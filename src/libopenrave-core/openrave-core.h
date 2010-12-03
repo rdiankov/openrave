@@ -1,4 +1,5 @@
-// Copyright (C) 2006-2008 Carnegie Mellon University (rdiankov@cs.cmu.edu)
+// -*- coding: utf-8 -*-
+// Copyright (C) 2006-2010 Rosen Diankov (rosen.diankov@gmail.com)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify

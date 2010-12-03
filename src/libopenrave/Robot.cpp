@@ -646,7 +646,7 @@ int RobotBase::GetAffineDOFIndex(DOFAffine dof) const
     if( !(_nAffineDOFs&dof) )
         return -1;
 
-    int index = (int)_vActiveJointIndices.size();
+    int index = (int)_vActiveDOFIndices.size();
     if( dof&DOF_X ) return index;
     else if( _nAffineDOFs & DOF_X ) ++index;
 
@@ -785,8 +785,9 @@ void RobotBase::SetActiveDOFs(const std::vector<int>& vJointIndices, int nAffine
             throw openrave_exception("bad indices",ORE_InvalidArguments);
         }
     }
-    _vActiveJointIndices = vJointIndices;
+    _vActiveDOFIndices = vJointIndices;
     _nAffineDOFs = nAffineDOFBitmask;
+    _nNonAdjacentLinkCache &= ~AO_ActiveDOFs;
 
     // mutually exclusive
     if( _nAffineDOFs & DOF_RotationAxis ) {
@@ -831,9 +832,9 @@ void RobotBase::SetActiveDOFValues(const std::vector<dReal>& values, bool bCheck
     }
 
     Transform t;
-    if( (int)_vActiveJointIndices.size() < _nActiveDOF ) {
+    if( (int)_vActiveDOFIndices.size() < _nActiveDOF ) {
         // first set the affine transformation of the first link before setting joints
-        const dReal* pAffineValues = &values[_vActiveJointIndices.size()];
+        const dReal* pAffineValues = &values.at(_vActiveDOFIndices.size());
 
         t = GetTransform();
         
@@ -867,16 +868,17 @@ void RobotBase::SetActiveDOFValues(const std::vector<dReal>& values, bool bCheck
             else t.rot = Vector(1,0,0,0);
         }
 
-        if( _vActiveJointIndices.size() == 0 )
+        if( _vActiveDOFIndices.size() == 0 ) {
             SetTransform(t);
+        }
     }
 
-    if( _vActiveJointIndices.size() > 0 ) {
+    if( _vActiveDOFIndices.size() > 0 ) {
         GetDOFValues(_vTempRobotJoints);
-        for(size_t i = 0; i < _vActiveJointIndices.size(); ++i) {
-            _vTempRobotJoints[_vActiveJointIndices[i]] = values[i];
+        for(size_t i = 0; i < _vActiveDOFIndices.size(); ++i) {
+            _vTempRobotJoints[_vActiveDOFIndices[i]] = values[i];
         }
-        if( (int)_vActiveJointIndices.size() < _nActiveDOF ) {
+        if( (int)_vActiveDOFIndices.size() < _nActiveDOF ) {
             SetJointValues(_vTempRobotJoints, t, bCheckLimits);
         }
         else {
@@ -893,19 +895,20 @@ void RobotBase::GetActiveDOFValues(std::vector<dReal>& values) const
     }
 
     values.resize(GetActiveDOF());
-    if( values.size() == 0 )
+    if( values.size() == 0 ) {
         return;
+    }
     dReal* pValues = &values[0];
-    if( _vActiveJointIndices.size() != 0 ) {
+    if( _vActiveDOFIndices.size() != 0 ) {
         GetDOFValues(_vTempRobotJoints);
-
-        FOREACHC(it, _vActiveJointIndices)
+        FOREACHC(it, _vActiveDOFIndices) {
             *pValues++ = _vTempRobotJoints[*it];
+        }
     }
 
-    if( _nAffineDOFs == DOF_NoTransform )
+    if( _nAffineDOFs == DOF_NoTransform ) {
         return;
-
+    }
     Transform t = GetTransform();
     if( _nAffineDOFs & DOF_X ) *pValues++ = t.trans.x;
     if( _nAffineDOFs & DOF_Y ) *pValues++ = t.trans.y;
@@ -949,9 +952,9 @@ void RobotBase::SetActiveDOFVelocities(const std::vector<dReal>& velocities, boo
     }
 
     Vector linearvel, angularvel;
-    if( (int)_vActiveJointIndices.size() < _nActiveDOF ) {
+    if( (int)_vActiveDOFIndices.size() < _nActiveDOF ) {
         // first set the affine transformation of the first link before setting joints
-        const dReal* pAffineValues = &velocities[_vActiveJointIndices.size()];
+        const dReal* pAffineValues = &velocities[_vActiveDOFIndices.size()];
 
         _veclinks.at(0)->GetVelocity(linearvel, angularvel);
         
@@ -970,18 +973,18 @@ void RobotBase::SetActiveDOFVelocities(const std::vector<dReal>& velocities, boo
             throw openrave_exception("quaternions not supported",ORE_InvalidArguments);
         }
 
-        if( _vActiveJointIndices.size() == 0 ) {
+        if( _vActiveDOFIndices.size() == 0 ) {
             SetVelocity(linearvel, angularvel);
         }
     }
 
-    if( _vActiveJointIndices.size() > 0 ) {
+    if( _vActiveDOFIndices.size() > 0 ) {
         GetDOFVelocities(_vTempRobotJoints);
         std::vector<dReal>::const_iterator itvel = velocities.begin();
-        FOREACHC(it, _vActiveJointIndices) {
+        FOREACHC(it, _vActiveDOFIndices) {
             _vTempRobotJoints[*it] = *itvel++;
         }
-        if( (int)_vActiveJointIndices.size() < _nActiveDOF ) {
+        if( (int)_vActiveDOFIndices.size() < _nActiveDOF ) {
             SetDOFVelocities(_vTempRobotJoints,linearvel,angularvel,bCheckLimits);
         }
         else {
@@ -1001,16 +1004,16 @@ void RobotBase::GetActiveDOFVelocities(std::vector<dReal>& velocities) const
     if( velocities.size() == 0 )
         return;
     dReal* pVelocities = &velocities[0];
-    if( _vActiveJointIndices.size() != 0 ) {
+    if( _vActiveDOFIndices.size() != 0 ) {
         GetDOFVelocities(_vTempRobotJoints);
-
-        FOREACHC(it, _vActiveJointIndices)
+        FOREACHC(it, _vActiveDOFIndices) {
             *pVelocities++ = _vTempRobotJoints[*it];
+        }
     }
 
-    if( _nAffineDOFs == DOF_NoTransform )
+    if( _nAffineDOFs == DOF_NoTransform ) {
         return;
-
+    }
     Vector linearvel, angularvel;
     _veclinks.at(0)->GetVelocity(linearvel, angularvel);
 
@@ -1049,16 +1052,16 @@ void RobotBase::GetActiveDOFLimits(std::vector<dReal>& lower, std::vector<dReal>
         }
         else {
             GetDOFLimits(alllower,allupper);
-            FOREACHC(it, _vActiveJointIndices) {
+            FOREACHC(it, _vActiveDOFIndices) {
                 *pLowerLimit++ = alllower[*it];
                 *pUpperLimit++ = allupper[*it];
             }
         }
     }
     else {
-        if( _vActiveJointIndices.size() > 0 ) {
+        if( _vActiveDOFIndices.size() > 0 ) {
             GetDOFLimits(alllower,allupper);
-            FOREACHC(it, _vActiveJointIndices) {
+            FOREACHC(it, _vActiveDOFIndices) {
                 *pLowerLimit++ = alllower[*it];
                 *pUpperLimit++ = allupper[*it];
             }
@@ -1104,9 +1107,9 @@ void RobotBase::GetActiveDOFResolutions(std::vector<dReal>& resolution) const
     dReal* pResolution = &resolution[0];
 
     GetDOFResolutions(_vTempRobotJoints);
-    FOREACHC(it, _vActiveJointIndices)
+    FOREACHC(it, _vActiveDOFIndices) {
         *pResolution++ = _vTempRobotJoints[*it];
-
+    }
     // set some default limits 
     if( _nAffineDOFs & DOF_X ) { *pResolution++ = _vTranslationResolutions.x;}
     if( _nAffineDOFs & DOF_Y ) { *pResolution++ = _vTranslationResolutions.y;}
@@ -1140,9 +1143,9 @@ void RobotBase::GetActiveDOFWeights(std::vector<dReal>& weights) const
     dReal* pweight = &weights[0];
 
     GetDOFWeights(_vTempRobotJoints);
-    FOREACHC(it, _vActiveJointIndices)
+    FOREACHC(it, _vActiveDOFIndices) {
         *pweight++ = _vTempRobotJoints[*it];
-
+    }
     // set some default limits 
     if( _nAffineDOFs & DOF_X ) { *pweight++ = _vTranslationWeights.x;}
     if( _nAffineDOFs & DOF_Y ) { *pweight++ = _vTranslationWeights.y;}
@@ -1175,9 +1178,9 @@ void RobotBase::GetActiveDOFMaxVel(std::vector<dReal>& maxvel) const
     dReal* pMaxVel = &maxvel[0];
 
     GetDOFMaxVel(_vTempRobotJoints);
-    FOREACHC(it, _vActiveJointIndices)
+    FOREACHC(it, _vActiveDOFIndices) {
         *pMaxVel++ = _vTempRobotJoints[*it];
-
+    }
     if( _nAffineDOFs & DOF_X ) { *pMaxVel++ = _vTranslationMaxVels.x;}
     if( _nAffineDOFs & DOF_Y ) { *pMaxVel++ = _vTranslationMaxVels.y;}
     if( _nAffineDOFs & DOF_Z ) { *pMaxVel++ = _vTranslationMaxVels.z;}
@@ -1209,9 +1212,9 @@ void RobotBase::GetActiveDOFMaxAccel(std::vector<dReal>& maxaccel) const
     dReal* pMaxAccel = &maxaccel[0];
 
     GetDOFMaxAccel(_vTempRobotJoints);
-    FOREACHC(it, _vActiveJointIndices)
+    FOREACHC(it, _vActiveDOFIndices) {
         *pMaxAccel++ = _vTempRobotJoints[*it];
-
+    }
     if( _nAffineDOFs & DOF_X ) { *pMaxAccel++ = _vTranslationMaxVels.x;} // wrong
     if( _nAffineDOFs & DOF_Y ) { *pMaxAccel++ = _vTranslationMaxVels.y;} // wrong
     if( _nAffineDOFs & DOF_Z ) { *pMaxAccel++ = _vTranslationMaxVels.z;} // wrong
@@ -1239,15 +1242,17 @@ void RobotBase::SubtractActiveDOFValues(std::vector<dReal>& q1, const std::vecto
 
     // go through all active joints
     int index = 0;
-    FOREACHC(it,_vActiveJointIndices) {
+    FOREACHC(it,_vActiveDOFIndices) {
         JointConstPtr pjoint = _vecjoints.at(*it);
         if( pjoint->IsCircular() ) {
-            for(int i = 0; i < pjoint->GetDOF(); ++i, index++)
+            for(int i = 0; i < pjoint->GetDOF(); ++i, index++) {
                 q1.at(index) = ANGLE_DIFF(q1.at(index), q2.at(index));
+            }
         }
         else {
-            for(int i = 0; i < pjoint->GetDOF(); ++i, index++)
+            for(int i = 0; i < pjoint->GetDOF(); ++i, index++) {
                 q1.at(index) -= q2.at(index);
+            }
         }
     }
 
@@ -1299,13 +1304,13 @@ void RobotBase::GetFullTrajectoryFromActive(TrajectoryBasePtr pFullTraj, Traject
         FORIT(itp, pActiveTraj->GetPoints()) {
 
             int i=0;
-            for(i = 0; i < (int)_vActiveJointIndices.size(); ++i) {
-                p.q[_vActiveJointIndices[i]] = itp->q[i];
+            for(i = 0; i < (int)_vActiveDOFIndices.size(); ++i) {
+                p.q[_vActiveDOFIndices[i]] = itp->q[i];
             }
 
-            if( !bOverwriteTransforms )
+            if( !bOverwriteTransforms ) {
                 p.trans = itp->trans;
-            
+            }
             if( _nAffineDOFs != DOF_NoTransform ) {
                 if( _nAffineDOFs & DOF_X ) p.trans.trans.x = itp->q[i++];
                 if( _nAffineDOFs & DOF_Y ) p.trans.trans.y = itp->q[i++];
@@ -1341,7 +1346,7 @@ void RobotBase::GetFullTrajectoryFromActive(TrajectoryBasePtr pFullTraj, Traject
 
 const std::vector<int>& RobotBase::GetActiveDOFIndices() const
 {
-    return _nActiveDOF < 0 ? _vAllDOFIndices : _vActiveJointIndices;
+    return _nActiveDOF < 0 ? _vAllDOFIndices : _vActiveDOFIndices;
 }
 
 void RobotBase::CalculateActiveJacobian(int index, const Vector& offset, boost::multi_array<dReal,2>& mjacobian) const
@@ -1352,20 +1357,20 @@ void RobotBase::CalculateActiveJacobian(int index, const Vector& offset, boost::
     }
 
     mjacobian.resize(boost::extents[3][GetActiveDOF()]);
-    if( _vActiveJointIndices.size() != 0 ) {
+    if( _vActiveDOFIndices.size() != 0 ) {
         boost::multi_array<dReal,2> mjacobianjoints;
         CalculateJacobian(index, offset, mjacobianjoints);
-        for(size_t i = 0; i < _vActiveJointIndices.size(); ++i) {
-            mjacobian[0][i] = mjacobianjoints[0][_vActiveJointIndices[i]];
-            mjacobian[1][i] = mjacobianjoints[1][_vActiveJointIndices[i]];
-            mjacobian[2][i] = mjacobianjoints[2][_vActiveJointIndices[i]];
+        for(size_t i = 0; i < _vActiveDOFIndices.size(); ++i) {
+            mjacobian[0][i] = mjacobianjoints[0][_vActiveDOFIndices[i]];
+            mjacobian[1][i] = mjacobianjoints[1][_vActiveDOFIndices[i]];
+            mjacobian[2][i] = mjacobianjoints[2][_vActiveDOFIndices[i]];
         }
     }
 
     if( _nAffineDOFs == DOF_NoTransform )
         return;
 
-    size_t ind = _vActiveJointIndices.size();
+    size_t ind = _vActiveDOFIndices.size();
     if( _nAffineDOFs & DOF_X ) {
         mjacobian[0][ind] = 1;
         mjacobian[1][ind] = 0;
@@ -1477,21 +1482,21 @@ void RobotBase::CalculateActiveRotationJacobian(int index, const Vector& q, boos
     }
 
     mjacobian.resize(boost::extents[4][GetActiveDOF()]);
-    if( _vActiveJointIndices.size() != 0 ) {
+    if( _vActiveDOFIndices.size() != 0 ) {
         boost::multi_array<dReal,2> mjacobianjoints;
         CalculateRotationJacobian(index, q, mjacobianjoints);
-        for(size_t i = 0; i < _vActiveJointIndices.size(); ++i) {
-            mjacobian[0][i] = mjacobianjoints[0][_vActiveJointIndices[i]];
-            mjacobian[1][i] = mjacobianjoints[1][_vActiveJointIndices[i]];
-            mjacobian[2][i] = mjacobianjoints[2][_vActiveJointIndices[i]];
-            mjacobian[3][i] = mjacobianjoints[3][_vActiveJointIndices[i]];
+        for(size_t i = 0; i < _vActiveDOFIndices.size(); ++i) {
+            mjacobian[0][i] = mjacobianjoints[0][_vActiveDOFIndices[i]];
+            mjacobian[1][i] = mjacobianjoints[1][_vActiveDOFIndices[i]];
+            mjacobian[2][i] = mjacobianjoints[2][_vActiveDOFIndices[i]];
+            mjacobian[3][i] = mjacobianjoints[3][_vActiveDOFIndices[i]];
         }
     }
 
     if( _nAffineDOFs == DOF_NoTransform )
         return;
 
-    size_t ind = _vActiveJointIndices.size();
+    size_t ind = _vActiveDOFIndices.size();
     if( _nAffineDOFs & DOF_X ) {
         mjacobian[0][ind] = 0;
         mjacobian[1][ind] = 0;
@@ -1556,20 +1561,20 @@ void RobotBase::CalculateActiveAngularVelocityJacobian(int index, boost::multi_a
     }
 
     mjacobian.resize(boost::extents[3][GetActiveDOF()]);
-    if( _vActiveJointIndices.size() != 0 ) {
+    if( _vActiveDOFIndices.size() != 0 ) {
         boost::multi_array<dReal,2> mjacobianjoints;
         CalculateAngularVelocityJacobian(index, mjacobianjoints);
-        for(size_t i = 0; i < _vActiveJointIndices.size(); ++i) {
-            mjacobian[0][i] = mjacobianjoints[0][_vActiveJointIndices[i]];
-            mjacobian[1][i] = mjacobianjoints[1][_vActiveJointIndices[i]];
-            mjacobian[2][i] = mjacobianjoints[2][_vActiveJointIndices[i]];
+        for(size_t i = 0; i < _vActiveDOFIndices.size(); ++i) {
+            mjacobian[0][i] = mjacobianjoints[0][_vActiveDOFIndices[i]];
+            mjacobian[1][i] = mjacobianjoints[1][_vActiveDOFIndices[i]];
+            mjacobian[2][i] = mjacobianjoints[2][_vActiveDOFIndices[i]];
         }
     }
 
     if( _nAffineDOFs == DOF_NoTransform )
         return;
 
-    size_t ind = _vActiveJointIndices.size();
+    size_t ind = _vActiveDOFIndices.size();
     if( _nAffineDOFs & DOF_X ) {
         mjacobian[0][ind] = 0;
         mjacobian[1][ind] = 0;
@@ -1657,6 +1662,66 @@ bool RobotBase::InitFromData(const std::string& data, const std::list<std::pair<
     }
 
     return true;
+}
+
+const std::set<int>& RobotBase::GetNonAdjacentLinks(int adjacentoptions) const
+{
+    CHECK_INTERNAL_COMPUTATION;
+    int requestedoptions = _nNonAdjacentLinkCache&adjacentoptions;
+    if( requestedoptions != adjacentoptions ) {
+        // find out what needs to computed
+        boost::array<uint8_t,4> compute={{0,0,0,0}};
+        if( requestedoptions & AO_Enabled ) {
+            for(size_t i = 0; i < compute.size(); ++i) {
+                if( i & AO_Enabled ) {
+                    compute[i] = 1;
+                }
+            }
+        }
+        if( requestedoptions & AO_ActiveDOFs ) {
+            for(size_t i = 0; i < compute.size(); ++i) {
+                if( i & AO_ActiveDOFs ) {
+                    compute[i] = 1;
+                }
+            }
+        }
+        if( requestedoptions & (AO_Enabled|AO_ActiveDOFs) ) {
+            throw openrave_exception(str(boost::format("RobotBase::GetNonAdjacentLinks does not support adjacentoptions %d")%adjacentoptions),ORE_InvalidArguments);
+        }
+
+        // compute it
+        if( compute.at(AO_Enabled) ) {
+            _setNonAdjacentLinks.at(AO_Enabled).clear();
+            FOREACHC(itset, _setNonAdjacentLinks[0]) {
+                KinBody::LinkConstPtr plink1(_veclinks.at(*itset&0xffff)), plink2(_veclinks.at(*itset>>16));
+                if( plink1->IsEnabled() && plink2->IsEnabled() ) {
+                    _setNonAdjacentLinks[AO_Enabled].insert(*itset);
+                }
+            }
+        }
+        if( compute.at(AO_ActiveDOFs) ) {
+            _setNonAdjacentLinks.at(AO_ActiveDOFs).clear();
+            FOREACHC(itset, _setNonAdjacentLinks[0]) {
+                FOREACHC(it, GetActiveDOFIndices()) {
+                    if( IsDOFInChain(*itset&0xffff,*itset>>16,*it) ) {
+                        _setNonAdjacentLinks[AO_ActiveDOFs].insert(*itset);
+                        break;
+                    }
+                }
+            }
+        }
+        if( compute.at(AO_Enabled|AO_ActiveDOFs) ) {
+            _setNonAdjacentLinks.at(AO_Enabled|AO_ActiveDOFs).clear();
+            FOREACHC(itset, _setNonAdjacentLinks[AO_ActiveDOFs]) {
+                KinBody::LinkConstPtr plink1(_veclinks.at(*itset&0xffff)), plink2(_veclinks.at(*itset>>16));
+                if( plink1->IsEnabled() && plink2->IsEnabled() ) {
+                    _setNonAdjacentLinks[AO_Enabled|AO_ActiveDOFs].insert(*itset);
+                }
+            }
+        }
+        _nNonAdjacentLinkCache |= requestedoptions;
+    }
+    return _setNonAdjacentLinks.at(adjacentoptions);
 }
 
 bool RobotBase::Grab(KinBodyPtr pbody)
@@ -2102,7 +2167,7 @@ bool RobotBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     }
     _UpdateAttachedSensors();
 
-    _vActiveJointIndices = r->_vActiveJointIndices;
+    _vActiveDOFIndices = r->_vActiveDOFIndices;
     _vAllDOFIndices = r->_vAllDOFIndices;
     vActvAffineRotationAxis = r->vActvAffineRotationAxis;
     _nActiveManip = r->_nActiveManip;

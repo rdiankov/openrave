@@ -1773,7 +1773,6 @@ namespace OpenRAVEXMLParser
             }
             else if( xmlname == "joint" ) {
                 _pjoint.reset();
-                _pchain->_vecJointIndices.push_back(_pchain->GetDOF()); // be careful, GetDOF() is computed using _vecJointIndices
                 boost::shared_ptr<JointXMLReader> pjointreader(new  JointXMLReader(_pjoint,_pchain, atts));
                 pjointreader->_fnGetModelsDir = boost::bind(&KinBodyXMLReader::GetModelsDir,this,_1);
                 pjointreader->_fnGetOffsetFrom = boost::bind(&KinBodyXMLReader::GetOffsetFrom,this,_1);
@@ -1833,14 +1832,12 @@ namespace OpenRAVEXMLParser
                     else if( xmlname == "joint" ) {
                         if( !_pjoint )
                             throw openrave_exception("joint should be valid");
-                        BOOST_ASSERT(_pchain->_vecJointIndices.size()>0);
-                        _pjoint->dofindex = (int)_pchain->_vecJointIndices.back();
+                        _pjoint->dofindex = _pchain->GetDOF();
                         boost::shared_ptr<JointXMLReader> pjointreader = boost::dynamic_pointer_cast<JointXMLReader>(_pcurreader);
                         if( pjointreader->IsMimic() )
                             listMimicJoints.push_back(make_pair(_pjoint,pjointreader->GetMimicJoint()));
 
                         if( pjointreader->IsDisabled() ) {
-                            _pchain->_vecJointIndices.pop_back();
                             _pjoint->jointindex = -1;
                             _pjoint->dofindex = -1;
                             _pchain->_vecPassiveJoints.push_back(_pjoint);

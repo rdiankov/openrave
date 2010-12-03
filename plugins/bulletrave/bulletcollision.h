@@ -375,7 +375,9 @@ public:
         if( options & CO_Contacts ) {
             //setCollisionFlags btCollisionObject::CF_NO_CONTACT_RESPONSE - don't generate
         }
-    
+        if(options & CO_ActiveDOFs) {
+            RAVELOG_DEBUG("bullet checker does not support activedof option");
+        }
         return true;
     }
 
@@ -714,7 +716,11 @@ public:
         }
 
         bulletspace->Synchronize();
-        LinkAdjacentFilterCallback linkadjacent(pbody, pbody->GetNonAdjacentLinks());
+        int adjacentoptions = KinBody::AO_Enabled;
+        if( (_options&OpenRAVE::CO_ActiveDOFs) && pbody->IsRobot() ) {
+            adjacentoptions |= KinBody::AO_ActiveDOFs;
+        }
+        LinkAdjacentFilterCallback linkadjacent(pbody, pbody->GetNonAdjacentLinks(adjacentoptions));
         bool bCollision = CheckCollisionP(&linkadjacent, report);
         // things get cached and very messy if not released
         _world->getPairCache()->setOverlapFilterCallback(NULL);

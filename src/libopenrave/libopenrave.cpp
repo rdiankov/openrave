@@ -1747,6 +1747,22 @@ void MultiController::GetTorque(std::vector<dReal>& torque) const
     }
 }
 
+CollisionOptionsStateSaver::CollisionOptionsStateSaver(CollisionCheckerBasePtr p, int newoptions, bool required)
+{
+    _oldoptions = p->GetCollisionOptions();
+    _p = p;
+    if( !_p->SetCollisionOptions(newoptions) ) {
+        if( required ) {
+            throw openrave_exception(str(boost::format("Failed to set collision options %d in checker %s\n")%newoptions%_p->GetXMLId()));
+        }
+    }
+}
+
+CollisionOptionsStateSaver::~CollisionOptionsStateSaver()
+{
+    _p->SetCollisionOptions(_oldoptions);
+}
+
 //void RobotBase::GetControlMaxTorques(std::vector<dReal>& maxtorques) const
 //{
 //    if( _nActiveDOF < 0 ) {

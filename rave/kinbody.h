@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2010 Rosen Diankov (rdiankov@cs.cmu.edu)
+// Copyright (C) 2006-2010 Rosen Diankov (rosen.diankov@gmail.com)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -557,9 +557,6 @@ public:
     virtual void GetJointResolutions(std::vector<dReal>& v) const RAVE_DEPRECATED;
     virtual void GetJointWeights(std::vector<dReal>& v) const RAVE_DEPRECATED;
 
-    /// \brief Returns a vector that stores the start dof indices of each joint joints, size() is equal to GetJoints().size().
-    virtual const std::vector<int>& GetJointIndices() const { return _vecJointIndices; }
-
     /// \brief Returns the joints making up the degrees of freedom in the user-defined order.
     const std::vector<JointPtr>& GetJoints() const { return _vecjoints; }
     /// \brief Returns the passive joints, order does not matter.
@@ -581,8 +578,8 @@ public:
     
         Passive joints are used to detect rigidly attached links and mimic joints, otherwise they are ignored in the computation of the chain.
         If a mimic joint is found along the path, the joint returned is the source joint!
-        \param[in] linkbaseindex the base link index to start the search
-        \param[in] linkendindex the link index where the search ends
+        \param[in] linkindex1 the link index to start the search
+        \param[in] linkindex2 the link index where the search ends
         \param[out] vjoints the joints to fill that describe the chain
         \return true if the two links are connected (vjoints will be filled), false if the links are separate
 
@@ -594,7 +591,10 @@ public:
         \param[out] vjoints　関節の経路
         \return 経路が存在している場合，trueを返す．
     */
-    bool GetChain(int linkbaseindex, int linkendindex, std::vector<JointPtr>& vjoints) const;
+    bool GetChain(int linkindex1, int linkindex2, std::vector<JointPtr>& vjoints) const;
+    
+    /// \brief Returns true if the dof index is on a path between two links
+    bool IsDOFInChain(int linkbaseindex, int linkendindex, int dofindex) const;
 
     /// \brief Return the index of the joint with the given name, else -1.
     virtual int GetJointIndex(const std::string& name) const;
@@ -753,8 +753,15 @@ public:
     virtual void SetGuiData(UserDataPtr data) { _pGuiData = data; }
     virtual UserDataPtr GetGuiData() const { return _pGuiData; }
 
+    /// \brief specifies the type of adjacent link information to receive
+    enum AdjacentOptions
+    {
+        AO_Enabled = 1, ///< return only enabled link pairs
+        AO_ActiveDOFs = 2, ///< return only link pairs that have an active in its path
+    };
+
     /// \return all possible link pairs that could get in collision
-    virtual const std::set<int>& GetNonAdjacentLinks() const;
+    virtual const std::set<int>& GetNonAdjacentLinks(int adjacentoptions=0) const;
     /// \return all possible link pairs whose collisions are ignored.
     virtual const std::set<int>& GetAdjacentLinks() const;
     
@@ -840,7 +847,7 @@ protected:
     std::vector<JointPtr> _vDOFOrderedJoints; ///< all joints of the body ordered on how they are arranged within the degrees of freedom
     std::vector<LinkPtr> _veclinks;       ///< children, unlike render hierarchies, transformations
                                         ///< of the children are with respect to the global coordinate system
-    std::vector<int> _vecJointIndices;  ///< cached start indices, indexed by joint indices
+    std::vector<int> _vecDOFIndices; ///< cached start joint indices, indexed by dof indices
     std::vector<char> _vecJointHierarchy;   ///< joint x link, entry is non-zero if the joint affects the link in the forward kinematics
                                             ///< if negative, the partial derivative of ds/dtheta should be negated
 
@@ -848,15 +855,16 @@ protected:
 
     std::set<int> _setAdjacentLinks;        ///< a set of which links are connected to which if link i and j are connected then
                                             ///< i|(j<<16) will be in the set where i<j.
-    std::set<int> _setNonAdjacentLinks;     ///< the not of _setAdjacentLinks
+    mutable boost::array<std::set<int>, 4> _setNonAdjacentLinks;     ///< contains cached versions of the non-adjacent links depending on values in AdjacentOptions. Declared as mutable since data is cached.
     std::vector< std::pair<std::string, std::string> > _vForcedAdjacentLinks; ///< internally stores forced adjacent links
 
     std::list<KinBodyWeakPtr> _listAttachedBodies; ///< list of bodies that are directly attached to this body (can have duplicates)
 
-    int _environmentid;                          ///< \see GetEnvironmentId
-    int _nUpdateStampId;                         ///< \see GetUpdateStamp
-    UserDataPtr _pGuiData;                        ///< GUI data to let the viewer store specific graphic handles for the object
-    UserDataPtr _pPhysicsData;                ///< data set by the physics engine
+    mutable int _nNonAdjacentLinkCache; ///< specifies what information is currently valid in the AdjacentOptions.  Declared as mutable since data is cached.
+    int _environmentid; ///< \see GetEnvironmentId
+    int _nUpdateStampId; ///< \see GetUpdateStamp
+    UserDataPtr _pGuiData; ///< GUI data to let the viewer store specific graphic handles for the object
+    UserDataPtr _pPhysicsData; ///< data set by the physics engine
     UserDataPtr _pCollisionData; ///< internal collision model
     ManageDataPtr _pManageData;
 

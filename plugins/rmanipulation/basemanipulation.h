@@ -72,8 +72,10 @@ public:
 
     virtual int main(const std::string& args)
     {
+        string strRobotName;
         stringstream ss(args);
-        ss >> _strRobotName;
+        ss >> strRobotName;
+        robot = GetEnv()->GetRobot(strRobotName);
 
         _fMaxVelMult=1;
         string cmd;
@@ -101,7 +103,7 @@ public:
                 _strRRTPlannerName = "";
         }
 
-        RAVELOG_DEBUGA(str(boost::format("BaseManipulation: using %s planner\n")%_strRRTPlannerName));
+        RAVELOG_DEBUG(str(boost::format("BaseManipulation: using %s planner\n")%_strRRTPlannerName));
         return 0;
     }
 
@@ -113,7 +115,6 @@ public:
     virtual bool SendCommand(std::ostream& sout, std::istream& sinput)
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
-        robot = GetEnv()->GetRobot(_strRobotName);
         return ProblemInstance::SendCommand(sout,sinput);
     }
 protected:
@@ -229,7 +230,7 @@ protected:
             return false;
         }
 
-        RAVELOG_DEBUGA(str(boost::format("robot %s:%s grabbing body %s...\n")%robot->GetName()%robot->GetActiveManipulator()->GetEndEffector()->GetName()%ptarget->GetName()));
+        RAVELOG_DEBUG(str(boost::format("robot %s:%s grabbing body %s...\n")%robot->GetName()%robot->GetActiveManipulator()->GetEndEffector()->GetName()%ptarget->GetName()));
         robot->Grab(ptarget);
         return true;
     }
@@ -237,7 +238,7 @@ protected:
     bool ReleaseAll(ostream& sout, istream& sinput)
     {
         if( !!robot ) {
-            RAVELOG_DEBUGA("Releasing all bodies\n");
+            RAVELOG_DEBUG("Releasing all bodies\n");
             robot->ReleaseAllGrabbed();
         }
         return true;
@@ -296,7 +297,7 @@ protected:
             }
         }
     
-        RAVELOG_DEBUGA("Starting MoveHandStraight dir=(%f,%f,%f)...\n",(float)direction.x, (float)direction.y, (float)direction.z);
+        RAVELOG_DEBUG("Starting MoveHandStraight dir=(%f,%f,%f)...\n",(float)direction.x, (float)direction.y, (float)direction.z);
         robot->RegrabAll();
 
         RobotBase::RobotStateSaver saver(robot);
@@ -344,12 +345,14 @@ protected:
 
                 robot->CalculateActiveJacobian(eeindex,robot->GetActiveManipulator()->GetEndEffectorTransform().trans,vjacobian);
                 const double lambda2 = 1e-8; // normalization constant
-                for(size_t j = 0; j < 3; ++j)
+                for(size_t j = 0; j < 3; ++j) {
                     std::copy(vjacobian[j].begin(),vjacobian[j].end(),J.find2(0,j,0));
+                }
                 Jt = trans(J);
                 invJJt = prod(J,Jt);
-                for(int j = 0; j < 3; ++j)
+                for(int j = 0; j < 3; ++j) {
                     invJJt(j,j) += lambda2;
+                }
                 try {
                     if( !pconstraints->InvertMatrix(invJJt,invJJt) ) {
                         RAVELOG_WARN("failed to invert matrix\n");
@@ -362,10 +365,12 @@ protected:
                 }
                 invJ = prod(Jt,invJJt);
                 qdelta = prod(invJ,Jerror);
-                for(size_t j = 0; j < point.q.size(); ++j)
+                for(size_t j = 0; j < point.q.size(); ++j) {
                     point.q[j] = vPrevValues[j] + qdelta(j,0);
-                if( !pconstraints->RetractionConstraint(vPrevValues,point.q,0) )
+                }
+                if( !pconstraints->RetractionConstraint(vPrevValues,point.q,0) ) {
                     break;
+                }
                 robot->SetActiveDOFValues(point.q);
                 bool bInCollision = robot->CheckSelfCollision();
                 Transform tdelta = handTr.inverse()*robot->GetActiveManipulator()->GetEndEffectorTransform();
@@ -374,15 +379,16 @@ protected:
                     RAVELOG_VERBOSE(ss.str());
                 }
                 robot->SetActiveDOFValues(vPrevValues);
-                if( bInCollision )
+                if( bInCollision ) {
                     break;
+                }
             }
             else {
                 handTr.trans += stepsize*direction;
                 bool bCheckCollision = !bPrevInCollision && i >= minsteps;
                 if( bSearchAll ) {
                     if( !pmanip->FindIKSolutions(handTr,vsolutions,bCheckCollision)) {
-                        RAVELOG_DEBUGA("Arm Lifting: broke due to ik\n");
+                        RAVELOG_DEBUG("Arm Lifting: broke due to ik\n");
                         break;
                     }
                     int minindex=0;
@@ -398,7 +404,7 @@ protected:
                 }
                 else {
                     if( !pmanip->FindIKSolution(handTr,point.q,bCheckCollision)) {
-                        RAVELOG_DEBUGA("Arm Lifting: broke due to ik\n");
+                        RAVELOG_DEBUG("Arm Lifting: broke due to ik\n");
                         break;
                     }
                 }
@@ -406,12 +412,13 @@ protected:
         
             size_t j = 0;
             for(; j < point.q.size(); j++) {
-                if(fabsf(point.q[j] - vPrevValues[j]) > 0.2)
+                if(fabsf(point.q[j] - vPrevValues[j]) > 0.2) {
                     break;
+                }
             }
 
             if( j < point.q.size()) {
-                RAVELOG_DEBUGA(str(boost::format("Arm Lifting: broke due to discontinuity (%d:%f)\n")%j%(point.q[j] - vPrevValues[j])));
+                RAVELOG_DEBUG(str(boost::format("Arm Lifting: broke due to discontinuity (%d:%f)\n")%j%(point.q[j] - vPrevValues[j])));
                 break;
             }
         
@@ -419,7 +426,7 @@ protected:
         
             bool bInCollision = GetEnv()->CheckCollision(KinBodyConstPtr(robot))||robot->CheckSelfCollision();
             if(bInCollision && !bPrevInCollision && i >= minsteps) {
-                RAVELOG_DEBUGA("Arm Lifting: broke due to collision\n");
+                RAVELOG_DEBUG("Arm Lifting: broke due to collision\n");
                 break;
             }
         
@@ -430,22 +437,24 @@ protected:
     
         if( i > 0 ) {
             if( bPrevInCollision ) {
-                RAVELOG_DEBUGA("hand failed to move out of collision\n");
+                RAVELOG_DEBUG("hand failed to move out of collision\n");
                 return false;
             }
-            RAVELOG_DEBUGA("hand can move %f\n", (float)i*stepsize);
-            if( i >= minsteps ) // only move if exceeded minsteps (otherwise user of this function would not have specified min steps)
+            RAVELOG_DEBUG("hand can move %f\n", (float)i*stepsize);
+            // only move if exceeded minsteps (otherwise user of this function would not have specified min steps)
+            if( i >= minsteps ) {
                 CM::SetActiveTrajectory(robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream,_fMaxVelMult);
+            }
             return i >= minsteps;
         }
 
-        RAVELOG_DEBUGA("hand didn't move\n");
+        RAVELOG_DEBUG("hand didn't move\n");
         return i >= minsteps;
     }
 
     bool MoveManipulator(ostream& sout, istream& sinput)
     {
-        RAVELOG_DEBUGA("Starting MoveManipulator...\n");
+        RAVELOG_DEBUG("Starting MoveManipulator...\n");
         RobotBase::ManipulatorPtr pmanip = robot->GetActiveManipulator();
 
         string strtrajfilename;
@@ -622,7 +631,7 @@ protected:
     
         boost::shared_ptr<Trajectory> ptraj(RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF()));
     
-        RAVELOG_DEBUGA("starting planning\n");
+        RAVELOG_DEBUG("starting planning\n");
         bool bSuccess = false;
         for(int itry = 0; itry < nMaxTries; ++itry) {
             if( !rrtplanner->InitPlan(robot, params) ) {
@@ -648,7 +657,7 @@ protected:
 
     bool MoveToHandPosition(ostream& sout, istream& sinput)
     {
-        RAVELOG_DEBUGA("Starting MoveToHandPosition...\n");
+        RAVELOG_DEBUG("Starting MoveToHandPosition...\n");
         RobotBase::ManipulatorConstPtr pmanip = robot->GetActiveManipulator();
 
         list<IkParameterization> listgoals;
@@ -783,7 +792,7 @@ protected:
                     FOREACH(it, viksolution)
                         s << *it << " ";
                     s << endl;
-                    RAVELOG_DEBUGA(s.str());
+                    RAVELOG_DEBUG(s.str());
                     armgoals.insert(armgoals.end(), viksolution.begin(), viksolution.end());
                 }
             }
@@ -962,339 +971,43 @@ protected:
     bool CloseFingers(ostream& sout, istream& sinput)
     {
         RAVELOG_WARN("CloseFingers moved to TaskManipulation...\n");
-        bool bExecute = true, bOutputFinal=false;
-        string strtrajfilename;
-        boost::shared_ptr<ostream> pOutputTrajStream;
-        Vector direction;
-        RobotBase::ManipulatorConstPtr pmanip = robot->GetActiveManipulator();
-        boost::shared_ptr<GraspParameters> graspparams(new GraspParameters(GetEnv()));
-        graspparams->vgoalconfig = pmanip->GetClosingDirection();
-
-        vector<dReal> voffset;
-        string cmd;
-        while(!sinput.eof()) {
-            sinput >> cmd;
-            if( !sinput )
-                break;
-            std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
-
-            if( cmd == "execute" )
-                sinput >> bExecute;
-            else if( cmd == "writetraj" )
-                sinput >> strtrajfilename;
-            else if( cmd == "outputtraj" )
-                pOutputTrajStream = boost::shared_ptr<ostream>(&sout,null_deleter());
-            else if( cmd == "outputfinal" )
-                bOutputFinal = true;
-            else if( cmd == "offset" ) {
-                voffset.resize(pmanip->GetGripperIndices().size());
-                FOREACH(it, voffset)
-                    sinput >> *it;
-            }
-            else if( cmd == "movingdir" ) {
-                FOREACH(it,graspparams->vgoalconfig)
-                    sinput >> *it;
-            }
-            else {
-                RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
-                break;
-            }
-
-            if( !sinput ) {
-                RAVELOG_ERROR(str(boost::format("failed processing command %s\n")%cmd));
-                return false;
-            }
-        }
-
-        RobotBase::RobotStateSaver saver(robot);
-        robot->SetActiveDOFs(pmanip->GetGripperIndices());
-
-        // have to add the first point
-        Trajectory::TPOINT ptfirst;
-        robot->GetActiveDOFValues(ptfirst.q);
- 
-        boost::shared_ptr<PlannerBase> graspplanner = RaveCreatePlanner(GetEnv(),"Grasper");
-        if( !graspplanner ) {
-            RAVELOG_ERROR("grasping planner failure!\n");
+        boost::shared_ptr<TaskManipulation> task(new TaskManipulation(GetEnv()));
+        if( !task ) {
             return false;
         }
-    
-        graspparams->SetRobotActiveJoints(robot);
-        robot->GetActiveDOFValues(graspparams->vinitialconfig);
-        graspparams->btransformrobot = false;
-        graspparams->breturntrajectory = false;
-        graspparams->bonlycontacttarget = false;
-
-        boost::shared_ptr<Trajectory> ptraj(RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF()));
-        ptraj->AddPoint(ptfirst);
-
-        if( !graspplanner->InitPlan(robot, graspparams) ) {
-            RAVELOG_ERROR("InitPlan failed\n");
-            return false;
-        }
-    
-        if( !graspplanner->PlanPath(ptraj) ) {
-            RAVELOG_WARN("PlanPath failed\n");
-            return false;
-        }   
-
-        if( ptraj->GetPoints().size() == 0 )
-            return false;
-
-        if( bOutputFinal ) {
-            FOREACH(itq,ptraj->GetPoints().back().q)
-                sout << *itq << " ";
-        }
-
-        Trajectory::TPOINT p = ptraj->GetPoints().back();
-        if(p.q.size() == voffset.size() ) {
-            for(size_t i = 0; i < voffset.size(); ++i)
-                p.q[i] += voffset[i]*pmanip->GetClosingDirection().at(i);
-            robot->SetActiveDOFValues(p.q,true);
-            robot->GetActiveDOFValues(p.q);
-            ptraj->AddPoint(p);
-        }
-
-        CM::SetActiveTrajectory(robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream,_fMaxVelMult);
-        return true;
+        stringstream sparams; sparams << robot->GetName() << " planner " << _strRRTPlannerName << " maxvelmult " << _fMaxVelMult;
+        GetEnv()->LoadProblem(task,sparams.str());
+        bool bsuccess = task->CloseFingers(sout,sinput);
+        GetEnv()->Remove(task);
+        return bsuccess;
     }
 
     bool ReleaseFingers(ostream& sout, istream& sinput)
     {
         RAVELOG_WARN("ReleaseFingers moved to TaskManipulation problem...\n");
-        bool bExecute = true, bOutputFinal=false;
-        string strtrajfilename;
-        boost::shared_ptr<ostream> pOutputTrajStream;
-        Vector direction;
-        KinBodyPtr ptarget;
-        RobotBase::ManipulatorConstPtr pmanip = robot->GetActiveManipulator();
-        boost::shared_ptr<GraspParameters> graspparams(new GraspParameters(GetEnv()));
-        graspparams->vgoalconfig = pmanip->GetClosingDirection();
-        FOREACH(it,graspparams->vgoalconfig)
-            *it = -*it;
-
-        string cmd;
-        while(!sinput.eof()) {
-            sinput >> cmd;
-            if( !sinput )
-                break;
-            std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
-
-            if( cmd == "execute" )
-                sinput >> bExecute;
-            else if( cmd == "writetraj" )
-                sinput >> strtrajfilename;
-            else if( cmd == "target" ) {
-                string name; sinput >> name;
-                ptarget = GetEnv()->GetKinBody(name);
-            }
-            else if( cmd == "outputtraj" )
-                pOutputTrajStream = boost::shared_ptr<ostream>(&sout,null_deleter());
-            else if( cmd == "outputfinal" )
-                bOutputFinal = true;
-            else if( cmd == "movingdir" ) {
-                FOREACH(it,graspparams->vgoalconfig)
-                    sinput >> *it;
-            }
-            else {
-                RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
-                break;
-            }
-
-            if( !sinput ) {
-                RAVELOG_ERROR(str(boost::format("failed processing command %s\n")%cmd));
-                return false;
-            }
-        }
-
-        RobotBase::RobotStateSaver saver(robot);
-        robot->SetActiveDOFs(pmanip->GetGripperIndices());
-        boost::shared_ptr<Trajectory> ptraj(RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF()));
-        // have to add the first point
-        Trajectory::TPOINT ptfirst;
-        robot->GetActiveDOFValues(ptfirst.q);
-        ptraj->AddPoint(ptfirst);
-        switch(CM::JitterActiveDOF(robot) ) {
-        case 0:
-            RAVELOG_WARN("robot initially in collision\n");
-            return false;
-        case 1:
-            robot->GetActiveDOFValues(ptfirst.q);
-        default:
-            break;
-        }
- 
-        boost::shared_ptr<PlannerBase> graspplanner = RaveCreatePlanner(GetEnv(),"Grasper");
-        if( !graspplanner ) {
-            RAVELOG_ERROR("grasping planner failure!\n");
+        boost::shared_ptr<TaskManipulation> task(new TaskManipulation(GetEnv()));
+        if( !task ) {
             return false;
         }
-    
-        graspparams->SetRobotActiveJoints(robot);
-        robot->GetActiveDOFValues(graspparams->vinitialconfig);
-        graspparams->btransformrobot = false;
-        graspparams->breturntrajectory = false;
-        graspparams->bonlycontacttarget = false;
-        graspparams->bavoidcontact = true;
-
-        if( !graspplanner->InitPlan(robot, graspparams) ) {
-            RAVELOG_ERROR("InitPlan failed\n");
-            return false;
-        }
-    
-        if( !graspplanner->PlanPath(ptraj) ) {
-            RAVELOG_WARN("PlanPath failed\n");
-            return false;
-        }   
-
-        if( ptraj->GetPoints().size() == 0 )
-            return false;
-
-        if( bOutputFinal ) {
-            FOREACH(itq,ptraj->GetPoints().back().q)
-                sout << *itq << " ";
-        }
-
-        {
-            // check final trajectory for colliding points
-            RobotBase::RobotStateSaver saver2(robot);
-            robot->SetActiveDOFValues(ptraj->GetPoints().back().q);
-            if( CM::JitterActiveDOF(robot) > 0 ) {
-                RAVELOG_WARN("robot final configuration is in collision\n");
-                Trajectory::TPOINT pt = ptraj->GetPoints().back();
-                robot->GetActiveDOFValues(pt.q);
-                ptraj->AddPoint(pt);
-            }
-        }
-
-        if( !!ptarget )
-            robot->Release(ptarget);
-
-        CM::SetActiveTrajectory(robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream,_fMaxVelMult);
-
-        return true;
+        stringstream sparams; sparams << robot->GetName() << " planner " << _strRRTPlannerName << " maxvelmult " << _fMaxVelMult;
+        GetEnv()->LoadProblem(task,sparams.str());
+        bool bsuccess = task->ReleaseFingers(sout,sinput);
+        GetEnv()->Remove(task);
+        return bsuccess;
     }
 
     bool ReleaseActive(ostream& sout, istream& sinput)
     {
         RAVELOG_WARN("ReleaseActive moved to TaskManipulation ...\n");
-
-        bool bExecute = true, bOutputFinal = false;
-        string strtrajfilename;
-        boost::shared_ptr<ostream> pOutputTrajStream;
-        boost::shared_ptr<GraspParameters> graspparams(new GraspParameters(GetEnv()));
-
-        // initialize the moving direction as the opposite of the closing direction defined in the manipulators
-		vector<dReal> vclosingsign_full(robot->GetDOF(), 0);
-        FOREACHC(itmanip, robot->GetManipulators()) {
-            BOOST_ASSERT((*itmanip)->GetClosingDirection().size()==(*itmanip)->GetGripperIndices().size());
-            for(size_t i = 0; i < (*itmanip)->GetClosingDirection().size(); ++i) {
-                if( (*itmanip)->GetClosingDirection()[i] != 0 )
-                    vclosingsign_full[(*itmanip)->GetGripperIndices()[i]] = (*itmanip)->GetClosingDirection()[i];
-            }
-        }
-
-        graspparams->vgoalconfig.resize(robot->GetActiveDOF());
-        int i = 0;
-        FOREACHC(itindex,robot->GetActiveDOFIndices()) {
-            graspparams->vgoalconfig[i++] = -vclosingsign_full.at(*itindex);
-        }
-
-        string cmd;
-        while(!sinput.eof()) {
-            sinput >> cmd;
-            if( !sinput )
-                break;
-            std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
-
-            if( cmd == "execute" )
-                sinput >> bExecute;
-            else if( cmd == "outputtraj" )
-                pOutputTrajStream = boost::shared_ptr<ostream>(&sout,null_deleter());
-            else if( cmd == "outputfinal" )
-                bOutputFinal = true;
-            else if( cmd == "writetraj" )
-                sinput >> strtrajfilename;
-            else if( cmd == "movingdir" ) {
-                // moving direction, has to be of size activedof
-                FOREACH(it, graspparams->vgoalconfig)
-                    sinput >> *it;
-            }
-            else {
-                RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
-                break;
-            }
-
-            if( !sinput ) {
-                RAVELOG_ERROR(str(boost::format("failed processing command %s\n")%cmd));
-                return false;
-            }
-        }
-
-        RobotBase::RobotStateSaver saver(robot);
-        boost::shared_ptr<Trajectory> ptraj(RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF()));
-
-        // have to add the first point
-        Trajectory::TPOINT ptfirst;
-        robot->GetActiveDOFValues(ptfirst.q);
-        ptraj->AddPoint(ptfirst);
-        switch( CM::JitterActiveDOF(robot) ) {
-        case 0:
-            RAVELOG_WARN("robot initially in collision\n");
-            return false;
-        case 1:
-            robot->GetActiveDOFValues(ptfirst.q);
-        default:
-            break;
-        }
- 
-        boost::shared_ptr<PlannerBase> graspplanner = RaveCreatePlanner(GetEnv(),"Grasper");
-        if( !graspplanner ) {
-            RAVELOG_ERROR("grasping planner failure!\n");
+        boost::shared_ptr<TaskManipulation> task(new TaskManipulation(GetEnv()));
+        if( !task ) {
             return false;
         }
-        
-        robot->SetActiveManipulator(-1); // reset the manipulator
-        graspparams->SetRobotActiveJoints(robot);
-        robot->GetActiveDOFValues(graspparams->vinitialconfig);  
-        graspparams->btransformrobot = false;
-        graspparams->breturntrajectory = false;
-        graspparams->bonlycontacttarget = false;
-        graspparams->bavoidcontact = true;
-
-        if( !graspplanner->InitPlan(robot, graspparams) ) {
-            RAVELOG_ERROR("InitPlan failed\n");
-            return false;
-        }
-    
-        if( !graspplanner->PlanPath(ptraj) ) {
-            RAVELOG_WARN("PlanPath failed\n");
-            return false;
-        }
-
-        if( ptraj->GetPoints().size() == 0 )
-            return false;
-
-
-        if( bOutputFinal ) {
-            FOREACH(itq,ptraj->GetPoints().back().q)
-                sout << *itq << " ";
-        }
-
-        {
-            // check final trajectory for colliding points
-            RobotBase::RobotStateSaver saver2(robot);
-            robot->SetActiveDOFValues(ptraj->GetPoints().back().q);
-            if( CM::JitterActiveDOF(robot) > 0 ) {
-                RAVELOG_WARN("robot final configuration is in collision\n");
-                Trajectory::TPOINT pt = ptraj->GetPoints().back();
-                robot->GetActiveDOFValues(pt.q);
-                ptraj->AddPoint(pt);
-            }
-        }
-
-        CM::SetActiveTrajectory(robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream,_fMaxVelMult);
-        return true;
+        stringstream sparams; sparams << robot->GetName() << " planner " << _strRRTPlannerName << " maxvelmult " << _fMaxVelMult;
+        GetEnv()->LoadProblem(task,sparams.str());
+        bool bsuccess = task->ReleaseActive(sout,sinput);
+        GetEnv()->Remove(task);
+        return bsuccess;
     }
 
     bool JitterActive(ostream& sout, istream& sinput)
@@ -1533,7 +1246,6 @@ protected:
 
     RobotBasePtr robot;
     string _strRRTPlannerName;
-    string _strRobotName; ///< name of the active robot
     dReal _fMaxVelMult;
 };
 

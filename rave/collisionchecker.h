@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2010 Rosen Diankov (rdiankov@cs.cmu.edu)
+// Copyright (C) 2006-2010 Rosen Diankov (rosen.diankov@gmail.com)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -25,10 +25,11 @@ namespace OpenRAVE {
 /// options for collision checker
 enum CollisionOptions
 {
-    CO_Distance = 1,
+    CO_Distance = 1, ///< compute distance measurements, this is usually slow
     CO_UseTolerance = 2,
     CO_Contacts = 4,    ///< Collision returns contact points
     CO_RayAnyHit = 8, ///< when performing collision with rays, if this is set, algorithm just returns any hit instead of the closest (can be faster)
+    CO_ActiveDOFs = 16, ///< if set and the target object is a robot, then only the links controlled by the currently set active DOFs will be checked for collisions. This allows planners to reduce redundant collision checks.
 };
 
 /// action to perform whenever a collision is detected between objects
@@ -83,24 +84,25 @@ public:
     CollisionCheckerBase(EnvironmentBasePtr penv) : InterfaceBase(PT_CollisionChecker, penv) {}
     virtual ~CollisionCheckerBase() {}
 
-    /// return the static interface type this class points to (used for safe casting)
+    /// \brief return the static interface type this class points to (used for safe casting)
     static inline InterfaceType GetInterfaceTypeStatic() { return PT_CollisionChecker; }
     
-    /// Set basic collision options using the CollisionOptions enum
+    /// \brief Set basic collision options using the CollisionOptions enum
     virtual bool SetCollisionOptions(int collisionoptions) = 0;
+
+    /// \brief get the current collision options
     virtual int GetCollisionOptions() const = 0;
 
-    /// set and get various collision checker options
-    /// \return true if command succeeded
+    /// \deprecated (10/11/18) use SendCommand instead
     virtual bool SetCollisionOptions(std::ostream& sout, std::istream& sinput) RAVE_DEPRECATED = 0;
+
     virtual void SetTolerance(dReal tolerance) = 0;
 
     /// notified when a new body has been initialized in the environment
     virtual bool InitKinBody(KinBodyPtr pbody) = 0;
 
-    /// enables or disables a kinematic body from being considered in collisions
-    /// \return true if operation succeeded
-    virtual bool Enable(KinBodyConstPtr pbody, bool bEnable) = 0;
+    /// \deprecated (10/12/03) use \see EnableLink
+    virtual bool Enable(KinBodyConstPtr pbody, bool bEnable) RAVE_DEPRECATED = 0;
     
     /// enables or disables a link from being considered in collisions
     /// \return true if operation succeeded
@@ -110,16 +112,29 @@ public:
     /// \name Collision specific functions.
     /// \anchor collision_checking
     //@{
+
+    /// \brief checks collision of a body and a scene. Attached bodies are respected. If CO_ActiveDOFs is set, will only check affected links of the body.
     virtual bool CheckCollision(KinBodyConstPtr pbody1, CollisionReportPtr report = CollisionReportPtr())=0;
+
+    /// \brief checks collision between two bodies. Attached bodies are respected. If CO_ActiveDOFs is set, will only check affected links of the pbody1 and pbody2.
     virtual bool CheckCollision(KinBodyConstPtr pbody1, KinBodyConstPtr pbody2, CollisionReportPtr report = CollisionReportPtr())=0;
+
+    /// \brief checks collision of a link and a scene. Attached bodies are ignored. CO_ActiveDOFs option is ignored.
     virtual bool CheckCollision(KinBody::LinkConstPtr plink, CollisionReportPtr report = CollisionReportPtr())=0;
+
+    /// \brief checks collision of two links. Attached bodies are ignored. CO_ActiveDOFs option is ignored.
     virtual bool CheckCollision(KinBody::LinkConstPtr plink1, KinBody::LinkConstPtr plink2, CollisionReportPtr report = CollisionReportPtr())=0;
+
+    /// \brief checks collision of a link and a body. Attached bodies for pbody are respected. If CO_ActiveDOFs is set, will only check affected links of pbody.
     virtual bool CheckCollision(KinBody::LinkConstPtr plink, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr())=0;
     
+    /// \brief checks collision of a link and a scene. Attached bodies are ignored. CO_ActiveDOFs option is ignored.
     virtual bool CheckCollision(KinBody::LinkConstPtr plink, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report = CollisionReportPtr())=0;
+
+    /// \brief checks collision of a body and a scene. Attached bodies are respected. If CO_ActiveDOFs is set, will only check affected links of pbody.
     virtual bool CheckCollision(KinBodyConstPtr pbody, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report = CollisionReportPtr())=0;
 
-    /// \brief Check collision with a link and a ray with a specified length.
+    /// \brief Check collision with a link and a ray with a specified length. CO_ActiveDOFs option is ignored.
     ///
     /// \param ray holds the origin and direction. The length of the ray is the length of the direction.
     /// \param plink the link to collide with
@@ -129,11 +144,11 @@ public:
     /// \brief Check collision with a link and a ray with a specified length.
     ///
     /// \param ray holds the origin and direction. The length of the ray is the length of the direction.
-    /// \param pbody the link to collide with
+    /// \param pbody the link to collide with. If CO_ActiveDOFs is set, will only check affected links of the body.
     /// \param[out] report [optional] collision report to be filled with data about the collision. If a body was hit, CollisionReport::plink1 contains the hit link pointer.
     virtual bool CheckCollision(const RAY& ray, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr()) = 0;
 
-    /// \brief Check collision with a body and a ray with a specified length.
+    /// \brief Check collision with a body and a ray with a specified length. CO_ActiveDOFs option is ignored.
     ///
     /// \param ray holds the origin and direction. The length of the ray is the length of the direction.
     /// \param pbody the kinbody to look for collisions
@@ -168,6 +183,18 @@ private:
 #endif
     friend class KinBody;
 };
+
+/// \brief Helper class to save and restore the collision options. If options are not supported and required is true, throws an exception.
+class RAVE_API CollisionOptionsStateSaver
+{
+ public:
+    CollisionOptionsStateSaver(CollisionCheckerBasePtr p, int newoptions, bool required=true);
+    virtual ~CollisionOptionsStateSaver();
+ protected:
+    int _oldoptions; ///< saved options
+    CollisionCheckerBasePtr _p;
+};
+
 
 } // end namespace OpenRAVE
 

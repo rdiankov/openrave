@@ -653,6 +653,7 @@ class BiSpacePlanner : public PlannerBase
         Node *pbestconfig=NULL;
 
         _StoreRobot();
+        CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
 
         _parameters.pgoalfn->SetRobot(_robot);
         _parameters.pdistmetric->SetRobot(_robot);

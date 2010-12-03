@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2010 Rosen Diankov (rdiankov@cs.cmu.edu)
+// Copyright (C) 2006-2010 Rosen Diankov (rosen.diankov@gmail.com)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -14,9 +14,6 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-/** \file   KinBody.cpp
-    \brief  Definition of OpenRAVE::KinBody
- */
 #include "libopenrave.h"
 
 #include <algorithm>
@@ -568,11 +565,14 @@ bool KinBody::Link::IsEnabled() const
 
 void KinBody::Link::Enable(bool bEnable)
 {
-    KinBodyPtr parent = GetParent();
-    if( !parent->GetEnv()->GetCollisionChecker()->EnableLink(LinkConstPtr(shared_from_this()),bEnable) ) {
-        throw openrave_exception(str(boost::format("failed to enable link %s:%s")%parent->GetName()%GetName()));
+    if( _bIsEnabled != bEnable ) {
+        KinBodyPtr parent = GetParent();
+        if( !parent->GetEnv()->GetCollisionChecker()->EnableLink(LinkConstPtr(shared_from_this()),bEnable) ) {
+            throw openrave_exception(str(boost::format("failed to enable link %s:%s")%parent->GetName()%GetName()));
+        }
+        parent->_nNonAdjacentLinkCache &= ~AO_Enabled;
+        _bIsEnabled = bEnable;
     }
-    _bIsEnabled = bEnable;
 }
 
 AABB KinBody::Link::ComputeAABB() const
@@ -1045,7 +1045,7 @@ KinBody::KinBody(InterfaceType type, EnvironmentBasePtr penv) : InterfaceBase(ty
     _bHierarchyComputed = false;
     _bMakeJoinedLinksAdjacent = true;
     _environmentid = 0;
-    
+    _nNonAdjacentLinkCache = 0;
     _nUpdateStampId = 0;
 }
 
@@ -1074,11 +1074,14 @@ void KinBody::Destroy()
     _vDependencyOrderedJoints.clear();
     _vDOFOrderedJoints.clear();
     _vecPassiveJoints.clear();
-    _vecJointIndices.clear();
     _vecJointHierarchy.clear();
+    _vecDOFIndices.clear();
 
     _setAdjacentLinks.clear();
-    _setNonAdjacentLinks.clear();
+    FOREACH(it,_setNonAdjacentLinks) {
+        it->clear();
+    }
+    _nNonAdjacentLinkCache = 0;
     _vForcedAdjacentLinks.clear();
     _bHierarchyComputed = false;
     _pGuiData.reset();
@@ -1215,14 +1218,11 @@ void KinBody::SetJointTorques(const std::vector<dReal>& torques, bool bAdd)
             (*itlink)->SetTorque(Vector(),false);
         }
     }
-
-    vector<int>::iterator itindex = _vecJointIndices.begin();
     std::vector<dReal> jointtorques;
     FOREACH(it, _vecjoints) {
         jointtorques.resize((*it)->GetDOF());
-        std::copy(torques.begin()+*itindex,torques.begin()+*itindex+(*it)->GetDOF(),jointtorques.begin());
+        std::copy(torques.begin()+(*it)->GetDOFIndex(),torques.begin()+(*it)->GetDOFIndex()+(*it)->GetDOF(),jointtorques.begin());
         (*it)->AddTorque(jointtorques);
-		++itindex;
     }
 }
 
@@ -1709,14 +1709,7 @@ void KinBody::GetBodyTransformations(vector<Transform>& vtrans) const
 
 KinBody::JointPtr KinBody::GetJointFromDOFIndex(int dofindex) const
 {
-    int jointindex = 0;
-    FOREACHC(it, _vecJointIndices) {
-        if( dofindex <= *it ) {
-            break;
-        }
-        ++jointindex;
-    }
-    return _vecjoints.at(jointindex);
+    return _vecjoints.at(_vecDOFIndices.at(dofindex));
 }
 
 AABB KinBody::ComputeAABB() const
@@ -1822,11 +1815,9 @@ void KinBody::SetJointValues(const std::vector<dReal>& vJointValues, bool bCheck
         dReal* ptempjoints = &_vTempJoints[0];
 
         // check the limits
-        vector<int>::const_iterator itindex = _vecJointIndices.begin();
-
         vector<dReal> upperlim, lowerlim;
         FOREACHC(it, _vecjoints) {
-            const dReal* p = pJointValues+*itindex++;
+            const dReal* p = pJointValues+(*it)->GetDOFIndex();
             BOOST_ASSERT( (*it)->GetDOF() <= 3 );
             (*it)->GetLimits(lowerlim, upperlim);
             if( (*it)->GetType() == Joint::JointSpherical ) {
@@ -1901,23 +1892,21 @@ void KinBody::SetJointValues(const std::vector<dReal>& vJointValues, bool bCheck
         // for active joints, read the angle from pJointValues, for passive joints
         // check if they have corresponding mimic joints, if they do, take those angles
         // otherwise set to 0
-        vector<int>::const_iterator itindex = _vecJointIndices.begin();
         for(size_t j = 0; j < 2; ++j) {
             
             FOREACH(itjoint, *alljoints[j]) {
                 const dReal* pvalues=NULL;
-                
-                if( itindex != _vecJointIndices.end() )
-                    pvalues = pJointValues+*itindex++;
+                if( (*itjoint)->GetDOFIndex() >= 0 ) {
+                    pvalues = pJointValues+(*itjoint)->GetDOFIndex();
+                }
 
                 if( (*itjoint)->GetMimicJointIndex() >= 0 ) {
                     int mimicindex = (*itjoint)->GetMimicJointIndex();
-                    int jointsize = mimicindex < (int)_vecJointIndices.size()-1 ? _vecJointIndices[mimicindex+1] : GetDOF();
-                    pvalues = pJointValues+_vecJointIndices[mimicindex];
-                    jointsize -= _vecJointIndices[mimicindex];
-                    
-                    for(int i = 0; i < jointsize; ++i)
+                    BOOST_ASSERT(_vecjoints.at(mimicindex)->GetDOFIndex()>=0);
+                    pvalues = pJointValues+_vecjoints.at(mimicindex)->GetDOFIndex();                    
+                    for(int i = 0; i < (*itjoint)->GetDOF(); ++i) {
                         dummyvalues[i] = pvalues[i] * (*itjoint)->GetMimicCoeffs()[0] + (*itjoint)->GetMimicCoeffs()[1];
+                    }
                     pvalues = dummyvalues;
                 }
                 
@@ -2130,21 +2119,22 @@ void KinBody::GetRigidlyAttachedLinks(int linkindex, std::vector<KinBody::LinkPt
     }
 }
 
-bool KinBody::GetChain(int linkbaseindex, int linkendindex, std::vector<JointPtr>& vjoints) const
+bool KinBody::GetChain(int linkindex1, int linkindex2, std::vector<JointPtr>& vjoints) const
 {
+    CHECK_INTERNAL_COMPUTATION;
     vjoints.resize(0);
     int numjoints = (int)_vecjoints.size();
     vector<int> vjointparents(numjoints+_vecPassiveJoints.size(),numjoints);
     list<pair<LinkConstPtr, int > > listlinks;
     vector<LinkPtr> vattachedlinks;
-    GetRigidlyAttachedLinks(linkbaseindex,vattachedlinks);
+    GetRigidlyAttachedLinks(linkindex1,vattachedlinks);
     FOREACHC(itlink,vattachedlinks) {
         listlinks.push_back(make_pair(LinkConstPtr(*itlink),-1));
     }
     while(listlinks.size()>0) {
         LinkConstPtr plink = listlinks.front().first;
         int parentjoint = listlinks.front().second;
-        if( plink->GetIndex() == linkendindex ) {
+        if( plink->GetIndex() == linkindex2 ) {
             vjoints.resize(0);
             list<int> listpath;
             while(parentjoint >= 0) {
@@ -2205,7 +2195,13 @@ bool KinBody::GetChain(int linkbaseindex, int linkendindex, std::vector<JointPtr
     return false;
 }
 
-//! return a pointer to the joint with the given name, else -1
+bool KinBody::IsDOFInChain(int linkindex1, int linkindex2, int dofindex) const
+{
+    CHECK_INTERNAL_COMPUTATION;
+    int jointindex = _vecDOFIndices.at(dofindex);
+    return (DoesAffect(jointindex,linkindex1)==0) != (DoesAffect(jointindex,linkindex2)==0);
+}
+
 int KinBody::GetJointIndex(const std::string& jointname) const
 {
     int index = 0;
@@ -2465,10 +2461,8 @@ bool KinBody::CheckSelfCollision(CollisionReportPtr report) const
 
 void KinBody::_ComputeInternalInformation()
 {
-    BOOST_ASSERT(_vecJointIndices.size()==_vecjoints.size());
     _bHierarchyComputed = true;
     _vecJointHierarchy.resize(_vecjoints.size()*_veclinks.size());
-    _vecJointIndices.resize(0);
 
     int jindex=0;
     FOREACH(itjoint,_vecjoints) {
@@ -2482,12 +2476,16 @@ void KinBody::_ComputeInternalInformation()
 
     if( _vecJointHierarchy.size() > 0 ) {
         vector<size_t> vorder(_vecjoints.size());
-        _vecJointIndices.resize(_vecjoints.size());
+        vector<int> vecJointIndices(_vecjoints.size());
+        _vecDOFIndices.resize(GetDOF());
         for(size_t i = 0; i < _vecjoints.size(); ++i) {
-            _vecJointIndices[i] = _vecjoints[i]->dofindex;
+            vecJointIndices[i] = _vecjoints[i]->dofindex;
+            for(int idof = 0; idof < _vecjoints[i]->GetDOF(); ++idof) {
+                _vecDOFIndices.at(vecJointIndices[i]+idof) = i;
+            }
             vorder[i] = i;
         }
-        sort(vorder.begin(), vorder.end(), index_cmp<vector<int>&>(_vecJointIndices));
+        sort(vorder.begin(), vorder.end(), index_cmp<vector<int>&>(vecJointIndices));
         _vDOFOrderedJoints.resize(0);
         FOREACH(it,vorder) {
             _vDOFOrderedJoints.push_back(_vecjoints.at(*it));
@@ -2643,7 +2641,10 @@ void KinBody::_ComputeInternalInformation()
     vector<dReal> vzero(GetDOF());
     SetJointValues(vzero);
     _setAdjacentLinks.clear();
-    _setNonAdjacentLinks.clear();  
+    FOREACH(it,_setNonAdjacentLinks) {
+        it->clear();
+    }
+    _nNonAdjacentLinkCache = 0;
 
     if( _bMakeJoinedLinksAdjacent ) {
         FOREACH(itj, _vecjoints) {
@@ -2694,7 +2695,7 @@ void KinBody::_ComputeInternalInformation()
         for(size_t i = 0; i < _veclinks.size(); ++i) {
             for(size_t j = i+1; j < _veclinks.size(); ++j) {
                 if( _setAdjacentLinks.find(i|(j<<16)) == _setAdjacentLinks.end() && !GetEnv()->CheckCollision(LinkConstPtr(_veclinks[i]), LinkConstPtr(_veclinks[j])) ) {
-                    _setNonAdjacentLinks.insert(i|(j<<16));
+                    _setNonAdjacentLinks[0].insert(i|(j<<16));
                 }
             }
         }
@@ -2775,9 +2776,15 @@ bool KinBody::_RemoveAttachedBody(KinBodyPtr pbody)
 
 void KinBody::Enable(bool bEnable)
 {
-    GetEnv()->GetCollisionChecker()->Enable(shared_kinbody(),bEnable);
+    CollisionCheckerBasePtr p = GetEnv()->GetCollisionChecker();
     FOREACH(it, _veclinks) {
-        (*it)->_bIsEnabled = bEnable;
+        if( (*it)->_bIsEnabled != bEnable ) {
+            if( !p->EnableLink(LinkConstPtr(*it),bEnable) ) {
+                throw openrave_exception(str(boost::format("failed to enable link %s:%s")%GetName()%(*it)->GetName()));
+            }
+            (*it)->_bIsEnabled = bEnable;
+            _nNonAdjacentLinkCache &= ~AO_Enabled;
+        }
     }
 }
 
@@ -2801,13 +2808,31 @@ char KinBody::DoesAffect(int jointindex, int linkindex ) const
 {
     CHECK_INTERNAL_COMPUTATION;
     BOOST_ASSERT(jointindex >= 0 && jointindex < (int)_vecjoints.size());
+    BOOST_ASSERT(linkindex >= 0 && linkindex < (int)_veclinks.size());
     return _vecJointHierarchy.at(jointindex*_veclinks.size()+linkindex);
 }
 
-const std::set<int>& KinBody::GetNonAdjacentLinks() const
+const std::set<int>& KinBody::GetNonAdjacentLinks(int adjacentoptions) const
 {
     CHECK_INTERNAL_COMPUTATION;
-    return _setNonAdjacentLinks;
+    int requestedoptions = _nNonAdjacentLinkCache&adjacentoptions;
+    if( requestedoptions != adjacentoptions ) {
+        // find out what needs to computed
+        if( requestedoptions & AO_Enabled ) {
+            _setNonAdjacentLinks.at(AO_Enabled).clear();
+            FOREACHC(itset, _setNonAdjacentLinks[0]) {
+                KinBody::LinkConstPtr plink1(_veclinks.at(*itset&0xffff)), plink2(_veclinks.at(*itset>>16));
+                if( plink1->IsEnabled() && plink2->IsEnabled() ) {
+                    _setNonAdjacentLinks[AO_Enabled].insert(*itset);
+                }
+            }
+            _nNonAdjacentLinkCache |= AO_Enabled;
+        }
+        else {
+            throw openrave_exception(str(boost::format("KinBody::GetNonAdjacentLinks does not support adjacentoptions %d")%adjacentoptions),ORE_InvalidArguments);
+        }
+    }
+    return _setNonAdjacentLinks.at(adjacentoptions);
 }
 
 const std::set<int>& KinBody::GetAdjacentLinks() const
@@ -2866,11 +2891,12 @@ bool KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
         _vDependencyOrderedJoints.push_back(_vecjoints.at((*itjoint)->GetJointIndex()));
     }
     _vDOFOrderedJoints = r->_vDOFOrderedJoints;
-    _vecJointIndices = r->_vecJointIndices;
     _vecJointHierarchy = r->_vecJointHierarchy;
+    _vecDOFIndices = r->_vecDOFIndices;
     
     _setAdjacentLinks = r->_setAdjacentLinks;
     _setNonAdjacentLinks = r->_setNonAdjacentLinks;
+    _nNonAdjacentLinkCache = r->_nNonAdjacentLinkCache;
     _vForcedAdjacentLinks = r->_vForcedAdjacentLinks;
 
     _listAttachedBodies.clear(); // will be set in the environment

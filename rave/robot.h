@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2010 Rosen Diankov (rdiankov@cs.cmu.edu)
+// Copyright (C) 2006-2010 Rosen Diankov (rosen.diankov@gmail.com)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -421,6 +421,8 @@ public:
     virtual void CalculateActiveAngularVelocityJacobian(int index, boost::multi_array<dReal,2>& vjacobian) const;
     virtual void CalculateActiveAngularVelocityJacobian(int index, std::vector<dReal>& pfJacobian) const;
 
+    virtual const std::set<int>& GetNonAdjacentLinks(int adjacentoptions=0) const;
+
     //@}
     
     /** A grabbed body becomes part of the robot and its relative pose with respect to a robot's
@@ -543,7 +545,7 @@ protected:
 
     std::vector<AttachedSensorPtr> _vecSensors;
 
-    std::vector<int> _vActiveJointIndices, _vAllDOFIndices;
+    std::vector<int> _vActiveDOFIndices, _vAllDOFIndices;
     Vector vActvAffineRotationAxis;
     int _nActiveDOF;            ///< Active degrees of freedom; if -1, use robot dofs
     int _nAffineDOFs;           ///< dofs describe what affine transformations are allowed

@@ -113,7 +113,7 @@ int main(int argc, char ** argv)
                     probot->SetActiveDOFValues(tp.q);
                     vpoints.push_back(pmanip->GetEndEffectorTransform().trans);
                 }
-                pgraph = penv->drawlinestrip(&vpoints[0].x,vpoints.size(),sizeof(vpoints[0]),0.01f);
+                pgraph = penv->drawlinestrip(&vpoints[0].x,vpoints.size(),sizeof(vpoints[0]),1.0f);
             }
         }
 

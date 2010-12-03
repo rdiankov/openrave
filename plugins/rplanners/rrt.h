@@ -228,6 +228,7 @@ class BirrtPlanner : public RrtPlanner<SimpleNode>
         bool bConnected = false;
  
         RobotBase::RobotStateSaver savestate(_robot);
+        CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
 
         SpatialTreeBase* TreeA = &_treeForward;
         SpatialTreeBase* TreeB = &_treeBackward;
@@ -426,6 +427,7 @@ class BasicRrtPlanner : public RrtPlanner<SimpleNode>
 
         // the main planning loop 
         RobotBase::RobotStateSaver savestate(_robot);
+        CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
 
         int iter = 0;
         int igoalindex = -1;
@@ -549,6 +551,8 @@ public:
         vector<dReal> vSampleConfig;
 
         RobotBase::RobotStateSaver saver(_robot);    
+        CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
+
         int iter = 0;
         while(iter < _parameters->_nMaxIterations && (int)_treeForward._nodes.size() < _parameters->_nExpectedDataSize ) {
             ++iter;

@@ -14,8 +14,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "plugindefs.h"
 
-#include "basemanipulation.h"
 #include "taskmanipulation.h"
+#include "basemanipulation.h"
 #include "taskcaging.h"
 #include "visualfeedback.h"
 

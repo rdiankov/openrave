@@ -25,19 +25,60 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
     COLLISIONCALLBACK(boost::shared_ptr<ODECollisionChecker> pchecker, CollisionReportPtr report, KinBodyConstPtr pbody, KinBody::LinkConstPtr plink) : _pchecker(pchecker), _report(report), _pbody(pbody), _plink(plink), _bCollision(false), _bOneCollision(false), fraymaxdist(0), pvbodyexcluded(NULL), pvlinkexcluded(NULL)
         {
             _bHasCallbacks = pchecker->GetEnv()->HasRegisteredCollisionCallbacks();
-            if( _bHasCallbacks && !_report )
+            if( _bHasCallbacks && !_report ) {
                 _report.reset(new CollisionReport());
-            if( !!_report )
+            }
+            if( !!_report ) {
                 _report->Reset(pchecker->GetCollisionOptions());
+            }
+            bActiveDOFs = !!(pchecker->GetCollisionOptions() & OpenRAVE::CO_ActiveDOFs);
+            if( !!pbody ) {
+                SetActiveDOFs(pbody);
+            }
         }
 
-        
         const std::list<EnvironmentBase::CollisionCallbackFn>& GetCallbacks() {
-            if( _bHasCallbacks && _listcallbacks.size() == 0 )
+            if( _bHasCallbacks && _listcallbacks.size() == 0 ) {
                 _pchecker->GetEnv()->GetRegisteredCollisionCallbacks(_listcallbacks);
+            }
             return _listcallbacks;
         }
 
+        void SetActiveDOFs(KinBodyConstPtr pbody)
+        {
+            if( bActiveDOFs ) {
+                if( !!OpenRAVE::RaveInterfaceConstCast<RobotBase>(pbody) ) {
+                    _mapactivelinks[pbody].resize(0);
+                }
+            }
+        }
+
+        bool IsActiveLink(KinBodyConstPtr pbody, int linkindex)
+        {
+            if( !bActiveDOFs ) {
+                return true;
+            }
+            std::map<KinBodyConstPtr, vector<uint8_t> >::iterator it = _mapactivelinks.find(pbody);
+            if( it == _mapactivelinks.end() ) {
+                return true;
+            }
+
+            if( it->second.size() == 0 ) {
+                RobotBaseConstPtr probot = OpenRAVE::RaveInterfaceConstCast<RobotBase>(pbody);
+                // only check links that can potentially move with respect to each other
+                it->second.resize(probot->GetLinks().size(),0);
+                for(size_t i = 0; i < probot->GetLinks().size(); ++i) {
+                    FOREACHC(itindex, probot->GetActiveDOFIndices()) {
+                        if( probot->DoesAffect(probot->GetJointFromDOFIndex(*itindex)->GetJointIndex(),i) ) {
+                            it->second[i] = 1;
+                            break;
+                        }
+                    }
+                }
+            }
+            return it == _mapactivelinks.end() || it->second.at(linkindex)>0;
+        }
+        
         boost::shared_ptr<ODECollisionChecker> _pchecker;
         CollisionReportPtr _report;
         KinBodyConstPtr _pbody;
@@ -48,6 +89,8 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
         const std::vector<KinBodyConstPtr>* pvbodyexcluded;
         const std::vector<KinBody::LinkConstPtr>* pvlinkexcluded;
     private:
+        std::map<KinBodyConstPtr, vector<uint8_t> > _mapactivelinks; /// non-zero values for the active links of the robot
+        bool bActiveDOFs;
         bool _bHasCallbacks;
         std::list<EnvironmentBase::CollisionCallbackFn> _listcallbacks;
     };
@@ -110,7 +153,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
     {
         _options = collisionoptions;
         if( _options & OpenRAVE::CO_Distance ) {
-            //RAVELOG("ode checker doesn't support CO_Distance\n");
+            RAVELOG_WARN("ode doesn't support CO_Distance\n");
             return false;
         }
     
@@ -148,18 +191,19 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
     virtual bool CheckCollision(KinBodyConstPtr pbody1, KinBodyConstPtr pbody2, CollisionReportPtr report)
     {
         COLLISIONCALLBACK cb(shared_checker(),report,KinBodyPtr(),KinBody::LinkConstPtr());
-
         if( pbody1->GetLinks().size() == 0 || !pbody1->IsEnabled()  ) {
             return false;
         }
         if( pbody2->GetLinks().size() == 0 || !pbody2->IsEnabled()  ) {
             return false;
         }
-
-        if( pbody1->IsAttached(pbody2) )
+        if( pbody1->IsAttached(pbody2) ) {
             return false;
+        }
 
         odespace->Synchronize();
+        cb.SetActiveDOFs(pbody1);
+        cb.SetActiveDOFs(pbody2);
 
         // have to go through all attached bodies manually (not sure if there's a fast way to set temporary groups in ode)
         std::set<KinBodyPtr> s1, s2;
@@ -168,8 +212,9 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
         FOREACH(it1,s1) {
             FOREACH(it2,s2) {
                 dSpaceCollide2((dGeomID)odespace->GetBodySpace(*it1),(dGeomID)odespace->GetBodySpace(*it2),&cb,KinBodyKinBodyCollisionCallback);
-                if( cb._bCollision )
+                if( cb._bCollision ) {
                     return true;
+                }
             }
         }
 
@@ -211,11 +256,9 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
         dGeomID geom1 = odespace->GetLinkGeom(plink1);
         while(geom1 != NULL) {
             BOOST_ASSERT(dGeomIsEnabled(geom1));
-
             dGeomID geom2 = odespace->GetLinkGeom(plink2);
 
             while(geom2 != NULL) {
-
                 BOOST_ASSERT(dGeomIsEnabled(geom2));
 
                 int N = dCollide (geom1, geom2,16,&contact[0].geom,sizeof(dContact));
@@ -276,23 +319,27 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
         if( pbody->GetLinks().size() == 0 || !pbody->IsEnabled()  ) {
             return false;
         }
-
         if( !plink->IsEnabled() ) {
             RAVELOG_VERBOSE("calling collision on disabled link %s\n", plink->GetName().c_str());
             return false;
         }
-
-        if( pbody->IsAttached(plink->GetParent()) )
+        if( pbody->IsAttached(plink->GetParent()) ) {
             return false;
+        }
 
         odespace->Synchronize();
+        COLLISIONCALLBACK cb(shared_checker(),report,KinBodyPtr(),KinBody::LinkConstPtr());
+        cb.SetActiveDOFs(pbody);
 
         std::set<KinBodyPtr> setattached;
         pbody->GetAttached(setattached);
         FOREACH(itbody,setattached) {
             FOREACHC(itlink, (*itbody)->GetLinks()) {
-                if( CheckCollision(plink, KinBody::LinkConstPtr(*itlink), report) )
-                    return true;
+                if( cb.IsActiveLink(*itbody,(*itlink)->GetIndex()) ) {
+                    if( CheckCollision(plink, KinBody::LinkConstPtr(*itlink), report) ) {
+                        return true;
+                    }
+                }
             }
         }
 
@@ -304,13 +351,10 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
     
     virtual bool CheckCollision(KinBody::LinkConstPtr plink, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report)
     {
-        if( vlinkexcluded.size() == 0 && vbodyexcluded.size() == 0 )
+        if( vlinkexcluded.size() == 0 && vbodyexcluded.size() == 0 ) {
             return CheckCollision(plink,report);
-
-        RAVELOG_ERRORA("This type of collision checking is not yet implemented in the ODE collision checker.\n");
-        BOOST_ASSERT(0);
-        odespace->Synchronize();
-        return false;
+        }
+        throw openrave_exception("This type of collision checking is not yet implemented in the ODE collision checker.\n",OpenRAVE::ORE_NotImplemented);
     }
 
     virtual bool CheckCollision(KinBodyConstPtr pbody, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report)
@@ -320,11 +364,12 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
             return false;
         }
 
-        if( vbodyexcluded.size() > 0 )
+        if( vbodyexcluded.size() > 0 ) {
             cb.pvbodyexcluded = &vbodyexcluded;
-        if( vlinkexcluded.size() > 0 )
+        }
+        if( vlinkexcluded.size() > 0 ) {
             cb.pvlinkexcluded = &vlinkexcluded;
-
+        }
         odespace->Synchronize();
         dSpaceCollide(odespace->GetSpace(), &cb, KinBodyCollisionCallback);
         return cb._bCollision;
@@ -332,9 +377,9 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
     
     virtual bool CheckCollision(const RAY& ray, KinBody::LinkConstPtr plink, CollisionReportPtr report)
     {
-        if( !!report )
+        if( !!report ) {
             report->Reset(_options);
-    
+        }
         if( !plink->IsEnabled() ) {
             RAVELOG_VERBOSE("calling collision on disabled link %s\n", plink->GetName().c_str());
             return false;
@@ -342,8 +387,9 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
 
         odespace->Synchronize();
         OpenRAVE::dReal fmaxdist = OpenRAVE::RaveSqrt(ray.dir.lengthsqr3());
-        if( RaveFabs(fmaxdist-1) < 1e-4 )
+        if( RaveFabs(fmaxdist-1) < 1e-4 ) {
             RAVELOG_DEBUGA("CheckCollision: ray direction length is 1.0, note that only collisions within a distance of 1.0 will be checked\n");
+        }
         
         Vector vnormdir = ray.dir*(1/fmaxdist);
         dGeomRaySet(geomray, ray.pos.x, ray.pos.y, ray.pos.z, vnormdir.x, vnormdir.y, vnormdir.z);
@@ -441,57 +487,58 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
         }
 
         odespace->Synchronize();
+        cb.SetActiveDOFs(pbody);
         cb.fraymaxdist = OpenRAVE::RaveSqrt(ray.dir.lengthsqr3());
-        if( RaveFabs(cb.fraymaxdist-1) < 1e-4 )
+        if( RaveFabs(cb.fraymaxdist-1) < 1e-4 ) {
             RAVELOG_DEBUGA("CheckCollision: ray direction length is 1.0, note that only collisions within a distance of 1.0 will be checked\n");
+        }
         Vector vnormdir = ray.dir*(1/cb.fraymaxdist);
         dGeomRaySet(geomray, ray.pos.x, ray.pos.y, ray.pos.z, vnormdir.x, vnormdir.y, vnormdir.z);
         dGeomRaySetClosestHit(geomray, !(_options&OpenRAVE::CO_RayAnyHit)); // only care about the closest points
-
         //dSpaceAdd(pbody->GetSpace(), geomray);
         dSpaceCollide2((dGeomID)odespace->GetBodySpace(pbody), geomray, &cb, RayCollisionCallback);
         //dSpaceRemove(pbody->GetSpace(), geomray);
-
         return cb._bOneCollision;
     }
 
     virtual bool CheckCollision(const RAY& ray, CollisionReportPtr report)
     {
         COLLISIONCALLBACK cb(shared_checker(),report,KinBodyPtr(),KinBody::LinkConstPtr());
-
         cb.fraymaxdist = OpenRAVE::RaveSqrt(ray.dir.lengthsqr3());
         Vector vnormdir = ray.dir*(1/cb.fraymaxdist);
-        if( RaveFabs(cb.fraymaxdist-1) < 1e-4 )
+        if( RaveFabs(cb.fraymaxdist-1) < 1e-4 ) {
             RAVELOG_DEBUGA("CheckCollision: ray direction length is 1.0, note that only collisions within a distance of 1.0 will be checked\n");
+        }
         dGeomRaySet(geomray, ray.pos.x, ray.pos.y, ray.pos.z, vnormdir.x, vnormdir.y, vnormdir.z);
 
         dGeomRaySetClosestHit(geomray, !(_options&OpenRAVE::CO_RayAnyHit)); // only care about the closest points
         dGeomRaySetParams(geomray,0,0);
 
         odespace->Synchronize();
-
         //dSpaceAdd(odespace->GetSpace(), geomray);
         dSpaceCollide2((dGeomID)odespace->GetSpace(), geomray, &cb, RayCollisionCallback);
         //dSpaceRemove(odespace->GetSpace(), geomray);
-
         return cb._bOneCollision;
     }
 
     virtual bool CheckSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report)
     {
-        if( pbody->GetLinks().size() <= 1 )
+        if( pbody->GetLinks().size() <= 1 ) {
             return false;
+        }
 
-        // check collision, ignore adjacent bodies
-        FOREACHC(itset, pbody->GetNonAdjacentLinks()) {
-            BOOST_ASSERT( (*itset&0xffff) < (int)pbody->GetLinks().size() && (*itset>>16) < (int)pbody->GetLinks().size() );
-            KinBody::LinkConstPtr plink1(pbody->GetLinks()[*itset&0xffff]), plink2(pbody->GetLinks()[*itset>>16]);
-            if( plink1->IsEnabled() && plink2->IsEnabled() && CheckCollision(plink1,plink2, report) ) {
-                RAVELOG_VERBOSEA(str(boost::format("selfcol %s, Links %s %s are colliding\n")%pbody->GetName()%pbody->GetLinks()[*itset&0xffff]->GetName()%pbody->GetLinks()[*itset>>16]->GetName()));
+        int adjacentoptions = KinBody::AO_Enabled;
+        if( (_options&OpenRAVE::CO_ActiveDOFs) && pbody->IsRobot() ) {
+            adjacentoptions |= KinBody::AO_ActiveDOFs;
+        }
+
+        FOREACHC(itset, pbody->GetNonAdjacentLinks(adjacentoptions)) {
+            KinBody::LinkConstPtr plink1(pbody->GetLinks().at(*itset&0xffff)), plink2(pbody->GetLinks().at(*itset>>16));
+            if( CheckCollision(plink1,plink2, report) ) {
+                RAVELOG_VERBOSE(str(boost::format("selfcol %s, Links %s %s are colliding\n")%pbody->GetName()%plink1->GetName()%plink2->GetName()));
                 return true;
             }
         }
-
         return false;
     }
 
@@ -504,35 +551,37 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
         pcb->_pchecker->_KinBodyCollisionCallback(o1,o2,pcb);
     }
 
-
     void _KinBodyCollisionCallback (dGeomID o1, dGeomID o2, COLLISIONCALLBACK* pcb)
     {
-        if( pcb->_bCollision )
+        if( pcb->_bCollision ) {
             return; // don't test anymore
-        
+        }
         // ASSUMPTION: every space is attached to a KinBody!
-        if( !dGeomIsEnabled(o1) || !dGeomIsEnabled(o2) )
+        if( !dGeomIsEnabled(o1) || !dGeomIsEnabled(o2) ) {
             return;
+        }
 
         KinBodyPtr* o1data = (KinBodyPtr*)dGeomGetData(o1);
         KinBodyPtr* o2data = (KinBodyPtr*)dGeomGetData(o2);
         KinBodyConstPtr pbody1,pbody2;
 
-        if( dGeomIsSpace(o1) && o1data != NULL )
+        if( dGeomIsSpace(o1) && o1data != NULL ) {
             pbody1 = KinBodyConstPtr(*o1data);
-        if( dGeomIsSpace(o2) && o2data != NULL )
+        }
+        if( dGeomIsSpace(o2) && o2data != NULL ) {
             pbody2 = KinBodyConstPtr(*o2data);
-
+        }
         if( !!pcb->pvbodyexcluded ) {
             if( (!!pbody1 && std::find(pcb->pvbodyexcluded->begin(),pcb->pvbodyexcluded->end(),pbody1) != pcb->pvbodyexcluded->end()) || 
-                (!!pbody2 && std::find(pcb->pvbodyexcluded->begin(),pcb->pvbodyexcluded->end(),pbody2) != pcb->pvbodyexcluded->end()) )
+                (!!pbody2 && std::find(pcb->pvbodyexcluded->begin(),pcb->pvbodyexcluded->end(),pbody2) != pcb->pvbodyexcluded->end()) ) {
                 return;
+            }
         }
 
         // only recurse two spaces if exactly one of them is attached to _pbody
-        if( !!pbody1 && !!pbody2 && pcb->_pbody->IsAttached(pbody1) == pcb->_pbody->IsAttached(pbody2) )
+        if( !!pbody1 && !!pbody2 && pcb->_pbody->IsAttached(pbody1) == pcb->_pbody->IsAttached(pbody2) ) {
             return;
-
+        }
         if (dGeomIsSpace(o1) || dGeomIsSpace(o2)) {
             dSpaceCollide2(o1,o2,pcb,KinBodyCollisionCallback);
             return;
@@ -546,35 +595,43 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
         KinBody::LinkPtr pkb1,pkb2;
         if(!!b1 && dBodyGetData(b1)) {
             pkb1 = *(KinBody::LinkPtr*)dBodyGetData(b1);
-            if( !!pkb1 && !pkb1->IsEnabled() )
-                return;
+            if( !!pkb1 ) {
+                if( !pkb1->IsEnabled() || !pcb->IsActiveLink(pbody1,pkb1->GetIndex()) ) {
+                    return;
+                }
+            }
         }
         if(!!b2 && dBodyGetData(b1)) {
             pkb2 = *(KinBody::LinkPtr*)dBodyGetData(b2);
-            if( !!pkb2 && !pkb2->IsEnabled() )
-                return;
+            if( !!pkb2 ) {
+                if( !pkb2->IsEnabled() || !pcb->IsActiveLink(pbody2,pkb2->GetIndex()) ) {
+                    return;
+                }
+            }
         }
 
         // redundant but necessary for some versions of ODE
         if( !!pkb1 && !!pkb2 ) {
-            if( pkb1->GetParent()->IsAttached(KinBodyConstPtr(pkb2->GetParent())) )
+            if( pkb1->GetParent()->IsAttached(KinBodyConstPtr(pkb2->GetParent())) ) {
                 return;
+            }
             if( !!pcb->pvbodyexcluded ) {
                 if( std::find(pcb->pvbodyexcluded->begin(),pcb->pvbodyexcluded->end(),KinBodyConstPtr(pkb1->GetParent())) != pcb->pvbodyexcluded->end() || 
-                    std::find(pcb->pvbodyexcluded->begin(),pcb->pvbodyexcluded->end(),KinBodyConstPtr(pkb2->GetParent())) != pcb->pvbodyexcluded->end() )
+                    std::find(pcb->pvbodyexcluded->begin(),pcb->pvbodyexcluded->end(),KinBodyConstPtr(pkb2->GetParent())) != pcb->pvbodyexcluded->end() ) {
                     return;
+                }
             }
             if( !!pcb->pvlinkexcluded ) {
                 if( std::find(pcb->pvlinkexcluded->begin(),pcb->pvlinkexcluded->end(),KinBody::LinkConstPtr(pkb1)) != pcb->pvlinkexcluded->end() || 
-                    std::find(pcb->pvlinkexcluded->begin(),pcb->pvlinkexcluded->end(),KinBody::LinkConstPtr(pkb2)) != pcb->pvlinkexcluded->end() )
+                    std::find(pcb->pvlinkexcluded->begin(),pcb->pvlinkexcluded->end(),KinBody::LinkConstPtr(pkb2)) != pcb->pvlinkexcluded->end() ) {
                     return;
+                }
             }
         }
 
         dContact contact[16];
         int N = dCollide (o1,o2,16,&contact[0].geom,sizeof(dContact));
         if ( N ) {
-
             if( N > 0 && !!pcb->_report ) {
                 pcb->_report->numCols = N;
                 pcb->_report->minDistance = contact[0].geom.depth;
@@ -591,8 +648,9 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
                             vnorm = -vnorm;
                             distance = -distance;
                         }
-                        if( !!pcb->_report->plink2 && pcb->_report->plink2->ValidateContactNormal(contact[i].geom.pos,vnorm) )
+                        if( !!pcb->_report->plink2 && pcb->_report->plink2->ValidateContactNormal(contact[i].geom.pos,vnorm) ) {
                             distance = -distance;
+                        }
                         pcb->_report->contacts.push_back(CollisionReport::CONTACT(contact[i].geom.pos, vnorm, distance));
                     }
                 }
@@ -618,12 +676,12 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
 
     void _KinBodyKinBodyCollisionCallback (dGeomID o1, dGeomID o2, COLLISIONCALLBACK* pcb)
     {
-        if( pcb->_bCollision )
+        if( pcb->_bCollision ) {
             return; // don't test anymore
-
-        if( !dGeomIsEnabled(o1) || !dGeomIsEnabled(o2) )
+        }
+        if( !dGeomIsEnabled(o1) || !dGeomIsEnabled(o2) ) {
             return;
-
+        }
         if (dGeomIsSpace(o1) || dGeomIsSpace(o2)) {    
             dSpaceCollide2(o1,o2,pcb,KinBodyKinBodyCollisionCallback);
             return;
@@ -635,17 +693,25 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
         b2 = dGeomGetBody(o2);
 
         KinBody::LinkPtr pkb1,pkb2;
-        if(!!b1 && dBodyGetData(b1))
+        if(!!b1 && dBodyGetData(b1)) {
             pkb1 = *(KinBody::LinkPtr*)dBodyGetData(b1);
-        if(!!b2 && dBodyGetData(b1))
+        }
+        if(!!b2 && dBodyGetData(b1)) {
             pkb2 = *(KinBody::LinkPtr*)dBodyGetData(b2);
-
-        if( !!pkb1 && !pkb1->IsEnabled() )
+        }
+        if( !!pkb1 ) {
+            if( !pkb1->IsEnabled() || !pcb->IsActiveLink(pkb1->GetParent(),pkb1->GetIndex()) ) {
+                return;
+            }
+        }
+        if( !!pkb2 ) {
+            if( !pkb2->IsEnabled() || !pcb->IsActiveLink(pkb2->GetParent(),pkb2->GetIndex()) ) {
+                return;
+            }
+        }
+        if( !!pkb1 && !!pkb2 && pkb1->GetParent()->IsAttached(KinBodyConstPtr(pkb2->GetParent())) ) {
             return;
-        if( !!pkb2 && !pkb2->IsEnabled() )
-            return;
-        if( !!pkb1 && !!pkb2 && pkb1->GetParent()->IsAttached(KinBodyConstPtr(pkb2->GetParent())) )
-            return;
+        }
 
         // only care if one of the bodies is the link
         dContact contact[16];
@@ -693,31 +759,33 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
 
     void _LinkCollisionCallback (dGeomID o1, dGeomID o2, COLLISIONCALLBACK* pcb)
     {
-        if( pcb->_bCollision )
+        if( pcb->_bCollision ) {
             return; // don't test anymore
-
+        }
         KinBodyPtr pbody = pcb->_plink->GetParent();
     
         KinBodyPtr* o1data = (KinBodyPtr*)dGeomGetData(o1);
         KinBodyPtr* o2data = (KinBodyPtr*)dGeomGetData(o2);
 
         // ASSUMPTION: every space is attached to a KinBody!
-        if( !dGeomIsEnabled(o1) || !dGeomIsEnabled(o2) )
+        if( !dGeomIsEnabled(o1) || !dGeomIsEnabled(o2) ) {
             return;
-
+        }
         // only recurse two spaces if one of them is pbody
-        if( dGeomIsSpace(o1) && dGeomIsSpace(o2) && !(o1data != NULL && *o1data == pbody) && !(o2data != NULL && *o2data == pbody) )
+        if( dGeomIsSpace(o1) && dGeomIsSpace(o2) && !(o1data != NULL && *o1data == pbody) && !(o2data != NULL && *o2data == pbody) ) {
             return;
-
+        }
         if( dGeomIsSpace(o1) ) {
             BOOST_ASSERT(!!o1data);
-            if( pbody != *o1data && pbody->IsAttached(KinBodyConstPtr(*o1data)) )
+            if( pbody != *o1data && pbody->IsAttached(KinBodyConstPtr(*o1data)) ) {
                 return;
+            }
         }
         if( dGeomIsSpace(o2) ) {
             BOOST_ASSERT(!!o2data);
-            if( pbody != *o2data && pbody->IsAttached(KinBodyConstPtr(*o2data)) )
+            if( pbody != *o2data && pbody->IsAttached(KinBodyConstPtr(*o2data)) ) {
                 return;
+            }
         }
 
         if (dGeomIsSpace(o1) || dGeomIsSpace(o2)) {    
@@ -733,25 +801,26 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
         KinBody::LinkPtr pkb1,pkb2;
         if(!!b1 && dBodyGetData(b1)) {
             pkb1 = *(KinBody::LinkPtr*)dBodyGetData(b1);
-            if( !!pkb1 && !pkb1->IsEnabled() )
+            if( !!pkb1 && !pkb1->IsEnabled() ) {
                 return;
+            }
         }
         if(!!b2 && dBodyGetData(b1)) {
             pkb2 = *(KinBody::LinkPtr*)dBodyGetData(b2);
-            if( !!pkb2 && !pkb2->IsEnabled() )
+            if( !!pkb2 && !pkb2->IsEnabled() ) {
                 return;
+            }
         }
 
-        if( !!pkb1 && !!pkb2 && pkb1->GetParent()->IsAttached(KinBodyConstPtr(pkb2->GetParent())) )
+        if( !!pkb1 && !!pkb2 && pkb1->GetParent()->IsAttached(KinBodyConstPtr(pkb2->GetParent())) ) {
             return;
+        }
 
         // only care if one of the bodies is the link
         if( pkb1 == pcb->_plink || pkb2 == pcb->_plink ) {
-
             dContact contact[16];
             int N = dCollide (o1,o2,16,&contact[0].geom,sizeof(dContact));
             if (N) {
-
                 if( N > 0 && !!pcb->_report ) {
                     pcb->_report->numCols = N;
                     pcb->_report->plink1 = pcb->_plink;
@@ -769,8 +838,9 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
                                 vnorm = -vnorm;
                                 distance = -distance;
                             }
-                            if( !!pcb->_report->plink2 && pcb->_report->plink2->ValidateContactNormal(contact[i].geom.pos,vnorm) )
+                            if( !!pcb->_report->plink2 && pcb->_report->plink2->ValidateContactNormal(contact[i].geom.pos,vnorm) ) {
                                 distance = -distance;
+                            }
                             pcb->_report->contacts.push_back(CollisionReport::CONTACT(contact[i].geom.pos,vnorm,distance));
                         }
                     }
@@ -797,20 +867,39 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
 
     void _RayCollisionCallback (dGeomID o1, dGeomID o2, COLLISIONCALLBACK* pcb)
     {
-        if( pcb->_bCollision )
+        if( pcb->_bCollision ) {
             return; // don't test anymore
-
-        if( !dGeomIsEnabled(o1) || !dGeomIsEnabled(o2) )
+        }
+        if( !dGeomIsEnabled(o1) || !dGeomIsEnabled(o2) ) {
             return;
-
+        }
         if (dGeomIsSpace(o1) || dGeomIsSpace(o2)) {    
             dSpaceCollide2(o1,o2,pcb,RayCollisionCallback);
             return;
         }
 
         // ignore if a ray isn't included
-        if( dGeomGetClass(o1) != dRayClass && dGeomGetClass(o2) != dRayClass )
+        if( dGeomGetClass(o1) != dRayClass && dGeomGetClass(o2) != dRayClass ) {
             return;
+        }
+
+        dGeomID geomray = o2;
+        dBodyID b = dGeomGetBody(o1);
+        if( b == NULL ) {
+            BOOST_ASSERT( dGeomGetClass(o1) == dRayClass );
+            geomray = o1;
+            b = dGeomGetBody(o2);
+        }
+        BOOST_ASSERT( b != NULL );
+        KinBody::LinkPtr plink;
+        if( dBodyGetData(b) ) {
+            plink = *(KinBody::LinkPtr*)dBodyGetData(b);
+            if( !!plink ) {
+                if( !plink->IsEnabled() || !pcb->IsActiveLink(plink->GetParent(),plink->GetIndex()) ) {
+                    return;
+                }
+            }
+        }
 
         dContact contact[2];
         int N = dCollide (o1,o2,2,&contact[0].geom,sizeof(dContact));
@@ -818,36 +907,30 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
 
             int index = 0;
             for(;index < N; ++index) {
-                if( contact[index].geom.depth <= pcb->fraymaxdist )
+                if( contact[index].geom.depth <= pcb->fraymaxdist ) {
                     break;
+                }
             }
-
-            if( index >= N )
+            if( index >= N ) {
                 return;
-
-            dGeomID geomray = o2;
-            dBodyID b = dGeomGetBody(o1);
-            if( b == NULL ) {
-                BOOST_ASSERT( dGeomGetClass(o1) == dRayClass );
-                geomray = o1;
-                b = dGeomGetBody(o2);
             }
-            BOOST_ASSERT( b != NULL );
             
             if( !!pcb->_report ) {
                 if( pcb->_bOneCollision ) {
                     // collided already, see if this point is closer
-                    if( pcb->_report->minDistance < contact[index].geom.depth )
+                    if( pcb->_report->minDistance < contact[index].geom.depth ) {
                         return;
+                    }
                 }
 
                 pcb->_report->numCols = 1;
                 pcb->_report->minDistance = contact[index].geom.depth;
-                if( dBodyGetData(b) )
+                if( dBodyGetData(b) ) {
                     pcb->_report->plink1 = *(KinBody::LinkPtr*)dBodyGetData(b);
-                else
+                }
+                else {
                     RAVELOG_WARN("ode body does not have a link attached\n");
-
+                }
                 // always return contacts since it isn't that much computation (openravepy expects this!)
                 //if( pcb->_report->options & OpenRAVE::CO_Contacts) {
                 Vector vnorm(contact[index].geom.normal);
@@ -856,14 +939,15 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
                     vnorm = -vnorm;
                     distance = -distance;
                 }
-                if( !!pcb->_report->plink1 && pcb->_report->plink1->ValidateContactNormal(contact[index].geom.pos,vnorm) )
+                if( !!pcb->_report->plink1 && pcb->_report->plink1->ValidateContactNormal(contact[index].geom.pos,vnorm) ) {
                     distance = -distance;
+                }
                 if( pcb->_report->contacts.size() == 0 ) {
                     pcb->_report->contacts.push_back(CollisionReport::CONTACT(contact[index].geom.pos, vnorm, distance));
                 }
-                else
+                else {
                     pcb->_report->contacts.front() = CollisionReport::CONTACT(contact[index].geom.pos, vnorm, distance);
-                //}
+                }
 
                 FOREACHC(itfn, pcb->GetCallbacks()) {
                     OpenRAVE::CollisionAction action = (*itfn)(pcb->_report,false);
@@ -873,12 +957,14 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
                     }
                 }
 
-                if( _options&OpenRAVE::CO_RayAnyHit )
+                if( _options&OpenRAVE::CO_RayAnyHit ) {
                     pcb->_bCollision = true;
+                }
             }
             else {
-                if( _options&OpenRAVE::CO_RayAnyHit )
+                if( _options&OpenRAVE::CO_RayAnyHit ) {
                     pcb->_bCollision = true;
+                }
             }
 
             pcb->_bOneCollision = true;

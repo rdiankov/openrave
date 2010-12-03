@@ -130,8 +130,11 @@ class CollisionCheckerPQP : public CollisionCheckerBase
 
     virtual bool SetCollisionOptions(int options)
     {    
+        if(options & CO_ActiveDOFs) {
+            RAVELOG_DEBUG("checker does not support activedof option");
+        }
         if(options & CO_Distance) {
-            RAVELOG_DEBUG("setting pqp distance computation\n");
+            RAVELOG_VERBOSE("setting pqp distance computation\n");
             _benabledis = true;
         }
         else {
@@ -334,11 +337,13 @@ class CollisionCheckerPQP : public CollisionCheckerBase
         if(!!report ) {
             report->Reset(_options);
         }
-        // check collision, ignore adjacent bodies
-        FOREACHC(itset, pbody->GetNonAdjacentLinks()) {
-            BOOST_ASSERT( (*itset&0xffff) < (int)pbody->GetLinks().size() && (*itset>>16) < (int)pbody->GetLinks().size() );
-            if( CheckCollision(KinBody::LinkConstPtr(pbody->GetLinks()[*itset&0xffff]), KinBody::LinkConstPtr(pbody->GetLinks()[*itset>>16]), report) ) {
-                RAVELOG_VERBOSEA(str(boost::format("selfcol %s, Links %s %s are colliding\n")%pbody->GetName()%pbody->GetLinks()[*itset&0xffff]->GetName()%pbody->GetLinks()[*itset>>16]->GetName()));
+        int adjacentoptions = KinBody::AO_Enabled;
+        if( (_options&OpenRAVE::CO_ActiveDOFs) && pbody->IsRobot() ) {
+            adjacentoptions |= KinBody::AO_ActiveDOFs;
+        }
+        FOREACHC(itset, pbody->GetNonAdjacentLinks(adjacentoptions)) {
+            if( CheckCollision(KinBody::LinkConstPtr(pbody->GetLinks().at(*itset&0xffff)), KinBody::LinkConstPtr(pbody->GetLinks().at(*itset>>16)), report) ) {
+                RAVELOG_VERBOSE(str(boost::format("selfcol %s, Links %s %s are colliding\n")%pbody->GetName()%pbody->GetLinks().at(*itset&0xffff)->GetName()%pbody->GetLinks().at(*itset>>16)->GetName()));
                 return true;
             }
         }

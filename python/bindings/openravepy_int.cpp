@@ -673,19 +673,30 @@ public:
         return links;
     }
 
-    object GetChain(int linkbaseindex, int linkendindex) const
+    object GetChain(int linkindex1, int linkindex2) const
     {
         std::vector<KinBody::JointPtr> vjoints;
-        _pbody->GetChain(linkbaseindex,linkendindex,vjoints);
+        _pbody->GetChain(linkindex1,linkindex2,vjoints);
         boost::python::list joints;
         FOREACHC(itjoint, vjoints)
             joints.append(PyJointPtr(new PyJoint(*itjoint, GetEnv())));
         return joints;
     }
 
+    bool IsDOFInChain(int linkindex1, int linkindex2, int dofindex) const
+    {
+        return _pbody->IsDOFInChain(linkindex1,linkindex2,dofindex);
+    }
+
     PyJointPtr GetJoint(const std::string& jointname) const
     {
         KinBody::JointPtr pjoint = _pbody->GetJoint(jointname);
+        return !pjoint ? PyJointPtr() : PyJointPtr(new PyJoint(pjoint,GetEnv()));
+    }
+
+    PyJointPtr GetJointFromDOFIndex(int dofindex) const
+    {
+        KinBody::JointPtr pjoint = _pbody->GetJointFromDOFIndex(dofindex);
         return !pjoint ? PyJointPtr() : PyJointPtr(new PyJoint(pjoint,GetEnv()));
     }
 
@@ -871,10 +882,19 @@ public:
 
     object GetNonAdjacentLinks() const {
         boost::python::list nonadjacent;
-        FOREACHC(it,_pbody->GetNonAdjacentLinks())
+        FOREACHC(it,_pbody->GetNonAdjacentLinks()) {
             nonadjacent.append(boost::python::make_tuple((int)(*it)&0xffff,(int)(*it)>>16));
+        }
         return nonadjacent;
     }
+    object GetNonAdjacentLinks(int adjacentoptions) const {
+        boost::python::list nonadjacent;
+        FOREACHC(it,_pbody->GetNonAdjacentLinks(adjacentoptions)) {
+            nonadjacent.append(boost::python::make_tuple((int)(*it)&0xffff,(int)(*it)>>16));
+        }
+        return nonadjacent;
+    }
+
     object GetAdjacentLinks() const {
         boost::python::list adjacent;
         FOREACHC(it,_pbody->GetAdjacentLinks())
@@ -1315,9 +1335,6 @@ public:
 
 		bool SetIkSolver(PyIkSolverBasePtr iksolver) { CHECK_POINTER(iksolver); return _pmanip->SetIkSolver(iksolver->GetIkSolver()); }
         PyIkSolverBasePtr GetIkSolver() { IkSolverBasePtr iksolver = _pmanip->GetIkSolver(); return !iksolver ? PyIkSolverBasePtr() : PyIkSolverBasePtr(new PyIkSolverBase(iksolver,_pyenv)); }
-        bool InitIKSolver() { RAVELOG_WARN("Manipulator::InitIKSolver has been deprecated\n"); return _pmanip->InitIKSolver(); }
-        string GetIKSolverName() const { RAVELOG_WARN("Manipulator::GetIKSolverName  has been deprecated\n");  return _pmanip->GetIKSolverName(); }
-        bool HasIKSolver() const { RAVELOG_WARN("Manipulator::HasIKSolver has been deprecated, use GetIkSolver\n");  return !!_pmanip->GetIkSolver(); }
 
         boost::shared_ptr<PyLink> GetBase() { return !_pmanip->GetBase() ? PyLinkPtr() : PyLinkPtr(new PyLink(_pmanip->GetBase(),_pyenv)); }
         boost::shared_ptr<PyLink> GetEndEffector() { return !_pmanip->GetEndEffector() ? PyLinkPtr() : PyLinkPtr(new PyLink(_pmanip->GetEndEffector(),_pyenv)); }
@@ -3417,6 +3434,8 @@ BOOST_PYTHON_MODULE(openravepy_int)
         bool (PyKinBody::*setdofvelocities2)(object,object,object) = &PyKinBody::SetDOFVelocities;
         bool (PyKinBody::*setdofvelocities3)(object,bool) = &PyKinBody::SetDOFVelocities;
         bool (PyKinBody::*setdofvelocities4)(object,object,object,bool) = &PyKinBody::SetDOFVelocities;
+        object (PyKinBody::*GetNonAdjacentLinks1)() const = &PyKinBody::GetNonAdjacentLinks;
+        object (PyKinBody::*GetNonAdjacentLinks2)(int) const = &PyKinBody::GetNonAdjacentLinks;
         scope kinbody = class_<PyKinBody, boost::shared_ptr<PyKinBody>, bases<PyInterfaceBase> >("KinBody", DOXY_CLASS(KinBody), no_init)
             .def("InitFromFile",&PyKinBody::InitFromFile,args("filename"),DOXY_FN(KinBody,InitFromFile))
             .def("InitFromData",&PyKinBody::InitFromData,args("data"), DOXY_FN(KinBody,InitFromData))
@@ -3448,8 +3467,10 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("GetPassiveJoints",&PyKinBody::GetPassiveJoints, DOXY_FN(KinBody,GetPassiveJoints))
             .def("GetDependencyOrderedJoints",&PyKinBody::GetDependencyOrderedJoints, DOXY_FN(KinBody,GetDependencyOrderedJoints))
             .def("GetRigidlyAttachedLinks",&PyKinBody::GetRigidlyAttachedLinks,args("linkindex"), DOXY_FN(KinBody,GetRigidlyAttachedLinks))
-            .def("GetChain",&PyKinBody::GetChain,args("linkbaseindex","linkendindex"), DOXY_FN(KinBody,GetChain))
+            .def("GetChain",&PyKinBody::GetChain,args("linkindex1","linkindex2"), DOXY_FN(KinBody,GetChain))
+            .def("IsDOFInChain",&PyKinBody::IsDOFInChain,args("linkindex1","linkindex2","dofindex"), DOXY_FN(KinBody,IsDOFInChain))
             .def("GetJoint",&PyKinBody::GetJoint,args("name"), DOXY_FN(KinBody,GetJoint))
+            .def("GetJointFromDOFIndex",&PyKinBody::GetJointFromDOFIndex,args("dofindex"), DOXY_FN(KinBody,GetJointFromDOFIndex))
             .def("GetTransform",&PyKinBody::GetTransform, DOXY_FN(KinBody,GetTransform))
             .def("GetBodyTransformations",&PyKinBody::GetBodyTransformations, DOXY_FN(KinBody,GetBodyTransformations))
             .def("SetBodyTransformations",&PyKinBody::SetBodyTransformations,args("transforms"), DOXY_FN(KinBody,SetBodyTransformations))
@@ -3483,7 +3504,8 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("SetGuiData",&PyKinBody::SetGuiData,args("data"), DOXY_FN(KinBody,SetGuiData))
             .def("GetGuiData",&PyKinBody::GetGuiData, DOXY_FN(KinBody,GetGuiData))
             .def("GetXMLFilename",&PyKinBody::GetXMLFilename, DOXY_FN(InterfaceBase,GetXMLFilename))
-            .def("GetNonAdjacentLinks",&PyKinBody::GetNonAdjacentLinks, DOXY_FN(KinBody,GetNonAdjacentLinks))
+            .def("GetNonAdjacentLinks",GetNonAdjacentLinks1, DOXY_FN(KinBody,GetNonAdjacentLinks))
+            .def("GetNonAdjacentLinks",GetNonAdjacentLinks2, args("adjacentoptions"), DOXY_FN(KinBody,GetNonAdjacentLinks))
             .def("GetAdjacentLinks",&PyKinBody::GetAdjacentLinks, DOXY_FN(KinBody,GetAdjacentLinks))
             .def("GetPhysicsData",&PyKinBody::GetPhysicsData, DOXY_FN(KinBody,GetPhysicsData))
             .def("GetCollisionData",&PyKinBody::GetCollisionData, DOXY_FN(KinBody,GetCollisionData))
@@ -3503,6 +3525,10 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .value("ActiveDOF",KinBody::Save_ActiveDOF)
             .value("ActiveManipulator",KinBody::Save_ActiveManipulator)
             .value("GrabbedBodies",KinBody::Save_GrabbedBodies)
+            ;
+        enum_<KinBody::AdjacentOptions>("AdjacentOptions" DOXY_ENUM(AdjacentOptions))
+            .value("Enabled",KinBody::AO_Enabled)
+            .value("ActiveDOFs",KinBody::AO_ActiveDOFs)
             ;
 
         {
@@ -3800,9 +3826,6 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("SetIkSolver",&PyRobotBase::PyManipulator::SetIkSolver, DOXY_FN(RobotBase::Manipulator,SetIkSolver))
             .def("GetIkSolver",&PyRobotBase::PyManipulator::GetIkSolver, DOXY_FN(RobotBase::Manipulator,GetIkSolver))
             .def("SetIKSolver",&PyRobotBase::PyManipulator::SetIkSolver, DOXY_FN(RobotBase::Manipulator,SetIkSolver))
-            .def("InitIKSolver",&PyRobotBase::PyManipulator::InitIKSolver,args("iksolver"), DOXY_FN(RobotBase::Manipulator,InitIKSolver))
-            .def("GetIKSolverName",&PyRobotBase::PyManipulator::GetIKSolverName, DOXY_FN(RobotBase::Manipulator,GetIKSolverName))
-            .def("HasIKSolver",&PyRobotBase::PyManipulator::HasIKSolver, DOXY_FN(RobotBase::Manipulator,HasIKSolver))
             .def("GetNumFreeParameters",&PyRobotBase::PyManipulator::GetNumFreeParameters, DOXY_FN(RobotBase::Manipulator,GetNumFreeParameters))
             .def("GetFreeParameters",&PyRobotBase::PyManipulator::GetFreeParameters, DOXY_FN(RobotBase::Manipulator,GetFreeParameters))
             .def("FindIKSolution",pmanipik,args("param","filteroptions"), DOXY_FN(RobotBase::Manipulator,FindIKSolution "const IkParameterization; std::vector; int"))

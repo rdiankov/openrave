@@ -935,15 +935,21 @@ class Environment : public EnvironmentBase
             }
         }
 
-        // check for collada?
-        InterfaceBasePtr pinterface = robot;
-        OpenRAVEXMLParser::InterfaceXMLReaderPtr preader = OpenRAVEXMLParser::CreateInterfaceReader(shared_from_this(), PT_Robot, pinterface, "robot", atts);
-        bool bSuccess = ParseXMLData(preader, data);
-        robot = RaveInterfaceCast<RobotBase>(pinterface);
-        if( !bSuccess || !robot ) {
-            return RobotBasePtr();
+        if( _IsColladaData(data) ) {
+            if( !RaveParseColladaData(shared_from_this(), robot, data) ) {
+                return RobotBasePtr();
+            }
         }
-        robot->__strxmlfilename = preader->_filename;
+        else {
+            InterfaceBasePtr pinterface = robot;
+            OpenRAVEXMLParser::InterfaceXMLReaderPtr preader = OpenRAVEXMLParser::CreateInterfaceReader(shared_from_this(), PT_Robot, pinterface, "robot", atts);
+            bool bSuccess = ParseXMLData(preader, data);
+            robot = RaveInterfaceCast<RobotBase>(pinterface);
+            if( !bSuccess || !robot ) {
+                return RobotBasePtr();
+            }
+            robot->__strxmlfilename = preader->_filename;
+        }
         return robot;
     }
 
@@ -1012,15 +1018,21 @@ class Environment : public EnvironmentBase
             }
         }
 
-        // check for collada?
-        InterfaceBasePtr pinterface = body;
-        OpenRAVEXMLParser::InterfaceXMLReaderPtr preader = OpenRAVEXMLParser::CreateInterfaceReader(shared_from_this(), PT_KinBody, pinterface, "kinbody", atts);
-        bool bSuccess = ParseXMLData(preader, data);
-        body = RaveInterfaceCast<KinBody>(pinterface);
-        if( !bSuccess || !body ) {
-            return KinBodyPtr();
+        if( _IsColladaData(data) ) {
+            if( !RaveParseColladaData(shared_from_this(), body, data) ) {
+                return RobotBasePtr();
+            }
         }
-        body->__strxmlfilename = preader->_filename;
+        else {
+            InterfaceBasePtr pinterface = body;
+            OpenRAVEXMLParser::InterfaceXMLReaderPtr preader = OpenRAVEXMLParser::CreateInterfaceReader(shared_from_this(), PT_KinBody, pinterface, "kinbody", atts);
+            bool bSuccess = ParseXMLData(preader, data);
+            body = RaveInterfaceCast<KinBody>(pinterface);
+            if( !bSuccess || !body ) {
+                return KinBodyPtr();
+            }
+            body->__strxmlfilename = preader->_filename;
+        }
         return body;
     }
 
@@ -1692,6 +1704,10 @@ protected:
         if( len < 4 )
             return false;
         return filename[len-4] == '.' && filename[len-3] == 'd' && filename[len-2] == 'a' && filename[len-1] == 'e';
+    }
+    static bool _IsColladaData(const std::string& data)
+    {
+        return data.find("<COLLADA") != std::string::npos;
     }
     static bool IsValidCharInName(char c) {
         return isalnum(c) || c == '_' || c == '-' || c == '.';

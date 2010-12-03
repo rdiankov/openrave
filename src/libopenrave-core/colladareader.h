@@ -79,7 +79,7 @@ class ColladaReader : public daeErrorHandler
                 return false;
             }
             for(size_t ik = 0; ik < arr.getCount(); ++ik) {
-                daeElement* pelt = daeSidRef(kinematics_axis_info->getAxis(), arr[ik]).resolve().elt;
+                daeElement* pelt = daeSidRef(kinematics_axis_info->getAxis(), arr[ik]->getUrl().getElement()).resolve().elt;
                 if( !!pelt ) {
                     // look for the correct placement
                     bool bfound = false;
@@ -142,8 +142,21 @@ class ColladaReader : public daeErrorHandler
         return true;
     }
     bool InitFromData(const string& pdata) {
-        BOOST_ASSERT(0);
-        return false;
+        RAVELOG_DEBUG(str(boost::format("init COLLADA reader version: %s, namespace: %s\n")%COLLADA_VERSION%COLLADA_NAMESPACE));
+        _collada.reset(new DAE);
+        _dom = _collada->openFromMemory(".",pdata.c_str());
+        if (!_dom) {
+            return false;
+        }
+
+        size_t maxchildren = _countChildren(_dom);
+        _vuserdata.resize(0);
+        _vuserdata.reserve(maxchildren);
+
+        double dScale = 1.0;
+        _processUserData(_dom, dScale);
+        RAVELOG_DEBUG(str(boost::format("processed children: %d/%d\n")%_vuserdata.size()%maxchildren));
+        return true;
     }
 
     /// \brief Extract all possible collada scene objects into the environment
@@ -340,7 +353,7 @@ class ColladaReader : public daeErrorHandler
                 for(size_t i = 0; i < articulated_system->getMotion()->getTechnique_common()->getAxis_info_array().getCount(); ++i) {
                     domMotion_axis_infoRef motion_axis_info = articulated_system->getMotion()->getTechnique_common()->getAxis_info_array()[i];
                     // this should point to a kinematics axis_info
-                    domKinematics_axis_infoRef kinematics_axis_info = daeSafeCast<domKinematics_axis_info>(daeSidRef(motion_axis_info->getAxis(), ias_new).resolve().elt);
+                    domKinematics_axis_infoRef kinematics_axis_info = daeSafeCast<domKinematics_axis_info>(daeSidRef(motion_axis_info->getAxis(), ias_new->getUrl().getElement()).resolve().elt);
                     if( !!kinematics_axis_info ) {
                         // find the parent kinematics and go through all its instance kinematics models
                         daeElement* pparent = kinematics_axis_info->getParent();
@@ -739,7 +752,6 @@ class ColladaReader : public daeErrorHandler
                     }
 
                     if( joint_active ) {
-                        pkinbody->_vecJointIndices.push_back(pjoint->dofindex);
                         pkinbody->_vecjoints.push_back(pjoint);
                     }
                     else {
@@ -2150,7 +2162,7 @@ class ColladaReader : public daeErrorHandler
             }
        
             // visual information
-            domNodeRef node = daeSafeCast<domNode>(daeSidRef(kbindmodel->getNode(), viscene).resolve().elt);
+            domNodeRef node = daeSafeCast<domNode>(daeSidRef(kbindmodel->getNode(), viscene->getUrl().getElement()).resolve().elt);
             if (!node) {
                 RAVELOG_WARNA(str(boost::format("bind_kinematics_model does not reference valid node %s\n")%kbindmodel->getNode()));
                 continue;
@@ -2173,7 +2185,7 @@ class ColladaReader : public daeErrorHandler
         // axis info
         for (size_t ijoint = 0; ijoint < kiscene->getBind_joint_axis_array().getCount(); ++ijoint) {
             domBind_joint_axisRef bindjoint = kiscene->getBind_joint_axis_array()[ijoint];
-            daeElementRef pjtarget = daeSidRef(bindjoint->getTarget(), viscene).resolve().elt;
+            daeElementRef pjtarget = daeSidRef(bindjoint->getTarget(), viscene->getUrl().getElement()).resolve().elt;
             if (!pjtarget) {
                 RAVELOG_ERRORA(str(boost::format("Target Node %s NOT found!!!\n")%bindjoint->getTarget()));
                 continue;

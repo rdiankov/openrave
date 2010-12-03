@@ -101,8 +101,9 @@ class IkFastSolver : public IkSolverBase
         }
 
         RobotBase::ManipulatorPtr pmanip(_pmanip);
-        if( (filteroptions&IKFO_CheckEnvCollisions) && _CheckIndependentCollision(pmanip) )
+        if( (filteroptions&IKFO_CheckEnvCollisions) && _CheckIndependentCollision(pmanip) ) {
             return false;
+        }
         
         RobotBasePtr probot = pmanip->GetRobot();
         RobotBase::RobotStateSaver saver(probot);
@@ -120,8 +121,9 @@ class IkFastSolver : public IkSolverBase
         }
 
         RobotBase::ManipulatorPtr pmanip(_pmanip);
-        if( (filteroptions&IKFO_CheckEnvCollisions) && _CheckIndependentCollision(pmanip) )
+        if( (filteroptions&IKFO_CheckEnvCollisions) && _CheckIndependentCollision(pmanip) ) {
             return false;
+        }
 
         RobotBasePtr probot = pmanip->GetRobot();
         RobotBase::RobotStateSaver saver(probot);
@@ -140,14 +142,13 @@ class IkFastSolver : public IkSolverBase
             RAVELOG_WARNA(str(boost::format("ik solver only supports type %d, given %d\n")%_iktype%param.GetType()));
             return false;
         }
-
-        if( vFreeParameters.size() != _vfreeparams.size() )
+        if( vFreeParameters.size() != _vfreeparams.size() ) {
             throw openrave_exception("free parameters not equal",ORE_InvalidArguments);
-
+        }
         RobotBase::ManipulatorPtr pmanip(_pmanip);
-        if( (filteroptions&IKFO_CheckEnvCollisions) && _CheckIndependentCollision(pmanip) )
+        if( (filteroptions&IKFO_CheckEnvCollisions) && _CheckIndependentCollision(pmanip) ) {
             return false;
-
+        }
         RobotBasePtr probot = pmanip->GetRobot();
         RobotBase::RobotStateSaver saver(probot);
         probot->SetActiveDOFs(pmanip->GetArmIndices());
@@ -168,8 +169,9 @@ class IkFastSolver : public IkSolverBase
             throw openrave_exception("free parameters not equal",ORE_InvalidArguments);
 
         RobotBase::ManipulatorPtr pmanip(_pmanip);
-        if( (filteroptions&IKFO_CheckEnvCollisions) && _CheckIndependentCollision(pmanip) )
+        if( (filteroptions&IKFO_CheckEnvCollisions) && _CheckIndependentCollision(pmanip) ) {
             return false;
+        }
 
         RobotBasePtr probot = pmanip->GetRobot();
         RobotBase::RobotStateSaver saver(probot);
@@ -204,8 +206,9 @@ class IkFastSolver : public IkSolverBase
 private:
     SolutionResults ComposeSolution(const std::vector<int>& vfreeparams, vector<IKReal>& vfree, int freeindex, const vector<dReal>& q0, const boost::function<SolutionResults()>& fn)
     {
-        if( freeindex >= (int)vfreeparams.size())
+        if( freeindex >= (int)vfreeparams.size()) {
             return fn();
+        }
 
         // start searching for phi close to q0, as soon as a solution is found for the curphi, return it
         dReal startphi = q0.size() == _qlower.size() ? q0.at(vfreeparams.at(freeindex)) : 0;
@@ -214,17 +217,17 @@ private:
         dReal fFreeInc = _fFreeInc;
                 // if joint is a slider, make increments 5 times less (this makes it possible to have free joints that are both revolume and prismatic)
         // (actually this should be fixed so that there is a different increment per free joint). can use max radius
-        if( &vfreeparams == &_vfreeparams && _vfreetypes.at(freeindex) == KinBody::Joint::JointPrismatic )
+        if( &vfreeparams == &_vfreeparams && _vfreetypes.at(freeindex) == KinBody::Joint::JointPrismatic ) {
             fFreeInc *= 0.2f;
+        }
         while(1) {
-
             dReal curphi = startphi;
             if( iter & 1 ) { // increment
                 curphi += deltaphi;
                 if( curphi > upperphi ) {
-
-                    if( startphi-deltaphi < lowerphi)
+                    if( startphi-deltaphi < lowerphi) {
                         break; // reached limit
+                    }
                     ++iter;
                     continue;
                 }
@@ -232,9 +235,9 @@ private:
             else { // decrement
                 curphi -= deltaphi;
                 if( curphi < lowerphi ) {
-
-                    if( startphi+deltaphi > upperphi )
+                    if( startphi+deltaphi > upperphi ) {
                         break; // reached limit
+                    }
                     deltaphi += fFreeInc; // increment
                     ++iter;
                     continue;
@@ -247,16 +250,18 @@ private:
 
             vfree.at(freeindex) = curphi;
             SolutionResults res = ComposeSolution(vfreeparams, vfree, freeindex+1,q0, fn);
-            if( res != SR_Continue )
+            if( res != SR_Continue ) {
                 return res;
+            }
         }
 
         // explicitly test 0 since many edge cases involve 0s
         if( _qlower[vfreeparams[freeindex]] <= 0 && _qupper[vfreeparams[freeindex]] >= 0 ) {
             vfree.at(freeindex) = 0;
             SolutionResults res = ComposeSolution(vfreeparams, vfree, freeindex+1,q0, fn);
-            if( res != SR_Continue )
+            if( res != SR_Continue ) {
                 return res;
+            }
         }
 
         return SR_Continue;
@@ -313,13 +318,6 @@ private:
             //RAVELOG_INFO("ray: %f %f %f %f %f %f\n",eerot[0],eerot[1],eerot[2],eetrans[0],eetrans[1],eetrans[2]);
             if( !_pfnik(eetrans, eerot, vfree.size()>0?&vfree[0]:NULL, vsolutions) ) {
                 return false;
-            }
-            //?
-            FOREACH(itsol,vsolutions) {
-                FOREACH(it,itsol->basesol) {
-                    it->freeind=-1;
-                }
-                itsol->vfree.resize(0);
             }
             return true;
 //            IKReal s[4];
@@ -393,12 +391,13 @@ private:
                 res = _ValidateSolutionSingle(iksol, textra, sol, vravesol, vbest, bestdist, param, bCheckEndEffector);
             }
 
-            if( res == SR_Quit )
+            if( res == SR_Quit ) {
                 return SR_Quit;
-
+            }
             // stop if there is no solution we are attempting to get close to
-            if( res == SR_Success && q0.size() != pmanip->GetArmIndices().size() )
+            if( res == SR_Success && q0.size() != pmanip->GetArmIndices().size() ) {
                 break;
+            }
         }
 
         // return as soon as a solution is found, since we're visiting phis starting from q0, we are guaranteed
@@ -505,8 +504,9 @@ private:
                 if( itsol->GetFree().size() > 0 ) {
                     // have to search over all the free parameters of the solution!
                     vsolfree.resize(itsol->GetFree().size());                    
-                    if( ComposeSolution(itsol->GetFree(), vsolfree, 0, vector<dReal>(), boost::bind(&IkFastSolver::_ValidateSolutionAll,shared_solver(), boost::ref(param), boost::ref(*itsol), boost::ref(vsolfree), filteroptions, boost::ref(sol), boost::ref(vravesol), boost::ref(qSolutions), boost::ref(bCheckEndEffector))) == SR_Quit)
+                    if( ComposeSolution(itsol->GetFree(), vsolfree, 0, vector<dReal>(), boost::bind(&IkFastSolver::_ValidateSolutionAll,shared_solver(), boost::ref(param), boost::ref(*itsol), boost::ref(vsolfree), filteroptions, boost::ref(sol), boost::ref(vravesol), boost::ref(qSolutions), boost::ref(bCheckEndEffector))) == SR_Quit) {
                         return SR_Quit;
+                    }
                 }
                 else {
                     if( _ValidateSolutionAll(param, *itsol, vector<IKReal>(), filteroptions, sol, vravesol, qSolutions, bCheckEndEffector) == SR_Quit ) {
@@ -521,14 +521,14 @@ private:
     SolutionResults _ValidateSolutionAll(const IkParameterization& param, const Solution& iksol, const vector<IKReal>& vfree, int filteroptions, std::vector<IKReal>& sol, std::vector<dReal>& vravesol, std::vector< std::vector<dReal> >& qSolutions, bool& bCheckEndEffector)
     {
         iksol.GetSolution(&sol[0],vfree.size()>0?&vfree[0]:NULL);
-
-        for(int i = 0; i < (int)sol.size(); ++i)
+        for(int i = 0; i < (int)sol.size(); ++i) {
             vravesol[i] = (dReal)sol[i];
-            
+        }
         // find the first valid solutino that satisfies joint constraints and collisions
         if( !(filteroptions&IKFO_IgnoreJointLimits) ) {
-            if( !_checkjointangles(vravesol) )
+            if( !_checkjointangles(vravesol) ) {
                 return SR_Continue;
+            }
         }
 
         // check for self collisions
@@ -550,8 +550,9 @@ private:
         }
         if( (filteroptions&IKFO_CheckEnvCollisions) ) {
             if( bCheckEndEffector && param.GetType() == IkParameterization::Type_Transform6D ) {
-                if( pmanip->CheckEndEffectorCollision(pmanip->GetBase()->GetTransform()*param.GetTransform()) )
+                if( pmanip->CheckEndEffectorCollision(pmanip->GetBase()->GetTransform()*param.GetTransform()) ) {
                     return SR_Quit; // stop the search
+                }
                 bCheckEndEffector = false;
             }
             if( GetEnv()->CheckCollision(KinBodyConstPtr(probot)) ) {
