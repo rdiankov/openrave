@@ -881,18 +881,20 @@ public:
     std::string GetXMLFilename() const { return _pbody->GetXMLFilename(); }
 
     object GetNonAdjacentLinks() const {
-        boost::python::list nonadjacent;
-        FOREACHC(it,_pbody->GetNonAdjacentLinks()) {
-            nonadjacent.append(boost::python::make_tuple((int)(*it)&0xffff,(int)(*it)>>16));
+        boost::python::list ononadjacent;
+        const std::set<int>& nonadjacent = _pbody->GetNonAdjacentLinks();
+        FOREACHC(it,nonadjacent) {
+            ononadjacent.append(boost::python::make_tuple((int)(*it)&0xffff,(int)(*it)>>16));
         }
-        return nonadjacent;
+        return ononadjacent;
     }
     object GetNonAdjacentLinks(int adjacentoptions) const {
-        boost::python::list nonadjacent;
-        FOREACHC(it,_pbody->GetNonAdjacentLinks(adjacentoptions)) {
-            nonadjacent.append(boost::python::make_tuple((int)(*it)&0xffff,(int)(*it)>>16));
+        boost::python::list ononadjacent;
+        const std::set<int>& nonadjacent = _pbody->GetNonAdjacentLinks(adjacentoptions);
+        FOREACHC(it,nonadjacent) {
+            ononadjacent.append(boost::python::make_tuple((int)(*it)&0xffff,(int)(*it)>>16));
         }
-        return nonadjacent;
+        return ononadjacent;
     }
 
     object GetAdjacentLinks() const {

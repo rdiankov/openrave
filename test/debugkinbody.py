@@ -302,3 +302,4 @@ def test_kinematics():
                         print dot(Jtrans,deltavalues) - deltatrans
                         print dot(Jquat,deltavalues) - deltaquat
                         print dot(Jangvel,deltavalues) - deltaangvel
+

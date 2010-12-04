@@ -532,7 +532,8 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
             adjacentoptions |= KinBody::AO_ActiveDOFs;
         }
 
-        FOREACHC(itset, pbody->GetNonAdjacentLinks(adjacentoptions)) {
+        const std::set<int>& nonadjacent = pbody->GetNonAdjacentLinks(adjacentoptions);
+        FOREACHC(itset, nonadjacent) {
             KinBody::LinkConstPtr plink1(pbody->GetLinks().at(*itset&0xffff)), plink2(pbody->GetLinks().at(*itset>>16));
             if( CheckCollision(plink1,plink2, report) ) {
                 RAVELOG_VERBOSE(str(boost::format("selfcol %s, Links %s %s are colliding\n")%pbody->GetName()%plink1->GetName()%plink2->GetName()));

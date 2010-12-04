@@ -341,7 +341,8 @@ class CollisionCheckerPQP : public CollisionCheckerBase
         if( (_options&OpenRAVE::CO_ActiveDOFs) && pbody->IsRobot() ) {
             adjacentoptions |= KinBody::AO_ActiveDOFs;
         }
-        FOREACHC(itset, pbody->GetNonAdjacentLinks(adjacentoptions)) {
+        const std::set<int>& nonadjacent = pbody->GetNonAdjacentLinks(adjacentoptions);
+        FOREACHC(itset, nonadjacent) {
             if( CheckCollision(KinBody::LinkConstPtr(pbody->GetLinks().at(*itset&0xffff)), KinBody::LinkConstPtr(pbody->GetLinks().at(*itset>>16)), report) ) {
                 RAVELOG_VERBOSE(str(boost::format("selfcol %s, Links %s %s are colliding\n")%pbody->GetName()%pbody->GetLinks().at(*itset&0xffff)->GetName()%pbody->GetLinks().at(*itset>>16)->GetName()));
                 return true;

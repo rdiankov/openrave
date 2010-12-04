@@ -412,7 +412,7 @@ class InverseKinematicsModel(OpenRAVEModel):
                 numiktests = int(iktests)
                 for i in range(numiktests):
                     while True:
-                        self.robot.SetJointValues(random.rand()*(upper-lower)+lower,self.manip.GetArmIndices()) # set random values
+                        self.robot.SetDOFValues(random.rand()*(upper-lower)+lower,self.manip.GetArmIndices()) # set random values
                         if not self.robot.CheckSelfCollision():
                             break
                     iktestvalues.append(self.robot.GetDOFValues(self.manip.GetArmIndices()))
@@ -427,10 +427,10 @@ class InverseKinematicsModel(OpenRAVEModel):
                 for orgvalues in iktestvalues:
                     self.robot.SetDOFValues(orgvalues,self.manip.GetArmIndices())
                     targetdir = dot(self.manip.GetEndEffectorTransform()[0:3,0:3],self.manip.GetDirection())
-                    self.robot.SetJointValues(random.rand()*(upper-lower)+lower,self.manip.GetArmIndices()) # set random values
+                    self.robot.SetDOFValues(random.rand()*(upper-lower)+lower,self.manip.GetArmIndices()) # set random values
                     sol = self.manip.FindIKSolution(IkParameterization(targetdir,self.iktype),0)
                     if sol is not None:
-                        self.robot.SetJointValues(sol,self.manip.GetArmIndices())
+                        self.robot.SetDOFValues(sol,self.manip.GetArmIndices())
                         realdir = dot(self.manip.GetEndEffectorTransform()[0:3,0:3],self.manip.GetDirection())
                         if sum((targetdir-realdir)**2) < 1e-7:
                             success += 1
@@ -443,10 +443,10 @@ class InverseKinematicsModel(OpenRAVEModel):
                 for orgvalues in iktestvalues:
                     self.robot.SetDOFValues(orgvalues,self.manip.GetArmIndices())
                     targetpos = self.manip.GetEndEffectorTransform()[0:3,3]
-                    #self.robot.SetJointValues(random.rand()*(upper-lower)+lower,self.manip.GetArmIndices()) # set random values
+                    #self.robot.SetDOFValues(random.rand()*(upper-lower)+lower,self.manip.GetArmIndices()) # set random values
                     sol = self.manip.FindIKSolution(IkParameterization(targetpos,self.iktype),0)
                     if sol is not None:
-                        self.robot.SetJointValues(sol,self.manip.GetArmIndices())
+                        self.robot.SetDOFValues(sol,self.manip.GetArmIndices())
                         realpos = self.manip.GetEndEffectorTransform()[0:3,3]
                         if sum((targetpos-realpos)**2) < 1e-7:
                             success += 1
@@ -460,10 +460,10 @@ class InverseKinematicsModel(OpenRAVEModel):
                 for orgvalues in iktestvalues:
                     self.robot.SetDOFValues(orgvalues,self.manip.GetArmIndices())
                     targetquat = quatFromRotationMatrix(self.manip.GetEndEffectorTransform()[0:3,0:3])
-                    self.robot.SetJointValues(random.rand()*(upper-lower)+lower,self.manip.GetArmIndices()) # set random values
+                    self.robot.SetDOFValues(random.rand()*(upper-lower)+lower,self.manip.GetArmIndices()) # set random values
                     sol = self.manip.FindIKSolution(IkParameterization(targetquat,self.iktype),0)
                     if sol is not None:
-                        self.robot.SetJointValues(sol,self.manip.GetArmIndices())
+                        self.robot.SetDOFValues(sol,self.manip.GetArmIndices())
                         realquat = quatFromRotationMatrix(self.manip.GetEndEffectorTransform()[0:3,0:3])
                         if quatArrayTDist(targetquat,realquat) < 1e-3:
                             success += 1
@@ -480,10 +480,10 @@ class InverseKinematicsModel(OpenRAVEModel):
                     targetpos += (random.rand()-0.5)*sqrt(sum(targetpos**2))*targetdir
                     #print targetdir[0],targetdir[1],targetdir[2],targetpos[0],0,0,0,targetpos[1],0,0,0,targetpos[2]
                     targetprojpos = targetpos - targetdir*dot(targetdir,targetpos)
-                    self.robot.SetJointValues(random.rand()*(upper-lower)+lower,self.manip.GetArmIndices()) # set random values
+                    self.robot.SetDOFValues(random.rand()*(upper-lower)+lower,self.manip.GetArmIndices()) # set random values
                     sol = self.manip.FindIKSolution(IkParameterization(Ray(targetpos,targetdir),self.iktype),0)
                     if sol is not None:
-                        self.robot.SetJointValues(sol,self.manip.GetArmIndices())
+                        self.robot.SetDOFValues(sol,self.manip.GetArmIndices())
                         realdir = dot(self.manip.GetEndEffectorTransform()[0:3,0:3],self.manip.GetDirection())
                         realpos = self.manip.GetEndEffectorTransform()[0:3,3]
                         realprojpos = realpos - realdir*dot(realdir,realpos)
@@ -500,10 +500,10 @@ class InverseKinematicsModel(OpenRAVEModel):
                     self.robot.SetDOFValues(orgvalues,self.manip.GetArmIndices())
                     targetdir = dot(self.manip.GetEndEffectorTransform()[0:3,0:3],self.manip.GetDirection())
                     targetpos = self.manip.GetEndEffectorTransform()[0:3,3] + 10.0*random.rand()*targetdir
-                    self.robot.SetJointValues(random.rand()*(upper-lower)+lower,self.manip.GetArmIndices()) # set random values
+                    self.robot.SetDOFValues(random.rand()*(upper-lower)+lower,self.manip.GetArmIndices()) # set random values
                     sol = self.manip.FindIKSolution(IkParameterization(targetpos,self.iktype),0)
                     if sol is not None:
-                        self.robot.SetJointValues(sol,self.manip.GetArmIndices())
+                        self.robot.SetDOFValues(sol,self.manip.GetArmIndices())
                         realdir = dot(self.manip.GetEndEffectorTransform()[0:3,0:3],self.manip.GetDirection())
                         realpos = self.manip.GetEndEffectorTransform()[0:3,3]
                         if linalg.norm(cross(realdir,realpos-targetpos)) < 7e-5: # relax error a little...

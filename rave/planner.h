@@ -195,29 +195,41 @@ public:
     /// \param pparams The parameters of the planner, any class derived from PlannerParameters can be passed. The planner should copy these parameters for future instead of storing the pointer.
     virtual bool InitPlan(RobotBasePtr probot, PlannerParametersConstPtr pparams) = 0;
 
-    /// \brief Setup scene, robot, and properties of the plan, and reset all structures with pparams.
-    /// \param pbase The robot will be planning for.
-    /// \param isParameters The serialized form of the parameters. By default, this exists to allow third parties to
-    /// pass information to planners without excplicitly knowning the format/internal structures used
-    virtual bool InitPlan(RobotBasePtr pbase, std::istream& isParameters);
+    /** \brief Setup scene, robot, and properties of the plan, and reset all structures with pparams.
+    
+        \param robot The robot will be planning for. Although the configuration space of the planner and the robot can be independent,
+        the planner uses the robot to check for environment and self-collisions.
+        In order to speed up computations further, planners can use the CO_ActiveDOFs collision checker option, which only focuses
+        collision on the currently moving links in the robot.
+        Even if the configuration space of the planner is different from the robot, the robot active DOFs must be set correctly (or at least have all dofs active)!
 
-    /// \brief Executes the main planner trying to solve for the goal condition.
-    ///
-    /// Fill ptraj with the trajectory of the planned path that the robot needs to execute
-    /// \param ptraj The output trajectory the robot has to follow in order to successfully complete the plan. If this planner is a path optimizer, the trajectory can be used as an input for generating a smoother path. The trajectory is for the configuration degrees of freedom defined by the planner parameters.
-    /// \param pOutStream If specified, planner will output any other special data
-    /// \return true if planner is successful
+        \param isParameters The serialized form of the parameters. By default, this exists to allow third parties to
+        pass information to planners without excplicitly knowning the format/internal structures used
+        \return true if plan is initialized successfully and initial conditions are satisfied.
+    */
+    virtual bool InitPlan(RobotBasePtr robot, std::istream& isParameters);
+
+    /** \brief Executes the main planner trying to solve for the goal condition.
+    
+        Fill ptraj with the trajectory of the planned path that the robot needs to execute
+        \param ptraj The output trajectory the robot has to follow in order to successfully complete the plan. If this planner is a path optimizer, the trajectory can be used as an input for generating a smoother path. The trajectory is for the configuration degrees of freedom defined by the planner parameters.
+        \param pOutStream If specified, planner will output any other special data
+        \return true if planner is successful
+    */
     virtual bool PlanPath(TrajectoryBasePtr ptraj, boost::shared_ptr<std::ostream> pOutStream = boost::shared_ptr<std::ostream>()) = 0;
 
-    /// \return the internal parameters of the planner
+    /// \brief return the internal parameters of the planner
     virtual PlannerParametersConstPtr GetParameters() const = 0;
 
 protected:
-    /// Calls a planner to optimizes the trajectory path. The PlannerParameters structure passed into the optimization planner is
-    /// constructed with the same freespace constraints as this planner.
-    /// This function should always be called in PlanPath to post-process the trajectory.
-    /// \param probot the robot this trajectory is meant for, also uses the robot for checking collisions.
-    /// \param ptraj Initial trajectory to be smoothed is inputted. If optimization path succeeds, final trajectory output is set in this variable. The trajectory is for the configuration degrees of freedom defined by the planner parameters.
+    /** \brief Calls a planner to optimizes the trajectory path.
+
+        The PlannerParameters structure passed into the optimization planner is
+        constructed with the same freespace constraints as this planner.
+        This function should always be called in PlanPath to post-process the trajectory.
+        \param probot the robot this trajectory is meant for, also uses the robot for checking collisions.
+        \param ptraj Initial trajectory to be smoothed is inputted. If optimization path succeeds, final trajectory output is set in this variable. The trajectory is for the configuration degrees of freedom defined by the planner parameters.
+    */
     virtual bool _OptimizePath(RobotBasePtr probot, TrajectoryBasePtr ptraj);
     
 private:

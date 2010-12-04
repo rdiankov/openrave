@@ -593,7 +593,9 @@ public:
     */
     bool GetChain(int linkindex1, int linkindex2, std::vector<JointPtr>& vjoints) const;
     
-    /// \brief Returns true if the dof index is on a path between two links
+    /// \brief Returns true if the dof index affects the relative transformation between the two links.
+    ///
+    /// The internal implementation uses \ref KinBody::DoesAffect, therefore mimic indices are correctly handled.
     bool IsDOFInChain(int linkbaseindex, int linkendindex, int dofindex) const;
 
     /// \brief Return the index of the joint with the given name, else -1.

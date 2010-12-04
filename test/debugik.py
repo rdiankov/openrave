@@ -46,6 +46,62 @@ def test_ikgeneration():
     usedummyjoints=usedummyjoints
     solvefn=solvefn
 
+def test_handstraight_jacobian():
+    env = Environment()
+    robot = env.ReadRobotXMLFile('robots/barrettwam.robot.xml')
+    env.AddRobot(robot)
+    # use jacobians for validation
+    with env:
+        deltastep = 0.01
+        thresh=1e-5
+        lower,upper = robot.GetDOFLimits()
+        manip = robot.GetActiveManipulator()
+        ilink = manip.GetEndEffector().GetIndex()
+        localtrans = [0.1,0.2,0.3]
+        localquat = [1.0,0.0,0.0,0.0]
+        stats = []
+        robot.SetActiveDOFs(manip.GetArmIndices())
+        while True:
+            robot.SetDOFValues(random.rand()*(upper-lower)+lower)
+            if not robot.CheckSelfCollision() and not env.CheckCollision(robot):
+                break
+        deltatrans = deltastep*(random.rand(3)-0.5)
+        while True:
+            values = robot.GetDOFValues(manip.GetArmIndices())
+            T = manip.GetEndEffectorTransform()
+            Tnew = array(T)
+            Tnew[0:3,3] += deltatrans
+            sols = manip.FindIKSolutions(Tnew,IkFilterOptions.CheckEnvCollisions)
+            if len(sols) == 0:
+                break
+            dists = sum( (array(sols)-tile(values,(len(sols),1)))**2, 1)
+            sol = sols[argmin(dists)]            
+            J = robot.CalculateActiveJacobian(ilink,manip.GetEndEffectorTransform()[0:3,3])
+            Jrot = robot.CalculateActiveAngularVelocityJacobian(ilink)
+            Jtrans = r_[J,Jrot]
+            JJt = dot(Jtrans,transpose(Jtrans))
+            deltavalues = dot(transpose(Jtrans),dot(linalg.inv(JJt),r_[deltatrans,0,0,0]))
+            #dtt = dot(r_[deltatrans,0,0,0],JJt)
+            #alpha = dot(r_[deltatrans,0,0,0], dtt)/dot(dtt,dtt)
+            #deltavalues = alpha*dot(transpose(Jtrans),r_[deltatrans,0,0,0])
+            realvalues = sol-values
+            realtransdelta = dot(J,realvalues)
+            #err = sum(abs(sign(deltatrans)-sign(realtransdelta)))
+            err = dot(deltatrans,realtransdelta)/(linalg.norm(deltatrans)*linalg.norm(realtransdelta))
+            d = sqrt(sum(realvalues**2)/sum(deltavalues**2))
+            if err < 0.95 or d > 10:
+                print realvalues
+                print deltavalues
+            stats.append((err,d))
+            print stats[-1]
+            robot.SetDOFValues(sol,manip.GetArmIndices())
+
+    import matplotlib.pyplot as plt
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax.hist(stats,100)
+    fig.show()
+
 def test_ik():
     import inversekinematics
     env = Environment()
@@ -57,20 +113,20 @@ def test_ik():
     self = inversekinematics.InverseKinematicsModel(robot=robot,iktype=IkParameterization.Type.Transform6D)
     self.load()
     self.perftiming(10)
-    robot.SetJointValues([-2.62361, 1.5708, -0.17691, -3.2652, 0, -3.33643],manip.GetArmJoints())
+    robot.SetDOFValues([-2.62361, 1.5708, -0.17691, -3.2652, 0, -3.33643],manip.GetArmJoints())
     T=manip.GetEndEffectorTransform()
     print robot.CheckSelfCollision()
     #[j.SetJointLimits([-pi],[pi]) for j in robot.GetJoints()]
-    robot.SetJointValues(zeros(robot.GetDOF()))
+    robot.SetDOFValues(zeros(robot.GetDOF()))
     values=manip.FindIKSolution(T,False)
     Tlocal = dot(dot(linalg.inv(manip.GetBase().GetTransform()),T),linalg.inv(manip.GetGraspTransform()))
     print ' '.join(str(f) for f in Tlocal[0:3,0:4].flatten())
-    robot.SetJointValues (values,manip.GetArmJoints())
+    robot.SetDOFValues (values,manip.GetArmJoints())
     print manip.GetEndEffectorTransform()
     
     sols=manip.FindIKSolutions(T,False)
     for i,sol in enumerate(sols):
-        robot.SetJointValues(sol)
+        robot.SetDOFValues(sol)
         Tnew = manip.GetEndEffectorTransform()
         if sum((Tnew-T)**2) > 0.0001:
             print i
