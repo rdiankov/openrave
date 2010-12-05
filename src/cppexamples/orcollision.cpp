@@ -123,7 +123,7 @@ int main(int argc, char ** argv)
     for(int i = 0; i < (int)vsetvalues.size() && i < (int)values.size(); ++i) {
         values[i] = vsetvalues[i];
     }
-    pbody->SetJointValues(values,true);
+    pbody->SetDOFValues(values,true);
 
     int contactpoints = 0;
     CollisionReportPtr report(new CollisionReport());

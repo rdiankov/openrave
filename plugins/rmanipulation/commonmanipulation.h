@@ -53,7 +53,7 @@ class CM
     /// \return 0 if jitter failed and robot is in collision, -1 if robot originally not in collision, 1 if jitter succeeded
     static int JitterActiveDOF(RobotBasePtr robot,int nMaxIterations=5000,dReal fRand=0.03f)
     {
-        RAVELOG_VERBOSEA("starting jitter active dof...\n");
+        RAVELOG_VERBOSE("starting jitter active dof...\n");
         vector<dReal> curdof, newdof, lower, upper;
         robot->GetActiveDOFValues(curdof);
         robot->GetActiveDOFLimits(lower, upper);
@@ -77,7 +77,7 @@ class CM
 
         do {
             if( iter++ > nMaxIterations ) {
-                RAVELOG_WARNA("Failed to find noncolliding position for robot\n");
+                RAVELOG_WARN("Failed to find noncolliding position for robot\n");
                 robot->SetActiveDOFValues(curdof);
                 return 0;
             }
@@ -91,7 +91,7 @@ class CM
 
     static bool JitterTransform(KinBodyPtr pbody, float fJitter, int nMaxIterations=1000)
     {
-        RAVELOG_VERBOSEA("starting jitter transform...\n");
+        RAVELOG_VERBOSE("starting jitter transform...\n");
 
         // randomly add small offset to the body until it stops being in collision
         Transform transorig = pbody->GetTransform();
@@ -120,7 +120,7 @@ class CM
         if( ikp.GetType() == IkParameterization::Type_Transform6D ) {
             CollisionReportPtr report(new CollisionReport());
             if( pmanip->CheckEndEffectorCollision(ikp.GetTransform(),report) ) {
-                RAVELOG_VERBOSEA("sampleiksolutions gripper in collision: (%s:%s)x(%s:%s).\n",
+                RAVELOG_VERBOSE("sampleiksolutions gripper in collision: (%s:%s)x(%s:%s).\n",
                                  !!report->plink1?report->plink1->GetParent()->GetName().c_str():"",
                                  !!report->plink1?report->plink1->GetName().c_str():"",
                                  !!report->plink2?report->plink2->GetParent()->GetName().c_str():"",
@@ -257,7 +257,7 @@ class CM
 
             boost::shared_ptr<PlannerBase> planner(RaveCreatePlanner(penv,pplannername));
             if( !planner ) {
-                RAVELOG_WARNA(str(boost::format("failed to find planner %s\n")%pplannername));
+                RAVELOG_WARN(str(boost::format("failed to find planner %s\n")%pplannername));
                 return false;
             }
     

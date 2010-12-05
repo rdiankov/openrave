@@ -177,7 +177,7 @@ def run(args=None):
         target.SetTransform(O_T_Target)
     
         # init robot pose: l_shoulder_pan, r_shoulder_pan, torso, l_gripper
-        robot.SetJointValues([pi/2,-pi/2,0.31,0.54],[35,56,14,47])
+        robot.SetDOFValues([pi/2,-pi/2,0.31,0.54],[35,56,14,47])
         gt = GraspTransform(env,target)
         handles = []
         raw_input('This demo shows how to find the transform that moves the hand to the target.\npress ENTER to continue...')

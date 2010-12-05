@@ -78,10 +78,10 @@ protected:
             else if( name == "height" )
                 ss >> _psensor->_pgeom->height;
             else
-                RAVELOG_WARNA(str(boost::format("bad tag: %s")%name));
+                RAVELOG_WARN(str(boost::format("bad tag: %s")%name));
 
             if( !ss )
-                RAVELOG_WARNA(str(boost::format("error parsing %s\n")%name));
+                RAVELOG_WARN(str(boost::format("error parsing %s\n")%name));
 
             return false;
         }

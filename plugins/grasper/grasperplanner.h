@@ -39,13 +39,13 @@ public:
         _parameters->copy(pparams);
 
         if( _parameters->btightgrasp )
-            RAVELOG_WARNA("tight grasping not supported yet\n");
+            RAVELOG_WARN("tight grasping not supported yet\n");
 
         _vAvoidLinkGeometry.resize(0);
         FOREACH(itavoid,_parameters->vavoidlinkgeometry) {
             KinBody::LinkPtr plink = _robot->GetLink(*itavoid);
             if( !plink ) {
-                RAVELOG_WARNA(str(boost::format("failed to find avoiding link\n")%*itavoid));
+                RAVELOG_WARN(str(boost::format("failed to find avoiding link\n")%*itavoid));
                 continue;
             }
             _vAvoidLinkGeometry.push_back(plink);
@@ -131,7 +131,7 @@ public:
                 tbase = tbase * pmanip->GetEndEffectorTransform().inverse() * pbase->GetTransform();
             }
             else {
-                RAVELOG_DEBUGA("no active manipulator for robot, cannot get palm direction\n");
+                RAVELOG_DEBUG("no active manipulator for robot, cannot get palm direction\n");
                 tbase.trans = _parameters->vtargetposition;
             }
 
@@ -204,7 +204,7 @@ public:
             }
 
             if( !bInitialized ) {
-                RAVELOG_WARNA("no objects in environment\n");
+                RAVELOG_WARN("no objects in environment\n");
                 vTargetCenter = pmanip->GetEndEffectorTransform().trans;
                 fTargetRadius = 0;
                 //return false;
@@ -307,7 +307,7 @@ public:
             for(int q = 0; q < (int)vlinks.size(); q++) {
                 ct = CheckCollision(vlinks[q]);
                 if( ct&CT_AvoidLinkHit ) {
-                    RAVELOG_VERBOSEA(str(boost::format("hit link that needed to be avoided %s: %s\n")%vlinks.at(q)->GetName()%_report->__str__()));
+                    RAVELOG_VERBOSE(str(boost::format("hit link that needed to be avoided %s: %s\n")%vlinks.at(q)->GetName()%_report->__str__()));
                     return false;
                 }
             }
@@ -384,13 +384,13 @@ public:
                             }
                             else {
                                 if( IS_DEBUGLEVEL(Level_Verbose) ) {
-                                    RAVELOG_VERBOSEA(str(boost::format("Collision (%d) of link %s using joint %d [%s]\n")%ct%vlinks.at(q)->GetName()%nJointIndex%_report->__str__()));
+                                    RAVELOG_VERBOSE(str(boost::format("Collision (%d) of link %s using joint %d [%s]\n")%ct%vlinks.at(q)->GetName()%nJointIndex%_report->__str__()));
                                     stringstream ss; ss << "Transform: " << vlinks.at(q)->GetTransform() << ", Joint Vals: ";
                                     for(int vi = 0; vi < _robot->GetActiveDOF();vi++) {
                                         ss << dofvals[vi] << " ";
                                     }
                                     ss << endl;
-                                    RAVELOG_VERBOSEA(ss.str());
+                                    RAVELOG_VERBOSE(ss.str());
                                 }
                                 if( ct & CT_SelfCollision ) {
                                     RAVELOG_WARN("robot in self collision even though nothing moved!\n");
@@ -402,12 +402,12 @@ public:
                         }
                         else {
                             if( IS_DEBUGLEVEL(Level_Verbose) ) {
-                                RAVELOG_VERBOSEA(str(boost::format("Collision (%d) of link %s using joint %d, value=%f [%s]\n")%ct%vlinks.at(q)->GetName()%nJointIndex%dofvals[ifing]%_report->__str__()));
+                                RAVELOG_VERBOSE(str(boost::format("Collision (%d) of link %s using joint %d, value=%f [%s]\n")%ct%vlinks.at(q)->GetName()%nJointIndex%dofvals[ifing]%_report->__str__()));
                                 stringstream ss; ss << "Transform: " << vlinks.at(q)->GetTransform() << "Joint Vals: ";
                                 for(int vi = 0; vi < _robot->GetActiveDOF();vi++)
                                     ss << dofvals[vi] << " ";
                                 ss << endl;
-                                RAVELOG_VERBOSEA(ss.str());
+                                RAVELOG_VERBOSE(ss.str());
                             }
                             
                             if( (ct & CT_SelfCollision) || _parameters->bavoidcontact ) {

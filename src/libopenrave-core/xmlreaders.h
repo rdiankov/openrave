@@ -152,7 +152,7 @@ namespace OpenRAVEXMLParser
     {
         va_list args;
         va_start(args, msg);
-        RAVELOG_ERRORA("XML Parse error: ");
+        RAVELOG_ERROR("XML Parse error: ");
         vprintf(msg,args);
         va_end(args);
         GetXMLErrorCount()++;
@@ -666,7 +666,7 @@ namespace OpenRAVEXMLParser
                     _itgeomprop->type = KinBody::Link::GEOMPROPERTIES::GeomTrimesh;
                 }
                 else {
-                    RAVELOG_WARNA(str(boost::format("type %s not supported\n")%type));
+                    RAVELOG_WARN(str(boost::format("type %s not supported\n")%type));
                 }
 
                 _itgeomprop->_bDraw = bDraw;
@@ -813,7 +813,7 @@ namespace OpenRAVEXMLParser
                                 SoDB::readlock(); // have to lock coin3d, or otherwise state gets corrupted
                                 SoInput mySceneInput;
                                 if (!mySceneInput.openFile(renderfile.c_str())) {
-                                    RAVELOG_WARNA(str(boost::format("Failed to open %s for KinBody:TriMesh\n")%renderfile));
+                                    RAVELOG_WARN(str(boost::format("Failed to open %s for KinBody:TriMesh\n")%renderfile));
                                     GetXMLErrorCount()++;
                                 }
                                 else {
@@ -836,13 +836,13 @@ namespace OpenRAVEXMLParser
 
                                 if( !bSuccess ) {
                                     ivcon::ReadFile(renderfile.c_str(), _itgeomprop->collisionmesh);
-                                    RAVELOG_VERBOSEA(str(boost::format("trimesh verts: %d, inds: %d\n")%_itgeomprop->collisionmesh.vertices.size()%_itgeomprop->collisionmesh.indices.size()));
+                                    RAVELOG_VERBOSE(str(boost::format("trimesh verts: %d, inds: %d\n")%_itgeomprop->collisionmesh.vertices.size()%_itgeomprop->collisionmesh.indices.size()));
                                     FOREACH(it, _itgeomprop->collisionmesh.vertices)
                                         *it *= vScale;
                                 }
                             }
                             else
-                                RAVELOG_WARNA(str(boost::format("failed to find %s\n")%orgrenderfile));
+                                RAVELOG_WARN(str(boost::format("failed to find %s\n")%orgrenderfile));
                         }
                         else if( xmlname == "vertices" ) {
                             vector<dReal> values((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
@@ -909,7 +909,7 @@ namespace OpenRAVEXMLParser
 
             if( xmlname == "body" ) {
                 if( _plink->GetGeometries().size() == 0 )
-                    RAVELOG_WARNA(str(boost::format("link %s has no geometry attached!\n")%_plink->GetName()));
+                    RAVELOG_WARN(str(boost::format("link %s has no geometry attached!\n")%_plink->GetName()));
 
                 // perform final processing stages
                 MASS totalmass;
@@ -995,7 +995,7 @@ namespace OpenRAVEXMLParser
                 _offsetfrom = _pparent->GetLink(linkname);
 
                 if( !_offsetfrom ) {
-                    RAVELOG_WARNA(str(boost::format("Failed to find offsetfrom body %s\n")%linkname));
+                    RAVELOG_WARN(str(boost::format("Failed to find offsetfrom body %s\n")%linkname));
                     GetXMLErrorCount()++;
                 }
             }
@@ -1077,7 +1077,7 @@ namespace OpenRAVEXMLParser
                         _pjoint->vAxes[2] = Vector(0,0,1);
                     }
                     else {
-                        RAVELOG_WARNA(str(boost::format("unrecognized joint type: %s, setting to hinge\n")%itatt->second));
+                        RAVELOG_WARN(str(boost::format("unrecognized joint type: %s, setting to hinge\n")%itatt->second));
                         _pjoint->type = KinBody::Joint::JointHinge;
                     }
                 }
@@ -1088,7 +1088,7 @@ namespace OpenRAVEXMLParser
                     stringstream ss(itatt->second);
                     ss >> _strmimicjoint >> _pjoint->vMimicCoeffs[0] >> _pjoint->vMimicCoeffs[1];
                     if( !ss ) {
-                        RAVELOG_WARNA(str(boost::format("failed to set mimic properties correctly from: %s\n")%itatt->second));
+                        RAVELOG_WARN(str(boost::format("failed to set mimic properties correctly from: %s\n")%itatt->second));
                     }
                     _bMimicJoint = true;
                 }
@@ -1152,7 +1152,7 @@ namespace OpenRAVEXMLParser
             }
             else if( xmlname == "joint" ) {
                 if( _pparent->GetLinks().size() == 0 ) {
-                    RAVELOG_WARNA("parent kinbody has no links defined yet!\n");
+                    RAVELOG_WARN("parent kinbody has no links defined yet!\n");
                     return false;
                 }
             
@@ -1181,7 +1181,7 @@ namespace OpenRAVEXMLParser
                 Transform tbody0, tbody1;
 
                 if( !_pjoint->bodies[0] || !_pjoint->bodies[1] ) {
-                    RAVELOG_WARNA(str(boost::format("one or more attached bodies are invalid for joint %s\n")%_pjoint->GetName()));
+                    RAVELOG_WARN(str(boost::format("one or more attached bodies are invalid for joint %s\n")%_pjoint->GetName()));
                     if( !_pjoint->bodies[1] )
                         _pjoint->bodies[1] = _pparent->GetLinks().at(0);
                     if( !_pjoint->bodies[0] )
@@ -1228,7 +1228,7 @@ namespace OpenRAVEXMLParser
                 }
 
                 if( _pjoint->bodies[0]->IsStatic() ) {
-                    RAVELOG_WARNA(str(boost::format("joint %s: all attached links are static!\n")%_pjoint->GetName()));
+                    RAVELOG_WARN(str(boost::format("joint %s: all attached links are static!\n")%_pjoint->GetName()));
                 }
 
                 _pjoint->vanchor = toffsetfrom*_pjoint->vanchor;
@@ -1303,7 +1303,7 @@ namespace OpenRAVEXMLParser
                 }
             
                 if( !_pjoint->bodies[index] && bQuery ) {
-                    RAVELOG_WARNA(str(boost::format("Failed to find body %s for joint %s\n")%linkname%_pjoint->name));
+                    RAVELOG_WARN(str(boost::format("Failed to find body %s for joint %s\n")%linkname%_pjoint->name));
                     GetXMLErrorCount()++;
                 }
             }
@@ -1359,7 +1359,7 @@ namespace OpenRAVEXMLParser
                 _offsetfrom = _pparent->GetLink(linkname);
         
                 if( !_offsetfrom ) {
-                    RAVELOG_WARNA(str(boost::format("Failed to find body %s\n")%linkname));
+                    RAVELOG_WARN(str(boost::format("Failed to find body %s\n")%linkname));
                     GetXMLErrorCount()++;
                 }
             }
@@ -1517,7 +1517,7 @@ namespace OpenRAVEXMLParser
                     GetFullFilename() = oldfile;
                     
                     if( !pinterface ) {
-                        RAVELOG_DEBUGA(str(boost::format("Failed to load filename %s\n")%itatt->second));
+                        RAVELOG_DEBUG(str(boost::format("Failed to load filename %s\n")%itatt->second));
                         GetXMLErrorCount()++;
                         break;
                     }
@@ -1553,7 +1553,7 @@ namespace OpenRAVEXMLParser
             }
 
             if( !_pinterface ) {
-                RAVELOG_ERRORA(str(boost::format("xml readers failed to create instance of type %s:%s\n")%RaveGetInterfaceName(type)%strtype));
+                RAVELOG_ERROR(str(boost::format("xml readers failed to create instance of type %s:%s\n")%RaveGetInterfaceName(type)%strtype));
             }
             else {
                 _pcustomreader = RaveCallXMLReader(_pinterface->GetInterfaceType(),_pinterface->GetXMLId(),_pinterface,atts);
@@ -1944,7 +1944,7 @@ namespace OpenRAVEXMLParser
                 FOREACH(itmimic, listMimicJoints) {
                     itmimic->first->nMimicJointIndex = _pchain->GetJointIndex(itmimic->second);
                     if( itmimic->first->nMimicJointIndex < 0 ) {
-                        RAVELOG_WARNA("Failed to find mimic joint: %s", itmimic->second.c_str());
+                        RAVELOG_WARN("Failed to find mimic joint: %s", itmimic->second.c_str());
                         GetXMLErrorCount()++;
                     }
                 }
@@ -1993,13 +1993,13 @@ namespace OpenRAVEXMLParser
 
                 if( _vjointvalues.size() > 0 ) {
                     if( _vjointvalues.size() == _pchain->GetJoints().size() )
-                        _pchain->SetJointValues(_vjointvalues);
+                        _pchain->SetDOFValues(_vjointvalues);
                     else
-                        RAVELOG_WARNA(str(boost::format("jointvalues for body %s wrong number (%d!=%d)\n")%_pchain->GetName()%_vjointvalues.size()%_pchain->GetJoints().size()));
+                        RAVELOG_WARN(str(boost::format("jointvalues for body %s wrong number (%d!=%d)\n")%_pchain->GetName()%_vjointvalues.size()%_pchain->GetJoints().size()));
                 }
         
                 Vector com = _pchain->GetCenterOfMass();
-                RAVELOG_VERBOSEA("%s: COM = (%f,%f,%f)\n", _pchain->GetName().c_str(), com.x, com.y, com.z);
+                RAVELOG_VERBOSE("%s: COM = (%f,%f,%f)\n", _pchain->GetName().c_str(), com.x, com.y, com.z);
                 return true;
             }
             return false;
@@ -2099,7 +2099,7 @@ namespace OpenRAVEXMLParser
                     _probot->SetController(RaveInterfaceCast<ControllerBase>(_pinterface),dofindices,nControlTransformation);
                 }
                 else {
-                    RAVELOG_WARNA("controller is unused\n");
+                    RAVELOG_WARN("controller is unused\n");
                 }
                 return true;
             }
@@ -2170,7 +2170,7 @@ namespace OpenRAVEXMLParser
                 _pmanip->_pEndEffector = _probot->GetLink(linkname);
         
                 if( !_pmanip->_pEndEffector ) {
-                    RAVELOG_WARNA("Failed to find manipulator end effector %s\n", linkname.c_str());
+                    RAVELOG_WARN("Failed to find manipulator end effector %s\n", linkname.c_str());
                     GetXMLErrorCount()++;
                 }
             }
@@ -2178,7 +2178,7 @@ namespace OpenRAVEXMLParser
                 string linkname; _ss >> linkname;
                 _pmanip->_pBase = _probot->GetLink(linkname);
                 if( !_pmanip->_pBase ) {
-                    RAVELOG_WARNA("Failed to find manipulator base %s\n", linkname.c_str());
+                    RAVELOG_WARN("Failed to find manipulator base %s\n", linkname.c_str());
                     GetXMLErrorCount()++;
                 }
             }
@@ -2188,7 +2188,7 @@ namespace OpenRAVEXMLParser
                 FOREACH(itname,jointnames) {
                     int index = _probot->GetJointIndex(*itname);
                     if( index < 0 )
-                        RAVELOG_WARNA(str(boost::format("failed to find gripper joint name %s\n")%*itname));
+                        RAVELOG_WARN(str(boost::format("failed to find gripper joint name %s\n")%*itname));
                     else
                         _pmanip->_vgripperdofindices.push_back(index);
                 }
@@ -2202,7 +2202,7 @@ namespace OpenRAVEXMLParser
                 _ss >> _pmanip->_vdirection.x >> _pmanip->_vdirection.y >> _pmanip->_vdirection.z;
                 dReal flen = _pmanip->_vdirection.lengthsqr3();
                 if( flen == 0 ) {
-                    RAVELOG_WARNA("palm direction is 0, setting to default value\n");
+                    RAVELOG_WARN("palm direction is 0, setting to default value\n");
                     _pmanip->_vdirection = Vector(0,0,1);
                 }
                 else
@@ -2265,13 +2265,13 @@ namespace OpenRAVEXMLParser
                             }
                         }
                         else {
-                            RAVELOG_WARNA("Failed to load IKFast problem\n");
+                            RAVELOG_WARN("Failed to load IKFast problem\n");
                         }
                     }
                 }
                 
                 if( !piksolver )
-                    RAVELOG_WARNA("failed to create iksolver %s\n", iklibraryname.c_str());
+                    RAVELOG_WARN("failed to create iksolver %s\n", iklibraryname.c_str());
                 else {
                     _pmanip->_strIkSolver = piksolver->GetXMLId();
                 }
@@ -2402,11 +2402,11 @@ namespace OpenRAVEXMLParser
             }
             else if( xmlname == "attachedsensor" ) {
                 if( !_psensor->psensor ) {
-                    RAVELOG_VERBOSEA("Attached robot sensor %s points to no real sensor!\n",_psensor->GetName().c_str());
+                    RAVELOG_VERBOSE("Attached robot sensor %s points to no real sensor!\n",_psensor->GetName().c_str());
                 }
                 else {
                     if( !_psensor->psensor->Init(args) ) {
-                        RAVELOG_WARNA("failed to initialize sensor %s\n", _psensor->GetName().c_str());
+                        RAVELOG_WARN("failed to initialize sensor %s\n", _psensor->GetName().c_str());
                         _psensor->psensor.reset();
                     }
                     else {
@@ -2430,7 +2430,7 @@ namespace OpenRAVEXMLParser
                 _psensor->pattachedlink = _probot->GetLink(linkname);
         
                 if( _psensor->pattachedlink.expired() ) {
-                    RAVELOG_WARNA("Failed to find attached sensor link %s\n", linkname.c_str());
+                    RAVELOG_WARN("Failed to find attached sensor link %s\n", linkname.c_str());
                     GetXMLErrorCount()++;
                 }
             }
@@ -2620,17 +2620,17 @@ namespace OpenRAVEXMLParser
         
                 if( _vjointvalues.size() > 0 ) {
                     if( _vjointvalues.size() == _probot->GetJoints().size() ) {
-                        _probot->SetJointValues(_vjointvalues);
+                        _probot->SetDOFValues(_vjointvalues);
                     }
                     else
-                        RAVELOG_WARNA(str(boost::format("jointvalues for body %s wrong number (%d!=%d)\n")%_probot->GetName()%_vjointvalues.size()%_probot->GetJoints().size()));
+                        RAVELOG_WARN(str(boost::format("jointvalues for body %s wrong number (%d!=%d)\n")%_probot->GetName()%_vjointvalues.size()%_probot->GetJoints().size()));
                 }
 
                 // forces robot to reupdate its internal objects
                 _probot->SetTransform(_probot->GetTransform());
         
                 if( !_probot->GetEnv()->GetPhysicsEngine()->InitKinBody(_probot) )
-                    RAVELOG_WARNA("physics engine failed to init robot %s\n", _probot->GetName().c_str());
+                    RAVELOG_WARN("physics engine failed to init robot %s\n", _probot->GetName().c_str());
 
                 return true;
             }
@@ -2857,7 +2857,7 @@ namespace OpenRAVEXMLParser
                         throw openrave_exception("interface should not be initialized");
                     _pcurreader = CreateInterfaceReader(_penv,itname->first,_pinterface,"",atts);
                     if( !_pinterface ) {
-                        RAVELOG_WARNA("failed to create interface %s in <environment>\n", itname->second.c_str());
+                        RAVELOG_WARN("failed to create interface %s in <environment>\n", itname->second.c_str());
                         _pcurreader.reset(new DummyXMLReader(xmlname,"environment"));
                     }
                     return PE_Support;
@@ -2907,7 +2907,7 @@ namespace OpenRAVEXMLParser
                         _penv->SetCollisionChecker(RaveInterfaceCast<CollisionCheckerBase>(_pinterface));
                     }
                     else if( !!_pinterface ) {
-                        RAVELOG_DEBUGA("owning interface %s, type: %s\n",_pinterface->GetXMLId().c_str(),RaveGetInterfaceName(_pinterface->GetInterfaceType()).c_str());
+                        RAVELOG_DEBUG("owning interface %s, type: %s\n",_pinterface->GetXMLId().c_str(),RaveGetInterfaceName(_pinterface->GetInterfaceType()).c_str());
                         _penv->OwnInterface(_pinterface);
                     }
                     _pinterface.reset();

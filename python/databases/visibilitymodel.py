@@ -222,7 +222,7 @@ class VisibilityModel(OpenRAVEModel):
                 with RobotStateSaver(self.robot):
                     # find better way of handling multiple grasps
                     if len(self.preshapes) > 0:
-                            self.robot.SetJointValues(self.preshapes[0],self.manip.GetGripperIndices())
+                            self.robot.SetDOFValues(self.preshapes[0],self.manip.GetGripperIndices())
                     extentsfile = os.path.join(RaveGetHomeDirectory(),'kinbody.'+self.target.GetKinematicsGeometryHash(),'visibility.txt')
                     if sphere is None and os.path.isfile(extentsfile):
                         self.visibilitytransforms = self.visualprob.ProcessVisibilityExtents(extents=loadtxt(extentsfile,float),conedirangles=conedirangles)
@@ -249,7 +249,7 @@ class VisibilityModel(OpenRAVEModel):
                 for i,pose in enumerate(self.visibilitytransforms):
                     with self.env:
                         if len(self.preshapes) > 0:
-                            self.robot.SetJointValues(self.preshapes[0],self.manip.GetGripperIndices())
+                            self.robot.SetDOFValues(self.preshapes[0],self.manip.GetGripperIndices())
                         Trelative = dot(linalg.inv(self.attachedsensor.GetTransform()),self.manip.GetEndEffectorTransform())
                         Tcamera = dot(self.target.GetTransform(),matrixFromPose(pose))
                         Tgrasp = dot(Tcamera,Trelative)
@@ -300,7 +300,7 @@ class VisibilityModel(OpenRAVEModel):
                 Tgrasp = dot(Tcamera,Trelative)
                 s = self.manip.FindIKSolution(Tgrasp,checkcollision)
                 if s is not None:
-                    self.robot.SetJointValues(s,self.manip.GetArmIndices())
+                    self.robot.SetDOFValues(s,self.manip.GetArmIndices())
                     if computevisibility and not self.visualprob.ComputeVisibility():
                         continue
                     validjoints.append((s,i))

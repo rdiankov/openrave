@@ -7633,7 +7633,7 @@ void init_program_data ( void )
 
 int iv_read_binary ( FILE *filein )
 {
-    RAVELOG_WARNA("does not support binary IV files\n");
+    RAVELOG_WARN("does not support binary IV files\n");
     return 1;
 }
 

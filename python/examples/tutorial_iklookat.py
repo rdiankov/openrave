@@ -75,13 +75,13 @@ def run(args=None):
             with env:
                 # first test to see if dot product is positive before displaying the solution
                 with KinBodyStateSaver(robot):
-                    robot.SetJointValues(solutions[i],ikmodel.manip.GetArmIndices())
+                    robot.SetDOFValues(solutions[i],ikmodel.manip.GetArmIndices())
                     T = ikmodel.manip.GetEndEffectorTransform()
                     globaldir = numpy.dot(T[0:3,0:3],ikmodel.manip.GetDirection())
                     if numpy.dot(target-T[0:3,3],globaldir) < 0:
                         continue
                 # draw
-                robot.SetJointValues(solutions[i],ikmodel.manip.GetArmIndices())
+                robot.SetDOFValues(solutions[i],ikmodel.manip.GetArmIndices())
                 hray = env.drawlinelist(array([T[0:3,3], T[0:3,3]+globaldir]),5,colors=[0.1,0.1,1])
                 env.UpdatePublishedBodies()
             time.sleep(0.1)

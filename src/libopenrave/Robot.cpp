@@ -389,7 +389,7 @@ void RobotBase::Manipulator::serialize(std::ostream& o, int options) const
         RobotBasePtr probot(_probot);
         KinBody::KinBodyStateSaver saver(probot,Save_LinkTransformation);
         vector<dReal> vzeros(probot->GetDOF(),0);
-        probot->SetJointValues(vzeros);
+        probot->SetDOFValues(vzeros);
         Transform tbaseinv;
         if( !!_pBase ) {
             tbaseinv = _pBase->GetTransform().inverse();
@@ -592,16 +592,16 @@ bool RobotBase::SetController(ControllerBasePtr controller, const std::vector<in
     return false;
 }
 
-void RobotBase::SetJointValues(const std::vector<dReal>& vJointValues, bool bCheckLimits)
+void RobotBase::SetDOFValues(const std::vector<dReal>& vJointValues, bool bCheckLimits)
 {
-    KinBody::SetJointValues(vJointValues, bCheckLimits);
+    KinBody::SetDOFValues(vJointValues, bCheckLimits);
     _UpdateGrabbedBodies();
     _UpdateAttachedSensors();
 }
 
-void RobotBase::SetJointValues(const std::vector<dReal>& vJointValues, const Transform& transbase, bool bCheckLimits)
+void RobotBase::SetDOFValues(const std::vector<dReal>& vJointValues, const Transform& transbase, bool bCheckLimits)
 {
-    KinBody::SetJointValues(vJointValues, transbase, bCheckLimits); // should call RobotBase::SetJointValues
+    KinBody::SetDOFValues(vJointValues, transbase, bCheckLimits); // should call RobotBase::SetDOFValues
 }
 
 void RobotBase::SetBodyTransformations(const std::vector<Transform>& vbodies)
@@ -627,7 +627,7 @@ void RobotBase::_UpdateGrabbedBodies()
         if( !!pbody )
             pbody->SetTransform(itbody->plinkrobot->GetTransform() * itbody->troot);
         else {
-            RAVELOG_DEBUGA(str(boost::format("erasing invaliding grabbed body from %s")%GetName()));
+            RAVELOG_DEBUG(str(boost::format("erasing invaliding grabbed body from %s")%GetName()));
             itbody = _vGrabbedBodies.erase(itbody);
         }
     }
@@ -824,7 +824,7 @@ void RobotBase::SetActiveDOFs(const std::vector<int>& vJointIndices, int nAffine
 void RobotBase::SetActiveDOFValues(const std::vector<dReal>& values, bool bCheckLimits)
 {
     if(_nActiveDOF < 0) {
-        SetJointValues(values,bCheckLimits);
+        SetDOFValues(values,bCheckLimits);
         return;
     }
     if( (int)values.size() != GetActiveDOF() ) {
@@ -879,10 +879,10 @@ void RobotBase::SetActiveDOFValues(const std::vector<dReal>& values, bool bCheck
             _vTempRobotJoints[_vActiveDOFIndices[i]] = values[i];
         }
         if( (int)_vActiveDOFIndices.size() < _nActiveDOF ) {
-            SetJointValues(_vTempRobotJoints, t, bCheckLimits);
+            SetDOFValues(_vTempRobotJoints, t, bCheckLimits);
         }
         else {
-            SetJointValues(_vTempRobotJoints, bCheckLimits);
+            SetDOFValues(_vTempRobotJoints, bCheckLimits);
         }
     }
 }
@@ -1748,7 +1748,7 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr plink)
         throw openrave_exception("robot cannot grab itself",ORE_InvalidArguments);
 
     if( IsGrabbing(pbody) ) {
-        RAVELOG_VERBOSEA("Robot %s: body %s already grabbed\n", GetName().c_str(), pbody->GetName().c_str());
+        RAVELOG_VERBOSE("Robot %s: body %s already grabbed\n", GetName().c_str(), pbody->GetName().c_str());
         return true;
     }
 
@@ -1784,7 +1784,7 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr pRobotLinkToGrabWith, const std::
         throw openrave_exception("robot cannot grab itself",ORE_InvalidArguments);
 
     if( IsGrabbing(pbody) ) {
-        RAVELOG_VERBOSEA("Robot %s: body %s already grabbed\n", GetName().c_str(), pbody->GetName().c_str());
+        RAVELOG_VERBOSE("Robot %s: body %s already grabbed\n", GetName().c_str(), pbody->GetName().c_str());
         return true;
     }
 
@@ -1824,7 +1824,7 @@ void RobotBase::Release(KinBodyPtr pbody)
     }
 
     if( itbody == _vGrabbedBodies.end() ) {
-        RAVELOG_DEBUGA(str(boost::format("Robot %s: body %s not grabbed\n")%GetName()%pbody->GetName()));
+        RAVELOG_DEBUG(str(boost::format("Robot %s: body %s not grabbed\n")%GetName()%pbody->GetName()));
         return;
     }
 
@@ -1929,8 +1929,9 @@ bool RobotBase::CheckSelfCollision(CollisionReportPtr report) const
     bool bCollision = false;
     FOREACHC(itbody, _vGrabbedBodies) {
         KinBodyPtr pbody(itbody->pbody);
-        if( !pbody )
+        if( !pbody ) {
             continue;
+        }
         FOREACHC(itrobotlink,itbody->vNonCollidingLinks) {
             // have to use link/link collision since link/body checks attached bodies
             FOREACHC(itbodylink,pbody->GetLinks()) {
@@ -1939,11 +1940,13 @@ bool RobotBase::CheckSelfCollision(CollisionReportPtr report) const
                     break;
                 }
             }
-            if( bCollision )
+            if( bCollision ) {
                 break;
+            }
         }
-        if( bCollision )
+        if( bCollision ) {
             break;
+        }
 
         if( pbody->CheckSelfCollision(report) ) {
             bCollision = true;
@@ -1964,19 +1967,23 @@ bool RobotBase::CheckSelfCollision(CollisionReportPtr report) const
                             break;
                         }
                     }
-                    if( bCollision )
+                    if( bCollision ) {
                         break;
+                    }
                 }
-                if( bCollision )
+                if( bCollision ) {
                     break;
+                }
             }
-            if( bCollision )
+            if( bCollision ) {
                 break;
+            }
         }
     }
     
-    if( bCollision && !!report )
-        RAVELOG_VERBOSEA(str(boost::format("Self collision: %s\n")%report->__str__()));
+    if( bCollision && !!report ) {
+        RAVELOG_VERBOSE(str(boost::format("Self collision: %s\n")%report->__str__()));
+    }
     return bCollision;
 }
 
@@ -2194,7 +2201,7 @@ bool RobotBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     // clone the controller
     if( (cloningoptions&Clone_RealControllers) && !!r->GetController() ) {
         if( !SetController(RaveCreateController(GetEnv(), r->GetController()->GetXMLId()),r->GetController()->GetControlDOFIndices(),r->GetController()->IsControlTransformation()) ) {
-            RAVELOG_WARNA("failed to set %s controller for robot %s\n", r->GetController()->GetXMLId().c_str(), GetName().c_str());
+            RAVELOG_WARN("failed to set %s controller for robot %s\n", r->GetController()->GetXMLId().c_str(), GetName().c_str());
         }
     }
 
@@ -2204,7 +2211,7 @@ bool RobotBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
             dofindices.push_back(i);
         }
         if( !SetController(RaveCreateController(GetEnv(), "IdealController"),dofindices, 1) ) {
-            RAVELOG_WARNA("failed to set IdealController\n");
+            RAVELOG_WARN("failed to set IdealController\n");
             return false;
         }
     }

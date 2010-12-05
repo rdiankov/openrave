@@ -241,7 +241,7 @@ class CalibrationViews(metaclass.AutoReloader):
         try:
             with self.robot:
                 for i,config in enumerate(configs):
-                    self.robot.SetJointValues(config,self.vmodel.manip.GetArmIndices())
+                    self.robot.SetDOFValues(config,self.vmodel.manip.GetArmIndices())
                     self.env.UpdatePublishedBodies()
                     raw_input('%d: press any key'%i)
         finally:

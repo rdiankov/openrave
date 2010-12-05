@@ -230,7 +230,7 @@ Code fragment from `examples.mobilemanipulation`
                 poses,jointstate = samplerfn(N-len(goals))
                 for pose in poses:
                     self.robot.SetTransform(pose)
-                    self.robot.SetJointValues(*jointstate)
+                    self.robot.SetDOFValues(*jointstate)
                     # validate that base is not in collision
                     if not self.manip.CheckIndependentCollision(CollisionReport()):
                         q = self.manip.FindIKSolution(Tgrasp,filteroptions=IkFilterOptions.CheckEnvCollisions)
@@ -251,7 +251,7 @@ Move robot to valid poses
             raw_input('press ENTER to show goal %d'%ind)
             Tgrasp,pose,values = goal
             self.robot.SetTransform(pose)
-            self.robot.SetJointValues(values)
+            self.robot.SetDOFValues(values)
 
 .. figure:: ../../images/example_tutorials/ir_after.png
    :width: 640 px
@@ -280,7 +280,7 @@ Code fragment from `databases.inversereachability`
                 self.env.AddRobot(newrobot,True)
                 with self.env:
                     newrobot.SetTransform(T)
-                    newrobot.SetJointValues(values)
+                    newrobot.SetDOFValues(values)
                 newrobots.append(newrobot)
 
 
@@ -400,7 +400,7 @@ class InverseReachabilityDemo:
                 poses,jointstate = samplerfn(N-len(goals))
                 for pose in poses:
                     self.robot.SetTransform(pose)
-                    self.robot.SetJointValues(*jointstate)
+                    self.robot.SetDOFValues(*jointstate)
                     # validate that base is not in collision
                     if not self.manip.CheckIndependentCollision(CollisionReport()):
                         q = self.manip.FindIKSolution(Tgrasp,filteroptions=IkFilterOptions.CheckEnvCollisions)
@@ -415,7 +415,7 @@ class InverseReachabilityDemo:
             raw_input('press ENTER to show goal %d'%ind)
             Tgrasp,pose,values = goal
             self.robot.SetTransform(pose)
-            self.robot.SetJointValues(values)
+            self.robot.SetDOFValues(values)
 
         raw_input('press ENTER to show all results simultaneously')
         # Code fragment from `databases.inversereachability`
@@ -432,7 +432,7 @@ class InverseReachabilityDemo:
                         geom.SetTransparency(transparency)
                 self.env.AddRobot(newrobot,True)
                 newrobot.SetTransform(T)
-                newrobot.SetJointValues(values)
+                newrobot.SetDOFValues(values)
                 newrobots.append(newrobot)
         print 'overlaying all results, wait for a few seconds for the viewer to update'
         time.sleep(10)

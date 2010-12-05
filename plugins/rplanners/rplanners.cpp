@@ -18,6 +18,7 @@
 #include "rrt.h"
 #include "graspgradient.h"
 #include "pathoptimizers.h"
+#include "workspacetrajectorytracker.h"
 
 #include <rave/plugin.h>
 
@@ -27,20 +28,28 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
     case OpenRAVE::PT_Planner:
         if( interfacename == "ra*")
             return InterfaceBasePtr(new RandomizedAStarPlanner(penv));
-        else if( interfacename == "birrt")
-            return InterfaceBasePtr(new BirrtPlanner(penv));
-        else if( interfacename == "rbirrt") {
-            RAVELOG_WARNA("rBiRRT is deprecated, use BiRRT\n");
+        else if( interfacename == "birrt") {
             return InterfaceBasePtr(new BirrtPlanner(penv));
         }
-        else if( interfacename == "basicrrt")
+        else if( interfacename == "rbirrt") {
+            RAVELOG_WARN("rBiRRT is deprecated, use BiRRT\n");
+            return InterfaceBasePtr(new BirrtPlanner(penv));
+        }
+        else if( interfacename == "basicrrt") {
             return InterfaceBasePtr(new BasicRrtPlanner(penv));
-        else if( interfacename == "explorationrrt" )
+        }
+        else if( interfacename == "explorationrrt" ) {
             return InterfaceBasePtr(new ExplorationPlanner(penv));
-        else if( interfacename == "graspgradient" )
+        }
+        else if( interfacename == "graspgradient" ) {
             return InterfaceBasePtr(new GraspGradientPlanner(penv));
-        else if( interfacename == "shortcut_linear" )
+        }
+        else if( interfacename == "shortcut_linear" ) {
             return InterfaceBasePtr(new ShortcutLinearPlanner(penv));
+        }
+//        else if( interfacename == "workspacetrajectorytracker" ) {
+//            return InterfaceBasePtr(new WorkspaceTrajectoryTracker(penv));
+//        }
         break;
     default:
         break;
@@ -56,6 +65,7 @@ void GetPluginAttributesValidated(PLUGININFO& info)
     info.interfacenames[OpenRAVE::PT_Planner].push_back("ExplorationRRT");
     info.interfacenames[OpenRAVE::PT_Planner].push_back("GraspGradient");
     info.interfacenames[OpenRAVE::PT_Planner].push_back("shortcut_linear");
+    //info.interfacenames[OpenRAVE::PT_Planner].push_back("workspacetrajectorytracker");
 }
 
 RAVE_PLUGIN_API void DestroyPlugin()

@@ -29,6 +29,7 @@ namespace OpenRAVE {
 class RAVE_API TrajectoryBase : public InterfaceBase
 {
 public:
+    /// \brief options for serializing trajectories
     enum TrajectoryOptions {
         TO_OneLine = 1, ///< if set, will write everything without newlines, otherwise
                         ///< will start a newline for the header and every trajectory point
@@ -40,13 +41,15 @@ public:
         TO_IncludeTorques = 32, ///< include torques
     };
     
-    /// trajectory interpolation and sampling methods 
-    enum InterpEnum {  NONE=0,            //!< unspecified timing info
-                     LINEAR=1,            //!< linear interpolation 
-	         LINEAR_BLEND=2,      //!< linear with quadratic blends
-	         CUBIC=3,             //!< cubic spline interpolation
-	         QUINTIC=4,           //!< quintic min-jerk interpolation 
-	         NUM_METHODS=5 };     //!< number of interpolation methods
+    /// \brief trajectory interpolation and sampling methods 
+    enum InterpEnum {
+        NONE=0, ///< unspecified timing info
+        LINEAR=1, ///< linear interpolation 
+        LINEAR_BLEND=2, ///< linear with quadratic blends
+        CUBIC=3, ///< cubic spline interpolation
+        QUINTIC=4, ///< quintic min-jerk interpolation 
+        NUM_METHODS=5, ///< number of interpolation methods
+    };     
 
     /// Via point along the trajectory (joint configuration with a timestamp)
     class TPOINT

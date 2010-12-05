@@ -41,12 +41,12 @@ Uses the Rapidly-Exploring Random Trees Algorithm.\n\
 
         RobotBase::RobotStateSaver savestate(_robot);
         if( (int)params->vinitialconfig.size() != params->GetDOF() ) {
-            RAVELOG_ERRORA(str(boost::format("initial config wrong dim: %d\n")%params->vinitialconfig.size()));
+            RAVELOG_ERROR(str(boost::format("initial config wrong dim: %d\n")%params->vinitialconfig.size()));
             return false;
         }
 
         if(CollisionFunctions::CheckCollision(params,_robot,params->vinitialconfig, _report)) {
-            RAVELOG_DEBUGA("BirrtPlanner::InitPlan - Error: Initial configuration in collision\n");
+            RAVELOG_DEBUG("BirrtPlanner::InitPlan - Error: Initial configuration in collision\n");
             return false;
         }
             
@@ -57,7 +57,7 @@ Uses the Rapidly-Exploring Random Trees Algorithm.\n\
             params->_setstatefn(params->vinitialconfig);
             if( !params->_constraintfn(params->vinitialconfig, params->vinitialconfig,0) ) {
                 // failed
-                RAVELOG_WARNA("initial state rejected by constraint fn\n");
+                RAVELOG_WARN("initial state rejected by constraint fn\n");
                 return false;
             }
         }
@@ -166,7 +166,7 @@ class BirrtPlanner : public RrtPlanner<SimpleNode>
                 if(goal_index < (int)_parameters->vgoalconfig.size())
                     vgoal[i] = _parameters->vgoalconfig[goal_index];
                 else {
-                    RAVELOG_ERRORA("BirrtPlanner::InitPlan - Error: goals are improperly specified:\n");
+                    RAVELOG_ERROR("BirrtPlanner::InitPlan - Error: goals are improperly specified:\n");
                     _parameters.reset();
                     return false;
                 }
@@ -180,7 +180,7 @@ class BirrtPlanner : public RrtPlanner<SimpleNode>
                     // filter
                     if( !_parameters->_constraintfn(vgoal, vgoal, 0) ) {
                         // failed
-                        RAVELOG_WARNA("goal state rejected by constraint fn\n");
+                        RAVELOG_WARN("goal state rejected by constraint fn\n");
                         bSuccess = false;
                     }
                 }
@@ -192,7 +192,7 @@ class BirrtPlanner : public RrtPlanner<SimpleNode>
                 }
             }
             else {
-                RAVELOG_WARNA("goal in collision %s\n", _robot->CheckSelfCollision()?"(self)":NULL);
+                RAVELOG_WARN("goal in collision %s\n", _robot->CheckSelfCollision()?"(self)":NULL);
                 if( GetEnv()->CheckCollision(KinBodyConstPtr(_robot), _report) || _robot->CheckSelfCollision(_report) ) {
                     RAVELOG_WARN(str(boost::format("birrt: robot initially in collision %s!\n")%_report->__str__()));
                 }
@@ -200,7 +200,7 @@ class BirrtPlanner : public RrtPlanner<SimpleNode>
         }
     
         if( num_goals == 0 && !_parameters->_samplegoalfn ) {
-            RAVELOG_WARNA("no goals specified\n");
+            RAVELOG_WARN("no goals specified\n");
             _parameters.reset();
             return false;
         }    
@@ -209,7 +209,7 @@ class BirrtPlanner : public RrtPlanner<SimpleNode>
             _parameters->_nMaxIterations = 10000;
         }
 
-        RAVELOG_DEBUGA("BirrtPlanner::InitPlan - RRT Planner Initialized\n");
+        RAVELOG_DEBUG("BirrtPlanner::InitPlan - RRT Planner Initialized\n");
         return true;
     }
 
@@ -217,7 +217,7 @@ class BirrtPlanner : public RrtPlanner<SimpleNode>
     virtual bool PlanPath(TrajectoryBasePtr ptraj, boost::shared_ptr<std::ostream> pOutStream)
     {
         if(!_parameters) {
-            RAVELOG_ERRORA("BirrtPlanner::PlanPath - Error, planner not initialized\n");
+            RAVELOG_ERROR("BirrtPlanner::PlanPath - Error, planner not initialized\n");
             return false;
         }
     
@@ -236,13 +236,13 @@ class BirrtPlanner : public RrtPlanner<SimpleNode>
         int iter = 0;
 
         while(!bConnected && iter < 3*_parameters->_nMaxIterations) {
-            RAVELOG_VERBOSEA("iter: %d\n", iter);
+            RAVELOG_VERBOSE("iter: %d\n", iter);
             ++iter;
 
             if( !!_parameters->_samplegoalfn ) {//  _treeBackward._nodes.size() == 0 ) {
                 vector<dReal> vgoal;
                 if( _parameters->_samplegoalfn(vgoal) ) {
-                    RAVELOG_VERBOSEA("found goal\n");
+                    RAVELOG_VERBOSE("found goal\n");
                     _treeBackward.AddNode(-10000,vgoal);
                 }
             }
@@ -257,7 +257,7 @@ class BirrtPlanner : public RrtPlanner<SimpleNode>
             if( et == ET_Failed ) {
                 // necessary to increment iterator in case spaces are not connected
                 if( iter > 3*_parameters->_nMaxIterations ) {
-                    RAVELOG_WARNA("iterations exceeded\n");
+                    RAVELOG_WARN("iterations exceeded\n");
                     break;
                 }
                 continue;
@@ -275,13 +275,13 @@ class BirrtPlanner : public RrtPlanner<SimpleNode>
             swap(TreeA, TreeB);
             iter += 3;
             if( iter > 3*_parameters->_nMaxIterations ) {
-                RAVELOG_WARNA("iterations exceeded\n");
+                RAVELOG_WARN("iterations exceeded\n");
                 break;
             }
         }
     
         if( !bConnected ) {
-            RAVELOG_WARNA("plan failed, %fs\n",0.001f*(float)(timeGetTime()-basetime));
+            RAVELOG_WARN("plan failed, %fs\n",0.001f*(float)(timeGetTime()-basetime));
             return false;
         }
     
@@ -323,7 +323,7 @@ class BirrtPlanner : public RrtPlanner<SimpleNode>
             ptraj->AddPoint(pt);
         }
 
-        RAVELOG_DEBUGA(str(boost::format("plan success, path=%d points in %fs\n")%ptraj->GetPoints().size()%(0.001f*(float)(timeGetTime()-basetime))));
+        RAVELOG_DEBUG(str(boost::format("plan success, path=%d points in %fs\n")%ptraj->GetPoints().size()%(0.001f*(float)(timeGetTime()-basetime))));
         _OptimizePath(_robot,ptraj);
         return true;
     }
@@ -367,7 +367,7 @@ class BasicRrtPlanner : public RrtPlanner<SimpleNode>
                 if(goal_index < (int)_parameters->vgoalconfig.size())
                     vgoal[i] = _parameters->vgoalconfig[goal_index];
                 else {
-                    RAVELOG_ERRORA("BirrtPlanner::InitPlan - Error: goals are improperly specified:\n");
+                    RAVELOG_ERROR("BirrtPlanner::InitPlan - Error: goals are improperly specified:\n");
                     _parameters.reset();
                     return false;
                 }
@@ -381,7 +381,7 @@ class BasicRrtPlanner : public RrtPlanner<SimpleNode>
                     // filter
                     if( !_parameters->_constraintfn(vgoal, vgoal, 0) ) {
                         // failed
-                        RAVELOG_WARNA("goal state rejected by constraint fn\n");
+                        RAVELOG_WARN("goal state rejected by constraint fn\n");
                         bSuccess = false;
                     }
                 }
@@ -392,7 +392,7 @@ class BasicRrtPlanner : public RrtPlanner<SimpleNode>
                 }
             }
             else {
-                RAVELOG_WARNA("goal in collision %s\n", _robot->CheckSelfCollision()?"(self)":NULL);
+                RAVELOG_WARN("goal in collision %s\n", _robot->CheckSelfCollision()?"(self)":NULL);
                 if( GetEnv()->CheckCollision(KinBodyConstPtr(_robot), _report) || _robot->CheckSelfCollision(_report)) {
                     RAVELOG_WARN(str(boost::format("birrt: robot initially in collision %s!\n")%_report->__str__()));
                 }
@@ -403,19 +403,19 @@ class BasicRrtPlanner : public RrtPlanner<SimpleNode>
         }
         
         if( _vecGoals.size() == 0 && !_parameters->_goalfn ) {
-            RAVELOG_WARNA("no goals or goal function specified\n");
+            RAVELOG_WARN("no goals or goal function specified\n");
             _parameters.reset();
             return false;
         }
         
-        RAVELOG_DEBUGA("RrtPlanner::InitPlan - RRT Planner Initialized\n");
+        RAVELOG_DEBUG("RrtPlanner::InitPlan - RRT Planner Initialized\n");
         return true;
     }
 
     bool PlanPath(TrajectoryBasePtr ptraj, boost::shared_ptr<std::ostream> pOutStream)
     {
         if(!_parameters) {
-            RAVELOG_WARNA("RrtPlanner::PlanPath - Error, planner not initialized\n");
+            RAVELOG_WARN("RrtPlanner::PlanPath - Error, planner not initialized\n");
             return false;
         }
     
@@ -438,7 +438,7 @@ class BasicRrtPlanner : public RrtPlanner<SimpleNode>
             if( !!_parameters->_samplegoalfn ) {
                 vector<dReal> vgoal;
                 if( _parameters->_samplegoalfn(vgoal) ) {
-                    RAVELOG_VERBOSEA("found goal\n");
+                    RAVELOG_VERBOSE("found goal\n");
                     _vecGoals.push_back(vgoal);
                 }
             }
@@ -472,13 +472,13 @@ class BasicRrtPlanner : public RrtPlanner<SimpleNode>
         
             // check if reached any goals
             if( iter > _parameters->_nMaxIterations ) {
-                RAVELOG_WARNA("iterations exceeded %d\n", _parameters->_nMaxIterations);
+                RAVELOG_WARN("iterations exceeded %d\n", _parameters->_nMaxIterations);
                 break;
             }
         }
     
         if( !bSuccess ) {
-            RAVELOG_DEBUGA("plan failed, %fs\n",0.001f*(float)(timeGetTime()-basetime));
+            RAVELOG_DEBUG("plan failed, %fs\n",0.001f*(float)(timeGetTime()-basetime));
             return false;
         }
     
@@ -507,7 +507,7 @@ class BasicRrtPlanner : public RrtPlanner<SimpleNode>
         }
 
         _OptimizePath(_robot,ptraj);
-        RAVELOG_DEBUGA(str(boost::format("plan success, path=%d points in %fs\n")%ptraj->GetPoints().size()%((0.001f*(float)(timeGetTime()-basetime)))));
+        RAVELOG_DEBUG(str(boost::format("plan success, path=%d points in %fs\n")%ptraj->GetPoints().size()%((0.001f*(float)(timeGetTime()-basetime)))));
     
         return true;
     }
@@ -524,12 +524,68 @@ class BasicRrtPlanner : public RrtPlanner<SimpleNode>
 class ExplorationPlanner : public RrtPlanner<SimpleNode>
 {
 public:
+    class ExplorationParameters : public PlannerBase::PlannerParameters {
+    public:
+    ExplorationParameters() : _fExploreProb(0), _nExpectedDataSize(100), _bProcessingExploration(false) {
+            _vXMLParameters.push_back("exploreprob");
+            _vXMLParameters.push_back("expectedsize");
+        }
+        
+        dReal _fExploreProb;
+        int _nExpectedDataSize;
+        
+    protected:
+        bool _bProcessingExploration;
+        // save the extra data to XML
+        virtual bool serialize(std::ostream& O) const
+        {
+            if( !PlannerParameters::serialize(O) )
+                return false;
+            O << "<exploreprob>" << _fExploreProb << "</exploreprob>" << endl;
+            O << "<expectedsize>" << _nExpectedDataSize << "</expectedsize>" << endl;
+            return !!O;
+        }
+
+        ProcessElement startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts)
+        {
+            if( _bProcessingExploration )
+                return PE_Ignore;
+            switch( PlannerBase::PlannerParameters::startElement(name,atts) ) {
+            case PE_Pass: break;
+            case PE_Support: return PE_Support;
+            case PE_Ignore: return PE_Ignore;
+            }
+        
+            _bProcessingExploration = name=="exploreprob"||name=="expectedsize";
+            return _bProcessingExploration ? PE_Support : PE_Pass;
+        }
+        
+        // called at the end of every XML tag, _ss contains the data 
+        virtual bool endElement(const std::string& name)
+        {
+            // _ss is an internal stringstream that holds the data of the tag
+            if( _bProcessingExploration ) {
+                if( name == "exploreprob")
+                    _ss >> _fExploreProb;
+                else if( name == "expectedsize" )
+                    _ss >> _nExpectedDataSize;
+                else
+                    RAVELOG_WARN(str(boost::format("unknown tag %s\n")%name));
+                _bProcessingExploration = false;
+                return false;
+            }
+        
+            // give a chance for the default parameters to get processed
+            return PlannerParameters::endElement(name);
+        }
+    };
+
     ExplorationPlanner(EnvironmentBasePtr penv) : RrtPlanner<SimpleNode>(penv) {
         __description = ":Interface Author: Rosen Diankov\nRRT-based exploration planner";
     }
     virtual ~ExplorationPlanner() {}
 
-    bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams)
+    virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams)
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         _parameters.reset(new ExplorationParameters());
@@ -542,7 +598,7 @@ public:
         return true;
     }
 
-    bool PlanPath(TrajectoryBasePtr ptraj, boost::shared_ptr<std::ostream> pOutStream)
+    virtual bool PlanPath(TrajectoryBasePtr ptraj, boost::shared_ptr<std::ostream> pOutStream)
     {
         if( !_parameters )
             return false;
@@ -574,7 +630,7 @@ public:
                 if( !CollisionFunctions::CheckCollision(GetParameters(),_robot,pnode->q, vSampleConfig, IT_OpenStart) ) {
                     _treeForward.AddNode(inode,vSampleConfig);
                     GetEnv()->UpdatePublishedBodies();
-                    RAVELOG_DEBUGA(str(boost::format("size %d\n")%_treeForward._nodes.size()));
+                    RAVELOG_DEBUG(str(boost::format("size %d\n")%_treeForward._nodes.size()));
                 }
             }
             else { // rrt extend
@@ -582,7 +638,7 @@ public:
                     continue;
                 int lastindex;
                 if( _treeForward.Extend(vSampleConfig,lastindex,true) == ET_Connected ) {
-                    RAVELOG_DEBUGA(str(boost::format("size %d\n")%_treeForward._nodes.size()));
+                    RAVELOG_DEBUG(str(boost::format("size %d\n")%_treeForward._nodes.size()));
                 }
             }
         }

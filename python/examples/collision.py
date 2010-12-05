@@ -75,7 +75,7 @@ def run(args=None):
         env.CheckCollision(robot2,body1)
 
         print 'checking self collision'
-        robot1.SetJointValues([2.98],[3])
+        robot1.SetDOFValues([2.98],[3])
         if not robot1.CheckSelfCollision():
             print 'no collision detected (bad)!!, ',env.CheckCollision(robot1.GetLinks()[1],robot1.GetLinks()[13])
 

@@ -136,14 +136,14 @@ class TaskManipulation : public ProblemInstance
         }
 
         if( !_pRRTPlanner ) {
-            RAVELOG_WARNA("could not find an rrt planner\n");
+            RAVELOG_WARN("could not find an rrt planner\n");
             return -1;
         }
-        RAVELOG_DEBUGA(str(boost::format("using %s planner\n")%plannername));
+        RAVELOG_DEBUG(str(boost::format("using %s planner\n")%plannername));
 
         _pGrasperPlanner = RaveCreatePlanner(GetEnv(),graspername);
         if( !_pGrasperPlanner )
-            RAVELOG_WARNA(str(boost::format("Failed to create a grasper planner %s\n")%graspername));
+            RAVELOG_WARN(str(boost::format("Failed to create a grasper planner %s\n")%graspername));
             
         return 0;
     }
@@ -171,7 +171,7 @@ class TaskManipulation : public ProblemInstance
         psystem->AddRegisteredBodies(vbodies);
         listsystems.push_back(psystem);
 
-        RAVELOG_DEBUGA(str(boost::format("added %s system\n")%systemname));
+        RAVELOG_DEBUG(str(boost::format("added %s system\n")%systemname));
         sout << 1; // signal success
         return true;
     }
@@ -225,12 +225,12 @@ class TaskManipulation : public ProblemInstance
             else if( cmd == "constrainterrorthresh" )
                 sinput >> errorthresh;
             else {
-                RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
+                RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
             }
 
             if( !sinput ) {
-                RAVELOG_ERRORA(str(boost::format("failed processing command %s\n")%cmd));
+                RAVELOG_ERROR(str(boost::format("failed processing command %s\n")%cmd));
                 return false;
             }
         }
@@ -355,18 +355,18 @@ class TaskManipulation : public ProblemInstance
                 sinput >> strpreshapetraj;
             }
             else {
-                RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
+                RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
             }
 
             if( !sinput ) {
-                RAVELOG_ERRORA(str(boost::format("failed processing command %s\n")%cmd));
+                RAVELOG_ERROR(str(boost::format("failed processing command %s\n")%cmd));
                 return false;
             }
         }
     
         if( !ptarget ) {
-            RAVELOG_WARNA(str(boost::format("Could not find target %s\n")%targetname));
+            RAVELOG_WARN(str(boost::format("Could not find target %s\n")%targetname));
             return false;
         }
     
@@ -389,7 +389,7 @@ class TaskManipulation : public ProblemInstance
         if( GetEnv()->CheckCollision(KinBodyConstPtr(_robot)) ) {
             _robot->SetActiveDOFs(pmanip->GetArmIndices());
             if( !CM::JitterActiveDOF(_robot) ) {
-                RAVELOG_ERRORA("failed to jitter robot\n");
+                RAVELOG_ERROR("failed to jitter robot\n");
                 return false;
             }
 
@@ -435,11 +435,11 @@ class TaskManipulation : public ProblemInstance
         }
         if( iGraspTransform < 0 ) {
             if( !_pGrasperPlanner ) {
-                RAVELOG_ERRORA("grasper problem not valid\n");
+                RAVELOG_ERROR("grasper problem not valid\n");
                 return false;
             }
             if( iGraspDir < 0 || iGraspPos < 0 || iGraspRoll < 0 || iGraspStandoff < 0 ) {
-                RAVELOG_ERRORA("grasp indices not all initialized\n");
+                RAVELOG_ERROR("grasp indices not all initialized\n");
                 return false;
             }
         }
@@ -454,7 +454,7 @@ class TaskManipulation : public ProblemInstance
                 // start planning
                 _UpdateSwitchModels(true,false);
 
-                RAVELOG_VERBOSEA(str(boost::format("planning grasps %d\n")%listGraspGoals.size()));
+                RAVELOG_VERBOSE(str(boost::format("planning grasps %d\n")%listGraspGoals.size()));
                 uint64_t basestart = GetMicroTime();
                 ptraj = _PlanGrasp(listGraspGoals, nMaxSeedIkSolutions, goalFound, nMaxIterations,mapPreshapeTrajectories);
                 nSearchTime += GetMicroTime() - basestart;
@@ -479,7 +479,7 @@ class TaskManipulation : public ProblemInstance
             PRESHAPETRAJMAP::iterator itpreshapetraj = mapPreshapeTrajectories.find(vgoalpreshape);
             if( itpreshapetraj != mapPreshapeTrajectories.end() && !itpreshapetraj->second ) {
                 // has failed to find a trajectory to open a hand on a previous attempt, so skip
-                RAVELOG_DEBUGA("grasp %d: skipping failed preshape\n", igrasp);
+                RAVELOG_DEBUG("grasp %d: skipping failed preshape\n", igrasp);
                 continue;
             }
 
@@ -513,12 +513,12 @@ class TaskManipulation : public ProblemInstance
                 // TODO: in order to reproduce the same exact conditions as the original grasp, have to also transfer the step sizes
 
                 if( !_pGrasperPlanner->InitPlan(_robot,graspparams) ) {
-                    RAVELOG_DEBUGA("grasper planner failed: %d\n", igrasp);
+                    RAVELOG_DEBUG("grasper planner failed: %d\n", igrasp);
                     continue; // failed
                 }
 
                 if( !_pGrasperPlanner->PlanPath(phandtraj) ) {
-                    RAVELOG_DEBUGA("grasper planner failed: %d\n", igrasp);
+                    RAVELOG_DEBUG("grasper planner failed: %d\n", igrasp);
                     continue; // failed
                 }
 
@@ -560,14 +560,14 @@ class TaskManipulation : public ProblemInstance
                 }
 
                 if( pmanip->CheckEndEffectorCollision(tGoalEndEffector,report) ) {
-                    RAVELOG_DEBUGA(str(boost::format("grasp %d: in collision (%s)\n")%igrasp%report->__str__()));
+                    RAVELOG_DEBUG(str(boost::format("grasp %d: in collision (%s)\n")%igrasp%report->__str__()));
                     continue;
                 }
 
                 vFinalGripperValues.resize(0);
             }
             else {
-                RAVELOG_ERRORA("grasper problem not valid\n");
+                RAVELOG_ERROR("grasper problem not valid\n");
                 return false;
             }
 
@@ -591,7 +591,7 @@ class TaskManipulation : public ProblemInstance
 
                 // first test the IK solution at the destination tGoalEndEffector
                 if( !pmanip->FindIKSolution(tApproachEndEffector, viksolution, true) ) {
-                    RAVELOG_DEBUGA("grasp %d: No IK solution found (final)\n", igrasp);
+                    RAVELOG_DEBUG("grasp %d: No IK solution found (final)\n", igrasp);
                     continue;
                 }
 
@@ -604,8 +604,8 @@ class TaskManipulation : public ProblemInstance
                     _robot->SetActiveDOFs(pmanip->GetArmIndices());
                     _robot->SetActiveDOFValues(viksolution);
                     if( !pmanip->FindIKSolution(tApproachEndEffector, viksolution, true) ) {
-                        _robot->SetJointValues(vCurRobotValues); // reset robot to original position
-                        RAVELOG_DEBUGA("grasp %d: No IK solution found (approach)\n", igrasp);
+                        _robot->SetDOFValues(vCurRobotValues); // reset robot to original position
+                        RAVELOG_DEBUG("grasp %d: No IK solution found (approach)\n", igrasp);
                         continue;
                     }
                     else {
@@ -614,7 +614,7 @@ class TaskManipulation : public ProblemInstance
                         FOREACH(it, viksolution)
                             ss << *it << " ";
                         ss << endl;
-                        RAVELOG_DEBUGA(ss.str());
+                        RAVELOG_DEBUG(ss.str());
                     }
                 }
             }
@@ -645,7 +645,7 @@ class TaskManipulation : public ProblemInstance
 
                 ptarget->SetTransform(transTarg);
                 if( bTargetCollision ) {
-                    RAVELOG_VERBOSEA("target collision at dest\n");
+                    RAVELOG_VERBOSE("target collision at dest\n");
                     continue;
                 }
                 
@@ -661,10 +661,10 @@ class TaskManipulation : public ProblemInstance
                     break;
             }
 
-            _robot->SetJointValues(vCurRobotValues); // reset robot to original position
+            _robot->SetDOFValues(vCurRobotValues); // reset robot to original position
 
             if( vObjDestinations.size() > 0 && listDests.size() == 0 ) {
-                RAVELOG_WARNA("grasp %d: could not find destination\n", igrasp);
+                RAVELOG_WARN("grasp %d: could not find destination\n", igrasp);
                 continue;
             }
 
@@ -683,7 +683,7 @@ class TaskManipulation : public ProblemInstance
                 
                 if( !bSuccess ) {
                     mapPreshapeTrajectories[vgoalpreshape].reset(); // set to empty
-                    RAVELOG_DEBUGA("grasp %d: failed to find preshape\n", igrasp);
+                    RAVELOG_DEBUG("grasp %d: failed to find preshape\n", igrasp);
                     continue;
                 }
 
@@ -694,7 +694,7 @@ class TaskManipulation : public ProblemInstance
                 // add a grasp with the full preshape
                 Trajectory::TPOINT tpopenhand;
                 BOOST_ASSERT(ptrajToPreshapeFull->GetPoints().size()>0);
-                _robot->SetJointValues(ptrajToPreshapeFull->GetPoints().back().q);
+                _robot->SetDOFValues(ptrajToPreshapeFull->GetPoints().back().q);
                 _robot->SetActiveDOFs(pmanip->GetGripperIndices());
                 if( iGraspPreshape >= 0 ) {
                     _robot->SetActiveDOFValues(vector<dReal>(pgrasp+iGraspPreshape,pgrasp+iGraspPreshape+_robot->GetActiveDOF()),true);
@@ -722,11 +722,11 @@ class TaskManipulation : public ProblemInstance
                     goal.vpreshape[j] = pgrasp[iGraspPreshape+j];
             }
 
-            RAVELOG_DEBUGA("grasp %d: adding to goals\n", igrasp);
+            RAVELOG_DEBUG("grasp %d: adding to goals\n", igrasp);
             iCountdown = 40;
 
             if( (int)listGraspGoals.size() >= nMaxSeedGrasps ) {
-                RAVELOG_VERBOSEA(str(boost::format("planning grasps %d\n")%listGraspGoals.size()));
+                RAVELOG_VERBOSE(str(boost::format("planning grasps %d\n")%listGraspGoals.size()));
                 uint64_t basestart = GetMicroTime();
                 ptraj = _PlanGrasp(listGraspGoals, nMaxSeedGrasps, goalFound, nMaxIterations,mapPreshapeTrajectories);
                 nSearchTime += GetMicroTime() - basestart;
@@ -742,7 +742,7 @@ class TaskManipulation : public ProblemInstance
         // if there's left over goal positions, start planning
         while( !ptraj && listGraspGoals.size() > 0 ) {
             //TODO have to update ptrajToPreshape
-            RAVELOG_VERBOSEA(str(boost::format("planning grasps %d\n")%listGraspGoals.size()));
+            RAVELOG_VERBOSE(str(boost::format("planning grasps %d\n")%listGraspGoals.size()));
             uint64_t basestart = GetMicroTime();
             ptraj = _PlanGrasp(listGraspGoals, nMaxSeedGrasps, goalFound, nMaxIterations,mapPreshapeTrajectories);
             nSearchTime += GetMicroTime() - basestart;
@@ -753,9 +753,9 @@ class TaskManipulation : public ProblemInstance
         if( !!ptraj ) {
             PRESHAPETRAJMAP::iterator itpreshapetraj = mapPreshapeTrajectories.find(goalFound.vpreshape);
             if( itpreshapetraj == mapPreshapeTrajectories.end() ) {
-                RAVELOG_ERRORA("no preshape trajectory!\n");
+                RAVELOG_ERROR("no preshape trajectory!\n");
                 FOREACH(itpreshape,mapPreshapeTrajectories) {
-                    RAVELOG_ERRORA("%f %f %f %f %f %f\n",itpreshape->first[0],itpreshape->first[1],itpreshape->first[2],itpreshape->first[3],itpreshape->first[4],itpreshape->first[5]);
+                    RAVELOG_ERROR("%f %f %f %f %f %f\n",itpreshape->first[0],itpreshape->first[1],itpreshape->first[2],itpreshape->first[3],itpreshape->first[4],itpreshape->first[5]);
                 }
                 return false;
             }
@@ -887,12 +887,12 @@ class TaskManipulation : public ProblemInstance
             else if( cmd == "clearmodels" )
                 _listSwitchModels.clear();
             else {
-                RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
+                RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
             }
 
             if( !sinput ) {
-                RAVELOG_ERRORA(str(boost::format("failed processing command %s\n")%cmd));
+                RAVELOG_ERROR(str(boost::format("failed processing command %s\n")%cmd));
                 return false;
             }
         }
@@ -904,7 +904,7 @@ class TaskManipulation : public ProblemInstance
 
     bool CloseFingers(ostream& sout, istream& sinput)
     {
-        RAVELOG_DEBUGA("Starting CloseFingers...\n");
+        RAVELOG_DEBUG("Starting CloseFingers...\n");
         bool bExecute = true, bOutputFinal=false;
         string strtrajfilename;
         boost::shared_ptr<ostream> pOutputTrajStream;
@@ -939,12 +939,12 @@ class TaskManipulation : public ProblemInstance
                     sinput >> *it;
             }
             else {
-                RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
+                RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
             }
 
             if( !sinput ) {
-                RAVELOG_ERRORA(str(boost::format("failed processing command %s\n")%cmd));
+                RAVELOG_ERROR(str(boost::format("failed processing command %s\n")%cmd));
                 return false;
             }
         }
@@ -958,7 +958,7 @@ class TaskManipulation : public ProblemInstance
  
         boost::shared_ptr<PlannerBase> graspplanner = RaveCreatePlanner(GetEnv(),"Grasper");
         if( !graspplanner ) {
-            RAVELOG_ERRORA("grasping planner failure!\n");
+            RAVELOG_ERROR("grasping planner failure!\n");
             return false;
         }
     
@@ -972,12 +972,12 @@ class TaskManipulation : public ProblemInstance
         ptraj->AddPoint(ptfirst);
 
         if( !graspplanner->InitPlan(_robot, graspparams) ) {
-            RAVELOG_ERRORA("InitPlan failed\n");
+            RAVELOG_ERROR("InitPlan failed\n");
             return false;
         }
     
         if( !graspplanner->PlanPath(ptraj) ) {
-            RAVELOG_WARNA("PlanPath failed\n");
+            RAVELOG_WARN("PlanPath failed\n");
             return false;
         }   
 
@@ -1040,12 +1040,12 @@ class TaskManipulation : public ProblemInstance
                     sinput >> *it;
             }
             else {
-                RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
+                RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
             }
 
             if( !sinput ) {
-                RAVELOG_ERRORA(str(boost::format("failed processing command %s\n")%cmd));
+                RAVELOG_ERROR(str(boost::format("failed processing command %s\n")%cmd));
                 return false;
             }
         }
@@ -1059,7 +1059,7 @@ class TaskManipulation : public ProblemInstance
         ptraj->AddPoint(ptfirst);
         switch(CM::JitterActiveDOF(_robot) ) {
         case 0:
-            RAVELOG_WARNA("robot initially in collision\n");
+            RAVELOG_WARN("robot initially in collision\n");
             return false;
         case 1:
             _robot->GetActiveDOFValues(ptfirst.q);
@@ -1069,7 +1069,7 @@ class TaskManipulation : public ProblemInstance
  
         boost::shared_ptr<PlannerBase> graspplanner = RaveCreatePlanner(GetEnv(),"Grasper");
         if( !graspplanner ) {
-            RAVELOG_ERRORA("grasping planner failure!\n");
+            RAVELOG_ERROR("grasping planner failure!\n");
             return false;
         }
     
@@ -1081,12 +1081,12 @@ class TaskManipulation : public ProblemInstance
         graspparams->bavoidcontact = true;
 
         if( !graspplanner->InitPlan(_robot, graspparams) ) {
-            RAVELOG_ERRORA("InitPlan failed\n");
+            RAVELOG_ERROR("InitPlan failed\n");
             return false;
         }
     
         if( !graspplanner->PlanPath(ptraj) ) {
-            RAVELOG_WARNA("PlanPath failed\n");
+            RAVELOG_WARN("PlanPath failed\n");
             return false;
         }   
 
@@ -1103,7 +1103,7 @@ class TaskManipulation : public ProblemInstance
             RobotBase::RobotStateSaver saver2(_robot);
             _robot->SetActiveDOFValues(ptraj->GetPoints().back().q);
             if( CM::JitterActiveDOF(_robot) > 0 ) {
-                RAVELOG_WARNA("robot final configuration is in collision\n");
+                RAVELOG_WARN("robot final configuration is in collision\n");
                 Trajectory::TPOINT pt = ptraj->GetPoints().back();
                 _robot->GetActiveDOFValues(pt.q);
                 ptraj->AddPoint(pt);
@@ -1120,7 +1120,7 @@ class TaskManipulation : public ProblemInstance
 
     bool ReleaseActive(ostream& sout, istream& sinput)
     {
-        RAVELOG_DEBUGA("Releasing active...\n");
+        RAVELOG_DEBUG("Releasing active...\n");
 
         bool bExecute = true, bOutputFinal = false;
         string strtrajfilename;
@@ -1164,12 +1164,12 @@ class TaskManipulation : public ProblemInstance
                     sinput >> *it;
             }
             else {
-                RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
+                RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
             }
 
             if( !sinput ) {
-                RAVELOG_ERRORA(str(boost::format("failed processing command %s\n")%cmd));
+                RAVELOG_ERROR(str(boost::format("failed processing command %s\n")%cmd));
                 return false;
             }
         }
@@ -1183,7 +1183,7 @@ class TaskManipulation : public ProblemInstance
         ptraj->AddPoint(ptfirst);
         switch( CM::JitterActiveDOF(_robot) ) {
         case 0:
-            RAVELOG_WARNA("robot initially in collision\n");
+            RAVELOG_WARN("robot initially in collision\n");
             return false;
         case 1:
             _robot->GetActiveDOFValues(ptfirst.q);
@@ -1193,7 +1193,7 @@ class TaskManipulation : public ProblemInstance
  
         boost::shared_ptr<PlannerBase> graspplanner = RaveCreatePlanner(GetEnv(),"Grasper");
         if( !graspplanner ) {
-            RAVELOG_ERRORA("grasping planner failure!\n");
+            RAVELOG_ERROR("grasping planner failure!\n");
             return false;
         }
         
@@ -1206,12 +1206,12 @@ class TaskManipulation : public ProblemInstance
         graspparams->bavoidcontact = true;
 
         if( !graspplanner->InitPlan(_robot, graspparams) ) {
-            RAVELOG_ERRORA("InitPlan failed\n");
+            RAVELOG_ERROR("InitPlan failed\n");
             return false;
         }
     
         if( !graspplanner->PlanPath(ptraj) ) {
-            RAVELOG_WARNA("PlanPath failed\n");
+            RAVELOG_WARN("PlanPath failed\n");
             return false;
         }
 
@@ -1229,7 +1229,7 @@ class TaskManipulation : public ProblemInstance
             RobotBase::RobotStateSaver saver2(_robot);
             _robot->SetActiveDOFValues(ptraj->GetPoints().back().q);
             if( CM::JitterActiveDOF(_robot) > 0 ) {
-                RAVELOG_WARNA("robot final configuration is in collision\n");
+                RAVELOG_WARN("robot final configuration is in collision\n");
                 Trajectory::TPOINT pt = ptraj->GetPoints().back();
                 _robot->GetActiveDOFValues(pt.q);
                 ptraj->AddPoint(pt);
@@ -1294,23 +1294,23 @@ protected:
 
     TrajectoryBasePtr _MoveArm(const vector<int>& activejoints, const vector<dReal>& activegoalconfig, int& nGoalIndex, int nMaxIterations)
     {
-        RAVELOG_DEBUGA("Starting MoveArm...\n");
+        RAVELOG_DEBUG("Starting MoveArm...\n");
         BOOST_ASSERT( !!_pRRTPlanner );
         TrajectoryBasePtr ptraj;
         RobotBase::RobotStateSaver _saver(_robot);
 
         if( activejoints.size() == 0 ) {
-            RAVELOG_WARNA("move arm failed\n");
+            RAVELOG_WARN("move arm failed\n");
             return ptraj;
         }
 
         if( (activegoalconfig.size()%activejoints.size()) != 0 ) {
-            RAVELOG_WARNA(str(boost::format("Active goal configurations not a multiple (%d/%d)\n")%activegoalconfig.size()%activejoints.size()));
+            RAVELOG_WARN(str(boost::format("Active goal configurations not a multiple (%d/%d)\n")%activegoalconfig.size()%activejoints.size()));
             return ptraj;
         }
 
         if( GetEnv()->CheckCollision(KinBodyConstPtr(_robot)) )
-            RAVELOG_WARNA("Hand in collision\n");
+            RAVELOG_WARN("Hand in collision\n");
     
         PlannerBase::PlannerParametersPtr params(new PlannerBase::PlannerParameters());
         _robot->SetActiveDOFs(activejoints);
@@ -1350,14 +1350,14 @@ protected:
         params->_nMaxIterations = nMaxIterations; // max iterations before failure
 
         bool bSuccess = false;
-        RAVELOG_VERBOSEA("starting planning\n");
+        RAVELOG_VERBOSE("starting planning\n");
     
         stringstream ss;
 
         for(int iter = 0; iter < 3; ++iter) {
 
             if( !_pRRTPlanner->InitPlan(_robot, params) ) {
-                RAVELOG_WARNA("InitPlan failed\n");
+                RAVELOG_WARN("InitPlan failed\n");
                 ptraj.reset();
                 return ptraj;
             }
@@ -1370,7 +1370,7 @@ protected:
                 RAVELOG_INFOA("finished planning, goal index: %d\n", nGoalIndex);
                 break;
             }
-            else RAVELOG_WARNA("PlanPath failed\n");
+            else RAVELOG_WARN("PlanPath failed\n");
         }
     
         if( !bSuccess )
@@ -1422,10 +1422,10 @@ protected:
         PRESHAPETRAJMAP::iterator itpreshapetraj = mapPreshapeTrajectories.find(vpreshape);
         if( itpreshapetraj != mapPreshapeTrajectories.end() ) {
             if( itpreshapetraj->second->GetPoints().size() > 0 )
-                _robot->SetJointValues(itpreshapetraj->second->GetPoints().back().q);
+                _robot->SetDOFValues(itpreshapetraj->second->GetPoints().back().q);
         }
         else {
-            RAVELOG_WARNA("no preshape trajectory!");
+            RAVELOG_WARN("no preshape trajectory!");
         }
 
         vector<dReal> vgoalconfigs;
@@ -1435,7 +1435,7 @@ protected:
 
             int nsampled = CM::SampleIkSolutions(_robot, itgoal->tgrasp, nSeedIkSolutions, vgoalconfigs);
             if( nsampled != nSeedIkSolutions ) {
-                RAVELOG_WARNA("warning, only found %d/%d ik solutions. goal indices will be wrong!\n", nsampled, nSeedIkSolutions);
+                RAVELOG_WARN("warning, only found %d/%d ik solutions. goal indices will be wrong!\n", nsampled, nSeedIkSolutions);
                 // fill the rest
                 while(nsampled++ < nSeedIkSolutions)
                     vgoalconfigs.insert(vgoalconfigs.end(), itgoal->viksolution.begin(), itgoal->viksolution.end());
@@ -1456,7 +1456,7 @@ protected:
         _robot->SetActiveDOFs(pmanip->GetArmIndices());
         _robot->GetFullTrajectoryFromActive(pfulltraj, ptraj);
         
-        RAVELOG_DEBUGA("total planning time %d ms\n", (uint32_t)(GetMicroTime()-tbase)/1000);
+        RAVELOG_DEBUG("total planning time %d ms\n", (uint32_t)(GetMicroTime()-tbase)/1000);
         return pfulltraj;
     }
 

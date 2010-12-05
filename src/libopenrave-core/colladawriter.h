@@ -99,7 +99,7 @@ class ColladaWriter : public daeErrorHandler
     {
         daeErrorHandler::setErrorHandler(this);
 
-        RAVELOG_VERBOSEA("init COLLADA writer version: %s, namespace: %s\n", COLLADA_VERSION, COLLADA_NAMESPACE);
+        RAVELOG_VERBOSE("init COLLADA writer version: %s, namespace: %s\n", COLLADA_VERSION, COLLADA_NAMESPACE);
         _collada.reset(new DAE);
         _collada->setIOPlugin( NULL );
         _collada->setDatabase( NULL );
@@ -402,7 +402,7 @@ class ColladaWriter : public daeErrorHandler
 //                        sensor->setId(strsensor.c_str());
 //                        sensor->setName(strsensor.c_str());
 //
-//                        RAVELOG_VERBOSEA("Plugin Name: %s\n",asensor->GetSensor()->GetXMLId().c_str());
+//                        RAVELOG_VERBOSE("Plugin Name: %s\n",asensor->GetSensor()->GetXMLId().c_str());
 //                    }
 //            }
         
@@ -506,7 +506,7 @@ class ColladaWriter : public daeErrorHandler
         KinBody::KinBodyStateSaver saver(pbody);
         vector<dReal> vjointvalues, vzero(pbody->GetDOF());
         pbody->GetDOFValues(vjointvalues);
-        pbody->SetJointValues(vzero);
+        pbody->SetDOFValues(vzero);
 
         //  Create root node for the visual scene
         domNodeRef pnoderoot = daeSafeCast<domNode>(_scene.vscene->add(COLLADA_ELEMENT_NODE));
@@ -556,7 +556,7 @@ class ColladaWriter : public daeErrorHandler
                 case KinBody::Joint::JointHinge2:
                 default:
                     fmult = 180.0f/PI;
-                    RAVELOG_WARNA(str(boost::format("unsupported joint type specified %d\n")%pjoint->GetType()));
+                    RAVELOG_WARN(str(boost::format("unsupported joint type specified %d\n")%pjoint->GetType()));
                     break;
                 }
 
@@ -883,7 +883,7 @@ class ColladaWriter : public daeErrorHandler
             case KinBody::Joint::JointUniversal:
             case KinBody::Joint::JointHinge2:
             default:
-                RAVELOG_WARNA("unsupported joint type specified %d\n", pjoint->GetType());
+                RAVELOG_WARN("unsupported joint type specified %d\n", pjoint->GetType());
                 break;
             }
 
@@ -962,12 +962,12 @@ class ColladaWriter : public daeErrorHandler
 
     virtual void handleError( daeString msg )
     {
-        RAVELOG_ERRORA("COLLADA error: %s\n", msg);
+        RAVELOG_ERROR("COLLADA error: %s\n", msg);
     }
 
     virtual void handleWarning( daeString msg )
     {
-        RAVELOG_WARNA("COLLADA warning: %s\n", msg);
+        RAVELOG_WARN("COLLADA warning: %s\n", msg);
     }
 
     virtual KinBody::LinkPtr GetChildLink(KinBody::JointConstPtr pjoint) {

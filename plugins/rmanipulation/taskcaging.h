@@ -111,7 +111,7 @@ public:
             vector<dReal>::const_iterator ittarget = pstate.begin()+_robot->GetActiveDOF();
             for(size_t i = 0; i < _vtargetjoints.size(); ++i)
                 vtargvalues[_vtargetjoints[i]] = *ittarget++;
-            ptarget->SetJointValues(vtargvalues);
+            ptarget->SetDOFValues(vtargvalues);
         }
 
         virtual void GetState(vector<dReal>& pstate)
@@ -277,7 +277,7 @@ public:
                     vtargvalues[_vtargetjoints[i]] = pNewSample[i];
                 }
         
-                ptarget->SetJointValues(vtargvalues);
+                ptarget->SetDOFValues(vtargvalues);
         
                 // sample the grasp and execute in random permutation order (for now just select one grasp)
                 boost::shared_ptr<vector<Transform> > vgrasps = Eval(pNewSample) < fGoalThresh ? pvGraspContactSet : pvGraspSet;
@@ -326,7 +326,7 @@ public:
                     vtargvalues[_vtargetjoints[i-_robot->GetActiveDOF()]] = _vsample[i];
                 }
         
-                ptarget->SetJointValues(vtargvalues);
+                ptarget->SetDOFValues(vtargvalues);
         
                 // choose a grasp
                 boost::shared_ptr<FINDGRASPDATA> pdata;
@@ -465,7 +465,7 @@ public:
             //            if( pCurSolution.size() == solution.size() ) {
             //                // make sure solution is close to current solution
             //                if( !AcceptConfig(pCurSolution, solution) ) {
-            //                    //RAVELOG_WARNA("no accept\n");
+            //                    //RAVELOG_WARN("no accept\n");
             //                    continue;
             //                }
             //            }
@@ -487,7 +487,7 @@ public:
                 FOREACHC(itsol, solutions)
                     g.iksolutions.push_back(ConstrainedTaskData::IKSOL(*itsol, EvalWithFeatures(*itsol)));
                 g.iksolutions.sort(IkSolutionCompare());
-                //RAVELOG_WARNA("%f %f\n", g.iksolutions.at(0).second, g.iksolutions.back().second);
+                //RAVELOG_WARN("%f %f\n", g.iksolutions.at(0).second, g.iksolutions.back().second);
             }
             else {
                 // fill the list
@@ -659,7 +659,7 @@ public:
             _vvvCachedTransforms.resize(vtargetjoints.size()*2);
             vector< vector< vector<Transform> > >::iterator itvv = _vvvCachedTransforms.begin();
 
-            plink->GetParent()->SetJointValues(vtargetvalues);
+            plink->GetParent()->SetDOFValues(vtargetvalues);
             plink->GetParent()->GetBodyTransformations(_vTargetTransforms);
             vector<int>::const_iterator itside = vTargetSides.begin();
 
@@ -670,7 +670,7 @@ public:
                     itvv->resize(0);
                     for(dReal finc = fIncrement; finc < fCagedConfig; finc += fIncrement) {
                         values[*itjoint] = vtargetvalues[*itjoint] - finc;
-                        plink->GetParent()->SetJointValues(values);
+                        plink->GetParent()->SetDOFValues(values);
                     
                         itvv->push_back(vector<Transform>());
                         plink->GetParent()->GetBodyTransformations(itvv->back());
@@ -682,7 +682,7 @@ public:
                     itvv->resize(0);
                     for(dReal finc = fIncrement; finc < fCagedConfig; finc += fIncrement) {
                         values[*itjoint] = vtargetvalues[*itjoint] + finc;
-                        plink->GetParent()->SetJointValues(values);
+                        plink->GetParent()->SetDOFValues(values);
 
                         itvv->push_back(vector<Transform>());
                         plink->GetParent()->GetBodyTransformations(itvv->back());
@@ -696,7 +696,7 @@ public:
             }
 
             _vvvCachedTransforms.erase(itvv,_vvvCachedTransforms.end());
-            plink->GetParent()->SetJointValues(vtargetvalues);
+            plink->GetParent()->SetDOFValues(vtargetvalues);
         }
 
         dReal fIncrement, fCagedConfig;
@@ -766,7 +766,7 @@ This greatly relaxes the constraints on the robot (see the door manipluation exa
             BOOST_ASSERT( (int)tp.q.size() == itbody->ptarget->GetDOF());
 
             if( tp.q.size() > 0 )
-                itbody->ptarget->SetJointValues(tp.q);
+                itbody->ptarget->SetDOFValues(tp.q);
             itbody->ptarget->SetTransform(tp.trans);
 
             if( itbody->time > itbody->ptraj->GetTotalDuration() ) {
@@ -843,18 +843,18 @@ private:
                     sinput >> *it;
             }
             else {
-                RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
+                RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
             }
 
             if( !sinput ) {
-                RAVELOG_ERRORA(str(boost::format("failed processing command %s\n")%cmd));
+                RAVELOG_ERROR(str(boost::format("failed processing command %s\n")%cmd));
                 return false;
             }
         }
 
         if( !ptarget || !graspfn->plink ) {
-            RAVELOG_WARNA("invalid target\n");
+            RAVELOG_WARN("invalid target\n");
             return false;
         }
 
@@ -864,7 +864,7 @@ private:
         string plannername = "ExplorationRRT";
         PlannerBasePtr planner = RaveCreatePlanner(GetEnv(),plannername);
         if( !planner ) {
-            RAVELOG_WARNA(str(boost::format("failed to find planner %s\n")%plannername));
+            RAVELOG_WARN(str(boost::format("failed to find planner %s\n")%plannername));
             return false;
         }
 
@@ -881,7 +881,7 @@ private:
         for(size_t i = 0; i < lower.size(); ++i)
             graspfn->vtargetvalues[i] = 0.5f*(lower[i]+upper[i]);
 
-        ptarget->SetJointValues(graspfn->vtargetvalues);
+        ptarget->SetDOFValues(graspfn->vtargetvalues);
         tlinknew = graspfn->plink->GetTransform();
 
         graspfn->CacheTransforms(vTargetSides);
@@ -890,7 +890,7 @@ private:
         _robot->SetTransform(tlinknew*tlinkorig.inverse()*_robot->GetTransform());
     
         if( !CM::JitterTransform(_robot, 0.004f) ) {
-            RAVELOG_WARNA("failed to jitter\n");
+            RAVELOG_WARN("failed to jitter\n");
             return false;
         }
 
@@ -907,7 +907,7 @@ private:
         params->_nMaxIterations = params->_nExpectedDataSize*5;
 
         if( !planner->InitPlan(_robot, params) ) {
-            RAVELOG_WARNA("failed to initplan\n");
+            RAVELOG_WARN("failed to initplan\n");
             return false;
         }
 
@@ -915,7 +915,7 @@ private:
         TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),_robot->GetActiveDOF());
 
         if( !planner->PlanPath(ptraj) ) {
-            RAVELOG_WARNA("failed to plan\n");
+            RAVELOG_WARN("failed to plan\n");
             return false;
         }
     
@@ -942,7 +942,7 @@ private:
                         vtargetvalues[graspfn->vtargetjoints[j]] = graspfn->vtargetvalues[graspfn->vtargetjoints[j]] + fadd;
                     }
 
-                    ptarget->SetJointValues(vtargetvalues, true);
+                    ptarget->SetDOFValues(vtargetvalues, true);
 
                     if( GetEnv()->CheckCollision(KinBodyConstPtr(_robot), KinBodyConstPtr(ptarget)) ) {
                         // in collision, so part of contact set
@@ -957,7 +957,7 @@ private:
         }
 
         if( !!ptarget )
-            ptarget->SetJointValues(vorigvalues);
+            ptarget->SetDOFValues(vorigvalues);
         return true;
     }
 
@@ -989,7 +989,7 @@ private:
                 string name; sinput >> name;
                 taskdata->ptarget = GetEnv()->GetKinBody(name);
                 if( !taskdata->ptarget )
-                    RAVELOG_WARNA(str(boost::format("invalid target %s\n")%name));
+                    RAVELOG_WARN(str(boost::format("invalid target %s\n")%name));
             }
             else if( cmd == "planner" )
                 sinput >> plannername;
@@ -1039,7 +1039,7 @@ private:
                     }
                     taskdata->pvGraspSet->push_back(t);
                 }
-                RAVELOG_DEBUGA(str(boost::format("grasp set size = %d\n")%taskdata->pvGraspSet->size()));
+                RAVELOG_DEBUG(str(boost::format("grasp set size = %d\n")%taskdata->pvGraspSet->size()));
             }
             else if( cmd == "graspcontactset") {
                 taskdata->pvGraspContactSet.reset(new vector<Transform>());
@@ -1054,7 +1054,7 @@ private:
                     }
                     taskdata->pvGraspContactSet->push_back(t);
                 }
-                RAVELOG_DEBUGA(str(boost::format("grasp contact set size = %d\n")%taskdata->pvGraspContactSet->size()));
+                RAVELOG_DEBUG(str(boost::format("grasp contact set size = %d\n")%taskdata->pvGraspContactSet->size()));
             }
             else if( cmd == "graspstartset" ) {
                 taskdata->pvGraspStartSet.reset(new vector<Transform>());
@@ -1069,12 +1069,12 @@ private:
                     }
                     taskdata->pvGraspStartSet->push_back(t);
                 }
-                RAVELOG_DEBUGA(str(boost::format("grasp start set size = %d\n")%taskdata->pvGraspStartSet->size()));
+                RAVELOG_DEBUG(str(boost::format("grasp start set size = %d\n")%taskdata->pvGraspStartSet->size()));
             }
             else if( cmd == "targettraj" ) {
 
                 if( !taskdata->ptarget ) {
-                    RAVELOG_WARNA("target cannot be null when specifying trajectories!\n");
+                    RAVELOG_WARN("target cannot be null when specifying trajectories!\n");
                     return false;
                 }
 
@@ -1099,32 +1099,32 @@ private:
                 taskdata->SetGenerateFeatures(filename);
             }
             else {
-                RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
+                RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
             }
 
             if( !sinput ) {
-                RAVELOG_ERRORA(str(boost::format("failed processing command %s\n")%cmd));
+                RAVELOG_ERROR(str(boost::format("failed processing command %s\n")%cmd));
                 return false;
             }
         }
 
         if( !taskdata->ptarget ) {
-            RAVELOG_WARNA("need to specify target!\n");
+            RAVELOG_WARN("need to specify target!\n");
             return false;
         }
 
         if(nLinkIndex < 0 || nLinkIndex >= (int)taskdata->ptarget->GetLinks().size() ) {
-            RAVELOG_WARNA("need target link name\n");
+            RAVELOG_WARN("need target link name\n");
             return false;
         }
 
         if( !taskdata->pvGraspSet || taskdata->pvGraspSet->size() == 0 ) {
-            RAVELOG_WARNA("error, graspset size 0\n");
+            RAVELOG_WARN("error, graspset size 0\n");
             return false;
         }
         if( !taskdata->pvGraspContactSet || taskdata->pvGraspContactSet->size() == 0 ) {
-            RAVELOG_WARNA("error, graspset size 0\n");
+            RAVELOG_WARN("error, graspset size 0\n");
             return false;
         }
 
@@ -1132,7 +1132,7 @@ private:
 
         RobotBase::ManipulatorPtr pmanip = _robot->GetActiveManipulator();
         if( !pmanip->GetIkSolver() ) {
-            RAVELOG_WARNA("need to select a robot manipulator with ik solver\n");
+            RAVELOG_WARN("need to select a robot manipulator with ik solver\n");
             return false;
         }
 
@@ -1152,7 +1152,7 @@ private:
         if( plannername.size() > 0 ) {
 
             if( taskdata->vtargettraj.size() < 2 ) {
-                RAVELOG_WARNA("not enough target trajectory points (need at least 2 for initial and goal\n");
+                RAVELOG_WARN("not enough target trajectory points (need at least 2 for initial and goal\n");
                 return false;
             }
 
@@ -1173,7 +1173,7 @@ private:
             vector<dReal> vtargetinit;
             taskdata->ptarget->GetDOFValues(vtargetinit);
 
-            taskdata->ptarget->SetJointValues(taskdata->vtargettraj.back());
+            taskdata->ptarget->SetDOFValues(taskdata->vtargettraj.back());
             Transform tlink  = taskdata->ptargetlink->GetTransform();
         
             bool bSucceed = false;
@@ -1186,7 +1186,7 @@ private:
             }
 
             if( !bSucceed ) {
-                RAVELOG_WARNA("failed to find goal configuration = %dms\n", timeGetTime()-basetime);
+                RAVELOG_WARN("failed to find goal configuration = %dms\n", timeGetTime()-basetime);
                 return false;
             }
         
@@ -1206,7 +1206,7 @@ private:
             //        }
             //
             //        if( !bSucceed ) {
-            //            RAVELOG_WARNA("failed to find initial configuration = %dms\n", timeGetTime()-basetime);
+            //            RAVELOG_WARN("failed to find initial configuration = %dms\n", timeGetTime()-basetime);
             //            return false;
             //        }
 
@@ -1216,7 +1216,7 @@ private:
             vector<dReal> solution;
         
             for(int ivgrasp = 0; ivgrasp < (int)taskdata->vtargettraj.size()-1; ++ivgrasp) {
-                taskdata->ptarget->SetJointValues(taskdata->vtargettraj[ivgrasp]);
+                taskdata->ptarget->SetDOFValues(taskdata->vtargettraj[ivgrasp]);
                 tlink = taskdata->ptargetlink->GetTransform();
                 bHasIK = false;
             
@@ -1229,7 +1229,7 @@ private:
             
                 if( !bHasIK ) {
                     // no ik solution found for this grasp, so quit
-                    RAVELOG_ERRORA(str(boost::format("failure, due to ik time=%dms, %d/%d\n")%(timeGetTime()-basetime)%ivgrasp%taskdata->vtargettraj.size()));
+                    RAVELOG_ERROR(str(boost::format("failure, due to ik time=%dms, %d/%d\n")%(timeGetTime()-basetime)%ivgrasp%taskdata->vtargettraj.size()));
                     break;
                 }
             }
@@ -1241,16 +1241,16 @@ private:
 
             boost::shared_ptr<PlannerBase> pra(RaveCreatePlanner(GetEnv(),plannername.c_str()));
             if( !pra ) {
-                RAVELOG_WARNA(str(boost::format("could not find %s planner\n")%plannername));
+                RAVELOG_WARN(str(boost::format("could not find %s planner\n")%plannername));
                 return false;
             }
 
             if( !pra->InitPlan(_robot,params) )
                 return false;
         
-            RAVELOG_WARNA("planning a caging grasp...\n");
+            RAVELOG_WARN("planning a caging grasp...\n");
             if( !pra->PlanPath(ptrajtemp) ) {
-                RAVELOG_WARNA("planner failure, time = %dms\n", timeGetTime()-basetime);
+                RAVELOG_WARN("planner failure, time = %dms\n", timeGetTime()-basetime);
                 return false;
             }
         }
@@ -1258,7 +1258,7 @@ private:
             CollisionReportPtr report(new CollisionReport());
 
             if( taskdata->vtargettraj.size() < 2 ) {
-                RAVELOG_WARNA("not enough trajectory points\n");
+                RAVELOG_WARN("not enough trajectory points\n");
                 return false;
             }
 
@@ -1273,7 +1273,7 @@ private:
             for(int ivgrasp = 0; ivgrasp < (int)taskdata->vlistGraspSet.size(); ++ivgrasp) {
                 int realindex = (ivgrasp+taskdata->vlistGraspSet.size()-1)%taskdata->vlistGraspSet.size();
 
-                taskdata->ptarget->SetJointValues(taskdata->vtargettraj[realindex]);
+                taskdata->ptarget->SetDOFValues(taskdata->vtargettraj[realindex]);
                 Transform Ttarget = taskdata->ptargetlink->GetTransform();
                 bHasIK = false;
                 bool bIndependentCollision = pmanip->CheckIndependentCollision(report);
@@ -1309,9 +1309,9 @@ private:
             
                 if( !bHasIK ) {
                     // no ik solution found for this grasp, so quit
-                    RAVELOG_ERRORA(str(boost::format("failure, due to ik time=%dms, %d/%d, col=%d\n")%(timeGetTime()-basetime)%realindex%taskdata->vtargettraj.size()%bIndependentCollision));
+                    RAVELOG_ERROR(str(boost::format("failure, due to ik time=%dms, %d/%d, col=%d\n")%(timeGetTime()-basetime)%realindex%taskdata->vtargettraj.size()%bIndependentCollision));
                     if( bIndependentCollision )
-                        RAVELOG_ERRORA(str(boost::format("colliding %s:%s with %s:%s\n")%report->plink1->GetParent()->GetName()%report->plink1->GetName()%report->plink2->GetParent()->GetName()%report->plink2->GetName()));
+                        RAVELOG_ERROR(str(boost::format("colliding %s:%s with %s:%s\n")%report->plink1->GetParent()->GetName()%report->plink1->GetName()%report->plink2->GetParent()->GetName()%report->plink2->GetName()));
                     break;
                 }
             }
@@ -1321,7 +1321,7 @@ private:
             }
         
             BOOST_ASSERT(taskdata->vtargettraj.size()>0);
-            taskdata->ptarget->SetJointValues(taskdata->vtargettraj.back());
+            taskdata->ptarget->SetDOFValues(taskdata->vtargettraj.back());
             Transform Ttarget = taskdata->ptargetlink->GetTransform();
     
             // start planning backwards    
@@ -1345,7 +1345,7 @@ private:
             }
 
             if( !bSuccess ) {
-                RAVELOG_WARNA("failure, time=%dms\n", timeGetTime()-basetime);
+                RAVELOG_WARN("failure, time=%dms\n", timeGetTime()-basetime);
                 return false;
             }
         }
@@ -1401,7 +1401,7 @@ private:
             pbodytraj->Write(f, Trajectory::TO_IncludeTimestamps|Trajectory::TO_IncludeBaseTransformation);
         }
 
-        RAVELOG_WARNA("success, time=%dms\n", finaltime);
+        RAVELOG_WARN("success, time=%dms\n", finaltime);
         sout << finaltime << " ";
 
         // write first and last points
@@ -1427,7 +1427,7 @@ private:
 
     bool SimpleConstrainedPlanner(ostream& sout, istream& sinput)
     {
-        RAVELOG_DEBUGA("SimpleConstrainedPlanner\n");
+        RAVELOG_DEBUG("SimpleConstrainedPlanner\n");
     
         vector<vector<dReal> > vtargettraj;
         dReal fConfigThresh2 = 0.1f*0.1f;
@@ -1450,7 +1450,7 @@ private:
                 string name; sinput >> name;
                 taskdata->ptarget = GetEnv()->GetKinBody(name);
                 if( !taskdata->ptarget )
-                    RAVELOG_WARNA("invalid target %s\n", name.c_str());
+                    RAVELOG_WARN("invalid target %s\n", name.c_str());
             }
             else if( cmd == "targetlink" )
                 sinput >> nLinkIndex;
@@ -1470,7 +1470,7 @@ private:
                     Transform t;
                     fgrasp >> t;
                     if( !fgrasp ) {
-                        RAVELOG_ERRORA("grasp set file corrupted\n");
+                        RAVELOG_ERROR("grasp set file corrupted\n");
                         break;
                     }
                     listGraspSet.push_back(t);
@@ -1479,7 +1479,7 @@ private:
             else if( cmd == "targettraj" ) {
 
                 if( !taskdata->ptarget ) {
-                    RAVELOG_WARNA("target cannot be null when specifying trajectories!\n");
+                    RAVELOG_WARN("target cannot be null when specifying trajectories!\n");
                     return false;
                 }
 
@@ -1495,30 +1495,30 @@ private:
             else if( cmd == "fullcol" )
                 taskdata->bCheckFullCollision = true;
             else {
-                RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
+                RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
             }
 
             if( !sinput ) {
-                RAVELOG_ERRORA(str(boost::format("failed processing command %s\n")%cmd));
+                RAVELOG_ERROR(str(boost::format("failed processing command %s\n")%cmd));
                 return false;
             }
         }
 
         if( !taskdata->ptarget ) {
-            RAVELOG_WARNA("need to specify target!\n");
+            RAVELOG_WARN("need to specify target!\n");
             return false;
         }
 
         if(nLinkIndex < 0 || nLinkIndex >= (int)taskdata->ptarget->GetLinks().size() ) {
-            RAVELOG_WARNA("need target link name\n");
+            RAVELOG_WARN("need target link name\n");
             return false;
         }
         taskdata->ptargetlink = taskdata->ptarget->GetLinks()[nLinkIndex];
 
         RobotBase::ManipulatorPtr pmanip = _robot->GetActiveManipulator();
         if( !pmanip->GetIkSolver() ) {
-            RAVELOG_WARNA("need to select a robot manipulator with ik solver\n");
+            RAVELOG_WARN("need to select a robot manipulator with ik solver\n");
             return false;
         }
 
@@ -1550,7 +1550,7 @@ private:
             for(int i = 0; i < (int)vtargettraj.size(); ++i) {
                 int realindex = (i+vtargettraj.size()-1)%vtargettraj.size();
                 vsolutions[realindex].clear();
-                taskdata->ptarget->SetJointValues(vtargettraj[realindex]);
+                taskdata->ptarget->SetDOFValues(vtargettraj[realindex]);
                 Transform Ttarget = taskdata->ptargetlink->GetTransform();
             
                 pmanip->FindIKSolutions(Ttarget * *itgrasp, solutions, true);
@@ -1585,11 +1585,11 @@ private:
         uint32_t finaltime = timeGetTime()-basetime;
 
         if( !bSuccess ) {
-            RAVELOG_WARNA("failure, time=%dms\n", finaltime);
+            RAVELOG_WARN("failure, time=%dms\n", finaltime);
             return false;
         }
 
-        RAVELOG_WARNA("success, time=%dms\n", finaltime);
+        RAVELOG_WARN("success, time=%dms\n", finaltime);
         sout << finaltime << " ";
 
         // write the last point
@@ -1668,12 +1668,12 @@ private:
                 body.ptarget = GetEnv()->GetKinBody(name);
             }
             else {
-                RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
+                RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
             }
 
             if( !sinput ) {
-                RAVELOG_ERRORA(str(boost::format("failed processing command %s\n")%cmd));
+                RAVELOG_ERROR(str(boost::format("failed processing command %s\n")%cmd));
                 return false;
             }
         }
@@ -1684,7 +1684,7 @@ private:
         body.ptraj = RaveCreateTrajectory(GetEnv(),body.ptarget->GetDOF());
         ifstream f(strtraj.c_str());
         if( !body.ptraj->Read(f, RobotBasePtr()) ) {
-            RAVELOG_ERRORA(str(boost::format("failed to read %s\n")%strtraj));
+            RAVELOG_ERROR(str(boost::format("failed to read %s\n")%strtraj));
             return false;
         }
         _listBodyTrajs.push_back(body);
@@ -1694,11 +1694,11 @@ private:
     // relaxed task constraints
     bool FindAllRelaxedForward(const vector<dReal>& qprev, int j, Trajectory* ptraj, boost::shared_ptr<ConstrainedTaskData> taskdata)
     {
-        //RAVELOG_WARNA("%d\n", j);
+        //RAVELOG_WARN("%d\n", j);
         RobotBase::ManipulatorPtr pmanip = _robot->GetActiveManipulator();
         BOOST_ASSERT( !!pmanip->GetIkSolver() );
     
-        taskdata->ptarget->SetJointValues(taskdata->vtargettraj[j]);
+        taskdata->ptarget->SetDOFValues(taskdata->vtargettraj[j]);
     
         vector<dReal> qprevrobot(qprev.begin(),qprev.begin()+_robot->GetActiveDOF());
         _robot->SetActiveDOFValues(qprevrobot);
@@ -1732,7 +1732,7 @@ private:
                     continue;
                 }
             
-                //RAVELOG_WARNA("iksol\n", j);
+                //RAVELOG_WARN("iksol\n", j);
                 taskdata->FillIkSolutions(grasp, solutions);
                 if( taskdata->bCheckFullCollision ) {
                     FOREACH(itsol, grasp.iksolutions) {
@@ -1764,7 +1764,7 @@ private:
                     }
 
                     if( taskdata->bCheckFullCollision )
-                        taskdata->ptarget->SetJointValues(taskdata->vtargettraj[j]);
+                        taskdata->ptarget->SetDOFValues(taskdata->vtargettraj[j]);
                     if( j == 0 || FindAllRelaxedForward(itsol->first, j-1, ptraj, taskdata)) {
                     
                         bFoundAtLeastOne = true;
@@ -1803,12 +1803,12 @@ private:
                 ++itsol;
             }
 
-            if( taskdata->bCheckFullCollision )
-                taskdata->ptarget->SetJointValues(taskdata->vtargettraj[j]);
-
-            if( grasp.iksolutions.size() == 0 )
+            if( taskdata->bCheckFullCollision ) {
+                taskdata->ptarget->SetDOFValues(taskdata->vtargettraj[j]);
+            }
+            if( grasp.iksolutions.size() == 0 ) {
                 taskdata->vlistGraspSet[j].erase(pqAcceptedGrasps.top().first); // remove
-
+            }
             pqAcceptedGrasps.pop();
         }
 

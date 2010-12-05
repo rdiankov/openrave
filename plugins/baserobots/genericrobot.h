@@ -29,7 +29,7 @@ class GenericRobot : public RobotBase
         _pController = controller;
         if( !!_pController ) {
             if( !_pController->Init(shared_robot(),jointindices,nControlTransformation) ) {
-                RAVELOG_WARNA(str(boost::format("GenericRobot %s: Failed to init controller %s\n")%GetName()%controller->GetXMLId()));
+                RAVELOG_WARN(str(boost::format("GenericRobot %s: Failed to init controller %s\n")%GetName()%controller->GetXMLId()));
                 _pController.reset();
                 return false;
             }

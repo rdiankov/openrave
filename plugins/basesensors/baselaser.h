@@ -80,10 +80,10 @@ protected:
                     ss.clear();
             }
             else
-                RAVELOG_WARNA(str(boost::format("bad tag: %s")%name));
+                RAVELOG_WARN(str(boost::format("bad tag: %s")%name));
 
             if( !ss )
-                RAVELOG_WARNA(str(boost::format("error parsing %s\n")%name));
+                RAVELOG_WARN(str(boost::format("error parsing %s\n")%name));
 
             return false;
         }
@@ -391,7 +391,7 @@ protected:
                 else
                     RAVELOG_WARN("invalid tag\n");
                 if( !ss )
-                    RAVELOG_WARNA(str(boost::format("error parsing %s\n")%name));
+                    RAVELOG_WARN(str(boost::format("error parsing %s\n")%name));
                 _bProcessing = false;
                 return false;
             }

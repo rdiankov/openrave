@@ -21,7 +21,7 @@ class BaseManipulation : public ProblemInstance
 {
 public:
  BaseManipulation(EnvironmentBasePtr penv) : ProblemInstance(penv) {
-        __description = ":Interface Author: Rosen Diankov\nVery useful routines for manipulation planning and planning in general.";
+        __description = ":Interface Author: Rosen Diankov\nVery useful routines for manipulation planning and planning in general. The planners use analytical inverse kinematics and search based techniques.";
         RegisterCommand("SetActiveManip",boost::bind(&BaseManipulation::SetActiveManip,this,_1,_2),
                         "Set the active manipulator");
         RegisterCommand("Traj",boost::bind(&BaseManipulation::Traj,this,_1,_2),
@@ -169,7 +169,7 @@ protected:
 
         if( filename == "stream" ) {
             // the trajectory is embedded in the stream
-            RAVELOG_VERBOSEA("BaseManipulation: reading trajectory from stream\n");
+            RAVELOG_VERBOSE("BaseManipulation: reading trajectory from stream\n");
 
             if( !ptraj->Read(sinput, robot) ) {
                 RAVELOG_ERROR("BaseManipulation: failed to get trajectory\n");
@@ -177,7 +177,7 @@ protected:
             }
         }
         else {
-            RAVELOG_VERBOSEA(str(boost::format("BaseManipulation: reading trajectory: %s\n")%filename));
+            RAVELOG_VERBOSE(str(boost::format("BaseManipulation: reading trajectory: %s\n")%filename));
             ifstream f(filename.c_str());
             if( !ptraj->Read(f, robot) ) {
                 RAVELOG_ERROR(str(boost::format("BaseManipulation: failed to read trajectory %s\n")%filename));
@@ -188,14 +188,14 @@ protected:
         bool bResetTrans = false; sinput >> bResetTrans;
     
         if( bResetTrans ) {
-            RAVELOG_VERBOSEA("resetting transformations of trajectory\n");
+            RAVELOG_VERBOSE("resetting transformations of trajectory\n");
             Transform tcur = robot->GetTransform();
             // set the transformation of every point to the current robot transformation
             FOREACH(itpoint, ptraj->GetPoints())
                 itpoint->trans = tcur;
         }
 
-        RAVELOG_VERBOSEA(str(boost::format("executing traj with %d points\n")%ptraj->GetPoints().size()));
+        RAVELOG_VERBOSE(str(boost::format("executing traj with %d points\n")%ptraj->GetPoints().size()));
         robot->SetMotion(ptraj);
         sout << "1";
         return true;
@@ -1103,7 +1103,7 @@ protected:
             for (i = 0; i < (int)vtempconfig.size(); i++)
                 vtempconfig[i] = q0[i] + (jointIncrement[i] * f);
         
-            probot->SetJointValues(vtempconfig);
+            probot->SetDOFValues(vtempconfig);
             if( probot->GetEnv()->CheckCollision(KinBodyConstPtr(probot)) || probot->CheckSelfCollision() )
                 return true;
         }

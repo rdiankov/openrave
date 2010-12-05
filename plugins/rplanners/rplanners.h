@@ -24,77 +24,6 @@ enum ExtendType {
     ET_Connected=2
 };
 
-// sorted by increasing getvalue
-template <class T, class S>
-class BinarySearchTree
-{
-public:
-    BinarySearchTree() { Reset(); }
-
-    // other global definitions
-    void Add(T& pex)
-    {
-        BOOST_ASSERT( pex != NULL );
-        
-        switch(blocks.size()) {
-		    case 0:
-                blocks.push_back(pex);
-                return;
-		    case 1:
-                if( blocks.front()->getvalue() < pex->getvalue() ) {
-                    blocks.push_back(pex);
-                }
-                else blocks.insert(blocks.begin(), pex);
-                
-                return;
-                
-		    default: {
-                int imin = 0, imax = (int)blocks.size(), imid;
-                
-                while(imin < imax) {
-                    imid = (imin+imax)>>1;
-                    
-                    if( blocks[imid]->getvalue() > pex->getvalue() ) imax = imid;
-                    else imin = imid+1;
-                }
-                
-                blocks.insert(blocks.begin()+imin, pex);
-                return;
-            }
-        }
-    }
-    
-    ///< returns the index into blocks
-    int Get(S& s)
-    {
-        switch(blocks.size()) {
-		    case 1: return 0;
-		    case 2: return blocks.front()->getvalue() < s;    
-		    default: {
-                int imin = 0, imax = blocks.size()-1, imid;
-                
-                while(imin < imax) {
-                    imid = (imin+imax)>>1;
-                    
-                    if( blocks[imid]->getvalue() > s ) imax = imid;
-                    else if( blocks[imid]->getvalue() == s ) return imid;
-                    else imin = imid+1;
-                }
-                
-                return imin;
-            }
-        }
-    }
-
-    void Reset()
-    {
-        blocks.clear();
-        blocks.reserve(1<<16);
-    }
-    
-	vector<T> blocks;
-};
-
 class CollisionFunctions
 {
  public:
@@ -185,7 +114,7 @@ class CollisionFunctions
         params->_setstatefn(pConfig);
         bool bCol = robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot), report) || (params->_bCheckSelfCollisions&&robot->CheckSelfCollision(report));
         if( bCol && !!report )
-            RAVELOG_WARNA(str(boost::format("fcollision %s\n")%report->__str__()));
+            RAVELOG_WARN(str(boost::format("fcollision %s\n")%report->__str__()));
         return bCol;
     }
 };
@@ -364,130 +293,6 @@ class SpatialTree : public SpatialTreeBase
     vector<dReal> _vNewConfig;
     boost::weak_ptr<Planner> _planner;
     int _dof;
-};
-
-class ExplorationParameters : public PlannerBase::PlannerParameters
-{
- public:
-ExplorationParameters() : _fExploreProb(0), _nExpectedDataSize(100), _bProcessingExploration(false) {
-        _vXMLParameters.push_back("exploreprob");
-        _vXMLParameters.push_back("expectedsize");
-    }
-        
-    dReal _fExploreProb;
-    int _nExpectedDataSize;
-        
- protected:
-    bool _bProcessingExploration;
-    // save the extra data to XML
-    virtual bool serialize(std::ostream& O) const
-    {
-        if( !PlannerParameters::serialize(O) )
-            return false;
-        O << "<exploreprob>" << _fExploreProb << "</exploreprob>" << endl;
-        O << "<expectedsize>" << _nExpectedDataSize << "</expectedsize>" << endl;
-        return !!O;
-    }
-
-    ProcessElement startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts)
-    {
-        if( _bProcessingExploration )
-            return PE_Ignore;
-        switch( PlannerBase::PlannerParameters::startElement(name,atts) ) {
-            case PE_Pass: break;
-            case PE_Support: return PE_Support;
-            case PE_Ignore: return PE_Ignore;
-        }
-        
-        _bProcessingExploration = name=="exploreprob"||name=="expectedsize";
-        return _bProcessingExploration ? PE_Support : PE_Pass;
-    }
-        
-    // called at the end of every XML tag, _ss contains the data 
-    virtual bool endElement(const std::string& name)
-    {
-        // _ss is an internal stringstream that holds the data of the tag
-        if( _bProcessingExploration ) {
-            if( name == "exploreprob")
-                _ss >> _fExploreProb;
-            else if( name == "expectedsize" )
-                _ss >> _nExpectedDataSize;
-            else
-                RAVELOG_WARN(str(boost::format("unknown tag %s\n")%name));
-            _bProcessingExploration = false;
-            return false;
-        }
-        
-        // give a chance for the default parameters to get processed
-        return PlannerParameters::endElement(name);
-    }
-};
-
-class RAStarParameters : public PlannerBase::PlannerParameters
-{
- public:
-RAStarParameters() : fRadius(0.1f), fDistThresh(0.03f), fGoalCoeff(1), nMaxChildren(5), nMaxSampleTries(10), _bProcessingRA(false) {
-        _vXMLParameters.push_back("radius");
-        _vXMLParameters.push_back("distthresh");
-        _vXMLParameters.push_back("goalcoeff");
-        _vXMLParameters.push_back("maxchildren");
-        _vXMLParameters.push_back("maxsampletries");
-    }
-        
-    dReal fRadius;      ///< _pDistMetric thresh is the radius that children must be within parents
-    dReal fDistThresh;  ///< gamma * _pDistMetric->thresh is the sampling radius
-    dReal fGoalCoeff;   ///< balancees exploratino vs cost
-    int nMaxChildren;   ///< limit on number of children
-    int nMaxSampleTries; ///< max sample tries before giving up on creating a child
- protected:
-    bool _bProcessingRA;
-    virtual bool serialize(std::ostream& O) const
-    {
-        if( !PlannerParameters::serialize(O) )
-            return false;
-
-        O << "<radius>" << fRadius << "</radius>" << endl;
-        O << "<distthresh>" << fDistThresh << "</distthresh>" << endl;
-        O << "<goalcoeff>" << fGoalCoeff << "</goalcoeff>" << endl;
-        O << "<maxchildren>" << nMaxChildren << "</maxchildren>" << endl;
-        O << "<maxsampletries>" << nMaxSampleTries << "</maxsampletries>" << endl;
-    
-        return !!O;
-    }
-
-    ProcessElement startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts)
-    {
-        if( _bProcessingRA )
-            return PE_Ignore;
-        switch( PlannerBase::PlannerParameters::startElement(name,atts) ) {
-            case PE_Pass: break;
-            case PE_Support: return PE_Support;
-            case PE_Ignore: return PE_Ignore;
-        }
-        _bProcessingRA = name=="radius"||name=="distthresh"||name=="goalcoeff"||name=="maxchildren"||name=="maxsampletries";
-        return _bProcessingRA ? PE_Support : PE_Pass;
-    }
-    virtual bool endElement(const string& name)
-    {
-        if( _bProcessingRA ) {
-            if( name == "radius")
-                _ss >> fRadius;
-            else if( name == "distthresh")
-                _ss >> fDistThresh;
-            else if( name == "goalcoeff")
-                _ss >> fGoalCoeff;
-            else if( name == "maxchildren")
-                _ss >> nMaxChildren;
-            else if( name == "maxsampletries")
-                _ss >> nMaxSampleTries;
-            else
-                RAVELOG_WARN(str(boost::format("unknown tag %s\n")%name));
-            _bProcessingRA = false;
-            return false;
-        }
-        // give a chance for the default parameters to get processed
-        return PlannerParameters::endElement(name);
-    }
 };
 
 class GraspSetParameters : public PlannerBase::PlannerParameters

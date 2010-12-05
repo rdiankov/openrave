@@ -75,7 +75,7 @@ class DualManipulation : public ProblemInstance
                 _strRRTPlannerName = "";
         }
 
-        RAVELOG_DEBUGA(str(boost::format("DualManipulation: using %s planner\n")%_strRRTPlannerName));
+        RAVELOG_DEBUG(str(boost::format("DualManipulation: using %s planner\n")%_strRRTPlannerName));
         return 0;
     }
 
@@ -123,7 +123,7 @@ class DualManipulation : public ProblemInstance
             sout << "1";
         }
         else {
-            RAVELOG_ERRORA("invaild manip %d\n", index);
+            RAVELOG_ERROR("invaild manip %d\n", index);
             sout << "0";
         }
 
@@ -149,17 +149,17 @@ class DualManipulation : public ProblemInstance
             else break;
 
             if( !sinput ) {
-                RAVELOG_ERRORA(str(boost::format("failed processing command %s\n")%cmd));
+                RAVELOG_ERROR(str(boost::format("failed processing command %s\n")%cmd));
                 return false;
             }
         }
 
         if(!ptarget) {
-            RAVELOG_ERRORA("ERROR Manipulation::GrabBody - Invalid body name.\n");
+            RAVELOG_ERROR("ERROR Manipulation::GrabBody - Invalid body name.\n");
             return false;
         }
 
-        RAVELOG_DEBUGA(str(boost::format("robot %s:%s grabbing body %s...\n")%robot->GetName()%robot->GetActiveManipulator()->GetEndEffector()->GetName()%ptarget->GetName()));
+        RAVELOG_DEBUG(str(boost::format("robot %s:%s grabbing body %s...\n")%robot->GetName()%robot->GetActiveManipulator()->GetEndEffector()->GetName()%ptarget->GetName()));
         robot->Grab(ptarget);
         return true;
     }
@@ -167,7 +167,7 @@ class DualManipulation : public ProblemInstance
     bool ReleaseAll(ostream& sout, istream& sinput)
     {
         if( !!robot ) {
-            RAVELOG_DEBUGA("Releasing all bodies\n");
+            RAVELOG_DEBUG("Releasing all bodies\n");
             robot->ReleaseAllGrabbed();
         }
         return true;
@@ -240,12 +240,12 @@ class DualManipulation : public ProblemInstance
                 }
             }
             else {
-                RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
+                RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
             }
 
             if( !sinput ) {
-                RAVELOG_ERRORA(str(boost::format("failed processing command %s\n")%cmd));
+                RAVELOG_ERROR(str(boost::format("failed processing command %s\n")%cmd));
                 return false;
             }
         }
@@ -256,7 +256,7 @@ class DualManipulation : public ProblemInstance
         RobotBase::RobotStateSaver saver(robot);
 
         if( !CM::JitterActiveDOF(robot) ) {
-            RAVELOG_WARNA("failed\n");
+            RAVELOG_WARN("failed\n");
             return false;
         }
 
@@ -267,7 +267,7 @@ class DualManipulation : public ProblemInstance
     
         // jitter again for goal
         if( !CM::JitterActiveDOF(robot) ) {
-            RAVELOG_WARNA("failed\n");
+            RAVELOG_WARN("failed\n");
             return false;
         }
 
@@ -292,10 +292,10 @@ class DualManipulation : public ProblemInstance
         boost::shared_ptr<PlannerBase> rrtplanner = RaveCreatePlanner(GetEnv(),_strRRTPlannerName);
         
         if( !rrtplanner ) {
-            RAVELOG_ERRORA("failed to create BiRRTs\n");
+            RAVELOG_ERROR("failed to create BiRRTs\n");
             return false;
         }    
-        RAVELOG_DEBUGA("starting planning\n");
+        RAVELOG_DEBUG("starting planning\n");
     
         for(int iter = 0; iter < nMaxTries; ++iter) {
             if( !rrtplanner->InitPlan(robot, params) ) {
@@ -309,7 +309,7 @@ class DualManipulation : public ProblemInstance
                 break;
             }
             else
-                RAVELOG_WARNA("PlanPath failed\n");
+                RAVELOG_WARN("PlanPath failed\n");
         }
 
         rrtplanner.reset(); // have to destroy before environment
@@ -317,7 +317,7 @@ class DualManipulation : public ProblemInstance
         if( !bSuccess )
             return false;
     
-        RAVELOG_DEBUGA("finished planning\n");
+        RAVELOG_DEBUG("finished planning\n");
         CM::SetActiveTrajectory(robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream);
         return true;
     }
@@ -386,17 +386,17 @@ class DualManipulation : public ProblemInstance
                 }
             }
             else {
-                RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
+                RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
             }
 
             if( !sinput ) {
-                RAVELOG_ERRORA(str(boost::format("failed processing command %s\n")%cmd));
+                RAVELOG_ERROR(str(boost::format("failed processing command %s\n")%cmd));
                 return false;
             }
         }
     
-        RAVELOG_DEBUGA("Starting MoveBothHandsStraight dir0=(%f,%f,%f)...dir1=(%f,%f,%f)...\n",(float)direction0.x, (float)direction0.y, (float)direction0.z, (float)direction1.x, (float)direction1.y, (float)direction1.z);
+        RAVELOG_DEBUG("Starting MoveBothHandsStraight dir0=(%f,%f,%f)...dir1=(%f,%f,%f)...\n",(float)direction0.x, (float)direction0.y, (float)direction0.z, (float)direction1.x, (float)direction1.y, (float)direction1.z);
         robot->RegrabAll();
 
         RobotBase::RobotStateSaver saver(robot);
@@ -411,7 +411,7 @@ class DualManipulation : public ProblemInstance
         robot->GetActiveDOFValues(vPrevValues);
 
         if( bPrevInCollision && !bIgnoreFirstCollision ) {
-            RAVELOG_WARNA("MoveBothHandsStraight: robot in collision\n");
+            RAVELOG_WARN("MoveBothHandsStraight: robot in collision\n");
             return false;
         }
 
@@ -426,7 +426,7 @@ class DualManipulation : public ProblemInstance
             if (!reached0){
                 handTr0.trans += stepsize*direction0;
                 if( !pmanip0->FindIKSolution(handTr0,v0Joints,false)) {
-                    RAVELOG_DEBUGA("Arm 0 Lifting: broke due to ik\n");
+                    RAVELOG_DEBUG("Arm 0 Lifting: broke due to ik\n");
                     reached0=true;
                 }
                 else {
@@ -439,7 +439,7 @@ class DualManipulation : public ProblemInstance
             if (!reached1){
                 handTr1.trans += stepsize*direction1;
                 if( !pmanip1->FindIKSolution(handTr1,v1Joints,false)) {
-                    RAVELOG_DEBUGA("Arm 1 Lifting: broke due to ik\n");
+                    RAVELOG_DEBUG("Arm 1 Lifting: broke due to ik\n");
                     reached1=true;
                 }
                 else  {
@@ -452,13 +452,13 @@ class DualManipulation : public ProblemInstance
             size_t j = 0;
             for(; j < point.q.size(); j++) {
                 if(fabsf(point.q[j] - vPrevValues[j]) > 0.2){
-                    RAVELOG_DEBUGA("Breaking here %d\n",j);                 
+                    RAVELOG_DEBUG("Breaking here %d\n",j);                 
                     break;
                 }
             }
 
             if( j < point.q.size()) {
-                RAVELOG_DEBUGA("Arm Lifting: broke due to discontinuity\n");
+                RAVELOG_DEBUG("Arm Lifting: broke due to discontinuity\n");
                 break;
             }
         
@@ -466,7 +466,7 @@ class DualManipulation : public ProblemInstance
         
             bool bInCollision = GetEnv()->CheckCollision(KinBodyConstPtr(robot))||robot->CheckSelfCollision();
             if(bInCollision && !bPrevInCollision && i >= minsteps) {
-                RAVELOG_DEBUGA("Arm Lifting: broke due to collision\n");
+                RAVELOG_DEBUG("Arm Lifting: broke due to collision\n");
                 break;
             }
 
@@ -478,16 +478,16 @@ class DualManipulation : public ProblemInstance
     
         if( i > 0 ) {
             if( bPrevInCollision ) {
-                RAVELOG_DEBUGA("hand failed to move out of collision\n");
+                RAVELOG_DEBUG("hand failed to move out of collision\n");
                 return false;
             }
-            RAVELOG_DEBUGA("hand moved %f\n", (float)i*stepsize);
+            RAVELOG_DEBUG("hand moved %f\n", (float)i*stepsize);
             CM::SetActiveTrajectory(robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream);
             sout << "1";
             return i >= minsteps;
         }
 
-        RAVELOG_DEBUGA("hand didn't move\n");
+        RAVELOG_DEBUG("hand didn't move\n");
         return i >= minsteps;
     }
 

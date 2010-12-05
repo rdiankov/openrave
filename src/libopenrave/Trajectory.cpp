@@ -70,14 +70,14 @@ bool TrajectoryBase::CalcTrajTiming(RobotBaseConstPtr pRobot, InterpEnum interpo
         return false;
 
     if( !pRobot && bAutoCalcTiming ) {
-        RAVELOG_WARNA("need to specify a robot if calculating trajectory timings\n");
+        RAVELOG_WARN("need to specify a robot if calculating trajectory timings\n");
         return false;
     }
 
     if( !!pRobot ) {
         if( bActiveDOFs ) {
             if( pRobot->GetActiveDOF() != GetDOF() ) {
-                RAVELOG_WARNA("trajectory has different degrees of freedom %d != %d\n", pRobot->GetActiveDOF(), GetDOF());
+                RAVELOG_WARN("trajectory has different degrees of freedom %d != %d\n", pRobot->GetActiveDOF(), GetDOF());
                 return false;
             }
             
@@ -105,7 +105,7 @@ bool TrajectoryBase::CalcTrajTiming(RobotBaseConstPtr pRobot, InterpEnum interpo
         _maxAffineRotationQuatVel *= fMaxVelMult;
     }
     else
-        RAVELOG_WARNA("bad multipler set: %f, ignoring...\n", (float)fMaxVelMult);
+        RAVELOG_WARN("bad multipler set: %f, ignoring...\n", (float)fMaxVelMult);
 
     // set the trajectory timing using the given interpolation method
     bool bSuccess = false;
@@ -126,12 +126,12 @@ bool TrajectoryBase::CalcTrajTiming(RobotBaseConstPtr pRobot, InterpEnum interpo
 //        bSuccess = _SetQuintic(bAutoCalcTiming);
 //        break;
     default:
-        RAVELOG_ERRORA("TrajectoryBase:: ERROR - bad interpolation method: %d\n", interpolationMethod);
+        RAVELOG_ERROR("TrajectoryBase:: ERROR - bad interpolation method: %d\n", interpolationMethod);
         break;
     }
 
     if( bSuccess )
-        RAVELOG_VERBOSEA("Total Trajectory Duration = %f\n", GetTotalDuration());
+        RAVELOG_VERBOSE("Total Trajectory Duration = %f\n", GetTotalDuration());
     return bSuccess;
 }
 
@@ -140,7 +140,7 @@ bool TrajectoryBase::SampleTrajectory(dReal time, TPOINT &sample) const
     if (_vecpoints.size() < 2) {
 
         if( _vecpoints.size() == 0 ) {
-            RAVELOG_ERRORA(str(boost::format("TrajectoryBase:: ERROR unable to sample.  numpoints = %d\n")%_vecpoints.size()));
+            RAVELOG_ERROR(str(boost::format("TrajectoryBase:: ERROR unable to sample.  numpoints = %d\n")%_vecpoints.size()));
             return false;
         }
 
@@ -207,7 +207,7 @@ bool TrajectoryBase::SampleTrajectory(dReal time, TPOINT &sample) const
 
 bool TrajectoryBase::IsValid() const
 {
-    RAVELOG_VERBOSEA("Checking validity of trajectory points...\n");
+    RAVELOG_VERBOSE("Checking validity of trajectory points...\n");
     bool bResult = true;
 
     // check joint limits, velocity and acceleration bounds
@@ -215,15 +215,15 @@ bool TrajectoryBase::IsValid() const
     FORIT(it, _vecpoints) {
         for (int d = 0; d < _nDOF; d++) {
             if (it->q[d] < _lowerJointLimit[d]) {
-                RAVELOG_WARNA("Trajectory: WARNING! dof %d exceeds lower joint limit (%f)! q = %f\n", d, _lowerJointLimit[d], it->q[d]);
+                RAVELOG_WARN("Trajectory: WARNING! dof %d exceeds lower joint limit (%f)! q = %f\n", d, _lowerJointLimit[d], it->q[d]);
                 bResult = false;
             }
             if (it->q[d] > _upperJointLimit[d]) {
-                RAVELOG_WARNA("Trajectory: WARNING! dof %d exceeds upper joint limit (%f)! q = %f\n", d, _upperJointLimit[d], it->q[d]);
+                RAVELOG_WARN("Trajectory: WARNING! dof %d exceeds upper joint limit (%f)! q = %f\n", d, _upperJointLimit[d], it->q[d]);
                 bResult = false;
             }
             if (fabs(it->qdot[d]) > _maxJointVel[d]) {
-                RAVELOG_WARNA("Trajectory: WARNING! dof %d exceeds max joint velocity (%f)! q = %f\n", d, _lowerJointLimit[d], it->qdot[d]);
+                RAVELOG_WARN("Trajectory: WARNING! dof %d exceeds max joint velocity (%f)! q = %f\n", d, _lowerJointLimit[d], it->qdot[d]);
                 bResult = false;
             }
             //        if (fabs(tp.qaccel[d]) > _maxJointAccel[d]) {
@@ -794,7 +794,7 @@ dReal TrajectoryBase::_MinimumTimeCubicZero(const TPOINT& tp0, const TPOINT& tp1
 
 dReal TrajectoryBase::_MinimumTimeQuintic(const TPOINT& tp0, const TPOINT& tp1, bool bActiveDOFs)
 {
-    RAVELOG_ERRORA("Trajectory: ERROR - inaccurate minimum time quintic calculation used.\n");
+    RAVELOG_ERROR("Trajectory: ERROR - inaccurate minimum time quintic calculation used.\n");
 
     dReal minJointTime, jointDiff;
     dReal velocityConstraint, accelConstraint;
@@ -983,7 +983,7 @@ bool TrajectoryBase::Write(const std::string& filename, int options) const
 {
     ofstream of(filename.c_str());
     if( !of ) {
-        RAVELOG_WARNA(str(boost::format("failed to write to file %s\n")%filename));
+        RAVELOG_WARN(str(boost::format("failed to write to file %s\n")%filename));
         return false;
     }
 
@@ -1042,7 +1042,7 @@ bool TrajectoryBase::Read(const std::string& filename, RobotBasePtr robot)
 {
     ifstream fi(filename.c_str());
     if( !fi ) {
-        RAVELOG_WARNA(str(boost::format("failed to read file %s\n")%filename));
+        RAVELOG_WARN(str(boost::format("failed to read file %s\n")%filename));
         return false;
     }
 

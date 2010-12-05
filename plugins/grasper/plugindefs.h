@@ -122,7 +122,7 @@ class CollisionCheckerMngr
         if( collisionchecker.size() > 0 ) {
             _pnewchecker = RaveCreateCollisionChecker(_penv,collisionchecker);
             if( !!_pnewchecker ) {
-                RAVELOG_VERBOSEA(str(boost::format("setting collision checker %s\n")%collisionchecker));
+                RAVELOG_VERBOSE(str(boost::format("setting collision checker %s\n")%collisionchecker));
                 _penv->SetCollisionChecker(_pnewchecker);
             }
         }

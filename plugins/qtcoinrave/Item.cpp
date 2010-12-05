@@ -265,7 +265,7 @@ void KinBodyItem::Load()
                     break;
                 }
                 default:
-                    RAVELOG_WARNA("No render data for link %s:%s, geom type = %d\n", _pchain->GetName().c_str(), (*it)->GetName().c_str(), itgeom->GetType());
+                    RAVELOG_WARN("No render data for link %s:%s, geom type = %d\n", _pchain->GetName().c_str(), (*it)->GetName().c_str(), itgeom->GetType());
                     break;
                 }
             }

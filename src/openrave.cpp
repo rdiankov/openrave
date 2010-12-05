@@ -260,7 +260,7 @@ int main(int argc, char ** argv)
             stringstream ss;
             ss << nServPort;
             if( s_penv->LoadProblem(pserver,ss.str()) != 0 )
-                RAVELOG_WARNA("failed to load server\n");
+                RAVELOG_WARN("failed to load server\n");
         }
     }
 
@@ -318,9 +318,9 @@ void MainOpenRAVEThread()
         }
         
         if( !pviewer )
-            RAVELOG_WARNA("failed to find an OpenRAVE viewer.\n");
+            RAVELOG_WARN("failed to find an OpenRAVE viewer.\n");
         else {
-            RAVELOG_DEBUGA("using %s viewer\n", pviewer->GetXMLId().c_str());
+            RAVELOG_DEBUG("using %s viewer\n", pviewer->GetXMLId().c_str());
 
             pviewer->ViewerSetSize(s_WindowWidth, s_WindowHeight);
             if( s_bSetWindowPosition )
@@ -328,7 +328,7 @@ void MainOpenRAVEThread()
             s_penv->AttachViewer(pviewer);
             for(size_t i = 0; i < vIvFiles.size(); ++i) {
                 if( !pviewer->LoadModel(vIvFiles[i]) )
-                    RAVELOG_WARNA("failed to open %s\n", vIvFiles[i].c_str());
+                    RAVELOG_WARN("failed to open %s\n", vIvFiles[i].c_str());
             }
         }
     }
@@ -354,7 +354,7 @@ void MainOpenRAVEThread()
         if( s_saveScene.size() > 0 ) {
             s_penv->Save(s_saveScene);
     //        if( !bSaveScene )
-    //            RAVELOG_ERRORA("save scene at file %s failed\n", s_saveScene);
+    //            RAVELOG_ERROR("save scene at file %s failed\n", s_saveScene);
     //        else
     //            RAVELOG_INFOA("save scene at file %s succeeded\n", s_saveScene);
 

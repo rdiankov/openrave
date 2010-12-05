@@ -23,7 +23,7 @@ class CM
  public:
     static bool JitterActiveDOF(RobotBasePtr robot,int nMaxIterations=5000)
     {
-        RAVELOG_VERBOSEA("starting jitter active dof...\n");
+        RAVELOG_VERBOSE("starting jitter active dof...\n");
         vector<dReal> curdof, newdof, lower, upper;
         robot->GetActiveDOFValues(curdof);
         robot->GetActiveDOFLimits(lower, upper);
@@ -33,11 +33,11 @@ class CM
         int iter = 0;
 
         if(robot->CheckSelfCollision())
-            RAVELOG_WARNA("JitterActiveDOFs: initial config in self collision!\n");
+            RAVELOG_WARN("JitterActiveDOFs: initial config in self collision!\n");
 
         while(robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot)) || robot->CheckSelfCollision() ) {
             if( iter > nMaxIterations ) {
-                RAVELOG_WARNA("Failed to find noncolliding position for robot\n");
+                RAVELOG_WARN("Failed to find noncolliding position for robot\n");
 
                 robot->SetActiveDOFValues(curdof);
 
@@ -45,7 +45,7 @@ class CM
                 CollisionReport report;
                 if( robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot), CollisionReportPtr(&report,null_deleter())) ) {
                     if( !!report.plink1 && !!report.plink2 ) {
-                        RAVELOG_WARNA(str(boost::format("Jitter collision %s:%s with %s:%s\n")%report.plink1->GetParent()->GetName()%report.plink1->GetName()%report.plink2->GetParent()->GetName()%report.plink2->GetName()));
+                        RAVELOG_WARN(str(boost::format("Jitter collision %s:%s with %s:%s\n")%report.plink1->GetParent()->GetName()%report.plink1->GetName()%report.plink2->GetParent()->GetName()%report.plink2->GetName()));
                     }
                 }
             
@@ -68,7 +68,7 @@ class CM
 
     static bool JitterTransform(KinBodyPtr pbody, float fJitter, int nMaxIterations=1000)
     {
-        RAVELOG_VERBOSEA("starting jitter transform...\n");
+        RAVELOG_VERBOSE("starting jitter transform...\n");
 
         // randomly add small offset to the body until it stops being in collision
         Transform transorig = pbody->GetTransform();
@@ -95,7 +95,7 @@ class CM
             return 0;
         // quickly prune grasp is end effector is in collision
         if( pmanip->CheckEndEffectorCollision(tgrasp) ) {
-            RAVELOG_VERBOSEA("sampleiksolutions: gripper in collision\n");
+            RAVELOG_VERBOSE("sampleiksolutions: gripper in collision\n");
             return 0;
         }
 

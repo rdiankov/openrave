@@ -90,7 +90,7 @@ class IdealController : public ControllerBase
     virtual bool SetPath(TrajectoryBaseConstPtr ptraj)
     {
         if( _bPause ) {
-            RAVELOG_DEBUGA("IdealController cannot player trajectories when paused\n");
+            RAVELOG_DEBUG("IdealController cannot player trajectories when paused\n");
             _ptraj.reset();
             _bIsDone = true;
             return false;
@@ -185,7 +185,7 @@ private:
             curvalues.at(*it) = values.at(i++);
             curvel.at(*it) = 0;
         }
-        _probot->SetJointValues(curvalues,true);
+        _probot->SetDOFValues(curvalues,true);
         _probot->SetDOFVelocities(curvel,linearvel,angularvel);
     }
     virtual void _SetDOFValues(const std::vector<dReal>& values, const Transform& t)
@@ -199,7 +199,7 @@ private:
             curvalues.at(*it) = values.at(i++);
             curvel.at(*it) = 0;
         }
-        _probot->SetJointValues(curvalues,t, true);
+        _probot->SetDOFValues(curvalues,t, true);
         _probot->SetDOFVelocities(curvel,Vector(),Vector());
     }
 

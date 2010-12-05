@@ -221,7 +221,7 @@ public:
             // object is inside, find an ik solution
             Transform tgoalee = t*_vf->_ttogripper;
             if( !_vf->_pmanip->FindIKSolution(tgoalee,_vsolution,true) ) {
-                RAVELOG_VERBOSEA("no valid ik\n");
+                RAVELOG_VERBOSE("no valid ik\n");
                 return false;
             }
 
@@ -269,7 +269,7 @@ public:
             FOREACH(itobb,_vTargetOBBs) {
                 OBB cameraobb = geometry::TransformOBB(tcamerainv,*itobb);
                 if( !SampleProjectedOBBWithTest(cameraobb, _vf->_fSampleRayDensity, boost::bind(&VisibilityConstraintFunction::TestRay, this, _1, boost::ref(tworldcamera)),_vf->_fAllowableOcclusion) ) {
-                    RAVELOG_VERBOSEA("box is occluded\n");
+                    RAVELOG_VERBOSE("box is occluded\n");
                     return true;
                 }
             }
@@ -355,7 +355,7 @@ public:
     public:
     GoalSampleFunction(boost::shared_ptr<VisualFeedbackProblem> vf, const vector<Transform>& visibilitytransforms) : _vconstraint(vf), _fSampleGoalProb(1.0f), _vf(vf), _visibilitytransforms(visibilitytransforms)
         {
-            RAVELOG_DEBUGA(str(boost::format("have %d detection extents hypotheses\n")%_visibilitytransforms.size()));
+            RAVELOG_DEBUG(str(boost::format("have %d detection extents hypotheses\n")%_visibilitytransforms.size()));
             _ttarget = _vf->_target->GetTransform();
             _sphereperms.PermuteStart(_visibilitytransforms.size());
         }
@@ -577,19 +577,19 @@ Visibility computation checks occlusion with other objects using ray sampling in
                     _vcenterconvex /= 3.0f*totalarea; _vcenterconvex.z = 1;
                 }
                 else
-                    RAVELOG_WARNA(str(boost::format("convex data does not have enough points %d\n")%vconvexdata.size()));
+                    RAVELOG_WARN(str(boost::format("convex data does not have enough points %d\n")%vconvexdata.size()));
             }
             else if( cmd == "raydensity" ) {
                 sinput >> _fSampleRayDensity;
                 bHasRayDensity = true;
             }
             else {
-                RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
+                RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
             }
 
             if( !sinput ) {
-                RAVELOG_ERRORA(str(boost::format("failed processing command %s\n")%cmd));
+                RAVELOG_ERROR(str(boost::format("failed processing command %s\n")%cmd));
                 return false;
             }
         }
@@ -781,12 +781,12 @@ Visibility computation checks occlusion with other objects using ray sampling in
                 vconedirangles.push_back(vconedir);
             }
             else {
-                RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
+                RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
             }
 
             if( !sinput ) {
-                RAVELOG_ERRORA(str(boost::format("failed processing command %s\n")%cmd));
+                RAVELOG_ERROR(str(boost::format("failed processing command %s\n")%cmd));
                 return false;
             }
         }
@@ -852,12 +852,12 @@ Visibility computation checks occlusion with other objects using ray sampling in
                 sinput >> mindist;
             }
             else {
-                RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
+                RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
             }
 
             if( !sinput ) {
-                RAVELOG_ERRORA(str(boost::format("failed processing command %s\n")%cmd));
+                RAVELOG_ERROR(str(boost::format("failed processing command %s\n")%cmd));
                 return false;
             }
         }
@@ -909,12 +909,12 @@ Visibility computation checks occlusion with other objects using ray sampling in
                 sinput >> _fAllowableOcclusion;
             }
             else {
-                RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
+                RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
             }
 
             if( !sinput ) {
-                RAVELOG_ERRORA(str(boost::format("failed processing command %s\n")%cmd));
+                RAVELOG_ERROR(str(boost::format("failed processing command %s\n")%cmd));
                 return false;
             }
         }
@@ -935,12 +935,12 @@ Visibility computation checks occlusion with other objects using ray sampling in
                 sinput >> t;
             }
             else {
-                RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
+                RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
             }
 
             if( !sinput ) {
-                RAVELOG_ERRORA(str(boost::format("failed processing command %s\n")%cmd));
+                RAVELOG_ERROR(str(boost::format("failed processing command %s\n")%cmd));
                 return false;
             }
         }
@@ -974,12 +974,12 @@ Visibility computation checks occlusion with other objects using ray sampling in
             if( cmd == "numsamples" )
                 sinput >> numsamples;
             else {
-                RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
+                RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
             }
 
             if( !sinput ) {
-                RAVELOG_ERRORA(str(boost::format("failed processing command %s\n")%cmd));
+                RAVELOG_ERROR(str(boost::format("failed processing command %s\n")%cmd));
                 return false;
             }
         }
@@ -1052,12 +1052,12 @@ Visibility computation checks occlusion with other objects using ray sampling in
             else if( cmd == "sampleprob" )
                 sinput >> fSampleGoalProb;
             else {
-                RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
+                RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
             }
 
             if( !sinput ) {
-                RAVELOG_ERRORA(str(boost::format("failed processing command %s\n")%cmd));
+                RAVELOG_ERROR(str(boost::format("failed processing command %s\n")%cmd));
                 return false;
             }
         }
@@ -1082,14 +1082,14 @@ Visibility computation checks occlusion with other objects using ray sampling in
     
         // jitter for initial collision
         if( !CM::JitterActiveDOF(_robot) ) {
-            RAVELOG_WARNA("jitter failed for initial\n");
+            RAVELOG_WARN("jitter failed for initial\n");
             return false;
         }
         _robot->GetActiveDOFValues(params->vinitialconfig);
 
         PlannerBasePtr planner = RaveCreatePlanner(GetEnv(),plannername);
         if( !planner ) {
-            RAVELOG_ERRORA("failed to create BiRRTs\n");
+            RAVELOG_ERROR("failed to create BiRRTs\n");
             return false;
         }
     
@@ -1098,7 +1098,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
         uint64_t starttime = GetMicroTime();
         for(int iter = 0; iter < 1; ++iter) {
             if( !planner->InitPlan(_robot, params) ) {
-                RAVELOG_ERRORA("InitPlan failed\n");
+                RAVELOG_ERROR("InitPlan failed\n");
                 return false;
             }
             if( planner->PlanPath(ptraj) ) {
@@ -1106,7 +1106,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
                 RAVELOG_INFOA("finished planning\n");
                 break;
             }
-            else RAVELOG_WARNA("PlanPath failed\n");
+            else RAVELOG_WARN("PlanPath failed\n");
         }
 
         float felapsed = (GetMicroTime()-starttime)*0.000001f;
@@ -1160,17 +1160,17 @@ Visibility computation checks occlusion with other objects using ray sampling in
                     sinput >> t;
                     *itgrasp = t;
                 }
-                RAVELOG_DEBUGA(str(boost::format("grasp set size = %d\n")%params->_vgrasps.size()));
+                RAVELOG_DEBUG(str(boost::format("grasp set size = %d\n")%params->_vgrasps.size()));
             }
             else if( cmd == "numgradientsamples" )
                 sinput >> params->_nGradientSamples;
             else {
-                RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
+                RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 return false;
             }
 
             if( !sinput ) {
-                RAVELOG_ERRORA(str(boost::format("failed processing command %s\n")%cmd));
+                RAVELOG_ERROR(str(boost::format("failed processing command %s\n")%cmd));
                 return false;
             }
         }
@@ -1192,7 +1192,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
         TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),_robot->GetActiveDOF());
         PlannerBasePtr planner = RaveCreatePlanner(GetEnv(),plannername);
         if( !planner ) {
-            RAVELOG_ERRORA("failed to create BiRRTs\n");
+            RAVELOG_ERROR("failed to create BiRRTs\n");
             return false;
         }
     
@@ -1200,14 +1200,14 @@ Visibility computation checks occlusion with other objects using ray sampling in
         RAVELOG_INFOA("starting planning\n");
         uint64_t starttime = GetMicroTime();
         if( !planner->InitPlan(_robot, params) ) {
-            RAVELOG_ERRORA("InitPlan failed\n");
+            RAVELOG_ERROR("InitPlan failed\n");
             return false;
         }
         
         if( planner->PlanPath(ptraj) ) {
             bSuccess = true;
         }
-        else RAVELOG_WARNA("PlanPath failed\n");
+        else RAVELOG_WARN("PlanPath failed\n");
 
         float felapsed = (GetMicroTime()-starttime)*0.000001f;
         RAVELOG_INFOA("total planning time: %fs\n", felapsed);

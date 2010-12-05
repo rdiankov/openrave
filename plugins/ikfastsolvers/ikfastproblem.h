@@ -135,44 +135,44 @@ class IKFastProblem : public ProblemInstance
             _libraryname = libraryname;
             plib = SysLoadLibrary(_libraryname.c_str());
             if( plib == NULL ) {
-                RAVELOG_WARNA("failed to load library %s\n", _libraryname.c_str());
+                RAVELOG_WARN("failed to load library %s\n", _libraryname.c_str());
                 return false;
             }
 
             getNumFreeParameters = (getNumFreeParametersFn)SysLoadSym(plib, "getNumFreeParameters");
             if( getNumFreeParameters == NULL ) {
-                RAVELOG_WARNA("failed to find getNumFreeParameters in %s\n", _libraryname.c_str());
+                RAVELOG_WARN("failed to find getNumFreeParameters in %s\n", _libraryname.c_str());
                 return false;
             }
             getFreeParameters = (getFreeParametersFn)SysLoadSym(plib, "getFreeParameters");
             if( getFreeParameters == NULL ) {
-                RAVELOG_WARNA("failed to find getFreeParameters in %s\n", _libraryname.c_str());
+                RAVELOG_WARN("failed to find getFreeParameters in %s\n", _libraryname.c_str());
                 return false;
             }
             getNumJoints = (getNumJointsFn)SysLoadSym(plib, "getNumJoints");
             if( getNumJoints == NULL ) {
-                RAVELOG_WARNA("failed to find getNumJoints in %s\n", _libraryname.c_str());
+                RAVELOG_WARN("failed to find getNumJoints in %s\n", _libraryname.c_str());
                 return false;
             }
             getIKRealSize = (getIKRealSizeFn)SysLoadSym(plib, "getIKRealSize");
             if( getIKRealSize == NULL ) {
-                RAVELOG_WARNA("failed to find getIKRealSize in %s\n", _libraryname.c_str());
+                RAVELOG_WARN("failed to find getIKRealSize in %s\n", _libraryname.c_str());
                 return false;
             }
             getIKType = (getIKTypeFn)SysLoadSym(plib, "getIKType");
             if( getIKType == NULL ) {
-                RAVELOG_WARNA("failed to find getIKType in %s, setting to 6D transform\n", _libraryname.c_str());
+                RAVELOG_WARN("failed to find getIKType in %s, setting to 6D transform\n", _libraryname.c_str());
                 getIKType = getDefaultIKType;
                 //return false;
             }
             getKinematicsHash = (getKinematicsHashFn)SysLoadSym(plib, "getKinematicsHash");
             if( getKinematicsHash == NULL ) {
-                RAVELOG_WARNA("failed to find getKinematicsHash in %s, will not be able to validate inverse kinematics structure\n", _libraryname.c_str());
+                RAVELOG_WARN("failed to find getKinematicsHash in %s, will not be able to validate inverse kinematics structure\n", _libraryname.c_str());
             }
 
             ikfn = SysLoadSym(plib, "ik");
             if( ikfn == NULL ) {
-                RAVELOG_WARNA("failed to find ik in %s\n", _libraryname.c_str());
+                RAVELOG_WARN("failed to find ik in %s\n", _libraryname.c_str());
                 return false;
             }
             fkfn = SysLoadSym(plib, "fk");
@@ -215,12 +215,12 @@ class IKFastProblem : public ProblemInstance
 #ifdef _WIN32
             void* plib = LoadLibraryA(lib);
             if( plib == NULL ) {
-                RAVELOG_WARNA("Failed to load %s\n", lib);
+                RAVELOG_WARN("Failed to load %s\n", lib);
             }
 #else
             void* plib = dlopen(lib, RTLD_NOW);
             if( plib == NULL ) {
-                RAVELOG_WARNA("%s\n", dlerror());
+                RAVELOG_WARN("%s\n", dlerror());
             }
 #endif
             return plib;
@@ -301,7 +301,7 @@ public:
             return false;
         boost::trim(libraryname);
         if( !sinput || libraryname.size() == 0 || ikname.size() == 0 ) {
-            RAVELOG_DEBUGA("bad input\n");
+            RAVELOG_DEBUG("bad input\n");
             return false;
         }
 
@@ -512,7 +512,7 @@ public:
 
     bool IKtest(ostream& sout, istream& sinput)
     {
-        RAVELOG_DEBUGA("Starting IKtest...\n");
+        RAVELOG_DEBUG("Starting IKtest...\n");
         vector<dReal> varmjointvals, values;
 
         TransformMatrix handTm;
@@ -557,12 +557,12 @@ public:
                 pmanip = robot->GetActiveManipulator();
             }
             else {
-                RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
+                RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
             }
 
             if( !sinput ) {
-                RAVELOG_ERRORA(str(boost::format("failed processing command %s\n")%cmd));
+                RAVELOG_ERROR(str(boost::format("failed processing command %s\n")%cmd));
                 return false;
             }
         }
@@ -582,12 +582,12 @@ public:
         for(size_t i = 0; i < varmjointvals.size(); i++)
             values[pmanip->GetArmIndices()[i]] = varmjointvals[i];
 
-        robot->SetJointValues(values);
+        robot->SetDOFValues(values);
 
         vector<dReal> q1;
     
         if( !pmanip->FindIKSolution(handTr, q1, bCheckCollision) ) {
-            RAVELOG_WARNA("No IK solution found\n");
+            RAVELOG_WARN("No IK solution found\n");
             return false;
         }
     
@@ -601,7 +601,7 @@ public:
             sout << *it << " ";
         }
         s2 << endl;
-        RAVELOG_DEBUGA(s2.str());
+        RAVELOG_DEBUG(s2.str());
         return true;
     }
 
@@ -682,12 +682,12 @@ public:
                 robot = GetEnv()->GetRobot(name);
             }
             else {
-                RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
+                RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
             }
 
             if( !sinput ) {
-                RAVELOG_ERRORA(str(boost::format("failed processing command %s\n")%cmd));
+                RAVELOG_ERROR(str(boost::format("failed processing command %s\n")%cmd));
                 return false;
             }
         }
@@ -697,7 +697,7 @@ public:
         vector<dReal> vlowerlimit, vupperlimit, viksolution;
         vector< vector<dReal> > viksolutions;
 
-        RAVELOG_DEBUGA("Starting DebugIK... iter=%d\n", num_itrs);
+        RAVELOG_DEBUG("Starting DebugIK... iter=%d\n", num_itrs);
     
         robot->SetActiveDOFs(pmanip->GetArmIndices());
         robot->GetActiveDOFLimits(vlowerlimit, vupperlimit);
@@ -717,7 +717,7 @@ public:
             fsfile.open(readfilename.c_str(),ios_base::in);
             if(!fsfile.is_open())
                 {
-                    RAVELOG_ERRORA("IKFastProblem::DebugIK - Error: Cannot open specified file.\n");
+                    RAVELOG_ERROR("IKFastProblem::DebugIK - Error: Cannot open specified file.\n");
                     return false;
                 }
 
@@ -765,16 +765,16 @@ public:
             robot->SetActiveDOFValues(vjoints,true);
 
             if(GetEnv()->CheckCollision(KinBodyConstPtr(robot)) ) {
-                RAVELOG_VERBOSEA("robot in collision\n");
+                RAVELOG_VERBOSE("robot in collision\n");
                 continue;
             }
             if( robot->CheckSelfCollision()) {
-                RAVELOG_VERBOSEA("robot in self-collision\n");
+                RAVELOG_VERBOSE("robot in self-collision\n");
                 continue;
             }
 
             GetEnv()->UpdatePublishedBodies();
-            RAVELOG_DEBUGA("iteration %d\n",i);
+            RAVELOG_DEBUG("iteration %d\n",i);
             twrist = pmanip->GetEndEffectorTransform();
 
             if(bGenFile) {
@@ -811,7 +811,7 @@ public:
                 }
 
                 s << endl << endl;
-                RAVELOG_WARNA(s.str());
+                RAVELOG_WARN(s.str());
                 ++i;
                 continue;
             }
@@ -854,7 +854,7 @@ public:
                 FOREACH(it, vjoints)
                     s << *it << " ";
                 s << endl << "Transform: " << twrist << endl << endl;
-                RAVELOG_WARNA(s.str());
+                RAVELOG_WARN(s.str());
                 ++i;
                 continue;
             }
@@ -885,7 +885,7 @@ public:
                         s << *itfree << " ";
                     }
                     s << endl << endl;
-                    RAVELOG_WARNA(s.str());
+                    RAVELOG_WARN(s.str());
                     bfail = true;
                     break;
                 }
@@ -914,7 +914,7 @@ public:
                 for(size_t j = 0; j < vjoints.size(); j++)
                     s << vjoints[j] << " ";
                 s << endl << "Transform: " << twrist << endl << endl;
-                RAVELOG_WARNA(s.str());
+                RAVELOG_WARN(s.str());
                 ++i;
                 continue;
             }
@@ -936,13 +936,13 @@ public:
                     s << *it << " ";
                 s << endl << "Transform in: " << twrist << endl;
                 s << "Transform out: " << twrist_out << endl << endl;
-                RAVELOG_WARNA(s.str());
+                RAVELOG_WARN(s.str());
                 ++i;
                 continue;
             }
 
             if( !pmanip->GetFreeParameters(vfreeparams2) ) {
-                RAVELOG_ERRORA("failed to get free parameters\n");
+                RAVELOG_ERROR("failed to get free parameters\n");
                 ++i;
                 continue;
             }
@@ -950,7 +950,7 @@ public:
             // make sure they are the same
             for(int j = 0; j < pmanip->GetNumFreeParameters(); ++j) {
                 if( fabsf(vfreeparams[j]-vfreeparams2[j]) > 0.01f ) {
-                    RAVELOG_WARNA("free params %d not equal: %f!=%f\n", j, vfreeparams[j], vfreeparams2[j]);
+                    RAVELOG_WARN("free params %d not equal: %f!=%f\n", j, vfreeparams[j], vfreeparams2[j]);
                     pmanip->GetFreeParameters(vfreeparams2);
                     ++i;
                     continue;
@@ -968,7 +968,7 @@ public:
                 for(size_t j = 0; j < vjoints.size(); j++)
                     s << vjoints[j] << " ";
                 s << endl << "Transform: " << twrist << endl << endl;
-                RAVELOG_WARNA(s.str());
+                RAVELOG_WARN(s.str());
                 ++i;
                 continue;
             }
@@ -993,7 +993,7 @@ public:
                       << tm.m[0] << " " << tm.m[1] << " " << tm.m[2] << " " << tm.trans[0] << " "
                       << tm.m[4] << " " << tm.m[5] << " " << tm.m[6] << " " << tm.trans[1] << " "
                       << tm.m[8] << " " << tm.m[9] << " " << tm.m[10] << " " << tm.trans[2] << endl;
-                    RAVELOG_WARNA(s.str());
+                    RAVELOG_WARN(s.str());
                     bfail = true;
                     break;
                 }

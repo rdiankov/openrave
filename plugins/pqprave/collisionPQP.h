@@ -59,12 +59,12 @@ class CollisionCheckerPQP : public CollisionCheckerBase
 
     virtual bool InitEnvironment()
     {
-        RAVELOG_DEBUGA("creating pqp collision\n");
+        RAVELOG_DEBUG("creating pqp collision\n");
         vector<KinBodyPtr> vbodies;
         GetEnv()->GetBodies(vbodies);
         FOREACHC(itbody, vbodies) {
             if( !InitKinBody(*itbody) ) {
-                RAVELOG_WARNA("failed to init kinbody\n");
+                RAVELOG_WARN("failed to init kinbody\n");
             }
         }
         return true;
@@ -72,7 +72,7 @@ class CollisionCheckerPQP : public CollisionCheckerBase
 
     virtual void DestroyEnvironment()
     {
-        RAVELOG_DEBUGA("destroying pqp collision\n");
+        RAVELOG_DEBUG("destroying pqp collision\n");
         vector<KinBodyPtr> vbodies;
         GetEnv()->GetBodies(vbodies);
         FOREACHC(itbody, vbodies) {

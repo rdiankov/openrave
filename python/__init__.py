@@ -165,7 +165,7 @@ various information about the robot
   env.Load('data/lab1.env.xml') # load a simple scene
   robot = env.GetRobots()[0] # get the first robot
   print "Robot ",robot.GetName()," has ",robot.GetDOF()," joints with values:\\n",robot.GetJointValues()
-  robot.SetJointValues([0.5],[0]) # set joint 0 to value 0.5
+  robot.SetDOFValues([0.5],[0]) # set joint 0 to value 0.5
   T = robot.GetLinks()[1].GetTransform() # get the transform of link 1
   print "The transformation of link 1 is:\\n",T
   env.Destroy() # explicitly destroy the environment once done with it
@@ -213,7 +213,7 @@ OpenRAVE C++ exceptions in the form of the openrave_exception class are automati
   try:
       env = Environment()
       env.Load('robots/barrettwam.robot.xml')
-      env.GetRobots()[0].SetJointValues([])
+      env.GetRobots()[0].SetDOFValues([])
   except openrave_exception, e:
       print e
 

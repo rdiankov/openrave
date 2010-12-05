@@ -585,7 +585,7 @@ bool DummyXMLReader::endElement(const std::string& name)
 
     if( name == _fieldname )
         return true;
-    RAVELOG_ERRORA(str(boost::format("invalid xml tag %s\n")%name));
+    RAVELOG_ERROR(str(boost::format("invalid xml tag %s\n")%name));
     return false;
 }
 
@@ -976,7 +976,7 @@ void RaveXMLErrorFunc(void *ctx, const char *msg, ...)
     va_list args;
 
     va_start(args, msg);
-    RAVELOG_ERRORA("XML Parse error: ");
+    RAVELOG_ERROR("XML Parse error: ");
     vprintf(msg,args);
     va_end(args);
 }
@@ -1268,19 +1268,19 @@ bool InterfaceBase::_GetCommandHelp(std::ostream& o, std::istream& sinput) const
 
 bool SensorBase::SensorData::serialize(std::ostream& O) const
 {
-    RAVELOG_WARNA("SensorData XML serialization not implemented\n");
+    RAVELOG_WARN("SensorData XML serialization not implemented\n");
     return true;
 }
 
 bool SensorBase::LaserSensorData::serialize(std::ostream& O) const
 {
-    RAVELOG_WARNA("LaserSensorData XML serialization not implemented\n");
+    RAVELOG_WARN("LaserSensorData XML serialization not implemented\n");
     return true;
 }
 
 bool SensorBase::CameraSensorData::serialize(std::ostream& O) const
 {
-    RAVELOG_WARNA("CameraSensorData XML serialization not implemented\n");
+    RAVELOG_WARN("CameraSensorData XML serialization not implemented\n");
     return true;
 }
 
@@ -1338,7 +1338,7 @@ bool SimpleSensorSystem::SimpleXMLReader::endElement(const std::string& name)
         return true;
         
     if( !ss )
-        RAVELOG_WARNA(str(boost::format("error parsing %s\n")%name));
+        RAVELOG_WARN(str(boost::format("error parsing %s\n")%name));
     return false;
 }
 
@@ -1404,7 +1404,7 @@ KinBody::ManageDataPtr SimpleSensorSystem::AddKinBody(KinBodyPtr pbody, XMLReada
 
     boost::mutex::scoped_lock lock(_mutex);
     if( _mapbodies.find(pbody->GetEnvironmentId()) != _mapbodies.end() ) {
-        RAVELOG_WARNA(str(boost::format("body %s already added\n")%pbody->GetName()));
+        RAVELOG_WARN(str(boost::format("body %s already added\n")%pbody->GetName()));
         return KinBody::ManageDataPtr();
     }
     
@@ -1435,7 +1435,7 @@ bool SimpleSensorSystem::EnableBody(KinBodyPtr pbody, bool bEnable)
     boost::mutex::scoped_lock lock(_mutex);
     BODIES::iterator it = _mapbodies.find(pbody->GetEnvironmentId());
     if( it == _mapbodies.end() ) {
-        RAVELOG_WARNA("trying to %s body %s that is not in system\n", bEnable?"enable":"disable", pbody->GetName().c_str());
+        RAVELOG_WARN("trying to %s body %s that is not in system\n", bEnable?"enable":"disable", pbody->GetName().c_str());
         return false;
     }
 
@@ -1497,10 +1497,10 @@ void SimpleSensorSystem::_UpdateBodies(list<SimpleSensorSystem::SNAPSHOT>& listb
             it->first->lastupdated = curtime;
             it->first->tnew = it->second;
             
-            //RAVELOG_DEBUGA("%f %f %f\n", tfinal.trans.x, tfinal.trans.y, tfinal.trans.z);
+            //RAVELOG_DEBUG("%f %f %f\n", tfinal.trans.x, tfinal.trans.y, tfinal.trans.z);
             
             if( !it->first->IsPresent() )
-                RAVELOG_VERBOSEA(str(boost::format("updating body %s\n")%plink->GetParent()->GetName()));
+                RAVELOG_VERBOSE(str(boost::format("updating body %s\n")%plink->GetParent()->GetName()));
             it->first->bPresent = true;
         }
     }
@@ -1514,19 +1514,18 @@ void SimpleSensorSystem::_UpdateBodies(list<SimpleSensorSystem::SNAPSHOT>& listb
             continue;
         }
         else if( curtime-itbody->second->lastupdated > _expirationtime ) {
-
-
             if( !itbody->second->IsLocked() ) {
                 if( !!plink ) {
-                    //RAVELOG_VERBOSEA(str(boost::format("object %s expired %fs\n")%plink->GetParent()->GetName()*((curtime-itbody->second->lastupdated)*1e-6f)));
+                    //RAVELOG_VERBOSE(str(boost::format("object %s expired %fs\n")%plink->GetParent()->GetName()*((curtime-itbody->second->lastupdated)*1e-6f)));
                     GetEnv()->Remove(plink->GetParent());
                 }
                 _mapbodies.erase(itbody++);
                 continue;
             }
                 
-            if( itbody->second->IsPresent() && !!plink )
-                RAVELOG_VERBOSEA(str(boost::format("body %s not present\n")%plink->GetParent()->GetName()));
+            if( itbody->second->IsPresent() && !!plink ) {
+                RAVELOG_VERBOSE(str(boost::format("body %s not present\n")%plink->GetParent()->GetName()));
+            }
             itbody->second->bPresent = false;
         }
 

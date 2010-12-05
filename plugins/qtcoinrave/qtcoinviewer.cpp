@@ -227,7 +227,7 @@ QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
 
 QtCoinViewer::~QtCoinViewer()
 {
-    RAVELOG_DEBUGA("destroying qtcoinviewer\n");
+    RAVELOG_DEBUG("destroying qtcoinviewer\n");
 
     {
         boost::mutex::scoped_lock lock(_mutexMessages);
@@ -540,14 +540,14 @@ bool QtCoinViewer::WriteCameraImage(int width, int height, const RaveTransform<f
     void* ret;
     if (_timerSensor->isScheduled() && _bUpdateEnvironment) {
         if( !ForceUpdatePublishedBodies() ) {
-            RAVELOG_WARNA("failed to WriteCameraImage\n");
+            RAVELOG_WARN("failed to WriteCameraImage\n");
             return false;
         }
         EnvMessagePtr pmsg(new WriteCameraImageMessage(shared_viewer(), &ret, width, height, t, KK, fileName, extension));
         pmsg->callerexecute();
     }
     else
-        RAVELOG_WARNA("failed to WriteCameraImage: viewer is not updating\n");
+        RAVELOG_WARN("failed to WriteCameraImage: viewer is not updating\n");
     
     return *(bool*)&ret;
 }
@@ -1051,7 +1051,7 @@ void QtCoinViewer::EnvironmentSync()
     {
         boost::mutex::scoped_lock lockupdating(_mutexUpdating);
         if( !_bUpdateEnvironment ) {
-            RAVELOG_WARNA("cannot update models from environment sync\n");
+            RAVELOG_WARN("cannot update models from environment sync\n");
             return;
         }
     }
@@ -1060,7 +1060,7 @@ void QtCoinViewer::EnvironmentSync()
     _bModelsUpdated = false;
     _condUpdateModels.wait(lock);
     if( !_bModelsUpdated )
-        RAVELOG_WARNA("failed to update models from environment sync\n");
+        RAVELOG_WARN("failed to update models from environment sync\n");
 }
 
 void QtCoinViewer::_SetCamera(const RaveTransform<float>& t, float focalDistance)
@@ -1513,7 +1513,7 @@ void* QtCoinViewer::_drawarrow(SoSwitch* handle, const RaveVector<float>& p1, co
     //check to make sure points aren't the same
     if(RaveSqrt(direction.lengthsqr3()) < 0.9f)
     {
-        RAVELOG_WARNA("QtCoinViewer::drawarrow - Error: End points are the same.\n");
+        RAVELOG_WARN("QtCoinViewer::drawarrow - Error: End points are the same.\n");
         return handle;
     }
 
@@ -1573,7 +1573,7 @@ void* QtCoinViewer::_drawbox(SoSwitch* handle, const RaveVector<float>& vpos, co
     }
     SoSeparator* pparent = new SoSeparator(); handle->addChild(pparent);
     pparent->addChild(new SoTransform());
-    RAVELOG_ERRORA("drawbox not implemented\n");
+    RAVELOG_ERROR("drawbox not implemented\n");
 
     _pFigureRoot->addChild(handle);
     return handle;
@@ -2133,7 +2133,7 @@ bool QtCoinViewer::_HandleSelection(SoPath *path)
     boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = LockEnvironment(100000);
     if( !lockenv ) {
         _ivRoot->deselectAll();
-        RAVELOG_WARNA("failed to grab environment lock\n");
+        RAVELOG_WARN("failed to grab environment lock\n");
         return false;
     }
 
@@ -2481,7 +2481,7 @@ void QtCoinViewer::UpdateFromModel()
                 // check to make sure the real GUI data is also NULL
                 if( !pbody->GetGuiData() ) {
                     if( _mapbodies.find(pbody) != _mapbodies.end() ) {
-                        RAVELOG_WARNA("body %s already registered!\n", pbody->GetName().c_str());
+                        RAVELOG_WARN("body %s already registered!\n", pbody->GetName().c_str());
                         continue;
                     }
 
@@ -2501,7 +2501,7 @@ void QtCoinViewer::UpdateFromModel()
                                 break;
                         }
                         if( !lockenv ) {
-                            RAVELOG_VERBOSEA("couldn't acquire viewer lock\n");
+                            RAVELOG_VERBOSE("couldn't acquire viewer lock\n");
                             return; // couldn't acquire the lock, try next time. This prevents deadlock situations
                         }
                     }
@@ -2529,7 +2529,7 @@ void QtCoinViewer::UpdateFromModel()
         map<KinBodyPtr, KinBodyItemPtr>::iterator itmap = _mapbodies.find(pbody);
 
         if( itmap == _mapbodies.end() ) {
-            RAVELOG_VERBOSEA("body %s doesn't have a map associated with it!\n", itbody->strname.c_str());
+            RAVELOG_VERBOSE("body %s doesn't have a map associated with it!\n", itbody->strname.c_str());
             continue;
         }
 
@@ -2776,14 +2776,14 @@ void QtCoinViewer::_RecordSetup(bool bOn, bool bRealtimeVideo)
             //if( !s.endsWith(".avi", Qt::CaseInsensitive) ) s += ".avi";
             
 		    if( !START_AVI((char*)s.toAscii().data(), VIDEO_FRAMERATE, VIDEO_WIDTH, VIDEO_HEIGHT, 24,_videocodec) ) {
-                RAVELOG_ERRORA("Failed to capture %s\n", s.toAscii().data());
+                RAVELOG_ERROR("Failed to capture %s\n", s.toAscii().data());
                 return;
 		    }
-		    RAVELOG_DEBUGA("Starting to capture %s\n", s.toAscii().data());
+		    RAVELOG_DEBUG("Starting to capture %s\n", s.toAscii().data());
 		    _bAVIInit = true;
 	    }
         else {
-            RAVELOG_DEBUGA("Resuming previous video file\n");
+            RAVELOG_DEBUG("Resuming previous video file\n");
         }
     }
 
@@ -2802,7 +2802,7 @@ void QtCoinViewer::_RecordSetup(bool bOn, bool bRealtimeVideo)
 bool QtCoinViewer::_GetCameraImage(std::vector<uint8_t>& memory, int width, int height, const RaveTransform<float>& _t, const SensorBase::CameraIntrinsics& KK)
 {
     if( !_bCanRenderOffscreen ) {
-        RAVELOG_WARNA("cannot render offscreen\n");
+        RAVELOG_WARN("cannot render offscreen\n");
         return false;
     }
 
@@ -2842,7 +2842,7 @@ bool QtCoinViewer::_GetCameraImage(std::vector<uint8_t>& memory, int width, int 
             memcpy(&memory[i*width*3], _ivOffscreen.getBuffer()+(height-i-1)*width*3, width*3);
     }
     else {
-        RAVELOG_WARNA("offscreen renderer failed (check video driver), disabling\n");
+        RAVELOG_WARN("offscreen renderer failed (check video driver), disabling\n");
         _bCanRenderOffscreen = false; // need this or _ivOffscreen.render will freeze next time
     }
 
@@ -2889,13 +2889,13 @@ bool QtCoinViewer::_WriteCameraImage(int width, int height, const RaveTransform<
 
     bool bSuccess = true;
     if( !_ivOffscreen.render(_pOffscreenVideo) ) {
-        RAVELOG_WARNA("offscreen renderer failed (check video driver), disabling\n");
+        RAVELOG_WARN("offscreen renderer failed (check video driver), disabling\n");
         _bCanRenderOffscreen = false;
         bSuccess = false;
     }
     else {
         if( !_ivOffscreen.isWriteSupported(extension.c_str()) ) {
-            RAVELOG_WARNA("file type %s not supported, supported filetypes are\n", extension.c_str());
+            RAVELOG_WARN("file type %s not supported, supported filetypes are\n", extension.c_str());
             stringstream ss;
             
             for(int i = 0; i < _ivOffscreen.getNumWriteFiletypes(); ++i) {
@@ -2938,7 +2938,7 @@ bool QtCoinViewer::_RecordVideo()
     _ivOffscreen.render(_pOffscreenVideo);
     
     if( _ivOffscreen.getBuffer() == NULL ) {
-        RAVELOG_WARNA("offset buffer null, disabling\n");
+        RAVELOG_WARN("offset buffer null, disabling\n");
         _bCanRenderOffscreen = false;
         return false;
     }
@@ -2956,7 +2956,7 @@ bool QtCoinViewer::_RecordVideo()
     
     while(_nVideoTimeOffset >= (1000000.0/VIDEO_FRAMERATE) ) {
         if( !ADD_FRAME_FROM_DIB_TO_AVI(_ivOffscreen.getBuffer()) ) {
-            RAVELOG_WARNA("Failed adding frames, stopping avi recording\n");
+            RAVELOG_WARN("Failed adding frames, stopping avi recording\n");
             _bSaveVideo = false;
             SoDB::enableRealTimeSensor(!_bSaveVideo);
             SoSceneManager::enableRealTimeUpdate(!_bSaveVideo);

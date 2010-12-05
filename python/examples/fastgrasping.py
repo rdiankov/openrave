@@ -90,7 +90,7 @@ def run(args=None):
         if grasp is not None:
             print 'grasp is found!'
             self.gmodel.showgrasp(grasp)
-            self.robot.SetJointValues(jointvalues)
+            self.robot.SetDOFValues(jointvalues)
             raw_input('press any key to exit')
     finally:
         env.Destroy()

@@ -113,7 +113,7 @@ class SimpleTextServer : public ProblemInstance
             int num = select(client_sockfd+1, NULL, NULL, &exfds, &tv);
     
             if ( num > 0 && FD_ISSET(client_sockfd, &exfds) ) {
-                RAVELOG_ERRORA("socket exception detected\n");
+                RAVELOG_ERROR("socket exception detected\n");
                 Close();
                 return;
             }
@@ -124,7 +124,7 @@ class SimpleTextServer : public ProblemInstance
             num = select(client_sockfd+1, NULL, &writefds, NULL, &tv);
     
             if ( num == 0 || !FD_ISSET(client_sockfd, &writefds) ) {
-                RAVELOG_WARNA("no writable socket\n");
+                RAVELOG_WARN("no writable socket\n");
                 return;
             }
 
@@ -139,7 +139,7 @@ class SimpleTextServer : public ProblemInstance
             char* pbuf = (char*)pdata;
 
             if( (nBytesReceived = send(client_sockfd, (char*)&size_to_write, 4, 0)) != 4 ) {
-                RAVELOG_ERRORA("failed to send command: %d\n", nBytesReceived);
+                RAVELOG_ERROR("failed to send command: %d\n", nBytesReceived);
                 return;
             }
 
@@ -176,7 +176,7 @@ class SimpleTextServer : public ProblemInstance
             int num = select(client_sockfd+1, NULL, NULL, &exfds, &tv);
     
             if ( num > 0 && FD_ISSET(client_sockfd, &exfds) ) {
-                RAVELOG_ERRORA("socket exception detected\n");
+                RAVELOG_ERROR("socket exception detected\n");
                 Close();
                 return false;
             }
@@ -203,7 +203,7 @@ class SimpleTextServer : public ProblemInstance
                     s.push_back(c);
                 }
                 else if( nBytesReceived == 0 ) {
-                    //RAVELOG_DEBUGA("closing connection\n");
+                    //RAVELOG_DEBUG("closing connection\n");
                     //  Close();
                     return false;
                 }
@@ -304,7 +304,7 @@ class SimpleTextServer : public ProblemInstance
         string logfilename = RaveGetHomeDirectory() + string("/textserver.log");
         flog.open(logfilename.c_str());
         if( !!flog )
-            RAVELOG_DEBUGA("logging network to %s.txt\n",logfilename.c_str());
+            RAVELOG_DEBUG("logging network to %s.txt\n",logfilename.c_str());
     }
 
     virtual ~SimpleTextServer() {
@@ -342,20 +342,20 @@ class SimpleTextServer : public ProblemInstance
         int yes = 1;
         int err = setsockopt(server_sockfd, SOL_SOCKET,SO_REUSEADDR, (const char*)&yes, sizeof(int));
         if( err ) {
-            RAVELOG_ERRORA("failed to set socket option, err=%d\n", err);
+            RAVELOG_ERROR("failed to set socket option, err=%d\n", err);
             perror("failed to set socket options\n");
             return -1;
         }
 
         err = bind(server_sockfd, (struct sockaddr *)&server_address, server_len);
         if( err ) {
-            RAVELOG_ERRORA("failed to bind server to port %d, error=%d\n", _nPort, err);
+            RAVELOG_ERROR("failed to bind server to port %d, error=%d\n", _nPort, err);
             return -1;
         }
 
         err = listen(server_sockfd, 16);
         if( err ) {
-            RAVELOG_ERRORA("failed to listen to server port %d, error=%d\n", _nPort, err);
+            RAVELOG_ERROR("failed to listen to server port %d, error=%d\n", _nPort, err);
             return -1;
         }
 
@@ -494,10 +494,10 @@ class SimpleTextServer : public ProblemInstance
                     (*it)();
                 }
                 catch(const openrave_exception& ex) {
-                    RAVELOG_FATALA("server caught exception: %s\n",ex.what());
+                    RAVELOG_FATAL("server caught exception: %s\n",ex.what());
                 }
                 catch(const std::logic_error& ex) {
-                    RAVELOG_FATALA("server caught std exception: %s\n",ex.what());
+                    RAVELOG_FATAL("server caught std exception: %s\n",ex.what());
                 }
                 catch(...) {
                     RAVELOG_FATAL("unknown exception!!\n");
@@ -527,12 +527,12 @@ class SimpleTextServer : public ProblemInstance
             psocket.reset(new Socket());
         }
 
-        RAVELOG_DEBUGA("**Server thread exiting\n");
+        RAVELOG_DEBUG("**Server thread exiting\n");
     }
 
     void _read_threadcb(SocketPtr psocket)
     {
-        RAVELOG_VERBOSEA("started new server connection\n");
+        RAVELOG_VERBOSE("started new server connection\n");
         string cmd, line;
         stringstream sout;
         while(!bCloseThread) {
@@ -547,7 +547,7 @@ class SimpleTextServer : public ProblemInstance
                 boost::shared_ptr<istream> is(new stringstream(line));
                 *is >> cmd;
                 if( !*is ) {
-                    RAVELOG_ERRORA("Failed to get command\n");
+                    RAVELOG_ERROR("Failed to get command\n");
                     psocket->SendData("error\n",1);
                     continue;
                 }
@@ -567,10 +567,10 @@ class SimpleTextServer : public ProblemInstance
                             bSuccess = itfn->second.fnSocketThread(*is, sout, pdata);
                         }
                         catch(const openrave_exception& ex) {
-                            RAVELOG_FATALA("server caught exception: %s\n",ex.what());
+                            RAVELOG_FATAL("server caught exception: %s\n",ex.what());
                         }
                         catch(const std::logic_error& ex) {
-                            RAVELOG_FATALA("server caught std exception: %s\n",ex.what());
+                            RAVELOG_FATAL("server caught std exception: %s\n",ex.what());
                         }
                         catch(...) {
                             RAVELOG_FATAL("unknown exception!!\n");
@@ -606,7 +606,7 @@ class SimpleTextServer : public ProblemInstance
                     }
                 }
                 else {
-                    RAVELOG_ERRORA("Failed to recognize command: %s\n", cmd.c_str());
+                    RAVELOG_ERROR("Failed to recognize command: %s\n", cmd.c_str());
                     psocket->SendData("error\n",1);
                 }
             }
@@ -616,7 +616,7 @@ class SimpleTextServer : public ProblemInstance
             Sleep(1);
         }
 
-        RAVELOG_VERBOSEA("Closing socket connection\n");
+        RAVELOG_VERBOSE("Closing socket connection\n");
     }
 
     int _nPort; ///< port used for listening to incoming connections
@@ -688,7 +688,7 @@ protected:
                 GetEnv()->GetViewer()->SetEnvironmentSync(false);
             }
             else {
-                RAVELOG_WARNA("unknown render command: %s\n", cmd.c_str());
+                RAVELOG_WARN("unknown render command: %s\n", cmd.c_str());
             }
 
             if( is->fail() || !*is )
@@ -726,14 +726,14 @@ protected:
                 string name;
                 *is >> name;
                 if( !*is  || name.size() == 0 ) {
-                    RAVELOG_DEBUGA("resetting physics engine\n");
+                    RAVELOG_DEBUG("resetting physics engine\n");
                     GetEnv()->SetPhysicsEngine(PhysicsEngineBasePtr());
                 }
                 else {
                     PhysicsEngineBasePtr pnewengine = RaveCreatePhysicsEngine(GetEnv(),name);
                     
                     if( !!pnewengine ) {
-                        RAVELOG_DEBUGA("setting physics engine to %s\n",name.c_str());
+                        RAVELOG_DEBUG("setting physics engine to %s\n",name.c_str());
                         GetEnv()->SetPhysicsEngine(pnewengine);
                     }
                 }
@@ -742,14 +742,14 @@ protected:
                 string name;
                 *is >> name;
                 if( !*is  || name.size() == 0 ) {
-                    RAVELOG_DEBUGA("resetting collision checker\n");
+                    RAVELOG_DEBUG("resetting collision checker\n");
                     GetEnv()->SetCollisionChecker(CollisionCheckerBasePtr());
                 }
                 else {
                     CollisionCheckerBasePtr p = RaveCreateCollisionChecker(GetEnv(),name);
                     
                     if( !!p ) {
-                        RAVELOG_DEBUGA("setting collision checker to %s\n",name.c_str());
+                        RAVELOG_DEBUG("setting collision checker to %s\n",name.c_str());
                         GetEnv()->SetCollisionChecker(p);
                     }
                 }
@@ -762,11 +762,11 @@ protected:
                 if( simcmd == "start" || simcmd == "on" ) {
                     dReal fdeltatime = 0.01f;
                     *is >> fdeltatime;                    
-                    RAVELOG_DEBUGA("starting simulation loop, timestep=%f\n", (float)fdeltatime);
+                    RAVELOG_DEBUG("starting simulation loop, timestep=%f\n", (float)fdeltatime);
                     GetEnv()->StartSimulation(fdeltatime);
                 }
                 else {
-                    RAVELOG_DEBUGA("stopping simulation loop\n");
+                    RAVELOG_DEBUG("stopping simulation loop\n");
                     GetEnv()->StopSimulation();
                 }
             }
@@ -779,7 +779,7 @@ protected:
                 Vector vgravity;
                 *is >> vgravity.x >> vgravity.y >> vgravity.z;
                 if( !!*is ) {
-                    RAVELOG_DEBUGA("set gravity (%f,%f,%f)\n", vgravity.x,vgravity.y,vgravity.z);
+                    RAVELOG_DEBUG("set gravity (%f,%f,%f)\n", vgravity.x,vgravity.y,vgravity.z);
                     GetEnv()->GetPhysicsEngine()->SetGravity(vgravity);
                 }
             }
@@ -794,11 +794,11 @@ protected:
 
                 if( newcmd == "on" ) {
                     GetEnv()->GetPhysicsEngine()->SetPhysicsOptions(OpenRAVE::PEO_SelfCollisions);
-                    RAVELOG_DEBUGA("set self collisions to on\n");
+                    RAVELOG_DEBUG("set self collisions to on\n");
                 }
                 else {
                     GetEnv()->GetPhysicsEngine()->SetPhysicsOptions(GetEnv()->GetPhysicsEngine()->GetPhysicsOptions()&~OpenRAVE::PEO_SelfCollisions);
-                    RAVELOG_DEBUGA("set self collisions to off\n");
+                    RAVELOG_DEBUG("set self collisions to off\n");
                 }
             }
 
@@ -816,20 +816,20 @@ protected:
         string filename;
         is >> filename >> bClearScene;
         if( !is || filename.size() == 0 ) {
-            RAVELOG_DEBUGA("resetting scene\n");
+            RAVELOG_DEBUG("resetting scene\n");
             _mapProblems.clear();
             GetEnv()->Reset();
             return true;
         }
         else {
             if( bClearScene ) {
-                RAVELOG_VERBOSEA("resetting scene\n");
+                RAVELOG_VERBOSE("resetting scene\n");
                 GetEnv()->Reset();
                 _mapProblems.clear();
-                RAVELOG_VERBOSEA("resetting destroying\n");
+                RAVELOG_VERBOSE("resetting destroying\n");
             }
 
-            RAVELOG_DEBUGA("Loading scene %s\n", filename.c_str());
+            RAVELOG_DEBUG("Loading scene %s\n", filename.c_str());
             return GetEnv()->Load(filename);
         }
 
@@ -853,7 +853,7 @@ protected:
     
         robot->SetName(robotname);
         if( !GetEnv()->AddRobot(robot) ) {
-            RAVELOG_WARNA("failed to add robot");
+            RAVELOG_WARN("failed to add robot");
             return false;
         }
 
@@ -877,9 +877,9 @@ protected:
             map<int, ProblemInstancePtr >::iterator itprob = _mapProblems.begin();
             while(itprob != _mapProblems.end()) {
                 if( itprob->second->GetXMLId() == problemname ) {
-                    RAVELOG_DEBUGA("deleting duplicate problem %s\n", problemname.c_str());
+                    RAVELOG_DEBUG("deleting duplicate problem %s\n", problemname.c_str());
                     if( !GetEnv()->Remove(itprob->second) )
-                        RAVELOG_WARNA("environment failed to remove duplicate problem %s\n", problemname.c_str());
+                        RAVELOG_WARN("environment failed to remove duplicate problem %s\n", problemname.c_str());
                     _mapProblems.erase(itprob++);
                 }
                 else ++itprob;
@@ -888,7 +888,7 @@ protected:
     
         ProblemInstancePtr prob = RaveCreateProblem(GetEnv(),problemname);
         if( !prob ) {
-            RAVELOG_ERRORA("Cannot find probleminstance: %s\n", problemname.c_str());
+            RAVELOG_ERROR("Cannot find probleminstance: %s\n", problemname.c_str());
             return false;
         }
     
@@ -901,7 +901,7 @@ protected:
     bool worEnvCreateProblem(boost::shared_ptr<istream> is, boost::shared_ptr<void> pdata)
     {
         if( GetEnv()->LoadProblem(boost::static_pointer_cast< pair<ProblemInstancePtr,string> >(pdata)->first, boost::static_pointer_cast< pair<ProblemInstancePtr,string> >(pdata)->second) != 0 ) {
-            RAVELOG_WARNA("failed to load problem");
+            RAVELOG_WARN("failed to load problem");
             return false;
         }
         return true;
@@ -916,11 +916,11 @@ protected:
         map<int, ProblemInstancePtr >::iterator it = _mapProblems.find(index);
         if( it != _mapProblems.end() ) {
             if( !GetEnv()->Remove(it->second) )
-                RAVELOG_WARNA("orEnvDestroyProblem: failed to remove problem from environment\n");
+                RAVELOG_WARN("orEnvDestroyProblem: failed to remove problem from environment\n");
             _mapProblems.erase(it);
         }
         else
-            RAVELOG_WARNA("orEnvDestroyProblem: cannot find problem with id %d\n", index);
+            RAVELOG_WARN("orEnvDestroyProblem: cannot find problem with id %d\n", index);
 
         return true;
     }
@@ -1148,12 +1148,12 @@ protected:
         boost::shared_ptr<SensorBase::SensorData> psensordata = psensor->CreateSensorData();
 
         if( !psensordata ) {
-            RAVELOG_ERRORA("Robot %s, failed to create sensor %s data\n", probot->GetName().c_str(), probot->GetAttachedSensors().at(sensorindex)->GetName().c_str());
+            RAVELOG_ERROR("Robot %s, failed to create sensor %s data\n", probot->GetName().c_str(), probot->GetAttachedSensors().at(sensorindex)->GetName().c_str());
             return false;
         }
 
         if( !psensor->GetSensorData(psensordata) ) {
-            RAVELOG_ERRORA("Robot %s, failed to get sensor %s data\n", probot->GetName().c_str(), probot->GetAttachedSensors().at(sensorindex)->GetName().c_str());
+            RAVELOG_ERROR("Robot %s, failed to get sensor %s data\n", probot->GetName().c_str(), probot->GetAttachedSensors().at(sensorindex)->GetName().c_str());
             return false;
         }
 
@@ -1190,14 +1190,14 @@ protected:
             boost::shared_ptr<SensorBase::CameraSensorData> pcameradata = boost::static_pointer_cast<SensorBase::CameraSensorData>(psensordata);
 
             if( psensor->GetSensorGeometry()->GetType() != SensorBase::ST_Camera ) {
-                RAVELOG_ERRORA("sensor geometry not a camera type\n");
+                RAVELOG_ERROR("sensor geometry not a camera type\n");
                 return false;
             }
 
             boost::shared_ptr<SensorBase::CameraGeomData> pgeom = boost::static_pointer_cast<SensorBase::CameraGeomData>(psensor->GetSensorGeometry());
 
             if( (int)pcameradata->vimagedata.size() != pgeom->width*pgeom->height*3 ) {
-                RAVELOG_ERRORA(str(boost::format("image data wrong size %d != %d\n")%pcameradata->vimagedata.size()%(pgeom->width*pgeom->height*3)));
+                RAVELOG_ERROR(str(boost::format("image data wrong size %d != %d\n")%pcameradata->vimagedata.size()%(pgeom->width*pgeom->height*3)));
                 return false;
             }
 
@@ -1229,7 +1229,7 @@ protected:
         case SensorBase::ST_JointEncoder:
         case SensorBase::ST_Force6D:
         default:
-            RAVELOG_WARNA("sensor type %d not supported\n", psensordata->GetType());
+            RAVELOG_WARN("sensor type %d not supported\n", psensordata->GetType());
             break;
         }
     
@@ -1311,12 +1311,12 @@ protected:
         float falpha = 1-ftransparency;
 
         if( !is ) {
-            RAVELOG_ERRORA("error occured in orEnvPlot stream\n");
+            RAVELOG_ERROR("error occured in orEnvPlot stream\n");
             return false;
         }
 
         if( numcolors > 1 && numcolors != numpoints) {
-            RAVELOG_WARNA(str(boost::format("number of colors (%d) != number of points (%d)\n")%vcolors.size()%numpoints));
+            RAVELOG_WARN(str(boost::format("number of colors (%d) != number of points (%d)\n")%vcolors.size()%numpoints));
             numcolors = 1;
         }
 
@@ -1387,7 +1387,7 @@ protected:
             if( !is )
                 return false;
             if( tempindex < 0 || tempindex >= probot->GetDOF() ) {
-                RAVELOG_WARNA("bad degree of freedom\n");
+                RAVELOG_WARN("bad degree of freedom\n");
                 return false;
             }
             vindices.push_back(tempindex);
@@ -1501,7 +1501,7 @@ protected:
             values.reserve(ids.size());
             FOREACH(it,ids) {
                 if( *it < 0 || *it >= pbody->GetDOF() ) {
-                    RAVELOG_ERRORA("orBodyGetJointValues bad index\n");
+                    RAVELOG_ERROR("orBodyGetJointValues bad index\n");
                     return false;
                 }
                 os << values[*it] << " ";
@@ -1533,7 +1533,7 @@ protected:
             values.reserve(ids.size());
             FOREACH(it,ids) {
                 if( *it < 0 || *it >= probot->GetDOF() ) {
-                    RAVELOG_ERRORA("orBodyGetJointValues bad index\n");
+                    RAVELOG_ERROR("orBodyGetJointValues bad index\n");
                     return false;
                 }
                 os << values[*it] << " ";
@@ -1665,7 +1665,7 @@ protected:
                 if( i == 0 )
                     break;
                 else {
-                    RAVELOG_WARNA("incorrect number of indices, ignoring\n");
+                    RAVELOG_WARN("incorrect number of indices, ignoring\n");
                     return false;
                 }
             }
@@ -1679,18 +1679,18 @@ protected:
             vector<dReal>::iterator itvalue = vvalues.begin();
             FOREACH(it,vindices) {
                 if( *it < 0 || *it >= pbody->GetDOF() ) {
-                    RAVELOG_ERRORA("bad index: %d\n", *it);
+                    RAVELOG_ERROR("bad index: %d\n", *it);
                     return false;
                 }
                 v[*it] = *itvalue++;
             }
-            pbody->SetJointValues(v, true);
+            pbody->SetDOFValues(v, true);
         }
         else {
             // do not use indices
             if( (int)vvalues.size() != pbody->GetDOF() )
                 return false;
-            pbody->SetJointValues(vvalues, true);
+            pbody->SetDOFValues(vvalues, true);
         }
 
         if( pbody->IsRobot() ) {
@@ -1762,7 +1762,7 @@ protected:
                 if( i == 0 )
                     break;
                 else {
-                    RAVELOG_WARNA("incorrect number of indices, ignoring\n");
+                    RAVELOG_WARN("incorrect number of indices, ignoring\n");
                     return false;
                 }
             }
@@ -1776,12 +1776,12 @@ protected:
             vector<dReal>::iterator itvalue = vvalues.begin();
             FOREACH(it,vindices) {
                 if( *it < 0 || *it >= probot->GetDOF() ) {
-                    RAVELOG_ERRORA("bad index: %d\n", *it);
+                    RAVELOG_ERROR("bad index: %d\n", *it);
                     return false;
                 }
                 v[*it] = *itvalue++;
             }
-            probot->SetJointValues(v, true);
+            probot->SetDOFValues(v, true);
         }
         else {
             // do not use indices
@@ -1889,7 +1889,7 @@ protected:
             if( bodyid ) {
                 KinBodyPtr pignore = GetEnv()->GetBodyFromEnvironmentId(bodyid);
                 if( !pignore )
-                    RAVELOG_WARNA("failed to find body %d",bodyid);
+                    RAVELOG_WARN("failed to find body %d",bodyid);
                 else
                     vignore.push_back(pignore);
             }
@@ -1903,7 +1903,7 @@ protected:
         GetEnv()->GetCollisionChecker()->SetCollisionOptions(CO_Contacts);
         if( GetEnv()->CheckCollision(KinBodyConstPtr(pbody), vignore, empty,preport)) {
             os << "1 ";
-            //RAVELOG_VERBOSEA(str(boost::format("collision %s\n")%preport->__str__()));
+            //RAVELOG_VERBOSE(str(boost::format("collision %s\n")%preport->__str__()));
         }
         else
             os << "0 ";
@@ -2090,7 +2090,7 @@ protected:
         if( problemid > 0 ) {
             map<int, ProblemInstancePtr >::iterator it = _mapProblems.find(problemid);
             if( it == _mapProblems.end() ) {
-                RAVELOG_WARNA("failed to find problem %d\n", problemid);
+                RAVELOG_WARN("failed to find problem %d\n", problemid);
                 return false;
             }
             it->second->SendCommand(os,is);
@@ -2102,7 +2102,7 @@ protected:
             FOREACHC(itprob, listProblems) {
                 is.seekg(inputpos);
                 if( !(*itprob)->SendCommand(os,is) ) {
-                    RAVELOG_DEBUGA("problem failed");
+                    RAVELOG_DEBUG("problem failed");
                     return false;
                 }
                 os << " ";

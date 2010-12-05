@@ -555,7 +555,7 @@ KinBody::Link::Link(KinBodyPtr parent)
 
 KinBody::Link::~Link()
 {
-    //RAVELOG_VERBOSEA(str(boost::format("destroy link %s\n")%GetName()));
+    //RAVELOG_VERBOSE(str(boost::format("destroy link %s\n")%GetName()));
 }
 
 bool KinBody::Link::IsEnabled() const
@@ -1051,7 +1051,7 @@ KinBody::KinBody(InterfaceType type, EnvironmentBasePtr penv) : InterfaceBase(ty
 
 KinBody::~KinBody()
 {
-    RAVELOG_VERBOSEA(str(boost::format("destroying kinbody: %s\n")%GetName()));
+    RAVELOG_VERBOSE(str(boost::format("destroying kinbody: %s\n")%GetName()));
     Destroy();
 }
 
@@ -1065,7 +1065,7 @@ void KinBody::Destroy()
                 ss << pattached->GetName();
             }
         }
-        RAVELOG_WARNA(ss.str());
+        RAVELOG_WARN(ss.str());
     }
     _listAttachedBodies.clear();
 
@@ -1576,7 +1576,7 @@ bool KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocity, const Vec
                                 w.x = vjointvel[0]; w.y = vjointvel[1]; w.z = vjointvel[2];
                                 break;
                             default:
-                                RAVELOG_WARNA("forward kinematic type %d not supported\n", (*itjoint)->GetType());
+                                RAVELOG_WARN("forward kinematic type %d not supported\n", (*itjoint)->GetType());
                                 break;
                             }
                             
@@ -1611,7 +1611,7 @@ bool KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocity, const Vec
                             w.x = -vjointvel[0]; w.y = -vjointvel[1]; w.z = -vjointvel[2];
                             break;
                         default:
-                            RAVELOG_WARNA("forward kinematic type %d not supported\n", (*itjoint)->GetType());
+                            RAVELOG_WARN("forward kinematic type %d not supported\n", (*itjoint)->GetType());
                             break;
                         }
 
@@ -1645,7 +1645,7 @@ bool KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocity, const Vec
                         w.x = vjointvel[0]; w.y = vjointvel[1]; w.z = vjointvel[2];
                         break;
                     default:
-                        RAVELOG_WARNA("forward kinematic type %d not supported\n", (*itjoint)->GetType());
+                        RAVELOG_WARN("forward kinematic type %d not supported\n", (*itjoint)->GetType());
                         break;
                     }
                     
@@ -1784,7 +1784,7 @@ void KinBody::SetBodyTransformations(const std::vector<Transform>& vbodies)
     _nUpdateStampId++;
 }
 
-void KinBody::SetJointValues(const std::vector<dReal>& vJointValues, const Transform& transBase, bool bCheckLimits)
+void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, const Transform& transBase, bool bCheckLimits)
 {
     if( _veclinks.size() == 0 ) {
         return;
@@ -1797,10 +1797,10 @@ void KinBody::SetJointValues(const std::vector<dReal>& vJointValues, const Trans
         _veclinks[i]->SetTransform(tbase*_veclinks[i]->GetTransform());
     }
 
-    SetJointValues(vJointValues,bCheckLimits);
+    SetDOFValues(vJointValues,bCheckLimits);
 }
 
-void KinBody::SetJointValues(const std::vector<dReal>& vJointValues, bool bCheckLimits)
+void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, bool bCheckLimits)
 {
     if( (int)vJointValues.size() != GetDOF() ) {
         throw openrave_exception(str(boost::format("dof not equal %d!=%d")%vJointValues.size()%GetDOF()),ORE_InvalidArguments);
@@ -1963,7 +1963,7 @@ void KinBody::SetJointValues(const std::vector<dReal>& vJointValues, bool bCheck
                                 break;
                             }
                             default:
-                                RAVELOG_WARNA("forward kinematic type %d not supported\n", (*itjoint)->GetType());
+                                RAVELOG_WARN("forward kinematic type %d not supported\n", (*itjoint)->GetType());
                                 break;
                             }
                             
@@ -2004,7 +2004,7 @@ void KinBody::SetJointValues(const std::vector<dReal>& vJointValues, bool bCheck
                             break;
                         }
                         default:
-                            RAVELOG_WARNA("forward kinematic type %d not supported\n", (*itjoint)->GetType());
+                            RAVELOG_WARN("forward kinematic type %d not supported\n", (*itjoint)->GetType());
                             break;
                         }
 
@@ -2045,7 +2045,7 @@ void KinBody::SetJointValues(const std::vector<dReal>& vJointValues, bool bCheck
                         break;
                     }
                     default:
-                        RAVELOG_WARNA("forward kinematic type %d not supported\n", (*itjoint)->GetType());
+                        RAVELOG_WARN("forward kinematic type %d not supported\n", (*itjoint)->GetType());
                         break;
                     }
                     
@@ -2070,7 +2070,7 @@ KinBody::LinkPtr KinBody::GetLink(const std::string& linkname) const
         if ( (*it)->GetName() == linkname )
             return *it;
     }
-    RAVELOG_VERBOSEA("Link::GetLink - Error Unknown Link %s\n",linkname.c_str());
+    RAVELOG_VERBOSE("Link::GetLink - Error Unknown Link %s\n",linkname.c_str());
     return LinkPtr();
 }
 
@@ -2250,7 +2250,7 @@ void KinBody::CalculateJacobian(int index, const Vector& trans, boost::multi_arr
                     v = (*itjoint)->GetAxis(dof);
                     break;
                 default:
-                    RAVELOG_WARNA("CalculateJacobian joint %d not supported\n", (*itjoint)->GetType());
+                    RAVELOG_WARN("CalculateJacobian joint %d not supported\n", (*itjoint)->GetType());
                     v = Vector(0,0,0);
                     break;
                 }
@@ -2273,7 +2273,7 @@ void KinBody::CalculateJacobian(int index, const Vector& trans, boost::multi_arr
                     v = (*itjoint)->GetAxis(dof);
                     break;
                 default:
-                    RAVELOG_WARNA("CalculateJacobian joint %d not supported\n", (*itjoint)->GetType());
+                    RAVELOG_WARN("CalculateJacobian joint %d not supported\n", (*itjoint)->GetType());
                     v = Vector(0,0,0);
                     break;
                 }
@@ -2323,7 +2323,7 @@ void KinBody::CalculateRotationJacobian(int index, const Vector& q, boost::multi
                     v = Vector(0,0,0);
                     break;
                 default:
-                    RAVELOG_WARNA("CalculateRotationJacobian joint %d not supported\n", (*itjoint)->GetType());
+                    RAVELOG_WARN("CalculateRotationJacobian joint %d not supported\n", (*itjoint)->GetType());
                     v = Vector(0,0,0);
                     break;
                 }
@@ -2349,7 +2349,7 @@ void KinBody::CalculateRotationJacobian(int index, const Vector& q, boost::multi
                     v = Vector(0,0,0);
                     break;
                 default:
-                    RAVELOG_WARNA("CalculateRotationJacobian joint %d not supported\n", (*itjoint)->GetType());
+                    RAVELOG_WARN("CalculateRotationJacobian joint %d not supported\n", (*itjoint)->GetType());
                     v = Vector(0,0,0);
                     break;
                 }
@@ -2402,7 +2402,7 @@ void KinBody::CalculateAngularVelocityJacobian(int index, boost::multi_array<dRe
                     v = Vector(0,0,0);
                     break;
                 default:
-                    RAVELOG_WARNA("CalculateAngularVelocityJacobian joint %d not supported\n", (*itjoint)->GetType());
+                    RAVELOG_WARN("CalculateAngularVelocityJacobian joint %d not supported\n", (*itjoint)->GetType());
                     v = Vector(0,0,0);
                     break;
                 }
@@ -2425,7 +2425,7 @@ void KinBody::CalculateAngularVelocityJacobian(int index, boost::multi_array<dRe
                     v = Vector(0,0,0);
                     break;
                 default:
-                    RAVELOG_WARNA("CalculateAngularVelocityJacobian joint %d not supported\n", (*itjoint)->GetType());
+                    RAVELOG_WARN("CalculateAngularVelocityJacobian joint %d not supported\n", (*itjoint)->GetType());
                     v = Vector(0,0,0);
                     break;
                 }
@@ -2452,7 +2452,7 @@ bool KinBody::CheckSelfCollision(CollisionReportPtr report) const
 {
     if( GetEnv()->CheckSelfCollision(shared_kinbody_const(), report) ) {
         if( !!report ) {
-            RAVELOG_VERBOSEA(str(boost::format("Self collision: %s\n")%report->__str__()));
+            RAVELOG_VERBOSE(str(boost::format("Self collision: %s\n")%report->__str__()));
         }
         return true;
     }
@@ -2626,20 +2626,20 @@ void KinBody::_ComputeInternalInformation()
             }
 
             if( cursize == ljoints.size() ) {
-                RAVELOG_ERRORA(str(boost::format("Cannot compute joint hierarchy for number of joints %d! Part of robot might not be moveable\n")%_vecjoints.size()));
+                RAVELOG_ERROR(str(boost::format("Cannot compute joint hierarchy for number of joints %d! Part of robot might not be moveable\n")%_vecjoints.size()));
                 break;
             }
         }
 
         if( ljoints.size() == 0 ) {
-            RAVELOG_DEBUGA(str(boost::format("Successfully computed joint hierarchy for number of joints %d!\n")%_vecjoints.size()));
+            RAVELOG_DEBUG(str(boost::format("Successfully computed joint hierarchy for number of joints %d!\n")%_vecjoints.size()));
         }
     }
 
     // create the adjacency list
     vector<dReal> prevvalues; GetDOFValues(prevvalues);
     vector<dReal> vzero(GetDOF());
-    SetJointValues(vzero);
+    SetDOFValues(vzero);
     _setAdjacentLinks.clear();
     FOREACH(it,_setNonAdjacentLinks) {
         it->clear();
@@ -2701,7 +2701,7 @@ void KinBody::_ComputeInternalInformation()
         }
     }
 
-    SetJointValues(prevvalues, true);
+    SetDOFValues(prevvalues, true);
 
     {
         ostringstream ss;

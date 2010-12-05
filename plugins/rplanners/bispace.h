@@ -1353,7 +1353,7 @@ class BiSpacePlanner : public PlannerBase
         fprintf(f, "];\n");
         fclose(f);
 
-        RAVELOG_DEBUGA("dump %s: fwd=%"PRIdS" work=%"PRIdS", time=%f\n", filename, _configtree._nodes.size(), _workspacetree._nodes.size(), _GetTime());
+        RAVELOG_DEBUG("dump %s: fwd=%"PRIdS" work=%"PRIdS", time=%f\n", filename, _configtree._nodes.size(), _workspacetree._nodes.size(), _GetTime());
     }
 
     void _SetRobotConfig(const dReal* pconfig, bool bWorkspace)
@@ -1391,7 +1391,7 @@ class BiSpacePlanner : public PlannerBase
         //RAVEPRINT(L"optimizing path %d\n", vecnodes.size());
         _OptimizePath(vecnodes, (int)vecnodes.size()/2, true);
         bool bSuccess = false;
-        RAVELOG_DEBUGA("path follow: fwd: %"PRIdS"\n", _configtree._nodes.size());
+        RAVELOG_DEBUG("path follow: fwd: %"PRIdS"\n", _configtree._nodes.size());
 
         // * bias the sampling around the path
         // * have to know when to stop expanding, 
@@ -1504,7 +1504,7 @@ class BiSpacePlanner : public PlannerBase
 
         _SetWorkspaceFromFwdConfig(vworkconfig, pfwdnode->q);
         dReal fdist = _workspacetree._pDistMetric->Eval(&vworkconfig[0], vecnodes.back()->q);
-        RAVELOG_DEBUGA("final %f, fwd: %"PRIdS"\n", fdist, _configtree._nodes.size());
+        RAVELOG_DEBUG("final %f, fwd: %"PRIdS"\n", fdist, _configtree._nodes.size());
 
         // test out IK to see if close to goal
         if( _pmanip != NULL && _pmanip->HasIKSolver() ) {

@@ -18,7 +18,7 @@
 
 class GraspGradientPlanner : public PlannerBase
 {
-public:
+ public:
     struct GRASP
     {
     GRASP() : fgoaldist(-1),bChecked(false), bProcessed(false) {}
@@ -47,26 +47,26 @@ GraspGradientPlanner(EnvironmentBasePtr penv) : PlannerBase(penv) {
         RobotBase::RobotStateSaver savestate(_robot);
 
         if( (int)parameters->vinitialconfig.size() != parameters->GetDOF() ) {
-            RAVELOG_ERRORA(str(boost::format("initial config wrong dim: %d\n")%parameters->vinitialconfig.size()));
+            RAVELOG_ERROR(str(boost::format("initial config wrong dim: %d\n")%parameters->vinitialconfig.size()));
             return false;
         }
 
         if(CollisionFunctions::CheckCollision(parameters,_robot,parameters->vinitialconfig, _report)) {
-            RAVELOG_DEBUGA("BirrtPlanner::InitPlan - Error: Initial configuration in collision\n");
+            RAVELOG_DEBUG("BirrtPlanner::InitPlan - Error: Initial configuration in collision\n");
             return false;
         }
 
         if( parameters->_vgrasps.size() == 0 ) {
-            RAVELOG_ERRORA("no goal sampler specified\n");
+            RAVELOG_ERROR("no goal sampler specified\n");
             return false;
         }
         if( !parameters->_ptarget ) {
-            RAVELOG_ERRORA("no target specified\n");
+            RAVELOG_ERROR("no target specified\n");
             return false;
         }
 
         if( (int)parameters->vinitialconfig.size() != _robot->GetActiveDOF() ) {
-            RAVELOG_ERRORA(str(boost::format("initial config wrong dim: %d\n")%parameters->vinitialconfig.size()));
+            RAVELOG_ERROR(str(boost::format("initial config wrong dim: %d\n")%parameters->vinitialconfig.size()));
             return false;
         }
 
@@ -74,17 +74,17 @@ GraspGradientPlanner(EnvironmentBasePtr penv) : PlannerBase(penv) {
 
         _pmanip = _robot->GetActiveManipulator();
         if( (int)_pmanip->GetArmIndices().size() != _robot->GetActiveDOF()) {
-            RAVELOG_ERRORA("active dof not equal to arm joints\n");
+            RAVELOG_ERROR("active dof not equal to arm joints\n");
             return false;
         }
 
         if( _robot->GetActiveDOF() != (int)_pmanip->GetArmIndices().size() || _robot->GetActiveDOFIndices().size() != _pmanip->GetArmIndices().size() ) {
-            RAVELOG_ERRORA("active dof not equal to arm joints\n");
+            RAVELOG_ERROR("active dof not equal to arm joints\n");
             return false;
         }
         for(int i = 0; i < _robot->GetActiveDOF(); ++i) {
             if( _pmanip->GetArmIndices().at(i) != _robot->GetActiveDOFIndices().at(i) ) {
-                RAVELOG_ERRORA("active dof not equal to arm joints\n");
+                RAVELOG_ERROR("active dof not equal to arm joints\n");
                 return false;
             }
         }
@@ -95,7 +95,7 @@ GraspGradientPlanner(EnvironmentBasePtr penv) : PlannerBase(penv) {
             parameters->_setstatefn(parameters->vinitialconfig);
             if( !parameters->_constraintfn(parameters->vinitialconfig, parameters->vinitialconfig,0) ) {
                 // failed
-                RAVELOG_WARNA("initial state rejected by constraint fn\n");
+                RAVELOG_WARN("initial state rejected by constraint fn\n");
                 //return false;
             }
         }
@@ -111,7 +111,7 @@ GraspGradientPlanner(EnvironmentBasePtr penv) : PlannerBase(penv) {
     virtual bool PlanPath(TrajectoryBasePtr ptraj, boost::shared_ptr<std::ostream> pOutStream)
     {
         if(!_parameters) {
-            RAVELOG_ERRORA("GraspGradientPlanner::PlanPath - Error, planner not initialized\n");
+            RAVELOG_ERROR("GraspGradientPlanner::PlanPath - Error, planner not initialized\n");
             return false;
         }
 
@@ -155,8 +155,8 @@ GraspGradientPlanner(EnvironmentBasePtr penv) : PlannerBase(penv) {
                 if( itgrasp->bProcessed || (itgrasp->bChecked && itgrasp->fgoaldist < 0) )
                     continue;
 
-                RAVELOG_DEBUGA("attempting grasp %d, %f\n", (int)(itgrasp-vgrasps.begin()), itgrasp->fgraspdist);
-                RAVELOG_DEBUGA("trans: %f, %f, %f, %f, %f, %f, %f\n",
+                RAVELOG_DEBUG("attempting grasp %d, %f\n", (int)(itgrasp-vgrasps.begin()), itgrasp->fgraspdist);
+                RAVELOG_DEBUG("trans: %f, %f, %f, %f, %f, %f, %f\n",
                                itgrasp->tgrasp.rot.x,itgrasp->tgrasp.rot.y,itgrasp->tgrasp.rot.z,itgrasp->tgrasp.rot.w,itgrasp->tgrasp.trans.x,itgrasp->tgrasp.trans.y,itgrasp->tgrasp.trans.z);
                 
                 if( StochasticGradientDescent(*itgrasp, fConfigThresh, listpath) ) {
@@ -187,7 +187,7 @@ GraspGradientPlanner(EnvironmentBasePtr penv) : PlannerBase(penv) {
         FOREACH(it, listbestpath)
             ptraj->AddPoint(Trajectory::TPOINT(*it,0));
 
-        RAVELOG_DEBUGA(str(boost::format("plan %s, path=%d points in %fs\n")%(bSuccess?"success":"failure")%ptraj->GetPoints().size()%(0.001f*(float)(timeGetTime()-basetime))));
+        RAVELOG_DEBUG(str(boost::format("plan %s, path=%d points in %fs\n")%(bSuccess?"success":"failure")%ptraj->GetPoints().size()%(0.001f*(float)(timeGetTime()-basetime))));
     
         return bSuccess;
     }
@@ -210,7 +210,7 @@ private:
             g.bChecked = true;
 
             if( _pmanip->CheckEndEffectorCollision(g.tgrasp, _report) ) {
-                RAVELOG_DEBUGA("gripper collision: (%s:%s)x(%s:%s).\n",
+                RAVELOG_DEBUG("gripper collision: (%s:%s)x(%s:%s).\n",
                                !!_report->plink1?_report->plink1->GetParent()->GetName().c_str():"",
                                !!_report->plink1?_report->plink1->GetName().c_str():"",
                                !!_report->plink2?_report->plink2->GetParent()->GetName().c_str():"",
@@ -223,14 +223,14 @@ private:
             bool bGetFirstSolution=true;
             if( bGetFirstSolution ) {
                 if( !_pmanip->FindIKSolution(g.tgrasp,g.qgoal,true) ) {
-                    RAVELOG_DEBUGA("failed to find ik solution\n");
+                    RAVELOG_DEBUG("failed to find ik solution\n");
                     return false;
                 }
             }
             else {
                 // get all solutions and find the closest to initial config
                 if( !_pmanip->FindIKSolutions(g.tgrasp,_viksolutions,true) ) {
-                    RAVELOG_DEBUGA("failed to find ik solutions\n");
+                    RAVELOG_DEBUG("failed to find ik solutions\n");
                     return false;
                 }
 
@@ -299,7 +299,7 @@ private:
 
                             // check if grasp is closer than threshold
                             dReal graspdist2 = TransformDistance2(_pmanip->GetEndEffectorTransform(),g.tgrasp,0.2f);
-                            //RAVELOG_DEBUGA("graspdist: %f\n",RaveSqrt(graspdist));
+                            //RAVELOG_DEBUG("graspdist: %f\n",RaveSqrt(graspdist));
                             if( graspdist2 > _parameters->_fVisibiltyGraspThresh*_parameters->_fVisibiltyGraspThresh ) {
                                 _parameters->_setstatefn(qnew);
                                 if( !_parameters->_constraintfn(*itq, qnew, 0) )
@@ -321,7 +321,7 @@ private:
                     // if new sample is closer than the best, accept it
                     dReal dist = _parameters->_distmetricfn(q,g.qgoal);
                     if( qbest.size() == 0 || dist < bestdist ) {
-                        RAVELOG_DEBUGA("dist: %f\n",dist);
+                        RAVELOG_DEBUG("dist: %f\n",dist);
                         qbest = q;
                         bestdist = dist;
                         if( giter == 0 ) // goal reached

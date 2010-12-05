@@ -254,7 +254,7 @@ class MultiManipIKSolver(metaclass.AutoReloader):
             
             for sols in sequence_cross_product(*alljointvalues):
                 for sol,manip in izip(sols,self.manips):
-                    self.robot.SetJointValues(sol,manip.GetArmIndices()) 
+                    self.robot.SetDOFValues(sol,manip.GetArmIndices()) 
                 if not self.robot.CheckSelfCollision():
                     if not (filteroptions&openravepy.IkFilterOptions.CheckEnvCollisions) or not self.robot.GetEnv().CheckCollision(self.robot):
                         return sols

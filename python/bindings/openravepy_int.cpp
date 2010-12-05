@@ -784,7 +784,7 @@ public:
         vector<dReal> values = ExtractArray<dReal>(o);
         if( (int)values.size() != GetDOF() )
             throw openrave_exception("values do not equal to body degrees of freedom");
-        _pbody->SetJointValues(values,true);
+        _pbody->SetDOFValues(values,true);
     }
     void SetTransformWithDOFValues(object otrans,object ojoints)
     {
@@ -797,7 +797,7 @@ public:
         if( (int)values.size() != GetDOF() )
             throw openrave_exception("values do not equal to body degrees of freedom");
 
-        _pbody->SetJointValues(values,ExtractTransform(otrans),true);
+        _pbody->SetDOFValues(values,ExtractTransform(otrans),true);
     }
 
     void SetDOFValues(object o, object indices)
@@ -820,7 +820,7 @@ public:
             values[*it] = *itv++;
         }
 
-        _pbody->SetJointValues(values,true);
+        _pbody->SetDOFValues(values,true);
     }
 
     void SetJointTorques(object otorques, bool bAdd)
@@ -3486,13 +3486,13 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("Enable",&PyKinBody::Enable,args("enable"), DOXY_FN(KinBody,Enable))
             .def("IsEnabled",&PyKinBody::IsEnabled, DOXY_FN(KinBody,IsEnabled))
             .def("SetTransform",&PyKinBody::SetTransform,args("transform"), DOXY_FN(KinBody,SetTransform))
-            .def("SetJointValues",psetdofvalues1,args("values"), DOXY_FN(KinBody,SetJointValues "const std::vector; bool"))
-            .def("SetJointValues",psetdofvalues2,args("values","dofindices"), DOXY_FN(KinBody,SetJointValues "const std::vector; bool"))
-            .def("SetDOFValues",psetdofvalues1,args("values"), DOXY_FN(KinBody,SetJointValues "const std::vector; bool"))
-            .def("SetDOFValues",psetdofvalues2,args("values","dofindices"), DOXY_FN(KinBody,SetJointValues "const std::vector; bool"))
+            .def("SetJointValues",psetdofvalues1,args("values"), DOXY_FN(KinBody,SetDOFValues "const std::vector; bool"))
+            .def("SetJointValues",psetdofvalues2,args("values","dofindices"), DOXY_FN(KinBody,SetDOFValues "const std::vector; bool"))
+            .def("SetDOFValues",psetdofvalues1,args("values"), DOXY_FN(KinBody,SetDOFValues "const std::vector; bool"))
+            .def("SetDOFValues",psetdofvalues2,args("values","dofindices"), DOXY_FN(KinBody,SetDOFValues "const std::vector; bool"))
             .def("SetJointTorques",&PyKinBody::SetJointTorques,args("torques","add"), DOXY_FN(KinBody,SetJointTorques))
-            .def("SetTransformWithJointValues",&PyKinBody::SetTransformWithDOFValues,args("transform","values"), DOXY_FN(KinBody,SetJointValues "const std::vector; const Transform; bool"))
-            .def("SetTransformWithDOFValues",&PyKinBody::SetTransformWithDOFValues,args("transform","values"), DOXY_FN(KinBody,SetJointValues "const std::vector; const Transform; bool"))
+            .def("SetTransformWithJointValues",&PyKinBody::SetTransformWithDOFValues,args("transform","values"), DOXY_FN(KinBody,SetDOFValues "const std::vector; const Transform; bool"))
+            .def("SetTransformWithDOFValues",&PyKinBody::SetTransformWithDOFValues,args("transform","values"), DOXY_FN(KinBody,SetDOFValues "const std::vector; const Transform; bool"))
             .def("CalculateJacobian",&PyKinBody::CalculateJacobian,args("linkindex","offset"), DOXY_FN(KinBody,CalculateJacobian "int; const Vector; boost::multi_array"))
             .def("CalculateRotationJacobian",&PyKinBody::CalculateRotationJacobian,args("linkindex","quat"), DOXY_FN(KinBody,CalculateRotationJacobian "int; const Vector; boost::multi_array"))
             .def("CalculateAngularVelocityJacobian",&PyKinBody::CalculateAngularVelocityJacobian,args("linkindex"), DOXY_FN(KinBody,CalculateAngularVelocityJacobian "int; boost::multi_array"))

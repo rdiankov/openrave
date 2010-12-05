@@ -24,7 +24,7 @@ bool STOP_AVI() { return false; }
 std::list<std::pair<int,string> > GET_CODECS() { return std::list<std::pair<int,string> >(); }
 bool START_AVI(const char* filename, double _frameRate, int width, int height, int bits,int)
 {
-    RAVELOG_WARNA("avi recording to file %s not enabled\n", filename);
+    RAVELOG_WARN("avi recording to file %s not enabled\n", filename);
     return false;
 }
 bool ADD_FRAME_FROM_DIB_TO_AVI(void* pdata)
@@ -503,7 +503,7 @@ std::list<std::pair<int,string> > GET_CODECS() {
 bool START_AVI(const char* filename, double _frameRate, int width, int height, int bits, int codecid)
 {
     if( bits != 24 ) {
-        RAVELOG_WARNA("START_AVI only supports 24bits\n");
+        RAVELOG_WARN("START_AVI only supports 24bits\n");
         return false;
     }
     
@@ -523,13 +523,13 @@ bool START_AVI(const char* filename, double _frameRate, int width, int height, i
 		fmt = fmt->next;
 	}
 	if (fmt == NULL) {
-		RAVELOG_WARNA("START_AVI: mpeg4 codec not found\n");
+		RAVELOG_WARN("START_AVI: mpeg4 codec not found\n");
         return false;
 	}
 
 	output = (AVFormatContext*)av_mallocz(sizeof(AVFormatContext));
 	if (output == NULL) {
-		RAVELOG_WARNA("START_AVI: Out of Memory\n");
+		RAVELOG_WARN("START_AVI: Out of Memory\n");
         return false;
 	}
 
@@ -538,7 +538,7 @@ bool START_AVI(const char* filename, double _frameRate, int width, int height, i
 
 	stream = av_new_stream(output, 0);
 	if (stream == NULL) {
-		RAVELOG_WARNA("START_AVI: Out of Memory\n");
+		RAVELOG_WARN("START_AVI: Out of Memory\n");
         return false;
 	}
 
@@ -557,25 +557,25 @@ bool START_AVI(const char* filename, double _frameRate, int width, int height, i
     codec_ctx->pix_fmt = PIX_FMT_YUV420P;
 
 	if (av_set_parameters(output, NULL) < 0) {
-		RAVELOG_WARNA("START_AVI: set parameters failed\n");
+		RAVELOG_WARN("START_AVI: set parameters failed\n");
         return false;
 	}
 
 	codec = avcodec_find_encoder(codec_ctx->codec_id);
 	if (codec == NULL) {
-		RAVELOG_WARNA("START_AVI: codec not found\n");
+		RAVELOG_WARN("START_AVI: codec not found\n");
         return false;
 	}
 
-    RAVELOG_DEBUGA("opening %s, w:%d h:%dx fps:%f, codec: %s\n", output->filename, width, height, (float)_frameRate, codec->name);
+    RAVELOG_DEBUG("opening %s, w:%d h:%dx fps:%f, codec: %s\n", output->filename, width, height, (float)_frameRate, codec->name);
 
 	if (avcodec_open(codec_ctx, codec) < 0) {
-		RAVELOG_WARNA("START_AVI: Unable to open codec\n");
+		RAVELOG_WARN("START_AVI: Unable to open codec\n");
         return false;
 	}
 
 	if (url_fopen(&output->pb, filename, URL_WRONLY) < 0) {
-		RAVELOG_WARNA("START_AVI: Unable to open %s for writing\n", filename);
+		RAVELOG_WARN("START_AVI: Unable to open %s for writing\n", filename);
         return false;
 	}
 
@@ -587,14 +587,14 @@ bool START_AVI(const char* filename, double _frameRate, int width, int height, i
 	outbuf_size = 100000;
 	outbuf = (char*)malloc(outbuf_size);
 	if (outbuf == NULL) {
-		RAVELOG_WARNA("START_AVI: Out of Memory\n");
+		RAVELOG_WARN("START_AVI: Out of Memory\n");
         return false;
 	}
 
 	picture_size = avpicture_get_size(PIX_FMT_YUV420P, codec_ctx->width, codec_ctx->height);
     picture_buf = (char*)malloc(picture_size);
 	if (picture_buf == NULL) {
-		RAVELOG_WARNA("START_AVI: Out of Memory\n");
+		RAVELOG_WARN("START_AVI: Out of Memory\n");
         return false;
 	}
 
@@ -635,21 +635,21 @@ bool ADD_FRAME_FROM_DIB_TO_AVI(void* pdata)
     if (!sws_scale(img_convert_ctx, picture->data, picture->linesize, 0,
                    stream->codec->height, yuv420p->data, yuv420p->linesize)) {
         sws_freeContext(img_convert_ctx);
-        RAVELOG_ERRORA("ADD_FRAME sws_scale failed\n");
+        RAVELOG_ERROR("ADD_FRAME sws_scale failed\n");
         return false;
     }
  
     sws_freeContext(img_convert_ctx);
 #else
     if( img_convert((AVPicture*)yuv420p, PIX_FMT_YUV420P, (AVPicture*)picture, PIX_FMT_BGR24, stream->codec->width, stream->codec->height) ) {
-        RAVELOG_ERRORA("ADD_FRAME img_convert failed\n");
+        RAVELOG_ERROR("ADD_FRAME img_convert failed\n");
         return false;
     }
 #endif
     
     size = avcodec_encode_video(stream->codec, (uint8_t*)outbuf, outbuf_size, yuv420p);
 	if (size == -1) {
-		RAVELOG_WARNA("error encoding frame\n");
+		RAVELOG_WARN("error encoding frame\n");
         return false;
 	}
 
@@ -659,7 +659,7 @@ bool ADD_FRAME_FROM_DIB_TO_AVI(void* pdata)
     pkt.size = size;
     pkt.stream_index = stream->index;
 	if( av_write_frame(output, &pkt) < 0)
-        RAVELOG_WARNA("av_write_frame failed\n");
+        RAVELOG_WARN("av_write_frame failed\n");
     
     return true;
 }
@@ -673,7 +673,7 @@ bool STOP_AVI() { return false; }
 std::list<std::pair<int,string> > GET_CODECS() { return std::list<std::pair<int,string> >(); }
 bool START_AVI(const char* filename, double _frameRate, int width, int height, int bits,int)
 {
-    RAVELOG_WARNA("avi recording to file %s not enabled\n", filename);
+    RAVELOG_WARN("avi recording to file %s not enabled\n", filename);
     return false;
 }
 bool ADD_FRAME_FROM_DIB_TO_AVI(void* pdata)

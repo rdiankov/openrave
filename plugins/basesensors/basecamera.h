@@ -65,10 +65,10 @@ class BaseCameraSensor : public SensorBase
                 }
             }
             else {
-                RAVELOG_WARNA(str(boost::format("bad tag: %s")%name));
+                RAVELOG_WARN(str(boost::format("bad tag: %s")%name));
             }
             if( !ss ) {
-                RAVELOG_WARNA(str(boost::format("BaseCameraSensor error parsing %s\n")%name));
+                RAVELOG_WARN(str(boost::format("BaseCameraSensor error parsing %s\n")%name));
             }
             return false;
         }

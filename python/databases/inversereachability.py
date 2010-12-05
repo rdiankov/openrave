@@ -194,7 +194,7 @@ class InverseReachabilityModel(OpenRAVEModel):
             if not self.ikmodel.load():
                 self.ikmodel.autogenerate()
             print "Generating Inverse Reachability",heightthresh,quatthresh
-            self.robot.SetJointValues(*self.necessaryjointstate())
+            self.robot.SetDOFValues(*self.necessaryjointstate())
             # get base of link manipulator with respect to base link
             Tbase = dot(linalg.inv(self.robot.GetTransform()),self.manip.GetBase().GetTransform())
             # convert the quatthresh to a loose euclidean distance
@@ -525,7 +525,7 @@ class InverseReachabilityModel(OpenRAVEModel):
                     failures = 0
                     for pose in poses:
                         self.robot.SetTransform(matrixFromPose(pose))
-                        self.robot.SetJointValues(*jointstate)
+                        self.robot.SetDOFValues(*jointstate)
                         if self.manip.FindIKSolution(eye(4),0) is None:
                             #print 'pose failed: ',pose
                             failures += 1
@@ -538,7 +538,7 @@ class InverseReachabilityModel(OpenRAVEModel):
     def testEquivalenceClass(self,equivalenceclass):
         """tests that configurations in the cluster has IK solutions"""
         with self.robot:
-            self.robot.SetJointValues(*self.necessaryjointstate())
+            self.robot.SetDOFValues(*self.necessaryjointstate())
             Tgrasp = matrixFromQuat(equivalenceclass[0][0:4])
             Tgrasp[2,3] = equivalenceclass[0][4]
             failed = 0
@@ -612,10 +612,10 @@ class InverseReachabilityModel(OpenRAVEModel):
                 Tmanip = matrixFromAxisAngle([0,0,1],sample[0])
                 Tmanip[0:2,3] = sample[1:3]
                 self.robot.SetTransform(Tmanip)
-                self.robot.SetJointValues(*self.necessaryjointstate())
+                self.robot.SetDOFValues(*self.necessaryjointstate())
                 solution = self.manip.FindIKSolution(Tgrasp,0)
                 if solution is not None:
-                    self.robot.SetJointValues(solution,self.manip.GetArmIndices())
+                    self.robot.SetDOFValues(solution,self.manip.GetArmIndices())
                     robotlocs.append((self.robot.GetTransform(),self.robot.GetDOFValues()))
         try:
             print 'number of locations: ',len(robotlocs)
@@ -630,7 +630,7 @@ class InverseReachabilityModel(OpenRAVEModel):
                             geom.SetTransparency(transparency)
                     self.env.AddRobot(newrobot,True)
                     newrobot.SetTransform(T)
-                    newrobot.SetJointValues(values)
+                    newrobot.SetDOFValues(values)
                     newrobots.append(newrobot)
                     #time.sleep(0.1)
             raw_input('press any key to continue')
@@ -658,7 +658,7 @@ class InverseReachabilityModel(OpenRAVEModel):
             # find a random position
             with self.robot:
                 while True:
-                    self.robot.SetJointValues(random.rand()*(upper-lower)+lower,self.manip.GetArmIndices()) # set random values
+                    self.robot.SetDOFValues(random.rand()*(upper-lower)+lower,self.manip.GetArmIndices()) # set random values
                     if not self.robot.CheckSelfCollision():
                         break
                 Tgrasp = self.manip.GetEndEffectorTransform()
@@ -672,7 +672,7 @@ class InverseReachabilityModel(OpenRAVEModel):
                     poses,jointstate = samplerfn(1,1.0)
                     for pose in poses:
                         self.robot.SetTransform(matrixFromPose(pose))
-                        self.robot.SetJointValues(*jointstate)
+                        self.robot.SetDOFValues(*jointstate)
                         q = self.manip.FindIKSolution(Tgrasp,filteroptions=IkFilterOptions.CheckEnvCollisions)
                         if q is not None:
                             values = self.robot.GetDOFValues()

@@ -74,7 +74,7 @@ public:
             boost::mutex::scoped_lock lock(_mutex);
             // do some more checking here, there still might be instances of robots, planners, and sensors out there
             if (plibrary) {
-                RAVELOG_DEBUGA("RaveDatabase: closing plugin %s\n", ppluginname.c_str());// Sleep(10);
+                RAVELOG_DEBUG("RaveDatabase: closing plugin %s\n", ppluginname.c_str());// Sleep(10);
                 if( pfnDestroyPlugin != NULL ) {
                     pfnDestroyPlugin();
                 }
@@ -416,7 +416,7 @@ public:
             }
         }
         if( !pointer ) {
-            RAVELOG_WARNA("Failed to create name %s, interface %s\n", name.c_str(), RaveGetInterfaceNamesMap().find(type)->second.c_str());
+            RAVELOG_WARN("Failed to create name %s, interface %s\n", name.c_str(), RaveGetInterfaceNamesMap().find(type)->second.c_str());
         }
         return pointer;
     }
@@ -435,12 +435,12 @@ public:
 
         hFind = FindFirstFileA(strfind.c_str(), &FindFileData);
         if (hFind == INVALID_HANDLE_VALUE) {
-            RAVELOG_DEBUGA("No plugins in dir: %s (GetLastError reports %d)\n", pdir.c_str(), GetLastError ());
+            RAVELOG_DEBUG("No plugins in dir: %s (GetLastError reports %d)\n", pdir.c_str(), GetLastError ());
             return false;
         } 
         else  {
             do {
-                RAVELOG_DEBUGA("Adding plugin %s\n", FindFileData.cFileName);
+                RAVELOG_DEBUG("Adding plugin %s\n", FindFileData.cFileName);
                 string strplugin = pdir;
                 strplugin += "\\";
                 strplugin += FindFileData.cFileName;
@@ -466,7 +466,7 @@ public:
             (void) closedir (dp);
         }
         else {
-            RAVELOG_WARNA("Couldn't open directory %s\n", pdir.c_str());
+            RAVELOG_WARN("Couldn't open directory %s\n", pdir.c_str());
         }
 #endif
         return true;
@@ -608,7 +608,7 @@ protected:
             }
             
             if( plibrary == NULL ) {
-                RAVELOG_WARNA("failed to load: %s\n", _libraryname.c_str());
+                RAVELOG_WARN("failed to load: %s\n", _libraryname.c_str());
                 return PluginPtr();
             }
         }
@@ -673,7 +673,7 @@ protected:
 #ifdef _WIN32
         void* plib = LoadLibraryA(lib.c_str());
         if( plib == NULL ) {
-            RAVELOG_WARNA("Failed to load %s\n", lib.c_str());
+            RAVELOG_WARN("Failed to load %s\n", lib.c_str());
         }
 #else
         dlerror(); // clear error

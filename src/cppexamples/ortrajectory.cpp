@@ -22,7 +22,7 @@
     \code
     {
         RobotBase::RobotStateSaver saver(probot); // add a state saver so robot is not moved permenantly
-        probot->SetJointValues(q);
+        probot->SetDOFValues(q);
         if( penv->CheckCollision(RobotBaseConstPtr(probot)) ) {
             continue; // robot in collision at final point, so reject
         }
@@ -86,7 +86,7 @@ int main(int argc, char ** argv)
             // check for collisions
             {
                 RobotBase::RobotStateSaver saver(probot); // add a state saver so robot is not moved permenantly
-                probot->SetJointValues(q);
+                probot->SetDOFValues(q);
                 if( penv->CheckCollision(RobotBaseConstPtr(probot)) ) {
                     continue; // robot in collision at final point, so reject
                 }

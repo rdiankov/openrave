@@ -240,12 +240,12 @@ void IvObjectDragger::CheckCollision(bool flag)
                 _viewer->GetEnv()->GetCollisionChecker()->SetCollisionOptions(CO_Contacts);
                 CollisionReportPtr preport(new CollisionReport());
                 if( pbody->GetBody()->CheckSelfCollision(preport) ) {
-                    RAVELOG_VERBOSEA(str(boost::format("self-collision %s\n")%preport->__str__()));
+                    RAVELOG_VERBOSE(str(boost::format("self-collision %s\n")%preport->__str__()));
                     _SetColor(COLLISION_COLOR);
                 }
                 else if( _viewer->GetEnv()->CheckCollision(KinBodyConstPtr(pbody->GetBody()), preport)) {
                     // if there is a collision, revert to the original transform
-                    RAVELOG_VERBOSEA(str(boost::format("collision %s\n")%preport->__str__()));
+                    RAVELOG_VERBOSE(str(boost::format("collision %s\n")%preport->__str__()));
                     _SetColor(COLLISION_COLOR);
                 }
                 else
@@ -327,7 +327,7 @@ IvJointDragger::IvJointDragger(QtCoinViewerPtr viewer, ItemPtr pItem, int iSelec
 
     _pLinkNode = pbody->GetIvLink(iSelectedLink);
     if( _pLinkNode == NULL ) {
-        RAVELOG_WARNA("no link is selected\n");
+        RAVELOG_WARN("no link is selected\n");
         return;
     }
 
@@ -488,7 +488,7 @@ void IvJointDragger::UpdateSkeleton()
                 probotitem->GetRobot()->GetController()->SetDesired(vjoints);
             }
             else {
-                pbody->GetBody()->SetJointValues(vjoints,true);
+                pbody->GetBody()->SetDOFValues(vjoints,true);
             }
         }
     }

@@ -97,7 +97,7 @@ public:
     
     bool InitEnvironment(boost::shared_ptr<btCollisionWorld>& world)
     {
-        RAVELOG_VERBOSEA("init bullet collision environment\n");
+        RAVELOG_VERBOSE("init bullet collision environment\n");
 
         _world = world;
         btGImpactCollisionAlgorithm::registerAlgorithm((btCollisionDispatcher*)_world->getDispatcher());
@@ -108,7 +108,7 @@ public:
 
     void DestroyEnvironment()
     {
-        RAVELOG_VERBOSEA("destroying bullet collision environment\n");
+        RAVELOG_VERBOSE("destroying bullet collision environment\n");
         _world.reset();
     }
     
@@ -169,7 +169,7 @@ public:
                 }
 
                 if( !child ) {
-                    RAVELOG_WARNA("did not create geom type %d\n", itgeom->GetType());
+                    RAVELOG_WARN("did not create geom type %d\n", itgeom->GetType());
                     continue;
                 }
 
@@ -229,7 +229,7 @@ public:
                     body1 = (btRigidBody*)pinfo->vlinks[(*itjoint)->GetSecondAttached()->GetIndex()]->obj.get();
             
                 if( body0 == NULL || body1 == NULL ) {
-                    RAVELOG_ERRORA(str(boost::format("joint %s needs to be attached to two bodies!\n")%(*itjoint)->GetName()));
+                    RAVELOG_ERROR(str(boost::format("joint %s needs to be attached to two bodies!\n")%(*itjoint)->GetName()));
                     continue;
                 }
 
@@ -267,13 +267,13 @@ public:
                     break;
                 }
                 case KinBody::Joint::JointUniversal:
-                    RAVELOG_ERRORA("universal joint not supported by bullet\n");
+                    RAVELOG_ERROR("universal joint not supported by bullet\n");
                     break;
                 case KinBody::Joint::JointHinge2:
-                    RAVELOG_ERRORA("hinge2 joint not supported by bullet\n");
+                    RAVELOG_ERROR("hinge2 joint not supported by bullet\n");
                     break;
                 default:
-                    RAVELOG_ERRORA("unknown joint type %d\n", (*itjoint)->GetType());
+                    RAVELOG_ERROR("unknown joint type %d\n", (*itjoint)->GetType());
                     break;
                 }
             

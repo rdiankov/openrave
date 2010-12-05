@@ -70,7 +70,7 @@ def run(args=None):
         h=env.plot3(array([target]),10.0)
         for i in random.permutation(len(solutions))[0:min(80,len(solutions))]:
             with env:
-                robot.SetJointValues(solutions[i],ikmodel.manip.GetArmIndices())
+                robot.SetDOFValues(solutions[i],ikmodel.manip.GetArmIndices())
                 env.UpdatePublishedBodies()
             time.sleep(0.05)
         h=None

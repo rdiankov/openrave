@@ -283,8 +283,8 @@ public:
     virtual std::vector<AttachedSensorPtr>& GetSensors() RAVE_DEPRECATED { RAVELOG_WARN("RobotBase::GetSensors() is deprecated\n"); return _vecSensors; }
     virtual std::vector<AttachedSensorPtr>& GetAttachedSensors() { return _vecSensors; }
 
-    virtual void SetJointValues(const std::vector<dReal>& vJointValues, bool bCheckLimits = false);
-    virtual void SetJointValues(const std::vector<dReal>& vJointValues, const Transform& transbase, bool bCheckLimits = false);
+    virtual void SetDOFValues(const std::vector<dReal>& vJointValues, bool bCheckLimits = false);
+    virtual void SetDOFValues(const std::vector<dReal>& vJointValues, const Transform& transbase, bool bCheckLimits = false);
 
     virtual void SetBodyTransformations(const std::vector<Transform>& vbodies);
 

@@ -40,6 +40,8 @@ public:
         - add the extra tags to PlannerParameters::_vXMLParameters
         - override PlannerParameters::startElement and PlannerParameters::endElement for processing
         - possibly override the PlannerParameters::characters
+
+        Also allows the parameters and descriptions to be serialized to reStructuredText for documentation purposes.
     */
     class RAVE_API PlannerParameters : public BaseXMLReader, public XMLReadable
     {

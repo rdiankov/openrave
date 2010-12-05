@@ -96,7 +96,7 @@ class GrasperProblem : public ProblemInstance
 
         _planner = RaveCreatePlanner(GetEnv(),plannername);
         if( !_planner ) {
-            RAVELOG_WARNA("Failed to create planner\n");
+            RAVELOG_WARN("Failed to create planner\n");
             return -1;
         }
 
@@ -189,12 +189,12 @@ class GrasperProblem : public ProblemInstance
             else if( cmd == "translationstepmult" )
                 sinput >> params->ftranslationstepmult;
             else {
-                RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
+                RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
             }
 
             if( !sinput ) {
-                RAVELOG_ERRORA(str(boost::format("failed processing command %s\n")%cmd));
+                RAVELOG_ERROR(str(boost::format("failed processing command %s\n")%cmd));
                 return false;
             }
         }
@@ -210,7 +210,7 @@ class GrasperProblem : public ProblemInstance
         _robot->GetActiveDOFValues(params->vinitialconfig);
     
         if( !_planner->InitPlan(_robot, params) ) {
-            RAVELOG_WARNA("InitPlan failed\n");
+            RAVELOG_WARN("InitPlan failed\n");
             return false;
         }
 
@@ -244,7 +244,7 @@ class GrasperProblem : public ProblemInstance
             _robot->GetActiveManipulator()->GetChildLinks(vlinks);
             FOREACHC(itlink, vlinks) {
                 if( GetEnv()->CheckCollision(KinBody::LinkConstPtr(*itlink), KinBodyConstPtr(params->targetbody), _report) ) {
-                    RAVELOG_VERBOSEA(str(boost::format("contact %s\n")%_report->__str__()));
+                    RAVELOG_VERBOSE(str(boost::format("contact %s\n")%_report->__str__()));
                     FOREACH(itcontact,_report->contacts) {
                         if( _report->plink1 != *itlink ) {
                             itcontact->norm = -itcontact->norm;
@@ -257,7 +257,7 @@ class GrasperProblem : public ProblemInstance
             GetEnv()->GetCollisionChecker()->SetCollisionOptions(0);
         }
 
-        RAVELOG_VERBOSEA(str(boost::format("number of contacts: %d\n")%contacts.size()));
+        RAVELOG_VERBOSE(str(boost::format("number of contacts: %d\n")%contacts.size()));
         FOREACH(itcontact,contacts) {
             Vector norm = itcontact->first.norm;
             Vector pos = itcontact->first.pos;//-norm*itcontact->first.depth; //?
@@ -318,12 +318,12 @@ class GrasperProblem : public ProblemInstance
             else if( cmd == "center" )
                 sinput >> vmapcenter.x >> vmapcenter.y >> vmapcenter.z;
             else {
-                RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
+                RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
             }
 
             if( !sinput ) {
-                RAVELOG_ERRORA(str(boost::format("failed processing command %s\n")%cmd));
+                RAVELOG_ERROR(str(boost::format("failed processing command %s\n")%cmd));
                 return false;
             }
         }
@@ -366,12 +366,12 @@ class GrasperProblem : public ProblemInstance
             else if( cmd == "getlinkcollisions" )
                 bGetLinkCollisions = true;
             else {
-                RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
+                RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
             }
 
             if( !sinput ) {
-                RAVELOG_ERRORA(str(boost::format("failed processing command %s\n")%cmd));
+                RAVELOG_ERROR(str(boost::format("failed processing command %s\n")%cmd));
                 return false;
             }
         }
@@ -658,10 +658,10 @@ class GrasperProblem : public ProblemInstance
     void _GetStableContacts(vector< pair<CollisionReport::CONTACT,int> >& contacts, const Vector& direction, dReal mu)
     {
         BOOST_ASSERT(mu>0);
-        RAVELOG_DEBUGA("Starting GetStableContacts...\n");
+        RAVELOG_DEBUG("Starting GetStableContacts...\n");
 
         if(!GetEnv()->CheckCollision(KinBodyConstPtr(_robot))) {
-            RAVELOG_ERRORA("GrasperProblem::GetStableContacts - Error: Robot is not colliding with the target.\n");
+            RAVELOG_ERROR("GrasperProblem::GetStableContacts - Error: Robot is not colliding with the target.\n");
             return;
         }
 
@@ -678,7 +678,7 @@ class GrasperProblem : public ProblemInstance
         std::vector<dReal> J;    
         FOREACHC(itlink,_robot->GetLinks()) {
             if( GetEnv()->CheckCollision(KinBody::LinkConstPtr(*itlink), _report) )  {
-                RAVELOG_DEBUGA(str(boost::format("contact %s:%s with %s:%s\n")%_report->plink1->GetParent()->GetName()%_report->plink1->GetName()%_report->plink2->GetParent()->GetName()%_report->plink2->GetName()));
+                RAVELOG_DEBUG(str(boost::format("contact %s:%s with %s:%s\n")%_report->plink1->GetParent()->GetName()%_report->plink1->GetName()%_report->plink2->GetParent()->GetName()%_report->plink2->GetName()));
                 FOREACH(itcontact, _report->contacts) {  
                     if( _report->plink1 != *itlink )
                         itcontact->norm = -itcontact->norm;
@@ -704,7 +704,7 @@ class GrasperProblem : public ProblemInstance
                     //if ilink is degenerate to base link (no joint between them), deltaxyz will be 0 0 0
                     //so treat it as if it were part of the base link
                     if(deltaxyz.lengthsqr3() < 1e-7f) {
-                        RAVELOG_WARNA(str(boost::format("degenerate link at %s")%(*itlink)->GetName()));
+                        RAVELOG_WARN(str(boost::format("degenerate link at %s")%(*itlink)->GetName()));
                         deltaxyz = direction;
                     }
                 
@@ -716,7 +716,7 @@ class GrasperProblem : public ProblemInstance
                         for(int q = 0; q < 3; q++)
                             ss << deltaxyz[q] << " ";
                         ss << endl;
-                        RAVELOG_DEBUGA(ss.str());
+                        RAVELOG_DEBUG(ss.str());
                     }
 
                     // determine if contact is stable (if angle is obtuse, can't be in friction cone)

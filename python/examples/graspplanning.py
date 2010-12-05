@@ -257,7 +257,7 @@ class GraspPlanning(metaclass.AutoReloader):
                 if res is None:
                     print 'forcing fingers'
                     with env:
-                        robot.SetJointValues(gmodel.grasps[graspindex][gmodel.graspindices['igrasppreshape']],manip.GetGripperIndices())
+                        robot.SetDOFValues(gmodel.grasps[graspindex][gmodel.graspindices['igrasppreshape']],manip.GetGripperIndices())
             self.waitrobot(robot)
             with env:
                 robot.ReleaseAllGrabbed()

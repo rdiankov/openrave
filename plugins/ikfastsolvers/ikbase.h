@@ -72,7 +72,7 @@ class IkFastSolver : public IkSolverBase
         _cblimits = probot->RegisterChangeCallback(KinBody::Prop_JointLimits,boost::bind(&IkFastSolver<IKReal,Solution>::SetJointLimits,boost::bind(&sptr_from<IkFastSolver<IKReal,Solution> >, weak_solver())));
 
         if( _nTotalDOF != (int)pmanip->GetArmIndices().size() ) {
-            RAVELOG_ERRORA(str(boost::format("ik %s configured with different number of joints than robot manipulator (%d!=%d)\n")%GetXMLId()%pmanip->GetArmIndices().size()%_nTotalDOF));
+            RAVELOG_ERROR(str(boost::format("ik %s configured with different number of joints than robot manipulator (%d!=%d)\n")%GetXMLId()%pmanip->GetArmIndices().size()%_nTotalDOF));
             return false;
         }
 
@@ -96,7 +96,7 @@ class IkFastSolver : public IkSolverBase
     virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, int filteroptions, boost::shared_ptr< std::vector<dReal> > result)
     {
         if( param.GetType() != _iktype ) {
-            RAVELOG_WARNA(str(boost::format("ik solver only supports type %d, given %d")%_iktype%param.GetType()));
+            RAVELOG_WARN(str(boost::format("ik solver only supports type %d, given %d")%_iktype%param.GetType()));
             return false;
         }
 
@@ -116,7 +116,7 @@ class IkFastSolver : public IkSolverBase
     virtual bool Solve(const IkParameterization& param, int filteroptions, std::vector< std::vector<dReal> >& qSolutions)
     {
         if( param.GetType() != _iktype ) {
-            RAVELOG_WARNA(str(boost::format("ik solver only supports type %d, given %d\n")%_iktype%param.GetType()));
+            RAVELOG_WARN(str(boost::format("ik solver only supports type %d, given %d\n")%_iktype%param.GetType()));
             return false;
         }
 
@@ -139,7 +139,7 @@ class IkFastSolver : public IkSolverBase
     virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, const std::vector<dReal>& vFreeParameters, int filteroptions, boost::shared_ptr< std::vector<dReal> > result)
     {
         if( param.GetType() != _iktype ) {
-            RAVELOG_WARNA(str(boost::format("ik solver only supports type %d, given %d\n")%_iktype%param.GetType()));
+            RAVELOG_WARN(str(boost::format("ik solver only supports type %d, given %d\n")%_iktype%param.GetType()));
             return false;
         }
         if( vFreeParameters.size() != _vfreeparams.size() ) {
@@ -161,7 +161,7 @@ class IkFastSolver : public IkSolverBase
     virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, int filteroptions, std::vector< std::vector<dReal> >& qSolutions)
     {
         if( param.GetType() != _iktype ) {
-            RAVELOG_WARNA(str(boost::format("ik solver only supports type %d, given %d")%_iktype%param.GetType()));
+            RAVELOG_WARN(str(boost::format("ik solver only supports type %d, given %d")%_iktype%param.GetType()));
             return false;
         }
 
@@ -463,10 +463,10 @@ private:
         }
         if( (filteroptions&IKFO_CheckEnvCollisions) && GetEnv()->CheckCollision(KinBodyConstPtr(probot), boost::shared_ptr<CollisionReport>(&report,null_deleter())) ) {
             if( !!report.plink1 && !!report.plink2 ) {
-                RAVELOG_VERBOSEA(str(boost::format("IKFastSolver: collision %s:%s with %s:%s\n")%report.plink1->GetParent()->GetName()%report.plink1->GetName()%report.plink2->GetParent()->GetName()%report.plink2->GetName()));
+                RAVELOG_VERBOSE(str(boost::format("IKFastSolver: collision %s:%s with %s:%s\n")%report.plink1->GetParent()->GetName()%report.plink1->GetName()%report.plink2->GetParent()->GetName()%report.plink2->GetName()));
             }
             else {
-                RAVELOG_VERBOSEA("ik collision, no link\n");
+                RAVELOG_VERBOSE("ik collision, no link\n");
             }
 
             // if gripper is colliding, solutions will always fail, so completely stop solution process
@@ -593,7 +593,7 @@ private:
         CollisionReport report;
         if( pmanip->CheckIndependentCollision(boost::shared_ptr<CollisionReport>(&report,null_deleter())) ) {
             if( !!report.plink1 && !!report.plink2 ) {
-                RAVELOG_VERBOSEA(str(boost::format("IKFastSolver: indep collision %s:%s with %s:%s\n")%report.plink1->GetParent()->GetName()%report.plink1->GetName()%report.plink2->GetParent()->GetName()%report.plink2->GetName()));
+                RAVELOG_VERBOSE(str(boost::format("IKFastSolver: indep collision %s:%s with %s:%s\n")%report.plink1->GetParent()->GetName()%report.plink1->GetName()%report.plink2->GetParent()->GetName()%report.plink2->GetName()));
             }
 
             return true;

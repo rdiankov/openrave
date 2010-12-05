@@ -29,7 +29,7 @@
 #define CHECK_COLLISION_BODY(body) { \
         CHECK_INTERFACE(body); \
         if( !(body)->GetCollisionData() ) { \
-            RAVELOG_WARNA("body %s not added to enviornment!\n", (body)->GetName().c_str()); \
+            RAVELOG_WARN("body %s not added to enviornment!\n", (body)->GetName().c_str()); \
             return false; \
         } \
     }
@@ -40,7 +40,7 @@ class Environment : public EnvironmentBase
     Environment() : EnvironmentBase()
     {
         _homedirectory = RaveGetHomeDirectory();
-        RAVELOG_DEBUGA("setting openrave cache directory to %s\n",_homedirectory.c_str());
+        RAVELOG_DEBUG("setting openrave cache directory to %s\n",_homedirectory.c_str());
 
         _nBodiesModifiedStamp = 0;
         _nEnvironmentIndex = 1;
@@ -137,11 +137,11 @@ class Environment : public EnvironmentBase
         }
 
         if( !!localchecker ) {
-            RAVELOG_DEBUGA("using %s collision checker\n", localchecker->GetXMLId().c_str());
+            RAVELOG_DEBUG("using %s collision checker\n", localchecker->GetXMLId().c_str());
             SetCollisionChecker(localchecker);
         }
         else {
-            RAVELOG_WARNA("failed to find any collision checker.\n");
+            RAVELOG_WARN("failed to find any collision checker.\n");
         }
         if( !!_threadSimulation ) {
             _threadSimulation->join();
@@ -169,7 +169,7 @@ class Environment : public EnvironmentBase
 
         // destroy the problems (their destructors could attempt to lock environment, so have to do it before global lock)
         // however, do not clear the _listProblems yet
-        RAVELOG_DEBUGA("destroy problems\n");
+        RAVELOG_DEBUG("destroy problems\n");
         list<ProblemInstancePtr> listProblems;
         {
             boost::mutex::scoped_lock lock(_mutexInterfaces);
@@ -180,7 +180,7 @@ class Environment : public EnvironmentBase
         }
         listProblems.clear();
 
-        RAVELOG_DEBUGA("resetting raveviewer\n");
+        RAVELOG_DEBUG("resetting raveviewer\n");
         if( !!_pCurrentViewer ) {
             _pCurrentViewer->deselect();
             _pCurrentViewer->Reset();
@@ -234,7 +234,7 @@ class Environment : public EnvironmentBase
     virtual void Reset()
     {
         // destruction order is *very* important, don't touch it without consultation
-        RAVELOG_DEBUGA("resetting raveviewer\n");
+        RAVELOG_DEBUG("resetting raveviewer\n");
         if( !!_pCurrentViewer ) {
             _pCurrentViewer->deselect();
             _pCurrentViewer->Reset();
@@ -375,7 +375,7 @@ class Environment : public EnvironmentBase
         }
 
         if( !bSuccess ) {
-            RAVELOG_WARNA("load failed on file %s\n", filename.c_str());
+            RAVELOG_WARN("load failed on file %s\n", filename.c_str());
         }
     
         return bSuccess;
@@ -385,7 +385,7 @@ class Environment : public EnvironmentBase
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         if( !ParseXMLData(boost::shared_ptr<OpenRAVEXMLParser::EnvironmentXMLReader>(new OpenRAVEXMLParser::EnvironmentXMLReader(shared_from_this(),std::list<std::pair<std::string,std::string> >(),false)),data) ) {
-            RAVELOG_WARNA("load failed environment data\n");
+            RAVELOG_WARN("load failed environment data\n");
             return false;
         }
         return true;
@@ -506,7 +506,7 @@ class Environment : public EnvironmentBase
             // before deleting, make sure no robots are grabbing it!!
             FOREACH(itrobot, _vecrobots) {
                 if( (*itrobot)->IsGrabbing(*it) ) {
-                    RAVELOG_WARNA("destroy %s already grabbed by robot %s!\n", pbody->GetName().c_str(), (*itrobot)->GetName().c_str());
+                    RAVELOG_WARN("destroy %s already grabbed by robot %s!\n", pbody->GetName().c_str(), (*itrobot)->GetName().c_str());
                     (*itrobot)->Release(pbody);
                 }
             }
@@ -602,11 +602,11 @@ class Environment : public EnvironmentBase
         }
         _pPhysicsEngine = pengine;
         if( !_pPhysicsEngine ) {
-            RAVELOG_DEBUGA("disabling physics\n");
+            RAVELOG_DEBUG("disabling physics\n");
             _pPhysicsEngine.reset(new DummyPhysicsEngine(shared_from_this()));
         }
         else {
-            RAVELOG_DEBUGA(str(boost::format("setting %s physics engine\n")%_pPhysicsEngine->GetXMLId()));
+            RAVELOG_DEBUG(str(boost::format("setting %s physics engine\n")%_pPhysicsEngine->GetXMLId()));
         }
         _pPhysicsEngine->InitEnvironment();
         return true;
@@ -651,11 +651,11 @@ class Environment : public EnvironmentBase
         }
         _pCurrentChecker = pchecker;
         if( !_pCurrentChecker ) {
-            RAVELOG_DEBUGA("disabling collisions\n");
+            RAVELOG_DEBUG("disabling collisions\n");
             _pCurrentChecker.reset(new DummyCollisionChecker(shared_from_this()));
         }
         else {
-            RAVELOG_DEBUGA(str(boost::format("setting %s collision checker\n")%_pCurrentChecker->GetXMLId()));
+            RAVELOG_DEBUG(str(boost::format("setting %s collision checker\n")%_pCurrentChecker->GetXMLId()));
         }
         return _pCurrentChecker->InitEnvironment();
     }
@@ -1318,12 +1318,12 @@ protected:
             FOREACHC(itrobot, r->_vecrobots) {
                 RobotBasePtr pnewrobot = RaveCreateRobot(shared_from_this(), (*itrobot)->GetXMLId());
                 if( !pnewrobot ) {
-                    RAVELOG_ERRORA("failed to create robot %s\n", (*itrobot)->GetXMLId().c_str());
+                    RAVELOG_ERROR("failed to create robot %s\n", (*itrobot)->GetXMLId().c_str());
                     continue;
                 }
 
                 if( !pnewrobot->Clone(*itrobot, options)) {
-                    RAVELOG_ERRORA("failed to clone robot %s\n", (*itrobot)->GetName().c_str());
+                    RAVELOG_ERROR("failed to clone robot %s\n", (*itrobot)->GetName().c_str());
                     continue;
                 }
 
@@ -1344,7 +1344,7 @@ protected:
                 }
                 KinBodyPtr pnewbody(new KinBody(PT_KinBody,shared_from_this()));
                 if( !pnewbody->Clone(*itbody,options) ) {
-                    RAVELOG_ERRORA("failed to clone body %s\n", (*itbody)->GetName().c_str());
+                    RAVELOG_ERROR("failed to clone body %s\n", (*itbody)->GetName().c_str());
                     continue;
                 }
 
@@ -1402,11 +1402,11 @@ protected:
             FOREACHC(itsensor,r->_listSensors) {
                 SensorBasePtr pnewsensor = RaveCreateSensor(shared_from_this(), (*itsensor)->GetXMLId());
                 if( !pnewsensor ) {
-                    RAVELOG_ERRORA("failed to create sensor %s\n", (*itsensor)->GetXMLId().c_str());
+                    RAVELOG_ERROR("failed to create sensor %s\n", (*itsensor)->GetXMLId().c_str());
                     continue;
                 }
                 if( !pnewsensor->Clone(*itsensor, options)) {
-                    RAVELOG_ERRORA("failed to clone sensor %s\n", (*itsensor)->GetName().c_str());
+                    RAVELOG_ERROR("failed to clone sensor %s\n", (*itsensor)->GetName().c_str());
                     continue;
                 }
                 _listSensors.push_back(pnewsensor);

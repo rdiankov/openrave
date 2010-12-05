@@ -349,7 +349,7 @@ public:
         }
         bulletspace->DestroyEnvironment();
         if( !!_world && _world->getNumCollisionObjects() )
-            RAVELOG_WARNA("world objects still left!\n");
+            RAVELOG_WARN("world objects still left!\n");
     
         _world.reset();
         _dispatcher.reset();
@@ -368,7 +368,7 @@ public:
     {
         _options = options;
         if( options & CO_Distance ) {
-            //RAVELOG_WARNA("bullet checker doesn't support CO_Distance\n");
+            //RAVELOG_WARN("bullet checker doesn't support CO_Distance\n");
             return false;
         }
 
@@ -396,7 +396,7 @@ public:
     virtual bool CheckCollision(KinBodyConstPtr pbody, CollisionReportPtr report)
     {
         if( pbody->GetLinks().size() == 0 || !pbody->IsEnabled() ) {
-            RAVELOG_WARNA(str(boost::format("body %s not valid\n")%pbody->GetName()));
+            RAVELOG_WARN(str(boost::format("body %s not valid\n")%pbody->GetName()));
             return false;
         }
 
@@ -423,11 +423,11 @@ public:
     virtual bool CheckCollision(KinBodyConstPtr pbody1, KinBodyConstPtr pbody2, CollisionReportPtr report)
     {
         if( pbody1->GetLinks().size() == 0 || !pbody1->IsEnabled()  ) {
-            RAVELOG_WARNA(str(boost::format("body1 %s not valid\n")%pbody1->GetName()));
+            RAVELOG_WARN(str(boost::format("body1 %s not valid\n")%pbody1->GetName()));
             return false;
         }
         if( pbody2 == NULL || pbody2->GetLinks().size() == 0 || !pbody2->IsEnabled()  ) {
-            RAVELOG_WARNA(str(boost::format("body2 %s not valid\n")%pbody2->GetName()));
+            RAVELOG_WARN(str(boost::format("body2 %s not valid\n")%pbody2->GetName()));
             return false;
         }
 
@@ -443,7 +443,7 @@ public:
     virtual bool CheckCollision(KinBody::LinkConstPtr plink, CollisionReportPtr report)
     {
         if( !plink->IsEnabled() ) {
-            RAVELOG_WARNA(str(boost::format("calling collision on disabled link %s\n")%plink->GetName()));
+            RAVELOG_WARN(str(boost::format("calling collision on disabled link %s\n")%plink->GetName()));
             return false;
         }
 
@@ -457,11 +457,11 @@ public:
     virtual bool CheckCollision(KinBody::LinkConstPtr plink1, KinBody::LinkConstPtr plink2, CollisionReportPtr report)
     {
         if( !plink1->IsEnabled() ) {
-            RAVELOG_WARNA(str(boost::format("calling collision on disabled link1 %s\n")%plink1->GetName()));
+            RAVELOG_WARN(str(boost::format("calling collision on disabled link1 %s\n")%plink1->GetName()));
             return false;
         }
         if( !plink2->IsEnabled() ) {
-            RAVELOG_WARNA(str(boost::format("calling collision on disabled link2 %s\n")%plink2->GetName()));
+            RAVELOG_WARN(str(boost::format("calling collision on disabled link2 %s\n")%plink2->GetName()));
             return false;
         }
 
@@ -474,12 +474,12 @@ public:
     virtual bool CheckCollision(KinBody::LinkConstPtr plink, KinBodyConstPtr pbody, CollisionReportPtr report)
     {
         if( pbody->GetLinks().size() == 0 || !pbody->IsEnabled()  ) { // 
-            RAVELOG_WARNA(str(boost::format("body %s not valid\n")%pbody->GetName()));
+            RAVELOG_WARN(str(boost::format("body %s not valid\n")%pbody->GetName()));
             return false;
         }
 
         if( !plink->IsEnabled() ) {
-            RAVELOG_WARNA(str(boost::format("calling collision on disabled link %s\n")%plink->GetName()));
+            RAVELOG_WARN(str(boost::format("calling collision on disabled link %s\n")%plink->GetName()));
             return false;
         }
 
@@ -492,7 +492,7 @@ public:
     
     virtual bool CheckCollision(KinBody::LinkConstPtr plink, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report)
     {
-        RAVELOG_FATALA("This type of collision checking is not yet implemented in the Bullet collision checker.\n"); 
+        RAVELOG_FATAL("This type of collision checking is not yet implemented in the Bullet collision checker.\n"); 
         BOOST_ASSERT(0);
         bulletspace->Synchronize();
         return false;
@@ -504,7 +504,7 @@ public:
             return CheckCollision(pbody, report);
 
         if( pbody->GetLinks().size() == 0 || !pbody->IsEnabled()  ) {
-            RAVELOG_WARNA(str(boost::format("body %s not valid\n")%pbody->GetName()));
+            RAVELOG_WARN(str(boost::format("body %s not valid\n")%pbody->GetName()));
             return false;
         }
 
@@ -518,7 +518,7 @@ public:
     virtual bool CheckCollision(const RAY& ray, KinBody::LinkConstPtr plink, CollisionReportPtr report)
     {
         if( !plink->IsEnabled() ) {
-            RAVELOG_WARNA(str(boost::format("calling collision on disabled link %s\n")%plink->GetName()));
+            RAVELOG_WARN(str(boost::format("calling collision on disabled link %s\n")%plink->GetName()));
             return false;
         }
 
@@ -529,7 +529,7 @@ public:
         _world->updateAabbs();
     
         if( fabsf(sqrtf(ray.dir.lengthsqr3())-1) < 1e-4 )
-            RAVELOG_DEBUGA("CheckCollision: ray direction length is 1.0, note that only collisions within a distance of 1.0 will be checked\n");
+            RAVELOG_DEBUG("CheckCollision: ray direction length is 1.0, note that only collisions within a distance of 1.0 will be checked\n");
 
         btVector3 from = BulletSpace::GetBtVector(ray.pos);
         btVector3 to = BulletSpace::GetBtVector(ray.pos+ray.dir);
@@ -579,7 +579,7 @@ public:
     virtual bool CheckCollision(const RAY& ray, KinBodyConstPtr pbody, CollisionReportPtr report)
     {
         if( pbody->GetLinks().size() == 0 || !pbody->IsEnabled()  ) {
-            RAVELOG_WARNA(str(boost::format("body %s not valid\n")%pbody->GetName()));
+            RAVELOG_WARN(str(boost::format("body %s not valid\n")%pbody->GetName()));
             return false;
         }
 
@@ -590,7 +590,7 @@ public:
         _world->updateAabbs();
 
         if( fabsf(sqrtf(ray.dir.lengthsqr3())-1) < 1e-4 )
-            RAVELOG_DEBUGA("CheckCollision: ray direction length is 1.0, note that only collisions within a distance of 1.0 will be checked\n");
+            RAVELOG_DEBUG("CheckCollision: ray direction length is 1.0, note that only collisions within a distance of 1.0 will be checked\n");
 
         btVector3 from = BulletSpace::GetBtVector(ray.pos);
         btVector3 to = BulletSpace::GetBtVector(ray.pos+ray.dir);
@@ -653,7 +653,7 @@ public:
         _world->updateAabbs();
 
         if( fabsf(sqrtf(ray.dir.lengthsqr3())-1) < 1e-4 )
-            RAVELOG_DEBUGA("CheckCollision: ray direction length is 1.0, note that only collisions within a distance of 1.0 will be checked\n");
+            RAVELOG_DEBUG("CheckCollision: ray direction length is 1.0, note that only collisions within a distance of 1.0 will be checked\n");
 
         // unfortunately, the bullet ray checker cannot handle enabled bodies properly, so have to move all of them away
         list<boost::shared_ptr<KinBody::KinBodyStateSaver> > listsavers;
@@ -711,7 +711,7 @@ public:
     virtual bool CheckSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report)
     {
         if( pbody->GetLinks().size() == 0 || !pbody->IsEnabled()  ) {
-            RAVELOG_WARNA(str(boost::format("body %s not valid\n")%pbody->GetName()));
+            RAVELOG_WARN(str(boost::format("body %s not valid\n")%pbody->GetName()));
             return false;
         }
 
@@ -728,7 +728,7 @@ public:
         return bCollision;
     }
 
-    virtual void SetTolerance(dReal tolerance) { RAVELOG_WARNA("not implemented\n"); }
+    virtual void SetTolerance(dReal tolerance) { RAVELOG_WARN("not implemented\n"); }
 
 private:
     boost::shared_ptr<BulletSpace> bulletspace;

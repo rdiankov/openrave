@@ -201,14 +201,14 @@ public:
 
     bool InitEnvironment()
     {
-        RAVELOG_VERBOSEA("init ode collision environment\n");
+        RAVELOG_VERBOSE("init ode collision environment\n");
         _ode.reset(new ODEResources());
         return true;
     }
 
     void DestroyEnvironment()
     {
-        RAVELOG_VERBOSEA("destroying ode collision environment\n");
+        RAVELOG_VERBOSE("destroying ode collision environment\n");
         _ode.reset();
     }
     
@@ -268,7 +268,7 @@ public:
                     }
                     break;
                 default:
-                    RAVELOG_WARNA("ode doesn't support geom type %d\n", itgeom->GetType());
+                    RAVELOG_WARN("ode doesn't support geom type %d\n", itgeom->GetType());
                     break;
                 }
 
@@ -347,7 +347,7 @@ public:
                 }
 
                 if( joint == NULL ) {
-                    RAVELOG_WARNA("ode failed to create joint type %d\n", (*itjoint)->GetType());
+                    RAVELOG_WARN("ode failed to create joint type %d\n", (*itjoint)->GetType());
                     continue;
                 }
 

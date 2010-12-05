@@ -91,20 +91,20 @@ class LoggingProblem : public ProblemInstance
             else break;
 
             if( !sinput ) {
-                RAVELOG_ERRORA("failed\n");
+                RAVELOG_ERROR("failed\n");
                 break;
             }
         }
 
         if( filename.size() == 0 ) {
-            RAVELOG_ERRORA("bad filename\n");
+            RAVELOG_ERROR("bad filename\n");
             sout << "0" << endl;
             return false;
         }
 
         ofstream fout(filename.c_str());
         if( !fout ) {
-            RAVELOG_ERRORA("failed to open file %s\n", filename.c_str());
+            RAVELOG_ERROR("failed to open file %s\n", filename.c_str());
             sout << "0" << endl;
             return false;
         }
@@ -135,7 +135,7 @@ class LoggingProblem : public ProblemInstance
             }
             else {
                 // have to process each link/geometry file
-                RAVELOG_ERRORA(str(boost::format("cannot process object %s defined inside environment file\n")%pbody->GetName()));
+                RAVELOG_ERROR(str(boost::format("cannot process object %s defined inside environment file\n")%pbody->GetName()));
                 continue;
                 //fout << ">" << endl;
             }
@@ -167,17 +167,17 @@ class LoggingProblem : public ProblemInstance
 
     virtual bool StartReplay(ostream& sout, istream& sinput)
     {
-        RAVELOG_ERRORA("not implemented\n");
+        RAVELOG_ERROR("not implemented\n");
         return false;
     }
     virtual bool StartRecording(ostream& sout, istream& sinput)
     {
-        RAVELOG_ERRORA("not implemented\n");
+        RAVELOG_ERROR("not implemented\n");
         return false;
     }
     virtual bool StopRecording(ostream& sout, istream& sinput)
     {
-        RAVELOG_ERRORA("not implemented\n");
+        RAVELOG_ERROR("not implemented\n");
         return false;
     }
 

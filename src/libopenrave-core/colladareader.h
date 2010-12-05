@@ -54,7 +54,7 @@ class ColladaReader : public daeErrorHandler
             }
         
             if (!visualnode) {
-                RAVELOG_WARNA(str(boost::format("couldn't find parent node of element id %s, sid %s\n")%pkinematicaxis->getID()%pkinematicaxis->getSid()));
+                RAVELOG_WARN(str(boost::format("couldn't find parent node of element id %s, sid %s\n")%pkinematicaxis->getID()%pkinematicaxis->getSid()));
             }
         }
         
@@ -216,7 +216,7 @@ class ColladaReader : public daeErrorHandler
 //                for(size_t i=0;i < processed_nodes.size();i++) {
 //                    //  If node belongs to processed nodes
 //                    if (nodeId == processed_nodes[i]) {
-//                        RAVELOG_VERBOSEA("Processed node name: %s\n",processed_nodes[i].c_str());
+//                        RAVELOG_VERBOSE("Processed node name: %s\n",processed_nodes[i].c_str());
 //                        found = true;
 //                        break;
 //                    }
@@ -225,11 +225,11 @@ class ColladaReader : public daeErrorHandler
 //                //  If the node is not part of a kinbody
 //                if (!found) {
 //                    if (!Extract(rigid_body, NULL, NULL, pnode, v_all_bindings)) {
-//                        RAVELOG_WARNA("failed to load kinbody WIHTOUT Joints\n");
+//                        RAVELOG_WARN("failed to load kinbody WIHTOUT Joints\n");
 //                        continue;
 //                    }
 //                    _penv->AddKinBody(rigid_body, true);
-//                    RAVELOG_VERBOSEA("Found node %s\n",visual_scene->getNode_array()[node]->getName());
+//                    RAVELOG_VERBOSE("Found node %s\n",visual_scene->getNode_array()[node]->getName());
 //                }
 //            }
 //        }
@@ -489,7 +489,7 @@ class ColladaReader : public daeErrorHandler
         for (size_t ijoint = 0; ijoint < ktec->getInstance_joint_array().getCount(); ++ijoint) {
             domJointRef pelt = daeSafeCast<domJoint> (ktec->getInstance_joint_array()[ijoint]->getUrl().getElement());
             if (!pelt) {
-                RAVELOG_WARNA("failed to get joint from instance\n");
+                RAVELOG_WARN("failed to get joint from instance\n");
             }
             else {
                 vdomjoints.push_back(pelt);
@@ -505,7 +505,7 @@ class ColladaReader : public daeErrorHandler
         for (size_t iform = 0; iform < ktec->getFormula_array().getCount(); ++iform) {
             domFormulaRef pf = ktec->getFormula_array()[iform];
             if (!pf->getTarget()) {
-                RAVELOG_WARNA("formula target not valid\n");
+                RAVELOG_WARN("formula target not valid\n");
                 continue;
             }
 
@@ -525,7 +525,7 @@ class ColladaReader : public daeErrorHandler
                         peltmath = pelt;
                     }
                     else {
-                        RAVELOG_WARNA(str(boost::format("unsupported formula element: %s\n")%pelt->getElementName()));
+                        RAVELOG_WARN(str(boost::format("unsupported formula element: %s\n")%pelt->getElementName()));
                     }
                 }
                 if (!!peltmath) {
@@ -637,7 +637,7 @@ class ColladaReader : public daeErrorHandler
             ExtractGeometry(pdomnode,plink,listAxisBindings);
         }
         else {
-            RAVELOG_DEBUGA(str(boost::format("Attachment link elements: %d\n")%pdomlink->getAttachment_full_array().getCount()));
+            RAVELOG_DEBUG(str(boost::format("Attachment link elements: %d\n")%pdomlink->getAttachment_full_array().getCount()));
             Transform tlink = _ExtractFullTransform(pdomlink);
             plink->_t = tParentLink * tlink; // use the kinematics coordinate system for each link
           
@@ -981,7 +981,7 @@ class ColladaReader : public daeErrorHandler
             domInstance_geometryRef domigeom = pdomnode->getInstance_geometry_array()[igeom];
             domGeometryRef domgeom = daeSafeCast<domGeometry> (domigeom->getUrl().getElement());
             if (!domgeom) {
-                RAVELOG_WARNA("link %s does not have valid geometry\n", plink->GetName().c_str());
+                RAVELOG_WARN("link %s does not have valid geometry\n", plink->GetName().c_str());
                 continue;
             }
 
@@ -1880,7 +1880,7 @@ class ColladaReader : public daeErrorHandler
                 else if( !!pnewparam->getSIDREF() ) {
                     domKinematics_newparam::domBoolRef ptarget = daeSafeCast<domKinematics_newparam::domBool>(daeSidRef(pnewparam->getSIDREF()->getValue(), pnewparam).resolve().elt);
                     if( !ptarget ) {
-                        RAVELOG_WARNA("failed to resolve %s from %s\n", pnewparam->getSIDREF()->getValue(), paddr->getID());
+                        RAVELOG_WARN("failed to resolve %s from %s\n", pnewparam->getSIDREF()->getValue(), paddr->getID());
                         continue;
                     }
                     return ptarget->getValue();
@@ -1907,7 +1907,7 @@ class ColladaReader : public daeErrorHandler
                 else if( !!pnewparam->getSIDREF() ) {
                     domKinematics_newparam::domFloatRef ptarget = daeSafeCast<domKinematics_newparam::domFloat>(daeSidRef(pnewparam->getSIDREF()->getValue(), pnewparam).resolve().elt);
                     if( !ptarget ) {
-                        RAVELOG_WARNA("failed to resolve %s from %s\n", pnewparam->getSIDREF()->getValue(), paddr->getID());
+                        RAVELOG_WARN("failed to resolve %s from %s\n", pnewparam->getSIDREF()->getValue(), paddr->getID());
                         continue;
                     }
                     return ptarget->getValue();
@@ -1993,7 +1993,7 @@ class ColladaReader : public daeErrorHandler
 
         domSkewRef pskew = daeSafeCast<domSkew>(pelt);
         if( !!pskew ) {
-            RAVELOG_ERRORA("skew transform not implemented\n");
+            RAVELOG_ERROR("skew transform not implemented\n");
         }
 
         return t;
@@ -2044,12 +2044,12 @@ class ColladaReader : public daeErrorHandler
 
     virtual void handleError( daeString msg )
     {
-        RAVELOG_ERRORA("COLLADA error: %s\n", msg);
+        RAVELOG_ERROR("COLLADA error: %s\n", msg);
     }
 
     virtual void handleWarning( daeString msg )
     {
-        RAVELOG_WARNA("COLLADA warning: %s\n", msg);
+        RAVELOG_WARN("COLLADA warning: %s\n", msg);
     }
 
     inline static dReal GetUnitScale(daeElement* pelt)
@@ -2124,7 +2124,7 @@ class ColladaReader : public daeErrorHandler
         }
 
         if (!pdomjoint || pdomjoint->typeID() != domJoint::ID() || !pdomjoint->getName()) {
-            RAVELOG_WARNA(str(boost::format("could not find collada joint %s!\n")%targetref));
+            RAVELOG_WARN(str(boost::format("could not find collada joint %s!\n")%targetref));
             return KinBody::JointPtr();
         }
 
@@ -2139,7 +2139,7 @@ class ColladaReader : public daeErrorHandler
             }
         }
         if(!pjoint) {
-            RAVELOG_WARNA(str(boost::format("could not find openrave joint %s!\n")%pdomjoint->getName()));
+            RAVELOG_WARN(str(boost::format("could not find openrave joint %s!\n")%pdomjoint->getName()));
         }
         return pjoint;
     }
@@ -2157,14 +2157,14 @@ class ColladaReader : public daeErrorHandler
             domArticulated_systemRef articulated_system; // if filled, contains robot-specific information, so create a robot
             domBind_kinematics_modelRef kbindmodel = kiscene->getBind_kinematics_model_array()[imodel];
             if (!kbindmodel->getNode()) {
-                RAVELOG_WARNA("do not support kinematics models without references to nodes\n");
+                RAVELOG_WARN("do not support kinematics models without references to nodes\n");
                 continue;
             }
        
             // visual information
             domNodeRef node = daeSafeCast<domNode>(daeSidRef(kbindmodel->getNode(), viscene->getUrl().getElement()).resolve().elt);
             if (!node) {
-                RAVELOG_WARNA(str(boost::format("bind_kinematics_model does not reference valid node %s\n")%kbindmodel->getNode()));
+                RAVELOG_WARN(str(boost::format("bind_kinematics_model does not reference valid node %s\n")%kbindmodel->getNode()));
                 continue;
             }
 
@@ -2187,7 +2187,7 @@ class ColladaReader : public daeErrorHandler
             domBind_joint_axisRef bindjoint = kiscene->getBind_joint_axis_array()[ijoint];
             daeElementRef pjtarget = daeSidRef(bindjoint->getTarget(), viscene->getUrl().getElement()).resolve().elt;
             if (!pjtarget) {
-                RAVELOG_ERRORA(str(boost::format("Target Node %s NOT found!!!\n")%bindjoint->getTarget()));
+                RAVELOG_ERROR(str(boost::format("Target Node %s NOT found!!!\n")%bindjoint->getTarget()));
                 continue;
             }
             daeElement* pelt = searchBinding(bindjoint->getAxis(),kscene);
@@ -2201,7 +2201,7 @@ class ColladaReader : public daeErrorHandler
 
     bool _computeConvexHull(const vector<Vector>& verts, KinBody::Link::TRIMESH& trimesh)
     {
-        RAVELOG_ERRORA("convex hulls not supported\n");
+        RAVELOG_ERROR("convex hulls not supported\n");
         return false;
         //        if( verts.size() <= 3 )
         //            return false;

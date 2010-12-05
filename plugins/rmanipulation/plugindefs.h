@@ -121,7 +121,7 @@ inline string getfilename_withseparator(istream& sinput, char separator)
     string filename;
     if( !getline(sinput, filename, separator) ) {
         // just input directly
-        RAVELOG_ERRORA("graspset filename not terminated with ';'\n");
+        RAVELOG_ERROR("graspset filename not terminated with ';'\n");
         sinput >> filename;
     }
 

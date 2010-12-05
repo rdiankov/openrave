@@ -374,7 +374,7 @@ class GraspingModel(OpenRAVEModel):
                             while self.manip.CheckEndEffectorCollision(Tgrasp_nocol):
                                 Tgrasp_nocol[0:3,3] -= dir*0.001 # 1mm good enough?
                             Tlocalgrasp_nocol = dot(linalg.inv(self.target.GetTransform()),Tgrasp_nocol)
-                            self.robot.SetJointValues(finalconfig[0])
+                            self.robot.SetDOFValues(finalconfig[0])
                             if updateenv:
                                 contactgraph = self.drawContacts(contacts) if len(contacts) > 0 else None
                                 self.env.UpdatePublishedBodies()
@@ -424,7 +424,7 @@ class GraspingModel(OpenRAVEModel):
                                 print 'grasp is not in force closure!'
                             contactgraph = self.drawContacts(contacts) if len(contacts) > 0 else None
                             self.robot.GetController().Reset(0)
-                            self.robot.SetJointValues(finalconfig[0])
+                            self.robot.SetDOFValues(finalconfig[0])
                             self.robot.SetTransform(finalconfig[1])
                             self.env.UpdatePublishedBodies()
                         if delay is None:
@@ -460,7 +460,7 @@ class GraspingModel(OpenRAVEModel):
                 # don't check mindist since slight variations can really affect force closure
 #                 with self.robot:
 #                     self.robot.SetTransform(finalconfig2[1])
-#                     self.robot.SetJointValues(finalconfig2[0])
+#                     self.robot.SetDOFValues(finalconfig2[0])
 #                     self.env.UpdatePublishedBodies()
 #                     time.sleep(1)
                 allfinaltrans.append(finalconfig2[1])
@@ -481,7 +481,7 @@ class GraspingModel(OpenRAVEModel):
         with self.robot: # lock the environment and save the robot state
             self.robot.SetActiveManipulator(self.manip)
             self.robot.SetTransform(eye(4)) # have to reset transform in order to remove randomness
-            self.robot.SetJointValues(grasp[self.graspindices.get('igrasppreshape')],self.manip.GetGripperIndices())
+            self.robot.SetDOFValues(grasp[self.graspindices.get('igrasppreshape')],self.manip.GetGripperIndices())
             self.robot.SetActiveDOFs(self.manip.GetGripperIndices(),Robot.DOFAffine.X+Robot.DOFAffine.Y+Robot.DOFAffine.Z if translate else 0)
             return self.grasper.Grasp(direction=grasp[self.graspindices.get('igraspdir')],
                                       roll=grasp[self.graspindices.get('igrasproll')],
@@ -493,7 +493,7 @@ class GraspingModel(OpenRAVEModel):
         """squeeze the fingers to test whether the completed grasp only collides with the target, throws an exception if it fails. Otherwise returns the Grasp parameters. Uses the grasp transformation directly."""
         with self.robot:
             self.robot.SetActiveManipulator(self.manip)
-            self.robot.SetJointValues(grasp[self.graspindices.get('igrasppreshape')],self.manip.GetGripperIndices())
+            self.robot.SetDOFValues(grasp[self.graspindices.get('igrasppreshape')],self.manip.GetGripperIndices())
             self.robot.SetTransform(dot(self.getGlobalGraspTransform(grasp),dot(linalg.inv(self.manip.GetEndEffectorTransform()),self.robot.GetTransform())))
             self.robot.SetActiveDOFs(self.manip.GetGripperIndices())
             return self.grasper.Grasp(transformrobot=False,target=self.target,onlycontacttarget=True, forceclosure=False, execute=False, outputfinal=True)
@@ -508,7 +508,7 @@ class GraspingModel(OpenRAVEModel):
         return dot(self.target.GetTransform()[0:3,0:3],grasp[self.graspindices.get('igraspdir')])
     def setPreshape(self,grasp):
         """sets the preshape on the robot, assumes environment is locked"""
-        self.robot.SetJointValues(grasp[self.graspindices['igrasppreshape']],self.manip.GetGripperIndices())
+        self.robot.SetDOFValues(grasp[self.graspindices['igrasppreshape']],self.manip.GetGripperIndices())
     def moveToPreshape(self,grasp,execute=True,outputtraj=False):
         """uses a planner to safely move the hand to the preshape and returns the trajectory"""
         trajdata = []
@@ -536,7 +536,7 @@ class GraspingModel(OpenRAVEModel):
                     if options & 32:
                         dof += numjoints
                     lastpointindex+=(numpoints-1)*dof
-                    self.robot.SetJointValues(array([float(f) for f in s[lastpointindex:(lastpointindex+numjoints)]]))
+                    self.robot.SetDOFValues(array([float(f) for f in s[lastpointindex:(lastpointindex+numjoints)]]))
             self.robot.SetActiveDOFs(self.manip.GetGripperIndices())
             trajdata.append(self.basemanip.MoveActiveJoints(goal=grasp[self.graspindices['igrasppreshape']],execute=execute,outputtraj=outputtraj))
         while execute and not self.robot.GetController().IsDone(): # busy wait

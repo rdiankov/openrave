@@ -88,10 +88,10 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
                 
             }
             else
-                RAVELOG_ERRORA("unknown field %s\n", name.c_str());
+                RAVELOG_ERROR("unknown field %s\n", name.c_str());
 
             if( !_ss )
-                RAVELOG_WARNA(str(boost::format("error parsing %s\n")%name));
+                RAVELOG_WARN(str(boost::format("error parsing %s\n")%name));
 
             return false;
         }

@@ -688,14 +688,23 @@ public:
     ///
     /// \param values the values to set the joint angles (ordered by the dof indices)
     /// \praam checklimits if true, will excplicitly check the joint limits before setting the values.
-    virtual void SetJointValues(const std::vector<dReal>& values, bool checklimits = false);
+    virtual void SetDOFValues(const std::vector<dReal>& values, bool checklimits = false);
+
+    virtual void SetJointValues(const std::vector<dReal>& values, bool checklimits = false) {
+        SetDOFValues(values,checklimits);
+    }
 
     /// \brief Sets the joint values and transformation of the body.
     ///
     /// \param values the values to set the joint angles (ordered by the dof indices)
     /// \param transform represents the transformation of the first body.
     /// \praam checklimits if true, will excplicitly check the joint limits before setting the values.
-    virtual void SetJointValues(const std::vector<dReal>& values, const Transform& transform, bool checklimits = false);
+    virtual void SetDOFValues(const std::vector<dReal>& values, const Transform& transform, bool checklimits = false);
+
+    virtual void SetJointValues(const std::vector<dReal>& values, const Transform& transform, bool checklimits = false)
+    {
+        SetDOFValues(values,transform,checklimits);
+    }
 
     virtual void SetBodyTransformations(const std::vector<Transform>& transforms);
 
