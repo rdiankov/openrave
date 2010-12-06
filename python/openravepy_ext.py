@@ -191,6 +191,11 @@ def transformPoints(T,points):
     kminus = T.shape[1]-1
     return numpy.dot(points,numpy.transpose(T[0:kminus,0:kminus]))+numpy.tile(T[0:kminus,kminus],(len(points),1))
 
+def transformInversePoints(T,points):
+    """Transforms a Nxk array of points by the inverse of an affine matrix"""
+    kminus = T.shape[1]-1
+    return numpy.dot(points-numpy.tile(T[0:kminus,kminus],(len(points),1)),T[0:kminus,0:kminus])
+
 def sequence_cross_product(*sequences):
     """iterates through the cross product of all items in the sequences"""
     # visualize an odometer, with "wheels" displaying "digits"...:

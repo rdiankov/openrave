@@ -52,6 +52,7 @@ def run(args=None):
     
     raw_input('press any key to exit: ')
     env.Destroy() # done with the environment
+    RaveDestroy()
 
 if __name__ == "__main__":
     run()

@@ -319,6 +319,7 @@ def run(args=None):
         
     finally:
         env.Destroy()
+        RaveDestroy()
 
 if __name__ == "__main__":
     run()

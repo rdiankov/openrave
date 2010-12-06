@@ -103,7 +103,7 @@ class ConvexDecompositionModel(OpenRAVEModel):
     def has(self):
         return self.linkgeometry is not None and len(self.linkgeometry)==len(self.robot.GetLinks())
     def getversion(self):
-        return 1
+        return 2
     def load(self):
         try:
             params = OpenRAVEModel.load(self)
@@ -148,13 +148,12 @@ class ConvexDecompositionModel(OpenRAVEModel):
                 for ig,geom in enumerate(link.GetGeometries()):
                     if geom.GetType() == KinBody.Link.GeomProperties.Type.Trimesh:
                         trimesh = geom.GetCollisionMesh()
-                        #hulls = convexdecompositionpy.computeConvexDecomposition(*self.padMesh(trimesh.vertices,trimesh.indices,padding),**self.convexparams)
-                        hulls = convexdecompositionpy.computeConvexDecomposition(trimesh.vertices,trimesh.indices,**self.convexparams)
-                        if len(hulls) > 0:
+                        orghulls = convexdecompositionpy.computeConvexDecomposition(trimesh.vertices,trimesh.indices,**self.convexparams)
+                        if len(orghulls) > 0:
                             # add in the padding
                             if padding != 0:
-                                hulls = [self.padMesh(hull[0],hull[1],padding) for hull in hulls]
-                            geoms.append((ig,hulls))
+                                orghulls = [self.padMesh(hull[0],hull[1],padding) for hull in orghulls]
+                            geoms.append((ig,[(hull[0],hull[1],self.computeHullPlanes(hull)) for hull in orghulls]))
                 self.linkgeometry.append(geoms)
         print 'all convex decomposition finished in %fs'%(time.time()-starttime)
     @staticmethod
@@ -197,16 +196,85 @@ class ConvexDecompositionModel(OpenRAVEModel):
         return newvertices,newindices
 
     @staticmethod
+    def computeHullPlanes(hull,thresh=0.99999):
+        """The computes planes point outside of the mesh. Therefore a point is inside only if the distance to all planes is negative.
+        """
+        vm = mean(hull[0],0)
+        v0 = hull[0][hull[1][:,0],:]
+        v1 = hull[0][hull[1][:,1],:]-v0
+        v2 = hull[0][hull[1][:,2],:]-v0
+        normals = cross(v1,v2,1)/sqrt(sum(v1**2)*sum(v2**2)) # need to multiply by lengths because of floating-point precision problems
+        planes = c_[normals,-sum(normals*v0,1)]
+        meandist = dot(planes[:,0:3],vm)+planes[:,3]
+        planes = r_[planes[flatnonzero(meandist<-1e-7)],-planes[flatnonzero(meandist>1e-7)]]
+        normalizedplanes = planes/transpose(tile(sqrt(sum(planes**2,1)),(4,1)))
+        # prune similar planes
+        uniqueplanes = ones(len(planes),bool)
+        for i in range(len(normalizedplanes)-1):
+            uniqueplanes[i+1:] &= dot(normalizedplanes[i+1:,:],normalizedplanes[i])<thresh
+        return planes[uniqueplanes]
+
+    def testPointsInside(self,points):
+        """tests if a point is inside the convex mesh of the robot.
+
+        Returns an array the same length as points that specifies whether the point is in or not. This method is not meant to be optimized (use C++ for that).
+        """
+        with self.env:
+            inside = zeros(len(points),bool)
+            leftinds = arange(len(points))
+            leftpoints = points[:]
+            for ilink,link in enumerate(self.robot.GetLinks()):
+                if len(leftinds) == 0:
+                    break
+                for ig,geom in enumerate(link.GetGeometries()):
+                    T = dot(link.GetTransform(),geom.GetTransform())
+                    localpoints = transformInversePoints(T,leftpoints)
+                    cdhulls = [cdhull for ig2,cdhull in self.linkgeometry[ilink] if ig2==ig]
+                    if len(cdhulls) > 0:
+                        for ihull,hull in enumerate(cdhulls[0]):
+                            insideinds = numpy.all(dot(localpoints,transpose(hull[2][:,0:3]))+tile(hull[2][:,3],(len(localpoints),1))<=0,1)
+                            inside[leftinds[flatnonzero(insideinds)]] = True
+                            outsideinds = flatnonzero(insideinds==0)
+                            if len(outsideinds) > 0:
+                                leftpoints = leftpoints[outsideinds]
+                                leftinds = leftinds[outsideinds]
+                                localpoints = localpoints[outsideinds]
+                            if len(leftinds) == 0:
+                                break
+                        continue
+                    elif geom.GetType() == KinBody.Link.GeomProperties.Type.Box:
+                        insideinds = numpy.all(numpy.less_equal(abs(localpoints), geom.GetBoxExtents()) ,1)
+                    elif geom.GetType() == KinBody.Link.GeomProperties.Type.Sphere:
+                        insideinds = numpy.less_equal(sum(localpoints**2,1), geom.GetSphereRadius()**2)
+                    elif geom.GetType() == KinBody.Link.GeomProperties.Type.Cylinder:
+                        insideinds = numpy.less_equal(abs(localpoints[:,1]), 0.5*geom.GetCylinderHeight()) and numpy.less_equal(localpoint[:,0]**2+localpoint[:2]**2, geom.GetCylinderRadius()**2)
+                    else:
+                        continue
+                    inside[leftinds[flatnonzero(insideinds)]] = True
+                    outsideinds = flatnonzero(insideinds==0)
+                    if len(outsideinds) > 0:
+                        leftpoints = leftpoints[outsideinds]
+                        leftinds = leftinds[outsideinds]
+                    if len(leftinds) == 0:
+                        break
+        return inside
+
+    @staticmethod
     def generateTrimeshFromHulls(hulls):
         allvertices = zeros((0,3),float64)
         allindices = zeros((0,3),int)
-        for vertices,indices in hulls:
-            allindices = r_[allindices,indices+len(allvertices)]
-            allvertices = r_[allvertices,vertices]
+        for hull in hulls:
+            allindices = r_[allindices,hull[1]+len(allvertices)]
+            allvertices = r_[allvertices,hull[0]]
         return KinBody.Link.TriMesh(allvertices,allindices)
     @staticmethod
     def transformHull(T,hull):
-        return dot(hull[0],transpose(T[0:3,0:3]))+tile(T[0:3,3],(len(hull[0]),1)),hull[1]
+        """hull can be (vertices,indices) or (vertices,indices,planes)
+        """
+        vertices = dot(hull[0],transpose(T[0:3,0:3]))+tile(T[0:3,3],(len(hull[0]),1))
+        if len(hull) == 2:
+            return vertices,hull[1]
+        return vertices,hull[1],dot(hull[2],linalg.inv(T))
     def show(self,options=None):
         self.env.SetViewer('qtcoin')
         self.env.UpdatePublishedBodies()
@@ -276,6 +344,7 @@ class ConvexDecompositionModel(OpenRAVEModel):
             OpenRAVEModel.RunFromParser(env=env,Model=Model,parser=parser,**kwargs)
         finally:
             env.Destroy()
+            RaveDestroy()
 
 def run(*args,**kwargs):
     """Executes the convexdecomposition database generation,  ``args`` specifies a list of the arguments to the script.

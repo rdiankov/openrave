@@ -169,6 +169,7 @@ def run(args=None):
     finally:
         del schunk
         env.Destroy() # done with the environment
+        RaveDestroy()
 
 if __name__ == "__main__":
     run()

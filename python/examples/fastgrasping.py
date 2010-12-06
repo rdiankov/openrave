@@ -20,7 +20,7 @@ from openravepy import *
 from openravepy.interfaces import BaseManipulation, TaskManipulation
 from openravepy.databases import convexdecomposition,grasping,inversekinematics
 from numpy import *
-import numpy,time,traceback
+import numpy
 from optparse import OptionParser
 from itertools import izip
 
@@ -70,11 +70,9 @@ def run(args=None):
     """
     parser = OptionParser(description='Example showing how to compute a valid grasp as fast as possible without computing a grasp set, this is used when the target objects change frequently.')
     OpenRAVEGlobalArguments.addOptions(parser)
-    parser.add_option('--scene',
-                      action="store",type='string',dest='scene',default='data/wamtest1.env.xml',
+    parser.add_option('--scene', action="store",type='string',dest='scene',default='data/wamtest1.env.xml',
                       help='Scene file to load (default=%default)')
-    parser.add_option('--manipname',
-                      action="store",type='string',dest='manipname',default=None,
+    parser.add_option('--manipname', action="store",type='string',dest='manipname',default=None,
                       help='Choose the manipulator to perform the grasping for')
     (options, leftargs) = parser.parse_args(args=args)
     env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
@@ -94,6 +92,7 @@ def run(args=None):
             raw_input('press any key to exit')
     finally:
         env.Destroy()
+        RaveDestroy()
 
 if __name__ == "__main__":
     run()

@@ -393,6 +393,7 @@ class VisibilityModel(OpenRAVEModel):
             OpenRAVEModel.RunFromParser(env=env,Model=Model,parser=parser,args=args,**kwargs)
         finally:
             env.Destroy()
+            RaveDestroy()
 
 def run(*args,**kwargs):
     """Executes the visibilitymodel database generation,  ``args`` specifies a list of the arguments to the script.

@@ -99,6 +99,7 @@ class LinkStatisticsModel(OpenRAVEModel):
             return self.has()
         except e:
             return False
+
     def save(self):
         OpenRAVEModel.save(self,(self.linkstats,self.jointvolumes,self.affinevolumes,self.samplingdelta))
 
@@ -172,11 +173,14 @@ class LinkStatisticsModel(OpenRAVEModel):
                     if len(cdhulls) > 0:
                         hulls += [self.cdmodel.transformHull(geom.GetTransform(),hull) for hull in cdhulls[0]]
                     elif geom.GetType() == KinBody.Link.GeomProperties.Type.Box:
-                        hulls.append(self.cdmodel.transformHull(geom.GetTransform(),ComputeBoxMesh(geom.GetBoxExtents())))
+                        hull= self.cdmodel.transformHull(geom.GetTransform(),ComputeBoxMesh(geom.GetBoxExtents()))
+                        hulls.append([hull[0],hull[1],self.cdmodel.computeHullPlanes(hull,0.999)])
                     elif geom.GetType() == KinBody.Link.GeomProperties.Type.Sphere:
-                        hulls.append(self.cdmodel.transformHull(geom.GetTransform(),ComputeGeodesicSphereMesh(geom.GetSphereRadius(),level=1)))
+                        hull = self.cdmodel.transformHull(geom.GetTransform(),ComputeGeodesicSphereMesh(geom.GetSphereRadius(),level=1))
+                        hulls.append([hull[0],hull[1],self.cdmodel.computeHullPlanes(hull,0.999)])
                     elif geom.GetType() == KinBody.Link.GeomProperties.Type.Cylinder:
-                        hulls.append(self.cdmodel.transformHull(geom.GetTransform(),ComputeCylinderYMesh(radius=geom.GetCylinderRadius(),height=geom.GetCylinderHeight())))
+                        hull = self.cdmodel.transformHull(geom.GetTransform(),ComputeCylinderYMesh(radius=geom.GetCylinderRadius(),height=geom.GetCylinderHeight()))
+                        hulls.append([hull[0],hull[1],self.cdmodel.computeHullPlanes(hull,0.999)])
                 self.linkstats[ilink] = self.computeGeometryStatistics(hulls)
                 
             print 'Generating swept volumes...'
@@ -359,9 +363,8 @@ class LinkStatisticsModel(OpenRAVEModel):
     def computeGeometryStatistics(self,hulls):
         if len(hulls) == 0:
             return {'com':zeros(3),'inertia':zeros((3,3)),'volume':0,'volumepoints':zeros((0,3))}
-        minpoint = numpy.min([numpy.min(vertices,axis=0) for vertices,indices in hulls],axis=0)
-        maxpoint = numpy.max([numpy.max(vertices,axis=0) for vertices,indices in hulls],axis=0)
-        hullplanes = self.computeHullPlanes(hulls)
+        minpoint = numpy.min([numpy.min(hull[0],axis=0) for hull in hulls],axis=0)
+        maxpoint = numpy.max([numpy.max(hull[0],axis=0) for hull in hulls],axis=0)
         X,Y,Z = mgrid[minpoint[0]:maxpoint[0]:self.samplingdelta,minpoint[1]:maxpoint[1]:self.samplingdelta,minpoint[2]:maxpoint[2]:self.samplingdelta]
         volumepoints = SpaceSampler().sampleR3(self.samplingdelta,boxdims=maxpoint-minpoint)
         volumepoints[:,0] += minpoint[0]
@@ -371,8 +374,8 @@ class LinkStatisticsModel(OpenRAVEModel):
         for i,point in enumerate(volumepoints):
             if mod(i,10000) == 0:
                 print '%d/%d'%(i,len(volumepoints))
-            for planes in hullplanes:
-                if all(dot(planes[:,0:3],point)+planes[:,3] <= 0):
+            for hull in hulls:
+                if all(dot(hull[2][:,0:3],point)+hull[2][:,3] <= 0):
                     insidepoints[i] = True
                     break
         volumepoints = volumepoints[insidepoints,:]
@@ -380,25 +383,6 @@ class LinkStatisticsModel(OpenRAVEModel):
         com = mean(volumepoints,0)
         inertia = cov(volumepoints,rowvar=0,bias=1)*(len(volumepoints)*self.samplingdelta**3)
         return {'com':com,'inertia':inertia,'volume':volume,'volumepoints':volumepoints}
-
-    @staticmethod
-    def computeHullPlanes(hulls):
-        hullplanes = [] # planes point outward
-        for vertices,indices in hulls:
-            vm = mean(vertices,0)
-            v0 = vertices[indices[:,0],:]
-            v1 = vertices[indices[:,1],:]
-            v2 = vertices[indices[:,2],:]
-            normals = cross(v1-v0,v2-v0,1)
-            planes = c_[normals,-sum(normals*v0,1)]
-            planes *= transpose(tile(-sign(dot(planes,r_[vm,1])),(4,1)))
-            normalizedplanes = planes/transpose(tile(sqrt(sum(planes**2,1)),(4,1)))
-            # prune similar planes
-            uniqueplanes = ones(len(planes),bool)
-            for i in range(len(normalizedplanes)-1):
-                uniqueplanes[i+1:] &= dot(normalizedplanes[i+1:,:],normalizedplanes[i])<0.999
-            hullplanes.append(planes[uniqueplanes])
-        return hullplanes
 
     @staticmethod
     def prunePointsKDTree(points, thresh2, neighsize,k=20):
@@ -460,6 +444,7 @@ class LinkStatisticsModel(OpenRAVEModel):
             OpenRAVEModel.RunFromParser(env=env,Model=Model,parser=parser,**kwargs)
         finally:
             env.Destroy()
+            RaveDestroy()
 
 def run(*args,**kwargs):
     """Executes the linkstatistics database generation,  ``args`` specifies a list of the arguments to the script.

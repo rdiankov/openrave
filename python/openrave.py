@@ -141,10 +141,11 @@ if __name__ == "__main__":
             env.SetViewer('qtcoin')
         if options.ipython:
             from IPython.Shell import IPShellEmbed
-            ipshell = IPShellEmbed(argv='',banner = 'OpenRAVE Dropping into IPython',exit_msg = 'Leaving Interpreter and closing program.')
+            ipshell = IPShellEmbed(argv='',banner = 'OpenRAVE Dropping into IPython, variables: env, robot',exit_msg = 'Leaving Interpreter and closing program.')
             ipshell(local_ns=locals())
             sys.exit(0)
         while True:
-            time.sleep(0.01)
+            time.sleep(1.0)
     finally:
         env.Destroy()
+        RaveDestroy()

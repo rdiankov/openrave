@@ -89,6 +89,7 @@ def run(args=None):
         self.performNavigationPlanning()
     finally:
         env.Destroy()
+        RaveDestroy()
 
 if __name__ == "__main__":
     run()

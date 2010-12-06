@@ -104,6 +104,7 @@ def run(args=None):
         self.graspAndMove()
     finally:
         env.Destroy()
+        RaveDestroy()
 
 if __name__ == "__main__":
     run()

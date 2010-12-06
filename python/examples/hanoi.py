@@ -219,6 +219,7 @@ def run(args=None):
             hanoi.hanoisolve(3,hanoi.srcpeg,hanoi.destpeg,hanoi.peg)
     finally:
         env.Destroy() # done with the environment
+        RaveDestroy()
 
 if __name__ == "__main__":
     run()

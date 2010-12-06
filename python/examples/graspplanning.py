@@ -326,6 +326,7 @@ def run(args=None):
         self.performGraspPlanning()
     finally:
         env.Destroy()
+        RaveDestroy()
 
 if __name__ == "__main__":
     run()

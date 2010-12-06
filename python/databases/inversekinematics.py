@@ -645,6 +645,7 @@ class InverseKinematicsModel(OpenRAVEModel):
                     print 'mean: %fs, median: %fs, min: %fs, max: %fs'%(mean(results),median(results),min(results),max(results))
             finally:
                 env.Destroy()
+                RaveDestroy()
 
 def run(*args,**kwargs):
     """Executes the inversekinematics database generation,  ``args`` specifies a list of the arguments to the script.

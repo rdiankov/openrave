@@ -73,6 +73,7 @@ def run(args=None):
             time.sleep(0.01)
     finally:
         env.Destroy()
+        RaveDestroy()
 
 if __name__ == "__main__":
     run()

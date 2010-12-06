@@ -110,7 +110,8 @@ def run(args=None):
             handles = [env.drawlinestrip(points=array((c.pos,c.pos-c.depth*c.norm)), linewidth=3.0, colors=array((1,0,0,1))) for c in contacts]
             time.sleep(0.1)
     finally:
-        env.Destroy() # done with the environment
+        env.Destroy()
+        RaveDestroy()
 
 if __name__ == "__main__":
     run()
