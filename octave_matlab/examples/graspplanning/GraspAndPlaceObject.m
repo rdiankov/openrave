@@ -132,7 +132,7 @@ while(curgrasp < size(grasps,1))
     else
         disp('closing fingers');
         %closeoffset = 0.12;
-        trajdata = orProblemSendCommand(['CloseFingers execute 0 outputtraj'] , probs.manip);
+        trajdata = orProblemSendCommand(['CloseFingers execute 0 outputtraj'] , probs.task);
         if( isempty(trajdata) )
             warning('failed to close fingers');
         end
@@ -193,7 +193,7 @@ while(curgrasp < size(grasps,1))
             success = StartTrajectory(robotid,trajdata);
             if( ~success )
                 warning('failed to start trajectory');
-                trajdata = orProblemSendCommand(['ReleaseFingers execute 0 outputtraj target ' curobj.name], probs.manip);
+                trajdata = orProblemSendCommand(['ReleaseFingers execute 0 outputtraj target ' curobj.name], probs.task);
                 success = StartTrajectory(robotid,trajdata);
                 return;
             end
@@ -255,13 +255,13 @@ while(curgrasp < size(grasps,1))
 
     % reenable hand joints
     %orRobotControllerSend(robotid, 'ignoreproxy');
-    trajdata = orProblemSendCommand(['ReleaseFingers execute 0 outputtraj target ' curobj.name], probs.manip);
+    trajdata = orProblemSendCommand(['ReleaseFingers execute 0 outputtraj target ' curobj.name], probs.task);
 
     %% cannot wait forever since hand might get stuck
     if( isempty(trajdata) )
         warning('problems releasing, releasing target first');
         orProblemSendCommand('releaseall', probs.manip);
-        trajdata = orProblemSendCommand(['ReleaseFingers execute 0 outputtraj target ' curobj.name], probs.manip);
+        trajdata = orProblemSendCommand(['ReleaseFingers execute 0 outputtraj target ' curobj.name], probs.task);
         if( isempty(trajdata) )
             warning('failed to release fingers, forcing open');
             orBodySetJointValues(robotid,grasp(robot.grasp.joints),handjoints);
@@ -287,7 +287,7 @@ while(curgrasp < size(grasps,1))
     
         if( orEnvCheckCollision(robotid) )
             orProblemSendCommand(['grabbody name ' curobj.name], probs.manip);
-            trajdata = orProblemSendCommand(['ReleaseFingers execute 0 outputtraj target ' curobj.name], probs.manip);
+            trajdata = orProblemSendCommand(['ReleaseFingers execute 0 outputtraj target ' curobj.name], probs.task);
             success = StartTrajectory(robotid,trajdata,2);
         end
     end

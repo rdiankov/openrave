@@ -416,16 +416,6 @@ class ColladaWriter : public daeErrorHandler
         RAVELOG_VERBOSE(str(boost::format("writing instance_kinematics_model (%d) %s\n")%pbody->GetEnvironmentId()%pbody->GetName()));
         boost::shared_ptr<kinematics_model_output> kmout = WriteKinematics_model(pbody);
 
-        vector< pair<int,KinBody::JointConstPtr> > vjoints;
-        vjoints.reserve(pbody->GetJoints().size()+pbody->_vecPassiveJoints.size());
-        FOREACHC(itj, pbody->GetJoints() ) {
-            vjoints.push_back(make_pair((*itj)->GetJointIndex(),*itj));
-        }
-        int index=pbody->GetJoints().size();
-        FOREACHC(itj, pbody->_vecPassiveJoints) {
-            vjoints.push_back(make_pair(index++,*itj));
-        }
-
         boost::shared_ptr<instance_kinematics_model_output> ikmout(new instance_kinematics_model_output());
         ikmout->kmout = kmout;
         ikmout->ikm = daeSafeCast<domInstance_kinematics_model>(parent->add(COLLADA_ELEMENT_INSTANCE_KINEMATICS_MODEL));
@@ -804,7 +794,7 @@ class ColladaWriter : public daeErrorHandler
     virtual LINKOUTPUT _WriteLink(KinBody::LinkConstPtr plink, daeElementRef pkinparent, domNodeRef pnodeparent, const string& strModelUri, const vector<pair<int, KinBody::JointConstPtr> >& vjoints)
     {
         LINKOUTPUT out;
-        string linksid = plink->GetName();
+        string linksid = str(boost::format("link%d")%plink->GetIndex());
         domLinkRef pdomlink = daeSafeCast<domLink>(pkinparent->add(COLLADA_ELEMENT_LINK));
         pdomlink->setName(plink->GetName().c_str());
         pdomlink->setSid(linksid.c_str());
@@ -900,7 +890,7 @@ class ColladaWriter : public daeErrorHandler
     /// \brief Write transformation
     /// \param pelt Element to transform
     /// \param t Transform to write
-    void _WriteTransformation(daeElementRef pelt, Transform t)
+    void _WriteTransformation(daeElementRef pelt, const Transform& t)
     {
         domRotateRef prot = daeSafeCast<domRotate>(pelt->add(COLLADA_ELEMENT_ROTATE,0));
         domTranslateRef ptrans = daeSafeCast<domTranslate>(pelt->add(COLLADA_ELEMENT_TRANSLATE,0));

@@ -803,7 +803,13 @@ class ColladaReader : public daeErrorHandler
                     pjoint->bodies[1] = pchildlink;
 
                     //  Axes and Anchor assignment.
-                    pjoint->vAxes[0] = Vector(pdomaxis->getAxis()->getValue()[0], pdomaxis->getAxis()->getValue()[1], pdomaxis->getAxis()->getValue()[2]).normalize3();
+                    pjoint->vAxes[0] = Vector(pdomaxis->getAxis()->getValue()[0], pdomaxis->getAxis()->getValue()[1], pdomaxis->getAxis()->getValue()[2]);
+                    if( pjoint->vAxes[0].lengthsqr3() > 0 ) {
+                        pjoint->vAxes[0].normalize3();
+                    }
+                    else {
+                        pjoint->vAxes[0] = Vector(0,0,1);
+                    }
                     pjoint->vanchor = Vector(0,0,0);
 
                     int numbad = 0;

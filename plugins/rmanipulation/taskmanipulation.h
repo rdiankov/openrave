@@ -103,15 +103,15 @@ class TaskManipulation : public ProblemInstance
         string name;
         stringstream ss(args);
         _fMaxVelMult=1;
-
         ss >> _strRobotName;
     
         string plannername, graspername = "Grasper";
         string cmd;
         while(!ss.eof()) {
             ss >> cmd;
-            if( !ss )
+            if( !ss ) {
                 break;
+            }
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
 
             if( cmd == "planner" ) {
@@ -124,12 +124,14 @@ class TaskManipulation : public ProblemInstance
                 ss >> graspername;
             }
 
-            if( ss.fail() || !ss )
+            if( ss.fail() || !ss ) {
                 break;
+            }
         }
 
-        if( plannername.size() > 0 )
+        if( plannername.size() > 0 ) {
             _pRRTPlanner = RaveCreatePlanner(GetEnv(),plannername);
+        }
         if( !_pRRTPlanner ) {
             plannername = "BiRRT";
             _pRRTPlanner = RaveCreatePlanner(GetEnv(),plannername);
@@ -142,9 +144,10 @@ class TaskManipulation : public ProblemInstance
         RAVELOG_DEBUG(str(boost::format("using %s planner\n")%plannername));
 
         _pGrasperPlanner = RaveCreatePlanner(GetEnv(),graspername);
-        if( !_pGrasperPlanner )
+        if( !_pGrasperPlanner ) {
             RAVELOG_WARN(str(boost::format("Failed to create a grasper planner %s\n")%graspername));
-            
+        }
+        _robot = GetEnv()->GetRobot(_strRobotName);
         return 0;
     }
 
@@ -159,13 +162,13 @@ class TaskManipulation : public ProblemInstance
     {
         string systemname;
         sinput >> systemname;
-        if( !sinput )
+        if( !sinput ) {
             return false;
-
+        }
         SensorSystemBasePtr psystem = RaveCreateSensorSystem(GetEnv(),systemname);
-        if( !psystem )
+        if( !psystem ) {
             return false;
-
+        }
         vector<KinBodyPtr> vbodies;
         GetEnv()->GetBodies(vbodies);
         psystem->AddRegisteredBodies(vbodies);
@@ -204,13 +207,16 @@ class TaskManipulation : public ProblemInstance
         double errorthresh=1e-3;
         while(!sinput.eof()) {
             sinput >> cmd;
-            if( !sinput )
+            if( !sinput ) {
                 break;
+            }
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
 
-            if( cmd == "constraintfreedoms" )
-                FOREACH(it,vfreedoms)
+            if( cmd == "constraintfreedoms" ) {
+                FOREACH(it,vfreedoms) {
                     sinput >> *it;
+                }
+            }
             else if( cmd == "constraintmatrix" ) {
                 TransformMatrix m; sinput >> m; tTargetWorldFrame = m;
             }
@@ -218,12 +224,14 @@ class TaskManipulation : public ProblemInstance
                 sinput >> tTargetWorldFrame;
             else if( cmd == "config" ) {
                 vector<dReal> vconfig(_robot->GetActiveDOF());
-                FOREACH(it,vconfig)
+                FOREACH(it,vconfig) {
                     sinput >> *it;
+                }
                 listconfigs.push_back(vconfig);
             }
-            else if( cmd == "constrainterrorthresh" )
+            else if( cmd == "constrainterrorthresh" ) {
                 sinput >> errorthresh;
+            }
             else {
                 RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
@@ -287,8 +295,9 @@ class TaskManipulation : public ProblemInstance
     
         while(!sinput.eof()) {
             sinput >> cmd;
-            if( !sinput )
+            if( !sinput ) {
                 break;
+            }
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
 
             if( cmd == "grasps" ) {
@@ -297,40 +306,55 @@ class TaskManipulation : public ProblemInstance
                 FOREACH(it, vgrasps)
                     sinput >> *it;
             }
-            else if( cmd == "outputtraj" )
+            else if( cmd == "outputtraj" ) {
                 pOutputTrajStream = boost::shared_ptr<ostream>(&sout,null_deleter());
-            else if( cmd == "execute" )
+            }
+            else if( cmd == "execute" ) {
                 sinput >> bExecute;
-            else if( cmd == "randomdests" )
+            }
+            else if( cmd == "randomdests" ) {
                 sinput >> bRandomDests;
-            else if( cmd == "randomgrasps" )
+            }
+            else if( cmd == "randomgrasps" ) {
                 sinput >> bRandomGrasps;
-            else if( cmd == "writetraj" )
+            }
+            else if( cmd == "writetraj" ) {
                 sinput >> strtrajfilename;
-            else if( cmd == "maxiter" )
+            }
+            else if( cmd == "maxiter" ) {
                 sinput >> nMaxIterations;
-            else if( cmd == "graspindices" )
+            }
+            else if( cmd == "graspindices" ) {
                 sinput >> iGraspDir >> iGraspPos >> iGraspRoll >> iGraspStandoff >> iGraspPreshape;
-            else if( cmd == "igraspdir" )
+            }
+            else if( cmd == "igraspdir" ) {
                 sinput >> iGraspDir;
-            else if( cmd == "igrasppos" )
+            }
+            else if( cmd == "igrasppos" ) {
                 sinput >> iGraspPos;
-            else if( cmd == "igrasproll" )
+            }
+            else if( cmd == "igrasproll" ) {
                 sinput >> iGraspRoll;
-            else if( cmd == "igraspstandoff" )
+            }
+            else if( cmd == "igraspstandoff" ) {
                 sinput >> iGraspStandoff;
-            else if( cmd == "igrasppreshape" )
+            }
+            else if( cmd == "igrasppreshape" ) {
                 sinput >> iGraspPreshape;
-            else if( cmd == "igrasptrans" )
+            }
+            else if( cmd == "igrasptrans" ) {
                 sinput >> iGraspTransform;
+            }
             else if( cmd == "target" ) {
                 sinput >> targetname;
                 ptarget = GetEnv()->GetKinBody(targetname);
             }
-            else if( cmd == "approachoffset" )
+            else if( cmd == "approachoffset" ) {
                 sinput >> fApproachOffset;
-            else if( cmd == "quitafterfirstrun" )
+            }
+            else if( cmd == "quitafterfirstrun" ) {
                 bQuitAfterFirstRun = true;
+            }
             else if( cmd == "matdests" ) {
                 int numdests = 0; sinput >> numdests;
                 vObjDestinations.resize(numdests);
@@ -345,12 +369,15 @@ class TaskManipulation : public ProblemInstance
                 FOREACH(ittrans, vObjDestinations)
                     sinput >> *ittrans;
             }
-            else if( cmd == "seedgrasps" )
+            else if( cmd == "seedgrasps" ) {
                 sinput >> nMaxSeedGrasps;
-            else if( cmd == "seeddests" )
+            }
+            else if( cmd == "seeddests" ) {
                 sinput >> nMaxSeedDests;
-            else if( cmd == "seedik" )
+            }
+            else if( cmd == "seedik" ) {
                 sinput >> nMaxSeedIkSolutions;
+            }
             else if( cmd == "savepreshapetraj" ) {
                 sinput >> strpreshapetraj;
             }
@@ -374,9 +401,9 @@ class TaskManipulation : public ProblemInstance
         RobotBase::RobotStateSaver saver(_robot);
 
         bool bMobileBase = _robot->GetAffineDOF()!=0; // if mobile base, cannot rely on IK
-        if( bMobileBase )
-            RAVELOG_INFOA("planning with mobile base!\n");
-
+        if( bMobileBase ) {
+            RAVELOG_INFO("planning with mobile base!\n");
+        }
         bool bInitialRobotChanged = false;
         vector<dReal> vCurHandValues, vCurRobotValues, vOrgRobotValues;
         _robot->SetActiveDOFs(pmanip->GetGripperIndices());
@@ -1367,15 +1394,15 @@ protected:
                 ss >> nGoalIndex; // extract the goal index
                 BOOST_ASSERT( nGoalIndex >= 0 && nGoalIndex < (int)params->vgoalconfig.size()/(int)activejoints.size() );
                 bSuccess = true;
-                RAVELOG_INFOA("finished planning, goal index: %d\n", nGoalIndex);
+                RAVELOG_INFO("finished planning, goal index: %d\n", nGoalIndex);
                 break;
             }
             else RAVELOG_WARN("PlanPath failed\n");
         }
     
-        if( !bSuccess )
+        if( !bSuccess ) {
             ptraj.reset();
-
+        }
         return ptraj;
     }
 
