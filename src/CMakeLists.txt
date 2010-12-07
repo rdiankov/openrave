@@ -36,13 +36,13 @@ endif()
 
 target_link_libraries (openrave ${Boost_THREAD_LIBRARY} ${SOCKET_LIBS} libopenrave libopenrave-core)
 
-# extract the models
-if( NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/models/WAM" OR NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/robots/pr2-beta-static.dae")
-  message(STATUS "extracting models to ${CMAKE_CURRENT_SOURCE_DIR}")
-  execute_process(
-    COMMAND ${CMAKE_COMMAND} -E tar xzf "${CMAKE_SOURCE_DIR}/models.tgz"
-    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
-endif()
+# always extract the models since we don't know when models.tgz has been changed
+#if( NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/models/WAM" OR NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/robots/pr2-beta-static.dae")
+message(STATUS "extracting models to ${CMAKE_CURRENT_SOURCE_DIR}")
+execute_process(
+  COMMAND ${CMAKE_COMMAND} -E tar xzf "${CMAKE_SOURCE_DIR}/models.tgz"
+  WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
+#endif()
 
 install(TARGETS openrave DESTINATION bin)
 

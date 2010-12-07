@@ -23,7 +23,7 @@
     <closingdirection>-1</closingdirection>
     <translation>0.18 0 0</translation>
     <direction>1 0 0</direction>
-    <iksolver>ikfast_pr2_leftarm</iksolver>
+<!--     <iksolver>ikfast_pr2_leftarm</iksolver> -->
   </manipulator>
   <manipulator name="leftarm_torso">
     <base>base_link</base>

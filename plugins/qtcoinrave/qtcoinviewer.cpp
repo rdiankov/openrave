@@ -311,9 +311,9 @@ void QtCoinViewer::_mousemove_cb(SoEventCallback * node)
             
             KinBodyItemPtr pKinBody = boost::dynamic_pointer_cast<KinBodyItem>(pItem);
             KinBody::LinkPtr pSelectedLink;
-            if( !!pKinBody )
+            if( !!pKinBody ) {
                 pSelectedLink = pKinBody->GetLinkFromIv(node);
-
+            }
             _pMouseOverLink = pSelectedLink;
             _vMouseSurfacePosition.x = pt->getPoint()[0];
             _vMouseSurfacePosition.y = pt->getPoint()[1];
@@ -329,7 +329,7 @@ void QtCoinViewer::_mousemove_cb(SoEventCallback * node)
             stringstream ss;
             ss << "mouse on " << pKinBody->GetBody()->GetName() << ":";
             if( !!pSelectedLink ) {
-                ss << pSelectedLink->GetName();
+                ss << pSelectedLink->GetName() << "(" << pSelectedLink->GetIndex() << ")";
             }
             else {
                 ss << "(NULL)";

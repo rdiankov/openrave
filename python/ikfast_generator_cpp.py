@@ -1540,6 +1540,9 @@ static void %s(IKReal _C0[6], IKReal roots[4], int& numroots)
     IKReal proots[3];
     int numproots, numyroots;
     %s(rawcoeffs,proots,numproots);
+    if( numproots < 1 ) {
+        return;
+    }
     numroots = 0;
     int iroot=0;
     IKReal a, b, c, d, e, f;
@@ -1606,7 +1609,21 @@ static void %s(IKReal _C0[6], IKReal roots[4], int& numroots)
             coeffs[2] = lineequation[2]*lineequation[2]-lineequation[0]*lineequation[0];
             %s(coeffs,yintersections,numyroots);
             for(int j = 0; j < numyroots; ++j) {
-                roots[numroots++] = IKatan2(yintersections[j],-(lineequation[1]*yintersections[j]+lineequation[2])/lineequation[0]);
+                // the mathematical solution would be: IKatan2(yintersections[j],-(lineequation[1]*yintersections[j]+lineequation[2])/lineequation[0]);
+                // however due to numerical imprecisions, it is better to compute sqrt(1-yintersections[j]*yintersections[j]) and choose sign 
+                IKReal x = 1-yintersections[j]*yintersections[j];
+                if( x <= 0 ) {
+                    if( x > -std::numeric_limits<IKReal>::epsilon() ) {
+                        roots[numroots++] = IKatan2(yintersections[j],-(lineequation[1]*yintersections[j]+lineequation[2])/lineequation[0]);
+                    }
+                }
+                else {
+                    x = IKsqrt(x);
+                    if( (lineequation[1]*yintersections[j]+lineequation[2])/lineequation[0] > 0 ) {
+                        x = -x;
+                    }
+                    roots[numroots++] = IKatan2(yintersections[j],x);
+                }
             }
         }
     }

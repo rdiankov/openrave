@@ -865,9 +865,9 @@ class ColladaWriter : public daeErrorHandler
                 domTranslateRef ptrans = daeSafeCast<domTranslate>(childinfo.pnode->add(COLLADA_ELEMENT_TRANSLATE,0));
                 ptrans->setSid(jointnodesid.c_str());
                 ptrans->getValue().setCount(3);
-                ptrans->getValue()[0] = pjoint->vAxes[0].x;
-                ptrans->getValue()[1] = pjoint->vAxes[0].y;
-                ptrans->getValue()[2] = pjoint->vAxes[0].z;
+                ptrans->getValue()[0] = 0;
+                ptrans->getValue()[1] = 0;
+                ptrans->getValue()[2] = 0;
                 break;
             }
             case KinBody::Joint::JointUniversal:
