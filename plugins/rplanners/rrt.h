@@ -324,8 +324,7 @@ class BirrtPlanner : public RrtPlanner<SimpleNode>
         }
 
         RAVELOG_DEBUG(str(boost::format("plan success, path=%d points in %fs\n")%ptraj->GetPoints().size()%(0.001f*(float)(timeGetTime()-basetime))));
-        _OptimizePath(_robot,ptraj);
-        return true;
+        return _OptimizePath(_robot,ptraj);
     }
 
     virtual PlannerParametersConstPtr GetParameters() const { return _parameters; }
@@ -506,10 +505,10 @@ class BasicRrtPlanner : public RrtPlanner<SimpleNode>
             ptraj->AddPoint(pt);
         }
 
-        _OptimizePath(_robot,ptraj);
+        bSuccess = _OptimizePath(_robot,ptraj);
         RAVELOG_DEBUG(str(boost::format("plan success, path=%d points in %fs\n")%ptraj->GetPoints().size()%((0.001f*(float)(timeGetTime()-basetime)))));
     
-        return true;
+        return bSuccess;
     }
 
     virtual PlannerParametersConstPtr GetParameters() const { return _parameters; }

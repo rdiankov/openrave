@@ -1664,7 +1664,7 @@ class ColladaReader : public daeErrorHandler
     {
         for (size_t ie = 0; ie < as->getExtra_array().getCount(); ie++) {
             domExtraRef pextra = as->getExtra_array()[ie];
-            if( strcmp(pextra->getType(), "sensor") == 0 ) {
+            if( strcmp(pextra->getType(), "attached_sensor") == 0 ) {
                 string name = pextra->getAttribute("name");
                 if( name.size() == 0 ) {
                     name = str(boost::format("sensor%d")%_nGlobalSensorId++);
@@ -1685,12 +1685,12 @@ class ColladaReader : public daeErrorHandler
                         }
                         pattachedsensor->trelative = _ExtractFullTransformFromChildren(pframe_origin);
                     }
-                    if( !_ExtractSensor(pattachedsensor->psensor,tec->getChild("instance_sensor")) ) {
-                        RAVELOG_WARN(str(boost::format("cannot find instance_sensor for attached sensor %s:%s\n")%probot->GetName()%name));
-                    }
-                    else {
-                        pattachedsensor->pdata = pattachedsensor->GetSensor()->CreateSensorData();
-                    }
+//                    if( !_ExtractSensor(pattachedsensor->psensor,tec->getChild("instance_sensor")) ) {
+//                        RAVELOG_WARN(str(boost::format("cannot find instance_sensor for attached sensor %s:%s\n")%probot->GetName()%name));
+//                    }
+//                    else {
+//                        pattachedsensor->pdata = pattachedsensor->GetSensor()->CreateSensorData();
+//                    }
                     probot->GetAttachedSensors().push_back(pattachedsensor);
                 }
                 else {
@@ -1706,7 +1706,7 @@ class ColladaReader : public daeErrorHandler
         if( !instance_sensor ) {
             return false;
         }
-        if( instance_sensor->hasAttribute("url") ) {
+        if( !instance_sensor->hasAttribute("url") ) {
             RAVELOG_WARN("instance_sensor has no url\n");
             return false;
         }

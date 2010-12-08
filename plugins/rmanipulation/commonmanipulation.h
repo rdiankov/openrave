@@ -17,6 +17,7 @@
 #define COMMON_MANIPULATION_H
 
 #include "plugindefs.h"
+#include "plannerparameters.h"
 
 // used for inverse jacobian computation
 #include <boost/numeric/ublas/vector.hpp>
@@ -98,9 +99,9 @@ class CM
         Transform transnew = transorig;
         int iter = 0;
         while(pbody->GetEnv()->CheckCollision(KinBodyConstPtr(pbody)) ) {
-            if( iter > nMaxIterations )
+            if( iter > nMaxIterations ) {
                 return false;
-
+            }
             transnew.trans = transorig.trans + fJitter * Vector(RaveRandomFloat()-0.5f, RaveRandomFloat()-0.5f, RaveRandomFloat()-0.5f);
             pbody->SetTransform(transnew);
             ++iter;
@@ -195,11 +196,13 @@ class CM
                 
                 _robot->SetActiveDOFValues(vhandvalues);
                 
-                if( _robot->GetEnv()->CheckCollision(KinBodyConstPtr(_robot)))
+                if( _robot->GetEnv()->CheckCollision(KinBodyConstPtr(_robot))) {
                     return 1000;
+                }
                 // don't check self collisions for multiple DOF since don't know how dof will actually get to the final config!!!!
-                if( vhandvalues.size() == 1 && _robot->CheckSelfCollision())
+                if( vhandvalues.size() == 1 && _robot->CheckSelfCollision()) {
                     return 1000;
+                }
             }
 
             // check self collision with the final config
@@ -210,14 +213,16 @@ class CM
             newvalues.resize(vhandgoal.size());
             numiter = 10;
             while(numiter > 0) {
-                for(size_t i = 0; i < newvalues.size(); ++i)
+                for(size_t i = 0; i < newvalues.size(); ++i) {
                     newvalues[i] = vhandgoal[i] + 0.2f*(RaveRandomFloat()-0.5f);
+                }
                 _robot->SetActiveDOFValues(newvalues, true);
-                if( _robot->CheckSelfCollision() )
+                if( _robot->CheckSelfCollision() ) {
                     continue;
-
-                if( _robot->GetEnv()->CheckCollision(KinBodyConstPtr(_robot)) )
+                }
+                if( _robot->GetEnv()->CheckCollision(KinBodyConstPtr(_robot)) ) {
                     return 1000;
+                }
                 --numiter;
             }
 

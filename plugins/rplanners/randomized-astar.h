@@ -318,7 +318,7 @@ RandomizedAStarPlanner(EnvironmentBasePtr penv) : PlannerBase(penv)
                           _report->plink2!=NULL?_report->plink2->GetName().c_str():"(NULL)");
             return false;
         }
-        else if( _parameters->_bCheckSelfCollisions && _robot->CheckSelfCollision() ) {
+        else if( _robot->CheckSelfCollision() ) {
             RAVELOG_WARN("RA*: robot self-collision!\n");
             return false;
         }
@@ -368,7 +368,7 @@ RandomizedAStarPlanner(EnvironmentBasePtr penv) : PlannerBase(penv)
                         continue;
                 
                     _parameters->_setstatefn(_vSampleConfig);
-                    if( GetEnv()->CheckCollision(KinBodyConstPtr(_robot)) || (_parameters->_bCheckSelfCollisions&&_robot->CheckSelfCollision()) )
+                    if( GetEnv()->CheckCollision(KinBodyConstPtr(_robot)) || (_robot->CheckSelfCollision()) )
                         continue;
 
                     break;
@@ -403,7 +403,7 @@ RandomizedAStarPlanner(EnvironmentBasePtr penv) : PlannerBase(penv)
         RAVELOG_DEBUG("Path found, final node: %f, %f\n", pbest->fcost, pbest->ftotal-pbest->fcost);
 
         _parameters->_setstatefn(pbest->q);
-        if( GetEnv()->CheckCollision(KinBodyConstPtr(_robot)) || (_parameters->_bCheckSelfCollisions&&_robot->CheckSelfCollision()) )
+        if( GetEnv()->CheckCollision(KinBodyConstPtr(_robot)) || (_robot->CheckSelfCollision()) )
             RAVELOG_WARN("RA* collision\n");
     
         stringstream ss;
@@ -516,7 +516,7 @@ private:
             if( pvCheckedConfigurations != NULL )
                 pvCheckedConfigurations->push_back(pQ1);
             _parameters->_setstatefn(pQ1);
-            if (GetEnv()->CheckCollision(KinBodyConstPtr(_robot)) || (_parameters->_bCheckSelfCollisions&&_robot->CheckSelfCollision()) )
+            if (GetEnv()->CheckCollision(KinBodyConstPtr(_robot)) || (_robot->CheckSelfCollision()) )
                 return true;
         }
 
@@ -537,15 +537,16 @@ private:
         // NOTE: this does not check the end config, and may or may
         // not check the start based on the value of 'start'
         for (int f = start; f < numSteps; f++) {
-
             for (i = 0; i < _parameters->GetDOF(); i++)
                 vtempconfig[i] = pQ0[i] + (_jointIncrement[i] * f);
         
-            if( pvCheckedConfigurations != NULL )
+            if( pvCheckedConfigurations != NULL ) {
                 pvCheckedConfigurations->push_back(vtempconfig);
+            }
             _parameters->_setstatefn(vtempconfig);
-            if( GetEnv()->CheckCollision(KinBodyConstPtr(_robot)) || (_parameters->_bCheckSelfCollisions&&_robot->CheckSelfCollision()) )
+            if( GetEnv()->CheckCollision(KinBodyConstPtr(_robot)) || (_robot->CheckSelfCollision()) ) {
                 return true;
+            }
         }
 
         return false;

@@ -277,8 +277,9 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(const Transform& tEE, Col
     }
     FOREACHC(itlink, probot->GetLinks()) {
         int ilink = (*itlink)->GetIndex();
-        if( ilink == iattlink )
+        if( ilink == iattlink || !(*itlink)->IsEnabled() ) {
             continue;
+        }
         // gripper needs to be affected by all joints
         bool bGripperLink = true;
         FOREACHC(itarmjoint,_varmdofindices) {
@@ -287,8 +288,9 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(const Transform& tEE, Col
                 break;
             }
         }
-        if( !bGripperLink )
+        if( !bGripperLink ) {
             continue;
+        }
         for(int ijoint = 0; ijoint < probot->GetDOF(); ++ijoint) {
             if( probot->DoesAffect(ijoint,ilink) && !probot->DoesAffect(ijoint,iattlink) ) {
                 if( probot->CheckLinkCollision(ilink,tdelta*(*itlink)->GetTransform(),report) )
@@ -307,6 +309,9 @@ bool RobotBase::Manipulator::CheckIndependentCollision(CollisionReportPtr report
     std::vector<KinBody::LinkConstPtr> vlinkexcluded;
 
     FOREACHC(itlink, probot->GetLinks()) {
+        if( !(*itlink)->IsEnabled() ) {
+            continue;
+        }
         bool bAffected = false;
         FOREACHC(itindex,_varmdofindices) {
             if( probot->DoesAffect(*itindex,(*itlink)->GetIndex()) ) {
@@ -324,17 +329,20 @@ bool RobotBase::Manipulator::CheckIndependentCollision(CollisionReportPtr report
         }
 
         if( !bAffected ) {
-            if( probot->GetEnv()->CheckCollision(KinBody::LinkConstPtr(*itlink),report) )
+            if( probot->GetEnv()->CheckCollision(KinBody::LinkConstPtr(*itlink),report) ) {
                 return true;
+            }
 
             // check if any grabbed bodies are attached to this link
             FOREACHC(itgrabbed,probot->_vGrabbedBodies) {
                 if( itgrabbed->plinkrobot == *itlink ) {
-                    if( vbodyexcluded.size() == 0 )
+                    if( vbodyexcluded.size() == 0 ) {
                         vbodyexcluded.push_back(KinBodyConstPtr(probot));
+                    }
                     KinBodyPtr pbody = itgrabbed->pbody.lock();
-                    if( !!pbody && probot->GetEnv()->CheckCollision(KinBodyConstPtr(pbody),vbodyexcluded, vlinkexcluded, report) )
+                    if( !!pbody && probot->GetEnv()->CheckCollision(KinBodyConstPtr(pbody),vbodyexcluded, vlinkexcluded, report) ) {
                         return true;
+                    }
                 }
             }
         }
@@ -367,6 +375,14 @@ bool RobotBase::Manipulator::IsGrabbing(KinBodyConstPtr pbody) const
         }
     }
     return false;
+}
+
+void RobotBase::Manipulator::CalculateJacobian(boost::multi_array<dReal,2>& mjacobian) const
+{
+    RobotBasePtr probot(_probot);
+    RobotBase::RobotStateSaver saver(probot,RobotBase::Save_ActiveDOF);
+    probot->SetActiveDOFs(_varmdofindices);
+    probot->CalculateActiveJacobian(_pEndEffector->GetIndex(),_pEndEffector->GetTransform() * _tGrasp.trans,mjacobian);
 }
 
 void RobotBase::Manipulator::serialize(std::ostream& o, int options) const
@@ -548,7 +564,7 @@ RobotBase::RobotBase(EnvironmentBasePtr penv) : KinBody(PT_Robot, penv)
     //set limits for the affine DOFs
     _vTranslationLowerLimits = Vector(-100,-100,-100);
     _vTranslationUpperLimits = Vector(100,100,100);
-    _vTranslationMaxVels = Vector(0.07f,0.07f,0.07f);
+    _vTranslationMaxVels = Vector(1.0f,1.0f,1.0f);
     _vTranslationResolutions = Vector(0.001f,0.001f,0.001f);
     _vTranslationWeights = Vector(2.0f,2.0f,2.0f);
 
@@ -785,9 +801,20 @@ void RobotBase::SetActiveDOFs(const std::vector<int>& vJointIndices, int nAffine
             throw openrave_exception("bad indices",ORE_InvalidArguments);
         }
     }
+    // only reset the cache if the dof values are different
+    if( _vActiveDOFIndices.size() != vJointIndices.size() ) {
+        _nNonAdjacentLinkCache &= ~AO_ActiveDOFs;
+    }
+    else {
+        for(size_t i = 0; i < vJointIndices.size(); ++i) {
+            if( _vActiveDOFIndices[i] != vJointIndices[i] ) {
+                _nNonAdjacentLinkCache &= ~AO_ActiveDOFs;
+                break;
+            }
+        }
+    }
     _vActiveDOFIndices = vJointIndices;
     _nAffineDOFs = nAffineDOFBitmask;
-    _nNonAdjacentLinkCache &= ~AO_ActiveDOFs;
 
     // mutually exclusive
     if( _nAffineDOFs & DOF_RotationAxis ) {
@@ -1990,6 +2017,9 @@ bool RobotBase::CheckSelfCollision(CollisionReportPtr report) const
 bool RobotBase::CheckLinkCollision(int ilinkindex, const Transform& tlinktrans, CollisionReportPtr report)
 {
     LinkPtr plink = _veclinks.at(ilinkindex);
+    if( !plink->IsEnabled() ) {
+        return false;
+    }
     boost::shared_ptr<TransformSaver<RobotBase::LinkPtr> > linksaver(new TransformSaver<RobotBase::LinkPtr>(plink)); // gcc optimization bug when linksaver is on stack
     plink->SetTransform(tlinktrans);
     if( GetEnv()->CheckCollision(LinkConstPtr(plink),report) ) {

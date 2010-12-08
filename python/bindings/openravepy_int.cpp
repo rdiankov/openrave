@@ -1481,6 +1481,13 @@ public:
             return _pmanip->CheckIndependentCollision(!pReport ? CollisionReportPtr() : pReport->report);
         }
 
+        boost::multi_array<dReal,2> CalculateJacobian()
+        {
+            boost::multi_array<dReal,2> mjacobian;
+            _pmanip->CalculateJacobian(mjacobian);
+            return mjacobian;
+        }
+
         string GetStructureHash() const { return _pmanip->GetStructureHash(); }
         string GetKinematicsStructureHash() const { return _pmanip->GetKinematicsStructureHash(); }
         string __repr__() { return boost::str(boost::format("<env.GetRobot('%s').GetManipulator('%s')>")%_pmanip->GetRobot()->GetName()%_pmanip->GetName()); }
@@ -3853,6 +3860,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("CheckEndEffectorCollision",pCheckEndEffectorCollision2,args("transform","report"), DOXY_FN(RobotBase::Manipulator,CheckEndEffectorCollision))
             .def("CheckIndependentCollision",pCheckIndependentCollision1, DOXY_FN(RobotBase::Manipulator,CheckIndependentCollision))
             .def("CheckIndependentCollision",pCheckIndependentCollision2,args("report"), DOXY_FN(RobotBase::Manipulator,CheckIndependentCollision))
+            .def("CalculateJacobian",&PyRobotBase::PyManipulator::CalculateJacobian,DOXY_FN(RobotBase::Manipulator,CalculateJacobian))
             .def("GetStructureHash",&PyRobotBase::PyManipulator::GetStructureHash, DOXY_FN(RobotBase::Manipulator,GetStructureHash))
             .def("GetKinematicsStructureHash",&PyRobotBase::PyManipulator::GetKinematicsStructureHash, DOXY_FN(RobotBase::Manipulator,GetKinematicsStructureHash))
             .def("__repr__",&PyRobotBase::PyManipulator::__repr__)

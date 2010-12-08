@@ -47,9 +47,9 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
         else if( interfacename == "shortcut_linear" ) {
             return InterfaceBasePtr(new ShortcutLinearPlanner(penv));
         }
-//        else if( interfacename == "workspacetrajectorytracker" ) {
-//            return InterfaceBasePtr(new WorkspaceTrajectoryTracker(penv));
-//        }
+        else if( interfacename == "workspacetrajectorytracker" ) {
+            return InterfaceBasePtr(new WorkspaceTrajectoryTracker(penv));
+        }
         break;
     default:
         break;
@@ -65,7 +65,7 @@ void GetPluginAttributesValidated(PLUGININFO& info)
     info.interfacenames[OpenRAVE::PT_Planner].push_back("ExplorationRRT");
     info.interfacenames[OpenRAVE::PT_Planner].push_back("GraspGradient");
     info.interfacenames[OpenRAVE::PT_Planner].push_back("shortcut_linear");
-    //info.interfacenames[OpenRAVE::PT_Planner].push_back("workspacetrajectorytracker");
+    info.interfacenames[OpenRAVE::PT_Planner].push_back("workspacetrajectorytracker");
 }
 
 RAVE_PLUGIN_API void DestroyPlugin()

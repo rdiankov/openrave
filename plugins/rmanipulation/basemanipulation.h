@@ -1,3 +1,4 @@
+// -*- coding: utf-8 -*-
 // Copyright (C) 2006-2010 Rosen Diankov (rdiankov@cs.cmu.edu)
 //
 // This program is free software: you can redistribute it and/or modify
@@ -244,6 +245,109 @@ protected:
         return true;
     }
 
+    bool MoveHandStraight2(ostream& sout, istream& sinput)
+    {
+        Vector direction = Vector(0,1,0);
+        string strtrajfilename;
+        bool bExecute = true;
+        int minsteps = 0;
+        int maxsteps = 10000;
+
+        RobotBase::ManipulatorConstPtr pmanip = robot->GetActiveManipulator();
+        boost::shared_ptr<WorkspaceTrajectoryParameters> params(new WorkspaceTrajectoryParameters(GetEnv()));
+        boost::shared_ptr<ostream> pOutputTrajStream;
+        params->_bIgnoreFirstCollision = true;
+        string cmd;
+        while(!sinput.eof()) {
+            sinput >> cmd;
+            if( !sinput ) {
+                break;
+            }
+            std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
+        
+            if( cmd == "minsteps" ) {
+                sinput >> minsteps;
+            }
+            else if( cmd == "outputtraj") {
+                pOutputTrajStream = boost::shared_ptr<ostream>(&sout,null_deleter());
+            }
+            else if( cmd == "maxsteps") {
+                sinput >> maxsteps;
+            }
+            else if( cmd == "stepsize") {
+                sinput >> params->_fStepLength;
+            }
+            else if( cmd == "execute" ) {
+                sinput >> bExecute;
+            }
+            else if( cmd == "writetraj") {
+                sinput >> strtrajfilename;
+            }
+            else if( cmd == "direction") {
+                sinput >> direction.x >> direction.y >> direction.z;
+                direction.normalize3();
+            }
+            else if( cmd == "ignorefirstcollision") {
+                sinput >> params->_bIgnoreFirstCollision;
+            }
+            else if( cmd == "greedysearch" ) {
+                sinput >> params->_bGreedySearch;
+            }
+            else if( cmd == "maxdeviationangle" ) {
+                sinput >> params->_fMaxDeviationAngle;
+            }
+            else {
+                RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
+                break;
+            }
+
+            if( !sinput ) {
+                RAVELOG_ERROR(str(boost::format("failed processing command %s\n")%cmd));
+                return false;
+            }
+        }
+    
+        RAVELOG_DEBUG("Starting MoveHandStraight dir=(%f,%f,%f)...\n",(float)direction.x, (float)direction.y, (float)direction.z);
+        robot->RegrabAll();
+
+        RobotBase::RobotStateSaver saver(robot);
+
+        params->_workspacetraj = RaveCreateTrajectory(GetEnv(),"");
+        Transform Tee = pmanip->GetEndEffectorTransform();
+        params->_workspacetraj->AddPoint(Trajectory::TPOINT(vector<dReal>(),Tee,0));
+        Tee.trans += direction*maxsteps*params->_fStepLength;
+        params->_workspacetraj->AddPoint(Trajectory::TPOINT(vector<dReal>(),Tee,0));
+        robot->SetActiveDOFs(vector<int>());
+        Vector vold = robot->GetAffineTranslationMaxVels();
+        robot->SetAffineTranslationMaxVels(Vector(1,1,1));
+        params->_workspacetraj->CalcTrajTiming(robot,TrajectoryBase::LINEAR,true,true);
+        robot->SetAffineTranslationMaxVels(vold);
+
+        robot->SetActiveDOFs(pmanip->GetArmIndices());
+        params->SetRobotActiveJoints(robot);
+
+        CM::JitterActiveDOF(robot,100); // try to jitter out, don't worry if it fails
+        robot->GetActiveDOFValues(params->vinitialconfig);
+
+        boost::shared_ptr<PlannerBase> planner = RaveCreatePlanner(GetEnv(),"workspacetrajectorytracker");
+        if( !planner ) {
+            RAVELOG_WARN("failed to create planner\n");
+            return false;
+        }
+    
+        if( !planner->InitPlan(robot, params) ) {
+            RAVELOG_ERROR("InitPlan failed\n");
+            return false;
+        }
+
+        boost::shared_ptr<Trajectory> poutputtraj(RaveCreateTrajectory(GetEnv(),""));
+        if( !planner->PlanPath(poutputtraj) ) {
+            return false;
+        }
+        CM::SetActiveTrajectory(robot, poutputtraj, bExecute, strtrajfilename, pOutputTrajStream,_fMaxVelMult);
+        return true;
+    }
+
     bool MoveHandStraight(ostream& sout, istream& sinput)
     {
         float stepsize = 0.003f;
@@ -386,9 +490,9 @@ protected:
             }
             else {
                 handTr.trans += stepsize*direction;
-                bool bCheckCollision = !bPrevInCollision && i >= minsteps;
+                int filteroptions = (!bPrevInCollision && i >= minsteps) ? IKFO_CheckEnvCollisions : 0;
                 if( bSearchAll ) {
-                    if( !pmanip->FindIKSolutions(handTr,vsolutions,bCheckCollision)) {
+                    if( !pmanip->FindIKSolutions(handTr,vsolutions,filteroptions)) {
                         RAVELOG_DEBUG("Arm Lifting: broke due to ik\n");
                         break;
                     }
@@ -404,7 +508,7 @@ protected:
                     point.q = vsolutions[minindex];
                 }
                 else {
-                    if( !pmanip->FindIKSolution(handTr,point.q,bCheckCollision)) {
+                    if( !pmanip->FindIKSolution(handTr,point.q,filteroptions)) {
                         RAVELOG_DEBUG("Arm Lifting: broke due to ik\n");
                         break;
                     }
@@ -549,9 +653,9 @@ protected:
             else RAVELOG_WARN("PlanPath failed\n");
         }
 
-        if( !bSuccess )
+        if( !bSuccess ) {
             return false;
-    
+        }
         CM::SetActiveTrajectory(robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream,_fMaxVelMult);
         sout << "1";
         return true;

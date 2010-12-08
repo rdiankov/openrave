@@ -466,7 +466,7 @@ public:
             (void) closedir (dp);
         }
         else {
-            RAVELOG_WARN("Couldn't open directory %s\n", pdir.c_str());
+            RAVELOG_DEBUG("Couldn't open directory %s\n", pdir.c_str());
         }
 #endif
         return true;

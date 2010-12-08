@@ -20,66 +20,18 @@
 
 class WorkspaceTrajectoryTracker : public PlannerBase
 {
-public:
-    class WorkspaceTrajectoryParameters : public PlannerBase::PlannerParameters {
+    class SetCustomFilterScope
+    {
     public:
-    WorkspaceTrajectoryParameters() : _fMaxDeviationAngle(0.15*PI), _bMaintainTiming(false), _bProcessing(false) {
-            _vXMLParameters.push_back("maxdeviationangle");
-            _vXMLParameters.push_back("maintaintiming");
+    SetCustomFilterScope(IkSolverBasePtr pik, const IkSolverBase::IkFilterCallbackFn& filterfn) : _pik(pik){
+            _pik->SetCustomFilter(filterfn);
         }
-        
-        dReal _fMaxDeviationAngle;
-        bool _bMaintainTiming; ///< maintain timing with input trajectory
-
-    protected:
-        bool _bProcessing;
-        // save the extra data to XML
-        virtual bool serialize(std::ostream& O) const
-        {
-            if( !PlannerParameters::serialize(O) ) {
-                return false;
-            }
-            O << "<maxdeviationangle>" << _fMaxDeviationAngle << "</maxdeviationangle>" << endl;
-            O << "<maintaintiming>" << _bMaintainTiming << "</maintaintiming>" << endl;
-            return !!O;
-        }
-
-        ProcessElement startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts)
-        {
-            if( _bProcessing ) {
-                return PE_Ignore;
-            }
-            switch( PlannerBase::PlannerParameters::startElement(name,atts) ) {
-            case PE_Pass: break;
-            case PE_Support: return PE_Support;
-            case PE_Ignore: return PE_Ignore;
-            }    
-            _bProcessing = name=="maxdeviationangle" || name=="maintaintiming";
-            return _bProcessing ? PE_Support : PE_Pass;
-        }
-        
-        // called at the end of every XML tag, _ss contains the data 
-        virtual bool endElement(const std::string& name)
-        {
-            // _ss is an internal stringstream that holds the data of the tag
-            if( _bProcessing ) {
-                if( name == "maxdeviationangle") {
-                    _ss >> _fMaxDeviationAngle;
-                }
-                else if( name == "maintaintiming" ) {
-                    _ss >> _bMaintainTiming;
-                }
-                else {
-                    RAVELOG_WARN(str(boost::format("unknown tag %s\n")%name));
-                }
-                _bProcessing = false;
-                return false;
-            }
-            // give a chance for the default parameters to get processed
-            return PlannerParameters::endElement(name);
-        }
+        virtual ~SetCustomFilterScope() { _pik->SetCustomFilter(IkSolverBase::IkFilterCallbackFn()); }
+    private:
+        IkSolverBasePtr _pik;
     };
-    
+
+public:    
  WorkspaceTrajectoryTracker(EnvironmentBasePtr penv) : PlannerBase(penv)
     {
         __description = "\
@@ -92,68 +44,248 @@ In the simplest case, the workspace trajectory can be a straight line from one p
     }
     virtual ~WorkspaceTrajectoryTracker() {}
 
-    virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr params)
+    virtual bool InitPlan(RobotBasePtr probot, PlannerParametersConstPtr params)
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
-        _parameters.reset(new WorkspaceTrajectoryParameters());
-        _parameters->copy(params);
-        _robot = pbase;
-        _fMaxCosDeviationAngle = RaveCos(_parameters->_fMaxDeviationAngle);
 
-        if( _parameters->_bMaintainTiming ) {
+        boost::shared_ptr<WorkspaceTrajectoryParameters> parameters(new WorkspaceTrajectoryParameters(GetEnv()));
+        parameters->copy(params);
+        _robot = probot;
+        _manip = _robot->GetActiveManipulator();
+
+        if( (int)_manip->GetArmIndices().size() != parameters->GetDOF() ) {
+            RAVELOG_WARN("parameter configuraiton space must be the robot's active manipulator\n");
+            return false;
+        }
+
+        if( !parameters->_workspacetraj || parameters->_workspacetraj->GetDOF() > 0 || parameters->_workspacetraj->GetTotalDuration() == 0 || parameters->_workspacetraj->GetPoints().size() == 0 ) {
+            RAVELOG_ERROR("input trajectory needs to be 0 DOF and initialized with interpolation information\n");
+        }
+
+        // check if the parameters configuration space actually reflects the active manipulator, move to the upper and lower limits
+        {
+            RobotBase::RobotStateSaver saver(_robot);
+            boost::array<std::vector<dReal>*,2> testvalues = {{&parameters->_vConfigLowerLimit,&parameters->_vConfigUpperLimit}};
+            vector<dReal> dummyvalues;
+            for(size_t i = 0; i < testvalues.size(); ++i) {
+                parameters->_setstatefn(*testvalues[i]);
+                Transform tstate = _manip->GetEndEffectorTransform();
+                _robot->SetActiveDOFs(_manip->GetArmIndices());
+                _robot->GetActiveDOFValues(dummyvalues);
+                for(size_t j = 0; j < dummyvalues.size(); ++j) {
+                    if( RaveFabs(dummyvalues.at(j) - testvalues[i]->at(j)) > 2*g_fEpsilon ) {
+                        RAVELOG_ERROR(str(boost::format("parameter configuration space does not match active manipulator, dof %d!\n")%j));
+                        return false;
+                    }
+                }
+            }
+        }
+
+        _fMaxCosDeviationAngle = RaveCos(parameters->_fMaxDeviationAngle);
+
+        if( parameters->_bMaintainTiming ) {
             RAVELOG_WARN("currently do not support maintaining timing\n");
         }
 
         RobotBase::RobotStateSaver savestate(_robot);
-        if( (int)_parameters->vinitialconfig.size() != _parameters->GetDOF() ) {
-            RAVELOG_ERROR(str(boost::format("initial config wrong dim: %d\n")%_parameters->vinitialconfig.size()));
-            return false;
-        }
-
-        if(CollisionFunctions::CheckCollision(_parameters,_robot,_parameters->vinitialconfig, _report)) {
-            RAVELOG_DEBUG("BirrtPlanner::InitPlan - Error: Initial configuration in collision\n");
+        if(CollisionFunctions::CheckCollision(parameters,_robot,parameters->vinitialconfig, _report)) {
+            RAVELOG_DEBUG("WorkspaceTrajectoryTracker::InitPlan - Error: Initial configuration in collision\n");
             return false;
         }
     
-        // set up the initial state
-        if( !!_parameters->_constraintfn ) {
-            _parameters->_setstatefn(_parameters->vinitialconfig);
-            if( !_parameters->_constraintfn(_parameters->vinitialconfig, _parameters->vinitialconfig,0) ) {
+        // validate the initial state if one exists
+        if( parameters->vinitialconfig.size() > 0 && !!parameters->_constraintfn ) {
+            if( (int)parameters->vinitialconfig.size() != parameters->GetDOF() ) {
+                RAVELOG_ERROR(str(boost::format("initial config wrong dim: %d\n")%parameters->vinitialconfig.size()));
+                return false;
+            }
+            parameters->_setstatefn(parameters->vinitialconfig);
+            if( !parameters->_constraintfn(parameters->vinitialconfig, parameters->vinitialconfig,0) ) {
                 RAVELOG_WARN("initial state rejected by constraint fn\n");
                 return false;
             }
         }
 
+        if( !_manip->GetIkSolver() ) {
+            RAVELOG_ERROR(str(boost::format("manipulator %s does not have ik solver set\n")%_manip->GetName()));
+            return false;
+        }
+        
+        _parameters = parameters;
         return true;
     }
 
-    virtual bool PlanPath(TrajectoryBasePtr ptraj, boost::shared_ptr<std::ostream> pOutStream)
+    virtual bool PlanPath(TrajectoryBasePtr poutputtraj, boost::shared_ptr<std::ostream> pOutStream)
     {
         if(!_parameters) {
-            RAVELOG_ERROR("BirrtPlanner::PlanPath - Error, planner not initialized\n");
+            RAVELOG_ERROR("WorkspaceTrajectoryTracker::PlanPath - Error, planner not initialized\n");
             return false;
-        }
-        if( ptraj->GetDOF() > 0 || ptraj->GetTotalDuration() == 0 ) {
-            RAVELOG_ERROR("input trajectory needs to be 0 DOF and initialized with interpolation information\n");
         }
 
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         uint32_t basetime = timeGetTime();
- 
         RobotBase::RobotStateSaver savestate(_robot);
+        _robot->SetActiveDOFs(_manip->GetArmIndices()); // should be set by user anyway, but this is an extra precaution
         CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
 
-        RAVELOG_DEBUG(str(boost::format("plan success, path=%d points in %fs\n")%ptraj->GetPoints().size()%((0.001f*(float)(timeGetTime()-basetime)))));
+        // first check if the end effectors are in collision
+        TrajectoryBaseConstPtr workspacetraj = _parameters->_workspacetraj;
+        if( _manip->CheckEndEffectorCollision(workspacetraj->GetPoints().back().trans) ) {
+            if( _parameters->_fMinimumCompleteTime >= workspacetraj->GetTotalDuration() ) {
+                return false;
+            }
+        }
+
+        TrajectoryBase::TPOINT pt;
+        dReal fstarttime = 0, fendtime = workspacetraj->GetTotalDuration();
+        bool bPrevInCollision = true;
+        list<Transform> listtransforms;
+        for(dReal ftime = 0; ftime < workspacetraj->GetTotalDuration(); ftime += _parameters->_fStepLength) {
+            workspacetraj->SampleTrajectory(ftime,pt);
+            listtransforms.push_back(pt.trans);
+            if( _manip->CheckEndEffectorCollision(pt.trans) ) {
+                if( _parameters->_bIgnoreFirstCollision && bPrevInCollision ) {
+                    continue;
+                }
+                if( !bPrevInCollision ) {
+                    if( ftime >= _parameters->_fMinimumCompleteTime ) {
+                        fendtime = ftime;
+                        break;
+                    }
+                }
+                return false;
+            }
+            else {
+                if( bPrevInCollision ) {
+                    fstarttime = ftime;
+                }
+                bPrevInCollision = false;
+            }
+        }
+
+        if( bPrevInCollision ) {
+            // only the last point is valid
+            fstarttime = workspacetraj->GetTotalDuration();
+        }
+        listtransforms.push_back(workspacetraj->GetPoints().back().trans);
+
+        // disable all child links since we've already checked their collision
+        vector<KinBody::LinkPtr> vlinks;
+        _manip->GetChildLinks(vlinks);
+        FOREACH(it,vlinks) {
+            (*it)->Enable(false);
+        }
+
+        if( !poutputtraj ) {
+            poutputtraj = RaveCreateTrajectory(GetEnv(),"");
+        }
+
+        _mjacobian.resize(boost::extents[0][0]);
+        _vprevsolution.resize(0);
+        poutputtraj->Reset(_parameters->GetDOF());
+        if( (int)_parameters->vinitialconfig.size() == _parameters->GetDOF() ) {
+            _vprevsolution = _parameters->vinitialconfig;
+            poutputtraj->AddPoint(Trajectory::TPOINT(_parameters->vinitialconfig,0));
+            _parameters->_setstatefn(_parameters->vinitialconfig);
+            _manip->CalculateJacobian(_mjacobian);
+            _transprev = _manip->GetEndEffectorTransform();
+        }
+
+        SetCustomFilterScope filter(_manip->GetIkSolver(),boost::bind(&WorkspaceTrajectoryTracker::_ValidateSolution,this,_1,_2,_3));
+        vector<dReal> vsolution;
+        if( _parameters->_bGreedySearch ) {
+            list<Transform>::iterator ittrans = listtransforms.begin();
+            bPrevInCollision = true;
+            for(dReal ftime = 0; ftime < fendtime; ftime += _parameters->_fStepLength) {
+                int filteroptions = (ftime >= fstarttime) ? IKFO_CheckEnvCollisions : 0;
+                if( !_manip->FindIKSolution(*ittrans,vsolution,filteroptions) ) {
+                    if( ftime < fstarttime ) {
+                        return false; // a solution really doesn't exist
+                    }
+                    if( _parameters->_bIgnoreFirstCollision && bPrevInCollision ) {
+                        if( !_manip->FindIKSolution(*ittrans,vsolution,0) ) {
+                            return false;
+                        }
+                    }
+                    else {
+                        if( !bPrevInCollision ) {
+                            if( ftime >= _parameters->_fMinimumCompleteTime ) {
+                                fendtime = ftime;
+                                break;
+                            }
+                        }
+                        return false;
+                    }
+                }
+                else {
+                    if( bPrevInCollision ) {
+                        fstarttime = ftime;
+                    }
+                    bPrevInCollision = false;
+                }
+
+                poutputtraj->AddPoint(Trajectory::TPOINT(vsolution,0));
+                _parameters->_setstatefn(vsolution);
+                _manip->CalculateJacobian(_mjacobian);
+                _transprev = *ittrans;
+            }
+        }
+        else {
+            RAVELOG_ERROR("WorkspaceTrajectoryTracker::PlanPath - Error, planner not initialized\n");
+        }
+
+        RAVELOG_DEBUG(str(boost::format("plan success, path=%d points in %fs\n")%poutputtraj->GetPoints().size()%((0.001f*(float)(timeGetTime()-basetime)))));
         return true;
     }
 
     virtual PlannerParametersConstPtr GetParameters() const { return _parameters; }
 
 protected:
-    RobotBasePtr         _robot;
+    IkFilterReturn _ValidateSolution(std::vector<dReal>& vsolution, RobotBase::ManipulatorPtr pmanip, const IkParameterization& ikp)
+    {
+        if( !!_parameters->_constraintfn ) {
+            _vtempsolution = vsolution;
+            if( !_parameters->_constraintfn(_vprevsolution.size() > 0 ? _vprevsolution : vsolution, _vtempsolution,0) ) {
+                return IKFR_Reject;
+            }
+            // check if solution was changed
+            for(size_t j = 0; j < _vtempsolution.size(); ++j) {
+                if( RaveFabs(_vtempsolution[j] - vsolution[j]) > 2*g_fEpsilon ) {
+                    RAVELOG_WARN("solution changed by constraint function\n");
+                    return IKFR_Reject;
+                }
+            }
+        }
+        
+        // check if continuous with previous solution using the jacobian
+        if( _mjacobian.num_elements() > 0 ) {
+            Vector expecteddeltatrans = ikp.GetTransform().trans - _transprev.trans;
+            Vector jdeltatrans;
+            for(size_t j = 0; j < vsolution.size(); ++j) {
+                dReal d = vsolution[j]-_vprevsolution.at(j);
+                jdeltatrans.x += _mjacobian[0][j]*d;
+                jdeltatrans.y += _mjacobian[1][j]*d;
+                jdeltatrans.z += _mjacobian[2][j]*d;
+            }
+            dReal cangle = expecteddeltatrans.dot3(jdeltatrans);
+            if( cangle < 0 || cangle*cangle  < _fMaxCosDeviationAngle*_fMaxCosDeviationAngle*expecteddeltatrans.lengthsqr3()*jdeltatrans.lengthsqr3() ) {
+                return IKFR_Reject;
+            }
+        }
+
+        return IKFR_Success;
+    }
+
+    RobotBasePtr _robot;
+    RobotBase::ManipulatorPtr _manip;
     CollisionReportPtr _report;
     boost::shared_ptr<WorkspaceTrajectoryParameters> _parameters;
     dReal _fMaxCosDeviationAngle;
+
+    // planning state
+    boost::multi_array<dReal,2> _mjacobian;
+    Transform _transprev;
+    vector<dReal> _vprevsolution, _vtempsolution;
 };
 
 #endif

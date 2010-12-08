@@ -208,9 +208,10 @@ class ReachabilityModel(OpenRAVEModel):
             with self.robot:
                 self.robot.SetTransform(eye(4))
                 if useconvex:
-                    self.cdmodel = convexdecomposition.ConvexDecompositionModel(self.robot)
-                    if not self.cdmodel.load():
-                        self.cdmodel.autogenerate()
+                    raveLogWarn('for now, convex decomposition disabled for self-collisions')
+                    #self.cdmodel = convexdecomposition.ConvexDecompositionModel(self.robot)
+                    #if not self.cdmodel.load():
+                    #    self.cdmodel.autogenerate()
                 Tbase = self.manip.GetBase().GetTransform()
                 Tbaseinv = linalg.inv(Tbase)
                 maniplinks = self.getManipulatorLinks(self.manip)

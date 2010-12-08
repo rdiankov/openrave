@@ -608,7 +608,7 @@ void subtractstates(std::vector<dReal>& q1, const std::vector<dReal>& q2)
 }
 
 // PlannerParameters class
-PlannerBase::PlannerParameters::PlannerParameters() : XMLReadable("plannerparameters"), _fStepLength(0.04f), _nMaxIterations(0), _sPathOptimizationPlanner("shortcut_linear"), _bCheckSelfCollisions(true)
+PlannerBase::PlannerParameters::PlannerParameters() : XMLReadable("plannerparameters"), _fStepLength(0.04f), _nMaxIterations(0), _sPathOptimizationPlanner("shortcut_linear")
 {
     _diffstatefn = subtractstates;
     _vXMLParameters.reserve(10);
@@ -621,7 +621,6 @@ PlannerBase::PlannerParameters::PlannerParameters() : XMLReadable("plannerparame
     _vXMLParameters.push_back("_nmaxiterations");
     _vXMLParameters.push_back("_fsteplength");
     _vXMLParameters.push_back("_pathoptimization");
-    _vXMLParameters.push_back("_bcheckselfcollisions");
 }
 
 PlannerBase::PlannerParameters& PlannerBase::PlannerParameters::operator=(const PlannerBase::PlannerParameters& r)
@@ -648,7 +647,6 @@ PlannerBase::PlannerParameters& PlannerBase::PlannerParameters::operator=(const 
     _sPathOptimizationParameters.resize(0);
     _sExtraParameters.resize(0);
     _nMaxIterations = 0;
-    _bCheckSelfCollisions = true;
     _fStepLength = 0.04f;
     _plannerparametersdepth = 0;
     
@@ -693,7 +691,6 @@ bool PlannerBase::PlannerParameters::serialize(std::ostream& O) const
     O << "<_nmaxiterations>" << _nMaxIterations << "</_nmaxiterations>" << endl;
     O << "<_fsteplength>" << _fStepLength << "</_fsteplength>" << endl;
     O << "<_pathoptimization planner=\"" << _sPathOptimizationPlanner << "\">" << _sPathOptimizationParameters << "</_pathoptimization>" << endl;
-    O << "<_bcheckselfcollisions>" << _bCheckSelfCollisions << "</_bcheckselfcollisions>" << endl;
     O << _sExtraParameters << endl;
     return !!O;
 }
@@ -702,14 +699,15 @@ BaseXMLReader::ProcessElement PlannerBase::PlannerParameters::startElement(const
 {
     _ss.str(""); // have to clear the string
     if( !!__pcurreader ) {
-        if( __pcurreader->startElement(name, atts) == PE_Support )
+        if( __pcurreader->startElement(name, atts) == PE_Support ) {
             return PE_Support;
+        }
         return PE_Ignore;
     }
 
-    if( __processingtag.size() > 0 )
+    if( __processingtag.size() > 0 ) {
         return PE_Ignore;
-
+    }
     if( name=="plannerparameters" ) {
         _plannerparametersdepth++;
         return PE_Support;
@@ -720,8 +718,9 @@ BaseXMLReader::ProcessElement PlannerBase::PlannerParameters::startElement(const
         _sPathOptimizationPlanner="";
         _sPathOptimizationParameters="";
         FOREACHC(itatt,atts) {
-            if( itatt->first == "planner" )
+            if( itatt->first == "planner" ) {
                 _sPathOptimizationPlanner = itatt->second;
+            }
         }
         __pcurreader.reset(new DummyXMLReader(name,GetXMLId(),_sslocal));
         return PE_Support;
@@ -730,14 +729,15 @@ BaseXMLReader::ProcessElement PlannerBase::PlannerParameters::startElement(const
     if( find(_vXMLParameters.begin(),_vXMLParameters.end(),name) == _vXMLParameters.end() ) {
         _sslocal.reset(new std::stringstream());
         *_sslocal << "<" << name << " ";
-        FOREACHC(itatt, atts)
+        FOREACHC(itatt, atts) {
             *_sslocal << itatt->first << "=\"" << itatt->second << "\" ";
+        }
         *_sslocal << ">" << endl;
         __pcurreader.reset(new DummyXMLReader(name,GetXMLId(),_sslocal));
         return PE_Support;
     }
 
-    if( name=="_vinitialconfig"||name=="_vgoalconfig"||name=="_vconfiglowerlimit"||name=="_vconfigupperlimit"||name=="_vconfigresolution"||name=="_tworkspacegoal"||name=="_nmaxiterations"||name=="_fsteplength"||name=="_pathoptimization"||name=="_bcheckselfcollisions" ) {
+    if( name=="_vinitialconfig"||name=="_vgoalconfig"||name=="_vconfiglowerlimit"||name=="_vconfigupperlimit"||name=="_vconfigresolution"||name=="_tworkspacegoal"||name=="_nmaxiterations"||name=="_fsteplength"||name=="_pathoptimization" ) {
         __processingtag = name;
         return PE_Support;
     }
@@ -766,28 +766,34 @@ bool PlannerBase::PlannerParameters::endElement(const std::string& name)
     else if( name == "plannerparameters" )
         return --_plannerparametersdepth < 0;
     else if( __processingtag.size() > 0 ) {
-        if( name == "_vinitialconfig")
+        if( name == "_vinitialconfig") {
             vinitialconfig = vector<dReal>((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
-        else if( name == "_vgoalconfig")
+        }
+        else if( name == "_vgoalconfig") {
             vgoalconfig = vector<dReal>((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
-        else if( name == "_vconfiglowerlimit")
+        }
+        else if( name == "_vconfiglowerlimit") {
             _vConfigLowerLimit = vector<dReal>((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
-        else if( name == "_vconfigupperlimit")
+        }
+        else if( name == "_vconfigupperlimit") {
             _vConfigUpperLimit = vector<dReal>((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
-        else if( name == "_vconfigresolution")
+        }
+        else if( name == "_vconfigresolution") {
             _vConfigResolution = vector<dReal>((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
+        }
         else if( name == "_tworkspacegoal") {
             _tWorkspaceGoal.reset(new Transform());
             _ss >> *_tWorkspaceGoal.get();
         }
-        else if( name == "_nmaxiterations")
+        else if( name == "_nmaxiterations") {
             _ss >> _nMaxIterations;
-        else if( name == "_fsteplength")
+        }
+        else if( name == "_fsteplength") {
             _ss >> _fStepLength;
-        else if( name == "_bcheckselfcollisions" )
-            _ss >> _bCheckSelfCollisions;
-        if( name !=__processingtag )
+        }
+        if( name !=__processingtag ) {
             RAVELOG_WARN(str(boost::format("invalid tag %s!=%s\n")%name%__processingtag));
+        }
         __processingtag = "";
         return false;
     }
@@ -797,8 +803,9 @@ bool PlannerBase::PlannerParameters::endElement(const std::string& name)
 
 void PlannerBase::PlannerParameters::characters(const std::string& ch)
 {
-    if( !!__pcurreader )
+    if( !!__pcurreader ) {
         __pcurreader->characters(ch);
+    }
     else {
         _ss.clear();
         _ss << ch;
@@ -824,8 +831,9 @@ class SimpleDistMetric
         std::vector<dReal> c = c0;
         _robot->SubtractActiveDOFValues(c,c1);
         dReal dist = 0;
-        for(int i=0; i < _robot->GetActiveDOF(); i++)
+        for(int i=0; i < _robot->GetActiveDOF(); i++) {
             dist += weights.at(i)*c.at(i)*c.at(i);
+        }
         return RaveSqrt(dist);
     }
 
@@ -840,13 +848,15 @@ public:
     SimpleSampleFunction(RobotBasePtr robot, const boost::function<dReal(const std::vector<dReal>&, const std::vector<dReal>&)>& distmetricfn) : _robot(robot), _distmetricfn(distmetricfn) {
         _robot->GetActiveDOFLimits(lower, upper);
         range.resize(lower.size());
-        for(int i = 0; i < (int)range.size(); ++i)
+        for(int i = 0; i < (int)range.size(); ++i) {
             range[i] = upper[i] - lower[i];
+        }
     }
     virtual bool Sample(vector<dReal>& pNewSample) {
         pNewSample.resize(lower.size());
-        for (size_t i = 0; i < lower.size(); i++)
+        for (size_t i = 0; i < lower.size(); i++) {
             pNewSample[i] = lower[i] + RaveRandomFloat()*range[i];
+        }
         return true;
     }
 
@@ -864,26 +874,31 @@ public:
         //assert(_robot->ConfigDist(&_vzero[0], &_vSampleConfig[0]) < B+1);
         dReal fDist = _distmetricfn(sample,pCurSample);
         while(fDist > fRatio) {
-            for (int i = 0; i < dof; i++)
+            for (int i = 0; i < dof; i++) {
                 sample[i] = 0.5f*pCurSample[i]+0.5f*sample[i];
+            }
             fDist = _distmetricfn(sample,pCurSample);
         }
     
         for(int iter = 0; iter < 20; ++iter) {
             while(_distmetricfn(sample, pCurSample) < fRatio ) {
-                for (int i = 0; i < dof; i++)
+                for (int i = 0; i < dof; i++) {
                     sample[i] = 1.2f*sample[i]-0.2f*pCurSample[i];
+                }
             }
         }
 
         pNewSample.resize(lower.size());
         for (int i = 0; i < dof; i++) {
-            if( sample[i] < lower[i] )
+            if( sample[i] < lower[i] ) {
                 pNewSample[i] = lower[i];
-            else if( sample[i] > upper[i] )
+            }
+            else if( sample[i] > upper[i] ) {
                 pNewSample[i] = upper[i];
-            else
+            }
+            else {
                 pNewSample[i] = sample[i];
+            }
         }
 
         return true;
@@ -905,7 +920,6 @@ void PlannerBase::PlannerParameters::SetRobotActiveJoints(RobotBasePtr robot)
     _setstatefn = boost::bind(&RobotBase::SetActiveDOFValues,robot,_1,false);
     _getstatefn = boost::bind(&RobotBase::GetActiveDOFValues,robot,_1);
     _diffstatefn = boost::bind(&RobotBase::SubtractActiveDOFValues,robot,_1,_2);
-    _bCheckSelfCollisions = robot->GetActiveDOF() != robot->GetAffineDOF();
     robot->GetActiveDOFLimits(_vConfigLowerLimit,_vConfigUpperLimit);
     robot->GetActiveDOFResolutions(_vConfigResolution);
     robot->GetActiveDOFValues(vinitialconfig);
@@ -922,19 +936,22 @@ bool PlannerBase::InitPlan(RobotBasePtr pbase, std::istream& isParameters)
 
 bool PlannerBase::_OptimizePath(RobotBasePtr probot, TrajectoryBasePtr ptraj)
 {
-    if( GetParameters()->_sPathOptimizationPlanner.size() == 0 )
+    if( GetParameters()->_sPathOptimizationPlanner.size() == 0 ) {
         return true;
+    }
     PlannerBasePtr planner = RaveCreatePlanner(GetEnv(), GetParameters()->_sPathOptimizationPlanner);
-    if( !planner )
+    if( !planner ) {
         return false;
+    }
     PlannerParametersPtr params(new PlannerParameters());
     params->copy(GetParameters());
     params->_sExtraParameters += GetParameters()->_sPathOptimizationParameters;
     params->_sPathOptimizationPlanner = "";
     params->_sPathOptimizationParameters = "";
     params->_nMaxIterations = 0; // have to reset since path optimizers also use it and new parameters could be in extra parameters
-    if( !planner->InitPlan(probot, params) )
+    if( !planner->InitPlan(probot, params) ) {
         return false;
+    }
     return planner->PlanPath(ptraj);
 }
 

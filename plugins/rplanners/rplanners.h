@@ -17,6 +17,7 @@
 #define RAVE_PLANNERS_H
 
 #include "plugindefs.h"
+#include "plannerparameters.h"
 
 enum ExtendType {
     ET_Failed=0,
@@ -53,9 +54,10 @@ class CollisionFunctions
         vector<dReal> vlastconfig(params->GetDOF()), vtempconfig(params->GetDOF());
         if (bCheckEnd) {
             params->_setstatefn(pQ1);
-            if (robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot)) || (params->_bCheckSelfCollisions&&robot->CheckSelfCollision()) ) {
-                if( pvCheckedConfigurations != NULL )
+            if (robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot)) || (robot->CheckSelfCollision()) ) {
+                if( pvCheckedConfigurations != NULL ) {
                     pvCheckedConfigurations->push_back(pQ1);
+                }
                 return true;
             }
         }
@@ -84,27 +86,28 @@ class CollisionFunctions
         // NOTE: this does not check the end config, and may or may
         // not check the start based on the value of 'start'
         for (int f = start; f < numSteps; f++) {
-
-            for (i = 0; i < params->GetDOF(); i++)
+            for (i = 0; i < params->GetDOF(); i++) {
                 vtempconfig[i] = pQ0[i] + (dQ[i] * f);
-        
+            }
             params->_setstatefn(vtempconfig);
             if( !!params->_constraintfn ) {
-                if( !params->_constraintfn(vlastconfig,vtempconfig,0) )
+                if( !params->_constraintfn(vlastconfig,vtempconfig,0) ) {
                     return true;
+                }
                 vlastconfig = pQ0;
             }
             if( pvCheckedConfigurations != NULL ) {
                 params->_getstatefn(vtempconfig); // query again in order to get normalizations/joint limits
                 pvCheckedConfigurations->push_back(vtempconfig);
             }
-            if( robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot)) || (params->_bCheckSelfCollisions&&robot->CheckSelfCollision()) )
+            if( robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot)) || (robot->CheckSelfCollision()) ) {
                 return true;
+            }
         }
 
-        if( bCheckEnd && pvCheckedConfigurations != NULL )
+        if( bCheckEnd && pvCheckedConfigurations != NULL ) {
             pvCheckedConfigurations->push_back(pQ1);
-
+        }
         return false;
     }
 
@@ -112,9 +115,10 @@ class CollisionFunctions
     static bool CheckCollision(PlannerBase::PlannerParametersConstPtr params, RobotBasePtr robot, const vector<dReal>& pConfig, CollisionReportPtr report=CollisionReportPtr())
     {
         params->_setstatefn(pConfig);
-        bool bCol = robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot), report) || (params->_bCheckSelfCollisions&&robot->CheckSelfCollision(report));
-        if( bCol && !!report )
+        bool bCol = robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot), report) || (robot->CheckSelfCollision(report));
+        if( bCol && !!report ) {
             RAVELOG_WARN(str(boost::format("fcollision %s\n")%report->__str__()));
+        }
         return bCol;
     }
 };
@@ -201,9 +205,9 @@ class SpatialTree : public SpatialTreeBase
     ///< return the nearest neighbor
     virtual int GetNN(const vector<dReal>& q)
     {
-        if( _nodes.size() == 0 )
+        if( _nodes.size() == 0 ) {
             return -1;
-
+        }
         int ibest = -1;
         dReal fbest = 0;
         FOREACH(itnode, _nodes) {
@@ -224,8 +228,9 @@ class SpatialTree : public SpatialTreeBase
     {
         // get the nearest neighbor
         lastindex = GetNN(pTargetConfig);
-        if( lastindex < 0 )
+        if( lastindex < 0 ) {
             return ET_Failed;
+        }
         Node* pnode = _nodes.at(lastindex);
         bool bHasAdded = false;
         boost::shared_ptr<Planner> planner(_planner);
@@ -265,16 +270,18 @@ class SpatialTree : public SpatialTreeBase
             }
 
             if( CollisionFunctions::CheckCollision(params,planner->GetRobot(),pnode->q, _vNewConfig, IT_OpenStart) ) {
-                if(bHasAdded)
+                if(bHasAdded) {
                     return ET_Sucess;
+                }
                 return ET_Failed;
             }
 
             lastindex = AddNode(lastindex, _vNewConfig);
             pnode = _nodes[lastindex];
             bHasAdded = true;
-            if( bOneStep )
+            if( bOneStep ) {
                 return ET_Connected;
+            }
         }
     
         return ET_Failed;
@@ -351,8 +358,9 @@ GraspSetParameters(EnvironmentBasePtr penv) : _nGradientSamples(5), _fVisibiltyG
                 int ngrasps=0;
                 _ss >> ngrasps;
                 _vgrasps.resize(ngrasps);
-                FOREACH(it, _vgrasps)
-                        _ss >> *it;
+                FOREACH(it, _vgrasps) {
+                    _ss >> *it;
+                }
             }
             else if( name == "target" ) {
                 int id = 0;
@@ -389,16 +397,18 @@ BasicRRTParameters() : _fGoalBiasProb(0.05f), _bProcessing(false) {
     bool _bProcessing;
     virtual bool serialize(std::ostream& O) const
     {
-        if( !PlannerParameters::serialize(O) )
+        if( !PlannerParameters::serialize(O) ) {
             return false;
+        }
         O << "<goalbias>" << _fGoalBiasProb << "</goalbias>" << endl;
         return !!O;
     }
 
     ProcessElement startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts)
     {
-        if( _bProcessing )
+        if( _bProcessing ) {
             return PE_Ignore;
+        }
         switch( PlannerBase::PlannerParameters::startElement(name,atts) ) {
             case PE_Pass: break;
             case PE_Support: return PE_Support;
@@ -412,10 +422,12 @@ BasicRRTParameters() : _fGoalBiasProb(0.05f), _bProcessing(false) {
     virtual bool endElement(const string& name)
     {
         if( _bProcessing ) {
-            if( name == "goalbias")
+            if( name == "goalbias") {
                 _ss >> _fGoalBiasProb;
-            else
+            }
+            else {
                 RAVELOG_WARN(str(boost::format("unknown tag %s\n")%name));
+            }
             _bProcessing = false;
             return false;
         }
@@ -424,7 +436,6 @@ BasicRRTParameters() : _fGoalBiasProb(0.05f), _bProcessing(false) {
         return PlannerParameters::endElement(name);
     }
 };
-
 
 inline dReal TransformDistance2(const Transform& t1, const Transform& t2, dReal frotweight=1, dReal ftransweight=1)
 {

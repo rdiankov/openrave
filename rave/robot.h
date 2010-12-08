@@ -89,7 +89,7 @@ public:
         /// Usually the DOF indices from pBase to pEndEffector
         virtual const std::vector<int>& GetArmIndices() const { return _varmdofindices; }
 
-        /// normal direction to move joints to 'close' the hand
+        /// \brief return the normal direction to move joints to 'close' the hand
         virtual const std::vector<dReal>& GetClosingDirection() const { return _vClosingDirection; }
 
         /// \deprecated (10/07/01) see GetDirection()
@@ -98,8 +98,9 @@ public:
         /// direction of palm/head/manipulator used for approaching inside the grasp coordinate system
         virtual Vector GetDirection() const { return _vdirection; }
 
-        /// \return Number of free parameters defining the null solution space.
-        ///         Each parameter is always in the range of [0,1].
+        /// \brief Number of free parameters defining the null solution space.
+        ///
+        /// Each parameter is always in the range of [0,1].
         virtual int GetNumFreeParameters() const;
 
         /// gets the free parameters from the current robot configuration
@@ -123,32 +124,41 @@ public:
         virtual bool FindIKSolutions(const IkParameterization& goal, std::vector<std::vector<dReal> >& solutions, int filteroptions) const;
         virtual bool FindIKSolutions(const IkParameterization& goal, const std::vector<dReal>& vFreeParameters, std::vector<std::vector<dReal> >& solutions, int filteroptions) const;
 
-        /// get all child joints of the manipulator starting at the pEndEffector link
+        /// \brief Get all child joints of the manipulator starting at the pEndEffector link
         virtual void GetChildJoints(std::vector<JointPtr>& vjoints) const;
 
-        /// get all child DOF indices of the manipulator starting at the pEndEffector link
+        /// \brief Get all child DOF indices of the manipulator starting at the pEndEffector link
         virtual void GetChildDOFIndices(std::vector<int>& vdofndices) const;
 
-        /// get all child links of the manipulator starting at pEndEffector link
+        /// \brief Get all child links of the manipulator starting at pEndEffector link
         virtual void GetChildLinks(std::vector<LinkPtr>& vlinks) const;
 
-        /// Get all links that are independent of the arm and gripper joints  conditioned that the base and end effector links are static.
+        /// \brief Get all links that are independent of the arm and gripper joints 
+        ///
+        /// conditioned that the base and end effector links are static.
         /// In other words, returns all links not on the path from the base to the end effector and not children of the end effector.
         virtual void GetIndependentLinks(std::vector<LinkPtr>& vlinks) const;
 
-        /// checks collision with only the gripper given its end-effector transform
-        /// \param tEE the end effector transform
-        /// \param[out] report [optional] collision report
-        /// \return true if a collision occurred
+        /** \brief Checks collision with only the gripper given its end-effector transform. Ignores disabled links.
+        
+            \param tEE the end effector transform
+            \param[out] report [optional] collision report
+            \return true if a collision occurred
+        */
         virtual bool CheckEndEffectorCollision(const Transform& tEE, CollisionReportPtr report = CollisionReportPtr()) const;
 
-        /// checks collision with the environment with all the independent links of the robot
-        /// \param[out] report [optional] collision report
-        /// \return true if a collision occurred
+        /** \brief Checks collision with the environment with all the independent links of the robot. Ignores disabled links.
+        
+            \param[out] report [optional] collision report
+            \return true if a collision occurred
+        */
         virtual bool CheckIndependentCollision(CollisionReportPtr report = CollisionReportPtr()) const;
 
-        /// \return true if the body is being grabbed by any link on this manipulator
+        /// \brief return true if the body is being grabbed by any link on this manipulator
         virtual bool IsGrabbing(KinBodyConstPtr body) const;
+
+        /// \brief computes the jacobian of the manipulator arm indices using the manipulator frame
+        virtual void CalculateJacobian(boost::multi_array<dReal,2>& mjacobian) const;
 
         virtual void serialize(std::ostream& o, int options) const;
         

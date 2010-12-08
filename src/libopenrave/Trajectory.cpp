@@ -41,11 +41,42 @@ inline dReal  START_A(const TrajectoryBase::TSEGMENT& seg, int d)    { return se
 inline dReal& END_A(TrajectoryBase::TSEGMENT& seg, int d)            { return seg.Get(5, d); }
 inline dReal  END_A(const TrajectoryBase::TSEGMENT& seg, int d)      { return seg.Get(5, d); }
 
+inline int CountZeroBits(uint32_t v)
+{
+    unsigned int c;     // c will be the number of zero bits on the right,
+    // so if v is 1101000 (base 2), then c will be 3
+    // NOTE: if 0 == v, then c = 31.
+    if (v & 0x1)  {
+        // special case for odd v (assumed to happen half of the time)
+        c = 0;
+    }
+    else {
+        c = 1;
+        if ((v & 0xffff) == 0)  {  
+            v >>= 16;  
+            c += 16;
+        }
+        if ((v & 0xff) == 0)  {  
+            v >>= 8;  
+            c += 8;
+        }
+        if ((v & 0xf) == 0)  {  
+            v >>= 4;
+            c += 4;
+        }
+        if ((v & 0x3) == 0)  {  
+            v >>= 2;
+            c += 2;
+        }
+        c -= v & 0x1;
+    }
+    return c;
+}
+
 TrajectoryBase::TrajectoryBase(EnvironmentBasePtr penv, int nDOF) : InterfaceBase(PT_Trajectory, penv)
 {
-    //BOOST_ASSERT( nDOF > 0 );
     _nDOF = nDOF;
-    _interpMethod  = LINEAR;
+    _interpMethod = LINEAR;
 }
 
 void TrajectoryBase::Reset(int nDOF)
@@ -66,9 +97,9 @@ void TrajectoryBase::Clear()
 
 bool TrajectoryBase::CalcTrajTiming(RobotBaseConstPtr pRobot, InterpEnum interpolationMethod, bool bAutoCalcTiming, bool bActiveDOFs, dReal fMaxVelMult)
 {
-    if( _vecpoints.size() == 0 )
+    if( _vecpoints.size() == 0 ) {
         return false;
-
+    }
     if( !pRobot && bAutoCalcTiming ) {
         RAVELOG_WARN("need to specify a robot if calculating trajectory timings\n");
         return false;
@@ -95,17 +126,20 @@ bool TrajectoryBase::CalcTrajTiming(RobotBaseConstPtr pRobot, InterpEnum interpo
             _diffstatefn = boost::bind(&RobotBase::SubtractJointValues,pRobot,_1,_2);
         }
     }
-    else
+    else {
         _diffstatefn = subtractstates;
+    }
 
     if( fMaxVelMult > 0 ) {// && fMaxVelMult <= 1 ) {
-        FOREACH(it, _maxJointVel)
+        FOREACH(it, _maxJointVel) {
             *it *= fMaxVelMult;
+        }
         _maxAffineTranslationVel *= fMaxVelMult;
         _maxAffineRotationQuatVel *= fMaxVelMult;
     }
-    else
+    else {
         RAVELOG_WARN("bad multipler set: %f, ignoring...\n", (float)fMaxVelMult);
+    }
 
     // set the trajectory timing using the given interpolation method
     bool bSuccess = false;
@@ -130,20 +164,19 @@ bool TrajectoryBase::CalcTrajTiming(RobotBaseConstPtr pRobot, InterpEnum interpo
         break;
     }
 
-    if( bSuccess )
+    if( bSuccess ) {
         RAVELOG_VERBOSE("Total Trajectory Duration = %f\n", GetTotalDuration());
+    }
     return bSuccess;
 }
 
 bool TrajectoryBase::SampleTrajectory(dReal time, TPOINT &sample) const
 {
     if (_vecpoints.size() < 2) {
-
         if( _vecpoints.size() == 0 ) {
             RAVELOG_ERROR(str(boost::format("TrajectoryBase:: ERROR unable to sample.  numpoints = %d\n")%_vecpoints.size()));
             return false;
         }
-
         sample = _vecpoints.at(0);
         return true;
     }
@@ -258,15 +291,17 @@ bool TrajectoryBase::_SetLinear(bool bAutoCalcTiming, bool bActiveDOFs)
         if (bAutoCalcTiming) {
             // compute minimum time interval that does not exceed the maximum joint velocities
             timeInterval = _MinimumTimeLinear(_vecpoints[i-1], _vecpoints[i], bActiveDOFs);
-            if( timeInterval < 1e-4f )
+            if( timeInterval < 1e-4f ) {
                 timeInterval= 1e-4f;
+            }
             _vecpoints[i].time = _vecpoints[i-1].time + timeInterval;
         }
         else {
             // use time stamps from the points
             timeInterval = _vecpoints[i].time - _vecpoints[i-1].time;
-            if( timeInterval < 1e-4f )
+            if( timeInterval < 1e-4f ) {
                 timeInterval = 1e-4f;
+            }
         }
     }
 
@@ -297,7 +332,6 @@ bool TrajectoryBase::_SetLinear(bool bAutoCalcTiming, bool bActiveDOFs)
     // the preceding and subsequent trajectory segments.
     BOOST_ASSERT(_vecpoints.size()>0);
     for (size_t i = 1; i < _vecpoints.size()-1; i++) {
-            
         _vecpoints[i].linearvel = (dReal)0.5f*(_vecsegments[i-1].linearvel+_vecsegments[i].linearvel);
         _vecpoints[i].angularvel = (dReal)0.5f*(_vecsegments[i-1].angularvel+_vecsegments[i].angularvel);
 
@@ -306,15 +340,13 @@ bool TrajectoryBase::_SetLinear(bool bAutoCalcTiming, bool bActiveDOFs)
             nextSlope = _vecsegments[i].Get(1, d);
 
             // check for the same slope directions
-            if (( prevSlope > 0 && nextSlope > 0 ) ||
-                ( prevSlope < 0 && nextSlope < 0))
-                {
-                    // use the slope average velocities
-                    _vecpoints[i].qdot[d] = (dReal)0.5 * (prevSlope + nextSlope);
-                    //cerr << "i: " << i << "  " << prevSlope << "  " << nextSlope
-                    //     << " \t" << _vecpoints[i].qdot[d] << endl;
-                    //_vecpoints[i].qdot[d] = 0.0;
-                }
+            if (( prevSlope > 0 && nextSlope > 0 ) || ( prevSlope < 0 && nextSlope < 0)) {
+                // use the slope average velocities
+                _vecpoints[i].qdot[d] = (dReal)0.5 * (prevSlope + nextSlope);
+                //cerr << "i: " << i << "  " << prevSlope << "  " << nextSlope
+                //     << " \t" << _vecpoints[i].qdot[d] << endl;
+                //_vecpoints[i].qdot[d] = 0.0;
+            }
             else {
                 // otherwise use a zero velocity
                 _vecpoints[i].qdot[d] = 0.0;
@@ -488,15 +520,17 @@ bool TrajectoryBase::_SetCubic(bool bAutoCalcTiming, bool bActiveDOFs)
             // compute minimum time interval that does not exceed the
             // maximum joint velocities
             timeInterval = _MinimumTimeCubic(_vecpoints[i-1], _vecpoints[i], bActiveDOFs);
-            if( timeInterval < 1e-4f )
+            if( timeInterval < 1e-4f ) {
                 timeInterval= 1e-4f;
+            }
             _vecpoints[i].time = _vecpoints[i-1].time + timeInterval;
         }
         else {
             // use time stamps from the points
             timeInterval = _vecpoints[i].time - _vecpoints[i-1].time;
-            if( timeInterval < 1e-4f )
+            if( timeInterval < 1e-4f ) {
                 timeInterval = 1e-4f;
+            }
         }
     }
 
@@ -519,9 +553,9 @@ bool TrajectoryBase::_SetCubic(bool bAutoCalcTiming, bool bActiveDOFs)
     _RecalculateViaPointDerivatives();
 
     // set all cubic coefficients for continuous velocities at via points
-    for (size_t i = 1; i < _vecpoints.size(); i++)
+    for (size_t i = 1; i < _vecpoints.size(); i++) {
         _CalculateCubicCoefficients(_vecsegments[i-1], _vecpoints[i-1], _vecpoints[i]);
-    
+    }
     _interpMethod = CUBIC;
     return true;
 }
@@ -621,8 +655,7 @@ void TrajectoryBase::_RecalculateViaPointDerivatives()
         vd1 = _vecpoints[i+1].q;
         _diffstatefn(vd1,_vecpoints[i].q);
 
-        for (int d = 0; d < _nDOF; d++)
-        {
+        for (int d = 0; d < _nDOF; d++) {
             prevSlope = vd0[d] / prevDur;
             nextSlope = vd1[d] / nextDur;
 
@@ -695,7 +728,7 @@ void TrajectoryBase::_RecalculateViaPointDerivatives()
 //    return true;
 //}
 
-inline dReal TrajectoryBase::_MinimumTimeLinear(const TPOINT& tp0, const TPOINT& tp1, bool bActiveDOFs)
+dReal TrajectoryBase::_MinimumTimeLinear(const TPOINT& tp0, const TPOINT& tp1, bool bActiveDOFs)
 {
     dReal minJointTime;
     dReal minPathTime = 0.0;
@@ -709,14 +742,15 @@ inline dReal TrajectoryBase::_MinimumTimeLinear(const TPOINT& tp0, const TPOINT&
     for (int d = 0; d < _nDOF; d++) {
         if(_maxJointVel[d] > 0.0) {
             minJointTime = fabs(vd[d]) / _maxJointVel[d];
-            if (minPathTime < minJointTime)
+            if (minPathTime < minJointTime) {
                 minPathTime = minJointTime;
+            }
         }
     }
 
-    if( !bActiveDOFs )
+    if( !bActiveDOFs ) {
         minPathTime = max(_MinimumTimeTransform(tp0.trans, tp1.trans),minPathTime);
-
+    }
 #ifndef _WIN32
     BOOST_ASSERT( !isnan(minPathTime));
 #endif
@@ -741,16 +775,17 @@ dReal TrajectoryBase::_MinimumTimeCubic(const TPOINT& tp0, const TPOINT& tp1, bo
             jointDiff = fabs(vd[d]);
             velocityConstraint = (1.5f/_maxJointVel[d]) * jointDiff;
             accelConstraint = RaveSqrt((6.0f/_maxJointAccel[d]) * jointDiff);
-
             minJointTime = max( velocityConstraint, accelConstraint );
 
-            if (minPathTime < minJointTime)
+            if (minPathTime < minJointTime) {
                 minPathTime = minJointTime;
+            }
         }
     }
 
-    if( !bActiveDOFs )
+    if( !bActiveDOFs ) {
         minPathTime = max(_MinimumTimeTransform(tp0.trans, tp1.trans),minPathTime);
+    }
 
 #ifndef _WIN32
     BOOST_ASSERT( !isnan(minPathTime));
@@ -776,16 +811,16 @@ dReal TrajectoryBase::_MinimumTimeCubicZero(const TPOINT& tp0, const TPOINT& tp1
             jointDiff          = fabs(vd[d]);
             velocityConstraint = (1.5f/_maxJointVel[d]) * jointDiff;
             accelConstraint    = RaveSqrt((6.0f/_maxJointAccel[d]) * jointDiff);
-
             minJointTime = max( velocityConstraint, accelConstraint );
-
-            if (minPathTime < minJointTime)
+            if (minPathTime < minJointTime) {
                 minPathTime = minJointTime;
+            }
         }
     }
     
-    if( !bActiveDOFs )
+    if( !bActiveDOFs ) {
         minPathTime = max(_MinimumTimeTransform(tp0.trans, tp1.trans),minPathTime);
+    }
 #ifndef _WIN32
     BOOST_ASSERT( !isnan(minPathTime));
 #endif
@@ -806,22 +841,22 @@ dReal TrajectoryBase::_MinimumTimeQuintic(const TPOINT& tp0, const TPOINT& tp1, 
 
     // compute minimum time interval that does not exceed the
     // maximum joint velocities or accelerations
-    for (int d = 0; d < _nDOF; d++)
-    {
+    for (int d = 0; d < _nDOF; d++) {
         if(_maxJointVel[d] > 0.0 && _maxJointAccel[d] > 0.0) {
-            jointDiff          = fabs(vd[d]);
+            jointDiff = fabs(vd[d]);
             velocityConstraint = (1.5f/_maxJointVel[d]) * jointDiff;
-            accelConstraint    = RaveSqrt((6.0f/_maxJointAccel[d]) * jointDiff);
-
+            accelConstraint = RaveSqrt((6.0f/_maxJointAccel[d]) * jointDiff);
             minJointTime = max( velocityConstraint, accelConstraint );
 
-            if (minPathTime < minJointTime)
+            if (minPathTime < minJointTime) {
                 minPathTime = minJointTime;
+            }
         }
     }
 
-    if( !bActiveDOFs )
+    if( !bActiveDOFs ) {
         minPathTime = max(_MinimumTimeTransform(tp0.trans, tp1.trans),minPathTime);
+    }
 #ifndef _WIN32
     BOOST_ASSERT( !isnan(minPathTime));
 #endif
@@ -844,30 +879,27 @@ int TrajectoryBase::_FindActiveInterval(dReal time) const
     int index = 0;
 
     // for now, just do a simple linear search
-    while (time > _vecpoints[index+1].time)
+    while (time > _vecpoints[index+1].time) {
         index++;
+    }
     BOOST_ASSERT (index < (int)_vecpoints.size() - 1);
-
     return index;
 }
 
-inline bool TrajectoryBase::_SampleLinear(const TPOINT& p0, const TPOINT& p1,
-                                      const TSEGMENT& seg, dReal time,
-                                      TPOINT& sample) const
+bool TrajectoryBase::_SampleLinear(const TPOINT& p0, const TPOINT& p1, const TSEGMENT& seg, dReal time, TPOINT& sample) const
 {
     BOOST_ASSERT (time >= p0.time && time <= p1.time);
     BOOST_ASSERT (seg._fduration > 0.0);
     BOOST_ASSERT (fabs((p1.time - p0.time) - seg._fduration) < 1e-4);
-    dReal  t = time - p0.time;
-
+    dReal t = time - p0.time;
     sample.q.resize(_nDOF);
     sample.qdot.resize(_nDOF);
     //sample.qaccel.resize(_nDOF);
 
     // perform the interpolation
     for (int d = 0; d < _nDOF; d++) {
-        sample.q[d]      = seg.Get(0, d) + t * seg.Get(1, d);
-        sample.qdot[d]   = seg.Get(1, d);
+        sample.q[d] = seg.Get(0, d) + t * seg.Get(1, d);
+        sample.qdot[d] = seg.Get(1, d);
         //sample.qaccel[d] = 0.0;
     }
 
@@ -875,13 +907,10 @@ inline bool TrajectoryBase::_SampleLinear(const TPOINT& p0, const TPOINT& p1,
     sample.time = time;
     sample.trans.trans = p0.trans.trans + (t/(seg._fduration))*(p1.trans.trans - p0.trans.trans);
     sample.trans.rot = quatSlerp(p0.trans.rot, p1.trans.rot,(t/(seg._fduration)));
-    
     return true;
 }
 
-inline bool TrajectoryBase::_SampleLinearBlend(const TPOINT& p0, const TPOINT& p1,
-                                           const TSEGMENT& seg, dReal time,
-                                           TPOINT& sample) const
+bool TrajectoryBase::_SampleLinearBlend(const TPOINT& p0, const TPOINT& p1, const TSEGMENT& seg, dReal time, TPOINT& sample) const
 {
     BOOST_ASSERT (time >= p0.time && time <= p1.time);
     BOOST_ASSERT (seg._fduration > 0.0);
@@ -914,13 +943,10 @@ inline bool TrajectoryBase::_SampleLinearBlend(const TPOINT& p0, const TPOINT& p
     sample.time = time;
     sample.trans.trans = p0.trans.trans + (t/(seg._fduration))*(p1.trans.trans - p0.trans.trans);
     sample.trans.rot = quatSlerp(p0.trans.rot, p1.trans.rot,(t/(seg._fduration)));
-
     return true;
 }
 
-inline bool TrajectoryBase::_SampleCubic(const TPOINT& p0, const TPOINT& p1,
-                                     const TSEGMENT& seg, dReal time,
-                                     TPOINT& sample) const
+bool TrajectoryBase::_SampleCubic(const TPOINT& p0, const TPOINT& p1, const TSEGMENT& seg, dReal time, TPOINT& sample) const
 {
     BOOST_ASSERT (time >= p0.time && time <= p1.time);
     BOOST_ASSERT (seg._fduration > 0.0);
@@ -932,8 +958,7 @@ inline bool TrajectoryBase::_SampleCubic(const TPOINT& p0, const TPOINT& p1,
     sample.qdot.resize(_nDOF);
     
     // perform the interpolation
-    for (int d = 0; d < _nDOF; d++)
-    {
+    for (int d = 0; d < _nDOF; d++) {
         sample.q[d]      = seg.Get(0, d) + t * seg.Get(1, d) + t_2 * seg.Get(2, d) + t_3 * seg.Get(3, d);
         sample.qdot[d]   = seg.Get(1, d) + ((dReal)2.0 * t * seg.Get(2, d)) + ((dReal)3.0 * t_2 * seg.Get(3, d));
 //        sample.qaccel[d] = 2.0 * seg.Get(2, d) + (6.0 * t * seg.Get(3, d));
@@ -941,13 +966,10 @@ inline bool TrajectoryBase::_SampleCubic(const TPOINT& p0, const TPOINT& p1,
     sample.time = time;
     sample.trans.trans = p0.trans.trans + (t/(seg._fduration))*(p1.trans.trans - p0.trans.trans);
     sample.trans.rot = quatSlerp(p0.trans.rot, p1.trans.rot,(t/(seg._fduration)));
-
     return true;
 }
 
-inline bool TrajectoryBase::_SampleQuintic(const TPOINT& p0, const TPOINT& p1,
-                                       const TSEGMENT& seg, dReal time,
-                                       TPOINT& sample) const
+bool TrajectoryBase::_SampleQuintic(const TPOINT& p0, const TPOINT& p1, const TSEGMENT& seg, dReal time, TPOINT& sample) const
 {
     BOOST_ASSERT (time >= p0.time && time <= p1.time);
     BOOST_ASSERT (seg._fduration > 0.0);
@@ -959,23 +981,14 @@ inline bool TrajectoryBase::_SampleQuintic(const TPOINT& p0, const TPOINT& p1,
     dReal t_5 = t * t_4;
 
     // perform the interpolation
-    for (int d = 0; d < _nDOF; d++)
-    {
-        sample.q[d]    = seg.Get(0, d)  +  t * seg.Get(1, d)
-        + t_2 * seg.Get(2, d)  +  t_3 * seg.Get(3, d) 
-        + t_4 * seg.Get(4, d)  +  t_5 * seg.Get(5, d);
-
-        sample.qdot[d] = seg.Get(1, d)  +  (2 * t * seg.Get(2, d))
-            + (3 * t_2 * seg.Get(3, d))  +  (4 * t_3 * seg.Get(4, d)) 
-            + (5 * t_4 * seg.Get(5, d));
-
-//        sample.qaccel[d] = (2 * seg.Get(2, d))  +  (6 * t * seg.Get(3, d))
-//            + (12 * t_2 * seg.Get(4, d))  +  (20 * t_3 * seg.Get(5, d));
+    for (int d = 0; d < _nDOF; d++) {
+        sample.q[d] = seg.Get(0, d) + t * seg.Get(1, d) + t_2 * seg.Get(2, d)  +  t_3 * seg.Get(3, d) + t_4 * seg.Get(4, d)  +  t_5 * seg.Get(5, d);
+        sample.qdot[d] = seg.Get(1, d) + (2 * t * seg.Get(2, d)) + (3 * t_2 * seg.Get(3, d))  +  (4 * t_3 * seg.Get(4, d)) + (5 * t_4 * seg.Get(5, d));
+//        sample.qaccel[d] = (2 * seg.Get(2, d))  +  (6 * t * seg.Get(3, d)) + (12 * t_2 * seg.Get(4, d))  +  (20 * t_3 * seg.Get(5, d));
     }
     sample.time = time;
     sample.trans.trans = p0.trans.trans + (t/(seg._fduration))*(p1.trans.trans - p0.trans.trans);
     sample.trans.rot = quatSlerp(p0.trans.rot, p1.trans.rot,(t/(seg._fduration)));
-
     return true;
 }
 
@@ -986,53 +999,60 @@ bool TrajectoryBase::Write(const std::string& filename, int options) const
         RAVELOG_WARN(str(boost::format("failed to write to file %s\n")%filename));
         return false;
     }
-
     return Write(of, options);
 }
 
 bool TrajectoryBase::Write(std::ostream& f, int options) const
 {
     if( !(options&TO_NoHeader) ) {
-        if( !(options&TO_OneLine) )
+        if( !(options&TO_OneLine) ) {
             f << endl;
-        else
+        }
+        else {
             f << " ";
-        f << _vecpoints.size() << " " << _nDOF << " " << options;
-        if( !(options&TO_OneLine) )
+        }
+        f << _vecpoints.size() << " " << _nDOF << " " << (options|(_interpMethod<<CountZeroBits(TO_InterpolationMask)));
+        if( !(options&TO_OneLine) ) {
             f << endl;
-        else
+        }
+        else {
             f << " ";
+        }
     }
     
     FOREACHC(it, _vecpoints) {
-        if( options & TO_IncludeTimestamps )
+        if( options & TO_IncludeTimestamps ) {
             f << it->time << " ";
-        FOREACHC(itval, it->q)
+        }
+        FOREACHC(itval, it->q) {
             f << *itval << " ";
-
-        if( options & TO_IncludeBaseTransformation )
+        }
+        if( options & TO_IncludeBaseTransformation ) {
             f << it->trans << " ";
-
+        }
         if( options & TO_IncludeVelocities ) {
             BOOST_ASSERT((int)it->qdot.size()==GetDOF());
-            FOREACHC(itvel, it->qdot)
+            FOREACHC(itvel, it->qdot) {
                 f << *itvel << " ";
-
-            if( options & TO_IncludeBaseTransformation )
-                f << it->linearvel.x << " " << it->linearvel.y << " " << it->linearvel.z << " "
-                  << it->angularvel.x << " " << it->angularvel.y << " " << it->angularvel.z << " ";
+            }
+            if( options & TO_IncludeBaseTransformation ) {
+                f << it->linearvel.x << " " << it->linearvel.y << " " << it->linearvel.z << " " << it->angularvel.x << " " << it->angularvel.y << " " << it->angularvel.z << " ";
+            }
         }
 
         if( options & TO_IncludeTorques ) {
             BOOST_ASSERT((int)it->qtorque.size()==GetDOF());
-            FOREACHC(ittorque,it->qtorque)
+            FOREACHC(ittorque,it->qtorque) {
                 f << *ittorque << " ";
+            }
         }
 
-        if( !(options&TO_OneLine) )
+        if( !(options&TO_OneLine) ) {
             f << endl;
-        else
+        }
+        else {
             f << " ";
+        }
     }
 
     return !!f;
@@ -1053,50 +1073,53 @@ bool TrajectoryBase::Read(std::istream& f, RobotBasePtr robot)
 {
     int size, dof, options;
     f >> size >> dof >> options;
-
-    if( dof < 0 )
+    if( dof < 0 ) {
         return false;
+    }
 
     Reset(dof);
     Transform tbody;
-    if( !!robot )
+    if( !!robot ) {
         tbody = robot->GetTransform();
+    }
 
     _vecpoints.resize(size);
     FOREACH(it, _vecpoints) {
         it->q.resize(dof);
         it->qdot.resize(dof);
 
-        if( options & TO_IncludeTimestamps )
+        if( options & TO_IncludeTimestamps ) {
             f >> it->time;
-
-        FOREACH(itval, it->q)
+        }
+        FOREACH(itval, it->q) {
             f >> *itval;
-
-        if( options & TO_IncludeBaseTransformation )
+        }
+        if( options & TO_IncludeBaseTransformation ) {
             f >> it->trans;
-        else
+        }
+        else {
             it->trans = tbody;
-
+        }
         if( options & TO_IncludeVelocities ) {
-            FOREACH(itvel, it->qdot)
+            FOREACH(itvel, it->qdot) {
                 f >> *itvel;
-
-            if( options & TO_IncludeBaseTransformation )
-                f >> it->linearvel.x >> it->linearvel.y >> it->linearvel.z
-                  >> it->angularvel.x >> it->angularvel.y >> it->angularvel.z;
+            }
+            if( options & TO_IncludeBaseTransformation ) {
+                f >> it->linearvel.x >> it->linearvel.y >> it->linearvel.z >> it->angularvel.x >> it->angularvel.y >> it->angularvel.z;
+            }
         }
 
         if( options & TO_IncludeVelocities ) {
             it->qtorque.resize(dof);
-            FOREACH(ittorque, it->qtorque)
+            FOREACH(ittorque, it->qtorque) {
                 f >> *ittorque;
+            }
         }
     }
 
-    CalcTrajTiming(robot, LINEAR, false, false);
-
-    return true;
+    InterpEnum interp = (InterpEnum)((options&TO_InterpolationMask)>>CountZeroBits(TO_InterpolationMask));
+    BOOST_ASSERT(interp<NUM_METHODS);
+    return CalcTrajTiming(robot, interp, false, false);
 }
 
 } // end namespace OpenRAVE

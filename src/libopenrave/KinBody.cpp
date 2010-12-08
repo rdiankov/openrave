@@ -2226,12 +2226,13 @@ KinBody::JointPtr KinBody::GetJoint(const std::string& jointname) const
 
 void KinBody::CalculateJacobian(int index, const Vector& trans, boost::multi_array<dReal,2>& mjacobian) const
 {
-    if( index < 0 || index >= (int)_veclinks.size() )
+    if( index < 0 || index >= (int)_veclinks.size() ) {
         throw openrave_exception(str(boost::format("bad index %d")%index),ORE_InvalidArguments);
-
+    }
     mjacobian.resize(boost::extents[3][GetDOF()]);
-    if( GetDOF() == 0 )
+    if( GetDOF() == 0 ) {
         return;
+    }
 
     //Vector trans = _veclinks[index]->GetTransform() * offset;
     Vector v;
@@ -2297,12 +2298,12 @@ void KinBody::CalculateJacobian(int index, const Vector& trans, vector<dReal>& v
     }
 }
 
-void KinBody::CalculateRotationJacobian(int index, const Vector& q, boost::multi_array<dReal,2>& vjacobian) const
+void KinBody::CalculateRotationJacobian(int index, const Vector& q, boost::multi_array<dReal,2>& mjacobian) const
 {
     if( index < 0 || index >= (int)_veclinks.size() ) {
         throw openrave_exception(str(boost::format("bad index %d")%index),ORE_InvalidArguments);
     }
-    vjacobian.resize(boost::extents[4][GetDOF()]);
+    mjacobian.resize(boost::extents[4][GetDOF()]);
     if( GetDOF() == 0 ) {
         return;
     }
@@ -2312,7 +2313,7 @@ void KinBody::CalculateRotationJacobian(int index, const Vector& q, boost::multi
         char affect = DoesAffect((*itjoint)->GetJointIndex(), index);
         for(int dof = 0; dof < (*itjoint)->GetDOF(); ++dof) {
             if( affect == 0 ) {
-                vjacobian[0][dofindex+dof] = vjacobian[1][dofindex+dof] = vjacobian[2][dofindex+dof] = vjacobian[3][dofindex+dof] = 0;
+                mjacobian[0][dofindex+dof] = mjacobian[1][dofindex+dof] = mjacobian[2][dofindex+dof] = mjacobian[3][dofindex+dof] = 0;
             }
             else {
                 switch((*itjoint)->GetType()) {
@@ -2328,10 +2329,10 @@ void KinBody::CalculateRotationJacobian(int index, const Vector& q, boost::multi
                     break;
                 }
 
-                vjacobian[0][dofindex+dof] = dReal(0.5)*(-q.y*v.x - q.z*v.y - q.w*v.z);
-                vjacobian[1][dofindex+dof] = dReal(0.5)*(q.x*v.x - q.z*v.z + q.w*v.y);
-                vjacobian[2][dofindex+dof] = dReal(0.5)*(q.x*v.y + q.y*v.z - q.w*v.x);
-                vjacobian[3][dofindex+dof] = dReal(0.5)*(q.x*v.z - q.y*v.y + q.z*v.x);
+                mjacobian[0][dofindex+dof] = dReal(0.5)*(-q.y*v.x - q.z*v.y - q.w*v.z);
+                mjacobian[1][dofindex+dof] = dReal(0.5)*(q.x*v.x - q.z*v.z + q.w*v.y);
+                mjacobian[2][dofindex+dof] = dReal(0.5)*(q.x*v.y + q.y*v.z - q.w*v.x);
+                mjacobian[3][dofindex+dof] = dReal(0.5)*(q.x*v.z - q.y*v.y + q.z*v.x);
             }
         }
     }
@@ -2355,10 +2356,10 @@ void KinBody::CalculateRotationJacobian(int index, const Vector& q, boost::multi
                 }
 
                 v *= (*itjoint)->GetMimicCoeffs()[0];
-                vjacobian[0][dofindex+dof] += dReal(0.5)*(-q.y*v.x - q.z*v.y - q.w*v.z);
-                vjacobian[1][dofindex+dof] += dReal(0.5)*(q.x*v.x - q.z*v.z + q.w*v.y);
-                vjacobian[2][dofindex+dof] += dReal(0.5)*(q.x*v.y + q.y*v.z - q.w*v.x);
-                vjacobian[3][dofindex+dof] += dReal(0.5)*(q.x*v.z - q.y*v.y + q.z*v.x);
+                mjacobian[0][dofindex+dof] += dReal(0.5)*(-q.y*v.x - q.z*v.y - q.w*v.z);
+                mjacobian[1][dofindex+dof] += dReal(0.5)*(q.x*v.x - q.z*v.z + q.w*v.y);
+                mjacobian[2][dofindex+dof] += dReal(0.5)*(q.x*v.y + q.y*v.z - q.w*v.x);
+                mjacobian[3][dofindex+dof] += dReal(0.5)*(q.x*v.z - q.y*v.y + q.z*v.x);
             }
         }
     }

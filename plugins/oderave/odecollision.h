@@ -65,13 +65,20 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
 
             if( it->second.size() == 0 ) {
                 RobotBaseConstPtr probot = OpenRAVE::RaveInterfaceConstCast<RobotBase>(pbody);
-                // only check links that can potentially move with respect to each other
-                it->second.resize(probot->GetLinks().size(),0);
-                for(size_t i = 0; i < probot->GetLinks().size(); ++i) {
-                    FOREACHC(itindex, probot->GetActiveDOFIndices()) {
-                        if( probot->DoesAffect(probot->GetJointFromDOFIndex(*itindex)->GetJointIndex(),i) ) {
-                            it->second[i] = 1;
-                            break;
+                if( probot->GetAffineDOF() ) {
+                    // enable everything
+                    it->second.resize(probot->GetLinks().size(),1);
+                }
+                else {
+                    it->second.resize(probot->GetLinks().size(),0);
+                    // only check links that can potentially move with respect to each other
+                    it->second.resize(probot->GetLinks().size(),0);
+                    for(size_t i = 0; i < probot->GetLinks().size(); ++i) {
+                        FOREACHC(itindex, probot->GetActiveDOFIndices()) {
+                            if( probot->DoesAffect(probot->GetJointFromDOFIndex(*itindex)->GetJointIndex(),i) ) {
+                                it->second[i] = 1;
+                                break;
+                            }
                         }
                     }
                 }
@@ -505,7 +512,14 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
     {
         COLLISIONCALLBACK cb(shared_checker(),report,KinBodyPtr(),KinBody::LinkConstPtr());
         cb.fraymaxdist = OpenRAVE::RaveSqrt(ray.dir.lengthsqr3());
-        Vector vnormdir = ray.dir*(1/cb.fraymaxdist);
+
+        Vector vnormdir;
+        if( cb.fraymaxdist > 0 ) {
+            vnormdir = ray.dir*(1/cb.fraymaxdist);
+        }
+        else {
+            vnormdir = ray.dir;
+        }
         if( RaveFabs(cb.fraymaxdist-1) < 1e-4 ) {
             RAVELOG_DEBUG("CheckCollision: ray direction length is 1.0, note that only collisions within a distance of 1.0 will be checked\n");
         }
@@ -597,7 +611,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
         if(!!b1 && dBodyGetData(b1)) {
             pkb1 = *(KinBody::LinkPtr*)dBodyGetData(b1);
             if( !!pkb1 ) {
-                if( !pkb1->IsEnabled() || !pcb->IsActiveLink(pbody1,pkb1->GetIndex()) ) {
+                if( !pkb1->IsEnabled() || !pcb->IsActiveLink(pkb1->GetParent(),pkb1->GetIndex()) ) {
                     return;
                 }
             }
@@ -605,7 +619,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
         if(!!b2 && dBodyGetData(b1)) {
             pkb2 = *(KinBody::LinkPtr*)dBodyGetData(b2);
             if( !!pkb2 ) {
-                if( !pkb2->IsEnabled() || !pcb->IsActiveLink(pbody2,pkb2->GetIndex()) ) {
+                if( !pkb2->IsEnabled() || !pcb->IsActiveLink(pkb2->GetParent(),pkb2->GetIndex()) ) {
                     return;
                 }
             }

@@ -12,7 +12,7 @@
 /// See the License for the specific language governing permissions and
 /// limitations under the License.
 ///
-/// generated 2010-12-08 14:11:24.906754
+/// generated 2010-12-09 07:54:09.888868
 /// To compile with gcc:
 ///     gcc -lstdc++ ik.cpp
 /// To compile without any main function as a shared object:
@@ -3080,8 +3080,8 @@ static void polyroots2(IKReal rawcoeffs[2+1], IKReal rawroots[2], int& numroots)
     }
     else {
         det = IKsqrt(det);
-        rawroots[0] = 0.5*(-rawcoeffs[1]+det)/rawcoeffs[0];
-        rawroots[1] = rawcoeffs[2]/(rawcoeffs[0]*rawroots[0]);
+        rawroots[0] = (-rawcoeffs[1]+det)/(2*rawcoeffs[0]);
+        rawroots[1] = (-rawcoeffs[1]-det)/(2*rawcoeffs[0]);//rawcoeffs[2]/(rawcoeffs[0]*rawroots[0]);
         numroots = 2;
     }
 }

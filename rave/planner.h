@@ -147,11 +147,6 @@ public:
 
         /// extra parameters data that does not fit within this planner parameters structure, but is still important not to lose all the information.
         std::string _sExtraParameters;
-        
-        /// if true, will validate every configuration with a self-collision check. If false, will assume that the configuration
-        /// space does not change the self-collision result (ie, planning only with affine DOF)
-        /// default is true
-        bool _bCheckSelfCollisions;
 
         /// \return the degrees of freedom of the planning configuration space
         virtual int GetDOF() const { return (int)_vConfigLowerLimit.size(); }

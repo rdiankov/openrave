@@ -187,9 +187,10 @@ private:
 
         virtual bool needsCollision (btBroadphaseProxy *proxy0) const {
             KinBody::LinkPtr plink = *(KinBody::LinkPtr*)static_cast<btCollisionObject*>(proxy0->m_clientObject)->getUserPointer();
-            if( !!_pbodyonly && _pbodyonly != plink->GetParent() )
+            if( !!_pbodyonly && _pbodyonly != plink->GetParent() ) {
                 return false;
-            //RAVELOG_INFO("clink: %s=%s: %d\n",plink->GetParent()->GetName().c_str(),_pbodyonly->GetName().c_str(),plink->IsEnabled());
+            }
+            //RAVELOG_INFO("clink: %s: %d\n",plink->GetParent()->GetName().c_str(),plink->IsEnabled());
             return plink->IsEnabled();
         }
 
@@ -228,8 +229,9 @@ private:
 
     bool CheckCollisionP(btOverlapFilterCallback* poverlapfilt, CollisionReportPtr report)
     {
-        if( !!report )
+        if( !!report ) {
             report->Reset(_options);
+        }
         bool bHasCallbacks = GetEnv()->HasRegisteredCollisionCallbacks();
         std::list<EnvironmentBase::CollisionCallbackFn> listcallbacks;
 
@@ -646,15 +648,15 @@ public:
 
     virtual bool CheckCollision(const RAY& ray, CollisionReportPtr report)
     {
-        if( !!report )
+        if( !!report ) {
             report->Reset();
-
+        }
         bulletspace->Synchronize();
         _world->updateAabbs();
 
-        if( fabsf(sqrtf(ray.dir.lengthsqr3())-1) < 1e-4 )
+        if( fabsf(sqrtf(ray.dir.lengthsqr3())-1) < 1e-4 ) {
             RAVELOG_DEBUG("CheckCollision: ray direction length is 1.0, note that only collisions within a distance of 1.0 will be checked\n");
-
+        }
         // unfortunately, the bullet ray checker cannot handle enabled bodies properly, so have to move all of them away
         list<boost::shared_ptr<KinBody::KinBodyStateSaver> > listsavers;
         vector<KinBodyPtr> vbodies;
