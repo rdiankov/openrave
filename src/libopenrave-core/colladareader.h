@@ -1641,6 +1641,13 @@ class ColladaReader : public daeErrorHandler
                             }
                             RAVELOG_WARN(str(boost::format("could not find manipulator gripper axis %s\n")%pgripper_axis->getAttribute("axis")));
                         }
+                        else if( pgripper_axis->getElementName() == string("iksolver") ) {
+                            daeElementRef piksolver = tec->getContents()[ic];
+                            if( piksolver->hasAttribute("interface") ) {
+                                pmanip->_strIkSolver = piksolver->getAttribute("interface");
+                                //pmanip->SetIkSolver(RaveCreateIkSolver(_penv,piksolver->getAttribute("interface")));
+                            }
+                        }
                     }
 
                     probot->GetManipulators().push_back(pmanip);
