@@ -3081,7 +3081,7 @@ static void polyroots2(IKReal rawcoeffs[2+1], IKReal rawroots[2], int& numroots)
     else {
         det = IKsqrt(det);
         rawroots[0] = 0.5*(-rawcoeffs[1]+det)/rawcoeffs[0];
-        rawroots[1] = 0.5*(-rawcoeffs[1]-det)/rawcoeffs[0];
+        rawroots[1] = rawcoeffs[2]/(rawcoeffs[0]*rawroots[0]);
         numroots = 2;
     }
 }

@@ -338,6 +338,11 @@ else()
   set(IS_X86_64 0)
 endif()
 
+check_library_exists(rt clock_gettime "" CLOCK_GETTIME_FOUND)
+if( CLOCK_GETTIME_FOUND )
+  add_definitions(-DCLOCK_GETTIME_FOUND)
+endif()
+
 # calls find_package ZLIB and libxml2, which might overwrite any previously set local values, so call in the beginning
 #find_package(COLLADA)
 

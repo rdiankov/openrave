@@ -1402,8 +1402,8 @@ int main(int argc, char** argv)
     }
     else {
         det = IKsqrt(det);
-        rawroots[0] = 0.5*(-rawcoeffs[1]+det)/rawcoeffs[0];
-        rawroots[1] = 0.5*(-rawcoeffs[1]-det)/rawcoeffs[0];
+        rawroots[0] = (-rawcoeffs[1]+det)/(2*rawcoeffs[0]);
+        rawroots[1] = rawcoeffs[2]/(rawcoeffs[0]*rawroots[0]);
         numroots = 2;
     }
 }

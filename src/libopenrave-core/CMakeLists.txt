@@ -6,6 +6,10 @@ if( COLLADA_FOUND )
   set (coreLIBS ${coreLIBS} ${COLLADA_LIBRARY})
 endif()
 
+if( CLOCK_GETTIME_FOUND )
+  set(coreLIBS ${coreLIBS} rt)
+endif()
+
 # necessary for function parser library
 check_library_exists(gmp __gmpz_init "" GMP_FOUND_LIB)
 

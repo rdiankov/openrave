@@ -262,8 +262,8 @@ inline int solvequad(T a, T b, T c, T& r1, T& r2)
     }
     // two roots
     d = sqrt(d);
-    r1 = (T)-0.5 * (b + d) / a;
-    r2 = r1 + d/a;
+    r1 = (-b+d)/(2*a);
+    r2 = c/(a*r1);
     return 2;
 }
 

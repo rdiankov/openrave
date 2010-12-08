@@ -108,7 +108,7 @@ inline static uint64_t GetNanoTime()
 
 inline static void getWallTime(uint32_t& sec, uint32_t& nsec)
 {
-#if POSIX_TIMERS > 0 || _POSIX_TIMERS > 0
+#if defined(CLOCK_GETTIME_FOUND) && (POSIX_TIMERS > 0 || _POSIX_TIMERS > 0)
   struct timespec start;
   clock_gettime(CLOCK_REALTIME, &start);
   sec  = start.tv_sec;
