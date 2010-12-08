@@ -1645,7 +1645,7 @@ class ColladaReader : public daeErrorHandler
                             daeElementRef piksolver = tec->getContents()[ic];
                             if( piksolver->hasAttribute("interface") ) {
                                 pmanip->_strIkSolver = piksolver->getAttribute("interface");
-                                //pmanip->SetIkSolver(RaveCreateIkSolver(_penv,piksolver->getAttribute("interface")));
+                                pmanip->_pIkSolver = RaveCreateIkSolver(_penv,pmanip->_strIkSolver);
                             }
                         }
                     }
