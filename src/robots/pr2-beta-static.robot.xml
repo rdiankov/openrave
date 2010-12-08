@@ -1,89 +1,17 @@
 <!-- base kinematics of pr2 robot with all frames defined -->
-<robot>
-  <robot name="pr2" file="pr2-beta-static.dae">
-    <kinbody>
-      <!-- wheels -->
-      <adjacent>base_link br_caster_r_wheel_link</adjacent>
-      <adjacent>base_link br_caster_l_wheel_link</adjacent>
-      <adjacent>base_link fr_caster_r_wheel_link</adjacent>
-      <adjacent>base_link fr_caster_l_wheel_link</adjacent>
-      <adjacent>base_link fl_caster_r_wheel_link</adjacent>
-      <adjacent>base_link fl_caster_l_wheel_link</adjacent>
-      <adjacent>base_link bl_caster_r_wheel_link</adjacent>
-      <adjacent>base_link bl_caster_l_wheel_link</adjacent>
-      <!-- needed for opening gripper all the way -->
-      <adjacent>l_gripper_l_finger_link l_gripper_r_finger_link</adjacent>
-      <adjacent>r_gripper_l_finger_link r_gripper_r_finger_link</adjacent>
-    </kinbody>
-  </robot>
-  <manipulator name="leftarm">
-    <base>torso_lift_link</base>
-    <effector>l_gripper_palm_link</effector>
-    <joints>l_gripper_l_finger_joint</joints>
-    <closingdirection>-1</closingdirection>
-    <translation>0.18 0 0</translation>
-    <direction>1 0 0</direction>
-<!--     <iksolver>ikfast_pr2_leftarm</iksolver> -->
-  </manipulator>
-  <manipulator name="leftarm_torso">
-    <base>base_link</base>
-    <effector>l_gripper_palm_link</effector>
-    <joints>l_gripper_l_finger_joint</joints>
-    <closingdirection>-1</closingdirection>
-    <translation>0.18 0 0</translation>
-    <direction>1 0 0</direction>
-    <iksolver>ikfast_pr2_leftarm_torso</iksolver>
-  </manipulator>
-  <manipulator name="rightarm">
-    <base>torso_lift_link</base>
-    <effector>r_gripper_palm_link</effector>
-    <joints>r_gripper_l_finger_joint</joints>
-    <closingdirection>-1</closingdirection>
-    <translation>0.18 0 0</translation>
-    <direction>1 0 0</direction>
-    <iksolver>ikfast_pr2_rightarm</iksolver>
-  </manipulator>
-  <manipulator name="rightarm_torso">
-    <base>base_link</base>
-    <effector>r_gripper_palm_link</effector>
-    <joints>r_gripper_l_finger_joint</joints>
-    <closingdirection>-1</closingdirection>
-    <translation>0.18 0 0</translation>
-    <direction>1 0 0</direction>
-    <iksolver>ikfast_pr2_rightarm_torso</iksolver>
-  </manipulator>
-  <manipulator name="leftarm_camera">
-    <base>torso_lift_link</base>
-    <effector>l_forearm_cam_optical_frame</effector>
-    <direction>0 0 1</direction>
-  </manipulator>
-  <manipulator name="rightarm_camera">
-    <base>torso_lift_link</base>
-    <effector>r_forearm_cam_optical_frame</effector>
-    <direction>0 0 1</direction>
-  </manipulator>
-  <manipulator name="head">
-    <base>torso_lift_link</base>
-    <effector>wide_stereo_optical_frame</effector>
-    <direction>0 0 1</direction>
-    <iksolver>ikfast_pr2_head</iksolver>
-  </manipulator>
-  <manipulator name="head_torso">
-    <base>base_link</base>
-    <effector>wide_stereo_optical_frame</effector>
-    <direction>0 0 1</direction>
-    <iksolver>ikfast_pr2_head_torso</iksolver>
-  </manipulator>
-  <attachedsensor name="l_forearm_cam_optical_frame">
-    <link>l_forearm_cam_optical_frame</link>
-  </attachedsensor>
-  <attachedsensor name="r_forearm_cam_optical_frame">
-    <link>r_forearm_cam_optical_frame</link>
-  </attachedsensor>
-  <attachedsensor name="narrow_stereo_optical_frame">
-    <link>narrow_stereo_optical_frame</link>
-  </attachedsensor>
-  <attachedsensor name="wide_stereo_optical_frame">
-    <link>wide_stereo_optical_frame</link>
-  </attachedsensor>
+<robot name="pr2" file="pr2-beta-static.dae">
+  <kinbody>
+    <!-- wheels -->
+    <adjacent>base_link br_caster_r_wheel_link</adjacent>
+    <adjacent>base_link br_caster_l_wheel_link</adjacent>
+    <adjacent>base_link fr_caster_r_wheel_link</adjacent>
+    <adjacent>base_link fr_caster_l_wheel_link</adjacent>
+    <adjacent>base_link fl_caster_r_wheel_link</adjacent>
+    <adjacent>base_link fl_caster_l_wheel_link</adjacent>
+    <adjacent>base_link bl_caster_r_wheel_link</adjacent>
+    <adjacent>base_link bl_caster_l_wheel_link</adjacent>
+    <!-- needed for opening gripper all the way -->
+    <adjacent>l_gripper_l_finger_link l_gripper_r_finger_link</adjacent>
+    <adjacent>r_gripper_l_finger_link r_gripper_r_finger_link</adjacent>
+  </kinbody>
 </robot>
