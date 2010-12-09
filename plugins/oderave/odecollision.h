@@ -158,12 +158,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
 
     virtual bool SetCollisionOptions(int collisionoptions)
     {
-        _options = collisionoptions;
-        if( _options & OpenRAVE::CO_Distance ) {
-            RAVELOG_WARN("ode doesn't support CO_Distance\n");
-            return false;
-        }
-    
+        _options = collisionoptions;    
         return true;
     }
 
@@ -189,6 +184,10 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
         if( pbody->GetLinks().size() == 0 || !pbody->IsEnabled() ) {
             return false;
         }
+        if( _options & OpenRAVE::CO_Distance ) {
+            RAVELOG_WARN("ode doesn't support CO_Distance\n");
+            return false;
+        }
 
         odespace->Synchronize();
         dSpaceCollide(odespace->GetSpace(), &cb, KinBodyCollisionCallback);
@@ -205,6 +204,10 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
             return false;
         }
         if( pbody1->IsAttached(pbody2) ) {
+            return false;
+        }
+        if( _options & OpenRAVE::CO_Distance ) {
+            RAVELOG_WARN("ode doesn't support CO_Distance\n");
             return false;
         }
 
@@ -235,6 +238,10 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
             RAVELOG_VERBOSE("calling collision on disabled link %s\n", plink->GetName().c_str());
             return false;
         }
+        if( _options & OpenRAVE::CO_Distance ) {
+            RAVELOG_WARN("ode doesn't support CO_Distance\n");
+            return false;
+        }
 
         odespace->Synchronize();
         dSpaceCollide(odespace->GetSpace(), &cb, LinkCollisionCallback);
@@ -243,15 +250,19 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
 
     virtual bool CheckCollision(KinBody::LinkConstPtr plink1, KinBody::LinkConstPtr plink2, CollisionReportPtr report)
     {
-        if( !!report )
+        if( !!report ) {
             report->Reset(_options);
-
+        }
         if( !plink1->IsEnabled() ) {
             RAVELOG_VERBOSE(str(boost::format("calling collision on disabled link1 %s\n")%plink1->GetName()));
             return false;
         }
         if( !plink2->IsEnabled() ) {
             RAVELOG_VERBOSE(str(boost::format("calling collision on disabled link2 %s\n")%plink2->GetName()));
+            return false;
+        }
+        if( _options & OpenRAVE::CO_Distance ) {
+            RAVELOG_WARN("ode doesn't support CO_Distance\n");
             return false;
         }
 
@@ -333,6 +344,10 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
         if( pbody->IsAttached(plink->GetParent()) ) {
             return false;
         }
+        if( _options & OpenRAVE::CO_Distance ) {
+            RAVELOG_WARN("ode doesn't support CO_Distance\n");
+            return false;
+        }
 
         odespace->Synchronize();
         COLLISIONCALLBACK cb(shared_checker(),report,KinBodyPtr(),KinBody::LinkConstPtr());
@@ -361,6 +376,10 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
         if( vlinkexcluded.size() == 0 && vbodyexcluded.size() == 0 ) {
             return CheckCollision(plink,report);
         }
+        if( _options & OpenRAVE::CO_Distance ) {
+            RAVELOG_WARN("ode doesn't support CO_Distance\n");
+            return false;
+        }
         throw openrave_exception("This type of collision checking is not yet implemented in the ODE collision checker.\n",OpenRAVE::ORE_NotImplemented);
     }
 
@@ -370,7 +389,10 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
         if( pbody->GetLinks().size() == 0 || !pbody->IsEnabled() ) {
             return false;
         }
-
+        if( _options & OpenRAVE::CO_Distance ) {
+            RAVELOG_WARN("ode doesn't support CO_Distance\n");
+            return false;
+        }
         if( vbodyexcluded.size() > 0 ) {
             cb.pvbodyexcluded = &vbodyexcluded;
         }

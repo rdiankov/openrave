@@ -298,10 +298,12 @@ bool KinBodyItem::UpdateFromIv()
     }
     
     boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = _viewer->LockEnvironment(50000,false);
-    if( !!lockenv )
+    if( !!lockenv ) {
         _pchain->SetBodyTransformations(vtrans);
-    else
-        RAVELOG_WARN("failed to acquire environment lock for updating body\n");
+    }
+    else {
+        RAVELOG_WARN("failed to acquire environment lock for updating body (viewer updates might be choppy, otherwise this does not affect internal openrave state)\n");
+    }
     return true;
 }
 
