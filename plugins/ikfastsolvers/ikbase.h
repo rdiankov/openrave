@@ -269,66 +269,74 @@ private:
 
     bool _CallIK(const IkParameterization& param, const vector<IKReal>& vfree, std::vector<Solution>& vsolutions)
     {
-        switch(param.GetType()) {
-        case IkParameterization::Type_Transform6D: {
-            TransformMatrix t = param.GetTransform();
-            IKReal eetrans[3] = {t.trans.x, t.trans.y, t.trans.z};
-            IKReal eerot[9] = {t.m[0],t.m[1],t.m[2],t.m[4],t.m[5],t.m[6],t.m[8],t.m[9],t.m[10]};
-//            stringstream ss; ss << "./ik " << std::setprecision(16);
-//            ss << eerot[0]  << " " << eerot[1]  << " " << eerot[2]  << " " << eetrans[0]  << " " << eerot[3]  << " " << eerot[4]  << " " << eerot[5]  << " " << eetrans[1]  << " " << eerot[6]  << " " << eerot[7]  << " " << eerot[8]  << " " << eetrans[2] << " ";
-//            FOREACH(itfree,vfree) {
-//                ss << *itfree << " ";
-//            }
-//            ss << endl;
-//            RAVELOG_INFO(ss.str());
-            return _pfnik(eetrans, eerot, vfree.size()>0?&vfree[0]:NULL, vsolutions);
-        }
-        case IkParameterization::Type_Rotation3D: {
-            TransformMatrix t(Transform(param.GetRotation(),Vector()));
-            IKReal eerot[9] = {t.m[0],t.m[1],t.m[2],t.m[4],t.m[5],t.m[6],t.m[8],t.m[9],t.m[10]};
-            return _pfnik(NULL, eerot, vfree.size()>0?&vfree[0]:NULL, vsolutions);
-        }
-        case IkParameterization::Type_Translation3D: {
-            Vector v = param.GetTranslation();
-            IKReal eetrans[3] = {v.x, v.y, v.z};
-//            stringstream ss; ss << "./ik " << std::setprecision(16);
-//            ss << eetrans[0]  << " " << eetrans[1]  << " " << eetrans[2] << " ";
-//            FOREACH(itfree,vfree) {
-//                ss << *itfree << " ";
-//            }
-//            ss << endl;
-//            RAVELOG_INFO(ss.str());
-            return _pfnik(eetrans, NULL, vfree.size()>0?&vfree[0]:NULL, vsolutions);
-        }
-        case IkParameterization::Type_Direction3D: {
-            Vector v = param.GetDirection();
-            IKReal eerot[9] = {v.x, v.y, v.z,0,0,0,0,0,0};
-            return _pfnik(NULL, eerot, vfree.size()>0?&vfree[0]:NULL, vsolutions);
-        }
-        case IkParameterization::Type_Lookat3D: {
-            Vector v = param.GetLookat();
-            IKReal eetrans[3] = {v.x, v.y, v.z};
-            //RAVELOG_INFO("lookat: %f %f %f\n",v.x,v.y,v.z);
-            return _pfnik(eetrans, NULL, vfree.size()>0?&vfree[0]:NULL, vsolutions);
-        }
-        case IkParameterization::Type_Ray4D: {
-            Vector pos = param.GetRay().pos;
-            Vector dir = param.GetRay().dir;
-            IKReal eetrans[3] = {pos.x,pos.y,pos.z};
-            IKReal eerot[9] = {dir.x, dir.y, dir.z,0,0,0,0,0,0};
-            //RAVELOG_INFO("ray: %f %f %f %f %f %f\n",eerot[0],eerot[1],eerot[2],eetrans[0],eetrans[1],eetrans[2]);
-            if( !_pfnik(eetrans, eerot, vfree.size()>0?&vfree[0]:NULL, vsolutions) ) {
-                return false;
+        try {
+            switch(param.GetType()) {
+            case IkParameterization::Type_Transform6D: {
+                TransformMatrix t = param.GetTransform();
+                IKReal eetrans[3] = {t.trans.x, t.trans.y, t.trans.z};
+                IKReal eerot[9] = {t.m[0],t.m[1],t.m[2],t.m[4],t.m[5],t.m[6],t.m[8],t.m[9],t.m[10]};
+    //            stringstream ss; ss << "./ik " << std::setprecision(16);
+    //            ss << eerot[0]  << " " << eerot[1]  << " " << eerot[2]  << " " << eetrans[0]  << " " << eerot[3]  << " " << eerot[4]  << " " << eerot[5]  << " " << eetrans[1]  << " " << eerot[6]  << " " << eerot[7]  << " " << eerot[8]  << " " << eetrans[2] << " ";
+    //            FOREACH(itfree,vfree) {
+    //                ss << *itfree << " ";
+    //            }
+    //            ss << endl;
+    //            RAVELOG_INFO(ss.str());
+                return _pfnik(eetrans, eerot, vfree.size()>0?&vfree[0]:NULL, vsolutions);
             }
-            return true;
-//            IKReal s[4];
-//            IKReal free[10];
-//            vsolutions[0].GetSolution(s,free);
-//            RAVELOG_INFO("sol %d: %f %f %f %f\n",(int)vsolutions[0].GetFree().size(),s[0],s[1],s[2],s[3]);
+            case IkParameterization::Type_Rotation3D: {
+                TransformMatrix t(Transform(param.GetRotation(),Vector()));
+                IKReal eerot[9] = {t.m[0],t.m[1],t.m[2],t.m[4],t.m[5],t.m[6],t.m[8],t.m[9],t.m[10]};
+                return _pfnik(NULL, eerot, vfree.size()>0?&vfree[0]:NULL, vsolutions);
+            }
+            case IkParameterization::Type_Translation3D: {
+                Vector v = param.GetTranslation();
+                IKReal eetrans[3] = {v.x, v.y, v.z};
+    //            stringstream ss; ss << "./ik " << std::setprecision(16);
+    //            ss << eetrans[0]  << " " << eetrans[1]  << " " << eetrans[2] << " ";
+    //            FOREACH(itfree,vfree) {
+    //                ss << *itfree << " ";
+    //            }
+    //            ss << endl;
+    //            RAVELOG_INFO(ss.str());
+                return _pfnik(eetrans, NULL, vfree.size()>0?&vfree[0]:NULL, vsolutions);
+            }
+            case IkParameterization::Type_Direction3D: {
+                Vector v = param.GetDirection();
+                IKReal eerot[9] = {v.x, v.y, v.z,0,0,0,0,0,0};
+                return _pfnik(NULL, eerot, vfree.size()>0?&vfree[0]:NULL, vsolutions);
+            }
+            case IkParameterization::Type_Lookat3D: {
+                Vector v = param.GetLookat();
+                IKReal eetrans[3] = {v.x, v.y, v.z};
+                //RAVELOG_INFO("lookat: %f %f %f\n",v.x,v.y,v.z);
+                return _pfnik(eetrans, NULL, vfree.size()>0?&vfree[0]:NULL, vsolutions);
+            }
+            case IkParameterization::Type_Ray4D: {
+                Vector pos = param.GetRay().pos;
+                Vector dir = param.GetRay().dir;
+                IKReal eetrans[3] = {pos.x,pos.y,pos.z};
+                IKReal eerot[9] = {dir.x, dir.y, dir.z,0,0,0,0,0,0};
+                //RAVELOG_INFO("ray: %f %f %f %f %f %f\n",eerot[0],eerot[1],eerot[2],eetrans[0],eetrans[1],eetrans[2]);
+                if( !_pfnik(eetrans, eerot, vfree.size()>0?&vfree[0]:NULL, vsolutions) ) {
+                    return false;
+                }
+                return true;
+    //            IKReal s[4];
+    //            IKReal free[10];
+    //            vsolutions[0].GetSolution(s,free);
+    //            RAVELOG_INFO("sol %d: %f %f %f %f\n",(int)vsolutions[0].GetFree().size(),s[0],s[1],s[2],s[3]);
+            }
+            case IkParameterization::Type_None:
+                break;
+            }
         }
-        default:
-            throw openrave_exception(str(boost::format("don't support ik parameterization %d")%param.GetType()));
+        catch(const std::exception& e) {
+            RAVELOG_WARN(str(boost::format("ik call failed for ik %s:%d: %s")%GetXMLId()%param.GetType()%e.what()));
+            return false;
         }
+
+        throw openrave_exception(str(boost::format("don't support ik parameterization %d")%param.GetType()),ORE_InvalidArguments);
     }
 
     static bool SortSolutionDistances(const pair<int,dReal>& p1, const pair<int,dReal>& p2)

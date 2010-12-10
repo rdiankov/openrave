@@ -115,11 +115,31 @@ class CodeGenerator(AutoReloader):
 /// To compile without any main function as a shared object:
 ///     gcc -fPIC -lstdc++ -DIKFAST_NO_MAIN -shared -Wl,-soname,ik.so -o ik.so ik.cpp
 #include <cmath>
-#include <cassert>
 #include <vector>
 #include <limits>
 #include <algorithm>
 #include <complex>
+
+#ifdef BOOST_ASSERT
+#define IKFAST_ASSERT BOOST_ASSERT
+#else
+
+#include <stdexcept>
+#include <sstream>
+
+#ifdef _MSC_VER
+#ifndef __PRETTY_FUNCTION__
+#define __PRETTY_FUNCTION__ __FUNCDNAME__
+#endif
+#endif
+
+#ifndef __PRETTY_FUNCTION__
+#define __PRETTY_FUNCTION__ __func__
+#endif
+
+#define IKFAST_ASSERT(b) { if( !(b) ) { std::stringstream ss; ss << "ikfast exception: " << __FILE__ << ":" << __LINE__ << ": " <<__PRETTY_FUNCTION__ << ": Assertion '" << #b << "' failed"; throw std::runtime_error(ss.str()); } }
+
+#endif
 
 #define IK2PI  6.28318530717959
 #define IKPI  3.14159265358979
@@ -153,7 +173,7 @@ public:
             if( basesol[i].freeind < 0 )
                 psolution[i] = basesol[i].foffset;
             else {
-                assert(pfree != NULL);
+                IKFAST_ASSERT(pfree != NULL);
                 psolution[i] = pfree[basesol[i].freeind]*basesol[i].fmul + basesol[i].foffset;
                 if( psolution[i] > IKPI )
                     psolution[i] -= IK2PI;
@@ -187,14 +207,14 @@ inline double IKlog(double f) { return log(f); }
 
 inline float IKasin(float f)
 {
-assert( f > -1.001f && f < 1.001f ); // any more error implies something is wrong with the solver
+IKFAST_ASSERT( f > -1.001f && f < 1.001f ); // any more error implies something is wrong with the solver
 if( f <= -1 ) return -IKPI_2;
 else if( f >= 1 ) return IKPI_2;
 return asinf(f);
 }
 inline double IKasin(double f)
 {
-assert( f > -1.001 && f < 1.001 ); // any more error implies something is wrong with the solver
+IKFAST_ASSERT( f > -1.001 && f < 1.001 ); // any more error implies something is wrong with the solver
 if( f <= -1 ) return -IKPI_2;
 else if( f >= 1 ) return IKPI_2;
 return asin(f);
@@ -220,14 +240,14 @@ inline float IKfmod(double x, double y)
 
 inline float IKacos(float f)
 {
-assert( f > -1.001f && f < 1.001f ); // any more error implies something is wrong with the solver
+IKFAST_ASSERT( f > -1.001f && f < 1.001f ); // any more error implies something is wrong with the solver
 if( f <= -1 ) return IKPI;
 else if( f >= 1 ) return 0.0f;
 return acosf(f);
 }
 inline double IKacos(double f)
 {
-assert( f > -1.001 && f < 1.001 ); // any more error implies something is wrong with the solver
+IKFAST_ASSERT( f > -1.001 && f < 1.001 ); // any more error implies something is wrong with the solver
 if( f <= -1 ) return IKPI;
 else if( f >= 1 ) return 0.0;
 return acos(f);
@@ -240,7 +260,7 @@ inline float IKsqrt(float f) { if( f <= 0.0f ) return 0.0f; return sqrtf(f); }
 inline double IKsqrt(double f) { if( f <= 0.0 ) return 0.0; return sqrt(f); }
 inline float IKatan2(float fy, float fx) {
     if( isnan(fy) ) {
-        assert(!isnan(fx)); // if both are nan, probably wrong value will be returned
+        IKFAST_ASSERT(!isnan(fx)); // if both are nan, probably wrong value will be returned
         return IKPI_2;
     }
     else if( isnan(fx) )
@@ -249,7 +269,7 @@ inline float IKatan2(float fy, float fx) {
 }
 inline double IKatan2(double fy, double fx) {
     if( isnan(fy) ) {
-        assert(!isnan(fx)); // if both are nan, probably wrong value will be returned
+        IKFAST_ASSERT(!isnan(fx)); // if both are nan, probably wrong value will be returned
         return IKPI_2;
     }
     else if( isnan(fx) )
@@ -349,7 +369,6 @@ int main(int argc, char** argv)
             outputnames = ['eerot[0]','eerot[1]','eerot[2]','eetrans[0]','eerot[3]','eerot[4]','eerot[5]','eetrans[1]','eerot[6]','eerot[7]','eerot[8]','eetrans[2]']
             fcode = ''
             if len(subexprs) > 0:
-                fcode = 'IKReal '
                 vars = [var for var,expr in subexprs]
                 fcode = 'IKReal ' + ','.join(str(var) for var,expr in subexprs) + ';\n'
                 for var,expr in subexprs:
@@ -434,12 +453,8 @@ int main(int argc, char** argv)
             outputnames = ['eerot[0]','eerot[1]','eerot[2]','eerot[3]','eerot[4]','eerot[5]','eerot[6]','eerot[7]','eerot[8]']
             fcode = ''
             if len(subexprs) > 0:
-                fcode = 'IKReal '
-                vars = []
-                for var,expr in subexprs:
-                    fcode += str(var) + ', '
-                    vars.append(var)
-                fcode += '__dummy__;\n'
+                vars = [var for var,expr in subexprs]
+                fcode = 'IKReal ' + ','.join(str(var) for var,expr in subexprs) + ';\n'
                 for var,expr in subexprs:
                     fcode += self.writeEquations(lambda k: str(var),collect(expr,vars))
             for i in range(len(outputnames)):
@@ -522,12 +537,8 @@ int main(int argc, char** argv)
             outputnames = ['eetrans[0]','eetrans[1]','eetrans[2]']
             fcode = ''
             if len(subexprs) > 0:
-                fcode = 'IKReal '
-                vars = []
-                for var,expr in subexprs:
-                    fcode += str(var) + ', '
-                    vars.append(var)
-                fcode += '__dummy__;\n'
+                vars = [var for var,expr in subexprs]
+                fcode = 'IKReal ' + ','.join(str(var) for var,expr in subexprs) + ';\n'
                 for var,expr in subexprs:
                     fcode += self.writeEquations(lambda k: str(var),collect(expr,vars))
             for i in range(len(outputnames)):
@@ -599,12 +610,8 @@ int main(int argc, char** argv)
             outputnames = ['eerot[0]','eerot[1]','eerot[2]']
             fcode = ''
             if len(subexprs) > 0:
-                fcode = 'IKReal '
-                vars = []
-                for var,expr in subexprs:
-                    fcode += str(var) + ', '
-                    vars.append(var)
-                fcode += '__dummy__;\n'
+                vars = [var for var,expr in subexprs]
+                fcode = 'IKReal ' + ','.join(str(var) for var,expr in subexprs) + ';\n'
                 for var,expr in subexprs:
                     fcode += self.writeEquations(lambda k: str(var),collect(expr,vars))
             for i in range(len(outputnames)):
@@ -682,12 +689,8 @@ int main(int argc, char** argv)
             outputnames = ['eetrans[0]','eetrans[1]','eetrans[2]','eerot[0]','eerot[1]','eerot[2]']
             fcode = ''
             if len(subexprs) > 0:
-                fcode = 'IKReal '
-                vars = []
-                for var,expr in subexprs:
-                    fcode += str(var) + ', '
-                    vars.append(var)
-                fcode += '__dummy__;\n'
+                vars = [var for var,expr in subexprs]
+                fcode = 'IKReal ' + ','.join(str(var) for var,expr in subexprs) + ';\n'
                 for var,expr in subexprs:
                     fcode += self.writeEquations(lambda k: str(var),collect(expr,vars))
             for i in range(len(outputnames)):
@@ -774,12 +777,8 @@ int main(int argc, char** argv)
             outputnames = ['eetrans[0]','eetrans[1]','eetrans[2]','eerot[0]','eerot[1]','eerot[2]']
             fcode = ''
             if len(subexprs) > 0:
-                fcode = 'IKReal '
-                vars = []
-                for var,expr in subexprs:
-                    fcode += str(var) + ', '
-                    vars.append(var)
-                fcode += '__dummy__;\n'
+                vars = [var for var,expr in subexprs]
+                fcode = 'IKReal ' + ','.join(str(var) for var,expr in subexprs) + ';\n'
                 for var,expr in subexprs:
                     fcode += self.writeEquations(lambda k: str(var),collect(expr,vars))
             for i in range(len(outputnames)):
@@ -1412,7 +1411,7 @@ int main(int argc, char** argv)
                 fcode = """static void %s(IKReal rawcoeffs[%d+1], IKReal rawroots[%d], int& numroots)
 {
     using std::complex;
-    assert(rawcoeffs[0] != 0);
+    IKFAST_ASSERT(rawcoeffs[0] != 0);
     IKReal a0 = rawcoeffs[3]/rawcoeffs[0], a1 = rawcoeffs[2]/rawcoeffs[0], a2 = rawcoeffs[1]/rawcoeffs[0];
     IKReal a2_3 = a2/3.0;
     IKReal Q = (3*a1-a2*a2)/9, R = (9*a2*a1-27*a0-2*a2*a2*a2)/54;
@@ -1452,7 +1451,7 @@ int main(int argc, char** argv)
 static void %s(IKReal rawcoeffs[%d+1], IKReal rawroots[%d], int& numroots)
 {
     using std::complex;
-    assert(rawcoeffs[0] != 0);
+    IKFAST_ASSERT(rawcoeffs[0] != 0);
     const IKReal tol = 128.0*std::numeric_limits<IKReal>::epsilon();
     complex<IKReal> coeffs[%d];
     const int maxsteps = 50;

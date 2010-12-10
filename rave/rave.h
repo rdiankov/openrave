@@ -333,15 +333,15 @@ RAVE_API DebugLevel RaveGetDebugLevel();
 /// extracts only the filename
 inline const char* RaveGetSourceFilename(const char* pfilename)
 {
-    if( pfilename == NULL )
+    if( pfilename == NULL ) {
         return "";
-
+    }
     const char* p0 = strrchr(pfilename,'/');
     const char* p1 = strrchr(pfilename,'\\');
     const char* p = p0 > p1 ? p0 : p1;
-    if( p == NULL )
+    if( p == NULL ) {
         return pfilename;
-
+    }
     return p+1;
 }
 
@@ -362,7 +362,12 @@ inline const char* RaveGetSourceFilename(const char* pfilename)
 #define DefineRavePrintfA(LEVEL) \
     inline int RavePrintfA##LEVEL(const std::string& s) \
     { \
-        printf ("%s", s.c_str()); \
+        if( s.size() == 0 || s[s.size()-1] != '\n' ) {  \
+            printf("%s\n", s.c_str()); \
+        } \
+        else { \
+            printf ("%s", s.c_str()); \
+        } \
         return s.size(); \
     } \
     \
@@ -379,7 +384,12 @@ inline const char* RaveGetSourceFilename(const char* pfilename)
 
 inline int RavePrintfA(const std::string& s, DebugLevel level)
 {
-    printf ("%s", s.c_str());
+    if( s.size() == 0 || s[s.size()-1] != '\n' ) { // automatically add a new line
+        printf("%s\n", s.c_str());
+    }
+    else {
+        printf ("%s", s.c_str());
+    }
     return s.size();
 }
 
@@ -410,7 +420,12 @@ DefineRavePrintfA(_INFOLEVEL)
 // for them.
     inline int RavePrintfA_INFOLEVEL(const std::string& s)
     {
-        printf ("%s", s.c_str());
+        if( s.size() == 0 || s[s.size()-1] != '\n' ) { // automatically add a new line
+            printf("%s\n", s.c_str());
+        }
+        else {
+            printf ("%s", s.c_str());
+        }
         return s.size();
     }
     
@@ -426,7 +441,12 @@ DefineRavePrintfA(_INFOLEVEL)
 #define DefineRavePrintfA(LEVEL) \
     inline int RavePrintfA##LEVEL(const std::string& s) \
     { \
-        printf ("%c[0;%d;%dm%s%c[m", 0x1B, OPENRAVECOLOR##LEVEL + 30,8+40,s.c_str(),0x1B); \
+        if( s.size() == 0 || s[s.size()-1] != '\n' ) { \
+            printf ("%c[0;%d;%dm%s%c[m\n", 0x1B, OPENRAVECOLOR##LEVEL + 30,8+40,s.c_str(),0x1B); \
+        } \
+        else { \
+            printf ("%c[0;%d;%dm%s%c[m", 0x1B, OPENRAVECOLOR##LEVEL + 30,8+40,s.c_str(),0x1B); \
+        } \
         return s.size(); \
     } \
     \
@@ -448,11 +468,23 @@ inline int RavePrintfA(const std::string& s, DebugLevel level)
         case Level_Fatal: color = OPENRAVECOLOR_FATALLEVEL; break;
         case Level_Error: color = OPENRAVECOLOR_ERRORLEVEL; break;
         case Level_Warn: color = OPENRAVECOLOR_WARNLEVEL; break;
-        case Level_Info: printf ("%s",s.c_str()); return s.size(); // print regular
+        case Level_Info: // print regular
+            if( s.size() == 0 || s[s.size()-1] != '\n' ) { // automatically add a new line
+                printf ("%s\n",s.c_str());
+            }
+            else {
+                printf ("%s",s.c_str());
+            }
+            return s.size(); 
         case Level_Debug: color = OPENRAVECOLOR_DEBUGLEVEL; break;
         case Level_Verbose: color = OPENRAVECOLOR_VERBOSELEVEL; break;
         }
-        printf ("%c[0;%d;%dm%s%c[0;38;48m", 0x1B, color + 30,8+40,s.c_str(),0x1B);
+        if( s.size() == 0 || s[s.size()-1] != '\n' ) { // automatically add a new line
+            printf ("%c[0;%d;%dm%s%c[0;38;48m\n", 0x1B, color + 30,8+40,s.c_str(),0x1B);
+        }
+        else {
+            printf ("%c[0;%d;%dm%s%c[0;38;48m", 0x1B, color + 30,8+40,s.c_str(),0x1B);
+        }
         return s.size();
     }
     return 0;

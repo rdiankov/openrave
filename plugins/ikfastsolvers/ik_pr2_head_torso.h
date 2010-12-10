@@ -12,17 +12,37 @@
 /// See the License for the specific language governing permissions and
 /// limitations under the License.
 ///
-/// generated 2010-12-10 15:04:57.195264
+/// generated 2010-12-10 19:07:53.677250
 /// To compile with gcc:
 ///     gcc -lstdc++ ik.cpp
 /// To compile without any main function as a shared object:
 ///     gcc -fPIC -lstdc++ -DIKFAST_NO_MAIN -shared -Wl,-soname,ik.so -o ik.so ik.cpp
 #include <cmath>
-#include <cassert>
 #include <vector>
 #include <limits>
 #include <algorithm>
 #include <complex>
+
+#ifdef BOOST_ASSERT
+#define IKFAST_ASSERT BOOST_ASSERT
+#else
+
+#include <stdexcept>
+#include <sstream>
+
+#ifdef _MSC_VER
+#ifndef __PRETTY_FUNCTION__
+#define __PRETTY_FUNCTION__ __FUNCDNAME__
+#endif
+#endif
+
+#ifndef __PRETTY_FUNCTION__
+#define __PRETTY_FUNCTION__ __func__
+#endif
+
+#define IKFAST_ASSERT(b) { if( !(b) ) { std::stringstream ss; ss << "ikfast exception: " << __FILE__ << ":" << __LINE__ << ": " <<__PRETTY_FUNCTION__ << ": Assertion '" << #b << "' failed"; throw std::runtime_error(ss.str()); } }
+
+#endif
 
 #define IK2PI  6.28318530717959
 #define IKPI  3.14159265358979
@@ -56,7 +76,7 @@ public:
             if( basesol[i].freeind < 0 )
                 psolution[i] = basesol[i].foffset;
             else {
-                assert(pfree != NULL);
+                IKFAST_ASSERT(pfree != NULL);
                 psolution[i] = pfree[basesol[i].freeind]*basesol[i].fmul + basesol[i].foffset;
                 if( psolution[i] > IKPI )
                     psolution[i] -= IK2PI;
@@ -90,14 +110,14 @@ inline double IKlog(double f) { return log(f); }
 
 inline float IKasin(float f)
 {
-assert( f > -1.001f && f < 1.001f ); // any more error implies something is wrong with the solver
+IKFAST_ASSERT( f > -1.001f && f < 1.001f ); // any more error implies something is wrong with the solver
 if( f <= -1 ) return -IKPI_2;
 else if( f >= 1 ) return IKPI_2;
 return asinf(f);
 }
 inline double IKasin(double f)
 {
-assert( f > -1.001 && f < 1.001 ); // any more error implies something is wrong with the solver
+IKFAST_ASSERT( f > -1.001 && f < 1.001 ); // any more error implies something is wrong with the solver
 if( f <= -1 ) return -IKPI_2;
 else if( f >= 1 ) return IKPI_2;
 return asin(f);
@@ -123,14 +143,14 @@ inline float IKfmod(double x, double y)
 
 inline float IKacos(float f)
 {
-assert( f > -1.001f && f < 1.001f ); // any more error implies something is wrong with the solver
+IKFAST_ASSERT( f > -1.001f && f < 1.001f ); // any more error implies something is wrong with the solver
 if( f <= -1 ) return IKPI;
 else if( f >= 1 ) return 0.0f;
 return acosf(f);
 }
 inline double IKacos(double f)
 {
-assert( f > -1.001 && f < 1.001 ); // any more error implies something is wrong with the solver
+IKFAST_ASSERT( f > -1.001 && f < 1.001 ); // any more error implies something is wrong with the solver
 if( f <= -1 ) return IKPI;
 else if( f >= 1 ) return 0.0;
 return acos(f);
@@ -143,7 +163,7 @@ inline float IKsqrt(float f) { if( f <= 0.0f ) return 0.0f; return sqrtf(f); }
 inline double IKsqrt(double f) { if( f <= 0.0 ) return 0.0; return sqrt(f); }
 inline float IKatan2(float fy, float fx) {
     if( isnan(fy) ) {
-        assert(!isnan(fx)); // if both are nan, probably wrong value will be returned
+        IKFAST_ASSERT(!isnan(fx)); // if both are nan, probably wrong value will be returned
         return IKPI_2;
     }
     else if( isnan(fx) )
@@ -152,7 +172,7 @@ inline float IKatan2(float fy, float fx) {
 }
 inline double IKatan2(double fy, double fx) {
     if( isnan(fy) ) {
-        assert(!isnan(fx)); // if both are nan, probably wrong value will be returned
+        IKFAST_ASSERT(!isnan(fx)); // if both are nan, probably wrong value will be returned
         return IKPI_2;
     }
     else if( isnan(fx) )
@@ -171,7 +191,7 @@ IKFAST_API int getIKType() { return 6; }
 /// solves the inverse kinematics equations.
 /// \param pfree is an array specifying the free joints of the chain.
 IKFAST_API void fk(const IKReal* j, IKReal* eetrans, IKReal* eerot) {
-IKReal x0, x1, x2, x3, __dummy__;
+IKReal x0, x1, x2, x3;
 x0=IKcos(j[1]);
 x1=IKsin(j[1]);
 x2=IKsin(j[2]);
@@ -199,7 +219,7 @@ px = eetrans[0]; py = eetrans[1]; pz = eetrans[2];
 j0=pfree[0]; cj0=cos(pfree[0]); sj0=sin(pfree[0]);
 new_px=((0.0670700000000000)+(px));
 new_py=py;
-new_pz=((-1.12113000000000)+(pz));
+new_pz=((-1.12113000000000)+(pz)+(((-1.00000000000000)*(j0))));
 px = new_px; py = new_py; pz = new_pz;
 {
 if( 1 )
@@ -251,24 +271,24 @@ IKReal x10=((cj1)*(px));
 IKReal x11=((py)*(sj1));
 IKReal x12=((x11)+(x10));
 IKReal x13=((0.0680000000000000)+(((-1.00000000000000)*(x12))));
-IKReal x14=((((-1.00000000000000)*(pz)))+(j0));
-IKReal x15=(x13)*(x13);
-IKReal x16=(x14)*(x14);
-IKReal x17=((x15)+(x16));
-if( (x17) < (IKReal)-0.00001 )
+IKReal x14=(x13)*(x13);
+IKReal x15=(pz)*(pz);
+IKReal x16=((x15)+(x14));
+if( (x16) < (IKReal)-0.00001 )
     continue;
-IKReal x18=IKsqrt(x17);
-IKReal x19=IKabs(x18);
-IKReal x20=((IKabs(x19) != 0)?((IKReal)1/(x19)):(IKReal)1.0e30);
-IKReal x21=((0.0980000000000000)*(x20));
-if( (x21) < -1.0001 || (x21) > 1.0001 )
+IKReal x17=IKsqrt(x16);
+IKReal x18=IKabs(x17);
+IKReal x19=((IKabs(x18) != 0)?((IKReal)1/(x18)):(IKReal)1.0e30);
+IKReal x20=((0.0980000000000000)*(x19));
+if( (x20) < -1.0001 || (x20) > 1.0001 )
     continue;
-IKReal x22=IKasin(x21);
-IKReal x23=IKatan2(x14, x13);
-j2array[0]=((((-1.00000000000000)*(x23)))+(((-1.00000000000000)*(x22))));
+IKReal x21=IKasin(x20);
+IKReal x22=((-1.00000000000000)*(pz));
+IKReal x23=IKatan2(x22, x13);
+j2array[0]=((((-1.00000000000000)*(x23)))+(((-1.00000000000000)*(x21))));
 sj2array[0]=IKsin(j2array[0]);
 cj2array[0]=IKcos(j2array[0]);
-j2array[1]=((3.14159265358979)+(((-1.00000000000000)*(x23)))+(x22));
+j2array[1]=((3.14159265358979)+(((-1.00000000000000)*(x23)))+(x21));
 sj2array[1]=IKsin(j2array[1]);
 cj2array[1]=IKcos(j2array[1]);
 if( j2array[0] > IKPI )

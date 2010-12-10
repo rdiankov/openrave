@@ -122,6 +122,8 @@ class SolverSolution:
         if self.jointevalcos is not None:
             valid &= all([IKFastSolver.isValidSolution(e) for e in self.jointevalcos])
         return valid
+    def getPresetCheckForZeros(self):
+        return []
 
 class SolverPolynomialRoots:
     """find all roots of the polynomial and plug it into jointeval. poly should be polys.polynomial.Poly
@@ -167,6 +169,8 @@ class SolverPolynomialRoots:
         if self.jointeval is not None:
             valid &= all([IKFastSolver.isValidSolution(e) for e in self.jointeval])
         return valid
+    def getPresetCheckForZeros(self):
+        return [self.poly.coeffs[0]] # make sure highest coefficient is not 0!
 
 class SolverConicRoots:
     """find all roots of the polynomial and plug it into jointeval. poly should be polys.polynomial.Poly
@@ -193,6 +197,8 @@ class SolverConicRoots:
         return generator.endConicRoots(self)
     def checkValidSolution(self):
         return all([IKFastSolver.isValidSolution(e) for e in self.jointeval])
+    def getPresetCheckForZeros(self):
+        return []
 
 class SolverConditionedSolution:
     solversolutions = None
@@ -598,7 +604,8 @@ class IKFastSolver(AutoReloader):
         assert jointname[0]=='j'
         jointindex=self.jointindexmap[int(jointname[1:])]
         return self.joints[jointindex][0].type=='hinge' or self.joints[jointindex][0].type=='revolute'
-    # The first and last matrices returned are always numerical
+
+    # The first and last matrices returned do not contain any unknown variables
     def forwardKinematicsChain(self, chain):
         Links = []
         Tright = eye(4)
@@ -630,11 +637,16 @@ class IKFastSolver(AutoReloader):
                     Tright = joint.Tright
                 else:
                     # the joints are different, so add regularly
-                    if joint.isfreejoint:
-                        ifreejointvars.append(len(jointvars))
-                    else:
-                        isolvejointvars.append(len(jointvars))
                     jointvars.append(var)
+                    if joint.isfreejoint:
+                        ifreejointvars.append(len(jointvars)-1)
+                        if len(isolvejointvars) == 0:
+                            # no unknown joints have been found yet, so instead of adding a new entry, merge
+                            # with previous matrix
+                            Tright = Tright * joint.Tleft * Tjoint * joint.Tright
+                            continue
+                    else:
+                        isolvejointvars.append(len(jointvars)-1)
                     Links.append(Tright * joint.Tleft)
                     jointinds.append(len(Links))
                     Links.append(Tjoint)
@@ -646,7 +658,6 @@ class IKFastSolver(AutoReloader):
         # before returning the final links, try to push as much translation components
         # outwards to both ends. Sometimes these components can get in the way of detecting
         # intersecting axes
-
         if len(jointinds) > 0:
             iright = jointinds[-1]
             Ttrans = eye(4)
@@ -654,7 +665,7 @@ class IKFastSolver(AutoReloader):
             Trot_with_trans = Ttrans * Links[iright]
             separated_trans = Trot_with_trans[0:3,0:3].transpose() * Trot_with_trans[0:3,3]
             for j in range(0,3):
-                if separated_trans[j].has_any_symbols(jointvars[-1]):
+                if separated_trans[j].has_any_symbols(*jointvars):
                     Ttrans[j,3] = Real(0,30)
                 else:
                     Ttrans[j,3] = separated_trans[j]
@@ -667,7 +678,7 @@ class IKFastSolver(AutoReloader):
             separated_trans = Links[ileft][0:3,0:3] * Links[ileft+1][0:3,3]
             Ttrans = eye(4)
             for j in range(0,3):
-                if not separated_trans[j].has_any_symbols(jointvars[0]):
+                if not separated_trans[j].has_any_symbols(*jointvars):
                     Ttrans[j,3] = separated_trans[j]
             Links[ileft-1] = Links[ileft-1] * Ttrans
             Links[ileft+1] = self.affineInverse(Ttrans) * Links[ileft+1]
@@ -678,7 +689,7 @@ class IKFastSolver(AutoReloader):
             separated_trans = Links[ileft][0:3,0:3] * Links[ileft+1][0:3,3]
             Ttrans = eye(4)
             for j in range(0,3):
-                if not separated_trans[j].has_any_symbols(jointvars[-3]):
+                if not separated_trans[j].has_any_symbols(*jointvars):
                     Ttrans[j,3] = separated_trans[j]
             Links[ileft-1] = Links[ileft-1] * Ttrans
             Links[ileft+1] = self.affineInverse(Ttrans) * Links[ileft+1]
@@ -842,7 +853,7 @@ class IKFastSolver(AutoReloader):
 
     def solutionComplexity(self,sol,solvedvars,unsolvedvars):
         # for all solutions, check if there is a divide by zero
-        sol.checkforzeros = []
+        sol.checkforzeros = sol.getPresetCheckForZeros()
         sol.score = 0
         try:
             # multiby by 400 in order to prioritize equations with less solutions
@@ -1081,7 +1092,7 @@ class IKFastSolver(AutoReloader):
         if len(solverbranches) == 0 or not solverbranches[-1][0] is None:
             print 'failed to solve for kinematics'
             return None
-        return SolverIKChainDirection3D([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(jointvars[ijoint],ijoint) for ijoint in ifreejointvars], Tfirstleft.inv()[0:3,0:3] * Dee, [SolverBranchConds(solverbranches)])
+        return SolverIKChainDirection3D([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(jointvars[ijoint],ijoint) for ijoint in ifreejointvars], self.affineInverse(Tfirstleft).subs(self.freevarsubs)[0:3,0:3] * Dee, [SolverBranchConds(solverbranches)])
 
     def solveFullIK_Rotation3D(self,chain,Tee,Rbaseraw=eye(3)):
         Rbase = eye(4)
@@ -1147,13 +1158,13 @@ class IKFastSolver(AutoReloader):
         if len(solverbranches) == 0 or not solverbranches[-1][0] is None:
             print 'failed to solve for kinematics'
             return None
-        return SolverIKChainRotation3D([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(jointvars[ijoint],ijoint) for ijoint in ifreejointvars], Tfirstleft.inv()[0:3,0:3] * Ree * Tfirstright.inv()[0:3,0:3], [SolverBranchConds(solverbranches)],Rfk = Tfirstleft[0:3,0:3] * LinksAccumRightAll[0][0:3,0:3])
+        return SolverIKChainRotation3D([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(jointvars[ijoint],ijoint) for ijoint in ifreejointvars], self.affineInverse(Tfirstleft).subs(self.freevarsubs)[0:3,0:3] * Ree * self.affineInverse(Tfirstright)[0:3,0:3], [SolverBranchConds(solverbranches)],Rfk = Tfirstleft[0:3,0:3] * LinksAccumRightAll[0][0:3,0:3])
 
     def solveFullIK_Translation3D(self,chain,Tee,rawbasepos=Matrix(3,1,[S.Zero,S.Zero,S.Zero])):
         basepos = Matrix(3,1,rawbasepos.tolist())
         Links, jointvars, isolvejointvars, ifreejointvars = self.forwardKinematicsChain(chain)
         Tfirstleft = Links.pop(0)
-        TfirstleftInv = Tfirstleft.inv()
+        TfirstleftInv = self.affineInverse(Tfirstleft)
         LinksInv = [self.affineInverse(link) for link in Links]
         solvejointvars = [jointvars[i] for i in isolvejointvars]
         freejointvars = [jointvars[i] for i in ifreejointvars]
@@ -1197,13 +1208,13 @@ class IKFastSolver(AutoReloader):
         curtransvars = solvejointvars[:]
         transtree = self.solveAllEquations(AllEquations,curvars=curtransvars,othersolvedvars=freejointvars,solsubs = solsubs,endbranchtree=endbranchtree)
         solverbranches.append((None,transtree))
-        return SolverIKChainTranslation3D([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(jointvars[ijoint],ijoint) for ijoint in ifreejointvars], TfirstleftInv[0:3,0:3] * Pee + TfirstleftInv[0:3,3], [SolverBranchConds(solverbranches)],Pfk = Tfirstleft * (LinksAccumRightAll[0]*Matrix(4,1,[basepos[0],basepos[1],basepos[2],1.0])))
+        return SolverIKChainTranslation3D([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(jointvars[ijoint],ijoint) for ijoint in ifreejointvars], TfirstleftInv.subs(self.freevarsubs)[0:3,0:3] * Pee + TfirstleftInv.subs(self.freevarsubs)[0:3,3], [SolverBranchConds(solverbranches)],Pfk = Tfirstleft * (LinksAccumRightAll[0]*Matrix(4,1,[basepos[0],basepos[1],basepos[2],1.0])))
 
     def solveFullIK_Ray4D(self,chain,Tee,rawbasedir=Matrix(3,1,[S.Zero,S.Zero,S.One]),rawbasepos=Matrix(3,1,[S.Zero,S.Zero,S.Zero])):
         """basedir,basepos needs to be filled with a direction and position of the ray to control"""
         Links, jointvars, isolvejointvars, ifreejointvars = self.forwardKinematicsChain(chain)
         Tfirstleft = Links.pop(0)
-        TfirstleftInv = Tfirstleft.inv()
+        TfirstleftInv = self.affineInverse(Tfirstleft)
         solvejointvars = [jointvars[i] for i in isolvejointvars]
         freejointvars = [jointvars[i] for i in ifreejointvars]
         
@@ -1254,7 +1265,7 @@ class IKFastSolver(AutoReloader):
             LinksAccumLeft.append(LinksAccumLeftAll[i])
             LinksAccumLeftInv.append(LinksAccumLeftInvAll[i])
             LinksAccumRight.append(LinksAccumRightAll[i])
-        assert( len(LinksAccumLeft) == len(jointvars)+1 )
+        #assert( len(LinksAccumLeft) == len(jointvars)+1 )
         
         solverbranches = []
         valuesubs = []
@@ -1333,7 +1344,7 @@ class IKFastSolver(AutoReloader):
         endbranchtree = [SolverStoreSolution (jointvars)]
         fulltree = self.solveAllEquations(AllEquations,curvars=solvejointvars,othersolvedvars = freejointvars[:],solsubs = orgsolsubs,endbranchtree=endbranchtree)
         solverbranches.append((freevarcond,fulltree))
-        return SolverIKChainRay4D([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(jointvars[ijoint],ijoint) for ijoint in ifreejointvars], TfirstleftInv[0:3,0:3] * Pee + TfirstleftInv[0:3,3], TfirstleftInv[0:3,0:3] * Dee, [SolverBranchConds(solverbranches)],Dfk=Tfirstleft[0:3,0:3]*LinksAccumRightAll[0][0:3,0:3]*basedir,Pfk=Tfirstleft*(LinksAccumRightAll[0]*Matrix(4,1,[rawbasepos[0],rawbasepos[1],rawbasepos[2],1.0])))
+        return SolverIKChainRay4D([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(jointvars[ijoint],ijoint) for ijoint in ifreejointvars], TfirstleftInv.subs(self.freevarsubs)[0:3,0:3] * Pee + TfirstleftInv.subs(self.freevarsubs)[0:3,3], TfirstleftInv.subs(self.freevarsubs)[0:3,0:3] * Dee, [SolverBranchConds(solverbranches)],Dfk=Tfirstleft[0:3,0:3]*LinksAccumRightAll[0][0:3,0:3]*basedir,Pfk=Tfirstleft*(LinksAccumRightAll[0]*Matrix(4,1,[rawbasepos[0],rawbasepos[1],rawbasepos[2],1.0])))
 
     def solveFullIK_Lookat3D(self,chain,Tee,rawbasedir=Matrix(3,1,[S.Zero,S.Zero,S.One]),rawbasepos=Matrix(3,1,[S.Zero,S.Zero,S.Zero])):
         """basedir,basepos needs to be filled with a direction and position of the ray to control the lookat
@@ -1344,14 +1355,14 @@ class IKFastSolver(AutoReloader):
         basepos = basepos-basedir*basedir.dot(basepos)
         Links, jointvars, isolvejointvars, ifreejointvars = self.forwardKinematicsChain(chain)
         Tfirstleft = Links.pop(0)
-        TfirstleftInv = Tfirstleft.inv()
+        TfirstleftInv = self.affineInverse(Tfirstleft)
         solvejointvars = [jointvars[i] for i in isolvejointvars]
         freejointvars = [jointvars[i] for i in ifreejointvars]        
         if not len(solvejointvars) == 2:
             raise ValueError('solve joints needs to be 2')
 
         LinksInv = [self.affineInverse(link) for link in Links]
-
+        
         # when solving equations, convert all free variables to constants
         self.freevarsubs = []
         for freevar in freejointvars:
@@ -1375,7 +1386,7 @@ class IKFastSolver(AutoReloader):
         LinksAccumLeftAll = [self.affineSimplify(T) for T in LinksAccumLeftAll]
         LinksAccumLeftInvAll = [self.affineSimplify(T) for T in LinksAccumLeftInvAll]
         LinksAccumRightAll = [self.affineSimplify(T) for T in LinksAccumRightAll]
-
+        
         # create LinksAccumX indexed by joint indices
         assert( len(LinksAccumLeftAll)%2 == 1 )
         LinksAccumLeft = []
@@ -1385,12 +1396,10 @@ class IKFastSolver(AutoReloader):
             LinksAccumLeft.append(LinksAccumLeftAll[i])
             LinksAccumLeftInv.append(LinksAccumLeftInvAll[i])
             LinksAccumRight.append(LinksAccumRightAll[i])
-        assert( len(LinksAccumLeft) == len(jointvars)+1 )
+        #assert( len(LinksAccumLeft) == len(jointvars)+1 )
         
-        # depending on the free variable values, sometimes the rotation matrix can have zeros where it does not expect zeros. Therefore, test all boundaries of all free variables
         valuesubs = []
         freevarcond = None
-
         Ds = [Matrix(3,1, [self.chop(x,accuracy=self.accuracy*10.0) for x in T[0:3,0:3]*basedir]) for T in LinksAccumRightAll[0:5]]
         Positions, Positionsee = self.buildPositionEquations(LinksAccumRightAll[0:5], LinksAccumLeftInvAll[0:5],basepos,Pee)
 
@@ -1438,7 +1447,7 @@ class IKFastSolver(AutoReloader):
         endbranchtree = [SolverStoreSolution (jointvars)]
         fulltree = self.solveAllEquations(AllEquations,curvars=solvejointvars,othersolvedvars = freejointvars[:],solsubs = orgsolsubs,endbranchtree=endbranchtree)
         solverbranches = [(freevarcond,fulltree)]
-        return SolverIKChainLookat3D([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(jointvars[ijoint],ijoint) for ijoint in ifreejointvars], Pee=TfirstleftInv[0:3,0:3] * Pee + TfirstleftInv[0:3,3], jointtree=[SolverBranchConds(solverbranches)],Dfk=Tfirstleft[0:3,0:3]*LinksAccumRightAll[0][0:3,0:3]*basedir,Pfk=Tfirstleft*(LinksAccumRightAll[0]*Matrix(4,1,[rawbasepos[0],rawbasepos[1],rawbasepos[2],1.0])))
+        return SolverIKChainLookat3D([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(jointvars[ijoint],ijoint) for ijoint in ifreejointvars], Pee=TfirstleftInv.subs(self.freevarsubs)[0:3,0:3] * Pee + TfirstleftInv.subs(self.freevarsubs)[0:3,3], jointtree=[SolverBranchConds(solverbranches)],Dfk=Tfirstleft[0:3,0:3]*LinksAccumRightAll[0][0:3,0:3]*basedir,Pfk=Tfirstleft*(LinksAccumRightAll[0]*Matrix(4,1,[rawbasepos[0],rawbasepos[1],rawbasepos[2],1.0])))
         
     def solveFullIK_6D(self, chain, Tee, Tgripperraw=eye(4)):
         Tgripper = eye(4)
@@ -1476,11 +1485,11 @@ class IKFastSolver(AutoReloader):
                 LinksAccumLeftInvAll.append(LinksInv[i]*LinksAccumLeftInvAll[-1])
                 LinksAccumRightAll.append(Links[len(Links)-i-1]*LinksAccumRightAll[-1])
             LinksAccumRightAll.reverse()
-
+            
             LinksAccumLeftAll = [self.affineSimplify(T) for T in LinksAccumLeftAll]
             LinksAccumLeftInvAll = [self.affineSimplify(T) for T in LinksAccumLeftInvAll]
             LinksAccumRightAll = [self.affineSimplify(T) for T in LinksAccumRightAll]
-
+            
             # create LinksAccumX indexed by joint indices
             assert( len(LinksAccumLeftAll)%2 == 0 )
             LinksAccumLeft = []
@@ -1490,8 +1499,7 @@ class IKFastSolver(AutoReloader):
                 LinksAccumLeft.append(LinksAccumLeftAll[i])
                 LinksAccumLeftInv.append(LinksAccumLeftInvAll[i])
                 LinksAccumRight.append(LinksAccumRightAll[i])
-            assert( len(LinksAccumLeft) == len(jointvars)+1 )
-
+            
             # find last point that separates translation and rotation
             lastsepindex = -1
             for i in isolvejointvars:
@@ -1601,7 +1609,7 @@ class IKFastSolver(AutoReloader):
             rottree[:] = [SolverRotation(LinksAccumLeftInv[rotindex].subs(solvedvarsubs)*Tee, rottree[:])]
         solverbranches = [(freevarcond,solvertree)]
 
-        Tgoal = Tfirstleft.inv() * Tee * Tfirstright.inv()
+        Tgoal = (self.affineInverse(Tfirstleft) * Tee * self.affineInverse(Tfirstright)).subs(self.freevarsubs)
         if inverted:
             Tgoal = self.affineInverse(Tgoal)
         return SolverIKChainTransform6D([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(jointvars[ijoint],ijoint) for ijoint in ifreejointvars], Tgoal, [SolverBranchConds(solverbranches)],Tfk=Tfirstleft * LinksAccumRightAll[0] * Tfirstright)
@@ -1885,14 +1893,23 @@ class IKFastSolver(AutoReloader):
             # if not equations found, try setting two variables at once
             # also try setting px, py, or pz to 0 (barrettwam4 lookat)
             for solution,var in usedsolutions:
-                for othervar in othersolvedvars:
-                    if not self.IsHinge(othervar.name):
-                        continue
-                    sothervar = Symbol('s%s'%othervar.name)
-                    cothervar = Symbol('c%s'%othervar.name)
-                    if checkzero.has_any_symbols(othervar,sothervar,cothervar):
-                        for preal in [Symbol('px'),Symbol('py'),Symbol('pz')]:
-                            if checkzero.has_any_symbols(preal):
+                for preal in [Symbol('px'),Symbol('py'),Symbol('pz')]:
+                    if checkzero.has_any_symbols(preal):
+                        # first check if the position alone can yield a zero
+                        eq = checkzero.subs([(preal,S.Zero)]).evalf()
+                        if eq == S.Zero:
+                            cond = abs(preal)
+                            evalcond = abs(preal)
+                            if self.isExpressionUnique(handledconds+[tempeq[0] for tempeq in eqs],-cond) and self.isExpressionUnique(handledconds+[tempeq[0] for tempeq in eqs],cond):
+                                eqs.append([cond,evalcond,[(preal,S.Zero)]])
+                                print '%s=0 in %s'%(str(preal),str(checkzero))
+                            continue
+                        for othervar in othersolvedvars:
+                            if not self.IsHinge(othervar.name):
+                                continue
+                            sothervar = Symbol('s%s'%othervar.name)
+                            cothervar = Symbol('c%s'%othervar.name)
+                            if checkzero.has_any_symbols(othervar,sothervar,cothervar):
                                 for value in [S.Zero,pi/2,pi,-pi/2]:
                                     eq = checkzero.subs([(othervar,value),(sothervar,sin(value).evalf()),(cothervar,cos(value).evalf()),(preal,S.Zero)]).evalf()
                                     if eq == S.Zero:
@@ -1935,13 +1952,14 @@ class IKFastSolver(AutoReloader):
 
         return prevbranch
 
-    def solveSingleVariable(self,raweqns,var):
+    def solveSingleVariable(self,raweqns,var,maxsolutions=4):
         svar = Symbol('s%s'%var.name)
         cvar = Symbol('c%s'%var.name)
         varsubs = [(sin(var),svar),(cos(var),cvar)]
         eqns = [eq.expand() for eq in raweqns if eq.has_any_symbols(var)]
         if len(eqns) == 0:
             raise self.CannotSolveError('not enough equations')
+        solutions = []
         if len(eqns) > 1:
             neweqns = []
             listsymbols = []
@@ -1968,7 +1986,7 @@ class IKFastSolver(AutoReloader):
             for eqs in combinations(neweqns,2):
                 eqcombinations.append((eqs[0][0]+eqs[1][0],[Eq(e[1],0) for e in eqs]))
             eqcombinations.sort(lambda x, y: x[0]-y[0])
-            solutions = []
+            hasgoodsolution = False
             for icomb,comb in enumerate(eqcombinations):
                 # skip if too complex
                 if len(solutions) > 0 and comb[0] > 200:
@@ -2033,17 +2051,18 @@ class IKFastSolver(AutoReloader):
                                 goodsolution += 1
                     if len(solversolution.jointeval) == len(sollist) and len(sollist) > 0:
                         solutions.append(solversolution)
+                        if goodsolution > 0:
+                            hasgoodsolution = True
                         if len(sollist) == goodsolution and goodsolution == 1:
                             break
-                        if len(solutions) >= 4:
+                        if len(solutions) >= maxsolutions:
                             # probably more than enough already?
                             break
 
-            if len(solutions) > 0:
+            if len(solutions) > 0 or hasgoodsolution: # found a solution without any divides, necessary for pr2 head_torso lookat3d ik
                 return solutions
 
         # solve one equation
-        solutions = []
         for eq in eqns:
             symbolgen = cse_main.numbered_symbols('const')
             eqnew, symbols = self.removeConstants(eq.subs([(sin(var),svar),(cos(var),cvar)]), [cvar,svar,var], symbolgen)
