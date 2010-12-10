@@ -597,6 +597,37 @@ class ColladaReader : public daeErrorHandler
                 }
             }
         }
+
+        // read the collision data
+        for(size_t ie = 0; ie < kmodel->getExtra_array().getCount(); ++ie) {
+            domExtraRef pextra = kmodel->getExtra_array()[ie];
+            if( strcmp(pextra->getType(), "collision") == 0 ) {
+                domTechniqueRef tec = _ExtractOpenRAVEProfile(pextra->getTechnique_array());
+                if( !!tec ) {
+                    for(size_t ic = 0; ic < tec->getContents().getCount(); ++ic) {
+                        daeElementRef pelt = tec->getContents()[ic];
+                        if( pelt->getElementName() == string("ignore_link_pair") ) {
+                            domLinkRef pdomlink0 = daeSafeCast<domLink>(daeSidRef(pelt->getAttribute("link0"), kmodel).resolve().elt);
+                            domLinkRef pdomlink1 = daeSafeCast<domLink>(daeSidRef(pelt->getAttribute("link1"), kmodel).resolve().elt);
+                            if( !pdomlink0 && !pdomlink1 ) {
+                                RAVELOG_WARN("failed to reference <ignore_link_pair> links\n");
+                                continue;
+                            }
+                            KinBody::LinkPtr plink0 = boost::static_pointer_cast<KinBody::Link>(_getUserData(pdomlink0)->p);
+                            KinBody::LinkPtr plink1 = boost::static_pointer_cast<KinBody::Link>(_getUserData(pdomlink1)->p);
+                            if( !plink0 && !plink1 ) {
+                                RAVELOG_WARN("failed to find openrave links from <ignore_link_pair>\n");
+                                continue;
+                            }
+                            pkinbody->_vForcedAdjacentLinks.push_back(make_pair(plink0->GetName(),plink1->GetName()));
+                        }
+                        else if( pelt->getElementName() == string("bind_instance_geometry") ) {
+                            RAVELOG_WARN("currently do not support bind_instance_geometry\n");
+                        }
+                    }
+                }
+            }
+        }
         return true;
     }
 
@@ -1642,9 +1673,9 @@ class ColladaReader : public daeErrorHandler
                             RAVELOG_WARN(str(boost::format("could not find manipulator gripper axis %s\n")%pgripper_axis->getAttribute("axis")));
                         }
                         else if( pgripper_axis->getElementName() == string("iksolver") ) {
-                            daeElementRef piksolver = tec->getContents()[ic];
-                            if( piksolver->hasAttribute("interface") ) {
-                                pmanip->_strIkSolver = piksolver->getAttribute("interface");
+                            boost::shared_ptr<std::string> interfacename = _ExtractInterfaceType(tec->getContents()[ic]);
+                            if( !!interfacename ) {
+                                pmanip->_strIkSolver = *interfacename;
                                 pmanip->_pIkSolver = RaveCreateIkSolver(_penv,pmanip->_strIkSolver);
                             }
                         }
@@ -2080,6 +2111,36 @@ class ColladaReader : public daeErrorHandler
             }
         }
         return domTechniqueRef();
+    }
+
+    daeElementRef _ExtractOpenRAVEProfile(const daeElementRef pelt)
+    {
+        daeTArray<daeElementRef> children;
+        pelt->getChildren(children);
+        for(size_t i = 0; i < children.getCount(); ++i) {
+            if( children[i]->getElementName() == string("technique") && children[i]->hasAttribute("profile") && children[i]->getAttribute("profile") == string("OpenRAVE") ) {
+                return children[i];
+            }
+        }
+        return daeElementRef();
+    }
+
+    /// \brief returns an openrave interface type from the extra array
+    boost::shared_ptr<std::string> _ExtractInterfaceType(const daeElementRef pelt) {
+        daeTArray<daeElementRef> children;
+        pelt->getChildren(children);
+        for(size_t i = 0; i < children.getCount(); ++i) {
+            if( children[i]->getElementName() == string("interface_type") ) {
+                daeElementRef ptec = _ExtractOpenRAVEProfile(children[i]);
+                if( !!ptec ) {
+                    daeElement* ptype = ptec->getChild("interface");
+                    if( !!ptype ) {
+                        return boost::shared_ptr<std::string>(new std::string(ptype->getCharData()));
+                    }
+                }
+            }
+        }
+        return boost::shared_ptr<std::string>();
     }
 
     /// \brief returns an openrave interface type from the extra array

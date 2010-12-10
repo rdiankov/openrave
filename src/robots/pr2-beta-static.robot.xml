@@ -1,17 +1,3 @@
-<!-- base kinematics of pr2 robot with all frames defined -->
+<!-- dummy pr2 openrave file -->
 <robot name="pr2" file="pr2-beta-static.dae">
-  <kinbody>
-    <!-- wheels -->
-    <adjacent>base_link br_caster_r_wheel_link</adjacent>
-    <adjacent>base_link br_caster_l_wheel_link</adjacent>
-    <adjacent>base_link fr_caster_r_wheel_link</adjacent>
-    <adjacent>base_link fr_caster_l_wheel_link</adjacent>
-    <adjacent>base_link fl_caster_r_wheel_link</adjacent>
-    <adjacent>base_link fl_caster_l_wheel_link</adjacent>
-    <adjacent>base_link bl_caster_r_wheel_link</adjacent>
-    <adjacent>base_link bl_caster_l_wheel_link</adjacent>
-    <!-- needed for opening gripper all the way -->
-    <adjacent>l_gripper_l_finger_link l_gripper_r_finger_link</adjacent>
-    <adjacent>r_gripper_l_finger_link r_gripper_r_finger_link</adjacent>
-  </kinbody>
 </robot>
