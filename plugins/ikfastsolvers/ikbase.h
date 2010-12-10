@@ -308,6 +308,7 @@ private:
         case IkParameterization::Type_Lookat3D: {
             Vector v = param.GetLookat();
             IKReal eetrans[3] = {v.x, v.y, v.z};
+            //RAVELOG_INFO("lookat: %f %f %f\n",v.x,v.y,v.z);
             return _pfnik(eetrans, NULL, vfree.size()>0?&vfree[0]:NULL, vsolutions);
         }
         case IkParameterization::Type_Ray4D: {
