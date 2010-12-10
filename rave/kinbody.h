@@ -576,7 +576,7 @@ public:
 
     /** \en \brief Computes the minimal chain of joints that are between two links in the order of linkbaseindex to linkendindex.
     
-        Passive joints are used to detect rigidly attached links and mimic joints, otherwise they are ignored in the computation of the chain.
+        Passive joints are used to detect rigidly attached links and mimic joints.
         If a mimic joint is found along the path, the joint returned is the source joint!
         \param[in] linkindex1 the link index to start the search
         \param[in] linkindex2 the link index where the search ends

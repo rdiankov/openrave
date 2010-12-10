@@ -188,6 +188,18 @@ def test_kinematicsstructure():
         print [joint.GetJointIndex() for joint in joints]
         joints = robot.GetChain(manip.GetEndEffector().GetIndex(),manip.GetBase().GetIndex())
         print [joint.GetJointIndex() for joint in joints]
+
+def test_chain():
+    hand = env.CreateKinBody();
+    hand.SetName('object')
+    hand.InitFromFile('robots/barretthand.kinbody.xml')
+    env.AddKinBody(hand)
+    palm = hand.GetLink('wam7')
+    tip = hand.GetLink('Finger0-2')
+    print palm, tip # first print
+    print hand.GetChain( tip.GetIndex(), palm.GetIndex() ) # second print
+    print hand.GetChain( palm.GetIndex(), tip.GetIndex() ) # third print
+
     
 def test_dualarm_grabbing():
     env = Environment()
