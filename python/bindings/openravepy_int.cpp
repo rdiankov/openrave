@@ -3380,7 +3380,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
         .def("SetShow",&PyGraphHandle::SetShow,DOXY_FN(GraphHandle,SetShow))
         ;
     class_<PyRay, boost::shared_ptr<PyRay> >("Ray", DOXY_CLASS(geometry::ray))
-        .def(init<object,object>())
+        .def(init<object,object>(args("pos","dir")))
         .def("dir",&PyRay::dir)
         .def("pos",&PyRay::pos)
         .def("__str__",&PyRay::__str__)
@@ -3388,7 +3388,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
         .def_pickle(Ray_pickle_suite())
         ;
     class_<PyAABB, boost::shared_ptr<PyAABB> >("AABB", DOXY_CLASS(geometry::aabb))
-        .def(init<object,object>())
+        .def(init<object,object>(args("pos","extents")))
         .def("extents",&PyAABB::extents)
         .def("pos",&PyAABB::pos)
         .def("__str__",&PyAABB::__str__)
@@ -3445,10 +3445,11 @@ BOOST_PYTHON_MODULE(openravepy_int)
         bool (PyKinBody::*setdofvelocities4)(object,object,object,bool) = &PyKinBody::SetDOFVelocities;
         object (PyKinBody::*GetNonAdjacentLinks1)() const = &PyKinBody::GetNonAdjacentLinks;
         object (PyKinBody::*GetNonAdjacentLinks2)(int) const = &PyKinBody::GetNonAdjacentLinks;
+        std::string sInitFromBoxesDoc = std::string(DOXY_FN(KinBody,InitFromBoxes "const std::vector< AABB; bool")) + std::string("\nboxes is a Nx6 array, first 3 columsn are position, last 3 are extents");
         scope kinbody = class_<PyKinBody, boost::shared_ptr<PyKinBody>, bases<PyInterfaceBase> >("KinBody", DOXY_CLASS(KinBody), no_init)
             .def("InitFromFile",&PyKinBody::InitFromFile,args("filename"),DOXY_FN(KinBody,InitFromFile))
             .def("InitFromData",&PyKinBody::InitFromData,args("data"), DOXY_FN(KinBody,InitFromData))
-            .def("InitFromBoxes",&PyKinBody::InitFromBoxes,args("boxes","draw"), DOXY_FN(KinBody,InitFromBoxes "const std::vector< AABB; bool"))
+            .def("InitFromBoxes",&PyKinBody::InitFromBoxes,args("boxes","draw"), sInitFromBoxesDoc.c_str())
             .def("InitFromTrimesh",&PyKinBody::InitFromTrimesh,args("trimesh","draw"), DOXY_FN(KinBody,InitFromTrimesh))
             .def("SetName", &PyKinBody::SetName,args("name"),DOXY_FN(KinBody,SetName))
             .def("GetName",&PyKinBody::GetName,DOXY_FN(KinBody,GetName))
@@ -3566,7 +3567,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
                 ;
 
             class_<PyKinBody::PyLink::PyTriMesh, boost::shared_ptr<PyKinBody::PyLink::PyTriMesh> >("TriMesh", DOXY_CLASS(KinBody::Link::TRIMESH))
-                .def(init<object,object>())
+                .def(init<object,object>(args("vertices","indices")))
                 .def_readwrite("vertices",&PyKinBody::PyLink::PyTriMesh::vertices)
                 .def_readwrite("indices",&PyKinBody::PyLink::PyTriMesh::indices)
                 .def("__str__",&PyKinBody::PyLink::PyTriMesh::__str__)
@@ -3689,7 +3690,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
 
     {
         scope ikparameterization = class_<PyIkParameterization, boost::shared_ptr<PyIkParameterization> >("IkParameterization", DOXY_CLASS(IkParameterization))
-            .def(init<object,IkParameterization::Type>())
+            .def(init<object,IkParameterization::Type>(args("primitive","type")))
             .def("SetTransform",&PyIkParameterization::SetTransform,args("transform"), DOXY_FN(IkParameterization,SetTransform))
             .def("SetRotation",&PyIkParameterization::SetRotation,args("quat"), DOXY_FN(IkParameterization,SetRotation))
             .def("SetTranslation",&PyIkParameterization::SetTranslation,args("pos"), DOXY_FN(IkParameterization,SetTranslation))
