@@ -2147,10 +2147,7 @@ bool KinBody::GetChain(int linkindex1, int linkindex2, std::vector<JointPtr>& vj
                     vjoints.push_back(_vecjoints.at(*it));
                 }
                 else {
-                    int jointindex = _vecPassiveJoints.at(*it-numjoints)->GetMimicJointIndex();
-                    if( jointindex >= 0 ) {
-                        vjoints.push_back(_vecjoints.at(jointindex));
-                    }
+                    vjoints.push_back(_vecPassiveJoints.at(*it-numjoints));
                 }
             }
             return true;
