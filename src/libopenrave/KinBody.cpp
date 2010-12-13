@@ -406,7 +406,7 @@ void KinBody::Link::GEOMPROPERTIES::SetCollisionMesh(const TRIMESH& mesh)
     }
     LinkPtr parent(_parent);
     collisionmesh = mesh;
-    parent->Update();
+    parent->_Update();
 }
 
 void KinBody::Link::GEOMPROPERTIES::SetDraw(bool bDraw)
@@ -549,7 +549,8 @@ KinBody::Link::Link(KinBodyPtr parent)
 {
     _parent = parent;
     bStatic = false;
-    index = -1;
+    _index = -1;
+    _parentlinkindex = -1;
     _bIsEnabled = true;
 }
 
@@ -616,7 +617,7 @@ AABB KinBody::Link::ComputeAABB() const
 
 void KinBody::Link::serialize(std::ostream& o, int options) const
 {
-    o << index << " ";
+    o << _index << " ";
     if( options & SO_Geometry ) {
         o << _listGeomProperties.size() << " ";
         FOREACHC(it,_listGeomProperties) {
@@ -633,11 +634,6 @@ void KinBody::Link::SetTransform(const Transform& t)
 {
     _t = t;
     GetParent()->_nUpdateStampId++;
-}
-
-Transform KinBody::Link::GetTransform() const
-{
-    return _t;
 }
 
 void KinBody::Link::SetForce(const Vector& force, const Vector& pos, bool bAdd)
@@ -680,7 +676,7 @@ void KinBody::Link::SwapGeometries(std::list<KinBody::Link::GEOMPROPERTIES>& lis
     FOREACH(itgeom,listNewGeometries) {
         itgeom->_parent=pnewlink;
     }
-    Update();
+    _Update();
     GetParent()->_ParametersChanged(Prop_LinkGeometry);
 }
 
@@ -689,10 +685,27 @@ bool KinBody::Link::ValidateContactNormal(const Vector& position, Vector& normal
     if( _listGeomProperties.size() == 1) {
         return _listGeomProperties.front().ValidateContactNormal(position,normal);
     }
+    else {
+        RAVELOG_WARN("cannot validate normal when there is more then one geometry (do not know colliding geometry\n");
+    }
     return false;
 }
 
-void KinBody::Link::Update()
+void KinBody::Link::GetRigidlyAttachedLinks(std::vector<boost::shared_ptr<Link> >& vattachedlinks) const
+{
+    KinBodyPtr parent(_parent);
+    vattachedlinks.resize(0);
+    FOREACHC(it, _vRigidlyAttachedLinks) {
+        vattachedlinks.push_back(parent->GetLinks().at(*it));
+    }
+}
+
+bool KinBody::Link::IsRigidlyAttached(boost::shared_ptr<Link const> plink)
+{
+    return find(_vRigidlyAttachedLinks.begin(),_vRigidlyAttachedLinks.end(),plink->GetIndex()) != _vRigidlyAttachedLinks.end();
+}
+
+void KinBody::Link::_Update()
 {
     collision.vertices.resize(0);
     collision.indices.resize(0);
@@ -1117,7 +1130,7 @@ bool KinBody::InitFromBoxes(const std::vector<AABB>& vaabbs, bool bDraw)
     }
     Destroy();
     LinkPtr plink(new Link(shared_kinbody()));
-    plink->index = 0;
+    plink->_index = 0;
     plink->name = "base";
     plink->bStatic = true;
     Link::TRIMESH trimesh;
@@ -1147,7 +1160,7 @@ bool KinBody::InitFromBoxes(const std::vector<OBB>& vobbs, bool bDraw)
     }
     Destroy();
     LinkPtr plink(new Link(shared_kinbody()));
-    plink->index = 0;
+    plink->_index = 0;
     plink->name = "base";
     plink->bStatic = true;
     Link::TRIMESH trimesh;
@@ -1182,7 +1195,7 @@ bool KinBody::InitFromTrimesh(const KinBody::Link::TRIMESH& trimesh, bool draw)
     }
     Destroy();
     LinkPtr plink(new Link(shared_kinbody()));
-    plink->index = 0;
+    plink->_index = 0;
     plink->name = "base";
     plink->bStatic = true;
     plink->collision = trimesh;
@@ -1439,7 +1452,7 @@ void KinBody::SimulationStep(dReal fElapsedTime)
 {
 }
 
-void KinBody::SubtractJointValues(std::vector<dReal>& q1, const std::vector<dReal>& q2) const
+void KinBody::SubtractDOFValues(std::vector<dReal>& q1, const std::vector<dReal>& q2) const
 {
     FOREACHC(itjoint,_vecjoints) {
         int dof = (*itjoint)->GetDOFIndex();
@@ -2076,47 +2089,7 @@ KinBody::LinkPtr KinBody::GetLink(const std::string& linkname) const
 
 void KinBody::GetRigidlyAttachedLinks(int linkindex, std::vector<KinBody::LinkPtr>& vattachedlinks) const
 {
-    vattachedlinks.resize(0);
-    if( linkindex < 0 ) {
-        FOREACHC(itjoint, GetJoints()) {
-            if( (*itjoint)->IsStatic() ) {
-                if( !(*itjoint)->GetFirstAttached() && !!(*itjoint)->GetSecondAttached() )
-                    vattachedlinks.push_back((*itjoint)->GetSecondAttached());
-                if( !(*itjoint)->GetSecondAttached() && !!(*itjoint)->GetFirstAttached() )
-                    vattachedlinks.push_back((*itjoint)->GetFirstAttached());
-            }
-        }
-        FOREACHC(itpassive, GetPassiveJoints()) {
-            if( (*itpassive)->IsStatic() ) {
-                if( !(*itpassive)->GetFirstAttached() && !!(*itpassive)->GetSecondAttached() )
-                    vattachedlinks.push_back((*itpassive)->GetSecondAttached());
-                if( !(*itpassive)->GetSecondAttached() && !!(*itpassive)->GetFirstAttached() )
-                    vattachedlinks.push_back((*itpassive)->GetFirstAttached());
-            }
-        }
-    }
-    else {
-        vattachedlinks.push_back(_veclinks.at(linkindex));
-        for(size_t icurlink = 0; icurlink<vattachedlinks.size(); ++icurlink) {
-            LinkPtr plink=vattachedlinks[icurlink];
-            FOREACHC(itjoint, GetJoints()) {
-                if( (*itjoint)->IsStatic() ) {
-                    if( (*itjoint)->GetFirstAttached() == plink && !!(*itjoint)->GetSecondAttached() && find(vattachedlinks.begin(),vattachedlinks.end(),(*itjoint)->GetSecondAttached()) == vattachedlinks.end())
-                        vattachedlinks.push_back((*itjoint)->GetSecondAttached());
-                    if( (*itjoint)->GetSecondAttached() == plink && !!(*itjoint)->GetFirstAttached() && find(vattachedlinks.begin(),vattachedlinks.end(),(*itjoint)->GetFirstAttached()) == vattachedlinks.end())
-                        vattachedlinks.push_back((*itjoint)->GetFirstAttached());
-                }
-            }
-            FOREACHC(itpassive, GetPassiveJoints()) {
-                if( (*itpassive)->IsStatic() ) {
-                    if( (*itpassive)->GetFirstAttached() == plink && !!(*itpassive)->GetSecondAttached() && find(vattachedlinks.begin(),vattachedlinks.end(),(*itpassive)->GetSecondAttached()) == vattachedlinks.end())
-                        vattachedlinks.push_back((*itpassive)->GetSecondAttached());
-                    if( (*itpassive)->GetSecondAttached() == plink && !!(*itpassive)->GetFirstAttached() && find(vattachedlinks.begin(),vattachedlinks.end(),(*itpassive)->GetFirstAttached()) == vattachedlinks.end())
-                        vattachedlinks.push_back((*itpassive)->GetFirstAttached());
-                }
-            }
-        }
-    }
+    _veclinks.at(linkindex)->GetRigidlyAttachedLinks(vattachedlinks);
 }
 
 bool KinBody::GetChain(int linkindex1, int linkindex2, std::vector<JointPtr>& vjoints) const
@@ -2127,7 +2100,7 @@ bool KinBody::GetChain(int linkindex1, int linkindex2, std::vector<JointPtr>& vj
     vector<int> vjointparents(numjoints+_vecPassiveJoints.size(),-2);
     list<pair<LinkConstPtr, int > > listlinks;
     vector<LinkPtr> vattachedlinks;
-    GetRigidlyAttachedLinks(linkindex1,vattachedlinks);
+    _veclinks.at(linkindex1)->GetRigidlyAttachedLinks(vattachedlinks);
     FOREACHC(itlink,vattachedlinks) {
         listlinks.push_back(make_pair(LinkConstPtr(*itlink),-1));
     }
@@ -2168,7 +2141,7 @@ bool KinBody::GetChain(int linkindex1, int linkindex2, std::vector<JointPtr>& vj
                     vjointparents[jointindex] = parentjoint;
                     //int addjointindex = (*itjoint)->GetMimicJointIndex() >= 0 ? (*itjoint)->GetMimicJointIndex() : jointindex;
                     vattachedlinks.resize(0);
-                    GetRigidlyAttachedLinks(pother->GetIndex(),vattachedlinks);
+                    pother->GetRigidlyAttachedLinks(vattachedlinks);
                     FOREACHC(itlink,vattachedlinks) {
                         listlinks.push_back(make_pair(LinkConstPtr(*itlink),jointindex));
                     }
@@ -2190,7 +2163,7 @@ bool KinBody::GetChain(int linkindex1, int linkindex2, std::vector<JointPtr>& vj
                     if( !!pother ) {
                         vjointparents[numjoints+jointindex] = parentjoint;
                         vattachedlinks.resize(0);
-                        GetRigidlyAttachedLinks(pother->GetIndex(),vattachedlinks);
+                        pother->GetRigidlyAttachedLinks(vattachedlinks);
                         FOREACHC(itlink,vattachedlinks) {
                             listlinks.push_back(make_pair(LinkConstPtr(*itlink),numjoints+jointindex));
                         }
@@ -2480,7 +2453,7 @@ void KinBody::_ComputeInternalInformation()
     int lindex=0;
     FOREACH(itlink,_veclinks) {
         BOOST_ASSERT( lindex++ == (*itlink)->GetIndex() );
-        (*itlink)->_parentlink.reset();
+        (*itlink)->_parentlinkindex = -1;
     }
 
     if( _vecJointHierarchy.size() > 0 ) {
@@ -2535,7 +2508,7 @@ void KinBody::_ComputeInternalInformation()
                     if( !!bodies[0] ) {
                         if( !!bodies[1] ) {
                             if( userdata.at(bodies[0]->GetIndex()) ) {
-                                bodies[1]->_parentlink = bodies[0];
+                                bodies[1]->_parentlinkindex = bodies[0]->GetIndex();
                                 userdata.at(bodies[1]->GetIndex()) = 1;
                                 int srcindex = bodies[0]->GetIndex();
                                 int dstindex = bodies[1]->GetIndex();
@@ -2545,7 +2518,7 @@ void KinBody::_ComputeInternalInformation()
                                 }
                             }
                             else if( userdata.at(bodies[1]->GetIndex()) ) {
-                                bodies[0]->_parentlink = bodies[1];
+                                bodies[0]->_parentlinkindex = bodies[1]->GetIndex();
                                 userdata.at(bodies[0]->GetIndex()) = 1;
                                 int srcindex = bodies[1]->GetIndex();
                                 int dstindex = bodies[0]->GetIndex();
@@ -2592,7 +2565,7 @@ void KinBody::_ComputeInternalInformation()
                                 }
                             }
 
-                            bodies[1]->_parentlink = bodies[0];
+                            bodies[1]->_parentlinkindex = bodies[0]->GetIndex();
                             userdata.at(bodies[1]->GetIndex()) = 1;
                             pvalues[dstindex] = 1;
                         }
@@ -2607,7 +2580,7 @@ void KinBody::_ComputeInternalInformation()
                                     _vecJointHierarchy[j*_veclinks.size()+dstindex] = _vecJointHierarchy[j*_veclinks.size()+srcindex];
                                 }
 
-                                bodies[0]->_parentlink = bodies[1];
+                                bodies[0]->_parentlinkindex = bodies[1]->GetIndex();
                                 userdata.at(bodies[0]->GetIndex()) = 1;
                                 pvalues[dstindex] = -1;
                             }
@@ -2717,6 +2690,67 @@ void KinBody::_ComputeInternalInformation()
         ss << std::fixed << std::setprecision(SERIALIZATION_PRECISION);
         serialize(ss,SO_Kinematics|SO_Geometry);
         __hashkinematics = GetMD5HashString(ss.str());
+    }
+
+    // compute the rigidly attached links
+    for(size_t ilink = 0; ilink < _veclinks.size(); ++ilink) {
+        vector<int>& vattachedlinks = _veclinks[ilink]->_vRigidlyAttachedLinks;
+        vattachedlinks.resize(0);
+        vattachedlinks.push_back(ilink);
+        if( ilink == 0 || _veclinks[ilink]->IsStatic() ) {
+            FOREACHC(itlink,_veclinks) {
+                if( (*itlink)->IsStatic() ) {
+                    if( (*itlink)->GetIndex() != (int)ilink ) {
+                        vattachedlinks.push_back((*itlink)->GetIndex());
+                    }
+                }
+            }
+            FOREACHC(itjoint, GetJoints()) {
+                if( (*itjoint)->IsStatic() ) {
+                    if( !(*itjoint)->GetFirstAttached() && !!(*itjoint)->GetSecondAttached() && !(*itjoint)->GetSecondAttached()->IsStatic() ) {
+                        vattachedlinks.push_back((*itjoint)->GetSecondAttached()->GetIndex());
+                    }
+                    if( !(*itjoint)->GetSecondAttached() && !!(*itjoint)->GetFirstAttached() && !(*itjoint)->GetFirstAttached()->IsStatic() ) {
+                        vattachedlinks.push_back((*itjoint)->GetFirstAttached()->GetIndex());
+                    }
+                }
+            }
+            FOREACHC(itpassive, GetPassiveJoints()) {
+                if( (*itpassive)->IsStatic() ) {
+                    if( !(*itpassive)->GetFirstAttached() && !!(*itpassive)->GetSecondAttached() && !(*itpassive)->GetSecondAttached()->IsStatic() ) {
+                        vattachedlinks.push_back((*itpassive)->GetSecondAttached()->GetIndex());
+                    }
+                    if( !(*itpassive)->GetSecondAttached() && !!(*itpassive)->GetFirstAttached() && !(*itpassive)->GetFirstAttached()->IsStatic() ) {
+                        vattachedlinks.push_back((*itpassive)->GetFirstAttached()->GetIndex());
+                    }
+                }
+            }
+        }
+
+        // breadth first search for rigid links
+        for(size_t icurlink = 0; icurlink<vattachedlinks.size(); ++icurlink) {
+            LinkPtr plink=_veclinks.at(vattachedlinks[icurlink]);
+            FOREACHC(itjoint, _vecjoints) {
+                if( (*itjoint)->IsStatic() ) {
+                    if( (*itjoint)->GetFirstAttached() == plink && !!(*itjoint)->GetSecondAttached() && find(vattachedlinks.begin(),vattachedlinks.end(),(*itjoint)->GetSecondAttached()->GetIndex()) == vattachedlinks.end()) {
+                        vattachedlinks.push_back((*itjoint)->GetSecondAttached()->GetIndex());
+                    }
+                    if( (*itjoint)->GetSecondAttached() == plink && !!(*itjoint)->GetFirstAttached() && find(vattachedlinks.begin(),vattachedlinks.end(),(*itjoint)->GetFirstAttached()->GetIndex()) == vattachedlinks.end()) {
+                        vattachedlinks.push_back((*itjoint)->GetFirstAttached()->GetIndex());
+                    }
+                }
+            }
+            FOREACHC(itpassive, _vecPassiveJoints) {
+                if( (*itpassive)->IsStatic() ) {
+                    if( (*itpassive)->GetFirstAttached() == plink && !!(*itpassive)->GetSecondAttached() && find(vattachedlinks.begin(),vattachedlinks.end(),(*itpassive)->GetSecondAttached()->GetIndex()) == vattachedlinks.end()) {
+                        vattachedlinks.push_back((*itpassive)->GetSecondAttached()->GetIndex());
+                    }
+                    if( (*itpassive)->GetSecondAttached() == plink && !!(*itpassive)->GetFirstAttached() && find(vattachedlinks.begin(),vattachedlinks.end(),(*itpassive)->GetFirstAttached()->GetIndex()) == vattachedlinks.end()) {
+                        vattachedlinks.push_back((*itpassive)->GetFirstAttached()->GetIndex());
+                    }
+                }
+            }
+        }
     }
 }
 

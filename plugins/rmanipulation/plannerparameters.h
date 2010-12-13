@@ -25,7 +25,7 @@ namespace OpenRAVE {
 class WorkspaceTrajectoryParameters : public PlannerBase::PlannerParameters
 {
 public:
- WorkspaceTrajectoryParameters(EnvironmentBasePtr penv) : _fMaxDeviationAngle(0.15*PI), _bMaintainTiming(false), _bGreedySearch(false), _bIgnoreFirstCollision(false), _fMinimumCompleteTime(1e30f), _penv(penv), _bProcessing(false) {
+ WorkspaceTrajectoryParameters(EnvironmentBasePtr penv) : _fMaxDeviationAngle(0.15*PI), _bMaintainTiming(false), _bGreedySearch(true), _bIgnoreFirstCollision(false), _fMinimumCompleteTime(1e30f), _penv(penv), _bProcessing(false) {
         _vXMLParameters.push_back("maxdeviationangle");
         _vXMLParameters.push_back("maintaintiming");
         _vXMLParameters.push_back("greedysearch");

@@ -59,7 +59,7 @@ static EnvironmentBasePtr s_penv;
 static boost::shared_ptr<boost::thread> s_mainThread;
 static string s_sceneFile;
 static string s_saveScene; // if not NULL, saves the scene and exits
-static string s_viewerName;
+static boost::shared_ptr<string> s_viewerName;
 
 static list< pair<string, string> > s_listProblems; // problems to initially create
 static vector<string> vIvFiles; // iv files to open
@@ -135,7 +135,7 @@ int main(int argc, char ** argv)
             i += 2;
         }
         else if( stricmp(argv[i], "--viewer") == 0 || stricmp(argv[i], "-viewer") == 0 ) {
-            s_viewerName = argv[i+1];
+            s_viewerName.reset(new string(argv[i+1]));
             i += 2;
         }
         else if( stricmp(argv[i], "--physics") == 0 || stricmp(argv[i], "-physics") == 0 ) {
@@ -289,11 +289,11 @@ int main(int argc, char ** argv)
 // use to control openrave
 void MainOpenRAVEThread()
 {
-    if( bDisplayGUI ) {
+    if( bDisplayGUI && (!s_viewerName || s_viewerName->size()>0) ) {
         ViewerBasePtr pviewer;
         // find a viewer
-        if( s_viewerName.size() > 0 ) {
-            pviewer = RaveCreateViewer(s_penv, s_viewerName);
+        if( !!s_viewerName && s_viewerName->size() > 0 ) {
+            pviewer = RaveCreateViewer(s_penv, *s_viewerName);
         }
         if( !pviewer ) {
             boost::array<string,1> viewer_prefs = {{"qtcoin"}};

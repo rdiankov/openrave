@@ -41,8 +41,9 @@ class CM
             std::vector<dReal> c = c0;
             _robot->SubtractActiveDOFValues(c,c1);
             dReal dist = 0;
-            for(int i=0; i < _robot->GetActiveDOF(); i++)
+            for(int i=0; i < _robot->GetActiveDOF(); i++) {
                 dist += weights.at(i)*c.at(i)*c.at(i);
+            }
             return RaveSqrt(dist);
         }
 
@@ -73,17 +74,18 @@ class CM
             RAVELOG_DEBUG(str(boost::format("JitterActiveDOFs: initial config in collision: %s!\n")%report.__str__()));
         }
 
-        if( !bCollision )
+        if( !bCollision ) {
             return -1;
-
+        }
         do {
             if( iter++ > nMaxIterations ) {
                 RAVELOG_WARN("Failed to find noncolliding position for robot\n");
                 robot->SetActiveDOFValues(curdof);
                 return 0;
             }
-            for(int j = 0; j < robot->GetActiveDOF(); j++)
+            for(int j = 0; j < robot->GetActiveDOF(); j++) {
                 newdof[j] = CLAMP_ON_RANGE(curdof[j] + fRand * (RaveRandomFloat()-0.5f), lower[j], upper[j]);
+            }
             robot->SetActiveDOFValues(newdof);
         } while(robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot)) || robot->CheckSelfCollision() );
     
@@ -115,17 +117,14 @@ class CM
     static int SampleIkSolutions(RobotBasePtr robot, const IkParameterization& ikp, int numsamples, vector<dReal>& vsolutions)
     {
         RobotBase::ManipulatorConstPtr pmanip = robot->GetActiveManipulator();
-        if( numsamples <= 0 )
+        if( numsamples <= 0 ) {
             return 0;
+        }
         // quickly prune grasp is end effector is in collision
         if( ikp.GetType() == IkParameterization::Type_Transform6D ) {
             CollisionReportPtr report(new CollisionReport());
             if( pmanip->CheckEndEffectorCollision(ikp.GetTransform(),report) ) {
-                RAVELOG_VERBOSE("sampleiksolutions gripper in collision: (%s:%s)x(%s:%s).\n",
-                                 !!report->plink1?report->plink1->GetParent()->GetName().c_str():"",
-                                 !!report->plink1?report->plink1->GetName().c_str():"",
-                                 !!report->plink2?report->plink2->GetParent()->GetName().c_str():"",
-                                 !!report->plink2?report->plink2->GetName().c_str():"");
+                RAVELOG_VERBOSE(str(boost::format("sampleiksolutions gripper in collision: %s.\n")%report->__str__()));
                 return 0;
             }
         }

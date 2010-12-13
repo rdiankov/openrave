@@ -312,21 +312,22 @@ protected:
 
         RobotBase::RobotStateSaver saver(robot);
 
-        params->_workspacetraj = RaveCreateTrajectory(GetEnv(),"");
-        Transform Tee = pmanip->GetEndEffectorTransform();
-        params->_workspacetraj->AddPoint(Trajectory::TPOINT(vector<dReal>(),Tee,0));
-        Tee.trans += direction*maxsteps*params->_fStepLength;
-        params->_workspacetraj->AddPoint(Trajectory::TPOINT(vector<dReal>(),Tee,0));
-        robot->SetActiveDOFs(vector<int>());
-        Vector vold = robot->GetAffineTranslationMaxVels();
-        robot->SetAffineTranslationMaxVels(Vector(1,1,1));
-        params->_workspacetraj->CalcTrajTiming(robot,TrajectoryBase::LINEAR,true,true);
-        robot->SetAffineTranslationMaxVels(vold);
+        // evaluate the trajectory
+        {
+            params->_workspacetraj = RaveCreateTrajectory(GetEnv(),"");
+            params->_workspacetraj->Reset(0);
+            Transform Tee = pmanip->GetEndEffectorTransform();
+            params->_workspacetraj->AddPoint(TrajectoryBase::TPOINT(vector<dReal>(),Tee,0));
+            Tee.trans += direction*maxsteps*params->_fStepLength;
+            params->_workspacetraj->AddPoint(TrajectoryBase::TPOINT(vector<dReal>(),Tee,0));
+            params->_workspacetraj->CalcTrajTiming(RobotBasePtr(),TrajectoryBase::LINEAR,true,false);
+            RAVELOG_INFO("time: %f\n",params->_workspacetraj->GetTotalDuration());
+        }
 
         robot->SetActiveDOFs(pmanip->GetArmIndices());
         params->SetRobotActiveJoints(robot);
 
-        CM::JitterActiveDOF(robot,100); // try to jitter out, don't worry if it fails
+        //CM::JitterActiveDOF(robot,100); // try to jitter out, don't worry if it fails
         robot->GetActiveDOFValues(params->vinitialconfig);
 
         boost::shared_ptr<PlannerBase> planner = RaveCreatePlanner(GetEnv(),"workspacetrajectorytracker");

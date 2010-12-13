@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2010 Rosen Diankov (rdiankov@cs.cmu.edu)
+// Copyright (C) 2006-2010 Rosen Diankov (rosen.diankov@gmail.com)
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
@@ -58,8 +58,8 @@ In the simplest case, the workspace trajectory can be a straight line from one p
             return false;
         }
 
-        if( !parameters->_workspacetraj || parameters->_workspacetraj->GetDOF() > 0 || parameters->_workspacetraj->GetTotalDuration() == 0 || parameters->_workspacetraj->GetPoints().size() == 0 ) {
-            RAVELOG_ERROR("input trajectory needs to be 0 DOF and initialized with interpolation information\n");
+        if( !parameters->_workspacetraj || parameters->_workspacetraj->GetTotalDuration() == 0 || parameters->_workspacetraj->GetPoints().size() == 0 ) {
+            RAVELOG_ERROR("input trajectory needs to be initialized with interpolation information\n");
         }
 
         // check if the parameters configuration space actually reflects the active manipulator, move to the upper and lower limits
@@ -88,10 +88,8 @@ In the simplest case, the workspace trajectory can be a straight line from one p
         }
 
         RobotBase::RobotStateSaver savestate(_robot);
-        if(CollisionFunctions::CheckCollision(parameters,_robot,parameters->vinitialconfig, _report)) {
-            RAVELOG_DEBUG("WorkspaceTrajectoryTracker::InitPlan - Error: Initial configuration in collision\n");
-            return false;
-        }
+        // should check collisio only for independent links that do not move during the planning process. This might require a CO_IndependentFromActiveDOFs option.
+        //if(CollisionFunctions::CheckCollision(parameters,_robot,parameters->vinitialconfig, _report)) {
     
         // validate the initial state if one exists
         if( parameters->vinitialconfig.size() > 0 && !!parameters->_constraintfn ) {
@@ -121,29 +119,32 @@ In the simplest case, the workspace trajectory can be a straight line from one p
             RAVELOG_ERROR("WorkspaceTrajectoryTracker::PlanPath - Error, planner not initialized\n");
             return false;
         }
-
+        
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         uint32_t basetime = timeGetTime();
         RobotBase::RobotStateSaver savestate(_robot);
         _robot->SetActiveDOFs(_manip->GetArmIndices()); // should be set by user anyway, but this is an extra precaution
         CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
-
+        
         // first check if the end effectors are in collision
         TrajectoryBaseConstPtr workspacetraj = _parameters->_workspacetraj;
-        if( _manip->CheckEndEffectorCollision(workspacetraj->GetPoints().back().trans) ) {
+        TrajectoryBase::TPOINT pt;
+        workspacetraj->SampleTrajectory(workspacetraj->GetTotalDuration(),pt);
+        Transform tlasttrans = pt.trans;
+        if( _manip->CheckEndEffectorCollision(tlasttrans,_report) ) {
             if( _parameters->_fMinimumCompleteTime >= workspacetraj->GetTotalDuration() ) {
+                RAVELOG_DEBUG(str(boost::format("final configuration colliding: %s\n")%_report->__str__()));
                 return false;
             }
         }
-
-        TrajectoryBase::TPOINT pt;
+        
         dReal fstarttime = 0, fendtime = workspacetraj->GetTotalDuration();
         bool bPrevInCollision = true;
         list<Transform> listtransforms;
         for(dReal ftime = 0; ftime < workspacetraj->GetTotalDuration(); ftime += _parameters->_fStepLength) {
             workspacetraj->SampleTrajectory(ftime,pt);
             listtransforms.push_back(pt.trans);
-            if( _manip->CheckEndEffectorCollision(pt.trans) ) {
+            if( _manip->CheckEndEffectorCollision(pt.trans,_report) ) {
                 if( _parameters->_bIgnoreFirstCollision && bPrevInCollision ) {
                     continue;
                 }
@@ -162,76 +163,73 @@ In the simplest case, the workspace trajectory can be a straight line from one p
                 bPrevInCollision = false;
             }
         }
-
+        
         if( bPrevInCollision ) {
             // only the last point is valid
             fstarttime = workspacetraj->GetTotalDuration();
         }
-        listtransforms.push_back(workspacetraj->GetPoints().back().trans);
-
+        listtransforms.push_back(tlasttrans);
+        
         // disable all child links since we've already checked their collision
         vector<KinBody::LinkPtr> vlinks;
         _manip->GetChildLinks(vlinks);
         FOREACH(it,vlinks) {
             (*it)->Enable(false);
         }
-
+        
         if( !poutputtraj ) {
             poutputtraj = RaveCreateTrajectory(GetEnv(),"");
         }
-
+        
         _mjacobian.resize(boost::extents[0][0]);
         _vprevsolution.resize(0);
         poutputtraj->Reset(_parameters->GetDOF());
+        Transform tbaseinv = _manip->GetBase()->GetTransform().inverse();
         if( (int)_parameters->vinitialconfig.size() == _parameters->GetDOF() ) {
             _vprevsolution = _parameters->vinitialconfig;
             poutputtraj->AddPoint(Trajectory::TPOINT(_parameters->vinitialconfig,0));
             _parameters->_setstatefn(_parameters->vinitialconfig);
             _manip->CalculateJacobian(_mjacobian);
-            _transprev = _manip->GetEndEffectorTransform();
+            _transprev = tbaseinv * _manip->GetEndEffectorTransform();
         }
 
         SetCustomFilterScope filter(_manip->GetIkSolver(),boost::bind(&WorkspaceTrajectoryTracker::_ValidateSolution,this,_1,_2,_3));
         vector<dReal> vsolution;
-        if( _parameters->_bGreedySearch ) {
-            list<Transform>::iterator ittrans = listtransforms.begin();
-            bPrevInCollision = true;
-            for(dReal ftime = 0; ftime < fendtime; ftime += _parameters->_fStepLength) {
-                int filteroptions = (ftime >= fstarttime) ? IKFO_CheckEnvCollisions : 0;
-                if( !_manip->FindIKSolution(*ittrans,vsolution,filteroptions) ) {
-                    if( ftime < fstarttime ) {
-                        return false; // a solution really doesn't exist
-                    }
-                    if( _parameters->_bIgnoreFirstCollision && bPrevInCollision ) {
-                        if( !_manip->FindIKSolution(*ittrans,vsolution,0) ) {
-                            return false;
-                        }
-                    }
-                    else {
-                        if( !bPrevInCollision ) {
-                            if( ftime >= _parameters->_fMinimumCompleteTime ) {
-                                fendtime = ftime;
-                                break;
-                            }
-                        }
+        if( !_parameters->_bGreedySearch ) {
+            RAVELOG_ERROR("WorkspaceTrajectoryTracker::PlanPath - do not support non-greedy search\n");
+        }
+
+        list<Transform>::iterator ittrans = listtransforms.begin();
+        bPrevInCollision = true;
+        for(dReal ftime = 0; ftime < fendtime; ftime += _parameters->_fStepLength, ++ittrans) {
+            int filteroptions = (ftime >= fstarttime) ? IKFO_CheckEnvCollisions : 0;
+            if( !_manip->FindIKSolution(*ittrans,vsolution,filteroptions) ) {
+                if( ftime < fstarttime ) {
+                    return false; // a solution really doesn't exist
+                }
+                if( _parameters->_bIgnoreFirstCollision && bPrevInCollision ) {
+                    if( !_manip->FindIKSolution(*ittrans,vsolution,0) ) {
                         return false;
                     }
                 }
                 else {
-                    if( bPrevInCollision ) {
-                        fstarttime = ftime;
+                    if( !bPrevInCollision ) {
+                        if( ftime >= _parameters->_fMinimumCompleteTime ) {
+                            fendtime = ftime;
+                            break;
+                        }
                     }
-                    bPrevInCollision = false;
+                    return false;
                 }
-
-                poutputtraj->AddPoint(Trajectory::TPOINT(vsolution,0));
-                _parameters->_setstatefn(vsolution);
-                _manip->CalculateJacobian(_mjacobian);
-                _transprev = *ittrans;
             }
-        }
-        else {
-            RAVELOG_ERROR("WorkspaceTrajectoryTracker::PlanPath - Error, planner not initialized\n");
+            else {
+                bPrevInCollision = false;
+            }
+
+            poutputtraj->AddPoint(Trajectory::TPOINT(vsolution,0));
+            _parameters->_setstatefn(vsolution);
+            _manip->CalculateJacobian(_mjacobian);
+            _transprev = tbaseinv * *ittrans;
         }
 
         RAVELOG_DEBUG(str(boost::format("plan success, path=%d points in %fs\n")%poutputtraj->GetPoints().size()%((0.001f*(float)(timeGetTime()-basetime)))));

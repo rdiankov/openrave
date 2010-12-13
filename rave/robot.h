@@ -130,7 +130,14 @@ public:
         /// \brief Get all child DOF indices of the manipulator starting at the pEndEffector link
         virtual void GetChildDOFIndices(std::vector<int>& vdofndices) const;
 
-        /// \brief Get all child links of the manipulator starting at pEndEffector link
+        /// \brief returns true if a link is part of the child links of the manipulator.
+        ///
+        /// The child links do not include the arm links.
+        virtual bool IsChildLink(LinkConstPtr plink) const;
+
+        /// \brief Get all child links of the manipulator starting at pEndEffector link.
+        ///
+        /// The child links do not include the arm links.
         virtual void GetChildLinks(std::vector<LinkPtr>& vlinks) const;
 
         /// \brief Get all links that are independent of the arm and gripper joints 
@@ -253,7 +260,7 @@ public:
         KinBodyWeakPtr pbody; ///< the grabbed body
         LinkPtr plinkrobot; ///< robot link that is grabbing the body
         std::vector<LinkConstPtr> vCollidingLinks, vNonCollidingLinks; ///< robot links that already collide with the body
-        Transform troot; // root transform (of first link) relative to end effector
+        Transform troot; ///< root transform (of first link of body) relative to plinkrobot's transform. In other words, pbody->GetTransform() == plinkrobot->GetTransform()*troot
     };
 
     /// \deprecated (10/07/10) 
@@ -312,7 +319,7 @@ public:
         @name Affine DOFs
         @{
     */
-    /// if planner should plan with affine transformations, use this enumeartion to specify the real dofs
+    /// \brief Selects which DOFs of the affine transformation to include in the active configuration.
     enum DOFAffine
     {
         DOF_NoTransform = 0,
@@ -324,21 +331,27 @@ public:
         DOF_RotationAxis = 8, ///< robot can rotate around an axis (1 dof)
         DOF_Rotation3D = 16, ///< robot can rotate freely (3 dof), the parameterization is
                              ///< theta * v, where v is the rotation axis and theta is the angle about that axis
-        DOF_RotationQuat = 32, ///< robot can rotate freely (4 dof), parameterization is a quaternion
+        DOF_RotationQuat = 32, ///< robot can rotate freely (4 dof), parameterization is a quaternion. In order for limits to work correctly, the quaternion is in the space of _vRotationQuatLimitStart. _vRotationQuatLimitStart is always left-multiplied before setting the transform!
     };
     
-    /// Set the joint indices and affine transformation dofs that the planner should use. If \ref DOF_RotationAxis is specified, the previously set axis is used.
-    /// \param dofindices the indices of the original degrees of freedom to use.
-    /// \param affine A bitmask of \ref DOFAffine values
+    /** \brief Set the joint indices and affine transformation dofs that the planner should use. If \ref DOF_RotationAxis is specified, the previously set axis is used.
+        
+        \param dofindices the indices of the original degrees of freedom to use.
+        \param affine A bitmask of \ref DOFAffine values
+    */
     virtual void SetActiveDOFs(const std::vector<int>& dofindices, int affine = DOF_NoTransform);
-    /// \param vDOFIndices the indices of the original degrees of freedom to use.
-    /// \param nAffineDOFsBitmask A bitmask of \ref DOFAffine values
-    /// \param pRotationAxis if \ref DOF_RotationAxis is specified, pRotationAxis is used as the new axis
+
+    /** \brief Set the joint indices and affine transformation dofs that the planner should use. If \ref DOF_RotationAxis is specified, then rotationaxis is set as the new axis.
+        
+        \param dofindices the indices of the original degrees of freedom to use.
+        \param affine A bitmask of \ref DOFAffine values
+        \param rotationaxis if \ref DOF_RotationAxis is specified, pRotationAxis is used as the new axis
+    */
     virtual void SetActiveDOFs(const std::vector<int>& dofindices, int affine, const Vector& rotationaxis);
     virtual int GetActiveDOF() const { return _nActiveDOF >= 0 ? _nActiveDOF : GetDOF(); }
     virtual int GetAffineDOF() const { return _nAffineDOFs; }
 
-    /// if dof is set in the affine dofs, returns its index in the dof values array, otherwise returns -1
+    /// \brief If dof is set in the affine dofs, returns its index in the dof values array, otherwise returns -1
     virtual int GetAffineDOFIndex(DOFAffine dof) const;
 
     /// \deprecated (10/07/25)
@@ -351,36 +364,45 @@ public:
     virtual void SetAffineTranslationLimits(const Vector& lower, const Vector& upper);
     virtual void SetAffineRotationAxisLimits(const Vector& lower, const Vector& upper);
     virtual void SetAffineRotation3DLimits(const Vector& lower, const Vector& upper);
-    virtual void SetAffineRotationQuatLimits(const Vector& lower, const Vector& upper);
+
+    /// \brief sets the quaternion limits using a starting rotation and the max angle deviation from it.
+    /// 
+    /// \param quatangle quaternion_start * max_angle. acos(q dot quaternion_start) <= max_angle.
+    /// If max_angle is 0, then will take the current transform of the robot
+    virtual void SetAffineRotationQuatLimits(const Vector& quatangle);
     virtual void SetAffineTranslationMaxVels(const Vector& vels);
     virtual void SetAffineRotationAxisMaxVels(const Vector& vels);
     virtual void SetAffineRotation3DMaxVels(const Vector& vels);
-    virtual void SetAffineRotationQuatMaxVels(const Vector& vels);
+    virtual void SetAffineRotationQuatMaxVels(dReal vels);
     virtual void SetAffineTranslationResolution(const Vector& resolution);
     virtual void SetAffineRotationAxisResolution(const Vector& resolution);
     virtual void SetAffineRotation3DResolution(const Vector& resolution);
-    virtual void SetAffineRotationQuatResolution(const Vector& resolution);
+    virtual void SetAffineRotationQuatResolution(dReal resolution);
     virtual void SetAffineTranslationWeights(const Vector& weights);
     virtual void SetAffineRotationAxisWeights(const Vector& weights);
     virtual void SetAffineRotation3DWeights(const Vector& weights);
-    virtual void SetAffineRotationQuatWeights(const Vector& weights);
+    virtual void SetAffineRotationQuatWeights(dReal weights);
 
     virtual void GetAffineTranslationLimits(Vector& lower, Vector& upper) const;
     virtual void GetAffineRotationAxisLimits(Vector& lower, Vector& upper) const;
     virtual void GetAffineRotation3DLimits(Vector& lower, Vector& upper) const;
-    virtual void GetAffineRotationQuatLimits(Vector& lower, Vector& upper) const;
+
+    /// \brief gets the quaternion limits
+    ///
+    /// \param quatangle quaternion_start * max_angle. acos(q dot quaternion_start) <= max_angle
+    virtual Vector GetAffineRotationQuatLimits() const { return _vRotationQuatLimitStart * _fQuatLimitMaxAngle; }
     virtual Vector GetAffineTranslationMaxVels() const { return _vTranslationMaxVels; }
     virtual Vector GetAffineRotationAxisMaxVels() const { return _vRotationAxisMaxVels; }
     virtual Vector GetAffineRotation3DMaxVels() const { return _vRotation3DMaxVels; }
-    virtual Vector GetAffineRotationQuatMaxVels() const { return _vRotationQuatMaxVels; }
+    virtual dReal GetAffineRotationQuatMaxVels() const { return _fQuatMaxAngleVelocity; }
     virtual Vector GetAffineTranslationResolution() const { return _vTranslationResolutions; }
     virtual Vector GetAffineRotationAxisResolution() const { return _vRotationAxisResolutions; }
     virtual Vector GetAffineRotation3DResolution() const { return _vRotation3DResolutions; }
-    virtual Vector GetAffineRotationQuatResolution() const { return _vRotationQuatResolutions; }
+    virtual dReal GetAffineRotationQuatResolution() const { return _fQuatAngleResolution; }
     virtual Vector GetAffineTranslationWeights() const { return _vTranslationWeights; }
     virtual Vector GetAffineRotationAxisWeights() const { return _vRotationAxisWeights; }
     virtual Vector GetAffineRotation3DWeights() const { return _vRotation3DWeights; }
-    virtual Vector GetAffineRotationQuatWeights() const { return _vRotationQuatWeights; }
+    virtual dReal GetAffineRotationQuatWeights() const { return _fQuatAngleResolution; }
 
     virtual void SetActiveDOFValues(const std::vector<dReal>& values, bool bCheckLimits=false);
     virtual void GetActiveDOFValues(std::vector<dReal>& v) const;
@@ -417,18 +439,24 @@ public:
     /// the speed at which the robot should go at
     virtual bool SetActiveMotion(TrajectoryBaseConstPtr ptraj, dReal fSpeed) { return SetActiveMotion(ptraj); }
 
-    /// gets the jacobian with respect to a link, pfArray is a 3 x ActiveDOF matrix (rotations are not taken into account)
-    /// Calculates the partial differentials for the active degrees of freedom that in the path from the root node to _veclinks[index]
-    /// (doesn't touch the rest of the values)
-    virtual void CalculateActiveJacobian(int index, const Vector& offset, boost::multi_array<dReal,2>& vjacobian) const;
+    /** \brief Calculates the translation jacobian with respect to a link.
+    
+        Calculates the partial differentials for the active degrees of freedom that in the path from the root node to _veclinks[index]
+        (doesn't touch the rest of the values).
+        \param mjacobian a 3 x ActiveDOF matrix
+    */
+    virtual void CalculateActiveJacobian(int index, const Vector& offset, boost::multi_array<dReal,2>& mjacobian) const;
     virtual void CalculateActiveJacobian(int index, const Vector& offset, std::vector<dReal>& pfJacobian) const;
 
     virtual void CalculateActiveRotationJacobian(int index, const Vector& qInitialRot, boost::multi_array<dReal,2>& vjacobian) const;
     virtual void CalculateActiveRotationJacobian(int index, const Vector& qInitialRot, std::vector<dReal>& pfJacobian) const;
-    /// calculates the angular velocity jacobian of a specified link about the axes of world coordinates
-    /// \param index of the link that the rotation is attached to
-    /// \param vjacobian 3x(num ACTIVE DOF) matrix
-    virtual void CalculateActiveAngularVelocityJacobian(int index, boost::multi_array<dReal,2>& vjacobian) const;
+    
+    /** Calculates the angular velocity jacobian of a specified link about the axes of world coordinates.
+    
+        \param index of the link that the rotation is attached to
+        \param mjacobian 3x(num ACTIVE DOF) matrix
+    */
+    virtual void CalculateActiveAngularVelocityJacobian(int index, boost::multi_array<dReal,2>& mjacobian) const;
     virtual void CalculateActiveAngularVelocityJacobian(int index, std::vector<dReal>& pfJacobian) const;
 
     virtual const std::set<int>& GetNonAdjacentLinks(int adjacentoptions=0) const;
@@ -443,65 +471,87 @@ public:
         @name Grabbing Bodies
         @{
     */
-    /// Grab the body with the specified link.
-    /// \param[in] body the body to be grabbed
-    /// \param[in] pRobotLinkToGrabWith the link of this robot that will perform the grab
-    /// \param[in] setRobotLinksToIgnore Additional robot link indices that collision checker ignore
-    ///        when checking collisions between the grabbed body and the robot.
-    /// \return true if successful and body is grabbed
+
+    /** \brief Grab the body with the specified link.
+
+        \param[in] body the body to be grabbed
+        \param[in] pRobotLinkToGrabWith the link of this robot that will perform the grab
+        \param[in] setRobotLinksToIgnore Additional robot link indices that collision checker ignore
+        when checking collisions between the grabbed body and the robot.
+        \return true if successful and body is grabbed.
+    */
     virtual bool Grab(KinBodyPtr body, LinkPtr pRobotLinkToGrabWith, const std::set<int>& setRobotLinksToIgnore);
 
-    /// Grab a body with the specified link.
-    /// \param[in] body the body to be grabbed
-    /// \param[in] pRobotLinkToGrabWith the link of this robot that will perform the grab
-    /// \return true if successful and body is grabbed
+    /** \brief Grab a body with the specified link.
+
+        \param[in] body the body to be grabbed
+        \param[in] pRobotLinkToGrabWith the link of this robot that will perform the grab
+        \return true if successful and body is grabbed/
+    */
     virtual bool Grab(KinBodyPtr body, LinkPtr pRobotLinkToGrabWith);
 
-    /// Grabs the body with the active manipulator's end effector.
-    /// \param[in] body the body to be grabbed
-    /// \param[in] setRobotLinksToIgnore Additional robot link indices that collision checker ignore
-    ///        when checking collisions between the grabbed body and the robot.
-    /// \return true if successful and body is grabbed
+    /** \brief Grabs the body with the active manipulator's end effector.
+
+        \param[in] body the body to be grabbed
+        \param[in] setRobotLinksToIgnore Additional robot link indices that collision checker ignore
+        when checking collisions between the grabbed body and the robot.
+        \return true if successful and body is grabbed
+    */
     virtual bool Grab(KinBodyPtr body, const std::set<int>& setRobotLinksToIgnore);
     
-    /// Grabs the body with the active manipulator's end effector.
-    /// \param[in] body the body to be grabbed
-    /// \return true if successful and body is grabbed
+    /** \brief Grabs the body with the active manipulator's end effector.
+        
+        \param[in] body the body to be grabbed
+        \return true if successful and body is grabbed
+    */
     virtual bool Grab(KinBodyPtr body);
 
-    /// Release the body if grabbed.
-    /// \param body body to release
+    /** \brief Release the body if grabbed.
+        
+        \param body body to release
+    */
     virtual void Release(KinBodyPtr body);
 
     /// Release all grabbed bodies.
     virtual void ReleaseAllGrabbed(); ///< release all bodies
 
-    /// Releases and grabs all bodies, has the effect of recalculating all the initial collision with the bodies.
-    /// In other words, the current collisions any grabbed body makes with the robot will be re-inserted into an ignore list
+    /** Releases and grabs all bodies, has the effect of recalculating all the initial collision with the bodies.
+        
+        This has the effect of resetting the current collisions any grabbed body makes with the robot into an ignore list.
+    */
     virtual void RegrabAll();
 
-    /// \param[in] body the body to check
-    /// \return the robot link that is currently grabbing the body. If the body is not grabbed, will return an  empty pointer.
+    /** \brief return the robot link that is currently grabbing the body. If the body is not grabbed, will return an  empty pointer.
+        
+        \param[in] body the body to check
+    */
     virtual LinkPtr IsGrabbing(KinBodyConstPtr body) const;
 
-    /// gets all grabbed bodies of the robot
-    /// \param[out] vbodies filled with the grabbed bodies
+    /** \brief gets all grabbed bodies of the robot
+        
+        \param[out] vbodies filled with the grabbed bodies
+    */
     virtual void GetGrabbed(std::vector<KinBodyPtr>& vbodies) const;
     //@}
 
-    /// \brief Simulate the robot and update the grabbed bodies and attached sensors
-    ///
-    /// Do not call SimulationStep for the attached sensors in this function.
+    /** \brief Simulate the robot and update the grabbed bodies and attached sensors
+        
+        Do not call SimulationStep for the attached sensors in this function.
+    */
     virtual void SimulationStep(dReal fElapsedTime);
 
-    /// Check if body is self colliding. Links that are joined together are ignored.
-    /// \param report [optional] collision report
+    /** \brief Check if body is self colliding. Links that are joined together are ignored.
+        
+        \param report [optional] collision report
+    */
     virtual bool CheckSelfCollision(CollisionReportPtr report = CollisionReportPtr()) const;
 
-    /// checks collision of a robot link with the surrounding environment. Attached/Grabbed bodies to this link are also checked for collision.
-    /// \param[in] ilinkindex the index of the link to check
-    /// \param[in] tlinktrans The transform of the link to check
-    /// \param[out] report [optional] collision report
+    /** \brief checks collision of a robot link with the surrounding environment. Attached/Grabbed bodies to this link are also checked for collision.
+        
+        \param[in] ilinkindex the index of the link to check
+        \param[in] tlinktrans The transform of the link to check
+        \param[out] report [optional] collision report
+    */
     virtual bool CheckLinkCollision(int ilinkindex, const Transform& tlinktrans, CollisionReportPtr report = CollisionReportPtr());
     
     /// does not clone the grabbed bodies since it requires pointers from other bodies (that might not be initialized yet)
@@ -539,10 +589,10 @@ protected:
     inline RobotBasePtr shared_robot() { return boost::static_pointer_cast<RobotBase>(shared_from_this()); }
     inline RobotBaseConstPtr shared_robot_const() const { return boost::static_pointer_cast<RobotBase const>(shared_from_this()); }
 
-    /// Proprocess the manipulators and sensors and build the specific robot hashes.
+    /// \brief Proprocess the manipulators and sensors and build the specific robot hashes.
     virtual void _ComputeInternalInformation();
 
-    /// Called to notify the body that certain groups of parameters have been changed.
+    /// \brief Called to notify the body that certain groups of parameters have been changed.
     ///
     /// This function in calls every registers calledback that is tracking the changes.
     virtual void _ParametersChanged(int parameters);
@@ -553,7 +603,7 @@ protected:
     std::vector<ManipulatorPtr> _vecManipulators; ///< \see GetManipulators
     int _nActiveManip;                  ///< \see GetActiveManipulatorIndex
 
-    std::vector<AttachedSensorPtr> _vecSensors;
+    std::vector<AttachedSensorPtr> _vecSensors; ///< \see GetAttachedSensors
 
     std::vector<int> _vActiveDOFIndices, _vAllDOFIndices;
     Vector vActvAffineRotationAxis;
@@ -564,7 +614,8 @@ protected:
     /// the xyz components are used if the rotation axis is solely about X,Y,or Z; otherwise the W component is used.
     Vector _vRotationAxisLowerLimits, _vRotationAxisUpperLimits, _vRotationAxisMaxVels, _vRotationAxisResolutions, _vRotationAxisWeights;
     Vector _vRotation3DLowerLimits, _vRotation3DUpperLimits, _vRotation3DMaxVels, _vRotation3DResolutions, _vRotation3DWeights;
-    Vector _vRotationQuatLowerLimits, _vRotationQuatUpperLimits, _vRotationQuatMaxVels, _vRotationQuatResolutions, _vRotationQuatWeights;
+    Vector _vRotationQuatLimitStart;
+    dReal _fQuatLimitMaxAngle, _fQuatMaxAngleVelocity, _fQuatAngleResolution, _fQuatAngleWeight;
 
 private:
     virtual const char* GetHash() const { return OPENRAVE_ROBOT_HASH; }

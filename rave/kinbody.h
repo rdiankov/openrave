@@ -51,14 +51,6 @@ public:
         Link(KinBodyPtr parent); ///< pass in a ODE world
         virtual ~Link();
         
-        inline const std::string& GetName() const { return name; }
-
-        inline bool IsStatic() const { return bStatic; }
-        virtual bool IsEnabled() const; ///< returns true if enabled
-
-        ///< enables a Link. An enabled link takes part in collision detection and physics simulations
-        virtual void Enable(bool enable);
-
         /// user data for trimesh geometries
         class RAVE_API TRIMESH
         {
@@ -168,24 +160,43 @@ public:
             friend class KinBody::Link;
         };
 
+        inline const std::string& GetName() const { return name; }
+
+        /// \brief Indicates a static body that does not move with respect to the root link.
+        ///
+        //// Static should be used when an object has infinite mass and
+        ///< shouldn't be affected by physics (including gravity). Collision still works.
+        inline bool IsStatic() const { return bStatic; }
+
+        /// \brief returns true if the link is enabled. \see Enable
+        virtual bool IsEnabled() const;
+
+        /// \brief Enables a Link. An enabled link takes part in collision detection and physics simulations
+        virtual void Enable(bool enable);
+
+        /// \brief parent body that link belong to.
         inline KinBodyPtr GetParent() const { return KinBodyPtr(_parent); }
 
-        inline int GetIndex() const { return index; }
+        /// \brief unique index into parent KinBody::GetLinks vector
+        inline int GetIndex() const { return _index; }
         inline const TRIMESH& GetCollisionData() const { return collision; }
 
         /// \return the aabb of all the geometries of the link in the world coordinate system
         virtual AABB ComputeAABB() const;
 
-        /// \return current transformation of the link in the world coordinate system
-        virtual Transform GetTransform() const;
+        /// \brief Return the current transformation of the link in the world coordinate system. 
+        inline Transform GetTransform() const { return _t; }
 
-        /// \return the parent link in the kinematics hierarchy (ie the link closest to the root that is immediately connected to this link by a joint). If the link has no parents, returns an empty link. Mimic joints do not affect the parent link.
-        inline boost::shared_ptr<Link> GetParentLink() const { return _parentlink.lock(); }
+        /// \brief the parent link in the kinematics hierarchy.
+        ///
+        /// The parent link is the link closest to the root that is immediately connected to this link by a joint.
+        /// If the link has no parents, returns an empty link. Mimic joints do not affect the parent link.
+        inline boost::shared_ptr<Link> GetParentLink() const { return KinBodyPtr(_parent)->GetLinks().at(_parentlinkindex); }
 
         /// \return center of mass offset in the link's local coordinate frame
-        virtual Vector GetCOMOffset() const {return _transMass.trans; }
-        virtual const TransformMatrix& GetInertia() const { return _transMass; }
-        virtual dReal GetMass() const { return _mass; }
+        inline Vector GetCOMOffset() const {return _transMass.trans; }
+        inline const TransformMatrix& GetInertia() const { return _transMass; }
+        inline dReal GetMass() const { return _mass; }
 
         /// \param[in] t the new transformation
         virtual void SetTransform(const Transform& transform);
@@ -212,9 +223,13 @@ public:
     
         //typedef std::list<GEOMPROPERTIES>::iterator GeomPtr;
         //typedef std::list<GEOMPROPERTIES>::const_iterator GeomConstPtr;
+
+        /// \brief returns a list of all the geometry objects.
         const std::list<GEOMPROPERTIES>& GetGeometries() const { return _listGeomProperties; }
         virtual GEOMPROPERTIES& GetGeometry(int index);
-        /// swaps the current geometries with the new geometries. This gives a user control for dynamically changing the object geometry. Note that the kinbody/robot hash could change.
+        /// \brief swaps the current geometries with the new geometries.
+        ///
+        /// This gives a user control for dynamically changing the object geometry. Note that the kinbody/robot hash could change.
         void SwapGeometries(std::list<GEOMPROPERTIES>& listNewGeometries);
         
         /// validates the contact normal on link and makes sure the normal faces "outside" of the geometry shape it lies on. An exception can be thrown if position is not on a geometry surface
@@ -223,27 +238,34 @@ public:
         /// \return true if the normal is changed to face outside of the shape
         virtual bool ValidateContactNormal(const Vector& position, Vector& normal) const;
 
+        /// \brief returns true if plink is rigidily attahced to this link.
+        virtual bool IsRigidlyAttached(boost::shared_ptr<Link const> plink);
+
+        /// \brief Gets all the rigidly attached links to linkindex, also adds the link to the list.
+        ///
+        /// \param vattachedlinks the array to insert all links attached to linkindex with the link itself.
+        virtual void GetRigidlyAttachedLinks(std::vector<boost::shared_ptr<Link> >& vattachedlinks) const;
+
         virtual void serialize(std::ostream& o, int options) const;
     private:
         /// \brief Updates the cached information due to changes in the collision data.
-        virtual void Update();
+        virtual void _Update();
 
-        Transform _t;           ///< current transform of the link
+        Transform _t;           ///< \see GetTransform
         TransformMatrix _transMass; ///< the 3x3 inertia and center of mass of the link in the link's coordinate system
         dReal _mass;
         TRIMESH collision; ///< triangles for collision checking, triangles are always the triangulation
                            ///< of the body when it is at the identity transformation
 
         std::string name;     ///< optional link name
-        int index;          ///< index into parent KinBody::_veclinks
-        KinBodyWeakPtr _parent; ///< body that link belong to
-        boost::weak_ptr<Link> _parentlink; ///< parent link in body kinematics
+        int _index;          ///< \see GetIndex
+        KinBodyWeakPtr _parent; ///< \see GetParent
+        int _parentlinkindex; ///< index of parent link in body kinematics. -1 if no parents. \see GetParentLink
+        std::vector<int> _vRigidlyAttachedLinks; ///< \see IsRigidlyAttached, GetRigidlyAttachedLinks
+        std::list<GEOMPROPERTIES> _listGeomProperties; ///< \see GetGeometries
         
-        std::list<GEOMPROPERTIES> _listGeomProperties; ///< a list of all the extra geometry properties
-        
-        bool bStatic;       ///< indicates a static body. Static should be used when an object has infinite mass and
-                            ///< shouldn't be affected by physics (including gravity). Collision still works
-        bool _bIsEnabled;
+        bool bStatic;       ///< \see IsStatic
+        bool _bIsEnabled; ///< \see IsEnabled
 
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
@@ -557,16 +579,17 @@ public:
     virtual void GetJointResolutions(std::vector<dReal>& v) const RAVE_DEPRECATED;
     virtual void GetJointWeights(std::vector<dReal>& v) const RAVE_DEPRECATED;
 
-    /// \brief Returns the joints making up the degrees of freedom in the user-defined order.
+    /// \brief Returns the joints making up the controllable degrees of freedom of the body.
     const std::vector<JointPtr>& GetJoints() const { return _vecjoints; }
+
     /// \brief Returns the passive joints, order does not matter.
+    ///
+    /// A passive joint is not directly controlled by the body's degrees of freedom so it has no
+    /// joint index and no dof index. Passive joints allows mimic joints to be hidden from the users.
     const std::vector<JointPtr>& GetPassiveJoints() const { return _vecPassiveJoints; }
 
-    /// \brief Gets all the rigidly attached links to linkindex, also adds the link to the list.
-    ///
-    /// \param linkindex the index to check for attached links. If < 0, then will return all links attached to the environment
-    /// \param vattachedlinks the array to insert all links attached to linkindex with the link itself.
-    virtual void GetRigidlyAttachedLinks(int linkindex, std::vector<LinkPtr>& vattachedlinks) const;
+    /// \deprecated \see Link::GetRigidlyAttachedLinks (10/12/12)
+    virtual void GetRigidlyAttachedLinks(int linkindex, std::vector<LinkPtr>& vattachedlinks) const RAVE_DEPRECATED;
 
     /// \brief Returns the joints in hierarchical order starting at the base link.
     ///
@@ -576,8 +599,7 @@ public:
 
     /** \en \brief Computes the minimal chain of joints that are between two links in the order of linkbaseindex to linkendindex.
     
-        Passive joints are used to detect rigidly attached links and mimic joints.
-        If a mimic joint is found along the path, the joint returned is the source joint!
+        Passive joints are also used in the computation of the chain and can be returned. Note that a passive joint has a joint index and dof index of -1.
         \param[in] linkindex1 the link index to start the search
         \param[in] linkindex2 the link index where the search ends
         \param[out] vjoints the joints to fill that describe the chain
@@ -585,7 +607,7 @@ public:
 
         \ja \brief 2つのリンクを繋ぐ関節の最短経路を計算する．
         
-        受動的な関節は，位置関係が固定されているリンクを見つけるために調べられている．ミミック関節が最短経路にある場合，元の関節が返されるので，注意する必要がある．
+        受動的な関節は，位置関係が固定されているリンクを見つけるために調べられている．受動的な関節も返される可能があるから，注意する必要があります．
         \param[in] linkbaseindex 始点リンクインデックス
         \param[in] linkendindex 終点リンクインデックス
         \param[out] vjoints　関節の経路
@@ -610,18 +632,20 @@ public:
     virtual JointPtr GetJointFromDOFIndex(int dofindex) const;
     //@}
 
-    /// \brief Computes the configuration difference q1-q2 and stores it in q1.
+    /// \brief Computes the configuration difference values1-values2 and stores it in values1.
     ///
-    /// Takes into account joint limits and circular joints
-    virtual void SubtractJointValues(std::vector<dReal>& q1, const std::vector<dReal>& q2) const;
+    /// Takes into account joint limits and wrapping of circular joints.
+    virtual void SubtractDOFValues(std::vector<dReal>& values1, const std::vector<dReal>& values2) const;
+
+    virtual void SubtractJointValues(std::vector<dReal>& q1, const std::vector<dReal>& q2) const RAVE_DEPRECATED { SubtractDOFValues(q1,q2); }
 
     /// \brief Adds a torque to every joint.
     ///
     /// \param bAdd if true, adds to previous torques, otherwise resets the torques on all bodies and starts from 0
     virtual void SetJointTorques(const std::vector<dReal>& torques, bool add);
 
-    /// \return the links of the robot
-    const std::vector<LinkPtr>& GetLinks() const { return _veclinks; }
+    /// \brief Returns all the rigid links of the body.
+    virtual const std::vector<LinkPtr>& GetLinks() const { return _veclinks; }
 
 	/// return a pointer to the link with the given name
     virtual LinkPtr GetLink(const std::string& name) const;
@@ -710,7 +734,7 @@ public:
 
     /// \brief Computes the translation jacobian with respect to a world position.
     /// 
-    /// Gets the jacobian with respect to a link by computing the partial differentials for all joints that in the path from the root node to _veclinks[index]
+    /// Gets the jacobian with respect to a link by computing the partial differentials for all joints that in the path from the root node to GetLinks()[index]
     /// (doesn't touch the rest of the values)
     /// \param linkindex of the link that the rotation is attached to
     /// \param position position in world space where to compute derivatives from.
@@ -855,16 +879,15 @@ protected:
 
     std::string name; ///< name of body
 
-    std::vector<JointPtr> _vecjoints;     ///< all the joints of the body, joints contain limits, torques, and velocities (the order of these joints dictate the order of the degrees of freedom)
-    std::vector<JointPtr> _vDependencyOrderedJoints; ///< all joints of the body ordered on how they affect the joint hierarchy
+    std::vector<JointPtr> _vecjoints;     ///< \see GetJoints
+    std::vector<JointPtr> _vDependencyOrderedJoints; ///< \see GetDependencyOrderedJoints
     std::vector<JointPtr> _vDOFOrderedJoints; ///< all joints of the body ordered on how they are arranged within the degrees of freedom
-    std::vector<LinkPtr> _veclinks;       ///< children, unlike render hierarchies, transformations
-                                        ///< of the children are with respect to the global coordinate system
+    std::vector<LinkPtr> _veclinks;       ///< \see GetLinks
     std::vector<int> _vecDOFIndices; ///< cached start joint indices, indexed by dof indices
     std::vector<char> _vecJointHierarchy;   ///< joint x link, entry is non-zero if the joint affects the link in the forward kinematics
                                             ///< if negative, the partial derivative of ds/dtheta should be negated
 
-    std::vector<JointPtr> _vecPassiveJoints; ///< joints not directly controlled
+    std::vector<JointPtr> _vecPassiveJoints; ///< \see GetPassiveJoints()
 
     std::set<int> _setAdjacentLinks;        ///< a set of which links are connected to which if link i and j are connected then
                                             ///< i|(j<<16) will be in the set where i<j.

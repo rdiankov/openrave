@@ -653,7 +653,7 @@ class ColladaReader : public daeErrorHandler
             plink->name = linkname;
             plink->_mass = 1.0;
             plink->bStatic = false;
-            plink->index = (int) pkinbody->_veclinks.size();
+            plink->_index = (int) pkinbody->_veclinks.size();
             pkinbody->_veclinks.push_back(plink);
         }
 
@@ -825,7 +825,7 @@ class ColladaReader : public daeErrorHandler
                         pchildlink.reset(new KinBody::Link(pkinbody));
                         pchildlink->name = ss.str().c_str();
                         pchildlink->bStatic = false;
-                        pchildlink->index = (int)pkinbody->_veclinks.size();
+                        pchildlink->_index = (int)pkinbody->_veclinks.size();
                         pkinbody->_veclinks.push_back(pchildlink);
                     }
 

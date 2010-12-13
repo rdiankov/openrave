@@ -378,6 +378,7 @@ inline const char* RaveGetSourceFilename(const char* pfilename)
         va_start(list,fmt); \
         int r = vprintf(fmt, list); \
         va_end(list); \
+        /*if( fmt[0] != '\n' ) { printf("\n"); }*/  \
         /*ResetTextColor(stdout);*/ \
         return r; \
     }
@@ -435,6 +436,7 @@ DefineRavePrintfA(_INFOLEVEL)
 	    va_start(list,fmt);
         int r = vprintf(fmt, list);
         va_end(list);
+        //if( fmt[0] != '\n' ) { printf("\n"); }
         return r;
     }
 
@@ -456,6 +458,7 @@ DefineRavePrintfA(_INFOLEVEL)
 	    va_start(list,fmt); \
         int r = vprintf((ChangeTextColor(0, OPENRAVECOLOR##LEVEL,8) + std::string(fmt) + ResetTextColor()).c_str(), list); \
         va_end(list); \
+        /*if( fmt[0] != '\n' ) { printf("\n"); } */ \
         return r; \
     } \
 

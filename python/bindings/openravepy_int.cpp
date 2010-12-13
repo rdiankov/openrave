@@ -299,6 +299,23 @@ public:
             return geoms;
         }
 
+        object GetRigidlyAttachedLinks() const
+        {
+            std::vector<KinBody::LinkPtr> vattachedlinks;
+            _plink->GetRigidlyAttachedLinks(vattachedlinks);
+            boost::python::list links;
+            FOREACHC(itlink, vattachedlinks) {
+                links.append(PyLinkPtr(new PyLink(*itlink, _pyenv)));
+            }
+            return links;
+        }
+
+        bool IsRigidlyAttached(boost::shared_ptr<PyLink>  plink)
+        {
+            CHECK_POINTER(plink);
+            return _plink->IsRigidlyAttached(plink->GetLink());
+        }
+
         string __repr__() { return boost::str(boost::format("<env.GetKinBody('%s').GetLink('%s')>")%_plink->GetParent()->GetName()%_plink->GetName()); }
         string __str__() { return boost::str(boost::format("<link:%s (%d), parent=%s>")%_plink->GetName()%_plink->GetIndex()%_plink->GetParent()->GetName()); }
         bool __eq__(boost::shared_ptr<PyLink> p) { return !!p && _plink == p->_plink; }
@@ -375,8 +392,9 @@ public:
         void SetJointLimits(object olower, object oupper) {
             vector<dReal> vlower = ExtractArray<dReal>(olower);
             vector<dReal> vupper = ExtractArray<dReal>(oupper);
-            if( vlower.size() != vupper.size() || (int)vlower.size() != _pjoint->GetDOF() )
+            if( vlower.size() != vupper.size() || (int)vlower.size() != _pjoint->GetDOF() ) {
                 throw openrave_exception("limits are wrong dimensions");
+            }
             _pjoint->SetJointLimits(vlower,vupper);
         }
         void SetResolution(dReal resolution) { _pjoint->SetResolution(resolution); }
@@ -446,7 +464,6 @@ public:
             vaabbs[i].pos = Vector(vboxes[i][0],vboxes[i][1],vboxes[i][2]);
             vaabbs[i].extents = Vector(vboxes[i][3],vboxes[i][4],vboxes[i][5]);
         }
-
         return _pbody->InitFromBoxes(vaabbs,bDraw);
     }
     bool InitFromTrimesh(boost::shared_ptr<PyKinBody::PyLink::PyTriMesh> pytrimesh, bool bDraw)
@@ -665,11 +682,13 @@ public:
 
     object GetRigidlyAttachedLinks(int linkindex) const
     {
+        RAVELOG_WARN("KinBody.GetRigidlyAttachedLinks is deprecated, use KinBody.Link.GetRigidlyAttachedLinks\n");
         std::vector<KinBody::LinkPtr> vattachedlinks;
-        _pbody->GetRigidlyAttachedLinks(linkindex,vattachedlinks);
+        _pbody->GetLinks().at(linkindex)->GetRigidlyAttachedLinks(vattachedlinks);
         boost::python::list links;
-        FOREACHC(itlink, vattachedlinks)
+        FOREACHC(itlink, vattachedlinks) {
             links.append(PyLinkPtr(new PyLink(*itlink, GetEnv())));
+        }
         return links;
     }
 
@@ -678,8 +697,9 @@ public:
         std::vector<KinBody::JointPtr> vjoints;
         _pbody->GetChain(linkindex1,linkindex2,vjoints);
         boost::python::list joints;
-        FOREACHC(itjoint, vjoints)
+        FOREACHC(itjoint, vjoints) {
             joints.append(PyJointPtr(new PyJoint(*itjoint, GetEnv())));
+        }
         return joints;
     }
 
@@ -713,12 +733,13 @@ public:
     void SetBodyTransformations(object transforms)
     {
         size_t numtransforms = len(transforms);
-        if( numtransforms != _pbody->GetLinks().size() )
+        if( numtransforms != _pbody->GetLinks().size() ) {
             throw openrave_exception("number of input transforms not equal to links");
-
+        }
         std::vector<Transform> vtransforms(numtransforms);
-        for(size_t i = 0; i < numtransforms; ++i)
+        for(size_t i = 0; i < numtransforms; ++i) {
             vtransforms[i] = ExtractTransform(transforms[i]);
+        }
         _pbody->SetBodyTransformations(vtransforms);
     }
 
@@ -782,8 +803,9 @@ public:
             return;
         }
         vector<dReal> values = ExtractArray<dReal>(o);
-        if( (int)values.size() != GetDOF() )
+        if( (int)values.size() != GetDOF() ) {
             throw openrave_exception("values do not equal to body degrees of freedom");
+        }
         _pbody->SetDOFValues(values,true);
     }
     void SetTransformWithDOFValues(object otrans,object ojoints)
@@ -792,42 +814,47 @@ public:
             _pbody->SetTransform(ExtractTransform(otrans));
             return;
         }
-
         vector<dReal> values = ExtractArray<dReal>(ojoints);
-        if( (int)values.size() != GetDOF() )
+        if( (int)values.size() != GetDOF() ) {
             throw openrave_exception("values do not equal to body degrees of freedom");
-
+        }
         _pbody->SetDOFValues(values,ExtractTransform(otrans),true);
     }
 
     void SetDOFValues(object o, object indices)
     {
-        if( _pbody->GetDOF() == 0 || len(indices) == 0 )
+        if( _pbody->GetDOF() == 0 || len(indices) == 0 ) {
             return;
-
+        }
         vector<dReal> vsetvalues = ExtractArray<dReal>(o);
         vector<int> vindices = ExtractArray<int>(indices);
-        if( vsetvalues.size() != vindices.size() )
+        if( vsetvalues.size() != vindices.size() ) {
             throw openrave_exception("sizes do not match");
-
+        }
         vector<dReal> values;
         _pbody->GetDOFValues(values);
         vector<dReal>::iterator itv = vsetvalues.begin();
         FOREACH(it, vindices) {
-            if( *it < 0 || *it >= _pbody->GetDOF() )
+            if( *it < 0 || *it >= _pbody->GetDOF() ) {
                 throw openrave_exception(boost::str(boost::format("bad index passed")%(*it)));
-
+            }
             values[*it] = *itv++;
         }
 
         _pbody->SetDOFValues(values,true);
     }
 
+    void SubtractDOFValues(object ovalues1, object ovalues2)
+    {
+        vector<dReal> values1 = ExtractArray<dReal>(ovalues1);
+        vector<dReal> values2 = ExtractArray<dReal>(ovalues2);
+        BOOST_ASSERT((int)values1.size() == GetDOF() );
+        BOOST_ASSERT((int)values2.size() == GetDOF() );
+        _pbody->SubtractDOFValues(values1,values2);
+    }
+
     void SetJointTorques(object otorques, bool bAdd)
     {
-        if( _pbody->GetDOF() == 0 )
-            return;
-
         vector<dReal> vtorques = ExtractArray<dReal>(otorques);
         BOOST_ASSERT((int)vtorques.size() == GetDOF() );
         _pbody->SetJointTorques(vtorques,bAdd);
@@ -1100,9 +1127,9 @@ public:
     public:
         PyCameraSensorData(boost::shared_ptr<SensorBase::CameraGeomData> pgeom, boost::shared_ptr<SensorBase::CameraSensorData> pdata) : PySensorData(pdata)
         {
-            if( (int)pdata->vimagedata.size() != pgeom->height*pgeom->width*3 )
+            if( (int)pdata->vimagedata.size() != pgeom->height*pgeom->width*3 ) {
                 throw openrave_exception("bad image data");
-
+            }
             transform = ReturnTransform(pdata->t);
             {
                 npy_intp dims[] = {pgeom->height,pgeom->width,3};
@@ -1433,8 +1460,9 @@ public:
             std::vector<KinBody::JointPtr> vjoints;
             _pmanip->GetChildJoints(vjoints);
             boost::python::list joints;
-            FOREACH(itjoint,vjoints)
+            FOREACH(itjoint,vjoints) {
                 joints.append(PyJointPtr(new PyJoint(*itjoint, _pyenv)));
+            }
             return joints;
         }
         object GetChildDOFIndices() {
@@ -1453,6 +1481,12 @@ public:
             FOREACH(itlink,vlinks)
                 links.append(PyLinkPtr(new PyLink(*itlink,_pyenv)));
             return links;
+        }
+        
+        bool IsChildLink(PyLinkPtr plink)
+        {
+            CHECK_POINTER(plink);
+            return _pmanip->IsChildLink(plink->GetLink());
         }
 
         object GetIndependentLinks() {
@@ -1666,19 +1700,19 @@ public:
     void SetAffineTranslationLimits(object lower, object upper) { return _probot->SetAffineTranslationLimits(ExtractVector3(lower),ExtractVector3(upper)); }
     void SetAffineRotationAxisLimits(object lower, object upper) { return _probot->SetAffineRotationAxisLimits(ExtractVector3(lower),ExtractVector3(upper)); }
     void SetAffineRotation3DLimits(object lower, object upper) { return _probot->SetAffineRotation3DLimits(ExtractVector3(lower),ExtractVector3(upper)); }
-    void SetAffineRotationQuatLimits(object lower, object upper) { return _probot->SetAffineRotationQuatLimits(ExtractVector4(lower),ExtractVector4(upper)); }
+    void SetAffineRotationQuatLimits(object quatangle) { return _probot->SetAffineRotationQuatLimits(ExtractVector4(quatangle)); }
     void SetAffineTranslationMaxVels(object vels) { _probot->SetAffineTranslationMaxVels(ExtractVector3(vels)); }
     void SetAffineRotationAxisMaxVels(object vels) { _probot->SetAffineRotationAxisMaxVels(ExtractVector3(vels)); }
     void SetAffineRotation3DMaxVels(object vels) { _probot->SetAffineRotation3DMaxVels(ExtractVector3(vels)); }
-    void SetAffineRotationQuatMaxVels(object vels) { _probot->SetAffineRotationQuatMaxVels(ExtractVector4(vels)); }
+    void SetAffineRotationQuatMaxVels(dReal vels) { _probot->SetAffineRotationQuatMaxVels(vels); }
     void SetAffineTranslationResolution(object resolution) { _probot->SetAffineTranslationResolution(ExtractVector4(resolution)); }
     void SetAffineRotationAxisResolution(object resolution) { _probot->SetAffineRotationAxisResolution(ExtractVector3(resolution)); }
     void SetAffineRotation3DResolution(object resolution) { _probot->SetAffineRotation3DResolution(ExtractVector3(resolution)); }
-    void SetAffineRotationQuatResolution(object resolution) { _probot->SetAffineRotationQuatResolution(ExtractVector4(resolution)); }
+    void SetAffineRotationQuatResolution(dReal resolution) { _probot->SetAffineRotationQuatResolution(resolution); }
     void SetAffineTranslationWeights(object weights) { _probot->SetAffineTranslationWeights(ExtractVector3(weights)); }
     void SetAffineRotationAxisWeights(object weights) { _probot->SetAffineRotationAxisWeights(ExtractVector4(weights)); }
     void SetAffineRotation3DWeights(object weights) { _probot->SetAffineRotation3DWeights(ExtractVector3(weights)); }
-    void SetAffineRotationQuatWeights(object weights) { _probot->SetAffineRotationQuatWeights(ExtractVector4(weights)); }
+    void SetAffineRotationQuatWeights(dReal weights) { _probot->SetAffineRotationQuatWeights(weights); }
 
     object GetAffineTranslationLimits() const
     {
@@ -1700,22 +1734,20 @@ public:
     }
     object GetAffineRotationQuatLimits() const
     {
-        Vector lower, upper;
-        _probot->GetAffineRotationQuatLimits(lower,upper);
-        return boost::python::make_tuple(toPyVector4(lower),toPyVector4(upper));
+        return toPyVector4(_probot->GetAffineRotationQuatLimits());
     }
     object GetAffineTranslationMaxVels() const { return toPyVector3(_probot->GetAffineTranslationMaxVels()); }
     object GetAffineRotationAxisMaxVels() const { return toPyVector3(_probot->GetAffineRotationAxisMaxVels()); }
     object GetAffineRotation3DMaxVels() const { return toPyVector3(_probot->GetAffineRotation3DMaxVels()); }
-    object GetAffineRotationQuatMaxVels() const { return toPyVector4(_probot->GetAffineRotationQuatMaxVels()); }
+    dReal GetAffineRotationQuatMaxVels() const { return _probot->GetAffineRotationQuatMaxVels(); }
     object GetAffineTranslationResolution() const { return toPyVector3(_probot->GetAffineTranslationResolution()); }
     object GetAffineRotationAxisResolution() const { return toPyVector4(_probot->GetAffineRotationAxisResolution()); }
     object GetAffineRotation3DResolution() const { return toPyVector3(_probot->GetAffineRotation3DResolution()); }
-    object GetAffineRotationQuatResolution() const { return toPyVector4(_probot->GetAffineRotationQuatResolution()); }
+    dReal GetAffineRotationQuatResolution() const { return _probot->GetAffineRotationQuatResolution(); }
     object GetAffineTranslationWeights() const { return toPyVector3(_probot->GetAffineTranslationWeights()); }
     object GetAffineRotationAxisWeights() const { return toPyVector4(_probot->GetAffineRotationAxisWeights()); }
     object GetAffineRotation3DWeights() const { return toPyVector3(_probot->GetAffineRotation3DWeights()); }
-    object GetAffineRotationQuatWeights() const { return toPyVector4(_probot->GetAffineRotationQuatWeights()); }
+    dReal GetAffineRotationQuatWeights() const { return _probot->GetAffineRotationQuatWeights(); }
 
     void SetActiveDOFValues(object values) const
     {
@@ -3309,8 +3341,8 @@ BOOST_PYTHON_MODULE(openravepy_int)
         .def( "message", &openrave_exception::message, return_copy_const_ref() )
         .def( "__str__", &openrave_exception::message, return_copy_const_ref() )
         ;
-    //exception_translator<std::exception>();
     exception_translator<openrave_exception>();
+    exception_translator<std::runtime_error>();
 
     enum_<DebugLevel>("DebugLevel" DOXY_ENUM(DebugLevel))
         .value("Fatal",Level_Fatal)
@@ -3498,6 +3530,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("SetJointValues",psetdofvalues2,args("values","dofindices"), DOXY_FN(KinBody,SetDOFValues "const std::vector; bool"))
             .def("SetDOFValues",psetdofvalues1,args("values"), DOXY_FN(KinBody,SetDOFValues "const std::vector; bool"))
             .def("SetDOFValues",psetdofvalues2,args("values","dofindices"), DOXY_FN(KinBody,SetDOFValues "const std::vector; bool"))
+            .def("SubtractDOFValues",&PyKinBody::SubtractDOFValues,args("values1","values2"), DOXY_FN(KinBody,SubtractDOFValues))
             .def("SetJointTorques",&PyKinBody::SetJointTorques,args("torques","add"), DOXY_FN(KinBody,SetJointTorques))
             .def("SetTransformWithJointValues",&PyKinBody::SetTransformWithDOFValues,args("transform","values"), DOXY_FN(KinBody,SetDOFValues "const std::vector; const Transform; bool"))
             .def("SetTransformWithDOFValues",&PyKinBody::SetTransformWithDOFValues,args("transform","values"), DOXY_FN(KinBody,SetDOFValues "const std::vector; const Transform; bool"))
@@ -3560,6 +3593,8 @@ BOOST_PYTHON_MODULE(openravepy_int)
                 .def("SetForce",&PyKinBody::PyLink::SetForce,args("force","pos","add"), DOXY_FN(KinBody::Link,SetForce))
                 .def("SetTorque",&PyKinBody::PyLink::SetTorque,args("torque","add"), DOXY_FN(KinBody::Link,SetTorque))
                 .def("GetGeometries",&PyKinBody::PyLink::GetGeometries, DOXY_FN(KinBody::Link,GetGeometries))
+                .def("GetRigidlyAttachedLinks",&PyKinBody::PyLink::GetRigidlyAttachedLinks, DOXY_FN(KinBody::Link,GetRigidlyAttachedLinks))
+                .def("IsRigidlyAttached",&PyKinBody::PyLink::IsRigidlyAttached, DOXY_FN(KinBody::Link,IsRigidlyAttached))
                 .def("__repr__", &PyKinBody::PyLink::__repr__)
                 .def("__str__", &PyKinBody::PyLink::__str__)
                 .def("__eq__",&PyKinBody::PyLink::__eq__)
@@ -3763,7 +3798,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("SetAffineTranslationLimits",&PyRobotBase::SetAffineTranslationLimits,args("lower","upper"), DOXY_FN(RobotBase,SetAffineTranslationLimits))
             .def("SetAffineRotationAxisLimits",&PyRobotBase::SetAffineRotationAxisLimits,args("lower","upper"), DOXY_FN(RobotBase,SetAffineRotationAxisLimits))
             .def("SetAffineRotation3DLimits",&PyRobotBase::SetAffineRotation3DLimits,args("lower","upper"), DOXY_FN(RobotBase,SetAffineRotation3DLimits))
-            .def("SetAffineRotationQuatLimits",&PyRobotBase::SetAffineRotationQuatLimits,args("lower","upper"), DOXY_FN(RobotBase,SetAffineRotationQuatLimits))
+            .def("SetAffineRotationQuatLimits",&PyRobotBase::SetAffineRotationQuatLimits,args("quatangle"), DOXY_FN(RobotBase,SetAffineRotationQuatLimits))
             .def("SetAffineTranslationMaxVels",&PyRobotBase::SetAffineTranslationMaxVels,args("lower","upper"), DOXY_FN(RobotBase,SetAffineTranslationMaxVels))
             .def("SetAffineRotationAxisMaxVels",&PyRobotBase::SetAffineRotationAxisMaxVels,args("velocity"), DOXY_FN(RobotBase,SetAffineRotationAxisMaxVels))
             .def("SetAffineRotation3DMaxVels",&PyRobotBase::SetAffineRotation3DMaxVels,args("velocity"), DOXY_FN(RobotBase,SetAffineRotation3DMaxVels))
@@ -3856,6 +3891,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("GetChildJoints",&PyRobotBase::PyManipulator::GetChildJoints, DOXY_FN(RobotBase::Manipulator,GetChildJoints))
             .def("GetChildDOFIndices",&PyRobotBase::PyManipulator::GetChildDOFIndices, DOXY_FN(RobotBase::Manipulator,GetChildDOFIndices))
             .def("GetChildLinks",&PyRobotBase::PyManipulator::GetChildLinks, DOXY_FN(RobotBase::Manipulator,GetChildLinks))
+            .def("IsChildLink",&PyRobotBase::PyManipulator::IsChildLink, DOXY_FN(RobotBase::Manipulator,IsChildLink))
             .def("GetIndependentLinks",&PyRobotBase::PyManipulator::GetIndependentLinks, DOXY_FN(RobotBase::Manipulator,GetIndependentLinks))
             .def("CheckEndEffectorCollision",pCheckEndEffectorCollision1,args("transform"), DOXY_FN(RobotBase::Manipulator,CheckEndEffectorCollision))
             .def("CheckEndEffectorCollision",pCheckEndEffectorCollision2,args("transform","report"), DOXY_FN(RobotBase::Manipulator,CheckEndEffectorCollision))

@@ -42,7 +42,7 @@ def run(args=None):
         # no physics engine set, so set one
         physics = RaveCreatePhysicsEngine(env,'ode')
         env.SetPhysicsEngine(physics)
-    physics.SetGravity(array((0,0,-9.8)))
+        physics.SetGravity(array((0,0,-9.8)))
 
     with env:
         robot = env.GetRobots()[0]

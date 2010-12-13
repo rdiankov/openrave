@@ -48,6 +48,7 @@
 #include <map>
 #include <set>
 #include <string>
+#include <stdexcept>
 
 #define FOREACH(it, v) for(typeof((v).begin()) it = (v).begin(); it != (v).end(); (it)++)
 #define FOREACH_NOINC(it, v) for(typeof((v).begin()) it = (v).begin(); it != (v).end(); )
@@ -130,20 +131,17 @@ inline std::set<T> ExtractSet(const object& o)
 template <typename T>
 struct exception_translator
 {
-    exception_translator(){
-
+    exception_translator() {
         register_exception_translator<T>(&exception_translator::translate);
 
         //Register custom r-value converter
         //There are situations, where we have to pass the exception back to 
         //C++ library. This will do the trick
-        converter::registry::push_back( &exception_translator::convertible
-                                            , &exception_translator::construct
-                                            , type_id<T>() );
+        converter::registry::push_back( &exception_translator::convertible, &exception_translator::construct, type_id<T>() );
     }
     
-    static void 
-    translate( const T& err ){
+    static void translate( const T& err )
+    {
         object pimpl_err( err );
         object pyerr_class = pimpl_err.attr( "py_err_class" );
         object pyerr = pyerr_class( pimpl_err );
@@ -151,8 +149,7 @@ struct exception_translator
     }
 
     //Sometimes, exceptions should be passed back to the library.
-    static void*
-    convertible(PyObject* py_obj){
+    static void* convertible(PyObject* py_obj){
         if( 1 != PyObject_IsInstance( py_obj, PyExc_Exception ) ){
             return 0;
         }
@@ -170,8 +167,8 @@ struct exception_translator
         return py_obj;
     }
 
-    static void
-    construct( PyObject* py_obj, converter::rvalue_from_python_stage1_data* data){
+    static void construct( PyObject* py_obj, converter::rvalue_from_python_stage1_data* data)
+    {
         typedef converter::rvalue_from_python_storage<T> storage_t;
         
         object pyerr( handle<>( borrowed( py_obj ) ) );        

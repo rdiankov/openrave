@@ -115,7 +115,7 @@ public:
 
         \param solution The current solution of the manipulator. Can be modified by this function, but note that it will not go through previous checks again.
         \param manipulator The current manipulator that the ik is being solved for.
-        \param param The paramterization that IK was called with.
+        \param param The paramterization that IK was called with. This is in the manipulator base link's coordinate system (which is not necessarily the world coordinate system).
         \return \ref IkFilterReturn controlling the behavior of the ik search process.
     */
     typedef boost::function<IkFilterReturn(std::vector<dReal>&, RobotBase::ManipulatorPtr, const IkParameterization&)> IkFilterCallbackFn;

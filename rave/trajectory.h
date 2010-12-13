@@ -242,7 +242,9 @@ private:
     std::vector<TPOINT> _vecpoints;
     std::vector<TSEGMENT> _vecsegments;
     std::vector<dReal> _lowerJointLimit, _upperJointLimit, _maxJointVel, _maxJointAccel;
-    Vector _maxAffineTranslationVel, _maxAffineRotationQuatVel;
+    Vector _maxAffineTranslationVel;
+    dReal _maxAffineRotationQuatVel;
+    int _nQuaternionIndex; ///< the index of a quaternion rotation, if one exists (interpolation is different for quaternions)
 
     /// computes the difference of two states necessary for correct interpolation when there are circular joints. Default is regular subtraction.
     /// _diffstatefn(q1,q2) -> q1 -= q2

@@ -201,12 +201,13 @@ void RobotBase::Manipulator::GetChildLinks(std::vector<LinkPtr>& vlinks) const
     RobotBasePtr probot(_probot);
     // get all child links of the manipualtor
     vlinks.resize(0);
-    probot->GetRigidlyAttachedLinks(_pEndEffector->GetIndex(),vlinks);
+    _pEndEffector->GetRigidlyAttachedLinks(vlinks);
     int iattlink = _pEndEffector->GetIndex();
     FOREACHC(itlink, probot->GetLinks()) {
         int ilink = (*itlink)->GetIndex();
-        if( ilink == iattlink )
+        if( ilink == iattlink ) {
             continue;
+        }
         // gripper needs to be affected by all joints
         bool bGripperLink = true;
         FOREACHC(itarmjoint,_varmdofindices) {
@@ -215,8 +216,9 @@ void RobotBase::Manipulator::GetChildLinks(std::vector<LinkPtr>& vlinks) const
                 break;
             }
         }
-        if( !bGripperLink )
+        if( !bGripperLink ) {
             continue;
+        }
         for(int ijoint = 0; ijoint < probot->GetDOF(); ++ijoint) {
             if( probot->DoesAffect(ijoint,ilink) && !probot->DoesAffect(ijoint,iattlink) ) {
                 vlinks.push_back(*itlink);
@@ -224,6 +226,40 @@ void RobotBase::Manipulator::GetChildLinks(std::vector<LinkPtr>& vlinks) const
             }
         }
     }
+}
+
+bool RobotBase::Manipulator::IsChildLink(LinkConstPtr plink) const
+{
+    if( _pEndEffector->IsRigidlyAttached(plink) ) {
+        return true;
+    }
+
+    RobotBasePtr probot(_probot);
+    // get all child links of the manipualtor
+    int iattlink = _pEndEffector->GetIndex();
+    FOREACHC(itlink, probot->GetLinks()) {
+        int ilink = (*itlink)->GetIndex();
+        if( ilink == iattlink ) {
+            continue;
+        }
+        // gripper needs to be affected by all joints
+        bool bGripperLink = true;
+        FOREACHC(itarmjoint,_varmdofindices) {
+            if( !probot->DoesAffect(*itarmjoint,ilink) ) {
+                bGripperLink = false;
+                break;
+            }
+        }
+        if( !bGripperLink ) {
+            continue;
+        }
+        for(int ijoint = 0; ijoint < probot->GetDOF(); ++ijoint) {
+            if( probot->DoesAffect(ijoint,ilink) && !probot->DoesAffect(ijoint,iattlink) ) {
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 void RobotBase::Manipulator::GetIndependentLinks(std::vector<LinkPtr>& vlinks) const
@@ -266,14 +302,14 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(const Transform& tEE, Col
     RobotBasePtr probot(_probot);
     Transform toldEE = GetEndEffectorTransform();
     Transform tdelta = tEE*toldEE.inverse();
-
     // get all child links of the manipualtor
     int iattlink = _pEndEffector->GetIndex();
     vector<LinkPtr> vattachedlinks;
-    probot->GetRigidlyAttachedLinks(_pEndEffector->GetIndex(),vattachedlinks);
+    _pEndEffector->GetRigidlyAttachedLinks(vattachedlinks);
     FOREACHC(itlink,vattachedlinks) {
-        if( probot->CheckLinkCollision((*itlink)->GetIndex(),tdelta*(*itlink)->GetTransform(),report) )
+        if( probot->CheckLinkCollision((*itlink)->GetIndex(),tdelta*(*itlink)->GetTransform(),report) ) {
             return true;
+        }
     }
     FOREACHC(itlink, probot->GetLinks()) {
         int ilink = (*itlink)->GetIndex();
@@ -293,8 +329,9 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(const Transform& tEE, Col
         }
         for(int ijoint = 0; ijoint < probot->GetDOF(); ++ijoint) {
             if( probot->DoesAffect(ijoint,ilink) && !probot->DoesAffect(ijoint,iattlink) ) {
-                if( probot->CheckLinkCollision(ilink,tdelta*(*itlink)->GetTransform(),report) )
+                if( probot->CheckLinkCollision(ilink,tdelta*(*itlink)->GetTransform(),report) ) {
                     return true;
+                }
                 break;
             }
         }
@@ -355,8 +392,9 @@ bool RobotBase::Manipulator::IsGrabbing(KinBodyConstPtr pbody) const
     RobotBasePtr probot(_probot);
     KinBody::LinkPtr plink = probot->IsGrabbing(pbody);
     if( !!plink ) {
-        if( plink == _pEndEffector || plink == _pBase )
+        if( plink == _pEndEffector || plink == _pBase ) {
             return true;
+        }
         int iattlink = _pEndEffector->GetIndex();
         FOREACHC(itlink, probot->GetLinks()) {
             int ilink = (*itlink)->GetIndex();
@@ -370,8 +408,9 @@ bool RobotBase::Manipulator::IsGrabbing(KinBodyConstPtr pbody) const
                     break;
                 }
             }
-            if( bGripperLink && plink == *itlink )
+            if( bGripperLink && plink == *itlink ) {
                 return true;
+            }
         }
     }
     return false;
@@ -580,11 +619,11 @@ RobotBase::RobotBase(EnvironmentBasePtr penv) : KinBody(PT_Robot, penv)
     _vRotation3DResolutions = Vector(0.01f,0.01f,0.01f);
     _vRotation3DWeights = Vector(1.0f,1.0f,1.0f);
 
-    _vRotationQuatLowerLimits = Vector(-1,-1,-1,-1);
-    _vRotationQuatUpperLimits = Vector(1,1,1,1);
-    _vRotationQuatMaxVels = Vector(0.07f,0.07f,0.07f,0.07f);
-    _vRotationQuatResolutions = Vector(0.01f,0.01f,0.01f,0.01f);
-    _vRotationQuatWeights = Vector(0.4f,0.4f,0.4f,0.4f);
+    _vRotationQuatLimitStart = Vector(1,0,0,0);
+    _fQuatLimitMaxAngle = PI;
+    _fQuatMaxAngleVelocity = 1.0;
+    _fQuatAngleResolution = 0.01f;
+    _fQuatAngleWeight = 0.4f;
 }
 
 RobotBase::~RobotBase()
@@ -617,7 +656,7 @@ void RobotBase::SetDOFValues(const std::vector<dReal>& vJointValues, bool bCheck
 
 void RobotBase::SetDOFValues(const std::vector<dReal>& vJointValues, const Transform& transbase, bool bCheckLimits)
 {
-    KinBody::SetDOFValues(vJointValues, transbase, bCheckLimits); // should call RobotBase::SetDOFValues
+    KinBody::SetDOFValues(vJointValues, transbase, bCheckLimits); // should call RobotBase::SetDOFValues, so no need to upgrade grabbed bodies, attached sensors
 }
 
 void RobotBase::SetBodyTransformations(const std::vector<Transform>& vbodies)
@@ -659,23 +698,37 @@ void RobotBase::_UpdateAttachedSensors()
 
 int RobotBase::GetAffineDOFIndex(DOFAffine dof) const
 {
-    if( !(_nAffineDOFs&dof) )
+    if( !(_nAffineDOFs&dof) ) {
         return -1;
-
+    }
     int index = (int)_vActiveDOFIndices.size();
-    if( dof&DOF_X ) return index;
-    else if( _nAffineDOFs & DOF_X ) ++index;
-
-    if( dof&DOF_Y ) return index;
-    else if( _nAffineDOFs & DOF_Y ) ++index;
-
-    if( dof&DOF_Z ) return index;
-    else if( _nAffineDOFs & DOF_Z ) ++index;
-
-    if( dof&DOF_RotationAxis ) return index;
-    if( dof&DOF_Rotation3D ) return index;
-    if( dof&DOF_RotationQuat ) return index;
-
+    if( dof&DOF_X ) {
+        return index;
+    }
+    else if( _nAffineDOFs & DOF_X ) {
+        ++index;
+    }
+    if( dof&DOF_Y ) {
+        return index;
+    }
+    else if( _nAffineDOFs & DOF_Y ) {
+        ++index;
+    }
+    if( dof&DOF_Z ) {
+        return index;
+    }
+    else if( _nAffineDOFs & DOF_Z ) {
+        ++index;
+    }
+    if( dof&DOF_RotationAxis ) {
+        return index;
+    }
+    if( dof&DOF_Rotation3D ) {
+        return index;
+    }
+    if( dof&DOF_RotationQuat ) {
+        return index;
+    }
     throw openrave_exception("unspecified dow",ORE_InvalidArguments);
 }
 
@@ -697,10 +750,15 @@ void RobotBase::SetAffineRotation3DLimits(const Vector& lower, const Vector& upp
     _vRotation3DUpperLimits = upper;
 }
 
-void RobotBase::SetAffineRotationQuatLimits(const Vector& lower, const Vector& upper)
+void RobotBase::SetAffineRotationQuatLimits(const Vector& quatangle)
 {
-    _vRotationQuatLowerLimits = lower;
-    _vRotationQuatUpperLimits = upper;
+    _fQuatLimitMaxAngle = RaveSqrt(quatangle.lengthsqr4());
+    if( _fQuatLimitMaxAngle > 0 ) {
+        _vRotationQuatLimitStart = quatangle * (1/_fQuatLimitMaxAngle);
+    }
+    else {
+        _vRotationQuatLimitStart = GetTransform().rot;
+    }
 }
 
 void RobotBase::SetAffineTranslationMaxVels(const Vector& vels)
@@ -718,9 +776,9 @@ void RobotBase::SetAffineRotation3DMaxVels(const Vector& vels)
     _vRotation3DMaxVels = vels;
 }
 
-void RobotBase::SetAffineRotationQuatMaxVels(const Vector& vels)
+void RobotBase::SetAffineRotationQuatMaxVels(dReal anglevelocity)
 {
-    _vRotationQuatMaxVels = vels;
+    _fQuatMaxAngleVelocity = anglevelocity;
 }
 
 void RobotBase::SetAffineTranslationResolution(const Vector& resolution)
@@ -738,9 +796,9 @@ void RobotBase::SetAffineRotation3DResolution(const Vector& resolution)
     _vRotation3DResolutions = resolution;
 }
 
-void RobotBase::SetAffineRotationQuatResolution(const Vector& resolution)
+void RobotBase::SetAffineRotationQuatResolution(dReal angleresolution)
 {
-    _vRotationQuatResolutions = resolution;
+    _fQuatAngleResolution = angleresolution;
 }
 
 void RobotBase::SetAffineTranslationWeights(const Vector& weights)
@@ -758,9 +816,9 @@ void RobotBase::SetAffineRotation3DWeights(const Vector& weights)
     _vRotation3DWeights = weights;
 }
 
-void RobotBase::SetAffineRotationQuatWeights(const Vector& weights)
+void RobotBase::SetAffineRotationQuatWeights(dReal angleweight)
 {
-    _vRotationQuatWeights = weights;
+    _fQuatAngleWeight = angleweight;
 }
 
 void RobotBase::GetAffineTranslationLimits(Vector& lower, Vector& upper) const
@@ -780,13 +838,6 @@ void RobotBase::GetAffineRotation3DLimits(Vector& lower, Vector& upper) const
     lower = _vRotation3DLowerLimits;
     upper = _vRotation3DUpperLimits;
 }
-
-void RobotBase::GetAffineRotationQuatLimits(Vector& lower, Vector& upper) const
-{
-    lower = _vRotationQuatLowerLimits;
-    upper = _vRotationQuatUpperLimits;
-}
-
 
 void RobotBase::SetActiveDOFs(const std::vector<int>& vJointIndices, int nAffineDOFBitmask, const Vector& vRotationAxis)
 {
@@ -890,9 +941,8 @@ void RobotBase::SetActiveDOFValues(const std::vector<dReal>& values, bool bCheck
         else if( _nAffineDOFs & DOF_RotationQuat ) {
             // have to normalize since user might not be aware of this particular parameterization of rotations
             t.rot = *(Vector*)pAffineValues;
-            dReal flength = t.rot.lengthsqr4();
-            if( flength > 0 ) t.rot /= RaveSqrt(flength);
-            else t.rot = Vector(1,0,0,0);
+            t.rot.normalize4();
+            t.rot = quatMultiply(_vRotationQuatLimitStart, t.rot);
         }
 
         if( _vActiveDOFIndices.size() == 0 ) {
@@ -967,7 +1017,7 @@ void RobotBase::GetActiveDOFValues(std::vector<dReal>& values) const
         }
     }
     else if( _nAffineDOFs & DOF_RotationQuat ) {
-        *(Vector*)pValues = t.rot;
+        *(Vector*)pValues = quatMultiply(quatInverse(_vRotationQuatLimitStart), t.rot);
     }
 }
 
@@ -1065,9 +1115,9 @@ void RobotBase::GetActiveDOFLimits(std::vector<dReal>& lower, std::vector<dReal>
 {
     lower.resize(GetActiveDOF());
     upper.resize(GetActiveDOF());
-    if( GetActiveDOF() == 0 )
+    if( GetActiveDOF() == 0 ) {
         return;
-
+    }
     dReal* pLowerLimit = &lower[0];
     dReal* pUpperLimit = &upper[0];
     vector<dReal> alllower,allupper;
@@ -1094,11 +1144,23 @@ void RobotBase::GetActiveDOFLimits(std::vector<dReal>& lower, std::vector<dReal>
             }
         }
 
-        if( _nAffineDOFs & DOF_X ) { *pLowerLimit++ = _vTranslationLowerLimits.x; *pUpperLimit++ = _vTranslationUpperLimits.x; }
-        if( _nAffineDOFs & DOF_Y ) { *pLowerLimit++ = _vTranslationLowerLimits.y; *pUpperLimit++ = _vTranslationUpperLimits.y; }
-        if( _nAffineDOFs & DOF_Z ) { *pLowerLimit++ = _vTranslationLowerLimits.z; *pUpperLimit++ = _vTranslationUpperLimits.z; }
+        if( _nAffineDOFs & DOF_X ) {
+            *pLowerLimit++ = _vTranslationLowerLimits.x;
+            *pUpperLimit++ = _vTranslationUpperLimits.x;
+        }
+        if( _nAffineDOFs & DOF_Y ) {
+            *pLowerLimit++ = _vTranslationLowerLimits.y;
+            *pUpperLimit++ = _vTranslationUpperLimits.y;
+        }
+        if( _nAffineDOFs & DOF_Z ) {
+            *pLowerLimit++ = _vTranslationLowerLimits.z;
+            *pUpperLimit++ = _vTranslationUpperLimits.z;
+        }
 
-        if( _nAffineDOFs & DOF_RotationAxis ) { *pLowerLimit++ = _vRotationAxisLowerLimits.x; *pUpperLimit++ = _vRotationAxisUpperLimits.x; }
+        if( _nAffineDOFs & DOF_RotationAxis ) {
+            *pLowerLimit++ = _vRotationAxisLowerLimits.x;
+            *pUpperLimit++ = _vRotationAxisUpperLimits.x;
+        }
         else if( _nAffineDOFs & DOF_Rotation3D ) {
             *pLowerLimit++ = _vRotation3DLowerLimits.x;
             *pLowerLimit++ = _vRotation3DLowerLimits.y;
@@ -1108,17 +1170,19 @@ void RobotBase::GetActiveDOFLimits(std::vector<dReal>& lower, std::vector<dReal>
             *pUpperLimit++ = _vRotation3DUpperLimits.z;
         }
         else if( _nAffineDOFs & DOF_RotationQuat ) {
-            *pLowerLimit++ = _vRotationQuatLowerLimits.x;
-            *pLowerLimit++ = _vRotationQuatLowerLimits.y;
-            *pLowerLimit++ = _vRotationQuatLowerLimits.z;
-            *pLowerLimit++ = _vRotationQuatLowerLimits.w;
-            *pUpperLimit++ = _vRotationQuatUpperLimits.x;
-            *pUpperLimit++ = _vRotationQuatUpperLimits.y;
-            *pUpperLimit++ = _vRotationQuatUpperLimits.z;
-            *pUpperLimit++ = _vRotationQuatUpperLimits.w;
+            // this is actually difficult to do correctly...
+            dReal fsin = RaveSin(_fQuatLimitMaxAngle);
+            *pLowerLimit++ = RaveCos(_fQuatLimitMaxAngle);
+            *pLowerLimit++ = -fsin;
+            *pLowerLimit++ = -fsin;
+            *pLowerLimit++ = -fsin;
+            *pUpperLimit++ = 1;
+            *pUpperLimit++ = fsin;
+            *pUpperLimit++ = fsin;
+            *pUpperLimit++ = fsin;
         }
     }
-}    
+}
 
 void RobotBase::GetActiveDOFResolutions(std::vector<dReal>& resolution) const
 {
@@ -1138,21 +1202,28 @@ void RobotBase::GetActiveDOFResolutions(std::vector<dReal>& resolution) const
         *pResolution++ = _vTempRobotJoints[*it];
     }
     // set some default limits 
-    if( _nAffineDOFs & DOF_X ) { *pResolution++ = _vTranslationResolutions.x;}
-    if( _nAffineDOFs & DOF_Y ) { *pResolution++ = _vTranslationResolutions.y;}
-    if( _nAffineDOFs & DOF_Z ) { *pResolution++ = _vTranslationResolutions.z;}
+    if( _nAffineDOFs & DOF_X ) {
+        *pResolution++ = _vTranslationResolutions.x;
+    }
+    if( _nAffineDOFs & DOF_Y ) {
+        *pResolution++ = _vTranslationResolutions.y;
+    }
+    if( _nAffineDOFs & DOF_Z ) { *pResolution++ = _vTranslationResolutions.z;
+    }
 
-    if( _nAffineDOFs & DOF_RotationAxis ) { *pResolution++ = _vRotationAxisResolutions.x; }
+    if( _nAffineDOFs & DOF_RotationAxis ) {
+        *pResolution++ = _vRotationAxisResolutions.x;
+    }
     else if( _nAffineDOFs & DOF_Rotation3D ) {
         *pResolution++ = _vRotation3DResolutions.x;
         *pResolution++ = _vRotation3DResolutions.y;
         *pResolution++ = _vRotation3DResolutions.z;
     }
     else if( _nAffineDOFs & DOF_RotationQuat ) {
-        *pResolution++ = _vRotationQuatResolutions.x;
-        *pResolution++ = _vRotationQuatResolutions.y;
-        *pResolution++ = _vRotationQuatResolutions.z;
-        *pResolution++ = _vRotationQuatResolutions.w;
+        *pResolution++ = _fQuatLimitMaxAngle;
+        *pResolution++ = _fQuatLimitMaxAngle;
+        *pResolution++ = _fQuatLimitMaxAngle;
+        *pResolution++ = _fQuatLimitMaxAngle;
     }
 }
 
@@ -1185,10 +1256,10 @@ void RobotBase::GetActiveDOFWeights(std::vector<dReal>& weights) const
         *pweight++ = _vRotation3DWeights.z;
     }
     else if( _nAffineDOFs & DOF_RotationQuat ) {
-        *pweight++ = _vRotationQuatWeights.x;
-        *pweight++ = _vRotationQuatWeights.y;
-        *pweight++ = _vRotationQuatWeights.z;
-        *pweight++ = _vRotationQuatWeights.w;
+        *pweight++ = _fQuatAngleWeight;
+        *pweight++ = _fQuatAngleWeight;
+        *pweight++ = _fQuatAngleWeight;
+        *pweight++ = _fQuatAngleWeight;
     }
 }
 
@@ -1219,10 +1290,10 @@ void RobotBase::GetActiveDOFMaxVel(std::vector<dReal>& maxvel) const
         *pMaxVel++ = _vRotation3DMaxVels.z;
     }
     else if( _nAffineDOFs & DOF_RotationQuat ) {
-        *pMaxVel++ = _vRotationQuatMaxVels.x;
-        *pMaxVel++ = _vRotationQuatMaxVels.y;
-        *pMaxVel++ = _vRotationQuatMaxVels.z;
-        *pMaxVel++ = _vRotationQuatMaxVels.w;
+        *pMaxVel++ = _fQuatMaxAngleVelocity;
+        *pMaxVel++ = _fQuatMaxAngleVelocity;
+        *pMaxVel++ = _fQuatMaxAngleVelocity;
+        *pMaxVel++ = _fQuatMaxAngleVelocity;
     }
 }
 
@@ -1253,17 +1324,17 @@ void RobotBase::GetActiveDOFMaxAccel(std::vector<dReal>& maxaccel) const
         *pMaxAccel++ = _vRotation3DMaxVels.z; // wrong
     }
     else if( _nAffineDOFs & DOF_RotationQuat ) {
-        *pMaxAccel++ = _vRotationQuatMaxVels.x; // wrong
-        *pMaxAccel++ = _vRotationQuatMaxVels.y; // wrong
-        *pMaxAccel++ = _vRotationQuatMaxVels.z; // wrong
-        *pMaxAccel++ = _vRotationQuatMaxVels.w; // wrong
+        *pMaxAccel++ = _fQuatMaxAngleVelocity; // wrong
+        *pMaxAccel++ = _fQuatMaxAngleVelocity; // wrong
+        *pMaxAccel++ = _fQuatMaxAngleVelocity; // wrong
+        *pMaxAccel++ = _fQuatMaxAngleVelocity; // wrong
     }
 }
 
 void RobotBase::SubtractActiveDOFValues(std::vector<dReal>& q1, const std::vector<dReal>& q2) const
 {
     if( _nActiveDOF < 0 ) {
-        SubtractJointValues(q1,q2);
+        SubtractDOFValues(q1,q2);
         return;
     }
 
@@ -1283,17 +1354,30 @@ void RobotBase::SubtractActiveDOFValues(std::vector<dReal>& q1, const std::vecto
         }
     }
 
-    if( _nAffineDOFs & DOF_X ) { q1.at(index) -= q2.at(index); index++; }
-    if( _nAffineDOFs & DOF_Y ) { q1.at(index) -= q2.at(index); index++; }
-    if( _nAffineDOFs & DOF_Z ) { q1.at(index) -= q2.at(index); index++; }
+    if( _nAffineDOFs & DOF_X ) {
+        q1.at(index) -= q2.at(index);
+        index++;
+    }
+    if( _nAffineDOFs & DOF_Y ) {
+        q1.at(index) -= q2.at(index);
+        index++;
+    }
+    if( _nAffineDOFs & DOF_Z ) {
+        q1.at(index) -= q2.at(index);
+        index++;
+    }
 
-    if( _nAffineDOFs & DOF_RotationAxis ) { q1.at(index) = ANGLE_DIFF(q1.at(index),q2.at(index)); index++;  }
+    if( _nAffineDOFs & DOF_RotationAxis ) {
+        q1.at(index) = ANGLE_DIFF(q1.at(index),q2.at(index));
+        index++;
+    }
     else if( _nAffineDOFs & DOF_Rotation3D ) {
         q1.at(index) -= q2.at(index); index++;
         q1.at(index) -= q2.at(index); index++;
         q1.at(index) -= q2.at(index); index++;
     }
     else if( _nAffineDOFs & DOF_RotationQuat ) {
+        // would like to do q2^-1 q1, but that might break rest of planners...
         q1.at(index) -= q2.at(index); index++;
         q1.at(index) -= q2.at(index); index++;
         q1.at(index) -= q2.at(index); index++;
@@ -1359,6 +1443,8 @@ void RobotBase::GetFullTrajectoryFromActive(TrajectoryBasePtr pFullTraj, Traject
                 }
                 else if( _nAffineDOFs & DOF_RotationQuat ) {
                     p.trans.rot = *(Vector*)&itp->q[i];
+                    p.trans.rot.normalize4();
+                    p.trans.rot = quatMultiply(_vRotationQuatLimitStart, p.trans.rot);
                 }
             }
 
@@ -1466,7 +1552,8 @@ void RobotBase::CalculateActiveJacobian(int index, const Vector& offset, boost::
         ind += 3;
     }
     else if( _nAffineDOFs & DOF_RotationQuat ) {
-        Transform t = GetTransform();
+        Transform t; t.rot = quatInverse(_vRotationQuatLimitStart);
+        t = t * GetTransform();
         dReal Qx = t.rot.x, Qy = t.rot.y, Qz = t.rot.z, Qw = t.rot.w;
         dReal Tx = offset.x-t.trans.x, Ty = offset.y-t.trans.y, Tz = offset.z-t.trans.z;
 
@@ -1598,9 +1685,9 @@ void RobotBase::CalculateActiveAngularVelocityJacobian(int index, boost::multi_a
         }
     }
 
-    if( _nAffineDOFs == DOF_NoTransform )
+    if( _nAffineDOFs == DOF_NoTransform ) {
         return;
-
+    }
     size_t ind = _vActiveDOFIndices.size();
     if( _nAffineDOFs & DOF_X ) {
         mjacobian[0][ind] = 0;
@@ -1634,7 +1721,8 @@ void RobotBase::CalculateActiveAngularVelocityJacobian(int index, boost::multi_a
         BOOST_ASSERT(!"quaternions not supported");
 
         // most likely wrong
-        Transform t = GetTransform();
+        Transform t; t.rot = quatInverse(_vRotationQuatLimitStart);
+        t = t * GetTransform();
         dReal fnorm = t.rot.y*t.rot.y+t.rot.z*t.rot.z+t.rot.w*t.rot.w;
         if( fnorm > 0 ) {
             fnorm = dReal(1)/RaveSqrt(fnorm);
@@ -1676,7 +1764,6 @@ bool RobotBase::InitFromFile(const std::string& filename, const std::list<std::p
         Destroy();
         return false;
     }
-
     return true;
 }
 
@@ -1687,7 +1774,6 @@ bool RobotBase::InitFromData(const std::string& data, const std::list<std::pair<
         Destroy();
         return false;
     }
-
     return true;
 }
 
@@ -1754,26 +1840,29 @@ const std::set<int>& RobotBase::GetNonAdjacentLinks(int adjacentoptions) const
 bool RobotBase::Grab(KinBodyPtr pbody)
 {
     ManipulatorPtr pmanip = GetActiveManipulator();
-    if( !pmanip )
+    if( !pmanip ) {
         return false;
+    }
     return Grab(pbody, pmanip->GetEndEffector());
 }
 
 bool RobotBase::Grab(KinBodyPtr pbody, const std::set<int>& setRobotLinksToIgnore)
 {
     ManipulatorPtr pmanip = GetActiveManipulator();
-    if( !pmanip )
+    if( !pmanip ) {
         return false;
+    }
     return Grab(pbody, pmanip->GetEndEffector(), setRobotLinksToIgnore);
 }
 
 bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr plink)
 {
-    if( !pbody || !plink || plink->GetParent() != shared_kinbody() )
+    if( !pbody || !plink || plink->GetParent() != shared_kinbody() ) {
         throw openrave_exception("invalid grab arguments",ORE_InvalidArguments);
-    if( pbody == shared_kinbody() )
+    }
+    if( pbody == shared_kinbody() ) {
         throw openrave_exception("robot cannot grab itself",ORE_InvalidArguments);
-
+    }
     if( IsGrabbing(pbody) ) {
         RAVELOG_VERBOSE("Robot %s: body %s already grabbed\n", GetName().c_str(), pbody->GetName().c_str());
         return true;
@@ -1805,11 +1894,12 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr plink)
 
 bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr pRobotLinkToGrabWith, const std::set<int>& setRobotLinksToIgnore)
 {
-    if( !pbody || !pRobotLinkToGrabWith || pRobotLinkToGrabWith->GetParent() != shared_kinbody() )
+    if( !pbody || !pRobotLinkToGrabWith || pRobotLinkToGrabWith->GetParent() != shared_kinbody() ) {
         throw openrave_exception("invalid grab arguments",ORE_InvalidArguments);
-    if( pbody == shared_kinbody() )
+    }
+    if( pbody == shared_kinbody() ) {
         throw openrave_exception("robot cannot grab itself",ORE_InvalidArguments);
-
+    }
     if( IsGrabbing(pbody) ) {
         RAVELOG_VERBOSE("Robot %s: body %s already grabbed\n", GetName().c_str(), pbody->GetName().c_str());
         return true;
@@ -1863,8 +1953,9 @@ void RobotBase::ReleaseAllGrabbed()
 {
     FOREACH(itgrabbed, _vGrabbedBodies) {
         KinBodyPtr pbody = itgrabbed->pbody.lock();
-        if( !!pbody )
+        if( !!pbody ) {
             _RemoveAttachedBody(pbody);
+        }
     }
     _vGrabbedBodies.clear();
 }
@@ -1895,10 +1986,10 @@ void RobotBase::RegrabAll()
 RobotBase::LinkPtr RobotBase::IsGrabbing(KinBodyConstPtr pbody) const
 {
     FOREACHC(itbody, _vGrabbedBodies) {
-        if( KinBodyConstPtr(itbody->pbody) == pbody )
+        if( KinBodyConstPtr(itbody->pbody) == pbody ) {
             return itbody->plinkrobot;
+        }
     }
-
     return LinkPtr();
 }
 
@@ -1907,8 +1998,9 @@ void RobotBase::GetGrabbed(std::vector<KinBodyPtr>& vbodies) const
     vbodies.resize(0);
     FOREACHC(itbody, _vGrabbedBodies) {
         KinBodyPtr pbody = itbody->pbody.lock();
-        if( !!pbody && pbody->GetEnvironmentId() )
+        if( !!pbody && pbody->GetEnvironmentId() ) {
             vbodies.push_back(pbody);
+        }
     }
 }
 
@@ -1934,15 +2026,17 @@ void RobotBase::SetActiveManipulator(const std::string& manipname)
 
 RobotBase::ManipulatorPtr RobotBase::GetActiveManipulator()
 {
-    if(_nActiveManip < 0 && _nActiveManip >= (int)_vecManipulators.size() )
+    if(_nActiveManip < 0 && _nActiveManip >= (int)_vecManipulators.size() ) {
         throw RobotBase::ManipulatorPtr();
+    }
     return _vecManipulators.at(_nActiveManip);
 }
 
 RobotBase::ManipulatorConstPtr RobotBase::GetActiveManipulator() const
 {
-    if(_nActiveManip < 0 && _nActiveManip >= (int)_vecManipulators.size() )
+    if(_nActiveManip < 0 && _nActiveManip >= (int)_vecManipulators.size() ) {
         return RobotBase::ManipulatorPtr();
+    }
     return _vecManipulators.at(_nActiveManip);
 }
 
@@ -1952,7 +2046,7 @@ bool RobotBase::CheckSelfCollision(CollisionReportPtr report) const
     if( KinBody::CheckSelfCollision(report) ) {
         return true;
     }
-    // check all grabbed bodies with 
+    // check all grabbed bodies with (TODO: support CO_ActiveDOFs option)
     bool bCollision = false;
     FOREACHC(itbody, _vGrabbedBodies) {
         KinBodyPtr pbody(itbody->pbody);
@@ -1985,8 +2079,9 @@ bool RobotBase::CheckSelfCollision(CollisionReportPtr report) const
         if( _vGrabbedBodies.size() > 1 ) {
             FOREACHC(itbody2, _vGrabbedBodies) {
                 KinBodyPtr pbody2(itbody2->pbody);
-                if( pbody != pbody2 )
+                if( pbody != pbody2 ) {
                     continue;
+                }
                 FOREACHC(itlink, pbody->GetLinks()) {
                     FOREACHC(itlink2, pbody2->GetLinks()) {
                         if( GetEnv()->CheckCollision(KinBody::LinkConstPtr(*itlink),KinBody::LinkConstPtr(*itlink2),report) ) {
@@ -2017,14 +2112,14 @@ bool RobotBase::CheckSelfCollision(CollisionReportPtr report) const
 bool RobotBase::CheckLinkCollision(int ilinkindex, const Transform& tlinktrans, CollisionReportPtr report)
 {
     LinkPtr plink = _veclinks.at(ilinkindex);
-    if( !plink->IsEnabled() ) {
-        return false;
+    if( plink->IsEnabled() ) {
+        boost::shared_ptr<TransformSaver<RobotBase::LinkPtr> > linksaver(new TransformSaver<RobotBase::LinkPtr>(plink)); // gcc optimization bug when linksaver is on stack?
+        plink->SetTransform(tlinktrans);
+        if( GetEnv()->CheckCollision(LinkConstPtr(plink),report) ) {
+            return true;
+        }
     }
-    boost::shared_ptr<TransformSaver<RobotBase::LinkPtr> > linksaver(new TransformSaver<RobotBase::LinkPtr>(plink)); // gcc optimization bug when linksaver is on stack
-    plink->SetTransform(tlinktrans);
-    if( GetEnv()->CheckCollision(LinkConstPtr(plink),report) ) {
-        return true;
-    }
+
     // check if any grabbed bodies are attached to this link
     std::vector<KinBodyConstPtr> vbodyexcluded;
     std::vector<KinBody::LinkConstPtr> vlinkexcluded;
@@ -2036,7 +2131,7 @@ bool RobotBase::CheckLinkCollision(int ilinkindex, const Transform& tlinktrans, 
                     vbodyexcluded.push_back(shared_kinbody_const());
                 }
                 KinBodyStateSaver bodysaver(pbody,Save_LinkTransformation);
-                pbody->SetTransform(plink->GetTransform() * itgrabbed->troot);
+                pbody->SetTransform(tlinktrans * itgrabbed->troot);
                 if( GetEnv()->CheckCollision(KinBodyConstPtr(pbody),vbodyexcluded, vlinkexcluded, report) ) {
                     return true;
                 }
@@ -2076,8 +2171,22 @@ void RobotBase::_ComputeInternalInformation()
             if( GetChain((*itmanip)->GetBase()->GetIndex(),(*itmanip)->GetEndEffector()->GetIndex(), vjoints) ) {
                 (*itmanip)->_varmdofindices.resize(0);
                 FOREACH(it,vjoints) {
-                    for(int i = 0; i < (*it)->GetDOF(); ++i) {
-                        (*itmanip)->_varmdofindices.push_back((*it)->GetDOFIndex()+i);
+                    if( (*it)->GetMimicJointIndex() >= 0 ) {
+                        JointPtr pmimicjoint = _vecjoints.at((*it)->GetMimicJointIndex());
+                        if( find(vjoints.begin(),vjoints.end(),pmimicjoint) == vjoints.end() ) {
+                            for(int i = 0; i < pmimicjoint->GetDOF(); ++i) {
+                                (*itmanip)->_varmdofindices.push_back((*it)->GetDOFIndex()+i);
+                            }
+                            //RAVELOG_WARN(str(boost::format("manipulator arm contains mimic joint %s whose source joint %s is not part of the arm, ignoring...\n")%(*it)->GetName()%_vecjoints.at((*it)->GetMimicJointIndex())->GetName()));
+                        }
+                    }
+                    else if( (*it)->GetDOFIndex() < 0) {
+                        RAVELOG_WARN(str(boost::format("manipulator arm contains joint %s without a dof index, ignoring...\n")%(*it)->GetName()));
+                    }
+                    else {
+                        for(int i = 0; i < (*it)->GetDOF(); ++i) {
+                            (*itmanip)->_varmdofindices.push_back((*it)->GetDOFIndex()+i);
+                        }
                     }
                 }
             }
@@ -2223,10 +2332,11 @@ bool RobotBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     _vRotation3DUpperLimits = r->_vRotation3DUpperLimits;
     _vRotation3DMaxVels = r->_vRotation3DMaxVels;
     _vRotation3DResolutions = r->_vRotation3DResolutions;
-    _vRotationQuatLowerLimits = r->_vRotationQuatLowerLimits;
-    _vRotationQuatUpperLimits = r->_vRotationQuatUpperLimits;
-    _vRotationQuatMaxVels = r->_vRotationQuatMaxVels;
-    _vRotationQuatResolutions = r->_vRotationQuatResolutions;
+    _vRotationQuatLimitStart = r->_vRotationQuatLimitStart;
+    _fQuatLimitMaxAngle = r->_fQuatLimitMaxAngle;
+    _fQuatMaxAngleVelocity = r->_fQuatMaxAngleVelocity;
+    _fQuatAngleResolution = r->_fQuatAngleResolution;
+    _fQuatAngleWeight = r->_fQuatAngleWeight;
 
     // clone the controller
     if( (cloningoptions&Clone_RealControllers) && !!r->GetController() ) {
@@ -2253,12 +2363,14 @@ void RobotBase::serialize(std::ostream& o, int options) const
 {
     KinBody::serialize(o,options);
     if( options & SO_RobotManipulators ) {
-        FOREACHC(itmanip,_vecManipulators)
+        FOREACHC(itmanip,_vecManipulators) {
             (*itmanip)->serialize(o,options);
+        }
     }
     if( options & SO_RobotSensors ) {
-        FOREACHC(itsensor,_vecSensors)
+        FOREACHC(itsensor,_vecSensors) {
             (*itsensor)->serialize(o,options);
+        }
     }
 }
 

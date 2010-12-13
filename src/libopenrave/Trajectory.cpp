@@ -77,12 +77,15 @@ TrajectoryBase::TrajectoryBase(EnvironmentBasePtr penv, int nDOF) : InterfaceBas
 {
     _nDOF = nDOF;
     _interpMethod = LINEAR;
+    _maxAffineTranslationVel = Vector(1,1,1);
+    _maxAffineRotationQuatVel = 1;
 }
 
 void TrajectoryBase::Reset(int nDOF)
 {
     Clear();
     _nDOF = nDOF;
+    _nQuaternionIndex = -1;
 }
 
 void TrajectoryBase::Clear()
@@ -101,10 +104,14 @@ bool TrajectoryBase::CalcTrajTiming(RobotBaseConstPtr pRobot, InterpEnum interpo
         return false;
     }
     if( !pRobot && bAutoCalcTiming ) {
-        RAVELOG_WARN("need to specify a robot if calculating trajectory timings\n");
-        return false;
+        if( _nDOF > 0 ) {
+            RAVELOG_WARN("need to specify a robot if calculating trajectory timings\n");
+            return false;
+        }
+        // allow at least transformations to be interpolated
     }
 
+    _nQuaternionIndex = -1;
     if( !!pRobot ) {
         if( bActiveDOFs ) {
             if( pRobot->GetActiveDOF() != GetDOF() ) {
@@ -116,6 +123,8 @@ bool TrajectoryBase::CalcTrajTiming(RobotBaseConstPtr pRobot, InterpEnum interpo
             pRobot->GetActiveDOFMaxAccel(_maxJointAccel);
             pRobot->GetActiveDOFLimits(_lowerJointLimit, _upperJointLimit);
             _diffstatefn = boost::bind(&RobotBase::SubtractActiveDOFValues,pRobot,_1,_2);
+            _nQuaternionIndex = pRobot->GetAffineDOFIndex(RobotBase::DOF_RotationQuat);
+            BOOST_ASSERT(_nQuaternionIndex < 0 || _nQuaternionIndex+4 <= _nDOF );
         }
         else {
             pRobot->GetDOFMaxVel(_maxJointVel);
@@ -291,16 +300,16 @@ bool TrajectoryBase::_SetLinear(bool bAutoCalcTiming, bool bActiveDOFs)
         if (bAutoCalcTiming) {
             // compute minimum time interval that does not exceed the maximum joint velocities
             timeInterval = _MinimumTimeLinear(_vecpoints[i-1], _vecpoints[i], bActiveDOFs);
-            if( timeInterval < 1e-4f ) {
-                timeInterval= 1e-4f;
+            if( timeInterval < g_fEpsilon ) {
+                timeInterval= g_fEpsilon;
             }
             _vecpoints[i].time = _vecpoints[i-1].time + timeInterval;
         }
         else {
             // use time stamps from the points
             timeInterval = _vecpoints[i].time - _vecpoints[i-1].time;
-            if( timeInterval < 1e-4f ) {
-                timeInterval = 1e-4f;
+            if( timeInterval < g_fEpsilon ) {
+                timeInterval = g_fEpsilon;
             }
         }
     }
@@ -737,15 +746,24 @@ dReal TrajectoryBase::_MinimumTimeLinear(const TPOINT& tp0, const TPOINT& tp1, b
     vd = tp1.q;
     _diffstatefn(vd,tp0.q);
 
-    // compute minimum time interval that does not exceed the
-    // maximum joint velocities
-    for (int d = 0; d < _nDOF; d++) {
+    // compute minimum time interval that does not exceed the maximum joint velocities
+    int d = 0;
+    while(d < _nDOF) {
         if(_maxJointVel[d] > 0.0) {
-            minJointTime = fabs(vd[d]) / _maxJointVel[d];
+            if( _nQuaternionIndex == d ) {
+                Vector q0(tp0.q[d],tp0.q[d+1],tp0.q[d+2],tp0.q[d+3]);
+                Vector q1(tp1.q[d],tp1.q[d+1],tp1.q[d+2],tp1.q[d+3]);
+                minJointTime = RaveAcos(min(dReal(1),RaveFabs(q0.dot(q1))))/_maxJointVel[d];
+                d += 3; // d will be increased by 1 below
+            }
+            else {
+                minJointTime = fabs(vd[d]) / _maxJointVel[d];
+            }
             if (minPathTime < minJointTime) {
                 minPathTime = minJointTime;
             }
         }
+        ++d;
     }
 
     if( !bActiveDOFs ) {
@@ -768,19 +786,32 @@ dReal TrajectoryBase::_MinimumTimeCubic(const TPOINT& tp0, const TPOINT& tp1, bo
     vd = tp1.q;
     _diffstatefn(vd,tp0.q);
 
-    // compute minimum time interval that does not exceed the
-    // maximum joint velocities or accelerations
-    for (int d = 0; d < _nDOF; d++) {
+    // compute minimum time interval that does not exceed the maximum joint velocities or accelerations
+    int d = 0;
+    while(d < _nDOF) {
         if(_maxJointVel[d] > 0.0 && _maxJointAccel[d] > 0 ) {
-            jointDiff = fabs(vd[d]);
-            velocityConstraint = (1.5f/_maxJointVel[d]) * jointDiff;
-            accelConstraint = RaveSqrt((6.0f/_maxJointAccel[d]) * jointDiff);
-            minJointTime = max( velocityConstraint, accelConstraint );
+            if( _nQuaternionIndex == d ) {
+                Vector q0(tp0.q[d],tp0.q[d+1],tp0.q[d+2],tp0.q[d+3]);
+                Vector q1(tp1.q[d],tp1.q[d+1],tp1.q[d+2],tp1.q[d+3]);
+                // correct?
+                jointDiff = RaveAcos(min(dReal(1),RaveFabs(q0.dot(q1))));
+                velocityConstraint = (1.5f/_maxJointVel[d]) * jointDiff;
+                accelConstraint = RaveSqrt((6.0f/_maxJointAccel[d]) * jointDiff);
+                minJointTime = max( velocityConstraint, accelConstraint );
+                d += 3; // d will be increased by 1 below
+            }
+            else {
+                jointDiff = fabs(vd[d]);
+                velocityConstraint = (1.5f/_maxJointVel[d]) * jointDiff;
+                accelConstraint = RaveSqrt((6.0f/_maxJointAccel[d]) * jointDiff);
+                minJointTime = max( velocityConstraint, accelConstraint );
+            }
 
             if (minPathTime < minJointTime) {
                 minPathTime = minJointTime;
             }
         }
+        ++d;
     }
 
     if( !bActiveDOFs ) {
@@ -804,18 +835,30 @@ dReal TrajectoryBase::_MinimumTimeCubicZero(const TPOINT& tp0, const TPOINT& tp1
     vd = tp1.q;
     _diffstatefn(vd,tp0.q);
 
-    // compute minimum time interval that does not exceed the
-    // maximum joint velocities or accelerations
-    for (int d = 0; d < _nDOF; d++) {
+    // compute minimum time interval that does not exceed the maximum joint velocities or accelerations
+    int d = 0;
+    while(d < _nDOF) {
         if(_maxJointVel[d] > 0.0 && _maxJointAccel[d] > 0 ) {
-            jointDiff          = fabs(vd[d]);
-            velocityConstraint = (1.5f/_maxJointVel[d]) * jointDiff;
-            accelConstraint    = RaveSqrt((6.0f/_maxJointAccel[d]) * jointDiff);
-            minJointTime = max( velocityConstraint, accelConstraint );
+            if( _nQuaternionIndex == d ) {
+                Vector q0(tp0.q[d],tp0.q[d+1],tp0.q[d+2],tp0.q[d+3]);
+                Vector q1(tp1.q[d],tp1.q[d+1],tp1.q[d+2],tp1.q[d+3]);
+                jointDiff = RaveAcos(min(dReal(1),RaveFabs(q0.dot(q1))));
+                velocityConstraint = (1.5f/_maxJointVel[d]) * jointDiff;
+                accelConstraint = RaveSqrt((6.0f/_maxJointAccel[d]) * jointDiff);
+                minJointTime = max( velocityConstraint, accelConstraint );
+                d += 3; // d will be increased by 1 below
+            }
+            else {
+                jointDiff = fabs(vd[d]);
+                velocityConstraint = (1.5f/_maxJointVel[d]) * jointDiff;
+                accelConstraint = RaveSqrt((6.0f/_maxJointAccel[d]) * jointDiff);
+                minJointTime = max( velocityConstraint, accelConstraint );
+            }
             if (minPathTime < minJointTime) {
                 minPathTime = minJointTime;
             }
         }
+        ++d;
     }
     
     if( !bActiveDOFs ) {
@@ -839,19 +882,28 @@ dReal TrajectoryBase::_MinimumTimeQuintic(const TPOINT& tp0, const TPOINT& tp1, 
     vd = tp1.q;
     _diffstatefn(vd,tp0.q);
 
-    // compute minimum time interval that does not exceed the
-    // maximum joint velocities or accelerations
-    for (int d = 0; d < _nDOF; d++) {
+    // compute minimum time interval that does not exceed the maximum joint velocities or accelerations
+    int d = 0;
+    while(d < _nDOF) {
         if(_maxJointVel[d] > 0.0 && _maxJointAccel[d] > 0.0) {
-            jointDiff = fabs(vd[d]);
-            velocityConstraint = (1.5f/_maxJointVel[d]) * jointDiff;
-            accelConstraint = RaveSqrt((6.0f/_maxJointAccel[d]) * jointDiff);
-            minJointTime = max( velocityConstraint, accelConstraint );
+            if( _nQuaternionIndex == d ) {
+                Vector q0(tp0.q[d],tp0.q[d+1],tp0.q[d+2],tp0.q[d+3]);
+                Vector q1(tp1.q[d],tp1.q[d+1],tp1.q[d+2],tp1.q[d+3]);
+                jointDiff = RaveAcos(min(dReal(1),RaveFabs(q0.dot(q1))))/_maxJointVel[d];
+                d += 3; // d will be increased by 1 below
+            }
+            else {
+                jointDiff = fabs(vd[d]);
+                velocityConstraint = (1.5f/_maxJointVel[d]) * jointDiff;
+                accelConstraint = RaveSqrt((6.0f/_maxJointAccel[d]) * jointDiff);
+                minJointTime = max( velocityConstraint, accelConstraint );
+            }
 
             if (minPathTime < minJointTime) {
                 minPathTime = minJointTime;
             }
         }
+        ++d;
     }
 
     if( !bActiveDOFs ) {
@@ -870,7 +922,7 @@ dReal TrajectoryBase::_MinimumTimeTransform(const Transform& t0, const Transform
     dReal x_time = fabs(t1.trans.x - t0.trans.x) / _maxAffineTranslationVel.x;
     dReal y_time = fabs(t1.trans.y - t0.trans.y) / _maxAffineTranslationVel.y;
     dReal z_time = fabs(t1.trans.z - t0.trans.z) / _maxAffineTranslationVel.z;
-    dReal rot_dist = RaveAcos(min(dReal(1),RaveFabs(t0.rot.dot(t1.rot))))/_maxAffineRotationQuatVel.x;
+    dReal rot_dist = RaveAcos(min(dReal(1),RaveFabs(t0.rot.dot(t1.rot))))/_maxAffineRotationQuatVel;
     return max(max(max(x_time,y_time),z_time),rot_dist);
 }
 
@@ -892,21 +944,55 @@ bool TrajectoryBase::_SampleLinear(const TPOINT& p0, const TPOINT& p1, const TSE
     BOOST_ASSERT (seg._fduration > 0.0);
     BOOST_ASSERT (fabs((p1.time - p0.time) - seg._fduration) < 1e-4);
     dReal t = time - p0.time;
+    dReal tduration = t/seg._fduration;
     sample.q.resize(_nDOF);
     sample.qdot.resize(_nDOF);
     //sample.qaccel.resize(_nDOF);
 
     // perform the interpolation
-    for (int d = 0; d < _nDOF; d++) {
-        sample.q[d] = seg.Get(0, d) + t * seg.Get(1, d);
-        sample.qdot[d] = seg.Get(1, d);
+    int d = 0;
+    while(d < _nDOF) {
+        if( d == _nQuaternionIndex ) {
+            Vector q0(p0.q[d],p0.q[d+1],p0.q[d+2],p0.q[d+3]);
+            Vector q1(p1.q[d],p1.q[d+1],p1.q[d+2],p1.q[d+3]);
+            Vector qres = quatSlerp(q0, q1,tduration);
+            sample.q[d] = qres.x;
+            sample.q[d+1] = qres.y;
+            sample.q[d+2] = qres.z;
+            sample.q[d+3] = qres.w;
+            Vector qtemp = quatMultiply(q1,quatInverse(q0));
+            Vector axis(qtemp.y,qtemp.z,qtemp.w);
+            dReal sinangle = RaveSqrt(axis.lengthsqr3());
+            if( sinangle > 0 ) {
+                axis /= sinangle;
+                Vector qlog(0,axis.x,axis.y,axis.z);
+                qlog *= RaveAtan2(sinangle,qtemp.x)/seg._fduration;
+                Vector qderiv = quatMultiply(qlog,qres);
+                sample.qdot[d] = qderiv.x;
+                sample.qdot[d+1] = qderiv.y;
+                sample.qdot[d+2] = qderiv.z;
+                sample.qdot[d+3] = qderiv.w;
+            }
+            else {
+                sample.qdot[d+0] = 0;
+                sample.qdot[d+1] = 0;
+                sample.qdot[d+2] = 0;
+                sample.qdot[d+3] = 0;
+            }
+            d += 3;
+        }
+        else {
+            sample.q[d] = seg.Get(0, d) + t * seg.Get(1, d);
+            sample.qdot[d] = seg.Get(1, d);
+        }
         //sample.qaccel[d] = 0.0;
+        ++d;
     }
 
     //NEED TO do t/(seg._fduration-step)
     sample.time = time;
-    sample.trans.trans = p0.trans.trans + (t/(seg._fduration))*(p1.trans.trans - p0.trans.trans);
-    sample.trans.rot = quatSlerp(p0.trans.rot, p1.trans.rot,(t/(seg._fduration)));
+    sample.trans.trans = p0.trans.trans + tduration*(p1.trans.trans - p0.trans.trans);
+    sample.trans.rot = quatSlerp(p0.trans.rot, p1.trans.rot,tduration);
     return true;
 }
 

@@ -1818,9 +1818,9 @@ namespace OpenRAVEXMLParser
                         if( !_plink )
                             throw openrave_exception("link should be valid");
 
-                        if( _plink->index < 0 ) {
+                        if( _plink->_index < 0 ) {
                             // not in array yet
-                            _plink->index = (int)_pchain->_veclinks.size();
+                            _plink->_index = (int)_pchain->_veclinks.size();
                             _pchain->_veclinks.push_back(_plink);
                             _vTransforms.push_back(Transform());
                         }

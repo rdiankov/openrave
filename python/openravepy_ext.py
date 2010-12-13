@@ -674,6 +674,20 @@ class openrave_exception(Exception):
         except AttributeError:
             return super(openrave_exception,self).__getattribute__(attr)
 
+class runtime_error(Exception):
+    """wrap up the C++ runtime_error"""
+    def __init__( self, app_error ):
+        Exception.__init__( self )
+        self._pimpl = app_error
+    def __str__( self ):
+        return self._pimpl.message()
+    def __getattribute__(self, attr):
+        my_pimpl = super(runtime_error, self).__getattribute__("_pimpl")
+        try:
+            return getattr(my_pimpl, attr)
+        except AttributeError:
+            return super(runtime_error,self).__getattribute__(attr)
+
 class pyann_exception(Exception):
     """wrap up the C++ pyann_exception"""
     def __init__( self, app_error ):
