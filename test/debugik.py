@@ -144,7 +144,7 @@ def debug_ik():
 def test_ik():
     from sympy import *
     import __builtin__
-    from openravepy.ikfast import SolverStoreSolution, SolverSolution, combinations, SolverSequence, fmod
+    from openravepy.ikfast import SolverStoreSolution, SolverSolution, combinations, SolverSequence, fmod, SolverRotation, SolverIKChainTransform6D, SolverBranchConds
     ikmodel=self
     self = solver
     alljoints = self.getJointsInChain(baselink, eelink)

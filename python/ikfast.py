@@ -1525,10 +1525,10 @@ class IKFastSolver(AutoReloader):
                 if all([not LinksAccumRight[rotindex][i,j].is_zero for i in range(3) for j in range(3)]):
                     break
                 rotindex = rotindex-1
-
+            
             if rotindex < 0:
                 print 'Current joints cannot solve for a full 3D rotation'
-
+            
             # add all but first 3 vars to free parameters
             rotvars = []
             transvars = []
@@ -1582,10 +1582,10 @@ class IKFastSolver(AutoReloader):
         else:
             endbranchtree = [SolverSequence([rottree])]
 
-        curtransvars = transvars[:]
         AllEquations = self.buildEquationsFromPositions(Positions,Positionsee)
         if not solveRotationFirst:
             AllEquations = [eq for eq in AllEquations if not eq.has_any_symbols(*rotvars)]
+        curtransvars = transvars[:]
         transtree = self.solveAllEquations(AllEquations,curvars=curtransvars,othersolvedvars = rotvars+freejointvars if solveRotationFirst else freejointvars,solsubs = solsubs,endbranchtree=endbranchtree)
 
         solvertree = []
@@ -1603,6 +1603,7 @@ class IKFastSolver(AutoReloader):
         rottree += self.solveIKRotation(R=R,Ree = Tee[0:3,0:3].subs(rotsubs),rawvars = rotvars,endbranchtree=storesolutiontree,solvedvarsubs=solvedvarsubs)
         if len(rottree) == 0:
             raise self.CannotSolveError('could not solve for all rotation variables: %s:%s'%(str(freevar),str(freevalue)))
+        
         if solveRotationFirst:
             solvertree.append(SolverRotation(LinksAccumLeftInv[rotindex].subs(solvedvarsubs)*Tee, rottree))
         else:
@@ -1959,6 +1960,7 @@ class IKFastSolver(AutoReloader):
         eqns = [eq.expand() for eq in raweqns if eq.has_any_symbols(var)]
         if len(eqns) == 0:
             raise self.CannotSolveError('not enough equations')
+        
         solutions = []
         if len(eqns) > 1:
             neweqns = []
@@ -2010,7 +2012,11 @@ class IKFastSolver(AutoReloader):
                     goodsolution = 0
                     for svarsol,cvarsol in sollist:
                         # solutions cannot be trivial
-                        if self.chop((svarsol-cvarsol).subs(listsymbols)) == 0 or self.chop(svarsol.subs(listsymbols)) == 0 or self.chop(cvarsol.subs(listsymbols)) == 0:
+                        if self.chop((svarsol-cvarsol).subs(listsymbols)) == 0:
+                            break
+                        if self.chop(svarsol.subs(listsymbols)) == S.Zero and self.chop(abs(cvarsol.subs(listsymbols)) - S.One) != S.Zero:
+                            break
+                        if self.chop(cvarsol.subs(listsymbols)) == S.Zero and self.chop(abs(svarsol.subs(listsymbols)) - S.One) != S.Zero:
                             break
                         # check the numerator and denominator if solutions are the same or for possible divide by zeros
                         svarfrac=fraction(svarsol)

@@ -869,12 +869,12 @@ Vector KinBody::Joint::GetAxis(int iaxis) const
 
 Vector KinBody::Joint::GetInternalHierarchyAxis(int iaxis) const
 {
-    return vAxes.at(iaxis);
+    return ( !!bodies[1] && !bodies[1]->IsStatic() && bodies[1] == bodies[0]->GetParentLink() ) ? -vAxes.at(iaxis) : vAxes.at(iaxis);
 }
 
 Transform KinBody::Joint::GetInternalHierarchyLeftTransform() const
 {
-    if( !!bodies[1] && bodies[1] == bodies[0]->GetParentLink() ) {
+    if( !!bodies[1] && !bodies[1]->IsStatic() && bodies[1] == bodies[0]->GetParentLink() ) {
         // bodies[0] is a child
         Transform tjoint;
         if( GetType() == Joint::JointHinge ) {
@@ -897,7 +897,7 @@ Transform KinBody::Joint::GetInternalHierarchyLeftTransform() const
 
 Transform KinBody::Joint::GetInternalHierarchyRightTransform() const
 {
-    return ( !!bodies[1] && bodies[1] == bodies[0]->GetParentLink() ) ? tinvLeft : tRight;
+    return ( !!bodies[1] && !bodies[1]->IsStatic() && bodies[1] == bodies[0]->GetParentLink() ) ? tinvLeft : tRight;
 }
 
 void KinBody::Joint::GetVelocities(std::vector<dReal>& pVelocities, bool bAppend) const
