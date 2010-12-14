@@ -207,6 +207,8 @@ class ConvexDecompositionModel(OpenRAVEModel):
         planes = c_[normals,-sum(normals*v0,1)]
         meandist = dot(planes[:,0:3],vm)+planes[:,3]
         planes = r_[planes[flatnonzero(meandist<-1e-7)],-planes[flatnonzero(meandist>1e-7)]]
+        if len(planes) == 0:
+            return planes
         normalizedplanes = planes/transpose(tile(sqrt(sum(planes**2,1)),(4,1)))
         # prune similar planes
         uniqueplanes = ones(len(planes),bool)
