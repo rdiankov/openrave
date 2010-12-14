@@ -2690,7 +2690,7 @@ void KinBody::_ComputeInternalInformation()
     // create the adjacency list
     {
         // set to 0 when computing hashes
-        KinBodyStateSaver bodysaver(shared_kinbody());
+        vector<dReal> vprev; GetDOFValues(vprev);
         vector<dReal> vzero(GetDOF(),0);
         SetDOFValues(vzero);
 
@@ -2774,6 +2774,8 @@ void KinBody::_ComputeInternalInformation()
                 }
             }
         }
+
+        SetDOFValues(vprev);
     }
 }
 
