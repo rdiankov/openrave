@@ -1875,8 +1875,7 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr plink)
     g.troot = plink->GetTransform().inverse() * pbody->GetTransform();
 
     {
-        CollisionOptionSaver colsaver(GetEnv(),0); // have to reset the collision options
-
+        CollisionOptionsStateSaver colsaver(GetEnv()->GetCollisionChecker(),0); // have to reset the collision options
         // check collision with all links to see which are valid
         FOREACH(itlink, _veclinks) {
             if( GetEnv()->CheckCollision(LinkConstPtr(*itlink), KinBodyConstPtr(pbody)) ) {
@@ -1912,7 +1911,7 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr pRobotLinkToGrabWith, const std::
     g.troot = pRobotLinkToGrabWith->GetTransform().inverse() * pbody->GetTransform();
 
     {
-        CollisionOptionSaver colsaver(GetEnv(),0); // have to reset the collision options
+        CollisionOptionsStateSaver colsaver(GetEnv()->GetCollisionChecker(),0); // have to reset the collision options
 
         // check collision with all links to see which are valid
         FOREACH(itlink, _veclinks) {
@@ -1962,7 +1961,7 @@ void RobotBase::ReleaseAllGrabbed()
 
 void RobotBase::RegrabAll()
 {
-    CollisionOptionSaver colsaver(GetEnv(),0); // have to reset the collision options
+    CollisionOptionsStateSaver colsaver(GetEnv()->GetCollisionChecker(),0); // have to reset the collision options
     FOREACH(itbody, _vGrabbedBodies) {
         KinBodyPtr pbody(itbody->pbody);
         if( !!pbody ) {

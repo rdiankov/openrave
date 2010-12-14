@@ -577,10 +577,47 @@ public:
         _pbody->GetDOFWeights(values);
         return toPyArray(values);
     }
+
+    object GetDOFWeights(object oindices) const
+    {
+        if( oindices == object() ) {
+            return numeric::array(boost::python::list());
+        }
+        vector<int> vindices = ExtractArray<int>(oindices);
+        if( vindices.size() == 0 ) {
+            return numeric::array(boost::python::list());
+        }
+        vector<dReal> values, v;
+        values.reserve(vindices.size());
+        FOREACHC(it, vindices) {
+            KinBody::JointPtr pjoint = _pbody->GetJointFromDOFIndex(*it);
+            values.push_back(pjoint->GetWeight(*it-pjoint->GetDOFIndex()));
+        }
+        return toPyArray(values);
+    }
+
     object GetDOFResolutions() const
     {
         vector<dReal> values;
         _pbody->GetDOFResolutions(values);
+        return toPyArray(values);
+    }
+
+    object GetDOFResolutions(object oindices) const
+    {
+        if( oindices == object() ) {
+            return numeric::array(boost::python::list());
+        }
+        vector<int> vindices = ExtractArray<int>(oindices);
+        if( vindices.size() == 0 ) {
+            return numeric::array(boost::python::list());
+        }
+        vector<dReal> values, v;
+        values.reserve(vindices.size());
+        FOREACHC(it, vindices) {
+            KinBody::JointPtr pjoint = _pbody->GetJointFromDOFIndex(*it);
+            values.push_back(pjoint->GetResolution());
+        }
         return toPyArray(values);
     }
 
@@ -1705,7 +1742,7 @@ public:
     void SetAffineRotationAxisMaxVels(object vels) { _probot->SetAffineRotationAxisMaxVels(ExtractVector3(vels)); }
     void SetAffineRotation3DMaxVels(object vels) { _probot->SetAffineRotation3DMaxVels(ExtractVector3(vels)); }
     void SetAffineRotationQuatMaxVels(dReal vels) { _probot->SetAffineRotationQuatMaxVels(vels); }
-    void SetAffineTranslationResolution(object resolution) { _probot->SetAffineTranslationResolution(ExtractVector4(resolution)); }
+    void SetAffineTranslationResolution(object resolution) { _probot->SetAffineTranslationResolution(ExtractVector3(resolution)); }
     void SetAffineRotationAxisResolution(object resolution) { _probot->SetAffineRotationAxisResolution(ExtractVector3(resolution)); }
     void SetAffineRotation3DResolution(object resolution) { _probot->SetAffineRotation3DResolution(ExtractVector3(resolution)); }
     void SetAffineRotationQuatResolution(dReal resolution) { _probot->SetAffineRotationQuatResolution(resolution); }
@@ -3465,6 +3502,10 @@ BOOST_PYTHON_MODULE(openravepy_int)
         object (PyKinBody::*getdofvalues2)(object) const = &PyKinBody::GetDOFValues;
         object (PyKinBody::*getdoflimits1)() const = &PyKinBody::GetDOFLimits;
         object (PyKinBody::*getdoflimits2)(object) const = &PyKinBody::GetDOFLimits;
+        object (PyKinBody::*getdofweights1)() const = &PyKinBody::GetDOFWeights;
+        object (PyKinBody::*getdofweights2)(object) const = &PyKinBody::GetDOFWeights;
+        object (PyKinBody::*getdofresolutions1)() const = &PyKinBody::GetDOFResolutions;
+        object (PyKinBody::*getdofresolutions2)(object) const = &PyKinBody::GetDOFResolutions;
         object (PyKinBody::*getdofvelocitylimits1)() const = &PyKinBody::GetDOFVelocityLimits;
         object (PyKinBody::*getdofvelocitylimits2)(object) const = &PyKinBody::GetDOFVelocityLimits;
         object (PyKinBody::*getlinks1)() const = &PyKinBody::GetLinks;
@@ -3494,8 +3535,10 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("GetDOFVelocityLimits",getdofvelocitylimits1, DOXY_FN(KinBody,GetDOFVelocityLimits))
             .def("GetDOFVelocityLimits",getdofvelocitylimits2, args("indices"),DOXY_FN(KinBody,GetDOFVelocityLimits))
             .def("GetDOFMaxVel",&PyKinBody::GetDOFMaxVel, DOXY_FN(KinBody,GetDOFMaxVel))
-            .def("GetDOFWeights",&PyKinBody::GetDOFWeights, DOXY_FN(KinBody,GetDOFWeights))
-            .def("GetDOFResolutions",&PyKinBody::GetDOFResolutions, DOXY_FN(KinBody,GetDOFResolutions))
+            .def("GetDOFWeights",getdofweights1, DOXY_FN(KinBody,GetDOFWeights))
+            .def("GetDOFWeights",getdofweights2, DOXY_FN(KinBody,GetDOFWeights))
+            .def("GetDOFResolutions",getdofresolutions1, DOXY_FN(KinBody,GetDOFResolutions))
+            .def("GetDOFResolutions",getdofresolutions2, DOXY_FN(KinBody,GetDOFResolutions))
             .def("GetJointValues",&PyKinBody::GetJointValues, DOXY_FN(KinBody,GetJointValues))
             .def("GetJointVelocities",&PyKinBody::GetJointVelocities, DOXY_FN(KinBody,GetJointVelocities))
             .def("GetJointLimits",&PyKinBody::GetJointLimits, DOXY_FN(KinBody,GetJointLimits))

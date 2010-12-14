@@ -2618,74 +2618,8 @@ void KinBody::_ComputeInternalInformation()
         }
     }
 
-    // create the adjacency list
-    vector<dReal> prevvalues; GetDOFValues(prevvalues);
-    vector<dReal> vzero(GetDOF());
-    SetDOFValues(vzero);
-    _setAdjacentLinks.clear();
-    FOREACH(it,_setNonAdjacentLinks) {
-        it->clear();
-    }
-    _nNonAdjacentLinkCache = 0;
-
-    if( _bMakeJoinedLinksAdjacent ) {
-        FOREACH(itj, _vecjoints) {
-            if( !!(*itj)->bodies[0] && !!(*itj)->bodies[1] ) {
-                int ind0 = (*itj)->bodies[0]->GetIndex();
-                int ind1 = (*itj)->bodies[1]->GetIndex();
-                if( ind1 < ind0 ) {
-                    _setAdjacentLinks.insert(ind1|(ind0<<16));
-                }
-                else {
-                    _setAdjacentLinks.insert(ind0|(ind1<<16));
-                }
-            }
-        }
-
-        FOREACH(itj, _vecPassiveJoints) {
-            if( !!(*itj)->bodies[0] && !!(*itj)->bodies[1] ) {
-                int ind0 = (*itj)->bodies[0]->GetIndex();
-                int ind1 = (*itj)->bodies[1]->GetIndex();
-                if( ind1 < ind0 ) {
-                    _setAdjacentLinks.insert(ind1|(ind0<<16));
-                }
-                else {
-                    _setAdjacentLinks.insert(ind0|(ind1<<16));
-                }
-            }
-        }
-    }
-
-    FOREACH(itadj, _vForcedAdjacentLinks) {
-        LinkPtr pl0 = GetLink(itadj->first.c_str());
-        LinkPtr pl1 = GetLink(itadj->second.c_str());
-        if( !!pl0 && !!pl1 ) {
-            int ind0 = pl0->GetIndex();
-            int ind1 = pl1->GetIndex();
-            if( ind1 < ind0 ) {
-                _setAdjacentLinks.insert(ind1|(ind0<<16));
-            }
-            else {
-                _setAdjacentLinks.insert(ind0|(ind1<<16));
-            }
-        }
-    }
-
-    // set a default pose
     {
-        CollisionOptionSaver colsaver(GetEnv(),0); // have to reset the collision options
-        for(size_t i = 0; i < _veclinks.size(); ++i) {
-            for(size_t j = i+1; j < _veclinks.size(); ++j) {
-                if( _setAdjacentLinks.find(i|(j<<16)) == _setAdjacentLinks.end() && !GetEnv()->CheckCollision(LinkConstPtr(_veclinks[i]), LinkConstPtr(_veclinks[j])) ) {
-                    _setNonAdjacentLinks[0].insert(i|(j<<16));
-                }
-            }
-        }
-    }
-
-    SetDOFValues(prevvalues, true);
-
-    {
+        // force all joints to 0 when computing hashes?
         ostringstream ss;
         ss << std::fixed << std::setprecision(SERIALIZATION_PRECISION);
         serialize(ss,SO_Kinematics|SO_Geometry);
@@ -2747,6 +2681,95 @@ void KinBody::_ComputeInternalInformation()
                     }
                     if( (*itpassive)->GetSecondAttached() == plink && !!(*itpassive)->GetFirstAttached() && find(vattachedlinks.begin(),vattachedlinks.end(),(*itpassive)->GetFirstAttached()->GetIndex()) == vattachedlinks.end()) {
                         vattachedlinks.push_back((*itpassive)->GetFirstAttached()->GetIndex());
+                    }
+                }
+            }
+        }
+    }
+
+    // create the adjacency list
+    {
+        // set to 0 when computing hashes
+        KinBodyStateSaver bodysaver(shared_kinbody());
+        vector<dReal> vzero(GetDOF(),0);
+        SetDOFValues(vzero);
+
+        _setAdjacentLinks.clear();
+        FOREACH(it,_setNonAdjacentLinks) {
+            it->clear();
+        }
+        _nNonAdjacentLinkCache = 0;
+
+        FOREACH(itadj, _vForcedAdjacentLinks) {
+            LinkPtr pl0 = GetLink(itadj->first.c_str());
+            LinkPtr pl1 = GetLink(itadj->second.c_str());
+            if( !!pl0 && !!pl1 ) {
+                int ind0 = pl0->GetIndex();
+                int ind1 = pl1->GetIndex();
+                if( ind1 < ind0 ) {
+                    _setAdjacentLinks.insert(ind1|(ind0<<16));
+                }
+                else {
+                    _setAdjacentLinks.insert(ind0|(ind1<<16));
+                }
+            }
+        }
+
+        if( _bMakeJoinedLinksAdjacent ) {
+            FOREACH(itj, _vecjoints) {
+                if( !!(*itj)->bodies[0] && !!(*itj)->bodies[1] ) {
+                    int ind0 = (*itj)->bodies[0]->GetIndex();
+                    int ind1 = (*itj)->bodies[1]->GetIndex();
+                    if( ind1 < ind0 ) {
+                        _setAdjacentLinks.insert(ind1|(ind0<<16));
+                    }
+                    else {
+                        _setAdjacentLinks.insert(ind0|(ind1<<16));
+                    }
+                }
+            }
+        
+            FOREACH(itj, _vecPassiveJoints) {
+                if( !!(*itj)->bodies[0] && !!(*itj)->bodies[1] ) {
+                    int ind0 = (*itj)->bodies[0]->GetIndex();
+                    int ind1 = (*itj)->bodies[1]->GetIndex();
+                    if( ind1 < ind0 ) {
+                        _setAdjacentLinks.insert(ind1|(ind0<<16));
+                    }
+                    else {
+                        _setAdjacentLinks.insert(ind0|(ind1<<16));
+                    }
+                }
+            }
+
+            // if a pair links has exactly one non-static joint in the middle, then make the pair adjacent
+            vector<JointPtr> vjoints;
+            for(int i = 0; i < (int)_veclinks.size()-1; ++i) {
+                for(int j = i+1; j < (int)_veclinks.size(); ++j) {
+                    GetChain(i,j,vjoints);
+                    size_t numstatic = 0;
+                    FOREACH(it,vjoints) {
+                        numstatic += (*it)->IsStatic();
+                    }
+                    if( numstatic+1 >= vjoints.size() ) {
+                        if( i < j ) {
+                            _setAdjacentLinks.insert(i|(j<<16));
+                        }
+                        else {
+                            _setAdjacentLinks.insert(j|(i<<16));
+                        }
+                    }
+                }
+            }
+        }
+
+        // set a default pose and check for colliding link pairs
+        {
+            CollisionOptionsStateSaver colsaver(GetEnv()->GetCollisionChecker(),0); // have to reset the collision options
+            for(size_t i = 0; i < _veclinks.size(); ++i) {
+                for(size_t j = i+1; j < _veclinks.size(); ++j) {
+                    if( _setAdjacentLinks.find(i|(j<<16)) == _setAdjacentLinks.end() && !GetEnv()->CheckCollision(LinkConstPtr(_veclinks[i]), LinkConstPtr(_veclinks[j])) ) {
+                        _setNonAdjacentLinks[0].insert(i|(j<<16));
                     }
                 }
             }

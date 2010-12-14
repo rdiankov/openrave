@@ -655,8 +655,15 @@ def test_pr2movehandstraight():
     env=Environment()
     env.Load('robots/pr2-beta-static.robot.xml')
     robot=env.GetRobots()[0]
+    RaveSetDebugLevel(DebugLevel.Debug)
     basemanip = interfaces.BaseManipulation(robot)
-    with env:
+    lmodel = databases.linkstatistics.LinkStatisticsModel(robot)
+    if not lmodel.load():
+        lmodel.autogenerate()
+    lmodel.setRobotWeights()
+    lmodel.setRobotResolutions()
+    with env:        
+        robot.GetController().Reset(0)
         robot.SetDOFValues(array([  3.92742505e+00,  -1.11998514e+02,  -1.12338294e+02, -2.58996561e+01,  -4.50039340e+02,  -4.94179434e+02, -1.02276493e+01,  -7.15039024e+02,  -7.36311760e+02, 1.02395814e+01,   2.59771698e+02,   2.57443795e+02, 2.30174678e-01,   1.46851569e-02,  -4.67573707e-01, 5.14696340e-03,   8.37552006e-01,   1.02808376e+00, -2.17092539e+00,   7.99473354e+00,  -1.90625735e+00, 3.75677048e-02,   7.16413010e-03,   9.25338303e-04, 1.30856421e-02,  -1.44843374e-01,   1.06201002e+00, -1.84726393e+00,  -1.53293256e+00,   1.22156997e+00, 4.56456176e-03,  -5.94439315e+00,   7.32226686e-03, 9.54206204e-04]))
         Tgoal = array([[  1.77635684e-15,   0.00000000e+00,   1.00000000e+00, 0.6],
                        [  0.00000000e+00,   1.00000000e+00,   0.00000000e+00, 0],
@@ -665,6 +672,7 @@ def test_pr2movehandstraight():
         robot.SetActiveManipulator('rightarm_torso')
         manip = robot.GetManipulator('rightarm_torso')
         sol = manip.FindIKSolution(Tgoal,IkFilterOptions.CheckEnvCollisions)
-        basemanip.MoveToHandPosition(matrices=[Tgoal])
+    for iter in range(10):
+        basemanip.MoveToHandPosition(matrices=[Tgoal],execute=False)
     
     robot.SetDOFValues(sol,manip.GetArmIndices())

@@ -263,19 +263,6 @@ smart_pointer_deleter(P const & p, const boost::function<void(void const*)>& del
     }
 };
 
-class CollisionOptionSaver
-{
- public:
- CollisionOptionSaver(EnvironmentBasePtr penv, int newoptions) : _penv(penv) {
-        _oldoptions=_penv->GetCollisionChecker()->GetCollisionOptions();
-        _penv->GetCollisionChecker()->SetCollisionOptions(newoptions);
-    }
-    virtual ~CollisionOptionSaver() { _penv->GetCollisionChecker()->SetCollisionOptions(_oldoptions); }
- private:
-    EnvironmentBasePtr _penv;
-    int _oldoptions;
-};
-
 }
 
 // need the prototypes in order to keep them free of the OpenRAVE namespace

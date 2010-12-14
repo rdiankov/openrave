@@ -110,9 +110,14 @@ class LinkStatisticsModel(OpenRAVEModel):
         """sets the robot resolution
         xyzdelta is the maxdistance allowed to be swept."""
         with self.env:
-            jresolutions = array([xyzdelta/numpy.max(jv['crossarea'][:,0]) for jv in self.jointvolumes])
-            for w,j in izip(jresolutions,self.robot.GetJoints()):
-                j.SetResolution(r)
+            for index,joint in enumerate(self.robot.GetJoints()):
+                if joint.GetType() == KinBody.Joint.Type.Prismatic:
+                    joint.SetResolution(xyzdelta)
+                elif not joint.IsStatic():
+                    crossarea = self.jointvolumes[index]['crossarea']
+                    # some cross areas are 0.... bad sampling?
+                    if len(crossarea) > 0:
+                        joint.SetResolution(xyzdelta/numpy.max(crossarea[:,0]))
             self.robot.SetAffineTranslationResolution(tile(xyzdelta,3))
             self.robot.SetAffineRotationAxisResolution(tile(xyzdelta/numpy.max(self.affinevolumes[3+2]['crossarea'][:,0]),4))
 
@@ -131,11 +136,11 @@ class LinkStatisticsModel(OpenRAVEModel):
                         accumvolume = sum(array([volume for ilink,volume in enumerate(linkvolumes) if self.robot.DoesAffect(ijoint,ilink)]))
                     return (volumeinfo['volumedelta']*accumvolume)**weightexp
                 jweights = array([getweight(ijoint,jv) for ijoint,jv in enumerate(self.jointvolumes)])
-                #jweights *= 0.5#1.0/mean(jweights) # normalize.........?
+                jweights *= 1.0/mean(jweights) # normalize.........?
                 for w,j in izip(jweights,self.robot.GetJoints()):
                     j.SetWeights(tile(w,j.GetDOF()))
                 self.robot.SetAffineTranslationWeights([getweight(-1,self.affinevolumes[i]) for i in range(3)])
-                self.robot.SetAffineRotationAxisResolution(tile(getweight(-1,self.affinevolumes[3+2]),4)) # only z axis
+                self.robot.SetAffineRotationAxisWeights(tile(getweight(-1,self.affinevolumes[3+2]),4)) # only z axis
             elif type == 1:
                 # set everything to 1
                 for j in self.robot.GetJoints():
