@@ -23,6 +23,7 @@ import fastgrasping
 import hanoi
 import graspplanning
 import mobilemanipulation
+import movehandstraight
 import simplenavigation
 import testcamerasensor
 import testphysics

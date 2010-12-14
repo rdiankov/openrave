@@ -41,6 +41,7 @@ Options can be specified to prioritize trajectory time, trajectory smoothness, a
 In the simplest case, the workspace trajectory can be a straight line from one point to another.\n\
 ";
         _report.reset(new CollisionReport());
+        _filteroptions = 0;
     }
     virtual ~WorkspaceTrajectoryTracker() {}
 
@@ -73,8 +74,18 @@ In the simplest case, the workspace trajectory can be a straight line from one p
                 _robot->SetActiveDOFs(_manip->GetArmIndices());
                 _robot->GetActiveDOFValues(dummyvalues);
                 for(size_t j = 0; j < dummyvalues.size(); ++j) {
-                    if( RaveFabs(dummyvalues.at(j) - testvalues[i]->at(j)) > 2*g_fEpsilon ) {
-                        RAVELOG_ERROR(str(boost::format("parameter configuration space does not match active manipulator, dof %d!\n")%j));
+                    dReal diff = RaveFabs(dummyvalues.at(j) - testvalues[i]->at(j));
+                    // this is necessary in case robot's have limits like [-100,100] for revolute joints (pa10 arm)
+                    if( _robot->GetJoints().at(_manip->GetArmIndices().at(j))->GetType() == KinBody::Joint::JointRevolute ) {
+                        if( diff > PI ) {
+                            diff -= 2*PI;
+                        }
+                        if( diff < -PI ) {
+                            diff += 2*PI;
+                        }
+                    }
+                    if( diff > 2*g_fEpsilon ) {
+                        RAVELOG_ERROR(str(boost::format("parameter configuration space does not match active manipulator, dof %d=%f!\n")%j%RaveFabs(dummyvalues.at(j) - testvalues[i]->at(j))));
                         return false;
                     }
                 }
@@ -202,13 +213,15 @@ In the simplest case, the workspace trajectory can be a straight line from one p
         list<Transform>::iterator ittrans = listtransforms.begin();
         bPrevInCollision = true;
         for(dReal ftime = 0; ftime < fendtime; ftime += _parameters->_fStepLength, ++ittrans) {
-            int filteroptions = (ftime >= fstarttime) ? IKFO_CheckEnvCollisions : 0;
-            if( !_manip->FindIKSolution(*ittrans,vsolution,filteroptions) ) {
-                if( ftime < fstarttime ) {
-                    return false; // a solution really doesn't exist
+            _filteroptions = (ftime >= fstarttime) ? IKFO_CheckEnvCollisions : 0;
+            if( !_manip->FindIKSolution(*ittrans,vsolution,_filteroptions) ) {
+                if( _filteroptions == 0 ) {
+                    // haven't even checked with environment collisions, so a solution really doesn't exist
+                    return false;
                 }
                 if( _parameters->_bIgnoreFirstCollision && bPrevInCollision ) {
-                    if( !_manip->FindIKSolution(*ittrans,vsolution,0) ) {
+                    _filteroptions = 0;
+                    if( !_manip->FindIKSolution(*ittrans,vsolution,_filteroptions) ) {
                         return false;
                     }
                 }
@@ -232,7 +245,7 @@ In the simplest case, the workspace trajectory can be a straight line from one p
             _transprev = tbaseinv * *ittrans;
         }
 
-        RAVELOG_DEBUG(str(boost::format("plan success, path=%d points in %fs\n")%poutputtraj->GetPoints().size()%((0.001f*(float)(timeGetTime()-basetime)))));
+        RAVELOG_DEBUG(str(boost::format("workspace trajectory tracker plan success, path=%d points in %fs\n")%poutputtraj->GetPoints().size()%((0.001f*(float)(timeGetTime()-basetime)))));
         return true;
     }
 
@@ -271,6 +284,12 @@ protected:
             }
         }
 
+        if( _filteroptions & IKFO_CheckEnvCollisions ) {
+            // check rest of environment collisions
+            if( CollisionFunctions::CheckCollision(_parameters,_robot,_vprevsolution,vsolution,IT_Open) ) {
+                return IKFR_Reject;
+            }
+        }
         return IKFR_Success;
     }
 
@@ -279,11 +298,57 @@ protected:
     CollisionReportPtr _report;
     boost::shared_ptr<WorkspaceTrajectoryParameters> _parameters;
     dReal _fMaxCosDeviationAngle;
+    int _filteroptions;
 
     // planning state
     boost::multi_array<dReal,2> _mjacobian;
     Transform _transprev;
     vector<dReal> _vprevsolution, _vtempsolution;
+
+    // moving straight using jacobian (doesn't work as well)
+//            if( !pconstraints ) {
+//                boost::array<double,6> vconstraintfreedoms = {{1,1,0,1,1,0}}; // only rotate and translate across z
+//                Transform tframe; tframe.rot = quatRotateDirection(direction,Vector(0,0,1));
+//                pconstraints.reset(new CM::GripperJacobianConstrains<double>(robot->GetActiveManipulator(),tframe,vconstraintfreedoms,fjacobianerror));
+//                pconstraints->_distmetricfn = boost::bind(&CM::SimpleDistMetric::Eval,distmetricfn,_1,_2);
+//                eeindex = robot->GetActiveManipulator()->GetEndEffector()->GetIndex();
+//                J.resize(3,robot->GetActiveDOF());
+//                invJJt.resize(3,3);
+//                Jerror.resize(3,1);
+//                Jerror(0,0) = direction.x*stepsize; Jerror(1,0) = direction.y*stepsize; Jerror(2,0) = direction.z*stepsize;
+//            }
+//
+//            robot->CalculateActiveJacobian(eeindex,robot->GetActiveManipulator()->GetEndEffectorTransform().trans,vjacobian);
+//            const double lambda2 = 1e-8; // normalization constant
+//            for(size_t j = 0; j < 3; ++j) {
+//                std::copy(vjacobian[j].begin(),vjacobian[j].end(),J.find2(0,j,0));
+//            }
+//            Jt = trans(J);
+//            invJJt = prod(J,Jt);
+//            for(int j = 0; j < 3; ++j) {
+//                invJJt(j,j) += lambda2;
+//            }
+//            try {
+//                if( !pconstraints->InvertMatrix(invJJt,invJJt) ) {
+//                    RAVELOG_WARN("failed to invert matrix\n");
+//                    break;
+//                }
+//            }
+//            catch(...) {
+//                RAVELOG_WARN("failed to invert matrix!!\n");
+//                break;
+//            }
+//            invJ = prod(Jt,invJJt);
+//            qdelta = prod(invJ,Jerror);
+//            for(size_t j = 0; j < point.q.size(); ++j) {
+//                point.q[j] = vPrevValues[j] + qdelta(j,0);
+//            }
+//            if( !pconstraints->RetractionConstraint(vPrevValues,point.q,0) ) {
+//                break;
+//            }
+//            robot->SetActiveDOFValues(point.q);
+//            bool bInCollision = robot->CheckSelfCollision();
+//            Transform tdelta = handTr.inverse()*robot->GetActiveManipulator()->GetEndEffectorTransform();
 };
 
 #endif

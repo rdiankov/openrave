@@ -223,7 +223,7 @@ class GraspPlanning(metaclass.AutoReloader):
             if waitforkey:
                 raw_input('press any key to continue grasp')
             try:
-                self.basemanip.MoveHandStraight(jacobian=0.02,direction=self.updir,stepsize=0.003,minsteps=1,maxsteps=60)
+                self.basemanip.MoveHandStraight(direction=self.updir,stepsize=0.003,minsteps=1,maxsteps=60)
             except:
                 print 'failed to move hand up'
             self.waitrobot(robot)
@@ -237,7 +237,7 @@ class GraspPlanning(metaclass.AutoReloader):
                     print 'failed to reach a goal',e
             print 'moving hand down'
             try:
-                res = self.basemanip.MoveHandStraight(jacobian=0.02,direction=-self.updir,stepsize=0.003,minsteps=1,maxsteps=100)
+                res = self.basemanip.MoveHandStraight(direction=-self.updir,stepsize=0.003,minsteps=1,maxsteps=100)
             except:
                 print 'failed to move hand down'
             self.waitrobot(robot)
@@ -265,7 +265,7 @@ class GraspPlanning(metaclass.AutoReloader):
                 print 'robot in collision, moving back a little'
                 try:
                     self.basemanip.MoveHandStraight(direction=-dot(manip.GetEndEffectorTransform()[0:3,0:3],manip.GetDirection()),
-                                                    jacobian=0.02,stepsize=stepsize,minsteps=1,maxsteps=10)
+                                                    stepsize=stepsize,minsteps=1,maxsteps=10)
                     self.waitrobot(robot)
                 except planning_error,e:
                     pass

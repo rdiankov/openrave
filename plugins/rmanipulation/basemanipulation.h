@@ -245,7 +245,7 @@ protected:
         return true;
     }
 
-    bool MoveHandStraight2(ostream& sout, istream& sinput)
+    bool MoveHandStraight(ostream& sout, istream& sinput)
     {
         Vector direction = Vector(0,1,0);
         string strtrajfilename;
@@ -258,6 +258,7 @@ protected:
         boost::shared_ptr<ostream> pOutputTrajStream;
         params->_bIgnoreFirstCollision = true;
         string cmd;
+        params->_fStepLength = 0.01;
         while(!sinput.eof()) {
             sinput >> cmd;
             if( !sinput ) {
@@ -296,6 +297,9 @@ protected:
             else if( cmd == "maxdeviationangle" ) {
                 sinput >> params->_fMaxDeviationAngle;
             }
+            else if( cmd == "jacobian" ) {
+                RAVELOG_WARN("MoveHandStraight jacobian parameter not supported anymore\n");
+            }
             else {
                 RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
@@ -312,7 +316,13 @@ protected:
 
         RobotBase::RobotStateSaver saver(robot);
 
-        // evaluate the trajectory
+        robot->SetActiveDOFs(pmanip->GetArmIndices());
+        params->SetRobotActiveJoints(robot);
+
+        CM::JitterActiveDOF(robot,100); // try to jitter out, don't worry if it fails
+        robot->GetActiveDOFValues(params->vinitialconfig);
+
+        // compute a workspace trajectory (important to do this after jittering!)
         {
             params->_workspacetraj = RaveCreateTrajectory(GetEnv(),"");
             params->_workspacetraj->Reset(0);
@@ -321,14 +331,7 @@ protected:
             Tee.trans += direction*maxsteps*params->_fStepLength;
             params->_workspacetraj->AddPoint(TrajectoryBase::TPOINT(vector<dReal>(),Tee,0));
             params->_workspacetraj->CalcTrajTiming(RobotBasePtr(),TrajectoryBase::LINEAR,true,false);
-            RAVELOG_INFO("time: %f\n",params->_workspacetraj->GetTotalDuration());
         }
-
-        robot->SetActiveDOFs(pmanip->GetArmIndices());
-        params->SetRobotActiveJoints(robot);
-
-        //CM::JitterActiveDOF(robot,100); // try to jitter out, don't worry if it fails
-        robot->GetActiveDOFValues(params->vinitialconfig);
 
         boost::shared_ptr<PlannerBase> planner = RaveCreatePlanner(GetEnv(),"workspacetrajectorytracker");
         if( !planner ) {
@@ -347,215 +350,6 @@ protected:
         }
         CM::SetActiveTrajectory(robot, poutputtraj, bExecute, strtrajfilename, pOutputTrajStream,_fMaxVelMult);
         return true;
-    }
-
-    bool MoveHandStraight(ostream& sout, istream& sinput)
-    {
-        float stepsize = 0.003f;
-        Vector direction = Vector(0,1,0);
-        string strtrajfilename;
-        bool bExecute = true;
-
-        int minsteps = 0;
-        int maxsteps = 10000;
-
-        RobotBase::ManipulatorConstPtr pmanip = robot->GetActiveManipulator();
-    
-        dReal fjacobianerror=0;
-        bool bIgnoreFirstCollision = true, bSearchAll = false;
-        boost::shared_ptr<ostream> pOutputTrajStream;
-        string cmd;
-        while(!sinput.eof()) {
-            sinput >> cmd;
-            if( !sinput ) {
-                break;
-            }
-            std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
-        
-            if( cmd == "minsteps" )
-                sinput >> minsteps;
-            else if( cmd == "outputtraj")
-                pOutputTrajStream = boost::shared_ptr<ostream>(&sout,null_deleter());
-            else if( cmd == "maxsteps")
-                sinput >> maxsteps;
-            else if( cmd == "stepsize")
-                sinput >> stepsize;
-            else if( cmd == "execute" )
-                sinput >> bExecute;
-            else if( cmd == "writetraj")
-                sinput >> strtrajfilename;
-            else if( cmd == "direction")
-                sinput >> direction.x >> direction.y >> direction.z;
-            else if( cmd == "ignorefirstcollision")
-                sinput >> bIgnoreFirstCollision;
-            else if( cmd == "jacobian")
-                sinput >> fjacobianerror;
-            else if( cmd == "searchall" )
-                sinput >> bSearchAll;
-            else {
-                RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
-                break;
-            }
-
-            if( !sinput ) {
-                RAVELOG_ERROR(str(boost::format("failed processing command %s\n")%cmd));
-                return false;
-            }
-        }
-    
-        RAVELOG_DEBUG("Starting MoveHandStraight dir=(%f,%f,%f)...\n",(float)direction.x, (float)direction.y, (float)direction.z);
-        robot->RegrabAll();
-
-        RobotBase::RobotStateSaver saver(robot);
-
-        robot->SetActiveDOFs(pmanip->GetArmIndices());
-        CM::JitterActiveDOF(robot,100); // try to jitter out, don't worry if it fails
-
-        boost::shared_ptr<Trajectory> ptraj(RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF()));
-        Trajectory::TPOINT point;
-        vector<dReal> vPrevValues;
-        bool bPrevInCollision = GetEnv()->CheckCollision(KinBodyConstPtr(robot))||robot->CheckSelfCollision();
-        robot->GetActiveDOFValues(vPrevValues);
-
-        if( bPrevInCollision && !bIgnoreFirstCollision ) {
-            RAVELOG_WARN("MoveHandStraight: robot in collision\n");
-            return false;
-        }
-
-        Transform handTr = robot->GetActiveManipulator()->GetEndEffectorTransform();
-
-        boost::shared_ptr<CM::SimpleDistMetric> distmetricfn(new CM::SimpleDistMetric(robot));
-        point.q = vPrevValues;
-        ptraj->AddPoint(point);
-        vector<vector<dReal> > vsolutions;
-
-        // variables only for jacobians
-        boost::multi_array<dReal,2> vjacobian;
-        boost::shared_ptr<CM::GripperJacobianConstrains<double> > pconstraints;
-        boost::numeric::ublas::matrix<double> J, Jt, invJJt, invJ, Jerror, qdelta;
-        int i, eeindex=-1;
-        for (i = 0; i < maxsteps;  i++) {
-            if( fjacobianerror > 0 ) {
-                // use jacobian
-                if( !pconstraints ) {
-                    boost::array<double,6> vconstraintfreedoms = {{1,1,0,1,1,0}}; // only rotate and translate across z
-                    Transform tframe; tframe.rot = quatRotateDirection(direction,Vector(0,0,1));
-                    pconstraints.reset(new CM::GripperJacobianConstrains<double>(robot->GetActiveManipulator(),tframe,vconstraintfreedoms,fjacobianerror));
-                    pconstraints->_distmetricfn = boost::bind(&CM::SimpleDistMetric::Eval,distmetricfn,_1,_2);
-                    eeindex = robot->GetActiveManipulator()->GetEndEffector()->GetIndex();
-                    J.resize(3,robot->GetActiveDOF());
-                    invJJt.resize(3,3);
-                    Jerror.resize(3,1);
-                    Jerror(0,0) = direction.x*stepsize; Jerror(1,0) = direction.y*stepsize; Jerror(2,0) = direction.z*stepsize;
-                }
-
-                robot->CalculateActiveJacobian(eeindex,robot->GetActiveManipulator()->GetEndEffectorTransform().trans,vjacobian);
-                const double lambda2 = 1e-8; // normalization constant
-                for(size_t j = 0; j < 3; ++j) {
-                    std::copy(vjacobian[j].begin(),vjacobian[j].end(),J.find2(0,j,0));
-                }
-                Jt = trans(J);
-                invJJt = prod(J,Jt);
-                for(int j = 0; j < 3; ++j) {
-                    invJJt(j,j) += lambda2;
-                }
-                try {
-                    if( !pconstraints->InvertMatrix(invJJt,invJJt) ) {
-                        RAVELOG_WARN("failed to invert matrix\n");
-                        break;
-                    }
-                }
-                catch(...) {
-                    RAVELOG_WARN("failed to invert matrix!!\n");
-                    break;
-                }
-                invJ = prod(Jt,invJJt);
-                qdelta = prod(invJ,Jerror);
-                for(size_t j = 0; j < point.q.size(); ++j) {
-                    point.q[j] = vPrevValues[j] + qdelta(j,0);
-                }
-                if( !pconstraints->RetractionConstraint(vPrevValues,point.q,0) ) {
-                    break;
-                }
-                robot->SetActiveDOFValues(point.q);
-                bool bInCollision = robot->CheckSelfCollision();
-                Transform tdelta = handTr.inverse()*robot->GetActiveManipulator()->GetEndEffectorTransform();
-                if( IS_DEBUGLEVEL(Level_Verbose) ) {
-                    stringstream ss; ss << "transform: " << tdelta << endl;
-                    RAVELOG_VERBOSE(ss.str());
-                }
-                robot->SetActiveDOFValues(vPrevValues);
-                if( bInCollision ) {
-                    break;
-                }
-            }
-            else {
-                handTr.trans += stepsize*direction;
-                int filteroptions = (!bPrevInCollision && i >= minsteps) ? IKFO_CheckEnvCollisions : 0;
-                if( bSearchAll ) {
-                    if( !pmanip->FindIKSolutions(handTr,vsolutions,filteroptions)) {
-                        RAVELOG_DEBUG("Arm Lifting: broke due to ik\n");
-                        break;
-                    }
-                    int minindex=0;
-                    dReal fbestdist = distmetricfn->Eval(vPrevValues,vsolutions.at(0));
-                    for(size_t j = 1; j < vsolutions.size(); ++j) {
-                        dReal fdist = distmetricfn->Eval(vPrevValues,vsolutions[j]);
-                        if( fbestdist > fdist ) {
-                            fbestdist = fdist;
-                            minindex = j;
-                        }
-                    }
-                    point.q = vsolutions[minindex];
-                }
-                else {
-                    if( !pmanip->FindIKSolution(handTr,point.q,filteroptions)) {
-                        RAVELOG_DEBUG("Arm Lifting: broke due to ik\n");
-                        break;
-                    }
-                }
-            }
-        
-            size_t j = 0;
-            for(; j < point.q.size(); j++) {
-                if(fabsf(point.q[j] - vPrevValues[j]) > 0.2) {
-                    break;
-                }
-            }
-
-            if( j < point.q.size()) {
-                RAVELOG_DEBUG(str(boost::format("Arm Lifting: broke due to discontinuity (%d:%f)\n")%j%(point.q[j] - vPrevValues[j])));
-                break;
-            }
-        
-            robot->SetActiveDOFValues(point.q);
-        
-            bool bInCollision = GetEnv()->CheckCollision(KinBodyConstPtr(robot))||robot->CheckSelfCollision();
-            if(bInCollision && !bPrevInCollision && i >= minsteps) {
-                RAVELOG_DEBUG("Arm Lifting: broke due to collision\n");
-                break;
-            }
-        
-            ptraj->AddPoint(point);
-            vPrevValues = point.q;
-            bPrevInCollision = bInCollision;
-        }
-    
-        if( i > 0 ) {
-            if( bPrevInCollision ) {
-                RAVELOG_DEBUG("hand failed to move out of collision\n");
-                return false;
-            }
-            RAVELOG_DEBUG("hand can move %f\n", (float)i*stepsize);
-            // only move if exceeded minsteps (otherwise user of this function would not have specified min steps)
-            if( i >= minsteps ) {
-                CM::SetActiveTrajectory(robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream,_fMaxVelMult);
-            }
-            return i >= minsteps;
-        }
-
-        RAVELOG_DEBUG("hand didn't move\n");
-        return i >= minsteps;
     }
 
     bool MoveManipulator(ostream& sout, istream& sinput)
