@@ -182,6 +182,7 @@ class CollisionCheckerPQP : public CollisionCheckerBase
 
     virtual bool CheckCollision(KinBody::LinkConstPtr plink, CollisionReportPtr report)
     {
+        _pactiverobot.reset();
         return CheckCollision(plink, vector<KinBodyConstPtr>(), vector<KinBody::LinkConstPtr>(),report);
     }
 
@@ -190,6 +191,7 @@ class CollisionCheckerPQP : public CollisionCheckerBase
         if(!!report) {
             report->Reset(_options);
         }
+        _pactiverobot.reset();
         PQP_REAL R1[3][3], R2[3][3], T1[3], T2[3];
         GetPQPTransformFromTransform(plink1->GetTransform(),R1,T1);
         GetPQPTransformFromTransform(plink2->GetTransform(),R2,T2);
@@ -204,6 +206,7 @@ class CollisionCheckerPQP : public CollisionCheckerBase
         if( pbody->IsAttached(plink->GetParent()) ) {
             return false;
         }
+        _pactiverobot.reset();
         std::set<KinBodyPtr> setattached;
         pbody->GetAttached(setattached);
         FOREACH(itbody,setattached) {
@@ -219,6 +222,7 @@ class CollisionCheckerPQP : public CollisionCheckerBase
         if(!!report) {
             report->Reset(_options);
         }
+        _pactiverobot.reset();
         int tmpnumcols = 0;
         int tmpnumwithintol = 0;
         bool retval;
@@ -310,6 +314,7 @@ class CollisionCheckerPQP : public CollisionCheckerBase
         if(!!report ) {
             report->Reset(_options);
         }
+        _pactiverobot.reset();
         throw openrave_exception("PQP collision checker does not support ray collision queries\n");
     }
     virtual bool CheckCollision(const RAY& ray, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr())
@@ -325,6 +330,7 @@ class CollisionCheckerPQP : public CollisionCheckerBase
         if(!!report ) {
             report->Reset(_options);
         }
+        _pactiverobot.reset();
         throw openrave_exception("PQP collision checker does not support ray collision queries\n");
     }
     virtual bool CheckSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report)
