@@ -60,13 +60,13 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
 
 void GetPluginAttributesValidated(PLUGININFO& info)
 {
-    info.interfacenames[OpenRAVE::PT_Planner].push_back("RA*");
-    info.interfacenames[OpenRAVE::PT_Planner].push_back("BiRRT");
-    info.interfacenames[OpenRAVE::PT_Planner].push_back("BasicRRT");
-    info.interfacenames[OpenRAVE::PT_Planner].push_back("ExplorationRRT");
-    info.interfacenames[OpenRAVE::PT_Planner].push_back("GraspGradient");
-    info.interfacenames[OpenRAVE::PT_Planner].push_back("shortcut_linear");
-    info.interfacenames[OpenRAVE::PT_Planner].push_back("workspacetrajectorytracker");
+    info.interfacenames[PT_Planner].push_back("RA*");
+    info.interfacenames[PT_Planner].push_back("BiRRT");
+    info.interfacenames[PT_Planner].push_back("BasicRRT");
+    info.interfacenames[PT_Planner].push_back("ExplorationRRT");
+    info.interfacenames[PT_Planner].push_back("GraspGradient");
+    info.interfacenames[PT_Planner].push_back("shortcut_linear");
+    info.interfacenames[PT_Planner].push_back("WorkspaceTrajectoryTracker");
 }
 
 RAVE_PLUGIN_API void DestroyPlugin()

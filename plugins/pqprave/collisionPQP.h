@@ -130,9 +130,6 @@ class CollisionCheckerPQP : public CollisionCheckerBase
 
     virtual bool SetCollisionOptions(int options)
     {    
-        if(options & CO_ActiveDOFs) {
-            RAVELOG_DEBUG("checker does not support activedof option");
-        }
         if(options & CO_Distance) {
             RAVELOG_VERBOSE("setting pqp distance computation\n");
             _benabledis = true;
@@ -148,7 +145,6 @@ class CollisionCheckerPQP : public CollisionCheckerBase
             _benabletol = false;
         }
         _options = options;
-
         return true;
     }
     virtual int GetCollisionOptions() const { return _options; }
@@ -160,6 +156,7 @@ class CollisionCheckerPQP : public CollisionCheckerBase
         if(!!report) {
             report->Reset(_options);
         }
+        _SetActiveBody(pbody1);
         std::vector<KinBodyConstPtr> vexcluded;
         vexcluded.push_back(pbody1);
         return CheckCollision(pbody1,vexcluded,std::vector<KinBody::LinkConstPtr>(),report);
@@ -167,9 +164,10 @@ class CollisionCheckerPQP : public CollisionCheckerBase
 
     virtual bool CheckCollision(KinBodyConstPtr pbody1, KinBodyConstPtr pbody2, CollisionReportPtr report)
     {
-        if(!!report)
+        if(!!report) {
             report->Reset(_options);
-
+        }
+        _SetActiveBody(pbody1);
         std::set<KinBodyPtr> s1, s2;
         pbody1->GetAttached(s1);
         pbody2->GetAttached(s2);
@@ -211,10 +209,10 @@ class CollisionCheckerPQP : public CollisionCheckerBase
         std::set<KinBodyPtr> setattached;
         pbody->GetAttached(setattached);
         FOREACH(itbody,setattached) {
-            if( CheckCollisionP(plink,*itbody,report) )
+            if( CheckCollisionP(plink,*itbody,report) ) {
                 return true;
+            }
         }
-    
         return false;
     }
     
@@ -294,9 +292,10 @@ class CollisionCheckerPQP : public CollisionCheckerBase
 
     virtual bool CheckCollision(KinBodyConstPtr pbody, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report)
     {
-        if(!!report )
+        if(!!report ) {
             report->Reset(_options);
-
+        }
+        _SetActiveBody(pbody);
         std::set<KinBodyPtr> vattached;
         pbody->GetAttached(vattached);
         FOREACHC(itbody, vattached) {
@@ -320,6 +319,7 @@ class CollisionCheckerPQP : public CollisionCheckerBase
         if(!!report ) {
             report->Reset(_options);
         }
+        _SetActiveBody(pbody);
         throw openrave_exception("PQP collision checker does not support ray collision queries\n");
     }
     virtual bool CheckCollision(const RAY& ray, CollisionReportPtr report = CollisionReportPtr())
@@ -490,6 +490,9 @@ class CollisionCheckerPQP : public CollisionCheckerBase
         if( !link1->IsEnabled() || !link2->IsEnabled() ) {
             return false;
         }
+        if( !_IsActiveLink(link1->GetParent(),link1->GetIndex()) || !_IsActiveLink(link2->GetParent(),link2->GetIndex()) ) {
+            return false;
+        }
         boost::shared_ptr<PQP_Model> m1 = GetLinkModel(link1);
         boost::shared_ptr<PQP_Model> m2 = GetLinkModel(link2);
         bool bcollision = false;
@@ -615,6 +618,46 @@ class CollisionCheckerPQP : public CollisionCheckerBase
     Vector contactpos, contactnorm;
     PQP_REAL tri1[3][3], tri2[3][3];
     TransformMatrix tmtemp;
+
+    RobotBaseConstPtr _pactiverobot; ///< set if ActiveDOFs option is enabled
+    vector<uint8_t> _vactivelinks;
+
+    void _SetActiveBody(KinBodyConstPtr pbody) {
+        if( _options & CO_ActiveDOFs ) {
+            _pactiverobot = OpenRAVE::RaveInterfaceConstCast<RobotBase>(pbody);
+            _vactivelinks.resize(0);
+        }
+        else {
+            _pactiverobot.reset();
+        }
+    }
+
+    bool _IsActiveLink(KinBodyConstPtr pbody, int linkindex)
+    {
+        if( !(_options & CO_ActiveDOFs) || !_pactiverobot || pbody != _pactiverobot) {
+            return true;
+        }
+        if( _vactivelinks.size() == 0 ) {
+            if( _pactiverobot->GetAffineDOF() ) {
+                // enable everything
+                _vactivelinks.resize(_pactiverobot->GetLinks().size(),1);
+            }
+            else {
+                _vactivelinks.resize(_pactiverobot->GetLinks().size(),0);
+                // only check links that can potentially move with respect to each other
+                _vactivelinks.resize(_pactiverobot->GetLinks().size(),0);
+                for(size_t i = 0; i < _pactiverobot->GetLinks().size(); ++i) {
+                    FOREACHC(itindex, _pactiverobot->GetActiveDOFIndices()) {
+                        if( _pactiverobot->DoesAffect(_pactiverobot->GetJointFromDOFIndex(*itindex)->GetJointIndex(),i) ) {
+                            _vactivelinks[i] = 1;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        return _vactivelinks.at(linkindex)>0;
+    }
 };
 
 #ifdef RAVE_REGISTER_BOOST

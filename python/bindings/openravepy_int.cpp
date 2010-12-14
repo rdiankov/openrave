@@ -3414,6 +3414,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
         .value("UseTolerance",CO_UseTolerance)
         .value("Contacts",CO_Contacts)
         .value("RayAnyHit",CO_RayAnyHit)
+        .value("ActiveDOFs",CO_ActiveDOFs);
         ;
     enum_<CollisionAction>("CollisionAction" DOXY_ENUM(CollisionAction))
         .value("DefaultAction",CA_DefaultAction)

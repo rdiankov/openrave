@@ -32,9 +32,6 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
                 _report->Reset(pchecker->GetCollisionOptions());
             }
             bActiveDOFs = !!(pchecker->GetCollisionOptions() & OpenRAVE::CO_ActiveDOFs);
-            if( !!pbody ) {
-                SetActiveDOFs(pbody);
-            }
         }
 
         const std::list<EnvironmentBase::CollisionCallbackFn>& GetCallbacks() {
@@ -44,46 +41,32 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
             return _listcallbacks;
         }
 
-        void SetActiveDOFs(KinBodyConstPtr pbody)
+        bool IsActiveLink(KinBodyPtr pbody, int linkindex)
         {
-            if( bActiveDOFs ) {
-                if( !!OpenRAVE::RaveInterfaceConstCast<RobotBase>(pbody) ) {
-                    _mapactivelinks[pbody].resize(0);
-                }
-            }
-        }
-
-        bool IsActiveLink(KinBodyConstPtr pbody, int linkindex)
-        {
-            if( !bActiveDOFs ) {
+            if( !bActiveDOFs || !_pbody || pbody != _pbody || !_pbody->IsRobot()) {
                 return true;
             }
-            std::map<KinBodyConstPtr, vector<uint8_t> >::iterator it = _mapactivelinks.find(pbody);
-            if( it == _mapactivelinks.end() ) {
-                return true;
-            }
-
-            if( it->second.size() == 0 ) {
+            if( _vactivelinks.size() == 0 ) {
                 RobotBaseConstPtr probot = OpenRAVE::RaveInterfaceConstCast<RobotBase>(pbody);
                 if( probot->GetAffineDOF() ) {
                     // enable everything
-                    it->second.resize(probot->GetLinks().size(),1);
+                    _vactivelinks.resize(probot->GetLinks().size(),1);
                 }
                 else {
-                    it->second.resize(probot->GetLinks().size(),0);
+                    _vactivelinks.resize(probot->GetLinks().size(),0);
                     // only check links that can potentially move with respect to each other
-                    it->second.resize(probot->GetLinks().size(),0);
+                    _vactivelinks.resize(probot->GetLinks().size(),0);
                     for(size_t i = 0; i < probot->GetLinks().size(); ++i) {
                         FOREACHC(itindex, probot->GetActiveDOFIndices()) {
                             if( probot->DoesAffect(probot->GetJointFromDOFIndex(*itindex)->GetJointIndex(),i) ) {
-                                it->second[i] = 1;
+                                _vactivelinks[i] = 1;
                                 break;
                             }
                         }
                     }
                 }
             }
-            return it == _mapactivelinks.end() || it->second.at(linkindex)>0;
+            return _vactivelinks.at(linkindex)>0;
         }
         
         boost::shared_ptr<ODECollisionChecker> _pchecker;
@@ -96,7 +79,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
         const std::vector<KinBodyConstPtr>* pvbodyexcluded;
         const std::vector<KinBody::LinkConstPtr>* pvlinkexcluded;
     private:
-        std::map<KinBodyConstPtr, vector<uint8_t> > _mapactivelinks; /// non-zero values for the active links of the robot
+        vector<uint8_t> _vactivelinks; ///< active links for _pbody, only valid if _pbody is a robot
         bool bActiveDOFs;
         bool _bHasCallbacks;
         std::list<EnvironmentBase::CollisionCallbackFn> _listcallbacks;
@@ -158,7 +141,10 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
 
     virtual bool SetCollisionOptions(int collisionoptions)
     {
-        _options = collisionoptions;    
+        _options = collisionoptions;
+        if( _options & OpenRAVE::CO_Distance ) {
+            return false;
+        }
         return true;
     }
 
@@ -196,7 +182,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
 
     virtual bool CheckCollision(KinBodyConstPtr pbody1, KinBodyConstPtr pbody2, CollisionReportPtr report)
     {
-        COLLISIONCALLBACK cb(shared_checker(),report,KinBodyPtr(),KinBody::LinkConstPtr());
+        COLLISIONCALLBACK cb(shared_checker(),report,pbody1,KinBody::LinkConstPtr());
         if( pbody1->GetLinks().size() == 0 || !pbody1->IsEnabled()  ) {
             return false;
         }
@@ -212,8 +198,6 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
         }
 
         odespace->Synchronize();
-        cb.SetActiveDOFs(pbody1);
-        cb.SetActiveDOFs(pbody2);
 
         // have to go through all attached bodies manually (not sure if there's a fast way to set temporary groups in ode)
         std::set<KinBodyPtr> s1, s2;
@@ -351,7 +335,6 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
 
         odespace->Synchronize();
         COLLISIONCALLBACK cb(shared_checker(),report,KinBodyPtr(),KinBody::LinkConstPtr());
-        cb.SetActiveDOFs(pbody);
 
         std::set<KinBodyPtr> setattached;
         pbody->GetAttached(setattached);
@@ -510,13 +493,12 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
 
     virtual bool CheckCollision(const RAY& ray, KinBodyConstPtr pbody, CollisionReportPtr report)
     {
-        COLLISIONCALLBACK cb(shared_checker(),report,KinBodyPtr(),KinBody::LinkConstPtr());
+        COLLISIONCALLBACK cb(shared_checker(),report,pbody,KinBody::LinkConstPtr());
         if( pbody->GetLinks().size() == 0 || !pbody->IsEnabled()  ) {
             return false;
         }
 
         odespace->Synchronize();
-        cb.SetActiveDOFs(pbody);
         cb.fraymaxdist = OpenRAVE::RaveSqrt(ray.dir.lengthsqr3());
         if( RaveFabs(cb.fraymaxdist-1) < 1e-4 ) {
             RAVELOG_DEBUG("CheckCollision: ray direction length is 1.0, note that only collisions within a distance of 1.0 will be checked\n");
