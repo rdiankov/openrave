@@ -191,7 +191,7 @@ public:
         ///
         /// The parent link is the link closest to the root that is immediately connected to this link by a joint.
         /// If the link has no parents, returns an empty link. Mimic joints do not affect the parent link.
-        inline boost::shared_ptr<Link> GetParentLink() const { return KinBodyPtr(_parent)->GetLinks().at(_parentlinkindex); }
+        inline boost::shared_ptr<Link> GetParentLink() const { return _parentlinkindex >= 0 ? KinBodyPtr(_parent)->GetLinks().at(_parentlinkindex) : boost::shared_ptr<Link>(); }
 
         /// \return center of mass offset in the link's local coordinate frame
         inline Vector GetCOMOffset() const {return _transMass.trans; }
