@@ -149,8 +149,6 @@ class CollisionCheckerPQP : public CollisionCheckerBase
     }
     virtual int GetCollisionOptions() const { return _options; }
 
-    virtual bool SetCollisionOptions(std::ostream& sout, std::istream& sinput) { return false; }
-
     virtual bool CheckCollision(KinBodyConstPtr pbody1, CollisionReportPtr report)
     {
         if(!!report) {
@@ -522,8 +520,7 @@ class CollisionCheckerPQP : public CollisionCheckerBase
                     bcollision = true;
                 }
             
-                for(int i = 0; i < colres.NumPairs(); i++) {
-                
+                for(int i = 0; i < colres.NumPairs(); i++) {                
                     u1 = PQPRealToVector(link1->GetCollisionData().vertices[link1->GetCollisionData().indices[colres.Id1(i)*3]],R1,T1);
                     u2 = PQPRealToVector(link1->GetCollisionData().vertices[link1->GetCollisionData().indices[colres.Id1(i)*3+1]],R1,T1);
                     u3 = PQPRealToVector(link1->GetCollisionData().vertices[link1->GetCollisionData().indices[colres.Id1(i)*3+2]],R1,T1);
@@ -554,9 +551,9 @@ class CollisionCheckerPQP : public CollisionCheckerBase
     
         // distance
         if(_benabledis) {
-            if(!report)
+            if(!report) {
                 throw openrave_exception("CollisionCheckerPQP::DoPQP - ERROR: YOU MUST PASS IN A CollisionReport STRUCT TO MEASURE DISTANCE!\n");
-
+            }
             //don't do a tolerance check, some users wants distance all the time
             //PQP_Tolerance(&tolres,R1,T1,m1,R2,T2,m2,_preport->minDistance);
             //if(tolres.CloserThanTolerance()) {

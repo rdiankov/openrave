@@ -384,7 +384,6 @@ public:
     }
 
     virtual int GetCollisionOptions() const { return _options; }
-    virtual bool SetCollisionOptions(std::ostream& sout, std::istream& sinput) { return false; }
 
     virtual bool Enable(KinBodyConstPtr pbody, bool bEnable)
     {

@@ -1,4 +1,4 @@
-// Copyright (C) 2006-2010 Rosen Diankov (rdiankov@cs.cmu.edu), Stefan Ulbrich, Gustavo Rodriguez
+// Copyright (C) 2006-2010 Rosen Diankov (rosen.diankov@gmail.com), Stefan Ulbrich, Gustavo Rodriguez
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -13,7 +13,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-/// functions that allow plugins to program for the RAVE simulator
+// functions that allow plugins to program for the RAVE simulator
 #ifndef OPENRAVE_COLLADA_READER_H
 #define OPENRAVE_COLLADA_READER_H
 
@@ -781,6 +781,7 @@ class ColladaReader : public daeErrorHandler
                     FOREACH(it,pjoint->_vweights) {
                         *it = 1;
                     }
+                    pjoint->fMaxVel = pjoint->GetType() == KinBody::Joint::JointPrismatic ? 0.01 : 0.5f;
 
                     if( joint_active ) {
                         pkinbody->_vecjoints.push_back(pjoint);
@@ -960,8 +961,6 @@ class ColladaReader : public daeErrorHandler
                         pjoint->tLeft = matrixFromAxisAngle(pjoint->vAxes[0], pjoint->offset);
                     }
 
-                    pjoint->fMaxVel = pjoint->GetType() == KinBody::Joint::JointPrismatic ? 0.01 : 0.5f;
-          
                     pjoint->tLeft.trans   = pjoint->vanchor;
                     pjoint->tRight.trans  = -pjoint->vanchor;
                     pjoint->tRight = pjoint->tRight * trel;
