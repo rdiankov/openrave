@@ -2405,12 +2405,17 @@ void QtCoinViewer::_UpdateEnvironment()
             BOOST_ASSERT( _listMessages.size() == 0 );
         }
         
-        FOREACH(itmsg, listmessages)
+        FOREACH(itmsg, listmessages) {
             (*itmsg)->viewerexecute();
-        
+        }
+
         // have to update model after messages since it can lock the environment
         UpdateFromModel();
         UpdateCameraTransform();
+
+        if( !!_pdragger ) {
+            _pdragger->UpdateSkeleton();
+        }
     }
 }
 
