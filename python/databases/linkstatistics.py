@@ -163,7 +163,7 @@ class LinkStatisticsModel(OpenRAVEModel):
     def generate(self,samplingdelta=None,**kwargs):
         if not self.cdmodel.load():
             self.cdmodel.autogenerate()
-        self.samplingdelta=samplingdelta if samplingdelta is not None else 0.01
+        self.samplingdelta=samplingdelta if samplingdelta is not None else 0.02
         with self.robot:
             self.robot.SetTransform(eye(4))
             # compute the convex hulls for every link
@@ -436,7 +436,7 @@ class LinkStatisticsModel(OpenRAVEModel):
         parser.description='Computes statistics about the link geometry'
         parser.usage='openrave.py --database linkstatistics [options]'
         parser.add_option('--samplingdelta',action='store',type='float',dest='samplingdelta',default=None,
-                          help='Skin width on the convex hulls generated (default=0.01)')
+                          help='Skin width on the convex hulls generated (default=0.02)')
         return parser
     @staticmethod
     def RunFromParser(Model=None,parser=None,**kwargs):

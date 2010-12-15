@@ -57,7 +57,7 @@
     <limitsdeg>0 140</limitsdeg>
     <axis>0 0 1</axis>
     <maxvel>2</maxvel>
-    <resolution>1</resolution>
+    <resolution>4.2</resolution>
   </Joint>
   <Body name="Finger0-2" type="dynamic" >
     <offsetfrom>Finger0-1</offsetfrom>
@@ -77,7 +77,7 @@
     <limitsdeg>0 90</limitsdeg>
     <axis>0 0 1</axis>
     <maxvel>1</maxvel>
-    <resolution>1</resolution>
+    <resolution>4.2</resolution>
   </Joint>
 
   <!-- finger 1-->
@@ -107,7 +107,7 @@
     <limitsdeg>0 140</limitsdeg>
     <axis>0 0 1</axis>
     <maxvel>2</maxvel>
-    <resolution>1</resolution>
+    <resolution>4.2</resolution>
   </Joint>
   <Body name="Finger1-2" type="dynamic" >
     <offsetfrom>Finger1-1</offsetfrom>
@@ -127,7 +127,7 @@
     <limitsdeg>0 90</limitsdeg>
     <axis>0 0 1</axis>
     <maxvel>1</maxvel>
-    <resolution>1</resolution>
+    <resolution>4.2</resolution>
   </Joint>
 
 
@@ -150,7 +150,7 @@
     <limitsdeg>0 140</limitsdeg>
     <axis>0 0 1</axis>
     <maxvel>2</maxvel>
-    <resolution>1</resolution>
+    <resolution>4.2</resolution>
   </Joint>
   <Body name="Finger2-2" type="dynamic" >
     <offsetfrom>Finger2-1</offsetfrom>
@@ -170,7 +170,7 @@
     <limitsdeg>0 90</limitsdeg>
     <axis>0 0 1</axis>
     <maxvel>1</maxvel>
-    <resolution>1</resolution>
+    <resolution>4.2</resolution>
   </Joint>
 
   <!-- spread -->
@@ -183,7 +183,7 @@
     <axis>0 0 -1</axis>
     <!-- <anchor>0.025 0 0</anchor> -->
     <maxvel>2</maxvel>
-    <resolution>1</resolution>
+    <resolution>1.7</resolution>
   </Joint>
   <Joint name="JF4mimic" type="hinge" enable="false" mimic="JF4 1 0">
     <Body>wam7</Body>
@@ -193,7 +193,7 @@
     <axis>0 0 1</axis>
     <!-- <anchor>-0.025 0 0</anchor> -->
     <maxvel>2</maxvel>
-    <resolution>1</resolution>
+    <resolution>1.7</resolution>
   </Joint>
 
   <!-- add adjacent links, necessary in order to prevent bogus collisions -->

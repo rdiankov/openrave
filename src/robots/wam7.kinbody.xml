@@ -36,7 +36,7 @@
     <limitsdeg>-150 150</limitsdeg>
     <weight>2</weight>
     <maxvel>1.5708</maxvel>
-    <resolution>1</resolution>
+    <resolution>0.25</resolution>
   </Joint>
   <Body name="wam2" type="dynamic">
     <offsetfrom>wam1</offsetfrom>
@@ -58,7 +58,7 @@
     <limitsdeg>-113 113</limitsdeg>
     <weight>2</weight>
     <maxvel>1.0472</maxvel>
-    <resolution>1</resolution>
+    <resolution>0.5</resolution>
   </Joint>
   <Body name="wam3" type="dynamic">
     <offsetfrom>wam2</offsetfrom>
@@ -79,7 +79,7 @@
     <limitsdeg>-157 157</limitsdeg>
     <weight>2</weight>
     <maxvel>2.0944</maxvel>
-    <resolution>1</resolution>
+    <resolution>0.5</resolution>
   </Joint>
   <Body name="wam4" type="dynamic">
     <offsetfrom>wam3</offsetfrom>
@@ -123,7 +123,7 @@
     <limitsdeg>-275 75</limitsdeg>
     <weight>1</weight>
     <maxvel>4.1888</maxvel>
-    <resolution>2</resolution>
+    <resolution>1.11</resolution>
   </Joint>
 
   <Body name="wam6" type="dynamic">
@@ -147,7 +147,7 @@
     <limitsdeg>-90 90</limitsdeg>
     <weight>1</weight>
     <maxvel>4.1888</maxvel>
-    <resolution>2</resolution>
+    <resolution>1.62</resolution>
   </Joint>
   <Body name="wam7" type="dynamic">
     <offsetfrom>wam6</offsetfrom>
@@ -170,7 +170,7 @@
     <limitsdeg>-172 172</limitsdeg>
     <weight>1</weight>
     <maxvel>1.0472</maxvel>
-    <resolution>2</resolution>
+    <resolution>1.62</resolution>
   </Joint>
 
   <adjacent>wam1 wam3</adjacent>
