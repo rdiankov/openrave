@@ -80,10 +80,6 @@ def run(args=None):
             robot.Grab(target)
             updir = array((0,0,1))
 
-#         from IPython.Shell import IPShellEmbed
-#         ipshell = IPShellEmbed(argv='',banner = 'OpenRAVE Dropping into IPython, variables: env, robot',exit_msg = 'Leaving Interpreter and closing program.')
-#         ipshell(local_ns=locals())
-
         success = basemanip.MoveHandStraight(direction=updir,stepsize=0.01,minsteps=1,maxsteps=40)
         robot.WaitForController(0)
         success = basemanip.MoveHandStraight(direction=-updir,stepsize=0.01,minsteps=1,maxsteps=40)
@@ -111,10 +107,10 @@ def run(args=None):
                 direction = random.rand(3)
                 direction /= linalg.norm(direction)
                 x = random.rand(3)-0.5
-                length = 0.2*random.rand()*armlength
+                length = 0.4*random.rand()*armlength
                 Tee[0:3,3] = eetrans + x/linalg.norm(x)*(armlength-length)
                 maxsteps=int(length/stepsize)
-                minsteps = maxsteps/3
+                minsteps = maxsteps/2
                 h = env.drawlinelist(array([Tee[0:3,3],Tee[0:3,3]+direction*maxsteps*stepsize]),1)
             try:
                 success = basemanip.MoveHandStraight(direction=direction,starteematrix=Tee,stepsize=stepsize,minsteps=minsteps,maxsteps=maxsteps)

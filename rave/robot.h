@@ -164,8 +164,14 @@ public:
         /// \brief return true if the body is being grabbed by any link on this manipulator
         virtual bool IsGrabbing(KinBodyConstPtr body) const;
 
-        /// \brief computes the jacobian of the manipulator arm indices using the manipulator frame
+        /// \brief computes the jacobian of the manipulator arm indices from the current manipulator frame origin.
         virtual void CalculateJacobian(boost::multi_array<dReal,2>& mjacobian) const;
+
+        /// \brief computes the quaternion jacobian of the manipulator arm indices from the current manipulator frame rotation.
+        virtual void CalculateRotationJacobian(boost::multi_array<dReal,2>& mjacobian) const;
+
+        /// \brief computes the angule axis jacobian of the manipulator arm indices.
+        virtual void CalculateAngularVelocityJacobian(boost::multi_array<dReal,2>& mjacobian) const;
 
         virtual void serialize(std::ostream& o, int options) const;
         

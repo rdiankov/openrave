@@ -890,6 +890,9 @@ dReal TrajectoryBase::_MinimumTimeQuintic(const TPOINT& tp0, const TPOINT& tp1, 
                 Vector q0(tp0.q[d],tp0.q[d+1],tp0.q[d+2],tp0.q[d+3]);
                 Vector q1(tp1.q[d],tp1.q[d+1],tp1.q[d+2],tp1.q[d+3]);
                 jointDiff = RaveAcos(min(dReal(1),RaveFabs(q0.dot(q1))))/_maxJointVel[d];
+                velocityConstraint = (1.5f/_maxJointVel[d]) * jointDiff;
+                accelConstraint = RaveSqrt((6.0f/_maxJointAccel[d]) * jointDiff);
+                minJointTime = max( velocityConstraint, accelConstraint );
                 d += 3; // d will be increased by 1 below
             }
             else {

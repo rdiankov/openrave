@@ -259,7 +259,7 @@ protected:
 
         boost::shared_ptr<WorkspaceTrajectoryParameters> params(new WorkspaceTrajectoryParameters(GetEnv()));
         boost::shared_ptr<ostream> pOutputTrajStream;
-        params->_bIgnoreFirstCollision = true;
+        params->ignorefirstcollision = true;
         string cmd;
         params->_fStepLength = 0.01;
         while(!sinput.eof()) {
@@ -292,13 +292,13 @@ protected:
                 direction.normalize3();
             }
             else if( cmd == "ignorefirstcollision") {
-                sinput >> params->_bIgnoreFirstCollision;
+                sinput >> params->ignorefirstcollision;
             }
             else if( cmd == "greedysearch" ) {
-                sinput >> params->_bGreedySearch;
+                sinput >> params->greedysearch;
             }
             else if( cmd == "maxdeviationangle" ) {
-                sinput >> params->_fMaxDeviationAngle;
+                sinput >> params->maxdeviationangle;
             }
             else if( cmd == "jacobian" ) {
                 RAVELOG_WARN("MoveHandStraight jacobian parameter not supported anymore\n");
@@ -320,7 +320,7 @@ protected:
             }
         }
 
-        params->_fMinimumCompleteTime = params->_fStepLength * minsteps;
+        params->minimumcompletetime = params->_fStepLength * minsteps;
         RAVELOG_DEBUG("Starting MoveHandStraight dir=(%f,%f,%f)...\n",(float)direction.x, (float)direction.y, (float)direction.z);
         robot->RegrabAll();
 
@@ -344,12 +344,12 @@ protected:
             dReal foldrot = robot->GetAffineRotationQuatMaxVels();
             robot->SetAffineTranslationMaxVels(Vector(1,1,1));
             robot->SetAffineRotationQuatMaxVels(1.0);
-            params->_workspacetraj = RaveCreateTrajectory(GetEnv(),"");
-            params->_workspacetraj->Reset(0);
-            params->_workspacetraj->AddPoint(TrajectoryBase::TPOINT(vector<dReal>(),Tee,0));
+            params->workspacetraj = RaveCreateTrajectory(GetEnv(),"");
+            params->workspacetraj->Reset(0);
+            params->workspacetraj->AddPoint(TrajectoryBase::TPOINT(vector<dReal>(),Tee,0));
             Tee.trans += direction*maxsteps*params->_fStepLength;
-            params->_workspacetraj->AddPoint(TrajectoryBase::TPOINT(vector<dReal>(),Tee,0));
-            params->_workspacetraj->CalcTrajTiming(RobotBasePtr(),TrajectoryBase::LINEAR,true,false);
+            params->workspacetraj->AddPoint(TrajectoryBase::TPOINT(vector<dReal>(),Tee,0));
+            params->workspacetraj->CalcTrajTiming(RobotBasePtr(),TrajectoryBase::LINEAR,true,false);
             robot->SetAffineTranslationMaxVels(voldtrans);
             robot->SetAffineRotationQuatMaxVels(foldrot);
         }

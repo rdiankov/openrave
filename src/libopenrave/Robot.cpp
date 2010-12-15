@@ -424,6 +424,22 @@ void RobotBase::Manipulator::CalculateJacobian(boost::multi_array<dReal,2>& mjac
     probot->CalculateActiveJacobian(_pEndEffector->GetIndex(),_pEndEffector->GetTransform() * _tGrasp.trans,mjacobian);
 }
 
+void RobotBase::Manipulator::CalculateRotationJacobian(boost::multi_array<dReal,2>& mjacobian) const
+{
+    RobotBasePtr probot(_probot);
+    RobotBase::RobotStateSaver saver(probot,RobotBase::Save_ActiveDOF);
+    probot->SetActiveDOFs(_varmdofindices);
+    probot->CalculateActiveRotationJacobian(_pEndEffector->GetIndex(),quatMultiply(_pEndEffector->GetTransform().rot, _tGrasp.rot),mjacobian);
+}
+
+void RobotBase::Manipulator::CalculateAngularVelocityJacobian(boost::multi_array<dReal,2>& mjacobian) const
+{
+    RobotBasePtr probot(_probot);
+    RobotBase::RobotStateSaver saver(probot,RobotBase::Save_ActiveDOF);
+    probot->SetActiveDOFs(_varmdofindices);
+    probot->CalculateActiveAngularVelocityJacobian(_pEndEffector->GetIndex(),mjacobian);
+}
+
 void RobotBase::Manipulator::serialize(std::ostream& o, int options) const
 {
     if( options & SO_RobotManipulators ) {

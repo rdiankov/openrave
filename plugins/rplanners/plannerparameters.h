@@ -158,7 +158,7 @@ BasicRRTParameters() : _fGoalBiasProb(0.05f), _bProcessing(false) {
 class WorkspaceTrajectoryParameters : public PlannerBase::PlannerParameters
 {
 public:
- WorkspaceTrajectoryParameters(EnvironmentBasePtr penv) : _fMaxDeviationAngle(0.15*PI), _bMaintainTiming(false), _bGreedySearch(true), _bIgnoreFirstCollision(false), _fMinimumCompleteTime(1e30f), _penv(penv), _bProcessing(false) {
+ WorkspaceTrajectoryParameters(EnvironmentBasePtr penv) : maxdeviationangle(0.15*PI), maintaintiming(false), greedysearch(true), ignorefirstcollision(false), minimumcompletetime(1e30f), _penv(penv), _bProcessing(false) {
         _vXMLParameters.push_back("maxdeviationangle");
         _vXMLParameters.push_back("maintaintiming");
         _vXMLParameters.push_back("greedysearch");
@@ -167,12 +167,12 @@ public:
         _vXMLParameters.push_back("workspacetraj");
     }
     
-    dReal _fMaxDeviationAngle; ///< the maximum angle the next iksolution can deviate from the expected direction computed by the jacobian 
-    bool _bMaintainTiming; ///< maintain timing with input trajectory
-    bool _bGreedySearch; ///< if true, will greeidly choose solutions (can possibly fail even a solution exists)
-    bool _bIgnoreFirstCollision; ///< if true, will allow the robot to be in environment collision for the initial part of the trajectory. Once the robot gets out of collision, it will execute its normal following phase until it gets into collision again. This option is used when lifting objects from a surface, where the object is already in collision with the surface.
-    dReal _fMinimumCompleteTime; ///< specifies the minimum trajectory that must be followed for planner to declare success. If 0, then the entire trajectory has to be followed.
-    TrajectoryBasePtr _workspacetraj; ///< workspace trajectory
+    dReal maxdeviationangle; ///< the maximum angle the next iksolution can deviate from the expected direction computed by the jacobian 
+    bool maintaintiming; ///< maintain timing with input trajectory
+    bool greedysearch; ///< if true, will greeidly choose solutions (can possibly fail even a solution exists)
+    bool ignorefirstcollision; ///< if true, will allow the robot to be in environment collision for the initial part of the trajectory. Once the robot gets out of collision, it will execute its normal following phase until it gets into collision again. This option is used when lifting objects from a surface, where the object is already in collision with the surface.
+    dReal minimumcompletetime; ///< specifies the minimum trajectory that must be followed for planner to declare success. If 0, then the entire trajectory has to be followed.
+    TrajectoryBasePtr workspacetraj; ///< workspace trajectory
  protected:
     EnvironmentBasePtr _penv;
     bool _bProcessing;
@@ -182,14 +182,14 @@ public:
         if( !PlannerParameters::serialize(O) ) {
             return false;
         }
-        O << "<maxdeviationangle>" << _fMaxDeviationAngle << "</maxdeviationangle>" << endl;
-        O << "<maintaintiming>" << _bMaintainTiming << "</maintaintiming>" << endl;
-        O << "<greedysearch>" << _bGreedySearch << "</greedysearch>" << endl;
-        O << "<ignorefirstcollision>" << _bIgnoreFirstCollision << "</ignorefirstcollision>" << endl;
-        O << "<minimumcompletetime>" << _fMinimumCompleteTime << "</minimumcompletetime>" << endl;
-        if( !!_workspacetraj ) {
+        O << "<maxdeviationangle>" << maxdeviationangle << "</maxdeviationangle>" << endl;
+        O << "<maintaintiming>" << maintaintiming << "</maintaintiming>" << endl;
+        O << "<greedysearch>" << greedysearch << "</greedysearch>" << endl;
+        O << "<ignorefirstcollision>" << ignorefirstcollision << "</ignorefirstcollision>" << endl;
+        O << "<minimumcompletetime>" << minimumcompletetime << "</minimumcompletetime>" << endl;
+        if( !!workspacetraj ) {
             O << "<workspacetraj>";
-            _workspacetraj->Write(O,TrajectoryBase::TO_IncludeTimestamps|TrajectoryBase::TO_IncludeBaseTransformation);
+            workspacetraj->Write(O,TrajectoryBase::TO_IncludeTimestamps|TrajectoryBase::TO_IncludeBaseTransformation);
             O << "</workspacetraj>" << endl;
         }
         return !!O;
@@ -215,25 +215,25 @@ public:
         // _ss is an internal stringstream that holds the data of the tag
         if( _bProcessing ) {
             if( name == "maxdeviationangle") {
-                _ss >> _fMaxDeviationAngle;
+                _ss >> maxdeviationangle;
             }
             else if( name == "maintaintiming" ) {
-                _ss >> _bMaintainTiming;
+                _ss >> maintaintiming;
             }
             else if( name == "greedysearch" ) {
-                _ss >> _bGreedySearch;
+                _ss >> greedysearch;
             }
             else if( name == "ignorefirstcollision" ) {
-                _ss >> _bIgnoreFirstCollision;
+                _ss >> ignorefirstcollision;
             }
             else if( name == "minimumcompletetime" ) {
-                _ss >> _fMinimumCompleteTime;
+                _ss >> minimumcompletetime;
             }
             else if( name == "workspacetraj" ) {
-                if( !_workspacetraj ) {
-                    _workspacetraj = RaveCreateTrajectory(_penv,"");
+                if( !workspacetraj ) {
+                    workspacetraj = RaveCreateTrajectory(_penv,"");
                 }
-                _workspacetraj->Read(_ss,RobotBasePtr());
+                workspacetraj->Read(_ss,RobotBasePtr());
             }
             else {
                 RAVELOG_WARN(str(boost::format("unknown tag %s\n")%name));
