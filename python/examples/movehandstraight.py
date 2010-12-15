@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Tests moving the hand straight with several robots.
+"""Tests moving the end effctor of the manipulator in straight paths.
 
 .. image:: ../../images/examples_movehandstraight.jpg
   :height: 200
@@ -23,7 +23,7 @@
 Description
 -----------
 
-Shows how to use the MoveHandStraight basemanipulation command.
+Shows how to use the MoveHandStraight basemanipulation command. The example picks a random trajectory of the end effector and tests if this trajectory is feasible to achieve in the robot.
 
 """
 
