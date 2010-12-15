@@ -39,6 +39,20 @@ public:
 Given a workspace trajectory of the end effector of a manipulator (active manipulator of the robot), finds a configuration space trajectory that tracks it using analytical inverse kinematics.\n\
 Options can be specified to prioritize trajectory time, trajectory smoothness, and planning time\n\
 In the simplest case, the workspace trajectory can be a straight line from one point to another.\n\
+\n\
+Planner Parameters\n\
+==================\n\
+\n\
+- **dReal maxdeviationangle** - the maximum angle the next iksolution can deviate from the expected direction computed by the jacobian.\n\
+\n\
+- **bool maintaintiming** - maintain timing with input trajectory\n\
+\n\
+- **bool ignorefirstcollision** - if true, will allow the robot to be in environment collision for the initial part of the trajectory. Once the robot gets out of collision, it will execute its normal following phase until it gets into collision again. This option is used when lifting objects from a surface, where the object is already in collision with the surface.\n\
+\n\
+- **dReal minimumcompletetime** - specifies the minimum trajectory that must be followed for planner to declare success. If 0, then the entire trajectory has to be followed.\n\
+\n\
+- **TrajectoryBasePtr workspacetraj** - workspace trajectory of the end effector\n\
+\n\
 ";
         _report.reset(new CollisionReport());
         _filteroptions = 0;
@@ -243,6 +257,12 @@ In the simplest case, the workspace trajectory can be a straight line from one p
             _parameters->_setstatefn(vsolution);
             _manip->CalculateJacobian(_mjacobian);
             _transprev = tbaseinv * *ittrans;
+            _vprevsolution = vsolution;
+        }
+
+        if( bPrevInCollision ) {
+            poutputtraj->Clear();
+            return false;
         }
 
         RAVELOG_DEBUG(str(boost::format("workspace trajectory tracker plan success, path=%d points in %fs\n")%poutputtraj->GetPoints().size()%((0.001f*(float)(timeGetTime()-basetime)))));
@@ -282,12 +302,15 @@ protected:
             if( cangle < 0 || cangle*cangle  < _fMaxCosDeviationAngle*_fMaxCosDeviationAngle*expecteddeltatrans.lengthsqr3()*jdeltatrans.lengthsqr3() ) {
                 return IKFR_Reject;
             }
+            // constrain rotations
         }
 
         if( _filteroptions & IKFO_CheckEnvCollisions ) {
-            // check rest of environment collisions
-            if( CollisionFunctions::CheckCollision(_parameters,_robot,_vprevsolution,vsolution,IT_Open) ) {
-                return IKFR_Reject;
+            if( _vprevsolution.size() > 0 ) {
+                // check rest of environment collisions
+                if( CollisionFunctions::CheckCollision(_parameters,_robot,_vprevsolution,vsolution,IT_Open) ) {
+                    return IKFR_Reject;
+                }
             }
         }
         return IKFR_Success;

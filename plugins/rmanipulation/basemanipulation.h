@@ -252,8 +252,11 @@ protected:
         bool bExecute = true;
         int minsteps = 0;
         int maxsteps = 10000;
+        bool starteematrix = false;
 
         RobotBase::ManipulatorConstPtr pmanip = robot->GetActiveManipulator();
+        Transform Tee;
+
         boost::shared_ptr<WorkspaceTrajectoryParameters> params(new WorkspaceTrajectoryParameters(GetEnv()));
         boost::shared_ptr<ostream> pOutputTrajStream;
         params->_bIgnoreFirstCollision = true;
@@ -300,6 +303,12 @@ protected:
             else if( cmd == "jacobian" ) {
                 RAVELOG_WARN("MoveHandStraight jacobian parameter not supported anymore\n");
             }
+            else if( cmd == "starteematrix" ) {
+                TransformMatrix tm;
+                starteematrix = true;
+                sinput >> tm;
+                Tee = tm;
+            }
             else {
                 RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
@@ -310,7 +319,8 @@ protected:
                 return false;
             }
         }
-    
+
+        params->_fMinimumCompleteTime = params->_fStepLength * minsteps;
         RAVELOG_DEBUG("Starting MoveHandStraight dir=(%f,%f,%f)...\n",(float)direction.x, (float)direction.y, (float)direction.z);
         robot->RegrabAll();
 
@@ -319,18 +329,29 @@ protected:
         robot->SetActiveDOFs(pmanip->GetArmIndices());
         params->SetRobotActiveJoints(robot);
 
-        CM::JitterActiveDOF(robot,100); // try to jitter out, don't worry if it fails
-        robot->GetActiveDOFValues(params->vinitialconfig);
+        if( !starteematrix ) {
+            CM::JitterActiveDOF(robot,100); // try to jitter out, don't worry if it fails
+            robot->GetActiveDOFValues(params->vinitialconfig);
+            Tee = pmanip->GetEndEffectorTransform();
+        }
+        else {
+            params->vinitialconfig.resize(0); // set by SetRobotActiveJoints
+        }
 
         // compute a workspace trajectory (important to do this after jittering!)
         {
+            Vector voldtrans = robot->GetAffineTranslationMaxVels();
+            dReal foldrot = robot->GetAffineRotationQuatMaxVels();
+            robot->SetAffineTranslationMaxVels(Vector(1,1,1));
+            robot->SetAffineRotationQuatMaxVels(1.0);
             params->_workspacetraj = RaveCreateTrajectory(GetEnv(),"");
             params->_workspacetraj->Reset(0);
-            Transform Tee = pmanip->GetEndEffectorTransform();
             params->_workspacetraj->AddPoint(TrajectoryBase::TPOINT(vector<dReal>(),Tee,0));
             Tee.trans += direction*maxsteps*params->_fStepLength;
             params->_workspacetraj->AddPoint(TrajectoryBase::TPOINT(vector<dReal>(),Tee,0));
             params->_workspacetraj->CalcTrajTiming(RobotBasePtr(),TrajectoryBase::LINEAR,true,false);
+            robot->SetAffineTranslationMaxVels(voldtrans);
+            robot->SetAffineRotationQuatMaxVels(foldrot);
         }
 
         boost::shared_ptr<PlannerBase> planner = RaveCreatePlanner(GetEnv(),"workspacetrajectorytracker");

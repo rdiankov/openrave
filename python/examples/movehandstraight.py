@@ -70,23 +70,62 @@ def run(args=None):
             robot.SetJointValues([-0.97],ikmodel.manip.GetGripperIndices())
             Tstart = array([[ -1,  0,  0,   2.00000000e-01], [  0,0,   1, 6.30000000e-01], [  0,   1  , 0,   5.50000000e-02], [  0,0,0,1]])
             sol = ikmodel.manip.FindIKSolution(Tstart,IkFilterOptions.CheckEnvCollisions)
-            #sol = array([ 0.849865, -0.266642,  3.3226  , -0.722752, -1.5065  ,  1.6274   ])
             robot.SetDOFValues(sol,ikmodel.manip.GetArmIndices())
         #basemanip.MoveToHandPosition([Tstart],maxiter=1000,maxtries=1,seedik=4)
         #robot.WaitForController(0)
         taskmanip.CloseFingers()
         robot.WaitForController(0)
-        RaveSetDebugLevel(DebugLevel.Debug)
         with env:
             target = env.GetKinBody('cylinder_green_3')
             robot.Grab(target)
             updir = array((0,0,1))
-            env.SetDebugLevel(DebugLevel.Debug)
-        success = basemanip.MoveHandStraight(direction=updir,stepsize=0.01,minsteps=1,maxsteps=10)
+
+#         from IPython.Shell import IPShellEmbed
+#         ipshell = IPShellEmbed(argv='',banner = 'OpenRAVE Dropping into IPython, variables: env, robot',exit_msg = 'Leaving Interpreter and closing program.')
+#         ipshell(local_ns=locals())
+
+        success = basemanip.MoveHandStraight(direction=updir,stepsize=0.01,minsteps=1,maxsteps=40)
         robot.WaitForController(0)
-        success = basemanip.MoveHandStraight(direction=-updir,stepsize=0.01,minsteps=1,maxsteps=10)
+        success = basemanip.MoveHandStraight(direction=-updir,stepsize=0.01,minsteps=1,maxsteps=40)
         robot.WaitForController(0)
-        raw_input('')
+        
+        # test verification with offset (should succeed)
+        T = ikmodel.manip.GetEndEffectorTransform()
+        T[1,3] += 0.1
+        success = basemanip.MoveHandStraight(direction=updir,starteematrix=T,stepsize=0.01,minsteps=1,maxsteps=20)
+        robot.WaitForController(0)
+     
+        print 'checking for existance of trajectories with random queries of moving in a straight line'
+        armlength = 0
+        armjoints = [j for j in robot.GetDependencyOrderedJoints() if j.GetJointIndex() in ikmodel.manip.GetArmIndices()]
+        eetrans = ikmodel.manip.GetEndEffectorTransform()[0:3,3]
+        for j in armjoints[::-1]:
+            armlength += sqrt(sum((eetrans-j.GetAnchor())**2))
+            eetrans = j.GetAnchor()
+        stepsize=0.01
+        failedattempt = 0
+        while True:
+            with env:
+                #Tee = dot(ikmodel.manip.GetEndEffectorTransform(),matrixFromAxisAngle(random.rand(3)-0.5,0.2*random.rand()))
+                Tee = matrixFromAxisAngle(random.rand(3)-0.5,pi*random.rand())
+                direction = random.rand(3)
+                direction /= linalg.norm(direction)
+                x = random.rand(3)-0.5
+                length = 0.2*random.rand()*armlength
+                Tee[0:3,3] = eetrans + x/linalg.norm(x)*(armlength-length)
+                maxsteps=int(length/stepsize)
+                minsteps = maxsteps/3
+                h = env.drawlinelist(array([Tee[0:3,3],Tee[0:3,3]+direction*maxsteps*stepsize]),1)
+            try:
+                success = basemanip.MoveHandStraight(direction=direction,starteematrix=Tee,stepsize=stepsize,minsteps=minsteps,maxsteps=maxsteps)
+                params = (direction,Tee)
+                print '%d failed attemps before found'%failedattempt
+                failedattempt = 0
+                h = env.drawlinelist(array([Tee[0:3,3],Tee[0:3,3]+direction*maxsteps*stepsize]),4,[0,0,1])
+                robot.WaitForController(0)
+            except planning_error,e:
+                failedattempt += 1
+            
     finally:
         RaveDestroy()
 

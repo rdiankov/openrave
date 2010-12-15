@@ -40,7 +40,7 @@ class BaseManipulation:
         """.. interface-command:: BaseManipulation TrajFromData
         """
         return self.prob.SendCommand('traj stream ' + data)
-    def MoveHandStraight(self,direction,minsteps=None,maxsteps=None,stepsize=None,ignorefirstcollision=None,jacobian=None,searchall=None,execute=None,outputtraj=None):
+    def MoveHandStraight(self,direction,minsteps=None,maxsteps=None,stepsize=None,ignorefirstcollision=None,starteematrix=None,searchall=None,execute=None,outputtraj=None):
         cmd = 'MoveHandStraight direction %f %f %f '%(direction[0],direction[1],direction[2])
         if minsteps is not None:
             cmd += 'minsteps %d '%minsteps
@@ -50,8 +50,8 @@ class BaseManipulation:
             cmd += 'stepsize %f '%stepsize
         if execute is not None:
             cmd += 'execute %d '%execute
-        if jacobian is not None:
-            cmd += 'jacobian %f '%jacobian
+        if starteematrix is not None:
+            cmd += 'starteematrix ' + matrixSerialization(starteematrix) + ' '
         if searchall is not None:
             cmd += 'searchall %d '%searchall
         if outputtraj is not None and outputtraj:
