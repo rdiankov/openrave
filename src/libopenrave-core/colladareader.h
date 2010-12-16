@@ -609,8 +609,8 @@ class ColladaReader : public daeErrorHandler
                         if( pelt->getElementName() == string("ignore_link_pair") ) {
                             domLinkRef pdomlink0 = daeSafeCast<domLink>(daeSidRef(pelt->getAttribute("link0"), kmodel).resolve().elt);
                             domLinkRef pdomlink1 = daeSafeCast<domLink>(daeSidRef(pelt->getAttribute("link1"), kmodel).resolve().elt);
-                            if( !pdomlink0 && !pdomlink1 ) {
-                                RAVELOG_WARN("failed to reference <ignore_link_pair> links\n");
+                            if( !pdomlink0 || !pdomlink1 ) {
+                                RAVELOG_WARN(str(boost::format("failed to reference <ignore_link_pair> links: %s %s\n")%pelt->getAttribute("link0")%pelt->getAttribute("link1")));
                                 continue;
                             }
                             KinBody::LinkPtr plink0 = boost::static_pointer_cast<KinBody::Link>(_getUserData(pdomlink0)->p);
