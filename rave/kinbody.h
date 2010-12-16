@@ -783,7 +783,7 @@ public:
     /// returns how the joint effects the link. If zero, link is unaffected. If negative, the partial derivative of the Jacobian should be negated.
     /// \param jointindex index of the joint
     /// \param linkindex index of the link
-    virtual char DoesAffect(int jointindex, int linkindex) const;
+    virtual int8_t DoesAffect(int jointindex, int linkindex) const;
 
     virtual void SetGuiData(UserDataPtr data) { _pGuiData = data; }
     virtual UserDataPtr GetGuiData() const { return _pGuiData; }
@@ -884,7 +884,7 @@ protected:
     std::vector<JointPtr> _vDOFOrderedJoints; ///< all joints of the body ordered on how they are arranged within the degrees of freedom
     std::vector<LinkPtr> _veclinks;       ///< \see GetLinks
     std::vector<int> _vecDOFIndices; ///< cached start joint indices, indexed by dof indices
-    std::vector<char> _vecJointHierarchy;   ///< joint x link, entry is non-zero if the joint affects the link in the forward kinematics
+    std::vector<int8_t> _vecJointHierarchy;   ///< joint x link, entry is non-zero if the joint affects the link in the forward kinematics
                                             ///< if negative, the partial derivative of ds/dtheta should be negated
 
     std::vector<JointPtr> _vecPassiveJoints; ///< \see GetPassiveJoints()
@@ -893,6 +893,7 @@ protected:
                                             ///< i|(j<<16) will be in the set where i<j.
     mutable boost::array<std::set<int>, 4> _setNonAdjacentLinks;     ///< contains cached versions of the non-adjacent links depending on values in AdjacentOptions. Declared as mutable since data is cached.
     std::vector< std::pair<std::string, std::string> > _vForcedAdjacentLinks; ///< internally stores forced adjacent links
+    std::vector<std::pair<int16_t,int16_t> > _vAllPairsShortestPaths; ///< all-pairs shortest paths through the link hierarchy. The first value describes the parent link index, and the second value is an index into _vecjoints or _vecPassiveJoints. If the second value is greater or equal to  _vecjoints.size() then it indexes into _vecPassiveJoints.
 
     std::list<KinBodyWeakPtr> _listAttachedBodies; ///< list of bodies that are directly attached to this body (can have duplicates)
 

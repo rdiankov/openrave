@@ -281,7 +281,7 @@ class GraspPlanning(metaclass.AutoReloader):
 
     def performGraspPlanning(self,withreplacement=True,**kwargs):
         print 'starting to pick and place random objects'
-        graspables = self.graspables
+        graspables = self.graspables[:]
         while True:
             if len(graspables) == 0:
                 if withreplacement:

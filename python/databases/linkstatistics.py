@@ -136,7 +136,7 @@ class LinkStatisticsModel(OpenRAVEModel):
                         accumvolume = sum(array([volume for ilink,volume in enumerate(linkvolumes) if self.robot.DoesAffect(ijoint,ilink)]))
                     return (volumeinfo['volumedelta']*accumvolume)**weightexp
                 jweights = array([getweight(ijoint,jv) for ijoint,jv in enumerate(self.jointvolumes)])
-                jweights *= 1.0/mean(jweights) # normalize.........?
+                jweights *= 10.0# this is a weird factor.... but at least it is consistent when composing robots
                 for w,j in izip(jweights,self.robot.GetJoints()):
                     j.SetWeights(tile(w,j.GetDOF()))
                 self.robot.SetAffineTranslationWeights([getweight(-1,self.affinevolumes[i]) for i in range(3)])

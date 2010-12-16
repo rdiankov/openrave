@@ -1094,6 +1094,7 @@ void KinBody::Destroy()
     FOREACH(it,_setNonAdjacentLinks) {
         it->clear();
     }
+    _vAllPairsShortestPaths.clear();
     _nNonAdjacentLinkCache = 0;
     _vForcedAdjacentLinks.clear();
     _bHierarchyComputed = false;
@@ -2095,85 +2096,20 @@ void KinBody::GetRigidlyAttachedLinks(int linkindex, std::vector<KinBody::LinkPt
 bool KinBody::GetChain(int linkindex1, int linkindex2, std::vector<JointPtr>& vjoints) const
 {
     CHECK_INTERNAL_COMPUTATION;
+    BOOST_ASSERT(linkindex1>=0&&linkindex1<(int)_veclinks.size());
+    BOOST_ASSERT(linkindex2>=0&&linkindex2<(int)_veclinks.size());
     vjoints.resize(0);
-    int numjoints = (int)_vecjoints.size();
-    vector<int> vjointparents(numjoints+_vecPassiveJoints.size(),-2);
-    list<pair<LinkConstPtr, int > > listlinks;
-    vector<LinkPtr> vattachedlinks;
-    _veclinks.at(linkindex1)->GetRigidlyAttachedLinks(vattachedlinks);
-    FOREACHC(itlink,vattachedlinks) {
-        listlinks.push_back(make_pair(LinkConstPtr(*itlink),-1));
+    if( linkindex1 == linkindex2 ) {
+        return true;
     }
-    while(listlinks.size()>0) {
-        LinkConstPtr plink = listlinks.front().first;
-        int parentjoint = listlinks.front().second;
-        if( plink->GetIndex() == linkindex2 ) {
-            vjoints.resize(0);
-            list<int> listpath;
-            while(parentjoint >= 0) {
-                listpath.push_front(parentjoint);
-                parentjoint = vjointparents.at(parentjoint);
-            }
-            vjoints.resize(0); vjoints.reserve(listpath.size());
-            FOREACH(it,listpath) {
-                if( *it < numjoints ) {
-                    vjoints.push_back(_vecjoints.at(*it));
-                }
-                else {
-                    vjoints.push_back(_vecPassiveJoints.at(*it-numjoints));
-                }
-            }
-            return true;
-        }
-        listlinks.pop_front();
-        FOREACHC(itjoint, _vecjoints) {
-            int jointindex = (*itjoint)->GetJointIndex();
-            // use the source mimic joint
-            if( vjointparents.at(jointindex) == -2 ) {
-                LinkConstPtr pother;
-                if( (*itjoint)->GetFirstAttached() == plink && !!(*itjoint)->GetSecondAttached() ) {
-                    pother = (*itjoint)->GetSecondAttached();
-                }
-                if( (*itjoint)->GetSecondAttached() == plink && !!(*itjoint)->GetFirstAttached() ) {
-                    pother = (*itjoint)->GetFirstAttached();
-                }
-                if( !!pother ) {
-                    vjointparents[jointindex] = parentjoint;
-                    //int addjointindex = (*itjoint)->GetMimicJointIndex() >= 0 ? (*itjoint)->GetMimicJointIndex() : jointindex;
-                    vattachedlinks.resize(0);
-                    pother->GetRigidlyAttachedLinks(vattachedlinks);
-                    FOREACHC(itlink,vattachedlinks) {
-                        listlinks.push_back(make_pair(LinkConstPtr(*itlink),jointindex));
-                    }
-                }
-            }
-        }
-        // also check passive mimic joints!
-        int jointindex=0;
-        FOREACHC(itjoint, _vecPassiveJoints) {
-            if( (*itjoint)->GetMimicJointIndex() >= 0 ) {
-                if( vjointparents.at(numjoints+jointindex) == -2 ) {
-                    LinkConstPtr pother;
-                    if( (*itjoint)->GetFirstAttached() == plink && !!(*itjoint)->GetSecondAttached() ) {
-                        pother = (*itjoint)->GetSecondAttached();
-                    }
-                    if( (*itjoint)->GetSecondAttached() == plink && !!(*itjoint)->GetFirstAttached() ) {
-                        pother = (*itjoint)->GetFirstAttached();
-                    }
-                    if( !!pother ) {
-                        vjointparents[numjoints+jointindex] = parentjoint;
-                        vattachedlinks.resize(0);
-                        pother->GetRigidlyAttachedLinks(vattachedlinks);
-                        FOREACHC(itlink,vattachedlinks) {
-                            listlinks.push_back(make_pair(LinkConstPtr(*itlink),numjoints+jointindex));
-                        }
-                    }
-                }
-            }
-            ++jointindex;
-        }
+    int offset = linkindex2*_veclinks.size();
+    int curlink = linkindex1;
+    while(_vAllPairsShortestPaths[offset+curlink].first>=0) {
+        int jointindex = _vAllPairsShortestPaths[offset+curlink].second;
+        vjoints.push_back(jointindex < (int)_vecjoints.size() ? _vecjoints[jointindex] : _vecPassiveJoints.at(jointindex-_vecjoints.size()));
+        curlink = _vAllPairsShortestPaths[offset+curlink].first;
     }
-    return false;
+    return vjoints.size()>0; // otherwise disconnected
 }
 
 bool KinBody::IsDOFInChain(int linkindex1, int linkindex2, int dofindex) const
@@ -2219,7 +2155,7 @@ void KinBody::CalculateJacobian(int index, const Vector& trans, boost::multi_arr
     Vector v;
     FOREACHC(itjoint, _vecjoints) {
         int dofindex = (*itjoint)->GetDOFIndex();
-        char affect = DoesAffect((*itjoint)->GetJointIndex(), index);
+        int8_t affect = DoesAffect((*itjoint)->GetJointIndex(), index);
         for(int dof = 0; dof < (*itjoint)->GetDOF(); ++dof) {
             if( affect == 0 )
                 mjacobian[0][dofindex+dof] = mjacobian[1][dofindex+dof] = mjacobian[2][dofindex+dof] = 0;
@@ -2291,7 +2227,7 @@ void KinBody::CalculateRotationJacobian(int index, const Vector& q, boost::multi
     Vector v;
     FOREACHC(itjoint, _vecjoints) {
         int dofindex = (*itjoint)->GetDOFIndex();
-        char affect = DoesAffect((*itjoint)->GetJointIndex(), index);
+        int8_t affect = DoesAffect((*itjoint)->GetJointIndex(), index);
         for(int dof = 0; dof < (*itjoint)->GetDOF(); ++dof) {
             if( affect == 0 ) {
                 mjacobian[0][dofindex+dof] = mjacobian[1][dofindex+dof] = mjacobian[2][dofindex+dof] = mjacobian[3][dofindex+dof] = 0;
@@ -2370,7 +2306,7 @@ void KinBody::CalculateAngularVelocityJacobian(int index, boost::multi_array<dRe
     Vector v, anchor, axis;
     FOREACHC(itjoint, _vecjoints) {
         int dofindex = (*itjoint)->GetDOFIndex();
-        char affect = DoesAffect((*itjoint)->GetJointIndex(), index);
+        int8_t affect = DoesAffect((*itjoint)->GetJointIndex(), index);
         for(int dof = 0; dof < (*itjoint)->GetDOF(); ++dof) {
             if( affect == 0 ) {
                 mjacobian[0][dofindex+dof] = mjacobian[1][dofindex+dof] = mjacobian[2][dofindex+dof] = 0;
@@ -2545,7 +2481,7 @@ void KinBody::_ComputeInternalInformation()
                     continue;
                 }
 
-                char* pvalues = &_vecJointHierarchy[!bIsPassive ? itjoint->second*_veclinks.size() : itjoint->first->GetMimicJointIndex() * _veclinks.size()];
+                int8_t* pvalues = &_vecJointHierarchy[!bIsPassive ? itjoint->second*_veclinks.size() : itjoint->first->GetMimicJointIndex() * _veclinks.size()];
 
                 if( !!bodies[0] ) {
                     if( !!bodies[1] ) {
@@ -2618,14 +2554,6 @@ void KinBody::_ComputeInternalInformation()
         }
     }
 
-    {
-        // force all joints to 0 when computing hashes?
-        ostringstream ss;
-        ss << std::fixed << std::setprecision(SERIALIZATION_PRECISION);
-        serialize(ss,SO_Kinematics|SO_Geometry);
-        __hashkinematics = GetMD5HashString(ss.str());
-    }
-
     // compute the rigidly attached links
     for(size_t ilink = 0; ilink < _veclinks.size(); ++ilink) {
         vector<int>& vattachedlinks = _veclinks[ilink]->_vRigidlyAttachedLinks;
@@ -2685,6 +2613,69 @@ void KinBody::_ComputeInternalInformation()
                 }
             }
         }
+    }
+
+    // compute the all-pairs shortest paths
+    {
+        _vAllPairsShortestPaths.resize(_veclinks.size()*_veclinks.size());
+        FOREACH(it,_vAllPairsShortestPaths) {
+            it->first = -1;
+            it->second = -1;
+        }
+        vector<uint32_t> vcosts(_veclinks.size()*_veclinks.size(),0x3fffffff); // initialize to 2^30 since we'll be adding
+        for(size_t i = 0; i < _veclinks.size(); ++i) {
+            vcosts[i*_veclinks.size()+i] = 0;
+        }
+        FOREACHC(itjoint,_vecjoints) {
+            if( !!(*itjoint)->GetFirstAttached() && !!(*itjoint)->GetSecondAttached() ) {
+                int index = (*itjoint)->GetFirstAttached()->GetIndex()*_veclinks.size()+(*itjoint)->GetSecondAttached()->GetIndex();
+                _vAllPairsShortestPaths[index] = std::pair<int16_t,int16_t>((*itjoint)->GetFirstAttached()->GetIndex(),(*itjoint)->GetJointIndex());
+                vcosts[index] = 1;
+                index = (*itjoint)->GetSecondAttached()->GetIndex()*_veclinks.size()+(*itjoint)->GetFirstAttached()->GetIndex();
+                _vAllPairsShortestPaths[index] = std::pair<int16_t,int16_t>((*itjoint)->GetSecondAttached()->GetIndex(),(*itjoint)->GetJointIndex());
+                vcosts[index] = 1;
+            }
+        }
+        int jointindex = (int)_vecjoints.size();
+        FOREACHC(itjoint,_vecPassiveJoints) {
+            if( !!(*itjoint)->GetFirstAttached() && !!(*itjoint)->GetSecondAttached() ) {
+                int index = (*itjoint)->GetFirstAttached()->GetIndex()*_veclinks.size()+(*itjoint)->GetSecondAttached()->GetIndex();
+                _vAllPairsShortestPaths[index] = std::pair<int16_t,int16_t>((*itjoint)->GetFirstAttached()->GetIndex(),jointindex);
+                vcosts[index] = 1;
+                index = (*itjoint)->GetSecondAttached()->GetIndex()*_veclinks.size()+(*itjoint)->GetFirstAttached()->GetIndex();
+                _vAllPairsShortestPaths[index] = std::pair<int16_t,int16_t>((*itjoint)->GetSecondAttached()->GetIndex(),jointindex);
+                vcosts[index] = 1;
+            }
+            ++jointindex;
+        }
+        for(size_t k = 0; k < _veclinks.size(); ++k) {
+            for(size_t i = 0; i < _veclinks.size(); ++i) {
+                if( i == k ) {
+                    continue;
+                }
+                for(size_t j = 0; j < _veclinks.size(); ++j) {
+                    if( j == i || j == k ) {
+                        continue;
+                    }
+                    uint32_t kcost = vcosts[k*_veclinks.size()+i] + vcosts[j*_veclinks.size()+k];
+                    if( vcosts[j*_veclinks.size()+i] > kcost ) {
+                        vcosts[j*_veclinks.size()+i] = kcost;
+                        _vAllPairsShortestPaths[j*_veclinks.size()+i] = _vAllPairsShortestPaths[k*_veclinks.size()+i];
+                    }
+                    else if( vcosts[j*_veclinks.size()+i] == kcost && _vAllPairsShortestPaths[j*_veclinks.size()+i] != _vAllPairsShortestPaths[k*_veclinks.size()+i] ) {
+                        RAVELOG_WARN("found closed loop in kinematics! links %d,%d,%d\n",k,i,j);
+                    }
+                }
+            }
+        }
+    }
+
+    {
+        // force all joints to 0 when computing hashes?
+        ostringstream ss;
+        ss << std::fixed << std::setprecision(SERIALIZATION_PRECISION);
+        serialize(ss,SO_Kinematics|SO_Geometry);
+        __hashkinematics = GetMD5HashString(ss.str());
     }
 
     // create the adjacency list
@@ -2872,7 +2863,7 @@ int KinBody::GetEnvironmentId() const
     return _environmentid;
 }
 
-char KinBody::DoesAffect(int jointindex, int linkindex ) const
+int8_t KinBody::DoesAffect(int jointindex, int linkindex ) const
 {
     CHECK_INTERNAL_COMPUTATION;
     BOOST_ASSERT(jointindex >= 0 && jointindex < (int)_vecjoints.size());
@@ -2966,7 +2957,8 @@ bool KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     _setNonAdjacentLinks = r->_setNonAdjacentLinks;
     _nNonAdjacentLinkCache = r->_nNonAdjacentLinkCache;
     _vForcedAdjacentLinks = r->_vForcedAdjacentLinks;
-
+    _vAllPairsShortestPaths = r->_vAllPairsShortestPaths;
+    
     _listAttachedBodies.clear(); // will be set in the environment
     _listRegisteredCallbacks.clear(); // reset the callbacks
 

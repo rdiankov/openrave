@@ -2195,10 +2195,13 @@ void RobotBase::_ComputeInternalInformation()
                             //RAVELOG_WARN(str(boost::format("manipulator arm contains mimic joint %s whose source joint %s is not part of the arm, ignoring...\n")%(*it)->GetName()%_vecjoints.at((*it)->GetMimicJointIndex())->GetName()));
                         }
                     }
+                    else if( (*it)->IsStatic() ) {
+                        // ignore
+                    }
                     else if( (*it)->GetDOFIndex() < 0) {
                         RAVELOG_WARN(str(boost::format("manipulator arm contains joint %s without a dof index, ignoring...\n")%(*it)->GetName()));
                     }
-                    else {
+                    else { // ignore static joints
                         for(int i = 0; i < (*it)->GetDOF(); ++i) {
                             (*itmanip)->_varmdofindices.push_back((*it)->GetDOFIndex()+i);
                         }

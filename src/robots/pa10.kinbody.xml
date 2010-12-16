@@ -31,6 +31,8 @@
     <limitsdeg>-177 177</limitsdeg>
     <maxvel>0.4</maxvel>
     <hardmaxvel>1</hardmaxvel>
+    <weight>1.509</weight>
+    <resolution>0.2592</resolution>
   </Joint>
   <Body name="link2">
     <offsetfrom>link0</offsetfrom>
@@ -53,6 +55,8 @@
     <limitsdeg>-91 91</limitsdeg>
     <maxvel>0.4</maxvel>
     <hardmaxvel>1</hardmaxvel>
+    <weight>0.771746</weight>
+    <resolution>0.43719945</resolution>
   </Joint>
   <Body name="link3">
     <offsetfrom>link0</offsetfrom>
@@ -75,6 +79,8 @@
     <limitsdeg>-174 174</limitsdeg>
     <maxvel>0.5</maxvel>
     <hardmaxvel>1.5</hardmaxvel>
+    <weight>0.75061505</weight>
+    <resolution>0.437199</resolution>
   </Joint>
   <Body name="link4">
     <offsetfrom>link0</offsetfrom>
@@ -97,6 +103,8 @@
     <limitsdeg>-137 137</limitsdeg>
     <maxvel>0.5</maxvel>
     <hardmaxvel>2</hardmaxvel>
+    <weight>0.213169</weight>
+    <resolution>1.8019</resolution>
   </Joint>
   <Body name="link5">
     <offsetfrom>link0</offsetfrom>
@@ -119,6 +127,8 @@
     <limitsdeg>-255 255</limitsdeg>
     <maxvel>1</maxvel>
     <hardmaxvel>6.28</hardmaxvel>
+    <weight>0.202897</weight>
+    <resolution>1.8019</resolution>
   </Joint>
   <Body name="link6">
     <offsetfrom>link0</offsetfrom>
@@ -141,6 +151,8 @@
     <limitsdeg>-165 165</limitsdeg>
     <maxvel>1</maxvel>
     <hardmaxvel>6.28</hardmaxvel>
+    <weight>0.08016</weight>
+    <resolution>6.85359</resolution>
   </Joint>
   <Body name="link7">
     <offsetfrom>link0</offsetfrom>
@@ -166,5 +178,7 @@
     <!-- no joint limits -->
     <maxvel>1</maxvel>
     <hardmaxvel>6.28</hardmaxvel>
+    <weight>0.029175</weight>
+    <resolution>8.04</resolution>
   </Joint>
 </KinBody>
