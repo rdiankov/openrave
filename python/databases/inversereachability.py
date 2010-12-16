@@ -129,7 +129,7 @@ class InverseReachabilityModel(OpenRAVEModel):
     @staticmethod
     def getdofindices(manip):
         joints = manip.GetRobot().GetChain(0,manip.GetBase().GetIndex())
-        return hstack([arange(joint.GetDOFIndex(),joint.GetDOFIndex()+joint.GetDOF()) for joint in joints]) if len(joints) > 0 else array([],int)
+        return hstack([arange(joint.GetDOFIndex(),joint.GetDOFIndex()+joint.GetDOF()) for joint in joints if joint.GetDOFIndex()>=0 and not joint.IsStatic()]) if len(joints) > 0 else array([],int)
     @staticmethod
     def getManipulatorLinks(manip):
         links = manip.GetChildLinks()
@@ -143,7 +143,7 @@ class InverseReachabilityModel(OpenRAVEModel):
                 links.append(joint.GetSecondAttached())
         # don't forget the rigidly attached links
         for link in links[:]:
-            for newlink in robot.GetRigidlyAttachedLinks(link.GetIndex()):
+            for newlink in link.GetRigidlyAttachedLinks():
                 if not newlink in links:
                     links.append(newlink)
         return links

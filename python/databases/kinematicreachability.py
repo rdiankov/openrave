@@ -174,7 +174,7 @@ class ReachabilityModel(OpenRAVEModel):
         # add the links connecting to the base link.... although this reduces the freespace of the arm, it is better to have than not (ie waist on humanoid)
         tobasejoints = manip.GetRobot().GetChain(0,manip.GetBase().GetIndex())
         if len(tobasejoints) > 0:
-            tobasedofs = hstack([arange(joint.GetDOFIndex(),joint.GetDOFIndex()+joint.GetDOF()) for joint in tobasejoints])
+            tobasedofs = hstack([arange(joint.GetDOFIndex(),joint.GetDOFIndex()+joint.GetDOF()) for joint in tobasejoints if joint.GetDOFIndex() >= 0 and not joint.IsStatic()])
         else:
             tobasedofs = []
         robot = manip.GetRobot()
@@ -187,7 +187,7 @@ class ReachabilityModel(OpenRAVEModel):
                 links.append(joint.GetSecondAttached())
         # don't forget the rigidly attached links
         for link in links[:]:
-            for newlink in robot.GetRigidlyAttachedLinks(link.GetIndex()):
+            for newlink in link.GetRigidlyAttachedLinks():
                 if not newlink in links:
                     links.append(newlink)
         return links
