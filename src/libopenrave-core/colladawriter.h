@@ -310,9 +310,9 @@ class ColladaWriter : public daeErrorHandler
         string asmsym = str(boost::format("%s.%s")%asmid%ikmout->ikm->getSid());
         string assym = str(boost::format("%s.%s")%_scene.kscene->getID()%ikmout->ikm->getSid());
         FOREACH(it, ikmout->vkinematicsbindings) {
-            domKinematics_bindRef abm = daeSafeCast<domKinematics_bind>(ias_motion->add(COLLADA_ELEMENT_BIND));
-            abm->setSymbol(asmsym.c_str());
-            daeSafeCast<domKinematics_param>(abm->add(COLLADA_ELEMENT_PARAM))->setRef(it->first.c_str());
+            domKinematics_newparamRef abm = daeSafeCast<domKinematics_newparam>(ias_motion->add(COLLADA_ELEMENT_NEWPARAM));
+            abm->setSid(asmsym.c_str());
+            daeSafeCast<domKinematics_newparam::domSIDREF>(abm->add(COLLADA_ELEMENT_SIDREF))->setValue(it->first.c_str());
             domKinematics_bindRef ab = daeSafeCast<domKinematics_bind>(ias->add(COLLADA_ELEMENT_BIND));
             ab->setSymbol(assym.c_str());
             daeSafeCast<domKinematics_param>(ab->add(COLLADA_ELEMENT_PARAM))->setRef(asmsym.c_str());
@@ -320,17 +320,17 @@ class ColladaWriter : public daeErrorHandler
         }
         for(size_t idof = 0; idof < ikmout->vaxissids.size(); ++idof) {
             const axis_sids& kas = ikmout->vaxissids.at(idof);
-            domKinematics_bindRef abm = daeSafeCast<domKinematics_bind>(ias_motion->add(COLLADA_ELEMENT_BIND));
-            abm->setSymbol(str(boost::format("%s.%s")%asmid%kas.axissid).c_str());
-            daeSafeCast<domKinematics_param>(abm->add(COLLADA_ELEMENT_PARAM))->setRef(kas.axissid.c_str());
+            domKinematics_newparamRef abm = daeSafeCast<domKinematics_newparam>(ias_motion->add(COLLADA_ELEMENT_NEWPARAM));
+            abm->setSid(str(boost::format("%s.%s")%asmid%kas.axissid).c_str());
+            daeSafeCast<domKinematics_newparam::domSIDREF>(abm->add(COLLADA_ELEMENT_SIDREF))->setValue(kas.axissid.c_str());
             domKinematics_bindRef ab = daeSafeCast<domKinematics_bind>(ias->add(COLLADA_ELEMENT_BIND));
             ab->setSymbol(str(boost::format("%s.%s")%assym%kas.axissid).c_str());
             daeSafeCast<domKinematics_param>(ab->add(COLLADA_ELEMENT_PARAM))->setRef(str(boost::format("%s.%s")%asmid%kas.axissid).c_str());
             string valuesid;
             if( kas.valuesid.size() > 0 ) {
-                domKinematics_bindRef abmvalue = daeSafeCast<domKinematics_bind>(ias_motion->add(COLLADA_ELEMENT_BIND));
-                abmvalue->setSymbol(str(boost::format("%s.%s")%asmid%kas.valuesid).c_str());
-                daeSafeCast<domKinematics_param>(abmvalue->add(COLLADA_ELEMENT_PARAM))->setRef(kas.valuesid.c_str());
+                domKinematics_newparamRef abmvalue = daeSafeCast<domKinematics_newparam>(ias_motion->add(COLLADA_ELEMENT_NEWPARAM));
+                abmvalue->setSid(str(boost::format("%s.%s")%asmid%kas.valuesid).c_str());
+                daeSafeCast<domKinematics_newparam::domSIDREF>(abmvalue->add(COLLADA_ELEMENT_SIDREF))->setValue(kas.valuesid.c_str());
                 domKinematics_bindRef abvalue = daeSafeCast<domKinematics_bind>(ias->add(COLLADA_ELEMENT_BIND));
                 valuesid = str(boost::format("%s.%s")%assym%kas.valuesid);
                 abvalue->setSymbol(valuesid.c_str());
@@ -429,17 +429,17 @@ class ColladaWriter : public daeErrorHandler
         ikmout->ikm->setUrl(str(boost::format("#%s")%kmout->kmodel->getID()).c_str());
         ikmout->ikm->setSid(ikmsid.c_str());
 
-        domKinematics_bindRef kbind = daeSafeCast<domKinematics_bind>(ikmout->ikm->add(COLLADA_ELEMENT_BIND));
-        kbind->setSymbol((symscope+ikmsid).c_str());
-        daeSafeCast<domKinematics_bind::domSIDREF>(kbind->add(COLLADA_ELEMENT_SIDREF))->setValue((refscope+ikmsid).c_str());
-        ikmout->vkinematicsbindings.push_back(make_pair(string(kbind->getSymbol()), str(boost::format("visual%d/node0")%pbody->GetEnvironmentId())));
+        domKinematics_newparamRef kbind = daeSafeCast<domKinematics_newparam>(ikmout->ikm->add(COLLADA_ELEMENT_NEWPARAM));
+        kbind->setSid((symscope+ikmsid).c_str());
+        daeSafeCast<domKinematics_newparam::domSIDREF>(kbind->add(COLLADA_ELEMENT_SIDREF))->setValue((refscope+ikmsid).c_str());
+        ikmout->vkinematicsbindings.push_back(make_pair(string(kbind->getSid()), str(boost::format("visual%d/node0")%pbody->GetEnvironmentId())));
 
         ikmout->vaxissids.reserve(kmout->vaxissids.size());
         vector<dReal> vdofvalues;
         pbody->GetDOFValues(vdofvalues);
         int i = 0;
         FOREACH(it,kmout->vaxissids) {
-            domKinematics_bindRef kbind = daeSafeCast<domKinematics_bind>(ikmout->ikm->add(COLLADA_ELEMENT_BIND));
+            domKinematics_newparamRef kbind = daeSafeCast<domKinematics_newparam>(ikmout->ikm->add(COLLADA_ELEMENT_NEWPARAM));
             string ref = it->sid;
             size_t index = ref.find("/");
             while(index != string::npos) {
@@ -447,8 +447,8 @@ class ColladaWriter : public daeErrorHandler
                 index = ref.find("/",index+1);
             }
             string sid = symscope+ikmsid+"."+ref;
-            kbind->setSymbol(sid.c_str());
-            daeSafeCast<domKinematics_bind::domSIDREF>(kbind->add(COLLADA_ELEMENT_SIDREF))->setValue((refscope+ikmsid+"/"+it->sid).c_str());
+            kbind->setSid(sid.c_str());
+            daeSafeCast<domKinematics_newparam::domSIDREF>(kbind->add(COLLADA_ELEMENT_SIDREF))->setValue((refscope+ikmsid+"/"+it->sid).c_str());
             dReal value=0;
             if( it->pjoint->GetDOFIndex() >= 0 ) {
                 value = vdofvalues.at(it->pjoint->GetDOFIndex()+it->iaxis);
