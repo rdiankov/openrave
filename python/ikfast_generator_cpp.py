@@ -1521,6 +1521,7 @@ static void %s(IKReal rawcoeffs[%d+1], IKReal rawroots[%d], int& numroots)
             fcode = """/// intersection of a conic and the unit circle
 static void %s(IKReal _C0[6], IKReal roots[4], int& numroots)
 {
+    numroots = 0;
     // have to normalize _C0
     IKReal maxval = IKabs(_C0[0]);
     for(int i = 1; i < 6; ++i) {
@@ -1542,7 +1543,6 @@ static void %s(IKReal _C0[6], IKReal roots[4], int& numroots)
     if( numproots < 1 ) {
         return;
     }
-    numroots = 0;
     int iroot=0;
     IKReal a, b, c, d, e, f;
     a = C0[0]+proots[iroot]; b = C0[1]; c = C0[3]+proots[iroot]; d = C0[2]; e = C0[4]; f = C0[5]-proots[iroot];

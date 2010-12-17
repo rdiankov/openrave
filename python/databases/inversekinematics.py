@@ -156,7 +156,7 @@ class InverseKinematicsModel(OpenRAVEModel):
     def load(self,*args,**kwargs):
         return self.setrobot(*args,**kwargs)
     def getversion(self):
-        return 21
+        return 22
     def setrobot(self,freeinc=None):
         self.iksolver = None
         self.freeinc=freeinc

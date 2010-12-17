@@ -288,7 +288,6 @@ conicsolver(coniccoeffs,j0array,numsolutions);
 for(int ij0 = 0; ij0 < numsolutions; ++ij0)
 {
     j0 = j0array[ij0]; cj0 = IKcos(j0); sj0 = IKsin(j0);
-
 {
 IKReal j3eval[1];
 j3eval[0]=sj2;
@@ -3108,6 +3107,7 @@ static void polyroots2(IKReal rawcoeffs[2+1], IKReal rawroots[2], int& numroots)
 /// intersection of a conic and the unit circle
 static void conicsolver(IKReal _C0[6], IKReal roots[4], int& numroots)
 {
+    numroots = 0;
     // have to normalize _C0
     IKReal maxval = IKabs(_C0[0]);
     for(int i = 1; i < 6; ++i) {
@@ -3129,7 +3129,6 @@ static void conicsolver(IKReal _C0[6], IKReal roots[4], int& numroots)
     if( numproots < 1 ) {
         return;
     }
-    numroots = 0;
     int iroot=0;
     IKReal a, b, c, d, e, f;
     a = C0[0]+proots[iroot]; b = C0[1]; c = C0[3]+proots[iroot]; d = C0[2]; e = C0[4]; f = C0[5]-proots[iroot];
