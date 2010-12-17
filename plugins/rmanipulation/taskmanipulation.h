@@ -944,26 +944,36 @@ class TaskManipulation : public ProblemInstance
         string cmd;
         while(!sinput.eof()) {
             sinput >> cmd;
-            if( !sinput )
+            if( !sinput ) {
                 break;
+            }
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
 
-            if( cmd == "execute" )
+            if( cmd == "execute" ) {
                 sinput >> bExecute;
-            else if( cmd == "writetraj" )
+            }
+            else if( cmd == "writetraj" ) {
                 sinput >> strtrajfilename;
-            else if( cmd == "outputtraj" )
+            }
+            else if( cmd == "outputtraj" ) {
                 pOutputTrajStream = boost::shared_ptr<ostream>(&sout,null_deleter());
-            else if( cmd == "outputfinal" )
+            }
+            else if( cmd == "outputfinal" ) {
                 bOutputFinal = true;
+            }
             else if( cmd == "offset" ) {
                 voffset.resize(pmanip->GetGripperIndices().size());
                 FOREACH(it, voffset)
                     sinput >> *it;
             }
             else if( cmd == "movingdir" ) {
-                FOREACH(it,graspparams->vgoalconfig)
+                FOREACH(it,graspparams->vgoalconfig) {
                     sinput >> *it;
+                }
+            }
+            else if( cmd == "coarsestep" ) {
+                sinput >> graspparams->fcoarsestep;
+                graspparams->ffinestep = graspparams->fcoarsestep * 0.01; // always make it 100x more accurate
             }
             else {
                 RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
@@ -1040,9 +1050,9 @@ class TaskManipulation : public ProblemInstance
         RobotBase::ManipulatorConstPtr pmanip = _robot->GetActiveManipulator();
         boost::shared_ptr<GraspParameters> graspparams(new GraspParameters(GetEnv()));
         graspparams->vgoalconfig = pmanip->GetClosingDirection();
-        FOREACH(it,graspparams->vgoalconfig)
+        FOREACH(it,graspparams->vgoalconfig) {
             *it = -*it;
-
+        }
         string cmd;
         while(!sinput.eof()) {
             sinput >> cmd;
@@ -1050,21 +1060,29 @@ class TaskManipulation : public ProblemInstance
                 break;
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
 
-            if( cmd == "execute" )
+            if( cmd == "execute" ) {
                 sinput >> bExecute;
-            else if( cmd == "writetraj" )
+            }
+            else if( cmd == "writetraj" ) {
                 sinput >> strtrajfilename;
+            }
             else if( cmd == "target" ) {
                 string name; sinput >> name;
                 ptarget = GetEnv()->GetKinBody(name);
             }
-            else if( cmd == "outputtraj" )
+            else if( cmd == "outputtraj" ) {
                 pOutputTrajStream = boost::shared_ptr<ostream>(&sout,null_deleter());
-            else if( cmd == "outputfinal" )
+            }
+            else if( cmd == "outputfinal" ) {
                 bOutputFinal = true;
+            }
             else if( cmd == "movingdir" ) {
                 FOREACH(it,graspparams->vgoalconfig)
                     sinput >> *it;
+            }
+            else if( cmd == "coarsestep" ) {
+                sinput >> graspparams->fcoarsestep;
+                graspparams->ffinestep = graspparams->fcoarsestep * 0.01; // always make it 100x more accurate
             }
             else {
                 RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));

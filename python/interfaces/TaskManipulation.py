@@ -104,7 +104,7 @@ class TaskManipulation:
         iters = array([int(s) for s in resvalues[0:len(configs)]])
         newconfigs = reshape(array([float(s) for s in resvalues[len(configs):]]),(len(configs),self.robot.GetActiveDOF()))
         return iters,newconfigs
-    def CloseFingers(self,offset=None,movingdir=None,execute=None,outputtraj=None,outputfinal=None):
+    def CloseFingers(self,offset=None,movingdir=None,execute=None,outputtraj=None,outputfinal=None,coarsestep=None):
         cmd = 'CloseFingers '
         dof=len(self.robot.GetActiveManipulator().GetGripperIndices())
         if offset is not None:
@@ -115,6 +115,8 @@ class TaskManipulation:
             cmd += 'movingdir %s '%(' '.join(str(f) for f in movingdir))
         if execute is not None:
             cmd += 'execute %d '%execute
+        if coarsestep is not None:
+            cmd += 'coarsestep %f '%coarsestep
         if outputtraj is not None and outputtraj:
             cmd += 'outputtraj '
         if outputfinal:
@@ -133,7 +135,7 @@ class TaskManipulation:
         else:
             traj = None
         return final,traj
-    def ReleaseFingers(self,target=None,movingdir=None,execute=None,outputtraj=None,outputfinal=None):
+    def ReleaseFingers(self,target=None,movingdir=None,execute=None,outputtraj=None,outputfinal=None,coarsestep=None):
         cmd = 'ReleaseFingers '
         dof=len(self.robot.GetActiveManipulator().GetGripperIndices())
         if target is not None:
@@ -147,6 +149,8 @@ class TaskManipulation:
             cmd += 'outputtraj '
         if outputfinal:
             cmd += 'outputfinal'
+        if coarsestep is not None:
+            cmd += 'coarsestep %f '%coarsestep
         res = self.prob.SendCommand(cmd)
         if res is None:
             raise planning_error('ReleaseFingers')

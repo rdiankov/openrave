@@ -141,7 +141,7 @@ class BaseManipulation:
         if res is None:
             raise planning_error('MoveUnsyncJoints')
         return res
-    def CloseFingers(self,offset=None,movingdir=None,execute=None,outputtraj=None,outputfinal=None):
+    def CloseFingers(self,offset=None,movingdir=None,execute=None,outputtraj=None,outputfinal=None,coarsestep=None):
         cmd = 'CloseFingers '
         dof=len(self.robot.GetActiveManipulator().GetGripperIndices())
         if offset is not None:
@@ -152,6 +152,8 @@ class BaseManipulation:
             cmd += 'movingdir %s '%(' '.join(str(f) for f in movingdir))
         if execute is not None:
             cmd += 'execute %d '%execute
+        if coarsestep is not None:
+            cmd += 'coarsestep %f '%coarsestep
         if outputtraj is not None and outputtraj:
             cmd += 'outputtraj '
         if outputfinal:
