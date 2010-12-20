@@ -186,7 +186,7 @@ class BirrtPlanner : public RrtPlanner<SimpleNode>
                         }
                         ss << endl;
                         RAVELOG_WARN(ss.str());
-                        _parameters->_constraintfn(vgoal, vgoal, 0);
+                        //_parameters->_constraintfn(vgoal, vgoal, 0);
                         bSuccess = false;
                     }
                 }
