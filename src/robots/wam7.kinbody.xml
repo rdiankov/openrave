@@ -166,7 +166,7 @@
     <Body>wam6</Body>
     <Body>wam7</Body>
     <offsetfrom>wam7</offsetfrom>
-    <axis>0 0 -1</axis>
+    <axis>0 0 1</axis>
     <limitsdeg>-172 172</limitsdeg>
     <weight>0.20178</weight>
     <maxvel>1.0472</maxvel>
