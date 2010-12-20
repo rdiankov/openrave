@@ -2069,6 +2069,7 @@ public:
 
     object Write(int options) {
         std::stringstream ss;
+        ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
         if( !_ptrajectory->Write(ss,options) ) {
             return object();
         }

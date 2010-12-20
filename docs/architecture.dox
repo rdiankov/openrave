@@ -750,12 +750,16 @@ Export format:
 - angular velocity - axis * angular_speed
 - transform - outputs quaternion first then translation
 
-An example file that contains 2 points with timestamps for a 3 dof robot is:
+An example file that contains 2 points linearly interpolated with timestamps for a 3 dof robot is:
 \verbatim
-2 3 4
+2 3 68
 0.5 0 0   0
 1.5 1 2.2 3.3
 \endverbatim
+
+where 4 (TO_OneLine) + 64*1 (LINEAR) = 68.
+
+Cubic blend would be 4 (TO_OneLine) + 64*3 (CUBIC) = 196.
 
 */
 
