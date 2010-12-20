@@ -372,7 +372,14 @@ namespace {
             if( strcmp(result.elt->getElementName(),"newparam") == 0) {
                 daeElement* psidref = result.elt->getChild("SIDREF");
                 if( !!psidref ) {
-                    return resolveImpl(daeSidRef(psidref->getCharData(),sidRef.refElt,sidRef.profile));
+                    daeSidRef::resolveData newresult;
+                    newresult = resolveImpl(daeSidRef(string("./") + psidref->getCharData(),result.elt->getParent(),sidRef.profile));
+                    if( !newresult.elt ) {
+                        newresult = resolveImpl(daeSidRef(psidref->getCharData(),result.elt->getParent(),sidRef.profile));
+                    }
+                    if( !!newresult.elt ) {
+                        return newresult;
+                    }
                 }
             }
         }

@@ -1694,7 +1694,7 @@ class ColladaReader : public daeErrorHandler
     {
         for (size_t ie = 0; ie < as->getExtra_array().getCount(); ie++) {
             domExtraRef pextra = as->getExtra_array()[ie];
-            if( strcmp(pextra->getType(), "attached_sensor") == 0 ) {
+            if( strcmp(pextra->getType(), "attach_sensor") == 0 ) {
                 string name = pextra->getAttribute("name");
                 if( name.size() == 0 ) {
                     name = str(boost::format("sensor%d")%_nGlobalSensorId++);
@@ -1863,7 +1863,7 @@ class ColladaReader : public daeErrorHandler
                 if( !!pbind->getSymbol() && strcmp(pbind->getSymbol(), ref) == 0 ) { 
                     // found a match
                     if( !!pbind->getParam() ) {
-                        return searchBinding(pbind->getParam()->getRef(), pbindelt);
+                        return daeSidRef(pbind->getParam()->getRef(), pbindelt).resolve().elt;
                     }
                     else if( !!pbind->getSIDREF() ) {
                         return daeSidRef(pbind->getSIDREF()->getValue(), pbindelt).resolve().elt;
@@ -2249,7 +2249,7 @@ class ColladaReader : public daeErrorHandler
                     RAVELOG_WARN("bind_kinematics_model does not reference element\n");
                 }
                 else {
-                    RAVELOG_WARN(str(boost::format("bind_kinematics_model cannot find reference to %s%s:\n")%pelt->getElementName()));
+                    RAVELOG_WARN(str(boost::format("bind_kinematics_model cannot find reference to %s:%s:\n")%kbindmodel->getNode()%pelt->getElementName()));
                 }
                 continue;
             }
