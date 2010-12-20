@@ -15,7 +15,7 @@
 #ifndef OPENRAVE_MANIPULATION_H
 #define OPENRAVE_MANIPULATION_H
 
-#include "commonmanipulation.h"
+#include "dualcommonmanipulation.h"
 
 class DualManipulation : public ProblemInstance
 {

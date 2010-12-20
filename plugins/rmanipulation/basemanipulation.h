@@ -686,23 +686,22 @@ protected:
         RobotBase::RobotStateSaver saver(robot);
 
         std::vector<dReal> viksolution, armgoals;
-
         if( nSeedIkSolutions < 0 ) {
             vector<vector<dReal> > solutions;
-
             FOREACH(ittrans, listgoals) {
-                pmanip->FindIKSolutions(*ittrans, solutions, true);
-            
+                pmanip->FindIKSolutions(*ittrans, solutions, true);            
                 armgoals.reserve(armgoals.size()+solutions.size()*pmanip->GetArmIndices().size());
-                FOREACH(itsol, solutions)
+                FOREACH(itsol, solutions) {
                     armgoals.insert(armgoals.end(), itsol->begin(), itsol->end());
+                }
             }
         }
         else if( nSeedIkSolutions > 0 ) {
             FOREACH(ittrans, listgoals) {
                 int nsampled = CM::SampleIkSolutions(robot, *ittrans, nSeedIkSolutions, armgoals);
-                if( nsampled != nSeedIkSolutions )
+                if( nsampled != nSeedIkSolutions ) {
                     RAVELOG_WARN("only found %d/%d ik solutions\n", nsampled, nSeedIkSolutions);
+                }
             }
         }
         else {
@@ -710,8 +709,9 @@ protected:
                 if( pmanip->FindIKSolution(*ittrans, viksolution, true) ) {
                     stringstream s;
                     s << "ik sol: ";
-                    FOREACH(it, viksolution)
+                    FOREACH(it, viksolution) {
                         s << *it << " ";
+                    }
                     s << endl;
                     RAVELOG_DEBUG(s.str());
                     armgoals.insert(armgoals.end(), viksolution.begin(), viksolution.end());
@@ -728,7 +728,15 @@ protected:
     
         robot->SetActiveDOFs(pmanip->GetArmIndices(), affinedofs);
         params->SetRobotActiveJoints(robot);
-        robot->GetActiveDOFValues(params->vinitialconfig);        
+        robot->GetActiveDOFValues(params->vinitialconfig);
+
+        if( constrainterrorthresh > 0 ) {
+            RAVELOG_DEBUG("setting jacobian constraint function in planner parameters\n");
+            boost::shared_ptr<CM::GripperJacobianConstrains<double> > pconstraints(new CM::GripperJacobianConstrains<double>(robot->GetActiveManipulator(),tConstraintTargetWorldFrame,vconstraintfreedoms,constrainterrorthresh));
+            pconstraints->_distmetricfn = params->_distmetricfn;
+            params->_constraintfn = boost::bind(&CM::GripperJacobianConstrains<double>::RetractionConstraint,pconstraints,_1,_2,_3);
+        }
+
         robot->SetActiveDOFs(pmanip->GetArmIndices(), 0);
 
         vector<dReal> vgoals;
@@ -736,12 +744,14 @@ protected:
         for(int i = 0; i < (int)armgoals.size(); i += pmanip->GetArmIndices().size()) {
             vector<dReal> v(armgoals.begin()+i,armgoals.begin()+i+pmanip->GetArmIndices().size());
             robot->SetActiveDOFValues(v);
-
             robot->SetActiveDOFs(pmanip->GetArmIndices(), affinedofs);
 
-            if( CM::JitterActiveDOF(robot) ) {
+            if( CM::JitterActiveDOF(robot,5000,0.03,params->_constraintfn) ) {
                 robot->GetActiveDOFValues(vgoals);
                 params->vgoalconfig.insert(params->vgoalconfig.end(), vgoals.begin(), vgoals.end());
+            }
+            else {
+                RAVELOG_DEBUG("constraint function failed for goal %d\n",i);
             }
         }
 
@@ -760,18 +770,11 @@ protected:
         ptraj->AddPoint(pt);
     
         // jitter again for initial collision
-        if( CM::JitterActiveDOF(robot) == 0 ) {
+        if( CM::JitterActiveDOF(robot,5000,0.03,params->_constraintfn) == 0 ) {
             RAVELOG_WARN("jitter failed for initial\n");
             return false;
         }
         robot->GetActiveDOFValues(params->vinitialconfig);
-
-        if( constrainterrorthresh > 0 ) {
-            RAVELOG_DEBUG("setting jacobian constraint function in planner parameters\n");
-            boost::shared_ptr<CM::GripperJacobianConstrains<double> > pconstraints(new CM::GripperJacobianConstrains<double>(robot->GetActiveManipulator(),tConstraintTargetWorldFrame,vconstraintfreedoms,constrainterrorthresh));
-            pconstraints->_distmetricfn = params->_distmetricfn;
-            params->_constraintfn = boost::bind(&CM::GripperJacobianConstrains<double>::RetractionConstraint,pconstraints,_1,_2,_3);
-        }
 
         boost::shared_ptr<PlannerBase> rrtplanner = RaveCreatePlanner(GetEnv(),_strRRTPlannerName);
         if( !rrtplanner ) {

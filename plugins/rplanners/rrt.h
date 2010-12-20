@@ -180,7 +180,13 @@ class BirrtPlanner : public RrtPlanner<SimpleNode>
                     // filter
                     if( !_parameters->_constraintfn(vgoal, vgoal, 0) ) {
                         // failed
-                        RAVELOG_WARN("goal state rejected by constraint fn\n");
+                        stringstream ss; ss << "goal state rejected by constraint fn: ";
+                        FOREACH(it,vgoal) {
+                            ss << *it << " ";
+                        }
+                        ss << endl;
+                        RAVELOG_WARN(ss.str());
+                        _parameters->_constraintfn(vgoal, vgoal, 0);
                         bSuccess = false;
                     }
                 }

@@ -53,40 +53,50 @@ class CM
     };
 
     /// \return 0 if jitter failed and robot is in collision, -1 if robot originally not in collision, 1 if jitter succeeded
-    static int JitterActiveDOF(RobotBasePtr robot,int nMaxIterations=5000,dReal fRand=0.03f)
+    typedef boost::function<bool(const std::vector<dReal>&, std::vector<dReal>&, int)> ConstraintFn;
+    static int JitterActiveDOF(RobotBasePtr robot,int nMaxIterations=5000,dReal fRand=0.03f,const ConstraintFn& constraintfn = ConstraintFn())
     {
         RAVELOG_VERBOSE("starting jitter active dof...\n");
-        vector<dReal> curdof, newdof, lower, upper;
+        vector<dReal> curdof, newdof;
         robot->GetActiveDOFValues(curdof);
-        robot->GetActiveDOFLimits(lower, upper);
-        newdof = curdof;
         int iter = 0;
         CollisionReport report;
         CollisionReportPtr preport(&report,null_deleter());
         bool bCollision = false;
 
-        if(robot->CheckSelfCollision(preport)) {
-            bCollision = true;
-            RAVELOG_DEBUG(str(boost::format("JitterActiveDOFs: initial config in self collision: %s!\n")%report.__str__()));
+        if( !constraintfn || constraintfn(curdof,curdof,0) ) {
+            robot->SetActiveDOFValues(curdof);
+            if(robot->CheckSelfCollision(preport)) {
+                bCollision = true;
+                RAVELOG_DEBUG(str(boost::format("JitterActiveDOFs: initial config in self collision: %s!\n")%report.__str__()));
+            }
+            if( robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot),preport) ) {
+                bCollision = true;
+                RAVELOG_DEBUG(str(boost::format("JitterActiveDOFs: initial config in collision: %s!\n")%report.__str__()));
+            }
+            if( !bCollision ) {
+                return -1;
+            }
         }
-        if( robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot),preport) ) {
-            bCollision = true;
-            RAVELOG_DEBUG(str(boost::format("JitterActiveDOFs: initial config in collision: %s!\n")%report.__str__()));
+        else {
+            RAVELOG_DEBUG("constraint function failed\n");
         }
 
-        if( !bCollision ) {
-            return -1;
-        }
+        newdof.resize(curdof.size());
         do {
             if( iter++ > nMaxIterations ) {
                 RAVELOG_WARN("Failed to find noncolliding position for robot\n");
-                robot->SetActiveDOFValues(curdof);
+                robot->SetActiveDOFValues(curdof,true);
                 return 0;
             }
             for(int j = 0; j < robot->GetActiveDOF(); j++) {
-                newdof[j] = CLAMP_ON_RANGE(curdof[j] + fRand * (RaveRandomFloat()-0.5f), lower[j], upper[j]);
+                newdof[j] = curdof[j] + fRand * (RaveRandomFloat()-0.5f);
             }
-            robot->SetActiveDOFValues(newdof);
+            robot->SetActiveDOFValues(newdof,true);
+            robot->GetActiveDOFValues(newdof);
+            if( !!constraintfn && !constraintfn(curdof,newdof,0) ) {
+                continue;
+            }
         } while(robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot)) || robot->CheckSelfCollision() );
     
         return 1;
@@ -292,24 +302,32 @@ class CM
             _J.resize(6,_probot->GetActiveDOF());
             _invJJt.resize(6,6);
             _error.resize(6,1);
+            _nMaxIterations = 20;
             
         }
         virtual ~GripperJacobianConstrains() {}
 
         bool RetractionConstraint(const std::vector<dReal>& vprev, std::vector<dReal>& vcur, int settings)
         {
+            const T lambda2 = 1e-8; // normalization constant
             using namespace boost::numeric::ublas;
             std::vector<dReal> vnew = vcur;
             dReal fdistprev = _distmetricfn(vprev,vcur), fdistcur=0;
             _lasterror=0;
-
-            for(_iter = 0; _iter < 10; ++_iter) {
+            for(_iter = 0; _iter < _nMaxIterations; ++_iter) {
                 Transform tEE = _pmanip->GetEndEffectorTransform();
                 Transform t = _tTargetFrameLeft * tEE * _tTargetFrameRight;
 
                 T totalerror=0;
                 for(int i = 0; i < 3; ++i) {
-                    _error(i,0) = _vfreedoms[i]*2.0f*RaveAtan2(t.rot[i+1],t.rot[0]);
+                    dReal ang = 2.0f*RaveAtan2(t.rot[i+1],t.rot[0]);
+                    if( ang > PI ) {
+                        ang -= 2*PI;
+                    }
+                    if( ang < -PI ) {
+                        ang += 2*PI;
+                    }
+                    _error(i,0) = _vfreedoms[i]*ang;
                     _error(i+3,0) = _vfreedoms[i+3]*t.trans[i];
                     totalerror += _error(i,0)*_error(i,0) + _error(3+i,0)*_error(3+i,0);
                 }
@@ -317,27 +335,30 @@ class CM
                     vcur = vnew;
                     return true;
                 }
-                if( totalerror > _lasterror && fdistcur > fdistprev ) {
+                // 4.0 is an arbitrary number...
+                if( totalerror > 4.0*_lasterror && fdistcur > 4.0*fdistprev ) {
                     // last adjustment was greater than total distance (jacobian was close to being singular)
                     _iter = -1;
+                    //RAVELOG_INFO(str(boost::format("%f > %f && %f > %f\n")%totalerror%_lasterror%fdistcur%fdistprev));
                     return false;
                 }
                 _lasterror = totalerror;
 
                 // compute jacobian
-                _probot->CalculateActiveAngularVelocityJacobian(_pmanip->GetEndEffector()->GetIndex(),_vjacobian);
-                for(size_t i = 0; i < 3; ++i)
+                _pmanip->CalculateAngularVelocityJacobian(_vjacobian);
+                for(size_t i = 0; i < 3; ++i) {
                     std::copy(_vjacobian[i].begin(),_vjacobian[i].end(),_J.find2(0,i,0));
-                _probot->CalculateActiveJacobian(_pmanip->GetEndEffector()->GetIndex(),tEE.trans,_vjacobian);
-                for(size_t i = 0; i < 3; ++i)
+                }
+                _pmanip->CalculateJacobian(_vjacobian);
+                for(size_t i = 0; i < 3; ++i) {
                     std::copy(_vjacobian[i].begin(),_vjacobian[i].end(),_J.find2(0,3+i,0));
-
+                }
                 // pseudo inverse of jacobian
-                const T lambda2 = 1e-8; // normalization constant
                 _Jt = trans(_J);
                 _invJJt = prod(_J,_Jt);
-                for(int i = 0; i < 6; ++i)
+                for(int i = 0; i < 6; ++i) {
                     _invJJt(i,i) += lambda2;
+                }
                 try {
                     if( !InvertMatrix(_invJJt,_invJJt) ) {
                         RAVELOG_VERBOSE("failed to invert matrix\n");
@@ -351,9 +372,9 @@ class CM
                 }
                 _invJ = prod(_Jt,_invJJt);
                 _qdelta = prod(_invJ,_error);
-                for(size_t i = 0; i < vnew.size(); ++i)
-                    vnew.at(i) -= _qdelta(i,0);
-
+                for(size_t i = 0; i < vnew.size(); ++i) {
+                    vnew.at(i) += _qdelta(i,0);
+                }
                 fdistcur = _distmetricfn(vcur,vnew);
                 _probot->SetActiveDOFValues(vnew); // for next iteration
             }
@@ -382,6 +403,7 @@ class CM
         // statistics about last run
         int _iter;
         double _lasterror;
+        int _nMaxIterations;
 
     protected:
         RobotBasePtr _probot;

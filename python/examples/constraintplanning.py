@@ -37,7 +37,7 @@ class ConstraintPlanning(metaclass.AutoReloader):
         self.basemanip = BaseManipulation(self.robot)
         self.taskmanip = TaskManipulation(self.robot,graspername=self.gmodel.grasper.plannername)
 
-    def graspAndMove(self):
+    def graspAndMove(self,showgoalcup=True):
         target = self.gmodel.target
         print 'grasping %s'%target.GetName()
         # only use one grasp since preshape can change
@@ -54,34 +54,52 @@ class ConstraintPlanning(metaclass.AutoReloader):
         self.taskmanip.CloseFingers()
         self.robot.WaitForController(0)
         self.robot.Grab(target)
-        print 'moving mug without XY rotation'
-        while True:
-            xyzconstraints = random.permutation(3)[0:2]
-            constraintfreedoms = array([1,1,0,1,1,1]) # rotation xyz, translation xyz
-            constraintfreedoms[3+xyzconstraints] = 0
-            print 'planning with freedoms: ',constraintfreedoms
-            Tplane = eye(4)
-            Tplane[0:3,0:2] = Tplane[0:3,xyzconstraints]
-            Tplane[0:3,2] = cross(Tplane[0:3,0],Tplane[0:3,1])
-            Tplane[0:3,3] = self.manip.GetEndEffectorTransform()[0:3,3]
-            hplane = self.envreal.drawplane(transform=Tplane,extents=[1.0,1.0],texture=reshape([1,1,0.5,0.5],(1,1,4)))
+        showtarget = None
+        if showgoalcup:
+            # create a dummy cup to show destinations
+            with self.envreal:
+                showtarget = RaveCreateKinBody(self.envreal,'')
+                showtarget.Clone(target,0)
+                self.envreal.AddKinBody(showtarget,True)
+                showtarget.Enable(False)
+                for geom in showtarget.GetLinks()[0].GetGeometries():
+                    geom.SetTransparency(0.7)
 
-            constraintmatrix = eye(4)
-            constrainterrorthresh = 0.02
-            for iter in range(5):
-                with self.robot:
-                    vcur = self.robot.GetDOFValues()
-                    Tee = self.manip.GetEndEffectorTransform()
-                    while True:
-                        T = array(Tee)
-                        T[0:3,3] += (random.rand(3)-0.5)*(1.0-array(constraintfreedoms[3:]))
-                        if self.manip.FindIKSolution(T,True) is not None:
-                            break
-                try:
-                    self.basemanip.MoveToHandPosition(matrices=[T],maxiter=10000,maxtries=1,seedik=8,constraintfreedoms=constraintfreedoms,constraintmatrix=constraintmatrix,constrainterrorthresh=constrainterrorthresh)
-                except planning_error,e:
-                    print e
-                self.robot.WaitForController(0)
+        try:
+            print 'moving mug without XY rotation'
+            while True:
+                xyzconstraints = random.permutation(3)[0:2]
+                constraintfreedoms = array([1,1,0,1,1,1]) # rotation xyz, translation xyz
+                constraintfreedoms[3+xyzconstraints] = 0
+                print 'planning with freedoms: ',constraintfreedoms
+                Tplane = eye(4)
+                Tplane[0:3,0:2] = Tplane[0:3,xyzconstraints]
+                Tplane[0:3,2] = cross(Tplane[0:3,0],Tplane[0:3,1])
+                Tplane[0:3,3] = self.manip.GetEndEffectorTransform()[0:3,3]
+                hplane = self.envreal.drawplane(transform=Tplane,extents=[1.0,1.0],texture=reshape([1,1,0.5,0.5],(1,1,4)))
+
+                constraintmatrix = eye(4)
+                constrainterrorthresh = 0.005
+                for iter in range(5):
+                    with self.robot:
+                        vcur = self.robot.GetDOFValues()
+                        Tee = self.manip.GetEndEffectorTransform()
+                        while True:
+                            T = array(Tee)
+                            T[0:3,3] += 0.5*(random.rand(3)-0.5)*(1.0-array(constraintfreedoms[3:]))
+                            if self.manip.FindIKSolution(T,True) is not None:
+                                break
+                    if showtarget is not None:
+                        showtarget.SetTransform(dot(T,dot(linalg.inv(self.manip.GetEndEffectorTransform()),target.GetTransform())))
+                        self.envreal.UpdatePublishedBodies()
+                    try:
+                        self.basemanip.MoveToHandPosition(matrices=[T],maxiter=10000,maxtries=1,seedik=8,constraintfreedoms=constraintfreedoms,constraintmatrix=constraintmatrix,constrainterrorthresh=constrainterrorthresh)
+                    except planning_error,e:
+                        print e
+                    self.robot.WaitForController(0)
+        finally:
+            if showtarget is not None:
+                self.envreal.Remove(showtarget)
 
 def run(args=None):
     """Executes the constraintplanning example
