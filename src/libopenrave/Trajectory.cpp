@@ -1088,6 +1088,7 @@ bool TrajectoryBase::Write(const std::string& filename, int options) const
         RAVELOG_WARN(str(boost::format("failed to write to file %s\n")%filename));
         return false;
     }
+    of << std::setprecision(std::numeric_limits<dReal>::digits10+1);
     return Write(of, options);
 }
 

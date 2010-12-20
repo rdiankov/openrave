@@ -63,9 +63,13 @@ class CM
         CollisionReport report;
         CollisionReportPtr preport(&report,null_deleter());
         bool bCollision = false;
-
-        if( !constraintfn || constraintfn(curdof,curdof,0) ) {
-            robot->SetActiveDOFValues(curdof);
+        bool bConstraint = !!constraintfn;
+        if( !bConstraint || constraintfn(curdof,curdof,0) ) {
+            if( bConstraint ) {
+                // curdof might have changed from constraint function
+                robot->SetActiveDOFValues(curdof);
+                //robot->GetActiveDOFValues(curdof); // necessary?
+            }
             if(robot->CheckSelfCollision(preport)) {
                 bCollision = true;
                 RAVELOG_DEBUG(str(boost::format("JitterActiveDOFs: initial config in self collision: %s!\n")%report.__str__()));
@@ -94,7 +98,7 @@ class CM
             }
             robot->SetActiveDOFValues(newdof,true);
             robot->GetActiveDOFValues(newdof);
-            if( !!constraintfn && !constraintfn(curdof,newdof,0) ) {
+            if( bConstraint && !constraintfn(curdof,newdof,0) ) {
                 continue;
             }
         } while(robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot)) || robot->CheckSelfCollision() );

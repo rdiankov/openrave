@@ -1,5 +1,4 @@
-
-// Copyright (C) 2006-2010 Carnegie Mellon University (rdiankov@cs.cmu.edu)
+// Copyright (C) 2006-2010 Carnegie Mellon University (rosen.diankov@gmail.com)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -652,6 +651,7 @@ PlannerBase::PlannerParameters& PlannerBase::PlannerParameters::operator=(const 
     
     // transfer data
     std::stringstream ss;
+    ss << std::setprecision(std::numeric_limits<dReal>::digits10+1); /// have to do this or otherwise precision gets lost and planners' initial conditions can vioalte constraints
     ss << r;
     ss >> *this;
     return *this;

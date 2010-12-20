@@ -2023,7 +2023,7 @@ public:
         return _pplanner->InitPlan(pbase->GetRobot(),ss);
     }
     
-    bool PlanPath(PyTrajectoryBasePtr ptraj, object output);
+    bool PlanPath(PyTrajectoryBasePtr ptraj, boost::python::list output);
     
     boost::shared_ptr<PyPlannerParameters> GetParameters() const
     {
@@ -2058,12 +2058,38 @@ public:
     PyTrajectoryBase(TrajectoryBasePtr pTrajectory, PyEnvironmentBasePtr pyenv) : PyInterfaceBase(pTrajectory, pyenv),_ptrajectory(pTrajectory) {}
     virtual ~PyTrajectoryBase() {}
 
+    bool Read(const string& s, PyRobotBasePtr probot) {
+        std::stringstream ss(s);
+        RobotBasePtr robot;
+        if( !!probot ) {
+            robot = probot->GetRobot();
+        }
+        return _ptrajectory->Read(ss,robot);
+    }
+
+    object Write(int options) {
+        std::stringstream ss;
+        if( !_ptrajectory->Write(ss,options) ) {
+            return object();
+        }
+        return object(ss.str());
+    }
+
     TrajectoryBasePtr GetTrajectory() { return _ptrajectory; }
 };
 
-bool PyPlannerBase::PlanPath(PyTrajectoryBasePtr ptraj, object output)
+bool PyPlannerBase::PlanPath(PyTrajectoryBasePtr ptraj, boost::python::list output)
 {
-    return _pplanner->PlanPath(ptraj->GetTrajectory());
+    boost::shared_ptr<ostringstream> os;
+    if( output != object() ) {
+        os.reset(new ostringstream());
+        *os << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+    }
+    bool bSuccess = _pplanner->PlanPath(ptraj->GetTrajectory(),os);
+    if( !!os ) {
+        output.append(os->str());
+    }
+    return bSuccess;
 }
 
 bool PyControllerBase::SetPath(PyTrajectoryBasePtr ptraj)
@@ -4018,7 +4044,10 @@ BOOST_PYTHON_MODULE(openravepy_int)
                 ;
     }
     class_<PySensorSystemBase, boost::shared_ptr<PySensorSystemBase>, bases<PyInterfaceBase> >("SensorSystem", DOXY_CLASS(SensorSystemBase), no_init);
-    class_<PyTrajectoryBase, boost::shared_ptr<PyTrajectoryBase>, bases<PyInterfaceBase> >("Trajectory", DOXY_CLASS(TrajectoryBase), no_init);
+    class_<PyTrajectoryBase, boost::shared_ptr<PyTrajectoryBase>, bases<PyInterfaceBase> >("Trajectory", DOXY_CLASS(TrajectoryBase), no_init)
+        .def("Write",&PyTrajectoryBase::Write,args("options"),DOXY_FN(TrajectoryBase,Write))
+        .def("Read",&PyTrajectoryBase::Read,args("data","robot"),DOXY_FN(TrajectoryBase,Read))
+        ;
     {
         bool (PyControllerBase::*init1)(PyRobotBasePtr,const string&) = &PyControllerBase::Init;
         bool (PyControllerBase::*init2)(PyRobotBasePtr,object,int) = &PyControllerBase::Init;

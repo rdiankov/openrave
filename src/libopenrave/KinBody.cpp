@@ -1816,6 +1816,7 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, const Transfo
 
 void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, bool bCheckLimits)
 {
+    _nUpdateStampId++;
     if( (int)vJointValues.size() != GetDOF() ) {
         throw openrave_exception(str(boost::format("dof not equal %d!=%d")%vJointValues.size()%GetDOF()),ORE_InvalidArguments);
     }

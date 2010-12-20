@@ -951,8 +951,9 @@ void RobotBase::SetActiveDOFValues(const std::vector<dReal>& values, bool bCheck
                 t.rot.z = fnormalizer * pAffineValues[1];
                 t.rot.w = fnormalizer * pAffineValues[2];
             }
-            else
+            else {
                 t.rot = Vector(1,0,0,0); // identity
+            }
         }
         else if( _nAffineDOFs & DOF_RotationQuat ) {
             // have to normalize since user might not be aware of this particular parameterization of rotations
