@@ -173,10 +173,8 @@ class ReachabilityModel(OpenRAVEModel):
         links = manip.GetChildLinks()
         # add the links connecting to the base link.... although this reduces the freespace of the arm, it is better to have than not (ie waist on humanoid)
         tobasejoints = manip.GetRobot().GetChain(0,manip.GetBase().GetIndex())
-        if len(tobasejoints) > 0:
-            tobasedofs = hstack([arange(joint.GetDOFIndex(),joint.GetDOFIndex()+joint.GetDOF()) for joint in tobasejoints if joint.GetDOFIndex() >= 0 and not joint.IsStatic()])
-        else:
-            tobasedofs = []
+        dofindices = [arange(joint.GetDOFIndex(),joint.GetDOFIndex()+joint.GetDOF()) for joint in tobasejoints if joint.GetDOFIndex() >= 0 and not joint.IsStatic()]
+        tobasedofs = hstack(dofindices) if len(dofindices) > 0 else array([],int)
         robot = manip.GetRobot()
         joints = robot.GetJoints()
         for jindex in r_[manip.GetArmIndices(),tobasedofs]:
