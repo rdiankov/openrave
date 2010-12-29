@@ -104,6 +104,64 @@ public:
     }
 };
 
+class PyTriMesh
+{
+public:
+    PyTriMesh() {}
+    PyTriMesh(object vertices, object indices) : vertices(vertices), indices(indices) {}
+    PyTriMesh(const KinBody::Link::TRIMESH& mesh) {
+        npy_intp dims[] = {mesh.vertices.size(),3};
+        PyObject *pyvertices = PyArray_SimpleNew(2,dims, sizeof(dReal)==8?PyArray_DOUBLE:PyArray_FLOAT);
+        dReal* pvdata = (dReal*)PyArray_DATA(pyvertices);
+        FOREACHC(itv, mesh.vertices) {
+            *pvdata++ = itv->x;
+            *pvdata++ = itv->y;
+            *pvdata++ = itv->z;
+        }
+        vertices = static_cast<numeric::array>(handle<>(pyvertices));
+
+        dims[0] = mesh.indices.size()/3;
+        dims[1] = 3;
+        PyObject *pyindices = PyArray_SimpleNew(2,dims, PyArray_INT);
+        int* pidata = (int*)PyArray_DATA(pyindices);
+        FOREACHC(it, mesh.indices)
+            *pidata++ = *it;
+        indices = static_cast<numeric::array>(handle<>(pyindices));
+    }
+
+    void GetTriMesh(KinBody::Link::TRIMESH& mesh) {
+        int numverts = len(vertices);
+        mesh.vertices.resize(numverts);
+        for(int i = 0; i < numverts; ++i) {
+            object ov = vertices[i];
+            mesh.vertices[i].x = extract<dReal>(ov[0]);
+            mesh.vertices[i].y = extract<dReal>(ov[1]);
+            mesh.vertices[i].z = extract<dReal>(ov[2]);
+        }
+
+        int numtris = len(indices);
+        mesh.indices.resize(3*numtris);
+        for(int i = 0; i < numtris; ++i) {
+            object oi = indices[i];
+            mesh.indices[3*i+0] = extract<int>(oi[0]);
+            mesh.indices[3*i+1] = extract<int>(oi[1]);
+            mesh.indices[3*i+2] = extract<int>(oi[2]);
+        }
+    }
+
+    string __str__() { return boost::str(boost::format("<trimesh: verts %d, tris=%d>")%len(vertices)%len(indices)); }
+            
+    object vertices,indices;
+};
+
+class TriMesh_pickle_suite : public pickle_suite
+{
+public:
+    static tuple getinitargs(const PyTriMesh& r)
+    {
+        return boost::python::make_tuple(r.vertices,r.indices);
+    }
+};
 class PyInterfaceBase
 {
 protected:
@@ -166,56 +224,6 @@ public:
         KinBody::LinkPtr _plink;
         PyEnvironmentBasePtr _pyenv;
     public:
-        class PyTriMesh
-        {
-        public:
-            PyTriMesh() {}
-            PyTriMesh(object vertices, object indices) : vertices(vertices), indices(indices) {}
-            PyTriMesh(const KinBody::Link::TRIMESH& mesh) {
-                npy_intp dims[] = {mesh.vertices.size(),3};
-                PyObject *pyvertices = PyArray_SimpleNew(2,dims, sizeof(dReal)==8?PyArray_DOUBLE:PyArray_FLOAT);
-                dReal* pvdata = (dReal*)PyArray_DATA(pyvertices);
-                FOREACHC(itv, mesh.vertices) {
-                    *pvdata++ = itv->x;
-                    *pvdata++ = itv->y;
-                    *pvdata++ = itv->z;
-                }
-                vertices = static_cast<numeric::array>(handle<>(pyvertices));
-
-                dims[0] = mesh.indices.size()/3;
-                dims[1] = 3;
-                PyObject *pyindices = PyArray_SimpleNew(2,dims, PyArray_INT);
-                int* pidata = (int*)PyArray_DATA(pyindices);
-                FOREACHC(it, mesh.indices)
-                    *pidata++ = *it;
-                indices = static_cast<numeric::array>(handle<>(pyindices));
-            }
-
-            void GetTriMesh(KinBody::Link::TRIMESH& mesh) {
-                int numverts = len(vertices);
-                mesh.vertices.resize(numverts);
-                for(int i = 0; i < numverts; ++i) {
-                    object ov = vertices[i];
-                    mesh.vertices[i].x = extract<dReal>(ov[0]);
-                    mesh.vertices[i].y = extract<dReal>(ov[1]);
-                    mesh.vertices[i].z = extract<dReal>(ov[2]);
-                }
-
-                int numtris = len(indices);
-                mesh.indices.resize(3*numtris);
-                for(int i = 0; i < numtris; ++i) {
-                    object oi = indices[i];
-                    mesh.indices[3*i+0] = extract<int>(oi[0]);
-                    mesh.indices[3*i+1] = extract<int>(oi[1]);
-                    mesh.indices[3*i+2] = extract<int>(oi[2]);
-                }
-            }
-
-            string __str__() { return boost::str(boost::format("<trimesh: verts %d, tris=%d>")%len(vertices)%len(indices)); }
-            
-            object vertices,indices;
-        };
-
         class PyGeomProperties
         {
             KinBody::LinkPtr _plink;
@@ -466,7 +474,7 @@ public:
         }
         return _pbody->InitFromBoxes(vaabbs,bDraw);
     }
-    bool InitFromTrimesh(boost::shared_ptr<PyKinBody::PyLink::PyTriMesh> pytrimesh, bool bDraw)
+    bool InitFromTrimesh(boost::shared_ptr<PyTriMesh> pytrimesh, bool bDraw)
     {
         KinBody::Link::TRIMESH mesh;
         pytrimesh->GetTriMesh(mesh);
@@ -3174,20 +3182,20 @@ public:
         _penv->UpdatePublishedBodies();
     }
 
-    boost::shared_ptr<PyKinBody::PyLink::PyTriMesh> Triangulate(PyKinBodyPtr pbody)
+    boost::shared_ptr<PyTriMesh> Triangulate(PyKinBodyPtr pbody)
     {
         CHECK_POINTER(pbody);
         KinBody::Link::TRIMESH mesh;
         if( !_penv->Triangulate(mesh,pbody->GetBody()) )
             throw openrave_exception(boost::str(boost::format("failed to triangulate body %s")%pbody->GetBody()->GetName()));
-        return boost::shared_ptr<PyKinBody::PyLink::PyTriMesh>(new PyKinBody::PyLink::PyTriMesh(mesh));
+        return boost::shared_ptr<PyTriMesh>(new PyTriMesh(mesh));
     }
-    boost::shared_ptr<PyKinBody::PyLink::PyTriMesh> TriangulateScene(EnvironmentBase::TriangulateOptions opts, const string& name)
+    boost::shared_ptr<PyTriMesh> TriangulateScene(EnvironmentBase::TriangulateOptions opts, const string& name)
     {
         KinBody::Link::TRIMESH mesh;
         if( !_penv->TriangulateScene(mesh,opts,name) )
             throw openrave_exception(boost::str(boost::format("failed to triangulate scene: %d, %s")%opts%name));
-        return boost::shared_ptr<PyKinBody::PyLink::PyTriMesh>(new PyKinBody::PyLink::PyTriMesh(mesh));
+        return boost::shared_ptr<PyTriMesh>(new PyTriMesh(mesh));
     }
 
     void SetDebugLevel(DebugLevel level) { _penv->SetDebugLevel(level); }
@@ -3506,7 +3514,13 @@ BOOST_PYTHON_MODULE(openravepy_int)
         .def("__repr__",&PyAABB::__repr__)
         .def_pickle(AABB_pickle_suite())
         ;
-
+    class_<PyTriMesh, boost::shared_ptr<PyTriMesh> >("TriMesh", DOXY_CLASS(KinBody::Link::TRIMESH))
+        .def(init<object,object>(args("vertices","indices")))
+        .def_readwrite("vertices",&PyTriMesh::vertices)
+        .def_readwrite("indices",&PyTriMesh::indices)
+        .def("__str__",&PyTriMesh::__str__)
+        .def_pickle(TriMesh_pickle_suite())
+        ;
     {
         void (PyInterfaceBase::*setuserdata1)(PyUserData) = &PyInterfaceBase::SetUserData;
         void (PyInterfaceBase::*setuserdata2)(object) = &PyInterfaceBase::SetUserData;
@@ -3685,14 +3699,6 @@ BOOST_PYTHON_MODULE(openravepy_int)
                 .def("__eq__",&PyKinBody::PyLink::__eq__)
                 .def("__ne__",&PyKinBody::PyLink::__ne__)
                 ;
-
-            class_<PyKinBody::PyLink::PyTriMesh, boost::shared_ptr<PyKinBody::PyLink::PyTriMesh> >("TriMesh", DOXY_CLASS(KinBody::Link::TRIMESH))
-                .def(init<object,object>(args("vertices","indices")))
-                .def_readwrite("vertices",&PyKinBody::PyLink::PyTriMesh::vertices)
-                .def_readwrite("indices",&PyKinBody::PyLink::PyTriMesh::indices)
-                .def("__str__",&PyKinBody::PyLink::PyTriMesh::__str__)
-                ;
-
             {
                 scope geomproperties = class_<PyKinBody::PyLink::PyGeomProperties, boost::shared_ptr<PyKinBody::PyLink::PyGeomProperties> >("GeomProperties", DOXY_CLASS(KinBody::Link::GEOMPROPERTIES),no_init)
                     .def("SetCollisionMesh",&PyKinBody::PyLink::PyGeomProperties::SetCollisionMesh,args("trimesh"), DOXY_FN(KinBody::Link::GEOMPROPERTIES,SetCollisionMesh))

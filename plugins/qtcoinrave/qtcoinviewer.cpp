@@ -2413,9 +2413,10 @@ void QtCoinViewer::_UpdateEnvironment()
         UpdateFromModel();
         UpdateCameraTransform();
 
-        if( !!_pdragger ) {
-            _pdragger->UpdateSkeleton();
-        }
+        // this causes the GUI links to jitter when moving the joints, perhaps there is fighting somewhere?
+//        if( !!_pdragger ) {
+//            _pdragger->UpdateSkeleton();
+//        }
     }
 }
 

@@ -49,15 +49,19 @@ class FastGrasping(metaclass.AutoReloader):
             raise self.GraspingException([grasp,jointvalues])
         return True
 
-    def computeGrasp(self):
+    def computeGrasp(self,updateenv=True):
         approachrays = self.gmodel.computeBoxApproachRays(delta=0.02,normalanglerange=0.5) # rays to approach object
         standoffs = [0]
         # roll discretization
         rolls = arange(0,2*pi,0.5*pi)
-        # initial preshape for robot is the current joint angles
-        preshapes = [self.robot.GetJointValues()[self.gmodel.manip.GetGripperIndices()]]
+        # initial preshape for robot is the released fingers
+        with self.gmodel.target:
+            self.gmodel.target.Enable(False)
+            taskmanip = interfaces.TaskManipulation(self.robot)
+            final,traj = taskmanip.ReleaseFingers(execute=False,outputfinal=True)
+            preshapes = array([final])
         try:
-            self.gmodel.generate(preshapes=preshapes,standoffs=standoffs,rolls=rolls,approachrays=approachrays,checkgraspfn=self.checkgraspfn,disableallbodies=False)
+            self.gmodel.generate(preshapes=preshapes,standoffs=standoffs,rolls=rolls,approachrays=approachrays,checkgraspfn=self.checkgraspfn,disableallbodies=False,updateenv=updateenv)
             return None,None # did not find anything
         except self.GraspingException, e:
             return e.args

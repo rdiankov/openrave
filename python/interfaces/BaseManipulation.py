@@ -163,7 +163,7 @@ class BaseManipulation:
             raise planning_error('CloseFingers')
         resvalues = res.split()
         if outputfinal:
-            final = array([float(resvalues[i]) for i in range(dof)])
+            final = array([float64(resvalues[i]) for i in range(dof)])
             resvalues=resvalues[dof:]
         else:
             final=None
@@ -191,7 +191,7 @@ class BaseManipulation:
             raise planning_error('ReleaseFingers')
         resvalues = res.split()
         if outputfinal:
-            final = array([float(resvalues[i]) for i in range(dof)])
+            final = array([float64(resvalues[i]) for i in range(dof)])
             resvalues=resvalues[len(final):]
         else:
             final=None
@@ -216,7 +216,7 @@ class BaseManipulation:
             raise planning_error('ReleaseActive')
         resvalues = res.split()
         if outputfinal:
-            final = array([float(resvalues[i]) for i in range(self.robot.GetActiveDOF())])
+            final = array([float64(resvalues[i]) for i in range(self.robot.GetActiveDOF())])
             resvalues=resvalues[len(final):]
         else:
             final=None
@@ -242,7 +242,7 @@ class BaseManipulation:
             raise planning_error('JitterActive')
         resvalues = res.split()
         if outputfinal:
-            final = array([float(resvalues[i]) for i in range(self.robot.GetActiveDOF())])
+            final = array([float64(resvalues[i]) for i in range(self.robot.GetActiveDOF())])
             resvalues=resvalues[len(final):]
         else:
             final=None

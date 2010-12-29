@@ -197,7 +197,7 @@ class ConvexDecompositionModel(OpenRAVEModel):
 
     @staticmethod
     def computeHullPlanes(hull,thresh=0.99999):
-        """The computes planes point outside of the mesh. Therefore a point is inside only if the distance to all planes is negative.
+        """The computed planes point outside of the mesh. Therefore a point is inside only if the distance to all planes is negative.
         """
         vm = mean(hull[0],0)
         v0 = hull[0][hull[1][:,0],:]
@@ -268,7 +268,7 @@ class ConvexDecompositionModel(OpenRAVEModel):
         for hull in hulls:
             allindices = r_[allindices,hull[1]+len(allvertices)]
             allvertices = r_[allvertices,hull[0]]
-        return KinBody.Link.TriMesh(allvertices,allindices)
+        return TriMesh(allvertices,allindices)
     @staticmethod
     def transformHull(T,hull):
         """hull can be (vertices,indices) or (vertices,indices,planes)

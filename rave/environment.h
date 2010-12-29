@@ -329,30 +329,37 @@ public:
         TO_AllExceptBody = 5 ///< triangulate everything but kinbody
     };
     
-    /// triangulation of the body including its current transformation. trimesh will be appended the new data.
-    /// \param body body the triangulate
+    /// \brief Triangulation of the body including its current transformation. trimesh will be appended the new data.  <b>[multi-thread safe]</b>
+    ///
+    /// \param[out] trimesh - The output triangle mesh
+    /// \param[in] body body the triangulate
     virtual bool Triangulate(KinBody::Link::TRIMESH& trimesh, KinBodyConstPtr pbody) = 0;
 
-    /// general triangulation of the whole scene. trimesh will be appended the new data.
-    /// \param options - Controlls what to triangulate
-    /// \param name - name of the body used in options
+    /// \brief General triangulation of the whole scene. trimesh will be appended the new data. <b>[multi-thread safe]</b>
+    ///
+    /// \param[out] trimesh - The output triangle mesh
+    /// \param[in] options - Controlls what to triangulate
+    /// \param[in] name - name of the body used in options
     virtual bool TriangulateScene(KinBody::Link::TRIMESH& trimesh, TriangulateOptions options, const std::string& name) = 0;
     //@}
 
-    /// Load a new problem, need to Lock if calling outside simulation thread
+    /// \brief Load a new problem, need to Lock if calling outside simulation thread
     virtual int LoadProblem(ProblemInstancePtr prob, const std::string& cmdargs) = 0;
+
     /// \deprecated (10/09/15) see \ref EnvironmentBase::Remove
     virtual bool RemoveProblem(ProblemInstancePtr prob) RAVE_DEPRECATED = 0;
 
-    /// Returns a list of loaded problems with a lock. As long as the lock is held, the problems
-    /// are guaranteed to stay loaded in the environment.
+    /// \brief Returns a list of loaded problems with a pointer to a lock preventing the list from being modified.
+    ///
+    /// As long as the lock is held, the problems are guaranteed to stay loaded in the environment.
     /// \return returns a pointer to a Lock. Destroying the shared_ptr will release the lock
     virtual boost::shared_ptr<void> GetLoadedProblems(std::list<ProblemInstancePtr>& listProblems) const = 0;
 
-    /// Lock/unlock the environment mutex. Accessing environment body information and adding/removing bodies
+    /// \brief Return the global environment mutex used to protect environment information access in multi-threaded environments.
+    ///
+    /// Accessing environment body information and adding/removing bodies
     /// or changing any type of scene property should have the environment lock acquired. Once the environment
     /// is locked, the user is guaranteed that nnothing will change in the environment.
-    /// \return the mutex used to control the lock.
     virtual EnvironmentMutex& GetMutex() const = 0;
 
     virtual bool AttachViewer(ViewerBasePtr pnewviewer) = 0;

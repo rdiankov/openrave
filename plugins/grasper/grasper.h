@@ -38,6 +38,13 @@ extern "C"
   (dReal)0.525731112119133606025669084847876607285497935
 #define GTS_M_ICOSAHEDRON_Z (dReal)0.0
 
+template<class T1, class T2>
+    struct sort_pair_first {
+        bool operator()(const std::pair<T1,T2>&left, const std::pair<T1,T2>&right) {
+            return left.first < right.first;
+        }
+    };
+
 // very simple interface to use the GrasperPlanner
 class GrasperProblem : public ProblemInstance
 {
@@ -56,7 +63,9 @@ class GrasperProblem : public ProblemInstance
         RegisterCommand("ComputeDistanceMap",boost::bind(&GrasperProblem::ComputeDistanceMap,this,_1,_2),
                         "Computes a distance map around a particular point in space");
         RegisterCommand("GetStableContacts",boost::bind(&GrasperProblem::GetStableContacts,this,_1,_2),
-                        "Returns the stable contacts as defined by the closing direction");   
+                        "Returns the stable contacts as defined by the closing direction");
+        RegisterCommand("ConvexHull",boost::bind(&GrasperProblem::ConvexHull,this,_1,_2),
+                        "Given a point cloud, returns information about its convex hull like normal planes, vertex indices, and triangle indices. Computed planes point outside the mesh, face indices are not ordered, triangles point outside the mesh (counter-clockwise)");
     }
     virtual ~GrasperProblem() {
         if( !!errfile )
@@ -82,16 +91,17 @@ class GrasperProblem : public ProblemInstance
         string cmd;
         while(!ss.eof()) {
             ss >> cmd;
-            if( !ss )
+            if( !ss ) {
                 break;
+            }
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
 
             if( cmd == "planner" ) {
                 ss >> plannername;
             }
-
-            if( ss.fail() || !ss )
+            if( ss.fail() || !ss ) {
                 break;
+            }
         }
 
         _planner = RaveCreatePlanner(GetEnv(),plannername);
@@ -355,16 +365,20 @@ class GrasperProblem : public ProblemInstance
         bool bGetLinkCollisions = false;
         while(!sinput.eof()) {
             sinput >> cmd;
-            if( !sinput )
+            if( !sinput ) {
                 break;
+            }
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
 
-            if( cmd == "direction" )
+            if( cmd == "direction" ) {
                 sinput >> direction.x >> direction.y >> direction.z;
-            else if( cmd == "friction" )
+            }
+            else if( cmd == "friction" ) {
                 sinput >> mu;
-            else if( cmd == "getlinkcollisions" )
+            }
+            else if( cmd == "getlinkcollisions" ) {
                 bGetLinkCollisions = true;
+            }
             else {
                 RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
@@ -386,6 +400,128 @@ class GrasperProblem : public ProblemInstance
             sout << endl;
         }
 
+        return true;
+    }
+
+    virtual bool ConvexHull(std::ostream& sout, std::istream& sinput)
+    {
+        string cmd;
+        bool bReturnFaces = true, bReturnPlanes = true, bReturnTriangles = true;
+        int dim=0;
+        vector<double> vpoints;
+        while(!sinput.eof()) {
+            sinput >> cmd;
+            if( !sinput ) {
+                break;
+            }
+            std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
+
+            if( cmd == "points" ) {
+                int N=0;
+                sinput >> N >> dim;
+                vpoints.resize(N*dim);
+                for(int i = 0; i < N*dim; ++i) {
+                    sinput >> vpoints[i];
+                }
+            }
+            else if( cmd == "returnplanes" ) {
+                sinput >> bReturnPlanes;
+            }
+            else if( cmd == "returnfaces" ) {
+                sinput >> bReturnFaces;
+            }
+            else if( cmd == "returntriangles" ) {
+                sinput >> bReturnFaces;
+            }
+            else {
+                RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
+                break;
+            }
+
+            if( !sinput ) {
+                RAVELOG_ERROR(str(boost::format("failed processing command %s\n")%cmd));
+                return false;
+            }
+        }
+
+        vector<double> vconvexplanes;
+        boost::shared_ptr< vector<int> > vconvexfaces;
+        if( bReturnFaces || bReturnTriangles ) {
+            vconvexfaces.reset(new vector<int>);
+        }
+        if( !_ComputeConvexHull(vpoints,vconvexplanes, vconvexfaces, dim) ) {
+            return false;
+        }
+        if( bReturnPlanes ) {
+            sout << vconvexplanes.size()/(dim+1) << " ";
+            FOREACH(it,vconvexplanes) {
+                sout << *it << " ";
+            }
+        }
+        if( bReturnFaces ) {
+            FOREACH(it,*vconvexfaces) {
+                sout << *it << " ";
+            }
+        }
+        if( bReturnTriangles ) {
+            if( dim != 3 ) {
+                RAVELOG_WARN(str(boost::format("cannot triangulate convex hulls of dimension %d\n")%dim));
+                return false;
+            }
+            size_t faceindex = 1;
+            int numtriangles = 0;
+            while(faceindex < vconvexfaces->size()) {
+                numtriangles += vconvexfaces->at(faceindex)-2;
+                faceindex += vconvexfaces->at(faceindex)+1;
+            }
+            sout << numtriangles << " ";
+            faceindex = 1;
+            size_t planeindex = 0;
+            vector<double> meanpoint(dim,0), point0(dim,0), point1(dim,0);
+            vector<pair<double,int> > angles;
+            while(faceindex < vconvexfaces->size()) {
+                // have to first sort the vertices of the face before triangulating them
+                // point* = point-mean
+                // atan2(plane^T * (point0* x point1*), point0*^T * point1*) = angle <- sort
+                int numpoints = vconvexfaces->at(faceindex);
+                for(int j = 0; j < dim; ++j) {
+                    meanpoint[j] = 0;
+                    point0[j] = 0;
+                    point1[j] = 0;
+                }
+                for(int i = 0; i < numpoints; ++i) {
+                    int pointindex = vconvexfaces->at(faceindex+i+1);
+                    for(int j = 0; j < dim; ++j) {
+                        meanpoint[j] += vpoints[pointindex*dim+j];
+                    }
+                }
+                int pointindex0 = vconvexfaces->at(faceindex+1);
+                for(int j = 0; j < dim; ++j) {
+                    meanpoint[j] /= numpoints;
+                    point0[j] = vpoints[pointindex0*dim+j] - meanpoint[j];
+                }
+                angles.resize(numpoints); angles[0].first = 0; angles[0].second = 0;
+                for(int i = 1; i < numpoints; ++i) {
+                    int pointindex = vconvexfaces->at(faceindex+i+1);
+                    for(int j = 0; j < dim; ++j) {
+                        point1[j] = vpoints[pointindex*dim+j] - meanpoint[j];
+                    }
+                    dReal sinang = vconvexplanes[planeindex+0] * (point0[1]*point1[2] - point0[2]*point1[1]) + vconvexplanes[planeindex+1] * (point0[2]*point1[0] - point0[0]*point1[2]) + vconvexplanes[planeindex+2] * (point0[0]*point1[1] - point0[1]*point1[0]);
+                    dReal cosang = point0[0]*point1[0] + point0[1]*point1[1] + point0[2]*point1[2];
+                    angles[i].first = RaveAtan2(sinang,cosang);
+                    if( angles[i].first < 0 ) {
+                        angles[i].first += 2*PI;
+                    }
+                    angles[i].second = i;
+                }
+                sort(angles.begin(),angles.end(),sort_pair_first<double,int>());
+                for(size_t i = 2; i < angles.size(); ++i) {
+                    sout << vconvexfaces->at(faceindex+1+angles[0].second) << " " << vconvexfaces->at(faceindex+1+angles[i-1].second) << " " << vconvexfaces->at(faceindex+1+angles[i].second) << " ";
+                }
+                faceindex += numpoints+1;
+                planeindex += dim+1;
+            }
+        }
         return true;
     }
 
@@ -765,7 +901,6 @@ class GrasperProblem : public ProblemInstance
 
         GRASPANALYSIS analysis;
         vector<double> vpoints(6*contacts.size()), vconvexplanes;
-
         vector<double>::iterator itpoint = vpoints.begin();
         FOREACHC(itcontact, contacts) {
             *itpoint++ = itcontact->norm.x;
@@ -777,30 +912,14 @@ class GrasperProblem : public ProblemInstance
             *itpoint++ = v.z;
         }
 
-        analysis.volume = _ComputeConvexHull(vpoints,vconvexplanes,6);
+        analysis.volume = _ComputeConvexHull(vpoints,vconvexplanes,boost::shared_ptr< vector<int> >(),6);
 
-        boost::array<double,6> vmean={{0}};
-        for(size_t i = 0; i < vpoints.size(); i += 6) {
-            for(int j = 0; j < 6; ++j)
-                vmean[j] += vpoints[i+j];
-        }
-        double fipoints = 1.0f/(double)contacts.size();
-        for(int j = 0; j < 6; ++j)
-            vmean[j] *= fipoints;
-        
         // go through each of the faces and check if center is inside, and compute its distance
         double mindist = 1e30;
         for(size_t i = 0; i < vconvexplanes.size(); i += 7) {
-            double dist = -vconvexplanes.at(i+6);
-            double meandist = 0;
-            for(int j = 0; j < 6; ++j)
-                meandist += vconvexplanes[i+j]*vmean[j];
-            
-            if( dist < meandist )
-                dist = -dist;
-            if( dist < 0 || RaveFabs(dist-meandist) < 1e-15 )
+            if( vconvexplanes.at(i+6) > 0 || RaveFabs(vconvexplanes.at(i+6)) < 1e-15 )
                 return analysis;
-            mindist = min(mindist,dist);
+            mindist = min(mindist,-vconvexplanes.at(i+6));
         }
         analysis.mindist = mindist;
         return analysis;
@@ -809,7 +928,7 @@ class GrasperProblem : public ProblemInstance
     /// Computes the convex hull of a set of points
     /// \param vpoints a set of points each of dimension dim
     /// \param vconvexplaces the places of the convex hull, dimension is dim+1
-    virtual double _ComputeConvexHull(const vector<double>& vpoints, vector<double>& vconvexplanes, int dim)
+    virtual double _ComputeConvexHull(const vector<double>& vpoints, vector<double>& vconvexplanes, boost::shared_ptr< vector<int> > vconvexfaces, int dim)
     {
         vconvexplanes.resize(0);
 #ifdef QHULL_FOUND
@@ -819,22 +938,41 @@ class GrasperProblem : public ProblemInstance
         boolT ismalloc = 0;           // True if qhull should free points in qh_freeqhull() or reallocation
         char flags[]= "qhull Tv FA"; // option flags for qhull, see qh_opt.htm, output volume (FA)
 
-        if( !errfile )
+        if( !errfile ) {
             errfile = tmpfile();    // stderr, error messages from qhull code  
-        
+        }
         int exitcode= qh_new_qhull (dim, qpoints.size()/dim, &qpoints[0], ismalloc, flags, errfile, errfile);
         if (!exitcode) {
             vconvexplanes.reserve(1000);
-
+            if( !!vconvexfaces ) {
+                // fill with face indices
+                vconvexfaces->resize(0);
+                vconvexfaces->push_back(0);
+            }
             facetT *facet;	          // set by FORALLfacets 
+            vertexT *vertex, **vertexp; // set by FOREACHvdertex_
             FORALLfacets { // 'qh facet_list' contains the convex hull
 //                if( facet->isarea && facet->f.area < 1e-15 ) {
 //                    RAVELOG_VERBOSE(str(boost::format("skipping area: %e\n")%facet->f.area));
 //                    continue;
 //                }
-                for(int i = 0; i < dim; ++i)
-                    vconvexplanes.push_back(facet->normal[i]);
-                vconvexplanes.push_back(facet->offset);
+                if( !!vconvexfaces && !!facet->vertices ) {
+                    size_t startindex = vconvexfaces->size();
+                    vconvexfaces->push_back(0);
+                    FOREACHvertex_(facet->vertices) {
+                        int id = qh_pointid(vertex->point);
+                        BOOST_ASSERT(id>=0);
+                        vconvexfaces->push_back(id);
+                    }
+                    vconvexfaces->at(startindex) = vconvexfaces->size()-startindex-1;
+                    vconvexfaces->at(0) += 1;
+                }
+                if( !!facet->normal ) {
+                    for(int i = 0; i < dim; ++i) {
+                        vconvexplanes.push_back(facet->normal[i]);
+                    }
+                    vconvexplanes.push_back(facet->offset);
+                }
             }
         }
         
@@ -842,10 +980,35 @@ class GrasperProblem : public ProblemInstance
         qh_freeqhull(!qh_ALL);
         int curlong, totlong;	  // memory remaining after qh_memfreeshort 
         qh_memfreeshort (&curlong, &totlong);
-        if (curlong || totlong)
+        if (curlong || totlong) {
             RAVELOG_ERROR("qhull internal warning (main): did not free %d bytes of long memory (%d pieces)\n", totlong, curlong);
-        if( exitcode )
+        }
+        if( exitcode ) {
             throw openrave_exception(str(boost::format("Qhull failed with error %d")%exitcode));
+        }
+
+        vector<double> vmean(dim,0);
+        for(size_t i = 0; i < vpoints.size(); i += dim) {
+            for(int j = 0; j < dim; ++j)
+                vmean[j] += vpoints[i+j];
+        }
+        double fipoints = 1/(double)(vpoints.size()/dim);
+        for(int j = 0; j < dim; ++j) {
+            vmean[j] *= fipoints;
+        }        
+        for(size_t i = 0; i < vconvexplanes.size(); i += dim+1) {
+            double meandist = 0;
+            for(int j = 0; j < dim; ++j) {
+                meandist += vconvexplanes[i+j]*vmean[j];
+            }
+            meandist += vconvexplanes.at(i+dim);
+            if( meandist > 0 ) {
+                for(int j = 0; j < dim; ++j) {
+                    vconvexplanes[i+j] = -vconvexplanes[i+j];
+                }
+            }
+        }
+
         return totvol; // return volume
 #else
         throw openrave_exception(str(boost::format("QHull library not found, cannot compute convex hull of contact points")));

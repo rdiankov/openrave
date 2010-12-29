@@ -52,13 +52,16 @@ public:
     /// \brief initializes the controller and specifies the controlled dof
     /// \param robot the robot that uses the controller
     /// \param dofindices the indices that controller will have exclusive access to
+    /// \param nControlTransformation \see IsControlTransformation
     /// \return true on successful initialization
     virtual bool Init(RobotBasePtr robot, const std::vector<int>& dofindices, int nControlTransformation) = 0;
 
     /// \brief returns the dof indices controlled
     virtual const std::vector<int>& GetControlDOFIndices() const = 0;
 
-    /// \brief returns non-zero value if base affine transformation is controlled
+    /// \brief returns non-zero value if base affine transformation is controlled.
+    ///
+    /// Only one controller can modify translation and orientation per robot. For now, the two cannot be divided.
     virtual int IsControlTransformation() const = 0;
 
     virtual RobotBasePtr GetRobot() const = 0;

@@ -378,13 +378,13 @@ class GraspingModel(OpenRAVEModel):
                             if updateenv:
                                 contactgraph = self.drawContacts(contacts) if len(contacts) > 0 else None
                                 self.env.UpdatePublishedBodies()
-                        grasp[self.graspindices.get('igrasptrans')] = reshape(transpose(Tlocalgrasp[0:3,0:4]),12)
-                        grasp[self.graspindices.get('grasptrans_nocol')] = reshape(transpose(Tlocalgrasp_nocol[0:3,0:4]),12)
-                        grasp[self.graspindices.get('forceclosure')] = mindist if mindist is not None else 0
-                        if not forceclosure or mindist >= forceclosurethreshold:
-                            if checkgraspfn is None or checkgraspfn(contacts,finalconfig,grasp,{'mindist':mindist,'volume':volume}):
-                                print 'found good grasp',len(self.grasps),'config: ',array(finalconfig[0])[self.manip.GetGripperIndices()]
-                                self.grasps.append(grasp)
+                            grasp[self.graspindices.get('igrasptrans')] = reshape(transpose(Tlocalgrasp[0:3,0:4]),12)
+                            grasp[self.graspindices.get('grasptrans_nocol')] = reshape(transpose(Tlocalgrasp_nocol[0:3,0:4]),12)
+                            grasp[self.graspindices.get('forceclosure')] = mindist if mindist is not None else 0
+                            if not forceclosure or mindist >= forceclosurethreshold:
+                                if checkgraspfn is None or checkgraspfn(contacts,finalconfig,grasp,{'mindist':mindist,'volume':volume}):
+                                    print 'found good grasp',len(self.grasps),'config: ',array(finalconfig[0])[self.manip.GetGripperIndices()]
+                                    self.grasps.append(grasp)
                 self.grasps = array(self.grasps)
                 print 'ordering grasps'
                 self.orderGrasps()
@@ -509,6 +509,9 @@ class GraspingModel(OpenRAVEModel):
     def setPreshape(self,grasp):
         """sets the preshape on the robot, assumes environment is locked"""
         self.robot.SetDOFValues(grasp[self.graspindices['igrasppreshape']],self.manip.GetGripperIndices())
+    def getPreshape(self,grasp):
+        """returns the preshape joint values"""
+        return grasp[self.graspindices['igrasppreshape']]
     def moveToPreshape(self,grasp,execute=True,outputtraj=False):
         """uses a planner to safely move the hand to the preshape and returns the trajectory"""
         trajdata = []

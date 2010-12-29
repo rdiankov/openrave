@@ -68,15 +68,44 @@ class Grasper:
         contacts = None
         finalconfig = None
         if forceclosure:
-            volume = float(resvalues.pop())
-            mindist = float(resvalues.pop())
+            volume = float64(resvalues.pop())
+            mindist = float64(resvalues.pop())
         if outputfinal:
             jointvalues = []
             for i in range(self.robot.GetDOF()):
-                jointvalues.insert(0,float(resvalues.pop()))
+                jointvalues.insert(0,float64(resvalues.pop()))
             pose = []
             for i in range(7):
-                pose.insert(0,float(resvalues.pop()))
+                pose.insert(0,float64(resvalues.pop()))
             finalconfig = (jointvalues,matrixFromPose(pose))
-        contacts = reshape(array([float(s) for s in resvalues],float),(len(resvalues)/6,6))
+        contacts = reshape(array([float64(s) for s in resvalues],float64),(len(resvalues)/6,6))
         return contacts,finalconfig,mindist,volume
+    def ConvexHull(self,points,returnplanes=True,returnfaces=True,returntriangles=True):
+        dim = len(points[0])
+        cmd = 'ConvexHull points %d %d '%(len(points),dim) + ' '.join(str(f) for f in points.flat) + ' '
+        if returnplanes is not None:
+            cmd += 'returnplanes %d '%returnplanes
+        if returnfaces is not None:
+            cmd += 'returnfaces %d '%returnfaces
+        if returntriangles is not None:
+            cmd += 'returntriangles %d '%returntriangles
+        res = self.prob.SendCommand(cmd)
+        if res is None:
+            raise planning_error('ConvexHull')
+        resvalues = res.split()
+        planes = None
+        faces = None
+        triangles = None
+        if returnplanes:
+            numplanes = int(resvalues.pop(0))
+            planes = reshape(array([float64(resvalues.pop(0)) for i in range((dim+1)*numplanes)],float64),(numplanes,dim+1))
+        if returnfaces:
+            numfaces = int(resvalues.pop(0))
+            faces = []
+            for i in range(numfaces):
+                numvertices = int(resvalues.pop(0))
+                faces.append(array([int(resvalues.pop(0)) for i in range(numvertices)],int))
+        if returntriangles:
+            numtriangles = int(resvalues.pop(0))
+            triangles = reshape(array([int(resvalues.pop(0)) for i in range(3*numtriangles)],int),(numtriangles,3))
+        return planes,faces,triangles

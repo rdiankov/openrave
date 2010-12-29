@@ -819,6 +819,7 @@ class Environment : public EnvironmentBase
         if( !pbody ) {
             return false;
         }
+        EnvironmentMutex::scoped_lock lockenv(GetMutex()); // reading collision data, so don't want anyone modifying it
         FOREACHC(it, pbody->GetLinks()) {
             trimesh.Append((*it)->GetCollisionData(), (*it)->GetTransform());
         }

@@ -81,7 +81,7 @@ class TaskManipulation:
             T = eye(4)
             for j in range(4):
                 for k in range(3):
-                    T[k][j] = float(resvalues.pop(0))
+                    T[k][j] = float64(resvalues.pop(0))
             goals.append(T)
         graspindex = int(resvalues.pop(0))
         searchtime = double(resvalues.pop(0))
@@ -102,7 +102,7 @@ class TaskManipulation:
         res = self.prob.SendCommand(cmd)
         resvalues = res.split()
         iters = array([int(s) for s in resvalues[0:len(configs)]])
-        newconfigs = reshape(array([float(s) for s in resvalues[len(configs):]]),(len(configs),self.robot.GetActiveDOF()))
+        newconfigs = reshape(array([float64(s) for s in resvalues[len(configs):]]),(len(configs),self.robot.GetActiveDOF()))
         return iters,newconfigs
     def CloseFingers(self,offset=None,movingdir=None,execute=None,outputtraj=None,outputfinal=None,coarsestep=None):
         cmd = 'CloseFingers '
@@ -126,7 +126,7 @@ class TaskManipulation:
             raise planning_error('CloseFingers')
         resvalues = res.split()
         if outputfinal:
-            final = array([float(resvalues[i]) for i in range(dof)])
+            final = array([float64(resvalues[i]) for i in range(dof)])
             resvalues=resvalues[dof:]
         else:
             final=None
@@ -156,7 +156,7 @@ class TaskManipulation:
             raise planning_error('ReleaseFingers')
         resvalues = res.split()
         if outputfinal:
-            final = array([float(resvalues[i]) for i in range(dof)])
+            final = array([float64(resvalues[i]) for i in range(dof)])
             resvalues=resvalues[len(final):]
         else:
             final=None
@@ -181,7 +181,7 @@ class TaskManipulation:
             raise planning_error('ReleaseActive')
         resvalues = res.split()
         if outputfinal:
-            final = array([float(resvalues[i]) for i in range(self.robot.GetActiveDOF())])
+            final = array([float64(resvalues[i]) for i in range(self.robot.GetActiveDOF())])
             resvalues=resvalues[len(final):]
         else:
             final=None

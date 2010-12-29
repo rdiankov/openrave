@@ -51,7 +51,7 @@ def run(args=None):
                 T = eye(4)
                 T[0:3,3] = array((-0.5,-0.5,2))+0.4*random.rand(3)
                 body.SetTransform(T)
-                #env.GetRobots()[0].GetLinks()[6].GetGeometries()[0].SetCollisionMesh(KinBody.Link.TriMesh(*ComputeBoxMesh([1,0.2,0.3])))
+                #env.GetRobots()[0].GetLinks()[6].GetGeometries()[0].SetCollisionMesh(TriMesh(*ComputeBoxMesh([1,0.2,0.3])))
                         
         time.sleep(0.4)
         simtime = env.GetSimulationTime()*1e-6
