@@ -304,7 +304,7 @@ find_package(GMPXX)
 find_package(MPFR)
 find_package(MPFI)
 
-if( OPT_ACCURATEMATH )
+if( OPT_ACCURATEMATH AND NOT MSVC )
   add_subdirectory(3rdparty/crlibm-1.0beta4)
   set(CRLIBM_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/crlibm-1.0beta4")
   set(CRLIBM_FOUND 1)

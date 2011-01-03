@@ -29,7 +29,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 
 /* Avoid loading the header twice */
-#ifndef INCLUDE_SCS 
+#ifndef INCLUDE_SCS
 #define INCLUDE_SCS 1
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS /* because it is not very clean */
@@ -39,6 +39,8 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #endif
 #ifdef HAVE_INTTYPES_H
 #include <inttypes.h>
+#else
+#include <stdint.h>
 #endif
 
 

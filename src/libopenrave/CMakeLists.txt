@@ -1,5 +1,14 @@
 set(openrave_lib_SOURCES KinBody.cpp math.cpp libopenrave.cpp Robot.cpp Trajectory.cpp mt19937ar.cpp libopenrave.h  mt19937ar.h plugindatabase.h ${rave_header_files})
 
+check_function_exists(asinh HAS_ASINH)
+check_function_exists(acosh HAS_ACOSH)
+check_function_exists(atanh HAS_ATANH)
+check_function_exists(exp2 HAS_EXP2)
+check_function_exists(log2 HAS_LOG2)
+if( HAS_LOG2 )
+  add_definitions("-DHAS_LOG2")
+endif()
+
 include_directories(${FPARSER_INCLUDE_DIR})
 add_library(libopenrave SHARED ${openrave_lib_SOURCES})
 add_dependencies(libopenrave classhashes_h openrave-md5)

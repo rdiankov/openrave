@@ -133,13 +133,17 @@ dReal RaveFabs(dReal f) { return fabs(f); }
 
 #else // use all standard libm
 
-#if sizeof(dReal) == 4 // floating-point
+#if OPENRAVE_PRECISION == 0 // floating-point
 dReal RaveExp(dReal f) { return expf(f); }
 dReal RaveLog(dReal f) { return logf(f); }
 dReal RaveCos(dReal f) { return cosf(f); }
 dReal RaveSin(dReal f) { return sinf(f); }
 dReal RaveTan(dReal f) { return tanf(f); }
+#ifdef HAS_LOG2
 dReal RaveLog2(dReal f) { return log2f(f); }
+#else
+dReal RaveLog2(dReal f) { return logf(f)/logf(2.0f); }
+#endif
 dReal RaveLog10(dReal f) { return log10f(f); }
 dReal RaveAcos(dReal f) { return acosf(f); }
 dReal RaveAsin(dReal f) { return asinf(f); }
@@ -153,7 +157,11 @@ dReal RaveLog(dReal f) { return log(f); }
 dReal RaveCos(dReal f) { return cos(f); }
 dReal RaveSin(dReal f) { return sin(f); }
 dReal RaveTan(dReal f) { return tan(f); }
+#ifdef HAS_LOG2
 dReal RaveLog2(dReal f) { return log2(f); }
+#else
+dReal RaveLog2(dReal f) { return log(f)/log(2.0f); }
+#endif
 dReal RaveLog10(dReal f) { return log10(f); }
 dReal RaveAcos(dReal f) { return acos(f); }
 dReal RaveAsin(dReal f) { return asin(f); }
@@ -1988,11 +1996,12 @@ RAVE_API void RaveRandomInt(int n, std::vector<int>& v)
 RAVE_API float RaveRandomFloat(IntervalType interval)
 {
     switch(interval) {
-    case IT_Open: return (((float)genrand_int32()) + 0.5f)*(1.0/4294967296.0f);
-    case IT_OpenStart: return (((float)genrand_int32()) + 1.0f)*(1.0/4294967296.0f);
-    case IT_OpenEnd: return (float)genrand_int32()*(1.0/4294967296.0f); 
-    case IT_Closed: return (float)genrand_int32()*(1.0/4294967295.0f);
+    case IT_Open: return (((float)genrand_int32()) + 0.5f)*(1.0f/4294967296.0f);
+    case IT_OpenStart: return (((float)genrand_int32()) + 1.0f)*(1.0f/4294967296.0f);
+    case IT_OpenEnd: return (float)genrand_int32()*(1.0f/4294967296.0f); 
+    case IT_Closed: return (float)genrand_int32()*(1.0f/4294967295.0f);
     }
+    BOOST_ASSERT(0);
 }
 
 RAVE_API void RaveRandomFloat(int n, std::vector<float>& v)
@@ -2012,6 +2021,7 @@ RAVE_API double RaveRandomDouble(IntervalType interval)
     case IT_OpenEnd: return (a*67108864.0+b)*(1.0/9007199254740992.0);
     case IT_Closed: return (a*67108864.0+b)*(1.0/9007199254740991.0);
     }
+    BOOST_ASSERT(0);
 }
 
 RAVE_API void RaveRandomDouble(int n, std::vector<double>& v)
