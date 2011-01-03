@@ -1,5 +1,15 @@
 add_definitions("-DFP_SUPPORT_FLOAT_TYPE") # since openrave has a float option
-add_definitions("-DFP_SUPPORT_TR1_MATH_FUNCS") # make things faster?
+
+set(CMAKE_REQUIRED_LIBRARIES m)
+#look for asinh(), acosh(), atanh(), exp2() and log2().
+check_function_exists(asinh HAS_ASINH)
+check_function_exists(acosh HAS_ACOSH)
+check_function_exists(atanh HAS_ATANH)
+check_function_exists(exp2 HAS_EXP2)
+check_function_exists(log2 HAS_LOG2)
+if( HAS_ASINH AND HAS_ACOSH AND HAS_ATANH AND HAS_EXP2 AND HAS_LOG2 )
+  add_definitions("-DFP_SUPPORT_TR1_MATH_FUNCS") # make things faster?
+endif()
 
 # check if alloca exists
 check_include_file(alloca.h HAVE_ALLOCA_H)
