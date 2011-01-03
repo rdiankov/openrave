@@ -69,7 +69,7 @@
       <Render>models/barrett/link3.iv 0.001</Render>
     </Geom>
   </Body>
-  <Joint name="JF1mimic" type="hinge" enable="false" mimic="JF1 0.33333 0.8727">
+  <Joint name="JF1mimic" type="hinge" enable="false" mimic_pos="JF1/3+0.8727" mimic_vel="|JF1 0.33333" mimic_accel="|JF1 0">
     <Body>Finger0-1</Body>
     <Body>Finger0-2</Body>
     <offsetfrom>Finger0-2</offsetfrom>
@@ -119,7 +119,7 @@
       <Render>models/barrett/link3.iv 0.001</Render>
     </Geom>
   </Body>
-  <Joint name="JF2mimic" type="hinge" enable="false" mimic="JF2 0.33333 0.8727">
+  <Joint name="JF2mimic" type="hinge" enable="false" mimic_pos="JF2/3+0.8727" mimic_vel="|JF2 0.33333" mimic_accel="|JF2 0">
     <Body>Finger1-1</Body>
     <Body>Finger1-2</Body>
     <offsetfrom>Finger1-2</offsetfrom>
@@ -162,7 +162,7 @@
       <Render>models/barrett/link3.iv 0.001</Render>
     </Geom>
   </Body>
-  <Joint name="JF3mimic" type="hinge" enable="false" mimic="JF3 0.33333 0.8727">
+  <Joint name="JF3mimic" type="hinge" enable="false" mimic_pos="JF3/3+0.8727" mimic_vel="|JF3 0.33333" mimic_accel="|JF3 0">
     <Body>Finger2-1</Body>
     <Body>Finger2-2</Body>
     <offsetfrom>Finger2-2</offsetfrom>
@@ -185,7 +185,7 @@
     <maxvel>2</maxvel>
     <resolution>1.7</resolution>
   </Joint>
-  <Joint name="JF4mimic" type="hinge" enable="false" mimic="JF4 1 0">
+  <Joint name="JF4mimic" type="hinge" enable="false" mimic_pos="JF4" mimic_vel="|JF4 1" mimic_accel="|JF4 0">
     <Body>wam7</Body>
     <Body>Finger1-0</Body>
     <offsetfrom>Finger1-0</offsetfrom>

@@ -9,6 +9,11 @@ if( Boost_FILESYSTEM_FOUND AND Boost_SYSTEM_FOUND )
   set(openrave_libraries ${openrave_libraries} ${Boost_FILESYSTEM_LIBRARY} ${Boost_SYSTEM_LIBRARY})
   add_definitions(-DHAVE_BOOST_FILESYSTEM)
 endif()
+if( CRLIBM_FOUND )
+  set(openrave_libraries ${openrave_libraries} ${CRLIBM_LIBRARY})
+  include_directories(${CRLIBM_INCLUDE_DIR})
+  add_definitions("-DUSE_CRLIBM")
+endif()
 
 set(LIB_COMPILE_FLAGS "${Boost_CFLAGS}")
 

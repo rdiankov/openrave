@@ -35,6 +35,145 @@ using namespace std;
 #include <locale>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/date_time/time_facet.hpp>
+#include <boost/algorithm/string.hpp>
+
+#define LIBXML_SAX1_ENABLED
+#include <libxml/globals.h>
+#include <libxml/xmlerror.h>
+#include <libxml/parser.h>
+#include <libxml/tree.h>
+#include <libxml/xmlmemory.h>
+
+/// \brief converts raw XML data to DAE using libxml2
+namespace XMLtoDAE
+{
+    struct XMLREADERDATA
+    {
+    XMLREADERDATA(daeElementRef pelt, xmlParserCtxtPtr ctxt) : _ctxt(ctxt), _offset(0) { _elts.push_back(pelt); }
+        xmlParserCtxtPtr _ctxt;
+        list<daeElementRef> _elts;
+        size_t _offset;
+    };
+
+    static void XMLErrorFunc(void *ctx, const char *msg, ...)
+    {
+        va_list args;
+
+        va_start(args, msg);
+        RAVELOG_ERROR("XML Parse error: ");
+        vprintf(msg,args);
+        va_end(args);
+    }
+
+    static void DefaultStartElementSAXFunc(void *ctx, const xmlChar *name, const xmlChar **atts)
+    {
+        XMLREADERDATA* pdata = (XMLREADERDATA*)ctx;
+        daeElementRef pelt = pdata->_elts.back()->add((const char*)name);
+        if( atts != NULL ) {
+            for (int i = 0;(atts[i] != NULL);i+=2) {
+                pelt->setAttribute((const char*)atts[i],(const char*)atts[i+1]);
+            }
+        }
+        pdata->_elts.push_back(pelt);
+    }
+
+    static void DefaultEndElementSAXFunc(void *ctx, const xmlChar *name)
+    {
+        XMLREADERDATA* pdata = (XMLREADERDATA*)ctx;
+        pdata->_elts.pop_back();
+        if( pdata->_elts.size() == 1 ) {
+            BOOST_ASSERT(!!pdata->_ctxt->input);
+            pdata->_offset = pdata->_ctxt->input->cur-pdata->_ctxt->input->base;
+            xmlStopParser(pdata->_ctxt);
+        }
+    }
+
+    static void DefaultCharactersSAXFunc(void *ctx, const xmlChar *ch, int len)
+    {
+        XMLREADERDATA* pdata = (XMLREADERDATA*)ctx;
+        pdata->_elts.back()->setCharData(string((const char*)ch, len));
+    }
+
+    static bool xmlDetectSAX2(xmlParserCtxtPtr ctxt)
+    {
+        if (ctxt == NULL)
+            return false;
+#ifdef LIBXML_SAX1_ENABLED
+        if ((ctxt->sax) &&  (ctxt->sax->initialized == XML_SAX2_MAGIC) && ((ctxt->sax->startElementNs != NULL) || (ctxt->sax->endElementNs != NULL))) {
+            ctxt->sax2 = 1;
+        }
+#else
+        ctxt->sax2 = 1;
+#endif
+
+        ctxt->str_xml = xmlDictLookup(ctxt->dict, BAD_CAST "xml", 3);
+        ctxt->str_xmlns = xmlDictLookup(ctxt->dict, BAD_CAST "xmlns", 5);
+        ctxt->str_xml_ns = xmlDictLookup(ctxt->dict, XML_XML_NAMESPACE, 36);
+        if ((ctxt->str_xml==NULL) || (ctxt->str_xmlns==NULL) || (ctxt->str_xml_ns == NULL)) {
+            return false;
+        }
+        return true;
+    }
+
+    static size_t Parse(daeElementRef pelt, const char* buffer, int size)
+    {
+        static xmlSAXHandler s_DefaultSAXHandler = {0};
+        if( size <= 0 ) {
+            size = strlen(buffer);
+            if( size == 0 ) {
+                return 0;
+            }
+        }
+        if( !s_DefaultSAXHandler.initialized ) {
+            // first time, so init
+            s_DefaultSAXHandler.startElement = DefaultStartElementSAXFunc;
+            s_DefaultSAXHandler.endElement = DefaultEndElementSAXFunc;
+            s_DefaultSAXHandler.characters = DefaultCharactersSAXFunc;
+            s_DefaultSAXHandler.error = XMLErrorFunc;
+            s_DefaultSAXHandler.initialized = 1;
+        }
+
+        xmlSAXHandlerPtr sax = &s_DefaultSAXHandler;
+        int ret = 0;
+        xmlParserCtxtPtr ctxt;
+
+        ctxt = xmlCreateMemoryParserCtxt(buffer, size);
+        if (!ctxt ) {
+            return 0;
+        }
+        if (ctxt->sax != (xmlSAXHandlerPtr) &xmlDefaultSAXHandler) {
+            xmlFree(ctxt->sax);
+        }
+        ctxt->sax = sax;
+        xmlDetectSAX2(ctxt);
+
+        XMLREADERDATA reader(pelt, ctxt);
+        ctxt->userData = &reader;
+        xmlParseDocument(ctxt);
+
+        if (ctxt->wellFormed) {
+            ret = 0;
+        }
+        else {
+            if (ctxt->errNo != 0) {
+                ret = ctxt->errNo;
+            }
+            else {
+                ret = -1;
+            }
+        }
+        if (sax != NULL) {
+            ctxt->sax = NULL;
+        }
+        if (ctxt->myDoc != NULL) {
+            xmlFreeDoc(ctxt->myDoc);
+            ctxt->myDoc = NULL;
+        }
+        xmlFreeParserCtxt(ctxt);
+    
+        return ret==0 ? reader._offset : 0;
+    }
+};
 
 class ColladaWriter : public daeErrorHandler
 {
@@ -109,7 +248,6 @@ class ColladaWriter : public daeErrorHandler
         daeInt error = _collada->getDatabase()->insertDocument(documentName, &doc ); // also creates a collada root
         BOOST_ASSERT( error == DAE_OK && !!doc );
         _dom = daeSafeCast<domCOLLADA>(doc->getDomRoot());
-        _dom->setAttribute("xmlns:math","http://www.w3.org/1998/Math/MathML");
 
         //create the required asset tag
         domAssetRef asset = daeSafeCast<domAsset>( _dom->add( COLLADA_ELEMENT_ASSET ) );
@@ -435,8 +573,6 @@ class ColladaWriter : public daeErrorHandler
         ikmout->vkinematicsbindings.push_back(make_pair(string(kbind->getSid()), str(boost::format("visual%d/node0")%pbody->GetEnvironmentId())));
 
         ikmout->vaxissids.reserve(kmout->vaxissids.size());
-        vector<dReal> vdofvalues;
-        pbody->GetDOFValues(vdofvalues);
         int i = 0;
         FOREACH(it,kmout->vaxissids) {
             domKinematics_newparamRef kbind = daeSafeCast<domKinematics_newparam>(ikmout->ikm->add(COLLADA_ELEMENT_NEWPARAM));
@@ -449,28 +585,9 @@ class ColladaWriter : public daeErrorHandler
             string sid = symscope+ikmsid+"_"+ref;
             kbind->setSid(sid.c_str());
             daeSafeCast<domKinematics_newparam::domSIDREF>(kbind->add(COLLADA_ELEMENT_SIDREF))->setValue((refscope+ikmsid+"/"+it->sid).c_str());
-            dReal value=0;
-            if( it->pjoint->GetDOFIndex() >= 0 ) {
-                value = vdofvalues.at(it->pjoint->GetDOFIndex()+it->iaxis);
-            }
-            else if( it->pjoint->GetMimicJointIndex() >= 0 ) {
-                value = vdofvalues.at(pbody->GetJoints().at(it->pjoint->GetMimicJointIndex())->GetDOFIndex()+it->iaxis);
-                value = it->pjoint->GetMimicCoeffs().at(0)*value + it->pjoint->GetMimicCoeffs().at(1);
-            }
-            else {
-                vector<dReal> vlower, vupper;
-                it->pjoint->GetLimits(vlower,vupper);
-                if( vlower.at(it->iaxis) == vupper.at(it->iaxis) ) {
-                    value = vlower.at(it->iaxis);
-                }
-                else {
-                    RAVELOG_WARN(str(boost::format("could not assign value for joint %s\n")%it->pjoint->GetName()));
-                }
-            }
-
             domKinematics_newparamRef pvalueparam = daeSafeCast<domKinematics_newparam>(ikmout->ikm->add(COLLADA_ELEMENT_NEWPARAM));
             pvalueparam->setSid((sid+string("_value")).c_str());
-            daeSafeCast<domKinematics_newparam::domFloat>(pvalueparam->add(COLLADA_ELEMENT_FLOAT))->setValue(value);
+            daeSafeCast<domKinematics_newparam::domFloat>(pvalueparam->add(COLLADA_ELEMENT_FLOAT))->setValue(it->pjoint->GetValue(it->iaxis));
             ikmout->vaxissids.push_back(axis_sids(sid,pvalueparam->getSid(),kmout->vaxissids.at(i).jointnodesid));
             ++i;
         }
@@ -602,12 +719,19 @@ class ColladaWriter : public daeErrorHandler
         }
 
         // create the formulas for all mimic joints
+        std::map<std::string,std::string> mapjointnames;
+        FOREACHC(itjoint,pbody->GetJoints()) {
+            mapjointnames[str(boost::format("<csymbol>%s</csymbol>")%(*itjoint)->GetName())] = str(boost::format("<csymbol encoding=\"COLLADA\">%s/joint%d</csymbol>")%kmodel->getID()%(*itjoint)->GetJointIndex());
+        }
+
         FOREACHC(itjoint, vjoints) {
             KinBody::JointConstPtr pjoint = itjoint->second;
-            if( pjoint->GetMimicJointIndex() < 0 ) {
+            if( !pjoint->IsMimic() ) {
                 continue;
             }
-
+            if( pjoint->GetDOF() > 1 ) {
+                RAVELOG_WARN("collada writer might not support multi-dof joint formulas...");
+            }
             domFormulaRef pf = daeSafeCast<domFormula>(ktec->add(COLLADA_ELEMENT_FORMULA));
             string formulaid = str(boost::format("joint%d.formula")%itjoint->first);
             pf->setSid(formulaid.c_str());
@@ -615,25 +739,45 @@ class ColladaWriter : public daeErrorHandler
             string targetjointid = str(boost::format("%s/joint%d")%kmodel->getID()%itjoint->first);
             daeSafeCast<domCommon_param>(ptarget->add(COLLADA_TYPE_PARAM))->setValue(targetjointid.c_str());
 
-            domFormula_techniqueRef pftec = daeSafeCast<domFormula_technique>(pf->add(COLLADA_ELEMENT_TECHNIQUE_COMMON));
-            // create a const0*joint+const1 formula
-            // <apply> <plus/> <apply> <times/> <cn>a</cn> x </apply> <cn>b</cn> </apply>
-            daeElementRef pmath_math = pftec->add("math");
-            daeElementRef pmath_apply = pmath_math->add("apply");
-            {
-                daeElementRef pmath_plus = pmath_apply->add("plus");
-                daeElementRef pmath_apply1 = pmath_apply->add("apply");
-                {
-                    daeElementRef pmath_times = pmath_apply1->add("times");
-                    daeElementRef pmath_const0 = pmath_apply1->add("cn");
-                    pmath_const0->setCharData(str(boost::format("%f")%pjoint->GetMimicCoeffs().at(0)));
-                    daeElementRef pmath_symb = pmath_apply1->add("csymbol");
-                    pmath_symb->setAttribute("encoding","COLLADA");
-                    pmath_symb->setCharData(str(boost::format("%s/joint%d")%kmodel->getID()%pjoint->GetMimicJointIndex()));
+            int iaxis = 0;
+            boost::array<string,3> sequations;
+            for(int itype = 0; itype < 3; ++itype) {
+                sequations[itype] = pjoint->GetMimicEquation(iaxis,itype,"mathml");
+                FOREACH(itmapping,mapjointnames) {
+                    boost::algorithm::replace_all(sequations[itype],itmapping->first,itmapping->second);
                 }
-                daeElementRef pmath_const1 = pmath_apply->add("cn");
-                pmath_const1->setCharData(str(boost::format("%f")%pjoint->GetMimicCoeffs().at(1)));
             }
+            boost::array<const char*,3> sequationids = {{"position","first_partial","second_partial"}};
+
+            domTechniqueRef pftec = daeSafeCast<domTechnique>(pf->add(COLLADA_ELEMENT_TECHNIQUE));
+            pftec->setProfile("OpenRAVE");
+            // save position equation
+            daeElementRef poselt = pftec->add("equation");
+            poselt->setAttribute("type",sequationids[0]);
+            XMLtoDAE::Parse(poselt, sequations[0].c_str(), sequations[0].size());
+
+            // save partial derivative equations
+            for(int itype = 1; itype < 3; ++itype) {
+                if( sequations[itype].size() == 0 ) {
+                    continue;
+                }
+                size_t offset = 0;
+                for(size_t idof = 0; idof < pjoint->GetMimicDOFIndices(iaxis).size(); ++idof) {
+                    if(offset<sequations[itype].size());
+                    daeElementRef pelt = pftec->add("equation");
+                    pelt->setAttribute("type",sequationids[itype]);
+                    KinBody::JointPtr pmimic = pbody->GetJointFromDOFIndex(pjoint->GetMimicDOFIndices(iaxis)[idof]);
+                    std::string smimicid = str(boost::format("%s/joint%d")%kmodel->getID()%pmimic->GetJointIndex());
+                    pelt->setAttribute("target",smimicid.c_str());
+                    offset += XMLtoDAE::Parse(pelt, sequations[itype].c_str()+offset, sequations[itype].size()-offset);
+                    if( offset == 0 ) {
+                        RAVELOG_WARN(str(boost::format("failed to parse joint %s first partial: %s\n")%pjoint->GetName()%sequations[itype]));
+                        break;
+                    }
+                }
+            }
+            domFormula_techniqueRef pfdefaulttec = daeSafeCast<domFormula_technique>(pf->add(COLLADA_ELEMENT_TECHNIQUE_COMMON));
+            XMLtoDAE::Parse(pfdefaulttec, sequations[0].c_str(), sequations[0].size());
         }
 
         _listkinbodies.push_back(make_pair(pbody,kmout));
@@ -785,12 +929,14 @@ class ColladaWriter : public daeErrorHandler
         _scene.piscene->setUrl( (string("#") + string(_scene.pscene->getID())).c_str() );
     }
 
-    /// \brief Write link of a kinematic body
-    /// \param link Link to write
-    /// \param pkinparent Kinbody parent
-    /// \param pnodeparent Node parent
-    /// \param strModelUri
-    /// \param vjoints Vector of joints
+    /** \brief Write link of a kinematic body
+        
+        \param link Link to write
+        \param pkinparent Kinbody parent
+        \param pnodeparent Node parent
+        \param strModelUri
+        \param vjoints Vector of joints
+    */
     virtual LINKOUTPUT _WriteLink(KinBody::LinkConstPtr plink, daeElementRef pkinparent, domNodeRef pnodeparent, const string& strModelUri, const vector<pair<int, KinBody::JointConstPtr> >& vjoints)
     {
         LINKOUTPUT out;

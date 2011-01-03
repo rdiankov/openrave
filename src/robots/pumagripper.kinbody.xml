@@ -57,7 +57,7 @@
     </mass>
   </Body>
 
-  <Joint name="m2" type="hinge" enable="false" mimic="m1 1 0">
+  <Joint name="m2" type="hinge" enable="false" mimic_pos="m1" mimic_vel="|m1 1" mimic_accel="|m1 0">
     <Body>Puma6</Body>
     <Body>LClaw</Body>
     <offsetfrom>LClaw</offsetfrom>

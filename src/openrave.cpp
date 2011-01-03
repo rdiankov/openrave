@@ -206,6 +206,7 @@ int main(int argc, char ** argv)
     for(list<string>::iterator it = listLoadPlugins.begin(); it != listLoadPlugins.end(); ++it) {
         RaveLoadPlugin(*it);
     }
+
 #ifndef _WIN32
     // add a signal handler
     signal(SIGINT,sigint_handler); // control C
@@ -357,7 +358,7 @@ void MainOpenRAVEThread()
     //            RAVELOG_ERROR("save scene at file %s failed\n", s_saveScene);
     //        else
     //            RAVELOG_INFOA("save scene at file %s succeeded\n", s_saveScene);
-
+            
             s_bThreadDestroyed = true;
             return;
         }

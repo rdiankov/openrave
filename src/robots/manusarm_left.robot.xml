@@ -181,7 +181,7 @@
       <maxvel>0.5</maxvel>
       <resolution>4</resolution>
     </Joint>
-    <Joint type="hinge" enable="false" mimic="lJ-gripper 1 0">
+    <Joint type="hinge" enable="false" mimic_pos="lJ-gripper" mimic_vel="|lJ-gripper 1" mimic_accel="|lJ-gripper 0">
       <Body>left-hand-proximal-r</Body>
       <Body>left-hand-distal-r</Body>
       <offsetfrom>left-hand-distal-r</offsetfrom>
@@ -191,7 +191,7 @@
       <maxvel>0.5</maxvel>
       <resolution>4</resolution>
     </Joint>
-    <Joint type="hinge" enable="false" mimic="lJ-gripper 1 0">
+    <Joint type="hinge" enable="false" mimic_pos="lJ-gripper" mimic_vel="|lJ-gripper 1" mimic_accel="|lJ-gripper 0">
       <Body>left-hand-base</Body>
       <Body>left-hand-proximal-l</Body>
       <offsetfrom>left-hand-proximal-l</offsetfrom>
@@ -201,7 +201,7 @@
       <maxvel>0.5</maxvel>
       <resolution>4</resolution>
     </Joint>
-    <Joint type="hinge" enable="false" mimic="lJ-gripper 1 0">
+    <Joint type="hinge" enable="false" mimic_pos="lJ-gripper" mimic_vel="|lJ-gripper 1" mimic_accel="|lJ-gripper 0">
       <Body>left-hand-proximal-l</Body>
       <Body>left-hand-distal-l</Body>
       <offsetfrom>left-hand-distal-l</offsetfrom>

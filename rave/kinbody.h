@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2010 Rosen Diankov (rosen.diankov@gmail.com)
+// Copyright (C) 2006-2011 Rosen Diankov (rosen.diankov@gmail.com)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -20,6 +20,9 @@
 #ifndef  OPENRAVE_KINBODY_H
 #define  OPENRAVE_KINBODY_H
 
+/// declare function parser class from fparser library
+template<typename Value_t> class FunctionParserBase;
+
 namespace OpenRAVE {
 
 /** \brief <b>[interface]</b> A kinematic body of links and joints. See \ref arch_kinbody.
@@ -33,7 +36,7 @@ public:
         Prop_Joints=0x1, ///< all properties of all joints
         Prop_JointLimits=0x2,
         Prop_JointOffset=0x4,
-        Prop_JointProperties=0x8, ///< max velocity, max acceleration, resolution, max torque
+        Prop_JointProperties=0x8, ///< max velocity, max acceleration, resolution, max torque, mimic joint
         Prop_Links=0x10, ///< all properties of all links
         Prop_Name=0x20, ///< name changed
         Prop_LinkDraw=0x40, ///< toggle link geometries rendering
@@ -305,20 +308,19 @@ public:
         Joint(KinBodyPtr parent);
         virtual ~Joint();
 
+        /// \brief The unique name of the joint
         inline const std::string& GetName() const { return name; }
-        inline int GetMimicJointIndex() const { return nMimicJointIndex; }
-        inline const std::vector<dReal>& GetMimicCoeffs() const { return vMimicCoeffs; }
 
         inline dReal GetMaxVel() const { return fMaxVel; }
         inline dReal GetMaxAccel() const { return fMaxAccel; }
         inline dReal GetMaxTorque() const { return fMaxTorque; }
-        inline dReal GetOffset() const { return offset; }
 
-        /// Get the degree of freedom index in the body's DOF array, does not index in KinBody::_vecjoints!
-        /// Ie, KinBody::GetJointValues()[GetDOFIndex()] == GetValues()
+        /// \brief Get the degree of freedom index in the body's DOF array.
+        ///
+        /// This does not index in KinBody::GetJoints() directly! In other words, KinBody::GetDOFValues()[GetDOFIndex()] == GetValues()[0]
         inline int GetDOFIndex() const { return dofindex; }
 
-        /// Get the joint index into KinBody::_vecjoints
+        /// \brief Get the joint index into KinBody::GetJoints.
         inline int GetJointIndex() const { return jointindex; }
         
         inline KinBodyPtr GetParent() const { return KinBodyPtr(_parent); }
@@ -326,69 +328,147 @@ public:
         inline LinkPtr GetFirstAttached() const { return bodies[0]; }
         inline LinkPtr GetSecondAttached() const { return bodies[1]; }
 
-        inline dReal GetResolution() const { return fResolution; }
         inline JointType GetType() const { return type; }
 
+        /// \brief The discretization of the joint used when line-collision checking.
+        ///
+        /// The resolutions are set as large as possible such that the joint will not go through obstacles of determined size.
+        inline dReal GetResolution() const { return fResolution; }
+        virtual void SetResolution(dReal resolution);
+
+        /// \brief The degrees of freedom of the joint. Each joint supports a max of 3 degrees of freedom.
         virtual int GetDOF() const;
 
-        /// return true if joint has no limits
+        /// \brief return true if joint has an identification at the lower and upper limits
+        ///
+        /// Although currently not developed, it could be possible to support identified joints that are not circular.
         virtual bool IsCircular() const { return _bIsCircular; }
 
-        /// return true if joint can be treated as a static binding (ie all limits are 0)
+        /// \brief Return true if joint can be treated as a static binding (ie all limits are 0)
         virtual bool IsStatic() const;
 
-        /// Gets the joint values with the correct offsets applied
+        /// \brief Return all the joint values with the correct offsets applied
+        ///
         /// \param bAppend if true will append to the end of the vector instead of erasing it
         /// \return degrees of freedom of the joint (even if pValues is NULL)
         virtual void GetValues(std::vector<dReal>& values, bool bAppend=false) const;
+
+        /// \brief Return the value of the specified joint axis only.
+        virtual dReal GetValue(int axis=0) const;
 
         /// Gets the joint velocities
         /// \param bAppend if true will append to the end of the vector instead of erasing it
         /// \return the degrees of freedom of the joint (even if pValues is NULL)
         virtual void GetVelocities(std::vector<dReal>& values, bool bAppend=false) const;
 
-        /// add torque
+        /// \brief Add torque to the physics engine.
         virtual void AddTorque(const std::vector<dReal>& torques);
 
-        /// \return the anchor of the joint in global coordinates
+        /// \brief The anchor of the joint in global coordinates.
         virtual Vector GetAnchor() const;
 
+        /// \brief The axis of the joint in global coordinates
+        ///
         /// \param[in] axis the axis to get
-        /// \return the axis of the joint in global coordinates
         virtual Vector GetAxis(int axis = 0) const;
 
-        /// Returns the limits of the joint
-        /// \param[out] vLowerLimit the lower limits
-        /// \param[out] vUpperLimit the upper limits
-        /// \param[in] bAppend if true will append to the end of the vector instead of erasing it
-        /// \return degrees of freedom of the joint
+        /** \brief Returns the limits of the joint
+        
+            \param[out] vLowerLimit the lower limits
+            \param[out] vUpperLimit the upper limits
+            \param[in] bAppend if true will append to the end of the vector instead of erasing it
+            \return degrees of freedom of the joint
+        */
         virtual void GetLimits(std::vector<dReal>& vLowerLimit, std::vector<dReal>& vUpperLimit, bool bAppend=false) const;
+        /// \brief \see GetLimits
+        virtual void SetLimits(const std::vector<dReal>& lower, const std::vector<dReal>& upper);
+        /// \deprecated (11/1/1)
+        virtual void SetJointLimits(const std::vector<dReal>& lower, const std::vector<dReal>& upper) RAVE_DEPRECATED { SetLimits(lower,upper); }
 
         virtual void GetVelocityLimits(std::vector<dReal>& vLowerLimit, std::vector<dReal>& vUpperLimit, bool bAppend=false) const;
 
-        /// \return the weight associated with a joint's axis for computing a distance in the robot configuration space.
-        virtual dReal GetWeight(int iaxis=0) const;
-
-        virtual void SetJointOffset(dReal offset);
-        virtual void SetJointLimits(const std::vector<dReal>& lower, const std::vector<dReal>& upper);
-        virtual void SetResolution(dReal resolution);
+        /// \brief The weight associated with a joint's axis for computing a distance in the robot configuration space.
+        virtual dReal GetWeight(int axis=0) const;
+        /// \brief \see GetWeight
         virtual void SetWeights(const std::vector<dReal>& weights);
+
+        /// \brief Return internal offset parameter that determines the zero of the joint offset.
+        ///
+        /// Offsets are needed for rotation joints since the range is limited to 2*pi.
+        /// This allows the offset to be set so the joint can function in [-pi+offset,pi+offset]..
+        inline dReal GetOffset() const { return offset; }
+        /// \brief \see GetOffset
+        virtual void SetJointOffset(dReal offset);
 
         virtual void serialize(std::ostream& o, int options) const;
 
         /// @name Internal Hierarchy Methods
         //@{
 
-        /// \return the anchor of the joint in local coordinates
+        /// \brief The anchor of the joint in local coordinates.
         virtual Vector GetInternalHierarchyAnchor() const { return vanchor; }
-        /// \return the axis of the joint in local coordinates
-        virtual Vector GetInternalHierarchyAxis(int iaxis = 0) const;
-        /// left multiply transform given the base body
+        /// \brief The axis of the joint in local coordinates.
+        virtual Vector GetInternalHierarchyAxis(int axis = 0) const;
+        /// \brief Left multiply transform given the base body.
         virtual Transform GetInternalHierarchyLeftTransform() const;
-        /// right multiply transform given the base body
+        /// \brief Right multiply transform given the base body.
         virtual Transform GetInternalHierarchyRightTransform() const;
         //@}
-    private:
+
+        /// A mimic joint's angles are automatically determined from other joints based on a general purpose formula.
+        /// A user does not have control of the the mimic joint values, even if they appear in the DOF list.
+        /// @name Mimic Joint Properties
+        //@{
+
+        /// \deprecated (11/1/1)
+        int GetMimicJointIndex() const RAVE_DEPRECATED;
+        /// \deprecated (11/1/1)
+        const std::vector<dReal> GetMimicCoeffs() const RAVE_DEPRECATED;
+
+        /// \brief Returns true if a particular axis of the joint is mimiced.
+        ///
+        /// \param axis the axis to query. When -1 returns true if any of the axes have mimic joints
+        bool IsMimic(int axis=-1) const;
+
+        /** \brief If the joint is mimic, returns the equation to compute its value
+            
+            \param[in] axis the axis index
+            \param[in] type 0 for position, 1 for velocity, 2 for acceleration.
+            \param[in] format the format the equations are returned in. If empty or "fparser", equation in fparser format. Also supports: "mathml".
+            
+            MathML:
+
+            Set 'format' to "mathml". The joint variables are specified with <csymbol>. If a targetted joint has more than one degree of freedom, then axis is suffixed with _\%d. If 'type' is 1 or 2, the partial derivatives are outputted as consecutive <math></math> tags in the same order as \ref GetMimicDOFIndices.
+        */
+        std::string GetMimicEquation(int axis=0, int type=0, const std::string& format="") const;
+
+        /// \brief Returns the set of DOF indices used in the computation of the mimic joint axis.
+        ///
+        /// \throw openrave_exception Throws an exception if the axis is not mimic.
+        const std::vector<int>& GetMimicDOFIndices(int axis=0) const;
+
+        /** \brief Sets the mimic properties of the joint.
+        
+            The equations can use the joint names directly in the equation, which represent the position of the joint. If a joint has more than one degree of freedom, then suffix it '_' and the axis index. For example universaljoint_0 * 10 + sin(universaljoint_1). 
+            
+            See http://warp.povusers.org/FunctionParser/fparser.html for a full description of the equation formats.
+
+            The velocity and acceleration equations are specified in terms of partial derivatives, which means one expression needs to be specified per degree of freedom of used. In order to separate the expressions use "|name ...". The name should immediately follow  '|'.  For example:
+
+            |universaljoint_0 10 |universaljoint_1 10*cos(universaljoint_1)
+
+            If there is only one variable used in the position equation, then the equation can be specified directly without using "{}".
+
+            \param[in] axis the axis to set the properties for.
+            \param[in] poseq Equation for joint's position. If it is empty, the mimic properties are turned off for this joint.
+            \param[in] veleq First-order partial derivatives of poseq with respect to all used DOFs. Only the variables used in poseq are allowed to be used. If poseq is not empty, this is required.
+            \param[in] acceleq Second-order partial derivatives of poseq with respect to all used DOFs. Only the variables used in poseq are allowed to be used. Optional.
+            \throw openrave_exception Throws an exception if the mimic equation is invalid in any way.
+        */
+        void SetMimicEquations(int axis, const std::string& poseq, const std::string& veleq, const std::string& acceleq="");
+        //@}
+
+    protected:
         boost::array<Vector,3> vAxes;        ///< axes in body[0]'s or environment coordinate system used to define joint movement
         Vector vanchor;         ///< anchor of the joint
         Transform tRight, tLeft;///< transforms used to get body[1]'s transformation with respect to body[0]'s
@@ -399,21 +479,35 @@ public:
         dReal fHardMaxVel;      ///< the hard maximum velocity, robot cannot exceed this velocity. used for verification checking
         dReal fMaxAccel;        ///< the maximum acceleration (rad/s^2) of the joint
         dReal fMaxTorque;       ///< maximum torque (N.m, kg m^2/s^2) that can be applied to the joint
-        boost::array<LinkPtr,2> bodies; ///< attached bodies
         std::vector<dReal> _vweights;        ///< the weights of the joint for computing distance metrics.
-        dReal offset;           ///< needed for rotation joints since the range is limited to 2*pi. This allows the offset to be set so the joint can function in [-pi+offset,pi+offset]
-                                ///< converts the ode joint angle to the expected joint angle
+        dReal offset;           ///< \see GetOffset
         std::vector<dReal> _vlowerlimit, _vupperlimit; ///< joint limits
-        int nMimicJointIndex;   ///< only valid for passive joints and if value is >= 0
-        std::vector<dReal> vMimicCoeffs;  ///< the angular position of this joint should be fMimicCoeffs[0]*mimic_joint+fMimicCoeffs[1]
-                                ///< when specifying joint limits, note that they are still in terms of this joint
+
+        /// \brief Holds mimic information about position, velocity, and acceleration of one axis of the joint.
+        ///
+        /// In every array, [0] is position, [1] is velocity, [2] is acceleration.
+        struct RAVE_API MIMIC
+        {
+            std::vector< int > _vdofs; ///< the list of dof indices that the function takes, order is important. It is possible for an equation to reference no joints, but is still mimic (in this case the joint is static).
+            std::set<int> _setjointindices; ///< all joint indices involved in the computation of this joint's axis.
+            boost::shared_ptr<FunctionParserBase<dReal> > _posfn;
+            std::vector<boost::shared_ptr<FunctionParserBase<dReal> > > _velfns, _accelfns; ///< the velocity and acceleration partial derivatives with respect to 
+            boost::array< std::string, 3>  _equations; ///< the original equations
+        };
+        boost::array< boost::shared_ptr<MIMIC> ,3> _vmimic; ///< the mimic properties of each of the joint axes. It is theoretically possible for a multi-dof joint to have one axes mimiced and the others free.
+
+        std::string name; ///< \see GetName
+        bool _bIsCircular;    ///< \see IsCircular
+    private:
+        /// Sensitive variables that should be modified at all for this joint.
+        /// @name Private Joint Variables
+        //@{
+        KinBodyWeakPtr _parent;       ///< body that joint belong to
+        boost::array<LinkPtr,2> bodies; ///< attached bodies
         int dofindex;           ///< the degree of freedom index in the body's DOF array, does not index in KinBody::_vecjoints!
         int jointindex;         ///< the joint index into KinBody::_vecjoints
-        KinBodyWeakPtr _parent;       ///< body that joint belong to
         JointType type;
-        std::string name; ///< joint name
-        bool _bIsCircular;    ///< circular joint where the lower and upper limits identifiy with each other.
-
+        //@}
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
         friend class ColladaReader;
@@ -861,7 +955,7 @@ protected:
     /// This method is called after the body is finished being initialized with data and before being added to the environment. Also builds the hashes.
     virtual void _ComputeInternalInformation();
 
-    /// Called to notify the body that certain groups of parameters have been changed.
+    /// \brief Called to notify the body that certain groups of parameters have been changed.
     ///
     /// This function in calls every registers calledback that is tracking the changes. It also
     /// recomputes the hashes if geometry changed.

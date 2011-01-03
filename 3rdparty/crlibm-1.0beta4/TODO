@@ -1,0 +1,66 @@
+TODO before 1.0 final release
+
+
+Serious bugs
+------------
+No known serious bug left so far. Exception raising should be improved.
+
+New functions
+-------------
+Document the cases on which power is guaranteed correctly rounded values.
+Possibly write 2^x and 10^x (in harmonious combination with power)
+
+Proof stuff
+-----------
+Update chapter asin and write chapter acos. 
+   Add the scripts generating the polynomials.
+Write Gappa proofs for log2-td, log10-td, expm1, log1p
+Check all the existing .gappa against last version of Gappa
+ + set the paths right (where there are paths). 
+Write proper proofs of the DE integer rounding tests, or remove DE altogether.
+
+
+Cleaning up stuff
+-----------------
+Check .mpl with underscored variables (some versions of Maple don't like them)
+Purge obsolete .mpl
+Ensure compilation on icc9 and SunStudio11
+Solution: check recent icc first. Then add FMADE macros everywhere FMA intended
+add make timings
+
+Autotest stuff
+--------------
+Add worst cases for all which are currently written TODO
+A lot of the  Lefevre worst cases are still missing
+You never have enough test cases. In particular asin and acos
+More cases around the various boundaries would be welcome.
+
+Optim stuff
+-----------
+Remove remaining SCS: in atan, in trigo.
+Replace the current test for non-IEEE subnormal (on x86) in the code
+    with a test taking into account that x86-64 is OK
+Minor improvements to atanpi as mentionned in the doc. 
+Fuse atan-pentium and atan-itanium into atan-de, and add in atanpi. 
+Or maybe remove all the DE stuff altogether for cleaning up.
+
+===========================================================================
+
+TODO some day for a later release
+
+New functions
+-------------
+Write  inverse hyperbolic functions
+
+Optimisation stuff
+------------------
+Write TD versions of: trigo
+Write DE versions of: most functions
+
+
+Use technique in paper by Karp and Markstein for sqrt12 and sqrt13
+
+
+Interval stuff
+--------------
+Write interval functions for each CR function

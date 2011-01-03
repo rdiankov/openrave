@@ -232,7 +232,7 @@
       </Geom>
     </Body>
 
-    <Joint type="hinge" enable="false" mimic="JR 1 0">
+    <Joint type="hinge" enable="false" mimic_pos="JR" mimic_vel="|JR 1" mimic_accel="|JR 0">
       <Body>Link5</Body>
       <Body>ManipRU</Body>
       <offsetfrom>ManipRU</offsetfrom>
@@ -240,7 +240,7 @@
       <limitsdeg>-50 50</limitsdeg>
       <axis>0 -1 0</axis>
     </Joint>
-    <Joint type="hinge" enable="false" mimic="JL 1 0">
+    <Joint type="hinge" enable="false" mimic_pos="JL" mimic_vel="|JL 1" mimic_accel="|JL 0">
       <Body>Link5</Body>
       <Body>ManipLU</Body>
       <offsetfrom>ManipLU</offsetfrom>
@@ -287,7 +287,7 @@
       </Mass>-->
     </Body>
 
-    <Joint type="hinge" enable="false" mimic="JL 1 0">
+    <Joint type="hinge" enable="false" mimic_pos="JL" mimic_vel="|JL 1" mimic_accel="|JL 0">
       <Body>ManipLD</Body>
       <Body>ManipL</Body>
       <offsetfrom>ManipLD</offsetfrom>
@@ -296,7 +296,7 @@
       <axis>0 -1 0</axis>
       <anchor>0.0143 0 0</anchor>
     </Joint>
-    <Joint type="hinge" enable="false" mimic="JL 1 0">
+    <Joint type="hinge" enable="false" mimic_pos="JL" mimic_vel="|JL 1" mimic_accel="|JL 0">
       <Body>ManipLU</Body>
       <Body>ManipL</Body>
       <offsetfrom>ManipLU</offsetfrom>
@@ -305,7 +305,7 @@
       <axis>0 -1 0</axis>
       <anchor>0.0143 0 0</anchor>
     </Joint>
-    <Joint type="hinge" enable="false" mimic="JR 1 0">
+    <Joint type="hinge" enable="false" mimic_pos="JR" mimic_vel="|JR 1" mimic_accel="|JR 0">
       <Body>ManipRD</Body>
       <Body>ManipR</Body>
       <offsetfrom>ManipRD</offsetfrom>
@@ -314,7 +314,7 @@
       <axis>0 1 0</axis>
       <anchor>0.0143 0 0</anchor>
     </Joint>
-    <Joint type="hinge" enable="false" mimic="JR 1 0">
+    <Joint type="hinge" enable="false" mimic_pos="JR" mimic_vel="|JR 1" mimic_accel="|JR 0">
       <Body>ManipRU</Body>
       <Body>ManipR</Body>
       <offsetfrom>ManipRU</offsetfrom>

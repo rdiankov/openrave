@@ -1051,7 +1051,6 @@ namespace OpenRAVEXMLParser
     public:
     JointXMLReader(KinBody::JointPtr& pjoint, KinBodyPtr pparent, const std::list<std::pair<std::string,std::string> >& atts) : _pjoint(pjoint) {
             _bNegateJoint = false;
-            _bMimicJoint = false;
             bDisabled = false;
             _pparent = pparent;
             _pjoint.reset(new KinBody::Joint(pparent));
@@ -1085,15 +1084,39 @@ namespace OpenRAVEXMLParser
                     bDisabled = stricmp(itatt->second.c_str(), "false") == 0 || itatt->second=="0";
                 }
                 else if( itatt->first == "mimic" ) {
+                    RAVELOG_WARN("mimic attribute on <joint> tag is deprecated! Use mimic_pos, mimic_vel, and mimic_accel\n");
                     stringstream ss(itatt->second);
-                    ss >> _strmimicjoint >> _pjoint->vMimicCoeffs[0] >> _pjoint->vMimicCoeffs[1];
+                    dReal a=1, b=0;
+                    string strmimicjoint;
+                    ss >> strmimicjoint >> a >> b;
                     if( !ss ) {
                         RAVELOG_WARN(str(boost::format("failed to set mimic properties correctly from: %s\n")%itatt->second));
                     }
-                    _bMimicJoint = true;
+                    _pjoint->_vmimic[0].reset(new KinBody::Joint::MIMIC());
+                    _pjoint->_vmimic[0]->_equations[0] = str(boost::format("%s*%f+%f")%strmimicjoint%a%b);
+                    _pjoint->_vmimic[0]->_equations[1] = str(boost::format("|%s %f")%strmimicjoint%a);
                 }
-                else if( itatt->first == "circular" )
+                else if( itatt->first.size() >= 9 && itatt->first.substr(0,9) == "mimic_pos" ) {
+                    if( !_pjoint->_vmimic[0] ) {
+                        _pjoint->_vmimic[0].reset(new KinBody::Joint::MIMIC());
+                    }
+                    _pjoint->_vmimic[0]->_equations[0] = itatt->second;
+                }
+                else if( itatt->first.size() >= 9 && itatt->first.substr(0,9) == "mimic_vel" ) {
+                    if( !_pjoint->_vmimic[0] ) {
+                        _pjoint->_vmimic[0].reset(new KinBody::Joint::MIMIC());
+                    }
+                    _pjoint->_vmimic[0]->_equations[1] = itatt->second;
+                }
+                else if( itatt->first.size() >= 11 && itatt->first.substr(0,11) == "mimic_accel" ) {
+                    if( !_pjoint->_vmimic[0] ) {
+                        _pjoint->_vmimic[0].reset(new KinBody::Joint::MIMIC());
+                    }
+                    _pjoint->_vmimic[0]->_equations[2] = itatt->second;
+                }
+                else if( itatt->first == "circular" ) {
                     _pjoint->_bIsCircular = !(stricmp(itatt->second.c_str(), "false") == 0 || itatt->second=="0");
+                }
             }
 
             _pjoint->_vlowerlimit.resize(_pjoint->GetDOF());
@@ -1123,8 +1146,6 @@ namespace OpenRAVEXMLParser
         }
 
         bool IsDisabled() const { return bDisabled; }
-        bool IsMimic() const { return _bMimicJoint; }
-        const string& GetMimicJoint() const { return _strmimicjoint; }
 
         virtual ProcessElement startElement(const std::string& xmlname, const std::list<std::pair<std::string,std::string> >& atts)
         {
@@ -1436,9 +1457,7 @@ namespace OpenRAVEXMLParser
         KinBody::LinkPtr _offsetfrom; ///< all transforms are relative to this body
         KinBodyPtr _pparent;
         KinBody::JointPtr& _pjoint;
-        string _strmimicjoint;
         bool bDisabled; // if true, joint is not counted as a controllable degree of freedom
-        bool _bMimicJoint;
         bool _bNegateJoint;
         string _processingtag;
     };
@@ -1830,12 +1849,8 @@ namespace OpenRAVEXMLParser
                         _plink.reset();
                     }
                     else if( xmlname == "joint" ) {
-                        if( !_pjoint )
-                            throw openrave_exception("joint should be valid");
                         _pjoint->dofindex = _pchain->GetDOF();
                         boost::shared_ptr<JointXMLReader> pjointreader = boost::dynamic_pointer_cast<JointXMLReader>(_pcurreader);
-                        if( pjointreader->IsMimic() )
-                            listMimicJoints.push_back(make_pair(_pjoint,pjointreader->GetMimicJoint()));
 
                         if( pjointreader->IsDisabled() ) {
                             _pjoint->jointindex = -1;
@@ -1940,15 +1955,6 @@ namespace OpenRAVEXMLParser
                 _processingtag = "";
             }
             else if( InterfaceXMLReader::endElement(xmlname) ) {
-                // go through all mimic joints and assign the correct indices
-                FOREACH(itmimic, listMimicJoints) {
-                    itmimic->first->nMimicJointIndex = _pchain->GetJointIndex(itmimic->second);
-                    if( itmimic->first->nMimicJointIndex < 0 ) {
-                        RAVELOG_WARN("Failed to find mimic joint: %s", itmimic->second.c_str());
-                        GetXMLErrorCount()++;
-                    }
-                }
-                
                 if( _bodyname.size() > 0 )
                     _pchain->SetName(_bodyname);
                 if( _filename.size() > 0 ) {
@@ -2039,8 +2045,6 @@ namespace OpenRAVEXMLParser
 
         string _processingtag; /// if not empty, currently processing
         bool _bOverwriteDiffuse, _bOverwriteAmbient, _bOverwriteTransparency;
-
-        list<pair<KinBody::JointPtr,string> > listMimicJoints; ///< mimic joints needed to be resolved
     };
 
     class ControllerXMLReader : public InterfaceXMLReader

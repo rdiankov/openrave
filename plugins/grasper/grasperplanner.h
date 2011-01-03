@@ -172,10 +172,6 @@ public:
         ptemp.q.resize(_robot->GetActiveDOF());
         ptemp.qdot.resize(_robot->GetActiveDOF());
 
-        for(int i = 0; i < _robot->GetActiveDOF(); i++) {
-            UpdateDependents(i,dofvals);
-        }
-
         Vector vTargetCenter;
         dReal fTargetRadius;
         if( !_parameters->targetbody ) {
@@ -356,8 +352,6 @@ public:
             bool bMoved = false;
             while(num_iters-- > 0) {
                 // set manip joints that haven't been covered so far
-                UpdateDependents(ifing,dofvals);
-
                 if( (vclosingdir[ifing] > 0 && dofvals[ifing] >  vupperlim[ifing]+step_size) || (vclosingdir[ifing] < 0 && dofvals[ifing] < vlowerlim[ifing]-step_size) ) {
                     break;
                 }
@@ -377,7 +371,6 @@ public:
                             //if it didn't start in collision, move back one step before switching to smaller step size
                             if(bMoved) {
                                 dofvals[ifing] -= vclosingdir[ifing] * step_size;
-                                UpdateDependents(ifing,dofvals);
                                 _robot->SetActiveDOFValues(dofvals,true);
                                 num_iters = (int)(step_size/(_parameters->ffinestep*fmult))+1;
                                 step_size = _parameters->ffinestep*fmult;
@@ -492,21 +485,6 @@ public:
     }
 
     virtual RobotBasePtr GetRobot() {return _robot; }
-
-    void UpdateDependents(size_t ifing, vector<dReal>& dofvals)
-    {
-        for(size_t c = ifing; c < _robot->GetActiveDOFIndices().size(); ++c ) {
-            int index = _robot->GetActiveDOFIndices()[c];
-            KinBody::JointPtr pmimicjoint = _robot->GetJoints().at(index);
-            //check that it's the right doff val
-            if( pmimicjoint->GetMimicJointIndex() == index) {
-                // set accordingly
-                dofvals[c] = pmimicjoint->GetMimicCoeffs()[0]*dofvals[ifing] + pmimicjoint->GetMimicCoeffs()[1];
-            }
-        }
-
-    }
-
     virtual PlannerParametersConstPtr GetParameters() const { return _parameters; }
     
 protected:

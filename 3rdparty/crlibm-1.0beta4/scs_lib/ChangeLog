@@ -1,0 +1,16 @@
+2003-06-17 : Florent de Dinechin
+	* Version 1.4.1
+	* Added round towards 0 in scs2double
+	* Corrected buggy handling of exceptional cases in scs2double
+
+2003-04-18 : Florent de Dinechin
+	* Version 1.4.0
+	* Several bugs corrected in multiplication and scs_square
+	* minor performance improvement in scs_square
+	
+2003-04-15 : Florent de Dinechin
+	* Version 1.3.0 released
+	* scslib is now a subdirectory of crlibm
+	* Precision is now set cleanly from the configure script.
+	* make install hopefully cleaner
+	

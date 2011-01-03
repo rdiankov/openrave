@@ -103,7 +103,7 @@
     </Joint>
 
 
-    <Joint type="hinge" name="JF0_4" enable="false" mimic="JF0_3 1.0 0">
+    <Joint type="hinge" name="JF0_4" enable="false" mimic_pos="JF0_3" mimic_vel="|JF0_3 1" mimic_accel="|JF0_3 0">
       <Body>Finger0-0</Body>
       <Body>Finger0-1</Body>
       <offsetfrom>Finger0-0</offsetfrom>
@@ -115,7 +115,7 @@
       <resolution>1</resolution>
     </Joint>
 
-    <Joint type="hinge" name="JF0_5" enable="false" mimic="JF0_3 1.0 0">
+    <Joint type="hinge" name="JF0_5" enable="false" mimic_pos="JF0_3" mimic_vel="|JF0_3 1" mimic_accel="|JF0_3 0">
       <Body>Finger0-1</Body>
       <Body>Finger0-2</Body>
       <offsetfrom>Finger0-0</offsetfrom>
@@ -185,7 +185,7 @@
     </Joint>
 
 
-    <Joint type="hinge" name="JF1_3" enable="false" mimic="JF1_2 1.0 0">
+    <Joint type="hinge" name="JF1_3" enable="false" mimic_pos="JF1_2" mimic_vel="|JF1_2 1" mimic_accel="|JF1_2 0">
       <Body>Finger1-0</Body>
       <Body>Finger1-1</Body>
       <offsetfrom>Finger1-0</offsetfrom>
@@ -197,7 +197,7 @@
       <resolution>1</resolution>
     </Joint>
 
-    <Joint type="hinge" name="JF1_4" enable="false" mimic="JF1_2 1.0 0">
+    <Joint type="hinge" name="JF1_4" enable="false" mimic_pos="JF1_2" mimic_vel="|JF1_2 1" mimic_accel="|JF1_2 0">
       <Body>Finger1-1</Body>
       <Body>Finger1-2</Body>
       <offsetfrom>Finger1-0</offsetfrom>
@@ -268,7 +268,7 @@
     </Joint>
 
 
-    <Joint type="hinge" name="JF2_3" enable="false" mimic="JF2_2 1.0 0">
+    <Joint type="hinge" name="JF2_3" enable="false" mimic_pos="JF2_2" mimic_vel="|JF2_2 1" mimic_accel="|JF2_2 0">
       <Body>Finger2-0</Body>
       <Body>Finger2-1</Body>
       <offsetfrom>Finger2-0</offsetfrom>
@@ -280,7 +280,7 @@
       <resolution>1</resolution>
     </Joint>
 
-    <Joint type="hinge" name="JF2_4" enable="false" mimic="JF2_2 1.0 0">
+    <Joint type="hinge" name="JF2_4" enable="false" mimic_pos="JF2_2" mimic_vel="|JF2_2 1" mimic_accel="|JF2_2 0">
       <Body>Finger2-1</Body>
       <Body>Finger2-2</Body>
       <offsetfrom>Finger2-0</offsetfrom>
@@ -348,7 +348,7 @@
     </Joint>
 
 
-    <Joint type="hinge" name="JF3_3" enable="false" mimic="JF3_2 1.0 0">
+    <Joint type="hinge" name="JF3_3" enable="false" mimic_pos="JF3_2" mimic_vel="|JF3_2 1" mimic_accel="|JF3_2 0">
       <Body>Finger3-0</Body>
       <Body>Finger3-1</Body>
       <offsetfrom>Finger3-0</offsetfrom>
@@ -360,7 +360,7 @@
       <resolution>1</resolution>
     </Joint>
 
-    <Joint type="hinge" name="JF3_4" enable="false" mimic="JF3_2 1.0 0">
+    <Joint type="hinge" name="JF3_4" enable="false" mimic_pos="JF3_2" mimic_vel="|JF3_2 1" mimic_accel="|JF3_2 0">
       <Body>Finger3-1</Body>
       <Body>Finger3-2</Body>
       <offsetfrom>Finger3-0</offsetfrom>
@@ -462,7 +462,7 @@
       <resolution>1</resolution>
     </Joint>
 
-    <Joint type="hinge" name="JF4_5" enable="false" mimic="JF4_4 1.0 0">
+    <Joint type="hinge" name="JF4_5" enable="false" mimic_pos="JF4_4" mimic_vel="|JF4_4 1" mimic_accel="|JF4_4 0">
       <Body>Finger4-1</Body>
       <Body>Finger4-2</Body>
       <offsetfrom>Finger4-2</offsetfrom>

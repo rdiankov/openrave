@@ -1682,7 +1682,7 @@ protected:
                 //RAVELOG_INFOA("sim: %f, real: %f\n",_nCurSimTime*1e-6f,(GetMicroTime()-_nSimStartTime)*1e-6f);
             }
 
-            if( GetMicroTime()-nLastSleptTime > 100000 ) {
+            if( GetMicroTime()-nLastSleptTime > 20000 ) { // 100000 freezes the environment
                 Sleep(1); bNeedSleep = false;
                 nLastSleptTime = GetMicroTime();
             }

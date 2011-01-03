@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2010 Rosen Diankov (rosen.diankov@gmail.com)
+// Copyright (C) 2006-2011 Rosen Diankov (rosen.diankov@gmail.com)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -22,8 +22,8 @@
 
 #include <cmath>
 #include <iostream>
+#include <limits>
 #include <cstring>
-#include <climits>
 #include <cstdlib>
 
 #ifdef BOOST_ASSERT
@@ -31,14 +31,6 @@
 #else
 #include <cassert>
 #define MATH_ASSERT assert
-#endif
-
-#ifndef g_fEpsilon
-#define g_fEpsilon 2e-7f
-#endif
-
-#ifndef PI
-#define PI 3.14159265358979323846
 #endif
 
 namespace OpenRAVE {
@@ -49,20 +41,34 @@ namespace geometry {
 template <typename T> class RaveTransform;
 template <typename T> class RaveTransformMatrix;
 
-inline float RaveSqrt(float f) { return sqrtf(f); }
-inline double RaveSqrt(double f) { return sqrt(f); }
-inline float RaveSin(float f) { return sinf(f); }
-inline double RaveSin(double f) { return sin(f); }
-inline float RaveCos(float f) { return cosf(f); }
-inline double RaveCos(double f) { return cos(f); }
-inline float RaveFabs(float f) { return fabsf(f); }
-inline double RaveFabs(double f) { return fabs(f); }
-inline float RaveAcos(float f) { return acosf(f); }
-inline double RaveAcos(double f) { return acos(f); }
-inline float RaveAsin(float f) { return asinf(f); }
-inline double RaveAsin(double f) { return asin(f); }
-inline float RaveAtan2(float fy, float fx) { return atan2f(fy,fx); }
-inline double RaveAtan2(double fy, double fx) { return atan2(fy,fx); }
+#ifndef MATH_SQRT
+inline float MATH_SQRT(float f) { return sqrtf(f); }
+inline double MATH_SQRT(double f) { return sqrt(f); }
+#endif
+#ifndef MATH_SIN
+inline float MATH_SIN(float f) { return sinf(f); }
+inline double MATH_SIN(double f) { return sin(f); }
+#endif
+#ifndef MATH_COS
+inline float MATH_COS(float f) { return cosf(f); }
+inline double MATH_COS(double f) { return cos(f); }
+#endif
+#ifndef MATH_FABS
+inline float MATH_FABS(float f) { return fabsf(f); }
+inline double MATH_FABS(double f) { return fabs(f); }
+#endif
+#ifndef MATH_ACOS
+inline float MATH_ACOS(float f) { return acosf(f); }
+inline double MATH_ACOS(double f) { return acos(f); }
+#endif
+#ifndef MATH_ASIN
+inline float MATH_ASIN(float f) { return asinf(f); }
+inline double MATH_ASIN(double f) { return asin(f); }
+#endif
+#ifndef MATH_ATAN2
+inline float MATH_ATAN2(float fy, float fx) { return atan2f(fy,fx); }
+inline double MATH_ATAN2(double fy, double fx) { return atan2(fy,fx); }
+#endif
 
 /** \brief Vector class containing 4 dimensions.
     
@@ -100,16 +106,21 @@ public:
     inline RaveVector<T>& normalize() { return normalize4(); }
     inline RaveVector<T>& normalize4() {
         T f = x*x+y*y+z*z+w*w;
-        MATH_ASSERT( f > 0 );
-        f = 1.0f / RaveSqrt(f);
-        x *= f; y *= f; z *= f; w *= f;
+        if( f < T(1)-std::numeric_limits<dReal>::epsilon() || f > T(1)+std::numeric_limits<dReal>::epsilon() ) {
+            MATH_ASSERT( f > 0 );
+            // yes it is faster to multiply by (1/f), but with 4 divides we gain precision (which is more important in robotics)
+            f = MATH_SQRT(f);
+            x /= f; y /= f; z /= f; w /= f;
+        }
         return *this;
     }
     inline RaveVector<T>& normalize3() {
         T f = x*x+y*y+z*z;
-        MATH_ASSERT( f > 0 );
-        f = 1.0f / RaveSqrt(f);
-        x *= f; y *= f; z *= f;
+        if( f < T(1)-std::numeric_limits<dReal>::epsilon() || f > T(1)+std::numeric_limits<dReal>::epsilon() ) {
+            MATH_ASSERT( f > 0 );
+            f = MATH_SQRT(f);
+            x /= f; y /= f; z /= f;
+        }
         return *this;
     }
 
@@ -255,8 +266,8 @@ public:
         t.rot.w = rot.x*r.rot.w + rot.w*r.rot.x + rot.y*r.rot.z - rot.z*r.rot.y;
         // normalize the transformation
         T fnorm = t.rot.lengthsqr4();
-        MATH_ASSERT( fnorm > 0.98f && fnorm < 1.02f );
-        t.rot /= RaveSqrt(fnorm);
+        MATH_ASSERT( fnorm > 0.99f && fnorm < 1.01f );
+        t.rot.normalize4();
         return t;
     }
 
@@ -270,8 +281,8 @@ public:
         t.rot.w = rot.x*r.rot.w + rot.w*r.rot.x + rot.y*r.rot.z - rot.z*r.rot.y;
         // normalize the transformation
         T fnorm = t.rot.lengthsqr4();
-        MATH_ASSERT( fnorm > 0.98f && fnorm < 1.02f );
-        t.rot /= RaveSqrt(fnorm);
+        MATH_ASSERT( fnorm > 0.99f && fnorm < 1.01f );
+        t.rot.normalize4();
         return t;
     }
     
@@ -413,7 +424,7 @@ public:
         inv.m[2*4+1] = m[0*4 + 1] * m[2*4 + 0] - m[0*4 + 0] * m[2*4 + 1];
         inv.m[2*4+2] = m[0*4 + 0] * m[1*4 + 1] - m[0*4 + 1] * m[1*4 + 0];
         T fdet = m[0*4 + 2] * inv.m[2*4+0] + m[1*4 + 2] * inv.m[2*4+1] + m[2*4 + 2] * inv.m[2*4+2];
-        MATH_ASSERT(fdet>=g_fEpsilon);
+        MATH_ASSERT(fdet>=0);
         fdet = 1 / fdet;
 		inv.m[0*4+0] *= fdet;		inv.m[0*4+1] *= fdet;		inv.m[0*4+2] *= fdet;
 		inv.m[1*4+0] *= fdet;		inv.m[1*4+1] *= fdet;		inv.m[1*4+2] *= fdet;
@@ -561,13 +572,13 @@ std::basic_istream<T>& operator>>(std::basic_istream<T>& I, RaveTransformMatrix<
 /// \param angle rotation angle (radians)
 template <typename T> inline RaveVector<T> quatFromAxisAngle(const RaveVector<T>& axis, T angle)
 {
-    T axislen = RaveSqrt(axis.lengthsqr3());
+    T axislen = MATH_SQRT(axis.lengthsqr3());
     if( axislen == 0 ) {
         return RaveVector<T>(T(1),T(0),T(0),T(0));
     }
     angle *= T(0.5);
-    T sang = RaveSin(angle)/axislen;
-    return RaveVector<T>(RaveCos(angle),axis.x*sang,axis.y*sang,axis.z*sang);
+    T sang = MATH_SIN(angle)/axislen;
+    return RaveVector<T>(MATH_COS(angle),axis.x*sang,axis.y*sang,axis.z*sang);
 }
 
 /// \brief Converts an axis-angle rotation into a quaternion.
@@ -576,12 +587,12 @@ template <typename T> inline RaveVector<T> quatFromAxisAngle(const RaveVector<T>
 /// \param axisangle unit axis * rotation angle (radians), 3 values
 template <typename T> inline RaveVector<T> quatFromAxisAngle(const RaveVector<T>& axisangle)
 {
-    T axislen = RaveSqrt(axisangle.lengthsqr3());
-    if( axislen < g_fEpsilon ) {
+    T axislen = MATH_SQRT(axisangle.lengthsqr3());
+    if( axislen == 0 ) {
         return RaveVector<T>(T(1),T(0),T(0),T(0));
     }
-    T sang = RaveSin(axislen*T(0.5))/axislen;
-    return RaveVector<T>(RaveCos(axislen*T(0.5)),axisangle.x*sang,axisangle.y*sang,axisangle.z*sang);
+    T sang = MATH_SIN(axislen*T(0.5))/axislen;
+    return RaveVector<T>(MATH_COS(axislen*T(0.5)),axisangle.x*sang,axisangle.y*sang,axisangle.z*sang);
 }
 
 /// \brief Converts the rotation of a matrix into a quaternion.
@@ -627,7 +638,8 @@ template <typename T> inline RaveVector<T> quatFromMatrix(const RaveTransformMat
             rot[0] = (rotation.m[4*2+1] - rotation.m[4*1+2]);
         }
     }
-    return rot * (T(1) / RaveSqrt(rot.lengthsqr4()));
+    rot.normalize4();
+    return rot;
 }
 
 /// \brief Converts a quaternion to a 3x3 matrix
@@ -711,8 +723,9 @@ inline RaveVector<T> quatMultiply(const RaveVector<T>& quat0, const RaveVector<T
                     quat0.x*quat1.z + quat0.z*quat1.x + quat0.w*quat1.y - quat0.y*quat1.w,
                     quat0.x*quat1.w + quat0.w*quat1.x + quat0.y*quat1.z - quat0.z*quat1.y);
     T fnorm = q.lengthsqr4(); // normalize the quaternion
-    MATH_ASSERT( fnorm > 0.98f && fnorm < 1.02f ); // catches multi-threading errors
-    return q * (T(1)/RaveSqrt(fnorm));
+    MATH_ASSERT( fnorm > 0.99f && fnorm < 1.01f ); // catches multi-threading errors
+    q.normalize4();
+    return q;
 }
 
 /// \brief Inverted a quaternion rotation.
@@ -745,24 +758,24 @@ inline RaveVector<T> quatSlerp(const RaveVector<T>& quat0, const RaveVector<T>& 
     // Calculate angle between them.
     T cosHalfTheta = quat0.w * qb.w + quat0.x * qb.x + quat0.y * qb.y + quat0.z * qb.z;
     // if quat0=qb or quat0=-qb then theta = 0 and we can return quat0
-    if (RaveFabs(cosHalfTheta) >= 1.0){
+    if (MATH_FABS(cosHalfTheta) >= 1.0){
         qm.w = quat0.w;qm.x = quat0.x;qm.y = quat0.y;qm.z = quat0.z;
         return qm;
     }
     // Calculate temporary values.
-    T halfTheta = RaveAcos(cosHalfTheta);
-    T sinHalfTheta = RaveSqrt(1 - cosHalfTheta*cosHalfTheta);
+    T halfTheta = MATH_ACOS(cosHalfTheta);
+    T sinHalfTheta = MATH_SQRT(1 - cosHalfTheta*cosHalfTheta);
     // if theta = 180 degrees then result is not fully defined
     // we could rotate around any axis normal to quat0 or qb
-    if (RaveFabs(sinHalfTheta) < 1e-7f){ // fabs is floating point absolute
+    if (MATH_FABS(sinHalfTheta) < 1e-7f){ // fabs is floating point absolute
         qm.w = (quat0.w * 0.5f + qb.w * 0.5f);
         qm.x = (quat0.x * 0.5f + qb.x * 0.5f);
         qm.y = (quat0.y * 0.5f + qb.y * 0.5f);
         qm.z = (quat0.z * 0.5f + qb.z * 0.5f);
         return qm;
     }
-    T ratioA = RaveSin((1 - t) * halfTheta) / sinHalfTheta;
-    T ratioB = RaveSin(t * halfTheta) / sinHalfTheta; 
+    T ratioA = MATH_SIN((1 - t) * halfTheta) / sinHalfTheta;
+    T ratioB = MATH_SIN(t * halfTheta) / sinHalfTheta; 
     //calculate Quaternion.
     qm.w = (quat0.w * ratioA + qb.w * ratioB);
     qm.x = (quat0.x * ratioA + qb.x * ratioB);
@@ -787,8 +800,8 @@ template <typename T> inline RaveVector<T> AxisAngle2Quat(const RaveVector<T>& r
 template <typename T> inline RaveVector<T> AxisAngle2Quat(const RaveVector<T>& rotaxis, T angle)
 {
     angle *= (T)0.5;
-    T fsin = RaveSin(angle);
-    return RaveVector<T>(RaveCos(angle), rotaxis.x*fsin, rotaxis.y * fsin, rotaxis.z * fsin);
+    T fsin = MATH_SIN(angle);
+    return RaveVector<T>(MATH_COS(angle), rotaxis.x*fsin, rotaxis.y * fsin, rotaxis.z * fsin);
 }
 
 /// \brief transform a vector by a quaternion
@@ -824,11 +837,11 @@ template<typename T>
 RaveVector<T> quatRotateDirection(const RaveVector<T>& sourcedir, const RaveVector<T>& targetdir)
 {
     RaveVector<T> rottodirection = sourcedir.cross(targetdir);
-    T fsin = RaveSqrt(rottodirection.lengthsqr3());
+    T fsin = MATH_SQRT(rottodirection.lengthsqr3());
     T fcos = sourcedir.dot3(targetdir);
     RaveTransform<T> torient;
-    if( fsin > g_fEpsilon ) {
-        return quatFromAxisAngle(rottodirection*(1/fsin), RaveAtan2(fsin, fcos));
+    if( fsin > 0 ) {
+        return quatFromAxisAngle(rottodirection*(1/fsin), MATH_ATAN2(fsin, fcos));
     }
     if( fcos < 0 ) {
         // hand is flipped 180, rotate around x axis
@@ -839,7 +852,7 @@ RaveVector<T> quatRotateDirection(const RaveVector<T>& sourcedir, const RaveVect
             rottodirection -= sourcedir * sourcedir.dot3(rottodirection);
         }
         rottodirection.normalize3();
-        return quatFromAxisAngle(rottodirection, RaveAtan2(fsin, fcos));
+        return quatFromAxisAngle(rottodirection, MATH_ATAN2(fsin, fcos));
     }
     return RaveVector<T>(T(1),T(0),T(0),T(0));
 }
@@ -852,7 +865,7 @@ template<typename T>
 RaveVector<T> axisAngleFromQuat(const RaveVector<T>& quat)
 {
     T sinang = quat.y*quat.y+quat.z*quat.z+quat.w*quat.w;
-    if( RaveFabs(sinang) < g_fEpsilon ) {
+    if( sinang == 0 ) {
         return RaveVector<T>(0,0,0);
     }
     RaveVector<T> _quat;
@@ -862,8 +875,8 @@ RaveVector<T> axisAngleFromQuat(const RaveVector<T>& quat)
     else {
         _quat = quat;
     }
-    sinang = RaveSqrt(sinang);
-    T f = 2.0*RaveAtan2(sinang,_quat.x)/sinang;
+    sinang = MATH_SQRT(sinang);
+    T f = 2.0*MATH_ATAN2(sinang,_quat.x)/sinang;
     return RaveVector<T>(_quat.y*f,_quat.z*f,_quat.w*f);
 }
 
@@ -898,8 +911,8 @@ template <typename T> template <typename U> inline RaveTransformMatrix<T>& RaveT
 }
 
 template <typename T> template <typename U> inline RaveTransform<T>& RaveTransform<T>::rotfromaxisangle(const RaveVector<U>& axis, U angle) {
-    U sinang = (U)RaveSin(angle/2);
-    rot.x = (U)RaveCos(angle/2);
+    U sinang = (U)MATH_SIN(angle/2);
+    rot.x = (U)MATH_COS(angle/2);
     rot.y = axis.x*sinang;
     rot.z = axis.y*sinang;
     rot.w = axis.z*sinang;
@@ -917,7 +930,7 @@ template<typename T>
 RaveTransformMatrix<T> transformLookat(const RaveVector<T>& vlookat, const RaveVector<T>& vcamerapos, const RaveVector<T>& vcameraup)
 {
     RaveVector<T> dir = vlookat - vcamerapos;
-    T len = RaveSqrt(dir.lengthsqr3());
+    T len = MATH_SQRT(dir.lengthsqr3());
     if( len > 1e-6 ) {
         dir *= 1/len;
     }
@@ -936,7 +949,7 @@ RaveTransformMatrix<T> transformLookat(const RaveVector<T>& vlookat, const RaveV
             len = up.lengthsqr3();
         }
     }
-    up *= 1/RaveSqrt(len);
+    up *= 1/MATH_SQRT(len);
     RaveVector<T> right = up.cross(dir);
     RaveTransformMatrix<T> t;
     t.m[0] = right.x; t.m[1] = up.x; t.m[2] = dir.x;
@@ -963,15 +976,16 @@ inline int insideQuadrilateral(const RaveVector<T>& v, const RaveVector<T>& vert
         v5.z = verts[(i+1)%4].z - v->z;
         m1 = v4.lengthsqr3();
         m2 = v5.lengthsqr3();
-        if (m1*m2 <= g_fEpsilon)
+        if (m1*m2 <= std::numeric_limits<T>::epsilon()*std::numeric_limits<T>::epsilon()) {
             return(1); // on a vertex, consider this inside
-        else {
-            costheta = v4.dot3(v5)/RaveSqrt(m1*m2);
         }
-        anglesum += RaveAcos(costheta);
+        else {
+            costheta = v4.dot3(v5)/MATH_SQRT(m1*m2);
+        }
+        anglesum += MATH_ACOS(costheta);
     }
-    T diff = anglesum - (T)2.0 * PI;
-    return diff*diff <= g_fEpsilon*g_fEpsilon;
+    T diff = anglesum - (T)2.0 * M_PI;
+    return RaveFabs(diff) <= std::numeric_limits<T>::epsilon();
 }
 
 /// \brief Tests a point insdie a 3D triangle.
@@ -992,16 +1006,16 @@ inline int insideTriangle(const RaveVector<T> v, const triangle<T>& tri)
         v5.z = tri[(i+1)%3].z - v->z;
         m1 = v4.lengthsqr3();
         m2 = v5.lengthsqr3();
-        if (m1*m2 <= g_fEpsilon) {
+        if (m1*m2 <= std::numeric_limits<T>::epsilon()*std::numeric_limits<T>::epsilon()) {
     	    return(1); // on a vertex, consider this inside
         }
         else {
-    	    costheta = v4.dot3(v5)/RaveSqrt(m1*m2);
+    	    costheta = v4.dot3(v5)/MATH_SQRT(m1*m2);
         }
         anglesum += acos(costheta);
     }
-    T diff = anglesum - (T)2.0 * PI;
-    return diff*diff <= g_fEpsilon*g_fEpsilon;
+    T diff = anglesum - (T)2.0 * M_PI;
+    return RaveFabs(diff) <= std::numeric_limits<T>::epsilon();
 }
 
 /// \brief Test collision of a ray with an axis aligned bounding box.
@@ -1010,18 +1024,18 @@ template <typename T>
 inline bool RayAABBTest(const ray<T>& r, const aabb<T>& ab)
 {
     RaveVector<T> vd, vpos = r.pos - ab.pos;
-    if( RaveFabs(vpos.x) > ab.extents.x && r.dir.x* vpos.x > 0.0f)
+    if( MATH_FABS(vpos.x) > ab.extents.x && r.dir.x* vpos.x > 0.0f)
         return false;
-    if( RaveFabs(vpos.y) > ab.extents.y && r.dir.y * vpos.y > 0.0f)
+    if( MATH_FABS(vpos.y) > ab.extents.y && r.dir.y * vpos.y > 0.0f)
         return false;
-    if( RaveFabs(vpos.z) > ab.extents.z && r.dir.z * vpos.z > 0.0f)
+    if( MATH_FABS(vpos.z) > ab.extents.z && r.dir.z * vpos.z > 0.0f)
         return false;
     vd = r.dir.cross(vpos);
-    if( RaveFabs(vd.x) > ab.extents.y * RaveFabs(r.dir.z) + ab.extents.z * RaveFabs(r.dir.y) )
+    if( MATH_FABS(vd.x) > ab.extents.y * MATH_FABS(r.dir.z) + ab.extents.z * MATH_FABS(r.dir.y) )
         return false;
-    if( RaveFabs(vd.y) > ab.extents.x * RaveFabs(r.dir.z) + ab.extents.z * RaveFabs(r.dir.x) )
+    if( MATH_FABS(vd.y) > ab.extents.x * MATH_FABS(r.dir.z) + ab.extents.z * MATH_FABS(r.dir.x) )
         return false;
-    if( RaveFabs(vd.z) > ab.extents.x * RaveFabs(r.dir.y) + ab.extents.y * RaveFabs(r.dir.x) )
+    if( MATH_FABS(vd.z) > ab.extents.x * MATH_FABS(r.dir.y) + ab.extents.y * MATH_FABS(r.dir.x) )
         return false;
     return true;
 }
@@ -1035,23 +1049,23 @@ inline bool RayOBBTest(const ray<T>& r, const obb<T>& o)
     vd = r.pos - o.pos;
     vpos.x = vd.dot3(o.right);
     vdir.x = r.dir.dot3(o.right);
-    if( RaveFabs(vpos.x) > o.extents.x && vdir.x* vpos.x > 0.0f) {
+    if( MATH_FABS(vpos.x) > o.extents.x && vdir.x* vpos.x > 0.0f) {
         return false;
     }
     vpos.y = vd.dot3(o.up);
     vdir.y = r.dir.dot3(o.up);
-    if( RaveFabs(vpos.y) > o.extents.y && vdir.y * vpos.y > 0.0f) {
+    if( MATH_FABS(vpos.y) > o.extents.y && vdir.y * vpos.y > 0.0f) {
         return false;
     }
     vpos.z = vd.dot3(o.dir);
     vdir.z = r.dir.dot3(o.dir);
-    if( RaveFabs(vpos.z) > o.extents.z && vdir.z * vpos.z > 0.0f) {
+    if( MATH_FABS(vpos.z) > o.extents.z && vdir.z * vpos.z > 0.0f) {
         return false;
     }
     cross3(vd, vdir, vpos);
-    if( RaveFabs(vd.x) > o.extents.y * RaveFabs(vdir.z) + o.extents.z * RaveFabs(vdir.y) ||
-        RaveFabs(vd.y) > o.extents.x * RaveFabs(vdir.z) + o.extents.z * RaveFabs(vdir.x) ||
-        RaveFabs(vd.z) > o.extents.x * RaveFabs(vdir.y) + o.extents.y * RaveFabs(vdir.x) ) {
+    if( MATH_FABS(vd.x) > o.extents.y * MATH_FABS(vdir.z) + o.extents.z * MATH_FABS(vdir.y) ||
+        MATH_FABS(vd.y) > o.extents.x * MATH_FABS(vdir.z) + o.extents.z * MATH_FABS(vdir.x) ||
+        MATH_FABS(vd.z) > o.extents.x * MATH_FABS(vdir.y) + o.extents.y * MATH_FABS(vdir.x) ) {
         return false;
     }
     return true;
@@ -1233,23 +1247,23 @@ inline bool IsOBBinFrustum(const obb<T>& o, const frustum<T>& fr)
     // top sides
     // side planes
     RaveVector<T> vNorm = fr.fcosfovx * fr.right - fr.fsinfovx * fr.dir;
-    if( v.dot3(vNorm) > -o.extents.x * RaveFabs(vNorm.dot3(o.right)) -  o.extents.y * RaveFabs(vNorm.dot3(o.up)) -  o.extents.z * RaveFabs(vNorm.dot3(o.dir))) {
+    if( v.dot3(vNorm) > -o.extents.x * MATH_FABS(vNorm.dot3(o.right)) -  o.extents.y * MATH_FABS(vNorm.dot3(o.up)) -  o.extents.z * MATH_FABS(vNorm.dot3(o.dir))) {
         return false;
     }
     vNorm = -fr.fcosfovx * fr.right - fr.fsinfovx * fr.dir;
-    if(dot3(v, vNorm) > -o.extents.x * RaveFabs(vNorm.dot3(o.right)) - o.extents.y * RaveFabs(vNorm.dot3(o.up)) - o.extents.z * RaveFabs(vNorm.dot3(o.dir))) {
+    if(dot3(v, vNorm) > -o.extents.x * MATH_FABS(vNorm.dot3(o.right)) - o.extents.y * MATH_FABS(vNorm.dot3(o.up)) - o.extents.z * MATH_FABS(vNorm.dot3(o.dir))) {
         return false;
     }
     vNorm = fr.fcosfovy * fr.up - fr.fsinfovy * fr.dir;
-    if(dot3(v, vNorm) > -o.extents.x * RaveFabs(vNorm.dot3(o.right)) - o.extents.y * RaveFabs(vNorm.dot3(o.up)) - o.extents.z * RaveFabs(vNorm.dot3(o.dir))) {
+    if(dot3(v, vNorm) > -o.extents.x * MATH_FABS(vNorm.dot3(o.right)) - o.extents.y * MATH_FABS(vNorm.dot3(o.up)) - o.extents.z * MATH_FABS(vNorm.dot3(o.dir))) {
         return false;
     }
     vNorm = -fr.fcosfovy * fr.up - fr.fsinfovy * fr.dir;
-    if(dot3(v, vNorm) > -o.extents.x * RaveFabs(vNorm.dot3(o.right)) - o.extents.y * RaveFabs(vNorm.dot3(o.up)) - o.extents.z * RaveFabs(vNorm.dot3(o.dir))) {
+    if(dot3(v, vNorm) > -o.extents.x * MATH_FABS(vNorm.dot3(o.right)) - o.extents.y * MATH_FABS(vNorm.dot3(o.up)) - o.extents.z * MATH_FABS(vNorm.dot3(o.dir))) {
         return false;
     }
     vNorm.x = v.dot3(fr.dir);
-    vNorm.y = o.extents.x * RaveFabs(fr.dir.dot3(o.right)) +  o.extents.y * RaveFabs(fr.dir.dot3(o.up)) +  o.extents.z * RaveFabs(fr.dir.dot3(o.dir));
+    vNorm.y = o.extents.x * MATH_FABS(fr.dir.dot3(o.right)) +  o.extents.y * MATH_FABS(fr.dir.dot3(o.up)) +  o.extents.z * MATH_FABS(fr.dir.dot3(o.dir));
     if( (vNorm.x < fr.fnear + vNorm.y) || (vNorm.x > fr.ffar - vNorm.y) ) {
         return false;
     }
@@ -1300,7 +1314,7 @@ inline bool IsOBBinConvexHull(const obb<T>& o, const U& vplanes)
 {
     for(size_t i = 0; i < vplanes.size(); ++i) {
         RaveVector<T> vplane = vplanes[i];
-        if( o.pos.dot3(vplane)+vplane.w < o.extents.x * RaveFabs(vplane.dot3(o.right)) + o.extents.y * RaveFabs(vplane.dot3(o.up)) + o.extents.z * RaveFabs(vplane.dot3(o.dir))) {
+        if( o.pos.dot3(vplane)+vplane.w < o.extents.x * MATH_FABS(vplane.dot3(o.right)) + o.extents.y * MATH_FABS(vplane.dot3(o.up)) + o.extents.z * MATH_FABS(vplane.dot3(o.dir))) {
             return false;
         }
     }
@@ -1541,7 +1555,7 @@ template <typename T>
 inline bool AABBCollision(const aabb<T>& ab1, const aabb<T>& ab2)
 {
     RaveVector<T> v = ab1.pos-ab2.pos;
-    return RaveFabs(v.x) <= ab1.extents.x+ab2.extents.x && RaveFabs(v.y) <= ab1.extents.y+ab2.extents.y && RaveFabs(v.z) <= ab1.extents.z+ab2.extents.z;
+    return MATH_FABS(v.x) <= ab1.extents.x+ab2.extents.x && MATH_FABS(v.y) <= ab1.extents.y+ab2.extents.y && MATH_FABS(v.z) <= ab1.extents.z+ab2.extents.z;
 }
 
 //bool AABBOBBTest(const AABB& a, const OBB& o)
@@ -2109,9 +2123,9 @@ template <typename T>
 T DistVertexOBBSq(const RaveVector<T>& v, const obb<T>& o)
 {
     RaveVector<T> vn = v - o.pos;
-    vn.x = RaveFabs(vn.dot3(o.right)) - o.extents.x;
-    vn.y = RaveFabs(vn.dot3(o.up)) - o.extents.y;
-    vn.z = RaveFabs(vn.dot3(o.dir)) - o.extents.z;
+    vn.x = MATH_FABS(vn.dot3(o.right)) - o.extents.x;
+    vn.y = MATH_FABS(vn.dot3(o.up)) - o.extents.y;
+    vn.z = MATH_FABS(vn.dot3(o.dir)) - o.extents.z;
     // now we have the vertex in OBB's frame
     T fDist = 0;
     if( vn.x > 0.0f ) {

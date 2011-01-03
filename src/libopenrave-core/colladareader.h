@@ -29,6 +29,7 @@ using namespace std;
 #include <dom/domConstants.h>
 #include <dom/domTriangles.h>
 #include <dae/daeStandardURIResolver.h>
+#include <boost/lexical_cast.hpp>
 
 struct NodeMatcher: public daeElement::matchElement {
  public:
@@ -123,7 +124,8 @@ class ColladaReader : public daeErrorHandler
         DAE::cleanup();
     }
 
-    bool InitFromFile(const string& filename) {
+    bool InitFromFile(const string& filename)
+    {
         RAVELOG_VERBOSE(str(boost::format("init COLLADA reader version: %s, namespace: %s, filename: %s\n")%COLLADA_VERSION%COLLADA_NAMESPACE%filename));
         _collada.reset(new DAE);
         _dom = _collada->open(filename);
@@ -131,17 +133,18 @@ class ColladaReader : public daeErrorHandler
             return false;
         }
         _filename=filename;
-
+        
         size_t maxchildren = _countChildren(_dom);
         _vuserdata.resize(0);
         _vuserdata.reserve(maxchildren);
-
+        
         dReal dScale = 1.0;
         _processUserData(_dom, dScale);
         RAVELOG_VERBOSE(str(boost::format("processed children: %d/%d\n")%_vuserdata.size()%maxchildren));
         return true;
     }
-    bool InitFromData(const string& pdata) {
+    bool InitFromData(const string& pdata)
+    {
         RAVELOG_DEBUG(str(boost::format("init COLLADA reader version: %s, namespace: %s\n")%COLLADA_VERSION%COLLADA_NAMESPACE));
         _collada.reset(new DAE);
         _dom = _collada->openFromMemory(".",pdata.c_str());
@@ -501,7 +504,7 @@ class ColladaReader : public daeErrorHandler
             ExtractLink(pkinbody, ktec->getLink_array()[ilink], ilink == 0 ? pnode : domNodeRef(), Transform(), vdomjoints, listAxisBindings);
         }
 
-        //  TODO: implement mathml
+        daeTArray<daeElementRef> children;
         for (size_t iform = 0; iform < ktec->getFormula_array().getCount(); ++iform) {
             domFormulaRef pf = ktec->getFormula_array()[iform];
             if (!pf->getTarget()) {
@@ -514,86 +517,74 @@ class ColladaReader : public daeErrorHandler
             if (!pjoint) {
                 continue;
             }
-        
-            if (!!pf->getTechnique_common()) {
-                daeElementRef peltmath;
-                daeTArray<daeElementRef> children;
-                pf->getTechnique_common()->getChildren(children);
-                for (size_t ichild = 0; ichild < children.getCount(); ++ichild) {
-                    daeElementRef pelt = children[ichild];
-                    if (_checkMathML(pelt,string("math")) ) {
-                        peltmath = pelt;
-                    }
-                    else {
-                        RAVELOG_WARN(str(boost::format("unsupported formula element: %s\n")%pelt->getElementName()));
-                    }
-                }
-                if (!!peltmath) {
-                    // full math xml spec not supported, only looking for ax+b pattern:
-                    // <apply> <plus/> <apply> <times/> <ci>a</ci> x </apply> <ci>b</ci> </apply>
-                    dReal a = 1, b = 0;
-                    daeElementRef psymboljoint;
-                    try {
-                        BOOST_ASSERT(peltmath->getChildren().getCount()>0);
-                        daeElementRef papplyelt = peltmath->getChildren()[0];
-                        BOOST_ASSERT(_checkMathML(papplyelt,"apply"));
-                        BOOST_ASSERT(papplyelt->getChildren().getCount()>0);
-                        if( _checkMathML(papplyelt->getChildren()[0],"plus") ) {
-                            BOOST_ASSERT(papplyelt->getChildren().getCount()==3);
-                            daeElementRef pa = papplyelt->getChildren()[1];
-                            daeElementRef pb = papplyelt->getChildren()[2];
-                            if( !_checkMathML(papplyelt->getChildren()[1],"apply") ) {
-                                swap(pa,pb);
+
+            if( pjoint->GetDOF() > 1 ) {
+                RAVELOG_WARN("collada cannot parse joint formulas when joint dof is greater than 1\n");
+            }
+
+            int iaxis = 0;
+            pjoint->_vmimic[iaxis].reset(new KinBody::Joint::MIMIC());
+
+            domTechniqueRef popenravetec = _ExtractOpenRAVEProfile(pf->getTechnique_array());
+            if( !!popenravetec ) {
+                for(size_t ic = 0; ic < popenravetec->getContents().getCount(); ++ic) {
+                    daeElementRef pequation = popenravetec->getContents()[ic];
+                    if( pequation->getElementName() == string("equation") ) {
+                        if( !pequation->hasAttribute("type") ) {
+                            RAVELOG_WARN("equaiton needs 'type' attribute, ignoring\n");
+                            continue;
+                        }
+                        if( pequation->getChildren().getCount() != 1 ) {
+                            RAVELOG_WARN("equaiton needs exactly one child\n");
+                            continue;
+                        }
+                        std::string equationtype = pequation->getAttribute("type");
+                        KinBody::JointPtr pjointtarget;
+                        if( pequation->hasAttribute("target") ) {
+                            pjointtarget = _getJointFromRef(pequation->getAttribute("target").c_str(),pf,pkinbody);
+                        }
+                        try {
+                            std::string eq = _ExtractMathML(pf,pkinbody,pequation->getChildren()[0]);
+                            if( equationtype == "position" ) {
+                                pjoint->_vmimic[iaxis]->_equations[0] = eq;
                             }
-                            if( !_checkMathML(pa,"csymbol") ) {
-                                BOOST_ASSERT(_checkMathML(pa,"apply"));
-                                BOOST_ASSERT(_checkMathML(pa->getChildren()[0],"times"));
-                                if( _checkMathML(pa->getChildren()[1],"csymbol") ) {
-                                    psymboljoint = pa->getChildren()[1];
-                                    BOOST_ASSERT(_checkMathML(pa->getChildren()[2],"cn"));
-                                    stringstream ss(pa->getChildren()[2]->getCharData());
-                                    ss >> a;
+                            else if( equationtype == "first_partial" ) {
+                                if( !pjointtarget ) {
+                                    RAVELOG_WARN(str(boost::format("first_partial equation '%s' needs a target attribute! ignoring...\n")%eq));
+                                    continue;
                                 }
-                                else {
-                                    psymboljoint = pa->getChildren()[2];
-                                    BOOST_ASSERT(_checkMathML(pa->getChildren()[1],"cn"));
-                                    stringstream ss(pa->getChildren()[1]->getCharData());
-                                    ss >> a;
+                                pjoint->_vmimic[iaxis]->_equations[1] += str(boost::format("|%s %s ")%pjointtarget->GetName()%eq);
+                            }
+                            else if( equationtype == "second_partial" ) {
+                                if( !pjointtarget ) {
+                                    RAVELOG_WARN(str(boost::format("second_partial equation '%s' needs a target attribute! ignoring...\n")%eq));
+                                    continue;
                                 }
+                                pjoint->_vmimic[iaxis]->_equations[2] += str(boost::format("|%s %s ")%pjointtarget->GetName()%eq);
                             }
                             else {
-                                psymboljoint = pa;
-                            }
-                            BOOST_ASSERT(_checkMathML(pb,"cn"));
-                            {
-                                stringstream ss(pb->getCharData());
-                                ss >> b;
+                                RAVELOG_WARN(str(boost::format("unknown equation type %s")%equationtype));
                             }
                         }
-                        else if( _checkMathML(papplyelt->getChildren()[0],"minus") ) {
-                            BOOST_ASSERT(_checkMathML(papplyelt->getChildren()[1],"csymbol"));
-                            a = -1;
-                            psymboljoint = papplyelt->getChildren()[1];
-                        }
-                        else {
-                            BOOST_ASSERT(_checkMathML(papplyelt->getChildren()[0],"csymbol"));
-                            psymboljoint = papplyelt->getChildren()[0];
-                        }
-                        BOOST_ASSERT(psymboljoint->hasAttribute("encoding"));
-                        BOOST_ASSERT(psymboljoint->getAttribute("encoding")==string("COLLADA"));
-                        KinBody::JointPtr pbasejoint = _getJointFromRef(psymboljoint->getCharData().c_str(),pf,pkinbody);
-                        if( !!pbasejoint ) {
-                            // set the mimic properties
-                            pjoint->nMimicJointIndex = pbasejoint->GetJointIndex();
-                            pjoint->vMimicCoeffs.resize(2);
-                            pjoint->vMimicCoeffs[0] = a;
-                            pjoint->vMimicCoeffs[1] = b;
-                            RAVELOG_DEBUG(str(boost::format("assigning joint %s to mimic %s(%d) %f %f\n")%pjoint->GetName()%pbasejoint->GetName()%pjoint->nMimicJointIndex%a%b));
+                        catch(const openrave_exception& ex) {
+                            RAVELOG_WARN(str(boost::format("failed to parse formula %s for target %s")%equationtype%pjoint->GetName()));
                         }
                     }
-                    catch(const openrave_exception& ex) {
-                        RAVELOG_WARN(str(boost::format("exception occured when parsing formula for target joint %s: %s\n")%pjoint->GetName()%ex.what()));
+                }
+            }
+            else if (!!pf->getTechnique_common()) {
+                try {
+                    pf->getTechnique_common()->getChildren(children);
+                    for(size_t ic = 0; ic < children.getCount(); ++ic) {
+                        string eq = _ExtractMathML(pf,pkinbody,children[ic]);
+                        if( eq.size() > 0 ) {
+                            pjoint->_vmimic[iaxis]->_equations[0] = eq;
+                            break;
+                        }
                     }
+                }
+                catch(const openrave_exception& ex) {
+                    RAVELOG_WARN(str(boost::format("failed to parse formula for target %s")%pjoint->GetName()));
                 }
             }
         }
@@ -2102,6 +2093,62 @@ class ColladaReader : public daeErrorHandler
 
  private:
 
+    /// \brief go through all kinematics binds to get a kinematics/visual pair
+    ///
+    /// \param kiscene instance of one kinematics scene, binds the kinematic and visual models
+    /// \param bindings the extracted bindings
+    static void _ExtractKinematicsVisualBindings(domInstance_with_extraRef viscene, domInstance_kinematics_sceneRef kiscene, KinematicsSceneBindings& bindings)
+    {
+        domKinematics_sceneRef kscene = daeSafeCast<domKinematics_scene> (kiscene->getUrl().getElement().cast());
+        if (!kscene) {
+            return;
+        }
+        for (size_t imodel = 0; imodel < kiscene->getBind_kinematics_model_array().getCount(); imodel++) {
+            domArticulated_systemRef articulated_system; // if filled, contains robot-specific information, so create a robot
+            domBind_kinematics_modelRef kbindmodel = kiscene->getBind_kinematics_model_array()[imodel];
+            if (!kbindmodel->getNode()) {
+                RAVELOG_WARN("do not support kinematics models without references to nodes\n");
+                continue;
+            }
+       
+            // visual information
+            domNodeRef node = daeSafeCast<domNode>(daeSidRef(kbindmodel->getNode(), viscene->getUrl().getElement()).resolve().elt);
+            if (!node) {
+                RAVELOG_WARN(str(boost::format("bind_kinematics_model does not reference valid node %s\n")%kbindmodel->getNode()));
+                continue;
+            }
+
+            //  kinematics information
+            daeElement* pelt = searchBinding(kbindmodel,kscene);
+            domInstance_kinematics_modelRef kimodel = daeSafeCast<domInstance_kinematics_model>(pelt);
+            if (!kimodel) {
+                if( !pelt ) {
+                    RAVELOG_WARN("bind_kinematics_model does not reference element\n");
+                }
+                else {
+                    RAVELOG_WARN(str(boost::format("bind_kinematics_model cannot find reference to %s:%s:\n")%kbindmodel->getNode()%pelt->getElementName()));
+                }
+                continue;
+            }
+            bindings.listKinematicsVisualBindings.push_back(make_pair(node,kimodel));
+        }
+        // axis info
+        for (size_t ijoint = 0; ijoint < kiscene->getBind_joint_axis_array().getCount(); ++ijoint) {
+            domBind_joint_axisRef bindjoint = kiscene->getBind_joint_axis_array()[ijoint];
+            daeElementRef pjtarget = daeSidRef(bindjoint->getTarget(), viscene->getUrl().getElement()).resolve().elt;
+            if (!pjtarget) {
+                RAVELOG_ERROR(str(boost::format("Target Node %s NOT found!!!\n")%bindjoint->getTarget()));
+                continue;
+            }
+            daeElement* pelt = searchBinding(bindjoint->getAxis(),kscene);
+            domAxis_constraintRef pjointaxis = daeSafeCast<domAxis_constraint>(pelt);
+            if (!pjointaxis) {
+                continue;
+            }
+            bindings.listAxisBindings.push_back(JointAxisBinding(pjtarget, pjointaxis, bindjoint->getValue(), NULL, NULL));
+        }
+    }
+
     domTechniqueRef _ExtractOpenRAVEProfile(const domTechnique_Array& arr)
     {
         for(size_t i = 0; i < arr.getCount(); ++i) {
@@ -2176,7 +2223,7 @@ class ColladaReader : public daeErrorHandler
         if( pelt->getElementName()==type ) {
             return true;
         }
-        // check the substring after ':'
+        // check the substring after ':', the substring before is the namespace set in some parent attribute
         string name = pelt->getElementName();
         size_t pos = name.find_last_of(':');
         if( pos == string::npos ) {
@@ -2217,59 +2264,282 @@ class ColladaReader : public daeErrorHandler
         return pjoint;
     }
 
-    /// \brief go through all kinematics binds to get a kinematics/visual pair
-    /// \param kiscene instance of one kinematics scene, binds the kinematic and visual models
-    /// \param bindings the extracted bindings
-    static void _ExtractKinematicsVisualBindings(domInstance_with_extraRef viscene, domInstance_kinematics_sceneRef kiscene, KinematicsSceneBindings& bindings)
+    /// \brief Extracts MathML into fparser equation format
+    std::string _ExtractMathML(daeElementRef proot, KinBodyPtr pkinbody, daeElementRef pelt)
     {
-        domKinematics_sceneRef kscene = daeSafeCast<domKinematics_scene> (kiscene->getUrl().getElement().cast());
-        if (!kscene) {
-            return;
+        std::string name = pelt->getElementName();
+        std::size_t pos = name.find_last_of(':');
+        if( pos != string::npos ) {
+            name = name.substr(pos+1);
         }
-        for (size_t imodel = 0; imodel < kiscene->getBind_kinematics_model_array().getCount(); imodel++) {
-            domArticulated_systemRef articulated_system; // if filled, contains robot-specific information, so create a robot
-            domBind_kinematics_modelRef kbindmodel = kiscene->getBind_kinematics_model_array()[imodel];
-            if (!kbindmodel->getNode()) {
-                RAVELOG_WARN("do not support kinematics models without references to nodes\n");
-                continue;
-            }
-       
-            // visual information
-            domNodeRef node = daeSafeCast<domNode>(daeSidRef(kbindmodel->getNode(), viscene->getUrl().getElement()).resolve().elt);
-            if (!node) {
-                RAVELOG_WARN(str(boost::format("bind_kinematics_model does not reference valid node %s\n")%kbindmodel->getNode()));
-                continue;
-            }
-
-            //  kinematics information
-            daeElement* pelt = searchBinding(kbindmodel,kscene);
-            domInstance_kinematics_modelRef kimodel = daeSafeCast<domInstance_kinematics_model>(pelt);
-            if (!kimodel) {
-                if( !pelt ) {
-                    RAVELOG_WARN("bind_kinematics_model does not reference element\n");
+        std::string eq;
+        daeTArray<daeElementRef> children;
+        pelt->getChildren(children);
+        if( name == "math" ) {
+            for(std::size_t ic = 0; ic < children.getCount(); ++ic) {
+                std::string childname = children[ic]->getElementName();
+                if( childname == "apply" || childname == "csymbol" || childname == "cn" || childname == "ci" ) {
+                    eq = _ExtractMathML(proot, pkinbody, children[ic]);
                 }
                 else {
-                    RAVELOG_WARN(str(boost::format("bind_kinematics_model cannot find reference to %s:%s:\n")%kbindmodel->getNode()%pelt->getElementName()));
+                    throw openrave_exception(str(boost::format("_ExtractMathML: do not support element %s in mathml")%childname),ORE_CommandNotSupported);
                 }
-                continue;
             }
-            bindings.listKinematicsVisualBindings.push_back(make_pair(node,kimodel));
         }
-        // axis info
-        for (size_t ijoint = 0; ijoint < kiscene->getBind_joint_axis_array().getCount(); ++ijoint) {
-            domBind_joint_axisRef bindjoint = kiscene->getBind_joint_axis_array()[ijoint];
-            daeElementRef pjtarget = daeSidRef(bindjoint->getTarget(), viscene->getUrl().getElement()).resolve().elt;
-            if (!pjtarget) {
-                RAVELOG_ERROR(str(boost::format("Target Node %s NOT found!!!\n")%bindjoint->getTarget()));
-                continue;
+        else if( name == "apply" ) {
+            if( children.getCount() == 0 ) {
+                return eq;
             }
-            daeElement* pelt = searchBinding(bindjoint->getAxis(),kscene);
-            domAxis_constraintRef pjointaxis = daeSafeCast<domAxis_constraint>(pelt);
-            if (!pjointaxis) {
-                continue;
+            string childname = children[0]->getElementName();
+            if( childname == "plus" ) {
+                eq += '(';
+                for(size_t ic = 1; ic < children.getCount(); ++ic) {
+                    eq += _ExtractMathML(proot, pkinbody, children[ic]);
+                    if( ic+1 < children.getCount() ) {
+                        eq += '+';
+                    }
+                }
+                eq += ')';
             }
-            bindings.listAxisBindings.push_back(JointAxisBinding(pjtarget, pjointaxis, bindjoint->getValue(), NULL, NULL));
+            else if( childname == "quotient" ) {
+                BOOST_ASSERT(children.getCount()==3);
+                eq += str(boost::format("floor(%s/%s)")%_ExtractMathML(proot,pkinbody,children[1])%_ExtractMathML(proot,pkinbody,children[2]));
+            }
+            else if( childname == "divide" ) {
+                BOOST_ASSERT(children.getCount()==3);
+                eq += str(boost::format("(%s/%s)")%_ExtractMathML(proot,pkinbody,children[1])%_ExtractMathML(proot,pkinbody,children[2]));
+            }
+            else if( childname == "minus" ) {
+                BOOST_ASSERT(children.getCount()>1 && children.getCount()<=3);
+                if( children.getCount() == 2 ) {
+                    eq += str(boost::format("(-%s)")%_ExtractMathML(proot,pkinbody,children[1]));
+                }
+                else {
+                    eq += str(boost::format("(%s-%s)")%_ExtractMathML(proot,pkinbody,children[1])%_ExtractMathML(proot,pkinbody,children[2]));
+                }
+            }
+            else if( childname == "power" ) {
+                BOOST_ASSERT(children.getCount()==3);
+                eq += str(boost::format("pow(%s,%s)")%_ExtractMathML(proot,pkinbody,children[1])%_ExtractMathML(proot,pkinbody,children[2]));
+            }
+            else if( childname == "rem" ) {
+                BOOST_ASSERT(children.getCount()==3);
+                eq += str(boost::format("(%s%%%s)")%_ExtractMathML(proot,pkinbody,children[1])%_ExtractMathML(proot,pkinbody,children[2]));
+            }
+            else if( childname == "times" ) {
+                eq += '(';
+                for(size_t ic = 1; ic < children.getCount(); ++ic) {
+                    eq += _ExtractMathML(proot, pkinbody, children[ic]);
+                    if( ic+1 < children.getCount() ) {
+                        eq += '*';
+                    }
+                }
+                eq += ')';
+            }
+            else if( childname == "root" ) {
+                BOOST_ASSERT(children.getCount()==3);
+                string sdegree, snum;
+                for(size_t ic = 1; ic < children.getCount(); ++ic) {
+                    if( children[ic]->getElementName() == string("degree") ) {
+                        sdegree = _ExtractMathML(proot,pkinbody,children[ic]->getChildren()[0]);
+                    }
+                    else {
+                        snum = _ExtractMathML(proot,pkinbody,children[ic]);
+                    }
+                }
+                try {
+                    int degree = boost::lexical_cast<int>(sdegree);
+                    if( degree == 1 ) {
+                        eq += str(boost::format("(%s)")%snum);
+                    }
+                    else if( degree == 2 ) {
+                        eq += str(boost::format("sqrt(%s)")%snum);
+                    }
+                    else if( degree == 3 ) {
+                        eq += str(boost::format("cbrt(%s)")%snum);
+                    }
+                    else {
+                        eq += str(boost::format("pow(%s,1.0/%s)")%snum%sdegree);
+                    }
+                }
+                catch(const boost::bad_lexical_cast&) {
+                    eq += str(boost::format("pow(%s,1.0/%s)")%snum%sdegree);
+                }
+            }
+            else if( childname == "and" ) {
+                eq += '(';
+                for(size_t ic = 1; ic < children.getCount(); ++ic) {
+                    eq += _ExtractMathML(proot, pkinbody, children[ic]);
+                    if( ic+1 < children.getCount() ) {
+                        eq += '&';
+                    }
+                }
+                eq += ')';
+            }
+            else if( childname == "or" ) {
+                eq += '(';
+                for(size_t ic = 1; ic < children.getCount(); ++ic) {
+                    eq += _ExtractMathML(proot, pkinbody, children[ic]);
+                    if( ic+1 < children.getCount() ) {
+                        eq += '|';
+                    }
+                }
+                eq += ')';
+            }
+            else if( childname == "not" ) {
+                BOOST_ASSERT(children.getCount()==2);
+                eq += str(boost::format("(!%s)")%_ExtractMathML(proot,pkinbody,children[1]));
+            }
+            else if( childname == "floor" ) {
+                BOOST_ASSERT(children.getCount()==2);
+                eq += str(boost::format("floor(%s)")%_ExtractMathML(proot,pkinbody,children[1]));
+            }
+            else if( childname == "ceiling" ) {
+                BOOST_ASSERT(children.getCount()==2);
+                eq += str(boost::format("ceil(%s)")%_ExtractMathML(proot,pkinbody,children[1]));
+            }
+            else if( childname == "eq" ) {
+                BOOST_ASSERT(children.getCount()==3);
+                eq += str(boost::format("(%s=%s)")%_ExtractMathML(proot,pkinbody,children[1])%_ExtractMathML(proot,pkinbody,children[2]));
+            }
+            else if( childname == "neq" ) {
+                BOOST_ASSERT(children.getCount()==3);
+                eq += str(boost::format("(%s!=%s)")%_ExtractMathML(proot,pkinbody,children[1])%_ExtractMathML(proot,pkinbody,children[2]));
+            }
+            else if( childname == "gt" ) {
+                BOOST_ASSERT(children.getCount()==3);
+                eq += str(boost::format("(%s>%s)")%_ExtractMathML(proot,pkinbody,children[1])%_ExtractMathML(proot,pkinbody,children[2]));
+            }
+            else if( childname == "lt" ) {
+                BOOST_ASSERT(children.getCount()==3);
+                eq += str(boost::format("(%s<%s)")%_ExtractMathML(proot,pkinbody,children[1])%_ExtractMathML(proot,pkinbody,children[2]));
+            }
+            else if( childname == "geq" ) {
+                BOOST_ASSERT(children.getCount()==3);
+                eq += str(boost::format("(%s>=%s)")%_ExtractMathML(proot,pkinbody,children[1])%_ExtractMathML(proot,pkinbody,children[2]));
+            }
+            else if( childname == "leq" ) {
+                BOOST_ASSERT(children.getCount()==3);
+                eq += str(boost::format("(%s<=%s)")%_ExtractMathML(proot,pkinbody,children[1])%_ExtractMathML(proot,pkinbody,children[2]));
+            }
+            else if( childname == "ln" ) {
+                BOOST_ASSERT(children.getCount()==2);
+                eq += str(boost::format("log(%s)")%_ExtractMathML(proot,pkinbody,children[1]));
+            }
+            else if( childname == "log" ) {
+                BOOST_ASSERT(children.getCount()==2 || children.getCount()==3);
+                string sbase="10", snum;
+                for(size_t ic = 1; ic < children.getCount(); ++ic) {
+                    if( children[ic]->getElementName() == string("logbase") ) {
+                        sbase = _ExtractMathML(proot,pkinbody,children[ic]->getChildren()[0]);
+                    }
+                    else {
+                        snum = _ExtractMathML(proot,pkinbody,children[ic]);
+                    }
+                }
+                try {
+                    int base = boost::lexical_cast<int>(sbase);
+                    if( base == 10 ) {
+                        eq += str(boost::format("log10(%s)")%snum);
+                    }
+                    else if( base == 2 ) {
+                        eq += str(boost::format("log2(%s)")%snum);
+                    }
+                    else {
+                        eq += str(boost::format("(log(%s)/log(%s))")%snum%sbase);
+                    }
+                }
+                catch(const boost::bad_lexical_cast&) {
+                    eq += str(boost::format("(log(%s)/log(%s))")%snum%sbase);
+                }
+            }
+            else if( childname == "arcsin" ) {
+                BOOST_ASSERT(children.getCount()==2);
+                eq += str(boost::format("asin(%s)")%_ExtractMathML(proot,pkinbody,children[1]));
+            }
+            else if( childname == "arccos" ) {
+                BOOST_ASSERT(children.getCount()==2);
+                eq += str(boost::format("acos(%s)")%_ExtractMathML(proot,pkinbody,children[1]));
+            }
+            else if( childname == "arctan" ) {
+                BOOST_ASSERT(children.getCount()==2);
+                eq += str(boost::format("atan(%s)")%_ExtractMathML(proot,pkinbody,children[1]));
+            }
+            else if( childname == "arccosh" ) {
+                BOOST_ASSERT(children.getCount()==2);
+                eq += str(boost::format("acosh(%s)")%_ExtractMathML(proot,pkinbody,children[1]));
+            }
+            else if( childname == "arccot" ) {
+                BOOST_ASSERT(children.getCount()==2);
+                eq += str(boost::format("acot(%s)")%_ExtractMathML(proot,pkinbody,children[1]));
+            }
+            else if( childname == "arccoth" ) {
+                BOOST_ASSERT(children.getCount()==2);
+                eq += str(boost::format("acoth(%s)")%_ExtractMathML(proot,pkinbody,children[1]));
+            }
+            else if( childname == "arccsc" ) {
+                BOOST_ASSERT(children.getCount()==2);
+                eq += str(boost::format("acsc(%s)")%_ExtractMathML(proot,pkinbody,children[1]));
+            }
+            else if( childname == "arccsch" ) {
+                BOOST_ASSERT(children.getCount()==2);
+                eq += str(boost::format("acsch(%s)")%_ExtractMathML(proot,pkinbody,children[1]));
+            }
+            else if( childname == "arcsec" ) {
+                BOOST_ASSERT(children.getCount()==2);
+                eq += str(boost::format("asec(%s)")%_ExtractMathML(proot,pkinbody,children[1]));
+            }
+            else if( childname == "arcsech" ) {
+                BOOST_ASSERT(children.getCount()==2);
+                eq += str(boost::format("asech(%s)")%_ExtractMathML(proot,pkinbody,children[1]));
+            }
+            else if( childname == "arcsinh" ) {
+                BOOST_ASSERT(children.getCount()==2);
+                eq += str(boost::format("asinh(%s)")%_ExtractMathML(proot,pkinbody,children[1]));
+            }
+            else if( childname == "arctanh" ) {
+                BOOST_ASSERT(children.getCount()==2);
+                eq += str(boost::format("atanh(%s)")%_ExtractMathML(proot,pkinbody,children[1]));
+            }
+            else if( childname == "implies" || childname == "forall" || childname == "exists" || childname == "conjugate" || childname == "arg" || childname == "real" || childname == "imaginary" || childname == "lcm" || childname == "factorial" || childname == "xor") {
+                throw openrave_exception(str(boost::format("_ExtractMathML: %s function in <apply> tag not supported")%childname),ORE_CommandNotSupported);
+            }
+            else {
+                // make a function call
+                eq += childname;
+                eq += '(';
+                for(size_t ic = 1; ic < children.getCount(); ++ic) {
+                    eq += _ExtractMathML(proot, pkinbody, children[ic]);
+                    if( ic+1 < children.getCount() ) {
+                        eq += ',';
+                    }
+                }
+                eq += ')';
+            }
         }
+        else if( name == "csymbol" ) {
+            if( !pelt->hasAttribute("encoding") ) {
+                RAVELOG_WARN(str(boost::format("_ExtractMathML: csymbol '%s' does not have any encoding")%pelt->getCharData()));
+            }
+            else if( pelt->getAttribute("encoding")!=string("COLLADA") ) {
+                RAVELOG_WARN(str(boost::format("_ExtractMathML: csymbol '%s' has unknown encoding")%pelt->getCharData()%pelt->getAttribute("encoding")));
+            }
+            KinBody::JointPtr pjoint = _getJointFromRef(pelt->getCharData().c_str(),proot,pkinbody);
+            if( !pjoint ) {
+                RAVELOG_WARN(str(boost::format("_ExtractMathML: failed to find joint %s")%pelt->getCharData()));
+                eq = pelt->getCharData();
+            }
+            else {
+                eq = pjoint->GetName();
+            }
+        }
+        else if( name == "cn" ) {
+            eq = pelt->getCharData();
+        }
+        else if( name == "ci" ) {
+            eq = pelt->getCharData();
+        }
+        return eq;
     }
 
     bool _computeConvexHull(const vector<Vector>& verts, KinBody::Link::TRIMESH& trimesh)

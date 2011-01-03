@@ -8,7 +8,7 @@ set( CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS TRUE )
 # Define here the needed parameters
 set (OPENRAVE_VERSION_MAJOR 0)
 set (OPENRAVE_VERSION_MINOR 2)
-set (OPENRAVE_VERSION_PATCH 15)
+set (OPENRAVE_VERSION_PATCH 16)
 set (OPENRAVE_VERSION ${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}.${OPENRAVE_VERSION_PATCH})
 set (OPENRAVE_SOVERSION ${OPENRAVE_VERSION_MAJOR})
 
@@ -20,27 +20,10 @@ if("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}" GREATER 2.4)
    if(NOT COMMAND SET_PROPERTY)
       message(FATAL_ERROR "You are using an old version of CMake from cvs, please update to CMake >= 2.6.0 or cvs at least from Feb 20th, 2008")
    endif(NOT COMMAND SET_PROPERTY)
-
-
-   # CMake 2.6 gives errors if there are multiple targets with the same name
-   # we use this for the target "buildtests", which is created for the unit tests
-   # and which depends on the tests, so building "buildtests" builds all the tests
-   # enabling this property disables this check in CMake
-   # visual studio doesn't like it
-   #set_property(GLOBAL PROPERTY ALLOW_DUPLICATE_CUSTOM_TARGETS 1)
-
-   # CMP0002: in KDE4 we have multiple targets with the same name for the unit tests
-   cmake_policy(SET CMP0002 OLD)
-   # CMP0003: add the link paths to the link command as with cmake 2.4
-   cmake_policy(SET CMP0003 OLD)
-   # CMake 2.6 uses the full file names of the libraries when linking and so
-   # doesn't use -L anymore to list the link dirs. Now the dependencies created
-   # export_library_dependencies() lists the in-project libraries without 
-   # path, i.e. with only the logical name ("kdecore"), so they don't link
-   # Setting this variable to true has the effect that the link dirs are
-   # listed nevertheless also with CMake 2.6.
-   set(CMAKE_LINK_OLD_PATHS TRUE)
-
+   # http://www.cmake.org/cmake/help/cmake-2.6.html#policy:CMP0002
+   cmake_policy(SET CMP0002 NEW)
+   # http://www.cmake.org/cmake/help/cmake-2.6.html#policy:CMP0003
+   cmake_policy(SET CMP0003 NEW)
 endif("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}" GREATER 2.4)
 
 
@@ -92,6 +75,7 @@ message(STATUS "installing to ${CMAKE_INSTALL_PREFIX}")
 option(OPT_VIDEORECORDING "Enable video recording" ON)
 option(OPT_PLUGINS "Build the pluings" ON)
 option(OPT_DOUBLE_PRECISION "Use double precision" ON)
+option(OPT_ACCURATEMATH "Use accurate and robust math to account for floating-point errors" ON)
 option(OPT_PYTHON "Build python bindings" ON)
 option(OPT_OCTAVE "Build octave bindings" ON)
 option(OPT_MATLAB "Build matlab bindings" ON)
@@ -104,6 +88,8 @@ option(OPT_STATIC "Build static libraries" OFF)
 # Additional CMake modules for 3rd party library checks reside here
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/modules-cmake")
 
+message(STATUS "detected system processor: ${CMAKE_SYSTEM_PROCESSOR}")
+
 include(CheckIncludeFile)
 include(CheckIncludeFileCXX)
 include(CheckLibraryExists)
@@ -111,7 +97,15 @@ include(CheckFunctionExists)
 include(CheckCXXSourceCompiles)
 include(CheckCXXSourceRuns)
 include(CheckCXXCompilerFlag)
+include(CheckTypeSize)
 include(FindPkgConfig)
+
+set(OPENRAVE_PLUGINS_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/share/openrave/plugins")
+set(OPENRAVE_DATA_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/share/openrave")
+set(OPENRAVE_PYTHON_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/share/openrave")
+set(OPENRAVE_OCTAVE_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/share/openrave/octave")
+set(OPENRAVE_MATLAB_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/share/openrave/matlab")
+set(OPENRAVEPY_INSTALL_DIR "${OPENRAVE_PYTHON_INSTALL_DIR}/openravepy")
 
 # very important to only test release since default is debug, and it usually reuquires special libraries
 set(CMAKE_TRY_COMPILE_CONFIGURATION Release)
@@ -304,6 +298,24 @@ add_custom_command(
 
 add_custom_target(classhashes_h ALL DEPENDS ${CMAKE_SOURCE_DIR}/rave/classhashes.h ${EXTRA_MSVC_DEPEND})
 
+# math libraries
+find_package(GMP)
+find_package(GMPXX)
+find_package(MPFR)
+find_package(MPFI)
+
+if( OPT_ACCURATEMATH )
+  add_subdirectory(3rdparty/crlibm-1.0beta4)
+  set(CRLIBM_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/crlibm-1.0beta4")
+  set(CRLIBM_FOUND 1)
+  set(CRLIBM_LIBRARY crlibm)
+  add_subdirectory(check_libm_accuracy)
+else()
+  set(CRLIBM_FOUND 0)
+endif()
+
+CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/defines.h.in ${CMAKE_CURRENT_SOURCE_DIR}/rave/defines.h)
+
 # always include coin3d (needed for file parsing)
 find_package(Coin)
 if( COIN_LIBRARY_FOUND )
@@ -464,6 +476,23 @@ else()
   set(ANN_FOUND 1)
 endif()
 
+## check FLANN library
+set(BUILD_MATLAB_BINDINGS false)
+set(BUILD_PYTHON_BINDINGS true)
+set(BUILD_C_BINDINGS true)
+message(STATUS "compiling local flann library")
+add_subdirectory(3rdparty/flann-1.6.6)
+set(FLANN_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/flann-1.6.6/src/cpp")
+set(FLANN_FOUND 1) # use flann_cpp_s to link statically
+
+message(STATUS "openrave project ${PROJECT_NAME}")
+
+# function expression parser library
+add_subdirectory(3rdparty/fparser-4.3)
+set(FPARSER_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/fparser-4.3")
+set(FPARSER_LIBRARY fparser)
+set(FPARSER_FOUND 1)
+
 message(STATUS "compiling local convexdecomposition library")
 add_subdirectory(3rdparty/convexdecomposition)
 set(CONVEXDECOMPOSITION_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/convexdecomposition")
@@ -482,13 +511,6 @@ if( NOT PYTHON_EXECUTABLE )
     NAMES python2.6 python
     PATHS [HKEY_LOCAL_MACHINE\\SOFTWARE\\Python\\PythonCore\\2.6\\InstallPath])
 endif()
-
-set(OPENRAVE_PLUGINS_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/share/openrave/plugins")
-set(OPENRAVE_DATA_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/share/openrave")
-set(OPENRAVE_PYTHON_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/share/openrave")
-set(OPENRAVE_OCTAVE_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/share/openrave/octave")
-set(OPENRAVE_MATLAB_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/share/openrave/matlab")
-set(OPENRAVEPY_INSTALL_DIR "${OPENRAVE_PYTHON_INSTALL_DIR}/openravepy")
 
 if( PYTHON_EXECUTABLE )
   message(STATUS "python executable is ${PYTHON_EXECUTABLE}")

@@ -240,7 +240,7 @@ def test_drawjoints():
     env = robot.GetEnv()
     while True:
         h = None
-        h = [env.drawlinelist(array([j.GetAnchor()-j.GetAxis(0),j.GetAnchor()+j.GetAxis(0)]),5,array([0,0,0]))  for j in robot.GetJoints()]
+        h = [env.drawlinelist(array([j.GetAnchor()-j.GetAxis(0),j.GetAnchor()+j.GetAxis(0)]),5,array([0,0,float(j.GetDOFIndex())/robot.GetDOF()]))  for j in robot.GetJoints()]
         time.sleep(0.1)
 
     while True:

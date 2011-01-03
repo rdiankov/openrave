@@ -64,6 +64,10 @@ build openrave must include (used in place of rave.h). Precompiled header.
 #include <sstream>
 #include <iomanip>
 
+#ifdef USE_CRLIBM
+#include <crlibm.h> // robust/accurate math
+#endif
+
 #include <sys/timeb.h>    // ftime(), struct timeb
 
 #ifndef _WIN32

@@ -1518,7 +1518,7 @@ void* QtCoinViewer::_drawarrow(SoSwitch* handle, const RaveVector<float>& p1, co
     }
 
     //rotate to face point
-    RaveVector<float> qrot = quatRotateDirection(RaveVector<float>(0,1,0),direction);
+    RaveVector<float> qrot = quatRotateDirection(RaveVector<dReal>(0,1,0),RaveVector<dReal>(direction));
     RaveVector<float> vaxis = axisAngleFromQuat(qrot);
     dReal angle = RaveSqrt(vaxis.lengthsqr3());
     if( angle > 0 ) {
@@ -2170,31 +2170,43 @@ bool QtCoinViewer::_HandleSelection(SoPath *path)
 
             if( !pjoint ) {
                 FOREACHC(itjoint, pKinBody->GetBody()->GetPassiveJoints()) {
-                    if( (*itjoint)->GetMimicJointIndex() >= 0 ) {
-                        KinBody::JointPtr ptempjoint = pKinBody->GetBody()->GetJoints()[(*itjoint)->GetMimicJointIndex()];
-                        if( !ptempjoint->IsStatic() && pKinBody->GetBody()->DoesAffect(ptempjoint->GetJointIndex(), pSelectedLink->GetIndex()) && 
-                            ((*itjoint)->GetFirstAttached()==pSelectedLink || (*itjoint)->GetSecondAttached()==pSelectedLink) ) {
-                            pjoint = ptempjoint;
+                    if( (*itjoint)->IsMimic() ) {
+                        for(int idof = 0; idof < (*itjoint)->GetDOF(); ++idof) {
+                            if( (*itjoint)->IsMimic(idof) ) {
+                                FOREACH(itmimicdof, (*itjoint)->GetMimicDOFIndices(idof)) {
+                                    KinBody::JointPtr ptempjoint = pKinBody->GetBody()->GetJointFromDOFIndex(*itmimicdof);
+                                    if( !ptempjoint->IsStatic() && pKinBody->GetBody()->DoesAffect(ptempjoint->GetJointIndex(), pSelectedLink->GetIndex()) && 
+                                        ((*itjoint)->GetFirstAttached()==pSelectedLink || (*itjoint)->GetSecondAttached()==pSelectedLink) ) {
+                                        pjoint = ptempjoint;
+                                        break;
+                                    }
+                                }
+                                if( !!pjoint ) {
+                                    break;
+                                }
+                            }
                         }
                     }
                     else {
                         KinBody::LinkPtr pother;
-                        if( (*itjoint)->GetFirstAttached()==pSelectedLink )
+                        if( (*itjoint)->GetFirstAttached()==pSelectedLink ) {
                             pother = (*itjoint)->GetSecondAttached();
-                        else if( (*itjoint)->GetSecondAttached()==pSelectedLink )
+                        }
+                        else if( (*itjoint)->GetSecondAttached()==pSelectedLink ) {
                             pother = (*itjoint)->GetFirstAttached();
+                        }
                         if( !!pother ) {
                             FOREACHC(itjoint2, pKinBody->GetBody()->GetJoints()) {
-                                if( !(*itjoint2)->IsStatic() && pKinBody->GetBody()->DoesAffect((*itjoint2)->GetJointIndex(), pother->GetIndex()) && 
-                                    ((*itjoint2)->GetFirstAttached()==pother || (*itjoint2)->GetSecondAttached()==pother) ) {
+                                if( !(*itjoint2)->IsStatic() && pKinBody->GetBody()->DoesAffect((*itjoint2)->GetJointIndex(), pother->GetIndex()) && ((*itjoint2)->GetFirstAttached()==pother || (*itjoint2)->GetSecondAttached()==pother) ) {
                                     pjoint = *itjoint2;
                                     break;
                                 }
                             }
                         }
 
-                        if( !!pjoint )
+                        if( !!pjoint ) {
                             break;
+                        }
                     }
                 }
             }

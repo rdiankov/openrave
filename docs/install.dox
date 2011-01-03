@@ -202,6 +202,28 @@ switch to the unstripped versions when recording.
 sudo apt-get install g++ cmake libqt4-dev qt4-dev-tools ffmpeg libavcodec-dev libavformat-dev libxvidcore4-dev libfaac-dev libogg-dev libvorbis-dev libdc1394-22-dev libgsm1-dev libboost-dev libboost-regex-dev libxml2-dev libsoqt4-dev libboost-graph-dev libode0-dev libboost-wave-dev libboost-serialization-dev libboost-filesystem-dev libpcre3-dev libboost-thread-dev libswscale-dev
 \endverbatim
 
+\~ \subsection ilinux_ubuntu9 Ubuntu 10.x
+
+Required:
+\verbatim
+sudo apt-get install g++ cmake libqt4-dev qt4-dev-tools ffmpeg  libboost-dev libboost-regex-dev libxml2-dev libsoqt4-dev libboost-graph-dev libode0-dev libboost-wave-dev libboost-serialization-dev libboost-filesystem-dev libboost-system-dev libpcre3-dev libboost-thread-dev libsimage-dev libboost-iostreams-dev
+\endverbatim
+
+Recommended for accuracy/precision/reliability:
+\verbatim
+sudo apt-get install --ignore-missing libmpfr-dev libgmp3-dev libmpfi-dev libgmpxx4ldbl python-gmpy python-mpmath
+\endverbatim
+
+For python:
+\verbatim
+sudo apt-get install libboost-python-dev python python-dev python-numpy python-scipy python-imaging-tk
+\endverbatim
+
+Optional:
+\verbatim
+sudo apt-get install --ignore-missing libavcodec-dev libavformat-dev libxvidcore4-dev libfaac-dev libogg-dev libvorbis-dev libdc1394-22-dev libgsm1-dev libswscale-dev
+\endverbatim
+
 \en \subsection ilinux_fedora Fedora Core Users
 
 Might need to add the livna yum repository for ffmpeg. To install the necessary packages type

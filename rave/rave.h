@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2010 Rosen Diankov (rosen.diankov@gmail.com)
+// Copyright (C) 2006-2011 Rosen Diankov (rosen.diankov@gmail.com)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -101,8 +101,6 @@
 #define RAVE_DEPRECATED
 #endif
 
-#define MATH_RANDOM_FLOAT RaveRandomFloat()
-
 /// The entire %OpenRAVE library
 namespace OpenRAVE {
     
@@ -117,7 +115,41 @@ typedef float dReal;
 #define g_fEpsilon 2e-7f
 #endif
 
-#define PI ((dReal)3.14159265358979)
+/// \brief openrave constant for PI, could be replaced by accurate precision number depending on choice of dReal.
+static const dReal PI = (dReal)3.14159265358979323846;
+
+/// Wrappers of common basic math functions, allows OpenRAVE to control the precision requirements.
+/// \ingroup affine_math
+//@{
+
+/// \brief exponential
+RAVE_API dReal RaveExp(dReal f);
+/// \brief logarithm
+RAVE_API dReal RaveLog(dReal f);
+/// \brief cosine
+RAVE_API dReal RaveCos(dReal f);
+/// \brief sine
+RAVE_API dReal RaveSin(dReal f);
+/// \brief tangent
+RAVE_API dReal RaveTan(dReal f);
+/// \brief base 2 logarithm
+RAVE_API dReal RaveLog2(dReal f);
+/// \brief base 10 logarithm
+RAVE_API dReal RaveLog10(dReal f);
+/// \brief arccosine
+RAVE_API dReal RaveAcos(dReal f);
+/// \brief arcsine
+RAVE_API dReal RaveAsin(dReal f);
+/// \brief arctangent2 covering entire circle
+RAVE_API dReal RaveAtan2(dReal fy, dReal fx);
+/// \brief power x^y
+RAVE_API dReal RavePow(dReal fx, dReal fy);
+/// \brief square-root
+RAVE_API dReal RaveSqrt(dReal f);
+/// \brief absolute value
+RAVE_API dReal RaveFabs(dReal f);
+
+//@}
 
 /// %OpenRAVE error codes
 enum OpenRAVEErrorCode {
@@ -705,6 +737,20 @@ private:
 
 } // end namespace OpenRAVE
 
+// define the math functions
+#define MATH_EXP RaveExp
+#define MATH_LOG RaveLog
+#define MATH_COS RaveCos
+#define MATH_SIN RaveSin
+#define MATH_TAN RaveTan
+#define MATH_LOG2 RaveLog2
+#define MATH_LOG10 RaveLog10
+#define MATH_ACOS RaveAcos
+#define MATH_ASIN RaveAsin
+#define MATH_ATAN2 RaveAtan2
+#define MATH_POW RavePow
+#define MATH_SQRT RaveSqrt
+#define MATH_FABS RaveFabs
 
 #include <rave/geometry.h>
 #include <rave/mathextra.h>
@@ -713,13 +759,6 @@ namespace OpenRAVE {
     using geometry::RaveVector;
     using geometry::RaveTransform;
     using geometry::RaveTransformMatrix;
-    using geometry::RaveSqrt;
-    using geometry::RaveSin;
-    using geometry::RaveCos;
-    using geometry::RaveFabs;
-    using geometry::RaveAcos;
-    using geometry::RaveAsin;
-    using geometry::RaveAtan2;
     typedef RaveVector<dReal> Vector;
     typedef RaveTransform<dReal> Transform;
     typedef boost::shared_ptr< RaveTransform<dReal> > TransformPtr;
@@ -1033,6 +1072,7 @@ BOOST_TYPEOF_REGISTER_TEMPLATE(OpenRAVE::RaveTransformMatrix, 1)
 
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::KinBody)
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::KinBody::Joint)
+BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::KinBody::Joint::MIMIC)
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::KinBody::Link)
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::KinBody::Link::GEOMPROPERTIES)
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::KinBody::Link::TRIMESH)

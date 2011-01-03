@@ -2187,17 +2187,22 @@ void RobotBase::_ComputeInternalInformation()
             if( GetChain((*itmanip)->GetBase()->GetIndex(),(*itmanip)->GetEndEffector()->GetIndex(), vjoints) ) {
                 (*itmanip)->_varmdofindices.resize(0);
                 FOREACH(it,vjoints) {
-                    if( (*it)->GetMimicJointIndex() >= 0 ) {
-                        JointPtr pmimicjoint = _vecjoints.at((*it)->GetMimicJointIndex());
-                        if( find(vjoints.begin(),vjoints.end(),pmimicjoint) == vjoints.end() ) {
-                            for(int i = 0; i < pmimicjoint->GetDOF(); ++i) {
+                    if( (*it)->IsStatic() ) {
+                        // ignore
+                    }
+                    else if( (*it)->IsMimic() ) {
+                        for(int i = 0; i < (*it)->GetDOF(); ++i) {
+                            if( (*it)->IsMimic(i) ) {
+                                FOREACHC(itdof,(*it)->GetMimicDOFIndices(i)) {
+                                    if( find((*itmanip)->_varmdofindices.begin(),(*itmanip)->_varmdofindices.end(),*itdof) == (*itmanip)->_varmdofindices.end() ) {
+                                        (*itmanip)->_varmdofindices.push_back(*itdof);
+                                    }
+                                }
+                            }
+                            else if( (*it)->GetDOFIndex() >= 0 ) {
                                 (*itmanip)->_varmdofindices.push_back((*it)->GetDOFIndex()+i);
                             }
-                            //RAVELOG_WARN(str(boost::format("manipulator arm contains mimic joint %s whose source joint %s is not part of the arm, ignoring...\n")%(*it)->GetName()%_vecjoints.at((*it)->GetMimicJointIndex())->GetName()));
                         }
-                    }
-                    else if( (*it)->IsStatic() ) {
-                        // ignore
                     }
                     else if( (*it)->GetDOFIndex() < 0) {
                         RAVELOG_WARN(str(boost::format("manipulator arm contains joint %s without a dof index, ignoring...\n")%(*it)->GetName()));

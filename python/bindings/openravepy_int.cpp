@@ -344,8 +344,16 @@ public:
         KinBody::JointPtr GetJoint() { return _pjoint; }
 
         string GetName() { return _pjoint->GetName(); }
-        int GetMimicJointIndex() const { return _pjoint->GetMimicJointIndex(); }
-        object GetMimicCoeffs() const { return toPyArray(_pjoint->GetMimicCoeffs()); }
+        int GetMimicJointIndex() const { RAVELOG_WARN("GetMimicJointIndex is deprecated!\n"); return _pjoint->GetMimicJointIndex(); }
+        bool IsMimic(int iaxis=-1) { return _pjoint->IsMimic(iaxis); }
+        string GetMimicEquation(int iaxis=0, int itype=0, const std::string& format="") { return _pjoint->GetMimicEquation(iaxis,itype,format); }
+        object GetMimicDOFIndices(int iaxis=0) {
+            return toPyArray(_pjoint->GetMimicDOFIndices(iaxis));
+        }
+        void SetMimicEquations(int iaxis, const std::string& poseq, const std::string& veleq, const std::string& acceleq)
+        {
+            _pjoint->SetMimicEquations(iaxis,poseq,veleq,acceleq);
+        }
 
         dReal GetMaxVel() const { return _pjoint->GetMaxVel(); }
         dReal GetMaxAccel() const { return _pjoint->GetMaxAccel(); }
@@ -397,13 +405,13 @@ public:
         }
 
         void SetJointOffset(dReal offset) { _pjoint->SetJointOffset(offset); }
-        void SetJointLimits(object olower, object oupper) {
+        void SetLimits(object olower, object oupper) {
             vector<dReal> vlower = ExtractArray<dReal>(olower);
             vector<dReal> vupper = ExtractArray<dReal>(oupper);
             if( vlower.size() != vupper.size() || (int)vlower.size() != _pjoint->GetDOF() ) {
                 throw openrave_exception("limits are wrong dimensions");
             }
-            _pjoint->SetJointLimits(vlower,vupper);
+            _pjoint->SetLimits(vlower,vupper);
         }
         void SetResolution(dReal resolution) { _pjoint->SetResolution(resolution); }
         void SetWeights(object o) { _pjoint->SetWeights(ExtractArray<dReal>(o)); }
@@ -3401,6 +3409,9 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(drawlinelist_overloads, drawlinelist, 2, 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(drawarrow_overloads, drawarrow, 2, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(drawbox_overloads, drawbox, 2, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(drawtrimesh_overloads, drawtrimesh, 1, 3)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(IsMimic_overloads, IsMimic, 0, 1)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMimicEquation_overloads, GetMimicEquation, 0, 3)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMimicDOFIndices_overloads, GetMimicDOFIndices, 0, 1)
 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Load_overloads, Load, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Save_overloads, Save, 1, 2)
@@ -3734,7 +3745,10 @@ BOOST_PYTHON_MODULE(openravepy_int)
             scope joint = class_<PyKinBody::PyJoint, boost::shared_ptr<PyKinBody::PyJoint> >("Joint", DOXY_CLASS(KinBody::Joint),no_init)
                 .def("GetName", &PyKinBody::PyJoint::GetName, DOXY_FN(KinBody::Joint,GetName))
                 .def("GetMimicJointIndex", &PyKinBody::PyJoint::GetMimicJointIndex, DOXY_FN(KinBody::Joint,GetMimicJointIndex))
-                .def("GetMimicCoeffs", &PyKinBody::PyJoint::GetMimicCoeffs, DOXY_FN(KinBody::Joint,GetMimicCoeffs))
+                .def("IsMimic",&PyKinBody::PyJoint::IsMimic,IsMimic_overloads(args("axis"), DOXY_FN(KinBody::Joint,IsMimic)))
+                .def("GetMimicEquation",&PyKinBody::PyJoint::GetMimicEquation,GetMimicEquation_overloads(args("axis","type","format"), DOXY_FN(KinBody::Joint,GetMimicEquation)))
+                .def("GetMimicDOFIndices",&PyKinBody::PyJoint::GetMimicDOFIndices,GetMimicDOFIndices_overloads(args("axis"), DOXY_FN(KinBody::Joint,GetMimicDOFIndices)))
+                .def("SetMimicEquations", &PyKinBody::PyJoint::SetMimicEquations, args("axis","poseq","veleq","acceleq"), DOXY_FN(KinBody::Joint,SetMimicEquations))
                 .def("GetMaxVel", &PyKinBody::PyJoint::GetMaxVel, DOXY_FN(KinBody::Joint,GetMaxVel))
                 .def("GetMaxAccel", &PyKinBody::PyJoint::GetMaxAccel, DOXY_FN(KinBody::Joint,GetMaxAccel))
                 .def("GetMaxTorque", &PyKinBody::PyJoint::GetMaxTorque, DOXY_FN(KinBody::Joint,GetMaxTorque))
@@ -3758,7 +3772,8 @@ BOOST_PYTHON_MODULE(openravepy_int)
                 .def("GetLimits", &PyKinBody::PyJoint::GetLimits, DOXY_FN(KinBody::Joint,GetLimits))
                 .def("GetWeights", &PyKinBody::PyJoint::GetWeights, DOXY_FN(KinBody::Joint,GetWeight))
                 .def("SetJointOffset",&PyKinBody::PyJoint::SetJointOffset,args("offset"), DOXY_FN(KinBody::Joint,SetJointOffset))
-                .def("SetJointLimits",&PyKinBody::PyJoint::SetJointLimits,args("lower","upper"), DOXY_FN(KinBody::Joint,SetJointLimits))
+                .def("SetLimits",&PyKinBody::PyJoint::SetLimits,args("lower","upper"), DOXY_FN(KinBody::Joint,SetLimits))
+                .def("SetJointLimits",&PyKinBody::PyJoint::SetLimits,args("lower","upper"), DOXY_FN(KinBody::Joint,SetLimits))
                 .def("SetResolution",&PyKinBody::PyJoint::SetResolution,args("resolution"), DOXY_FN(KinBody::Joint,SetResolution))
                 .def("SetWeights",&PyKinBody::PyJoint::SetWeights,args("weights"), DOXY_FN(KinBody::Joint,SetWeights))
                 .def("AddTorque",&PyKinBody::PyJoint::AddTorque,args("torques"), DOXY_FN(KinBody::Joint,AddTorque))
