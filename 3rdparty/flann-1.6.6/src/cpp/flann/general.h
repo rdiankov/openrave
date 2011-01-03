@@ -33,7 +33,19 @@
 
 #define ARRAY_LEN(a) (sizeof(a)/sizeof(a[0]))
 
-
+#ifdef _MSC_VER
+#pragma warning(disable:4738) // storing 32-bit float result in memory, possible loss of performance
+#pragma warning(disable:4365) // conversion from 'int' to 'size_t', signed/unsigned mismatch
+#pragma warning(disable:4244) // conversion from 'const int' to 'float', possible loss of data
+#pragma warning(disable:4061) // enumerator 'X' in switch of enum 'Y' is not explicitly handled by a case label
+#pragma warning(disable:4710) // function not inlined
+#pragma warning(disable:4711) // function selected for automatic inline expansion
+#pragma warning(disable:4701) // potentially uninitialized variable
+#pragma warning(disable:4305) // truncation from double to float
+#pragma warning(disable:4820) // X  bytes padded after data member
+#pragma warning(disable:4100) // unreferenced formal parameter
+#pragma warning(disable:4245) // conversion from int to unsigned char, signed/unsigned mismatch
+#endif
 
 /* Nearest neighbour index algorithms */
 enum flann_algorithm_t {

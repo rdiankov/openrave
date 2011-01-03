@@ -2173,7 +2173,7 @@ bool QtCoinViewer::_HandleSelection(SoPath *path)
                     if( (*itjoint)->IsMimic() ) {
                         for(int idof = 0; idof < (*itjoint)->GetDOF(); ++idof) {
                             if( (*itjoint)->IsMimic(idof) ) {
-                                FOREACH(itmimicdof, (*itjoint)->GetMimicDOFIndices(idof)) {
+                                FOREACHC(itmimicdof, (*itjoint)->GetMimicDOFIndices(idof)) {
                                     KinBody::JointPtr ptempjoint = pKinBody->GetBody()->GetJointFromDOFIndex(*itmimicdof);
                                     if( !ptempjoint->IsStatic() && pKinBody->GetBody()->DoesAffect(ptempjoint->GetJointIndex(), pSelectedLink->GetIndex()) && 
                                         ((*itjoint)->GetFirstAttached()==pSelectedLink || (*itjoint)->GetSecondAttached()==pSelectedLink) ) {
