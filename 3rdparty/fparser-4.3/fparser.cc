@@ -361,7 +361,11 @@ namespace
     template<>
     inline float fp_parseLiteral<float>(const char* str, char** endptr)
     {
+#ifdef FP_USE_STRTOF
         return strtof(str, endptr);
+#else
+        return (float)strtod(str, endptr);
+#endif
     }
 #endif
 

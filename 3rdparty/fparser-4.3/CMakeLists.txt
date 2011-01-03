@@ -22,6 +22,11 @@ endif()
 # don't include optimizer since openrave really doesn't use that many complex equations
 add_definitions("-DFP_NO_SUPPORT_OPTIMIZER")
 
+check_function_exists(strtof HAS_STRTOF)
+if( HAS_STRTOF )
+  add_definitions("-DFP_USE_STRTOF")
+endif()
+
 set(fparser_SOURCES fparser.cc ) # fpoptimizer.cc
 
 set(fparser_LIBRARIES)
