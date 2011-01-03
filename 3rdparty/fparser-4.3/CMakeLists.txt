@@ -27,6 +27,12 @@ if( HAS_STRTOF )
   add_definitions("-DFP_USE_STRTOF")
 endif()
 
+check_function_exists(strtold HAS_STRTOLD)
+check_type_size("long double" HAVE_LONG_DOUBLE BUILTIN_TYPES_ONLY)
+if( HAVE_LONG_DOUBLE EQUAL 16 AND HAS_STRTOLD)
+  add_definitions("-DFP_SUPPORT_LONG_DOUBLE_TYPE")
+endif()
+
 set(fparser_SOURCES fparser.cc ) # fpoptimizer.cc
 
 set(fparser_LIBRARIES)

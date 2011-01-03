@@ -5,7 +5,7 @@ configure_file(
 
 INSTALL (
     FILES setup.py
-    DESTINATION ${OPENRAVEPY_INSTALL_DIR}
+    DESTINATION ${OPENRAVEPY_INSTALL_DIR}/pyflann
 )
 
 INSTALL (
@@ -19,4 +19,5 @@ INSTALL (
     PATTERN *.tpl EXCLUDE
     PATTERN *~ EXCLUDE
     PATTERN _tests EXCLUDE
+    PATTERN ".svn" EXCLUDE
 )
