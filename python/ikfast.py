@@ -510,7 +510,7 @@ class IKFastSolver(AutoReloader):
                     joint = IKFastSolver.Joint()
                     joint.type = bodyjoint.GetType().name.lower()
                     joint.jointindex = bodyjoint.GetJointIndex()
-                    joint.jcoeff = [round(float(x),5) for x in bodyjoint.GetMimicCoeffs()]
+                    joint.jcoeff = [S.One,S.Zero]#[round(float(x),5) for x in bodyjoint.GetMimicCoeffs()]
                     joint.isfreejoint = False
                     joint.isdummy = bodyjoint.IsStatic()
                     joint.Tright = self.normalizeRotation(Matrix(4,4,[Real(round(float(x),5),30) for x in bodyjoint.GetInternalHierarchyRightTransform().flat]))
