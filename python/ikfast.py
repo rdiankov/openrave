@@ -2361,14 +2361,20 @@ class IKFastSolver(AutoReloader):
                             othervarpoly0 = Poly(othervarpoly,othervars[0])
                             othervarpoly_simp = None
                             solvevar = None
-                            if othervarpoly0.degree == 1:
-                                othervarpoly_simp = othervarpoly0
-                                solvevar = othervars[1]
-                            else:
-                                othervarpoly1 = Poly(othervarpoly,othervars[1])
-                                if othervarpoly1.degree == 1:
-                                    othervarpoly_simp = othervarpoly1
-                                    solvevar = othervars[0]
+                            for tempiter in range(2):
+                                if othervarpoly0.degree == 1:
+                                    othervarpoly_simp = othervarpoly0
+                                    solvevar = othervars[1]
+                                else:
+                                    othervarpoly1 = Poly(othervarpoly,othervars[1])
+                                    if othervarpoly1.degree == 1:
+                                        othervarpoly_simp = othervarpoly1
+                                        solvevar = othervars[0]
+                                if solvevar is None and tempiter == 0:
+                                    print 'othervarpoly too complex, trying to chop small numbers: ',othervarpoly
+                                    othervarpoly = self.chop(othervarpoly,accuracy=self.accuracy*0.01)
+                                    othervarpoly0 = Poly(othervarpoly,othervars[0])
+                                    othervarpoly_simp = None
                             if solvevar is not None:
                                 # note that squaring on both sides introduces bad solutions!
                                 # chop with a very small threshold
