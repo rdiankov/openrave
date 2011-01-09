@@ -108,7 +108,7 @@ public:
                 // find furthest point from origin of body and rotate around center
                 AABB ab = _parameters->targetbody->ComputeAABB();
                 dReal fmaxradius = RaveSqrt(ab.extents.lengthsqr3());
-                tTargetOffset.rotfromaxisangle(vrandaxis.normalize3(),RaveRandomFloat()*_parameters->fgraspingnoise*frotratio*fmaxradius);
+                tTargetOffset.rot = quatFromAxisAngle(vrandaxis,RaveRandomFloat()*_parameters->fgraspingnoise*frotratio*fmaxradius);
                 tTargetOffset.trans = tTargetOffset.rotate(-ab.pos)+ab.pos+vrandtrans;
             }
         }
@@ -119,7 +119,8 @@ public:
             _robot->SetTransform(Transform()); // this is necessary to reset any 'randomness' introduced from the current state
 
             if( !!pmanip ) {
-                tbase.rotfromaxisangle(pmanip->GetDirection(),_parameters->ftargetroll);
+                tbase.rot = quatFromAxisAngle(pmanip->GetDirection(),_parameters->ftargetroll);
+                tbase.trans = Vector(0,0,0);
 
                 // set the robot so that its palm is facing the approach direction find the closest rotation
                 Transform torient; torient.rot = quatRotateDirection(pmanip->GetDirection(), _parameters->vtargetdirection);

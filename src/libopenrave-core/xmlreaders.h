@@ -599,7 +599,7 @@ namespace OpenRAVEXMLParser
                 _plink.reset(new KinBody::Link(pparent));
 
             if( linkname.size() > 0 )
-                _plink->name = linkname;
+                _plink->_name = linkname;
     
             if( bStaticSet )
                 _plink->bStatic = bStatic;
@@ -734,7 +734,7 @@ namespace OpenRAVEXMLParser
                 else if( xmlname == "rotationaxis" ) {
                     Vector vaxis; dReal fangle=0;
                     _ss >> vaxis.x >> vaxis.y >> vaxis.z >> fangle;
-                    Transform tnew; tnew.rotfromaxisangle(vaxis.normalize3(), fangle * PI / 180.0f);
+                    Transform tnew; tnew.rot = quatFromAxisAngle(vaxis, fangle * PI / 180.0f);
                     _itgeomprop->_t.rot = (tnew*_itgeomprop->_t).rot;
                 }
                 else if( xmlname == "quat" ) {
@@ -765,7 +765,7 @@ namespace OpenRAVEXMLParser
                     if( _itgeomprop->type == KinBody::Link::GEOMPROPERTIES::GeomCylinder ) { // axis has to point on y
                         // rotate on x axis by pi/2
                         Transform trot;
-                        trot.rotfromaxisangle(Vector(1, 0, 0), PI/2);
+                        trot.rot = quatFromAxisAngle(Vector(1, 0, 0), PI/2);
                         _itgeomprop->_t.rot = (_itgeomprop->_t*trot).rot;
                     }
 
@@ -979,7 +979,7 @@ namespace OpenRAVEXMLParser
             else if( xmlname == "rotationaxis" ) {
                 Vector vaxis; dReal fangle=0;
                 _ss >> vaxis.x >> vaxis.y >> vaxis.z >> fangle;
-                Transform tnew; tnew.rotfromaxisangle(vaxis.normalize3(), fangle * PI / 180.0f);
+                Transform tnew; tnew.rot = quatFromAxisAngle(vaxis, fangle * PI / 180.0f);
                 _plink->_t.rot = (tnew*_plink->_t).rot;
             }
             else if( xmlname == "quat" ) {
@@ -1051,14 +1051,13 @@ namespace OpenRAVEXMLParser
     public:
     JointXMLReader(KinBody::JointPtr& pjoint, KinBodyPtr pparent, const std::list<std::pair<std::string,std::string> >& atts) : _pjoint(pjoint) {
             _bNegateJoint = false;
-            bDisabled = false;
             _pparent = pparent;
             _pjoint.reset(new KinBody::Joint(pparent));
             _pjoint->type = KinBody::Joint::JointHinge;
 
             FOREACHC(itatt,atts) {
                 if( itatt->first == "name" ) {
-                    _pjoint->name = itatt->second;
+                    _pjoint->_name = itatt->second;
                 }
                 else if( itatt->first == "type" ) {
                     if( stricmp(itatt->second.c_str(), "hinge") == 0 )
@@ -1081,7 +1080,7 @@ namespace OpenRAVEXMLParser
                     }
                 }
                 else if( itatt->first == "enable" ) {
-                    bDisabled = stricmp(itatt->second.c_str(), "false") == 0 || itatt->second=="0";
+                    _pjoint->_bActive = !(stricmp(itatt->second.c_str(), "false") == 0 || itatt->second=="0");
                 }
                 else if( itatt->first == "mimic" ) {
                     RAVELOG_WARN("mimic attribute on <joint> tag is deprecated! Use mimic_pos, mimic_vel, and mimic_accel\n");
@@ -1144,8 +1143,6 @@ namespace OpenRAVEXMLParser
             FOREACH(it,_pjoint->_vweights)
                 *it = 1;
         }
-
-        bool IsDisabled() const { return bDisabled; }
 
         virtual ProcessElement startElement(const std::string& xmlname, const std::list<std::pair<std::string,std::string> >& atts)
         {
@@ -1259,7 +1256,7 @@ namespace OpenRAVEXMLParser
 
                 switch(_pjoint->type) {
                 case KinBody::Joint::JointHinge:
-                    _pjoint->tLeft.rotfromaxisangle(_pjoint->vAxes[0], _pjoint->offset);
+                    _pjoint->tLeft.rot = quatFromAxisAngle(_pjoint->vAxes[0], _pjoint->offset);
                     _pjoint->tLeft.trans = _pjoint->vanchor;
                     _pjoint->tRight.trans = -_pjoint->vanchor;
                     _pjoint->tRight = _pjoint->tRight * trel;
@@ -1324,7 +1321,7 @@ namespace OpenRAVEXMLParser
                 }
             
                 if( !_pjoint->bodies[index] && bQuery ) {
-                    RAVELOG_WARN(str(boost::format("Failed to find body %s for joint %s\n")%linkname%_pjoint->name));
+                    RAVELOG_WARN(str(boost::format("Failed to find body %s for joint %s\n")%linkname%_pjoint->_name));
                     GetXMLErrorCount()++;
                 }
             }
@@ -1457,7 +1454,6 @@ namespace OpenRAVEXMLParser
         KinBody::LinkPtr _offsetfrom; ///< all transforms are relative to this body
         KinBodyPtr _pparent;
         KinBody::JointPtr& _pjoint;
-        bool bDisabled; // if true, joint is not counted as a controllable degree of freedom
         bool _bNegateJoint;
         string _processingtag;
     };
@@ -1851,15 +1847,14 @@ namespace OpenRAVEXMLParser
                     else if( xmlname == "joint" ) {
                         _pjoint->dofindex = _pchain->GetDOF();
                         boost::shared_ptr<JointXMLReader> pjointreader = boost::dynamic_pointer_cast<JointXMLReader>(_pcurreader);
-
-                        if( pjointreader->IsDisabled() ) {
-                            _pjoint->jointindex = -1;
-                            _pjoint->dofindex = -1;
-                            _pchain->_vecPassiveJoints.push_back(_pjoint);
-                        }
-                        else {
+                        if( _pjoint->_bActive ) {
                             _pjoint->jointindex = (int)_pchain->_vecjoints.size();
                             _pchain->_vecjoints.push_back(_pjoint);
+                        }
+                        else {
+                            _pjoint->jointindex = -1;
+                            _pjoint->dofindex = -1;
+                            _pchain->_vPassiveJoints.push_back(_pjoint);
                         }
                         BOOST_ASSERT( _pjoint->dofindex < _pchain->GetDOF());
                         _pjoint.reset();
@@ -1909,7 +1904,7 @@ namespace OpenRAVEXMLParser
                 else if( xmlname == "rotationaxis" ) {
                     Vector vaxis; dReal fangle=0;
                     _ss >> vaxis.x >> vaxis.y >> vaxis.z >> fangle;
-                    Transform tnew; tnew.rotfromaxisangle(vaxis.normalize3(), fangle * PI / 180.0f);
+                    Transform tnew; tnew.rot = quatFromAxisAngle(vaxis, fangle * PI / 180.0f);
                     _trans.rot = (tnew*_trans).rot;
                 }
                 else if( xmlname == "quat" ) {
@@ -1947,11 +1942,12 @@ namespace OpenRAVEXMLParser
                     _bOverwriteTransparency = true;
                 }
                 else if( xmlname == "jointvalues" ) {
-                    _vjointvalues = vector<dReal>((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
+                    _vjointvalues.reset(new std::vector<dReal>((istream_iterator<dReal>(_ss)), istream_iterator<dReal>()));
                 }
 
-                if( xmlname !=_processingtag )
+                if( xmlname !=_processingtag ) {
                     RAVELOG_WARN(str(boost::format("invalid tag %s!=%s\n")%xmlname%_processingtag));
+                }
                 _processingtag = "";
             }
             else if( InterfaceXMLReader::endElement(xmlname) ) {
@@ -1963,10 +1959,12 @@ namespace OpenRAVEXMLParser
 
                 // add prefix
                 if( _prefix.size() > 0 ) {
-                    for(vector<KinBody::LinkPtr>::iterator itlink = _pchain->_veclinks.begin()+rootoffset; itlink != _pchain->_veclinks.end(); ++itlink)
-                        (*itlink)->name = _prefix + (*itlink)->name;
-                    for(vector<KinBody::JointPtr>::iterator itjoint = _pchain->_vecjoints.begin()+rootjoffset; itjoint != _pchain->_vecjoints.end(); ++itjoint)
-                        (*itjoint)->name = _prefix +(*itjoint)->name;
+                    for(vector<KinBody::LinkPtr>::iterator itlink = _pchain->_veclinks.begin()+rootoffset; itlink != _pchain->_veclinks.end(); ++itlink) {
+                        (*itlink)->_name = _prefix + (*itlink)->_name;
+                    }
+                    for(vector<KinBody::JointPtr>::iterator itjoint = _pchain->_vecjoints.begin()+rootjoffset; itjoint != _pchain->_vecjoints.end(); ++itjoint) {
+                        (*itjoint)->_name = _prefix +(*itjoint)->_name;
+                    }
                 }
 
                 if( _bOverwriteDiffuse ) {
@@ -1994,16 +1992,9 @@ namespace OpenRAVEXMLParser
                 // transform all the bodies with trans
                 Transform cur;
 
-                for(vector<KinBody::LinkPtr>::iterator itlink = _pchain->_veclinks.begin()+rootoffset; itlink != _pchain->_veclinks.end(); ++itlink)
+                for(vector<KinBody::LinkPtr>::iterator itlink = _pchain->_veclinks.begin()+rootoffset; itlink != _pchain->_veclinks.end(); ++itlink) {
                     (*itlink)->SetTransform(_trans * (*itlink)->GetTransform());
-
-                if( _vjointvalues.size() > 0 ) {
-                    if( _vjointvalues.size() == _pchain->GetJoints().size() )
-                        _pchain->SetDOFValues(_vjointvalues);
-                    else
-                        RAVELOG_WARN(str(boost::format("jointvalues for body %s wrong number (%d!=%d)\n")%_pchain->GetName()%_vjointvalues.size()%_pchain->GetJoints().size()));
                 }
-        
                 Vector com = _pchain->GetCenterOfMass();
                 RAVELOG_VERBOSE("%s: COM = (%f,%f,%f)\n", _pchain->GetName().c_str(), com.x, com.y, com.z);
                 return true;
@@ -2022,6 +2013,7 @@ namespace OpenRAVEXMLParser
             }
         }
 
+        const boost::shared_ptr< std::vector<dReal> > GetJointValues() { return _vjointvalues; }
     protected:
         KinBodyPtr _pchain;
         Transform _trans;
@@ -2041,7 +2033,7 @@ namespace OpenRAVEXMLParser
 
         RaveVector<float> _diffusecol, _ambientcol;
         float _transparency;
-        vector<dReal> _vjointvalues;
+        boost::shared_ptr< std::vector<dReal> > _vjointvalues;
 
         string _processingtag; /// if not empty, currently processing
         bool _bOverwriteDiffuse, _bOverwriteAmbient, _bOverwriteTransparency;
@@ -2308,7 +2300,7 @@ namespace OpenRAVEXMLParser
             else if( xmlname == "rotationaxis" ) {
                 Vector vaxis; dReal fangle=0;
                 _ss >> vaxis.x >> vaxis.y >> vaxis.z >> fangle;
-                Transform tnew; tnew.rotfromaxisangle(vaxis.normalize3(), fangle * PI / 180.0f);
+                Transform tnew; tnew.rot = quatFromAxisAngle(vaxis, fangle * PI / 180.0f);
                 _pmanip->_tGrasp.rot = (tnew*_pmanip->_tGrasp).rot;
             }
             else if( xmlname == "rotationmat" ) {
@@ -2452,7 +2444,7 @@ namespace OpenRAVEXMLParser
             else if( xmlname == "rotationaxis" ) {
                 Vector vaxis; dReal fangle=0;
                 _ss >> vaxis.x >> vaxis.y >> vaxis.z >> fangle;
-                Transform tnew; tnew.rotfromaxisangle(vaxis.normalize3(), fangle * PI / 180.0f);
+                Transform tnew; tnew.rot = quatFromAxisAngle(vaxis, fangle * PI / 180.0f);
                 _psensor->trelative.rot = (tnew*_psensor->trelative).rot;
             }
             else if( xmlname == "rotationmat" ) {
@@ -2544,8 +2536,15 @@ namespace OpenRAVEXMLParser
         virtual bool endElement(const std::string& xmlname)
         {
             if( !!_pcurreader ) {
-                if( _pcurreader->endElement(xmlname) )
+                if( _pcurreader->endElement(xmlname) ) {
+                    KinBodyXMLReaderPtr kinbodyreader = boost::dynamic_pointer_cast<KinBodyXMLReader>(_pcurreader);
+                    if( !!kinbodyreader ) {
+                        if( !_vjointvalues ) {
+                            _vjointvalues = kinbodyreader->GetJointValues();
+                        }
+                    }
                     _pcurreader.reset();
+                }
                 _probot = RaveInterfaceCast<RobotBase>(_pinterface); // might be updated by readers
                 return false;
             }
@@ -2558,7 +2557,7 @@ namespace OpenRAVEXMLParser
                 else if( xmlname == "rotationaxis" ) {
                     Vector vaxis; dReal fangle=0;
                     _ss >> vaxis.x >> vaxis.y >> vaxis.z >> fangle;
-                    Transform tnew; tnew.rotfromaxisangle(vaxis.normalize3(), fangle * PI / 180.0f);
+                    Transform tnew; tnew.rot = quatFromAxisAngle(vaxis, fangle * PI / 180.0f);
                     _trans.rot = (tnew*_trans).rot;
                 }
                 else if( xmlname == "quat" ) {
@@ -2575,7 +2574,7 @@ namespace OpenRAVEXMLParser
                 else if( xmlname == "controller" ) {
                 }
                 else if( xmlname == "jointvalues" ) {
-                    _vjointvalues = vector<dReal>((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
+                    _vjointvalues.reset(new std::vector<dReal>((istream_iterator<dReal>(_ss)), istream_iterator<dReal>()));
                 }
 
                 if( xmlname !=_processingtag ) {
@@ -2595,12 +2594,12 @@ namespace OpenRAVEXMLParser
                 if( _prefix.size() > 0 ) {
                     vector<KinBody::LinkPtr>::iterator itlink = _probot->_veclinks.begin()+rootoffset;
                     while(itlink != _probot->_veclinks.end()) {
-                        (*itlink)->name = _prefix + (*itlink)->name;
+                        (*itlink)->_name = _prefix + (*itlink)->_name;
                         ++itlink;
                     }
                     vector<KinBody::JointPtr>::iterator itjoint = _probot->_vecjoints.begin()+rootjoffset;
                     while(itjoint != _probot->_vecjoints.end()) {
-                        (*itjoint)->name = _prefix +(*itjoint)->name;
+                        (*itjoint)->_name = _prefix +(*itjoint)->_name;
                         ++itjoint;
                     }
                     vector<RobotBase::AttachedSensorPtr>::iterator itsensor = _probot->GetAttachedSensors().begin()+rootsoffset;
@@ -2622,14 +2621,6 @@ namespace OpenRAVEXMLParser
                     ++itlink;
                 }
         
-                if( _vjointvalues.size() > 0 ) {
-                    if( _vjointvalues.size() == _probot->GetJoints().size() ) {
-                        _probot->SetDOFValues(_vjointvalues);
-                    }
-                    else
-                        RAVELOG_WARN(str(boost::format("jointvalues for body %s wrong number (%d!=%d)\n")%_probot->GetName()%_vjointvalues.size()%_probot->GetJoints().size()));
-                }
-
                 // forces robot to reupdate its internal objects
                 _probot->SetTransform(_probot->GetTransform());
         
@@ -2652,6 +2643,8 @@ namespace OpenRAVEXMLParser
             }
         }
 
+        const boost::shared_ptr< std::vector<dReal> > GetJointValues() { return _vjointvalues; }
+
     protected:
         RobotBasePtr _probot;
         InterfaceBasePtr _pcontroller; ///< controller to set the robot at
@@ -2659,7 +2652,7 @@ namespace OpenRAVEXMLParser
         string _prefix;
         string _processingtag;
 
-        vector<dReal> _vjointvalues;
+        boost::shared_ptr<std::vector<dReal> >  _vjointvalues;
         RobotBase::AttachedSensorPtr _psensor;
 
         Transform _trans;
@@ -2773,7 +2766,7 @@ namespace OpenRAVEXMLParser
                 else if( xmlname == "rotationaxis" ) {
                     Vector vaxis; dReal fangle=0;
                     _ss >> vaxis.x >> vaxis.y >> vaxis.z >> fangle;
-                    Transform tnew; tnew.rotfromaxisangle(vaxis.normalize3(), fangle * PI / 180.0f);
+                    Transform tnew; tnew.rot = quatFromAxisAngle(vaxis, fangle * PI / 180.0f);
                     _tsensor.rot = (tnew*_tsensor).rot;
                 }
                 else if( xmlname == "rotationmat" ) {
@@ -2839,7 +2832,7 @@ namespace OpenRAVEXMLParser
                 }
             }
             tCamera.trans = Vector(0, 1.5f, 0.8f);
-            tCamera.rotfromaxisangle(Vector(1, 0, 0), (dReal)-0.5);
+            tCamera.rot = quatFromAxisAngle(Vector(1, 0, 0), (dReal)-0.5);
             vBkgndColor = Vector(1,1,1);
             bTransSpecified = false;
         }
@@ -2891,12 +2884,22 @@ namespace OpenRAVEXMLParser
                     }
 
                     if( !!boost::dynamic_pointer_cast<RobotXMLReader>(_pcurreader) ) {
+                        boost::shared_ptr<RobotXMLReader> robotreader = boost::dynamic_pointer_cast<RobotXMLReader>(_pcurreader);
                         BOOST_ASSERT(_pinterface->GetInterfaceType()==PT_Robot);
-                        _penv->AddRobot(RaveInterfaceCast<RobotBase>(_pinterface));
+                        RobotBasePtr probot = RaveInterfaceCast<RobotBase>(_pinterface);
+                        _penv->AddRobot(probot);
+                        if( !!robotreader->GetJointValues() ) {
+                            probot->SetDOFValues(*robotreader->GetJointValues());
+                        }
                     }
                     else if( !!boost::dynamic_pointer_cast<KinBodyXMLReader>(_pcurreader) ) {
+                        KinBodyXMLReaderPtr kinbodyreader = boost::dynamic_pointer_cast<KinBodyXMLReader>(_pcurreader);
                         BOOST_ASSERT(_pinterface->GetInterfaceType()==PT_KinBody);
-                        _penv->AddKinBody(RaveInterfaceCast<KinBody>(_pinterface));
+                        KinBodyPtr pbody = RaveInterfaceCast<KinBody>(_pinterface);
+                        _penv->AddKinBody(pbody);
+                        if( !!kinbodyreader->GetJointValues() ) {
+                            pbody->SetDOFValues(*kinbodyreader->GetJointValues());
+                        }
                     }
                     else if( !!boost::dynamic_pointer_cast<SensorXMLReader>(_pcurreader) ) {
                         BOOST_ASSERT(_pinterface->GetInterfaceType()==PT_Sensor);
@@ -2936,7 +2939,7 @@ namespace OpenRAVEXMLParser
             else if( xmlname == "camrotaxis" || xmlname == "camrotationaxis" ) {
                 Vector vaxis; dReal fangle=0;
                 _ss >> vaxis.x >> vaxis.y >> vaxis.z >> fangle;
-                tCamera.rotfromaxisangle(vaxis.normalize3(), fangle * PI / 180.0f);
+                tCamera.rot = quatFromAxisAngle(vaxis, fangle * PI / 180.0f);
                 bTransSpecified = true;
             }
             else if( xmlname == "camrotmat" ) {

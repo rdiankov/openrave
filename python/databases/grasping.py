@@ -284,7 +284,7 @@ class GraspingModel(OpenRAVEModel):
                 directiondelta = options.directiondelta
             updateenv = True#options.useviewer
         # check for specific robots
-        if self.robot.GetRobotStructureHash() == 'a7a10f9467fe3eba4f72596f21903a5d' and self.manip.GetName() == 'arm' and self.target.GetKinematicsGeometryHash() == 'bbf03c6db8efc712a765f955a27b0d0f': # barrett hand
+        if self.robot.GetRobotStructureHash() == 'dc6974d07d6adf9db8b790f49e304ffa' or self.robot.GetRobotStructureHash() == 'd51f2af3be3f82ae9a9393af36e72bcd': # wam+barretthand
             if preshapes is None:
                 preshapes=array(((0.5,0.5,0.5,pi/3),(0.5,0.5,0.5,0),(0,0,0,pi/2)))
             if graspingnoise is None:
@@ -328,6 +328,7 @@ class GraspingModel(OpenRAVEModel):
         N = approachrays.shape[0]
         with self.env:
             Ttarget = self.target.GetTransform()
+            Trobotorig = self.robot.GetTransform()
 
         # transform each ray into the global coordinate system in order to plot it
         gapproachrays = c_[dot(approachrays[:,0:3],transpose(Ttarget[0:3,0:3]))+tile(Ttarget[0:3,3],(N,1)),dot(approachrays[:,3:6],transpose(Ttarget[0:3,0:3]))]
@@ -381,6 +382,7 @@ class GraspingModel(OpenRAVEModel):
                             grasp[self.graspindices.get('igrasptrans')] = reshape(transpose(Tlocalgrasp[0:3,0:4]),12)
                             grasp[self.graspindices.get('grasptrans_nocol')] = reshape(transpose(Tlocalgrasp_nocol[0:3,0:4]),12)
                             grasp[self.graspindices.get('forceclosure')] = mindist if mindist is not None else 0
+                            self.robot.SetTransform(Trobotorig) # transform back to original position for checkgraspfn
                             if not forceclosure or mindist >= forceclosurethreshold:
                                 if checkgraspfn is None or checkgraspfn(contacts,finalconfig,grasp,{'mindist':mindist,'volume':volume}):
                                     print 'found good grasp',len(self.grasps),'config: ',array(finalconfig[0])[self.manip.GetGripperIndices()]

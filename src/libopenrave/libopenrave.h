@@ -147,6 +147,11 @@ inline std::string tolowerstring(const std::string & s)
 std::string GetMD5HashString(const std::string& s);
 std::string GetMD5HashString(const std::vector<uint8_t>& v);
 
+/// \brief search and replace all for all pairs
+///
+/// \return returns a reference to the out string
+std::string& SearchAndReplace(std::string& out, const std::string& in, const std::vector< std::pair<std::string, std::string> >& pairs);
+
 #define SERIALIZATION_PRECISION 4
 template<typename T>
 inline T SerializationValue(T f)
@@ -230,17 +235,22 @@ inline static dReal TransformDistanceFast(const Transform& t1, const Transform& 
 
 void subtractstates(std::vector<dReal>& q1, const std::vector<dReal>& q2);
 
+// if modifying check modify ravep.h too!
 inline bool IsValidCharInName(char c) { return isalnum(c) || c == '_' || c == '-' || c == '.' || c == '/'; }
- inline bool IsValidName(const std::string& s) {
+inline bool IsValidName(const std::string& s) {
     if( s.size() == 0 )
         return false;
     return std::count_if(s.begin(), s.end(), IsValidCharInName) == (int)s.size();
 }
 
-template<class T> struct index_cmp {
-index_cmp(const T arr) : arr(arr) {}
+template<typename T>
+struct index_cmp
+{
+    index_cmp(const T arr) : arr(arr) {}
     bool operator()(const size_t a, const size_t b) const
-    { return arr[a] < arr[b]; }
+    {
+        return arr[a] < arr[b];
+    }
     const T arr;
 };
 
@@ -266,6 +276,201 @@ smart_pointer_deleter(P const & p, const boost::function<void(void const*)>& del
         return p_;
     }
 };
+
+template <typename IKReal>
+inline void polyroots2(const IKReal* rawcoeffs, IKReal* rawroots, int& numroots)
+{
+    IKReal det = rawcoeffs[1]*rawcoeffs[1]-4*rawcoeffs[0]*rawcoeffs[2];
+    if( det < 0 ) {
+        numroots=0;
+    }
+    else if( det == 0 ) {
+        rawroots[0] = -0.5*rawcoeffs[1]/rawcoeffs[0];
+        numroots = 1;
+    }
+    else {
+        det = IKsqrt(det);
+        rawroots[0] = (-rawcoeffs[1]+det)/(2*rawcoeffs[0]);
+        rawroots[1] = (-rawcoeffs[1]-det)/(2*rawcoeffs[0]);//rawcoeffs[2]/(rawcoeffs[0]*rawroots[0]);
+        numroots = 2;
+    }
+}
+
+/// \brief Durand-Kerner polynomial root finding method
+template <typename IKReal, int D>
+inline void polyroots(const IKReal* rawcoeffs, IKReal* rawroots, int& numroots)
+{
+    using std::complex;
+    IKFAST_ASSERT(rawcoeffs[0] != 0);
+    const IKReal tol = 128.0*std::numeric_limits<IKReal>::epsilon();
+    complex<IKReal> coeffs[D];
+    const int maxsteps = 50;
+    for(int i = 0; i < D; ++i) {
+        coeffs[i] = complex<IKReal>(rawcoeffs[i+1]/rawcoeffs[0]);
+    }
+    complex<IKReal> roots[D];
+    IKReal err[D];
+    roots[0] = complex<IKReal>(1,0);
+    roots[1] = complex<IKReal>(0.4,0.9); // any complex number not a root of unity is works
+    err[0] = 1.0;
+    err[1] = 1.0;
+    for(int i = 2; i < D; ++i) {
+        roots[i] = roots[i-1]*roots[1];
+        err[i] = 1.0;
+    }
+    for(int step = 0; step < maxsteps; ++step) {
+        bool changed = false;
+        for(int i = 0; i < D; ++i) {
+            if ( err[i] >= tol ) {
+                changed = true;
+                // evaluate
+                complex<IKReal> x = roots[i] + coeffs[0];
+                for(int j = 1; j < D; ++j) {
+                    x = roots[i] * x + coeffs[j];
+                }
+                for(int j = 0; j < D; ++j) {
+                    if( i != j ) {
+                        if( roots[i] != roots[j] ) {
+                            x /= (roots[i] - roots[j]);
+                        }
+                    }
+                }
+                roots[i] -= x;
+                err[i] = abs(x);
+            }
+        }
+        if( !changed ) {
+            break;
+        }
+    }
+    numroots = 0;
+    for(int i = 0; i < D; ++i) {
+        if( IKabs(imag(roots[i])) < std::numeric_limits<IKReal>::epsilon() ) {
+            rawroots[numroots++] = real(roots[i]);
+        }
+    }
+}
+
+/** \brief Intersection between a conic section and a unit circle
+
+    The general method to solve an intersection of two conics C1 and C2 is to first
+    note that any solution to their intersection is also a solution of
+    x^T C x = 0, where C = t0*C0 + t1*C1
+    for t0, t1 in Reals. Without loss of generality, we set t1 = 1, and find t0 when
+    C becomes degenerate, ie det(C) = 0. This produces a cubic equation in t0,
+    which gives 4 solutions. Gathering all the equations produced by the degenerate
+    conic should give rise to two equations of lines. Intersect these lines with the simpler of the
+    two conics, the unit circle: c^2+s^2-1 = 0
+*/
+template <typename IKReal>
+inline void conicsolver(IKReal _C0[6], IKReal roots[4], int& numroots)
+{
+    numroots = 0;
+    // have to normalize _C0
+    IKReal maxval = IKabs(_C0[0]);
+    for(int i = 1; i < 6; ++i) {
+        if( maxval < IKabs(_C0[i]) ) {
+            maxval = IKabs(_C0[i]);
+        }
+    }
+    IKReal C0[6];
+    for(int i = 0; i < 6; ++i) {
+        C0[i]=_C0[i]/maxval;
+    }
+    IKReal rawcoeffs[4] = {-1,
+                           C0[5] - C0[0] - C0[3],
+                           C0[0]*C0[5] + C0[3]*C0[5] - C0[0]*C0[3] + C0[1]*C0[1] - C0[2]*C0[2] - C0[4]*C0[4],
+                           C0[0]*C0[3]*C0[5] + 2*C0[1]*C0[2]*C0[4] - C0[0]*C0[4]*C0[4] - C0[3]*C0[2]*C0[2] - C0[5]*C0[1]*C0[1]};
+    IKReal proots[3];
+    int numproots, numyroots;
+    polyroots<IKReal,3>(rawcoeffs,proots,numproots);
+    if( numproots < 1 ) {
+        return;
+    }
+    int iroot=0;
+    IKReal a, b, c, d, e, f;
+    a = C0[0]+proots[iroot]; b = C0[1]; c = C0[3]+proots[iroot]; d = C0[2]; e = C0[4]; f = C0[5]-proots[iroot];
+    IKReal adjugate[9] = {c*f-e*e, -b*f+e*d, b*e-c*d, -b*f+d*e, a*f-d*d, -a*e+b*d, b*e-d*c, -a*e+d*b, a*c-b*b};
+    // find the greatest absolute value of adjugate and take that column
+    int maxindex = 0;
+    IKReal val = IKabs(adjugate[maxindex]);
+    for(int i = 1; i < 9; ++i) {
+        IKReal newval = IKabs(adjugate[i]);
+        if( val < newval ) {
+            val = newval;
+            maxindex = i;
+        }
+    }
+    maxindex = maxindex%3;
+    if( adjugate[0] > 0 || adjugate[4] > 0 || adjugate[8] > 0 || adjugate[4*maxindex] >= 0 ) {
+        // according to the structure of the matrix, should be always negative if a solution exists...
+        return;
+    }
+    IKReal bmult = 1.0/IKsqrt(-adjugate[4*maxindex]);
+    IKReal p[3] = {adjugate[maxindex]*bmult, adjugate[3+maxindex]*bmult, adjugate[6+maxindex]*bmult}; // intersection point
+    // C = C0 - [p_x] = 2gh^t, C is rank1
+    IKReal C[9] = {a,b+p[2],d-p[1],b-p[2],c,e+p[0],d+p[1],e-p[0],f};
+    maxindex = 0;
+    val = IKabs(C[maxindex]);
+    for(int i = 1; i < 9; ++i) {
+        IKReal newval = IKabs(C[i]);
+        if( val < newval ) {
+            val = newval;
+            maxindex = i;
+        }
+    }
+    int row = maxindex/3;
+    int col = maxindex%3;
+    IKReal lineequation[3], coeffs[3], yintersections[2];
+    for(int i = 0; i < 2; ++i) {
+        if( i == 0 ) {
+            lineequation[0] = C[3*row];
+            lineequation[1] = C[3*row+1];
+            lineequation[2] = C[3*row+2];
+        }
+        else {
+            lineequation[0] = C[col];
+            lineequation[1] = C[3+col];
+            lineequation[2] = C[6+col];
+        }
+
+        if( IKabs(lineequation[0]) < std::numeric_limits<IKReal>::epsilon() ) {
+            yintersections[0] = -lineequation[2]/lineequation[1];
+            IKReal x = 1-yintersections[0]*yintersections[0];
+            if( x <= 0 && x > -std::numeric_limits<IKReal>::epsilon() ) {
+                roots[numroots++] = yintersections[0] > 0 ? M_PI_2 : -M_PI_2;
+            }
+            else {
+                x = IKsqrt(x);
+                roots[numroots++] = IKatan2(yintersections[0], x);
+                roots[numroots] = M_PI - roots[numroots-1]; numroots++;
+            }
+        }
+        else {
+            coeffs[0] = lineequation[0]*lineequation[0]+lineequation[1]*lineequation[1];
+            coeffs[1] = 2*lineequation[1]*lineequation[2];
+            coeffs[2] = lineequation[2]*lineequation[2]-lineequation[0]*lineequation[0];
+            polyroots2<IKReal>(coeffs,yintersections,numyroots);
+            for(int j = 0; j < numyroots; ++j) {
+                // the mathematical solution would be: IKatan2(yintersections[j],-(lineequation[1]*yintersections[j]+lineequation[2])/lineequation[0]);
+                // however due to numerical imprecisions, it is better to compute sqrt(1-yintersections[j]*yintersections[j]) and choose sign 
+                IKReal x = 1-yintersections[j]*yintersections[j];
+                if( x <= 0 ) {
+                    if( x > -std::numeric_limits<IKReal>::epsilon() ) {
+                        roots[numroots++] = IKatan2(yintersections[j],-(lineequation[1]*yintersections[j]+lineequation[2])/lineequation[0]);
+                    }
+                }
+                else {
+                    x = IKsqrt(x);
+                    if( (lineequation[1]*yintersections[j]+lineequation[2])/lineequation[0] > 0 ) {
+                        x = -x;
+                    }
+                    roots[numroots++] = IKatan2(yintersections[j],x);
+                }
+            }
+        }
+    }
+}
 
 }
 

@@ -18,6 +18,7 @@
 #include <fparser.hh>
 #include <algorithm>
 #include <boost/algorithm/string.hpp> // boost::trim
+#include <boost/lexical_cast.hpp>
 
 #define CHECK_INTERNAL_COMPUTATION { \
     if( !_bHierarchyComputed ) { \
@@ -551,13 +552,11 @@ KinBody::Link::Link(KinBodyPtr parent)
     _parent = parent;
     bStatic = false;
     _index = -1;
-    _parentlinkindex = -1;
     _bIsEnabled = true;
 }
 
 KinBody::Link::~Link()
 {
-    //RAVELOG_VERBOSE(str(boost::format("destroy link %s\n")%GetName()));
 }
 
 bool KinBody::Link::IsEnabled() const
@@ -575,6 +574,20 @@ void KinBody::Link::Enable(bool bEnable)
         parent->_nNonAdjacentLinkCache &= ~AO_Enabled;
         _bIsEnabled = bEnable;
     }
+}
+
+void KinBody::Link::GetParentLinks(std::vector< boost::shared_ptr<Link> >& vParentLinks) const
+{
+    KinBodyConstPtr parent(_parent);
+    vParentLinks.resize(_vParentLinks.size());
+    for(size_t i = 0; i < _vParentLinks.size(); ++i) {
+        vParentLinks[i] = parent->GetLinks().at(_vParentLinks[i]);
+    }
+}
+
+bool KinBody::Link::IsParentLink(boost::shared_ptr<Link const> plink) const
+{
+    return find(_vParentLinks.begin(),_vParentLinks.end(),plink->GetIndex()) != _vParentLinks.end();
 }
 
 AABB KinBody::Link::ComputeAABB() const
@@ -686,8 +699,8 @@ bool KinBody::Link::ValidateContactNormal(const Vector& position, Vector& normal
     if( _listGeomProperties.size() == 1) {
         return _listGeomProperties.front().ValidateContactNormal(position,normal);
     }
-    else {
-        RAVELOG_WARN("cannot validate normal when there is more then one geometry (do not know colliding geometry\n");
+    else if( _listGeomProperties.size() > 1 ) {
+        RAVELOG_VERBOSE(str(boost::format("cannot validate normal when there is more then one geometry in link '%s' (do not know colliding geometry")%_name));
     }
     return false;
 }
@@ -701,7 +714,7 @@ void KinBody::Link::GetRigidlyAttachedLinks(std::vector<boost::shared_ptr<Link> 
     }
 }
 
-bool KinBody::Link::IsRigidlyAttached(boost::shared_ptr<Link const> plink)
+bool KinBody::Link::IsRigidlyAttached(boost::shared_ptr<Link const> plink) const
 {
     return find(_vRigidlyAttachedLinks.begin(),_vRigidlyAttachedLinks.end(),plink->GetIndex()) != _vRigidlyAttachedLinks.end();
 }
@@ -729,8 +742,10 @@ KinBody::Joint::Joint(KinBodyPtr parent)
     fMaxTorque = 1e5f;
     offset = 0;
     jointindex=-1;
+    _parentlinkindex = -1;
     dofindex = -1; // invalid index
     _bIsCircular = false;
+    _bActive = true;
 }
 
 KinBody::Joint::~Joint()
@@ -756,8 +771,8 @@ bool KinBody::Joint::IsStatic() const
         KinBodyConstPtr parent(_parent);
         for(int i = 0; i < GetDOF(); ++i) {
             if( !!_vmimic.at(i) ) {
-                FOREACHC(it, _vmimic.at(i)->_setjointindices) {
-                    if( !parent->GetJoints().at(*it)->IsStatic() ) {
+                FOREACHC(it, _vmimic.at(i)->_vmimicdofs) {
+                    if( !parent->GetJointFromDOFIndex(it->dofindex)->IsStatic() ) {
                         bstatic = false;
                         break;
                     }
@@ -963,18 +978,42 @@ Vector KinBody::Joint::GetAxis(int iaxis) const
     }
 }
 
+KinBody::LinkPtr KinBody::Joint::GetHierarchyParentLink() const
+{
+    return _parentlinkindex >= 0 ? GetParent()->GetLinks().at(_parentlinkindex) : LinkPtr();
+}
+
+KinBody::LinkPtr KinBody::Joint::GetHierarchyChildLink() const
+{
+    if( !bodies[0] ) {
+        return bodies[1];
+    }
+    else if( !bodies[1] ) {
+        return bodies[0];
+    }
+    else {
+        BOOST_ASSERT(_parentlinkindex>=0);
+        return bodies[0]->GetIndex() == _parentlinkindex ? bodies[1] : bodies[0];
+    }
+}
+
+Vector KinBody::Joint::GetInternalHierarchyAnchor() const
+{
+    return vanchor;
+}
+
 Vector KinBody::Joint::GetInternalHierarchyAxis(int iaxis) const
 {
-    return ( !!bodies[1] && !bodies[1]->IsStatic() && bodies[1] == bodies[0]->GetParentLink() ) ? -vAxes.at(iaxis) : vAxes.at(iaxis);
+    return ( !!bodies[1] && !bodies[1]->IsStatic() && bodies[1]->GetIndex() == _parentlinkindex) ? -vAxes.at(iaxis) : vAxes.at(iaxis);
 }
 
 Transform KinBody::Joint::GetInternalHierarchyLeftTransform() const
 {
-    if( !!bodies[1] && !bodies[1]->IsStatic() && bodies[1] == bodies[0]->GetParentLink() ) {
+    if( !!bodies[1] && !bodies[1]->IsStatic() && bodies[1]->GetIndex() == _parentlinkindex ) {
         // bodies[0] is a child
         Transform tjoint;
         if( GetType() == Joint::JointHinge ) {
-            tjoint.rotfromaxisangle(vAxes.at(0),GetOffset());
+            tjoint.rot = quatFromAxisAngle(vAxes.at(0),GetOffset());
         }
         else if( GetType() == Joint::JointSlider ) {
             tjoint.trans = vAxes.at(0)*(GetOffset());
@@ -983,7 +1022,7 @@ Transform KinBody::Joint::GetInternalHierarchyLeftTransform() const
     }
     Transform tjoint;
     if( GetType() == Joint::JointHinge ) {
-        tjoint.rotfromaxisangle(vAxes.at(0),-GetOffset());
+        tjoint.rot = quatFromAxisAngle(vAxes.at(0),-GetOffset());
     }
     else if( GetType() == Joint::JointSlider ) {
         tjoint.trans = vAxes.at(0)*(-GetOffset());
@@ -993,7 +1032,7 @@ Transform KinBody::Joint::GetInternalHierarchyLeftTransform() const
 
 Transform KinBody::Joint::GetInternalHierarchyRightTransform() const
 {
-    return ( !!bodies[1] && !bodies[1]->IsStatic() && bodies[1] == bodies[0]->GetParentLink() ) ? tinvLeft : tRight;
+    return ( !!bodies[1] && !bodies[1]->IsStatic() && bodies[1]->GetIndex() == _parentlinkindex ) ? tinvLeft : tRight;
 }
 
 void KinBody::Joint::GetVelocities(std::vector<dReal>& pVelocities, bool bAppend) const
@@ -1095,8 +1134,8 @@ void KinBody::Joint::AddTorque(const std::vector<dReal>& pTorques)
 int KinBody::Joint::GetMimicJointIndex() const
 {
     for(int i = 0; i < GetDOF(); ++i) {
-        if( !!_vmimic.at(i) && _vmimic.at(i)->_setjointindices.size() > 0 ) {
-            return *_vmimic.at(i)->_setjointindices.begin();
+        if( !!_vmimic.at(i) && _vmimic.at(i)->_vmimicdofs.size() > 0 ) {
+            return GetParent()->GetJointFromDOFIndex(_vmimic.at(i)->_vmimicdofs.front().dofindex)->GetJointIndex();
         }
     }
     return -1;
@@ -1134,11 +1173,11 @@ std::string KinBody::Joint::GetMimicEquation(int iaxis, int itype, const std::st
         boost::format mathfmt("<math xmlns=\"http://www.w3.org/1998/Math/MathML\">\n%s</math>\n");
         std::vector<std::string> Vars;
         std::string sout;
-        KinBodyPtr parent = GetParent();
-        FOREACHC(itdof, _vmimic.at(iaxis)->_vdofs) {
-            JointPtr pjoint = parent->GetJointFromDOFIndex(*itdof);
+        KinBodyConstPtr parent(_parent);
+        FOREACHC(itdofformat, _vmimic.at(iaxis)->_vdofformat) {
+            JointConstPtr pjoint = itdofformat->GetJoint(parent);
             if( pjoint->GetDOF() > 1 ) {
-                Vars.push_back(str(boost::format("<csymbol>%s_%d</csymbol>")%pjoint->GetName()%(*itdof-pjoint->GetDOFIndex())));
+                Vars.push_back(str(boost::format("<csymbol>%s_%d</csymbol>")%pjoint->GetName()%(int)itdofformat->axis));
             }
             else {
                 Vars.push_back(str(boost::format("<csymbol>%s</csymbol>")%pjoint->GetName()));
@@ -1167,12 +1206,18 @@ std::string KinBody::Joint::GetMimicEquation(int iaxis, int itype, const std::st
     throw openrave_exception(str(boost::format("GetMimicEquation: unsupported math format %s")%format));
 }
 
-const std::vector<int>& KinBody::Joint::GetMimicDOFIndices(int iaxis) const
+void KinBody::Joint::GetMimicDOFIndices(std::vector<int>& vmimicdofs, int iaxis) const
 {
     if( !_vmimic.at(iaxis) ) {
-        throw openrave_exception(str(boost::format("joint %s axis %d is not mimic")%name%iaxis),ORE_InvalidArguments);
+        throw openrave_exception(str(boost::format("joint %s axis %d is not mimic")%GetName()%iaxis),ORE_InvalidArguments);
     }
-    return _vmimic.at(iaxis)->_vdofs;
+    vmimicdofs.resize(0);
+    FOREACHC(it, _vmimic.at(iaxis)->_vmimicdofs) {
+        std::vector<int>::iterator itinsert = std::lower_bound(vmimicdofs.begin(),vmimicdofs.end(), it->dofindex);
+        if( itinsert == vmimicdofs.end() || *itinsert != it->dofindex ) {
+            vmimicdofs.insert(itinsert,it->dofindex);
+        }
+    }
 }
 
 void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, const std::string& veleq, const std::string& acceleq)
@@ -1181,29 +1226,55 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
         _vmimic.at(iaxis).reset();
         return;
     }
-    KinBodyPtr parent = GetParent();
+    KinBodyPtr parent(_parent);
     std::vector<std::string> resultVars;
     boost::shared_ptr<MIMIC> mimic(new MIMIC());
     mimic->_equations.at(0) = poseq;
     mimic->_equations.at(1) = veleq;
     mimic->_equations.at(2) = acceleq;
 
-    mimic->_posfn.reset(new FunctionParserBase<dReal>());
-    int ret = mimic->_posfn->ParseAndDeduceVariables(mimic->_equations[0],resultVars);
+    mimic->_posfn = parent->_CreateFunctionParser();
+    // because openrave joint names can hold symbols like '-' and '.' can affect the equation, so first do a search and replace
+    std::vector< std::pair<std::string, std::string> > jointnamepairs; jointnamepairs.reserve(parent->GetJoints().size());
+    FOREACHC(itjoint,parent->GetJoints()) {
+        if( (*itjoint)->GetName().size() > 0 ) {
+            jointnamepairs.push_back(make_pair((*itjoint)->GetName(),str(boost::format("joint%d")%(*itjoint)->GetJointIndex())));
+        }
+    }
+    size_t index = parent->GetJoints().size();
+    FOREACHC(itjoint,parent->GetPassiveJoints()) {
+        if( (*itjoint)->GetName().size() > 0 ) {
+            jointnamepairs.push_back(make_pair((*itjoint)->GetName(),str(boost::format("joint%d")%index)));
+        }
+        ++index;
+    }
+    std::string eq;
+    int ret = mimic->_posfn->ParseAndDeduceVariables(SearchAndReplace(eq,mimic->_equations[0],jointnamepairs),resultVars);
     if( ret >= 0 ) {
-        throw openrave_exception(str(boost::format("SetMimicEquations: failed to set equation '%s' on %s:%s, at %d. Error is %s\n")%mimic->_equations[0]%parent->GetName()%name%ret%mimic->_posfn->ErrorMsg()),ORE_InvalidArguments);
+        throw openrave_exception(str(boost::format("SetMimicEquations: failed to set equation '%s' on %s:%s, at %d. Error is %s\n")%eq%parent->GetName()%GetName()%ret%mimic->_posfn->ErrorMsg()),ORE_InvalidArguments);
     }
     // process the variables
     FOREACH(itvar,resultVars) {
-        JointPtr pjoint = parent->GetJoint(*itvar);
-        if( !pjoint ) {
-            throw openrave_exception(str(boost::format("SetMimicEquations: failed to set equation '%s' on %s:%s, variable %s is invalid joint\n")%mimic->_equations[0]%parent->GetName()%name%*itvar),ORE_InvalidArguments);
+        MIMIC::DOFFormat dofformat;
+        size_t axisindex = itvar->find('_');
+        if( axisindex != std::string::npos ) {
+            dofformat.jointindex = boost::lexical_cast<uint16_t>(itvar->substr(5,axisindex-5));
+            dofformat.axis = boost::lexical_cast<uint8_t>(itvar->substr(axisindex+1));
         }
-        if( pjoint->GetDOF() > 1 ) {
-            RAVELOG_WARN("do not support multi-dof joints in mimic equations yet\n");
+        else {
+            dofformat.jointindex = boost::lexical_cast<uint16_t>(itvar->substr(5));
+            dofformat.axis = 0;
         }
-        mimic->_vdofs.push_back(pjoint->GetDOFIndex());
-        mimic->_setjointindices.insert(pjoint->GetJointIndex());
+        dofformat.dofindex = -1;
+        JointPtr pjoint = dofformat.GetJoint(parent);
+        if( pjoint->GetDOFIndex() >= 0 && !pjoint->IsMimic(dofformat.axis) ) {
+            dofformat.dofindex = pjoint->GetDOFIndex()+dofformat.axis;
+            MIMIC::DOFHierarchy h;
+            h.dofindex = dofformat.dofindex;
+            h.dofformatindex = mimic->_vdofformat.size();
+            mimic->_vmimicdofs.push_back(h);
+        }
+        mimic->_vdofformat.push_back(dofformat);
     }
 
     stringstream sVars;
@@ -1221,7 +1292,7 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
 
         std::vector<boost::shared_ptr<FunctionParserBase<dReal> > > vfns(resultVars.size());
         // extract the equations
-        const std::string& eq = mimic->_equations[itype];
+        SearchAndReplace(eq,mimic->_equations[itype],jointnamepairs);
         size_t index = eq.find('|');
         while(index != std::string::npos) {
             size_t startindex = index+1;
@@ -1242,10 +1313,10 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
                 throw openrave_exception(str(boost::format("SetMimicEquations: variable %s from velocity equation is not referenced in the position, skipping...")%varname),ORE_InvalidArguments);
             }
             
-            boost::shared_ptr<FunctionParserBase<dReal> > fn(new FunctionParserBase<dReal>());
+            boost::shared_ptr<FunctionParserBase<dReal> > fn(parent->_CreateFunctionParser());
             ret = fn->Parse(sequation,sVars.str());
             if( ret >= 0 ) {
-                throw openrave_exception(str(boost::format("SetMimicEquations: failed to set equation '%s' on %s:%s, at %d. Error is %s\n")%sequation%parent->GetName()%name%ret%fn->ErrorMsg()),ORE_InvalidArguments);
+                throw openrave_exception(str(boost::format("SetMimicEquations: failed to set equation '%s' on %s:%s, at %d. Error is %s\n")%sequation%parent->GetName()%GetName()%ret%fn->ErrorMsg()),ORE_InvalidArguments);
             }
             vfns.at(itnameindex-resultVars.begin()) = fn;
         }
@@ -1265,9 +1336,101 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
         }
     }
     _vmimic.at(iaxis) = mimic;
-    parent->_ParametersChanged(Prop_JointProperties);
+    parent->_ParametersChanged(Prop_JointMimic);
 }
 
+void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int,dReal> >& vpartials, int iaxis, std::map< std::pair<MIMIC::DOFFormat, int>, dReal >& mapcachedpartials) const
+{
+    vpartials.resize(0);
+    if( dofindex >= 0 ) {
+        vpartials.push_back(make_pair(dofindex+iaxis,1.0));
+        return;
+    }
+    if( !_vmimic.at(iaxis) ) {
+        throw openrave_exception(str(boost::format("cannot compute partial velocities of joint %s")%_name));
+    }
+    KinBodyConstPtr parent(_parent);
+    MIMIC::DOFFormat thisdofformat;
+    thisdofformat.dofindex = -1; // always -1 since it is mimiced
+    thisdofformat.axis = iaxis;
+    thisdofformat.jointindex = jointindex;
+    if( jointindex < 0 ) {
+        // this is a weird computation... have to figure out the passive joint index given where it is in parent->GetPassiveJoints()
+        thisdofformat.jointindex = parent->GetJoints().size() + (find(parent->GetPassiveJoints().begin(),parent->GetPassiveJoints().end(),shared_from_this()) - parent->GetPassiveJoints().begin());
+    }
+    std::vector<std::pair<int,dReal> > vtemppartials;
+    vector<dReal> vtempvalues;
+    FOREACHC(itmimicdof, _vmimic[iaxis]->_vmimicdofs) {
+        std::pair<MIMIC::DOFFormat, int> key = make_pair(thisdofformat,itmimicdof->dofindex);
+        std::map< std::pair<MIMIC::DOFFormat, int>, dReal >::iterator it = mapcachedpartials.find(key);
+        if( it == mapcachedpartials.end() ) {
+            // not in the cache so compute using the chain rule
+            if( vtempvalues.size() == 0 ) {
+                FOREACHC(itdofformat, _vmimic[iaxis]->_vdofformat) {
+                    vtempvalues.push_back(itdofformat->GetJoint(parent)->GetValue(itdofformat->axis));
+                }
+            }
+            dReal fvel = _vmimic[iaxis]->_velfns.at(itmimicdof->dofformatindex)->Eval(vtempvalues.size() > 0 ? &vtempvalues[0] : NULL);
+            const MIMIC::DOFFormat& dofformat = _vmimic[iaxis]->_vdofformat.at(itmimicdof->dofformatindex);
+            if( dofformat.GetJoint(parent)->IsMimic(dofformat.axis) ) {
+                dofformat.GetJoint(parent)->_ComputePartialVelocities(vtemppartials,dofformat.axis,mapcachedpartials);
+                dReal fpartial = 0;
+                FOREACHC(itpartial,vtemppartials) {
+                    if( itpartial->first == itmimicdof->dofindex ) {
+                        fpartial += itpartial->second;
+                    }
+                }
+                fvel *= fpartial;
+            }
+            // before pushing back, check for repetition
+            bool badd = true;
+            FOREACH(itpartial,vpartials) {
+                if( itpartial->first == itmimicdof->dofindex ) {
+                    itpartial->second += fvel;
+                    badd = false;
+                    break;
+                }
+            }
+            if( badd ) {
+                vpartials.push_back(make_pair(itmimicdof->dofindex, fvel));
+            }
+        }
+        else {
+            bool badd = true;
+            FOREACH(itpartial,vpartials) {
+                if( itpartial->first == itmimicdof->dofindex ) {
+                    badd = false;
+                    break;
+                }
+            }
+            if( badd ) {
+                vpartials.push_back(make_pair(itmimicdof->dofindex, it->second));
+            }
+        }
+    }
+}
+
+bool KinBody::Joint::MIMIC::DOFFormat::operator <(const KinBody::Joint::MIMIC::DOFFormat& r) const
+{
+    return jointindex < r.jointindex || (jointindex == r.jointindex && (dofindex < r.dofindex || (dofindex == r.dofindex && axis < r.axis)));
+}
+
+bool KinBody::Joint::MIMIC::DOFFormat::operator ==(const KinBody::Joint::MIMIC::DOFFormat& r) const
+{
+    return jointindex == r.jointindex && dofindex == r.dofindex && axis == r.axis;
+}
+
+KinBody::JointPtr KinBody::Joint::MIMIC::DOFFormat::GetJoint(KinBodyPtr parent) const
+{
+    int numjoints = (int)parent->GetJoints().size();
+    return jointindex < numjoints ? parent->GetJoints().at(jointindex) : parent->GetPassiveJoints().at(jointindex-numjoints);
+}
+
+KinBody::JointConstPtr KinBody::Joint::MIMIC::DOFFormat::GetJoint(KinBodyConstPtr parent) const
+{
+    int numjoints = (int)parent->GetJoints().size();
+    return jointindex < numjoints ? parent->GetJoints().at(jointindex) : parent->GetPassiveJoints().at(jointindex-numjoints);
+}
 
 void KinBody::Joint::serialize(std::ostream& o, int options) const
 {
@@ -1358,17 +1521,20 @@ void KinBody::Destroy()
 
     _veclinks.clear();
     _vecjoints.clear();
-    _vDependencyOrderedJoints.clear();
+    _vTopologicallySortedJoints.clear();
+    _vTopologicallySortedJointsAll.clear();
     _vDOFOrderedJoints.clear();
-    _vecPassiveJoints.clear();
-    _vecJointHierarchy.clear();
-    _vecDOFIndices.clear();
+    _vPassiveJoints.clear();
+    _vJointsAffectingLinks.clear();
+    _vDOFIndices.clear();
 
     _setAdjacentLinks.clear();
     FOREACH(it,_setNonAdjacentLinks) {
         it->clear();
     }
     _vAllPairsShortestPaths.clear();
+    _vClosedLoops.clear();
+    _vClosedLoopIndices.clear();
     _nNonAdjacentLinkCache = 0;
     _vForcedAdjacentLinks.clear();
     _bHierarchyComputed = false;
@@ -1406,7 +1572,7 @@ bool KinBody::InitFromBoxes(const std::vector<AABB>& vaabbs, bool bDraw)
     Destroy();
     LinkPtr plink(new Link(shared_kinbody()));
     plink->_index = 0;
-    plink->name = "base";
+    plink->_name = "base";
     plink->bStatic = true;
     Link::TRIMESH trimesh;
     FOREACHC(itab, vaabbs) {
@@ -1436,7 +1602,7 @@ bool KinBody::InitFromBoxes(const std::vector<OBB>& vobbs, bool bDraw)
     Destroy();
     LinkPtr plink(new Link(shared_kinbody()));
     plink->_index = 0;
-    plink->name = "base";
+    plink->_name = "base";
     plink->bStatic = true;
     Link::TRIMESH trimesh;
     FOREACHC(itobb, vobbs) {
@@ -1471,7 +1637,7 @@ bool KinBody::InitFromTrimesh(const KinBody::Link::TRIMESH& trimesh, bool draw)
     Destroy();
     LinkPtr plink(new Link(shared_kinbody()));
     plink->_index = 0;
-    plink->name = "base";
+    plink->_name = "base";
     plink->bStatic = true;
     plink->collision = trimesh;
 
@@ -1489,8 +1655,8 @@ bool KinBody::InitFromTrimesh(const KinBody::Link::TRIMESH& trimesh, bool draw)
 void KinBody::SetName(const std::string& newname)
 {
     BOOST_ASSERT(newname.size() > 0);
-    if( name != newname ) {
-        name = newname;
+    if( _name != newname ) {
+        _name = newname;
         _ParametersChanged(Prop_Name);
     }
 }
@@ -1782,198 +1948,133 @@ bool KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocity, const Vec
     std::vector<std::pair<Vector,Vector> > velocities(_veclinks.size());
     velocities.at(0).first = linearvel;
     velocities.at(0).second = angularvel;
-
-    // set the first body and all static bodies to computed
-    vector<int> userdata(_veclinks.size(),0);
-    userdata.at(0) = 1;
-    int numleft = (int)_veclinks.size()-1;
-    for(size_t i = 1; i < _veclinks.size(); ++i) {
-        if( _veclinks[i]->IsStatic() ) {
-            numleft--;
-            userdata[i] = 1;
-            velocities[i] = velocities[0];
-        }
-    }
-
-    const vector<JointPtr>* alljoints[2] = {&_vecjoints, &_vecPassiveJoints};
-    vector<dReal> vjointang,vjointvel,vlower,vupper,vtempvalues;
+    
+    vector<dReal> vlower,vupper,vtempvalues;
     if( checklimits ) {
         GetDOFVelocityLimits(vlower,vupper);
     }
-    vector< vector<dReal> > vPassiveJointVelocities(_vecPassiveJoints.size());
+
+    // have to compute the velocities ahead of time since they are dependent on the link transformations
+    std::vector< std::vector<dReal> > vPassiveJointVelocities(_vPassiveJoints.size());
     for(size_t i = 0; i < vPassiveJointVelocities.size(); ++i) {
-        _vecPassiveJoints[i]->GetValues(vPassiveJointVelocities[i]);
+        if( !_vPassiveJoints[i]->IsMimic() ) {
+            _vPassiveJoints[i]->GetValues(vPassiveJointVelocities[i]);
+        }
+        else {
+            vPassiveJointVelocities[i].resize(_vPassiveJoints[i]->GetDOF());
+        }
     }
 
-    while(numleft > 0) {
-        int org = numleft;
+    std::vector<uint8_t> vlinkscomputed(_veclinks.size(),0);
+    vlinkscomputed[0] = 1;
+    boost::array<dReal,3> dummyvalues; // dummy values for a joint
 
-        // iterate through the two sets of joints: active and passive
-        // for active joints, read the angle from pJointValues, for passive joints
-        // check if they have corresponding mimic joints, if they do, take those angles
-        // otherwise set to 0
-        for(size_t j = 0; j < 2; ++j) {
-            FOREACHC(itjoint, *alljoints[j]) {
-                (*itjoint)->GetValues(vjointang);
-                int dofindex = (*itjoint)->GetDOFIndex();
-                vjointvel.resize((*itjoint)->GetDOF());
-                for(size_t i = 0; i < vjointvel.size(); ++i) {
-                    if( (*itjoint)->IsMimic(i) ) {
-                        vtempvalues.resize(0);
-                        FOREACH(itdof,(*itjoint)->_vmimic.at(i)->_vdofs) {
-                            JointPtr pj = GetJointFromDOFIndex(*itdof);
-                            vtempvalues.push_back(pj->GetValue(*itdof-pj->GetDOFIndex()));
-                        }
-                        vjointvel[i] = 0;
-                        int varindex = 0;
-                        FOREACH(itfn, (*itjoint)->_vmimic.at(i)->_velfns) {
-                            vjointvel[i] += (*itfn)->Eval(vtempvalues.size() > 0 ? &vtempvalues[0] : NULL) * vDOFVelocity.at((*itjoint)->_vmimic.at(i)->_vdofs.at(varindex));
-                            ++varindex;
-                        }
+    for(size_t i = 0; i < _vTopologicallySortedJointsAll.size(); ++i) {
+        JointPtr pjoint = _vTopologicallySortedJointsAll[i];
+        int jointindex = _vTopologicallySortedJointIndicesAll[i];
+        int dofindex = pjoint->GetDOFIndex();
+        const dReal* pvalues=dofindex >= 0 ? &vDOFVelocity.at(dofindex) : NULL;
+        if( pjoint->IsMimic() ) {
+            for(int i = 0; i < pjoint->GetDOF(); ++i) {
+                if( pjoint->IsMimic(i) ) {
+                    vtempvalues.resize(0);
+                    const std::vector<Joint::MIMIC::DOFFormat>& vdofformat = pjoint->_vmimic[i]->_vdofformat;
+                    FOREACHC(itdof,vdofformat) {
+                        JointPtr pj = itdof->jointindex < (int)_vecjoints.size() ? _vecjoints[itdof->jointindex] : _vPassiveJoints.at(itdof->jointindex-_vecjoints.size());
+                        vtempvalues.push_back(pj->GetValue(itdof->axis));
                     }
-                    else if( dofindex >= 0 ){
-                        vjointvel[i] = vDOFVelocity.at(dofindex+i);
+                    dummyvalues[i] = 0;
+                    int varindex = 0;
+                    FOREACH(itfn, pjoint->_vmimic.at(i)->_velfns) {
+                        dReal partialvelocity;
+                        if( vdofformat[varindex].dofindex >= 0 ) {
+                            partialvelocity = vDOFVelocity.at(vdofformat[varindex].dofindex);
+                        }
+                        else {
+                            partialvelocity = vPassiveJointVelocities.at(vdofformat[varindex].jointindex-_vecjoints.size()).at(vdofformat[varindex].axis);
+                        }
+                        dummyvalues[i] += (*itfn)->Eval(vtempvalues.size() > 0 ? &vtempvalues[0] : NULL) * partialvelocity;
+                        ++varindex;
                     }
-                    else {
-                        // preserve passive joint velocities, it is debatable whether to always force this to 0 or not
-                        vjointvel[i] = vPassiveJointVelocities.at(itjoint-_vecPassiveJoints.begin()).at(i);
+
+                    // if joint is passive, update the stored joint values! This is necessary because joint value might be referenced in the future.
+                    if( dofindex < 0 ) {
+                        vPassiveJointVelocities.at(jointindex-(int)_vecjoints.size()).at(i) = dummyvalues[i];
                     }
                 }
-                if( checklimits && dofindex >= 0 ) {
-                    for(size_t i = 0; i < vjointvel.size(); ++i) {
-                        if( vjointvel[i] < vlower[dofindex+i] ) {
-                            vjointvel[i] = vlower[i];
-                        }
-                        else if( vjointvel[i] > vupper[dofindex+i] ) {
-                            vjointvel[i] = vupper[i];
-                        }
-                    }
+                else if( dofindex >= 0 ) {
+                    dummyvalues[i] = vDOFVelocity.at(dofindex+i); // is this correct? what is a joint has a mimic and non-mimic axis?
                 }
-
-                boost::array<LinkPtr,2>& bodies = (*itjoint)->bodies;
-                if( !!bodies[0] && !!bodies[1] && !bodies[1]->IsStatic()) {
-                    if( userdata.at(bodies[0]->GetIndex()) ) {
-                        if( !userdata.at(bodies[1]->GetIndex()) ) {
-                            Vector w,v;
-                            // init 1 from 0
-                            switch((*itjoint)->GetType()) {
-                            case Joint::JointHinge:
-                                w = vjointvel[0]*(*itjoint)->vAxes[0];
-                                break;
-                            case Joint::JointHinge2: {
-                                Transform tfirst;
-                                tfirst.rotfromaxisangle((*itjoint)->vAxes[0], vjointang[0]);
-                                w = vjointvel[0]*(*itjoint)->vAxes[0] + tfirst.rotate(vjointvel[1]*(*itjoint)->vAxes[1]);
-                                break;
-                            }
-                            case Joint::JointSlider:
-                                v = vjointvel[0]*(*itjoint)->vAxes[0];
-                                break;
-                            case Joint::JointSpherical:
-                                w.x = vjointvel[0]; w.y = vjointvel[1]; w.z = vjointvel[2];
-                                break;
-                            default:
-                                RAVELOG_WARN("forward kinematic type %d not supported\n", (*itjoint)->GetType());
-                                break;
-                            }
-                            
-                            Transform tbody0 = bodies[0]->GetTransform();
-                            Transform tdelta = tbody0 * (*itjoint)->tLeft;
-                            Vector vparent = velocities[bodies[0]->GetIndex()].first;
-                            Vector wparent = velocities[bodies[0]->GetIndex()].second;
-                            velocities.at(bodies[1]->GetIndex()).first = vparent + tdelta.rotate(v) + wparent.cross(bodies[1]->GetTransform().trans-tbody0.trans);
-                            velocities.at(bodies[1]->GetIndex()).second = wparent + tdelta.rotate(w);
-
-                            userdata.at(bodies[1]->GetIndex()) = 1;
-                            numleft--;
-                        }
-                    }
-                    else if( userdata.at(bodies[1]->GetIndex()) ) {
-                        Vector w,v;
-                        // init 1 from 0
-                        switch((*itjoint)->GetType()) {
-                        case Joint::JointHinge:
-                            w = -vjointvel[0]*(*itjoint)->vAxes[0];
-                            break;
-                        case Joint::JointHinge2: {
-                            Transform tfirst;
-                            tfirst.rotfromaxisangle((*itjoint)->vAxes[0], -vjointang[0]);
-                            w = -(vjointvel[0]*(*itjoint)->vAxes[0] + tfirst.rotate(vjointvel[1]*(*itjoint)->vAxes[1]));
-                            break;
-                        }
-                        case Joint::JointSlider:
-                            v = -vjointvel[0]*(*itjoint)->vAxes[0];
-                            break;
-                        case Joint::JointSpherical:
-                            w.x = -vjointvel[0]; w.y = -vjointvel[1]; w.z = -vjointvel[2];
-                            break;
-                        default:
-                            RAVELOG_WARN("forward kinematic type %d not supported\n", (*itjoint)->GetType());
-                            break;
-                        }
-
-                        Transform tbody1 = bodies[1]->GetTransform();
-                        Transform tdelta = tbody1 * (*itjoint)->tinvRight;
-                        Vector vparent = velocities[bodies[1]->GetIndex()].first;
-                        Vector wparent = velocities[bodies[1]->GetIndex()].second;
-                        velocities.at(bodies[0]->GetIndex()).first = vparent + tdelta.rotate(v) + wparent.cross(bodies[0]->GetTransform().trans-tbody1.trans);
-                        velocities.at(bodies[0]->GetIndex()).second = wparent + tdelta.rotate(w);
-                        userdata.at(bodies[0]->GetIndex()) = 1;
-                        numleft--;
-                    }
-                }
-                else if( !!bodies[0] && !userdata.at(bodies[0]->GetIndex()) ) {
-                    Vector w,v;
-                    // joint attached to static environment (it will never be [1])
-                    switch((*itjoint)->GetType()) {
-                    case Joint::JointHinge:
-                        w = vjointvel[0]*(*itjoint)->vAxes[0];
-                        break;
-                    case Joint::JointHinge2: {
-                        Transform tfirst;
-                        tfirst.rotfromaxisangle((*itjoint)->vAxes[0], vjointang[0]);
-                        w = vjointvel[0]*(*itjoint)->vAxes[0] + tfirst.rotate(vjointvel[1]*(*itjoint)->vAxes[1]);
-                        break;
-                    }
-                    case Joint::JointSlider:
-                        v = vjointvel[0]*(*itjoint)->vAxes[0];
-                        break;
-                    case Joint::JointSpherical:
-                        w.x = vjointvel[0]; w.y = vjointvel[1]; w.z = vjointvel[2];
-                        break;
-                    default:
-                        RAVELOG_WARN("forward kinematic type %d not supported\n", (*itjoint)->GetType());
-                        break;
-                    }
-                    
-                    Transform tbody = GetTransform();
-                    Transform tdelta = tbody * (*itjoint)->tLeft;
-                    Vector vparent = velocities[0].first;
-                    Vector wparent = velocities[0].second;
-                    velocities.at(bodies[0]->GetIndex()).first = vparent + tdelta.rotate(v) + wparent.cross(bodies[0]->GetTransform().trans-tbody.trans);
-                    velocities.at(bodies[0]->GetIndex()).second = wparent + tdelta.rotate(w);
-                    userdata.at(bodies[0]->GetIndex()) = 1;
-                    numleft--;
+                else {
+                    // preserve passive joint values
+                    dummyvalues[i] = vPassiveJointVelocities.at(jointindex-(int)_vecjoints.size()).at(i);
                 }
             }
+            pvalues = &dummyvalues[0];
+        }
+        // do the test after mimic computation!
+        if( vlinkscomputed[pjoint->GetHierarchyChildLink()->GetIndex()] ) {
+            continue;
+        }
+        if( !pvalues ) {
+            // has to be a passive joint
+            pvalues = &vPassiveJointVelocities.at(jointindex-(int)_vecjoints.size()).at(0);
         }
 
-        // nothing changed so exit
-        if( org == numleft ) {
+        if( checklimits && dofindex >= 0 ) {
+            for(int i = 0; i < pjoint->GetDOF(); ++i) {
+                if( pvalues[i] < vlower[dofindex+i] ) {
+                    dummyvalues[i] = vlower[i];
+                }
+                else if( pvalues[i] > vupper[dofindex+i] ) {
+                    dummyvalues[i] = vupper[i];
+                }
+                else {
+                    dummyvalues[i] = pvalues[i];
+                }
+            }
+            pvalues = &dummyvalues[0];
+        }
+
+        Vector w,v;
+        // init 1 from 0
+        switch(pjoint->GetType()) {
+        case Joint::JointHinge:
+            w = pvalues[0]*pjoint->GetInternalHierarchyAxis(0);
+            break;
+        case Joint::JointHinge2: {
+            Transform tfirst;
+            tfirst.rot = quatFromAxisAngle(pjoint->GetInternalHierarchyAxis(0), pjoint->GetValue(0));
+            w = pvalues[0]*pjoint->GetInternalHierarchyAxis(0) + tfirst.rotate(pvalues[1]*pjoint->GetInternalHierarchyAxis(1));
             break;
         }
-    }
-
-    // some links might not be connected to any joints. In this case, transform them by tbase
-    if( numleft > 0 ) {
-        for(size_t i = 1; i < _veclinks.size(); ++i) {
-            if( userdata[i] == 0 ) {
-                velocities[i] = velocities[0];
-                velocities[i].first += velocities[i].second.cross(_veclinks[i]->GetTransform().trans-_veclinks[0]->GetTransform().trans);
-            }
+        case Joint::JointSlider:
+            v = pvalues[0]*pjoint->GetInternalHierarchyAxis(0);
+            break;
+        case Joint::JointSpherical:
+            w.x = pvalues[0]; w.y = pvalues[1]; w.z = pvalues[2];
+            break;
+        default:
+            RAVELOG_WARN(str(boost::format("forward kinematic type %d not supported")%pjoint->GetType()));
+            break;
         }
+        
+        Vector vparent, wparent; 
+        Transform tparent;
+        if( !pjoint->GetHierarchyParentLink() ) {
+            tparent = _veclinks.at(0)->GetTransform();
+            vparent = velocities.at(0).first;
+            wparent = velocities.at(0).second;
+        }
+        else {
+            tparent = pjoint->GetHierarchyParentLink()->GetTransform();
+            vparent = velocities[pjoint->GetHierarchyParentLink()->GetIndex()].first;
+            wparent = velocities[pjoint->GetHierarchyParentLink()->GetIndex()].second;
+        }
+        Transform tdelta = tparent * pjoint->GetInternalHierarchyLeftTransform();
+        velocities.at(pjoint->GetHierarchyChildLink()->GetIndex()) = make_pair(vparent + tdelta.rotate(v) + wparent.cross(pjoint->GetHierarchyChildLink()->GetTransform().trans-tparent.trans), wparent + tdelta.rotate(w));
+        vlinkscomputed[pjoint->GetHierarchyChildLink()->GetIndex()] = 1;
     }
-
     return GetEnv()->GetPhysicsEngine()->SetLinkVelocities(shared_kinbody(),velocities);
 }
 
@@ -2006,7 +2107,7 @@ void KinBody::GetBodyTransformations(vector<Transform>& vtrans) const
 
 KinBody::JointPtr KinBody::GetJointFromDOFIndex(int dofindex) const
 {
-    return _vecjoints.at(_vecDOFIndices.at(dofindex));
+    return _vecjoints.at(_vDOFIndices.at(dofindex));
 }
 
 AABB KinBody::ComputeAABB() const
@@ -2103,13 +2204,12 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, bool bCheckLi
     if( (int)vJointValues.size() != GetDOF() ) {
         throw openrave_exception(str(boost::format("dof not equal %d!=%d")%vJointValues.size()%GetDOF()),ORE_InvalidArguments);
     }
-    if( vJointValues.size() == 0 ) {
+    if( vJointValues.size() == 0 || _veclinks.size() == 0 ) {
         return;
     }
     const dReal* pJointValues = &vJointValues[0];
     if( bCheckLimits ) {
         _vTempJoints.resize(GetDOF());
-
         dReal* ptempjoints = &_vTempJoints[0];
 
         // check the limits
@@ -2156,220 +2256,107 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, bool bCheckLi
                 }
             }
         }
-
         pJointValues = &_vTempJoints[0];
     }
 
-    // set the first body and all static bodies to computed
-    vector<int> userdata(_veclinks.size(),0);
-    userdata.at(0) = 1;
-    int numleft = (int)_veclinks.size()-1;
+    boost::array<dReal,3> dummyvalues; // dummy values for a joint
+    std::vector<dReal> vtempvalues;
 
-    for(size_t i = 1; i < _veclinks.size(); ++i) {
-        if( _veclinks[i]->IsStatic() ) {
-            numleft--;
-            userdata.at(i) = 1;
+    // have to compute the angles ahead of time since they are dependent on the link transformations
+    std::vector< std::vector<dReal> > vPassiveJointValues(_vPassiveJoints.size());
+    for(size_t i = 0; i < vPassiveJointValues.size(); ++i) {
+        if( !_vPassiveJoints[i]->IsMimic() ) {
+            _vPassiveJoints[i]->GetValues(vPassiveJointValues[i]);
+        }
+        else {
+            vPassiveJointValues[i].resize(_vPassiveJoints[i]->GetDOF());
         }
     }
 
-    boost::array<dReal,3> dummyvalues; // dummy values for a joint
-    Vector axis, anchor;
-    Transform trans;
-    Transform identity;
-    vector<JointPtr>* alljoints[2] = {&_vecjoints, &_vecPassiveJoints};
-    vector<dReal> vjointang, vtempvalues;
+    std::vector<uint8_t> vlinkscomputed(_veclinks.size(),0);
+    vlinkscomputed[0] = 1;
 
-    vector< vector<dReal> > vPassiveJointValues(_vecPassiveJoints.size());
-    for(size_t i = 0; i < vPassiveJointValues.size(); ++i) {
-        _vecPassiveJoints[i]->GetValues(vPassiveJointValues[i]);
-    }
-    
-    while(numleft > 0) {
-        int org = numleft;
-
-        // iterate through the two sets of joints: active and passive
-        // for active joints, read the angle from pJointValues, for passive joints
-        // check if they have corresponding mimic joints, if they do, take those angles
-        // otherwise set to 0
-        for(size_t j = 0; j < 2; ++j) {
-            
-            FOREACH(itjoint, *alljoints[j]) {
-                const dReal* pvalues=NULL;
-                if( (*itjoint)->GetDOFIndex() >= 0 ) {
-                    pvalues = pJointValues+(*itjoint)->GetDOFIndex();
-                }
-
-                if( (*itjoint)->IsMimic() ) {
-                    for(int i = 0; i < (*itjoint)->GetDOF(); ++i) {
-                        if( (*itjoint)->IsMimic(i) ) {
-                            vtempvalues.resize(0);
-                            FOREACH(itdof,(*itjoint)->_vmimic.at(i)->_vdofs) {
-                                vtempvalues.push_back(pJointValues[*itdof]);
-                            }
-                            dummyvalues[i] = (*itjoint)->_vmimic.at(i)->_posfn->Eval(vtempvalues.size() > 0 ? &vtempvalues[0] : NULL);
-                        }
-                        else if( (*itjoint)->GetDOFIndex() >= 0 ) {
-                            dummyvalues[i] = pvalues[(*itjoint)->GetDOFIndex()+i]; // is this correct? what is a joint has a mimic and non-mimic axis?
+    for(size_t i = 0; i < _vTopologicallySortedJointsAll.size(); ++i) {
+        JointPtr pjoint = _vTopologicallySortedJointsAll[i];
+        int jointindex = _vTopologicallySortedJointIndicesAll[i];
+        int dofindex = pjoint->GetDOFIndex();
+        const dReal* pvalues=dofindex >= 0 ? pJointValues + dofindex : NULL;
+        if( pjoint->IsMimic() ) {
+            for(int i = 0; i < pjoint->GetDOF(); ++i) {
+                if( pjoint->IsMimic(i) ) {
+                    vtempvalues.resize(0);
+                    const std::vector<Joint::MIMIC::DOFFormat>& vdofformat = pjoint->_vmimic[i]->_vdofformat;
+                    FOREACHC(itdof,vdofformat) {
+                        if( itdof->dofindex >= 0 ) {
+                            vtempvalues.push_back(pJointValues[itdof->dofindex]);
                         }
                         else {
-                            // preserve passive joint values
-                            dummyvalues[i] = vPassiveJointValues.at(itjoint-_vecPassiveJoints.begin()).at(i);
+                            vtempvalues.push_back(vPassiveJointValues.at(itdof->jointindex-_vecjoints.size()).at(itdof->axis));
                         }
                     }
-                    pvalues = &dummyvalues[0];
-                }
-                
-                if( pvalues == NULL ) {
-                    if( alljoints[j] == &_vecPassiveJoints ) {
-                        pvalues = &vPassiveJointValues.at(itjoint-_vecPassiveJoints.begin())[0];
-                    }
-                    else {
-                        dummyvalues[0] = dummyvalues[1] = dummyvalues[2] = 0;
-                        pvalues = &dummyvalues[0];
-                        userdata.at((*itjoint)->bodies[0]->GetIndex()) = 1;
-                        numleft--;
-                        continue;
+                    dummyvalues[i] = pjoint->_vmimic.at(i)->_posfn->Eval(vtempvalues.size() > 0 ? &vtempvalues[0] : NULL);
+                    // if joint is passive, update the stored joint values! This is necessary because joint value might be referenced in the future.
+                    if( dofindex < 0 ) {
+                        vPassiveJointValues.at(jointindex-(int)_vecjoints.size()).at(i) = dummyvalues[i];
                     }
                 }
-
-                boost::array<LinkPtr,2>& bodies = (*itjoint)->bodies;
-
-                // make sure there is no wrap around for limits close to pi
-                vjointang.resize((*itjoint)->GetDOF());
-                for(int iang = 0; iang < (*itjoint)->GetDOF(); ++iang) { 
-                    vjointang[iang] = pvalues[iang]-(*itjoint)->GetOffset();
+                else if( dofindex >= 0 ) {
+                    dummyvalues[i] = pvalues[dofindex+i]; // is this correct? what is a joint has a mimic and non-mimic axis?
                 }
-
-                if( !!bodies[0] && !!bodies[1] && !bodies[1]->IsStatic()) {
-                    if( userdata.at(bodies[0]->GetIndex()) ) {
-                        if( !userdata.at(bodies[1]->GetIndex()) ) {
-                            Transform tjoint;
-                            axis = (*itjoint)->vAxes[0];
-
-                            // init 1 from 0
-                            switch((*itjoint)->GetType()) {
-                            case Joint::JointHinge:
-                                tjoint.rotfromaxisangle(axis, vjointang[0]);
-                                break;
-                            case Joint::JointHinge2: {
-                                Transform tfirst;
-                                tfirst.rotfromaxisangle((*itjoint)->vAxes[0], vjointang[0]);
-                                Transform tsecond;
-                                tsecond.rotfromaxisangle(tfirst.rotate((*itjoint)->vAxes[1]), vjointang[1]);
-                                tjoint = tsecond * tfirst;
-                                break;
-                            }
-                            case Joint::JointSlider:
-                                tjoint.trans = axis * vjointang[0];
-                                break;
-                            case Joint::JointSpherical: {
-                                dReal fang = vjointang[0]*vjointang[0]+vjointang[1]*vjointang[1]+vjointang[2]*vjointang[2];
-                                if( fang > 1e-10 ) {
-                                    fang = RaveSqrt(fang);
-                                    dReal fiang = 1/fang;
-                                    tjoint.rotfromaxisangle(Vector(vjointang[0]*fiang,vjointang[1]*fiang,vjointang[2]*fiang),fang);
-                                }
-                                break;
-                            }
-                            default:
-                                RAVELOG_WARN("forward kinematic type %d not supported\n", (*itjoint)->GetType());
-                                break;
-                            }
-                            
-                            trans = bodies[0]->GetTransform() * (*itjoint)->tLeft * tjoint * (*itjoint)->tRight;
-                            bodies[1]->SetTransform(trans);
-
-                            userdata.at(bodies[1]->GetIndex()) = 1;
-                            numleft--;
-                        }
-                    }
-                    else if( userdata.at(bodies[1]->GetIndex()) ) {
-                        Transform tjoint;
-                        axis = (*itjoint)->vAxes[0];
-
-                        // init 1 from 0
-                        switch((*itjoint)->GetType()) {
-                        case Joint::JointHinge:
-                            tjoint.rotfromaxisangle(axis, -vjointang[0]);
-                            break;
-                        case Joint::JointHinge2: {
-                            Transform tfirst;
-                            tfirst.rotfromaxisangle((*itjoint)->vAxes[0], -vjointang[0]);
-                            Transform tsecond;
-                            tsecond.rotfromaxisangle(tfirst.rotate((*itjoint)->vAxes[1]), -vjointang[1]);
-                            tjoint = tsecond * tfirst;
-                            break;
-                        }
-                        case Joint::JointSlider:
-                            tjoint.trans = -axis * vjointang[0];
-                            break;
-                        case Joint::JointSpherical: {
-                            dReal fang = vjointang[0]*vjointang[0]+vjointang[1]*vjointang[1]+vjointang[2]*vjointang[2];
-                            if( fang > 1e-10 ) {
-                                fang = RaveSqrt(fang);
-                                dReal fiang = 1/fang;
-                                tjoint.rotfromaxisangle(Vector(vjointang[0]*fiang,vjointang[1]*fiang,vjointang[2]*fiang),-fang);
-                            }
-                            break;
-                        }
-                        default:
-                            RAVELOG_WARN("forward kinematic type %d not supported\n", (*itjoint)->GetType());
-                            break;
-                        }
-
-                        trans = bodies[1]->GetTransform() * (*itjoint)->tinvRight * tjoint * (*itjoint)->tinvLeft;
-                        bodies[0]->SetTransform(trans);
-                        userdata.at(bodies[0]->GetIndex()) = 1;
-                        numleft--;
-                    }
-                }
-                else if( !!bodies[0] && !userdata.at(bodies[0]->GetIndex()) ) {
-
-                    Transform tjoint;
-                    axis = (*itjoint)->vAxes[0];
-                    
-                    // joint attached to static environment (it will never be [1])
-                    switch((*itjoint)->GetType()) {
-                    case Joint::JointHinge:
-                        tjoint.rotfromaxisangle(axis, vjointang[0]);
-                        break;
-                    case Joint::JointHinge2: {
-                        Transform tfirst;
-                        tfirst.rotfromaxisangle((*itjoint)->vAxes[0], vjointang[0]);
-                        Transform tsecond;
-                        tsecond.rotfromaxisangle(tfirst.rotate((*itjoint)->vAxes[1]), vjointang[1]);
-                        tjoint = tsecond * tfirst;
-                        break;
-                    }
-                    case Joint::JointSlider:
-                        tjoint.trans = axis * vjointang[0];
-                        break;
-                    case Joint::JointSpherical: {
-                        dReal fang = vjointang[0]*vjointang[0]+vjointang[1]*vjointang[1]+vjointang[2]*vjointang[2];
-                        if( fang > 1e-10 ) {
-                            fang = RaveSqrt(fang);
-                            dReal fiang = 1/fang;
-                            tjoint.rotfromaxisangle(Vector(vjointang[0]*fiang,vjointang[1]*fiang,vjointang[2]*fiang),fang);
-                        }
-                        break;
-                    }
-                    default:
-                        RAVELOG_WARN("forward kinematic type %d not supported\n", (*itjoint)->GetType());
-                        break;
-                    }
-                    
-                    trans = GetTransform() * (*itjoint)->tLeft * tjoint * (*itjoint)->tRight;
-                    bodies[0]->SetTransform(trans);
-                    userdata.at(bodies[0]->GetIndex()) = 1;
-                    numleft--;
+                else {
+                    // preserve passive joint values
+                    dummyvalues[i] = vPassiveJointValues.at(jointindex-(int)_vecjoints.size()).at(i);
                 }
             }
+            pvalues = &dummyvalues[0];
+        }
+        // do the test after mimic computation!
+        if( vlinkscomputed[pjoint->GetHierarchyChildLink()->GetIndex()] ) {
+            continue;
+        }
+        if( !pvalues ) {
+            // has to be a passive joint
+            pvalues = &vPassiveJointValues.at(jointindex-(int)_vecjoints.size()).at(0);
         }
 
-        // nothing changed so exit
-        if( org == numleft ) {
+        Transform tjoint;
+        switch(pjoint->GetType()) {
+        case Joint::JointHinge:
+            tjoint.rot = quatFromAxisAngle(pjoint->GetInternalHierarchyAxis(0), pvalues[0]);
+            break;
+        case Joint::JointHinge2: {
+            Transform tfirst;
+            tfirst.rot = quatFromAxisAngle(pjoint->GetInternalHierarchyAxis(0), pvalues[0]);
+            Transform tsecond;
+            tsecond.rot = quatFromAxisAngle(tfirst.rotate(pjoint->GetInternalHierarchyAxis(1)), pvalues[1]);
+            tjoint = tsecond * tfirst;
             break;
         }
+        case Joint::JointSlider:
+            tjoint.trans = pjoint->GetInternalHierarchyAxis(0) * pvalues[0];
+            break;
+        case Joint::JointSpherical: {
+            dReal fang = pvalues[0]*pvalues[0]+pvalues[1]*pvalues[1]+pvalues[2]*pvalues[2];
+            if( fang > 0 ) {
+                fang = RaveSqrt(fang);
+                dReal fiang = 1/fang;
+                tjoint.rot = quatFromAxisAngle(Vector(pvalues[0]*fiang,pvalues[1]*fiang,pvalues[2]*fiang),fang);
+            }
+            break;
+        }
+        default:
+            RAVELOG_WARN("forward kinematic type %d not supported\n", pjoint->GetType());
+            break;
+        }
+        Transform t = pjoint->GetInternalHierarchyLeftTransform() * tjoint * pjoint->GetInternalHierarchyRightTransform();
+        if( !pjoint->GetHierarchyParentLink() ) {
+            t = _veclinks.at(0)->GetTransform() * t;
+        }
+        else {
+            t = pjoint->GetHierarchyParentLink()->GetTransform() * t;
+        }
+        pjoint->GetHierarchyChildLink()->SetTransform(t);
+        vlinkscomputed[pjoint->GetHierarchyChildLink()->GetIndex()] = 1;
     }
 }
 
@@ -2401,16 +2388,43 @@ bool KinBody::GetChain(int linkindex1, int linkindex2, std::vector<JointPtr>& vj
     int curlink = linkindex1;
     while(_vAllPairsShortestPaths[offset+curlink].first>=0) {
         int jointindex = _vAllPairsShortestPaths[offset+curlink].second;
-        vjoints.push_back(jointindex < (int)_vecjoints.size() ? _vecjoints[jointindex] : _vecPassiveJoints.at(jointindex-_vecjoints.size()));
+        vjoints.push_back(jointindex < (int)_vecjoints.size() ? _vecjoints.at(jointindex) : _vPassiveJoints.at(jointindex-_vecjoints.size()));
         curlink = _vAllPairsShortestPaths[offset+curlink].first;
     }
     return vjoints.size()>0; // otherwise disconnected
 }
 
+bool KinBody::GetChain(int linkindex1, int linkindex2, std::vector<LinkPtr>& vlinks) const
+{
+    CHECK_INTERNAL_COMPUTATION;
+    BOOST_ASSERT(linkindex1>=0&&linkindex1<(int)_veclinks.size());
+    BOOST_ASSERT(linkindex2>=0&&linkindex2<(int)_veclinks.size());
+    vlinks.resize(0);
+    int offset = linkindex2*_veclinks.size();
+    int curlink = linkindex1;
+    if( _vAllPairsShortestPaths[offset+curlink].first < 0 ) {
+        return false;
+    }
+    vlinks.push_back(_veclinks.at(linkindex1));
+    if( linkindex1 == linkindex2 ) {
+        return true;
+    }
+    while(_vAllPairsShortestPaths[offset+curlink].first != linkindex2) {
+        curlink = _vAllPairsShortestPaths[offset+curlink].first;
+        if( curlink < 0 ) {
+            vlinks.resize(0);
+            return false;
+        }
+        vlinks.push_back(_veclinks.at(curlink));
+    }
+    vlinks.push_back(_veclinks.at(linkindex2));
+    return true; // otherwise disconnected
+}
+
 bool KinBody::IsDOFInChain(int linkindex1, int linkindex2, int dofindex) const
 {
     CHECK_INTERNAL_COMPUTATION;
-    int jointindex = _vecDOFIndices.at(dofindex);
+    int jointindex = _vDOFIndices.at(dofindex);
     return (DoesAffect(jointindex,linkindex1)==0) != (DoesAffect(jointindex,linkindex2)==0);
 }
 
@@ -2433,24 +2447,29 @@ KinBody::JointPtr KinBody::GetJoint(const std::string& jointname) const
             return *it;
         }
     }
+    FOREACHC(it,_vPassiveJoints) {
+        if ((*it)->GetName() == jointname ) {
+            return *it;
+        }
+    }
     return JointPtr();
 }
 
-void KinBody::CalculateJacobian(int index, const Vector& trans, boost::multi_array<dReal,2>& mjacobian) const
+void KinBody::CalculateJacobian(int linkindex, const Vector& trans, boost::multi_array<dReal,2>& mjacobian) const
 {
-    if( index < 0 || index >= (int)_veclinks.size() ) {
-        throw openrave_exception(str(boost::format("bad index %d")%index),ORE_InvalidArguments);
+    if( linkindex < 0 || linkindex >= (int)_veclinks.size() ) {
+        throw openrave_exception(str(boost::format("bad link index %d")%linkindex),ORE_InvalidArguments);
     }
     mjacobian.resize(boost::extents[3][GetDOF()]);
     if( GetDOF() == 0 ) {
         return;
     }
 
-    //Vector trans = _veclinks[index]->GetTransform() * offset;
+    //Vector trans = _veclinks[linkindex]->GetTransform() * offset;
     Vector v;
     FOREACHC(itjoint, _vecjoints) {
         int dofindex = (*itjoint)->GetDOFIndex();
-        int8_t affect = DoesAffect((*itjoint)->GetJointIndex(), index);
+        int8_t affect = DoesAffect((*itjoint)->GetJointIndex(), linkindex);
         for(int dof = 0; dof < (*itjoint)->GetDOF(); ++dof) {
             if( affect == 0 )
                 mjacobian[0][dofindex+dof] = mjacobian[1][dofindex+dof] = mjacobian[2][dofindex+dof] = 0;
@@ -2474,36 +2493,32 @@ void KinBody::CalculateJacobian(int index, const Vector& trans, boost::multi_arr
     }
 
     // add in the contributions for each of the passive joints
-    vector<dReal> vtempvalues;
-    FOREACHC(itjoint, _vecPassiveJoints) {
-        vtempvalues.resize(0);
+    std::vector<std::pair<int,dReal> > vpartials;
+    std::map< std::pair<Joint::MIMIC::DOFFormat, int>, dReal > mapcachedpartials;
+    FOREACHC(itjoint, _vPassiveJoints) {
         for(int idof = 0; idof < (*itjoint)->GetDOF(); ++idof) {
             if( (*itjoint)->IsMimic(idof) ) {
-                for(size_t imimicdof = 0; imimicdof < (*itjoint)->_vmimic.at(idof)->_vdofs.size(); ++imimicdof) {
-                    int dofindex = (*itjoint)->_vmimic.at(idof)->_vdofs[imimicdof];
-                    if( DoesAffect(_vecDOFIndices.at(dofindex),index) ) {
-                        // add the partial derivatives
-                        switch((*itjoint)->GetType()) {
-                        case Joint::JointHinge:
-                            v = (*itjoint)->GetAxis(idof).cross(trans-(*itjoint)->GetAnchor());
-                            break;
-                        case Joint::JointSlider:
-                            v = (*itjoint)->GetAxis(idof);
-                            break;
-                        default:
-                            RAVELOG_WARN("CalculateJacobian joint %d not supported\n", (*itjoint)->GetType());
-                            v = Vector(0,0,0);
-                            break;
-                        }
-                        
-                        if( vtempvalues.size() == 0 ) {
-                            FOREACHC(itmimicdof2, (*itjoint)->_vmimic.at(idof)->_vdofs) {
-                                JointPtr pj = GetJointFromDOFIndex(*itmimicdof2);
-                                vtempvalues.push_back(pj->GetValue(*itmimicdof2-pj->GetDOFIndex()));
-                            }
-                        }
-                        v *= (*itjoint)->_vmimic.at(idof)->_velfns.at(imimicdof)->Eval(vtempvalues.size() > 0 ? &vtempvalues[0] : NULL);
-                        mjacobian[0][dofindex] += v.x; mjacobian[1][dofindex] += v.y; mjacobian[2][dofindex] += v.z;
+                Vector vaxis;
+                switch((*itjoint)->GetType()) {
+                case Joint::JointHinge:
+                    vaxis = (*itjoint)->GetAxis(idof).cross(trans-(*itjoint)->GetAnchor());
+                    break;
+                case Joint::JointSlider:
+                    vaxis = (*itjoint)->GetAxis(idof);
+                    break;
+                default:
+                    RAVELOG_WARN("CalculateJacobian joint %d not supported\n", (*itjoint)->GetType());
+                    vaxis = Vector(0,0,0);
+                    break;
+                }
+                (*itjoint)->_ComputePartialVelocities(vpartials,idof,mapcachedpartials);
+                FOREACH(itpartial,vpartials) {
+                    int dofindex = itpartial->first;
+                    if( DoesAffect(_vDOFIndices.at(dofindex),linkindex) ) {
+                        Vector v = vaxis * itpartial->second;
+                        mjacobian[0][dofindex] += v.x;
+                        mjacobian[1][dofindex] += v.y;
+                        mjacobian[2][dofindex] += v.z;
                     }
                 }
             }
@@ -2511,10 +2526,10 @@ void KinBody::CalculateJacobian(int index, const Vector& trans, boost::multi_arr
     }
 }
 
-void KinBody::CalculateJacobian(int index, const Vector& trans, vector<dReal>& vjacobian) const
+void KinBody::CalculateJacobian(int linkindex, const Vector& trans, vector<dReal>& vjacobian) const
 {
     boost::multi_array<dReal,2> mjacobian;
-    KinBody::CalculateJacobian(index,trans,mjacobian);
+    KinBody::CalculateJacobian(linkindex,trans,mjacobian);
     vjacobian.resize(3*GetDOF());
     vector<dReal>::iterator itdst = vjacobian.begin();
     FOREACH(it,mjacobian) {
@@ -2523,10 +2538,10 @@ void KinBody::CalculateJacobian(int index, const Vector& trans, vector<dReal>& v
     }
 }
 
-void KinBody::CalculateRotationJacobian(int index, const Vector& q, boost::multi_array<dReal,2>& mjacobian) const
+void KinBody::CalculateRotationJacobian(int linkindex, const Vector& q, boost::multi_array<dReal,2>& mjacobian) const
 {
-    if( index < 0 || index >= (int)_veclinks.size() ) {
-        throw openrave_exception(str(boost::format("bad index %d")%index),ORE_InvalidArguments);
+    if( linkindex < 0 || linkindex >= (int)_veclinks.size() ) {
+        throw openrave_exception(str(boost::format("bad link index %d")%linkindex),ORE_InvalidArguments);
     }
     mjacobian.resize(boost::extents[4][GetDOF()]);
     if( GetDOF() == 0 ) {
@@ -2535,7 +2550,7 @@ void KinBody::CalculateRotationJacobian(int index, const Vector& q, boost::multi
     Vector v;
     FOREACHC(itjoint, _vecjoints) {
         int dofindex = (*itjoint)->GetDOFIndex();
-        int8_t affect = DoesAffect((*itjoint)->GetJointIndex(), index);
+        int8_t affect = DoesAffect((*itjoint)->GetJointIndex(), linkindex);
         for(int dof = 0; dof < (*itjoint)->GetDOF(); ++dof) {
             if( affect == 0 ) {
                 mjacobian[0][dofindex+dof] = mjacobian[1][dofindex+dof] = mjacobian[2][dofindex+dof] = mjacobian[3][dofindex+dof] = 0;
@@ -2563,35 +2578,29 @@ void KinBody::CalculateRotationJacobian(int index, const Vector& q, boost::multi
     }
 
     // add in the contributions for each of the passive links
-    vector<dReal> vtempvalues;
-    FOREACHC(itjoint, _vecPassiveJoints) {
-        vtempvalues.resize(0);
+    std::vector<std::pair<int,dReal> > vpartials;
+    std::map< std::pair<Joint::MIMIC::DOFFormat, int>, dReal > mapcachedpartials;
+    FOREACHC(itjoint, _vPassiveJoints) {
         for(int idof = 0; idof < (*itjoint)->GetDOF(); ++idof) {
             if( (*itjoint)->IsMimic(idof) ) {
-                for(size_t imimicdof = 0; imimicdof < (*itjoint)->_vmimic.at(idof)->_vdofs.size(); ++imimicdof) {
-                    int dofindex = (*itjoint)->_vmimic.at(idof)->_vdofs[imimicdof];
-                    if( DoesAffect(_vecDOFIndices.at(dofindex),index) ) {
-                        // add the partial derivatives
-                        switch((*itjoint)->GetType()) {
-                        case Joint::JointHinge:
-                            v = (*itjoint)->GetAxis(0);
-                            break;
-                        case Joint::JointSlider:
-                            v = Vector(0,0,0);
-                            break;
-                        default:
-                            RAVELOG_WARN("CalculateRotationJacobian joint %d not supported\n", (*itjoint)->GetType());
-                            v = Vector(0,0,0);
-                            break;
-                        }
-                        
-                        if( vtempvalues.size() == 0 ) {
-                            FOREACHC(itmimicdof2, (*itjoint)->_vmimic.at(idof)->_vdofs) {
-                                JointPtr pj = GetJointFromDOFIndex(*itmimicdof2);
-                                vtempvalues.push_back(pj->GetValue(*itmimicdof2-pj->GetDOFIndex()));
-                            }
-                        }
-                        v *= (*itjoint)->_vmimic.at(idof)->_velfns.at(imimicdof)->Eval(vtempvalues.size() > 0 ? &vtempvalues[0] : NULL);
+                Vector vaxis;
+                switch((*itjoint)->GetType()) {
+                case Joint::JointHinge:
+                    vaxis = (*itjoint)->GetAxis(0);
+                    break;
+                case Joint::JointSlider:
+                    vaxis = Vector(0,0,0);
+                    break;
+                default:
+                    RAVELOG_WARN("CalculateRotationJacobian joint %d not supported\n", (*itjoint)->GetType());
+                    vaxis = Vector(0,0,0);
+                    break;
+                }
+                (*itjoint)->_ComputePartialVelocities(vpartials,idof,mapcachedpartials);
+                FOREACH(itpartial,vpartials) {
+                    int dofindex = itpartial->first;
+                    if( DoesAffect(_vDOFIndices.at(dofindex),linkindex) ) {
+                        Vector v = vaxis * itpartial->second;
                         mjacobian[0][dofindex] += dReal(0.5)*(-q.y*v.x - q.z*v.y - q.w*v.z);
                         mjacobian[1][dofindex] += dReal(0.5)*(q.x*v.x - q.z*v.z + q.w*v.y);
                         mjacobian[2][dofindex] += dReal(0.5)*(q.x*v.y + q.y*v.z - q.w*v.x);
@@ -2603,10 +2612,10 @@ void KinBody::CalculateRotationJacobian(int index, const Vector& q, boost::multi
     }
 }
 
-void KinBody::CalculateRotationJacobian(int index, const Vector& q, vector<dReal>& vjacobian) const
+void KinBody::CalculateRotationJacobian(int linkindex, const Vector& q, vector<dReal>& vjacobian) const
 {
     boost::multi_array<dReal,2> mjacobian;
-    KinBody::CalculateRotationJacobian(index,q,mjacobian);
+    KinBody::CalculateRotationJacobian(linkindex,q,mjacobian);
     vjacobian.resize(4*GetDOF());
     vector<dReal>::iterator itdst = vjacobian.begin();
     FOREACH(it,mjacobian) {
@@ -2615,10 +2624,10 @@ void KinBody::CalculateRotationJacobian(int index, const Vector& q, vector<dReal
     }
 }
 
-void KinBody::CalculateAngularVelocityJacobian(int index, boost::multi_array<dReal,2>& mjacobian) const
+void KinBody::CalculateAngularVelocityJacobian(int linkindex, boost::multi_array<dReal,2>& mjacobian) const
 {
-    if( index < 0 || index >= (int)_veclinks.size() ) {
-        throw openrave_exception(str(boost::format("bad index %d")%index),ORE_InvalidArguments);
+    if( linkindex < 0 || linkindex >= (int)_veclinks.size() ) {
+        throw openrave_exception(str(boost::format("bad link index %d")%linkindex),ORE_InvalidArguments);
     }
     mjacobian.resize(boost::extents[3][GetDOF()]);
     if( GetDOF() == 0 ) {
@@ -2627,7 +2636,7 @@ void KinBody::CalculateAngularVelocityJacobian(int index, boost::multi_array<dRe
     Vector v, anchor, axis;
     FOREACHC(itjoint, _vecjoints) {
         int dofindex = (*itjoint)->GetDOFIndex();
-        int8_t affect = DoesAffect((*itjoint)->GetJointIndex(), index);
+        int8_t affect = DoesAffect((*itjoint)->GetJointIndex(), linkindex);
         for(int dof = 0; dof < (*itjoint)->GetDOF(); ++dof) {
             if( affect == 0 ) {
                 mjacobian[0][dofindex+dof] = mjacobian[1][dofindex+dof] = mjacobian[2][dofindex+dof] = 0;
@@ -2652,35 +2661,29 @@ void KinBody::CalculateAngularVelocityJacobian(int index, boost::multi_array<dRe
     }
 
     // add in the contributions for each of the passive links
-    vector<dReal> vtempvalues;
-    FOREACHC(itjoint, _vecPassiveJoints) {
-        vtempvalues.resize(0);
+    std::vector<std::pair<int,dReal> > vpartials;
+    std::map< std::pair<Joint::MIMIC::DOFFormat, int>, dReal > mapcachedpartials;
+    FOREACHC(itjoint, _vPassiveJoints) {
         for(int idof = 0; idof < (*itjoint)->GetDOF(); ++idof) {
             if( (*itjoint)->IsMimic(idof) ) {
-                for(size_t imimicdof = 0; imimicdof < (*itjoint)->_vmimic.at(idof)->_vdofs.size(); ++imimicdof) {
-                    int dofindex = (*itjoint)->_vmimic.at(idof)->_vdofs[imimicdof];
-                    if( DoesAffect(_vecDOFIndices.at(dofindex),index) ) {
-                        // add the partial derivatives
-                        switch((*itjoint)->GetType()) {
-                        case Joint::JointHinge:
-                            v = (*itjoint)->GetAxis(0);
-                            break;
-                        case Joint::JointSlider:
-                            v = Vector(0,0,0);
-                            break;
-                        default:
-                            RAVELOG_WARN("CalculateAngularVelocityJacobian joint %d not supported\n", (*itjoint)->GetType());
-                            v = Vector(0,0,0);
-                            break;
-                        }
-                        
-                        if( vtempvalues.size() == 0 ) {
-                            FOREACHC(itmimicdof2, (*itjoint)->_vmimic.at(idof)->_vdofs) {
-                                JointPtr pj = GetJointFromDOFIndex(*itmimicdof2);
-                                vtempvalues.push_back(pj->GetValue(*itmimicdof2-pj->GetDOFIndex()));
-                            }
-                        }
-                        v *= (*itjoint)->_vmimic.at(idof)->_velfns.at(imimicdof)->Eval(vtempvalues.size() > 0 ? &vtempvalues[0] : NULL);
+                Vector vaxis;
+                switch((*itjoint)->GetType()) {
+                case Joint::JointHinge:
+                    vaxis = (*itjoint)->GetAxis(0);
+                    break;
+                case Joint::JointSlider:
+                    vaxis = Vector(0,0,0);
+                    break;
+                default:
+                    RAVELOG_WARN("CalculateAngularVelocityJacobian joint %d not supported\n", (*itjoint)->GetType());
+                    vaxis = Vector(0,0,0);
+                    break;
+                }
+                (*itjoint)->_ComputePartialVelocities(vpartials,idof,mapcachedpartials);
+                FOREACH(itpartial,vpartials) {
+                    int dofindex = itpartial->first;
+                    if( DoesAffect(_vDOFIndices.at(dofindex),linkindex) ) {
+                        Vector v = vaxis * itpartial->second;
                         mjacobian[0][dofindex] += v.x; mjacobian[1][dofindex] += v.y; mjacobian[2][dofindex] += v.z;
                     }
                 }
@@ -2689,10 +2692,10 @@ void KinBody::CalculateAngularVelocityJacobian(int index, boost::multi_array<dRe
     }
 }
 
-void KinBody::CalculateAngularVelocityJacobian(int index, std::vector<dReal>& vjacobian) const
+void KinBody::CalculateAngularVelocityJacobian(int linkindex, std::vector<dReal>& vjacobian) const
 {
     boost::multi_array<dReal,2> mjacobian;
-    KinBody::CalculateAngularVelocityJacobian(index,mjacobian);
+    KinBody::CalculateAngularVelocityJacobian(linkindex,mjacobian);
     vjacobian.resize(3*GetDOF());
     vector<dReal>::iterator itdst = vjacobian.begin();
     FOREACH(it,mjacobian) {
@@ -2714,218 +2717,593 @@ bool KinBody::CheckSelfCollision(CollisionReportPtr report) const
 
 void KinBody::_ComputeInternalInformation()
 {
+    uint64_t starttime = GetMicroTime();
     _bHierarchyComputed = true;
-    _vecJointHierarchy.resize(_vecjoints.size()*_veclinks.size());
 
-    int jindex=0;
-    FOREACH(itjoint,_vecjoints) {
-        BOOST_ASSERT(jindex++==(*itjoint)->GetJointIndex());
-    }
     int lindex=0;
     FOREACH(itlink,_veclinks) {
-        BOOST_ASSERT( lindex++ == (*itlink)->GetIndex() );
-        (*itlink)->_parentlinkindex = -1;
+        BOOST_ASSERT( lindex == (*itlink)->GetIndex() );
+        (*itlink)->_vParentLinks.clear();
+        lindex++;
     }
 
-    if( _vecJointHierarchy.size() > 0 ) {
-        vector<size_t> vorder(_vecjoints.size());
-        vector<int> vecJointIndices(_vecjoints.size());
-        _vecDOFIndices.resize(GetDOF());
-        for(size_t i = 0; i < _vecjoints.size(); ++i) {
-            vecJointIndices[i] = _vecjoints[i]->dofindex;
-            for(int idof = 0; idof < _vecjoints[i]->GetDOF(); ++idof) {
-                _vecDOFIndices.at(vecJointIndices[i]+idof) = i;
+    {
+        // move any enabled passive joints to the regular joints list
+        vector<JointPtr>::iterator itjoint = _vPassiveJoints.begin();
+        while(itjoint != _vPassiveJoints.end()) {
+            bool bmimic = false;
+            for(int idof = 0; idof < (*itjoint)->GetDOF(); ++idof) {
+                if( !!(*itjoint)->_vmimic[idof] ) {
+                    bmimic = true;
+                }
             }
-            vorder[i] = i;
+            if( !bmimic && (*itjoint)->_bActive ) {
+                _vecjoints.push_back(*itjoint);
+                itjoint = _vPassiveJoints.erase(itjoint);
+            }
+            else {
+                ++itjoint;
+            }
         }
-        sort(vorder.begin(), vorder.end(), index_cmp<vector<int>&>(vecJointIndices));
-        _vDOFOrderedJoints.resize(0);
-        FOREACH(it,vorder) {
-            _vDOFOrderedJoints.push_back(_vecjoints.at(*it));
+        // move any mimic joints to the passive joints
+        itjoint = _vecjoints.begin();
+        while(itjoint != _vecjoints.end()) {
+            bool bmimic = false;
+            for(int idof = 0; idof < (*itjoint)->GetDOF(); ++idof) {
+                if( !!(*itjoint)->_vmimic[idof] ) {
+                    bmimic = true;
+                    break;
+                }
+            }
+            if( bmimic || !(*itjoint)->_bActive ) {
+                _vPassiveJoints.push_back(*itjoint);
+                itjoint = _vecjoints.erase(itjoint);
+            }
+            else {
+                ++itjoint;
+            }
         }
+        int jointindex=0;
+        int dofindex=0;
+        FOREACH(itjoint,_vecjoints) {
+            (*itjoint)->jointindex = jointindex++;
+            (*itjoint)->_parentlinkindex = -1;
+            (*itjoint)->dofindex = dofindex;
+            dofindex += (*itjoint)->GetDOF();
+        }
+        FOREACH(itjoint,_vPassiveJoints) {
+            (*itjoint)->jointindex = -1;
+            (*itjoint)->_parentlinkindex = -1;
+            (*itjoint)->dofindex = -1;
+        }
+    }
 
-        try {
-            // initialize all the mimic equations
-            FOREACH(itjoint,_vecjoints) {
+    vector<size_t> vorder(_vecjoints.size());
+    vector<int> vJointIndices(_vecjoints.size());
+    _vDOFIndices.resize(GetDOF());
+    for(size_t i = 0; i < _vecjoints.size(); ++i) {
+        vJointIndices[i] = _vecjoints[i]->dofindex;
+        for(int idof = 0; idof < _vecjoints[i]->GetDOF(); ++idof) {
+            _vDOFIndices.at(vJointIndices[i]+idof) = i;
+        }
+        vorder[i] = i;
+    }
+    sort(vorder.begin(), vorder.end(), index_cmp<vector<int>&>(vJointIndices));
+    _vDOFOrderedJoints.resize(0);
+    FOREACH(it,vorder) {
+        _vDOFOrderedJoints.push_back(_vecjoints.at(*it));
+    }
+
+    try {
+        // initialize all the mimic equations
+        for(int ijoints = 0; ijoints < 2; ++ijoints) {
+            vector<JointPtr>& vjoints = ijoints ? _vPassiveJoints : _vecjoints;
+            FOREACH(itjoint,vjoints) {
                 for(int i = 0; i < (*itjoint)->GetDOF(); ++i) {
                     if( !!(*itjoint)->_vmimic[i] ) {
                         (*itjoint)->SetMimicEquations(i,(*itjoint)->_vmimic[i]->_equations[0],(*itjoint)->_vmimic[i]->_equations[1],(*itjoint)->_vmimic[i]->_equations[2]);
                     }
                 }
             }
-            FOREACH(itjoint,_vecPassiveJoints) {
-                for(int i = 0; i < (*itjoint)->GetDOF(); ++i) {
-                    if( !!(*itjoint)->_vmimic[i] ) {
-                        (*itjoint)->SetMimicEquations(i,(*itjoint)->_vmimic[i]->_equations[0],(*itjoint)->_vmimic[i]->_equations[1],(*itjoint)->_vmimic[i]->_equations[2]);
+        }
+        // fill Joint::MIMIC::_vmimicdofs, check that there are no circular dependencies between the mimic joints
+        std::map<Joint::MIMIC::DOFFormat, boost::shared_ptr<Joint::MIMIC> > mapmimic;
+        for(int ijoints = 0; ijoints < 2; ++ijoints) {
+            vector<JointPtr>& vjoints = ijoints ? _vPassiveJoints : _vecjoints;
+            int jointindex=0;
+            FOREACH(itjoint,vjoints) {
+                Joint::MIMIC::DOFFormat dofformat;
+                if( ijoints ) {
+                    dofformat.dofindex = -1;
+                    dofformat.jointindex = jointindex+(int)_vecjoints.size();
+                }
+                else {
+                    dofformat.dofindex = (*itjoint)->GetDOFIndex();
+                    dofformat.jointindex = (*itjoint)->GetJointIndex();
+                }
+                for(int idof = 0; idof < (*itjoint)->GetDOF(); ++idof) {
+                    dofformat.axis = idof;
+                    if( !!(*itjoint)->_vmimic[idof] ) {
+                        // only add if depends on mimic joints
+                        FOREACH(itdofformat,(*itjoint)->_vmimic[idof]->_vdofformat) {
+                            JointPtr pjoint = itdofformat->GetJoint(shared_kinbody());
+                            if( pjoint->IsMimic(itdofformat->axis) ) {
+                                mapmimic[dofformat] = (*itjoint)->_vmimic[idof];
+                                break;
+                            }
+                        }
                     }
+                }
+                ++jointindex;
+            }
+        }
+        bool bchanged = true;
+        while(bchanged) {
+            bchanged = false;
+            FOREACH(itmimic,mapmimic) {
+                boost::shared_ptr<Joint::MIMIC> mimic = itmimic->second;
+                Joint::MIMIC::DOFHierarchy h; 
+                h.dofformatindex = 0;
+                FOREACH(itdofformat,mimic->_vdofformat) {
+                    if( mapmimic.find(*itdofformat) == mapmimic.end() ) {
+                        continue; // this is normal, just means that the parent is a regular dof
+                    }
+                    boost::shared_ptr<Joint::MIMIC> mimicparent = mapmimic[*itdofformat];
+                    FOREACH(itmimicdof, mimicparent->_vmimicdofs) {
+                        if( mimicparent->_vdofformat[itmimicdof->dofformatindex] == itmimic->first ) {
+                            JointPtr pjoint = itmimic->first.GetJoint(shared_kinbody());
+                            JointPtr pjointparent = itdofformat->GetJoint(shared_kinbody());
+                            throw openrave_exception(str(boost::format("joint index %s uses a mimic joint %s that also depends on %s! this is not allowed")%pjoint->GetName()%pjointparent->GetName()%pjoint->GetName()));
+                        }
+                        h.dofindex = itmimicdof->dofindex;
+                        if( find(mimic->_vmimicdofs.begin(),mimic->_vmimicdofs.end(),h) == mimic->_vmimicdofs.end() ) {
+                            mimic->_vmimicdofs.push_back(h);
+                            bchanged = true;
+                        }
+                    }
+                    ++h.dofformatindex;
                 }
             }
         }
-        catch(const openrave_exception& ex) {
-            RAVELOG_ERROR(str(boost::format("failed to set any mimic equations on kinematics body %s: %s\n")%GetName()%ex.what()));
-        }
+    }
+    catch(const openrave_exception& ex) {
+        RAVELOG_ERROR(str(boost::format("failed to set mimic equations on kinematics body %s: %s\n")%GetName()%ex.what()));
+    }
 
-        FOREACH(it,_vecJointHierarchy) {
-            *it = 0;
+    _vTopologicallySortedJoints.resize(0);
+    _vTopologicallySortedJointsAll.resize(0);
+    _vTopologicallySortedJointIndicesAll.resize(0);
+    _vJointsAffectingLinks.resize(_vecjoints.size()*_veclinks.size());
+
+    // compute the all-pairs shortest paths
+    {
+        _vAllPairsShortestPaths.resize(_veclinks.size()*_veclinks.size());
+        FOREACH(it,_vAllPairsShortestPaths) {
+            it->first = -1;
+            it->second = -1;
         }
-        vector<int> userdata(_veclinks.size());
+        vector<uint32_t> vcosts(_veclinks.size()*_veclinks.size(),0x3fffffff); // initialize to 2^30-1 since we'll be adding
         for(size_t i = 0; i < _veclinks.size(); ++i) {
-            userdata[i] = _veclinks[i]->IsStatic();
+            vcosts[i*_veclinks.size()+i] = 0;
         }
-        userdata.at(0) = 1; // always set the first to be a root
-
-        typedef pair<JointPtr, int> JOINTPAIR;
-        list<JOINTPAIR> ljoints;
-        for(int i = 0; i < (int)_vecjoints.size(); ++i) {
-            ljoints.push_back(JOINTPAIR(_vecjoints[i], i));
+        FOREACHC(itjoint,_vecjoints) {
+            if( !!(*itjoint)->GetFirstAttached() && !!(*itjoint)->GetSecondAttached() ) {
+                int index = (*itjoint)->GetFirstAttached()->GetIndex()*_veclinks.size()+(*itjoint)->GetSecondAttached()->GetIndex();
+                _vAllPairsShortestPaths[index] = std::pair<int16_t,int16_t>((*itjoint)->GetFirstAttached()->GetIndex(),(*itjoint)->GetJointIndex());
+                vcosts[index] = 1;
+                index = (*itjoint)->GetSecondAttached()->GetIndex()*_veclinks.size()+(*itjoint)->GetFirstAttached()->GetIndex();
+                _vAllPairsShortestPaths[index] = std::pair<int16_t,int16_t>((*itjoint)->GetSecondAttached()->GetIndex(),(*itjoint)->GetJointIndex());
+                vcosts[index] = 1;
+            }
         }
-        for(int i = 0; i < (int)_vecPassiveJoints.size(); ++i) {
-            ljoints.push_back(JOINTPAIR(_vecPassiveJoints[i], -1));
+        int jointindex = (int)_vecjoints.size();
+        FOREACHC(itjoint,_vPassiveJoints) {
+            if( !!(*itjoint)->GetFirstAttached() && !!(*itjoint)->GetSecondAttached() ) {
+                int index = (*itjoint)->GetFirstAttached()->GetIndex()*_veclinks.size()+(*itjoint)->GetSecondAttached()->GetIndex();
+                _vAllPairsShortestPaths[index] = std::pair<int16_t,int16_t>((*itjoint)->GetFirstAttached()->GetIndex(),jointindex);
+                vcosts[index] = 1;
+                index = (*itjoint)->GetSecondAttached()->GetIndex()*_veclinks.size()+(*itjoint)->GetFirstAttached()->GetIndex();
+                _vAllPairsShortestPaths[index] = std::pair<int16_t,int16_t>((*itjoint)->GetSecondAttached()->GetIndex(),jointindex);
+                vcosts[index] = 1;
+            }
+            ++jointindex;
         }
-        list<JOINTPAIR>::iterator itjoint;
-        _vDependencyOrderedJoints.resize(0);
+        for(size_t k = 0; k < _veclinks.size(); ++k) {
+            for(size_t i = 0; i < _veclinks.size(); ++i) {
+                if( i == k ) {
+                    continue;
+                }
+                for(size_t j = 0; j < _veclinks.size(); ++j) {
+                    if( j == i || j == k ) {
+                        continue;
+                    }
+                    uint32_t kcost = vcosts[k*_veclinks.size()+i] + vcosts[j*_veclinks.size()+k];
+                    if( vcosts[j*_veclinks.size()+i] > kcost ) {
+                        vcosts[j*_veclinks.size()+i] = kcost;
+                        _vAllPairsShortestPaths[j*_veclinks.size()+i] = _vAllPairsShortestPaths[k*_veclinks.size()+i];
+                    }
+                }
+            }
+        }
+    }
 
-        // iterate through all the joints and keep track of which joint affects which link
-        while(ljoints.size() > 0) {
-            size_t cursize = ljoints.size();
+    // Use the APAC algorithm to initialize the kinematics hierarchy: _vTopologicallySortedJoints, _vJointsAffectingLinks, Link::_vParentLinks.
+    // SIMOES, Ricardo. APAC: An exact algorithm for retrieving cycles and paths in all kinds of graphs. Tékhne, Dec. 2009, no.12, p.39-55. ISSN 1654-9911.
+    if( _veclinks.size() > 0 && _vecjoints.size() > 0 ) {
+        std::vector< std::vector<int> > vlinkadjacency(_veclinks.size());
+        FOREACHC(itjoint,_vecjoints) {
+            if( !!(*itjoint)->GetFirstAttached() && !!(*itjoint)->GetSecondAttached() ) {
+                vlinkadjacency.at((*itjoint)->GetFirstAttached()->GetIndex()).push_back((*itjoint)->GetSecondAttached()->GetIndex());
+                vlinkadjacency.at((*itjoint)->GetSecondAttached()->GetIndex()).push_back((*itjoint)->GetFirstAttached()->GetIndex());
+            }
+        }
+        FOREACHC(itjoint,_vPassiveJoints) {
+            if( !!(*itjoint)->GetFirstAttached() && !!(*itjoint)->GetSecondAttached() ) {
+                vlinkadjacency.at((*itjoint)->GetFirstAttached()->GetIndex()).push_back((*itjoint)->GetSecondAttached()->GetIndex());
+                vlinkadjacency.at((*itjoint)->GetSecondAttached()->GetIndex()).push_back((*itjoint)->GetFirstAttached()->GetIndex());
+            }
+        }
+        FOREACH(it,vlinkadjacency) {
+            sort(it->begin(), it->end());
+        }
 
-            itjoint = ljoints.begin();
-            while(itjoint != ljoints.end()) {
-            
-                bool bDelete = true;
-                bool bIsPassive = itjoint->second < 0;
-                boost::array<LinkPtr,2>& bodies = itjoint->first->bodies;
-                if( bIsPassive && !itjoint->first->IsMimic() ) {
-                    // is not part of the hierarchy, but still used to join links
-                    if( !!bodies[0] ) {
-                        if( !!bodies[1] ) {
-                            if( userdata.at(bodies[0]->GetIndex()) ) {
-                                bodies[1]->_parentlinkindex = bodies[0]->GetIndex();
-                                userdata.at(bodies[1]->GetIndex()) = 1;
-                                int srcindex = bodies[0]->GetIndex();
-                                int dstindex = bodies[1]->GetIndex();
-                                // copy the data from bodies[0]
-                                for(int j = 0; j < (int)_vecjoints.size(); ++j) {
-                                    _vecJointHierarchy[j*_veclinks.size()+dstindex] = _vecJointHierarchy[j*_veclinks.size()+srcindex];
-                                }
+        std::vector< std::list< std::list<int> > > vuniquepaths(_veclinks.size()); // all unique paths starting at the root link
+        std::list< std::list<int> > closedloops;
+        int s = 0;
+        std::list< std::list<int> > S;
+        FOREACH(itv,vlinkadjacency[s]) {
+            std::list<int> P;
+            P.push_back(s);
+            P.push_back(*itv);
+            S.push_back(P);
+            vuniquepaths[*itv].push_back(P);
+        }
+        while(S.size() > 0) {
+            std::list<int>& P = S.front();
+            int u = P.back();
+            FOREACH(itv,vlinkadjacency[u]) {
+                std::list<int>::iterator itfound = find(P.begin(),P.end(),*itv);
+                if( itfound == P.end() ) {
+                    S.push_back(P);
+                    S.back().push_back(*itv);
+                    vuniquepaths[*itv].push_back(S.back());
+                }
+                else {
+                    // found a cycle
+                    std::list<int> cycle;
+                    while(itfound != P.end()) {
+                        cycle.push_back(*itfound);
+                        ++itfound;
+                    }
+                    if( cycle.size() > 2 ) {
+                        // sort the cycle so that it starts with the lowest link index and the direction is the next lowest index
+                        // this way the cycle becomes unique and can be compared for duplicates
+                        itfound = cycle.begin();
+                        std::list<int>::iterator itmin = itfound++;
+                        while(itfound != cycle.end()) {
+                            if( *itmin > *itfound ) {
+                                itmin = itfound;
                             }
-                            else if( userdata.at(bodies[1]->GetIndex()) ) {
-                                bodies[0]->_parentlinkindex = bodies[1]->GetIndex();
-                                userdata.at(bodies[0]->GetIndex()) = 1;
-                                int srcindex = bodies[1]->GetIndex();
-                                int dstindex = bodies[0]->GetIndex();
-                                // copy the data from bodies[1]
-                                for(int j = 0; j < (int)_vecjoints.size(); ++j) {
-                                    _vecJointHierarchy[j*_veclinks.size()+dstindex] = _vecJointHierarchy[j*_veclinks.size()+srcindex];
-                                }
-                            }
-                            else {
-                                bDelete = false;
-                            }
+                            itfound++;
                         }
-                        else {
-                            userdata.at(bodies[0]->GetIndex()) = 1;
+                        if( itmin != cycle.begin() ) {
+                            cycle.splice(cycle.end(),cycle,cycle.begin(),itmin);
+                        }
+                        if( *++cycle.begin() > cycle.back() ) {
+                            // reverse the cycle
+                            cycle.reverse();
+                            cycle.push_front(cycle.back());
+                            cycle.pop_back();
+                        }
+                        if( find(closedloops.begin(),closedloops.end(),cycle) == closedloops.end() ) {
+                            closedloops.push_back(cycle);
                         }
                     }
+                }
+            }
+            S.pop_front();
+        }
+        // fill each link's parent links
+        FOREACH(itlink,_veclinks) {
+            if( (*itlink)->GetIndex() > 0 && vuniquepaths[(*itlink)->GetIndex()].size() == 0 ) {
+                RAVELOG_WARN(str(boost::format("_ComputeInternalInformation: %s has incomplete kinematics! link %s not connected to root %s")%GetName()%(*itlink)->GetName()%_veclinks.at(0)->GetName()));
+            }
+            FOREACH(itpath, vuniquepaths[(*itlink)->GetIndex()]) {
+                BOOST_ASSERT(itpath->back()==(*itlink)->GetIndex());
+                int parentindex = *----itpath->end();
+                if( find((*itlink)->_vParentLinks.begin(),(*itlink)->_vParentLinks.end(),parentindex) == (*itlink)->_vParentLinks.end() ) {
+                    (*itlink)->_vParentLinks.push_back(parentindex);
+                }
+            }
+        }
+        // find the link depths (minimum path length to the root)
+        vector<int> vlinkdepths(_veclinks.size(),-1);
+        vlinkdepths.at(0) = 0;
+        for(size_t i = 0; i < _veclinks.size(); ++i) {
+            if( _veclinks[i]->IsStatic() ) {
+                vlinkdepths[i] = 0;
+            }
+        }
+        bool changed = true;
+        while(changed) {
+            changed = false;
+            FOREACH(itlink,_veclinks) {
+                if( vlinkdepths[(*itlink)->GetIndex()] == -1 ) {
+                    int bestindex = -1;
+                    FOREACH(itparent, (*itlink)->_vParentLinks) {
+                        if( vlinkdepths[*itparent] >= 0 ) {
+                            if( bestindex == -1 || (bestindex >= 0 && vlinkdepths[*itparent] < bestindex) ) {
+                                bestindex = vlinkdepths[*itparent]+1;
+                            }
+                        }
+                    }
+                    if( bestindex >= 0 ) {
+                        vlinkdepths[(*itlink)->GetIndex()] = bestindex;
+                        changed = true;
+                    }
+                }
+            }
+        }
+        // build up a directed graph of joint dependencies
+        int numjoints = (int)(_vecjoints.size()+_vPassiveJoints.size());
+        // build the adjacency list
+        vector<int> vjointadjacency(numjoints*numjoints,0);
+        for(int ij0 = 0; ij0 < numjoints; ++ij0) {
+            JointPtr j0 = ij0 < (int)_vecjoints.size() ? _vecjoints[ij0] : _vPassiveJoints[ij0-_vecjoints.size()];
+            bool bj0hasstatic = (!j0->GetFirstAttached() || j0->GetFirstAttached()->IsStatic()) || (!j0->GetSecondAttached() || j0->GetSecondAttached()->IsStatic());
+            // mimic joint sorting is a hard limit
+            if( j0->IsMimic() ) {
+                for(int i = 0; i < j0->GetDOF(); ++i) {
+                    if(j0->IsMimic(i)) {
+                        FOREACH(itdofformat, j0->_vmimic[i]->_vdofformat) {
+                            if( itdofformat->dofindex < 0 ) {
+                                vjointadjacency[itdofformat->jointindex*numjoints+ij0] = 100;
+                            }
+                        }
+                    }
+                }
+            }
 
-                    if( bDelete ) {
-                        itjoint = ljoints.erase(itjoint);
+            for(int ij1 = ij0+1; ij1 < numjoints; ++ij1) {
+                JointPtr j1 = ij1 < (int)_vecjoints.size() ? _vecjoints[ij1] : _vPassiveJoints[ij1-_vecjoints.size()];
+                bool bj1hasstatic = (!j1->GetFirstAttached() || j1->GetFirstAttached()->IsStatic()) || (!j1->GetSecondAttached() || j1->GetSecondAttached()->IsStatic());
+
+                // test if connected to world
+                if( bj0hasstatic ) {
+                    if( bj1hasstatic ) {
+                        continue;
                     }
                     else {
-                        ++itjoint;
+                        vjointadjacency[ij0*numjoints+ij1] = 1000;
+                        continue;
                     }
+                }
+                else if( bj1hasstatic ) {
+                    vjointadjacency[ij1*numjoints+ij0] = 1000;
+                    continue;
+                }
+                if( vjointadjacency[ij1*numjoints+ij0] || vjointadjacency[ij0*numjoints+ij1] ) {
+                    // already have an edge, so no reason to add any more
                     continue;
                 }
 
-                list<int> vtestjointindices;
-                if( bIsPassive ) {
-                    for(int i = 0; i < itjoint->first->GetDOF(); ++i) {
-                        if( !!itjoint->first->_vmimic.at(i)) {
-                            FOREACH(itindex,itjoint->first->_vmimic.at(i)->_setjointindices) {
-                                vtestjointindices.push_back(*itindex);
-                            }
-                        }
-                    }
-                    // in case there's multi-dof
-                    vtestjointindices.sort();
-                    vtestjointindices.unique();
+                // sort by link depth
+                int j0l0 = vlinkdepths[j0->GetFirstAttached()->GetIndex()];
+                int j0l1 = vlinkdepths[j0->GetSecondAttached()->GetIndex()];
+                int j1l0 = vlinkdepths[j1->GetFirstAttached()->GetIndex()];
+                int j1l1 = vlinkdepths[j1->GetSecondAttached()->GetIndex()];
+                int diff = min(j0l0,j0l1) - min(j1l0,j1l1);
+                if( diff < 0 ) {
+                    vjointadjacency[ij0*numjoints+ij1] = 1+min(j0l0,j0l1);
+                    continue;
                 }
-                else {
-                    vtestjointindices.push_back(itjoint->second);
+                if( diff > 0 ) {
+                    vjointadjacency[ij1*numjoints+ij0] = 1+min(j1l0,j1l1);
+                    continue;
                 }
-
-                FOREACH(ittestjointindex,vtestjointindices) {
-                    int8_t* pvalues = &_vecJointHierarchy[*ittestjointindex*_veclinks.size()];
-                    if( !!bodies[0] ) {
-                        if( !!bodies[1] ) {
-                            if( userdata.at(bodies[0]->GetIndex()) ) {
-                        
-                                int srcindex = bodies[0]->GetIndex();
-                                int dstindex = bodies[1]->GetIndex();
-                    
-                                if( userdata.at(bodies[1]->GetIndex()) ) {
-                                    BOOST_ASSERT( pvalues[dstindex] >= 0 );
-                                }
-                                else {
-                                    // copy the data from bodies[0]
-                                    for(int j = 0; j < (int)_vecjoints.size(); ++j) {
-                                        _vecJointHierarchy[j*_veclinks.size()+dstindex] = _vecJointHierarchy[j*_veclinks.size()+srcindex];
-                                    }
-                                }
-
-                                bodies[1]->_parentlinkindex = bodies[0]->GetIndex();
-                                userdata.at(bodies[1]->GetIndex()) = 1;
-                                pvalues[dstindex] = 1;
-                            }
-                            else {
-
-                                if( userdata.at(bodies[1]->GetIndex()) ) {
-                                    // copy the data from bodies[1]
-                                    int srcindex = bodies[1]->GetIndex();
-                                    int dstindex = bodies[0]->GetIndex();
-                            
-                                    for(int j = 0; j < (int)_vecjoints.size(); ++j) {
-                                        _vecJointHierarchy[j*_veclinks.size()+dstindex] = _vecJointHierarchy[j*_veclinks.size()+srcindex];
-                                    }
-
-                                    bodies[0]->_parentlinkindex = bodies[1]->GetIndex();
-                                    userdata.at(bodies[0]->GetIndex()) = 1;
-                                    pvalues[dstindex] = -1;
-                                }
-                                else {
-                                    bDelete = false; // skip
-                                }
-                            }
-                        }
-                        else {
-                            userdata.at(bodies[0]->GetIndex()) = 1;
-                            pvalues[bodies[0]->GetIndex()] = 1;
-                        }
-                    }
+                diff = max(j0l0,j0l1) - max(j1l0,j1l1);
+                if( diff < 0 ) {
+                    vjointadjacency[ij0*numjoints+ij1] = 1+max(j0l0,j0l1);
+                    continue;
                 }
-
-                if( bDelete ) {
-                    FOREACH(ittestjointindex,vtestjointindices) {
-                        JointPtr pjoint = _vecjoints.at(*ittestjointindex);
-                        if( find(_vDependencyOrderedJoints.begin(),_vDependencyOrderedJoints.end(),pjoint) == _vDependencyOrderedJoints.end() ) {
-                            _vDependencyOrderedJoints.push_back(pjoint);
-                        }
-                    }
-                    itjoint = ljoints.erase(itjoint);
-                }
-                else {
-                    ++itjoint;
+                if( diff > 0 ) {
+                    vjointadjacency[ij1*numjoints+ij0] = 1+max(j1l0,j1l1);
+                    continue;
                 }
             }
+        }
+        // topologically sort the joints
+        _vTopologicallySortedJointIndicesAll.resize(0); _vTopologicallySortedJointIndicesAll.reserve(numjoints);
+        std::list<int> noincomingedges;
+        for(int i = 0; i < numjoints; ++i) {
+            bool hasincoming = false;
+            for(int j = 0; j < numjoints; ++j) {
+                if( vjointadjacency[j*numjoints+i] ) {
+                    hasincoming = true;
+                    break;
+                }
+            }
+            if( !hasincoming ) {
+                noincomingedges.push_back(i);
+            }
+        }
+        bool bcontinuesorting = true;
+        while(bcontinuesorting) {
+            bcontinuesorting = false;
+            while(noincomingedges.size() > 0) {
+                int n = noincomingedges.front();
+                noincomingedges.pop_front();
+                _vTopologicallySortedJointIndicesAll.push_back(n);
+                for(int i = 0; i < numjoints; ++i) {
+                    if( vjointadjacency[n*numjoints+i] ) {
+                        vjointadjacency[n*numjoints+i] = 0;
+                        bool hasincoming = false;
+                        for(int j = 0; j < numjoints; ++j) {
+                            if( vjointadjacency[j*numjoints+i] ) {
+                                hasincoming = true;
+                                break;
+                            }
+                        }
+                        if( !hasincoming ) {
+                            noincomingedges.push_back(i);
+                        }
+                    }
+                }
+            }
+                
+            // go backwards so we prioritize moving joints towards the end rather than the beginning (not a formal heurstic)
+            int imaxadjind = vjointadjacency[numjoints*numjoints-1];
+            for(int ijoint = numjoints*numjoints-1; ijoint >= 0; --ijoint) {
+                if( vjointadjacency[ijoint] > vjointadjacency[imaxadjind] ) {
+                    imaxadjind = ijoint;
+                }
+            }
+            if( vjointadjacency[imaxadjind] > 0 ) {
+                bcontinuesorting = true;
+                int ifirst = imaxadjind/numjoints;
+                int isecond = imaxadjind%numjoints;
+                if( vjointadjacency[imaxadjind] <= 2 ) { // level 1 - static constraint violated, level 2 - mimic constraint
+                    JointPtr pji = ifirst < (int)_vecjoints.size() ? _vecjoints[ifirst] : _vPassiveJoints.at(ifirst-_vecjoints.size());
+                    JointPtr pjj = isecond < (int)_vecjoints.size() ? _vecjoints[isecond] : _vPassiveJoints.at(isecond-_vecjoints.size());
+                    RAVELOG_WARN(str(boost::format("cannot sort joints topologically %d for robot %s joints %s:%s!! forward kinematics might be buggy\n")%vjointadjacency[imaxadjind]%GetName()%pji->GetName()%pjj->GetName()));
+                }
+                // remove this edge
+                vjointadjacency[imaxadjind] = 0;
+                bool hasincoming = false;
+                for(int j = 0; j < numjoints; ++j) {
+                    if( vjointadjacency[j*numjoints+isecond] ) {
+                        hasincoming = true;
+                        break;
+                    }
+                }
+                if( !hasincoming ) {
+                    noincomingedges.push_back(isecond);
+                }
+            }
+        }
+        BOOST_ASSERT((int)_vTopologicallySortedJointIndicesAll.size()==numjoints);
+        FOREACH(itindex,_vTopologicallySortedJointIndicesAll) {
+            JointPtr pj = *itindex < (int)_vecjoints.size() ? _vecjoints[*itindex] : _vPassiveJoints.at(*itindex-_vecjoints.size());
+            if( *itindex < (int)_vecjoints.size() ) {
+                _vTopologicallySortedJoints.push_back(pj);
+            }
+            _vTopologicallySortedJointsAll.push_back(pj);
+        }
 
-            if( cursize == ljoints.size() ) {
-                RAVELOG_ERROR(str(boost::format("Cannot compute joint hierarchy for number of joints %d! Part of robot might not be moveable\n")%_vecjoints.size()));
-                break;
+        // based on this topological sorting, find the parent link for each joint
+        FOREACH(itjoint,_vTopologicallySortedJointsAll) {
+            if( !(*itjoint)->GetFirstAttached() || (*itjoint)->GetFirstAttached()->IsStatic() ) {
+                if( !!(*itjoint)->GetSecondAttached() && !(*itjoint)->GetSecondAttached()->IsStatic() ) {
+                    (*itjoint)->_parentlinkindex = (*itjoint)->GetSecondAttached()->GetIndex();
+                }
+            }
+            else if( !(*itjoint)->GetSecondAttached() || (*itjoint)->GetSecondAttached()->IsStatic() ) {
+                (*itjoint)->_parentlinkindex = (*itjoint)->GetFirstAttached()->GetIndex();
+            }
+            else {
+                // NOTE: possibly try to choose roots that do not involve mimic joints. ikfast might have problems
+                // dealing with very complex formulas
+                LinkPtr plink0 = (*itjoint)->GetFirstAttached(), plink1 = (*itjoint)->GetSecondAttached();
+                if( vlinkdepths[plink0->GetIndex()] < vlinkdepths[plink1->GetIndex()] ) {
+                    (*itjoint)->_parentlinkindex = plink0->GetIndex();
+                }
+                else if( vlinkdepths[plink0->GetIndex()] > vlinkdepths[plink1->GetIndex()] ) {
+                    (*itjoint)->_parentlinkindex = plink1->GetIndex();
+                }
+                else {
+                    // depths are the same, so check the adjacent joints of each link
+                    size_t link0pos=_vTopologicallySortedJointIndicesAll.size(), link1pos=_vTopologicallySortedJointIndicesAll.size();
+                    FOREACHC(itparentlink,plink0->_vParentLinks) {
+                        int jointindex = _vAllPairsShortestPaths[plink0->GetIndex()*_veclinks.size()+*itparentlink].second;
+                        size_t pos = find(_vTopologicallySortedJointIndicesAll.begin(),_vTopologicallySortedJointIndicesAll.end(),jointindex) - _vTopologicallySortedJointIndicesAll.begin();
+                        link0pos = min(link0pos,pos);
+                    }
+                    FOREACHC(itparentlink,plink1->_vParentLinks) {
+                        int jointindex = _vAllPairsShortestPaths[plink1->GetIndex()*_veclinks.size()+*itparentlink].second;
+                        size_t pos = find(_vTopologicallySortedJointIndicesAll.begin(),_vTopologicallySortedJointIndicesAll.end(),jointindex) - _vTopologicallySortedJointIndicesAll.end();
+                        link1pos = min(link1pos,pos);
+                    }
+                    if( link0pos < link1pos ) {
+                        (*itjoint)->_parentlinkindex = plink0->GetIndex();
+                    }
+                    else if( link0pos > link1pos ) {
+                        (*itjoint)->_parentlinkindex = plink1->GetIndex();
+                    }
+                    else {
+                        RAVELOG_WARN(str(boost::format("links %s and %s have joints on the same depth %d and %d?")%plink0->GetName()%plink1->GetName()%link0pos%link1pos));
+                    }
+                }
+            }
+        }
+        // find out what links are affected by what joints.
+        FOREACH(it,_vJointsAffectingLinks) {
+            *it = 0;
+        }
+        vector<int8_t> vusedlinks;
+        for(int i = 0; i < (int)_veclinks.size(); ++i) {
+            vusedlinks.resize(0); vusedlinks.resize(_veclinks.size());
+            FOREACH(itpath,vuniquepaths[i]) {
+                FOREACH(itlink,*itpath) {
+                    vusedlinks[*itlink] = 1;
+                }
+            }
+            for(int j = 0; j < (int)_veclinks.size(); ++j) {
+                if( vusedlinks[j] && i != j ) {
+                    int jointindex = _vAllPairsShortestPaths[i*_veclinks.size()+j].second;
+                    BOOST_ASSERT( jointindex >= 0 );
+                    JointPtr pjoint = jointindex < (int)_vecjoints.size() ? _vecjoints[jointindex] : _vPassiveJoints.at(jointindex-_vecjoints.size());
+                    if( jointindex < (int)_vecjoints.size() ) {
+                        _vJointsAffectingLinks[jointindex*_veclinks.size()+i] = pjoint->GetHierarchyParentLink()->GetIndex() == i ? -1 : 1;
+                    }
+                    if( pjoint->IsMimic() ) {
+                        for(int idof = 0; idof < pjoint->GetDOF(); ++idof) {
+                            if( pjoint->IsMimic(idof) ) {
+                                FOREACHC(itmimicdof,pjoint->_vmimic[idof]->_vmimicdofs) {
+                                    JointPtr pjoint2 = GetJointFromDOFIndex(itmimicdof->dofindex);
+                                    _vJointsAffectingLinks[pjoint2->GetJointIndex()*_veclinks.size()+i] = pjoint2->GetHierarchyParentLink()->GetIndex() == i ? -1 : 1;
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
 
-        if( ljoints.size() == 0 ) {
-            RAVELOG_DEBUG(str(boost::format("Successfully computed joint hierarchy for number of joints %d!\n")%_vecjoints.size()));
+        // process the closed loops, note that determining 'degrees of freedom' of the loop is very difficult and should be left to the 'fkfast' tool
+        _vClosedLoopIndices.resize(0); _vClosedLoopIndices.reserve(closedloops.size());
+        _vClosedLoops.resize(0); _vClosedLoops.reserve(closedloops.size());
+        FOREACH(itclosedloop,closedloops) {
+            _vClosedLoopIndices.push_back(vector< std::pair<int16_t, int16_t> >());
+            _vClosedLoopIndices.back().reserve(itclosedloop->size());
+            _vClosedLoops.push_back(vector< std::pair<LinkPtr, JointPtr> >());
+            _vClosedLoops.back().reserve(itclosedloop->size());
+            // fill the links
+            FOREACH(itlinkindex,*itclosedloop) {
+                _vClosedLoopIndices.back().push_back(make_pair<int16_t,int16_t>(*itlinkindex,0));
+                _vClosedLoops.back().push_back(make_pair<LinkPtr,JointPtr>(_veclinks.at(*itlinkindex),JointPtr()));
+            }
+            // fill the joints
+            for(size_t i = 0; i < _vClosedLoopIndices.back().size(); ++i) {
+                int nextlink = i+1 < _vClosedLoopIndices.back().size() ? _vClosedLoopIndices.back()[i+1].first : _vClosedLoopIndices.back()[0].first;
+                int jointindex = _vAllPairsShortestPaths[nextlink*_veclinks.size()+_vClosedLoopIndices.back()[i].first].second;
+                _vClosedLoopIndices.back()[i].second = jointindex;
+                if( jointindex < (int)_vecjoints.size() ) {
+                    _vClosedLoops.back().at(i).second = _vecjoints.at(jointindex);
+                }
+                else {
+                    _vClosedLoops.back().at(i).second = _vPassiveJoints.at(jointindex-_vecjoints.size());
+                }
+            }
+
+            if( IS_DEBUGLEVEL(Level_Debug) ) {
+                stringstream ss;
+                ss << GetName() << " closedloop found: ";
+                FOREACH(itlinkindex,*itclosedloop) {
+                    LinkPtr plink = _veclinks.at(*itlinkindex);
+                    ss << plink->GetName() << "(" << plink->GetIndex() << ") ";
+                }
+                RAVELOG_DEBUG(ss.str());
+            }
         }
     }
 
@@ -2977,68 +3355,13 @@ void KinBody::_ComputeInternalInformation()
                     }
                 }
             }
-            FOREACHC(itpassive, _vecPassiveJoints) {
+            FOREACHC(itpassive, _vPassiveJoints) {
                 if( (*itpassive)->IsStatic() ) {
                     if( (*itpassive)->GetFirstAttached() == plink && !!(*itpassive)->GetSecondAttached() && find(vattachedlinks.begin(),vattachedlinks.end(),(*itpassive)->GetSecondAttached()->GetIndex()) == vattachedlinks.end()) {
                         vattachedlinks.push_back((*itpassive)->GetSecondAttached()->GetIndex());
                     }
                     if( (*itpassive)->GetSecondAttached() == plink && !!(*itpassive)->GetFirstAttached() && find(vattachedlinks.begin(),vattachedlinks.end(),(*itpassive)->GetFirstAttached()->GetIndex()) == vattachedlinks.end()) {
                         vattachedlinks.push_back((*itpassive)->GetFirstAttached()->GetIndex());
-                    }
-                }
-            }
-        }
-    }
-
-    // compute the all-pairs shortest paths
-    {
-        _vAllPairsShortestPaths.resize(_veclinks.size()*_veclinks.size());
-        FOREACH(it,_vAllPairsShortestPaths) {
-            it->first = -1;
-            it->second = -1;
-        }
-        vector<uint32_t> vcosts(_veclinks.size()*_veclinks.size(),0x3fffffff); // initialize to 2^30-1 since we'll be adding
-        for(size_t i = 0; i < _veclinks.size(); ++i) {
-            vcosts[i*_veclinks.size()+i] = 0;
-        }
-        FOREACHC(itjoint,_vecjoints) {
-            if( !!(*itjoint)->GetFirstAttached() && !!(*itjoint)->GetSecondAttached() ) {
-                int index = (*itjoint)->GetFirstAttached()->GetIndex()*_veclinks.size()+(*itjoint)->GetSecondAttached()->GetIndex();
-                _vAllPairsShortestPaths[index] = std::pair<int16_t,int16_t>((*itjoint)->GetFirstAttached()->GetIndex(),(*itjoint)->GetJointIndex());
-                vcosts[index] = 1;
-                index = (*itjoint)->GetSecondAttached()->GetIndex()*_veclinks.size()+(*itjoint)->GetFirstAttached()->GetIndex();
-                _vAllPairsShortestPaths[index] = std::pair<int16_t,int16_t>((*itjoint)->GetSecondAttached()->GetIndex(),(*itjoint)->GetJointIndex());
-                vcosts[index] = 1;
-            }
-        }
-        int jointindex = (int)_vecjoints.size();
-        FOREACHC(itjoint,_vecPassiveJoints) {
-            if( !!(*itjoint)->GetFirstAttached() && !!(*itjoint)->GetSecondAttached() ) {
-                int index = (*itjoint)->GetFirstAttached()->GetIndex()*_veclinks.size()+(*itjoint)->GetSecondAttached()->GetIndex();
-                _vAllPairsShortestPaths[index] = std::pair<int16_t,int16_t>((*itjoint)->GetFirstAttached()->GetIndex(),jointindex);
-                vcosts[index] = 1;
-                index = (*itjoint)->GetSecondAttached()->GetIndex()*_veclinks.size()+(*itjoint)->GetFirstAttached()->GetIndex();
-                _vAllPairsShortestPaths[index] = std::pair<int16_t,int16_t>((*itjoint)->GetSecondAttached()->GetIndex(),jointindex);
-                vcosts[index] = 1;
-            }
-            ++jointindex;
-        }
-        for(size_t k = 0; k < _veclinks.size(); ++k) {
-            for(size_t i = 0; i < _veclinks.size(); ++i) {
-                if( i == k ) {
-                    continue;
-                }
-                for(size_t j = 0; j < _veclinks.size(); ++j) {
-                    if( j == i || j == k ) {
-                        continue;
-                    }
-                    uint32_t kcost = vcosts[k*_veclinks.size()+i] + vcosts[j*_veclinks.size()+k];
-                    if( vcosts[j*_veclinks.size()+i] > kcost ) {
-                        vcosts[j*_veclinks.size()+i] = kcost;
-                        _vAllPairsShortestPaths[j*_veclinks.size()+i] = _vAllPairsShortestPaths[k*_veclinks.size()+i];
-                    }
-                    else if( vcosts[j*_veclinks.size()+i] == kcost && _vAllPairsShortestPaths[j*_veclinks.size()+i] != _vAllPairsShortestPaths[k*_veclinks.size()+i] ) {
-                        RAVELOG_WARN("found closed loop in kinematics! links %d,%d,%d\n",k,i,j);
                     }
                 }
             }
@@ -3095,7 +3418,7 @@ void KinBody::_ComputeInternalInformation()
                 }
             }
         
-            FOREACH(itj, _vecPassiveJoints) {
+            FOREACH(itj, _vPassiveJoints) {
                 if( !!(*itj)->bodies[0] && !!(*itj)->bodies[1] ) {
                     int ind0 = (*itj)->bodies[0]->GetIndex();
                     int ind1 = (*itj)->bodies[1]->GetIndex();
@@ -3143,6 +3466,7 @@ void KinBody::_ComputeInternalInformation()
 
         SetDOFValues(vprev);
     }
+    RAVELOG_DEBUG(str(boost::format("_ComputeInternalInformation %s in %fs")%GetName()%(1e-6*(GetMicroTime()-starttime))));
 }
 
 bool KinBody::IsAttached(KinBodyConstPtr pbody) const
@@ -3243,7 +3567,7 @@ int8_t KinBody::DoesAffect(int jointindex, int linkindex ) const
     CHECK_INTERNAL_COMPUTATION;
     BOOST_ASSERT(jointindex >= 0 && jointindex < (int)_vecjoints.size());
     BOOST_ASSERT(linkindex >= 0 && linkindex < (int)_veclinks.size());
-    return _vecJointHierarchy.at(jointindex*_veclinks.size()+linkindex);
+    return _vJointsAffectingLinks.at(jointindex*_veclinks.size()+linkindex);
 }
 
 const std::set<int>& KinBody::GetNonAdjacentLinks(int adjacentoptions) const
@@ -3282,7 +3606,7 @@ bool KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     }
     KinBodyConstPtr r = RaveInterfaceConstCast<KinBody>(preference);
 
-    name = r->name;
+    _name = r->_name;
     _bHierarchyComputed = r->_bHierarchyComputed;
     _bMakeJoinedLinksAdjacent = r->_bMakeJoinedLinksAdjacent;
     __hashkinematics = r->__hashkinematics;
@@ -3301,38 +3625,80 @@ bool KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
         JointPtr pnewjoint(new Joint(shared_kinbody()));
         *pnewjoint = **itjoint; // be careful of copying pointers!
         pnewjoint->_parent = shared_kinbody();
-        if( !!(*itjoint)->bodies[0] )
+        if( !!(*itjoint)->bodies[0] ) {
             pnewjoint->bodies[0] = _veclinks.at((*itjoint)->bodies[0]->GetIndex());
-        if( !!(*itjoint)->bodies[1] )
+        }
+        if( !!(*itjoint)->bodies[1] ) {
             pnewjoint->bodies[1] = _veclinks.at((*itjoint)->bodies[1]->GetIndex());
+        }
         _vecjoints.push_back(pnewjoint);
     }
 
-    _vecPassiveJoints.resize(0); _vecPassiveJoints.reserve(r->_vecPassiveJoints.size());
-    FOREACHC(itjoint, r->_vecPassiveJoints) {
+    _vPassiveJoints.resize(0); _vPassiveJoints.reserve(r->_vPassiveJoints.size());
+    FOREACHC(itjoint, r->_vPassiveJoints) {
         JointPtr pnewjoint(new Joint(shared_kinbody()));
         *pnewjoint = **itjoint; // be careful of copying pointers!
         pnewjoint->_parent = shared_kinbody();
-        if( !!(*itjoint)->bodies[0] )
+        if( !!(*itjoint)->bodies[0] ) {
             pnewjoint->bodies[0] = _veclinks.at((*itjoint)->bodies[0]->GetIndex());
-        if( !!(*itjoint)->bodies[1] )
+        }
+        if( !!(*itjoint)->bodies[1] ) {
             pnewjoint->bodies[1] = _veclinks.at((*itjoint)->bodies[1]->GetIndex());
-        _vecPassiveJoints.push_back(pnewjoint);
+        }
+        _vPassiveJoints.push_back(pnewjoint);
     }
 
-    _vDependencyOrderedJoints.resize(0); _vDependencyOrderedJoints.resize(r->_vDependencyOrderedJoints.size());
-    FOREACHC(itjoint, r->_vDependencyOrderedJoints) {
-        _vDependencyOrderedJoints.push_back(_vecjoints.at((*itjoint)->GetJointIndex()));
+    _vTopologicallySortedJoints.resize(0); _vTopologicallySortedJoints.resize(r->_vTopologicallySortedJoints.size());
+    FOREACHC(itjoint, r->_vTopologicallySortedJoints) {
+        _vTopologicallySortedJoints.push_back(_vecjoints.at((*itjoint)->GetJointIndex()));
+    }
+    _vTopologicallySortedJointsAll.resize(0); _vTopologicallySortedJointsAll.resize(r->_vTopologicallySortedJointsAll.size());
+    FOREACHC(itjoint, r->_vTopologicallySortedJointsAll) {
+        std::vector<JointPtr>::const_iterator it = find(r->_vecjoints.begin(),r->_vecjoints.end(),*itjoint);
+        if( it != r->_vecjoints.end() ) {
+            _vTopologicallySortedJointsAll.push_back(_vecjoints.at(it-r->_vecjoints.begin()));
+        }
+        else {
+            it = find(r->_vPassiveJoints.begin(), r->_vPassiveJoints.end(),*itjoint);
+            if( it != r->_vPassiveJoints.end() ) {
+                _vTopologicallySortedJointsAll.push_back(_vPassiveJoints.at(it-r->_vPassiveJoints.begin()));
+            }
+            else {
+                throw openrave_exception("joint doesn't belong to anythong?",ORE_Assert);
+            }
+        }
     }
     _vDOFOrderedJoints = r->_vDOFOrderedJoints;
-    _vecJointHierarchy = r->_vecJointHierarchy;
-    _vecDOFIndices = r->_vecDOFIndices;
+    _vJointsAffectingLinks = r->_vJointsAffectingLinks;
+    _vDOFIndices = r->_vDOFIndices;
     
     _setAdjacentLinks = r->_setAdjacentLinks;
     _setNonAdjacentLinks = r->_setNonAdjacentLinks;
     _nNonAdjacentLinkCache = r->_nNonAdjacentLinkCache;
     _vForcedAdjacentLinks = r->_vForcedAdjacentLinks;
     _vAllPairsShortestPaths = r->_vAllPairsShortestPaths;
+    _vClosedLoopIndices = r->_vClosedLoopIndices;
+    _vClosedLoops.resize(0); _vClosedLoops.reserve(r->_vClosedLoops.size());
+    FOREACHC(itloop,_vClosedLoops) {
+        _vClosedLoops.push_back(std::vector< std::pair<LinkPtr,JointPtr> >());
+        FOREACHC(it,*itloop) {
+            _vClosedLoops.back().push_back(make_pair(_veclinks.at(it->first->GetIndex()),JointPtr()));
+            // the joint might be in _vPassiveJoints
+            std::vector<JointPtr>::const_iterator itjoint = find(r->_vecjoints.begin(),r->_vecjoints.end(),it->second);
+            if( itjoint != r->_vecjoints.end() ) {
+                _vClosedLoops.back().back().second = _vecjoints.at(itjoint-r->_vecjoints.begin());
+            }
+            else {
+                itjoint = find(r->_vPassiveJoints.begin(), r->_vPassiveJoints.end(),it->second);
+                if( itjoint != r->_vPassiveJoints.end() ) {
+                    _vClosedLoops.back().back().second = _vPassiveJoints.at(itjoint-r->_vPassiveJoints.begin());
+                }
+                else {
+                    throw openrave_exception("joint in closed loop doesn't belong to anythong?",ORE_Assert);
+                }
+            }
+        }
+    }
     
     _listAttachedBodies.clear(); // will be set in the environment
     _listRegisteredCallbacks.clear(); // reset the callbacks
@@ -3369,8 +3735,8 @@ void KinBody::serialize(std::ostream& o, int options) const
     FOREACHC(it,_vecjoints) {
         (*it)->serialize(o,options);
     }
-    o << _vecPassiveJoints.size() << " ";
-    FOREACHC(it,_vecPassiveJoints) {
+    o << _vPassiveJoints.size() << " ";
+    FOREACHC(it,_vPassiveJoints) {
         (*it)->serialize(o,options);
     }
 }
@@ -3395,6 +3761,54 @@ void KinBody::__erase_iterator(KinBodyWeakPtr pweakbody, std::list<std::pair<int
 boost::shared_ptr<void> KinBody::RegisterChangeCallback(int properties, const boost::function<void()>& callback)
 {
     return boost::shared_ptr<void>(new std::list<std::pair<int,boost::function<void()> > >::iterator(_listRegisteredCallbacks.insert(_listRegisteredCallbacks.end(),make_pair(properties,callback))), boost::bind(KinBody::__erase_iterator,KinBodyWeakPtr(shared_kinbody()), _1));
+}
+
+template <int D>
+static dReal polyrootsk(KinBody::JointWeakPtr pweakjoint, int iaxis, const dReal* rawcoeffs)
+{
+    int numroots=0;
+    dReal rawroots[D];
+    polyroots<dReal,D>(rawcoeffs,rawroots,numroots);
+    if( numroots > 0 ) {
+        if( pweakjoint.expired() ) {
+            // take the one closest to 0
+            int best = 0;
+            dReal f = RaveFabs(rawroots[0]);
+            for(int i = 1; i < numroots; ++i) {
+                if( RaveFabs(rawroots[i]) < f ) {
+                    f = RaveFabs(rawroots[i]);
+                    best = i;
+                }
+            }
+            return rawroots[best];
+        }
+        else {
+            // take the one within joint limits and closest to the current value
+            KinBody::JointPtr pjoint(pweakjoint);
+            std::vector<dReal> vLowerLimit, vUpperLimit;
+            pjoint->GetLimits(vLowerLimit,vUpperLimit);
+            dReal flower = vLowerLimit.at(iaxis), fupper = vUpperLimit.at(iaxis);
+            int best = -1;
+            dReal fbest;
+            for(int i = 0; i < numroots; ++i) {
+                if( pjoint->IsCircular() || (flower <= rawroots[i]  && fupper >= rawroots[i]) ) {
+                    if( best == -1 || RaveFabs(rawroots[i]) < fbest ) {
+                        fbest = RaveFabs(rawroots[i]);
+                        best = i;
+                    }
+                }
+            }
+            return rawroots[best];
+        }
+    }
+    throw openrave_exception("failed to solve for joint",ORE_Failed);
+}
+
+boost::shared_ptr<FunctionParserBase<dReal> > KinBody::_CreateFunctionParser()
+{
+    boost::shared_ptr<FunctionParserBase<dReal> > parser(new FunctionParserBase<dReal>());
+    // register commonly used functions
+    return parser;
 }
 
 } // end namespace OpenRAVE

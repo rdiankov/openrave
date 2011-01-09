@@ -2169,11 +2169,13 @@ bool QtCoinViewer::_HandleSelection(SoPath *path)
             }
 
             if( !pjoint ) {
+                std::vector<int> vmimicdofs;
                 FOREACHC(itjoint, pKinBody->GetBody()->GetPassiveJoints()) {
                     if( (*itjoint)->IsMimic() ) {
                         for(int idof = 0; idof < (*itjoint)->GetDOF(); ++idof) {
                             if( (*itjoint)->IsMimic(idof) ) {
-                                FOREACHC(itmimicdof, (*itjoint)->GetMimicDOFIndices(idof)) {
+                                (*itjoint)->GetMimicDOFIndices(vmimicdofs,idof);
+                                FOREACHC(itmimicdof, vmimicdofs) {
                                     KinBody::JointPtr ptempjoint = pKinBody->GetBody()->GetJointFromDOFIndex(*itmimicdof);
                                     if( !ptempjoint->IsStatic() && pKinBody->GetBody()->DoesAffect(ptempjoint->GetJointIndex(), pSelectedLink->GetIndex()) && 
                                         ((*itjoint)->GetFirstAttached()==pSelectedLink || (*itjoint)->GetSecondAttached()==pSelectedLink) ) {
@@ -2625,7 +2627,7 @@ void QtCoinViewer::UpdateCameraTransform()
     SbVec3f axis;
     float fangle;
     GetCamera()->orientation.getValue(axis, fangle);
-    Tcam.rotfromaxisangle(RaveVector<float>(axis[0],axis[1],axis[2]),fangle);
+    Tcam.rot = quatFromAxisAngle(RaveVector<float>(axis[0],axis[1],axis[2]),fangle);
 }
 
 // menu items
@@ -2825,7 +2827,7 @@ bool QtCoinViewer::_GetCameraImage(std::vector<uint8_t>& memory, int width, int 
     }
 
     // have to flip Z axis
-    RaveTransform<float> trot; trot.rotfromaxisangle(RaveVector<float>(1,0,0),(float)PI);
+    RaveTransform<float> trot; trot.rot = quatFromAxisAngle(RaveVector<float>(1,0,0),(float)PI);
     RaveTransform<float> t = _t * trot;
 
     SoSFVec3f position = GetCamera()->position;
@@ -2876,11 +2878,11 @@ bool QtCoinViewer::_GetCameraImage(std::vector<uint8_t>& memory, int width, int 
 
 bool QtCoinViewer::_WriteCameraImage(int width, int height, const RaveTransform<float>& _t, const SensorBase::CameraIntrinsics& KK, const std::string& filename, const std::string& extension)
 {
-    if( !_bCanRenderOffscreen )
+    if( !_bCanRenderOffscreen ) {
         return false;
-
+    }
     // have to flip Z axis
-    RaveTransform<float> trot; trot.rotfromaxisangle(RaveVector<float>(1,0,0),(float)PI);
+    RaveTransform<float> trot; trot.rot = quatFromAxisAngle(RaveVector<float>(1,0,0),(float)PI);
     RaveTransform<float> t = _t * trot;
 
     SoSFVec3f position = GetCamera()->position;

@@ -292,13 +292,13 @@ private:
             case IkParameterization::Type_Translation3D: {
                 Vector v = param.GetTranslation();
                 IKReal eetrans[3] = {v.x, v.y, v.z};
-    //            stringstream ss; ss << "./ik " << std::setprecision(16);
-    //            ss << eetrans[0]  << " " << eetrans[1]  << " " << eetrans[2] << " ";
-    //            FOREACH(itfree,vfree) {
-    //                ss << *itfree << " ";
-    //            }
-    //            ss << endl;
-    //            RAVELOG_INFO(ss.str());
+//                stringstream ss; ss << "./ik " << std::setprecision(16);
+//                ss << eetrans[0]  << " " << eetrans[1]  << " " << eetrans[2] << " ";
+//                FOREACH(itfree,vfree) {
+//                    ss << *itfree << " ";
+//                }
+//                ss << endl;
+//                RAVELOG_INFO(ss.str());
                 return _pfnik(eetrans, NULL, vfree.size()>0?&vfree[0]:NULL, vsolutions);
             }
             case IkParameterization::Type_Direction3D: {

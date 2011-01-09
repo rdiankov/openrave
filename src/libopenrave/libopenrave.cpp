@@ -1476,7 +1476,7 @@ bool SimpleSensorSystem::SimpleXMLReader::endElement(const std::string& name)
     else if( name == "rotationaxis" ) {
         Vector axis; dReal fang;
         ss >> axis.x >> axis.y >> axis.z >> fang;
-        _pdata->transOffset.rotfromaxisangle(axis.normalize3(),fang*dReal(PI/180.0));
+        _pdata->transOffset.rot = quatFromAxisAngle(axis,fang*dReal(PI/180.0));
     }
     else if( name == "quat" )
         ss >> _pdata->transOffset.rot;
@@ -1490,7 +1490,7 @@ bool SimpleSensorSystem::SimpleXMLReader::endElement(const std::string& name)
     else if( name == "prerotationaxis") {
         Vector axis; dReal fang;
         ss >> axis.x >> axis.y >> axis.z >> fang;
-        _pdata->transPreOffset.rotfromaxisangle(axis,fang*dReal(PI/180.0));
+        _pdata->transPreOffset.rot = quatFromAxisAngle(axis,fang*dReal(PI/180.0));
     }
     else if( name == "prequat")
         ss >> _pdata->transPreOffset.rot;
@@ -2074,6 +2074,34 @@ std::string GetMD5HashString(const std::vector<uint8_t>& v)
         hex_output[2*di+1] = n > 9 ? ('a'+n-10) : ('0'+n);
     }
     return hex_output;
+}
+
+std::string& SearchAndReplace(std::string& out, const std::string& in, const std::vector< std::pair<std::string, std::string> >& pairs)
+{
+    FOREACHC(itp,pairs) {
+        BOOST_ASSERT(itp->first.size()>0);
+    }
+    out.resize(0);
+    size_t startindex = 0;
+    while(startindex < in.size()) {
+        size_t nextindex=std::string::npos;
+        std::vector< std::pair<std::string, std::string> >::const_iterator itbestp;
+        FOREACHC(itp,pairs) {
+            size_t index = in.find(itp->first,startindex);
+            if( nextindex == std::string::npos || (index != std::string::npos && index < nextindex) ) {
+                nextindex = index;
+                itbestp = itp;
+            }
+        }
+        if( nextindex == std::string::npos ) {
+            out += in.substr(startindex);
+            break;
+        }
+        out += in.substr(startindex,nextindex-startindex);
+        out += itbestp->second;
+        startindex = nextindex+itbestp->first.size();
+    }
+    return out;
 }
 
 } // end namespace OpenRAVE

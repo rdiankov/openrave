@@ -730,7 +730,7 @@ bool FunctionParserBase<Value_t>::AddUnit(const std::string& name,
 
 template<typename Value_t>
 bool FunctionParserBase<Value_t>::AddFunction
-(const std::string& name, FunctionPtr ptr, unsigned paramsAmount)
+(const std::string& name, const FunctionPtr& ptr, unsigned paramsAmount)
 {
     if(!containsOnlyValidIdentifierChars<Value_t>(name)) return false;
 

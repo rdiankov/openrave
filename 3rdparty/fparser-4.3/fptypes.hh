@@ -249,11 +249,9 @@ struct FunctionParserBase<Value_t>::Data
 
     struct FuncPtrData
     {
-        union
-        {
-            FunctionPtr mFuncPtr;
-            FunctionParserBase<Value_t>* mParserPtr;
-        };
+        // removed union due to constructor/destructors (Rosen Diankov)
+        FunctionPtr mFuncPtr;
+        FunctionParserBase<Value_t>* mParserPtr;
         unsigned mParams;
     };
 

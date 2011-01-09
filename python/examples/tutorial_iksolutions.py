@@ -146,7 +146,7 @@ def run(args=None):
 
         env.UpdatePublishedBodies()
         print('waiting...')
-        time.sleep(10)
+        time.sleep(20)
         # remove the robots
         for newrobot in newrobots:
             env.Remove(newrobot)

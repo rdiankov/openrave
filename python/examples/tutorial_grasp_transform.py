@@ -176,8 +176,11 @@ def run(args=None):
                             [0,0,0,1]])
         target.SetTransform(O_T_Target)
     
+        robot.SetActiveManipulator('leftarm')
         # init robot pose: l_shoulder_pan, r_shoulder_pan, torso, l_gripper
-        robot.SetDOFValues([pi/2,-pi/2,0.31,0.54],[35,56,14,47])
+        names = ['l_shoulder_pan_joint', 'r_shoulder_pan_joint', 'torso_lift_joint', 'l_gripper_joint']
+        dofs = [robot.GetJoint(name).GetDOFIndex() for name in names]
+        robot.SetDOFValues([pi/2,-pi/2,0.31,0.54],dofs)
         gt = GraspTransform(env,target)
         handles = []
         raw_input('This demo shows how to find the transform that moves the hand to the target.\npress ENTER to continue...')

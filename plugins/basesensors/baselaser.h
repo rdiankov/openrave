@@ -161,7 +161,6 @@ public:
         if( fTimeToScan <= 0 ) {
             fTimeToScan = _pgeom->time_scan;
             Vector rotaxis(0,0,1);
-            Transform trot;
             RAY r;
     
             GetEnv()->GetCollisionChecker()->SetCollisionOptions(CO_Distance);
@@ -178,11 +177,10 @@ public:
 
                 size_t index = 0;
                 for(float frotangle = _pgeom->min_angle[0]; frotangle <= _pgeom->max_angle[0]; frotangle += _pgeom->resolution[0], ++index) {
-                    if( index >= _pdata->ranges.size() )
+                    if( index >= _pdata->ranges.size() ) {
                         break;
-            
-                    trot.rotfromaxisangle(rotaxis, (dReal)frotangle);
-                    Vector vdir(t.rotate(trot.rotate(Vector(1,0,0))));
+                    }
+                    Vector vdir(t.rotate(quatRotate(quatFromAxisAngle(rotaxis, (dReal)frotangle),Vector(1,0,0))));
                     r.dir = _pgeom->max_range*vdir;
                     
                     if( GetEnv()->CheckCollision(r, _report)) {
@@ -304,12 +302,10 @@ public:
             viconpoints.resize(N+2);
             viconindices.resize(3*N);
             viconpoints[0] = Vector(0,0,0);
-            Transform trot;
 
             for(int i = 0; i <= N; ++i) {
                 dReal fang = _pgeom->min_angle[0] + (_pgeom->max_angle[0]-_pgeom->min_angle[0])*(float)i/(float)N;
-                trot.rotfromaxisangle(Vector(0,0,1), fang);
-                viconpoints[i+1] = trot.rotate(Vector(0.05f,0,0));
+                viconpoints[i+1] = quatRotate(quatFromAxisAngle(Vector(0,0,1), fang),Vector(0.05f,0,0));
 
                 if( i < N ) {
                     viconindices[3*i+0] = 0;
@@ -480,7 +476,7 @@ protected:
     virtual Transform GetLaserPlaneTransform()
     {
         Transform trot;
-        trot.rotfromaxisangle(_vGeomSpinAxis, _fCurAngle);
+        trot.rot = quatFromAxisAngle(_vGeomSpinAxis, _fCurAngle);
         trot.trans = trot.rotate(-_vGeomSpinPos) + _vGeomSpinPos;
         return GetTransform() * trot;
     }

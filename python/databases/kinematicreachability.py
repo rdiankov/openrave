@@ -155,10 +155,10 @@ class ReachabilityModel(OpenRAVEModel):
                 quatdelta=options.quatdelta
             usefreespace=options.usefreespace
             useconvex=options.useconvex
-        if self.robot.GetKinematicsGeometryHash() == '7543c4bc79f7efddba92556084c8cdb1' or self.robot.GetKinematicsGeometryHash() == '2fe791ac1e75cd969dedeb7b005a058d': # wam 7dof
+        if self.robot.GetKinematicsGeometryHash() == 'e829feb384e6417bbf5bd015f1c6b49a' or self.robot.GetKinematicsGeometryHash() == '22548f4f2ecf83e88ae7e2f3b2a0bd08': # wam 7dof
             if maxradius is None:
                 maxradius = 1.1
-        elif self.robot.GetKinematicsGeometryHash() == 'b873d8723a5126f7ebbb05e8300a4a61': # pr2
+        elif self.robot.GetKinematicsGeometryHash() == 'e3b4168a72a78fa2c37dc414cabb933a': # pr2
             if xyzdelta is None:
                 xyzdelta = 0.03
             if quatdelta is None:

@@ -33,6 +33,9 @@ if( HAVE_LONG_DOUBLE EQUAL 16 AND HAS_STRTOLD)
   add_definitions("-DFP_SUPPORT_LONG_DOUBLE_TYPE")
 endif()
 
+# custom flag
+add_definitions("-DFP_USE_BOOST_FUNCTION")
+
 set(fparser_SOURCES fparser.cc ) # fpoptimizer.cc
 
 set(fparser_LIBRARIES)

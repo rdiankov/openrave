@@ -164,7 +164,7 @@ class InverseReachabilityModel(OpenRAVEModel):
             if options.jointvalues is not None:
                 self.jointvalues = array([float(s) for s in options.jointvalues.split()])
                 assert(len(self.jointvalues)==len(self.getdofindices(self.manip)))
-        if self.robot.GetRobotStructureHash() == '7b789782446d86b95c6fb16de7f204c7' and self.manip.GetName() == 'arm':
+        if self.robot.GetKinematicsGeometryHash() == 'e829feb384e6417bbf5bd015f1c6b49a' or self.robot.GetKinematicsGeometryHash() == '22548f4f2ecf83e88ae7e2f3b2a0bd08': # wam 7dof
             if heightthresh is None:
                 heightthresh=0.05
             if quatthresh is None:

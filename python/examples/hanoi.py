@@ -35,7 +35,7 @@ __copyright__ = '2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Apache License, Version 2.0'
 
 import time
-from openravepy import Environment, IkParameterization, planning_error, raveLogInfo, raveLogWarn, OpenRAVEGlobalArguments
+from openravepy import Environment, IkParameterization, planning_error, raveLogInfo, raveLogWarn, OpenRAVEGlobalArguments, RaveDestroy
 from openravepy.interfaces import BaseManipulation, TaskManipulation
 from openravepy.databases import inversekinematics
 from numpy import array, arange, linalg, pi, dot, vstack, cos, sin, cross, r_, c_

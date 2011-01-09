@@ -641,7 +641,7 @@ class ColladaReader : public daeErrorHandler
         KinBody::LinkPtr plink = pkinbody->GetLink(linkname);
         if( !plink ) {
             plink.reset(new KinBody::Link(pkinbody));
-            plink->name = linkname;
+            plink->_name = _ConvertToOpenRAVEName(linkname);
             plink->_mass = 1.0;
             plink->bStatic = false;
             plink->_index = (int) pkinbody->_veclinks.size();
@@ -726,35 +726,35 @@ class ColladaReader : public daeErrorHandler
                 // create the joints before creating the child links
                 vector<KinBody::JointPtr> vjoints(vdomaxes.getCount());
                 for (size_t ic = 0; ic < vdomaxes.getCount(); ++ic) {
-                    bool joint_active = true; // if not active, put into the passive list
+                    KinBody::JointPtr pjoint(new KinBody::Joint(pkinbody));
+
+                    pjoint->_bActive = true; // if not active, put into the passive list
                     FOREACHC(itaxisbinding,listAxisBindings) {
                         if (vdomaxes[ic] == itaxisbinding->pkinematicaxis) {
                             if( !!itaxisbinding->kinematics_axis_info ) {
                                 if( !!itaxisbinding->kinematics_axis_info->getActive() ) {
-                                    joint_active = resolveBool(itaxisbinding->kinematics_axis_info->getActive(),itaxisbinding->kinematics_axis_info);
+                                    pjoint->_bActive = resolveBool(itaxisbinding->kinematics_axis_info->getActive(),itaxisbinding->kinematics_axis_info);
                                 }
                             }
                             break;
                         }
                     }
 
-                    KinBody::JointPtr pjoint(new KinBody::Joint(pkinbody));
                     pjoint->bodies[0] = plink;
                     pjoint->bodies[1].reset();
-
-                    if( joint_active ) {
+                    if( pjoint->_bActive ) {
                         pjoint->jointindex = (int) pkinbody->_vecjoints.size();
                         pjoint->dofindex = pkinbody->GetDOF();
                     }
                     if( !!pdomjoint->getName() ) {
-                        pjoint->name = pdomjoint->getName();
+                        pjoint->_name = _ConvertToOpenRAVEName(pdomjoint->getName());
                     }
                     else {
-                        pjoint->name = str(boost::format("dummy%d")%pjoint->jointindex);
+                        pjoint->_name = str(boost::format("dummy%d")%pjoint->jointindex);
                     }
 
-                    if( !joint_active ) {
-                        RAVELOG_VERBOSE(str(boost::format("joint %s is passive\n")%pjoint->name));
+                    if( !pjoint->_bActive ) {
+                        RAVELOG_VERBOSE(str(boost::format("joint %s is passive\n")%pjoint->_name));
                     }
                     
                     domAxis_constraintRef pdomaxis = vdomaxes[ic];
@@ -774,15 +774,16 @@ class ColladaReader : public daeErrorHandler
                     }
                     pjoint->fMaxVel = pjoint->GetType() == KinBody::Joint::JointPrismatic ? 0.01 : 0.5f;
 
-                    if( joint_active ) {
+                    if( pjoint->_bActive ) {
                         pkinbody->_vecjoints.push_back(pjoint);
                     }
                     else {
-                        pkinbody->_vecPassiveJoints.push_back(pjoint);
+                        pkinbody->_vPassiveJoints.push_back(pjoint);
                     }
                     _getUserData(pdomjoint)->p = pjoint;
                     _getUserData(pdomaxis)->p = boost::shared_ptr<int>(new int(pjoint->dofindex));
                     vjoints[ic] = pjoint;
+                    RAVELOG_DEBUG(str(boost::format("joint %s (%d:%d)")%pjoint->_name%pjoint->jointindex%pjoint->dofindex));
                 }
 
                 KinBody::LinkPtr pchildlink = ExtractLink(pkinbody, pattfull->getLink(), pchildnode, plink->_t * tatt, vdomjoints, listAxisBindings);
@@ -812,10 +813,10 @@ class ColladaReader : public daeErrorHandler
                         RAVELOG_WARN(str(boost::format("creating dummy link %s, num joints %d\n")%plink->GetName()%numjoints));
 
                         stringstream ss;
-                        ss << plink->name;
+                        ss << plink->_name;
                         ss <<"_dummy" << numjoints;
                         pchildlink.reset(new KinBody::Link(pkinbody));
-                        pchildlink->name = ss.str().c_str();
+                        pchildlink->_name = ss.str();
                         pchildlink->bStatic = false;
                         pchildlink->_index = (int)pkinbody->_veclinks.size();
                         pkinbody->_veclinks.push_back(pchildlink);
@@ -1613,7 +1614,7 @@ class ColladaReader : public daeErrorHandler
                 domTechniqueRef tec = _ExtractOpenRAVEProfile(pextra->getTechnique_array());
                 if( !!tec ) {
                     RobotBase::ManipulatorPtr pmanip(new RobotBase::Manipulator(probot));
-                    pmanip->_name = name;
+                    pmanip->_name = _ConvertToOpenRAVEName(name);
                     daeElement* pframe_origin = tec->getChild("frame_origin");
                     daeElement* pframe_tip = tec->getChild("frame_tip");
                     if( !!pframe_origin ) {
@@ -1693,7 +1694,7 @@ class ColladaReader : public daeErrorHandler
                 domTechniqueRef tec = _ExtractOpenRAVEProfile(pextra->getTechnique_array());
                 if( !!tec ) {
                     RobotBase::AttachedSensorPtr pattachedsensor(new RobotBase::AttachedSensor(probot));
-                    pattachedsensor->_name = name;
+                    pattachedsensor->_name = _ConvertToOpenRAVEName(name);
                     daeElement* pframe_origin = tec->getChild("frame_origin");
                     if( !!pframe_origin ) {
                         domLinkRef plink = daeSafeCast<domLink>(daeSidRef(pframe_origin->getAttribute("link"), as).resolve().elt);
@@ -2612,6 +2613,20 @@ class ColladaReader : public daeErrorHandler
                 _processUserData(children[i], scale);
             }
         }
+    }
+
+    std::string _ConvertToOpenRAVEName(const std::string& name) {
+        if( IsValidName(name) ) {
+            return name;
+        }
+        std::string newname = name;
+        for(size_t i = 0; i < newname.size(); ++i) {
+            if( !IsValidCharInName(newname[i]) ) {
+                newname[i] = '_';
+            }
+        }
+        RAVELOG_WARN(str(boost::format("name %s is not a valid OpenRAVE name, converting to %s")%name%newname));
+        return newname;
     }
 
     USERDATA* _getUserData(daeElement* pelt)

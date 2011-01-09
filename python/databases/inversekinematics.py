@@ -156,7 +156,7 @@ class InverseKinematicsModel(OpenRAVEModel):
     def load(self,*args,**kwargs):
         return self.setrobot(*args,**kwargs)
     def getversion(self):
-        return 22
+        return 23
     def setrobot(self,freeinc=None):
         self.iksolver = None
         self.freeinc=freeinc
@@ -222,10 +222,7 @@ class InverseKinematicsModel(OpenRAVEModel):
                 freejoints=options.freejoints
             outputlang=options.outputlang
             ipython=options.ipython
-        if self.manip.GetKinematicsStructureHash() == 'b4ff7e5e04780df16a6bda565e714741': # wam 7dof
-            if freejoints is None:
-                freejoints = ['Shoulder_Roll']
-        elif self.manip.GetKinematicsStructureHash() == 'f17f58ee53cc9d185c2634e721af7cd3': # wam 4dof
+        if self.manip.GetKinematicsStructureHash() == 'f17f58ee53cc9d185c2634e721af7cd3': # wam 4dof
             if iktype is None:
                 iktype=IkParameterization.Type.Translation3D
             if iktype == IkParameterization.Type.Translation3D and freejoints is None:
@@ -233,16 +230,16 @@ class InverseKinematicsModel(OpenRAVEModel):
         elif self.manip.GetKinematicsStructureHash() == 'bfc61bd497e9993b85f1ab511ee7bdbc': # stage
             if iktype is None:
                 iktype=IkParameterization.Type.Rotation3D
-        elif self.manip.GetKinematicsStructureHash() == '30532ef6342a21c6446f0239efd3f600' or self.manip.GetKinematicsStructureHash() == '722e06820651dc812ae099b4dc24761d': # pr2
+        elif self.manip.GetKinematicsStructureHash() == '603df18c6d90c4b3986cb9881408ce00' or self.manip.GetKinematicsStructureHash() == 'f2324dbb615f48445f43ce827edef614': # pr2
             if iktype == None:
                 iktype=IkParameterization.Type.Transform6D
             if freejoints is None:
                 # take the torso and roll joint
                 freejoints=[self.robot.GetJoints()[self.manip.GetArmIndices()[ind]].GetName() for ind in [0,3]]
-        elif self.manip.GetKinematicsStructureHash()=='0c314a70ee8eadd2c4cb0ff7770893f8' or self.manip.GetKinematicsStructureHash()=='f202b5bed247928f6a730bc6105058b9': # pr2 cameras
+        elif self.manip.GetKinematicsStructureHash()=='a1e9aea0dc0fda631ca376c03d500927' or self.manip.GetKinematicsStructureHash()=='ceb6be51bd14f345e22997cc0bca9f2f': # pr2 cameras
             if iktype is None:
                 iktype=IkParameterization.Type.Ray4D
-        elif self.manip.GetKinematicsStructureHash()=='cc9744737db7b45be2451aedff296c08': # katana
+        elif self.manip.GetKinematicsStructureHash()=='afe50514bf09aff5f2a84beb078bafbd': # katana
             if iktype==IkParameterization.Type.Translation3D or (iktype==None and self.iktype==IkParameterization.Type.Translation3D):
                 freejoints = [self.robot.GetJoints()[ind].GetName() for ind in self.manip.GetArmIndices()[3:]]
         self.generate(iktype=iktype,freejoints=freejoints,usedummyjoints=usedummyjoints,accuracy=accuracy,precision=precision,forceikbuild=forceikbuild,outputlang=outputlang,ipython=ipython)

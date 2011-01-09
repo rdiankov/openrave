@@ -270,10 +270,21 @@ public:
         void Enable(bool bEnable) { _plink->Enable(bEnable); }
 
         PyKinBodyPtr GetParent() const { return PyKinBodyPtr(new PyKinBody(_plink->GetParent(),_pyenv)); }
-        boost::shared_ptr<PyLink> GetParentLink() const
+
+        object GetParentLinks() const
         {
-            KinBody::LinkPtr parentlink = _plink->GetParentLink();
-            return !parentlink ? boost::shared_ptr<PyLink>() : boost::shared_ptr<PyLink>(new PyLink(parentlink,_pyenv));
+            std::vector<KinBody::LinkPtr> vParentLinks;
+            _plink->GetParentLinks(vParentLinks);
+            boost::python::list links;
+            FOREACHC(itlink, vParentLinks) {
+                links.append(PyLinkPtr(new PyLink(*itlink, _pyenv)));
+            }
+            return links;
+        }
+
+        bool IsParentLink(boost::shared_ptr<PyLink> pylink) const
+        {
+            return _plink->IsParentLink(pylink->GetLink());
         }
         
         boost::shared_ptr<PyTriMesh> GetCollisionData() { return boost::shared_ptr<PyTriMesh>(new PyTriMesh(_plink->GetCollisionData())); }
@@ -324,6 +335,13 @@ public:
             return _plink->IsRigidlyAttached(plink->GetLink());
         }
 
+        object GetVelocity() const
+        {
+            Vector linearvel, angularvel;
+            _plink->GetVelocity(linearvel,angularvel);
+            return boost::python::make_tuple(toPyVector3(linearvel),toPyVector3(angularvel));
+        }
+
         string __repr__() { return boost::str(boost::format("<env.GetKinBody('%s').GetLink('%s')>")%_plink->GetParent()->GetName()%_plink->GetName()); }
         string __str__() { return boost::str(boost::format("<link:%s (%d), parent=%s>")%_plink->GetName()%_plink->GetIndex()%_plink->GetParent()->GetName()); }
         bool __eq__(boost::shared_ptr<PyLink> p) { return !!p && _plink == p->_plink; }
@@ -348,7 +366,9 @@ public:
         bool IsMimic(int iaxis=-1) { return _pjoint->IsMimic(iaxis); }
         string GetMimicEquation(int iaxis=0, int itype=0, const std::string& format="") { return _pjoint->GetMimicEquation(iaxis,itype,format); }
         object GetMimicDOFIndices(int iaxis=0) {
-            return toPyArray(_pjoint->GetMimicDOFIndices(iaxis));
+            std::vector<int> vmimicdofs;
+            _pjoint->GetMimicDOFIndices(vmimicdofs,iaxis);
+            return toPyArray(vmimicdofs);
         }
         void SetMimicEquations(int iaxis, const std::string& poseq, const std::string& veleq, const std::string& acceleq)
         {
@@ -386,7 +406,9 @@ public:
         }
 
         object GetAnchor() const { return toPyVector3(_pjoint->GetAnchor()); }
-        object GetAxis(int iaxis) { return toPyVector3(_pjoint->GetAxis(iaxis)); }
+        object GetAxis(int iaxis=0) { return toPyVector3(_pjoint->GetAxis(iaxis)); }
+        PyLinkPtr GetHierarchyParentLink() const { return  !_pjoint->GetHierarchyParentLink() ? PyLinkPtr() : PyLinkPtr(new PyLink(_pjoint->GetHierarchyParentLink(),_pyenv)); }
+        PyLinkPtr GetHierarchyChildLink() const { return  !_pjoint->GetHierarchyChildLink() ? PyLinkPtr() : PyLinkPtr(new PyLink(_pjoint->GetHierarchyChildLink(),_pyenv)); }
         object GetInternalHierarchyAnchor() const { return toPyVector3(_pjoint->GetInternalHierarchyAnchor()); }
         object GetInternalHierarchyAxis(int iaxis) { return toPyVector3(_pjoint->GetInternalHierarchyAxis(iaxis)); }
         object GetInternalHierarchyLeftTransform() { return ReturnTransform(_pjoint->GetInternalHierarchyLeftTransform()); }
@@ -673,15 +695,17 @@ public:
     object GetLinks() const
     {
         boost::python::list links;
-        FOREACHC(itlink, _pbody->GetLinks())
+        FOREACHC(itlink, _pbody->GetLinks()) {
             links.append(PyLinkPtr(new PyLink(*itlink, GetEnv())));
+        }
         return links;
     }
 
     object GetLinks(object oindices) const
     {
-        if( oindices == object() )
+        if( oindices == object() ) {
             return GetLinks();
+        }
         vector<int> vindices = ExtractArray<int>(oindices);
         boost::python::list links;
         FOREACHC(it, vindices) {
@@ -707,8 +731,9 @@ public:
 
     object GetJoints(object oindices) const
     {
-        if( oindices == object() )
+        if( oindices == object() ) {
             return GetJoints();
+        }
         vector<int> vindices = ExtractArray<int>(oindices);
         boost::python::list joints;
         FOREACHC(it, vindices) {
@@ -720,17 +745,32 @@ public:
     object GetPassiveJoints()
     {
         boost::python::list joints;
-        FOREACHC(itjoint, _pbody->GetPassiveJoints())
+        FOREACHC(itjoint, _pbody->GetPassiveJoints()) {
             joints.append(PyJointPtr(new PyJoint(*itjoint, GetEnv())));
+        }
         return joints;
     }
 
     object GetDependencyOrderedJoints()
     {
         boost::python::list joints;
-        FOREACHC(itjoint, _pbody->GetDependencyOrderedJoints())
+        FOREACHC(itjoint, _pbody->GetDependencyOrderedJoints()) {
             joints.append(PyJointPtr(new PyJoint(*itjoint, GetEnv())));
+        }
         return joints;
+    }
+
+    object GetClosedLoops()
+    {
+        boost::python::list loops;
+        FOREACHC(itloop, _pbody->GetClosedLoops()) {
+            boost::python::list loop;
+            FOREACHC(itpair,*itloop) {
+                loop.append(boost::python::make_tuple(PyLinkPtr(new PyLink(itpair->first,GetEnv())),PyJointPtr(new PyJoint(itpair->second,GetEnv()))));
+            }
+            loops.append(loop);
+        }
+        return loops;
     }
 
     object GetRigidlyAttachedLinks(int linkindex) const
@@ -745,15 +785,24 @@ public:
         return links;
     }
 
-    object GetChain(int linkindex1, int linkindex2) const
+    object GetChain(int linkindex1, int linkindex2,bool returnjoints = true) const
     {
-        std::vector<KinBody::JointPtr> vjoints;
-        _pbody->GetChain(linkindex1,linkindex2,vjoints);
-        boost::python::list joints;
-        FOREACHC(itjoint, vjoints) {
-            joints.append(PyJointPtr(new PyJoint(*itjoint, GetEnv())));
+        boost::python::list chain;
+        if( returnjoints ) {
+            std::vector<KinBody::JointPtr> vjoints;
+            _pbody->GetChain(linkindex1,linkindex2,vjoints);
+            FOREACHC(itjoint, vjoints) {
+                chain.append(PyJointPtr(new PyJoint(*itjoint, GetEnv())));
+            }
         }
-        return joints;
+        else {
+            std::vector<KinBody::LinkPtr> vlinks;
+            _pbody->GetChain(linkindex1,linkindex2,vlinks);
+            FOREACHC(itlink, vlinks) {
+                chain.append(PyLinkPtr(new PyLink(*itlink, GetEnv())));
+            }
+        }
+        return chain;
     }
 
     bool IsDOFInChain(int linkindex1, int linkindex2, int dofindex) const
@@ -778,8 +827,9 @@ public:
     object GetBodyTransformations() const
     {
         boost::python::list transforms;
-        FOREACHC(itlink, _pbody->GetLinks())
+        FOREACHC(itlink, _pbody->GetLinks()) {
             transforms.append(ReturnTransform((*itlink)->GetTransform()));
+        }
         return transforms;
     }
 
@@ -1819,13 +1869,15 @@ public:
     void SetActiveDOFValues(object values) const
     {
         vector<dReal> vvalues = ExtractArray<dReal>(values);
-        if( vvalues.size() > 0 )
+        if( vvalues.size() > 0 ) {
             _probot->SetActiveDOFValues(vvalues,true);
+        }
     }
     object GetActiveDOFValues() const
     {
-        if( _probot->GetActiveDOF() == 0 )
+        if( _probot->GetActiveDOF() == 0 ) {
             return numeric::array(boost::python::list());
+        }
         vector<dReal> values;
         _probot->GetActiveDOFValues(values);
         return toPyArray(values);
@@ -1837,8 +1889,9 @@ public:
     }
     object GetActiveDOFVelocities() const
     {
-        if( _probot->GetActiveDOF() == 0 )
+        if( _probot->GetActiveDOF() == 0 ) {
             return numeric::array(boost::python::list());
+        }
         vector<dReal> values;
         _probot->GetActiveDOFVelocities(values);
         return toPyArray(values);
@@ -1846,8 +1899,9 @@ public:
 
     object GetActiveDOFLimits() const
     {
-        if( _probot->GetActiveDOF() == 0 )
+        if( _probot->GetActiveDOF() == 0 ) {
             return numeric::array(boost::python::list());
+        }
         vector<dReal> lower, upper;
         _probot->GetActiveDOFLimits(lower,upper);
         return boost::python::make_tuple(toPyArray(lower),toPyArray(upper));
@@ -1859,11 +1913,6 @@ public:
 //    void GetActiveDOFMaxVel(std::vector<dReal>& v) const;
 //    void GetActiveDOFMaxAccel(dReal* pMaxAccel) const;
 //    void GetActiveDOFMaxAccel(std::vector<dReal>& v) const;
-
-//    int GetControlDOF() const { return GetActiveDOF(); }
-//    void GetControlMaxTorques(dReal* pMaxTorque) const;
-//    void GetControlMaxTorques(std::vector<dReal>& vmaxtorque) const;
-//    void SetControlTorques(dReal* pTorques);
     
 //    void GetFullTrajectoryFromActive(PyTrajectory* pFullTraj, PyTrajectory* pActiveTraj, bool bOverwriteTransforms);
 //    void SetActiveMotion(PyTrajectory* ptraj);
@@ -1918,10 +1967,7 @@ public:
     PyLinkPtr IsGrabbing(PyKinBodyPtr pbody) const {
         CHECK_POINTER(pbody);
         KinBody::LinkPtr plink = _probot->IsGrabbing(pbody->GetBody());
-        if( !plink )
-            return PyLinkPtr();
-        else
-            return PyLinkPtr(new PyLink(plink,_pyenv));
+        return !plink ? PyLinkPtr() : PyLinkPtr(new PyLink(plink,_pyenv));
     }
 
     object GetGrabbed() const
@@ -1929,19 +1975,21 @@ public:
         boost::python::list bodies;
         std::vector<KinBodyPtr> vbodies;
         _probot->GetGrabbed(vbodies);
-        FOREACH(itbody, vbodies)
+        FOREACH(itbody, vbodies) {
             bodies.append(PyKinBodyPtr(new PyKinBody(*itbody,_pyenv)));
+        }
         return bodies;
     }
 
     bool WaitForController(float ftimeout)
     {
         ControllerBasePtr pcontroller = _probot->GetController();
-        if( !pcontroller )
+        if( !pcontroller ) {
             return false;
-        if( pcontroller->IsDone() )
+        }
+        if( pcontroller->IsDone() ) {
             return true;
-
+        }
         bool bSuccess = true;
         Py_BEGIN_ALLOW_THREADS
 
@@ -2282,11 +2330,13 @@ public:
 
     PyVoidHandle RegisterCallback(ViewerBase::ViewerEvents properties, object fncallback)
     {
-        if( !fncallback )
+        if( !fncallback ) {
             throw openrave_exception("callback not specified");
+        }
         boost::shared_ptr<void> p = _pviewer->RegisterCallback(properties,boost::bind(&PyViewerBase::_ViewerCallback,fncallback,_pyenv,_1,_2,_3));
-        if( !p )
+        if( !p ) {
             throw openrave_exception("no registration callback returned");
+        }
         return PyVoidHandle(p);
     }
 
@@ -2300,12 +2350,14 @@ public:
     object GetCameraImage(int width, int height, object extrinsic, object oKK)
     {
         vector<float> vKK = ExtractArray<float>(oKK);
-        if( vKK.size() != 4 )
+        if( vKK.size() != 4 ) {
             throw openrave_exception("KK needs to be of size 4");
+        }
         SensorBase::CameraIntrinsics KK(vKK[0],vKK[1],vKK[2],vKK[3]);
         vector<uint8_t> memory;
-        if( !_pviewer->GetCameraImage(memory, width,height,RaveTransform<float>(ExtractTransform(extrinsic)), KK) )
+        if( !_pviewer->GetCameraImage(memory, width,height,RaveTransform<float>(ExtractTransform(extrinsic)), KK) ) {
             throw openrave_exception("failed to get camera image");
+        }
         std::vector<npy_intp> dims(3); dims[0] = height; dims[1] = width; dims[2] = 3;
         return toPyArray(memory,dims);
     }
@@ -2335,9 +2387,9 @@ protected:
             _conditionViewer.notify_all();
         }
 
-        if( !pviewer )
+        if( !pviewer ) {
             return;
-
+        }
         pviewer->main(bShowViewer); // spin until quitfrommainloop is called
         _penv->AttachViewer(ViewerBasePtr());
         pviewer.reset();
@@ -2359,11 +2411,13 @@ protected:
             RAVELOG_ERRORA("exception occured in python collision callback\n");
         }
         PyGILState_Release(gstate);
-        if( res == object() || !res )
+        if( res == object() || !res ) {
             return CA_DefaultAction;
+        }
         extract<int> xi(res);
-        if( xi.check() )
+        if( xi.check() ) {
             return (CollisionAction)(int)xi;
+        }
         RAVELOG_WARNA("collision callback nothing returning, so executing default action\n");
         return CA_DefaultAction;
     }
@@ -2391,16 +2445,18 @@ public:
             _penv->AttachViewer(ViewerBasePtr());
         }
 
-        if( !!_threadviewer )
+        if( !!_threadviewer ) {
             _threadviewer->join();
+        }
         _threadviewer.reset();
     }
 
     void Reset() { _penv->Reset(); }
     void Destroy() {
         _penv->Destroy();
-        if( !!_threadviewer )
+        if( !!_threadviewer ) {
             _threadviewer->join();
+        }
     }
 
     object GetPluginInfo()
@@ -2480,12 +2536,14 @@ public:
         string strviewer;
         if( options & Clone_Viewer ) {
             boost::mutex::scoped_lock lockcreate(_mutexViewer);
-            if( !!_penv->GetViewer() )
+            if( !!_penv->GetViewer() ) {
                 strviewer = _penv->GetViewer()->GetXMLId();
+            }
         }
         PyEnvironmentBasePtr pnewenv(new PyEnvironmentBase(_penv->CloneSelf(options)));
-        if( strviewer.size() > 0 )
+        if( strviewer.size() > 0 ) {
             pnewenv->SetViewer(strviewer);
+        }
         return pnewenv;
     }
 
@@ -2504,9 +2562,9 @@ public:
     bool CheckCollision(PyKinBodyPtr pbody1, PyCollisionReportPtr pReport)
     {
         CHECK_POINTER(pbody1);
-        if( !pReport )
+        if( !pReport ) {
             return _penv->CheckCollision(KinBodyConstPtr(pbody1->GetBody()));
-
+        }
         bool bSuccess = _penv->CheckCollision(KinBodyConstPtr(pbody1->GetBody()), pReport->report);
         pReport->init(shared_from_this());
         return bSuccess;
@@ -2523,9 +2581,9 @@ public:
     {
         CHECK_POINTER(pbody1);
         CHECK_POINTER(pbody2);
-        if( !pReport )
+        if( !pReport ) {
             return _penv->CheckCollision(KinBodyConstPtr(pbody1->GetBody()), KinBodyConstPtr(pbody2->GetBody()));
-
+        }
         bool bSuccess = _penv->CheckCollision(KinBodyConstPtr(pbody1->GetBody()), KinBodyConstPtr(pbody2->GetBody()), pReport->report);
         pReport->init(shared_from_this());
         return bSuccess;
@@ -2540,9 +2598,9 @@ public:
     bool CheckCollision(PyKinBody::PyLinkPtr plink, PyCollisionReportPtr pReport)
     {
         CHECK_POINTER(plink);
-        if( !pReport )
+        if( !pReport ) {
             return _penv->CheckCollision(KinBody::LinkConstPtr(plink->GetLink()));
-
+        }
         bool bSuccess = _penv->CheckCollision(KinBody::LinkConstPtr(plink->GetLink()), pReport->report);
         pReport->init(shared_from_this());
         return bSuccess;
@@ -2558,9 +2616,9 @@ public:
     {
         CHECK_POINTER(plink1);
         CHECK_POINTER(plink2);
-        if( !pReport )
+        if( !pReport ) {
             return _penv->CheckCollision(KinBody::LinkConstPtr(plink1->GetLink()), KinBody::LinkConstPtr(plink2->GetLink()));
-
+        }
         bool bSuccess = _penv->CheckCollision(KinBody::LinkConstPtr(plink1->GetLink()), KinBody::LinkConstPtr(plink2->GetLink()), pReport->report);
         pReport->init(shared_from_this());
         return bSuccess;
@@ -2577,9 +2635,9 @@ public:
     {
         CHECK_POINTER(plink);
         CHECK_POINTER(pbody);
-        if( !pReport )
+        if( !pReport ) {
             return _penv->CheckCollision(KinBody::LinkConstPtr(plink->GetLink()), KinBodyConstPtr(pbody->GetBody()));
-
+        }
         bool bSuccess = _penv->CheckCollision(KinBody::LinkConstPtr(plink->GetLink()), KinBodyConstPtr(pbody->GetBody()), pReport->report);
         pReport->init(shared_from_this());
         return bSuccess;
@@ -2590,18 +2648,22 @@ public:
         std::vector<KinBodyConstPtr> vbodyexcluded;
         for(int i = 0; i < len(bodyexcluded); ++i) {
             PyKinBodyPtr pbody = extract<PyKinBodyPtr>(bodyexcluded[i]);
-            if( !!pbody )
+            if( !!pbody ) {
                 vbodyexcluded.push_back(pbody->GetBody());
-            else
+            }
+            else {
                 RAVELOG_ERRORA("failed to get excluded body\n");
+            }
         }
         std::vector<KinBody::LinkConstPtr> vlinkexcluded;
         for(int i = 0; i < len(linkexcluded); ++i) {
             PyKinBody::PyLinkPtr plink = extract<PyKinBody::PyLinkPtr>(linkexcluded[i]);
-            if( !!plink )
+            if( !!plink ) {
                 vlinkexcluded.push_back(plink->GetLink());
-            else
+            }
+            else {
                 RAVELOG_ERRORA("failed to get excluded link\n");
+            }
         }
         return _penv->CheckCollision(KinBody::LinkConstPtr(plink->GetLink()),vbodyexcluded,vlinkexcluded);
     }
@@ -2611,23 +2673,27 @@ public:
         std::vector<KinBodyConstPtr> vbodyexcluded;
         for(int i = 0; i < len(bodyexcluded); ++i) {
             PyKinBodyPtr pbody = extract<PyKinBodyPtr>(bodyexcluded[i]);
-            if( !!pbody )
+            if( !!pbody ) {
                 vbodyexcluded.push_back(pbody->GetBody());
-            else
+            }
+            else {
                 RAVELOG_ERRORA("failed to get excluded body\n");
+            }
         }
         std::vector<KinBody::LinkConstPtr> vlinkexcluded;
         for(int i = 0; i < len(linkexcluded); ++i) {
             PyKinBody::PyLinkPtr plink = extract<PyKinBody::PyLinkPtr>(linkexcluded[i]);
-            if( !!plink )
+            if( !!plink ) {
                 vlinkexcluded.push_back(plink->GetLink());
-            else
+            }
+            else {
                 RAVELOG_ERRORA("failed to get excluded link\n");
+            }
         }
 
-        if( !pReport )
+        if( !pReport ) {
             return _penv->CheckCollision(KinBody::LinkConstPtr(plink->GetLink()),vbodyexcluded,vlinkexcluded);
-
+        }
         bool bSuccess = _penv->CheckCollision(KinBody::LinkConstPtr(plink->GetLink()), vbodyexcluded, vlinkexcluded, pReport->report);
         pReport->init(shared_from_this());
         return bSuccess;
@@ -2638,18 +2704,22 @@ public:
         std::vector<KinBodyConstPtr> vbodyexcluded;
         for(int i = 0; i < len(bodyexcluded); ++i) {
             PyKinBodyPtr pbody = extract<PyKinBodyPtr>(bodyexcluded[i]);
-            if( pbody != NULL )
+            if( !!pbody ) {
                 vbodyexcluded.push_back(pbody->GetBody());
-            else
+            }
+            else {
                 RAVELOG_ERRORA("failed to get excluded body\n");
+            }
         }
         std::vector<KinBody::LinkConstPtr> vlinkexcluded;
         for(int i = 0; i < len(linkexcluded); ++i) {
             PyKinBody::PyLinkPtr plink = extract<PyKinBody::PyLinkPtr>(linkexcluded[i]);
-            if( plink != NULL )
+            if( !!plink ) {
                 vlinkexcluded.push_back(plink->GetLink());
-            else
+            }
+            else {
                 RAVELOG_ERRORA("failed to get excluded link\n");
+            }
         }
         return _penv->CheckCollision(KinBodyConstPtr(pbody->GetBody()),vbodyexcluded,vlinkexcluded);
     }
@@ -2659,23 +2729,27 @@ public:
         std::vector<KinBodyConstPtr> vbodyexcluded;
         for(int i = 0; i < len(bodyexcluded); ++i) {
             PyKinBodyPtr pbody = extract<PyKinBodyPtr>(bodyexcluded[i]);
-            if( pbody != NULL )
+            if( !!pbody ) {
                 vbodyexcluded.push_back(pbody->GetBody());
-            else
+            }
+            else {
                 RAVELOG_ERRORA("failed to get excluded body\n");
+            }
         }
         std::vector<KinBody::LinkConstPtr> vlinkexcluded;
         for(int i = 0; i < len(linkexcluded); ++i) {
             PyKinBody::PyLinkPtr plink = extract<PyKinBody::PyLinkPtr>(linkexcluded[i]);
-            if( plink != NULL )
+            if( !!plink ) {
                 vlinkexcluded.push_back(plink->GetLink());
-            else
+            }
+            else {
                 RAVELOG_ERRORA("failed to get excluded link\n");
+            }
         }
 
-        if( !pReport )
+        if( !pReport ) {
             return _penv->CheckCollision(KinBodyConstPtr(pbody->GetBody()),vbodyexcluded,vlinkexcluded);
-
+        }
         bool bSuccess = _penv->CheckCollision(KinBodyConstPtr(pbody->GetBody()), vbodyexcluded, vlinkexcluded, pReport->report);
         pReport->init(shared_from_this());
         return bSuccess;
@@ -2697,11 +2771,12 @@ public:
     {
         object shape = rays.attr("shape");
         int num = extract<int>(shape[0]);
-        if( num == 0 )
+        if( num == 0 ) {
             return boost::python::make_tuple(numeric::array(boost::python::list()).astype("i4"),numeric::array(boost::python::list()));
-        if( extract<int>(shape[1]) != 6 )
+        }
+        if( extract<int>(shape[1]) != 6 ) {
             throw openrave_exception("rays object needs to be a Nx6 vector\n");
-
+        }
         CollisionReport report;
         CollisionReportPtr preport(&report,null_deleter());
 
@@ -2720,10 +2795,12 @@ public:
             r.dir.y = ray[4];
             r.dir.z = ray[5];
             bool bCollision;
-            if( !pbody )
+            if( !pbody ) {
                 bCollision = _penv->CheckCollision(r, preport);
-            else
+            }
+            else {
                 bCollision = _penv->CheckCollision(r, KinBodyConstPtr(pbody->GetBody()), preport);
+            }
             pcollision[i] = false;
             ppos[0] = 0; ppos[1] = 0; ppos[2] = 0; ppos[3] = 0; ppos[4] = 0; ppos[5] = 0;
             if( bCollision && report.contacts.size() > 0 ) {
@@ -2760,39 +2837,32 @@ public:
     PyRobotBasePtr ReadRobotXMLFile(const string& filename)
     {
         RobotBasePtr probot = _penv->ReadRobotXMLFile(filename);
-        if( !probot )
-            return PyRobotBasePtr();
-        return PyRobotBasePtr(new PyRobotBase(probot,shared_from_this()));
+        return !probot ? PyRobotBasePtr() : PyRobotBasePtr(new PyRobotBase(probot,shared_from_this()));
     }
     PyRobotBasePtr ReadRobotXMLData(const string& data)
     {
         RobotBasePtr probot = _penv->ReadRobotXMLData(RobotBasePtr(), data, std::list<std::pair<std::string,std::string> >());
-        if( !probot )
-            return PyRobotBasePtr();
-        return PyRobotBasePtr(new PyRobotBase(probot,shared_from_this()));
+        return !probot ? PyRobotBasePtr() : PyRobotBasePtr(new PyRobotBase(probot,shared_from_this()));
     }
 
     PyKinBodyPtr ReadKinBodyXMLFile(const string& filename)
     {
         KinBodyPtr pbody = _penv->ReadKinBodyXMLFile(filename);
-        if( !pbody )
-            return PyKinBodyPtr();
-        return PyKinBodyPtr(new PyKinBody(pbody,shared_from_this()));
+        return !pbody ? PyKinBodyPtr() : PyKinBodyPtr(new PyKinBody(pbody,shared_from_this()));
     }
 
     PyKinBodyPtr ReadKinBodyXMLData(const string& data)
     {
         KinBodyPtr pbody = _penv->ReadKinBodyXMLData(KinBodyPtr(), data, std::list<std::pair<std::string,std::string> >());
-        if( !pbody )
-            return PyKinBodyPtr();
-        return PyKinBodyPtr(new PyKinBody(pbody,shared_from_this()));
+        return !pbody ? PyKinBodyPtr() : PyKinBodyPtr(new PyKinBody(pbody,shared_from_this()));
     }
 
     PyInterfaceBasePtr ReadInterfaceXMLFile(const std::string& filename)
     {
         InterfaceBasePtr pbody = _penv->ReadInterfaceXMLFile(filename);
-        if( !pbody )
+        if( !pbody ) {
             return PyInterfaceBasePtr();
+        }
         switch(pbody->GetInterfaceType()) {
         case PT_Planner: return PyPlannerBasePtr(new PyPlannerBase(boost::static_pointer_cast<PlannerBase>(pbody),shared_from_this()));
         case PT_Robot: return PyRobotBasePtr(new PyRobotBase(boost::static_pointer_cast<RobotBase>(pbody),shared_from_this()));
@@ -2821,37 +2891,23 @@ public:
     PyKinBodyPtr GetKinBody(const string& name)
     {
         KinBodyPtr pbody = _penv->GetKinBody(name);
-        if( !pbody ) {
-            return PyKinBodyPtr();
-            //throw openrave_exception(boost::str(boost::format("failed to get body %s")%name));
-        }
-        return PyKinBodyPtr(new PyKinBody(pbody,shared_from_this()));
+        return !pbody ? PyKinBodyPtr() : PyKinBodyPtr(new PyKinBody(pbody,shared_from_this()));
     }
     PyRobotBasePtr GetRobot(const string& name)
     {
         RobotBasePtr probot = _penv->GetRobot(name);
-        if( !probot ) {
-            return PyRobotBasePtr();
-            //throw openrave_exception(boost::str(boost::format("failed to get robot %s")%name));
-        }
-        return PyRobotBasePtr(new PyRobotBase(probot,shared_from_this()));
+        return !probot ? PyRobotBasePtr() : PyRobotBasePtr(new PyRobotBase(probot,shared_from_this()));
     }
     PySensorBasePtr GetSensor(const string& name)
     {
         SensorBasePtr psensor = _penv->GetSensor(name);
-        if( !psensor ) {
-            return PySensorBasePtr();
-            //throw openrave_exception(boost::str(boost::format("failed to get sensor %s")%name));
-        }
-        return PySensorBasePtr(new PySensorBase(psensor,shared_from_this()));
+        return !psensor ? PySensorBasePtr() : PySensorBasePtr(new PySensorBase(psensor,shared_from_this()));
     }
 
     PyKinBodyPtr GetBodyFromEnvironmentId(int id)
     {
         KinBodyPtr pbody = _penv->GetBodyFromEnvironmentId(id);
-        if( !pbody )
-            throw openrave_exception(boost::str(boost::format("failed to get body id %d")%id));
-        return PyKinBodyPtr(new PyKinBody(pbody,shared_from_this()));
+        return !pbody ? PyKinBodyPtr() : PyKinBodyPtr(new PyKinBody(pbody,shared_from_this()));
     }
 
     PyKinBodyPtr CreateKinBody()
@@ -2870,26 +2926,30 @@ public:
         std::list<ProblemInstancePtr> listProblems;
         boost::shared_ptr<void> lock = _penv->GetLoadedProblems(listProblems);
         boost::python::list problems;
-        FOREACHC(itprob, listProblems)
+        FOREACHC(itprob, listProblems) {
             problems.append(PyProblemInstancePtr(new PyProblemInstance(*itprob,shared_from_this())));
+        }
         return problems;
     }
 
     bool SetPhysicsEngine(PyPhysicsEngineBasePtr pengine)
     {
-        if( !pengine )
+        if( !pengine ) {
             return _penv->SetPhysicsEngine(PhysicsEngineBasePtr());
+        }
         return _penv->SetPhysicsEngine(pengine->GetPhysicsEngine());
     }
     PyPhysicsEngineBasePtr GetPhysicsEngine() { return PyPhysicsEngineBasePtr(new PyPhysicsEngineBase(_penv->GetPhysicsEngine(),shared_from_this())); }
 
     PyVoidHandle RegisterCollisionCallback(object fncallback)
     {
-        if( !fncallback )
+        if( !fncallback ) {
             throw openrave_exception("callback not specified");
+        }
         boost::shared_ptr<void> p = _penv->RegisterCollisionCallback(boost::bind(&PyEnvironmentBase::_CollisionCallback,shared_from_this(),fncallback,_1,_2));
-        if( !p )
+        if( !p ) {
             throw openrave_exception("registration handle is NULL");
+        }
         return PyVoidHandle(p);
     }
 
@@ -2907,8 +2967,9 @@ public:
                 _listfreelocks.back()->lock();
                 _listenvlocks.splice(_listenvlocks.end(),_listfreelocks,--_listfreelocks.end());
             }
-            else
+            else {
                 _listenvlocks.push_back(boost::shared_ptr<EnvironmentMutex::scoped_lock>(new EnvironmentMutex::scoped_lock(_penv->GetMutex())));
+            }
         }
         else {
             BOOST_ASSERT(_listenvlocks.size()>0);
@@ -2916,10 +2977,12 @@ public:
             _listfreelocks.splice(_listfreelocks.end(),_listenvlocks,--_listenvlocks.end());
         }
 #else
-        if( bLock )
+        if( bLock ) {
             _penv->GetMutex().lock();
-        else
+        }
+        else {
             _penv->GetMutex().unlock();
+        }
 #endif
     }
     void Lock(bool bLock, float timeout)
@@ -2940,8 +3003,9 @@ public:
 
     bool SetViewer(const string& viewername, bool showviewer=true)
     {
-        if( !!_threadviewer ) // wait for the viewer
+        if( !!_threadviewer ) { // wait for the viewer
             _threadviewer->join();
+        }
         _threadviewer.reset();
         
         _penv->AttachViewer(ViewerBasePtr());
@@ -2957,10 +3021,10 @@ public:
                 _threadviewer.reset();
                 return false;
             }
-            else
+            else {
                 RAVELOG_INFOA("viewer %s successfully attached\n", viewername.c_str());
+            }
         }
-        
         return true;
     }
 
@@ -3101,16 +3165,18 @@ public:
     object drawarrow(object op1, object op2, float linewidth=0.002, object ocolor=object())
     {
         RaveVector<float> vcolor(1,0.5,0.5,1);
-        if( ocolor != object() )
+        if( ocolor != object() ) {
             vcolor = ExtractVector34(ocolor,1.0f);
+        }
         return object(PyGraphHandle(_penv->drawarrow(ExtractVector3(op1),ExtractVector3(op2),linewidth,vcolor)));
     }
 
     object drawbox(object opos, object oextents, object ocolor=object())
     {
         RaveVector<float> vcolor(1,0.5,0.5,1);
-        if( ocolor != object() )
+        if( ocolor != object() ) {
             vcolor = ExtractVector34(ocolor,1.0f);
+        }
         return object(PyGraphHandle(_penv->drawbox(ExtractVector3(opos),ExtractVector3(oextents))));
     }
 
@@ -3160,8 +3226,9 @@ public:
         std::vector<KinBodyPtr> vbodies;
         _penv->GetBodies(vbodies);
         boost::python::list bodies;
-        FOREACHC(itbody, vbodies)
+        FOREACHC(itbody, vbodies) {
             bodies.append(PyKinBodyPtr(new PyKinBody(*itbody,shared_from_this())));
+        }
         return bodies;
     }
 
@@ -3170,8 +3237,9 @@ public:
         std::vector<RobotBasePtr> vrobots;
         _penv->GetRobots(vrobots);
         boost::python::list robots;
-        FOREACHC(itrobot, vrobots)
+        FOREACHC(itrobot, vrobots) {
             robots.append(PyRobotBasePtr(new PyRobotBase(*itrobot,shared_from_this())));
+        }
         return robots;
     }
 
@@ -3180,8 +3248,9 @@ public:
         std::vector<SensorBasePtr> vsensors;
         _penv->GetSensors(vsensors);
         boost::python::list sensors;
-        FOREACHC(itsensor, vsensors)
+        FOREACHC(itsensor, vsensors) {
             sensors.append(PySensorBasePtr(new PySensorBase(*itsensor,shared_from_this())));
+        }
         return sensors;
     }
 
@@ -3194,15 +3263,17 @@ public:
     {
         CHECK_POINTER(pbody);
         KinBody::Link::TRIMESH mesh;
-        if( !_penv->Triangulate(mesh,pbody->GetBody()) )
+        if( !_penv->Triangulate(mesh,pbody->GetBody()) ) {
             throw openrave_exception(boost::str(boost::format("failed to triangulate body %s")%pbody->GetBody()->GetName()));
+        }
         return boost::shared_ptr<PyTriMesh>(new PyTriMesh(mesh));
     }
     boost::shared_ptr<PyTriMesh> TriangulateScene(EnvironmentBase::TriangulateOptions opts, const string& name)
     {
         KinBody::Link::TRIMESH mesh;
-        if( !_penv->TriangulateScene(mesh,opts,name) )
+        if( !_penv->TriangulateScene(mesh,opts,name) ) {
             throw openrave_exception(boost::str(boost::format("failed to triangulate scene: %d, %s")%opts%name));
+        }
         return boost::shared_ptr<PyTriMesh>(new PyTriMesh(mesh));
     }
 
@@ -3412,6 +3483,8 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(drawtrimesh_overloads, drawtrimesh, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(IsMimic_overloads, IsMimic, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMimicEquation_overloads, GetMimicEquation, 0, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMimicDOFIndices_overloads, GetMimicDOFIndices, 0, 1)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetChain_overloads, GetChain, 2, 3)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetAxis_overloads, GetAxis, 0, 1)
 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Load_overloads, Load, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Save_overloads, Save, 1, 2)
@@ -3586,6 +3659,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
         object (PyKinBody::*GetNonAdjacentLinks1)() const = &PyKinBody::GetNonAdjacentLinks;
         object (PyKinBody::*GetNonAdjacentLinks2)(int) const = &PyKinBody::GetNonAdjacentLinks;
         std::string sInitFromBoxesDoc = std::string(DOXY_FN(KinBody,InitFromBoxes "const std::vector< AABB; bool")) + std::string("\nboxes is a Nx6 array, first 3 columsn are position, last 3 are extents");
+        std::string sGetChainDoc = std::string(DOXY_FN(KinBody,GetChain)) + std::string("If returnjoints is false will return a list of links, otherwise will return a list of links (default is true)");
         scope kinbody = class_<PyKinBody, boost::shared_ptr<PyKinBody>, bases<PyInterfaceBase> >("KinBody", DOXY_CLASS(KinBody), no_init)
             .def("InitFromFile",&PyKinBody::InitFromFile,args("filename"),DOXY_FN(KinBody,InitFromFile))
             .def("InitFromData",&PyKinBody::InitFromData,args("data"), DOXY_FN(KinBody,InitFromData))
@@ -3618,8 +3692,9 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("GetJoints",getjoints2, args("indices"), DOXY_FN(KinBody,GetJoints))
             .def("GetPassiveJoints",&PyKinBody::GetPassiveJoints, DOXY_FN(KinBody,GetPassiveJoints))
             .def("GetDependencyOrderedJoints",&PyKinBody::GetDependencyOrderedJoints, DOXY_FN(KinBody,GetDependencyOrderedJoints))
+            .def("GetClosedLoops",&PyKinBody::GetClosedLoops,DOXY_FN(KinBody,GetClosedLoops))
             .def("GetRigidlyAttachedLinks",&PyKinBody::GetRigidlyAttachedLinks,args("linkindex"), DOXY_FN(KinBody,GetRigidlyAttachedLinks))
-            .def("GetChain",&PyKinBody::GetChain,args("linkindex1","linkindex2"), DOXY_FN(KinBody,GetChain))
+            .def("GetChain",&PyKinBody::GetChain,GetChain_overloads(args("linkindex1","linkindex2","returnjoints"), sGetChainDoc.c_str()))
             .def("IsDOFInChain",&PyKinBody::IsDOFInChain,args("linkindex1","linkindex2","dofindex"), DOXY_FN(KinBody,IsDOFInChain))
             .def("GetJoint",&PyKinBody::GetJoint,args("name"), DOXY_FN(KinBody,GetJoint))
             .def("GetJointFromDOFIndex",&PyKinBody::GetJointFromDOFIndex,args("dofindex"), DOXY_FN(KinBody,GetJointFromDOFIndex))
@@ -3692,7 +3767,8 @@ BOOST_PYTHON_MODULE(openravepy_int)
                 .def("IsStatic",&PyKinBody::PyLink::IsStatic, DOXY_FN(KinBody::Link,IsStatic))
                 .def("Enable",&PyKinBody::PyLink::Enable,args("enable"), DOXY_FN(KinBody::Link,Enable))
                 .def("GetParent",&PyKinBody::PyLink::GetParent, DOXY_FN(KinBody::Link,GetParent))
-                .def("GetParentLink",&PyKinBody::PyLink::GetParentLink, DOXY_FN(KinBody::Link,GetParentLink))
+                .def("GetParentLinks",&PyKinBody::PyLink::GetParentLinks, DOXY_FN(KinBody::Link,GetParentLinks))
+                .def("IsParentLink",&PyKinBody::PyLink::IsParentLink, DOXY_FN(KinBody::Link,IsParentLink))
                 .def("GetCollisionData",&PyKinBody::PyLink::GetCollisionData, DOXY_FN(KinBody::Link,GetCollisionData))
                 .def("ComputeAABB",&PyKinBody::PyLink::ComputeAABB, DOXY_FN(KinBody::Link,ComputeAABB))
                 .def("GetTransform",&PyKinBody::PyLink::GetTransform, DOXY_FN(KinBody::Link,GetTransform))
@@ -3705,6 +3781,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
                 .def("GetGeometries",&PyKinBody::PyLink::GetGeometries, DOXY_FN(KinBody::Link,GetGeometries))
                 .def("GetRigidlyAttachedLinks",&PyKinBody::PyLink::GetRigidlyAttachedLinks, DOXY_FN(KinBody::Link,GetRigidlyAttachedLinks))
                 .def("IsRigidlyAttached",&PyKinBody::PyLink::IsRigidlyAttached, DOXY_FN(KinBody::Link,IsRigidlyAttached))
+                .def("GetVelocity",&PyKinBody::PyLink::GetVelocity,DOXY_FN(KinBody::Link,GetVelocity))
                 .def("__repr__", &PyKinBody::PyLink::__repr__)
                 .def("__str__", &PyKinBody::PyLink::__str__)
                 .def("__eq__",&PyKinBody::PyLink::__eq__)
@@ -3764,7 +3841,9 @@ BOOST_PYTHON_MODULE(openravepy_int)
                 .def("GetValues", &PyKinBody::PyJoint::GetValues, DOXY_FN(KinBody::Joint,GetValues))
                 .def("GetVelocities", &PyKinBody::PyJoint::GetVelocities, DOXY_FN(KinBody::Joint,GetVelocities))
                 .def("GetAnchor", &PyKinBody::PyJoint::GetAnchor, DOXY_FN(KinBody::Joint,GetAnchor))
-                .def("GetAxis", &PyKinBody::PyJoint::GetAxis,args("axis"), DOXY_FN(KinBody::Joint,GetAxis))
+                .def("GetAxis", &PyKinBody::PyJoint::GetAxis,GetAxis_overloads(args("axis"), DOXY_FN(KinBody::Joint,GetAxis)))
+                .def("GetHierarchyParentLink", &PyKinBody::PyJoint::GetHierarchyParentLink, DOXY_FN(KinBody::Joint,GetHierarchyParentLink))
+                .def("GetHierarchyChildLink", &PyKinBody::PyJoint::GetHierarchyChildLink, DOXY_FN(KinBody::Joint,GetHierarchyChildLink))
                 .def("GetInternalHierarchyAnchor", &PyKinBody::PyJoint::GetInternalHierarchyAnchor, DOXY_FN(KinBody::Joint,GetInternalHierarchyAnchor))
                 .def("GetInternalHierarchyAxis", &PyKinBody::PyJoint::GetInternalHierarchyAxis,args("axis"), DOXY_FN(KinBody::Joint,GetInternalHierarchyAxis))
                 .def("GetInternalHierarchyLeftTransform",&PyKinBody::PyJoint::GetInternalHierarchyLeftTransform, DOXY_FN(KinBody::Joint,GetInternalHierarchyLeftTransform))

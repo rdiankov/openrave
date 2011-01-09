@@ -1133,7 +1133,7 @@ int main(int argc, char** argv)
         return ''
     def generateCheckZeros(self, node):
         origequations = copy.copy(self.dictequations)
-        name = node.jointname
+        name = node.jointname if node.jointname is None else 'dummy'
         code = 'IKReal %seval[%d];\n'%(name,len(node.jointcheckeqs))
         code += self.writeEquations(lambda i: '%seval[%d]'%(name,i),node.jointcheckeqs)
         if len(node.jointcheckeqs) > 0:

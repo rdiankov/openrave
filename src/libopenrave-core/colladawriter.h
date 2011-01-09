@@ -624,12 +624,12 @@ class ColladaWriter : public daeErrorHandler
 
         //  Declare all the joints
         vector< pair<int,KinBody::JointConstPtr> > vjoints;
-        vjoints.reserve(pbody->GetJoints().size()+pbody->_vecPassiveJoints.size());
+        vjoints.reserve(pbody->GetJoints().size()+pbody->_vPassiveJoints.size());
         FOREACHC(itj, pbody->GetJoints() ) {
             vjoints.push_back(make_pair((*itj)->GetJointIndex(),*itj));
         }
         int index=pbody->GetJoints().size();
-        FOREACHC(itj, pbody->_vecPassiveJoints) {
+        FOREACHC(itj, pbody->_vPassiveJoints) {
             vjoints.push_back(make_pair(index++,*itj));
         }
         vector<dReal> lmin, lmax;
@@ -762,11 +762,11 @@ class ColladaWriter : public daeErrorHandler
                     continue;
                 }
                 size_t offset = 0;
-                for(size_t idof = 0; idof < pjoint->GetMimicDOFIndices(iaxis).size(); ++idof) {
+                FOREACHC(itdofformat, pjoint->_vmimic[iaxis]->_vdofformat) {
                     if(offset<sequations[itype].size());
                     daeElementRef pelt = pftec->add("equation");
                     pelt->setAttribute("type",sequationids[itype]);
-                    KinBody::JointPtr pmimic = pbody->GetJointFromDOFIndex(pjoint->GetMimicDOFIndices(iaxis)[idof]);
+                    KinBody::JointPtr pmimic = itdofformat->jointindex < (int)pbody->GetJoints().size() ? pbody->GetJoints().at(itdofformat->jointindex) : pbody->GetPassiveJoints().at(itdofformat->jointindex-(int)pbody->GetJoints().size());
                     std::string smimicid = str(boost::format("%s/joint%d")%kmodel->getID()%pmimic->GetJointIndex());
                     pelt->setAttribute("target",smimicid.c_str());
                     offset += XMLtoDAE::Parse(pelt, sequations[itype].c_str()+offset, sequations[itype].size()-offset);
@@ -1108,12 +1108,13 @@ class ColladaWriter : public daeErrorHandler
 
     virtual KinBody::LinkPtr GetChildLink(KinBody::JointConstPtr pjoint) {
         if( !!pjoint->GetFirstAttached() && !!pjoint->GetSecondAttached() ) {
-            if( pjoint->GetFirstAttached()->GetParentLink() == pjoint->GetSecondAttached() ) {
+            if( pjoint->GetFirstAttached()->IsParentLink(pjoint->GetSecondAttached()) ) {
                 RAVELOG_WARN("returning first link\n");
                 return pjoint->GetFirstAttached();
             }
-            else if( pjoint->GetSecondAttached()->GetParentLink() == pjoint->GetFirstAttached() )
+            else if( pjoint->GetSecondAttached()->IsParentLink(pjoint->GetFirstAttached()) ) {
                 return pjoint->GetSecondAttached();
+            }
         }
         else if( !!pjoint->GetFirstAttached() ) {
             RAVELOG_WARN("returning first link\n");

@@ -134,12 +134,19 @@ def test_ik():
         
 def debug_ik():
     env = Environment()
-    env.Reset()
-    robot = env.ReadRobotXMLFile('robots/man1.robot.xml')
-    env.AddRobot(robot)
-    manip=robot.SetActiveManipulator('rightarm')
-    prob=interfaces.BaseManipulation(robot)
-    prob.DebugIK(10)
+    env.Load('data/katanatable.env.xml')
+    env.StopSimulation()
+    robot = env.GetRobots()[0]
+
+    print robot.GetTransform()[0:3,3]
+    target=array([-0.34087322,  0.64355438,  1.01439696])
+    ikmodel = databases.inversekinematics.InverseKinematicsModel(robot, iktype=IkParameterization.Type.Translation3D)
+    if not ikmodel.load():
+        ikmodel.autogenerate()
+    sol = ikmodel.manip.FindIKSolution(IkParameterization(target,IkParameterization.Type.Translation3D),IkFilterOptions.CheckEnvCollisions)
+    print sol
+    robot.SetDOFValues(sol,ikmodel.manip.GetArmIndices())
+    print linalg.norm(target - ikmodel.manip.GetEndEffectorTransform()[0:3,3])
 
 def test_ik():
     from sympy import *

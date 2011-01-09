@@ -24,6 +24,10 @@
 #pragma warning(disable : 4661)
 #endif
 
+#ifdef FP_USE_BOOST_FUNCTION
+#include <boost/function.hpp>
+#endif
+
 namespace FPoptimizer_CodeTree { template<typename Value_t> class CodeTree; }
 
 template<typename Value_t>
@@ -61,10 +65,15 @@ public:
     bool AddConstant(const std::string& name, Value_t value);
     bool AddUnit(const std::string& name, Value_t value);
 
+    // added optional boost::function
+#ifdef FP_USE_BOOST_FUNCTION
+    typedef boost::function<Value_t(const Value_t*)> FunctionPtr;
+#else
     typedef Value_t (*FunctionPtr)(const Value_t*);
+#endif
 
     bool AddFunction(const std::string& name,
-                     FunctionPtr, unsigned paramsAmount);
+                     const FunctionPtr&, unsigned paramsAmount);
     bool AddFunction(const std::string& name, FunctionParserBase&);
 
     bool RemoveIdentifier(const std::string& name);

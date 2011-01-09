@@ -5,6 +5,7 @@
 	<base>Base</base>
 	<joints>gj1</joints>
     <closingdirection>-1</closingdirection>
-	<Translation>0 0 0.165</Translation>
+    <rotationaxis>1 0 0 -90</rotationaxis>
+	<Translation>0 0.09 0</Translation>
   </Manipulator>
 </Robot>

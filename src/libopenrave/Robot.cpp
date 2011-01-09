@@ -478,6 +478,24 @@ void RobotBase::Manipulator::serialize(std::ostream& o, int options) const
             SerializeRound3(o,tbaseinv*pjoint->GetAnchor());
             SerializeRound3(o,tbaseinv.rotate(pjoint->GetAxis(*it-pjoint->GetDOFIndex())));
         }
+        // the arm might be dependent on mimic joints, so recompute the chain and output the equations
+        std::vector<JointPtr> vjoints;
+        if( probot->GetChain(GetBase()->GetIndex(),GetEndEffector()->GetIndex(), vjoints) ) {
+            int index = 0;
+            FOREACH(it,vjoints) {
+                if( !(*it)->IsStatic() && (*it)->IsMimic() ) {
+                    for(int i = 0; i < (*it)->GetDOF(); ++i) {
+                        if( (*it)->IsMimic(i) ) {
+                            o << "mimic " << index << " ";
+                            for(int ieq = 0; ieq < 3; ++ieq) {
+                                o << (*it)->GetMimicEquation(i,ieq) << " ";
+                            }
+                        }
+                    }
+                }
+                ++index;
+            }
+        }
     }
     if( options & (SO_Kinematics|SO_RobotManipulators) ) {
         SerializeRound3(o,_vdirection);
@@ -2184,6 +2202,7 @@ void RobotBase::_ComputeInternalInformation()
         }
         if( !!(*itmanip)->GetBase() && !!(*itmanip)->GetEndEffector() ) {
             vector<JointPtr> vjoints;
+            std::vector<int> vmimicdofs;
             if( GetChain((*itmanip)->GetBase()->GetIndex(),(*itmanip)->GetEndEffector()->GetIndex(), vjoints) ) {
                 (*itmanip)->_varmdofindices.resize(0);
                 FOREACH(it,vjoints) {
@@ -2193,9 +2212,10 @@ void RobotBase::_ComputeInternalInformation()
                     else if( (*it)->IsMimic() ) {
                         for(int i = 0; i < (*it)->GetDOF(); ++i) {
                             if( (*it)->IsMimic(i) ) {
-                                FOREACHC(itdof,(*it)->GetMimicDOFIndices(i)) {
-                                    if( find((*itmanip)->_varmdofindices.begin(),(*itmanip)->_varmdofindices.end(),*itdof) == (*itmanip)->_varmdofindices.end() ) {
-                                        (*itmanip)->_varmdofindices.push_back(*itdof);
+                                (*it)->GetMimicDOFIndices(vmimicdofs,i);
+                                FOREACHC(itmimicdof,vmimicdofs) {
+                                    if( find((*itmanip)->_varmdofindices.begin(),(*itmanip)->_varmdofindices.end(),*itmimicdof) == (*itmanip)->_varmdofindices.end() ) {
+                                        (*itmanip)->_varmdofindices.push_back(*itmimicdof);
                                     }
                                 }
                             }
