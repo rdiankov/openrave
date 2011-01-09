@@ -6,8 +6,8 @@
   <manipulator name="arm">
     <base>base_link</base>
     <effector>arm_7_link</effector>
-    <joints>sdh_finger_11_joint sdh_finger_12_joint sdh_finger_13_joint sdh_finger_21_joint sdh_finger_22_joint sdh_finger_23_joint sdh_thumb_1_joint sdh_thumb_2_joint sdh_thumb_3_joint</joints>
-    <closingdirection>0 1 1 0 1 1 0 1 1</closingdirection>
+    <joints>sdh_finger_11_joint sdh_finger_12_joint sdh_finger_13_joint sdh_finger_21_joint sdh_finger_22_joint sdh_finger_23_joint sdh_thumb_2_joint sdh_thumb_3_joint</joints>
+    <closingdirection>0 1 1 0 1 1 1 1</closingdirection>
     <direction>0 0 -1</direction>
     <translation>0 0 -0.15</translation>
   </manipulator>
