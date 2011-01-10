@@ -264,7 +264,7 @@ namespace OpenRAVEXMLParser
         return ret;
     }
 
-    static boost::shared_ptr<pair<string,string> > RaveFindXMLFile(const string& filename)
+    static boost::shared_ptr<pair<string,string> > RaveFindFile(const string& filename)
     {
         if( filename.size() == 0 ) {
             return boost::shared_ptr<pair<string,string> >();
@@ -349,7 +349,7 @@ namespace OpenRAVEXMLParser
 
     static bool RaveParseXMLFile(BaseXMLReaderPtr preader, const string& filename)
     {
-        boost::shared_ptr<pair<string,string> > filedata = RaveFindXMLFile(filename);
+        boost::shared_ptr<pair<string,string> > filedata = RaveFindFile(filename);
         if( !filedata ) {
             return false;
         }
@@ -1483,7 +1483,7 @@ namespace OpenRAVEXMLParser
 
                     //BaseXMLReaderPtr preader = CreateInterfaceReader(_penv,_type,_pinterface, xmltag, listnewatts);
                     //bool bSuccess = RaveParseXMLFile(preader, itatt->second);
-                    boost::shared_ptr<pair<string,string> > filedata = RaveFindXMLFile(itatt->second);
+                    boost::shared_ptr<pair<string,string> > filedata = RaveFindFile(itatt->second);
                     if( !filedata ) {
                         continue;
                     }
@@ -2824,7 +2824,7 @@ namespace OpenRAVEXMLParser
                             listnewatts.push_back(*itatt2);
                     }
 
-                    boost::shared_ptr<pair<string,string> > filedata = RaveFindXMLFile(itatt->second);
+                    boost::shared_ptr<pair<string,string> > filedata = RaveFindFile(itatt->second);
                     if( !filedata ) {
                         continue;
                     }

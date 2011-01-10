@@ -368,6 +368,7 @@ class Environment : public EnvironmentBase
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         bool bSuccess;
         if( _IsColladaFile(filename) ) {
+            OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
             bSuccess = RaveParseColladaFile(shared_from_this(), filename);
         }
         else {
@@ -877,8 +878,10 @@ class Environment : public EnvironmentBase
         try {
             if( _IsColladaFile(filename) ) {
                 RobotBasePtr robot;
-                if( !RaveParseColladaFile(shared_from_this(), robot, filename) )
+                OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
+                if( !RaveParseColladaFile(shared_from_this(), robot, filename) ) {
                     return RobotBasePtr();
+                }
                 return robot;
             }
             else {
@@ -906,6 +909,7 @@ class Environment : public EnvironmentBase
         }
 
         if( _IsColladaFile(filename) ) {
+            OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
             if( !RaveParseColladaFile(shared_from_this(), robot, filename) ) {
                 return RobotBasePtr();
             }
@@ -959,6 +963,7 @@ class Environment : public EnvironmentBase
         try {
             if( _IsColladaFile(filename) ) {
                 KinBodyPtr body;
+                OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
                 if( !RaveParseColladaFile(shared_from_this(), body, filename) ) {
                     return KinBodyPtr();
                 }
@@ -989,6 +994,7 @@ class Environment : public EnvironmentBase
         }
 
         if( _IsColladaFile(filename) ) {
+            OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
             if( !RaveParseColladaFile(shared_from_this(), body, filename) ) {
                 return KinBodyPtr();
             }
@@ -1063,6 +1069,7 @@ class Environment : public EnvironmentBase
             if( type == PT_KinBody ) {
                 BOOST_ASSERT(!pinterface|| (pinterface->GetInterfaceType()==PT_KinBody||pinterface->GetInterfaceType()==PT_Robot));
                 KinBodyPtr pbody = RaveInterfaceCast<KinBody>(pinterface);
+                OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
                 if( !RaveParseColladaFile(shared_from_this(), pbody, filename) ) {
                     return InterfaceBasePtr();
                 }
@@ -1071,6 +1078,7 @@ class Environment : public EnvironmentBase
             else if( type == PT_Robot ) {
                 BOOST_ASSERT(!pinterface||pinterface->GetInterfaceType()==PT_Robot);
                 RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pinterface);
+                OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
                 if( !RaveParseColladaFile(shared_from_this(), probot, filename) ) {
                     return InterfaceBasePtr();
                 }

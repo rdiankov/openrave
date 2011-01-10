@@ -96,89 +96,86 @@ void CreateTriMeshData(SoNode* pnode, KinBody::Link::TRIMESH& tri)
 bool RaveParseColladaFile(EnvironmentBasePtr penv, const string& filename)
 {
     ColladaReader reader(penv);
-    if (!reader.InitFromFile(filename))
+    boost::shared_ptr<pair<string,string> > filedata = OpenRAVEXMLParser::RaveFindFile(filename);
+    if (!filedata || !reader.InitFromFile(filedata->second)) {
         return false;
+    }
     return reader.Extract();
 }
 
 bool RaveParseColladaFile(EnvironmentBasePtr penv, KinBodyPtr& pbody, const string& filename)
 {
     ColladaReader reader(penv);
-    if (!reader.InitFromFile(filename))
+    boost::shared_ptr<pair<string,string> > filedata = OpenRAVEXMLParser::RaveFindFile(filename);
+    if (!filedata || !reader.InitFromFile(filedata->second)) {
         return false;
+    }
     return reader.Extract(pbody);
 }
 
 bool RaveParseColladaFile(EnvironmentBasePtr penv, RobotBasePtr& probot, const string& filename)
 {
     ColladaReader reader(penv);
-    if (!reader.InitFromFile(filename))
+    boost::shared_ptr<pair<string,string> > filedata = OpenRAVEXMLParser::RaveFindFile(filename);
+    if (!filedata || !reader.InitFromFile(filedata->second)) {
         return false;
+    }
     return reader.Extract(probot);
 }
 
 bool RaveParseColladaData(EnvironmentBasePtr penv, const string& pdata) {
     ColladaReader reader(penv);
-    if (!reader.InitFromData(pdata))
+    if (!reader.InitFromData(pdata)) {
         return false;
+    }
     return reader.Extract();
 }
 
 bool RaveParseColladaData(EnvironmentBasePtr penv, KinBodyPtr& pbody, const string& pdata)
 {
     ColladaReader reader(penv);
-    if (!reader.InitFromData(pdata))
+    if (!reader.InitFromData(pdata)) {
         return false;
+    }
     return reader.Extract(pbody);
 }
 
 bool RaveParseColladaData(EnvironmentBasePtr penv, RobotBasePtr& probot, const string& pdata)
 {
     ColladaReader reader(penv);
-    if (!reader.InitFromData(pdata))
+    if (!reader.InitFromData(pdata)) {
         return false;
+    }
     return reader.Extract(probot);
 }
 
 bool RaveWriteColladaFile(EnvironmentBasePtr penv, const string& filename)
 {
     RAVELOG_VERBOSE("bool RaveWriteColladaFile(EnvironmentBasePtr penv, const string& filename)\n");
-
     ColladaWriter writer(penv);
-
-    if( !writer.Write(penv) )
-    {
+    if( !writer.Write(penv) ) {
         return false;
     }
-
     return writer.Save(filename);
 }
 
 bool RaveWriteColladaFile(KinBodyPtr pbody, const string& filename)
 {
     RAVELOG_VERBOSE("bool RaveWriteColladaFile(KinBodyPtr pbody, const string& filename)\n");
-
     ColladaWriter writer(pbody->GetEnv());
-
-    if( !writer.Write(pbody) )
-    {
+    if( !writer.Write(pbody) ) {
         return false;
     }
-
     return writer.Save(filename);
 }
 
 bool RaveWriteColladaFile(RobotBasePtr probot, const string& filename)
 {
     RAVELOG_VERBOSE("bool RaveWriteColladaFile(RobotBasePtr probot, const string& filename)\n");
-
     ColladaWriter writer(probot->GetEnv());
-
-    if( !writer.Write(probot) )
-    {
+    if( !writer.Write(probot) ) {
         return false;
     }
-
     return writer.Save(filename);
 }
 

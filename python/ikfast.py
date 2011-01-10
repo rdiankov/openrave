@@ -1004,7 +1004,7 @@ class IKFastSolver(AutoReloader):
             for j in range(3):
                 e = Positions[i][j] - Positionsee[i][j]
                 if self.codeComplexity(e) < 1500:
-                    e = self.customtrigsimp(e)
+                    e = self.customtrigsimp(e).expand()
 
                 if self.isExpressionUnique(AllEquations,e) and self.isExpressionUnique(AllEquations,-e):
                     AllEquations.append(e)
@@ -1013,7 +1013,7 @@ class IKFastSolver(AutoReloader):
                 pe2 = (Positionsee[i][0]**2+Positionsee[i][1]**2+Positionsee[i][2]**2).expand()
                 if self.codeComplexity(p2) < 1500 and self.codeComplexity(pe2) < 1500:
                     # sympy's trigsimp/customtrigsimp give up too easily
-                    e = self.customtrigsimp(self.customtrigsimp(self.customtrigsimp(self.chop(self.customtrigsimp(self.customtrigsimp(self.customtrigsimp(p2)).expand())) - self.chop(self.customtrigsimp(self.customtrigsimp(self.customtrigsimp(pe2)).expand())))))
+                    e = self.customtrigsimp(self.customtrigsimp(self.customtrigsimp(self.chop(self.customtrigsimp(self.customtrigsimp(self.customtrigsimp(p2)).expand())) - self.chop(self.customtrigsimp(self.customtrigsimp(self.customtrigsimp(pe2)).expand()))))).expand()
                     if self.isExpressionUnique(AllEquations,e) and self.isExpressionUnique(AllEquations,-e):
                         AllEquations.append(e)
                 else:
@@ -2611,7 +2611,7 @@ class IKFastSolver(AutoReloader):
                 for ivar in range(2):
                     lineareqs = [eq for eq in neweqs if __builtin__.sum(eq[ivar].lead_monom)==1]
                     for paireq0,paireq1 in combinations(lineareqs,2):
-                        print 'solving a separated equations with linear terms'
+                        print 'solving separated equations with linear terms'
                         eq0 = paireq0[ivar]
                         eq1 = paireq1[ivar]
                         disc = (eq0.coeff(1,0)*eq1.coeff(0,1) - eq0.coeff(0,1)*eq1.coeff(1,0)).subs(allsymbols).expand()
