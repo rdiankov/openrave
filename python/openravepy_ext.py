@@ -221,9 +221,9 @@ class MultiManipIKSolver(metaclass.AutoReloader):
     def __init__(self,manips):
         self.robot = manips[0].GetRobot()
         self.manips = manips
-        indeplinksets=[set([l.GetName() for l in manip.GetIndependentLinks()]) for manip in self.manips]
+        indeplinksets=[set([l for l in manip.GetIndependentLinks()]) for manip in self.manips]
         indeplinknames=indeplinksets[0].intersection(*indeplinksets[1:])
-        alllinknames = set([l.GetName() for l in self.robot.GetLinks()])
+        alllinknames = set([l for l in self.robot.GetLinks()])
         self.enablelinknames = [alllinknames.difference(indeplinksets[i]).union(indeplinknames) for i in range(len(self.manips))]
     
     def findMultiIKSolution(self,Tgrasps,filteroptions=openravepy.IkFilterOptions.CheckEnvCollisions):
@@ -244,7 +244,7 @@ class MultiManipIKSolver(metaclass.AutoReloader):
                     for i,manip in enumerate(self.manips):
                         # invalidate all links that are controlled by the other manipulators
                         for link in self.robot.GetLinks():
-                            link.Enable(link.GetName() in self.enablelinknames[i])
+                            link.Enable(link in self.enablelinknames[i])
                         # enable only the grabbed bodies of this manipulator
                         for body in grabbed:
                             body.Enable(manip.IsGrabbing(body))

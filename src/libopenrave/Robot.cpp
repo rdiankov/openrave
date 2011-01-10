@@ -1,4 +1,5 @@
-// Copyright (C) 2006-2008 Rosen Diankov (rdiankov@cs.cmu.edu)
+// -*- coding: utf-8 -*-
+// Copyright (C) 2006-2011 Rosen Diankov (rdiankov@cs.cmu.edu)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -13,13 +14,10 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-/** \file   Robot.cpp
-    \brief  Definition of OpenRAVE::RobotBase
- */
 #include "libopenrave.h"
 
 #define CHECK_INTERNAL_COMPUTATION { \
-    if( !_bHierarchyComputed ) { \
+    if( _nHierarchyComputed == 0 ) { \
         throw openrave_exception(str(boost::format("%s: joint hierarchy needs to be computed (is body added to environment?)\n")%__PRETTY_FUNCTION__)); \
     } \
 } \

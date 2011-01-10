@@ -21,8 +21,8 @@
 #include <boost/lexical_cast.hpp>
 
 #define CHECK_INTERNAL_COMPUTATION { \
-    if( !_bHierarchyComputed ) { \
-        throw openrave_exception(str(boost::format("%s: joint hierarchy needs to be computed (is body added to environment?)\n")%__PRETTY_FUNCTION__)); \
+    if( _nHierarchyComputed == 0 ) { \
+        throw openrave_exception(str(boost::format("%s: joint hierarchy needs to be computed, current value is %d")%__PRETTY_FUNCTION__%_nHierarchyComputed)); \
     } \
 } \
 
@@ -1492,7 +1492,8 @@ KinBody::KinBodyStateSaver::~KinBodyStateSaver()
 
 KinBody::KinBody(InterfaceType type, EnvironmentBasePtr penv) : InterfaceBase(type, penv)
 {
-    _bHierarchyComputed = false;
+    _nHierarchyComputed = 0;
+    _nParametersChanged = 0;
     _bMakeJoinedLinksAdjacent = true;
     _environmentid = 0;
     _nNonAdjacentLinkCache = 0;
@@ -1537,7 +1538,8 @@ void KinBody::Destroy()
     _vClosedLoopIndices.clear();
     _nNonAdjacentLinkCache = 0;
     _vForcedAdjacentLinks.clear();
-    _bHierarchyComputed = false;
+    _nHierarchyComputed = 0;
+    _nParametersChanged = 0;
     _pGuiData.reset();
     _pPhysicsData.reset();
     _pCollisionData.reset();
@@ -2375,6 +2377,18 @@ void KinBody::GetRigidlyAttachedLinks(int linkindex, std::vector<KinBody::LinkPt
     _veclinks.at(linkindex)->GetRigidlyAttachedLinks(vattachedlinks);
 }
 
+const std::vector<KinBody::JointPtr>& KinBody::GetDependencyOrderedJoints() const
+{
+    CHECK_INTERNAL_COMPUTATION;
+    return _vTopologicallySortedJoints;
+}
+
+const std::vector< std::vector< std::pair<KinBody::LinkPtr, KinBody::JointPtr> > >& KinBody::GetClosedLoops() const
+{
+    CHECK_INTERNAL_COMPUTATION;
+    return _vClosedLoops;
+}
+
 bool KinBody::GetChain(int linkindex1, int linkindex2, std::vector<JointPtr>& vjoints) const
 {
     CHECK_INTERNAL_COMPUTATION;
@@ -2457,6 +2471,7 @@ KinBody::JointPtr KinBody::GetJoint(const std::string& jointname) const
 
 void KinBody::CalculateJacobian(int linkindex, const Vector& trans, boost::multi_array<dReal,2>& mjacobian) const
 {
+    CHECK_INTERNAL_COMPUTATION;
     if( linkindex < 0 || linkindex >= (int)_veclinks.size() ) {
         throw openrave_exception(str(boost::format("bad link index %d")%linkindex),ORE_InvalidArguments);
     }
@@ -2540,6 +2555,7 @@ void KinBody::CalculateJacobian(int linkindex, const Vector& trans, vector<dReal
 
 void KinBody::CalculateRotationJacobian(int linkindex, const Vector& q, boost::multi_array<dReal,2>& mjacobian) const
 {
+    CHECK_INTERNAL_COMPUTATION;
     if( linkindex < 0 || linkindex >= (int)_veclinks.size() ) {
         throw openrave_exception(str(boost::format("bad link index %d")%linkindex),ORE_InvalidArguments);
     }
@@ -2626,6 +2642,7 @@ void KinBody::CalculateRotationJacobian(int linkindex, const Vector& q, vector<d
 
 void KinBody::CalculateAngularVelocityJacobian(int linkindex, boost::multi_array<dReal,2>& mjacobian) const
 {
+    CHECK_INTERNAL_COMPUTATION;
     if( linkindex < 0 || linkindex >= (int)_veclinks.size() ) {
         throw openrave_exception(str(boost::format("bad link index %d")%linkindex),ORE_InvalidArguments);
     }
@@ -2718,7 +2735,7 @@ bool KinBody::CheckSelfCollision(CollisionReportPtr report) const
 void KinBody::_ComputeInternalInformation()
 {
     uint64_t starttime = GetMicroTime();
-    _bHierarchyComputed = true;
+    _nHierarchyComputed = 1;
 
     int lindex=0;
     FOREACH(itlink,_veclinks) {
@@ -3466,6 +3483,17 @@ void KinBody::_ComputeInternalInformation()
 
         SetDOFValues(vprev);
     }
+    _nHierarchyComputed = 2;
+    // notify any callbacks of the changes
+    if( _nParametersChanged ) {
+        std::list<std::pair<int,boost::function<void()> > > listRegisteredCallbacks = _listRegisteredCallbacks; // copy since it can be changed
+        FOREACH(itfns,listRegisteredCallbacks) {
+            if( itfns->first & _nParametersChanged ) {
+                itfns->second();
+            }
+        }
+        _nParametersChanged = 0;
+    }
     RAVELOG_DEBUG(str(boost::format("_ComputeInternalInformation %s in %fs")%GetName()%(1e-6*(GetMicroTime()-starttime))));
 }
 
@@ -3607,7 +3635,7 @@ bool KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     KinBodyConstPtr r = RaveInterfaceConstCast<KinBody>(preference);
 
     _name = r->_name;
-    _bHierarchyComputed = r->_bHierarchyComputed;
+    _nHierarchyComputed = r->_nHierarchyComputed;
     _bMakeJoinedLinksAdjacent = r->_bMakeJoinedLinksAdjacent;
     __hashkinematics = r->__hashkinematics;
     _vTempJoints = r->_vTempJoints;
@@ -3710,10 +3738,13 @@ bool KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
 void KinBody::_ParametersChanged(int parameters)
 {
     _nUpdateStampId++;
-    std::list<std::pair<int,boost::function<void()> > > listRegisteredCallbacks = _listRegisteredCallbacks; // copy since it can be changed
-    FOREACH(itfns,listRegisteredCallbacks) {
-        if( itfns->first & parameters )
-            itfns->second();
+    if( _nHierarchyComputed == 1 ) {
+        _nParametersChanged |= parameters;
+        return;
+    }
+
+    if( parameters & Prop_JointMimic ) {
+        _ComputeInternalInformation();
     }
     // do not change hash if geometry changed!
     //if( parameters&Prop_LinkGeometry )
@@ -3722,6 +3753,13 @@ void KinBody::_ParametersChanged(int parameters)
         ss << std::fixed << std::setprecision(SERIALIZATION_PRECISION);
         serialize(ss,SO_Kinematics|SO_Geometry);
         __hashkinematics = GetMD5HashString(ss.str());
+    }
+
+    std::list<std::pair<int,boost::function<void()> > > listRegisteredCallbacks = _listRegisteredCallbacks; // copy since it can be changed
+    FOREACH(itfns,listRegisteredCallbacks) {
+        if( itfns->first & parameters ) {
+            itfns->second();
+        }
     }
 }
 
@@ -3763,46 +3801,46 @@ boost::shared_ptr<void> KinBody::RegisterChangeCallback(int properties, const bo
     return boost::shared_ptr<void>(new std::list<std::pair<int,boost::function<void()> > >::iterator(_listRegisteredCallbacks.insert(_listRegisteredCallbacks.end(),make_pair(properties,callback))), boost::bind(KinBody::__erase_iterator,KinBodyWeakPtr(shared_kinbody()), _1));
 }
 
-template <int D>
-static dReal polyrootsk(KinBody::JointWeakPtr pweakjoint, int iaxis, const dReal* rawcoeffs)
-{
-    int numroots=0;
-    dReal rawroots[D];
-    polyroots<dReal,D>(rawcoeffs,rawroots,numroots);
-    if( numroots > 0 ) {
-        if( pweakjoint.expired() ) {
-            // take the one closest to 0
-            int best = 0;
-            dReal f = RaveFabs(rawroots[0]);
-            for(int i = 1; i < numroots; ++i) {
-                if( RaveFabs(rawroots[i]) < f ) {
-                    f = RaveFabs(rawroots[i]);
-                    best = i;
-                }
-            }
-            return rawroots[best];
-        }
-        else {
-            // take the one within joint limits and closest to the current value
-            KinBody::JointPtr pjoint(pweakjoint);
-            std::vector<dReal> vLowerLimit, vUpperLimit;
-            pjoint->GetLimits(vLowerLimit,vUpperLimit);
-            dReal flower = vLowerLimit.at(iaxis), fupper = vUpperLimit.at(iaxis);
-            int best = -1;
-            dReal fbest;
-            for(int i = 0; i < numroots; ++i) {
-                if( pjoint->IsCircular() || (flower <= rawroots[i]  && fupper >= rawroots[i]) ) {
-                    if( best == -1 || RaveFabs(rawroots[i]) < fbest ) {
-                        fbest = RaveFabs(rawroots[i]);
-                        best = i;
-                    }
-                }
-            }
-            return rawroots[best];
-        }
-    }
-    throw openrave_exception("failed to solve for joint",ORE_Failed);
-}
+//template <int D>
+//static dReal polyrootsk(KinBody::JointWeakPtr pweakjoint, int iaxis, const dReal* rawcoeffs)
+//{
+//    int numroots=0;
+//    dReal rawroots[D];
+//    polyroots<dReal,D>(rawcoeffs,rawroots,numroots);
+//    if( numroots > 0 ) {
+//        if( pweakjoint.expired() ) {
+//            // take the one closest to 0
+//            int best = 0;
+//            dReal f = RaveFabs(rawroots[0]);
+//            for(int i = 1; i < numroots; ++i) {
+//                if( RaveFabs(rawroots[i]) < f ) {
+//                    f = RaveFabs(rawroots[i]);
+//                    best = i;
+//                }
+//            }
+//            return rawroots[best];
+//        }
+//        else {
+//            // take the one within joint limits and closest to the current value
+//            KinBody::JointPtr pjoint(pweakjoint);
+//            std::vector<dReal> vLowerLimit, vUpperLimit;
+//            pjoint->GetLimits(vLowerLimit,vUpperLimit);
+//            dReal flower = vLowerLimit.at(iaxis), fupper = vUpperLimit.at(iaxis);
+//            int best = -1;
+//            dReal fbest;
+//            for(int i = 0; i < numroots; ++i) {
+//                if( pjoint->IsCircular() || (flower <= rawroots[i]  && fupper >= rawroots[i]) ) {
+//                    if( best == -1 || RaveFabs(rawroots[i]) < fbest ) {
+//                        fbest = RaveFabs(rawroots[i]);
+//                        best = i;
+//                    }
+//                }
+//            }
+//            return rawroots[best];
+//        }
+//    }
+//    throw openrave_exception("failed to solve for joint",ORE_Failed);
+//}
 
 boost::shared_ptr<FunctionParserBase<dReal> > KinBody::_CreateFunctionParser()
 {

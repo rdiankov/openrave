@@ -735,7 +735,7 @@ public:
     ///
     /// In the case of closed loops, the joints are returned in the order closest to the root.
     /// All the joints affecting a particular joint's transformation will always come before the joint in the list.
-    const std::vector<JointPtr>& GetDependencyOrderedJoints() const { return _vTopologicallySortedJoints; }
+    virtual const std::vector<JointPtr>& GetDependencyOrderedJoints() const;
 
     /** \brief Return the set of unique closed loops of the kinematics hierarchy.
         
@@ -743,7 +743,7 @@ public:
         [l_0,l_1,l_2] will consist of three joints connecting l_0 to l_1, l_1 to l_2, and l_2 to l_0. 
         The first element in the pair is the link l_X, the second element in the joint connecting l_X to l_(X+1).
     */
-    const std::vector< std::vector< std::pair<LinkPtr, JointPtr> > >& GetClosedLoops() const { return _vClosedLoops; }
+    virtual const std::vector< std::vector< std::pair<LinkPtr, JointPtr> > >& GetClosedLoops() const;
 
     /** \en \brief Computes the minimal chain of joints that are between two links in the order of linkindex1 to linkindex2
     
@@ -761,17 +761,17 @@ public:
         \param[out] vjoints　関節の経路
         \return 経路が存在している場合，trueを返す．
     */
-    bool GetChain(int linkindex1, int linkindex2, std::vector<JointPtr>& vjoints) const;
+    virtual bool GetChain(int linkindex1, int linkindex2, std::vector<JointPtr>& vjoints) const;
 
     /// \brief similar to \ref GetChain(int,int,std::vector<JointPtr>&) except returns the links along the path.
-    bool GetChain(int linkindex1, int linkindex2, std::vector<LinkPtr>& vlinks) const;
+    virtual bool GetChain(int linkindex1, int linkindex2, std::vector<LinkPtr>& vlinks) const;
     
     /// \brief Returns true if the dof index affects the relative transformation between the two links.
     ///
     /// The internal implementation uses \ref KinBody::DoesAffect, therefore mimic indices are correctly handled.
     /// \param[in] linkindex1 the link index to start the search
     /// \param[in] linkindex2 the link index where the search ends
-    bool IsDOFInChain(int linkindex1, int linkindex2, int dofindex) const;
+    virtual bool IsDOFInChain(int linkindex1, int linkindex2, int dofindex) const;
 
     /// \brief Return the index of the joint with the given name, else -1.
     virtual int GetJointIndex(const std::string& name) const;
@@ -943,7 +943,10 @@ public:
     */
     virtual int8_t DoesAffect(int jointindex, int linkindex) const;
 
+    /// \brief GUI data to let the viewer store specific graphic handles for the object.
     virtual void SetGuiData(UserDataPtr data) { _pGuiData = data; }
+
+    /// \see SetGuiData
     virtual UserDataPtr GetGuiData() const { return _pGuiData; }
 
     /// \brief specifies the type of adjacent link information to receive
@@ -960,7 +963,9 @@ public:
     /// \brief return all possible link pairs whose collisions are ignored.
     virtual const std::set<int>& GetAdjacentLinks() const;
     
+    /// \see SetPhysicsData
     virtual UserDataPtr GetPhysicsData() const { return _pPhysicsData; }
+    /// \brief SetCollisionData
     virtual UserDataPtr GetCollisionData() const { return _pCollisionData; }
     virtual ManageDataPtr GetManageData() const { return _pManageData; }
 
@@ -1009,8 +1014,9 @@ protected:
     inline KinBodyPtr shared_kinbody() { return boost::static_pointer_cast<KinBody>(shared_from_this()); }
     inline KinBodyConstPtr shared_kinbody_const() const { return boost::static_pointer_cast<KinBody const>(shared_from_this()); }
     
-    /// \brief specific data about physics engine, should be set only by the current PhysicsEngineBase
+    /// \brief custom data managed by the current active physics engine, should be set only by PhysicsEngineBase
     virtual void SetPhysicsData(UserDataPtr pdata) { _pPhysicsData = pdata; }
+    /// \brief custom data managed by the current active collision checker, should be set only by CollisionCheckerBase
     virtual void SetCollisionData(UserDataPtr pdata) { _pCollisionData = pdata; }
     virtual void SetManageData(ManageDataPtr pdata) { _pManageData = pdata; }
 
@@ -1061,11 +1067,12 @@ protected:
     std::list<std::pair<int,boost::function<void()> > > _listRegisteredCallbacks; ///< callbacks to call when particular properties of the body change.
     int _environmentid; ///< \see GetEnvironmentId
     int _nUpdateStampId; ///< \see GetUpdateStamp
-    UserDataPtr _pGuiData; ///< GUI data to let the viewer store specific graphic handles for the object
-    UserDataPtr _pPhysicsData; ///< data set by the physics engine
-    UserDataPtr _pCollisionData; ///< internal collision model
+    int _nParametersChanged; ///< set of parameters that changed and need callbacks
+    UserDataPtr _pGuiData; ///< \ see SetGuiData
+    UserDataPtr _pPhysicsData; ///< \see SetPhysicsData
+    UserDataPtr _pCollisionData; ///< \see SetCollisionData
     ManageDataPtr _pManageData;    
-    bool _bHierarchyComputed; ///< true if the joint heirarchy and other cached information is computed
+    uint8_t _nHierarchyComputed; ///< true if the joint heirarchy and other cached information is computed
     bool _bMakeJoinedLinksAdjacent;
 private:
     std::string __hashkinematics;
