@@ -34,6 +34,7 @@ if (BUILD_C_BINDINGS)
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_COMPILER_IS_GNUCC)
         add_library(flann SHARED "")
         target_link_libraries(flann -Wl,-whole-archive flann_s -Wl,-no-whole-archive)
+        set_target_properties(flann PROPERTIES LINKER_LANGUAGE C) # have to do this manually for cmake 2.6
     else()
         add_library(flann SHARED ${C_SOURCES})
     endif()
