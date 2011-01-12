@@ -127,7 +127,8 @@ dReal RavePow(dReal x, dReal y) { return pow_rn(x,y); }
 #ifdef LIBM_SQRT_ACCURATE
 dReal RaveSqrt(dReal f) { return sqrt(f); }
 #else
-dReal RaveSqrt(dReal f) { return pow_rn(f,0.5); } // NOTE: this is really slow, is it really worth the precision?
+dReal RaveSqrt(dReal f) { return sqrt(f); }
+    //dReal RaveSqrt(dReal f) { return pow_rn(f,0.5); } // NOTE: this is really slow, is it really worth the precision?
 #endif
 dReal RaveFabs(dReal f) { return fabs(f); }
 

@@ -12,7 +12,7 @@
 /// See the License for the specific language governing permissions and
 /// limitations under the License.
 ///
-/// generated 2010-12-10 19:05:50.987706
+/// generated 2011-01-12 18:28:55.144605
 /// To compile with gcc:
 ///     gcc -lstdc++ ik.cpp
 /// To compile without any main function as a shared object:
@@ -191,14 +191,14 @@ IKFAST_API int getIKType() { return 6; }
 /// solves the inverse kinematics equations.
 /// \param pfree is an array specifying the free joints of the chain.
 IKFAST_API void fk(const IKReal* j, IKReal* eetrans, IKReal* eerot) {
-IKReal x0, x1, x2, x3;
+IKReal x0,x1,x2,x3;
 x0=IKcos(j[0]);
 x1=IKsin(j[0]);
 x2=IKsin(j[1]);
 x3=IKcos(j[1]);
-eetrans[0]=((-0.0170700000000000)+(((-0.0300000000000000)*(x1)))+(((0.0680000000000000)*(x0)))+(((0.0980000000000000)*(x0)*(x2)))+(((0.0232000000000000)*(x0)*(x3))));
-eetrans[1]=((((0.0232000000000000)*(x1)*(x3)))+(((0.0680000000000000)*(x1)))+(((0.0980000000000000)*(x1)*(x2)))+(((0.0300000000000000)*(x0))));
-eetrans[2]=((0.381450000000000)+(((0.0980000000000000)*(x3)))+(((-0.0232000000000000)*(x2))));
+eetrans[0]=((-0.0170700000000000)+(((-0.0300000000000000)*(x1)))+(((0.0680000000000000)*(x0)))+(((0.0232000000000000)*(x0)*(x3)))+(((0.0979999999999999)*(x0)*(x2))));
+eetrans[1]=((((0.0232000000000000)*(x1)*(x3)))+(((0.0680000000000000)*(x1)))+(((0.0979999999999999)*(x1)*(x2)))+(((0.0300000000000000)*(x0))));
+eetrans[2]=((0.381450000000000)+(((-0.0232000000000000)*(x2)))+(((0.0979999999999999)*(x3))));
 eerot[0]=((x0)*(x3));
 eerot[1]=((x1)*(x3));
 eerot[2]=((-1.00000000000000)*(x2));
@@ -221,6 +221,11 @@ new_pz=((-0.381450000000000)+(pz));
 px = new_px; py = new_py; pz = new_pz;
 {
 if( 1 )
+{
+{
+IKReal Noneeval[1];
+Noneeval[0]=0;
+if( IKabs(Noneeval[0]) < 0.000010  )
 {
 {
 IKReal j0array[2], cj0array[2], sj0array[2];
@@ -277,7 +282,7 @@ if( (x16) < (IKReal)-0.00001 )
 IKReal x17=IKsqrt(x16);
 IKReal x18=IKabs(x17);
 IKReal x19=((IKabs(x18) != 0)?((IKReal)1/(x18)):(IKReal)1.0e30);
-IKReal x20=((0.0980000000000000)*(x19));
+IKReal x20=((0.0979999999999999)*(x19));
 if( (x20) < -1.0001 || (x20) > 1.0001 )
     continue;
 IKReal x21=IKasin(x20);
@@ -314,6 +319,14 @@ solution.vfree.resize(0);
 }
 }
 }
+}
+
+} else
+{
+continue;
+
+}
+
 }
 
 } else

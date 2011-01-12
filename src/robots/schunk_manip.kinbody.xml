@@ -63,6 +63,6 @@
     <body>gripper_base</body>
     <body>R_finger</body>
     <axis>0 -1 0</axis>
-    <limits>0 0.034</limits>
+    <limits>-0.034 0</limits>
   </Joint>
 </KinBody>

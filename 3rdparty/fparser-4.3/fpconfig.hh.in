@@ -25,11 +25,11 @@
    and the resulting binary needlessly larger if they are not used in the
    program.)
 */
-//#define FP_SUPPORT_FLOAT_TYPE
-//#define FP_SUPPORT_LONG_DOUBLE_TYPE
-//#define FP_SUPPORT_LONG_INT_TYPE
-//#define FP_SUPPORT_MPFR_FLOAT_TYPE
-//#define FP_SUPPORT_GMP_INT_TYPE
+#cmakedefine FP_SUPPORT_FLOAT_TYPE
+#cmakedefine FP_SUPPORT_LONG_DOUBLE_TYPE
+#cmakedefine FP_SUPPORT_LONG_INT_TYPE
+#cmakedefine FP_SUPPORT_MPFR_FLOAT_TYPE
+#cmakedefine FP_SUPPORT_GMP_INT_TYPE
 
 /* Uncomment this line of define it in your compiler settings if you want
    to disable compiling the basic double version of the library, in case
@@ -37,7 +37,7 @@
    type is not used, then disabling it makes compiling faster and the
    resulting binary smaller.)
  */
-//#define FP_DISABLE_DOUBLE_TYPE
+#cmakedefine FP_DISABLE_DOUBLE_TYPE
 
 /*
  Note that these do not change what FunctionParser supports, they only
@@ -46,7 +46,7 @@
  These will make the source code use asinh(), acosh(), atanh(), exp2()
  and log2().
 */
-//#define FP_SUPPORT_TR1_MATH_FUNCS
+#cmakedefine FP_SUPPORT_TR1_MATH_FUNCS
 
 #ifdef FP_SUPPORT_TR1_MATH_FUNCS
 #define FP_SUPPORT_ASINH
@@ -67,23 +67,18 @@
  Alternatively you can define the FP_ENABLE_EVAL precompiler constant in
  your compiler settings.
 */
-#ifndef FP_ENABLE_EVAL
-#define FP_DISABLE_EVAL
-#endif
-
+#cmakedefine FP_DISABLE_EVAL
 
 /*
  Maximum recursion level for eval() calls:
 */
-#define FP_EVAL_MAX_REC_LEVEL 1000
+#cmakedefine FP_EVAL_MAX_REC_LEVEL 1000
 
 
 /*
  Whether to use shortcut evaluation for the & and | operators:
 */
-#ifndef FP_DISABLE_SHORTCUT_LOGICAL_EVALUATION
-#define FP_ENABLE_SHORTCUT_LOGICAL_EVALUATION
-#endif
+#cmakedefine FP_ENABLE_SHORTCUT_LOGICAL_EVALUATION
 
 /*
  Whether to enable optimizations that may ignore side effects
@@ -101,9 +96,7 @@
  If you are unsure, just leave it. It won't slow down the other parts of
  the library.
 */
-#ifndef FP_NO_SUPPORT_OPTIMIZER
-#define FP_SUPPORT_OPTIMIZER
-#endif
+#cmakedefine FP_SUPPORT_OPTIMIZER
 
 
 /*
@@ -112,7 +105,7 @@
  lead to marginally faster evaluation of the comparison operators, but
  can introduce inaccuracies in comparisons.)
 */
-#define FP_EPSILON 1e-14
+#cmakedefine FP_EPSILON @FP_EPSILON@
 
 
 /*
@@ -122,11 +115,11 @@
  The second version requires that the compiler supports the alloca() function,
  which is not standard, but is faster.
  */
-//#define FP_USE_THREAD_SAFE_EVAL
-//#define FP_USE_THREAD_SAFE_EVAL_WITH_ALLOCA
+#cmakedefine FP_USE_THREAD_SAFE_EVAL
+#cmakedefine FP_USE_THREAD_SAFE_EVAL_WITH_ALLOCA
 
 /*
  Uncomment (or define in your compiler options) to disable evaluation checks.
  (Consult the documentation for details.)
  */
-//#define FP_NO_EVALUATION_CHECKS
+#cmakedefine FP_NO_EVALUATION_CHECKS

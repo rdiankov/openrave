@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # Software License Agreement (Lesser GPL)
 #
-# Copyright (C) 2009-2010 Rosen Diankov
+# Copyright (C) 2009-2011 Rosen Diankov
 #
 # ikfast is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -50,88 +50,30 @@ class FKFastSolver(AutoReloader):
         self.freevarsubs = []
         self.degeneratecases = None
         self.kinematicshash = kinematicshash
-        if accuracy is None:
-            self.accuracy=1e-12
-        else:
-            self.accuracy=accuracy
-        if precision is None:
-            self.precision=15
-        else:
-            self.precision=precision
         self.kinbody = kinbody
-        self.iksolver = openravepy.ikfast.IKFastSolver(kinbody=self.kinbody,accuracy=self.accuracy,precision=self.precision)
+        self.iksolver = openravepy.ikfast.IKFastSolver(kinbody=self.kinbody,accuracy=accuracy,precision=precision)
         self.iksolver.IsHinge = self.IsHinge # temporary hack
 
-    # deep chopping of tiny numbers due to floating point precision errors
-    def chop(self,expr,precision=None,accuracy=None):
-        # go through all arguments and chop them
-        if precision is None:
-            precision = self.precision
-        if accuracy is None:
-            accuracy = self.accuracy
-        if expr.is_Function:
-            return expr.func(*[self.chop(arg, precision,accuracy) for arg in expr.args])
-        elif expr.is_Mul:
-            ret = S.One
-            for x in expr.args:
-                ret *= self.chop(x, precision, accuracy)
-            return ret
-        elif expr.is_Pow:
-            return Pow(self.chop(expr.base, precision, accuracy), expr.exp)
-        elif expr.is_Add:
-            # Scan for the terms we need
-            ret = S.Zero
-            for term in expr.args:
-                term = self.chop(term, precision, accuracy)
-                ret += term
-            return ret
-        e = expr.evalf(precision,chop=True)
-        if e.is_number:
-            try:
-                e = Real(e,30) # re-add the precision for future operations
-            except TypeError:
-                pass # not a number? (like I)
-        return e if abs(e) > accuracy else S.Zero
-
-    def affineSimplify(self, T):
-        # yes, it is necessary to call self.trigsimp so many times since it gives up too easily
-        values = [trigsimp(x.expand()) for x in T]
-        for i in range(12):
-            if (i%4)<3: # rotation should have bigger accuracy threshold
-                values[i] = self.chop(values[i],accuracy=self.accuracy*10.0)
-            else: # translation
-                values[i] = self.chop(values[i])
-        return Matrix(4,4,values)
-
-    @staticmethod
-    def affineInverse(affinematrix):
-        T = eye(4)
-        T[0:3,0:3] = affinematrix[0:3,0:3].transpose()
-        T[0:3,3] = -affinematrix[0:3,0:3].transpose() * affinematrix[0:3,3]
-        return T
-
-    @staticmethod
-    def normalizeRotation(M):
+    def normalizeRotation(self,M):
         right = M[0,0:3]/sqrt(M[0,0:3].dot(M[0,0:3]))
+        for i in range(3):
+            right[i] = self.iksolver.chop(right[i])
         up = M[1,0:3] - right*right.dot(M[1,0:3])
         up = up/sqrt(up.dot(up))
+        for i in range(3):
+            up[i] = self.iksolver.chop(up[i])
         M[0,0:3] = right
         M[1,0:3] = up
         M[2,0:3] = right.cross(up)
+        for i in range(3):
+            M[i,3] = self.iksolver.chop(M[i,3])
         return M
 
-    @staticmethod
-    def numpyMatrixToSympy(T):
-        return FKFastSolver.normalizeRotation(Matrix(4,4,[Real(round(float(x),5),30) for x in T.flat]))
+    def numpyMatrixToSympy(self,T):
+        return self.normalizeRotation(Matrix(4,4,[Real(x,30) for x in T.flat]))
 
-    @staticmethod
-    def numpyVectorToSympy(v):
-        return Matrix(3,1,[Real(round(float(x),4),30) for x in v])
-
-    @staticmethod
-    def rodrigues(axis, angle):
-        skewsymmetric = Matrix(3, 3, [S.Zero,-axis[2],axis[1],axis[2],S.Zero,-axis[0],-axis[1],axis[0],S.Zero])
-        return eye(3) + sin(angle) * skewsymmetric + (S.One-cos(angle))*skewsymmetric*skewsymmetric
+    def numpyVectorToSympy(self,v):
+        return Matrix(3,1,[self.iksolver.chop(Real(x,30)) for x in v])
         
     def forwardKinematicsChain(self, chainlinks, chainjoints):
         with self.kinbody:
@@ -145,6 +87,14 @@ class FKFastSolver(AutoReloader):
             self.jointindexmap = dict()
             jointindexmap_inv = dict()
             for i,joint in enumerate(chainjoints):
+                if chainjoints[i].GetHierarchyParentLink() == chainlinks[i]:
+                    TLeftjoint = self.numpyMatrixToSympy(joint.GetInternalHierarchyLeftTransform())
+                    TRightjoint = self.numpyMatrixToSympy(joint.GetInternalHierarchyRightTransform())
+                    jaxis = self.numpyVectorToSympy(joint.GetInternalHierarchyAxis(0))
+                else:
+                    TLeftjoint = self.iksolver.affineInverse(self.numpyMatrixToSympy(joint.GetInternalHierarchyRightTransform()))
+                    TRightjoint = self.iksolver.affineInverse(self.numpyMatrixToSympy(joint.GetInternalHierarchyLeftTransform()))
+                    jaxis = -self.numpyVectorToSympy(joint.GetInternalHierarchyAxis(0))
                 if not joint.IsStatic():
                     if not joint in self.jointindexmap:
                         self.jointindexmap[len(jointvars)] = joint
@@ -153,18 +103,9 @@ class FKFastSolver(AutoReloader):
                     else:
                         var = Symbol(jointindexmap_inv[joint].GetName())
 
-                    if chainjoints[i].GetHierarchyParentLink() == chainlinks[i]:
-                        TLeftjoint = self.numpyMatrixToSympy(joint.GetInternalHierarchyLeftTransform())
-                        TRightjoint = self.numpyMatrixToSympy(joint.GetInternalHierarchyRightTransform())
-                        jaxis = FKFastSolver.numpyVectorToSympy(joint.GetInternalHierarchyAxis(0))
-                    else:
-                        TLeftjoint = self.affineInverse(self.numpyMatrixToSympy(joint.GetInternalHierarchyRightTransform()))
-                        TRightjoint = self.affineInverse(self.numpyMatrixToSympy(joint.GetInternalHierarchyLeftTransform()))
-                        jaxis = -FKFastSolver.numpyVectorToSympy(joint.GetInternalHierarchyAxis(0))
-
                     Tjoint = eye(4)
                     if joint.GetType() == openravepy.KinBody.Joint.Type.Hinge:
-                        Tjoint[0:3,0:3] = self.rodrigues(jaxis,var)
+                        Tjoint[0:3,0:3] = self.iksolver.rodrigues(jaxis,var)
                     elif joint.GetType() == openravepy.KinBody.Joint.Type.Slider:
                         Tjoint[0:3,3] = jaxis*(var)
                     else:
@@ -172,7 +113,7 @@ class FKFastSolver(AutoReloader):
 
                     if i > 0 and chainjoints[i]==chainjoints[i-1]:
                         # the joint is the same as the last joint
-                        Links[-1] = self.affineSimplify(Links[-1] * Tright * Tleftjoint * Tjoint)
+                        Links[-1] = self.iksolver.affineSimplify(Links[-1] * Tright * TLeftjoint * Tjoint)
                         Tright = TRightjoint
                     else:
                         # the joints are different, so add regularly
@@ -190,7 +131,7 @@ class FKFastSolver(AutoReloader):
                         Links.append(Tjoint)
                         Tright = TRightjoint
                 else:
-                    Tright = self.affineSimplify(Tright * TLeftjoint * TRightjoint)
+                    Tright = self.iksolver.affineSimplify(Tright * TLeftjoint * TRightjoint)
             Links.append(Tright)
         
         # before returning the final links, try to push as much translation components
@@ -208,7 +149,7 @@ class FKFastSolver(AutoReloader):
                 else:
                     Ttrans[j,3] = separated_trans[j]
             Links[iright+1] = Ttrans * Links[iright+1]
-            Links[iright-1] = Links[iright-1] * self.affineInverse(Ttrans)
+            Links[iright-1] = Links[iright-1] * self.iksolver.affineInverse(Ttrans)
             print "moved translation ",Ttrans[0:3,3].transpose(),"to right end"
         
         if len(jointinds) > 1:
@@ -219,7 +160,7 @@ class FKFastSolver(AutoReloader):
                 if not separated_trans[j].has_any_symbols(*jointvars):
                     Ttrans[j,3] = separated_trans[j]
             Links[ileft-1] = Links[ileft-1] * Ttrans
-            Links[ileft+1] = self.affineInverse(Ttrans) * Links[ileft+1]
+            Links[ileft+1] = self.iksolver.affineInverse(Ttrans) * Links[ileft+1]
             print "moved translation ",Ttrans[0:3,3].transpose(),"to left end"
 
         if len(jointinds) > 3: # last 3 axes always have to be intersecting, move the translation of the first axis to the left
@@ -230,129 +171,26 @@ class FKFastSolver(AutoReloader):
                 if not separated_trans[j].has_any_symbols(*jointvars):
                     Ttrans[j,3] = separated_trans[j]
             Links[ileft-1] = Links[ileft-1] * Ttrans
-            Links[ileft+1] = self.affineInverse(Ttrans) * Links[ileft+1]
+            Links[ileft+1] = self.iksolver.affineInverse(Ttrans) * Links[ileft+1]
             print "moved translation on intersecting axis ",Ttrans[0:3,3].transpose(),"to left"
 
         return Links, jointvars, isolvejointvars, ifreejointvars
 
     def IsHinge(self,jointname):
         j = self.kinbody.GetJoint(jointname)
-        if j is None:
-            return True # dummy joint most likely for angles
-        return j.GetType()==openravepy.KinBody.Joint.Type.Hinge
-
-    @staticmethod
-    def expandsincos(angles):
-        if len(angles) == 1:
-            return cos(angles[0]),sin(angles[0])
-        othercos,othersin = FKFastSolver.expandsincos(angles[1:])
-        return (cos(angles[0])*othercos - sin(angles[0])*othersin).expand(),( cos(angles[0])*othersin + sin(angles[0])*othercos).expand()
+        if j is not None:
+            return j.GetType()==openravepy.KinBody.Joint.Type.Hinge
+        if jointname.startswith('dummy') >= 0:
+            return False
+        return True # dummy joint most likely for angles
 
     def isZero(self,eq,vars,num=8):
         for i in range(num):
             subs = [(v,numpy.random.rand()) for v in vars]
-            eq2=self.chop(eq.subs(subs).evalf()).evalf()
+            eq2=self.iksolver.chop(eq.subs(subs).evalf()).evalf()
             if eq2 == S.Zero:
                 return True
         return False
-    def substituteVariable(self,eqs,var,othervars):
-        cvar = Symbol('c%s'%var.name)
-        svar = Symbol('s%s'%var.name)
-        varsubs = [(cos(var),cvar),(sin(var),svar)]
-        othervarsubs = [(sin(v)**2,1-cos(v)**2) for v in othervars]
-        eqpolys = [Poly(eq.subs(varsubs),cvar,svar) for eq in eqs]
-        eqpolys = [eq for eq in eqpolys if eq.degree == 1 and not eq.coeff(0,0).has_any_symbols(var)]
-        #eqpolys.sort(lambda x,y: iksolver.codeComplexity(x) - iksolver.codeComplexity(y))
-        partialsolutions = []
-        neweqs = []
-        for p0,p1 in combinations(eqpolys,2):
-            M = Matrix(2,3,[p0.coeff(1,0),p0.coeff(0,1),p0.coeff(0,0),p1.coeff(1,0),p1.coeff(0,1),p1.coeff(0,0)])
-            M = M.subs(othervarsubs).expand()
-            partialsolution = [-M[1,1]*M[0,2]+M[0,1]*M[1,2],M[1,0]*M[0,2]-M[0,0]*M[1,2],M[0,0]*M[1,1]-M[0,1]*M[1,0]]
-            partialsolution = [eq.expand().subs(othervarsubs).expand() for eq in partialsolution]
-            rank = [self.iksolver.codeComplexity(eq) for eq in partialsolution]
-            partialsolutions.append([rank,partialsolution])
-            # cos(A)**2 + sin(A)**2 - 1 = 0
-            neweqs.append(partialsolution[0]**2+partialsolution[1]**2-partialsolution[2]**2)
-        # try to cross
-        partialsolutions.sort(lambda x, y: int(min(x[0])-min(y[0])))
-        for (rank0,ps0),(rank1,ps1) in combinations(partialsolutions,2):
-            if self.isZero(ps0[0]*ps1[2]-ps1[0]*ps0[2],othervars):
-                continue
-            neweqs.append(ps0[0]*ps1[2]-ps1[0]*ps0[2])
-            neweqs.append(ps0[1]*ps1[2]-ps1[1]*ps0[2])
-            neweqs.append(ps0[0]*ps1[1]-ps1[0]*ps0[1])
-            neweqs.append(ps0[0]*ps1[0]+ps0[1]*ps1[1]-ps0[2]*ps1[2])
-            break;
-        return [self.chop(self.chop(eq.expand().subs(othervarsubs).expand())) for eq in neweqs]
-
-    def PlanarLoop(self):
-        """Solve the equations knowing the loop is planar, work in progress"""
-        tempa = Symbol('__A__') # total angle sum
-        ca = Symbol('c__A__')
-        sa = Symbol('s__A__')
-        Asubs = [(cos(tempa),ca),(sin(tempa),sa)]
-        solvejointvars.append(tempa)
-        planenormal = Matrix(3,1,(axes[0][0],axes[0][1],axes[0][2]))
-        if abs(planenormal.dot([1,0,0])) > S.One-1e-8:
-            xaxis = Matrix(3,1,[0.0,1.0,0.0])
-            yaxis = Matrix(3,1,[0.0,0.0,1.0])
-        elif abs(planenormal.dot([0,1,0])) > S.One-1e-8:
-            xaxis = Matrix(3,1,[1.0,0.0,0.0])
-            yaxis = Matrix(3,1,[0.0,0.0,1.0])
-        else:
-            xaxis = Matrix(3,1,[1.0,0.0,0.0])
-            yaxis = Matrix(3,1,[0.0,1.0,0.0])
-        xaxis = (xaxis - planenormal*planenormal.dot(xaxis)).normalized()
-        yaxis = (yaxis - planenormal*planenormal.dot(yaxis)).normalized()
-        # extract all coordinates on this plane, note that rotations just become equations on the pure angles
-        newtransformations = []
-        for patheqs in pathseqs:
-            vars=patheqs[2]
-            joints = [self.kinbody.GetJoint(var.name) for var in vars]
-            anglesigns = [sign(planenormal.dot(list(j.GetAxis(0)))) if j.GetType() == openravepy.KinBody.Joint.Type.Hinge else 0.0  for j in joints]
-            angleeq = S.Zero
-            for varsign,var in izip(anglesigns,patheqs[2]):
-                angleeq += varsign*var
-            xeq = self.chop(patheqs[0][0:3,3].dot(xaxis))
-            yeq = self.chop(patheqs[0][0:3,3].dot(yaxis))
-            xylength = iksolver.customtrigsimp(self.chop(iksolver.customtrigsimp(iksolver.customtrigsimp((xeq**2+yeq**2).expand()))))
-            indices = [i for i,a in enumerate(anglesigns) if a != 0]
-            if len(indices) == 0:
-                newtransformations.append([xeq, yeq, angleeq,xylength])
-                continue
-            # A = sum(angles) => one_angle = A - rest_of_angles
-            angles = [tempa]
-            outangle = vars[indices[0]]
-            othervarsubs = []
-            othervars = []
-            for i,anglesign in enumerate(anglesigns):
-                if i != indices[0] and anglesign != 0:
-                    angles.append(-anglesign*vars[i])
-                    othervarsubs.append((sin(vars[i])**2,1-cos(vars[i])**2))
-                    othervars.append(vars[i])
-            newvaluecos,newvaluesin = self.expandsincos(angles)
-            varsubs = [(cos(outangle),newvaluecos),(sin(outangle),newvaluesin)]
-            xeq = xeq.subs(varsubs).expand()
-            yeq = yeq.subs(varsubs).expand()
-            xylength = xylength.subs(varsubs).expand()
-            xeq = xeq.subs(othervarsubs).expand()
-            yeq = yeq.subs(othervarsubs).expand()
-            xylength = xylength.subs(othervarsubs).expand()
-            eqs = [xeq, yeq, xylength]
-            newtransformations.append([eqs, angleeq-tempa,othervars])
-            solvejointvars.remove(outangle)
-        AllEquations = []
-        APartialSolutions = []
-        for (eqs0,angleeq0,othervars0),(eqs1,angleeq1,othervars1) in combinations(newtransformations,2):
-            othervars=othervars0+othervars1
-            eqdiff = [p0-p1 for p0,p1 in izip(eqs0,eqs1)] # == 0
-            aeqs = self.substituteVariable(eqdiff,tempa,othervars)
-            self.iksolver.sortComplexity(aeqs)
-            # only one linearly-independent equation can be extracted
-            AllEquations += [simplify(eq) for eq in eqdiff]
-            AllEquations.append(aeqs[0])
-        iksolver.sortComplexity(AllEquations)
 
     def SolveFK(self):
         knot = 2
@@ -386,7 +224,7 @@ class FKFastSolver(AutoReloader):
             Links, jointvars, isolvejointvars, ifreejointvars = self.forwardKinematicsChain(path[0],path[1])
             Tfirstleft = Links.pop(0)
             Tfirstright = Links.pop()
-            LinksInv = [self.affineInverse(link) for link in Links]
+            LinksInv = [self.iksolver.affineInverse(link) for link in Links]
             #Tee = Tfirstleft.inv() * Tee_in * Tfirstright.inv()
             # LinksAccumLeftInv[x] * Tee = LinksAccumRight[x]
             # LinksAccumLeftInv[x] = InvLinks[x-1] * ... * InvLinks[0]
@@ -397,96 +235,168 @@ class FKFastSolver(AutoReloader):
                 LinksAccumLeftInvAll.append(LinksInv[i]*LinksAccumLeftInvAll[-1])
                 LinksAccumRightAll.append(Links[len(Links)-i-1]*LinksAccumRightAll[-1])
             LinksAccumRightAll.reverse()
-            pathseqs.append([self.affineSimplify(LinksAccumRightAll[0]),self.affineSimplify(LinksAccumLeftInvAll[-1]),[Tfirstleft,Tfirstright],jointvars,isolvejointvars,ifreejointvars])
+            pathseqs.append([self.iksolver.affineSimplify(LinksAccumRightAll[0]),self.iksolver.affineSimplify(LinksAccumLeftInvAll[-1]),[Tfirstleft,Tfirstright],jointvars,isolvejointvars,ifreejointvars])
 
         alljointvars = set()
         for patheqs in pathseqs:
             alljointvars = alljointvars.union(patheqs[3])
         alljoints = [self.kinbody.GetJoint(var.name) for var in alljointvars]
-        # see if all hinge joints are on the same plane (allows us to simplify things a lot)
-        axes = [j.GetAxis(0) for j in alljoints if j.GetType() == openravepy.KinBody.Joint.Type.Hinge]
-        isplanar = all([abs(dot(axis,axes[0]))>0.999999 for axis in axes])
-        if isplanar:
-            print 'robot is planar, can add sum of angles of all loops as an equation!'
-        iksolver = self.iksolver
         solvejointvars = list(alljointvars)
 
-        #print 'mechanism is not planar, going to 3D equations...'
-        AllEquations = []
+        # take all joints with a dof index as the free dof
+        possiblefreevars = [v for v in alljointvars if self.kinbody.GetJoint(v.name).GetDOFIndex()>=0]
+        unknownvars = solvejointvars[:]
+        for v in possiblefreevars:
+            unknownvars.remove(v)
+        unknownsubs = []
+        for v in unknownvars:
+            if self.IsHinge(v.name):
+                unknownsubs += [(cos(v),Symbol('c%s'%v.name)),(sin(v),Symbol('s%s'%v.name))]
+
+        Equations = []
+        eliminatevargroups = []
+        MUL=Symbol('MUL')
         for patheqs0,patheqs1 in combinations(pathseqs,2):
             Tleft0,Tright0 = patheqs0[2]
             T0,T0inv = patheqs0[0:2]
             Tleft1,Tright1 = patheqs1[2]
             T1,T1inv = patheqs1[0:2]
-            Tleft = self.affineInverse(Tleft1)*Tleft0
-            Tleftinv = self.affineInverse(Tleft0)*Tleft1
-            Tright = Tright0 * self.affineInverse(Tright1)
-            Trightinv = Tright1 * self.affineInverse(Tright0)
-            T = Tleft*T0*Tright - T1
-            for i in range(12):
-                AllEquations.append(T[i])
-            T = T0 - Tleftinv*T1*Trightinv
-            for i in range(12):
-                AllEquations.append(T[i])
-        self.iksolver.sortComplexity(AllEquations)
-        i = 1
-        while i < len(AllEquations):
-            if not self.iksolver.isExpressionUnique(AllEquations[:i],AllEquations[i]):
-                eq=AllEquations.pop(i)
-            else:
-                i += 1
+            Tleft = self.iksolver.affineInverse(Tleft1)*Tleft0
+            Tright = Tright0 * self.iksolver.affineInverse(Tright1)
+            Equations2 = self.iksolver.buildRaghavanRothEquations(Tleft*T0*Tright, T1,unknownvars)
+            Equations += Equations2
+            for vars in [patheqs0[3],patheqs1[3]]:
+                eliminatevargroup = []
+                for eq0,eq1 in Equations2:
+                    if eq0.has_any_symbols(*vars):
+                        if eq0 != S.Zero and eq0.count_ops() == 1 or eq0.count_ops() == 2+MUL:
+                            eliminatevargroup.append((eq0,eq1,int(eq0.count_ops().subs(MUL,4).evalf())))
+                if len(eliminatevargroup) > 0:
+                    eliminatevargroup.sort(lambda x,y: -x[2]+y[2])
+                    eliminatevargroups.append(eliminatevargroup)
+
+        reducesubs = []
+        for var in solvejointvars:
+            if self.IsHinge(var.name):
+                reducesubs.append((sin(var)**2,1-cos(var)**2))
         # create the length equations by moving the coordinate systems
         for patheqs,path in izip(pathseqs,pathstoknot):
             # find an appropriate coordinate system
             baselink,basejoint = path[0][0],path[1][0]
             endlink,endjoint = path[0][-1],path[1][-1]
             if basejoint.GetHierarchyChildLink() == baselink:
-                Tleft = FKFastSolver.numpyMatrixToSympy(basejoint.GetInternalHierarchyRightTransform())
+                Tleft = self.numpyMatrixToSympy(basejoint.GetInternalHierarchyRightTransform())
             elif basejoint.GetHierarchyParentLink() == baselink:
-                Tleft = self.affineInverse(FKFastSolver.numpyMatrixToSympy(basejoint.GetInternalHierarchyLeftTransform()))
+                Tleft = self.iksolver.affineInverse(self.numpyMatrixToSympy(basejoint.GetInternalHierarchyLeftTransform()))
             else:
                 Tleft = eye(4)
             if endjoint.GetHierarchyChildLink() == endlink:
-                Tright = self.affineInverse(FKFastSolver.numpyMatrixToSympy(endjoint.GetInternalHierarchyRightTransform()))
+                Tright = self.iksolver.affineInverse(self.numpyMatrixToSympy(endjoint.GetInternalHierarchyRightTransform()))
             elif endjoint.GetHierarchyParentLink() == endlink:
-                Tright = FKFastSolver.numpyMatrixToSympy(endjoint.GetInternalHierarchyLeftTransform())
+                Tright = self.numpyMatrixToSympy(endjoint.GetInternalHierarchyLeftTransform())
             else:
                 Tright = eye(4)
             Lengths = []
             for patheqs2 in pathseqs:
                 T = Tleft*patheqs2[2][0]*patheqs2[0]*patheqs2[2][1]*Tright
                 pos = T[0:3,3]
-                eq = (pos[0]**2+pos[1]**2+pos[2]**2).expand()
+                eq = (pos[0]**2+pos[1]**2+pos[2]**2).expand().subs(reducesubs).expand()
                 if self.iksolver.codeComplexity(eq) < 1500:
                     # sympy's trigsimp/customtrigsimp give up too easily
                     eq = self.iksolver.chop(self.iksolver.customtrigsimp(self.iksolver.customtrigsimp(self.iksolver.customtrigsimp(eq)).expand()))
                     if self.iksolver.isExpressionUnique(Lengths,eq) and self.iksolver.isExpressionUnique(Lengths,-eq):
-                        Lengths.append(eq)
+                        Lengths.append(eq.expand())
             for l0,l1 in combinations(Lengths,2):
-                eq = l0-l1
-                if self.iksolver.isExpressionUnique(AllEquations,eq) and self.iksolver.isExpressionUnique(AllEquations,-eq):
-                    AllEquations.append(eq)
+                Equations.append([l0,l1])
+
+        AllEquations = [eq[0]-eq[1] for eq in Equations]
+        self.iksolver.sortComplexity(AllEquations)
+        reducedeqs = []
+        i = 0
+        while i < len(AllEquations):
+            reducedeq = self.iksolver.removecommonexprs(AllEquations[i])
+            if self.iksolver.isExpressionUnique(reducedeqs,reducedeq) and self.iksolver.isExpressionUnique(reducedeqs,-reducedeq):
+                reducedeqs.append(reducedeq)
+                i += 1
+            else:
+                eq=AllEquations.pop(i)
+
+        # make all possible substitutions, not certain how many new constraints this introduces
+#         OrgEquations = AllEquations[:]
+#         for eliminatevargroup in eliminatevargroups[0:1]:
+#             usedvars = [var for var in unknownvars if any([eq[0].has_any_symbols(var) for eq in eliminatevargroup])]
+#             for eq in OrgEquations:
+#                 if not eq.has_any_symbols(*usedvars):
+#                     continue
+#                 for oldvalue,newvalue,rank in eliminatevargroup:
+#                     eq = eq.subs(oldvalue,newvalue)
+#                 eq = self.iksolver.chop(eq.expand(),accuracy=self.iksolver.accuracy)
+#                 reducedeq = self.iksolver.removecommonexprs(eq)
+#                 if self.chop(eq,accuracy=self.iksolver.accuracy*1000) != S.Zero and self.iksolver.isExpressionUnique(reducedeqs,reducedeq):
+#                     AllEquations.append(eq)
+#                     reducedeqs.append(reducedeq)
+
+        # see if all hinge joints are on the same plane (allows us to simplify things a lot)
+        axes = [j.GetAxis(0) for j in alljoints if j.GetType() == openravepy.KinBody.Joint.Type.Hinge]
+        isplanar = all([abs(dot(axis,axes[0]))>0.999999 for axis in axes])
+        if isplanar:
+            print 'robot is planar, adding sum of angles of all loops'
+            angleeqs = []
+            commonaxis = None
+            for patheqs in pathseqs:
+                vars=patheqs[3]
+                R = (patheqs[2][0]*patheqs[0]*patheqs[2][1])[0:3,0:3]
+                valuesubs = [[var,S.Zero] for var in vars]
+                R0 = R.subs(valuesubs).evalf()
+                axes = []
+                # to find the angle signs, test pi/2 for each value
+                for i in range(len(vars)):
+                    valuesubs[i][1] = pi/2
+                    R1 = R.subs(valuesubs)
+                    valuesubs[i][1] = S.Zero
+                    Rdelta=R0.transpose()*R1
+                    axes.append(axisAngleFromRotationMatrix(Rdelta.tolist()))
+                if commonaxis == None:
+                    commonaxis = axes[0]
+                angleeq = S.Zero
+                for i,var in enumerate(vars):
+                    if self.IsHinge(var.name):
+                        angleeq += sign(commonaxis[0]*axes[i][0]+commonaxis[1]*axes[i][1]+commonaxis[2]*axes[i][2]) * var
+                angleeqs.append(angleeq)
+            for angeq0,angeq1 in combinations(angleeqs,2):
+                AllEquations.append(angeq0-angeq1)
         self.iksolver.sortComplexity(AllEquations)
 
-        dof = 1 # way to automatically determine?
+        # do a sanity check
+        maxvalue = max([eq.subs(allsubs).evalf() for eq in AllEquations])
+        # maybe too strict?
+        assert(maxvalue < 5e-10)
+        if maxvalue > self.iksolver.accuracy:
+            self.iksolver.accuracy = maxvalue*1.1
+            print 'setting new accuracy to: ',self.iksolver.accuracy
+            AllEquations = [self.iksolver.chop(eq,accuracy=maxvalue*2) for eq in AllEquations]
+            self.iksolver.sortComplexity(AllEquations)
+
         # pick free variables until equations become solvable
-        possiblefreevars = [v for v in alljointvars if self.kinbody.GetJoint(v.name).GetDOFIndex()>=0]
-        for othersolvedvars in combinations(possiblefreevars,dof):
-            curvars = solvejointvars[:]
-            solsubs = []
-            for v in othersolvedvars:
-                curvars.remove(v)
-                solsubs += [(cos(v),Symbol('c%s'%v.name)),(sin(v),Symbol('s%s'%v.name))]
+        try:
             endbranchtree = [openravepy.ikfast.SolverStoreSolution (jointvars)]
-            try:
-                tree = iksolver.solveAllEquations(AllEquations,curvars=curvars,othersolvedvars=othersolvedvars,solsubs=solsubs,endbranchtree=endbranchtree)
-                print 'forward kinematics solved!'
-                # sometimes there are multiple solutions to variables, do sanity checks knowing the initial values of the robot
-                return tree
-            except self.iksolver.CannotSolveError:
-                pass
+            solsubs = []
+            for v in possiblefreevars:
+                if self.IsHinge(v.name):
+                    solsubs += [(cos(v),Symbol('c%s'%v.name)),(sin(v),Symbol('s%s'%v.name))]
+            tree = self.iksolver.solveAllEquations(AllEquations,curvars=unknownvars,othersolvedvars=possiblefreevars,solsubs=solsubs,endbranchtree=endbranchtree)
+            print 'forward kinematics solved, setting equations!'
+            self.setMimicEquations(tree)
+            return tree
+        except self.iksolver.CannotSolveError:
+            pass
             
         return None
+
+    def setMimicEquations(self,tree):
+        # sometimes there are multiple solutions to variables, do sanity checks knowing the initial values of the robot
+        pass
+    
 
 def test_bobcat():
     env.Reset()
@@ -506,7 +416,6 @@ def test_bobcat():
     P4 = Symbol('P4')
     P5 = Symbol('P5')
     A=Symbol('A')
-    __A__=Symbol('__A__')
     curvars=[P0,P5,A]
     othersolvedvars=[P1,P2,P3,P4]
     solsubs=[]

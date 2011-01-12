@@ -1855,6 +1855,7 @@ class ColladaReader : public daeErrorHandler
                 if( !!pbind->getSymbol() && strcmp(pbind->getSymbol(), ref) == 0 ) { 
                     // found a match
                     if( !!pbind->getParam() ) {
+                        //return searchBinding(pbind->getParam()->getRef(), pbindelt);
                         return daeSidRef(pbind->getParam()->getRef(), pbindelt).resolve().elt;
                     }
                     else if( !!pbind->getSIDREF() ) {

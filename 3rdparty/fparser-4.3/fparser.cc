@@ -730,7 +730,7 @@ bool FunctionParserBase<Value_t>::AddUnit(const std::string& name,
 
 template<typename Value_t>
 bool FunctionParserBase<Value_t>::AddFunction
-(const std::string& name, const FunctionPtr& ptr, unsigned paramsAmount)
+(const std::string& name, const FunctionParserBase<Value_t>::FunctionPtr& ptr, unsigned paramsAmount)
 {
     if(!containsOnlyValidIdentifierChars<Value_t>(name)) return false;
 
@@ -2574,7 +2574,7 @@ Value_t FunctionParserBase<Value_t>::Eval(const Value_t* Vars)
                   unsigned index = byteCode[++IP];
                   unsigned params = mData->mFuncPtrs[index].mParams;
                   Value_t retVal =
-                      mData->mFuncPtrs[index].mFuncPtr(&Stack[SP-params+1]);
+                      mData->mFuncPtrs[index].mFuncPtr(&Stack[SP-params+1]).at(0);
                   SP -= int(params)-1;
                   Stack[SP] = retVal;
                   break;
@@ -2700,6 +2700,610 @@ Value_t FunctionParserBase<Value_t>::Eval(const Value_t* Vars)
 
     mEvalErrorType=0;
     return Stack[SP];
+}
+
+// out = fn(in)
+#define EVAL_MULTI_APPLY(fn,SPout,SPin) { \
+(SPout).resize((SPin).size()); \
+for(size_t ii = 0; ii < (SPin).size(); ++ii) { \
+    (SPout)[ii] = std::make_pair(fn((SPin)[ii].first),(SPin)[ii].second); \
+} \
+} \
+
+#define EVAL_MULTI_COMPARE_INDICES(index0,index1) ((index0)==-1 || (index1)==-1 || (index0)==(index1))
+// out = fn(in0,in1): have to take the cross product, be careful since SPout can be SPin0 or SPin1
+#define EVAL_MULTI_APPLY2(fn,SPout,SPin0,SPin1) {     \
+VALUES _vtemp_; _vtemp_.reserve((SPin0).size()*(SPin1).size()); \
+for(size_t ii = 0; ii < (SPin0).size(); ++ii) { \
+    for(size_t jj = 0; jj < (SPin1).size(); ++jj) { \
+        if( EVAL_MULTI_COMPARE_INDICES((SPin0)[ii].second, (SPin1)[jj].second) ) { \
+            _vtemp_.push_back(std::make_pair(fn((SPin0)[ii].first,(SPin1)[jj].first),std::max((SPin0)[ii].second,(SPin1)[jj].second))); \
+        } \
+    } \
+} \
+(SPout).swap(_vtemp_); \
+} \
+
+// fn(out0,out1,in): have to take the cross product, be careful since SPout can be SPin0 or SPin1
+#define EVAL_MULTI_APPLYOUT2(fn,SPout0,SPout1,SPin) {     \
+(SPout0).resize((SPin).size()); \
+(SPout1).resize((SPin).size()); \
+for(size_t ii = 0; ii < (SPin).size(); ++ii) { \
+    fn((SPout0)[ii].first,(SPout1)[ii].first,(SPin)[ii].first); \
+    (SPout0)[ii].second = (SPout1)[ii].second = (SPin)[ii].second; \
+    } \
+} \
+
+// out = in0 ? in1: have to take the cross product, be careful since SPout can be SPin0 or SPin1
+#define EVAL_MULTI_APPLYOP(op,SPout,SPin0,SPin1) {     \
+VALUES _vtemp_; _vtemp_.reserve((SPin0).size()*(SPin1).size()); \
+for(size_t ii = 0; ii < (SPin0).size(); ++ii) { \
+    for(size_t jj = 0; jj < (SPin1).size(); ++jj) { \
+        if( EVAL_MULTI_COMPARE_INDICES((SPin0)[ii].second, (SPin1)[jj].second) ) { \
+            _vtemp_.push_back(std::make_pair((SPin0)[ii].first op (SPin1)[jj].first,std::max((SPin0)[ii].second,(SPin1)[jj].second))); \
+        } \
+    } \
+} \
+(SPout).swap(_vtemp_); \
+} \
+
+#define EVAL_MULTI_CHECK(fn,SPin,reterror) { \
+    typename VALUES::iterator itvalue = (SPin).begin(); \
+    while(itvalue != (SPin).end()) { \
+    if( fn ) { \
+    itvalue = (SPin).erase(itvalue); \
+    } \
+    else { \
+    ++itvalue; \
+    } \
+    } \
+    if( (SPin).size() == 0 ) { \
+        mEvalErrorType=reterror; return;  \
+    } \
+} \
+
+//===========================================================================
+// Function evaluation
+//===========================================================================
+template<typename Value_t>
+void FunctionParserBase<Value_t>::EvalMulti(std::vector<Value_t>& finalret, const Value_t* Vars)
+{
+    finalret.resize(0);
+    if(mParseErrorType != FP_NO_ERROR) return;
+
+    const unsigned* const byteCode = &(mData->mByteCode[0]);
+    const Value_t* const immed = mData->mImmed.empty() ? 0 : &(mData->mImmed[0]);
+    const unsigned byteCodeSize = unsigned(mData->mByteCode.size());
+    unsigned IP, DP=0;
+    int SP=-1;
+    int uniquevaluethreadindex = 1;
+    typedef std::vector<std::pair<Value_t,int> > VALUES;
+#ifdef FP_USE_THREAD_SAFE_EVAL
+    /* If Eval() may be called by multiple threads simultaneously,
+     * then Eval() must allocate its own stack.
+     */
+#ifdef FP_USE_THREAD_SAFE_EVAL_WITH_ALLOCA
+    /* alloca() allocates room from the hardware stack.
+     * It is automatically freed when the function returns.
+     */
+    struct AutoDealloc
+    {
+        VALUES* ptr;
+        unsigned mStackSize;
+        ~AutoDealloc() { for(unsigned i = 0; i < mStackSize; ++i) { ptr[i].~VALUES(); } }
+    } AutoDeallocStack;
+    AutoDeallocStack.ptr = (VALUES*)alloca(mData->mStackSize*sizeof(VALUES));
+    for(unsigned i = 0; i < mData->mStackSize; ++i) {
+        new (AutoDeallocStack.ptr+i) VALUES();
+    }
+    AutoDeallocStack.mStackSize = (int)mData->mStackSize;
+    VALUES*& Stack = AutoDeallocStack.ptr;
+#else
+    /* Allocate from the heap. Ensure that it is freed
+     * automatically no matter which exit path is taken.
+     */
+    struct AutoDealloc
+    {
+        Value_t* ptr;
+        ~AutoDealloc() { delete[] ptr; }
+    } AutoDeallocStack = { new VALUES[mData->mStackSize] };
+    VALUES*& Stack = AutoDeallocStack.ptr;
+#endif
+#else
+    /* No thread safety, so use a global stack. */
+    std::vector< VALUES >& Stack = mData->mStack;
+#endif
+
+    for(IP=0; IP<byteCodeSize; ++IP)
+    {
+        switch(byteCode[IP])
+        {
+// Functions:
+        case   cAbs: EVAL_MULTI_APPLY(fp_abs,Stack[SP],Stack[SP]); break;
+
+          case  cAcos:
+#           ifndef FP_NO_EVALUATION_CHECKS
+              EVAL_MULTI_CHECK(itvalue->first < Value_t(-1) || itvalue->first > Value_t(1),Stack[SP],4);
+#           endif
+              EVAL_MULTI_APPLY(fp_acos,Stack[SP],Stack[SP]); break;
+
+          case cAcosh:
+#           ifndef FP_NO_EVALUATION_CHECKS
+              EVAL_MULTI_CHECK(itvalue->first < Value_t(1),Stack[SP],4);
+#           endif
+              EVAL_MULTI_APPLY(fp_acosh,Stack[SP],Stack[SP]); break;
+
+          case  cAsin:
+#           ifndef FP_NO_EVALUATION_CHECKS
+              EVAL_MULTI_CHECK(itvalue->first < Value_t(-1) || itvalue->first > Value_t(1),Stack[SP],4);
+#           endif
+              EVAL_MULTI_APPLY(fp_asin,Stack[SP],Stack[SP]); break;
+
+          case cAsinh: EVAL_MULTI_APPLY(fp_asinh,Stack[SP],Stack[SP]); break;
+
+        case  cAtan: EVAL_MULTI_APPLY(fp_atan,Stack[SP],Stack[SP]); break;
+
+        case cAtan2:
+            EVAL_MULTI_APPLY2(fp_atan2,Stack[SP-1],Stack[SP-1], Stack[SP]);
+            --SP; break;
+
+          case cAtanh:
+#           ifndef FP_NO_EVALUATION_CHECKS
+              EVAL_MULTI_CHECK(itvalue->first <= Value_t(-1) || itvalue->first >= Value_t(1),Stack[SP],4);
+#           endif
+              EVAL_MULTI_APPLY(fp_atanh,Stack[SP], Stack[SP]); break;
+
+        case  cCbrt: EVAL_MULTI_APPLY(fp_cbrt, Stack[SP], Stack[SP]); break;
+
+        case  cCeil: EVAL_MULTI_APPLY(fp_ceil, Stack[SP], Stack[SP]); break;
+
+        case   cCos: EVAL_MULTI_APPLY(fp_cos, Stack[SP], Stack[SP]); break;
+
+        case  cCosh: EVAL_MULTI_APPLY(fp_cosh, Stack[SP], Stack[SP]); break;
+
+          case   cCot:
+              {
+                  EVAL_MULTI_APPLY(fp_tan,Stack[SP],Stack[SP]);
+#               ifndef FP_NO_EVALUATION_CHECKS
+                  
+                  EVAL_MULTI_CHECK(itvalue->first == Value_t(0),Stack[SP],1);
+#               endif
+                  EVAL_MULTI_APPLY(Value_t(1)/,Stack[SP],Stack[SP]);
+                  break;
+              }
+
+          case   cCsc:
+              {
+                  EVAL_MULTI_APPLY(fp_sin,Stack[SP],Stack[SP]);
+#               ifndef FP_NO_EVALUATION_CHECKS
+                  EVAL_MULTI_CHECK(itvalue->first==0,Stack[SP],1);
+#               endif
+                  EVAL_MULTI_APPLY(Value_t(1)/,Stack[SP],Stack[SP]);
+                  break;
+              }
+
+
+//#       ifndef FP_DISABLE_EVAL
+//          case  cEval:
+//              {
+//                  const unsigned varAmount = mData->mVariablesAmount;
+//                  Value_t retVal = Value_t(0);
+//                  if(mEvalRecursionLevel == FP_EVAL_MAX_REC_LEVEL)
+//                  {
+//                      mEvalErrorType = 5;
+//                  }
+//                  else
+//                  {
+//                      ++mEvalRecursionLevel;
+//#                   ifndef FP_USE_THREAD_SAFE_EVAL
+//                      /* Eval() will use mData->mStack for its storage.
+//                       * Swap the current stack with an empty one.
+//                       * This is the not-thread-safe method.
+//                       */
+//                      std::vector<Value_t> tmpStack(Stack.size());
+//                      mData->mStack.swap(tmpStack);
+//                      retVal = Eval(&tmpStack[SP - varAmount + 1]);
+//                      mData->mStack.swap(tmpStack);
+//#                   else
+//                      /* Thread safety mode. We don't need to
+//                       * worry about stack reusing here, because
+//                       * each instance of Eval() will allocate
+//                       * their own stack.
+//                       */
+//                      retVal = Eval(&Stack[SP - varAmount + 1]);
+//#                   endif
+//                      --mEvalRecursionLevel;
+//                  }
+//                  SP -= varAmount-1;
+//                  Stack[SP] = retVal;
+//                  break;
+//              }
+//#       endif
+
+          case   cExp: EVAL_MULTI_APPLY(fp_exp,Stack[SP],Stack[SP]); break;
+
+          case   cExp2: EVAL_MULTI_APPLY(fp_exp2,Stack[SP],Stack[SP]); break;
+
+          case cFloor: EVAL_MULTI_APPLY(fp_floor,Stack[SP],Stack[SP]); break;
+
+          case cHypot:
+              EVAL_MULTI_APPLY2(fp_hypot,Stack[SP-1],Stack[SP-1],Stack[SP]);
+              --SP; break;
+
+//          case    cIf:
+//                  if(fp_truth(Stack[SP--]))
+//                      IP += 2;
+//                  else
+//                  {
+//                      const unsigned* buf = &byteCode[IP+1];
+//                      IP = buf[0];
+//                      DP = buf[1];
+//                  }
+//                  break;
+
+          case   cInt: EVAL_MULTI_APPLY(fp_int,Stack[SP],Stack[SP]); break;
+
+          case   cLog:
+#           ifndef FP_NO_EVALUATION_CHECKS
+              EVAL_MULTI_CHECK(!(itvalue->first > Value_t(0)),Stack[SP],3);
+#           endif
+              EVAL_MULTI_APPLY(fp_log,Stack[SP],Stack[SP]);
+              break;
+
+          case cLog10:
+#           ifndef FP_NO_EVALUATION_CHECKS
+              EVAL_MULTI_CHECK(!(itvalue->first > Value_t(0)), Stack[SP],3);
+#           endif
+              EVAL_MULTI_APPLY(fp_log10,Stack[SP],Stack[SP]);
+              break;
+
+          case  cLog2:
+#           ifndef FP_NO_EVALUATION_CHECKS
+              EVAL_MULTI_CHECK(!(itvalue->first > Value_t(0)), Stack[SP], 3);
+#           endif
+              EVAL_MULTI_APPLY(fp_log2,Stack[SP],Stack[SP]);
+              break;
+
+        case   cMax: EVAL_MULTI_APPLY2(fp_max,Stack[SP-1],Stack[SP-1],Stack[SP]);
+                       --SP; break;
+
+        case   cMin: EVAL_MULTI_APPLY2(fp_min,Stack[SP-1],Stack[SP-1],Stack[SP]);
+                       --SP; break;
+
+          case   cPow:
+#           ifndef FP_NO_EVALUATION_CHECKS
+              // x:Negative ^ y:NonInteger is failure,
+              // except when the reciprocal of y forms an integer
+              /*if(Stack[SP-1] < Value_t(0) &&
+                 !isInteger(Stack[SP]) &&
+                 !isInteger(1.0 / Stack[SP]))
+              { mEvalErrorType=3; return; }*/
+              // x:0 ^ y:negative is failure
+              EVAL_MULTI_CHECK(itvalue->first == Value_t(0), Stack[SP-1],3);
+              EVAL_MULTI_CHECK(itvalue->first < Value_t(0), Stack[SP],3);
+#           endif
+              EVAL_MULTI_APPLY2(fp_pow,Stack[SP-1],Stack[SP-1],Stack[SP]);
+              --SP; break;
+
+        case  cTrunc: EVAL_MULTI_APPLY(fp_trunc,Stack[SP], Stack[SP]); break;
+
+          case   cSec:
+              {
+                  EVAL_MULTI_APPLY(fp_cos,Stack[SP],Stack[SP]);
+#               ifndef FP_NO_EVALUATION_CHECKS
+                  EVAL_MULTI_CHECK(itvalue->first == Value_t(0),Stack[SP],1);
+#               endif
+                  EVAL_MULTI_APPLY(Value_t(1)/,Stack[SP],Stack[SP]);
+                  break;
+              }
+
+        case   cSin: EVAL_MULTI_APPLY(fp_sin, Stack[SP], Stack[SP]); break;
+
+        case  cSinh: EVAL_MULTI_APPLY(fp_sinh, Stack[SP], Stack[SP]); break;
+
+          case  cSqrt:
+#           ifndef FP_NO_EVALUATION_CHECKS
+              EVAL_MULTI_CHECK(itvalue->first < Value_t(0), Stack[SP],2);
+#           endif
+              EVAL_MULTI_APPLY(fp_sqrt,Stack[SP],Stack[SP]);
+              break;
+
+        case   cTan: EVAL_MULTI_APPLY(fp_tan, Stack[SP], Stack[SP]); break;
+
+        case  cTanh: EVAL_MULTI_APPLY(fp_tanh, Stack[SP], Stack[SP]); break;
+
+// Misc:
+        case cImmed: Stack[++SP].resize(1); Stack[SP][0] = std::make_pair(immed[DP++],int(-1)); break;
+
+          case  cJump:
+              {
+                  const unsigned* buf = &byteCode[IP+1];
+                  IP = buf[0];
+                  DP = buf[1];
+                  break;
+              }
+
+// Operators:
+        case   cNeg: EVAL_MULTI_APPLY(-,Stack[SP],Stack[SP]); break;
+        case   cAdd: EVAL_MULTI_APPLYOP(+,Stack[SP-1],Stack[SP-1],Stack[SP]); --SP; break;
+          case   cSub: EVAL_MULTI_APPLYOP(-,Stack[SP-1],Stack[SP-1],Stack[SP]); --SP; break;
+          case   cMul: EVAL_MULTI_APPLYOP(*,Stack[SP-1],Stack[SP-1],Stack[SP]); --SP; break;
+
+          case   cDiv:
+#           ifndef FP_NO_EVALUATION_CHECKS
+              EVAL_MULTI_CHECK(itvalue->first == Value_t(0),Stack[SP],1);
+#           else
+              if( IsIntType<Value_t>::result ) {
+                  EVAL_MULTI_CHECK(IsIntType<Value_t>::result && itvalue->first == Value_t(0),Stack[SP],1);
+              }
+#           endif
+              EVAL_MULTI_APPLYOP(/,Stack[SP-1],Stack[SP-1],Stack[SP]);
+              --SP; break;
+
+          case   cMod:
+              EVAL_MULTI_CHECK(itvalue->first == Value_t(0), Stack[SP],1);
+              EVAL_MULTI_APPLY2(fp_mod,Stack[SP-1], Stack[SP-1], Stack[SP]);
+              --SP; break;
+
+          case cEqual:
+              EVAL_MULTI_APPLY2(fp_equal, Stack[SP-1], Stack[SP-1], Stack[SP]);
+              --SP; break;
+
+          case cNEqual:
+              EVAL_MULTI_APPLY2(fp_nequal, Stack[SP-1], Stack[SP-1], Stack[SP]);
+              --SP; break;
+
+          case  cLess:
+              EVAL_MULTI_APPLY2(fp_less, Stack[SP-1], Stack[SP-1], Stack[SP]);
+              --SP; break;
+
+          case  cLessOrEq:
+              EVAL_MULTI_APPLY2(fp_lessOrEq, Stack[SP-1], Stack[SP-1], Stack[SP]);
+              --SP; break;
+
+          case cGreater:
+              EVAL_MULTI_APPLY2(fp_less,Stack[SP-1],Stack[SP], Stack[SP-1]);
+              --SP; break;
+
+          case cGreaterOrEq:
+              EVAL_MULTI_APPLY2(fp_lessOrEq, Stack[SP-1], Stack[SP], Stack[SP-1]);
+              --SP; break;
+
+        case   cNot: EVAL_MULTI_APPLY(fp_not, Stack[SP], Stack[SP]); break;
+
+        case cNotNot: EVAL_MULTI_APPLY(fp_notNot, Stack[SP],Stack[SP]); break;
+
+          case   cAnd:
+              EVAL_MULTI_APPLY2(fp_and, Stack[SP-1], Stack[SP-1], Stack[SP]);
+              --SP; break;
+
+          case    cOr:
+              EVAL_MULTI_APPLY2(fp_or, Stack[SP-1], Stack[SP-1], Stack[SP]);
+              --SP; break;
+
+// Degrees-radians conversion:
+        case   cDeg: EVAL_MULTI_APPLY(RadiansToDegrees, Stack[SP], Stack[SP]); break;
+        case   cRad: EVAL_MULTI_APPLY(DegreesToRadians, Stack[SP], Stack[SP]); break;
+
+// User-defined function calls:
+          case cFCall:
+              {
+                  unsigned index = byteCode[++IP];
+                  unsigned params = mData->mFuncPtrs[index].mParams;                  
+                  // have to use the cross product, the for loop does this without recursion
+                  std::vector<Value_t> vparams(params), retVal; retVal.reserve(Stack[SP-params+1].size());
+                  std::vector<int> vparamindices(params,0);
+                  std::vector<Value_t> r;
+                  while(1) {
+                      bool docall = true;
+                      // for params to be valid, inputs have to be either all -1, or one specific value
+                      int maxuniqueindexvalue = -1;
+                      for(int iparam = 0; iparam < params; ++iparam) {
+                          std::pair<Value_t,int> param = Stack[SP-params+1+iparam].at(vparamindices[iparam]);
+                          if( param.second == -1 || maxuniqueindexvalue == -1 || param.second == maxuniqueindexvalue ) {
+                              vparams[iparam] = param.first;
+                              maxuniqueindexvalue = std::max(maxuniqueindexvalue,param.second);
+                          }
+                          else {
+                              docall = false;
+                              break;
+                          }
+                      }
+                      if( docall ) {
+                          r = mData->mFuncPtrs[index].mFuncPtr(&vparams.at(0));
+                          retVal.insert(retVal.end(),r.begin(),r.end());
+                      }
+                      // go to the next parameter
+                      vparamindices.front() += 1;
+                      for(size_t ii = 0; ii+1 < vparamindices.size(); ++ii) {
+                          if( vparamindices[ii] >= Stack[SP-params+1+ii].size() ) {
+                              vparamindices[ii] = 0;
+                              vparamindices[ii+1]++;
+                          }
+                          else {
+                              break;
+                          }
+                      }
+                      if( vparamindices.back() >= Stack[SP].size() ) {
+                          break;
+                      }
+                  }
+                  SP -= int(params)-1;
+                  Stack[SP].resize(retVal.size());
+                  for(size_t ii = 0; ii < retVal.size(); ++ii) {
+                      Stack[SP][ii] = std::make_pair(retVal[ii],uniquevaluethreadindex++);
+                  }
+                  if(retVal.size() == 0 ) {
+                      mEvalErrorType = 10;
+                      return;
+                  }
+                  break;
+              }
+
+          case cPCall:
+              {
+                  unsigned index = byteCode[++IP];
+                  unsigned params = mData->mFuncParsers[index].mParams;
+                  // have to use the cross product, the for loop does this without recursion
+                  std::vector<Value_t> vparams(params), retVal; retVal.reserve(Stack[SP-params+1].size());
+                  std::vector<int> vparamindices(params,0);
+                  std::vector<Value_t> r;
+                  while(1) {
+                      bool docall = true;
+                      // for params to be valid, inputs have to be either all -1, or one specific value
+                      int maxuniqueindexvalue = -1;
+                      for(int iparam = 0; iparam < params; ++iparam) {
+                          std::pair<Value_t,int> param = Stack[SP-params+1+iparam].at(vparamindices[iparam]);
+                          if( param.second == -1 || maxuniqueindexvalue == -1 || param.second == maxuniqueindexvalue ) {
+                              vparams[iparam] = param.first;
+                              maxuniqueindexvalue = std::max(maxuniqueindexvalue,param.second);
+                          }
+                          else {
+                              docall = false;
+                              break;
+                          }
+                      }
+                      if( docall ) {
+                          mData->mFuncParsers[index].mParserPtr->EvalMulti(r,&vparams.at(0));
+                          const int error = mData->mFuncParsers[index].mParserPtr->EvalError();
+                          if(!error) {
+                              retVal.insert(retVal.end(),r.begin(),r.end());
+                          }
+                      }
+                      // go to the next parameter
+                      vparams.front() += 1;
+                      for(size_t ii = 0; ii+1 < vparams.size(); ++ii) {
+                          if( vparams[ii] >= Stack[SP-params+1+ii].size() ) {
+                              vparams[ii] = 0;
+                              vparams[ii+1]++;
+                          }
+                          else {
+                              break;
+                          }
+                      }
+                      if( vparams.back() >= Stack[SP].size() ) {
+                          break;
+                      }
+                  }
+                  SP -= int(params)-1;
+                  Stack[SP].resize(retVal.size());
+                  for(size_t ii = 0; ii < retVal.size(); ++ii) {
+                      Stack[SP][ii] = std::make_pair(retVal[ii],uniquevaluethreadindex++);
+                  }
+                  if(retVal.size() == 0 ) {
+                      mEvalErrorType = 10;
+                      return;
+                  }
+                  break;
+              }
+
+
+          case   cFetch:
+              {
+                  unsigned stackOffs = byteCode[++IP];
+                  Stack[SP+1] = Stack[stackOffs]; ++SP;
+                  break;
+              }
+
+#ifdef FP_SUPPORT_OPTIMIZER
+          case   cPopNMov:
+              {
+                  unsigned stackOffs_target = byteCode[++IP];
+                  unsigned stackOffs_source = byteCode[++IP];
+                  Stack[stackOffs_target] = Stack[stackOffs_source];
+                  SP = stackOffs_target;
+                  break;
+              }
+
+          case  cLog2by:
+#           ifndef FP_NO_EVALUATION_CHECKS
+              EVAL_MULTI_CHECK(itvalue->first <= Value_t(0),Stack[SP-1],3)
+#           endif
+                  EVAL_MULTI_APPLY(fp_log2,Stack[SP-1],Stack[SP-1]);
+              EVAL_MULTI_APPLYOP(*,Stack[SP-1],Stack[SP-1],Stack[SP-1]);
+              --SP;
+              break;
+
+          case cNop: break;
+#endif // FP_SUPPORT_OPTIMIZER
+
+          case cSinCos:
+              EVAL_MULTI_APPLYOUT2(fp_sinCos,Stack[SP], Stack[SP+1], Stack[SP]);
+              ++SP;
+              break;
+
+          case cAbsNot:
+              EVAL_MULTI_APPLY(fp_absNot,Stack[SP],Stack[SP]); break;
+          case cAbsNotNot:
+              EVAL_MULTI_APPLY(fp_absNotNot, Stack[SP], Stack[SP]); break;
+          case cAbsAnd:
+              EVAL_MULTI_APPLY2(fp_absAnd,Stack[SP-1],Stack[SP-1],Stack[SP]);
+              --SP; break;
+          case cAbsOr:
+              EVAL_MULTI_APPLY2(fp_absOr,Stack[SP-1],Stack[SP-1],Stack[SP]);
+              --SP; break;
+//          case cAbsIf:
+//              if(fp_absTruth(Stack[SP--]))
+//                  IP += 2;
+//              else
+//              {
+//                  const unsigned* buf = &byteCode[IP+1];
+//                  IP = buf[0];
+//                  DP = buf[1];
+//              }
+//              break;
+
+          case   cDup: Stack[SP+1] = Stack[SP]; ++SP; break;
+
+          case   cInv:
+#           ifndef FP_NO_EVALUATION_CHECKS
+              EVAL_MULTI_CHECK(itvalue->first == Value_t(0),Stack[SP],1);
+#           else
+              if(IsIntType<Value_t>::result ) {
+                  EVAL_MULTI_CHECK(itvalue->first == Value_t(0),Stack[SP],1);
+              }
+#           endif
+              EVAL_MULTI_APPLY(Value_t(1)/,Stack[SP],Stack[SP]);
+              break;
+
+          case   cSqr:
+              for(size_t ii = 0; ii < Stack[SP].size(); ++ii) {
+                  Stack[SP][ii].first *= Stack[SP][ii].first;
+              }
+              break;
+
+          case   cRDiv:
+#           ifndef FP_NO_EVALUATION_CHECKS
+              EVAL_MULTI_CHECK(itvalue->first == Value_t(0),Stack[SP-1],1);
+#           else
+              if(IsIntType<Value_t>::result ) {
+                  EVAL_MULTI_CHECK(itvalue->first == Value_t(0),Stack[SP-1],1);
+              }
+#           endif
+              EVAL_MULTI_APPLYOP(/,Stack[SP-1],Stack[SP],Stack[SP-1]);
+              --SP; break;
+
+        case   cRSub: EVAL_MULTI_APPLYOP(-,Stack[SP-1],Stack[SP],Stack[SP-1]); --SP; break;
+
+          case   cRSqrt:
+#           ifndef FP_NO_EVALUATION_CHECKS
+              EVAL_MULTI_CHECK(itvalue->first == Value_t(0),Stack[SP],1);
+#           endif
+              EVAL_MULTI_APPLY(Value_t(1) / fp_sqrt, Stack[SP], Stack[SP]); break;
+
+// Variables:
+          default:
+              Stack[++SP].resize(0);
+              Stack[SP].push_back(std::make_pair(Vars[byteCode[IP]-VarBegin],int(-1)));
+        }
+    }
+
+    mEvalErrorType=0;
+    finalret.resize(Stack[SP].size());
+    for(size_t ii = 0; ii < finalret.size(); ++ii) {
+        finalret[ii] = Stack[SP][ii].first;
+    }
+    return;
 }
 
 #include <sstream>
@@ -2924,7 +3528,7 @@ bool FunctionParserBase<Value_t>::toMathML(std::string& sout, const std::vector<
 // User-defined function calls:
         case cFCall:
               {
-                  printf("function calls not supported\n");
+                  printf("function calls not supported when converting to MathML\n");
                   unsigned index = byteCode[++IP];
                   unsigned params = mData->mFuncPtrs[index].mParams;
                   //Value_t retVal = mData->mFuncPtrs[index].mFuncPtr(&Stack[SP-params+1]);

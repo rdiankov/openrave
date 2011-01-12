@@ -1248,6 +1248,12 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
         }
         ++index;
     }
+
+    std::map<std::string,std::string> mapinvnames;
+    FOREACH(itpair,jointnamepairs) {
+        mapinvnames[itpair->second] = itpair->first;
+    }
+
     std::string eq;
     int ret = mimic->_posfn->ParseAndDeduceVariables(SearchAndReplace(eq,mimic->_equations[0],jointnamepairs),resultVars);
     if( ret >= 0 ) {
@@ -1255,6 +1261,9 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
     }
     // process the variables
     FOREACH(itvar,resultVars) {
+        if( itvar->find("joint") != 0 ) {
+            throw openrave_exception(str(boost::format("SetMimicEquations: equation '%s' uses unknown variable")%mimic->_equations[0]));
+        }
         MIMIC::DOFFormat dofformat;
         size_t axisindex = itvar->find('_');
         if( axisindex != std::string::npos ) {
@@ -1306,11 +1315,19 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
             }
             boost::trim(sequation);
             size_t nameendindex = sequation.find(' ');
-            string varname = sequation.substr(0,nameendindex);
-            sequation = sequation.substr(nameendindex);
+            string varname;
+            if( nameendindex == std::string::npos ) {
+                RAVELOG_WARN(str(boost::format("invalid equation syntax '%s' for joint %s")%sequation%_name));
+                varname = sequation;
+                sequation = "0";
+            }
+            else {
+                varname = sequation.substr(0,nameendindex);
+                sequation = sequation.substr(nameendindex);
+            }
             vector<string>::iterator itnameindex = find(resultVars.begin(),resultVars.end(),varname);
             if( itnameindex == resultVars.end() ) {
-                throw openrave_exception(str(boost::format("SetMimicEquations: variable %s from velocity equation is not referenced in the position, skipping...")%varname),ORE_InvalidArguments);
+                throw openrave_exception(str(boost::format("SetMimicEquations: variable %s from velocity equation is not referenced in the position, skipping...")%mapinvnames[varname]),ORE_InvalidArguments);
             }
             
             boost::shared_ptr<FunctionParserBase<dReal> > fn(parent->_CreateFunctionParser());
@@ -1324,7 +1341,9 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
         for(size_t j = 0; j < resultVars.size(); ++j) {
             if( !vfns[j] ) {
                 // print a message instead of throwing an exception since it might be common for only position equations to be specified
-                RAVELOG_ERROR(str(boost::format("SetMimicEquations: missing variable %s from partial derivatives!")%resultVars[j]));
+                RAVELOG_WARN(str(boost::format("SetMimicEquations: missing variable %s from partial derivatives of joint %s!")%mapinvnames[resultVars[j]]%_name));
+                vfns[j] = parent->_CreateFunctionParser();
+                vfns[j]->Parse("0","");
             }
         }
 
@@ -2262,7 +2281,7 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, bool bCheckLi
     }
 
     boost::array<dReal,3> dummyvalues; // dummy values for a joint
-    std::vector<dReal> vtempvalues;
+    std::vector<dReal> vtempvalues, veval;
 
     // have to compute the angles ahead of time since they are dependent on the link transformations
     std::vector< std::vector<dReal> > vPassiveJointValues(_vPassiveJoints.size());
@@ -2271,7 +2290,7 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, bool bCheckLi
             _vPassiveJoints[i]->GetValues(vPassiveJointValues[i]);
         }
         else {
-            vPassiveJointValues[i].resize(_vPassiveJoints[i]->GetDOF());
+            vPassiveJointValues[i].reserve(_vPassiveJoints[i]->GetDOF()); // do not resize so that we can catch hierarchy errors
         }
     }
 
@@ -2296,9 +2315,57 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, bool bCheckLi
                             vtempvalues.push_back(vPassiveJointValues.at(itdof->jointindex-_vecjoints.size()).at(itdof->axis));
                         }
                     }
-                    dummyvalues[i] = pjoint->_vmimic.at(i)->_posfn->Eval(vtempvalues.size() > 0 ? &vtempvalues[0] : NULL);
+                    //dummyvalues[i] = pjoint->_vmimic.at(i)->_posfn->Eval(vtempvalues.size() > 0 ? &vtempvalues[0] : NULL);
+                    pjoint->_vmimic.at(i)->_posfn->EvalMulti(veval, vtempvalues.size() > 0 ? &vtempvalues[0] : NULL);
+                    if( pjoint->_vmimic.at(i)->_posfn->EvalError() ) {
+                        RAVELOG_WARN(str(boost::format("failed to evaluate joint %s, fparser error %d")%pjoint->GetName()%pjoint->_vmimic.at(i)->_posfn->EvalError()));
+                    }
+                    vector<dReal>::iterator iteval = veval.begin();
+                    while(iteval != veval.end()) {
+                        bool removevalue = false;
+                        if( pjoint->GetType() == Joint::JointSpherical || pjoint->IsCircular() ) {
+                        }
+                        else if( *iteval < pjoint->_vlowerlimit[i] ) {
+                            if(*iteval >= pjoint->_vlowerlimit[i]-g_fEpsilon*1000 ) {
+                                *iteval = pjoint->_vlowerlimit[i];
+                            }
+                            else {
+                                removevalue=true;
+                            }
+                        }
+                        else if( *iteval > pjoint->_vupperlimit[i] ) {
+                            if(*iteval <= pjoint->_vupperlimit[i]+g_fEpsilon*1000 ) {
+                                *iteval = pjoint->_vupperlimit[i];
+                            }
+                            else {
+                                removevalue=true;
+                            }
+                        }
+
+                        if( removevalue ) {
+                            iteval = veval.erase(iteval); // invalid value so remove from candidates
+                        }
+                        else {
+                            ++iteval;
+                        }
+                    }
+                    
+                    if( veval.size() == 0 ) {
+                        throw openrave_exception(str(boost::format("SetDOFValues: no valid values for joint %s")%pjoint->GetName()),ORE_Assert);
+                    }
+                    if( veval.size() > 1 ) {
+                        stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+                        ss << "multiplie values for joint " << pjoint->GetName() << ": ";
+                        FORIT(iteval,veval) {
+                            ss << *iteval << " ";
+                        }
+                        RAVELOG_WARN(ss.str());
+                    }
+                    dummyvalues[i] = veval.at(0);
+
                     // if joint is passive, update the stored joint values! This is necessary because joint value might be referenced in the future.
                     if( dofindex < 0 ) {
+                        vPassiveJointValues.at(jointindex-(int)_vecjoints.size()).resize(pjoint->GetDOF());
                         vPassiveJointValues.at(jointindex-(int)_vecjoints.size()).at(i) = dummyvalues[i];
                     }
                 }
@@ -3074,7 +3141,7 @@ void KinBody::_ComputeInternalInformation()
                     if(j0->IsMimic(i)) {
                         FOREACH(itdofformat, j0->_vmimic[i]->_vdofformat) {
                             if( itdofformat->dofindex < 0 ) {
-                                vjointadjacency[itdofformat->jointindex*numjoints+ij0] = 100;
+                                vjointadjacency[itdofformat->jointindex*numjoints+ij0] = 2;
                             }
                         }
                     }
@@ -3091,12 +3158,12 @@ void KinBody::_ComputeInternalInformation()
                         continue;
                     }
                     else {
-                        vjointadjacency[ij0*numjoints+ij1] = 1000;
+                        vjointadjacency[ij0*numjoints+ij1] = 1;
                         continue;
                     }
                 }
                 else if( bj1hasstatic ) {
-                    vjointadjacency[ij1*numjoints+ij0] = 1000;
+                    vjointadjacency[ij1*numjoints+ij0] = 1;
                     continue;
                 }
                 if( vjointadjacency[ij1*numjoints+ij0] || vjointadjacency[ij0*numjoints+ij1] ) {
@@ -3111,20 +3178,24 @@ void KinBody::_ComputeInternalInformation()
                 int j1l1 = vlinkdepths[j1->GetSecondAttached()->GetIndex()];
                 int diff = min(j0l0,j0l1) - min(j1l0,j1l1);
                 if( diff < 0 ) {
-                    vjointadjacency[ij0*numjoints+ij1] = 1+min(j0l0,j0l1);
+                    BOOST_ASSERT(min(j0l0,j0l1)<100);
+                    vjointadjacency[ij0*numjoints+ij1] = 100-min(j0l0,j0l1);
                     continue;
                 }
                 if( diff > 0 ) {
-                    vjointadjacency[ij1*numjoints+ij0] = 1+min(j1l0,j1l1);
+                    BOOST_ASSERT(min(j1l0,j1l1)<100);
+                    vjointadjacency[ij1*numjoints+ij0] = 100-min(j1l0,j1l1);
                     continue;
                 }
                 diff = max(j0l0,j0l1) - max(j1l0,j1l1);
                 if( diff < 0 ) {
-                    vjointadjacency[ij0*numjoints+ij1] = 1+max(j0l0,j0l1);
+                    BOOST_ASSERT(max(j0l0,j0l1)<100);
+                    vjointadjacency[ij0*numjoints+ij1] = 100-max(j0l0,j0l1);
                     continue;
                 }
                 if( diff > 0 ) {
-                    vjointadjacency[ij1*numjoints+ij0] = 1+max(j1l0,j1l1);
+                    BOOST_ASSERT(max(j1l0,j1l1)<100);
+                    vjointadjacency[ij1*numjoints+ij0] = 100-max(j1l0,j1l1);
                     continue;
                 }
             }
@@ -3175,7 +3246,7 @@ void KinBody::_ComputeInternalInformation()
                     imaxadjind = ijoint;
                 }
             }
-            if( vjointadjacency[imaxadjind] > 0 ) {
+            if( vjointadjacency[imaxadjind] != 0 ) {
                 bcontinuesorting = true;
                 int ifirst = imaxadjind/numjoints;
                 int isecond = imaxadjind%numjoints;
@@ -3205,6 +3276,7 @@ void KinBody::_ComputeInternalInformation()
                 _vTopologicallySortedJoints.push_back(pj);
             }
             _vTopologicallySortedJointsAll.push_back(pj);
+            //RAVELOG_INFO(str(boost::format("top: %s")%pj->GetName()));
         }
 
         // based on this topological sorting, find the parent link for each joint
@@ -3801,51 +3873,36 @@ boost::shared_ptr<void> KinBody::RegisterChangeCallback(int properties, const bo
     return boost::shared_ptr<void>(new std::list<std::pair<int,boost::function<void()> > >::iterator(_listRegisteredCallbacks.insert(_listRegisteredCallbacks.end(),make_pair(properties,callback))), boost::bind(KinBody::__erase_iterator,KinBodyWeakPtr(shared_kinbody()), _1));
 }
 
-//template <int D>
-//static dReal polyrootsk(KinBody::JointWeakPtr pweakjoint, int iaxis, const dReal* rawcoeffs)
-//{
-//    int numroots=0;
-//    dReal rawroots[D];
-//    polyroots<dReal,D>(rawcoeffs,rawroots,numroots);
-//    if( numroots > 0 ) {
-//        if( pweakjoint.expired() ) {
-//            // take the one closest to 0
-//            int best = 0;
-//            dReal f = RaveFabs(rawroots[0]);
-//            for(int i = 1; i < numroots; ++i) {
-//                if( RaveFabs(rawroots[i]) < f ) {
-//                    f = RaveFabs(rawroots[i]);
-//                    best = i;
-//                }
-//            }
-//            return rawroots[best];
-//        }
-//        else {
-//            // take the one within joint limits and closest to the current value
-//            KinBody::JointPtr pjoint(pweakjoint);
-//            std::vector<dReal> vLowerLimit, vUpperLimit;
-//            pjoint->GetLimits(vLowerLimit,vUpperLimit);
-//            dReal flower = vLowerLimit.at(iaxis), fupper = vUpperLimit.at(iaxis);
-//            int best = -1;
-//            dReal fbest;
-//            for(int i = 0; i < numroots; ++i) {
-//                if( pjoint->IsCircular() || (flower <= rawroots[i]  && fupper >= rawroots[i]) ) {
-//                    if( best == -1 || RaveFabs(rawroots[i]) < fbest ) {
-//                        fbest = RaveFabs(rawroots[i]);
-//                        best = i;
-//                    }
-//                }
-//            }
-//            return rawroots[best];
-//        }
-//    }
-//    throw openrave_exception("failed to solve for joint",ORE_Failed);
-//}
+static std::vector<dReal> fparser_polyroots2(const dReal* rawcoeffs)
+{
+    int numroots=0;
+    std::vector<dReal> rawroots(2);
+    polyroots2<dReal>(rawcoeffs,&rawroots[0],numroots);
+    rawroots.resize(numroots);
+    return rawroots;
+}
+
+template <int D>
+static std::vector<dReal> fparser_polyroots(const dReal* rawcoeffs)
+{
+    int numroots=0;
+    std::vector<dReal> rawroots(D);
+    polyroots<dReal,D>(rawcoeffs,&rawroots[0],numroots);
+    rawroots.resize(numroots);
+    return rawroots;
+}
 
 boost::shared_ptr<FunctionParserBase<dReal> > KinBody::_CreateFunctionParser()
 {
     boost::shared_ptr<FunctionParserBase<dReal> > parser(new FunctionParserBase<dReal>());
     // register commonly used functions
+    parser->AddFunction("polyroots2",fparser_polyroots2,3);
+    parser->AddFunction("polyroots3",fparser_polyroots<3>,4);
+    parser->AddFunction("polyroots4",fparser_polyroots<4>,5);
+    parser->AddFunction("polyroots5",fparser_polyroots<5>,6);
+    parser->AddFunction("polyroots6",fparser_polyroots<6>,7);
+    parser->AddFunction("polyroots7",fparser_polyroots<7>,8);
+    parser->AddFunction("polyroots8",fparser_polyroots<8>,9);
     return parser;
 }
 

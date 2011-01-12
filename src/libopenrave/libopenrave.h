@@ -289,7 +289,7 @@ inline void polyroots2(const IKReal* rawcoeffs, IKReal* rawroots, int& numroots)
         numroots = 1;
     }
     else {
-        det = IKsqrt(det);
+        det = RaveSqrt(det);
         rawroots[0] = (-rawcoeffs[1]+det)/(2*rawcoeffs[0]);
         rawroots[1] = (-rawcoeffs[1]-det)/(2*rawcoeffs[0]);//rawcoeffs[2]/(rawcoeffs[0]*rawroots[0]);
         numroots = 2;
@@ -301,7 +301,7 @@ template <typename IKReal, int D>
 inline void polyroots(const IKReal* rawcoeffs, IKReal* rawroots, int& numroots)
 {
     using std::complex;
-    IKFAST_ASSERT(rawcoeffs[0] != 0);
+    BOOST_ASSERT(rawcoeffs[0] != 0);
     const IKReal tol = 128.0*std::numeric_limits<IKReal>::epsilon();
     complex<IKReal> coeffs[D];
     const int maxsteps = 50;
@@ -345,7 +345,7 @@ inline void polyroots(const IKReal* rawcoeffs, IKReal* rawroots, int& numroots)
     }
     numroots = 0;
     for(int i = 0; i < D; ++i) {
-        if( IKabs(imag(roots[i])) < std::numeric_limits<IKReal>::epsilon() ) {
+        if( RaveFabs(imag(roots[i])) < std::numeric_limits<IKReal>::epsilon() ) {
             rawroots[numroots++] = real(roots[i]);
         }
     }

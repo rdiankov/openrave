@@ -58,6 +58,7 @@ public:
     inline ParseErrorType GetParseErrorType() const { return mParseErrorType; }
 
     Value_t Eval(const Value_t* Vars);
+    void EvalMulti(std::vector<Value_t>& finalret, const Value_t* Vars);
     inline int EvalError() const { return mEvalErrorType; }
 
     bool toMathML(std::string& sout, const std::vector<std::string>& Vars);
@@ -67,9 +68,9 @@ public:
 
     // added optional boost::function
 #ifdef FP_USE_BOOST_FUNCTION
-    typedef boost::function<Value_t(const Value_t*)> FunctionPtr;
+    typedef boost::function<std::vector<Value_t>(const Value_t*)> FunctionPtr;
 #else
-    typedef Value_t (*FunctionPtr)(const Value_t*);
+    typedef std::vector<Value_t> (*FunctionPtr)(const Value_t*);
 #endif
 
     bool AddFunction(const std::string& name,
