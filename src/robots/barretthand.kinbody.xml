@@ -74,7 +74,7 @@
     <Body>Finger0-2</Body>
     <offsetfrom>Finger0-2</offsetfrom>
     <weight>0.03846</weight>
-    <limitsdeg>0 90</limitsdeg>
+    <limitsdeg>0 97</limitsdeg>
     <axis>0 0 1</axis>
     <maxvel>1</maxvel>
     <resolution>4.2</resolution>
@@ -124,7 +124,7 @@
     <Body>Finger1-2</Body>
     <offsetfrom>Finger1-2</offsetfrom>
     <weight>0.03846</weight>
-    <limitsdeg>0 90</limitsdeg>
+    <limitsdeg>0 97</limitsdeg>
     <axis>0 0 1</axis>
     <maxvel>1</maxvel>
     <resolution>4.2</resolution>
@@ -167,7 +167,7 @@
     <Body>Finger2-2</Body>
     <offsetfrom>Finger2-2</offsetfrom>
     <weight>0.03846</weight>
-    <limitsdeg>0 90</limitsdeg>
+    <limitsdeg>0 97</limitsdeg>
     <axis>0 0 1</axis>
     <maxvel>1</maxvel>
     <resolution>4.2</resolution>

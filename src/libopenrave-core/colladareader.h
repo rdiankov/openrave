@@ -577,6 +577,7 @@ class ColladaReader : public daeErrorHandler
                     pf->getTechnique_common()->getChildren(children);
                     for(size_t ic = 0; ic < children.getCount(); ++ic) {
                         string eq = _ExtractMathML(pf,pkinbody,children[ic]);
+                        //RAVELOG_INFO(str(boost::format("eq: %s")%eq));
                         if( eq.size() > 0 ) {
                             pjoint->_vmimic[iaxis]->_equations[0] = eq;
                             break;
@@ -584,7 +585,7 @@ class ColladaReader : public daeErrorHandler
                     }
                 }
                 catch(const openrave_exception& ex) {
-                    RAVELOG_WARN(str(boost::format("failed to parse formula for target %s")%pjoint->GetName()));
+                    RAVELOG_WARN(str(boost::format("failed to parse formula for target %s: %s")%pjoint->GetName()%ex.what()));
                 }
             }
         }
@@ -2266,20 +2267,26 @@ class ColladaReader : public daeErrorHandler
         return pjoint;
     }
 
-    /// \brief Extracts MathML into fparser equation format
-    std::string _ExtractMathML(daeElementRef proot, KinBodyPtr pkinbody, daeElementRef pelt)
-    {
+    /// \brief get the element name without the namespace
+    std::string _getElementName(daeElementRef pelt) {
         std::string name = pelt->getElementName();
         std::size_t pos = name.find_last_of(':');
         if( pos != string::npos ) {
-            name = name.substr(pos+1);
+            return name.substr(pos+1);
         }
+        return name;
+    }
+
+    /// \brief Extracts MathML into fparser equation format
+    std::string _ExtractMathML(daeElementRef proot, KinBodyPtr pkinbody, daeElementRef pelt)
+    {
+        std::string name = _getElementName(pelt);
         std::string eq;
         daeTArray<daeElementRef> children;
         pelt->getChildren(children);
         if( name == "math" ) {
             for(std::size_t ic = 0; ic < children.getCount(); ++ic) {
-                std::string childname = children[ic]->getElementName();
+                std::string childname = _getElementName(children[ic]);
                 if( childname == "apply" || childname == "csymbol" || childname == "cn" || childname == "ci" ) {
                     eq = _ExtractMathML(proot, pkinbody, children[ic]);
                 }
@@ -2292,7 +2299,7 @@ class ColladaReader : public daeErrorHandler
             if( children.getCount() == 0 ) {
                 return eq;
             }
-            string childname = children[0]->getElementName();
+            string childname = _getElementName(children[0]);
             if( childname == "plus" ) {
                 eq += '(';
                 for(size_t ic = 1; ic < children.getCount(); ++ic) {
@@ -2322,7 +2329,23 @@ class ColladaReader : public daeErrorHandler
             }
             else if( childname == "power" ) {
                 BOOST_ASSERT(children.getCount()==3);
-                eq += str(boost::format("pow(%s,%s)")%_ExtractMathML(proot,pkinbody,children[1])%_ExtractMathML(proot,pkinbody,children[2]));
+                std::string sbase = _ExtractMathML(proot,pkinbody,children[1]);
+                std::string sexp = _ExtractMathML(proot,pkinbody,children[2]);
+//                try {
+//                    int degree = boost::lexical_cast<int>(sexp);
+//                    if( degree == 1 ) {
+//                        eq += str(boost::format("(%s)")%sbase);
+//                    }
+//                    else if( degree == 2 ) {
+//                        eq += str(boost::format("sqr(%s)")%sbase);
+//                    }
+//                    else {
+//                        eq += str(boost::format("pow(%s,%s)")%sbase%sexp);
+//                    }
+//                }
+//                catch(const boost::bad_lexical_cast&) {
+                    eq += str(boost::format("pow(%s,%s)")%sbase%sexp);
+                    //}
             }
             else if( childname == "rem" ) {
                 BOOST_ASSERT(children.getCount()==3);
@@ -2342,7 +2365,7 @@ class ColladaReader : public daeErrorHandler
                 BOOST_ASSERT(children.getCount()==3);
                 string sdegree, snum;
                 for(size_t ic = 1; ic < children.getCount(); ++ic) {
-                    if( children[ic]->getElementName() == string("degree") ) {
+                    if( _getElementName(children[ic]) == string("degree") ) {
                         sdegree = _ExtractMathML(proot,pkinbody,children[ic]->getChildren()[0]);
                     }
                     else {
@@ -2432,7 +2455,7 @@ class ColladaReader : public daeErrorHandler
                 BOOST_ASSERT(children.getCount()==2 || children.getCount()==3);
                 string sbase="10", snum;
                 for(size_t ic = 1; ic < children.getCount(); ++ic) {
-                    if( children[ic]->getElementName() == string("logbase") ) {
+                    if( _getElementName(children[ic]) == string("logbase") ) {
                         sbase = _ExtractMathML(proot,pkinbody,children[ic]->getChildren()[0]);
                     }
                     else {
@@ -2506,6 +2529,25 @@ class ColladaReader : public daeErrorHandler
             else if( childname == "implies" || childname == "forall" || childname == "exists" || childname == "conjugate" || childname == "arg" || childname == "real" || childname == "imaginary" || childname == "lcm" || childname == "factorial" || childname == "xor") {
                 throw openrave_exception(str(boost::format("_ExtractMathML: %s function in <apply> tag not supported")%childname),ORE_CommandNotSupported);
             }
+            else if( childname == "csymbol" ) {
+                if( children[0]->getAttribute("encoding")==string("text/xml") ) {
+                    string childfn = children[0]->getCharData();
+                    if( childfn == "INRANGE" ) {
+                        BOOST_ASSERT(children.getCount()==4);
+                        eq += str(boost::format("min(max(%s,%s),%s)")%_ExtractMathML(proot,pkinbody,children[1])%_ExtractMathML(proot,pkinbody,children[2])%_ExtractMathML(proot,pkinbody,children[3]));
+                    }
+                    else if( childfn == "SSSA" || childfn == "SASA") {
+                        BOOST_ASSERT(children.getCount()==4);
+                        eq += str(boost::format("%s(%s,%s,%s)")%tolowerstring(childfn)%_ExtractMathML(proot,pkinbody,children[1])%_ExtractMathML(proot,pkinbody,children[2])%_ExtractMathML(proot,pkinbody,children[3]));
+                    }
+                    else {
+                        RAVELOG_WARN(str(boost::format("_ExtractMathML: csymbol '%s' has unknown encoding '%s'")%children[0]->getCharData()%children[0]->getAttribute("encoding")));
+                    }
+                }
+                else {
+                    eq += _ExtractMathML(proot,pkinbody,children[0]);
+                }
+            }
             else {
                 // make a function call
                 eq += childname;
@@ -2524,7 +2566,7 @@ class ColladaReader : public daeErrorHandler
                 RAVELOG_WARN(str(boost::format("_ExtractMathML: csymbol '%s' does not have any encoding")%pelt->getCharData()));
             }
             else if( pelt->getAttribute("encoding")!=string("COLLADA") ) {
-                RAVELOG_WARN(str(boost::format("_ExtractMathML: csymbol '%s' has unknown encoding")%pelt->getCharData()%pelt->getAttribute("encoding")));
+                RAVELOG_WARN(str(boost::format("_ExtractMathML: csymbol '%s' has unknown encoding '%s'")%pelt->getCharData()%pelt->getAttribute("encoding")));
             }
             KinBody::JointPtr pjoint = _getJointFromRef(pelt->getCharData().c_str(),proot,pkinbody);
             if( !pjoint ) {

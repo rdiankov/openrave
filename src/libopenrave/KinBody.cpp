@@ -1222,8 +1222,8 @@ void KinBody::Joint::GetMimicDOFIndices(std::vector<int>& vmimicdofs, int iaxis)
 
 void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, const std::string& veleq, const std::string& acceleq)
 {
+    _vmimic.at(iaxis).reset();
     if( poseq.size() == 0 ) {
-        _vmimic.at(iaxis).reset();
         return;
     }
     KinBodyPtr parent(_parent);
@@ -1257,7 +1257,7 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
     std::string eq;
     int ret = mimic->_posfn->ParseAndDeduceVariables(SearchAndReplace(eq,mimic->_equations[0],jointnamepairs),resultVars);
     if( ret >= 0 ) {
-        throw openrave_exception(str(boost::format("SetMimicEquations: failed to set equation '%s' on %s:%s, at %d. Error is %s\n")%eq%parent->GetName()%GetName()%ret%mimic->_posfn->ErrorMsg()),ORE_InvalidArguments);
+        throw openrave_exception(str(boost::format("SetMimicEquations: failed to set equation '%s' on %s:%s, at %d. Error is %s\n")%mimic->_equations[0]%parent->GetName()%GetName()%ret%mimic->_posfn->ErrorMsg()),ORE_InvalidArguments);
     }
     // process the variables
     FOREACH(itvar,resultVars) {
@@ -2320,6 +2320,7 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, bool bCheckLi
                     if( pjoint->_vmimic.at(i)->_posfn->EvalError() ) {
                         RAVELOG_WARN(str(boost::format("failed to evaluate joint %s, fparser error %d")%pjoint->GetName()%pjoint->_vmimic.at(i)->_posfn->EvalError()));
                     }
+                    vector<dReal> vevalcopy = veval;
                     vector<dReal>::iterator iteval = veval.begin();
                     while(iteval != veval.end()) {
                         bool removevalue = false;
@@ -2351,7 +2352,25 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, bool bCheckLi
                     }
                     
                     if( veval.size() == 0 ) {
-                        throw openrave_exception(str(boost::format("SetDOFValues: no valid values for joint %s")%pjoint->GetName()),ORE_Assert);
+                        FORIT(iteval,vevalcopy) {
+                            if( pjoint->GetType() == Joint::JointSpherical || pjoint->IsCircular() ) {
+                                veval.push_back(*iteval);
+                            }
+                            else if( *iteval < pjoint->_vlowerlimit[i] ) {
+                                veval.push_back(pjoint->_vlowerlimit[i]);
+                                RAVELOG_WARN(str(boost::format("joint %s: lower limit (%f) is not followed: %f")%pjoint->GetName()%pjoint->_vlowerlimit[i]%*iteval));
+                            }
+                            else if( *iteval > pjoint->_vupperlimit[i] ) {
+                                veval.push_back(pjoint->_vupperlimit[i]);
+                                RAVELOG_WARN(str(boost::format("joint %s: upper limit (%f) is not followed: %f")%pjoint->GetName()%pjoint->_vupperlimit[i]%*iteval));
+                            }
+                            else {
+                                veval.push_back(*iteval);
+                            }
+                        }
+                        if( veval.size() == 0 ) {
+                            throw openrave_exception(str(boost::format("SetDOFValues: no valid values for joint %s")%pjoint->GetName()),ORE_Assert);
+                        }
                     }
                     if( veval.size() > 1 ) {
                         stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
@@ -2885,7 +2904,8 @@ void KinBody::_ComputeInternalInformation()
             FOREACH(itjoint,vjoints) {
                 for(int i = 0; i < (*itjoint)->GetDOF(); ++i) {
                     if( !!(*itjoint)->_vmimic[i] ) {
-                        (*itjoint)->SetMimicEquations(i,(*itjoint)->_vmimic[i]->_equations[0],(*itjoint)->_vmimic[i]->_equations[1],(*itjoint)->_vmimic[i]->_equations[2]);
+                        std::string poseq = (*itjoint)->_vmimic[i]->_equations[0], veleq = (*itjoint)->_vmimic[i]->_equations[1], acceleq = (*itjoint)->_vmimic[i]->_equations[2]; // have to copy since memory can become invalidated
+                        (*itjoint)->SetMimicEquations(i,poseq,veleq,acceleq);
                     }
                 }
             }
@@ -3892,6 +3912,53 @@ static std::vector<dReal> fparser_polyroots(const dReal* rawcoeffs)
     return rawroots;
 }
 
+// take triangle 3 sides and compute the angle opposite the first side
+static std::vector<dReal> fparser_sssa(const dReal* coeffs)
+{
+    std::vector<dReal> res;
+    dReal cosangle = (coeffs[1]*coeffs[1] + coeffs[2]*coeffs[2] - coeffs[0]*coeffs[0])/(2*coeffs[1]*coeffs[2]);
+    if( cosangle < -1 ) {
+        if( cosangle+1 >= -g_fEpsilon*100 ) {
+            res.push_back(M_PI);
+        }
+        
+    }
+    else if( cosangle > 1 ) {
+        if( cosangle- 1 <= g_fEpsilon*100 ) {
+            res.push_back(0);
+        }
+    }
+    else {
+        res.push_back(RaveAcos(cosangle));
+    }
+    return res;
+}
+
+/// take triangle 2 sides and an angle and compute the missing side
+static std::vector<dReal> fparser_sasa(const dReal* coeffs)
+{
+    std::vector<dReal> res;
+    dReal c = coeffs[0]*coeffs[0] + coeffs[2]*coeffs[2] - 2 * coeffs[0]*coeffs[2]*RaveCos(coeffs[1]);
+    if( c > 0 ) {
+        dReal sinangle = coeffs[0]*RaveSin(coeffs[1])/RaveSqrt(c);
+        if( sinangle < -1 ) {
+            if( sinangle+1 >= -g_fEpsilon*100 ) {
+                res.push_back(-M_PI_2);
+            }
+        
+        }
+        else if( sinangle > 1 ) {
+            if( sinangle- 1 <= g_fEpsilon*100 ) {
+                res.push_back(M_PI_2);
+            }
+        }
+        else {
+            res.push_back(RaveAsin(sinangle));
+        }
+    }
+    return res;
+}
+
 boost::shared_ptr<FunctionParserBase<dReal> > KinBody::_CreateFunctionParser()
 {
     boost::shared_ptr<FunctionParserBase<dReal> > parser(new FunctionParserBase<dReal>());
@@ -3903,6 +3970,8 @@ boost::shared_ptr<FunctionParserBase<dReal> > KinBody::_CreateFunctionParser()
     parser->AddFunction("polyroots6",fparser_polyroots<6>,7);
     parser->AddFunction("polyroots7",fparser_polyroots<7>,8);
     parser->AddFunction("polyroots8",fparser_polyroots<8>,9);
+    parser->AddFunction("sssa",fparser_sssa,3);
+    parser->AddFunction("sasa",fparser_sasa,3);
     return parser;
 }
 
