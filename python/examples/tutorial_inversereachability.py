@@ -326,11 +326,11 @@ class InverseReachabilityDemo:
 
         # initialize robot pose
         v = self.robot.GetActiveDOFValues()
-        v[35] = 3.14/2 # l shoulder pan
-        v[56] = -3.14/2 # r shoulder pan
+        v[self.robot.GetJoint('l_shoulder_pan_joint').GetDOFIndex()]= 3.14/2
+        v[self.robot.GetJoint('r_shoulder_pan_joint').GetDOFIndex()] = -3.14/2
         """note here the torso height must be set to 0, because the database was generated for torso height=0"""
-        v[14] = 0# torso  
-        v[47] = .54 # l gripper
+        v[self.robot.GetJoint('torso_lift_joint').GetDOFIndex()] = 0
+        v[self.robot.GetJoint('l_gripper_joint').GetDOFIndex()] = .54
         self.robot.SetActiveDOFValues(v)
     
         # load inverserechability database
@@ -338,23 +338,24 @@ class InverseReachabilityDemo:
         starttime = time.time()
         print 'loading irmodel'
         if not self.irmodel.load():
-            print 'do you want to generate irmodel for your robot? it might take several hours'
-            print 'or you can go to http://people.csail.mit.edu/liuhuan/pr2/openrave/.openrave/ to get the database for PR2'
-            input = raw_input('[Y/n]')
-            if input == 'y' or input == 'Y' or input == '\n' or input == '':
-                class IrmodelOption:
-                    def __init__(self,robot,heightthresh=.05,quatthresh=.15,Nminimum=10,id=None,jointvalues=None):
-                        self.robot = robot
-                        self.heightthresh = heightthresh
-                        self.quatthresh = quatthresh
-                        self.Nminimum = Nminimum
-                        self.id = id
-                        self.jointvalues = jointvalues
-                option = IrmodelOption(self.robot)
-                self.irmodel.autogenerate(option)
-                self.irmodel.load()
-            else:
-                self.irmodel.autogenerate()
+            # are there really kept up to date? (Rosen)
+#             print 'do you want to generate irmodel for your robot? it might take several hours'
+#             print 'or you can go to http://people.csail.mit.edu/liuhuan/pr2/openrave/.openrave/ to get the database for PR2'
+#             input = raw_input('[Y/n]')
+#             if input == 'y' or input == 'Y' or input == '\n' or input == '':
+#                 class IrmodelOption:
+#                     def __init__(self,robot,heightthresh=.05,quatthresh=.15,Nminimum=10,id=None,jointvalues=None):
+#                         self.robot = robot
+#                         self.heightthresh = heightthresh
+#                         self.quatthresh = quatthresh
+#                         self.Nminimum = Nminimum
+#                         self.id = id
+#                         self.jointvalues = jointvalues
+#                 option = IrmodelOption(self.robot)
+#                 self.irmodel.autogenerate(option)
+#                 self.irmodel.load()
+#             else:
+            self.irmodel.autogenerate()
         print 'time to load inverse-reachability model: %fs'%(time.time()-starttime)
         # make sure the robot and manipulator match the database
         assert self.irmodel.robot == self.robot and self.irmodel.manip == self.robot.GetActiveManipulator()   
@@ -485,6 +486,8 @@ def run(args=None):
         env.AddRobot(robot)
         if options.manipname is not None:
             robot.SetActiveManipulator(options.manipname)
+        else:
+            robot.SetActiveManipulator('leftarm')
         target = env.ReadKinBodyXMLFile(options.target)
         env.AddKinBody(target)
         # initialize target pose, for visualization and collision checking purpose only
