@@ -17,6 +17,7 @@ set_target_properties(flann_cpp_s PROPERTIES COMPILE_FLAGS -fPIC)
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_COMPILER_IS_GNUCC)
     add_library(flann_cpp SHARED "")
     target_link_libraries(flann_cpp -Wl,-whole-archive flann_cpp_s -Wl,-no-whole-archive)
+    set_target_properties(flann_cpp PROPERTIES LINKER_LANGUAGE CXX) # have to do this manually for cmake 2.6
 else()
     add_library(flann_cpp SHARED ${CPP_SOURCES})
 endif()
