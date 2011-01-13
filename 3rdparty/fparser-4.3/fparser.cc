@@ -3175,7 +3175,7 @@ void FunctionParserBase<Value_t>::EvalMulti(std::vector<Value_t>& finalret, cons
                       for(size_t ii = 0; ii+1 < vparams.size(); ++ii) {
                           if( vparams[ii] >= Stack[SP-params+1+ii].size() ) {
                               vparams[ii] = 0;
-                              vparams[ii+1]++;
+                              vparams[ii+1] += 1;
                           }
                           else {
                               break;
