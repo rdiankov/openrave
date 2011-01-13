@@ -3916,21 +3916,9 @@ static std::vector<dReal> fparser_polyroots(const dReal* rawcoeffs)
 static std::vector<dReal> fparser_sssa(const dReal* coeffs)
 {
     std::vector<dReal> res;
-    dReal cosangle = (coeffs[1]*coeffs[1] + coeffs[2]*coeffs[2] - coeffs[0]*coeffs[0])/(2*coeffs[1]*coeffs[2]);
-    if( cosangle < -1 ) {
-        if( cosangle+1 >= -g_fEpsilon*100 ) {
-            res.push_back(M_PI);
-        }
-        
-    }
-    else if( cosangle > 1 ) {
-        if( cosangle- 1 <= g_fEpsilon*100 ) {
-            res.push_back(0);
-        }
-    }
-    else {
-        res.push_back(RaveAcos(cosangle));
-    }
+    dReal a = coeffs[0], b = coeffs[1], c = coeffs[2];
+    dReal f = (a*a+b*b-c*c)/(2*b);
+    res.push_back(RaveAtan2(RaveSqrt(a*a-f*f),b-f));
     return res;
 }
 
@@ -3938,24 +3926,8 @@ static std::vector<dReal> fparser_sssa(const dReal* coeffs)
 static std::vector<dReal> fparser_sasa(const dReal* coeffs)
 {
     std::vector<dReal> res;
-    dReal c = coeffs[0]*coeffs[0] + coeffs[2]*coeffs[2] - 2 * coeffs[0]*coeffs[2]*RaveCos(coeffs[1]);
-    if( c > 0 ) {
-        dReal sinangle = coeffs[0]*RaveSin(coeffs[1])/RaveSqrt(c);
-        if( sinangle < -1 ) {
-            if( sinangle+1 >= -g_fEpsilon*100 ) {
-                res.push_back(-M_PI_2);
-            }
-        
-        }
-        else if( sinangle > 1 ) {
-            if( sinangle- 1 <= g_fEpsilon*100 ) {
-                res.push_back(M_PI_2);
-            }
-        }
-        else {
-            res.push_back(RaveAsin(sinangle));
-        }
-    }
+    dReal a = coeffs[0], gamma = coeffs[1], b = coeffs[2];
+    res.push_back(RaveAtan2(a*RaveSin(gamma),b-a*RaveCos(gamma)));
     return res;
 }
 

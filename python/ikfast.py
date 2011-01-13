@@ -2908,6 +2908,8 @@ class IKFastSolver(AutoReloader):
 
                 lineareqs = self.solveSingleVariableLinearly(raweqns,var0,[var1])
                 if len(lineareqs) > 0:
+                    if len(lineareqs) > 1:
+                        print 'can simplify equations more! (%d)'%len(lineareqs)
                     for lineareq in lineareqs:
                         try:
                             return [self.solveHighDegreeEquationHalfAngle(lineareq,var1)]

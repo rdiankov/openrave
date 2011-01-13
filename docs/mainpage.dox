@@ -218,10 +218,10 @@ system running %OpenRAVE.
 - \b OPENRAVE_DATABASE - Use ':' to separate each directory (';' for Windows). Search paths for
   loading database files created by the openrave database system. Databases are used to store useful
   information/statistics about the robot, target object, and sensors that take a long time to
-  pre-compute or rely on real-world data. When writing, the first valid directory is used.
+  pre-compute or rely on real-world data. When writing, the first valid directory is used. If
+  environment variable is not set, then $OPENRAVE_HOME is used.
 
-- \b OPENRAVE_HOME - Used to set the directory where all openrave specific cached data is stored
-  like inverse kinematics solvers, robot preprocessed data, database generation results, etc. The
+- \b OPENRAVE_HOME - Used to set the directory of the openrave local cache and log files. The
   default directory is <b>$HOME/.openrave</b>.
 
 - \b OPENRAVE_PLUGINS - Use ':' to separate each directory (';' for Windows). At startup, %OpenRAVE

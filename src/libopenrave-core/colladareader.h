@@ -31,13 +31,6 @@ using namespace std;
 #include <dae/daeStandardURIResolver.h>
 #include <boost/lexical_cast.hpp>
 
-struct NodeMatcher: public daeElement::matchElement {
- public:
-    NodeMatcher(){};
-    virtual bool operator()(daeElement* elt) const
-    {return (domNode::ID()==elt->typeID());};
-};
-
 class ColladaReader : public daeErrorHandler
 {
     class JointAxisBinding
@@ -47,7 +40,7 @@ class ColladaReader : public daeErrorHandler
             BOOST_ASSERT( !!pkinematicaxis );
             daeElement* pae = pvisualtrans->getParentElement();
             while (!!pae) {
-                visualnode = daeSafeCast<domNode> (pae);            
+                visualnode = daeSafeCast<domNode> (pae);
                 if (!!visualnode) {
                     break;
                 }
@@ -465,6 +458,7 @@ class ColladaReader : public daeErrorHandler
     /// \brief append the kinematics model to the openrave kinbody
     bool ExtractKinematicsModel(KinBodyPtr& pkinbody, domKinematics_modelRef kmodel, domNodeRef pnode, domPhysics_modelRef pmodel, const std::list<JointAxisBinding>& listAxisBindings)
     {
+        _mapJointUnits.clear();
         vector<domJointRef> vdomjoints;
         if (!pkinbody) {
             pkinbody = RaveCreateKinBody(_penv);
@@ -504,7 +498,6 @@ class ColladaReader : public daeErrorHandler
             ExtractLink(pkinbody, ktec->getLink_array()[ilink], ilink == 0 ? pnode : domNodeRef(), Transform(), vdomjoints, listAxisBindings);
         }
 
-        daeTArray<daeElementRef> children;
         for (size_t iform = 0; iform < ktec->getFormula_array().getCount(); ++iform) {
             domFormulaRef pf = ktec->getFormula_array()[iform];
             if (!pf->getTarget()) {
@@ -524,6 +517,13 @@ class ColladaReader : public daeErrorHandler
 
             int iaxis = 0;
             pjoint->_vmimic[iaxis].reset(new KinBody::Joint::MIMIC());
+            dReal ftargetunit = 1;
+            if(_mapJointUnits.find(pjoint) != _mapJointUnits.end() ) {
+                ftargetunit = _mapJointUnits[pjoint];
+            }
+
+            daeTArray<daeElementRef> children;
+            pf->getTechnique_common()->getChildren(children);
 
             domTechniqueRef popenravetec = _ExtractOpenRAVEProfile(pf->getTechnique_array());
             if( !!popenravetec ) {
@@ -534,7 +534,7 @@ class ColladaReader : public daeErrorHandler
                             RAVELOG_WARN("equaiton needs 'type' attribute, ignoring\n");
                             continue;
                         }
-                        if( pequation->getChildren().getCount() != 1 ) {
+                        if( children.getCount() != 1 ) {
                             RAVELOG_WARN("equaiton needs exactly one child\n");
                             continue;
                         }
@@ -544,7 +544,10 @@ class ColladaReader : public daeErrorHandler
                             pjointtarget = _getJointFromRef(pequation->getAttribute("target").c_str(),pf,pkinbody);
                         }
                         try {
-                            std::string eq = _ExtractMathML(pf,pkinbody,pequation->getChildren()[0]);
+                            std::string eq = _ExtractMathML(pf,pkinbody,children[0]);
+                            if( ftargetunit != 1 ) {
+                                eq = str(boost::format("%f*(%s)")%ftargetunit%eq);
+                            }
                             if( equationtype == "position" ) {
                                 pjoint->_vmimic[iaxis]->_equations[0] = eq;
                             }
@@ -574,10 +577,11 @@ class ColladaReader : public daeErrorHandler
             }
             else if (!!pf->getTechnique_common()) {
                 try {
-                    pf->getTechnique_common()->getChildren(children);
                     for(size_t ic = 0; ic < children.getCount(); ++ic) {
                         string eq = _ExtractMathML(pf,pkinbody,children[ic]);
-                        //RAVELOG_INFO(str(boost::format("eq: %s")%eq));
+                        if( ftargetunit != 1 ) {
+                            eq = str(boost::format("%f*(%s)")%ftargetunit%eq);
+                        }
                         if( eq.size() > 0 ) {
                             pjoint->_vmimic[iaxis]->_equations[0] = eq;
                             break;
@@ -764,6 +768,7 @@ class ColladaReader : public daeErrorHandler
                     }
                     else if( strcmp(pdomaxis->getElementName(), "prismatic") == 0 ) {
                         pjoint->type = KinBody::Joint::JointPrismatic;
+                        _mapJointUnits[pjoint] = GetUnitScale(pdomaxis);
                     }
                     else {
                         RAVELOG_WARN(str(boost::format("unsupported joint type: %s\n")%pdomaxis->getElementName()));
@@ -964,8 +969,12 @@ class ColladaReader : public daeErrorHandler
                 }
             }
         }
-        //pdomlink->getAttachment_start_array();
-        //pdomlink->getAttachment_end_array();
+        if( pdomlink->getAttachment_start_array().getCount() > 0 ) {
+            RAVELOG_WARN("openrave collada reader does not support attachment_start\n");
+        }
+        if( pdomlink->getAttachment_end_array().getCount() > 0 ) {
+            RAVELOG_WARN("openrave collada reader does not support attachment_end\n");
+        }
 
         return plink;
     }
@@ -2058,7 +2067,8 @@ class ColladaReader : public daeErrorHandler
     /// \brief Travel by the transformation array and calls the getTransform method
     template <typename T> static TransformMatrix _ExtractFullTransformFromChildren(const T pelt) {
         TransformMatrix t;
-        daeTArray<daeElementRef> children; pelt->getChildren(children);
+        daeTArray<daeElementRef> children;
+        pelt->getChildren(children);
         for(size_t i = 0; i < children.getCount(); ++i) {
             t = t * getTransform(children[i]);
         }
@@ -2531,14 +2541,35 @@ class ColladaReader : public daeErrorHandler
             }
             else if( childname == "csymbol" ) {
                 if( children[0]->getAttribute("encoding")==string("text/xml") ) {
-                    string childfn = children[0]->getCharData();
-                    if( childfn == "INRANGE" ) {
-                        BOOST_ASSERT(children.getCount()==4);
-                        eq += str(boost::format("min(max(%s,%s),%s)")%_ExtractMathML(proot,pkinbody,children[1])%_ExtractMathML(proot,pkinbody,children[2])%_ExtractMathML(proot,pkinbody,children[3]));
-                    }
-                    else if( childfn == "SSSA" || childfn == "SASA") {
-                        BOOST_ASSERT(children.getCount()==4);
-                        eq += str(boost::format("%s(%s,%s,%s)")%tolowerstring(childfn)%_ExtractMathML(proot,pkinbody,children[1])%_ExtractMathML(proot,pkinbody,children[2])%_ExtractMathML(proot,pkinbody,children[3]));
+                    if( children[0]->hasAttribute("definitionURL") ) {
+                        // search for the formula in library_formulas
+                        daeElementRef pelt = _getElementFromUrl(daeURI(*children[0],children[0]->getAttribute("definitionURL")));
+                        domFormulaRef pformula = daeSafeCast<domFormula>(pelt);
+                        if( !pformula ) {
+                            RAVELOG_WARN(str(boost::format("could not find csymbol %s formula\n")%children[0]->getAttribute("definitionURL")));
+                            eq += "1";
+                        }
+                        else {
+                            RAVELOG_DEBUG(str(boost::format("csymbol formula %s found\n")%pformula->getId()));
+                            string childfn = children[0]->getCharData();
+                            if( childfn == "INRANGE" ) {
+                                BOOST_ASSERT(children.getCount()==4);
+                                string a = _ExtractMathML(proot,pkinbody,children[1]), b = _ExtractMathML(proot,pkinbody,children[2]), c = _ExtractMathML(proot,pkinbody,children[3]);
+                                eq += str(boost::format("((%s>=%s)&(%s<=%s))")%a%b%a%c);
+                            }
+                            else if( childfn == "SSSA" || childfn == "SASA") {
+                                BOOST_ASSERT(children.getCount()==4);
+                                eq += str(boost::format("%s(%s,%s,%s)")%tolowerstring(childfn)%_ExtractMathML(proot,pkinbody,children[1])%_ExtractMathML(proot,pkinbody,children[2])%_ExtractMathML(proot,pkinbody,children[3]));
+                            }
+                            else if( childfn == "atan2") {
+                                BOOST_ASSERT(children.getCount()==3);
+                                eq += str(boost::format("atan2(%s,%s)")%_ExtractMathML(proot,pkinbody,children[1])%_ExtractMathML(proot,pkinbody,children[2]));
+                            }
+                            else {
+                                RAVELOG_DEBUG(str(boost::format("csymbol formula %s found, but not implemented yet\n")%pformula->getId()));
+                                eq += "1";
+                            }
+                        }
                     }
                     else {
                         RAVELOG_WARN(str(boost::format("_ExtractMathML: csymbol '%s' has unknown encoding '%s'")%children[0]->getCharData()%children[0]->getAttribute("encoding")));
@@ -2570,11 +2601,16 @@ class ColladaReader : public daeErrorHandler
             }
             KinBody::JointPtr pjoint = _getJointFromRef(pelt->getCharData().c_str(),proot,pkinbody);
             if( !pjoint ) {
-                RAVELOG_WARN(str(boost::format("_ExtractMathML: failed to find joint %s")%pelt->getCharData()));
+                RAVELOG_WARN(str(boost::format("_ExtractMathML: failed to find csymbol: %s")%pelt->getCharData()));
                 eq = pelt->getCharData();
             }
             else {
-                eq = pjoint->GetName();
+                if( _mapJointUnits.find(pjoint) != _mapJointUnits.end() && _mapJointUnits[pjoint] != 1 ) {
+                    eq = str(boost::format("(%f*%s)")%(1/_mapJointUnits[pjoint])%pjoint->GetName());
+                }
+                else {
+                    eq = pjoint->GetName();
+                }
             }
         }
         else if( name == "cn" ) {
@@ -2582,6 +2618,12 @@ class ColladaReader : public daeErrorHandler
         }
         else if( name == "ci" ) {
             eq = pelt->getCharData();
+        }
+        else if( name == "pi" ) {
+            eq = "3.14159265358979323846";
+        }
+        else {
+            RAVELOG_WARN(str(boost::format("mathml unprocessed tag: %s")));
         }
         return eq;
     }
@@ -2683,9 +2725,10 @@ class ColladaReader : public daeErrorHandler
     boost::shared_ptr<DAE> _collada;
     domCOLLADA* _dom;
     EnvironmentBasePtr _penv;
-    vector<USERDATA> _vuserdata; // all userdata
+    std::map<KinBody::JointPtr, dReal> _mapJointUnits;
+    std::vector<USERDATA> _vuserdata; // all userdata
     int _nGlobalSensorId, _nGlobalManipulatorId;
-    string _filename;
+    std::string _filename;
 };
 
 #endif
