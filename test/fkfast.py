@@ -70,10 +70,10 @@ class FKFastSolver(AutoReloader):
         return M
 
     def numpyMatrixToSympy(self,T):
-        return self.normalizeRotation(Matrix(4,4,[Real(x,30) for x in T.flat]))
+        return self.normalizeRotation(Matrix(4,4,[Real(float(x),30) for x in T.flat]))
 
     def numpyVectorToSympy(self,v):
-        return Matrix(3,1,[self.iksolver.chop(Real(x,30)) for x in v])
+        return Matrix(3,1,[self.iksolver.chop(Real(float(x),30)) for x in v])
         
     def forwardKinematicsChain(self, chainlinks, chainjoints):
         with self.kinbody:

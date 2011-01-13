@@ -506,9 +506,9 @@ class IKFastSolver(AutoReloader):
                     joint.jcoeff = [S.One,S.Zero]#[round(float(x),5) for x in bodyjoint.GetMimicCoeffs()]
                     joint.isfreejoint = False
                     joint.isdummy = bodyjoint.IsStatic()
-                    joint.Tright = self.normalizeRotation(Matrix(4,4,[self.chop(Real(x,30),accuracy=1e-8) for x in bodyjoint.GetInternalHierarchyRightTransform().flat]))
-                    joint.Tleft = self.normalizeRotation(Matrix(4,4,[self.chop(Real(x,30),accuracy=1e-8) for x in bodyjoint.GetInternalHierarchyLeftTransform().flat]))
-                    joint.axis = Matrix(3,1,[self.chop(Real(x,30),accuracy=1e-5) for x in bodyjoint.GetInternalHierarchyAxis(0)])
+                    joint.Tright = self.normalizeRotation(Matrix(4,4,[self.chop(Real(float(x),30),accuracy=1e-8) for x in bodyjoint.GetInternalHierarchyRightTransform().flat]))
+                    joint.Tleft = self.normalizeRotation(Matrix(4,4,[self.chop(Real(float(x),30),accuracy=1e-8) for x in bodyjoint.GetInternalHierarchyLeftTransform().flat]))
+                    joint.axis = Matrix(3,1,[self.chop(Real(float(x),30),accuracy=1e-5) for x in bodyjoint.GetInternalHierarchyAxis(0)])
                     joint.axis /= sqrt(joint.axis.dot(joint.axis))
                     joint.linkcur = bodyjoint.GetSecondAttached().GetIndex()
                     joint.linkbase = bodyjoint.GetFirstAttached().GetIndex()
