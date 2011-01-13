@@ -16,7 +16,7 @@ check_include_file(alloca.h HAVE_ALLOCA_H)
 if( HAVE_ALLOCA_H )
   set(FP_USE_THREAD_SAFE_EVAL_WITH_ALLOCA 1)
 else()
-  se(FP_USE_THREAD_SAFE_EVAL 1)
+  set(FP_USE_THREAD_SAFE_EVAL 1)
 endif()
 
 # don't include optimizer since openrave really doesn't use that many complex equations
