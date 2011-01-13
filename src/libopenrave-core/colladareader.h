@@ -2541,39 +2541,58 @@ class ColladaReader : public daeErrorHandler
             }
             else if( childname == "csymbol" ) {
                 if( children[0]->getAttribute("encoding")==string("text/xml") ) {
+                    domFormulaRef pformula;
+                    string functionname;
                     if( children[0]->hasAttribute("definitionURL") ) {
                         // search for the formula in library_formulas
-                        daeElementRef pelt = _getElementFromUrl(daeURI(*children[0],children[0]->getAttribute("definitionURL")));
-                        domFormulaRef pformula = daeSafeCast<domFormula>(pelt);
-                        if( !pformula ) {
-                            RAVELOG_WARN(str(boost::format("could not find csymbol %s formula\n")%children[0]->getAttribute("definitionURL")));
-                            eq += "1";
-                        }
-                        else {
-                            RAVELOG_DEBUG(str(boost::format("csymbol formula %s found\n")%pformula->getId()));
-                            string childfn = children[0]->getCharData();
-                            if( childfn == "INRANGE" ) {
-                                BOOST_ASSERT(children.getCount()==4);
-                                string a = _ExtractMathML(proot,pkinbody,children[1]), b = _ExtractMathML(proot,pkinbody,children[2]), c = _ExtractMathML(proot,pkinbody,children[3]);
-                                eq += str(boost::format("((%s>=%s)&(%s<=%s))")%a%b%a%c);
-                            }
-                            else if( childfn == "SSSA" || childfn == "SASA") {
-                                BOOST_ASSERT(children.getCount()==4);
-                                eq += str(boost::format("%s(%s,%s,%s)")%tolowerstring(childfn)%_ExtractMathML(proot,pkinbody,children[1])%_ExtractMathML(proot,pkinbody,children[2])%_ExtractMathML(proot,pkinbody,children[3]));
-                            }
-                            else if( childfn == "atan2") {
-                                BOOST_ASSERT(children.getCount()==3);
-                                eq += str(boost::format("atan2(%s,%s)")%_ExtractMathML(proot,pkinbody,children[1])%_ExtractMathML(proot,pkinbody,children[2]));
+                        string formulaurl = children[0]->getAttribute("definitionURL");
+                        if( formulaurl.size() > 0 ) {
+                            daeElementRef pelt = _getElementFromUrl(daeURI(*children[0],formulaurl));
+                            pformula = daeSafeCast<domFormula>(pelt);
+                            if( !pformula ) {
+                                RAVELOG_WARN(str(boost::format("could not find csymbol %s formula\n")%children[0]->getAttribute("definitionURL")));
                             }
                             else {
-                                RAVELOG_DEBUG(str(boost::format("csymbol formula %s found, but not implemented yet\n")%pformula->getId()));
-                                eq += "1";
+                                RAVELOG_DEBUG(str(boost::format("csymbol formula %s found\n")%pformula->getId()));
+                            }
+                        }
+                    }
+                    if( !pformula ) {
+                        if( children[0]->hasAttribute("type") ) {
+                            if( children[0]->getAttribute("type") == "function" ) {
+                                functionname = children[0]->getCharData();
                             }
                         }
                     }
                     else {
-                        RAVELOG_WARN(str(boost::format("_ExtractMathML: csymbol '%s' has unknown encoding '%s'")%children[0]->getCharData()%children[0]->getAttribute("encoding")));
+                        if( !!pformula->getName() ) {
+                            functionname = pformula->getName();
+                        }
+                        else {
+                            functionname = children[0]->getCharData();
+                        }
                     }
+
+                    if( functionname == "INRANGE" ) {
+                        BOOST_ASSERT(children.getCount()==4);
+                        string a = _ExtractMathML(proot,pkinbody,children[1]), b = _ExtractMathML(proot,pkinbody,children[2]), c = _ExtractMathML(proot,pkinbody,children[3]);
+                        eq += str(boost::format("((%s>=%s)&(%s<=%s))")%a%b%a%c);
+                    }
+                    else if( functionname == "SSSA" || functionname == "SASA" || functionname == "SASS" ) {
+                        BOOST_ASSERT(children.getCount()==4);
+                        eq += str(boost::format("%s(%s,%s,%s)")%tolowerstring(functionname)%_ExtractMathML(proot,pkinbody,children[1])%_ExtractMathML(proot,pkinbody,children[2])%_ExtractMathML(proot,pkinbody,children[3]));
+                    }
+                    else if( functionname == "atan2") {
+                        BOOST_ASSERT(children.getCount()==3);
+                        eq += str(boost::format("atan2(%s,%s)")%_ExtractMathML(proot,pkinbody,children[1])%_ExtractMathML(proot,pkinbody,children[2]));
+                    }
+                    else {
+                        RAVELOG_WARN(str(boost::format("csymbol %s not implemented\n")%functionname));
+                        eq += "1";
+                    }
+                }
+                else if( children[0]->getAttribute("encoding")!=string("COLLADA") ) {
+                    RAVELOG_WARN(str(boost::format("_ExtractMathML: csymbol '%s' has unknown encoding '%s'")%children[0]->getCharData()%children[0]->getAttribute("encoding")));
                 }
                 else {
                     eq += _ExtractMathML(proot,pkinbody,children[0]);

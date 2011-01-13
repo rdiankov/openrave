@@ -3922,12 +3922,21 @@ static std::vector<dReal> fparser_sssa(const dReal* coeffs)
     return res;
 }
 
-/// take triangle 2 sides and an angle and compute the missing side
+/// take triangle 2 sides and an angle and compute the missing angle
 static std::vector<dReal> fparser_sasa(const dReal* coeffs)
 {
     std::vector<dReal> res;
     dReal a = coeffs[0], gamma = coeffs[1], b = coeffs[2];
     res.push_back(RaveAtan2(a*RaveSin(gamma),b-a*RaveCos(gamma)));
+    return res;
+}
+
+/// take triangle 2 sides and an angle and compute the missing side
+static std::vector<dReal> fparser_sass(const dReal* coeffs)
+{
+    std::vector<dReal> res;
+    dReal a = coeffs[0], gamma = coeffs[1], b = coeffs[2];
+    res.push_back(RaveSqrt(a*a+b*b-2*a*b*RaveCos(gamma)));
     return res;
 }
 
@@ -3944,6 +3953,7 @@ boost::shared_ptr<FunctionParserBase<dReal> > KinBody::_CreateFunctionParser()
     parser->AddFunction("polyroots8",fparser_polyroots<8>,9);
     parser->AddFunction("sssa",fparser_sssa,3);
     parser->AddFunction("sasa",fparser_sasa,3);
+    parser->AddFunction("sass",fparser_sass,3);
     return parser;
 }
 
