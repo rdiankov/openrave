@@ -3171,17 +3171,17 @@ void FunctionParserBase<Value_t>::EvalMulti(std::vector<Value_t>& finalret, cons
                           }
                       }
                       // go to the next parameter
-                      vparams.front() += 1;
-                      for(size_t ii = 0; ii+1 < vparams.size(); ++ii) {
-                          if( vparams[ii] >= Stack[SP-params+1+ii].size() ) {
-                              vparams[ii] = 0;
-                              vparams[ii+1] += 1;
+                      vparamindices.front() += 1;
+                      for(size_t ii = 0; ii+1 < vparamindices.size(); ++ii) {
+                          if( vparamindices[ii] >= Stack[SP-params+1+ii].size() ) {
+                              vparamindices[ii] = 0;
+                              vparamindices[ii+1]++;
                           }
                           else {
                               break;
                           }
                       }
-                      if( vparams.back() >= Stack[SP].size() ) {
+                      if( vparamindices.back() >= Stack[SP].size() ) {
                           break;
                       }
                   }
