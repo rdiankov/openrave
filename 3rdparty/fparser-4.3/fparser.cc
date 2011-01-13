@@ -730,7 +730,7 @@ bool FunctionParserBase<Value_t>::AddUnit(const std::string& name,
 
 template<typename Value_t>
 bool FunctionParserBase<Value_t>::AddFunction
-(const std::string& name, const FunctionParserBase<Value_t>::FunctionPtr& ptr, unsigned paramsAmount)
+(const std::string& name, const FunctionPtr& ptr, unsigned paramsAmount)
 {
     if(!containsOnlyValidIdentifierChars<Value_t>(name)) return false;
 
@@ -2804,7 +2804,7 @@ void FunctionParserBase<Value_t>::EvalMulti(std::vector<Value_t>& finalret, cons
      */
     struct AutoDealloc
     {
-        Value_t* ptr;
+        VALUES* ptr;
         ~AutoDealloc() { delete[] ptr; }
     } AutoDeallocStack = { new VALUES[mData->mStackSize] };
     VALUES*& Stack = AutoDeallocStack.ptr;
