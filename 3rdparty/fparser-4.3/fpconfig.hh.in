@@ -30,6 +30,7 @@
 #cmakedefine FP_SUPPORT_LONG_INT_TYPE
 #cmakedefine FP_SUPPORT_MPFR_FLOAT_TYPE
 #cmakedefine FP_SUPPORT_GMP_INT_TYPE
+#cmakedefine FP_USE_STRTOF
 
 /* Uncomment this line of define it in your compiler settings if you want
    to disable compiling the basic double version of the library, in case
