@@ -212,7 +212,7 @@ Planner Parameters\n\
         _tbaseinv = _manip->GetBase()->GetTransform().inverse();
         if( (int)_parameters->vinitialconfig.size() == _parameters->GetDOF() ) {
             _parameters->_setstatefn(_parameters->vinitialconfig);
-            _SetPreviousSolution(_parameters->vinitialconfig);
+            _SetPreviousSolution(_parameters->vinitialconfig,false);
             poutputtraj->AddPoint(Trajectory::TPOINT(_parameters->vinitialconfig,0));
         }
 
@@ -268,22 +268,27 @@ Planner Parameters\n\
     virtual PlannerParametersConstPtr GetParameters() const { return _parameters; }
 
 protected:
-    void _SetPreviousSolution(const std::vector<dReal>& vsolution)
+    void _SetPreviousSolution(const std::vector<dReal>& vsolution, bool bsetjacobian=true)
     {
-        _manip->CalculateJacobian(_mjacobian);
-        _manip->CalculateRotationJacobian(_mquatjacobian);
-        
-        Vector q0 = _tbaseinv.rot;
-        // since will be using inside the ik custom filter _ValidateSolution, have to multiply be the inverse of the base
-        for(size_t i = 0; i < _manip->GetArmIndices().size(); ++i) {
-            Vector v = _tbaseinv.rotate(Vector(_mjacobian[0][i],_mjacobian[1][i],_mjacobian[2][i]));
-            _mjacobian[0][i] = v.x; _mjacobian[1][i] = v.y; _mjacobian[2][i] = v.z;
-            Vector q1(_mquatjacobian[0][i],_mquatjacobian[1][i],_mquatjacobian[2][i],_mquatjacobian[3][i]);
-            Vector q0xq1(q0.x*q1.x - q0.y*q1.y - q0.z*q1.z - q0.w*q1.w,
-                         q0.x*q1.y + q0.y*q1.x + q0.z*q1.w - q0.w*q1.z,
-                         q0.x*q1.z + q0.z*q1.x + q0.w*q1.y - q0.y*q1.w,
-                         q0.x*q1.w + q0.w*q1.x + q0.y*q1.z - q0.z*q1.y);
-            _mquatjacobian[0][i] = q0xq1.x; _mquatjacobian[1][i] = q0xq1.y; _mquatjacobian[2][i] = q0xq1.z; _mquatjacobian[3][i] = q0xq1.w;
+        if( bsetjacobian ) {
+            _manip->CalculateJacobian(_mjacobian);
+            _manip->CalculateRotationJacobian(_mquatjacobian);
+            Vector q0 = _tbaseinv.rot;
+            // since will be using inside the ik custom filter _ValidateSolution, have to multiply be the inverse of the base
+            for(size_t i = 0; i < _manip->GetArmIndices().size(); ++i) {
+                Vector v = _tbaseinv.rotate(Vector(_mjacobian[0][i],_mjacobian[1][i],_mjacobian[2][i]));
+                _mjacobian[0][i] = v.x; _mjacobian[1][i] = v.y; _mjacobian[2][i] = v.z;
+                Vector q1(_mquatjacobian[0][i],_mquatjacobian[1][i],_mquatjacobian[2][i],_mquatjacobian[3][i]);
+                Vector q0xq1(q0.x*q1.x - q0.y*q1.y - q0.z*q1.z - q0.w*q1.w,
+                             q0.x*q1.y + q0.y*q1.x + q0.z*q1.w - q0.w*q1.z,
+                             q0.x*q1.z + q0.z*q1.x + q0.w*q1.y - q0.y*q1.w,
+                             q0.x*q1.w + q0.w*q1.x + q0.y*q1.z - q0.z*q1.y);
+                _mquatjacobian[0][i] = q0xq1.x; _mquatjacobian[1][i] = q0xq1.y; _mquatjacobian[2][i] = q0xq1.z; _mquatjacobian[3][i] = q0xq1.w;
+            }
+        }
+        else {
+            _mjacobian.resize(boost::extents[0][0]);
+            _mquatjacobian.resize(boost::extents[0][0]);
         }
         _transprev = _tbaseinv * _manip->GetEndEffectorTransform();
         _vprevsolution = vsolution;
