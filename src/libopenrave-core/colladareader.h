@@ -150,7 +150,9 @@ class ColladaReader : public daeErrorHandler
             return false;
         }
 
+        std::list<JointAxisBinding> listAxisBindingsAll;
         //  parse each instance kinematics scene
+        vector<std::string>  vprocessednodes;
         for (size_t iscene = 0; iscene < allscene->getInstance_kinematics_scene_array().getCount(); iscene++) {
             domInstance_kinematics_sceneRef kiscene = allscene->getInstance_kinematics_scene_array()[iscene];
             domKinematics_sceneRef kscene = daeSafeCast<domKinematics_scene> (kiscene->getUrl().getElement().cast());
@@ -161,6 +163,12 @@ class ColladaReader : public daeErrorHandler
             daeElementRef kscenelib = _dom->getLibrary_kinematics_scenes_array()[0]->getKinematics_scene_array()[0];
             KinematicsSceneBindings bindings;
             _ExtractKinematicsVisualBindings(allscene->getInstance_visual_scene(),kiscene,bindings);
+            listAxisBindingsAll.insert(listAxisBindingsAll.end(),bindings.listAxisBindings.begin(),bindings.listAxisBindings.end());
+            FOREACH(itbinding,bindings.listKinematicsVisualBindings) {
+                if( !!itbinding->first->getId() ) {
+                    vprocessednodes.push_back(itbinding->first->getId());
+                }
+            }
 
             for(size_t ias = 0; ias < kscene->getInstance_articulated_system_array().getCount(); ++ias) {
                 RobotBasePtr probot;
@@ -178,47 +186,17 @@ class ColladaReader : public daeErrorHandler
             }
         }
 
-        //vector<std::string>  processed_nodes; //  Nodes that are part of kinematics models
-//                RAVELOG_DEBUG(str(boost::format("kinematics model node name: %s\n")%node->getName()));
-//                domNodeRef parentnode = daeSafeCast<domNode>(node->getParent());
-//                if( !pparentnode ) {
-//                    RAVELOG_WARN(str(boost::format("parent of node of id=%s is not a node?\n")%node->getID()));
-//                    parentnode = node;
-//                }
-//                processed_nodes.push_back(parentnode->getID()); //  Store ID's of nodes that are part of kinematics model
-
-
         // add left-over visual objects
-//        if (!!allscene->getInstance_visual_scene()) {
-//            domVisual_sceneRef visual_scene = daeSafeCast<domVisual_scene>(allscene->getInstance_visual_scene()->getUrl().getElement().cast());
-//            for (size_t node = 0; node < visual_scene->getNode_array().getCount(); node++) {
-//                KinBodyPtr rigid_body;
-//                domNodeRef pnode = visual_scene->getNode_array()[node];
-//                bool found   = false;
-//                string nodeId  = string(pnode->getID());
-//                //  Search if the node is into processed nodes
-//                for(size_t i=0;i < processed_nodes.size();i++) {
-//                    //  If node belongs to processed nodes
-//                    if (nodeId == processed_nodes[i]) {
-//                        RAVELOG_VERBOSE("Processed node name: %s\n",processed_nodes[i].c_str());
-//                        found = true;
-//                        break;
-//                    }
-//                }
-//
-//                //  If the node is not part of a kinbody
-//                if (!found) {
-//                    if (!Extract(rigid_body, NULL, NULL, pnode, v_all_bindings)) {
-//                        RAVELOG_WARN("failed to load kinbody WIHTOUT Joints\n");
-//                        continue;
-//                    }
-//                    _penv->AddKinBody(rigid_body, true);
-//                    RAVELOG_VERBOSE("Found node %s\n",visual_scene->getNode_array()[node]->getName());
-//                }
-//            }
-//        }
+        if (!!allscene->getInstance_visual_scene()) {
+            domVisual_sceneRef visual_scene = daeSafeCast<domVisual_scene>(allscene->getInstance_visual_scene()->getUrl().getElement().cast());
+            for (size_t node = 0; node < visual_scene->getNode_array().getCount(); node++) {
+                KinBodyPtr pbody = ExtractKinematicsModel(visual_scene->getNode_array()[node], domPhysics_modelRef(),listAxisBindingsAll,vprocessednodes);
+                if( !!pbody ) {
+                    _penv->AddKinBody(pbody, true);
+                }
+            }
+        }
 
-        //ExtractLink(pkinbody, NULL, pnode, Transform(), vdomjoints, vbindings);
         return true;
     }
 
@@ -443,6 +421,33 @@ class ColladaReader : public daeErrorHandler
         return true;
     }
 
+    /// \brief extract one rigid link composed of the node hierarchy
+    KinBodyPtr ExtractKinematicsModel(domNodeRef pdomnode, domPhysics_modelRef pmodel, const std::list<JointAxisBinding>& listAxisBindings, const std::vector<std::string>& vprocessednodes)
+    {
+        if( !!pdomnode->getID() && find(vprocessednodes.begin(),vprocessednodes.end(),pdomnode->getID()) != vprocessednodes.end() ) {
+            return KinBodyPtr();
+        }
+        KinBodyPtr pkinbody = RaveCreateKinBody(_penv);
+        string name = !pdomnode->getName() ? "" : _ConvertToOpenRAVEName(pdomnode->getName());
+        if( name.size() == 0 ) {
+            name = _ConvertToOpenRAVEName(pdomnode->getID());
+        }
+        KinBody::LinkPtr plink(new KinBody::Link(pkinbody));
+        plink->_name = name;
+        plink->_mass = 1.0;
+        plink->bStatic = false;   
+        bool bhasgeometry = ExtractGeometry(pdomnode,plink,listAxisBindings,vprocessednodes);
+        if( !bhasgeometry ) {
+            return KinBodyPtr();
+        }
+
+        RAVELOG_INFO(str(boost::format("Loading non-kinematics node '%s'")%name));
+        pkinbody->SetName(name);
+        plink->_index = (int) pkinbody->_veclinks.size();
+        pkinbody->_veclinks.push_back(plink);
+        return pkinbody;
+    }
+
     /// \brief append the kinematics model to the openrave kinbody
     bool ExtractKinematicsModel(KinBodyPtr& pkinbody, domKinematics_modelRef kmodel, domNodeRef pnode, domPhysics_modelRef pmodel, const std::list<JointAxisBinding>& listAxisBindings)
     {
@@ -616,11 +621,16 @@ class ColladaReader : public daeErrorHandler
     }
 
     ///  \brief Extract Link info and add it to an existing body
-    KinBody::LinkPtr ExtractLink(KinBodyPtr pkinbody, const domLinkRef pdomlink,const domNodeRef pdomnode, Transform tParentLink, const vector<domJointRef>& vdomjoints, const std::list<JointAxisBinding>& listAxisBindings) {
+    KinBody::LinkPtr ExtractLink(KinBodyPtr pkinbody, const domLinkRef pdomlink,const domNodeRef pdomnode, Transform tParentLink, const std::vector<domJointRef>& vdomjoints, const std::list<JointAxisBinding>& listAxisBindings) {
         //  Set link name with the name of the COLLADA's Link
-        std::string linkname = _ExtractLinkName(pdomlink);
+        std::string linkname;
+        if( !!pdomlink ) {
+            linkname = _ExtractLinkName(pdomlink);
+            if( linkname.size() == 0 ) {
+                RAVELOG_WARN("<link> has no name or id, falling back to <node>!\n");
+            }
+        }
         if( linkname.size() == 0 ) {
-            RAVELOG_WARN("<link> has no name or id, falling back to <node>!\n");
             if( !!pdomnode ) {
                 if (!!pdomnode->getName()) {
                     linkname = pdomnode->getName();
@@ -646,8 +656,7 @@ class ColladaReader : public daeErrorHandler
         }
 
         if (!pdomlink) {
-            RAVELOG_WARN("Extract object NOT kinematics !!!\n");
-            ExtractGeometry(pdomnode,plink,listAxisBindings);
+            ExtractGeometry(pdomnode,plink,listAxisBindings,std::vector<std::string>());
         }
         else {
             RAVELOG_DEBUG(str(boost::format("Attachment link elements: %d\n")%pdomlink->getAttachment_full_array().getCount()));
@@ -660,7 +669,7 @@ class ColladaReader : public daeErrorHandler
             }
           
             // Get the geometry
-            ExtractGeometry(pdomnode,plink,listAxisBindings);
+            ExtractGeometry(pdomnode,plink,listAxisBindings,std::vector<std::string>());
             
             RAVELOG_DEBUG(str(boost::format("After ExtractGeometry Attachment link elements: %d\n")%pdomlink->getAttachment_full_array().getCount()));
           
@@ -952,28 +961,31 @@ class ColladaReader : public daeErrorHandler
                     ++numjoints;
                 }
             }
+            if( pdomlink->getAttachment_start_array().getCount() > 0 ) {
+                RAVELOG_WARN("openrave collada reader does not support attachment_start\n");
+            }
+            if( pdomlink->getAttachment_end_array().getCount() > 0 ) {
+                RAVELOG_WARN("openrave collada reader does not support attachment_end\n");
+            }
         }
-        if( pdomlink->getAttachment_start_array().getCount() > 0 ) {
-            RAVELOG_WARN("openrave collada reader does not support attachment_start\n");
-        }
-        if( pdomlink->getAttachment_end_array().getCount() > 0 ) {
-            RAVELOG_WARN("openrave collada reader does not support attachment_end\n");
-        }
-
         return plink;
     }
 
     /// Extract Geometry and apply the transformations of the node
     /// \param pdomnode Node to extract the goemetry
     /// \param plink    Link of the kinematics model
-    void ExtractGeometry(const domNodeRef pdomnode,KinBody::LinkPtr plink, const std::list<JointAxisBinding>& listAxisBindings)
+    bool ExtractGeometry(const domNodeRef pdomnode,KinBody::LinkPtr plink, const std::list<JointAxisBinding>& listAxisBindings,const std::vector<std::string>& vprocessednodes)
     {
         if( !pdomnode ) {
-            return;
+            return false;
+        }
+        if( !!pdomnode->getID() && find(vprocessednodes.begin(),vprocessednodes.end(),pdomnode->getID()) != vprocessednodes.end() ) {
+            return false;
         }
 
         RAVELOG_VERBOSE(str(boost::format("ExtractGeometry(node,link) of %s\n")%pdomnode->getName()));
 
+        bool bhasgeometry = false;
         // For all child nodes of pdomnode
         for (size_t i = 0; i < pdomnode->getNode_array().getCount(); i++) {
             // check if contains a joint
@@ -989,7 +1001,7 @@ class ColladaReader : public daeErrorHandler
                 continue;
             }
 
-            ExtractGeometry(pdomnode->getNode_array()[i],plink, listAxisBindings);
+            bhasgeometry |= ExtractGeometry(pdomnode->getNode_array()[i],plink, listAxisBindings,vprocessednodes);
             // Plink stayes the same for all children
             // replace pdomnode by child = pdomnode->getNode_array()[i]
             // hope for the best!
@@ -1020,7 +1032,11 @@ class ColladaReader : public daeErrorHandler
             }
 
             //  Gets the geometry
-            ExtractGeometry(domgeom, mapmaterials, plink);
+            bhasgeometry |= ExtractGeometry(domgeom, mapmaterials, plink);
+        }
+
+        if( !bhasgeometry ) {
+            return false;
         }
 
         TransformMatrix tmnodegeom = (TransformMatrix) plink->_t.inverse() * getNodeParentTransform(pdomnode) * _ExtractFullTransform(pdomnode);
@@ -1060,6 +1076,8 @@ class ColladaReader : public daeErrorHandler
             trimesh.ApplyTransform(itgeom->_t);
             plink->collision.Append(trimesh);
         }
+
+        return true;
     }
 
     /// Paint the Geometry with the color material
