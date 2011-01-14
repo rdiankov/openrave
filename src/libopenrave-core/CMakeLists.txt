@@ -1,4 +1,4 @@
-check_function_exists(mkstemps HAVE_MKSTEMP)
+check_function_exists(mkstemp HAVE_MKSTEMP)
 if( HAVE_MKSTEMP )
   add_definitions("-DHAVE_MKSTEMP")
 endif()

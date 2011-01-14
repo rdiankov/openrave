@@ -1660,7 +1660,7 @@ class ColladaReader : public daeErrorHandler
                                 }
                                 continue;
                             }
-                            RAVELOG_WARN(str(boost::format("could not find manipulator gripper joint %s\n")%pgripper_joint->getAttribute("joint")));
+                            RAVELOG_WARN(str(boost::format("could not find manipulator '%s' gripper joint '%s'\n")%pmanip->GetName()%pgripper_joint->getAttribute("joint")));
                         }
                         else if( pgripper_joint->getElementName() == string("iksolver") ) {
                             boost::shared_ptr<std::string> interfacename = _ExtractInterfaceType(tec->getContents()[ic]);
@@ -2241,13 +2241,13 @@ class ColladaReader : public daeErrorHandler
         }
 
         if (!pdomjoint || pdomjoint->typeID() != domJoint::ID() || !pdomjoint->getName()) {
-            RAVELOG_WARN(str(boost::format("could not find collada joint %s!\n")%targetref));
+            RAVELOG_WARN(str(boost::format("could not find collada joint '%s'!\n")%targetref));
             return std::make_pair(KinBody::JointPtr(),domJointRef());
         }
 
         KinBody::JointPtr pjoint = pkinbody->GetJoint(pdomjoint->getName());
         if(!pjoint) {
-            RAVELOG_WARN(str(boost::format("could not find openrave joint %s!\n")%pdomjoint->getName()));
+            RAVELOG_WARN(str(boost::format("could not find openrave joint '%s'!\n")%pdomjoint->getName()));
         }
         return std::make_pair(pjoint,pdomjoint);
     }
