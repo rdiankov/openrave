@@ -23,7 +23,7 @@ function _complete_openravepy {
             esac
         else
             # just add in the xml and dae files, we don't have auto-completations for the examples/databases yet
-            COMPREPLY=($(compgen -f -X "!*.+(dae|xml)" -- ${cur}))
+            COMPREPLY=($(compgen -f -X "!*.+(dae|zae|xml)" -- ${cur}))
             return 0
         fi
     fi
@@ -65,8 +65,8 @@ function _complete_openravepy {
     fi
     COMPREPLY=($(compgen -W "$opts" -- ${cur}))
     if [[ ${cur} != -* ]] ; then
-        # add in xml and dae files
-        COMPREPLY=($(compgen -f -X "!*.+(dae|xml)" -- ${cur}) ${COMPREPLY[@]})
+        # add in xml and dae and zae files
+        COMPREPLY=($(compgen -f -X "!*.+(dae|zae|xml)" -- ${cur}) ${COMPREPLY[@]})
     fi
 }
 

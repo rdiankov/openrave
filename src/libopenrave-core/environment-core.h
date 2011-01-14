@@ -395,7 +395,14 @@ class Environment : public EnvironmentBase
     virtual bool Save(const std::string& filename)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        return RaveWriteColladaFile(shared_from_this(),filename);
+        try {
+            RaveWriteColladaFile(shared_from_this(),filename);
+            return true;
+        }
+        catch(const openrave_exception& ex) {
+            RAVELOG_ERROR("save filed: %s\n",ex.what());
+        }
+        return false;
     }
 
     virtual bool AddKinBody(KinBodyPtr pbody, bool bAnonymous)
@@ -657,6 +664,9 @@ class Environment : public EnvironmentBase
         }
         else {
             RAVELOG_DEBUG(str(boost::format("setting %s collision checker\n")%_pCurrentChecker->GetXMLId()));
+            FOREACH(itbody,_vecbodies) {
+                (*itbody)->_ResetInternalCollisionCache();
+            }
         }
         return _pCurrentChecker->InitEnvironment();
     }
@@ -1710,21 +1720,20 @@ protected:
     static bool _IsColladaFile(const std::string& filename)
     {
         size_t len = filename.size();
-        if( len < 4 )
+        if( len < 4 ) {
             return false;
-        return filename[len-4] == '.' && filename[len-3] == 'd' && filename[len-2] == 'a' && filename[len-1] == 'e';
+        }
+        if( filename[len-4] == '.' && ::tolower(filename[len-3]) == 'd' && ::tolower(filename[len-2]) == 'a' && ::tolower(filename[len-1]) == 'e' ) {
+            return true;
+        }
+        if( filename[len-4] == '.' && ::tolower(filename[len-3]) == 'z' && ::tolower(filename[len-2]) == 'a' && ::tolower(filename[len-1]) == 'e' ) {
+            return true;
+        }
+        return false;
     }
     static bool _IsColladaData(const std::string& data)
     {
         return data.find("<COLLADA") != std::string::npos;
-    }
-    static bool IsValidCharInName(char c) {
-        return isalnum(c) || c == '_' || c == '-' || c == '.';
-    }
-    static bool IsValidName(const string& s) {
-        if( s.size() == 0 )
-            return false;
-        return count_if(s.begin(), s.end(), IsValidCharInName) == (int)s.size();
     }
 
     std::vector<RobotBasePtr> _vecrobots;  ///< robots (possibly controlled)

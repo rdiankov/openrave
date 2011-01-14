@@ -1,4 +1,4 @@
-// Copyright (C) 2006-2010 Rosen Diankov (rosen.diankov@gmail.com), Stefan Ulbrich, Gustavo Rodriguez
+// Copyright (C) 2006-2011 Rosen Diankov (rosen.diankov@gmail.com), Stefan Ulbrich, Gustavo Rodriguez
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -99,59 +99,46 @@ class ColladaReader : public daeErrorHandler
         }
     };
 
-    struct USERDATA
-    {
-        USERDATA() {}
-        USERDATA(dReal scale) : scale(scale) {}
-        dReal scale;
-        boost::shared_ptr<void> p; ///< custom managed data
-    };
-
  public:
  ColladaReader(EnvironmentBasePtr penv) : _dom(NULL), _penv(penv), _nGlobalSensorId(0), _nGlobalManipulatorId(0) {
         daeErrorHandler::setErrorHandler(this);
     }
     virtual ~ColladaReader() {
-        _vuserdata.clear();
-        _collada.reset();
+        _dae.reset();
         DAE::cleanup();
     }
 
     bool InitFromFile(const string& filename)
     {
         RAVELOG_VERBOSE(str(boost::format("init COLLADA reader version: %s, namespace: %s, filename: %s\n")%COLLADA_VERSION%COLLADA_NAMESPACE%filename));
-        _collada.reset(new DAE);
-        _dom = _collada->open(filename);
+        _dae.reset(new DAE);
+        _dom = _dae->open(filename);
         if (!_dom) {
             return false;
         }
         _filename=filename;
-        
-        size_t maxchildren = _countChildren(_dom);
-        _vuserdata.resize(0);
-        _vuserdata.reserve(maxchildren);
-        
-        dReal dScale = 1.0;
-        _processUserData(_dom, dScale);
-        RAVELOG_VERBOSE(str(boost::format("processed children: %d/%d\n")%_vuserdata.size()%maxchildren));
-        return true;
+        return _Init();
     }
+
     bool InitFromData(const string& pdata)
     {
         RAVELOG_DEBUG(str(boost::format("init COLLADA reader version: %s, namespace: %s\n")%COLLADA_VERSION%COLLADA_NAMESPACE));
-        _collada.reset(new DAE);
-        _dom = _collada->openFromMemory(".",pdata.c_str());
+        _dae.reset(new DAE);
+        _dom = _dae->openFromMemory(".",pdata.c_str());
         if (!_dom) {
             return false;
         }
+        return _Init();
+    }
 
-        size_t maxchildren = _countChildren(_dom);
-        _vuserdata.resize(0);
-        _vuserdata.reserve(maxchildren);
-
-        double dScale = 1.0;
-        _processUserData(_dom, dScale);
-        RAVELOG_DEBUG(str(boost::format("processed children: %d/%d\n")%_vuserdata.size()%maxchildren));
+    bool _Init()
+    {
+        _fGlobalScale = 1;
+        if( !!_dom->getAsset() ) {
+            if( !!_dom->getAsset()->getUnit() ) {
+                _fGlobalScale = _dom->getAsset()->getUnit()->getMeter();
+            }
+        }
         return true;
     }
 
@@ -171,6 +158,7 @@ class ColladaReader : public daeErrorHandler
                 continue;
             }
 
+            daeElementRef kscenelib = _dom->getLibrary_kinematics_scenes_array()[0]->getKinematics_scene_array()[0];
             KinematicsSceneBindings bindings;
             _ExtractKinematicsVisualBindings(allscene->getInstance_visual_scene(),kiscene,bindings);
 
@@ -506,7 +494,7 @@ class ColladaReader : public daeErrorHandler
             }
 
             // find the target joint
-            KinBody::JointPtr pjoint = _getJointFromRef(pf->getTarget()->getParam()->getValue(),pf,pkinbody);
+            KinBody::JointPtr pjoint = _getJointFromRef(pf->getTarget()->getParam()->getValue(),pf,pkinbody).first;
             if (!pjoint) {
                 continue;
             }
@@ -541,7 +529,7 @@ class ColladaReader : public daeErrorHandler
                         std::string equationtype = pequation->getAttribute("type");
                         KinBody::JointPtr pjointtarget;
                         if( pequation->hasAttribute("target") ) {
-                            pjointtarget = _getJointFromRef(pequation->getAttribute("target").c_str(),pf,pkinbody);
+                            pjointtarget = _getJointFromRef(pequation->getAttribute("target").c_str(),pf,pkinbody).first;
                         }
                         try {
                             std::string eq = _ExtractMathML(pf,pkinbody,children[0]);
@@ -609,8 +597,8 @@ class ColladaReader : public daeErrorHandler
                                 RAVELOG_WARN(str(boost::format("failed to reference <ignore_link_pair> links: %s %s\n")%pelt->getAttribute("link0")%pelt->getAttribute("link1")));
                                 continue;
                             }
-                            KinBody::LinkPtr plink0 = boost::static_pointer_cast<KinBody::Link>(_getUserData(pdomlink0)->p);
-                            KinBody::LinkPtr plink1 = boost::static_pointer_cast<KinBody::Link>(_getUserData(pdomlink1)->p);
+                            KinBody::LinkPtr plink0 = pkinbody->GetLink(_ExtractLinkName(pdomlink0));
+                            KinBody::LinkPtr plink1 = pkinbody->GetLink(_ExtractLinkName(pdomlink1));
                             if( !plink0 && !plink1 ) {
                                 RAVELOG_WARN("failed to find openrave links from <ignore_link_pair>\n");
                                 continue;
@@ -652,8 +640,6 @@ class ColladaReader : public daeErrorHandler
             plink->_index = (int) pkinbody->_veclinks.size();
             pkinbody->_veclinks.push_back(plink);
         }
-
-        _getUserData(pdomlink)->p = plink;
 
         if( !!pdomnode ) {
             RAVELOG_VERBOSE(str(boost::format("Node Id %s and Name %s\n")%pdomnode->getId()%pdomnode->getName()));
@@ -768,7 +754,7 @@ class ColladaReader : public daeErrorHandler
                     }
                     else if( strcmp(pdomaxis->getElementName(), "prismatic") == 0 ) {
                         pjoint->type = KinBody::Joint::JointPrismatic;
-                        _mapJointUnits[pjoint] = GetUnitScale(pdomaxis);
+                        _mapJointUnits[pjoint] = _GetUnitScale(pdomaxis,_fGlobalScale);
                     }
                     else {
                         RAVELOG_WARN(str(boost::format("unsupported joint type: %s\n")%pdomaxis->getElementName()));
@@ -786,8 +772,6 @@ class ColladaReader : public daeErrorHandler
                     else {
                         pkinbody->_vPassiveJoints.push_back(pjoint);
                     }
-                    _getUserData(pdomjoint)->p = pjoint;
-                    _getUserData(pdomaxis)->p = boost::shared_ptr<int>(new int(pjoint->dofindex));
                     vjoints[ic] = pjoint;
                     RAVELOG_DEBUG(str(boost::format("joint %s (%d:%d)")%pjoint->_name%pjoint->jointindex%pjoint->dofindex));
                 }
@@ -877,7 +861,7 @@ class ColladaReader : public daeErrorHandler
                         }
                         else if (kinematics_axis_info->getLimits()) { // If there are articulated system kinematics limits
                             kinematics_limits   = true;
-                            dReal fscale = (pjoint->type == KinBody::Joint::JointRevolute)?(PI/180.0f):GetUnitScale(kinematics_axis_info);
+                            dReal fscale = (pjoint->type == KinBody::Joint::JointRevolute)?(PI/180.0f):_GetUnitScale(kinematics_axis_info,_fGlobalScale);
                             if( pjoint->type == KinBody::Joint::JointRevolute || pjoint->type ==KinBody::Joint::JointPrismatic) {
                                 pjoint->_vlowerlimit.push_back(fscale*(dReal)(resolveFloat(kinematics_axis_info->getLimits()->getMin(),kinematics_axis_info)));
                                 pjoint->_vupperlimit.push_back(fscale*(dReal)(resolveFloat(kinematics_axis_info->getLimits()->getMax(),kinematics_axis_info)));
@@ -909,7 +893,7 @@ class ColladaReader : public daeErrorHandler
                             }
                             else {
                                 RAVELOG_VERBOSE(str(boost::format("There are LIMITS in joint %s ...\n")%pjoint->GetName()));
-                                dReal fscale = (pjoint->type == KinBody::Joint::JointRevolute)?(PI/180.0f):GetUnitScale(pdomaxis);
+                                dReal fscale = (pjoint->type == KinBody::Joint::JointRevolute)?(PI/180.0f):_GetUnitScale(pdomaxis,_fGlobalScale);
                                 pjoint->_vlowerlimit.push_back((dReal)pdomaxis->getLimits()->getMin()->getValue()*fscale);
                                 pjoint->_vupperlimit.push_back((dReal)pdomaxis->getLimits()->getMax()->getValue()*fscale);
                                 if( pjoint->type == KinBody::Joint::JointRevolute ) {
@@ -1149,7 +1133,7 @@ class ColladaReader : public daeErrorHandler
                 if( !node ) {
                     continue;
                 }
-                dReal fUnitScale = GetUnitScale(node);
+                dReal fUnitScale = _GetUnitScale(node,_fGlobalScale);
                 const domFloat_arrayRef flArray = node->getFloat_array();
                 if (!!flArray) {
                     const domList_of_floats& listFloats = flArray->getValue();
@@ -1235,7 +1219,7 @@ class ColladaReader : public daeErrorHandler
                     if( !node ) {
                         continue;
                     }
-                    dReal fUnitScale = GetUnitScale(node);
+                    dReal fUnitScale = _GetUnitScale(node,_fGlobalScale);
                     const domFloat_arrayRef flArray = node->getFloat_array();
                     if (!!flArray) {
                         const domList_of_floats& listFloats = flArray->getValue();
@@ -1327,7 +1311,7 @@ class ColladaReader : public daeErrorHandler
                     if( !node ) {
                         continue;
                     }
-                    dReal fUnitScale = GetUnitScale(node);
+                    dReal fUnitScale = _GetUnitScale(node,_fGlobalScale);
                     const domFloat_arrayRef flArray = node->getFloat_array();
                     if (!!flArray) {
                         const domList_of_floats& listFloats = flArray->getValue();
@@ -1417,7 +1401,7 @@ class ColladaReader : public daeErrorHandler
                 if( !node ) {
                     continue;
                 }
-                dReal fUnitScale = GetUnitScale(node);
+                dReal fUnitScale = _GetUnitScale(node,_fGlobalScale);
                 const domFloat_arrayRef flArray = node->getFloat_array();
                 if (!!flArray) {
                     const domList_of_floats& listFloats = flArray->getValue();
@@ -1490,7 +1474,7 @@ class ColladaReader : public daeErrorHandler
             //                        const domSourceRef node = daeSafeCast<domSource>(localRef->getSource().getElement());
             //                        if( !node )
             //                            continue;
-            //                        dReal fUnitScale = GetUnitScale(node);
+            //                        dReal fUnitScale = _GetUnitScale(node,_fGlobalScale);
             //                        const domFloat_arrayRef flArray = node->getFloat_array();
             //                        if (!!flArray) {
             //                            const domList_of_floats& listFloats = flArray->getValue();
@@ -1550,7 +1534,7 @@ class ColladaReader : public daeErrorHandler
                                         if( !node ) {
                                             continue;
                                         }
-                                        dReal fUnitScale = GetUnitScale(node);
+                                        dReal fUnitScale = _GetUnitScale(node,_fGlobalScale);
                                         const domFloat_arrayRef flArray = node->getFloat_array();
                                         if (!!flArray) {
                                             vconvexhull.reserve(vconvexhull.size()+flArray->getCount());
@@ -1580,7 +1564,7 @@ class ColladaReader : public daeErrorHandler
                         if( !node ) {
                             continue;
                         }
-                        dReal fUnitScale = GetUnitScale(node);
+                        dReal fUnitScale = _GetUnitScale(node,_fGlobalScale);
                         const domFloat_arrayRef flArray = node->getFloat_array();
                         if (!!flArray) {
                             const domList_of_floats& listFloats = flArray->getValue();
@@ -1628,9 +1612,9 @@ class ColladaReader : public daeErrorHandler
                     daeElement* pframe_origin = tec->getChild("frame_origin");
                     daeElement* pframe_tip = tec->getChild("frame_tip");
                     if( !!pframe_origin ) {
-                        domLinkRef plink = daeSafeCast<domLink>(daeSidRef(pframe_origin->getAttribute("link"), as).resolve().elt);
-                        if( !!plink ) {
-                            pmanip->_pBase = boost::static_pointer_cast<KinBody::Link>(_getUserData(plink)->p);
+                        domLinkRef pdomlink = daeSafeCast<domLink>(daeSidRef(pframe_origin->getAttribute("link"), as).resolve().elt);
+                        if( !!pdomlink ) {
+                            pmanip->_pBase = probot->GetLink(_ExtractLinkName(pdomlink));
                         }
                         if( !pmanip->_pBase ) {
                             RAVELOG_WARN(str(boost::format("failed to find manipulator %s frame origin %s\n")%name%pframe_origin->getAttribute("link")));
@@ -1638,9 +1622,9 @@ class ColladaReader : public daeErrorHandler
                         }
                     }
                     if( !!pframe_tip ) {
-                        daeElementRef plink = daeSafeCast<domLink>(daeSidRef(pframe_tip->getAttribute("link"), as).resolve().elt);
-                        if( !!plink ) {
-                            pmanip->_pEndEffector = boost::static_pointer_cast<KinBody::Link>(_getUserData(plink)->p);
+                        domLinkRef pdomlink = daeSafeCast<domLink>(daeSidRef(pframe_tip->getAttribute("link"), as).resolve().elt);
+                        if( !!pdomlink ) {
+                            pmanip->_pEndEffector = probot->GetLink(_ExtractLinkName(pdomlink));
                         }
                         if( !pmanip->_pEndEffector ) {
                             RAVELOG_WARN(str(boost::format("failed to find manipulator %s frame tip %s\n")%name%pframe_tip->getAttribute("link")));
@@ -1650,30 +1634,35 @@ class ColladaReader : public daeErrorHandler
                     }
 
                     for(size_t ic = 0; ic < tec->getContents().getCount(); ++ic) {
-                        daeElementRef pgripper_axis = tec->getContents()[ic];
-                        if( pgripper_axis->getElementName() == string("gripper_axis") ) {
-                            domAxis_constraintRef paxis = daeSafeCast<domAxis_constraint>(daeSidRef(pgripper_axis->getAttribute("axis"), as).resolve().elt);
-                            if( !!paxis ) {
-                                boost::shared_ptr<int> pdofindex = boost::static_pointer_cast<int>(_getUserData(paxis)->p);
-                                if( !!pdofindex ) {
-                                    if( *pdofindex < 0 ) {
-                                        RAVELOG_WARN(str(boost::format("manipulator %s gripper axis %s references passive joint\n")%name%pgripper_axis->getAttribute("axis")));
-                                    }
-                                    else {
-                                        float closingdirection = 0;
-                                        daeElementRef pclosingdirection = daeElementRef(pgripper_axis->getChild("closingdirection"));
-                                        if( !pclosingdirection || !resolveCommon_float_or_param(pclosingdirection,as,closingdirection) ) {
-                                            RAVELOG_WARN(str(boost::format("manipulator %s gripper axis %s failed to process closing direction\n")%name%pgripper_axis->getAttribute("axis")));
+                        daeElementRef pgripper_joint = tec->getContents()[ic];
+                        if( pgripper_joint->getElementName() == string("gripper_joint") ) {
+                            std::pair<KinBody::JointPtr, domJointRef> result = _getJointFromRef(pgripper_joint->getAttribute("joint").c_str(),as,probot);
+                            KinBody::JointPtr pjoint = result.first;
+                            domJointRef pdomjoint = result.second;
+                            if( !!pjoint && !!pdomjoint ) {
+                                pmanip->_vgripperjointnames.push_back(pjoint->GetName());
+                                daeTArray<daeElementRef> children;
+                                pgripper_joint->getChildren(children);
+                                for (size_t i = 0; i < children.getCount(); i++) {
+                                    if( children[i]->getElementName() == string("closing_direction") ) {
+                                        domAxis_constraintRef paxis = daeSafeCast<domAxis_constraint>(daeSidRef(children[i]->getAttribute("axis"), pdomjoint).resolve().elt);
+                                        float closing_direction = 0;
+                                        if( !paxis ) {
+                                            RAVELOG_WARN(str(boost::format("cannot resolve joint %s axis %s")%pgripper_joint->getAttribute("joint")%children[i]->getAttribute("axis")));
                                         }
-                                        pmanip->_vgripperdofindices.push_back(*pdofindex);
-                                        pmanip->_vClosingDirection.push_back((dReal)closingdirection);
+                                        else {
+                                            if( !resolveCommon_float_or_param(children[i],as,closing_direction) ) {
+                                                RAVELOG_WARN(str(boost::format("gripper joint %s axis %s cannot extract closing_direction\n")%children[i]->getAttribute("axis")%pgripper_joint->getAttribute("joint")));
+                                            }
+                                        }
+                                        pmanip->_vClosingDirection.push_back((dReal)closing_direction);
                                     }
-                                    continue;
                                 }
+                                continue;
                             }
-                            RAVELOG_WARN(str(boost::format("could not find manipulator gripper axis %s\n")%pgripper_axis->getAttribute("axis")));
+                            RAVELOG_WARN(str(boost::format("could not find manipulator gripper joint %s\n")%pgripper_joint->getAttribute("joint")));
                         }
-                        else if( pgripper_axis->getElementName() == string("iksolver") ) {
+                        else if( pgripper_joint->getElementName() == string("iksolver") ) {
                             boost::shared_ptr<std::string> interfacename = _ExtractInterfaceType(tec->getContents()[ic]);
                             if( !!interfacename ) {
                                 pmanip->_strIkSolver = *interfacename;
@@ -1707,9 +1696,9 @@ class ColladaReader : public daeErrorHandler
                     pattachedsensor->_name = _ConvertToOpenRAVEName(name);
                     daeElement* pframe_origin = tec->getChild("frame_origin");
                     if( !!pframe_origin ) {
-                        domLinkRef plink = daeSafeCast<domLink>(daeSidRef(pframe_origin->getAttribute("link"), as).resolve().elt);
-                        if( !!plink ) {
-                            pattachedsensor->pattachedlink = boost::static_pointer_cast<KinBody::Link>(_getUserData(plink)->p);
+                        domLinkRef pdomlink = daeSafeCast<domLink>(daeSidRef(pframe_origin->getAttribute("link"), as).resolve().elt);
+                        if( !!pdomlink ) {
+                            pattachedsensor->pattachedlink = probot->GetLink(_ExtractLinkName(pdomlink));
                         }
                         if( !pattachedsensor->pattachedlink.lock() ) {
                             RAVELOG_WARN(str(boost::format("failed to find manipulator %s frame origin %s\n")%name%pframe_origin->getAttribute("link")));
@@ -1797,7 +1786,7 @@ class ColladaReader : public daeErrorHandler
 
     inline daeElementRef _getElementFromUrl(const daeURI &uri)
     {
-        return daeStandardURIResolver(*_collada).resolveElement(uri);
+        return daeStandardURIResolver(*_dae).resolveElement(uri);
     }
 
     static daeElement* searchBinding(domCommon_sidref_or_paramRef paddr, daeElementRef parent)
@@ -1988,7 +1977,7 @@ class ColladaReader : public daeErrorHandler
     }
 
     /// Gets all transformations applied to the node
-    static TransformMatrix getTransform(daeElementRef pelt)
+    TransformMatrix getTransform(daeElementRef pelt)
     {
         TransformMatrix t;
         domRotateRef protate = daeSafeCast<domRotate>(pelt);
@@ -2003,7 +1992,7 @@ class ColladaReader : public daeErrorHandler
         if( !!ptrans ) {
             //      if( !ptrans->getSid() ) { // if sid is valid, then controlled by joint?
             t.trans = Vector(ptrans->getValue()[0], ptrans->getValue()[1], ptrans->getValue()[2]);
-            t.trans *= GetUnitScale(pelt);
+            t.trans *= _GetUnitScale(pelt,_fGlobalScale);
             //      }
             return t;
         }
@@ -2016,7 +2005,7 @@ class ColladaReader : public daeErrorHandler
                 t.m[4*i+2] = pmat->getValue()[4*i+2];
                 t.trans[i] = pmat->getValue()[4*i+3];
             }
-            t.trans *= GetUnitScale(pelt);
+            t.trans *= _GetUnitScale(pelt,_fGlobalScale);
             return t;
         }
 
@@ -2033,7 +2022,7 @@ class ColladaReader : public daeErrorHandler
             Vector campos(pcamera->getValue()[0], pcamera->getValue()[1], pcamera->getValue()[2]);
             Vector lookat(pcamera->getValue()[3], pcamera->getValue()[4], pcamera->getValue()[5]);
             Vector camup(pcamera->getValue()[6], pcamera->getValue()[7], pcamera->getValue()[8]);
-            t = transformLookat(lookat,campos*GetUnitScale(pelt),camup);
+            t = transformLookat(lookat,campos*_GetUnitScale(pelt,_fGlobalScale),camup);
             return t;
         }
 
@@ -2047,7 +2036,7 @@ class ColladaReader : public daeErrorHandler
 
     /// Travels recursively the node parents of the given one
     /// to extract the Transform arrays that affects the node given
-    template <typename T> static TransformMatrix getNodeParentTransform(const T pelt) {
+    template <typename T> TransformMatrix getNodeParentTransform(const T pelt) {
         domNodeRef pnode = daeSafeCast<domNode>(pelt->getParent());
         if( !pnode ) {
             return TransformMatrix();
@@ -2056,7 +2045,7 @@ class ColladaReader : public daeErrorHandler
     }
 
     /// \brief Travel by the transformation array and calls the getTransform method
-    template <typename T> static TransformMatrix _ExtractFullTransform(const T pelt) {
+    template <typename T> TransformMatrix _ExtractFullTransform(const T pelt) {
         TransformMatrix t;
         for(size_t i = 0; i < pelt->getContents().getCount(); ++i) {
             t = t * getTransform(pelt->getContents()[i]);
@@ -2065,7 +2054,7 @@ class ColladaReader : public daeErrorHandler
     }
 
     /// \brief Travel by the transformation array and calls the getTransform method
-    template <typename T> static TransformMatrix _ExtractFullTransformFromChildren(const T pelt) {
+    template <typename T> TransformMatrix _ExtractFullTransformFromChildren(const T pelt) {
         TransformMatrix t;
         daeTArray<daeElementRef> children;
         pelt->getChildren(children);
@@ -2097,11 +2086,6 @@ class ColladaReader : public daeErrorHandler
     virtual void handleWarning( daeString msg )
     {
         RAVELOG_WARN("COLLADA warning: %s\n", msg);
-    }
-
-    inline static dReal GetUnitScale(daeElement* pelt)
-    {
-        return ((USERDATA*)pelt->getUserData())->scale;
     }
 
  private:
@@ -2150,12 +2134,13 @@ class ColladaReader : public daeErrorHandler
             domBind_joint_axisRef bindjoint = kiscene->getBind_joint_axis_array()[ijoint];
             daeElementRef pjtarget = daeSidRef(bindjoint->getTarget(), viscene->getUrl().getElement()).resolve().elt;
             if (!pjtarget) {
-                RAVELOG_ERROR(str(boost::format("Target Node %s NOT found!!!\n")%bindjoint->getTarget()));
+                RAVELOG_WARN(str(boost::format("Target Node %s not found\n")%bindjoint->getTarget()));
                 continue;
             }
             daeElement* pelt = searchBinding(bindjoint->getAxis(),kscene);
             domAxis_constraintRef pjointaxis = daeSafeCast<domAxis_constraint>(pelt);
             if (!pjointaxis) {
+                RAVELOG_WARN(str(boost::format("joint axis for target %s\n")%bindjoint->getTarget()));
                 continue;
             }
             bindings.listAxisBindings.push_back(JointAxisBinding(pjtarget, pjointaxis, bindjoint->getValue(), NULL, NULL));
@@ -2245,10 +2230,9 @@ class ColladaReader : public daeErrorHandler
         return name.substr(pos+1)==type;
     }
 
-    KinBody::JointPtr _getJointFromRef(xsToken targetref, daeElementRef peltref, KinBodyPtr pkinbody) {
+    std::pair<KinBody::JointPtr,domJointRef> _getJointFromRef(xsToken targetref, daeElementRef peltref, KinBodyPtr pkinbody) {
         daeElement* peltjoint = daeSidRef(targetref, peltref).resolve().elt;
         domJointRef pdomjoint = daeSafeCast<domJoint> (peltjoint);
-
         if (!pdomjoint) {
             domInstance_jointRef pdomijoint = daeSafeCast<domInstance_joint> (peltjoint);
             if (!!pdomijoint) {
@@ -2258,23 +2242,14 @@ class ColladaReader : public daeErrorHandler
 
         if (!pdomjoint || pdomjoint->typeID() != domJoint::ID() || !pdomjoint->getName()) {
             RAVELOG_WARN(str(boost::format("could not find collada joint %s!\n")%targetref));
-            return KinBody::JointPtr();
+            return std::make_pair(KinBody::JointPtr(),domJointRef());
         }
 
         KinBody::JointPtr pjoint = pkinbody->GetJoint(pdomjoint->getName());
-        if (!pjoint) {
-            // search the passive joints
-            FOREACHC(itjoint,pkinbody->GetPassiveJoints()) {
-                if( (*itjoint)->GetName() == pdomjoint->getName() ) {
-                    pjoint = *itjoint;
-                    break;
-                }
-            }
-        }
         if(!pjoint) {
             RAVELOG_WARN(str(boost::format("could not find openrave joint %s!\n")%pdomjoint->getName()));
         }
-        return pjoint;
+        return std::make_pair(pjoint,pdomjoint);
     }
 
     /// \brief get the element name without the namespace
@@ -2580,7 +2555,7 @@ class ColladaReader : public daeErrorHandler
                     }
                     else if( functionname == "SSSA" || functionname == "SASA" || functionname == "SASS" ) {
                         BOOST_ASSERT(children.getCount()==4);
-                        eq += str(boost::format("%s(%s,%s,%s)")%tolowerstring(functionname)%_ExtractMathML(proot,pkinbody,children[1])%_ExtractMathML(proot,pkinbody,children[2])%_ExtractMathML(proot,pkinbody,children[3]));
+                        eq += str(boost::format("%s(%s,%s,%s)")%functionname%_ExtractMathML(proot,pkinbody,children[1])%_ExtractMathML(proot,pkinbody,children[2])%_ExtractMathML(proot,pkinbody,children[3]));
                     }
                     else if( functionname == "atan2") {
                         BOOST_ASSERT(children.getCount()==3);
@@ -2618,7 +2593,7 @@ class ColladaReader : public daeErrorHandler
             else if( pelt->getAttribute("encoding")!=string("COLLADA") ) {
                 RAVELOG_WARN(str(boost::format("_ExtractMathML: csymbol '%s' has unknown encoding '%s'")%pelt->getCharData()%pelt->getAttribute("encoding")));
             }
-            KinBody::JointPtr pjoint = _getJointFromRef(pelt->getCharData().c_str(),proot,pkinbody);
+            KinBody::JointPtr pjoint = _getJointFromRef(pelt->getCharData().c_str(),proot,pkinbody).first;
             if( !pjoint ) {
                 RAVELOG_WARN(str(boost::format("_ExtractMathML: failed to find csymbol: %s")%pelt->getCharData()));
                 eq = pelt->getCharData();
@@ -2650,6 +2625,7 @@ class ColladaReader : public daeErrorHandler
     bool _computeConvexHull(const vector<Vector>& verts, KinBody::Link::TRIMESH& trimesh)
     {
         RAVELOG_ERROR("convex hulls not supported\n");
+        // since there is no easy way of getting geometry boxes, check if convex hull is a box
         return false;
         //        if( verts.size() <= 3 )
         //            return false;
@@ -2690,36 +2666,7 @@ class ColladaReader : public daeErrorHandler
         //        return bSuccess;
     }
 
-    size_t _countChildren(daeElement* pelt) {
-        size_t c = 1;
-        daeTArray<daeElementRef> children;
-        pelt->getChildren(children);
-        for (size_t i = 0; i < children.getCount(); ++i) {
-            c += _countChildren(children[i]);
-        }
-        return c;
-    }
-
-    void _processUserData(daeElement* pelt, dReal scale)
-    {
-        // getChild could be optimized since asset tag is supposed to appear as the first element
-        domAssetRef passet = daeSafeCast<domAsset> (pelt->getChild("asset"));
-        if (!!passet && !!passet->getUnit()) {
-            scale = passet->getUnit()->getMeter();
-        }
-        
-        _vuserdata.push_back(USERDATA(scale));
-        pelt->setUserData(&_vuserdata.back());
-        daeTArray<daeElementRef> children;
-        pelt->getChildren(children);
-        for (size_t i = 0; i < children.getCount(); ++i) {
-            if (children[i] != passet) {
-                _processUserData(children[i], scale);
-            }
-        }
-    }
-
-    std::string _ConvertToOpenRAVEName(const std::string& name) {
+    inline static std::string _ConvertToOpenRAVEName(const std::string& name) {
         if( IsValidName(name) ) {
             return name;
         }
@@ -2733,19 +2680,24 @@ class ColladaReader : public daeErrorHandler
         return newname;
     }
 
-    USERDATA* _getUserData(daeElement* pelt)
+    inline static dReal _GetUnitScale(daeElementRef pelt, dReal startscale)
     {
-        BOOST_ASSERT(!!pelt);
-        void* p = pelt->getUserData();
-        BOOST_ASSERT(!!p);
-        return (USERDATA*)p;
+        // getChild could be optimized since asset tag is supposed to appear as the first element
+        domExtraRef pextra = daeSafeCast<domExtra> (pelt->getChild("extra"));
+        if( !!pextra && !!pextra->getAsset() && !!pextra->getAsset()->getUnit() ) {
+            return pextra->getAsset()->getUnit()->getMeter();
+        }
+        if( !!pelt->getParent() ) {
+            return _GetUnitScale(pelt->getParent(),startscale);
+        }
+        return startscale;
     }
         
-    boost::shared_ptr<DAE> _collada;
+    boost::shared_ptr<DAE> _dae;
     domCOLLADA* _dom;
     EnvironmentBasePtr _penv;
+    dReal _fGlobalScale;
     std::map<KinBody::JointPtr, dReal> _mapJointUnits;
-    std::vector<USERDATA> _vuserdata; // all userdata
     int _nGlobalSensorId, _nGlobalManipulatorId;
     std::string _filename;
 };

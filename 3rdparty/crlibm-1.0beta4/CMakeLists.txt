@@ -49,9 +49,9 @@ add_definitions("-DSCS_NB_BITS=30")
 # Number of digits in the SCS structure
 add_definitions("-DSCS_NB_WORDS=8")
 
-check_type_size("long double" HAVE_LONG_DOUBLE BUILTIN_TYPES_ONLY)
+check_type_size("long double" LONG_DOUBLE BUILTIN_TYPES_ONLY)
 set(source_dir .)
-if( HAS_FPU_CONTROL_H AND HAVE_LONG_DOUBLE EQUAL 16 )
+if( HAS_FPU_CONTROL_H AND HAVE_LONG_DOUBLE AND LONG_DOUBLE EQUAL 16 )
   message(STATUS "compiling with double extended (long double) floating point")
   set(crlibm_SOURCES
     ${source_dir}/crlibm_private.c

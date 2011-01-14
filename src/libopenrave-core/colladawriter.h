@@ -1,4 +1,4 @@
-// Copyright (C) 2006-2010 Rosen Diankov (rdiankov@cs.cmu.edu)
+// Copyright (C) 2006-2011 Rosen Diankov (rdiankov@cs.cmu.edu)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -43,6 +43,13 @@ using namespace std;
 #include <libxml/parser.h>
 #include <libxml/tree.h>
 #include <libxml/xmlmemory.h>
+
+#include <zip.h> // for saving compressed files
+#ifdef _WIN32
+#include <iowin32.h>
+#else
+#include <unistd.h>
+#endif
 
 /// \brief converts raw XML data to DAE using libxml2
 namespace XMLtoDAE
@@ -202,7 +209,8 @@ class ColladaWriter : public daeErrorHandler
         {
             //axis_output(const string& sid, KinBody::JointConstPtr pjoint, int iaxis) : sid(sid), pjoint(pjoint), iaxis(iaxis) {}
         axis_output() : iaxis(0) {}
-            string sid, nodesid;
+            string sid; // joint/axis
+            string nodesid;
             KinBody::JointConstPtr pjoint;
             int iaxis;
             string jointnodesid;
@@ -244,10 +252,9 @@ class ColladaWriter : public daeErrorHandler
         _collada->setDatabase( NULL );
 
         const char* documentName = "openrave_snapshot";
-        daeDocument *doc = NULL;
-        daeInt error = _collada->getDatabase()->insertDocument(documentName, &doc ); // also creates a collada root
-        BOOST_ASSERT( error == DAE_OK && !!doc );
-        _dom = daeSafeCast<domCOLLADA>(doc->getDomRoot());
+        daeInt error = _collada->getDatabase()->insertDocument(documentName, &_doc ); // also creates a collada root
+        BOOST_ASSERT( error == DAE_OK && !!_doc );
+        _dom = daeSafeCast<domCOLLADA>(_doc->getDomRoot());
 
         //create the required asset tag
         domAssetRef asset = daeSafeCast<domAsset>( _dom->add( COLLADA_ELEMENT_ASSET ) );
@@ -500,11 +507,21 @@ class ColladaWriter : public daeErrorHandler
             frame_tip->setAttribute("link",(kmodelid+kmout->vlinksids.at((*itmanip)->GetEndEffector()->GetIndex())).c_str());
             _WriteTransformation(frame_tip,(*itmanip)->GetGraspTransform());
             int i = 0;
+            map<KinBody::JointPtr, daeElementRef> mapgripper_joints;
             FOREACHC(itindex,(*itmanip)->GetGripperIndices()) {
-                daeElementRef gripper_axis = ptec->add("gripper_axis");
-                gripper_axis->setAttribute("axis",(kmodelid+kmout->vaxissids.at(*itindex).sid).c_str());
-                daeElementRef closingdirection = gripper_axis->add("closingdirection");
-                closingdirection->add("float")->setCharData(str(boost::format("%f")%(*itmanip)->GetClosingDirection().at(i)));
+                KinBody::JointPtr pjoint = probot->GetJointFromDOFIndex(*itindex);
+                BOOST_ASSERT(pjoint->GetJointIndex()>=0);
+                daeElementRef gripper_joint;
+                if( mapgripper_joints.find(pjoint) == mapgripper_joints.end() ) {
+                    gripper_joint = ptec->add("gripper_joint");
+                    gripper_joint->setAttribute("joint",str(boost::format("%sjoint%d")%kmodelid%pjoint->GetJointIndex()).c_str());
+                }
+                else {
+                    gripper_joint = mapgripper_joints[pjoint];
+                }
+                daeElementRef closing_direction = gripper_joint->add("closing_direction");
+                closing_direction->setAttribute("axis",str(boost::format("./axis%d")%(*itindex-pjoint->GetDOFIndex())).c_str());
+                closing_direction->add("float")->setCharData(str(boost::format("%f")%(*itmanip)->GetClosingDirection().at(i)));
                 ++i;
            }
 //            <iksolver interface="WAM7ikfast" type="Transform6D">
@@ -636,14 +653,14 @@ class ColladaWriter : public daeErrorHandler
         vector<domJointRef> vdomjoints(vjoints.size());
         kmout.reset(new kinematics_model_output());
         kmout->kmodel = kmodel;
-        kmout->vaxissids.resize(vjoints.size());
+        kmout->vaxissids.resize(0);
         kmout->vlinksids.resize(pbody->GetLinks().size());
 
         FOREACHC(itjoint, vjoints) {
             KinBody::JointConstPtr pjoint = itjoint->second;
             domJointRef pdomjoint = daeSafeCast<domJoint>(ktec->add(COLLADA_ELEMENT_JOINT));
-            string jointid = str(boost::format("joint%d")%itjoint->first);
-            pdomjoint->setSid( jointid.c_str() );
+            string jointsid = str(boost::format("joint%d")%itjoint->first);
+            pdomjoint->setSid( jointsid.c_str() );
             pdomjoint->setName(pjoint->GetName().c_str());
             pjoint->GetLimits(lmin, lmax);
             vector<domAxis_constraintRef> vaxes(pjoint->GetDOF());
@@ -673,9 +690,11 @@ class ColladaWriter : public daeErrorHandler
 
                 string axisid = str(boost::format("axis%d")%ia);
                 vaxes[ia]->setSid(axisid.c_str());
-                kmout->vaxissids.at(itjoint->first).pjoint = pjoint;
-                kmout->vaxissids.at(itjoint->first).sid = jointid+string("/")+axisid;
-                kmout->vaxissids.at(itjoint->first).iaxis = ia;
+                kinematics_model_output::axis_output axissid;
+                axissid.pjoint = pjoint;
+                axissid.sid = jointsid+string("/")+axisid;
+                axissid.iaxis = ia;
+                kmout->vaxissids.push_back(axissid);
                 domAxisRef paxis = daeSafeCast<domAxis>(vaxes.at(ia)->add(COLLADA_ELEMENT_AXIS));
                 paxis->getValue().setCount(3);
                 paxis->getValue()[0] = pjoint->vAxes.at(ia).x;
@@ -720,8 +739,8 @@ class ColladaWriter : public daeErrorHandler
 
         // create the formulas for all mimic joints
         std::map<std::string,std::string> mapjointnames;
-        FOREACHC(itjoint,pbody->GetJoints()) {
-            mapjointnames[str(boost::format("<csymbol>%s</csymbol>")%(*itjoint)->GetName())] = str(boost::format("<csymbol encoding=\"COLLADA\">%s/joint%d</csymbol>")%kmodel->getID()%(*itjoint)->GetJointIndex());
+        FOREACHC(itjoint,vjoints) {
+            mapjointnames[str(boost::format("<csymbol>%s</csymbol>")%itjoint->second->GetName())] = str(boost::format("<csymbol encoding=\"COLLADA\">%s/joint%d</csymbol>")%kmodel->getID()%itjoint->first);
         }
 
         FOREACHC(itjoint, vjoints) {
@@ -891,9 +910,184 @@ class ColladaWriter : public daeErrorHandler
     }
 
     /// Write down a COLLADA file
-    virtual bool Save(const string& filename)
+    virtual void Save(const string& filename)
     {
-        return _collada->saveAs(filename.c_str())>0;
+        bool bcompress = filename.size() >= 4 && filename[filename.size()-4] == '.' && ::tolower(filename[filename.size()-3]) == 'z' && ::tolower(filename[filename.size()-2]) == 'a' && ::tolower(filename[filename.size()-1]) == 'e';
+        if( !bcompress ) {
+            if(!_collada->writeTo(_doc->getDocumentURI()->getURI(), filename.c_str()) ) {
+                throw openrave_exception(str(boost::format("failed to save collada file to %s")%filename));
+            }
+            return;
+        }
+        vector<uint8_t> buf(16384); // write in 16K chunks
+        std::string savefilenameinzip;
+        size_t namestart = filename.find_last_of(s_filesep);
+        if( namestart == string::npos ) {
+            namestart = 0;
+        }
+        else {
+            namestart+=1;
+        }
+        if(namestart+4>=filename.size()) {
+            throw openrave_exception(str(boost::format("bad filename: %s")%filename),ORE_InvalidArguments);
+        }
+        savefilenameinzip = filename.substr(namestart,filename.size()-namestart-4);
+        savefilenameinzip += ".dae";
+
+#ifdef _WIN32
+        char lpPathBuffer[MAX_PATH]={0};
+        char m_szTempName[MAX_PATH]={0};
+        if( GetTempPath(MAX_PATH, lpPathBuffer) == 0 ) {
+            throw openrave_exception("GetTempPath failed");
+        }
+        if( GetTempFileName(lpPathBuffer, "openrave_rawdae", 0, szTempName) == 0 ) {
+            throw openrave_exception("GetTempFileName failed");
+        }
+        string rawfilename = szTempName;
+#else
+        // unix environment
+        class UnlinkFilename
+        {
+        public:
+        UnlinkFilename(const std::string& filename) : _filename(filename) {}
+            virtual ~UnlinkFilename() { unlink(_filename.c_str()); }
+            std::string _filename;
+        };
+
+#if HAVE_MKSTEMP
+        string rawfilename = "/tmp/openrave_rawdaeXXXXXX";
+
+        int fd = mkstemp(&rawfilename[0]);
+        if( fd == -1 ) {
+            throw openrave_exception(str(boost::format("failed to create temporary file with template %s")%rawfilename));
+        }
+        close(fd);
+#else
+        bool bfoundfile = false;
+        for(int iter = 0; iter < 1000; ++iter) {
+            rawfilename = str(boost::format("openrave_rawdae%d.dae")%name%rand());
+            if( !!std::ifstream(rawfilename.c_str())) {
+                bfoundfile = true;
+                break;
+            }
+        }
+        if( !bfoundfile ) {
+            throw openrave_exception(str(boost::format("failed to create temporary file with template %s")%rawfilename));
+        }
+#endif
+        UnlinkFilename unlinkfilename(rawfilename);
+#endif
+
+        rawfilename += ".dae";
+        if( !_collada->writeTo(_doc->getDocumentURI()->getURI(), rawfilename.c_str()) ) {
+            throw openrave_exception(str(boost::format("failed to save collada file to %s")%rawfilename));
+        }
+
+        zipFile zf;
+#ifdef _WIN32
+        zlib_filefunc64_def ffunc;
+        fill_win32_filefunc64A(&ffunc);
+        zf = zipOpen2_64(filename.c_str(),APPEND_STATUS_CREATE,NULL,&ffunc);
+#else
+        zf = zipOpen64(filename.c_str(),APPEND_STATUS_CREATE);
+#endif
+        if (!zf) {
+            throw openrave_exception(str(boost::format("error opening %s")%filename));
+        }
+
+        FILE * fin=NULL;
+        time_t curtime = time(NULL);
+        struct tm* timeofday = localtime(&curtime);
+        zip_fileinfo zi;
+        zi.tmz_date.tm_sec = timeofday->tm_sec;
+        zi.tmz_date.tm_min = timeofday->tm_min;
+        zi.tmz_date.tm_hour = timeofday->tm_hour;
+        zi.tmz_date.tm_mday = timeofday->tm_mday;
+        zi.tmz_date.tm_mon = timeofday->tm_mon;
+        zi.tmz_date.tm_year = timeofday->tm_year;
+        zi.dosDate = 0;
+        zi.internal_fa = 0;
+        zi.external_fa = 0;
+
+        int zip64=0;
+        fin = fopen64(rawfilename.c_str(), "rb");
+        if(!!fin) {
+            fseeko64(fin, 0, SEEK_END);
+            ZPOS64_T pos = ftello64(fin);
+            if(pos >= 0xffffffff) {
+                zip64 = 1;
+            }
+            fclose(fin); fin = NULL;
+        }
+
+        char* password=NULL;
+        unsigned long crcFile=0;
+        int opt_compress_level = 9;
+        int err = zipOpenNewFileInZip3_64(zf,savefilenameinzip.c_str(),&zi,NULL,0,NULL,0,"collada file generated by openrave",Z_DEFLATED, opt_compress_level,0,-MAX_WBITS, DEF_MEM_LEVEL, Z_DEFAULT_STRATEGY,password,crcFile, zip64);
+        if (err != ZIP_OK) {
+            RAVELOG_WARN(str(boost::format("zipOpenNewFileInZip3_64 error %d")%err));
+        }
+        else {
+            fin = fopen64(rawfilename.c_str(),"rb");
+            if (fin==NULL) {
+                err=ZIP_ERRNO;
+                RAVELOG_WARN(str(boost::format("error in opening %s in zipfile")%rawfilename));
+            }
+        }
+
+        if( err == ZIP_OK ) {
+            size_t size_read=0;
+            do {
+                err = ZIP_OK;
+                size_read = fread(&buf[0],1,buf.size(),fin);
+                if (size_read < buf.size()) {
+                    if (feof(fin)==0) {
+                        RAVELOG_WARN(str(boost::format("error in reading %s")%rawfilename));
+                        err = ZIP_ERRNO;
+                    }
+                }
+                if (size_read>0) {
+                    err = zipWriteInFileInZip (zf,&buf[0],size_read);
+                    if (err<0) {
+                        RAVELOG_WARN(str(boost::format("error in writing %s in the zipfile")%rawfilename));
+                    }
+                }
+            } while ((err == ZIP_OK) && (size_read>0));
+        }
+        if (fin) {
+            fclose(fin);
+        }
+        if (err<0) {
+            RAVELOG_WARN(str(boost::format("error in writing: %d")%err));
+            err=ZIP_ERRNO;
+        }
+        else {
+            err = zipCloseFileInZip(zf);
+            if (err!=ZIP_OK) {
+                RAVELOG_WARN(str(boost::format("error in closing %s in the zipfile")%rawfilename));
+            }
+        }
+        if (err<0) {
+            RAVELOG_WARN(str(boost::format("error in writing %s in the zipfile")%rawfilename));
+        }
+        
+        // add the manifest
+        string smanifest = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<dae_root>./";
+        smanifest += savefilenameinzip;
+        smanifest += "</dae_root>\n";
+        err = zipOpenNewFileInZip3_64(zf,"manifest.xml",&zi,NULL,0,NULL,0,NULL,Z_DEFLATED, opt_compress_level,0,-MAX_WBITS, DEF_MEM_LEVEL, Z_DEFAULT_STRATEGY,password,crcFile, zip64);
+        if (err == ZIP_OK) {
+            err = zipWriteInFileInZip (zf,&smanifest[0],smanifest.size());
+            err = zipCloseFileInZip(zf);
+        }
+        if (err<0) {
+            RAVELOG_WARN(str(boost::format("error in writing manifest.xml in the zipfile: %d")%err));
+        }
+
+        int errclose = zipClose(zf,NULL);
+        if (errclose != ZIP_OK) {
+            throw openrave_exception(str(boost::format("error in closing %s")%filename));
+        }
     }
 
  private:
@@ -1138,6 +1332,7 @@ class ColladaWriter : public daeErrorHandler
 
     boost::shared_ptr<DAE> _collada;
     domCOLLADA* _dom;
+    daeDocument* _doc;
     domCOLLADA::domSceneRef _globalscene;
     domLibrary_visual_scenesRef _visualScenesLib;
     domLibrary_kinematics_scenesRef _kinematicsScenesLib;

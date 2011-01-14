@@ -20,8 +20,15 @@
 #include <boost/algorithm/string.hpp> // boost::trim
 #include <boost/lexical_cast.hpp>
 
-#define CHECK_INTERNAL_COMPUTATION { \
+// used for functions that are also used internally
+#define CHECK_INTERNAL_COMPUTATION0 { \
     if( _nHierarchyComputed == 0 ) { \
+        throw openrave_exception(str(boost::format("%s: joint hierarchy needs to be computed, current value is %d")%__PRETTY_FUNCTION__%_nHierarchyComputed)); \
+    } \
+} \
+
+#define CHECK_INTERNAL_COMPUTATION { \
+    if( _nHierarchyComputed != 2 ) { \
         throw openrave_exception(str(boost::format("%s: joint hierarchy needs to be computed, current value is %d")%__PRETTY_FUNCTION__%_nHierarchyComputed)); \
     } \
 } \
@@ -1515,7 +1522,7 @@ KinBody::KinBody(InterfaceType type, EnvironmentBasePtr penv) : InterfaceBase(ty
     _nParametersChanged = 0;
     _bMakeJoinedLinksAdjacent = true;
     _environmentid = 0;
-    _nNonAdjacentLinkCache = 0;
+    _nNonAdjacentLinkCache = 0x80000000;
     _nUpdateStampId = 0;
 }
 
@@ -1549,13 +1556,10 @@ void KinBody::Destroy()
     _vDOFIndices.clear();
 
     _setAdjacentLinks.clear();
-    FOREACH(it,_setNonAdjacentLinks) {
-        it->clear();
-    }
+    _vInitialLinkTransformations.clear();
     _vAllPairsShortestPaths.clear();
     _vClosedLoops.clear();
     _vClosedLoopIndices.clear();
-    _nNonAdjacentLinkCache = 0;
     _vForcedAdjacentLinks.clear();
     _nHierarchyComputed = 0;
     _nParametersChanged = 0;
@@ -1563,6 +1567,8 @@ void KinBody::Destroy()
     _pPhysicsData.reset();
     _pCollisionData.reset();
     _pManageData.reset();
+
+    _ResetInternalCollisionCache();
 }
 
 bool KinBody::InitFromFile(const std::string& filename, const std::list<std::pair<std::string,std::string> >& atts)
@@ -1963,6 +1969,7 @@ bool KinBody::SetVelocity(const Vector& linearvel, const Vector& angularvel)
 
 bool KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocity, const Vector& linearvel, const Vector& angularvel, bool checklimits)
 {
+    CHECK_INTERNAL_COMPUTATION;
     if( (int)vDOFVelocity.size() != GetDOF() ) {
         throw openrave_exception(str(boost::format("dof not equal %d!=%d")%vDOFVelocity.size()%GetDOF()),ORE_InvalidArguments);
     }
@@ -2221,6 +2228,7 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, const Transfo
 
 void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, bool bCheckLimits)
 {
+    CHECK_INTERNAL_COMPUTATION;
     _nUpdateStampId++;
     if( (int)vJointValues.size() != GetDOF() ) {
         throw openrave_exception(str(boost::format("dof not equal %d!=%d")%vJointValues.size()%GetDOF()),ORE_InvalidArguments);
@@ -2477,7 +2485,7 @@ const std::vector< std::vector< std::pair<KinBody::LinkPtr, KinBody::JointPtr> >
 
 bool KinBody::GetChain(int linkindex1, int linkindex2, std::vector<JointPtr>& vjoints) const
 {
-    CHECK_INTERNAL_COMPUTATION;
+    CHECK_INTERNAL_COMPUTATION0;
     BOOST_ASSERT(linkindex1>=0&&linkindex1<(int)_veclinks.size());
     BOOST_ASSERT(linkindex2>=0&&linkindex2<(int)_veclinks.size());
     vjoints.resize(0);
@@ -2496,7 +2504,7 @@ bool KinBody::GetChain(int linkindex1, int linkindex2, std::vector<JointPtr>& vj
 
 bool KinBody::GetChain(int linkindex1, int linkindex2, std::vector<LinkPtr>& vlinks) const
 {
-    CHECK_INTERNAL_COMPUTATION;
+    CHECK_INTERNAL_COMPUTATION0;
     BOOST_ASSERT(linkindex1>=0&&linkindex1<(int)_veclinks.size());
     BOOST_ASSERT(linkindex2>=0&&linkindex2<(int)_veclinks.size());
     vlinks.resize(0);
@@ -2523,7 +2531,7 @@ bool KinBody::GetChain(int linkindex1, int linkindex2, std::vector<LinkPtr>& vli
 
 bool KinBody::IsDOFInChain(int linkindex1, int linkindex2, int dofindex) const
 {
-    CHECK_INTERNAL_COMPUTATION;
+    CHECK_INTERNAL_COMPUTATION0;
     int jointindex = _vDOFIndices.at(dofindex);
     return (DoesAffect(jointindex,linkindex1)==0) != (DoesAffect(jointindex,linkindex2)==0);
 }
@@ -2599,6 +2607,15 @@ void KinBody::CalculateJacobian(int linkindex, const Vector& trans, boost::multi
     FOREACHC(itjoint, _vPassiveJoints) {
         for(int idof = 0; idof < (*itjoint)->GetDOF(); ++idof) {
             if( (*itjoint)->IsMimic(idof) ) {
+                bool usejoint = false;
+                FOREACHC(itmimicdof,(*itjoint)->_vmimic[idof]->_vmimicdofs) {
+                    if( DoesAffect(itmimicdof->dofindex,linkindex) ) {
+                        usejoint = true;
+                    }
+                }
+                if( !usejoint ) {
+                    continue;
+                }
                 Vector vaxis;
                 switch((*itjoint)->GetType()) {
                 case Joint::JointHinge:
@@ -2685,6 +2702,15 @@ void KinBody::CalculateRotationJacobian(int linkindex, const Vector& q, boost::m
     FOREACHC(itjoint, _vPassiveJoints) {
         for(int idof = 0; idof < (*itjoint)->GetDOF(); ++idof) {
             if( (*itjoint)->IsMimic(idof) ) {
+                bool usejoint = false;
+                FOREACHC(itmimicdof,(*itjoint)->_vmimic[idof]->_vmimicdofs) {
+                    if( DoesAffect(itmimicdof->dofindex,linkindex) ) {
+                        usejoint = true;
+                    }
+                }
+                if( !usejoint ) {
+                    continue;
+                }
                 Vector vaxis;
                 switch((*itjoint)->GetType()) {
                 case Joint::JointHinge:
@@ -2769,6 +2795,15 @@ void KinBody::CalculateAngularVelocityJacobian(int linkindex, boost::multi_array
     FOREACHC(itjoint, _vPassiveJoints) {
         for(int idof = 0; idof < (*itjoint)->GetDOF(); ++idof) {
             if( (*itjoint)->IsMimic(idof) ) {
+                bool usejoint = false;
+                FOREACHC(itmimicdof,(*itjoint)->_vmimic[idof]->_vmimicdofs) {
+                    if( DoesAffect(itmimicdof->dofindex,linkindex) ) {
+                        usejoint = true;
+                    }
+                }
+                if( !usejoint ) {
+                    continue;
+                }
                 Vector vaxis;
                 switch((*itjoint)->GetType()) {
                 case Joint::JointHinge:
@@ -2972,6 +3007,14 @@ void KinBody::_ComputeInternalInformation()
     }
     catch(const openrave_exception& ex) {
         RAVELOG_ERROR(str(boost::format("failed to set mimic equations on kinematics body %s: %s\n")%GetName()%ex.what()));
+        for(int ijoints = 0; ijoints < 2; ++ijoints) {
+            vector<JointPtr>& vjoints = ijoints ? _vPassiveJoints : _vecjoints;
+            FOREACH(itjoint,vjoints) {
+                for(int i = 0; i < (*itjoint)->GetDOF(); ++i) {
+                    (*itjoint)->_vmimic[i].reset();
+                }
+            }
+        }
     }
 
     _vTopologicallySortedJoints.resize(0);
@@ -3487,17 +3530,8 @@ void KinBody::_ComputeInternalInformation()
 
     // create the adjacency list
     {
-        // set to 0 when computing hashes
-        vector<dReal> vprev; GetDOFValues(vprev);
-        vector<dReal> vzero(GetDOF(),0);
-        SetDOFValues(vzero);
-
+        GetBodyTransformations(_vInitialLinkTransformations);
         _setAdjacentLinks.clear();
-        FOREACH(it,_setNonAdjacentLinks) {
-            it->clear();
-        }
-        _nNonAdjacentLinkCache = 0;
-
         FOREACH(itadj, _vForcedAdjacentLinks) {
             LinkPtr pl0 = GetLink(itadj->first.c_str());
             LinkPtr pl1 = GetLink(itadj->second.c_str());
@@ -3560,22 +3594,13 @@ void KinBody::_ComputeInternalInformation()
                 }
             }
         }
-
-        // set a default pose and check for colliding link pairs
-        {
-            CollisionOptionsStateSaver colsaver(GetEnv()->GetCollisionChecker(),0); // have to reset the collision options
-            for(size_t i = 0; i < _veclinks.size(); ++i) {
-                for(size_t j = i+1; j < _veclinks.size(); ++j) {
-                    if( _setAdjacentLinks.find(i|(j<<16)) == _setAdjacentLinks.end() && !GetEnv()->CheckCollision(LinkConstPtr(_veclinks[i]), LinkConstPtr(_veclinks[j])) ) {
-                        _setNonAdjacentLinks[0].insert(i|(j<<16));
-                    }
-                }
-            }
-        }
-
-        SetDOFValues(vprev);
+        _ResetInternalCollisionCache();
     }
     _nHierarchyComputed = 2;
+    // because of mimic joints, need to call SetDOFValues at least once
+    vector<dReal> vcurrentvalues;
+    GetDOFValues(vcurrentvalues);
+    SetDOFValues(vcurrentvalues);
     // notify any callbacks of the changes
     if( _nParametersChanged ) {
         std::list<std::pair<int,boost::function<void()> > > listRegisteredCallbacks = _listRegisteredCallbacks; // copy since it can be changed
@@ -3684,15 +3709,54 @@ int KinBody::GetEnvironmentId() const
 
 int8_t KinBody::DoesAffect(int jointindex, int linkindex ) const
 {
-    CHECK_INTERNAL_COMPUTATION;
+    CHECK_INTERNAL_COMPUTATION0;
     BOOST_ASSERT(jointindex >= 0 && jointindex < (int)_vecjoints.size());
     BOOST_ASSERT(linkindex >= 0 && linkindex < (int)_veclinks.size());
     return _vJointsAffectingLinks.at(jointindex*_veclinks.size()+linkindex);
 }
 
+void KinBody::_ResetInternalCollisionCache()
+{
+    _nNonAdjacentLinkCache = 0x80000000;
+    FOREACH(it,_setNonAdjacentLinks) {
+        it->clear();
+    }
+}
+
 const std::set<int>& KinBody::GetNonAdjacentLinks(int adjacentoptions) const
 {
+    class TransformsSaver
+    {
+    public:
+        TransformsSaver(KinBodyConstPtr pbody) : _pbody(pbody) { _pbody->GetBodyTransformations(vcurtrans); }
+        ~TransformsSaver() {
+            for(size_t i = 0; i < _pbody->_veclinks.size(); ++i) {
+                boost::static_pointer_cast<Link>(_pbody->_veclinks[i])->_t = vcurtrans.at(i);
+            }
+        }
+    private:
+        KinBodyConstPtr _pbody;
+        std::vector<Transform> vcurtrans;
+    };
+
     CHECK_INTERNAL_COMPUTATION;
+    if( _nNonAdjacentLinkCache & 0x80000000 ) {
+        // Check for colliding link pairs given the initial pose _vInitialLinkTransformations
+        // this is actually weird, we need to call the individual link collisions on a const body. in order to pull this off, we need to be very careful with the body state.
+        TransformsSaver saver(shared_kinbody_const());
+        CollisionOptionsStateSaver colsaver(GetEnv()->GetCollisionChecker(),0); // have to reset the collision options
+        for(size_t i = 0; i < _veclinks.size(); ++i) {
+            boost::static_pointer_cast<Link>(_veclinks[i])->_t = _vInitialLinkTransformations.at(i);
+        }
+        for(size_t i = 0; i < _veclinks.size(); ++i) {
+            for(size_t j = i+1; j < _veclinks.size(); ++j) {
+                if( _setAdjacentLinks.find(i|(j<<16)) == _setAdjacentLinks.end() && !GetEnv()->CheckCollision(LinkConstPtr(_veclinks[i]), LinkConstPtr(_veclinks[j])) ) {
+                    _setNonAdjacentLinks[0].insert(i|(j<<16));
+                }
+            }
+        }
+        _nNonAdjacentLinkCache = 0;
+    }
     if( (_nNonAdjacentLinkCache&adjacentoptions) != adjacentoptions ) {
         int requestedoptions = (~_nNonAdjacentLinkCache)&adjacentoptions;
         // find out what needs to computed
@@ -3793,8 +3857,7 @@ bool KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     _vDOFIndices = r->_vDOFIndices;
     
     _setAdjacentLinks = r->_setAdjacentLinks;
-    _setNonAdjacentLinks = r->_setNonAdjacentLinks;
-    _nNonAdjacentLinkCache = r->_nNonAdjacentLinkCache;
+    _vInitialLinkTransformations = r->_vInitialLinkTransformations;
     _vForcedAdjacentLinks = r->_vForcedAdjacentLinks;
     _vAllPairsShortestPaths = r->_vAllPairsShortestPaths;
     _vClosedLoopIndices = r->_vClosedLoopIndices;
@@ -3822,6 +3885,9 @@ bool KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     
     _listAttachedBodies.clear(); // will be set in the environment
     _listRegisteredCallbacks.clear(); // reset the callbacks
+
+    // cache
+    _ResetInternalCollisionCache();
 
     _nUpdateStampId++; // update the stamp instead of copying
     return true;
@@ -3951,9 +4017,9 @@ boost::shared_ptr<FunctionParserBase<dReal> > KinBody::_CreateFunctionParser()
     parser->AddFunction("polyroots6",fparser_polyroots<6>,7);
     parser->AddFunction("polyroots7",fparser_polyroots<7>,8);
     parser->AddFunction("polyroots8",fparser_polyroots<8>,9);
-    parser->AddFunction("sssa",fparser_sssa,3);
-    parser->AddFunction("sasa",fparser_sasa,3);
-    parser->AddFunction("sass",fparser_sass,3);
+    parser->AddFunction("SSSA",fparser_sssa,3);
+    parser->AddFunction("SASA",fparser_sasa,3);
+    parser->AddFunction("SASS",fparser_sass,3);
     return parser;
 }
 

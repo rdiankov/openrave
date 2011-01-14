@@ -1020,9 +1020,12 @@ protected:
     virtual void SetCollisionData(UserDataPtr pdata) { _pCollisionData = pdata; }
     virtual void SetManageData(ManageDataPtr pdata) { _pManageData = pdata; }
 
-    /// \brief Proprocess the kinematic body and build the internal hierarchy.
-    ///
-    /// This method is called after the body is finished being initialized with data and before being added to the environment. Also builds the hashes.
+    /** \brief Final post-processing stage before a kinematics body can be used.
+    
+        This method is called after the body is finished being initialized with data and before being added to the environment. Also builds the hashes. Builds the internal hierarchy and kinematic body hash.
+        
+        Avoids making specific calls on the collision checker (like CheckCollision) or physics engine (like simulating velocities/torques) since this information can change depending on the attached plugin.
+    */
     virtual void _ComputeInternalInformation();
 
     /// \brief Called to notify the body that certain groups of parameters have been changed.
@@ -1042,6 +1045,9 @@ protected:
     /// \return true if body was successfully found and removed
     virtual bool _RemoveAttachedBody(KinBodyPtr body);
 
+    /// \brief resets cached information dependent on the collision checker (usually called when the collision checker is switched or some big mode is set.
+    virtual void _ResetInternalCollisionCache();
+
     /// creates the function parser connected to this body's joint values
     virtual boost::shared_ptr<FunctionParserBase<dReal> > _CreateFunctionParser();
 
@@ -1060,11 +1066,14 @@ protected:
     std::vector<JointPtr> _vPassiveJoints; ///< \see GetPassiveJoints()
     std::set<int> _setAdjacentLinks;        ///< a set of which links are connected to which if link i and j are connected then
                                             ///< i|(j<<16) will be in the set where i<j.
-    mutable boost::array<std::set<int>, 4> _setNonAdjacentLinks;     ///< contains cached versions of the non-adjacent links depending on values in AdjacentOptions. Declared as mutable since data is cached.
     std::vector< std::pair<std::string, std::string> > _vForcedAdjacentLinks; ///< internally stores forced adjacent links
     std::list<KinBodyWeakPtr> _listAttachedBodies; ///< list of bodies that are directly attached to this body (can have duplicates)
-    mutable int _nNonAdjacentLinkCache; ///< specifies what information is currently valid in the AdjacentOptions.  Declared as mutable since data is cached.
     std::list<std::pair<int,boost::function<void()> > > _listRegisteredCallbacks; ///< callbacks to call when particular properties of the body change.
+
+    mutable boost::array<std::set<int>, 4> _setNonAdjacentLinks;     ///< contains cached versions of the non-adjacent links depending on values in AdjacentOptions. Declared as mutable since data is cached.
+    mutable int _nNonAdjacentLinkCache; ///< specifies what information is currently valid in the AdjacentOptions.  Declared as mutable since data is cached. If 0x80000000 (ie < 0), then everything needs to be recomputed including _setNonAdjacentLinks[0].
+    std::vector<Transform> _vInitialLinkTransformations; ///< the initial transformations of each link specifying at least one pose where the robot is collision free
+
     int _environmentid; ///< \see GetEnvironmentId
     int _nUpdateStampId; ///< \see GetUpdateStamp
     int _nParametersChanged; ///< set of parameters that changed and need callbacks

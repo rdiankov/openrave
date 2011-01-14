@@ -3528,12 +3528,34 @@ bool FunctionParserBase<Value_t>::toMathML(std::string& sout, const std::vector<
 // User-defined function calls:
         case cFCall:
               {
-                  printf("function calls not supported when converting to MathML\n");
+                  
                   unsigned index = byteCode[++IP];
                   unsigned params = mData->mFuncPtrs[index].mParams;
-                  //Value_t retVal = mData->mFuncPtrs[index].mFuncPtr(&Stack[SP-params+1]);
+                  // go through the existing names to find the function name
+                  string functionname;
+                  for(typename NamePtrsMap<Value_t>::iterator i = mData->mNamePtrs.begin(); i != mData->mNamePtrs.end(); ++i) {
+                      if(i->second.type == NameData<Value_t>::FUNC_PTR && i->second.index == index ) {
+                          functionname = std::string(i->first.name,i->first.nameLength);
+                          break;
+                      }
+                  }
+                  if( functionname.size() == 0 ) {
+                      mEvalErrorType = SYNTAX_ERROR;
+                      return false;
+                  }
+
+                  // custom function, so use csymbol
+                  std::string s; s.reserve(100);
+                  s += "<apply>\n";
+                  s += "<csymbol encoding=\"text/xml\" definitionURL=\"\" type=\"function\">";
+                  s += functionname;
+                  s += "</csymbol>\n";
+                  for(unsigned i = 0; i < params; ++i) {
+                      s += Stack[SP-params+1+i];
+                  }
+                  s += "</apply>\n";
                   SP -= int(params)-1;
-                  Stack[SP] = "";
+                  Stack[SP] = s;
                   break;
               }
 

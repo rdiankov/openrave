@@ -187,7 +187,7 @@ int main(int argc, char ** argv)
             vIvFiles.push_back(argv[i]);
             i++;
         }
-        else if( strstr(argv[i], ".xml") != NULL || strstr(argv[i], ".dae") != NULL ) {
+        else if( strstr(argv[i], ".xml") != NULL || strstr(argv[i], ".dae") != NULL || strstr(argv[i], ".zae") != NULL ) {
             vXMLFiles.push_back(argv[i]);
             i++;
         }

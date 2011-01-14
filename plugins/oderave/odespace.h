@@ -232,9 +232,9 @@ public:
             boost::shared_ptr<KinBodyInfo::LINK> link(new KinBodyInfo::LINK());
             link->body = dBodyCreate(GetWorld());
 
-            if( (*itlink)->IsStatic() )
+            if( (*itlink)->IsStatic() ) {
                 dBodyDisable(link->body);
-
+            }
             // add all the correct geometry objects
             FOREACHC(itgeom, (*itlink)->GetGeometries()) {
                 dGeomID geom = NULL;
@@ -251,18 +251,16 @@ public:
                 case KinBody::Link::GEOMPROPERTIES::GeomTrimesh:
                     if( itgeom->GetCollisionMesh().indices.size() > 0 ) {
                         dTriIndex* pindices = new dTriIndex[itgeom->GetCollisionMesh().indices.size()];
-                        for(size_t i = 0; i < itgeom->GetCollisionMesh().indices.size(); ++i)
+                        for(size_t i = 0; i < itgeom->GetCollisionMesh().indices.size(); ++i) {
                             pindices[i] = itgeom->GetCollisionMesh().indices[i];
-                        
+                        }
                         dReal* pvertices = new dReal[4*itgeom->GetCollisionMesh().vertices.size()];
                         for(size_t i = 0; i < itgeom->GetCollisionMesh().vertices.size(); ++i) {
                             Vector v = itgeom->GetCollisionMesh().vertices[i];
                             pvertices[4*i+0] = v.x; pvertices[4*i+1] = v.y; pvertices[4*i+2] = v.z;
                         }
-                
                         dTriMeshDataID id = dGeomTriMeshDataCreate();
-                        dGeomTriMeshDataBuildSimple(id, pvertices, itgeom->GetCollisionMesh().vertices.size(), pindices,
-                                                    itgeom->GetCollisionMesh().indices.size());
+                        dGeomTriMeshDataBuildSimple(id, pvertices, itgeom->GetCollisionMesh().vertices.size(), pindices, itgeom->GetCollisionMesh().indices.size());
                         geom = dCreateTriMesh(0, id, NULL, NULL, NULL);
                         link->listtrimeshinds.push_back(pindices);
                     }
@@ -272,9 +270,9 @@ public:
                     break;
                 }
 
-                if( geom == NULL )
+                if( geom == NULL ) {
                     continue;
-
+                }
                 dGeomID geomtrans = dCreateGeomTransform(pinfo->space);
                 dGeomTransformSetCleanup(geomtrans, 1);
                 dGeomTransformSetGeom(geomtrans, geom);

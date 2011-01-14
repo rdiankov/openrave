@@ -40,8 +40,12 @@ const char s_filesep = '\\';
 const char s_filesep = '/';
 #endif
 
-#include "libm_accuracy_results.h"
 #if defined(USE_CRLIBM)
+
+#ifdef LIBM_ACCURACY_RESULTS_H
+#include LIBM_ACCURACY_RESULTS_H
+#endif
+
 // use round-nearest versions since it is the default
 #ifdef LIBM_EXP_ACCURATE
 dReal RaveExp(dReal f) { return exp(f); }

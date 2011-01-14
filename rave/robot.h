@@ -76,18 +76,18 @@ public:
         virtual Transform GetGraspTransform() const { return _tGrasp; }
 
         /// \brief Gripper indices of the joints that the  manipulator controls.
-        virtual const std::vector<int>& GetGripperIndices() const { return _vgripperdofindices; }
+        virtual const std::vector<int>& GetGripperIndices() const { return __vgripperdofindices; }
 
         /// \deprecated (10/07/22) see GetGripperIndices()
-        virtual const std::vector<int>& GetGripperJoints() const RAVE_DEPRECATED { return _vgripperdofindices; }
+        virtual const std::vector<int>& GetGripperJoints() const RAVE_DEPRECATED { return __vgripperdofindices; }
         
         /// \deprecated (10/07/22) see GetArmIndices()
-        virtual const std::vector<int>& GetArmJoints() const RAVE_DEPRECATED { return _varmdofindices; }
+        virtual const std::vector<int>& GetArmJoints() const RAVE_DEPRECATED { return __varmdofindices; }
 
         /// \brief Return the indices of the DOFs of the arm (used for IK, etc).
         ///
         /// Usually the DOF indices from pBase to pEndEffector
-        virtual const std::vector<int>& GetArmIndices() const { return _varmdofindices; }
+        virtual const std::vector<int>& GetArmIndices() const { return __varmdofindices; }
 
         /// \brief return the normal direction to move joints to 'close' the hand
         virtual const std::vector<dReal>& GetClosingDirection() const { return _vClosingDirection; }
@@ -183,15 +183,18 @@ public:
         /// This includes joint axes, joint positions, and final grasp transform. Hash is used to cache the solvers.
         virtual const std::string& GetKinematicsStructureHash() const;
     private:
-        RobotBaseWeakPtr _probot;
+        std::string _name;
         LinkPtr _pBase, _pEndEffector;
         Transform _tGrasp;
-        std::vector<int> _vgripperdofindices, _varmdofindices;
         std::vector<dReal> _vClosingDirection;
         Vector _vdirection;
         IkSolverBasePtr _pIkSolver;
-        std::string _name;
         std::string _strIkSolver;
+        std::vector<std::string> _vgripperjointnames; ///< names of the gripper joints
+
+        // auto-generated
+        RobotBaseWeakPtr _probot;
+        std::vector<int> __vgripperdofindices, __varmdofindices;
         std::string __hashstructure, __hashkinematicsstructure;
 
 #ifdef RAVE_PRIVATE

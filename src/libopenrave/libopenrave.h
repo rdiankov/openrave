@@ -125,6 +125,18 @@ inline static uint64_t GetMicroTime()
 
 namespace OpenRAVE {
 
+template <typename T>
+class TransformSaver
+{
+public:
+    TransformSaver(T plink) : _plink(plink) { _t = _plink->GetTransform(); }
+    ~TransformSaver() { _plink->SetTransform(_t); }
+    const Transform& GetTransform() { return _t; }
+private:
+    T _plink;
+    Transform _t;
+};
+
 struct null_deleter
 {
     void operator()(void const *) const {}

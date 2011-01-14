@@ -1,9 +1,14 @@
+check_function_exists(mkstemps HAVE_MKSTEMP)
+if( HAVE_MKSTEMP )
+  add_definitions("-DHAVE_MKSTEMP")
+endif()
+
 set(coreLIBS ${openrave_libraries})
 
 if( COLLADA_FOUND )
   set(LIB_COMPILE_FLAGS "${LIB_COMPILE_FLAGS} -DOPENRAVE_COLLADA_SUPPORT")
-  include_directories(${COLLADA_INCLUDE_DIR})
-  set (coreLIBS ${coreLIBS} ${COLLADA_LIBRARY})
+  include_directories(${COLLADA_INCLUDE_DIR} ${MINIZIP_INCLUDE_DIR})
+  set (coreLIBS ${coreLIBS} ${COLLADA_LIBRARY} minizip)
 endif()
 
 if( CLOCK_GETTIME_FOUND )

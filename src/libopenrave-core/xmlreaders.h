@@ -45,12 +45,6 @@
 
 BOOST_STATIC_ASSERT(sizeof(xmlChar) == 1);
 
-#ifdef _WIN32
-const char s_filesep = '\\';
-#else
-const char s_filesep = '/';
-#endif
-
 namespace OpenRAVEXMLParser
 {
     static boost::once_flag __onceCreateXMLMutex = BOOST_ONCE_INIT;
@@ -2148,16 +2142,6 @@ namespace OpenRAVEXMLParser
                 return true;
 
             if( xmlname == "manipulator" ) {
-                if( _pmanip->_vgripperdofindices.size() != _pmanip->_vClosingDirection.size() ) {
-                    if( _pmanip->_vClosingDirection.size() == 0 ) {
-                        RAVELOG_DEBUG(str(boost::format("setting manipulator %s closing direction to zeros\n")%_pmanip->GetName()));
-                        _pmanip->_vClosingDirection.resize(_pmanip->_vgripperdofindices.size(),0);
-                    }
-                    else {
-                        RAVELOG_WARN(str(boost::format("Manipulator %s has closing direction grasps wrong %d!=%d\n")%_pmanip->GetName()%_pmanip->_vgripperdofindices.size()%_pmanip->_vClosingDirection.size()));
-                        _pmanip->_vClosingDirection.resize(_pmanip->_vgripperdofindices.size(),0);
-                    }
-                }
                 return true;
             }
             else if( xmlname == "effector" ) {
@@ -2179,15 +2163,7 @@ namespace OpenRAVEXMLParser
                 }
             }
             else if( xmlname == "joints" || xmlname == "gripperjoints" ) {
-                vector<string> jointnames((istream_iterator<string>(_ss)), istream_iterator<string>());
-                _pmanip->_vgripperdofindices.resize(0);
-                FOREACH(itname,jointnames) {
-                    int index = _probot->GetJointIndex(*itname);
-                    if( index < 0 )
-                        RAVELOG_WARN(str(boost::format("failed to find gripper joint name %s\n")%*itname));
-                    else
-                        _pmanip->_vgripperdofindices.push_back(index);
-                }
+                _pmanip->_vgripperjointnames = vector<string>((istream_iterator<string>(_ss)), istream_iterator<string>());
             }
             else if( xmlname == "armjoints" ) {
                 RAVELOG_WARN("<armjoints> for <manipulator> tag is not used anymore\n");

@@ -152,6 +152,12 @@ inline std::string tolowerstring(const std::string & s)
     return d;
 }
 
+#ifdef _WIN32
+static const char s_filesep = '\\';
+#else
+static const char s_filesep = '/';
+#endif
+
 // need the prototypes in order to keep them free of the OpenRAVE namespace
 namespace OpenRAVEXMLParser
 {
@@ -252,9 +258,9 @@ bool RaveParseColladaData(EnvironmentBasePtr penv, const std::string& data);
 bool RaveParseColladaData(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& data);
 bool RaveParseColladaData(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& data);
 
-bool RaveWriteColladaFile(EnvironmentBasePtr penv, const std::string& filename);
-bool RaveWriteColladaFile(KinBodyPtr pbody, const std::string& filename);
-bool RaveWriteColladaFile(RobotBasePtr probot, const std::string& filename);
+void RaveWriteColladaFile(EnvironmentBasePtr penv, const std::string& filename);
+void RaveWriteColladaFile(KinBodyPtr pbody, const std::string& filename);
+void RaveWriteColladaFile(RobotBasePtr probot, const std::string& filename);
 
 #include "ivcon.h"
 #include "xmlreaders.h"

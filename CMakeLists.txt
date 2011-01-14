@@ -262,8 +262,9 @@ else()
   message(STATUS "Using single precision")
 endif()
 
+set(interfacehashes_h ${CMAKE_CURRENT_BINARY_DIR}/rave/interfacehashes.h)
 add_custom_command(
-  OUTPUT ${CMAKE_SOURCE_DIR}/rave/classhashes.h
+  OUTPUT ${interfacehashes_h}
   COMMAND ${CPPGENMD5}
   ARGS "${OPENRAVE_PRECISION}" "${CMAKE_SOURCE_DIR}/rave/interface.h"
        "${CMAKE_SOURCE_DIR}/rave/collisionchecker.h" OPENRAVE_COLLISIONCHECKER_HASH
@@ -280,7 +281,7 @@ add_custom_command(
        "${CMAKE_SOURCE_DIR}/rave/trajectory.h" OPENRAVE_TRAJECTORY_HASH
        "${CMAKE_SOURCE_DIR}/rave/environment.h" OPENRAVE_ENVIRONMENT_HASH
        "${CMAKE_SOURCE_DIR}/rave/plugininfo.h" OPENRAVE_PLUGININFO_HASH
-       > "${CMAKE_SOURCE_DIR}/rave/classhashes.h"
+       > "${interfacehashes_h}"
   DEPENDS cpp-gen-md5
   ${CMAKE_SOURCE_DIR}/rave/collisionchecker.h
   ${CMAKE_SOURCE_DIR}/rave/robot.h
@@ -296,7 +297,7 @@ add_custom_command(
   ${CMAKE_SOURCE_DIR}/rave/trajectory.h
   ${CMAKE_SOURCE_DIR}/rave/environment.h)
 
-add_custom_target(classhashes_h ALL DEPENDS ${CMAKE_SOURCE_DIR}/rave/classhashes.h ${EXTRA_MSVC_DEPEND})
+add_custom_target(interfacehashes_target ALL DEPENDS ${interfacehashes_h} ${EXTRA_MSVC_DEPEND})
 
 # math libraries
 find_package(GMP)
@@ -309,12 +310,9 @@ if( OPT_ACCURATEMATH AND NOT MSVC )
   set(CRLIBM_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/crlibm-1.0beta4")
   set(CRLIBM_FOUND 1)
   set(CRLIBM_LIBRARY crlibm)
-  add_subdirectory(check_libm_accuracy)
 else()
   set(CRLIBM_FOUND 0)
 endif()
-
-CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/defines.h.in ${CMAKE_CURRENT_SOURCE_DIR}/rave/defines.h)
 
 # always include coin3d (needed for file parsing)
 find_package(Coin)
@@ -520,9 +518,9 @@ else()
   set(IKFAST_INSTALLED_EXECUTABLE "")
 endif()
 
-CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/defines.h.in ${CMAKE_CURRENT_SOURCE_DIR}/rave/defines.h)
-
-file(GLOB rave_header_files ${CMAKE_CURRENT_SOURCE_DIR}/rave/*.h)
+CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/rave/config.h)
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
+file(GLOB rave_header_files ${CMAKE_CURRENT_SOURCE_DIR}/rave/*.h ${CMAKE_CURRENT_BINARY_DIR}/rave/config.h)
 
 add_subdirectory(src)
 add_subdirectory(octave_matlab)
@@ -570,8 +568,7 @@ if( WIN32 )
   install(FILES ${dll_files} DESTINATION bin)
 endif()
 
-file(GLOB rave_include_files ${CMAKE_CURRENT_SOURCE_DIR}/rave/*.h)
-install(FILES ${rave_include_files} ${CMAKE_CURRENT_SOURCE_DIR}/rave/defines.h ${CMAKE_SOURCE_DIR}/rave/classhashes.h DESTINATION include/rave)
+install(FILES ${rave_header_files} ${interfacehashes_h} DESTINATION include/rave)
 
 # add make uninstall capability
 configure_file(

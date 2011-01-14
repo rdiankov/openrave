@@ -56,7 +56,7 @@ if("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION}" STRGRE
   install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/models DESTINATION share/openrave PATTERN ".svn" EXCLUDE)
   install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/robots DESTINATION share/openrave PATTERN ".svn" EXCLUDE)
   install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/data DESTINATION share/openrave PATTERN ".svn" EXCLUDE)
-  install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/cppexamples  DESTINATION share/openrave PATTERN ".svn" EXCLUDE)
+  install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/cppexamples  DESTINATION share/openrave FILES_MATCHING PATTERN "*.cpp" PATTERN "*.xml" PATTERN "*.txt" PATTERN "*.bat" PATTERN ".svn" EXCLUDE)
 else()
   # manually install
   file(GLOB robot_files ${CMAKE_CURRENT_SOURCE_DIR}/robots/*.xml)

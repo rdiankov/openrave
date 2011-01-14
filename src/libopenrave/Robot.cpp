@@ -17,14 +17,14 @@
 #include "libopenrave.h"
 
 #define CHECK_INTERNAL_COMPUTATION { \
-    if( _nHierarchyComputed == 0 ) { \
+    if( _nHierarchyComputed != 2 ) { \
         throw openrave_exception(str(boost::format("%s: joint hierarchy needs to be computed (is body added to environment?)\n")%__PRETTY_FUNCTION__)); \
     } \
 } \
 
 namespace OpenRAVE {
 
-RobotBase::Manipulator::Manipulator(RobotBasePtr probot) : _probot(probot), _vdirection(0,0,1) {}
+RobotBase::Manipulator::Manipulator(RobotBasePtr probot) : _vdirection(0,0,1), _probot(probot) {}
 RobotBase::Manipulator::~Manipulator() {}
 
 RobotBase::Manipulator::Manipulator(const RobotBase::Manipulator& r)
@@ -91,9 +91,9 @@ bool RobotBase::Manipulator::FindIKSolution(const IkParameterization& goal, cons
     BOOST_ASSERT(_pIkSolver->GetManipulator() == shared_from_this() );
     vector<dReal> temp;
     GetRobot()->GetDOFValues(temp);
-    solution.resize(_varmdofindices.size());
-    for(size_t i = 0; i < _varmdofindices.size(); ++i) {
-        solution[i] = temp[_varmdofindices[i]];
+    solution.resize(__varmdofindices.size());
+    for(size_t i = 0; i < __varmdofindices.size(); ++i) {
+        solution[i] = temp[__varmdofindices[i]];
     }
     IkParameterization localgoal;
     if( !!_pBase ) {
@@ -138,7 +138,7 @@ void RobotBase::Manipulator::GetChildJoints(std::vector<JointPtr>& vjoints) cons
         int ilink = (*itlink)->GetIndex();
         if( ilink == iattlink )
             continue;
-        if( _varmdofindices.size() > 0 && !probot->DoesAffect(_varmdofindices[0],ilink) )
+        if( __varmdofindices.size() > 0 && !probot->DoesAffect(__varmdofindices[0],ilink) )
             continue;
         for(int idof = 0; idof < probot->GetDOF(); ++idof) {
             KinBody::JointPtr pjoint = probot->GetJointFromDOFIndex(idof);
@@ -171,7 +171,7 @@ void RobotBase::Manipulator::GetChildDOFIndices(std::vector<int>& vdofindices) c
         int ilink = (*itlink)->GetIndex();
         if( ilink == iattlink )
             continue;
-        if( _varmdofindices.size() > 0 && !probot->DoesAffect(_varmdofindices[0],ilink) )
+        if( __varmdofindices.size() > 0 && !probot->DoesAffect(__varmdofindices[0],ilink) )
             continue;
         for(int idof = 0; idof < probot->GetDOF(); ++idof) {
             KinBody::JointPtr pjoint = probot->GetJointFromDOFIndex(idof);
@@ -208,7 +208,7 @@ void RobotBase::Manipulator::GetChildLinks(std::vector<LinkPtr>& vlinks) const
         }
         // gripper needs to be affected by all joints
         bool bGripperLink = true;
-        FOREACHC(itarmjoint,_varmdofindices) {
+        FOREACHC(itarmjoint,__varmdofindices) {
             if( !probot->DoesAffect(*itarmjoint,ilink) ) {
                 bGripperLink = false;
                 break;
@@ -242,7 +242,7 @@ bool RobotBase::Manipulator::IsChildLink(LinkConstPtr plink) const
         }
         // gripper needs to be affected by all joints
         bool bGripperLink = true;
-        FOREACHC(itarmjoint,_varmdofindices) {
+        FOREACHC(itarmjoint,__varmdofindices) {
             if( !probot->DoesAffect(*itarmjoint,ilink) ) {
                 bGripperLink = false;
                 break;
@@ -265,13 +265,13 @@ void RobotBase::Manipulator::GetIndependentLinks(std::vector<LinkPtr>& vlinks) c
     RobotBasePtr probot(_probot);
     FOREACHC(itlink, probot->GetLinks()) {
         bool bAffected = false;
-        FOREACHC(itindex,_varmdofindices) {
+        FOREACHC(itindex,__varmdofindices) {
             if( probot->DoesAffect(*itindex,(*itlink)->GetIndex()) ) {
                 bAffected = true;
                 break;
             }
         }
-        FOREACHC(itindex,_vgripperdofindices) {
+        FOREACHC(itindex,__vgripperdofindices) {
             if( probot->DoesAffect(*itindex,(*itlink)->GetIndex()) ) {
                 bAffected = true;
                 break;
@@ -282,18 +282,6 @@ void RobotBase::Manipulator::GetIndependentLinks(std::vector<LinkPtr>& vlinks) c
             vlinks.push_back(*itlink);
     }
 }
-
-template <typename T>
-class TransformSaver
-{
-public:
-    TransformSaver(T plink) : _plink(plink) { _t = _plink->GetTransform(); }
-    ~TransformSaver() { _plink->SetTransform(_t); }
-    const Transform& GetTransform() { return _t; }
-private:
-    T _plink;
-    Transform _t;
-};
 
 bool RobotBase::Manipulator::CheckEndEffectorCollision(const Transform& tEE, CollisionReportPtr report) const
 {
@@ -316,7 +304,7 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(const Transform& tEE, Col
         }
         // gripper needs to be affected by all joints
         bool bGripperLink = true;
-        FOREACHC(itarmjoint,_varmdofindices) {
+        FOREACHC(itarmjoint,__varmdofindices) {
             if( !probot->DoesAffect(*itarmjoint,ilink) ) {
                 bGripperLink = false;
                 break;
@@ -348,14 +336,14 @@ bool RobotBase::Manipulator::CheckIndependentCollision(CollisionReportPtr report
             continue;
         }
         bool bAffected = false;
-        FOREACHC(itindex,_varmdofindices) {
+        FOREACHC(itindex,__varmdofindices) {
             if( probot->DoesAffect(*itindex,(*itlink)->GetIndex()) ) {
                 bAffected = true;
                 break;
             }
         }
         if( !bAffected ) {
-            FOREACHC(itindex,_vgripperdofindices) {
+            FOREACHC(itindex,__vgripperdofindices) {
                 if( probot->DoesAffect(*itindex,(*itlink)->GetIndex()) ) {
                     bAffected = true;
                     break;
@@ -400,7 +388,7 @@ bool RobotBase::Manipulator::IsGrabbing(KinBodyConstPtr pbody) const
                 continue;
             // gripper needs to be affected by all joints
             bool bGripperLink = true;
-            FOREACHC(itarmjoint,_varmdofindices) {
+            FOREACHC(itarmjoint,__varmdofindices) {
                 if( !probot->DoesAffect(*itarmjoint,ilink) ) {
                     bGripperLink = false;
                     break;
@@ -418,7 +406,7 @@ void RobotBase::Manipulator::CalculateJacobian(boost::multi_array<dReal,2>& mjac
 {
     RobotBasePtr probot(_probot);
     RobotBase::RobotStateSaver saver(probot,RobotBase::Save_ActiveDOF);
-    probot->SetActiveDOFs(_varmdofindices);
+    probot->SetActiveDOFs(__varmdofindices);
     probot->CalculateActiveJacobian(_pEndEffector->GetIndex(),_pEndEffector->GetTransform() * _tGrasp.trans,mjacobian);
 }
 
@@ -426,7 +414,7 @@ void RobotBase::Manipulator::CalculateRotationJacobian(boost::multi_array<dReal,
 {
     RobotBasePtr probot(_probot);
     RobotBase::RobotStateSaver saver(probot,RobotBase::Save_ActiveDOF);
-    probot->SetActiveDOFs(_varmdofindices);
+    probot->SetActiveDOFs(__varmdofindices);
     probot->CalculateActiveRotationJacobian(_pEndEffector->GetIndex(),quatMultiply(_pEndEffector->GetTransform().rot, _tGrasp.rot),mjacobian);
 }
 
@@ -434,7 +422,7 @@ void RobotBase::Manipulator::CalculateAngularVelocityJacobian(boost::multi_array
 {
     RobotBasePtr probot(_probot);
     RobotBase::RobotStateSaver saver(probot,RobotBase::Save_ActiveDOF);
-    probot->SetActiveDOFs(_varmdofindices);
+    probot->SetActiveDOFs(__varmdofindices);
     probot->CalculateActiveAngularVelocityJacobian(_pEndEffector->GetIndex(),mjacobian);
 }
 
@@ -442,11 +430,9 @@ void RobotBase::Manipulator::serialize(std::ostream& o, int options) const
 {
     if( options & SO_RobotManipulators ) {
         o << (!_pBase ? -1 : _pBase->GetIndex()) << " " << (!_pEndEffector ? -1 : _pEndEffector->GetIndex()) << " ";
-        o << _vgripperdofindices.size() << " " << _varmdofindices.size() << " " << _vClosingDirection.size() << " ";
-        FOREACHC(it,_vgripperdofindices) {
-            o << *it << " ";
-        }
-        FOREACHC(it,_varmdofindices) {
+        // don't include __varmdofindices and __vgripperdofindices since they are generated from the data
+        o << _vgripperjointnames.size() << " ";
+        FOREACHC(it,_vgripperjointnames) {
             o << *it << " ";
         }
         FOREACHC(it,_vClosingDirection) {
@@ -469,8 +455,8 @@ void RobotBase::Manipulator::serialize(std::ostream& o, int options) const
         else {
             SerializeRound(o,tbaseinv * GetEndEffectorTransform());
         }
-        o << _varmdofindices.size() << " ";
-        FOREACHC(it,_varmdofindices) {
+        o << __varmdofindices.size() << " ";
+        FOREACHC(it,__varmdofindices) {
             JointPtr pjoint = probot->GetJointFromDOFIndex(*it);
             o << pjoint->GetType() << " ";
             SerializeRound3(o,tbaseinv*pjoint->GetAnchor());
@@ -1812,7 +1798,7 @@ bool RobotBase::InitFromData(const std::string& data, const std::list<std::pair<
 
 const std::set<int>& RobotBase::GetNonAdjacentLinks(int adjacentoptions) const
 {
-    CHECK_INTERNAL_COMPUTATION;
+    KinBody::GetNonAdjacentLinks(0); // need to call to set the cache
     if( (_nNonAdjacentLinkCache&adjacentoptions) != adjacentoptions ) {
         int requestedoptions = (~_nNonAdjacentLinkCache)&adjacentoptions;
         // find out what needs to computed
@@ -2201,8 +2187,8 @@ void RobotBase::_ComputeInternalInformation()
         if( !!(*itmanip)->GetBase() && !!(*itmanip)->GetEndEffector() ) {
             vector<JointPtr> vjoints;
             std::vector<int> vmimicdofs;
+            (*itmanip)->__varmdofindices.resize(0);
             if( GetChain((*itmanip)->GetBase()->GetIndex(),(*itmanip)->GetEndEffector()->GetIndex(), vjoints) ) {
-                (*itmanip)->_varmdofindices.resize(0);
                 FOREACH(it,vjoints) {
                     if( (*it)->IsStatic() ) {
                         // ignore
@@ -2212,13 +2198,13 @@ void RobotBase::_ComputeInternalInformation()
                             if( (*it)->IsMimic(i) ) {
                                 (*it)->GetMimicDOFIndices(vmimicdofs,i);
                                 FOREACHC(itmimicdof,vmimicdofs) {
-                                    if( find((*itmanip)->_varmdofindices.begin(),(*itmanip)->_varmdofindices.end(),*itmimicdof) == (*itmanip)->_varmdofindices.end() ) {
-                                        (*itmanip)->_varmdofindices.push_back(*itmimicdof);
+                                    if( find((*itmanip)->__varmdofindices.begin(),(*itmanip)->__varmdofindices.end(),*itmimicdof) == (*itmanip)->__varmdofindices.end() ) {
+                                        (*itmanip)->__varmdofindices.push_back(*itmimicdof);
                                     }
                                 }
                             }
                             else if( (*it)->GetDOFIndex() >= 0 ) {
-                                (*itmanip)->_varmdofindices.push_back((*it)->GetDOFIndex()+i);
+                                (*itmanip)->__varmdofindices.push_back((*it)->GetDOFIndex()+i);
                             }
                         }
                     }
@@ -2227,7 +2213,7 @@ void RobotBase::_ComputeInternalInformation()
                     }
                     else { // ignore static joints
                         for(int i = 0; i < (*it)->GetDOF(); ++i) {
-                            (*itmanip)->_varmdofindices.push_back((*it)->GetDOFIndex()+i);
+                            (*itmanip)->__varmdofindices.push_back((*it)->GetDOFIndex()+i);
                         }
                     }
                 }
@@ -2239,6 +2225,36 @@ void RobotBase::_ComputeInternalInformation()
         else {
             RAVELOG_WARN(str(boost::format("manipulator %s has undefined base and end effector links\n")%(*itmanip)->GetName()));
         }
+        // init the gripper dof indices
+        (*itmanip)->__vgripperdofindices.resize(0);
+        std::vector<dReal> vClosingDirection;
+        size_t iclosingdirection = 0;
+        FOREACHC(itjointname,(*itmanip)->_vgripperjointnames) {
+            JointPtr pjoint = GetJoint(*itjointname);
+            if( !pjoint ) {
+                RAVELOG_WARN(str(boost::format("could not find gripper joint %s")%*itjointname));
+                iclosingdirection++;
+            }
+            else {
+                if( pjoint->GetDOFIndex() >= 0 ) {
+                    for(int i = 0; i < pjoint->GetDOF(); ++i) {
+                        (*itmanip)->__vgripperdofindices.push_back(pjoint->GetDOFIndex()+i);
+                        if( iclosingdirection < (*itmanip)->_vClosingDirection.size() ) {
+                            vClosingDirection.push_back((*itmanip)->_vClosingDirection[iclosingdirection++]);
+                        }
+                        else {
+                            vClosingDirection.push_back(0);
+                            RAVELOG_DEBUG(str(boost::format("manipulator %s closing direction not correct length, might get bad closing/release grasping\n")%(*itmanip)->GetName()));
+                        }
+                    }
+                }
+                else {
+                    ++iclosingdirection;
+                    RAVELOG_WARN(str(boost::format("manipulator %s gripper joint %s is not active, so has no dof index. ignoring.")%(*itmanip)->GetName()%*itjointname));
+                }
+            }
+        }
+        (*itmanip)->_vClosingDirection.swap(vClosingDirection);
         vector<ManipulatorPtr>::iterator itmanip2 = itmanip; ++itmanip2;
         for(;itmanip2 != _vecManipulators.end(); ++itmanip2) {
             if( (*itmanip)->GetName() == (*itmanip2)->GetName() ) {

@@ -104,8 +104,8 @@
 /// The entire %OpenRAVE library
 namespace OpenRAVE {
     
-#include <rave/defines.h>
-#include <rave/classhashes.h>
+#include <rave/config.h>
+#include <rave/interfacehashes.h>
 
 #if OPENRAVE_PRECISION // 1 if double precision
 typedef double dReal;

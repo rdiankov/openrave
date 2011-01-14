@@ -149,34 +149,31 @@ bool RaveParseColladaData(EnvironmentBasePtr penv, RobotBasePtr& probot, const s
     return reader.Extract(probot);
 }
 
-bool RaveWriteColladaFile(EnvironmentBasePtr penv, const string& filename)
+void RaveWriteColladaFile(EnvironmentBasePtr penv, const string& filename)
 {
-    RAVELOG_VERBOSE("bool RaveWriteColladaFile(EnvironmentBasePtr penv, const string& filename)\n");
     ColladaWriter writer(penv);
     if( !writer.Write(penv) ) {
-        return false;
+        throw openrave_exception("ColladaWriter::Write(EnvironmentBasePtr) failed");
     }
-    return writer.Save(filename);
+    writer.Save(filename);
 }
 
-bool RaveWriteColladaFile(KinBodyPtr pbody, const string& filename)
+void RaveWriteColladaFile(KinBodyPtr pbody, const string& filename)
 {
-    RAVELOG_VERBOSE("bool RaveWriteColladaFile(KinBodyPtr pbody, const string& filename)\n");
     ColladaWriter writer(pbody->GetEnv());
     if( !writer.Write(pbody) ) {
-        return false;
+        throw openrave_exception("ColladaWriter::Write(KinBodyPtr) failed");
     }
-    return writer.Save(filename);
+    writer.Save(filename);
 }
 
-bool RaveWriteColladaFile(RobotBasePtr probot, const string& filename)
+void RaveWriteColladaFile(RobotBasePtr probot, const string& filename)
 {
-    RAVELOG_VERBOSE("bool RaveWriteColladaFile(RobotBasePtr probot, const string& filename)\n");
     ColladaWriter writer(probot->GetEnv());
     if( !writer.Write(probot) ) {
-        return false;
+        throw openrave_exception("ColladaWriter::Write(RobotBasePtr) failed");
     }
-    return writer.Save(filename);
+    writer.Save(filename);
 }
 
 #else

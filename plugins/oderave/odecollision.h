@@ -252,10 +252,11 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
 
         dContact contact[16];
         dGeomID geom1 = odespace->GetLinkGeom(plink1);
+        int igeom1 = 0;
         while(geom1 != NULL) {
             BOOST_ASSERT(dGeomIsEnabled(geom1));
             dGeomID geom2 = odespace->GetLinkGeom(plink2);
-
+            int igeom2 = 0;
             while(geom2 != NULL) {
                 BOOST_ASSERT(dGeomIsEnabled(geom2));
 
@@ -304,9 +305,11 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
                 }
 
                 geom2 = dGeomGetBodyNext(geom2);
+                ++igeom2;
             }
 
             geom1 = dGeomGetBodyNext(geom1);
+            ++igeom1;
         }
 
         return false;
