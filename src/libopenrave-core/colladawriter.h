@@ -936,7 +936,7 @@ class ColladaWriter : public daeErrorHandler
 
 #ifdef _WIN32
         char lpPathBuffer[MAX_PATH]={0};
-        char m_szTempName[MAX_PATH]={0};
+        char szTempName[MAX_PATH]={0};
         if( GetTempPath(MAX_PATH, lpPathBuffer) == 0 ) {
             throw openrave_exception("GetTempPath failed");
         }
