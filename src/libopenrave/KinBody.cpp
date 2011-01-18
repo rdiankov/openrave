@@ -3590,7 +3590,7 @@ void KinBody::_ComputeInternalInformation()
             else if( parentlinkindex != (*itjoint)->GetFirstAttached()->GetIndex() ) {
                 // have to swap order
                 Transform tswap = (*itjoint)->GetSecondAttached()->GetTransform().inverse() * (*itjoint)->GetFirstAttached()->GetTransform();
-                for(int idof = 0; idof < GetDOF(); ++idof) {
+                for(int idof = 0; idof < (*itjoint)->GetDOF(); ++idof) {
                     (*itjoint)->vAxes[idof] = -tswap.rotate((*itjoint)->vAxes[idof]);
                 }
                 (*itjoint)->vanchor = tswap*(*itjoint)->vanchor;
