@@ -1,17 +1,15 @@
-<Robot name="PA10">
-  <KinBody file="pa10.kinbody.xml">
-    <kinbody>
-      <body name="staticbase" type="static">
-        <geom type="box">
-          <extents>0.001 0.001 0.001</extents>
-        </geom>
-      </body>
-      <joint type="hinge" enable="false">
-        <body>staticbase</body>
-        <body>link0</body>
-        <limitsdeg>0 0</limitsdeg>
-      </joint>
-    </kinbody>
+<Robot name="PA10" file="mitsubishi-pa10.zae">
+  <KinBody>
+    <body name="staticbase" type="static">
+      <geom type="box">
+        <extents>0.001 0.001 0.001</extents>
+      </geom>
+    </body>
+    <joint type="hinge" enable="false">
+      <body>staticbase</body>
+      <body>link0</body>
+      <limitsdeg>0 0</limitsdeg>
+    </joint>
     <KinBody file="schunk_manip.kinbody.xml"></KinBody>
     <Joint name="dummy" type="hinge" enable="false">
       <body>link7</body>
@@ -20,7 +18,7 @@
       <limitsdeg>0 0</limitsdeg>
     </Joint>
   </KinBody>
-
+  
   <AttachedSensor name="wristcam">
     <link>gripper_base</link>
     <translation>-0.06514 -0.00494 0.12267</translation>

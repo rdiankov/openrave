@@ -375,9 +375,9 @@ public:
             _pjoint->SetMimicEquations(iaxis,poseq,veleq,acceleq);
         }
 
-        dReal GetMaxVel() const { return _pjoint->GetMaxVel(); }
-        dReal GetMaxAccel() const { return _pjoint->GetMaxAccel(); }
-        dReal GetMaxTorque() const { return _pjoint->GetMaxTorque(); }
+        dReal GetMaxVel(int iaxis=0) const { return _pjoint->GetMaxVel(iaxis); }
+        dReal GetMaxAccel(int iaxis=0) const { return _pjoint->GetMaxAccel(iaxis); }
+        dReal GetMaxTorque(int iaxis=0) const { return _pjoint->GetMaxTorque(iaxis); }
 
         int GetDOFIndex() const { return _pjoint->GetDOFIndex(); }
         int GetJointIndex() const { return _pjoint->GetJointIndex(); }
@@ -388,7 +388,9 @@ public:
         PyLinkPtr GetSecondAttached() const { return !_pjoint->GetSecondAttached() ? PyLinkPtr() : PyLinkPtr(new PyLink(_pjoint->GetSecondAttached(), _pyenv)); }
 
         KinBody::Joint::JointType GetType() const { return _pjoint->GetType(); }
-        bool IsCircular() const { return _pjoint->IsCircular(); }
+        bool IsCircular(int iaxis) const { return _pjoint->IsCircular(iaxis); }
+        bool IsRevolute(int iaxis) const { return _pjoint->IsRevolute(iaxis); }
+        bool IsPrismatic(int iaxis) const { return _pjoint->IsPrismatic(iaxis); }
         bool IsStatic() const { return _pjoint->IsStatic(); }
 
         int GetDOF() const { return _pjoint->GetDOF(); }
@@ -426,7 +428,8 @@ public:
             return toPyArray(weights);
         }
 
-        void SetJointOffset(dReal offset) { _pjoint->SetJointOffset(offset); }
+        dReal GetOffset(int iaxis=0) { return _pjoint->GetOffset(iaxis); }
+        void SetOffset(dReal offset, int iaxis=0) { _pjoint->SetOffset(offset,iaxis); }
         void SetLimits(object olower, object oupper) {
             vector<dReal> vlower = ExtractArray<dReal>(olower);
             vector<dReal> vupper = ExtractArray<dReal>(oupper);
@@ -3485,6 +3488,11 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMimicEquation_overloads, GetMimicEquat
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMimicDOFIndices_overloads, GetMimicDOFIndices, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetChain_overloads, GetChain, 2, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetAxis_overloads, GetAxis, 0, 1)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetOffset_overloads, GetOffset, 0, 1)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetOffset_overloads, SetOffset, 1, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMaxVel_overloads, GetMaxVel, 0, 1)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMaxAccel_overloads, GetMaxAccel, 0, 1)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMaxTorque_overloads, GetMaxTorque, 0, 1)
 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Load_overloads, Load, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Save_overloads, Save, 1, 2)
@@ -3826,9 +3834,9 @@ BOOST_PYTHON_MODULE(openravepy_int)
                 .def("GetMimicEquation",&PyKinBody::PyJoint::GetMimicEquation,GetMimicEquation_overloads(args("axis","type","format"), DOXY_FN(KinBody::Joint,GetMimicEquation)))
                 .def("GetMimicDOFIndices",&PyKinBody::PyJoint::GetMimicDOFIndices,GetMimicDOFIndices_overloads(args("axis"), DOXY_FN(KinBody::Joint,GetMimicDOFIndices)))
                 .def("SetMimicEquations", &PyKinBody::PyJoint::SetMimicEquations, args("axis","poseq","veleq","acceleq"), DOXY_FN(KinBody::Joint,SetMimicEquations))
-                .def("GetMaxVel", &PyKinBody::PyJoint::GetMaxVel, DOXY_FN(KinBody::Joint,GetMaxVel))
-                .def("GetMaxAccel", &PyKinBody::PyJoint::GetMaxAccel, DOXY_FN(KinBody::Joint,GetMaxAccel))
-                .def("GetMaxTorque", &PyKinBody::PyJoint::GetMaxTorque, DOXY_FN(KinBody::Joint,GetMaxTorque))
+                .def("GetMaxVel", &PyKinBody::PyJoint::GetMaxVel, GetMaxVel_overloads(args("axis"),DOXY_FN(KinBody::Joint,GetMaxVel)))
+                .def("GetMaxAccel", &PyKinBody::PyJoint::GetMaxAccel, GetMaxAccel_overloads(args("axis"),DOXY_FN(KinBody::Joint,GetMaxAccel)))
+                .def("GetMaxTorque", &PyKinBody::PyJoint::GetMaxTorque, GetMaxTorque_overloads(args("axis"),DOXY_FN(KinBody::Joint,GetMaxTorque)))
                 .def("GetDOFIndex", &PyKinBody::PyJoint::GetDOFIndex, DOXY_FN(KinBody::Joint,GetDOFIndex))
                 .def("GetJointIndex", &PyKinBody::PyJoint::GetJointIndex, DOXY_FN(KinBody::Joint,GetJointIndex))
                 .def("GetParent", &PyKinBody::PyJoint::GetParent, DOXY_FN(KinBody::Joint,GetParent))
@@ -3836,6 +3844,8 @@ BOOST_PYTHON_MODULE(openravepy_int)
                 .def("GetSecondAttached", &PyKinBody::PyJoint::GetSecondAttached, DOXY_FN(KinBody::Joint,GetSecondAttached))
                 .def("IsStatic",&PyKinBody::PyJoint::IsStatic, DOXY_FN(KinBody::Joint,IsStatic))
                 .def("IsCircular",&PyKinBody::PyJoint::IsCircular, DOXY_FN(KinBody::Joint,IsCircular))
+                .def("IsRevolute",&PyKinBody::PyJoint::IsRevolute, DOXY_FN(KinBody::Joint,IsRevolute))
+                .def("IsPrismatic",&PyKinBody::PyJoint::IsPrismatic, DOXY_FN(KinBody::Joint,IsPrismatic))
                 .def("GetType", &PyKinBody::PyJoint::GetType, DOXY_FN(KinBody::Joint,GetType))
                 .def("GetDOF", &PyKinBody::PyJoint::GetDOF, DOXY_FN(KinBody::Joint,GetDOF))
                 .def("GetValues", &PyKinBody::PyJoint::GetValues, DOXY_FN(KinBody::Joint,GetValues))
@@ -3850,7 +3860,8 @@ BOOST_PYTHON_MODULE(openravepy_int)
                 .def("GetInternalHierarchyRightTransform",&PyKinBody::PyJoint::GetInternalHierarchyRightTransform, DOXY_FN(KinBody::Joint,GetInternalHierarchyRightTransform))
                 .def("GetLimits", &PyKinBody::PyJoint::GetLimits, DOXY_FN(KinBody::Joint,GetLimits))
                 .def("GetWeights", &PyKinBody::PyJoint::GetWeights, DOXY_FN(KinBody::Joint,GetWeight))
-                .def("SetJointOffset",&PyKinBody::PyJoint::SetJointOffset,args("offset"), DOXY_FN(KinBody::Joint,SetJointOffset))
+                .def("SetOffset",&PyKinBody::PyJoint::SetOffset,SetOffset_overloads(args("offset","axis"), DOXY_FN(KinBody::Joint,SetOffset)))
+                .def("GetOffset",&PyKinBody::PyJoint::GetOffset,GetOffset_overloads(args("axis"), DOXY_FN(KinBody::Joint,GetOffset)))
                 .def("SetLimits",&PyKinBody::PyJoint::SetLimits,args("lower","upper"), DOXY_FN(KinBody::Joint,SetLimits))
                 .def("SetJointLimits",&PyKinBody::PyJoint::SetLimits,args("lower","upper"), DOXY_FN(KinBody::Joint,SetLimits))
                 .def("SetResolution",&PyKinBody::PyJoint::SetResolution,args("resolution"), DOXY_FN(KinBody::Joint,SetResolution))
@@ -3868,6 +3879,10 @@ BOOST_PYTHON_MODULE(openravepy_int)
                 .value("Revolute",KinBody::Joint::JointRevolute)
                 .value("Slider",KinBody::Joint::JointSlider)
                 .value("Prismatic",KinBody::Joint::JointPrismatic)
+                .value("RR",KinBody::Joint::JointRR)
+                .value("RP",KinBody::Joint::JointRP)
+                .value("PR",KinBody::Joint::JointPR)
+                .value("PP",KinBody::Joint::JointPP)
                 .value("Universal",KinBody::Joint::JointUniversal)
                 .value("Hinge2",KinBody::Joint::JointHinge2)
                 .value("Spherical",KinBody::Joint::JointSpherical)

@@ -977,7 +977,7 @@ int main(int argc, char** argv)
         D=node.poly.degree
         polyroots=self.using_polyroots(D)
         name = node.jointname
-        polyvar = node.poly.symbols[0].name[0]
+        polyvar = node.poly.symbols[0].name
         code = 'IKReal op[%d+1], zeror[%d];\nint numroots;\n'%(D,D)
         numevals = 0
         if node.postcheckforzeros is not None:
@@ -993,7 +993,7 @@ int main(int argc, char** argv)
         code += 'IKReal %sarray[%d], c%sarray[%d], s%sarray[%d], temp%sarray[%d];\n'%(name,len(node.jointeval)*D,name,len(node.jointeval)*D,name,len(node.jointeval)*D,name,len(node.jointeval))
         code += 'int numsolutions = 0;\n'
         code += 'for(int i%s = 0; i%s < numroots; ++i%s)\n{\n'%(name,name,name)
-        fcode = '%s = zeror[i%s];\n'%(node.poly.symbols[0].name,name)
+        fcode = 'IKReal %s = zeror[i%s];\n'%(polyvar,name)
         origequations = copy.copy(self.dictequations)
         fcode += self.writeEquations(lambda i: 'temp%sarray[%d]'%(name,i), node.jointeval)
         self.dictequations = origequations
@@ -1001,11 +1001,8 @@ int main(int argc, char** argv)
         fcode += '%sarray[numsolutions] = temp%sarray[k%s];\n'%(name,name,name)
         if node.IsHinge:
             fcode += 'if( %sarray[numsolutions] > IKPI )\n    %sarray[numsolutions]-=IK2PI;\nelse if( %sarray[numsolutions] < -IKPI )\n    %sarray[numsolutions]+=IK2PI;\n'%(name,name,name,name)
-        fcode += '%c%sarray[numsolutions] = zeror[i%s];\n'%(polyvar,name,name)
-        if polyvar == 'c':
-            fcode += 's%sarray[numsolutions] = IKsin(%sarray[numsolutions]);\n'%(name,name)
-        else:
-            fcode += 'c%sarray[numsolutions] = IKcos(%sarray[numsolutions]);\n'%(name,name)
+        fcode += 's%sarray[numsolutions] = IKsin(%sarray[numsolutions]);\n'%(name,name)
+        fcode += 'c%sarray[numsolutions] = IKcos(%sarray[numsolutions]);\n'%(name,name)
         fcode += 'bool valid = true;\n'
         # test all the solutions up to now for validity
         fcode += 'for( int j%s = 0; j%s < numsolutions; ++j%s)\n{\n'%(name,name,name)

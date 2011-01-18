@@ -1,6 +1,6 @@
-<Robot name="PumaBarrett">
+<Robot name="PumaBarrett" file="pumaarm.zae">
   <!-- include the barrett hand -->
-  <KinBody file="pumaarm.kinbody.xml">
+  <KinBody>
     <body name="wam7">
       <offsetfrom>Puma6</offsetfrom>
       <geom type="box">
@@ -21,6 +21,6 @@
     <!-- joint values of the closed and opened positions -->
     <closingdirection>1.0 1.0 1.0</closingdirection>
     <direction>0 0 1</direction>
-    <IkSolver>PUMAikfast</IkSolver>
+    <translation>0 0 0.18</translation>
   </Manipulator>
 </Robot>

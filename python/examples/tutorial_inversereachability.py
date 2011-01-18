@@ -34,8 +34,8 @@ and store both folders under::
 
 You can also generate the IK solvers for both arms. It takes about 10 minutes for each arm::
 
-  openrave.py --database inversekinematics --robot=robots/pr2-beta-static.robot.xml --manipname=rightarm --freejoint=r_shoulder_pan_joint --freeinc=0.01
-  openrave.py --database inversekinematics --robot=robots/pr2-beta-static.robot.xml --manipname=leftarm --freejoint=l_shoulder_pan_joint --freeinc=0.01
+  openrave.py --database inversekinematics --robot=robots/pr2-beta-static.zae --manipname=rightarm --freejoint=r_shoulder_pan_joint --freeinc=0.01
+  openrave.py --database inversekinematics --robot=robots/pr2-beta-static.zae --manipname=leftarm --freejoint=l_shoulder_pan_joint --freeinc=0.01
 
 [optional] Download inverse-reachability database
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -62,7 +62,7 @@ Generate database
 
 Command::
 
-  openrave.py --database inversereachability --robot=robots/pr2-beta-static.robot.xml
+  openrave.py --database inversereachability --robot=robots/pr2-beta-static.zae
   
 This process took ~10 hours on the PR2 base station (Intel Core2 Duo E8400 @ 3GHz with 4G of memory).
 
@@ -97,7 +97,7 @@ Visualize reachability database
 
 Command::
 
-   openrave.py --database kinematicreachability --robot=robots/pr2-beta-static.robot.xml --show
+   openrave.py --database kinematicreachability --robot=robots/pr2-beta-static.zae --show
 
 .. figure:: ../../images/example_tutorials/ir_reachability_front.png
    :width: 640 px
@@ -330,7 +330,7 @@ class InverseReachabilityDemo:
         v[self.robot.GetJoint('r_shoulder_pan_joint').GetDOFIndex()] = -3.14/2
         """note here the torso height must be set to 0, because the database was generated for torso height=0"""
         v[self.robot.GetJoint('torso_lift_joint').GetDOFIndex()] = 0
-        v[self.robot.GetJoint('l_gripper_joint').GetDOFIndex()] = .54
+        v[self.robot.GetJoint('l_gripper_l_finger_joint').GetDOFIndex()] = .54
         self.robot.SetActiveDOFValues(v)
     
         # load inverserechability database
@@ -369,7 +369,7 @@ class InverseReachabilityDemo:
         """
         # setting the gripper angle
         v = self.robot.GetActiveDOFValues()
-        v[47] = gripper_angle # l gripper
+        v[self.robot.GetJoint('l_gripper_l_finger_joint').GetDOFIndex()] = gripper_angle # l gripper
         self.robot.SetActiveDOFValues(v)
 
         print 'showing the goal grasp'
@@ -448,7 +448,7 @@ class InverseReachabilityDemo:
         probot = self.robot
         pmanip = probot.GetActiveManipulator()
         v = probot.GetActiveDOFValues()
-        v[47] = angle
+        v[self.robot.GetJoint('l_gripper_l_finger_joint').GetDOFIndex()] = gripper_angle
         probot.SetActiveDOFValues(v)
         with grasping.GraspingModel.GripperVisibility(pmanip): # show only the gripper
             O_T_R = probot.GetTransform() # robot transform R in global frame O 
@@ -473,7 +473,7 @@ def run(args=None):
     # set up planning environment
     parser = OptionParser(description='Move base where the robot can perform target grasp using inversereachability database.')
     OpenRAVEGlobalArguments.addOptions(parser)
-    parser.add_option('--robot',action="store",type='string',dest='robot',default='robots/pr2-beta-static.robot.xml',
+    parser.add_option('--robot',action="store",type='string',dest='robot',default='robots/pr2-beta-static.zae',
                       help='Robot filename to use (default=%default)')
     parser.add_option('--manipname',action="store",type='string',dest='manipname',default=None,
                       help='name of manipulator to use (default=%default)')

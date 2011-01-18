@@ -1361,13 +1361,11 @@ void RobotBase::SubtractActiveDOFValues(std::vector<dReal>& q1, const std::vecto
     int index = 0;
     FOREACHC(it,_vActiveDOFIndices) {
         JointConstPtr pjoint = _vecjoints.at(*it);
-        if( pjoint->IsCircular() ) {
-            for(int i = 0; i < pjoint->GetDOF(); ++i, index++) {
+        for(int i = 0; i < pjoint->GetDOF(); ++i, index++) {
+            if( pjoint->IsCircular(i) ) {
                 q1.at(index) = ANGLE_DIFF(q1.at(index), q2.at(index));
             }
-        }
-        else {
-            for(int i = 0; i < pjoint->GetDOF(); ++i, index++) {
+            else {
                 q1.at(index) -= q2.at(index);
             }
         }
@@ -1883,7 +1881,7 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr plink)
         throw openrave_exception("robot cannot grab itself",ORE_InvalidArguments);
     }
     if( IsGrabbing(pbody) ) {
-        RAVELOG_VERBOSE("Robot %s: body %s already grabbed\n", GetName().c_str(), pbody->GetName().c_str());
+        RAVELOG_VERBOSE(str(boost::format("Robot %s: body %s already grabbed\n")%GetName()%pbody->GetName()));
         return true;
     }
 
@@ -1919,7 +1917,7 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr pRobotLinkToGrabWith, const std::
         throw openrave_exception("robot cannot grab itself",ORE_InvalidArguments);
     }
     if( IsGrabbing(pbody) ) {
-        RAVELOG_VERBOSE("Robot %s: body %s already grabbed\n", GetName().c_str(), pbody->GetName().c_str());
+        RAVELOG_VERBOSE(str(boost::format("Robot %s: body %s already grabbed\n")%GetName()%pbody->GetName()));
         return true;
     }
 
@@ -2399,7 +2397,7 @@ bool RobotBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     // clone the controller
     if( (cloningoptions&Clone_RealControllers) && !!r->GetController() ) {
         if( !SetController(RaveCreateController(GetEnv(), r->GetController()->GetXMLId()),r->GetController()->GetControlDOFIndices(),r->GetController()->IsControlTransformation()) ) {
-            RAVELOG_WARN("failed to set %s controller for robot %s\n", r->GetController()->GetXMLId().c_str(), GetName().c_str());
+            RAVELOG_WARN(str(boost::format("failed to set %s controller for robot %s\n")%r->GetController()->GetXMLId()%GetName()));
         }
     }
 

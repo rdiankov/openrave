@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2010 Rosen Diankov (rosen.diankov@gmail.com)
+// Copyright (C) 2006-2011 Rosen Diankov (rosen.diankov@gmail.com)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -651,13 +651,13 @@ namespace OpenRAVEXMLParser
 
                 _itgeomprop = _plink->_listGeomProperties.insert(_plink->_listGeomProperties.end(),KinBody::Link::GEOMPROPERTIES(_plink));
                 if( stricmp(type.c_str(), "box") == 0 )
-                    _itgeomprop->type = KinBody::Link::GEOMPROPERTIES::GeomBox;
+                    _itgeomprop->_type = KinBody::Link::GEOMPROPERTIES::GeomBox;
                 else if( stricmp(type.c_str(), "sphere") == 0 )
-                    _itgeomprop->type = KinBody::Link::GEOMPROPERTIES::GeomSphere;
+                    _itgeomprop->_type = KinBody::Link::GEOMPROPERTIES::GeomSphere;
                 else if( stricmp(type.c_str(), "cylinder") == 0 )
-                    _itgeomprop->type = KinBody::Link::GEOMPROPERTIES::GeomCylinder;
+                    _itgeomprop->_type = KinBody::Link::GEOMPROPERTIES::GeomCylinder;
                 else if( stricmp(type.c_str(), "trimesh") == 0 ) {
-                    _itgeomprop->type = KinBody::Link::GEOMPROPERTIES::GeomTrimesh;
+                    _itgeomprop->_type = KinBody::Link::GEOMPROPERTIES::GeomTrimesh;
                 }
                 else {
                     RAVELOG_WARN(str(boost::format("type %s not supported\n")%type));
@@ -756,7 +756,7 @@ namespace OpenRAVEXMLParser
                     _ss >> _itgeomprop->ftransparency;
                 }
                 else if( xmlname == _processingtag ) {
-                    if( _itgeomprop->type == KinBody::Link::GEOMPROPERTIES::GeomCylinder ) { // axis has to point on y
+                    if( _itgeomprop->GetType() == KinBody::Link::GEOMPROPERTIES::GeomCylinder ) { // axis has to point on y
                         // rotate on x axis by pi/2
                         Transform trot;
                         trot.rot = quatFromAxisAngle(Vector(1, 0, 0), PI/2);
@@ -764,7 +764,7 @@ namespace OpenRAVEXMLParser
                     }
 
                     // call before attaching the geom
-                    if( _itgeomprop->type != KinBody::Link::GEOMPROPERTIES::GeomTrimesh ) {
+                    if( _itgeomprop->GetType() != KinBody::Link::GEOMPROPERTIES::GeomTrimesh ) {
                         _itgeomprop->InitCollisionMesh();
                     }
 
@@ -814,12 +814,38 @@ namespace OpenRAVEXMLParser
                                     // SoDB::readAll memory leaks!
                                     SoSeparator* psep = SoDB::readAll(&mySceneInput);
                                     if( !!psep ) {
+                                        // try to extract a material
+                                        SoSearchAction search;
+                                        search.setType(SoMaterial::getClassTypeId());
+                                        search.setInterest(SoSearchAction::ALL);
+                                        psep->ref();
+                                        search.apply(psep);
+                                        for(int i = 0; i < search.getPaths().getLength(); ++i) {
+                                            SoPath* path = search.getPaths()[i];
+                                            SoMaterial* pmtrl = (SoMaterial*)path->getTail();
+                                            if( !pmtrl ) {
+                                                continue;
+                                            }
+                                            if( !!pmtrl->diffuseColor.getValues(0) ) {
+                                                _itgeomprop->diffuseColor.x = pmtrl->diffuseColor.getValues(0)->getValue()[0];
+                                                _itgeomprop->diffuseColor.y = pmtrl->diffuseColor.getValues(0)->getValue()[1];
+                                                _itgeomprop->diffuseColor.z = pmtrl->diffuseColor.getValues(0)->getValue()[2];
+                                            }
+                                            if( !!pmtrl->ambientColor.getValues(0) ) {
+                                                _itgeomprop->ambientColor.x = pmtrl->ambientColor.getValues(0)->getValue()[0];
+                                                _itgeomprop->ambientColor.y = pmtrl->ambientColor.getValues(0)->getValue()[1];
+                                                _itgeomprop->ambientColor.z = pmtrl->ambientColor.getValues(0)->getValue()[2];
+                                                
+                                            }
+                                            if( !!pmtrl->transparency.getValues(0) ) {
+                                                _itgeomprop->ftransparency = pmtrl->transparency.getValues(0)[0];
+                                            }
+                                        }
                                         CreateTriMeshData(psep, _itgeomprop->collisionmesh);
                                         psep->unref();
-                                        
-                                        //_trimeshGeom
-                                        FOREACH(it, _itgeomprop->collisionmesh.vertices)
+                                        FOREACH(it, _itgeomprop->collisionmesh.vertices) {
                                             *it *= vScale;
+                                        }
                                         bSuccess = true;
                                     }
                                 }
@@ -835,8 +861,9 @@ namespace OpenRAVEXMLParser
                                         *it *= vScale;
                                 }
                             }
-                            else
+                            else {
                                 RAVELOG_WARN(str(boost::format("failed to find %s\n")%orgrenderfile));
+                            }
                         }
                         else if( xmlname == "vertices" ) {
                             vector<dReal> values((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
@@ -866,17 +893,21 @@ namespace OpenRAVEXMLParser
             }
             if( _processingtag == "mass" ) {
                 if( xmlname == "density" ) {
-                    if( _masstype == MT_BoxMass )
+                    if( _masstype == MT_BoxMass ) {
                         _masstype = MT_Box;
-                    else if( _masstype == MT_SphereMass)
+                    }
+                    else if( _masstype == MT_SphereMass) {
                         _masstype = MT_Sphere;
+                    }
                     _ss >> _fMassDensity;
                 }
                 else if( xmlname == "total" ) {
-                    if( _masstype == MT_Box )
+                    if( _masstype == MT_Box ) {
                         _masstype = MT_BoxMass;
-                    else if( _masstype == MT_Sphere)
+                    }
+                    else if( _masstype == MT_Sphere) {
                         _masstype = MT_SphereMass;
+                    }
                     _ss >> _fTotalMass;
                     _massCustom.fTotalMass = _fTotalMass;
                 }
@@ -902,15 +933,15 @@ namespace OpenRAVEXMLParser
             }
 
             if( xmlname == "body" ) {
-                if( _plink->GetGeometries().size() == 0 )
+                if( _plink->GetGeometries().size() == 0 ) {
                     RAVELOG_WARN(str(boost::format("link %s has no geometry attached!\n")%_plink->GetName()));
-
+                }
                 // perform final processing stages
                 MASS totalmass;
                 if( _masstype == MT_MimicGeom ) {
                     FOREACHC(itgeom, _plink->GetGeometries()) {
                         MASS mass;
-                        switch(itgeom->type) {
+                        switch(itgeom->GetType()) {
                         case KinBody::Link::GEOMPROPERTIES::GeomSphere:
                             mass = MASS::GetSphericalMassD(itgeom->GetSphereRadius(), Vector(),_fMassDensity);
                             break;
@@ -927,17 +958,21 @@ namespace OpenRAVEXMLParser
                         totalmass += mass.transform(itgeom->GetTransform());
                     }
                 }
-                else if( _masstype == MT_Box )
+                else if( _masstype == MT_Box ) {
                     totalmass = MASS::GetBoxMassD(_vMassExtents, Vector(), _fMassDensity);
-                else if( _masstype == MT_BoxMass )
+                }
+                else if( _masstype == MT_BoxMass ) {
                     totalmass = MASS::GetBoxMass(_vMassExtents, Vector(), _fTotalMass);
-                else if( _masstype == MT_Sphere )
+                }
+                else if( _masstype == MT_Sphere ) {
                     totalmass = MASS::GetSphericalMassD(_vMassExtents.x, Vector(), _fMassDensity);
-                else if( _masstype == MT_Custom )
+                }
+                else if( _masstype == MT_Custom ) {
                     totalmass = _massCustom;
-                else
+                }
+                else {
                     totalmass = MASS::GetSphericalMass(_vMassExtents.x, Vector(), _fTotalMass);
-        
+                }
                 _plink->_transMass = totalmass.t;
                 _plink->_mass = totalmass.fTotalMass;
                 tOrigTrans = _plink->GetTransform();
@@ -946,11 +981,12 @@ namespace OpenRAVEXMLParser
                 if( !!_offsetfrom ) {
                     // recompute new transformation
                     Transform root;
-                    if( !!_fnGetOffsetFrom )
+                    if( !!_fnGetOffsetFrom ) {
                         root = _fnGetOffsetFrom(_offsetfrom);
-                    else
+                    }
+                    else {
                         root = _offsetfrom->GetTransform();
-
+                    }
                     cur = _plink->GetTransform();
                     cur = root * cur;
                     tOrigTrans = root * tOrigTrans; // update orig trans separately
@@ -987,7 +1023,6 @@ namespace OpenRAVEXMLParser
                 string linkname;
                 _ss >> linkname;
                 _offsetfrom = _pparent->GetLink(linkname);
-
                 if( !_offsetfrom ) {
                     RAVELOG_WARN(str(boost::format("Failed to find offsetfrom body %s\n")%linkname));
                     GetXMLErrorCount()++;
@@ -1047,7 +1082,7 @@ namespace OpenRAVEXMLParser
             _bNegateJoint = false;
             _pparent = pparent;
             _pjoint.reset(new KinBody::Joint(pparent));
-            _pjoint->type = KinBody::Joint::JointHinge;
+            _pjoint->_type = KinBody::Joint::JointHinge;
 
             FOREACHC(itatt,atts) {
                 if( itatt->first == "name" ) {
@@ -1055,22 +1090,22 @@ namespace OpenRAVEXMLParser
                 }
                 else if( itatt->first == "type" ) {
                     if( stricmp(itatt->second.c_str(), "hinge") == 0 )
-                        _pjoint->type = KinBody::Joint::JointHinge;
+                        _pjoint->_type = KinBody::Joint::JointHinge;
                     else if( stricmp(itatt->second.c_str(), "slider") == 0 )
-                        _pjoint->type = KinBody::Joint::JointSlider;
+                        _pjoint->_type = KinBody::Joint::JointSlider;
                     else if( stricmp(itatt->second.c_str(), "universal") == 0 )
-                        _pjoint->type = KinBody::Joint::JointUniversal;
+                        _pjoint->_type = KinBody::Joint::JointUniversal;
                     else if( stricmp(itatt->second.c_str(), "hinge2") == 0 )
-                        _pjoint->type = KinBody::Joint::JointHinge2;
+                        _pjoint->_type = KinBody::Joint::JointHinge2;
                     else if( stricmp(itatt->second.c_str(), "spherical") == 0 ) {
-                        _pjoint->type = KinBody::Joint::JointSpherical;
+                        _pjoint->_type = KinBody::Joint::JointSpherical;
                         _pjoint->vAxes[0] = Vector(1,0,0);
                         _pjoint->vAxes[1] = Vector(0,1,0);
                         _pjoint->vAxes[2] = Vector(0,0,1);
                     }
                     else {
                         RAVELOG_WARN(str(boost::format("unrecognized joint type: %s, setting to hinge\n")%itatt->second));
-                        _pjoint->type = KinBody::Joint::JointHinge;
+                        _pjoint->_type = KinBody::Joint::JointHinge;
                     }
                 }
                 else if( itatt->first == "enable" ) {
@@ -1108,7 +1143,10 @@ namespace OpenRAVEXMLParser
                     _pjoint->_vmimic[0]->_equations[2] = itatt->second;
                 }
                 else if( itatt->first == "circular" ) {
-                    _pjoint->_bIsCircular = !(stricmp(itatt->second.c_str(), "false") == 0 || itatt->second=="0");
+                    _pjoint->_bIsCircular[0] = !(stricmp(itatt->second.c_str(), "false") == 0 || itatt->second=="0");
+                    for(int i = 1; i < _pjoint->GetDOF(); ++i) {
+                        _pjoint->_bIsCircular[i] = _pjoint->_bIsCircular[0];
+                    }
                 }
             }
 
@@ -1132,10 +1170,10 @@ namespace OpenRAVEXMLParser
                     _pjoint->_vupperlimit[i] = PI;
                 }
             }
-
             _pjoint->_vweights.resize(_pjoint->GetDOF());
-            FOREACH(it,_pjoint->_vweights)
+            FOREACH(it,_pjoint->_vweights) {
                 *it = 1;
+            }
         }
 
         virtual ProcessElement startElement(const std::string& xmlname, const std::list<std::pair<std::string,std::string> >& atts)
@@ -1156,7 +1194,7 @@ namespace OpenRAVEXMLParser
         virtual bool endElement(const std::string& xmlname)
         {
             int numindices = _pjoint->GetDOF();
-            dReal fRatio = _pjoint->type == KinBody::Joint::JointSlider ? (dReal)1 : (dReal)PI / 180.0f; // most, but not all, joint take degrees
+            dReal fRatio = _pjoint->_type == KinBody::Joint::JointSlider ? (dReal)1 : (dReal)PI / 180.0f; // most, but not all, joint take degrees
         
             if( !!_pcurreader ) {
                 if( _pcurreader->endElement(xmlname) )
@@ -1167,48 +1205,6 @@ namespace OpenRAVEXMLParser
                     RAVELOG_WARN("parent kinbody has no links defined yet!\n");
                     return false;
                 }
-            
-                string defaultname = "J_";
-            
-                int numbad = 0;
-                _pjoint->offset = 0;
-
-                // check if joint needs an artificial offset, only for revolute joints that have identifying points!
-                if( _pjoint->type == KinBody::Joint::JointHinge ||
-                    _pjoint->type == KinBody::Joint::JointUniversal ||
-                    _pjoint->type == KinBody::Joint::JointHinge2 ) {
-            
-                    for(int i = 0; i < numindices; ++i) {
-                        if( _pjoint->_vlowerlimit[i] < -PI || _pjoint->_vupperlimit[i] > PI ) {
-                            _pjoint->offset += 0.5f * (_pjoint->_vlowerlimit[i] + _pjoint->_vupperlimit[i]);
-                            ++numbad;
-                        }
-                    }
-            
-                    if( numbad > 0 ) {
-                        _pjoint->offset *= 1.0f / (float)numbad;
-                    }
-                }
-
-                Transform tbody0, tbody1;
-
-                if( !_pjoint->bodies[0] || !_pjoint->bodies[1] ) {
-                    RAVELOG_WARN(str(boost::format("one or more attached bodies are invalid for joint %s\n")%_pjoint->GetName()));
-                    if( !_pjoint->bodies[1] )
-                        _pjoint->bodies[1] = _pparent->GetLinks().at(0);
-                    if( !_pjoint->bodies[0] )
-                        _pjoint->bodies[0] = _pparent->GetLinks().at(0);
-                }
-
-                // make sure first body is always closer to the root, unless the second body is static
-                if( !_pjoint->bodies[1]->IsStatic() ) {
-                    if( _pjoint->bodies[0]->IsStatic() || (_pjoint->bodies[0]->GetIndex() > _pjoint->bodies[1]->GetIndex() && !_pjoint->bodies[1]->IsStatic()) ) {
-                        for(int i = 0; i < _pjoint->GetDOF(); ++i) {
-                            _pjoint->vAxes[i] = -_pjoint->vAxes[i];
-                        }
-                        swap(_pjoint->bodies[0], _pjoint->bodies[1]);
-                    }
-                }
 
                 if( _bNegateJoint ) {
                     for(int i = 0; i < _pjoint->GetDOF(); ++i) {
@@ -1216,8 +1212,15 @@ namespace OpenRAVEXMLParser
                     }
                 }
 
-                tbody0 = _pjoint->bodies[0]->GetTransform();
-                tbody1 = _pjoint->bodies[1]->GetTransform();
+                string defaultname = "J_";
+                // check if joint needs an artificial offset, only for revolute joints that have identifying points!
+                if( _pjoint->_type == KinBody::Joint::JointUniversal || _pjoint->_type == KinBody::Joint::JointHinge2 || _pjoint->_type == KinBody::Joint::JointHinge ) {
+                    for(int i = 0; i < numindices; ++i) {
+                        if( _pjoint->_vlowerlimit[i] < -PI || _pjoint->_vupperlimit[i] > PI ) {
+                            _pjoint->_offsets[i] = 0.5f * (_pjoint->_vlowerlimit[i] + _pjoint->_vupperlimit[i]);
+                        }
+                    }
+                }
 
                 Transform toffsetfrom;
                 if( !!_offsetfrom ) {
@@ -1229,70 +1232,14 @@ namespace OpenRAVEXMLParser
                     }
                 }
 
-                Transform trel;
-                if( _pjoint->bodies[1]->IsStatic() ) {
-                    trel = tbody1.inverse() * tbody0;
-                    toffsetfrom = tbody1.inverse() * toffsetfrom;
-                }
-                else {
-                    trel = tbody0.inverse() * tbody1;
-                    toffsetfrom = tbody0.inverse() * toffsetfrom;
-                }
-
-                if( _pjoint->bodies[0]->IsStatic() ) {
-                    RAVELOG_WARN(str(boost::format("joint %s: all attached links are static!\n")%_pjoint->GetName()));
-                }
+                toffsetfrom = attachedbodies[0]->GetTransform().inverse() * toffsetfrom;
 
                 _pjoint->vanchor = toffsetfrom*_pjoint->vanchor;
                 for(int i = 0; i < _pjoint->GetDOF(); ++i) {
                     _pjoint->vAxes[i] = toffsetfrom.rotate(_pjoint->vAxes[i]);
                 }
 
-                switch(_pjoint->type) {
-                case KinBody::Joint::JointHinge:
-                    _pjoint->tLeft.rot = quatFromAxisAngle(_pjoint->vAxes[0], _pjoint->offset);
-                    _pjoint->tLeft.trans = _pjoint->vanchor;
-                    _pjoint->tRight.trans = -_pjoint->vanchor;
-                    _pjoint->tRight = _pjoint->tRight * trel;
-                    break;
-                case KinBody::Joint::JointSlider:
-                    _pjoint->tRight = trel;
-                    break;
-                case KinBody::Joint::JointUniversal:
-                    _pjoint->tLeft.trans = _pjoint->vanchor;
-                    _pjoint->tRight.trans = -_pjoint->vanchor;
-                    _pjoint->tRight = _pjoint->tRight * trel;
-                    break;
-                case KinBody::Joint::JointHinge2:
-                    _pjoint->tLeft.trans = _pjoint->vanchor;
-                    _pjoint->tRight.trans = -_pjoint->vanchor;
-                    _pjoint->tRight = _pjoint->tRight * trel;
-                    break;
-                case KinBody::Joint::JointSpherical:
-                    _pjoint->tLeft.trans = _pjoint->vanchor;
-                    _pjoint->tRight.trans = -_pjoint->vanchor;
-                    _pjoint->tRight = _pjoint->tRight * trel;
-                    break;
-                default:
-                    throw openrave_exception(str(boost::format("unknown joint type %d")%_pjoint->type));
-                }
-
-                if( _pjoint->bodies[1]->IsStatic() ) {
-                    _pjoint->tLeft = _pparent->GetTransform().inverse() * tbody1 * _pjoint->tLeft;
-                    _pjoint->bodies[0]->SetTransform(_pjoint->tLeft * _pjoint->tRight);
-                }
-                else
-                    _pjoint->bodies[1]->SetTransform(tbody0 * _pjoint->tLeft * _pjoint->tRight);
-
-                _pjoint->tinvRight = _pjoint->tRight.inverse();
-                _pjoint->tinvLeft = _pjoint->tLeft.inverse();
-
-                // have to transform back
-                if( !!_pjoint->bodies[0] )
-                    _pjoint->bodies[0]->SetTransform(tbody0);
-                if( !!_pjoint->bodies[1] )
-                    _pjoint->bodies[1]->SetTransform(tbody1);
-
+                _pjoint->_ComputeInternalInformation(attachedbodies[0],attachedbodies[1]);
                 return true;
             }
             else if( xmlname == "weight" ) {
@@ -1301,7 +1248,7 @@ namespace OpenRAVEXMLParser
             }
             else if( xmlname == "body" ) {
                 // figure out which body
-                int index = !_pjoint->bodies[0] ? 0 : 1;
+                int index = !attachedbodies[0] ? 0 : 1;
                 bool bQuery = true;
                 string linkname;
                 _ss >> linkname;
@@ -1309,12 +1256,12 @@ namespace OpenRAVEXMLParser
                 FOREACHC(itlink, _pparent->GetLinks()) {
                     if( stricmp((*itlink)->GetName().c_str(), linkname.c_str()) == 0 ) {
                         bQuery = !(*itlink)->IsStatic();
-                        _pjoint->bodies[index] = *itlink;
+                        attachedbodies[index] = *itlink;
                         break;
                     }
                 }
             
-                if( !_pjoint->bodies[index] && bQuery ) {
+                if( !attachedbodies[index] && bQuery ) {
                     RAVELOG_WARN(str(boost::format("Failed to find body %s for joint %s\n")%linkname%_pjoint->_name));
                     GetXMLErrorCount()++;
                 }
@@ -1353,14 +1300,26 @@ namespace OpenRAVEXMLParser
                     *it *= fRatio;
                 }
             }
-            else if( xmlname == "maxvel" )
-                _ss >> _pjoint->fMaxVel;
-            else if( xmlname == "hardmaxvel" )
-                _ss >> _pjoint->fHardMaxVel;
-            else if( xmlname == "maxaccel" )
-                _ss >> _pjoint->fMaxAccel;
-            else if( xmlname == "maxtorque" )
-                _ss >> _pjoint->fMaxTorque;
+            else if( xmlname == "maxvel" ) {
+                for(int idof = 0; idof < _pjoint->GetDOF(); ++idof) {
+                    _ss >> _pjoint->fMaxVel[idof];
+                }
+            }
+            else if( xmlname == "hardmaxvel" ) {
+                for(int idof = 0; idof < _pjoint->GetDOF(); ++idof) {
+                    _ss >> _pjoint->fHardMaxVel[idof];
+                }
+            }
+            else if( xmlname == "maxaccel" ) {
+                for(int idof = 0; idof < _pjoint->GetDOF(); ++idof) {
+                    _ss >> _pjoint->fMaxAccel[idof];
+                }
+            }
+            else if( xmlname == "maxtorque" ) {
+                for(int idof = 0; idof < _pjoint->GetDOF(); ++idof) {
+                    _ss >> _pjoint->fMaxTorque[idof];
+                }
+            }
             else if( xmlname == "resolution" ) {
                 _ss >> _pjoint->fResolution;
                 _pjoint->fResolution *= fRatio;
@@ -1377,7 +1336,7 @@ namespace OpenRAVEXMLParser
             }
             else {
                 // could be type specific
-                switch(_pjoint->type) {
+                switch(_pjoint->_type) {
                 case KinBody::Joint::JointHinge:
                     if( xmlname == "anchor" )
                         _ss >> _pjoint->vanchor.x >> _pjoint->vanchor.y >> _pjoint->vanchor.z;
@@ -1421,7 +1380,7 @@ namespace OpenRAVEXMLParser
                         _ss >> _pjoint->vanchor.x >> _pjoint->vanchor.y >> _pjoint->vanchor.z;
                     break;
                 default:
-                    throw openrave_exception(str(boost::format("bad joint type: %d")%_pjoint->type));
+                    throw openrave_exception(str(boost::format("bad joint type: 0x%x")%_pjoint->_type));
                     break;
                 }
             }
@@ -1450,6 +1409,7 @@ namespace OpenRAVEXMLParser
         KinBody::JointPtr& _pjoint;
         bool _bNegateJoint;
         string _processingtag;
+        boost::array<KinBody::LinkPtr,2> attachedbodies;
     };
 
     class InterfaceXMLReader;
@@ -2460,10 +2420,19 @@ namespace OpenRAVEXMLParser
     RobotXMLReader(EnvironmentBasePtr penv, InterfaceBasePtr& probot, const std::list<std::pair<std::string,std::string> >& atts, int rootoffset, int rootjoffset, int rootsoffset, int rootmoffset) : InterfaceXMLReader(penv,probot,PT_Robot,"robot",atts), rootoffset(rootoffset), rootjoffset(rootjoffset), rootsoffset(rootsoffset), rootmoffset(rootmoffset) {
             _probot = RaveInterfaceCast<RobotBase>(_pinterface);
             FOREACHC(itatt, atts) {
-                if( itatt->first == "name" )
+                if( itatt->first == "name" ) {
                     _robotname = itatt->second;
-                else if( itatt->first == "prefix" )
+                }
+                else if( itatt->first == "prefix" ) {
                     _prefix = itatt->second;
+                }
+            }
+            if( !!_probot ) {
+                curmoffset = _probot->GetManipulators().size();
+                cursoffset = _probot->GetAttachedSensors().size();
+            }
+            else {
+                curmoffset = cursoffset = 0;
             }
         }
 
@@ -2586,6 +2555,9 @@ namespace OpenRAVEXMLParser
                     vector<RobotBase::ManipulatorPtr>::iterator itmanip = _probot->GetManipulators().begin()+rootmoffset;
                     while(itmanip != _probot->GetManipulators().end()) {
                         (*itmanip)->_name = _prefix + (*itmanip)->_name;
+                        FOREACH(itgrippername,(*itmanip)->_vgripperjointnames) {
+                            *itgrippername = _prefix + *itgrippername;
+                        }
                         ++itmanip;
                     }
                 }
@@ -2597,6 +2569,22 @@ namespace OpenRAVEXMLParser
                     ++itlink;
                 }
         
+                // put the sensors and manipulators in front of what was declared. this is necessary so that user-based manipulator definitions come before the pre-defined ones.
+                if( cursoffset > 0 && cursoffset < _probot->GetAttachedSensors().size() ) {
+                    size_t prevsize = _probot->GetAttachedSensors().size();
+                    std::vector<RobotBase::AttachedSensorPtr> vtemp(_probot->GetAttachedSensors().begin()+cursoffset,_probot->GetAttachedSensors().end());
+                    vtemp.insert(vtemp.end(),_probot->GetAttachedSensors().begin(),_probot->GetAttachedSensors().begin()+cursoffset);
+                    _probot->GetAttachedSensors().swap(vtemp);
+                    _probot->GetAttachedSensors().resize(prevsize);
+                }
+                if( curmoffset > 0 && curmoffset < _probot->GetManipulators().size() ) {
+                    size_t prevsize = _probot->GetManipulators().size();
+                    std::vector<RobotBase::ManipulatorPtr> vtemp(_probot->GetManipulators().begin()+curmoffset,_probot->GetManipulators().end());
+                    vtemp.insert(vtemp.end(),_probot->GetManipulators().begin(),_probot->GetManipulators().begin()+curmoffset);
+                    _probot->GetManipulators().swap(vtemp);
+                    _probot->GetManipulators().resize(prevsize);
+                }
+
                 // forces robot to reupdate its internal objects
                 _probot->SetTransform(_probot->GetTransform());
         
@@ -2636,6 +2624,8 @@ namespace OpenRAVEXMLParser
         int rootjoffset; ///< the initial number of joints when Robot is created
         int rootsoffset; ///< the initial number of attached sensors when Robot is created
         int rootmoffset; ///< the initial number of manipulators when Robot is created
+        size_t curmoffset; ///< initial number of manipulators for current xml reader
+        size_t cursoffset; ///< initial number of manipulators for current xml reader
     };
 
     template <InterfaceType type> class DummyInterfaceXMLReader : public InterfaceXMLReader

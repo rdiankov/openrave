@@ -152,13 +152,13 @@ namespace {
 	                         list<string>& remainingPart) {
 		remainingPart.clear();
 
-        // custom change for following instance urls (Rosen Diankov)
+        // need to follow instance urls since they are just copies of code in the url.
         if ( strncmp( container->getElementName(), "instance_", 9 ) == 0 ) {
             daeURI *uri = (daeURI*)container->getAttributeValue("url");
-            if ( uri != NULL && uri->getElement() != NULL ) {
+            if ( !!uri && !!uri->getElement() ) {
+                // found the url, now resolve the left over part
                 daeElement *e = findWithDots( uri->getElement(), s, profile, finder, remainingPart );
-                if ( e != NULL ) {
-                    //found it
+                if ( !!e ) {
                     return e;
                 }
             }
@@ -368,14 +368,25 @@ namespace {
 			return daeSidRef::resolveData();
 
         if( !!result.elt && !result.array && !result.scalar ) {
-            // if newparam, follow its SIDREF (Rosen Diankov)
+            // <newparam> can have a SIDREF specification, so if the current sid resolves to this newparam, then start a new search
+            // for the <newparam>'s SIDREF
             if( strcmp(result.elt->getElementName(),"newparam") == 0) {
                 daeElement* psidref = result.elt->getChild("SIDREF");
                 if( !!psidref ) {
                     daeSidRef::resolveData newresult;
-                    newresult = resolveImpl(daeSidRef(string("./") + psidref->getCharData(),result.elt->getParent(),sidRef.profile));
+                    daeSidRef newsidref(psidref->getCharData(),result.elt->getParent(),sidRef.profile);
+                    newresult = result.elt->getDAE()->getSidRefCache().lookup(newsidref);
+                    if (!!newresult.elt) {
+                        return newresult;
+                    }
+                    // try resolving as an animation-style sid ref, where the first part is an ID.
+                    newresult = resolveImpl(newsidref);
                     if( !newresult.elt ) {
-                        newresult = resolveImpl(daeSidRef(psidref->getCharData(),result.elt->getParent(),sidRef.profile));
+                        // this is actually not part of the standard, it is only a hack
+                        newresult = resolveImpl(daeSidRef(string("./") + psidref->getCharData(),result.elt->getParent(),sidRef.profile));
+                        if( !!newresult.elt ) {
+                            fprintf(stderr,"SID '%s' that needs  './' prefixed to it to resolve correctly\n",psidref->getCharData().c_str());
+                        }
                     }
                     if( !!newresult.elt ) {
                         return newresult;

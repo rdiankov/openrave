@@ -56,9 +56,14 @@ public:
     SoTransform* GetIvTransform()    { return _ivXform; }
     SoSwitch*    GetIvGeom() const   { return _ivGeom; }
     SoTransparencyType* GetIvTransparency() const { return _ivTransparency; }
+
+    /// \brief returns true if the given node is in the inventor hierarchy
     bool ContainsIvNode(SoNode *pNode);
+    /// \brief returns true if the path the given node passes through the geometry root of this item (i.e. the node is part of the geometry of this item).
     bool ContainsIvNode(SoPath *pNodePath);
+    /// \brief Set the visibility of the geometry (ON = true).
     void SetGeomVisibility(bool bFlag);
+    /// \brief Set the pick style of the node to be unpickable
     void SetUnpickable();
 
     virtual SoSeparator* GetIvLink(int index) const { return _ivRoot; }

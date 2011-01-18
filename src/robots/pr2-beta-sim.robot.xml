@@ -1,5 +1,5 @@
 <!-- pr2 robot with simulated sensors and controllers attached -->
-<robot file="pr2-beta-static.robot.xml">
+<robot file="pr2-beta-static.zae">
   <attachedsensor name="l_forearm_cam_optical_frame">
     <link>l_forearm_cam_optical_frame</link>
     <sensor type="BaseCamera" args="">

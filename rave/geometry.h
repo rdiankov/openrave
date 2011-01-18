@@ -23,6 +23,7 @@
 #include <cmath>
 #include <iostream>
 #include <limits>
+#include <utility> // for std::pair
 #include <cstring>
 #include <cstdlib>
 
@@ -855,6 +856,22 @@ RaveVector<T> quatRotateDirection(const RaveVector<T>& sourcedir, const RaveVect
         return quatFromAxisAngle(rottodirection, MATH_ATAN2(fsin, fcos));
     }
     return RaveVector<T>(T(1),T(0),T(0),T(0));
+}
+
+/// \brief Find the rotation theta around axis such that rot(axis,theta) * q is closest to the identity rotation
+///
+/// \ingroup affine_math
+/// \param[in] axis axis to minimize rotation about
+/// \param[in] quat input
+/// \return The angle that minimizes the rotation along with the normalized rotation rot(axis,theta)*q
+template<typename T>
+std::pair<T, RaveVector<T> > normalizeAxisRotation(const RaveVector<T>& axis, const RaveVector<T>& quat)
+{
+    T axislen = MATH_SQRT(axis.lengthsqr3());
+    dReal angle = MATH_ATAN2(-quat.w*axis.z-quat.z*axis.y-quat.y*axis.x,quat.x*axislen);
+    dReal sinangle2 = MATH_SIN(angle)/axislen, cosangle2 = MATH_COS(angle);
+    RaveVector<T> normalizingquat = RaveVector<T>(cosangle2,axis.x*sinangle2,axis.y*sinangle2,axis.z*sinangle2);
+    return std::make_pair(2*angle,quatMultiply(normalizingquat,quat));
 }
 
 /// \brief Converts a quaternion into the axis-angle representation.

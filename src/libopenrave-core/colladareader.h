@@ -100,8 +100,9 @@ class ColladaReader : public daeErrorHandler
     };
 
  public:
- ColladaReader(EnvironmentBasePtr penv) : _dom(NULL), _penv(penv), _nGlobalSensorId(0), _nGlobalManipulatorId(0) {
+ ColladaReader(EnvironmentBasePtr penv) : _dom(NULL), _penv(penv), _nGlobalSensorId(0), _nGlobalManipulatorId(0), _nGlobalIndex(0) {
         daeErrorHandler::setErrorHandler(this);
+        _bOpeningZAE = false;
     }
     virtual ~ColladaReader() {
         _dae.reset();
@@ -112,7 +113,9 @@ class ColladaReader : public daeErrorHandler
     {
         RAVELOG_VERBOSE(str(boost::format("init COLLADA reader version: %s, namespace: %s, filename: %s\n")%COLLADA_VERSION%COLLADA_NAMESPACE%filename));
         _dae.reset(new DAE);
+        _bOpeningZAE = filename.find(".zae") == filename.size()-4;
         _dom = _dae->open(filename);
+        _bOpeningZAE = false;
         if (!_dom) {
             return false;
         }
@@ -260,6 +263,19 @@ class ColladaReader : public daeErrorHandler
                 }
             }
         }
+
+        // search for anything left over
+        std::list<JointAxisBinding> listAxisBindingsAll;
+        std::vector<std::string> vprocessednodes;
+        if (!!allscene->getInstance_visual_scene()) {
+            domVisual_sceneRef visual_scene = daeSafeCast<domVisual_scene>(allscene->getInstance_visual_scene()->getUrl().getElement().cast());
+            for (size_t node = 0; node < visual_scene->getNode_array().getCount(); node++) {
+                pbody = ExtractKinematicsModel(visual_scene->getNode_array()[node], domPhysics_modelRef(),listAxisBindingsAll,vprocessednodes);
+                if( !!pbody ) {
+                    return true;
+                }
+            }
+        }
         return true;
     }
 
@@ -290,6 +306,8 @@ class ColladaReader : public daeErrorHandler
                     RAVELOG_WARN("creating default robot with no controller support\n");
                 }
             }
+            _mapJointUnits.clear();
+            _mapJointIds.clear();
         }
         if( probot->__strxmlfilename.size() == 0 ) {
             probot->__strxmlfilename = _filename;
@@ -349,9 +367,11 @@ class ColladaReader : public daeErrorHandler
             // parse the kinematics information
             if (!probot) {
                 probot = RaveCreateRobot(_penv, "GenericRobot");
-            }
-            if( !probot ) {
-                probot = RaveCreateRobot(_penv, "");
+                if( !probot ) {
+                    probot = RaveCreateRobot(_penv, "");
+                }
+                _mapJointUnits.clear();
+                _mapJointIds.clear();
             }
             BOOST_ASSERT(probot->IsRobot());
 
@@ -389,6 +409,8 @@ class ColladaReader : public daeErrorHandler
             if( !pkinbody ) {
                 pkinbody = RaveCreateKinBody(_penv,"");
             }
+            _mapJointUnits.clear();
+            _mapJointIds.clear();
         }
         if( pkinbody->__strxmlfilename.size() == 0 ) {
             pkinbody->__strxmlfilename = _filename;
@@ -427,6 +449,8 @@ class ColladaReader : public daeErrorHandler
         if( !!pdomnode->getID() && find(vprocessednodes.begin(),vprocessednodes.end(),pdomnode->getID()) != vprocessednodes.end() ) {
             return KinBodyPtr();
         }
+        _mapJointUnits.clear();
+        _mapJointIds.clear();
         KinBodyPtr pkinbody = RaveCreateKinBody(_penv);
         string name = !pdomnode->getName() ? "" : _ConvertToOpenRAVEName(pdomnode->getName());
         if( name.size() == 0 ) {
@@ -451,10 +475,11 @@ class ColladaReader : public daeErrorHandler
     /// \brief append the kinematics model to the openrave kinbody
     bool ExtractKinematicsModel(KinBodyPtr& pkinbody, domKinematics_modelRef kmodel, domNodeRef pnode, domPhysics_modelRef pmodel, const std::list<JointAxisBinding>& listAxisBindings)
     {
-        _mapJointUnits.clear();
         vector<domJointRef> vdomjoints;
         if (!pkinbody) {
             pkinbody = RaveCreateKinBody(_penv);
+            _mapJointUnits.clear();
+            _mapJointIds.clear();
         }
         if( pkinbody->GetName().size() == 0 && !!kmodel->getName() ) {
             pkinbody->SetName(kmodel->getName());
@@ -465,6 +490,9 @@ class ColladaReader : public daeErrorHandler
         RAVELOG_DEBUG(str(boost::format("kinematics model: %s\n")%pkinbody->GetName()));
         if( !!pnode ) {
             RAVELOG_DEBUG(str(boost::format("node name: %s\n")%pnode->getId()));
+        }
+        if( !kmodel->getID() ) {
+            RAVELOG_DEBUG(str(boost::format("kinematics model: %s has no id attribute!\n")%pkinbody->GetName()));
         }
 
         //  Process joint of the kinbody
@@ -512,7 +540,7 @@ class ColladaReader : public daeErrorHandler
             pjoint->_vmimic[iaxis].reset(new KinBody::Joint::MIMIC());
             dReal ftargetunit = 1;
             if(_mapJointUnits.find(pjoint) != _mapJointUnits.end() ) {
-                ftargetunit = _mapJointUnits[pjoint];
+                ftargetunit = _mapJointUnits[pjoint].at(iaxis);
             }
 
             daeTArray<daeElementRef> children;
@@ -633,10 +661,10 @@ class ColladaReader : public daeErrorHandler
         if( linkname.size() == 0 ) {
             if( !!pdomnode ) {
                 if (!!pdomnode->getName()) {
-                    linkname = pdomnode->getName();
+                    linkname = _ConvertToOpenRAVEName(pdomnode->getName());
                 }
                 if( linkname.size() == 0 && !!pdomnode->getID()) {
-                    linkname = pdomnode->getID();
+                    linkname = _ConvertToOpenRAVEName(pdomnode->getID());
                 }
             }
         }
@@ -644,11 +672,14 @@ class ColladaReader : public daeErrorHandler
         KinBody::LinkPtr plink = pkinbody->GetLink(linkname);
         if( !plink ) {
             plink.reset(new KinBody::Link(pkinbody));
-            plink->_name = _ConvertToOpenRAVEName(linkname);
+            plink->_name = linkname;
             plink->_mass = 1.0;
             plink->bStatic = false;
             plink->_index = (int) pkinbody->_veclinks.size();
             pkinbody->_veclinks.push_back(plink);
+        }
+        else {
+            RAVELOG_DEBUG(str(boost::format("found previously defined link '%s")%linkname));
         }
 
         if( !!pdomnode ) {
@@ -660,8 +691,7 @@ class ColladaReader : public daeErrorHandler
         }
         else {
             RAVELOG_DEBUG(str(boost::format("Attachment link elements: %d\n")%pdomlink->getAttachment_full_array().getCount()));
-            Transform tlink = _ExtractFullTransform(pdomlink);
-            plink->_t = tParentLink * tlink; // use the kinematics coordinate system for each link
+            plink->_t = tParentLink * _ExtractFullTransform(pdomlink); // use the kinematics coordinate system for each link
           
             {
                 stringstream ss; ss << plink->GetName() << ": " << plink->_t << endl;
@@ -682,23 +712,33 @@ class ColladaReader : public daeErrorHandler
 
                 // process attached links
                 daeElement* peltjoint = daeSidRef(pattfull->getJoint(), pattfull).resolve().elt;
+                if( !peltjoint ) {
+                    RAVELOG_WARN(str(boost::format("could not find attached joint %s!\n")%pattfull->getJoint()));
+                    continue;
+                }
+                string jointid;
+                if( string(pattfull->getJoint()).find("./") == 0 ) {
+                    jointid = str(boost::format("%s/%s")%_ExtractParentId(pattfull)%&pattfull->getJoint()[1]);
+                }
+                else {
+                    jointid = pattfull->getJoint();
+                }
+                    
                 domJointRef pdomjoint = daeSafeCast<domJoint> (peltjoint);
-
                 if (!pdomjoint) {
                     domInstance_jointRef pdomijoint = daeSafeCast<domInstance_joint> (peltjoint);
                     if (!!pdomijoint) {
                         pdomjoint = daeSafeCast<domJoint> (pdomijoint->getUrl().getElement().cast());
                     }
-                }
-
-                if (!pdomjoint || pdomjoint->typeID() != domJoint::ID()) {
-                    RAVELOG_WARN(str(boost::format("could not find attached joint %s!\n")%pattfull->getJoint()));
-                    return KinBody::LinkPtr();
+                    else {
+                        RAVELOG_WARN(str(boost::format("could not cast element <%s> to <joint>!\n")%peltjoint->getElementName()));
+                        continue;
+                    }
                 }
 
                 // get direct child link
                 if (!pattfull->getLink()) {
-                    RAVELOG_WARN(str(boost::format("joint %s needs to be attached to a valid link\n")%pdomjoint->getID()));
+                    RAVELOG_WARN(str(boost::format("joint %s needs to be attached to a valid link\n")%jointid));
                     continue;
                 }
 
@@ -720,79 +760,94 @@ class ColladaReader : public daeErrorHandler
                     }
                 }              
                 if (!pchildnode) {
-                    RAVELOG_DEBUG(str(boost::format("joint %s has no visual binding\n")%pdomjoint->getID()));
+                    RAVELOG_DEBUG(str(boost::format("joint %s has no visual binding\n")%jointid));
                 }
 
                 // create the joints before creating the child links
-                vector<KinBody::JointPtr> vjoints(vdomaxes.getCount());
+                KinBody::JointPtr pjoint(new KinBody::Joint(pkinbody));
+                int jointtype = vdomaxes.getCount();
+                pjoint->_bActive = true; // if not active, put into the passive list
+                pjoint->_vweights.resize(vdomaxes.getCount());
+                FOREACH(it,pjoint->_vweights) {
+                    *it = 1;
+                }
+                std::vector<dReal> vaxisunits(vdomaxes.getCount(),dReal(1));
                 for (size_t ic = 0; ic < vdomaxes.getCount(); ++ic) {
-                    KinBody::JointPtr pjoint(new KinBody::Joint(pkinbody));
-
-                    pjoint->_bActive = true; // if not active, put into the passive list
                     FOREACHC(itaxisbinding,listAxisBindings) {
                         if (vdomaxes[ic] == itaxisbinding->pkinematicaxis) {
                             if( !!itaxisbinding->kinematics_axis_info ) {
                                 if( !!itaxisbinding->kinematics_axis_info->getActive() ) {
+                                    // what if different axes have different active profiles?
                                     pjoint->_bActive = resolveBool(itaxisbinding->kinematics_axis_info->getActive(),itaxisbinding->kinematics_axis_info);
                                 }
                             }
                             break;
                         }
                     }
-
-                    pjoint->bodies[0] = plink;
-                    pjoint->bodies[1].reset();
-                    if( pjoint->_bActive ) {
-                        pjoint->jointindex = (int) pkinbody->_vecjoints.size();
-                        pjoint->dofindex = pkinbody->GetDOF();
-                    }
-                    if( !!pdomjoint->getName() ) {
-                        pjoint->_name = _ConvertToOpenRAVEName(pdomjoint->getName());
-                    }
-                    else {
-                        pjoint->_name = str(boost::format("dummy%d")%pjoint->jointindex);
-                    }
-
-                    if( !pjoint->_bActive ) {
-                        RAVELOG_VERBOSE(str(boost::format("joint %s is passive\n")%pjoint->_name));
-                    }
-                    
                     domAxis_constraintRef pdomaxis = vdomaxes[ic];
                     if( strcmp(pdomaxis->getElementName(), "revolute") == 0 ) {
-                        pjoint->type = KinBody::Joint::JointRevolute;
+                        pjoint->_type = KinBody::Joint::JointRevolute;
+                        pjoint->fMaxVel[ic] = 0.5;
                     }
                     else if( strcmp(pdomaxis->getElementName(), "prismatic") == 0 ) {
-                        pjoint->type = KinBody::Joint::JointPrismatic;
-                        _mapJointUnits[pjoint] = _GetUnitScale(pdomaxis,_fGlobalScale);
+                        pjoint->_type = KinBody::Joint::JointPrismatic;
+                        vaxisunits[ic] = _GetUnitScale(pdomaxis,_fGlobalScale);
+                        jointtype |= 1<<(4+ic);
+                        pjoint->fMaxVel[ic] = 0.01;
                     }
                     else {
                         RAVELOG_WARN(str(boost::format("unsupported joint type: %s\n")%pdomaxis->getElementName()));
                     }
-
-                    pjoint->_vweights.resize(pjoint->GetDOF());
-                    FOREACH(it,pjoint->_vweights) {
-                        *it = 1;
-                    }
-                    pjoint->fMaxVel = pjoint->GetType() == KinBody::Joint::JointPrismatic ? 0.01 : 0.5f;
-
-                    if( pjoint->_bActive ) {
-                        pkinbody->_vecjoints.push_back(pjoint);
-                    }
-                    else {
-                        pkinbody->_vPassiveJoints.push_back(pjoint);
-                    }
-                    vjoints[ic] = pjoint;
-                    RAVELOG_DEBUG(str(boost::format("joint %s (%d:%d)")%pjoint->_name%pjoint->jointindex%pjoint->dofindex));
                 }
+
+                pjoint->_type = (KinBody::Joint::JointType)jointtype;
+                _mapJointUnits[pjoint] = vaxisunits;
+                if( pjoint->_bActive ) {
+                    pjoint->jointindex = (int) pkinbody->_vecjoints.size();
+                    pjoint->dofindex = pkinbody->GetDOF();
+                }
+                if( !!pdomjoint->getName() ) {
+                    pjoint->_name = _ConvertToOpenRAVEName(pdomjoint->getName());
+                }
+                else {
+                    pjoint->_name = str(boost::format("dummy%d")%pjoint->jointindex);
+                }
+
+                if( pjoint->_bActive ) {
+                    pkinbody->_vecjoints.push_back(pjoint);
+                }
+                else {
+                    RAVELOG_VERBOSE(str(boost::format("joint %s is passive\n")%pjoint->_name));
+                    pkinbody->_vPassiveJoints.push_back(pjoint);
+                }
+
+                if( _mapJointIds.find(jointid) != _mapJointIds.end() ) {
+                    RAVELOG_WARN(str(boost::format("jointid '%s' is duplicated!")%jointid));
+                }
+                _mapJointIds[jointid] = pjoint;
+                RAVELOG_DEBUG(str(boost::format("joint %s (%d:%d)")%pjoint->_name%pjoint->jointindex%pjoint->dofindex));
 
                 KinBody::LinkPtr pchildlink = ExtractLink(pkinbody, pattfull->getLink(), pchildnode, plink->_t * tatt, vdomjoints, listAxisBindings);
 
                 if (!pchildlink) {
-                    RAVELOG_WARN(str(boost::format("Link has no child: %s\n")%plink->GetName()));
-                    continue;
+                    RAVELOG_WARN(str(boost::format("Link '%s' has no child link, creating dummy link\n")%plink->GetName()));
+                    // create dummy child link
+                    stringstream ss;
+                    ss << plink->_name;
+                    ss <<"_dummy" << pkinbody->_veclinks.size();
+                    pchildlink.reset(new KinBody::Link(pkinbody));
+                    pchildlink->_name = ss.str();
+                    pchildlink->bStatic = false;
+                    pchildlink->_index = (int)pkinbody->_veclinks.size();
+                    pkinbody->_veclinks.push_back(pchildlink);
                 }
 
-                int numjoints = 0;
+                pjoint->_vlowerlimit.resize(vdomaxes.getCount());
+                pjoint->_vupperlimit.resize(vdomaxes.getCount());
+
+                // Transform applied to the joint
+                pjoint->vanchor = tatt.trans;
+
                 for (size_t ic = 0; ic < vdomaxes.getCount(); ++ic) {
                     domKinematics_axis_infoRef kinematics_axis_info;
                     domMotion_axis_infoRef motion_axis_info;
@@ -806,37 +861,17 @@ class ColladaReader : public daeErrorHandler
                         }
                     }
                     domAxis_constraintRef pdomaxis = vdomaxes[ic];
-                    if (!pchildlink) {
-                        // create dummy child link
-                        // multiple axes can be easily done with "empty links"
-                        RAVELOG_WARN(str(boost::format("creating dummy link %s, num joints %d\n")%plink->GetName()%numjoints));
-
-                        stringstream ss;
-                        ss << plink->_name;
-                        ss <<"_dummy" << numjoints;
-                        pchildlink.reset(new KinBody::Link(pkinbody));
-                        pchildlink->_name = ss.str();
-                        pchildlink->bStatic = false;
-                        pchildlink->_index = (int)pkinbody->_veclinks.size();
-                        pkinbody->_veclinks.push_back(pchildlink);
-                    }
-
-                    RAVELOG_VERBOSE(str(boost::format("Joint %s assigned %d \n")%vjoints[ic]->GetName()%ic));
-                    KinBody::JointPtr pjoint = vjoints[ic];
-                    pjoint->bodies[1] = pchildlink;
 
                     //  Axes and Anchor assignment.
-                    pjoint->vAxes[0] = Vector(pdomaxis->getAxis()->getValue()[0], pdomaxis->getAxis()->getValue()[1], pdomaxis->getAxis()->getValue()[2]);
-                    if( pjoint->vAxes[0].lengthsqr3() > 0 ) {
-                        pjoint->vAxes[0].normalize3();
+                    pjoint->vAxes[ic] = Vector(pdomaxis->getAxis()->getValue()[ic], pdomaxis->getAxis()->getValue()[1], pdomaxis->getAxis()->getValue()[2]);
+                    if( pjoint->vAxes[ic].lengthsqr3() > 0 ) {
+                        pjoint->vAxes[ic].normalize3();
                     }
                     else {
-                        pjoint->vAxes[0] = Vector(0,0,1);
+                        pjoint->vAxes[ic] = Vector(0,0,1);
                     }
-                    pjoint->vanchor = Vector(0,0,0);
 
-                    int numbad = 0;
-                    pjoint->offset = 0; // to overcome -pi to pi boundary
+                    pjoint->_offsets[ic] = 0; // to overcome -pi to pi boundary
                     if (pkinbody->IsRobot() && !motion_axis_info) {
                         RAVELOG_WARN(str(boost::format("No motion axis info for joint %s\n")%pjoint->GetName()));
                     }
@@ -844,11 +879,11 @@ class ColladaReader : public daeErrorHandler
                     //  Sets the Speed and the Acceleration of the joint
                     if (!!motion_axis_info) {
                         if (!!motion_axis_info->getSpeed()) {
-                            pjoint->fMaxVel = resolveFloat(motion_axis_info->getSpeed(),motion_axis_info);
+                            pjoint->fMaxVel[ic] = resolveFloat(motion_axis_info->getSpeed(),motion_axis_info);
                             RAVELOG_VERBOSE("... Joint Speed: %f...\n",pjoint->GetMaxVel());
                         }
                         if (!!motion_axis_info->getAcceleration()) {
-                            pjoint->fMaxAccel = resolveFloat(motion_axis_info->getAcceleration(),motion_axis_info);
+                            pjoint->fMaxAccel[ic] = resolveFloat(motion_axis_info->getAcceleration(),motion_axis_info);
                             RAVELOG_VERBOSE("... Joint Acceleration: %f...\n",pjoint->GetMaxAccel());
                         }
                     }
@@ -862,23 +897,18 @@ class ColladaReader : public daeErrorHandler
                         }
                         
                         if (joint_locked) { // If joint is locked set limits to the static value.
-                            if( pjoint->type == KinBody::Joint::JointRevolute || pjoint->type ==KinBody::Joint::JointPrismatic) {
-                                RAVELOG_WARN("lock joint!!\n");
-                                pjoint->_vlowerlimit.push_back(0.0f);
-                                pjoint->_vupperlimit.push_back(0.0f);
-                            }
+                            RAVELOG_WARN("lock joint!!\n");
+                            pjoint->_vlowerlimit[ic] = 0;
+                            pjoint->_vupperlimit[ic] = 0;
                         }
                         else if (kinematics_axis_info->getLimits()) { // If there are articulated system kinematics limits
                             kinematics_limits   = true;
-                            dReal fscale = (pjoint->type == KinBody::Joint::JointRevolute)?(PI/180.0f):_GetUnitScale(kinematics_axis_info,_fGlobalScale);
-                            if( pjoint->type == KinBody::Joint::JointRevolute || pjoint->type ==KinBody::Joint::JointPrismatic) {
-                                pjoint->_vlowerlimit.push_back(fscale*(dReal)(resolveFloat(kinematics_axis_info->getLimits()->getMin(),kinematics_axis_info)));
-                                pjoint->_vupperlimit.push_back(fscale*(dReal)(resolveFloat(kinematics_axis_info->getLimits()->getMax(),kinematics_axis_info)));
-                                if( pjoint->type == KinBody::Joint::JointRevolute ) {
-                                    if( pjoint->_vlowerlimit.back() < -PI || pjoint->_vupperlimit.back()> PI ) {
-                                        pjoint->offset += 0.5f * (pjoint->_vlowerlimit.back() + pjoint->_vupperlimit.back());
-                                        ++numbad;
-                                    }
+                            dReal fscale = pjoint->IsRevolute(ic)?(PI/180.0f):_GetUnitScale(kinematics_axis_info,_fGlobalScale);
+                            pjoint->_vlowerlimit[ic] = fscale*(dReal)(resolveFloat(kinematics_axis_info->getLimits()->getMin(),kinematics_axis_info));
+                            pjoint->_vupperlimit[ic] = fscale*(dReal)(resolveFloat(kinematics_axis_info->getLimits()->getMax(),kinematics_axis_info));
+                            if( pjoint->IsRevolute(ic) ) {
+                                if( pjoint->_vlowerlimit[ic] < -PI || pjoint->_vupperlimit[ic] > PI ) {
+                                    pjoint->_offsets[ic] = 0.5f * (pjoint->_vlowerlimit[ic] + pjoint->_vupperlimit[ic]);
                                 }
                             }
                         }
@@ -886,80 +916,37 @@ class ColladaReader : public daeErrorHandler
                   
                     //  Search limits in the joints section
                     if (!kinematics_axis_info || (!joint_locked && !kinematics_limits)) {
-                        for(int i = 0; i < pjoint->GetDOF(); ++i) {
-                            //  If there are NO LIMITS
-                            if( !pdomaxis->getLimits() ) {
-                                RAVELOG_VERBOSE(str(boost::format("There are NO LIMITS in joint %s:%d ...\n")%pjoint->GetName()%kinematics_limits));
-                                if( pjoint->type == KinBody::Joint::JointRevolute ) {
-                                    pjoint->_bIsCircular = true;
-                                    pjoint->_vlowerlimit.push_back(-PI);
-                                    pjoint->_vupperlimit.push_back(PI);
-                                }
-                                else {
-                                    pjoint->_vlowerlimit.push_back(-100000);
-                                    pjoint->_vupperlimit.push_back(100000);
-                                }
+                        //  If there are NO LIMITS
+                        if( !pdomaxis->getLimits() ) {
+                            RAVELOG_VERBOSE(str(boost::format("There are NO LIMITS in joint %s:%d ...\n")%pjoint->GetName()%kinematics_limits));
+                            if( pjoint->IsRevolute(ic) ) {
+                                pjoint->_bIsCircular[ic] = true;
+                                pjoint->_vlowerlimit[ic] = -PI;
+                                pjoint->_vupperlimit[ic] = PI;
                             }
                             else {
-                                RAVELOG_VERBOSE(str(boost::format("There are LIMITS in joint %s ...\n")%pjoint->GetName()));
-                                dReal fscale = (pjoint->type == KinBody::Joint::JointRevolute)?(PI/180.0f):_GetUnitScale(pdomaxis,_fGlobalScale);
-                                pjoint->_vlowerlimit.push_back((dReal)pdomaxis->getLimits()->getMin()->getValue()*fscale);
-                                pjoint->_vupperlimit.push_back((dReal)pdomaxis->getLimits()->getMax()->getValue()*fscale);
-                                if( pjoint->type == KinBody::Joint::JointRevolute ) {
-                                    if( pjoint->_vlowerlimit.back() < -PI || pjoint->_vupperlimit.back()> PI ) {
-                                        pjoint->offset += 0.5f * (pjoint->_vlowerlimit[i] + pjoint->_vupperlimit[i]);
-                                        ++numbad;
-                                    }
+                                pjoint->_vlowerlimit[ic] =-1000000;
+                                pjoint->_vupperlimit[ic] = 1000000;
+                            }
+                        }
+                        else {
+                            RAVELOG_VERBOSE(str(boost::format("There are LIMITS in joint %s ...\n")%pjoint->GetName()));
+                            dReal fscale = pjoint->IsRevolute(ic)?(PI/180.0f):_GetUnitScale(pdomaxis,_fGlobalScale);
+                            pjoint->_vlowerlimit[ic] = (dReal)pdomaxis->getLimits()->getMin()->getValue()*fscale;
+                            pjoint->_vupperlimit[ic] = (dReal)pdomaxis->getLimits()->getMax()->getValue()*fscale;
+                            if( pjoint->IsRevolute(ic) ) {
+                                if( pjoint->_vlowerlimit[ic] < -PI || pjoint->_vupperlimit[ic] > PI ) {
+                                    pjoint->_offsets[ic] = 0.5f * (pjoint->_vlowerlimit[ic] + pjoint->_vupperlimit[ic]);
                                 }
                             }
                         }
                     }
 
-                    if( numbad> 0 ) {
-                        pjoint->offset *= 1.0f / (dReal)numbad;
-                        RAVELOG_VERBOSE("joint %s offset is %f\n", pjoint->GetName().c_str(), (float)pjoint->offset);
-                    }
-                  
-                    // Transform applied to the joint
-                    Transform tbody0, tbody1;
-                    tbody0 = pjoint->bodies[0]->GetTransform();
-                    tbody1 = pjoint->bodies[1]->GetTransform();
-                    Transform trel;
-                    trel = tbody0.inverse() * tbody1;
-
-                    Transform toffsetfrom;
-
-                    if (!!pchildnode) {
-                        RAVELOG_DEBUG(str(boost::format("Applies Transform Offset From Parent Link (%s:%s)!!!\n")%pjoint->bodies[0]->GetName()%pjoint->bodies[1]->GetName()));
-                        toffsetfrom = plink->_t * tatt;
-                        toffsetfrom = tbody0.inverse() * toffsetfrom;
-                    }
-                  
-                    pjoint->vanchor = toffsetfrom * pjoint->vanchor;
-
-                    RAVELOG_DEBUG(str(boost::format("joint dof: %d, link %s offset is %f\n")%pjoint->dofindex%plink->GetName()%pjoint->offset));
-                    RAVELOG_DEBUG(str(boost::format("OffsetFrom Translation trans.x:%f, trans.y:%f, trans.z:%f\n")%toffsetfrom.trans.x%toffsetfrom.trans.y%toffsetfrom.trans.z));
-                    RAVELOG_DEBUG(str(boost::format("OffsetFrom Rotation rot.x:%f, rot.y:%f, rot.z:%f, rot.w:%f\n")%toffsetfrom.rot.x%toffsetfrom.rot.y%toffsetfrom.rot.z%toffsetfrom.rot.w));
-                    RAVELOG_DEBUG(str(boost::format("vAnchor (%s) x:%f, y:%f, z:%f\n")%pjoint->GetName()%pjoint->vanchor.x%pjoint->vanchor.y%pjoint->vanchor.z));
-                    RAVELOG_DEBUG(str(boost::format("vAxes x:%f, y:%f, z:%f\n")%pjoint->vAxes.at(0).x%pjoint->vAxes.at(0).y%pjoint->vAxes.at(0).z));
-
                     //  Rotate axis from the parent offset
-                    for(int i = 0; i < pjoint->GetDOF(); ++i) {
-                        pjoint->vAxes[i] = toffsetfrom.rotate(pjoint->vAxes[i]);
-                    }
-
-                    if( pjoint->type == KinBody::Joint::JointRevolute ) {
-                        pjoint->tLeft = matrixFromAxisAngle(pjoint->vAxes[0], pjoint->offset);
-                    }
-
-                    pjoint->tLeft.trans   = pjoint->vanchor;
-                    pjoint->tRight.trans  = -pjoint->vanchor;
-                    pjoint->tRight = pjoint->tRight * trel;
-                    pjoint->tinvLeft = pjoint->tLeft.inverse();
-                    pjoint->tinvRight = pjoint->tRight.inverse();
-                    pchildlink.reset();
-                    ++numjoints;
+                    pjoint->vAxes[ic] = tatt.rotate(pjoint->vAxes[ic]);
                 }
+                RAVELOG_DEBUG(str(boost::format("joint dof: %d, link %s\n")%pjoint->dofindex%plink->GetName()));
+                pjoint->_ComputeInternalInformation(plink,pchildlink);
             }
             if( pdomlink->getAttachment_start_array().getCount() > 0 ) {
                 RAVELOG_WARN("openrave collada reader does not support attachment_start\n");
@@ -1114,7 +1101,7 @@ class ColladaReader : public daeErrorHandler
         plink->_listGeomProperties.push_back(KinBody::Link::GEOMPROPERTIES(plink));
         KinBody::Link::GEOMPROPERTIES& geom = plink->_listGeomProperties.back();
         KinBody::Link::TRIMESH& trimesh = geom.collisionmesh;
-        geom.type = KinBody::Link::GEOMPROPERTIES::GeomTrimesh;
+        geom._type = KinBody::Link::GEOMPROPERTIES::GeomTrimesh;
 
         // resolve the material and assign correct colors to the geometry
         if( !!triRef->getMaterial() ) {
@@ -1197,7 +1184,7 @@ class ColladaReader : public daeErrorHandler
         plink->_listGeomProperties.push_back(KinBody::Link::GEOMPROPERTIES(plink));
         KinBody::Link::GEOMPROPERTIES& geom = plink->_listGeomProperties.back();
         KinBody::Link::TRIMESH& trimesh = geom.collisionmesh;
-        geom.type = KinBody::Link::GEOMPROPERTIES::GeomTrimesh;
+        geom._type = KinBody::Link::GEOMPROPERTIES::GeomTrimesh;
 
         // resolve the material and assign correct colors to the geometry
         if( !!triRef->getMaterial() ) {
@@ -1290,7 +1277,7 @@ class ColladaReader : public daeErrorHandler
         plink->_listGeomProperties.push_back(KinBody::Link::GEOMPROPERTIES(plink));
         KinBody::Link::GEOMPROPERTIES& geom = plink->_listGeomProperties.back();
         KinBody::Link::TRIMESH& trimesh = geom.collisionmesh;
-        geom.type = KinBody::Link::GEOMPROPERTIES::GeomTrimesh;
+        geom._type = KinBody::Link::GEOMPROPERTIES::GeomTrimesh;
 
         // resolve the material and assign correct colors to the geometry
         if( !!triRef->getMaterial() ) {
@@ -1386,7 +1373,7 @@ class ColladaReader : public daeErrorHandler
         plink->_listGeomProperties.push_back(KinBody::Link::GEOMPROPERTIES(plink));
         KinBody::Link::GEOMPROPERTIES& geom = plink->_listGeomProperties.back();
         KinBody::Link::TRIMESH& trimesh = geom.collisionmesh;
-        geom.type = KinBody::Link::GEOMPROPERTIES::GeomTrimesh;
+        geom._type = KinBody::Link::GEOMPROPERTIES::GeomTrimesh;
 
         // resolve the material and assign correct colors to the geometry
         if( !!triRef->getMaterial() ) {
@@ -1602,7 +1589,7 @@ class ColladaReader : public daeErrorHandler
                 plink->_listGeomProperties.push_back(KinBody::Link::GEOMPROPERTIES(plink));
                 KinBody::Link::GEOMPROPERTIES& geom = plink->_listGeomProperties.back();
                 KinBody::Link::TRIMESH& trimesh = geom.collisionmesh;
-                geom.type = KinBody::Link::GEOMPROPERTIES::GeomTrimesh;
+                geom._type = KinBody::Link::GEOMPROPERTIES::GeomTrimesh;
 
                 _computeConvexHull(vconvexhull,trimesh);
                 geom.InitCollisionMesh();
@@ -1652,25 +1639,25 @@ class ColladaReader : public daeErrorHandler
                     }
 
                     for(size_t ic = 0; ic < tec->getContents().getCount(); ++ic) {
-                        daeElementRef pgripper_joint = tec->getContents()[ic];
-                        if( pgripper_joint->getElementName() == string("gripper_joint") ) {
-                            std::pair<KinBody::JointPtr, domJointRef> result = _getJointFromRef(pgripper_joint->getAttribute("joint").c_str(),as,probot);
+                        daeElementRef pmanipchild = tec->getContents()[ic];
+                        if( pmanipchild->getElementName() == string("gripper_joint") ) {
+                            std::pair<KinBody::JointPtr, domJointRef> result = _getJointFromRef(pmanipchild->getAttribute("joint").c_str(),as,probot);
                             KinBody::JointPtr pjoint = result.first;
                             domJointRef pdomjoint = result.second;
                             if( !!pjoint && !!pdomjoint ) {
                                 pmanip->_vgripperjointnames.push_back(pjoint->GetName());
                                 daeTArray<daeElementRef> children;
-                                pgripper_joint->getChildren(children);
+                                pmanipchild->getChildren(children);
                                 for (size_t i = 0; i < children.getCount(); i++) {
                                     if( children[i]->getElementName() == string("closing_direction") ) {
                                         domAxis_constraintRef paxis = daeSafeCast<domAxis_constraint>(daeSidRef(children[i]->getAttribute("axis"), pdomjoint).resolve().elt);
                                         float closing_direction = 0;
                                         if( !paxis ) {
-                                            RAVELOG_WARN(str(boost::format("cannot resolve joint %s axis %s")%pgripper_joint->getAttribute("joint")%children[i]->getAttribute("axis")));
+                                            RAVELOG_WARN(str(boost::format("cannot resolve joint %s axis %s")%pmanipchild->getAttribute("joint")%children[i]->getAttribute("axis")));
                                         }
                                         else {
                                             if( !resolveCommon_float_or_param(children[i],as,closing_direction) ) {
-                                                RAVELOG_WARN(str(boost::format("gripper joint %s axis %s cannot extract closing_direction\n")%children[i]->getAttribute("axis")%pgripper_joint->getAttribute("joint")));
+                                                RAVELOG_WARN(str(boost::format("gripper joint %s axis %s cannot extract closing_direction\n")%children[i]->getAttribute("axis")%pmanipchild->getAttribute("joint")));
                                             }
                                         }
                                         pmanip->_vClosingDirection.push_back((dReal)closing_direction);
@@ -1678,14 +1665,17 @@ class ColladaReader : public daeErrorHandler
                                 }
                                 continue;
                             }
-                            RAVELOG_WARN(str(boost::format("could not find manipulator '%s' gripper joint '%s'\n")%pmanip->GetName()%pgripper_joint->getAttribute("joint")));
+                            RAVELOG_WARN(str(boost::format("could not find manipulator '%s' gripper joint '%s'\n")%pmanip->GetName()%pmanipchild->getAttribute("joint")));
                         }
-                        else if( pgripper_joint->getElementName() == string("iksolver") ) {
+                        else if( pmanipchild->getElementName() == string("iksolver") ) {
                             boost::shared_ptr<std::string> interfacename = _ExtractInterfaceType(tec->getContents()[ic]);
                             if( !!interfacename ) {
                                 pmanip->_strIkSolver = *interfacename;
                                 pmanip->_pIkSolver = RaveCreateIkSolver(_penv,pmanip->_strIkSolver);
                             }
+                        }
+                        else if( pmanipchild->getElementName() != string("frame_origin") && pmanipchild->getElementName() != string("frame_tip")) {
+                            RAVELOG_WARN(str(boost::format("unrecognized tag <%s> in manipulator '%s'")%pmanipchild->getElementName()%pmanip->GetName()));
                         }
                     }
 
@@ -2098,12 +2088,15 @@ class ColladaReader : public daeErrorHandler
 
     virtual void handleError( daeString msg )
     {
-        RAVELOG_ERROR("COLLADA error: %s\n", msg);
+        if( _bOpeningZAE && (msg == string("Document is empty\n") || msg == string("Error parsing XML in daeLIBXMLPlugin::read\n")) ) {
+            return; // collada-dom prints these messages even if no error
+        }
+        RAVELOG_ERROR(str(boost::format("COLLADA error: %s")%msg));
     }
 
     virtual void handleWarning( daeString msg )
     {
-        RAVELOG_WARN("COLLADA warning: %s\n", msg);
+        RAVELOG_WARN(str(boost::format("COLLADA warning: %s")%msg));
     }
 
  private:
@@ -2152,7 +2145,7 @@ class ColladaReader : public daeErrorHandler
             domBind_joint_axisRef bindjoint = kiscene->getBind_joint_axis_array()[ijoint];
             daeElementRef pjtarget = daeSidRef(bindjoint->getTarget(), viscene->getUrl().getElement()).resolve().elt;
             if (!pjtarget) {
-                RAVELOG_WARN(str(boost::format("Target Node %s not found\n")%bindjoint->getTarget()));
+                RAVELOG_WARN(str(boost::format("Target Node '%s' not found\n")%bindjoint->getTarget()));
                 continue;
             }
             daeElement* pelt = searchBinding(bindjoint->getAxis(),kscene);
@@ -2231,7 +2224,7 @@ class ColladaReader : public daeErrorHandler
                 linkname = pdomlink->getID();
             }
         }
-        return linkname;
+        return _ConvertToOpenRAVEName(linkname);
     }
 
     bool _checkMathML(daeElementRef pelt,const string& type)
@@ -2258,9 +2251,17 @@ class ColladaReader : public daeErrorHandler
             }
         }
 
-        if (!pdomjoint || pdomjoint->typeID() != domJoint::ID() || !pdomjoint->getName()) {
+        if (!pdomjoint) {
             RAVELOG_WARN(str(boost::format("could not find collada joint '%s'!\n")%targetref));
             return std::make_pair(KinBody::JointPtr(),domJointRef());
+        }
+
+        if( string(targetref).find("./") != 0 ) {
+            std::map<std::string,KinBody::JointPtr>::iterator itjoint = _mapJointIds.find(targetref);
+            if( itjoint != _mapJointIds.end() ) {
+                return std::make_pair(itjoint->second,pdomjoint);
+            }
+            RAVELOG_WARN(str(boost::format("failed to find joint target '%s' in _mapJointIds")%targetref));
         }
 
         KinBody::JointPtr pjoint = pkinbody->GetJoint(pdomjoint->getName());
@@ -2278,6 +2279,16 @@ class ColladaReader : public daeErrorHandler
             return name.substr(pos+1);
         }
         return name;
+    }
+
+    std::string _ExtractParentId(daeElementRef p) {
+        while(!!p) {
+            if( p->hasAttribute("id") ) {
+                return p->getAttribute("id");
+            }
+            p = p->getParent();
+        }
+        return "";
     }
 
     /// \brief Extracts MathML into fparser equation format
@@ -2616,9 +2627,12 @@ class ColladaReader : public daeErrorHandler
                 RAVELOG_WARN(str(boost::format("_ExtractMathML: failed to find csymbol: %s")%pelt->getCharData()));
                 eq = pelt->getCharData();
             }
+            if( pjoint->GetDOF() > 1 ) {
+                RAVELOG_WARN(str(boost::format("formulas do not support using joints with > 1 DOF yet (%s)")%pjoint->GetName()));
+            }
             else {
-                if( _mapJointUnits.find(pjoint) != _mapJointUnits.end() && _mapJointUnits[pjoint] != 1 ) {
-                    eq = str(boost::format("(%f*%s)")%(1/_mapJointUnits[pjoint])%pjoint->GetName());
+                if( _mapJointUnits.find(pjoint) != _mapJointUnits.end() && _mapJointUnits[pjoint].at(0) != 1 ) {
+                    eq = str(boost::format("(%f*%s)")%(1/_mapJointUnits[pjoint].at(0))%pjoint->GetName());
                 }
                 else {
                     eq = pjoint->GetName();
@@ -2684,7 +2698,10 @@ class ColladaReader : public daeErrorHandler
         //        return bSuccess;
     }
 
-    inline static std::string _ConvertToOpenRAVEName(const std::string& name) {
+    inline std::string _ConvertToOpenRAVEName(const std::string& name) {
+        if( name.size() == 0 ) {
+            return str(boost::format("__dummy%d")%_nGlobalIndex++);
+        }
         if( IsValidName(name) ) {
             return name;
         }
@@ -2694,7 +2711,7 @@ class ColladaReader : public daeErrorHandler
                 newname[i] = '_';
             }
         }
-        RAVELOG_WARN(str(boost::format("name %s is not a valid OpenRAVE name, converting to %s")%name%newname));
+        RAVELOG_WARN(str(boost::format("name '%s' is not a valid OpenRAVE name, converting to '%s'")%name%newname));
         return newname;
     }
 
@@ -2712,11 +2729,13 @@ class ColladaReader : public daeErrorHandler
     }
         
     boost::shared_ptr<DAE> _dae;
+    bool _bOpeningZAE;
     domCOLLADA* _dom;
     EnvironmentBasePtr _penv;
     dReal _fGlobalScale;
-    std::map<KinBody::JointPtr, dReal> _mapJointUnits;
-    int _nGlobalSensorId, _nGlobalManipulatorId;
+    std::map<KinBody::JointPtr, std::vector<dReal> > _mapJointUnits;
+    std::map<std::string,KinBody::JointPtr> _mapJointIds;
+    int _nGlobalSensorId, _nGlobalManipulatorId, _nGlobalIndex;
     std::string _filename;
 };
 

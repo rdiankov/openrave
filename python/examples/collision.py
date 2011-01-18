@@ -68,7 +68,7 @@ def run(args=None):
         except openrave_exception,e:
             print e
 
-        robot2 = env.ReadRobotXMLFile('robots/pa10.robot.xml')
+        robot2 = env.ReadRobotXMLFile('robots/mitsubishi-pa10.zae')
         env.AddRobot(robot2)
         body1 = env.ReadKinBodyXMLFile('data/mug1.kinbody.xml')
         env.AddKinBody(body1)

@@ -33,7 +33,7 @@ Load the robot and object
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 .. code-block:: python
 
-    robot = env.ReadRobotXMLFile('robots/pr2-beta-static.robot.xml')
+    robot = env.ReadRobotXMLFile('robots/pr2-beta-static.zae')
     env.AddRobot(robot)
     target = env.ReadKinBodyXMLFile('data/mug2.kinbody.xml')
     env.AddKinBody(target)
@@ -164,7 +164,7 @@ def run(args=None):
     (options, leftargs) = parser.parse_args(args=args) # use default options 
     env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True) # the special setup for openrave tutorial
     try:
-        robot = env.ReadRobotXMLFile('robots/pr2-beta-static.robot.xml')
+        robot = env.ReadRobotXMLFile('robots/pr2-beta-static.zae')
         env.AddRobot(robot)
         target = env.ReadKinBodyXMLFile('data/mug2.kinbody.xml')
         env.AddKinBody(target)
@@ -177,8 +177,8 @@ def run(args=None):
         target.SetTransform(O_T_Target)
     
         robot.SetActiveManipulator('leftarm')
-        # init robot pose: l_shoulder_pan, r_shoulder_pan, torso, l_gripper
-        names = ['l_shoulder_pan_joint', 'r_shoulder_pan_joint', 'torso_lift_joint', 'l_gripper_joint']
+        # init robot pose: l_shoulder_pan, r_shoulder_pan, torso, l_gripper_l_finger_joint
+        names = ['l_shoulder_pan_joint', 'r_shoulder_pan_joint', 'torso_lift_joint', 'l_gripper_l_finger_joint']
         dofs = [robot.GetJoint(name).GetDOFIndex() for name in names]
         robot.SetDOFValues([pi/2,-pi/2,0.31,0.54],dofs)
         gt = GraspTransform(env,target)

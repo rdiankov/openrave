@@ -1,7 +1,0 @@
-<Robot name="Mitsubishi-PA10">
-  <KinBody file="pa10.kinbody.xml"/>
-  <Manipulator name="arm">
-    <base>link0</base>
-    <effector>link7</effector>
-  </Manipulator>
-</Robot>

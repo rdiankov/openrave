@@ -8,37 +8,41 @@
         <translation>0 0 0.4</translation>
       </geom>
     </body>
-    <!-- left arm -->
-    <KinBody prefix="l_" file="schunk-lwa3.kinbody.xml">
-      <RotationAxis>1 0 0 90</RotationAxis>
-      <translation>0 -0.1 0.7</translation>
-    </KinBody>
-    <!-- right arm -->
-    <KinBody prefix="r_" file="schunk-lwa3.kinbody.xml">
-      <RotationAxis>1 0 0 -90</RotationAxis>
-      <translation>0 0.1 0.7</translation>
-    </KinBody>
-
-    <!-- connect the two arms with dummy joints -->
-    <joint name="leftdummy" type="hinge" enable="false">
-      <body>chest</body>
-      <body>l_base</body>
-      <limitsdeg>0 0</limitsdeg>
-    </joint>
-    <joint name="rightdummy" type="hinge" enable="false">
-      <body>chest</body>
-      <body>r_base</body>
-      <limitsdeg>0 0</limitsdeg>
-    </joint>
   </KinBody>
-  <Manipulator name="leftarm">
-    <base>l_base</base>
-    <effector>l_link7</effector>
-    <iksolver>ikfast_schunk_lwa3</iksolver>
-  </Manipulator>
-  <Manipulator name="rightarm">
-    <base>r_base</base>
-    <effector>r_link7</effector>
-    <iksolver>ikfast_schunk_lwa3</iksolver>
-  </Manipulator>
+  <!-- left arm -->
+  <Robot prefix="l_" file="schunk-lwa3.zae">
+    <RotationAxis>1 0 0 90</RotationAxis>
+    <translation>0 -0.1 0.7</translation>
+  </Robot>
+  <!-- right arm -->
+  <Robot prefix="r_" file="schunk-lwa3.zae">
+    <RotationAxis>1 0 0 -90</RotationAxis>
+    <translation>0 0.1 0.7</translation>
+  </Robot>
+
+  <Robot>
+    <!-- connect the two arms with dummy joints -->
+    <KinBody>
+      <joint name="leftdummy" type="hinge" enable="false">
+        <body>chest</body>
+        <body>l_base</body>
+        <limitsdeg>0 0</limitsdeg>
+      </joint>
+      <joint name="rightdummy" type="hinge" enable="false">
+        <body>chest</body>
+        <body>r_base</body>
+        <limitsdeg>0 0</limitsdeg>
+      </joint>
+    </KinBody>
+    <Manipulator name="leftarm">
+      <base>l_base</base>
+      <effector>l_link7</effector>
+      <iksolver>ikfast_schunk_lwa3</iksolver>
+    </Manipulator>
+    <Manipulator name="rightarm">
+      <base>r_base</base>
+      <effector>r_link7</effector>
+      <iksolver>ikfast_schunk_lwa3</iksolver>
+    </Manipulator>
+  </Robot>
 </Robot>

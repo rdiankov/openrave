@@ -12,7 +12,7 @@
 /// See the License for the specific language governing permissions and
 /// limitations under the License.
 ///
-/// generated 2011-01-12 19:14:42.631259
+/// generated 2011-01-18 13:41:45.973460
 /// To compile with gcc:
 ///     gcc -lstdc++ ik.cpp
 /// To compile without any main function as a shared object:
@@ -196,9 +196,9 @@ x0=IKcos(j[1]);
 x1=IKsin(j[1]);
 x2=IKsin(j[2]);
 x3=IKcos(j[2]);
-eetrans[0]=((-0.0670700000000000)+(((-0.0300000000000000)*(x1)))+(((0.0680000000000000)*(x0)))+(((0.0232000000000000)*(x0)*(x3)))+(((0.0979999999999999)*(x0)*(x2))));
-eetrans[1]=((((0.0232000000000000)*(x1)*(x3)))+(((0.0680000000000000)*(x1)))+(((0.0979999999999999)*(x1)*(x2)))+(((0.0300000000000000)*(x0))));
-eetrans[2]=((1.12112500000000)+(((-0.0232000000000000)*(x2)))+(((0.0979999999999999)*(x3)))+(j[0]));
+eetrans[0]=((-0.0670700000000000)+(((-0.0300000000000000)*(x1)))+(((0.0680000000000000)*(x0)))+(((0.0980000000000000)*(x0)*(x2)))+(((0.0232000000000000)*(x0)*(x3))));
+eetrans[1]=((((0.0232000000000000)*(x1)*(x3)))+(((0.0680000000000000)*(x1)))+(((0.0980000000000000)*(x1)*(x2)))+(((0.0300000000000000)*(x0))));
+eetrans[2]=((1.12112500000000)+(((0.0980000000000000)*(x3)))+(((-0.0232000000000000)*(x2)))+(j[0]));
 eerot[0]=((x0)*(x3));
 eerot[1]=((x1)*(x3));
 eerot[2]=((-1.00000000000000)*(x2));
@@ -284,7 +284,7 @@ if( (x16) < (IKReal)-0.00001 )
 IKReal x17=IKsqrt(x16);
 IKReal x18=IKabs(x17);
 IKReal x19=((IKabs(x18) != 0)?((IKReal)1/(x18)):(IKReal)1.0e30);
-IKReal x20=((0.0979999999999999)*(x19));
+IKReal x20=((0.0980000000000000)*(x19));
 if( (x20) < -1.0001 || (x20) > 1.0001 )
     continue;
 IKReal x21=IKasin(x20);
@@ -350,7 +350,7 @@ IKSolver solver;
 return solver.ik(eetrans,eerot,pfree,vsolutions);
 }
 
-IKFAST_API const char* getKinematicsHash() { return "cc7d0cc5860afa51daf48de95d891f9f"; }
+IKFAST_API const char* getKinematicsHash() { return "2640ae411e0c87b03f56bf289296f9d8"; }
 
 #ifndef IKFAST_NO_MAIN
 #include <stdio.h>

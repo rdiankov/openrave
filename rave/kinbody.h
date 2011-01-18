@@ -91,7 +91,7 @@ public:
             virtual ~GEOMPROPERTIES() {}
 
             inline const Transform& GetTransform() const { return _t; }
-            inline GeomType GetType() const { return type; }
+            inline GeomType GetType() const { return _type; }
             inline const Vector& GetRenderScale() const { return vRenderScale; }
             inline const std::string& GetRenderFilename() const { return renderfile; }
             inline float GetTransparency() const { return ftransparency; }
@@ -141,7 +141,7 @@ public:
             RaveVector<float> diffuseColor, ambientColor; ///< hints for how to color the meshes
             TRIMESH collisionmesh; ///< collision data of the specific object. For spheres and cylinders, an appropriate
                                    ///< discretization value is chosen. Should be transformed by _t before rendering
-            GeomType type;         ///< the type of geometry primitive
+            GeomType _type;         ///< the type of geometry primitive
             std::string renderfile;  ///< render resource file, should be transformed by _t before rendering
             Vector vRenderScale; ///< render scale of the object (x,y,z)
             float ftransparency; ///< value from 0-1 for the transparency of the rendered object, 0 is opaque
@@ -304,16 +304,28 @@ public:
     class RAVE_API Joint : public boost::enable_shared_from_this<Joint>
     {
     public:
-        /// \brief The type of joint movement.
+        /** \brief The type of joint movement.
+        
+            Non-special joints that are combinations of revolution and prismatic joints. 
+            The first 4 bits specify the joint DOF, the next bits specify whether the joint is revolute (0) or prismatic (1).
+            There can be also special joint types that are valid if the JointSpecialBit is set.
+
+            For multi-dof joints, the order is transform(parentlink) * transform(axis0) * transform(axis1) ...
+        */
         enum JointType {
             JointNone = 0,
-            JointHinge = 1,
-            JointRevolute = 1,
-            JointSlider = 2,
-            JointPrismatic = 2,
-            JointUniversal = 3,
-            JointHinge2 = 4,
-            JointSpherical = 5,
+            JointHinge = 0x01,
+            JointRevolute = 0x01,
+            JointSlider = 0x11,
+            JointPrismatic = 0x11,
+            JointRR = 0x02,
+            JointRP = 0x12,
+            JointPR = 0x22,
+            JointPP = 0x32,
+            JointSpecialBit = 0x80000000,
+            JointUniversal = 0x80000001,
+            JointHinge2 = 0x80000002,
+            JointSpherical = 0x80000003,
         };
 
         Joint(KinBodyPtr parent);
@@ -322,9 +334,9 @@ public:
         /// \brief The unique name of the joint
         inline const std::string& GetName() const { return _name; }
 
-        inline dReal GetMaxVel() const { return fMaxVel; }
-        inline dReal GetMaxAccel() const { return fMaxAccel; }
-        inline dReal GetMaxTorque() const { return fMaxTorque; }
+        inline dReal GetMaxVel(int iaxis=0) const { return fMaxVel[iaxis]; }
+        inline dReal GetMaxAccel(int iaxis=0) const { return fMaxAccel[iaxis]; }
+        inline dReal GetMaxTorque(int iaxis=0) const { return fMaxTorque[iaxis]; }
 
         /// \brief Get the degree of freedom index in the body's DOF array.
         ///
@@ -336,10 +348,10 @@ public:
         
         inline KinBodyPtr GetParent() const { return KinBodyPtr(_parent); }
 
-        inline LinkPtr GetFirstAttached() const { return bodies[0]; }
-        inline LinkPtr GetSecondAttached() const { return bodies[1]; }
+        inline LinkPtr GetFirstAttached() const { return _attachedbodies[0]; }
+        inline LinkPtr GetSecondAttached() const { return _attachedbodies[1]; }
 
-        inline JointType GetType() const { return type; }
+        inline JointType GetType() const { return _type; }
 
         /// \brief The discretization of the joint used when line-collision checking.
         ///
@@ -350,10 +362,16 @@ public:
         /// \brief The degrees of freedom of the joint. Each joint supports a max of 3 degrees of freedom.
         virtual int GetDOF() const;
 
-        /// \brief return true if joint has an identification at the lower and upper limits
+        /// \brief return true if joint axis has an identification at some of its lower and upper limits
         ///
         /// Although currently not developed, it could be possible to support identified joints that are not circular.
-        virtual bool IsCircular() const { return _bIsCircular; }
+        virtual bool IsCircular(int iaxis) const { return _bIsCircular.at(iaxis); }
+
+        /// \brief returns true if the axis describes a rotation around an axis.
+        virtual bool IsRevolute(int iaxis) const;
+
+        /// \brief returns true if the axis describes a translation around an axis.
+        virtual bool IsPrismatic(int iaxis) const;
 
         /// \brief Return true if joint can be treated as a static binding (ie all limits are 0)
         virtual bool IsStatic() const;
@@ -365,9 +383,10 @@ public:
         virtual void GetValues(std::vector<dReal>& values, bool bAppend=false) const;
 
         /// \brief Return the value of the specified joint axis only.
-        virtual dReal GetValue(int axis=0) const;
+        virtual dReal GetValue(int axis) const;
 
-        /// Gets the joint velocities
+        /// \brief Gets the joint velocities
+        ///
         /// \param bAppend if true will append to the end of the vector instead of erasing it
         /// \return the degrees of freedom of the joint (even if pValues is NULL)
         virtual void GetVelocities(std::vector<dReal>& values, bool bAppend=false) const;
@@ -407,9 +426,12 @@ public:
         ///
         /// Offsets are needed for rotation joints since the range is limited to 2*pi.
         /// This allows the offset to be set so the joint can function in [-pi+offset,pi+offset]..
-        inline dReal GetOffset() const { return offset; }
+        /// \param iaxis the axis to get the offset from
+        inline dReal GetOffset(int iaxis=0) const { return _offsets.at(iaxis); }
         /// \brief \see GetOffset
-        virtual void SetJointOffset(dReal offset);
+        virtual void SetOffset(dReal offset, int iaxis=0);
+        /// \deprecated (11/1/16)
+        virtual void SetJointOffset(dReal offset, int iaxis=0) RAVE_DEPRECATED { SetOffset(offset,iaxis); }
 
         virtual void serialize(std::ostream& o, int options) const;
 
@@ -489,18 +511,14 @@ public:
     protected:
         boost::array<Vector,3> vAxes;        ///< axes in body[0]'s or environment coordinate system used to define joint movement
         Vector vanchor;         ///< anchor of the joint
-        Transform tRight, tLeft;///< transforms used to get body[1]'s transformation with respect to body[0]'s
-                                ///< Tbody1 = Tbody0 * tLeft * JointRotation * tRight
-        Transform tinvRight, tinvLeft; ///< the inverse transformations of tRight and tLeft
         dReal fResolution;      ///< interpolation resolution
-        dReal fMaxVel;          ///< the maximum velocity (rad/s) to move the joint when planning
-        dReal fHardMaxVel;      ///< the hard maximum velocity, robot cannot exceed this velocity. used for verification checking
-        dReal fMaxAccel;        ///< the maximum acceleration (rad/s^2) of the joint
-        dReal fMaxTorque;       ///< maximum torque (N.m, kg m^2/s^2) that can be applied to the joint
+        boost::array<dReal,3> fMaxVel;          ///< the soft maximum velocity (rad/s) to move the joint when planning
+        boost::array<dReal,3> fHardMaxVel;      ///< the hard maximum velocity, robot cannot exceed this velocity. used for verification checking
+        boost::array<dReal,3> fMaxAccel;        ///< the maximum acceleration (rad/s^2) of the joint
+        boost::array<dReal,3> fMaxTorque;       ///< maximum torque (N.m, kg m^2/s^2) that can be applied to the joint
         std::vector<dReal> _vweights;        ///< the weights of the joint for computing distance metrics.
-        dReal offset;           ///< \see GetOffset
+        boost::array<dReal,3> _offsets;           ///< \see GetOffset
         std::vector<dReal> _vlowerlimit, _vupperlimit; ///< joint limits
-
         /// \brief Holds mimic information about position, velocity, and acceleration of one axis of the joint.
         ///
         /// In every array, [0] is position, [1] is velocity, [2] is acceleration.
@@ -539,19 +557,31 @@ public:
         */
         virtual void _ComputePartialVelocities(std::vector<std::pair<int,dReal> >& vpartials, int iaxis, std::map< std::pair<MIMIC::DOFFormat, int>, dReal >& mapcachedpartials) const;
 
+        /** \brief Compute internal transformations and specify the attached links of the joint. 
+            
+            Called after the joint protected parameters {vAxes, vanchor, and _offsets}  have been initialized. vAxes and vanchor should be in the frame of plink0.
+            Compute the left and right multiplications of the joint transformation and cleans up the attached bodies.
+            After function completes, the following parameters are initialized: _tRight, _tLeft, _tinvRight, _tinvLeft, _attachedbodies. _attachedbodies does not necessarily contain the links in the same order as they were input.
+        */
+        virtual void _ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1);
+
         std::string _name; ///< \see GetName
-        bool _bIsCircular;    ///< \see IsCircular
+        boost::array<bool,3> _bIsCircular;    ///< \see IsCircular
     private:
         /// Sensitive variables that should be modified at all for this joint.
         /// @name Private Joint Variables
         //@{
         KinBodyWeakPtr _parent;       ///< body that joint belong to
-        boost::array<LinkPtr,2> bodies; ///< attached bodies
-        int _parentlinkindex; ///< link index of one of the attached bodies that is computed first in the hierarchy before the other body.
+        boost::array<LinkPtr,2> _attachedbodies; ///< attached bodies. The link in [0] is computed first in the hierarchy before the other body.
+        Transform _tRight, _tLeft;///< transforms used to get body[1]'s transformation with respect to body[0]'s
+                                ///< Tbody1 = Tbody0 * tLeft * JointOffsetLeft * JointRotation * JointOffsetRight * tRight
+        Transform _tRightNoOffset, _tLeftNoOffset; ///< same as _tLeft and _tRight except it doesn't not include the offset
+        Transform _tinvRight, _tinvLeft; ///< the inverse transformations of tRight and tLeft
         int dofindex;           ///< the degree of freedom index in the body's DOF array, does not index in KinBody::_vecjoints!
         int jointindex;         ///< the joint index into KinBody::_vecjoints
-        JointType type;
+        JointType _type;
         bool _bActive;         ///< if true, should belong to the DOF of the body, unless it is a mimic joint (_ComputeInternalInformation decides this)
+        bool _bInitialized;
         //@}
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER

@@ -390,7 +390,7 @@ public:
                     if( (*itjoint)->GetType() == KinBody::Joint::JointSpherical ) {
                         continue;
                     }
-                    if( (*itjoint)->IsCircular() ) {
+                    if( (*itjoint)->IsCircular(i) ) {
                         _jointset[dJointGetType(joint)](joint,dParamLoStop+dParamGroup*i,-dInfinity);
                         _jointset[dJointGetType(joint)](joint,dParamHiStop+dParamGroup*i,dInfinity);
                     }

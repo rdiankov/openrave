@@ -230,7 +230,7 @@ class InverseKinematicsModel(OpenRAVEModel):
         elif self.manip.GetKinematicsStructureHash() == 'bfc61bd497e9993b85f1ab511ee7bdbc': # stage
             if iktype is None:
                 iktype=IkParameterization.Type.Rotation3D
-        elif self.manip.GetKinematicsStructureHash() == '603df18c6d90c4b3986cb9881408ce00' or self.manip.GetKinematicsStructureHash() == 'f2324dbb615f48445f43ce827edef614': # pr2
+        elif self.manip.GetKinematicsStructureHash() == 'c363859a2d7a151a22dc1e251d6d8669' or self.manip.GetKinematicsStructureHash() == '12ceb0aaa06143fe305efa6e48faae0b': # pr2
             if iktype == None:
                 iktype=IkParameterization.Type.Transform6D
             if freejoints is None:

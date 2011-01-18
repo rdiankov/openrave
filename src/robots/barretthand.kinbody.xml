@@ -194,6 +194,7 @@
     <!-- <anchor>-0.025 0 0</anchor> -->
     <maxvel>2</maxvel>
     <resolution>1.7</resolution>
+    <limitsdeg>-1 181</limitsdeg>
   </Joint>
 
   <!-- add adjacent links, necessary in order to prevent bogus collisions -->

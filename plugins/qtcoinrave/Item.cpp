@@ -1,4 +1,5 @@
-// Copyright (C) 2006-2010 Rosen Diankov (rdiankov@cs.cmu.edu)
+// -*- coding: utf-8 -*-
+// Copyright (C) 2006-2011 Rosen Diankov (rdiankov@cs.cmu.edu)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -51,7 +52,6 @@ Item::~Item()
     
 }
 
-/// returns true if the given node is in the inventor hierarchy
 bool Item::ContainsIvNode(SoNode *pNode)
 {
   SoSearchAction search;
@@ -64,22 +64,17 @@ bool Item::ContainsIvNode(SoNode *pNode)
   return false;
 }
 
-///! returns true if the path the given node passes through
-///          the geometry root of this item (i.e. the node is part
-///          of the geometry of this item).
 bool Item::ContainsIvNode(SoPath *pNodePath)
 {
   //return (pNodePath->containsNode(_ivGeom));    
   return (ContainsIvNode(pNodePath->getTail()));
 }
 
-/// Set the visibility of the geometry (ON = true).
 void Item::SetGeomVisibility(bool bFlag)
 {
   _ivGeom->whichChild.setValue(bFlag ? SO_SWITCH_ALL : SO_SWITCH_NONE); 
 }
 
-/// Set the pick style of the node to be unpickable
 void Item::SetUnpickable()
 {
   SoPickStyle* pickStyle = new SoPickStyle();
@@ -88,7 +83,6 @@ void Item::SetUnpickable()
   _ivGeom->insertChild(pickStyle, 0);
 }
 
-/// KinBodyItem class
 KinBodyItem::KinBodyItem(QtCoinViewerPtr viewer, KinBodyPtr pchain, ViewGeometry viewmode) : Item(viewer), _viewmode(viewmode)
 {
     _pchain = pchain;
@@ -123,9 +117,9 @@ void KinBodyItem::Load()
         _veclinks.push_back(lnk);
 
         FOREACHC(itgeom, (*it)->GetGeometries()) {
-            if( !itgeom->IsDraw() && _viewmode == VG_RenderOnly )
+            if( !itgeom->IsDraw() && _viewmode == VG_RenderOnly ) {
                 continue;
-            
+            }
             SoSeparator* psep = NULL;
             SoTransform* ptrans = new SoTransform();
             Transform tgeom = itgeom->GetTransform();
@@ -164,10 +158,10 @@ void KinBodyItem::Load()
             }
 
             if( !bSucceeded || _viewmode == VG_RenderCollision ) {
-
                 // create custom
-                if( psep == NULL )
+                if( psep == NULL ) {
                     psep = new SoSeparator();
+                }
                 else {
                     SoSeparator* pparentsep = new SoSeparator();
                     pparentsep->addChild(psep);
@@ -218,17 +212,14 @@ void KinBodyItem::Load()
                     SbMatrix m;
                     SbRotation(SbVec3f(1,0,0),M_PI/2).getValue(m);
                     ptrans->multLeft(m);
-                        
                     SoCylinder* cy = new SoCylinder();
                     cy->radius = itgeom->GetCylinderRadius();
                     cy->height = itgeom->GetCylinderHeight();
                     cy->parts = SoCylinder::ALL;
-
                     psep->addChild(cy);
                     break;
                 }
                 case KinBody::Link::GEOMPROPERTIES::GeomTrimesh: {
-
                     // set to render for both faces
                     phints->shapeType = SoShapeHints::UNKNOWN_SHAPE_TYPE;
                     
@@ -242,8 +233,7 @@ void KinBodyItem::Load()
                         psep->addChild(ptype);
                     }
 
-                    const KinBody::Link::TRIMESH& mesh = itgeom->GetCollisionMesh();
-                    
+                    const KinBody::Link::TRIMESH& mesh = itgeom->GetCollisionMesh();                    
                     SoCoordinate3* vprop = new SoCoordinate3();
                     // this makes it crash!
                     //vprop->point.set1Value(mesh.indices.size()-1,SbVec3f(0,0,0)); // resize
@@ -258,10 +248,10 @@ void KinBodyItem::Load()
                     SoFaceSet* faceset = new SoFaceSet();
                     // this makes it crash!
                     //faceset->numVertices.set1Value(mesh.indices.size()/3-1,3);
-                    for(size_t i = 0; i < mesh.indices.size()/3; ++i)
+                    for(size_t i = 0; i < mesh.indices.size()/3; ++i) {
                         faceset->numVertices.set1Value(i,3);
+                    }
                     psep->addChild(faceset);
-                    
                     break;
                 }
                 default:
@@ -283,9 +273,9 @@ void KinBodyItem::Load()
 
 bool KinBodyItem::UpdateFromIv()
 {
-    if( !_pchain )
+    if( !_pchain ) {
         return false;
-
+    }
     vector<Transform> vtrans(_veclinks.size());
     Transform tglob = GetRaveTransform(_ivXform);
     
@@ -366,18 +356,19 @@ bool KinBodyItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vecto
 
     if( _bReload || _bDrawStateChanged ) {
         EnvironmentMutex::scoped_try_lock lockenv(_pchain->GetEnv()->GetMutex());
-        if( !!lockenv )
+        if( !!lockenv ) {
             Load();
+        }
     }
 
     boost::mutex::scoped_lock lock(_mutexjoints);
     _vjointvalues = vjointvalues;
     _vtrans = vtrans;
     
-    if( _vtrans.size() == 0 || _veclinks.size() != _vtrans.size() )
+    if( _vtrans.size() == 0 || _veclinks.size() != _vtrans.size() ) {
         // something's wrong, so just return
         return false;
-
+    }
     Transform tglob = _vtrans.at(0);//_pchain->GetCenterOfMass();
     SbMatrix m; m.makeIdentity();
     _ivXform->setMatrix(m);
@@ -398,30 +389,32 @@ bool KinBodyItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vecto
 
 void KinBodyItem::SetGrab(bool bGrab, bool bUpdate)
 {
-    if(!_pchain )
+    if(!_pchain ) {
         return;
-
+    }
     bGrabbed = bGrab;
 
     if( bUpdate ) {
-        if( bGrab ) UpdateFromModel();
-        else UpdateFromIv();
+        if( bGrab ) {
+            UpdateFromModel();
+        }
+        else {
+            UpdateFromIv();
+        }
     }
 }
 
 KinBody::LinkPtr KinBodyItem::GetLinkFromIv(SoNode* plinknode) const
 {
     vector<LINK>::const_iterator it;
-    SoSearchAction search;
-    
+    SoSearchAction search;    
     FORIT(it, _veclinks) {
         search.setNode(plinknode);   
-        search.apply(it->psep);
-        
-        if (search.getPath())
+        search.apply(it->psep);   
+        if (search.getPath()) {
             return KinBody::LinkPtr(it->plink);
+        }
     }
-    
     return KinBody::LinkPtr();
 }
 
@@ -430,11 +423,13 @@ RobotItem::RobotItem(QtCoinViewerPtr viewer, RobotBasePtr robot, ViewGeometry vi
 
 void RobotItem::Load()
 {
-    FOREACH(it,_vEndEffectors)
+    FOREACH(it,_vEndEffectors) {
         _ivGeom->removeChild(it->_pswitch);
+    }
     _vEndEffectors.resize(0);
-    FOREACH(it,_vAttachedSensors)
+    FOREACH(it,_vAttachedSensors) {
         _ivGeom->removeChild(it->_pswitch);
+    }
     _vAttachedSensors.resize(0);
     KinBodyItem::Load();
 
@@ -560,9 +555,9 @@ void RobotItem::CreateAxis(RobotItem::EE& ee, const string& name)
 
 void RobotItem::SetGrab(bool bGrab, bool bUpdate)
 {
-    if( !_probot )
+    if( !_probot ) {
         return;
-
+    }
     if( bGrab ) {
         // turn off any controller commands if a robot
         if( !!_probot->GetController() )
@@ -583,9 +578,9 @@ void RobotItem::SetGrab(bool bGrab, bool bUpdate)
 
 bool RobotItem::UpdateFromIv()
 {
-    if( !KinBodyItem::UpdateFromIv() )
+    if( !KinBodyItem::UpdateFromIv() ) {
         return false;
-
+    }
     return true;
 }
 

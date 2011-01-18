@@ -185,7 +185,9 @@ using namespace std;
 
 #include <Inventor/SoDB.h>
 #include <Inventor/SoInput.h>
+#include <Inventor/nodes/SoMaterial.h>
 #include <Inventor/nodes/SoSeparator.h>
+#include <Inventor/actions/SoSearchAction.h>
 
 /// Triangles SoNode and fills a dTriMeshDataID structure
 void CreateTriMeshData(SoNode* pnode, KinBody::Link::TRIMESH& tri);
@@ -246,8 +248,9 @@ smart_pointer_deleter(P const & p, const boost::function<void(void const*)>& del
 // if modifying check modify libopenrave.h too!
 inline bool IsValidCharInName(char c) { return isalnum(c) || c == '_' || c == '-' || c == '.' || c == '/'; }
 inline bool IsValidName(const std::string& s) {
-    if( s.size() == 0 )
+    if( s.size() == 0 ) {
         return false;
+    }
     return std::count_if(s.begin(), s.end(), IsValidCharInName) == (int)s.size();
 }
 

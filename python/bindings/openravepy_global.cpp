@@ -246,6 +246,12 @@ object quatRotateDirection(object source, object target)
     return toPyVector4(quatRotateDirection(ExtractVector3(source), ExtractVector3(target)));
 }
 
+object normalizeAxisRotation(object axis, object quat)
+{
+    std::pair<dReal, Vector > res = normalizeAxisRotation(ExtractVector3(axis), ExtractVector4(quat));
+    return boost::python::make_tuple(res.first,toPyVector4(res.second));
+}
+
 object quatMult(object oquat1, object oquat2)
 {
     return toPyVector4(quatMultiply(ExtractVector4(oquat1),ExtractVector4(oquat2)));
