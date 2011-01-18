@@ -1107,7 +1107,7 @@ protected:
     int _environmentid; ///< \see GetEnvironmentId
     int _nUpdateStampId; ///< \see GetUpdateStamp
     int _nParametersChanged; ///< set of parameters that changed and need callbacks
-    UserDataPtr _pGuiData; ///< \ see SetGuiData
+    UserDataPtr _pGuiData; ///< \see SetGuiData
     UserDataPtr _pPhysicsData; ///< \see SetPhysicsData
     UserDataPtr _pCollisionData; ///< \see SetCollisionData
     ManageDataPtr _pManageData;    

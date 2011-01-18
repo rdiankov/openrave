@@ -376,20 +376,17 @@ SET(targets ${targets} pcrecpp_local)
   IF(MINGW AND NOT PCRE_STATIC)
     IF(NON_STANDARD_LIB_PREFIX)
       SET_TARGET_PROPERTIES(pcrecpp_local
-                            PROPERTIES PREFIX ""
-                            COMPILE_FLAGS "${EXTRA_COMPILE_FLAGS}"
-      )
+                            PROPERTIES PREFIX "")
     ENDIF(NON_STANDARD_LIB_PREFIX)
 
     IF(NON_STANDARD_LIB_SUFFIX)
       SET_TARGET_PROPERTIES(pcrecpp_local
-                          PROPERTIES SUFFIX "-0.dll"
-                          COMPILE_FLAGS "${EXTRA_COMPILE_FLAGS}"
-      )
+                          PROPERTIES SUFFIX "-0.dll")
     ENDIF(NON_STANDARD_LIB_SUFFIX)
   ENDIF(MINGW AND NOT PCRE_STATIC)
 ENDIF(PCRE_BUILD_PCRECPP)
 
+SET_TARGET_PROPERTIES(pcrecpp_local COMPILE_FLAGS "${EXTRA_COMPILE_FLAGS}")
 
 # Executables
 
