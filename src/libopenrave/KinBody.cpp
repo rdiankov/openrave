@@ -3595,7 +3595,6 @@ void KinBody::_ComputeInternalInformation()
                 }
                 (*itjoint)->vanchor = tswap*(*itjoint)->vanchor;
                 (*itjoint)->_ComputeInternalInformation((*itjoint)->GetSecondAttached(),(*itjoint)->GetFirstAttached());
-                
             }
         }
         // find out what links are affected by what joints.
