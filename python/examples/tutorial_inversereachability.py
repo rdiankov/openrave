@@ -4,7 +4,7 @@
 Move Hand to Target: Use Inverse Reachability Database
 ======================================================
 
-This tutorial shows how to generate and use the inverse-reachability database in OpenRAVE for PR2.
+This tutorial shows how to generate and use the inverse-reachability database in OpenRAVE for the PR2 robot.
 
 .. image:: ../../images/example_tutorials/ir_grasps.png
    :width: 200px
@@ -23,48 +23,72 @@ Prerequisite
 IK solvers
 ~~~~~~~~~~
 
-Get the IK solvers from::
+Generate the IK solver for leftarm_torso. It takes several minutes:
 
-  http://people.csail.mit.edu/liuhuan/pr2/openrave/.openrave/kinematics.30b0c746bc8e2c01a8b0478ad7acb287/
-  http://people.csail.mit.edu/liuhuan/pr2/openrave/.openrave/kinematics.cf3ad23d0c0394969de000d2727ed5bc/
+.. code-block:: bash
 
-and store both folders under::
-
-  ~/.openrave/
-
-You can also generate the IK solvers for both arms. It takes about 10 minutes for each arm::
-
-  openrave.py --database inversekinematics --robot=robots/pr2-beta-static.zae --manipname=rightarm --freejoint=r_shoulder_pan_joint --freeinc=0.01
-  openrave.py --database inversekinematics --robot=robots/pr2-beta-static.zae --manipname=leftarm --freejoint=l_shoulder_pan_joint --freeinc=0.01
+  openrave.py --database inversekinematics --robot=robots/pr2-beta-static.zae --manipname=leftarm_torso
 
 [optional] Download inverse-reachability database
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Get the inverse-reachability and reachability databases from::
+Get the inverse-reachability and reachability databases for OpenRAVE r1974 from::
  
-  http://people.csail.mit.edu/liuhuan/pr2/openrave/.openrave/robot.e66273b7c010736b42f24e2e30240dcb/
+  http://people.csail.mit.edu/liuhuan/pr2/openrave/openrave_database/robot.1fd7b38c8ca370ea2f8d4ab79bbb074b.tgz
 
-and store them under::
-
-  ~/.openrave/robot.e66273b7c010736b42f24e2e30240dcb
-
-You can also `Generate database`_.
-
-Run this tutorial
------------------
+and decompress the file under:
 
 .. code-block:: bash
 
-   openrave.py --example tutorial_inversereachability
+  ~/.openrave/
+
+You can also `Generate database`_.
 
 Generate database
 -----------------
 
-Command::
+**Generate the databases with single core**
 
-  openrave.py --database inversereachability --robot=robots/pr2-beta-static.zae
+.. code-block:: bash
+
+  openrave.py --database inversereachability --robot=robots/pr2-beta-static.zae --manipname=leftarm_torso --ignorefreespace 
   
-This process took ~10 hours on the PR2 base station (Intel Core2 Duo E8400 @ 3GHz with 4G of memory).
+This process will generate both reachability and inverse-rechability databases. It will take more than 10 hours (Intel Core2 Duo E8400 @ 3GHz with 4G of memory).
+
+**Generate the databases with multiple cores**
+
+If you have the openrave_planning ROS stack installed, you can try a parallelized version of the reachability database generation:
+
+First:
+
+.. code-block:: bash
+
+  rosmake openrave_data
+  
+Then:
+
+.. code-block:: bash
+
+  roscore
+  
+Finally, in a separate terminal:
+
+.. code-block:: bash
+
+  rosrun openrave_database kinematicreachability_ros.py --robot=robots/pr2-beta-static.zae --manipname=leftarm_torso --ignorefreespace --launchservice='8*localhost'
+  
+To add another computer with 8 cores add:
+
+.. code-block:: bash
+  
+  --launchservice='8*newhost'
+
+Once the reachability database is generated, generate the inversereachability database (which will take much less time): 
+
+.. code-block:: bash
+
+  openrave.py --database inversereachability --robot=robots/pr2-beta-static.zae --manipname=leftarm_torso --ignorefreespace 
+
 
 There are a few other parameters that can be set:
 
@@ -72,9 +96,10 @@ There are a few other parameters that can be set:
 
    heightthresh = .05 # The max radius of the arm to perform the computation (default=0.05)
    quatthresh = .15 # The max radius of the arm to perform the computation (default=0.15)
-   Nminimum = 10 # Minimum number of equivalence classes for each base distribution
+   show_maxnumber = 10 # Number of robots to show simultaneously (default=20)
    id = None # Special id differentiating inversereachability models
    jointvalues = None # String of joint values that connect the robot base link to the manipulator base link
+   show_transparency = .8 # Transparency of the robots to show (default=.8)
 
 You can also `[optional] Download inverse-reachability database`_.
 
@@ -150,11 +175,9 @@ Set up robot
 
         # initialize robot pose
         v = self.robot.GetActiveDOFValues()
-        v[35] = 3.14/2 # l shoulder pan
-        v[56] = -3.14/2 # r shoulder pan
-        # note here the torso height must be set to 0, because the database was generated for torso height=0
-        v[14] = 0# torso  
-        v[47] = .54 # l gripper
+        v[self.robot.GetJoint('l_shoulder_pan_joint').GetDOFIndex()]= 3.14/2
+        v[self.robot.GetJoint('r_shoulder_pan_joint').GetDOFIndex()] = -3.14/2
+        v[self.robot.GetJoint('l_gripper_l_finger_joint').GetDOFIndex()] = .54
         self.robot.SetActiveDOFValues(v)
 
 .. figure:: ../../images/example_tutorials/ir_before.png
@@ -173,19 +196,11 @@ Load database
         print 'loading irmodel'
         if not self.irmodel.load():
             print 'do you want to generate irmodel for your robot? it might take several hours'
-            print 'or you can go to http://people.csail.mit.edu/liuhuan/pr2/openrave/.openrave/ to get the database for PR2'
+            print 'or you can go to http://people.csail.mit.edu/liuhuan/pr2/openrave/openrave_database/ to get the database for PR2'
             input = raw_input('[Y/n]')
             if input == 'y' or input == 'Y' or input == '\\n' or input == '':
                 class IrmodelOption:
-                    def __init__(self,robot,heightthresh=.05,quatthresh=.15,Nminimum=10,id=None,jointvalues=None):
-                        self.robot = robot
-                        self.heightthresh = heightthresh
-                        self.quatthresh = quatthresh
-                        self.Nminimum = Nminimum
-                        self.id = id
-                        self.jointvalues = jointvalues
-                option = IrmodelOption(self.robot)
-                self.irmodel.autogenerate(option)
+                self.irmodel.autogenerate()
                 self.irmodel.load()
             else:
                 self.env.Destroy()
@@ -322,14 +337,13 @@ class InverseReachabilityDemo:
     def __init__(self,robot):
         self.robot = robot
         self.env = self.robot.GetEnv()
+        self.robot.SetActiveManipulator('leftarm_torso')
         self.manip = self.robot.GetActiveManipulator()
 
         # initialize robot pose
         v = self.robot.GetActiveDOFValues()
         v[self.robot.GetJoint('l_shoulder_pan_joint').GetDOFIndex()]= 3.14/2
         v[self.robot.GetJoint('r_shoulder_pan_joint').GetDOFIndex()] = -3.14/2
-        """note here the torso height must be set to 0, because the database was generated for torso height=0"""
-        v[self.robot.GetJoint('torso_lift_joint').GetDOFIndex()] = 0
         v[self.robot.GetJoint('l_gripper_l_finger_joint').GetDOFIndex()] = .54
         self.robot.SetActiveDOFValues(v)
     
@@ -337,25 +351,17 @@ class InverseReachabilityDemo:
         self.irmodel = inversereachability.InverseReachabilityModel(robot=self.robot)
         starttime = time.time()
         print 'loading irmodel'
-        if not self.irmodel.load():
-            # are there really kept up to date? (Rosen)
-#             print 'do you want to generate irmodel for your robot? it might take several hours'
-#             print 'or you can go to http://people.csail.mit.edu/liuhuan/pr2/openrave/.openrave/ to get the database for PR2'
-#             input = raw_input('[Y/n]')
-#             if input == 'y' or input == 'Y' or input == '\n' or input == '':
-#                 class IrmodelOption:
-#                     def __init__(self,robot,heightthresh=.05,quatthresh=.15,Nminimum=10,id=None,jointvalues=None):
-#                         self.robot = robot
-#                         self.heightthresh = heightthresh
-#                         self.quatthresh = quatthresh
-#                         self.Nminimum = Nminimum
-#                         self.id = id
-#                         self.jointvalues = jointvalues
-#                 option = IrmodelOption(self.robot)
-#                 self.irmodel.autogenerate(option)
-#                 self.irmodel.load()
-#             else:
-            self.irmodel.autogenerate()
+        if not self.irmodel.load():            
+            print 'do you want to generate irmodel for your robot? it might take several hours'
+            print 'or you can go to http://people.csail.mit.edu/liuhuan/pr2/openrave/openrave_database/ to get the database for PR2'
+            input = raw_input('[Y/n]')
+            if input == 'y' or input == 'Y' or input == '\n' or input == '':
+                self.irmodel.autogenerate()
+                self.irmodel.load()
+            else:
+                self.env.Destroy()
+                RaveDestroy()
+                sys.exit()
         print 'time to load inverse-reachability model: %fs'%(time.time()-starttime)
         # make sure the robot and manipulator match the database
         assert self.irmodel.robot == self.robot and self.irmodel.manip == self.robot.GetActiveManipulator()   
@@ -448,7 +454,7 @@ class InverseReachabilityDemo:
         probot = self.robot
         pmanip = probot.GetActiveManipulator()
         v = probot.GetActiveDOFValues()
-        v[self.robot.GetJoint('l_gripper_l_finger_joint').GetDOFIndex()] = gripper_angle
+        v[self.robot.GetJoint('l_gripper_l_finger_joint').GetDOFIndex()] = angle
         probot.SetActiveDOFValues(v)
         with grasping.GraspingModel.GripperVisibility(pmanip): # show only the gripper
             O_T_R = probot.GetTransform() # robot transform R in global frame O 
@@ -484,6 +490,7 @@ def run(args=None):
     try:
         robot = env.ReadRobotXMLFile(options.robot)
         env.AddRobot(robot)
+        
         if options.manipname is not None:
             robot.SetActiveManipulator(options.manipname)
         else:
