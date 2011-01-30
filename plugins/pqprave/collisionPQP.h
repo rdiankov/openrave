@@ -94,7 +94,7 @@ class CollisionCheckerPQP : public CollisionCheckerBase
             boost::shared_ptr<PQP_Model> pm;
             if( trimesh.indices.size() > 0 ) {
                 pm.reset(new PQP_Model());
-                pm->BeginModel();
+                pm->BeginModel(trimesh.indices.size()/3);
                 for(int j = 0; j < (int)trimesh.indices.size(); j+=3) { 
                     p1[0] = trimesh.vertices[trimesh.indices[j]].x;     p1[1] = trimesh.vertices[trimesh.indices[j]].y;     p1[2] = trimesh.vertices[trimesh.indices[j]].z;
                     p2[0] = trimesh.vertices[trimesh.indices[j+1]].x;   p2[1] = trimesh.vertices[trimesh.indices[j+1]].y;     p2[2] = trimesh.vertices[trimesh.indices[j+1]].z;

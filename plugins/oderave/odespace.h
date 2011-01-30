@@ -50,12 +50,18 @@ class ODESpace : public boost::enable_shared_from_this<ODESpace>
             contactgroup = dJointGroupCreate(0);
         }
         virtual ~ODEResources() {
-            if( contactgroup )
+            if( contactgroup ) {
                 dJointGroupDestroy(contactgroup);
-            if( space )
+            }
+            if( space ) {
                 dSpaceDestroy(space);
-            if( world )
+            }
+            if( world ) {
                 dWorldDestroy(world);
+            }
+#ifdef ODE_HAVE_ALLOCATE_DATA_THREAD
+            dCleanupODEAllDataForThread();
+#endif
         }
         dWorldID world;  ///< the dynamics world
         dSpaceID space;  ///< the collision world
@@ -70,6 +76,9 @@ public:
         struct LINK
         {
         LINK() : body(NULL), geom(NULL) {}
+            virtual ~LINK() {
+                BOOST_ASSERT(listtrimeshinds.size()==0&&listvertices.size()==0&&body==NULL&&geom==NULL);
+            }
 
             dBodyID body;
             dGeomID geom;
@@ -140,14 +149,19 @@ public:
                     dGeomDestroy(curgeom);
                     curgeom = pnextgeom;
                 }
-
-                if( (*itlink)->body )
+                (*itlink)->geom = NULL;
+                if( (*itlink)->body ) {
                     dBodyDestroy((*itlink)->body);
-
-                FOREACH(itind, (*itlink)->listtrimeshinds)
-                    delete *itind;
-                FOREACH(itind, (*itlink)->listvertices)
-                    delete *itind;
+                    (*itlink)->body = NULL;
+                }
+                FOREACH(itind, (*itlink)->listtrimeshinds) {
+                    delete[] *itind;
+                }
+                (*itlink)->listtrimeshinds.clear();
+                FOREACH(itind, (*itlink)->listvertices) {
+                    delete[] *itind;
+                }
+                (*itlink)->listvertices.clear();
             }
             vlinks.resize(0);
 
@@ -263,6 +277,7 @@ public:
                         dGeomTriMeshDataBuildSimple(id, pvertices, itgeom->GetCollisionMesh().vertices.size(), pindices, itgeom->GetCollisionMesh().indices.size());
                         geom = dCreateTriMesh(0, id, NULL, NULL, NULL);
                         link->listtrimeshinds.push_back(pindices);
+                        link->listvertices.push_back(pvertices);
                     }
                     break;
                 default:
