@@ -923,8 +923,8 @@ class ColladaWriter : public daeErrorHandler
                 paxis->getValue()[2] = pjoint->vAxes.at(ia).z;
                 if( !pjoint->IsCircular(ia) ) {
                     domJoint_limitsRef plimits = daeSafeCast<domJoint_limits>(vaxes[ia]->add(COLLADA_TYPE_LIMITS));
-                    daeSafeCast<domMinmax>(plimits->add(COLLADA_ELEMENT_MIN))->getValue() = lmin.at(ia);
-                    daeSafeCast<domMinmax>(plimits->add(COLLADA_ELEMENT_MAX))->getValue() = lmax.at(ia);
+                    daeSafeCast<domMinmax>(plimits->add(COLLADA_ELEMENT_MIN))->getValue() = lmin.at(ia)*fmult;
+                    daeSafeCast<domMinmax>(plimits->add(COLLADA_ELEMENT_MAX))->getValue() = lmax.at(ia)*fmult;
                 }
             }
             vdomjoints.at(itjoint->first) = pdomjoint;
