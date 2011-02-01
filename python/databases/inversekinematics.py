@@ -239,7 +239,7 @@ class InverseKinematicsModel(OpenRAVEModel):
         elif self.manip.GetKinematicsStructureHash()=='a1e9aea0dc0fda631ca376c03d500927' or self.manip.GetKinematicsStructureHash()=='ceb6be51bd14f345e22997cc0bca9f2f': # pr2 cameras
             if iktype is None:
                 iktype=IkParameterization.Type.Ray4D
-        elif self.manip.GetKinematicsStructureHash()=='afe50514bf09aff5f2a84beb078bafbd': # katana
+        elif self.manip.GetKinematicsStructureHash()=='2c89f74eb73a27f0fcf44ba3aef9fcf5': # katana
             if iktype==IkParameterization.Type.Translation3D or (iktype==None and self.iktype==IkParameterization.Type.Translation3D):
                 freejoints = [self.robot.GetJoints()[ind].GetName() for ind in self.manip.GetArmIndices()[3:]]
         self.generate(iktype=iktype,freejoints=freejoints,usedummyjoints=usedummyjoints,accuracy=accuracy,precision=precision,forceikbuild=forceikbuild,outputlang=outputlang,ipython=ipython)
