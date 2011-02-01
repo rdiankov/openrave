@@ -1176,6 +1176,7 @@ int main(int argc, char** argv)
     def generateRotation(self, node):
         if not node.functionid in self.functions:
             code = 'inline void rotationfunction%d(std::vector<IKSolution>& vsolutions) {\n'%(node.functionid)
+            code += 'for(int rotationiter = 0; rotationiter < 1; ++rotationiter) {\n'
             origequations = self.dictequations
             self.dictequations = []
             listequations = []
@@ -1186,7 +1187,7 @@ int main(int argc, char** argv)
                     names.append(Symbol('new_r%d%d'%(i,j)))
             code += self.indentCode(self.writeEquations(lambda i: names[i],listequations),4)
             code += self.indentCode(self.generateTree(node.jointtree),4)
-            code += '}'
+            code += '}\n}'
             self.dictequations = origequations
             self.functions[node.functionid] = code
         return 'rotationfunction%d(vsolutions);\n'%(node.functionid)
