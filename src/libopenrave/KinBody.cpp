@@ -133,7 +133,6 @@ KinBody::Link::GEOMPROPERTIES::GEOMPROPERTIES(KinBody::LinkPtr parent) : _parent
 AABB KinBody::Link::GEOMPROPERTIES::ComputeAABB(const Transform& t) const
 {
     AABB ab;
-
     TransformMatrix tglobal = t * _t;
 
     switch(_type) {
@@ -178,9 +177,11 @@ AABB KinBody::Link::GEOMPROPERTIES::ComputeAABB(const Transform& t) const
                     vmax.z = v.z;
                 }
             }
-
             ab.extents = (dReal)0.5*(vmax-vmin);
             ab.pos = (dReal)0.5*(vmax+vmin);
+        }
+        else {
+            ab.pos = tglobal.trans;
         }
         break;
     default:
@@ -629,11 +630,10 @@ AABB KinBody::Link::ComputeAABB() const
                 vmax.z = vmax2.z;
             }
         }
-
         return AABB( 0.5f * (vmin+vmax), 0.5f * (vmax-vmin) );
     }
-
-    return AABB();
+    // have to at least return the correct position!
+    return AABB(_t.trans,Vector(0,0,0));
 }
 
 void KinBody::Link::serialize(std::ostream& o, int options) const
