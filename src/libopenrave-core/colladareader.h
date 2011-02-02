@@ -1,3 +1,4 @@
+// -*- coding: utf-8 -*-
 // Copyright (C) 2006-2011 Rosen Diankov (rosen.diankov@gmail.com), Stefan Ulbrich, Gustavo Rodriguez
 //
 // This file is part of OpenRAVE.
@@ -649,7 +650,7 @@ class ColladaReader : public daeErrorHandler
     }
 
     ///  \brief Extract Link info and add it to an existing body
-    KinBody::LinkPtr ExtractLink(KinBodyPtr pkinbody, const domLinkRef pdomlink,const domNodeRef pdomnode, Transform tParentLink, const std::vector<domJointRef>& vdomjoints, const std::list<JointAxisBinding>& listAxisBindings) {
+    KinBody::LinkPtr ExtractLink(KinBodyPtr pkinbody, const domLinkRef pdomlink,const domNodeRef pdomnode, const Transform& tParentLink, const std::vector<domJointRef>& vdomjoints, const std::list<JointAxisBinding>& listAxisBindings) {
         //  Set link name with the name of the COLLADA's Link
         std::string linkname;
         if( !!pdomlink ) {
@@ -863,7 +864,7 @@ class ColladaReader : public daeErrorHandler
                     domAxis_constraintRef pdomaxis = vdomaxes[ic];
 
                     //  Axes and Anchor assignment.
-                    pjoint->vAxes[ic] = Vector(pdomaxis->getAxis()->getValue()[ic], pdomaxis->getAxis()->getValue()[1], pdomaxis->getAxis()->getValue()[2]);
+                    pjoint->vAxes[ic] = Vector(pdomaxis->getAxis()->getValue()[0], pdomaxis->getAxis()->getValue()[1], pdomaxis->getAxis()->getValue()[2]);
                     if( pjoint->vAxes[ic].lengthsqr3() > 0 ) {
                         pjoint->vAxes[ic].normalize3();
                     }
@@ -2083,7 +2084,11 @@ class ColladaReader : public daeErrorHandler
     // decompose a matrix into a scale and rigid transform (necessary for model scales)
     void decompose(const TransformMatrix& tm, Transform& tout, Vector& vscale)
     {
-        tout = tm;
+        tout = tm; // quaternion removes the scale?
+        TransformMatrix tnormalized = tout;
+        for(int i = 0; i < 3; ++i) {
+            vscale[i] = (RaveFabs(tm.m[0+i])+RaveFabs(tm.m[4+i])+RaveFabs(tm.m[8+i]))/(RaveFabs(tnormalized.m[0+i])+RaveFabs(tnormalized.m[4+i])+RaveFabs(tnormalized.m[8+i]));
+        }
     }
 
     virtual void handleError( daeString msg )
