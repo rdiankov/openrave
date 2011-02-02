@@ -79,6 +79,9 @@ void KinBody::Link::TRIMESH::Append(const TRIMESH& mesh, const Transform& trans)
 AABB KinBody::Link::TRIMESH::ComputeAABB() const
 {
     AABB ab;
+    if( vertices.size() == 0 ) {
+        return ab;
+    }
     Vector vmin, vmax;
     vmin = vmax = vertices.at(0);
     FOREACHC(itv, vertices) {
@@ -600,37 +603,55 @@ bool KinBody::Link::IsParentLink(boost::shared_ptr<Link const> plink) const
 
 AABB KinBody::Link::ComputeAABB() const
 {
-    // enable/disable everything
     if( _listGeomProperties.size() == 1) {
         return _listGeomProperties.front().ComputeAABB(_t);
     }
     else if( _listGeomProperties.size() > 1 ) {
-        AABB ab = _listGeomProperties.front().ComputeAABB(_t);
-        Vector vmin = ab.pos-ab.extents, vmax = ab.pos+ab.extents;
-        list<GEOMPROPERTIES>::const_iterator it = _listGeomProperties.begin();
-        while(++it != _listGeomProperties.end()) {
-            ab = it->ComputeAABB(_t);
-            Vector vmin2 = ab.pos-ab.extents, vmax2 = ab.pos+ab.extents;
-            if( vmin.x > vmin2.x ) {
-                vmin.x = vmin2.x;
+        Vector vmin, vmax;
+        bool binitialized=false;
+        AABB ab;
+        FOREACHC(itgeom,_listGeomProperties) {
+            ab = itgeom->ComputeAABB(_t);
+            if( ab.extents.x == 0 && ab.extents.y == 0 && ab.extents.z == 0 ) {
+                continue;
             }
-            if( vmin.y > vmin2.y ) {
-                vmin.y = vmin2.y;
+            Vector vnmin = ab.pos - ab.extents;
+            Vector vnmax = ab.pos + ab.extents;
+            if( !binitialized ) {
+                vmin = vnmin;
+                vmax = vnmax;
+                binitialized = true;
             }
-            if( vmin.z > vmin2.z ) {
-                vmin.z = vmin2.z;
-            }
-            if( vmax.x < vmax2.x ) {
-                vmax.x = vmax2.x;
-            }
-            if( vmax.y < vmax2.y ) {
-                vmax.y = vmax2.y;
-            }
-            if( vmax.z < vmax2.z ) {
-                vmax.z = vmax2.z;
+            else {
+                if( vmin.x > vnmin.x ) {
+                    vmin.x = vnmin.x;
+                }
+                if( vmin.y > vnmin.y ) {
+                    vmin.y = vnmin.y;
+                }
+                if( vmin.z > vnmin.z ) {
+                    vmin.z = vnmin.z;
+                }
+                if( vmax.x < vnmax.x ) {
+                    vmax.x = vnmax.x;
+                }
+                if( vmax.y < vnmax.y ) {
+                    vmax.y = vnmax.y;
+                }
+                if( vmax.z < vnmax.z ) {
+                    vmax.z = vnmax.z;
+                }
             }
         }
-        return AABB( 0.5f * (vmin+vmax), 0.5f * (vmax-vmin) );
+        if( !binitialized ) {
+            ab.pos = _t.trans;
+            ab.extents = Vector(0,0,0);
+        }
+        else {
+            ab.pos = (dReal)0.5 * (vmin + vmax);
+            ab.extents = vmax - ab.pos;
+        }
+        return ab;
     }
     // have to at least return the correct position!
     return AABB(_t.trans,Vector(0,0,0));
@@ -2332,43 +2353,50 @@ KinBody::JointPtr KinBody::GetJointFromDOFIndex(int dofindex) const
 
 AABB KinBody::ComputeAABB() const
 {
-    if( _veclinks.size() == 0 ) {
-        return AABB();
-    }
     Vector vmin, vmax;
-    std::vector<LinkPtr>::const_iterator itlink = _veclinks.begin();
-
-    AABB ab = (*itlink++)->ComputeAABB();
-    vmin = ab.pos - ab.extents;
-    vmax = ab.pos + ab.extents;
-
-    while(itlink != _veclinks.end()) {
-        ab = (*itlink++)->ComputeAABB();
+    bool binitialized=false;
+    AABB ab;
+    FOREACHC(itlink,_veclinks) {
+        ab = (*itlink)->ComputeAABB();
+        if( ab.extents.x == 0 && ab.extents.y == 0 && ab.extents.z == 0 ) {
+            continue;
+        }
         Vector vnmin = ab.pos - ab.extents;
         Vector vnmax = ab.pos + ab.extents;
-
-        if( vmin.x > vnmin.x ) {
-            vmin.x = vnmin.x;
+        if( !binitialized ) {
+            vmin = vnmin;
+            vmax = vnmax;
+            binitialized = true;
         }
-        if( vmin.y > vnmin.y ) {
-            vmin.y = vnmin.y;
-        }
-        if( vmin.z > vnmin.z ) {
-            vmin.z = vnmin.z;
-        }
-        if( vmax.x < vnmax.x ) {
-            vmax.x = vnmax.x;
-        }
-        if( vmax.y < vnmax.y ) {
-            vmax.y = vnmax.y;
-        }
-        if( vmax.z < vnmax.z ) {
-            vmax.z = vnmax.z;
+        else {
+            if( vmin.x > vnmin.x ) {
+                vmin.x = vnmin.x;
+            }
+            if( vmin.y > vnmin.y ) {
+                vmin.y = vnmin.y;
+            }
+            if( vmin.z > vnmin.z ) {
+                vmin.z = vnmin.z;
+            }
+            if( vmax.x < vnmax.x ) {
+                vmax.x = vnmax.x;
+            }
+            if( vmax.y < vnmax.y ) {
+                vmax.y = vnmax.y;
+            }
+            if( vmax.z < vnmax.z ) {
+                vmax.z = vnmax.z;
+            }
         }
     }
-
-    ab.pos = (dReal)0.5 * (vmin + vmax);
-    ab.extents = vmax - ab.pos;
+    if( !binitialized ) {
+        ab.pos = GetTransform().trans;
+        ab.extents = Vector(0,0,0);
+    }
+    else {
+        ab.pos = (dReal)0.5 * (vmin + vmax);
+        ab.extents = vmax - ab.pos;
+    }
     return ab;
 }
 
