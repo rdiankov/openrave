@@ -1262,7 +1262,7 @@ class ColladaReader : public daeErrorHandler
         }
 
         geom.InitCollisionMesh();
-        return false;
+        return true;
     }
 
     /// Extract the Geometry in TRIANGLE STRIPS and adds it to OpenRave
@@ -1323,7 +1323,7 @@ class ColladaReader : public daeErrorHandler
                         const domList_of_floats& listFloats = flArray->getValue();
                         int k=vertexoffset;
                         int vertexStride = 3;//instead of hardcoded stride, should use the 'accessor'
-                        size_t usedindices = indexArray.getCount()-2;
+                        size_t usedindices = 3*(indexArray.getCount()-2);
                         if( trimesh.indices.capacity() < trimesh.indices.size()+usedindices ) {
                             trimesh.indices.reserve(trimesh.indices.size()+usedindices);
                         }
@@ -1356,9 +1356,8 @@ class ColladaReader : public daeErrorHandler
                 }
             }
         }
-
         geom.InitCollisionMesh();
-        return false;
+        return true;
     }
 
     /// Extract the Geometry in TRIANGLE STRIPS and adds it to OpenRave
@@ -1440,7 +1439,7 @@ class ColladaReader : public daeErrorHandler
             }
         }
         geom.InitCollisionMesh();
-        return false;
+        return true;
     }
 
     /// Extract the Geometry and adds it to OpenRave
