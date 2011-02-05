@@ -1,8 +1,12 @@
 if( ZLIB_FOUND AND Boost_FILESYSTEM_FOUND AND Boost_SYSTEM_FOUND )
 message(STATUS "Compiling with COLLADA support from sources!")
 
-add_definitions(${LIBXML2_DEFINITIONS})
-include_directories(${LIBXML2_INCLUDE_DIR})
+if( LIBXML2_DEFINITIONS )
+  add_definitions(${LIBXML2_DEFINITIONS})
+endif()
+if( LIBXML2_INCLUDE_DIR )
+  include_directories(${LIBXML2_INCLUDE_DIR})
+endif()
 
 include_directories(${MINIZIP_INCLUDE_DIR})
 include_directories(BEFORE ${libpcrecpp_INCLUDE_DIRS})
