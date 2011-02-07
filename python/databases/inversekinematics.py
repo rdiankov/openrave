@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)
+# Copyright (C) 2009-2011 Rosen Diankov (rosen.diankov@gmail.com)
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -54,7 +54,7 @@ Description
 This process allows users to generate OpenRAVE inverse kinematics solvers for any robot
 manipulator. The manipulator's arm joints are used for obtaining the joints to solve for. The user
 can specify the IK type (Rotation, Translation, Full 6D, Ray 4D, etc), the free joints of the
-kinematics, and the accuracy. For example, generating the right arm 6D IK for the PR2 robot where
+kinematics, and the precision. For example, generating the right arm 6D IK for the PR2 robot where
 the free joint is the first joint and the free increment is 0.01 radians is:
 
 .. code-block:: bash
@@ -200,7 +200,6 @@ class InverseKinematicsModel(OpenRAVEModel):
         freejoints = None
         iktype = self.iktype
         usedummyjoints = None
-        accuracy = None
         precision = None
         forceikbuild = True
         outputlang = None
@@ -216,7 +215,6 @@ class InverseKinematicsModel(OpenRAVEModel):
                 iktype = IkParameterization.Type.Ray4D
             forceikbuild=options.force
             precision=options.precision
-            accuracy=options.accuracy
             usedummyjoints=options.usedummyjoints
             if options.freejoints is not None:
                 freejoints=options.freejoints
@@ -239,13 +237,16 @@ class InverseKinematicsModel(OpenRAVEModel):
         elif self.manip.GetKinematicsStructureHash()=='a1e9aea0dc0fda631ca376c03d500927' or self.manip.GetKinematicsStructureHash()=='ceb6be51bd14f345e22997cc0bca9f2f': # pr2 cameras
             if iktype is None:
                 iktype=IkParameterization.Type.Ray4D
+            if freejoints is None:
+                # take the torso joint
+                freejoints=[self.robot.GetJoints()[self.manip.GetArmIndices()[0]].GetName()]
         elif self.manip.GetKinematicsStructureHash()=='2c89f74eb73a27f0fcf44ba3aef9fcf5': # katana
             if iktype==IkParameterization.Type.Translation3D or (iktype==None and self.iktype==IkParameterization.Type.Translation3D):
                 freejoints = [self.robot.GetJoints()[ind].GetName() for ind in self.manip.GetArmIndices()[3:]]
-        self.generate(iktype=iktype,freejoints=freejoints,usedummyjoints=usedummyjoints,accuracy=accuracy,precision=precision,forceikbuild=forceikbuild,outputlang=outputlang,ipython=ipython)
+        self.generate(iktype=iktype,freejoints=freejoints,usedummyjoints=usedummyjoints,precision=precision,forceikbuild=forceikbuild,outputlang=outputlang,ipython=ipython)
         self.save()
 
-    def generate(self,iktype=None,freejoints=None,usedummyjoints=False,accuracy=None,precision=None,forceikbuild=True,outputlang=None,ipython=False):
+    def generate(self,iktype=None,freejoints=None,usedummyjoints=False,precision=None,forceikbuild=True,outputlang=None,ipython=False):
         if iktype is not None:
             self.iktype = iktype
         if self.iktype is None:
@@ -259,9 +260,9 @@ class InverseKinematicsModel(OpenRAVEModel):
                 return ikfast.IKFastSolver.solveFullIK_Rotation3D(*args,**kwargs)
             solvefn=solveFullIK_Rotation3D
         elif self.iktype == IkParameterization.Type.Direction3D:
-            basedir=dot(self.manip.GetGraspTransform()[0:3,0:3],self.manip.GetDirection())
+            rawbasedir=dot(self.manip.GetGraspTransform()[0:3,0:3],self.manip.GetDirection())
             def solveFullIK_Direction3D(*args,**kwargs):
-                kwargs['basedir'] = basedir
+                kwargs['rawbasedir'] = rawbasedir
                 return ikfast.IKFastSolver.solveFullIK_Direction3D(*args,**kwargs)
             solvefn=solveFullIK_Direction3D
         elif self.iktype == IkParameterization.Type.Ray4D:
@@ -310,7 +311,7 @@ class InverseKinematicsModel(OpenRAVEModel):
                         raise LookupError("cannot find joint '%s(%d)' in solve joints: %s"%(jointname,jointindices[0],str(solvejoints)))
                     freejointinds.append(jointindices[0])
                     solvejoints.remove(jointindices[0])
-        print 'Generating inverse kinematics for manip',self.manip.GetName(),':',self.iktype,solvejoints,'(this might take ~10-30 min)'
+        print 'Generating inverse kinematics for manip',self.manip.GetName(),':',self.iktype,solvejoints,'(this might take ~5 min)'
         if self.iktype == IkParameterization.Type.Rotation3D:
             self.dofexpected = 3
         elif self.iktype == IkParameterization.Type.Direction3D:
@@ -347,10 +348,11 @@ class InverseKinematicsModel(OpenRAVEModel):
         if outputlang is None:
             outputlang = 'cpp'
         sourcefilename += '.' + outputlang
+
         if forceikbuild or not os.path.isfile(sourcefilename):
-            print 'generating inverse kinematics file %s'%sourcefilename
+            print 'creating ik file %s'%sourcefilename
             mkdir_recursive(os.path.split(sourcefilename)[0])
-            solver = ikfast.IKFastSolver(kinbody=self.robot,kinematicshash=self.manip.GetKinematicsStructureHash(),accuracy=accuracy,precision=precision)
+            solver = ikfast.IKFastSolver(kinbody=self.robot,kinematicshash=self.manip.GetKinematicsStructureHash(),precision=precision)
             baselink=self.manip.GetBase().GetIndex()
             eelink=self.manip.GetEndEffector().GetIndex()
             if ipython:
@@ -358,14 +360,15 @@ class InverseKinematicsModel(OpenRAVEModel):
                 ipshell = IPython.Shell.IPShellEmbed(argv='',banner = 'inversekinematics dropping into ipython',exit_msg = 'Leaving Interpreter and continuing solver.')
                 ipshell(local_ns=locals())
                 reload(ikfast) # in case changes occurred
-            code = solver.generateIkSolver(baselink=baselink,eelink=eelink,solvejoints=solvejoints,freejointinds=freejointinds,usedummyjoints=usedummyjoints,solvefn=solvefn,lang=outputlang)
+            chaintree = solver.generateIkSolver(baselink=baselink,eelink=eelink,freejointinds=freejointinds,solvefn=solvefn)
+            code = solver.writeIkSolver(chaintree,lang=outputlang)
             if len(code) == 0:
                 raise ValueError('failed to generate ik solver for robot %s:%s'%(self.robot.GetName(),self.manip.GetName()))
             open(sourcefilename,'w').write(code)
             if outputlang != 'cpp':
                 print 'cannot continue further if outputlang is not cpp'
                 sys.exit(0)
-        
+
         # compile the code and create the shared object
         compiler,compile_flags = self.getcompiler()
         try:
@@ -377,7 +380,11 @@ class InverseKinematicsModel(OpenRAVEModel):
         shutil.copyfile(sourcefilename, platformsourcefilename)
         try:
             objectfiles = compiler.compile(sources=[platformsourcefilename],macros=[('IKFAST_CLIBRARY',1),('IKFAST_NO_MAIN',1)],extra_postargs=compile_flags,output_dir=output_dir)
-            compiler.link_shared_object(objectfiles,output_filename=output_filename)
+            # because some parts of ikfast require lapack, always try to link with it
+            try:
+                compiler.link_shared_object(objectfiles,output_filename=output_filename,libraries=['lapack'])
+            except distutils.errors.LinkError:
+                compiler.link_shared_object(objectfiles,output_filename=output_filename)
             if not self.load():
                 return ValueError('failed to generate ik solver')
         finally:
@@ -573,8 +580,6 @@ class InverseKinematicsModel(OpenRAVEModel):
                           help='Optional joint name specifying a free parameter of the manipulator. If nothing specified, assumes all joints not solving for are free parameters. Can be specified multiple times for multiple free parameters.')
         parser.add_option('--precision', action='store', type='int', dest='precision',default=15,
                           help='The precision to compute the inverse kinematics in, (default=%default).')
-        parser.add_option('--accuracy', action='store', type='float', dest='accuracy',default=1e-12,
-                          help='The small number that will be recognized as a zero used to eliminate floating point errors (default=%default).')
         parser.add_option('--usecached', action='store_false', dest='force',default=True,
                           help='If set, will always try to use the cached ik c++ file, instead of generating a new one.')
         parser.add_option('--rotation3donly', action='store_true', dest='rotation3donly',default=False,

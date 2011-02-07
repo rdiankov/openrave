@@ -441,8 +441,8 @@ public:
         virtual LinkPtr GetHierarchyParentLink() const;
         /// \brief Return the child link whose transformation is computed by this joint's values (either GetFirstAttached() or GetSecondAttached())
         virtual LinkPtr GetHierarchyChildLink() const;
-        /// \brief The anchor of the joint in local coordinates.
-        virtual Vector GetInternalHierarchyAnchor() const;
+        /// \deprecated (11/1/27)
+        virtual Vector GetInternalHierarchyAnchor() const RAVE_DEPRECATED;
         /// \brief The axis of the joint in local coordinates.
         virtual Vector GetInternalHierarchyAxis(int axis = 0) const;
         /// \brief Left multiply transform given the base body.
@@ -510,7 +510,7 @@ public:
 
     protected:
         boost::array<Vector,3> vAxes;        ///< axes in body[0]'s or environment coordinate system used to define joint movement
-        Vector vanchor;         ///< anchor of the joint
+        Vector vanchor;         ///< anchor of the joint, this is only used to construct the internal left/right matrices
         dReal fResolution;      ///< interpolation resolution
         boost::array<dReal,3> fMaxVel;          ///< the soft maximum velocity (rad/s) to move the joint when planning
         boost::array<dReal,3> fHardMaxVel;      ///< the hard maximum velocity, robot cannot exceed this velocity. used for verification checking

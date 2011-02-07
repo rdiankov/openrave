@@ -32,7 +32,12 @@ public:
         RegisterCommand("ReleaseAll",boost::bind(&BaseManipulation::ReleaseAll,this,_1,_2),
                         "Releases all grabbed bodies (RobotBase::ReleaseAllGrabbed).");
         RegisterCommand("MoveHandStraight",boost::bind(&BaseManipulation::MoveHandStraight,this,_1,_2),
-                        "Move the active end-effector in a straight line until collision or IK fails.");
+                        "Move the active end-effector in a straight line until collision or IK fails. Parameters:\n\n\
+* stepsize - the increments in workspace in which the robot tests for the next configuration.\n\n\
+* minsteps - The minimum number of steps that need to be taken in order for success to declared. If robot doesn't reach this number of steps, it fails.\n\n\
+* maxsteps - The maximum number of steps the robot should take.\n\n\
+* direction - The workspace direction to move end effector in.\n\n\
+Method wraps the WorkspaceTrajectoryTracker planner. For more details on parameters, check out its documentation.");
         RegisterCommand("MoveManipulator",boost::bind(&BaseManipulation::MoveManipulator,this,_1,_2),
                         "Moves arm joints of active manipulator to a given set of joint values");
         RegisterCommand("MoveActiveJoints",boost::bind(&BaseManipulation::MoveActiveJoints,this,_1,_2),

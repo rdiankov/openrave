@@ -263,7 +263,8 @@ class FKFastSolver(AutoReloader):
             T1,T1inv = patheqs1[0:2]
             Tleft = self.iksolver.affineInverse(Tleft1)*Tleft0
             Tright = Tright0 * self.iksolver.affineInverse(Tright1)
-            Equations2 = self.iksolver.buildRaghavanRothEquations(Tleft*T0*Tright, T1,unknownvars)
+            PolyEquations,numminvars = self.iksolver.buildRaghavanRothEquations(Tleft*T0*Tright, T1,unknownvars)
+            Equations2 = [[eq[0].as_basic().expand(),eq[1].as_basic().expand()] for eq in PolyEquations]
             Equations += Equations2
             for vars in [patheqs0[3],patheqs1[3]]:
                 eliminatevargroup = []

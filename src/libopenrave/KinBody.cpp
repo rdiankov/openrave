@@ -926,18 +926,19 @@ void KinBody::Joint::GetValues(vector<dReal>& pValues, bool bAppend) const
     else {
         // chain of revolute and prismatic joints
         for(int i = 0; i < GetDOF(); ++i) {
+            Vector vaxis = vAxes.at(i);
             if( IsRevolute(i) ) {
                 if( i+1 < GetDOF() ) {
-                    std::pair<dReal, Vector > res = normalizeAxisRotation(vAxes[i],tjoint.rot);
+                    std::pair<dReal, Vector > res = normalizeAxisRotation(vaxis,tjoint.rot);
                     tjoint.rot = res.second;
                     if( res.first != 0 ) {
                         // could speed up by checking if trans is ever needed after this
-                        tjoint.trans = quatRotate(quatFromAxisAngle(vAxes[i],res.first),tjoint.trans);
+                        tjoint.trans = quatRotate(quatFromAxisAngle(vaxis,res.first),tjoint.trans);
                     }
                     f = -res.first;
                 }
                 else {
-                    f = 2.0f*RaveAtan2(tjoint.rot.y*vAxes[i].x+tjoint.rot.z*vAxes[i].y+tjoint.rot.w*vAxes[i].z, tjoint.rot.x);
+                    f = 2.0f*RaveAtan2(tjoint.rot.y*vaxis.x+tjoint.rot.z*vaxis.y+tjoint.rot.w*vaxis.z, tjoint.rot.x);
                 }
                 // expect values to be within -PI to PI range
                 if( f < -PI ) {
@@ -949,10 +950,10 @@ void KinBody::Joint::GetValues(vector<dReal>& pValues, bool bAppend) const
                 pValues.push_back(_offsets[i]+f);
             }
             else { // prismatic
-                f = tjoint.trans.x*vAxes[i].x+tjoint.trans.y*vAxes[i].y+tjoint.trans.z*vAxes[i].z;
+                f = tjoint.trans.x*vaxis.x+tjoint.trans.y*vaxis.y+tjoint.trans.z*vaxis.z;
                 pValues.push_back(_offsets[i]+f);
                 if( i+1 < GetDOF() ) {
-                    tjoint.trans -= vAxes[i]*f;
+                    tjoint.trans -= vaxis*f;
                 }
             }
         }
@@ -1047,18 +1048,19 @@ dReal KinBody::Joint::GetValue(int iaxis) const
 
         // chain of revolute and prismatic joints
         for(int i = 0; i < GetDOF(); ++i) {
+            Vector vaxis = vAxes.at(i);
             if( IsRevolute(i) ) {
                 if( i+1 < GetDOF() ) {
-                    std::pair<dReal, Vector > res = normalizeAxisRotation(vAxes[i],tjoint.rot);
+                    std::pair<dReal, Vector > res = normalizeAxisRotation(vaxis,tjoint.rot);
                     tjoint.rot = res.second;
                     if( res.first != 0 ) {
                         // could speed up by checking if trans is ever needed after this
-                        tjoint.trans = quatRotate(quatFromAxisAngle(vAxes[i],res.first),tjoint.trans);
+                        tjoint.trans = quatRotate(quatFromAxisAngle(vaxis,res.first),tjoint.trans);
                     }
                     f = -res.first;
                 }
                 else {
-                    f = 2.0f*RaveAtan2(tjoint.rot.y*vAxes[i].x+tjoint.rot.z*vAxes[i].y+tjoint.rot.w*vAxes[i].z, tjoint.rot.x);
+                    f = 2.0f*RaveAtan2(tjoint.rot.y*vaxis.x+tjoint.rot.z*vaxis.y+tjoint.rot.w*vaxis.z, tjoint.rot.x);
                 }
                 // expect values to be within -PI to PI range
                 if( f < -PI ) {
@@ -1072,12 +1074,12 @@ dReal KinBody::Joint::GetValue(int iaxis) const
                 }
             }
             else { // prismatic
-                f = tjoint.trans.x*vAxes[i].x+tjoint.trans.y*vAxes[i].y+tjoint.trans.z*vAxes[i].z;
+                f = tjoint.trans.x*vaxis.x+tjoint.trans.y*vaxis.y+tjoint.trans.z*vaxis.z;
                 if( i == iaxis ) {
                     return _offsets[i]+f;
                 }
                 if( i+1 < GetDOF() ) {
-                    tjoint.trans -= vAxes[i]*f;
+                    tjoint.trans -= vaxis*f;
                 }
             }
         }
@@ -1144,12 +1146,12 @@ void KinBody::Joint::GetVelocities(std::vector<dReal>& pVelocities, bool bAppend
 
 Vector KinBody::Joint::GetAnchor() const
 {
-    return !_attachedbodies[0] ? vanchor : _attachedbodies[0]->GetTransform() * vanchor;
+    return !_attachedbodies[0] ? _tLeft.trans : _attachedbodies[0]->GetTransform() * _tLeft.trans;
 }
 
 Vector KinBody::Joint::GetAxis(int iaxis) const
 {
-    return !_attachedbodies[0] ? vAxes.at(iaxis) : _attachedbodies[0]->GetTransform().rotate(vAxes.at(iaxis));
+    return !_attachedbodies[0] ? _tLeft.rotate(vAxes.at(iaxis)) : _attachedbodies[0]->GetTransform().rotate(_tLeft.rotate(vAxes.at(iaxis)));
 }
 
 void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1)
@@ -1211,6 +1213,16 @@ void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1)
         _tLeftNoOffset.trans = vanchor;
         _tRightNoOffset.trans = -vanchor;
         _tRightNoOffset = _tRightNoOffset * trel;
+        if( GetDOF() == 1 ) {
+            // in the case of one axis, create a new coordinate system such that the axis rotates about (0,0,1)
+            // this is necessary in order to simplify the rotation matrices (for future symbolic computation)
+            // and suppress any floating-point error. The data structures are only setup for this to work in 1 DOF.
+            Transform trot; trot.rot = quatRotateDirection(vAxes[0],Vector(0,0,1));
+            _tLeftNoOffset = _tLeftNoOffset * trot.inverse();
+            _tRightNoOffset = trot*_tRightNoOffset;
+            vAxes[0] = Vector(0,0,1);
+        }
+            
         Transform toffset;
         if( IsRevolute(0) ) {
             toffset.rot = quatFromAxisAngle(vAxes[0], _offsets[0]);
@@ -1247,7 +1259,7 @@ KinBody::LinkPtr KinBody::Joint::GetHierarchyChildLink() const
 
 Vector KinBody::Joint::GetInternalHierarchyAnchor() const
 {
-    return vanchor;
+    return _tLeft.trans;
 }
 
 Vector KinBody::Joint::GetInternalHierarchyAxis(int iaxis) const
@@ -1655,7 +1667,7 @@ void KinBody::Joint::serialize(std::ostream& o, int options) const
         for(int i = 0; i < GetDOF(); ++i) {
             SerializeRound(o,_offsets[i]);
         }
-        SerializeRound3(o,vanchor);
+        SerializeRound3(o,vanchor); // not needed! remove?
         for(int i = 0; i < GetDOF(); ++i) {
             SerializeRound3(o,vAxes[i]);
             if( !!_vmimic.at(i) ) {

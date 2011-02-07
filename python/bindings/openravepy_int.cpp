@@ -1793,7 +1793,7 @@ public:
     }
 
     bool SetController(PyControllerBasePtr pController) {
-        RAVELOG_VERBOSE("RobotBase::SetController(PyControllerBasePtr) will control all DOFs\n");
+        RAVELOG_VERBOSE("RobotBase::SetController(PyControllerBasePtr) will control all DOFs and transformation\n");
         std::vector<int> dofindices;
         for(int i = 0; i < _probot->GetDOF(); ++i) {
             dofindices.push_back(i);
@@ -3616,6 +3616,11 @@ BOOST_PYTHON_MODULE(openravepy_int)
     {
         void (PyInterfaceBase::*setuserdata1)(PyUserData) = &PyInterfaceBase::SetUserData;
         void (PyInterfaceBase::*setuserdata2)(object) = &PyInterfaceBase::SetUserData;
+        std::string sSendCommandDoc = std::string(DOXY_FN(InterfaceBase,SendCommand)) + std::string("The calling conventions between C++ and Python differ a little.\n\n\
+In C++ the syntax is::\n\n  success = SendCommand(OUT, IN)\n\n\
+In python, the syntax is::\n\n\
+  OUT = SendCommand(IN)\n\
+  success = not OUT is None\n\n");
         class_<PyInterfaceBase, boost::shared_ptr<PyInterfaceBase> >("Interface", DOXY_CLASS(InterfaceBase), no_init)
             .def("GetInterfaceType",&PyInterfaceBase::GetInterfaceType, DOXY_FN(InterfaceBase,GetInterfaceType))
             .def("GetXMLId",&PyInterfaceBase::GetXMLId, DOXY_FN(InterfaceBase,GetXMLId))
@@ -3626,7 +3631,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("SetUserData",setuserdata1,args("data"), DOXY_FN(InterfaceBase,SetUserData))
             .def("SetUserData",setuserdata2,args("data"), DOXY_FN(InterfaceBase,SetUserData))
             .def("GetUserData",&PyInterfaceBase::GetUserData, DOXY_FN(InterfaceBase,GetUserData))
-            .def("SendCommand",&PyInterfaceBase::SendCommand,args("cmd"), DOXY_FN(InterfaceBase,SendCommand))
+            .def("SendCommand",&PyInterfaceBase::SendCommand,args("cmd"), sSendCommandDoc.c_str() )
             .def("__repr__", &PyInterfaceBase::__repr__)
             .def("__str__", &PyInterfaceBase::__str__)
             .def("__eq__",&PyInterfaceBase::__eq__)

@@ -27,9 +27,6 @@ namespace pa10 {
 namespace puma {
 #include "ik_puma.h"
 }
-namespace manusleft {
-#include "ik_manusleftarm.h"
-}
 namespace pr2_head {
 #include "ik_pr2_head.h"
 }
@@ -58,7 +55,6 @@ namespace schunk_lwa3 {
 BOOST_TYPEOF_REGISTER_TYPE(barrettwam::IKSolution)
 BOOST_TYPEOF_REGISTER_TYPE(pa10::IKSolution)
 BOOST_TYPEOF_REGISTER_TYPE(puma::IKSolution)
-BOOST_TYPEOF_REGISTER_TYPE(manusleft::IKSolution)
 BOOST_TYPEOF_REGISTER_TYPE(pr2_head::IKSolution)
 BOOST_TYPEOF_REGISTER_TYPE(pr2_head_torso::IKSolution)
 BOOST_TYPEOF_REGISTER_TYPE(pr2_leftarm::IKSolution)
@@ -106,12 +102,6 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
                 for(size_t i = 0; i < vfree.size(); ++i)
                     vfree[i] = puma::getFreeParameters()[i];
                 return InterfaceBasePtr(new IkFastSolver<puma::IKReal,puma::IKSolution>(puma::ik,vfree,freeinc,puma::getNumJoints(),(IkParameterization::Type)puma::getIKType(), boost::shared_ptr<void>(), puma::getKinematicsHash(), penv));
-            }
-            else if( interfacename == "manusleftarmikfast" ) {
-                vector<int> vfree(manusleft::getNumFreeParameters());
-                for(size_t i = 0; i < vfree.size(); ++i)
-                    vfree[i] = manusleft::getFreeParameters()[i];
-                return InterfaceBasePtr(new IkFastSolver<manusleft::IKReal,manusleft::IKSolution>(manusleft::ik,vfree,freeinc,manusleft::getNumJoints(),(IkParameterization::Type)manusleft::getIKType(), boost::shared_ptr<void>(), manusleft::getKinematicsHash(), penv));
             }
             else if( interfacename == "ikfast_pr2_head" ) {
                 vector<int> vfree(pr2_head::getNumFreeParameters());
@@ -176,7 +166,6 @@ void GetPluginAttributesValidated(PLUGININFO& info)
     info.interfacenames[PT_InverseKinematicsSolver].push_back("wam7ikfast");
     info.interfacenames[PT_InverseKinematicsSolver].push_back("pa10ikfast");
     info.interfacenames[PT_InverseKinematicsSolver].push_back("pumaikfast");
-    info.interfacenames[PT_InverseKinematicsSolver].push_back("manusleftarmikfast");
     info.interfacenames[PT_InverseKinematicsSolver].push_back("ikfast_pr2_head");
     info.interfacenames[PT_InverseKinematicsSolver].push_back("ikfast_pr2_head_torso");
     info.interfacenames[PT_InverseKinematicsSolver].push_back("ikfast_pr2_rightarm");
