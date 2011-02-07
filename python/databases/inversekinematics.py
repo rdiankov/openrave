@@ -578,7 +578,7 @@ class InverseKinematicsModel(OpenRAVEModel):
         parser.usage='openrave.py --database inversekinematics [options]'
         parser.add_option('--freejoint', action='append', type='string', dest='freejoints',default=None,
                           help='Optional joint name specifying a free parameter of the manipulator. If nothing specified, assumes all joints not solving for are free parameters. Can be specified multiple times for multiple free parameters.')
-        parser.add_option('--precision', action='store', type='int', dest='precision',default=15,
+        parser.add_option('--precision', action='store', type='int', dest='precision',default=8,
                           help='The precision to compute the inverse kinematics in, (default=%default).')
         parser.add_option('--usecached', action='store_false', dest='force',default=True,
                           help='If set, will always try to use the cached ik c++ file, instead of generating a new one.')

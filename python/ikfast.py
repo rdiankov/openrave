@@ -591,7 +591,7 @@ class IKFastSolver(AutoReloader):
         self.kinematicshash = kinematicshash
         self.testconsistentvalues = None
         if precision is None:
-            self.precision=10
+            self.precision=8
         else:
             self.precision=precision
         self.kinbody = kinbody
@@ -606,21 +606,21 @@ class IKFastSolver(AutoReloader):
                 self.axismap[name] = axis
                 self.axismapinv[idof] = name
 
-    @staticmethod
-    def convertRealToRational(x,digits=8):
-        r0 = Rational(str(round(Real(float(x),30),digits)))
+    def convertRealToRational(self, x,precision=None):
+        if precision is None:
+            precision=self.precision
+        r0 = Rational(str(round(Real(float(x),30),precision)))
         if x == 0:
             return r0
-        r1 = 1/Rational(str(round(Real(1/float(x),30),digits)))
+        r1 = 1/Rational(str(round(Real(1/float(x),30),precision)))
         return r0 if len(str(r0)) < len(str(r1)) else r1
 
-    @staticmethod
-    def normalizeRotation(M):
-        """error from openrave can be on the order of 1e-7, so round all rotational vectors to 1e-6
+    def normalizeRotation(self,M):
+        """error from openrave can be on the order of 1e-6 (especially if they are defined diagonal to some axis)
         """
-        right = Matrix(3,1,[IKFastSolver.convertRealToRational(x,6) for x in M[0,0:3]])
+        right = Matrix(3,1,[self.convertRealToRational(x,self.precision-3) for x in M[0,0:3]])
         right = right/right.norm()
-        up = Matrix(3,1,[IKFastSolver.convertRealToRational(x,6) for x in M[1,0:3]])
+        up = Matrix(3,1,[self.convertRealToRational(x,self.precision-3) for x in M[1,0:3]])
         up = up - right*right.dot(up)
         up = up/up.norm()
         d = right.cross(up)
@@ -629,18 +629,16 @@ class IKFastSolver(AutoReloader):
             M[0,i] = right[i]
             M[1,i] = up[i]
             M[2,i] = d[i]
-            M[i,3] = IKFastSolver.convertRealToRational(M[i,3])
+            M[i,3] = self.convertRealToRational(M[i,3])
             M[3,i] = S.Zero
         M[3,3] = S.One
         return M
 
-    @staticmethod
-    def numpyMatrixToSympy(T):
-        return IKFastSolver.normalizeRotation(Matrix(4,4,[Real(x,30) for x in T.flat]))
+    def numpyMatrixToSympy(self,T):
+        return self.normalizeRotation(Matrix(4,4,[Real(x,30) for x in T.flat]))
 
-    @staticmethod
-    def numpyVectorToSympy(v,digits=8):
-        return Matrix(len(v),1,[IKFastSolver.convertRealToRational(x,digits) for x in v])
+    def numpyVectorToSympy(self,v,precision=None):
+        return Matrix(len(v),1,[self.convertRealToRational(x,precision) for x in v])
 
     @staticmethod
     def rodrigues(axis, angle):
@@ -1319,7 +1317,10 @@ class IKFastSolver(AutoReloader):
                         break
                     except self.CannotSolveError, e:
                         print e
-                        
+
+        if tree is None:
+            raise self.CannotSolveError('cannot solve 6D mechanism!')
+
         Tgoal = (self.affineInverse(Tfirstleft) * self.Tee * self.affineInverse(Tfirstright)).subs(self.freevarsubs)
         return SolverIKChainTransform6D([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(v,i) for v,i in izip(self.freejointvars,self.ifreejointvars)], Tgoal, tree,Tfk=Tfirstleft*Tfinal*Tfirstright)
 
