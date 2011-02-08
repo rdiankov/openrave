@@ -28,7 +28,7 @@ namespace OpenRAVE {
 /** \brief <b>[interface]</b> A kinematic body of links and joints. See \ref arch_kinbody.
     \ingroup interfaces
 */
-class RAVE_API KinBody : public InterfaceBase
+class OPENRAVE_API KinBody : public InterfaceBase
 {
 public:
     /// \brief A set of properties for the kinbody. These properties are used to describe a set of variables used in KinBody.
@@ -49,14 +49,14 @@ public:
     };
 
     /// \brief A rigid body holding all its collision and rendering data.
-    class RAVE_API Link : public boost::enable_shared_from_this<Link>
+    class OPENRAVE_API Link : public boost::enable_shared_from_this<Link>
     {
     public:
         Link(KinBodyPtr parent); ///< pass in a ODE world
         virtual ~Link();
         
         /// user data for trimesh geometries
-        class RAVE_API TRIMESH
+        class OPENRAVE_API TRIMESH
         {
         public:
             std::vector<Vector> vertices;
@@ -75,7 +75,7 @@ public:
 
         /// Describes the properties of a basic geometric primitive.
         /// Contains everything associated with a physical body along with a seprate (optional) render file.
-        class RAVE_API GEOMPROPERTIES
+        class OPENRAVE_API GEOMPROPERTIES
         {
         public:
             /// \brief The type of geometry primitive.
@@ -276,11 +276,14 @@ public:
         bool _bIsEnabled; ///< \see IsEnabled
 
     private:
+        /// Sensitive variables that should not be modified.
+        /// @name Private Link Variables
+        //@{
         int _index;          ///< \see GetIndex
         KinBodyWeakPtr _parent; ///< \see GetParent
         std::vector<int> _vParentLinks; ///< \see GetParentLinks, IsParentLink
         std::vector<int> _vRigidlyAttachedLinks; ///< \see IsRigidlyAttached, GetRigidlyAttachedLinks
-
+        //@}
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
         friend class ColladaReader;
@@ -301,7 +304,7 @@ public:
     typedef boost::weak_ptr<Link> LinkWeakPtr;
 
     /// \brief Information about a joint that controls the relationship between two links.
-    class RAVE_API Joint : public boost::enable_shared_from_this<Joint>
+    class OPENRAVE_API Joint : public boost::enable_shared_from_this<Joint>
     {
     public:
         /** \brief The type of joint movement.
@@ -522,7 +525,7 @@ public:
         /// \brief Holds mimic information about position, velocity, and acceleration of one axis of the joint.
         ///
         /// In every array, [0] is position, [1] is velocity, [2] is acceleration.
-        struct RAVE_API MIMIC
+        struct OPENRAVE_API MIMIC
         {
             struct DOFFormat
             {
@@ -568,19 +571,19 @@ public:
         std::string _name; ///< \see GetName
         boost::array<bool,3> _bIsCircular;    ///< \see IsCircular
     private:
-        /// Sensitive variables that should be modified at all for this joint.
+        /// Sensitive variables that should not be modified.
         /// @name Private Joint Variables
         //@{
-        KinBodyWeakPtr _parent;       ///< body that joint belong to
-        boost::array<LinkPtr,2> _attachedbodies; ///< attached bodies. The link in [0] is computed first in the hierarchy before the other body.
-        Transform _tRight, _tLeft;///< transforms used to get body[1]'s transformation with respect to body[0]'s
-                                ///< Tbody1 = Tbody0 * tLeft * JointOffsetLeft * JointRotation * JointOffsetRight * tRight
-        Transform _tRightNoOffset, _tLeftNoOffset; ///< same as _tLeft and _tRight except it doesn't not include the offset
-        Transform _tinvRight, _tinvLeft; ///< the inverse transformations of tRight and tLeft
         int dofindex;           ///< the degree of freedom index in the body's DOF array, does not index in KinBody::_vecjoints!
         int jointindex;         ///< the joint index into KinBody::_vecjoints
         JointType _type;
         bool _bActive;         ///< if true, should belong to the DOF of the body, unless it is a mimic joint (_ComputeInternalInformation decides this)
+
+        KinBodyWeakPtr _parent;       ///< body that joint belong to
+        boost::array<LinkPtr,2> _attachedbodies; ///< attached bodies. The link in [0] is computed first in the hierarchy before the other body.
+        Transform _tRight, _tLeft;///< transforms used to get body[1]'s transformation with respect to body[0]'s: Tbody1 = Tbody0 * tLeft * JointOffsetLeft * JointRotation * JointOffsetRight * tRight
+        Transform _tRightNoOffset, _tLeftNoOffset; ///< same as _tLeft and _tRight except it doesn't not include the offset
+        Transform _tinvRight, _tinvLeft; ///< the inverse transformations of tRight and tLeft
         bool _bInitialized;
         //@}
 #ifdef RAVE_PRIVATE
@@ -621,7 +624,7 @@ public:
     typedef boost::shared_ptr<BodyState const> BodyStateConstPtr;
 
     /// \brief Access point of the sensor system that manages the body.
-    class RAVE_API ManageData : public boost::enable_shared_from_this<ManageData>
+    class OPENRAVE_API ManageData : public boost::enable_shared_from_this<ManageData>
     {
     public:
     ManageData(SensorSystemBasePtr psensorsystem) : _psensorsystem(psensorsystem) {}
@@ -673,7 +676,7 @@ public:
     /// \brief Helper class to save and restore the entire kinbody state.
     ///
     /// Options can be passed to the constructor in order to choose which parameters to save (see \ref SaveParameters)
-    class RAVE_API KinBodyStateSaver
+    class OPENRAVE_API KinBodyStateSaver
     {
     public:
         KinBodyStateSaver(KinBodyPtr pbody, int options = Save_LinkTransformation|Save_LinkEnable);

@@ -39,6 +39,6 @@ void GetPluginAttributesValidated(PLUGININFO& info)
     info.interfacenames[PT_Viewer].push_back("qtcoin");
 }
 
-RAVE_PLUGIN_API void DestroyPlugin()
+OPENRAVE_PLUGIN_API void DestroyPlugin()
 {
 }

@@ -483,22 +483,22 @@ private:
 
 boost::shared_ptr<RaveGlobal> RaveGlobal::_state;
 
-RAVE_API void RaveSetDebugLevel(DebugLevel level)
+void RaveSetDebugLevel(DebugLevel level)
 {
     RaveGlobal::instance()->SetDebugLevel(level);
 }
 
-RAVE_API DebugLevel RaveGetDebugLevel()
+DebugLevel RaveGetDebugLevel()
 {
     return RaveGlobal::instance()->GetDebugLevel();
 }
 
-RAVE_API const std::map<InterfaceType,std::string>& RaveGetInterfaceNamesMap()
+const std::map<InterfaceType,std::string>& RaveGetInterfaceNamesMap()
 {
     return RaveGlobal::instance()->GetInterfaceNamesMap();
 }
 
-RAVE_API const std::string& RaveGetInterfaceName(InterfaceType type)
+const std::string& RaveGetInterfaceName(InterfaceType type)
 {
     return RaveGlobal::instance()->GetInterfaceName(type);
 }
@@ -959,7 +959,7 @@ void PlannerBase::PlannerParameters::characters(const std::string& ch)
     }
 }
 
-RAVE_API std::ostream& operator<<(std::ostream& O, const PlannerBase::PlannerParameters& v)
+std::ostream& operator<<(std::ostream& O, const PlannerBase::PlannerParameters& v)
 {
     O << "<" << v.GetXMLId() << ">" << endl;
     v.serialize(O);
@@ -1287,7 +1287,7 @@ bool ParseXMLData(BaseXMLReaderPtr preader, const char* buffer, int size)
 
 }
 
-RAVE_API std::istream& operator>>(std::istream& I, PlannerBase::PlannerParameters& pp)
+std::istream& operator>>(std::istream& I, PlannerBase::PlannerParameters& pp)
 {
     if( !!I) {
         stringbuf buf;
@@ -1982,23 +1982,23 @@ CollisionOptionsStateSaver::~CollisionOptionsStateSaver()
 //    }
 //}
 
-RAVE_API void RaveInitRandomGeneration(uint32_t seed)
+void RaveInitRandomGeneration(uint32_t seed)
 {
     init_genrand(seed);
 }
 
-RAVE_API uint32_t RaveRandomInt()
+uint32_t RaveRandomInt()
 {
     return genrand_int32();
 }
 
-RAVE_API void RaveRandomInt(int n, std::vector<int>& v)
+void RaveRandomInt(int n, std::vector<int>& v)
 {
     v.resize(n);
     FOREACH(it, v) *it = genrand_int32();
 }
 
-RAVE_API float RaveRandomFloat(IntervalType interval)
+float RaveRandomFloat(IntervalType interval)
 {
     switch(interval) {
     case IT_Open: return (((float)genrand_int32()) + 0.5f)*(1.0f/4294967296.0f);
@@ -2009,7 +2009,7 @@ RAVE_API float RaveRandomFloat(IntervalType interval)
     BOOST_ASSERT(0);
 }
 
-RAVE_API void RaveRandomFloat(int n, std::vector<float>& v)
+void RaveRandomFloat(int n, std::vector<float>& v)
 {
     v.resize(n);
     FOREACH(it, v) {
@@ -2017,7 +2017,7 @@ RAVE_API void RaveRandomFloat(int n, std::vector<float>& v)
     }
 }
 
-RAVE_API double RaveRandomDouble(IntervalType interval)
+double RaveRandomDouble(IntervalType interval)
 {
     unsigned long a=genrand_int32()>>5, b=genrand_int32()>>6;
     switch(interval) {
@@ -2029,7 +2029,7 @@ RAVE_API double RaveRandomDouble(IntervalType interval)
     BOOST_ASSERT(0);
 }
 
-RAVE_API void RaveRandomDouble(int n, std::vector<double>& v)
+void RaveRandomDouble(int n, std::vector<double>& v)
 {
     v.resize(n);
     FOREACH(it, v) {

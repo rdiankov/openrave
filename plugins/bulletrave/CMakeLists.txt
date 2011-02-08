@@ -8,7 +8,7 @@ endif(APPLE)
 pkg_check_modules(bullet bullet)
 
 if(bullet_FOUND)
-  include_directories(${CMAKE_SOURCE_DIR} ${bullet_INCLUDE_DIRS})
+  include_directories(${bullet_INCLUDE_DIRS})
   link_directories(${OPENRAVE_LINK_DIRS} ${bullet_LIBRARY_DIRS})
 
   add_library(bulletrave SHARED bulletrave.cpp bulletcollision.h  bulletspace.h  plugindefs.h)

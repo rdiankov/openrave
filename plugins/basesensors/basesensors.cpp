@@ -53,7 +53,7 @@ void GetPluginAttributesValidated(PLUGININFO& info)
     info.interfacenames[OpenRAVE::PT_Sensor].push_back("BaseCamera");
 }
 
-RAVE_PLUGIN_API void DestroyPlugin()
+OPENRAVE_PLUGIN_API void DestroyPlugin()
 {
     delete s_listRegisteredReaders;
     s_listRegisteredReaders = NULL;

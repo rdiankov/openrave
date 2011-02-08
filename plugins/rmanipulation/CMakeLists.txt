@@ -17,7 +17,6 @@ else()
   target_link_libraries(rmanipulation libopenrave)
 endif()
 
-include_directories(rmanipulation "${CMAKE_SOURCE_DIR}")
 add_dependencies(rmanipulation libopenrave)
 set_target_properties(rmanipulation PROPERTIES COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS}"
                                        LINK_FLAGS "${PLUGIN_LINK_FLAGS}")

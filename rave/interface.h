@@ -37,24 +37,8 @@ enum SerializationOptions
 /** \brief <b>[interface]</b> Base class for all interfaces that OpenRAVE provides. See \ref arch_interface.
     \ingroup interfaces
 */
-class RAVE_API InterfaceBase : public boost::enable_shared_from_this<InterfaceBase>
+class OPENRAVE_API InterfaceBase : public boost::enable_shared_from_this<InterfaceBase>
 {
-protected:
-    /// \brief The function to be executed for every command.
-    ///
-    /// \param sinput - input of the command
-    /// \param sout - output of the command
-    /// \return If false, there was an error with the command, true if successful
-    typedef boost::function<bool(std::ostream&, std::istream&)> InterfaceCommandFn;
-    class InterfaceCommand
-    {
-    public:
-        InterfaceCommand() {}
-        InterfaceCommand(InterfaceCommandFn newfn, const std::string& newhelp) : fn(newfn), help(newhelp) {}
-        InterfaceCommandFn fn; ///< command function to run
-        std::string help; ///< help string explaining command arguments
-    };
-
 public:
     typedef std::map<std::string, XMLReadablePtr, CaseInsensitiveCompare> READERSMAP;
 
@@ -120,6 +104,21 @@ public:
     //virtual void Serialize(std::ostream& o, int options) const;
 
 protected:
+    /// \brief The function to be executed for every command.
+    ///
+    /// \param sinput - input of the command
+    /// \param sout - output of the command
+    /// \return If false, there was an error with the command, true if successful
+    typedef boost::function<bool(std::ostream&, std::istream&)> InterfaceCommandFn;
+    class OPENRAVE_API InterfaceCommand
+    {
+    public:
+        InterfaceCommand() {}
+        InterfaceCommand(InterfaceCommandFn newfn, const std::string& newhelp) : fn(newfn), help(newhelp) {}
+        InterfaceCommandFn fn; ///< command function to run
+        std::string help; ///< help string explaining command arguments
+    };
+
     /// \brief Registers a command and its help string.
     ///
     /// \param cmdname - command name, converted to lower case

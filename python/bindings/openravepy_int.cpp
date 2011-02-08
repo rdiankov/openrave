@@ -200,8 +200,9 @@ public:
 
     object SendCommand(const string& in) {
         stringstream sin(in), sout;
-        if( !_pbase->SendCommand(sout,sin) )
+        if( !_pbase->SendCommand(sout,sin) ) {
             return object();
+        }
         return object(sout.str());
     }
 
@@ -411,7 +412,7 @@ public:
         object GetAxis(int iaxis=0) { return toPyVector3(_pjoint->GetAxis(iaxis)); }
         PyLinkPtr GetHierarchyParentLink() const { return  !_pjoint->GetHierarchyParentLink() ? PyLinkPtr() : PyLinkPtr(new PyLink(_pjoint->GetHierarchyParentLink(),_pyenv)); }
         PyLinkPtr GetHierarchyChildLink() const { return  !_pjoint->GetHierarchyChildLink() ? PyLinkPtr() : PyLinkPtr(new PyLink(_pjoint->GetHierarchyChildLink(),_pyenv)); }
-        object GetInternalHierarchyAnchor() const { return toPyVector3(_pjoint->GetInternalHierarchyAnchor()); }
+        object GetInternalHierarchyAnchor() const { RAVELOG_WARN("GetInternalHierarchyAnchor is deprecated\n"); return toPyVector3(_pjoint->GetInternalHierarchyAnchor()); }
         object GetInternalHierarchyAxis(int iaxis) { return toPyVector3(_pjoint->GetInternalHierarchyAxis(iaxis)); }
         object GetInternalHierarchyLeftTransform() { return ReturnTransform(_pjoint->GetInternalHierarchyLeftTransform()); }
         object GetInternalHierarchyRightTransform() { return ReturnTransform(_pjoint->GetInternalHierarchyRightTransform()); }

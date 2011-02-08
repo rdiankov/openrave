@@ -585,7 +585,7 @@ protected:
     {
         RAVELOG_DEBUG("Starting MoveToHandPosition...\n");
         RobotBase::ManipulatorConstPtr pmanip = robot->GetActiveManipulator();
-
+        
         list<IkParameterization> listgoals;
     
         string strtrajfilename;
@@ -686,7 +686,7 @@ protected:
                 return false;
             }
         }
-    
+
         robot->RegrabAll();
         RobotBase::RobotStateSaver saver(robot);
 

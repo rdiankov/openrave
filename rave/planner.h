@@ -25,7 +25,7 @@ namespace OpenRAVE {
 /** \brief <b>[interface]</b> Planner interface that generates trajectories for the robot to follow around the environment. See \ref arch_planner.
     \ingroup interfaces
 */
-class RAVE_API PlannerBase : public InterfaceBase
+class OPENRAVE_API PlannerBase : public InterfaceBase
 {
 public:
     /// Options for constraint planning.
@@ -43,7 +43,7 @@ public:
 
         Also allows the parameters and descriptions to be serialized to reStructuredText for documentation purposes.
     */
-    class RAVE_API PlannerParameters : public BaseXMLReader, public XMLReadable
+    class OPENRAVE_API PlannerParameters : public BaseXMLReader, public XMLReadable
     {
     public:
         PlannerParameters();
@@ -174,9 +174,9 @@ public:
         int _plannerparametersdepth;
 
         /// outputs the data and surrounds it with \verbatim <PlannerParameters> \endverbatim tags
-        friend RAVE_API std::ostream& operator<<(std::ostream& O, const PlannerParameters& v);
+        friend OPENRAVE_API std::ostream& operator<<(std::ostream& O, const PlannerParameters& v);
         /// expects \verbatim <PlannerParameters> \endverbatim to be the first token. Parses stream until \verbatim </PlannerParameters> \endverbatim reached
-        friend RAVE_API std::istream& operator>>(std::istream& I, PlannerParameters& v);
+        friend OPENRAVE_API std::istream& operator>>(std::istream& I, PlannerParameters& v);
     };
     typedef boost::shared_ptr<PlannerParameters> PlannerParametersPtr;
     typedef boost::shared_ptr<PlannerParameters const> PlannerParametersConstPtr;
@@ -233,8 +233,8 @@ private:
     virtual const char* GetHash() const { return OPENRAVE_PLANNER_HASH; }
 };
 
-RAVE_API std::ostream& operator<<(std::ostream& O, const PlannerBase::PlannerParameters& v);
-RAVE_API std::istream& operator>>(std::istream& I, PlannerBase::PlannerParameters& v);
+OPENRAVE_API std::ostream& operator<<(std::ostream& O, const PlannerBase::PlannerParameters& v);
+OPENRAVE_API std::istream& operator>>(std::istream& I, PlannerBase::PlannerParameters& v);
 
 } // end namespace OpenRAVE
 

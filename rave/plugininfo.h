@@ -27,7 +27,7 @@ namespace OpenRAVE {
     \ingroup plugin_exports
     PLUGININFO has a hash computed for it to validate its size and type before having a plugin fill it.
 */
-class PLUGININFO
+class OPENRAVE_API PLUGININFO
 {
 public:
     PLUGININFO() : version(0) {}

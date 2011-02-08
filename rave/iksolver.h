@@ -27,7 +27,7 @@ namespace OpenRAVE {
     Holds the parameterization of a geometric primitive useful for autonomous manipulation scenarios like:
     6D pose, 3D translation, 3D rotation, 3D look at direction, and ray look at direction.
 */
-class RAVE_API IkParameterization
+class OPENRAVE_API IkParameterization
 {
 public:
     /// \brief The types of inverse kinematics parameterizations supported.
@@ -104,7 +104,7 @@ enum IkFilterOptions
 /** \brief <b>[interface]</b> Base class for all Inverse Kinematic solvers. See \ref arch_iksolver.   
    \ingroup interfaces
 */
-class RAVE_API IkSolverBase : public InterfaceBase
+class OPENRAVE_API IkSolverBase : public InterfaceBase
 {
 public:
     /** Inverse kinematics filter callback function.

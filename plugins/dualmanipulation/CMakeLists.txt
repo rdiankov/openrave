@@ -17,7 +17,6 @@ else()
   target_link_libraries(dualmanipulation libopenrave)
 endif()
 
-include_directories(dualmanipulation "${CMAKE_SOURCE_DIR}")
 add_dependencies(dualmanipulation libopenrave)
 set_target_properties(dualmanipulation PROPERTIES COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS}"
                                        LINK_FLAGS "${PLUGIN_LINK_FLAGS}")

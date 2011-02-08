@@ -19,7 +19,7 @@ if(ODE_LIBRARY_FOUND)
     add_definitions("-DODE_HAVE_ALLOCATE_DATA_THREAD")
   endif()
 
-  include_directories(${CMAKE_SOURCE_DIR} ${ODE_INCLUDE_DIRS})
+  include_directories(${ODE_INCLUDE_DIRS})
   add_library(oderave SHARED oderave.cpp odecollision.h odephysics.h odespace.h odecontroller.h plugindefs.h)
 
   # test for ode version 0.10

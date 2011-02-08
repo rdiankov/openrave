@@ -25,7 +25,7 @@ namespace OpenRAVE {
 /** \brief <b>[interface]</b> A loadable module of user code meant to solve a specific problem in robotics. See \ref arch_problem.
     \ingroup interfaces
 */
-class RAVE_API ProblemInstance : public InterfaceBase
+class OPENRAVE_API ProblemInstance : public InterfaceBase
 {
 public:
     ProblemInstance(EnvironmentBasePtr penv) : InterfaceBase(PT_ProblemInstance, penv) {}

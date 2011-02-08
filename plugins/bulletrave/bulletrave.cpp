@@ -35,6 +35,6 @@ void GetPluginAttributesValidated(PLUGININFO& info)
     info.interfacenames[OpenRAVE::PT_CollisionChecker].push_back("bullet");
 }
 
-void DestroyPlugin()
+OPENRAVE_PLUGIN_API void DestroyPlugin()
 {
 }

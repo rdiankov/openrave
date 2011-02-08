@@ -40,16 +40,14 @@ if( Boost_PYTHON_FOUND AND Boost_THREAD_FOUND )
 
     if( HAVE_ALL_PYTHON_HEADERS )
       message(STATUS "python and boost-python found")
-      include_directories(${PYTHON_INCLUDE_PATH})
-      include_directories("${CMAKE_SOURCE_DIR}")
-      include_directories("${CMAKE_SOURCE_DIR}/src/libopenrave-core")
+      include_directories(${PYTHON_INCLUDE_PATH} ${OPENRAVE_INCLUDE_DIRS} ${OPENRAVE_CORE_INCLUDE_DIRS})
 
       ## openrave bindings
       add_library(openravepy_int SHARED openravepy_int.cpp openravepy_int.h openravepy_global.cpp bindings.cpp bindings.h docstrings.cpp docstrings.h)
       # stdc++ has to be included before opengl libraries due to some ATI bug (http://wiki.fifengine.de/Segfault_in_cxa_allocate_exception#Workaround)
       target_link_libraries(openravepy_int ${STDC_LIBRARY} libopenrave libopenrave-core ${PYTHON_LIBRARIES} ${Boost_PYTHON_LIBRARY} ${Boost_THREAD_LIBRARY})
       add_dependencies(openravepy_int libopenrave libopenrave-core)
-      set_target_properties(openravepy_int PROPERTIES PREFIX "" COMPILE_FLAGS "-DRAVE_CORE_USEDLL")
+      set_target_properties(openravepy_int PROPERTIES PREFIX "" COMPILE_FLAGS "-DOPENRAVE_CORE_DLL")
       if( WIN32 )
         set_target_properties(openravepy_int PROPERTIES SUFFIX ".pyd")
       endif()

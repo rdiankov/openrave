@@ -34,6 +34,6 @@ void GetPluginAttributesValidated(PLUGININFO& info)
     info.interfacenames[PT_ProblemInstance].push_back("DualManipulation");
 }
 
-RAVE_PLUGIN_API void DestroyPlugin()
+OPENRAVE_PLUGIN_API void DestroyPlugin()
 {
 }

@@ -25,7 +25,7 @@ namespace OpenRAVE {
 /** \brief <b>[interface]</b> Used to manage the creation and destruction of bodies. See \ref arch_sensorsystem.
     \ingroup interfaces
 */
-class RAVE_API SensorSystemBase : public InterfaceBase
+class OPENRAVE_API SensorSystemBase : public InterfaceBase
 {
 public:
     SensorSystemBase(EnvironmentBasePtr penv) : InterfaceBase(PT_SensorSystem, penv) {}
@@ -65,10 +65,10 @@ private:
 };
 
 /// A very simple sensor system example that manages raw detection data
-class SimpleSensorSystem : public SensorSystemBase
+class OPENRAVE_API SimpleSensorSystem : public SensorSystemBase
 {
 public:
-    class XMLData : public XMLReadable {
+    class OPENRAVE_API XMLData : public XMLReadable {
     public:
     XMLData(const std::string& xmlid) : XMLReadable(xmlid) {}
         virtual void copy(boost::shared_ptr<XMLData const> pdata) { *this = *pdata; }
@@ -81,7 +81,7 @@ public:
         friend class SimpleSensorSystem;
     };
 
-    class BodyData : public KinBody::ManageData {
+    class OPENRAVE_API BodyData : public KinBody::ManageData {
     public:
     BodyData(SensorSystemBasePtr psensorsystem, KinBodyPtr pbody, boost::shared_ptr<XMLData> initdata) : KinBody::ManageData(psensorsystem), _initdata(initdata), bPresent(false), bEnabled(true), bLock(false)
         {
@@ -123,7 +123,7 @@ public:
         friend class SimpleSensorSystem;
     };
 
-    class SimpleXMLReader : public BaseXMLReader
+    class OPENRAVE_API SimpleXMLReader : public BaseXMLReader
     {
     public:
         SimpleXMLReader(boost::shared_ptr<XMLData>);

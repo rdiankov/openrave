@@ -25,7 +25,7 @@ namespace OpenRAVE {
 /** \brief <b>[interface]</b> A sensor measures physical properties from the environment. See \ref arch_sensor.     
   \ingroup interfaces
 */
-class RAVE_API SensorBase : public InterfaceBase
+class OPENRAVE_API SensorBase : public InterfaceBase
 {
 public:
     enum SensorType
@@ -50,7 +50,7 @@ public:
     };
 
     /// used to pass sensor data around
-    class RAVE_API SensorData
+    class OPENRAVE_API SensorData
     {
     public:
         virtual ~SensorData() {}
@@ -64,7 +64,7 @@ public:
     typedef boost::shared_ptr<SensorData> SensorDataPtr;
     typedef boost::shared_ptr<SensorData const> SensorDataConstPtr;
 
-    class RAVE_API LaserSensorData : public SensorData
+    class OPENRAVE_API LaserSensorData : public SensorData
     {
     public:
         virtual SensorType GetType() { return ST_Laser; }
@@ -77,7 +77,7 @@ public:
 
         virtual bool serialize(std::ostream& O) const;
     };
-    class RAVE_API CameraSensorData : public SensorData
+    class OPENRAVE_API CameraSensorData : public SensorData
     {
     public:
         virtual SensorType GetType() { return ST_Camera; }
@@ -87,7 +87,7 @@ public:
     };
 
     /// \brief Stores joint angles and EE position.
-    class RAVE_API JointEncoderSensorData : public SensorData
+    class OPENRAVE_API JointEncoderSensorData : public SensorData
     {
     public:
         virtual SensorType GetType() { return ST_JointEncoder; }
@@ -96,7 +96,7 @@ public:
     };
     
     /// \brief Stores force data
-    class RAVE_API Force6DSensorData : public SensorData
+    class OPENRAVE_API Force6DSensorData : public SensorData
     {
     public:
         virtual SensorType GetType() { return ST_Force6D; }
@@ -105,7 +105,7 @@ public:
     };
 
     /// \brief Stores IMU data
-    class RAVE_API IMUSensorData : public SensorData
+    class OPENRAVE_API IMUSensorData : public SensorData
     {
     public:
         virtual SensorType GetType() { return ST_IMU; }
@@ -118,7 +118,7 @@ public:
     };
 
     /// \brief odometry data storing full 6D pose and velocity
-    class RAVE_API OdometrySensorData : public SensorData
+    class OPENRAVE_API OdometrySensorData : public SensorData
     {
     public:
         virtual SensorType GetType() { return ST_Odometry; }
@@ -129,7 +129,7 @@ public:
     };
 
     /// \brief tactle data
-    class RAVE_API TactileSensorData : public SensorData
+    class OPENRAVE_API TactileSensorData : public SensorData
     {
     public:
         virtual SensorType GetType() { return ST_Tactile; }
@@ -147,7 +147,7 @@ public:
 //    };
 
     /// permanent properties of the sensors
-    class RAVE_API SensorGeometry
+    class OPENRAVE_API SensorGeometry
     {
     public:
         virtual ~SensorGeometry() {}
@@ -156,7 +156,7 @@ public:
     typedef boost::shared_ptr<SensorGeometry> SensorGeometryPtr;
     typedef boost::shared_ptr<SensorGeometry const> SensorGeometryConstPtr;
 
-    class RAVE_API LaserGeomData : public SensorGeometry
+    class OPENRAVE_API LaserGeomData : public SensorGeometry
     {
     public:
     LaserGeomData() : min_range(0), max_range(0), time_increment(0), time_scan(0) { min_angle[0] = min_angle[1] = max_angle[0] = max_angle[1] = resolution[0] = resolution[1] = 0; }
@@ -168,36 +168,36 @@ public:
         dReal time_increment; ///< time between individual measurements [seconds]
         dReal time_scan; ///< time between scans [seconds]
     };
-    class RAVE_API CameraGeomData : public SensorGeometry
+    class OPENRAVE_API CameraGeomData : public SensorGeometry
     {
     public:
         virtual SensorType GetType() { return ST_Camera; }
         CameraIntrinsics KK; ///< intrinsic matrix
         int width, height; ///< width and height of image
     };
-    class RAVE_API JointEncoderGeomData : public SensorGeometry
+    class OPENRAVE_API JointEncoderGeomData : public SensorGeometry
     {
     public:
         virtual SensorType GetType() { return ST_JointEncoder; }
     };
-    class RAVE_API Force6DGeomData : public SensorGeometry
+    class OPENRAVE_API Force6DGeomData : public SensorGeometry
     {
     public:
         virtual SensorType GetType() { return ST_Force6D; }
     };
-    class RAVE_API IMUGeomData : public SensorGeometry
+    class OPENRAVE_API IMUGeomData : public SensorGeometry
     {
     public:
         virtual SensorType GetType() { return ST_IMU; }
         dReal time_measurement; ///< time between measurements
     };
-    class RAVE_API OdometryGeomData : public SensorGeometry
+    class OPENRAVE_API OdometryGeomData : public SensorGeometry
     {
     public:
         virtual SensorType GetType() { return ST_Odometry; }
         std::string targetid; ///< id of the target whose odometry/pose messages are being published for
     };
-    class RAVE_API TactileGeomData : public SensorGeometry
+    class OPENRAVE_API TactileGeomData : public SensorGeometry
     {
     public:
         virtual SensorType GetType() { return ST_Tactile; }

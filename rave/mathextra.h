@@ -16,9 +16,11 @@
 /** \file   mathextra.h
     \brief  Extra math routines that are useful to have but don't really belong anywhere.
  */
+#ifndef OPENRAVE_MATHEXTRA_H
+#define OPENRAVE_MATHEXTRA_H
 
-#ifndef RAVE_API
-#define RAVE_API
+#ifndef OPENRAVE_API
+#define OPENRAVE_API
 #endif
 
 #ifdef BOOST_ASSERT
@@ -118,11 +120,11 @@ inline bool eig2(const T* pfmat, T* peigs, T& fv1x, T& fv1y, T& fv2x, T& fv2y);
 
 // Simple routines for linear algebra algorithms //
 
-RAVE_API int CubicRoots (double c0, double c1, double c2, double *r0, double *r1, double *r2);
+OPENRAVE_API int CubicRoots (double c0, double c1, double c2, double *r0, double *r1, double *r2);
 template <typename T, typename S> void Tridiagonal3 (S* mat, T* diag, T* subd);
-RAVE_API bool QLAlgorithm3 (float* m_aafEntry, float* afDiag, float* afSubDiag);
-RAVE_API bool QLAlgorithm3 (double* m_aafEntry, double* afDiag, double* afSubDiag);
-RAVE_API void EigenSymmetric3(const double* fCovariance, double* eval, double* fAxes);
+OPENRAVE_API bool QLAlgorithm3 (float* m_aafEntry, float* afDiag, float* afSubDiag);
+OPENRAVE_API bool QLAlgorithm3 (double* m_aafEntry, double* afDiag, double* afSubDiag);
+OPENRAVE_API void EigenSymmetric3(const double* fCovariance, double* eval, double* fAxes);
 
 /// Computes the eigenvectors of the covariance matrix and forms a basis
 /// \param[in] fCovariance a symmetric 3x3 matrix.
@@ -1138,3 +1140,5 @@ int Max(T* pts, int stride, int numPts)
 
 } // end namespace mathextra
 } // end namespace OpenRAVE
+
+#endif

@@ -26,7 +26,7 @@ namespace OpenRAVE {
 ///
 /// Designed to be multi-thread safe and destruction and modification of the viewer plot can be done at any time. The viewers
 /// internally handle synchronization and threading issues.
-class RAVE_API GraphHandle
+class OPENRAVE_API GraphHandle
 {
 public:
     virtual ~GraphHandle() {}
@@ -46,7 +46,7 @@ typedef boost::weak_ptr<GraphHandle const> GraphHandleWeakPtr;
 /** \brief <b>[interface]</b> Base class for the graphics and gui engine that renders the environment and provides visual sensor information.
     \ingroup interfaces
 */
-class RAVE_API ViewerBase : public InterfaceBase
+class OPENRAVE_API ViewerBase : public InterfaceBase
 {
 public:
     enum ViewerEvents

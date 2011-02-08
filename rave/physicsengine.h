@@ -31,7 +31,7 @@ enum PhysicsEngineOptions
 /** \brief <b>[interface]</b> The physics engine interfaces supporting simulations and dynamics. See \ref arch_physicsengine.    
     \ingroup interfaces
 */
-class RAVE_API PhysicsEngineBase : public InterfaceBase
+class OPENRAVE_API PhysicsEngineBase : public InterfaceBase
 {
 public:
     PhysicsEngineBase(EnvironmentBasePtr penv) : InterfaceBase(PT_PhysicsEngine, penv) {}

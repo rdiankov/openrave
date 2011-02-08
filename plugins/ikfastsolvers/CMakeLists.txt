@@ -15,7 +15,6 @@ if( Boost_IOSTREAMS_FOUND )
 else()
   target_link_libraries(ikfastsolvers libopenrave)
 endif()
-include_directories(ikfastsolvers "${CMAKE_SOURCE_DIR}")
 add_dependencies(ikfastsolvers libopenrave)
 set_target_properties(ikfastsolvers PROPERTIES COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS}"
                                       LINK_FLAGS "${PLUGIN_LINK_FLAGS}")

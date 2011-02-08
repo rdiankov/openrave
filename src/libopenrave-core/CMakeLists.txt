@@ -6,7 +6,7 @@ endif()
 set(coreLIBS ${openrave_libraries})
 
 if( COLLADA_FOUND )
-  set(LIB_COMPILE_FLAGS "${LIB_COMPILE_FLAGS} -DOPENRAVE_COLLADA_SUPPORT")
+  set(LIBOPENRAVE_COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} -DOPENRAVE_COLLADA_SUPPORT")
   include_directories(${COLLADA_INCLUDE_DIR} ${MINIZIP_INCLUDE_DIR})
   set (coreLIBS ${coreLIBS} ${COLLADA_LIBRARY} minizip)
 endif()
@@ -28,7 +28,7 @@ set_target_properties(libopenrave-core PROPERTIES OUTPUT_NAME openrave-core
                                   SOVERSION ${OPENRAVE_SOVERSION}
                                   VERSION ${OPENRAVE_VERSION}
                                   CLEAN_DIRECT_OUTPUT 1
-                                  COMPILE_FLAGS "${LIB_COMPILE_FLAGS} -DRAVE_CORE_LIBBUILD -DRAVE_CORE_USEDLL"
+                                  COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} -DOPENRAVE_CORE_DLL_EXPORTS -DOPENRAVE_CORE_DLL"
                                   LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS} ${COIN_LINK_FLAGS}")
 
 target_link_libraries (libopenrave-core ${COIN_LIBRARY} libopenrave ${coreLIBS})
@@ -58,11 +58,11 @@ if( OPT_STATIC )
                                                 SOVERSION ${OPENRAVE_SOVERSION}
                                                 VERSION ${OPENRAVE_VERSION}
                                                 CLEAN_DIRECT_OUTPUT 1
-                                                COMPILE_FLAGS "${LIB_COMPILE_FLAGS}"
+                                                COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS}"
                                                 LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS} ${COIN_LINK_FLAGS}")
   if( MSVC )
     # set "link library dependencies" for visual studio in order to include symbols for other statically linked libs
-    # this is such an unbelievable hack, that it's disgusting
+    # this is such an unbelievable hack, that it's ridiculous
     set_target_properties(libopenrave-core_static PROPERTIES STATIC_LIBRARY_FLAGS "\" LinkLibraryDependencies=\"true")
   endif()
 

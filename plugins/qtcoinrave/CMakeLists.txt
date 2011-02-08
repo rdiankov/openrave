@@ -30,7 +30,6 @@ if (QT_FOUND AND SOQT_LIBRARY_FOUND AND OPENGL_FOUND)
   message(STATUS "Detected SoQt/Coin3D GUI, making plugin")
 
   include_directories(${OPENGL_INCLUDE_DIR} ${QT_INCLUDE_DIRS} ${SOQT_INCLUDE_DIRS})
-  include_directories(${CMAKE_SOURCE_DIR})
 
   add_definitions(${SOQT_CXXFLAGS})
   link_directories(${OPENRAVE_LINK_DIRS} ${SOQT_LINK_DIRS})
@@ -108,7 +107,7 @@ if (QT_FOUND AND SOQT_LIBRARY_FOUND AND OPENGL_FOUND)
   endif()
 
   target_link_libraries (qtcoinrave ${extLIBS} libopenrave)
-  include_directories(${CMAKE_SOURCE_DIR} ${FFMPEG_libavformat_INCLUDEDIR} ${FFMPEG_libavcodec_INCLUDEDIR} ${FFMPEG_libswscale_INCLUDEDIR})
+  include_directories(${FFMPEG_libavformat_INCLUDEDIR} ${FFMPEG_libavcodec_INCLUDEDIR} ${FFMPEG_libswscale_INCLUDEDIR})
   add_dependencies(qtcoinrave libopenrave)
   set_target_properties(qtcoinrave PROPERTIES COMPILE_FLAGS "${QTCOIN_COMPILE_FLAGS}"
                                       LINK_FLAGS "${QTCOIN_LINK_FLAGS}")

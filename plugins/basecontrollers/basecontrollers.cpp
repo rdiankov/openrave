@@ -36,6 +36,6 @@ void GetPluginAttributesValidated(PLUGININFO& info)
     info.interfacenames[PT_Controller].push_back("RedirectController");
 }
 
-RAVE_PLUGIN_API void DestroyPlugin()
+OPENRAVE_PLUGIN_API void DestroyPlugin()
 {
 }

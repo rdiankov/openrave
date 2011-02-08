@@ -175,7 +175,7 @@ void GetPluginAttributesValidated(PLUGININFO& info)
     info.interfacenames[PT_InverseKinematicsSolver].push_back("ikfast_schunk_lwa3");
 }
 
-RAVE_PLUGIN_API void DestroyPlugin()
+OPENRAVE_PLUGIN_API void DestroyPlugin()
 {
     delete IKFastProblem::GetLibraries();
     IKFastProblem::GetLibraries() = NULL;

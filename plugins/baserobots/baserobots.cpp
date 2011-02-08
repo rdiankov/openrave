@@ -46,7 +46,7 @@ void GetPluginAttributesValidated(PLUGININFO& info)
     info.interfacenames[PT_Robot].push_back("CollisionMapRobot");
 }
 
-RAVE_PLUGIN_API void DestroyPlugin()
+OPENRAVE_PLUGIN_API void DestroyPlugin()
 {
     s_RegisteredReader.reset(); // unregister the reader
 }

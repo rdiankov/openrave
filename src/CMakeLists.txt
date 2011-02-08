@@ -1,8 +1,7 @@
 # Populates ssources list
 set (openrave_SOURCES openrave.cpp)
 
-include_directories(${CMAKE_SOURCE_DIR})
-include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+include_directories(${OPENRAVE_INCLUDE_DIRS})
 
 set(openrave_libraries ${LIBXML2_LIBRARIES} ${Boost_THREAD_LIBRARY} openrave-md5)
 if( Boost_FILESYSTEM_FOUND AND Boost_SYSTEM_FOUND )
@@ -15,21 +14,43 @@ if( CRLIBM_FOUND )
   add_definitions("-DUSE_CRLIBM")
 endif()
 
-set(LIB_COMPILE_FLAGS "${Boost_CFLAGS}")
+set(LIBOPENRAVE_COMPILE_FLAGS "${Boost_CFLAGS}")
 
 if( NEED_TRIINDEX  )
-  set(LIB_COMPILE_FLAGS "${LIB_COMPILE_FLAGS} -DNEED_DTRIINDEX_TYPEDEF")
+  set(LIBOPENRAVE_COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} -DNEED_DTRIINDEX_TYPEDEF")
 endif()
 
 if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
-  set(LIB_COMPILE_FLAGS "${LIB_COMPILE_FLAGS} -fPIC")
+  set(LIBOPENRAVE_COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} -fPIC")
+endif()
+
+set(LIBOPENRAVE_LINK_FLAGS "")
+if( LINKER_HAS_RDYNAMIC )
+  set(LIBOPENRAVE_COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} -rdynamic")
+  set(LIBOPENRAVE_LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS} -rdynamic")
+endif()
+if( LINKER_HAS_BSYMBOLIC )
+  set(LIBOPENRAVE_LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS} -Wl,-Bsymbolic")
+endif()
+if( LINKER_HAS_BSYMBOLIC_FUNCTIONS )
+  set(LIBOPENRAVE_LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS} -Wl,-Bsymbolic-functions")
+endif()
+if( LINKER_HAS_VISIBILITY )
+  # not sure whether it is compiler or linkiner flag...
+  set(LIBOPENRAVE_COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} -fvisibility=hidden")
+  set(LIBOPENRAVE_LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS} -fvisibility=hidden")
+endif()
+if( LINKER_HAS_VISIBILITY_INLINES_HIDDEN )
+  # not sure whether it is compiler or linkiner flag...
+  set(LIBOPENRAVE_COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} -fvisibility-inlines-hidden")
+  set(LIBOPENRAVE_LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS} -fvisibility-inlines-hidden")
 endif()
 
 add_subdirectory(libopenrave)
 add_subdirectory(libopenrave-core)
 
 add_executable(openrave ${openrave_SOURCES})
-set_target_properties(openrave PROPERTIES COMPILE_FLAGS "${Boost_CFLAGS} -DRAVE_CORE_USEDLL")
+set_target_properties(openrave PROPERTIES COMPILE_FLAGS "${Boost_CFLAGS} -DOPENRAVE_CORE_DLL")
 
 add_dependencies(openrave libopenrave libopenrave-core)
 
@@ -45,7 +66,7 @@ target_link_libraries (openrave ${Boost_THREAD_LIBRARY} ${SOCKET_LIBS} libopenra
 #if( NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/models/WAM" OR NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/robots/pr2-beta-static.dae")
 message(STATUS "extracting models to ${CMAKE_CURRENT_SOURCE_DIR}")
 execute_process(
-  COMMAND ${CMAKE_COMMAND} -E tar xzf "${CMAKE_SOURCE_DIR}/models.tgz"
+  COMMAND ${CMAKE_COMMAND} -E tar xzf "${CMAKE_CURRENT_SOURCE_DIR}/../models.tgz"
   WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
 #endif()
 

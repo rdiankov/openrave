@@ -32,7 +32,7 @@ set_target_properties(libopenrave PROPERTIES OUTPUT_NAME openrave
                                   SOVERSION ${OPENRAVE_SOVERSION}
                                   VERSION ${OPENRAVE_VERSION}
                                   CLEAN_DIRECT_OUTPUT 1
-                                  COMPILE_FLAGS "${LIB_COMPILE_FLAGS} -DRAVE_LIBBUILD -DRAVE_USEDLL"
+                                  COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} -DOPENRAVE_DLL_EXPORTS -DOPENRAVE_DLL"
                                   LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS}")
 target_link_libraries(libopenrave ${openrave_libraries} ${FPARSER_LIBRARY})
 if( MSVC )
@@ -55,7 +55,7 @@ if( OPT_STATIC )
                                            SOVERSION ${OPENRAVE_VERSION}
                                            VERSION ${OPENRAVE_VERSION}
                                            CLEAN_DIRECT_OUTPUT 1
-                                           COMPILE_FLAGS "${LIB_COMPILE_FLAGS}"
+                                           COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS}"
                                            LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS}")
   if( MSVC )
     # set "link library dependencies" for visual studio in order to include symbols for other statically linked libs

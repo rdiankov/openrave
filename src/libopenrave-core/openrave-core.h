@@ -21,14 +21,16 @@
 // public headers
 #include <rave/rave.h>
 
-#if defined(_MSC_VER) && defined(RAVE_CORE_USEDLL)
-#ifdef RAVE_CORE_LIBBUILD
-#define RAVE_CORE_API __declspec(dllexport)
+#if defined(OPENRAVE_CORE_DLL)
+  #ifdef OPENRAVE_CORE_DLL_EXPORTS
+    #define OPENRAVE_CORE_API OPENRAVE_HELPER_DLL_EXPORT
+  #else
+    #define OPENRAVE_CORE_API OPENRAVE_HELPER_DLL_IMPORT
+  #endif
+  #define OPENRAVE_CORE_LOCAL OPENRAVE_HELPER_DLL_LOCAL
 #else
-#define RAVE_CORE_API __declspec(dllimport)
-#endif
-#else
-#define RAVE_CORE_API 
+  #define OPENRAVE_CORE_API
+  #define OPENRAVE_CORE_LOCAL
 #endif
 
 namespace OpenRAVE
@@ -36,10 +38,10 @@ namespace OpenRAVE
 
 /// Creates an OpenRAVE environment.
 /// \param bLoadAllPlugins passed into \ref RaveInitialize
-RAVE_CORE_API EnvironmentBasePtr RaveCreateEnvironment();
+OPENRAVE_CORE_API EnvironmentBasePtr RaveCreateEnvironment();
 
 /// \deprecated (10/09/23) see \ref RaveCreateEnvironment
-RAVE_CORE_API EnvironmentBasePtr CreateEnvironment(bool bLoadAllPlugins=true) RAVE_DEPRECATED;
+OPENRAVE_CORE_API EnvironmentBasePtr CreateEnvironment(bool bLoadAllPlugins=true) RAVE_DEPRECATED;
 
 } // end namespace OpenRAVE
 

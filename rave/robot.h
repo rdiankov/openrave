@@ -26,11 +26,11 @@ namespace OpenRAVE {
 /** \brief <b>[interface]</b> A robot is a kinematic body that has attached manipulators, sensors, and controllers. See \ref arch_robot.    
     \ingroup interfaces
 */
-class RAVE_API RobotBase : public KinBody
+class OPENRAVE_API RobotBase : public KinBody
 {
 public:
     /// \brief Defines a chain of joints for an arm and set of joints for a gripper. Simplifies operating with them.
-    class RAVE_API Manipulator : public boost::enable_shared_from_this<Manipulator>
+    class OPENRAVE_API Manipulator : public boost::enable_shared_from_this<Manipulator>
     {
         Manipulator(RobotBasePtr probot);
         Manipulator(const Manipulator& r);
@@ -182,7 +182,7 @@ public:
         /// 
         /// This includes joint axes, joint positions, and final grasp transform. Hash is used to cache the solvers.
         virtual const std::string& GetKinematicsStructureHash() const;
-    private:
+    protected:
         std::string _name;
         LinkPtr _pBase, _pEndEffector;
         Transform _tGrasp;
@@ -192,7 +192,7 @@ public:
         std::string _strIkSolver;
         std::vector<std::string> _vgripperjointnames; ///< names of the gripper joints
 
-        // auto-generated
+    private:
         RobotBaseWeakPtr _probot;
         std::vector<int> __vgripperdofindices, __varmdofindices;
         std::string __hashstructure, __hashkinematicsstructure;
@@ -215,7 +215,7 @@ public:
     typedef boost::weak_ptr<Manipulator> ManipulatorWeakPtr;
 
     /// \brief Attaches a sensor to a link on the robot.
-    class RAVE_API AttachedSensor : public boost::enable_shared_from_this<AttachedSensor>
+    class OPENRAVE_API AttachedSensor : public boost::enable_shared_from_this<AttachedSensor>
     {
     public:
         AttachedSensor(RobotBasePtr probot);
@@ -263,7 +263,7 @@ public:
     typedef boost::shared_ptr<AttachedSensor const> AttachedSensorConstPtr;
 
     /// \brief The information of a currently grabbed body.
-    class RAVE_API Grabbed
+    class OPENRAVE_API Grabbed
     {
     public:
         KinBodyWeakPtr pbody; ///< the grabbed body
@@ -276,7 +276,7 @@ public:
     typedef Grabbed GRABBED RAVE_DEPRECATED;
     
     /// \brief Helper class derived from KinBodyStateSaver to additionaly save robot information.
-    class RAVE_API RobotStateSaver : public KinBodyStateSaver
+    class OPENRAVE_API RobotStateSaver : public KinBodyStateSaver
     {
     public:
         RobotStateSaver(RobotBasePtr probot, int options = Save_LinkTransformation|Save_LinkEnable|Save_ActiveDOF|Save_ActiveManipulator);

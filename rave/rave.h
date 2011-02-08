@@ -75,25 +75,38 @@
 #include <boost/format.hpp>
 #include <boost/array.hpp>
 #include <boost/multi_array.hpp>
-
 //#include <boost/cstdint.hpp>
 
-#if defined(_MSC_VER) && (defined(RAVE_USEDLL) || defined(RAVE_CORE_USEDLL))
-#ifdef RAVE_LIBBUILD
-#define RAVE_API __declspec(dllexport)
+#if defined(_WIN32) || defined(__CYGWIN__) || defined(_MSC_VER)
+  #define OPENRAVE_HELPER_DLL_IMPORT __declspec(dllimport)
+  #define OPENRAVE_HELPER_DLL_EXPORT __declspec(dllexport)
+  #define OPENRAVE_HELPER_DLL_LOCAL
 #else
-#define RAVE_API __declspec(dllimport)
-#endif
-#else
-#define RAVE_API 
+  #if __GNUC__ >= 4
+    #define OPENRAVE_HELPER_DLL_IMPORT __attribute__ ((visibility("default")))
+    #define OPENRAVE_HELPER_DLL_EXPORT __attribute__ ((visibility("default")))
+    #define OPENRAVE_HELPER_DLL_LOCAL  __attribute__ ((visibility("hidden")))
+  #else
+    #define OPENRAVE_HELPER_DLL_IMPORT
+    #define OPENRAVE_HELPER_DLL_EXPORT
+    #define OPENRAVE_HELPER_DLL_LOCAL
+  #endif
 #endif
 
-// export symbol prefix for plugin functions
-#ifdef _MSC_VER
-#define RAVE_PLUGIN_API extern "C" __declspec(dllexport)
-#else
-#define RAVE_PLUGIN_API extern "C"
-#endif
+// Now we use the generic helper definitions above to define OPENRAVE_API and OPENRAVE_LOCAL.
+// OPENRAVE_API is used for the public API symbols. It either DLL imports or DLL exports (or does nothing for static build)
+// OPENRAVE_LOCAL is used for non-api symbols.
+#if defined(OPENRAVE_DLL) || defined(OPENRAVE_CORE_DLL) // defined if OpenRAVE is compiled as a DLL
+  #ifdef OPENRAVE_DLL_EXPORTS // defined if we are building the OpenRAVE DLL (instead of using it)
+    #define OPENRAVE_API OPENRAVE_HELPER_DLL_EXPORT
+  #else
+    #define OPENRAVE_API OPENRAVE_HELPER_DLL_IMPORT
+  #endif // OPENRAVE_DLL_EXPORTS
+  #define OPENRAVE_LOCAL OPENRAVE_HELPER_DLL_LOCAL
+#else // OPENRAVE_DLL is not defined: this means OpenRAVE is a static lib.
+  #define OPENRAVE_API
+  #define OPENRAVE_LOCAL
+#endif // OPENRAVE_DLL
 
 #if defined(__GNUC__)
 #define RAVE_DEPRECATED __attribute__((deprecated))
@@ -123,31 +136,31 @@ static const dReal PI = (dReal)3.14159265358979323846;
 //@{
 
 /// \brief exponential
-RAVE_API dReal RaveExp(dReal f);
+OPENRAVE_API dReal RaveExp(dReal f);
 /// \brief logarithm
-RAVE_API dReal RaveLog(dReal f);
+OPENRAVE_API dReal RaveLog(dReal f);
 /// \brief cosine
-RAVE_API dReal RaveCos(dReal f);
+OPENRAVE_API dReal RaveCos(dReal f);
 /// \brief sine
-RAVE_API dReal RaveSin(dReal f);
+OPENRAVE_API dReal RaveSin(dReal f);
 /// \brief tangent
-RAVE_API dReal RaveTan(dReal f);
+OPENRAVE_API dReal RaveTan(dReal f);
 /// \brief base 2 logarithm
-RAVE_API dReal RaveLog2(dReal f);
+OPENRAVE_API dReal RaveLog2(dReal f);
 /// \brief base 10 logarithm
-RAVE_API dReal RaveLog10(dReal f);
+OPENRAVE_API dReal RaveLog10(dReal f);
 /// \brief arccosine
-RAVE_API dReal RaveAcos(dReal f);
+OPENRAVE_API dReal RaveAcos(dReal f);
 /// \brief arcsine
-RAVE_API dReal RaveAsin(dReal f);
+OPENRAVE_API dReal RaveAsin(dReal f);
 /// \brief arctangent2 covering entire circle
-RAVE_API dReal RaveAtan2(dReal fy, dReal fx);
+OPENRAVE_API dReal RaveAtan2(dReal fy, dReal fx);
 /// \brief power x^y
-RAVE_API dReal RavePow(dReal fx, dReal fy);
+OPENRAVE_API dReal RavePow(dReal fx, dReal fy);
 /// \brief square-root
-RAVE_API dReal RaveSqrt(dReal f);
+OPENRAVE_API dReal RaveSqrt(dReal f);
 /// \brief absolute value
-RAVE_API dReal RaveFabs(dReal f);
+OPENRAVE_API dReal RaveFabs(dReal f);
 
 //@}
 
@@ -164,7 +177,7 @@ enum OpenRAVEErrorCode {
 };
 
 /// \brief Exception that all OpenRAVE internal methods throw; the error codes are held in \ref OpenRAVEErrorCode.
-class openrave_exception : std::exception
+class OPENRAVE_API openrave_exception : public std::exception
 {
 public:
     openrave_exception() : std::exception(), _s("unknown exception"), _error(ORE_Failed) {}
@@ -196,7 +209,7 @@ private:
     OpenRAVEErrorCode _error;
 };
 
-class CaseInsensitiveCompare
+class OPENRAVE_LOCAL CaseInsensitiveCompare
 {
 public:
     bool operator()(const std::string & s1, const std::string& s2) const
@@ -224,7 +237,7 @@ public:
 };
 
 /// \brief base class for all user data
-class UserData
+class OPENRAVE_API UserData
 {
  public:
     virtual ~UserData() {} 
@@ -333,34 +346,34 @@ enum IntervalType {
     IT_Closed=3, ///< [a,b]
 };
 
-RAVE_API void RaveInitRandomGeneration(uint32_t seed);
+OPENRAVE_API void RaveInitRandomGeneration(uint32_t seed);
 /// generate a random integer, 32bit precision
-RAVE_API uint32_t RaveRandomInt();
+OPENRAVE_API uint32_t RaveRandomInt();
 /// generate n random integers, 32bit precision
-RAVE_API void RaveRandomInt(int n, std::vector<int>& v);
+OPENRAVE_API void RaveRandomInt(int n, std::vector<int>& v);
 
 /// \brief generate a random float in 0-1
 ///
 /// \param interval specifies inclusion of 0 and 1 in the result
-RAVE_API float RaveRandomFloat(IntervalType interval=IT_Closed);
+OPENRAVE_API float RaveRandomFloat(IntervalType interval=IT_Closed);
 
 /// \deprecated (10/11/27)
-RAVE_API void RaveRandomFloat(int n, std::vector<float>& v) RAVE_DEPRECATED;
+OPENRAVE_API void RaveRandomFloat(int n, std::vector<float>& v) RAVE_DEPRECATED;
 
 /// \brief generate a random double in 0-1, 53bit precision
 ///
 /// \param interval specifies inclusion of 0 and 1 in the result
-RAVE_API double RaveRandomDouble(IntervalType interval=IT_Closed);
+OPENRAVE_API double RaveRandomDouble(IntervalType interval=IT_Closed);
 
 /// \deprecated (10/11/27)
-RAVE_API void RaveRandomDouble(int n, std::vector<double>& v) RAVE_DEPRECATED;
+OPENRAVE_API void RaveRandomDouble(int n, std::vector<double>& v) RAVE_DEPRECATED;
 //@}
 
 /// Sets the global openrave debug level
-RAVE_API void RaveSetDebugLevel(DebugLevel level);
+OPENRAVE_API void RaveSetDebugLevel(DebugLevel level);
 
 /// Returns the openrave debug level
-RAVE_API DebugLevel RaveGetDebugLevel();
+OPENRAVE_API DebugLevel RaveGetDebugLevel();
 
 /// extracts only the filename
 inline const char* RaveGetSourceFilename(const char* pfilename)
@@ -662,7 +675,7 @@ enum CloningOptions {
 };
 
 /// base class for readable interfaces
-class RAVE_API XMLReadable
+class OPENRAVE_API XMLReadable
 {
 public:
     XMLReadable(const std::string& xmlid) : __xmlid(xmlid) {}
@@ -679,7 +692,7 @@ typedef std::list<std::pair<std::string,std::string> > XMLAttributesList;
 /// base class for all xml readers. XMLReaders are used to process data from
 /// xml files. Custom readers can be registered through EnvironmentBase.
 /// By default it can record all data that is encountered inside the xml reader
-class RAVE_API BaseXMLReader : public boost::enable_shared_from_this<BaseXMLReader>
+class OPENRAVE_API BaseXMLReader : public boost::enable_shared_from_this<BaseXMLReader>
 {
 public:
     enum ProcessElement
@@ -720,7 +733,7 @@ typedef boost::shared_ptr<BaseXMLReader const> BaseXMLReaderConstPtr;
 typedef boost::function<BaseXMLReaderPtr(InterfaceBasePtr, const std::list<std::pair<std::string,std::string> >&)> CreateXMLReaderFn;
 
 /// reads until the tag ends
-class RAVE_API DummyXMLReader : public BaseXMLReader
+class OPENRAVE_API DummyXMLReader : public BaseXMLReader
 {
 public:
     DummyXMLReader(const std::string& pfieldname, const std::string& pparentname, boost::shared_ptr<std::ostream> osrecord = boost::shared_ptr<std::ostream>());
@@ -866,20 +879,20 @@ inline boost::shared_ptr<T const> RaveInterfaceConstCast(InterfaceBaseConstPtr p
 }
 
 /// \brief returns a lower case string of the interface type
-RAVE_API const std::map<InterfaceType,std::string>& RaveGetInterfaceNamesMap();
-RAVE_API const std::string& RaveGetInterfaceName(InterfaceType type);
+OPENRAVE_API const std::map<InterfaceType,std::string>& RaveGetInterfaceNamesMap();
+OPENRAVE_API const std::string& RaveGetInterfaceName(InterfaceType type);
 
 /// \brief Returns the openrave home directory where settings, cache, and other files are stored.
 ///
 /// On Linux/Unix systems, this is usually $HOME/.openrave, on Windows this is $HOMEPATH/.openrave
-RAVE_API std::string RaveGetHomeDirectory();
+OPENRAVE_API std::string RaveGetHomeDirectory();
 
 /// \brief Searches for a filename in the database and returns a full path/URL to it
 ///
 /// \param filename the relative filename in the database
 /// \param bRead if true will only return a file if it exists. If false, will return the filename of the first valid database directory.
 /// \return a non-empty string if a file could be found.
-RAVE_API std::string RaveFindDatabaseFile(const std::string& filename, bool bRead=true);
+OPENRAVE_API std::string RaveFindDatabaseFile(const std::string& filename, bool bRead=true);
 
 /// \brief Explicitly initializes the global OpenRAVE state (optional).
 ///
@@ -888,7 +901,7 @@ RAVE_API std::string RaveFindDatabaseFile(const std::string& filename, bool bRea
 /// explicit control of when this happens.
 /// \param bLoadAllPlugins If true will load all the openrave plugins automatically that can be found in the OPENRAVE_PLUGINS environment path
 /// \return 0 if successful, otherwise an error code
-RAVE_API int RaveInitialize(bool bLoadAllPlugins=true, DebugLevel level = Level_Info);
+OPENRAVE_API int RaveInitialize(bool bLoadAllPlugins=true, DebugLevel level = Level_Info);
 
 /// \brief Initializes the global state from an already loaded OpenRAVE environment.
 ///
@@ -896,56 +909,56 @@ RAVE_API int RaveInitialize(bool bLoadAllPlugins=true, DebugLevel level = Level_
 /// around. If using plugin.h, this function is automatically called by \ref CreateInterfaceValidated.
 /// It is also called by and every InterfaceBase constructor.
 /// \param[in] globalstate 
-RAVE_API void RaveInitializeFromState(UserDataPtr globalstate);
+OPENRAVE_API void RaveInitializeFromState(UserDataPtr globalstate);
 
 /// \brief A pointer to the global openrave state
 /// \return a managed pointer to the state.
-RAVE_API UserDataPtr RaveGlobalState();
+OPENRAVE_API UserDataPtr RaveGlobalState();
 
 /// \brief Destroys the entire OpenRAVE state and all loaded environments. 
 ///
 /// This functions should be always called before program shutdown in order to assure all
 /// resources are relased appropriately.
-RAVE_API void RaveDestroy();
+OPENRAVE_API void RaveDestroy();
 
 /// \brief Get all the loaded plugins and the interfaces they support.
 ///
 /// \param plugins A list of plugins. Each entry has the plugin name and the interfaces it supports
-RAVE_API void RaveGetPluginInfo(std::list< std::pair<std::string, PLUGININFO> >& plugins);
+OPENRAVE_API void RaveGetPluginInfo(std::list< std::pair<std::string, PLUGININFO> >& plugins);
 
 /// \brief Get a list of all the loaded interfaces.
-RAVE_API void RaveGetLoadedInterfaces(std::map<InterfaceType, std::vector<std::string> >& interfacenames);
+OPENRAVE_API void RaveGetLoadedInterfaces(std::map<InterfaceType, std::vector<std::string> >& interfacenames);
 
 /// \brief Reloads all the plugins.
 ///
 /// The interfaces currently created remain will continue using the old plugins, so this function is safe in that plugins currently loaded remain loaded until the last interface that uses them is released.
-RAVE_API void RaveReloadPlugins();
+OPENRAVE_API void RaveReloadPlugins();
 
 /// \brief Load a plugin and its interfaces.
 ///
 /// If the plugin is already loaded, will reload it.
 /// \param name the filename of the plugin to load
-RAVE_API bool RaveLoadPlugin(const std::string& libraryname);
+OPENRAVE_API bool RaveLoadPlugin(const std::string& libraryname);
 
 /// \brief Returns true if interface can be created, otherwise false.
-RAVE_API bool RaveHasInterface(InterfaceType type, const std::string& interfacename);
+OPENRAVE_API bool RaveHasInterface(InterfaceType type, const std::string& interfacename);
 
-RAVE_API InterfaceBasePtr RaveCreateInterface(EnvironmentBasePtr penv, InterfaceType type,const std::string& interfacename);
-RAVE_API RobotBasePtr RaveCreateRobot(EnvironmentBasePtr penv, const std::string& name="");
-RAVE_API PlannerBasePtr RaveCreatePlanner(EnvironmentBasePtr penv, const std::string& name);
-RAVE_API SensorSystemBasePtr RaveCreateSensorSystem(EnvironmentBasePtr penv, const std::string& name);
-RAVE_API ControllerBasePtr RaveCreateController(EnvironmentBasePtr penv, const std::string& name);
-RAVE_API ProblemInstancePtr RaveCreateProblem(EnvironmentBasePtr penv, const std::string& name);
-RAVE_API IkSolverBasePtr RaveCreateIkSolver(EnvironmentBasePtr penv, const std::string& name);
-RAVE_API PhysicsEngineBasePtr RaveCreatePhysicsEngine(EnvironmentBasePtr penv, const std::string& name);
-RAVE_API SensorBasePtr RaveCreateSensor(EnvironmentBasePtr penv, const std::string& name);
-RAVE_API CollisionCheckerBasePtr RaveCreateCollisionChecker(EnvironmentBasePtr penv, const std::string& name);
-RAVE_API ViewerBasePtr RaveCreateViewer(EnvironmentBasePtr penv, const std::string& name);
-RAVE_API  KinBodyPtr RaveCreateKinBody(EnvironmentBasePtr penv, const std::string& name="");
+OPENRAVE_API InterfaceBasePtr RaveCreateInterface(EnvironmentBasePtr penv, InterfaceType type,const std::string& interfacename);
+OPENRAVE_API RobotBasePtr RaveCreateRobot(EnvironmentBasePtr penv, const std::string& name="");
+OPENRAVE_API PlannerBasePtr RaveCreatePlanner(EnvironmentBasePtr penv, const std::string& name);
+OPENRAVE_API SensorSystemBasePtr RaveCreateSensorSystem(EnvironmentBasePtr penv, const std::string& name);
+OPENRAVE_API ControllerBasePtr RaveCreateController(EnvironmentBasePtr penv, const std::string& name);
+OPENRAVE_API ProblemInstancePtr RaveCreateProblem(EnvironmentBasePtr penv, const std::string& name);
+OPENRAVE_API IkSolverBasePtr RaveCreateIkSolver(EnvironmentBasePtr penv, const std::string& name);
+OPENRAVE_API PhysicsEngineBasePtr RaveCreatePhysicsEngine(EnvironmentBasePtr penv, const std::string& name);
+OPENRAVE_API SensorBasePtr RaveCreateSensor(EnvironmentBasePtr penv, const std::string& name);
+OPENRAVE_API CollisionCheckerBasePtr RaveCreateCollisionChecker(EnvironmentBasePtr penv, const std::string& name);
+OPENRAVE_API ViewerBasePtr RaveCreateViewer(EnvironmentBasePtr penv, const std::string& name);
+OPENRAVE_API  KinBodyPtr RaveCreateKinBody(EnvironmentBasePtr penv, const std::string& name="");
 /// \brief Return an empty trajectory instance initialized to nDOF degrees of freedom. Will be deprecated soon
-RAVE_API TrajectoryBasePtr RaveCreateTrajectory(EnvironmentBasePtr penv, int nDOF);
+OPENRAVE_API TrajectoryBasePtr RaveCreateTrajectory(EnvironmentBasePtr penv, int nDOF);
 /// \brief Return an empty trajectory instance.
-RAVE_API TrajectoryBasePtr RaveCreateTrajectory(EnvironmentBasePtr penv, const std::string& name="");
+OPENRAVE_API TrajectoryBasePtr RaveCreateTrajectory(EnvironmentBasePtr penv, const std::string& name="");
 
 /** \brief Registers a function to create an interface, this allows the interface to be created by other modules.
 
@@ -957,7 +970,7 @@ RAVE_API TrajectoryBasePtr RaveCreateTrajectory(EnvironmentBasePtr penv, const s
     \return a handle if function is successfully registered. By destroying the handle, the interface will be automatically unregistered.
     \throw openrave_exception Will throw with ORE_InvalidInterfaceHash if hashes do not match
  */
-RAVE_API boost::shared_ptr<void> RaveRegisterInterface(InterfaceType type, const std::string& name, const char* interfacehash, const char* envhash, const boost::function<InterfaceBasePtr(EnvironmentBasePtr, std::istream&)>& createfn);
+OPENRAVE_API boost::shared_ptr<void> RaveRegisterInterface(InterfaceType type, const std::string& name, const char* interfacehash, const char* envhash, const boost::function<InterfaceBasePtr(EnvironmentBasePtr, std::istream&)>& createfn);
 
 /** \brief Registers a custom xml reader for a particular interface.
     
@@ -967,22 +980,22 @@ RAVE_API boost::shared_ptr<void> RaveRegisterInterface(InterfaceType type, const
     \param fn CreateXMLReaderFn(pinterface,atts) - passed in the pointer to the interface where the tag was seen along with the list of attributes
     \return a pointer holding the registration, releasing the pointer will unregister the XML reader
 */
-RAVE_API boost::shared_ptr<void> RaveRegisterXMLReader(InterfaceType type, const std::string& xmltag, const CreateXMLReaderFn& fn);
+OPENRAVE_API boost::shared_ptr<void> RaveRegisterXMLReader(InterfaceType type, const std::string& xmltag, const CreateXMLReaderFn& fn);
 
 /// \brief return the environment's unique id, returns 0 if environment could not be found or not registered
-RAVE_API int RaveGetEnvironmentId(EnvironmentBasePtr penv);
+OPENRAVE_API int RaveGetEnvironmentId(EnvironmentBasePtr penv);
 
 /// \brief get the environment from its unique id
 /// \param id the unique environment id returned by \ref RaveGetEnvironmentId
-RAVE_API EnvironmentBasePtr RaveGetEnvironment(int id);
+OPENRAVE_API EnvironmentBasePtr RaveGetEnvironment(int id);
 
 /// \brief Return all the created OpenRAVE environments.
-RAVE_API void RaveGetEnvironments(std::list<EnvironmentBasePtr>& listenvironments);
+OPENRAVE_API void RaveGetEnvironments(std::list<EnvironmentBasePtr>& listenvironments);
 
 /// \brief Returns the current registered reader for the interface type/xmlid
 ///
 /// \throw openrave_exception Will throw with ORE_InvalidArguments if registered function could not be found.
-RAVE_API BaseXMLReaderPtr RaveCallXMLReader(InterfaceType type, const std::string& xmltag, InterfaceBasePtr pinterface, const std::list<std::pair<std::string,std::string> >& atts);
+OPENRAVE_API BaseXMLReaderPtr RaveCallXMLReader(InterfaceType type, const std::string& xmltag, InterfaceBasePtr pinterface, const std::list<std::pair<std::string,std::string> >& atts);
 
 //@}
 
@@ -1051,6 +1064,7 @@ BOOST_STATIC_ASSERT(OPENRAVE_VERSION_PATCH>=0&&OPENRAVE_VERSION_PATCH<=255);
 #ifdef RAVE_REGISTER_BOOST
 #include BOOST_TYPEOF_INCREMENT_REGISTRATION_GROUP()
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::InterfaceType)
+BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::UserData)
 
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::ProblemInstance)
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::ControllerBase)

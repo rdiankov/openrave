@@ -23,6 +23,12 @@
 #include <rave/rave.h>
 #include <boost/format.hpp>
 
+// export symbol prefix for plugin functions
+#define OPENRAVE_PLUGIN_API extern "C" OPENRAVE_HELPER_DLL_EXPORT
+
+/// \deprecated
+#define RAVE_PLUGIN_API OPENRAVE_PLUGIN_API
+
 /// \brief \b <b>[helper]</b> Validated function callback for creating an interface function. No checks need to be made on the parmaeters.
 ///
 /// \ingroup plugin_exports
@@ -48,7 +54,7 @@ void GetPluginAttributesValidated(OpenRAVE::PLUGININFO& info);
 
 /// \brief <b>[export]</b> Definition of a plugin export. Requires \ref CreateInterfaceValidated to be defined.
 /// \ingroup plugin_exports
-RAVE_PLUGIN_API OpenRAVE::InterfaceBasePtr OpenRAVECreateInterface(OpenRAVE::InterfaceType type, const std::string& name, const char* interfacehash, const char* envhash, OpenRAVE::EnvironmentBasePtr penv)
+OPENRAVE_PLUGIN_API OpenRAVE::InterfaceBasePtr OpenRAVECreateInterface(OpenRAVE::InterfaceType type, const std::string& name, const char* interfacehash, const char* envhash, OpenRAVE::EnvironmentBasePtr penv)
 {
     if( strcmp(interfacehash,OpenRAVE::RaveGetInterfaceHash(type)) ) {
         throw OpenRAVE::openrave_exception(str(boost::format("bad interface %s hash")%RaveGetInterfaceName(type)),OpenRAVE::ORE_InvalidInterfaceHash);
@@ -69,7 +75,7 @@ RAVE_PLUGIN_API OpenRAVE::InterfaceBasePtr OpenRAVECreateInterface(OpenRAVE::Int
 
 /// \brief \b <b>[export]</b> Definition of a plugin export. Requires \ref GetPluginAttributesValidated to be defined.
 /// \ingroup plugin_exports
-RAVE_PLUGIN_API void OpenRAVEGetPluginAttributes(OpenRAVE::PLUGININFO* pinfo, int size, const char* infohash)
+OPENRAVE_PLUGIN_API void OpenRAVEGetPluginAttributes(OpenRAVE::PLUGININFO* pinfo, int size, const char* infohash)
 {
     if( pinfo == NULL ) {
         throw OpenRAVE::openrave_exception("bad data",OpenRAVE::ORE_InvalidArguments);
@@ -86,7 +92,7 @@ RAVE_PLUGIN_API void OpenRAVEGetPluginAttributes(OpenRAVE::PLUGININFO* pinfo, in
 
 /// \brief \b <b>[export]</b> Stub function to be defined by plugin that includes \ref rave/plugin.h.
 /// \ingroup plugin_exports
-RAVE_PLUGIN_API void DestroyPlugin();
+OPENRAVE_PLUGIN_API void DestroyPlugin();
 
 //@}
 

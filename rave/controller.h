@@ -25,7 +25,7 @@ namespace OpenRAVE {
 /** \brief <b>[interface]</b> Abstract base class to encapsulate a local controller. See \ref arch_controller.
     \ingroup interfaces
 */
-class RAVE_API ControllerBase : public InterfaceBase
+class OPENRAVE_API ControllerBase : public InterfaceBase
 {
 public:
     ControllerBase(EnvironmentBasePtr penv) : InterfaceBase(PT_Controller, penv) {}
@@ -125,7 +125,7 @@ private:
     
     The class also make sure individual controllers do not have colliding DOF. It ignores the 
  */
-class RAVE_API MultiController : public ControllerBase
+class OPENRAVE_API MultiController : public ControllerBase
 {
 public:
     MultiController(EnvironmentBasePtr penv);

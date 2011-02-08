@@ -13,7 +13,6 @@ else()
   target_link_libraries(textserver libopenrave)
 endif()
 
-include_directories(textserver "${CMAKE_SOURCE_DIR}")
 add_dependencies(textserver libopenrave)
 set_target_properties(textserver PROPERTIES COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS}"
                               LINK_FLAGS "${PLUGIN_LINK_FLAGS}")

@@ -26,7 +26,7 @@ namespace OpenRAVE {
 /** \brief <b>[interface]</b> Encapsulate a time-parameterized trajectories of robot configurations. See \ref arch_trajectory.
     \ingroup interfaces
 */
-class RAVE_API TrajectoryBase : public InterfaceBase
+class OPENRAVE_API TrajectoryBase : public InterfaceBase
 {
 public:
     /// \brief trajectory interpolation and sampling methods 

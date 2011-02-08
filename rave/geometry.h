@@ -27,6 +27,9 @@
 #include <cstring>
 #include <cstdlib>
 
+#ifndef RAVE_DEPRECATED
+#define RAVE_DEPRECATED
+#endif
 #ifdef BOOST_ASSERT
 #define MATH_ASSERT BOOST_ASSERT
 #else

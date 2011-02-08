@@ -11,6 +11,7 @@ set (OPENRAVE_VERSION_MINOR 2)
 set (OPENRAVE_VERSION_PATCH 19)
 set (OPENRAVE_VERSION ${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}.${OPENRAVE_VERSION_PATCH})
 set (OPENRAVE_SOVERSION ${OPENRAVE_VERSION_MAJOR})
+message(STATUS "Compiling OpenRAVE Version ${OPENRAVE_VERSION}")
 
 # Differences between CMake 2.4 and 2.6
 if("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}" GREATER 2.4)
@@ -39,10 +40,6 @@ if("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}" GREATER 2.4)
    # listed nevertheless also with CMake 2.6.
    set(CMAKE_LINK_OLD_PATHS TRUE)
 endif("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}" GREATER 2.4)
-
-#if(UNIX AND CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
-#  set(CMAKE_INSTALL_PREFIX "${CMAKE_SOURCE_DIR}/localinstall" CACHE PATH "openrave install prefix" FORCE )
-#endif()
 
 if("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION}" STRLESS "2.4.3")
   message(STATUS "cmake version too low, might not be able to install directories")
@@ -86,7 +83,7 @@ option(OPT_STATIC "Build static libraries" OFF)
 ##############################################################################
 
 # Additional CMake modules for 3rd party library checks reside here
-set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/modules-cmake")
+set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/modules-cmake")
 
 message(STATUS "detected system processor: ${CMAKE_SYSTEM_PROCESSOR}")
 
@@ -115,10 +112,16 @@ if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
 endif()
 
 if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
-  #set(CMAKE_CXX_FLAGS_OPTIMIZED "-DNDEBUG -DBOOST_DISABLE_ASSERTS") #  #define _SECURE_SCL 0
-  set(CMAKE_CXX_FLAGS_RELEASE "-O2 -g") # only add NDEBUG when generating super release modules
+  set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG -DBOOST_DISABLE_ASSERTS -D_SECURE_SCL=0") # this practically removes all checks making it a very dangerous options to play with
+  set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g")
   set(CMAKE_CXX_FLAGS_DEBUG "-g -D_DEBUG")
 endif()
+
+check_cxx_compiler_flag("-rdynamic" LINKER_HAS_RDYNAMIC)
+check_cxx_compiler_flag("-Bsymbolic" LINKER_HAS_BSYMBOLIC)
+check_cxx_compiler_flag("-Bsymbolic-functions" LINKER_HAS_BSYMBOLIC_FUNCTIONS)
+check_cxx_compiler_flag("-fvisibility=hidden" LINKER_HAS_VISIBILITY)
+check_cxx_compiler_flag("-fvisibility-inlines-hidden" LINKER_HAS_VISIBILITY_INLINES_HIDDEN)
 
 if( UNIX OR CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
   set(STDC_LIBRARY stdc++)
@@ -126,6 +129,8 @@ else()
   set(STDC_LIBRARY)
 endif()
 
+set(OPENRAVE_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR})
+set(OPENRAVE_CORE_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/src/libopenrave-core)
 set(OPENRAVE_LINK_DIRS "")
 
 # to facilitate compilation, all visual studio libraries are included locally
@@ -148,19 +153,19 @@ if( MSVC )
 
   # untar the source files
   add_custom_command(
-    OUTPUT ${CMAKE_SOURCE_DIR}/inc
+    OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/inc
     COMMAND ${CMAKE_COMMAND} -E chdir
-    ARGS "${CMAKE_SOURCE_DIR}" ${CMAKE_COMMAND} -E tar xzf "${CMAKE_SOURCE_DIR}/msvc_files.tgz"
-    DEPENDS ${CMAKE_SOURCE_DIR}/msvc_files.tgz)
-  add_custom_target(msvc_files ALL DEPENDS ${CMAKE_SOURCE_DIR}/inc)
+    ARGS "${CMAKE_CURRENT_SOURCE_DIR}" ${CMAKE_COMMAND} -E tar xzf "${CMAKE_CURRENT_SOURCE_DIR}/msvc_files.tgz"
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/msvc_files.tgz)
+  add_custom_target(msvc_files ALL DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/inc)
   set(EXTRA_MSVC_DEPEND msvc_files)
 
-  include_directories("${CMAKE_SOURCE_DIR}/inc")
-  set(OPENRAVE_LINK_DIRS ${OPENRAVE_LINK_DIRS} "${CMAKE_SOURCE_DIR}/lib/win32")
+  include_directories("${CMAKE_CURRENT_SOURCE_DIR}/inc")
+  set(OPENRAVE_LINK_DIRS ${OPENRAVE_LINK_DIRS} "${CMAKE_CURRENT_SOURCE_DIR}/lib/win32")
 
   # manually set boost root, find_package errors due to tgz file
   if( NOT BOOST_ROOT )
-    set(BOOST_ROOT "${CMAKE_SOURCE_DIR}/inc")
+    set(BOOST_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/inc")
   endif()
 
   set(Boost_FOUND 1)
@@ -172,37 +177,37 @@ if( MSVC )
   set(Boost_SYSTEM_FOUND 1)
   set(Boost_PYTHON_FOUND 1)
   set(Boost_THREAD_FOUND 1)
-  set(Boost_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/inc")
+  set(Boost_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/inc")
   set(Boost_CFLAGS "-DBOOST_ALL_DYN_LINK -DBOOST_ALL_NO_LIB")
   # have to add to required flags for applications that will test linking with boost
   set(CMAKE_REQUIRED_FLAGS "-DBOOST_ALL_DYN_LINK -DBOOST_ALL_NO_LIB")
   if( MSVC70 OR MSVC71 )
-    set(Boost_THREAD_LIBRARY ${CMAKE_SOURCE_DIR}/lib/win32/boost_thread-vc71-mt-1_39.lib ${CMAKE_SOURCE_DIR}/lib/win32/boost_date_time-vc71-mt-1_39.lib)
-    set(Boost_SYSTEM_LIBRARY ${CMAKE_SOURCE_DIR}/lib/win32/boost_system-vc71-mt-1_39.lib)
-    set(Boost_FILESYSTEM_LIBRARY ${CMAKE_SOURCE_DIR}/lib/win32/boost_filesystem-vc71-mt-1_39.lib)
-    set(Boost_PYTHON_LIBRARY ${CMAKE_SOURCE_DIR}/lib/win32/boost_python-vc71-mt-1_39.lib)
-    set(Boost_IOSTREAMS_LIBRARY ${CMAKE_SOURCE_DIR}/lib/win32/boost_iostreams-vc71-mt-1_39.lib)
+    set(Boost_THREAD_LIBRARY ${CMAKE_CURRENT_SOURCE_DIR}/lib/win32/boost_thread-vc71-mt-1_39.lib ${CMAKE_CURRENT_SOURCE_DIR}/lib/win32/boost_date_time-vc71-mt-1_39.lib)
+    set(Boost_SYSTEM_LIBRARY ${CMAKE_CURRENT_SOURCE_DIR}/lib/win32/boost_system-vc71-mt-1_39.lib)
+    set(Boost_FILESYSTEM_LIBRARY ${CMAKE_CURRENT_SOURCE_DIR}/lib/win32/boost_filesystem-vc71-mt-1_39.lib)
+    set(Boost_PYTHON_LIBRARY ${CMAKE_CURRENT_SOURCE_DIR}/lib/win32/boost_python-vc71-mt-1_39.lib)
+    set(Boost_IOSTREAMS_LIBRARY ${CMAKE_CURRENT_SOURCE_DIR}/lib/win32/boost_iostreams-vc71-mt-1_39.lib)
   elseif( MSVC80 )
-    set(Boost_THREAD_LIBRARY ${CMAKE_SOURCE_DIR}/lib/win32/boost_thread-vc80-mt-1_39.lib ${CMAKE_SOURCE_DIR}/lib/win32/boost_date_time-vc80-mt-1_39.lib)
-    set(Boost_SYSTEM_LIBRARY ${CMAKE_SOURCE_DIR}/lib/win32/boost_system-vc80-mt-1_39.lib)
-    set(Boost_FILESYSTEM_LIBRARY ${CMAKE_SOURCE_DIR}/lib/win32/boost_filesystem-vc80-mt-1_39.lib)
-    set(Boost_PYTHON_LIBRARY ${CMAKE_SOURCE_DIR}/lib/win32/boost_python-vc80-mt-1_39.lib)
-    set(Boost_IOSTREAMS_LIBRARY ${CMAKE_SOURCE_DIR}/lib/win32/boost_iostreams-vc80-mt-1_39.lib)
+    set(Boost_THREAD_LIBRARY ${CMAKE_CURRENT_SOURCE_DIR}/lib/win32/boost_thread-vc80-mt-1_39.lib ${CMAKE_CURRENT_SOURCE_DIR}/lib/win32/boost_date_time-vc80-mt-1_39.lib)
+    set(Boost_SYSTEM_LIBRARY ${CMAKE_CURRENT_SOURCE_DIR}/lib/win32/boost_system-vc80-mt-1_39.lib)
+    set(Boost_FILESYSTEM_LIBRARY ${CMAKE_CURRENT_SOURCE_DIR}/lib/win32/boost_filesystem-vc80-mt-1_39.lib)
+    set(Boost_PYTHON_LIBRARY ${CMAKE_CURRENT_SOURCE_DIR}/lib/win32/boost_python-vc80-mt-1_39.lib)
+    set(Boost_IOSTREAMS_LIBRARY ${CMAKE_CURRENT_SOURCE_DIR}/lib/win32/boost_iostreams-vc80-mt-1_39.lib)
   else()
-    set(Boost_THREAD_LIBRARY ${CMAKE_SOURCE_DIR}/lib/win32/boost_thread-vc90-mt-1_39.lib ${CMAKE_SOURCE_DIR}/lib/win32/boost_date_time-vc90-mt-1_39.lib)
-    set(Boost_SYSTEM_LIBRARY ${CMAKE_SOURCE_DIR}/lib/win32/boost_system-vc90-mt-1_39.lib)
-    set(Boost_FILESYSTEM_LIBRARY ${CMAKE_SOURCE_DIR}/lib/win32/boost_filesystem-vc90-mt-1_39.lib)
-    set(Boost_PYTHON_LIBRARY ${CMAKE_SOURCE_DIR}/lib/win32/boost_python-vc90-mt-1_39.lib)
-    set(Boost_IOSTREAMS_LIBRARY ${CMAKE_SOURCE_DIR}/lib/win32/boost_iostreams-vc90-mt-1_39.lib)
+    set(Boost_THREAD_LIBRARY ${CMAKE_CURRENT_SOURCE_DIR}/lib/win32/boost_thread-vc90-mt-1_39.lib ${CMAKE_CURRENT_SOURCE_DIR}/lib/win32/boost_date_time-vc90-mt-1_39.lib)
+    set(Boost_SYSTEM_LIBRARY ${CMAKE_CURRENT_SOURCE_DIR}/lib/win32/boost_system-vc90-mt-1_39.lib)
+    set(Boost_FILESYSTEM_LIBRARY ${CMAKE_CURRENT_SOURCE_DIR}/lib/win32/boost_filesystem-vc90-mt-1_39.lib)
+    set(Boost_PYTHON_LIBRARY ${CMAKE_CURRENT_SOURCE_DIR}/lib/win32/boost_python-vc90-mt-1_39.lib)
+    set(Boost_IOSTREAMS_LIBRARY ${CMAKE_CURRENT_SOURCE_DIR}/lib/win32/boost_iostreams-vc90-mt-1_39.lib)
   endif()
 
   # make sure to install the library since it will be necessary for linking
-  install(FILES ${CMAKE_SOURCE_DIR}/lib/win32/libxml2.lib DESTINATION lib)
-  install(FILES ${CMAKE_SOURCE_DIR}/lib/win32/libxml2d.lib DESTINATION lib)
-  install(FILES ${CMAKE_SOURCE_DIR}/inc/stdint.h DESTINATION include)
-  install(DIRECTORY ${CMAKE_SOURCE_DIR}/inc/boost DESTINATION include)
+  install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/lib/win32/libxml2.lib DESTINATION lib)
+  install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/lib/win32/libxml2d.lib DESTINATION lib)
+  install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/inc/stdint.h DESTINATION include)
+  install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/inc/boost DESTINATION include)
 
-  file(GLOB boost_lib_files ${CMAKE_SOURCE_DIR}/lib/win32/boost_*.lib)
+  file(GLOB boost_lib_files ${CMAKE_CURRENT_SOURCE_DIR}/lib/win32/boost_*.lib)
   install(FILES ${boost_lib_files} DESTINATION lib)
 
 else()
@@ -245,7 +250,7 @@ endif()
 
 # generate the md5 sum for all OpenRAVE interfaces
 add_subdirectory(cpp-gen-md5)
-include_directories("${CMAKE_SOURCE_DIR}/cpp-gen-md5")
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/cpp-gen-md5")
 
 if( MSVC )
   add_dependencies(cpp-gen-md5 ${EXTRA_MSVC_DEPEND})
@@ -266,36 +271,36 @@ set(interfacehashes_h ${CMAKE_CURRENT_BINARY_DIR}/rave/interfacehashes.h)
 add_custom_command(
   OUTPUT ${interfacehashes_h}
   COMMAND ${CPPGENMD5}
-  ARGS "${OPENRAVE_PRECISION}" "${CMAKE_SOURCE_DIR}/rave/interface.h"
-       "${CMAKE_SOURCE_DIR}/rave/collisionchecker.h" OPENRAVE_COLLISIONCHECKER_HASH
-       "${CMAKE_SOURCE_DIR}/rave/robot.h" OPENRAVE_ROBOT_HASH
-       "${CMAKE_SOURCE_DIR}/rave/planner.h" OPENRAVE_PLANNER_HASH
-       "${CMAKE_SOURCE_DIR}/rave/kinbody.h" OPENRAVE_KINBODY_HASH
-       "${CMAKE_SOURCE_DIR}/rave/sensorsystem.h" OPENRAVE_SENSORSYSTEM_HASH
-       "${CMAKE_SOURCE_DIR}/rave/controller.h" OPENRAVE_CONTROLLER_HASH
-       "${CMAKE_SOURCE_DIR}/rave/problems.h" OPENRAVE_PROBLEM_HASH
-       "${CMAKE_SOURCE_DIR}/rave/iksolver.h" OPENRAVE_IKSOLVER_HASH
-       "${CMAKE_SOURCE_DIR}/rave/physicsengine.h" OPENRAVE_PHYSICSENGINE_HASH
-       "${CMAKE_SOURCE_DIR}/rave/sensor.h" OPENRAVE_SENSOR_HASH
-       "${CMAKE_SOURCE_DIR}/rave/viewer.h" OPENRAVE_VIEWER_HASH
-       "${CMAKE_SOURCE_DIR}/rave/trajectory.h" OPENRAVE_TRAJECTORY_HASH
-       "${CMAKE_SOURCE_DIR}/rave/environment.h" OPENRAVE_ENVIRONMENT_HASH
-       "${CMAKE_SOURCE_DIR}/rave/plugininfo.h" OPENRAVE_PLUGININFO_HASH
+  ARGS "${OPENRAVE_PRECISION}" "${CMAKE_CURRENT_SOURCE_DIR}/rave/interface.h"
+       "${CMAKE_CURRENT_SOURCE_DIR}/rave/collisionchecker.h" OPENRAVE_COLLISIONCHECKER_HASH
+       "${CMAKE_CURRENT_SOURCE_DIR}/rave/robot.h" OPENRAVE_ROBOT_HASH
+       "${CMAKE_CURRENT_SOURCE_DIR}/rave/planner.h" OPENRAVE_PLANNER_HASH
+       "${CMAKE_CURRENT_SOURCE_DIR}/rave/kinbody.h" OPENRAVE_KINBODY_HASH
+       "${CMAKE_CURRENT_SOURCE_DIR}/rave/sensorsystem.h" OPENRAVE_SENSORSYSTEM_HASH
+       "${CMAKE_CURRENT_SOURCE_DIR}/rave/controller.h" OPENRAVE_CONTROLLER_HASH
+       "${CMAKE_CURRENT_SOURCE_DIR}/rave/problems.h" OPENRAVE_PROBLEM_HASH
+       "${CMAKE_CURRENT_SOURCE_DIR}/rave/iksolver.h" OPENRAVE_IKSOLVER_HASH
+       "${CMAKE_CURRENT_SOURCE_DIR}/rave/physicsengine.h" OPENRAVE_PHYSICSENGINE_HASH
+       "${CMAKE_CURRENT_SOURCE_DIR}/rave/sensor.h" OPENRAVE_SENSOR_HASH
+       "${CMAKE_CURRENT_SOURCE_DIR}/rave/viewer.h" OPENRAVE_VIEWER_HASH
+       "${CMAKE_CURRENT_SOURCE_DIR}/rave/trajectory.h" OPENRAVE_TRAJECTORY_HASH
+       "${CMAKE_CURRENT_SOURCE_DIR}/rave/environment.h" OPENRAVE_ENVIRONMENT_HASH
+       "${CMAKE_CURRENT_SOURCE_DIR}/rave/plugininfo.h" OPENRAVE_PLUGININFO_HASH
        > "${interfacehashes_h}"
   DEPENDS cpp-gen-md5
-  ${CMAKE_SOURCE_DIR}/rave/collisionchecker.h
-  ${CMAKE_SOURCE_DIR}/rave/robot.h
-  ${CMAKE_SOURCE_DIR}/rave/planner.h
-  ${CMAKE_SOURCE_DIR}/rave/kinbody.h
-  ${CMAKE_SOURCE_DIR}/rave/sensorsystem.h
-  ${CMAKE_SOURCE_DIR}/rave/controller.h
-  ${CMAKE_SOURCE_DIR}/rave/problems.h
-  ${CMAKE_SOURCE_DIR}/rave/iksolver.h
-  ${CMAKE_SOURCE_DIR}/rave/physicsengine.h
-  ${CMAKE_SOURCE_DIR}/rave/sensor.h
-  ${CMAKE_SOURCE_DIR}/rave/viewer.h
-  ${CMAKE_SOURCE_DIR}/rave/trajectory.h
-  ${CMAKE_SOURCE_DIR}/rave/environment.h)
+  ${CMAKE_CURRENT_SOURCE_DIR}/rave/collisionchecker.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/rave/robot.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/rave/planner.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/rave/kinbody.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/rave/sensorsystem.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/rave/controller.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/rave/problems.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/rave/iksolver.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/rave/physicsengine.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/rave/sensor.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/rave/viewer.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/rave/trajectory.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/rave/environment.h)
 
 add_custom_target(interfacehashes_target ALL DEPENDS ${interfacehashes_h} ${EXTRA_MSVC_DEPEND})
 
@@ -485,8 +490,6 @@ add_subdirectory(3rdparty/flann-1.6.6)
 set(FLANN_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/flann-1.6.6/src/cpp")
 set(FLANN_FOUND 1) # use flann_cpp_s to link statically
 
-message(STATUS "openrave project ${PROJECT_NAME}")
-
 # function expression parser library
 add_subdirectory(3rdparty/fparser-4.3)
 set(FPARSER_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/fparser-4.3")
@@ -566,7 +569,7 @@ endif()
 
 if( WIN32 )
   # copy the dlls
-  file(GLOB dll_files ${CMAKE_SOURCE_DIR}/bin/*.dll)
+  file(GLOB dll_files ${CMAKE_CURRENT_SOURCE_DIR}/bin/*.dll)
   install(FILES ${dll_files} DESTINATION bin)
 endif()
 
@@ -574,8 +577,8 @@ install(FILES ${rave_header_files} ${interfacehashes_h} DESTINATION include/rave
 
 # add make uninstall capability
 configure_file(
-  "${CMAKE_SOURCE_DIR}/modules-cmake/cmake_uninstall.cmake.in"
-  "${CMAKE_BINARY_DIR}/cmake_uninstall.cmake"
+  "${CMAKE_CURRENT_SOURCE_DIR}/modules-cmake/cmake_uninstall.cmake.in"
+  "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
   IMMEDIATE @ONLY)
 
 add_custom_target(uninstall

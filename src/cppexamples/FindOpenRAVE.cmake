@@ -65,7 +65,7 @@ else(NOT MSVC AND OPENRAVE_CONFIG_EXECUTABLE)
   # openrave include files in local directory
   if( MSVC )
     set(OPENRAVE_FOUND 1)
-    set( OPENRAVE_CXXFLAGS " -DRAVE_USEDLL -DRAVE_CORE_USEDLL -DBOOST_ALL_DYN_LINK -DBOOST_ALL_NO_LIB /EHc- ")
+    set( OPENRAVE_CXXFLAGS " -DOPENRAVE_DLL -DOPENRAVE_CORE_DLL -DBOOST_ALL_DYN_LINK -DBOOST_ALL_NO_LIB /EHc- ")
     set( OPENRAVE_LINK_FLAGS " ")
     set( OPENRAVE_INCLUDE_DIRS "c:/program files/openrave/include")
     set( OPENRAVE_LINK_DIRS "c:/program files/openrave/lib" )

@@ -1,9 +1,10 @@
+include_directories("${OPENRAVE_INCLUDE_DIRS}") # needed since plugins include rave/rave.h
 set(PLUGIN_LINK_FLAGS "")
 
 if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
-  set(PLUGIN_COMPILE_FLAGS "-DRAVE_USEDLL ${Boost_CFLAGS} -fPIC")
+  set(PLUGIN_COMPILE_FLAGS "-DOPENRAVE_DLL ${Boost_CFLAGS} -fPIC")
 else()
-  set(PLUGIN_COMPILE_FLAGS "-DRAVE_USEDLL ${Boost_CFLAGS}")
+  set(PLUGIN_COMPILE_FLAGS "-DOPENRAVE_DLL ${Boost_CFLAGS}")
 endif()
 
 add_subdirectory(basecontrollers)

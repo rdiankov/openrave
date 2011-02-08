@@ -26,7 +26,7 @@ typedef boost::recursive_try_mutex EnvironmentMutex;
 
 /** \brief Maintains a world state, which serves as the gateway to all functions offered through %OpenRAVE. See \ref arch_environment.
 */
-class RAVE_API EnvironmentBase : public boost::enable_shared_from_this<EnvironmentBase>
+class OPENRAVE_API EnvironmentBase : public boost::enable_shared_from_this<EnvironmentBase>
 {
 public:
     EnvironmentBase();

@@ -40,12 +40,12 @@ enum CollisionAction
 };
 
 /// \brief Holds information about a particular collision that occured.
-class RAVE_API CollisionReport
+class OPENRAVE_API CollisionReport
 {
 public:
     CollisionReport() { Reset(); }
 
-    class RAVE_API CONTACT
+    class OPENRAVE_API CONTACT
     {
     public:
         CONTACT() : depth(0) {}
@@ -78,7 +78,7 @@ typedef CollisionReport COLLISIONREPORT RAVE_DEPRECATED;
 /** \brief <b>[interface]</b> Responsible for all collision checking queries of the environment. See \ref arch_collisionchecker.    
     \ingroup interfaces
 */
-class RAVE_API CollisionCheckerBase : public InterfaceBase
+class OPENRAVE_API CollisionCheckerBase : public InterfaceBase
 {
 public:
     CollisionCheckerBase(EnvironmentBasePtr penv) : InterfaceBase(PT_CollisionChecker, penv) {}
@@ -185,12 +185,12 @@ private:
 };
 
 /// \brief Helper class to save and restore the collision options. If options are not supported and required is true, throws an exception.
-class RAVE_API CollisionOptionsStateSaver
+class OPENRAVE_API CollisionOptionsStateSaver
 {
  public:
     CollisionOptionsStateSaver(CollisionCheckerBasePtr p, int newoptions, bool required=true);
     virtual ~CollisionOptionsStateSaver();
- protected:
+ private:
     int _oldoptions; ///< saved options
     CollisionCheckerBasePtr _p;
 };
