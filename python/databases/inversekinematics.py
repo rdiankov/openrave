@@ -384,6 +384,7 @@ class InverseKinematicsModel(OpenRAVEModel):
             try:
                 compiler.link_shared_object(objectfiles,output_filename=output_filename,libraries=['lapack'])
             except distutils.errors.LinkError:
+                print 'linking without lapack...'
                 compiler.link_shared_object(objectfiles,output_filename=output_filename)
             if not self.load():
                 return ValueError('failed to generate ik solver')

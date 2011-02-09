@@ -1751,7 +1751,7 @@ static inline bool %s(const IKReal* Breal)
     for(int i = 0; i < 15; ++i) {
         norm += IKabs(Breal[i]);
     }
-    IKReal tol = 1e-5*norm; // have to increase the threshold since many computations are involved
+    IKReal tol = 5e-5*norm; // have to increase the threshold since many computations are involved
     return IKabs(Breal[2]*Breal[2]-Breal[3]) < tol && IKabs(Breal[0]*Breal[4]-Breal[5]) < tol && IKabs(Breal[1]*Breal[4]-Breal[6]) < tol && IKabs(Breal[2]*Breal[4]-Breal[7]) < tol && IKabs(Breal[3]*Breal[4]-Breal[8]) < tol && IKabs(Breal[4]*Breal[4]-Breal[9]) < tol && IKabs(Breal[2]*Breal[9]-Breal[10]) < tol && IKabs(Breal[3]*Breal[9]-Breal[11]) < tol && IKabs(Breal[4]*Breal[9]-Breal[12]) < tol && IKabs(Breal[2]*Breal[12]-Breal[13]) < tol && IKabs(Breal[3]*Breal[12]-Breal[14]) < tol;
 };
 """%name
