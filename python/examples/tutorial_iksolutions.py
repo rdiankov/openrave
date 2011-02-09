@@ -38,7 +38,7 @@ First the inversekinematics database generator is called querying a **Transform6
 .. 
 .. code-block:: python
 
-  lower,upper = [v[ikmodel.manip.GetArmIndices()] for v in ikmodel.robot.GetJointLimits()]
+  lower,upper = [v[ikmodel.manip.GetArmIndices()] for v in ikmodel.robot.GetDOFLimits()]
   robot.SetDOFValues(random.rand()*(upper-lower)+lower,ikmodel.manip.GetArmIndices()) # set random values
   if not robot.CheckSelfCollision():
       ...
@@ -125,7 +125,7 @@ def run(args=None):
         with env:
             # move the robot in a random collision-free position and call the IK
             while True:
-                lower,upper = [v[ikmodel.manip.GetArmIndices()] for v in ikmodel.robot.GetJointLimits()]
+                lower,upper = [v[ikmodel.manip.GetArmIndices()] for v in ikmodel.robot.GetDOFLimits()]
                 robot.SetDOFValues(random.rand()*(upper-lower)+lower,ikmodel.manip.GetArmIndices()) # set random values
                 if not robot.CheckSelfCollision():
                     solutions = ikmodel.manip.FindIKSolutions(ikmodel.manip.GetEndEffectorTransform(),IkFilterOptions.CheckEnvCollisions)

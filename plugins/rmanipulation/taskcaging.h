@@ -386,7 +386,7 @@ public:
         {
             vector< dReal> solution;
             RobotBase::ManipulatorConstPtr pmanip = _robot->GetActiveManipulator();
-            if( nMaxIkIterations == 0 || pmanip->GetNumFreeParameters() == 0 ) {
+            if( nMaxIkIterations == 0 || pmanip->GetIkSolver()->GetNumFreeParameters() == 0 ) {
                 if( pmanip->FindIKSolution(tgrasp, solution, true) ) {
                     if( pCurSolution.size() == solution.size() ) {
                         // make sure solution is close to current solution
@@ -402,9 +402,9 @@ public:
             }
 
             // have a classifier that knows when ik solution is impossible
-            if( pmanip->GetNumFreeParameters() > 0 ) {
-                _vfreeparams.resize(pmanip->GetNumFreeParameters());
-                pmanip->GetFreeParameters(_vcurfreeparams);
+            if( pmanip->GetIkSolver()->GetNumFreeParameters() > 0 ) {
+                _vfreeparams.resize(pmanip->GetIkSolver()->GetNumFreeParameters());
+                pmanip->GetIkSolver()->GetFreeParameters(_vcurfreeparams);
             }
 
             dReal startphi = _vcurfreeparams[0];
@@ -457,7 +457,7 @@ public:
             //int iter = nMaxIkIterations;
             //    while(iter-- > 0) {
             //        // randomly sample params
-            //        for(int j = 0; j < pmanip->GetNumFreeParameters(); ++j)
+            //        for(int j = 0; j < pmanip->GetIkSolver()->GetNumFreeParameters(); ++j)
             //            _vfreeparams[j] = CLAMP_ON_RANGE(_vcurfreeparams[j] + 0.5f*fConfigThresh*(RaveRandomFloat()-0.5f),(dReal)0,(dReal)1);
             //        
             //        if( pmanip->FindIKSolution(tgrasp, _vfreeparams, solution, true) ) {

@@ -319,7 +319,7 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
                 if solutions is None or len(solutions) == 0:
                     continue
                 # find the closest solution
-                weights = self.robot.GetJointWeights()[armjoints]
+                weights = self.robot.GetDOFWeights()[armjoints]
                 dists = [numpy.max(abs(finalarmsolution-s)) for s in solutions]
                 index = argmin(dists)
                 usejacobian = False
@@ -417,7 +417,7 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
                     continue
                 # find the closest solution
                 curjointvalues = self.robot.GetDOFValues(armjoints)
-                weights = self.robot.GetJointWeights()[armjoints]
+                weights = self.robot.GetDOFWeights()[armjoints]
                 dist = numpy.max(abs(finalarmsolution-curjointvalues))
                 if dist < 15.0*approachoffset:
                     usejacobian = True
@@ -740,7 +740,7 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
             if solutions is None or len(solutions) == 0:
                 return self.graspObject([gmodel])
             # find the closest solution
-            weights = self.robot.GetJointWeights()[armjoints]
+            weights = self.robot.GetDOFWeights()[armjoints]
             dists = [numpy.max(abs(finalarmsolution-s)) for s in solutions]
             index = argmin(dists)
             if dists[index] < 15.0*approachoffset:

@@ -274,8 +274,12 @@ public:
         RegisterCommand("IKTest",boost::bind(&IKFastProblem::IKtest,this,_1,_2),
                         "Tests for an IK solution if active manipulation has an IK solver attached");
         RegisterCommand("DebugIK",boost::bind(&IKFastProblem::DebugIK,this,_1,_2),
-                        "Function used for debugging and testing an IK solver");
-
+                        "Function used for debugging and testing an IK solver. Input parameters are:\n\n\
+* string readfile - file containing joint values to read, starts with number of entries.\n\n\
+* int numtests - if file not specified, number of random tests to perform (defualt is 1000).\n\n\
+* float sampledegeneratecases - probability in [0,1] specifies the probability of sampling joint values on [-pi/2,0,pi/2] (default is 0.2).\n\n\
+* int selfcollision - if true, will check IK only for non-self colliding positions of the robot (default is 0).\n\n\
+* string robot - name of the robot to test. the active manipulator of the roobt is used.\n\n");
     }
 
     virtual ~IKFastProblem() {}
@@ -579,22 +583,19 @@ public:
     
         robot->GetDOFValues(values);
 
-        for(size_t i = 0; i < varmjointvals.size(); i++)
+        for(size_t i = 0; i < varmjointvals.size(); i++) {
             values[pmanip->GetArmIndices()[i]] = varmjointvals[i];
-
+        }
         robot->SetDOFValues(values);
 
-        vector<dReal> q1;
-    
+        vector<dReal> q1;    
         if( !pmanip->FindIKSolution(handTr, q1, bCheckCollision) ) {
             RAVELOG_WARN("No IK solution found\n");
             return false;
         }
     
         stringstream s2;
-#if OPENRAVE_PRECISION
-        s2 << std::setprecision(16); // if double precision, set to full 16 digits
-#endif
+        s2 << std::setprecision(std::numeric_limits<dReal>::digits10+1); /// have to do this or otherwise precision gets lost
         s2 << "ik sol: ";
         FOREACH(it, q1) {
             s2 << *it << " ";
@@ -605,36 +606,35 @@ public:
         return true;
     }
 
-    bool DebugIKFindSolution(RobotBase::ManipulatorPtr pmanip, const Transform& twrist,
-                             vector<dReal>& viksolution, bool bEnvCollision, vector<dReal>& parameters, int paramindex)
+    bool DebugIKFindSolution(RobotBase::ManipulatorPtr pmanip, const Transform& twrist, std::vector<dReal>& viksolution, int filteroptions, std::vector<dReal>& parameters, int paramindex)
     {
-        for(dReal f = 0; f <= 1; f += 0.001f) {
+        for(dReal f = 0; f <= 1; f += 0.01f) {
             parameters[paramindex] = f;
             if( paramindex > 0 ) {
-                if( DebugIKFindSolution(pmanip, twrist, viksolution, bEnvCollision, parameters, paramindex-1) )
+                if( DebugIKFindSolution(pmanip, twrist, viksolution, filteroptions, parameters, paramindex-1) ) {
                     return true;
+                }
             }
             else {
-                if( pmanip->FindIKSolution(twrist, parameters, viksolution, bEnvCollision) )
+                if( pmanip->FindIKSolution(twrist, parameters, viksolution, filteroptions) ) {
                     return true;
+                }
             }
         }
 
         return false;
     }
         
-    void DebugIKFindSolutions(RobotBase::ManipulatorPtr pmanip, const Transform& twrist,
-                              vector< vector<dReal> >& viksolutions, bool bEnvCollision,
-                              vector<dReal>& parameters, int paramindex)
+    void DebugIKFindSolutions(RobotBase::ManipulatorPtr pmanip, const Transform& twrist, vector< vector<dReal> >& viksolutions, int filteroptions, std::vector<dReal>& parameters, int paramindex)
     {
-        for(dReal f = 0; f <= 1; f += 0.001f) {
-            parameters[paramindex] = f;
+        for(dReal f = 0; f <= 1; f += 0.01f) {
+            parameters.at(paramindex) = f;
             if( paramindex > 0 ) {
-                DebugIKFindSolutions(pmanip, twrist, viksolutions, bEnvCollision, parameters, paramindex-1);
+                DebugIKFindSolutions(pmanip, twrist, viksolutions, filteroptions, parameters, paramindex-1);
             }
             else {
                 vector< vector<dReal> > vtempsol;
-                if( pmanip->FindIKSolutions(twrist, parameters, vtempsol, bEnvCollision) ) {
+                if( pmanip->FindIKSolutions(twrist, parameters, vtempsol, filteroptions) ) {
                     viksolutions.insert(viksolutions.end(), vtempsol.begin(), vtempsol.end());
                 }
             }
@@ -643,38 +643,35 @@ public:
 
     bool DebugIK(ostream& sout, istream& sinput)
     {
-        int num_itrs = 10000;
+        int num_itrs = 1000;
         stringstream s;
-#if OPENRAVE_PRECISION
-        s << std::setprecision(16); // if double precision, set to full 16 digits
-#endif
+        s << std::setprecision(std::numeric_limits<dReal>::digits10+1); /// have to do this or otherwise precision gets lost
         fstream fsfile;
-
-        string readfilename, genfilename;
-        bool bReadFile = false;
-        bool bGenFile = false;
-        dReal frotweight = 0.4f, ftransweight = 1.0f;
+        string readfilename;
+        bool bReadFile = false, bTestSelfCollision = false;
+        dReal frotweight = 0.4f, ftransweight = 1.0f, sampledegeneratecases = 0.2f, fthreshold = 0.0001f;
 
         RobotBasePtr robot;
         string cmd;
         while(!sinput.eof()) {
             sinput >> cmd;
-            if( !sinput )
+            if( !sinput ) {
                 break;
+            }
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
 
             if( cmd == "readfile" ) {
                 sinput >> readfilename;
                 bReadFile = true;
             }
-            else if( cmd == "genfile" ) {
-                sinput >> genfilename;
-                bGenFile = true;
-            }
-            else if( cmd == "numtests" )
+            else if( cmd == "numtests" ) {
                 sinput >> num_itrs;
-            else if( cmd == "rotonly" ) {
-                ftransweight = 0;
+            }
+            else if( cmd == "sampledegeneratecases" ) {
+                sinput >> sampledegeneratecases;
+            }
+            else if( cmd == "selfcollision" ) {
+                sinput >> bTestSelfCollision;
             }
             else if( cmd == "robot" ) {
                 string name;
@@ -692,8 +689,13 @@ public:
             }
         }
 
+        RobotBase::RobotStateSaver saver(robot);
+        if( !bTestSelfCollision ) {
+            robot->Enable(false);
+        }
+
         RobotBase::ManipulatorPtr pmanip = robot->GetActiveManipulator();
-        vector<dReal> vjoints(pmanip->GetArmIndices().size(),0), vrand(pmanip->GetArmIndices().size(),0);
+        vector<dReal> vrealsolution(pmanip->GetArmIndices().size(),0), vrand(pmanip->GetArmIndices().size(),0);
         vector<dReal> vlowerlimit, vupperlimit, viksolution;
         vector< vector<dReal> > viksolutions;
 
@@ -709,30 +711,28 @@ public:
             vupperlimit[i] = newupper;
         }
 
-        if(bGenFile) {
-            fsfile.open(genfilename.c_str(),ios_base::out);
-            fsfile << num_itrs <<endl;
-        }
         if(bReadFile) {
             fsfile.open(readfilename.c_str(),ios_base::in);
-            if(!fsfile.is_open())
-                {
-                    RAVELOG_ERROR("IKFastProblem::DebugIK - Error: Cannot open specified file.\n");
-                    return false;
-                }
-
+            if(!fsfile.is_open()) {
+                RAVELOG_ERROR("IKFastProblem::DebugIK - Error: Cannot open specified file.\n");
+                return false;
+            }
             fsfile >> num_itrs;
         }
 
         RaveInitRandomGeneration(GetMilliTime()); // have to seed a new number
-        vector<dReal> vfreeparams(pmanip->GetNumFreeParameters()) ,vfreeparams2(pmanip->GetNumFreeParameters());
 
         Transform twrist, twrist_out;
+        vector<dReal> vfreeparameters, vfreeparameters_out;
         int i = 0;
-        int success = 0;
+        boost::array<vector<pair<Transform, vector<dReal> > >, 3> vsolutionresults;
+        vector<pair<Transform, vector<dReal> > >& vwrongsolutions = vsolutionresults[0]; // wrong solution is returned
+        vector<pair<Transform, vector<dReal> > >& vnosolutions = vsolutionresults[1]; // no solution found
+        vector<pair<Transform, vector<dReal> > >& vnofullsolutions = vsolutionresults[2]; // solution returned, but not all of them
+        int success=0;
         while(i < num_itrs) {
             if(bReadFile) {
-                FOREACH(it, vjoints) {
+                FOREACH(it, vrealsolution) {
                     fsfile >> *it;
                 }
                 if( !fsfile ) {
@@ -742,274 +742,307 @@ public:
             else {
                 if( i == 0 ) {
                     // test the all 0s case (it is so common to get this imperfect)
-                    for(int j = 0; j < (int)vjoints.size(); j++) {
-                        vjoints[j] = 0;
+                    for(int j = 0; j < (int)vrealsolution.size(); j++) {
+                        vrealsolution[j] = 0;
                     }
                 }
                 else {
-                    for(int j = 0; j < (int)vjoints.size(); j++) {
-                        if( RaveRandomFloat() > 0.2f ) {
-                            vjoints[j] = vlowerlimit[j] + (vupperlimit[j]-vlowerlimit[j])*RaveRandomFloat();
+                    for(int j = 0; j < (int)vrealsolution.size(); j++) {
+                        if( RaveRandomFloat() > sampledegeneratecases ) {
+                            vrealsolution[j] = vlowerlimit[j] + (vupperlimit[j]-vlowerlimit[j])*RaveRandomFloat();
                         }
                         else {
                             switch(RaveRandomInt()%3) {
-                            case 0: vjoints[j] = CLAMP_ON_RANGE(dReal(-PI*0.5),vlowerlimit[j],vupperlimit[j]); break;
-                            case 2: vjoints[j] = CLAMP_ON_RANGE(dReal(PI*0.5),vlowerlimit[j],vupperlimit[j]); break;
-                            default: vjoints[j] = CLAMP_ON_RANGE(dReal(0),vlowerlimit[j],vupperlimit[j]); break;
+                            case 0: vrealsolution[j] = CLAMP_ON_RANGE(dReal(-PI*0.5),vlowerlimit[j],vupperlimit[j]); break;
+                            case 2: vrealsolution[j] = CLAMP_ON_RANGE(dReal(PI*0.5),vlowerlimit[j],vupperlimit[j]); break;
+                            default: vrealsolution[j] = CLAMP_ON_RANGE(dReal(0),vlowerlimit[j],vupperlimit[j]); break;
                             }
                         }
                     }
                 }
             }
 
-            robot->SetActiveDOFValues(vjoints,true);
-
-            if(GetEnv()->CheckCollision(KinBodyConstPtr(robot)) ) {
-                RAVELOG_VERBOSE("robot in collision\n");
-                continue;
-            }
-            if( robot->CheckSelfCollision()) {
+            robot->SetActiveDOFValues(vrealsolution,true);
+            twrist = pmanip->GetEndEffectorTransform();
+            if( bTestSelfCollision && robot->CheckSelfCollision()) {
                 RAVELOG_VERBOSE("robot in self-collision\n");
                 continue;
             }
 
-            GetEnv()->UpdatePublishedBodies();
-            RAVELOG_DEBUG("iteration %d\n",i);
-            twrist = pmanip->GetEndEffectorTransform();
-
-            if(bGenFile) {
-                FOREACH(it, vjoints)
-                    fsfile << *it << " ";  
-                fsfile << twrist << endl;
-            }
-
-            // find a random config
+            // have to start at a random config
             while(1) {
-                for(int j = 0; j < (int)vrand.size(); j++)
+                for(int j = 0; j < (int)vrand.size(); j++) {
                     vrand[j] = vlowerlimit[j] + (vupperlimit[j]-vlowerlimit[j])*RaveRandomFloat();
-        
+                }
                 robot->SetActiveDOFValues(vrand, true);
-                if(!GetEnv()->CheckCollision(KinBodyConstPtr(robot)) && !robot->CheckSelfCollision())
+                if(!bTestSelfCollision || !robot->CheckSelfCollision()) {
                     break;
+                }
             }
-            
-            if( !pmanip->FindIKSolution(twrist, viksolution, true) ) {    
+            RAVELOG_DEBUG("iteration %d\n",i);
+            bool bsuccess = true;
+            if( !pmanip->GetIkSolver()->GetFreeParameters(vfreeparameters) ) {
+                RAVELOG_WARN("failed to get freeparameters");
+            }
+            vfreeparameters_out.resize(vfreeparameters.size());
+
+            if( !pmanip->FindIKSolution(twrist, viksolution, 0) ) {
+                vnosolutions.push_back(make_pair(twrist,vfreeparameters));
+                bsuccess = false;
                 s.str("");
                 s << "FindIKSolution: No ik solution found, i = " << i << endl << "Joint Val: ";
-                FOREACH(it, vjoints)
+                FOREACH(it, vrealsolution) {
                     s << *it << " ";
+                }
                 s << endl << "Transform: " << twrist << endl;
                 TransformMatrix tm(pmanip->GetBase()->GetTransform().inverse()*twrist);
-                vector<dReal> vfree;
-                pmanip->GetFreeParameters(vfree);
                 s << "raw ik command: "
                   << tm.m[0] << " " << tm.m[1] << " " << tm.m[2] << " " << tm.trans[0] << " "
                   << tm.m[4] << " " << tm.m[5] << " " << tm.m[6] << " " << tm.trans[1] << " "
                   << tm.m[8] << " " << tm.m[9] << " " << tm.m[10] << " " << tm.trans[2] << " ";
-                FOREACH(itfree,vfree) {
-                    s << *itfree << " ";
-                }
-
-                s << endl << endl;
-                RAVELOG_WARN(s.str());
-                ++i;
-                continue;
-            }
-
-            robot->SetActiveDOFValues(viksolution, true);
-            twrist_out = pmanip->GetEndEffectorTransform();
-        
-            if(_TransformDistance2(twrist, twrist_out, frotweight, ftransweight) > 0.05f*0.05f) {
-                s.str("");
-                s << "FindIKSolution: Incorrect IK, i = " << i <<" error: " << RaveSqrt(_TransformDistance2(twrist, twrist_out, frotweight, ftransweight)) << endl
-                  << "Original Joint Val: ";
-                FOREACH(it, vjoints)
-                    s << *it << " ";
-                s << endl << "Returned Joint Val: ";
-                FOREACH(it, viksolution)
-                    s << *it << " ";
-                s << endl << "Transform in: " << twrist << endl;
-                s << "Transform out: " << twrist_out << endl;
-                TransformMatrix tm(pmanip->GetBase()->GetTransform().inverse()*twrist);
-                vector<dReal> vfree;
-                pmanip->GetFreeParameters(vfree);
-                s << "raw ik command: "
-                  << tm.m[0] << " " << tm.m[1] << " " << tm.m[2] << " " << tm.trans[0] << " "
-                  << tm.m[4] << " " << tm.m[5] << " " << tm.m[6] << " " << tm.trans[1] << " "
-                  << tm.m[8] << " " << tm.m[9] << " " << tm.m[10] << " " << tm.trans[2] << " ";
-                FOREACH(itfree,vfree) {
+                FOREACH(itfree,vfreeparameters) {
                     s << *itfree << " ";
                 }
                 s << endl << endl;
-                RAVELOG_ERROR(s.str());
-                ++i;
-                continue;
-            }
-        
-            // test the multiple solution function
-            robot->SetActiveDOFValues(vrand, true);
-            if( !pmanip->FindIKSolutions(twrist, viksolutions, true) ) {
-                s.str("");
-                s << "FindIKSolutions: No ik solution found for, i = " << i << endl << "Joint Val: ";
-                FOREACH(it, vjoints)
-                    s << *it << " ";
-                s << endl << "Transform: " << twrist << endl << endl;
                 RAVELOG_WARN(s.str());
-                ++i;
-                continue;
             }
-
-            bool bfail = false;
-            FOREACH(itsol, viksolutions) {
-                robot->SetActiveDOFValues(*itsol, true);
+            else {
+                robot->SetActiveDOFValues(viksolution);
                 twrist_out = pmanip->GetEndEffectorTransform();
-                if(_TransformDistance2(twrist, twrist_out, frotweight, ftransweight) > 0.05f*0.05f) {
+                if( !pmanip->GetIkSolver()->GetFreeParameters(vfreeparameters_out) ) {
+                    RAVELOG_WARN("failed to get freeparameters");
+                }
+                if(_TransformDistance2(twrist, twrist_out, frotweight, ftransweight) > fthreshold) {
+                    vwrongsolutions.push_back(make_pair(twrist,vfreeparameters_out));
+                    bsuccess = false;
                     s.str("");
-                    s << "FindIKSolutions: Incorrect IK, i = " << i << " error: " << RaveSqrt(_TransformDistance2(twrist, twrist_out, frotweight, ftransweight)) << endl
+                    s << "FindIKSolution: Incorrect IK, i = " << i <<" error: " << RaveSqrt(_TransformDistance2(twrist, twrist_out, frotweight, ftransweight)) << endl
                       << "Original Joint Val: ";
-                    FOREACH(it, vjoints)
+                    FOREACH(it, vrealsolution)
                         s << *it << " ";
                     s << endl << "Returned Joint Val: ";
-                    FOREACH(it, *itsol)
+                    FOREACH(it, viksolution)
                         s << *it << " ";
                     s << endl << "Transform in: " << twrist << endl;
                     s << "Transform out: " << twrist_out << endl;
                     TransformMatrix tm(pmanip->GetBase()->GetTransform().inverse()*twrist);
-                    vector<dReal> vfree;
-                    pmanip->GetFreeParameters(vfree);
                     s << "raw ik command: "
                       << tm.m[0] << " " << tm.m[1] << " " << tm.m[2] << " " << tm.trans[0] << " "
                       << tm.m[4] << " " << tm.m[5] << " " << tm.m[6] << " " << tm.trans[1] << " "
                       << tm.m[8] << " " << tm.m[9] << " " << tm.m[10] << " " << tm.trans[2] << " ";
-                    FOREACH(itfree,vfree) {
+                    FOREACH(itfree,vfreeparameters_out) {
                         s << *itfree << " ";
                     }
                     s << endl << endl;
                     RAVELOG_ERROR(s.str());
-                    bfail = true;
-                    break;
+                    ++i;
+                    continue;
                 }
             }
+        
+            // test all possible solutions
+            robot->SetActiveDOFValues(vrand, true);
+            if( !pmanip->FindIKSolutions(twrist, viksolutions, 0) ) {
+                FOREACH(itfree,vfreeparameters_out) {
+                    *itfree = -1;
+                }
+                vnosolutions.push_back(make_pair(twrist,vfreeparameters_out));
+                bsuccess = false;
+                s.str("");
+                s << "FindIKSolutions: No ik solution found for, i = " << i << endl << "Joint Val: ";
+                FOREACH(it, vrealsolution) {
+                    s << *it << " ";
+                }
+                s << endl << "Transform: " << twrist << endl << endl;
+                RAVELOG_WARN(s.str());
+            }
+            else {
+                bool bfail = false;
+                bool bfoundinput = false;
+                FOREACH(itsol, viksolutions) {
+                    robot->SetActiveDOFValues(*itsol, true);
+                    twrist_out = pmanip->GetEndEffectorTransform();
+                    if( !pmanip->GetIkSolver()->GetFreeParameters(vfreeparameters_out) ) {
+                        RAVELOG_WARN("failed to get freeparameters");
+                    }
+                    if(_TransformDistance2(twrist, twrist_out, frotweight, ftransweight) > fthreshold ) {
+                        vwrongsolutions.push_back(make_pair(twrist,vfreeparameters_out));
+                        s.str("");
+                        s << "FindIKSolutions: Incorrect IK, i = " << i << " error: " << RaveSqrt(_TransformDistance2(twrist, twrist_out, frotweight, ftransweight)) << endl
+                          << "Original Joint Val: ";
+                        FOREACH(it, vrealsolution)
+                            s << *it << " ";
+                        s << endl << "Returned Joint Val: ";
+                        FOREACH(it, *itsol)
+                            s << *it << " ";
+                        s << endl << "Transform in: " << twrist << endl;
+                        s << "Transform out: " << twrist_out << endl;
+                        TransformMatrix tm(pmanip->GetBase()->GetTransform().inverse()*twrist);
+                        s << "raw ik command: "
+                          << tm.m[0] << " " << tm.m[1] << " " << tm.m[2] << " " << tm.trans[0] << " "
+                          << tm.m[4] << " " << tm.m[5] << " " << tm.m[6] << " " << tm.trans[1] << " "
+                          << tm.m[8] << " " << tm.m[9] << " " << tm.m[10] << " " << tm.trans[2] << " ";
+                        FOREACH(itfree,vfreeparameters_out) {
+                            s << *itfree << " ";
+                        }
+                        s << endl << endl;
+                        RAVELOG_ERROR(s.str());
+                        bfail = true;
+                        break;
+                    }
+                    robot->SubtractActiveDOFValues(*itsol,vrealsolution);
+                    dReal diff = 0;
+                    FOREACHC(it,*itsol) {
+                        diff += *it**it;
+                    }
+                    if( diff <= fthreshold ) {
+                        bfoundinput = true;
+                    }
+                }
 
-            if( bfail ) {
-                ++i;
-                continue;
+                if( bfail ) {
+                    ++i;
+                    continue;
+                }
+                if( !bfoundinput ) {
+                    FOREACH(itfree,vfreeparameters_out) {
+                        *itfree = -1;
+                    }
+                    vnofullsolutions.push_back(make_pair(twrist,vfreeparameters_out));
+                }                
             }
 
-            if( pmanip->GetNumFreeParameters() == 0 ) {
-                success++;
+            if( pmanip->GetIkSolver()->GetNumFreeParameters() == 0 ) {
+                if( bsuccess ) {
+                    success++;
+                }
                 i++;
                 continue;
             }
 
             // test with the free parameters
             robot->SetActiveDOFValues(vrand, true);
-            if( !DebugIKFindSolution(pmanip, twrist, viksolution, true, vfreeparams, vfreeparams.size()-1) ) {
+            if( !DebugIKFindSolution(pmanip, twrist, viksolution, 0, vfreeparameters, vfreeparameters_out.size()-1) ) {
+                vnosolutions.push_back(make_pair(twrist,vfreeparameters));
+                bsuccess = false;
                 s.str("");
                 s << "FindIKSolution (freeparams: ";
-                FOREACH(itfree,vfreeparams) {
+                FOREACH(itfree,vfreeparameters) {
                     s << *itfree << " ";
                 }
                 s << "): No ik solution found, i = " << i << endl << "Joint Val: ";
-                for(size_t j = 0; j < vjoints.size(); j++)
-                    s << vjoints[j] << " ";
+                for(size_t j = 0; j < vrealsolution.size(); j++) {
+                    s << vrealsolution[j] << " ";
+                }
                 s << endl << "Transform: " << twrist << endl << endl;
                 RAVELOG_WARN(s.str());
-                ++i;
-                continue;
             }
-
-            robot->SetActiveDOFValues(viksolution, true);
-            twrist_out = pmanip->GetEndEffectorTransform();
-        
-            if(_TransformDistance2(twrist, twrist_out, frotweight, ftransweight) > 0.05f*0.05f) {
-                s.str("");
-                s << "FindIKSolution (freeparams): Incorrect IK, i = " << i << " error: " << RaveSqrt(_TransformDistance2(twrist, twrist_out, frotweight, ftransweight)) << endl
-                  << "freeparams: ";
-                FOREACH(it, vfreeparams)
-                    s << *it << " ";
-                s << endl << "Original Joint Val: ";
-                FOREACH(it, vjoints)
-                    s << *it << " ";
-                s << endl << "Returned Joint Val: ";
-                FOREACH(it, viksolution)
-                    s << *it << " ";
-                s << endl << "Transform in: " << twrist << endl;
-                s << "Transform out: " << twrist_out << endl << endl;
-                RAVELOG_ERROR(s.str());
-                ++i;
-                continue;
-            }
-
-            if( !pmanip->GetFreeParameters(vfreeparams2) ) {
-                RAVELOG_ERROR("failed to get free parameters\n");
-                ++i;
-                continue;
-            }
-
-            // make sure they are the same
-            for(int j = 0; j < pmanip->GetNumFreeParameters(); ++j) {
-                if( fabsf(vfreeparams[j]-vfreeparams2[j]) > 0.01f ) {
-                    RAVELOG_WARN("free params %d not equal: %f!=%f\n", j, vfreeparams[j], vfreeparams2[j]);
-                    pmanip->GetFreeParameters(vfreeparams2);
+            else {
+                robot->SetActiveDOFValues(viksolution, true);
+                twrist_out = pmanip->GetEndEffectorTransform();
+                if(_TransformDistance2(twrist, twrist_out, frotweight, ftransweight) > fthreshold ) {
+                    vwrongsolutions.push_back(make_pair(twrist,vfreeparameters));
+                    bsuccess = false;
+                    s.str("");
+                    s << "FindIKSolution (freeparams): Incorrect IK, i = " << i << " error: " << RaveSqrt(_TransformDistance2(twrist, twrist_out, frotweight, ftransweight)) << endl
+                      << "freeparams: ";
+                    FOREACH(it, vfreeparameters) {
+                        s << *it << " ";
+                    }
+                    s << endl << "Original Joint Val: ";
+                    FOREACH(it, vrealsolution) {
+                        s << *it << " ";
+                    }
+                    s << endl << "Returned Joint Val: ";
+                    FOREACH(it, viksolution) {
+                        s << *it << " ";
+                    }
+                    s << endl << "Transform in: " << twrist << endl;
+                    s << "Transform out: " << twrist_out << endl << endl;
+                    RAVELOG_ERROR(s.str());
                     ++i;
                     continue;
+                }
+
+                // make sure they are the same
+                if( !pmanip->GetIkSolver()->GetFreeParameters(vfreeparameters_out) ) {
+                    RAVELOG_WARN("failed to get freeparameters");
+                }
+                for(int j = 0; j < pmanip->GetIkSolver()->GetNumFreeParameters(); ++j) {
+                    if( fabsf(vfreeparameters.at(j)-vfreeparameters_out.at(j)) > 0.0001f ) {
+                        RAVELOG_WARN(str(boost::format("free params %d not equal: %f!=%f\n")%j%vfreeparameters[j]%vfreeparameters_out[j]));
+                        vnofullsolutions.push_back(make_pair(twrist,vfreeparameters));
+                        bsuccess = false;
+                        break;
+                    }
                 }
             }
         
             // test the multiple solution function
             robot->SetActiveDOFValues(vrand, true);
-            viksolution.resize(0);
-            DebugIKFindSolutions(pmanip, twrist, viksolutions, true, vfreeparams, vfreeparams.size()-1);
-
+            viksolutions.resize(0);
+            DebugIKFindSolutions(pmanip, twrist, viksolutions, 0, vfreeparameters_out, vfreeparameters_out.size()-1);
             if( viksolutions.size() == 0 ) {
+                vnosolutions.push_back(make_pair(twrist,vfreeparameters_out));
+                bsuccess = false;
                 s.str("");
                 s << "FindIKSolutions (freeparams): No ik solution found for, i = " << i << endl << "Joint Val: ";
-                for(size_t j = 0; j < vjoints.size(); j++)
-                    s << vjoints[j] << " ";
+                for(size_t j = 0; j < vrealsolution.size(); j++)
+                    s << vrealsolution[j] << " ";
                 s << endl << "Transform: " << twrist << endl << endl;
                 RAVELOG_WARN(s.str());
-                ++i;
-                continue;
             }
-
-            bfail = false;
-            FOREACH(itsol, viksolutions) {
-                robot->SetActiveDOFValues(*itsol, true);
-                twrist_out = pmanip->GetEndEffectorTransform();
-                if(_TransformDistance2(twrist, twrist_out, frotweight, ftransweight) > 0.05f*0.05f) {
-                    s.str("");
-                    s << "FindIKSolutions (freeparams): Incorrect IK, i = " << i <<" error: " << RaveSqrt(_TransformDistance2(twrist, twrist_out, frotweight, ftransweight)) << endl
-                      << "Original Joint Val: ";
-                    FOREACH(it, vjoints)
-                        s << *it << " ";
-                    s << endl << "Returned Joint Val: ";
-                    FOREACH(it, *itsol)
-                        s << *it << " ";
-                    s << endl << "Transform in: " << twrist << endl;
-                    s << "Transform out: " << twrist_out << endl;
-                    TransformMatrix tm(pmanip->GetBase()->GetTransform().inverse()*twrist);
-                    s << "raw ik command: "
-                      << tm.m[0] << " " << tm.m[1] << " " << tm.m[2] << " " << tm.trans[0] << " "
-                      << tm.m[4] << " " << tm.m[5] << " " << tm.m[6] << " " << tm.trans[1] << " "
-                      << tm.m[8] << " " << tm.m[9] << " " << tm.m[10] << " " << tm.trans[2] << endl << endl;
-                    RAVELOG_ERROR(s.str());
-                    bfail = true;
-                    break;
+            else {
+                bool bfail = false;
+                FOREACH(itsol, viksolutions) {
+                    robot->SetActiveDOFValues(*itsol, true);
+                    twrist_out = pmanip->GetEndEffectorTransform();
+                    if(_TransformDistance2(twrist, twrist_out, frotweight, ftransweight) > fthreshold ) {
+                        s.str("");
+                        s << "FindIKSolutions (freeparams): Incorrect IK, i = " << i <<" error: " << RaveSqrt(_TransformDistance2(twrist, twrist_out, frotweight, ftransweight)) << endl
+                          << "Original Joint Val: ";
+                        FOREACH(it, vrealsolution) {
+                            s << *it << " ";
+                        }
+                        s << endl << "Returned Joint Val: ";
+                        FOREACH(it, *itsol) {
+                            s << *it << " ";
+                        }
+                        s << endl << "Transform in: " << twrist << endl;
+                        s << "Transform out: " << twrist_out << endl;
+                        TransformMatrix tm(pmanip->GetBase()->GetTransform().inverse()*twrist);
+                        s << "raw ik command: "
+                          << tm.m[0] << " " << tm.m[1] << " " << tm.m[2] << " " << tm.trans[0] << " "
+                          << tm.m[4] << " " << tm.m[5] << " " << tm.m[6] << " " << tm.trans[1] << " "
+                          << tm.m[8] << " " << tm.m[9] << " " << tm.m[10] << " " << tm.trans[2] << endl << endl;
+                        RAVELOG_ERROR(s.str());
+                        bfail = true;
+                        break;
+                    }
+                }
+                if( bfail ) {
+                    ++i;
+                    continue;
                 }
             }
 
-            if( bfail ) {
-                ++i;
-                continue;
+            if( bsuccess ) {
+                success++;
             }
-
-            success++;
             i++;
         }
 
-        RAVELOG_INFOA("DebugIK done, success rate %f.\n", (float)success/(float)num_itrs);
-        sout << (float)success/(float)num_itrs;
+        RAVELOG_DEBUG(str(boost::format("DebugIK done, rates %f, %f, %f, %f\n")%((float)success/(float)num_itrs)%((float)vnofullsolutions.size()/(float)num_itrs)%((float)vnosolutions.size()/(float)num_itrs)%((float)vwrongsolutions.size()/(float)num_itrs)));
+        sout << num_itrs << " " << success << " ";
+        FOREACH(itresults,vsolutionresults) {
+            sout << itresults->size() << " ";
+            FOREACH(it, *itresults) {
+                sout << it->first << " ";
+                FOREACH(itfree,it->second) {
+                    sout << *itfree << " ";
+                }
+            }
+        }
         return true;
     }
 

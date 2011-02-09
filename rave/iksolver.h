@@ -139,11 +139,13 @@ public:
     /// \exception openrave_exception Throw if filters are not supported.
     virtual void SetCustomFilter(const IkFilterCallbackFn& filterfn) { throw openrave_exception("ik filters ignored",ORE_NotImplemented); }
 
-    /// \return Number of free parameters defining the null solution space.
-    ///         Each parameter is always in the range of [0,1].
+    /// \brief Number of free parameters defining the null solution space.
+    ///
+    /// Each parameter is always in the range of [0,1].
     virtual int GetNumFreeParameters() const = 0;
 
-    /// gets the free parameters from the current robot configuration
+    /// \brief gets the free parameters from the current robot configuration
+    ///
     /// \param[out] vFreeParameters is filled with GetNumFreeParameters() parameters in [0,1] range
     /// \return true if succeeded
     virtual bool GetFreeParameters(std::vector<dReal>& vFreeParameters) const = 0;

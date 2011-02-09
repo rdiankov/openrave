@@ -407,7 +407,7 @@ class InverseKinematicsModel(OpenRAVEModel):
             self.robot.Enable(False) # removes self-collisions from being considered
             # set base to identity to avoid complications when reporting errors
             self.robot.SetTransform(dot(linalg.inv(self.manip.GetBase().GetTransform()),self.robot.GetTransform()))
-            lower,upper = [v[self.manip.GetArmIndices()] for v in self.robot.GetJointLimits()]
+            lower,upper = [v[self.manip.GetArmIndices()] for v in self.robot.GetDOFLimits()]
 
             # get the values to test
             success = 0.0
@@ -524,7 +524,19 @@ class InverseKinematicsModel(OpenRAVEModel):
                     cmd += 'numtests %d '%int(iktests)
                 else:
                     cmd += 'readfile %s '%iktests
-                successrate = float(self.ikfastproblem.SendCommand(cmd))
+                res = self.ikfastproblem.SendCommand(cmd).split()
+                numtested = float(res[0])
+                successrate = float(res[1])/numtested
+                solutionresults = []
+                index = 2
+                numfree=self.manip.GetIkSolver().GetNumFreeParameters()
+                for iresults in range(3):
+                    num = int(res[index])
+                    index += 1
+                    samples = reshape(array([float64(s) for s in res[index:(index+num*(7+numfree))]]),(num,7+numfree))
+                    solutionresults.append(samples)
+                    index += num*(7+numfree)
+                print 'success rate: %f, wrong solutions: %f, no solutions: %f, missing solution: %f'%(float(res[1])/numtested,len(solutionresults[0])/numtested,len(solutionresults[1])/numtested,len(solutionresults[2])/numtested)
         return successrate
 
     @staticmethod

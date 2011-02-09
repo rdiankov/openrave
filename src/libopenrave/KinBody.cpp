@@ -1154,7 +1154,7 @@ Vector KinBody::Joint::GetAxis(int iaxis) const
     return !_attachedbodies[0] ? _tLeft.rotate(vAxes.at(iaxis)) : _attachedbodies[0]->GetTransform().rotate(_tLeft.rotate(vAxes.at(iaxis)));
 }
 
-void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1)
+void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1, const Vector& vanchorraw)
 {
     if( !plink0 || !plink1 ) {
         throw openrave_exception(str(boost::format("one or more attached _attachedbodies are invalid for joint %s\n")%GetName()),ORE_InvalidArguments);
@@ -1164,7 +1164,8 @@ void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1)
     _attachedbodies[0] = plink0;
     _attachedbodies[1] = plink1;
     Transform trel, tbody0, tbody1;
-    
+    Vector vanchor=vanchorraw;
+
     // make sure first body is always closer to the root, unless the second body is static
     if( !_attachedbodies[1]->IsStatic() ) {
         if( _attachedbodies[0]->IsStatic() ) {
@@ -1667,7 +1668,6 @@ void KinBody::Joint::serialize(std::ostream& o, int options) const
         for(int i = 0; i < GetDOF(); ++i) {
             SerializeRound(o,_offsets[i]);
         }
-        SerializeRound3(o,vanchor); // not needed! remove?
         for(int i = 0; i < GetDOF(); ++i) {
             SerializeRound3(o,vAxes[i]);
             if( !!_vmimic.at(i) ) {
@@ -3629,12 +3629,11 @@ void KinBody::_ComputeInternalInformation()
             }
             else if( parentlinkindex != (*itjoint)->GetFirstAttached()->GetIndex() ) {
                 // have to swap order
-                Transform tswap = (*itjoint)->GetSecondAttached()->GetTransform().inverse() * (*itjoint)->GetFirstAttached()->GetTransform();
+                Transform tswap = (*itjoint)->GetSecondAttached()->GetTransform().inverse() * (*itjoint)->GetFirstAttached()->GetTransform() * (*itjoint)->GetInternalHierarchyLeftTransform();
                 for(int idof = 0; idof < (*itjoint)->GetDOF(); ++idof) {
                     (*itjoint)->vAxes[idof] = -tswap.rotate((*itjoint)->vAxes[idof]);
                 }
-                (*itjoint)->vanchor = tswap*(*itjoint)->vanchor;
-                (*itjoint)->_ComputeInternalInformation((*itjoint)->GetSecondAttached(),(*itjoint)->GetFirstAttached());
+                (*itjoint)->_ComputeInternalInformation((*itjoint)->GetSecondAttached(),(*itjoint)->GetFirstAttached(),tswap.trans);
             }
         }
         // find out what links are affected by what joints.

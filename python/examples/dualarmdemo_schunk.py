@@ -149,7 +149,7 @@ def run(args=None):
         while True:
             # initialize
             with env:
-                jointvalues=schunk.robot.GetJointValues()
+                jointvalues=schunk.robot.GetDOFValues()
                 schunk.robot.SetActiveManipulator(schunk.rightArm)
                 obj=env.GetKinBody('Object1')
                 while True:

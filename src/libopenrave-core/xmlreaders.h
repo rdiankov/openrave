@@ -1233,13 +1233,10 @@ namespace OpenRAVEXMLParser
                 }
 
                 toffsetfrom = attachedbodies[0]->GetTransform().inverse() * toffsetfrom;
-
-                _pjoint->vanchor = toffsetfrom*_pjoint->vanchor;
                 for(int i = 0; i < _pjoint->GetDOF(); ++i) {
                     _pjoint->vAxes[i] = toffsetfrom.rotate(_pjoint->vAxes[i]);
                 }
-
-                _pjoint->_ComputeInternalInformation(attachedbodies[0],attachedbodies[1]);
+                _pjoint->_ComputeInternalInformation(attachedbodies[0],attachedbodies[1],toffsetfrom*_vanchor);
                 return true;
             }
             else if( xmlname == "weight" ) {
@@ -1339,7 +1336,7 @@ namespace OpenRAVEXMLParser
                 switch(_pjoint->_type) {
                 case KinBody::Joint::JointHinge:
                     if( xmlname == "anchor" )
-                        _ss >> _pjoint->vanchor.x >> _pjoint->vanchor.y >> _pjoint->vanchor.z;
+                        _ss >> _vanchor.x >> _vanchor.y >> _vanchor.z;
                     else if( xmlname == "axis" ) {
                         _ss >> _pjoint->vAxes[0].x >> _pjoint->vAxes[0].y >> _pjoint->vAxes[0].z;
                         _pjoint->vAxes[0].normalize3();
@@ -1353,7 +1350,7 @@ namespace OpenRAVEXMLParser
                     break;
                 case KinBody::Joint::JointUniversal:
                     if( xmlname == "anchor" )
-                        _ss >> _pjoint->vanchor.x >> _pjoint->vanchor.y >> _pjoint->vanchor.z;
+                        _ss >> _vanchor.x >> _vanchor.y >> _vanchor.z;
                     else if( xmlname == "axis1" ) {
                         _ss >> _pjoint->vAxes[0].x >> _pjoint->vAxes[0].y >> _pjoint->vAxes[0].z;
                         _pjoint->vAxes[0].normalize3();
@@ -1365,7 +1362,7 @@ namespace OpenRAVEXMLParser
                     break;
                 case KinBody::Joint::JointHinge2:
                     if( xmlname == "anchor" )
-                        _ss >> _pjoint->vanchor.x >> _pjoint->vanchor.y >> _pjoint->vanchor.z;
+                        _ss >> _vanchor.x >> _vanchor.y >> _vanchor.z;
                     else if( xmlname == "axis1" ) {
                         _ss >> _pjoint->vAxes[0].x >> _pjoint->vAxes[0].y >> _pjoint->vAxes[0].z;
                         _pjoint->vAxes[0].normalize3();
@@ -1377,7 +1374,7 @@ namespace OpenRAVEXMLParser
                     break;
                 case KinBody::Joint::JointSpherical:
                     if( xmlname == "anchor" )
-                        _ss >> _pjoint->vanchor.x >> _pjoint->vanchor.y >> _pjoint->vanchor.z;
+                        _ss >> _vanchor.x >> _vanchor.y >> _vanchor.z;
                     break;
                 default:
                     throw openrave_exception(str(boost::format("bad joint type: 0x%x")%_pjoint->_type));
@@ -1407,6 +1404,7 @@ namespace OpenRAVEXMLParser
         KinBody::LinkPtr _offsetfrom; ///< all transforms are relative to this body
         KinBodyPtr _pparent;
         KinBody::JointPtr& _pjoint;
+        Vector _vanchor;
         bool _bNegateJoint;
         string _processingtag;
         boost::array<KinBody::LinkPtr,2> attachedbodies;

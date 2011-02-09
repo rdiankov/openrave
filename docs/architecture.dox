@@ -396,7 +396,7 @@ Assuming that there exists a plugin with a controller interface named \b MyContr
  - add a \b <controller> tag in the openrave robot XML file like this:
 \verbatim
 <robot file="robots/schunk-lwa3.robot.xml">
-  <controller type="MyController" args="controller arguments here"></controller>
+  <controller type="MyController controller arguments here"></controller>
 </robot>
 \endverbatim
  - It is also possible to set a controller outside of the robot definition by specifying the robot's name. For example: 
@@ -404,22 +404,27 @@ Assuming that there exists a plugin with a controller interface named \b MyContr
 <environment>
   <robot name="schunk-lwa3" file="robots/schunk-lwa3.robot.xml">
   </robot>
-  <controller type="MyController" robot="schunk-lwa3" args="controller arguments here"></controller>
+  <controller type="MyController" robot="schunk-lwa3 controller arguments here"></controller>
   </environment>
 \endverbatim
 
 - C++ 
 \code
 RobotBasePtr probot = GetEnv()->GetRobot("schunk-lwa3");
-ControllerBasePtr pcontroller = GetEnv()->CreateController("MyController");
-probot->SetController(pcontroller,"controller arguments here");
+ControllerBasePtr pcontroller = GetEnv()->CreateController("MyController controller arguments here");
+vector<int> dofindices(probot->GetDOF());
+for(int i = 0; i < probot->GetDOF(); ++i) {
+    dofindices[i] = i;
+}
+int nControlTransformation = 1;
+probot->SetController(pcontroller,dofindices,nControlTransformation);
 \endcode
 
 - Python 
 \code
 robot = env.GetRobot('schunk-lwa3')
-controller = env.CreateController('MyController')
-robot.SetController(controller,'controller arguments here')
+controller = env.CreateController('MyController controller arguments here')
+robot.SetController(controller,range(robot.GetDOF()),controltransform=1)
 \endcode
 
 - Octave/MATLAB 

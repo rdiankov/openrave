@@ -146,7 +146,7 @@ class CM
         int _numsamples = numsamples;
 
         vector< vector<dReal> > viksolutions;
-        vector<dReal> vfree(pmanip->GetNumFreeParameters());
+        vector<dReal> vfree(pmanip->GetIkSolver()->GetNumFreeParameters());
         for(int iter = 0; iter < 50*numsamples; ++iter) {
             for(int i = 0; i < (int)vfree.size(); ++i) {
                 vfree[i] = RaveRandomFloat();

@@ -846,9 +846,6 @@ class ColladaReader : public daeErrorHandler
                 pjoint->_vlowerlimit.resize(vdomaxes.getCount());
                 pjoint->_vupperlimit.resize(vdomaxes.getCount());
 
-                // Transform applied to the joint
-                pjoint->vanchor = tatt.trans;
-
                 for (size_t ic = 0; ic < vdomaxes.getCount(); ++ic) {
                     domKinematics_axis_infoRef kinematics_axis_info;
                     domMotion_axis_infoRef motion_axis_info;
@@ -947,7 +944,7 @@ class ColladaReader : public daeErrorHandler
                     pjoint->vAxes[ic] = tatt.rotate(pjoint->vAxes[ic]);
                 }
                 RAVELOG_DEBUG(str(boost::format("joint dof: %d, link %s\n")%pjoint->dofindex%plink->GetName()));
-                pjoint->_ComputeInternalInformation(plink,pchildlink);
+                pjoint->_ComputeInternalInformation(plink,pchildlink,tatt.trans);
             }
             if( pdomlink->getAttachment_start_array().getCount() > 0 ) {
                 RAVELOG_WARN("openrave collada reader does not support attachment_start\n");

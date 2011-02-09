@@ -66,6 +66,12 @@ public:
         /// \deprecated (10/07/29)
         virtual bool HasIKSolver() const RAVE_DEPRECATED { return !!_pIkSolver; }
 
+        /// \deprecated (11/02/08) use GetIkSolver()->GetNumFreeParameters()
+        virtual int GetNumFreeParameters() const RAVE_DEPRECATED;
+
+        /// \deprecated (11/02/08) use GetIkSolver()->GetFreeParameters()
+        virtual bool GetFreeParameters(std::vector<dReal>& vFreeParameters) const RAVE_DEPRECATED;
+
         /// the base used for the iksolver
         virtual LinkPtr GetBase() const { return _pBase; }
 
@@ -97,16 +103,6 @@ public:
 
         /// direction of palm/head/manipulator used for approaching inside the grasp coordinate system
         virtual Vector GetDirection() const { return _vdirection; }
-
-        /// \brief Number of free parameters defining the null solution space.
-        ///
-        /// Each parameter is always in the range of [0,1].
-        virtual int GetNumFreeParameters() const;
-
-        /// gets the free parameters from the current robot configuration
-        /// \param vFreeParameters is filled with GetNumFreeParameters() parameters in [0,1] range
-        /// \return true if succeeded
-        virtual bool GetFreeParameters(std::vector<dReal>& vFreeParameters) const;
 
         /// will find a close solution to the current robot's joint values. The function is a wrapper around the IkSolver interface.
         /// Note that the solution returned is not guaranteed to be the closest solution. In order to compute that, will have to

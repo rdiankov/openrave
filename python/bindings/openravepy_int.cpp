@@ -200,6 +200,7 @@ public:
 
     object SendCommand(const string& in) {
         stringstream sin(in), sout;
+        sout << std::setprecision(std::numeric_limits<dReal>::digits10+1); /// have to do this or otherwise precision gets lost
         if( !_pbase->SendCommand(sout,sin) ) {
             return object();
         }
@@ -665,6 +666,7 @@ public:
 
     object GetJointValues() const
     {
+        RAVELOG_WARN("KinBody.GetJointValues deprecated, use KinBody.GetDOFValues\n");
         vector<dReal> values;
         _pbody->GetDOFValues(values);
         return toPyArray(values);
@@ -672,6 +674,7 @@ public:
 
     object GetJointVelocities() const
     {
+        RAVELOG_WARN("KinBody.GetJointVelocities deprecated, use KinBody.GetDOFVelocities\n");
         vector<dReal> values;
         _pbody->GetDOFVelocities(values);
         return toPyArray(values);
@@ -679,18 +682,21 @@ public:
 
     object GetJointLimits() const
     {
+        RAVELOG_WARN("KinBody.GetJointLimits deprecated, use KinBody.GetDOFLimits\n");
         vector<dReal> vlower, vupper;
         _pbody->GetDOFLimits(vlower,vupper);
         return boost::python::make_tuple(toPyArray(vlower),toPyArray(vupper));
     }
     object GetJointMaxVel() const
     {
+        RAVELOG_WARN("KinBody.GetJointMaxVel deprecated, use KinBody.GetDOFMaxVel\n");
         vector<dReal> values;
         _pbody->GetDOFMaxVel(values);
         return toPyArray(values);
     }
     object GetJointWeights() const
     {
+        RAVELOG_WARN("KinBody.GetJointWeights deprecated, use KinBody.GetDOFWeights\n");
         vector<dReal> values;
         _pbody->GetDOFWeights(values);
         return toPyArray(values);
@@ -1048,6 +1054,7 @@ public:
 
     string serialize(int options) const {
         stringstream ss;
+        ss << std::setprecision(std::numeric_limits<dReal>::digits10+1); /// have to do this or otherwise precision gets lost
         _pbody->serialize(ss,options);
         return ss.str();
     }
@@ -1083,6 +1090,7 @@ public:
         {
             Vector vpos = ExtractVector3(pos), vnorm = ExtractVector3(norm);
             stringstream ss;
+            ss << std::setprecision(std::numeric_limits<dReal>::digits10+1); /// have to do this or otherwise precision gets lost
             ss << "pos=["<<vpos.x<<", "<<vpos.y<<", "<<vpos.z<<"], norm=["<<vnorm.x<<", "<<vnorm.y<<", "<<vnorm.z<<"]";
             return ss.str();
         }
@@ -1447,6 +1455,16 @@ public:
     virtual ~PyIkSolverBase() {}
 
     IkSolverBasePtr GetIkSolver() { return _pIkSolver; }
+
+    int GetNumFreeParameters() const { return _pIkSolver->GetNumFreeParameters(); }
+    object GetFreeParameters() const {
+        if( _pIkSolver->GetNumFreeParameters() == 0 ) {
+            return numeric::array(boost::python::list());
+        }
+        vector<dReal> values;
+        _pIkSolver->GetFreeParameters(values);
+        return toPyArray(values);
+    }
 };
 
 class PyRobotBase : public PyKinBody
@@ -1484,13 +1502,15 @@ public:
         object GetDirection() { return toPyVector3(_pmanip->GetDirection()); }
         bool IsGrabbing(PyKinBodyPtr pbody) { return _pmanip->IsGrabbing(pbody->GetBody()); }
 
-        int GetNumFreeParameters() const { return _pmanip->GetNumFreeParameters(); }
+        int GetNumFreeParameters() const { RAVELOG_WARN("Manipulator::GetNumFreeParameters() is deprecated\n"); return _pmanip->GetIkSolver()->GetNumFreeParameters(); }
 
         object GetFreeParameters() const {
-            if( _pmanip->GetNumFreeParameters() == 0 )
+            RAVELOG_WARN("Manipulator::GetFreeParameters() is deprecated\n"); 
+            if( _pmanip->GetIkSolver()->GetNumFreeParameters() == 0 ) {
                 return numeric::array(boost::python::list());
+            }
             vector<dReal> values;
-            _pmanip->GetFreeParameters(values);
+            _pmanip->GetIkSolver()->GetFreeParameters(values);
             return toPyArray(values);
         }
 
@@ -2070,6 +2090,7 @@ public:
         string __repr__() { return boost::str(boost::format("<PlannerParameters(dof=%d)>")%_paramsread->GetDOF()); }
         string __str__() {
             stringstream ss;
+            ss << std::setprecision(std::numeric_limits<dReal>::digits10+1); /// have to do this or otherwise precision gets lost
             ss << *_paramsread << endl;
             return ss.str();
         }
@@ -4195,7 +4216,10 @@ In python, the syntax is::\n\n\
     class_<PyProblemInstance, boost::shared_ptr<PyProblemInstance>, bases<PyInterfaceBase> >("Problem", DOXY_CLASS(ProblemInstance), no_init)
         .def("SimulationStep",&PyProblemInstance::SimulationStep, DOXY_FN(ProblemInstance,"SimulationStep"))
         ;
-    class_<PyIkSolverBase, boost::shared_ptr<PyIkSolverBase>, bases<PyInterfaceBase> >("IkSolver", DOXY_CLASS(IkSolverBase), no_init);
+    class_<PyIkSolverBase, boost::shared_ptr<PyIkSolverBase>, bases<PyInterfaceBase> >("IkSolver", DOXY_CLASS(IkSolverBase), no_init)
+        .def("GetNumFreeParameters",&PyIkSolverBase::GetNumFreeParameters, DOXY_FN(IkSolverBase,GetNumFreeParameters))
+        .def("GetFreeParameters",&PyIkSolverBase::GetFreeParameters, DOXY_FN(IkSolverBase,GetFreeParameters))
+        ;
 
     class_<PyPhysicsEngineBase, boost::shared_ptr<PyPhysicsEngineBase>, bases<PyInterfaceBase> >("PhysicsEngine", DOXY_CLASS(PhysicsEngineBase), no_init)
         .def("GetPhysicsOptions",&PyPhysicsEngineBase::GetPhysicsOptions, DOXY_FN(PhysicsEngineBase,GetPhysicsOptions))

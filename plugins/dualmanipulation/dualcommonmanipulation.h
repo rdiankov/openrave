@@ -102,7 +102,7 @@ class CM
         int _numsamples = numsamples;
 
         vector< vector<dReal> > viksolutions;
-        vector<dReal> vfree(pmanip->GetNumFreeParameters());
+        vector<dReal> vfree(pmanip->GetIkSolver()->GetNumFreeParameters());
         for(int iter = 0; iter < 50*numsamples; ++iter) {//it puts random values in vfree params and checks to see if there is an IK solution for that config..and returns the numspamples as soon as adequate number of soulutions have been found..thats the reson why we use 50*numsamples
             for(int i = 0; i < (int)vfree.size(); ++i)
                 vfree[i] = RaveRandomFloat();

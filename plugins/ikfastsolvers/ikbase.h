@@ -52,13 +52,15 @@ class IkFastSolver : public IkSolverBase
         probot->GetActiveDOFLimits(_qlower,_qupper);
         _vfreeparamscales.resize(0);
         FOREACH(itfree, _vfreeparams) {
-            if( *itfree < 0 || *itfree >= (int)_qlower.size() )
+            if( *itfree < 0 || *itfree >= (int)_qlower.size() ) {
                 throw openrave_exception(str(boost::format("free parameter idx %d out of bounds\n")%*itfree));
-
-            if( _qupper[*itfree] > _qlower[*itfree] )
+            }
+            if( _qupper[*itfree] > _qlower[*itfree] ) {
                 _vfreeparamscales.push_back(1.0f/(_qupper[*itfree]-_qlower[*itfree]));
-            else
+            }
+            else {
                 _vfreeparamscales.push_back(0.0f);
+            }
         }
     }
 
@@ -119,7 +121,6 @@ class IkFastSolver : public IkSolverBase
             RAVELOG_WARN(str(boost::format("ik solver only supports type %d, given %d\n")%_iktype%param.GetType()));
             return false;
         }
-
         RobotBase::ManipulatorPtr pmanip(_pmanip);
         if( (filteroptions&IKFO_CheckEnvCollisions) && _CheckIndependentCollision(pmanip) ) {
             return false;
@@ -131,8 +132,9 @@ class IkFastSolver : public IkSolverBase
         std::vector<IKReal> vfree(_vfreeparams.size());
         qSolutions.resize(0);
         bool bCheckEndEffector = true;
-        if( ComposeSolution(_vfreeparams, vfree, 0, vector<dReal>(), boost::bind(&IkFastSolver::_SolveAll,shared_solver(), param,boost::ref(vfree),filteroptions,boost::ref(qSolutions),boost::ref(bCheckEndEffector))) == SR_Quit )
+        if( ComposeSolution(_vfreeparams, vfree, 0, vector<dReal>(), boost::bind(&IkFastSolver::_SolveAll,shared_solver(), param,boost::ref(vfree),filteroptions,boost::ref(qSolutions),boost::ref(bCheckEndEffector))) == SR_Quit ) {
             return false;
+        }
         return qSolutions.size()>0;
     }
 
@@ -153,8 +155,9 @@ class IkFastSolver : public IkSolverBase
         RobotBase::RobotStateSaver saver(probot);
         probot->SetActiveDOFs(pmanip->GetArmIndices());
         std::vector<IKReal> vfree(_vfreeparams.size());
-        for(size_t i = 0; i < _vfreeparams.size(); ++i)
+        for(size_t i = 0; i < _vfreeparams.size(); ++i) {
             vfree[i] = vFreeParameters[i]*(_qupper[_vfreeparams[i]]-_qlower[_vfreeparams[i]]) + _qlower[_vfreeparams[i]];
+        }
         bool bCheckEndEffector = true;
         return _SolveSingle(param,vfree,q0,filteroptions,result,bCheckEndEffector)==SR_Success;
     }
@@ -164,10 +167,9 @@ class IkFastSolver : public IkSolverBase
             RAVELOG_WARN(str(boost::format("ik solver only supports type %d, given %d")%_iktype%param.GetType()));
             return false;
         }
-
-        if( vFreeParameters.size() != _vfreeparams.size() )
+        if( vFreeParameters.size() != _vfreeparams.size() ) {
             throw openrave_exception("free parameters not equal",ORE_InvalidArguments);
-
+        }
         RobotBase::ManipulatorPtr pmanip(_pmanip);
         if( (filteroptions&IKFO_CheckEnvCollisions) && _CheckIndependentCollision(pmanip) ) {
             return false;
@@ -177,16 +179,21 @@ class IkFastSolver : public IkSolverBase
         RobotBase::RobotStateSaver saver(probot);
         probot->SetActiveDOFs(pmanip->GetArmIndices());
         std::vector<IKReal> vfree(_vfreeparams.size());
-        for(size_t i = 0; i < _vfreeparams.size(); ++i)
+        for(size_t i = 0; i < _vfreeparams.size(); ++i) {
             vfree[i] = vFreeParameters[i]*(_qupper[_vfreeparams[i]]-_qlower[_vfreeparams[i]]) + _qlower[_vfreeparams[i]];
+        }
         qSolutions.resize(0);
         bool bCheckEndEffector = true;
-        if( _SolveAll(param,vfree,filteroptions,qSolutions,bCheckEndEffector) == SR_Quit )
+        if( _SolveAll(param,vfree,filteroptions,qSolutions,bCheckEndEffector) == SR_Quit ) {
             return false;
+        }
         return qSolutions.size()>0;
     }
 
-    virtual int GetNumFreeParameters() const { return (int)_vfreeparams.size(); }
+    virtual int GetNumFreeParameters() const
+    {
+        return (int)_vfreeparams.size();
+    }
     virtual bool GetFreeParameters(std::vector<dReal>& pFreeParameters) const
     {
         RobotBase::ManipulatorPtr pmanip(_pmanip);
@@ -584,10 +591,12 @@ private:
     {
         for(int j = 0; j < (int)_qlower.size(); ++j) {
             if( _vjointtypes.at(j) != KinBody::Joint::JointPrismatic ) {
-                if( _qlower[j] < -PI && vravesol[j] > _qupper[j] )
+                if( _qlower[j] < -PI && vravesol[j] > _qupper[j] ) {
                     vravesol[j] -= 2*PI;
-                if( _qupper[j] > PI && vravesol[j] < _qlower[j] )
+                }
+                if( _qupper[j] > PI && vravesol[j] < _qlower[j] ) {
                     vravesol[j] += 2*PI;
+                }
             }
             // due to error propagation, give error bounds for lower and upper limits
             if( vravesol[j] < _qlower[j]-10*g_fEpsilon || vravesol[j] > _qupper[j]+10*g_fEpsilon ) {

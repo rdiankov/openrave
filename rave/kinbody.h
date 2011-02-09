@@ -565,8 +565,11 @@ public:
             Called after the joint protected parameters {vAxes, vanchor, and _offsets}  have been initialized. vAxes and vanchor should be in the frame of plink0.
             Compute the left and right multiplications of the joint transformation and cleans up the attached bodies.
             After function completes, the following parameters are initialized: _tRight, _tLeft, _tinvRight, _tinvLeft, _attachedbodies. _attachedbodies does not necessarily contain the links in the same order as they were input.
+            \param plink0 the first attaching link, all axes and anchors are defined in its coordinate system
+            \param plink1 the second attaching link
+            \param the anchor of the rotation axes
         */
-        virtual void _ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1);
+        virtual void _ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1, const Vector& vanchor);
 
         std::string _name; ///< \see GetName
         boost::array<bool,3> _bIsCircular;    ///< \see IsCircular
