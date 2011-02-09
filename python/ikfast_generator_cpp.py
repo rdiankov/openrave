@@ -1561,8 +1561,8 @@ static inline void %s(IKReal rawcoeffs[%d+1], IKReal rawroots[%d], int& numroots
             fcode = """
 static inline bool %s(const IKReal* Breal)
 {
-    IKReal norm = 0;
-    for(int i = 0; i < 15; ++i) {
+    IKReal norm = 0.1;
+    for(int i = 0; i < 11; ++i) {
         norm += IKabs(Breal[i]);
     }
     IKReal tol = 1e-6*norm; // have to increase the threshold since many computations are involved
@@ -1747,7 +1747,7 @@ static inline void %s(const IKReal* matcoeffs, IKReal* rawroots, int& numroots)
             fcode = """
 static inline bool %s(const IKReal* Breal)
 {
-    IKReal norm = 0;
+    IKReal norm = 0.1;
     for(int i = 0; i < 15; ++i) {
         norm += IKabs(Breal[i]);
     }
