@@ -697,7 +697,7 @@ public:
         RobotBase::ManipulatorPtr pmanip = robot->GetActiveManipulator();
         vector<dReal> vrealsolution(pmanip->GetArmIndices().size(),0), vrand(pmanip->GetArmIndices().size(),0);
         vector<dReal> vlowerlimit, vupperlimit, viksolution;
-        vector< vector<dReal> > viksolutions;
+        vector< vector<dReal> > viksolutions, viksolutions2;
 
         RAVELOG_DEBUG("Starting DebugIK... iter=%d\n", num_itrs);
     
@@ -723,7 +723,7 @@ public:
         RaveInitRandomGeneration(GetMilliTime()); // have to seed a new number
 
         Transform twrist, twrist_out;
-        vector<dReal> vfreeparameters, vfreeparameters_out;
+        vector<dReal> vfreeparameters_real, vfreeparameters, vfreeparameters_out;
         int i = 0;
         boost::array<vector<pair<Transform, vector<dReal> > >, 3> vsolutionresults;
         vector<pair<Transform, vector<dReal> > >& vwrongsolutions = vsolutionresults[0]; // wrong solution is returned
@@ -764,6 +764,9 @@ public:
 
             robot->SetActiveDOFValues(vrealsolution,true);
             twrist = pmanip->GetEndEffectorTransform();
+            if( !pmanip->GetIkSolver()->GetFreeParameters(vfreeparameters_real) ) {
+                RAVELOG_WARN("failed to get freeparameters");
+            }
             if( bTestSelfCollision && robot->CheckSelfCollision()) {
                 RAVELOG_VERBOSE("robot in self-collision\n");
                 continue;
@@ -780,12 +783,12 @@ public:
                 }
             }
             RAVELOG_DEBUG("iteration %d\n",i);
-            bool bsuccess = true;
             if( !pmanip->GetIkSolver()->GetFreeParameters(vfreeparameters) ) {
                 RAVELOG_WARN("failed to get freeparameters");
             }
             vfreeparameters_out.resize(vfreeparameters.size());
 
+            bool bsuccess = true;
             if( !pmanip->FindIKSolution(twrist, viksolution, 0) ) {
                 vnosolutions.push_back(make_pair(twrist,vfreeparameters));
                 bsuccess = false;
@@ -842,7 +845,12 @@ public:
         
             // test all possible solutions
             robot->SetActiveDOFValues(vrand, true);
-            if( !pmanip->FindIKSolutions(twrist, viksolutions, 0) ) {
+            pmanip->FindIKSolutions(twrist, viksolutions, 0);
+            if( vfreeparameters_real.size() > 0 ) {
+                pmanip->FindIKSolutions(twrist, vfreeparameters_real, viksolutions2, 0);
+                viksolutions.insert(viksolutions.end(),viksolutions2.begin(),viksolutions2.end());
+            }
+            if( viksolutions.size() == 0 ) {
                 FOREACH(itfree,vfreeparameters_out) {
                     *itfree = -1;
                 }
@@ -905,11 +913,8 @@ public:
                     continue;
                 }
                 if( !bfoundinput ) {
-                    FOREACH(itfree,vfreeparameters_out) {
-                        *itfree = -1;
-                    }
-                    vnofullsolutions.push_back(make_pair(twrist,vfreeparameters_out));
-                }                
+                    vnofullsolutions.push_back(make_pair(twrist,vfreeparameters_real));
+                }
             }
 
             if( pmanip->GetIkSolver()->GetNumFreeParameters() == 0 ) {

@@ -866,3 +866,15 @@ def test_ik():
     symbolgenconst,localsymbols,localsymbols_reduced,localsymbols_mult,newreducedeqs,reducedeqs,RightEquations,dummys,dummysubs,dummyvars = pickle.load(open('eqs.pp','r'))
     symbolgen = cse_main.numbered_symbols('const',start=int(symbolgenconst.name[5:]))
 
+
+"""
+ikfast notes;
+
+pr2 with conic sections:
+success rate: 0.955000, wrong solutions: 0.000000, no solutions: 0.145000, missing solution: 0.281000
+mean: 0.000006s, median: 0.000007s, min: 0.000001s, max: 0.000015s
+
+pr2 with half-angle transformation:
+success rate: 0.993000, wrong solutions: 0.000000, no solutions: 0.011000, missing solution: 0.081000
+mean: 0.000009s, median: 0.000009s, min: 0.000005s, max: 0.000016s
+"""

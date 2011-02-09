@@ -87,7 +87,7 @@ class CodeGenerator(AutoReloader):
       bool ik(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::vector<SOLUTION>& vsolutions);
       bool fk(const IKReal* joints, IKReal* eetrans, IKReal* eerot);
     """
-    def __init__(self,kinematicshash=''):
+    def __init__(self,kinematicshash='',version=''):
         self.symbolgen = cse_main.numbered_symbols('x')
         self.strprinter = printing.StrPrinter()
         self.freevars = None # list of free variables in the solution
@@ -95,6 +95,7 @@ class CodeGenerator(AutoReloader):
         self.functions = dict()
         self.kinematicshash=kinematicshash
         self.resetequations() # dictionary of symbols already written
+        self.version=version
 
     def resetequations(self):
         self.dictequations = [[],[]]
@@ -119,7 +120,7 @@ class CodeGenerator(AutoReloader):
 /// See the License for the specific language governing permissions and
 /// limitations under the License.
 ///
-/// generated %s
+/// ikfast version %s generated on %s
 /// To compile with gcc:
 ///     gcc -lstdc++ ik.cpp
 /// To compile without any main function as a shared object:
@@ -303,7 +304,7 @@ inline double IKatan2(double fy, double fx) {
     return atan2(fy,fx);
 }
 
-"""%str(datetime.datetime.now())
+"""%(self.version,str(datetime.datetime.now()))
         code += solvertree.generate(self)
         code += solvertree.end(self)
 
@@ -1117,33 +1118,6 @@ int main(int argc, char** argv)
     def endMatrixInverse(self,node):
         return ''
 
-    def generateConicRoots(self, node):
-        conicsolver=self.using_conicsolver()
-        name = node.jointname
-        cvar = Symbol('c%s'%name)
-        svar = Symbol('s%s'%name)
-        code = 'IKReal coniccoeffs[6], %sarray[4];\nint numsolutions;\n'%(name)
-        if node.checkforzeros is not None and len(node.checkforzeros) > 0:
-            code += 'IKReal %seval[%d];\n'%(name,len(node.checkforzeros))
-            fcode = self.writeEquations(lambda i: '%seval[%d]'%(name,i),node.checkforzeros)
-            fcode += 'if( '
-            for i in range(len(node.checkforzeros)):
-                if i != 0:
-                    fcode += ' || '
-                fcode += 'IKabs(%sevalpoly[%d]) < %f '%(name,i,node.thresh)
-            fcode += ' )\n{\n    continue;\n}\n'
-            code += self.indentCode(fcode,4)
-        
-        conicpoly = Poly(node.jointeval[0],cvar,svar)
-        coeffs = [conicpoly.coeff(2,0),0.5*conicpoly.coeff(1,1),0.5*conicpoly.coeff(1,0),conicpoly.coeff(0,2),0.5*conicpoly.coeff(0,1),conicpoly.coeff(0,0)]
-        code += self.writeEquations(lambda i: 'coniccoeffs[%d]'%(i),coeffs)
-        code += '%s(coniccoeffs,%sarray,numsolutions);\n'%(conicsolver,name)
-        code += 'for(int i%s = 0; i%s < numsolutions; ++i%s)\n{\n'%(name,name,name)
-        code += '    %s = %sarray[i%s]; c%s = IKcos(%s); s%s = IKsin(%s);\n\n'%(name, name,name,name,name,name,name)
-        return code
-    def endConicRoots(self, node):
-        return '    }\n'
-
     def generateBranch(self, node):
         origequations = self.copyequations()
         name = node.jointname
@@ -1578,133 +1552,6 @@ static inline void %s(IKReal rawcoeffs[%d+1], IKReal rawroots[%d], int& numroots
     }
 }
 """%(name,deg,deg,deg,deg,deg,deg,deg,deg,deg,deg,deg)
-            self.functions[name] = fcode
-        return name
-
-    def using_conicsolver(self):
-        """ the general method to solve an intersection of two conics C1 and C2 is to first
-        note that any solution to their intersection is also a solution of
-        x^T C x = 0, where C = t0*C0 + t1*C1
-        for t0, t1 in Reals. Without loss of generality, we set t1 = 1, and find t0 when
-        C becomes degenerate, ie det(C) = 0. This produces a cubic equation in t0,
-        which gives 4 solutions. Gathering all the equations produced by the degenerate
-        conic should give rise to two equations of lines. Intersect these lines with the simpler of the
-        two conics, the unit circle: c^2+s^2-1 = 0
-        """
-        polyroots2=self.using_polyroots(2)
-        polyroots3=self.using_polyroots(3)
-        name = 'conicsolver'
-        if not name in self.functions:
-            fcode = """/// intersection of a conic and the unit circle
-static inline void %s(IKReal _C0[6], IKReal roots[4], int& numroots)
-{
-    numroots = 0;
-    // have to normalize _C0
-    IKReal maxval = IKabs(_C0[0]);
-    for(int i = 1; i < 6; ++i) {
-        if( maxval < IKabs(_C0[i]) ) {
-            maxval = IKabs(_C0[i]);
-        }
-    }
-    IKReal C0[6];
-    for(int i = 0; i < 6; ++i) {
-        C0[i]=_C0[i]/maxval;
-    }
-    IKReal rawcoeffs[4] = {-1,
-                           C0[5] - C0[0] - C0[3],
-                           C0[0]*C0[5] + C0[3]*C0[5] - C0[0]*C0[3] + C0[1]*C0[1] - C0[2]*C0[2] - C0[4]*C0[4],
-                           C0[0]*C0[3]*C0[5] + 2*C0[1]*C0[2]*C0[4] - C0[0]*C0[4]*C0[4] - C0[3]*C0[2]*C0[2] - C0[5]*C0[1]*C0[1]};
-    IKReal proots[3];
-    int numproots, numyroots;
-    %s(rawcoeffs,proots,numproots);
-    if( numproots < 1 ) {
-        return;
-    }
-    int iroot=0;
-    IKReal a, b, c, d, e, f;
-    a = C0[0]+proots[iroot]; b = C0[1]; c = C0[3]+proots[iroot]; d = C0[2]; e = C0[4]; f = C0[5]-proots[iroot];
-    IKReal adjugate[9] = {c*f-e*e, -b*f+e*d, b*e-c*d, -b*f+d*e, a*f-d*d, -a*e+b*d, b*e-d*c, -a*e+d*b, a*c-b*b};
-    // find the greatest absolute value of adjugate and take that column
-    int maxindex = 0;
-    IKReal val = IKabs(adjugate[maxindex]);
-    for(int i = 1; i < 9; ++i) {
-        IKReal newval = IKabs(adjugate[i]);
-        if( val < newval ) {
-            val = newval;
-            maxindex = i;
-        }
-    }
-    maxindex = maxindex%%3;
-    if( adjugate[0] > 0 || adjugate[4] > 0 || adjugate[8] > 0 || adjugate[4*maxindex] >= 0 ) {
-        // according to the structure of the matrix, should be always negative if a solution exists...
-        return;
-    }
-    IKReal bmult = 1.0/IKsqrt(-adjugate[4*maxindex]);
-    IKReal p[3] = {adjugate[maxindex]*bmult, adjugate[3+maxindex]*bmult, adjugate[6+maxindex]*bmult}; // intersection point
-    // C = C0 - [p_x] = 2gh^t, C is rank1
-    IKReal C[9] = {a,b+p[2],d-p[1],b-p[2],c,e+p[0],d+p[1],e-p[0],f};
-    maxindex = 0;
-    val = IKabs(C[maxindex]);
-    for(int i = 1; i < 9; ++i) {
-        IKReal newval = IKabs(C[i]);
-        if( val < newval ) {
-            val = newval;
-            maxindex = i;
-        }
-    }
-    int row = maxindex/3;
-    int col = maxindex%%3;
-    IKReal lineequation[3], coeffs[3], yintersections[2];
-    for(int i = 0; i < 2; ++i) {
-        if( i == 0 ) {
-            lineequation[0] = C[3*row];
-            lineequation[1] = C[3*row+1];
-            lineequation[2] = C[3*row+2];
-        }
-        else {
-            lineequation[0] = C[col];
-            lineequation[1] = C[3+col];
-            lineequation[2] = C[6+col];
-        }
-
-        if( IKabs(lineequation[0]) < std::numeric_limits<IKReal>::epsilon() ) {
-            yintersections[0] = -lineequation[2]/lineequation[1];
-            IKReal x = 1-yintersections[0]*yintersections[0];
-            if( x <= 0 && x > -std::numeric_limits<IKReal>::epsilon() ) {
-                roots[numroots++] = yintersections[0] > 0 ? IKPI_2 : -IKPI_2;
-            }
-            else {
-                x = IKsqrt(x);
-                roots[numroots++] = IKatan2(yintersections[0], x);
-                roots[numroots] = IKPI - roots[numroots-1]; numroots++;
-            }
-        }
-        else {
-            coeffs[0] = lineequation[0]*lineequation[0]+lineequation[1]*lineequation[1];
-            coeffs[1] = 2*lineequation[1]*lineequation[2];
-            coeffs[2] = lineequation[2]*lineequation[2]-lineequation[0]*lineequation[0];
-            %s(coeffs,yintersections,numyroots);
-            for(int j = 0; j < numyroots; ++j) {
-                // the mathematical solution would be: IKatan2(yintersections[j],-(lineequation[1]*yintersections[j]+lineequation[2])/lineequation[0]);
-                // however due to numerical imprecisions, it is better to compute sqrt(1-yintersections[j]*yintersections[j]) and choose sign 
-                IKReal x = 1-yintersections[j]*yintersections[j];
-                if( x <= 0 ) {
-                    if( x > -std::numeric_limits<IKReal>::epsilon() ) {
-                        roots[numroots++] = IKatan2(yintersections[j],-(lineequation[1]*yintersections[j]+lineequation[2])/lineequation[0]);
-                    }
-                }
-                else {
-                    x = IKsqrt(x);
-                    if( (lineequation[1]*yintersections[j]+lineequation[2])/lineequation[0] > 0 ) {
-                        x = -x;
-                    }
-                    roots[numroots++] = IKatan2(yintersections[j],x);
-                }
-            }
-        }
-    }
-}
-"""%(name,polyroots3,polyroots2)
             self.functions[name] = fcode
         return name
 
