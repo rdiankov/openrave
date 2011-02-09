@@ -906,7 +906,7 @@ int main(int argc, char** argv)
             for i,j in combinations(range(allnumsolutions),2):
                 code += 'if( %svalid[%d] && %svalid[%d] && IKabs(c%sarray[%d]-c%sarray[%d]) < 0.0001 && IKabs(s%sarray[%d]-s%sarray[%d]) < 0.0001 )\n    %svalid[%d]=false;\n'%(name,i,name,j,name,i,name,j,name,i,name,j,name,j)
         code += 'for(int i%s = 0; i%s < %d; ++i%s)\n{\n'%(name,name,allnumsolutions,name)
-        code += 'if( !%svalid[i%s] ) { continue; }\n'%(name,name)
+        code += 'if( !%svalid[i%s] )\n{\n    continue;\n}\n'%(name,name)
         code += '%s = %sarray[i%s]; c%s = c%sarray[i%s]; s%s = s%sarray[i%s];\n\n'%(name,name,name,name,name,name,name,name,name)
         return code
 
@@ -941,7 +941,7 @@ int main(int argc, char** argv)
             checkcode += '\n} else\n'
         checkcode += '{\n    continue;\n}\n'  # if got here, then current solution branch is not good, so skip
         checkcode += '}\n'*len(node.solversolutions)
-        checkcode += 'if( numsolutions%s == 0 ) { continue; }\n'%name
+        checkcode += 'if( numsolutions%s == 0 )\n{\n    continue;\n}\n'%name
 
         code = '{\nIKReal evalcond[%d]; int numsolutions%s = 0;\n'%(maxchecks,name)
         code += 'IKReal %sarray[%d], c%sarray[%d], s%sarray[%d];\n'%(name,allnumsolutions,name,allnumsolutions,name,allnumsolutions)
@@ -951,7 +951,7 @@ int main(int argc, char** argv)
             for i,j in combinations(range(allnumsolutions),2):
                 code += 'if( %svalid[%d] && %svalid[%d] && IKabs(c%sarray[%d]-c%sarray[%d]) < 0.0001 && IKabs(s%sarray[%d]-s%sarray[%d]) < 0.0001 )\n    %svalid[%d]=false;\n'%(name,i,name,j,name,i,name,j,name,i,name,j,name,j)
         code += 'for(int i%s = 0; i%s < numsolutions%s; ++i%s)\n{\n'%(name,name,name,name)
-        code += 'if( !%svalid[i%s] ) { continue; }\n'%(name,name)
+        code += 'if( !%svalid[i%s] )\n{\n    continue;\n}\n'%(name,name)
         code += '%s = %sarray[i%s]; c%s = c%sarray[i%s]; s%s = s%sarray[i%s];\n\n'%(name,name,name,name,name,name,name,name,name)
         self.dictequations = origequations
         return code
@@ -986,7 +986,7 @@ int main(int argc, char** argv)
         fcode += 'for(int k%s = 0; k%s < %d; ++k%s)\n{\n'%(name,name,len(node.jointeval),name)
         fcode += '%sarray[numsolutions] = temp%sarray[k%s];\n'%(name,name,name)
         if node.isHinge:
-            fcode += 'if( %sarray[numsolutions] > IKPI )\n    %sarray[numsolutions]-=IK2PI;\nelse if( %sarray[numsolutions] < -IKPI )\n    %sarray[numsolutions]+=IK2PI;\n'%(name,name,name,name)
+            fcode += 'if( %sarray[numsolutions] > IKPI )\n{\n    %sarray[numsolutions]-=IK2PI;\n}\nelse if( %sarray[numsolutions] < -IKPI )\n{\n    %sarray[numsolutions]+=IK2PI;\n}\n'%(name,name,name,name)
         fcode += 's%sarray[numsolutions] = IKsin(%sarray[numsolutions]);\n'%(name,name)
         fcode += 'c%sarray[numsolutions] = IKcos(%sarray[numsolutions]);\n'%(name,name)
         fcode += 'bool valid = true;\n'

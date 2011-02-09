@@ -32,9 +32,9 @@ Item::Item(QtCoinViewerPtr viewer) : _viewer(viewer)
     _ivGeom = new SoSwitch(2);
     _ivGeom->whichChild.setValue(SO_SWITCH_ALL); 
 
-    _ivRoot->ref();
     _ivRoot->addChild(_ivXform);
     _ivRoot->addChild(_ivGeom);
+    _ivRoot->ref();
 
     _ivTransparency = new SoTransparencyType();
     _ivTransparency->value = SoGLRenderAction::SORTED_OBJECT_SORTED_TRIANGLE_BLEND;

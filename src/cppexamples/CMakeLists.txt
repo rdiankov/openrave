@@ -12,7 +12,7 @@ if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
   add_definitions("-fno-strict-aliasing -Wall")
 endif( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
 
-find_package(Boost COMPONENTS iostreams)
+find_package(Boost COMPONENTS iostreams python thread)
 
 include_directories(${OPENRAVE_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR} )
 if( Boost_INCLUDE_DIRS )
@@ -85,3 +85,31 @@ set_target_properties(orconveyormovement PROPERTIES COMPILE_FLAGS "${OPENRAVE_CX
 set_target_properties(orconveyormovement PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
 target_link_libraries(orconveyormovement ${OPENRAVE_LIBRARY} ${OPENRAVE_CORE_LIBRARY})
 install(TARGETS orconveyormovement DESTINATION . )
+
+# include python bindings sample
+if( Boost_PYTHON_FOUND AND Boost_THREAD_FOUND )
+  find_package(PythonLibs)
+  if( PYTHONLIBS_FOUND OR PYTHON_LIBRARIES )
+    if( PYTHON_EXECUTABLE )
+      # get the site-packages directory
+      execute_process(
+        COMMAND ${PYTHON_EXECUTABLE} -c "from distutils.sysconfig import get_python_lib; print get_python_lib()"
+        OUTPUT_VARIABLE _python_sitepackage
+        RESULT_VARIABLE _python_failed)
+      if( ${_python_failed} EQUAL 0 )
+        string(REGEX REPLACE "[\r\n]" "" _python_sitepackage "${_python_sitepackage}")
+        set(PYTHON_INCLUDE_PATH ${PYTHON_INCLUDE_PATH} ${_python_sitepackage}/numpy/core/include)
+      else()
+        message(STATUS "failed to get python site-package directory")
+      endif()
+    endif()
+
+    include_directories(${PYTHON_INCLUDE_PATH} ${OPENRAVE_INCLUDE_DIRS} ${OPENRAVE_CORE_INCLUDE_DIRS})
+    add_library(orpythonbinding SHARED orpythonbinding.cpp)
+    target_link_libraries(orpythonbinding ${OPENRAVE_LIBRARY} ${PYTHON_LIBRARIES} ${Boost_PYTHON_LIBRARY} ${Boost_THREAD_LIBRARY})
+    set_target_properties(orpythonbinding PROPERTIES PREFIX "")
+    if( WIN32 )
+      set_target_properties(orpythonbinding PROPERTIES SUFFIX ".pyd")
+    endif()
+  endif()
+endif()

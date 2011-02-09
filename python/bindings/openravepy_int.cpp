@@ -3635,6 +3635,8 @@ BOOST_PYTHON_MODULE(openravepy_int)
         .def("__str__",&PyTriMesh::__str__)
         .def_pickle(TriMesh_pickle_suite())
         ;
+    class_<InterfaceBase, InterfaceBasePtr, boost::noncopyable >("InterfaceBase", DOXY_CLASS(InterfaceBase), no_init)
+        ;
     {
         void (PyInterfaceBase::*setuserdata1)(PyUserData) = &PyInterfaceBase::SetUserData;
         void (PyInterfaceBase::*setuserdata2)(object) = &PyInterfaceBase::SetUserData;

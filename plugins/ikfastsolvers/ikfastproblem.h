@@ -690,9 +690,7 @@ public:
         }
 
         RobotBase::RobotStateSaver saver(robot);
-        if( !bTestSelfCollision ) {
-            robot->Enable(false);
-        }
+        robot->Enable(bTestSelfCollision);
 
         RobotBase::ManipulatorPtr pmanip = robot->GetActiveManipulator();
         vector<dReal> vrealsolution(pmanip->GetArmIndices().size(),0), vrand(pmanip->GetArmIndices().size(),0);
