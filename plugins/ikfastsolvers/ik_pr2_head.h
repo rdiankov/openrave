@@ -202,7 +202,7 @@ IKFAST_API int getNumJoints() { return 2; }
 
 IKFAST_API int getIKRealSize() { return sizeof(IKReal); }
 
-IKFAST_API int getIKType() { return 6; }
+IKFAST_API int getIKType() { return 0x20000006; }
 
 /// solves the inverse kinematics equations.
 /// \param pfree is an array specifying the free joints of the chain.

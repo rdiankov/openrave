@@ -1415,6 +1415,7 @@ public:
         case IkParameterization::Type_Direction3D: SetDirection(o); break;
         case IkParameterization::Type_Ray4D: SetRay(extract<boost::shared_ptr<PyRay> >(o)); break;
         case IkParameterization::Type_Lookat3D: SetLookat(o); break;
+        case IkParameterization::Type_TranslationDirection5D: SetTranslationDirection(extract<boost::shared_ptr<PyRay> >(o)); break;
         default: throw openrave_exception(boost::str(boost::format("incorrect ik parameterization type %d")%type));
         }
     }
@@ -1425,6 +1426,7 @@ public:
     void SetDirection(object o) { _param.SetDirection(ExtractVector3(o)); }
     void SetRay(boost::shared_ptr<PyRay> ray) { _param.SetRay(ray->r); }
     void SetLookat(object o) { _param.SetLookat(ExtractVector3(o)); }
+    void SetTranslationDirection(boost::shared_ptr<PyRay> ray) { _param.SetTranslationDirection(ray->r); }
 
     IkParameterization::Type GetType() { return _param.GetType(); }
     object GetTransform() { return ReturnTransform(_param.GetTransform()); }
@@ -1433,6 +1435,7 @@ public:
     object GetDirection() { return toPyVector3(_param.GetDirection()); }
     PyRay GetRay() { return PyRay(_param.GetRay()); }
     object GetLookat() { return toPyVector3(_param.GetLookat()); }
+    PyRay GetTranslationDirection() { return PyRay(_param.GetTranslationDirection()); }
 
     IkParameterization _param;
 };
@@ -1523,8 +1526,9 @@ public:
                     return object();
             }
             // assume transformation matrix
-            else if( !_pmanip->FindIKSolution(ExtractTransform(oparam),solution,filteroptions) )
+            else if( !_pmanip->FindIKSolution(ExtractTransform(oparam),solution,filteroptions) ) {
                 return object();
+            }
             return toPyArrayN(&solution[0],solution.size());
         }
 
@@ -1537,8 +1541,9 @@ public:
                     return object();
             }
             // assume transformation matrix
-            else if( !_pmanip->FindIKSolution(ExtractTransform(oparam),vfreeparams, solution,filteroptions) )
+            else if( !_pmanip->FindIKSolution(ExtractTransform(oparam),vfreeparams, solution,filteroptions) ) {
                 return object();
+            }
             return toPyArray(solution);
         }
 
@@ -3960,12 +3965,18 @@ In python, the syntax is::\n\n\
             .def("SetTranslation",&PyIkParameterization::SetTranslation,args("pos"), DOXY_FN(IkParameterization,SetTranslation))
             .def("SetDirection",&PyIkParameterization::SetDirection,args("dir"), DOXY_FN(IkParameterization,SetDirection))
             .def("SetRay",&PyIkParameterization::SetRay,args("quat"), DOXY_FN(IkParameterization,SetRay))
+            .def("SetLookat",&PyIkParameterization::SetLookat,args("pos"), DOXY_FN(IkParameterization,SetLookat))
+            .def("SetTranslationDirection",&PyIkParameterization::SetTranslationDirection,args("quat"), DOXY_FN(IkParameterization,SetTranslationDirection))
             .def("GetType",&PyIkParameterization::GetType, DOXY_FN(IkParameterization,GetType))
             .def("GetTransform",&PyIkParameterization::GetTransform, DOXY_FN(IkParameterization,GetTransform))
             .def("GetRotation",&PyIkParameterization::GetRotation, DOXY_FN(IkParameterization,GetRotation))
             .def("GetTranslation",&PyIkParameterization::GetTranslation, DOXY_FN(IkParameterization,GetTranslation))
             .def("GetDirection",&PyIkParameterization::GetDirection, DOXY_FN(IkParameterization,GetDirection))
             .def("GetRay",&PyIkParameterization::GetRay, DOXY_FN(IkParameterization,GetRay))
+            .def("GetLookat",&PyIkParameterization::GetLookat, DOXY_FN(IkParameterization,GetLookat))
+            .def("GetTranslationDirection",&PyIkParameterization::GetTranslationDirection, DOXY_FN(IkParameterization,GetTranslationDirection))
+            .def("GetDOF", &IkParameterization::GetDOF,args("type"))
+            .staticmethod("GetDOF")
             .def_pickle(IkParameterization_pickle_suite())
             ;
 
@@ -3976,6 +3987,7 @@ In python, the syntax is::\n\n\
             .value("Direction3D",IkParameterization::Type_Direction3D)
             .value("Ray4D",IkParameterization::Type_Ray4D)
             .value("Lookat3D",IkParameterization::Type_Lookat3D)
+            .value("TranslationDirection5D",IkParameterization::Type_TranslationDirection5D)
         ;
     }
 

@@ -31,11 +31,13 @@ try:
     IkType = IkParameterization.Type
 except:
     class IkType:
-        Transform6D=1
-        Rotation3D=2
-        Translation3D=3
-        Direction3D=4
-        Ray4D=5
+        Transform6D=0x60000001
+        Rotation3D=0x30000002
+        Translation3D=0x30000003
+        Direction3D=0x20000004
+        Ray4D=0x40000005
+        Lookat3D=0x20000006
+        TranslationDirection5D=0x50000007
 
 from sympy import *
 
@@ -658,7 +660,7 @@ int main(int argc, char** argv)
     def endIKChainDirection3D(self, node):
         return ''
 
-    def generateIKChainRay4D(self, node):
+    def generateIKChainRay(self, node):
         self.freevars = []
         self.freevardependencies = []
         self.resetequations()
@@ -676,7 +678,7 @@ int main(int argc, char** argv)
             code += "}; return freeparams; }\n"
         code += "IKFAST_API int getNumJoints() { return %d; }\n\n"%(len(node.freejointvars)+len(node.solvejointvars))
         code += "IKFAST_API int getIKRealSize() { return sizeof(IKReal); }\n\n"
-        code += 'IKFAST_API int getIKType() { return %d; }\n\n'%IkType.Ray4D
+        code += 'IKFAST_API int getIKType() { return %d; }\n\n'%(IkType.TranslationDirection5D if node.is5dray else IkType.Ray4D)
         if node.Dfk and node.Pfk:
             code += "/// solves the inverse kinematics equations.\n"
             code += "/// \\param pfree is an array specifying the free joints of the chain.\n"
@@ -719,8 +721,11 @@ int main(int argc, char** argv)
             fcode += self.writeEquations(lambda k: psymbols[i],node.Pee[i])
         for i in range(3):
             fcode += "r0%d = new_r0%d; "%(i,i)
-        fcode += "\nIKReal new_pdotd = new_px*new_r00+new_py*new_r01+new_pz*new_r02;\n"
-        fcode += "px = new_px-new_pdotd * new_r00; py = new_py- new_pdotd * new_r01; pz = new_pz - new_pdotd * new_r02;\n\n"
+        if node.is5dray:
+            fcode += "px = new_px; py = new_py; pz = new_pz;\n\n"
+        else:
+            fcode += "\nIKReal new_pdotd = new_px*new_r00+new_py*new_r01+new_pz*new_r02;\n"
+            fcode += "px = new_px-new_pdotd * new_r00; py = new_py- new_pdotd * new_r01; pz = new_pz - new_pdotd * new_r02;\n\n"
         if node.dictequations is not None:
             for var,value in node.dictequations:
                 fcode += self.writeEquations(lambda k: var,value)
@@ -732,7 +737,7 @@ int main(int argc, char** argv)
             code += self.indentCode(functioncode,4)
         code += "};\n"
         return code
-    def endIKChainRay4D(self, node):
+    def endIKChainRay(self, node):
         return ''
 
     def generateIKChainLookat3D(self, node):

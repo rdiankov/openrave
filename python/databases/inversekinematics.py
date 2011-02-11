@@ -65,7 +65,7 @@ Generating the 3d rotation IK for the stage below is:
 
 .. code-block:: bash
 
-  openrave.py --database inversekinematics --robot=robots/rotation_stage.robot.xml --rotation3donly
+  openrave.py --database inversekinematics --robot=robots/rotation_stage.robot.xml --iktype=rotation3d
 
 
 .. image:: ../../images/databases_inversekinematics_rotation_stage.jpg
@@ -75,7 +75,7 @@ Generating the ray inverse kinematics for the 4 degrees of freedom barrett wam i
 
 .. code-block:: bash
 
-  openrave.py --database inversekinematics --robot=drill.robot.xml --ray4donly 
+  openrave.py --database inversekinematics --robot=drill.robot.xml --iktype=ray4d
 
 Testing
 -------
@@ -205,14 +205,6 @@ class InverseKinematicsModel(OpenRAVEModel):
         outputlang = None
         ipython = None
         if options is not None:
-            if options.rotation3donly:
-                iktype = IkParameterization.Type.Rotation3D
-            if options.direction3donly:
-                iktype = IkParameterization.Type.Direction3D
-            if options.translation3donly:
-                iktype = IkParameterization.Type.Translation3D
-            if options.ray4donly:
-                iktype = IkParameterization.Type.Ray4D
             forceikbuild=options.force
             precision=options.precision
             usedummyjoints=options.usedummyjoints
@@ -273,6 +265,14 @@ class InverseKinematicsModel(OpenRAVEModel):
                 kwargs['rawbasepos'] = rawbasepos
                 return ikfast.IKFastSolver.solveFullIK_Ray4D(*args,**kwargs)
             solvefn=solveFullIK_Ray4D
+        elif self.iktype == IkParameterization.Type.TranslationDirection5D:
+            rawbasedir=dot(self.manip.GetGraspTransform()[0:3,0:3],self.manip.GetDirection())
+            rawbasepos=self.manip.GetGraspTransform()[0:3,3]
+            def solveFullIK_TranslationDirection5D(*args,**kwargs):
+                kwargs['rawbasedir'] = rawbasedir
+                kwargs['rawbasepos'] = rawbasepos
+                return ikfast.IKFastSolver.solveFullIK_TranslationDirection5D(*args,**kwargs)
+            solvefn=solveFullIK_TranslationDirection5D
         elif self.iktype == IkParameterization.Type.Translation3D:
             rawbasepos=self.manip.GetGraspTransform()[0:3,3]
             def solveFullIK_Translation3D(*args,**kwargs):
@@ -312,23 +312,9 @@ class InverseKinematicsModel(OpenRAVEModel):
                     freejointinds.append(jointindices[0])
                     solvejoints.remove(jointindices[0])
         print 'Generating inverse kinematics for manip',self.manip.GetName(),':',self.iktype,solvejoints,'(this might take ~5 min)'
-        if self.iktype == IkParameterization.Type.Rotation3D:
-            self.dofexpected = 3
-        elif self.iktype == IkParameterization.Type.Direction3D:
-            self.dofexpected = 2
-        elif self.iktype == IkParameterization.Type.Translation3D:
-            self.dofexpected = 3
-        elif self.iktype == IkParameterization.Type.Transform6D:
-            self.dofexpected = 6
-        elif self.iktype == IkParameterization.Type.Ray4D:
-            self.dofexpected = 4
-        elif self.iktype == IkParameterization.Type.Lookat3D:
-            self.dofexpected = 2
-        else:
-            raise ValueError('bad type')
-
-        if len(solvejoints) > self.dofexpected:
-            for i in range(len(solvejoints) - self.dofexpected):
+        dofexpected = IkParameterization.GetDOF(self.iktype)
+        if len(solvejoints) > dofexpected:
+            for i in range(len(solvejoints) - dofexpected):
                 if self.iktype == IkParameterization.Type.Transform6D or self.iktype == IkParameterization.Type.Translation3D:
                     freejointinds.append(solvejoints.pop(2))
                 elif self.iktype == IkParameterization.Type.Lookat3D:
@@ -339,8 +325,8 @@ class InverseKinematicsModel(OpenRAVEModel):
                     # so remove the least important joints
                     freejointinds.append(solvejoints.pop(-1))
         
-        if not len(solvejoints) == self.dofexpected:
-            raise ValueError('Need %d solve joints, got: %d'%(self.dofexpected, len(solvejoints)))
+        if not len(solvejoints) == dofexpected:
+            raise ValueError('Need %d solve joints, got: %d'%(dofexpected, len(solvejoints)))
         
         sourcefilename += '_' + '_'.join(str(ind) for ind in solvejoints)
         if len(freejointinds)>0:
@@ -595,14 +581,6 @@ class InverseKinematicsModel(OpenRAVEModel):
                           help='The precision to compute the inverse kinematics in, (default=%default).')
         parser.add_option('--usecached', action='store_false', dest='force',default=True,
                           help='If set, will always try to use the cached ik c++ file, instead of generating a new one.')
-        parser.add_option('--rotation3donly', action='store_true', dest='rotation3donly',default=False,
-                          help='[deprecated] If true, need to specify only 3 solve joints and will solve for a target rotation')
-        parser.add_option('--direction3donly', action='store_true', dest='direction3donly',default=False,
-                          help='[deprecated] If true, need to specify only 2 solve joints and will solve for a target direction')
-        parser.add_option('--translation3donly', action='store_true', dest='translation3donly',default=False,
-                          help='[deprecated] If true, need to specify only 3 solve joints and will solve for a target translation')
-        parser.add_option('--ray4donly', action='store_true', dest='ray4donly',default=False,
-                          help='[deprecated] If true, need to specify only 4 solve joints and will solve for a target ray')
         parser.add_option('--usedummyjoints', action='store_true',dest='usedummyjoints',default=False,
                           help='Treat the unspecified joints in the kinematic chain as dummy and set them to 0. If not specified, treats all unspecified joints as free parameters.')
         parser.add_option('--freeinc', action='store', type='float', dest='freeinc',default=None,
@@ -631,14 +609,6 @@ class InverseKinematicsModel(OpenRAVEModel):
                     break
         else:
             iktype = IkParameterization.Type.Transform6D
-            if options.rotation3donly:
-                iktype = IkParameterization.Type.Rotation3D
-            if options.direction3donly:
-                iktype = IkParameterization.Type.Direction3D
-            if options.translation3donly:
-                iktype = IkParameterization.Type.Translation3D
-            if options.ray4donly:
-                iktype = IkParameterization.Type.Ray4D
         Model = lambda robot: InverseKinematicsModel(robot=robot,iktype=iktype,forceikfast=True)
         OpenRAVEModel.RunFromParser(Model=Model,parser=parser,args=args,**kwargs)
         if options.iktests is not None or options.perftiming is not None:

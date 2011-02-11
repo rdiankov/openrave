@@ -320,19 +320,23 @@ private:
                 return _pfnik(eetrans, NULL, vfree.size()>0?&vfree[0]:NULL, vsolutions);
             }
             case IkParameterization::Type_Ray4D: {
-                Vector pos = param.GetRay().pos;
-                Vector dir = param.GetRay().dir;
-                IKReal eetrans[3] = {pos.x,pos.y,pos.z};
-                IKReal eerot[9] = {dir.x, dir.y, dir.z,0,0,0,0,0,0};
+                RAY r = param.GetRay();
+                IKReal eetrans[3] = {r.pos.x,r.pos.y,r.pos.z};
+                IKReal eerot[9] = {r.dir.x, r.dir.y, r.dir.z,0,0,0,0,0,0};
                 //RAVELOG_INFO("ray: %f %f %f %f %f %f\n",eerot[0],eerot[1],eerot[2],eetrans[0],eetrans[1],eetrans[2]);
                 if( !_pfnik(eetrans, eerot, vfree.size()>0?&vfree[0]:NULL, vsolutions) ) {
                     return false;
                 }
                 return true;
-    //            IKReal s[4];
-    //            IKReal free[10];
-    //            vsolutions[0].GetSolution(s,free);
-    //            RAVELOG_INFO("sol %d: %f %f %f %f\n",(int)vsolutions[0].GetFree().size(),s[0],s[1],s[2],s[3]);
+            }
+            case IkParameterization::Type_TranslationDirection5D: {
+                RAY r = param.GetTranslationDirection();
+                IKReal eetrans[3] = {r.pos.x,r.pos.y,r.pos.z};
+                IKReal eerot[9] = {r.dir.x, r.dir.y, r.dir.z,0,0,0,0,0,0};
+                if( !_pfnik(eetrans, eerot, vfree.size()>0?&vfree[0]:NULL, vsolutions) ) {
+                    return false;
+                }
+                return true;
             }
             case IkParameterization::Type_None:
                 break;

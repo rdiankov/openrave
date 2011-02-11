@@ -367,6 +367,7 @@ public:
         case IkParameterization::Type_Direction3D: striktype="Direction3D"; break;
         case IkParameterization::Type_Ray4D: striktype="Ray4D"; break;
         case IkParameterization::Type_Lookat3D: striktype="Lookat3D"; break;
+        case IkParameterization::Type_TranslationDirection5D: striktype="TranslationDirection5D"; break;
         default: return false;
         }
 

@@ -819,7 +819,7 @@ def test_ik():
     jointvalues[4] = possibleangles[3]
     valsubs = []
     for var,value in izip(jointvars,jointvalues):
-        valsubs += [(var,value),(Symbol('c%s'%var.name),self.convertRealToRational(cos(value).evalf())),(Symbol('s%s'%var.name),self.convertRealToRational(sin(value).evalf()))]
+        valsubs += [(var,value),(Symbol('c%s'%var.name),self.convertRealToRational(cos(value).evalf())),(Symbol('s%s'%var.name),self.convertRealToRational(sin(value).evalf())),(Symbol('t%s'%var.name),self.convertRealToRational(tan(value).evalf())),(Symbol('ht%s'%var.name),self.convertRealToRational(tan(value/2).evalf()))]
     psubs = []
     for i in range(12):
         psubs.append((self.Tee[i],self.convertRealToRational(Tfinal[i].subs(valsubs).evalf())))

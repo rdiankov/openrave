@@ -20,7 +20,7 @@ from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2011 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Lesser GPL, Version 3'
-__version__ = '26'
+__version__ = '27'
 
 import sys, copy, time, math, datetime
 import __builtin__
@@ -396,7 +396,7 @@ class SolverIKChainDirection3D:
     def end(self, generator):
         return generator.endIKChainDirection3D(self)
 
-class SolverIKChainRay4D:
+class SolverIKChainRay:
     solvejointvars = None
     freejointvars = None
     Pee = None
@@ -405,7 +405,8 @@ class SolverIKChainRay4D:
     Pfk = None
     Dfk = None
     dictequations = None
-    def __init__(self, solvejointvars, freejointvars, Pee, Dee, jointtree,Pfk=None,Dfk=None):
+    is5dray = False # if True, then full 3D position becomes important and things shouldn't be normalized
+    def __init__(self, solvejointvars, freejointvars, Pee, Dee, jointtree,Pfk=None,Dfk=None,is5dray=False):
         self.solvejointvars = solvejointvars
         self.freejointvars = freejointvars
         self.Pee = Pee
@@ -414,10 +415,11 @@ class SolverIKChainRay4D:
         self.Pfk = Pfk
         self.Dfk = Dfk
         self.dictequations = []
+        self.is5dray=is5dray
     def generate(self, generator):
-        return generator.generateIKChainRay4D(self)
+        return generator.generateIKChainRay(self)
     def end(self, generator):
-        return generator.endIKChainRay4D(self)
+        return generator.endIKChainRay(self)
 
 class SolverIKChainLookat3D:
     solvejointvars = None
@@ -506,7 +508,18 @@ class fmod(core.function.Function):
     is_Function = True
 
 class IKFastSolver(AutoReloader):
-    """Solves the analytical inverse kinematics equations.    
+    """Solves the analytical inverse kinematics equations. The symbol naming conventions are as follows:
+
+    cjX - cos joint angle
+    constX - temporary constant used to simplify computations    
+    dummyX - dummy intermediate variables to solve for
+    gconstX - global constant that is also used during ik generation phase
+    htjX - half tan of joint angle
+    jX - joint angle
+    pX - end effector position information
+    rX - end effector rotation information
+    sjX - sin joint angle
+    tjX - tan of joint angle    
     """
 
     class CannotSolveError(Exception):
@@ -519,15 +532,17 @@ class IKFastSolver(AutoReloader):
         __slots__ = ['joint','iaxis']
 
     class Variable:
-        __slots__ = ['var','svar','cvar','tvar']
+        __slots__ = ['var','svar','cvar','tvar','htvar']
         def __init__(self, var):
+            self.name = var.name
             self.var = var
             self.svar = Symbol("s%s"%var.name)
             self.cvar = Symbol("c%s"%var.name)
             self.tvar = Symbol("t%s"%var.name)
-            self.vars = [self.var,self.svar,self.cvar,self.tvar]
-            self.subs = [(cos(self.var),self.cvar),(sin(self.var),self.svar)]
-            self.subsinv = [(self.cvar,cos(self.var)),(self.svar, sin(self.var))]
+            self.htvar = Symbol("ht%s"%var.name)
+            self.vars = [self.var,self.svar,self.cvar,self.tvar,self.htvar]
+            self.subs = [(cos(self.var),self.cvar),(sin(self.var),self.svar),(tan(self.var),self.tvar),(tan(self.var/2),self.htvar)]
+            self.subsinv = [(self.cvar,cos(self.var)),(self.svar, sin(self.var)),(self.tvar,tan(self.tvar))]
 
     class DegenerateCases:
         def __init__(self):
@@ -1027,7 +1042,6 @@ class IKFastSolver(AutoReloader):
 
     def solveFullIK_Direction3D(self,LinksRaw, jointvars, isolvejointvars, rawbasedir=Matrix(3,1,[S.Zero,S.Zero,S.One])):
         """basedir needs to be filled with a 3elemtn vector of the initial direction to control"""
-
         basedir = Matrix(3,1,[Real(x,30) for x in rawbasedir])
         basedir /= sqrt(basedir[0]*basedir[0]+basedir[1]*basedir[1]+basedir[2]*basedir[2])
         for i in range(3):
@@ -1206,12 +1220,106 @@ class IKFastSolver(AutoReloader):
             # build the raghavan/roth equations and solve with higher power methods
             pass
         tree = self.verifyAllEquations(AllEquations,solvejointvars,self.freevarsubs,tree)
-        return SolverIKChainRay4D([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(v,i) for v,i in izip(self.freejointvars,self.ifreejointvars)], Pee=(TfirstleftInv[0:3,0:3] * self.Tee[0:3,3] + TfirstleftInv[0:3,3]).subs(self.freevarsubs), Dee=(TfirstleftInv[0:3,0:3]*self.Tee[0,0:3].transpose()).subs(self.freevarsubs),jointtree=tree,Dfk=Tfirstleft[0:3,0:3]*Tfinal[0,0:3].transpose(),Pfk=Tfirstleft[0:3,0:3]*Tfinal[0:3,3]+Tfirstleft[0:3,3])
+        return SolverIKChainRay([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(v,i) for v,i in izip(self.freejointvars,self.ifreejointvars)], Pee=(TfirstleftInv[0:3,0:3] * self.Tee[0:3,3] + TfirstleftInv[0:3,3]).subs(self.freevarsubs), Dee=(TfirstleftInv[0:3,0:3]*self.Tee[0,0:3].transpose()).subs(self.freevarsubs),jointtree=tree,Dfk=Tfirstleft[0:3,0:3]*Tfinal[0,0:3].transpose(),Pfk=Tfirstleft[0:3,0:3]*Tfinal[0:3,3]+Tfirstleft[0:3,3])
         
-    def solveFullIK_5D(self, LinksRaw, jointvars, isolvejointvars,Tgripperraw=eye(4)):
+    def solveFullIK_TranslationDirection5D(self, LinksRaw, jointvars, isolvejointvars, rawbasedir=Matrix(3,1,[S.Zero,S.Zero,S.One]),rawbasepos=Matrix(3,1,[S.Zero,S.Zero,S.Zero])):
         """Solves 3D translation + 3D direction
         """
-        assert(0)
+        basepos = Matrix(3,1,[self.convertRealToRational(x) for x in rawbasepos])
+        basedir = Matrix(3,1,[Real(x,30) for x in rawbasedir])
+        basedir /= sqrt(basedir[0]*basedir[0]+basedir[1]*basedir[1]+basedir[2]*basedir[2])
+        for i in range(3):
+            basedir[i] = self.convertRealToRational(basedir[i])
+        Tfirstleft = LinksRaw[0]
+        TfirstleftInv = self.affineInverse(Tfirstleft)
+        Links = LinksRaw[1:]
+        LinksInv = [self.affineInverse(link) for link in Links]
+        T = self.multiplyMatrix(Links)
+        Tfinal = zeros((4,4))
+        Tfinal[0,0:3] = (T[0:3,0:3]*basedir).transpose()
+        Tfinal[0:3,3] = T[0:3,0:3]*basepos+T[0:3,3]
+        self.testconsistentvalues = self.computeConsistentValues(jointvars,Tfinal,numsolutions=4)
+        endbranchtree = [SolverStoreSolution (jointvars)]
+        solvejointvars = [jointvars[i] for i in isolvejointvars]
+        if len(solvejointvars) != 5:
+            raise self.CannotSolveError('need 5 joints')
+        
+        print 'ikfast translation direction 5d: ',solvejointvars
+
+        # if last two axes are intersecting, can divide computing position and direction
+        ilinks = [i for i,Tlink in enumerate(Links) if self.has_any_symbols(Tlink,*solvejointvars)]
+        T = self.multiplyMatrix(Links[ilinks[-2]:])
+        P = T[0:3,0:3]*basepos+T[0:3,3]
+        D = T[0:3,0:3]*basedir
+        if not self.has_any_symbols(P,*solvejointvars):
+            Tposinv = eye(4)
+            Tposinv[0:3,3] = -P
+            T0links=[Tposinv]+Links[:ilinks[-2]]
+            try:
+                print 'last 2 axes are intersecting'
+                tree = self.solve5DIntersectingAxes(T0links,basepos,D,endbranchtree)
+            except self.CannotSolveError, e:
+                print e
+
+        if tree is None:
+            rawpolyeqs2 = [None,None]
+            coupledsolutions = None
+            for solvemethod in [self.solveKohliOsvatic, self.solveManochaCanny]:
+                if coupledsolutions is not None:
+                    break
+                for index in [2,3]:
+                    T0links=LinksInv[:ilinks[index]][::-1]
+                    T0 = self.multiplyMatrix(T0links)
+                    T1links=Links[ilinks[index]:]
+                    T1 = self.multiplyMatrix(T1links)
+                    p0 = T0[0:3,0:3]*self.Tee[0:3,3]+T0[0:3,3]
+                    p1 = T1[0:3,0:3]*basepos+T1[0:3,3]
+                    l0 = T0[0:3,0:3]*self.Tee[0,0:3].transpose()
+                    l1 = T1[0:3,0:3]*basedir
+                    if rawpolyeqs2[j] is None:
+                        rawpolyeqs2[j] = self.buildRaghavanRothEquations(p0,p1,l0,l1,solvejointvars)
+                    try:
+                        coupledsolutions,usedvars = solvemethod(rawpolyeqs2[j])
+                        break
+                    except self.CannotSolveError:
+                        continue
+
+            if coupledsolutions is None:
+                raise self.CannotSolveError('raghavan roth equations too complex')
+
+            print 'solving coupled variables: ',usedvars
+            AllEquations = []
+            for i in range(3):
+                AllEquations.append(self.simplifyTransform(p0-p1))
+                AllEquations.append(self.simplifyTransform(l0-l1))
+            self.sortComplexity(AllEquations)
+            curvars=solvejointvars[:]
+            solsubs = self.freevarsubs[:]
+            for var in usedvars:
+                curvars.remove(var)
+                solsubs += [(cos(var),self.Variable(var).cvar),(sin(var),self.Variable(var).svar)]
+            tree = self.solveAllEquations(AllEquations,curvars=curvars,othersolvedvars = self.freejointvars+usedvars,solsubs = solsubs,endbranchtree=endbranchtree)
+            tree = tree+coupledsolutions
+        
+        return SolverIKChainRay([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(v,i) for v,i in izip(self.freejointvars,self.ifreejointvars)], Pee=(TfirstleftInv[0:3,0:3] * self.Tee[0:3,3] + TfirstleftInv[0:3,3]).subs(self.freevarsubs), Dee=(TfirstleftInv[0:3,0:3]*self.Tee[0,0:3].transpose()).subs(self.freevarsubs),jointtree=tree,Dfk=Tfirstleft[0:3,0:3]*Tfinal[0,0:3].transpose(),Pfk=Tfirstleft[0:3,0:3]*Tfinal[0:3,3]+Tfirstleft[0:3,3],is5dray=True)
+
+    def solve5DIntersectingAxes(self, T0links, basepos, D, solvejointvars, endbranchtree):
+        LinksInv = [self.affineInverse(T) for T in T0links]
+        T0 = self.multiplyMatrix(T0links)
+        Tbaseposinv = eye(4)
+        Tbaseposinv[0:3,3] = -basepos
+        AllEquations = self.buildEquationsFromPositions([Tbaseposinv]+LinksInv[::-1]+[self.Tee],solvejointvars,self.freejointvars,uselength=True)
+        transvars = [v for v in solvejointvars if self.has_any_symbols(T0,v)]
+        transtree = self.solveAllEquations(AllEquations,curvars=transvars[:],othersolvedvars=self.freejointvars,solsubs = self.freevarsubs[:],endbranchtree=endbranchtree)
+        transtree = self.verifyAllEquations(AllEquations,solvejointvars,self.freevarsubs,transtree)
+        rotvars = [v for v in solvejointvars if self.has_any_symbols(D,v)]
+        solsubs = self.freevarsubs[:]
+        for v in transvars:
+            solsubs += self.Variable(v).subs
+        AllEquations = self.buildEquationsFromTwoSides([D],[T0[0:3,0:3]*self.Tee[0,0:3].transpose()],jointvars,uselength=False)
+        dirtree = self.solveAllEquations(AllEquations,curvars=rotvars[:],othersolvedvars = self.freejointvars+transvars,solsubs=solsubs,endbranchtree=endbranchtree)
+        dirtree = self.verifyAllEquations(AllEquations,rotvars,solsubs,dirtree)
+        return transtree+dirtree
 
     def solveFullIK_6D(self, LinksRaw, jointvars, isolvejointvars,Tgripperraw=eye(4)):
         """Solves the full 6D translatio + rotation IK
@@ -1233,9 +1341,34 @@ class IKFastSolver(AutoReloader):
         
         print 'ikfast 6d: ',solvejointvars
 
-        # first search for 3 intersecting joints
-        ilinks = [i for i,Tlink in enumerate(Links) if self.has_any_symbols(Tlink,*solvejointvars)]
         tree = None
+        for T0links,T1links,transvars,rotvars,solveRotationFirst in self.iterateThreeIntersectingAxes(solvejointvars,Links, LinksInv):
+            try:
+                print 'found 3 consecutive intersecting axes: %s, translation=%s'%(str(transvars),str(rotvars))
+                tree = self.solve6DIntersectingAxes(T0links,T1links,transvars,rotvars,solveRotationFirst=solveRotationFirst, endbranchtree=endbranchtree)
+                break
+            except self.CannotSolveError, e:
+                print e
+                        
+        if tree is None:
+            for T0links, T1links in self.iterateThreeNonIntersectingAxes(solvejointvars,Links, LinksInv):
+                try:
+                    print 'found 3 consecutive non-intersecting axes'
+                    tree = self.solveFullIK_6DGeneral(T0links, T1links, solvejointvars, endbranchtree)
+                    break
+                except self.CannotSolveError, e:
+                    print e
+
+        if tree is None:
+            raise self.CannotSolveError('cannot solve 6D mechanism!')
+
+        Tgoal = (self.affineInverse(Tfirstleft) * self.Tee * self.affineInverse(Tfirstright)).subs(self.freevarsubs)
+        return SolverIKChainTransform6D([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(v,i) for v,i in izip(self.freejointvars,self.ifreejointvars)], Tgoal, tree,Tfk=Tfirstleft*Tfinal*Tfirstright)
+
+    def iterateThreeIntersectingAxes(self, solvejointvars, Links, LinksInv):
+        """Search for 3 consectuive intersecting axes. If a robot has this condition, it makes a lot of IK computations simpler.
+        """
+        ilinks = [i for i,Tlink in enumerate(Links) if self.has_any_symbols(Tlink,*solvejointvars)]
         for i in range(len(ilinks)-2):
             startindex = ilinks[i]
             endindex = ilinks[i+2]+1
@@ -1262,40 +1395,24 @@ class IKFastSolver(AutoReloader):
                     else:
                         transvars.append(svar)
                 if len(rotvars) == 3 and len(transvars) == 3:
-                    try:
-                        print 'found 3 consecutive intersecting axes: %s, translation=%s'%(str(transvars),str(rotvars))
-                        tree = self.solve6DIntersectingAxes(T0links,T1links,transvars,rotvars,solveRotationFirst=solveRotationFirst, endbranchtree=endbranchtree)
-                        break
-                    except self.CannotSolveError, e:
-                        print e
-                        
-        if tree is None:
-            # check for non-intersecting joints
-            # if several points exist, so have to choose one that is least complex?
-            for i in range(len(ilinks)-2):
-                startindex = ilinks[i]
-                endindex = ilinks[i+2]+1
-                p0 = self.multiplyMatrix(Links[ilinks[i]:ilinks[i+1]])[0:3,3]
-                p1 = self.multiplyMatrix(Links[ilinks[i+1]:ilinks[i+2]])[0:3,3]
-                if self.has_any_symbols(p0,*solvejointvars) and self.has_any_symbols(p1,*solvejointvars):
-                    T0links = Links[startindex:endindex]
-                    T0 = self.multiplyMatrix(T0links)
-                    T1links = LinksInv[:startindex][::-1]
-                    T1links.append(self.Tee)
-                    T1links += LinksInv[endindex:][::-1]
-                    coupledvars = [svar for svar in solvejointvars if self.has_any_symbols(T0,svar)]
-                    print 'found 3 consecutive non-intersecting axes: %s'%(str(coupledvars))
-                    try:
-                        tree = self.solveFullIK_6DGeneral(T0links, T1links, solvejointvars, endbranchtree)
-                        break
-                    except self.CannotSolveError, e:
-                        print e
+                    yield T0links,T1links,transvars,rotvars,solveRotationFirst
 
-        if tree is None:
-            raise self.CannotSolveError('cannot solve 6D mechanism!')
-
-        Tgoal = (self.affineInverse(Tfirstleft) * self.Tee * self.affineInverse(Tfirstright)).subs(self.freevarsubs)
-        return SolverIKChainTransform6D([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(v,i) for v,i in izip(self.freejointvars,self.ifreejointvars)], Tgoal, tree,Tfk=Tfirstleft*Tfinal*Tfirstright)
+    def iterateThreeNonIntersectingAxes(self, solvejointvars, Links, LinksInv):
+        """check for three consecutive non-intersecting axes.
+        if several points exist, so have to choose one that is least complex?
+        """
+        ilinks = [i for i,Tlink in enumerate(Links) if self.has_any_symbols(Tlink,*solvejointvars)]
+        for i in range(len(ilinks)-2):
+            startindex = ilinks[i]
+            endindex = ilinks[i+2]+1
+            p0 = self.multiplyMatrix(Links[ilinks[i]:ilinks[i+1]])[0:3,3]
+            p1 = self.multiplyMatrix(Links[ilinks[i+1]:ilinks[i+2]])[0:3,3]
+            if self.has_any_symbols(p0,*solvejointvars) and self.has_any_symbols(p1,*solvejointvars):
+                T0links = Links[startindex:endindex]
+                T1links = LinksInv[:startindex][::-1]
+                T1links.append(self.Tee)
+                T1links += LinksInv[endindex:][::-1]
+                yield T0links, T1links
 
     def solve6DIntersectingAxes(self, T0links, T1links, transvars,rotvars,solveRotationFirst,endbranchtree):
         """Solve 6D equations using fact that 3 axes are intersecting. The 3 intersecting axes are all part of T0links and will be used to compute the rotation of the robot. The other 3 axes are part of T1links and will be used to first compute the position.
@@ -1358,7 +1475,7 @@ class IKFastSolver(AutoReloader):
                     else:
                         T0 = self.affineSimplify(self.multiplyMatrix(T0links))
                         T1 = self.affineSimplify(self.multiplyMatrix(T1links))
-                    rawpolyeqs,numminvars = self.buildRaghavanRothEquations(T0,T1,solvejointvars)
+                    rawpolyeqs,numminvars = self.buildRaghavanRothEquationsFromMatrix(T0,T1,solvejointvars)
                     if numminvars <= 5 or len(PolyEquations[0][1].symbols) <= 6:
                         rawpolyeqs2[j] = rawpolyeqs
                 try:
@@ -1371,7 +1488,7 @@ class IKFastSolver(AutoReloader):
         if coupledsolutions is None:
             raise self.CannotSolveError('raghavan roth equations too complex')
 
-        print 'solved coupled variables: ',usedvars
+        print 'solving coupled variables: ',usedvars
         AllEquations = []
         for i in range(3):
             for j in range(4):
@@ -1471,7 +1588,7 @@ class IKFastSolver(AutoReloader):
         self.sortComplexity(AllEquations)
         return AllEquations
 
-    def buildRaghavanRothEquations(self,T0,T1,solvejointvars,doreduction=True):
+    def buildRaghavanRothEquationsFromMatrix(self,T0,T1,solvejointvars):
         """Builds the 14 equations using only 5 unknowns. Method explained by:
 
         M. Raghavan and B. Roth, "Inverse Kinematics of the General 6R Manipulator and related Linkages",  Journal of Mechanical Design, Volume 115, Issue 3, 1993.
@@ -1496,6 +1613,9 @@ class IKFastSolver(AutoReloader):
                 numminvars = numcurvars
                 l0 = T0[irow,0:3].transpose()
                 l1 = T1[irow,0:3].transpose()
+        return self.buildRaghavanRothEquations(p0,p1,l0,l1,solvejointvars),numminvars
+    
+    def buildRaghavanRothEquations(self,p0,p1,l0,l1,solvejointvars):
         eqs = []
         for i in range(3):
             eqs.append([l0[i],l1[i]])
@@ -1542,7 +1662,7 @@ class IKFastSolver(AutoReloader):
                         poly2 = poly2.add_term(cnew,m)
                 polyeqs[i][j] = poly2
         # remove all fractions? having big integers could blow things up...
-        return polyeqs,numminvars
+        return polyeqs
 
     def reduceBothSides(self,polyeqs):
         """Reduces a set of equations in 5 unknowns to a set of equations with 3 unknowns by solving for one side with respect to another.
@@ -1903,7 +2023,7 @@ class IKFastSolver(AutoReloader):
         dummyvars = []
         usedvars = []
         for i in range(0,len(symbols),2):
-            dummy = Symbol('dummy%d'%i)
+            dummy = Symbol('ht%s'%symbols[i][1:])
             # [0] - cos, [1] - sin
             dummys.append(dummy)
             dummysubs += [(symbols[i],(1-dummy**2)/(1+dummy**2)),(symbols[i+1],2*dummy/(1+dummy**2))]
@@ -1942,7 +2062,164 @@ class IKFastSolver(AutoReloader):
         coupledsolution = SolverCoeffFunction(jointnames=[v.name for v in usedvars],jointeval=[v[1] for v in dummysubs2],jointevalcos=[dummysubs[2*i][1] for i in range(len(usedvars))],jointevalsin=[dummysubs[2*i+1][1] for i in range(len(usedvars))],isHinges=[self.isHinge(v.name) for v in usedvars],exportvar=[v.name for v in dummys],exportcoeffeqs=exportcoeffeqs,exportfnname='solvedialyticpoly12qep')
         self.usinglapack = True
         return [raghavansolutiontree,coupledsolution],usedvars
-    
+
+    def solveLiWoernleHiller(self,rawpolyeqs):
+        """Li-Woernle-Hiller procedure covered in 
+        Jorge Angeles, "Fundamentals of Robotics Mechanical Systems, Springer, 2007.
+        """
+        if len(rawpolyeqs[0][0].symbols) < len(rawpolyeqs[0][1].symbols):
+            for peq in rawpolyeqs:
+                peq[0],peq[1] = peq[1],peq[0]
+
+        symbols = list(rawpolyeqs[0][0].symbols)
+        othersymbols = list(rawpolyeqs[0][1].symbols)
+        symbolsubs = [(symbols[i].subs(self.invsubs),symbols[i]) for i in range(len(symbols))]
+        if len(symbols) != 6:
+            raise CannotSolveError('Kohli/Osvatic method requires 3 unknown variables')
+            
+        # choose which leftvar can determine the singularity of the following equations!
+        for i in range(0,6,2):
+            eqs = [peq for peq in rawpolyeqs if peq[0].has_any_symbols(symbols[i],symbols[i+1])]
+            if len(eqs) <= 8:
+                break
+        if len(eqs) > 8:
+            raise self.CannotSolveError('need 8 or less equations of one variable')
+        
+        cvar = symbols[i]
+        svar = symbols[i+1]
+        tvar = Symbol('ht'+cvar.name[1:])
+        symbols.remove(cvar)
+        symbols.remove(svar)
+        symbols.append(tvar)
+        othersymbols.append(tvar)
+        
+        polyeqs = [[eq[0].as_basic(),eq[1]] for eq in eqs]
+        neweqs=[]
+        for i in range(0,8,2):
+            p0 = Poly(polyeqs[i][0],cvar,svar)
+            p1 = Poly(polyeqs[i+1][0],cvar,svar)
+            r0 = polyeqs[i][1].as_basic()
+            r1 = polyeqs[i+1][1].as_basic()
+            if self.equal(p0.coeff(1,0),-p1.coeff(0,1)) and self.equal(p0.coeff(0,1),p1.coeff(1,0)):
+                p0,p1 = p1,p0
+                r0,r1 = r1,r0
+            if self.equal(p0.coeff(1,0),p1.coeff(0,1)) and self.equal(p0.coeff(0,1),-p1.coeff(1,0)):
+                # p0+tvar*p1, p1-tvar*p0
+                # subs: tvar*svar + cvar = 1, svar-tvar*cvar=tvar
+                neweqs.append([Poly(p0.coeff(1,0) + p0.coeff(0,1)*tvar + p0.coeff(0,0) + tvar*p1.coeff(0,0),*symbols), Poly(r0+tvar*r1,*othersymbols)])
+                neweqs.append([Poly(p0.coeff(1,0)*tvar - p0.coeff(0,1) - p0.coeff(0,0)*tvar + p1.coeff(0,0),*symbols), Poly(r1-tvar*r0,*othersymbols)])
+        if len(neweqs) != 8:
+            raise self.CannotSolveError('coefficients of equations need to match! only got %d reduced equations'%len(neweqs))
+
+        for peq in rawpolyeqs:
+            if not peq[0].has_any_symbols(cvar,svar):
+                neweqs.append([Poly(peq[0],*symbols),Poly(peq[1],*othersymbols)])
+                neweqs.append([Poly(peq[0].as_basic()*tvar,*symbols),Poly(peq[1].as_basic()*tvar,*othersymbols)])
+
+        # one side should have only numbers, this makes the following inverse operations trivial
+        for peq in neweqs:
+            peq[1] = peq[1] - tvar*peq[0].coeff(0,0,0,0,1)-peq[0].coeff()
+            peq[0] = peq[0] - tvar*peq[0].coeff(0,0,0,0,1)-peq[0].coeff()
+        allmonoms = set()
+        for peq in neweqs:
+            allmonoms = allmonoms.union(set(peq[0].monoms))
+        allmonoms = list(allmonoms)
+        allmonoms.sort()
+        assert(len(allmonoms)==16)
+        
+        A = zeros((len(neweqs),len(allmonoms)))
+        B = zeros((len(neweqs),1))
+        for ipeq,peq in enumerate(neweqs):
+            for c,m in peq[0].iter_terms():
+                A[ipeq,allmonoms.index(m)] = c
+            B[ipeq] = peq[1].as_basic()
+        AU = zeros((len(allmonoms),len(allmonoms)))
+        AL = zeros((A.shape[0]-len(allmonoms),len(allmonoms)))
+        BU = zeros((len(allmonoms),1))
+        BL = zeros((A.shape[0]-len(allmonoms),1))
+        AUinv = None
+        for rows in combinations(range(A.shape[0]),A.shape[1]):
+            for i,row in enumerate(rows):
+                AU[i,:] = A[row,:]
+            if AU.det() != S.Zero:
+                AUinv = AU.inv()
+                break
+        if AUinv is None:
+            raise self.CannotSolveError('could not find the inverse matrix')
+        
+        otherrows = range(A.shape[0])
+        for i,row in enumerate(rows):
+            BU[i] = B[row]
+            otherrows.remove(row)
+        for i,row in enumerate(otherrows):
+            BL[i] = B[row]
+            AL[i,:] = A[row,:]
+        C = AL*(AUinv*BU)-BL
+        # is now a (len(neweqs)-len(allmonoms))x1 matrix, usually this is 4x1
+        reducedeqs = []
+        nextindex = 2
+        dummy = Symbol('ht%s'%othersymbols[nextindex].name[1:])
+        dummysubs = [(othersymbols[nextindex],(1-dummy**2)/(1+dummy**2)),(othersymbols[nextindex+1],2*dummy/(1+dummy**2))]
+        for c in C:
+            reducedeqs.append(Poly(simplify(c.subs(dummysubs)*(1+dummy**2)),dummy,tvar))
+        # create a new matrix using the coefficients of reducedeqs
+        newmonoms = set()
+        origmonoms = set()
+        maxdegree = 0
+        for peq in reducedeqs:
+            for m in peq.iter_monoms():
+                mlist = list(m)
+                newmonoms.add(tuple(mlist))
+                origmonoms.add(tuple(mlist))
+                mlist[0] += 1
+                newmonoms.add(tuple(mlist))
+        newmonoms = list(newmonoms)
+        newmonoms.sort()
+        origmonoms = list(origmonoms)
+        origmonoms.sort()
+        assert(len(newmonoms)<=2*len(reducedeqs))
+        symbolgen = cse_main.numbered_symbols('const')
+        localsymbols = []
+        localexprs = []
+        localcommon = []
+        M = zeros((2*len(reducedeqs),len(newmonoms)))
+        exportcoeffeqs = [S.Zero]*(len(reducedeqs)*len(newmonoms)*3)
+        x = Symbol('ht%s'%othersymbols[0].name[1:])
+        for ipeq,peq in enumerate(reducedeqs):
+            for c,m in peq.iter_terms():
+                #eq,symbolsubs = self.removeConstants(c,othersymbols[0:2],symbolgen)
+                eq = Poly(c,othersymbols[0],othersymbols[1])
+                assert(eq.degree<=1)
+                dummyeq = eq.coeff(0,0)*(1+x**2) + eq.coeff(1,0)*(1-x**2) + eq.coeff(0,1)*2*x
+                eq,symbolsubs = self.removeConstants(dummyeq,[x],symbolgen)
+                for s,expr in symbolsubs:
+                    expr0,common0 = self.removecommonexprs(expr,returncommon=True)
+                    index = self.getCommonExpression(localexprs,expr0)
+                    if index is not None:
+                        eq=eq.subs(s,localsymbols[index][0]/localcommon[index]*common0)
+                    else:
+                        index = self.getCommonExpression(localexprs,-expr0)
+                        if index is not None:
+                            eq=eq.subs(s,-localsymbols[index][0]/localcommon[index]*common0)
+                        else:
+                            localsymbols.append((s,expr))
+                            localexprs.append(expr0)
+                            localcommon.append(common0)
+                #eq = Poly(eq,othersymbols[0],othersymbols[1])
+                exportindex = len(newmonoms)*ipeq+newmonoms.index(m)
+                #exportcoeffeqs[exportindex] = eq.coeff(0,0)
+                #exportcoeffeqs[len(newmonoms)*len(reducedeqs)+exportindex] = eq.coeff(1,0)
+                #exportcoeffeqs[2*len(newmonoms)*len(reducedeqs)+exportindex] = eq.coeff(0,1)
+                M[ipeq+len(reducedeqs),newmonoms.index(m)] = eq.as_basic()
+                mlist = list(m)
+                mlist[0] += 1
+                M[ipeq,newmonoms.index(tuple(mlist))] = eq.as_basic()
+
+        #allsymbols = self.pvars+[s for s,v in localsymbols]+[x]
+        #P,L,DD,U= self.LUdecompositionFF(M,*allsymbols)
+        #det=self.det_bareis(M,*(self.pvars+othersymbols[0:2]))
+        raise self.CannotSolveError('not implemented')
+
     def solveKohliOsvatic(self,rawpolyeqs):
         """Find a 16x16 matrix where the entries are linear with respect to the tan half-angle of one of the variables.
         Takes in the 14 raghavan/roth equations.
@@ -1957,7 +2234,7 @@ class IKFastSolver(AutoReloader):
         symbols = list(rawpolyeqs[0][0].symbols)
         othersymbols = list(rawpolyeqs[0][1].symbols)
         symbolsubs = [(symbols[i].subs(self.invsubs),symbols[i]) for i in range(len(symbols))]
-        if len(symbols) != 6 or len(othersymbols) != 4:
+        if len(symbols) != 6:
             raise CannotSolveError('Kohli/Osvatic method requires 3 unknown variables')
             
         # choose which leftvar can determine the singularity of the following equations!
@@ -1994,7 +2271,7 @@ class IKFastSolver(AutoReloader):
             raise self.CannotSolveError('coefficients of equations need to match! only got %d reduced equations'%len(neweqs))
 
         # solve the othereqs for symbols without the standalone symbols[2] and symbols[3]
-        for jother in range(2):
+        for jother in range(len(othersymbols)/2):
             if jother == 0:
                 cosmonom = (1,0,0,0)
                 sinmonom = (0,1,0,0)
@@ -2021,9 +2298,12 @@ class IKFastSolver(AutoReloader):
                 rightsideeqs.append(rightsideeq)
                 leftsideeqs.append(leftsideeq)
             # number of symbols for hiro robot is 16
-            reducedeqs = self.reduceBothSidesSymbolically(leftsideeqs,rightsideeqs,usesymbols=False,maxsymbols=18)
-            for peq in reducedeqs:
-                peq[0] = Poly(peq[0],*othersymbols)
+            if len(othersymbols) > 2:
+                reducedeqs = self.reduceBothSidesSymbolically(leftsideeqs,rightsideeqs,usesymbols=False,maxsymbols=18)
+                for peq in reducedeqs:
+                    peq[0] = Poly(peq[0],*othersymbols)
+            else:
+                reducedeqs = [[left,right] for left,right in izip(leftsideeqs,rightsideeqs)]
             if len(reducedeqs) > 0:
                 break
             
@@ -2067,7 +2347,7 @@ class IKFastSolver(AutoReloader):
         dummysubs += [(cvar,(1-tvar**2)/(1+tvar**2)),(svar,2*tvar/(1+tvar**2))]
 
         for i in range(0,len(symbols),2):
-            dummy = Symbol('dummy%d'%(i/2))
+            dummy = Symbol('ht%s'%symbols[i].name[1:])
             # [0] - cos, [1] - sin
             dummys.append(dummy)
             dummysubs += [(symbols[i],(1-dummy**2)/(1+dummy**2)),(symbols[i+1],2*dummy/(1+dummy**2))]
@@ -2407,7 +2687,7 @@ class IKFastSolver(AutoReloader):
             for raweqn in raweqns:
                 try:
                     print 'testing with higher degrees'
-                    solution=self.solveHighDegreeEquationHalfAngle(raweqn,curvar)
+                    solution=self.solveHighDegreeEquationHalfAngle(raweqn,self.Variable(curvar))
                     self.solutionComplexity(solution,othersolvedvars,curvars)
                     solutions.append((solution,curvar))
                 except self.CannotSolveError:
@@ -2493,7 +2773,7 @@ class IKFastSolver(AutoReloader):
                             ss = []
                         try:
                             ss += self.solveSingleVariable([checkzero.subs([(sothervar,sin(othervar)),(cothervar,cos(othervar))])],othervar,othersolvedvars)
-                        except self.CannotSolveError:
+                        except self.CannotSolveError,e:
                             # this is actually a little tricky, sometimes really good solutions can have a divide that looks like:
                             # ((0.405 + 0.331*cj2)**2 + 0.109561*sj2**2 (manusarm_left.robot.xml)
                             # This will never be 0, but the solution cannot be solved. Instead of rejecting, add a condition to check if checkzero itself is 0 or not
@@ -2678,14 +2958,8 @@ class IKFastSolver(AutoReloader):
 
     def solveHighDegreeEquationHalfAngle(self,eq,var):
         """solve an equation with sin**2+cos**2-1 substitution"""
-        svar = Symbol('s%s'%var.name)
-        cvar = Symbol('c%s'%var.name)
-        varsubs = [(sin(var),svar),(cos(var),cvar)]
-        varsubsinv = [(f[1],f[0]) for f in varsubs]
-        eq = eq.subs(varsubs).subs(svar**2,1-cvar**2).expand()
-        dummy0 = Symbol('dummy0')
-        dummysubs = [(cvar,(1-dummy0**2)/(1+dummy0**2)),(svar,2*dummy0/(1+dummy0**2))]
-
+        eq = eq.subs(var.subs).subs(var.svar**2,1-var.cvar**2).expand()
+        dummysubs = [(var.cvar,(1-var.htvar**2)/(1+var.htvar**2)),(var.svar,2*var.htvar/(1+var.htvar**2))]
         peq = Poly(eq,*[v[0] for v in dummysubs])
         maxmonoms = [0,0]
         maxdenom = 0
@@ -2704,15 +2978,25 @@ class IKFastSolver(AutoReloader):
             term *= denom**(maxdenom-monoms[0]-monoms[1])
             eqnew += simplify(term)
         finaleq = simplify(eqnew).expand()
-        pfinal = Poly(finaleq,dummy0)
-        jointsol = 2*atan(dummy0)
+        pfinal = Poly(finaleq,var.htvar)
+        # check to see that LC is non-zero for at least one solution
+        if all([pfinal.LC.subs(testconsistentvalue).evalf()==S.Zero for testconsistentvalue in self.testconsistentvalues]):
+            raise self.CannotSolveError('leading coefficient is always zero in %s'%(str(pfinal)))
+        
+        jointsol = 2*atan(var.htvar)
         solution = SolverPolynomialRoots(jointname=var.name,poly=pfinal,jointeval=[jointsol],isHinge=self.isHinge(var.name))
         solution.checkforzeros = []
         solution.postcheckforzeros = []
         solution.postcheckfornonzeros = []
         solution.postcheckforrange = []
         return solution
-        
+
+    def solveHighDegreeEquationsHalfAngle(self,eqs,var):
+        if len(eqs) == 1:
+            return self.solveHighDegreeEquationHalfAngle(eqs[0],var)
+
+        raise self.CannotSolveError('solveHighDegreeEquationsHalfAngle: cannot solve equations %s'%str(eqs))
+
     def solveSingleVariable(self,raweqns,var,othersolvedvars,maxsolutions=4,maxdegree=2):
         varsym = self.Variable(var)
         cvar,svar = varsym.cvar,varsym.svar
@@ -2908,17 +3192,19 @@ class IKFastSolver(AutoReloader):
                     solutions.append(SolverSolution(var.name,jointeval=jointsolutions,isHinge=self.isHinge(var.name)))
                 continue
             try:
-                solutions.append(self.solveHighDegreeEquationHalfAngle(eqnew,var))
+                solutions.append(self.solveHighDegreeEquationHalfAngle(eqnew,varsym))
             except self.CannotSolveError:
                 pass
         if len(solutions) > 0:
             return solutions
-        raise self.CannotSolveError('cannot solve equations %s'%str(raweqns))
+
+        return [self.solveHighDegreeEquationsHalfAngle(eqns,varsym)]
 
     def solveHalfAnglePairVariables(self,raweqns,var0,var1,maxcomplexity=50):
         # make sure both variables are hinges
         if not self.isHinge(var0.name) or not self.isHinge(var1.name):
             raise self.CannotSolveError('pairwise variables only supports hinge joints')
+        
         cvar0 = Symbol('c%s'%var0.name)
         svar0 = Symbol('s%s'%var0.name)
         cvar1 = Symbol('c%s'%var1.name)
@@ -2978,6 +3264,7 @@ class IKFastSolver(AutoReloader):
         # make sure both variables are hinges
         if not self.isHinge(var0.name) or not self.isHinge(var1.name):
             raise self.CannotSolveError('pairwise variables only supports hinge joints')
+        
         varsym0 = self.Variable(var0)
         varsym1 = self.Variable(var1)
         cvar0,svar0 = varsym0.cvar, varsym0.svar
@@ -2989,7 +3276,7 @@ class IKFastSolver(AutoReloader):
         eqns = [eq.subs(varsubs).subs(reducesubs).expand() for eq in raweqns if eq.has_any_symbols(var0,var1)]
         if len(eqns) <= 1:
             raise self.CannotSolveError('not enough equations')
-
+        
         # group equations with single variables
         symbolgen = cse_main.numbered_symbols('const')
         orgeqns = []
@@ -3265,7 +3552,7 @@ class IKFastSolver(AutoReloader):
                                             break
                         if othervarpoly is not None:
                             # now we have one polynomial with only one variable (sin and cos)!
-                            solution = self.solveHighDegreeEquationHalfAngle(othervarpoly,var1 if i < 2 else var0)
+                            solution = self.solveHighDegreeEquationHalfAngle(othervarpoly,varsym1 if i < 2 else varsym0)
                             solution.postcheckforzeros = postcheckforzeros
                             solution.postcheckfornonzeros = postcheckfornonzeros
                             solution.postcheckforrange = postcheckforrange
@@ -3319,6 +3606,10 @@ class IKFastSolver(AutoReloader):
                         # be careful of the chop here, we've already take the original constants to the 4th power
                         finaleq = self.chop((ptotal_cos.as_basic()**2 - (1-polysymbols[0]**2)*ptotal_sin.as_basic()**2).expand())
                         pfinal = Poly(finaleq,*polysymbols)
+                        # check to see that LC is non-zero for at least one solution
+                        if all([pfinal.LC.subs(testconsistentvalue).evalf()==S.Zero for testconsistentvalue in self.testconsistentvalues]):
+                            raise self.CannotSolveError('leading coefficient is always zero in %s'%(str(pfinal)))
+
                         jointsol = atan2(ptotal_cos.as_basic()/ptotal_sin.as_basic(), polysymbols[0])
                         var = var0.name if ivar == 0 else var1
                         solution = SolverPolynomialRoots(jointname=var.name,poly=pfinal,jointeval=[jointsol],isHinge=self.isHinge(var.name))
@@ -3333,7 +3624,7 @@ class IKFastSolver(AutoReloader):
                         print 'can simplify equations more! (%d)'%len(lineareqs)
                     for lineareq in lineareqs:
                         try:
-                            return [self.solveHighDegreeEquationHalfAngle(lineareq,var1)]
+                            return [self.solveHighDegreeEquationHalfAngle(lineareq,varsym1)]
                         except self.CannotSolveError,e:
                             print e
                             continue
@@ -3341,6 +3632,7 @@ class IKFastSolver(AutoReloader):
 
         varindex=goodgroup[0][0]
         var = var0 if varindex < 2 else var1
+        varsym = varsym0 if varindex < 2 else varsym1
         unknownvar=unknownvars[goodgroup[0][0]]
         rawsolutions = None
         # try single variable solution
@@ -3417,7 +3709,7 @@ class IKFastSolver(AutoReloader):
             #if not self.isHinge(var.name):
             #    print 'got conic equation from a non-hinge joint?: ',finaleq
             #return [SolverConicRoots(var.name,[finaleq],isHinge=self.isHinge(var.name))]
-            solution = self.solveHighDegreeEquationHalfAngle(finaleq,var)
+            solution = self.solveHighDegreeEquationHalfAngle(finaleq,varsym)
             solution.checkforzeros += checkforzeros
             return [solution]
 
@@ -3637,6 +3929,7 @@ class IKFastSolver(AutoReloader):
 
                         if k > 0:
                             if len(vars) > 0:
+                                print i,M[k-1, k-1]
                                 D,r = div(Poly(D,*vars),M[k-1, k-1])
                             else:
                                 D /= M[k-1, k-1]
@@ -3650,8 +3943,47 @@ class IKFastSolver(AutoReloader):
                                 M[i, j] = Poly.cancel(D)
 
             det = sign * M[n-1, n-1]
-
+            
         return det.expand()
+
+    @staticmethod
+    def LUdecompositionFF(M,*vars):
+        """
+        Returns 4 matrices P, L, D, U such that PA = L D**-1 U.
+
+        From the paper "fraction-free matrix factors..." by Zhou and Jeffrey
+        """
+        n, m = M.rows, M.cols
+        U, L, P = M[:,:], eye(n), eye(n)
+        DD = zeros(n) # store it smarter since it's just diagonal
+        oldpivot = 1
+
+        for k in range(n-1):
+            if U[k,k] == S.Zero:
+                for kpivot in range(k+1, n):
+                    if U[kpivot, k] != S.Zero:
+                        break
+                else:
+                    raise ValueError("Matrix is not full rank")
+                U[k, k:], U[kpivot, k:] = U[kpivot, k:], U[k, k:]
+                L[k, :k], L[kpivot, :k] = L[kpivot, :k], L[k, :k]
+                P[k, :], P[kpivot, :] = P[kpivot, :], P[k, :]
+            L[k,k] = Ukk = U[k,k]
+            DD[k,k] = oldpivot * Ukk
+            for i in range(k+1, n):
+                L[i,k] = Uik = U[i,k]
+                for j in range(k+1, m):
+                    if len(vars) == 0:
+                        U[i,j] = (Ukk * U[i,j] - U[k,j]*Uik) / oldpivot
+                    else:
+                        print i,j,oldpivot
+                        q,r = div(Poly(Ukk * U[i,j] - U[k,j]*Uik,*vars),oldpivot)
+                        assert(r==S.Zero)
+                        U[i,j] = q
+                U[i,k] = S.Zero
+            oldpivot = Ukk
+        DD[n-1,n-1] = oldpivot
+        return P, L, DD, U
 
     @staticmethod
     def tolatex(e):
