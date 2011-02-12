@@ -20,7 +20,7 @@ from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2011 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Lesser GPL, Version 3'
-__version__ = '27'
+__version__ = '28'
 
 import sys, copy, time, math, datetime
 import __builtin__
@@ -108,6 +108,15 @@ class SolverSolution:
         return generator.generateSolution(self)
     def end(self, generator):
         return generator.endSolution(self)
+    def numsolutions(self):
+        n=0
+        if self.jointeval is not None:
+            n += len(self.jointeval)
+        if self.jointevalcos is not None:
+            n += len(self.jointevalcos)
+        if self.jointevalsin is not None:
+            n += len(self.jointevalsin)
+        return n
     def checkValidSolution(self):
         valid=True
         if self.jointeval is not None:
@@ -141,6 +150,8 @@ class SolverPolynomialRoots:
         self.jointname=jointname
         self.jointeval = jointeval
         self.isHinge = isHinge
+    def numsolutions(self):
+        return self.poly.degree
     def subs(self,solsubs):
         if self.jointeval is not None:
             self.jointeval = [e.subs(solsubs) for e in self.jointeval]
@@ -183,7 +194,6 @@ class SolverCoeffFunction:
     jointevalsin = None # used for half angles
     checkforzeros = None
     FeasibleIsZeros = False
-    rootmaxdim=None
     score = None
     def __init__(self, jointnames, jointeval=None, exportvar=None, exportcoeffeqs=None,exportfnname=None,isHinges=None,rootmaxdim=16,jointevalcos=None,jointevalsin=None):
         self.jointnames=jointnames
@@ -195,6 +205,8 @@ class SolverCoeffFunction:
         self.rootmaxdim=rootmaxdim
         self.jointevalsin=jointevalsin
         self.jointevalcos=jointevalcos
+    def numsolutions(self):
+        return self.rootmaxdim
     def subs(self,solsubs):
         if self.jointeval is not None:
             self.jointeval = [e.subs(solsubs) for e in self.jointeval]
@@ -888,22 +900,20 @@ class IKFastSolver(AutoReloader):
         try:
             # multiby by 400 in order to prioritize equations with less solutions
             if sol.jointeval is not None:
-                sol.score = 400*len(sol.jointeval)
+                sol.score = 20000*len(sol.jointeval)
                 for s in sol.jointeval:
                     sol.score += self.codeComplexity(s)
                 subexprs = sol.jointeval
             elif sol.jointevalsin is not None:
-                sol.score = 400*len(sol.jointevalsin)
+                sol.score = 20000*len(sol.jointevalsin)
                 for s in sol.jointevalsin:
                     sol.score += self.codeComplexity(s)
                 subexprs = sol.jointevalsin
-                #sol.score += 500
             elif sol.jointevalcos is not None:
-                sol.score = 400*len(sol.jointevalcos)
+                sol.score = 20000*len(sol.jointevalcos)
                 for s in sol.jointevalcos:
                     sol.score += self.codeComplexity(s)
                 subexprs = sol.jointevalcos
-                #sol.score += 500
             else:
                 assert False
             
@@ -2059,7 +2069,7 @@ class IKFastSolver(AutoReloader):
         coupledvars.pop(ileftvar)
         getsubs = raghavansolutiontree[0].getsubs if len(raghavansolutiontree) > 0 else None
         exportcoeffeqs,exportmonoms = self.solveDialytically(newreducedeqs,ileftvar,getsubs)
-        coupledsolution = SolverCoeffFunction(jointnames=[v.name for v in usedvars],jointeval=[v[1] for v in dummysubs2],jointevalcos=[dummysubs[2*i][1] for i in range(len(usedvars))],jointevalsin=[dummysubs[2*i+1][1] for i in range(len(usedvars))],isHinges=[self.isHinge(v.name) for v in usedvars],exportvar=[v.name for v in dummys],exportcoeffeqs=exportcoeffeqs,exportfnname='solvedialyticpoly12qep')
+        coupledsolution = SolverCoeffFunction(jointnames=[v.name for v in usedvars],jointeval=[v[1] for v in dummysubs2],jointevalcos=[dummysubs[2*i][1] for i in range(len(usedvars))],jointevalsin=[dummysubs[2*i+1][1] for i in range(len(usedvars))],isHinges=[self.isHinge(v.name) for v in usedvars],exportvar=[v.name for v in dummys],exportcoeffeqs=exportcoeffeqs,exportfnname='solvedialyticpoly12qep',rootmaxdim=16)
         self.usinglapack = True
         return [raghavansolutiontree,coupledsolution],usedvars
 
@@ -2388,7 +2398,7 @@ class IKFastSolver(AutoReloader):
             newreducedeqs.append(Poly(eqnew,*dummys))
 
         exportcoeffeqs,exportmonoms = self.solveDialytically(newreducedeqs,ileftvar)
-        coupledsolution = SolverCoeffFunction(jointnames=[v.name for v in usedvars],jointeval=[v[1] for v in dummysubs2],jointevalcos=[dummysubs[2*i][1] for i in range(len(usedvars))],jointevalsin=[dummysubs[2*i+1][1] for i in range(len(usedvars))],isHinges=[self.isHinge(v.name) for v in usedvars],exportvar=dummys[0:3]+[dummyjk],exportcoeffeqs=exportcoeffeqs,exportfnname='solvedialyticpoly16lep')
+        coupledsolution = SolverCoeffFunction(jointnames=[v.name for v in usedvars],jointeval=[v[1] for v in dummysubs2],jointevalcos=[dummysubs[2*i][1] for i in range(len(usedvars))],jointevalsin=[dummysubs[2*i+1][1] for i in range(len(usedvars))],isHinges=[self.isHinge(v.name) for v in usedvars],exportvar=dummys[0:3]+[dummyjk],exportcoeffeqs=exportcoeffeqs,exportfnname='solvedialyticpoly16lep',rootmaxdim=16)
         self.usinglapack = True
         return [coupledsolution],usedvars
 
@@ -2636,7 +2646,6 @@ class IKFastSolver(AutoReloader):
                 try:
                     rawsolutions=self.solveSingleVariable(raweqns,curvar,othersolvedvars)
                     for solution in rawsolutions:
-                        #solution.subs(freevarinvsubs)
                         self.solutionComplexity(solution,othersolvedvars,curvars)
                         solutions.append((solution,curvar))
                 except self.CannotSolveError:
@@ -2702,14 +2711,26 @@ class IKFastSolver(AutoReloader):
         """
         solutions = [s for s in solutions if s[0].score < oo and s[0].checkValidSolution()] # remove infinite scores
         solutions.sort(lambda x, y: x[0].score-y[0].score)
+        hasonesolution = False
         for solution in solutions:
             checkforzeros = solution[0].checkforzeros
-            if len(checkforzeros) == 0:
+            hasonesolution |= solution[0].numsolutions() == 1
+            if len(checkforzeros) == 0 and solution[0].numsolutions() == 1:
                 # did find a good solution, so take it. Make sure to check any zero branches
                 var = solution[1]
                 newvars=curvars[:]
                 newvars.remove(var)
                 return [solution[0].subs(solsubs)]+self.solveAllEquations(AllEquations,curvars=newvars,othersolvedvars=othersolvedvars+[var],solsubs=solsubs+self.Variable(var).subs,endbranchtree=endbranchtree,currentcases=currentcases)
+        if not hasonesolution:
+            # check again except without the number of solutions requirement
+            for solution in solutions:
+                checkforzeros = solution[0].checkforzeros
+                if len(checkforzeros) == 0:
+                    # did find a good solution, so take it. Make sure to check any zero branches
+                    var = solution[1]
+                    newvars=curvars[:]
+                    newvars.remove(var)
+                    return [solution[0].subs(solsubs)]+self.solveAllEquations(AllEquations,curvars=newvars,othersolvedvars=othersolvedvars+[var],solsubs=solsubs+self.Variable(var).subs,endbranchtree=endbranchtree,currentcases=currentcases)
 
         # all solutions have check for zero equations
         # choose the variable with the shortest solution and compute (this is a conservative approach)
