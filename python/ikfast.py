@@ -3133,7 +3133,7 @@ class IKFastSolver(AutoReloader):
                 ps = Poly(eqnew,varsym.svar)
                 pc = Poly(eqnew,varsym.cvar)
                 if ps.degree > maxdegree or pc.degree > maxdegree:
-                    print 'cannot solve equation with high degree'
+                    print 'cannot solve equation with high degree: %s'%str(eqnew)
                     continue
                 if ps.coeff(0) == S.Zero and len(ps.monoms) > 0:
                     #print 'equation %s has trivial solution, ignoring...'%(str(ps))
@@ -3611,7 +3611,7 @@ class IKFastSolver(AutoReloader):
                             raise self.CannotSolveError('leading coefficient is always zero in %s'%(str(pfinal)))
 
                         jointsol = atan2(ptotal_cos.as_basic()/ptotal_sin.as_basic(), polysymbols[0])
-                        var = var0 if ivar == 0 else var1
+                        var = var1 if ivar == 0 else var0
                         solution = SolverPolynomialRoots(jointname=var.name,poly=pfinal,jointeval=[jointsol],isHinge=self.isHinge(var.name))
                         solution.postcheckforzeros = []
                         solution.postcheckfornonzeros = []
