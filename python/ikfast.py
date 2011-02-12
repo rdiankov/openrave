@@ -3271,7 +3271,7 @@ class IKFastSolver(AutoReloader):
         cvar1,svar1 = varsym1.cvar, varsym1.svar
         varsubs=varsym0.subs+varsym1.subs
         varsubsinv = varsym0.subsinv+varsym1.subsinv
-        unknownvars=[v[1] for v in varsubs]
+        unknownvars=[cvar0,svar0,cvar1,svar1]
         reducesubs = [(svar0**2,1-cvar0**2),(svar1**2,1-cvar1**2)]
         eqns = [eq.subs(varsubs).subs(reducesubs).expand() for eq in raweqns if eq.has_any_symbols(var0,var1)]
         if len(eqns) <= 1:
