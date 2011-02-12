@@ -2980,6 +2980,7 @@ class IKFastSolver(AutoReloader):
         finaleq = simplify(eqnew).expand()
         pfinal = Poly(finaleq,var.htvar)
         # check to see that LC is non-zero for at least one solution
+        #print [pfinal.LC.subs(testconsistentvalue).evalf() for testconsistentvalue in self.testconsistentvalues]
         if all([pfinal.LC.subs(testconsistentvalue).evalf()==S.Zero for testconsistentvalue in self.testconsistentvalues]):
             raise self.CannotSolveError('leading coefficient is always zero in %s'%(str(pfinal)))
         
@@ -3603,9 +3604,8 @@ class IKFastSolver(AutoReloader):
                                 assert m[1] == 1
                                 ptotal_sin = ptotal_sin.sub_term(c,(m[0],0))
                                 ptotal_cos = ptotal_cos.sub_term(c,m)
-                        # be careful of the chop here, we've already take the original constants to the 4th power
                         finaleq = self.chop((ptotal_cos.as_basic()**2 - (1-polysymbols[0]**2)*ptotal_sin.as_basic()**2).expand())
-                        pfinal = Poly(finaleq,*polysymbols)
+                        pfinal = Poly(finaleq,polysymbols[0])
                         # check to see that LC is non-zero for at least one solution
                         if all([pfinal.LC.subs(testconsistentvalue).evalf()==S.Zero for testconsistentvalue in self.testconsistentvalues]):
                             raise self.CannotSolveError('leading coefficient is always zero in %s'%(str(pfinal)))
