@@ -3634,7 +3634,7 @@ class IKFastSolver(AutoReloader):
                         jointsol = atan2(ptotal_cos.as_basic()/ptotal_sin.as_basic(), polysymbols[0])
                         var = var1 if ivar == 0 else var0
                         solution = SolverPolynomialRoots(jointname=var.name,poly=pfinal,jointeval=[jointsol],isHinge=self.isHinge(var.name))
-                        solution.postcheckforzeros = []
+                        solution.postcheckforzeros = [ptotal_sin.as_basic()]
                         solution.postcheckfornonzeros = []
                         solution.postcheckforrange = []
                         return [solution]
