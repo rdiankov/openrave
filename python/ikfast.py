@@ -142,7 +142,7 @@ class SolverPolynomialRoots:
     postcheckforzeros = None # fail if zero
     postcheckfornonzeros = None # fail if nonzero
     postcheckforrange = None # checks that value is within [-1,1]
-    thresh = 1e-10
+    thresh = 1e-7
     isHinge = True
     FeasibleIsZeros = False
     score = None
@@ -3832,6 +3832,17 @@ class IKFastSolver(AutoReloader):
         return expr
 
     @staticmethod
+    def frontnumbers(eq):
+        if eq.is_Number:
+            return [eq]
+        if eq.is_Mul:
+            n = []
+            for arg in eq.args:
+                n += IKFastSolver.frontnumbers(arg)
+            return n
+        return []
+
+    @staticmethod
     def removecommonexprs(eq,returncommon=False,onlygcd=False,onlynumbers=True):
         """removes common expressions from a sum. Assumes all the coefficients are rationals. For example:
         a*c_0 + a*c_1 + a*c_2 = 0
@@ -3846,7 +3857,7 @@ class IKFastSolver(AutoReloader):
             if onlynumbers:
                 for i in range(len(exprs)):
                     denom = S.One
-                    for d in fraction(exprs[i])[1].atoms(Number):
+                    for d in IKFastSolver.frontnumbers(fraction(exprs[i])[1]):
                         denom *= d
                     if denom != S.One:
                         exprs = [expr*denom for expr in exprs]
@@ -3855,7 +3866,7 @@ class IKFastSolver(AutoReloader):
                     common = None
                     for i in range(len(exprs)):
                         coeff = S.One
-                        for n in exprs[i].atoms(Number):
+                        for n in IKFastSolver.frontnumbers(exprs[i]):
                             coeff *= n
                         if common == None:
                             common = coeff
@@ -3898,7 +3909,7 @@ class IKFastSolver(AutoReloader):
                 return eq,common/totaldenom
         elif eq.is_Mul:
             coeff = S.One
-            for d in eq.atoms(Number):
+            for d in IKFastSolver.frontnumbers(eq):
                 coeff *= d
             if returncommon:
                 return eq/coeff,coeff
