@@ -3611,7 +3611,7 @@ class IKFastSolver(AutoReloader):
                             raise self.CannotSolveError('leading coefficient is always zero in %s'%(str(pfinal)))
 
                         jointsol = atan2(ptotal_cos.as_basic()/ptotal_sin.as_basic(), polysymbols[0])
-                        var = var0.name if ivar == 0 else var1
+                        var = var0 if ivar == 0 else var1
                         solution = SolverPolynomialRoots(jointname=var.name,poly=pfinal,jointeval=[jointsol],isHinge=self.isHinge(var.name))
                         solution.postcheckforzeros = []
                         solution.postcheckfornonzeros = []
@@ -3929,7 +3929,7 @@ class IKFastSolver(AutoReloader):
 
                         if k > 0:
                             if len(vars) > 0:
-                                print i,M[k-1, k-1]
+                                #print i,M[k-1, k-1]
                                 D,r = div(Poly(D,*vars),M[k-1, k-1])
                             else:
                                 D /= M[k-1, k-1]
