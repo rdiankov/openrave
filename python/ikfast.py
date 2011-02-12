@@ -20,7 +20,7 @@ from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2011 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Lesser GPL, Version 3'
-__version__ = '29'
+__version__ = '30'
 
 import sys, copy, time, math, datetime
 import __builtin__
@@ -872,7 +872,7 @@ class IKFastSolver(AutoReloader):
                         if not base.is_number:
                             eq=self.subsExpressions(expr.base,subexprs)
                             if self.isExpressionUnique(checkforzeros,-eq) and self.isExpressionUnique(checkforzeros,eq):
-                                checkforzeros.append(self.removecommonexprs(eq,onlygcd=True,onlynumbers=True))
+                                checkforzeros.append(self.removecommonexprs(eq,onlygcd=False,onlynumbers=True))
 
             sexprs = [subexpr[1] for subexpr in subexprs]+reduced_exprs
             while len(sexprs) > 0:
@@ -934,7 +934,7 @@ class IKFastSolver(AutoReloader):
                             score += 100000
                         else:
                             if self.isExpressionUnique(sol.checkforzeros,-expr.base) and self.isExpressionUnique(sol.checkforzeros,expr.base):
-                                sol.checkforzeros.append(self.removecommonexprs(expr.base,onlygcd=True,onlynumbers=True))
+                                sol.checkforzeros.append(self.removecommonexprs(expr.base,onlygcd=False,onlynumbers=True))
                 elif not self.isValidSolution(expr):
                     return oo # infinity
                 return score
@@ -1749,7 +1749,7 @@ class IKFastSolver(AutoReloader):
             if det == S.Zero:
                 continue
             solution = SolverMatrixInverse(A=A,Asymbols=Asymbols)
-            solution.checkforzeros = [self.removecommonexprs(det,onlygcd=True,onlynumbers=True)]
+            solution.checkforzeros = [self.removecommonexprs(det,onlygcd=False,onlynumbers=True)]
             Aadj=A.adjugate() # too big to be useful for now, but can be used to see if any symbols are always 0
             break
         if solution is None:
@@ -3000,7 +3000,7 @@ class IKFastSolver(AutoReloader):
             term *= denom**(maxdenom-monoms[0]-monoms[1])
             eqnew += simplify(term)
         finaleq = simplify(eqnew).expand()
-        pfinal = Poly(self.removecommonexprs(finaleq,onlygcd=True,onlynumbers=True),var.htvar)
+        pfinal = Poly(self.removecommonexprs(finaleq,onlygcd=False,onlynumbers=True),var.htvar)
         # check to see that LC is non-zero for at least one solution
         #print [pfinal.LC.subs(testconsistentvalue).evalf() for testconsistentvalue in self.testconsistentvalues]
         if all([pfinal.LC.subs(testconsistentvalue).evalf()==S.Zero for testconsistentvalue in self.testconsistentvalues]):
@@ -3574,8 +3574,8 @@ class IKFastSolver(AutoReloader):
                         if othervarpoly is not None:
                             # now we have one polynomial with only one variable (sin and cos)!
                             solution = self.solveHighDegreeEquationHalfAngle(othervarpoly,varsym1 if i < 2 else varsym0)
-                            solution.postcheckforzeros = [self.removecommonexprs(eq,onlygcd=True,onlynumbers=True) for eq in postcheckforzeros]
-                            solution.postcheckfornonzeros = [self.removecommonexprs(eq,onlygcd=True,onlynumbers=True) for eq in postcheckfornonzeros]
+                            solution.postcheckforzeros = [self.removecommonexprs(eq,onlygcd=False,onlynumbers=True) for eq in postcheckforzeros]
+                            solution.postcheckfornonzeros = [self.removecommonexprs(eq,onlygcd=False,onlynumbers=True) for eq in postcheckfornonzeros]
                             solution.postcheckforrange = postcheckforrange
                             finalsolutions.append(solution)
                             if solution.poly.degree <= 2:
@@ -3626,7 +3626,7 @@ class IKFastSolver(AutoReloader):
                                 ptotal_cos = ptotal_cos.sub_term(c,m)
                         finaleq = (ptotal_cos.as_basic()**2 - (1-polysymbols[0]**2)*ptotal_sin.as_basic()**2).expand()
                         # sometimes denominators can accumulate
-                        pfinal = Poly(self.removecommonexprs(finaleq,onlygcd=True,onlynumbers=True),polysymbols[0])
+                        pfinal = Poly(self.removecommonexprs(finaleq,onlygcd=False,onlynumbers=True),polysymbols[0])
                         # check to see that LC is non-zero for at least one solution
                         if all([pfinal.LC.subs(testconsistentvalue).evalf()==S.Zero for testconsistentvalue in self.testconsistentvalues]):
                             raise self.CannotSolveError('leading coefficient is always zero in %s'%(str(pfinal)))
@@ -3705,7 +3705,7 @@ class IKFastSolver(AutoReloader):
             denomlcm = Poly(S.One,*lcmvars)
             for denom in denoms:
                 if denom != S.One:
-                    checkforzeros.append(self.removecommonexprs(denom,onlygcd=True,onlynumbers=True))
+                    checkforzeros.append(self.removecommonexprs(denom,onlygcd=False,onlynumbers=True))
                     denomlcm = Poly(lcm(denomlcm,denom),*lcmvars)
             finaleq = simplify(finaleq*denomlcm.as_basic()**2)
             complementvarindex = varindex-(varindex%2)+((varindex+1)%2)
