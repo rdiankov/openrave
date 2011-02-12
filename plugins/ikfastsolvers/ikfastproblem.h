@@ -788,8 +788,12 @@ public:
             vfreeparameters_out.resize(vfreeparameters.size());
 
             bool bsuccess = true;
+            bool bnoiksolution = false;
             if( !pmanip->FindIKSolution(twrist, viksolution, 0) ) {
-                vnosolutions.push_back(make_pair(twrist,vfreeparameters));
+                if( !bnoiksolution ) {
+                    vnosolutions.push_back(make_pair(twrist,vfreeparameters));
+                    bnoiksolution = true;
+                }
                 bsuccess = false;
                 s.str("");
                 s << "FindIKSolution: No ik solution found, i = " << i << endl << "Joint Val: ";
@@ -853,7 +857,10 @@ public:
                 FOREACH(itfree,vfreeparameters_out) {
                     *itfree = -1;
                 }
-                vnosolutions.push_back(make_pair(twrist,vfreeparameters_out));
+                if( !bnoiksolution ) {
+                    vnosolutions.push_back(make_pair(twrist,vfreeparameters_out));
+                    bnoiksolution = true;
+                }
                 bsuccess = false;
                 s.str("");
                 s << "FindIKSolutions: No ik solution found for, i = " << i << endl << "Joint Val: ";
@@ -927,7 +934,10 @@ public:
             // test with the free parameters
             robot->SetActiveDOFValues(vrand, true);
             if( !DebugIKFindSolution(pmanip, twrist, viksolution, 0, vfreeparameters, vfreeparameters_out.size()-1) ) {
-                vnosolutions.push_back(make_pair(twrist,vfreeparameters));
+                if( !bnoiksolution ) {
+                    vnosolutions.push_back(make_pair(twrist,vfreeparameters));
+                    bnoiksolution = true;
+                }
                 bsuccess = false;
                 s.str("");
                 s << "FindIKSolution (freeparams: ";
@@ -987,7 +997,10 @@ public:
             viksolutions.resize(0);
             DebugIKFindSolutions(pmanip, twrist, viksolutions, 0, vfreeparameters_out, vfreeparameters_out.size()-1);
             if( viksolutions.size() == 0 ) {
-                vnosolutions.push_back(make_pair(twrist,vfreeparameters_out));
+                if( !bnoiksolution ) {
+                    vnosolutions.push_back(make_pair(twrist,vfreeparameters_out));
+                    bnoiksolution=true;
+                }
                 bsuccess = false;
                 s.str("");
                 s << "FindIKSolutions (freeparams): No ik solution found for, i = " << i << endl << "Joint Val: ";
@@ -1036,7 +1049,7 @@ public:
             i++;
         }
 
-        RAVELOG_DEBUG(str(boost::format("DebugIK done, rates %f, %f, %f, %f\n")%((float)success/(float)num_itrs)%((float)vnofullsolutions.size()/(float)num_itrs)%((float)vnosolutions.size()/(float)num_itrs)%((float)vwrongsolutions.size()/(float)num_itrs)));
+        RAVELOG_DEBUG(str(boost::format("DebugIK done, rates %f, %f, %f, %f\n")%((float)success/(float)num_itrs)%((float)vwrongsolutions.size()/(float)num_itrs)%((float)vnosolutions.size()/(float)num_itrs)%((float)vnofullsolutions.size()/(float)num_itrs)));
         sout << num_itrs << " " << success << " ";
         FOREACH(itresults,vsolutionresults) {
             sout << itresults->size() << " ";

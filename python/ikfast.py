@@ -20,7 +20,7 @@ from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2011 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Lesser GPL, Version 3'
-__version__ = '28'
+__version__ = '29'
 
 import sys, copy, time, math, datetime
 import __builtin__
@@ -76,20 +76,21 @@ class SolverSolution:
     AddPiIfNegativeEq = None
     isHinge = True
     checkforzeros = None
-
+    thresh = None
     """Meaning of FeasibleIsZeros:
     If set to false, then solution is feasible only if all of these equations evalute to non-zero.
     If set to true, solution is feasible only if all these equations evaluate to zero.
     """
     FeasibleIsZeros = False
     score = None
-    def __init__(self, jointname, jointeval=None,jointevalcos=None,jointevalsin=None,AddPiIfNegativeEq=None,isHinge=True):
+    def __init__(self, jointname, jointeval=None,jointevalcos=None,jointevalsin=None,AddPiIfNegativeEq=None,isHinge=True,thresh=0.00001):
         self.jointname = jointname
         self.jointeval = jointeval
         self.jointevalcos = jointevalcos
         self.jointevalsin = jointevalsin
         self.AddPiIfNegativeEq = AddPiIfNegativeEq
         self.isHinge=isHinge
+        self.thresh = thresh
         assert self.checkValidSolution()
     def subs(self,solsubs):
         if self.jointeval is not None:
@@ -141,7 +142,7 @@ class SolverPolynomialRoots:
     postcheckforzeros = None # fail if zero
     postcheckfornonzeros = None # fail if nonzero
     postcheckforrange = None # checks that value is within [-1,1]
-    thresh = 1e-6
+    thresh = 1e-10
     isHinge = True
     FeasibleIsZeros = False
     score = None
@@ -871,7 +872,7 @@ class IKFastSolver(AutoReloader):
                         if not base.is_number:
                             eq=self.subsExpressions(expr.base,subexprs)
                             if self.isExpressionUnique(checkforzeros,-eq) and self.isExpressionUnique(checkforzeros,eq):
-                                checkforzeros.append(eq)
+                                checkforzeros.append(self.removecommonexprs(eq,onlygcd=True,onlynumbers=True))
 
             sexprs = [subexpr[1] for subexpr in subexprs]+reduced_exprs
             while len(sexprs) > 0:
@@ -933,7 +934,7 @@ class IKFastSolver(AutoReloader):
                             score += 100000
                         else:
                             if self.isExpressionUnique(sol.checkforzeros,-expr.base) and self.isExpressionUnique(sol.checkforzeros,expr.base):
-                                sol.checkforzeros.append(expr.base)
+                                sol.checkforzeros.append(self.removecommonexprs(expr.base,onlygcd=True,onlynumbers=True))
                 elif not self.isValidSolution(expr):
                     return oo # infinity
                 return score
@@ -1748,7 +1749,7 @@ class IKFastSolver(AutoReloader):
             if det == S.Zero:
                 continue
             solution = SolverMatrixInverse(A=A,Asymbols=Asymbols)
-            solution.checkforzeros = [det]
+            solution.checkforzeros = [self.removecommonexprs(det,onlygcd=True,onlynumbers=True)]
             Aadj=A.adjugate() # too big to be useful for now, but can be used to see if any symbols are always 0
             break
         if solution is None:
@@ -2856,7 +2857,7 @@ class IKFastSolver(AutoReloader):
                 self.degeneratecases = olddegeneratecases
             if len(checkforzeros) > 0:
                 hascheckzeros = True
-                prevbranch=[SolverCheckZeros(jointname=var.name,jointcheckeqs=checkforzeros,nonzerobranch=[solution]+nextsolutions[var],zerobranch=prevbranch,anycondition=True)]
+                prevbranch=[SolverCheckZeros(jointname=var.name,jointcheckeqs=checkforzeros,nonzerobranch=[solution]+nextsolutions[var],zerobranch=prevbranch,anycondition=True,thresh=solution.thresh)]
             else:
                 prevbranch = [solution]+nextsolutions[var]
                 
@@ -2999,7 +3000,7 @@ class IKFastSolver(AutoReloader):
             term *= denom**(maxdenom-monoms[0]-monoms[1])
             eqnew += simplify(term)
         finaleq = simplify(eqnew).expand()
-        pfinal = Poly(finaleq,var.htvar)
+        pfinal = Poly(self.removecommonexprs(finaleq,onlygcd=True,onlynumbers=True),var.htvar)
         # check to see that LC is non-zero for at least one solution
         #print [pfinal.LC.subs(testconsistentvalue).evalf() for testconsistentvalue in self.testconsistentvalues]
         if all([pfinal.LC.subs(testconsistentvalue).evalf()==S.Zero for testconsistentvalue in self.testconsistentvalues]):
@@ -3041,7 +3042,7 @@ class IKFastSolver(AutoReloader):
             if numvar >= 1 and numvar <= 2:
                 tempsolutions = solve(eqnew,var)
                 jointsolutions = [self.trigsimp(s.subs(symbols),othersolvedvars) for s in tempsolutions]
-                if all([self.isValidSolution(s) and self.isValidSolution(self.chop(s)) for s in jointsolutions]):
+                if all([self.isValidSolution(s) and self.isValidSolution(s) for s in jointsolutions]):
                     return [SolverSolution(var.name,jointeval=jointsolutions,isHinge=self.isHinge(var.name))]
 
         solutions = []
@@ -3093,7 +3094,7 @@ class IKFastSolver(AutoReloader):
                     goodsolution = 0
                     for svarsol,cvarsol in sollist:
                         # solutions cannot be trivial
-                        if self.chop((svarsol-cvarsol).subs(listsymbols)) == 0:
+                        if self.chop((svarsol-cvarsol).subs(listsymbols)) == S.Zero:
                             break
                         if self.chop(svarsol.subs(listsymbols)) == S.Zero and self.chop(abs(cvarsol.subs(listsymbols)) - S.One) != S.Zero:
                             break
@@ -3178,7 +3179,7 @@ class IKFastSolver(AutoReloader):
                     asinsol = trigsimp(asin(-m[c]/abs(sqrt(m[a]*m[a]+m[b]*m[b]))).subs(symbols),deep=True)
                     constsol = -atan2(m[a],m[b]).subs(symbols).evalf()
                     jointsolutions = [constsol+asinsol,constsol+pi.evalf()-asinsol]
-                    if all([self.isValidSolution(s) and self.isValidSolution(self.chop(s)) for s in jointsolutions]):
+                    if all([self.isValidSolution(s) and self.isValidSolution(s) for s in jointsolutions]):
                         solutions.append(SolverSolution(var.name,jointeval=jointsolutions,isHinge=self.isHinge(var.name)))
                     continue
             if numcvar > 0:
@@ -3187,7 +3188,7 @@ class IKFastSolver(AutoReloader):
                     if self.countVariables(eqnew,varsym.svar) <= 1 or (self.countVariables(eqnew,varsym.cvar) <= 2 and self.countVariables(eqnew,varsym.svar) == 0): # anything more than 1 implies quartic equation
                         tempsolutions = solve(eqnew.subs(varsym.svar,sqrt(1-varsym.cvar**2)),varsym.cvar)
                         jointsolutions = [self.trigsimp(s.subs(symbols+varsym.subsinv),othersolvedvars) for s in tempsolutions]
-                        if all([self.isValidSolution(s) and self.isValidSolution(self.chop(s)) for s in jointsolutions]):
+                        if all([self.isValidSolution(s) and self.isValidSolution(s) for s in jointsolutions]):
                             solutions.append(SolverSolution(var.name,jointevalcos=jointsolutions,isHinge=self.isHinge(var.name)))
                         continue
                 except self.CannotSolveError:
@@ -3200,7 +3201,7 @@ class IKFastSolver(AutoReloader):
                     if self.countVariables(eqnew,varsym.svar) <= 1 or (self.countVariables(eqnew,varsym.svar) <= 2 and self.countVariables(eqnew,varsym.cvar) == 0): # anything more than 1 implies quartic equation
                         tempsolutions = solve(eqnew.subs(varsym.cvar,sqrt(1-varsym.svar**2)),varsym.svar)
                         jointsolutions = [self.trigsimp(s.subs(symbols+varsym.subsinv),othersolvedvars) for s in tempsolutions]
-                        if all([self.isValidSolution(s) and self.isValidSolution(self.chop(s)) for s in jointsolutions]):
+                        if all([self.isValidSolution(s) and self.isValidSolution(s) for s in jointsolutions]):
                             solutions.append(SolverSolution(var.name,jointevalsin=jointsolutions,isHinge=self.isHinge(var.name)))
                         continue
                 except self.CannotSolveError:
@@ -3210,7 +3211,7 @@ class IKFastSolver(AutoReloader):
             if numcvar == 0 and numsvar == 0:
                 tempsolutions = solve(eqnew,var)
                 jointsolutions = [self.trigsimp(s.subs(symbols),othersolvedvars) for s in tempsolutions]
-                if all([self.isValidSolution(s) and self.isValidSolution(self.chop(s)) for s in jointsolutions]):
+                if all([self.isValidSolution(s) and self.isValidSolution(s) for s in jointsolutions]):
                     solutions.append(SolverSolution(var.name,jointeval=jointsolutions,isHinge=self.isHinge(var.name)))
                 continue
             try:
@@ -3272,8 +3273,7 @@ class IKFastSolver(AutoReloader):
             newdummyeqns = [eq for eq in prevdummyeqns if eq.coeff(*removemonom) == S.Zero]
             for eq0,eq1 in combinations(prevdummyeqns,2):
                 if eq0.coeff(*removemonom) != S.Zero and eq1.coeff(*removemonom) != S.Zero:
-                    eq = (eq0*eq1.coeff(*removemonom)-eq1*eq0.coeff(*removemonom)).as_basic().expand()
-                    eq = self.chop(simplify(self.chop(eq)))
+                    eq = simplify((eq0*eq1.coeff(*removemonom)-eq1*eq0.coeff(*removemonom)).as_basic().expand())
                     if eq != S.Zero:
                         newdummyeqns.append(Poly(eq,dummy0,dummy1))
             if len(newdummyeqns) == 0:
@@ -3340,7 +3340,7 @@ class IKFastSolver(AutoReloader):
                         continue
                     if not self.isExpressionUnique(eqns,eq) or not self.isExpressionUnique(eqns,-eq):
                         continue
-                    if eq.has_any_symbols(*unknownvars) and self.chop(eq) != S.Zero: # be a little strict about new candidates
+                    if eq.has_any_symbols(*unknownvars) and eq != S.Zero: # be a little strict about new candidates
                         eqns.append(eq)
                         eqnew, symbols = self.removeConstants(eq, unknownvars, symbolgen)
                         allsymbols += symbols
@@ -3416,8 +3416,7 @@ class IKFastSolver(AutoReloader):
                         pbase = pbase[0]
                         for i in range(len(polyunknown)):
                             eq = (polyunknown[i]*pbase.coeff(*monom)-pbase*polyunknown[i].coeff(*monom)).as_basic().subs(allsymbols).expand()
-                            if self.chop(eq) != S.Zero and self.isExpressionUnique(addedeqs,eq):
-                                eq = self.chop(eq) # should be safe..
+                            if eq != S.Zero and self.isExpressionUnique(addedeqs,eq):
                                 eqnew, symbols = self.removeConstants(eq, unknownvars, symbolgen)
                                 allsymbols += symbols
                                 p = Poly(eqnew,*pbase.symbols)
@@ -3513,7 +3512,7 @@ class IKFastSolver(AutoReloader):
                                     eqnewcheck = self.removecommonexprs(eqnew)
                                 else:
                                     eqnewcheck = eqnew
-                                if self.chop(eqnew) != S.Zero and self.isExpressionUnique(valideqscheck,eqnewcheck) and self.isExpressionUnique(valideqscheck,-eqnewcheck):
+                                if eqnew != S.Zero and self.isExpressionUnique(valideqscheck,eqnewcheck) and self.isExpressionUnique(valideqscheck,-eqnewcheck):
                                     valideqs.append(eqnew)
                                     valideqscheck.append(eqnewcheck)
                         if len(valideqs) <= 1:
@@ -3539,13 +3538,13 @@ class IKFastSolver(AutoReloader):
                                 peq = Poly(eq,complementvar)
                             except PolynomialError,e:
                                 try:
-                                    peq = Poly(self.chop(eq),complementvar)
+                                    peq = Poly(eq,complementvar)
                                 except PolynomialError,e:
                                     print 'solvePairVariables: ',e
                                     continue                                
                             if peq.degree == 1: # degree > 1 adds sqrt's
                                 solutions = [-peq.coeff(0).subs(allsymbols),peq.coeff(1).subs(allsymbols)]
-                                if self.chop(solutions[0]) != S.Zero and self.chop(solutions[1]) != S.Zero and self.isValidSolution(solutions[0]/solutions[1]):
+                                if solutions[0] != S.Zero and solutions[1] != S.Zero and self.isValidSolution(solutions[0]/solutions[1]):
                                     complementvarsols.append(solutions)
                                     if len(complementvarsols) >= 2:
                                         # test new solution with previous ones
@@ -3558,11 +3557,11 @@ class IKFastSolver(AutoReloader):
                                             neweq = eq0num*eq1denom-eq1num*eq0denom
                                             if self.codeComplexity(neweq.expand()) < 700:
                                                 neweq = simplify(neweq)
-                                            neweq = self.chop(neweq.expand()) # added expand due to below Poly call failing
+                                            neweq = neweq.expand() # added expand due to below Poly call failing
                                             if neweq != S.Zero:
                                                 try:
                                                     othervarpoly = Poly(neweq,*othervars).subs(othervars[0]**2,1-othervars[1]**2).subs(othervars[1]**2,1-othervars[0]**2)
-                                                    if self.chop(othervarpoly.as_basic()) != S.Zero:
+                                                    if othervarpoly.expand() != S.Zero:
                                                         postcheckforzeros = [varsolvalid, eq0denom, eq1denom]
                                                         postcheckfornonzeros = [(eq1num/eq1denom)**2+varsol.subs(complementvar,eq1num/eq1denom)**2-1]
                                                         break
@@ -3575,8 +3574,8 @@ class IKFastSolver(AutoReloader):
                         if othervarpoly is not None:
                             # now we have one polynomial with only one variable (sin and cos)!
                             solution = self.solveHighDegreeEquationHalfAngle(othervarpoly,varsym1 if i < 2 else varsym0)
-                            solution.postcheckforzeros = postcheckforzeros
-                            solution.postcheckfornonzeros = postcheckfornonzeros
+                            solution.postcheckforzeros = [self.removecommonexprs(eq,onlygcd=True,onlynumbers=True) for eq in postcheckforzeros]
+                            solution.postcheckfornonzeros = [self.removecommonexprs(eq,onlygcd=True,onlynumbers=True) for eq in postcheckfornonzeros]
                             solution.postcheckforrange = postcheckforrange
                             finalsolutions.append(solution)
                             if solution.poly.degree <= 2:
@@ -3607,7 +3606,7 @@ class IKFastSolver(AutoReloader):
                         eq0 = paireq0[ivar]
                         eq1 = paireq1[ivar]
                         disc = (eq0.coeff(1,0)*eq1.coeff(0,1) - eq0.coeff(0,1)*eq1.coeff(1,0)).subs(allsymbols).expand()
-                        if self.chop(disc) == S.Zero:
+                        if disc == S.Zero:
                             continue
                         othereq0 = paireq0[1-ivar].as_basic() - eq0.coeff(0,0)
                         othereq1 = paireq1[1-ivar].as_basic() - eq1.coeff(0,0)                        
@@ -3625,8 +3624,9 @@ class IKFastSolver(AutoReloader):
                                 assert m[1] == 1
                                 ptotal_sin = ptotal_sin.sub_term(c,(m[0],0))
                                 ptotal_cos = ptotal_cos.sub_term(c,m)
-                        finaleq = self.chop((ptotal_cos.as_basic()**2 - (1-polysymbols[0]**2)*ptotal_sin.as_basic()**2).expand())
-                        pfinal = Poly(finaleq,polysymbols[0])
+                        finaleq = (ptotal_cos.as_basic()**2 - (1-polysymbols[0]**2)*ptotal_sin.as_basic()**2).expand()
+                        # sometimes denominators can accumulate
+                        pfinal = Poly(self.removecommonexprs(finaleq,onlygcd=True,onlynumbers=True),polysymbols[0])
                         # check to see that LC is non-zero for at least one solution
                         if all([pfinal.LC.subs(testconsistentvalue).evalf()==S.Zero for testconsistentvalue in self.testconsistentvalues]):
                             raise self.CannotSolveError('leading coefficient is always zero in %s'%(str(pfinal)))
@@ -3705,7 +3705,7 @@ class IKFastSolver(AutoReloader):
             denomlcm = Poly(S.One,*lcmvars)
             for denom in denoms:
                 if denom != S.One:
-                    checkforzeros.append(denom)
+                    checkforzeros.append(self.removecommonexprs(denom,onlygcd=True,onlynumbers=True))
                     denomlcm = lcm(denomlcm,denom)
             finaleq = simplify(finaleq*denomlcm.as_basic()**2)
             complementvarindex = varindex-(varindex%2)+((varindex+1)%2)
@@ -3760,7 +3760,7 @@ class IKFastSolver(AutoReloader):
         """return true if solution does not contain any nan or inf terms"""
         if expr.is_number:
             e=expr.evalf()
-            if e.has(I) or math.isinf(e) or math.isnan(e) or abs(e) > 1e20:
+            if e.has(I) or math.isinf(e) or math.isnan(e):
                 return False
         for arg in expr.args:
             if not IKFastSolver.isValidSolution(arg):

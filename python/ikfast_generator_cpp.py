@@ -937,7 +937,7 @@ int main(int argc, char** argv)
             for i in range(len(solversolution.checkforzeros)):
                 if i != 0:
                     checkcode += ' && '
-                checkcode += 'IKabs(evalcond[%d]) %s %f '%(i,'<=' if solversolution.FeasibleIsZeros else '>',node.thresh)
+                checkcode += 'IKabs(evalcond[%d]) %s %.16f '%(i,'<=' if solversolution.FeasibleIsZeros else '>',node.thresh)
             checkcode += ' )\n{\n'
             scode,numsolutions = self.generateSolution(solversolution,declarearray=False,acceptfreevars=False)
             scode += 'numsolutions%s = %d;\n'%(name,numsolutions)
@@ -1011,7 +1011,7 @@ int main(int argc, char** argv)
             for i in range(len(node.postcheckforzeros)):
                 if i != 0:
                     fcode += ' || '
-                fcode += 'IKabs(%sevalpoly[%d]) < %f '%(name,i,node.thresh)
+                fcode += 'IKabs(%sevalpoly[%d]) < %.16f '%(name,i,node.thresh)
             fcode += ' )\n{\n    continue;\n}\n'
             code += self.indentCode(fcode,4)
         if node.postcheckfornonzeros is not None and len(node.postcheckfornonzeros) > 0:
@@ -1020,7 +1020,7 @@ int main(int argc, char** argv)
             for i in range(len(node.postcheckfornonzeros)):
                 if i != 0:
                     fcode += ' || '
-                fcode += 'IKabs(%sevalpoly[%d]) > %f '%(name,i,node.thresh)
+                fcode += 'IKabs(%sevalpoly[%d]) > %.16f '%(name,i,node.thresh)
             fcode += ' )\n{\n    continue;\n}\n'
             code += self.indentCode(fcode,4)
         if node.postcheckforrange is not None and len(node.postcheckforrange) > 0:
@@ -1029,7 +1029,7 @@ int main(int argc, char** argv)
             for i in range(len(node.postcheckforrange)):
                 if i != 0:
                     fcode += ' || '
-                fcode += ' (%sevalpoly[%d] < %f || %sevalpoly[%d] > %f) '%(name,i,-1.0-node.thresh,name,i,1.0+node.thresh)
+                fcode += ' (%sevalpoly[%d] < %.16f || %sevalpoly[%d] > %.16f) '%(name,i,-1.0-node.thresh,name,i,1.0+node.thresh)
             fcode += ' )\n{\n    continue;\n}\n'
             code += self.indentCode(fcode,4)
 
@@ -1139,7 +1139,7 @@ int main(int argc, char** argv)
             if branch[0] is None:
                 code += '{\n' + branchcode + '\n}\n'
             else:
-                code += 'if( %seval >= %f && %seval <= %f )\n{\n'%(name,branch[0]-0.00001,name,branch[0]+0.00001)
+                code += 'if( %seval >= %.16f && %seval <= %.16f )\n{\n'%(name,branch[0]-0.00001,name,branch[0]+0.00001)
                 code += branchcode + '\n} else\n'
         code += '}\n'
         self.dictequations = origequations
@@ -1166,7 +1166,7 @@ int main(int argc, char** argv)
                 for i in range(len(branch[0])):
                     if i != 0:
                         branchcode += ' && '
-                    branchcode += 'IKabs(evalcond[%d]) < %f '%(i,node.thresh)
+                    branchcode += 'IKabs(evalcond[%d]) < %.16f '%(i,node.thresh)
                 branchcode += ' )\n{\n'
             for n in branch[1]:
                 branchcode += n.generate(self)
@@ -1191,7 +1191,7 @@ int main(int argc, char** argv)
                         code += ' || '
                     else:
                         code += ' && '
-                code += 'IKabs(%seval[%d]) < %f '%(name,i,node.thresh)
+                code += 'IKabs(%seval[%d]) < %.16f '%(name,i,node.thresh)
             code += ' )\n{\n'
             self.dictequations = self.copyequations(origequations)
             code += self.indentCode(self.generateTree(node.zerobranch),4)
@@ -1215,7 +1215,7 @@ int main(int argc, char** argv)
         self.freevardependencies.pop()
         return ''
     def generateSetJoint(self, node):
-        code = '{\n%s = %f; s%s = %f; c%s = %f;\n'%(node.jointname,node.jointvalue,node.jointname,sin(node.jointvalue),node.jointname,cos(node.jointvalue))
+        code = '{\n%s = %.16f; s%s = %.16f; c%s = %.16f;\n'%(node.jointname,node.jointvalue,node.jointname,sin(node.jointvalue),node.jointname,cos(node.jointvalue))
         return code
     def endSetJoint(self, node):
         return '}\n'
