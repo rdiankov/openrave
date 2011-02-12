@@ -3706,7 +3706,7 @@ class IKFastSolver(AutoReloader):
             for denom in denoms:
                 if denom != S.One:
                     checkforzeros.append(self.removecommonexprs(denom,onlygcd=True,onlynumbers=True))
-                    denomlcm = lcm(denomlcm,denom)
+                    denomlcm = Poly(lcm(denomlcm,denom),*lcmvars)
             finaleq = simplify(finaleq*denomlcm.as_basic()**2)
             complementvarindex = varindex-(varindex%2)+((varindex+1)%2)
             complementvar = unknownvars[complementvarindex]
