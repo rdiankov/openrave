@@ -4305,6 +4305,10 @@ In python, the syntax is::\n\n\
             .def_readonly("velocity_covariance",&PySensorBase::PyOdometrySensorData::velocity_covariance)
             .def_readonly("targetid",&PySensorBase::PyOdometrySensorData::targetid)
             ;
+        class_<PySensorBase::PyTactileSensorData, boost::shared_ptr<PySensorBase::PyTactileSensorData>, bases<PySensorBase::PySensorData> >("TactileSensorData", DOXY_CLASS(SensorBase::TactileSensorData),no_init)
+            .def_readonly("forces",&PySensorBase::PyTactileSensorData::forces)
+            .def_readonly("force_covariance",&PySensorBase::PyTactileSensorData::force_covariance)
+            ;
 
         enum_<SensorBase::SensorType>("Type" DOXY_ENUM(SensorType))
             .value("Invalid",SensorBase::ST_Invalid)
