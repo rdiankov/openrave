@@ -198,7 +198,7 @@ class LinkStatisticsModel(OpenRAVEModel):
                     print 'do not support joints with > 1 DOF'
                 lower,upper = joint.GetLimits()
                 # final all the directly connected links
-                connectedjoints = [joint]+[j for j in self.robot.GetJoints()+self.robot.GetPassiveJoints() if j.GetMimicJointIndex() == joint.GetJointIndex()]
+                connectedjoints = [joint]+[j for j in self.robot.GetJoints()+self.robot.GetPassiveJoints() if j.IsMimic(0) and joint.GetDOFIndex() in j.GetMimicDOFIndices(0)]
                 connectedlinkindices = []
                 for j in connectedjoints:
                     if self.robot.DoesAffect(joint.GetJointIndex(),j.GetFirstAttached().GetIndex()):

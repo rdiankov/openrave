@@ -1039,7 +1039,7 @@ class IKFastSolver(AutoReloader):
                     jointvalues[j] = possibleangles[(isol+j)%len(possibleangles)]
             valsubs = []
             for var,value in izip(jointvars,jointvalues):
-                valsubs += [(var,value),(Symbol('c%s'%var.name),self.convertRealToRational(cos(value).evalf())),(Symbol('s%s'%var.name),self.convertRealToRational(sin(value).evalf()))]
+                valsubs += [(var,value),(Symbol('c%s'%var.name),self.convertRealToRational(cos(value).evalf())),(Symbol('s%s'%var.name),self.convertRealToRational(sin(value).evalf())),(Symbol('t%s'%var.name),self.convertRealToRational(tan(value).evalf())),(Symbol('ht%s'%var.name),self.convertRealToRational(tan(value/2).evalf()))]
             psubs = []
             for i in range(12):
                 psubs.append((self.pvars[i],self.convertRealToRational(T[i].subs(valsubs).evalf())))
@@ -1275,7 +1275,7 @@ class IKFastSolver(AutoReloader):
         if tree is None:
             rawpolyeqs2 = [None,None]
             coupledsolutions = None
-            for solvemethod in [self.solveKohliOsvatic, self.solveManochaCanny]:
+            for solvemethod in [self.solveLiWoernleHiller, self.solveKohliOsvatic, self.solveManochaCanny]:
                 if coupledsolutions is not None:
                     break
                 for index in [2,3]:
@@ -1474,7 +1474,7 @@ class IKFastSolver(AutoReloader):
         """
         rawpolyeqs2 = [None,None]
         coupledsolutions = None
-        for solvemethod in [self.solveKohliOsvatic, self.solveManochaCanny]:
+        for solvemethod in [self.solveLiWoernleHiller, self.solveKohliOsvatic, self.solveManochaCanny]:
             if coupledsolutions is not None:
                 break
             for j in range(2):
@@ -2078,6 +2078,7 @@ class IKFastSolver(AutoReloader):
         """Li-Woernle-Hiller procedure covered in 
         Jorge Angeles, "Fundamentals of Robotics Mechanical Systems, Springer, 2007.
         """
+        print 'attempting li/woernle/hiller general ik method'
         if len(rawpolyeqs[0][0].symbols) < len(rawpolyeqs[0][1].symbols):
             for peq in rawpolyeqs:
                 peq[0],peq[1] = peq[1],peq[0]
@@ -2098,7 +2099,8 @@ class IKFastSolver(AutoReloader):
         
         cvar = symbols[i]
         svar = symbols[i+1]
-        tvar = Symbol('ht'+cvar.name[1:])
+        varname = cvar.name[1:]
+        tvar = Symbol('ht'+varname)
         symbols.remove(cvar)
         symbols.remove(svar)
         symbols.append(tvar)
@@ -2167,69 +2169,46 @@ class IKFastSolver(AutoReloader):
             AL[i,:] = A[row,:]
         C = AL*(AUinv*BU)-BL
         # is now a (len(neweqs)-len(allmonoms))x1 matrix, usually this is 4x1
-        reducedeqs = []
-        nextindex = 2
-        dummy = Symbol('ht%s'%othersymbols[nextindex].name[1:])
-        dummysubs = [(othersymbols[nextindex],(1-dummy**2)/(1+dummy**2)),(othersymbols[nextindex+1],2*dummy/(1+dummy**2))]
-        for c in C:
-            reducedeqs.append(Poly(simplify(c.subs(dummysubs)*(1+dummy**2)),dummy,tvar))
-        # create a new matrix using the coefficients of reducedeqs
-        newmonoms = set()
-        origmonoms = set()
-        maxdegree = 0
-        for peq in reducedeqs:
-            for m in peq.iter_monoms():
-                mlist = list(m)
-                newmonoms.add(tuple(mlist))
-                origmonoms.add(tuple(mlist))
-                mlist[0] += 1
-                newmonoms.add(tuple(mlist))
-        newmonoms = list(newmonoms)
-        newmonoms.sort()
-        origmonoms = list(origmonoms)
-        origmonoms.sort()
-        assert(len(newmonoms)<=2*len(reducedeqs))
-        symbolgen = cse_main.numbered_symbols('const')
-        localsymbols = []
-        localexprs = []
-        localcommon = []
-        M = zeros((2*len(reducedeqs),len(newmonoms)))
-        exportcoeffeqs = [S.Zero]*(len(reducedeqs)*len(newmonoms)*3)
-        x = Symbol('ht%s'%othersymbols[0].name[1:])
-        for ipeq,peq in enumerate(reducedeqs):
-            for c,m in peq.iter_terms():
-                #eq,symbolsubs = self.removeConstants(c,othersymbols[0:2],symbolgen)
-                eq = Poly(c,othersymbols[0],othersymbols[1])
-                assert(eq.degree<=1)
-                dummyeq = eq.coeff(0,0)*(1+x**2) + eq.coeff(1,0)*(1-x**2) + eq.coeff(0,1)*2*x
-                eq,symbolsubs = self.removeConstants(dummyeq,[x],symbolgen)
-                for s,expr in symbolsubs:
-                    expr0,common0 = self.removecommonexprs(expr,returncommon=True)
-                    index = self.getCommonExpression(localexprs,expr0)
-                    if index is not None:
-                        eq=eq.subs(s,localsymbols[index][0]/localcommon[index]*common0)
-                    else:
-                        index = self.getCommonExpression(localexprs,-expr0)
-                        if index is not None:
-                            eq=eq.subs(s,-localsymbols[index][0]/localcommon[index]*common0)
-                        else:
-                            localsymbols.append((s,expr))
-                            localexprs.append(expr0)
-                            localcommon.append(common0)
-                #eq = Poly(eq,othersymbols[0],othersymbols[1])
-                exportindex = len(newmonoms)*ipeq+newmonoms.index(m)
-                #exportcoeffeqs[exportindex] = eq.coeff(0,0)
-                #exportcoeffeqs[len(newmonoms)*len(reducedeqs)+exportindex] = eq.coeff(1,0)
-                #exportcoeffeqs[2*len(newmonoms)*len(reducedeqs)+exportindex] = eq.coeff(0,1)
-                M[ipeq+len(reducedeqs),newmonoms.index(m)] = eq.as_basic()
-                mlist = list(m)
-                mlist[0] += 1
-                M[ipeq,newmonoms.index(tuple(mlist))] = eq.as_basic()
+        htvars = []
+        htvarsubs = []
+        htvarsubs2 = []
+        usedvars = []
+        for nextindex in [0,2]:
+            name = othersymbols[nextindex].name[1:]
+            htvar = Symbol('ht%s'%name)
+            htvarsubs += [(othersymbols[nextindex],(1-htvar**2)/(1+htvar**2)),(othersymbols[nextindex+1],2*htvar/(1+htvar**2))]
+            htvars.append(htvar)
+            htvarsubs2.append((Symbol(name),2*atan(htvar)))
+            usedvars.append(Symbol(name))
+        htvarsubs += [(cvar,(1-tvar**2)/(1+tvar**2)),(svar,2*tvar/(1+tvar**2))]
+        htvars.append(tvar)
+        htvarsubs2.append((Symbol(varname),2*atan(tvar)))
+        usedvars.append(Symbol(varname))
+        newreducedeqs = []
+        for eq in C:
+            peq = Poly(eq,*othersymbols)
+            maxdenom = [0,0]
+            for monoms in peq.iter_monoms():
+                for i in range(len(maxdenom)):
+                    maxdenom[i] = max(maxdenom[i],monoms[2*i]+monoms[2*i+1])
+            eqnew = S.Zero
+            for c,monoms in peq.iter_terms():
+                term = c
+                for i in range(4):
+                    num,denom = fraction(htvarsubs[i][1])
+                    term *= num**monoms[i]
+                term *= tvar**monoms[4]
+                # the denoms for 0,1 and 2,3 are the same
+                for i in range(len(maxdenom)):
+                    denom = fraction(htvarsubs[2*i][1])[1]
+                    term *= denom**(maxdenom[i]-monoms[2*i]-monoms[2*i+1])
+                eqnew += term
+            newreducedeqs.append(Poly(eqnew,htvars[0],htvars[1],tvar))
 
-        #allsymbols = self.pvars+[s for s,v in localsymbols]+[x]
-        #P,L,DD,U= self.LUdecompositionFF(M,*allsymbols)
-        #det=self.det_bareis(M,*(self.pvars+othersymbols[0:2]))
-        raise self.CannotSolveError('not implemented')
+        exportcoeffeqs,exportmonoms = self.solveDialytically(newreducedeqs,0)
+        coupledsolution = SolverCoeffFunction(jointnames=[v.name for v in usedvars],jointeval=[v[1] for v in htvarsubs2],jointevalcos=[htvarsubs[2*i][1] for i in range(len(htvars))],jointevalsin=[htvarsubs[2*i+1][1] for i in range(len(htvars))],isHinges=[self.isHinge(v.name) for v in usedvars],exportvar=[v.name for v in htvars],exportcoeffeqs=exportcoeffeqs,exportfnname='solvedialyticpoly8qep',rootmaxdim=16)
+        self.usinglapack = True
+        return [coupledsolution],usedvars
 
     def solveKohliOsvatic(self,rawpolyeqs):
         """Find a 16x16 matrix where the entries are linear with respect to the tan half-angle of one of the variables.
@@ -3002,7 +2981,6 @@ class IKFastSolver(AutoReloader):
         finaleq = simplify(eqnew).expand()
         pfinal = Poly(self.removecommonexprs(finaleq,onlygcd=False,onlynumbers=True),var.htvar)
         # check to see that LC is non-zero for at least one solution
-        #print [pfinal.LC.subs(testconsistentvalue).evalf() for testconsistentvalue in self.testconsistentvalues]
         if all([pfinal.LC.subs(testconsistentvalue).evalf()==S.Zero for testconsistentvalue in self.testconsistentvalues]):
             raise self.CannotSolveError('leading coefficient is always zero in %s'%(str(pfinal)))
         

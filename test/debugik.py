@@ -798,6 +798,121 @@ static inline void %s(const IKReal* matcoeffs, IKReal* rawroots, int& numroots)
             self.functions[name] = fcode
         return name
 
+def solveFailed(self):
+    for c in C:
+        reducedeqs.append(Poly(simplify(c.subs(htvarsubs)*(1+htvar[0]**2)*(1+htvar[1]**2)),htvars[0],htvars[1],tvar))
+    x = Symbol('ht%s'%othersymbols[0].name[1:])
+    dummyeq = eq.coeff(0,0)*(1+x**2) + eq.coeff(1,0)*(1-x**2) + eq.coeff(0,1)*2*x
+    eq,symbolsubs = self.removeConstants(dummyeq,[x],symbolgen)
+
+    # create a new matrix using the coefficients of reducedeqs
+    newmonoms = set()
+    origmonoms = set()
+    maxdegree = 0
+    for peq in reducedeqs:
+        for m in peq.iter_monoms():
+            mlist = list(m)
+            newmonoms.add(tuple(mlist))
+            origmonoms.add(tuple(mlist))
+            mlist[0] += 1
+            newmonoms.add(tuple(mlist))
+    newmonoms = list(newmonoms)
+    newmonoms.sort()
+    origmonoms = list(origmonoms)
+    origmonoms.sort()
+    assert(len(newmonoms)<=2*len(reducedeqs))
+    symbolgen = cse_main.numbered_symbols('const')
+    localsymbols = []
+    localexprs = []
+    localcommon = []
+    M = zeros((2*len(reducedeqs),len(newmonoms)))
+    exportcoeffeqs = [S.Zero]*(len(reducedeqs)*len(newmonoms)*3)
+    x = Symbol('ht%s'%othersymbols[0].name[1:])
+    for ipeq,peq in enumerate(reducedeqs):
+        for c,m in peq.iter_terms():
+            #eq,symbolsubs = self.removeConstants(c,othersymbols[0:2],symbolgen)
+            eq = Poly(c,othersymbols[0],othersymbols[1])
+            assert(eq.degree<=1)
+            dummyeq = eq.coeff(0,0)*(1+x**2) + eq.coeff(1,0)*(1-x**2) + eq.coeff(0,1)*2*x
+            eq,symbolsubs = self.removeConstants(dummyeq,[x],symbolgen)
+            for s,expr in symbolsubs:
+                expr0,common0 = self.removecommonexprs(expr,returncommon=True)
+                index = self.getCommonExpression(localexprs,expr0)
+                if index is not None:
+                    eq=eq.subs(s,localsymbols[index][0]/localcommon[index]*common0)
+                else:
+                    index = self.getCommonExpression(localexprs,-expr0)
+                    if index is not None:
+                        eq=eq.subs(s,-localsymbols[index][0]/localcommon[index]*common0)
+                    else:
+                        localsymbols.append((s,expr))
+                        localexprs.append(expr0)
+                        localcommon.append(common0)
+            #eq = Poly(eq,othersymbols[0],othersymbols[1])
+            exportindex = len(newmonoms)*ipeq+newmonoms.index(m)
+            #exportcoeffeqs[exportindex] = eq.coeff(0,0)
+            #exportcoeffeqs[len(newmonoms)*len(reducedeqs)+exportindex] = eq.coeff(1,0)
+            #exportcoeffeqs[2*len(newmonoms)*len(reducedeqs)+exportindex] = eq.coeff(0,1)
+            M[ipeq+len(reducedeqs),newmonoms.index(m)] = eq.as_basic()
+            mlist = list(m)
+            mlist[0] += 1
+            M[ipeq,newmonoms.index(tuple(mlist))] = eq.as_basic()
+
+    Mpowers = [zeros(M.shape)]
+    for i in range(M.shape[0]):
+        for j in range(M.shape[0]):
+            Mpowers[0][i,j] = Poly(M[i,j],x)
+        Mpowers[0][i,i] += S.One
+    multcombs = [(0,0),(0,1),(1,1),(0,3),(1,3),(2,3),(3,3)]
+    for indices in multcombs:
+        print indices
+        Mnew = Mpowers[indices[0]]*Mpowers[indices[1]]
+        for i in range(M.shape[0]):
+            for j in range(M.shape[0]):
+                eq,symbolsubs = self.removeConstants(Mnew[i,j],[x],symbolgen)
+                for s,expr in symbolsubs:
+                    localsymbols.append((s,expr))
+                    localexprs.append(expr)
+                    localcommon.append(S.One)
+                Mnew[i,j] = eq
+        Mpowers.append(Mnew)
+    # have M.shape[0] unknowns with constant term being 1
+    characteristiccoeffs = [Symbol('dummyc%d'%i) for i in range(M.shape[0]+1)]
+    characteristicpolys = []
+    for i in range(M.shape[0]):
+        for j in range(M.shape[0]):
+            print i,j
+            p = Poly(characteristiccoeffs[0],x,*characteristiccoeffs)
+            for k in range(M.shape[0]):
+                p = p + characteristiccoeffs[k+1]*Mpowers[k][i,j].as_basic()
+            characteristicpolys.append(p)
+
+    allmonoms = set()
+    for peq in characteristicpolys:
+        allmonoms = allmonoms.union(set(peq.monoms))
+    allmonoms = list(allmonoms)
+    allmonoms.sort()
+
+
+    localsymbolsvalues = []
+    for i in range(len(localsymbols)):
+        localsymbolsvalues.append((localsymbols[i][0],localsymbols[i][1].subs(localsymbolsvalues+psubs).evalf()))
+
+    Msub = [zeros(M.shape),zeros(M.shape),zeros(M.shape)]
+    for i in range(M.shape[0]):
+        for j in range(M.shape[1]):
+            peq = Poly(M[i,j],x)
+            for k in range(peq.degree+1):
+                Msub[k][i,j] = peq.coeff(k)
+
+
+
+
+    #allsymbols = self.pvars+[s for s,v in localsymbols]+[x]
+    #P,L,DD,U= self.LUdecompositionFF(M,*allsymbols)
+    #det=self.det_bareis(M,*(self.pvars+othersymbols[0:2]))
+    raise self.CannotSolveError('not implemented')
+
 def test_ik():
     from sympy import *
     import __builtin__
@@ -834,39 +949,13 @@ def test_ik():
     #for i in range(len(localsymbols)):
     #    localsymbolsvalues.append((localsymbols[i][0],localsymbols[i][1].subs(localsymbolsvalues+psubs).evalf()))
 
-    Mall.subs(localsymbolsvalues+[(leftvar,1.0)]).det()
-
     correctsols = [Poly(S.Zero,*newreducedeqs[0].symbols).add_term(S.One,m).subs(allsubs).evalf() for m in allmonoms]
     correctsols = Matrix(len(allmonoms),1,[Poly(S.Zero,*newreducedeqs[0].symbols).add_term(S.One,m).subs(allsubs).evalf() for m in allmonoms])
-        
-    Mvalues = Mall.subs(localsymbolsvalues)
-    for i in range(size(Mvalues)):
-        Mvalues[i] = self.chop(Mvalues[i])
 
-    Mleadcoeff.subs(localsymbolsvalues).det()
-
-    leftvarsubs = [(leftvar,tan(0.5).evalf())]
-    Mnext = Mall.subs(localsymbolsvalues+leftvarsubs)
-    A = Mnext[1:,1:]
-    b = -Mnext[1:,0]
-    x=numpy.linalg.solve(A,b)
-
-    str([eq.subs(localsymbols).subs(allsubs).evalf() for eq in exportcoeffeqs])
-
-    Mleadcoeff = Matrix(12,12,[S.Zero]*144)
-    coeffindex = 0
-    for j in range(6):
-        for k in range(9):
-            Mleadcoeff[j,k+3] = exportcoeffeqs[coeffindex+2].subs(localsymbolsvalues)
-            Mleadcoeff[(j+6),k] = Mleadcoeff[j,k+3]
-            coeffindex += 3
-    Mleadcoeff.det()
-
-    pickle.dump([symbolgen.next(),localsymbols,localsymbols_reduced,localsymbols_mult,newreducedeqs,reducedeqs,RightEquations,dummys,dummysubs,dummyvars],open('eqs.pp','w'))
-    symbolgenconst,localsymbols,localsymbols_reduced,localsymbols_mult,newreducedeqs,reducedeqs,RightEquations,dummys,dummysubs,dummyvars = pickle.load(open('eqs.pp','r'))
-    symbolgen = cse_main.numbered_symbols('const',start=int(symbolgenconst.name[5:]))
-
-
+    D = zeros((16,16))
+    D[:8,8:] = eye(8)
+    D[8:,:8] = -newA.evalf().inv()*newC.evalf()
+    D[8:,8:] = -newA.evalf().inv()*newB.evalf()
 """
 ikfast notes;
 

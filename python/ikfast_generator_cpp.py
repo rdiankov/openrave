@@ -204,10 +204,12 @@ public:
             else {
                 IKFAST_ASSERT(pfree != NULL);
                 psolution[i] = pfree[basesol[i].freeind]*basesol[i].fmul + basesol[i].foffset;
-                if( psolution[i] > IKPI )
+                if( psolution[i] > IKPI ) {
                     psolution[i] -= IK2PI;
-                else if( psolution[i] < -IKPI )
+                }
+                else if( psolution[i] < -IKPI ) {
                     psolution[i] += IK2PI;
+                }
             }
         }
     }
@@ -436,8 +438,8 @@ int main(int argc, char** argv)
         psymbols = ["new_px","new_py","new_pz"]
         for i in range(3):
             for j in range(3):
-                fcode += self.writeEquations(lambda k: "new_r%d%d"%(i,j),node.Tee[4*i+j])
-            fcode += self.writeEquations(lambda k: psymbols[i],node.Tee[4*i+3])
+                fcode += self.writeEquations(lambda k: "new_r%d%d"%(i,j),node.Tee[4*i+j].evalf())
+            fcode += self.writeEquations(lambda k: psymbols[i],node.Tee[4*i+3].evalf())
         for i in range(3):
             for j in range(3):
                 fcode += "r%d%d = new_r%d%d; "%(i,j,i,j)
@@ -506,7 +508,7 @@ int main(int argc, char** argv)
         
         for i in range(3):
             for j in range(3):
-                fcode += self.writeEquations(lambda k: "new_r%d%d"%(i,j),node.Ree[i,j])
+                fcode += self.writeEquations(lambda k: "new_r%d%d"%(i,j),node.Ree[i,j].evalf())
         for i in range(3):
             for j in range(3):
                 fcode += "r%d%d = new_r%d%d; "%(i,j,i,j)
@@ -576,7 +578,7 @@ int main(int argc, char** argv)
 
         psymbols = ["new_px","new_py","new_pz"]
         for i in range(3):
-            fcode += self.writeEquations(lambda k: psymbols[i],node.Pee[i])
+            fcode += self.writeEquations(lambda k: psymbols[i],node.Pee[i].evalf())
         fcode += "px = new_px; py = new_py; pz = new_pz;\n"
         if node.dictequations is not None:
             for var,value in node.dictequations:
@@ -643,7 +645,7 @@ int main(int argc, char** argv)
             fcode += "r0%d = eerot[%d];\n"%(i,i)
 
         for i in range(3):
-            fcode += self.writeEquations(lambda k: "new_r%d%d"%(0,i),node.Dee[i])
+            fcode += self.writeEquations(lambda k: "new_r%d%d"%(0,i),node.Dee[i].evalf())
         for i in range(3):
             fcode += "r0%d = new_r0%d; "%(i,i)
         if node.dictequations is not None:
@@ -717,8 +719,8 @@ int main(int argc, char** argv)
 
         psymbols = ["new_px","new_py","new_pz"]
         for i in range(3):
-            fcode += self.writeEquations(lambda k: "new_r%d%d"%(0,i),node.Dee[i])
-            fcode += self.writeEquations(lambda k: psymbols[i],node.Pee[i])
+            fcode += self.writeEquations(lambda k: "new_r%d%d"%(0,i),node.Dee[i].evalf())
+            fcode += self.writeEquations(lambda k: psymbols[i],node.Pee[i].evalf())
         for i in range(3):
             fcode += "r0%d = new_r0%d; "%(i,i)
         if node.is5dray:
@@ -794,7 +796,7 @@ int main(int argc, char** argv)
 
         psymbols = ["new_px","new_py","new_pz"]
         for i in range(3):
-            fcode += self.writeEquations(lambda k: psymbols[i],node.Pee[i])
+            fcode += self.writeEquations(lambda k: psymbols[i],node.Pee[i].evalf())
         fcode += "px = new_px; py = new_py; pz = new_pz;\n"
         if node.dictequations is not None:
             for var,value in node.dictequations:
@@ -857,7 +859,7 @@ int main(int argc, char** argv)
                 numsolutions *= 2
             for i in range(numsolutions):
                 if node.isHinge:
-                    eqcode += 'if( %sarray[%d] > IKPI )\n    %sarray[%d]-=IK2PI;\nelse if( %sarray[%d] < -IKPI )\n    %sarray[%d]+=IK2PI;\n'%(name,allnumsolutions+i,name,allnumsolutions+i,name,allnumsolutions+i,name,allnumsolutions+i)
+                    eqcode += 'if( %sarray[%d] > IKPI )\n{    %sarray[%d]-=IK2PI;\n}\nelse if( %sarray[%d] < -IKPI )\n{    %sarray[%d]+=IK2PI;\n}\n'%(name,allnumsolutions+i,name,allnumsolutions+i,name,allnumsolutions+i,name,allnumsolutions+i)
                 eqcode += '%svalid[%d] = true;\n'%(name,allnumsolutions+i)
             allnumsolutions += numsolutions
         # might also have cos solutions ...
@@ -1044,6 +1046,8 @@ int main(int argc, char** argv)
             fnname=self.using_solvedialyticpoly16lep()
         elif node.exportfnname == 'solvedialyticpoly12qep':
             fnname=self.using_solvedialyticpoly12qep()
+        elif node.exportfnname == 'solvedialyticpoly8qep':
+            fnname=self.using_solvedialyticpoly8qep()
         else:
             fnname = 'unknownfn'
         code = 'IKReal op[%d], zeror[%d];\nint numroots;\n'%(len(node.exportcoeffeqs),node.rootmaxdim*len(node.jointnames))
@@ -1647,7 +1651,7 @@ static inline void %s(const IKReal* matcoeffs, IKReal* rawroots, int& numroots)
         if( info == 0 ) {
             bsingular = false;
             for(int j = 0; j < matrixdim; ++j) {
-                if( IKabs(M[1][j*matrixdim+j]) < 100*tol ) {
+                if( IKabs(A[j*matrixdim+j]) < 100*tol ) {
                     bsingular = true;
                     break;
                 }
@@ -1656,7 +1660,7 @@ static inline void %s(const IKReal* matcoeffs, IKReal* rawroots, int& numroots)
                 break;
             }
         }
-        if( lfindex == 1 ) {
+        if( lfindex == 3 ) {
             break;
         }
         // transform by the linear functional
@@ -1743,6 +1747,169 @@ static inline void %s(const IKReal* matcoeffs, IKReal* rawroots, int& numroots)
         }
     }
 }"""%(name,checkconsistency12)
+            self.functions[name] = fcode
+        return name
+
+    def using_checkconsistency8(self):
+        name = 'checkconsistency8'
+        if not name in self.functions:
+            fcode = """
+static inline bool %s(const IKReal* Breal)
+{
+    IKReal norm = 0.1;
+    for(int i = 0; i < 7; ++i) {
+        norm += IKabs(Breal[i]);
+    }
+    IKReal tol = 1e-5*norm; // have to increase the threshold since many computations are involved
+    return IKabs(Breal[0]*Breal[1]-Breal[2]) < tol && IKabs(Breal[1]*Breal[1]-Breal[3]) < tol && IKabs(Breal[0]*Breal[3]-Breal[4]) < tol && IKabs(Breal[1]*Breal[3]-Breal[5]) < tol && IKabs(Breal[0]*Breal[5]-Breal[6]) < tol;
+}"""%name
+            self.functions[name] = fcode
+        return name
+
+    def using_solvedialyticpoly8qep(self):
+        name = 'solvedialyticpoly8qep'
+        checkconsistency8=self.using_checkconsistency8()
+        if not name in self.functions:
+            fcode = """
+/// \\brief Solve the det Ax^2+Bx+C = 0 problem using the Manocha and Canny method (1994)
+///
+/// matcoeffs is of length 54*3, for 3 matrices
+static inline void %s(const IKReal* matcoeffs, IKReal* rawroots, int& numroots)
+{
+    const IKReal tol = 128.0*std::numeric_limits<IKReal>::epsilon();
+    IKReal IKFAST_ALIGNED16(M[16*16]) = {0};
+    IKReal IKFAST_ALIGNED16(A[8*8]);
+    IKReal IKFAST_ALIGNED16(work[16*16*15]);
+    int ipiv[8];
+    int info, coeffindex;
+    const int worksize=16*16*15;
+    const int matrixdim = 8;
+    const int matrixdim2 = 16;
+    numroots = 0;
+    // first setup M = [0 I; -C -B] and A
+    coeffindex = 0;
+    for(int j = 0; j < 4; ++j) {
+        for(int k = 0; k < 6; ++k) {
+            M[matrixdim+(j+4)+2*matrixdim*k] = M[matrixdim+j+2*matrixdim*(k+2)] = -matcoeffs[coeffindex++];
+        }
+    }
+    for(int j = 0; j < 4; ++j) {
+        for(int k = 0; k < 6; ++k) {
+            M[matrixdim+(j+4)+2*matrixdim*k+matrixdim*2*matrixdim] = M[matrixdim+j+2*matrixdim*(k+2)+matrixdim*2*matrixdim] = -matcoeffs[coeffindex++];
+        }
+    }
+    for(int j = 0; j < 4; ++j) {
+        for(int k = 0; k < 6; ++k) {
+            A[(j+4)+matrixdim*k] = A[j+matrixdim*(k+2)] = matcoeffs[coeffindex++];
+        }
+        for(int k = 0; k < 2; ++k) {
+            A[j+matrixdim*k] = A[(j+4)+matrixdim*(k+6)] = 0;
+        }
+    }
+    const IKReal lfpossibilities[4][4] = {{1,-1,1,1},{1,0,-2,1},{1,1,2,0},{1,-1,4,1}};
+    int lfindex = -1;
+    bool bsingular = true;
+    do {
+        dgetrf_(&matrixdim,&matrixdim,A,&matrixdim,&ipiv[0],&info);
+        if( info == 0 ) {
+            bsingular = false;
+            for(int j = 0; j < matrixdim; ++j) {
+                if( IKabs(A[j*matrixdim+j]) < 100*tol ) {
+                    bsingular = true;
+                    break;
+                }
+            }
+            if( !bsingular ) {
+                break;
+            }
+        }
+        if( lfindex == 3 ) {
+            break;
+        }
+        // transform by the linear functional
+        lfindex++;
+        const IKReal* lf = lfpossibilities[lfindex];
+        // have to reinitialize A
+        coeffindex = 0;
+        for(int j = 0; j < 4; ++j) {
+            for(int k = 0; k < 6; ++k) {
+                IKReal a = matcoeffs[coeffindex+48], b = matcoeffs[coeffindex+24], c = matcoeffs[coeffindex];
+                A[(j+4)+matrixdim*k] = A[j+matrixdim*(k+2)] = lf[0]*lf[0]*a+lf[0]*lf[2]*b+lf[2]*lf[2]*c;
+                M[matrixdim+(j+4)+2*matrixdim*k] = M[matrixdim+j+2*matrixdim*(k+2)] = -(lf[1]*lf[1]*a + lf[1]*lf[3]*b + lf[3]*lf[3]*c);
+                M[matrixdim+(j+4)+2*matrixdim*k+matrixdim*2*matrixdim] = M[matrixdim+j+2*matrixdim*(k+2)+matrixdim*2*matrixdim] = -(2*lf[0]*lf[1]*a + (lf[0]*lf[3]+lf[1]*lf[2])*b + 2*lf[2]*lf[3]*c);
+                coeffindex++;
+            }
+            for(int k = 0; k < 2; ++k) {
+                A[j+matrixdim*k] = A[(j+4)+matrixdim*(k+6)] = 0;
+            }
+        }
+    } while(lfindex<4);
+
+    if( bsingular ) {
+        return;
+    }
+    dgetrs_("No transpose", &matrixdim, &matrixdim2, A, &matrixdim, &ipiv[0], &M[matrixdim], &matrixdim2, &info);
+    if( info != 0 ) {
+        return;
+    }
+
+    // set identity in upper corner
+    for(int j = 0; j < matrixdim; ++j) {
+        M[matrixdim*2*matrixdim+j+matrixdim*2*j] = 1;
+    }
+    IKReal IKFAST_ALIGNED16(wr[16]);
+    IKReal IKFAST_ALIGNED16(wi[16]);
+    IKReal IKFAST_ALIGNED16(vr[16*16]);
+    int one=1;
+    dgeev_("N", "V", &matrixdim2, M, &matrixdim2, wr, wi,NULL, &one, vr, &matrixdim2, work, &worksize, &info);
+    if( info != 0 ) {
+        return;
+    }
+    IKReal Breal[matrixdim-1];
+    for(int i = 0; i < matrixdim2; ++i) {
+        if( IKabs(wi[i]) < tol*100 ) {
+            IKReal* ev = vr+matrixdim2*i;
+            if( IKabs(wr[i]) > 1 ) {
+                ev += matrixdim;
+            }
+            // consistency has to be checked!!
+            if( IKabs(ev[0]) < tol ) {
+                continue;
+            }
+            IKReal iconst = 1/ev[0];
+            for(int j = 1; j < matrixdim; ++j) {
+                Breal[j-1] = ev[j]*iconst;
+            }
+            if( %s(Breal) ) {
+                if( lfindex >= 0 ) {
+                    const IKReal* lf = lfpossibilities[lfindex];
+                    rawroots[numroots++] = (wr[i]*lf[0]+lf[1])/(wr[i]*lf[2]+lf[3]);
+                }
+                else {
+                    rawroots[numroots++] = wr[i];
+                }
+                bool bsmall0=IKabs(ev[0]) > IKabs(ev[2]);
+                bool bsmall1=IKabs(ev[0]) > IKabs(ev[1]);
+                if( bsmall0 && bsmall1 ) {
+                    rawroots[numroots++] = ev[2]/ev[0];
+                    rawroots[numroots++] = ev[1]/ev[0];
+                }
+                else if( bsmall0 && !bsmall1 ) {
+                    rawroots[numroots++] = ev[3]/ev[1];
+                    rawroots[numroots++] = ev[1]/ev[0];
+                }
+                else if( !bsmall0 && bsmall1 ) {
+                    rawroots[numroots++] = ev[6]/ev[4];
+                    rawroots[numroots++] = ev[7]/ev[6];
+                }
+                else if( !bsmall0 && !bsmall1 ) {
+                    rawroots[numroots++] = ev[7]/ev[5];
+                    rawroots[numroots++] = ev[7]/ev[6];
+                }
+            }
+        }
+    }
+}"""%(name,checkconsistency8)
             self.functions[name] = fcode
         return name
 
