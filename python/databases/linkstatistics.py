@@ -155,9 +155,10 @@ class LinkStatisticsModel(OpenRAVEModel):
         if options is not None:
             if options.samplingdelta is not None:
                 samplingdelta=options.samplingdelta
-        if self.robot.GetKinematicsGeometryHash() == 'e829feb384e6417bbf5bd015f1c6b49a'or self.robot.GetKinematicsGeometryHash() == '22548f4f2ecf83e88ae7e2f3b2a0bd08': # wam 7dof
+        # compare hashes here
+        if self.robot.GetKinematicsGeometryHash() == 'ba2ac00ac66812b08d5c61678d306dcc'or self.robot.GetKinematicsGeometryHash() == '22548f4f2ecf83e88ae7e2f3b2a0bd08': # wam 7dof
             if samplingdelta is None:
-                samplingdelta=0.011
+                samplingdelta=0.03
         self.generate(samplingdelta=samplingdelta)
         self.save()
     def generate(self,samplingdelta=None,**kwargs):
@@ -167,7 +168,7 @@ class LinkStatisticsModel(OpenRAVEModel):
         with self.robot:
             self.robot.SetTransform(eye(4))
             # compute the convex hulls for every link
-            print 'Generating link volume points...'
+            print 'Generating link volume points, sampling delta = %f'%self.samplingdelta
             links = self.robot.GetLinks()
             self.linkstats = [None]*len(links)
             for ilink,link,linkcd in izip(range(len(links)),links,self.cdmodel.linkgeometry):

@@ -1875,45 +1875,58 @@ protected:
         SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         KinBodyPtr pbody = orMacroGetBody(is);
-        if( !pbody )
+        if( !pbody ) {
             return false;
-
+        }
         int nexcluded = 0;
         is >> nexcluded;
         vector<KinBodyConstPtr> vignore; vignore.reserve(nexcluded);
         for(int i = 0; i < nexcluded; ++i) {
             int bodyid = 0;
             is >> bodyid;
-            if( !is )
+            if( !is ) {
                 return false;
+            }
             if( bodyid ) {
                 KinBodyPtr pignore = GetEnv()->GetBodyFromEnvironmentId(bodyid);
-                if( !pignore )
+                if( !pignore ) {
                     RAVELOG_WARN("failed to find body %d",bodyid);
-                else
+                }
+                else {
                     vignore.push_back(pignore);
+                }
             }
         }
         bool bgetcontacts=false;
-        is >> bgetcontacts;
+        int linkindex = -1;
+        is >> bgetcontacts >> linkindex;
 
         CollisionReportPtr preport(new CollisionReport());
         vector<KinBody::LinkConstPtr> empty;
-        int oldoptions = GetEnv()->GetCollisionChecker()->GetCollisionOptions();
-        GetEnv()->GetCollisionChecker()->SetCollisionOptions(CO_Contacts);
-        if( GetEnv()->CheckCollision(KinBodyConstPtr(pbody), vignore, empty,preport)) {
-            os << "1 ";
-            //RAVELOG_VERBOSE(str(boost::format("collision %s\n")%preport->__str__()));
+        CollisionOptionsStateSaver optionsaver(GetEnv()->GetCollisionChecker(),CO_Contacts);
+        if( linkindex >= 0 ) {
+            if( GetEnv()->CheckCollision(KinBody::LinkConstPtr(pbody->GetLinks().at(linkindex)), vignore, empty,preport)) {
+                os << "1 ";
+            }
+            else {
+                os << "0 ";
+            }
         }
-        else
-            os << "0 ";
-        GetEnv()->GetCollisionChecker()->SetCollisionOptions(oldoptions);
+        else {
+            if( GetEnv()->CheckCollision(KinBodyConstPtr(pbody), vignore, empty,preport)) {
+                os << "1 ";
+            }
+            else {
+                os << "0 ";
+            }
+        }
         int bodyindex = 0;
-        if( !!preport->plink1 && preport->plink1->GetParent() != pbody )
+        if( !!preport->plink1 && preport->plink1->GetParent() != pbody ) {
             bodyindex = preport->plink1->GetParent()->GetEnvironmentId();
-        if( !!preport->plink2 && preport->plink2->GetParent() != pbody )
+        }
+        if( !!preport->plink2 && preport->plink2->GetParent() != pbody ) {
             bodyindex = preport->plink2->GetParent()->GetEnvironmentId();
-
+        }
         os << bodyindex << " ";
 
         if( bgetcontacts ) {
