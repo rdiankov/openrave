@@ -20,7 +20,7 @@ from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2011 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Lesser GPL, Version 3'
-__version__ = '30'
+__version__ = '31'
 
 import sys, copy, time, math, datetime
 import __builtin__
@@ -277,22 +277,6 @@ class SolverConditionedSolution:
     def end(self, generator):
         return generator.endConditionedSolution(self)
     
-class SolverBranch:
-    jointname = None
-    jointeval = None # only used for evaluation, do use these for real solutions
-    # list of tuples, first gives expected value of joint, then the code that follows.
-    # Last element in list is executed if nothing else is
-    jointbranches = None
-    def __init__(self, jointname, jointeval, jointbranches):
-        self.jointname = jointname
-        self.jointeval = jointeval
-        self.jointbranches = jointbranches
-        assert(jointeval is not None)
-    def generate(self, generator):
-        return generator.generateBranch(self)
-    def end(self, generator):
-        return generator.endBranch(self)
-
 class SolverBranchConds:
     jointbranches = None
     thresh = 0.00001
@@ -333,12 +317,52 @@ class SolverFreeParameter:
     def end(self, generator):
         return generator.endFreeParameter(self)
 
+class SolverRotation:
+    T = None
+    jointtree = None
+    functionid=0
+    def __init__(self, T, jointtree):
+        self.T = T
+        self.jointtree = jointtree
+        self.dictequations = []
+    def generate(self, generator):
+        return generator.generateRotation(self)
+    def end(self, generator):
+        return generator.endRotation(self)
+
+class SolverStoreSolution:
+    alljointvars = None
+    checkgreaterzero = None # used for final sanity checks to ensure IK solution is consistent
+    thresh = 0
+    def __init__(self, alljointvars,checkgreaterzero=None):
+        self.alljointvars = alljointvars
+        self.checkgreaterzero = checkgreaterzero
+    def generate(self, generator):
+        return generator.generateStoreSolution(self)
+    def end(self, generator):
+        return generator.endStoreSolution(self)
+
+class SolverSequence:
+    jointtrees = None
+    def __init__(self, jointtrees):
+        self.jointtrees = jointtrees
+    def generate(self, generator):
+        return generator.generateSequence(self)
+    def end(self, generator):
+        return generator.endSequence(self)
+
+class SolverBreak:
+    def generate(self,generator):
+        return generator.generateBreak(self)
+    def end(self,generator):
+        return generator.endBreak(self)
+
 class SolverIKChainTransform6D:
     solvejointvars = None
     freejointvars = None
-    Tee = None
     jointtree = None
     Tfk = None
+    Tee = None
     dictequations = None
     def __init__(self, solvejointvars, freejointvars, Tee, jointtree,Tfk=None):
         self.solvejointvars = solvejointvars
@@ -351,12 +375,15 @@ class SolverIKChainTransform6D:
         return generator.generateChain(self)
     def end(self, generator):
         return generator.endChain(self)
+    def leftmultiply(self,Tleft,Tleftinv):
+        self.Tfk = Tleft*self.Tfk
+        self.Tee = Tleftinv*self.Tee
 
 class SolverIKChainRotation3D:
     solvejointvars = None
     freejointvars = None
-    Ree = None
     Rfk = None
+    Ree = None
     jointtree = None
     dictequations = None
     def __init__(self, solvejointvars, freejointvars, Ree, jointtree,Rfk=None):
@@ -370,13 +397,16 @@ class SolverIKChainRotation3D:
         return generator.generateIKChainRotation3D(self)
     def end(self, generator):
         return generator.endIKChainRotation3D(self)
+    def leftmultiply(self,Tleft,Tleftinv):
+        self.Rfk = Tleft[0:3,0:3]*self.Rfk
+        self.Ree = Tleftinv[0:3,0:3]*self.Ree
 
 class SolverIKChainTranslation3D:
     solvejointvars = None
     freejointvars = None
-    Pee = None
     jointtree = None
     Pfk = None
+    Pee = None
     dictequations = None
     def __init__(self, solvejointvars, freejointvars, Pee, jointtree,Pfk=None):
         self.solvejointvars = solvejointvars
@@ -389,13 +419,16 @@ class SolverIKChainTranslation3D:
         return generator.generateIKChainTranslation3D(self)
     def end(self, generator):
         return generator.endIKChainTranslation3D(self)
+    def leftmultiply(self,Tleft,Tleftinv):
+        self.Pfk = Tleft[0:3,0:3]*self.Pfk+Tleft[0:3,3]
+        self.Tee = Tleftinv[0:3,0:3]*self.Pee+Tleftinv[0:3,3]
 
 class SolverIKChainDirection3D:
     solvejointvars = None
     freejointvars = None
-    Dee = None
     jointtree = None
     Dfk = None
+    Dee = None
     dictequations = None
     def __init__(self, solvejointvars, freejointvars, Dee, jointtree,Dfk=None):
         self.solvejointvars = solvejointvars
@@ -408,15 +441,18 @@ class SolverIKChainDirection3D:
         return generator.generateIKChainDirection3D(self)
     def end(self, generator):
         return generator.endIKChainDirection3D(self)
+    def leftmultiply(self,Tleft,Tleftinv):
+        self.Dfk = Tleft[0:3,0:3]*self.Dfk
+        self.Dee = Tleftinv[0:3,0:3]*self.Dee
 
 class SolverIKChainRay:
     solvejointvars = None
     freejointvars = None
-    Pee = None
-    Dee = None
     jointtree = None
     Pfk = None
     Dfk = None
+    Pee = None
+    Dee = None
     dictequations = None
     is5dray = False # if True, then full 3D position becomes important and things shouldn't be normalized
     def __init__(self, solvejointvars, freejointvars, Pee, Dee, jointtree,Pfk=None,Dfk=None,is5dray=False):
@@ -433,14 +469,19 @@ class SolverIKChainRay:
         return generator.generateIKChainRay(self)
     def end(self, generator):
         return generator.endIKChainRay(self)
+    def leftmultiply(self,Tleft,Tleftinv):
+        self.Pfk = Tleft[0:3,0:3]*self.Pfk+Tleft[0:3,3]
+        self.Dfk = Tleft[0:3,0:3]*self.Dfk
+        self.Pee = Tleftinv[0:3,0:3]*self.Pee+Tleftinv[0:3,3]
+        self.Dee = Tleftinv[0:3,0:3]*self.Dee
 
 class SolverIKChainLookat3D:
     solvejointvars = None
     freejointvars = None
-    Pee = None
     jointtree = None
     Pfk = None
     Dfk = None
+    Pee = None
     dictequations = None
     def __init__(self, solvejointvars, freejointvars, Pee, jointtree,Pfk=None,Dfk=None):
         self.solvejointvars = solvejointvars
@@ -454,66 +495,10 @@ class SolverIKChainLookat3D:
         return generator.generateIKChainLookat3D(self)
     def end(self, generator):
         return generator.endIKChainLookat3D(self)
-
-class SolverRotation:
-    T = None
-    jointtree = None
-    functionid=0
-    def __init__(self, T, jointtree):
-        self.T = T
-        self.jointtree = jointtree
-        self.dictequations = []
-    def generate(self, generator):
-        return generator.generateRotation(self)
-    def end(self, generator):
-        return generator.endRotation(self)
-
-class SolverDirection:
-    D = None
-    jointtree = None
-    def __init__(self, D, jointtree):
-        self.D = D
-        self.jointtree = jointtree
-        self.dictequations = []
-    def generate(self, generator):
-        return generator.generateDirection(self)
-    def end(self, generator):
-        return generator.endDirection(self)
-
-class SolverStoreSolution:
-    alljointvars = None
-    def __init__(self, alljointvars):
-        self.alljointvars = alljointvars
-    def generate(self, generator):
-        return generator.generateStoreSolution(self)
-    def end(self, generator):
-        return generator.endStoreSolution(self)
-
-class SolverSequence:
-    jointtrees = None
-    def __init__(self, jointtrees):
-        self.jointtrees = jointtrees
-    def generate(self, generator):
-        return generator.generateSequence(self)
-    def end(self, generator):
-        return generator.endSequence(self)
-
-class SolverSetJoint:
-    jointname = None
-    jointvalue = None
-    def __init__(self, jointname,jointvalue):
-        self.jointname = jointname
-        self.jointvalue = jointvalue
-    def generate(self, generator):
-        return generator.generateSetJoint(self)
-    def end(self, generator):
-        return generator.endSetJoint(self)
-
-class SolverBreak:
-    def generate(self,generator):
-        return generator.generateBreak(self)
-    def end(self,generator):
-        return generator.endBreak(self)
+    def leftmultiply(self,Tleft,Tleftinv):
+        self.Pfk = Tleft[0:3,0:3]*self.Pfk+Tleft[0:3,3]
+        self.Dfk = Tleft[0:3,0:3]*self.Dfk
+        self.Pee = Tleftinv[0:3,0:3]*self.Pee+Tleftinv[0:3,3]
 
 class fmod(core.function.Function):
     nargs = 2
@@ -983,6 +968,7 @@ class IKFastSolver(AutoReloader):
             # need to iterate through all combinations of free joints
             assert(0)
         isolvejointvars = []
+        solvejointvars = []
         self.ifreejointvars = []
         self.freevarsubs = []
         self.freevars = []
@@ -999,6 +985,7 @@ class IKFastSolver(AutoReloader):
                 self.freevars += [var.cvar,var.svar]
                 self.freejointvars.append(var.var)
             else:
+                solvejointvars.append(v)
                 isolvejointvars.append(i)
                 self.invsubs += [(var.cvar,cos(v)),(var.svar,sin(v))]
 
@@ -1024,9 +1011,13 @@ class IKFastSolver(AutoReloader):
             self.rxpsubs += [(self.rxp[-1][j],c[j]) for j in range(3)]
         self.pvars = self.Tee[0:12]+self.npxyz+[self.pp]+self.rxp[0]+self.rxp[1]+self.rxp[2]
         self.Teeinv = self.affineInverse(self.Tee)
+        LinksLeft = []
+        while not self.has_any_symbols(LinksRaw[0],*solvejointvars):
+            LinksLeft.append(LinksRaw.pop(0))
+        LinksLeftInv = [self.affineInverse(T) for T in LinksLeft]
         self.testconsistentvalues = None
         chaintree = solvefn(self, LinksRaw, jointvars, isolvejointvars)
-        chaintree.dictequations += self.ppsubs+self.npxyzsubs+self.rxpsubs
+        chaintree.leftmultiply(Tleft=self.multiplyMatrix(LinksLeft), Tleftinv=self.multiplyMatrix(LinksLeftInv[::-1]))
         return chaintree
 
     def computeConsistentValues(self,jointvars,T,numsolutions=1,subs=None):
@@ -1057,9 +1048,7 @@ class IKFastSolver(AutoReloader):
         basedir /= sqrt(basedir[0]*basedir[0]+basedir[1]*basedir[1]+basedir[2]*basedir[2])
         for i in range(3):
             basedir[i] = self.convertRealToRational(basedir[i])
-        Tfirstleft = LinksRaw[0]
-        TfirstleftInv = self.affineInverse(Tfirstleft)
-        Links = LinksRaw[1:]
+        Links = LinksRaw[:]
         LinksInv = [self.affineInverse(link) for link in Links]
         T = self.multiplyMatrix(Links)
         Tfinal = zeros((4,4))
@@ -1089,7 +1078,7 @@ class IKFastSolver(AutoReloader):
         AllEquations = self.buildEquationsFromTwoSides(Ds,Dsee,jointvars,uselength=False)
         tree = self.solveAllEquations(AllEquations,curvars=solvejointvars,othersolvedvars = self.freejointvars[:],solsubs = self.freevarsubs[:],endbranchtree=endbranchtree)
         tree = self.verifyAllEquations(AllEquations,solvejointvars,self.freevarsubs,tree)
-        return SolverIKChainDirection3D([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(v,i) for v,i in izip(self.freejointvars,self.ifreejointvars)], Dee=(TfirstleftInv[0:3,0:3] * self.Tee[0,0:3].transpose()).subs(self.freevarsubs), jointtree=tree,Dfk=Tfirstleft[0:3,0:3]*Tfinal[0,0:3].transpose())
+        return SolverIKChainDirection3D([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(v,i) for v,i in izip(self.freejointvars,self.ifreejointvars)], Dee=self.Tee[0,0:3].transpose().subs(self.freevarsubs), jointtree=tree,Dfk=Tfinal[0,0:3].transpose())
 
     def solveFullIK_Lookat3D(self,LinksRaw, jointvars, isolvejointvars,rawbasedir=Matrix(3,1,[S.Zero,S.Zero,S.One]),rawbasepos=Matrix(3,1,[S.Zero,S.Zero,S.Zero])):
         """basedir,basepos needs to be filled with a direction and position of the ray to control the lookat
@@ -1100,16 +1089,13 @@ class IKFastSolver(AutoReloader):
         for i in range(3):
             basedir[i] = self.convertRealToRational(basedir[i])
         basepos = basepos-basedir*basedir.dot(basepos)
-        Tfirstleft = LinksRaw[0]
-        TfirstleftInv = self.affineInverse(Tfirstleft)
-        Links = LinksRaw[1:]
+        Links = LinksRaw[:]
         LinksInv = [self.affineInverse(link) for link in Links]
         T = self.multiplyMatrix(Links)
         Tfinal = zeros((4,4))
         Tfinal[0,0:3] = (T[0:3,0:3]*basedir).transpose()
         Tfinal[0:3,3] = T[0:3,0:3]*basepos+T[0:3,3]
         self.testconsistentvalues = self.computeConsistentValues(jointvars,Tfinal,numsolutions=4)
-        endbranchtree = [SolverStoreSolution (jointvars)]
         solvejointvars = [jointvars[i] for i in isolvejointvars]
         if len(solvejointvars) != 2:
             raise self.CannotSolveError('need 2 joints')
@@ -1131,19 +1117,25 @@ class IKFastSolver(AutoReloader):
                 numvarsdone -= 1
             Tinv = self.affineInverse(Links[i])
             Paccum = Tinv[0:3,0:3]*Paccum+Tinv[0:3,3]
+
+        frontcond = (Links[-1][0:3,0:3]*basedir).dot(Paccum-(Links[-1][0:3,0:3]*basepos+Links[-1][0:3,3]))
+        for v in jointvars:
+            frontcond = frontcond.subs(self.Variable(v).subs)
+        endbranchtree = [SolverStoreSolution (jointvars,checkgreaterzero=[frontcond])]
         AllEquations = self.buildEquationsFromTwoSides(Positions,Positionsee,jointvars,uselength=True)
         tree = self.solveAllEquations(AllEquations,curvars=solvejointvars,othersolvedvars = self.freejointvars[:],solsubs = self.freevarsubs[:],endbranchtree=endbranchtree)
         tree = self.verifyAllEquations(AllEquations,solvejointvars,self.freevarsubs,tree)
-        return SolverIKChainLookat3D([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(v,i) for v,i in izip(self.freejointvars,self.ifreejointvars)], Pee=(TfirstleftInv[0:3,0:3] * self.Tee[0:3,3] + TfirstleftInv[0:3,3]).subs(self.freevarsubs), jointtree=tree,Dfk=Tfirstleft[0:3,0:3]*Tfinal[0,0:3].transpose(),Pfk=Tfirstleft[0:3,0:3]*Tfinal[0:3,3]+Tfirstleft[0:3,3])
+        chaintree = SolverIKChainLookat3D([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(v,i) for v,i in izip(self.freejointvars,self.ifreejointvars)], Pee=self.Tee[0:3,3].subs(self.freevarsubs), jointtree=tree,Dfk=Tfinal[0,0:3].transpose(),Pfk=Tfinal[0:3,3])
+        chaintree.dictequations += self.ppsubs
+        return chaintree
 
     def solveFullIK_Rotation3D(self,LinksRaw, jointvars, isolvejointvars, Rbaseraw=eye(3)):
         Rbase = eye(4)
         for i in range(3):
             for j in range(3):
                 Rbase[i,j] = self.convertRealToRational(Rbaseraw[i,j])
-        Tfirstleft = LinksRaw[0]
         Tfirstright = LinksRaw[-1]*Rbase
-        Links = LinksRaw[1:-1]
+        Links = LinksRaw[:-1]
         LinksInv = [self.affineInverse(link) for link in Links]
         Tfinal = self.multiplyMatrix(Links)
         self.testconsistentvalues = self.computeConsistentValues(jointvars,Tfinal,numsolutions=4)
@@ -1157,13 +1149,11 @@ class IKFastSolver(AutoReloader):
         AllEquations = self.buildEquationsFromRotation(Links,self.Tee[0:3,0:3],solvejointvars,self.freejointvars)
         tree = self.solveAllEquations(AllEquations,curvars=solvejointvars[:],othersolvedvars=self.freejointvars,solsubs = self.freevarsubs[:],endbranchtree=endbranchtree)
         tree = self.verifyAllEquations(AllEquations,solvejointvars,self.freevarsubs,tree)
-        return SolverIKChainRotation3D([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(v,i) for v,i in izip(self.freejointvars,self.ifreejointvars)], (self.affineInverse(Tfirstleft)[0:3,0:3] * self.Tee[0:3,0:3] * self.affineInverse(Tfirstright)[0:3,0:3]).subs(self.freevarsubs), tree, Rfk = Tfirstleft[0:3,0:3] * Tfinal[0:3,0:3] * Tfirstright[0:3,0:3])
+        return SolverIKChainRotation3D([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(v,i) for v,i in izip(self.freejointvars,self.ifreejointvars)], (self.Tee[0:3,0:3] * self.affineInverse(Tfirstright)[0:3,0:3]).subs(self.freevarsubs), tree, Rfk = Tfinal[0:3,0:3] * Tfirstright[0:3,0:3])
 
     def solveFullIK_Translation3D(self,LinksRaw, jointvars, isolvejointvars, rawbasepos=Matrix(3,1,[S.Zero,S.Zero,S.Zero])):
         basepos = Matrix(3,1,[self.convertRealToRational(x) for x in rawbasepos])
-        Tfirstleft = LinksRaw[0]
-        TfirstleftInv = self.affineInverse(Tfirstleft)
-        Links = LinksRaw[1:]
+        Links = LinksRaw[:]
         LinksInv = [self.affineInverse(link) for link in Links]
         Tfinal = self.multiplyMatrix(Links)
         self.testconsistentvalues = self.computeConsistentValues(jointvars,Tfinal,numsolutions=4)
@@ -1175,10 +1165,13 @@ class IKFastSolver(AutoReloader):
         print 'ikfast translation3d: ',solvejointvars
         Tbaseposinv = eye(4)
         Tbaseposinv[0:3,3] = -basepos
-        AllEquations = self.buildEquationsFromPositions([Tbaseposinv]+LinksInv[::-1]+[self.Tee],solvejointvars,self.freejointvars,uselength=True)
+        T1links = [Tbaseposinv]+LinksInv[::-1]+[self.Tee]
+        AllEquations = self.buildEquationsFromPositions(T1links,solvejointvars,self.freejointvars,uselength=True)
         transtree = self.solveAllEquations(AllEquations,curvars=solvejointvars[:],othersolvedvars=self.freejointvars,solsubs = self.freevarsubs[:],endbranchtree=endbranchtree)
         transtree = self.verifyAllEquations(AllEquations,solvejointvars,self.freevarsubs,transtree)
-        return SolverIKChainTranslation3D([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(v,i) for v,i in izip(self.freejointvars,self.ifreejointvars)], (TfirstleftInv[0:3,0:3] * self.Tee[0:3,3] + TfirstleftInv[0:3,3]).subs(self.freevarsubs), transtree, Pfk = Tfirstleft*Tfinal*Matrix(4,1,[basepos[0],basepos[1],basepos[2],S.One]))
+        chaintree = SolverIKChainTranslation3D([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(v,i) for v,i in izip(self.freejointvars,self.ifreejointvars)], self.Tee[0:3,3].subs(self.freevarsubs), transtree, Pfk = Tfinal*Matrix(4,1,[basepos[0],basepos[1],basepos[2],S.One]))
+        chaintree.dictequations += self.ppsubs
+        return chaintree
 
     def solveFullIK_Ray4D(self,LinksRaw, jointvars, isolvejointvars, rawbasedir=Matrix(3,1,[S.Zero,S.Zero,S.One]),rawbasepos=Matrix(3,1,[S.Zero,S.Zero,S.Zero])):
         """basedir,basepos needs to be filled with a direction and position of the ray to control"""
@@ -1188,9 +1181,7 @@ class IKFastSolver(AutoReloader):
         for i in range(3):
             basedir[i] = self.convertRealToRational(basedir[i])
         basepos = basepos-basedir*basedir.dot(basepos)
-        Tfirstleft = LinksRaw[0]
-        TfirstleftInv = self.affineInverse(Tfirstleft)
-        Links = LinksRaw[1:]
+        Links = LinksRaw[:]
         LinksInv = [self.affineInverse(link) for link in Links]
         T = self.multiplyMatrix(Links)
         Tfinal = zeros((4,4))
@@ -1231,8 +1222,10 @@ class IKFastSolver(AutoReloader):
             # build the raghavan/roth equations and solve with higher power methods
             pass
         tree = self.verifyAllEquations(AllEquations,solvejointvars,self.freevarsubs,tree)
-        return SolverIKChainRay([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(v,i) for v,i in izip(self.freejointvars,self.ifreejointvars)], Pee=(TfirstleftInv[0:3,0:3] * self.Tee[0:3,3] + TfirstleftInv[0:3,3]).subs(self.freevarsubs), Dee=(TfirstleftInv[0:3,0:3]*self.Tee[0,0:3].transpose()).subs(self.freevarsubs),jointtree=tree,Dfk=Tfirstleft[0:3,0:3]*Tfinal[0,0:3].transpose(),Pfk=Tfirstleft[0:3,0:3]*Tfinal[0:3,3]+Tfirstleft[0:3,3])
-        
+        chaintree = SolverIKChainRay([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(v,i) for v,i in izip(self.freejointvars,self.ifreejointvars)], Pee=self.Tee[0:3,3].subs(self.freevarsubs), Dee=self.Tee[0,0:3].transpose().subs(self.freevarsubs),jointtree=tree,Dfk=Tfinal[0,0:3].transpose(),Pfk=Tfinal[0:3,3])
+        chaintree.dictequations += self.ppsubs
+        return chaintree
+
     def solveFullIK_TranslationDirection5D(self, LinksRaw, jointvars, isolvejointvars, rawbasedir=Matrix(3,1,[S.Zero,S.Zero,S.One]),rawbasepos=Matrix(3,1,[S.Zero,S.Zero,S.Zero])):
         """Solves 3D translation + 3D direction
         """
@@ -1241,9 +1234,7 @@ class IKFastSolver(AutoReloader):
         basedir /= sqrt(basedir[0]*basedir[0]+basedir[1]*basedir[1]+basedir[2]*basedir[2])
         for i in range(3):
             basedir[i] = self.convertRealToRational(basedir[i])
-        Tfirstleft = LinksRaw[0]
-        TfirstleftInv = self.affineInverse(Tfirstleft)
-        Links = LinksRaw[1:]
+        Links = LinksRaw[:]
         LinksInv = [self.affineInverse(link) for link in Links]
         T = self.multiplyMatrix(Links)
         Tfinal = zeros((4,4))
@@ -1311,9 +1302,11 @@ class IKFastSolver(AutoReloader):
                 curvars.remove(var)
                 solsubs += [(cos(var),self.Variable(var).cvar),(sin(var),self.Variable(var).svar)]
             tree = self.solveAllEquations(AllEquations,curvars=curvars,othersolvedvars = self.freejointvars+usedvars,solsubs = solsubs,endbranchtree=endbranchtree)
-            tree = tree+coupledsolutions
+            tree = coupledsolutions+tree
         
-        return SolverIKChainRay([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(v,i) for v,i in izip(self.freejointvars,self.ifreejointvars)], Pee=(TfirstleftInv[0:3,0:3] * self.Tee[0:3,3] + TfirstleftInv[0:3,3]).subs(self.freevarsubs), Dee=(TfirstleftInv[0:3,0:3]*self.Tee[0,0:3].transpose()).subs(self.freevarsubs),jointtree=tree,Dfk=Tfirstleft[0:3,0:3]*Tfinal[0,0:3].transpose(),Pfk=Tfirstleft[0:3,0:3]*Tfinal[0:3,3]+Tfirstleft[0:3,3],is5dray=True)
+        chaintree = SolverIKChainRay([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(v,i) for v,i in izip(self.freejointvars,self.ifreejointvars)], Pee=self.Tee[0:3,3].subs(self.freevarsubs), Dee=self.Tee[0,0:3].transpose().subs(self.freevarsubs),jointtree=tree,Dfk=Tfinal[0,0:3].transpose(),Pfk=Tfinal[0:3,3],is5dray=True)
+        chaintree.dictequations += self.ppsubs
+        return chaintree
 
     def solve5DIntersectingAxes(self, T0links, basepos, D, solvejointvars, endbranchtree):
         LinksInv = [self.affineInverse(T) for T in T0links]
@@ -1340,9 +1333,8 @@ class IKFastSolver(AutoReloader):
         for i in range(4):
             for j in range(4):
                 Tgripper[i,j] = self.convertRealToRational(Tgripperraw[i,j])
-        Tfirstleft = LinksRaw[0]
         Tfirstright = LinksRaw[-1]*Tgripper
-        Links = LinksRaw[1:-1]
+        Links = LinksRaw[:-1]
         LinksInv = [self.affineInverse(link) for link in Links]
         Tfinal = self.multiplyMatrix(Links)
         self.testconsistentvalues = self.computeConsistentValues(jointvars,Tfinal,numsolutions=4)
@@ -1374,8 +1366,9 @@ class IKFastSolver(AutoReloader):
         if tree is None:
             raise self.CannotSolveError('cannot solve 6D mechanism!')
 
-        Tgoal = (self.affineInverse(Tfirstleft) * self.Tee * self.affineInverse(Tfirstright)).subs(self.freevarsubs)
-        return SolverIKChainTransform6D([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(v,i) for v,i in izip(self.freejointvars,self.ifreejointvars)], Tgoal, tree,Tfk=Tfirstleft*Tfinal*Tfirstright)
+        chaintree = SolverIKChainTransform6D([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(v,i) for v,i in izip(self.freejointvars,self.ifreejointvars)], (self.Tee * self.affineInverse(Tfirstright)).subs(self.freevarsubs), tree,Tfk=Tfinal*Tfirstright)
+        chaintree.dictequations += self.ppsubs+self.npxyzsubs+self.rxpsubs
+        return chain
 
     def iterateThreeIntersectingAxes(self, solvejointvars, Links, LinksInv):
         """Search for 3 consectuive intersecting axes. If a robot has this condition, it makes a lot of IK computations simpler.
@@ -1569,12 +1562,13 @@ class IKFastSolver(AutoReloader):
         for i in range(len(T1links)-1):
             Taccum = self.affineInverse(T1links[i])*Taccum
             hasvars = [self.has_any_symbols(Taccum,v) for v in transvars]
-            if len(Positions) > 0 and __builtin__.sum(hasvars) >= len(transvars):
-                break
             if __builtin__.sum(hasvars) == numvarsdone:
                 Positions.append(Taccum[0:3,3])
                 Positionsee.append(self.multiplyMatrix(T1links[(i+1):])[0:3,3])
                 numvarsdone += 1
+            if numvarsdone > 2:
+                # more than 2 variables is almost always useless
+                break
         if len(Positions) == 0:
             Positions.append(zeros((3,1)))
             Positionsee.append(self.multiplyMatrix(T1links)[0:3,3])

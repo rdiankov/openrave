@@ -120,6 +120,23 @@ public:
         virtual bool FindIKSolutions(const IkParameterization& goal, std::vector<std::vector<dReal> >& solutions, int filteroptions) const;
         virtual bool FindIKSolutions(const IkParameterization& goal, const std::vector<dReal>& vFreeParameters, std::vector<std::vector<dReal> >& solutions, int filteroptions) const;
 
+        /** \brief returns the parameterization of a given IK type for the current manipulator position.
+            
+            Ideally pluging the returned ik parameterization into FindIkSolution should return the a manipulator configuration
+            such that a new call to GetIkParameterization returns the same values. In other words:
+            \code
+            ikparam = manip->GetIkParameterization(iktype);
+            ... move robot
+            std::vector<dReal> sol;
+            if( FindIKSolution(ikparam,sol, filteroptions) ) {
+                manip->GetRobot()->SetActiveDOFs(manip->GetArmIndices());
+                manip->GetRobot()->SetActiveDOFValues(sol);
+                BOOST_ASSERT( dist(manip->GetIkParameterization(iktype), ikparam) <= epsilon );
+            }
+            \endcode
+        */
+        virtual IkParameterization GetIkParameterization(IkParameterization::Type iktype) const;
+
         /// \brief Get all child joints of the manipulator starting at the pEndEffector link
         virtual void GetChildJoints(std::vector<JointPtr>& vjoints) const;
 

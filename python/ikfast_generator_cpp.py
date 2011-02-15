@@ -31,13 +31,13 @@ try:
     IkType = IkParameterization.Type
 except:
     class IkType:
-        Transform6D=0x60000001
-        Rotation3D=0x30000002
-        Translation3D=0x30000003
-        Direction3D=0x20000004
-        Ray4D=0x40000005
-        Lookat3D=0x20000006
-        TranslationDirection5D=0x50000007
+        Transform6D=0x67000001
+        Rotation3D=0x34000002
+        Translation3D=0x33000003
+        Direction3D=0x23000004
+        Ray4D=0x46000005
+        Lookat3D=0x23000006
+        TranslationDirection5D=0x56000007
 
 from sympy import *
 
@@ -405,7 +405,7 @@ int main(int argc, char** argv)
             code += "}; return freeparams; }\n"
         code += "IKFAST_API int getNumJoints() { return %d; }\n\n"%(len(node.freejointvars)+len(node.solvejointvars))
         code += "IKFAST_API int getIKRealSize() { return sizeof(IKReal); }\n\n"
-        code += 'IKFAST_API int getIKType() { return %d; }\n\n'%IkType.Transform6D
+        code += 'IKFAST_API int getIKType() { return 0x%x; }\n\n'%IkType.Transform6D
         # generate the fk
         if node.Tfk:
             code += "/// solves the forward kinematics equations.\n"
@@ -476,7 +476,7 @@ int main(int argc, char** argv)
             code += "}; return freeparams; }\n"
         code += "IKFAST_API int getNumJoints() { return %d; }\n\n"%(len(node.freejointvars)+len(node.solvejointvars))
         code += "IKFAST_API int getIKRealSize() { return sizeof(IKReal); }\n\n"
-        code += 'IKFAST_API int getIKType() { return %d; }\n\n'%IkType.Rotation3D
+        code += 'IKFAST_API int getIKType() { return 0x%x; }\n\n'%IkType.Rotation3D
         if node.Rfk:
             code += "/// solves the inverse kinematics equations.\n"
             code += "/// \\param pfree is an array specifying the free joints of the chain.\n"
@@ -544,7 +544,7 @@ int main(int argc, char** argv)
             code += "}; return freeparams; }\n"
         code += "IKFAST_API int getNumJoints() { return %d; }\n\n"%(len(node.freejointvars)+len(node.solvejointvars))
         code += "IKFAST_API int getIKRealSize() { return sizeof(IKReal); }\n\n"
-        code += 'IKFAST_API int getIKType() { return %d; }\n\n'%IkType.Translation3D
+        code += 'IKFAST_API int getIKType() { return 0x%x; }\n\n'%IkType.Translation3D
         if node.Pfk:
             code += "/// solves the inverse kinematics equations.\n"
             code += "/// \\param pfree is an array specifying the free joints of the chain.\n"
@@ -611,7 +611,7 @@ int main(int argc, char** argv)
             code += "}; return freeparams; }\n"
         code += "IKFAST_API int getNumJoints() { return %d; }\n\n"%(len(node.freejointvars)+len(node.solvejointvars))
         code += "IKFAST_API int getIKRealSize() { return sizeof(IKReal); }\n\n"
-        code += 'IKFAST_API int getIKType() { return %d; }\n\n'%IkType.Direction3D
+        code += 'IKFAST_API int getIKType() { return 0x%x; }\n\n'%IkType.Direction3D
         if node.Dfk:
             code += "/// solves the inverse kinematics equations.\n"
             code += "/// \\param pfree is an array specifying the free joints of the chain.\n"
@@ -680,7 +680,7 @@ int main(int argc, char** argv)
             code += "}; return freeparams; }\n"
         code += "IKFAST_API int getNumJoints() { return %d; }\n\n"%(len(node.freejointvars)+len(node.solvejointvars))
         code += "IKFAST_API int getIKRealSize() { return sizeof(IKReal); }\n\n"
-        code += 'IKFAST_API int getIKType() { return %d; }\n\n'%(IkType.TranslationDirection5D if node.is5dray else IkType.Ray4D)
+        code += 'IKFAST_API int getIKType() { return 0x%x; }\n\n'%(IkType.TranslationDirection5D if node.is5dray else IkType.Ray4D)
         if node.Dfk and node.Pfk:
             code += "/// solves the inverse kinematics equations.\n"
             code += "/// \\param pfree is an array specifying the free joints of the chain.\n"
@@ -760,7 +760,7 @@ int main(int argc, char** argv)
             code += "}; return freeparams; }\n"
         code += "IKFAST_API int getNumJoints() { return %d; }\n\n"%(len(node.freejointvars)+len(node.solvejointvars))
         code += "IKFAST_API int getIKRealSize() { return sizeof(IKReal); }\n\n"
-        code += 'IKFAST_API int getIKType() { return %d; }\n\n'%IkType.Lookat3D
+        code += 'IKFAST_API int getIKType() { return 0x%x; }\n\n'%IkType.Lookat3D
         if node.Dfk and node.Pfk:
             code += "/// solves the inverse kinematics equations.\n"
             code += "/// \\param pfree is an array specifying the free joints of the chain.\n"
@@ -859,7 +859,7 @@ int main(int argc, char** argv)
                 numsolutions *= 2
             for i in range(numsolutions):
                 if node.isHinge:
-                    eqcode += 'if( %sarray[%d] > IKPI )\n{    %sarray[%d]-=IK2PI;\n}\nelse if( %sarray[%d] < -IKPI )\n{    %sarray[%d]+=IK2PI;\n}\n'%(name,allnumsolutions+i,name,allnumsolutions+i,name,allnumsolutions+i,name,allnumsolutions+i)
+                    eqcode += 'if( %sarray[%d] > IKPI )\n{\n    %sarray[%d]-=IK2PI;\n}\nelse if( %sarray[%d] < -IKPI )\n{    %sarray[%d]+=IK2PI;\n}\n'%(name,allnumsolutions+i,name,allnumsolutions+i,name,allnumsolutions+i,name,allnumsolutions+i)
                 eqcode += '%svalid[%d] = true;\n'%(name,allnumsolutions+i)
             allnumsolutions += numsolutions
         # might also have cos solutions ...
@@ -911,7 +911,7 @@ int main(int argc, char** argv)
         code += eqcode
         if allnumsolutions > 1:
             for i,j in combinations(range(allnumsolutions),2):
-                code += 'if( %svalid[%d] && %svalid[%d] && IKabs(c%sarray[%d]-c%sarray[%d]) < 0.0001 && IKabs(s%sarray[%d]-s%sarray[%d]) < 0.0001 )\n    %svalid[%d]=false;\n'%(name,i,name,j,name,i,name,j,name,i,name,j,name,j)
+                code += 'if( %svalid[%d] && %svalid[%d] && IKabs(c%sarray[%d]-c%sarray[%d]) < 0.0001 && IKabs(s%sarray[%d]-s%sarray[%d]) < 0.0001 )\n{\n    %svalid[%d]=false;\n}\n'%(name,i,name,j,name,i,name,j,name,i,name,j,name,j)
         code += 'for(int i%s = 0; i%s < %d; ++i%s)\n{\n'%(name,name,allnumsolutions,name)
         code += 'if( !%svalid[i%s] )\n{\n    continue;\n}\n'%(name,name)
         code += '%s = %sarray[i%s]; c%s = c%sarray[i%s]; s%s = s%sarray[i%s];\n\n'%(name,name,name,name,name,name,name,name,name)
@@ -1077,7 +1077,7 @@ int main(int argc, char** argv)
         self.dictequations = origequations
         for i in range(len(node.jointnames)):
             if node.isHinges[i]:
-                fcode += 'if( %sarray[numsolutions] > IKPI )\n    %sarray[numsolutions]-=IK2PI;\nelse if( %sarray[numsolutions] < -IKPI )\n    %sarray[numsolutions]+=IK2PI;\n'%(node.jointnames[i],node.jointnames[i],node.jointnames[i],node.jointnames[i])
+                fcode += 'if( %sarray[numsolutions] > IKPI )\n{\n    %sarray[numsolutions]-=IK2PI;\n}\nelse if( %sarray[numsolutions] < -IKPI )\n{\n    %sarray[numsolutions]+=IK2PI;\n}\n'%(node.jointnames[i],node.jointnames[i],node.jointnames[i],node.jointnames[i])
         fcode += 'bool valid = true;\n'
         # test all the solutions up to now for validity
         fcode += 'for( int k%s = 0; k%s < numsolutions; ++k%s)\n{\n'%(firstname,firstname,firstname)
@@ -1127,29 +1127,6 @@ int main(int argc, char** argv)
     def endMatrixInverse(self,node):
         return ''
 
-    def generateBranch(self, node):
-        origequations = self.copyequations()
-        name = node.jointname
-        code = '{\nIKReal %seval;\n'%name
-        code += self.writeEquations(lambda x: '%seval'%name,[node.jointeval])
-        for branch in node.jointbranches:
-            branchcode = ''
-            self.dictequations = self.copyequations(origequations)
-            for n in branch[1]:
-                branchcode += n.generate(self)
-            for n in reversed(branch[1]):
-                branchcode += n.end(self)
-            branchcode = self.indentCode(branchcode,4)
-            if branch[0] is None:
-                code += '{\n' + branchcode + '\n}\n'
-            else:
-                code += 'if( %seval >= %.16f && %seval <= %.16f )\n{\n'%(name,branch[0]-0.00001,name,branch[0]+0.00001)
-                code += branchcode + '\n} else\n'
-        code += '}\n'
-        self.dictequations = origequations
-        return code
-    def endBranch(self, node):
-        return ''
     def generateBranchConds(self, node):
         origequations = self.copyequations()
         code = '{\n'
@@ -1218,11 +1195,6 @@ int main(int argc, char** argv)
         self.freevars.pop()
         self.freevardependencies.pop()
         return ''
-    def generateSetJoint(self, node):
-        code = '{\n%s = %.16f; s%s = %.16f; c%s = %.16f;\n'%(node.jointname,node.jointvalue,node.jointname,sin(node.jointvalue),node.jointname,cos(node.jointvalue))
-        return code
-    def endSetJoint(self, node):
-        return '}\n'
     def generateBreak(self,node):
         return 'continue;\n'
     def endBreak(self,node):
@@ -1261,11 +1233,23 @@ int main(int argc, char** argv)
     def endDirection(self, node):
         return ''
     def generateStoreSolution(self, node):
-        code = 'vsolutions.push_back(IKSolution()); IKSolution& solution = vsolutions.back();\n'
+        code = ''
+        if node.checkgreaterzero is not None and len(node.checkgreaterzero) > 0:
+            origequations = self.copyequations()
+            code += 'IKReal soleval[%d];\n'%(len(node.checkgreaterzero))
+            code += self.writeEquations(lambda i: 'soleval[%d]'%(i),node.checkgreaterzero)
+            code += 'if( '
+            for i in range(len(node.checkgreaterzero)):
+                if i != 0:
+                    code += ' && '
+                code += 'soleval[%d] > %.16f '%(i,node.thresh)
+            code += ' )\n'
+            self.dictequations = origequations
+        code += '{\n'
+        code += 'vsolutions.push_back(IKSolution()); IKSolution& solution = vsolutions.back();\n'
         code += 'solution.basesol.resize(%d);\n'%len(node.alljointvars)
         for i,var in enumerate(node.alljointvars):
             code += 'solution.basesol[%d].foffset = %s;\n'%(i,var)
-            
             vardeps = [vardep for vardep in self.freevardependencies if vardep[1]==var.name]
             if len(vardeps) > 0:
                 freevarname = vardeps[0][0]
@@ -1276,6 +1260,7 @@ int main(int argc, char** argv)
         for i,varname in enumerate(self.freevars):
             ind = [j for j in range(len(node.alljointvars)) if varname==node.alljointvars[j].name]
             code += 'solution.vfree[%d] = %d;\n'%(i,ind[0])
+        code += '}\n'
         return code
     def endStoreSolution(self, node):
         return ''

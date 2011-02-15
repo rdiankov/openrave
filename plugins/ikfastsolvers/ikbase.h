@@ -95,6 +95,11 @@ class IkFastSolver : public IkSolverBase
         return true;
     }
 
+    virtual bool Supports(IkParameterization::Type iktype) const
+    {
+        return iktype == _iktype;
+    }
+
     virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, int filteroptions, boost::shared_ptr< std::vector<dReal> > result)
     {
         if( param.GetType() != _iktype ) {
@@ -279,7 +284,7 @@ private:
         try {
             switch(param.GetType()) {
             case IkParameterization::Type_Transform6D: {
-                TransformMatrix t = param.GetTransform();
+                TransformMatrix t = param.GetTransform6D();
                 IKReal eetrans[3] = {t.trans.x, t.trans.y, t.trans.z};
                 IKReal eerot[9] = {t.m[0],t.m[1],t.m[2],t.m[4],t.m[5],t.m[6],t.m[8],t.m[9],t.m[10]};
     //            stringstream ss; ss << "./ik " << std::setprecision(16);
@@ -292,12 +297,12 @@ private:
                 return _pfnik(eetrans, eerot, vfree.size()>0?&vfree[0]:NULL, vsolutions);
             }
             case IkParameterization::Type_Rotation3D: {
-                TransformMatrix t(Transform(param.GetRotation(),Vector()));
+                TransformMatrix t(Transform(param.GetRotation3D(),Vector()));
                 IKReal eerot[9] = {t.m[0],t.m[1],t.m[2],t.m[4],t.m[5],t.m[6],t.m[8],t.m[9],t.m[10]};
                 return _pfnik(NULL, eerot, vfree.size()>0?&vfree[0]:NULL, vsolutions);
             }
             case IkParameterization::Type_Translation3D: {
-                Vector v = param.GetTranslation();
+                Vector v = param.GetTranslation3D();
                 IKReal eetrans[3] = {v.x, v.y, v.z};
 //                stringstream ss; ss << "./ik " << std::setprecision(16);
 //                ss << eetrans[0]  << " " << eetrans[1]  << " " << eetrans[2] << " ";
@@ -309,18 +314,12 @@ private:
                 return _pfnik(eetrans, NULL, vfree.size()>0?&vfree[0]:NULL, vsolutions);
             }
             case IkParameterization::Type_Direction3D: {
-                Vector v = param.GetDirection();
+                Vector v = param.GetDirection3D();
                 IKReal eerot[9] = {v.x, v.y, v.z,0,0,0,0,0,0};
                 return _pfnik(NULL, eerot, vfree.size()>0?&vfree[0]:NULL, vsolutions);
             }
-            case IkParameterization::Type_Lookat3D: {
-                Vector v = param.GetLookat();
-                IKReal eetrans[3] = {v.x, v.y, v.z};
-                //RAVELOG_INFO("lookat: %f %f %f\n",v.x,v.y,v.z);
-                return _pfnik(eetrans, NULL, vfree.size()>0?&vfree[0]:NULL, vsolutions);
-            }
             case IkParameterization::Type_Ray4D: {
-                RAY r = param.GetRay();
+                RAY r = param.GetRay4D();
                 IKReal eetrans[3] = {r.pos.x,r.pos.y,r.pos.z};
                 IKReal eerot[9] = {r.dir.x, r.dir.y, r.dir.z,0,0,0,0,0,0};
                 //RAVELOG_INFO("ray: %f %f %f %f %f %f\n",eerot[0],eerot[1],eerot[2],eetrans[0],eetrans[1],eetrans[2]);
@@ -329,8 +328,14 @@ private:
                 }
                 return true;
             }
+            case IkParameterization::Type_Lookat3D: {
+                Vector v = param.GetLookat3D();
+                IKReal eetrans[3] = {v.x, v.y, v.z};
+                //RAVELOG_INFO("lookat: %f %f %f\n",v.x,v.y,v.z);
+                return _pfnik(eetrans, NULL, vfree.size()>0?&vfree[0]:NULL, vsolutions);
+            }
             case IkParameterization::Type_TranslationDirection5D: {
-                RAY r = param.GetTranslationDirection();
+                RAY r = param.GetTranslationDirection5D();
                 IKReal eetrans[3] = {r.pos.x,r.pos.y,r.pos.z};
                 IKReal eerot[9] = {r.dir.x, r.dir.y, r.dir.z,0,0,0,0,0,0};
                 if( !_pfnik(eetrans, eerot, vfree.size()>0?&vfree[0]:NULL, vsolutions) ) {
@@ -338,7 +343,8 @@ private:
                 }
                 return true;
             }
-            case IkParameterization::Type_None:
+            default:
+                BOOST_ASSERT(0);
                 break;
             }
         }
@@ -490,7 +496,7 @@ private:
             }
 
             // if gripper is colliding, solutions will always fail, so completely stop solution process
-            if( bCheckEndEffector && param.GetType() == IkParameterization::Type_Transform6D && pmanip->CheckEndEffectorCollision(pmanip->GetBase()->GetTransform()*param.GetTransform()) ) {
+            if( bCheckEndEffector && param.GetType() == IkParameterization::Type_Transform6D && pmanip->CheckEndEffectorCollision(pmanip->GetBase()->GetTransform()*param.GetTransform6D()) ) {
                 return SR_Quit; // stop the search
             }
             
@@ -570,7 +576,7 @@ private:
         }
         if( (filteroptions&IKFO_CheckEnvCollisions) ) {
             if( bCheckEndEffector && param.GetType() == IkParameterization::Type_Transform6D ) {
-                if( pmanip->CheckEndEffectorCollision(pmanip->GetBase()->GetTransform()*param.GetTransform()) ) {
+                if( pmanip->CheckEndEffectorCollision(pmanip->GetBase()->GetTransform()*param.GetTransform6D()) ) {
                     return SR_Quit; // stop the search
                 }
                 bCheckEndEffector = false;

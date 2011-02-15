@@ -22,80 +22,6 @@
 
 namespace OpenRAVE {
 
-/** \brief Parameterization of basic primitives for querying inverse-kinematics solutions.
-
-    Holds the parameterization of a geometric primitive useful for autonomous manipulation scenarios like:
-    6D pose, 3D translation, 3D rotation, 3D look at direction, and ray look at direction.
-*/
-class OPENRAVE_API IkParameterization
-{
-public:
-    /// \brief The types of inverse kinematics parameterizations supported.
-    ///
-    /// The minimum degree of freedoms required is set in the upper 4 bits of each type.
-    /// The lower bits contain a unique id of the type.
-    enum Type {
-        Type_None=0,
-        Type_Transform6D=0x60000001, ///< end effector reaches desired 6D transformation
-        Type_Rotation3D=0x30000002, ///< end effector reaches desired 3D rotation
-        Type_Translation3D=0x30000003, ///< end effector origin reaches desired 3D translation
-        Type_Direction3D=0x20000004, ///< direction on end effector coordinate system reaches desired direction
-        Type_Ray4D=0x40000005, ///< ray on end effector coordinate system reaches desired global ray
-        Type_Lookat3D=0x20000006, ///< direction on end effector coordinate system points to desired 3D position
-        Type_TranslationDirection5D=0x50000007, ///< end effector origin and direction reaches desired 3D translation and direction. Can be thought of as Ray IK where the origin of the ray must coincide.
-    };
-
-    IkParameterization() : _type(Type_None) {}
-    IkParameterization(const Transform& t) { SetTransform(t); }
-    IkParameterization(const RAY& r) { SetRay(r); }
-
-    inline void SetTransform(const Transform& t) { _type = Type_Transform6D; _transform = t; }
-    inline void SetRotation(const Vector& quaternion) { _type = Type_Rotation3D; _transform.rot = quaternion; }
-    inline void SetTranslation(const Vector& trans) { _type = Type_Translation3D; _transform.trans = trans; }
-    inline void SetDirection(const Vector& dir) { _type = Type_Direction3D; _transform.rot = dir; }
-    inline void SetRay(const RAY& ray) { _type = Type_Ray4D; _transform.trans = ray.pos; _transform.rot = ray.dir; }
-    inline void SetLookat(const Vector& trans) { _type = Type_Lookat3D; _transform.trans = trans; }
-    inline void SetTranslationDirection(const RAY& ray) { _type = Type_TranslationDirection5D; _transform.trans = ray.pos; _transform.rot = ray.dir; }
-
-    inline Type GetType() const { return _type; }
-    inline const Transform& GetTransform() const { return _transform; }
-    inline const Vector& GetRotation() const { return _transform.rot; }
-    inline const Vector& GetTranslation() const { return _transform.trans; }
-    inline const Vector& GetDirection() const { return _transform.rot; }
-    inline const Vector& GetLookat() const { return _transform.trans; }
-    inline const RAY GetRay() const { return RAY(_transform.trans,_transform.rot); }
-    inline const RAY GetTranslationDirection() const { return RAY(_transform.trans,_transform.rot); }
-
-    /// \brief Returns the minimum degree of freedoms required for the IK type.
-    static int GetDOF(Type type) { return (type>>28)&0xf; }
-
-protected:
-    Transform _transform;
-    Type _type;
-
-    friend IkParameterization operator* (const Transform& t, const IkParameterization& ikparam);
-};
-
-inline IkParameterization operator* (const Transform& t, const IkParameterization& ikparam)
-{
-    IkParameterization local;
-    switch(ikparam.GetType()) {
-    case IkParameterization::Type_Transform6D: local.SetTransform(t * ikparam.GetTransform()); break;
-    case IkParameterization::Type_Rotation3D: local.SetRotation(quatMultiply(quatInverse(t.rot),ikparam.GetRotation())); break;
-    case IkParameterization::Type_Translation3D: local.SetTranslation(t*ikparam.GetTranslation()); break;
-    case IkParameterization::Type_Direction3D: local.SetDirection(t.rotate(ikparam.GetDirection())); break; 
-    case IkParameterization::Type_Ray4D: {
-            local.SetRay(RAY(t*ikparam.GetRay().pos,t.rotate(ikparam.GetRay().dir))); break;
-    }
-    case IkParameterization::Type_Lookat3D: local.SetLookat(t*ikparam.GetLookat()); break;
-    case IkParameterization::Type_TranslationDirection5D: {
-            local.SetRay(RAY(t*ikparam.GetTranslationDirection().pos,t.rotate(ikparam.GetTranslationDirection().dir))); break;
-    }
-    default: throw openrave_exception(str(boost::format("does not support parameterization %d")%ikparam.GetType()));
-    }
-    return local;
-}
-
 /// \brief Return value for the ik filter that can be optionally set on an ik solver.
 enum IkFilterReturn
 {
@@ -201,6 +127,9 @@ public:
     /// \param[out] solutions All solutions within a reasonable discretization level of the free parameters.
     /// \return true at least one solution is found
     virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, int filteroptions, std::vector< std::vector<dReal> >& solutions) = 0;
+
+    /// \brief returns true if the solver supports a particular ik parameterization as input.
+    virtual bool Supports(IkParameterization::Type iktype) const { throw openrave_exception("IkSolverBase::Supports not implemented",ORE_NotImplemented); }
 
 private:
     virtual const char* GetHash() const { return OPENRAVE_IKSOLVER_HASH; }

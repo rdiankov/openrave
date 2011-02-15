@@ -188,7 +188,7 @@ class RaveGlobal : private boost::noncopyable, public boost::enable_shared_from_
 
     RaveGlobal()
     {
-        // is this really necessary?
+        // is this really necessary? just makes bugs hard to reproduce...
         //srand(timeGetTime());
         //RaveInitRandomGeneration(timeGetTime());
         _nDebugLevel = Level_Info;
@@ -207,6 +207,15 @@ class RaveGlobal : private boost::noncopyable, public boost::enable_shared_from_
         _mapinterfacenames[PT_Trajectory] = "trajectory";
         _mapinterfacenames[PT_Viewer] = "viewer";
         BOOST_ASSERT(_mapinterfacenames.size()==PT_NumberOfInterfaces);
+
+        _mapikparameterization[IkParameterization::Type_Transform6D] = "Transform6d";
+        _mapikparameterization[IkParameterization::Type_Rotation3D] = "Rotation3D";
+        _mapikparameterization[IkParameterization::Type_Translation3D] = "Translation3D";
+        _mapikparameterization[IkParameterization::Type_Direction3D] = "Direction3D";
+        _mapikparameterization[IkParameterization::Type_Ray4D] = "Ray4D";
+        _mapikparameterization[IkParameterization::Type_Lookat3D] = "Lookat3D";
+        _mapikparameterization[IkParameterization::Type_TranslationDirection5D] = "TranslationDirection5D";
+        BOOST_ASSERT(_mapikparameterization.size()==IkParameterization::Type_NumberOfParameterizations);
     }
 public:
     virtual ~RaveGlobal() {
@@ -377,6 +386,7 @@ public:
 
     boost::shared_ptr<RaveDatabase> GetDatabase() const { return _pdatabase; }
     const std::map<InterfaceType,std::string>& GetInterfaceNamesMap() const { return _mapinterfacenames; }
+    const std::map<IkParameterization::Type,std::string>& GetIkParameterizationMap() { return _mapikparameterization; }
 
     const std::string& GetInterfaceName(InterfaceType type)
     {
@@ -469,6 +479,7 @@ private:
     boost::mutex _mutexXML;
     std::map<InterfaceType, READERSMAP > _mapreaders;
     std::map<InterfaceType,string> _mapinterfacenames;
+    std::map<IkParameterization::Type,string> _mapikparameterization;
     std::map<int, EnvironmentBase*> _mapenvironments;
     std::string _homedirectory;
     std::vector<std::string> _vdbdirectories;
@@ -496,6 +507,11 @@ DebugLevel RaveGetDebugLevel()
 const std::map<InterfaceType,std::string>& RaveGetInterfaceNamesMap()
 {
     return RaveGlobal::instance()->GetInterfaceNamesMap();
+}
+
+const std::map<IkParameterization::Type,std::string>& RaveGetIkParameterizationMap()
+{
+    return RaveGlobal::instance()->GetIkParameterizationMap();
 }
 
 const std::string& RaveGetInterfaceName(InterfaceType type)

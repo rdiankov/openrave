@@ -137,7 +137,7 @@ class CM
         // quickly prune grasp is end effector is in collision
         if( ikp.GetType() == IkParameterization::Type_Transform6D ) {
             CollisionReportPtr report(new CollisionReport());
-            if( pmanip->CheckEndEffectorCollision(ikp.GetTransform(),report) ) {
+            if( pmanip->CheckEndEffectorCollision(ikp.GetTransform6D(),report) ) {
                 RAVELOG_VERBOSE(str(boost::format("sampleiksolutions gripper in collision: %s.\n")%report->__str__()));
                 return 0;
             }

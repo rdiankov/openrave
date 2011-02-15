@@ -601,6 +601,7 @@ enum InterfaceType
     PT_NumberOfInterfaces=12 ///< number of interfaces, do not forget to update
 };
 
+/// \deprecated (10/01/01)
 typedef InterfaceType PluginType RAVE_DEPRECATED;
 
 class CollisionReport;
@@ -798,6 +799,176 @@ namespace OpenRAVE {
     using mathextra::lengthsqr4;
     using mathextra::mult4;
     //@}
+
+/** \brief Parameterization of basic primitives for querying inverse-kinematics solutions.
+
+    Holds the parameterization of a geometric primitive useful for autonomous manipulation scenarios like:
+    6D pose, 3D translation, 3D rotation, 3D look at direction, and ray look at direction.
+*/
+class OPENRAVE_API IkParameterization
+{
+public:
+    /// \brief The types of inverse kinematics parameterizations supported.
+    ///
+    /// The minimum degree of freedoms required is set in the upper 4 bits of each type.
+    /// The number of values used to represent the parameterization ( >= dof ) is the next 4 bits.
+    /// The lower bits contain a unique id of the type.
+    enum Type {
+        Type_None=0,
+        Type_Transform6D=0x67000001, ///< end effector reaches desired 6D transformation
+        Type_Rotation3D=0x34000002, ///< end effector reaches desired 3D rotation
+        Type_Translation3D=0x33000003, ///< end effector origin reaches desired 3D translation
+        Type_Direction3D=0x23000004, ///< direction on end effector coordinate system reaches desired direction
+        Type_Ray4D=0x46000005, ///< ray on end effector coordinate system reaches desired global ray
+        Type_Lookat3D=0x23000006, ///< direction on end effector coordinate system points to desired 3D position
+        Type_TranslationDirection5D=0x56000007, ///< end effector origin and direction reaches desired 3D translation and direction. Can be thought of as Ray IK where the origin of the ray must coincide.
+        Type_NumberOfParameterizations=7, ///< number of parameterizations (does not count Type_None)
+    };
+
+    IkParameterization() : _type(Type_None) {}
+    IkParameterization(const Transform& t) { SetTransform6D(t); }
+    IkParameterization(const RAY& r) { SetRay4D(r); }
+
+    inline Type GetType() const { return _type; }
+
+    /// \brief Returns the minimum degree of freedoms required for the IK type.
+    static int GetDOF(Type type) { return (type>>28)&0xf; }
+    /// \brief Returns the number of values used to represent the parameterization ( >= dof ). The number of values serialized is this number plus 1 for the iktype.
+    static int GetNumberOfValues(Type type) { return (type>>24)&0xf; }
+
+    inline void SetTransform6D(const Transform& t) { _type = Type_Transform6D; _transform = t; }
+    inline void SetRotation3D(const Vector& quaternion) { _type = Type_Rotation3D; _transform.rot = quaternion; }
+    inline void SetTranslation3D(const Vector& trans) { _type = Type_Translation3D; _transform.trans = trans; }
+    inline void SetDirection3D(const Vector& dir) { _type = Type_Direction3D; _transform.rot = dir; }
+    inline void SetRay4D(const RAY& ray) { _type = Type_Ray4D; _transform.trans = ray.pos; _transform.rot = ray.dir; }
+    inline void SetLookat3D(const Vector& trans) { _type = Type_Lookat3D; _transform.trans = trans; }
+    /// \brief the ray direction is not used for IK, however it is needed in order to compute the error
+    inline void SetLookat3D(const RAY& ray) { _type = Type_Lookat3D; _transform.trans = ray.pos; _transform.rot = ray.dir; }
+    inline void SetTranslationDirection5D(const RAY& ray) { _type = Type_TranslationDirection5D; _transform.trans = ray.pos; _transform.rot = ray.dir; }
+
+    inline const Transform& GetTransform6D() const { return _transform; }
+    inline const Vector& GetRotation3D() const { return _transform.rot; }
+    inline const Vector& GetTranslation3D() const { return _transform.trans; }
+    inline const Vector& GetDirection3D() const { return _transform.rot; }
+    inline const RAY GetRay4D() const { return RAY(_transform.trans,_transform.rot); }
+    inline const Vector& GetLookat3D() const { return _transform.trans; }
+    inline const Vector& GetLookat3DDirection() const { return _transform.rot; }
+    inline const RAY GetTranslationDirection5D() const { return RAY(_transform.trans,_transform.rot); }
+
+    /// \deprecated (11/02/15)
+    //@{
+    inline void SetTransform(const Transform& t) RAVE_DEPRECATED { SetTransform6D(t); }
+    inline void SetRotation(const Vector& quaternion) RAVE_DEPRECATED { SetRotation3D(quaternion); }
+    inline void SetTranslation(const Vector& trans) RAVE_DEPRECATED { SetTranslation3D(trans); }
+    inline void SetDirection(const Vector& dir) RAVE_DEPRECATED { SetDirection3D(dir); }
+    inline void SetRay(const RAY& ray) RAVE_DEPRECATED { SetRay4D(ray); }
+    inline void SetLookat(const Vector& trans) RAVE_DEPRECATED { SetLookat3D(trans); }
+    inline void SetTranslationDirection(const RAY& ray) RAVE_DEPRECATED { SetTranslationDirection5D(ray); }
+    inline const Transform& GetTransform() const RAVE_DEPRECATED { return _transform; }
+    inline const Vector& GetRotation() const RAVE_DEPRECATED { return _transform.rot; }
+    inline const Vector& GetTranslation() const RAVE_DEPRECATED { return _transform.trans; }
+    inline const Vector& GetDirection() const RAVE_DEPRECATED { return _transform.rot; }
+    inline const Vector& GetLookat() const RAVE_DEPRECATED { return _transform.trans; }
+    inline const RAY GetRay() const RAVE_DEPRECATED { return RAY(_transform.trans,_transform.rot); }
+    inline const RAY GetTranslationDirection() const RAVE_DEPRECATED { return RAY(_transform.trans,_transform.rot); }
+    //@}
+
+protected:
+    Transform _transform;
+    Type _type;
+
+    friend IkParameterization operator* (const Transform& t, const IkParameterization& ikparam);
+    friend std::ostream& operator<<(std::ostream& O, const IkParameterization& ikparam);
+    friend std::istream& operator>>(std::istream& I, IkParameterization& ikparam);
+};
+
+inline IkParameterization operator* (const Transform& t, const IkParameterization& ikparam)
+{
+    IkParameterization local;
+    switch(ikparam.GetType()) {
+    case IkParameterization::Type_Transform6D:
+        local.SetTransform6D(t * ikparam.GetTransform6D());
+        break;
+    case IkParameterization::Type_Rotation3D:
+        local.SetRotation3D(quatMultiply(quatInverse(t.rot),ikparam.GetRotation3D()));
+        break;
+    case IkParameterization::Type_Translation3D:
+        local.SetTranslation3D(t*ikparam.GetTranslation3D());
+        break;
+    case IkParameterization::Type_Direction3D:
+        local.SetDirection3D(t.rotate(ikparam.GetDirection3D()));
+        break; 
+    case IkParameterization::Type_Ray4D:
+        local.SetRay4D(RAY(t*ikparam.GetRay4D().pos,t.rotate(ikparam.GetRay4D().dir)));
+        break;
+    case IkParameterization::Type_Lookat3D:
+        local.SetLookat3D(RAY(t*ikparam.GetLookat3D(),t.rotate(ikparam.GetLookat3DDirection())));
+        break;
+    case IkParameterization::Type_TranslationDirection5D:
+        local.SetTranslationDirection5D(RAY(t*ikparam.GetTranslationDirection5D().pos,t.rotate(ikparam.GetTranslationDirection5D().dir)));
+        break;
+    default:
+        throw openrave_exception(str(boost::format("does not support parameterization %d")%ikparam.GetType()));
+    }
+    return local;
+}
+ 
+inline std::ostream& operator<<(std::ostream& O, const IkParameterization& ikparam)
+{
+    O << ikparam._type << " ";
+    switch(ikparam._type) {
+    case IkParameterization::Type_Transform6D:
+        O << ikparam.GetTransform6D();
+        break;
+    case IkParameterization::Type_Rotation3D:
+        O << ikparam.GetRotation3D();
+        break;
+    case IkParameterization::Type_Translation3D: {
+        Vector v = ikparam.GetTranslation3D();
+        O << v.x << " " << v.y << " " << v.z << " ";
+        break;
+    }
+    case IkParameterization::Type_Direction3D: {
+        Vector v = ikparam.GetDirection3D();
+        O << v.x << " " << v.y << " " << v.z << " ";
+        break;
+    }
+    case IkParameterization::Type_Ray4D: {
+        O << ikparam.GetRay4D();
+        break;
+    }
+    case IkParameterization::Type_Lookat3D: {
+        Vector v = ikparam.GetLookat3D();
+        O << v.x << " " << v.y << " " << v.z << " ";
+        break;
+    }
+    case IkParameterization::Type_TranslationDirection5D:
+        O << ikparam.GetTranslationDirection5D();
+        break;
+    default:
+        throw openrave_exception(str(boost::format("does not support parameterization %d")%ikparam.GetType()));
+    }
+    return O;
+}
+
+inline std::istream& operator>>(std::istream& I, IkParameterization& ikparam)
+{
+    int type=IkParameterization::Type_None;
+    I >> type;
+    ikparam._type = static_cast<IkParameterization::Type>(type);
+    switch(ikparam._type) {
+    case IkParameterization::Type_Transform6D: { Transform t; I >> t; ikparam.SetTransform6D(t); break; }
+    case IkParameterization::Type_Rotation3D: { Vector v; I >> v; ikparam.SetRotation3D(v); break; }
+    case IkParameterization::Type_Translation3D: { Vector v; I >> v.x >> v.y >> v.z; ikparam.SetTranslation3D(v); break; }
+    case IkParameterization::Type_Direction3D: { Vector v; I >> v.x >> v.y >> v.z; ikparam.SetDirection3D(v); break; }
+    case IkParameterization::Type_Ray4D: { RAY r; I >> r; ikparam.SetRay4D(r); break; }
+    case IkParameterization::Type_Lookat3D: { Vector v; I >> v.x >> v.y >> v.z; ikparam.SetLookat3D(v); break; }
+    case IkParameterization::Type_TranslationDirection5D: { RAY r; I >> r; ikparam.SetTranslationDirection5D(r); break; }
+    default: throw openrave_exception(str(boost::format("does not support parameterization %d")%ikparam.GetType()));
+    }
+    return I;
+}
+
 }
 
 #include <rave/plugininfo.h>
@@ -808,11 +979,11 @@ namespace OpenRAVE {
 #include <rave/collisionchecker.h>
 #include <rave/sensor.h>
 #include <rave/robot.h>
+#include <rave/iksolver.h>
 #include <rave/planner.h>
 #include <rave/controller.h>
 #include <rave/physicsengine.h>
 #include <rave/sensorsystem.h>
-#include <rave/iksolver.h>
 #include <rave/viewer.h>
 #include <rave/environment.h>
 
@@ -881,6 +1052,9 @@ inline boost::shared_ptr<T const> RaveInterfaceConstCast(InterfaceBaseConstPtr p
 /// \brief returns a lower case string of the interface type
 OPENRAVE_API const std::map<InterfaceType,std::string>& RaveGetInterfaceNamesMap();
 OPENRAVE_API const std::string& RaveGetInterfaceName(InterfaceType type);
+
+/// \brief returns a string of the ik parameterization type names (can include upper case in order to match IkParameterization::Type)
+OPENRAVE_API const std::map<IkParameterization::Type,std::string>& RaveGetIkParameterizationMap();
 
 /// \brief Returns the openrave home directory where settings, cache, and other files are stored.
 ///

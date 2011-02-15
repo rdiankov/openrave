@@ -616,13 +616,13 @@ protected:
                 Vector trans;
                 sinput >> trans.x >> trans.y >> trans.z;
                 listgoals.push_back(IkParameterization());
-                listgoals.back().SetTranslation(trans);
+                listgoals.back().SetTranslation3D(trans);
             }
             else if( cmd == "rotation" ) {
                 Vector q;
                 sinput >> q.x >> q.y >> q.z >> q.w;
                 listgoals.push_back(IkParameterization());
-                listgoals.back().SetRotation(q);
+                listgoals.back().SetRotation3D(q);
             }
             else if( cmd == "outputtraj" )
                 pOutputTrajStream = boost::shared_ptr<ostream>(&sout,null_deleter());

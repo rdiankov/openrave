@@ -396,139 +396,26 @@ class InverseKinematicsModel(OpenRAVEModel):
         """Tests the iksolver.
         """
         with self.robot:
-            self.robot.Enable(False) # removes self-collisions from being considered
             # set base to identity to avoid complications when reporting errors
             self.robot.SetTransform(dot(linalg.inv(self.manip.GetBase().GetTransform()),self.robot.GetTransform()))
-            lower,upper = [v[self.manip.GetArmIndices()] for v in self.robot.GetDOFLimits()]
-
-            # get the values to test
-            success = 0.0
-            iktestvalues = []
+            cmd = 'DebugIK robot %s '%self.robot.GetName()
             if iktests.isdigit():
-                numiktests = int(iktests)
-                for i in range(numiktests):
-                    while True:
-                        self.robot.SetDOFValues(random.rand()*(upper-lower)+lower,self.manip.GetArmIndices()) # set random values
-                        if not self.robot.CheckSelfCollision():
-                            break
-                    iktestvalues.append(self.robot.GetDOFValues(self.manip.GetArmIndices()))
+                cmd += 'numtests %d '%int(iktests)
             else:
-                tokens = open(iktests).read().split()
-                numiktests = int(tokens[0])
-                iktestvalues = [float(tokens[i+1]) for i in range(len(self.manip.GetArmIndices())*numiktests)]
-                iktestvalues = reshape(iktestvalues,(numiktests,len(self.manip.GetArmIndices())))
-            success = 0.0
-
-            if self.iktype == IkParameterization.Type.Direction3D:
-                for orgvalues in iktestvalues:
-                    self.robot.SetDOFValues(orgvalues,self.manip.GetArmIndices())
-                    targetdir = dot(self.manip.GetEndEffectorTransform()[0:3,0:3],self.manip.GetDirection())
-                    self.robot.SetDOFValues(random.rand()*(upper-lower)+lower,self.manip.GetArmIndices()) # set random values
-                    sol = self.manip.FindIKSolution(IkParameterization(targetdir,self.iktype),0)
-                    if sol is not None:
-                        self.robot.SetDOFValues(sol,self.manip.GetArmIndices())
-                        realdir = dot(self.manip.GetEndEffectorTransform()[0:3,0:3],self.manip.GetDirection())
-                        if sum((targetdir-realdir)**2) < 1e-7:
-                            success += 1
-                        else:
-                            print 'wrong solution to: ',targetpos, 'returned is: ',realpos
-                    else:
-                        print 'failed to find: ',targetpos,'solution is: ',orgvalues
-                return success/numiktests
-            elif self.iktype == IkParameterization.Type.Translation3D:
-                for orgvalues in iktestvalues:
-                    self.robot.SetDOFValues(orgvalues,self.manip.GetArmIndices())
-                    targetpos = self.manip.GetEndEffectorTransform()[0:3,3]
-                    #self.robot.SetDOFValues(random.rand()*(upper-lower)+lower,self.manip.GetArmIndices()) # set random values
-                    sol = self.manip.FindIKSolution(IkParameterization(targetpos,self.iktype),0)
-                    if sol is not None:
-                        self.robot.SetDOFValues(sol,self.manip.GetArmIndices())
-                        realpos = self.manip.GetEndEffectorTransform()[0:3,3]
-                        if sum((targetpos-realpos)**2) < 1e-7:
-                            success += 1
-                        else:
-                            print 'wrong solution to: ',targetpos, 'returned is: ',realpos,'wrong sol is:',sol,', org values are:',orgvalues
-                            print 'squared error is: ',sum((targetpos-realpos)**2)
-                    else:
-                        print 'failed to find: ',targetpos,'solution is: ',orgvalues
-                return success/numiktests
-            elif self.iktype == IkParameterization.Type.Rotation3D:
-                for orgvalues in iktestvalues:
-                    self.robot.SetDOFValues(orgvalues,self.manip.GetArmIndices())
-                    targetquat = quatFromRotationMatrix(self.manip.GetEndEffectorTransform()[0:3,0:3])
-                    self.robot.SetDOFValues(random.rand()*(upper-lower)+lower,self.manip.GetArmIndices()) # set random values
-                    sol = self.manip.FindIKSolution(IkParameterization(targetquat,self.iktype),0)
-                    if sol is not None:
-                        self.robot.SetDOFValues(sol,self.manip.GetArmIndices())
-                        realquat = quatFromRotationMatrix(self.manip.GetEndEffectorTransform()[0:3,0:3])
-                        if quatArrayTDist(targetquat,realquat) < 1e-3:
-                            success += 1
-                        else:
-                            print 'wrong solution to: ',targetquat, 'returned is: ',realquat, 'original solution is ',orgvalues,'returned solution is',sol,'error is: ',quatArrayTDist(targetquat,realquat)
-                    else:
-                        print 'failed to find: ',targetquat,'solution is: ',orgvalues
-                return success/numiktests
-            elif self.iktype == IkParameterization.Type.Ray4D:
-                for orgvalues in iktestvalues:
-                    self.robot.SetDOFValues(orgvalues,self.manip.GetArmIndices())
-                    targetdir = dot(self.manip.GetEndEffectorTransform()[0:3,0:3],self.manip.GetDirection())
-                    targetpos = self.manip.GetEndEffectorTransform()[0:3,3]
-                    targetpos += (random.rand()-0.5)*sqrt(sum(targetpos**2))*targetdir
-                    #print targetdir[0],targetdir[1],targetdir[2],targetpos[0],0,0,0,targetpos[1],0,0,0,targetpos[2]
-                    targetprojpos = targetpos - targetdir*dot(targetdir,targetpos)
-                    self.robot.SetDOFValues(random.rand()*(upper-lower)+lower,self.manip.GetArmIndices()) # set random values
-                    sol = self.manip.FindIKSolution(IkParameterization(Ray(targetpos,targetdir),self.iktype),0)
-                    if sol is not None:
-                        self.robot.SetDOFValues(sol,self.manip.GetArmIndices())
-                        realdir = dot(self.manip.GetEndEffectorTransform()[0:3,0:3],self.manip.GetDirection())
-                        realpos = self.manip.GetEndEffectorTransform()[0:3,3]
-                        realprojpos = realpos - realdir*dot(realdir,realpos)
-                        if sum((targetdir-realdir)**2) < 2e-5 and sum((targetprojpos-realprojpos)**2) < 1e-6:
-                            success += 1
-                        else:
-                            print 'wrong solution to: ',targetpos,targetdir, 'returned is: ',realpos,realdir,'wrong sol is:',sol,', org values are:',orgvalues
-                            print 'errors direction: ', sum((targetdir-realdir)**2), ' on position: ',sum((targetprojpos-realprojpos)**2)
-                    else:
-                        print 'failed to find: ',targetpos,targetdir,'solution is: ',orgvalues
-                return success/numiktests
-            elif self.iktype == IkParameterization.Type.Lookat3D:
-                for orgvalues in iktestvalues:
-                    self.robot.SetDOFValues(orgvalues,self.manip.GetArmIndices())
-                    targetdir = dot(self.manip.GetEndEffectorTransform()[0:3,0:3],self.manip.GetDirection())
-                    targetpos = self.manip.GetEndEffectorTransform()[0:3,3] + 10.0*random.rand()*targetdir
-                    self.robot.SetDOFValues(random.rand()*(upper-lower)+lower,self.manip.GetArmIndices()) # set random values
-                    sol = self.manip.FindIKSolution(IkParameterization(targetpos,self.iktype),0)
-                    if sol is not None:
-                        self.robot.SetDOFValues(sol,self.manip.GetArmIndices())
-                        realdir = dot(self.manip.GetEndEffectorTransform()[0:3,0:3],self.manip.GetDirection())
-                        realpos = self.manip.GetEndEffectorTransform()[0:3,3]
-                        if linalg.norm(cross(realdir,realpos-targetpos)) < 7e-5: # relax error a little...
-                            success += 1
-                        else:
-                            print 'wrong solution to: ',repr(targetpos), 'returned is: ',repr(realpos),repr(realdir),'wrong sol is:',repr(sol),', org values are:',repr(orgvalues)
-                            print 'errors on position: ',linalg.norm(cross(realdir,realpos-targetpos))
-                    else:
-                        print 'failed to find: ',targetpos,'solution is: ',orgvalues
-                return success/numiktests
-            else:
-                cmd = 'DebugIK robot %s '%self.robot.GetName()
-                if iktests.isdigit():
-                    cmd += 'numtests %d '%int(iktests)
-                else:
-                    cmd += 'readfile %s '%iktests
-                res = self.ikfastproblem.SendCommand(cmd).split()
-                numtested = float(res[0])
-                successrate = float(res[1])/numtested
-                solutionresults = []
-                index = 2
-                numfree=self.manip.GetIkSolver().GetNumFreeParameters()
-                for iresults in range(3):
-                    num = int(res[index])
-                    index += 1
-                    samples = reshape(array([float64(s) for s in res[index:(index+num*(7+numfree))]]),(num,7+numfree))
-                    solutionresults.append(samples)
-                    index += num*(7+numfree)
-                print 'success rate: %f, wrong solutions: %f, no solutions: %f, missing solution: %f'%(float(res[1])/numtested,len(solutionresults[0])/numtested,len(solutionresults[1])/numtested,len(solutionresults[2])/numtested)
+                cmd += 'readfile %s '%iktests
+            res = self.ikfastproblem.SendCommand(cmd).split()
+            numtested = float(res[0])
+            successrate = float(res[1])/numtested
+            solutionresults = []
+            index = 2
+            numvalues=1+IkParameterization.GetNumberOfValues(self.iktype)+self.manip.GetIkSolver().GetNumFreeParameters()
+            for iresults in range(3):
+                num = int(res[index])
+                index += 1
+                samples = reshape(array([float64(s) for s in res[index:(index+num*numvalues)]]),(num,numvalues))
+                solutionresults.append(samples)
+                index += num*numvalues
+            print 'success rate: %f, wrong solutions: %f, no solutions: %f, missing solution: %f'%(float(res[1])/numtested,len(solutionresults[0])/numtested,len(solutionresults[1])/numtested,len(solutionresults[2])/numtested)
         return successrate
 
     @staticmethod

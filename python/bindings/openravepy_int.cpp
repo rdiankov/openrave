@@ -1409,33 +1409,34 @@ public:
     PyIkParameterization(object o, IkParameterization::Type type)
     {
         switch(type) {
-        case IkParameterization::Type_Transform6D: SetTransform(o); break;
-        case IkParameterization::Type_Rotation3D: SetRotation(o); break;
-        case IkParameterization::Type_Translation3D: SetTranslation(o); break;
-        case IkParameterization::Type_Direction3D: SetDirection(o); break;
-        case IkParameterization::Type_Ray4D: SetRay(extract<boost::shared_ptr<PyRay> >(o)); break;
-        case IkParameterization::Type_Lookat3D: SetLookat(o); break;
-        case IkParameterization::Type_TranslationDirection5D: SetTranslationDirection(extract<boost::shared_ptr<PyRay> >(o)); break;
+        case IkParameterization::Type_Transform6D: SetTransform6D(o); break;
+        case IkParameterization::Type_Rotation3D: SetRotation3D(o); break;
+        case IkParameterization::Type_Translation3D: SetTranslation3D(o); break;
+        case IkParameterization::Type_Direction3D: SetDirection3D(o); break;
+        case IkParameterization::Type_Ray4D: SetRay4D(extract<boost::shared_ptr<PyRay> >(o)); break;
+        case IkParameterization::Type_Lookat3D: SetLookat3D(o); break;
+        case IkParameterization::Type_TranslationDirection5D: SetTranslationDirection5D(extract<boost::shared_ptr<PyRay> >(o)); break;
         default: throw openrave_exception(boost::str(boost::format("incorrect ik parameterization type %d")%type));
         }
     }
 
-    void SetTransform(object o) { _param.SetTransform(ExtractTransform(o)); }
-    void SetRotation(object o) { _param.SetRotation(ExtractVector4(o)); }
-    void SetTranslation(object o) { _param.SetTranslation(ExtractVector3(o)); }
-    void SetDirection(object o) { _param.SetDirection(ExtractVector3(o)); }
-    void SetRay(boost::shared_ptr<PyRay> ray) { _param.SetRay(ray->r); }
-    void SetLookat(object o) { _param.SetLookat(ExtractVector3(o)); }
-    void SetTranslationDirection(boost::shared_ptr<PyRay> ray) { _param.SetTranslationDirection(ray->r); }
-
     IkParameterization::Type GetType() { return _param.GetType(); }
-    object GetTransform() { return ReturnTransform(_param.GetTransform()); }
-    object GetRotation() { return toPyVector4(_param.GetRotation()); }
-    object GetTranslation() { return toPyVector3(_param.GetTranslation()); }
-    object GetDirection() { return toPyVector3(_param.GetDirection()); }
-    PyRay GetRay() { return PyRay(_param.GetRay()); }
-    object GetLookat() { return toPyVector3(_param.GetLookat()); }
-    PyRay GetTranslationDirection() { return PyRay(_param.GetTranslationDirection()); }
+
+    void SetTransform6D(object o) { _param.SetTransform6D(ExtractTransform(o)); }
+    void SetRotation3D(object o) { _param.SetRotation3D(ExtractVector4(o)); }
+    void SetTranslation3D(object o) { _param.SetTranslation3D(ExtractVector3(o)); }
+    void SetDirection3D(object o) { _param.SetDirection3D(ExtractVector3(o)); }
+    void SetRay4D(boost::shared_ptr<PyRay> ray) { _param.SetRay4D(ray->r); }
+    void SetLookat3D(object o) { _param.SetLookat3D(ExtractVector3(o)); }
+    void SetTranslationDirection5D(boost::shared_ptr<PyRay> ray) { _param.SetTranslationDirection5D(ray->r); }
+
+    object GetTransform6D() { return ReturnTransform(_param.GetTransform6D()); }
+    object GetRotation3D() { return toPyVector4(_param.GetRotation3D()); }
+    object GetTranslation3D() { return toPyVector3(_param.GetTranslation3D()); }
+    object GetDirection3D() { return toPyVector3(_param.GetDirection3D()); }
+    PyRay GetRay4D() { return PyRay(_param.GetRay4D()); }
+    object GetLookat3D() { return toPyVector3(_param.GetLookat3D()); }
+    PyRay GetTranslationDirection5D() { return PyRay(_param.GetTranslationDirection5D()); }
 
     IkParameterization _param;
 };
@@ -1445,7 +1446,7 @@ class IkParameterization_pickle_suite : public pickle_suite
 public:
     static tuple getinitargs(const PyIkParameterization& r)
     {
-        return boost::python::make_tuple(r._param.GetTransform(),r._param.GetType());
+        return boost::python::make_tuple(r._param.GetTransform6D(),r._param.GetType());
     }
 };
 
@@ -3960,35 +3961,55 @@ In python, the syntax is::\n\n\
     {
         scope ikparameterization = class_<PyIkParameterization, boost::shared_ptr<PyIkParameterization> >("IkParameterization", DOXY_CLASS(IkParameterization))
             .def(init<object,IkParameterization::Type>(args("primitive","type")))
-            .def("SetTransform",&PyIkParameterization::SetTransform,args("transform"), DOXY_FN(IkParameterization,SetTransform))
-            .def("SetRotation",&PyIkParameterization::SetRotation,args("quat"), DOXY_FN(IkParameterization,SetRotation))
-            .def("SetTranslation",&PyIkParameterization::SetTranslation,args("pos"), DOXY_FN(IkParameterization,SetTranslation))
-            .def("SetDirection",&PyIkParameterization::SetDirection,args("dir"), DOXY_FN(IkParameterization,SetDirection))
-            .def("SetRay",&PyIkParameterization::SetRay,args("quat"), DOXY_FN(IkParameterization,SetRay))
-            .def("SetLookat",&PyIkParameterization::SetLookat,args("pos"), DOXY_FN(IkParameterization,SetLookat))
-            .def("SetTranslationDirection",&PyIkParameterization::SetTranslationDirection,args("quat"), DOXY_FN(IkParameterization,SetTranslationDirection))
             .def("GetType",&PyIkParameterization::GetType, DOXY_FN(IkParameterization,GetType))
-            .def("GetTransform",&PyIkParameterization::GetTransform, DOXY_FN(IkParameterization,GetTransform))
-            .def("GetRotation",&PyIkParameterization::GetRotation, DOXY_FN(IkParameterization,GetRotation))
-            .def("GetTranslation",&PyIkParameterization::GetTranslation, DOXY_FN(IkParameterization,GetTranslation))
-            .def("GetDirection",&PyIkParameterization::GetDirection, DOXY_FN(IkParameterization,GetDirection))
-            .def("GetRay",&PyIkParameterization::GetRay, DOXY_FN(IkParameterization,GetRay))
-            .def("GetLookat",&PyIkParameterization::GetLookat, DOXY_FN(IkParameterization,GetLookat))
-            .def("GetTranslationDirection",&PyIkParameterization::GetTranslationDirection, DOXY_FN(IkParameterization,GetTranslationDirection))
+            .def("SetTransform6D",&PyIkParameterization::SetTransform6D,args("transform"), DOXY_FN(IkParameterization,SetTransform6D))
+            .def("SetRotation3D",&PyIkParameterization::SetRotation3D,args("quat"), DOXY_FN(IkParameterization,SetRotation3D))
+            .def("SetTranslation3D",&PyIkParameterization::SetTranslation3D,args("pos"), DOXY_FN(IkParameterization,SetTranslation3D))
+            .def("SetDirection3D",&PyIkParameterization::SetDirection3D,args("dir"), DOXY_FN(IkParameterization,SetDirection3D))
+            .def("SetRay4D",&PyIkParameterization::SetRay4D,args("quat"), DOXY_FN(IkParameterization,SetRay4D))
+            .def("SetLookat3D",&PyIkParameterization::SetLookat3D,args("pos"), DOXY_FN(IkParameterization,SetLookat3D))
+            .def("SetTranslationDirection5D",&PyIkParameterization::SetTranslationDirection5D,args("quat"), DOXY_FN(IkParameterization,SetTranslationDirection5D))
+            .def("GetTransform6D",&PyIkParameterization::GetTransform6D, DOXY_FN(IkParameterization,GetTransform6D))
+            .def("GetRotation3D",&PyIkParameterization::GetRotation3D, DOXY_FN(IkParameterization,GetRotation3D))
+            .def("GetTranslation3D",&PyIkParameterization::GetTranslation3D, DOXY_FN(IkParameterization,GetTranslation3D))
+            .def("GetDirection3D",&PyIkParameterization::GetDirection3D, DOXY_FN(IkParameterization,GetDirection3D))
+            .def("GetRay4D",&PyIkParameterization::GetRay4D, DOXY_FN(IkParameterization,GetRay4D))
+            .def("GetLookat3D",&PyIkParameterization::GetLookat3D, DOXY_FN(IkParameterization,GetLookat3D))
+            .def("GetTranslationDirection5D",&PyIkParameterization::GetTranslationDirection5D, DOXY_FN(IkParameterization,GetTranslationDirection5D))
             .def("GetDOF", &IkParameterization::GetDOF,args("type"))
             .staticmethod("GetDOF")
+            .def("GetNumberOfValues",&IkParameterization::GetNumberOfValues,args("type"))
+            .staticmethod("GetNumberOfValues")
             .def_pickle(IkParameterization_pickle_suite())
+
+            // deprecated
+            .def("SetTransform",&PyIkParameterization::SetTransform6D,args("transform"), DOXY_FN(IkParameterization,SetTransform6D))
+            .def("SetRotation",&PyIkParameterization::SetRotation3D,args("quat"), DOXY_FN(IkParameterization,SetRotation3D))
+            .def("SetTranslation",&PyIkParameterization::SetTranslation3D,args("pos"), DOXY_FN(IkParameterization,SetTranslation3D))
+            .def("SetDirection",&PyIkParameterization::SetDirection3D,args("dir"), DOXY_FN(IkParameterization,SetDirection3D))
+            .def("SetRay",&PyIkParameterization::SetRay4D,args("quat"), DOXY_FN(IkParameterization,SetRay4D))
+            .def("SetLookat",&PyIkParameterization::SetLookat3D,args("pos"), DOXY_FN(IkParameterization,SetLookat3D))
+            .def("SetTranslationDirection",&PyIkParameterization::SetTranslationDirection5D,args("quat"), DOXY_FN(IkParameterization,SetTranslationDirection5D))
+            .def("GetTransform",&PyIkParameterization::GetTransform6D, DOXY_FN(IkParameterization,GetTransform6D))
+            .def("GetRotation",&PyIkParameterization::GetRotation3D, DOXY_FN(IkParameterization,GetRotation3D))
+            .def("GetTranslation",&PyIkParameterization::GetTranslation3D, DOXY_FN(IkParameterization,GetTranslation3D))
+            .def("GetDirection",&PyIkParameterization::GetDirection3D, DOXY_FN(IkParameterization,GetDirection3D))
+            .def("GetRay",&PyIkParameterization::GetRay4D, DOXY_FN(IkParameterization,GetRay4D))
+            .def("GetLookat",&PyIkParameterization::GetLookat3D, DOXY_FN(IkParameterization,GetLookat3D))
+            .def("GetTranslationDirection",&PyIkParameterization::GetTranslationDirection5D, DOXY_FN(IkParameterization,GetTranslationDirection5D))
             ;
 
-        enum_<IkParameterization::Type>("Type" DOXY_ENUM(IkParameterization::Type))
-            .value("Transform6D",IkParameterization::Type_Transform6D)
-            .value("Rotation3D",IkParameterization::Type_Rotation3D)
-            .value("Translation3D",IkParameterization::Type_Translation3D)
-            .value("Direction3D",IkParameterization::Type_Direction3D)
-            .value("Ray4D",IkParameterization::Type_Ray4D)
-            .value("Lookat3D",IkParameterization::Type_Lookat3D)
-            .value("TranslationDirection5D",IkParameterization::Type_TranslationDirection5D)
-        ;
+        {
+            scope type =  enum_<IkParameterization::Type>("Type" DOXY_ENUM(IkParameterization::Type))
+                .value("Transform6D",IkParameterization::Type_Transform6D)
+                .value("Rotation3D",IkParameterization::Type_Rotation3D)
+                .value("Translation3D",IkParameterization::Type_Translation3D)
+                .value("Direction3D",IkParameterization::Type_Direction3D)
+                .value("Ray4D",IkParameterization::Type_Ray4D)
+                .value("Lookat3D",IkParameterization::Type_Lookat3D)
+                .value("TranslationDirection5D",IkParameterization::Type_TranslationDirection5D)
+                ;
+        }
     }
 
     {

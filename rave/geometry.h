@@ -172,8 +172,8 @@ public:
     template <typename U> friend RaveVector<U> operator* (float f, const RaveVector<U>& v);
     template <typename U> friend RaveVector<U> operator* (double f, const RaveVector<U>& v);
     
-    template <typename S, typename U> friend std::basic_ostream<S>& operator<<(std::basic_ostream<S>& O, const RaveVector<U>& v);
-    template <typename S, typename U> friend std::basic_istream<S>& operator>>(std::basic_istream<S>& I, RaveVector<U>& v);
+    template <typename U> friend std::ostream& operator<<(std::ostream& O, const RaveVector<U>& v);
+    template <typename U> friend std::istream& operator>>(std::istream& I, RaveVector<U>& v);
 
     /// cross product operator
     template <typename U> inline RaveVector<T> operator^(const RaveVector<U> &v) const { 
@@ -314,8 +314,8 @@ public:
         return *this;
     }
 
-    template <typename S, typename U> friend std::basic_ostream<S>& operator<<(std::basic_ostream<S>& O, const RaveTransform<U>& v);
-    template <typename S, typename U> friend std::basic_istream<S>& operator>>(std::basic_istream<S>& I, RaveTransform<U>& v);
+    template <typename U> friend std::ostream& operator<<(std::ostream& O, const RaveTransform<U>& v);
+    template <typename U> friend std::istream& operator>>(std::istream& I, RaveTransform<U>& v);
 
     RaveVector<T> rot, trans; ///< rot is a quaternion=(cos(ang/2),axisx*sin(ang/2),axisy*sin(ang/2),axisz*sin(ang/2))
 };
@@ -445,8 +445,8 @@ public:
         right.z = m[8]; up.z = m[9]; dir.z = m[10];
     }
 
-    template <typename S, typename U> friend std::basic_ostream<S>& operator<<(std::basic_ostream<S>& O, const RaveTransformMatrix<U>& v);
-    template <typename S, typename U> friend std::basic_istream<S>& operator>>(std::basic_istream<S>& I, RaveTransformMatrix<U>& v);
+    template <typename U> friend std::ostream& operator<<(std::ostream& O, const RaveTransformMatrix<U>& v);
+    template <typename U> friend std::istream& operator>>(std::istream& I, RaveTransformMatrix<U>& v);
 
     /// 3x3 rotation matrix. Note that each row is 4 elements long! So row 1 starts at m[4], row 2 at m[8]
     /// The reason is to maintain 16 byte alignment when sizeof(T) is 4 bytes
@@ -522,49 +522,55 @@ public:
 /// to send across the network.
 /// \name Primitive Serialization functions.
 //@{
-template <typename T, typename U>
-std::basic_ostream<T>& operator<<(std::basic_ostream<T>& O, const RaveVector<U>& v)
+template <typename U>
+std::ostream& operator<<(std::ostream& O, const RaveVector<U>& v)
 {
     return O << v.x << " " << v.y << " " << v.z << " " << v.w << " ";
 }
 
-template <typename T, typename U>
-std::basic_istream<T>& operator>>(std::basic_istream<T>& I, RaveVector<U>& v)
+template <typename U>
+std::istream& operator>>(std::istream& I, RaveVector<U>& v)
 {
     return I >> v.x >> v.y >> v.z >> v.w;
 }
 
-template <typename T, typename U>
-std::basic_ostream<T>& operator<<(std::basic_ostream<T>& O, const RaveTransform<U>& v)
+template <typename U>
+std::ostream& operator<<(std::ostream& O, const RaveTransform<U>& v)
 {
-    return O << v.rot.x << " " << v.rot.y << " " << v.rot.z << " " << v.rot.w << " "
-             << v.trans.x << " " << v.trans.y << " " << v.trans.z << " ";
+    return O << v.rot.x << " " << v.rot.y << " " << v.rot.z << " " << v.rot.w << " " << v.trans.x << " " << v.trans.y << " " << v.trans.z << " ";
 }
 
-template <typename T, typename U>
-std::basic_istream<T>& operator>>(std::basic_istream<T>& I, RaveTransform<U>& v)
+template <typename U>
+std::istream& operator>>(std::istream& I, RaveTransform<U>& v)
 {
     return I >> v.rot.x >> v.rot.y >> v.rot.z >> v.rot.w >> v.trans.x >> v.trans.y >> v.trans.z;
 }
 
-// serial in column order! This is the format transformations are passed across the network
-template <typename T, typename U>
-std::basic_ostream<T>& operator<<(std::basic_ostream<T>& O, const RaveTransformMatrix<U>& v)
+template <typename U>
+std::ostream& operator<<(std::ostream& O, const ray<U>& r)
 {
-    return O << v.m[0] << " " << v.m[4] << " " << v.m[8] << " "
-             << v.m[1] << " " << v.m[5] << " " << v.m[9] << " "
-             << v.m[2] << " " << v.m[6] << " " << v.m[10] << " "
-             << v.trans.x << " " << v.trans.y << " " << v.trans.z << " ";
+    return O << r.pos.x << " " << r.pos.y << " " << r.pos.z << " " << r.dir.x << " " << r.dir.y << " " << r.dir.z << " ";
 }
 
-// read in column order! This is the format transformations are passed across the network
-template <typename T, typename U>
-std::basic_istream<T>& operator>>(std::basic_istream<T>& I, RaveTransformMatrix<U>& v)
+template <typename U>
+std::istream& operator>>(std::istream& I, ray<U>& r)
 {
-    return I >> v.m[0] >> v.m[4] >> v.m[8]
-             >> v.m[1] >> v.m[5] >> v.m[9]
-             >> v.m[2] >> v.m[6] >> v.m[10]
-             >> v.trans.x >> v.trans.y >> v.trans.z;
+    return I >> r.pos.x >> r.pos.y >> r.pos.z >> r.dir.x >> r.dir.y >> r.dir.z;
+}
+
+
+/// \brief serialize in column order! This is the format transformations are passed across the network
+template <typename U>
+std::ostream& operator<<(std::ostream& O, const RaveTransformMatrix<U>& v)
+{
+    return O << v.m[0] << " " << v.m[4] << " " << v.m[8] << " " << v.m[1] << " " << v.m[5] << " " << v.m[9] << " " << v.m[2] << " " << v.m[6] << " " << v.m[10] << " " << v.trans.x << " " << v.trans.y << " " << v.trans.z << " ";
+}
+
+/// \brief de-serialize in column order! This is the format transformations are passed across the network
+template <typename U>
+std::istream& operator>>(std::istream& I, RaveTransformMatrix<U>& v)
+{
+    return I >> v.m[0] >> v.m[4] >> v.m[8] >> v.m[1] >> v.m[5] >> v.m[9] >> v.m[2] >> v.m[6] >> v.m[10] >> v.trans.x >> v.trans.y >> v.trans.z;
 }
 
 //@}

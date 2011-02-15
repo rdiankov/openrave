@@ -312,7 +312,7 @@ protected:
         
         // check if continuous with previous solution using the jacobian
         if( _mjacobian.num_elements() > 0 ) {
-            Vector expecteddeltatrans = ikp.GetTransform().trans - _transprev.trans;
+            Vector expecteddeltatrans = ikp.GetTransform6D().trans - _transprev.trans;
             Vector jdeltatrans;
             dReal solutiondiff = 0;
             for(size_t j = 0; j < vsolution.size(); ++j) {
@@ -332,7 +332,7 @@ protected:
                 }
             }
             // constrain rotations
-            Vector expecteddeltaquat = ikp.GetTransform().rot - _transprev.rot;
+            Vector expecteddeltaquat = ikp.GetTransform6D().rot - _transprev.rot;
             Vector jdeltaquat;
             solutiondiff = 0;
             for(size_t j = 0; j < vsolution.size(); ++j) {

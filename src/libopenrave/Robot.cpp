@@ -126,6 +126,37 @@ bool RobotBase::Manipulator::FindIKSolutions(const IkParameterization& goal, con
     return vFreeParameters.size() == 0 ? _pIkSolver->Solve(localgoal,filteroptions,solutions) : _pIkSolver->Solve(localgoal,vFreeParameters,filteroptions,solutions);
 }
 
+IkParameterization RobotBase::Manipulator::GetIkParameterization(IkParameterization::Type iktype) const
+{
+    IkParameterization ikp;
+    switch(iktype) {
+    case IkParameterization::Type_Transform6D: ikp.SetTransform6D(GetEndEffectorTransform()); break;
+    case IkParameterization::Type_Rotation3D: ikp.SetRotation3D(GetEndEffectorTransform().rot); break;
+    case IkParameterization::Type_Translation3D: ikp.SetTranslation3D(GetEndEffectorTransform().trans); break;
+    case IkParameterization::Type_Direction3D: ikp.SetDirection3D(GetEndEffectorTransform().rotate(_vdirection)); break;
+    case IkParameterization::Type_Ray4D: {
+        Transform t = GetEndEffectorTransform();
+        ikp.SetRay4D(RAY(t.trans,t.rotate(_vdirection)));
+        break;
+    }
+    case IkParameterization::Type_Lookat3D: {
+        // have goal a distance of 1 from the origin
+        Transform t = GetEndEffectorTransform();
+        Vector vdir = t.rotate(_vdirection);
+        ikp.SetLookat3D(RAY(t.trans + vdir,vdir));
+        break;
+    }
+    case IkParameterization::Type_TranslationDirection5D: {
+        Transform t = GetEndEffectorTransform();
+        ikp.SetTranslationDirection5D(RAY(t.trans,t.rotate(_vdirection)));
+        break;
+    }
+    default:
+        throw openrave_exception(str(boost::format("invalid ik type %d")%iktype));
+    }
+    return ikp;
+}
+
 void RobotBase::Manipulator::GetChildJoints(std::vector<JointPtr>& vjoints) const
 {
     // get all child links of the manipualtor
