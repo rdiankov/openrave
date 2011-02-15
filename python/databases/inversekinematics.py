@@ -59,7 +59,7 @@ the free joint is the first joint and the free increment is 0.01 radians is:
 
 .. code-block:: bash
 
-  openrave.py --database inversekinematics --robot=robots/pr2-beta-static.robot.xml --manipname=rightarm  --freejoint=r_shoulder_pan_joint --freeinc=0.01
+  openrave.py --database inversekinematics --robot=robots/pr2-beta-static.zae --manipname=rightarm  --freejoint=r_shoulder_pan_joint --freeinc=0.01
 
 Generating the 3d rotation IK for the stage below is:
 
@@ -75,7 +75,12 @@ Generating the ray inverse kinematics for the 4 degrees of freedom barrett wam i
 
 .. code-block:: bash
 
-  openrave.py --database inversekinematics --robot=drill.robot.xml --iktype=ray4d
+  openrave.py --database inversekinematics --robot=robots/barrettwam4.robot.xml --iktype=ray4d
+  openrave.py --database inversekinematics --robot=robots/pr2-beta-static.zae --iktype=ray4d --manipname=rightarm_camera
+
+.. code-block:: bash
+
+  openrave.py --database inversekinematics --robot=robots/neuronics-katana.zae --iktype=translationdirection5d --manipname=arm
 
 Testing
 -------

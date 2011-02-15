@@ -1262,6 +1262,7 @@ class IKFastSolver(AutoReloader):
         T = self.multiplyMatrix(Links[ilinks[-2]:])
         P = T[0:3,0:3]*basepos+T[0:3,3]
         D = T[0:3,0:3]*basedir
+        tree = None
         if not self.has_any_symbols(P,*solvejointvars):
             Tposinv = eye(4)
             Tposinv[0:3,3] = -P
@@ -1273,7 +1274,7 @@ class IKFastSolver(AutoReloader):
                 print e
 
         if tree is None:
-            rawpolyeqs2 = [None,None]
+            rawpolyeqs2 = [None]*len(solvejointvars)
             coupledsolutions = None
             for solvemethod in [self.solveLiWoernleHiller, self.solveKohliOsvatic, self.solveManochaCanny]:
                 if coupledsolutions is not None:
@@ -1287,10 +1288,10 @@ class IKFastSolver(AutoReloader):
                     p1 = T1[0:3,0:3]*basepos+T1[0:3,3]
                     l0 = T0[0:3,0:3]*self.Tee[0,0:3].transpose()
                     l1 = T1[0:3,0:3]*basedir
-                    if rawpolyeqs2[j] is None:
-                        rawpolyeqs2[j] = self.buildRaghavanRothEquations(p0,p1,l0,l1,solvejointvars)
+                    if rawpolyeqs2[index] is None:
+                        rawpolyeqs2[index] = self.buildRaghavanRothEquations(p0,p1,l0,l1,solvejointvars)
                     try:
-                        coupledsolutions,usedvars = solvemethod(rawpolyeqs2[j])
+                        coupledsolutions,usedvars = solvemethod(rawpolyeqs2[index])
                         break
                     except self.CannotSolveError:
                         continue
@@ -1301,8 +1302,8 @@ class IKFastSolver(AutoReloader):
             print 'solving coupled variables: ',usedvars
             AllEquations = []
             for i in range(3):
-                AllEquations.append(self.simplifyTransform(p0-p1))
-                AllEquations.append(self.simplifyTransform(l0-l1))
+                AllEquations.append(self.simplifyTransform(p0[i]-p1[i]))
+                AllEquations.append(self.simplifyTransform(l0[i]-l1[i]))
             self.sortComplexity(AllEquations)
             curvars=solvejointvars[:]
             solsubs = self.freevarsubs[:]
@@ -2130,19 +2131,26 @@ class IKFastSolver(AutoReloader):
                 neweqs.append([Poly(peq[0].as_basic()*tvar,*symbols),Poly(peq[1].as_basic()*tvar,*othersymbols)])
 
         # one side should have only numbers, this makes the following inverse operations trivial
+        neweqs_full = []
+        reducedeqs = []
         for peq in neweqs:
             peq[1] = peq[1] - tvar*peq[0].coeff(0,0,0,0,1)-peq[0].coeff()
             peq[0] = peq[0] - tvar*peq[0].coeff(0,0,0,0,1)-peq[0].coeff()
+            if peq[0] != S.Zero:
+                neweqs_full.append(peq)
+            else:
+                reducedeqs.append(peq[1].as_basic())
         allmonoms = set()
-        for peq in neweqs:
+        for peq in neweqs_full:
             allmonoms = allmonoms.union(set(peq[0].monoms))
         allmonoms = list(allmonoms)
         allmonoms.sort()
-        assert(len(allmonoms)==16)
+        if len(allmonoms) > len(neweqs_full):
+            raise self.CannotSolveError('new monoms is not %d!=16'%len(allmonoms))
         
-        A = zeros((len(neweqs),len(allmonoms)))
-        B = zeros((len(neweqs),1))
-        for ipeq,peq in enumerate(neweqs):
+        A = zeros((len(neweqs_full),len(allmonoms)))
+        B = zeros((len(neweqs_full),1))
+        for ipeq,peq in enumerate(neweqs_full):
             for c,m in peq[0].iter_terms():
                 A[ipeq,allmonoms.index(m)] = c
             B[ipeq] = peq[1].as_basic()
@@ -2168,6 +2176,8 @@ class IKFastSolver(AutoReloader):
             BL[i] = B[row]
             AL[i,:] = A[row,:]
         C = AL*(AUinv*BU)-BL
+        for c in C:
+            reducedeqs.append(c)
         # is now a (len(neweqs)-len(allmonoms))x1 matrix, usually this is 4x1
         htvars = []
         htvarsubs = []
@@ -2185,7 +2195,7 @@ class IKFastSolver(AutoReloader):
         htvarsubs2.append((Symbol(varname),2*atan(tvar)))
         usedvars.append(Symbol(varname))
         newreducedeqs = []
-        for eq in C:
+        for eq in reducedeqs:
             peq = Poly(eq,*othersymbols)
             maxdenom = [0,0]
             for monoms in peq.iter_monoms():
