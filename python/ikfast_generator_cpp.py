@@ -76,6 +76,9 @@ def evalNumbers(expr):
     elif expr.is_Pow:
         # don't replace the exponent
         result = evalNumbers(expr.base)**expr.exp
+    elif expr.is_Function:
+        args = [evalNumbers(arg) for arg in expr.args]
+        return expr.func(*args)
     else:
         result = expr
     return result

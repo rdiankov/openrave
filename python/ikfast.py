@@ -3024,6 +3024,7 @@ class IKFastSolver(AutoReloader):
                         for i,eq in enumerate(eqs):
                             for j in range(degree+1):
                                 Mall[i,j] = eq.coeff(j)
+                        # det_bareis freezes when there are huge fractions
                         #det=self.det_bareis(Mall,*(self.pvars+dummyvars+[leftvar]))
                         det=Mall.berkowitz_det()
                         if det.evalf() != S.Zero:
