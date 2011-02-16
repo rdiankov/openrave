@@ -237,7 +237,7 @@ class InverseKinematicsModel(OpenRAVEModel):
             if freejoints is None:
                 # take the torso joint
                 freejoints=[self.robot.GetJoints()[self.manip.GetArmIndices()[0]].GetName()]
-        elif self.manip.GetKinematicsStructureHash()=='2c89f74eb73a27f0fcf44ba3aef9fcf5': # katana
+        elif self.manip.GetKinematicsStructureHash()=='ab9d03903279e44bc692e896791bcd05': # katana
             if iktype==IkParameterization.Type.Translation3D or (iktype==None and self.iktype==IkParameterization.Type.Translation3D):
                 freejoints = [self.robot.GetJoints()[ind].GetName() for ind in self.manip.GetArmIndices()[3:]]
         self.generate(iktype=iktype,freejoints=freejoints,usedummyjoints=usedummyjoints,precision=precision,forceikbuild=forceikbuild,outputlang=outputlang,ipython=ipython)
