@@ -624,7 +624,7 @@ class IKFastSolver(AutoReloader):
         return M
 
     def numpyMatrixToSympy(self,T):
-        return self.normalizeRotation(Matrix(4,4,[Real(x,30) for x in T.flat]))
+        return self.normalizeRotation(Matrix(4,4,[x for x in T.flat]))
 
     def numpyVectorToSympy(self,v,precision=None):
         return Matrix(len(v),1,[self.convertRealToRational(x,precision) for x in v])
