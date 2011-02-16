@@ -3825,7 +3825,8 @@ class IKFastSolver(AutoReloader):
         p = Poly(expr,*vars)
         newexpr = S.Zero
         for c,m in p.iter_terms():
-            if not c.is_number and not c.is_Symbol:
+            # make huge numbers into constants too
+            if (c.is_number and len(str(c)) > 40) or (not c.is_number and not c.is_Symbol):
                 # if it is a product of a symbol and a number, then ignore
                 if not c.is_Mul or not all([e.is_number or e.is_Symbol for e in c.args]):
                     sym = symbolgen.next()
