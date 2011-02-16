@@ -596,6 +596,8 @@ class IKFastSolver(AutoReloader):
     def convertRealToRational(self, x,precision=None):
         if precision is None:
             precision=self.precision
+        if abs(x) < 10**-precision:
+            return S.Zero
         r0 = Rational(str(round(Real(float(x),30),precision)))
         if x == 0:
             return r0
@@ -3036,7 +3038,10 @@ class IKFastSolver(AutoReloader):
                 coeffs = [pfinal.coeff(degree).subs(subs).subs(testconsistentvalue).evalf() for degree in range(pfinal.degree,-1,-1)]
                 if coeffs[0] == S.Zero:
                     continue
-                
+                if not all([c.is_number for c in coeffs]):
+                    # cannot evalute
+                    print 'cannot evalute',coeffs
+                    continue
                 realsolution = pfinal.symbols[0].subs(subs).subs(testconsistentvalue).evalf()
                 roots = mpmath.polyroots(coeffs)
                 for root in roots:
