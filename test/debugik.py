@@ -905,13 +905,137 @@ def solveFailed(self):
             for k in range(peq.degree+1):
                 Msub[k][i,j] = peq.coeff(k)
 
-
-
-
     #allsymbols = self.pvars+[s for s,v in localsymbols]+[x]
     #P,L,DD,U= self.LUdecompositionFF(M,*allsymbols)
     #det=self.det_bareis(M,*(self.pvars+othersymbols[0:2]))
     raise self.CannotSolveError('not implemented')
+
+def isolatepair():
+    print 'attempting to isolate a variable'
+    finalsolutions = []
+    for i in [1,3]: # for every variable, used to be range(4) but it is never the case that [1] fails and [0] succeeds
+        # if variable ever appears, it should be alone
+        complementvar = unknownvars[[1,0,3,2][i]]
+        print 'var:',unknownvars[i]
+        varsol = None
+        for rank,eq in orgeqns:
+            if eq.has_any_symbols(unknownvars[i]):
+                # the equations can get big, so 'solve' does not work, also it doesn't make sense to solve for degree > 1
+                eq2=Poly(eq,unknownvars[i])
+                if eq2.degree == 1 and eq2.coeff(0) != S.Zero:
+                    # dividing directly leaves common denominators, so use gcd
+                    # long fractions can make the gcd computation, so first remove all numbers
+                    tsymbolgen = cse_main.numbered_symbols('tconst')
+                    coeff0,tsymbols0 = self.replaceNumbers(eq2.coeff(0),tsymbolgen)
+                    coeff1,tsymbols1 = self.replaceNumbers(eq2.coeff(1),tsymbolgen)
+                    common = gcd(coeff0,coeff1,unknownvars)
+                    coeff0,r = div(coeff0,common,unknownvars)
+                    coeff1,r = div(coeff1,common,unknownvars)
+                    if not coeff1.has_any_symbols(complementvar):
+                        varsol = (-coeff0/coeff1).subs(tsymbols0+tsymbols1)
+                        break
+        if varsol is not None:
+            #eq=simplify(fraction(varsol)[0]**2 + fraction(varsol)[1]**2*(complementvar**2 - 1))
+            varsolvalid=fraction(varsol)[1]
+            valideqs = []
+            valideqscheck = []
+            for rank,eq in orgeqns:
+                # find the max degree tha unknownvars[i] appears
+                maxdegree = max([m[i] for m in eq.iter_monoms()])
+                if maxdegree <= 1:
+                    eqsub = Symbol('tempsym')**maxdegree*eq.as_basic().subs(allsymbols+[(unknownvars[i],varsol)]).subs(fraction(varsol)[1],Symbol('tempsym'))
+                    if self.codeComplexity(eqsub) < 70: # bobcat fk has a 75 valued equation that does not simplify
+                        #print eqsub,'complexity: ',self.codeComplexity(eqsub)
+                        eqsub = simplify(eqsub)
+                    else:
+                        eqsub=eqsub.expand()
+                        print 'solvePairVariables: could not simplify eqsub: ',eqsub
+                    eqnew = eqsub.subs(Symbol('tempsym'),fraction(varsol)[1]).expand()
+                    if self.codeComplexity(eqnew) < 120:
+                        eqnew = simplify(eqnew)
+                    else:
+                        print 'solvePairVariables: could not simplify eqnew: ',eqnew
+                    eqnew = eqnew.expand().subs(reducesubs).expand()
+                    if self.codeComplexity(eqnew) < 120:
+                        eqnewcheck = self.removecommonexprs(eqnew)
+                    else:
+                        eqnewcheck = eqnew
+                    if eqnew != S.Zero and self.isExpressionUnique(valideqscheck,eqnewcheck) and self.isExpressionUnique(valideqscheck,-eqnewcheck):
+                        valideqs.append(eqnew)
+                        valideqscheck.append(eqnewcheck)
+            if len(valideqs) <= 1:
+                continue
+
+            valideqs2 = []
+            for eq in valideqs:
+                eqnew, symbols = self.groupTerms(eq, unknownvars, symbolgen)
+                # only accept simple equations
+                if self.codeComplexity(eqnew) < 100:
+                    allsymbols += symbols
+                    valideqs2.append(eqnew)
+            if len(valideqs2) <= 1:
+                continue
+
+            self.sortComplexity(valideqs2)
+            complementvarsols = []
+            othervarpoly = None                        
+            othervars = unknownvars[0:2] if i >= 2 else unknownvars[2:4]
+            postcheckforzeros = []
+            postcheckforrange = []
+            postcheckfornonzeros = []
+            for eq in valideqs2:
+                try:
+                    peq = Poly(eq,complementvar)
+                except PolynomialError,e:
+                    try:
+                        peq = Poly(eq,complementvar)
+                    except PolynomialError,e:
+                        print 'solvePairVariables: ',e
+                        continue                                
+                if peq.degree == 1: # degree > 1 adds sqrt's
+                    solutions = [-peq.coeff(0).subs(allsymbols),peq.coeff(1).subs(allsymbols)]
+                    if solutions[0] != S.Zero and solutions[1] != S.Zero and self.isValidSolution(solutions[0]/solutions[1]):
+                        complementvarsols.append(solutions)
+                        if len(complementvarsols) >= 2:
+                            # test new solution with previous ones
+                            eq0num,eq0denom = complementvarsols[-1]
+                            for eq1num,eq1denom in complementvarsols[:-1]:
+                                # although not apparent, this is actually a dangerous transformation that allows
+                                # wrong solutions to pass through since complementvar is actually constrained, but the constraint
+                                # is ignored. Therefore, this requires us to explicitly check denominator for zero and
+                                # that each solution is within the [-1,1] range.
+                                neweq = eq0num*eq1denom-eq1num*eq0denom
+                                if self.codeComplexity(neweq.expand()) < 700:
+                                    neweq = simplify(neweq)
+                                neweq = neweq.expand() # added expand due to below Poly call failing
+                                if neweq != S.Zero:
+                                    try:
+                                        othervarpoly = Poly(neweq,*othervars).subs(othervars[0]**2,1-othervars[1]**2).subs(othervars[1]**2,1-othervars[0]**2)
+                                        if othervarpoly.expand() != S.Zero:
+                                            postcheckforzeros = [varsolvalid, eq0denom, eq1denom]
+                                            postcheckfornonzeros = [(eq1num/eq1denom)**2+varsol.subs(complementvar,eq1num/eq1denom)**2-1]
+                                            break
+                                        else:
+                                            othervarpoly = None
+                                    except PolynomialError,e:
+                                        print e
+                            if othervarpoly is not None:
+                                break
+            if othervarpoly is not None:
+                # now we have one polynomial with only one variable (sin and cos)!
+                solution = self.solveHighDegreeEquationsHalfAngle([othervarpoly],varsym1 if i < 2 else varsym0)
+                solution.postcheckforzeros = [self.removecommonexprs(eq,onlygcd=False,onlynumbers=True) for eq in postcheckforzeros]
+                solution.postcheckfornonzeros = [self.removecommonexprs(eq,onlygcd=False,onlynumbers=True) for eq in postcheckfornonzeros]
+                solution.postcheckforrange = postcheckforrange
+                finalsolutions.append(solution)
+                if solution.poly.degree <= 2:
+                    # found a really good solution, so choose it
+                    break
+                else:
+                    print 'othervarpoly too complex: ',othervarpoly
+    if len(finalsolutions) > 0:
+        # find the equation with the minimal degree, and the least code complexity
+        return [min(finalsolutions, key=lambda f: f.poly.degree*1e6 + self.codeComplexity(f.poly.as_basic()))]
 
 def test_ik():
     from sympy import *

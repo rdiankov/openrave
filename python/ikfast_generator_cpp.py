@@ -61,17 +61,41 @@ class fmod(core.function.Function):
     is_real = True
     is_Function = True
 
-def customcse(exprs,symbols=None):
+def evalNumbers(expr):
+    """Replaces all numbers with symbols, this is to make gcd faster when fractions get too big"""
+    if expr.is_number:
+        return expr.evalf()
+    elif expr.is_Mul:
+        result = S.One
+        for arg in expr.args:
+            result *= evalNumbers(arg)
+    elif expr.is_Add:
+        result = S.Zero
+        for arg in expr.args:
+            result += evalNumbers(arg)
+    elif expr.is_Pow:
+        # don't replace the exponent
+        result = evalNumbers(expr.base)**expr.exp
+    else:
+        result = expr
+    return result
+
+def customcse(rawexprs,symbols=None):
+    if not hasattr(rawexprs,'__iter__') and not hasattr(rawexprs,'__array__'):
+        rawexprs = [rawexprs]
+    # fractions can get big, so evaluate as many decimals as possible
+    exprs = [evalNumbers(expr) for expr in rawexprs]
     replacements,reduced_exprs = cse(exprs,symbols=symbols)
     newreplacements = []
-    # look for opany expressions of the order of (x**(1/a))**b, usually computer wants x^(b/a)
+    # look for any expressions of the order of (x**(1/a))**b, usually computer wants x^(b/a)
     for r in replacements:
-        if r[1].is_Pow and r[1].exp.is_number and r[1].base.is_Symbol:
-            baseexpr = r[1].base.subs(replacements)
+        newr = r[1]
+        if newr.is_Pow and newr.exp.is_number and newr.base.is_Symbol:
+            baseexpr = newr.base.subs(replacements)
             if baseexpr.is_Pow and baseexpr.exp.is_number:
-                newreplacements.append((r[0],baseexpr.base**(r[1].exp*baseexpr.exp)))
+                newreplacements.append((r[0],baseexpr.base**(newr.exp*baseexpr.exp)))
                 continue
-        newreplacements.append(r)
+        newreplacements.append((r[0],newr))
     return newreplacements,reduced_exprs
 
 class CodeGenerator(AutoReloader):
@@ -1280,6 +1304,7 @@ int main(int argc, char** argv)
         return code
     def writeEquations(self, varnamefn, exprs):
         code = ''
+        # customcse splits up numbers, which could introduce a lot of difficulties, so call evalf here
         [replacements,reduced_exprs] = customcse(exprs,symbols=self.symbolgen)
         for rep in replacements:                
             comparerep = rep[1].subs(self.dictequations[0]).expand()
@@ -1379,13 +1404,20 @@ int main(int argc, char** argv)
                     for i in range(1,expr.exp.evalf()):
                         code += '*('+exprbase+')'
                     return code,sepcode
-                elif expr.exp-0.5 == 0:
+                elif expr.exp-0.5 == S.Zero:
                     sepcode += 'if( (%s) < (IKReal)-0.00001 )\n    continue;\n'%exprbase
                     return 'IKsqrt('+exprbase+')',sepcode
+                elif expr.exp+1 == S.Zero:
+                    # check if exprbase is 0
+                    return '((IKabs('+exprbase+') != 0)?((IKReal)1/('+exprbase+')):(IKReal)1.0e30)',sepcode
+                elif expr.exp.is_integer and expr.exp.evalf() < 0:
+                    # check if exprbase is 0
+                    fcode = '('+exprbase+')'
+                    for i in range(1,-expr.exp.evalf()):
+                        fcode += '*('+exprbase+')'
+                    return '((IKabs('+exprbase+') != 0)?((IKReal)1/('+fcode+')):(IKReal)1.0e30)',sepcode
                 elif expr.exp < 0:
                     # check if exprbase is 0
-                    if expr.exp+1 == 0:
-                        return '((IKabs('+exprbase+') != 0)?((IKReal)1/('+exprbase+')):(IKReal)1.0e30)',sepcode
                     return '((IKabs('+exprbase+') != 0)?(pow(' + exprbase + ',' + str(expr.exp.evalf()) + ')):(IKReal)1.0e30)',sepcode
                     
             exprexp,sepcode2 = self.writeExprCode(expr.exp)

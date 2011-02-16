@@ -17,6 +17,7 @@ import calibrationviews
 import checkconvexdecomposition
 import checkvisibility
 import collision
+import collision2
 import constraintplanning
 import dualarmdemo_schunk
 import fastgrasping
