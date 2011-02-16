@@ -1368,7 +1368,7 @@ class IKFastSolver(AutoReloader):
 
         chaintree = SolverIKChainTransform6D([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(v,i) for v,i in izip(self.freejointvars,self.ifreejointvars)], (self.Tee * self.affineInverse(Tfirstright)).subs(self.freevarsubs), tree,Tfk=Tfinal*Tfirstright)
         chaintree.dictequations += self.ppsubs+self.npxyzsubs+self.rxpsubs
-        return chain
+        return chaintree
 
     def iterateThreeIntersectingAxes(self, solvejointvars, Links, LinksInv):
         """Search for 3 consectuive intersecting axes. If a robot has this condition, it makes a lot of IK computations simpler.
