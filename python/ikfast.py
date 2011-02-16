@@ -3010,10 +3010,8 @@ class IKFastSolver(AutoReloader):
             newpolyeqs = [Poly(eq,varsyms[1-ileftvar].htvar) for eq in polyeqs]
             for peq in newpolyeqs:
                 if len(peq.monoms) == 1:
-                    pfinal = Poly(peq.coeffs[0],leftvar)
-                    pfinal = self.checkFinalEquation(pfinal,subs)
-                    if pfinal is not None:
-                        solutions[ileftvar] = pfinal
+                    solutions[ileftvar] = self.checkFinalEquation(Poly(peq.coeffs[0],leftvar),subs)
+                    if solutions[ileftvar] is not None:
                         break
             if solutions[ileftvar] is not None:
                 break
@@ -3029,10 +3027,8 @@ class IKFastSolver(AutoReloader):
                         #det=self.det_bareis(Mall,*(self.pvars+dummyvars+[leftvar]))
                         det=Mall.berkowitz_det()
                         if det.evalf() != S.Zero:
-                            pfinal = Poly(det,leftvar)
-                            pfinal = self.checkFinalEquation(pfinal,subs)
-                            if pfinal is not None:
-                                solutions[ileftvar] = pfinal
+                            solutions[ileftvar] = self.checkFinalEquation(Poly(det,leftvar),subs)
+                            if solutions[ileftvar] is not None:
                                 break
                 if solutions[ileftvar] is not None:
                     break
@@ -3052,7 +3048,7 @@ class IKFastSolver(AutoReloader):
             ileftvar = 1
 
         if pfinal is None:
-            raise self.CannotSolveError('solvePairVariablesHalfAngle: solve dialytically with %d equations %d variables (%d)'%(len(polyeqs),len(allmonoms),len(origmonoms)))
+            raise self.CannotSolveError('solvePairVariablesHalfAngle: solve dialytically with %d equations'%(len(polyeqs)))
 
         jointsol = 2*atan(varsyms[ileftvar].htvar)
         solution = SolverPolynomialRoots(jointname=varsyms[ileftvar].name,poly=pfinal,jointeval=[jointsol],isHinge=self.isHinge(varsyms[ileftvar].name))
