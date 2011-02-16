@@ -3026,8 +3026,9 @@ class IKFastSolver(AutoReloader):
                         for i,eq in enumerate(eqs):
                             for j in range(degree+1):
                                 Mall[i,j] = eq.coeff(j)
-                        det=self.det_bareis(Mall,*(self.pvars+dummyvars+[leftvar]))
-                        if det != S.Zero:
+                        #det=self.det_bareis(Mall,*(self.pvars+dummyvars+[leftvar]))
+                        det=Mall.berkowitz_det()
+                        if det.evalf() != S.Zero:
                             pfinal = Poly(det,leftvar)
                             pfinal = self.checkFinalEquation(pfinal,subs)
                             if pfinal is not None:
@@ -3040,7 +3041,7 @@ class IKFastSolver(AutoReloader):
         pfinal = None
         ileftvar = None
         if solutions[0] is not None:
-            if solutions[1] is not None and solutions[1].poly.degree < solutions[0].poly.degree:
+            if solutions[1] is not None and solutions[1].degree < solutions[0].degree:
                 pfinal = solutions[1]
                 ileftvar = 1
             else:
