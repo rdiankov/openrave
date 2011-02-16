@@ -1306,7 +1306,8 @@ class IKFastSolver(AutoReloader):
                     try:
                         coupledsolutions,usedvars = solvemethod(rawpolyeqs2[index])
                         break
-                    except self.CannotSolveError:
+                    except self.CannotSolveError, e:
+                        print e
                         continue
 
             if coupledsolutions is None:
@@ -1521,7 +1522,8 @@ class IKFastSolver(AutoReloader):
                     if rawpolyeqs2[j] is not None:
                         coupledsolutions,usedvars = solvemethod(rawpolyeqs2[j])
                         break
-                except self.CannotSolveError:
+                except self.CannotSolveError, e:
+                    print e
                     continue
 
         if coupledsolutions is None:
@@ -2136,6 +2138,9 @@ class IKFastSolver(AutoReloader):
         othersymbols.append(tvar)
         
         polyeqs = [[eq[0].as_basic(),eq[1]] for eq in eqs]
+        if len(polyeqs) < 8:
+            raise self.CannotSolveError('solveLiWoernleHiller: need 8 or more polyeqs')
+        
         neweqs=[]
         for i in range(0,8,2):
             p0 = Poly(polyeqs[i][0],cvar,svar)
@@ -2281,6 +2286,9 @@ class IKFastSolver(AutoReloader):
         othereqs = [peq for peq in rawpolyeqs if not peq[0].has_any_symbols(cvar,svar)]
 
         polyeqs = [[eq[0].as_basic(),eq[1]] for eq in eqs]
+        if len(polyeqs) < 8:
+            raise self.CannotSolveError('solveKohliOsvatic: need 8 or more polyeqs')
+        
         neweqs=[]
         for i in range(0,8,2):
             p0 = Poly(polyeqs[i][0],cvar,svar)
