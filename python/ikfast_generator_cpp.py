@@ -403,10 +403,10 @@ int main(int argc, char** argv)
         code += 'IKReal '
         
         for var in node.solvejointvars:
-            code += '%s, c%s, s%s,\n'%(var[0].name,var[0].name,var[0].name)
+            code += '%s, c%s, s%s, ht%s,\n'%(var[0].name,var[0].name,var[0].name,var[0].name)
         for i in range(len(node.freejointvars)):
             name = node.freejointvars[i][0].name
-            code += '%s, c%s, s%s,\n'%(name,name,name)
+            code += '%s, c%s, s%s, ht%s,\n'%(name,name,name,name)
 
         for i in range(3):
             for j in range(3):
@@ -1460,10 +1460,8 @@ int main(int argc, char** argv)
         if not name in self.functions:
             if deg == 1:            
                 fcode = """static inline void %s(IKReal rawcoeffs[1+1], IKReal rawroots[1], int& numroots) {
-    if( rawcoeffs[0] == 0 ) {
-        numroots=0;
-    }
-    else {
+    numroots=0;
+    if( rawcoeffs[0] != 0 ) {
         rawroots[0] = -rawcoeffs[1]/rawcoeffs[0];
         numroots=1;
     }
