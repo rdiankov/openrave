@@ -314,6 +314,8 @@ inline float IKsin(float f) { return sinf(f); }
 inline double IKsin(double f) { return sin(f); }
 inline float IKcos(float f) { return cosf(f); }
 inline double IKcos(double f) { return cos(f); }
+inline float IKtan(float f) { return tanf(f); }
+inline double IKtan(double f) { return tan(f); }
 inline float IKsqrt(float f) { if( f <= 0.0f ) return 0.0f; return sqrtf(f); }
 inline double IKsqrt(double f) { if( f <= 0.0 ) return 0.0; return sqrt(f); }
 inline float IKatan2(float fy, float fx) {
@@ -941,7 +943,10 @@ int main(int argc, char** argv)
                 code += 'if( %svalid[%d] && %svalid[%d] && IKabs(c%sarray[%d]-c%sarray[%d]) < 0.0001 && IKabs(s%sarray[%d]-s%sarray[%d]) < 0.0001 )\n{\n    %svalid[%d]=false;\n}\n'%(name,i,name,j,name,i,name,j,name,i,name,j,name,j)
         code += 'for(int i%s = 0; i%s < %d; ++i%s)\n{\n'%(name,name,allnumsolutions,name)
         code += 'if( !%svalid[i%s] )\n{\n    continue;\n}\n'%(name,name)
-        code += '%s = %sarray[i%s]; c%s = c%sarray[i%s]; s%s = s%sarray[i%s];\n\n'%(name,name,name,name,name,name,name,name,name)
+        code += '%s = %sarray[i%s]; c%s = c%sarray[i%s]; s%s = s%sarray[i%s];\n'%(name,name,name,name,name,name,name,name,name)
+        if node.AddHalfTanValue:
+            code += 'ht%s = IKtan(%s/2);\n'%(name,name)
+        code += '\n'
         return code
 
     def endSolution(self, node):
@@ -1033,7 +1038,10 @@ int main(int argc, char** argv)
         code += self.indentCode(fcode,4)
         code += '}\n'
         code += 'for(int i%s = 0; i%s < numsolutions; ++i%s)\n    {\n'%(name,name,name)
-        code += '    %s = %sarray[i%s]; c%s = c%sarray[i%s]; s%s = s%sarray[i%s];\n\n'%(name,name,name,name,name,name,name,name,name)
+        code += '    %s = %sarray[i%s]; c%s = c%sarray[i%s]; s%s = s%sarray[i%s];\n'%(name,name,name,name,name,name,name,name,name)
+        if node.AddHalfTanValue:
+            code += 'ht%s = IKtan(%s/2);\n'%(name,name)
+        code += '\n'
         if node.postcheckforzeros is not None and len(node.postcheckforzeros) > 0:
             fcode = self.writeEquations(lambda i: '%sevalpoly[%d]'%(name,i),node.postcheckforzeros)
             fcode += 'if( '

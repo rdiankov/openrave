@@ -1094,14 +1094,14 @@ public:
         case IkParameterization::Type_Lookat3D: {
             Vector v = ik0.GetLookat3D()-ik1.GetLookat3D();
             dReal s = v.dot3(ik1.GetLookat3DDirection());
-            if( s >= -1 ) { // ik1's lookat is always 1 beyond the origin
+            if( s >= -1 ) { // ik1's lookat is always 1 beyond the origin, this is just the convention for testing...
                 v -= s*ik1.GetLookat3DDirection();
             }
             return v.lengthsqr3();
         }
         case IkParameterization::Type_TranslationDirection5D: {
             dReal facos = RaveAcos(min(dReal(1),ik0.GetTranslationDirection5D().dir.dot(ik1.GetTranslationDirection5D().dir)));
-            return (ik0.GetTranslationDirection5D().pos-ik1.GetTranslationDirection5D().pos).lengthsqr3() * 0.4*facos*facos;
+            return (ik0.GetTranslationDirection5D().pos-ik1.GetTranslationDirection5D().pos).lengthsqr3() + 0.4*facos*facos;
         }
         default:
             BOOST_ASSERT(0);
@@ -1127,12 +1127,14 @@ public:
             break;
         }
         case IkParameterization::Type_Direction3D: {
-            o << param.GetDirection3D() << " 0 0 0 0 0 0 0 0 0 ";
+            Vector dir = param.GetDirection3D();
+            o << dir.x << " " << dir.y << " " << dir.z << " 0 0 0 0 0 0 0 0 0 ";
             break;
         }
         case IkParameterization::Type_Ray4D: {
             Vector pos = param.GetRay4D().pos;
-            o << param.GetRay4D().dir << pos.x << " 0 0 0 " << pos.y << " 0 0 0 " << pos.z << " ";
+            Vector dir = param.GetRay4D().dir;
+            o << dir.x << " " << dir.y << " " << dir.z << " " << pos.x << " 0 0 0 " << pos.y << " 0 0 0 " << pos.z << " ";
             break;
         }
         case IkParameterization::Type_Lookat3D: {

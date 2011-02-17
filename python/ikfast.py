@@ -77,6 +77,7 @@ class SolverSolution:
     isHinge = True
     checkforzeros = None
     thresh = None
+    AddHalfTanValue = False
     """Meaning of FeasibleIsZeros:
     If set to false, then solution is feasible only if all of these equations evalute to non-zero.
     If set to true, solution is feasible only if all these equations evaluate to zero.
@@ -145,6 +146,7 @@ class SolverPolynomialRoots:
     thresh = 1e-7
     isHinge = True
     FeasibleIsZeros = False
+    AddHalfTanValue = False
     score = None
     def __init__(self, jointname, poly=None, jointeval=None,isHinge=True):
         self.poly = poly
@@ -542,6 +544,8 @@ class IKFastSolver(AutoReloader):
             self.vars = [self.var,self.svar,self.cvar,self.tvar,self.htvar]
             self.subs = [(cos(self.var),self.cvar),(sin(self.var),self.svar),(tan(self.var),self.tvar),(tan(self.var/2),self.htvar)]
             self.subsinv = [(self.cvar,cos(self.var)),(self.svar, sin(self.var)),(self.tvar,tan(self.tvar))]
+        def getsubs(self,value):
+            return [(self.var,value)]+[(s,v.subs(self.var,value).evalf()) for v,s in self.subs]
 
     class DegenerateCases:
         def __init__(self):
@@ -1301,7 +1305,7 @@ class IKFastSolver(AutoReloader):
                     if rawpolyeqs2[index] is None:
                         rawpolyeqs2[index] = self.buildRaghavanRothEquations(p0,p1,l0,l1,solvejointvars)
                     try:
-                        coupledsolutions,usedvars = solvemethod(rawpolyeqs2[index],solvejointvars)
+                        coupledsolutions,usedvars = solvemethod(rawpolyeqs2[index],solvejointvars,endbranchtree)
                         break
                     except self.CannotSolveError, e:
                         print e
@@ -1325,6 +1329,8 @@ class IKFastSolver(AutoReloader):
                 tree = self.solveAllEquations(AllEquations,curvars=curvars,othersolvedvars = self.freejointvars+usedvars,solsubs = solsubs,endbranchtree=endbranchtree)
                 tree = self.verifyAllEquations(AllEquations,curvars,solsubs,tree)
                 tree = coupledsolutions+tree
+            else:
+                tree = coupledsolutions
         chaintree = SolverIKChainRay([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(v,i) for v,i in izip(self.freejointvars,self.ifreejointvars)], Pee=self.Tee[0:3,3].subs(self.freevarsubs), Dee=self.Tee[0,0:3].transpose().subs(self.freevarsubs),jointtree=tree,Dfk=Tfinal[0,0:3].transpose(),Pfk=Tfinal[0:3,3],is5dray=True)
         chaintree.dictequations += self.ppsubs
         return chaintree
@@ -1518,7 +1524,7 @@ class IKFastSolver(AutoReloader):
                         rawpolyeqs2[j] = rawpolyeqs
                 try:
                     if rawpolyeqs2[j] is not None:
-                        coupledsolutions,usedvars = solvemethod(rawpolyeqs2[j],solvejointvars)
+                        coupledsolutions,usedvars = solvemethod(rawpolyeqs2[j],solvejointvars,endbranchtree)
                         break
                 except self.CannotSolveError, e:
                     print e
@@ -2029,7 +2035,7 @@ class IKFastSolver(AutoReloader):
             print 'finished with %d equations'%len(reducedeqs)
         return reducedeqs
 
-    def solveManochaCanny(self,rawpolyeqs,solvejointvars):
+    def solveManochaCanny(self,rawpolyeqs,solvejointvars,endbranchtree):
         """Solves the IK equations using eigenvalues/eigenvectors of a 12x12 quadratic eigenvalue problem.
         
         D. Manocha and J.F. Canny. "Efficient inverse kinematics for general 6R manipulators", IEEE Transactions on Robotics and Automation, Volume 10, Issue 5, Oct 1994.
@@ -2103,7 +2109,7 @@ class IKFastSolver(AutoReloader):
         self.usinglapack = True
         return [raghavansolutiontree,coupledsolution],usedvars
 
-    def solveLiWoernleHiller(self,rawpolyeqs,solvejointvars):
+    def solveLiWoernleHiller(self,rawpolyeqs,solvejointvars,endbranchtree):
         """Li-Woernle-Hiller procedure covered in 
         Jorge Angeles, "Fundamentals of Robotics Mechanical Systems, Springer, 2007.
         """
@@ -2230,16 +2236,44 @@ class IKFastSolver(AutoReloader):
                 try:
                     unknownvars = usedvars[:]
                     unknownvars.remove(curvar)
-                    endbranchtree=[]
-                    treefirst = self.solveAllEquations(AllEquations,curvars=[curvar],othersolvedvars=self.freevars,solsubs=self.freevarsubs,endbranchtree=endbranchtree,unknownvars=unknownvars+[tvar])
+                    jointtrees2=[]
+                    curvarsubs=self.Variable(curvar).subs
+                    treefirst = self.solveAllEquations(AllEquations,curvars=[curvar],othersolvedvars=self.freevars,solsubs=self.freevarsubs,endbranchtree=[SolverSequence([jointtrees2])],unknownvars=unknownvars+[tvar])
                     # solvable, which means we now have len(AllEquations)-1 with two variables, solve with half angles
-                    halfanglesolution=self.solvePairVariablesHalfAngle(AllEquations,unknownvars[0],unknownvars[1],othersolvedvars=self.freevars+[curvar])
+                    halfanglesolution=self.solvePairVariablesHalfAngle(raweqns=[eq.subs(curvarsubs) for eq in AllEquations],var0=unknownvars[0],var1=unknownvars[1],othersolvedvars=self.freevars+[curvar])
+                    halfanglesolution.AddHalfTanValue = True
+                    jointtrees2.append(halfanglesolution)
                     halfanglevar = unknownvars[0] if halfanglesolution.jointname==unknownvars[0].name else unknownvars[1]
                     unknownvars.remove(halfanglevar)
                     # solve all the unknowns now
-                    endbranchtree2=[]
-                    treesecond = self.solveAllEquations(AllEquations,curvars=unknownvars,othersolvedvars=self.freevars+[curvar,halfanglevar],solsubs=self.freevarsubs+self.Variable(curvar).subs+self.Variable(halfanglevar).subs,endbranchtree=endbranchtree2)
-                    return treefirst+[halfanglesolution]+treesecond,usedvars
+                    jointtrees3=[]
+                    treesecond = self.solveAllEquations(AllEquations,curvars=unknownvars,othersolvedvars=self.freevars+[curvar,halfanglevar],solsubs=self.freevarsubs+curvarsubs+self.Variable(halfanglevar).subs,endbranchtree=[SolverSequence([jointtrees3])])
+                    for t in treesecond:
+                        # most likely t is a solution...
+                        t.AddHalfTanValue = True
+                    jointtrees2 += treesecond
+                    # using these solutions, can evaluate all monoms and check for consistency, this step is crucial since
+                    # AllEquations might not constrain all degrees of freedom (check out katana)
+                    indices = []
+                    for i in range(4):
+                        monom = [0]*len(symbols)
+                        monom[i] = 1
+                        indices.append(allmonoms.index(tuple(monom)))
+                    X = AUinv*BU
+                    for i in [0,2]:
+                        jointname=symbols[i].name[1:]
+                        usedvars.append(Symbol(jointname))
+                        jointtrees3.append(SolverSolution(jointname,jointeval=[atan2(X[indices[i+1]],X[indices[i]])],isHinge=self.isHinge(jointname)))
+                    jointcheckeqs = []
+                    for i,monom in enumerate(allmonoms):
+                        if not i in indices:
+                            eq = S.One
+                            for isymbol,ipower in enumerate(monom):
+                                eq *= symbols[isymbol]**ipower
+                            jointcheckeqs.append(eq-X[i])
+                    # threshold can be a little more loose
+                    jointtrees3.append(SolverCheckZeros('sanitycheck',jointcheckeqs,zerobranch=endbranchtree,nonzerobranch=[SolverBreak()],anycondition=False,thresh=0.001))
+                    return treefirst,usedvars
                 except self.CannotSolveError:
                     pass
 
@@ -2269,7 +2303,7 @@ class IKFastSolver(AutoReloader):
         self.usinglapack = True
         return [coupledsolution],usedvars
 
-    def solveKohliOsvatic(self,rawpolyeqs,solvejointvars):
+    def solveKohliOsvatic(self,rawpolyeqs,solvejointvars,endbranchtree2):
         """Find a 16x16 matrix where the entries are linear with respect to the tan half-angle of one of the variables.
         Takes in the 14 raghavan/roth equations.
         

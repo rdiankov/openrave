@@ -1100,7 +1100,7 @@ def isolatepair():
 def test_ik():
     from sympy import *
     import __builtin__
-    from openravepy.ikfast import SolverStoreSolution, SolverSolution, combinations, SolverSequence, fmod, SolverRotation, SolverIKChainTransform6D, SolverBranchConds, SolverMatrixInverse, SolverCoeffFunction, SolverCheckZeros
+    from openravepy.ikfast import SolverStoreSolution, SolverSolution, combinations, SolverSequence, fmod, SolverRotation, SolverIKChainTransform6D, SolverBranchConds, SolverMatrixInverse, SolverCoeffFunction, SolverCheckZeros, SolverBreak
     ikmodel=self
     self = solver
     

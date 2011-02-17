@@ -325,6 +325,9 @@ class InverseKinematicsModel(OpenRAVEModel):
                 elif self.iktype == IkParameterization.Type.Lookat3D:
                     # usually head (rotation joints) are at the end
                     freejointinds.append(solvejoints.pop(0))
+                elif self.iktype == IkParameterization.Type.TranslationDirection5D:
+                    # usually on arms, so remove furthest joints
+                    freejointinds.append(solvejoints.pop(-1))
                 else:
                     # if not 6D, then don't need to worry about intersecting joints
                     # so remove the least important joints
