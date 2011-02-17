@@ -1037,6 +1037,66 @@ def isolatepair():
         # find the equation with the minimal degree, and the least code complexity
         return [min(finalsolutions, key=lambda f: f.poly.degree*1e6 + self.codeComplexity(f.poly.as_basic()))]
 
+    def solveLinearly(self,raweqns,varsyms,othersolvedvars,maxdegree=1):
+        varsubs = []
+        unknownvars = []
+        for varsym in varsyms:
+            varsubs += varsym.subs
+            unknownvars += [varsym.cvar,varsym.svar,varsym.var]
+        polyeqs = [Poly(eq.subs(varsubs),*unknownvars) for eq in raweqns]
+        allmonoms = set()
+        newpolyeqs = []
+        for peq in polyeqs:
+            if peq.degree <= maxdegree:
+                allmonoms = allmonoms.union(set(peq.monoms))
+                newpolyeqs.append(peq)
+        allmonoms = list(allmonoms)
+        allmonoms.sort()
+        if len(allmonoms) > len(newpolyeqs):
+            raise self.CannotSolveError('not enough equations %d>%d'%(len(allmonoms),len(newpolyeqs)))
+
+        if __builtin__.sum(allmonoms[0]) != 0:
+            raise self.CannotSolveError('need null space')
+        
+        # try to solve for all pairwise variables
+        systemofequations = []
+        for peq in newpolyeqs:
+            if peq.degree <= maxdegree:
+                arr = [S.Zero]*len(allmonoms)
+                for c,m in peq.iter_terms():
+                    arr[allmonoms.index(m)] = c
+                systemofequations.append(arr)
+
+        singleeqs = None
+        M = zeros((len(allmonoms),len(allmonoms)))
+        for eqs in combinations(systemofequations,len(allmonoms)):
+            for i,arr in enumerate(eqs):
+                for j in range(len(allmonoms)):
+                    M[i,j] = arr[j]
+            if __builtin__.sum(allmonoms[0]) == 0:
+                # can solve directly
+                det = self.det_bareis(M)
+                if det != S.Zero:
+                    break
+                X = M[1:,1:].inv()*M[1:,0]
+                print X
+            else:
+                # find a nullspace of M, this means that det(M) = 0
+                
+            det = self.det_bareis(M,*(self.pvars+unknownvars)).subs(allsymbols)
+            if det.evalf() != S.Zero:
+                X = M.adjugate()*B
+                singleeqs = []
+                for i in range(4):
+                    eq = (pairwisesubs[i][0]*det - X[i]).subs(allsymbols)
+                    eqnew, symbols = self.groupTerms(eq, unknownvars, symbolgen)
+                    allsymbols += symbols
+                    singleeqs.append([self.codeComplexity(eq),Poly(eqnew,*unknownvars)])
+                break
+        if singleeqs is not None:
+            neweqns += singleeqs
+            neweqns.sort(lambda x, y: x[0]-y[0])
+
 def test_ik():
     from sympy import *
     import __builtin__

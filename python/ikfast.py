@@ -20,7 +20,7 @@ from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2011 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Lesser GPL, Version 3'
-__version__ = '33'
+__version__ = '34'
 
 import sys, copy, time, math, datetime
 import __builtin__
@@ -2732,6 +2732,8 @@ class IKFastSolver(AutoReloader):
             return self.addSolution(solutions,AllEquations,curvars,othersolvedvars,solsubs,endbranchtree,currentcases=currentcases)
 
         # solve with all 3 variables together
+
+        # have got this far, so perhaps two axes are aligned?
         
         raise self.CannotSolveError('failed to find a variable to solve')
 
@@ -3016,6 +3018,8 @@ class IKFastSolver(AutoReloader):
         for ileftvar in range(2):
             leftvar = varsyms[ileftvar].htvar
             newpolyeqs = [Poly(eq,varsyms[1-ileftvar].htvar) for eq in polyeqs]
+            mindegree = __builtin__.min([peq.degree for peq in newpolyeqs])
+            maxdegree = __builtin__.max([peq.degree for peq in newpolyeqs])
             for peq in newpolyeqs:
                 if len(peq.monoms) == 1:
                     solutions[ileftvar] = self.checkFinalEquation(Poly(peq.coeffs[0],leftvar),subs)
@@ -3023,8 +3027,7 @@ class IKFastSolver(AutoReloader):
                         break
             if solutions[ileftvar] is not None:
                 break
-            maxdegree = __builtin__.max([peq.degree for peq in newpolyeqs])
-            for degree in range(1,maxdegree):
+            for degree in range(mindegree,maxdegree+1):
                 newpolyeqs2 = [peq for peq in newpolyeqs if peq.degree <= degree]
                 if degree+1 <= len(newpolyeqs2):
                     for eqs in combinations(newpolyeqs2,degree+1):
@@ -3034,11 +3037,9 @@ class IKFastSolver(AutoReloader):
                                 Mall[i,j] = eq.coeff(j)
                         # det_bareis freezes when there are huge fractions
                         #det=self.det_bareis(Mall,*(self.pvars+dummyvars+[leftvar]))
-                        det=Mall.berkowitz_det()
-                        if det.evalf() != S.Zero:
-                            solutions[ileftvar] = self.checkFinalEquation(Poly(det,leftvar),subs)
-                            if solutions[ileftvar] is not None:
-                                break
+                        solutions[ileftvar] = self.checkFinalEquation(Poly(Mall.berkowitz_det(),leftvar),subs)
+                        if solutions[ileftvar] is not None:
+                            break
                 if solutions[ileftvar] is not None:
                     break
 
@@ -3055,7 +3056,7 @@ class IKFastSolver(AutoReloader):
         elif solutions[1] is not None:
             pfinal = solutions[1]
             ileftvar = 1
-
+            
         if pfinal is None:
             raise self.CannotSolveError('solvePairVariablesHalfAngle: solve dialytically with %d equations'%(len(polyeqs)))
 
@@ -3124,6 +3125,9 @@ class IKFastSolver(AutoReloader):
             if peq.has_any_symbols(varsym.var):
                 raise self.CannotSolveError('expecting only sin and cos! %s'%peq)
             
+            if peq.degree == 0:
+                continue
+            
             # check if all terms are multiples of cos/sin
             maxmonoms = [0,0]
             maxdenom = 0
@@ -3180,17 +3184,23 @@ class IKFastSolver(AutoReloader):
 
         # sanity check that polynomial can produce a solution and is not actually very small values
         found = False
+        LCnormalized, common = self.removecommonexprs(pfinal.LC,returncommon=True,onlygcd=False,onlynumbers=True)
         for testconsistentvalue in self.testconsistentvalues:
-            coeffs = [pfinal.coeff(degree).subs(subs).subs(self.globalsymbols).subs(testconsistentvalue).evalf() for degree in range(pfinal.degree,-1,-1)]
-            if coeffs[0] == S.Zero:
+            coeffs = []
+            globalsymbols = [(s,v.subs(testconsistentvalue).evalf()) for s,v in self.globalsymbols]
+            for degree in range(pfinal.degree,-1,-1):
+                coeffs.append(pfinal.coeff(degree).subs(subs).subs(globalsymbols+testconsistentvalue).evalf()/common.evalf())
+                # since coeffs[0] is normalized with the LC constant, can compare for precision
+                if len(coeffs) == 1 and abs(coeffs[0]) < 2*(10.0**-self.precision):
+                    coeffs = None
+                    break
+            if coeffs is None:
                 continue
-            
             if not all([c.is_number for c in coeffs]):
                 # cannot evalute
                 print 'cannot evalute',coeffs
                 found = True
-                return pfinal
-            
+                break            
             realsolution = pfinal.symbols[0].subs(subs).subs(self.globalsymbols).subs(testconsistentvalue).evalf()
             roots = mpmath.polyroots(coeffs)
             for root in roots:
@@ -3429,9 +3439,6 @@ class IKFastSolver(AutoReloader):
         for eq in eqns:
             eqnew, symbols = self.groupTerms(eq, unknownvars, symbolgen)
             allsymbols += symbols
-            #p = Poly(eqnew,*unknownvars)
-            # make sure there are no monomials that have more than 2 diferent terms
-            #if all([__builtin__.sum([m[j]>0 for j in range(len(unknownvars))])<=2 for m in p.monoms]):
             orgeqns.append([self.codeComplexity(eq),Poly(eqnew,*unknownvars)])
         orgeqns.sort(lambda x, y: x[0]-y[0])
         neweqns = orgeqns[:]
@@ -3645,17 +3652,15 @@ class IKFastSolver(AutoReloader):
                             finaleq = (ptotal_cos.as_basic()**2 - (1-polysymbols[0]**2)*ptotal_sin.as_basic()**2).expand()
                             # sometimes denominators can accumulate
                             pfinal = Poly(self.removecommonexprs(finaleq,onlygcd=False,onlynumbers=True),polysymbols[0])
-                            # check to see that LC is non-zero for at least one solution
-                            if pfinal.LC.evalf() == S.Zero or all([pfinal.LC.subs(testconsistentvalue).evalf()==S.Zero for testconsistentvalue in self.testconsistentvalues]):
-                                raise self.CannotSolveError('leading coefficient is always zero in %s'%(str(pfinal)))
-                            
-                            jointsol = atan2(ptotal_cos.as_basic()/ptotal_sin.as_basic(), polysymbols[0])
-                            var = var1 if ivar == 0 else var0
-                            solution = SolverPolynomialRoots(jointname=var.name,poly=pfinal,jointeval=[jointsol],isHinge=self.isHinge(var.name))
-                            solution.postcheckforzeros = [ptotal_sin.as_basic()]
-                            solution.postcheckfornonzeros = []
-                            solution.postcheckforrange = []
-                            return [solution]
+                            pfinal = self.checkFinalEquation(pfinal,subs)
+                            if pfinal is not None:
+                                jointsol = atan2(ptotal_cos.as_basic()/ptotal_sin.as_basic(), polysymbols[0])
+                                var = var1 if ivar == 0 else var0
+                                solution = SolverPolynomialRoots(jointname=var.name,poly=pfinal,jointeval=[jointsol],isHinge=self.isHinge(var.name))
+                                solution.postcheckforzeros = [ptotal_sin.as_basic()]
+                                solution.postcheckfornonzeros = []
+                                solution.postcheckforrange = []
+                                return [solution]
                     
                 # if maxnumeqs is any less, it will miss linearly independent equations
                 lineareqs = self.solveSingleVariableLinearly(raweqns,var0,[var1],maxnumeqs=len(raweqns))
@@ -3725,10 +3730,7 @@ class IKFastSolver(AutoReloader):
             finaleq = simplify(finaleq*denomlcm.as_basic()**2)
             complementvarindex = varindex-(varindex%2)+((varindex+1)%2)
             complementvar = unknownvars[complementvarindex]
-            finaleq = simplify(finaleq.subs(complementvar**2,1-unknownvar**2)).subs(allsymbols).expand()
-            if not self.isValidSolution(finaleq):
-                raise self.CannotSolveError('failed to solve pairwise equation: %s'%str(finaleq))
-            
+            finaleq = simplify(finaleq.subs(complementvar**2,1-unknownvar**2)).subs(allsymbols).expand()            
         else:
             # try to reduce finaleq
             p0 = Poly(simpleterms[0],unknownvars[varindex],unknownvars[varindex+1])
@@ -3741,6 +3743,9 @@ class IKFastSolver(AutoReloader):
         if finaleq is None:
             raise self.CannotSolveError('solvePairVariables: did not compute a final variable. This is a weird condition...')
         
+        if not self.isValidSolution(finaleq):
+            raise self.CannotSolveError('failed to solve pairwise equation: %s'%str(finaleq))
+
         if useconic:
             #if not self.isHinge(var.name):
             #    print 'got conic equation from a non-hinge joint?: ',finaleq
@@ -3752,20 +3757,25 @@ class IKFastSolver(AutoReloader):
         newunknownvars = unknownvars[:]
         newunknownvars.remove(unknownvar)
         if finaleq.has_any_symbols(*newunknownvars):
-            raise self.CannotSolveError('ray ik bad equation %s'%str(finaleq))
+            raise self.CannotSolveError('equation relies on unsolved variables  %s'%str(finaleq))
+
+        if not finaleq.has_any_symbols(unknownvar):
+            # somehow removed all variables, so try the general method
+            return [self.solvePairVariablesHalfAngle(raweqns,var0,var1,othersolvedvars)]
+
         # now that everything is with respect to one variable, simplify and solve the equation
         eqnew, symbols = self.groupTerms(finaleq, unknownvars, symbolgen)
         allsymbols += symbols
         solutions=solve(eqnew,unknownvar)
         print 'pair solution: ',eqnew,',',solutions
         if solutions:
-            
             solversolution=SolverSolution(var.name, isHinge=self.isHinge(var.name))
             if (varindex%2)==0:
                 solversolution.jointevalcos=[self.trigsimp(s.subs(allsymbols+varsubsinv),othersolvedvars).subs(varsubs) for s in solutions]
             else:
                 solversolution.jointevalsin=[self.trigsimp(s.subs(allsymbols+varsubsinv),othersolvedvars).subs(varsubs) for s in solutions]
             return [solversolution]
+        
         raise self.CannotSolveError('cannot solve pair equation')
         
     ## SymPy helper routines
