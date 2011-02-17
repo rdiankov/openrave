@@ -2173,6 +2173,14 @@ class IKFastSolver(AutoReloader):
                 neweqs_full.append(peq)
             else:
                 reducedeqs.append(peq[1].as_basic())
+
+        if len(reducedeqs) > 0:
+            # try to see if any variables are solvable!
+            subsinv = []
+            AllEquations = [eq.subs(self.invsubs) for eq in reducedeqs]
+            curvars = [Symbol(othersymbols[0].name[1:]),Symbol(othersymbols[2].name[1:]),othersymbols[4]]
+            tree=self.solveAllEquations(AllEquations,curvars,othersolvedvars=self.freevars,solsubs=self.freevarsubs,endbranchtree=[])
+
         allmonoms = set()
         for peq in neweqs_full:
             allmonoms = allmonoms.union(set(peq[0].monoms))
@@ -3652,7 +3660,7 @@ class IKFastSolver(AutoReloader):
                             finaleq = (ptotal_cos.as_basic()**2 - (1-polysymbols[0]**2)*ptotal_sin.as_basic()**2).expand()
                             # sometimes denominators can accumulate
                             pfinal = Poly(self.removecommonexprs(finaleq,onlygcd=False,onlynumbers=True),polysymbols[0])
-                            pfinal = self.checkFinalEquation(pfinal,subs)
+                            pfinal = self.checkFinalEquation(pfinal)
                             if pfinal is not None:
                                 jointsol = atan2(ptotal_cos.as_basic()/ptotal_sin.as_basic(), polysymbols[0])
                                 var = var1 if ivar == 0 else var0

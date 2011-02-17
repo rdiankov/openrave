@@ -182,6 +182,7 @@ class GraspingModel(OpenRAVEModel):
         self.grasper = None
         self.basemanip = None
         self.maxvelmult=maxvelmult
+        self.collision_escape_offset = 0.00009 # used for escaping collision/alignment errors during grasp generation
         self.preprocess()
         # only the indices used by the TaskManipulation plugin should start with an 'i'
         graspdof = {'igraspdir':3,'igrasppos':3,'igrasproll':1,'igraspstandoff':1,'igrasppreshape':len(self.manip.GetGripperIndices()),'igrasptrans':12,'forceclosure':1,'grasptrans_nocol':12}
@@ -373,7 +374,7 @@ class GraspingModel(OpenRAVEModel):
                             dir = self.getGlobalApproachDir(grasp)
                             Tgrasp_nocol = array(Tgrasp)
                             while self.manip.CheckEndEffectorCollision(Tgrasp_nocol):
-                                Tgrasp_nocol[0:3,3] -= dir*0.001 # 1mm good enough?
+                                Tgrasp_nocol[0:3,3] -= dir*self.collision_escape_offset
                             Tlocalgrasp_nocol = dot(linalg.inv(self.target.GetTransform()),Tgrasp_nocol)
                             self.robot.SetDOFValues(finalconfig[0])
                             if updateenv:

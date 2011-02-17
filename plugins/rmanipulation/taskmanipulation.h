@@ -520,7 +520,6 @@ class TaskManipulation : public ProblemInstance
             if( !!_pGrasperPlanner ) {
                 // set the preshape
                 _robot->SetActiveDOFs(pmanip->GetGripperIndices(), RobotBase::DOF_X|RobotBase::DOF_Y|RobotBase::DOF_Z);
-
                 if( !phandtraj ) {
                     phandtraj = RaveCreateTrajectory(GetEnv(),_robot->GetActiveDOF());
                 }
@@ -557,10 +556,12 @@ class TaskManipulation : public ProblemInstance
                     RobotBase::RobotStateSaver saverlocal(_robot);
                     _robot->SetTransform(t);
                     Vector vglobalpalmdir;
-                    if( iGraspDir >= 0 )
+                    if( iGraspDir >= 0 ) {
                         vglobalpalmdir = transTarg.rotate(Vector(pgrasp[iGraspDir], pgrasp[iGraspDir+1], pgrasp[iGraspDir+2]));
-                    else
+                    }
+                    else {
                         vglobalpalmdir = pmanip->GetEndEffectorTransform().rotate(pmanip->GetDirection());
+                    }
 
                     while(GetEnv()->CheckCollision(KinBodyConstPtr(_robot),KinBodyConstPtr(ptarget))) {
                         t.trans -= vglobalpalmdir*0.001f;
@@ -608,12 +609,14 @@ class TaskManipulation : public ProblemInstance
             if( !bMobileBase ) {
                 // check ik
                 Vector vglobalpalmdir;
-                if( iGraspDir >= 0 )
+                if( iGraspDir >= 0 ) {
                     vglobalpalmdir = transTarg.rotate(Vector(pgrasp[iGraspDir], pgrasp[iGraspDir+1], pgrasp[iGraspDir+2]));
-                else
+                }
+                else {
                     vglobalpalmdir = tApproachEndEffector.rotate(pmanip->GetDirection());
+                }
 
-                dReal fSmallOffset = 0.002f;
+                dReal fSmallOffset = 0.0001f;
                 tApproachEndEffector.trans -= fSmallOffset * vglobalpalmdir;
 
                 // first test the IK solution at the destination tGoalEndEffector
@@ -638,11 +641,16 @@ class TaskManipulation : public ProblemInstance
                     else {
                         stringstream ss;
                         ss << "IK found: "; 
-                        FOREACH(it, viksolution)
+                        FOREACH(it, viksolution) {
                             ss << *it << " ";
+                        }
                         ss << endl;
                         RAVELOG_DEBUG(ss.str());
                     }
+                }
+                else {
+                    // revert back?
+                    //tApproachEndEffector.trans += fSmallOffset * vglobalpalmdir;
                 }
             }
 
