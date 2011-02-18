@@ -524,6 +524,16 @@ class IKFastSolver(AutoReloader):
     """
 
     class CannotSolveError(Exception):
+        """thrown when ikfast fails to solve a particular set of equations with the given knowns and unknowns
+        """
+        def __init__(self,value):
+            self.value=value
+        def __str__(self):
+            return repr(self.value)
+
+    class IKFeasibilityError(Exception):
+        """thrown when it is not possible to solve the IK due to robot not having enough degrees of freedom. For example, a robot with 5 joints does not have 6D IK
+        """
         def __init__(self,value):
             self.value=value
         def __str__(self):
@@ -2107,7 +2117,7 @@ class IKFastSolver(AutoReloader):
         exportcoeffeqs,exportmonoms = self.solveDialytically(newreducedeqs,ileftvar,getsubs)
         coupledsolution = SolverCoeffFunction(jointnames=[v.name for v in usedvars],jointeval=[v[1] for v in dummysubs2],jointevalcos=[dummysubs[2*i][1] for i in range(len(usedvars))],jointevalsin=[dummysubs[2*i+1][1] for i in range(len(usedvars))],isHinges=[self.isHinge(v.name) for v in usedvars],exportvar=[v.name for v in dummys],exportcoeffeqs=exportcoeffeqs,exportfnname='solvedialyticpoly12qep',rootmaxdim=16)
         self.usinglapack = True
-        return [raghavansolutiontree,coupledsolution],usedvars
+        return raghavansolutiontree+[coupledsolution],usedvars
 
     def solveLiWoernleHiller(self,rawpolyeqs,solvejointvars,endbranchtree):
         """Li-Woernle-Hiller procedure covered in 
