@@ -1318,8 +1318,8 @@ class IKFastSolver(AutoReloader):
             if len(usedvars) < len(solvejointvars):
                 AllEquations = []
                 for i in range(3):
-                    AllEquations.append(self.simplifyTransform(p0[i]-p1[i]))
-                    AllEquations.append(self.simplifyTransform(l0[i]-l1[i]))
+                    AllEquations.append(self.simplifyTransform(p0[i]-p1[i]).expand())
+                    AllEquations.append(self.simplifyTransform(l0[i]-l1[i]).expand())
                 self.sortComplexity(AllEquations)
                 curvars=solvejointvars[:]
                 solsubs = self.freevarsubs[:]
@@ -2069,7 +2069,7 @@ class IKFastSolver(AutoReloader):
         dummyvars = []
         usedvars = []
         for i in range(0,len(symbols),2):
-            dummy = Symbol('ht%s'%symbols[i][1:])
+            dummy = Symbol('ht%s'%symbols[i].name[1:])
             # [0] - cos, [1] - sin
             dummys.append(dummy)
             dummysubs += [(symbols[i],(1-dummy**2)/(1+dummy**2)),(symbols[i+1],2*dummy/(1+dummy**2))]
