@@ -31,6 +31,7 @@ if( LINKER_HAS_RDYNAMIC )
 endif()
 if( APPLE OR ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
   # apple has a different meaning on Bsymbolic
+  # hidden visibility doesn't work?
 else()
   if( LINKER_HAS_BSYMBOLIC )
     set(LIBOPENRAVE_LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS} -Wl,-Bsymbolic")
@@ -38,18 +39,18 @@ else()
   if( LINKER_HAS_BSYMBOLIC_FUNCTIONS )
     set(LIBOPENRAVE_LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS} -Wl,-Bsymbolic-functions")
   endif()
+  if( LINKER_HAS_VISIBILITY )
+    # not sure whether it is compiler or linkiner flag...
+    set(LIBOPENRAVE_COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} -fvisibility=hidden")
+    set(LIBOPENRAVE_LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS} -fvisibility=hidden")
+  endif()
+  if( LINKER_HAS_VISIBILITY_INLINES_HIDDEN )
+    # not sure whether it is compiler or linkiner flag...
+    set(LIBOPENRAVE_COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} -fvisibility-inlines-hidden")
+    set(LIBOPENRAVE_LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS} -fvisibility-inlines-hidden")
+  endif()
 endif()
 
-if( LINKER_HAS_VISIBILITY )
-  # not sure whether it is compiler or linkiner flag...
-  set(LIBOPENRAVE_COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} -fvisibility=hidden")
-  set(LIBOPENRAVE_LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS} -fvisibility=hidden")
-endif()
-if( LINKER_HAS_VISIBILITY_INLINES_HIDDEN )
-  # not sure whether it is compiler or linkiner flag...
-  set(LIBOPENRAVE_COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} -fvisibility-inlines-hidden")
-  set(LIBOPENRAVE_LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS} -fvisibility-inlines-hidden")
-endif()
 
 add_subdirectory(libopenrave)
 add_subdirectory(libopenrave-core)
