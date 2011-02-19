@@ -28,7 +28,7 @@ set_target_properties(libopenrave-core PROPERTIES OUTPUT_NAME openrave-core
                                   SOVERSION ${OPENRAVE_SOVERSION}
                                   VERSION ${OPENRAVE_VERSION}
                                   CLEAN_DIRECT_OUTPUT 1
-                                  COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} -DOPENRAVE_CORE_DLL_EXPORTS -DOPENRAVE_CORE_DLL"
+                                  COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} ${COIN_CXXFLAGS} -DOPENRAVE_CORE_DLL_EXPORTS -DOPENRAVE_CORE_DLL"
                                   LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS} ${COIN_LINK_FLAGS}")
 
 target_link_libraries (libopenrave-core ${COIN_LIBRARY} libopenrave ${coreLIBS})
@@ -58,7 +58,7 @@ if( OPT_STATIC )
                                                 SOVERSION ${OPENRAVE_SOVERSION}
                                                 VERSION ${OPENRAVE_VERSION}
                                                 CLEAN_DIRECT_OUTPUT 1
-                                                COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS}"
+                                                COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} ${COIN_CXXFLAGS}"
                                                 LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS} ${COIN_LINK_FLAGS}")
   if( MSVC )
     # set "link library dependencies" for visual studio in order to include symbols for other statically linked libs
