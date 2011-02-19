@@ -137,6 +137,11 @@ else()
   set(STDC_LIBRARY)
 endif()
 
+if( APPLE OR ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+  # apple doesn't have 64bit versions of file opening functions, so add them
+  add_definitions("-Dfopen64=fopen -Dfseeko64=fseeko -Dfseek64=fseek -Dftell64=ftell")
+endif()
+
 set(OPENRAVE_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR})
 set(OPENRAVE_CORE_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/src/libopenrave-core)
 set(OPENRAVE_LINK_DIRS "")
