@@ -158,7 +158,7 @@ BasicRRTParameters() : _fGoalBiasProb(0.05f), _bProcessing(false) {
 class WorkspaceTrajectoryParameters : public PlannerBase::PlannerParameters
 {
 public:
- WorkspaceTrajectoryParameters(EnvironmentBasePtr penv) : maxdeviationangle(0.15*PI), maintaintiming(false), greedysearch(true), ignorefirstcollision(false), minimumcompletetime(1e30f), _penv(penv), _bProcessing(false) {
+ WorkspaceTrajectoryParameters(EnvironmentBasePtr penv) : maxdeviationangle(0.15*PI), maintaintiming(false), greedysearch(true), ignorefirstcollision(0), minimumcompletetime(1e30f), _penv(penv), _bProcessing(false) {
         _vXMLParameters.push_back("maxdeviationangle");
         _vXMLParameters.push_back("maintaintiming");
         _vXMLParameters.push_back("greedysearch");
@@ -170,7 +170,7 @@ public:
     dReal maxdeviationangle; ///< the maximum angle the next iksolution can deviate from the expected direction computed by the jacobian 
     bool maintaintiming; ///< maintain timing with input trajectory
     bool greedysearch; ///< if true, will greeidly choose solutions (can possibly fail even a solution exists)
-    bool ignorefirstcollision; ///< if true, will allow the robot to be in environment collision for the initial part of the trajectory. Once the robot gets out of collision, it will execute its normal following phase until it gets into collision again. This option is used when lifting objects from a surface, where the object is already in collision with the surface.
+    dReal ignorefirstcollision; ///< if > 0, will allow the robot to be in environment collision for the initial 'ignorefirstcollision' seconds of the trajectory. Once the robot gets out of collision, it will execute its normal following phase until it gets into collision again. This option is used when lifting objects from a surface, where the object is already in collision with the surface.
     dReal minimumcompletetime; ///< specifies the minimum trajectory that must be followed for planner to declare success. If 0, then the entire trajectory has to be followed.
     TrajectoryBasePtr workspacetraj; ///< workspace trajectory
  protected:

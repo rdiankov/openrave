@@ -157,7 +157,7 @@ class InverseKinematicsModel(OpenRAVEModel):
         clone.setrobot(self.freeinc)
         return clone
     def has(self):
-        return self.iksolver is not None and self.manip.GetIkSolver() is not None
+        return self.iksolver is not None and self.manip.GetIkSolver() is not None and self.manip.GetIkSolver().Supports(self.iktype)
     def load(self,*args,**kwargs):
         return self.setrobot(*args,**kwargs)
     def getversion(self):
@@ -184,7 +184,7 @@ class InverseKinematicsModel(OpenRAVEModel):
                         raise ValueError('ik does not match types %s!=%s'%(self.iktype,iktype))
                     ikname = 'ikfast ' + ikname
                     self.iksolver = RaveCreateIkSolver(self.env,ikname+iksuffix)
-        if self.iksolver is not None:
+        if self.iksolver is not None and self.iksolver.Supports(self.iktype):
             return self.manip.SetIKSolver(self.iksolver)
         return self.has()
     

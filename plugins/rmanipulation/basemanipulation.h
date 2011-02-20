@@ -264,7 +264,7 @@ protected:
 
         boost::shared_ptr<WorkspaceTrajectoryParameters> params(new WorkspaceTrajectoryParameters(GetEnv()));
         boost::shared_ptr<ostream> pOutputTrajStream;
-        params->ignorefirstcollision = true;
+        params->ignorefirstcollision = 0.04; // 0.04m?
         string cmd;
         params->_fStepLength = 0.01;
         while(!sinput.eof()) {

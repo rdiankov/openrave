@@ -26,6 +26,7 @@ import hanoi
 import graspplanning
 import mobilemanipulation
 import movehandstraight
+import movehandstraight2
 import simplenavigation
 import testcamerasensor
 import testphysics

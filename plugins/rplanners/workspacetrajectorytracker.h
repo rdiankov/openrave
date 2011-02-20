@@ -39,6 +39,7 @@ public:
 Given a workspace trajectory of the end effector of a manipulator (active manipulator of the robot), finds a configuration space trajectory that tracks it using analytical inverse kinematics.\n\
 Options can be specified to prioritize trajectory time, trajectory smoothness, and planning time\n\
 In the simplest case, the workspace trajectory can be a straight line from one point to another.\n\
+The workspace trajectory also supports manipulators with just Rotation3D or Translation3D inverse kinematics solvers. In this case, only the corresponding workspace end effector values are used (ie for Rotation3D, the translations are ignored).\n\
 \n\
 Planner Parameters\n\
 ==================\n\
@@ -47,7 +48,7 @@ Planner Parameters\n\
 \n\
 - **bool maintaintiming** - maintain timing with input trajectory\n\
 \n\
-- **bool ignorefirstcollision** - if true, will allow the robot to be in environment collision for the initial part of the trajectory. Once the robot gets out of collision, it will execute its normal following phase until it gets into collision again. This option is used when lifting objects from a surface, where the object is already in collision with the surface.\n\
+- **dReal ignorefirstcollision** - if > 0, will allow the robot to be in environment collision for the initial 'ignorefirstcollision' seconds of the trajectory. Once the robot gets out of collision, it will execute its normal following phase until it gets into collision again. This option is used when lifting objects from a surface, where the object is already in collision with the surface.\n\
 \n\
 - **dReal minimumcompletetime** - specifies the minimum trajectory that must be followed for planner to declare success. If 0, then the entire trajectory has to be followed.\n\
 \n\
@@ -133,6 +134,18 @@ Planner Parameters\n\
             RAVELOG_ERROR(str(boost::format("manipulator %s does not have ik solver set\n")%_manip->GetName()));
             return false;
         }
+        boost::array<IkParameterization::Type, 3> order = {{IkParameterization::Type_Transform6D, IkParameterization::Type_Rotation3D, IkParameterization::Type_Translation3D}};
+        _iktype = IkParameterization::Type_None;
+        for(size_t i = 0; i < order.size(); ++i) {
+            if( _manip->GetIkSolver()->Supports(order[i]) ) {
+                _iktype = order[i];
+                break;
+            }
+        }
+        if( _iktype == IkParameterization::Type_None ) {
+            RAVELOG_ERROR(str(boost::format("WorkspaceTrajectoryTracker: unsupported iktype for manipulator %s")%_manip->GetName()));
+            return false;
+        }
         
         _parameters = parameters;
         return true;
@@ -169,23 +182,29 @@ Planner Parameters\n\
         for(dReal ftime = 0; ftime < workspacetraj->GetTotalDuration(); ftime += _parameters->_fStepLength) {
             workspacetraj->SampleTrajectory(ftime,pt);
             listtransforms.push_back(pt.trans);
-            if( _manip->CheckEndEffectorCollision(pt.trans,_report) ) {
-                if( _parameters->ignorefirstcollision && bPrevInCollision ) {
-                    continue;
-                }
-                if( !bPrevInCollision ) {
-                    if( ftime >= _parameters->minimumcompletetime ) {
-                        fendtime = ftime;
-                        break;
+            if( _iktype == IkParameterization::Type_Transform6D ) {
+                // end effector is only fully known given the entire 6D transform!
+                if( _manip->CheckEndEffectorCollision(pt.trans,_report) ) {
+                    if( ftime < _parameters->ignorefirstcollision && bPrevInCollision ) {
+                        continue;
                     }
+                    if( !bPrevInCollision ) {
+                        if( ftime >= _parameters->minimumcompletetime ) {
+                            fendtime = ftime;
+                            break;
+                        }
+                    }
+                    return false;
                 }
-                return false;
+                else {
+                    if( bPrevInCollision ) {
+                        fstarttime = ftime;
+                    }
+                    bPrevInCollision = false;
+                }
             }
             else {
-                if( bPrevInCollision ) {
-                    fstarttime = ftime;
-                }
-                bPrevInCollision = false;
+                bPrevInCollision = false; // not sure what else to do
             }
         }
         
@@ -193,15 +212,22 @@ Planner Parameters\n\
             // only the last point is valid
             fstarttime = workspacetraj->GetTotalDuration();
         }
+        if( fstarttime > _parameters->ignorefirstcollision ) {
+            RAVELOG_DEBUG(str(boost::format("initial end effector in collision, start time %f > %f\n")%fstarttime%_parameters->ignorefirstcollision));
+            return false;
+        }
+
         listtransforms.push_back(tlasttrans);
         
-        // disable all child links since we've already checked their collision
-        vector<KinBody::LinkPtr> vlinks;
-        _manip->GetChildLinks(vlinks);
-        FOREACH(it,vlinks) {
-            (*it)->Enable(false);
+        if( _iktype == IkParameterization::Type_Transform6D ) {
+            // disable all child links since we've already checked their collision
+            vector<KinBody::LinkPtr> vlinks;
+            _manip->GetChildLinks(vlinks);
+            FOREACH(it,vlinks) {
+                (*it)->Enable(false);
+            }
         }
-        
+
         if( !poutputtraj ) {
             poutputtraj = RaveCreateTrajectory(GetEnv(),"");
         }
@@ -224,16 +250,18 @@ Planner Parameters\n\
 
         list<Transform>::iterator ittrans = listtransforms.begin();
         bPrevInCollision = true;
-        for(dReal ftime = 0; ftime < fendtime; ftime += _parameters->_fStepLength, ++ittrans) {
+        dReal ftime = 0;
+        for(; ftime < fendtime; ftime += _parameters->_fStepLength, ++ittrans) {
             _filteroptions = (ftime >= fstarttime) ? IKFO_CheckEnvCollisions : 0;
-            if( !_manip->FindIKSolution(*ittrans,vsolution,_filteroptions) ) {
+            IkParameterization ikparam(*ittrans,_iktype);
+            if( !_manip->FindIKSolution(ikparam,vsolution,_filteroptions) ) {
                 if( _filteroptions == 0 ) {
                     // haven't even checked with environment collisions, so a solution really doesn't exist
                     return false;
                 }
-                if( _parameters->ignorefirstcollision && bPrevInCollision ) {
+                if( ftime < _parameters->ignorefirstcollision && bPrevInCollision ) {
                     _filteroptions = 0;
-                    if( !_manip->FindIKSolution(*ittrans,vsolution,_filteroptions) ) {
+                    if( !_manip->FindIKSolution(ikparam,vsolution,_filteroptions) ) {
                         return false;
                     }
                 }
@@ -261,7 +289,7 @@ Planner Parameters\n\
             return false;
         }
 
-        RAVELOG_DEBUG(str(boost::format("workspace trajectory tracker plan success, path=%d points in %fs\n")%poutputtraj->GetPoints().size()%((0.001f*(float)(timeGetTime()-basetime)))));
+        RAVELOG_DEBUG(str(boost::format("workspace trajectory tracker plan success, path=%d points, time=%f computed in %fs\n")%poutputtraj->GetPoints().size()%ftime%((0.001f*(float)(timeGetTime()-basetime)))));
         return true;
     }
 
@@ -271,26 +299,30 @@ protected:
     void _SetPreviousSolution(const std::vector<dReal>& vsolution, bool bsetjacobian=true)
     {
         if( bsetjacobian ) {
-            _manip->CalculateJacobian(_mjacobian);
-            _manip->CalculateRotationJacobian(_mquatjacobian);
-            Vector q0 = _tbaseinv.rot;
-            // since will be using inside the ik custom filter _ValidateSolution, have to multiply be the inverse of the base
-            for(size_t i = 0; i < _manip->GetArmIndices().size(); ++i) {
-                Vector v = _tbaseinv.rotate(Vector(_mjacobian[0][i],_mjacobian[1][i],_mjacobian[2][i]));
-                _mjacobian[0][i] = v.x; _mjacobian[1][i] = v.y; _mjacobian[2][i] = v.z;
-                Vector q1(_mquatjacobian[0][i],_mquatjacobian[1][i],_mquatjacobian[2][i],_mquatjacobian[3][i]);
-                Vector q0xq1(q0.x*q1.x - q0.y*q1.y - q0.z*q1.z - q0.w*q1.w,
-                             q0.x*q1.y + q0.y*q1.x + q0.z*q1.w - q0.w*q1.z,
-                             q0.x*q1.z + q0.z*q1.x + q0.w*q1.y - q0.y*q1.w,
-                             q0.x*q1.w + q0.w*q1.x + q0.y*q1.z - q0.z*q1.y);
-                _mquatjacobian[0][i] = q0xq1.x; _mquatjacobian[1][i] = q0xq1.y; _mquatjacobian[2][i] = q0xq1.z; _mquatjacobian[3][i] = q0xq1.w;
+            if( _iktype != IkParameterization::Type_Rotation3D ) {
+                _manip->CalculateJacobian(_mjacobian);
+            }
+            if( _iktype != IkParameterization::Type_Translation3D ) {
+                _manip->CalculateRotationJacobian(_mquatjacobian);
+                Vector q0 = _tbaseinv.rot;
+                // since will be using inside the ik custom filter _ValidateSolution, have to multiply be the inverse of the base
+                for(size_t i = 0; i < _manip->GetArmIndices().size(); ++i) {
+                    Vector v = _tbaseinv.rotate(Vector(_mjacobian[0][i],_mjacobian[1][i],_mjacobian[2][i]));
+                    _mjacobian[0][i] = v.x; _mjacobian[1][i] = v.y; _mjacobian[2][i] = v.z;
+                    Vector q1(_mquatjacobian[0][i],_mquatjacobian[1][i],_mquatjacobian[2][i],_mquatjacobian[3][i]);
+                    Vector q0xq1(q0.x*q1.x - q0.y*q1.y - q0.z*q1.z - q0.w*q1.w,
+                                 q0.x*q1.y + q0.y*q1.x + q0.z*q1.w - q0.w*q1.z,
+                                 q0.x*q1.z + q0.z*q1.x + q0.w*q1.y - q0.y*q1.w,
+                                 q0.x*q1.w + q0.w*q1.x + q0.y*q1.z - q0.z*q1.y);
+                    _mquatjacobian[0][i] = q0xq1.x; _mquatjacobian[1][i] = q0xq1.y; _mquatjacobian[2][i] = q0xq1.z; _mquatjacobian[3][i] = q0xq1.w;
+                }
             }
         }
         else {
             _mjacobian.resize(boost::extents[0][0]);
             _mquatjacobian.resize(boost::extents[0][0]);
         }
-        _transprev = _tbaseinv * _manip->GetEndEffectorTransform();
+        _ikprev = _tbaseinv * _manip->GetIkParameterization(_iktype);
         _vprevsolution = vsolution;
     }
 
@@ -312,44 +344,72 @@ protected:
         
         // check if continuous with previous solution using the jacobian
         if( _mjacobian.num_elements() > 0 ) {
-            Vector expecteddeltatrans = ikp.GetTransform6D().trans - _transprev.trans;
+            Vector expecteddeltatrans;
+            switch(ikp.GetType()) {
+            case IkParameterization::Type_Transform6D:
+                expecteddeltatrans = ikp.GetTransform6D().trans - _ikprev.GetTransform6D().trans;
+                break;
+            case IkParameterization::Type_Translation3D:
+                expecteddeltatrans = ikp.GetTranslation3D() - _ikprev.GetTranslation3D();
+                break;
+            default:
+                RAVELOG_WARN("unsupported type");
+                expecteddeltatrans = ikp.GetTranslation3D() - _ikprev.GetTranslation3D();
+                break;
+            }
             Vector jdeltatrans;
             dReal solutiondiff = 0;
-            for(size_t j = 0; j < vsolution.size(); ++j) {
-                dReal d = vsolution[j]-_vprevsolution.at(j);
-                jdeltatrans.x += _mjacobian[0][j]*d;
-                jdeltatrans.y += _mjacobian[1][j]*d;
-                jdeltatrans.z += _mjacobian[2][j]*d;
-                solutiondiff += d*d;
-            }
-            dReal transangle = expecteddeltatrans.dot3(jdeltatrans);
-            dReal expecteddeltatrans_len = expecteddeltatrans.lengthsqr3();
-            dReal jdeltatrans_len = jdeltatrans.lengthsqr3();
-            if( jdeltatrans_len > 1e-7 * solutiondiff ) { // first see if there is a direction
-                if( transangle < 0 || transangle*transangle  < _fMaxCosDeviationAngle*_fMaxCosDeviationAngle*expecteddeltatrans_len*jdeltatrans_len ) {
-                    //RAVELOG_INFO("rejected translation: %e < %e\n",transangle,RaveSqrt(_fMaxCosDeviationAngle*_fMaxCosDeviationAngle*expecteddeltatrans_len*jdeltatrans_len));
-                    return IKFR_Reject;
+            if( ikp.GetType() != IkParameterization::Type_Rotation3D ) {
+                for(size_t j = 0; j < vsolution.size(); ++j) {
+                    dReal d = vsolution[j]-_vprevsolution.at(j);
+                    jdeltatrans.x += _mjacobian[0][j]*d;
+                    jdeltatrans.y += _mjacobian[1][j]*d;
+                    jdeltatrans.z += _mjacobian[2][j]*d;
+                    solutiondiff += d*d;
+                }
+                dReal transangle = expecteddeltatrans.dot3(jdeltatrans);
+                dReal expecteddeltatrans_len = expecteddeltatrans.lengthsqr3();
+                dReal jdeltatrans_len = jdeltatrans.lengthsqr3();
+                if( jdeltatrans_len > 1e-7 * solutiondiff ) { // first see if there is a direction
+                    if( transangle < 0 || transangle*transangle  < _fMaxCosDeviationAngle*_fMaxCosDeviationAngle*expecteddeltatrans_len*jdeltatrans_len ) {
+                        //RAVELOG_INFO("rejected translation: %e < %e\n",transangle,RaveSqrt(_fMaxCosDeviationAngle*_fMaxCosDeviationAngle*expecteddeltatrans_len*jdeltatrans_len));
+                        return IKFR_Reject;
+                    }
                 }
             }
-            // constrain rotations
-            Vector expecteddeltaquat = ikp.GetTransform6D().rot - _transprev.rot;
-            Vector jdeltaquat;
-            solutiondiff = 0;
-            for(size_t j = 0; j < vsolution.size(); ++j) {
-                dReal d = vsolution[j]-_vprevsolution.at(j);
-                jdeltaquat.x += _mquatjacobian[0][j]*d;
-                jdeltaquat.y += _mquatjacobian[1][j]*d;
-                jdeltaquat.z += _mquatjacobian[2][j]*d;
-                jdeltaquat.w += _mquatjacobian[3][j]*d;
-                solutiondiff += d*d;
-            }
-            dReal quatangle = expecteddeltaquat.dot(jdeltaquat);
-            dReal expecteddeltaquat_len = expecteddeltaquat.lengthsqr4();
-            dReal jdeltaquat_len = jdeltaquat.lengthsqr4();
-            if( jdeltaquat_len > 1e-4 * solutiondiff ) { // first see if there is a direction
-                if( quatangle < 0 || quatangle*quatangle  < 0.95f*0.95f*expecteddeltaquat_len*jdeltaquat_len ) {
-                    //RAVELOG_INFO("rejected rotation: %e < %e\n",quatangle,RaveSqrt(_fMaxCosDeviationAngle*_fMaxCosDeviationAngle*expecteddeltaquat.lengthsqr3()*jdeltaquat.lengthsqr3()));
-                    return IKFR_Reject;
+            if( ikp.GetType() != IkParameterization::Type_Translation3D ) {
+                // constrain rotations
+                Vector expecteddeltaquat;
+                switch(ikp.GetType()) {
+                case IkParameterization::Type_Transform6D:
+                    expecteddeltaquat = ikp.GetTransform6D().rot - _ikprev.GetTransform6D().rot;
+                    break;
+                case IkParameterization::Type_Rotation3D:
+                    expecteddeltaquat = ikp.GetRotation3D() - _ikprev.GetRotation3D();
+                    break;
+                default:
+                    RAVELOG_WARN("unknown iktype");
+                    expecteddeltaquat = ikp.GetRotation3D() - _ikprev.GetRotation3D();
+                    break;
+                }
+                Vector jdeltaquat;
+                solutiondiff = 0;
+                for(size_t j = 0; j < vsolution.size(); ++j) {
+                    dReal d = vsolution[j]-_vprevsolution.at(j);
+                    jdeltaquat.x += _mquatjacobian[0][j]*d;
+                    jdeltaquat.y += _mquatjacobian[1][j]*d;
+                    jdeltaquat.z += _mquatjacobian[2][j]*d;
+                    jdeltaquat.w += _mquatjacobian[3][j]*d;
+                    solutiondiff += d*d;
+                }
+                dReal quatangle = expecteddeltaquat.dot(jdeltaquat);
+                dReal expecteddeltaquat_len = expecteddeltaquat.lengthsqr4();
+                dReal jdeltaquat_len = jdeltaquat.lengthsqr4();
+                if( jdeltaquat_len > 1e-4 * solutiondiff ) { // first see if there is a direction
+                    if( quatangle < 0 || quatangle*quatangle  < 0.95f*0.95f*expecteddeltaquat_len*jdeltaquat_len ) {
+                        //RAVELOG_INFO("rejected rotation: %e < %e\n",quatangle,RaveSqrt(_fMaxCosDeviationAngle*_fMaxCosDeviationAngle*expecteddeltaquat.lengthsqr3()*jdeltaquat.lengthsqr3()));
+                        return IKFR_Reject;
+                    }
                 }
             }
         }
@@ -371,11 +431,12 @@ protected:
     boost::shared_ptr<WorkspaceTrajectoryParameters> _parameters;
     dReal _fMaxCosDeviationAngle;
     int _filteroptions;
+    IkParameterization::Type _iktype;
 
     // planning state
     Transform _tbaseinv;
     boost::multi_array<dReal,2> _mjacobian, _mquatjacobian;
-    Transform _transprev;
+    IkParameterization _ikprev;
     vector<dReal> _vprevsolution, _vtempsolution;
 
     // moving straight using jacobian (doesn't work as well)

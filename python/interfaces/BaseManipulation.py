@@ -57,7 +57,7 @@ class BaseManipulation:
         if outputtraj is not None and outputtraj:
             cmd += 'outputtraj '
         if ignorefirstcollision is not None:
-            cmd += 'ignorefirstcollision %d '%ignorefirstcollision
+            cmd += 'ignorefirstcollision %f '%ignorefirstcollision
         if maxdeviationangle is not None:
             cmd += 'maxdeviationangle %f '%maxdeviationangle
         res = self.prob.SendCommand(cmd)

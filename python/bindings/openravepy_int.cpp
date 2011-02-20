@@ -1469,6 +1469,8 @@ public:
         _pIkSolver->GetFreeParameters(values);
         return toPyArray(values);
     }
+
+    bool Supports(IkParameterization::Type type) { return _pIkSolver->Supports(type); }
 };
 
 class PyRobotBase : public PyKinBody
@@ -4254,6 +4256,7 @@ In python, the syntax is::\n\n\
     class_<PyIkSolverBase, boost::shared_ptr<PyIkSolverBase>, bases<PyInterfaceBase> >("IkSolver", DOXY_CLASS(IkSolverBase), no_init)
         .def("GetNumFreeParameters",&PyIkSolverBase::GetNumFreeParameters, DOXY_FN(IkSolverBase,GetNumFreeParameters))
         .def("GetFreeParameters",&PyIkSolverBase::GetFreeParameters, DOXY_FN(IkSolverBase,GetFreeParameters))
+        .def("Supports",&PyIkSolverBase::Supports, DOXY_FN(IkSolverBase,Supports))
         ;
 
     class_<PyPhysicsEngineBase, boost::shared_ptr<PyPhysicsEngineBase>, bases<PyInterfaceBase> >("PhysicsEngine", DOXY_CLASS(PhysicsEngineBase), no_init)

@@ -826,10 +826,25 @@ public:
     };
 
     IkParameterization() : _type(Type_None) {}
+    /// \brief sets a 6D transform parameterization
     IkParameterization(const Transform& t) { SetTransform6D(t); }
+    /// \brief sets a ray parameterization
     IkParameterization(const RAY& r) { SetRay4D(r); }
+    /// \brief set a custom parameterization using a transform as the source of the data. Not all types are supported with this method.
+    IkParameterization(const Transform& t, Type type) {
+        _type=type;
+        switch(_type) {
+        case Type_Transform6D: SetTransform6D(t); break;
+        case Type_Rotation3D: SetRotation3D(t.rot); break;
+        case Type_Translation3D: SetTranslation3D(t.trans); break;
+        case Type_Lookat3D: SetLookat3D(t.trans); break;
+        default:
+            throw openrave_exception(str(boost::format("IkParameterization constructor does not support type 0x%x")%_type));
+        }
+    }
 
     inline Type GetType() const { return _type; }
+    inline const std::string& GetName() const;
 
     /// \brief Returns the minimum degree of freedoms required for the IK type.
     static int GetDOF(Type type) { return (type>>28)&0xf; }
@@ -1216,6 +1231,16 @@ typedef InterfaceBasePtr (*PluginExportFn_CreateInterface)(InterfaceType type, c
 
 /// \deprecated
 typedef bool (*PluginExportFn_GetPluginAttributes)(PLUGININFO* pinfo, int size);
+
+// define inline functions
+const std::string& IkParameterization::GetName() const
+{
+    std::map<IkParameterization::Type,std::string>::const_iterator it = RaveGetIkParameterizationMap().find(_type);
+    if( it != RaveGetIkParameterizationMap().end() ) {
+        return it->second;
+    }
+    throw openrave_exception(str(boost::format("IkParameterization iktype 0x%x not supported")));
+}
 
 } // end namespace OpenRAVE
 

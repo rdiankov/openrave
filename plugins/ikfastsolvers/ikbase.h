@@ -103,7 +103,7 @@ class IkFastSolver : public IkSolverBase
     virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, int filteroptions, boost::shared_ptr< std::vector<dReal> > result)
     {
         if( param.GetType() != _iktype ) {
-            RAVELOG_WARN(str(boost::format("ik solver only supports type %d, given %d")%_iktype%param.GetType()));
+            RAVELOG_WARN(str(boost::format("ik solver only supports type 0x%x, given 0x%x")%_iktype%param.GetType()));
             return false;
         }
 
