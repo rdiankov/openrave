@@ -3648,7 +3648,16 @@ BOOST_PYTHON_MODULE(openravepy_int)
         .value("Reject",IKFR_Reject)
         .value("Quit",IKFR_Quit)
         ;
-
+    object iktype = enum_<IkParameterization::Type>("IkParameterizationType" DOXY_ENUM(IkParameterization::Type))
+        .value("Transform6D",IkParameterization::Type_Transform6D)
+        .value("Rotation3D",IkParameterization::Type_Rotation3D)
+        .value("Translation3D",IkParameterization::Type_Translation3D)
+        .value("Direction3D",IkParameterization::Type_Direction3D)
+        .value("Ray4D",IkParameterization::Type_Ray4D)
+        .value("Lookat3D",IkParameterization::Type_Lookat3D)
+        .value("TranslationDirection5D",IkParameterization::Type_TranslationDirection5D)
+        ;
+    
     class_< boost::shared_ptr< void > >("VoidPointer", "Holds auto-managed resources, deleting it releases its shared data.");
 
     class_<PyEnvironmentBase, boost::shared_ptr<PyEnvironmentBase> > classenv("Environment", DOXY_CLASS(EnvironmentBase));
@@ -4037,19 +4046,9 @@ In python, the syntax is::\n\n\
             .def("GetRay",&PyIkParameterization::GetRay4D, DOXY_FN(IkParameterization,GetRay4D))
             .def("GetLookat",&PyIkParameterization::GetLookat3D, DOXY_FN(IkParameterization,GetLookat3D))
             .def("GetTranslationDirection",&PyIkParameterization::GetTranslationDirection5D, DOXY_FN(IkParameterization,GetTranslationDirection5D))
+            //.def_readonly("Type",iktype)
             ;
-
-        {
-            scope type =  enum_<IkParameterization::Type>("Type" DOXY_ENUM(IkParameterization::Type))
-                .value("Transform6D",IkParameterization::Type_Transform6D)
-                .value("Rotation3D",IkParameterization::Type_Rotation3D)
-                .value("Translation3D",IkParameterization::Type_Translation3D)
-                .value("Direction3D",IkParameterization::Type_Direction3D)
-                .value("Ray4D",IkParameterization::Type_Ray4D)
-                .value("Lookat3D",IkParameterization::Type_Lookat3D)
-                .value("TranslationDirection5D",IkParameterization::Type_TranslationDirection5D)
-                ;
-        }
+        ikparameterization.attr("Type") = iktype;
     }
 
     {

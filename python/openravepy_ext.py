@@ -623,7 +623,10 @@ class OpenRAVEModel(metaclass.AutoReloader):
         try:
             viewername=OpenRAVEGlobalArguments.parseEnvironment(options,env,defaultviewer=defaultviewer,returnviewer=True)
             with env:
-                robot = env.ReadRobotXMLFile(options.robot,robotatts)
+                if robotatts is not None:
+                    robot = env.ReadRobotXMLFile(options.robot,robotatts)
+                else:
+                    robot = env.ReadRobotXMLFile(options.robot)
                 env.AddRobot(robot)
                 robot.SetTransform(numpy.eye(4))
                 if hasattr(options,'manipname'):
