@@ -369,10 +369,10 @@ class Environment : public EnvironmentBase
         bool bSuccess;
         if( _IsColladaFile(filename) ) {
             OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
-            bSuccess = RaveParseColladaFile(shared_from_this(), filename);
+            bSuccess = RaveParseColladaFile(shared_from_this(), filename, AttributesList());
         }
         else {
-            bSuccess = ParseXMLFile(boost::shared_ptr<OpenRAVEXMLParser::EnvironmentXMLReader>(new OpenRAVEXMLParser::EnvironmentXMLReader(shared_from_this(),std::list<std::pair<std::string,std::string> >(),false)), filename);
+            bSuccess = ParseXMLFile(boost::shared_ptr<OpenRAVEXMLParser::EnvironmentXMLReader>(new OpenRAVEXMLParser::EnvironmentXMLReader(shared_from_this(),AttributesList(),false)), filename);
         }
 
         if( !bSuccess ) {
@@ -385,7 +385,7 @@ class Environment : public EnvironmentBase
     virtual bool LoadXMLData(const std::string& data)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        if( !ParseXMLData(boost::shared_ptr<OpenRAVEXMLParser::EnvironmentXMLReader>(new OpenRAVEXMLParser::EnvironmentXMLReader(shared_from_this(),std::list<std::pair<std::string,std::string> >(),false)),data) ) {
+        if( !ParseXMLData(boost::shared_ptr<OpenRAVEXMLParser::EnvironmentXMLReader>(new OpenRAVEXMLParser::EnvironmentXMLReader(shared_from_this(),AttributesList(),false)),data) ) {
             RAVELOG_WARN("load failed environment data\n");
             return false;
         }
@@ -889,13 +889,13 @@ class Environment : public EnvironmentBase
             if( _IsColladaFile(filename) ) {
                 RobotBasePtr robot;
                 OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
-                if( !RaveParseColladaFile(shared_from_this(), robot, filename) ) {
+                if( !RaveParseColladaFile(shared_from_this(), robot, filename, AttributesList()) ) {
                     return RobotBasePtr();
                 }
                 return robot;
             }
             else {
-                InterfaceBasePtr pinterface = ReadInterfaceXMLFile(filename);
+                InterfaceBasePtr pinterface = ReadInterfaceXMLFile(filename,AttributesList());
                 BOOST_ASSERT(pinterface->GetInterfaceType() == PT_Robot );
                 return RaveInterfaceCast<RobotBase>(pinterface);
             }
@@ -906,7 +906,7 @@ class Environment : public EnvironmentBase
         return RobotBasePtr();
     }
 
-    virtual RobotBasePtr ReadRobotXMLFile(RobotBasePtr robot, const std::string& filename, const std::list<std::pair<std::string,std::string> >& atts)
+    virtual RobotBasePtr ReadRobotXMLFile(RobotBasePtr robot, const std::string& filename, const AttributesList& atts)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
 
@@ -920,7 +920,7 @@ class Environment : public EnvironmentBase
 
         if( _IsColladaFile(filename) ) {
             OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
-            if( !RaveParseColladaFile(shared_from_this(), robot, filename) ) {
+            if( !RaveParseColladaFile(shared_from_this(), robot, filename, atts) ) {
                 return RobotBasePtr();
             }
         }
@@ -938,7 +938,7 @@ class Environment : public EnvironmentBase
         return robot;
     }
 
-    virtual RobotBasePtr ReadRobotXMLData(RobotBasePtr robot, const std::string& data, const std::list<std::pair<std::string,std::string> >& atts)
+    virtual RobotBasePtr ReadRobotXMLData(RobotBasePtr robot, const std::string& data, const AttributesList& atts)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
 
@@ -951,7 +951,7 @@ class Environment : public EnvironmentBase
         }
 
         if( _IsColladaData(data) ) {
-            if( !RaveParseColladaData(shared_from_this(), robot, data) ) {
+            if( !RaveParseColladaData(shared_from_this(), robot, data, atts) ) {
                 return RobotBasePtr();
             }
         }
@@ -974,13 +974,13 @@ class Environment : public EnvironmentBase
             if( _IsColladaFile(filename) ) {
                 KinBodyPtr body;
                 OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
-                if( !RaveParseColladaFile(shared_from_this(), body, filename) ) {
+                if( !RaveParseColladaFile(shared_from_this(), body, filename, AttributesList()) ) {
                     return KinBodyPtr();
                 }
                 return body;
             }
             else {
-                InterfaceBasePtr pinterface = ReadInterfaceXMLFile(filename);
+                InterfaceBasePtr pinterface = ReadInterfaceXMLFile(filename,AttributesList());
                 BOOST_ASSERT(pinterface->GetInterfaceType() == PT_KinBody );
                 return RaveInterfaceCast<KinBody>(pinterface);
             }
@@ -991,7 +991,7 @@ class Environment : public EnvironmentBase
         return KinBodyPtr();
     }
 
-    virtual KinBodyPtr ReadKinBodyXMLFile(KinBodyPtr body, const std::string& filename, const std::list<std::pair<std::string,std::string> >& atts)
+    virtual KinBodyPtr ReadKinBodyXMLFile(KinBodyPtr body, const std::string& filename, const AttributesList& atts)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
 
@@ -1005,7 +1005,7 @@ class Environment : public EnvironmentBase
 
         if( _IsColladaFile(filename) ) {
             OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
-            if( !RaveParseColladaFile(shared_from_this(), body, filename) ) {
+            if( !RaveParseColladaFile(shared_from_this(), body, filename, atts) ) {
                 return KinBodyPtr();
             }
         }
@@ -1023,7 +1023,7 @@ class Environment : public EnvironmentBase
         return body;
     }
 
-    virtual KinBodyPtr ReadKinBodyXMLData(KinBodyPtr body, const std::string& data, const std::list<std::pair<std::string,std::string> >& atts)
+    virtual KinBodyPtr ReadKinBodyXMLData(KinBodyPtr body, const std::string& data, const AttributesList& atts)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
 
@@ -1036,7 +1036,7 @@ class Environment : public EnvironmentBase
         }
 
         if( _IsColladaData(data) ) {
-            if( !RaveParseColladaData(shared_from_this(), body, data) ) {
+            if( !RaveParseColladaData(shared_from_this(), body, data, atts) ) {
                 return RobotBasePtr();
             }
         }
@@ -1053,12 +1053,12 @@ class Environment : public EnvironmentBase
         return body;
     }
 
-    virtual InterfaceBasePtr ReadInterfaceXMLFile(const std::string& filename)
+    virtual InterfaceBasePtr ReadInterfaceXMLFile(const std::string& filename, const AttributesList& atts)
     {
         try {
             EnvironmentMutex::scoped_lock lockenv(GetMutex());
             OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
-            boost::shared_ptr<OpenRAVEXMLParser::GlobalInterfaceXMLReader> preader(new OpenRAVEXMLParser::GlobalInterfaceXMLReader(shared_from_this()));
+            boost::shared_ptr<OpenRAVEXMLParser::GlobalInterfaceXMLReader> preader(new OpenRAVEXMLParser::GlobalInterfaceXMLReader(shared_from_this(),atts));
             bool bSuccess = RaveParseXMLFile(preader, filename);
             if( !bSuccess || !preader->GetInterface()) {
                 return InterfaceBasePtr();
@@ -1072,7 +1072,7 @@ class Environment : public EnvironmentBase
         return InterfaceBasePtr();
     }
 
-    virtual InterfaceBasePtr ReadInterfaceXMLFile(InterfaceBasePtr pinterface, InterfaceType type, const std::string& filename, const std::list<std::pair<std::string,std::string> >& atts)
+    virtual InterfaceBasePtr ReadInterfaceXMLFile(InterfaceBasePtr pinterface, InterfaceType type, const std::string& filename, const AttributesList& atts)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         if( (type == PT_KinBody || type == PT_Robot) && _IsColladaFile(filename) ) {
@@ -1080,7 +1080,7 @@ class Environment : public EnvironmentBase
                 BOOST_ASSERT(!pinterface|| (pinterface->GetInterfaceType()==PT_KinBody||pinterface->GetInterfaceType()==PT_Robot));
                 KinBodyPtr pbody = RaveInterfaceCast<KinBody>(pinterface);
                 OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
-                if( !RaveParseColladaFile(shared_from_this(), pbody, filename) ) {
+                if( !RaveParseColladaFile(shared_from_this(), pbody, filename, atts) ) {
                     return InterfaceBasePtr();
                 }
                 pinterface = pbody;
@@ -1089,7 +1089,7 @@ class Environment : public EnvironmentBase
                 BOOST_ASSERT(!pinterface||pinterface->GetInterfaceType()==PT_Robot);
                 RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pinterface);
                 OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
-                if( !RaveParseColladaFile(shared_from_this(), probot, filename) ) {
+                if( !RaveParseColladaFile(shared_from_this(), probot, filename, atts) ) {
                     return InterfaceBasePtr();
                 }
                 pinterface = probot;
@@ -1107,7 +1107,7 @@ class Environment : public EnvironmentBase
                 }
             }
             else {
-                pinterface = ReadInterfaceXMLFile(filename);
+                pinterface = ReadInterfaceXMLFile(filename,AttributesList());
                 if( !!pinterface && pinterface->GetInterfaceType() != type ) {
                     return InterfaceBasePtr();
                 }
@@ -1117,7 +1117,7 @@ class Environment : public EnvironmentBase
         return pinterface;
     }
 
-    virtual InterfaceBasePtr ReadInterfaceXMLData(InterfaceBasePtr pinterface, InterfaceType type, const std::string& data, const std::list<std::pair<std::string,std::string> >& atts)
+    virtual InterfaceBasePtr ReadInterfaceXMLData(InterfaceBasePtr pinterface, InterfaceType type, const std::string& data, const AttributesList& atts)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
 

@@ -206,7 +206,7 @@ GraspParameters(EnvironmentBasePtr penv) : PlannerBase::PlannerParameters(), fst
         return !!O;
     }
 
-    ProcessElement startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts)
+    ProcessElement startElement(const std::string& name, const AttributesList& atts)
     {
         if( _bProcessingGrasp )
             return PE_Ignore;

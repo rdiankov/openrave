@@ -16,7 +16,7 @@
 .. image:: ../../images/example_tutorials/ik5d.jpg
   :height: 200
 
-Shows how to use translational inverse kinematics for an arm with few joints
+Shows how to use 5D translation+direction inverse kinematics for an arm with >= 5 joints.
 """
 from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'

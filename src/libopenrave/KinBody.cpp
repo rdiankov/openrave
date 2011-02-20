@@ -1779,7 +1779,7 @@ void KinBody::Destroy()
     _ResetInternalCollisionCache();
 }
 
-bool KinBody::InitFromFile(const std::string& filename, const std::list<std::pair<std::string,std::string> >& atts)
+bool KinBody::InitFromFile(const std::string& filename, const AttributesList& atts)
 {
     bool bSuccess = GetEnv()->ReadKinBodyXMLFile(shared_kinbody(), filename, atts)==shared_kinbody();
     if( !bSuccess ) {
@@ -1789,7 +1789,7 @@ bool KinBody::InitFromFile(const std::string& filename, const std::list<std::pai
     return true;
 }
 
-bool KinBody::InitFromData(const std::string& data, const std::list<std::pair<std::string,std::string> >& atts)
+bool KinBody::InitFromData(const std::string& data, const AttributesList& atts)
 {
     bool bSuccess = GetEnv()->ReadKinBodyXMLData(shared_kinbody(), data, atts)==shared_kinbody();
     if( !bSuccess ) {

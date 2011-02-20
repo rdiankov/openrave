@@ -688,7 +688,9 @@ private:
 
 typedef boost::shared_ptr<XMLReadable> XMLReadablePtr;
 typedef boost::shared_ptr<XMLReadable const> XMLReadableConstPtr;
-typedef std::list<std::pair<std::string,std::string> > XMLAttributesList;
+typedef std::list<std::pair<std::string,std::string> > AttributesList;
+/// \deprecated (11/02/18)
+typedef AttributesList XMLAttributesList RAVE_DEPRECATED;
 
 /// base class for all xml readers. XMLReaders are used to process data from
 /// xml files. Custom readers can be registered through EnvironmentBase.
@@ -713,7 +715,7 @@ public:
     /// \param name of the tag, will be always lower case
     /// \param atts string of attributes where the first std::string is the attribute name and second is the value
     /// \return true if tag is accepted and this class will process it, otherwise false
-    virtual ProcessElement startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts) = 0;
+    virtual ProcessElement startElement(const std::string& name, const AttributesList& atts) = 0;
 
     /// Gets called at the end of each "</type>" expression. In this case, name is "type"
     /// \param name of the tag, will be always lower case
@@ -731,14 +733,14 @@ public:
 typedef boost::shared_ptr<BaseXMLReader> BaseXMLReaderPtr;
 typedef boost::shared_ptr<BaseXMLReader const> BaseXMLReaderConstPtr;
 
-typedef boost::function<BaseXMLReaderPtr(InterfaceBasePtr, const std::list<std::pair<std::string,std::string> >&)> CreateXMLReaderFn;
+typedef boost::function<BaseXMLReaderPtr(InterfaceBasePtr, const AttributesList&)> CreateXMLReaderFn;
 
 /// reads until the tag ends
 class OPENRAVE_API DummyXMLReader : public BaseXMLReader
 {
 public:
     DummyXMLReader(const std::string& pfieldname, const std::string& pparentname, boost::shared_ptr<std::ostream> osrecord = boost::shared_ptr<std::ostream>());
-    virtual ProcessElement startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts);
+    virtual ProcessElement startElement(const std::string& name, const AttributesList& atts);
     virtual bool endElement(const std::string& name);
     virtual void characters(const std::string& ch);
     const std::string& GetFieldName() const { return _fieldname; }
@@ -848,8 +850,13 @@ public:
 
     /// \brief Returns the minimum degree of freedoms required for the IK type.
     static int GetDOF(Type type) { return (type>>28)&0xf; }
+    /// \brief Returns the minimum degree of freedoms required for the IK type.
+    inline int GetDOF() const { return (_type>>28)&0xf; }
+
     /// \brief Returns the number of values used to represent the parameterization ( >= dof ). The number of values serialized is this number plus 1 for the iktype.
     static int GetNumberOfValues(Type type) { return (type>>24)&0xf; }
+    /// \brief Returns the number of values used to represent the parameterization ( >= dof ). The number of values serialized is this number plus 1 for the iktype.
+    inline int GetNumberOfValues() const { return (_type>>24)&0xf; }
 
     inline void SetTransform6D(const Transform& t) { _type = Type_Transform6D; _transform = t; }
     inline void SetRotation3D(const Vector& quaternion) { _type = Type_Rotation3D; _transform.rot = quaternion; }
@@ -1184,7 +1191,7 @@ OPENRAVE_API void RaveGetEnvironments(std::list<EnvironmentBasePtr>& listenviron
 /// \brief Returns the current registered reader for the interface type/xmlid
 ///
 /// \throw openrave_exception Will throw with ORE_InvalidArguments if registered function could not be found.
-OPENRAVE_API BaseXMLReaderPtr RaveCallXMLReader(InterfaceType type, const std::string& xmltag, InterfaceBasePtr pinterface, const std::list<std::pair<std::string,std::string> >& atts);
+OPENRAVE_API BaseXMLReaderPtr RaveCallXMLReader(InterfaceType type, const std::string& xmltag, InterfaceBasePtr pinterface, const AttributesList& atts);
 
 //@}
 

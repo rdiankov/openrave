@@ -204,7 +204,6 @@ class InverseKinematicsModel(OpenRAVEModel):
     def autogenerate(self,options=None):
         freejoints = None
         iktype = self.iktype
-        usedummyjoints = None
         precision = None
         forceikbuild = True
         outputlang = None
@@ -212,7 +211,6 @@ class InverseKinematicsModel(OpenRAVEModel):
         if options is not None:
             forceikbuild=options.force
             precision=options.precision
-            usedummyjoints=options.usedummyjoints
             if options.freejoints is not None:
                 freejoints=options.freejoints
             outputlang=options.outputlang
@@ -240,10 +238,10 @@ class InverseKinematicsModel(OpenRAVEModel):
         elif self.manip.GetKinematicsStructureHash()=='ab9d03903279e44bc692e896791bcd05': # katana
             if iktype==IkParameterization.Type.Translation3D or (iktype==None and self.iktype==IkParameterization.Type.Translation3D):
                 freejoints = [self.robot.GetJoints()[ind].GetName() for ind in self.manip.GetArmIndices()[3:]]
-        self.generate(iktype=iktype,freejoints=freejoints,usedummyjoints=usedummyjoints,precision=precision,forceikbuild=forceikbuild,outputlang=outputlang,ipython=ipython)
+        self.generate(iktype=iktype,freejoints=freejoints,precision=precision,forceikbuild=forceikbuild,outputlang=outputlang,ipython=ipython)
         self.save()
 
-    def generate(self,iktype=None,freejoints=None,usedummyjoints=False,precision=None,forceikbuild=True,outputlang=None,ipython=False):
+    def generate(self,iktype=None,freejoints=None,freeindices=None,precision=None,forceikbuild=True,outputlang=None,ipython=False):
         if iktype is not None:
             self.iktype = iktype
         if self.iktype is None:
@@ -316,6 +314,10 @@ class InverseKinematicsModel(OpenRAVEModel):
                         raise LookupError("cannot find joint '%s(%d)' in solve joints: %s"%(jointname,jointindices[0],str(solvejoints)))
                     freejointinds.append(jointindices[0])
                     solvejoints.remove(jointindices[0])
+        if freeindices is not None:
+            freejointinds = freeindices
+            solvejoints = [i for i in solvejoints if not i in freeindices]
+            
         print 'Generating inverse kinematics for manip',self.manip.GetName(),':',self.iktype,solvejoints,'(this might take ~5 min)'
         dofexpected = IkParameterization.GetDOF(self.iktype)
         if len(solvejoints) > dofexpected:
@@ -334,7 +336,7 @@ class InverseKinematicsModel(OpenRAVEModel):
                     freejointinds.append(solvejoints.pop(-1))
         
         if not len(solvejoints) == dofexpected:
-            raise ValueError('Need %d solve joints, got: %d'%(dofexpected, len(solvejoints)))
+            raise ikfast.IKFastSolver.IKFeasibilityError('Need %d solve joints, got: %d'%(dofexpected, len(solvejoints)))
         
         sourcefilename += '_' + '_'.join(str(ind) for ind in solvejoints)
         if len(freejointinds)>0:
@@ -354,7 +356,7 @@ class InverseKinematicsModel(OpenRAVEModel):
                 ipshell = IPython.Shell.IPShellEmbed(argv='',banner = 'inversekinematics dropping into ipython',exit_msg = 'Leaving Interpreter and continuing solver.')
                 ipshell(local_ns=locals())
                 reload(ikfast) # in case changes occurred
-            chaintree = solver.generateIkSolver(baselink=baselink,eelink=eelink,freejointinds=freejointinds,solvefn=solvefn)
+            chaintree = solver.generateIkSolver(baselink=baselink,eelink=eelink,freeindices=freejointinds,solvefn=solvefn)
             code = solver.writeIkSolver(chaintree,lang=outputlang)
             if len(code) == 0:
                 raise ValueError('failed to generate ik solver for robot %s:%s'%(self.robot.GetName(),self.manip.GetName()))
@@ -476,8 +478,6 @@ class InverseKinematicsModel(OpenRAVEModel):
                           help='The precision to compute the inverse kinematics in, (default=%default).')
         parser.add_option('--usecached', action='store_false', dest='force',default=True,
                           help='If set, will always try to use the cached ik c++ file, instead of generating a new one.')
-        parser.add_option('--usedummyjoints', action='store_true',dest='usedummyjoints',default=False,
-                          help='Treat the unspecified joints in the kinematic chain as dummy and set them to 0. If not specified, treats all unspecified joints as free parameters.')
         parser.add_option('--freeinc', action='store', type='float', dest='freeinc',default=None,
                           help='The discretization value of freejoints.')
         parser.add_option('--numiktests','--iktests',action='store',type='string',dest='iktests',default=None,
@@ -505,12 +505,12 @@ class InverseKinematicsModel(OpenRAVEModel):
         else:
             iktype = IkParameterization.Type.Transform6D
         Model = lambda robot: InverseKinematicsModel(robot=robot,iktype=iktype,forceikfast=True)
-        OpenRAVEModel.RunFromParser(Model=Model,parser=parser,args=args,**kwargs)
+        OpenRAVEModel.RunFromParser(Model=Model,parser=parser,robotatts={'skipgeometry':'1'},args=args,**kwargs)
         if options.iktests is not None or options.perftiming is not None:
             print 'testing the success rate of robot ',options.robot
             env = Environment()
             try:
-                robot = env.ReadRobotXMLFile(options.robot)
+                robot = env.ReadRobotXMLFile(options.robot,{'skipgeometry':'1'})
                 env.AddRobot(robot)
                 if options.manipname is not None:
                     robot.SetActiveManipulator(options.manipname)

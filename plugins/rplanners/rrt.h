@@ -551,7 +551,7 @@ public:
             return !!O;
         }
 
-        ProcessElement startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts)
+        ProcessElement startElement(const std::string& name, const AttributesList& atts)
         {
             if( _bProcessingExploration )
                 return PE_Ignore;

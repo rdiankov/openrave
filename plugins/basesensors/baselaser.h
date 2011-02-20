@@ -25,7 +25,7 @@ protected:
     public:
     BaseLaser2DXMLReader(boost::shared_ptr<BaseLaser2DSensor> psensor) : _psensor(psensor) {}
         
-        virtual ProcessElement startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts)
+        virtual ProcessElement startElement(const std::string& name, const AttributesList& atts)
         {
             if( !!_pcurreader ) {
                 if( _pcurreader->startElement(name,atts) == PE_Support )
@@ -105,7 +105,7 @@ protected:
     };
 
 public:
-    static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const std::list<std::pair<std::string,std::string> >& atts)
+    static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const AttributesList& atts)
     {
         return BaseXMLReaderPtr(new BaseLaser2DXMLReader(boost::dynamic_pointer_cast<BaseLaser2DSensor>(ptr)));
     }
@@ -359,7 +359,7 @@ protected:
     public:
   BaseSpinningLaser2DXMLReader(boost::shared_ptr<BaseSpinningLaser2DSensor> psensor) : BaseLaser2DXMLReader(psensor), _bProcessing(false) {}
 
-        virtual ProcessElement startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts)
+        virtual ProcessElement startElement(const std::string& name, const AttributesList& atts)
         {
             if( _bProcessing )
                 return PE_Ignore;
@@ -406,7 +406,7 @@ protected:
     };
     
 public:
-    static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const std::list<std::pair<std::string,std::string> >& atts)
+    static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const AttributesList& atts)
     {
         return BaseXMLReaderPtr(new BaseSpinningLaser2DXMLReader(boost::dynamic_pointer_cast<BaseSpinningLaser2DSensor>(ptr)));
     }

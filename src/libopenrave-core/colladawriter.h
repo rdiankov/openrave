@@ -437,19 +437,10 @@ class ColladaWriter : public daeErrorHandler
         zi.external_fa = 0;
 
         int zip64=0;
-#if defined(__APPLE_CC__)
-        fin = fopen(rawfilename.c_str(), "rb");
-#else
         fin = fopen64(rawfilename.c_str(), "rb");
-#endif
         if(!!fin) {
-#if defined(__APPLE_CC__)
-            fseeko(fin, 0, SEEK_END);
-            ZPOS64_T pos = ftello(fin);
-#else
             fseeko64(fin, 0, SEEK_END);
             ZPOS64_T pos = ftello64(fin);
-#endif
             if(pos >= 0xffffffff) {
                 zip64 = 1;
             }
@@ -464,11 +455,7 @@ class ColladaWriter : public daeErrorHandler
             RAVELOG_WARN(str(boost::format("zipOpenNewFileInZip3_64 error %d")%err));
         }
         else {
-#if defined(__APPLE_CC__)
-            fin = fopen(rawfilename.c_str(),"rb");
-#else
             fin = fopen64(rawfilename.c_str(),"rb");
-#endif
             if (fin==NULL) {
                 err=ZIP_ERRNO;
                 RAVELOG_WARN(str(boost::format("error in opening %s in zipfile")%rawfilename));

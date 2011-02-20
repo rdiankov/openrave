@@ -970,7 +970,7 @@ class IKFastSolver(AutoReloader):
             generator = CodeGenerators.get('cpp',CodeGenerators.values()[0])
         return CodeGenerators[lang](kinematicshash=self.kinematicshash,version=__version__).generate(chaintree)
 
-    def generateIkSolver(self, baselink, eelink, freejointinds=None,solvefn=None):
+    def generateIkSolver(self, baselink, eelink, freeindices=None,solvefn=None):
         if solvefn is None:
             solvefn = IKFastSolver.solveFullIK_6D
         chainlinks = self.kinbody.GetChain(baselink,eelink,returnjoints=False)
@@ -978,7 +978,7 @@ class IKFastSolver(AutoReloader):
         LinksRaw, jointvars = self.forwardKinematicsChain(chainlinks,chainjoints)
         self.degeneratecases = None
 
-        if freejointinds is None:
+        if freeindices is None:
             # need to iterate through all combinations of free joints
             assert(0)
         isolvejointvars = []
@@ -992,7 +992,7 @@ class IKFastSolver(AutoReloader):
             var = self.Variable(v)
             axis = self.axismap[v.name]
             dofindex = axis.joint.GetDOFIndex()+axis.iaxis
-            if dofindex in freejointinds:
+            if dofindex in freeindices:
                 # convert all free variables to constants
                 self.ifreejointvars.append(i)
                 self.freevarsubs += [(cos(var.var), var.cvar), (sin(var.var), var.svar)]
@@ -4203,7 +4203,7 @@ ikfast.py --fkfile=fk_WAM7.txt --baselink=0 --eelink=7 --savefile=ik.cpp 1 2 3 4
                       help='base link index to start extraction of ik chain')
     parser.add_option('--eelink', action='store', type='int', dest='eelink',
                       help='end effector link index to end extraction of ik chain')
-    parser.add_option('--freejointind','--freeparam', action='append', type='int', dest='freejointinds',default=[],
+    parser.add_option('--freejointind','--freeparam', action='append', type='int', dest='freeindices',default=[],
                       help='Optional joint index specifying a free parameter of the manipulator. If not specified, assumes all joints not solving for are free parameters. Can be specified multiple times for multiple free parameters.')
     parser.add_option('--rotation3donly', action='store_true', dest='rotation3donly',default=False,
                       help='If true, need to specify only 3 solve joints and will solve for a target rotation')
@@ -4234,7 +4234,7 @@ ikfast.py --fkfile=fk_WAM7.txt --baselink=0 --eelink=7 --savefile=ik.cpp 1 2 3 4
         kinbody=env.ReadKinBodyXMLFile(options.fkfile)
         env.AddKinBody(kinbody)
         kinematics = IKFastSolver(kinbody,kinbody)
-        code = kinematics.generateIkSolver(options.baselink,options.eelink,options.freejointinds,solvefn=solvefn,lang=options.lang)
+        code = kinematics.generateIkSolver(options.baselink,options.eelink,options.freeindices,solvefn=solvefn,lang=options.lang)
         success = True if len(code) > 0 else False
         print 'total time for ik generation of %s is %fs'%(options.savefile,time.time()-tstart)
         if success:

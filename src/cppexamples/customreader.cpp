@@ -24,18 +24,18 @@ public:
     class PIDXMLReader : public BaseXMLReader
     {
     public:
-        PIDXMLReader(boost::shared_ptr<XMLData> piddata, const std::list<std::pair<std::string,std::string> >& atts) {
+        PIDXMLReader(boost::shared_ptr<XMLData> piddata, const AttributesList& atts) {
             _piddata = piddata;
             if( !_piddata )
                 _piddata.reset(new XMLData());
             RAVELOG_INFO("the attributes piddata is created with are:\n");
-            for(std::list<std::pair<std::string,std::string> >::const_iterator itatt = atts.begin(); itatt != atts.end(); ++itatt)
+            for(AttributesList::const_iterator itatt = atts.begin(); itatt != atts.end(); ++itatt)
                 RAVELOG_INFO("%s=%s\n",itatt->first.c_str(),itatt->second.c_str());
         }
 
         virtual XMLReadablePtr GetReadable() { return _piddata; }
 
-        virtual ProcessElement startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts) {
+        virtual ProcessElement startElement(const std::string& name, const AttributesList& atts) {
             _ss.str("");
             return (name == "pgains" || name=="igains") ? PE_Support : PE_Pass;
         }
@@ -67,7 +67,7 @@ public:
         stringstream _ss;
     };
 
-    static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const std::list<std::pair<std::string,std::string> >& atts)
+    static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const AttributesList& atts)
     {
         // ptr is the robot interface that this reader is being created for
         return BaseXMLReaderPtr(new PIDXMLReader(boost::shared_ptr<XMLData>(),atts));

@@ -698,10 +698,10 @@ public:
     
     virtual void Destroy();
 
-    /// Build the robot from an XML filename
-    virtual bool InitFromFile(const std::string& filename, const XMLAttributesList& atts = XMLAttributesList());
-    /// Build the robot from a string representing XML information
-    virtual bool InitFromData(const std::string& data, const XMLAttributesList& atts = XMLAttributesList());
+    /// \deprecated (11/02/18) \see EnvironmentBase::ReadKinBodyXMLFile
+    virtual bool InitFromFile(const std::string& filename, const AttributesList& atts = AttributesList()) RAVE_DEPRECATED;
+    /// \deprecated (11/02/18) \see EnvironmentBase::ReadKinBodyXMLData
+    virtual bool InitFromData(const std::string& data, const AttributesList& atts = AttributesList()) RAVE_DEPRECATED;
 
     /// \brief Create a kinbody with one link composed of an array of aligned bounding boxes.
     ///

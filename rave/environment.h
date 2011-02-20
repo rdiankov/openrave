@@ -165,22 +165,33 @@ public:
     virtual bool SetPhysicsEngine(PhysicsEngineBasePtr physics) = 0;
     virtual PhysicsEngineBasePtr GetPhysicsEngine() const = 0;
 
-    /// Makes one simulation step
+    /// \brief Makes one simulation time step.
+    ///
+    /// Can be called manually by the user inside planners. Keep in mind that the internal simulation thread also calls this function periodically. See \ref arch_simulation for more about the simulation thread.
     virtual void StepSimulation(dReal timeStep) = 0;
 
-    /// Start the internal simulation thread that calls the physics engine loop and SimulateStep for all modules.
-    /// Resets simulation time to 0.
-    /// \param fDeltaTime the delta step to take in simulation
-    /// \param bRealTime if false will call SimulateStep as fast as possible, otherwise will time the simulate step calls so that simulation progresses with real system time.
+    /** \brief Start the internal simulation thread.
+
+        Resets simulation time to 0. See \ref arch_simulation for more about the simulation thread.
+        
+        \param fDeltaTime the delta step to take in simulation
+        \param bRealTime if false will call SimulateStep as fast as possible, otherwise will time the simulate step calls so that simulation progresses with real system time.
+    */
     virtual void StartSimulation(dReal fDeltaTime, bool bRealTime=true) = 0;
 
-    /// Stops the internal physics loop, stops calling SimulateStep for all modules
+    /// \brief Stops the internal physics loop, stops calling SimulateStep for all modules
+    ///
+    /// See \ref arch_simulation for more about the simulation thread.
     virtual void StopSimulation() = 0;
 
-    /// \return true if inner simulation loop is executing
+    /// \brief Return true if inner simulation loop is executing
+    ///
+    /// See \ref arch_simulation for more about the simulation thread.
     virtual bool IsSimulationRunning() const = 0;
     
-    /// \return simulation time since the start of the environment (in microseconds)
+    /// \brief Return simulation time since the start of the environment (in microseconds).
+    ///
+    /// See \ref arch_simulation for more about the simulation thread.
     virtual uint64_t GetSimulationTime() = 0;
     //@}
 
@@ -193,44 +204,59 @@ public:
     virtual bool LoadXMLData(const std::string& data) = 0;
     /// Saves a scene depending on the filename extension. Default is in COLLADA format
     virtual bool Save(const std::string& filename) = 0;
-    /// Initializes a robot from an XML file. The robot should not be added the environment when calling this function.
-    /// \param robot If a null pointer is passed, a new robot will be created, otherwise an existing robot will be filled
-    /// \param filename the name of the file to open
-    /// \param atts the XML attributes/value pairs
-    virtual RobotBasePtr ReadRobotXMLFile(RobotBasePtr robot, const std::string& filename, const XMLAttributesList& atts = XMLAttributesList()) = 0;
+
+    /** \brief Initializes a robot from an XML file. The robot should not be added the environment when calling this function.
+        
+        \param robot If a null pointer is passed, a new robot will be created, otherwise an existing robot will be filled
+        \param filename the name of the file to open
+        \param atts The attribute/value pair specifying loading options. Defined in \ref arch_robot.
+    */
+    virtual RobotBasePtr ReadRobotXMLFile(RobotBasePtr robot, const std::string& filename, const AttributesList& atts = AttributesList()) = 0;
+    /// \brief Creates a new robot from an XML file with no extra load options specified.
     virtual RobotBasePtr ReadRobotXMLFile(const std::string& filename) = 0;
 
-    /// Initialize a robot from an XML formatted string
-    /// The robot should not be added the environment when calling this function.
-    /// \param robot If a null pointer is passed, a new robot will be created, otherwise an existing robot will be filled
-    /// \param atts the XML attributes/value pairs
-    virtual RobotBasePtr ReadRobotXMLData(RobotBasePtr robot, const std::string& data, const XMLAttributesList& atts = XMLAttributesList()) = 0;
+    /** \brief Initialize a robot from an XML formatted string
+    
+        The robot should not be added the environment when calling this function.
+        \param robot If a null pointer is passed, a new robot will be created, otherwise an existing robot will be filled
+        \param atts The attribute/value pair specifying loading options. Defined in \ref arch_robot.
+    */
+    virtual RobotBasePtr ReadRobotXMLData(RobotBasePtr robot, const std::string& data, const AttributesList& atts = AttributesList()) = 0;
 
-    /// Initializes a kinematic body from an XML file. The body should not be added to the environment when calling this function.
-    /// \param filename the name of the file to open
-    /// \param body If a null pointer is passed, a new body will be created, otherwise an existing robot will be filled
-    /// \param atts the XML attributes/value pairs
-    virtual KinBodyPtr ReadKinBodyXMLFile(KinBodyPtr body, const std::string& filename, const XMLAttributesList& atts = XMLAttributesList()) = 0;
+    /** \brief Initializes a kinematic body from an XML file. The body should not be added to the environment when calling this function.
+        
+        \param filename the name of the file to open
+        \param body If a null pointer is passed, a new body will be created, otherwise an existing robot will be filled
+        \param atts The attribute/value pair specifying loading options. Defined in \ref arch_kinbody.
+    */
+    virtual KinBodyPtr ReadKinBodyXMLFile(KinBodyPtr body, const std::string& filename, const AttributesList& atts = AttributesList()) = 0;
+    /// \brief Creates a new kinbody from an XML file with no extra load options specified.
     virtual KinBodyPtr ReadKinBodyXMLFile(const std::string& filename) = 0;
 
-    /// Initializes a kinematic body from an XML formatted string.
-    // The body should not be added to the environment when calling this function.
-    /// \param body If a null pointer is passed, a new body will be created, otherwise an existing robot will be filled
-    /// \param atts the XML attributes/value pairs
-    virtual KinBodyPtr ReadKinBodyXMLData(KinBodyPtr body, const std::string& data, const XMLAttributesList& atts = XMLAttributesList()) = 0;
+    /** \brief Initializes a kinematic body from an XML formatted string.
+        
+        The body should not be added to the environment when calling this function.
+        \param body If a null pointer is passed, a new body will be created, otherwise an existing robot will be filled
+        \param atts The attribute/value pair specifying loading options. Defined in \ref arch_kinbody.
+    */
+    virtual KinBodyPtr ReadKinBodyXMLData(KinBodyPtr body, const std::string& data, const AttributesList& atts = AttributesList()) = 0;
 
-    /// Initializes an interface from an XML file.
-    /// \param pinterface If a null pointer is passed, a new interface will be created, otherwise an existing interface will be filled
-    /// \param filename the name of the file to open
-    /// \param atts the XML attributes/value pairs
-    virtual InterfaceBasePtr ReadInterfaceXMLFile(InterfaceBasePtr pinterface, InterfaceType type, const std::string& filename, const XMLAttributesList& atts = XMLAttributesList()) = 0;
-    virtual InterfaceBasePtr ReadInterfaceXMLFile(const std::string& filename) = 0;
+    /** \brief Initializes an interface from an XML file.
+        
+        \param pinterface If a null pointer is passed, a new interface will be created, otherwise an existing interface will be filled
+        \param filename the name of the file to open
+        \param atts The attribute/value pair specifying loading options. See the individual interface descriptions at \ref interface_concepts.
+    */
+    virtual InterfaceBasePtr ReadInterfaceXMLFile(InterfaceBasePtr pinterface, InterfaceType type, const std::string& filename, const AttributesList& atts = AttributesList()) = 0;
+    virtual InterfaceBasePtr ReadInterfaceXMLFile(const std::string& filename, const AttributesList& atts = AttributesList()) = 0;
 
-    /// Initializes an interface from an XML formatted string.
-    /// \param pinterface If a null pointer is passed, a new interface will be created, otherwise an existing interface will be filled
-    /// \param data string containing XML data
-    /// \param atts the XML attributes/value pairs
-    virtual InterfaceBasePtr ReadInterfaceXMLData(InterfaceBasePtr pinterface, InterfaceType type, const std::string& data, const XMLAttributesList& atts = XMLAttributesList()) = 0;
+    /** \brief Initializes an interface from an XML formatted string.
+    
+        \param pinterface If a null pointer is passed, a new interface will be created, otherwise an existing interface will be filled
+        \param data string containing XML data
+        \param atts The attribute/value pair specifying loading options. See the individual interface descriptions at \ref interface_concepts.
+    */
+    virtual InterfaceBasePtr ReadInterfaceXMLData(InterfaceBasePtr pinterface, InterfaceType type, const std::string& data, const AttributesList& atts = AttributesList()) = 0;
     
     /// \deprecated (10/09/30) see \ref RaveRegisterXMLReader
     virtual boost::shared_ptr<void> RegisterXMLReader(InterfaceType type, const std::string& xmltag, const CreateXMLReaderFn& fn) RAVE_DEPRECATED = 0;

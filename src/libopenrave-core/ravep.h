@@ -254,12 +254,12 @@ inline bool IsValidName(const std::string& s) {
     return std::count_if(s.begin(), s.end(), IsValidCharInName) == (int)s.size();
 }
 
-bool RaveParseColladaFile(EnvironmentBasePtr penv, const std::string& filename);
-bool RaveParseColladaFile(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& filename);
-bool RaveParseColladaFile(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& filename);
-bool RaveParseColladaData(EnvironmentBasePtr penv, const std::string& data);
-bool RaveParseColladaData(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& data);
-bool RaveParseColladaData(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& data);
+bool RaveParseColladaFile(EnvironmentBasePtr penv, const std::string& filename,const AttributesList& atts);
+bool RaveParseColladaFile(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& filename,const AttributesList& atts);
+bool RaveParseColladaFile(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& filename,const AttributesList& atts);
+bool RaveParseColladaData(EnvironmentBasePtr penv, const std::string& data,const AttributesList& atts);
+bool RaveParseColladaData(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& data,const AttributesList& atts);
+bool RaveParseColladaData(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& data,const AttributesList& atts);
 
 void RaveWriteColladaFile(EnvironmentBasePtr penv, const std::string& filename);
 void RaveWriteColladaFile(KinBodyPtr pbody, const std::string& filename);

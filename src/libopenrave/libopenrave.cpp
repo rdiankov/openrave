@@ -374,7 +374,7 @@ public:
         return boost::shared_ptr<void>((void*)1, boost::bind(&RaveGlobal::_UnregisterXMLReader,boost::weak_ptr<RaveGlobal>(shared_from_this()),type,xmltag,oldfn));
     }
 
-    const BaseXMLReaderPtr CallXMLReader(InterfaceType type, const std::string& xmltag, InterfaceBasePtr pinterface, const std::list<std::pair<std::string,std::string> >& atts)
+    const BaseXMLReaderPtr CallXMLReader(InterfaceType type, const std::string& xmltag, InterfaceBasePtr pinterface, const AttributesList& atts)
     {
         READERSMAP::iterator it = _mapreaders[type].find(xmltag);
         if( it == _mapreaders[type].end() ) {
@@ -678,7 +678,7 @@ boost::shared_ptr<void> RaveRegisterXMLReader(InterfaceType type, const std::str
     return RaveGlobal::instance()->RegisterXMLReader(type,xmltag,fn);
 }
 
-BaseXMLReaderPtr RaveCallXMLReader(InterfaceType type, const std::string& xmltag, InterfaceBasePtr pinterface, const std::list<std::pair<std::string,std::string> >& atts)
+BaseXMLReaderPtr RaveCallXMLReader(InterfaceType type, const std::string& xmltag, InterfaceBasePtr pinterface, const AttributesList& atts)
 {
     return RaveGlobal::instance()->CallXMLReader(type,xmltag,pinterface,atts);
 }
@@ -714,7 +714,7 @@ DummyXMLReader::DummyXMLReader(const std::string& fieldname, const std::string& 
     _parentname += _fieldname;
 }
 
-BaseXMLReader::ProcessElement DummyXMLReader::startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts)
+BaseXMLReader::ProcessElement DummyXMLReader::startElement(const std::string& name, const AttributesList& atts)
 {
     if( !!_pcurreader ) {
         if( _pcurreader->startElement(name, atts) == PE_Support )
@@ -858,7 +858,7 @@ bool PlannerBase::PlannerParameters::serialize(std::ostream& O) const
     return !!O;
 }
 
-BaseXMLReader::ProcessElement PlannerBase::PlannerParameters::startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts)
+BaseXMLReader::ProcessElement PlannerBase::PlannerParameters::startElement(const std::string& name, const AttributesList& atts)
 {
     _ss.str(""); // have to clear the string
     if( !!__pcurreader ) {
@@ -1170,7 +1170,7 @@ struct XMLREADERDATA
 
 void DefaultStartElementSAXFunc(void *ctx, const xmlChar *name, const xmlChar **atts)
 {
-    std::list<std::pair<std::string,std::string> > listatts;
+    AttributesList listatts;
     if( atts != NULL ) {
         for (int i = 0;(atts[i] != NULL);i+=2) {
             listatts.push_back(make_pair(string((const char*)atts[i]),string((const char*)atts[i+1])));
@@ -1470,7 +1470,7 @@ SimpleSensorSystem::SimpleXMLReader::SimpleXMLReader(boost::shared_ptr<XMLData> 
 {
 }
 
-BaseXMLReader::ProcessElement SimpleSensorSystem::SimpleXMLReader::startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts)
+BaseXMLReader::ProcessElement SimpleSensorSystem::SimpleXMLReader::startElement(const std::string& name, const AttributesList& atts)
 {
     ss.str("");
     if( name != _pdata->GetXMLId() && name != "offsetlink" && name != "id" && name != "sid" && name != "translation" && name != "rotationmat" && name != "rotationaxis" && name != "quat" && name != "pretranslation" && name != "prerotation" && name != "prerotationaxis" && name != "prequat" ) {
@@ -1529,7 +1529,7 @@ void SimpleSensorSystem::SimpleXMLReader::characters(const std::string& ch)
     ss << ch;
 }
 
-BaseXMLReaderPtr SimpleSensorSystem::CreateXMLReaderId(const string& xmlid, InterfaceBasePtr ptr, const std::list<std::pair<std::string,std::string> >& atts)
+BaseXMLReaderPtr SimpleSensorSystem::CreateXMLReaderId(const string& xmlid, InterfaceBasePtr ptr, const AttributesList& atts)
 {
     return BaseXMLReaderPtr(new SimpleXMLReader(boost::shared_ptr<XMLData>(new XMLData(xmlid))));
 }

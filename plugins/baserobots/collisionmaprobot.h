@@ -38,7 +38,7 @@ class CollisionMapRobot : public RobotBase
     class CollisionMapXMLReader : public BaseXMLReader
     {
     public:
-        CollisionMapXMLReader(boost::shared_ptr<XMLData> cmdata, const std::list<std::pair<std::string,std::string> >& atts) {
+        CollisionMapXMLReader(boost::shared_ptr<XMLData> cmdata, const AttributesList& atts) {
             _cmdata = cmdata;
             if( !_cmdata )
                 _cmdata.reset(new XMLData());
@@ -46,12 +46,12 @@ class CollisionMapRobot : public RobotBase
 
         virtual XMLReadablePtr GetReadable() { return _cmdata; }
         
-        virtual ProcessElement startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts) {
+        virtual ProcessElement startElement(const std::string& name, const AttributesList& atts) {
             _ss.str(""); // have to clear the string
             if( name == "pair" ) {
                 _cmdata->listmaps.push_back(XMLData::COLLISIONPAIR());
                 XMLData::COLLISIONPAIR& pair = _cmdata->listmaps.back();
-                for(std::list<std::pair<std::string,std::string> >::const_iterator itatt = atts.begin(); itatt != atts.end(); ++itatt) {
+                for(AttributesList::const_iterator itatt = atts.begin(); itatt != atts.end(); ++itatt) {
                     if( itatt->first == "dims" ) {
                         boost::array<size_t,2> dims={{0,0}};
                         stringstream ss(itatt->second);
@@ -112,7 +112,7 @@ class CollisionMapRobot : public RobotBase
         stringstream _ss;
     };
 
-    static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const std::list<std::pair<std::string,std::string> >& atts)
+    static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const AttributesList& atts)
     {
         // ptr is the robot interface that this reader is being created for
         return BaseXMLReaderPtr(new CollisionMapXMLReader(boost::shared_ptr<XMLData>(),atts));

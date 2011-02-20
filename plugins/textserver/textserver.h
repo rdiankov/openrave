@@ -846,11 +846,13 @@ protected:
 
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         RobotBasePtr robot = RaveCreateRobot(GetEnv(),robottype);
-        if( !robot )
+        if( !robot ) {
             return false;
-        if( !robot->InitFromFile(xmlfile, list<pair<string,string> >()) )
+        }
+        robot = GetEnv()->ReadRobotXMLFile(robot,xmlfile,AttributesList());
+        if( !robot ) {
             return false;
-    
+        }
         robot->SetName(robotname);
         if( !GetEnv()->AddRobot(robot) ) {
             RAVELOG_WARN("failed to add robot");
@@ -2025,18 +2027,20 @@ protected:
 
         KinBody::Link::TRIMESH trimesh;
         FOREACH(itbody, vbodies) {
-            if( (find(vobjids.begin(),vobjids.end(),(*itbody)->GetEnvironmentId()) == vobjids.end()) ^ !inclusive )
+            if( (find(vobjids.begin(),vobjids.end(),(*itbody)->GetEnvironmentId()) == vobjids.end()) ^ !inclusive ) {
                 continue;
+            }
             GetEnv()->Triangulate(trimesh, *itbody);
         }
 
         BOOST_ASSERT( (trimesh.indices.size()%3) == 0 );
         os << trimesh.vertices.size() << " " << trimesh.indices.size()/3 << " ";
-        FOREACH(itvert, trimesh.vertices)
+        FOREACH(itvert, trimesh.vertices) {
             os << itvert->x << " " << itvert->y << " " << itvert->z << " ";
-        FOREACH(itind, trimesh.indices)
+        }
+        FOREACH(itind, trimesh.indices) {
             os << *itind << " ";
-
+        }
         return true;
     }
 
@@ -2059,9 +2063,9 @@ protected:
             }
 
             is >> ftimeout;
-            if( !!is )
+            if( !!is ) {
                 timeout = (int)(1000*ftimeout);
-
+            }
             pcontroller = probot->GetController();
         }
 
@@ -2072,18 +2076,21 @@ protected:
                     if( --timeout == 0 )
                         break;
                 }
-                if( bCloseThread )
+                if( bCloseThread ) {
                     return false;
+                }
             }
 
-            if( timeout != 0 ) // only ret success
+            if( timeout != 0 ) { // only ret success
                 os << "1";
-            else
+            }
+            else {
                 os << "0";
+            }
         }
-        else
+        else {
             os << "1";
-
+        }
         return true;
     }
 
@@ -2093,9 +2100,9 @@ protected:
         int problemid=0, dosync;
         bool bDoLock;
         is >> problemid >> dosync >> bDoLock;
-        if( !is )
+        if( !is ) {
             return false;
-
+        }
         SyncWithWorkerThread();
         // do not need lock
         //EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
@@ -2130,9 +2137,9 @@ protected:
     {
         string pluginname;
         is >> pluginname;
-        if( !is )
+        if( !is ) {
             return false;
-
+        }
         return RaveLoadPlugin(pluginname);
     }
 

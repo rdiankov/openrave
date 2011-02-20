@@ -43,7 +43,7 @@ ExplorationParameters() : _fExploreProb(0), _nExpectedDataSize(100), _bProcessin
         return !!O;
     }
 
-    ProcessElement startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts)
+    ProcessElement startElement(const std::string& name, const AttributesList& atts)
     {
         if( _bProcessingExploration )
             return PE_Ignore;
@@ -109,7 +109,7 @@ RAStarParameters() : fRadius(0.1f), fDistThresh(0.03f), fGoalCoeff(1), nMaxChild
         return !!O;
     }
 
-    ProcessElement startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts)
+    ProcessElement startElement(const std::string& name, const AttributesList& atts)
     {
         if( _bProcessingRA )
             return PE_Ignore;
@@ -179,7 +179,7 @@ GraspSetParameters(EnvironmentBasePtr penv) : _nGradientSamples(5), _fVisibiltyG
         return !!O;
     }
 
-    ProcessElement startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts)
+    ProcessElement startElement(const std::string& name, const AttributesList& atts)
     {
         if( _bProcessingGS )
             return PE_Ignore;
@@ -293,7 +293,7 @@ GraspParameters(EnvironmentBasePtr penv) : PlannerBase::PlannerParameters(), fst
         return !!O;
     }
 
-    ProcessElement startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts)
+    ProcessElement startElement(const std::string& name, const AttributesList& atts)
     {
         if( _bProcessingGrasp )
             return PE_Ignore;
@@ -402,7 +402,7 @@ public:
         return !!O;
     }
 
-    ProcessElement startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts)
+    ProcessElement startElement(const std::string& name, const AttributesList& atts)
     {
         if( _bProcessing ) {
             return PE_Ignore;

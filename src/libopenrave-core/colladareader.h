@@ -104,13 +104,14 @@ class ColladaReader : public daeErrorHandler
  ColladaReader(EnvironmentBasePtr penv) : _dom(NULL), _penv(penv), _nGlobalSensorId(0), _nGlobalManipulatorId(0), _nGlobalIndex(0) {
         daeErrorHandler::setErrorHandler(this);
         _bOpeningZAE = false;
+        _bSkipGeometry = false;
     }
     virtual ~ColladaReader() {
         _dae.reset();
         DAE::cleanup();
     }
 
-    bool InitFromFile(const string& filename)
+    bool InitFromFile(const string& filename,const AttributesList& atts)
     {
         RAVELOG_VERBOSE(str(boost::format("init COLLADA reader version: %s, namespace: %s, filename: %s\n")%COLLADA_VERSION%COLLADA_NAMESPACE%filename));
         _dae.reset(new DAE);
@@ -121,10 +122,10 @@ class ColladaReader : public daeErrorHandler
             return false;
         }
         _filename=filename;
-        return _Init();
+        return _Init(atts);
     }
 
-    bool InitFromData(const string& pdata)
+    bool InitFromData(const string& pdata,const AttributesList& atts)
     {
         RAVELOG_DEBUG(str(boost::format("init COLLADA reader version: %s, namespace: %s\n")%COLLADA_VERSION%COLLADA_NAMESPACE));
         _dae.reset(new DAE);
@@ -132,15 +133,24 @@ class ColladaReader : public daeErrorHandler
         if (!_dom) {
             return false;
         }
-        return _Init();
+        return _Init(atts);
     }
 
-    bool _Init()
+    bool _Init(const AttributesList& atts)
     {
         _fGlobalScale = 1;
         if( !!_dom->getAsset() ) {
             if( !!_dom->getAsset()->getUnit() ) {
                 _fGlobalScale = _dom->getAsset()->getUnit()->getMeter();
+            }
+        }
+        _bSkipGeometry = false;
+        FOREACHC(itatt,atts) {
+            if( itatt->first == "skipgeometry" ) {
+                _bSkipGeometry = stricmp(itatt->second.c_str(), "true") == 0 || itatt->second=="1";
+            }
+            else {
+                RAVELOG_WARN(str(boost::format("collada reader unprocessed attribute pair: %s:%s")%itatt->first%itatt->second));
             }
         }
         return true;
@@ -961,13 +971,16 @@ class ColladaReader : public daeErrorHandler
     /// \param plink    Link of the kinematics model
     bool ExtractGeometry(const domNodeRef pdomnode,KinBody::LinkPtr plink, const std::list<JointAxisBinding>& listAxisBindings,const std::vector<std::string>& vprocessednodes)
     {
+        if( _bSkipGeometry ) {
+            return true;
+        }
         if( !pdomnode ) {
             return false;
         }
         if( !!pdomnode->getID() && find(vprocessednodes.begin(),vprocessednodes.end(),pdomnode->getID()) != vprocessednodes.end() ) {
             return false;
         }
-
+        
         RAVELOG_VERBOSE(str(boost::format("ExtractGeometry(node,link) of %s\n")%pdomnode->getName()));
 
         bool bhasgeometry = false;
@@ -1754,7 +1767,7 @@ class ColladaReader : public daeErrorHandler
         }
 
         // Create the custom XML reader to read in the data (determined by users)
-        BaseXMLReaderPtr pcurreader = RaveCallXMLReader(PT_Sensor,psensor->GetXMLId(),psensor, std::list<std::pair<std::string,std::string> >());
+        BaseXMLReaderPtr pcurreader = RaveCallXMLReader(PT_Sensor,psensor->GetXMLId(),psensor, AttributesList());
         if( !pcurreader ) {
             pcurreader.reset();
             return false;
@@ -1773,7 +1786,7 @@ class ColladaReader : public daeErrorHandler
     {
         daeTArray<daeElementRef> children;
         elt->getChildren(children);
-        std::list<std::pair<std::string,std::string> >  atts;
+        AttributesList atts;
         for (size_t i = 0; i < children.getCount(); i++) {
             string xmltag = tolowerstring(children[i]->getElementName());
             daeTArray<daeElement::attr> domatts;
@@ -2730,7 +2743,6 @@ class ColladaReader : public daeErrorHandler
     }
         
     boost::shared_ptr<DAE> _dae;
-    bool _bOpeningZAE;
     domCOLLADA* _dom;
     EnvironmentBasePtr _penv;
     dReal _fGlobalScale;
@@ -2738,6 +2750,8 @@ class ColladaReader : public daeErrorHandler
     std::map<std::string,KinBody::JointPtr> _mapJointIds;
     int _nGlobalSensorId, _nGlobalManipulatorId, _nGlobalIndex;
     std::string _filename;
+    bool _bOpeningZAE;
+    bool _bSkipGeometry;
 };
 
 #endif

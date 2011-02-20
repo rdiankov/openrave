@@ -137,6 +137,7 @@ using OpenRAVE::ControllerBase;
 using OpenRAVE::RobotBasePtr;
 using OpenRAVE::TrajectoryBaseConstPtr;
 using OpenRAVE::ControllerBase;
+using OpenRAVE::AttributesList;
 
 // define ODE_LIB for static linking
 #include <ode/ode.h>

@@ -50,7 +50,7 @@ def run(args=None):
             print '%d contacts'%len(report.contacts)
             positions = [c.pos for c in report.contacts]
 
-        h1=env.plot3(array(positions),10)
+        h1=env.plot3(array(positions),20)
 
         raw_input('press key to show collisions with links')
 
@@ -63,7 +63,7 @@ def run(args=None):
                     print 'link %s %d contacts'%(link.GetName(),len(report.contacts))
                     positions += [c.pos for c in report.contacts]
 
-        h2=env.plot3(array(positions),10)
+        h2=env.plot3(array(positions),20)
 
         raw_input('press any key to exit')
     finally:

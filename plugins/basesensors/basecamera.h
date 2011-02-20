@@ -23,7 +23,7 @@ class BaseCameraSensor : public SensorBase
     public:
     BaseCameraXMLReader(boost::shared_ptr<BaseCameraSensor> psensor) : _psensor(psensor) {}
         
-        virtual ProcessElement startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts)
+        virtual ProcessElement startElement(const std::string& name, const AttributesList& atts)
         {
             if( !!_pcurreader ) {
                 if( _pcurreader->startElement(name,atts) == PE_Support )
@@ -89,7 +89,7 @@ class BaseCameraSensor : public SensorBase
         stringstream ss;
     };
  public:
-    static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const std::list<std::pair<std::string,std::string> >& atts)
+    static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const AttributesList& atts)
     {
         return BaseXMLReaderPtr(new BaseCameraXMLReader(boost::dynamic_pointer_cast<BaseCameraSensor>(ptr)));
     }

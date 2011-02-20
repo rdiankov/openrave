@@ -93,57 +93,57 @@ void CreateTriMeshData(SoNode* pnode, KinBody::Link::TRIMESH& tri)
 #include "colladareader.h"
 #include "colladawriter.h"
 
-bool RaveParseColladaFile(EnvironmentBasePtr penv, const string& filename)
+bool RaveParseColladaFile(EnvironmentBasePtr penv, const string& filename,const AttributesList& atts)
 {
     ColladaReader reader(penv);
     boost::shared_ptr<pair<string,string> > filedata = OpenRAVEXMLParser::RaveFindFile(filename);
-    if (!filedata || !reader.InitFromFile(filedata->second)) {
+    if (!filedata || !reader.InitFromFile(filedata->second,atts)) {
         return false;
     }
     return reader.Extract();
 }
 
-bool RaveParseColladaFile(EnvironmentBasePtr penv, KinBodyPtr& pbody, const string& filename)
+bool RaveParseColladaFile(EnvironmentBasePtr penv, KinBodyPtr& pbody, const string& filename,const AttributesList& atts)
 {
     ColladaReader reader(penv);
     boost::shared_ptr<pair<string,string> > filedata = OpenRAVEXMLParser::RaveFindFile(filename);
-    if (!filedata || !reader.InitFromFile(filedata->second)) {
+    if (!filedata || !reader.InitFromFile(filedata->second,atts)) {
         return false;
     }
     return reader.Extract(pbody);
 }
 
-bool RaveParseColladaFile(EnvironmentBasePtr penv, RobotBasePtr& probot, const string& filename)
+bool RaveParseColladaFile(EnvironmentBasePtr penv, RobotBasePtr& probot, const string& filename,const AttributesList& atts)
 {
     ColladaReader reader(penv);
     boost::shared_ptr<pair<string,string> > filedata = OpenRAVEXMLParser::RaveFindFile(filename);
-    if (!filedata || !reader.InitFromFile(filedata->second)) {
+    if (!filedata || !reader.InitFromFile(filedata->second,atts)) {
         return false;
     }
     return reader.Extract(probot);
 }
 
-bool RaveParseColladaData(EnvironmentBasePtr penv, const string& pdata) {
+bool RaveParseColladaData(EnvironmentBasePtr penv, const string& pdata,const AttributesList& atts) {
     ColladaReader reader(penv);
-    if (!reader.InitFromData(pdata)) {
+    if (!reader.InitFromData(pdata,atts)) {
         return false;
     }
     return reader.Extract();
 }
 
-bool RaveParseColladaData(EnvironmentBasePtr penv, KinBodyPtr& pbody, const string& pdata)
+bool RaveParseColladaData(EnvironmentBasePtr penv, KinBodyPtr& pbody, const string& pdata,const AttributesList& atts)
 {
     ColladaReader reader(penv);
-    if (!reader.InitFromData(pdata)) {
+    if (!reader.InitFromData(pdata,atts)) {
         return false;
     }
     return reader.Extract(pbody);
 }
 
-bool RaveParseColladaData(EnvironmentBasePtr penv, RobotBasePtr& probot, const string& pdata)
+bool RaveParseColladaData(EnvironmentBasePtr penv, RobotBasePtr& probot, const string& pdata,const AttributesList& atts)
 {
     ColladaReader reader(penv);
-    if (!reader.InitFromData(pdata)) {
+    if (!reader.InitFromData(pdata,atts)) {
         return false;
     }
     return reader.Extract(probot);
@@ -178,37 +178,37 @@ void RaveWriteColladaFile(RobotBasePtr probot, const string& filename)
 
 #else
 
-bool RaveParseColladaFile(EnvironmentBasePtr penv, const string& filename)
+bool RaveParseColladaFile(EnvironmentBasePtr penv, const string& filename,const AttributesList& atts)
 {
     RAVELOG_ERROR("collada files not supported\n");
     return false;
 }
 
-bool RaveParseColladaFile(EnvironmentBasePtr penv, KinBodyPtr& pbody, const string& filename)
+bool RaveParseColladaFile(EnvironmentBasePtr penv, KinBodyPtr& pbody, const string& filename,const AttributesList& atts)
 {
     RAVELOG_ERROR("collada files not supported\n");
     return false;
 }
 
-bool RaveParseColladaFile(EnvironmentBasePtr penv, RobotBasePtr& probot, const string& filename)
+bool RaveParseColladaFile(EnvironmentBasePtr penv, RobotBasePtr& probot, const string& filename,const AttributesList& atts)
 {
     RAVELOG_ERROR("collada files not supported\n");
     return false;
 }
 
-bool RaveParseColladaData(EnvironmentBasePtr penv, const string& pdata)
+bool RaveParseColladaData(EnvironmentBasePtr penv, const string& pdata,const AttributesList& atts)
 {
     RAVELOG_ERROR("collada files not supported\n");
     return false;
 }
 
-bool RaveParseColladaData(EnvironmentBasePtr penv, KinBodyPtr& pbody, const string& pdata)
+bool RaveParseColladaData(EnvironmentBasePtr penv, KinBodyPtr& pbody, const string& pdata,const AttributesList& atts)
 {
     RAVELOG_ERROR("collada files not supported\n");
     return false;
 }
 
-bool RaveParseColladaData(EnvironmentBasePtr penv, RobotBasePtr& probot, const string& pdata)
+bool RaveParseColladaData(EnvironmentBasePtr penv, RobotBasePtr& probot, const string& pdata,const AttributesList& atts)
 {
     RAVELOG_ERROR("collada files not supported\n");
     return false;

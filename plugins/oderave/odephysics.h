@@ -48,10 +48,10 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
     class PhysicsPropertiesXMLReader : public BaseXMLReader
     {
     public:
-    PhysicsPropertiesXMLReader(boost::shared_ptr<ODEPhysicsEngine> physics, const std::list<std::pair<std::string,std::string> >& atts) : _physics(physics) {
+    PhysicsPropertiesXMLReader(boost::shared_ptr<ODEPhysicsEngine> physics, const AttributesList& atts) : _physics(physics) {
         }
 
-        virtual ProcessElement startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts) {
+        virtual ProcessElement startElement(const std::string& name, const AttributesList& atts) {
             if( !!_pcurreader ) {
                 if( _pcurreader->startElement(name,atts) == PE_Support )
                     return PE_Support;
@@ -113,7 +113,7 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
     };
 
  public:
-    static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const std::list<std::pair<std::string,std::string> >& atts)
+    static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const AttributesList& atts)
     {
         return BaseXMLReaderPtr(new PhysicsPropertiesXMLReader(boost::dynamic_pointer_cast<ODEPhysicsEngine>(ptr),atts));
     }

@@ -128,7 +128,7 @@ public:
     public:
         SimpleXMLReader(boost::shared_ptr<XMLData>);
         virtual XMLReadablePtr GetReadable() { return _pdata; }
-        virtual ProcessElement startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts);
+        virtual ProcessElement startElement(const std::string& name, const AttributesList& atts);
         virtual bool endElement(const std::string& name);
         virtual void characters(const std::string& ch);
 
@@ -163,7 +163,7 @@ protected:
     virtual void SetRecentTransform(boost::shared_ptr<BodyData> pdata, const Transform& t) { pdata->tnew = t; }
 
     /// creates a reader to parse the data
-    static BaseXMLReaderPtr CreateXMLReaderId(const std::string& xmlid, InterfaceBasePtr ptr, const std::list<std::pair<std::string,std::string> >& atts);
+    static BaseXMLReaderPtr CreateXMLReaderId(const std::string& xmlid, InterfaceBasePtr ptr, const AttributesList& atts);
 
     std::string _xmlid;
     BODIES _mapbodies;

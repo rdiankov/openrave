@@ -310,9 +310,10 @@ public:
     
     virtual void Destroy();
 
-    /// \brief Build the robot from a file.
-    virtual bool InitFromFile(const std::string& filename, const XMLAttributesList& atts = XMLAttributesList());
-    virtual bool InitFromData(const std::string& data, const XMLAttributesList& atts = XMLAttributesList());
+    /// \deprecated (11/02/18) \see EnvironmentBase::ReadRobotXMLFile
+    virtual bool InitFromFile(const std::string& filename, const AttributesList& atts = AttributesList()) RAVE_DEPRECATED;
+    /// \deprecated (11/02/18) \see EnvironmentBase::ReadRobotXMLData
+    virtual bool InitFromData(const std::string& data, const AttributesList& atts = AttributesList()) RAVE_DEPRECATED;
 
     /// \brief Returns the manipulators of the robot
     virtual std::vector<ManipulatorPtr>& GetManipulators() { return _vecManipulators; }

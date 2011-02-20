@@ -72,7 +72,8 @@ public:
                 ret = p->simulationfn(fElapsedTime);
             }
             catch(...) {
-                RAVELOG_WARN("unknown exception in python callback, please register again\n");
+                RAVELOG_WARN("unknown exception in python callback, please register again:\n");
+                PyErr_Print();
                 ret = true;
             }
             PyGILState_Release(gstate);

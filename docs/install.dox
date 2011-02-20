@@ -552,7 +552,7 @@ subversionを更新したときには常に\c runcmake_win.batを再度実行し
 First execute this command:
 
 \verbatim
-sudo port install cmake boost libxml2 glew octave
+sudo port install cmake boost libxml2 glew py-numpy 
 \endverbatim
 
 It is necessary to install these libraries:
@@ -570,7 +570,7 @@ After this, follow the instructions on \ref installation_linux.
 はじめに以下のコマンドを実行してください．
 
 \verbatim
-sudo port install cmake boost libxml2 glew octave
+sudo port install cmake boost libxml2 glew py-numpy 
 \endverbatim
 
 以下のライブラリのインストールが必要です．

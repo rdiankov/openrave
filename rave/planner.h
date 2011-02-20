@@ -157,7 +157,7 @@ public:
         virtual bool serialize(std::ostream& O) const;
                                
         //@{ XML parsing functions, parses the default parameters
-        virtual ProcessElement startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts);
+        virtual ProcessElement startElement(const std::string& name, const AttributesList& atts);
         virtual bool endElement(const std::string& name);
         virtual void characters(const std::string& ch);
         std::stringstream _ss; ///< holds the data read by characters

@@ -34,7 +34,7 @@ enum SerializationOptions
     SO_Geometry = 0x40, ///< geometry information (for collision detection)
 };
 
-/** \brief <b>[interface]</b> Base class for all interfaces that OpenRAVE provides. See \ref arch_interface.
+/** \brief <b>[interface]</b> Base class for all interfaces that OpenRAVE provides. See \ref interface_concepts.
     \ingroup interfaces
 */
 class OPENRAVE_API InterfaceBase : public boost::enable_shared_from_this<InterfaceBase>

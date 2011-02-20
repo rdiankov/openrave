@@ -55,7 +55,7 @@ GraspSetParameters(EnvironmentBasePtr penv) : _nGradientSamples(5), _fVisibiltyG
         return !!O;
     }
 
-    ProcessElement startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts)
+    ProcessElement startElement(const std::string& name, const AttributesList& atts)
     {
         if( _bProcessingGS )
             return PE_Ignore;
@@ -122,7 +122,7 @@ BasicRRTParameters() : _fGoalBiasProb(0.05f), _bProcessing(false) {
         return !!O;
     }
 
-    ProcessElement startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts)
+    ProcessElement startElement(const std::string& name, const AttributesList& atts)
     {
         if( _bProcessing ) {
             return PE_Ignore;
@@ -195,7 +195,7 @@ public:
         return !!O;
     }
 
-    ProcessElement startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts)
+    ProcessElement startElement(const std::string& name, const AttributesList& atts)
     {
         if( _bProcessing ) {
             return PE_Ignore;

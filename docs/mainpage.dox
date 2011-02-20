@@ -481,7 +481,7 @@ make
 
 /** \defgroup interfaces Base Interface Classes
 
-A list of the %OpenRAVE interface templates. See \ref arch_interface for an explanation.
+A list of the %OpenRAVE interface templates. See \ref interface_concepts.
  */
 
 /** \defgroup geometric_primitives Geometric Primitives

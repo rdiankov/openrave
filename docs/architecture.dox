@@ -119,7 +119,7 @@ having the environment lock acquired.
 \subsection arch_simulation Simulation Thread
 
 A thread is always running in the background periodically calling SimulationStep on all the
-controllers and problem interfaces, and calling the physics engine simulation step. The simulation
+controllers and problem interfaces, and calling the physics engine SimulateStep. The simulation
 thread keeps track the the global time.
 
 \en
@@ -460,6 +460,12 @@ Each KinBody can be thought of as the basic rigid body element in OpenRAVE. It i
 - Jacobian calculation - both translational and rotational.
 - Attaching bodies online - a necessary function for manipulation planning; is called, for example, when an object is rigidly grasped by a hand
 
+\section arch_kinbody_options Loading Options
+
+This is the set of loading options passed as a AttributesList into functions like OpenRAVE::EnvironmentBase::ReadKinBodyXMLFile:
+- <b>prefix</b>: prefix link, joint, manipulator, and sensor names with a string
+- <b>skipgeometry</b>: if 1 or true, will skip loading all geometry of the links
+
 */
 
 /**
@@ -501,6 +507,12 @@ KinBody.
 
 - \ref OpenRAVE::RobotBase::AttachedSensor "AttachedSensor" - Can attach any number of sensors to
   the robot's links. The sensor transformations will be completely owned by the robot.
+
+\section arch_robot_options Loading Options
+
+This is the set of loading options passed as a AttributesList into functions like OpenRAVE::EnvironmentBase::ReadRobotXMLFile.
+
+KinBody \ref arch_kinbody_options is also valid.
 
   */
 

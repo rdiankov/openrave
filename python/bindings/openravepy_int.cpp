@@ -162,6 +162,7 @@ public:
         return boost::python::make_tuple(r.vertices,r.indices);
     }
 };
+
 class PyInterfaceBase
 {
 protected:
@@ -495,8 +496,14 @@ public:
     virtual ~PyKinBody() {}
     KinBodyPtr GetBody() { return _pbody; }
 
-    bool InitFromFile(const string& filename) { return _pbody->InitFromFile(filename,std::list<std::pair<std::string,std::string> >()); }
-    bool InitFromData(const string& data) { return _pbody->InitFromData(data,std::list<std::pair<std::string,std::string> >()); }
+    bool InitFromFile(const string& filename) {
+        RAVELOG_WARN("KinBody.InitFromFile is deprecated, use EnvironmentBase::ReadKinBodyXMLFile\n");
+        return _pbody->GetEnv()->ReadKinBodyXMLFile(_pbody,filename);
+    }
+    bool InitFromData(const string& data) {
+        RAVELOG_WARN("KinBody.InitFromData is deprecated, use EnvironmentBase::ReadKinBodyXMLData\n");
+        return _pbody->GetEnv()->ReadKinBodyXMLData(_pbody,data);
+    }
     bool InitFromBoxes(const boost::multi_array<dReal,2>& vboxes, bool bDraw)
     {
         if( vboxes.shape()[1] != 6 ) {
@@ -2037,7 +2044,8 @@ public:
             }
         }
         catch(...) {
-            RAVELOG_ERROR("exception raised inside WaitForController\n");
+            RAVELOG_ERROR("exception raised inside WaitForController:\n");
+            PyErr_Print();
             bSuccess = false;
         }
         
@@ -2332,7 +2340,8 @@ protected:
             res = fncallback(PyKinBody::PyLinkPtr(new PyKinBody::PyLink(plink,pyenv)),toPyVector3(position),toPyVector3(direction));
         }
         catch(...) {
-            RAVELOG_ERRORA("exception occured in python viewer callback\n");
+            RAVELOG_ERRORA("exception occured in python viewer callback:\n");
+            PyErr_Print();
         }
         PyGILState_Release(gstate);
         extract<bool> xb(res);
@@ -2408,6 +2417,29 @@ protected:
     boost::mutex _mutexViewer;
     boost::condition _conditionViewer;
 
+    PyInterfaceBasePtr _toPyInterface(InterfaceBasePtr pinterface)
+    {
+        if( !pinterface ) {
+            return PyInterfaceBasePtr();
+        }
+        switch(pinterface->GetInterfaceType()) {
+        case PT_Planner: return PyPlannerBasePtr(new PyPlannerBase(boost::static_pointer_cast<PlannerBase>(pinterface),shared_from_this()));
+        case PT_Robot: return PyRobotBasePtr(new PyRobotBase(boost::static_pointer_cast<RobotBase>(pinterface),shared_from_this()));
+        case PT_SensorSystem: return PySensorSystemBasePtr(new PySensorSystemBase(boost::static_pointer_cast<SensorSystemBase>(pinterface),shared_from_this()));
+        case PT_Controller: return PyControllerBasePtr(new PyControllerBase(boost::static_pointer_cast<ControllerBase>(pinterface),shared_from_this()));
+        case PT_ProblemInstance: return PyProblemInstancePtr(new PyProblemInstance(boost::static_pointer_cast<ProblemInstance>(pinterface),shared_from_this()));
+        case PT_InverseKinematicsSolver: return PyIkSolverBasePtr(new PyIkSolverBase(boost::static_pointer_cast<IkSolverBase>(pinterface),shared_from_this()));
+        case PT_KinBody: return PyKinBodyPtr(new PyKinBody(boost::static_pointer_cast<KinBody>(pinterface),shared_from_this()));
+        case PT_PhysicsEngine: return PyPhysicsEngineBasePtr(new PyPhysicsEngineBase(boost::static_pointer_cast<PhysicsEngineBase>(pinterface),shared_from_this()));
+        case PT_Sensor: return PySensorBasePtr(new PySensorBase(boost::static_pointer_cast<SensorBase>(pinterface),shared_from_this()));
+        case PT_CollisionChecker: return PyCollisionCheckerBasePtr(new PyCollisionCheckerBase(boost::static_pointer_cast<CollisionCheckerBase>(pinterface),shared_from_this()));
+        case PT_Trajectory: return PyTrajectoryBasePtr(new PyTrajectoryBase(boost::static_pointer_cast<TrajectoryBase>(pinterface),shared_from_this()));
+        case PT_Viewer: return PyViewerBasePtr(new PyViewerBase(boost::static_pointer_cast<ViewerBase>(pinterface),shared_from_this()));
+        }
+        return PyInterfaceBasePtr();
+    }
+
+
     void _ViewerThread(const string& strviewer, bool bShowViewer)
     {
         ViewerBasePtr pviewer;
@@ -2441,7 +2473,8 @@ protected:
             res = fncallback(pyreport,bFromPhysics);
         }
         catch(...) {
-            RAVELOG_ERRORA("exception occured in python collision callback\n");
+            RAVELOG_ERRORA("exception occured in python collision callback:\n");
+            PyErr_Print();
         }
         PyGILState_Release(gstate);
         if( res == object() || !res ) {
@@ -2872,45 +2905,48 @@ public:
         RobotBasePtr probot = _penv->ReadRobotXMLFile(filename);
         return !probot ? PyRobotBasePtr() : PyRobotBasePtr(new PyRobotBase(probot,shared_from_this()));
     }
-    PyRobotBasePtr ReadRobotXMLData(const string& data)
+    PyRobotBasePtr ReadRobotXMLFile(const string& filename, dict odictatts)
     {
-        RobotBasePtr probot = _penv->ReadRobotXMLData(RobotBasePtr(), data, std::list<std::pair<std::string,std::string> >());
+        RobotBasePtr probot = _penv->ReadRobotXMLFile(RobotBasePtr(), filename,toAttributesList(odictatts));
         return !probot ? PyRobotBasePtr() : PyRobotBasePtr(new PyRobotBase(probot,shared_from_this()));
     }
-
+    PyRobotBasePtr ReadRobotXMLData(const string& data)
+    {
+        RobotBasePtr probot = _penv->ReadRobotXMLData(RobotBasePtr(), data, AttributesList());
+        return !probot ? PyRobotBasePtr() : PyRobotBasePtr(new PyRobotBase(probot,shared_from_this()));
+    }
+    PyRobotBasePtr ReadRobotXMLData(const string& data, dict odictatts)
+    {
+        RobotBasePtr probot = _penv->ReadRobotXMLData(RobotBasePtr(), data, toAttributesList(odictatts));
+        return !probot ? PyRobotBasePtr() : PyRobotBasePtr(new PyRobotBase(probot,shared_from_this()));
+    }
     PyKinBodyPtr ReadKinBodyXMLFile(const string& filename)
     {
         KinBodyPtr pbody = _penv->ReadKinBodyXMLFile(filename);
         return !pbody ? PyKinBodyPtr() : PyKinBodyPtr(new PyKinBody(pbody,shared_from_this()));
     }
-
-    PyKinBodyPtr ReadKinBodyXMLData(const string& data)
+    PyKinBodyPtr ReadKinBodyXMLFile(const string& filename, dict odictatts)
     {
-        KinBodyPtr pbody = _penv->ReadKinBodyXMLData(KinBodyPtr(), data, std::list<std::pair<std::string,std::string> >());
+        KinBodyPtr pbody = _penv->ReadKinBodyXMLFile(KinBodyPtr(), filename, toAttributesList(odictatts));
         return !pbody ? PyKinBodyPtr() : PyKinBodyPtr(new PyKinBody(pbody,shared_from_this()));
     }
-
+    PyKinBodyPtr ReadKinBodyXMLData(const string& data)
+    {
+        KinBodyPtr pbody = _penv->ReadKinBodyXMLData(KinBodyPtr(), data, AttributesList());
+        return !pbody ? PyKinBodyPtr() : PyKinBodyPtr(new PyKinBody(pbody,shared_from_this()));
+    }
+    PyKinBodyPtr ReadKinBodyXMLData(const string& data, dict odictatts)
+    {
+        KinBodyPtr pbody = _penv->ReadKinBodyXMLData(KinBodyPtr(), data, toAttributesList(odictatts));
+        return !pbody ? PyKinBodyPtr() : PyKinBodyPtr(new PyKinBody(pbody,shared_from_this()));
+    }
     PyInterfaceBasePtr ReadInterfaceXMLFile(const std::string& filename)
     {
-        InterfaceBasePtr pbody = _penv->ReadInterfaceXMLFile(filename);
-        if( !pbody ) {
-            return PyInterfaceBasePtr();
-        }
-        switch(pbody->GetInterfaceType()) {
-        case PT_Planner: return PyPlannerBasePtr(new PyPlannerBase(boost::static_pointer_cast<PlannerBase>(pbody),shared_from_this()));
-        case PT_Robot: return PyRobotBasePtr(new PyRobotBase(boost::static_pointer_cast<RobotBase>(pbody),shared_from_this()));
-        case PT_SensorSystem: return PySensorSystemBasePtr(new PySensorSystemBase(boost::static_pointer_cast<SensorSystemBase>(pbody),shared_from_this()));
-        case PT_Controller: return PyControllerBasePtr(new PyControllerBase(boost::static_pointer_cast<ControllerBase>(pbody),shared_from_this()));
-        case PT_ProblemInstance: return PyProblemInstancePtr(new PyProblemInstance(boost::static_pointer_cast<ProblemInstance>(pbody),shared_from_this()));
-        case PT_InverseKinematicsSolver: return PyIkSolverBasePtr(new PyIkSolverBase(boost::static_pointer_cast<IkSolverBase>(pbody),shared_from_this()));
-        case PT_KinBody: return PyKinBodyPtr(new PyKinBody(boost::static_pointer_cast<KinBody>(pbody),shared_from_this()));
-        case PT_PhysicsEngine: return PyPhysicsEngineBasePtr(new PyPhysicsEngineBase(boost::static_pointer_cast<PhysicsEngineBase>(pbody),shared_from_this()));
-        case PT_Sensor: return PySensorBasePtr(new PySensorBase(boost::static_pointer_cast<SensorBase>(pbody),shared_from_this()));
-        case PT_CollisionChecker: return PyCollisionCheckerBasePtr(new PyCollisionCheckerBase(boost::static_pointer_cast<CollisionCheckerBase>(pbody),shared_from_this()));
-        case PT_Trajectory: return PyTrajectoryBasePtr(new PyTrajectoryBase(boost::static_pointer_cast<TrajectoryBase>(pbody),shared_from_this()));
-        case PT_Viewer: return PyViewerBasePtr(new PyViewerBase(boost::static_pointer_cast<ViewerBase>(pbody),shared_from_this()));
-        }
-        return PyInterfaceBasePtr();
+        return _toPyInterface(_penv->ReadInterfaceXMLFile(filename));
+    }
+    PyInterfaceBasePtr ReadInterfaceXMLFile(const std::string& filename, dict odictatts)
+    {
+        return _toPyInterface(_penv->ReadInterfaceXMLFile(filename, toAttributesList(odictatts)));
     }
 
     bool AddKinBody(PyKinBodyPtr pbody) { CHECK_POINTER(pbody); return _penv->AddKinBody(pbody->GetBody()); }
@@ -3961,6 +3997,8 @@ In python, the syntax is::\n\n\
         ;
 
     {
+        int (*getdof1)(IkParameterization::Type) = &IkParameterization::GetDOF;
+        int (*getnumberofvalues1)(IkParameterization::Type) = &IkParameterization::GetNumberOfValues;
         scope ikparameterization = class_<PyIkParameterization, boost::shared_ptr<PyIkParameterization> >("IkParameterization", DOXY_CLASS(IkParameterization))
             .def(init<object,IkParameterization::Type>(args("primitive","type")))
             .def("GetType",&PyIkParameterization::GetType, DOXY_FN(IkParameterization,GetType))
@@ -3978,9 +4016,9 @@ In python, the syntax is::\n\n\
             .def("GetRay4D",&PyIkParameterization::GetRay4D, DOXY_FN(IkParameterization,GetRay4D))
             .def("GetLookat3D",&PyIkParameterization::GetLookat3D, DOXY_FN(IkParameterization,GetLookat3D))
             .def("GetTranslationDirection5D",&PyIkParameterization::GetTranslationDirection5D, DOXY_FN(IkParameterization,GetTranslationDirection5D))
-            .def("GetDOF", &IkParameterization::GetDOF,args("type"))
+            .def("GetDOF", getdof1,args("type"), DOXY_FN(IkParameterization,GetDOF))
             .staticmethod("GetDOF")
-            .def("GetNumberOfValues",&IkParameterization::GetNumberOfValues,args("type"))
+            .def("GetNumberOfValues",getnumberofvalues1,args("type"), DOXY_FN(IkParameterization,GetNumberOfValues))
             .staticmethod("GetNumberOfValues")
             .def_pickle(IkParameterization_pickle_suite())
 
@@ -4409,6 +4447,16 @@ In python, the syntax is::\n\n\
         bool (PyEnvironmentBase::*addsensor2)(PySensorBasePtr,const std::string&,bool) = &PyEnvironmentBase::AddSensor;
         void (PyEnvironmentBase::*setuserdata1)(PyUserData) = &PyEnvironmentBase::SetUserData;
         void (PyEnvironmentBase::*setuserdata2)(object) = &PyEnvironmentBase::SetUserData;
+        PyRobotBasePtr (PyEnvironmentBase::*readrobotxmlfile1)(const string&) = &PyEnvironmentBase::ReadRobotXMLFile;
+        PyRobotBasePtr (PyEnvironmentBase::*readrobotxmlfile2)(const string&,dict) = &PyEnvironmentBase::ReadRobotXMLFile;
+        PyRobotBasePtr (PyEnvironmentBase::*readrobotxmldata1)(const string&) = &PyEnvironmentBase::ReadRobotXMLData;
+        PyRobotBasePtr (PyEnvironmentBase::*readrobotxmldata2)(const string&,dict) = &PyEnvironmentBase::ReadRobotXMLData;
+        PyKinBodyPtr (PyEnvironmentBase::*readkinbodyxmlfile1)(const string&) = &PyEnvironmentBase::ReadKinBodyXMLFile;
+        PyKinBodyPtr (PyEnvironmentBase::*readkinbodyxmlfile2)(const string&,dict) = &PyEnvironmentBase::ReadKinBodyXMLFile;
+        PyKinBodyPtr (PyEnvironmentBase::*readkinbodyxmldata1)(const string&) = &PyEnvironmentBase::ReadKinBodyXMLData;
+        PyKinBodyPtr (PyEnvironmentBase::*readkinbodyxmldata2)(const string&,dict) = &PyEnvironmentBase::ReadKinBodyXMLData;
+        PyInterfaceBasePtr (PyEnvironmentBase::*readinterfacexmlfile1)(const string&) = &PyEnvironmentBase::ReadInterfaceXMLFile;
+        PyInterfaceBasePtr (PyEnvironmentBase::*readinterfacexmlfile2)(const string&,dict) = &PyEnvironmentBase::ReadInterfaceXMLFile;
         scope env = classenv
             .def(init<>())
             .def("Reset",&PyEnvironmentBase::Reset, DOXY_FN(EnvironmentBase,Reset))
@@ -4456,11 +4504,16 @@ In python, the syntax is::\n\n\
                                               "Check if any rays hit the body and returns their contact points along with a vector specifying if a collision occured or not. Rays is a Nx6 array, first 3 columsn are position, last 3 are direction+range."))
             .def("Load",&PyEnvironmentBase::Load,args("filename"), DOXY_FN(EnvironmentBase,Load))
             .def("Save",&PyEnvironmentBase::Save,args("filename"), DOXY_FN(EnvironmentBase,Save))
-            .def("ReadRobotXMLFile",&PyEnvironmentBase::ReadRobotXMLFile,args("filename"), DOXY_FN(EnvironmentBase,ReadRobotXMLFile "const std::string"))
-            .def("ReadRobotXMLData",&PyEnvironmentBase::ReadRobotXMLData,args("data"), DOXY_FN(EnvironmentBase,ReadRobotXMLData "RobotBasePtr; const std::string; const XMLAttributesList"))
-            .def("ReadKinBodyXMLFile",&PyEnvironmentBase::ReadKinBodyXMLFile,args("filename"), DOXY_FN(EnvironmentBase,ReadKinBodyXMLFile "const std::string"))
-            .def("ReadKinBodyXMLData",&PyEnvironmentBase::ReadKinBodyXMLData,args("data"), DOXY_FN(EnvironmentBase,ReadKinBodyXMLData "KinBodyPtr; const std::string; const XMLAttributesList"))
-            .def("ReadInterfaceXMLFile",&PyEnvironmentBase::ReadInterfaceXMLFile,args("filename"), DOXY_FN(EnvironmentBase,ReadInterfaceXMLFile "const std::string"))
+            .def("ReadRobotXMLFile",readrobotxmlfile1,args("filename"), DOXY_FN(EnvironmentBase,ReadRobotXMLFile "const std::string"))
+            .def("ReadRobotXMLFile",readrobotxmlfile2,args("filename","atts"), DOXY_FN(EnvironmentBase,ReadRobotXMLFile "const std::string"))
+            .def("ReadRobotXMLData",readrobotxmldata1,args("data"), DOXY_FN(EnvironmentBase,ReadRobotXMLData "RobotBasePtr; const std::string; const XMLAttributesList"))
+            .def("ReadRobotXMLData",readrobotxmldata2,args("data","atts"), DOXY_FN(EnvironmentBase,ReadRobotXMLData "RobotBasePtr; const std::string; const XMLAttributesList"))
+            .def("ReadKinBodyXMLFile",readkinbodyxmlfile1,args("filename"), DOXY_FN(EnvironmentBase,ReadKinBodyXMLFile "const std::string"))
+            .def("ReadKinBodyXMLFile",readkinbodyxmlfile2,args("filename","atts"), DOXY_FN(EnvironmentBase,ReadKinBodyXMLFile "const std::string"))
+            .def("ReadKinBodyXMLData",readkinbodyxmldata1,args("data"), DOXY_FN(EnvironmentBase,ReadKinBodyXMLData "KinBodyPtr; const std::string; const XMLAttributesList"))
+            .def("ReadKinBodyXMLData",readkinbodyxmldata2,args("data","atts"), DOXY_FN(EnvironmentBase,ReadKinBodyXMLData "KinBodyPtr; const std::string; const XMLAttributesList"))
+            .def("ReadInterfaceXMLFile",readinterfacexmlfile1,args("filename"), DOXY_FN(EnvironmentBase,ReadInterfaceXMLFile "const std::string"))
+            .def("ReadInterfaceXMLFile",readinterfacexmlfile2,args("filename","atts"), DOXY_FN(EnvironmentBase,ReadInterfaceXMLFile "const std::string"))
             .def("AddKinBody",addkinbody1,args("body"), DOXY_FN(EnvironmentBase,AddKinBody))
             .def("AddKinBody",addkinbody2,args("body","anonymous"), DOXY_FN(EnvironmentBase,AddKinBody))
             .def("AddRobot",addrobot1,args("robot"), DOXY_FN(EnvironmentBase,AddRobot))

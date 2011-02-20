@@ -53,12 +53,20 @@ function _complete_openravepy {
             COMPREPLY=($(compgen -f -X "!*.so" -- ${cur}))
             return 0
             ;;
+        --robotmanipulators)
+            COMPREPLY=($(compgen -f -X "!*.+(dae|zae|xml)" -- ${cur}))
+            return 0
+            ;;
+        --robotsensors)
+            COMPREPLY=($(compgen -f -X "!*.+(dae|zae|xml)" -- ${cur}))
+            return 0
+            ;;
         *)
             ;;
     esac
 
     # not processing a current option, so offer all the options again
-    opts="--loadplugin --collision --physics --viewer --server --serverport --level --ipython --pythoncmd --listinterfaces --listplugins  --listdatabases --listexamples"
+    opts="--loadplugin --collision --physics --viewer --server --serverport --level --ipython --pythoncmd --listinterfaces --listplugins  --listdatabases --listexamples --robotmanipulators --robotsensors"
     if [[ $COMP_CWORD == 1 ]]; then
         # these options transfer the args to another program
         opts="$opts --database --example"
