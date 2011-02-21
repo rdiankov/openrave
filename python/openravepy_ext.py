@@ -663,6 +663,30 @@ class OpenRAVEModel(metaclass.AutoReloader):
             if destroyenv:
                 env.Destroy()
 
+# this is necessary due to broken boost python pickle support for enums
+def _tuple2enum(enum, value):
+    enum = getattr(openravepy, enum)
+    e = enum.values.get(value,None)
+    if e is None:
+        e = enum(value)
+    return e
+
+#def isEnumType(o):
+#    return isinstance(o, type) and issubclass(o,int) and not (o is int)
+
+def _registerEnumPicklers(): 
+    from copy_reg import constructor, pickle
+    def reduce_enum(e):
+        enum = type(e).__name__.split('.')[-1]
+        return ( _tuple2enum, ( enum, int(e) ) )
+    constructor( _tuple2enum)
+    pickle(openravepy.IkParameterizationType,reduce_enum)
+    #for e in [ e for e in vars(openravepy).itervalues() if isEnumType(e) ]:
+    #    pickle(e, reduce_enum)
+
+_registerEnumPicklers()
+
+
 class openrave_exception(Exception):
     """wrap up the C++ openrave_exception"""
     def __init__( self, app_error ):

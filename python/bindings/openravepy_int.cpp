@@ -4046,7 +4046,6 @@ In python, the syntax is::\n\n\
             .def("GetRay",&PyIkParameterization::GetRay4D, DOXY_FN(IkParameterization,GetRay4D))
             .def("GetLookat",&PyIkParameterization::GetLookat3D, DOXY_FN(IkParameterization,GetLookat3D))
             .def("GetTranslationDirection",&PyIkParameterization::GetTranslationDirection5D, DOXY_FN(IkParameterization,GetTranslationDirection5D))
-            //.def_readonly("Type",iktype)
             ;
         ikparameterization.attr("Type") = iktype;
     }

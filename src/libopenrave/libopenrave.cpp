@@ -306,7 +306,7 @@ public:
 
     void Destroy()
     {
-        RAVELOG_VERBOSE("shutting down openrave\n");
+        // don't use any log statements since global instance might be null
         // environments have to be destroyed carefully since their destructors can be called, which will attempt to unregister the environment
         std::map<int, EnvironmentBase*> mapenvironments;
         {
