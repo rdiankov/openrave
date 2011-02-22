@@ -540,7 +540,7 @@ class IKFastSolver(AutoReloader):
             self.equations=equations
             self.checkvars=checkvars
         def __str__(self):
-            return "Not enough equations to solve variables %s, perhaps manipulator doesn't have enough degrees of freedom or bad free joints were chosen."%str(self.checkvars)
+            return "Not enough equations to solve variables %s, perhaps manipulator doesn't have enough degrees of freedom or bad free joints were chosen. This is not an ikfast failure, it just means the robot kinematics are invalid for this type of IK."%str(self.checkvars)
 
     class JointAxis:
         __slots__ = ['joint','iaxis']
