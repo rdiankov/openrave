@@ -147,7 +147,7 @@ set(OPENRAVE_CORE_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/src/libopenrave-core)
 set(OPENRAVE_LINK_DIRS "")
 
 # to facilitate compilation, all visual studio libraries are included locally
-set(Boost_ADDITIONAL_VERSIONS "1.40" "1.39" "1.38" "1.37.0" "1.37" "1.35.0" "1.34.1" "1.34.0" "1.34" "1.33.1" "1.33.0" "1.33")
+set(Boost_ADDITIONAL_VERSIONS "1.46" "1.45" "1.44" "1.43" "1.42" "1.41" "1.40" "1.39" "1.38" "1.37.0" "1.37" "1.35.0" "1.34.1" "1.34.0" "1.34" "1.33.1" "1.33.0" "1.33")
 
 if( MSVC )
   add_definitions( -D_CRT_SECURE_NO_WARNINGS)
@@ -374,9 +374,6 @@ if( CLOCK_GETTIME_FOUND )
   add_definitions(-DCLOCK_GETTIME_FOUND)
 endif()
 
-# calls find_package ZLIB and libxml2, which might overwrite any previously set local values, so call in the beginning
-#find_package(COLLADA)
-
 #libXml2
 find_package(LibXml2)
 
@@ -406,6 +403,8 @@ if( NOT ZLIB_FOUND )
   set(ZLIB_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/zlib)
 endif()
 
+pkg_check_modules(COLLADA collada15dom>=2.3.0)
+
 # check for local collada compilation (buggy so don't enable)
 #if( COLLADA_FOUND )
 #  set(COLLADA_INCLUDE_DIR ${COLLADA_INCLUDE_DIR} ${COLLADA_INCLUDE_DIR}/1.5)
@@ -417,10 +416,11 @@ endif()
 #  endif()
 #endif()
 
-if( NOT COLLADA_FOUND AND ZLIB_FOUND AND Boost_FILESYSTEM_FOUND AND Boost_SYSTEM_FOUND )
-  add_subdirectory(3rdparty/minizip)
-  set(MINIZIP_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/minizip ${ZLIB_INCLUDE_DIR})
+# require minizip regardless of collada presence
+add_subdirectory(3rdparty/minizip)
+set(MINIZIP_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/minizip ${ZLIB_INCLUDE_DIR})
 
+if( NOT COLLADA_FOUND AND ZLIB_FOUND AND Boost_FILESYSTEM_FOUND AND Boost_SYSTEM_FOUND )
   pkg_check_modules(libpcrecpp libpcrecpp)
   if( libpcrecpp_FOUND )
     set(CMAKE_REQUIRED_INCLUDES ${libpcrecpp_INCLUDE_DIRS})
@@ -444,12 +444,19 @@ if( NOT COLLADA_FOUND AND ZLIB_FOUND AND Boost_FILESYSTEM_FOUND AND Boost_SYSTEM
 
   add_subdirectory(3rdparty/collada)
   set(COLLADA_FOUND 1)
-  set(COLLADA_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/collada/include ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/collada/include/1.5)
-  set(COLLADA_LIBRARY collada15reader)
+  set(COLLADA_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/collada/include ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/collada/include/1.5)
+  set(COLLADA_LIBRARY_DIRS)
+  set(COLLADA_LIBRARIES collada15reader)
+  set(COLLADA_CFLAGS_OTHER)
+  set(COLLADA_LDFLAGS_OTHER)
+else()
+  set(OPENRAVE_LINK_DIRS ${OPENRAVE_LINK_DIRS} ${COLLADA_LIBRARY_DIRS})
 endif()
 if( NOT COLLADA_FOUND )
   message(STATUS "no COLLADA support found")
 endif()
+
+link_directories(${OPENRAVE_LINK_DIRS})
 
 ## check qhull library
 check_library_exists(qhull qh_new_qhull "" QHULL_FOUND_LIB)

@@ -6,9 +6,10 @@ endif()
 set(coreLIBS ${openrave_libraries})
 
 if( COLLADA_FOUND )
-  set(LIBOPENRAVE_COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} -DOPENRAVE_COLLADA_SUPPORT")
-  include_directories(${COLLADA_INCLUDE_DIR} ${MINIZIP_INCLUDE_DIR})
-  set (coreLIBS ${coreLIBS} ${COLLADA_LIBRARY} minizip)
+  set(LIBOPENRAVE_COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} -DOPENRAVE_COLLADA_SUPPORT ${COLLADA_CFLAGS_OTHER}")
+  set(LIBOPENRAVE_LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS} ${COLLADA_LDFLAGS_OTHER}")
+  include_directories(${COLLADA_INCLUDE_DIRS} ${MINIZIP_INCLUDE_DIR})
+  set (coreLIBS ${coreLIBS} ${COLLADA_LIBRARIES} minizip)
 endif()
 
 if( CLOCK_GETTIME_FOUND )
@@ -21,7 +22,7 @@ add_library(libopenrave-core SHARED ${openrave_core_SOURCES})
 add_dependencies(libopenrave-core libopenrave)
 
 if( COLLADA_FOUND )
-  add_dependencies(libopenrave-core ${COLLADA_LIBRARY})
+  add_dependencies(libopenrave-core ${COLLADA_LIBRARIES})
 endif()
 
 set_target_properties(libopenrave-core PROPERTIES OUTPUT_NAME openrave-core
@@ -51,7 +52,7 @@ if( OPT_STATIC )
   endif()
 
   if( COLLADA_FOUND )
-    add_dependencies(libopenrave-core_static ${COLLADA_LIBRARY})
+    add_dependencies(libopenrave-core_static ${COLLADA_LIBRARIES})
   endif()
 
   set_target_properties(libopenrave-core_static PROPERTIES OUTPUT_NAME ${LIBOPENRAVE_CORE_NAME}
