@@ -19,7 +19,7 @@ echo "$doxycommands" | cat Doxyfile.latex Doxyfile.en - > Doxyfile.latex.en
 echo "$doxycommands" | cat Doxyfile.html Doxyfile.ja - > Doxyfile.html.ja
 echo "$doxycommands" | cat Doxyfile.latex Doxyfile.ja - > Doxyfile.latex.ja
 
-bash makeimages.sh
+#bash makeimages.sh
 
 rm -rf en ja openrave.pdf ordocs.tgz
 

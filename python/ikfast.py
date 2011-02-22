@@ -32,7 +32,6 @@ except:
         pass
 
 import numpy # required for fast eigenvalue computation
-
 from sympy import *
 try:
     import re # for latex cleanup
@@ -50,6 +49,9 @@ except ImportError:
             for  i in xrange(len(items)):
                 for cc in combinations(items[i+1:],n-1):
                     yield [items[i]]+cc
+
+import logging
+log = logging.getLogger(__name__)
 
 CodeGenerators = {}
 try:
@@ -534,10 +536,11 @@ class IKFastSolver(AutoReloader):
     class IKFeasibilityError(Exception):
         """thrown when it is not possible to solve the IK due to robot not having enough degrees of freedom. For example, a robot with 5 joints does not have 6D IK
         """
-        def __init__(self,value):
-            self.value=value
+        def __init__(self,equations,checkvars):
+            self.equations=equations
+            self.checkvars=checkvars
         def __str__(self):
-            return repr(self.value)
+            return "Not enough equations to solve variables %s, perhaps manipulator doesn't have enough degrees of freedom or bad free joints were chosen."%str(self.checkvars)
 
     class JointAxis:
         __slots__ = ['joint','iaxis']
@@ -963,6 +966,42 @@ class IKFastSolver(AutoReloader):
             sol.score=1e10
         return sol.score
 
+    def checkSolvability(self,AllEquations,checkvars,othervars):
+        """returns true if there are enough equations to solve for checkvars
+        """
+        subs = []
+        checksymbols = []
+        allsymbols = []
+        for var in checkvars:
+            subs += self.Variable(var).subs
+            checksymbols += self.Variable(var).vars
+        allsymbols = checksymbols[:]
+        for var in othervars:
+            subs += self.Variable(var).subs
+            allsymbols += self.Variable(var).vars
+        found = False
+        for testconsistentvalue in self.testconsistentvalues:
+            psubvalues = [(s,v) for s,v in testconsistentvalue if not s.has_any_symbols(*checksymbols)]
+            eqs = [eq.subs(self.globalsymbols).subs(subs).subs(psubvalues) for eq in AllEquations]
+            usedsymbols = [s for s in checksymbols if self.has_any_symbols(eqs,s)]
+            eqs = [Poly(eq,*usedsymbols) for eq in eqs if eq != S.Zero]
+            for var in checkvars:
+                varsym = self.Variable(var)
+                if self.isHinge(var.name):
+                    if varsym.cvar in usedsymbols and varsym.svar in usedsymbols:
+                        eqs.append(Poly(varsym.cvar**2+varsym.svar**2-1,*usedsymbols))
+            # have to make sure there are representative symbols of all the checkvars, otherwise degenerate solution
+            setusedsymbols = set(usedsymbols)
+            if any([len(setusedsymbols.intersection(self.Variable(var).vars)) == 0 for var in checkvars]):
+                continue
+            try:
+                sol=solve_poly_system(eqs)
+                if sol is not None and len(sol) > 0 and len(sol[0]) == len(usedsymbols):
+                    return
+            except:
+                pass
+        raise self.IKFeasibilityError(AllEquations,checkvars)
+                
     def writeIkSolver(self,chaintree,lang=None):
         # parse the solver tree
         if lang is None:
@@ -977,7 +1016,6 @@ class IKFastSolver(AutoReloader):
         chainjoints = self.kinbody.GetChain(baselink,eelink,returnjoints=True)
         LinksRaw, jointvars = self.forwardKinematicsChain(chainlinks,chainjoints)
         self.degeneratecases = None
-
         if freeindices is None:
             # need to iterate through all combinations of free joints
             assert(0)
@@ -1053,23 +1091,30 @@ class IKFastSolver(AutoReloader):
 
     def computeConsistentValues(self,jointvars,T,numsolutions=1,subs=None):
         possibleangles = [S.Zero, pi.evalf()/2, asin(3.0/5).evalf(), asin(4.0/5).evalf(), asin(5.0/13).evalf(), asin(12.0/13).evalf()]
+        possibleanglescos = [S.One, S.Zero, Rational(4,5), Rational(3,5), Rational(12,13), Rational(5,13)]
+        possibleanglessin = [S.Zero, S.One, Rational(3,5), Rational(4,5), Rational(5,13), Rational(12,13)]
         testconsistentvalues = []
+        varsubs = []
+        for jointvar in jointvars:
+            varsubs += self.Variable(jointvar).subs
         for isol in range(numsolutions):
-            jointvalues = [S.Zero]*len(jointvars)
+            inds = [0]*len(jointvars)
             if isol < numsolutions-1:
                 for j in range(len(jointvars)):
-                    jointvalues[j] = possibleangles[(isol+j)%len(possibleangles)]
+                    inds[j] = (isol+j)%len(possibleangles)
             valsubs = []
-            for var,value in izip(jointvars,jointvalues):
-                valsubs += [(var,value),(Symbol('c%s'%var.name),self.convertRealToRational(cos(value).evalf())),(Symbol('s%s'%var.name),self.convertRealToRational(sin(value).evalf())),(Symbol('t%s'%var.name),self.convertRealToRational(tan(value).evalf())),(Symbol('ht%s'%var.name),self.convertRealToRational(tan(value/2).evalf()))]
+            for i,ind in enumerate(inds):
+                v,s,c = possibleangles[ind],possibleanglessin[ind],possibleanglescos[ind]
+                var = self.Variable(jointvars[i])
+                valsubs += [(var.var,v),(var.cvar,c),(var.svar,s),(var.tvar,s/c),(var.htvar,s/(1+c))]
             psubs = []
             for i in range(12):
-                psubs.append((self.pvars[i],self.convertRealToRational(T[i].subs(self.globalsymbols+valsubs).evalf())))
+                psubs.append((self.pvars[i],T[i].subs(varsubs).subs(self.globalsymbols+valsubs)))
             for s,v in self.ppsubs+self.npxyzsubs+self.rxpsubs:
                 psubs.append((s,v.subs(psubs)))
             allsubs = valsubs+psubs
             if subs is not None:
-                allsubs += [(dvar,self.convertRealToRational(var.subs(valsubs).evalf())) for dvar,var in subs]
+                allsubs += [(dvar,var.subs(varsubs).subs(valsubs)) for dvar,var in subs]
             testconsistentvalues.append(allsubs)
         return testconsistentvalues
 
@@ -1107,6 +1152,7 @@ class IKFastSolver(AutoReloader):
             Tinv = self.affineInverse(Links[i])
             Daccum = Tinv[0:3,0:3]*Daccum
         AllEquations = self.buildEquationsFromTwoSides(Ds,Dsee,jointvars,uselength=False)
+        self.checkSolvability(AllEquations,jointvars,self.freejointvars)
         tree = self.solveAllEquations(AllEquations,curvars=solvejointvars,othersolvedvars = self.freejointvars[:],solsubs = self.freevarsubs[:],endbranchtree=endbranchtree)
         tree = self.verifyAllEquations(AllEquations,solvejointvars,self.freevarsubs,tree)
         return SolverIKChainDirection3D([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(v,i) for v,i in izip(self.freejointvars,self.ifreejointvars)], Dee=self.Tee[0,0:3].transpose().subs(self.freevarsubs), jointtree=tree,Dfk=Tfinal[0,0:3].transpose())
@@ -1154,6 +1200,7 @@ class IKFastSolver(AutoReloader):
             frontcond = frontcond.subs(self.Variable(v).subs)
         endbranchtree = [SolverStoreSolution (jointvars,checkgreaterzero=[frontcond])]
         AllEquations = self.buildEquationsFromTwoSides(Positions,Positionsee,jointvars,uselength=True)
+        self.checkSolvability(AllEquations,jointvars,self.freejointvars)
         tree = self.solveAllEquations(AllEquations,curvars=solvejointvars,othersolvedvars = self.freejointvars[:],solsubs = self.freevarsubs[:],endbranchtree=endbranchtree)
         tree = self.verifyAllEquations(AllEquations,solvejointvars,self.freevarsubs,tree)
         chaintree = SolverIKChainLookat3D([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(v,i) for v,i in izip(self.freejointvars,self.ifreejointvars)], Pee=self.Tee[0:3,3].subs(self.freevarsubs), jointtree=tree,Dfk=Tfinal[0,0:3].transpose(),Pfk=Tfinal[0:3,3])
@@ -1178,6 +1225,7 @@ class IKFastSolver(AutoReloader):
         print 'ikfast rotation3d: ',solvejointvars
 
         AllEquations = self.buildEquationsFromRotation(Links,self.Tee[0:3,0:3],solvejointvars,self.freejointvars)
+        self.checkSolvability(AllEquations,solvejointvars,self.freejointvars)
         tree = self.solveAllEquations(AllEquations,curvars=solvejointvars[:],othersolvedvars=self.freejointvars,solsubs = self.freevarsubs[:],endbranchtree=endbranchtree)
         tree = self.verifyAllEquations(AllEquations,solvejointvars,self.freevarsubs,tree)
         return SolverIKChainRotation3D([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(v,i) for v,i in izip(self.freejointvars,self.ifreejointvars)], (self.Tee[0:3,0:3] * self.affineInverse(Tfirstright)[0:3,0:3]).subs(self.freevarsubs), tree, Rfk = Tfinal[0:3,0:3] * Tfirstright[0:3,0:3])
@@ -1200,6 +1248,7 @@ class IKFastSolver(AutoReloader):
         T1links = [Tbaseposinv]+LinksInv[::-1]+[self.Tee]
         T1linksinv = [self.affineInverse(Tbaseposinv)]+Links[::-1]+[self.Teeinv]
         AllEquations = self.buildEquationsFromPositions(T1links,T1linksinv,solvejointvars,self.freejointvars,uselength=True)
+        self.checkSolvability(AllEquations,solvejointvars,self.freejointvars)
         transtree = self.solveAllEquations(AllEquations,curvars=solvejointvars[:],othersolvedvars=self.freejointvars,solsubs = self.freevarsubs[:],endbranchtree=endbranchtree)
         transtree = self.verifyAllEquations(AllEquations,solvejointvars,self.freevarsubs,transtree)
         chaintree = SolverIKChainTranslation3D([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(v,i) for v,i in izip(self.freejointvars,self.ifreejointvars)], Pee=self.Tee[0:3,3], jointtree=transtree, Pfk = Tfinal[0:3,3])
@@ -1248,6 +1297,7 @@ class IKFastSolver(AutoReloader):
             Pee = Tinv[0:3,0:3]*Pee+Tinv[0:3,3]
             Dee = Tinv[0:3,0:3]*Dee
         AllEquations = self.buildEquationsFromTwoSides(Positions,Positionsee,jointvars,uselength=True)
+        self.checkSolvability(AllEquations,jointvars,self.freejointvars)
 
         try:
             tree = self.solveAllEquations(AllEquations,curvars=solvejointvars[:],othersolvedvars = self.freejointvars[:],solsubs = self.freevarsubs[:],endbranchtree=endbranchtree)
@@ -1336,6 +1386,7 @@ class IKFastSolver(AutoReloader):
                 for var in usedvars:
                     curvars.remove(var)
                     solsubs += self.Variable(var).subs
+                self.checkSolvability(AllEquations,curvars,self.freejointvars+usedvars)
                 tree = self.solveAllEquations(AllEquations,curvars=curvars,othersolvedvars = self.freejointvars+usedvars,solsubs = solsubs,endbranchtree=endbranchtree)
                 tree = self.verifyAllEquations(AllEquations,curvars,solsubs,tree)
                 tree = coupledsolutions+tree
@@ -1354,6 +1405,7 @@ class IKFastSolver(AutoReloader):
         T1linksinv = [self.affineInverse(Tbaseposinv)]+T0links[::-1]+[self.Teeinv]
         AllEquations = self.buildEquationsFromPositions(T1links,T1linksinv,solvejointvars,self.freejointvars,uselength=True)
         transvars = [v for v in solvejointvars if self.has_any_symbols(T0,v)]
+        self.checkSolvability(AllEquations,transvars,self.freejointvars)
         transtree = self.solveAllEquations(AllEquations,curvars=transvars[:],othersolvedvars=self.freejointvars,solsubs = self.freevarsubs[:],endbranchtree=endbranchtree)
         transtree = self.verifyAllEquations(AllEquations,solvejointvars,self.freevarsubs,transtree)
         rotvars = [v for v in solvejointvars if self.has_any_symbols(D,v)]
@@ -1361,6 +1413,7 @@ class IKFastSolver(AutoReloader):
         for v in transvars:
             solsubs += self.Variable(v).subs
         AllEquations = self.buildEquationsFromTwoSides([D],[T0[0:3,0:3]*self.Tee[0,0:3].transpose()],jointvars,uselength=False)
+        self.checkSolvability(AllEquations,rotvars,self.freejointvars+transvars)
         dirtree = self.solveAllEquations(AllEquations,curvars=rotvars[:],othersolvedvars = self.freejointvars+transvars,solsubs=solsubs,endbranchtree=endbranchtree)
         dirtree = self.verifyAllEquations(AllEquations,rotvars,solsubs,dirtree)
         return transtree+dirtree
@@ -1465,9 +1518,10 @@ class IKFastSolver(AutoReloader):
         """
         assert(len(transvars)==3 and len(rotvars) == 3)
         T1 = self.multiplyMatrix(T1links)
-        othersolvedvars = rotvars+self.freejointvars if solveRotationFirst else self.freejointvars
+        othersolvedvars = rotvars+self.freejointvars if solveRotationFirst else self.freejointvars[:]
         T1linksinv = [self.affineInverse(T) for T in T1links]
         AllEquations = self.buildEquationsFromPositions(T1links,T1linksinv,transvars,othersolvedvars,uselength=True)
+        self.checkSolvability(AllEquations,transvars,self.freejointvars)
         rottree = []
         if solveRotationFirst:
             newendbranchtree = endbranchtree
@@ -1475,7 +1529,7 @@ class IKFastSolver(AutoReloader):
             newendbranchtree = [SolverSequence([rottree])]
         curvars = transvars[:]
         solsubs=self.freevarsubs[:]
-        transtree = self.solveAllEquations(AllEquations,curvars=curvars,othersolvedvars=othersolvedvars,solsubs=solsubs,endbranchtree=newendbranchtree)
+        transtree = self.solveAllEquations(AllEquations,curvars=curvars,othersolvedvars=othersolvedvars[:],solsubs=solsubs,endbranchtree=newendbranchtree)
         transtree = self.verifyAllEquations(AllEquations,rotvars if solveRotationFirst else transvars+rotvars,self.freevarsubs,transtree)
         solvertree= []
         solvedvarsubs = self.freevarsubs
@@ -1497,6 +1551,7 @@ class IKFastSolver(AutoReloader):
                     self.globalsymbols.append((Ree[i,j],T1sub[i,j]))
             othersolvedvars = self.freejointvars if solveRotationFirst else transvars+self.freejointvars
             AllEquations = self.buildEquationsFromRotation(T0links,Ree,rotvars,othersolvedvars)
+            self.checkSolvability(AllEquations,rotvars,othersolvedvars)
             currotvars = rotvars[:]
             rottree += self.solveAllEquations(AllEquations,curvars=currotvars,othersolvedvars=othersolvedvars,solsubs=self.freevarsubs[:],endbranchtree=storesolutiontree)
 
@@ -1554,6 +1609,7 @@ class IKFastSolver(AutoReloader):
         for var in usedvars:
             curvars.remove(var)
             solsubs += [(cos(var),self.Variable(var).cvar),(sin(var),self.Variable(var).svar)]
+        self.checkSolvability(AllEquations,curvars,self.freejointvars+usedvars)
         tree = self.solveAllEquations(AllEquations,curvars=curvars,othersolvedvars = self.freejointvars+usedvars,solsubs = solsubs,endbranchtree=endbranchtree)
         return coupledsolutions+tree
 

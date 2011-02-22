@@ -298,49 +298,50 @@ class InverseKinematicsModel(OpenRAVEModel):
             solvefn=solveFullIK_Lookat3D
         else:
             raise ValueError('bad type')
-        solvejoints = list(self.manip.GetArmIndices())
-        freejointinds = []
-        if freejoints is not None:
-            for jointname in freejoints:
-                if type(jointname) == int:
-                    freejointinds.append(jointname)
-                    solvejoints.remove(jointname)
-                else:
-                    # find the correct joint index
-                    jointindices = [joint.GetJointIndex() for joint in self.robot.GetJoints() if joint.GetName()==jointname]
-                    if len(jointindices) == 0:
-                        raise LookupError("cannot find '%s' joint in %s robot"%(jointname,self.robot.GetName()))
-                    if not jointindices[0] in solvejoints:
-                        raise LookupError("cannot find joint '%s(%d)' in solve joints: %s"%(jointname,jointindices[0],str(solvejoints)))
-                    freejointinds.append(jointindices[0])
-                    solvejoints.remove(jointindices[0])
-        if freeindices is not None:
-            freejointinds = freeindices
-            solvejoints = [i for i in solvejoints if not i in freeindices]
-            
-        print 'Generating inverse kinematics for manip',self.manip.GetName(),':',self.iktype,solvejoints,'(this might take ~5 min)'
+
         dofexpected = IkParameterization.GetDOF(self.iktype)
+        solvejoints = list(self.manip.GetArmIndices())
+        if freeindices is not None:
+            solvejoints = [i for i in solvejoints if not i in freeindices]
+        else:
+            freeindices = []
+            if freejoints is not None:
+                for jointname in freejoints:
+                    if type(jointname) == int:
+                        freeindices.append(jointname)
+                        solvejoints.remove(jointname)
+                    else:
+                        # find the correct joint index
+                        jointindices = [joint.GetJointIndex() for joint in self.robot.GetJoints() if joint.GetName()==jointname]
+                        if len(jointindices) == 0:
+                            raise LookupError("cannot find '%s' joint in %s robot"%(jointname,self.robot.GetName()))
+                        if not jointindices[0] in solvejoints:
+                            raise LookupError("cannot find joint '%s(%d)' in solve joints: %s"%(jointname,jointindices[0],str(solvejoints)))
+                        freeindices.append(jointindices[0])
+                        solvejoints.remove(jointindices[0])
+            
         if len(solvejoints) > dofexpected:
             for i in range(len(solvejoints) - dofexpected):
                 if self.iktype == IkParameterization.Type.Transform6D or self.iktype == IkParameterization.Type.Translation3D:
-                    freejointinds.append(solvejoints.pop(2))
+                    freeindices.append(solvejoints.pop(2))
                 elif self.iktype == IkParameterization.Type.Lookat3D:
                     # usually head (rotation joints) are at the end
-                    freejointinds.append(solvejoints.pop(0))
+                    freeindices.append(solvejoints.pop(0))
                 elif self.iktype == IkParameterization.Type.TranslationDirection5D:
                     # usually on arms, so remove furthest joints
-                    freejointinds.append(solvejoints.pop(-1))
+                    freeindices.append(solvejoints.pop(-1))
                 else:
                     # if not 6D, then don't need to worry about intersecting joints
                     # so remove the least important joints
-                    freejointinds.append(solvejoints.pop(-1))
-        
+                    freeindices.append(solvejoints.pop(-1))
+
+        print 'Generating inverse kinematics for manip',self.manip.GetName(),':',self.iktype,solvejoints,'(this might take ~5 min)'        
         if not len(solvejoints) == dofexpected:
             raise ikfast.IKFastSolver.IKFeasibilityError('Need %d solve joints, got: %d'%(dofexpected, len(solvejoints)))
         
         sourcefilename += '_' + '_'.join(str(ind) for ind in solvejoints)
-        if len(freejointinds)>0:
-            sourcefilename += '_f'+'_'.join(str(ind) for ind in freejointinds)
+        if len(freeindices)>0:
+            sourcefilename += '_f'+'_'.join(str(ind) for ind in freeindices)
         if outputlang is None:
             outputlang = 'cpp'
         sourcefilename += '.' + outputlang
@@ -356,7 +357,7 @@ class InverseKinematicsModel(OpenRAVEModel):
                 ipshell = IPython.Shell.IPShellEmbed(argv='',banner = 'inversekinematics dropping into ipython',exit_msg = 'Leaving Interpreter and continuing solver.')
                 ipshell(local_ns=locals())
                 reload(ikfast) # in case changes occurred
-            chaintree = solver.generateIkSolver(baselink=baselink,eelink=eelink,freeindices=freejointinds,solvefn=solvefn)
+            chaintree = solver.generateIkSolver(baselink=baselink,eelink=eelink,freeindices=freeindices,solvefn=solvefn)
             code = solver.writeIkSolver(chaintree,lang=outputlang)
             if len(code) == 0:
                 raise ValueError('failed to generate ik solver for robot %s:%s'%(self.robot.GetName(),self.manip.GetName()))

@@ -405,17 +405,6 @@ endif()
 
 pkg_check_modules(COLLADA collada15dom>=2.3.0)
 
-# check for local collada compilation (buggy so don't enable)
-#if( COLLADA_FOUND )
-#  set(COLLADA_INCLUDE_DIR ${COLLADA_INCLUDE_DIR} ${COLLADA_INCLUDE_DIR}/1.5)
-#  if( COLLADA_PCRECPP_LIBRARY AND COLLADA_ZLIB_LIBRARY AND COLLADA_PCRE_LIBRARY AND COLLADA_MINIZIP_LIBRARY AND COLLADA_BOOST_FILESYSTEM_LIBRARY AND COLLADA_BOOST_SYSTEM_LIBRARY )
-#    set(COLLADA_LIBRARY ${COLLADA_LIBRARY} ${COLLADA_PCRECPP_LIBRARY} ${COLLADA_ZLIB_LIBRARY} ${COLLADA_PCRE_LIBRARY} ${COLLADA_MINIZIP_LIBRARY} ${COLLADA_BOOST_FILESYSTEM_LIBRARY} ${COLLADA_BOOST_SYSTEM_LIBRARY})
-#  else()
-#    message(STATUS "system collada found, but all dependent libraries could not be found")
-#   set(COLLADA_FOUND 0)
-#  endif()
-#endif()
-
 # require minizip regardless of collada presence
 add_subdirectory(3rdparty/minizip)
 set(MINIZIP_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/minizip ${ZLIB_INCLUDE_DIR})

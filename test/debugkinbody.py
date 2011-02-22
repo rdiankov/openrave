@@ -79,23 +79,24 @@ def test_jacobian():
     robot = env.ReadRobotXMLFile('robots/barrettwam.robot.xml')#barretthand.robot.xml')
     env.AddRobot(robot)
     fingertip_global = array([-0.15,0,0.2])
-    # get a link name
-    link = robot.GetLink('Finger2-2')
-    fingertip_local = dot(linalg.inv(link.GetTransform()),r_[fingertip_global,1])[0:3]
-    J = robot.CalculateJacobian(link.GetIndex(),fingertip_global)
-    
-    # move each joint a little
-    curvalues = robot.GetJointValues()
-    for iter in range(100):
-        robot.SetJointValues(curvalues + (random.randint(0,2,len(curvalues))-0.5)*0.03)
-        fingertip_realdir = dot(link.GetTransform(),r_[fingertip_local,1])[0:3] - fingertip_global
-        deltavalues = robot.GetJointValues()-curvalues
-        fingertip_estimatedir = dot(J,deltavalues)
-        dreal = fingertip_realdir/sqrt(sum(fingertip_realdir**2))
-        destimate = fingertip_estimatedir/sqrt(sum(fingertip_estimatedir**2))
-        if dot(dreal,destimate) < 0.99:
-            print deltavalues
-            raise ValueError('bad jacobian: %f'%dot(dreal,destimate))
+
+    with env:
+        # get a link name
+        link = robot.GetLink('Finger2-2')
+        fingertip_local = dot(linalg.inv(link.GetTransform()),r_[fingertip_global,1])[0:3]
+        J = robot.CalculateJacobian(link.GetIndex(),fingertip_global)
+        # move each joint a little
+        curvalues = robot.GetDOFValues()
+        for iter in range(10000):
+            robot.SetJointValues(curvalues + (random.randint(0,2,len(curvalues))-0.5)*0.03)
+            fingertip_realdir = dot(link.GetTransform(),r_[fingertip_local,1])[0:3] - fingertip_global
+            deltavalues = robot.GetDOFValues()-curvalues
+            fingertip_estimatedir = dot(J,deltavalues)
+            dreal = fingertip_realdir/sqrt(sum(fingertip_realdir**2))
+            destimate = fingertip_estimatedir/sqrt(sum(fingertip_estimatedir**2))
+            if dot(dreal,destimate) < 0.98:
+                print deltavalues
+                raise ValueError('bad jacobian: %f'%dot(dreal,destimate))
 
 def test_hash():
     env = Environment()

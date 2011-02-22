@@ -71,7 +71,7 @@ int main(int argc, char ** argv)
         if( sin(d) != sin_rn(d) ) {
             cout << "bad accuracy sin(" << d << "): " << sin(d) << " != " << sin_rn(d) << endl;
             is_accurate = 0;
-            //break;
+            break;
         }
     }
     of << "#define LIBM_SIN_ACCURATE " << is_accurate << endl;

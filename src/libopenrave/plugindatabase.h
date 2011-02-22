@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2010 Rosen Diankov (rdiankov@cs.cmu.edu)
+// Copyright (C) 2006-2011 Rosen Diankov (rdiankov@cs.cmu.edu)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -18,6 +18,10 @@
 #define RAVE_PLUGIN_DATABASE_H
 
 #include <errno.h>
+
+#ifdef HAVE_BOOST_FILESYSTEM
+#include <boost/filesystem.hpp>
+#endif
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -267,7 +271,6 @@ public:
     friend class Plugin;
 
     RaveDatabase() : _bShutdown(false) {
-        _threadPluginLoader.reset(new boost::thread(boost::bind(&RaveDatabase::_PluginLoaderThread, this)));
     }
     virtual ~RaveDatabase() { Destroy(); }
 
@@ -284,6 +287,45 @@ public:
     ViewerBasePtr CreateViewer(EnvironmentBasePtr penv, const std::string& name) { return RaveInterfaceCast<ViewerBase>(Create(penv, PT_Viewer, name)); }
     TrajectoryBasePtr CreateTrajectory(EnvironmentBasePtr penv, const std::string& name) { return RaveInterfaceCast<TrajectoryBase>(Create(penv, PT_Trajectory, name)); }
 
+    virtual bool Init(bool bLoadAllPlugins)
+    {
+        EnvironmentMutex::scoped_lock lock(_mutex);
+        _threadPluginLoader.reset(new boost::thread(boost::bind(&RaveDatabase::_PluginLoaderThread, this)));
+
+        std::vector<std::string> vplugindirs;
+        RaveParseDirectories(getenv("OPENRAVE_PLUGINS"), vplugindirs);
+        bool bExists=false;
+#ifdef HAVE_BOOST_FILESYSTEM
+        boost::filesystem::path pluginsfilename = boost::filesystem::system_complete(boost::filesystem::path(OPENRAVE_PLUGINS_INSTALL_DIR, boost::filesystem::native));
+        FOREACH(itname, vplugindirs) {
+            if( pluginsfilename == boost::filesystem::system_complete(boost::filesystem::path(*itname, boost::filesystem::native)) ) {
+                bExists = true;
+                break;
+            }
+        }
+#else
+        string pluginsfilename=OPENRAVE_PLUGINS_INSTALL_DIR;
+        FOREACH(itname, vplugindirs) {
+            if( pluginsfilename == *itname ) {
+                bExists = true;
+                break;
+            }
+        }
+#endif
+        if( !bExists ) {
+            vplugindirs.push_back(OPENRAVE_PLUGINS_INSTALL_DIR);
+        }
+        FOREACH(it, vplugindirs) {
+            if( it->size() > 0 ) {
+                _listplugindirs.push_back(*it);
+                if( bLoadAllPlugins ) {
+                    AddDirectory(it->c_str());
+                }
+            }
+        }
+        return true;
+    }
+
     /// Destroy all plugins and directories
     virtual void Destroy()
     {
@@ -293,16 +335,18 @@ public:
             _bShutdown = true;
             _condLoaderHasWork.notify_all();
         }
-        _threadPluginLoader->join();
-        _threadPluginLoader.reset();
+        if( !!_threadPluginLoader ) {
+            _threadPluginLoader->join();
+            _threadPluginLoader.reset();
+        }
         {
             EnvironmentMutex::scoped_lock lock(_mutex);
             _listplugins.clear();
         }
+        _listplugindirs.clear();
         _listRegisteredInterfaces.clear();
-        RAVELOG_DEBUG("cleaning libraries\n");
         CleanupUnusedLibraries();
-        RAVELOG_DEBUG("plugin database finished\n");
+        RAVELOG_DEBUG("openrave plugin database destroyed\n");
     }
 
     void GetPlugins(std::list<PluginPtr>& listplugins) const
@@ -477,40 +521,44 @@ public:
         EnvironmentMutex::scoped_lock lock(_mutex);
         FOREACH(itplugin,_listplugins) {
             PluginPtr newplugin = _LoadPlugin((*itplugin)->ppluginname);
-            if( !!newplugin )
+            if( !!newplugin ) {
                 *itplugin = newplugin;
+            }
         }
         CleanupUnusedLibraries();   
     }
 
-    bool LoadPlugin(const std::string& libraryname)
+    bool LoadPlugin(const std::string& pluginname)
     {
         EnvironmentMutex::scoped_lock lock(_mutex);
-        DeletePlugin(libraryname); // first delete it
-        PluginPtr p = _LoadPlugin(libraryname);
-        if( !!p )
+        std::list<PluginPtr>::iterator it = _GetPlugin(pluginname);
+        string newpluginname;
+        if( it != _listplugins.end() ) {
+            // since we got a match, use the old name and remove the old library
+            newpluginname = (*it)->ppluginname;
+            _listplugins.erase(it);
+        }
+        else {
+            newpluginname = pluginname;
+        }
+        PluginPtr p = _LoadPlugin(newpluginname);
+        if( !!p ) {
             _listplugins.push_back(p);
+        }
         CleanupUnusedLibraries();
         return !!p;
     }
 
-    /// deletes the plugin from memory. Note that the function doesn't check if there's any object
-    /// pointers that were instantiated from the specific plugin. Those objects should be removed
-    /// before calling this function in order to avoid segmentation faults later on.
-    bool DeletePlugin(const std::string& name)
+    bool RemovePlugin(const std::string& pluginname)
     {
         EnvironmentMutex::scoped_lock lock(_mutex);
-        bool bFound = false;
-        list<PluginPtr>::iterator it = _listplugins.begin();
-        while(it != _listplugins.end()) {
-            if( name == (*it)->ppluginname ) {
-                it = _listplugins.erase(it);
-                bFound = true;
-            }
-            else ++it;
+        std::list<PluginPtr>::iterator it = _GetPlugin(pluginname);
+        if( it == _listplugins.end() ) {
+            return false;
         }
-
-        return bFound;
+        _listplugins.erase(it);
+        CleanupUnusedLibraries();
+        return true;
     }
 
     virtual bool HasInterface(InterfaceType type, const string& interfacename)
@@ -596,6 +644,31 @@ public:
     static const char* GetInterfaceHash(InterfaceBasePtr pint) { return pint->GetHash(); }
 
 protected:
+    /// \brief Deletes the plugin from the database
+    ///
+    /// It is safe to delete a plugin even if interfaces currently reference it because this function just decrements
+    /// the reference count instead of unloading from memory.
+    std::list<PluginPtr>::iterator _GetPlugin(const std::string& pluginname)
+    {
+        EnvironmentMutex::scoped_lock lock(_mutex);
+        FOREACH(it,_listplugins) {
+            if( pluginname == (*it)->ppluginname ) {
+                return it;
+            }
+        }
+#ifdef HAVE_BOOST_FILESYSTEM
+        // try matching partial base names without path and extension
+        boost::filesystem::path pluginpath(pluginname, boost::filesystem::native);
+        string stem = pluginpath.stem();
+        FOREACH(it, _listplugins) {
+            if( stem == boost::filesystem::path((*it)->ppluginname, boost::filesystem::native).stem() ) {
+                return it;
+            }
+        }
+#endif
+        return _listplugins.end();
+    }
+
     PluginPtr _LoadPlugin(const string& _libraryname)
     {
         string libraryname = _libraryname;
@@ -606,11 +679,23 @@ protected:
                 libraryname += PLUGIN_EXT;
                 plibrary = _SysLoadLibrary(libraryname.c_str(),OPENRAVE_LAZY_LOADING);
             }
-            
-            if( plibrary == NULL ) {
-                RAVELOG_WARN("failed to load: %s\n", _libraryname.c_str());
-                return PluginPtr();
+        }
+#ifdef HAVE_BOOST_FILESYSTEM
+        if( plibrary == NULL ) {
+            // try adding from the current plugin libraries
+            FOREACH(itdir,_listplugindirs) {
+                string newlibraryname = boost::filesystem::complete(libraryname,*itdir).string();
+                plibrary = _SysLoadLibrary(newlibraryname.c_str(),OPENRAVE_LAZY_LOADING);
+                if( !!plibrary ) {
+                    libraryname = newlibraryname;
+                    break;
+                }
             }
+        }
+#endif
+        if( plibrary == NULL ) {
+            RAVELOG_WARN("failed to load: %s\n", _libraryname.c_str());
+            return PluginPtr();
         }
 
         PluginPtr p(new Plugin(shared_from_this()));
@@ -680,8 +765,8 @@ protected:
         void* plib = dlopen(lib.c_str(), bLazy ? RTLD_LAZY : RTLD_NOW);
         char* pstr = dlerror();
         if( pstr != NULL ) {
-            RAVELOG_WARN("%s: %s\n",lib.c_str(),pstr);
             if( plib != NULL ) {
+                RAVELOG_WARN("%s: %s\n",lib.c_str(),pstr);
                 dlclose(plib); //???
             }
             return NULL;
@@ -797,14 +882,15 @@ protected:
     
     list<PluginPtr> _listplugins;
     mutable EnvironmentMutex _mutex; ///< changing plugin database
-    list<void*> _listDestroyLibraryQueue;
+    std::list<void*> _listDestroyLibraryQueue;
     std::list<RegisteredInterface> _listRegisteredInterfaces;
+    std::list<std::string> _listplugindirs;
     
     /// \name plugin loading
     //@{
     mutable boost::mutex _mutexPluginLoader; ///< specifically for loading shared objects
     boost::condition _condLoaderHasWork;
-    list<PluginPtr> _listPluginsToLoad;
+    std::list<PluginPtr> _listPluginsToLoad;
     boost::shared_ptr<boost::thread> _threadPluginLoader;
     bool _bShutdown;
     //@}

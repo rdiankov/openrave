@@ -1,4 +1,5 @@
-// Copyright (C) 2006-2010 Carnegie Mellon University (rosen.diankov@gmail.com)
+// -*- coding: utf-8 -*-
+// Copyright (C) 2006-2011 Rosen Diankov (rosen.diankov@gmail.com)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -246,37 +247,9 @@ public:
         }
 
         _nDebugLevel = level;
-
         _pdatabase.reset(new RaveDatabase());
-        if( bLoadAllPlugins ) {
-            vector<std::string> vplugindirs;
-            RaveParseDirectories(getenv("OPENRAVE_PLUGINS"), vplugindirs);
-            bool bExists=false;
-#ifdef HAVE_BOOST_FILESYSTEM
-            boost::filesystem::path pluginsfilename = boost::filesystem::system_complete(boost::filesystem::path(OPENRAVE_PLUGINS_INSTALL_DIR, boost::filesystem::native));
-            FOREACH(itname, vplugindirs) {
-                if( pluginsfilename == boost::filesystem::system_complete(boost::filesystem::path(*itname, boost::filesystem::native)) ) {
-                    bExists = true;
-                    break;
-                }
-            }
-#else
-            string pluginsfilename=OPENRAVE_PLUGINS_INSTALL_DIR;
-            FOREACH(itname, vplugindirs) {
-                if( pluginsfilename == *itname ) {
-                    bExists = true;
-                    break;
-                }
-            }
-#endif
-            if( !bExists ) {
-                vplugindirs.push_back(OPENRAVE_PLUGINS_INSTALL_DIR);
-            }
-            FOREACH(it, vplugindirs) {
-                if( it->size() > 0 ) {
-                    _pdatabase->AddDirectory(it->c_str());
-                }
-            }
+        if( !_pdatabase->Init(bLoadAllPlugins) ) {
+            RAVELOG_FATAL("failed to create the openrave plugin database\n");
         }
 
         char* phomedir = getenv("OPENRAVE_HOME");

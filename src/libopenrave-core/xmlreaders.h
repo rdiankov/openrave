@@ -37,7 +37,7 @@
 #include <sstream>
 
 #ifdef HAVE_BOOST_FILESYSTEM
-#include <boost/filesystem/operations.hpp>
+#include <boost/filesystem.hpp>
 #endif
 
 #include <boost/utility.hpp>
