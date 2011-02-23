@@ -552,8 +552,10 @@ subversionを更新したときには常に\c runcmake_win.batを再度実行し
 First execute this command:
 
 \verbatim
-sudo port install cmake boost libxml2 glew py26-numpy py26-pyplusplus
+sudo port install cmake boost libxml2 glew py27-numpy py27-pyplusplus
 \endverbatim
+
+The py27-xx are for python 2.7 users. If a different version of python will be used, the names will have to change correspondingly.
 
 It is necessary to install these libraries:
 

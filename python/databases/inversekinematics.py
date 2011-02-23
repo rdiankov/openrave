@@ -126,8 +126,11 @@ else:
 from openravepy import ikfast
 import time,platform,shutil,os
 import distutils
+import logging
 from distutils import ccompiler
 from optparse import OptionParser
+
+log = logging.getLogger(__name__)
 
 class InverseKinematicsModel(OpenRAVEModel):
     """Generates analytical inverse-kinematics solutions, compiles them into a shared object/DLL, and sets the robot's iksolver. Only generates the models for the robot's active manipulator. To generate IK models for each manipulator in the robot, mulitple InverseKinematicsModel classes have to be created."""
@@ -143,12 +146,13 @@ class InverseKinematicsModel(OpenRAVEModel):
         self.ikfastproblem = RaveCreateProblem(self.env,'ikfast')
         if self.ikfastproblem is not None:
             self.env.LoadProblem(self.ikfastproblem,'')
+
     def  __del__(self):
         if self.ikfastproblem is not None:
             try:
                 self.env.Remove(self.ikfastproblem)
             except openrave_exception, e:
-                print '__del__',e
+                log.debug('__del__ %s',e)
     def clone(self,envother):
         clone = OpenRAVEModel.clone(self,envother)
         clone.ikfastproblem = RaveCreateProblem(envother,'ikfast')
@@ -190,17 +194,44 @@ class InverseKinematicsModel(OpenRAVEModel):
     
     def save(self):
         # already saved as a lib
-        print 'inversekinematics generation is done, compiled shared object: %s'%self.getfilename(False)
-    
+        log.debug('inversekinematics generation is done, compiled shared object: %s',self.getfilename(False))
+
+    def getDefaultFreeIndices(self):
+        if self.iktype is None:
+            raise ValueError('ik type is not set')
+        freeindices = []
+        dofexpected = IkParameterization.GetDOF(self.iktype)
+        remainingindices = list(self.manip.GetArmIndices())
+        if len(remainingindices) > dofexpected:
+            for i in range(len(remainingindices) - dofexpected):
+                if self.iktype == IkParameterization.Type.Transform6D or self.iktype == IkParameterization.Type.Translation3D:
+                    freeindices.append(remainingindices.pop(2))
+                elif self.iktype == IkParameterization.Type.Lookat3D:
+                    # usually head (rotation joints) are at the end
+                    freeindices.append(remainingindices.pop(0))
+                elif self.iktype == IkParameterization.Type.TranslationDirection5D:
+                    # usually on arms, so remove furthest joints
+                    freeindices.append(remainingindices.pop(-1))
+                else:
+                    # if not 6D, then don't need to worry about intersecting joints
+                    # so remove the least important joints
+                    freeindices.append(remainingindices.pop(-1))
+        return freeindices
+
     def getfilename(self,read=False):
         if self.iktype is None:
             raise ValueError('ik type is not set')
-        basename = 'ikfast' + str(self.getversion()) + '.' + str(self.iktype) + '.' + platform.machine()
+        
+        basename = 'ikfast%s.%s.%s'%(self.getversion(),self.iktype,platform.machine())
         return RaveFindDatabaseFile(os.path.join('kinematics.'+self.manip.GetKinematicsStructureHash(),ccompiler.new_compiler().shared_object_filename(basename=basename)),read)
-    def getsourcefilename(self,read=False):
+    def getsourcefilename(self,solvejoints,freeindices,read=False):
         if self.iktype is None:
             raise ValueError('ik type is not set')
-        return RaveFindDatabaseFile(os.path.join('kinematics.'+self.manip.GetKinematicsStructureHash(),'ikfast' + str(self.getversion()) + '.' + str(self.iktype)),read)
+        
+        basename = 'ikfast%s.%s_'%(self.getversion(),self.iktype) + '_'.join(str(ind) for ind in solvejoints)
+        if len(freeindices)>0:
+            basename += '_f'+'_'.join(str(ind) for ind in freeindices)
+        return RaveFindDatabaseFile(os.path.join('kinematics.'+self.manip.GetKinematicsStructureHash(),basename),read)
     def autogenerate(self,options=None):
         freejoints = None
         iktype = self.iktype
@@ -247,7 +278,6 @@ class InverseKinematicsModel(OpenRAVEModel):
         if self.iktype is None:
             self.iktype = iktype = IkParameterization.Type.Transform6D
         output_filename = self.getfilename(False)
-        sourcefilename = self.getsourcefilename(False)
         if self.iktype == IkParameterization.Type.Rotation3D:
             Rbaseraw=self.manip.GetGraspTransform()[0:3,0:3]
             def solveFullIK_Rotation3D(*args,**kwargs):
@@ -300,54 +330,34 @@ class InverseKinematicsModel(OpenRAVEModel):
             raise ValueError('bad type')
 
         dofexpected = IkParameterization.GetDOF(self.iktype)
-        solvejoints = list(self.manip.GetArmIndices())
-        if freeindices is not None:
-            solvejoints = [i for i in solvejoints if not i in freeindices]
-        else:
-            freeindices = []
+        if freeindices is None:
             if freejoints is not None:
+                freeindices = []
                 for jointname in freejoints:
                     if type(jointname) == int:
                         freeindices.append(jointname)
-                        solvejoints.remove(jointname)
                     else:
                         # find the correct joint index
-                        jointindices = [joint.GetJointIndex() for joint in self.robot.GetJoints() if joint.GetName()==jointname]
-                        if len(jointindices) == 0:
+                        dofindices = [joint.GetDOFIndex() for joint in self.robot.GetJoints() if joint.GetName()==jointname]
+                        if len(dofindices) == 0:
                             raise LookupError("cannot find '%s' joint in %s robot"%(jointname,self.robot.GetName()))
-                        if not jointindices[0] in solvejoints:
-                            raise LookupError("cannot find joint '%s(%d)' in solve joints: %s"%(jointname,jointindices[0],str(solvejoints)))
-                        freeindices.append(jointindices[0])
-                        solvejoints.remove(jointindices[0])
-            
-        if len(solvejoints) > dofexpected:
-            for i in range(len(solvejoints) - dofexpected):
-                if self.iktype == IkParameterization.Type.Transform6D or self.iktype == IkParameterization.Type.Translation3D:
-                    freeindices.append(solvejoints.pop(2))
-                elif self.iktype == IkParameterization.Type.Lookat3D:
-                    # usually head (rotation joints) are at the end
-                    freeindices.append(solvejoints.pop(0))
-                elif self.iktype == IkParameterization.Type.TranslationDirection5D:
-                    # usually on arms, so remove furthest joints
-                    freeindices.append(solvejoints.pop(-1))
-                else:
-                    # if not 6D, then don't need to worry about intersecting joints
-                    # so remove the least important joints
-                    freeindices.append(solvejoints.pop(-1))
-
-        print 'Generating inverse kinematics for manip',self.manip.GetName(),':',self.iktype,solvejoints,'(this might take ~5 min)'        
-        if not len(solvejoints) == dofexpected:
-            raise ikfast.IKFastSolver.IKFeasibilityError('Need %d solve joints, got: %d'%(dofexpected, len(solvejoints)))
+                        if not dofindices[0] in self.manip.GetArmIndices():
+                            raise LookupError("cannot find joint '%s(%d)' in solve joints: %s"%(jointname,dofindices[0],self.manip.GetArmIndices()))
+                        freeindices.append(dofindices[0])
+            else:
+                freeindices = self.getDefaultFreeIndices()
+        solvejoints = [i for i in self.manip.GetArmIndices() if not i in freeindices]
+        if len(solvejoints) != dofexpected:
+            raise ValueError('number of joints to solve for is not equal to required joints %d!=%d'%(len(solvejoints),dofexpected))
         
-        sourcefilename += '_' + '_'.join(str(ind) for ind in solvejoints)
-        if len(freeindices)>0:
-            sourcefilename += '_f'+'_'.join(str(ind) for ind in freeindices)
+        log.info('Generating inverse kinematics for manip %s: %s %s (this might take ~5 min)',self.manip.GetName(),self.iktype,solvejoints)
+        sourcefilename = self.getsourcefilename(solvejoints,freeindices,False)
         if outputlang is None:
             outputlang = 'cpp'
         sourcefilename += '.' + outputlang
 
         if forceikbuild or not os.path.isfile(sourcefilename):
-            print 'creating ik file %s'%sourcefilename
+            log.info('creating ik file %s',sourcefilename)
             mkdir_recursive(os.path.split(sourcefilename)[0])
             solver = ikfast.IKFastSolver(kinbody=self.robot,kinematicshash=self.manip.GetKinematicsStructureHash(),precision=precision)
             baselink=self.manip.GetBase().GetIndex()
@@ -363,7 +373,7 @@ class InverseKinematicsModel(OpenRAVEModel):
                 raise ValueError('failed to generate ik solver for robot %s:%s'%(self.robot.GetName(),self.manip.GetName()))
             open(sourcefilename,'w').write(code)
             if outputlang != 'cpp':
-                print 'cannot continue further if outputlang is not cpp'
+                log.warn('cannot continue further if outputlang %s is not cpp',outputlang)
                 sys.exit(0)
 
         # compile the code and create the shared object
@@ -381,13 +391,14 @@ class InverseKinematicsModel(OpenRAVEModel):
             try:
                 compiler.link_shared_object(objectfiles,output_filename=output_filename,libraries=['lapack'])
             except distutils.errors.LinkError:
-                print 'linking without lapack...'
+                log.info('linking without lapack...')
                 compiler.link_shared_object(objectfiles,output_filename=output_filename)
             if not self.load():
                 return ValueError('failed to generate ik solver')
         finally:
             # cleanup intermediate files
-            os.remove(platformsourcefilename)
+            if os.path.isfile(platformsourcefilename):
+                os.remove(platformsourcefilename)
             for objectfile in objectfiles:
                 try:
                     os.remove(objectfile)
@@ -421,7 +432,7 @@ class InverseKinematicsModel(OpenRAVEModel):
                 samples = reshape(array([float64(s) for s in res[index:(index+num*numvalues)]]),(num,numvalues))
                 solutionresults.append(samples)
                 index += num*numvalues
-            print 'success rate: %f, wrong solutions: %f, no solutions: %f, missing solution: %f'%(float(res[1])/numtested,len(solutionresults[0])/numtested,len(solutionresults[1])/numtested,len(solutionresults[2])/numtested)
+            log.info('success rate: %f, wrong solutions: %f, no solutions: %f, missing solution: %f',float(res[1])/numtested,len(solutionresults[0])/numtested,len(solutionresults[1])/numtested,len(solutionresults[2])/numtested)
         return successrate
 
     @staticmethod
@@ -494,6 +505,13 @@ class InverseKinematicsModel(OpenRAVEModel):
         return parser
     @staticmethod
     def RunFromParser(Model=None,parser=None,args=None,**kwargs):
+        format = logging.Formatter('%(name)s: %(message)s')
+        handler = logging.StreamHandler(sys.stdout)
+        handler.setFormatter(format)
+        log.addHandler(handler)
+        log.setLevel(logging.INFO)
+        ikfast.log.addHandler(handler)
+        ikfast.log.setLevel(logging.INFO)
         if parser is None:
             parser = InverseKinematicsModel.CreateOptionParser()
         (options, leftargs) = parser.parse_args(args=args)
@@ -508,7 +526,7 @@ class InverseKinematicsModel(OpenRAVEModel):
         Model = lambda robot: InverseKinematicsModel(robot=robot,iktype=iktype,forceikfast=True)
         OpenRAVEModel.RunFromParser(Model=Model,parser=parser,robotatts={'skipgeometry':'1'},args=args,**kwargs)
         if options.iktests is not None or options.perftiming is not None:
-            print 'testing the success rate of robot ',options.robot
+            log.info('testing the success rate of robot %s ',options.robot)
             env = Environment()
             try:
                 robot = env.ReadRobotXMLFile(options.robot,{'skipgeometry':'1'})
@@ -520,10 +538,9 @@ class InverseKinematicsModel(OpenRAVEModel):
                     raise ValueError('failed to load ik')
                 if options.iktests is not None:
                     successrate = ikmodel.testik(iktests=options.iktests)
-                    print 'success rate is: ',successrate
                 elif options.perftiming:
                     results = array(ikmodel.perftiming(num=options.perftiming))
-                    print 'mean: %fs, median: %fs, min: %fs, max: %fs'%(mean(results),median(results),min(results),max(results))
+                    log.info('mean: %fs, median: %fs, min: %fs, max: %fs', mean(results),median(results),min(results),max(results))
             finally:
                 env.Destroy()
                 RaveDestroy()

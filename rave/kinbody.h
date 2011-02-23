@@ -365,9 +365,12 @@ public:
         /// \brief The degrees of freedom of the joint. Each joint supports a max of 3 degrees of freedom.
         virtual int GetDOF() const;
 
-        /// \brief return true if joint axis has an identification at some of its lower and upper limits
+        /// \brief Return true if joint axis has an identification at some of its lower and upper limits.
         ///
-        /// Although currently not developed, it could be possible to support identified joints that are not circular.
+        /// An identification of the lower and upper limits means that once the joint reaches its upper limits, it is also
+        /// at its lower limit. The most common identification on revolute joints at -pi and pi. 'circularity' means the
+        /// joint does not stop at limits.
+        /// Although currently not developed, it could be possible to support identification for joints that are not revolute.
         virtual bool IsCircular(int iaxis) const { return _bIsCircular.at(iaxis); }
 
         /// \brief returns true if the axis describes a rotation around an axis.

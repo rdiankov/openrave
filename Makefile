@@ -16,10 +16,7 @@ uninstall:
 	cd build && $(MAKE) uninstall
 
 test: all
-	cd build && $(MAKE) test
-
-test-future: all
-	cd build && $(MAKE) test-future
+	cd test && python test_ikfast.py
 
 clean:
 	-cd build && $(MAKE) clean

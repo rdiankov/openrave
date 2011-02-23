@@ -324,7 +324,6 @@ public:
             else {
                 return fullfilename;
             }
-            //#endif
         }
         return "";
     }

@@ -1500,7 +1500,14 @@ public:
         string GetName() const { return _pmanip->GetName(); }
         PyRobotBasePtr GetRobot() { return PyRobotBasePtr(new PyRobotBase(_pmanip->GetRobot(),_pyenv)); }
 
-		bool SetIkSolver(PyIkSolverBasePtr iksolver) { CHECK_POINTER(iksolver); return _pmanip->SetIkSolver(iksolver->GetIkSolver()); }
+		bool SetIkSolver(PyIkSolverBasePtr iksolver) {
+            if( !iksolver ) {
+                return _pmanip->SetIkSolver(IkSolverBasePtr());
+            }
+            else {
+                return _pmanip->SetIkSolver(iksolver->GetIkSolver());
+            }
+        }
         PyIkSolverBasePtr GetIkSolver() { IkSolverBasePtr iksolver = _pmanip->GetIkSolver(); return !iksolver ? PyIkSolverBasePtr() : PyIkSolverBasePtr(new PyIkSolverBase(iksolver,_pyenv)); }
 
         boost::shared_ptr<PyLink> GetBase() { return !_pmanip->GetBase() ? PyLinkPtr() : PyLinkPtr(new PyLink(_pmanip->GetBase(),_pyenv)); }
