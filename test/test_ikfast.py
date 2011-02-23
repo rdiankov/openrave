@@ -157,13 +157,15 @@ def robotstats(robotfilename,manipname,iktypestr,freeindices):
 
 
 from noseplugins import multiprocess, xunitmultiprocess
-#from nose.plugins.testid import TestId
-#from nose.plugins.xunit import Xunit
-#from nose.plugins.cover import Coverage
+from nose.plugins.cover import Coverage
 
 if __name__ == "__main__":
     import test_ikfast
-    #'--with-coverage','--cover-package=openravepy.ikfast'
+    numprocesses = 1
+    for arg in sys.argv[1:]:
+        if arg.startswith('-j'):
+            numprocesses = int(arg[2:])
+
     prog=nose.core.TestProgram(argv=['nosetests','-v','--with-xunitmp','--xunit-file=ikfastresults.xml','--processes=4','--process-timeout=1200','test_ikfast.py'],plugins=[multiprocess.MultiProcess(),xunitmultiprocess.Xunitmp()],exit=False)
     # save the queue to file
     f = open('stats.xml','w')
