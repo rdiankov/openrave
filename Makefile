@@ -15,7 +15,7 @@ install:
 uninstall:
 	cd build && $(MAKE) uninstall
 
-test: all
+test: all install
 	cd test && python test_ikfast.py
 
 clean:
