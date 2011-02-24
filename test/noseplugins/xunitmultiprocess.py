@@ -236,7 +236,7 @@ class Xunitmp(Plugin):
         id = test.id()
         self.xunitstream.put(
             '<testcase classname=%(cls)s name=%(name)s '
-            'time="%(taken)f" />' %
+            'time="%(taken)f" ><system-out>this is some statistics about the success!</system-out></testcase>' %
             {'cls': self._quoteattr('.'.join(id.split('.')[:-1])),
              'name': self._quoteattr(id.split('.')[-1]),
              'taken': taken,

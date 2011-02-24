@@ -79,7 +79,7 @@ description of the commands it supports and what they do.
 \section arch_environment Environment Concepts
 
 All of %OpenRAVE's services are offered through the environment. For example, requesting a
-planner interface called 'BiRRT' is done through \ref CreatePlanner(). The environment supports:
+planner interface called 'BiRRT' is done through \ref RaveCreatePlanner(). The environment supports:
 
 - \ref env_plugin_functionality "managing and communicating with plugins"
 - \ref env_collision_checking "collision checking"
@@ -96,7 +96,7 @@ mutex. (Note that this only applies to environment functions, and not interface 
 
 \ja
 \section arch_environment 環境の概念
-全ての%OpenRAVEのサービスはその環境を通じて提供されます．例えば，'BiRRT'と呼ばれるプランナーインターフェースへの要求はCreatePlanner()を通じて行われます．環境は以下をサポートします．
+全ての%OpenRAVEのサービスはその環境を通じて提供されます．例えば，'BiRRT'と呼ばれるプランナーインターフェースへの要求はRaveCreatePlanner()を通じて行われます．環境は以下をサポートします．
 
 - \ref env_plugin_functionality "プラグインの管理と通信"
 - \ref env_collision_checking "幾何学的干渉検知"
@@ -411,7 +411,7 @@ Assuming that there exists a plugin with a controller interface named \b MyContr
 - C++ 
 \code
 RobotBasePtr probot = GetEnv()->GetRobot("schunk-lwa3");
-ControllerBasePtr pcontroller = GetEnv()->CreateController("MyController controller arguments here");
+ControllerBasePtr pcontroller = RaveCreateController(GetEnv(),"MyController controller arguments here");
 vector<int> dofindices(probot->GetDOF());
 for(int i = 0; i < probot->GetDOF(); ++i) {
     dofindices[i] = i;
@@ -423,7 +423,7 @@ probot->SetController(pcontroller,dofindices,nControlTransformation);
 - Python 
 \code
 robot = env.GetRobot('schunk-lwa3')
-controller = env.CreateController('MyController controller arguments here')
+controller = RaveCreateController(env,'MyController controller arguments here')
 robot.SetController(controller,range(robot.GetDOF()),controltransform=1)
 \endcode
 
@@ -549,7 +549,7 @@ PlannerParameters, then a planner has to use it to set the state of the robot. T
 flexibility in choosing the configuration space. A planner should never use the raw joint values
 functions defined in KinBody. The usage of a planner is simple:
 
-- Acquire its pointer from EnvironmentBase::CreatePlanner. You **MUST** always do this, even if the
+- Acquire its pointer from RaveCreatePlanner. You **MUST** always do this, even if the
   planner is defined in the same plugin that uses it.
 
 - Fill a \ref OpenRAVE::PlannerBase::PlannerParameters "PlannerParameters" structure defining the
@@ -625,8 +625,8 @@ params.vgoalconfig = activegoal;
  
 // set other params values like
  
-PlannerBasePtr rrtplanner = GetEnv()->CreatePlanner("rBiRRT");
-TrajectoryBasePtr ptraj = GetEnv()->CreateTrajectory(robot->GetActiveDOF());
+PlannerBasePtr rrtplanner = RaveCreatePlanner(GetEnv(),"rBiRRT");
+TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF());
 if( !rrtplanner->InitPlan(robot, params) )
     return false;
  
