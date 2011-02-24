@@ -40,6 +40,8 @@ numiktests = [5000,10,100] # number of iktests indexed by the number of free joi
 iktypes = [IkParameterization.Type.Transform6D] # IK types to test for
 freeinc = 0.04 # increment of the free joints
 globalstats = multiprocessing.Queue() # used for gathering statistics
+minimumsuccess = 0.5
+maximumnosolutions = 0.5
 
 env=None
 ikfastproblem=None
@@ -125,24 +127,30 @@ def robotstats(iktypestr,robotfilename,manipname,freeindices):
                 samples = numpy.reshape(numpy.array([numpy.float64(s) for s in res[index:(index+num*numvalues)]]),(num,numvalues))
                 solutionresults.append(samples)
                 index += num*numvalues
-            print 'success: %.4f'%(float(numsuccessful)/numtested)
+            successrate = float(numsuccessful)/numtested
+            nosolutions = float(len(solutionresults[1]))/numtested
+            print 'success: %.4f'%(successrate)
             print 'wrong solutions: %.4f'%(float(len(solutionresults[0]))/numtested)
-            print 'no solutions: %.4f'%(float(len(solutionresults[1]))/numtested)
+            print 'no solutions: %.4f'%(nosolutions)
             print 'missing solution: %.4f'%(float(len(solutionresults[2]))/numtested)
             #globalstats.put([numtested,numsuccessful,solutionresults])
             #raise IKStatisticsException(s)
+            assert(len(solutionresults[0])==0)
+            assert(successrate > minimumsuccess)
+            assert(nosolutions < maximumnosolutions)
         except ikfast.IKFastSolver.IKFeasibilityError:
             # this is expected, and is normal operation, have to notify
             pass
             #raise IKStatisticsException('not solvable!')
+        freeindicesstr = ','.join(robot.GetJointFromDOFIndex(dof).GetName() for dof in freeindices)
+        return '%s %s:%s free:[%s]'%(iktypestr,os.path.splitext(os.path.split(robotfilename)[1])[0],manipname,freeindicesstr)
 
 class RunRobotStats:
     __name__='RunRobotStats'
     def __call__(self,*args):
-        self.description = '%s.%s:%s:%s'%(args[0],os.path.splitext(args[1])[0],args[2],args[3])
         try:
             setup_robotstats()
-            robotstats(*args)
+            self.description = robotstats(*args)
         finally:
             teardown_robotstats()
 
@@ -164,10 +172,7 @@ def test_robots():
                     armdof = len(manip.GetArmIndices())
                     if armdof >= expecteddof:
                         for freeindices in combinations(manip.GetArmIndices(),armdof-expecteddof):
-                            args = (str(iktype), robotfilename, manip.GetName(), freeindices)
-                            #yield robotstats,robotfilename, manip.GetName(), str(iktype),freeindices
-                            index += 1
-                            yield (RunRobotStats(),)+args
+                            yield RunRobotStats(),str(iktype),robotfilename, manip.GetName(),freeindices
     finally:
         envlocal.Destroy()
         # for some reason the plugindatabase _threadPluginLoader thread is on a different process
