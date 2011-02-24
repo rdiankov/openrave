@@ -257,7 +257,7 @@ class Xunitmp(Plugin):
         if test.capturedOutput is not None:
             systemout = '<system-out><![CDATA['+str(test.capturedOutput)+']]></system-out>'
         self.xunitstream.put(
-            '<testcase classname=%(cls)s name=%(name)s '
+            '<testcase classname=%(cls)s name=%(name)s assertions="IKAssertion" '
             'time="%(taken)f" >%(systemout)s</testcase>' %
             {'cls': self._quoteattr('.'.join(id[0:1])),
              'name': self._quoteattr(name),

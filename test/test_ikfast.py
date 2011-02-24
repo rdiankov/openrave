@@ -129,19 +129,17 @@ def robotstats(iktypestr,robotfilename,manipname,freeindices):
                 index += num*numvalues
             successrate = float(numsuccessful)/numtested
             nosolutions = float(len(solutionresults[1]))/numtested
-            print 'success: %.4f'%(successrate)
-            print 'wrong solutions: %.4f'%(float(len(solutionresults[0]))/numtested)
-            print 'no solutions: %.4f'%(nosolutions)
-            print 'missing solution: %.4f'%(float(len(solutionresults[2]))/numtested)
+            print 'success: %d/%d = %.4f'%(numsuccessful, numtested, successrate)
+            print 'wrong solutions: %d/%d = %.4f'%(len(solutionresults[0]),numtested, float(len(solutionresults[0]))/numtested)
+            print 'no solutions: %d/%d = %.4f'%(len(solutionresults[1]),numtested, nosolutions)
+            print 'missing solution: %d/%d = %.4f'%(len(solutionresults[2]),numtested,float(len(solutionresults[2]))/numtested)
             #globalstats.put([numtested,numsuccessful,solutionresults])
-            #raise IKStatisticsException(s)
             assert(len(solutionresults[0])==0)
             assert(successrate > minimumsuccess)
             assert(nosolutions < maximumnosolutions)
-        except ikfast.IKFastSolver.IKFeasibilityError:
+        except ikfast.IKFastSolver.IKFeasibilityError,e:
             # this is expected, and is normal operation, have to notify
-            pass
-            #raise IKStatisticsException('not solvable!')
+            print e
         freeindicesstr = ','.join(robot.GetJointFromDOFIndex(dof).GetName() for dof in freeindices)
         return '%s %s:%s free:[%s]'%(iktypestr,os.path.splitext(os.path.split(robotfilename)[1])[0],manipname,freeindicesstr)
 
