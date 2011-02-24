@@ -182,7 +182,7 @@ class RunRobotStats:
             teardown_robotstats()
 
 def test_robots():
-    robotfilenames = ['robots/unimation-pumaarm.zae','robots/barrettwam.robot.xml','robots/pr2-beta-static.zae','robots/neuronics-katana.zae','robots/mitsubishi-pa10.zae','robots/schunk-lwa3.zae','robots/darpa-arm.zae','robots/exactdynamics-manusarmleft.zae','robots/kuka-kr5-r650.zae','robots/kuka-kr5-r850.zae']
+    robotfilenames = ['robots/unimation-pumaarm.zae','robots/barrettwam.robot.xml','robots/pr2-beta-static.zae']#,'robots/neuronics-katana.zae','robots/mitsubishi-pa10.zae','robots/schunk-lwa3.zae','robots/darpa-arm.zae','robots/exactdynamics-manusarmleft.zae','robots/kuka-kr5-r650.zae','robots/kuka-kr5-r850.zae']
     RaveInitialize(load_all_plugins=False)
     RaveSetDebugLevel(DebugLevel.Error) # set to error in order to avoid expected plugin loading errosr
     envlocal=Environment()
