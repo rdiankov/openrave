@@ -222,7 +222,7 @@ if __name__ == "__main__":
 #     nose.loader.log.setLevel(logging.DEBUG)
 #     multiprocess.log.addHandler(handler)
 #     multiprocess.log.setLevel(logging.DEBUG)
-    prog=nose.core.TestProgram(argv=['nosetests','-v','--with-xunitmp','--xunit-file=ikfastresults.xml','--processes=4','--process-timeout=1200','--with-callableclass','test_ikfast.py'],plugins=[capture.Capture(),multiprocess.MultiProcess(),xunitmultiprocess.Xunitmp(),callableclass.CallableClass()],exit=False)
+    prog=nose.core.TestProgram(argv=['nosetests','-v','--with-xunitmp','--xunit-file=ikfastresults.xml','--processes=%d'%numprocesses,'--process-timeout=600','--with-callableclass','test_ikfast.py'],plugins=[capture.Capture(),multiprocess.MultiProcess(),xunitmultiprocess.Xunitmp(),callableclass.CallableClass()],exit=False)
     # save the queue to file
 #     f = open('stats.xml','w')
 #     while not test_ikfast.globalstats.empty():
