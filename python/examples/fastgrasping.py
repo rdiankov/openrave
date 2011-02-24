@@ -42,6 +42,8 @@ class FastGrasping(metaclass.AutoReloader):
     def checkgraspfn(self, contacts,finalconfig,grasp,info):
         # check if grasp can be reached by robot
         Tglobalgrasp = self.gmodel.getGlobalGraspTransform(grasp,collisionfree=True)
+        # have to set the preshape since the current robot is at the final grasp!
+        self.gmodel.setPreshape(grasp)
         sol = self.gmodel.manip.FindIKSolution(Tglobalgrasp,True)
         if sol is not None:
             jointvalues = array(finalconfig[0])
