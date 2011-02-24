@@ -244,13 +244,15 @@ class Xunitmp(Plugin):
         taken = self._timeTaken()
         self.xunitstats[2] += 1
         id = test.id()
+        name=test.shortDescription()#id.split('.')[-1]
+        systemout=''
         if test.capturedOutput is not None:
             systemout = '<system-out><![CDATA['+str(test.capturedOutput)+']]></system-out>'
         self.xunitstream.put(
             '<testcase classname=%(cls)s name=%(name)s '
             'time="%(taken)f" >%(systemout)s</testcase>' %
-            {'cls': self._quoteattr('.'.join(id.split('.')[:-1])),
-             'name': self._quoteattr(id.split('.')[-1]),
+            {'cls': self._quoteattr('.'.join(id.split('.')[0:1])),
+             'name': self._quoteattr(name),
              'taken': taken,
              'systemout':systemout
              })

@@ -25,6 +25,8 @@ import time, unittest, platform, os, sys
 from distutils import ccompiler
 import nose
 import logging
+from functools import partial
+
 log = logging.getLogger(__name__)
 
 import multiprocessing
@@ -66,30 +68,6 @@ def teardown_robotstats():
     env.Destroy()
     RaveDestroy()
 
-def test_robots():
-    robotfilenames = ['robots/unimation-pumaarm.zae','robots/barrettwam.robot.xml']
-    RaveInitialize(load_all_plugins=False)
-    RaveSetDebugLevel(DebugLevel.Error) # set to error in order to avoid expected plugin loading errosr
-    envlocal=Environment()
-    envlocal.StopSimulation()
-    try:
-        for robotfilename in robotfilenames:
-            envlocal.Reset()
-            robot = envlocal.ReadRobotXMLFile(robotfilename,{'skipgeometry':'1'})
-            envlocal.AddRobot(robot)
-            for iktype in iktypes:
-                expecteddof = IkParameterization.GetDOF(iktype)
-                for manip in robot.GetManipulators():
-                    armdof = len(manip.GetArmIndices())
-                    if armdof >= expecteddof:
-                        for freeindices in combinations(manip.GetArmIndices(),armdof-expecteddof):
-                            yield robotstats, robotfilename, manip.GetName(), str(iktype),freeindices
-    finally:
-        envlocal.Destroy()
-        # for some reason the plugindatabase _threadPluginLoader thread is on a different process
-        # than the main threading waiting for it to finish, so it is necessary to call RaveDestroy
-        RaveDestroy()
-
 class InverseKinematicsModelTest(databases.inversekinematics.InverseKinematicsModel):
     """keeps the written shared object files separate from the main stream files and adds the used indices.
     """
@@ -110,8 +88,8 @@ class InverseKinematicsModelTest(databases.inversekinematics.InverseKinematicsMo
             basename += '_f'+'_'.join(str(ind) for ind in self.freeindices)
         return RaveFindDatabaseFile(os.path.join('kinematics.'+self.manip.GetKinematicsStructureHash(),ccompiler.new_compiler().shared_object_filename(basename=basename)),read)
 
-@nose.with_setup(setup_robotstats, teardown_robotstats)
-def robotstats(robotfilename,manipname,iktypestr,freeindices):
+#@nose.with_setup(setup_robotstats, teardown_robotstats)
+def robotstats(iktypestr,robotfilename,manipname,freeindices):
     global env, ikfastproblem, globalstats
     iktype = None
     for value,type in IkParameterization.Type.values.iteritems():
@@ -147,10 +125,10 @@ def robotstats(robotfilename,manipname,iktypestr,freeindices):
                 samples = numpy.reshape(numpy.array([numpy.float64(s) for s in res[index:(index+num*numvalues)]]),(num,numvalues))
                 solutionresults.append(samples)
                 index += num*numvalues
-            print 'success rate: ',float(numsuccessful)/numtested
-            print 'wrong solutions: %f', len(solutionresults[0])/numtested
-            print 'no solutions: %f', len(solutionresults[1])/numtested
-            print 'missing solution: %f',len(solutionresults[2])/numtested
+            print 'success: %.4f'%(float(numsuccessful)/numtested)
+            print 'wrong solutions: %.4f'%(len(solutionresults[0])/numtested)
+            print 'no solutions: %.4f'%(len(solutionresults[1])/numtested)
+            print 'missing solution: %.4f'%(len(solutionresults[2])/numtested)
             #globalstats.put([numtested,numsuccessful,solutionresults])
             #raise IKStatisticsException(s)
         except ikfast.IKFastSolver.IKFeasibilityError:
@@ -158,6 +136,46 @@ def robotstats(robotfilename,manipname,iktypestr,freeindices):
             pass
             #raise IKStatisticsException('not solvable!')
 
+class RunRobotStats:
+    __name__='RunRobotStats'
+    def __call__(self,*args):
+        self.description = '%s.%s:%s:%s'%(args[0],os.path.splitext(args[1])[0],args[2],args[3])
+        try:
+            setup_robotstats()
+            robotstats(*args)
+        finally:
+            teardown_robotstats()
+        #robotstats(*args)
+
+def test_robots():
+    robotfilenames = ['robots/unimation-pumaarm.zae','robots/barrettwam.robot.xml']
+    RaveInitialize(load_all_plugins=False)
+    RaveSetDebugLevel(DebugLevel.Error) # set to error in order to avoid expected plugin loading errosr
+    envlocal=Environment()
+    envlocal.StopSimulation()
+    try:
+        for robotfilename in robotfilenames:
+            envlocal.Reset()
+            robot = envlocal.ReadRobotXMLFile(robotfilename,{'skipgeometry':'1'})
+            envlocal.AddRobot(robot)
+            for iktype in iktypes:
+                expecteddof = IkParameterization.GetDOF(iktype)
+                for manip in robot.GetManipulators():
+                    armdof = len(manip.GetArmIndices())
+                    if armdof >= expecteddof:
+                        for freeindices in combinations(manip.GetArmIndices(),armdof-expecteddof):
+                            args = (str(iktype), robotfilename, manip.GetName(), freeindices)
+                            #yield robotstats,robotfilename, manip.GetName(), str(iktype),freeindices
+                            #f = partial(robotstats,*args)
+                            #f.__name__=robotstats.__name__
+                            #f.__module__=robotstats.__module__
+                            #yield (f,)
+                            yield (RunRobotStats(),)+args
+    finally:
+        envlocal.Destroy()
+        # for some reason the plugindatabase _threadPluginLoader thread is on a different process
+        # than the main threading waiting for it to finish, so it is necessary to call RaveDestroy
+        RaveDestroy()
 
 from noseplugins import multiprocess, xunitmultiprocess, capture
 from nose.plugins.cover import Coverage
@@ -169,8 +187,12 @@ if __name__ == "__main__":
     for arg in sys.argv[1:]:
         if arg.startswith('-j'):
             numprocesses = int(arg[2:])
-
-    prog=nose.core.TestProgram(argv=['nosetests','-v','--with-xunitmp','--xunit-file=ikfastresults.xml','--processes=4','--process-timeout=1200','test_ikfast.py'],plugins=[capture.Capture(),multiprocess.MultiProcess(),xunitmultiprocess.Xunitmp()],exit=False)
+#     format = logging.Formatter('%(name)s: %(levelname)s: %(message)s')
+#     handler = logging.StreamHandler(sys.stderr)
+#     handler.setFormatter(format)
+#     multiprocess.log.addHandler(handler)
+#     multiprocess.log.setLevel(logging.DEBUG)
+    prog=nose.core.TestProgram(argv=['nosetests','-v','--with-xunitmp','-s','--xunit-file=ikfastresults.xml','--processes=4','--process-timeout=1200','test_ikfast.py'],plugins=[capture.Capture(),multiprocess.MultiProcess(),xunitmultiprocess.Xunitmp()],exit=False)
     # save the queue to file
 #     f = open('stats.xml','w')
 #     while not test_ikfast.globalstats.empty():

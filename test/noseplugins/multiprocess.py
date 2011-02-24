@@ -393,7 +393,9 @@ class MultiProcessTestRunner(TextTestRunner):
     def addtask(testQueue,tasks,case):
         arg = None
         if isinstance(case,nose.case.Test) and hasattr(case.test,'arg'):
-            case.test.descriptor = None # this removes the top level descriptor and allows real function name to be returned
+            # this removes the top level descriptor and allows real function name to be returned
+            #case.descriptor = None
+            case.test.descriptor = None
             arg = case.test.arg
         log.debug('adding (%s): %s '%(type(case),str(case)))
         test_addr = MultiProcessTestRunner.address(case)
