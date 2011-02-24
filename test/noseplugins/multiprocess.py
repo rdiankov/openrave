@@ -106,8 +106,7 @@ try:
 except ImportError:
     import StringIO
 
-import xunitmultiprocess
-from capture import Capture
+import xunitmultiprocess, capture, callableclass
 
 log = logging.getLogger(__name__)
 
@@ -147,7 +146,6 @@ class TestLet:
 
     def __str__(self):
         return self._str
-
 
 class MultiProcess(Plugin):
     """
@@ -218,7 +216,6 @@ class MultiProcess(Plugin):
                                       verbosity=self.config.verbosity,
                                       config=self.config,
                                       loaderClass=self.loaderClass)
-
 
 class MultiProcessTestRunner(TextTestRunner):
     def __init__(self, **kw):
@@ -397,7 +394,7 @@ class MultiProcessTestRunner(TextTestRunner):
             #case.descriptor = None
             case.test.descriptor = None
             arg = case.test.arg
-        log.debug('adding (%s): %s '%(type(case),str(case)))
+        #log.debug('adding (%s): %s '%(type(case),str(case)))
         test_addr = MultiProcessTestRunner.address(case)
         testQueue.put((test_addr,arg), block=False)
         if arg is not None:
@@ -512,11 +509,9 @@ def runner(ix, testQueue, resultQueue, currentaddr, currentstart, shouldStop,
     dummy_parser = config.parserClass()
 
     # manually add xunitmultiprocess plugin
-    plugin = Capture()
-    plugin.addOptions(dummy_parser,{})
-    config.plugins.addPlugin(plugin)
-    plugin = xunitmultiprocess.Xunitmp()
-    plugin.addOptions(dummy_parser,{})
+    for plugin in [capture.Capture(), xunitmultiprocess.Xunitmp(), callableclass.CallableClass()]:
+        plugin.addOptions(dummy_parser,{})
+        config.plugins.addPlugin(plugin)
     config.plugins.addPlugin(plugin)
     config.plugins.configure(config.options,config)
     config.plugins.begin()
@@ -565,6 +560,7 @@ def runner(ix, testQueue, resultQueue, currentaddr, currentstart, shouldStop,
                 try:
                     if arg is not None:
                         test_addr = test_addr + str(arg)
+                    log.debug('aargs: %s',test.arg)
                     currentaddr.value = test_addr
                     currentstart.value = time.time()
                     test(result)

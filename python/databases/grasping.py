@@ -371,10 +371,10 @@ class GraspingModel(OpenRAVEModel):
                             Tlocalgrasp = dot(linalg.inv(self.target.GetTransform()),Tgrasp)
                             # find a non-colliding transform
                             self.setPreshape(grasp)
-                            dir = self.getGlobalApproachDir(grasp)
+                            direction = self.getGlobalApproachDir(grasp)
                             Tgrasp_nocol = array(Tgrasp)
                             while self.manip.CheckEndEffectorCollision(Tgrasp_nocol):
-                                Tgrasp_nocol[0:3,3] -= dir*self.collision_escape_offset
+                                Tgrasp_nocol[0:3,3] -= direction*self.collision_escape_offset
                             Tlocalgrasp_nocol = dot(linalg.inv(self.target.GetTransform()),Tgrasp_nocol)
                             self.robot.SetDOFValues(finalconfig[0])
                             if updateenv:
@@ -550,7 +550,7 @@ class GraspingModel(OpenRAVEModel):
         return trajdata
     def computeValidGrasps(self,startindex=0,checkcollision=True,checkik=True,checkgrasper=True,backupdist=0.0,returnnum=inf):
         """Returns the set of grasps that satisfy certain conditions. If returnnum is set, will also return once that many number of grasps are found.
-        If backupdist > 0, then will move the hand along negative approach dir and check for validity.
+        If backupdist > 0, then will move the hand along negative approach direction and check for validity.
         If checkgrasper is True, will execute the grasp and check if gripper only contacts target
         """
         with self.robot:
@@ -590,7 +590,7 @@ class GraspingModel(OpenRAVEModel):
 
     def validGraspIterator(self,startindex=0,checkcollision=True,checkik=True,checkgrasper=True,backupdist=0.0,randomgrasps=False):
         """Returns an iterator for valid grasps that satisfy certain conditions.
-        If backupdist > 0, then will move the hand along negative approach dir and check for validity.
+        If backupdist > 0, then will move the hand along negative approach direction and check for validity.
         """
         if randomgrasps:
             order = startindex+random.permutation(len(self.grasps)-startindex)

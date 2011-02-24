@@ -195,7 +195,10 @@ class Xunitmp(Plugin):
             type = 'error'
             self.xunitstats[0] += 1
         tb = ''.join(traceback.format_exception(*err))
-        id = test.id()
+        id = test.id().split('.')
+        name=test.shortDescription()
+        if name is None:
+            name = '.'.join(id[1:])
         systemout = ''
         if test.capturedOutput is not None:
             systemout = '<system-out><![CDATA['+str(test.capturedOutput)+']]></system-out>'
@@ -204,8 +207,8 @@ class Xunitmp(Plugin):
             '%(systemout)s'
             '<%(type)s type=%(errtype)s message=%(message)s><![CDATA[%(tb)s]]>'
             '</%(type)s></testcase>' %
-            {'cls': self._quoteattr('.'.join(id.split('.')[:-1])),
-             'name': self._quoteattr(id.split('.')[-1]),
+            {'cls': self._quoteattr('.'.join(id[0:1])),
+             'name': self._quoteattr(name),
              'taken': taken,
              'type': type,
              'errtype': self._quoteattr(nice_classname(err[0])),
@@ -220,7 +223,10 @@ class Xunitmp(Plugin):
         taken = self._timeTaken()
         tb = ''.join(traceback.format_exception(*err))
         self.xunitstats[1] += 1
-        id = test.id()
+        id = test.id().split('.')
+        name=test.shortDescription()
+        if name is None:
+            name = '.'.join(id[1:])
         systemout = ''
         if test.capturedOutput is not None:
             systemout = '<system-out><![CDATA['+str(test.capturedOutput)+']]></system-out>'
@@ -229,8 +235,8 @@ class Xunitmp(Plugin):
             '%(systemout)s'
             '<failure type=%(errtype)s message=%(message)s><![CDATA[%(tb)s]]>'
             '</failure></testcase>' %
-            {'cls': self._quoteattr('.'.join(id.split('.')[:-1])),
-             'name': self._quoteattr(id.split('.')[-1]),
+            {'cls': self._quoteattr('.'.join(id[0:1])),
+             'name': self._quoteattr(name),
              'taken': taken,
              'errtype': self._quoteattr(nice_classname(err[0])),
              'message': self._quoteattr(exc_message(err)),
@@ -243,15 +249,17 @@ class Xunitmp(Plugin):
         """
         taken = self._timeTaken()
         self.xunitstats[2] += 1
-        id = test.id()
-        name=test.shortDescription()#id.split('.')[-1]
+        id = test.id().split('.')
+        name=test.shortDescription()
+        if name is None:
+            name = '.'.join(id[1:])
         systemout=''
         if test.capturedOutput is not None:
             systemout = '<system-out><![CDATA['+str(test.capturedOutput)+']]></system-out>'
         self.xunitstream.put(
             '<testcase classname=%(cls)s name=%(name)s '
             'time="%(taken)f" >%(systemout)s</testcase>' %
-            {'cls': self._quoteattr('.'.join(id.split('.')[0:1])),
+            {'cls': self._quoteattr('.'.join(id[0:1])),
              'name': self._quoteattr(name),
              'taken': taken,
              'systemout':systemout

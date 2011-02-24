@@ -1,3 +1,5 @@
+"""Derives from the nose.plugins.capture.Capture class and provides an addSuccess callback. It also removes the system out put from the error log, this is passed through the capturedOutput.
+"""
 import nose
 import nose.plugins.capture
 import sys

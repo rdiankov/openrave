@@ -88,7 +88,7 @@ class InverseKinematicsModelTest(databases.inversekinematics.InverseKinematicsMo
             basename += '_f'+'_'.join(str(ind) for ind in self.freeindices)
         return RaveFindDatabaseFile(os.path.join('kinematics.'+self.manip.GetKinematicsStructureHash(),ccompiler.new_compiler().shared_object_filename(basename=basename)),read)
 
-#@nose.with_setup(setup_robotstats, teardown_robotstats)
+@nose.with_setup(setup_robotstats, teardown_robotstats)
 def robotstats(iktypestr,robotfilename,manipname,freeindices):
     global env, ikfastproblem, globalstats
     iktype = None
@@ -126,9 +126,9 @@ def robotstats(iktypestr,robotfilename,manipname,freeindices):
                 solutionresults.append(samples)
                 index += num*numvalues
             print 'success: %.4f'%(float(numsuccessful)/numtested)
-            print 'wrong solutions: %.4f'%(len(solutionresults[0])/numtested)
-            print 'no solutions: %.4f'%(len(solutionresults[1])/numtested)
-            print 'missing solution: %.4f'%(len(solutionresults[2])/numtested)
+            print 'wrong solutions: %.4f'%(float(len(solutionresults[0]))/numtested)
+            print 'no solutions: %.4f'%(float(len(solutionresults[1]))/numtested)
+            print 'missing solution: %.4f'%(float(len(solutionresults[2]))/numtested)
             #globalstats.put([numtested,numsuccessful,solutionresults])
             #raise IKStatisticsException(s)
         except ikfast.IKFastSolver.IKFeasibilityError:
@@ -145,7 +145,6 @@ class RunRobotStats:
             robotstats(*args)
         finally:
             teardown_robotstats()
-        #robotstats(*args)
 
 def test_robots():
     robotfilenames = ['robots/unimation-pumaarm.zae','robots/barrettwam.robot.xml']
@@ -154,6 +153,7 @@ def test_robots():
     envlocal=Environment()
     envlocal.StopSimulation()
     try:
+        index = 0
         for robotfilename in robotfilenames:
             envlocal.Reset()
             robot = envlocal.ReadRobotXMLFile(robotfilename,{'skipgeometry':'1'})
@@ -166,10 +166,7 @@ def test_robots():
                         for freeindices in combinations(manip.GetArmIndices(),armdof-expecteddof):
                             args = (str(iktype), robotfilename, manip.GetName(), freeindices)
                             #yield robotstats,robotfilename, manip.GetName(), str(iktype),freeindices
-                            #f = partial(robotstats,*args)
-                            #f.__name__=robotstats.__name__
-                            #f.__module__=robotstats.__module__
-                            #yield (f,)
+                            index += 1
                             yield (RunRobotStats(),)+args
     finally:
         envlocal.Destroy()
@@ -177,7 +174,7 @@ def test_robots():
         # than the main threading waiting for it to finish, so it is necessary to call RaveDestroy
         RaveDestroy()
 
-from noseplugins import multiprocess, xunitmultiprocess, capture
+from noseplugins import multiprocess, xunitmultiprocess, capture, callableclass
 from nose.plugins.cover import Coverage
 
 if __name__ == "__main__":
@@ -190,9 +187,10 @@ if __name__ == "__main__":
 #     format = logging.Formatter('%(name)s: %(levelname)s: %(message)s')
 #     handler = logging.StreamHandler(sys.stderr)
 #     handler.setFormatter(format)
+#     nose.loader.log.setLevel(logging.DEBUG)
 #     multiprocess.log.addHandler(handler)
 #     multiprocess.log.setLevel(logging.DEBUG)
-    prog=nose.core.TestProgram(argv=['nosetests','-v','--with-xunitmp','-s','--xunit-file=ikfastresults.xml','--processes=4','--process-timeout=1200','test_ikfast.py'],plugins=[capture.Capture(),multiprocess.MultiProcess(),xunitmultiprocess.Xunitmp()],exit=False)
+    prog=nose.core.TestProgram(argv=['nosetests','-v','--with-xunitmp','--xunit-file=ikfastresults.xml','--processes=4','--process-timeout=1200','--with-callableclass','test_ikfast.py'],plugins=[capture.Capture(),multiprocess.MultiProcess(),xunitmultiprocess.Xunitmp(),callableclass.CallableClass()],exit=False)
     # save the queue to file
 #     f = open('stats.xml','w')
 #     while not test_ikfast.globalstats.empty():

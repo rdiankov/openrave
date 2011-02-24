@@ -555,9 +555,11 @@ First execute this command:
 sudo port install cmake boost libxml2 glew py27-numpy py27-pyplusplus
 \endverbatim
 
-The py27-xx are for python 2.7 users. If a different version of python will be used, the names will have to change correspondingly.
+The py27-xx are for python 2.7 users. If a different version of python will be used, the names will have to change correspondingly. Note that %OpenRAVE automatically chooses the newest version of python it can find, therefore it is necessary that the python bindings also correspond to this version.
 
-It is necessary to install these libraries:
+Sometimes it is easiest to install boost python directly from sources. Once installed, make sure to set the \c BOOST_ROOT environment variable to point to it before compiling %OpenRAVE.
+
+It is also necessary to install these libraries:
 
 - <a href="http://trolltech.com/developer/downloads/qt/mac">Qt</a> - download the installer. Users have reported problems with using <b>port install qt4-mac</b> due to Cocoa. It is highly recommended to use the official qt4 installer package.
 - <a href="http://www.coin3d.org/lib/coin">Coin3D</a> - build from sources
