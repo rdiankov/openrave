@@ -110,8 +110,11 @@ def robotstats(iktypestr,robotfilename,manipname,freeindices):
         try:
             # remove any default ik solver for the manipulator, it can get in the way loading
             ikmodel.manip.SetIKSolver(None)
+            ikfasttime = None
             if not ikmodel.load():
+                starttime = time.time()
                 ikmodel.generate(iktype=iktype,freeindices=freeindices,forceikbuild=True)
+                ikfasttime = time.time()-starttime
                 ikmodel.setrobot(freeinc)
 
             cmd = 'DebugIK robot %s '%robot.GetName()
@@ -136,7 +139,7 @@ def robotstats(iktypestr,robotfilename,manipname,freeindices):
             successrate = float(numsuccessful)/numtested
             nosolutions = float(len(solutionresults[1]))/numtested
             jointnames = ','.join(robot.GetJointFromDOFIndex(dof).GetName() for dof in ikmodel.manip.GetArmIndices())
-            print 'ikfast version %s'%ikfast.__version__
+            print 'ikfast version %s, time to generate ik: %ss'%(ikfast.__version__,ikfasttime)
             print 'manipulator base:%s endeffector:%s joints:[%s]'%(ikmodel.manip.GetBase().GetName(),ikmodel.manip.GetEndEffector().GetName(),jointnames)
             print 'success: %d/%d = %.4f'%(numsuccessful, numtested, successrate)
             print 'wrong solutions: %d/%d = %.4f'%(len(solutionresults[0]),numtested, float(len(solutionresults[0]))/numtested)
@@ -144,8 +147,8 @@ def robotstats(iktypestr,robotfilename,manipname,freeindices):
             print 'missing solution: %d/%d = %.4f'%(len(solutionresults[2]),numtested,float(len(solutionresults[2]))/numtested)
             resultsstr = ikfastproblem.SendCommand('PerfTiming num %d %s'%(numperftiming,ikmodel.getfilename(True)))
             results = [numpy.double(s)*1e-6 for s in resultsstr.split()]
-            print 'performance: mean: %.6fs, median: %.6fs, min: %6fs, max: %.6fs'%(numpy.mean(results),numpy.median(results),numpy.min(results),numpy.max(results))
-            print '\n\nThe following IK parameterizations are when link %s is at the origin, the last %d values are the joint values of the free variables [%s].\n'%(ikmodel.manip.GetBase().GetName(),len(freeindices),freeindicesstr)
+            print 'run-time performance: mean: %.6fs, median: %.6fs, min: %6fs, max: %.6fs'%(numpy.mean(results),numpy.median(results),numpy.min(results),numpy.max(results))
+            print '\n\nThe following IK parameterizations are when link %s is at the origin, the last %d values are the free variables [%s].\n'%(ikmodel.manip.GetBase().GetName(),len(freeindices),str(freeindicesstr))
             for isol in range(2):
                 if len(solutionresults[isol]) == 0:
                     continue
@@ -179,7 +182,7 @@ class RunRobotStats:
             teardown_robotstats()
 
 def test_robots():
-    robotfilenames = ['robots/unimation-pumaarm.zae','robots/barrettwam.robot.xml']
+    robotfilenames = ['robots/unimation-pumaarm.zae','robots/barrettwam.robot.xml','robots/pr2-beta-static.zae','robots/neuronics-katana.zae','robots/mitsubishi-pa10.zae','robots/schunk-lwa3.zae','robots/darpa-arm.zae','robots/exactdynamics-manusarmleft.zae','robots/kuka-kr5-r650.zae','robots/kuka-kr5-r850.zae']
     RaveInitialize(load_all_plugins=False)
     RaveSetDebugLevel(DebugLevel.Error) # set to error in order to avoid expected plugin loading errosr
     envlocal=Environment()
