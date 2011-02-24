@@ -150,23 +150,26 @@ def robotstats(robotfilename,manipname,iktypestr,freeindices):
             s = 'success rate: %f, wrong solutions: %f, no solutions: %f, missing solution: %f\n'%(float(res[1])/numtested,len(solutionresults[0])/numtested,len(solutionresults[1])/numtested,len(solutionresults[2])/numtested)
             globalstats.put(s)
             #raise IKStatisticsException(s)
+            print 'yooooooo2'
+            assert(0)
         except ikfast.IKFastSolver.IKFeasibilityError:
             # this is expected, and is normal operation, have to notify
             pass
             #raise IKStatisticsException('not solvable!')
 
 
-from noseplugins import multiprocess, xunitmultiprocess
+from noseplugins import multiprocess, xunitmultiprocess, capture
 from nose.plugins.cover import Coverage
 
 if __name__ == "__main__":
+    nose.plugins.capture.log.setLevel(logging.DEBUG)
     import test_ikfast
     numprocesses = 1
     for arg in sys.argv[1:]:
         if arg.startswith('-j'):
             numprocesses = int(arg[2:])
 
-    prog=nose.core.TestProgram(argv=['nosetests','-v','--with-xunitmp','--xunit-file=ikfastresults.xml','--processes=4','--process-timeout=1200','test_ikfast.py'],plugins=[multiprocess.MultiProcess(),xunitmultiprocess.Xunitmp()],exit=False)
+    prog=nose.core.TestProgram(argv=['nosetests','-v','--with-xunitmp','--xunit-file=ikfastresults.xml','--processes=4','--process-timeout=1200','test_ikfast.py'],plugins=[capture.Capture(),multiprocess.MultiProcess(),xunitmultiprocess.Xunitmp()],exit=False)
     # save the queue to file
     f = open('stats.xml','w')
     while not test_ikfast.globalstats.empty():

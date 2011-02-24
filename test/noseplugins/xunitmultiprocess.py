@@ -108,7 +108,7 @@ def exc_message(exc_info):
 class Xunitmp(Plugin):
     """This plugin provides test results in the standard XUnit XML format."""
     name = 'xunitmp'
-    score = 2000
+    score = 499 # necessary for it to go after capture
     encoding = 'UTF-8'
     xunitstream = None
     xunitstats = None
@@ -196,8 +196,12 @@ class Xunitmp(Plugin):
             self.xunitstats[0] += 1
         tb = ''.join(traceback.format_exception(*err))
         id = test.id()
+        systemout = ''
+        if test.capturedOutput is not None:
+            systemout = '<system-out><![CDATA['+str(test.capturedOutput)+']]></system-out>'
         self.xunitstream.put(
             '<testcase classname=%(cls)s name=%(name)s time="%(taken)f">'
+            '%(systemout)s'
             '<%(type)s type=%(errtype)s message=%(message)s><![CDATA[%(tb)s]]>'
             '</%(type)s></testcase>' %
             {'cls': self._quoteattr('.'.join(id.split('.')[:-1])),
@@ -207,6 +211,7 @@ class Xunitmp(Plugin):
              'errtype': self._quoteattr(nice_classname(err[0])),
              'message': self._quoteattr(exc_message(err)),
              'tb': escape_cdata(tb),
+             'systemout':systemout
              })
 
     def addFailure(self, test, err, capt=None, tb_info=None):
@@ -216,8 +221,12 @@ class Xunitmp(Plugin):
         tb = ''.join(traceback.format_exception(*err))
         self.xunitstats[1] += 1
         id = test.id()
+        systemout = ''
+        if test.capturedOutput is not None:
+            systemout = '<system-out><![CDATA['+str(test.capturedOutput)+']]></system-out>'
         self.xunitstream.put(
             '<testcase classname=%(cls)s name=%(name)s time="%(taken)f">'
+            '%(systemout)s'
             '<failure type=%(errtype)s message=%(message)s><![CDATA[%(tb)s]]>'
             '</failure></testcase>' %
             {'cls': self._quoteattr('.'.join(id.split('.')[:-1])),
@@ -226,6 +235,7 @@ class Xunitmp(Plugin):
              'errtype': self._quoteattr(nice_classname(err[0])),
              'message': self._quoteattr(exc_message(err)),
              'tb': escape_cdata(tb),
+             'systemout':systemout
              })
 
     def addSuccess(self, test, capt=None):
@@ -234,13 +244,13 @@ class Xunitmp(Plugin):
         taken = self._timeTaken()
         self.xunitstats[2] += 1
         id = test.id()
+        if test.capturedOutput is not None:
+            systemout = '<system-out><![CDATA['+str(test.capturedOutput)+']]></system-out>'
         self.xunitstream.put(
             '<testcase classname=%(cls)s name=%(name)s '
-            'time="%(taken)f" ><system-out>this is some statistics about the success!</system-out></testcase>' %
+            'time="%(taken)f" >%(systemout)s</testcase>' %
             {'cls': self._quoteattr('.'.join(id.split('.')[:-1])),
              'name': self._quoteattr(id.split('.')[-1]),
              'taken': taken,
+             'systemout':systemout
              })
-
-#    def prepareTestResult(self,result):
-#        pass

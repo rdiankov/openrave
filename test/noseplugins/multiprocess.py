@@ -107,6 +107,7 @@ except ImportError:
     import StringIO
 
 import xunitmultiprocess
+from capture import Capture
 
 log = logging.getLogger(__name__)
 
@@ -507,7 +508,11 @@ def runner(ix, testQueue, resultQueue, currentaddr, currentstart, shouldStop,
            loaderClass, resultClass, config):
     config = pickle.loads(config)
     dummy_parser = config.parserClass()
+
     # manually add xunitmultiprocess plugin
+    plugin = Capture()
+    plugin.addOptions(dummy_parser,{})
+    config.plugins.addPlugin(plugin)
     plugin = xunitmultiprocess.Xunitmp()
     plugin.addOptions(dummy_parser,{})
     config.plugins.addPlugin(plugin)
