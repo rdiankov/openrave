@@ -34,8 +34,8 @@ _multiprocess_can_split_ = True
 
 # global parameters
 maxfreejoints = 2 # max free joints to allow, 3 or more will take too long to evaluate, and most likely will never be used in real life
-perftiming = 10000 # perf timing, only computed when wrong solutions == 0
-numiktests = [5000,10,100] # number of iktests indexed by the number of free joints
+numperftiming = 10000 # perf timing, only computed when wrong solutions == 0
+numiktests = [5000,1000,100] # number of iktests indexed by the number of free joints
 #iktypes = [iktype for value,iktype in IkParameterization.Type.values.iteritems()]
 iktypes = [IkParameterization.Type.Transform6D] # IK types to test for
 freeinc = 0.04 # increment of the free joints
@@ -106,6 +106,7 @@ def robotstats(iktypestr,robotfilename,manipname,freeindices):
         robot.SetTransform(numpy.dot(numpy.linalg.inv(manip.GetBase().GetTransform()),robot.GetTransform()))
         manip=robot.SetActiveManipulator(manipname)
         ikmodel = InverseKinematicsModelTest(robot,iktype=iktype,freeindices=freeindices)
+        freeindicesstr = ','.join(robot.GetJointFromDOFIndex(dof).GetName() for dof in freeindices)
         try:
             # remove any default ik solver for the manipulator, it can get in the way loading
             ikmodel.manip.SetIKSolver(None)
@@ -120,19 +121,45 @@ def robotstats(iktypestr,robotfilename,manipname,freeindices):
             numsuccessful = int(res[1])
             solutionresults = []
             index = 2
-            numvalues=1+IkParameterization.GetNumberOfValues(iktype)+manip.GetIkSolver().GetNumFreeParameters()
+            ikdof = 1+IkParameterization.GetNumberOfValues(iktype)
+            assert(manip.GetIkSolver().GetNumFreeParameters() == len(freeindices))
             for iresults in range(3):
                 num = int(res[index])
                 index += 1
-                samples = numpy.reshape(numpy.array([numpy.float64(s) for s in res[index:(index+num*numvalues)]]),(num,numvalues))
+                samples = []
+                for i in range(num):
+                    ikparam = IkParameterization(' '.join(res[index:(index+ikdof)]))
+                    index += ikdof
+                    samples.append([ikparam,res[index:(index+len(freeindices))]])
+                    index += len(freeindices)
                 solutionresults.append(samples)
-                index += num*numvalues
             successrate = float(numsuccessful)/numtested
             nosolutions = float(len(solutionresults[1]))/numtested
+            jointnames = ','.join(robot.GetJointFromDOFIndex(dof).GetName() for dof in ikmodel.manip.GetArmIndices())
+            print 'ikfast version %s'%ikfast.__version__
+            print 'manipulator base:%s endeffector:%s joints:[%s]'%(ikmodel.manip.GetBase().GetName(),ikmodel.manip.GetEndEffector().GetName(),jointnames)
             print 'success: %d/%d = %.4f'%(numsuccessful, numtested, successrate)
             print 'wrong solutions: %d/%d = %.4f'%(len(solutionresults[0]),numtested, float(len(solutionresults[0]))/numtested)
             print 'no solutions: %d/%d = %.4f'%(len(solutionresults[1]),numtested, nosolutions)
             print 'missing solution: %d/%d = %.4f'%(len(solutionresults[2]),numtested,float(len(solutionresults[2]))/numtested)
+            resultsstr = ikfastproblem.SendCommand('PerfTiming num %d %s'%(numperftiming,ikmodel.getfilename(True)))
+            results = [numpy.double(s)*1e-6 for s in resultsstr.split()]
+            print 'performance: mean: %.6fs, median: %.6fs, min: %6fs, max: %.6fs'%(numpy.mean(results),numpy.median(results),numpy.min(results),numpy.max(results))
+            print '\n\nThe following IK parameterizations are when link %s is at the origin, the last %d values are the joint values of the free variables [%s].\n'%(ikmodel.manip.GetBase().GetName(),len(freeindices),freeindicesstr)
+            for isol in range(2):
+                if len(solutionresults[isol]) == 0:
+                    continue
+                if isol == 0:
+                    print 'Wrong Solutions:\n\n',
+                else:
+                    print 'No Solutions:\n\n'
+                rows = []
+                for ikparam,freevalues in solutionresults[isol]:
+                    ikparamvalues = [str(f) for f in ikparam.GetTransform6D()[0:3,0:4].flatten()]
+                    rows.append(ikparamvalues+freevalues)
+                    colwidths = [max([len(row[i]) for row in rows]) for i in range(len(rows[0]))]
+                    for i,row in enumerate(rows):
+                        print ' '.join([row[j].ljust(colwidths[j]) for j in range(len(colwidths))])
             #globalstats.put([numtested,numsuccessful,solutionresults])
             assert(len(solutionresults[0])==0)
             assert(successrate > minimumsuccess)
@@ -140,7 +167,6 @@ def robotstats(iktypestr,robotfilename,manipname,freeindices):
         except ikfast.IKFastSolver.IKFeasibilityError,e:
             # this is expected, and is normal operation, have to notify
             print e
-        freeindicesstr = ','.join(robot.GetJointFromDOFIndex(dof).GetName() for dof in freeindices)
         return '%s %s:%s free:[%s]'%(iktypestr,os.path.splitext(os.path.split(robotfilename)[1])[0],manipname,freeindicesstr)
 
 class RunRobotStats:

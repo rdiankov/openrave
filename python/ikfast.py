@@ -540,7 +540,7 @@ class IKFastSolver(AutoReloader):
             self.equations=equations
             self.checkvars=checkvars
         def __str__(self):
-            s = "Not enough equations to solve variables %s, perhaps manipulator doesn't have enough degrees of freedom or bad free joints were chosen. This is not an ikfast failure, it just means the robot kinematics are invalid for this type of IK. Equations are:"%str(self.checkvars)
+            s = "Not enough equations to solve variables %s!\nThis means one of several things: not enough constraints to solve all variables, or the manipulator does not span the target IK space. This is not an ikfast failure, it just means the robot kinematics are invalid for this type of IK. Equations that are not uniquely solvable are:\n"%str(self.checkvars)
             for eq in self.equations:
                 s += str(eq) + '\n'
             return s

@@ -1413,6 +1413,10 @@ class PyIkParameterization
 {
 public:
     PyIkParameterization() {}
+    PyIkParameterization(const string& s) {
+        stringstream ss(s);
+        ss >> _param;
+    }
     PyIkParameterization(object o, IkParameterization::Type type)
     {
         switch(type) {
@@ -4017,6 +4021,7 @@ In python, the syntax is::\n\n\
         int (*getnumberofvalues1)(IkParameterization::Type) = &IkParameterization::GetNumberOfValues;
         scope ikparameterization = class_<PyIkParameterization, boost::shared_ptr<PyIkParameterization> >("IkParameterization", DOXY_CLASS(IkParameterization))
             .def(init<object,IkParameterization::Type>(args("primitive","type")))
+            .def(init<string>(args("str")))
             .def("GetType",&PyIkParameterization::GetType, DOXY_FN(IkParameterization,GetType))
             .def("SetTransform6D",&PyIkParameterization::SetTransform6D,args("transform"), DOXY_FN(IkParameterization,SetTransform6D))
             .def("SetRotation3D",&PyIkParameterization::SetRotation3D,args("quat"), DOXY_FN(IkParameterization,SetRotation3D))
