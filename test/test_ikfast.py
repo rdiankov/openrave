@@ -151,7 +151,7 @@ def robotstats(robotfilename,manipname,iktypestr,freeindices):
             print 'wrong solutions: %f', len(solutionresults[0])/numtested
             print 'no solutions: %f', len(solutionresults[1])/numtested
             print 'missing solution: %f',len(solutionresults[2])/numtested
-            globalstats.put([numtested,numsuccessful,solutionresults])
+            #globalstats.put([numtested,numsuccessful,solutionresults])
             #raise IKStatisticsException(s)
         except ikfast.IKFastSolver.IKFeasibilityError:
             # this is expected, and is normal operation, have to notify
@@ -172,6 +172,6 @@ if __name__ == "__main__":
 
     prog=nose.core.TestProgram(argv=['nosetests','-v','--with-xunitmp','--xunit-file=ikfastresults.xml','--processes=4','--process-timeout=1200','test_ikfast.py'],plugins=[capture.Capture(),multiprocess.MultiProcess(),xunitmultiprocess.Xunitmp()],exit=False)
     # save the queue to file
-    f = open('stats.xml','w')
-    while not test_ikfast.globalstats.empty():
-        f.write(test_ikfast.globalstats.get())
+#     f = open('stats.xml','w')
+#     while not test_ikfast.globalstats.empty():
+#         f.write(test_ikfast.globalstats.get())
