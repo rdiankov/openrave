@@ -67,7 +67,7 @@ def teardown_robotstats():
     RaveDestroy()
 
 def test_robots():
-    robotfilenames = ['robots/unimation-pumaarm.zae','robots/unimation-pumaarm.zae']#'robots/barrettwam.robot.xml']
+    robotfilenames = ['robots/unimation-pumaarm.zae','robots/barrettwam.robot.xml']
     RaveInitialize(load_all_plugins=False)
     RaveSetDebugLevel(DebugLevel.Error) # set to error in order to avoid expected plugin loading errosr
     envlocal=Environment()
@@ -136,8 +136,8 @@ def robotstats(robotfilename,manipname,iktypestr,freeindices):
             cmd = 'DebugIK robot %s '%robot.GetName()
             cmd += 'numtests %d '%int(numiktests[len(freeindices)])
             res = ikfastproblem.SendCommand(cmd).split()
-            numtested = float(res[0])
-            successrate = float(res[1])/numtested
+            numtested = int(res[0])
+            numsuccessful = int(res[1])
             solutionresults = []
             index = 2
             numvalues=1+IkParameterization.GetNumberOfValues(iktype)+manip.GetIkSolver().GetNumFreeParameters()
@@ -147,11 +147,12 @@ def robotstats(robotfilename,manipname,iktypestr,freeindices):
                 samples = numpy.reshape(numpy.array([numpy.float64(s) for s in res[index:(index+num*numvalues)]]),(num,numvalues))
                 solutionresults.append(samples)
                 index += num*numvalues
-            s = 'success rate: %f, wrong solutions: %f, no solutions: %f, missing solution: %f\n'%(float(res[1])/numtested,len(solutionresults[0])/numtested,len(solutionresults[1])/numtested,len(solutionresults[2])/numtested)
-            globalstats.put(s)
+            print 'success rate: ',float(numsuccessful)/numtested
+            print 'wrong solutions: %f', len(solutionresults[0])/numtested
+            print 'no solutions: %f', len(solutionresults[1])/numtested
+            print 'missing solution: %f',len(solutionresults[2])/numtested
+            globalstats.put([numtested,numsuccessful,solutionresults])
             #raise IKStatisticsException(s)
-            print 'yooooooo2'
-            assert(0)
         except ikfast.IKFastSolver.IKFeasibilityError:
             # this is expected, and is normal operation, have to notify
             pass
