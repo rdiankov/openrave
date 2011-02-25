@@ -35,7 +35,7 @@ _multiprocess_can_split_ = True
 # global parameters
 maxfreejoints = 2 # max free joints to allow, 3 or more will take too long to evaluate, and most likely will never be used in real life
 numperftiming = 10000 # perf timing, only computed when wrong solutions == 0
-numiktests = [10000,4000,200] # number of iktests indexed by the number of free joints
+numiktests = [10000,400,200] # number of iktests indexed by the number of free joints
 #iktypes = [iktype for value,iktype in IkParameterization.Type.values.iteritems()]
 iktypes = [IkParameterization.Type.Transform6D] # IK types to test for
 freeincrot = 0.1 # increment of the free joints
@@ -71,26 +71,6 @@ def teardown_robotstats():
     env.Destroy()
     RaveDestroy()
 
-class InverseKinematicsModelTest(databases.inversekinematics.InverseKinematicsModel):
-    """keeps the written shared object files separate from the main stream files and adds the used indices.
-    """
-    def __init__(self,robot,iktype,freeindices):
-        databases.inversekinematics.InverseKinematicsModel.__init__(self,robot=robot,iktype=iktype)
-        if freeindices is None:
-            self.freeindices = self.getDefaultFreeIndices()
-        else:
-            self.freeindices = freeindices
-
-    def getfilename(self,read=False):
-        if self.iktype is None:
-            raise ValueError('ik type is not set')
-        
-        solveindices = [i for i in self.manip.GetArmIndices() if not i in self.freeindices]
-        basename = 'ikfast%s.%s.%s_'%(self.getversion(),self.iktype,platform.machine()) + '_'.join(str(ind) for ind in solveindices)
-        if len(self.freeindices)>0:
-            basename += '_f'+'_'.join(str(ind) for ind in self.freeindices)
-        return RaveFindDatabaseFile(os.path.join('kinematics.'+self.manip.GetKinematicsStructureHash(),ccompiler.new_compiler().shared_object_filename(basename=basename)),read)
-
 @nose.with_setup(setup_robotstats, teardown_robotstats)
 def robotstats(robotfilename,manipname, iktypestr,freeindices):
     global env, ikfastproblem, globalstats
@@ -106,25 +86,30 @@ def robotstats(robotfilename,manipname, iktypestr,freeindices):
         # set base to identity to avoid complications when reporting errors, testing that IK works under transformations is a different test
         robot.SetTransform(numpy.dot(numpy.linalg.inv(manip.GetBase().GetTransform()),robot.GetTransform()))
         manip=robot.SetActiveManipulator(manipname)
-        ikmodel = InverseKinematicsModelTest(robot,iktype=iktype,freeindices=freeindices)
-        freeindicesstr = ','.join(robot.GetJointFromDOFIndex(dof).GetName() for dof in freeindices)
-        freeinc = ikmodel.getDefaultFreeIncrements(freeindices,freeincrot,freeinctrans)
+        ikmodel = databases.inversekinematics.InverseKinematicsModel(robot,iktype=iktype,freeindices=freeindices)
+        freeindicesstr = ', '.join(robot.GetJointFromDOFIndex(dof).GetName() for dof in freeindices)
+        description = '%s:%s %s free:[%s]'%(os.path.splitext(os.path.split(robotfilename)[1])[0], manipname, iktypestr,freeindicesstr)
         try:
             # remove any default ik solver for the manipulator, it can get in the way loading
             ikmodel.manip.SetIKSolver(None)
             ikfasttime = None
             if not ikmodel.load():
-                starttime = time.time()
                 ikmodel.generate(iktype=iktype,freeindices=freeindices,forceikbuild=True)
-                ikfasttime = time.time()-starttime
-                ikmodel.setrobot(freeinc)
+                ikmodel.save()
+                ikmodel.setrobot()
 
+            if ikmodel.ikfeasibility is not None:
+                # nothing more to do than print the text
+                print ikmodel.ikfeasibility
+                return description
+
+            ikmodel.freeinc = ikmodel.getDefaultFreeIncrements(freeincrot,freeinctrans)
+            solutionresults = []                
             cmd = 'DebugIK robot %s '%robot.GetName()
             cmd += 'numtests %d '%int(numiktests[len(freeindices)])
             res = ikfastproblem.SendCommand(cmd).split()
             numtested = int(res[0])
             numsuccessful = int(res[1])
-            solutionresults = []
             index = 2
             ikdof = 1+IkParameterization.GetNumberOfValues(iktype)
             assert(manip.GetIkSolver().GetNumFreeParameters() == len(freeindices))
@@ -140,10 +125,10 @@ def robotstats(robotfilename,manipname, iktypestr,freeindices):
                 solutionresults.append(samples)
             successrate = float(numsuccessful)/numtested
             nosolutions = float(len(solutionresults[1]))/numtested
-            jointnames = ','.join(robot.GetJointFromDOFIndex(dof).GetName() for dof in ikmodel.manip.GetArmIndices())
+            jointnames = ', '.join(robot.GetJointFromDOFIndex(dof).GetName() for dof in ikmodel.manip.GetArmIndices())
             print 'ikfast version %s'%ikfast.__version__
-            print 'time to generate ik: %s seconds'%ikfasttime
-            print 'free joint increment: %s'%freeinc
+            print 'time to generate ik: %.3f seconds'%ikmodel.statistics.get('generationtime',-1)
+            print 'free joint increment: %s'%ikmodel.freeinc
             print 'manipulator: %s %s [%s]'%(ikmodel.manip.GetBase().GetName(),ikmodel.manip.GetEndEffector().GetName(),jointnames)
             print 'success: %d/%d = %.4f'%(numsuccessful, numtested, successrate)
             print 'wrong solutions: %d/%d = %.4f'%(len(solutionresults[0]),numtested, float(len(solutionresults[0]))/numtested)
@@ -152,7 +137,10 @@ def robotstats(robotfilename,manipname, iktypestr,freeindices):
             resultsstr = ikfastproblem.SendCommand('PerfTiming num %d %s'%(numperftiming,ikmodel.getfilename(True)))
             results = [numpy.double(s)*1e-6 for s in resultsstr.split()]
             print 'run-time performance: mean: %.6fs, median: %.6fs, min: %6fs, max: %.6fs'%(numpy.mean(results),numpy.median(results),numpy.min(results),numpy.max(results))
-            print '\n\nThe following IK parameterizations are when link %s is at the origin, the last %d values are the free variables [%s].\n'%(ikmodel.manip.GetBase().GetName(),len(freeindices),str(freeindicesstr))
+            lower,upper = robot.GetDOFLimits(ikmodel.manip.GetArmIndices())
+            print 'lower limits: ',lower
+            print 'upper limits: ',upper
+            print '\n\nThe following IK parameterizations are when link %s is at the origin, the last %d values are the normalized free variables [%s].\n'%(ikmodel.manip.GetBase().GetName(),len(freeindices),str(freeindicesstr))
             for isol in range(2):
                 if len(solutionresults[isol]) == 0:
                     continue
@@ -174,7 +162,7 @@ def robotstats(robotfilename,manipname, iktypestr,freeindices):
         except ikfast.IKFastSolver.IKFeasibilityError,e:
             # this is expected, and is normal operation, have to notify
             print e
-        return '%s:%s %s free:[%s]'%(os.path.splitext(os.path.split(robotfilename)[1])[0], manipname, iktypestr,freeindicesstr)
+        return description
 
 class RunRobotStats:
     __name__='RunRobotStats'
@@ -186,7 +174,7 @@ class RunRobotStats:
             teardown_robotstats()
 
 def test_robots():
-    robotfilenames = ['robots/unimation-pumaarm.zae','robots/barrettwam.robot.xml','robots/pr2-beta-static.zae']#,'robots/neuronics-katana.zae','robots/mitsubishi-pa10.zae','robots/schunk-lwa3.zae','robots/darpa-arm.zae','robots/exactdynamics-manusarmleft.zae','robots/kuka-kr5-r650.zae','robots/kuka-kr5-r850.zae']
+    robotfilenames = ['robots/unimation-pumaarm.zae','robots/barrettwam.robot.xml']#,'robots/pr2-beta-static.zae']#,'robots/neuronics-katana.zae','robots/mitsubishi-pa10.zae','robots/schunk-lwa3.zae','robots/darpa-arm.zae','robots/exactdynamics-manusarmleft.zae','robots/kuka-kr5-r650.zae','robots/kuka-kr5-r850.zae']
     RaveInitialize(load_all_plugins=False)
     RaveSetDebugLevel(DebugLevel.Error) # set to error in order to avoid expected plugin loading errosr
     envlocal=Environment()

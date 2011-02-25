@@ -311,7 +311,6 @@ class MultiProcessTestRunner(TextTestRunner):
         total_tasks = len(tasks)
         # need to keep track of the next time to check for timeouts in case more than one process times out at the same time.
         nexttimeout=self.config.multiprocess_timeout
-        oldworkers = []
         while tasks:
             log.debug("Waiting for results (%s/%s tasks), timeout=%ds",
                       len(completed), total_tasks,self.config.multiprocess_timeout)
@@ -336,17 +335,12 @@ class MultiProcessTestRunner(TextTestRunner):
                     shouldStop.set()
                     break
                 if self.config.multiprocess_restartworker:
-                    success = workers[iworker].join(1)
-                    if workers[iworker].is_alive():
-                        # this is expected if there are any plugins (like xunit) that hold queues
-                        log.debug("Worker %d failed to join, adding to oldworkers", iworker)
-                        oldworkers.append(workers[iworker])
-                        workers[iworker] = None
+                    success = workers[iworker].join()
             except Empty:
                 log.debug("Timed out with %s tasks pending", len(tasks))
                 any_alive = False
                 for w in workers:
-                    if w is not None and w.is_alive():
+                    if w.is_alive():
                         worker_addr = w.currentaddr.value
                         timeprocessing = time.time()-w.currentstart.value
                         if len(worker_addr) > 0 and timeprocessing > self.config.multiprocess_timeout:
@@ -361,7 +355,7 @@ class MultiProcessTestRunner(TextTestRunner):
             # compute next timeout
             nexttimeout=self.config.multiprocess_timeout
             for w in workers:
-                if w is not None and w.is_alive() and len(w.currentaddr.value) > 0:
+                if w.is_alive() and len(w.currentaddr.value) > 0:
                     timeprocessing = time.time()-w.currentstart.value
                     if timeprocessing <= self.config.multiprocess_timeout:
                         nexttimeout = min(nexttimeout,self.config.multiprocess_timeout-timeprocessing)
@@ -398,26 +392,25 @@ class MultiProcessTestRunner(TextTestRunner):
 
         stop = time.time()
 
+        # first write since can freeze on shutting down processes
         result.printErrors()
         result.printSummary(start, stop)
         self.config.plugins.finalize(result)
 
         log.debug("Tell all workers to stop")
-        for w in oldworkers+workers:
-            if w is not None and w.is_alive():
+        for w in workers:
+            if w.is_alive():
                 testQueue.put('STOP', block=False)
 
         # wait for the workers to end
         try:
-            for worker in oldworkers+workers:
-                if worker is not None:
-                    worker.join()
+            for worker in workers:
+                worker.join()
         except KeyboardInterrupt:
             print 'parent received ctrl-c'
-            for worker in oldworkers+workers:
-                if worker is not None:
-                    worker.terminate()
-                    worker.join()
+            for worker in workers:
+                worker.terminate()
+                worker.join()
 
         return result
 

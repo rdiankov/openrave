@@ -50,7 +50,8 @@ from xml.sax import saxutils
 from nose.pyversion import UNICODE_STRINGS
 
 import multiprocessing
-globalxunitstream = multiprocessing.Queue() # used for gathering statistics
+globalxunitmanager = multiprocessing.Manager()
+globalxunitstream = globalxunitmanager.list() # used for gathering statistics
 globalxunitstats = multiprocessing.Array('i',[0]*4)
 
 # Invalid XML characters, control characters 0-31 sans \t, \n and \r
@@ -171,12 +172,8 @@ class Xunitmp(Plugin):
             '<testsuite name="nosetests" tests="%(total)d" '
             'errors="%(errors)d" failures="%(failures)d" '
             'skip="%(skipped)d">' % stats)
-        while not self.xunitstream.empty():
-            try:
-                # empty is not reliable
-                error_report_file.write(self.xunitstream.get(timeout=1))
-            except multiprocessing.Queue.Emtpy:
-                break
+        while len(self.xunitstream) > 0:
+            error_report_file.write(self.xunitstream.pop(0))
         error_report_file.write('</testsuite>')
         error_report_file.close()
         if self.config.verbosity > 1:
@@ -206,7 +203,7 @@ class Xunitmp(Plugin):
         systemout = ''
         if test.capturedOutput is not None:
             systemout = '<system-out><![CDATA['+str(test.capturedOutput)+']]></system-out>'
-        self.xunitstream.put(
+        self.xunitstream.append(
             '<testcase classname=%(cls)s name=%(name)s time="%(taken)f">'
             '%(systemout)s'
             '<%(type)s type=%(errtype)s message=%(message)s><![CDATA[%(tb)s]]>'
@@ -234,7 +231,7 @@ class Xunitmp(Plugin):
         systemout = ''
         if test.capturedOutput is not None:
             systemout = '<system-out><![CDATA['+str(test.capturedOutput)+']]></system-out>'
-        self.xunitstream.put(
+        self.xunitstream.append(
             '<testcase classname=%(cls)s name=%(name)s time="%(taken)f">'
             '%(systemout)s'
             '<failure type=%(errtype)s message=%(message)s><![CDATA[%(tb)s]]>'
@@ -260,7 +257,7 @@ class Xunitmp(Plugin):
         systemout=''
         if test.capturedOutput is not None:
             systemout = '<system-out><![CDATA['+str(test.capturedOutput)+']]></system-out>'
-        self.xunitstream.put(
+        self.xunitstream.append(
             '<testcase classname=%(cls)s name=%(name)s '
             'time="%(taken)f" >%(systemout)s</testcase>' %
             {'cls': self._quoteattr('.'.join(id[0:1])),
