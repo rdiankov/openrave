@@ -208,12 +208,12 @@ if __name__ == "__main__":
     for arg in sys.argv[1:]:
         if arg.startswith('-j'):
             numprocesses = int(arg[2:])
-#     format = logging.Formatter('%(name)s: %(levelname)s: %(message)s')
-#     handler = logging.StreamHandler(sys.stderr)
-#     handler.setFormatter(format)
-#     multiprocess.log.addHandler(handler)
-#     multiprocess.log.setLevel(logging.DEBUG)
-    prog=nose.core.TestProgram(argv=['nosetests','-v','--with-xunitmp','--xunit-file=ikfastresults.xml','--processes=%d'%numprocesses,'--process-timeout=900','--process-restartworker','--with-callableclass','test_ikfast.py'],plugins=[capture.Capture(),multiprocess.MultiProcess(),xunitmultiprocess.Xunitmp(),callableclass.CallableClass()],exit=False)
+    format = logging.Formatter('%(name)s: %(levelname)s: %(message)s')
+    handler = logging.StreamHandler(sys.stderr)
+    handler.setFormatter(format)
+    multiprocess.log.addHandler(handler)
+    multiprocess.log.setLevel(logging.DEBUG)
+    prog=nose.core.TestProgram(argv=['nosetests','-v','--with-xunitmp','--xunit-file=ikfastresults.xml','--processes=%d'%numprocesses,'--process-timeout=600','--process-restartworker','--with-callableclass','test_ikfast.py'],plugins=[capture.Capture(),multiprocess.MultiProcess(),xunitmultiprocess.Xunitmp(),callableclass.CallableClass()],exit=False)
     # save the queue to file
 #     f = open('stats.xml','w')
 #     while not test_ikfast.globalstats.empty():
