@@ -35,7 +35,7 @@ _multiprocess_can_split_ = True
 # global parameters
 maxfreejoints = 2 # max free joints to allow, 3 or more will take too long to evaluate, and most likely will never be used in real life
 numperftiming = 10000 # perf timing, only computed when wrong solutions == 0
-numiktests = [10000,400,200] # number of iktests indexed by the number of free joints
+numiktests = [10000,4000,200] # number of iktests indexed by the number of free joints
 #iktypes = [iktype for value,iktype in IkParameterization.Type.values.iteritems()]
 iktypes = [IkParameterization.Type.Transform6D] # IK types to test for
 freeincrot = 0.1 # increment of the free joints
@@ -174,7 +174,7 @@ class RunRobotStats:
             teardown_robotstats()
 
 def test_robots():
-    robotfilenames = ['robots/unimation-pumaarm.zae','robots/barrettwam.robot.xml']#,'robots/pr2-beta-static.zae']#,'robots/neuronics-katana.zae','robots/mitsubishi-pa10.zae','robots/schunk-lwa3.zae','robots/darpa-arm.zae','robots/exactdynamics-manusarmleft.zae','robots/kuka-kr5-r650.zae','robots/kuka-kr5-r850.zae']
+    robotfilenames = ['robots/unimation-pumaarm.zae','robots/barrettwam.robot.xml','robots/pr2-beta-static.zae']#,'robots/neuronics-katana.zae','robots/mitsubishi-pa10.zae','robots/schunk-lwa3.zae','robots/darpa-arm.zae','robots/exactdynamics-manusarmleft.zae','robots/kuka-kr5-r650.zae','robots/kuka-kr5-r850.zae']
     RaveInitialize(load_all_plugins=False)
     RaveSetDebugLevel(DebugLevel.Error) # set to error in order to avoid expected plugin loading errosr
     envlocal=Environment()
