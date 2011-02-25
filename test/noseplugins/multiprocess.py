@@ -172,6 +172,10 @@ class MultiProcess(Plugin):
                           metavar="SECONDS",
                           help="Set timeout for return of results from each "
                           "test runner process. [NOSE_PROCESS_TIMEOUT]")
+        parser.add_option("--process-restartworker", action="store_true",
+                          default=env.get('NOSE_PROCESS_RESTARTWORKER', False),
+                          dest="multiprocess_restartworker",
+                          help="If set, will restart each worker process once their tests are done, this helps control memory leaks from killing the system. [NOSE_PROCESS_RESTARTWORKER]")
 
     def configure(self, options, config):
         """
@@ -200,6 +204,7 @@ class MultiProcess(Plugin):
             self.enabled = True
             self.config.multiprocess_workers = workers
             self.config.multiprocess_timeout = int(options.multiprocess_timeout)
+            self.config.multiprocess_restartworker = int(options.multiprocess_restartworker)
             self.status['active'] = True
 
     def prepareTestLoader(self, loader):
@@ -306,13 +311,15 @@ class MultiProcessTestRunner(TextTestRunner):
         total_tasks = len(tasks)
         # need to keep track of the next time to check for timeouts in case more than one process times out at the same time.
         nexttimeout=self.config.multiprocess_timeout
+        oldworkers = []
         while tasks:
             log.debug("Waiting for results (%s/%s tasks), timeout=%ds",
                       len(completed), total_tasks,self.config.multiprocess_timeout)
             try:
-                addr, newtask_addrs, batch_result = resultQueue.get(timeout=nexttimeout)
+                iworker, addr, newtask_addrs, batch_result = resultQueue.get(timeout=nexttimeout)
                 log.debug('Results received for %s, new tasks: %d', addr,len(newtask_addrs))
                 try:
+                    print addr
                     tasks.remove(addr)
                     total_tasks += len(newtask_addrs)
                     for newaddr in newtask_addrs:
@@ -328,11 +335,18 @@ class MultiProcessTestRunner(TextTestRunner):
                     # set the stop condition
                     shouldStop.set()
                     break
+                if self.config.multiprocess_restartworker:
+                    success = workers[iworker].join(1)
+                    if workers[iworker].is_alive():
+                        # this is expected if there are any plugins (like xunit) that hold queues
+                        log.debug("Worker %d failed to join, adding to oldworkers", iworker)
+                        oldworkers.append(workers[iworker])
+                        workers[iworker] = None
             except Empty:
                 log.debug("Timed out with %s tasks pending", len(tasks))
                 any_alive = False
                 for w in workers:
-                    if w.is_alive():
+                    if w is not None and w.is_alive():
                         worker_addr = w.currentaddr.value
                         timeprocessing = time.time()-w.currentstart.value
                         if len(worker_addr) > 0 and timeprocessing > self.config.multiprocess_timeout:
@@ -347,10 +361,29 @@ class MultiProcessTestRunner(TextTestRunner):
             # compute next timeout
             nexttimeout=self.config.multiprocess_timeout
             for w in workers:
-                if w.is_alive() and len(w.currentaddr.value) > 0:
+                if w is not None and w.is_alive() and len(w.currentaddr.value) > 0:
                     timeprocessing = time.time()-w.currentstart.value
                     if timeprocessing <= self.config.multiprocess_timeout:
                         nexttimeout = min(nexttimeout,self.config.multiprocess_timeout-timeprocessing)
+            if self.config.multiprocess_restartworker and not shouldStop.is_set() and not testQueue.empty():
+                # restart worker threads
+                for i,w in enumerate(workers):
+                    if w is None or not w.is_alive():
+                        currentaddr = Array('c',' '*1000)
+                        currentaddr.value = ''
+                        currentstart = Value('d')
+                        workers[i] = Process(target=runner, args=(i,
+                                             testQueue,
+                                             resultQueue,
+                                             currentaddr,
+                                             currentstart,
+                                             shouldStop,
+                                             self.loaderClass,
+                                             result.__class__,
+                                             pickle.dumps(self.config)))
+                        workers[i].currentaddr = currentaddr
+                        workers[i].currentstart = currentstart
+                        workers[i].start()
 
         log.debug("Completed %s tasks (%s remain)", len(completed), len(tasks))
 
@@ -369,20 +402,22 @@ class MultiProcessTestRunner(TextTestRunner):
         result.printSummary(start, stop)
         self.config.plugins.finalize(result)
 
-        # Tell all workers to stop
-        for w in workers:
-            if w.is_alive():
+        log.debug("Tell all workers to stop")
+        for w in oldworkers+workers:
+            if w is not None and w.is_alive():
                 testQueue.put('STOP', block=False)
+
         # wait for the workers to end
         try:
-            for worker in workers:
-                worker.join()
+            for worker in oldworkers+workers:
+                if worker is not None:
+                    worker.join()
         except KeyboardInterrupt:
             print 'parent received ctrl-c'
-            for worker in workers:
-                worker.terminate()
-                worker.join()
-
+            for worker in oldworkers+workers:
+                if worker is not None:
+                    worker.terminate()
+                    worker.join()
 
         return result
 
@@ -516,7 +551,6 @@ def runner(ix, testQueue, resultQueue, currentaddr, currentstart, shouldStop,
     config.plugins.configure(config.options,config)
     config.plugins.begin()
     log.debug("Worker %s executing", ix)
-    log.debug("Active plugins worker %s: %s", ix, config.plugins._plugins)
     loader = loaderClass(config=config)
     loader.suiteClass.suiteClass = NoSharedFixtureContextSuite
 
@@ -560,22 +594,21 @@ def runner(ix, testQueue, resultQueue, currentaddr, currentstart, shouldStop,
                 try:
                     if arg is not None:
                         test_addr = test_addr + str(arg)
-                    log.debug('aargs: %s',test.arg)
                     currentaddr.value = test_addr
                     currentstart.value = time.time()
                     test(result)
                     currentaddr.value = ''
-                    resultQueue.put((test_addr, test.tasks, batch(result)))
+                    resultQueue.put((ix, test_addr, test.tasks, batch(result)))
                 except KeyboardInterrupt:
                     if len(currentaddr.value) > 0:
                         log.exception('Worker %d keyboard interrupt, failing current test %s',ix,test_addr)
                         currentaddr.value = ''
                         failure.Failure(*sys.exc_info())(result)
-                        resultQueue.put((test_addr, test.tasks, batch(result)))
+                        resultQueue.put((ix, test_addr, test.tasks, batch(result)))
                     else:
                         log.debug('test %s timed out',ix,test_addr)
                         result.addError(test,(TimedOutException,TimedOutException(test_addr),sys.exc_info()[2]))
-                        resultQueue.put((test_addr, test.tasks, batch(result)))
+                        resultQueue.put((ix, test_addr, test.tasks, batch(result)))
                 except SystemExit:
                     currentaddr.value = ''
                     log.exception('Worker %d system exit',ix)
@@ -584,7 +617,13 @@ def runner(ix, testQueue, resultQueue, currentaddr, currentstart, shouldStop,
                     currentaddr.value = ''
                     log.exception("Worker %d error running test or returning results",ix)
                     failure.Failure(*sys.exc_info())(result)
-                    resultQueue.put((test_addr, test.tasks, batch(result)))
+                    resultQueue.put((ix, test_addr, test.tasks, batch(result)))
+                if config.multiprocess_restartworker:
+                    # this is necessary to prevent lockups if this thread adds more items to the queue?
+                    # will data be corrupted?
+                    #testQueue.cancel_join_thread()
+                    #resultQueue.cancel_join_thread()
+                    break
         except Empty:
             log.debug("Worker %s timed out waiting for tasks", ix)
     finally:

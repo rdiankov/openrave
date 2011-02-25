@@ -374,9 +374,13 @@ public:
         virtual bool IsCircular(int iaxis) const { return _bIsCircular.at(iaxis); }
 
         /// \brief returns true if the axis describes a rotation around an axis.
+        ///
+        /// \param iaxis the axis of the joint to return the results for
         virtual bool IsRevolute(int iaxis) const;
 
         /// \brief returns true if the axis describes a translation around an axis.
+        ///
+        /// \param iaxis the axis of the joint to return the results for
         virtual bool IsPrismatic(int iaxis) const;
 
         /// \brief Return true if joint can be treated as a static binding (ie all limits are 0)

@@ -172,7 +172,11 @@ class Xunitmp(Plugin):
             'errors="%(errors)d" failures="%(failures)d" '
             'skip="%(skipped)d">' % stats)
         while not self.xunitstream.empty():
-            error_report_file.write(self.xunitstream.get())
+            try:
+                # empty is not reliable
+                error_report_file.write(self.xunitstream.get(timeout=1))
+            except multiprocessing.Queue.Emtpy:
+                break
         error_report_file.write('</testsuite>')
         error_report_file.close()
         if self.config.verbosity > 1:

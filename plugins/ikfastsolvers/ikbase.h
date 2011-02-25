@@ -33,7 +33,7 @@ class IkFastSolver : public IkSolverBase
     typedef bool (*IkFn)(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::vector<Solution>& vsolutions);
     typedef bool (*FkFn)(const IKReal* j, IKReal* eetrans, IKReal* eerot);
     
- IkFastSolver(IkFn pfnik, const std::vector<int>& vfreeparams, dReal fFreeInc, int nTotalDOF, IkParameterization::Type iktype, boost::shared_ptr<void> resource, const std::string kinematicshash, EnvironmentBasePtr penv) : IkSolverBase(penv), _vfreeparams(vfreeparams), _pfnik(pfnik), _fFreeInc(fFreeInc), _nTotalDOF(nTotalDOF), _iktype(iktype), _resource(resource), _kinematicshash(kinematicshash) {
+ IkFastSolver(IkFn pfnik, const std::vector<int>& vfreeparams, const vector<dReal>& vFreeInc, int nTotalDOF, IkParameterization::Type iktype, boost::shared_ptr<void> resource, const std::string kinematicshash, EnvironmentBasePtr penv) : IkSolverBase(penv), _vfreeparams(vfreeparams), _pfnik(pfnik), _vFreeInc(vFreeInc), _nTotalDOF(nTotalDOF), _iktype(iktype), _resource(resource), _kinematicshash(kinematicshash) {
     }
     virtual ~IkFastSolver() {}
 
@@ -78,14 +78,33 @@ class IkFastSolver : public IkSolverBase
             return false;
         }
 
-        _vfreetypes.resize(0);
+        _vfreerevolute.resize(0);
         FOREACH(itfree, _vfreeparams) {
-            _vfreetypes.push_back(probot->GetJoints().at(pmanip->GetArmIndices().at(*itfree))->GetType());
+            int index = pmanip->GetArmIndices().at(*itfree);
+            KinBody::JointPtr pjoint = probot->GetJointFromDOFIndex(index);
+            _vfreerevolute.push_back(pjoint->IsRevolute(index-pjoint->GetDOFIndex()));
+        }
+        
+        _vjointrevolute.resize(0);
+        FOREACHC(it,pmanip->GetArmIndices()) {
+            KinBody::JointPtr pjoint = probot->GetJointFromDOFIndex(*it);
+            _vjointrevolute.push_back(pjoint->IsRevolute(*it-pjoint->GetDOFIndex()));
         }
 
-        _vjointtypes.resize(0);
-        FOREACHC(it,pmanip->GetArmIndices()) {
-            _vjointtypes.push_back(probot->GetJoints().at(*it)->GetType());
+        if( _vFreeInc.size() != _vfreeparams.size() ) {
+            _vFreeInc.resize(_vfreeparams.size());
+            stringstream ss;
+            ss << "robot " << probot->GetName() << ":" << pmanip->GetName() << " setting free increment to: ";
+            for(size_t i = 0; i < _vFreeInc.size(); ++i) {
+                if( _vfreerevolute[i] ) {
+                    _vFreeInc[i] = 0.1;
+                }
+                else {
+                    _vFreeInc[i] = 0.01;
+                }
+                ss << _vFreeInc[i] << " ";
+            }
+            RAVELOG_DEBUG(ss.str());
         }
 
         // get the joint limits
@@ -226,12 +245,7 @@ private:
         dReal startphi = q0.size() == _qlower.size() ? q0.at(vfreeparams.at(freeindex)) : 0;
         dReal upperphi = _qupper.at(vfreeparams.at(freeindex)), lowerphi = _qlower.at(vfreeparams.at(freeindex)), deltaphi = 0;
         int iter = 0;
-        dReal fFreeInc = _fFreeInc;
-                // if joint is a slider, make increments 5 times less (this makes it possible to have free joints that are both revolume and prismatic)
-        // (actually this should be fixed so that there is a different increment per free joint). can use max radius
-        if( &vfreeparams == &_vfreeparams && _vfreetypes.at(freeindex) == KinBody::Joint::JointPrismatic ) {
-            fFreeInc *= 0.2f;
-        }
+        dReal fFreeInc = _vFreeInc.at(freeindex);
         while(1) {
             dReal curphi = startphi;
             if( iter & 1 ) { // increment
@@ -600,7 +614,7 @@ private:
     bool _checkjointangles(std::vector<dReal>& vravesol) const
     {
         for(int j = 0; j < (int)_qlower.size(); ++j) {
-            if( _vjointtypes.at(j) != KinBody::Joint::JointPrismatic ) {
+            if( _vjointrevolute.at(j) ) {
                 if( _qlower[j] < -PI && vravesol[j] > _qupper[j] ) {
                     vravesol[j] -= 2*PI;
                 }
@@ -647,11 +661,11 @@ private:
 
     RobotBase::ManipulatorWeakPtr _pmanip;
     std::vector<int> _vfreeparams;
-    std::vector<KinBody::Joint::JointType> _vfreetypes, _vjointtypes;
+    std::vector<uint8_t> _vfreerevolute, _vjointrevolute;
     std::vector<dReal> _vfreeparamscales;
     boost::shared_ptr<void> _cblimits;
     IkFn _pfnik;
-    dReal _fFreeInc;
+    std::vector<dReal> _vFreeInc;
     int _nTotalDOF;
     std::vector<dReal> _qlower, _qupper;
     IkFilterCallbackFn _filterfn;

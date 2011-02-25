@@ -167,12 +167,20 @@ class InverseKinematicsModel(OpenRAVEModel):
     def getversion(self):
         return int(ikfast.__version__)
     def setrobot(self,freeinc=None):
+        """Sets the ik solver on the robot.
+
+        freeinc is a list of the delta increments of the freejoint values
+        """
         self.iksolver = None
         self.freeinc=freeinc
         if freeinc is not None:
-            iksuffix = ' %f'%freeinc
+            try:
+                iksuffix = ' ' + ' '.join(str(f) for f in freeinc)
+            except TypeError:
+                # possibly just a float
+                iksuffix = ' %f'%freeinc
         else:
-            iksuffix = ''
+            iksuffix = ' '# + ' '.join(str(f) for f in self.getDefaultFreeIncrements())
 #         if self.manip.GetIkSolver() is not None:
 #             self.iksolver = RaveCreateIkSolver(self.env,self.manip.GetIKSolverName()+iksuffix)
         if self.iksolver is None:
@@ -196,9 +204,35 @@ class InverseKinematicsModel(OpenRAVEModel):
         # already saved as a lib
         log.debug('inversekinematics generation is done, compiled shared object: %s',self.getfilename(False))
 
+    def getDefaultFreeIncrements(self,freeindices, freeincrot, freeinctrans):
+        """Returns a list of delta increments appropriate for each free index
+        """
+        with self.env:
+            values = []
+            eetrans = self.manip.GetEndEffectorTransform()[0:3,3]
+            armlength = 0
+            orderedarmindices = [j for j in self.robot.GetDependencyOrderedJoints() if j.GetJointIndex() in self.manip.GetArmIndices()]
+            for j in orderedarmindices[::-1]:
+                armlength += sqrt(sum((eetrans-j.GetAnchor())**2))
+                eetrans = j.GetAnchor()
+            freeinc = []
+            for index in freeindices:
+                joint = self.robot.GetJointFromDOFIndex(index)
+                if joint.IsRevolute(index-joint.GetDOFIndex()):
+                    freeinc.append(freeincrot)
+                elif joint.IsPrismatic(index-joint.GetDOFIndex()):
+                    freeinc.append(freeinctrans*armlength)
+                else:
+                    log.warn('cannot set increment for joint type %s'%joint.GetType())
+            return freeinc
+
     def getDefaultFreeIndices(self):
+        """Returns a default set of free indices if the robot has more joints than required by the IK.
+        In the futrue, this function will contain heuristics in order to select the best indices candidates.
+        """
         if self.iktype is None:
             raise ValueError('ik type is not set')
+        
         freeindices = []
         dofexpected = IkParameterization.GetDOF(self.iktype)
         remainingindices = list(self.manip.GetArmIndices())
@@ -490,7 +524,7 @@ class InverseKinematicsModel(OpenRAVEModel):
                           help='The precision to compute the inverse kinematics in, (default=%default).')
         parser.add_option('--usecached', action='store_false', dest='force',default=True,
                           help='If set, will always try to use the cached ik c++ file, instead of generating a new one.')
-        parser.add_option('--freeinc', action='store', type='float', dest='freeinc',default=None,
+        parser.add_option('--freeinc', action='append', type='float', dest='freeinc',default=None,
                           help='The discretization value of freejoints.')
         parser.add_option('--numiktests','--iktests',action='store',type='string',dest='iktests',default=None,
                           help='Will test the ik solver and return the success rate. IKTESTS can be an integer to specify number of random tests, it can also be a filename to specify the joint values of the manipulator to test. The formst of the filename is #numiktests [dof values]*')

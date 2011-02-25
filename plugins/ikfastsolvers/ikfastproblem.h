@@ -184,16 +184,18 @@ class IKFastProblem : public ProblemInstance
             return true;
         }
 
-        IkSolverBasePtr CreateSolver(EnvironmentBasePtr penv, dReal ffreedelta)
+        IkSolverBasePtr CreateSolver(EnvironmentBasePtr penv, const vector<dReal>& vfreeinc)
         {
             string kinematicshash;
             if( getKinematicsHash != NULL ) {
                 kinematicshash =getKinematicsHash();
             }
-            if( getIKRealSize() == 4 )
-                return IkSolverBasePtr(new IkFastSolver<float,IKSolutionFloat >((IkFastSolver<float,IKSolutionFloat >::IkFn)ikfn,vfree,ffreedelta,getNumJoints(),(IkParameterization::Type)getIKType(),shared_from_this(),kinematicshash, penv));
-            else if( getIKRealSize() == 8 )
-                return IkSolverBasePtr(new IkFastSolver<double,IKSolutionDouble >((IkFastSolver<double,IKSolutionDouble >::IkFn)ikfn,vfree,ffreedelta,getNumJoints(),(IkParameterization::Type)getIKType(),shared_from_this(),kinematicshash, penv));
+            if( getIKRealSize() == 4 ) {
+                return IkSolverBasePtr(new IkFastSolver<float,IKSolutionFloat >((IkFastSolver<float,IKSolutionFloat >::IkFn)ikfn,vfree,vfreeinc,getNumJoints(),(IkParameterization::Type)getIKType(),shared_from_this(),kinematicshash, penv));
+            }
+            else if( getIKRealSize() == 8 ) {
+                return IkSolverBasePtr(new IkFastSolver<double,IKSolutionDouble >((IkFastSolver<double,IKSolutionDouble >::IkFn)ikfn,vfree,vfreeinc,getNumJoints(),(IkParameterization::Type)getIKType(),shared_from_this(),kinematicshash, penv));
+            }
             throw openrave_exception("bad real size");
         }
 
@@ -302,8 +304,9 @@ public:
         string ikname, libraryname;
         sinput >> ikname;
         std::transform(ikname.begin(), ikname.end(), ikname.begin(), ::tolower);
-        if (!getline(sinput, libraryname) )
+        if (!getline(sinput, libraryname) ) {
             return false;
+        }
         boost::trim(libraryname);
         if( !sinput || libraryname.size() == 0 || ikname.size() == 0 ) {
             RAVELOG_DEBUG("bad input\n");
@@ -421,7 +424,7 @@ public:
         if( lib->GetIKType() != niktype ) {
             return false;
         }
-        IkSolverBasePtr iksolver = lib->CreateSolver(GetEnv(), 0.1);
+        IkSolverBasePtr iksolver = lib->CreateSolver(GetEnv(), vector<dReal>());
         if( !iksolver ) {
             return false;
         }
@@ -436,8 +439,9 @@ public:
         while(!sinput.eof()) {
             istream::streampos pos = sinput.tellg();
             sinput >> cmd;
-            if( !sinput )
+            if( !sinput ) {
                 break;
+            }
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
 
             if( cmd == "num" ) {
@@ -519,8 +523,9 @@ public:
         string cmd;
         while(!sinput.eof()) {
             sinput >> cmd;
-            if( !sinput )
+            if( !sinput ) {
                 break;
+            }
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
 
             if( cmd == "trans" ) {
@@ -1014,6 +1019,7 @@ public:
                         robot->SetActiveDOFValues(*itsol, true);
                         twrist_out = pmanip->GetIkParameterization(itiktype->first);
                         if(DistIkParameterization2(twrist, twrist_out) > fthreshold ) {
+                            vwrongsolutions.push_back(make_pair(twrist,vfreeparameters_out));
                             s.str("");
                             s << "FindIKSolutions (freeparams): Incorrect IK, i = " << i <<" error: " << RaveSqrt(DistIkParameterization2(twrist, twrist_out)) << endl
                               << "Original Joint Val: ";
@@ -1168,7 +1174,8 @@ public:
         return s_LibraryMutex;
     }
 
-    static IkSolverBasePtr CreateIkSolver(const string& _name, dReal freeinc, EnvironmentBasePtr penv)
+    /// sinput holds the freeindices and other run-time configuraiton parameters
+    static IkSolverBasePtr CreateIkSolver(const string& _name, std::vector<dReal> vfreeinc, EnvironmentBasePtr penv)
     {
         string name; name.resize(_name.size());
         std::transform(_name.begin(), _name.end(), name.begin(), ::tolower);
@@ -1177,7 +1184,7 @@ public:
         for(list< boost::shared_ptr<IKLibrary> >::reverse_iterator itlib = GetLibraries()->rbegin(); itlib != GetLibraries()->rend(); ++itlib) {
             FOREACHC(itikname,(*itlib)->GetIKNames()) {
                 if( name == *itikname ) {
-                    return (*itlib)->CreateSolver(penv,freeinc);
+                    return (*itlib)->CreateSolver(penv,vfreeinc);
                 }
             }
         }

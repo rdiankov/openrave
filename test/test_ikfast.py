@@ -35,10 +35,11 @@ _multiprocess_can_split_ = True
 # global parameters
 maxfreejoints = 2 # max free joints to allow, 3 or more will take too long to evaluate, and most likely will never be used in real life
 numperftiming = 10000 # perf timing, only computed when wrong solutions == 0
-numiktests = [5000,1000,100] # number of iktests indexed by the number of free joints
+numiktests = [10000,4000,200] # number of iktests indexed by the number of free joints
 #iktypes = [iktype for value,iktype in IkParameterization.Type.values.iteritems()]
 iktypes = [IkParameterization.Type.Transform6D] # IK types to test for
-freeinc = 0.04 # increment of the free joints
+freeincrot = 0.1 # increment of the free joints
+freeinctrans = 0.01 # percentage increment of the free joints, this should be scaled with robot size
 globalstats = multiprocessing.Queue() # used for gathering statistics
 minimumsuccess = 0.5
 maximumnosolutions = 0.5
@@ -91,7 +92,7 @@ class InverseKinematicsModelTest(databases.inversekinematics.InverseKinematicsMo
         return RaveFindDatabaseFile(os.path.join('kinematics.'+self.manip.GetKinematicsStructureHash(),ccompiler.new_compiler().shared_object_filename(basename=basename)),read)
 
 @nose.with_setup(setup_robotstats, teardown_robotstats)
-def robotstats(iktypestr,robotfilename,manipname,freeindices):
+def robotstats(robotfilename,manipname, iktypestr,freeindices):
     global env, ikfastproblem, globalstats
     iktype = None
     for value,type in IkParameterization.Type.values.iteritems():
@@ -107,6 +108,7 @@ def robotstats(iktypestr,robotfilename,manipname,freeindices):
         manip=robot.SetActiveManipulator(manipname)
         ikmodel = InverseKinematicsModelTest(robot,iktype=iktype,freeindices=freeindices)
         freeindicesstr = ','.join(robot.GetJointFromDOFIndex(dof).GetName() for dof in freeindices)
+        freeinc = ikmodel.getDefaultFreeIncrements(freeindices,freeincrot,freeinctrans)
         try:
             # remove any default ik solver for the manipulator, it can get in the way loading
             ikmodel.manip.SetIKSolver(None)
@@ -139,8 +141,10 @@ def robotstats(iktypestr,robotfilename,manipname,freeindices):
             successrate = float(numsuccessful)/numtested
             nosolutions = float(len(solutionresults[1]))/numtested
             jointnames = ','.join(robot.GetJointFromDOFIndex(dof).GetName() for dof in ikmodel.manip.GetArmIndices())
-            print 'ikfast version %s, time to generate ik: %ss'%(ikfast.__version__,ikfasttime)
-            print 'manipulator base:%s endeffector:%s joints:[%s]'%(ikmodel.manip.GetBase().GetName(),ikmodel.manip.GetEndEffector().GetName(),jointnames)
+            print 'ikfast version %s'%ikfast.__version__
+            print 'time to generate ik: %s seconds'%ikfasttime
+            print 'free joint increment: %s'%freeinc
+            print 'manipulator: %s %s [%s]'%(ikmodel.manip.GetBase().GetName(),ikmodel.manip.GetEndEffector().GetName(),jointnames)
             print 'success: %d/%d = %.4f'%(numsuccessful, numtested, successrate)
             print 'wrong solutions: %d/%d = %.4f'%(len(solutionresults[0]),numtested, float(len(solutionresults[0]))/numtested)
             print 'no solutions: %d/%d = %.4f'%(len(solutionresults[1]),numtested, nosolutions)
@@ -170,7 +174,7 @@ def robotstats(iktypestr,robotfilename,manipname,freeindices):
         except ikfast.IKFastSolver.IKFeasibilityError,e:
             # this is expected, and is normal operation, have to notify
             print e
-        return '%s %s:%s free:[%s]'%(iktypestr,os.path.splitext(os.path.split(robotfilename)[1])[0],manipname,freeindicesstr)
+        return '%s:%s %s free:[%s]'%(os.path.splitext(os.path.split(robotfilename)[1])[0], manipname, iktypestr,freeindicesstr)
 
 class RunRobotStats:
     __name__='RunRobotStats'
@@ -199,7 +203,7 @@ def test_robots():
                     armdof = len(manip.GetArmIndices())
                     if armdof >= expecteddof:
                         for freeindices in combinations(manip.GetArmIndices(),armdof-expecteddof):
-                            yield RunRobotStats(),str(iktype),robotfilename, manip.GetName(),freeindices
+                            yield RunRobotStats(),robotfilename, manip.GetName(), str(iktype),freeindices
     finally:
         envlocal.Destroy()
         # for some reason the plugindatabase _threadPluginLoader thread is on a different process
@@ -212,17 +216,16 @@ from nose.plugins.cover import Coverage
 if __name__ == "__main__":
     nose.plugins.capture.log.setLevel(logging.DEBUG)
     import test_ikfast
-    numprocesses = 1
+    numprocesses = 4
     for arg in sys.argv[1:]:
         if arg.startswith('-j'):
             numprocesses = int(arg[2:])
 #     format = logging.Formatter('%(name)s: %(levelname)s: %(message)s')
 #     handler = logging.StreamHandler(sys.stderr)
 #     handler.setFormatter(format)
-#     nose.loader.log.setLevel(logging.DEBUG)
 #     multiprocess.log.addHandler(handler)
 #     multiprocess.log.setLevel(logging.DEBUG)
-    prog=nose.core.TestProgram(argv=['nosetests','-v','--with-xunitmp','--xunit-file=ikfastresults.xml','--processes=%d'%numprocesses,'--process-timeout=600','--with-callableclass','test_ikfast.py'],plugins=[capture.Capture(),multiprocess.MultiProcess(),xunitmultiprocess.Xunitmp(),callableclass.CallableClass()],exit=False)
+    prog=nose.core.TestProgram(argv=['nosetests','-v','--with-xunitmp','--xunit-file=ikfastresults.xml','--processes=%d'%numprocesses,'--process-timeout=900','--process-restartworker','--with-callableclass','test_ikfast.py'],plugins=[capture.Capture(),multiprocess.MultiProcess(),xunitmultiprocess.Xunitmp(),callableclass.CallableClass()],exit=False)
     # save the queue to file
 #     f = open('stats.xml','w')
 #     while not test_ikfast.globalstats.empty():
