@@ -605,6 +605,7 @@ def runner(ix, testQueue, resultQueue, currentaddr, currentstart, shouldStop,
                 except SystemExit:
                     currentaddr.value = ''
                     log.exception('Worker %d system exit',ix)
+                    sys.stderr('Worker %d system exit\n'%ix)
                     raise
                 except:
                     currentaddr.value = ''

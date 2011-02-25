@@ -152,6 +152,9 @@ class InverseKinematicsModel(OpenRAVEModel):
         if self.freeindices is None:
             self.solveindices = None
         else:
+            if not all([ifree in self.manip.GetArmIndices() for ifree in self.freeindices]):
+                raise ValueError('not all free indices %s are part of the manipulator indices %s'%(self.freeindices,self.manip.GetArmIndices()))
+            
             self.solveindices = [i for i in self.manip.GetArmIndices() if not i in self.freeindices]
         self.forceikfast = forceikfast
         self.ikfastproblem = RaveCreateProblem(self.env,'ikfast')

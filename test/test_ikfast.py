@@ -100,7 +100,7 @@ def robotstats(robotfilename,manipname, iktypestr,freeindices):
 
             if ikmodel.ikfeasibility is not None:
                 # nothing more to do than print the text
-                print ikmodel.ikfeasibility
+                print ikmodel.ikfeasibility # will repeat text if just generated
                 return description
 
             ikmodel.freeinc = ikmodel.getDefaultFreeIncrements(freeincrot,freeinctrans)
