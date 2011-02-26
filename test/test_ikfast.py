@@ -167,11 +167,12 @@ class RunRobotStats:
     __name__='RunRobotStats'
     def __call__(self,*args):
         try:
-            setup_robotstats()
             description = []
+            setup_robotstats()
             robotstats(description,*args)
-            self.description = description[0]
         finally:
+            if len(description) > 0:
+                self.description = description[0]
             teardown_robotstats()
 
 def test_robots():
