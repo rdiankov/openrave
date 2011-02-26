@@ -80,7 +80,7 @@ def robotstats(description,robotfilename,manipname, iktypestr,freeindices):
         robot.SetTransform(numpy.dot(numpy.linalg.inv(manip.GetBase().GetTransform()),robot.GetTransform()))
         manip=robot.SetActiveManipulator(manipname)
         ikmodel = databases.inversekinematics.InverseKinematicsModel(robot,iktype=iktype,freeindices=freeindices)
-        freeindicesstr = ', '.join(robot.GetJointFromDOFIndex(dof).GetName() for dof in freeindices)
+        freeindicesstr = ', '.join(robot.GetJointFromDOFIndex(dof).GetName()+'('+str(dof)+')' for dof in freeindices)
         description.append('%s::%s.%s free:[%s]'%(os.path.split(robotfilename)[1].split('.')[0], manipname, iktypestr,freeindicesstr))
         try:
             # remove any default ik solver for the manipulator, it can get in the way loading
