@@ -7,4 +7,9 @@ export OPENRAVE_DATABASE=`pwd`/.openrave
 mkdir -p .openrave
 rm -rf localinstall
 cd openrave
-make test prefix=`pwd`/../localinstall
+make prefix=`pwd`/../localinstall
+make install
+export PATH=`sh build/openrave-config --prefix`/bin:$PATH
+export PYTHONPATH=`openrave-config --python-dir`:$PYTHONPATH
+export LD_LIBRARY_PATH=`openrave-config --prefix`/lib:$(LD_LIBRARY_PATH)
+python test/test_ikfast.py $(PARALLEL_JOBS)
