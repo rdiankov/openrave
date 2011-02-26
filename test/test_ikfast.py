@@ -87,7 +87,6 @@ def robotstats(description,robotfilename,manipname, iktypestr,freeindices):
             ikmodel.manip.SetIKSolver(None)
             ikfasttime = None
             if not ikmodel.load():
-                sys.stderr.write('generating\n')
                 ikmodel.generate(iktype=iktype,freeindices=freeindices,forceikbuild=True)
                 ikmodel.save()
                 ikmodel.setrobot()

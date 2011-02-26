@@ -312,7 +312,7 @@ class MultiProcessTestRunner(TextTestRunner):
         # need to keep track of the next time to check for timeouts in case more than one process times out at the same time.
         nexttimeout=self.config.multiprocess_timeout
         while tasks:
-            log.debug("Waiting for results (%s/%s tasks), timeout=%.3fs", len(completed), total_tasks,nexttimeout)
+            log.debug("Waiting for results (%s/%s tasks), next timeout=%.3fs", len(completed), total_tasks,nexttimeout)
             try:
                 iworker, addr, newtask_addrs, batch_result = resultQueue.get(timeout=nexttimeout)
                 log.debug('Results received for worker %d, %s, new tasks: %d', iworker,addr,len(newtask_addrs))
@@ -348,7 +348,7 @@ class MultiProcessTestRunner(TextTestRunner):
                             w.currentaddr.value = ''
                             os.kill(w.pid, signal.SIGINT)
                         any_alive = True
-                if not any_alive:
+                if not any_alive and testQueue.empty():
                     log.debug("All workers dead")
                     break
             nexttimeout=self.config.multiprocess_timeout
@@ -399,8 +399,10 @@ class MultiProcessTestRunner(TextTestRunner):
 
         # wait for the workers to end
         try:
-            for worker in workers:
-                worker.join()
+            for iworker,worker in enumerate(workers):
+                if worker.is_alive():
+                    log.debug('joining worker %s',iworker)
+                    worker.join()
         except KeyboardInterrupt:
             print 'parent received ctrl-c'
             for worker in workers:
