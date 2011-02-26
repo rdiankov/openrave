@@ -312,7 +312,7 @@ class MultiProcessTestRunner(TextTestRunner):
         # need to keep track of the next time to check for timeouts in case more than one process times out at the same time.
         nexttimeout=self.config.multiprocess_timeout
         while tasks:
-            log.debug("Waiting for results (%s/%s tasks), timeout=%ds", len(completed), total_tasks,nexttimeout)
+            log.debug("Waiting for results (%s/%s tasks), timeout=%.3fs", len(completed), total_tasks,nexttimeout)
             try:
                 iworker, addr, newtask_addrs, batch_result = resultQueue.get(timeout=nexttimeout)
                 log.debug('Results received for worker %d, %s, new tasks: %d', iworker,addr,len(newtask_addrs))
@@ -342,7 +342,6 @@ class MultiProcessTestRunner(TextTestRunner):
                     if w.is_alive():
                         worker_addr = w.currentaddr.value
                         timeprocessing = time.time()-w.currentstart.value
-                        log.debug('timeprocessing: %f, worker_addr: %s',timeprocessing,worker_addr)
                         if len(worker_addr) > 0 and timeprocessing > self.config.multiprocess_timeout-0.1:
                             log.debug('timed out: %s',worker_addr)
                             w.currentaddr.value = ''

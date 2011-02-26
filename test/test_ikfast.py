@@ -31,7 +31,7 @@ import multiprocessing
 
 #global variables
 _multiprocess_can_split_ = True
-globalstats = multiprocessing.Queue() # used for gathering statistics
+#globalstats = multiprocessing.Queue() # used for gathering statistics
 options = None
 env=None
 ikfastproblem=None
@@ -61,9 +61,12 @@ def teardown_robotstats():
     env.Destroy()
     RaveDestroy()
 
+def measurement(name,value):
+    return '<measurement><name>%s</name><value>%s</value></measurement>'%(name,value)
+
 @nose.with_setup(setup_robotstats, teardown_robotstats)
 def robotstats(robotfilename,manipname, iktypestr,freeindices):
-    global env, ikfastproblem, globalstats
+    global env, ikfastproblem#, globalstats
     iktype = None
     for value,type in IkParameterization.Type.values.iteritems():
         if type.name.lower() == iktypestr.lower():
@@ -118,20 +121,21 @@ def robotstats(robotfilename,manipname, iktypestr,freeindices):
             nosolutions = float(len(solutionresults[1]))/numtested
             jointnames = ', '.join(robot.GetJointFromDOFIndex(dof).GetName() for dof in ikmodel.manip.GetArmIndices())
             print 'ikfast version %s'%ikfast.__version__
-            print 'time to generate ik: %.3f seconds'%ikmodel.statistics.get('generationtime',-1)
             print 'free joint increment: %s'%ikmodel.freeinc
             print 'manipulator: %s %s [%s]'%(ikmodel.manip.GetBase().GetName(),ikmodel.manip.GetEndEffector().GetName(),jointnames)
-            print 'success: %d/%d = %.4f'%(numsuccessful, numtested, successrate)
-            print 'wrong solutions: %d/%d = %.4f'%(len(solutionresults[0]),numtested, float(len(solutionresults[0]))/numtested)
-            print 'no solutions: %d/%d = %.4f'%(len(solutionresults[1]),numtested, nosolutions)
-            print 'missing solution: %d/%d = %.4f'%(len(solutionresults[2]),numtested,float(len(solutionresults[2]))/numtested)
+            print measurement('time to generate ik', '%.3f'%ikmodel.statistics.get('generationtime',-1))
+            print measurement('success (%d/%d)'%(numsuccessful, numtested), '%.4f'%successrate)
+            print measurement('wrong solutions (%d/%d)'%(len(solutionresults[0]),numtested),'%.4f'%(float(len(solutionresults[0]))/numtested))
+            print measurement('no solutions (%d/%d)'%(len(solutionresults[1]),numtested), '%.4f'%nosolutions)
+            print measurement('missing solution (%d/%d)'%(len(solutionresults[2]),numtested), '%.4f'%(float(len(solutionresults[2]))/numtested))
             resultsstr = ikfastproblem.SendCommand('PerfTiming num %d %s'%(options.perftests,ikmodel.getfilename(True)))
             results = [numpy.double(s)*1e-6 for s in resultsstr.split()]
             print 'run-time performance: mean: %.6fs, median: %.6fs, min: %6fs, max: %.6fs'%(numpy.mean(results),numpy.median(results),numpy.min(results),numpy.max(results))
             lower,upper = robot.GetDOFLimits(ikmodel.manip.GetArmIndices())
-            print 'lower limits: ',lower
-            print 'upper limits: ',upper
-            print '\n\nThe following IK parameterizations are when link %s is at the origin, the last %d values are the normalized free variables [%s].\n'%(ikmodel.manip.GetBase().GetName(),len(freeindices),str(freeindicesstr))
+            print 'lower limits: '+' '.join(str(f) for f in lower)
+            print 'upper limits: '+' '.join(str(f) for f in upper)
+            if len(solutionresults[0])>0 or len(solutionresults[1])>0:
+                print '\n\nThe following IK parameterizations are when link %s is at the origin, the last %d values are the normalized free variables [%s].\n'%(ikmodel.manip.GetBase().GetName(),len(freeindices),str(freeindicesstr))
             for isol in range(2):
                 if len(solutionresults[isol]) == 0:
                     continue
@@ -140,12 +144,14 @@ def robotstats(robotfilename,manipname, iktypestr,freeindices):
                 else:
                     print 'No Solutions:\n\n'
                 rows = []
-                for ikparam,freevalues in solutionresults[isol]:
+                numprint = min(10,len(solutionresults[isol]))
+                for index in numpy.random.permutation(len(solutionresults[isol]))[0:numprint]:
+                    ikparam,freevalues = solutionresults[isol][index]
                     ikparamvalues = [str(f) for f in ikparam.GetTransform6D()[0:3,0:4].flatten()]
                     rows.append(ikparamvalues+freevalues)
-                    colwidths = [max([len(row[i]) for row in rows]) for i in range(len(rows[0]))]
-                    for i,row in enumerate(rows):
-                        print ' '.join([row[j].ljust(colwidths[j]) for j in range(len(colwidths))])
+                colwidths = [max([len(row[i]) for row in rows]) for i in range(len(rows[0]))]
+                for i,row in enumerate(rows):
+                    print ' '.join([row[j].ljust(colwidths[j]) for j in range(len(colwidths))])
             #globalstats.put([numtested,numsuccessful,solutionresults])
             assert(len(solutionresults[0])==0)
             assert(successrate > options.minimumsuccess)
