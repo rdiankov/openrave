@@ -65,7 +65,7 @@ def measurement(name,value):
     return '<measurement><name>%s</name><value>%s</value></measurement>'%(name,value)
 
 @nose.with_setup(setup_robotstats, teardown_robotstats)
-def robotstats(robotfilename,manipname, iktypestr,freeindices):
+def robotstats(description,robotfilename,manipname, iktypestr,freeindices):
     global env, ikfastproblem#, globalstats
     iktype = None
     for value,type in IkParameterization.Type.values.iteritems():
@@ -81,7 +81,7 @@ def robotstats(robotfilename,manipname, iktypestr,freeindices):
         manip=robot.SetActiveManipulator(manipname)
         ikmodel = databases.inversekinematics.InverseKinematicsModel(robot,iktype=iktype,freeindices=freeindices)
         freeindicesstr = ', '.join(robot.GetJointFromDOFIndex(dof).GetName() for dof in freeindices)
-        description = '%s.%s.%s free:[%s]'%(os.path.splitext(os.path.split(robotfilename)[1])[0], manipname, iktypestr,freeindicesstr)
+        description.append('%s.%s.%s free:[%s]'%(os.path.split(robotfilename)[1].split('.')[0], manipname, iktypestr,freeindicesstr))
         try:
             # remove any default ik solver for the manipulator, it can get in the way loading
             ikmodel.manip.SetIKSolver(None)
@@ -95,8 +95,8 @@ def robotstats(robotfilename,manipname, iktypestr,freeindices):
             if ikmodel.ikfeasibility is not None:
                 # nothing more to do than print the text
                 print ikmodel.ikfeasibility # will repeat text if just generated
-                return description
-
+                return
+            
             ikmodel.freeinc = ikmodel.getDefaultFreeIncrements(options.freeincrot,options.freeinctrans)
             solutionresults = []                
             cmd = 'DebugIK robot %s '%robot.GetName()
@@ -163,14 +163,15 @@ def robotstats(robotfilename,manipname, iktypestr,freeindices):
         except ikfast.IKFastSolver.IKFeasibilityError,e:
             # this is expected, and is normal operation, have to notify
             print e
-        return description
 
 class RunRobotStats:
     __name__='RunRobotStats'
     def __call__(self,*args):
         try:
             setup_robotstats()
-            self.description = robotstats(*args)
+            description = []
+            robotstats(description,*args)
+            self.description = description[0]
         finally:
             teardown_robotstats()
 

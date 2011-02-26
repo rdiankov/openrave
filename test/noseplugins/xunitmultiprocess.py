@@ -182,6 +182,7 @@ class Xunitmp(Plugin):
             'skip="%(skipped)d">' % stats)
         while len(self.xunitstream) > 0:
             error_report_file.write(self.xunitstream.pop(0))
+        error_report_file.write('<properties><property name="myproperty" value="1.5"/></properties>')
         error_report_file.write('</testsuite>')
         error_report_file.close()
         if self.config.verbosity > 1:
