@@ -351,7 +351,6 @@ class MultiProcessTestRunner(TextTestRunner):
                 if not any_alive:
                     log.debug("All workers dead")
                     break
-            log.debug('checking workers')
             nexttimeout=self.config.multiprocess_timeout
             for w in workers:
                 if w.is_alive() and len(w.currentaddr.value) > 0:
@@ -359,24 +358,21 @@ class MultiProcessTestRunner(TextTestRunner):
                     if timeprocessing <= self.config.multiprocess_timeout:
                         nexttimeout = min(nexttimeout,self.config.multiprocess_timeout-timeprocessing)
             if self.config.multiprocess_restartworker and not shouldStop.is_set() and not testQueue.empty():
-                # restart worker threads
-                for i,w in enumerate(workers):
-                    if not w.is_alive():
-                        currentaddr = Array('c',' '*1000)
-                        currentaddr.value = ''
-                        currentstart = Value('d')
-                        workers[i] = Process(target=runner, args=(i,
-                                             testQueue,
-                                             resultQueue,
-                                             currentaddr,
-                                             currentstart,
-                                             shouldStop,
-                                             self.loaderClass,
-                                             result.__class__,
-                                             pickle.dumps(self.config)))
-                        workers[i].currentaddr = currentaddr
-                        workers[i].currentstart = currentstart
-                        workers[i].start()
+                currentaddr = Array('c',' '*1000)
+                currentaddr.value = ''
+                currentstart = Value('d')
+                workers[iworker] = Process(target=runner, args=(iworker,
+                                     testQueue,
+                                     resultQueue,
+                                     currentaddr,
+                                     currentstart,
+                                     shouldStop,
+                                     self.loaderClass,
+                                     result.__class__,
+                                     pickle.dumps(self.config)))
+                workers[iworker].currentaddr = currentaddr
+                workers[iworker].currentstart = currentstart
+                workers[iworker].start()
 
         log.debug("Completed %s tasks (%s remain)", len(completed), len(tasks))
 
