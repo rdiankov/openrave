@@ -298,7 +298,7 @@ class InverseKinematicsModel(OpenRAVEModel):
         else:
             solveindices, freeindices = self.solveindices, self.freeindices
 
-        basename = 'ikfast%s.%s.%s_'%(self.getversion(),self.iktype,platform.machine()) + '_'.join(str(ind) for ind in solveindices)
+        basename = 'ikfast%s.%s.%s.'%(self.getversion(),self.iktype,platform.machine()) + '_'.join(str(ind) for ind in solveindices)
         if len(freeindices)>0:
             basename += '_f'+'_'.join(str(ind) for ind in freeindices)
         return RaveFindDatabaseFile(os.path.join('kinematics.'+self.manip.GetKinematicsStructureHash(),ccompiler.new_compiler().shared_object_filename(basename=basename)),read)
@@ -311,8 +311,8 @@ class InverseKinematicsModel(OpenRAVEModel):
             solveindices, freeindices = self.getDefaultIndices()
         else:
             solveindices, freeindices = self.solveindices, self.freeindices
-        basename = 'ikfast%s.%s'%(self.getversion(),self.iktype)
-        basename += '_' + '_'.join(str(ind) for ind in solveindices)
+        basename = 'ikfast%s.%s.'%(self.getversion(),self.iktype)
+        basename += '_'.join(str(ind) for ind in solveindices)
         if len(freeindices)>0:
             basename += '_f'+'_'.join(str(ind) for ind in freeindices)
         return RaveFindDatabaseFile(os.path.join('kinematics.'+self.manip.GetKinematicsStructureHash(),basename),read)
@@ -325,8 +325,8 @@ class InverseKinematicsModel(OpenRAVEModel):
             solveindices, freeindices = self.getDefaultIndices()
         else:
             solveindices, freeindices = self.solveindices, self.freeindices
-        basename = 'ikfast%s.%s'%(self.getversion(),self.iktype)
-        basename += '_' + '_'.join(str(ind) for ind in solveindices)
+        basename = 'ikfast%s.%s.'%(self.getversion(),self.iktype)
+        basename += '_'.join(str(ind) for ind in solveindices)
         if len(freeindices)>0:
             basename += '_f'+'_'.join(str(ind) for ind in freeindices)
         basename += '.pp'

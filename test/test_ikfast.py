@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+
 # Copyright (C) 2011 Rosen Diankov (rosen.diankov@gmail.com)
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,32 +20,22 @@ import openravepy
 from openravepy import databases, ikfast, IkParameterization, RaveInitialize, RaveDestroy, RaveCreateProblem, Environment, RaveLoadPlugin, RaveSetDebugLevel, RaveGetDebugLevel, DebugLevel, RaveFindDatabaseFile
 import numpy
 from itertools import izip, combinations
+from optparse import OptionParser
 
 import time, unittest, platform, os, sys
 from distutils import ccompiler
 import nose
 import logging
 from functools import partial
-
-log = logging.getLogger(__name__)
-
 import multiprocessing
+
+#global variables
 _multiprocess_can_split_ = True
-
-# global parameters
-maxfreejoints = 2 # max free joints to allow, 3 or more will take too long to evaluate, and most likely will never be used in real life
-numperftiming = 10000 # perf timing, only computed when wrong solutions == 0
-numiktests = [10000,4000,200] # number of iktests indexed by the number of free joints
-#iktypes = [iktype for value,iktype in IkParameterization.Type.values.iteritems()]
-iktypes = [IkParameterization.Type.Transform6D] # IK types to test for
-freeincrot = 0.1 # increment of the free joints
-freeinctrans = 0.01 # percentage increment of the free joints, this should be scaled with robot size
 globalstats = multiprocessing.Queue() # used for gathering statistics
-minimumsuccess = 0.5
-maximumnosolutions = 0.5
-
+options = None
 env=None
 ikfastproblem=None
+
 def setup_robotstats():
     global env,ikfastproblem
     # just load the plugin we'll be using
@@ -94,6 +84,7 @@ def robotstats(robotfilename,manipname, iktypestr,freeindices):
             ikmodel.manip.SetIKSolver(None)
             ikfasttime = None
             if not ikmodel.load():
+                sys.stderr.write('generating\n')
                 ikmodel.generate(iktype=iktype,freeindices=freeindices,forceikbuild=True)
                 ikmodel.save()
                 ikmodel.setrobot()
@@ -103,10 +94,10 @@ def robotstats(robotfilename,manipname, iktypestr,freeindices):
                 print ikmodel.ikfeasibility # will repeat text if just generated
                 return description
 
-            ikmodel.freeinc = ikmodel.getDefaultFreeIncrements(freeincrot,freeinctrans)
+            ikmodel.freeinc = ikmodel.getDefaultFreeIncrements(options.freeincrot,options.freeinctrans)
             solutionresults = []                
             cmd = 'DebugIK robot %s '%robot.GetName()
-            cmd += 'numtests %d '%int(numiktests[len(freeindices)])
+            cmd += 'numtests %d '%int(options.numiktests[len(freeindices)])
             res = ikfastproblem.SendCommand(cmd).split()
             numtested = int(res[0])
             numsuccessful = int(res[1])
@@ -134,7 +125,7 @@ def robotstats(robotfilename,manipname, iktypestr,freeindices):
             print 'wrong solutions: %d/%d = %.4f'%(len(solutionresults[0]),numtested, float(len(solutionresults[0]))/numtested)
             print 'no solutions: %d/%d = %.4f'%(len(solutionresults[1]),numtested, nosolutions)
             print 'missing solution: %d/%d = %.4f'%(len(solutionresults[2]),numtested,float(len(solutionresults[2]))/numtested)
-            resultsstr = ikfastproblem.SendCommand('PerfTiming num %d %s'%(numperftiming,ikmodel.getfilename(True)))
+            resultsstr = ikfastproblem.SendCommand('PerfTiming num %d %s'%(options.perftests,ikmodel.getfilename(True)))
             results = [numpy.double(s)*1e-6 for s in resultsstr.split()]
             print 'run-time performance: mean: %.6fs, median: %.6fs, min: %6fs, max: %.6fs'%(numpy.mean(results),numpy.median(results),numpy.min(results),numpy.max(results))
             lower,upper = robot.GetDOFLimits(ikmodel.manip.GetArmIndices())
@@ -157,8 +148,8 @@ def robotstats(robotfilename,manipname, iktypestr,freeindices):
                         print ' '.join([row[j].ljust(colwidths[j]) for j in range(len(colwidths))])
             #globalstats.put([numtested,numsuccessful,solutionresults])
             assert(len(solutionresults[0])==0)
-            assert(successrate > minimumsuccess)
-            assert(nosolutions < maximumnosolutions)
+            assert(successrate > options.minimumsuccess)
+            assert(nosolutions < options.maximumnosolutions)
         except ikfast.IKFastSolver.IKFeasibilityError,e:
             # this is expected, and is normal operation, have to notify
             print e
@@ -174,22 +165,21 @@ class RunRobotStats:
             teardown_robotstats()
 
 def test_robots():
-    robotfilenames = ['robots/unimation-pumaarm.zae','robots/barrettwam.robot.xml','robots/pr2-beta-static.zae']#,'robots/neuronics-katana.zae','robots/mitsubishi-pa10.zae','robots/schunk-lwa3.zae','robots/darpa-arm.zae','robots/exactdynamics-manusarmleft.zae','robots/kuka-kr5-r650.zae','robots/kuka-kr5-r850.zae']
     RaveInitialize(load_all_plugins=False)
     RaveSetDebugLevel(DebugLevel.Error) # set to error in order to avoid expected plugin loading errosr
     envlocal=Environment()
     envlocal.StopSimulation()
     try:
         index = 0
-        for robotfilename in robotfilenames:
+        for robotfilename in options.robotfilenames:
             envlocal.Reset()
             robot = envlocal.ReadRobotXMLFile(robotfilename,{'skipgeometry':'1'})
             envlocal.AddRobot(robot)
-            for iktype in iktypes:
+            for iktype in options.iktypes:
                 expecteddof = IkParameterization.GetDOF(iktype)
                 for manip in robot.GetManipulators():
                     armdof = len(manip.GetArmIndices())
-                    if armdof >= expecteddof:
+                    if armdof >= expecteddof and armdof <= expecteddof+options.maxfreejoints:
                         for freeindices in combinations(manip.GetArmIndices(),armdof-expecteddof):
                             yield RunRobotStats(),robotfilename, manip.GetName(), str(iktype),freeindices
     finally:
@@ -202,18 +192,64 @@ from noseplugins import multiprocess, xunitmultiprocess, capture, callableclass
 from nose.plugins.cover import Coverage
 
 if __name__ == "__main__":
-    nose.plugins.capture.log.setLevel(logging.DEBUG)
     import test_ikfast
-    numprocesses = 4
-    for arg in sys.argv[1:]:
-        if arg.startswith('-j'):
-            numprocesses = int(arg[2:])
+    parser = OptionParser(description='ikfast unit tests')
+    parser.add_option('--robots', action='store', type='string', dest='robots',default='basic',
+                      help='Robot groups to test, these are predetermined. type * for all robots (default=%default).')
+    parser.add_option('-j', action='store', type='int', dest='numprocesses',default='4',
+                      help='Number of processors to run this in (default=%default).')
+    parser.add_option('--timeout','-t', action='store', type='float', dest='timeout',default='600',
+                      help='Timeout for each ikfast run, this includes time for generation and performance measurement (default=%default).')
+    parser.add_option('--perftests', action='store', type='int', dest='perftests',default='5000',
+                      help='Number of tests to determine performance of generated IK. Performance is only computed if there are no wrong solutions. (default=%default) .')
+    parser.add_option('--numiktests', action='store', type='string', dest='numiktests',default='10000,4000,200',
+                      help='Number of tests for testing the generated IK for correctness. Because test times increase exponentially with number of free joints, the iktests is an array of values indexec by the number of free joints. (default=%default) .')
+    parser.add_option('--debug','-d', action='store', type='int',dest='debug',default=logging.INFO,
+                      help='Debug level for python nose (smaller values allow more text).')
+    parser.add_option('--maxfreejoints',action='store',type='int',dest='maxfreejoints',default=2,
+                      help='max free joints to allow, 3 or more will take too long to evaluate, and most likely will never be used in real life (default=%default)')
+    parser.add_option('--iktypes',action='store',type='string',dest='iktypes',default='Transform6D',
+                      help='IK types to test for. Can be a comma separated list of the specific names or * for all (default=%defaullt')
+    parser.add_option('--freeincrot',action='store',type='float',dest='freeincrot',default='0.1',
+                      help='increment of revolute free joints (default=%defaullt')
+    parser.add_option('--freeinctrans',action='store',type='float',dest='freeinctrans',default='0.01',
+                      help='percentage increment of the free joints, this should be scaled with robot size (default=%defaullt')
+    parser.add_option('--minimumsuccess',action='store',type='float',dest='minimumsuccess',default='0.5',
+                      help='Minimum success rate required to count test as passing (default=%defaullt')
+    parser.add_option('--maximumnosolutions',action='store',type='float',dest='maximumnosolutions',default='0.5',
+                      help='Maximum no-solutions rate allowed before test is decalred as a failure. In other words, if IK never finds anything, it is useless. (default=%defaullt')
+    (options, args) = parser.parse_args()
+    
+    if options.iktypes == '*':
+        options.iktypes = [iktype for value,iktype in IkParameterization.Type.values.iteritems()]
+    else:
+        iktypes = []
+        for iktype in options.iktypes.split(','):
+            for value,type in IkParameterization.Type.values.iteritems():
+                if type.name.lower() == iktype.lower():
+                    iktypes.append(type)
+                    break
+        options.iktypes = iktypes
+    if options.robots == 'basic':
+        options.robotfilenames = ['robots/unimation-pumaarm.zae','robots/barrettwam.robot.xml']
+    elif options.robots == 'pr2':
+        options.robotfilenames = ['robots/pr2-beta-static.zae']
+    elif options.robots == '*':
+        options.robotfilenames = ['robots/unimation-pumaarm.zae','robots/barrettwam.robot.xml','robots/pr2-beta-static.zae','robots/neuronics-katana.zae','robots/mitsubishi-pa10.zae','robots/schunk-lwa3.zae','robots/darpa-arm.zae','robots/exactdynamics-manusarmleft.zae','robots/kuka-kr5-r650.zae','robots/kuka-kr5-r850.zae']
+    elif options.robots == 'random':
+        options.robotfilenames = None
+    else:
+        options.robotfilenames = options.robots.split(',')
+    options.numiktests = [int(s) for s in options.numiktests.split(',')]
+    test_ikfast.options = options
+
     format = logging.Formatter('%(name)s: %(levelname)s: %(message)s')
     handler = logging.StreamHandler(sys.stderr)
     handler.setFormatter(format)
     multiprocess.log.addHandler(handler)
-    multiprocess.log.setLevel(logging.DEBUG)
-    prog=nose.core.TestProgram(argv=['nosetests','-v','--with-xunitmp','--xunit-file=ikfastresults.xml','--processes=%d'%numprocesses,'--process-timeout=600','--process-restartworker','--with-callableclass','test_ikfast.py'],plugins=[capture.Capture(),multiprocess.MultiProcess(),xunitmultiprocess.Xunitmp(),callableclass.CallableClass()],exit=False)
+    multiprocess.log.setLevel(options.debug)
+
+    prog=nose.core.TestProgram(argv=['nosetests','-v','--with-xunitmp','--xunit-file=test_ikfast.xml','--processes=%d'%options.numprocesses,'--process-timeout=%f'%options.timeout,'--process-restartworker','--with-callableclass','test_ikfast.py'],plugins=[capture.Capture(),multiprocess.MultiProcess(),xunitmultiprocess.Xunitmp(),callableclass.CallableClass()],exit=False)
     # save the queue to file
 #     f = open('stats.xml','w')
 #     while not test_ikfast.globalstats.empty():

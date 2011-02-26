@@ -203,7 +203,7 @@ class MultiProcess(Plugin):
                 return
             self.enabled = True
             self.config.multiprocess_workers = workers
-            self.config.multiprocess_timeout = int(options.multiprocess_timeout)
+            self.config.multiprocess_timeout = float(options.multiprocess_timeout)
             self.config.multiprocess_restartworker = int(options.multiprocess_restartworker)
             self.status['active'] = True
 
@@ -316,7 +316,7 @@ class MultiProcessTestRunner(TextTestRunner):
                       len(completed), total_tasks,self.config.multiprocess_timeout)
             try:
                 iworker, addr, newtask_addrs, batch_result = resultQueue.get(timeout=nexttimeout)
-                log.debug('Results received for %s, new tasks: %d', addr,len(newtask_addrs))
+                log.debug('Results received for worker %d, %s, new tasks: %d', iworker,addr,len(newtask_addrs))
                 try:
                     print addr
                     tasks.remove(addr)
@@ -577,6 +577,7 @@ def runner(ix, testQueue, resultQueue, currentaddr, currentstart, shouldStop,
         try:
             for test_addr, arg in iter(get, 'STOP'):
                 if shouldStop.is_set():
+                    log.exception('Worker %d STOPPED',ix)
                     break
                 result = makeResult()
                 test = loader.loadTestsFromNames([test_addr])
@@ -605,7 +606,6 @@ def runner(ix, testQueue, resultQueue, currentaddr, currentstart, shouldStop,
                 except SystemExit:
                     currentaddr.value = ''
                     log.exception('Worker %d system exit',ix)
-                    sys.stderr('Worker %d system exit\n'%ix)
                     raise
                 except:
                     currentaddr.value = ''

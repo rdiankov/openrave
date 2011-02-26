@@ -5,5 +5,6 @@ export PARALLEL_JOBS=-j4
 export OPENRAVE_DATA=`pwd`/data
 export OPENRAVE_DATABASE=`pwd`/.openrave
 mkdir -p .openrave
+rm -rf localinstall
 cd openrave
 make test prefix=`pwd`/../localinstall
