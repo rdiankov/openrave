@@ -334,6 +334,7 @@ class MultiProcessTestRunner(TextTestRunner):
                     shouldStop.set()
                     break
                 if self.config.multiprocess_restartworker:
+                    log.debug('joining worker %s',iworker)
                     success = workers[iworker].join()
             except Empty:
                 log.debug("Timed out with %s tasks pending", len(tasks))
@@ -350,7 +351,7 @@ class MultiProcessTestRunner(TextTestRunner):
                 if not any_alive:
                     log.debug("All workers dead")
                     break
-            # compute next timeout
+            log.debug('checking workers')
             nexttimeout=self.config.multiprocess_timeout
             for w in workers:
                 if w.is_alive() and len(w.currentaddr.value) > 0:
@@ -593,21 +594,21 @@ def runner(ix, testQueue, resultQueue, currentaddr, currentstart, shouldStop,
                     resultQueue.put((ix, test_addr, test.tasks, batch(result)))
                 except KeyboardInterrupt:
                     if len(currentaddr.value) > 0:
-                        log.exception('Worker %d keyboard interrupt, failing current test %s',ix,test_addr)
+                        log.exception('Worker %s keyboard interrupt, failing current test %s',ix,test_addr)
                         currentaddr.value = ''
                         failure.Failure(*sys.exc_info())(result)
                         resultQueue.put((ix, test_addr, test.tasks, batch(result)))
                     else:
-                        log.debug('worker %d test %s timed out',ix,test_addr)
+                        log.debug('Worker %s test %s timed out',ix,test_addr)
                         result.addError(test,(TimedOutException,TimedOutException(test_addr),sys.exc_info()[2]))
                         resultQueue.put((ix, test_addr, test.tasks, batch(result)))
                 except SystemExit:
                     currentaddr.value = ''
-                    log.exception('Worker %d system exit',ix)
+                    log.exception('Worker %s system exit',ix)
                     raise
                 except:
                     currentaddr.value = ''
-                    log.exception("Worker %d error running test or returning results",ix)
+                    log.exception("Worker %s error running test or returning results",ix)
                     failure.Failure(*sys.exc_info())(result)
                     resultQueue.put((ix, test_addr, test.tasks, batch(result)))
                 if config.multiprocess_restartworker:

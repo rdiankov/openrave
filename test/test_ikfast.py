@@ -147,7 +147,7 @@ def robotstats(description,robotfilename,manipname, iktypestr,freeindices):
                 for i,row in enumerate(rows):
                     print ' '.join([row[j].ljust(colwidths[j]) for j in range(len(colwidths))])
             # print measurement stuff at the end
-            print measurement('generation-time (s)', '%.3f'%ikmodel.statistics.get('generationtime',-1))
+            print measurement('compile-time (s)', '%.3f'%ikmodel.statistics.get('generationtime',-1))
             print measurement('test success (%d/%d)'%(numsuccessful, numtested), '%.4f'%successrate)
             print measurement('test wrong solutions (%d/%d)'%(len(solutionresults[0]),numtested),'%.4f'%(float(len(solutionresults[0]))/numtested))
             print measurement('test no solutions (%d/%d)'%(len(solutionresults[1]),numtested), '%.4f'%nosolutions)
