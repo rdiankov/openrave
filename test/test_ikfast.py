@@ -81,7 +81,7 @@ def robotstats(description,robotfilename,manipname, iktypestr,freeindices):
         manip=robot.SetActiveManipulator(manipname)
         ikmodel = databases.inversekinematics.InverseKinematicsModel(robot,iktype=iktype,freeindices=freeindices)
         freeindicesstr = ', '.join(robot.GetJointFromDOFIndex(dof).GetName() for dof in freeindices)
-        description.append('%s.%s.%s free:[%s]'%(os.path.split(robotfilename)[1].split('.')[0], manipname, iktypestr,freeindicesstr))
+        description.append('%s::%s.%s free:[%s]'%(os.path.split(robotfilename)[1].split('.')[0], manipname, iktypestr,freeindicesstr))
         try:
             # remove any default ik solver for the manipulator, it can get in the way loading
             ikmodel.manip.SetIKSolver(None)
@@ -211,9 +211,9 @@ if __name__ == "__main__":
                       help='Number of processors to run this in (default=%default).')
     parser.add_option('--timeout','-t', action='store', type='float', dest='timeout',default='600',
                       help='Timeout for each ikfast run, this includes time for generation and performance measurement. (default=%default)')
-    parser.add_option('--perftests', action='store', type='int', dest='perftests',default='5000',
+    parser.add_option('--perftests', action='store', type='int', dest='perftests',default='7000',
                       help='Number of tests to determine performance of generated IK. Performance is only computed if there are no wrong solutions. (default=%default)')
-    parser.add_option('--numiktests', action='store', type='string', dest='numiktests',default='10000,5000,200',
+    parser.add_option('--numiktests', action='store', type='string', dest='numiktests',default='10000,6000,200',
                       help='Number of tests for testing the generated IK for correctness. Because test times increase exponentially with number of free joints, the iktests is an array of values indexec by the number of free joints. (default=%default)')
     parser.add_option('--debug','-d', action='store', type='int',dest='debug',default=logging.INFO,
                       help='Debug level for python nose (smaller values allow more text).')
