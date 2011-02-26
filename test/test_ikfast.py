@@ -81,7 +81,7 @@ def robotstats(robotfilename,manipname, iktypestr,freeindices):
         manip=robot.SetActiveManipulator(manipname)
         ikmodel = databases.inversekinematics.InverseKinematicsModel(robot,iktype=iktype,freeindices=freeindices)
         freeindicesstr = ', '.join(robot.GetJointFromDOFIndex(dof).GetName() for dof in freeindices)
-        description = '%s:%s %s free:[%s]'%(os.path.splitext(os.path.split(robotfilename)[1])[0], manipname, iktypestr,freeindicesstr)
+        description = '%s.%s.%s free:[%s]'%(os.path.splitext(os.path.split(robotfilename)[1])[0], manipname, iktypestr,freeindicesstr)
         try:
             # remove any default ik solver for the manipulator, it can get in the way loading
             ikmodel.manip.SetIKSolver(None)
@@ -119,18 +119,12 @@ def robotstats(robotfilename,manipname, iktypestr,freeindices):
                 solutionresults.append(samples)
             successrate = float(numsuccessful)/numtested
             nosolutions = float(len(solutionresults[1]))/numtested
+            resultsstr = ikfastproblem.SendCommand('PerfTiming num %d %s'%(options.perftests,ikmodel.getfilename(True)))
+            results = [numpy.double(s)*1e-6 for s in resultsstr.split()]
             jointnames = ', '.join(robot.GetJointFromDOFIndex(dof).GetName() for dof in ikmodel.manip.GetArmIndices())
             print 'ikfast version %s'%ikfast.__version__
             print 'free joint increment: %s'%ikmodel.freeinc
             print 'manipulator: %s %s [%s]'%(ikmodel.manip.GetBase().GetName(),ikmodel.manip.GetEndEffector().GetName(),jointnames)
-            print measurement('time to generate ik', '%.3f'%ikmodel.statistics.get('generationtime',-1))
-            print measurement('success (%d/%d)'%(numsuccessful, numtested), '%.4f'%successrate)
-            print measurement('wrong solutions (%d/%d)'%(len(solutionresults[0]),numtested),'%.4f'%(float(len(solutionresults[0]))/numtested))
-            print measurement('no solutions (%d/%d)'%(len(solutionresults[1]),numtested), '%.4f'%nosolutions)
-            print measurement('missing solution (%d/%d)'%(len(solutionresults[2]),numtested), '%.4f'%(float(len(solutionresults[2]))/numtested))
-            resultsstr = ikfastproblem.SendCommand('PerfTiming num %d %s'%(options.perftests,ikmodel.getfilename(True)))
-            results = [numpy.double(s)*1e-6 for s in resultsstr.split()]
-            print 'run-time performance: mean: %.6fs, median: %.6fs, min: %6fs, max: %.6fs'%(numpy.mean(results),numpy.median(results),numpy.min(results),numpy.max(results))
             lower,upper = robot.GetDOFLimits(ikmodel.manip.GetArmIndices())
             print 'lower limits: '+' '.join(str(f) for f in lower)
             print 'upper limits: '+' '.join(str(f) for f in upper)
@@ -140,9 +134,9 @@ def robotstats(robotfilename,manipname, iktypestr,freeindices):
                 if len(solutionresults[isol]) == 0:
                     continue
                 if isol == 0:
-                    print 'Wrong Solutions:\n\n',
+                    print 'Examples of Wrong Solutions:\n\n',
                 else:
-                    print 'No Solutions:\n\n'
+                    print 'Examples of No Solutions:\n\n'
                 rows = []
                 numprint = min(10,len(solutionresults[isol]))
                 for index in numpy.random.permutation(len(solutionresults[isol]))[0:numprint]:
@@ -152,6 +146,16 @@ def robotstats(robotfilename,manipname, iktypestr,freeindices):
                 colwidths = [max([len(row[i]) for row in rows]) for i in range(len(rows[0]))]
                 for i,row in enumerate(rows):
                     print ' '.join([row[j].ljust(colwidths[j]) for j in range(len(colwidths))])
+            # print measurement stuff at the end
+            print measurement('generation-time (s)', '%.3f'%ikmodel.statistics.get('generationtime',-1))
+            print measurement('test success (%d/%d)'%(numsuccessful, numtested), '%.4f'%successrate)
+            print measurement('test wrong solutions (%d/%d)'%(len(solutionresults[0]),numtested),'%.4f'%(float(len(solutionresults[0]))/numtested))
+            print measurement('test no solutions (%d/%d)'%(len(solutionresults[1]),numtested), '%.4f'%nosolutions)
+            print measurement('test missing solutions (%d/%d)'%(len(solutionresults[2]),numtested), '%.4f'%(float(len(solutionresults[2]))/numtested))
+            print measurement('run-time mean (s)','%.6f'%numpy.mean(results))
+            print measurement('run-time median (s)','%.6f'%numpy.median(results))
+            print measurement('run-time min (s)','%.6f'%numpy.min(results))
+            print measurement('run-time max (s)','%.6f'%numpy.max(results))
             #globalstats.put([numtested,numsuccessful,solutionresults])
             assert(len(solutionresults[0])==0)
             assert(successrate > options.minimumsuccess)
@@ -255,7 +259,8 @@ if __name__ == "__main__":
     multiprocess.log.addHandler(handler)
     multiprocess.log.setLevel(options.debug)
 
-    prog=nose.core.TestProgram(argv=['nosetests','-v','--with-xunitmp','--xunit-file=test_ikfast.xml','--processes=%d'%options.numprocesses,'--process-timeout=%f'%options.timeout,'--process-restartworker','--with-callableclass','test_ikfast.py'],plugins=[capture.Capture(),multiprocess.MultiProcess(),xunitmultiprocess.Xunitmp(),callableclass.CallableClass()],exit=False)
+    header = 'name="%s robots" package="%s"'%(options.robots,ikfast.__name__)
+    prog=nose.core.TestProgram(argv=['nosetests','-v','--with-xunitmp','--xunit-file=test_ikfast.xml','--xunit-header=%s'%header,'--processes=%d'%options.numprocesses,'--process-timeout=%f'%options.timeout,'--process-restartworker','--with-callableclass','test_ikfast.py'],plugins=[capture.Capture(),multiprocess.MultiProcess(),xunitmultiprocess.Xunitmp(),callableclass.CallableClass()],exit=False)
     # save the queue to file
 #     f = open('stats.xml','w')
 #     while not test_ikfast.globalstats.empty():

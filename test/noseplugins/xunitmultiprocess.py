@@ -142,6 +142,12 @@ class Xunitmp(Plugin):
             help=("Path to xml file to store the xunit report in. "
                   "Default is nosetests.xml in the working directory "
                   "[NOSE_XUNIT_FILE]"))
+        parser.add_option(
+            '--xunit-header', action='store',
+            dest='xunit_header', metavar="HEADER",
+            default=env.get('NOSE_XUNIT_HEADER', ''),
+            help=("The attributes of the <testsuite> report that will be created, in particular 'package' and 'name' should be filled."
+                  "[NOSE_XUNIT_HEADER]"))
 
     def configure(self, options, config):
         """Configures the xunit plugin."""
@@ -153,6 +159,7 @@ class Xunitmp(Plugin):
             for i in range(4):
                 self.xunitstats[i] = 0
             self.xunit_file = options.xunit_file
+            self.xunit_header = options.xunit_header
 
     def report(self, stream):
         """Writes an Xunit-formatted XML file
@@ -163,13 +170,14 @@ class Xunitmp(Plugin):
         stats = {'errors': self.xunitstats[0], 'failures': self.xunitstats[1], 'passes': self.xunitstats[2], 'skipped': self.xunitstats[3] }
         stats['encoding'] = self.encoding
         stats['total'] = (stats['errors'] + stats['failures'] + stats['passes'] + stats['skipped'])
+        stats['header'] = self.xunit_header
         if UNICODE_STRINGS:
             error_report_file = open(self.xunit_file, 'w', encoding=self.encoding)
         else:
             error_report_file = open(self.xunit_file, 'w')
         error_report_file.write(
             '<?xml version="1.0" encoding="%(encoding)s"?>'
-            '<testsuite name="nosetests" tests="%(total)d" '
+            '<testsuite %(header)s tests="%(total)d" '
             'errors="%(errors)d" failures="%(failures)d" '
             'skip="%(skipped)d">' % stats)
         while len(self.xunitstream) > 0:
@@ -196,10 +204,11 @@ class Xunitmp(Plugin):
             type = 'error'
             self.xunitstats[0] += 1
         tb = ''.join(traceback.format_exception(*err))
-        id = test.id().split('.')
-        name=test.shortDescription()
-        if name is None:
-            name = '.'.join(id[1:])
+        id=test.shortDescription()
+        if id is None:
+            id = test.id()
+        id = id.split('.')
+        name = self._quoteattr(id[-1])
         systemout = ''
         if test.capturedOutput is not None:
             systemout = '<system-out><![CDATA['+str(test.capturedOutput)+']]></system-out>'
@@ -208,7 +217,7 @@ class Xunitmp(Plugin):
             '%(systemout)s'
             '<%(type)s type=%(errtype)s message=%(message)s><![CDATA[%(tb)s]]>'
             '</%(type)s></testcase>' %
-            {'cls': self._quoteattr('.'.join(id[0:1])),
+            {'cls': self._quoteattr('.'.join(id[:-1])),
              'name': self._quoteattr(name),
              'taken': taken,
              'type': type,
@@ -224,10 +233,11 @@ class Xunitmp(Plugin):
         taken = self._timeTaken()
         tb = ''.join(traceback.format_exception(*err))
         self.xunitstats[1] += 1
-        id = test.id().split('.')
-        name=test.shortDescription()
-        if name is None:
-            name = '.'.join(id[1:])
+        id=test.shortDescription()
+        if id is None:
+            id = test.id()
+        id = id.split('.')
+        name = self._quoteattr(id[-1])
         systemout = ''
         if test.capturedOutput is not None:
             systemout = '<system-out><![CDATA['+str(test.capturedOutput)+']]></system-out>'
@@ -236,7 +246,7 @@ class Xunitmp(Plugin):
             '%(systemout)s'
             '<failure type=%(errtype)s message=%(message)s><![CDATA[%(tb)s]]>'
             '</failure></testcase>' %
-            {'cls': self._quoteattr('.'.join(id[0:1])),
+            {'cls': self._quoteattr('.'.join(id[:-1])),
              'name': self._quoteattr(name),
              'taken': taken,
              'errtype': self._quoteattr(nice_classname(err[0])),
@@ -250,17 +260,18 @@ class Xunitmp(Plugin):
         """
         taken = self._timeTaken()
         self.xunitstats[2] += 1
-        id = test.id().split('.')
-        name=test.shortDescription()
-        if name is None:
-            name = '.'.join(id[1:])
+        id=test.shortDescription()
+        if id is None:
+            id = test.id()
+        id = id.split('.')
+        name = self._quoteattr(id[-1])
         systemout=''
         if test.capturedOutput is not None:
             systemout = '<system-out><![CDATA['+str(test.capturedOutput)+']]></system-out>'
         self.xunitstream.append(
             '<testcase classname=%(cls)s name=%(name)s '
             'time="%(taken)f" >%(systemout)s</testcase>' %
-            {'cls': self._quoteattr('.'.join(id[0:1])),
+            {'cls': self._quoteattr('.'.join(id[:-1])),
              'name': self._quoteattr(name),
              'taken': taken,
              'systemout':systemout
