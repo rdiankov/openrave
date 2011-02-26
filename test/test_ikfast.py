@@ -195,29 +195,29 @@ if __name__ == "__main__":
     import test_ikfast
     parser = OptionParser(description='ikfast unit tests')
     parser.add_option('--robots', action='store', type='string', dest='robots',default='basic',
-                      help='Robot groups to test, these are predetermined. type * for all robots (default=%default).')
+                      help='Robot groups to test, these are predetermined. type * for all robots. (default=%default)')
     parser.add_option('-j', action='store', type='int', dest='numprocesses',default='4',
                       help='Number of processors to run this in (default=%default).')
     parser.add_option('--timeout','-t', action='store', type='float', dest='timeout',default='600',
-                      help='Timeout for each ikfast run, this includes time for generation and performance measurement (default=%default).')
+                      help='Timeout for each ikfast run, this includes time for generation and performance measurement. (default=%default)')
     parser.add_option('--perftests', action='store', type='int', dest='perftests',default='5000',
-                      help='Number of tests to determine performance of generated IK. Performance is only computed if there are no wrong solutions. (default=%default) .')
-    parser.add_option('--numiktests', action='store', type='string', dest='numiktests',default='10000,4000,200',
-                      help='Number of tests for testing the generated IK for correctness. Because test times increase exponentially with number of free joints, the iktests is an array of values indexec by the number of free joints. (default=%default) .')
+                      help='Number of tests to determine performance of generated IK. Performance is only computed if there are no wrong solutions. (default=%default)')
+    parser.add_option('--numiktests', action='store', type='string', dest='numiktests',default='10000,5000,200',
+                      help='Number of tests for testing the generated IK for correctness. Because test times increase exponentially with number of free joints, the iktests is an array of values indexec by the number of free joints. (default=%default)')
     parser.add_option('--debug','-d', action='store', type='int',dest='debug',default=logging.INFO,
                       help='Debug level for python nose (smaller values allow more text).')
     parser.add_option('--maxfreejoints',action='store',type='int',dest='maxfreejoints',default=2,
                       help='max free joints to allow, 3 or more will take too long to evaluate, and most likely will never be used in real life (default=%default)')
     parser.add_option('--iktypes',action='store',type='string',dest='iktypes',default='Transform6D',
-                      help='IK types to test for. Can be a comma separated list of the specific names or * for all (default=%defaullt')
+                      help='IK types to test for. Can be a comma separated list of the specific names or * for all (default=%default)')
     parser.add_option('--freeincrot',action='store',type='float',dest='freeincrot',default='0.1',
-                      help='increment of revolute free joints (default=%defaullt')
+                      help='increment of revolute free joints (default=%default)')
     parser.add_option('--freeinctrans',action='store',type='float',dest='freeinctrans',default='0.01',
-                      help='percentage increment of the free joints, this should be scaled with robot size (default=%defaullt')
+                      help='percentage increment of the free joints, this should be scaled with robot size (default=%default)')
     parser.add_option('--minimumsuccess',action='store',type='float',dest='minimumsuccess',default='0.5',
-                      help='Minimum success rate required to count test as passing (default=%defaullt')
+                      help='Minimum success rate required to count test as passing (default=%default)')
     parser.add_option('--maximumnosolutions',action='store',type='float',dest='maximumnosolutions',default='0.5',
-                      help='Maximum no-solutions rate allowed before test is decalred as a failure. In other words, if IK never finds anything, it is useless. (default=%defaullt')
+                      help='Maximum no-solutions rate allowed before test is decalred as a failure. In other words, if IK never finds anything, it is useless. (default=%default)')
     (options, args) = parser.parse_args()
     
     if options.iktypes == '*':

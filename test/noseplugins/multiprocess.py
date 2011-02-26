@@ -362,7 +362,7 @@ class MultiProcessTestRunner(TextTestRunner):
             if self.config.multiprocess_restartworker and not shouldStop.is_set() and not testQueue.empty():
                 # restart worker threads
                 for i,w in enumerate(workers):
-                    if w is None or not w.is_alive():
+                    if not w.is_alive():
                         currentaddr = Array('c',' '*1000)
                         currentaddr.value = ''
                         currentstart = Value('d')
@@ -600,7 +600,7 @@ def runner(ix, testQueue, resultQueue, currentaddr, currentstart, shouldStop,
                         failure.Failure(*sys.exc_info())(result)
                         resultQueue.put((ix, test_addr, test.tasks, batch(result)))
                     else:
-                        log.debug('test %s timed out',ix,test_addr)
+                        log.debug('worker %d test %s timed out',ix,test_addr)
                         result.addError(test,(TimedOutException,TimedOutException(test_addr),sys.exc_info()[2]))
                         resultQueue.put((ix, test_addr, test.tasks, batch(result)))
                 except SystemExit:
