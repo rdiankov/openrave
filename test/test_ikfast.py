@@ -267,8 +267,9 @@ if __name__ == "__main__":
     multiprocess.log.addHandler(handler)
     multiprocess.log.setLevel(options.debug)
 
-    header = 'name="%s robots" package="%s"'%(options.robots,ikfast.__name__)
-    prog=nose.core.TestProgram(argv=['nosetests','-v','--with-xunitmp','--xunit-file=test_ikfast.xml','--xunit-header=%s'%header,'--with-jenkinsperf','--jenkinsperf-file=jenkins_ikfast.xml', '--processes=%d'%options.numprocesses,'--process-timeout=%f'%options.timeout,'--process-restartworker','--with-callableclass','test_ikfast.py'],plugins=[capture.Capture(),multiprocess.MultiProcess(),xunitmultiprocess.Xunitmp(),callableclass.CallableClass(), jenkinsperfpublisher.JenkinsPerfPublisher()],exit=False)
+    header = '"name=\"%s robots\" package=\"%s\""'%(options.robots,ikfast.__name__)
+    jenkins_header = '"name=\"%s\" categ=\"%s\"'%(options.robots,ikfast.__name__)
+    prog=nose.core.TestProgram(argv=['nosetests','-v','--with-xunitmp','--xunit-file=test_ikfast.xml','--xunit-header=%s'%header,'--with-jenkinsperf','--jenkinsperf-file=jenkins_ikfast.xml', '--jenkinsperf-header=%s'%jenkins_header,'--processes=%d'%options.numprocesses,'--process-timeout=%f'%options.timeout,'--process-restartworker','--with-callableclass','test_ikfast.py'],plugins=[capture.Capture(),multiprocess.MultiProcess(),xunitmultiprocess.Xunitmp(),callableclass.CallableClass(), jenkinsperfpublisher.JenkinsPerfPublisher()],exit=False)
     # save the queue to file
 #     f = open('stats.xml','w')
 #     while not test_ikfast.globalstats.empty():

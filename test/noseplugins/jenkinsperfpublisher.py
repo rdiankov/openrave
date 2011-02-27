@@ -115,7 +115,7 @@ class JenkinsPerfPublisher(Plugin):
         parser.add_option(
             '--jenkinsperf-header', action='store',
             dest='jenkinsperf_header', metavar="HEADER",
-            default=env.get('NOSE_JENKINSPERF_HEADER', ''),
+            default=env.get('NOSE_JENKINSPERF_HEADER', 'name="nosetests" categ="nosetests"'),
             help=("The attributes of the <testsuite> report that will be created, in particular 'package' and 'name' should be filled."
                   "[NOSE_JENKINSPERF_HEADER]"))
 
