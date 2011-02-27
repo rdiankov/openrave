@@ -340,6 +340,7 @@ class MultiProcessTestRunner(TextTestRunner):
                         currentaddr = Array('c',' '*1000)
                         currentaddr.value = ''
                         currentstart = Value('d')
+                        currentstart.value = time.time()
                         workers[iworker] = Process(target=runner, args=(iworker,
                                              testQueue,
                                              resultQueue,
