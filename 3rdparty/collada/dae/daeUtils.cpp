@@ -17,6 +17,12 @@
 #include <unistd.h>  // for getcwd (linux)
 #endif
 
+#ifndef NO_BOOST
+#include <boost/filesystem/convenience.hpp>       // THIS WAS NOT COMMENTED.
+#endif
+
+#include <cstdio> // for tmpnam
+
 using namespace std;
 
 cdom::systemType cdom::getSystemType() {
@@ -160,14 +166,14 @@ static string tmpDir = string(getenv("TMPDIR"));
 
 string cdom::getRandomFileName() {
     std::string randomSegment;
+    // have to createa a buffer in order to make it multi-thread safe
+    std::string tmpbuffer; tmpbuffer.resize(L_tmpnam*2+1);
+    std::string tmp(tmpnam(&tmpbuffer[0]));
 #ifdef WIN32
-    std::string tmp(tmpnam(0));
     randomSegment = tmp.substr(tmp.find_last_of('\\')+1);
 #elif defined(__linux__) || defined(__linux)
-    std::string tmp(tmpnam(0));
     randomSegment = tmp.substr(tmp.find_last_of('/')+1);
 #elif defined __APPLE_CC__
-	std::string tmp(tmpnam(0));
 	randomSegment = tmp.substr(tmp.find_last_of('/')+1);
 #elif defined __CELLOS_LV2__
 #error  usage of tmpnam() for your system unknown
@@ -178,7 +184,13 @@ string cdom::getRandomFileName() {
 }
 
 const string& cdom::getSafeTmpDir() {
-    static string tmpDir = getSystemTmpDir() + getRandomFileName() + getFileSeparator();
+    // there is a race condition here is multiple collada-dom -enabled processes call getSafeTmpDir at the same time.
+    // Therefore, have to check if directory already exists before using it. This still leaves the race
+    // condition, but makes it more difficult to reproduce. A better alternative would be to stop relying on tmpnam!
+    static string tmpDir;
+    do {
+        tmpDir = getSystemTmpDir() + getRandomFileName() + getFileSeparator();
+    } while(boost::filesystem::is_directory(tmpDir));
     return tmpDir;
 }
 #endif //NO_BOOST
