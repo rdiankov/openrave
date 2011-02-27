@@ -7,7 +7,7 @@ representation of test results.
 
 Add this shell command to your builder ::
 
-    nosetests --with-xunit
+    nosetests --with-xunitmp
 
 And by default a file named nosetests.xml will be written to the
 working directory.
@@ -212,7 +212,7 @@ class Xunitmp(Plugin):
         name = self._quoteattr(id[-1])
         systemout = ''
         if test.capturedOutput is not None:
-            systemout = '<system-out><![CDATA['+str(test.capturedOutput)+']]></system-out>'
+            systemout = '<system-out><![CDATA['+escape_cdata(str(test.capturedOutput))+']]></system-out>'
         self.xunitstream.append(
             '<testcase classname=%(cls)s name=%(name)s time="%(taken)f">'
             '%(systemout)s'
@@ -241,7 +241,7 @@ class Xunitmp(Plugin):
         name = self._quoteattr(id[-1])
         systemout = ''
         if test.capturedOutput is not None:
-            systemout = '<system-out><![CDATA['+str(test.capturedOutput)+']]></system-out>'
+            systemout = '<system-out><![CDATA['+escape_cdata(str(test.capturedOutput))+']]></system-out>'
         self.xunitstream.append(
             '<testcase classname=%(cls)s name=%(name)s time="%(taken)f">'
             '%(systemout)s'
@@ -268,7 +268,7 @@ class Xunitmp(Plugin):
         name = self._quoteattr(id[-1])
         systemout=''
         if test.capturedOutput is not None:
-            systemout = '<system-out><![CDATA['+str(test.capturedOutput)+']]></system-out>'
+            systemout = '<system-out><![CDATA['+escape_cdata(str(test.capturedOutput))+']]></system-out>'
         self.xunitstream.append(
             '<testcase classname=%(cls)s name=%(name)s '
             'time="%(taken)f" >%(systemout)s</testcase>' %

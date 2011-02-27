@@ -106,7 +106,7 @@ try:
 except ImportError:
     import StringIO
 
-import xunitmultiprocess, capture, callableclass
+import xunitmultiprocess, capture, callableclass, jenkinsperfpublisher
 
 log = logging.getLogger(__name__)
 
@@ -535,7 +535,7 @@ def runner(ix, testQueue, resultQueue, currentaddr, currentstart, shouldStop,
     dummy_parser = config.parserClass()
 
     # manually add xunitmultiprocess plugin
-    for plugin in [capture.Capture(), xunitmultiprocess.Xunitmp(), callableclass.CallableClass()]:
+    for plugin in [capture.Capture(), xunitmultiprocess.Xunitmp(), callableclass.CallableClass(),jenkinsperfpublisher.JenkinsPerfPublisher()]:
         plugin.addOptions(dummy_parser,{})
         config.plugins.addPlugin(plugin)
     config.plugins.addPlugin(plugin)

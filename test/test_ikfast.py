@@ -145,7 +145,7 @@ def robotstats(description,robotfilename,manipname, iktypestr,freeindices):
                 colwidths = [max([len(row[i]) for row in rows]) for i in range(len(rows[0]))]
                 for i,row in enumerate(rows):
                     print ' '.join([row[j].ljust(colwidths[j]) for j in range(len(colwidths))])
-            # print measurement stuff at the end
+            # jenkins plot measurement data
             print measurement('compile-time (s)', '%.3f'%ikmodel.statistics.get('generationtime',-1))
             print measurement('test success (%d/%d)'%(numsuccessful, numtested), '%.4f'%successrate)
             print measurement('test wrong solutions (%d/%d)'%(len(solutionresults[0]),numtested),'%.4f'%(float(len(solutionresults[0]))/numtested))
@@ -155,6 +155,13 @@ def robotstats(description,robotfilename,manipname, iktypestr,freeindices):
             print measurement('run-time median (s)','%.6f'%numpy.median(results))
             print measurement('run-time min (s)','%.6f'%numpy.min(results))
             print measurement('run-time max (s)','%.6f'%numpy.max(results))
+            # jenkins perfpublisher data
+            print '<targets><target>%s</target></targets>'%iktypestr
+            compiletime = ikmodel.statistics.get('generationtime',None)
+            if compiletime is not None:
+                print '<compiletime unit="s" mesure="%s" isRelevant="true" />'%compiletime
+            #print '<performance unit="GFLOPs" mesure="%s" isRelevant="true" />'
+            print '<executiontime unit="s" mesure="%s" isRelevant="true" />'%numpy.mean(results)
             #globalstats.put([numtested,numsuccessful,solutionresults])
             assert(len(solutionresults[0])==0)
             assert(successrate > options.minimumsuccess)
@@ -199,7 +206,7 @@ def test_robots():
         # than the main threading waiting for it to finish, so it is necessary to call RaveDestroy
         RaveDestroy()
 
-from noseplugins import multiprocess, xunitmultiprocess, capture, callableclass
+from noseplugins import multiprocess, xunitmultiprocess, capture, callableclass, jenkinsperfpublisher
 from nose.plugins.cover import Coverage
 
 if __name__ == "__main__":
@@ -213,7 +220,7 @@ if __name__ == "__main__":
                       help='Timeout for each ikfast run, this includes time for generation and performance measurement. (default=%default)')
     parser.add_option('--perftests', action='store', type='int', dest='perftests',default='7000',
                       help='Number of tests to determine performance of generated IK. Performance is only computed if there are no wrong solutions. (default=%default)')
-    parser.add_option('--numiktests', action='store', type='string', dest='numiktests',default='10000,6000,200',
+    parser.add_option('--numiktests', action='store', type='string', dest='numiktests',default='10000,7000,200',
                       help='Number of tests for testing the generated IK for correctness. Because test times increase exponentially with number of free joints, the iktests is an array of values indexec by the number of free joints. (default=%default)')
     parser.add_option('--debug','-d', action='store', type='int',dest='debug',default=logging.INFO,
                       help='Debug level for python nose (smaller values allow more text).')
@@ -261,7 +268,7 @@ if __name__ == "__main__":
     multiprocess.log.setLevel(options.debug)
 
     header = 'name="%s robots" package="%s"'%(options.robots,ikfast.__name__)
-    prog=nose.core.TestProgram(argv=['nosetests','-v','--with-xunitmp','--xunit-file=test_ikfast.xml','--xunit-header=%s'%header,'--processes=%d'%options.numprocesses,'--process-timeout=%f'%options.timeout,'--process-restartworker','--with-callableclass','test_ikfast.py'],plugins=[capture.Capture(),multiprocess.MultiProcess(),xunitmultiprocess.Xunitmp(),callableclass.CallableClass()],exit=False)
+    prog=nose.core.TestProgram(argv=['nosetests','-v','--with-xunitmp','--xunit-file=test_ikfast.xml','--xunit-header=%s'%header,'--with-jenkinsperf','--jenkinsperf-file=jenkins.xml', '--processes=%d'%options.numprocesses,'--process-timeout=%f'%options.timeout,'--process-restartworker','--with-callableclass','test_ikfast.py'],plugins=[capture.Capture(),multiprocess.MultiProcess(),xunitmultiprocess.Xunitmp(),callableclass.CallableClass(), jenkinsperfpublisher.JenkinsPerfPublisher()],exit=False)
     # save the queue to file
 #     f = open('stats.xml','w')
 #     while not test_ikfast.globalstats.empty():
