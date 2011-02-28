@@ -87,7 +87,7 @@ def robotstats(description,robotfilename,manipname, iktypestr,freeindices):
                 ikmodel.save()
                 ikmodel.setrobot()
 
-            compiletime = ikmodel.statistics.get('generationtime',-1)
+            compiletime = ikmodel.statistics.get('generationtime',0)
             if ikmodel.ikfeasibility is not None:
                 # nothing more to do than print the text
                 print ikmodel.ikfeasibility # will repeat text if just generated
