@@ -755,6 +755,10 @@ protected:
 
     static void* _SysLoadLibrary(const std::string& lib, bool bLazy=false)
     {
+        // check if file exists first
+        if( !ifstream(lib.c_str()) ) {
+            return NULL;
+        }
 #ifdef _WIN32
         void* plib = LoadLibraryA(lib.c_str());
         if( plib == NULL ) {
