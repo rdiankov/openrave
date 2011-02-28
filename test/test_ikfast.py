@@ -294,16 +294,6 @@ if __name__ == "__main__":
             ikfaststats[iktypestr][2] += compiletime
         ikfaststats[iktypestr][3] += successrate
         ikfaststats[iktypestr][4] += wrongrate
-#         xml += """<test name="%s" executed="yes">
-# %s
-# <targets><target>C++</target></targets>
-# <result>
-# <success passed="%s" state="%s" hasTimedOut="false"/>
-# <compiletime unit="s" mesure="%f" isRelevant="true"/>
-# <correctrate unit="%%" mesure="%f" isRelevant="true"/>
-# </result>
-# </test>
-# """%(str(testid),xmlplatform,'yes' if wrongrate==0 and successrate>0 else 'no',int(100*successrate),compiletime,100*(1-wrongrate))
 
     for name,value in ikfaststats.iteritems():
         num, success, compiletime, successrate, wrongrate = value
@@ -312,12 +302,13 @@ if __name__ == "__main__":
         if num > 0:
             xml += """<test name="%s" executed="yes">
 %s
+<targets><target>%s</target></targets>
 <result>
 <success passed="%s" state="%s" hasTimedOut="false"/>
 <compiletime unit="s" mesure="%f" isRelevant="true"/>
 <performance mesure="%f" isRelevant="true"/>
 </result>
 </test>
-"""%(name,xmlplatform,'yes' if num==success else 'no',(100*success)/num,compiletime,100*(1-wrongrate/float(num)))
+"""%(name,xmlplatform,name,'yes' if num==success else 'no',(100*success)/num,compiletime,100*(1-wrongrate/float(num)))
     xml += '</report>\n'
     open('ikfaststats.xml','w').write(xml)
