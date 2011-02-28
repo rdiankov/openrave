@@ -85,6 +85,7 @@ Updates by Rosen Diankov:
 
 - added "--process-restartworker" option to restart workers once they are done, this helps control memory usage. Sometimes memory leaks can accumulate making long runs very difficult.
 
+- added global _instantiate_plugins to configure which plugins are started on the worker processes.
 """
 
 import logging
