@@ -78,7 +78,7 @@ python test_ikfast.py $PARALLEL_JOBS -d 10 --robots=*
           </logTexts>
           <EscalateStatus>false</EscalateStatus>
           <RunIfJobSuccessful>false</RunIfJobSuccessful>
-          <script>scp openrave/test/ikfaststats.xml jenkins@daikon:~/workspace/ikfast2/openrave/test/</script>
+          <script>scp openrave/test/ikfaststats.xml jenkins@daikon:~/workspace/$JOB_NAME/openrave/test/</script>
         </hudson.plugins.postbuildtask.TaskProperties>
       </tasks>
     </hudson.plugins.postbuildtask.PostbuildTask>
