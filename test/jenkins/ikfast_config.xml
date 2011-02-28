@@ -1,0 +1,94 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<project>
+  <actions/>
+  <description></description>
+  <keepDependencies>false</keepDependencies>
+  <properties>
+    <hudson.plugins.trac.TracProjectProperty>
+      <tracWebsite>https://sourceforge.net/apps/trac/openrave/</tracWebsite>
+    </hudson.plugins.trac.TracProjectProperty>
+  </properties>
+  <scm class="hudson.scm.SubversionSCM">
+    <locations>
+      <hudson.scm.SubversionSCM_-ModuleLocation>
+        <remote>https://openrave.svn.sourceforge.net/svnroot/openrave/trunk</remote>
+        <local>openrave</local>
+      </hudson.scm.SubversionSCM_-ModuleLocation>
+      <hudson.scm.SubversionSCM_-ModuleLocation>
+        <remote>https://openrave.svn.sourceforge.net/svnroot/openrave/data</remote>
+        <local>data</local>
+      </hudson.scm.SubversionSCM_-ModuleLocation>
+    </locations>
+    <browser class="hudson.plugins.trac.TracRepositoryBrowser"/>
+    <excludedRegions></excludedRegions>
+    <includedRegions></includedRegions>
+    <excludedUsers></excludedUsers>
+    <excludedRevprop></excludedRevprop>
+    <excludedCommitMessages></excludedCommitMessages>
+    <workspaceUpdater class="hudson.scm.subversion.UpdateUpdater"/>
+  </scm>
+  <assignedNode>dulse</assignedNode>
+  <canRoam>false</canRoam>
+  <disabled>false</disabled>
+  <blockBuildWhenDownstreamBuilding>false</blockBuildWhenDownstreamBuilding>
+  <blockBuildWhenUpstreamBuilding>false</blockBuildWhenUpstreamBuilding>
+  <triggers class="vector">
+    <hudson.triggers.TimerTrigger>
+      <spec>@yearly</spec>
+    </hudson.triggers.TimerTrigger>
+  </triggers>
+  <concurrentBuild>false</concurrentBuild>
+  <builders>
+    <hudson.tasks.Shell>
+      <command>#!/bin/sh
+# this is the main script needed to be executed by jenkins
+# assuming the workspace has &apos;openrave&apos; folder for sources and &apos;data&apos; folder for scenes and robots.
+export PARALLEL_JOBS=-j16
+export OPENRAVE_DATA=`pwd`/data:/var/lib/jenkins/robots
+export OPENRAVE_DATABASE=`pwd`/.openrave
+mkdir -p .openrave
+#rm -rf localinstall openrave/build/CMakeCache.txt
+cd openrave
+make prefix=`pwd`/../localinstall $PARALLEL_JOBS
+make install $PARALLEL_JOBS
+export PATH=`sh build/openrave-config --prefix`/bin:$PATH
+export PYTHONPATH=`openrave-config --python-dir`:$PYTHONPATH
+export LD_LIBRARY_PATH=`openrave-config --prefix`/lib:$LD_LIBRARY_PATH
+cd test
+python test_ikfast.py $PARALLEL_JOBS -d 10 --robots=*
+</command>
+    </hudson.tasks.Shell>
+  </builders>
+  <publishers>
+    <hudson.tasks.junit.JUnitResultArchiver>
+      <testResults>openrave/test/test_ikfast.xml</testResults>
+      <keepLongStdio>true</keepLongStdio>
+      <testDataPublishers>
+        <hudson.plugins.measurement__plots.TestDataPublisher/>
+      </testDataPublishers>
+    </hudson.tasks.junit.JUnitResultArchiver>
+    <hudson.plugins.postbuildtask.PostbuildTask>
+      <tasks>
+        <hudson.plugins.postbuildtask.TaskProperties>
+          <logTexts>
+            <hudson.plugins.postbuildtask.LogProperties>
+              <logText></logText>
+              <operator>AND</operator>
+            </hudson.plugins.postbuildtask.LogProperties>
+          </logTexts>
+          <EscalateStatus>false</EscalateStatus>
+          <RunIfJobSuccessful>false</RunIfJobSuccessful>
+          <script>scp openrave/test/ikfaststats.xml jenkins@daikon:~/workspace/ikfast2/openrave/test/</script>
+        </hudson.plugins.postbuildtask.TaskProperties>
+      </tasks>
+    </hudson.plugins.postbuildtask.PostbuildTask>
+    <hudson.plugins.PerfPublisher.PerfPublisherPublisher>
+      <name>openrave/test/ikfaststats.xml</name>
+      <threshold></threshold>
+      <healthy></healthy>
+      <unhealthy></unhealthy>
+      <metrics></metrics>
+    </hudson.plugins.PerfPublisher.PerfPublisherPublisher>
+  </publishers>
+  <buildWrappers/>
+</project>
