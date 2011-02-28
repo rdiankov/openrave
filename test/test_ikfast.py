@@ -289,7 +289,7 @@ if __name__ == "__main__":
         testid += 1
         iktypestr,compiletime,successrate,wrongrate = test_ikfast.globalstats.get()
         ikfaststats[iktypestr][0] += 1
-        if wrongrate==0 and successrate>0:
+        if wrongrate==0:
             ikfaststats[iktypestr][1] += 1
             ikfaststats[iktypestr][2] += compiletime
         ikfaststats[iktypestr][3] += successrate
