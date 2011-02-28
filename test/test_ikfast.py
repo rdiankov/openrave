@@ -122,25 +122,25 @@ def robotstats(description,robotfilename,manipname, iktypestr,freeindices):
             results = [numpy.double(s)*1e-6 for s in resultsstr.split()]
             jointnames = ', '.join(robot.GetJointFromDOFIndex(dof).GetName() for dof in ikmodel.manip.GetArmIndices())
             print 'ikfast version: %s'%ikfast.__version__
-            print 'SECTION Robot Information'
-            print 'INFO robot: %s, manipulator: '%(robotfilename)
-            print 'INFO free joint increment: %s'%ikmodel.freeinc
-            print 'INFO manipulator %s: %s %s [%s]'%(manipname, ikmodel.manip.GetBase().GetName(),ikmodel.manip.GetEndEffector().GetName(),jointnames)
+            #print 'SECTION Robot Information'
+            print 'robot: %s, manipulator: '%(robotfilename)
+            print 'free joint increment: %s'%ikmodel.freeinc
+            print 'manipulator %s: %s %s [%s]'%(manipname, ikmodel.manip.GetBase().GetName(),ikmodel.manip.GetEndEffector().GetName(),jointnames)
             lower,upper = robot.GetDOFLimits(ikmodel.manip.GetArmIndices())
-            print 'INFO lower limits: '+' '.join(str(f) for f in lower)
-            print 'INFO upper limits: '+' '.join(str(f) for f in upper)
+            print 'lower limits: '+' '.join(str(f) for f in lower)
+            print 'upper limits: '+' '.join(str(f) for f in upper)
             if len(solutionresults[0])>0 or len(solutionresults[1])>0:
-                print '\nSECTION Problematic IK'
+                #print '\nSECTION Problematic IK'
                 print '\nThe following IK parameterizations are when link %s is at the origin, the last %d values are the normalized free variables [%s].\n'%(ikmodel.manip.GetBase().GetName(),len(freeindices),str(freeindicesstr))
             for isol in range(2):
                 if len(solutionresults[isol]) == 0:
                     continue
                 prefix = ''
                 if isol == 0:
-                    prefix = 'ERROR '
+                    #prefix = 'ERROR '
                     print 'Examples of Wrong Solutions:\n\n',
                 else:
-                    prefix = 'WARN '
+                    #prefix = 'WARN '
                     print 'WARNING: Examples of No Solutions:\n\n'
                 rows = []
                 numprint = min(10,len(solutionresults[isol]))
@@ -152,7 +152,7 @@ def robotstats(description,robotfilename,manipname, iktypestr,freeindices):
                 for i,row in enumerate(rows):
                     print prefix + ' '.join([row[j].ljust(colwidths[j]) for j in range(len(colwidths))])
             # jenkins plot measurement data
-            print 'INFO ' + measurement('compile-time (s)', '%.3f'%ikmodel.statistics.get('generationtime',-1))
+            print measurement('compile-time (s)', '%.3f'%ikmodel.statistics.get('generationtime',-1))
             print measurement('test success (%d/%d)'%(numsuccessful, numtested), '%.4f'%successrate)
             print measurement('test wrong solutions (%d/%d)'%(len(solutionresults[0]),numtested),'%.4f'%(float(len(solutionresults[0]))/numtested))
             print measurement('test no solutions (%d/%d)'%(len(solutionresults[1]),numtested), '%.4f'%nosolutions)
