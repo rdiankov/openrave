@@ -346,7 +346,9 @@ class MultiProcessTestRunner(TextTestRunner):
                     break
                 if self.config.multiprocess_restartworker:
                     log.debug('joining worker %s',iworker)
-                    success = workers[iworker].join()
+                    # wait for working, but not that important if worker cannot be joined
+                    # in fact, for workers that add to testQueue, they will never terminate
+                    workers[iworker].join(timeout=1)
                     if not shouldStop.is_set() and not testQueue.empty():
                         currentaddr = Array('c',' '*1000)
                         currentaddr.value = ''
