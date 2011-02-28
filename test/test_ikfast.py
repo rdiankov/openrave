@@ -141,7 +141,7 @@ def robotstats(description,robotfilename,manipname, iktypestr,freeindices):
                     print 'Examples of Wrong Solutions:\n\n',
                 else:
                     #prefix = 'WARN '
-                    print 'WARNING: Examples of No Solutions:\n\n'
+                    print 'Examples of No Solutions:\n\n'
                 rows = []
                 numprint = min(10,len(solutionresults[isol]))
                 for index in numpy.random.permutation(len(solutionresults[isol]))[0:numprint]:
@@ -212,7 +212,7 @@ if __name__ == "__main__":
     import test_ikfast
     parser = OptionParser(description='ikfast unit tests')
     parser.add_option('--robots', action='store', type='string', dest='robots',default='basic',
-                      help='Robot groups to test, these are predetermined. type * for all robots. (default=%default)')
+                      help='Robot groups to test, these are predetermined. type * for all default robots. The list can be comma separated to specify multiple groups/filenames. (default=%default)')
     parser.add_option('-j', action='store', type='int', dest='numprocesses',default='4',
                       help='Number of processors to run this in (default=%default).')
     parser.add_option('--timeout','-t', action='store', type='float', dest='timeout',default='600',
@@ -268,6 +268,8 @@ if __name__ == "__main__":
     handler.setFormatter(format)
     multiprocess.log.addHandler(handler)
     multiprocess.log.setLevel(options.debug)
+
+    multiprocess._instantiate_plugins = [capture.Capture, xunitmultiprocess.Xunitmp, callableclass.CallableClass,jenkinsperfpublisher.JenkinsPerfPublisher]
 
     header = 'name=\"%s robots\" package=\"%s\"'%(options.robots,ikfast.__name__)
     argv=['nosetests','-v','--with-xunitmp','--xunit-file=test_ikfast.xml','--xunit-header=%s'%header,'--processes=%d'%options.numprocesses,'--process-timeout=%f'%options.timeout,'--process-restartworker','--with-callableclass','test_ikfast.py']

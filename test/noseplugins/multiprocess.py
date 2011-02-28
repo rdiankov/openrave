@@ -115,7 +115,8 @@ try:
 except ImportError:
     import StringIO
 
-import xunitmultiprocess, capture, callableclass, jenkinsperfpublisher
+# this is a list of plugin classes that will be checked for and created inside each worker process
+_instantiate_plugins = None
 
 log = logging.getLogger(__name__)
 
@@ -542,11 +543,11 @@ def runner(ix, testQueue, resultQueue, currentaddr, currentstart, shouldStop,
            loaderClass, resultClass, config):
     config = pickle.loads(config)
     dummy_parser = config.parserClass()
-
-    # manually add xunitmultiprocess plugin
-    for plugin in [capture.Capture(), xunitmultiprocess.Xunitmp(), callableclass.CallableClass(),jenkinsperfpublisher.JenkinsPerfPublisher()]:
-        plugin.addOptions(dummy_parser,{})
-        config.plugins.addPlugin(plugin)
+    if _instantiate_plugins is not None:
+        for pluginclass in _instantiate_plugins:
+            plugin = pluginclass()
+            plugin.addOptions(dummy_parser,{})
+            config.plugins.addPlugin(plugin)
     config.plugins.configure(config.options,config)
     config.plugins.begin()
     log.debug("Worker %s executing", ix)
