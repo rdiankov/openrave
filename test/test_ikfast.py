@@ -303,7 +303,7 @@ if __name__ == "__main__":
 <result>
 <success passed="%s" state="%s" hasTimedOut="false"/>
 <compiletime unit="s" mesure="%f" isRelevant="true"/>
-<performance unit="none_wrong" mesure="%f" isRelevant="true"/>
+<performance mesure="%f" isRelevant="true"/>
 </result>
 </test>
 """%(name,xmlplatform,'yes' if num==success else 'no',(100*success)/num,compiletime,100*(1-wrongrate/float(num)))
