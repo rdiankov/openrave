@@ -20,7 +20,7 @@ from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2011 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Lesser GPL, Version 3'
-__version__ = '35'
+__version__ = '36'
 
 import sys, copy, time, math, datetime
 import __builtin__
@@ -1159,7 +1159,7 @@ class IKFastSolver(AutoReloader):
             Tinv = self.affineInverse(Links[i])
             Daccum = Tinv[0:3,0:3]*Daccum
         AllEquations = self.buildEquationsFromTwoSides(Ds,Dsee,jointvars,uselength=False)
-        self.checkSolvability(AllEquations,jointvars,self.freejointvars)
+        self.checkSolvability(AllEquations,solvejointvars,self.freejointvars)
         tree = self.solveAllEquations(AllEquations,curvars=solvejointvars,othersolvedvars = self.freejointvars[:],solsubs = self.freevarsubs[:],endbranchtree=endbranchtree)
         tree = self.verifyAllEquations(AllEquations,solvejointvars,self.freevarsubs,tree)
         return SolverIKChainDirection3D([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(v,i) for v,i in izip(self.freejointvars,self.ifreejointvars)], Dee=self.Tee[0,0:3].transpose().subs(self.freevarsubs), jointtree=tree,Dfk=Tfinal[0,0:3].transpose())
@@ -1207,7 +1207,7 @@ class IKFastSolver(AutoReloader):
             frontcond = frontcond.subs(self.Variable(v).subs)
         endbranchtree = [SolverStoreSolution (jointvars,checkgreaterzero=[frontcond])]
         AllEquations = self.buildEquationsFromTwoSides(Positions,Positionsee,jointvars,uselength=True)
-        self.checkSolvability(AllEquations,jointvars,self.freejointvars)
+        self.checkSolvability(AllEquations,solvejointvars,self.freejointvars)
         tree = self.solveAllEquations(AllEquations,curvars=solvejointvars,othersolvedvars = self.freejointvars[:],solsubs = self.freevarsubs[:],endbranchtree=endbranchtree)
         tree = self.verifyAllEquations(AllEquations,solvejointvars,self.freevarsubs,tree)
         chaintree = SolverIKChainLookat3D([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(v,i) for v,i in izip(self.freejointvars,self.ifreejointvars)], Pee=self.Tee[0:3,3].subs(self.freevarsubs), jointtree=tree,Dfk=Tfinal[0,0:3].transpose(),Pfk=Tfinal[0:3,3])
@@ -1304,7 +1304,7 @@ class IKFastSolver(AutoReloader):
             Pee = Tinv[0:3,0:3]*Pee+Tinv[0:3,3]
             Dee = Tinv[0:3,0:3]*Dee
         AllEquations = self.buildEquationsFromTwoSides(Positions,Positionsee,jointvars,uselength=True)
-        self.checkSolvability(AllEquations,jointvars,self.freejointvars)
+        self.checkSolvability(AllEquations,solvejointvars,self.freejointvars)
 
         try:
             tree = self.solveAllEquations(AllEquations,curvars=solvejointvars[:],othersolvedvars = self.freejointvars[:],solsubs = self.freevarsubs[:],endbranchtree=endbranchtree)

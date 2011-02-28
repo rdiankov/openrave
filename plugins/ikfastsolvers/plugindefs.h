@@ -153,6 +153,52 @@ template <class T> boost::shared_ptr<T> sptr_from(boost::weak_ptr<T> const& wpt)
     return boost::shared_ptr<T>(wpt); // throws on wpt.expired()
 }
 
+template <typename Real>
+class IKSolutionTemplate
+{
+ public:
+    typedef Real IKReal;
+    /// Gets a solution given its free parameters
+    /// \param pfree The free parameters required, range is in [-pi,pi]
+    void GetSolution(Real* psolution, const Real* pfree) const {
+        for(size_t i = 0; i < basesol.size(); ++i) {
+            if( basesol[i].freeind < 0 )
+                psolution[i] = basesol[i].foffset;
+            else {
+                BOOST_ASSERT(pfree != NULL);
+                psolution[i] = pfree[basesol[i].freeind]*basesol[i].fmul + basesol[i].foffset;
+                if( psolution[i] > M_PI )
+                    psolution[i] -= 2*M_PI;
+                else if( psolution[i] < -M_PI )
+                    psolution[i] += 2*M_PI;
+            }
+        }
+    }
+
+    /// Gets the free parameters the solution requires to be set before a full solution can be returned
+    /// \return vector of indices indicating the free parameters
+    const std::vector<int>& GetFree() const { return vfree; }
+
+    struct VARIABLE
+    {
+    VARIABLE() : freeind(-1), fmul(0), foffset(0) {}
+    VARIABLE(int freeind, Real fmul, Real foffset) : freeind(freeind), fmul(fmul), foffset(foffset) {}
+        int freeind;
+        Real fmul, foffset; ///< joint value is fmul*sol[freeind]+foffset
+    };
+
+    std::vector<VARIABLE> basesol;       ///< solution and their offsets if joints are mimiced
+    std::vector<int> vfree;
+};
+
+typedef IKSolutionTemplate<float> IKSolutionFloat;
+typedef IKSolutionTemplate<double> IKSolutionDouble;
+
 using namespace OpenRAVE;
+
+#ifdef RAVE_REGISTER_BOOST
+#include BOOST_TYPEOF_INCREMENT_REGISTRATION_GROUP()
+BOOST_TYPEOF_REGISTER_TEMPLATE(IKSolutionTemplate, 1)
+#endif
 
 #endif

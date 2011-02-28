@@ -18,38 +18,52 @@
 
 #include "ikfastproblem.h"
 
-namespace barrettwam {
-#include "ik_barrettwam.h"
+#define IKFAST_HEADER \
+    typedef double IKReal; \
+    class IKSolution : public IKSolutionTemplate<IKReal> {}; /* cannot use typedef since linking will not be correct */ \
+    int getNumFreeParameters(); \
+    int* getFreeParameters(); \
+    int getNumJoints(); \
+    int getIKRealSize(); \
+    int getIKType(); \
+    void fk(const IKReal* j, IKReal* eetrans, IKReal* eerot); \
+    bool ik(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::vector<IKSolution>& vsolutions); \
+    const char* getKinematicsHash(); \
+
+namespace barrettwam
+{
+    IKFAST_HEADER
 }
+
 namespace pa10 {
-#include "ik_pa10.h"
+    IKFAST_HEADER
 }
 namespace puma {
-#include "ik_puma.h"
+    IKFAST_HEADER
 }
 namespace pr2_head {
-#include "ik_pr2_head.h"
+    IKFAST_HEADER
 }
 namespace pr2_head_torso {
-#include "ik_pr2_head_torso.h"
+    IKFAST_HEADER
 }
 namespace pr2_leftarm {
-#include "ik_pr2_leftarm.h"
+    IKFAST_HEADER
 }
 namespace pr2_leftarm_torso {
-#include "ik_pr2_leftarm_torso.h"
+    IKFAST_HEADER
 }
 namespace pr2_rightarm {
-#include "ik_pr2_rightarm.h"
+    IKFAST_HEADER
 }
 namespace pr2_rightarm_torso {
-#include "ik_pr2_rightarm_torso.h"
+    IKFAST_HEADER
 }
 namespace schunk_lwa3 {
-#include "ik_schunk_lwa3.h"
+    IKFAST_HEADER
 }
 namespace katana5d {
-#include "ik_katana5d.h"
+    IKFAST_HEADER
 }
 
 // register for typeof (MSVC only)

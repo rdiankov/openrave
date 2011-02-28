@@ -12,7 +12,7 @@
 /// See the License for the specific language governing permissions and
 /// limitations under the License.
 ///
-/// ikfast version 33 generated on 2011-02-16 23:47:28.499347
+/// ikfast version 36 generated on 2011-02-28 17:09:05.548697
 /// To compile with gcc:
 ///     gcc -lstdc++ ik.cpp
 /// To compile without any main function as a shared object:
@@ -80,6 +80,10 @@ extern "C" {
   void dgetrs_(const char *trans, const int *n, const int *nrhs, double *a, const int *lda, int *ipiv, double *b, const int *ldb, int *info);
   void dgeev_(const char *jobvl, const char *jobvr, const int *n, double *a, const int *lda, double *wr, double *wi,double *vl, const int *ldvl, double *vr, const int *ldvr, double *work, const int *lwork, int *info);
 }
+
+#ifdef IKFAST_NAMESPACE
+namespace IKFAST_NAMESPACE {
+#endif
 
 typedef double IKReal;
 class IKSolution
@@ -177,6 +181,8 @@ inline float IKsin(float f) { return sinf(f); }
 inline double IKsin(double f) { return sin(f); }
 inline float IKcos(float f) { return cosf(f); }
 inline double IKcos(double f) { return cos(f); }
+inline float IKtan(float f) { return tanf(f); }
+inline double IKtan(double f) { return tan(f); }
 inline float IKsqrt(float f) { if( f <= 0.0f ) return 0.0f; return sqrtf(f); }
 inline double IKsqrt(double f) { if( f <= 0.0 ) return 0.0; return sqrt(f); }
 inline float IKatan2(float fy, float fx) {
@@ -224,8 +230,8 @@ eerot[2]=((-1.00000000000000)*(x3));
 
 class IKSolver {
 public:
-IKReal j13, cj13, sj13,
-j14, cj14, sj14,
+IKReal j13, cj13, sj13, htj13,
+j14, cj14, sj14, htj14,
 new_r00, r00, rxp0_0,
 new_r01, r01, rxp0_1,
 new_r02, r02, rxp0_2,
@@ -304,8 +310,8 @@ IKReal x1=((cj13)*(px));
 IKReal x2=((py)*(sj13));
 IKReal x3=((x2)+(x1));
 IKReal x4=((0.0680000000000000)+(((-1.00000000000000)*(x3))));
-IKReal x5=(x4)*(x4);
-IKReal x6=(pz)*(pz);
+IKReal x5=(pz)*(pz);
+IKReal x6=(x4)*(x4);
 IKReal x7=((x6)+(x5));
 if( (x7) < (IKReal)-0.00001 )
     continue;
@@ -401,10 +407,16 @@ return solver.ik(eetrans,eerot,pfree,vsolutions);
 
 IKFAST_API const char* getKinematicsHash() { return "80f514166e15c34bd64294fc1fdd5ddd"; }
 
+#ifdef IKFAST_NAMESPACE
+} // end namespace
+#endif
+
 #ifndef IKFAST_NO_MAIN
 #include <stdio.h>
 #include <stdlib.h>
-
+#ifdef IKFAST_NAMESPACE
+using namespace IKFAST_NAMESPACE;
+#endif
 int main(int argc, char** argv)
 {
     if( argc != 12+getNumFreeParameters()+1 ) {

@@ -12,7 +12,7 @@
 /// See the License for the specific language governing permissions and
 /// limitations under the License.
 ///
-/// ikfast version 33 generated on 2011-02-17 01:00:01.502862
+/// ikfast version 36 generated on 2011-02-28 17:07:54.464592
 /// To compile with gcc:
 ///     gcc -lstdc++ ik.cpp
 /// To compile without any main function as a shared object:
@@ -80,6 +80,10 @@ extern "C" {
   void dgetrs_(const char *trans, const int *n, const int *nrhs, double *a, const int *lda, int *ipiv, double *b, const int *ldb, int *info);
   void dgeev_(const char *jobvl, const char *jobvr, const int *n, double *a, const int *lda, double *wr, double *wi,double *vl, const int *ldvl, double *vr, const int *ldvr, double *work, const int *lwork, int *info);
 }
+
+#ifdef IKFAST_NAMESPACE
+namespace IKFAST_NAMESPACE {
+#endif
 
 typedef double IKReal;
 class IKSolution
@@ -177,6 +181,8 @@ inline float IKsin(float f) { return sinf(f); }
 inline double IKsin(double f) { return sin(f); }
 inline float IKcos(float f) { return cosf(f); }
 inline double IKcos(double f) { return cos(f); }
+inline float IKtan(float f) { return tanf(f); }
+inline double IKtan(double f) { return tan(f); }
 inline float IKsqrt(float f) { if( f <= 0.0f ) return 0.0f; return sqrtf(f); }
 inline double IKsqrt(double f) { if( f <= 0.0 ) return 0.0; return sqrt(f); }
 inline float IKatan2(float fy, float fx) {
@@ -282,12 +288,12 @@ eetrans[2]=((1.37100000000000)+(((x1)*(x17)*(((((-0.175000000000000)*(x46)))+(((
 
 class IKSolver {
 public:
-IKReal j0, cj0, sj0,
-j1, cj1, sj1,
-j2, cj2, sj2,
-j3, cj3, sj3,
-j4, cj4, sj4,
-j5, cj5, sj5,
+IKReal j0, cj0, sj0, htj0,
+j1, cj1, sj1, htj1,
+j2, cj2, sj2, htj2,
+j3, cj3, sj3, htj3,
+j4, cj4, sj4, htj4,
+j5, cj5, sj5, htj5,
 new_r00, r00, rxp0_0,
 new_r01, r01, rxp0_1,
 new_r02, r02, rxp0_2,
@@ -2047,10 +2053,16 @@ return solver.ik(eetrans,eerot,pfree,vsolutions);
 
 IKFAST_API const char* getKinematicsHash() { return "1212e32be9160d1dd10dda70c49c46d3"; }
 
+#ifdef IKFAST_NAMESPACE
+} // end namespace
+#endif
+
 #ifndef IKFAST_NO_MAIN
 #include <stdio.h>
 #include <stdlib.h>
-
+#ifdef IKFAST_NAMESPACE
+using namespace IKFAST_NAMESPACE;
+#endif
 int main(int argc, char** argv)
 {
     if( argc != 12+getNumFreeParameters()+1 ) {

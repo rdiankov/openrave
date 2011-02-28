@@ -765,8 +765,8 @@ protected:
         void* plib = dlopen(lib.c_str(), bLazy ? RTLD_LAZY : RTLD_NOW);
         char* pstr = dlerror();
         if( pstr != NULL ) {
+            RAVELOG_WARN("%s: %s\n",lib.c_str(),pstr);
             if( plib != NULL ) {
-                RAVELOG_WARN("%s: %s\n",lib.c_str(),pstr);
                 dlclose(plib); //???
             }
             return NULL;

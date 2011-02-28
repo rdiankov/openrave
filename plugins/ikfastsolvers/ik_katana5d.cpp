@@ -12,7 +12,7 @@
 /// See the License for the specific language governing permissions and
 /// limitations under the License.
 ///
-/// ikfast version 34 generated on 2011-02-17 22:52:56.057431
+/// ikfast version 36 generated on 2011-02-28 17:12:31.248960
 /// To compile with gcc:
 ///     gcc -lstdc++ ik.cpp
 /// To compile without any main function as a shared object:
@@ -80,6 +80,10 @@ extern "C" {
   void dgetrs_(const char *trans, const int *n, const int *nrhs, double *a, const int *lda, int *ipiv, double *b, const int *ldb, int *info);
   void dgeev_(const char *jobvl, const char *jobvr, const int *n, double *a, const int *lda, double *wr, double *wi,double *vl, const int *ldvl, double *vr, const int *ldvr, double *work, const int *lwork, int *info);
 }
+
+#ifdef IKFAST_NAMESPACE
+namespace IKFAST_NAMESPACE {
+#endif
 
 typedef double IKReal;
 class IKSolution
@@ -717,7 +721,7 @@ dummyeval[8]=((((-1.23659314306796)*(cj0)*(r01)))+(((-1.00000000000000)*(x274)))
 dummyeval[9]=((((cj3)*(htj2)*(sj4)))+(((1.23659314306796)*(htj2)*(r00)*(sj0)))+(((-1.23659314306796)*(cj0)*(htj2)*(r01)))+(((-1.00000000000000)*(x277)))+(((-1.00000000000000)*(x279)))+(((-1.00000000000000)*(x278)))+(((-1.00000000000000)*(x280)))+(((-1.00000000000000)*(x281))));
 dummyeval[10]=((((-1.00000000000000)*(cj0)*(cj1)*(r00)))+(((cj3)*(cj4)))+(((-1.00000000000000)*(cj1)*(r01)*(sj0)))+(x286)+(((-0.366906474820144)*(cj0)*(htj2)*(r00)*(sj1)))+(((0.366906474820144)*(cj1)*(htj2)*(r02)))+(((-0.366906474820144)*(htj2)*(r01)*(sj0)*(sj1)))+(((-1.00000000000000)*(r02)*(sj1))));
 dummyeval[11]=((((2.36690647482014)*(cj0)*(r00)*(sj1)))+(((cj1)*(htj2)*(r01)*(sj0)))+(((-2.36690647482014)*(cj1)*(r02)))+(((cj3)*(cj4)*(htj2)))+(((cj0)*(cj1)*(htj2)*(r00)))+(((2.36690647482014)*(r01)*(sj0)*(sj1)))+(((-1.00000000000000)*(x287)))+(((-1.00000000000000)*(x288)))+(((-1.00000000000000)*(x289)))+(((htj2)*(r02)*(sj1))));
-if( IKabs(dummyeval[0]) < 0.001  && IKabs(dummyeval[1]) < 0.001  && IKabs(dummyeval[2]) < 0.001  && IKabs(dummyeval[3]) < 0.001  && IKabs(dummyeval[4]) < 0.001  && IKabs(dummyeval[5]) < 0.001  && IKabs(dummyeval[6]) < 0.001  && IKabs(dummyeval[7]) < 0.001  && IKabs(dummyeval[8]) < 0.001  && IKabs(dummyeval[9]) < 0.001  && IKabs(dummyeval[10]) < 0.001  && IKabs(dummyeval[11]) < 0.001  )
+if( IKabs(dummyeval[0]) < 0.0010000000000000  && IKabs(dummyeval[1]) < 0.0010000000000000  && IKabs(dummyeval[2]) < 0.0010000000000000  && IKabs(dummyeval[3]) < 0.0010000000000000  && IKabs(dummyeval[4]) < 0.0010000000000000  && IKabs(dummyeval[5]) < 0.0010000000000000  && IKabs(dummyeval[6]) < 0.0010000000000000  && IKabs(dummyeval[7]) < 0.0010000000000000  && IKabs(dummyeval[8]) < 0.0010000000000000  && IKabs(dummyeval[9]) < 0.0010000000000000  && IKabs(dummyeval[10]) < 0.0010000000000000  && IKabs(dummyeval[11]) < 0.0010000000000000  )
 {
 {
 vsolutions.push_back(IKSolution()); IKSolution& solution = vsolutions.back();
@@ -814,10 +818,16 @@ return solver.ik(eetrans,eerot,pfree,vsolutions);
 
 IKFAST_API const char* getKinematicsHash() { return "ab9d03903279e44bc692e896791bcd05"; }
 
+#ifdef IKFAST_NAMESPACE
+} // end namespace
+#endif
+
 #ifndef IKFAST_NO_MAIN
 #include <stdio.h>
 #include <stdlib.h>
-
+#ifdef IKFAST_NAMESPACE
+using namespace IKFAST_NAMESPACE;
+#endif
 int main(int argc, char** argv)
 {
     if( argc != 12+getNumFreeParameters()+1 ) {

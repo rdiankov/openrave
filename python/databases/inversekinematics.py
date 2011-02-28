@@ -230,10 +230,12 @@ class InverseKinematicsModel(OpenRAVEModel):
                 if iktype is None:
                     if self.forceikfast:
                         return False
+                    
                     self.iksolver = RaveCreateIkSolver(self.env,self.manip.GetIkSolver().GetXMLId()+iksuffix) if self.manip.GetIkSolver() is not None else None
                 else:
                     if int(self.iktype) != int(iktype):
                         raise ValueError('ik does not match types %s!=%s'%(self.iktype,iktype))
+                    
                     ikname = 'ikfast ' + ikname
                     self.iksolver = RaveCreateIkSolver(self.env,ikname+iksuffix)
         if self.iksolver is not None and self.iksolver.Supports(self.iktype):
@@ -303,7 +305,7 @@ class InverseKinematicsModel(OpenRAVEModel):
             basename += '_f'+'_'.join(str(ind) for ind in freeindices)
         return RaveFindDatabaseFile(os.path.join('kinematics.'+self.manip.GetKinematicsStructureHash(),ccompiler.new_compiler().shared_object_filename(basename=basename)),read)
 
-    def getsourcefilename(self,read=False):
+    def getsourcefilename(self,read=False,outputlang='cpp'):
         if self.iktype is None:
             raise ValueError('ik type is not set')
         
@@ -315,6 +317,7 @@ class InverseKinematicsModel(OpenRAVEModel):
         basename += '_'.join(str(ind) for ind in solveindices)
         if len(freeindices)>0:
             basename += '_f'+'_'.join(str(ind) for ind in freeindices)
+        basename += '.' + outputlang
         return RaveFindDatabaseFile(os.path.join('kinematics.'+self.manip.GetKinematicsStructureHash(),basename),read)
 
     def getstatsfilename(self,read=False):
@@ -325,12 +328,26 @@ class InverseKinematicsModel(OpenRAVEModel):
             solveindices, freeindices = self.getDefaultIndices()
         else:
             solveindices, freeindices = self.solveindices, self.freeindices
-        basename = 'ikfast%s.%s.'%(self.getversion(),self.iktype)
-        basename += '_'.join(str(ind) for ind in solveindices)
-        if len(freeindices)>0:
-            basename += '_f'+'_'.join(str(ind) for ind in freeindices)
-        basename += '.pp'
-        return RaveFindDatabaseFile(os.path.join('kinematics.'+self.manip.GetKinematicsStructureHash(),basename),read)
+            
+        index = -1
+        while True:
+            basename = 'ikfast%s.%s.'%(self.getversion(),self.iktype)
+            basename += '_'.join(str(ind) for ind in solveindices)
+            if len(freeindices)>0:
+                basename += '_f'+'_'.join(str(ind) for ind in freeindices)
+            basename += '.pp'
+            filename = RaveFindDatabaseFile(os.path.join('kinematics.'+self.manip.GetKinematicsStructureHash(),basename),read)
+            if not read or len(filename) > 0 or self.freeindices is not None:
+                break
+            # user did not specify a set of freeindices, so the expected behavior is to search for the next loadable one
+            index += 1
+            dofexpected = IkParameterization.GetDOF(self.iktype)
+            allfreeindices = [f for f in ikfast.combinations(self.manip.GetArmIndices(),len(self.manip.GetArmIndices())-dofexpected)]
+            if index >= len(allfreeindices):
+                break
+            freeindices = allfreeindices[index]
+            solveindices = [i for i in self.manip.GetArmIndices() if not i in freeindices]
+        return filename
 
     def autogenerate(self,options=None):
         freejoints = None
@@ -395,7 +412,6 @@ class InverseKinematicsModel(OpenRAVEModel):
             self.iktype = iktype
         if self.iktype is None:
             self.iktype = iktype = IkParameterization.Type.Transform6D
-        output_filename = self.getfilename(False)
         if self.iktype == IkParameterization.Type.Rotation3D:
             Rbaseraw=self.manip.GetGraspTransform()[0:3,0:3]
             def solveFullIK_Rotation3D(*args,**kwargs):
@@ -464,11 +480,11 @@ class InverseKinematicsModel(OpenRAVEModel):
             self.freeinc = self.getDefaultFreeIncrements(0.1,0.01)
         
         log.info('Generating inverse kinematics for manip %s: %s %s (this might take up to 10 min)',self.manip.GetName(),self.iktype,self.solveindices)
-        sourcefilename = self.getsourcefilename(False)
         if outputlang is None:
             outputlang = 'cpp'
-        sourcefilename += '.' + outputlang
+        sourcefilename = self.getsourcefilename(False,outputlang)
         statsfilename = self.getstatsfilename(False)
+        output_filename = self.getfilename(False)
 
         if forceikbuild or not os.path.isfile(sourcefilename):
             log.info('creating ik file %s',sourcefilename)
@@ -559,8 +575,9 @@ class InverseKinematicsModel(OpenRAVEModel):
                 samples = reshape(array([float64(s) for s in res[index:(index+num*numvalues)]]),(num,numvalues))
                 solutionresults.append(samples)
                 index += num*numvalues
-            log.info('success rate: %f, wrong solutions: %f, no solutions: %f, missing solution: %f',float(res[1])/numtested,len(solutionresults[0])/numtested,len(solutionresults[1])/numtested,len(solutionresults[2])/numtested)
-        return successrate
+            wrongrate = len(solutionresults[0])/numtested
+            log.info('success rate: %f, wrong solutions: %f, no solutions: %f, missing solution: %f',float(res[1])/numtested,wrongrate,len(solutionresults[1])/numtested,len(solutionresults[2])/numtested)
+        return successrate, wrongrate
 
     @staticmethod
     def getcompiler():

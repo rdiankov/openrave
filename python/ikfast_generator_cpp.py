@@ -217,6 +217,10 @@ extern "C" {
   void dgeev_(const char *jobvl, const char *jobvr, const int *n, double *a, const int *lda, double *wr, double *wi,double *vl, const int *ldvl, double *vr, const int *ldvr, double *work, const int *lwork, int *info);
 }
 
+#ifdef IKFAST_NAMESPACE
+namespace IKFAST_NAMESPACE {
+#endif
+
 typedef double IKReal;
 class IKSolution
 {
@@ -350,13 +354,19 @@ return solver.ik(eetrans,eerot,pfree,vsolutions);
 }
 
 IKFAST_API const char* getKinematicsHash() { return "%s"; }
+
+#ifdef IKFAST_NAMESPACE
+} // end namespace
+#endif
 """%(self.kinematicshash)
 
         code += """
 #ifndef IKFAST_NO_MAIN
 #include <stdio.h>
 #include <stdlib.h>
-
+#ifdef IKFAST_NAMESPACE
+using namespace IKFAST_NAMESPACE;
+#endif
 int main(int argc, char** argv)
 {
     if( argc != 12+getNumFreeParameters()+1 ) {

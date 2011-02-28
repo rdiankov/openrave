@@ -32,82 +32,6 @@
 #endif
 
 #define DECLFNPTR(name, paramlist) (*name) paramlist
-#define IK2PI  6.28318530717959
-#define IKPI  3.14159265358979
-#define IKPI_2  1.57079632679490
-
-class IKSolutionFloat
-{
- public:
-    typedef float IKReal;
-    /// Gets a solution given its free parameters
-    /// \param pfree The free parameters required, range is in [-pi,pi]
-    void GetSolution(float* psolution, const float* pfree) const {
-        for(size_t i = 0; i < basesol.size(); ++i) {
-            if( basesol[i].freeind < 0 )
-                psolution[i] = basesol[i].foffset;
-            else {
-                BOOST_ASSERT(pfree != NULL);
-                psolution[i] = pfree[basesol[i].freeind]*basesol[i].fmul + basesol[i].foffset;
-                if( psolution[i] > IKPI )
-                    psolution[i] -= IK2PI;
-                else if( psolution[i] < -IKPI )
-                    psolution[i] += IK2PI;
-            }
-        }
-    }
-
-    /// Gets the free parameters the solution requires to be set before a full solution can be returned
-    /// \return vector of indices indicating the free parameters
-    const std::vector<int>& GetFree() const { return vfree; }
-
-    struct VARIABLE
-    {
-    VARIABLE() : freeind(-1), fmul(0), foffset(0) {}
-    VARIABLE(int freeind, float fmul, float foffset) : freeind(freeind), fmul(fmul), foffset(foffset) {}
-        int freeind;
-        float fmul, foffset; ///< joint value is fmul*sol[freeind]+foffset
-    };
-
-    std::vector<VARIABLE> basesol;       ///< solution and their offsets if joints are mimiced
-    std::vector<int> vfree;
-};
-class IKSolutionDouble
-{
- public:
-    typedef double IKReal;
-    /// Gets a solution given its free parameters
-    /// \param pfree The free parameters required, range is in [-pi,pi]
-    void GetSolution(double* psolution, const double* pfree) const {
-        for(size_t i = 0; i < basesol.size(); ++i) {
-            if( basesol[i].freeind < 0 )
-                psolution[i] = basesol[i].foffset;
-            else {
-                BOOST_ASSERT(pfree != NULL);
-                psolution[i] = pfree[basesol[i].freeind]*basesol[i].fmul + basesol[i].foffset;
-                if( psolution[i] > IKPI )
-                    psolution[i] -= IK2PI;
-                else if( psolution[i] < -IKPI )
-                    psolution[i] += IK2PI;
-            }
-        }
-    }
-
-    /// Gets the free parameters the solution requires to be set before a full solution can be returned
-    /// \return vector of indices indicating the free parameters
-    const std::vector<int>& GetFree() const { return vfree; }
-
-    struct VARIABLE
-    {
-    VARIABLE() : freeind(-1), fmul(0), foffset(0) {}
-    VARIABLE(int freeind, double fmul, double foffset) : freeind(freeind), fmul(fmul), foffset(foffset) {}
-        int freeind;
-        double fmul, foffset; ///< joint value is fmul*sol[freeind]+foffset
-    };
-
-    std::vector<VARIABLE> basesol;       ///< solution and their offsets if joints are mimiced
-    std::vector<int> vfree;
-};
 
 class IKFastProblem : public ProblemInstance
 {
@@ -497,6 +421,10 @@ public:
         uint32_t runmaxtimems = (uint32_t)(1000*maxtime);
         size_t i = 0;
         for(i = 0; i < vtimes.size(); ++i) {
+            // don't want to slow down the tests too much with polling
+            if( (i%100) == 0 && (GetMilliTime() - runstarttimems) > runmaxtimems ) {
+                break;
+            }
             for(size_t j = 0; j < vjoints.size(); ++j) {
                 vjoints[j] = RaveRandomDouble()*2*PI;
             }
@@ -511,17 +439,9 @@ public:
                 ikfn(eetrans,eerot,vfree.size() > 0 ? &vfree[0] : NULL,vsolutions);
             }
             vtimes[i] = (GetNanoTime()-starttime)/numtoaverage;
-            // don't want to slow down the tests too much with polling
-            if( (i%100) == 0 && (GetMilliTime() - runstarttimems) > runmaxtimems ) {
-                break;
-            }
         }
-        while(1) {
+        while(i-- > 0) {
             sout << vtimes[i] << " ";
-            if( i == 0 ) {
-                break;
-            }
-            --i;
         }
         return true;
     }

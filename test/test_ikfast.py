@@ -131,7 +131,7 @@ def robotstats(description,robotfilename,manipname, iktypestr,freeindices):
             print 'upper limits: '+' '.join(str(f) for f in upper)
             if len(solutionresults[0])>0 or len(solutionresults[1])>0:
                 #print '\nSECTION Problematic IK'
-                print '\nThe following IK parameterizations are when link %s is at the origin, the last %d values are the normalized free variables [%s].\n'%(ikmodel.manip.GetBase().GetName(),len(freeindices),str(freeindicesstr))
+                print '\n\nThe following IK parameterizations are when link %s is at the origin, the last %d values are the normalized free variables [%s].\n'%(ikmodel.manip.GetBase().GetName(),len(freeindices),str(freeindicesstr))
             for isol in range(2):
                 if len(solutionresults[isol]) == 0:
                     continue
