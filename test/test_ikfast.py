@@ -22,16 +22,12 @@ import numpy
 from itertools import izip, combinations
 from optparse import OptionParser
 
-import time, unittest, platform, os, sys
-from distutils import ccompiler
+import time, unittest, platform, os, sys, logging, multiprocessing
 import nose
-import logging
-from functools import partial
-import multiprocessing
 
 #global variables
 _multiprocess_can_split_ = True
-#globalstats = multiprocessing.Queue() # used for gathering statistics
+globalstats = multiprocessing.Queue() # used for gathering statistics
 options = None
 env=None
 ikfastproblem=None
@@ -66,10 +62,10 @@ def measurement(name,value):
 
 @nose.with_setup(setup_robotstats, teardown_robotstats)
 def robotstats(description,robotfilename,manipname, iktypestr,freeindices):
-    global env, ikfastproblem#, globalstats
+    global env, ikfastproblem, globalstats
     iktype = None
     for value,type in IkParameterization.Type.values.iteritems():
-        if type.name.lower() == iktypestr.lower():
+        if type.name == iktypestr:
             iktype = type
             break
     with env:
@@ -91,9 +87,11 @@ def robotstats(description,robotfilename,manipname, iktypestr,freeindices):
                 ikmodel.save()
                 ikmodel.setrobot()
 
+            compiletime = ikmodel.statistics.get('generationtime',-1)
             if ikmodel.ikfeasibility is not None:
                 # nothing more to do than print the text
                 print ikmodel.ikfeasibility # will repeat text if just generated
+                globalstats.put([iktypestr,compiletime,0,0])
                 return
             
             ikmodel.freeinc = ikmodel.getDefaultFreeIncrements(options.freeincrot,options.freeinctrans)
@@ -118,6 +116,7 @@ def robotstats(description,robotfilename,manipname, iktypestr,freeindices):
                 solutionresults.append(samples)
             successrate = float(numsuccessful)/numtested
             nosolutions = float(len(solutionresults[1]))/numtested
+            wrongrate = float(len(solutionresults[0]))/numtested
             resultsstr = ikfastproblem.SendCommand('PerfTiming num 10000 maxtime %f %s'%(options.perftime,ikmodel.getfilename(True)))
             results = [numpy.double(s)*1e-6 for s in resultsstr.split()]
             jointnames = ', '.join(robot.GetJointFromDOFIndex(dof).GetName() for dof in ikmodel.manip.GetArmIndices())
@@ -152,16 +151,16 @@ def robotstats(description,robotfilename,manipname, iktypestr,freeindices):
                 for i,row in enumerate(rows):
                     print prefix + ' '.join([row[j].ljust(colwidths[j]) for j in range(len(colwidths))])
             # jenkins plot measurement data
-            print measurement('compile-time (s)', '%.3f'%ikmodel.statistics.get('generationtime',-1))
+            print measurement('compile-time (s)', '%.3f'%compiletime)
             print measurement('test success (%d/%d)'%(numsuccessful, numtested), '%.4f'%successrate)
-            print measurement('test wrong solutions (%d/%d)'%(len(solutionresults[0]),numtested),'%.4f'%(float(len(solutionresults[0]))/numtested))
+            print measurement('test wrong solutions (%d/%d)'%(len(solutionresults[0]),numtested),'%.4f'%wrongrate)
             print measurement('test no solutions (%d/%d)'%(len(solutionresults[1]),numtested), '%.4f'%nosolutions)
             print measurement('test missing solutions (%d/%d)'%(len(solutionresults[2]),numtested), '%.4f'%(float(len(solutionresults[2]))/numtested))
             print measurement('run-time mean (s)','%.6f'%numpy.mean(results))
             print measurement('run-time median (s)','%.6f'%numpy.median(results))
             print measurement('run-time min (s)','%.6f'%numpy.min(results))
             print measurement('run-time max (s)','%.6f'%numpy.max(results))
-            #globalstats.put([numtested,numsuccessful,solutionresults])
+            globalstats.put([iktypestr,compiletime,successrate,wrongrate])
             assert(len(solutionresults[0])==0)
             assert(successrate > options.minimumsuccess)
             assert(nosolutions < options.maximumnosolutions)
@@ -279,7 +278,34 @@ if __name__ == "__main__":
         argv += ['--with-jenkinsperf','--jenkinsperf-file=jenkins_ikfast.xml', '--jenkinsperf-header=%s'%jenkins_header]
         plugins.append(jenkinsperfpublisher.JenkinsPerfPublisher())
     prog=nose.core.TestProgram(argv=argv,plugins=plugins,exit=False)
-    # save the queue to file
-#     f = open('stats.xml','w')
-#     while not test_ikfast.globalstats.empty():
-#         f.write(test_ikfast.globalstats.get())
+    # save the global stats to file
+    xml = '<?xml version="1.0" encoding="UTF-8"?>\n<report name="ikfast statistics" categ="ikfast">\n<start></start>\n'
+    xmlplatform = '<platform><os><type><![CDATA[%s]]></type><name><![CDATA[%s]]></name></os><processor arch="%s"></processor><compiler>%s</compiler><environment></environment></platform>\n'%(platform.platform(),platform.system(), platform.machine(),platform.python_compiler())
+    ikfaststats = dict()
+    for value,type in IkParameterization.Type.values.iteritems():
+        ikfaststats[type.name] = [0,0,0.0,0.0,0.0]
+    while not test_ikfast.globalstats.empty():
+        iktypestr,compiletime,successrate,wrongrate = test_ikfast.globalstats.get()
+        ikfaststats[iktypestr][0] += 1
+        if wrongrate==0 and successrate>0:
+            ikfaststats[iktypestr][1] += 1
+            ikfaststats[iktypestr][2] += compiletime
+        ikfaststats[iktypestr][3] += successrate
+        ikfaststats[iktypestr][4] += wrongrate
+
+    for name,value in ikfaststats.iteritems():
+        num, success, compiletime, successrate, wrongrate = value
+        if success > 0:
+            compiletime = compiletime/float(success)
+        if num > 0:
+            xml += """<test name="%s" executed="yes">
+%s
+<result>
+<success passed="%s" state="%s" hasTimedOut="false"/>
+<compiletime unit="s" mesure="%f" isRelevant="true"/>
+<performance unit="none_wrong" mesure="%f" isRelevant="true"/>
+</result>
+</test>
+"""%(name,xmlplatform,'yes' if num==success else 'no',(100*success)/num,compiletime,100*(1-wrongrate/float(num)))
+    xml += '</report>\n'
+    open('ikfaststats.xml','w').write(xml)

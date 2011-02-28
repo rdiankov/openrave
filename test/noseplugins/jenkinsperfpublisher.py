@@ -255,7 +255,6 @@ class JenkinsPerfPublisher(Plugin):
         self.xunitstream.append(xml)
 
     def addSuccess(self, test, capt=None):
-        print 'yooooooooooooooo'
         self.xunitstats[2] += 1
         id=test.shortDescription()
         if id is None:
