@@ -247,16 +247,19 @@ if __name__ == "__main__":
                     iktypes.append(type)
                     break
         options.iktypes = iktypes
-    if options.robots == 'basic':
-        options.robotfilenames = ['robots/unimation-pumaarm.zae','robots/barrettwam.robot.xml']
-    elif options.robots == 'pr2':
-        options.robotfilenames = ['robots/pr2-beta-static.zae']
-    elif options.robots == '*':
-        options.robotfilenames = ['robots/unimation-pumaarm.zae','robots/barrettwam.robot.xml','robots/pr2-beta-static.zae','robots/neuronics-katana.zae','robots/mitsubishi-pa10.zae','robots/schunk-lwa3.zae','robots/darpa-arm.zae','robots/exactdynamics-manusarmleft.zae','robots/kuka-kr5-r650.zae','robots/kuka-kr5-r850.zae']
-    elif options.robots == 'random':
-        options.robotfilenames = None
-    else:
-        options.robotfilenames = options.robots.split(',')
+    robots = options.robots.split(',')
+    options.robotfilenames = []
+    for robot in robots:
+        if robot == 'basic':
+            options.robotfilenames += ['robots/unimation-pumaarm.zae','robots/barrettwam.robot.xml']
+        elif robot == 'pr2':
+            options.robotfilenames += ['robots/pr2-beta-static.zae']
+        elif robot == '*':
+            options.robotfilenames += ['robots/unimation-pumaarm.zae','robots/barrettwam.robot.xml','robots/pr2-beta-static.zae','robots/neuronics-katana.zae','robots/mitsubishi-pa10.zae','robots/schunk-lwa3.zae','robots/darpa-arm.zae','robots/exactdynamics-manusarmleft.zae','robots/kuka-kr5-r650.zae','robots/kuka-kr5-r850.zae']
+        elif options.robots == 'random':
+            options.robotfilenames.append('random')
+        else:
+            options.robotfilenames.append(robot)
     options.numiktests = [int(s) for s in options.numiktests.split(',')]
     test_ikfast.options = options
 
