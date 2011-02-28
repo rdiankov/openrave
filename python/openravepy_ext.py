@@ -41,7 +41,11 @@ def mkdir_recursive(newdir):
         if head and not os.path.isdir(head):
             mkdir_recursive(head)
         if tail:
-            os.mkdir(newdir)
+            try:
+                os.mkdir(newdir)
+            except OSError:
+                # race conditions could still lead to such errors...
+                pass
 
 def ComputeGeodesicSphereMesh(radius=1.0,level=2):
     """Computes a geodesic sphere to a specified level. Returns the vertices and triangle indices"""
