@@ -358,6 +358,7 @@ public:
     
     bool PerfTiming(ostream& sout, istream& sinput)
     {
+        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         string cmd, libraryname;
         int num=1000;
         dReal maxtime = 1200;
@@ -448,6 +449,7 @@ public:
 
     bool IKtest(ostream& sout, istream& sinput)
     {
+        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         RAVELOG_DEBUG("Starting IKtest...\n");
         vector<dReal> varmjointvals, values;
 
@@ -578,6 +580,8 @@ public:
 
     bool DebugIK(ostream& sout, istream& sinput)
     {
+        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+
         int num_itrs = 1000;
         stringstream s;
         s << std::setprecision(std::numeric_limits<dReal>::digits10+1); /// have to do this or otherwise precision gets lost

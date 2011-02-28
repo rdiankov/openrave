@@ -2,17 +2,17 @@ Jenkins is used for running the tests, reporting errors, and creating new stable
 
 The following Jenkins plugins should be installed:
 	
-Hudson CMake plugin	
+CMake plugin	
 Measurement Plots
-Hudson Performance Publisher plugin
-Hudson Post build task
+Performance Publisher plugin
+Post build task
 Publish Over SSH
 Python Plugin
-Hudson SSH Slaves plugin
-Hudson Subversion Plug-in
+SSH Slaves plugin
+Subversion Plug-in
 Subversion Release Manager plugin
-Hudson Subversion Tagging Plugin
-Hudson Edgewall Trac plugin
+Subversion Tagging Plugin
+Edgewall Trac plugin
 Jenkins xUnit plugin
 Downstream buildview plugin
 Global Build Stats Plugin

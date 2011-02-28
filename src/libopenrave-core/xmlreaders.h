@@ -2241,10 +2241,12 @@ namespace OpenRAVEXMLParser
             else if( xmlname == "closingdirection" || xmlname == "closingdir" ) {
                 _pmanip->_vClosingDirection = vector<dReal>((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
                 FOREACH(it, _pmanip->_vClosingDirection) {
-                    if( *it > 0 )
+                    if( *it > 0 ) {
                         *it = 1;
-                    else if( *it < 0 )
+                    }
+                    else if( *it < 0 ) {
                         *it = -1;
+                    }
                 }
             }
             else if( xmlname == "translation" ) {
