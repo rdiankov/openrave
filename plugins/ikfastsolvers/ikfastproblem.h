@@ -435,7 +435,8 @@ public:
     bool PerfTiming(ostream& sout, istream& sinput)
     {
         string cmd, libraryname;
-        int num=100;
+        int num=1000;
+        dReal maxtime = 1200;
         while(!sinput.eof()) {
             istream::streampos pos = sinput.tellg();
             sinput >> cmd;
@@ -446,6 +447,9 @@ public:
 
             if( cmd == "num" ) {
                 sinput >> num;
+            }
+            else if( cmd == "maxtime" ) {
+                sinput >> maxtime;
             }
             else {
                 sinput.clear(); // have to clear eof bit
@@ -466,10 +470,10 @@ public:
         }
 
         if( lib->getIKRealSize() == 4 ) {
-            return _PerfTiming<IKSolutionFloat>(sout,lib,num);
+            return _PerfTiming<IKSolutionFloat>(sout,lib,num, maxtime);
         }
         else if( lib->getIKRealSize() == 8 ) {
-            return _PerfTiming<IKSolutionDouble>(sout,lib,num);
+            return _PerfTiming<IKSolutionDouble>(sout,lib,num, maxtime);
         }
         else {
             throw openrave_exception("bad real size");
@@ -477,18 +481,22 @@ public:
         return true;
     }
 
-    template<typename T> bool _PerfTiming(ostream& sout, boost::shared_ptr<IKLibrary> lib, int num)
+    template<typename T> bool _PerfTiming(ostream& sout, boost::shared_ptr<IKLibrary> lib, int num, dReal maxtime)
     {
         BOOST_ASSERT(lib->getIKRealSize()==sizeof(typename T::IKReal));
         typename IkFastSolver<typename T::IKReal,T>::IkFn ikfn = (typename IkFastSolver<typename T::IKReal,T>::IkFn)lib->ikfn;
         typename IkFastSolver<typename T::IKReal,T>::FkFn fkfn = (typename IkFastSolver<typename T::IKReal,T>::FkFn)lib->fkfn;
-        if( !ikfn || !fkfn )
+        if( !ikfn || !fkfn ) {
             return false;
+        }
         vector<uint64_t> vtimes(num);
         vector<T> vsolutions; vsolutions.reserve(32);
         vector<typename T::IKReal> vjoints(lib->getNumJoints()), vfree(lib->getNumFreeParameters());
         typename T::IKReal eerot[9],eetrans[3];
-        for(size_t i = 0; i < vtimes.size(); ++i) {
+        uint32_t runstarttimems = GetMilliTime();
+        uint32_t runmaxtimems = (uint32_t)(1000*maxtime);
+        size_t i = 0;
+        for(i = 0; i < vtimes.size(); ++i) {
             for(size_t j = 0; j < vjoints.size(); ++j) {
                 vjoints[j] = RaveRandomDouble()*2*PI;
             }
@@ -497,16 +505,23 @@ public:
             }
             fkfn(&vjoints[0],eetrans,eerot);
             vsolutions.resize(0);
-
             uint64_t numtoaverage=10;
             uint64_t starttime = GetNanoTime();
             for(uint64_t j = 0; j < numtoaverage; ++j) {
                 ikfn(eetrans,eerot,vfree.size() > 0 ? &vfree[0] : NULL,vsolutions);
             }
             vtimes[i] = (GetNanoTime()-starttime)/numtoaverage;
+            // don't want to slow down the tests too much with polling
+            if( (i%100) == 0 && (GetMilliTime() - runstarttimems) > runmaxtimems ) {
+                break;
+            }
         }
-        FOREACH(it,vtimes) {
-            sout << ((*it)/1000) << " ";
+        while(1) {
+            sout << vtimes[i] << " ";
+            if( i == 0 ) {
+                break;
+            }
+            --i;
         }
         return true;
     }

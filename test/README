@@ -9,14 +9,12 @@ http://somethingaboutorange.com/mrl/projects/nose
 
 Because it is not necessary to cater to the lowest common denominator, use easy_install to get latest test packages:
 
-sudo apt-get install python-profiler
+sudo apt-get install python-profiler graphviz
 sudo easy_install nose coverage unittest-xml-reporting
-
-The tests are designed to output to xunit so that Jenkins can read them. The following Jenkins plugins should be installed:
-
-Hudson Cobertuna, Python, Huson SSH Slaves, Hudson Subversion, Hudson Edgewall Trac, Hudson xUnit
 
 Testing
 =======
 
 Running 'make test' in the root directory should run all tests and generate all statistics files. If the PARALLEL_JOBS environment variable is set to "-jX", then will distribute the computation onto X processes.
+
+The tests are designed to output to Jenkins-friendly format. See the jenkins/README for more information.
