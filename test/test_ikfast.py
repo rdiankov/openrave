@@ -300,10 +300,9 @@ if __name__ == "__main__":
 <result>
 <success passed="%s" state="%s" hasTimedOut="false"/>
 <compiletime unit="s" mesure="%f" isRelevant="true"/>
-<performance unit="correct" mesure="%f" isRelevant="true"/>
 </result>
 </test>
-"""%(str(testid),xmlplatform,'yes' if wrongrate==0 and successrate>0 else 'no',int(100*successrate),compiletime,100*(1-wrongrate))
+"""%(str(testid),'','yes' if wrongrate==0 and successrate>0 else 'no',int(100*successrate),compiletime)
 
 #     for name,value in ikfaststats.iteritems():
 #         num, success, compiletime, successrate, wrongrate = value
