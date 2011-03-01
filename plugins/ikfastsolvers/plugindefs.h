@@ -19,6 +19,7 @@
 
 // include boost for vc++ only (to get typeof working)
 #ifdef _MSC_VER
+#define _USE_MATH_DEFINES
 #include <boost/typeof/std/string.hpp>
 #include <boost/typeof/std/vector.hpp>
 #include <boost/typeof/std/list.hpp>
