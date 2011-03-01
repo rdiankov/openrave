@@ -47,9 +47,10 @@
 
 #endif
 
-#include <stdint.h>
+#include <cstdint>
 #include <fstream>
 #include <iostream>
+#include <cmath>
 
 #include <boost/assert.hpp>
 #include <boost/bind.hpp>
