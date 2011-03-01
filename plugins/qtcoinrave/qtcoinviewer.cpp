@@ -123,7 +123,7 @@ QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
     pmsgtrans0->translation.setValue(SbVec3f(-0.978f,0.93f,0));
     pmsgsep->addChild(pmsgtrans0);
     SoBaseColor* pcolor0 = new SoBaseColor();
-    pcolor0->rgb.setValue(1.0f,1.0f,1.0f);
+    pcolor0->rgb.setValue(0.0f,0.0f,0.0f);
     pmsgsep->addChild(pcolor0);
     _messageNodes[0] = new SoText2();
     pmsgsep->addChild(_messageNodes[0]);
@@ -132,7 +132,7 @@ QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
     _messageShadowTranslation->translation.setValue(SbVec3f(-0.002f,0.032f,0));
     pmsgsep->addChild(_messageShadowTranslation);
     SoBaseColor* pcolor1 = new SoBaseColor();
-    pcolor1->rgb.setValue(0.0f,0.0f,0.0f);
+    pcolor1->rgb.setValue(0.99f,0.99f,0.99f);
     pmsgsep->addChild(pcolor1);
     _messageNodes[1] = new SoText2();
     pmsgsep->addChild(_messageNodes[1]);

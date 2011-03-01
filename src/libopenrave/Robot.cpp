@@ -2273,7 +2273,7 @@ void RobotBase::_ComputeInternalInformation()
                         }
                         else {
                             vClosingDirection.push_back(0);
-                            RAVELOG_DEBUG(str(boost::format("manipulator %s closing direction not correct length, might get bad closing/release grasping\n")%(*itmanip)->GetName()));
+                            RAVELOG_WARN(str(boost::format("manipulator %s closing direction not correct length, might get bad closing/release grasping")%(*itmanip)->GetName()));
                         }
                     }
                 }

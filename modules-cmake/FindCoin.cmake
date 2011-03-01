@@ -3,6 +3,7 @@
 #
 # COIN_LIBRARY_FOUND - if Coin3d is found
 # COIN_CXXFLAGS - extra flags
+# COIN_LINK_FLAGS - extra flags
 # COIN_INCLUDE_DIRS - include directories
 # COIN_LINK_DIRS - link directories
 # COIN_LIBRARY_RELEASE - the relase version

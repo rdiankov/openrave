@@ -35,11 +35,6 @@
 # include <fstream>
 # include <cstring>
 
-#include "rave/rave.h"
-
-using namespace std;
-using namespace OpenRAVE;
-
 # define ERROR 1
 # define G1_SECTION_MODEL_QUADS 18
 # define G1_SECTION_MODEL_TEXTURE_NAMES 19
@@ -2162,6 +2157,7 @@ void cor3_normal_set ( void )
 //    John Burkardt
 //
 {
+    assert(cor3_num<=COR3_MAX);
   int   icor3;
   int   iface;
   int   ivert;
@@ -2655,10 +2651,10 @@ void data_init ( void )
 //****************************************************************************80
 static boost::mutex s_mutexread;
 
-bool ReadFile(const char* pfilename, KinBody::Link::TRIMESH& mesh)
+bool ReadFile(const char* pfilename, std::vector<float>& vertices, std::vector<int>& indices)
 {
-    mesh.vertices.resize(0);
-    mesh.indices.resize(0);
+    vertices.resize(0);
+    indices.resize(0);
 
     if( pfilename == NULL )
         return false;
@@ -2673,27 +2669,27 @@ bool ReadFile(const char* pfilename, KinBody::Link::TRIMESH& mesh)
         return false;
 
     // read in the data
-    mesh.vertices.resize(cor3_num);
-    for(size_t i = 0; i < mesh.vertices.size(); ++i) {
-        mesh.vertices[i].x = cor3[0][i];
-        mesh.vertices[i].y = cor3[1][i];
-        mesh.vertices[i].z = cor3[2][i];
+    vertices.resize(cor3_num);
+    for(size_t i = 0; i < vertices.size(); ++i) {
+        vertices[i].x = cor3[0][i];
+        vertices[i].y = cor3[1][i];
+        vertices[i].z = cor3[2][i];
     }
 
     if( face_num == 0 ) {
         // assume every triplet of vertices form a triangle
-        int N = mesh.vertices.size()/3;
-        mesh.indices.resize(0); mesh.indices.reserve(N*3);
+        int N = vertices.size()/3;
+        indices.resize(0); indices.reserve(N*3);
         for(int i = 0; i < N*3; i += 3) {
             // prune faces with zero normals
-            Vector v0 = mesh.vertices[i];
-            Vector v1 = mesh.vertices[i+1];
-            Vector v2 = mesh.vertices[i+2];
+            Vector v0 = vertices[i];
+            Vector v1 = vertices[i+1];
+            Vector v2 = vertices[i+2];
             Vector vcross;
             if( (v1-v0).cross(v2-v0).lengthsqr3() > 1e-10 ) {
-                mesh.indices.push_back(i);
-                mesh.indices.push_back(i+1);
-                mesh.indices.push_back(i+2);
+                indices.push_back(i);
+                indices.push_back(i+1);
+                indices.push_back(i+2);
             }
         }
     }
@@ -2701,14 +2697,14 @@ bool ReadFile(const char* pfilename, KinBody::Link::TRIMESH& mesh)
         int totalindices = 0;
         for(int iface = 0; iface < face_num; ++iface)
             totalindices += face_order[iface]-2;
-        mesh.indices.resize(0); mesh.indices.reserve(totalindices);
+        indices.resize(0); indices.reserve(totalindices);
 
         for(int iface = 0; iface < face_num; ++iface) {
             // extract in a fan shape
             for (int ivert = 2; ivert < face_order[iface]; ivert++ ) {
-                mesh.indices.push_back(face[0][iface]);
-                mesh.indices.push_back(face[ivert-1][iface]);
-                mesh.indices.push_back(face[ivert][iface]);
+                indices.push_back(face[0][iface]);
+                indices.push_back(face[ivert-1][iface]);
+                indices.push_back(face[ivert][iface]);
             }
         }
     }

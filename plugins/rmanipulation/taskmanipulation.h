@@ -50,16 +50,37 @@ class TaskManipulation : public ProblemInstance
     typedef std::map<vector<dReal>, TrajectoryBasePtr, GraspVectorCompare > PRESHAPETRAJMAP;
 
  TaskManipulation(EnvironmentBasePtr penv) : ProblemInstance(penv) {
-        __description = ":Interface Author: Rosen Diankov\nGrasp/Manipulation planning with grasp sets.";
-        RegisterCommand("createsystem",boost::bind(&TaskManipulation::CreateSystem,this,_1,_2),
-                        "creates a sensor system and initializes it with the current bodies");
-#ifdef HAVE_BOOST_REGEX
-        RegisterCommand("switchmodels",boost::bind(&TaskManipulation::SwitchModels,this,_1,_2),
-                        "Switches between thin and fat models for planning.");
-#endif
-        RegisterCommand("graspplanning",boost::bind(&TaskManipulation::GraspPlanning,this,_1,_2),
-                        "Grasp planning, pick a grasp from a grasp set and use it for manipulation.\n"
-                        "Can optionally use bispace for mobile platforms");
+        __description = ":Interface Author: Rosen Diankov\n\n\
+Task-based manipulation planning involving target objects. A lot of the algorithms and theory are covered in:\n\
+\n\
+- Rosen Diankov. \"Automated Construction of Robotic Manipulation Programs\". PhD Thesis, CMU-RI-TR-10-29, Carnegie Mellon University, Robotics Institute, August 2010.\n";
+        RegisterCommand("GraspPlanning",boost::bind(&TaskManipulation::GraspPlanning,this,_1,_2),
+                        "Grasp planning is the ultimate function that puts together many planners achieving a robust and general pick and place motiotions with grasp sets. It first chooses grasps from a grasp set and use it for manipulation. In order for the arm to reach the grasps, it must have a Transform6D IK solver, anything with less DOF will not work.\nParameters:\n\n\
+* grasps\n\
+* outputtraj\n\
+* execute\n\
+* randomdests\n\
+* writetraj\n\
+* maxiter\n\
+* graspindices\n\
+* igraspdir\n\
+* igrasppos\n\
+* igrasproll\n\
+* igraspstandoff\n\
+* igrasppreshape\n\
+* igrasptrans\n\
+* target\n\
+* approachoffset\n\
+* quitafterfirstrun\n\
+* matdests\n\
+* posedests\n\
+* seedgrasps\n\
+* seeddests\n\
+* seedik\n\
+* savepreshapetraj\n\
+");
+        RegisterCommand("GraspPlanningAsCylinders",boost::bind(&TaskManipulation::GraspPlanningAsCylinders,this,_1,_2),
+                        "Performs grasp planning treating the targets as cylinders (axis is along the target local z), this allows TranslationDirection5D IK to be used for arms with >= 5 joints");
         RegisterCommand("CloseFingers",boost::bind(&TaskManipulation::CloseFingers,this,_1,_2),
                         "Closes the active manipulator fingers using the grasp planner.");
         RegisterCommand("ReleaseFingers",boost::bind(&TaskManipulation::ReleaseFingers,this,_1,_2),
@@ -67,9 +88,15 @@ class TaskManipulation : public ProblemInstance
                         "Also releases the given object.");
         RegisterCommand("ReleaseActive",boost::bind(&TaskManipulation::ReleaseActive,this,_1,_2),
                         "Moves the active DOF using the grasp planner.");
-        RegisterCommand("evaluateconstraints",boost::bind(&TaskManipulation::EvaluateConstraints,this,_1,_2),
+        RegisterCommand("CreateSystem",boost::bind(&TaskManipulation::CreateSystem,this,_1,_2),
+                        "creates a sensor system and initializes it with the current bodies");
+        RegisterCommand("EvaluateConstraints",boost::bind(&TaskManipulation::EvaluateConstraints,this,_1,_2),
                         "Instantiates a jacobian constraint function and runs it on several examples.\n"
                         "The constraints work on the active degress of freedom of the manipulator starting from the current configuration");
+#ifdef HAVE_BOOST_REGEX
+        RegisterCommand("SwitchModels",boost::bind(&TaskManipulation::SwitchModels,this,_1,_2),
+                        "Switches between thin and fat models for planning.");
+#endif
         _fMaxVelMult=1;
     }
     virtual ~TaskManipulation()
@@ -303,8 +330,9 @@ class TaskManipulation : public ProblemInstance
             if( cmd == "grasps" ) {
                 sinput >> nNumGrasps >> nGraspDim;
                 vgrasps.resize(nNumGrasps*nGraspDim);
-                FOREACH(it, vgrasps)
+                FOREACH(it, vgrasps) {
                     sinput >> *it;
+                }
             }
             else if( cmd == "outputtraj" ) {
                 pOutputTrajStream = boost::shared_ptr<ostream>(&sout,null_deleter());
@@ -366,8 +394,9 @@ class TaskManipulation : public ProblemInstance
             else if( cmd == "posedests" ) {
                 int numdests = 0; sinput >> numdests;
                 vObjDestinations.resize(numdests);
-                FOREACH(ittrans, vObjDestinations)
+                FOREACH(ittrans, vObjDestinations) {
                     sinput >> *ittrans;
+                }
             }
             else if( cmd == "seedgrasps" ) {
                 sinput >> nMaxSeedGrasps;
@@ -397,7 +426,12 @@ class TaskManipulation : public ProblemInstance
             return false;
         }
     
-        BOOST_ASSERT(!pmanip->IsGrabbing(ptarget));
+        if( pmanip->IsGrabbing(ptarget) ) {
+            throw openrave_exception(str(boost::format("TaskManipulaiton::GraspPlanning: manipulator %s is already grasping %s")%pmanip->GetName()%ptarget->GetName()));
+        }
+        if(!pmanip->GetIkSolver()->Supports(IkParameterization::Type_Transform6D)) {
+            throw openrave_exception(str(boost::format("TaskManipulaiton::GraspPlanning: manipulator %s does not support Transform6D IK type")%pmanip->GetName()));
+        }
         RobotBase::RobotStateSaver saver(_robot);
 
         bool bMobileBase = _robot->GetAffineDOF()!=0; // if mobile base, cannot rely on IK
@@ -419,7 +453,6 @@ class TaskManipulation : public ProblemInstance
                 RAVELOG_ERROR("failed to jitter robot\n");
                 return false;
             }
-
             bInitialRobotChanged = true;
         }
         
@@ -828,99 +861,83 @@ class TaskManipulation : public ProblemInstance
         return false; // couldn't not find for this cup
     }
 
-    class SwitchModelContainer
+    bool GraspPlanningAsCylinders(ostream& sout, istream& sinput)
     {
-    public:
-    SwitchModelContainer(KinBodyPtr pbody, const string& fatfilename) : _pbody(pbody) {
-            RAVELOG_VERBOSE(str(boost::format("register %s body with %s fatfile\n")%pbody->GetName()%fatfilename));
-            _pbodyfat = pbody->GetEnv()->ReadKinBodyXMLFile(fatfilename);
-            // validate the fat body
-            BOOST_ASSERT(pbody->GetLinks().size()==_pbodyfat->GetLinks().size());
-            _bFat=false;
-        }
-        virtual ~SwitchModelContainer() {
-            Switch(false);
-        }
+        RAVELOG_DEBUG("GraspPlanning...\n");
+        RobotBase::ManipulatorConstPtr pmanip = _robot->GetActiveManipulator();
+        boost::shared_ptr<GraspParameters> graspparams(new GraspParameters(GetEnv()));
+        KinBodyPtr ptarget;
+        dReal fApproachOffset=0.0f; // offset before approaching to the target
+        string targetname;
+        vector<Transform> vObjDestinations;
+        string strpreshapetraj; // save the preshape trajectory
+        //bool bCombinePreShapeTraj = true;
+        bool bExecute = true;
+        string strtrajfilename;
+        bool bRandomDests = true; // if true, permute the destinations when iterating through them
+        boost::shared_ptr<ostream> pOutputTrajStream;
+        int nMaxSeedDests = 5, nMaxSeedIkSolutions = 0;
+        int nMaxIterations = 4000;
+        bool bQuitAfterFirstRun = false;
 
-        void Switch(bool bSwitchToFat)
-        {
-            if( _bFat != bSwitchToFat ) {
-                RAVELOG_DEBUG(str(boost::format("switching %s to fat: %d\n")%_pbody->GetName()%(int)bSwitchToFat));
-                FOREACHC(itlink,_pbody->GetLinks()) {
-                    KinBody::LinkPtr pswitchlink = _pbodyfat->GetLink((*itlink)->GetName());
-                    list<KinBody::Link::GEOMPROPERTIES> listgeoms;
-                    (*itlink)->SwapGeometries(listgeoms);
-                    pswitchlink->SwapGeometries(listgeoms);
-                    (*itlink)->SwapGeometries(listgeoms);
-                }
-                _bFat = bSwitchToFat;
-            }
-        }
-
-        KinBodyPtr GetBody() const { return _pbody; }
-        bool IsFat() const { return _bFat; }
-    private:
-        KinBodyPtr _pbody, _pbodyfat;
-        bool _bFat;
-    };
-
-    class SwitchModelState
-    {
-    public:
-    SwitchModelState(boost::shared_ptr<TaskManipulation> ptask) : _ptask(ptask) {
-            _bFat = false;
-            FOREACH(it, _ptask->_listSwitchModels) {
-                if( (*it)->IsFat() ) {
-                    _bFat = true;
-                    break;
-                }
-            }
-        }
-        virtual ~SwitchModelState() { _ptask->_UpdateSwitchModels(_bFat); }
-    private:
-        boost::shared_ptr<TaskManipulation> _ptask;
-        bool _bFat;
-    };
-
-    typedef boost::shared_ptr<SwitchModelContainer> SwitchModelContainerPtr;
-
-    bool SwitchModels(ostream& sout, istream& sinput)
-    {
-        int doswitch=-1;
         string cmd;
-        bool bUpdateBodies=true;
+        CollisionReportPtr report(new CollisionReport);
+    
         while(!sinput.eof()) {
             sinput >> cmd;
-            if( !sinput )
+            if( !sinput ) {
                 break;
+            }
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
 
-            if( cmd == "register" ) {
-                string pattern, fatfilename;
-                sinput >> pattern >> fatfilename;
-                if( !!sinput ) {
-                    _listSwitchModelPatterns.push_back(make_pair(pattern,fatfilename));
+            if( cmd == "outputtraj" ) {
+                pOutputTrajStream = boost::shared_ptr<ostream>(&sout,null_deleter());
+            }
+            else if( cmd == "execute" ) {
+                sinput >> bExecute;
+            }
+            else if( cmd == "randomdests" ) {
+                sinput >> bRandomDests;
+            }
+            else if( cmd == "writetraj" ) {
+                sinput >> strtrajfilename;
+            }
+            else if( cmd == "maxiter" ) {
+                sinput >> nMaxIterations;
+            }
+            else if( cmd == "target" ) {
+                sinput >> targetname;
+                ptarget = GetEnv()->GetKinBody(targetname);
+            }
+            else if( cmd == "approachoffset" ) {
+                sinput >> fApproachOffset;
+            }
+            else if( cmd == "quitafterfirstrun" ) {
+                bQuitAfterFirstRun = true;
+            }
+            else if( cmd == "matdests" ) {
+                int numdests = 0; sinput >> numdests;
+                vObjDestinations.resize(numdests);
+                FOREACH(ittrans, vObjDestinations) {
+                    TransformMatrix m; sinput >> m;
+                    *ittrans = m;
                 }
             }
-            else if( cmd == "unregister" ) {
-                string pattern;
-                sinput >> pattern;
-                list<pair<string,string> >::iterator it;
-                FORIT(it,_listSwitchModelPatterns) {
-                    if( it->first == pattern )
-                        it = _listSwitchModelPatterns.erase(it);
-                    else
-                        ++it;
-                }
+            else if( cmd == "posedests" ) {
+                int numdests = 0; sinput >> numdests;
+                vObjDestinations.resize(numdests);
+                FOREACH(ittrans, vObjDestinations)
+                    sinput >> *ittrans;
             }
-            else if( cmd == "update" )
-                sinput >> bUpdateBodies;
-            else if( cmd == "switchtofat" )
-                sinput >> doswitch;
-            else if( cmd == "clearpatterns" )
-                _listSwitchModelPatterns.clear();
-            else if( cmd == "clearmodels" )
-                _listSwitchModels.clear();
+            else if( cmd == "seeddests" ) {
+                sinput >> nMaxSeedDests;
+            }
+            else if( cmd == "seedik" ) {
+                sinput >> nMaxSeedIkSolutions;
+            }
+            else if( cmd == "savepreshapetraj" ) {
+                sinput >> strpreshapetraj;
+            }
             else {
                 RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
@@ -931,10 +948,52 @@ class TaskManipulation : public ProblemInstance
                 return false;
             }
         }
+    
+        if( !ptarget ) {
+            RAVELOG_WARN(str(boost::format("Could not find target %s\n")%targetname));
+            return false;
+        }
+    
+        if( pmanip->IsGrabbing(ptarget) ) {
+            throw openrave_exception(str(boost::format("TaskManipulaiton::GraspPlanningAsCylinders: manipulator %s is already grasping %s")%pmanip->GetName()%ptarget->GetName()));
+        }
+        if(!pmanip->GetIkSolver()->Supports(IkParameterization::Type_TranslationDirection5D)) {
+            throw openrave_exception(str(boost::format("TaskManipulaiton::GraspPlanningAsCylinders: manipulator %s does not support Transform6D IK type")%pmanip->GetName()));
+        }
+        RobotBase::RobotStateSaver saver(_robot);
 
-        if( doswitch >= 0 )
-            _UpdateSwitchModels(doswitch>0,bUpdateBodies);
-        return true;
+        bool bMobileBase = _robot->GetAffineDOF()!=0; // if mobile base, cannot rely on IK
+        if( bMobileBase ) {
+            RAVELOG_INFO("planning with mobile base!\n");
+        }
+        bool bInitialRobotChanged = false;
+        vector<dReal> vCurHandValues, vCurRobotValues, vOrgRobotValues;
+        _robot->SetActiveDOFs(pmanip->GetGripperIndices());
+        _robot->GetActiveDOFValues(vCurHandValues);
+        _robot->GetDOFValues(vOrgRobotValues);
+
+        SwitchModelState switchstate(shared_problem());
+        _UpdateSwitchModels(true,true);
+        // check if robot is in collision with padded models
+        if( GetEnv()->CheckCollision(KinBodyConstPtr(_robot)) ) {
+            _robot->SetActiveDOFs(pmanip->GetArmIndices());
+            if( !CM::JitterActiveDOF(_robot) ) {
+                RAVELOG_ERROR("failed to jitter robot\n");
+                return false;
+            }
+
+            bInitialRobotChanged = true;
+        }
+        
+        _robot->GetDOFValues(vCurRobotValues);
+
+        string strResponse;
+        Transform transTarg = ptarget->GetTransform();
+        Transform transInvTarget = transTarg.inverse();
+        Transform transDummy(Vector(1,0,0,0), Vector(100,0,0));
+        vector<dReal> viksolution, vikgoal, vFinalGripperValues;
+        
+        return false;
     }
 
     bool CloseFingers(ostream& sout, istream& sinput)
@@ -1293,52 +1352,113 @@ class TaskManipulation : public ProblemInstance
         return true;
     }
 
-    void _UpdateSwitchModels(bool bSwitchToFat, bool bUpdateBodies=true)
+    class SwitchModelContainer
     {
-        if( bSwitchToFat && bUpdateBodies ) {
-            // update model list
-            string strcmd,strname;
-#ifdef HAVE_BOOST_REGEX
-            boost::regex re;
-#endif
+    public:
+    SwitchModelContainer(KinBodyPtr pbody, const string& fatfilename) : _pbody(pbody) {
+            RAVELOG_VERBOSE(str(boost::format("register %s body with %s fatfile\n")%pbody->GetName()%fatfilename));
+            _pbodyfat = pbody->GetEnv()->ReadKinBodyXMLFile(fatfilename);
+            // validate the fat body
+            BOOST_ASSERT(pbody->GetLinks().size()==_pbodyfat->GetLinks().size());
+            _bFat=false;
+        }
+        virtual ~SwitchModelContainer() {
+            Switch(false);
+        }
 
-            vector<KinBodyPtr>::const_iterator itbody;
-            list<SwitchModelContainerPtr>::iterator itmodel;
-            vector<KinBodyPtr> vbodies;
-            GetEnv()->GetBodies(vbodies);
-            FORIT(itbody, vbodies) {
-                FORIT(itmodel,_listSwitchModels) {
-                    if( (*itmodel)->GetBody() == *itbody )
-                        break;
+        void Switch(bool bSwitchToFat)
+        {
+            if( _bFat != bSwitchToFat ) {
+                RAVELOG_DEBUG(str(boost::format("switching %s to fat: %d\n")%_pbody->GetName()%(int)bSwitchToFat));
+                FOREACHC(itlink,_pbody->GetLinks()) {
+                    KinBody::LinkPtr pswitchlink = _pbodyfat->GetLink((*itlink)->GetName());
+                    list<KinBody::Link::GEOMPROPERTIES> listgeoms;
+                    (*itlink)->SwapGeometries(listgeoms);
+                    pswitchlink->SwapGeometries(listgeoms);
+                    (*itlink)->SwapGeometries(listgeoms);
                 }
-                if( itmodel != _listSwitchModels.end() )
-                    continue;
-                FOREACH(itpattern, _listSwitchModelPatterns) {
-                    bool bMatches=false;
-#ifdef HAVE_BOOST_REGEX
-                    try {
-                        re.assign(itpattern->first, boost::regex_constants::icase);
-                    }
-                    catch (boost::regex_error& e) {
-                        RAVELOG_ERROR(str(boost::format("%s is not a valid regular expression: %s")%itpattern->first%e.what()));
-                        continue;
-                    }
-            
-                    // convert
-                    bMatches = boost::regex_match((*itbody)->GetName().c_str(), re);
-#else
-                    RAVELOG_DEBUG(str(boost::format("boost regex not enabled, cannot parse %s\n")%itpattern->first));
-                    bMatches = (*itbody)->GetName() == itpattern->first;
-#endif
-                    if( bMatches ) {
-                        _listSwitchModels.push_back(SwitchModelContainerPtr(new SwitchModelContainer(*itbody,itpattern->second)));
-                    }
-                }
+                _bFat = bSwitchToFat;
             }
         }
 
-        FOREACH(it,_listSwitchModels)
-            (*it)->Switch(bSwitchToFat);
+        KinBodyPtr GetBody() const { return _pbody; }
+        bool IsFat() const { return _bFat; }
+    private:
+        KinBodyPtr _pbody, _pbodyfat;
+        bool _bFat;
+    };
+
+    class SwitchModelState
+    {
+    public:
+    SwitchModelState(boost::shared_ptr<TaskManipulation> ptask) : _ptask(ptask) {
+            _bFat = false;
+            FOREACH(it, _ptask->_listSwitchModels) {
+                if( (*it)->IsFat() ) {
+                    _bFat = true;
+                    break;
+                }
+            }
+        }
+        virtual ~SwitchModelState() { _ptask->_UpdateSwitchModels(_bFat); }
+    private:
+        boost::shared_ptr<TaskManipulation> _ptask;
+        bool _bFat;
+    };
+
+    typedef boost::shared_ptr<SwitchModelContainer> SwitchModelContainerPtr;
+
+    bool SwitchModels(ostream& sout, istream& sinput)
+    {
+        int doswitch=-1;
+        string cmd;
+        bool bUpdateBodies=true;
+        while(!sinput.eof()) {
+            sinput >> cmd;
+            if( !sinput )
+                break;
+            std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
+
+            if( cmd == "register" ) {
+                string pattern, fatfilename;
+                sinput >> pattern >> fatfilename;
+                if( !!sinput ) {
+                    _listSwitchModelPatterns.push_back(make_pair(pattern,fatfilename));
+                }
+            }
+            else if( cmd == "unregister" ) {
+                string pattern;
+                sinput >> pattern;
+                list<pair<string,string> >::iterator it;
+                FORIT(it,_listSwitchModelPatterns) {
+                    if( it->first == pattern )
+                        it = _listSwitchModelPatterns.erase(it);
+                    else
+                        ++it;
+                }
+            }
+            else if( cmd == "update" )
+                sinput >> bUpdateBodies;
+            else if( cmd == "switchtofat" )
+                sinput >> doswitch;
+            else if( cmd == "clearpatterns" )
+                _listSwitchModelPatterns.clear();
+            else if( cmd == "clearmodels" )
+                _listSwitchModels.clear();
+            else {
+                RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
+                break;
+            }
+
+            if( !sinput ) {
+                RAVELOG_ERROR(str(boost::format("failed processing command %s\n")%cmd));
+                return false;
+            }
+        }
+
+        if( doswitch >= 0 )
+            _UpdateSwitchModels(doswitch>0,bUpdateBodies);
+        return true;
     }
 
 protected:
@@ -1511,6 +1631,54 @@ protected:
         
         RAVELOG_DEBUG("total planning time %d ms\n", (uint32_t)(GetMicroTime()-tbase)/1000);
         return pfulltraj;
+    }
+
+    void _UpdateSwitchModels(bool bSwitchToFat, bool bUpdateBodies=true)
+    {
+        if( bSwitchToFat && bUpdateBodies ) {
+            // update model list
+            string strcmd,strname;
+#ifdef HAVE_BOOST_REGEX
+            boost::regex re;
+#endif
+
+            vector<KinBodyPtr>::const_iterator itbody;
+            list<SwitchModelContainerPtr>::iterator itmodel;
+            vector<KinBodyPtr> vbodies;
+            GetEnv()->GetBodies(vbodies);
+            FORIT(itbody, vbodies) {
+                FORIT(itmodel,_listSwitchModels) {
+                    if( (*itmodel)->GetBody() == *itbody )
+                        break;
+                }
+                if( itmodel != _listSwitchModels.end() )
+                    continue;
+                FOREACH(itpattern, _listSwitchModelPatterns) {
+                    bool bMatches=false;
+#ifdef HAVE_BOOST_REGEX
+                    try {
+                        re.assign(itpattern->first, boost::regex_constants::icase);
+                    }
+                    catch (boost::regex_error& e) {
+                        RAVELOG_ERROR(str(boost::format("%s is not a valid regular expression: %s")%itpattern->first%e.what()));
+                        continue;
+                    }
+            
+                    // convert
+                    bMatches = boost::regex_match((*itbody)->GetName().c_str(), re);
+#else
+                    RAVELOG_DEBUG(str(boost::format("boost regex not enabled, cannot parse %s\n")%itpattern->first));
+                    bMatches = (*itbody)->GetName() == itpattern->first;
+#endif
+                    if( bMatches ) {
+                        _listSwitchModels.push_back(SwitchModelContainerPtr(new SwitchModelContainer(*itbody,itpattern->second)));
+                    }
+                }
+            }
+        }
+
+        FOREACH(it,_listSwitchModels)
+            (*it)->Switch(bSwitchToFat);
     }
 
     string _strRobotName; ///< name of the active robot

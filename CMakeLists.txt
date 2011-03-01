@@ -332,20 +332,19 @@ else()
   set(CRLIBM_FOUND 0)
 endif()
 
-# always include coin3d (needed for file parsing)
-find_package(Coin)
-if( COIN_LIBRARY_FOUND )
-  include_directories(${COIN_INCLUDE_DIRS})
-  set(OPENRAVE_LINK_DIRS ${OPENRAVE_LINK_DIRS} ${COIN_LINK_DIRS})
-  add_definitions("-DOPENRAVE_COIN3D")
-  message(STATUS "Using Coin3D")
+pkg_check_modules(ASSIMP assimp)
+
+if( NOT ASSIMP_FOUND )
+  # if assimp is not found, then have to rely on the ivcon converter
+  add_subdirectory(3rdparty/ivcon)
+  set(IVCON_FOUND 1)
+  set(IVCON_LIBRARY ivcon)
+  set(IVCON_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/ivcon")
 else()
-  if( NOT COIN_LIBRARY_FOUND )
-    message(STATUS "Could not find Coin3D. Please install Coin3D (http://www.coin3d.org)")
-  endif()
-  set(COIN_CXXFLAGS)
-  set(COIN_LINK_FLAGS)
+  set(IVCON_FOUND 0)
 endif()
+
+find_package(Coin)
 
 if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
   check_cxx_source_runs("

@@ -234,7 +234,7 @@ class MultiProcess(Plugin):
                                       loaderClass=self.loaderClass)
 
 class MultiProcessTestRunner(TextTestRunner):
-    waitkilltime = 2.0 # max time to wait to terminate a process that does not respond to SIGINT
+    waitkilltime = 5.0 # max time to wait to terminate a process that does not respond to SIGINT
     def __init__(self, **kw):
         self.loaderClass = kw.pop('loaderClass', loader.defaultTestLoader)
         super(MultiProcessTestRunner, self).__init__(**kw)
@@ -374,7 +374,7 @@ class MultiProcessTestRunner(TextTestRunner):
                             while not w.keyboardCaught.is_set():
                                 if time.time()-startkilltime > self.waitkilltime:
                                     # have to terminate...
-                                    log.debug("terminating worker %s",iworker)
+                                    log.error("terminating worker %s",iworker)
                                     w.terminate()
                                     currentaddr = Array('c',' '*1000)
                                     currentaddr.value = ''
@@ -386,6 +386,7 @@ class MultiProcessTestRunner(TextTestRunner):
                                     workers[iworker].currentstart = currentstart
                                     workers[iworker].keyboardCaught = keyboardCaught
                                     workers[iworker].start()
+                                    # there is a small probability that the terminated process might send a result, which has to be specially handled or else processes might get orphaned.
                                     w = workers[iworker]
                                     break
                                 os.kill(w.pid, signal.SIGINT)
@@ -644,7 +645,6 @@ def runner(ix, testQueue, resultQueue, currentaddr, currentstart, keyboardCaught
         except Empty:
             log.debug("Worker %s timed out waiting for tasks", ix)
     finally:
-        log.debug("Worker %s closing queues",ix)
         testQueue.close()
         resultQueue.close()
     log.debug("Worker %s ending", ix)

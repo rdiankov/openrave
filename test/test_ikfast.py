@@ -138,10 +138,10 @@ def robotstats(description,robotfilename,manipname, iktypestr,freeindices):
                 prefix = ''
                 if isol == 0:
                     #prefix = 'ERROR '
-                    print 'Examples of Wrong Solutions:\n\n',
+                    print '\n\nExamples of Wrong Solutions:\n',
                 else:
                     #prefix = 'WARN '
-                    print 'Examples of No Solutions:\n\n'
+                    print '\n\nExamples of No Solutions:\n'
                 rows = []
                 numprint = min(10,len(solutionresults[isol]))
                 for index in numpy.random.permutation(len(solutionresults[isol]))[0:numprint]:

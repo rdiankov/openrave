@@ -45,17 +45,39 @@
 
 BOOST_STATIC_ASSERT(sizeof(xmlChar) == 1);
 
+#ifdef OPENRAVE_ASSIMP
+#include <assimp.hpp>
+#include <aiScene.h>
+#include <aiPostProcess.h>
+#endif
+
+#ifdef OPENRAVE_IVCON
+#include "ivcon.h"
+#endif
+
+#ifdef OPENRAVE_COIN3D
+#include <Inventor/SoDB.h>
+#include <Inventor/SoInput.h>
+#include <Inventor/nodes/SoMaterial.h>
+#include <Inventor/nodes/SoSeparator.h>
+#include <Inventor/actions/SoSearchAction.h>
+#include <Inventor/SbMatrix.h>
+#include <Inventor/SoPrimitiveVertex.h>
+#include <Inventor/actions/SoCallbackAction.h>
+#include <Inventor/nodes/SoShape.h>
+#endif
+
 namespace OpenRAVEXMLParser
 {
     static boost::once_flag __onceCreateXMLMutex = BOOST_ONCE_INIT;
     /// lock for parsing XML, don't destroy it in order to ensure it remains valid for as long as possible
     static EnvironmentMutex* __mutexXML;
-    void __CreateXMLMutex()
+    static void __CreateXMLMutex()
     {
         __mutexXML = new EnvironmentMutex();
     }
 
-    EnvironmentMutex* GetXMLMutex()
+    static EnvironmentMutex* GetXMLMutex()
     {
         boost::call_once(__CreateXMLMutex,__onceCreateXMLMutex);
         return __mutexXML;
@@ -72,15 +94,234 @@ namespace OpenRAVEXMLParser
         return v;
     }
 
+    static int& GetXMLErrorCount()
+    {
+        static int errorcount=0;
+        return errorcount;
+    }
+
     static void SetDataDirs(const vector<string>& vdatadirs) {
         EnvironmentMutex::scoped_lock lock(*GetXMLMutex());
         GetDataDirs() = vdatadirs;
     }
 
-    static int& GetXMLErrorCount()
+#ifdef OPENRAVE_ASSIMP
+    class aiSceneManaged
     {
-        static int errorcount=0;
-        return errorcount;
+    public:
+        aiSceneManaged(const char* pfilename, unsigned int flags) {
+            _scene = _importer.ReadFile(pfilename,flags);
+            if( _scene == NULL ) {
+                RAVELOG_VERBOSE("assimp error: %s\n",_importer.GetErrorString());
+            }
+        }
+        virtual ~aiSceneManaged() {
+            _importer.FreeScene();
+        }
+        Assimp::Importer _importer;
+        const struct aiScene* _scene;
+    };
+
+    static bool _AssimpCreateTriMesh(const aiScene* scene, aiNode* node, const Vector& scale, KinBody::Link::TRIMESH& trimesh, RaveVector<float>& diffuseColor, RaveVector<float>& ambientColor, float& ftransparency)
+    {
+        if( !node ) {
+            return false;
+        }
+        aiMatrix4x4 transform = node->mTransformation;
+        aiNode *pnode = node->mParent;
+        while (pnode) {
+            // Don't convert to y-up orientation, which is what the root node is in, Assimp does
+            if (pnode->mParent != NULL) {
+                transform = pnode->mTransformation * transform;
+            }
+            pnode = pnode->mParent;
+        }
+
+        std::vector<Vector>& vertices = trimesh.vertices;
+        std::vector<int>& indices = trimesh.indices;
+        {
+            size_t vertexOffset = vertices.size();
+            size_t nTotalVertices=0;
+            for (size_t i = 0; i < node->mNumMeshes; i++) {
+                aiMesh* input_mesh = scene->mMeshes[node->mMeshes[i]];
+                nTotalVertices += input_mesh->mNumVertices;
+            }
+
+            vertices.reserve(vertices.size()+nTotalVertices);
+            for (size_t i = 0; i < node->mNumMeshes; i++) {
+                aiMesh* input_mesh = scene->mMeshes[node->mMeshes[i]];
+                for (size_t j = 0; j < input_mesh->mNumVertices; j++) {
+                    aiVector3D p = input_mesh->mVertices[j];
+                    p *= transform;
+                    vertices.push_back(Vector(p.x*scale.x,p.y*scale.y,p.z*scale.z));
+                }
+            }
+            for (size_t i = 0; i < node->mNumMeshes; i++) {
+                aiMesh* input_mesh = scene->mMeshes[node->mMeshes[i]];
+                size_t indexCount = 0;
+                for (size_t j = 0; j < input_mesh->mNumFaces; j++) {
+                    aiFace& face = input_mesh->mFaces[j];
+                    indexCount += 3*(face.mNumIndices-2);
+                }
+                indices.reserve(indices.size()+indexCount);
+                for (size_t j = 0; j < input_mesh->mNumFaces; j++) {
+                    aiFace& face = input_mesh->mFaces[j];
+                    if( face.mNumIndices == 3 ) {
+                        indices.push_back(vertexOffset+face.mIndices[0]);
+                        indices.push_back(vertexOffset+face.mIndices[1]);
+                        indices.push_back(vertexOffset+face.mIndices[2]);
+                    }
+                    else {
+                        for (size_t k = 2; k < face.mNumIndices; ++k) {
+                            indices.push_back(face.mIndices[0]+vertexOffset);
+                            indices.push_back(face.mIndices[k-1]+vertexOffset);
+                            indices.push_back(face.mIndices[k]+vertexOffset);
+                        }
+                    }
+                }
+                vertexOffset += input_mesh->mNumVertices;
+            }
+        }
+        for (size_t i=0; i < node->mNumChildren; ++i) {
+            _AssimpCreateTriMesh(scene, node->mChildren[i], scale, trimesh, diffuseColor, ambientColor, ftransparency);
+        }
+        return true;
+    }
+#endif
+
+#ifdef OPENRAVE_COIN3D
+    // Coin specific routines
+    static SbMatrix& GetModelMatrix() {
+        static SbMatrix m;
+        return m;
+    }
+    static void _Coin3dTriangulateCB(void *data, SoCallbackAction *action, const SoPrimitiveVertex *vertex1, const SoPrimitiveVertex *vertex2, const SoPrimitiveVertex *vertex3)
+    {
+        KinBody::Link::TRIMESH* ptri = (KinBody::Link::TRIMESH*)data;
+        GetModelMatrix() = action->getModelMatrix();
+
+        // set the vertices (SCALED)
+        //    ptri->vertices.push_back(Vector(&vertex1->getPoint()[0]));
+        //    ptri->vertices.push_back(Vector(&vertex2->getPoint()[0]));
+        //    ptri->vertices.push_back(Vector(&vertex3->getPoint()[0]));
+        SbVec3f v;
+        GetModelMatrix().multVecMatrix(vertex1->getPoint(), v);
+        ptri->vertices.push_back(Vector(&v[0]));
+
+        GetModelMatrix().multVecMatrix(vertex2->getPoint(), v);
+        ptri->vertices.push_back(Vector(&v[0]));
+
+        GetModelMatrix().multVecMatrix(vertex3->getPoint(), v);
+        ptri->vertices.push_back(Vector(&v[0]));
+    }
+
+    static void _Coin3dCreateTriMeshData(SoNode* pnode, KinBody::Link::TRIMESH& tri)
+    {
+        tri.vertices.resize(0);
+        tri.vertices.reserve(256);
+
+        // create the collision model and triangulate
+        SoCallbackAction triAction;
+
+        // add the callbacks for all nodes
+        triAction.addTriangleCallback(SoShape::getClassTypeId(), _Coin3dTriangulateCB, &tri);
+        pnode->ref();
+        triAction.apply(pnode);
+        //pnode->unref();
+
+        Vector scale;
+        SbMatrix s_ModelMatrix = GetModelMatrix();
+        scale.x = sqrtf(s_ModelMatrix[0][0]*s_ModelMatrix[0][0]+s_ModelMatrix[1][0]*s_ModelMatrix[1][0]+s_ModelMatrix[2][0]*s_ModelMatrix[2][0]);
+        scale.y = sqrtf(s_ModelMatrix[0][1]*s_ModelMatrix[0][1]+s_ModelMatrix[1][1]*s_ModelMatrix[1][1]+s_ModelMatrix[2][1]*s_ModelMatrix[2][1]);
+        scale.z = sqrtf(s_ModelMatrix[0][2]*s_ModelMatrix[0][2]+s_ModelMatrix[1][2]*s_ModelMatrix[1][2]+s_ModelMatrix[2][2]*s_ModelMatrix[2][2]);
+
+        tri.indices.resize(tri.vertices.size());
+        for(size_t i = 0; i < tri.vertices.size(); ++i) {
+            tri.indices[i] = i;
+            tri.vertices[i].x *= scale.x;
+            tri.vertices[i].y *= scale.y;
+            tri.vertices[i].z *= scale.z;
+        }
+    }
+
+#endif
+    
+    static bool _CreateTriMeshData(const std::string& filename, const Vector& vscale, KinBody::Link::TRIMESH& trimesh, RaveVector<float>& diffuseColor, RaveVector<float>& ambientColor, float& ftransparency)
+    {
+#ifdef OPENRAVE_ASSIMP
+        aiSceneManaged scene(filename.c_str(),aiProcess_JoinIdenticalVertices|aiProcess_Triangulate);
+        if( !!scene._scene && !!scene._scene->mRootNode && !!scene._scene->HasMeshes() ) {
+            if( _AssimpCreateTriMesh(scene._scene,scene._scene->mRootNode, vscale, trimesh, diffuseColor, ambientColor, ftransparency) ) {
+                return true;
+            }
+        }
+#endif
+#ifdef OPENRAVE_COIN3D
+        if(!SoDB::isInitialized()) {
+            SoDB::init();
+        }
+        SoDB::readlock(); // have to lock coin3d, or otherwise state gets corrupted
+        SoInput mySceneInput;
+        if (!mySceneInput.openFile(filename.c_str())) {
+            RAVELOG_WARN(str(boost::format("Failed to open %s for KinBody:TriMesh\n")%filename));
+            GetXMLErrorCount()++;
+        }
+        else {
+            // SoDB::readAll memory leaks!
+            SoSeparator* psep = SoDB::readAll(&mySceneInput);
+            if( !!psep ) {
+                // try to extract a material
+                SoSearchAction search;
+                search.setType(SoMaterial::getClassTypeId());
+                search.setInterest(SoSearchAction::ALL);
+                psep->ref();
+                search.apply(psep);
+                for(int i = 0; i < search.getPaths().getLength(); ++i) {
+                    SoPath* path = search.getPaths()[i];
+                    SoMaterial* pmtrl = (SoMaterial*)path->getTail();
+                    if( !pmtrl ) {
+                        continue;
+                    }
+                    if( !!pmtrl->diffuseColor.getValues(0) ) {
+                        diffuseColor.x = pmtrl->diffuseColor.getValues(0)->getValue()[0];
+                        diffuseColor.y = pmtrl->diffuseColor.getValues(0)->getValue()[1];
+                        diffuseColor.z = pmtrl->diffuseColor.getValues(0)->getValue()[2];
+                    }
+                    if( !!pmtrl->ambientColor.getValues(0) ) {
+                        ambientColor.x = pmtrl->ambientColor.getValues(0)->getValue()[0];
+                        ambientColor.y = pmtrl->ambientColor.getValues(0)->getValue()[1];
+                        ambientColor.z = pmtrl->ambientColor.getValues(0)->getValue()[2];
+                                                
+                    }
+                    if( !!pmtrl->transparency.getValues(0) ) {
+                        ftransparency = pmtrl->transparency.getValues(0)[0];
+                    }
+                }
+                _Coin3dCreateTriMeshData(psep, trimesh);
+                psep->unref();
+                FOREACH(it, trimesh.vertices) {
+                    *it *= vscale;
+                }
+                return true;
+            }
+        }                        
+        mySceneInput.closeFile();
+        SoDB::readunlock();
+#endif
+
+#ifdef OPENRAVE_IVCON
+        RAVELOG_DEBUG("using ivcon for geometry reading\n");
+        vector<float> vertices;
+        if( ivcon::ReadFile(filename.c_str(), vertices, trimesh.indices) ) {
+            trimesh.vertices.resize(vertices.size());
+            std::copy(vertices.begin(), vertices.end(), trimesh.vertices.begin());
+            FOREACH(it, trimesh.vertices) {
+                *it *= vScale;
+            }
+            return true;
+        }
+#endif
+        return false;
     }
 
     struct XMLREADERDATA
@@ -678,7 +919,8 @@ namespace OpenRAVEXMLParser
                 else {
                     RAVELOG_WARN(str(boost::format("type %s not supported\n")%type));
                 }
-
+                _renderfilename.first.resize(0);
+                _collisionfilename.first.resize(0);
                 _itgeomprop->_bDraw = bDraw;
                 _itgeomprop->_bModifiable = bModifiable;
                 return PE_Support;
@@ -725,7 +967,6 @@ namespace OpenRAVEXMLParser
                         _plink->collision.ApplyTransform(tnew);
                         _plink->SetTransform(tOrigTrans);
                     }
-
                     _pcurreader.reset();
                 }
                 return false;
@@ -754,13 +995,13 @@ namespace OpenRAVEXMLParser
                     _itgeomprop->_t.rot = (tnew*_itgeomprop->_t).rot;
                 }
                 else if( xmlname == "render" ) {
-                    // check attributes for format (default is vrml)
-                    string renderfile;
-                    _itgeomprop->vRenderScale = Vector(1,1,1);
-                    _ss >> renderfile;
-                    _ss >> _itgeomprop->vRenderScale.x; _itgeomprop->vRenderScale.y = _itgeomprop->vRenderScale.z = _itgeomprop->vRenderScale.x;
-                    _ss >> _itgeomprop->vRenderScale.y >> _itgeomprop->vRenderScale.z;
-                    _itgeomprop->renderfile = !_fnGetModelsDir ? renderfile : _fnGetModelsDir(renderfile);
+                    string orgfilename;
+                    Vector vscale(1,1,1);
+                    _ss >> orgfilename;
+                    _ss >> vscale.x; vscale.y = vscale.z = vscale.x;
+                    _ss >> vscale.y >> vscale.z;
+                    _renderfilename.first = !_fnGetModelsDir ? orgfilename : _fnGetModelsDir(orgfilename);
+                    _renderfilename.second = vscale;
                 }
                 else if( xmlname == "diffusecolor" ) {
                     _ss >> _itgeomprop->diffuseColor.x >> _itgeomprop->diffuseColor.y >> _itgeomprop->diffuseColor.z;
@@ -772,6 +1013,32 @@ namespace OpenRAVEXMLParser
                     _ss >> _itgeomprop->ftransparency;
                 }
                 else if( xmlname == _processingtag ) {
+                    if( _itgeomprop->GetType() == KinBody::Link::GEOMPROPERTIES::GeomTrimesh ) {
+                        bool bSuccess = false;
+                        if( _collisionfilename.first.size() > 0 ) {
+                            _itgeomprop->vRenderScale = _renderfilename.second;
+                            _itgeomprop->renderfile = _renderfilename.first;
+                            if( !_CreateTriMeshData(_collisionfilename.first, _collisionfilename.second, _itgeomprop->collisionmesh, _itgeomprop->diffuseColor, _itgeomprop->ambientColor, _itgeomprop->ftransparency) ) {
+                                RAVELOG_WARN(str(boost::format("failed to find %s\n")%_collisionfilename.first));
+                            }
+                            else {
+                                bSuccess = true;
+                            }
+                        }
+                        if( _renderfilename.first.size() > 0 ) {
+                            _itgeomprop->vRenderScale = _renderfilename.second;
+                            _itgeomprop->renderfile = _renderfilename.first;
+                            if( !bSuccess ) {
+                                if( !_CreateTriMeshData(_renderfilename.first, _renderfilename.second, _itgeomprop->collisionmesh, _itgeomprop->diffuseColor, _itgeomprop->ambientColor, _itgeomprop->ftransparency) ) {
+                                    RAVELOG_WARN(str(boost::format("failed to find %s\n")%_renderfilename.first));
+                                }
+                                else {
+                                    bSuccess = true;
+                                }
+                            }
+                        }
+                    }
+
                     if( _itgeomprop->GetType() == KinBody::Link::GEOMPROPERTIES::GeomCylinder ) { // axis has to point on y
                         // rotate on x axis by pi/2
                         Transform trot;
@@ -792,94 +1059,32 @@ namespace OpenRAVEXMLParser
                     // could be type specific features
                     switch(_itgeomprop->GetType()) {
                     case KinBody::Link::GEOMPROPERTIES::GeomSphere:
-                        if( xmlname == "radius" )
+                        if( xmlname == "radius" ) {
                             _ss >> _itgeomprop->vGeomData.x;
+                        }
                         break;
                     case KinBody::Link::GEOMPROPERTIES::GeomBox:
-                        if( xmlname == "extents" )
+                        if( xmlname == "extents" ) {
                             _ss >> _itgeomprop->vGeomData.x >> _itgeomprop->vGeomData.y >> _itgeomprop->vGeomData.z;
+                        }
                         break;
                     case KinBody::Link::GEOMPROPERTIES::GeomCylinder:
-                        if( xmlname == "radius")
+                        if( xmlname == "radius") {
                             _ss >> _itgeomprop->vGeomData.x;
-                        else if( xmlname == "height" )
+                        }
+                        else if( xmlname == "height" ) {
                             _ss >> _itgeomprop->vGeomData.y;
+                        }
                         break;
                     case KinBody::Link::GEOMPROPERTIES::GeomTrimesh:
                         if( xmlname == "data" || xmlname == "collision") {
-                            string orgrenderfile;
-                            Vector vScale(1,1,1);
-                            _ss >> orgrenderfile;
-                            _ss >> vScale.x; vScale.y = vScale.z = vScale.x;
-                            _ss >> vScale.y >> vScale.z;
-                            string renderfile = !_fnGetModelsDir ? orgrenderfile : _fnGetModelsDir(orgrenderfile);
-
-                            bool bSuccess = false;
-                            if( renderfile.size() > 0 ) {
-#ifdef OPENRAVE_COIN3D
-                                if(!SoDB::isInitialized()) {
-                                    SoDB::init();
-                                }
-                                SoDB::readlock(); // have to lock coin3d, or otherwise state gets corrupted
-                                SoInput mySceneInput;
-                                if (!mySceneInput.openFile(renderfile.c_str())) {
-                                    RAVELOG_WARN(str(boost::format("Failed to open %s for KinBody:TriMesh\n")%renderfile));
-                                    GetXMLErrorCount()++;
-                                }
-                                else {
-                                    // SoDB::readAll memory leaks!
-                                    SoSeparator* psep = SoDB::readAll(&mySceneInput);
-                                    if( !!psep ) {
-                                        // try to extract a material
-                                        SoSearchAction search;
-                                        search.setType(SoMaterial::getClassTypeId());
-                                        search.setInterest(SoSearchAction::ALL);
-                                        psep->ref();
-                                        search.apply(psep);
-                                        for(int i = 0; i < search.getPaths().getLength(); ++i) {
-                                            SoPath* path = search.getPaths()[i];
-                                            SoMaterial* pmtrl = (SoMaterial*)path->getTail();
-                                            if( !pmtrl ) {
-                                                continue;
-                                            }
-                                            if( !!pmtrl->diffuseColor.getValues(0) ) {
-                                                _itgeomprop->diffuseColor.x = pmtrl->diffuseColor.getValues(0)->getValue()[0];
-                                                _itgeomprop->diffuseColor.y = pmtrl->diffuseColor.getValues(0)->getValue()[1];
-                                                _itgeomprop->diffuseColor.z = pmtrl->diffuseColor.getValues(0)->getValue()[2];
-                                            }
-                                            if( !!pmtrl->ambientColor.getValues(0) ) {
-                                                _itgeomprop->ambientColor.x = pmtrl->ambientColor.getValues(0)->getValue()[0];
-                                                _itgeomprop->ambientColor.y = pmtrl->ambientColor.getValues(0)->getValue()[1];
-                                                _itgeomprop->ambientColor.z = pmtrl->ambientColor.getValues(0)->getValue()[2];
-                                                
-                                            }
-                                            if( !!pmtrl->transparency.getValues(0) ) {
-                                                _itgeomprop->ftransparency = pmtrl->transparency.getValues(0)[0];
-                                            }
-                                        }
-                                        CreateTriMeshData(psep, _itgeomprop->collisionmesh);
-                                        psep->unref();
-                                        FOREACH(it, _itgeomprop->collisionmesh.vertices) {
-                                            *it *= vScale;
-                                        }
-                                        bSuccess = true;
-                                    }
-                                }
-                        
-                                mySceneInput.closeFile();
-                                SoDB::readunlock();
-#endif
-
-                                if( !bSuccess ) {
-                                    ivcon::ReadFile(renderfile.c_str(), _itgeomprop->collisionmesh);
-                                    RAVELOG_VERBOSE(str(boost::format("trimesh verts: %d, inds: %d\n")%_itgeomprop->collisionmesh.vertices.size()%_itgeomprop->collisionmesh.indices.size()));
-                                    FOREACH(it, _itgeomprop->collisionmesh.vertices)
-                                        *it *= vScale;
-                                }
-                            }
-                            else {
-                                RAVELOG_WARN(str(boost::format("failed to find %s\n")%orgrenderfile));
-                            }
+                            string orgfilename;
+                            Vector vscale(1,1,1);
+                            _ss >> orgfilename;
+                            _ss >> vscale.x; vscale.y = vscale.z = vscale.x;
+                            _ss >> vscale.y >> vscale.z;
+                            _collisionfilename.first = !_fnGetModelsDir ? orgfilename : _fnGetModelsDir(orgfilename);
+                            _collisionfilename.second = vscale;
                         }
                         else if( xmlname == "vertices" ) {
                             vector<dReal> values((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
@@ -1080,6 +1285,7 @@ namespace OpenRAVEXMLParser
         KinBodyPtr _pparent;
         KinBody::LinkPtr _offsetfrom;                    ///< all transformations are relative to the this body
         list<KinBody::Link::GEOMPROPERTIES>::iterator _itgeomprop;
+        std::pair< string, Vector > _renderfilename, _collisionfilename;
         bool _bSkipGeometry;
         Transform tOrigTrans;
         // Mass

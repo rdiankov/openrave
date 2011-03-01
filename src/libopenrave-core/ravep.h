@@ -181,19 +181,6 @@ class ColladaWriter;
 using namespace OpenRAVE;
 using namespace std;
 
-#ifdef OPENRAVE_COIN3D
-
-#include <Inventor/SoDB.h>
-#include <Inventor/SoInput.h>
-#include <Inventor/nodes/SoMaterial.h>
-#include <Inventor/nodes/SoSeparator.h>
-#include <Inventor/actions/SoSearchAction.h>
-
-/// Triangles SoNode and fills a dTriMeshDataID structure
-void CreateTriMeshData(SoNode* pnode, KinBody::Link::TRIMESH& tri);
-
-#endif
-
 #ifdef _WIN32
 #elif defined(__APPLE_CC__)
 #define strnicmp strncasecmp
@@ -265,7 +252,6 @@ void RaveWriteColladaFile(EnvironmentBasePtr penv, const std::string& filename);
 void RaveWriteColladaFile(KinBodyPtr pbody, const std::string& filename);
 void RaveWriteColladaFile(RobotBasePtr probot, const std::string& filename);
 
-#include "ivcon.h"
 #include "xmlreaders.h"
 #include "environment-core.h"
 

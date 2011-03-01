@@ -110,4 +110,6 @@ if (QT_FOUND AND SOQT_LIBRARY_FOUND AND OPENGL_FOUND)
   set_target_properties(qtcoinrave PROPERTIES COMPILE_FLAGS "${QTCOIN_COMPILE_FLAGS} ${SOQT_CXXFLAGS} ${COIN_CXXFLAGS}"
                                       LINK_FLAGS "${QTCOIN_LINK_FLAGS}")
   install(TARGETS qtcoinrave DESTINATION share/openrave/plugins)
+else()
+  message(STATUS "WARNING: Could not find Coin3D/SoQt/Qt libraries, will not compile qtcoinrave viewer.")
 endif()

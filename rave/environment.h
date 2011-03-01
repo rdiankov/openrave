@@ -37,7 +37,7 @@ public:
     /// Removing all environment pointer might not be enough to destroy the environment resources.
     virtual void Destroy()=0;
 
-    /// \brief Resets all objects of the scene (preserves all problems, planners).
+    /// \brief Resets all objects of the scene (preserves all problems, planners). <b>[multi-thread safe]</b>
     ///
     /// Do not call inside a SimulationStep call
     virtual void Reset()=0;
@@ -104,7 +104,8 @@ public:
     /// \return An environment of the same type as this environment containing the copied information.
     virtual EnvironmentBasePtr CloneSelf(int options) = 0;
 
-    /// Each function takes an optional pointer to a CollisionReport structure and returns true if collision occurs.
+    /// \brief Each function takes an optional pointer to a CollisionReport structure and returns true if collision occurs. <b>[multi-thread safe]</b>
+    ///
     /// \name Collision specific functions.
     /// \anchor env_collision_checking
     //@{
@@ -165,12 +166,12 @@ public:
     virtual bool SetPhysicsEngine(PhysicsEngineBasePtr physics) = 0;
     virtual PhysicsEngineBasePtr GetPhysicsEngine() const = 0;
 
-    /// \brief Makes one simulation time step.
+    /// \brief Makes one simulation time step. <b>[multi-thread safe]</b>
     ///
     /// Can be called manually by the user inside planners. Keep in mind that the internal simulation thread also calls this function periodically. See \ref arch_simulation for more about the simulation thread.
     virtual void StepSimulation(dReal timeStep) = 0;
 
-    /** \brief Start the internal simulation thread.
+    /** \brief Start the internal simulation thread. <b>[multi-thread safe]</b>
 
         Resets simulation time to 0. See \ref arch_simulation for more about the simulation thread.
         
@@ -179,17 +180,17 @@ public:
     */
     virtual void StartSimulation(dReal fDeltaTime, bool bRealTime=true) = 0;
 
-    /// \brief Stops the internal physics loop, stops calling SimulateStep for all modules
+    /// \brief Stops the internal physics loop, stops calling SimulateStep for all modules. <b>[multi-thread safe]</b>
     ///
     /// See \ref arch_simulation for more about the simulation thread.
     virtual void StopSimulation() = 0;
 
-    /// \brief Return true if inner simulation loop is executing
+    /// \brief Return true if inner simulation loop is executing. <b>[multi-thread safe]</b>
     ///
     /// See \ref arch_simulation for more about the simulation thread.
     virtual bool IsSimulationRunning() const = 0;
     
-    /// \brief Return simulation time since the start of the environment (in microseconds).
+    /// \brief Return simulation time since the start of the environment (in microseconds). <b>[multi-thread safe]</b>
     ///
     /// See \ref arch_simulation for more about the simulation thread.
     virtual uint64_t GetSimulationTime() = 0;
@@ -205,17 +206,17 @@ public:
     /// Saves a scene depending on the filename extension. Default is in COLLADA format
     virtual bool Save(const std::string& filename) = 0;
 
-    /** \brief Initializes a robot from an XML file. The robot should not be added the environment when calling this function.
+    /** \brief Initializes a robot from an XML file. The robot should not be added the environment when calling this function. <b>[multi-thread safe]</b>
         
         \param robot If a null pointer is passed, a new robot will be created, otherwise an existing robot will be filled
         \param filename the name of the file to open
         \param atts The attribute/value pair specifying loading options. Defined in \ref arch_robot.
     */
     virtual RobotBasePtr ReadRobotXMLFile(RobotBasePtr robot, const std::string& filename, const AttributesList& atts = AttributesList()) = 0;
-    /// \brief Creates a new robot from an XML file with no extra load options specified.
+    /// \brief Creates a new robot from an XML file with no extra load options specified. <b>[multi-thread safe]</b>
     virtual RobotBasePtr ReadRobotXMLFile(const std::string& filename) = 0;
 
-    /** \brief Initialize a robot from an XML formatted string
+    /** \brief Initialize a robot from an XML formatted string. <b>[multi-thread safe]</b>
     
         The robot should not be added the environment when calling this function.
         \param robot If a null pointer is passed, a new robot will be created, otherwise an existing robot will be filled
@@ -223,17 +224,17 @@ public:
     */
     virtual RobotBasePtr ReadRobotXMLData(RobotBasePtr robot, const std::string& data, const AttributesList& atts = AttributesList()) = 0;
 
-    /** \brief Initializes a kinematic body from an XML file. The body should not be added to the environment when calling this function.
+    /** \brief Initializes a kinematic body from an XML file. The body should not be added to the environment when calling this function. <b>[multi-thread safe]</b>
         
         \param filename the name of the file to open
         \param body If a null pointer is passed, a new body will be created, otherwise an existing robot will be filled
         \param atts The attribute/value pair specifying loading options. Defined in \ref arch_kinbody.
     */
     virtual KinBodyPtr ReadKinBodyXMLFile(KinBodyPtr body, const std::string& filename, const AttributesList& atts = AttributesList()) = 0;
-    /// \brief Creates a new kinbody from an XML file with no extra load options specified.
+    /// \brief Creates a new kinbody from an XML file with no extra load options specified. <b>[multi-thread safe]</b>
     virtual KinBodyPtr ReadKinBodyXMLFile(const std::string& filename) = 0;
 
-    /** \brief Initializes a kinematic body from an XML formatted string.
+    /** \brief Initializes a kinematic body from an XML formatted string. <b>[multi-thread safe]</b>
         
         The body should not be added to the environment when calling this function.
         \param body If a null pointer is passed, a new body will be created, otherwise an existing robot will be filled
@@ -241,7 +242,7 @@ public:
     */
     virtual KinBodyPtr ReadKinBodyXMLData(KinBodyPtr body, const std::string& data, const AttributesList& atts = AttributesList()) = 0;
 
-    /** \brief Initializes an interface from an XML file.
+    /** \brief Initializes an interface from an XML file. <b>[multi-thread safe]</b>
         
         \param pinterface If a null pointer is passed, a new interface will be created, otherwise an existing interface will be filled
         \param filename the name of the file to open
@@ -250,7 +251,7 @@ public:
     virtual InterfaceBasePtr ReadInterfaceXMLFile(InterfaceBasePtr pinterface, InterfaceType type, const std::string& filename, const AttributesList& atts = AttributesList()) = 0;
     virtual InterfaceBasePtr ReadInterfaceXMLFile(const std::string& filename, const AttributesList& atts = AttributesList()) = 0;
 
-    /** \brief Initializes an interface from an XML formatted string.
+    /** \brief Initializes an interface from an XML formatted string. <b>[multi-thread safe]</b>
     
         \param pinterface If a null pointer is passed, a new interface will be created, otherwise an existing interface will be filled
         \param data string containing XML data
