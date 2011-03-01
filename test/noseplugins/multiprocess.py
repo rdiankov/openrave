@@ -328,8 +328,10 @@ class MultiProcessTestRunner(TextTestRunner):
                 iworker, addr, newtask_addrs, batch_result = resultQueue.get(timeout=nexttimeout)
                 log.debug('Results received for worker %d, %s, new tasks: %d', iworker,addr,len(newtask_addrs))
                 try:
-                    print addr
-                    tasks.remove(addr)
+                    try:
+                        tasks.remove(addr)
+                    except ValueError:
+                        log.warn('worker %s failed to remove from tasks: %s',ix,addr)
                     total_tasks += len(newtask_addrs)
                     for newaddr in newtask_addrs:
                         tasks.append(newaddr)

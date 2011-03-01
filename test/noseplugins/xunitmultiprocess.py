@@ -193,6 +193,11 @@ class Xunitmp(Plugin):
         """Initializes a timer before starting a test."""
         self._timer = time()
 
+    def addstream(self,xml):
+        try:
+            self.xunitstream.append(xml)
+        except Exception, e:
+            print 'xunitmultiprocess add stream len=%d,%s'%(len(xml),str(e))
     def addError(self, test, err, capt=None):
         """Add error output to Xunit report.
         """
@@ -213,21 +218,12 @@ class Xunitmp(Plugin):
         systemout = ''
         if test.capturedOutput is not None:
             systemout = '<system-out><![CDATA['+escape_cdata(str(test.capturedOutput))+']]></system-out>'
-        self.xunitstream.append(
-            '<testcase classname=%(cls)s name=%(name)s time="%(taken)f">'
-            '%(systemout)s'
-            '<%(type)s type=%(errtype)s message=%(message)s><![CDATA[%(tb)s]]>'
-            '</%(type)s></testcase>' %
-            {'cls': self._quoteattr('.'.join(id[:-1])),
-             'name': self._quoteattr(name),
-             'taken': taken,
-             'type': type,
-             'errtype': self._quoteattr(nice_classname(err[0])),
-             'message': self._quoteattr(exc_message(err)),
-             'tb': escape_cdata(tb),
-             'systemout':systemout
-             })
-
+        xml = """<testcase classname=%(cls)s name=%(name)s time="%(taken)f">
+%(systemout)s
+<%(type)s type=%(errtype)s message=%(message)s><![CDATA[%(tb)s]]>
+</%(type)s></testcase>
+""" %{'cls': self._quoteattr('.'.join(id[:-1])), 'name': self._quoteattr(name), 'taken': taken, 'type': type, 'errtype': self._quoteattr(nice_classname(err[0])), 'message': self._quoteattr(exc_message(err)), 'tb': escape_cdata(tb), 'systemout':systemout}
+        self.addstream(xml)
     def addFailure(self, test, err, capt=None, tb_info=None):
         """Add failure output to Xunit report.
         """
@@ -242,19 +238,12 @@ class Xunitmp(Plugin):
         systemout = ''
         if test.capturedOutput is not None:
             systemout = '<system-out><![CDATA['+escape_cdata(str(test.capturedOutput))+']]></system-out>'
-        self.xunitstream.append(
-            '<testcase classname=%(cls)s name=%(name)s time="%(taken)f">'
-            '%(systemout)s'
-            '<failure type=%(errtype)s message=%(message)s><![CDATA[%(tb)s]]>'
-            '</failure></testcase>' %
-            {'cls': self._quoteattr('.'.join(id[:-1])),
-             'name': self._quoteattr(name),
-             'taken': taken,
-             'errtype': self._quoteattr(nice_classname(err[0])),
-             'message': self._quoteattr(exc_message(err)),
-             'tb': escape_cdata(tb),
-             'systemout':systemout
-             })
+        xml = """<testcase classname=%(cls)s name=%(name)s time="%(taken)f">
+%(systemout)s
+<failure type=%(errtype)s message=%(message)s><![CDATA[%(tb)s]]>
+</failure></testcase>
+""" %{'cls': self._quoteattr('.'.join(id[:-1])), 'name': self._quoteattr(name), 'taken': taken, 'errtype': self._quoteattr(nice_classname(err[0])), 'message': self._quoteattr(exc_message(err)), 'tb': escape_cdata(tb), 'systemout':systemout}
+        self.addstream(xml)
 
     def addSuccess(self, test, capt=None):
         """Add success output to Xunit report.
@@ -269,11 +258,6 @@ class Xunitmp(Plugin):
         systemout=''
         if test.capturedOutput is not None:
             systemout = '<system-out><![CDATA['+escape_cdata(str(test.capturedOutput))+']]></system-out>'
-        self.xunitstream.append(
-            '<testcase classname=%(cls)s name=%(name)s '
-            'time="%(taken)f" >%(systemout)s</testcase>' %
-            {'cls': self._quoteattr('.'.join(id[:-1])),
-             'name': self._quoteattr(name),
-             'taken': taken,
-             'systemout':systemout
-             })
+        xml = """<testcase classname=%(cls)s name=%(name)s time="%(taken)f" >%(systemout)s</testcase>
+""" % {'cls': self._quoteattr('.'.join(id[:-1])), 'name': self._quoteattr(name), 'taken': taken, 'systemout':systemout }
+        self.addstream(xml)
