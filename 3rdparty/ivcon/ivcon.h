@@ -5,7 +5,7 @@
 
 namespace ivcon {
 
-bool ReadFile(const char* pfilename, , std::vector<float>& vertices, std::vector<int>& indices);
+bool ReadFile(const char* pfilename, std::vector<float>& vertices, std::vector<int>& indices);
 
 }
 
