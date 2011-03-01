@@ -1,4 +1,5 @@
-
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 # Copyright (C) 2011 Rosen Diankov (rosen.diankov@gmail.com)
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
