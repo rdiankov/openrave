@@ -35,6 +35,8 @@
 # include <fstream>
 # include <cstring>
 
+using namespace std;
+
 # define ERROR 1
 # define G1_SECTION_MODEL_QUADS 18
 # define G1_SECTION_MODEL_TEXTURE_NAMES 19
