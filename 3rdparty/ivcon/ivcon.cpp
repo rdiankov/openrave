@@ -34,7 +34,9 @@
 # include <iomanip>
 # include <fstream>
 # include <cstring>
-
+#include <assert.h>
+#include <vector>
+#include <boost/thread/mutex.hpp>
 using namespace std;
 
 # define ERROR 1
@@ -43,8 +45,7 @@ using namespace std;
 # define G1_SECTION_MODEL_VERT_ANIMATION 20
 # define GMOD_MAX_SECTIONS 32
 # define GMOD_UNUSED_VERTEX 65535
-//# define PI 3.141592653589793238462643
-
+# define PI 3.141592653589793238462643
 # define DEG_TO_RAD   ( PI / 180.0 )
 # define RAD_TO_DEG   ( 180.0 / PI )
 
@@ -2671,28 +2672,28 @@ bool ReadFile(const char* pfilename, std::vector<float>& vertices, std::vector<i
         return false;
 
     // read in the data
-    vertices.resize(cor3_num);
+    vertices.resize(cor3_num*3);
     for(size_t i = 0; i < vertices.size(); ++i) {
-        vertices[i].x = cor3[0][i];
-        vertices[i].y = cor3[1][i];
-        vertices[i].z = cor3[2][i];
+        vertices[3*i+0] = cor3[0][i];
+        vertices[3*i+1] = cor3[1][i];
+        vertices[3*i+2] = cor3[2][i];
     }
 
     if( face_num == 0 ) {
         // assume every triplet of vertices form a triangle
-        int N = vertices.size()/3;
+        int N = vertices.size()/9;
         indices.resize(0); indices.reserve(N*3);
         for(int i = 0; i < N*3; i += 3) {
             // prune faces with zero normals
-            Vector v0 = vertices[i];
-            Vector v1 = vertices[i+1];
-            Vector v2 = vertices[i+2];
-            Vector vcross;
-            if( (v1-v0).cross(v2-v0).lengthsqr3() > 1e-10 ) {
+//            Vector v0 = vertices[i];
+//            Vector v1 = vertices[i+1];
+//            Vector v2 = vertices[i+2];
+//            Vector vcross;
+//            if( (v1-v0).cross(v2-v0).lengthsqr3() > 1e-10 ) {
                 indices.push_back(i);
                 indices.push_back(i+1);
                 indices.push_back(i+2);
-            }
+                //            }
         }
     }
     else {
@@ -7631,7 +7632,7 @@ void init_program_data ( void )
 
 int iv_read_binary ( FILE *filein )
 {
-    RAVELOG_WARN("does not support binary IV files\n");
+    //printf("does not support binary IV files\n");
     return 1;
 }
 

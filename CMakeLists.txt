@@ -333,17 +333,6 @@ else()
 endif()
 
 pkg_check_modules(ASSIMP assimp)
-
-if( NOT ASSIMP_FOUND )
-  # if assimp is not found, then have to rely on the ivcon converter
-  add_subdirectory(3rdparty/ivcon)
-  set(IVCON_FOUND 1)
-  set(IVCON_LIBRARY ivcon)
-  set(IVCON_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/ivcon")
-else()
-  set(IVCON_FOUND 0)
-endif()
-
 find_package(Coin)
 
 if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
@@ -445,6 +434,16 @@ if( NOT COLLADA_FOUND )
 endif()
 
 link_directories(${OPENRAVE_LINK_DIRS})
+
+if( NOT ASSIMP_FOUND )
+  # if assimp is not found, then have to rely on the ivcon converter
+  add_subdirectory(3rdparty/ivcon)
+  set(IVCON_FOUND 1)
+  set(IVCON_LIBRARY ivcon)
+  set(IVCON_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/ivcon")
+else()
+  set(IVCON_FOUND 0)
+endif()
 
 ## check qhull library
 check_library_exists(qhull qh_new_qhull "" QHULL_FOUND_LIB)
