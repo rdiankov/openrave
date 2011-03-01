@@ -347,7 +347,7 @@ class MultiProcessTestRunner(TextTestRunner):
                 if self.config.multiprocess_restartworker:
                     log.debug('joining worker %s',iworker)
                     # wait for working, but not that important if worker cannot be joined
-                    # in fact, for workers that add to testQueue, they will never terminate
+                    # in fact, for workers that add to testQueue, they will not terminate until all their items are read
                     workers[iworker].join(timeout=1)
                     if not shouldStop.is_set() and not testQueue.empty():
                         currentaddr = Array('c',' '*1000)
@@ -631,6 +631,7 @@ def runner(ix, testQueue, resultQueue, currentaddr, currentstart, shouldStop,
         except Empty:
             log.debug("Worker %s timed out waiting for tasks", ix)
     finally:
+        log.debug("Worker %s closing queues",ix)
         testQueue.close()
         resultQueue.close()
     log.debug("Worker %s ending", ix)
