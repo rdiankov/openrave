@@ -1,5 +1,5 @@
-#ifndef OPENRAVE_IVCON
-#define OPENRAVE_IVCON
+#ifndef OPENRAVE_IVCON_H
+#define OPENRAVE_IVCON_H
 
 #include <vector>
 
