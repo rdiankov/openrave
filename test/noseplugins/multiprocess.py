@@ -369,12 +369,12 @@ class MultiProcessTestRunner(TextTestRunner):
             except Empty:
                 log.debug("Timed out with %s tasks pending", len(tasks))
                 any_alive = False
-                for w in workers:
+                for iworker, w in enumerate(workers):
                     if w.is_alive():
                         worker_addr = w.currentaddr.value
                         timeprocessing = time.time()-w.currentstart.value
                         if len(worker_addr) > 0 and timeprocessing > self.config.multiprocess_timeout-0.1:
-                            log.debug('timed out: %s',worker_addr)
+                            log.debug('timed out worker %s: %s',iworker,worker_addr)
                             w.currentaddr.value = ''
                             os.kill(w.pid, signal.SIGINT)
                         any_alive = True
@@ -589,6 +589,7 @@ def runner(ix, testQueue, resultQueue, currentaddr, currentstart, shouldStop,
                 if shouldStop.is_set():
                     log.exception('Worker %d STOPPED',ix)
                     break
+                log.debug("Worker %s Test Starting",ix)
                 result = makeResult()
                 test = loader.loadTestsFromNames([test_addr])
                 test.testQueue = testQueue
