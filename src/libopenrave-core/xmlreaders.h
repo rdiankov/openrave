@@ -312,14 +312,13 @@ namespace OpenRAVEXMLParser
 #ifdef OPENRAVE_IVCON
         RAVELOG_DEBUG("using ivcon for geometry reading\n");
         vector<float> vertices;
-//        if( ivcon::ReadFile(filename.c_str(), vertices, trimesh.indices) ) {
-//            trimesh.vertices.resize(vertices.size());
-//            std::copy(vertices.begin(), vertices.end(), trimesh.vertices.begin());
-//            FOREACH(it, trimesh.vertices) {
-//                *it *= vscale;
-//            }
-//            return true;
-//        }
+        if( ivcon::ReadFile(filename.c_str(), vertices, trimesh.indices) ) {
+            trimesh.vertices.resize(vertices.size()/3);
+            for(size_t i = 0; i < vertices.size(); i += 3) {
+                trimesh.vertices[i/3] = Vector(vscale.x*vertices[i],vscale.y*vertices[i+1],vscale.z*vertices[i+2]);
+            }
+            return true;
+        }
 #endif
         return false;
     }
