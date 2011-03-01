@@ -555,7 +555,7 @@ def runner(ix, testQueue, resultQueue, currentaddr, currentstart, shouldStop,
             config.plugins.addPlugin(plugin)
     config.plugins.configure(config.options,config)
     config.plugins.begin()
-    log.debug("Worker %s executing", ix)
+    log.debug("Worker %s executing, pid=%d", ix,os.getpid())
     loader = loaderClass(config=config)
     loader.suiteClass.suiteClass = NoSharedFixtureContextSuite
 
