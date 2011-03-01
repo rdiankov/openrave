@@ -234,6 +234,7 @@ class MultiProcess(Plugin):
                                       loaderClass=self.loaderClass)
 
 class MultiProcessTestRunner(TextTestRunner):
+    waitkilltime = 2.0 # max time to wait to terminate a process that does not respond to SIGINT
     def __init__(self, **kw):
         self.loaderClass = kw.pop('loaderClass', loader.defaultTestLoader)
         super(MultiProcessTestRunner, self).__init__(**kw)
@@ -370,9 +371,8 @@ class MultiProcessTestRunner(TextTestRunner):
                             # therefore, send multiple signals until an exception is caught. If this takes too long, then terminate the process
                             w.keyboardCaught.clear()
                             startkilltime = time.time()
-                            waitkilltime = 2.0
                             while not w.keyboardCaught.is_set():
-                                if time.time()-startkilltime > waitkilltime:
+                                if time.time()-startkilltime > self.waitkilltime:
                                     # have to terminate...
                                     log.debug("terminating worker %s",iworker)
                                     w.terminate()
@@ -601,7 +601,6 @@ def runner(ix, testQueue, resultQueue, currentaddr, currentstart, keyboardCaught
                 if shouldStop.is_set():
                     log.exception('Worker %d STOPPED',ix)
                     break
-                log.debug("Worker %s Test Starting",ix)
                 result = makeResult()
                 test = loader.loadTestsFromNames([test_addr])
                 test.testQueue = testQueue
