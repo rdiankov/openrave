@@ -155,6 +155,8 @@ template <class T> boost::shared_ptr<T> sptr_from(boost::weak_ptr<T> const& wpt)
     return boost::shared_ptr<T>(wpt); // throws on wpt.expired()
 }
 
+using namespace OpenRAVE;
+
 template <typename Real>
 class IKSolutionTemplate
 {
@@ -169,10 +171,10 @@ class IKSolutionTemplate
             else {
                 BOOST_ASSERT(pfree != NULL);
                 psolution[i] = pfree[basesol[i].freeind]*basesol[i].fmul + basesol[i].foffset;
-                if( psolution[i] > M_PI )
-                    psolution[i] -= 2*M_PI;
-                else if( psolution[i] < -M_PI )
-                    psolution[i] += 2*M_PI;
+                if( psolution[i] > PI )
+                    psolution[i] -= 2*PI;
+                else if( psolution[i] < -PI )
+                    psolution[i] += 2*PI;
             }
         }
     }
@@ -195,8 +197,6 @@ class IKSolutionTemplate
 
 typedef IKSolutionTemplate<float> IKSolutionFloat;
 typedef IKSolutionTemplate<double> IKSolutionDouble;
-
-using namespace OpenRAVE;
 
 #ifdef RAVE_REGISTER_BOOST
 #include BOOST_TYPEOF_INCREMENT_REGISTRATION_GROUP()
