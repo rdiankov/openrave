@@ -19439,3 +19439,4 @@ int xgl_write ( FILE *fileout )
 }
 
 }
+
