@@ -1103,6 +1103,8 @@ def test_ik():
     from openravepy.ikfast import SolverStoreSolution, SolverSolution, combinations, SolverSequence, fmod, SolverRotation, SolverIKChainTransform6D, SolverBranchConds, SolverMatrixInverse, SolverCoeffFunction, SolverCheckZeros, SolverBreak
     ikmodel=self
     self = solver
+    freeindices = ikmodel.freeindices
+    log = ikfast.log
     
     chaintree = solver.generateIkSolver(baselink=baselink,eelink=eelink,freejointinds=freejointinds,solvefn=solvefn)
     code=ikfast_generator_cpp.CodeGenerator().generate(chaintree)

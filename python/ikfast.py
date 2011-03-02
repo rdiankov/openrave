@@ -20,7 +20,7 @@ from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2011 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Lesser GPL, Version 3'
-__version__ = '36'
+__version__ = '37'
 
 import sys, copy, time, math, datetime
 import __builtin__
@@ -2569,9 +2569,12 @@ class IKFastSolver(AutoReloader):
         allmonoms.sort()
         origmonoms = list(origmonoms)
         origmonoms.sort()
+        if len(allmonoms)<2*len(newreducedeqs):
+            log.warn('solveDialytically equations %d > %d, should be equal...', 2*len(newreducedeqs),len(allmonoms))
+            newreducedeqs = newreducedeqs[0:(len(allmonoms)/2)]
         if len(allmonoms)>2*len(newreducedeqs):
             raise self.CannotSolveError('solveDialytically: more unknowns than equations')
-        
+            
         Mall = [zeros((2*len(newreducedeqs),len(allmonoms))) for i in range(maxdegree+1)]
         exportcoeffeqs = [S.Zero]*(len(newreducedeqs)*len(origmonoms)*(maxdegree+1))
         for ipeq,peq in enumerate(newreducedeqs):
@@ -2593,8 +2596,12 @@ class IKFastSolver(AutoReloader):
                     subsvals = [(s,v.evalf()) for s,v in subs]
                     subs = subsvals+getsubs(subsvals)
                 A = Mall[maxdegree].subs(subs).evalf()
+                eps = 10**-(self.precision-3)
+#                 if A.shape[0] > A.shape[1]:
+#                     A = A.transpose() * A
+#                     eps *= eps
                 eigenvals = numpy.linalg.eigvals(numpy.array(numpy.array(A),numpy.float64))
-                if all([abs(f) > (10**-(self.precision-3)) for f in eigenvals]):
+                if all([abs(f) > eps for f in eigenvals]):
                     linearlyindependent = True
                     break
             if not linearlyindependent:
@@ -2771,8 +2778,9 @@ class IKFastSolver(AutoReloader):
     def solveAllEquations(self,AllEquations,curvars,othersolvedvars,solsubs,endbranchtree,currentcases=None,unknownvars=None):
         if len(curvars) == 0:
             return endbranchtree
+        
         if unknownvars is None:
-            unknownvars = []            
+            unknownvars = []
         log.info('%s %s',othersolvedvars,curvars)
         solsubs = solsubs[:]
         freevarinvsubs = [(f[1],f[0]) for f in self.freevarsubs]
@@ -3859,7 +3867,7 @@ class IKFastSolver(AutoReloader):
             finaleq = simplify(finaleq*denomlcm.as_basic()**2)
             complementvarindex = varindex-(varindex%2)+((varindex+1)%2)
             complementvar = unknownvars[complementvarindex]
-            finaleq = simplify(finaleq.subs(complementvar**2,1-unknownvar**2)).subs(allsymbols).expand()            
+            finaleq = simplify(finaleq.subs(complementvar**2,1-unknownvar**2)).subs(allsymbols).expand()
         else:
             # try to reduce finaleq
             p0 = Poly(simpleterms[0],unknownvars[varindex],unknownvars[varindex+1])
@@ -3870,10 +3878,12 @@ class IKFastSolver(AutoReloader):
                 if finaleq == S.Zero:
                     finaleq = expand(p0.as_basic().subs(allsymbols))
         if finaleq is None:
-            raise self.CannotSolveError('solvePairVariables: did not compute a final variable. This is a weird condition...')
+            log.warn('solvePairVariables: did not compute a final variable. This is a weird condition...')
+            return [self.solvePairVariablesHalfAngle(raweqns,var0,var1,othersolvedvars)]
         
         if not self.isValidSolution(finaleq):
-            raise self.CannotSolveError('failed to solve pairwise equation: %s'%str(finaleq))
+            log.warn('failed to solve pairwise equation: %s'%str(finaleq))
+            return [self.solvePairVariablesHalfAngle(raweqns,var0,var1,othersolvedvars)]
 
         if useconic:
             # conic roots solver not as robust as half-angle transform!
@@ -3885,7 +3895,8 @@ class IKFastSolver(AutoReloader):
         newunknownvars = unknownvars[:]
         newunknownvars.remove(unknownvar)
         if finaleq.has_any_symbols(*newunknownvars):
-            raise self.CannotSolveError('equation relies on unsolved variables  %s'%str(finaleq))
+            log.warn('equation relies on unsolved variables(%s): %s',newunknownvars,finaleq)
+            return [self.solvePairVariablesHalfAngle(raweqns,var0,var1,othersolvedvars)]
 
         if not finaleq.has_any_symbols(unknownvar):
             # somehow removed all variables, so try the general method
