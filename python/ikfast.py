@@ -2385,7 +2385,7 @@ class IKFastSolver(AutoReloader):
         othersymbols = list(rawpolyeqs[0][1].symbols)
         symbolsubs = [(symbols[i].subs(self.invsubs),symbols[i]) for i in range(len(symbols))]
         if len(symbols) != 6:
-            raise CannotSolveError('Kohli/Osvatic method requires 3 unknown variables')
+            raise self.CannotSolveError('Kohli/Osvatic method requires 3 unknown variables')
             
         # choose which leftvar can determine the singularity of the following equations!
         for i in range(0,6,2):
