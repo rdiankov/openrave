@@ -59,15 +59,7 @@
 
 using namespace std;
 
-#include <sys/timeb.h>    // ftime(), struct timeb
-
-#ifndef _WIN32
-#include <sys/time.h>
-#define Sleep(milli) usleep(1000*milli)
-#else
-#define WIN32_LEAN_AND_MEAN
-#include <winsock2.h>
-#endif
+#include <time.h>
 
 template<class T>
 inline T CLAMP_ON_RANGE(T value, T min, T max)
@@ -80,6 +72,9 @@ inline T CLAMP_ON_RANGE(T value, T min, T max)
 #define FORIT(it, v) for(it = (v).begin(); it != (v).end(); (it)++)
 
 #ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <winsock2.h>
+#include <sys/timeb.h>    // ftime(), struct timeb
 
 inline static uint32_t GetMilliTime()
 {
@@ -105,11 +100,18 @@ inline static uint64_t GetNanoTime()
     return (count.QuadPart * 1000000000) / freq.QuadPart;
 }
 
+inline static uint64_t GetNanoPerformanceTime() { return GetNanoTime(); }
+
 #else
+
+#if POSIX_TIMERS <= 0 && _POSIX_TIMERS <= 0
+#include <sys/time.h>
+#endif
+#define Sleep(milli) usleep(1000*milli)
 
 inline static void getWallTime(uint32_t& sec, uint32_t& nsec)
 {
-#if POSIX_TIMERS > 0
+#if defined(CLOCK_GETTIME_FOUND) && (POSIX_TIMERS > 0 || _POSIX_TIMERS > 0)
   struct timespec start;
   clock_gettime(CLOCK_REALTIME, &start);
   sec  = start.tv_sec;
@@ -141,6 +143,20 @@ inline static uint32_t GetMilliTime()
     uint32_t sec,nsec;
     getWallTime(sec,nsec);
     return (uint64_t)sec*1000 + (uint64_t)nsec/1000000;
+}
+
+inline static uint64_t GetNanoPerformanceTime()
+{
+#if defined(CLOCK_GETTIME_FOUND) && (POSIX_TIMERS > 0 || _POSIX_TIMERS > 0) && defined(_POSIX_MONOTONIC_CLOCK)
+  struct timespec start;
+  uint32_t sec, nsec;
+  clock_gettime(CLOCK_MONOTONIC, &start);
+  sec  = start.tv_sec;
+  nsec = start.tv_nsec;
+  return (uint64_t)sec*1000000000 + (uint64_t)nsec;
+#else
+  return GetNanoTime();
+#endif
 }
 
 #endif

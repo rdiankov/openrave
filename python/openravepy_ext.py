@@ -200,6 +200,11 @@ def transformInversePoints(T,points):
     kminus = T.shape[1]-1
     return numpy.dot(points-numpy.tile(T[0:kminus,kminus],(len(points),1)),T[0:kminus,0:kminus])
 
+def circleFit(pts):
+    """Very simple function to return the best fit circle. Used from time time and there's no other place to put it. Returns [center_x, center_y, radius]"""
+    x = numpy.linalg.lstsq(numpy.c_[pts[:,0],pts[:,1],numpy.ones(len(pts))],-pts[:,0]**2-pts[:,1]**2)[0]
+    return numpy.array([-0.5*x[0],-0.5*x[1], sqrt((x[0]**2+x[1]**2)/4-x[2])])
+
 def sequence_cross_product(*sequences):
     """iterates through the cross product of all items in the sequences"""
     # visualize an odometer, with "wheels" displaying "digits"...:

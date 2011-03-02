@@ -435,11 +435,11 @@ public:
             fkfn(&vjoints[0],eetrans,eerot);
             vsolutions.resize(0);
             uint64_t numtoaverage=10;
-            uint64_t starttime = GetNanoTime();
+            uint64_t starttime = GetNanoPerformanceTime();
             for(uint64_t j = 0; j < numtoaverage; ++j) {
                 ikfn(eetrans,eerot,vfree.size() > 0 ? &vfree[0] : NULL,vsolutions);
             }
-            vtimes[i] = (GetNanoTime()-starttime)/numtoaverage;
+            vtimes[i] = (GetNanoPerformanceTime()-starttime)/numtoaverage;
         }
         while(i-- > 0) {
             sout << vtimes[i] << " ";
