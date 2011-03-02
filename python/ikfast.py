@@ -1306,11 +1306,11 @@ class IKFastSolver(AutoReloader):
         AllEquations = self.buildEquationsFromTwoSides(Positions,Positionsee,jointvars,uselength=True)
         self.checkSolvability(AllEquations,solvejointvars,self.freejointvars)
 
-        try:
-            tree = self.solveAllEquations(AllEquations,curvars=solvejointvars[:],othersolvedvars = self.freejointvars[:],solsubs = self.freevarsubs[:],endbranchtree=endbranchtree)
-        except self.CannotSolveError:
+        #try:
+        tree = self.solveAllEquations(AllEquations,curvars=solvejointvars[:],othersolvedvars = self.freejointvars[:],solsubs = self.freevarsubs[:],endbranchtree=endbranchtree)
+        #except self.CannotSolveError:
             # build the raghavan/roth equations and solve with higher power methods
-            pass
+        #    pass
         tree = self.verifyAllEquations(AllEquations,solvejointvars,self.freevarsubs,tree)
         chaintree = SolverIKChainRay([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(v,i) for v,i in izip(self.freejointvars,self.ifreejointvars)], Pee=self.Tee[0:3,3].subs(self.freevarsubs), Dee=self.Tee[0,0:3].transpose().subs(self.freevarsubs),jointtree=tree,Dfk=Tfinal[0,0:3].transpose(),Pfk=Tfinal[0:3,3])
         chaintree.dictequations += self.ppsubs
@@ -1350,7 +1350,7 @@ class IKFastSolver(AutoReloader):
             T0links=[Tposinv]+Links[:ilinks[-2]]
             try:
                 log.info('last 2 axes are intersecting')
-                tree = self.solve5DIntersectingAxes(T0links,basepos,D,endbranchtree)
+                tree = self.solve5DIntersectingAxes(T0links,basepos,D,solvejointvars,endbranchtree)
             except self.CannotSolveError, e:
                 log.warn('%s', e)
 
