@@ -197,7 +197,7 @@ public:
         RegisterCommand("PerfTiming",boost::bind(&IKFastProblem::PerfTiming,this,_1,_2),
                         "Times the ik call of a given library.\n"
                         "Usage:\n    PerfTiming [options] iklibrarypath\n"
-                        "return the set of time measurements made");
+                        "return the set of time measurements made in nano-seconds");
         RegisterCommand("IKTest",boost::bind(&IKFastProblem::IKtest,this,_1,_2),
                         "Tests for an IK solution if active manipulation has an IK solver attached");
         RegisterCommand("DebugIK",boost::bind(&IKFastProblem::DebugIK,this,_1,_2),

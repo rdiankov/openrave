@@ -625,7 +625,9 @@ def runner(ix, testQueue, resultQueue, currentaddr, currentstart, keyboardCaught
                         resultQueue.put((ix, test_addr, test.tasks, batch(result)))
                     else:
                         log.debug('Worker %s test %s timed out',ix,test_addr)
-                        result.addError(test,(TimedOutException,TimedOutException(test_addr),sys.exc_info()[2]))
+                        err = (TimedOutException,TimedOutException(test_addr),sys.exc_info()[2])
+                        result.addError(test,err)
+                        config.plugins.addError(test,err)
                         resultQueue.put((ix, test_addr, test.tasks, batch(result)))
                 except SystemExit:
                     currentaddr.value = ''

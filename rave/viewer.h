@@ -119,6 +119,8 @@ public:
     virtual void ViewerSetSize(int w, int h) { throw openrave_exception("ViewerBase::ViewerSetSize not implemented",ORE_NotImplemented); }
     virtual void ViewerMove(int x, int y) { throw openrave_exception("ViewerBase::ViewerMove not implemented",ORE_NotImplemented); }
     virtual void ViewerSetTitle(const std::string& ptitle) { throw openrave_exception("ViewerBase::ViewerSetTitle not implemented",ORE_NotImplemented); }
+
+    /// \deprecated (11/03/02) Any type of model should be added through the openrave environment instead of viewer directly.
     virtual bool LoadModel(const std::string& pfilename) { throw openrave_exception("ViewerBase::LoadModel not implemented",ORE_NotImplemented); }
 
 protected:

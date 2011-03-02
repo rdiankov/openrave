@@ -21,6 +21,7 @@
 #endif
 
 #include "libopenrave-core/openrave-core.h"
+#include <set>
 
 using namespace OpenRAVE;
 using namespace std;
@@ -70,7 +71,7 @@ static bool s_bSetWindowPosition = false;
 int g_argc;
 char** g_argv;
 static bool s_bThreadDestroyed = false;
-
+static const char* s_geometryextentsions[] = {"iv","vrml","wrl","stl","blend","3ds","ase","obj","ply","dxf","lwo","lxo","ac","ms3d","x","mesh.xml","irrmesh","irr","nff","off","raw"};
 #ifndef _WIN32
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -87,6 +88,12 @@ int main(int argc, char ** argv)
     list<string> listLoadPlugins;
     string collisionchecker, physicsengine, servername="textserver";
     bool bListPlugins = false;
+
+    std::set<std::string> geometryextensions;
+    for(size_t i = 0; i < sizeof(s_geometryextentsions)/sizeof(s_geometryextentsions[0]); ++i) {
+        geometryextensions.insert(s_geometryextentsions[i]);
+    }
+
     // parse command line arguments
     int i = 1;
     while(i < argc) {
@@ -183,15 +190,22 @@ int main(int argc, char ** argv)
             nServPort = atoi(argv[i+1]);
             i += 2;
         }
-        else if( strstr(argv[i], ".iv") != NULL || strstr(argv[i], ".wrl") != NULL || strstr(argv[i], ".vrml") != NULL) {
-            vIvFiles.push_back(argv[i]);
-            i++;
-        }
         else if( strstr(argv[i], ".xml") != NULL || strstr(argv[i], ".dae") != NULL || strstr(argv[i], ".zae") != NULL ) {
             vXMLFiles.push_back(argv[i]);
             i++;
         }
         else {
+            std::string filename = argv[i];
+            size_t index = filename.find_last_of('.');
+            if( index != std::string::npos ) {
+                std::string extension = filename.substr(index+1);
+                std::transform(extension.begin(), extension.end(), extension.begin(), ::tolower);
+                if( geometryextensions.find(extension) != geometryextensions.end() ) {
+                    vIvFiles.push_back(filename);
+                    i++;
+                    continue;
+                }
+            }
             RAVELOG_INFOA("Error in input parameters at %s\ntype --help to see a list of command line options\n", argv[i]);
             return 0;
         }
@@ -327,9 +341,22 @@ void MainOpenRAVEThread()
             if( s_bSetWindowPosition )
                 pviewer->ViewerMove(s_WindowPosX,s_WindowPosY);
             s_penv->AttachViewer(pviewer);
+            boost::shared_ptr<KinBody::Link::TRIMESH> ptrimesh(new KinBody::Link::TRIMESH());
             for(size_t i = 0; i < vIvFiles.size(); ++i) {
-                if( !pviewer->LoadModel(vIvFiles[i]) )
-                    RAVELOG_WARN("failed to open %s\n", vIvFiles[i].c_str());
+                bool bsuccess = false;
+                boost::shared_ptr<KinBody::Link::TRIMESH> pnewtrimesh = s_penv->ReadTrimeshFile(ptrimesh, vIvFiles[i]);
+                if( !!pnewtrimesh ) {
+                    KinBodyPtr pbody = RaveCreateKinBody(s_penv,"");
+                    pbody->SetName("object");
+                    if( pbody->InitFromTrimesh(*pnewtrimesh,true) ) {
+                        if( s_penv->AddKinBody(pbody,true) ) {
+                            bsuccess = true;
+                        }
+                    }
+                }
+                if( !bsuccess ) {
+                    RAVELOG_WARN(str(boost::format("failed to open %s\n")%vIvFiles[i]));
+                }
             }
         }
     }

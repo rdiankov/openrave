@@ -2959,6 +2959,22 @@ public:
     {
         return _toPyInterface(_penv->ReadInterfaceXMLFile(filename, toAttributesList(odictatts)));
     }
+    boost::shared_ptr<PyTriMesh> ReadTrimeshFile(const std::string& filename)
+    {
+        boost::shared_ptr<KinBody::Link::TRIMESH> ptrimesh = _penv->ReadTrimeshFile(boost::shared_ptr<KinBody::Link::TRIMESH>(),filename);
+        if( !ptrimesh ) {
+            return boost::shared_ptr<PyTriMesh>();
+        }
+        return boost::shared_ptr<PyTriMesh>(new PyTriMesh(*ptrimesh));
+    }
+    boost::shared_ptr<PyTriMesh> ReadTrimeshFile(const std::string& filename, dict odictatts)
+    {
+        boost::shared_ptr<KinBody::Link::TRIMESH> ptrimesh = _penv->ReadTrimeshFile(boost::shared_ptr<KinBody::Link::TRIMESH>(),filename,toAttributesList(odictatts));
+        if( !ptrimesh ) {
+            return boost::shared_ptr<PyTriMesh>();
+        }
+        return boost::shared_ptr<PyTriMesh>(new PyTriMesh(*ptrimesh));
+    }
 
     bool AddKinBody(PyKinBodyPtr pbody) { CHECK_POINTER(pbody); return _penv->AddKinBody(pbody->GetBody()); }
     bool AddKinBody(PyKinBodyPtr pbody, bool bAnonymous) { CHECK_POINTER(pbody); return _penv->AddKinBody(pbody->GetBody(),bAnonymous); }
@@ -4467,6 +4483,8 @@ In python, the syntax is::\n\n\
         PyKinBodyPtr (PyEnvironmentBase::*readkinbodyxmldata2)(const string&,dict) = &PyEnvironmentBase::ReadKinBodyXMLData;
         PyInterfaceBasePtr (PyEnvironmentBase::*readinterfacexmlfile1)(const string&) = &PyEnvironmentBase::ReadInterfaceXMLFile;
         PyInterfaceBasePtr (PyEnvironmentBase::*readinterfacexmlfile2)(const string&,dict) = &PyEnvironmentBase::ReadInterfaceXMLFile;
+        boost::shared_ptr<PyTriMesh> (PyEnvironmentBase::*readtrimeshfile1)(const std::string&) = &PyEnvironmentBase::ReadTrimeshFile;
+        boost::shared_ptr<PyTriMesh> (PyEnvironmentBase::*readtrimeshfile2)(const std::string&,dict) = &PyEnvironmentBase::ReadTrimeshFile;
         scope env = classenv
             .def(init<>())
             .def("Reset",&PyEnvironmentBase::Reset, DOXY_FN(EnvironmentBase,Reset))
@@ -4515,15 +4533,17 @@ In python, the syntax is::\n\n\
             .def("Load",&PyEnvironmentBase::Load,args("filename"), DOXY_FN(EnvironmentBase,Load))
             .def("Save",&PyEnvironmentBase::Save,args("filename"), DOXY_FN(EnvironmentBase,Save))
             .def("ReadRobotXMLFile",readrobotxmlfile1,args("filename"), DOXY_FN(EnvironmentBase,ReadRobotXMLFile "const std::string"))
-            .def("ReadRobotXMLFile",readrobotxmlfile2,args("filename","atts"), DOXY_FN(EnvironmentBase,ReadRobotXMLFile "const std::string"))
+            .def("ReadRobotXMLFile",readrobotxmlfile2,args("filename","atts"), DOXY_FN(EnvironmentBase,ReadRobotXMLFile "RobotBasePtr; const std::string; const AttributesList"))
             .def("ReadRobotXMLData",readrobotxmldata1,args("data"), DOXY_FN(EnvironmentBase,ReadRobotXMLData "RobotBasePtr; const std::string; const AttributesList"))
             .def("ReadRobotXMLData",readrobotxmldata2,args("data","atts"), DOXY_FN(EnvironmentBase,ReadRobotXMLData "RobotBasePtr; const std::string; const AttributesList"))
             .def("ReadKinBodyXMLFile",readkinbodyxmlfile1,args("filename"), DOXY_FN(EnvironmentBase,ReadKinBodyXMLFile "const std::string"))
-            .def("ReadKinBodyXMLFile",readkinbodyxmlfile2,args("filename","atts"), DOXY_FN(EnvironmentBase,ReadKinBodyXMLFile "const std::string"))
+            .def("ReadKinBodyXMLFile",readkinbodyxmlfile2,args("filename","atts"), DOXY_FN(EnvironmentBase,ReadKinBodyXMLFile "KinBody; const std::string; const AttributesList"))
             .def("ReadKinBodyXMLData",readkinbodyxmldata1,args("data"), DOXY_FN(EnvironmentBase,ReadKinBodyXMLData "KinBodyPtr; const std::string; const AttributesList"))
             .def("ReadKinBodyXMLData",readkinbodyxmldata2,args("data","atts"), DOXY_FN(EnvironmentBase,ReadKinBodyXMLData "KinBodyPtr; const std::string; const AttributesList"))
-            .def("ReadInterfaceXMLFile",readinterfacexmlfile1,args("filename"), DOXY_FN(EnvironmentBase,ReadInterfaceXMLFile "const std::string"))
-            .def("ReadInterfaceXMLFile",readinterfacexmlfile2,args("filename","atts"), DOXY_FN(EnvironmentBase,ReadInterfaceXMLFile "const std::string"))
+            .def("ReadInterfaceXMLFile",readinterfacexmlfile1,args("filename"), DOXY_FN(EnvironmentBase,ReadInterfaceXMLFile "InterfaceBasePtr; InterfaceType; const std::string; const AttributesList"))
+            .def("ReadInterfaceXMLFile",readinterfacexmlfile2,args("filename","atts"), DOXY_FN(EnvironmentBase,ReadInterfaceXMLFile "InterfaceBasePtr; InterfaceType; const std::string; const AttributesList"))
+            .def("ReadTrimeshFile",readtrimeshfile1,args("filename"), DOXY_FN(EnvironmentBase,ReadTrimeshFile))
+            .def("ReadTrimeshFile",readtrimeshfile2,args("filename","atts"), DOXY_FN(EnvironmentBase,ReadTrimeshFile))
             .def("AddKinBody",addkinbody1,args("body"), DOXY_FN(EnvironmentBase,AddKinBody))
             .def("AddKinBody",addkinbody2,args("body","anonymous"), DOXY_FN(EnvironmentBase,AddKinBody))
             .def("AddRobot",addrobot1,args("robot"), DOXY_FN(EnvironmentBase,AddRobot))

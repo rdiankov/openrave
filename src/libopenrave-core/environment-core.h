@@ -1131,6 +1131,25 @@ class Environment : public EnvironmentBase
         return pinterface;
     }
 
+    virtual boost::shared_ptr<KinBody::Link::TRIMESH> ReadTrimeshFile(boost::shared_ptr<KinBody::Link::TRIMESH> ptrimesh, const std::string& filename, const AttributesList& atts) {
+        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
+        boost::shared_ptr<pair<string,string> > filedata = OpenRAVEXMLParser::RaveFindFile(filename);
+        if( !filedata ) {
+            return boost::shared_ptr<KinBody::Link::TRIMESH>();
+        }
+        Vector vscale(1,1,1);
+        RaveVector<float> diffuseColor, ambientColor;
+        float ftransparency;
+        if( !ptrimesh ) {
+            ptrimesh.reset(new KinBody::Link::TRIMESH());
+        }
+        if( !OpenRAVEXMLParser::_CreateTriMeshData(filedata->second, vscale, *ptrimesh, diffuseColor, ambientColor, ftransparency) ) {
+            ptrimesh.reset();
+        }
+        return ptrimesh;
+    }
+
     virtual boost::shared_ptr<void> RegisterXMLReader(InterfaceType type, const std::string& xmltag, const CreateXMLReaderFn& fn)
     {
         return RaveRegisterXMLReader(type,xmltag,fn);

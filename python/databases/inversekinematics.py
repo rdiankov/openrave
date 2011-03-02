@@ -548,7 +548,7 @@ class InverseKinematicsModel(OpenRAVEModel):
     def perftiming(self,num):
         with self.env:
             results = self.ikfastproblem.SendCommand('PerfTiming num %d %s'%(num,self.getfilename(True)))
-            return [double(s)*1e-6 for s in results.split()]
+            return [double(s)*1e-9 for s in results.split()]
     def testik(self,iktests):
         """Tests the iksolver.
         """

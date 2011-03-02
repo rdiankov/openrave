@@ -259,6 +259,12 @@ public:
     */
     virtual InterfaceBasePtr ReadInterfaceXMLData(InterfaceBasePtr pinterface, InterfaceType type, const std::string& data, const AttributesList& atts = AttributesList()) = 0;
     
+    /// \brief reads in the rigid geometry of a filename into a TRIMESH structure
+    ///
+    /// \param filename The resource filename to open. Can be any number of known formats. Complex meshes and articulated meshes are all triangulated appropriately.
+    /// \param options Options to control the parsing process.
+    virtual boost::shared_ptr<KinBody::Link::TRIMESH> ReadTrimeshFile(boost::shared_ptr<KinBody::Link::TRIMESH> ptrimesh, const std::string& filename, const AttributesList& atts = AttributesList()) = 0;
+
     /// \deprecated (10/09/30) see \ref RaveRegisterXMLReader
     virtual boost::shared_ptr<void> RegisterXMLReader(InterfaceType type, const std::string& xmltag, const CreateXMLReaderFn& fn) RAVE_DEPRECATED = 0;
     

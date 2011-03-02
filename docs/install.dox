@@ -426,7 +426,7 @@ source `openrave-config --prefix`/share/openrave/openravebash
 \page installation_win Building and Installing on Windows
 
 
-<b>NOTE:</b> Only Windows XP has been tested. Windows 7 and others have been reported to work, but might need to modify the executable properties to <b>windows95 compatibility mode</b> after the executable has been built.
+<b>NOTE:</b> Only Windows XP has been tested. Windows 7 and others have been reported to work, but might need to modify the executable properties to <b>windows95 compatibility mode</b> after the executable has been built. This requies the <b>msvcp71.dll</b> to be inserted into the system.
 
 \section iwin_octavematlab Installation of 3rd Party Software
 
@@ -498,7 +498,7 @@ installed/uninstalled), it is recommended to clear the cmake cache by first remo
 \page installation_win Windowsユーザーのためのインストール方法
 
 
-<b>注意：</b> 現在はWindows XPのみサポートしています．
+<b>注意：</b> 現在はWindows XPのみサポートしています．事前にコンパイルされた実行プログラムが含まれているため、<b>msvcp71.dll</b>のファイルが必要です。
 
 \section iwin_thirdparty 第三者ソフトウェアのインストール
 

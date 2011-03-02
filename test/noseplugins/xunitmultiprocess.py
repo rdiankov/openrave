@@ -48,7 +48,7 @@ from nose.exc import SkipTest
 from time import time
 from xml.sax import saxutils
 from nose.pyversion import UNICODE_STRINGS
-
+import sys
 import multiprocessing
 globalxunitmanager = multiprocessing.Manager()
 globalxunitstream = globalxunitmanager.list() # used for gathering statistics
@@ -198,11 +198,11 @@ class Xunitmp(Plugin):
             self.xunitstream.append(xml)
         except Exception, e:
             print 'xunitmultiprocess add stream len=%d,%s'%(len(xml),str(e))
+            
     def addError(self, test, err, capt=None):
         """Add error output to Xunit report.
         """
         taken = self._timeTaken()
-
         if issubclass(err[0], SkipTest):
             type = 'skipped'
             self.xunitstats[3] += 1
@@ -224,6 +224,7 @@ class Xunitmp(Plugin):
 </%(type)s></testcase>
 """ %{'cls': self._quoteattr('.'.join(id[:-1])), 'name': self._quoteattr(name), 'taken': taken, 'type': type, 'errtype': self._quoteattr(nice_classname(err[0])), 'message': self._quoteattr(exc_message(err)), 'tb': escape_cdata(tb), 'systemout':systemout}
         self.addstream(xml)
+
     def addFailure(self, test, err, capt=None, tb_info=None):
         """Add failure output to Xunit report.
         """

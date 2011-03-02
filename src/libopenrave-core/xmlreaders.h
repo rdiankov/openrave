@@ -857,6 +857,36 @@ namespace OpenRAVEXMLParser
 
             if( _processingtag.size() > 0 ) {
                 if( _processingtag == "geom" ) {
+                    if( xmlname == "render" ) {
+                        // check the attributes first
+                        FOREACHC(itatt,atts) {
+                            if( itatt->first == "file" ) {
+                                _renderfilename.first = !_fnGetModelsDir ? itatt->second : _fnGetModelsDir(itatt->second);
+                            }
+                            else if( itatt->first == "scale" ) {
+                                Vector vscale(1,1,1);
+                                stringstream sslocal(itatt->second);
+                                sslocal >> vscale.x; vscale.y = vscale.z = vscale.x;
+                                sslocal >> vscale.y >> vscale.z;
+                                _renderfilename.second = vscale;
+                            }
+                        }
+                    }
+                    else if( xmlname == "collision" ) {
+                        // check the attributes first
+                        FOREACHC(itatt,atts) {
+                            if( itatt->first == "file" ) {
+                                _collisionfilename.first = !_fnGetModelsDir ? itatt->second : _fnGetModelsDir(itatt->second);
+                            }
+                            else if( itatt->first == "scale" ) {
+                                Vector vscale(1,1,1);
+                                stringstream sslocal(itatt->second);
+                                sslocal >> vscale.x; vscale.y = vscale.z = vscale.x;
+                                sslocal >> vscale.y >> vscale.z;
+                                _collisionfilename.second = vscale;
+                            }
+                        }
+                    }
                     return (xmlname == "translation" || xmlname=="rotationmat" || xmlname=="rotationaxis" || xmlname=="quat" || xmlname=="diffusecolor" || xmlname == "ambientcolor" || xmlname == "transparency" || xmlname=="render" || xmlname == "extents" || xmlname == "radius" || xmlname == "height" || (_itgeomprop->GetType() == KinBody::Link::GEOMPROPERTIES::GeomTrimesh && (xmlname=="collision"||xmlname=="data"||xmlname=="vertices"))) ? PE_Support : PE_Ignore;
                 }
                 else if( _processingtag == "mass" ) {
@@ -994,13 +1024,15 @@ namespace OpenRAVEXMLParser
                     _itgeomprop->_t.rot = (tnew*_itgeomprop->_t).rot;
                 }
                 else if( xmlname == "render" ) {
-                    string orgfilename;
-                    Vector vscale(1,1,1);
-                    _ss >> orgfilename;
-                    _ss >> vscale.x; vscale.y = vscale.z = vscale.x;
-                    _ss >> vscale.y >> vscale.z;
-                    _renderfilename.first = !_fnGetModelsDir ? orgfilename : _fnGetModelsDir(orgfilename);
-                    _renderfilename.second = vscale;
+                    if( _renderfilename.first.size() == 0 ) {
+                        string orgfilename;
+                        Vector vscale(1,1,1);
+                        _ss >> orgfilename;
+                        _ss >> vscale.x; vscale.y = vscale.z = vscale.x;
+                        _ss >> vscale.y >> vscale.z;
+                        _renderfilename.first = !_fnGetModelsDir ? orgfilename : _fnGetModelsDir(orgfilename);
+                        _renderfilename.second = vscale;
+                    }
                 }
                 else if( xmlname == "diffusecolor" ) {
                     _ss >> _itgeomprop->diffuseColor.x >> _itgeomprop->diffuseColor.y >> _itgeomprop->diffuseColor.z;
@@ -1077,13 +1109,16 @@ namespace OpenRAVEXMLParser
                         break;
                     case KinBody::Link::GEOMPROPERTIES::GeomTrimesh:
                         if( xmlname == "data" || xmlname == "collision") {
-                            string orgfilename;
-                            Vector vscale(1,1,1);
-                            _ss >> orgfilename;
-                            _ss >> vscale.x; vscale.y = vscale.z = vscale.x;
-                            _ss >> vscale.y >> vscale.z;
-                            _collisionfilename.first = !_fnGetModelsDir ? orgfilename : _fnGetModelsDir(orgfilename);
-                            _collisionfilename.second = vscale;
+                            if( _collisionfilename.first.size() == 0 ) {
+                                // check the attributes first
+                                string orgfilename;
+                                Vector vscale(1,1,1);
+                                _ss >> orgfilename;
+                                _ss >> vscale.x; vscale.y = vscale.z = vscale.x;
+                                _ss >> vscale.y >> vscale.z;
+                                _collisionfilename.first = !_fnGetModelsDir ? orgfilename : _fnGetModelsDir(orgfilename);
+                                _collisionfilename.second = vscale;
+                            }
                         }
                         else if( xmlname == "vertices" ) {
                             vector<dReal> values((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());

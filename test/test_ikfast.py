@@ -119,7 +119,7 @@ def robotstats(description,robotfilename,manipname, iktypestr,freeindices):
             nosolutions = float(len(solutionresults[1]))/numtested
             wrongrate = float(len(solutionresults[0]))/numtested
             resultsstr = ikfastproblem.SendCommand('PerfTiming num 10000 maxtime %f %s'%(options.perftime,ikmodel.getfilename(True)))
-            results = [numpy.double(s)*1e-6 for s in resultsstr.split()]
+            results = [numpy.double(s)*1e-9 for s in resultsstr.split()]
             jointnames = ', '.join(robot.GetJointFromDOFIndex(dof).GetName() for dof in ikmodel.manip.GetArmIndices())
             print 'ikfast version: %s'%ikfast.__version__
             #print 'SECTION Robot Information'
