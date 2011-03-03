@@ -452,11 +452,10 @@ public:
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         RAVELOG_DEBUG("Starting IKtest...\n");
         vector<dReal> varmjointvals, values;
-
-        TransformMatrix handTm;
         bool bCheckCollision = true, bInitialized=false;
         RobotBasePtr robot;
         RobotBase::ManipulatorConstPtr pmanip;
+        IkParameterization ikparam;
         string cmd;
         while(!sinput.eof()) {
             sinput >> cmd;
@@ -465,8 +464,13 @@ public:
             }
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
             if( cmd == "matrix" ) {
+                TransformMatrix handTm;
                 sinput >> handTm;
+                ikparam.SetTransform6D(handTm);
                 bInitialized = true;
+            }
+            else if( cmd == "ikparam" ) {
+                sinput >> ikparam;
             }
             else if( cmd == "armjoints" ) {
                 varmjointvals.resize(pmanip->GetArmIndices().size());
@@ -500,10 +504,8 @@ public:
         RobotBase::RobotStateSaver saver(robot);
 
         if( !bInitialized ) {
-            handTm = pmanip->GetEndEffectorTransform();
+            ikparam = pmanip->GetIkParameterization(IkParameterization::Type_Transform6D);
         }
-        Transform handTr(handTm);
-    
         robot->GetDOFValues(values);
 
         for(size_t i = 0; i < varmjointvals.size(); i++) {
@@ -512,7 +514,7 @@ public:
         robot->SetDOFValues(values);
 
         vector<dReal> q1;    
-        if( !pmanip->FindIKSolution(handTr, q1, bCheckCollision) ) {
+        if( !pmanip->FindIKSolution(ikparam, q1, bCheckCollision) ) {
             RAVELOG_WARN("No IK solution found\n");
             return false;
         }
