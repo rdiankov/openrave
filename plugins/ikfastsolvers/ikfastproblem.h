@@ -464,27 +464,15 @@ public:
                 break;
             }
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
-
-            if( cmd == "trans" ) {
-                RAVELOG_WARN("IKtest: trans parameter has been deprecated, switch to matrix/matrices/poses");
-                sinput >> handTm.trans.x >> handTm.trans.y >> handTm.trans.z;
-                bInitialized = true;
-            }
-            else if( cmd == "rot" ) {
-                RAVELOG_WARN("IKtest: rot parameter has been deprecated, switch to matrix/matrices/poses");
-                sinput >> handTm.m[0] >> handTm.m[4] >> handTm.m[8]
-                       >> handTm.m[1] >> handTm.m[5] >> handTm.m[9]
-                       >> handTm.m[2] >> handTm.m[6] >> handTm.m[10];
-                bInitialized = true;
-            }
-            else if( cmd == "matrix" ) {
+            if( cmd == "matrix" ) {
                 sinput >> handTm;
                 bInitialized = true;
             }
             else if( cmd == "armjoints" ) {
                 varmjointvals.resize(pmanip->GetArmIndices().size());
-                FOREACH(it, varmjointvals)
+                FOREACH(it, varmjointvals) {
                     sinput >> *it;
+                }
             }
             else if( cmd == "nocol" ) {
                 bCheckCollision = false;

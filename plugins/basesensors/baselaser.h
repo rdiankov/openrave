@@ -32,8 +32,7 @@ protected:
                     return PE_Support;
                 return PE_Ignore;
             }
-
-            if( name != "sensor" && name != "minangle" && name != "maxangle" && name != "maxrange" && name != "scantime" && name != "color" && name != "resolution" && name != "time_scan" && name != "time_increment" ) {
+            if( name != "sensor" && name != "minangle" && name != "maxangle" && name != "maxrange" && name != "minrange" && name != "scantime" && name != "color" && name != "resolution" && name != "time_scan" && name != "time_increment" ) {
                 return PE_Pass;
             }
             ss.str("");
@@ -66,6 +65,9 @@ protected:
             }
             else if( name == "maxrange" ) {
                 ss >> _psensor->_pgeom->max_range;
+            }
+            else if( name == "minrange" ) {
+                ss >> _psensor->_pgeom->min_range;
             }
             else if( name == "scantime" || name == "time_scan" ) {
                 ss >> _psensor->_pgeom->time_scan;
@@ -123,6 +125,7 @@ public:
         _pgeom->min_angle[0] = -PI/2; _pgeom->min_angle[1] = 0;
         _pgeom->max_angle[0] = PI/2; _pgeom->max_angle[1] = 0;
         _pgeom->resolution[0] = 0.01f; _pgeom->resolution[1] = 0;
+        _pgeom->min_range = 0.03;
         _pgeom->max_range = 100;
         fTimeToScan = 0;
         _vColor = RaveVector<float>(0.5f,0.5f,1,1);
@@ -173,18 +176,17 @@ public:
                 _pdata->__stamp = GetEnv()->GetSimulationTime();
         
                 t = GetLaserPlaneTransform();
-                r.pos = t.trans;
-
                 size_t index = 0;
                 for(float frotangle = _pgeom->min_angle[0]; frotangle <= _pgeom->max_angle[0]; frotangle += _pgeom->resolution[0], ++index) {
                     if( index >= _pdata->ranges.size() ) {
                         break;
                     }
                     Vector vdir(t.rotate(quatRotate(quatFromAxisAngle(rotaxis, (dReal)frotangle),Vector(1,0,0))));
-                    r.dir = _pgeom->max_range*vdir;
+                    r.pos = t.trans+_pgeom->min_range*vdir;
+                    r.dir = (_pgeom->max_range-_pgeom->min_range)*vdir;
                     
                     if( GetEnv()->CheckCollision(r, _report)) {
-                        _pdata->ranges[index] = vdir*max(dReal(0.0001f),_report->minDistance);
+                        _pdata->ranges[index] = vdir*(_report->minDistance+_pgeom->min_range);
                         _pdata->intensity[index] = 1;
                         // store the colliding bodies
                         KinBody::LinkConstPtr plink = !!_report->plink1 ? _report->plink1 : _report->plink2;
@@ -305,7 +307,7 @@ public:
 
             for(int i = 0; i <= N; ++i) {
                 dReal fang = _pgeom->min_angle[0] + (_pgeom->max_angle[0]-_pgeom->min_angle[0])*(float)i/(float)N;
-                viconpoints[i+1] = quatRotate(quatFromAxisAngle(Vector(0,0,1), fang),Vector(0.05f,0,0));
+                viconpoints[i+1] = quatRotate(quatFromAxisAngle(Vector(0,0,1), fang),Vector(_pgeom->min_range,0,0));
 
                 if( i < N ) {
                     viconindices[3*i+0] = 0;

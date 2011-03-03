@@ -162,11 +162,10 @@ protected:
     bool Traj(ostream& sout, istream& sinput)
     {
         string filename; sinput >> filename;
-        if( !sinput )
+        if( !sinput ) {
             return false;
-
+        }
         TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),robot->GetDOF());
-    
         char sep = ' ';
         if( filename == "sep" ) {
             sinput >> sep;
@@ -176,7 +175,6 @@ protected:
         if( filename == "stream" ) {
             // the trajectory is embedded in the stream
             RAVELOG_VERBOSE("BaseManipulation: reading trajectory from stream\n");
-
             if( !ptraj->Read(sinput, robot) ) {
                 RAVELOG_ERROR("BaseManipulation: failed to get trajectory\n");
                 return false;
@@ -192,15 +190,21 @@ protected:
         }
         
         bool bResetTrans = false; sinput >> bResetTrans;
+        dReal fmaxvelmult = 1; sinput >> fmaxvelmult;
     
         if( bResetTrans ) {
             RAVELOG_VERBOSE("resetting transformations of trajectory\n");
             Transform tcur = robot->GetTransform();
             // set the transformation of every point to the current robot transformation
-            FOREACH(itpoint, ptraj->GetPoints())
+            FOREACH(itpoint, ptraj->GetPoints()) {
                 itpoint->trans = tcur;
+            }
         }
 
+        if( ptraj->GetTotalDuration() == 0 ) {
+            RAVELOG_VERBOSE(str(boost::format("retiming trajectory: %f\n")%fmaxvelmult));
+            ptraj->CalcTrajTiming(robot,TrajectoryBase::CUBIC,true,false,fmaxvelmult);
+        }
         RAVELOG_VERBOSE(str(boost::format("executing traj with %d points\n")%ptraj->GetPoints().size()));
         robot->SetMotion(ptraj);
         sout << "1";

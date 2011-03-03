@@ -162,11 +162,13 @@ namespace {
 // A simple structure to help alloc/free xmlTextReader objects
 struct xmlTextReaderHelper {
 	xmlTextReaderHelper(const daeURI& uri) {
+        // on huge files, would need XML_PARSE_HUGE option
 		if((reader = xmlReaderForFile(cdom::fixUriForLibxml(uri.str()).c_str(), NULL, 0)))
 		   xmlTextReaderSetErrorHandler(reader, libxmlErrorHandler, NULL);
 	}
 
 	xmlTextReaderHelper(daeString buffer, const daeURI& baseUri) {
+        // on huge files, would need XML_PARSE_HUGE option
 		if((reader = xmlReaderForDoc((xmlChar*)buffer, cdom::fixUriForLibxml(baseUri.str()).c_str(), NULL, 0)))
 			xmlTextReaderSetErrorHandler(reader, libxmlErrorHandler, NULL);
 	};

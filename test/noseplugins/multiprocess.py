@@ -371,7 +371,7 @@ class MultiProcessTestRunner(TextTestRunner):
                             # therefore, send multiple signals until an exception is caught. If this takes too long, then terminate the process
                             w.keyboardCaught.clear()
                             startkilltime = time.time()
-                            while not w.keyboardCaught.is_set():
+                            while not w.keyboardCaught.is_set() and w.is_alive():
                                 if time.time()-startkilltime > self.waitkilltime:
                                     # have to terminate...
                                     log.error("terminating worker %s",iworker)
@@ -625,9 +625,9 @@ def runner(ix, testQueue, resultQueue, currentaddr, currentstart, keyboardCaught
                         resultQueue.put((ix, test_addr, test.tasks, batch(result)))
                     else:
                         log.debug('Worker %s test %s timed out',ix,test_addr)
-                        err = (TimedOutException,TimedOutException(test_addr),sys.exc_info()[2])
-                        result.addError(test,err)
-                        config.plugins.addError(test,err)
+                        #err = (TimedOutException,TimedOutException(test_addr),sys.exc_info()[2])
+                        #result.addError(test,err)
+                        #config.plugins.addError(test,err)
                         resultQueue.put((ix, test_addr, test.tasks, batch(result)))
                 except SystemExit:
                     currentaddr.value = ''
@@ -717,7 +717,12 @@ class NoSharedFixtureContextSuite(ContextSuite):
                     # each nose.case.Test will create its own result proxy
                     # so the cases need the original result, to avoid proxy
                     # chains
-                    test(orig)
+                    try:
+                        test(orig)
+                    except KeyboardInterrupt,e:
+                        err = (TimedOutException,TimedOutException(str(test)),sys.exc_info()[2])
+                        orig.addError(test,err)
+                        test.config.plugins.addError(test,err)
         finally:
             self.has_run = True
             try:
