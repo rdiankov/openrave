@@ -86,9 +86,12 @@ def evalNumbers(expr):
 def customcse(rawexprs,symbols=None):
     if not hasattr(rawexprs,'__iter__') and not hasattr(rawexprs,'__array__'):
         rawexprs = [rawexprs]
+    if symbols is None:
+        symbols = cse_main.numbered_symbols('x')
     # fractions can get big, so evaluate as many decimals as possible
-    exprs = [evalNumbers(expr) for expr in rawexprs]
-    replacements,reduced_exprs = cse(exprs,symbols=symbols)
+    allexprs = [evalNumbers(expr) for expr in rawexprs]
+    # calling cse on many long expressions will freeze it, so try to divide the problem
+    replacements,reduced_exprs = cse(allexprs,symbols=symbols)
     newreplacements = []
     # look for any expressions of the order of (x**(1/a))**b, usually computer wants x^(b/a)
     for r in replacements:
@@ -971,6 +974,9 @@ int main(int argc, char** argv)
         maxchecks = max([len(s.checkforzeros) for s in node.solversolutions])
         allnumsolutions = 0
         checkcode = ''
+        for var,value in node.dictequations:
+            checkcode += 'IKReal %s;\n'%var
+            checkcode += self.writeEquations(lambda k: var,value)
         for solversolution in node.solversolutions:
             assert len(solversolution.checkforzeros) > 0
             self.dictequations = self.copyequations(origequations)
@@ -1159,14 +1165,17 @@ int main(int argc, char** argv)
         code += self.writeEquations(lambda i: 'matrixinvcoeffs[%d]'%(i),node.A.transpose()[:])
         code += 'if( !%s<%d>(matrixinvcoeffs) ) {\ncontinue;\n}\n'%(matrixinverse,node.A.shape[0]);
         # create the variables
-        code += 'IKReal '
+        mcode = ''
         for i in range(len(node.Asymbols)):
             for j in range(len(node.Asymbols[i])):
-                code += '%s=matrixinvcoeffs[%d]'%(node.Asymbols[i][j],i+j*node.A.shape[0])
-                if i+1==len(node.Asymbols) and j+1==len(node.Asymbols[i]):
-                    code += ';\n'
-                else:
-                    code += ', '
+                if node.Asymbols[i][j] is not None:
+                    if len(mcode) > 0:
+                        mcode += ', '
+                    else:
+                        mcode = 'IKReal '
+                    mcode += '%s=matrixinvcoeffs[%d]'%(node.Asymbols[i][j],i+j*node.A.shape[0])
+        if len(mcode)> 0:
+            code += mcode + ';\n'
         return code
     def endMatrixInverse(self,node):
         return ''
@@ -1207,6 +1216,9 @@ int main(int argc, char** argv)
         origequations = self.copyequations()
         name = node.jointname if node.jointname is None else 'dummy'
         code = 'IKReal %seval[%d];\n'%(name,len(node.jointcheckeqs))
+        for var,value in node.dictequations:
+            code += 'IKReal %s;\n'%var
+            code += self.writeEquations(lambda k: var,value)
         code += self.writeEquations(lambda i: '%seval[%d]'%(name,i),node.jointcheckeqs)
         if len(node.jointcheckeqs) > 0:
             code += 'if( '
@@ -1322,19 +1334,45 @@ int main(int argc, char** argv)
         for n in reversed(tree):
             code += n.end(self)
         return code
-    def writeEquations(self, varnamefn, exprs):
+
+    def writeEquations(self, varnamefn, allexprs):
+        if not hasattr(allexprs,'__iter__') and not hasattr(allexprs,'__array__'):
+            allexprs = [allexprs]
         code = ''
-        # customcse splits up numbers, which could introduce a lot of difficulties, so call evalf here
-        [replacements,reduced_exprs] = customcse(exprs,symbols=self.symbolgen)
-        for rep in replacements:                
+        # calling cse on many long expressions will freeze it, so try to divide the problem
+        complexitysubs = [(Symbol('POW'),1),(Symbol('ADD'),1),(Symbol('MUL'),1)]
+        complexity = [expr.count_ops().subs(complexitysubs) for expr in allexprs]
+        complexitythresh = 4000
+        exprs = []
+        curcomplexity = 0
+        for i,expr in enumerate(allexprs):
+            curcomplexity += complexity[i]
+            exprs.append(expr)
+            if curcomplexity > complexitythresh or i == len(allexprs)-1:
+                code += self._writeEquations(varnamefn,exprs,i+1-len(exprs))
+                exprs = []
+                curcomplexity = 0
+        assert(len(exprs)==0)
+        return code
+    def _writeEquations(self, varnamefn, exprs,ioffset):
+        code = ''
+        replacements,reduced_exprs = customcse(exprs,symbols=self.symbolgen)
+        N = len(self.dictequations[0])
+        complexitysubs = [(Symbol('POW'),1),(Symbol('ADD'),1),(Symbol('MUL'),1)]
+        for rep in replacements:
             comparerep = rep[1].subs(self.dictequations[0]).expand()
             found = False
-            for i in range(len(self.dictequations[0])):
-                if comparerep-self.dictequations[1][i]==S.Zero:
-                    self.dictequations.append((rep[0],self.dictequations[0][i][0],self.dictequations[1][i]))
-                    code += 'IKReal %s=%s;\n'%(rep[0],self.dictequations[0][i][0])
-                    found = True
-                    break
+            complexity = rep[1].count_ops().subs(complexitysubs)
+            maxcomplexity = 3 if N > 1000 else 2
+            if complexity > maxcomplexity: # check only long expressions
+                for i in range(N):
+                    if self.dictequations[1][i] is not None and comparerep-self.dictequations[1][i]==S.Zero:
+                        #self.dictequations.append((rep[0],self.dictequations[0][i][0],self.dictequations[1][i]))
+                        code += 'IKReal %s=%s;\n'%(rep[0],self.dictequations[0][i][0])
+                        found = True
+                        break
+            else:
+                comparerep = None
             if not found:
                 self.dictequations[0].append(rep)
                 self.dictequations[1].append(comparerep)
@@ -1342,7 +1380,7 @@ int main(int argc, char** argv)
                 code += sepcode2+'IKReal %s=%s;\n'%(rep[0],code2)
         for i,rexpr in enumerate(reduced_exprs):
             code2,sepcode2 = self.writeExprCode(rexpr)
-            code += sepcode2+'%s=%s;\n'%(varnamefn(i), code2)
+            code += sepcode2+'%s=%s;\n'%(varnamefn(i+ioffset), code2)
         return code
 
     def writeExprCode(self, expr):

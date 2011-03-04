@@ -381,16 +381,16 @@ def solveDialytically3(self,reducedeqs,ileftvar):
              2*lf[0]*lf[1]*Av[2] + (lf[0]*lf[3]+lf[1]*lf[2])*Av[1] + 2*lf[2]*lf[3]*Av[0],
              lf[0]*lf[0]*Av[2]+lf[0]*lf[2]*Av[1]+lf[2]*lf[2]*Av[0]]
 
-def computeDixonResultant(self,orgeqs):
+def computeDixonResultant(self,polyeqs,othersolvedvars):
     """Computes the dixon resultant of the polynomial equations and find a non-singular sub-matrix such that its determinant can be used to get polynomial in one of the variables.
     See:
     Deepak Kapur, Tushar Saxena, and Lu Yang. "Algebraic and geometric reasoning using Dixon resultants". ISSAC '94 Proceedings of the international symposium on Symbolic and algebraic computation .
     """
     allmonoms = set()
-    orgsymbols = orgeqs[0].symbols
+    orgsymbols = polyeqs[0].symbols
     dixsymbols = [Symbol('d_%s'%s.name) for s in orgsymbols]
     dixmaxmonoms = [0]*len(orgsymbols)
-    for peq in orgeqs:
+    for peq in polyeqs:
         allmonoms = allmonoms.union(set(peq.monoms))
         for m in peq.iter_monoms():
             for j in range(len(dixmaxmonoms)):
@@ -398,11 +398,11 @@ def computeDixonResultant(self,orgeqs):
     allmonoms = list(allmonoms)
     allmonoms.sort()
     allmonoms.reverse() # this should put (0) at the end
-    assert(len(orgsymbols) < len(orgeqs))
+    assert(len(orgsymbols) < len(polyeqs))
     neweqs = []
     dixonsymbolgen = symbolgen = cse_main.numbered_symbols('dconst')
     dixonsymbols = []
-    for eq in orgeqs:
+    for eq in polyeqs:
         neweq = Poly(S.Zero,*orgsymbols)
         for c,m in eq.iter_terms():
             v = symbolgen.next()
@@ -415,7 +415,8 @@ def computeDixonResultant(self,orgeqs):
         for i in range(len(orgsymbols)+1):
             M[isymbol,i] = neweqs[i].as_basic().subs(subs)
     allsymbols = list(dixsymbols)+list(orgsymbols)
-    det = M.det_bareis()
+    localvars = list(orgsymbols)+list(dixsymbols)+[s for s,v in dixonsymbols]
+    det = self.det_bareis(M,*localvars)
     polydixon_raw = Poly(det,*dixsymbols)
     quotient = S.One
     for sym,dsym in izip(orgsymbols,dixsymbols):
@@ -430,30 +431,37 @@ def computeDixonResultant(self,orgeqs):
     newmonoms.sort()
     newmonoms.reverse() # this should put (0) at the end
 
-    dixonsymbolsvalues = [(s,v.subs(valsubs+psubs+localsymbolsvalues)) for s,v in dixonsymbols]
+    dixonsymbolsvalues = [(s,v.subs(newvalsubs+psubs)) for s,v in dixonsymbols]
     Mdixon = Matrix(len(polydixon.monoms),len(newmonoms),[S.Zero]*(len(polydixon.monoms)*len(newmonoms)))
     i = 0
     for c,m in polydixon.iter_terms():
         p = Poly(c,*orgsymbols)
         for c2,m2 in p.iter_terms():
-            Mdixon[i,newmonoms.index(m2)] = c2.subs(dixonsymbolsvalues).expand()
+            Mdixon[i,newmonoms.index(m2)] = c2.subs(dixonsymbols).expand()
         i += 1
+
+    localvars2 = [var for var in self.pvars if self.has_any_symbols(Mdixon,var)]
+    for othersolvedvar in othersolvedvars:
+        for var in self.Variable(othersolvedvar).vars:
+            if self.has_any_symbols(Mdixon,var):
+                localvars2.append(var)
+    dfinal = self.det_bareis(Mdixon,*localvars2)
 
     s=linalg.svd(Mdixon.subs(leftvar,0),compute_uv=0)
     rank = numpy.sum(numpy.greater(abs(s),1e-14))
     Mdettest = Matrix(Mdixon.shape[0],Mdixon.shape[1]-1,[S.Zero]*(Mdixon.shape[0]*(Mdixon.shape[1]-1)))
     for j in range(Mdixon.shape[1]):
-        Mtemp = Mnew.subs(leftvar,0)
+        Mtemp = Mdixon.subs(leftvar,0)
         Mtemp.col_del(j)
         s=linalg.svd(Mtemp,compute_uv=0)
         if numpy.sum(numpy.greater(abs(s),1e-14)) < rank:
             print j
-    Mvalues = Mdixon.subs(localsymbolsvalues)
+    Mvalues = Mdixon.subs(dixonsymbolsvalues)
     for i in range(Mvalues.shape[0]):
         for j in range(Mvalues.shape[1]):
             Mvalues[i,j] = Mvalues[i,j].expand()
     dfinal = Mdixon.det_bareis()
-    solutionvector = Matrix(len(newmonoms),1,[Poly(S.Zero,*orgsymbols).add_term(S.One,m).subs(allsubs) for m in newmonoms])
+    solutionvector = Matrix(len(newmonoms),1,[Poly(S.Zero,*orgsymbols).add_term(S.One,m) for m in newmonoms])
 
 def ComputeMatrix(self,eqs,allsubs,symbols=None):
     if symbols is None:
@@ -1037,76 +1045,77 @@ def isolatepair():
         # find the equation with the minimal degree, and the least code complexity
         return [min(finalsolutions, key=lambda f: f.poly.degree*1e6 + self.codeComplexity(f.poly.as_basic()))]
 
-    def solveLinearly(self,raweqns,varsyms,othersolvedvars,maxdegree=1):
-        varsubs = []
-        unknownvars = []
-        for varsym in varsyms:
-            varsubs += varsym.subs
-            unknownvars += [varsym.cvar,varsym.svar,varsym.var]
-        polyeqs = [Poly(eq.subs(varsubs),*unknownvars) for eq in raweqns]
-        allmonoms = set()
-        newpolyeqs = []
-        for peq in polyeqs:
-            if peq.degree <= maxdegree:
-                allmonoms = allmonoms.union(set(peq.monoms))
-                newpolyeqs.append(peq)
-        allmonoms = list(allmonoms)
-        allmonoms.sort()
-        if len(allmonoms) > len(newpolyeqs):
-            raise self.CannotSolveError('not enough equations %d>%d'%(len(allmonoms),len(newpolyeqs)))
+def solveLinearly(self,raweqns,varsyms,othersolvedvars,maxdegree=1):
+    varsubs = []
+    unknownvars = []
+    for varsym in varsyms:
+        varsubs += varsym.subs
+        unknownvars += [varsym.cvar,varsym.svar,varsym.var]
+    polyeqs = [Poly(eq.subs(varsubs),*unknownvars) for eq in raweqns]
+    allmonoms = set()
+    newpolyeqs = []
+    for peq in polyeqs:
+        if peq.degree <= maxdegree:
+            allmonoms = allmonoms.union(set(peq.monoms))
+            newpolyeqs.append(peq)
+    allmonoms = list(allmonoms)
+    allmonoms.sort()
+    if len(allmonoms) > len(newpolyeqs):
+        raise self.CannotSolveError('not enough equations %d>%d'%(len(allmonoms),len(newpolyeqs)))
 
-        if __builtin__.sum(allmonoms[0]) != 0:
-            raise self.CannotSolveError('need null space')
-        
-        # try to solve for all pairwise variables
-        systemofequations = []
-        for peq in newpolyeqs:
-            if peq.degree <= maxdegree:
-                arr = [S.Zero]*len(allmonoms)
-                for c,m in peq.iter_terms():
-                    arr[allmonoms.index(m)] = c
-                systemofequations.append(arr)
+    if __builtin__.sum(allmonoms[0]) != 0:
+        raise self.CannotSolveError('need null space')
 
-        singleeqs = None
-        M = zeros((len(allmonoms),len(allmonoms)))
-        for eqs in combinations(systemofequations,len(allmonoms)):
-            for i,arr in enumerate(eqs):
-                for j in range(len(allmonoms)):
-                    M[i,j] = arr[j]
-            if __builtin__.sum(allmonoms[0]) == 0:
-                # can solve directly
-                det = self.det_bareis(M)
-                if det != S.Zero:
-                    break
-                X = M[1:,1:].inv()*M[1:,0]
-                print X
-            else:
-                # find a nullspace of M, this means that det(M) = 0
-                
-            det = self.det_bareis(M,*(self.pvars+unknownvars)).subs(allsymbols)
-            if det.evalf() != S.Zero:
-                X = M.adjugate()*B
-                singleeqs = []
-                for i in range(4):
-                    eq = (pairwisesubs[i][0]*det - X[i]).subs(allsymbols)
-                    eqnew, symbols = self.groupTerms(eq, unknownvars, symbolgen)
-                    allsymbols += symbols
-                    singleeqs.append([self.codeComplexity(eq),Poly(eqnew,*unknownvars)])
+    # try to solve for all pairwise variables
+    systemofequations = []
+    for peq in newpolyeqs:
+        if peq.degree <= maxdegree:
+            arr = [S.Zero]*len(allmonoms)
+            for c,m in peq.iter_terms():
+                arr[allmonoms.index(m)] = c
+            systemofequations.append(arr)
+
+    singleeqs = None
+    M = zeros((len(allmonoms),len(allmonoms)))
+    for eqs in combinations(systemofequations,len(allmonoms)):
+        for i,arr in enumerate(eqs):
+            for j in range(len(allmonoms)):
+                M[i,j] = arr[j]
+        if __builtin__.sum(allmonoms[0]) == 0:
+            # can solve directly
+            det = self.det_bareis(M)
+            if det != S.Zero:
                 break
-        if singleeqs is not None:
-            neweqns += singleeqs
-            neweqns.sort(lambda x, y: x[0]-y[0])
+            X = M[1:,1:].inv()*M[1:,0]
+            print X
+        else:
+            # find a nullspace of M, this means that det(M) = 0
+
+        det = self.det_bareis(M,*(self.pvars+unknownvars)).subs(allsymbols)
+        if det.evalf() != S.Zero:
+            X = M.adjugate()*B
+            singleeqs = []
+            for i in range(4):
+                eq = (pairwisesubs[i][0]*det - X[i]).subs(allsymbols)
+                eqnew, symbols = self.groupTerms(eq, unknownvars, symbolgen)
+                allsymbols += symbols
+                singleeqs.append([self.codeComplexity(eq),Poly(eqnew,*unknownvars)])
+            break
+    if singleeqs is not None:
+        neweqns += singleeqs
+        neweqns.sort(lambda x, y: x[0]-y[0])
+
 
 def test_ik():
     from sympy import *
     import __builtin__
-    from openravepy.ikfast import SolverStoreSolution, SolverSolution, combinations, SolverSequence, fmod, SolverRotation, SolverIKChainTransform6D, SolverBranchConds, SolverMatrixInverse, SolverCoeffFunction, SolverCheckZeros, SolverBreak
+    from openravepy.ikfast import SolverStoreSolution, SolverSolution, combinations, SolverSequence, fmod, SolverRotation, SolverIKChainTransform6D, SolverBranchConds, SolverMatrixInverse, SolverCoeffFunction, SolverCheckZeros, SolverBreak, SolverConditionedSolution
     ikmodel=self
     self = solver
     freeindices = ikmodel.freeindices
     log = ikfast.log
     
-    chaintree = solver.generateIkSolver(baselink=baselink,eelink=eelink,freejointinds=freejointinds,solvefn=solvefn)
+    chaintree = solver.generateIkSolver(baselink=baselink,eelink=eelink,freeindices=freeindices,solvefn=solvefn)
     code=ikfast_generator_cpp.CodeGenerator().generate(chaintree)
     open(sourcefilename,'w').write(code)
 

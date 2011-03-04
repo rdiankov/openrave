@@ -623,7 +623,7 @@ class GraspingModel(OpenRAVEModel):
                         continue
             yield grasp,i
     def orderGrasps(self):
-        """order the grasps from best to worst"""
+        """order the grasps by the closest contact to the center of object."""
         with self.target:
             contactdists = []
             self.target.SetTransform(eye(4))

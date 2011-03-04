@@ -20,7 +20,7 @@ from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2011 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Lesser GPL, Version 3'
-__version__ = '37'
+__version__ = '38'
 
 import sys, copy, time, math, datetime
 import __builtin__
@@ -200,6 +200,7 @@ class SolverCoeffFunction:
     checkforzeros = None
     FeasibleIsZeros = False
     score = None
+    presetcheckforzeros = None
     def __init__(self, jointnames, jointeval=None, exportvar=None, exportcoeffeqs=None,exportfnname=None,isHinges=None,rootmaxdim=16,jointevalcos=None,jointevalsin=None):
         self.jointnames=jointnames
         self.jointeval = jointeval
@@ -210,6 +211,7 @@ class SolverCoeffFunction:
         self.rootmaxdim=rootmaxdim
         self.jointevalsin=jointevalsin
         self.jointevalcos=jointevalcos
+        self.presetcheckforzeros = []
     def numsolutions(self):
         return self.rootmaxdim
     def subs(self,solsubs):
@@ -239,9 +241,9 @@ class SolverCoeffFunction:
         if self.jointevalsin is not None:
             valid &= all([IKFastSolver.isValidSolution(e) for e in self.jointevalsin])
         return valid
-    #def getPresetCheckForZeros(self):
-    #    return [self.poly.coeffs[0]] # make sure highest coefficient is not 0!
-
+    def getPresetCheckForZeros(self):
+        return self.presetcheckforzeros
+    
 class SolverMatrixInverse:
     """find all roots of the polynomial and plug it into jointeval. poly should be polys.polynomial.Poly
     """
@@ -264,14 +266,17 @@ class SolverMatrixInverse:
         subs = []
         for i in range(self.A.shape[0]):
             for j in range(self.A.shape[1]):
-                subs.append((self.Asymbols[i][j],Anew[i,j]))
+                if self.Asymbols[i][j] is not None:
+                    subs.append((self.Asymbols[i][j],Anew[i,j]))
         return subs
 
 class SolverConditionedSolution:
+    dictequations = None
     solversolutions = None
     thresh=0.00001
     def __init__(self, solversolutions):
         self.solversolutions = solversolutions
+        self.dictequations = []
     def subs(self,solsubs):
         for s in self.solversolutions:
             s.subs(solsubs)
@@ -297,6 +302,7 @@ class SolverCheckZeros:
     zerobranch = None
     nonzerobranch = None
     anycondition=None
+    dictequations=None
     thresh=None # a threshold of 1e-6 breaks hiro ik
     def __init__(self, jointname, jointcheckeqs, zerobranch, nonzerobranch,thresh=0.00001,anycondition=True):
         self.jointname = jointname
@@ -305,10 +311,31 @@ class SolverCheckZeros:
         self.nonzerobranch = nonzerobranch
         self.thresh = thresh
         self.anycondition = anycondition
+        self.dictequations = []
     def generate(self, generator):
         return generator.generateCheckZeros(self)
     def end(self, generator):
         return generator.endCheckZeros(self)
+    def getPresetCheckForZeros(self):
+        return []
+    def checkValidSolution(self):
+        for branch in self.nonzerobranch:
+            if not branch.checkValidSolution():
+                return False
+        for branch in self.zerobranch:
+            if not branch.checkValidSolution():
+                return False
+        return True
+    def numsolutions(self):
+        return 1
+    def subs(self,solsubs):
+        for branch in self.nonzerobranch:
+            if hasattr(branch,'subs'):
+                branch.subs(solsubs)
+        for branch in self.zerobranch:
+            if hasattr(branch,'subs'):
+                branch.subs(solsubs)
+        return self
 
 class SolverFreeParameter:
     jointname = None
@@ -360,6 +387,8 @@ class SolverBreak:
         return generator.generateBreak(self)
     def end(self,generator):
         return generator.endBreak(self)
+    def checkValidSolution(self):
+        return True
 
 class SolverIKChainTransform6D:
     solvejointvars = None
@@ -829,7 +858,7 @@ class IKFastSolver(AutoReloader):
 
     @staticmethod
     def has_any_symbols(eqs,*sym):
-        return any([eq.has_any_symbols(*sym) for eq in eqs])
+        return any([eq.has_any_symbols(*sym) for eq in eqs]) if len(sym) > 0 else False
 
     def trigsimp(self, eq,trigvars):
         trigsubs = [(sin(v)**2,1-cos(v)**2) for v in trigvars if self.isHinge(v.name)]
@@ -905,23 +934,23 @@ class IKFastSolver(AutoReloader):
         sol.score = 0
         try:
             # multiby by 400 in order to prioritize equations with less solutions
-            if sol.jointeval is not None:
+            if hasattr(sol,'jointeval') and sol.jointeval is not None:
                 sol.score = 20000*len(sol.jointeval)
                 for s in sol.jointeval:
                     sol.score += self.codeComplexity(s)
                 subexprs = sol.jointeval
-            elif sol.jointevalsin is not None:
+            elif hasattr(sol,'jointevalsin') and sol.jointevalsin is not None:
                 sol.score = 20000*len(sol.jointevalsin)
                 for s in sol.jointevalsin:
                     sol.score += self.codeComplexity(s)
                 subexprs = sol.jointevalsin
-            elif sol.jointevalcos is not None:
+            elif hasattr(sol,'jointevalcos') and sol.jointevalcos is not None:
                 sol.score = 20000*len(sol.jointevalcos)
                 for s in sol.jointevalcos:
                     sol.score += self.codeComplexity(s)
                 subexprs = sol.jointevalcos
             else:
-                assert False
+                return sol.score
             
             def checkpow(expr,sexprs):
                 score = 0
@@ -1030,6 +1059,7 @@ class IKFastSolver(AutoReloader):
         solvejointvars = []
         self.ifreejointvars = []
         self.freevarsubs = []
+        self.freevarsubsinv = []
         self.freevars = []
         self.freejointvars = []
         self.invsubs = []
@@ -1041,6 +1071,7 @@ class IKFastSolver(AutoReloader):
                 # convert all free variables to constants
                 self.ifreejointvars.append(i)
                 self.freevarsubs += [(cos(var.var), var.cvar), (sin(var.var), var.svar)]
+                self.freevarsubsinv += [(var.cvar,cos(var.var)), (var.svar,sin(var.var))]
                 self.freevars += [var.cvar,var.svar]
                 self.freejointvars.append(var.var)
             else:
@@ -2195,7 +2226,10 @@ class IKFastSolver(AutoReloader):
         allowedindices = [i for i in range(0,6,2) if 8 == __builtin__.sum([int(peq[0].has_any_symbols(symbols[i],symbols[i+1])) for peq in rawpolyeqs])]
         if len(allowedindices) == 0:
             raise self.CannotSolveError('need exactly 8 equations of one variable')
-        
+
+        solutiontree = []
+        checkforzeros = []
+        getsubs = None
         cvar = symbols[allowedindices[0]]
         svar = symbols[allowedindices[0]+1]
         varname = cvar.name[1:]
@@ -2237,7 +2271,7 @@ class IKFastSolver(AutoReloader):
             if peq[0] != S.Zero:
                 neweqs_full.append(peq)
             else:
-                reducedeqs.append(peq[1].as_basic())
+                reducedeqs.append(peq[1].as_basic().subs(self.freevarsubs))
         haszeroequations = len(reducedeqs)>0
 
         allmonoms = set()
@@ -2247,37 +2281,90 @@ class IKFastSolver(AutoReloader):
         allmonoms.sort()
         if len(allmonoms) > len(neweqs_full):
             raise self.CannotSolveError('new monoms is not %d!=16'%len(allmonoms))
-        
-        A = zeros((len(neweqs_full),len(allmonoms)))
-        B = zeros((len(neweqs_full),1))
-        for ipeq,peq in enumerate(neweqs_full):
-            for c,m in peq[0].iter_terms():
-                A[ipeq,allmonoms.index(m)] = c
-            B[ipeq] = peq[1].as_basic()
-        AU = zeros((len(allmonoms),len(allmonoms)))
-        AL = zeros((A.shape[0]-len(allmonoms),len(allmonoms)))
-        BU = zeros((len(allmonoms),1))
-        BL = zeros((A.shape[0]-len(allmonoms),1))
-        AUinv = None
-        for rows in combinations(range(A.shape[0]),A.shape[1]):
+
+        if len(allmonoms) < len(neweqs_full):
+            # order with respect to complexity of [0], this is to make the inverse of A faster
+            complexity = [(self.codeComplexity(peq[0].as_basic()),peq) for peq in neweqs_full]
+            complexity.sort()
+            neweqs_full = [peq for c,peq in complexity]
+            A = zeros((len(neweqs_full),len(allmonoms)))
+            B = zeros((len(neweqs_full),1))
+            for ipeq,peq in enumerate(neweqs_full):
+                for c,m in peq[0].iter_terms():
+                    A[ipeq,allmonoms.index(m)] = c.subs(self.freevarsubs)
+                B[ipeq] = peq[1].as_basic().subs(self.freevarsubs)
+            AU = zeros((len(allmonoms),len(allmonoms)))
+            AL = zeros((A.shape[0]-len(allmonoms),len(allmonoms)))
+            BU = zeros((len(allmonoms),1))
+            BL = zeros((A.shape[0]-len(allmonoms),1))
+            AUadjugate = None
+            AUinv = None
+
+            AU = A[:A.shape[1],:]
+            AUdet = AU.det()
+            if AUdet != S.Zero:
+                rows = range(A.shape[1])
+            else:
+                # prune the dependent vectors
+                AU = A[0:1,:]
+                rows = [0]
+                for i in range(1,A.shape[0]):
+                    AU2 = AU.col_join(A[i:(i+1),:])
+                    if AU2.shape[0] == AU2.shape[1]:
+                        AUdet = AU2.det()
+                    else:
+                        AUdet = (AU2*AU2.transpose()).det()
+                    if AUdet == S.Zero:
+                        continue
+                    AU = AU2
+                    rows.append(i)
+                    if AU.shape[0] == AU.shape[1]:
+                        break
+                if AU.shape[0] != AU.shape[1]:
+                    raise self.CannotSolveError('could not find non-singular matrix')
+
+            AUinv = AU.inv()
+            if self.has_any_symbols(A,*self.freevars):
+                log.info('AU has symbols, so working with inverse might take some time')
+                AUdet = self.trigsimp(AUdet.subs(self.freevarsubsinv),self.freejointvars).subs(self.freevarsubs)
+                # find the adjugate by simplifying from the inverse
+                AUadjugate = zeros(AUinv.shape)
+                sinsubs = []
+                for freevar in self.freejointvars:
+                    var=self.Variable(freevar)
+                    sinsubs.append((var.cvar**2,1-var.svar**2))
+                for i in range(AUinv.shape[0]):
+                    for j in range(AUinv.shape[1]):
+                        numerator,denominator = self.recursiveFraction(AUinv[i,j])
+                        numerator = self.trigsimp(numerator.subs(self.freevarsubsinv),self.freejointvars).subs(self.freevarsubs)
+                        numerator, common = self.removecommonexprs(numerator,onlygcd=True,returncommon=True)
+                        denominator = self.trigsimp((denominator/common).subs(self.freevarsubsinv),self.freejointvars).subs(self.freevarsubs)
+                        q,r=div(numerator*AUdet,denominator,self.freevars)
+                        if r != S.Zero:
+                            # sines and cosines can mix things up a lot, try converting to all sines
+                            numerator2 = (numerator*AUdet).subs(sinsubs)
+                            denominator2 = denominator.subs(sinsubs)
+                            q,r=div(numerator2,denominator2,self.freevars)
+                            if r != S.Zero:
+                                log.warn('cannot get rid of denominator in (%s/%s)',numerator2,denominator2)
+                                q = (numerator/denominator)*AUdet
+                        AUadjugate[i,j] = self.trigsimp(q.subs(self.freevarsubsinv),self.freejointvars).subs(self.freevarsubs)
+                checkforzeros.append(self.removecommonexprs(AUdet,onlygcd=False,onlynumbers=True))
+            log.info('found non-singular AU matrix')
+            otherrows = range(A.shape[0])
             for i,row in enumerate(rows):
-                AU[i,:] = A[row,:]
-            if AU.det() != S.Zero:
-                AUinv = AU.inv()
-                break
-        if AUinv is None:
-            raise self.CannotSolveError('could not find the inverse matrix')
-        
-        otherrows = range(A.shape[0])
-        for i,row in enumerate(rows):
-            BU[i] = B[row]
-            otherrows.remove(row)
-        for i,row in enumerate(otherrows):
-            BL[i] = B[row]
-            AL[i,:] = A[row,:]
-        C = AL*(AUinv*BU)-BL
-        for c in C:
-            reducedeqs.append(c)
+                BU[i] = B[row]
+                otherrows.remove(row)
+            for i,row in enumerate(otherrows):
+                BL[i] = B[row]
+                AL[i,:] = A[row,:]
+            if AUadjugate is not None:
+                # reason we're multiplying by adjugate instead of inverse is to get rid of the potential divides by (free) parameters
+                C = AL*(AUadjugate*BU)-BL*AUdet
+            else:
+                C = AL*(AUinv*BU)-BL
+            for c in C:
+                reducedeqs.append(c)
 
         # is now a (len(neweqs)-len(allmonoms))x1 matrix, usually this is 4x1
         htvars = []
@@ -2340,9 +2427,12 @@ class IKFastSolver(AutoReloader):
                             jointcheckeqs.append(eq-X[i])
                     # threshold can be a little more loose
                     jointtrees3.append(SolverCheckZeros('sanitycheck',jointcheckeqs,zerobranch=endbranchtree,nonzerobranch=[SolverBreak()],anycondition=False,thresh=0.001))
-                    return treefirst,usedvars
+                    return solutiontree+treefirst,usedvars
                 except self.CannotSolveError:
                     pass
+                
+            # try to solve first two variables pairwise
+            #solution = self.solvePairVariables(AllEquations,usedvars[0],usedvars[1],self.freejointvars,maxcomplexity=50)
 
         newreducedeqs = []
         for eq in reducedeqs:
@@ -2365,10 +2455,12 @@ class IKFastSolver(AutoReloader):
                 eqnew += term
             newreducedeqs.append(Poly(eqnew,htvars[0],htvars[1],tvar))
 
-        exportcoeffeqs,exportmonoms = self.solveDialytically(newreducedeqs,0)
+        exportcoeffeqs,exportmonoms = self.solveDialytically(newreducedeqs,0,getsubs)
         coupledsolution = SolverCoeffFunction(jointnames=[v.name for v in usedvars],jointeval=[v[1] for v in htvarsubs2],jointevalcos=[htvarsubs[2*i][1] for i in range(len(htvars))],jointevalsin=[htvarsubs[2*i+1][1] for i in range(len(htvars))],isHinges=[self.isHinge(v.name) for v in usedvars],exportvar=[v.name for v in htvars],exportcoeffeqs=exportcoeffeqs,exportfnname='solvedialyticpoly8qep',rootmaxdim=16)
+        coupledsolution.presetcheckforzeros = checkforzeros
+        solutiontree.append(coupledsolution)
         self.usinglapack = True
-        return [coupledsolution],usedvars
+        return solutiontree,usedvars
 
     def solveKohliOsvatic(self,rawpolyeqs,solvejointvars,endbranchtree2):
         """Find a 16x16 matrix where the entries are linear with respect to the tan half-angle of one of the variables.
@@ -2590,16 +2682,13 @@ class IKFastSolver(AutoReloader):
         # some equations are linearly dependent and not solvable through this method.
         if self.testconsistentvalues is not None:
             linearlyindependent = False
-            for subs in self.testconsistentvalues:
+            for itest,subs in enumerate(self.testconsistentvalues):
                 if getsubs is not None:
                     # have to explicitly evaluate since testsubs can be very complex
                     subsvals = [(s,v.evalf()) for s,v in subs]
                     subs = subsvals+getsubs(subsvals)
                 A = Mall[maxdegree].subs(subs).evalf()
                 eps = 10**-(self.precision-3)
-#                 if A.shape[0] > A.shape[1]:
-#                     A = A.transpose() * A
-#                     eps *= eps
                 eigenvals = numpy.linalg.eigvals(numpy.array(numpy.array(A),numpy.float64))
                 if all([abs(f) > eps for f in eigenvals]):
                     linearlyindependent = True
@@ -3150,51 +3239,169 @@ class IKFastSolver(AutoReloader):
             maxdegree = __builtin__.max([peq.degree for peq in newpolyeqs])
             for peq in newpolyeqs:
                 if len(peq.monoms) == 1:
-                    solutions[ileftvar] = self.checkFinalEquation(Poly(peq.coeffs[0],leftvar),subs)
-                    if solutions[ileftvar] is not None:
+                    possiblefinaleq = self.checkFinalEquation(Poly(peq.coeffs[0],leftvar),subs)
+                    if possiblefinaleq is not None:
+                        solutions[ileftvar] = [possiblefinaleq]
                         break
             if solutions[ileftvar] is not None:
                 break
             for degree in range(mindegree,maxdegree+1):
                 newpolyeqs2 = [peq for peq in newpolyeqs if peq.degree <= degree]
                 if degree+1 <= len(newpolyeqs2):
-                    for eqs in combinations(newpolyeqs2,degree+1):
+                    # in order to avoid wrong solutions, have to get resultants for all equations
+                    possibilities = []
+                    unusedindices = range(len(newpolyeqs2))
+                    for eqsindices in combinations(range(len(newpolyeqs2)),degree+1):
                         Mall = zeros((degree+1,degree+1))
-                        for i,eq in enumerate(eqs):
+                        for i,eqindex in enumerate(eqsindices):
+                            eq = newpolyeqs2[eqindex]
                             for j in range(degree+1):
                                 Mall[i,j] = eq.coeff(j)
                         # det_bareis freezes when there are huge fractions
                         #det=self.det_bareis(Mall,*(self.pvars+dummyvars+[leftvar]))
-                        solutions[ileftvar] = self.checkFinalEquation(Poly(Mall.berkowitz_det(),leftvar),subs)
-                        if solutions[ileftvar] is not None:
-                            break
+                        possiblefinaleq = self.checkFinalEquation(Poly(Mall.berkowitz_det(),leftvar),subs)
+                        if possiblefinaleq is not None:
+                            # sometimes +- I are solutions, so remove them
+                            q,r = div(possiblefinaleq,leftvar+I)
+                            if r == S.Zero:
+                                possiblefinaleq = Poly(q,leftvar)
+                            q,r = div(possiblefinaleq,leftvar-I)
+                            if r == S.Zero:
+                                possiblefinaleq = Poly(q,leftvar)
+                            possibilities.append(possiblefinaleq)
+                            for eqindex in eqsindices:
+                                if eqindex in unusedindices:
+                                    unusedindices.remove(eqindex)
+                            if len(unusedindices) == 0:
+                                break
+                    if len(possibilities) > 0:
+                        if len(possibilities) > 1:
+                            try:
+                                linearsolutions = self.solveVariablesLinearly(possibilities,othersolvedvars)
+                                # if can solve for a unique solution linearly, then prioritize this over anything
+                                prevsolution = SolverBreak()
+                                for divisor,linearsolution in linearsolutions:
+                                    assert(len(linearsolution)==1)
+                                    divisorsymbol = self.gsymbolgen.next()
+                                    solversolution = SolverSolution(varsyms[ileftvar].name,jointeval=[2*atan(linearsolution[0]/divisorsymbol)],isHinge=self.isHinge(varsyms[ileftvar].name))
+                                    prevsolution = SolverCheckZeros(varsyms[ileftvar].name,[divisorsymbol],zerobranch=[prevsolution],nonzerobranch=[solversolution],thresh=1e-6)
+                                    prevsolution.dictequations = [(divisorsymbol,divisor)]
+                                return prevsolution
+                            
+                            except self.CannotSolveError:
+                                pass
+                            
+                        # sort with respect to degree
+                        equationdegrees = [(peq.degree,peq) for peq in possibilities]
+                        equationdegrees.sort()
+                        solutions[ileftvar] = [peq[1] for peq in equationdegrees]
+                        break
                 if solutions[ileftvar] is not None:
                     break
 
         # take the solution with the smallest degree
-        pfinal = None
+        pfinals = None
         ileftvar = None
         if solutions[0] is not None:
-            if solutions[1] is not None and solutions[1].degree < solutions[0].degree:
-                pfinal = solutions[1]
+            if solutions[1] is not None and solutions[1][0].degree < solutions[0][0].degree:
+                pfinals = solutions[1]
                 ileftvar = 1
             else:
-                pfinal = solutions[0]
+                pfinals = solutions[0]
                 ileftvar = 0
         elif solutions[1] is not None:
-            pfinal = solutions[1]
+            pfinals = solutions[1]
             ileftvar = 1
             
-        if pfinal is None:
+        if pfinals is None:
             raise self.CannotSolveError('solvePairVariablesHalfAngle: solve dialytically with %d equations'%(len(polyeqs)))
 
         jointsol = 2*atan(varsyms[ileftvar].htvar)
-        solution = SolverPolynomialRoots(jointname=varsyms[ileftvar].name,poly=pfinal,jointeval=[jointsol],isHinge=self.isHinge(varsyms[ileftvar].name))
+        solution = SolverPolynomialRoots(jointname=varsyms[ileftvar].name,poly=pfinals[0],jointeval=[jointsol],isHinge=self.isHinge(varsyms[ileftvar].name))
         solution.checkforzeros = []
         solution.postcheckforzeros = []
-        solution.postcheckfornonzeros = []
+        solution.postcheckfornonzeros = [peq.as_basic() for peq in pfinals[1:]]
         solution.postcheckforrange = []
         return solution
+                
+    def solveVariablesLinearly(self,polyeqs,othersolvedvars):
+        log.debug('solveVariablesLinearly for %s: othersolvedvars=%s',polyeqs[0].symbols,othersolvedvars)
+        nummonoms = [len(peq.monoms)-int(peq.coeff()!=S.Zero) for peq in polyeqs]
+        mindegree = __builtin__.min(nummonoms)
+        maxdegree = min(__builtin__.max(nummonoms),len(polyeqs))
+        complexity = [(self.codeComplexity(peq.as_basic()),peq) for peq in polyeqs]
+        complexity.sort()
+        polyeqs = [peq[1] for peq in complexity]
+        trigsubs = []
+        trigsubsinv = []
+        for othervar in othersolvedvars:
+            v = self.Variable(othervar)
+            trigsubs += v.subs
+            trigsubsinv += v.subsinv
+        symbolscheck = []
+        for i,solvevar in enumerate(polyeqs[0].symbols):
+            monom = [0]*len(polyeqs[0].symbols)
+            monom[i] = 1
+            symbolscheck.append(tuple(monom))
+        for degree in range(mindegree,maxdegree+1):
+            allindices = [i for i,n in enumerate(nummonoms) if n <= degree]
+            if len(allindices) >= degree:
+                allmonoms = set()
+                for index in allindices:
+                    allmonoms = allmonoms.union(set(polyeqs[index].monoms))
+                allmonoms = list(allmonoms)
+                allmonoms.sort()
+                if __builtin__.sum(allmonoms[0]) == 0:
+                    allmonoms.pop(0)
+                # allmonoms has to have symbols as a single variable
+                if not all([check in allmonoms for check in symbolscheck]):
+                    continue
+                
+                if len(allmonoms) == degree:
+                    if degree > 4:
+                        log.warn('cannot handle linear solving for more than 4 equations')
+                        continue
+                    
+                    systemequations = []
+                    consts = []
+                    for index in allindices:
+                        systemequations.append([polyeqs[index].coeff(*monom) for monom in allmonoms])
+                        consts.append(-polyeqs[index].coeff())
+                    # generate at least two solutions in case first's determinant is 0
+                    solutions = []
+                    for startrow in range(len(systemequations)):
+                        rows = [startrow]
+                        M = Matrix(1,len(allmonoms),systemequations[rows[0]])
+                        for i in range(startrow+1,len(systemequations)):
+                            M2 = M.col_join(Matrix(1,len(allmonoms),systemequations[i]))
+                            if M2.shape[0] == M2.shape[1]:
+                                Mdet = M2.det()
+                            else:
+                                Mdet = (M2*M2.transpose()).det()
+                            if Mdet != S.Zero:
+                                M = M2
+                                rows.append(i)
+                                if M.shape[0] == M.shape[1]:
+                                    break
+                                
+                        if M.shape[0] == M.shape[1]:
+                            Mdet = self.trigsimp(Mdet.subs(trigsubsinv),othersolvedvars).subs(trigsubs)
+                            #Minv = M.inv()
+                            B = Matrix(M.shape[0],1,[consts[i] for i in rows])
+                            Madjugate = M.adjugate()
+                            solution = []
+                            for check in symbolscheck:
+                                value = Madjugate[allmonoms.index(check),:]*B
+                                solution.append(self.trigsimp(value[0].subs(trigsubsinv),othersolvedvars).subs(trigsubs))
+                            solutions.append([Mdet,solution])
+                            if len(solutions) >= 2:
+                                break
+                    if len(solutions) > 0:
+                        break                    
+        if len(solutions) == 0:
+            raise self.CannotSolveError('solveVariablesLinearly failed')
+        
+        return solutions
 
     def solveSingleVariableLinearly(self,raweqs,solvevar,othervars,maxnumeqs=2,douniquecheck=True):
         """tries to linearly solve for one variable treating everything else as constant
@@ -3690,7 +3897,7 @@ class IKFastSolver(AutoReloader):
                         pbase = pbase[0]
                         for i in range(len(polyunknown)):
                             eq = (polyunknown[i]*pbase.coeff(*monom)-pbase*polyunknown[i].coeff(*monom)).as_basic().subs(allsymbols).expand()
-                            if eq != S.Zero and self.isExpressionUnique(addedeqs,eq):
+                            if eq != S.Zero and self.isExpressionUnique(addedeqs,eq) and self.isExpressionUnique(addedeqs,-eq):
                                 eqnew, symbols = self.groupTerms(eq, unknownvars, symbolgen)
                                 allsymbols += symbols
                                 p = Poly(eqnew,*pbase.symbols)
@@ -3698,19 +3905,24 @@ class IKFastSolver(AutoReloader):
                                     monomtoremove[1][0].insert(0,p)
                                 polyeqs.append([self.codeComplexity(eqnew),Poly(eqnew,*unknownvars)])
                                 addedeqs.append(eq)
-            orgeqns += polyeqs
+            neweqns += polyeqs
+        neweqns.sort(lambda x,y: x[0]-y[0])
         orgeqns.sort(lambda x,y: x[0]-y[0])
         
         groups=[]
         for i,unknownvar in enumerate(unknownvars):
             listeqs = []
+            listeqscmp = []
             for rank,eq in neweqns:
                 # if variable ever appears, it should be alone
                 if all([m[i] == 0 or (__builtin__.sum(m) == m[i] and m[i]>0) for m in eq.iter_monoms()]) and any([m[i] > 0 for m in eq.iter_monoms()]):
                     # make sure there's only one monom that includes other variables
                     othervars = [__builtin__.sum(m) - m[i] > 0 for m in eq.iter_monoms()]
                     if __builtin__.sum(othervars) <= 1:
-                        listeqs.append(eq)
+                        eqcmp = self.removecommonexprs(eq.subs(allsymbols).as_basic(),onlynumbers=False,onlygcd=True)
+                        if self.isExpressionUnique(listeqscmp,eqcmp) and self.isExpressionUnique(listeqscmp,-eqcmp):
+                            listeqs.append(eq)
+                            listeqscmp.append(eqcmp)
             groups.append(listeqs)
         # find a group that has two or more equations:
         useconic=False
@@ -3723,10 +3935,12 @@ class IKFastSolver(AutoReloader):
                 unknownvar = unknownvars[i]
                 complementvar = unknownvars[i+1]
                 listeqs = []
+                listeqscmp = []
                 for rank,eq in neweqns:
                     # if variable ever appears, it should be alone
+                    addeq = False
                     if all([__builtin__.sum(m) == m[i]+m[i+1] for m in eq.iter_monoms()]):
-                        listeqs.append(eq)
+                        addeq = True
                     else:
                         # make sure there's only one monom that includes other variables
                         othervars = 0
@@ -3737,7 +3951,12 @@ class IKFastSolver(AutoReloader):
                                 else:
                                     othervars = 10000
                         if othervars <= 1:
+                            addeq = True
+                    if addeq:
+                        eqcmp = self.removecommonexprs(eq.subs(allsymbols).as_basic(),onlynumbers=False,onlygcd=True)
+                        if self.isExpressionUnique(listeqscmp,eqcmp) and self.isExpressionUnique(listeqscmp,-eqcmp):
                             listeqs.append(eq)
+                            listeqscmp.append(eqcmp)
                 groups.append(listeqs)
                 groups.append([]) # necessary to get indices correct
             goodgroup = [(i,g) for i,g in enumerate(groups) if len(g) >= 2]
@@ -3750,7 +3969,7 @@ class IKFastSolver(AutoReloader):
 
                 # try a separate approach where the two variables are divided on both sides
                 neweqs = []
-                for rank,eq in orgeqns:
+                for rank,eq in neweqns:
                     p = Poly(eq,unknownvars[0],unknownvars[1])
                     iscoupled = False
                     for m in p.iter_monoms():
@@ -4168,7 +4387,7 @@ class IKFastSolver(AutoReloader):
 
                         if k > 0:
                             if len(vars) > 0:
-                                #print i,M[k-1, k-1]
+                                #print i,j,M[k-1, k-1]
                                 D,r = div(Poly(D,*vars),M[k-1, k-1])
                             else:
                                 D /= M[k-1, k-1]
@@ -4203,7 +4422,7 @@ class IKFastSolver(AutoReloader):
                     if U[kpivot, k] != S.Zero:
                         break
                 else:
-                    raise ValueError("Matrix is not full rank")
+                    raise IKFastSolver.CannotSolveError("Matrix is not full rank")
                 U[k, k:], U[kpivot, k:] = U[kpivot, k:], U[k, k:]
                 L[k, :k], L[kpivot, :k] = L[kpivot, :k], L[k, :k]
                 P[k, :], P[kpivot, :] = P[kpivot, :], P[k, :]
