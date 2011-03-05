@@ -1105,11 +1105,55 @@ def solveLinearly(self,raweqns,varsyms,othersolvedvars,maxdegree=1):
         neweqns += singleeqs
         neweqns.sort(lambda x, y: x[0]-y[0])
 
+def detdialytically():
+    M = Mall[2]*leftvar**2+Mall[1]*leftvar+Mall[0]
+
+    tempsymbols = [Symbol('a%d'%i) for i in range(16)]
+    tempsubs = []
+    for i in range(16):
+        if M[i] != S.Zero:
+            tempsubs.append((tempsymbols[i],Poly(M[i],leftvar)))
+        else:
+            tempsymbols[i] = S.Zero
+    Mtemp = Matrix(4,4,tempsymbols)                    
+    dettemp=Mtemp.det()
+    log.info('multiplying all determinant coefficients')
+    eqadds = []
+    for arg in dettemp.args:
+        log.info('%s',arg)
+        eqmuls = [Poly(arg2.subs(tempsubs),leftvar) for arg2 in arg.args]
+        if eqmuls[0].degree == 0:
+            eq = eqmuls.pop(0)
+            eqmuls[0] = eqmuls[0]*eq
+        while len(eqmuls) > 1:
+            ioffset = 0
+            eqmuls2 = []
+            while ioffset < len(eqmuls)-1:
+                eqmuls2.append(eqmuls[ioffset]*eqmuls[ioffset+1])
+                ioffset += 2
+            eqmuls = eqmuls2
+        eqadds.append(eqmuls[0])
+    log.info('adding all determinant coefficients')
+    eqaddsorg=eqadds
+    eqadds2 = []
+    for eq in eqadds:
+        print 'yo'
+        eq2 = Poly(S.Zero,leftvar)
+        for c,m in eq.iter_terms():
+            eq2 = eq2.add_term(simplifyfn(c),m)
+        eqadds2.append(eq2)
+    # any further simplification will just freeze the generation process
+    det = Poly(S.Zero,leftvar)
+    for eq in eqadds2:
+        for c,m in eq.iter_terms():
+            sym=self.gsymbolgen.next()
+            dictequations.append([sym,c])
+            det += sym*leftvar**m[0]
 
 def test_ik():
     from sympy import *
     import __builtin__
-    from openravepy.ikfast import SolverStoreSolution, SolverSolution, combinations, SolverSequence, fmod, SolverRotation, SolverIKChainTransform6D, SolverBranchConds, SolverMatrixInverse, SolverCoeffFunction, SolverCheckZeros, SolverBreak, SolverConditionedSolution
+    from openravepy.ikfast import SolverStoreSolution, SolverSolution, combinations, SolverSequence, fmod, SolverRotation, SolverIKChainTransform6D, SolverBranchConds, SolverMatrixInverse, SolverCoeffFunction, SolverCheckZeros, SolverBreak, SolverConditionedSolution, SolverPolynomialRoots
     ikmodel=self
     self = solver
     freeindices = ikmodel.freeindices

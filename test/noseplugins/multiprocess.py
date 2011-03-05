@@ -626,8 +626,8 @@ def runner(ix, testQueue, resultQueue, currentaddr, currentstart, keyboardCaught
                     else:
                         log.debug('Worker %s test %s timed out',ix,test_addr)
                         #err = (TimedOutException,TimedOutException(test_addr),sys.exc_info()[2])
-                        #result.addError(test,err)
                         #config.plugins.addError(test,err)
+                        #result.addError(test,err)
                         resultQueue.put((ix, test_addr, test.tasks, batch(result)))
                 except SystemExit:
                     currentaddr.value = ''
@@ -639,10 +639,6 @@ def runner(ix, testQueue, resultQueue, currentaddr, currentstart, keyboardCaught
                     failure.Failure(*sys.exc_info())(result)
                     resultQueue.put((ix, test_addr, test.tasks, batch(result)))
                 if config.multiprocess_restartworker:
-                    # this is necessary to prevent lockups if this thread adds more items to the queue?
-                    # will data be corrupted?
-                    #testQueue.cancel_join_thread()
-                    #resultQueue.cancel_join_thread()
                     break
         except Empty:
             log.debug("Worker %s timed out waiting for tasks", ix)
@@ -721,8 +717,8 @@ class NoSharedFixtureContextSuite(ContextSuite):
                         test(orig)
                     except KeyboardInterrupt,e:
                         err = (TimedOutException,TimedOutException(str(test)),sys.exc_info()[2])
-                        orig.addError(test,err)
                         test.config.plugins.addError(test,err)
+                        orig.addError(test,err)
         finally:
             self.has_run = True
             try:

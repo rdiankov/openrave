@@ -1028,6 +1028,9 @@ int main(int argc, char** argv)
             numevals = max(numevals,len(node.postcheckforrange))
         if numevals > 0:
             code += 'IKReal %sevalpoly[%d];\n'%(name,numevals)
+        for var,value in node.dictequations:
+            code += 'IKReal %s;\n'%var
+            code += self.writeEquations(lambda k: var,value)
         code += self.writeEquations(lambda i: 'op[%d]'%(i),[node.poly.coeff(i) for i in range(D,-1,-1)])
         code += "%s(op,zeror,numroots);\n"%(polyroots)
         code += 'IKReal %sarray[%d], c%sarray[%d], s%sarray[%d], temp%sarray[%d];\n'%(name,len(node.jointeval)*D,name,len(node.jointeval)*D,name,len(node.jointeval)*D,name,len(node.jointeval))
