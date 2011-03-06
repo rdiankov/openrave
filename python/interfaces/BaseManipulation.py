@@ -64,7 +64,7 @@ class BaseManipulation:
         if res is None:
             raise planning_error('MoveHandStraight')
         return res
-    def MoveManipulator(self,goal,maxiter=None,execute=None,outputtraj=None):
+    def MoveManipulator(self,goal,maxiter=None,execute=None,outputtraj=None,maxtries=None):
         assert(len(goal) == len(self.robot.GetActiveManipulator().GetArmIndices()) and len(goal) > 0)
         cmd = 'MoveManipulator goal ' + ' '.join(str(f) for f in goal) + ' '
         if execute is not None:
@@ -73,6 +73,8 @@ class BaseManipulation:
             cmd += 'outputtraj '
         if maxiter is not None:
             cmd += 'maxiter %d '%maxiter
+        if maxtries is not None:
+            cmd += 'maxtries %d '%maxtries
         res = self.prob.SendCommand(cmd)
         if res is None:
             raise planning_error('MoveManipulator')
@@ -251,3 +253,19 @@ class BaseManipulation:
         else:
             traj = None
         return final,traj
+    def FindIKWithFilters(self,ikparam,cone=None,solveall=None,filteroptions=None):
+        cmd = 'FindIKWithFilters ikparam %s '%str(ikparam)
+        if cone is not None:            
+            cmd += 'cone %s '%(' '.join(str(f) for f in cone))
+        if solveall is not None and solveall:
+            cmd += 'solveall '
+        if filteroptions is not None:
+            cmd += 'filteroptions %d '%filteroptions        
+        res = self.prob.SendCommand(cmd)
+        if res is None:
+            raise planning_error('FindIKWithFilters')
+        resvalues = res.split()
+        num = int(resvalues[0])
+        dim = (len(resvalues)-1)/num
+        solutions = reshape([float64(s) for s in resvalues[1:]],(num,dim))
+        return solutions

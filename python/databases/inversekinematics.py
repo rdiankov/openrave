@@ -140,6 +140,9 @@ class InverseKinematicsModel(OpenRAVEModel):
         :param forceikfast: if set will always force the ikfast solver
         """
         OpenRAVEModel.__init__(self,robot=robot)
+        self.ikfastproblem = RaveCreateProblem(self.env,'ikfast')
+        if self.ikfastproblem is not None:
+            self.env.LoadProblem(self.ikfastproblem,'')
         self.iktype = iktype
         self.iksolver = None
         self.freeinc = None
@@ -157,9 +160,6 @@ class InverseKinematicsModel(OpenRAVEModel):
             
             self.solveindices = [i for i in self.manip.GetArmIndices() if not i in self.freeindices]
         self.forceikfast = forceikfast
-        self.ikfastproblem = RaveCreateProblem(self.env,'ikfast')
-        if self.ikfastproblem is not None:
-            self.env.LoadProblem(self.ikfastproblem,'')
         self.ikfeasibility = None # if not None, ik is NOT feasibile and contains the error message
         self.statistics = dict()
 

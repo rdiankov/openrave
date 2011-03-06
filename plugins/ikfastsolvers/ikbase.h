@@ -34,6 +34,7 @@ class IkFastSolver : public IkSolverBase
     typedef bool (*FkFn)(const IKReal* j, IKReal* eetrans, IKReal* eerot);
     
  IkFastSolver(IkFn pfnik, const std::vector<int>& vfreeparams, const vector<dReal>& vFreeInc, int nTotalDOF, IkParameterization::Type iktype, boost::shared_ptr<void> resource, const std::string kinematicshash, EnvironmentBasePtr penv) : IkSolverBase(penv), _vfreeparams(vfreeparams), _pfnik(pfnik), _vFreeInc(vFreeInc), _nTotalDOF(nTotalDOF), _iktype(iktype), _resource(resource), _kinematicshash(kinematicshash) {
+        __description = ":Interface Author: Rosen Diankov\nAn OpenRAVE wrapper for the ikfast generated files.\nIf 6D IK is used, will check if the end effector and other independent links are in collision before manipulator link collisions. If they are, the IK will terminate with failure immediately.\nBecause checking collisions is the slowest part of the IK, the custom filter function run before collision checking.";
     }
     virtual ~IkFastSolver() {}
 
@@ -488,6 +489,15 @@ private:
 
         // check for self collisions
         probot->SetActiveDOFValues(vravesol);
+        if( !!_filterfn ) {
+            switch(_filterfn(vravesol, pmanip, param)) {
+            case IKFR_Reject: return SR_Continue;
+            case IKFR_Quit: return SR_Quit;
+            case IKFR_Success:
+                break;
+            }
+        }
+
         CollisionReport report;
         if( !(filteroptions&IKFO_IgnoreSelfCollisions) ) {
             if( IS_DEBUGLEVEL(Level_Verbose) ) {
@@ -517,14 +527,7 @@ private:
             bCheckEndEffector = false;
             return SR_Continue;
         }
-        if( !!_filterfn ) {
-            switch(_filterfn(vravesol, pmanip, param)) {
-            case IKFR_Reject: return SR_Continue;
-            case IKFR_Quit: return SR_Quit;
-            case IKFR_Success:
-                break;
-            }
-        }
+
         // solution is valid
         vbest = vravesol;
         bestdist = d;
@@ -575,6 +578,16 @@ private:
         RobotBase::ManipulatorPtr pmanip(_pmanip);
         RobotBasePtr probot = pmanip->GetRobot();
         probot->SetActiveDOFValues(vravesol);
+
+        if( !!_filterfn ) {
+            switch(_filterfn(vravesol, pmanip, param)) {
+            case IKFR_Reject: return SR_Continue;
+            case IKFR_Quit: return SR_Quit;
+            case IKFR_Success:
+                break;
+            }
+        }
+
         if( !(filteroptions&IKFO_IgnoreSelfCollisions) ) {
             if( IS_DEBUGLEVEL(Level_Verbose) ) {
                 CollisionReport report;
@@ -599,14 +612,7 @@ private:
                 return SR_Continue;
             }
         }
-        if( !!_filterfn ) {
-            switch(_filterfn(vravesol, pmanip, param)) {
-            case IKFR_Reject: return SR_Continue;
-            case IKFR_Quit: return SR_Quit;
-            case IKFR_Success:
-                break;
-            }
-        }
+
         qSolutions.push_back(vravesol);
         return SR_Continue;
     }

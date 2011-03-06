@@ -363,13 +363,14 @@ public:
 
         virtual bool Sample(vector<dReal>& pNewSample)
         {
-            if( RaveRandomFloat() > _fSampleGoalProb )
+            if( RaveRandomFloat() > _fSampleGoalProb ) {
                 return false;
+            }
             RobotBase::RobotStateSaver state(_vf->_robot);
             _sphereperms._fn = boost::bind(&GoalSampleFunction::SampleWithParameters,this,_1,boost::ref(pNewSample));
-            if( _sphereperms.PermuteContinue() >= 0 )
+            if( _sphereperms.PermuteContinue() >= 0 ) {
                 return true;
-
+            }
 //            // start from the beginning, if nothing, throw
 //            _sphereperms.PermuteStart(_visibilitytransforms.size());
 //            if( _sphereperms.PermuteContinue() >= 0 )
@@ -458,11 +459,12 @@ Visibility computation checks occlusion with other objects using ray sampling in
             if( !ss )
                 break;
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
-            if( cmd == "maxvelmult" )
+            if( cmd == "maxvelmult" ) {
                 ss >> _fMaxVelMult;
-
-            if( ss.fail() || !ss )
+            }
+            if( ss.fail() || !ss ) {
                 break;
+            }
         }
         _robot = GetEnv()->GetRobot(robotname);
         return 0;
@@ -489,8 +491,9 @@ Visibility computation checks occlusion with other objects using ray sampling in
         string cmd;
         while(!sinput.eof()) {
             sinput >> cmd;
-            if( !sinput )
+            if( !sinput ) {
                 break;
+            }
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
 
             if( cmd == "sensorrobot" ) {
@@ -576,8 +579,9 @@ Visibility computation checks occlusion with other objects using ray sampling in
                     }
                     _vcenterconvex /= 3.0f*totalarea; _vcenterconvex.z = 1;
                 }
-                else
+                else {
                     RAVELOG_WARN(str(boost::format("convex data does not have enough points %d\n")%vconvexdata.size()));
+                }
             }
             else if( cmd == "raydensity" ) {
                 sinput >> _fSampleRayDensity;
@@ -700,8 +704,9 @@ Visibility computation checks occlusion with other objects using ray sampling in
         vector<Transform> vtransforms;
         while(!sinput.eof()) {
             sinput >> cmd;
-            if( !sinput )
+            if( !sinput ) {
                 break;
+            }
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
 
             if( cmd == "localtargetcenter" ) {
@@ -835,8 +840,9 @@ Visibility computation checks occlusion with other objects using ray sampling in
         dReal mindist = 0;
         while(!sinput.eof()) {
             sinput >> cmd;
-            if( !sinput )
+            if( !sinput ) {
                 break;
+            }
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
 
             if( cmd == "transforms" ) {
@@ -895,8 +901,9 @@ Visibility computation checks occlusion with other objects using ray sampling in
         Transform t;
         while(!sinput.eof()) {
             sinput >> cmd;
-            if( !sinput )
+            if( !sinput ) {
                 break;
+            }
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
 
             if( cmd == "raydensity" ) {
@@ -927,8 +934,9 @@ Visibility computation checks occlusion with other objects using ray sampling in
         Transform t;
         while(!sinput.eof()) {
             sinput >> cmd;
-            if( !sinput )
+            if( !sinput ) {
                 break;
+            }
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
 
             if( cmd == "pose" ) {
@@ -950,10 +958,12 @@ Visibility computation checks occlusion with other objects using ray sampling in
         _robot->SetActiveManipulator(_nManipIndex); BOOST_ASSERT(_robot->GetActiveManipulator()==_pmanip);
         _robot->SetActiveDOFs(_pmanip->GetArmIndices());
         boost::shared_ptr<VisibilityConstraintFunction> pconstraintfn(new VisibilityConstraintFunction(shared_problem()));
-        if( _pmanip->CheckEndEffectorCollision(t*_ttogripper) )
+        if( _pmanip->CheckEndEffectorCollision(t*_ttogripper) ) {
             return false;
-        if( !pconstraintfn->SampleWithCamera(t,vsample) )
+        }
+        if( !pconstraintfn->SampleWithCamera(t,vsample) ) {
             return false;
+        }
         FOREACH(it,vsample) {
             sout << *it << " ";
         }
@@ -967,12 +977,14 @@ Visibility computation checks occlusion with other objects using ray sampling in
         int numsamples=1;
         while(!sinput.eof()) {
             sinput >> cmd;
-            if( !sinput )
+            if( !sinput ) {
                 break;
+            }
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
         
-            if( cmd == "numsamples" )
+            if( cmd == "numsamples" ) {
                 sinput >> numsamples;
+            }
             else {
                 RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
@@ -1007,13 +1019,15 @@ Visibility computation checks occlusion with other objects using ray sampling in
             }
         }
 
-        if( numsampled == 0 )
+        if( numsampled == 0 ) {
             return false;
+        }
         float felapsed = (GetMicroTime()-starttime)*1e-6f;
         RAVELOG_INFO("total time for %d samples is %fs, %f avg\n", numsamples,felapsed,felapsed/numsamples);
         sout << numsampled << " ";
-        for(int i = 0; i < numsampled*_robot->GetActiveDOF(); ++i)
+        for(int i = 0; i < numsampled*_robot->GetActiveDOF(); ++i) {
             sout << vsamples[i] << " ";
+        }
         return true;
     }
 
@@ -1031,26 +1045,35 @@ Visibility computation checks occlusion with other objects using ray sampling in
 
         while(!sinput.eof()) {
             sinput >> cmd;
-            if( !sinput )
+            if( !sinput ) {
                 break;
+            }
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
 
-            if( cmd == "outputtraj" )
+            if( cmd == "outputtraj" ) {
                 pOutputTrajStream = boost::shared_ptr<ostream>(&sout,null_deleter());
-            else if( cmd == "affinedofs" )
+            }
+            else if( cmd == "affinedofs" ) {
                 sinput >> affinedofs;
-            else if( cmd == "maxiter" )
+            }
+            else if( cmd == "maxiter" ) {
                 sinput >> params->_nMaxIterations;
-            else if( cmd == "execute" )
+            }
+            else if( cmd == "execute" ) {
                 sinput >> bExecute;
-            else if( cmd == "writetraj" )
+            }
+            else if( cmd == "writetraj" ) {
                 sinput >> strtrajfilename;
-            else if( cmd == "smoothpath" )
+            }
+            else if( cmd == "smoothpath" ) {
                 sinput >> params->_sPathOptimizationPlanner;
-            else if( cmd == "planner" )
+            }
+            else if( cmd == "planner" ) {
                 sinput >> plannername;
-            else if( cmd == "sampleprob" )
+            }
+            else if( cmd == "sampleprob" ) {
                 sinput >> fSampleGoalProb;
+            }
             else {
                 RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
@@ -1111,9 +1134,9 @@ Visibility computation checks occlusion with other objects using ray sampling in
 
         float felapsed = (GetMicroTime()-starttime)*0.000001f;
         RAVELOG_INFOA("total planning time: %fs\n", felapsed);
-        if( !bSuccess )
+        if( !bSuccess ) {
             return false;
-
+        }
         CM::SetActiveTrajectory(_robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream,_fMaxVelMult);
         return true;
     }
@@ -1131,26 +1154,35 @@ Visibility computation checks occlusion with other objects using ray sampling in
         bool bUseVisibility = false;
         while(!sinput.eof()) {
             sinput >> cmd;
-            if( !sinput )
+            if( !sinput ) {
                 break;
+            }
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
         
-            if( cmd == "outputtraj" )
+            if( cmd == "outputtraj" ) {
                 pOutputTrajStream = boost::shared_ptr<ostream>(&sout,null_deleter());
-            else if( cmd == "maxiter" )
+            }
+            else if( cmd == "maxiter" ) {
                 sinput >> params->_nMaxIterations;
-            else if( cmd == "visgraspthresh" )
+            }
+            else if( cmd == "visgraspthresh" ) {
                 sinput >> params->_fVisibiltyGraspThresh;
-            else if( cmd == "execute" )
+            }
+            else if( cmd == "execute" ) {
                 sinput >> bExecute;
-            else if( cmd == "writetraj" )
+            }
+            else if( cmd == "writetraj" ) {
                 sinput >> strtrajfilename;
-            else if( cmd == "usevisibility" )
+            }
+            else if( cmd == "usevisibility" ) {
                 sinput >> bUseVisibility;
-            else if( cmd == "planner" )
+            }
+            else if( cmd == "planner" ) {
                 sinput >> plannername;
-            else if( cmd == "graspdistthresh" )
+            }
+            else if( cmd == "graspdistthresh" ) {
                 sinput >> params->_fGraspDistThresh;
+            }
             else if( cmd == "graspset" ) {
                 int numgrasps=0;
                 sinput >> numgrasps;
@@ -1162,8 +1194,9 @@ Visibility computation checks occlusion with other objects using ray sampling in
                 }
                 RAVELOG_DEBUG(str(boost::format("grasp set size = %d\n")%params->_vgrasps.size()));
             }
-            else if( cmd == "numgradientsamples" )
+            else if( cmd == "numgradientsamples" ) {
                 sinput >> params->_nGradientSamples;
+            }
             else {
                 RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 return false;
@@ -1211,9 +1244,9 @@ Visibility computation checks occlusion with other objects using ray sampling in
 
         float felapsed = (GetMicroTime()-starttime)*0.000001f;
         RAVELOG_INFOA("total planning time: %fs\n", felapsed);
-        if( !bSuccess )
+        if( !bSuccess ) {
             return false;
-
+        }
         CM::SetActiveTrajectory(_robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream,_fMaxVelMult);
         return true;
     }

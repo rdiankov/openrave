@@ -57,9 +57,13 @@ Method wraps the WorkspaceTrajectoryTracker planner. For more details on paramet
                         "see TaskManipulation problem.");
         RegisterCommand("JitterActive",boost::bind(&BaseManipulation::JitterActive,this,_1,_2),
                         "Jitters the active DOF for a collision-free position.");
-        RegisterCommand("SmoothTrajectory",boost::bind(&BaseManipulation::SmoothTrajectory,this,_1,_2),
-                        "Smooths a trajectory of points and returns the new trajectory such that\n"
-                        "it is guaranteed to contain no co-linear points in configuration space\n");
+        RegisterCommand("FindIKWithFilters",boost::bind(&BaseManipulation::FindIKWithFilters,this,_1,_2),
+                        "Samples IK solutions using custom filters that constrain the end effector in the world. Parameters:\n\n\
+* cone - Constraint the direction of a local axis with respect to a cone in the world. Takes in: worldaxis(3), localaxis(3), anglelimit. \n\
+* solveall - When specified, will return all possible solutions.\n\
+* ikparam - The serialized ik parameterization to use for FindIKSolution(s).\n\
+* filteroptions\n\
+");
         _fMaxVelMult=1;
     }
 
@@ -135,14 +139,15 @@ protected:
 
         if(!sinput.eof()) {
             sinput >> manipname;
-            if( !sinput )
+            if( !sinput ) {
                 return false;
-        
+            }
             // find the manipulator with the right name
             index = 0;
             FOREACHC(itmanip, robot->GetManipulators()) {
-                if( manipname == (*itmanip)->GetName() )
+                if( manipname == (*itmanip)->GetName() ) {
                     break;
+                }
                 ++index;
             }
 
@@ -218,8 +223,9 @@ protected:
         string cmd;
         while(!sinput.eof()) {
             sinput >> cmd;
-            if( !sinput )
+            if( !sinput ) {
                 break;
+            }
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
         
             if( cmd == "name" ) {
@@ -227,7 +233,9 @@ protected:
                 sinput >> name;
                 ptarget = GetEnv()->GetKinBody(name);
             }
-            else break;
+            else {
+                break;
+            }
 
             if( !sinput ) {
                 RAVELOG_ERROR(str(boost::format("failed processing command %s\n")%cmd));
@@ -395,25 +403,35 @@ protected:
         params->_nMaxIterations = 4000; // max iterations before failure
 
         string cmd;
+        int nMaxTries = 3; // max tries for the planner
         while(!sinput.eof()) {
             sinput >> cmd;
-            if( !sinput )
+            if( !sinput ) {
                 break;
+            }
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
 
             if( cmd == "armvals" || cmd == "goal" ) {
                 goals.resize(pmanip->GetArmIndices().size());
-                FOREACH(it, goals)
+                FOREACH(it, goals) {
                     sinput >> *it;
+                }
             }
-            else if( cmd == "outputtraj" )
+            else if( cmd == "outputtraj" ) {
                 pOutputTrajStream = boost::shared_ptr<ostream>(&sout,null_deleter());
-            else if( cmd == "maxiter" )
+            }
+            else if( cmd == "maxiter" ) {
                 sinput >> params->_nMaxIterations;
-            else if( cmd == "execute" )
+            }
+            else if( cmd == "execute" ) {
                 sinput >> bExecute;
-            else if( cmd == "writetraj" )
+            }
+            else if( cmd == "writetraj" ) {
                 sinput >> strtrajfilename;
+            }
+            else if( cmd == "maxtries" ) {
+                sinput >> nMaxTries;
+            }
             else {
                 RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
@@ -425,8 +443,9 @@ protected:
             }
         }
     
-        if( goals.size() != pmanip->GetArmIndices().size() )
+        if( goals.size() != pmanip->GetArmIndices().size() ) {
             return false;
+        }
 
         RobotBase::RobotStateSaver saver(robot);
 
@@ -464,7 +483,7 @@ protected:
         bool bSuccess = false;
         RAVELOG_INFO("starting planning\n");
     
-        for(int iter = 0; iter < 3; ++iter) {
+        for(int iter = 0; iter < nMaxTries; ++iter) {
             if( !rrtplanner->InitPlan(robot, params) ) {
                 RAVELOG_ERROR("InitPlan failed\n");
                 break;
@@ -499,27 +518,35 @@ protected:
         string cmd;
         while(!sinput.eof()) {
             sinput >> cmd;
-            if( !sinput )
+            if( !sinput ) {
                 break;
+            }
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
         
             if( cmd == "goal" ) {
                 params->vgoalconfig.resize(robot->GetActiveDOF());
-                FOREACH(it, params->vgoalconfig)
+                FOREACH(it, params->vgoalconfig) {
                     sinput >> *it;
+                }
             }
-            else if( cmd == "outputtraj" )
+            else if( cmd == "outputtraj" ) {
                 pOutputTrajStream = boost::shared_ptr<ostream>(&sout,null_deleter());
-            else if( cmd == "maxiter" )
+            }
+            else if( cmd == "maxiter" ) {
                 sinput >> params->_nMaxIterations;
-            else if( cmd == "execute" )
+            }
+            else if( cmd == "execute" ) {
                 sinput >> bExecute;
-            else if( cmd == "writetraj" )
+            }
+            else if( cmd == "writetraj" ) {
                 sinput >> strtrajfilename;
-            else if( cmd == "steplength" )
+            }
+            else if( cmd == "steplength" ) {
                 sinput >> params->_fStepLength;
-            else if( cmd == "maxtries" )
+            }
+            else if( cmd == "maxtries" ) {
                 sinput >> nMaxTries;
+            }
             else {
                 RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
@@ -612,8 +639,9 @@ protected:
         string cmd;
         while(!sinput.eof()) {
             sinput >> cmd;
-            if( !sinput )
+            if( !sinput ) {
                 break;
+            }
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
         
             if( cmd == "translation" ) {
@@ -628,8 +656,9 @@ protected:
                 listgoals.push_back(IkParameterization());
                 listgoals.back().SetRotation3D(q);
             }
-            else if( cmd == "outputtraj" )
+            else if( cmd == "outputtraj" ) {
                 pOutputTrajStream = boost::shared_ptr<ostream>(&sout,null_deleter());
+            }
             else if( cmd == "matrix" ) {
                 TransformMatrix m;
                 sinput >> m;
@@ -658,28 +687,38 @@ protected:
                     listgoals.push_back(IkParameterization(t));
                 }
             }
-            else if( cmd == "affinedofs" )
+            else if( cmd == "affinedofs" ) {
                 sinput >> affinedofs;
-            else if( cmd == "maxiter" )
+            }
+            else if( cmd == "maxiter" ) {
                 sinput >> params->_nMaxIterations;
-            else if( cmd == "maxtries" )
+            }
+            else if( cmd == "maxtries" ) {
                 sinput >> nMaxTries;
-            else if( cmd == "execute" )
+            }
+            else if( cmd == "execute" ) {
                 sinput >> bExecute;
-            else if( cmd == "writetraj" )
+            }
+            else if( cmd == "writetraj" ) {
                 sinput >> strtrajfilename;
-            else if( cmd == "seedik" )
+            }
+            else if( cmd == "seedik" ) {
                 sinput >> nSeedIkSolutions;
-            else if( cmd == "constraintfreedoms" )
-                FOREACH(it,vconstraintfreedoms)
+            }
+            else if( cmd == "constraintfreedoms" ) {
+                FOREACH(it,vconstraintfreedoms) {
                     sinput >> *it;
+                }
+            }
             else if( cmd == "constraintmatrix" ) {
                 TransformMatrix m; sinput >> m; tConstraintTargetWorldFrame = m;
             }
-            else if( cmd == "constraintpose" )
+            else if( cmd == "constraintpose" ) {
                 sinput >> tConstraintTargetWorldFrame;
-            else if( cmd == "constrainterrorthresh" )
+            }
+            else if( cmd == "constrainterrorthresh" ) {
                 sinput >> constrainterrorthresh;
+            }
             else {
                 RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
@@ -811,9 +850,9 @@ protected:
 
         rrtplanner.reset(); // have to destroy before environment
     
-        if( !bSuccess )
+        if( !bSuccess ) {
             return false;
-
+        }
         CM::SetActiveTrajectory(robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream,_fMaxVelMult);
         sout << "1";
         return true;
@@ -832,34 +871,44 @@ protected:
         int maxdivision=10;
         while(!sinput.eof()) {
             sinput >> cmd;
-            if( !sinput )
+            if( !sinput ) {
                 break;
+            }
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
 
-            if( cmd == "writetraj" )
+            if( cmd == "writetraj" ) {
                 sinput >> strsavetraj;
-            else if( cmd == "outputtraj" )
+            }
+            else if( cmd == "outputtraj" ) {
                 pOutputTrajStream = boost::shared_ptr<ostream>(&sout,null_deleter());
+            }
             else if( cmd == "handjoints" ) {
                 int dof = 0;
                 sinput >> dof;
-                if( !sinput || dof == 0 )
+                if( !sinput || dof == 0 ) {
                     return false;
+                }
                 vhandjoints.resize(dof);
                 vhandgoal.resize(dof);
-                FOREACH(it, vhandgoal)
+                FOREACH(it, vhandgoal) {
                     sinput >> *it;
-                FOREACH(it, vhandjoints)
+                }
+                FOREACH(it, vhandjoints) {
                     sinput >> *it;
+                }
             }
-            else if( cmd == "planner" )
+            else if( cmd == "planner" ) {
                 sinput >> strplanner;
-            else if( cmd == "execute" )
+            }
+            else if( cmd == "execute" ) {
                 sinput >> bExecute;
-            else if( cmd == "maxtries" )
+            }
+            else if( cmd == "maxtries" ) {
                 sinput >> nMaxTries;
-            else if( cmd == "maxdivision" )
+            }
+            else if( cmd == "maxdivision" ) {
                 sinput >> maxdivision;
+            }
             else {
                 RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
@@ -886,8 +935,9 @@ protected:
                 break;
             }
         }
-        if( !bSuccess )
+        if( !bSuccess ) {
             return false;
+        }
 
         BOOST_ASSERT(ptraj->GetPoints().size() > 0);
 
@@ -895,8 +945,9 @@ protected:
         sout << (int)bExecuted << " ";
 
         sout << (timeGetTime()-starttime)/1000.0f << " ";
-        FOREACH(it, ptraj->GetPoints().back().q)
+        FOREACH(it, ptraj->GetPoints().back().q) {
             sout << *it << " ";
+        }
 
         return true;
     }
@@ -953,20 +1004,26 @@ protected:
         dReal fJitter=0.03f;
         while(!sinput.eof()) {
             sinput >> cmd;
-            if( !sinput )
+            if( !sinput ) {
                 break;
+            }
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
 
-            if( cmd == "execute" )
+            if( cmd == "execute" ) {
                 sinput >> bExecute;
-            else if( cmd == "maxiter" )
+            }
+            else if( cmd == "maxiter" ) {
                 sinput >> nMaxIterations;
-            else if( cmd == "jitter" )
+            }
+            else if( cmd == "jitter" ) {
                 sinput >> fJitter;
-            else if( cmd == "outputtraj" )
+            }
+            else if( cmd == "outputtraj" ) {
                 pOutputTrajStream = boost::shared_ptr<ostream>(&sout,null_deleter());
-            else if( cmd == "outputfinal" )
+            }
+            else if( cmd == "outputfinal" ) {
                 bOutputFinal = true;
+            }
             else {
                 RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
@@ -997,184 +1054,100 @@ protected:
         }
 
         if( bOutputFinal ) {
-            FOREACH(itq,ptfirst.q)
+            FOREACH(itq,ptfirst.q) {
                 sout << *itq << " ";
+            }
         }
 
         CM::SetActiveTrajectory(robot, ptraj, bExecute, "", pOutputTrajStream,_fMaxVelMult);
         return true;
     }
 
-    static bool CheckCollision(RobotBasePtr probot, const vector<dReal>& q0, const vector<dReal>& q1, const vector<dReal>& qresolutioninv)
+    class IkResetFilter
     {
-        BOOST_ASSERT( probot->GetDOF() == (int)q0.size() && probot->GetDOF()== (int)q1.size() && probot->GetDOF() == (int)qresolutioninv.size() );
-    
-        // set the bounds based on the interval type
-        int start = 1;
+    public:
+        IkResetFilter(IkSolverBasePtr iksolver) : _iksolver(iksolver) {}
+        virtual ~IkResetFilter() { _iksolver->SetCustomFilter(IkSolverBase::IkFilterCallbackFn()); }
+        IkSolverBasePtr _iksolver;
+    };
 
-        // first make sure the end is free
-        vector<dReal> vtempconfig(probot->GetDOF()), jointIncrement(probot->GetDOF());
-
-        // compute  the discretization
-        int i, numSteps = 1;
-        for (i = 0; i < (int)vtempconfig.size(); i++) {
-            int steps = (int)(fabs(q1[i] - q0[i]) * qresolutioninv[i]);
-            if (steps > numSteps)
-                numSteps = steps;
-        }
-
-        // compute joint increments
-        for (i = 0; i < (int)vtempconfig.size(); i++)
-            jointIncrement[i] = (q1[i] - q0[i])/((float)numSteps);
-
-        // check for collision along the straight-line path
-        // NOTE: this does not check the end config, and may or may
-        // not check the start based on the value of 'start'
-        for (int f = start; f < numSteps; f++) {
-
-            for (i = 0; i < (int)vtempconfig.size(); i++)
-                vtempconfig[i] = q0[i] + (jointIncrement[i] * f);
-        
-            probot->SetDOFValues(vtempconfig);
-            if( probot->GetEnv()->CheckCollision(KinBodyConstPtr(probot)) || probot->CheckSelfCollision() )
-                return true;
-        }
-
-        return false;
-    }
-
-    static void OptimizePathRandomized(RobotBasePtr probot, list< Trajectory::TPOINT >& path, const vector<dReal>& qresolutioninv, int _nMaxIterations)
+    bool FindIKWithFilters(ostream& sout, istream& sinput)
     {
-        if( path.size() <= 2 )
-            return;
-
-        list< Trajectory::TPOINT >::iterator itstart, itend;
-    
-        int nrejected = 0;
-        int i = _nMaxIterations;
-        while(i > 0 && nrejected < (int)path.size() ) {
-
-            --i;
-
-            // pick a random node on the path, and a random jump ahead
-            int endIndex = 1+(RaveRandomInt()%((int)path.size()-1));
-            int startIndex = RaveRandomInt()%endIndex;
-        
-            itstart = path.begin();
-            advance(itstart, startIndex);
-            itend = itstart;
-            advance(itend, endIndex-startIndex);
-            nrejected++;
-
-            // check if the nodes can be connected by a straight line
-            if (CheckCollision(probot, itstart->q, itend->q, qresolutioninv)) {
-                if( nrejected++ > (int)path.size()*2 )
-                    break;
-                continue;
-            }
-
-            // splice out in-between nodes in path
-            path.erase(++itstart, itend);
-            nrejected = 0;
-
-            if( path.size() <= 2 )
-                return;
-        }
-    }
-
-    // check all pairs of nodes
-    static void OptimizePathAll(RobotBasePtr probot, list< Trajectory::TPOINT >& path, const vector<dReal>& qresolutioninv)
-    {
-        list< Trajectory::TPOINT >::iterator itstart = path.begin();
-        while(itstart != path.end() ) {
-        
-            list< Trajectory::TPOINT >::iterator itend = path.end();
-            while(--itend != itstart) {
-                if (!CheckCollision(probot, itstart->q, itend->q, qresolutioninv)) {
-                    // splice out in-between nodes in path
-                    list< Trajectory::TPOINT >::iterator itnext = itstart;
-                    path.erase(++itnext, itend);
-                    break;
-                }
-            }
-
-            ++itstart;
-        }
-    }
-
-    bool SmoothTrajectory(ostream& sout, istream& sinput)
-    {
-        bool bExecute = true;
-        int nMaxSmoothIterations = 100;
-        boost::shared_ptr<Trajectory> ptraj(RaveCreateTrajectory(GetEnv(),robot->GetDOF()));
-        vector<dReal> qresolutioninv(robot->GetDOF(),50.0f);
-
+        bool bSolveAll = false;
+        IkSolverBase::IkFilterCallbackFn filterfn;
+        IkParameterization ikparam;
+        int filteroptions = IKFO_CheckEnvCollisions;
         string cmd;
+        RobotBase::ManipulatorPtr pmanip = robot->GetActiveManipulator();
+        if( !pmanip->GetIkSolver() ) {
+            throw openrave_exception(str(boost::format("FindIKWithFilters: manipulator %s has no ik solver set")%robot->GetActiveManipulator()->GetName()));
+        }
+
         while(!sinput.eof()) {
             sinput >> cmd;
-            if( !sinput )
+            if( !sinput ) {
                 break;
+            }
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
 
-            if( cmd == "traj" ) {
-                if( !ptraj->Read(sinput,robot) ) {
-                    RAVELOG_ERROR("failed to read trajectory\n");
-                    return false;
-                }
+            if( cmd == "cone" ) {
+                Vector vlocalaxis, vworldaxis;
+                dReal anglelimit;
+                sinput >> vlocalaxis.x >> vlocalaxis.y >> vlocalaxis.z >> vworldaxis.x >> vworldaxis.y >> vworldaxis.z >> anglelimit;
+                filterfn = boost::bind(&BaseManipulation::_FilterWorldAxisIK,shared_problem(),_1,_2,_3, vlocalaxis, vworldaxis, RaveCos(anglelimit));
             }
-            else if( cmd == "trajfile" ) {
-                string filename;
-                sinput >> filename;
-                ifstream f(filename.c_str());
-                if( !ptraj->Read(f,robot) ) {
-                    RAVELOG_ERROR("failed to read trajectory\n");
-                    return false;
-                }
+            else if( cmd == "solveall" ) {
+                bSolveAll = true;
             }
-            else if( cmd == "maxsmoothiter" ) {
-                sinput >> nMaxSmoothIterations;
+            else if( cmd == "ikparam" ) {
+                sinput >> ikparam;
             }
-            else if( cmd == "resolution" ) {
-                FOREACH(it,qresolutioninv)
-                    sinput >> *it;
+            else if( cmd == "filteroptions" ) {
+                sinput >> filteroptions;
             }
-            else if( cmd == "execute" )
-                sinput >> bExecute;
             else {
                 RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
             }
-
             if( !sinput ) {
                 RAVELOG_ERROR(str(boost::format("failed processing command %s\n")%cmd));
                 return false;
             }
         }
 
-        if( ptraj->GetPoints().size() == 0 ) {
-            RAVELOG_ERROR("trajectory not initialized\n");
-            return false;
+        if( !filterfn ) {
+            throw openrave_exception("FindIKWithFilters: no filter function set");
         }
-
-        list<Trajectory::TPOINT> path;
-        FOREACH(itpoint, ptraj->GetPoints())
-            path.push_back(*itpoint);
-
-        OptimizePathRandomized(robot,path,qresolutioninv, nMaxSmoothIterations);
-        OptimizePathAll(robot, path, qresolutioninv);
-
-        boost::shared_ptr<Trajectory> pnewtraj(RaveCreateTrajectory(GetEnv(),robot->GetDOF()));
-        FOREACH(it, path) {
-            pnewtraj->AddPoint(Trajectory::TPOINT(it->q,it->trans,0));
+        IkResetFilter resetfilter(robot->GetActiveManipulator()->GetIkSolver());
+        pmanip->GetIkSolver()->SetCustomFilter(filterfn);
+        vector< vector<dReal> > vsolutions;
+        if( bSolveAll ) {
+            if( !pmanip->FindIKSolutions(ikparam,vsolutions,filteroptions)) {
+                return false;
+            }
         }
-
-        if( bExecute ) {
-            pnewtraj->CalcTrajTiming(robot,pnewtraj->GetInterpMethod(),true,false,_fMaxVelMult);
-            robot->SetMotion(pnewtraj);
+        else {
+            vsolutions.resize(1);
+            if( !pmanip->FindIKSolution(ikparam,vsolutions[0],filteroptions)) {
+                return false;
+            }
         }
-
-        pnewtraj->Write(sout, Trajectory::TO_OneLine);
+        sout << vsolutions.size() << " ";
+        FOREACH(itsol,vsolutions) {
+            FOREACH(it, *itsol) {
+                sout << *it << " ";
+            }
+        }
         return true;
+    }
+
+ protected:
+    IkFilterReturn _FilterWorldAxisIK(std::vector<dReal>& values, RobotBase::ManipulatorPtr pmanip, const IkParameterization& ikparam, const Vector& vlocalaxis, const Vector& vworldaxis, dReal coslimit)
+    {
+        if( RaveFabs(vworldaxis.dot3(pmanip->GetEndEffectorTransform().rotate(vlocalaxis))) < coslimit ) {
+            return IKFR_Reject;
+        }
+        return IKFR_Success;
     }
 
     RobotBasePtr robot;

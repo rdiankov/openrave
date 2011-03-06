@@ -1450,6 +1450,19 @@ public:
     PyRay GetTranslationDirection5D() { return PyRay(_param.GetTranslationDirection5D()); }
 
     IkParameterization _param;
+
+    string __repr__() {
+        stringstream ss;
+        ss << std::setprecision(std::numeric_limits<dReal>::digits10+1); /// have to do this or otherwise precision gets lost
+        ss << _param;
+        return boost::str(boost::format("<IkParameterization('%s')>")%ss.str());
+    }
+    string __str__() {
+        stringstream ss;
+        ss << std::setprecision(std::numeric_limits<dReal>::digits10+1); /// have to do this or otherwise precision gets lost
+        ss << _param;
+        return ss.str();
+    }
 };
 
 class IkParameterization_pickle_suite : public pickle_suite
@@ -4074,6 +4087,8 @@ In python, the syntax is::\n\n\
             .def("GetRay",&PyIkParameterization::GetRay4D, DOXY_FN(IkParameterization,GetRay4D))
             .def("GetLookat",&PyIkParameterization::GetLookat3D, DOXY_FN(IkParameterization,GetLookat3D))
             .def("GetTranslationDirection",&PyIkParameterization::GetTranslationDirection5D, DOXY_FN(IkParameterization,GetTranslationDirection5D))
+            .def("__str__",&PyIkParameterization::__str__)
+            .def("__repr__",&PyIkParameterization::__repr__)
             ;
         ikparameterization.attr("Type") = iktype;
     }
