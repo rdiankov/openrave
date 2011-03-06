@@ -15,9 +15,6 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 // functions that allow plugins to program for the RAVE simulator
-#ifndef OPENRAVE_COLLADA_READER_H
-#define OPENRAVE_COLLADA_READER_H
-
 #include "ravep.h"
 
 using namespace OpenRAVE;
@@ -2754,4 +2751,58 @@ class ColladaReader : public daeErrorHandler
     bool _bSkipGeometry;
 };
 
-#endif
+bool RaveParseColladaFile(EnvironmentBasePtr penv, const string& filename,const AttributesList& atts)
+{
+    ColladaReader reader(penv);
+    boost::shared_ptr<pair<string,string> > filedata = OpenRAVEXMLParser::FindFile(filename);
+    if (!filedata || !reader.InitFromFile(filedata->second,atts)) {
+        return false;
+    }
+    return reader.Extract();
+}
+
+bool RaveParseColladaFile(EnvironmentBasePtr penv, KinBodyPtr& pbody, const string& filename,const AttributesList& atts)
+{
+    ColladaReader reader(penv);
+    boost::shared_ptr<pair<string,string> > filedata = OpenRAVEXMLParser::FindFile(filename);
+    if (!filedata || !reader.InitFromFile(filedata->second,atts)) {
+        return false;
+    }
+    return reader.Extract(pbody);
+}
+
+bool RaveParseColladaFile(EnvironmentBasePtr penv, RobotBasePtr& probot, const string& filename,const AttributesList& atts)
+{
+    ColladaReader reader(penv);
+    boost::shared_ptr<pair<string,string> > filedata = OpenRAVEXMLParser::FindFile(filename);
+    if (!filedata || !reader.InitFromFile(filedata->second,atts)) {
+        return false;
+    }
+    return reader.Extract(probot);
+}
+
+bool RaveParseColladaData(EnvironmentBasePtr penv, const string& pdata,const AttributesList& atts) {
+    ColladaReader reader(penv);
+    if (!reader.InitFromData(pdata,atts)) {
+        return false;
+    }
+    return reader.Extract();
+}
+
+bool RaveParseColladaData(EnvironmentBasePtr penv, KinBodyPtr& pbody, const string& pdata,const AttributesList& atts)
+{
+    ColladaReader reader(penv);
+    if (!reader.InitFromData(pdata,atts)) {
+        return false;
+    }
+    return reader.Extract(pbody);
+}
+
+bool RaveParseColladaData(EnvironmentBasePtr penv, RobotBasePtr& probot, const string& pdata,const AttributesList& atts)
+{
+    ColladaReader reader(penv);
+    if (!reader.InitFromData(pdata,atts)) {
+        return false;
+    }
+    return reader.Extract(probot);
+}

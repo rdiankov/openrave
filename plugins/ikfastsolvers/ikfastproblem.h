@@ -3,6 +3,7 @@
 
 #include "plugindefs.h"
 #include <boost/algorithm/string.hpp>
+#include <boost/lexical_cast.hpp>
 
 #ifdef Boost_IOSTREAMS_FOUND
 #define BOOST_IOSTREAMS_USE_DEPRECATED // needed for newer versions of boost
@@ -278,9 +279,9 @@ public:
     {
         EnvironmentMutex::scoped_lock envlock(GetEnv()->GetMutex());
         string robotname;
-        int niktype=-1;
+        string striktype;
         sinput >> robotname;
-        sinput >> niktype;
+        sinput >> striktype;
         if( !sinput ) {
             return false;
         }
@@ -288,7 +289,24 @@ public:
         if( !probot || !probot->GetActiveManipulator() ) {
             return false;
         }
-        string striktype = RaveGetIkParameterizationMap().find(static_cast<IkParameterization::Type>(niktype))->second;
+        int niktype = -1;
+        try {
+            niktype = boost::lexical_cast<int>(striktype);
+            striktype = RaveGetIkParameterizationMap().find(static_cast<IkParameterization::Type>(niktype))->second;
+        }
+        catch(const boost::bad_lexical_cast&) {
+            // striktype is already correct, so check that it exists in RaveGetIkParameterizationMap
+            std::transform(striktype.begin(), striktype.end(), striktype.begin(), ::tolower);
+            FOREACHC(it,RaveGetIkParameterizationMap()) {
+                if( it->second == striktype ) {
+                    niktype = it->first;
+                    break;
+                }
+            }
+            if(niktype == -1) {
+                throw openrave_exception(str(boost::format("could not find iktype %s")%striktype));
+            }
+        }
 
         {
             string hasik;

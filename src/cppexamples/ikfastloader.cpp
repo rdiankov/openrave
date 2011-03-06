@@ -55,7 +55,7 @@ int main(int argc, char ** argv)
         ProblemInstancePtr pikfast = RaveCreateProblem(penv,"ikfast");
         penv->LoadProblem(pikfast,"");
         stringstream ssin,ssout;
-        ssin << "LoadIKFastSolver " << probot->GetName() << " " << (int)IkParameterization::Type_Transform6D;
+        ssin << "LoadIKFastSolver " << probot->GetName() << " " << iktype;
         // if necessary, add free inc for degrees of freedom
         //ssin << " " << 0.04f;
         // set the active manipulator

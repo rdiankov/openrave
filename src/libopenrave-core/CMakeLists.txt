@@ -4,13 +4,14 @@ if( HAVE_MKSTEMP )
 endif()
 
 set(coreLIBS ${openrave_libraries})
-set(openrave_core_SOURCES openrave-core.cpp colladareader.h  environment-core.h  openrave-core.h ravep.h   xmlreaders.h colladawriter.h)
+set(openrave_core_SOURCES openrave-core.cpp environment-core.h  openrave-core.h ravep.h   xmlreaders.cpp)
 
 if( COLLADA_FOUND )
   set(LIBOPENRAVE_COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} -DOPENRAVE_COLLADA_SUPPORT ${COLLADA_CFLAGS_OTHER}")
   set(LIBOPENRAVE_LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS} ${COLLADA_LDFLAGS_OTHER}")
   include_directories(${COLLADA_INCLUDE_DIRS} ${MINIZIP_INCLUDE_DIR})
   set (coreLIBS ${coreLIBS} ${COLLADA_LIBRARIES} minizip)
+  set(openrave_core_SOURCES ${openrave_core_SOURCES} colladareader.cpp colladawriter.cpp)
 endif()
 
 if( ASSIMP_FOUND )

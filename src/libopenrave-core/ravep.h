@@ -181,6 +181,27 @@ class ColladaWriter;
 using namespace OpenRAVE;
 using namespace std;
 
+namespace OpenRAVEXMLParser
+{
+    class InterfaceXMLReadable : public XMLReadable
+    {
+    public:
+        InterfaceXMLReadable(InterfaceBasePtr pinterface) : XMLReadable(pinterface->GetXMLId()), _pinterface(pinterface) {}
+        virtual ~InterfaceXMLReadable() {}
+        InterfaceBasePtr _pinterface;
+    };
+
+    int& GetXMLErrorCount();
+    void SetDataDirs(const std::vector<std::string>& vdatadirs);
+    bool ParseXMLFile(BaseXMLReaderPtr preader, const std::string& filename);
+    bool ParseXMLData(BaseXMLReaderPtr preader, const std::string& pdata);
+    BaseXMLReaderPtr CreateEnvironmentReader(EnvironmentBasePtr penv, const AttributesList& atts);
+    boost::shared_ptr<std::pair<std::string,std::string> > FindFile(const std::string& filename);
+    BaseXMLReaderPtr CreateInterfaceReader(EnvironmentBasePtr penv, InterfaceType type, InterfaceBasePtr& pinterface, const std::string& xmltag, const AttributesList& atts);
+    BaseXMLReaderPtr CreateInterfaceReader(EnvironmentBasePtr penv, const AttributesList& atts);
+    bool CreateTriMeshData(const std::string& filename, const Vector& vscale, KinBody::Link::TRIMESH& trimesh, RaveVector<float>& diffuseColor, RaveVector<float>& ambientColor, float& ftransparency);
+}
+
 #ifdef _WIN32
 #elif defined(__APPLE_CC__)
 #define strnicmp strncasecmp
@@ -251,8 +272,5 @@ bool RaveParseColladaData(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const 
 void RaveWriteColladaFile(EnvironmentBasePtr penv, const std::string& filename);
 void RaveWriteColladaFile(KinBodyPtr pbody, const std::string& filename);
 void RaveWriteColladaFile(RobotBasePtr probot, const std::string& filename);
-
-#include "xmlreaders.h"
-#include "environment-core.h"
 
 #endif

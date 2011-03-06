@@ -372,7 +372,7 @@ class Environment : public EnvironmentBase
             bSuccess = RaveParseColladaFile(shared_from_this(), filename, AttributesList());
         }
         else {
-            bSuccess = ParseXMLFile(boost::shared_ptr<OpenRAVEXMLParser::EnvironmentXMLReader>(new OpenRAVEXMLParser::EnvironmentXMLReader(shared_from_this(),AttributesList(),false)), filename);
+            bSuccess = ParseXMLFile(OpenRAVEXMLParser::CreateEnvironmentReader(shared_from_this(),AttributesList()), filename);
         }
 
         if( !bSuccess ) {
@@ -385,7 +385,7 @@ class Environment : public EnvironmentBase
     virtual bool LoadXMLData(const std::string& data)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        if( !ParseXMLData(boost::shared_ptr<OpenRAVEXMLParser::EnvironmentXMLReader>(new OpenRAVEXMLParser::EnvironmentXMLReader(shared_from_this(),AttributesList(),false)),data) ) {
+        if( !ParseXMLData(OpenRAVEXMLParser::CreateEnvironmentReader(shared_from_this(),AttributesList()),data) ) {
             RAVELOG_WARN("load failed environment data\n");
             return false;
         }
@@ -928,7 +928,7 @@ class Environment : public EnvironmentBase
         }
         else {
             InterfaceBasePtr pinterface = robot;
-            OpenRAVEXMLParser::InterfaceXMLReaderPtr preader = OpenRAVEXMLParser::CreateInterfaceReader(shared_from_this(), PT_Robot, pinterface, "robot", atts);
+            BaseXMLReaderPtr preader = OpenRAVEXMLParser::CreateInterfaceReader(shared_from_this(), PT_Robot, pinterface, "robot", atts);
             bool bSuccess = ParseXMLFile(preader, filename);
             robot = RaveInterfaceCast<RobotBase>(pinterface);
             if( !bSuccess || !robot ) {
@@ -959,7 +959,7 @@ class Environment : public EnvironmentBase
         }
         else {
             InterfaceBasePtr pinterface = robot;
-            OpenRAVEXMLParser::InterfaceXMLReaderPtr preader = OpenRAVEXMLParser::CreateInterfaceReader(shared_from_this(), PT_Robot, pinterface, "robot", atts);
+            BaseXMLReaderPtr preader = OpenRAVEXMLParser::CreateInterfaceReader(shared_from_this(), PT_Robot, pinterface, "robot", atts);
             bool bSuccess = ParseXMLData(preader, data);
             robot = RaveInterfaceCast<RobotBase>(pinterface);
             if( !bSuccess || !robot ) {
@@ -1013,7 +1013,7 @@ class Environment : public EnvironmentBase
         }
         else {
             InterfaceBasePtr pinterface = body;
-            OpenRAVEXMLParser::InterfaceXMLReaderPtr preader = OpenRAVEXMLParser::CreateInterfaceReader(shared_from_this(), PT_KinBody, pinterface, "kinbody", atts);
+            BaseXMLReaderPtr preader = OpenRAVEXMLParser::CreateInterfaceReader(shared_from_this(), PT_KinBody, pinterface, "kinbody", atts);
             bool bSuccess = ParseXMLFile(preader, filename);
             body = RaveInterfaceCast<KinBody>(pinterface);
             if( !bSuccess || !body ) {
@@ -1044,7 +1044,7 @@ class Environment : public EnvironmentBase
         }
         else {
             InterfaceBasePtr pinterface = body;
-            OpenRAVEXMLParser::InterfaceXMLReaderPtr preader = OpenRAVEXMLParser::CreateInterfaceReader(shared_from_this(), PT_KinBody, pinterface, "kinbody", atts);
+            BaseXMLReaderPtr preader = OpenRAVEXMLParser::CreateInterfaceReader(shared_from_this(), PT_KinBody, pinterface, "kinbody", atts);
             bool bSuccess = ParseXMLData(preader, data);
             body = RaveInterfaceCast<KinBody>(pinterface);
             if( !bSuccess || !body ) {
@@ -1060,13 +1060,14 @@ class Environment : public EnvironmentBase
         try {
             EnvironmentMutex::scoped_lock lockenv(GetMutex());
             OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
-            boost::shared_ptr<OpenRAVEXMLParser::GlobalInterfaceXMLReader> preader(new OpenRAVEXMLParser::GlobalInterfaceXMLReader(shared_from_this(),atts));
-            bool bSuccess = RaveParseXMLFile(preader, filename);
-            if( !bSuccess || !preader->GetInterface()) {
+            BaseXMLReaderPtr preader = OpenRAVEXMLParser::CreateInterfaceReader(shared_from_this(),atts);
+            bool bSuccess = ParseXMLFile(preader, filename);
+            boost::shared_ptr<OpenRAVEXMLParser::InterfaceXMLReadable> preadable = boost::dynamic_pointer_cast<OpenRAVEXMLParser::InterfaceXMLReadable>(preader->GetReadable());
+            if( !bSuccess || !preadable || !preadable->_pinterface) {
                 return InterfaceBasePtr();
             }
-            preader->GetInterface()->__strxmlfilename = filename;
-            return preader->GetInterface();
+            preadable->_pinterface->__strxmlfilename = filename;
+            return preadable->_pinterface;
         }
         catch(const openrave_exception& ex) {
             RAVELOG_ERROR(str(boost::format("ReadInterfaceXMLFile exception: %s\n")%ex.what()));
@@ -1102,11 +1103,13 @@ class Environment : public EnvironmentBase
             pinterface->__strxmlfilename = filename;
         }
         else {
-            OpenRAVEXMLParser::InterfaceXMLReaderPtr preader = OpenRAVEXMLParser::CreateInterfaceReader(shared_from_this(), type, pinterface, RaveGetInterfaceName(type), atts);
-            if( !!preader->GetInterface() ) {
+            BaseXMLReaderPtr preader = OpenRAVEXMLParser::CreateInterfaceReader(shared_from_this(), type, pinterface, RaveGetInterfaceName(type), atts);
+            boost::shared_ptr<OpenRAVEXMLParser::InterfaceXMLReadable> preadable = boost::dynamic_pointer_cast<OpenRAVEXMLParser::InterfaceXMLReadable>(preader->GetReadable());
+            if( !!preadable ) {
                 if( !ParseXMLFile(preader, filename) ) {
                     return InterfaceBasePtr();
                 }
+                pinterface = preadable->_pinterface;
             }
             else {
                 pinterface = ReadInterfaceXMLFile(filename,AttributesList());
@@ -1124,7 +1127,7 @@ class Environment : public EnvironmentBase
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
 
         // check for collada?
-        OpenRAVEXMLParser::InterfaceXMLReaderPtr preader = OpenRAVEXMLParser::CreateInterfaceReader(shared_from_this(), type, pinterface, RaveGetInterfaceName(type), atts);
+        BaseXMLReaderPtr preader = OpenRAVEXMLParser::CreateInterfaceReader(shared_from_this(), type, pinterface, RaveGetInterfaceName(type), atts);
         bool bSuccess = ParseXMLData(preader, data);
         if( !bSuccess ) {
             return InterfaceBasePtr();
@@ -1136,7 +1139,7 @@ class Environment : public EnvironmentBase
     virtual boost::shared_ptr<KinBody::Link::TRIMESH> ReadTrimeshFile(boost::shared_ptr<KinBody::Link::TRIMESH> ptrimesh, const std::string& filename, const AttributesList& atts) {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
-        boost::shared_ptr<pair<string,string> > filedata = OpenRAVEXMLParser::RaveFindFile(filename);
+        boost::shared_ptr<pair<string,string> > filedata = OpenRAVEXMLParser::FindFile(filename);
         if( !filedata ) {
             return boost::shared_ptr<KinBody::Link::TRIMESH>();
         }
@@ -1146,7 +1149,7 @@ class Environment : public EnvironmentBase
         if( !ptrimesh ) {
             ptrimesh.reset(new KinBody::Link::TRIMESH());
         }
-        if( !OpenRAVEXMLParser::_CreateTriMeshData(filedata->second, vscale, *ptrimesh, diffuseColor, ambientColor, ftransparency) ) {
+        if( !OpenRAVEXMLParser::CreateTriMeshData(filedata->second, vscale, *ptrimesh, diffuseColor, ambientColor, ftransparency) ) {
             ptrimesh.reset();
         }
         return ptrimesh;
@@ -1161,14 +1164,14 @@ class Environment : public EnvironmentBase
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
-        return OpenRAVEXMLParser::RaveParseXMLFile(preader, filename);
+        return OpenRAVEXMLParser::ParseXMLFile(preader, filename);
     }
 
     virtual bool ParseXMLData(BaseXMLReaderPtr preader, const std::string& pdata)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
-        return OpenRAVEXMLParser::RaveParseXMLData(preader, pdata);
+        return OpenRAVEXMLParser::ParseXMLData(preader, pdata);
     }
 
     virtual bool AttachViewer(ViewerBasePtr pnewviewer)

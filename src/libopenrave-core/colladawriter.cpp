@@ -15,9 +15,6 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /// functions that allow plugins to program for the RAVE simulator
-#ifndef OPENRAVE_COLLADA_WRITER_H
-#define OPENRAVE_COLLADA_WRITER_H
-
 #include "ravep.h"
 
 using namespace OpenRAVE;
@@ -42,6 +39,7 @@ using namespace std;
 #include <libxml/globals.h>
 #include <libxml/xmlerror.h>
 #include <libxml/parser.h>
+#include <libxml/parserInternals.h> // only for xmlNewInputFromFile()
 #include <libxml/tree.h>
 #include <libxml/xmlmemory.h>
 
@@ -1514,4 +1512,29 @@ BOOST_TYPEOF_REGISTER_TYPE(ColladaWriter::instance_kinematics_model_output)
 BOOST_TYPEOF_REGISTER_TYPE(ColladaWriter::articulated_system_output)
 #endif
 
-#endif
+void RaveWriteColladaFile(EnvironmentBasePtr penv, const string& filename)
+{
+    ColladaWriter writer(penv);
+    if( !writer.Write(penv) ) {
+        throw openrave_exception("ColladaWriter::Write(EnvironmentBasePtr) failed");
+    }
+    writer.Save(filename);
+}
+
+void RaveWriteColladaFile(KinBodyPtr pbody, const string& filename)
+{
+    ColladaWriter writer(pbody->GetEnv());
+    if( !writer.Write(pbody) ) {
+        throw openrave_exception("ColladaWriter::Write(KinBodyPtr) failed");
+    }
+    writer.Save(filename);
+}
+
+void RaveWriteColladaFile(RobotBasePtr probot, const string& filename)
+{
+    ColladaWriter writer(probot->GetEnv());
+    if( !writer.Write(probot) ) {
+        throw openrave_exception("ColladaWriter::Write(RobotBasePtr) failed");
+    }
+    writer.Save(filename);
+}

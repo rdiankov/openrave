@@ -17,11 +17,9 @@
 #ifndef RAVE_XML_READERS
 #define RAVE_XML_READERS
 
-#include <libxml/xmlstring.h>
+#include "ravep.h"
 
-/////////////////
-// XML Parsing //
-/////////////////
+#include <libxml/xmlstring.h>
 // define LIBXML_STATIC for static linking (libxml2s.lib)
 #define LIBXML_SAX1_ENABLED
 #include <libxml/globals.h>
@@ -72,37 +70,37 @@ namespace OpenRAVEXMLParser
     static boost::once_flag __onceCreateXMLMutex = BOOST_ONCE_INIT;
     /// lock for parsing XML, don't destroy it in order to ensure it remains valid for as long as possible
     static EnvironmentMutex* __mutexXML;
-    static void __CreateXMLMutex()
+    void __CreateXMLMutex()
     {
         __mutexXML = new EnvironmentMutex();
     }
 
-    static EnvironmentMutex* GetXMLMutex()
+    EnvironmentMutex* GetXMLMutex()
     {
         boost::call_once(__CreateXMLMutex,__onceCreateXMLMutex);
         return __mutexXML;
     }
 
     /// the directory of the file currently parsing
-    static string& GetParseDirectory() { static string s; return s; }
+    std::string& GetParseDirectory() { static string s; return s; }
     /// full filename currently parsing
-    static string& GetFullFilename() { static string s; return s; }
+    std::string& GetFullFilename() { static string s; return s; }
 
-    static vector<string>& GetDataDirs()
+    std::vector<string>& RaveGetDataDirs()
     {
         static vector<string> v;
         return v;
     }
 
-    static int& GetXMLErrorCount()
+    int& GetXMLErrorCount()
     {
         static int errorcount=0;
         return errorcount;
     }
 
-    static void SetDataDirs(const vector<string>& vdatadirs) {
+    void SetDataDirs(const vector<string>& vdatadirs) {
         EnvironmentMutex::scoped_lock lock(*GetXMLMutex());
-        GetDataDirs() = vdatadirs;
+        RaveGetDataDirs() = vdatadirs;
     }
 
 #ifdef OPENRAVE_ASSIMP
@@ -246,7 +244,7 @@ namespace OpenRAVEXMLParser
 
 #endif
     
-    static bool _CreateTriMeshData(const std::string& filename, const Vector& vscale, KinBody::Link::TRIMESH& trimesh, RaveVector<float>& diffuseColor, RaveVector<float>& ambientColor, float& ftransparency)
+    bool CreateTriMeshData(const std::string& filename, const Vector& vscale, KinBody::Link::TRIMESH& trimesh, RaveVector<float>& diffuseColor, RaveVector<float>& ambientColor, float& ftransparency)
     {
 #ifdef OPENRAVE_ASSIMP
         aiSceneManaged scene(filename.c_str(),aiProcess_JoinIdenticalVertices|aiProcess_Triangulate);
@@ -498,7 +496,7 @@ namespace OpenRAVEXMLParser
         return ret;
     }
 
-    static boost::shared_ptr<pair<string,string> > RaveFindFile(const string& filename)
+    boost::shared_ptr<std::pair<std::string,std::string> > FindFile(const std::string& filename)
     {
         if( filename.size() == 0 ) {
             return boost::shared_ptr<pair<string,string> >();
@@ -508,9 +506,9 @@ namespace OpenRAVEXMLParser
         // init the dir (for some reason msvc confuses the linking of the string class with soqt, so do it the old fashioned way)
         string appended;
         size_t sepindex = filename.find_last_of('/');
-        if( sepindex == string::npos )
+        if( sepindex == string::npos ) {
             sepindex = filename.find_last_of('\\');
-
+        }
         string parsedirectory = GetParseDirectory(), fullfilename = GetFullFilename();
 
         // check for absolute paths
@@ -542,7 +540,7 @@ namespace OpenRAVEXMLParser
             }
 
             // try the set openrave directories
-            FOREACHC(itdir, GetDataDirs()) {
+            FOREACHC(itdir, RaveGetDataDirs()) {
                 string newparse;
                 newparse = *itdir; newparse.push_back(s_filesep);
                 newparse += parsedirectory;
@@ -563,9 +561,9 @@ namespace OpenRAVEXMLParser
                     break;
                 }
             }
-
-            if( bFileFound )
+            if( bFileFound ) {
                 break;
+            }
 
         } while(0);
 
@@ -581,9 +579,9 @@ namespace OpenRAVEXMLParser
         return boost::shared_ptr<pair<string,string> >(new pair<string,string>(parsedirectory,fullfilename));
     }
 
-    static bool RaveParseXMLFile(BaseXMLReaderPtr preader, const string& filename)
+    bool ParseXMLFile(BaseXMLReaderPtr preader, const string& filename)
     {
-        boost::shared_ptr<pair<string,string> > filedata = RaveFindFile(filename);
+        boost::shared_ptr<pair<string,string> > filedata = FindFile(filename);
         if( !filedata ) {
             return false;
         }
@@ -622,7 +620,7 @@ namespace OpenRAVEXMLParser
         return ret == 0;
     }
     
-    static bool RaveParseXMLData(BaseXMLReaderPtr preader, const std::string& pdata)
+    bool ParseXMLData(BaseXMLReaderPtr preader, const std::string& pdata)
     {
         if( pdata.size() == 0 ) {
             return false;
@@ -831,7 +829,7 @@ namespace OpenRAVEXMLParser
                 _plink = plink;
             }
             if( linkfilename.size() > 0 ) {
-                RaveParseXMLFile(BaseXMLReaderPtr(new LinkXMLReader(_plink, _pparent, AttributesList())), linkfilename);
+                ParseXMLFile(BaseXMLReaderPtr(new LinkXMLReader(_plink, _pparent, AttributesList())), linkfilename);
             }
     
             if( !_plink ) {
@@ -1049,7 +1047,7 @@ namespace OpenRAVEXMLParser
                         if( _collisionfilename.first.size() > 0 ) {
                             _itgeomprop->vRenderScale = _renderfilename.second;
                             _itgeomprop->renderfile = _renderfilename.first;
-                            if( !_CreateTriMeshData(_collisionfilename.first, _collisionfilename.second, _itgeomprop->collisionmesh, _itgeomprop->diffuseColor, _itgeomprop->ambientColor, _itgeomprop->ftransparency) ) {
+                            if( !CreateTriMeshData(_collisionfilename.first, _collisionfilename.second, _itgeomprop->collisionmesh, _itgeomprop->diffuseColor, _itgeomprop->ambientColor, _itgeomprop->ftransparency) ) {
                                 RAVELOG_WARN(str(boost::format("failed to find %s\n")%_collisionfilename.first));
                             }
                             else {
@@ -1060,7 +1058,7 @@ namespace OpenRAVEXMLParser
                             _itgeomprop->vRenderScale = _renderfilename.second;
                             _itgeomprop->renderfile = _renderfilename.first;
                             if( !bSuccess ) {
-                                if( !_CreateTriMeshData(_renderfilename.first, _renderfilename.second, _itgeomprop->collisionmesh, _itgeomprop->diffuseColor, _itgeomprop->ambientColor, _itgeomprop->ftransparency) ) {
+                                if( !CreateTriMeshData(_renderfilename.first, _renderfilename.second, _itgeomprop->collisionmesh, _itgeomprop->diffuseColor, _itgeomprop->ambientColor, _itgeomprop->ftransparency) ) {
                                     RAVELOG_WARN(str(boost::format("failed to find %s\n")%_renderfilename.first));
                                 }
                                 else {
@@ -1670,8 +1668,6 @@ namespace OpenRAVEXMLParser
     typedef boost::shared_ptr<InterfaceXMLReader> InterfaceXMLReaderPtr;
     typedef boost::shared_ptr<InterfaceXMLReader const> InterfaceXMLReaderConstPtr;
 
-    static InterfaceXMLReaderPtr CreateInterfaceReader(EnvironmentBasePtr penv, InterfaceType type, InterfaceBasePtr& pinterface, const std::string& xmltag, const AttributesList& atts);
-
     class InterfaceXMLReader : public StreamXMLReader
     {
     public:
@@ -1690,8 +1686,8 @@ namespace OpenRAVEXMLParser
                     }
 
                     //BaseXMLReaderPtr preader = CreateInterfaceReader(_penv,_type,_pinterface, xmltag, listnewatts);
-                    //bool bSuccess = RaveParseXMLFile(preader, itatt->second);
-                    boost::shared_ptr<pair<string,string> > filedata = RaveFindFile(itatt->second);
+                    //bool bSuccess = ParseXMLFile(preader, itatt->second);
+                    boost::shared_ptr<pair<string,string> > filedata = FindFile(itatt->second);
                     if( !filedata ) {
                         continue;
                     }
@@ -1872,8 +1868,7 @@ namespace OpenRAVEXMLParser
             }
         }
 
-        InterfaceBasePtr GetInterface() { return _pinterface; }
-
+        virtual XMLReadablePtr GetReadable() { return XMLReadablePtr(new InterfaceXMLReadable(_pinterface)); }
     protected:        
         EnvironmentBasePtr _penv;
         InterfaceType _type;
@@ -1954,7 +1949,7 @@ namespace OpenRAVEXMLParser
                 if( !!ifstream(temp.c_str()) )
                     return temp;
 
-                FOREACHC(itdir, GetDataDirs()) {
+                FOREACHC(itdir, RaveGetDataDirs()) {
                     temp = *itdir; temp.push_back(s_filesep);
                     temp += *itmodelsdir;
                     temp += filename;
@@ -3067,7 +3062,7 @@ namespace OpenRAVEXMLParser
                         }
                     }
 
-                    boost::shared_ptr<pair<string,string> > filedata = RaveFindFile(itatt->second);
+                    boost::shared_ptr<pair<string,string> > filedata = FindFile(itatt->second);
                     if( !filedata ) {
                         continue;
                     }
@@ -3218,7 +3213,12 @@ namespace OpenRAVEXMLParser
         bool _bInEnvironment;
     };
 
-    static InterfaceXMLReaderPtr CreateInterfaceReader(EnvironmentBasePtr penv, InterfaceType type, InterfaceBasePtr& pinterface, const std::string& xmltag, const AttributesList& atts)
+    BaseXMLReaderPtr CreateEnvironmentReader(EnvironmentBasePtr penv, const AttributesList& atts)
+    {
+        return BaseXMLReaderPtr(new EnvironmentXMLReader(penv,atts,false));
+    }
+
+    BaseXMLReaderPtr CreateInterfaceReader(EnvironmentBasePtr penv, InterfaceType type, InterfaceBasePtr& pinterface, const std::string& xmltag, const AttributesList& atts)
     {
         switch(type) {
         case PT_Planner: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_Planner>(penv,pinterface,xmltag,atts));
@@ -3300,12 +3300,17 @@ namespace OpenRAVEXMLParser
             return false;
         }
 
-        InterfaceBasePtr GetInterface() { return _pinterface; }
+        virtual XMLReadablePtr GetReadable() { return XMLReadablePtr(new InterfaceXMLReadable(_pinterface)); }
     protected:
         EnvironmentBasePtr _penv;
         InterfaceBasePtr _pinterface; // current processed interface
         AttributesList _atts; ///< attributes to always set on newly created interfaces
     };
+
+    BaseXMLReaderPtr CreateInterfaceReader(EnvironmentBasePtr penv, const AttributesList& atts)
+    {
+        return BaseXMLReaderPtr(new OpenRAVEXMLParser::GlobalInterfaceXMLReader(penv,atts));
+    }
 };
 
 #endif
