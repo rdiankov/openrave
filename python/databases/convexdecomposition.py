@@ -284,10 +284,10 @@ class ConvexDecompositionModel(OpenRAVEModel):
         print 'total vertices: %d, total triangles: %d'%(len(T.vertices),len(T.indices)/3)
         volumecolors = array(((1,0,0,0.5),(0,1,0,0.5),(0,0,1,0.5),(0,1,1,0.5),(1,0,1,0.5),(1,1,0,0.5),(0.5,1,0,0.5),(0.5,0,1,0.5),(0,0.5,1,0.5),(1,0.5,0,0.5),(0,1,0.5,0.5),(1,0,0.5,0.5)))
         handles = []
-        jointvalues = tile(inf,self.robot.GetDOF())
+        jointvalues = None
         while True:
             newvalues = self.robot.GetDOFValues()
-            if all(abs(jointvalues-newvalues)<0.01):
+            if jointvalues is not None and all(abs(jointvalues-newvalues)<0.01):
                 time.sleep(0.5)
                 continue
             jointvalues = newvalues
@@ -343,7 +343,7 @@ class ConvexDecompositionModel(OpenRAVEModel):
         try:
             if Model is None:
                 Model = lambda robot: ConvexDecompositionModel(robot=robot)
-            OpenRAVEModel.RunFromParser(env=env,Model=Model,parser=parser,**kwargs)
+            OpenRAVEModel.RunFromParser(env=env,Model=Model,parser=parser,allowkinbody=True,**kwargs)
         finally:
             env.Destroy()
             RaveDestroy()

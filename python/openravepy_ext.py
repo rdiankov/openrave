@@ -612,7 +612,7 @@ class OpenRAVEModel(metaclass.AutoReloader):
         parser.add_option_group(dbgroup)
         return parser
     @staticmethod
-    def RunFromParser(Model,env=None,parser=None,args=None,robotatts=None,defaultviewer=False,**kwargs):
+    def RunFromParser(Model,env=None,parser=None,args=None,robotatts=None,defaultviewer=False,allowkinbody=False,**kwargs):
         if parser is None:
             parser = OpenRAVEModel.CreateOptionParser()
         (options, args) = parser.parse_args(args=args)
@@ -636,9 +636,16 @@ class OpenRAVEModel(metaclass.AutoReloader):
                     robot = env.ReadRobotXMLFile(options.robot,robotatts)
                 else:
                     robot = env.ReadRobotXMLFile(options.robot)
-                env.AddRobot(robot)
+                if robot is not None:
+                    env.AddRobot(robot)
+                elif allowkinbody:
+                    if robotatts is not None:
+                        robot = env.ReadKinBodyXMLFile(options.robot,robotatts)
+                    else:
+                        robot = env.ReadKinBodyXMLFile(options.robot)
+                    env.AddKinBody(robot)
                 robot.SetTransform(numpy.eye(4))
-                if hasattr(options,'manipname'):
+                if hasattr(options,'manipname') and robot.IsRobot():
                     if options.manipname is None:
                         # prioritize manipulators with ik solvers
                         indices = [i for i,m in enumerate(robot.GetManipulators()) if m.GetIkSolver() is not None]

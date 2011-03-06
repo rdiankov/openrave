@@ -439,10 +439,12 @@ class Environment : public EnvironmentBase
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         CHECK_INTERFACE(robot);
+        if( !robot->IsRobot() ) {
+            throw openrave_exception(str(boost::format("body \"%s\" is not a robot")%robot->GetName()));
+        }
         if( !IsValidName(robot->GetName()) ) {
             throw openrave_exception(str(boost::format("body name: \"%s\" is not valid")%robot->GetName()));
         }
-
         if( !_CheckUniqueName(KinBodyConstPtr(robot),!bAnonymous) ) {
             // continue to add random numbers until a unique name is found
             string oldname=robot->GetName(),newname;
