@@ -3618,6 +3618,7 @@ class IKFastSolver(AutoReloader):
             monom = [0]*len(polyeqs[0].symbols)
             monom[i] = 1
             symbolscheck.append(tuple(monom))
+        solutions = []
         for degree in range(mindegree,maxdegree+1):
             allindices = [i for i,n in enumerate(nummonoms) if n <= degree]
             if len(allindices) >= degree:
