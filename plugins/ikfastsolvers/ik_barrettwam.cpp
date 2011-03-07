@@ -12,7 +12,7 @@
 /// See the License for the specific language governing permissions and
 /// limitations under the License.
 ///
-/// ikfast version 36 generated on 2011-02-28 17:08:22.894307
+/// ikfast version 39 generated on 2011-03-07 23:54:59.279694
 /// To compile with gcc:
 ///     gcc -lstdc++ ik.cpp
 /// To compile without any main function as a shared object:
@@ -86,7 +86,12 @@ extern "C" {
 namespace IKFAST_NAMESPACE {
 #endif
 
+#ifdef IKFAST_REAL
+typedef IKFAST_REAL IKReal;
+#else
 typedef double IKReal;
+#endif
+
 class IKSolution
 {
 public:
@@ -945,12 +950,12 @@ IKReal x231=((-1.00000000000000)*(x230));
 IKReal x232=((0.0450000000000000)*(sj3));
 IKReal x233=((0.300000000000000)*(cj3));
 IKReal x234=((0.550000000000000)+(x232)+(x233));
-IKReal x235=x4;
+IKReal x235=(py)*(py);
 IKReal x236=(sj0)*(sj0);
 IKReal x237=(x229)*(x229);
 IKReal x238=(pz)*(pz);
 IKReal x239=(cj0)*(cj0);
-IKReal x240=x3;
+IKReal x240=(px)*(px);
 IKReal x241=(x228)*(x228);
 IKReal x242=((2.00000000000000)*(x228)*(x229));
 IKReal x243=((x238)+(x237)+(x242)+(x241));
@@ -1147,12 +1152,12 @@ IKReal x310=((x308)+(((-1.00000000000000)*(x309))));
 IKReal x311=((0.0450000000000000)*(sj3));
 IKReal x312=((0.300000000000000)*(cj3));
 IKReal x313=((0.550000000000000)+(x311)+(x312));
-IKReal x314=x4;
+IKReal x314=(py)*(py);
 IKReal x315=(sj0)*(sj0);
 IKReal x316=(x305)*(x305);
 IKReal x317=(pz)*(pz);
 IKReal x318=(cj0)*(cj0);
-IKReal x319=x3;
+IKReal x319=(px)*(px);
 IKReal x320=(x304)*(x304);
 IKReal x321=((2.00000000000000)*(x304)*(x305));
 IKReal x322=((x320)+(x321)+(x317)+(x316));
@@ -1215,11 +1220,11 @@ IKReal x331=((px)*(sj0)*(sj2));
 IKReal x332=((0.0450000000000000)*(cj3));
 IKReal x333=((x332)+(x331));
 IKReal x334=((x330)+(((-1.00000000000000)*(x333))));
-IKReal x335=x4;
+IKReal x335=(py)*(py);
 IKReal x336=(sj0)*(sj0);
 IKReal x337=((cj2)*(x335)*(x336));
 IKReal x338=(cj0)*(cj0);
-IKReal x339=x3;
+IKReal x339=(px)*(px);
 IKReal x340=((cj2)*(x338)*(x339));
 IKReal x341=((2.00000000000000)*(cj0)*(cj2)*(px)*(py)*(sj0));
 IKReal x342=(pz)*(pz);
@@ -1316,9 +1321,9 @@ IKReal x368=((2.00000000000000)*(cj0)*(px)*(py)*(sj0)*(sj2));
 IKReal x369=(pz)*(pz);
 IKReal x370=((sj2)*(x369));
 IKReal x371=(cj0)*(cj0);
-IKReal x372=x3;
+IKReal x372=(px)*(px);
 IKReal x373=((sj2)*(x371)*(x372));
-IKReal x374=x4;
+IKReal x374=(py)*(py);
 IKReal x375=(sj0)*(sj0);
 IKReal x376=((sj2)*(x374)*(x375));
 IKReal x377=((x376)+(x373)+(x370)+(x368));
@@ -2877,4 +2882,21 @@ int main(int argc, char** argv)
     return 0;
 }
 
+#endif
+
+#if defined(IKFAST_HEADER) && defined(IKFAST_NAMESPACE)
+#include "ikbase.h"
+namespace IKFAST_NAMESPACE {
+#ifdef RAVE_REGISTER_BOOST
+#include BOOST_TYPEOF_INCREMENT_REGISTRATION_GROUP()
+BOOST_TYPEOF_REGISTER_TYPE(IKSolution)
+#endif
+IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr penv, const std::vector<dReal>& vfreeinc) {
+    std::vector<int> vfree(getNumFreeParameters());
+    for(size_t i = 0; i < vfree.size(); ++i) {
+        vfree[i] = getFreeParameters()[i];
+    }
+    return IkSolverBasePtr(new IkFastSolver<IKReal,IKSolution>(ik,vfree,vfreeinc,getNumJoints(),(IkParameterization::Type)getIKType(), boost::shared_ptr<void>(), getKinematicsHash(), penv));
+}
+} // end namespace
 #endif

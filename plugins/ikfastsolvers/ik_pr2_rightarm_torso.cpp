@@ -12,7 +12,7 @@
 /// See the License for the specific language governing permissions and
 /// limitations under the License.
 ///
-/// ikfast version 36 generated on 2011-02-28 17:11:33.804943
+/// ikfast version 39 generated on 2011-03-07 23:59:43.835625
 /// To compile with gcc:
 ///     gcc -lstdc++ ik.cpp
 /// To compile without any main function as a shared object:
@@ -86,7 +86,12 @@ extern "C" {
 namespace IKFAST_NAMESPACE {
 #endif
 
+#ifdef IKFAST_REAL
+typedef IKFAST_REAL IKReal;
+#else
 typedef double IKReal;
+#endif
+
 class IKSolution
 {
 public:
@@ -474,7 +479,7 @@ if( IKabs(dummyeval[0]) < 0.0000100000000000  || IKabs(dummyeval[1]) < 0.0000100
 {
 {
 IKReal dummyeval[2];
-IKReal x15=x1;
+IKReal x15=(cj28)*(cj28);
 IKReal x16=((0.644006250000000)*(x15));
 IKReal x17=(sj28)*(sj28);
 IKReal x18=((0.644006250000000)*(x17));
@@ -544,7 +549,7 @@ rotationfunction0(vsolutions);
 {
 IKReal j26array[1], cj26array[1], sj26array[1];
 bool j26valid[1]={false};
-IKReal x121=x1;
+IKReal x121=(cj28)*(cj28);
 IKReal x122=((103041.000000000)*(x121));
 IKReal x123=((256800.000000000)*(cj28));
 IKReal x124=(sj28)*(sj28);
@@ -713,7 +718,7 @@ if( IKabs(dummyeval[0]) < 0.0000100000000000  || IKabs(dummyeval[1]) < 0.0000100
 {
 {
 IKReal dummyeval[2];
-IKReal x142=x128;
+IKReal x142=(cj28)*(cj28);
 IKReal x143=((0.644006250000000)*(x142));
 IKReal x144=(sj28)*(sj28);
 IKReal x145=((0.644006250000000)*(x144));
@@ -783,7 +788,7 @@ rotationfunction0(vsolutions);
 {
 IKReal j26array[1], cj26array[1], sj26array[1];
 bool j26valid[1]={false};
-IKReal x163=x128;
+IKReal x163=(cj28)*(cj28);
 IKReal x164=((103041.000000000)*(x163));
 IKReal x165=((256800.000000000)*(cj28));
 IKReal x166=(sj28)*(sj28);
@@ -932,9 +937,9 @@ if( IKabs(dummyeval[0]) < 0.0000100000000000  )
 IKReal dummyeval[2];
 IKReal x184=((200.000000000000)*(cj25)*(px)*(py)*(sj25)*(sj27));
 IKReal x185=(cj25)*(cj25);
-IKReal x186=x172;
+IKReal x186=(px)*(px);
 IKReal x187=((100.000000000000)*(sj27)*(x185)*(x186));
-IKReal x188=x171;
+IKReal x188=(py)*(py);
 IKReal x189=(sj25)*(sj25);
 IKReal x190=((100.000000000000)*(sj27)*(x188)*(x189));
 IKReal x191=(pz)*(pz);
@@ -1369,9 +1374,9 @@ IKReal x285=((x284)+(x283));
 IKReal x286=((x282)+(((-1.00000000000000)*(x285))));
 IKReal x287=((0.0400000000000000)*(sj27));
 IKReal x288=(cj25)*(cj25);
-IKReal x289=x172;
+IKReal x289=(px)*(px);
 IKReal x290=((4.00000000000000)*(sj27)*(x288)*(x289));
-IKReal x291=x171;
+IKReal x291=(py)*(py);
 IKReal x292=(sj25)*(sj25);
 IKReal x293=((4.00000000000000)*(sj27)*(x291)*(x292));
 IKReal x294=(pz)*(pz);
@@ -2108,8 +2113,8 @@ if( IKabs(dummyeval[0]) < 0.0000100000000000  )
 {
 {
 IKReal evalcond[4];
-IKReal x330=x328;
-IKReal x331=x329;
+IKReal x330=((cj25)*(py));
+IKReal x331=((px)*(sj25));
 evalcond[0]=((-3.14159265358979)+(IKfmod(((3.14159265358979)+(j26)), 6.28318530717959)));
 evalcond[1]=((x331)+(((-1.00000000000000)*(x330))));
 evalcond[2]=((-0.146959000000000)+(((cj25)*(px)))+(((-1.00000000000000)*(pp)))+(((py)*(sj25))));
@@ -2144,8 +2149,8 @@ rotationfunction0(vsolutions);
 
 } else
 {
-IKReal x332=x328;
-IKReal x333=x329;
+IKReal x332=((cj25)*(py));
+IKReal x333=((px)*(sj25));
 evalcond[0]=((-3.14159265358979)+(IKfmod(j26, 6.28318530717959)));
 evalcond[1]=((x333)+(((-1.00000000000000)*(x332))));
 evalcond[2]=((0.0130410000000000)+(((-0.600000000000000)*(py)*(sj25)))+(((-0.600000000000000)*(cj25)*(px)))+(((-1.00000000000000)*(pp))));
@@ -3838,4 +3843,21 @@ int main(int argc, char** argv)
     return 0;
 }
 
+#endif
+
+#if defined(IKFAST_HEADER) && defined(IKFAST_NAMESPACE)
+#include "ikbase.h"
+namespace IKFAST_NAMESPACE {
+#ifdef RAVE_REGISTER_BOOST
+#include BOOST_TYPEOF_INCREMENT_REGISTRATION_GROUP()
+BOOST_TYPEOF_REGISTER_TYPE(IKSolution)
+#endif
+IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr penv, const std::vector<dReal>& vfreeinc) {
+    std::vector<int> vfree(getNumFreeParameters());
+    for(size_t i = 0; i < vfree.size(); ++i) {
+        vfree[i] = getFreeParameters()[i];
+    }
+    return IkSolverBasePtr(new IkFastSolver<IKReal,IKSolution>(ik,vfree,vfreeinc,getNumJoints(),(IkParameterization::Type)getIKType(), boost::shared_ptr<void>(), getKinematicsHash(), penv));
+}
+} // end namespace
 #endif

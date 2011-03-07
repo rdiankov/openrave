@@ -12,7 +12,7 @@
 /// See the License for the specific language governing permissions and
 /// limitations under the License.
 ///
-/// ikfast version 36 generated on 2011-02-28 17:11:56.762060
+/// ikfast version 39 generated on 2011-03-08 00:00:05.014772
 /// To compile with gcc:
 ///     gcc -lstdc++ ik.cpp
 /// To compile without any main function as a shared object:
@@ -86,7 +86,12 @@ extern "C" {
 namespace IKFAST_NAMESPACE {
 #endif
 
+#ifdef IKFAST_REAL
+typedef IKFAST_REAL IKReal;
+#else
 typedef double IKReal;
+#endif
+
 class IKSolution
 {
 public:
@@ -1752,4 +1757,21 @@ int main(int argc, char** argv)
     return 0;
 }
 
+#endif
+
+#if defined(IKFAST_HEADER) && defined(IKFAST_NAMESPACE)
+#include "ikbase.h"
+namespace IKFAST_NAMESPACE {
+#ifdef RAVE_REGISTER_BOOST
+#include BOOST_TYPEOF_INCREMENT_REGISTRATION_GROUP()
+BOOST_TYPEOF_REGISTER_TYPE(IKSolution)
+#endif
+IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr penv, const std::vector<dReal>& vfreeinc) {
+    std::vector<int> vfree(getNumFreeParameters());
+    for(size_t i = 0; i < vfree.size(); ++i) {
+        vfree[i] = getFreeParameters()[i];
+    }
+    return IkSolverBasePtr(new IkFastSolver<IKReal,IKSolution>(ik,vfree,vfreeinc,getNumJoints(),(IkParameterization::Type)getIKType(), boost::shared_ptr<void>(), getKinematicsHash(), penv));
+}
+} // end namespace
 #endif
