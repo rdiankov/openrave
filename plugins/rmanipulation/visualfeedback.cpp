@@ -13,8 +13,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#ifndef OPENRAVE_VISUALSERVOING_PROBLEM
-#define OPENRAVE_VISUALSERVOING_PROBLEM
+#include "commonmanipulation.h"
 
 /// samples rays from the projected OBB and returns true if the test function returns true
 /// for all the rays. Otherwise, returns false
@@ -132,11 +131,11 @@ bool SampleProjectedOBBWithTest(const OBB& obb, dReal delta, const boost::functi
     return true;
 }
 
-class VisualFeedbackProblem : public ProblemInstance
+class VisualFeedback : public ProblemInstance
 {
 public:
-    inline boost::shared_ptr<VisualFeedbackProblem> shared_problem() { return boost::static_pointer_cast<VisualFeedbackProblem>(shared_from_this()); }
-    inline boost::shared_ptr<VisualFeedbackProblem const> shared_problem_const() const { return boost::static_pointer_cast<VisualFeedbackProblem const>(shared_from_this()); }
+    inline boost::shared_ptr<VisualFeedback> shared_problem() { return boost::static_pointer_cast<VisualFeedback>(shared_from_this()); }
+    inline boost::shared_ptr<VisualFeedback const> shared_problem_const() const { return boost::static_pointer_cast<VisualFeedback const>(shared_from_this()); }
     friend class VisibilityConstraintFunction;
 
 //        void Init(const SensorBase::CameraIntrinsics& KK,int width, int height)
@@ -150,7 +149,7 @@ public:
     class VisibilityConstraintFunction
     {
     public:
-    VisibilityConstraintFunction(boost::shared_ptr<VisualFeedbackProblem> vf) : _vf(vf) {
+    VisibilityConstraintFunction(boost::shared_ptr<VisualFeedback> vf) : _vf(vf) {
             _report.reset(new CollisionReport());
 
             // create the dummy box
@@ -340,7 +339,7 @@ public:
         }
 
     private:
-        boost::shared_ptr<VisualFeedbackProblem> _vf;
+        boost::shared_ptr<VisualFeedback> _vf;
         KinBodyPtr _ptargetbox; ///< box to represent the target for simulating ray collisions
 
         vector<OBB> _vTargetOBBs; // object links local AABBs
@@ -353,7 +352,7 @@ public:
     class GoalSampleFunction
     {
     public:
-    GoalSampleFunction(boost::shared_ptr<VisualFeedbackProblem> vf, const vector<Transform>& visibilitytransforms) : _vconstraint(vf), _fSampleGoalProb(1.0f), _vf(vf), _visibilitytransforms(visibilitytransforms)
+    GoalSampleFunction(boost::shared_ptr<VisualFeedback> vf, const vector<Transform>& visibilitytransforms) : _vconstraint(vf), _fSampleGoalProb(1.0f), _vf(vf), _visibilitytransforms(visibilitytransforms)
         {
             RAVELOG_DEBUG(str(boost::format("have %d detection extents hypotheses\n")%_visibilitytransforms.size()));
             _ttarget = _vf->_target->GetTransform();
@@ -388,7 +387,7 @@ public:
         VisibilityConstraintFunction _vconstraint;
         dReal _fSampleGoalProb;
     private:
-        boost::shared_ptr<VisualFeedbackProblem> _vf;
+        boost::shared_ptr<VisualFeedback> _vf;
         const vector<Transform>& _visibilitytransforms;
         
 
@@ -398,7 +397,7 @@ public:
         vector<Transform> _vcameras; ///< camera transformations in local coord systems
     };
 
-    VisualFeedbackProblem(EnvironmentBasePtr penv) : ProblemInstance(penv)
+    VisualFeedback(EnvironmentBasePtr penv) : ProblemInstance(penv)
     {
         __description = ":Interface Author: Rosen Diankov\n\n\
 .. image:: ../../../images/visualfeedback_concept.jpg\n\
@@ -417,30 +416,30 @@ Visibility computation checks occlusion with other objects using ray sampling in
         _fSampleRayDensity = 0.001;
         _fAllowableOcclusion = 0.1;
         _fRayMinDist = 0.02f;
-        RegisterCommand("SetCameraAndTarget",boost::bind(&VisualFeedbackProblem::SetCameraAndTarget,this,_1,_2),
+        RegisterCommand("SetCameraAndTarget",boost::bind(&VisualFeedback::SetCameraAndTarget,this,_1,_2),
                         "Sets the camera index from the robot and its convex hull");
-        RegisterCommand("ProcessVisibilityExtents",boost::bind(&VisualFeedbackProblem::ProcessVisibilityExtents,this,_1,_2),
+        RegisterCommand("ProcessVisibilityExtents",boost::bind(&VisualFeedback::ProcessVisibilityExtents,this,_1,_2),
                         "Processes the visibility extents of the target and initializes the camera transforms.\n\
 \n\
 :type sphere: Sets the transforms along a sphere density and the distances\n\
 :type conedirangle: Prunes the currently set transforms along a cone centered at the local target center and directed towards conedirangle with a half-angle of ``|conedirangle|``. Can specify multiple cones for an OR effect.");
-        RegisterCommand("SetCameraTransforms",boost::bind(&VisualFeedbackProblem::SetCameraTransforms,this,_1,_2),
+        RegisterCommand("SetCameraTransforms",boost::bind(&VisualFeedback::SetCameraTransforms,this,_1,_2),
                         "Sets new camera transformations. Can optionally choose a minimum distance from all planes of the camera convex hull (includes gripper mask)");
-        RegisterCommand("ComputeVisibility",boost::bind(&VisualFeedbackProblem::ComputeVisibility,this,_1,_2),
+        RegisterCommand("ComputeVisibility",boost::bind(&VisualFeedback::ComputeVisibility,this,_1,_2),
                         "Computes the visibility of the current robot configuration");
-        RegisterCommand("ComputeVisibleConfiguration",boost::bind(&VisualFeedbackProblem::ComputeVisibleConfiguration,this,_1,_2),
+        RegisterCommand("ComputeVisibleConfiguration",boost::bind(&VisualFeedback::ComputeVisibleConfiguration,this,_1,_2),
                         "Gives a camera transformation, computes the visibility of the object and returns the robot configuration that takes the camera to its specified position, otherwise returns false");
-        RegisterCommand("SampleVisibilityGoal",boost::bind(&VisualFeedbackProblem::SampleVisibilityGoal,this,_1,_2),
+        RegisterCommand("SampleVisibilityGoal",boost::bind(&VisualFeedback::SampleVisibilityGoal,this,_1,_2),
                         "Samples a goal with the current manipulator maintaining camera visibility constraints");
-        RegisterCommand("MoveToObserveTarget",boost::bind(&VisualFeedbackProblem::MoveToObserveTarget,this,_1,_2),
+        RegisterCommand("MoveToObserveTarget",boost::bind(&VisualFeedback::MoveToObserveTarget,this,_1,_2),
                         "Approaches a target object while choosing a goal such that the robot's camera sensor sees the object ");
-        RegisterCommand("VisualFeedbackGrasping",boost::bind(&VisualFeedbackProblem::VisualFeedbackGrasping,this,_1,_2),
+        RegisterCommand("VisualFeedbackGrasping",boost::bind(&VisualFeedback::VisualFeedbackGrasping,this,_1,_2),
                         "Stochastic greedy grasp planner considering visibility");
-        RegisterCommand("SetParameter",boost::bind(&VisualFeedbackProblem::SetParameter,this,_1,_2),
+        RegisterCommand("SetParameter",boost::bind(&VisualFeedback::SetParameter,this,_1,_2),
                         "Sets internal parameters of visibility computation");
     }
 
-    virtual ~VisualFeedbackProblem() {}
+    virtual ~VisualFeedback() {}
 
     void Destroy()
     {
@@ -1274,4 +1273,4 @@ protected:
 
 };
 
-#endif
+ProblemInstancePtr CreateVisualFeedback(EnvironmentBasePtr penv) { return ProblemInstancePtr(new VisualFeedback(penv)); }

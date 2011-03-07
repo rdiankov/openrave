@@ -29,7 +29,7 @@ if __name__ == "__main__":
     (options, args) = parser.parse_args()
     env=Environment()
     try:
-        env.SetViewer('qtcoin')
+        env.SetViewer('qtcoin',False)
         viewer=env.GetViewer()
         width=640
         height=480

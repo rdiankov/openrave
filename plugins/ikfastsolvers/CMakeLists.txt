@@ -13,7 +13,7 @@ set(ik_names barrettwam katana5d pa10 pr2_head pr2_head_torso pr2_leftarm pr2_le
 set(ik_libraries)
 foreach(ik_name ${ik_names})
   add_library(ik_${ik_name} STATIC ik_${ik_name}.cpp)
-  set_target_properties(ik_${ik_name} PROPERTIES COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS} -DIKFAST_NO_MAIN -DIKFAST_NAMESPACE=${ik_name} -DIKFAST_REAL=double")
+  set_target_properties(ik_${ik_name} PROPERTIES COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS} -DIKFAST_NAMESPACE=${ik_name} -DIKFAST_HEADER=\"\\\"plugindefs.h\\\"\"")
   set(ik_libraries ${ik_libraries} ik_${ik_name})
 endforeach()
 

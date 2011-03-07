@@ -23,8 +23,9 @@ import numpy
 from itertools import izip, combinations
 from optparse import OptionParser
 
-import time, unittest, platform, os, sys, logging, multiprocessing
+import time, os, sys, logging, multiprocessing
 import nose
+from noseplugins import multiprocess, xunitmultiprocess, capture, callableclass
 
 #global variables
 _multiprocess_can_split_ = True
@@ -164,10 +165,8 @@ def robotstats(description,robotfilename,manipname, iktypestr,freeindices):
             print measurement('test no solutions (%d_%d)'%(len(solutionresults[1]),numtested), '%.4f'%nosolutions)
             print measurement('test missing solutions (%d_%d)'%(len(solutionresults[2]),numtested), '%.4f'%(float(len(solutionresults[2]))/numtested))
             print measurement('run-time mean (s)','%.6f'%numpy.mean(results))
-            print measurement('run-time median (s)','%.6f'%numpy.median(results))
-            print measurement('run-time min (s)','%.6f'%numpy.min(results))
             print measurement('run-time max (s)','%.6f'%numpy.max(results))
-            globalstats.put([iktypestr,compiletime,successrate,wrongrate])
+            globalstats.put([robotfilename,manip.GetName(),iktypestr,description,ikmodel.getsourcefilename(read=True),numpy.mean(results),numpy.max(results),successrate,wrongrate])
             assert(len(solutionresults[0])==0)
             assert(successrate > options.minimumsuccess)
             assert(nosolutions < options.maximumnosolutions)
@@ -212,9 +211,21 @@ def test_robots():
         # than the main threading waiting for it to finish, so it is necessary to call RaveDestroy
         RaveDestroy()
 
-from noseplugins import multiprocess, xunitmultiprocess, capture, callableclass, jenkinsperfpublisher
-from nose.plugins.cover import Coverage
+def generaterst(stats,outputdir,jenkinsbuildurl):
+    text="""
+--------------------------------------------------------
+OpenRAVE %s IKFast %s Database
+--------------------------------------------------------
 
+This database is a collection for robots and statistics for the compiled inverse kinematics files using the IKFast program. The database generates all possible IKs for each robot's manipulator. supporting the following inverse kinematics types: .%s
+
+
+For example, a 7DOF arm will have 7 differnet 6D transform IKs, and 21 different 5 DOF IKs depending on the free joint used. Links to the robots, genreated ik files, and detailed test result are also provided.
+
+Testing 
+
+"""%(openravepy.__version__,ikfast.__version__)
+    
 if __name__ == "__main__":
     import test_ikfast
     parser = OptionParser(description='ikfast unit tests')
@@ -242,6 +253,10 @@ if __name__ == "__main__":
                       help='Minimum success rate required to count test as passing (default=%default)')
     parser.add_option('--maximumnosolutions',action='store',type='float',dest='maximumnosolutions',default='0.5',
                       help='Maximum no-solutions rate allowed before test is decalred as a failure. In other words, if IK never finds anything, it is useless. (default=%default)')
+    parser.add_option('--outputdir',action='store',type='string',dest='outputdir',default='rst',
+                      help='Directory to output the RST files used to show off the ikfast results. The root file in this directory is index.rst. (default=%default)')
+    parser.add_option('--jenkinsbuildurl',action='store',type='string',dest='jenkinsbuildurl',default='http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/',
+                      help='URL for the test results published by jenkins. This URL will be used to create links from the robot pages to the test page. (default=%default)')
     (options, args) = parser.parse_args()
     
     if options.iktypes == '*':
@@ -270,53 +285,21 @@ if __name__ == "__main__":
     options.numiktests = [int(s) for s in options.numiktests.split(',')]
     test_ikfast.options = options
 
-    format = logging.Formatter('%(name)s: %(levelname)s: %(message)s')
+    format = logging.Formatter('%(name)s: %(levelname)s %(message)s')
     handler = logging.StreamHandler(sys.stderr)
     handler.setFormatter(format)
     multiprocess.log.addHandler(handler)
     multiprocess.log.setLevel(options.debug)
 
-    multiprocess._instantiate_plugins = [capture.Capture, xunitmultiprocess.Xunitmp, callableclass.CallableClass,jenkinsperfpublisher.JenkinsPerfPublisher]
+    multiprocess._instantiate_plugins = [capture.Capture, xunitmultiprocess.Xunitmp, callableclass.CallableClass]
 
     header = 'name=\"%s robots\" package=\"%s\"'%(options.robots,ikfast.__name__)
     argv=['nosetests','-v','--with-xunitmp','--xunit-file=test_ikfast.xml','--xunit-header=%s'%header,'--processes=%d'%options.numprocesses,'--process-timeout=%f'%options.timeout,'--process-restartworker','--with-callableclass','test_ikfast.py']
     plugins=[capture.Capture(),multiprocess.MultiProcess(),xunitmultiprocess.Xunitmp(),callableclass.CallableClass()]
-    if False:
-        jenkins_header = 'name=\"%s\" categ=\"%s\"'%(options.robots,ikfast.__name__)
-        argv += ['--with-jenkinsperf','--jenkinsperf-file=jenkins_ikfast.xml', '--jenkinsperf-header=%s'%jenkins_header]
-        plugins.append(jenkinsperfpublisher.JenkinsPerfPublisher())
     prog=nose.core.TestProgram(argv=argv,plugins=plugins,exit=False)
-    # save the global stats to file
-    xml = '<?xml version="1.0" encoding="UTF-8"?>\n<report name="ikfast-statistics" categ="ikfast">\n<start></start>\n'
-    xmlplatform = '<platform><os><type><![CDATA[%s]]></type><name><![CDATA[%s]]></name></os><processor arch="%s"></processor><compiler>%s</compiler><environment></environment></platform>\n'%(platform.platform(),platform.system(), platform.machine(),platform.python_compiler())
-    ikfaststats = dict()
-    for value,type in IkParameterization.Type.values.iteritems():
-        ikfaststats[type.name] = [0,0,0.0,0.0,0.0]
-    testid = 0
+    # process the global stats
+    stats = []
     while not test_ikfast.globalstats.empty():
-        testid += 1
-        iktypestr,compiletime,successrate,wrongrate = test_ikfast.globalstats.get()
-        ikfaststats[iktypestr][0] += 1
-        if wrongrate==0:
-            ikfaststats[iktypestr][1] += 1
-            ikfaststats[iktypestr][2] += compiletime
-        ikfaststats[iktypestr][3] += successrate
-        ikfaststats[iktypestr][4] += wrongrate
-
-    for name,value in ikfaststats.iteritems():
-        num, success, compiletime, successrate, wrongrate = value
-        if success > 0:
-            compiletime = compiletime/float(success)
-        if num > 0:
-            xml += """<test name="%s" executed="yes">
-%s
-<targets><target>%s</target></targets>
-<result>
-<success passed="%s" state="%s" hasTimedOut="false"/>
-<compiletime unit="s" mesure="%f" isRelevant="true"/>
-<performance mesure="%f" isRelevant="true"/>
-</result>
-</test>
-"""%(name,xmlplatform,name,'yes' if num==success else 'no',(100*success)/num,compiletime,100*(1-wrongrate/float(num)))
-    xml += '</report>\n'
-    open('ikfaststats.xml','w').write(xml)
+        stats.append(test_ikfast.globalstats.get())
+    generaterst(stats,options.outputdir,options.jenkinsbuildurl)
+    pickle.dump(stats,open('ikfaststats.pp','w'))

@@ -13,26 +13,25 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "plugindefs.h"
-
-#include "taskmanipulation.h"
-#include "basemanipulation.h"
-#include "taskcaging.h"
-#include "visualfeedback.h"
-
 #include <rave/plugin.h>
+
+ProblemInstancePtr CreateBaseManipulation(EnvironmentBasePtr penv);
+ProblemInstancePtr CreateTaskCaging(EnvironmentBasePtr penv);
+ProblemInstancePtr CreateTaskManipulation(EnvironmentBasePtr penv);
+ProblemInstancePtr CreateVisualFeedback(EnvironmentBasePtr penv);
 
 InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
 {
     switch(type) {
     case PT_ProblemInstance:
         if( interfacename == "basemanipulation")
-            return InterfaceBasePtr(new BaseManipulation(penv));
+            return CreateBaseManipulation(penv);
         else if( interfacename == "taskmanipulation" )
-            return InterfaceBasePtr(new TaskManipulation(penv));
+            return CreateTaskManipulation(penv);
         else if( interfacename == "taskcaging")
-            return InterfaceBasePtr(new TaskCagingProblem(penv));
+            return CreateTaskCaging(penv);
         else if( interfacename == "visualfeedback")
-            return InterfaceBasePtr(new VisualFeedbackProblem(penv));
+            return CreateVisualFeedback(penv);
         break;
     default:
         break;

@@ -17,12 +17,9 @@
 // Functions to plan with caging grasps. See
 // Rosen Diankov, Siddhartha Srinivasa, Dave Ferguson, James Kuffner.
 // Manipulation Planning with Caging Grasps. IEEE-RAS Intl. Conf. on Humanoid Robots, December 2008.
-#ifndef OPENRAVE_TASKCONSTRAINT_H
-#define OPENRAVE_TASKCONSTRAINT_H
-
 #include "commonmanipulation.h"
 
-class TaskCagingProblem : public ProblemInstance
+class TaskCaging : public ProblemInstance
 {
 public:
     struct BODYTRAJ
@@ -712,11 +709,11 @@ public:
         vector<Transform> _vTargetTransforms;
     };
 
-    inline boost::shared_ptr<TaskCagingProblem> shared_problem() { return boost::static_pointer_cast<TaskCagingProblem>(shared_from_this()); }
-    inline boost::shared_ptr<TaskCagingProblem const> shared_problem_const() const { return boost::static_pointer_cast<TaskCagingProblem const>(shared_from_this()); }
+    inline boost::shared_ptr<TaskCaging> shared_problem() { return boost::static_pointer_cast<TaskCaging>(shared_from_this()); }
+    inline boost::shared_ptr<TaskCaging const> shared_problem_const() const { return boost::static_pointer_cast<TaskCaging const>(shared_from_this()); }
 
 public:
- TaskCagingProblem(EnvironmentBasePtr penv) : ProblemInstance(penv) {
+ TaskCaging(EnvironmentBasePtr penv) : ProblemInstance(penv) {
         __description = ":Interface Author: Rosen Diankov\n\n\
 .. image:: ../../../images/taskcaging_concept.jpg\n\
   :width: 500\n\
@@ -725,18 +722,18 @@ doors by having the hand cage the handles instead of tightly grip. \
 This greatly relaxes the constraints on the robot (see the door manipluation example). The relevant paper is:\n\n\
 \
 - Rosen Diankov, Siddhartha Srinivasa, Dave Ferguson, James Kuffner. Manipulation Planning with Caging Grasps. IEEE-RAS Intl. Conf. on Humanoid Robots, December 2008.";
-        RegisterCommand("graspset",boost::bind(&TaskCagingProblem::GraspSet, this, _1, _2),
+        RegisterCommand("graspset",boost::bind(&TaskCaging::GraspSet, this, _1, _2),
                         "Creates a grasp set given a robot end-effector floating in space.\n"
                         "Options: step exploreprob size target targetjoint contactconfigdelta cagedconfig");
-        RegisterCommand("taskconstraintplan", boost::bind(&TaskCagingProblem::TaskConstrainedPlanner, this, _1, _2),
+        RegisterCommand("taskconstraintplan", boost::bind(&TaskCaging::TaskConstrainedPlanner, this, _1, _2),
                         "Invokes the relaxed task constrained planner");
-        RegisterCommand("simpleconstraintplan", boost::bind(&TaskCagingProblem::SimpleConstrainedPlanner, this, _1, _2),
+        RegisterCommand("simpleconstraintplan", boost::bind(&TaskCaging::SimpleConstrainedPlanner, this, _1, _2),
                         "Invokes a simple one grasp planner");
-        RegisterCommand("bodytraj",boost::bind(&TaskCagingProblem::BodyTrajectory, this, _1, _2),
+        RegisterCommand("bodytraj",boost::bind(&TaskCaging::BodyTrajectory, this, _1, _2),
                         "Starts a body to follow a trajectory. The trajrectory must contain timestamps\n"
                         "Options: target targettraj");
     }
-    virtual ~TaskCagingProblem() {}
+    virtual ~TaskCaging() {}
     virtual void Destroy()
     {
         _robot.reset();
@@ -1862,12 +1859,12 @@ private:
 #ifdef RAVE_REGISTER_BOOST
 #include BOOST_TYPEOF_INCREMENT_REGISTRATION_GROUP()
 
-BOOST_TYPEOF_REGISTER_TYPE(TaskCagingProblem::BODYTRAJ)
-BOOST_TYPEOF_REGISTER_TYPE(TaskCagingProblem::ConstrainedTaskData)
-BOOST_TYPEOF_REGISTER_TYPE(TaskCagingProblem::ConstrainedTaskData::GRASP)
-BOOST_TYPEOF_REGISTER_TYPE(TaskCagingProblem::ConstrainedTaskData::FEATURES)
-BOOST_TYPEOF_REGISTER_TYPE(TaskCagingProblem::ConstrainedTaskData::FINDGRASPDATA)
+BOOST_TYPEOF_REGISTER_TYPE(TaskCaging::BODYTRAJ)
+BOOST_TYPEOF_REGISTER_TYPE(TaskCaging::ConstrainedTaskData)
+BOOST_TYPEOF_REGISTER_TYPE(TaskCaging::ConstrainedTaskData::GRASP)
+BOOST_TYPEOF_REGISTER_TYPE(TaskCaging::ConstrainedTaskData::FEATURES)
+BOOST_TYPEOF_REGISTER_TYPE(TaskCaging::ConstrainedTaskData::FINDGRASPDATA)
 
 #endif
 
-#endif
+ProblemInstancePtr CreateTaskCaging(EnvironmentBasePtr penv) { return ProblemInstancePtr(new TaskCaging(penv)); }

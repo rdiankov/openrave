@@ -169,7 +169,7 @@ public:
     virtual void SetGrab(bool bGrab, bool bUpdate=true);
     virtual void Load();
 private:
-    void CreateAxis(EE& ee, const string& name);
+    void CreateAxis(EE& ee, const string& name, const Vector* pdirection=NULL);
     std::vector< EE > _vEndEffectors, _vAttachedSensors;
     RobotBasePtr _probot;
 };

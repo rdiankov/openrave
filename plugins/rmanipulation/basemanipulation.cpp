@@ -13,9 +13,6 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#ifndef OPENRAVE_MANIPULATION_H
-#define OPENRAVE_MANIPULATION_H
-
 #include "commonmanipulation.h"
 
 class BaseManipulation : public ProblemInstance
@@ -33,10 +30,10 @@ public:
                         "Releases all grabbed bodies (RobotBase::ReleaseAllGrabbed).");
         RegisterCommand("MoveHandStraight",boost::bind(&BaseManipulation::MoveHandStraight,this,_1,_2),
                         "Move the active end-effector in a straight line until collision or IK fails. Parameters:\n\n\
-* stepsize - the increments in workspace in which the robot tests for the next configuration.\n\n\
-* minsteps - The minimum number of steps that need to be taken in order for success to declared. If robot doesn't reach this number of steps, it fails.\n\n\
-* maxsteps - The maximum number of steps the robot should take.\n\n\
-* direction - The workspace direction to move end effector in.\n\n\
+- stepsize - the increments in workspace in which the robot tests for the next configuration.\n\n\
+- minsteps - The minimum number of steps that need to be taken in order for success to declared. If robot doesn't reach this number of steps, it fails.\n\n\
+- maxsteps - The maximum number of steps the robot should take.\n\n\
+- direction - The workspace direction to move end effector in.\n\n\
 Method wraps the WorkspaceTrajectoryTracker planner. For more details on parameters, check out its documentation.");
         RegisterCommand("MoveManipulator",boost::bind(&BaseManipulation::MoveManipulator,this,_1,_2),
                         "Moves arm joints of active manipulator to a given set of joint values");
@@ -49,20 +46,14 @@ Method wraps the WorkspaceTrajectoryTracker planner. For more details on paramet
                         "fully move to their goal. This is necessary because synchronization with arm\n"
                         "and hand isn't guaranteed.\n"
                         "Options: handjoints savetraj planner");
-        RegisterCommand("CloseFingers",boost::bind(&BaseManipulation::CloseFingers,this,_1,_2),
-                        "see TaskManipulation problem");
-        RegisterCommand("ReleaseFingers",boost::bind(&BaseManipulation::ReleaseFingers,this,_1,_2),
-                        "see TaskManipulation problem.");
-        RegisterCommand("ReleaseActive",boost::bind(&BaseManipulation::ReleaseActive,this,_1,_2),
-                        "see TaskManipulation problem.");
         RegisterCommand("JitterActive",boost::bind(&BaseManipulation::JitterActive,this,_1,_2),
                         "Jitters the active DOF for a collision-free position.");
         RegisterCommand("FindIKWithFilters",boost::bind(&BaseManipulation::FindIKWithFilters,this,_1,_2),
                         "Samples IK solutions using custom filters that constrain the end effector in the world. Parameters:\n\n\
-* cone - Constraint the direction of a local axis with respect to a cone in the world. Takes in: worldaxis(3), localaxis(3), anglelimit. \n\
-* solveall - When specified, will return all possible solutions.\n\
-* ikparam - The serialized ik parameterization to use for FindIKSolution(s).\n\
-* filteroptions\n\
+- cone - Constraint the direction of a local axis with respect to a cone in the world. Takes in: worldaxis(3), localaxis(3), anglelimit. \n\
+- solveall - When specified, will return all possible solutions.\n\
+- ikparam - The serialized ik parameterization to use for FindIKSolution(s).\n\
+- filteroptions\n\
 ");
         _fMaxVelMult=1;
     }
@@ -213,52 +204,6 @@ protected:
         RAVELOG_VERBOSE(str(boost::format("executing traj with %d points\n")%ptraj->GetPoints().size()));
         robot->SetMotion(ptraj);
         sout << "1";
-        return true;
-    }
-
-    bool GrabBody(ostream& sout, istream& sinput)
-    {
-        KinBodyPtr ptarget;
-
-        string cmd;
-        while(!sinput.eof()) {
-            sinput >> cmd;
-            if( !sinput ) {
-                break;
-            }
-            std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
-        
-            if( cmd == "name" ) {
-                string name;
-                sinput >> name;
-                ptarget = GetEnv()->GetKinBody(name);
-            }
-            else {
-                break;
-            }
-
-            if( !sinput ) {
-                RAVELOG_ERROR(str(boost::format("failed processing command %s\n")%cmd));
-                return false;
-            }
-        }
-
-        if(!ptarget) {
-            RAVELOG_ERROR("ERROR Manipulation::GrabBody - Invalid body name.\n");
-            return false;
-        }
-
-        RAVELOG_DEBUG(str(boost::format("robot %s:%s grabbing body %s...\n")%robot->GetName()%robot->GetActiveManipulator()->GetEndEffector()->GetName()%ptarget->GetName()));
-        robot->Grab(ptarget);
-        return true;
-    }
-
-    bool ReleaseAll(ostream& sout, istream& sinput)
-    {
-        if( !!robot ) {
-            RAVELOG_DEBUG("Releasing all bodies\n");
-            robot->ReleaseAllGrabbed();
-        }
         return true;
     }
 
@@ -952,48 +897,6 @@ protected:
         return true;
     }
 
-    bool CloseFingers(ostream& sout, istream& sinput)
-    {
-        RAVELOG_WARN("CloseFingers moved to TaskManipulation...\n");
-        boost::shared_ptr<TaskManipulation> task(new TaskManipulation(GetEnv()));
-        if( !task ) {
-            return false;
-        }
-        stringstream sparams; sparams << robot->GetName() << " planner " << _strRRTPlannerName << " maxvelmult " << _fMaxVelMult;
-        GetEnv()->LoadProblem(task,sparams.str());
-        bool bsuccess = task->CloseFingers(sout,sinput);
-        GetEnv()->Remove(task);
-        return bsuccess;
-    }
-
-    bool ReleaseFingers(ostream& sout, istream& sinput)
-    {
-        RAVELOG_WARN("ReleaseFingers moved to TaskManipulation problem...\n");
-        boost::shared_ptr<TaskManipulation> task(new TaskManipulation(GetEnv()));
-        if( !task ) {
-            return false;
-        }
-        stringstream sparams; sparams << robot->GetName() << " planner " << _strRRTPlannerName << " maxvelmult " << _fMaxVelMult;
-        GetEnv()->LoadProblem(task,sparams.str());
-        bool bsuccess = task->ReleaseFingers(sout,sinput);
-        GetEnv()->Remove(task);
-        return bsuccess;
-    }
-
-    bool ReleaseActive(ostream& sout, istream& sinput)
-    {
-        RAVELOG_WARN("ReleaseActive moved to TaskManipulation ...\n");
-        boost::shared_ptr<TaskManipulation> task(new TaskManipulation(GetEnv()));
-        if( !task ) {
-            return false;
-        }
-        stringstream sparams; sparams << robot->GetName() << " planner " << _strRRTPlannerName << " maxvelmult " << _fMaxVelMult;
-        GetEnv()->LoadProblem(task,sparams.str());
-        bool bsuccess = task->ReleaseActive(sout,sinput);
-        GetEnv()->Remove(task);
-        return bsuccess;
-    }
-
     bool JitterActive(ostream& sout, istream& sinput)
     {
         RAVELOG_DEBUG("Starting ReleaseFingers...\n");
@@ -1141,6 +1044,55 @@ protected:
         return true;
     }
 
+    bool GrabBody(ostream& sout, istream& sinput)
+    {
+        RAVELOG_WARN("BaseManipulation GrabBody command is deprecated. Use Robot::Grab (11/03/07)\n");
+
+        KinBodyPtr ptarget;
+
+        string cmd;
+        while(!sinput.eof()) {
+            sinput >> cmd;
+            if( !sinput ) {
+                break;
+            }
+            std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
+        
+            if( cmd == "name" ) {
+                string name;
+                sinput >> name;
+                ptarget = GetEnv()->GetKinBody(name);
+            }
+            else {
+                break;
+            }
+
+            if( !sinput ) {
+                RAVELOG_ERROR(str(boost::format("failed processing command %s\n")%cmd));
+                return false;
+            }
+        }
+
+        if(!ptarget) {
+            RAVELOG_ERROR("ERROR Manipulation::GrabBody - Invalid body name.\n");
+            return false;
+        }
+
+        RAVELOG_DEBUG(str(boost::format("robot %s:%s grabbing body %s...\n")%robot->GetName()%robot->GetActiveManipulator()->GetEndEffector()->GetName()%ptarget->GetName()));
+        robot->Grab(ptarget);
+        return true;
+    }
+
+    bool ReleaseAll(ostream& sout, istream& sinput)
+    {
+        RAVELOG_WARN("BaseManipulation ReleaseAll command is deprecated. Use Robot::ReleaseAllGrabbed (11/03/07)\n");
+        if( !!robot ) {
+            RAVELOG_DEBUG("Releasing all bodies\n");
+            robot->ReleaseAllGrabbed();
+        }
+        return true;
+    }
+
  protected:
     IkFilterReturn _FilterWorldAxisIK(std::vector<dReal>& values, RobotBase::ManipulatorPtr pmanip, const IkParameterization& ikparam, const Vector& vlocalaxis, const Vector& vworldaxis, dReal coslimit)
     {
@@ -1155,4 +1107,4 @@ protected:
     dReal _fMaxVelMult;
 };
 
-#endif
+ProblemInstancePtr CreateBaseManipulation(EnvironmentBasePtr penv) { return ProblemInstancePtr(new BaseManipulation(penv)); }

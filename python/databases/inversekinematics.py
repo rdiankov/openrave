@@ -15,7 +15,7 @@
 """
 .. lang-block:: en
 
-  Automatically generate and load inverse kinematics equations for robots.
+  Python interface to ikfast that manages the compiled inverse kinematics files for robots.
 
 .. lang-block:: ja
 
@@ -39,7 +39,7 @@
 Usage
 -----
 
-Dynamically generate/load the inverse kinematics for a robot's manipulator:
+First set the active manipulator, and then instantiate the InverseKinematicsModel class specifying the iktype and free indices.
 
 .. code-block:: python
 
@@ -48,10 +48,12 @@ Dynamically generate/load the inverse kinematics for a robot's manipulator:
   if not ikmodel.load():
       ikmodel.autogenerate()
 
+The supported types are defined by `IkParameterization.Type` and are propagated throughout the entire OpenRAVE framework. All solve methods take in a `IkParameterization` structure, which handles each IK type's serialization, distances metrics, derivatives, and transformation.
+
 Description
 -----------
 
-This process allows users to generate OpenRAVE inverse kinematics solvers for any robot
+This database allows users to generate OpenRAVE inverse kinematics solvers for any robot
 manipulator. The manipulator's arm joints are used for obtaining the joints to solve for. The user
 can specify the IK type (Rotation, Translation, Full 6D, Ray 4D, etc), the free joints of the
 kinematics, and the precision. For example, generating the right arm 6D IK for the PR2 robot where
@@ -82,6 +84,12 @@ Generating the ray inverse kinematics for the 4 degrees of freedom barrett wam i
 
   openrave.py --database inversekinematics --robot=robots/neuronics-katana.zae --iktype=translationdirection5d --manipname=arm
 
+The filename that the code is saved in can be retrieved by 
+
+.. code-block:: bash
+
+  openrave.py --database inversekinematics --robot=robots/neuronics-katana.zae --iktype=translationdirection5d --manipname=arm --getfilename
+
 Testing
 -------
 
@@ -107,7 +115,17 @@ Loading from C++
 It is possible to use the auto-generation process through c++ by loading the IKFast problem and
 calling LoadIKFastSolver command. Check out the `ikfastloader.cpp`_ example program.
 
+Reference
+---------
+
+`IKFast Robot Database`_ - statistics and performance results for many robots.
+
+`openravepy.ikfast` - details on the technology behind IKFast
+
 .. _`ikfastloader.cpp`: http://openrave.programmingvision.com/ordocs/en/html/ikfastloader_8cpp-example.html
+
+.. _`IKFast Robot Database`: http://openrave.programmingvision.com/ikfast
+
 
 """
 from __future__ import with_statement # for python 2.5
@@ -628,7 +646,7 @@ class InverseKinematicsModel(OpenRAVEModel):
     @staticmethod
     def CreateOptionParser():
         parser = OpenRAVEModel.CreateOptionParser()
-        parser.description='Computes the closed-form inverse kinematics equations of a robot manipulator, generates a C++ file, and compiles this file into a shared object which can then be loaded by OpenRAVE'
+        parser.description='Uses ikfast to compute the closed-form inverse kinematics equations of a robot manipulator, generates a C++ file, and compiles this file into a shared object which can then be loaded by OpenRAVE.'
         parser.usage='openrave.py --database inversekinematics [options]'
         parser.add_option('--freejoint', action='append', type='string', dest='freejoints',default=None,
                           help='Optional joint name specifying a free parameter of the manipulator. If nothing specified, assumes all joints not solving for are free parameters. Can be specified multiple times for multiple free parameters.')

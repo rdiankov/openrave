@@ -438,7 +438,8 @@ void RobotItem::Load()
     FOREACHC(itmanip, _probot->GetManipulators()) {
         if( !!(*itmanip)->GetEndEffector() ) {
             _vEndEffectors[index]._index = index;
-            CreateAxis(_vEndEffectors[index],(*itmanip)->GetName());
+            Vector vdirection = (*itmanip)->GetDirection();
+            CreateAxis(_vEndEffectors[index],(*itmanip)->GetName(),&vdirection);
         }
         ++index;
     }
@@ -454,7 +455,7 @@ void RobotItem::Load()
     }
 }
 
-void RobotItem::CreateAxis(RobotItem::EE& ee, const string& name)
+void RobotItem::CreateAxis(RobotItem::EE& ee, const string& name, const Vector* pdirection)
 {
     SoSwitch* peeswitch = new SoSwitch();
     SoSeparator* peesep = new SoSeparator();
@@ -511,6 +512,41 @@ void RobotItem::CreateAxis(RobotItem::EE& ee, const string& name)
             
         SoTransform* pconetrans = new SoTransform();
         pconetrans->translation.setValue(0,0.02f,0);
+
+        psep->addChild(mtrl);
+        psep->addChild(protation);
+        psep->addChild(pcyltrans);
+        psep->addChild(c);
+        psep->addChild(pconetrans);
+        psep->addChild(cn);
+        paxes->addChild(psep);
+    }
+
+    if( pdirection != NULL ) {
+        SoSeparator* psep = new SoSeparator();
+        SoMaterial* mtrl = new SoMaterial;
+        mtrl->diffuseColor = SbColor(0,0,0);
+        mtrl->ambientColor = SbColor(0,0,0);
+        mtrl->setOverride(true);
+        
+        SoTransform* protation = new SoTransform();
+        RaveVector<float> axisangle = axisAngleFromQuat(quatRotateDirection(Vector(0,1,0),*pdirection));
+        float angle = RaveSqrt(axisangle.lengthsqr3());
+        protation->rotation.setValue(SbVec3f(axisangle.x/angle,axisangle.y/angle,axisangle.z/angle),angle);
+
+        SoTransform* pcyltrans = new SoTransform();
+        pcyltrans->translation.setValue(0,0.03f,0);
+
+        SoCylinder* c = new SoCylinder();
+        c->radius = 0.001f;
+        c->height = 0.06f;
+            
+        SoCone* cn = new SoCone();
+        cn->bottomRadius = 0.002f;
+        cn->height = 0.01f;
+            
+        SoTransform* pconetrans = new SoTransform();
+        pconetrans->translation.setValue(0,0.03f,0);
 
         psep->addChild(mtrl);
         psep->addChild(protation);

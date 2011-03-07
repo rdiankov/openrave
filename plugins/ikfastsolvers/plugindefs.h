@@ -214,6 +214,10 @@ class IKSolutionTemplate
 typedef IKSolutionTemplate<float> IKSolutionFloat;
 typedef IKSolutionTemplate<double> IKSolutionDouble;
 
+#define IKFAST_ASSERT BOOST_ASSERT
+#define IKFAST_REAL double
+#define IKFAST_NO_MAIN
+
 #ifdef RAVE_REGISTER_BOOST
 #include BOOST_TYPEOF_INCREMENT_REGISTRATION_GROUP()
 BOOST_TYPEOF_REGISTER_TEMPLATE(IKSolutionTemplate, 1)

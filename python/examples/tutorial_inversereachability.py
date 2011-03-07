@@ -229,7 +229,7 @@ Get robot base distribution
 Find valid poses from the distribution
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Code fragment from `examples.mobilemanipulation`
+Code fragment from sanbox/mobilemanipulation.py
 
 .. code-block:: python
 
@@ -314,7 +314,6 @@ Related classes
 
 - `databases.inversereachability` - Code that generates the inverse-reachability database
 - `databases.kinematicreachability` - Code that generates the reachability database
-- `examples.mobilemanipulation` - Example of mobile manipulation
    
 """
 from __future__ import with_statement # for python 2.5

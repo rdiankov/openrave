@@ -23,10 +23,11 @@
 #include <algorithm>
 #include <complex>
 
-#ifdef BOOST_ASSERT
-#define IKFAST_ASSERT BOOST_ASSERT
-#else
+#ifdef IKFAST_HEADER
+#include IKFAST_HEADER
+#endif
 
+#ifndef IKFAST_ASSERT
 #include <stdexcept>
 #include <sstream>
 
