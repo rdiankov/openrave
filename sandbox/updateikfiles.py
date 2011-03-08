@@ -20,6 +20,7 @@ def updateik(robotfilename,manipname,iktype,destfilename):
             ikmodel.setrobot()
             successrate, wrongrate = ikmodel.testik('100') # sanity check
             assert(wrongrate==0)
+            print 'success: ',successrate
             code = open(ikmodel.getsourcefilename(True),'r').read()
             code += """
 #if defined(IKFAST_HEADER) && defined(IKFAST_NAMESPACE)

@@ -53,7 +53,6 @@ def run(args=None):
     env.Load(options.scene)
     robot = env.GetRobots()[0]
     robot.SetActiveManipulator(options.manipname)
-    lower,upper = robot.GetDOFLimits(robot.GetActiveManipulator().GetArmIndices())
 
     # generate the ik solver
     ikmodel = databases.inversekinematics.InverseKinematicsModel(robot, iktype=IkParameterization.Type.Translation3D)

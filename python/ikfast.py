@@ -197,7 +197,7 @@ from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2011 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Lesser GPL, Version 3'
-__version__ = '39'
+__version__ = '40'
 
 import sys, copy, time, math, datetime
 import __builtin__
@@ -266,7 +266,7 @@ class AST:
         """
         FeasibleIsZeros = False
         score = None
-        def __init__(self, jointname, jointeval=None,jointevalcos=None,jointevalsin=None,AddPiIfNegativeEq=None,isHinge=True,thresh=0.00001):
+        def __init__(self, jointname, jointeval=None,jointevalcos=None,jointevalsin=None,AddPiIfNegativeEq=None,isHinge=True,thresh=0.000001):
             self.jointname = jointname
             self.jointeval = jointeval
             self.jointevalcos = jointevalcos
@@ -458,7 +458,7 @@ class AST:
     class SolverConditionedSolution:
         dictequations = None
         solversolutions = None
-        thresh=0.00001
+        thresh=0.000001
         def __init__(self, solversolutions):
             self.solversolutions = solversolutions
             self.dictequations = []
@@ -473,7 +473,7 @@ class AST:
 
     class SolverBranchConds:
         jointbranches = None
-        thresh = 0.00001
+        thresh = 0.000001
         def __init__(self, jointbranches):
             self.jointbranches = jointbranches
         def generate(self, generator):
@@ -489,7 +489,7 @@ class AST:
         anycondition=None
         dictequations=None
         thresh=None # a threshold of 1e-6 breaks hiro ik
-        def __init__(self, jointname, jointcheckeqs, zerobranch, nonzerobranch,thresh=0.00001,anycondition=True):
+        def __init__(self, jointname, jointcheckeqs, zerobranch, nonzerobranch,thresh=0.000001,anycondition=True):
             self.jointname = jointname
             self.jointcheckeqs = jointcheckeqs
             self.zerobranch = zerobranch
@@ -1102,42 +1102,39 @@ class IKFastSolver(AutoReloader):
         exprs.sort(lambda x, y: self.codeComplexity(x)-self.codeComplexity(y))
 
     def checkForDivideByZero(self,eq):
+        checkforzeros = []
         try:
-            checkforzeros = []
             if eq.is_Function:
                 for arg in eq.args:
                     checkforzeros += self.checkForDivideByZero(arg)
-                return checkforzeros
-            subexprs,reduced_exprs = cse(eq)
-            def checkpow(expr,sexprs):
-                if expr.is_Pow:
-                    sexprs.append(expr.base)
-                    if expr.exp.is_number and expr.exp < 0:
-                        base = self.subsExpressions(expr.base,subexprs)
-                        if not base.is_number:
-                            eq=self.subsExpressions(expr.base,subexprs)
-                            if self.isExpressionUnique(checkforzeros,-eq) and self.isExpressionUnique(checkforzeros,eq):
-                                checkforzeros.append(self.removecommonexprs(eq,onlygcd=False,onlynumbers=True))
-
-            sexprs = [subexpr[1] for subexpr in subexprs]+reduced_exprs
-            while len(sexprs) > 0:
-                sexpr = sexprs.pop(0)
-                if sexpr.is_Add:
-                    for arg in sexpr.args:
-                        if arg.is_Mul:
-                            for arg2 in arg.args:
-                                checkpow(arg2,sexprs)
-                        else:
-                            checkpow(arg,sexprs)
-                elif sexpr.is_Mul:
-                    for arg in sexpr.args:
-                        checkpow(arg,sexprs)
-                else:
-                    checkpow(sexpr,sexprs)
-            return checkforzeros
+            elif eq.is_Add:
+                for arg in eq.args:
+                    checkforzeros += self.checkForDivideByZero(arg)
+            elif eq.is_Mul:
+                for arg in eq.args:
+                    checkforzeros += self.checkForDivideByZero(arg)
+            elif eq.is_Pow:
+                for arg in eq.args:
+                    checkforzeros += self.checkForDivideByZero(arg)
+                if eq.exp.is_number and eq.exp < 0:
+                    checkforzeros.append(eq.base)
         except AssertionError,e:
             log.warn('%s',e)
-            return []
+
+        if len(checkforzeros) > 0:
+            newcheckforzeros = []
+            for eqtemp in checkforzeros:
+                # check for abs(x**y), in that case choose x
+                if eqtemp.is_Function and eqtemp.func == abs:
+                    eqtemp = eqtemp.args[0]
+                while eqtemp.is_Pow:
+                    eqtemp = eqtemp.base
+                checkeq = self.removecommonexprs(eqtemp,onlygcd=False,onlynumbers=True)
+                if self.isExpressionUnique(newcheckforzeros,checkeq) and self.isExpressionUnique(newcheckforzeros,-checkeq):
+                    newcheckforzeros.append(checkeq)
+            return newcheckforzeros
+
+        return checkforzeros
 
     def solutionComplexity(self,sol,solvedvars,unsolvedvars):
         # for all solutions, check if there is a divide by zero
@@ -1148,14 +1145,17 @@ class IKFastSolver(AutoReloader):
             if hasattr(sol,'jointeval') and sol.jointeval is not None:
                 for s in sol.jointeval:
                     sol.score += self.codeComplexity(s)
+                    sol.checkforzeros += self.checkForDivideByZero(s)
                 subexprs = sol.jointeval
             elif hasattr(sol,'jointevalsin') and sol.jointevalsin is not None:
                 for s in sol.jointevalsin:
                     sol.score += self.codeComplexity(s)
+                    sol.checkforzeros += self.checkForDivideByZero(s)
                 subexprs = sol.jointevalsin
             elif hasattr(sol,'jointevalcos') and sol.jointevalcos is not None:
                 for s in sol.jointevalcos:
                     sol.score += self.codeComplexity(s)
+                    sol.checkforzeros += self.checkForDivideByZero(s)
                 subexprs = sol.jointevalcos
             else:
                 return sol.score
@@ -1174,9 +1174,9 @@ class IKFastSolver(AutoReloader):
                         score += 10000
                         if not cancheckexpr:
                             score += 100000
-                        else:
-                            if self.isExpressionUnique(sol.checkforzeros,-expr.base) and self.isExpressionUnique(sol.checkforzeros,expr.base):
-                                sol.checkforzeros.append(self.removecommonexprs(expr.base,onlygcd=False,onlynumbers=True))
+#                        else:
+#                             if self.isExpressionUnique(sol.checkforzeros,-expr.base) and self.isExpressionUnique(sol.checkforzeros,expr.base):
+#                                 sol.checkforzeros.append(self.removecommonexprs(expr.base,onlygcd=False,onlynumbers=True))
                 elif not self.isValidSolution(expr):
                     return oo # infinity
                 return score
@@ -1204,6 +1204,13 @@ class IKFastSolver(AutoReloader):
         except AssertionError, e:
             log.warn('%s',e)
             sol.score=1e10
+
+        newcheckforzeros = []
+        for eqtemp in sol.checkforzeros:
+            checkeq = self.removecommonexprs(eqtemp,onlygcd=False,onlynumbers=True)
+            if self.isExpressionUnique(newcheckforzeros,checkeq) and self.isExpressionUnique(newcheckforzeros,-checkeq):
+                newcheckforzeros.append(checkeq)
+        sol.checkforzeros = newcheckforzeros
         return sol.score
 
     def checkSolvability(self,AllEquations,checkvars,othervars):
@@ -1225,6 +1232,17 @@ class IKFastSolver(AutoReloader):
             eqs = [eq.subs(self.globalsymbols).subs(subs).subs(psubvalues) for eq in AllEquations]
             usedsymbols = [s for s in checksymbols if self.has_any_symbols(eqs,s)]
             eqs = [Poly(eq,*usedsymbols) for eq in eqs if eq != S.Zero]
+            # check if any equations have monos of degree more than 1, if yes, then quit with success since 0.6.7 sympy solver will freeze
+            numhigherpowers = 0
+            for eq in eqs:
+                for monom in eq.monoms:
+                    if any([m > 1 for m in monom]):
+                        numhigherpowers += 1
+            if numhigherpowers > 0:
+                log.info('checkSolvability has %d higher powers, returning solvable if > 6'%numhigherpowers)
+                if numhigherpowers > 6:
+                    return
+
             for var in checkvars:
                 varsym = self.Variable(var)
                 if self.isHinge(var.name):
@@ -1828,7 +1846,7 @@ class IKFastSolver(AutoReloader):
         curvars = transvars[:]
         solsubs=self.freevarsubs[:]
         transtree = self.solveAllEquations(AllEquations,curvars=curvars,othersolvedvars=othersolvedvars[:],solsubs=solsubs,endbranchtree=newendbranchtree)
-        transtree = self.verifyAllEquations(AllEquations,rotvars if solveRotationFirst else transvars+rotvars,self.freevarsubs,transtree)
+        transtree = self.verifyAllEquations(AllEquations,rotvars if solveRotationFirst else transvars+rotvars,self.freevarsubs[:],transtree)
         solvertree= []
         solvedvarsubs = self.freevarsubs
         if solveRotationFirst:
@@ -2561,7 +2579,6 @@ class IKFastSolver(AutoReloader):
             BL = zeros((A.shape[0]-len(allmonoms),1))
             AUadjugate = None
             AUinv = None
-
             AU = A[:A.shape[1],:]
             AUdet = AU.det()
             if AUdet != S.Zero:
@@ -2584,7 +2601,7 @@ class IKFastSolver(AutoReloader):
                         break
                 if AU.shape[0] != AU.shape[1]:
                     raise self.CannotSolveError('could not find non-singular matrix')
-
+                
             AUinv = AU.inv()
             if self.has_any_symbols(A,*self.freevars):
                 log.info('AU has symbols, so working with inverse might take some time')
@@ -2654,7 +2671,7 @@ class IKFastSolver(AutoReloader):
                     unknownvars.remove(curvar)
                     jointtrees2=[]
                     curvarsubs=self.Variable(curvar).subs
-                    treefirst = self.solveAllEquations(AllEquations,curvars=[curvar],othersolvedvars=self.freejointvars,solsubs=self.freevarsubs,endbranchtree=[AST.SolverSequence([jointtrees2])],unknownvars=unknownvars+[tvar])
+                    treefirst = self.solveAllEquations(AllEquations,curvars=[curvar],othersolvedvars=self.freejointvars,solsubs=self.freevarsubs[:],endbranchtree=[AST.SolverSequence([jointtrees2])],unknownvars=unknownvars+[tvar])
                     # solvable, which means we now have len(AllEquations)-1 with two variables, solve with half angles
                     halfanglesolution=self.solvePairVariablesHalfAngle(raweqns=[eq.subs(curvarsubs) for eq in AllEquations],var0=unknownvars[0],var1=unknownvars[1],othersolvedvars=self.freejointvars+[curvar])
                     halfanglesolution.AddHalfTanValue = True
@@ -2667,6 +2684,13 @@ class IKFastSolver(AutoReloader):
                     for t in treesecond:
                         # most likely t is a solution...
                         t.AddHalfTanValue = True
+                        # can be SolverCheckZeros
+                        if hasattr(t,'zerobranch'):
+                            for t2 in t.zerobranch:
+                                t2.AddHalfTanValue = True
+                        if hasattr(t,'nonzerobranch'):
+                            for t2 in t.nonzerobranch:
+                                t2.AddHalfTanValue = True
                     jointtrees2 += treesecond
                     # using these solutions, can evaluate all monoms and check for consistency, this step is crucial since
                     # AllEquations might not constrain all degrees of freedom (check out katana)
@@ -2678,8 +2702,12 @@ class IKFastSolver(AutoReloader):
                     X = AUinv*BU
                     for i in [0,2]:
                         jointname=symbols[i].name[1:]
-                        usedvars.append(Symbol(jointname))
-                        jointtrees3.append(AST.SolverSolution(jointname,jointeval=[atan2(X[indices[i+1]],X[indices[i]])],isHinge=self.isHinge(jointname)))
+                        try:
+                            # atan2(0,0) produces an invalid solution
+                            jointtrees3.append(AST.SolverSolution(jointname,jointeval=[atan2(X[indices[i+1]],X[indices[i]])],isHinge=self.isHinge(jointname)))
+                            usedvars.append(Symbol(jointname))
+                        except Exception, e:
+                            log.warn(e)
                     jointcheckeqs = []
                     for i,monom in enumerate(allmonoms):
                         if not i in indices:
@@ -2687,11 +2715,12 @@ class IKFastSolver(AutoReloader):
                             for isymbol,ipower in enumerate(monom):
                                 eq *= symbols[isymbol]**ipower
                             jointcheckeqs.append(eq-X[i])
-                    # threshold can be a little more loose
+                    # threshold can be a little more loose since just a sanity check
                     jointtrees3.append(AST.SolverCheckZeros('sanitycheck',jointcheckeqs,zerobranch=endbranchtree,nonzerobranch=[AST.SolverBreak()],anycondition=False,thresh=0.001))
                     return solutiontree+treefirst,usedvars
-                except self.CannotSolveError:
-                    pass
+                
+                except self.CannotSolveError,e:
+                    log.info(e)
                 
             try:
                 # try to solve first two variables pairwise
@@ -3258,6 +3287,7 @@ class IKFastSolver(AutoReloader):
                 newvars=curvars[:]
                 newvars.remove(var)
                 return [solution[0].subs(solsubs)]+self.solveAllEquations(AllEquations,curvars=newvars,othersolvedvars=othersolvedvars+[var],solsubs=solsubs+self.Variable(var).subs,endbranchtree=endbranchtree,currentcases=currentcases)
+            
         if not hasonesolution:
             # check again except without the number of solutions requirement
             for solution in solutions:
@@ -3311,81 +3341,92 @@ class IKFastSolver(AutoReloader):
                 if checkzero.has_any_symbols(*allvars):
                     log.info('ignoring special check for zero')
                     continue
-                # fractions could get big, so evaluate directly
-                checkforzeros.append(self.removecommonexprs(checkzero.evalf(),onlygcd=False,onlynumbers=True))
-                for othervar in othersolvedvars:
-                    sothervar = self.Variable(othervar).svar
-                    cothervar = self.Variable(othervar).cvar
-                    if checkzero.has_any_symbols(othervar,sothervar,cothervar):
-                        # the easiest thing to check first is if the equation evaluates to zero on boundaries 0,pi/2,pi,-pi/2
-                        s = AST.SolverSolution(othervar.name,jointeval=[],isHinge=self.isHinge(othervar.name))
-                        for value in [S.Zero,pi/2,pi,-pi/2]:
+                
+                # bother trying to extract something if too complex (takes a lot of computation time to check and most likely nothing will be extracted). 100 is an arbitrary value
+                if self.codeComplexity(checkzero) > 120: 
+                    log.warn('checkforzero too big (%d): %s',self.codeComplexity(checkzero),checkzero)
+                    checkforzeros.append(checkzero)#self.removecommonexprs(checkzero.evalf(),onlygcd=False,onlynumbers=True))
+                else:
+                    # fractions could get big, so evaluate directly
+                    checkforzeros.append(checkzero.evalf())#self.removecommonexprs(checkzero.evalf(),onlygcd=False,onlynumbers=True))
+                    for othervar in othersolvedvars:
+                        sothervar = self.Variable(othervar).svar
+                        cothervar = self.Variable(othervar).cvar
+                        if checkzero.has_any_symbols(othervar,sothervar,cothervar):
+                            # the easiest thing to check first is if the equation evaluates to zero on boundaries 0,pi/2,pi,-pi/2
+                            s = AST.SolverSolution(othervar.name,jointeval=[],isHinge=self.isHinge(othervar.name))
+                            for value in [S.Zero,pi/2,pi,-pi/2]:
+                                try:
+                                    checkzerosub=checkzero.subs([(othervar,value),(sothervar,sin(value).evalf()),(cothervar,cos(value).evalf())])
+                                    if self.isValidSolution(checkzerosub) and checkzerosub.evalf() == S.Zero:
+                                        if s.jointeval is None:
+                                            s.jointeval = []
+                                        s.jointeval.append(S.One*value)
+                                except AssertionError,e:
+                                    log.warn('othervar %s=%f: %s',str(othervar),value,e)
+                                    
+                            if s.jointeval is not None and len(s.jointeval) > 0:
+                                ss = [s]
+                            else:
+                                ss = []
                             try:
-                                checkzerosub=checkzero.subs([(othervar,value),(sothervar,sin(value).evalf()),(cothervar,cos(value).evalf())])
-                                if self.isValidSolution(checkzerosub) and checkzerosub.evalf() == S.Zero:
-                                    if s.jointeval is None:
-                                        s.jointeval = []
-                                    s.jointeval.append(S.One*value)
-                            except AssertionError,e:
-                                log.warn('othervar %s=%f: %s',str(othervar),value,e)
-                        if s.jointeval is not None and len(s.jointeval) > 0:
-                            ss = [s]
-                        else:
-                            ss = []
-                        try:
-                            ss += self.solveSingleVariable([checkzero.subs([(sothervar,sin(othervar)),(cothervar,cos(othervar))])],othervar,othersolvedvars)
-                        except self.CannotSolveError,e:
-                            # this is actually a little tricky, sometimes really good solutions can have a divide that looks like:
-                            # ((0.405 + 0.331*cj2)**2 + 0.109561*sj2**2 (manusarm_left)
-                            # This will never be 0, but the solution cannot be solved. Instead of rejecting, add a condition to check if checkzero itself is 0 or not
-                            pass
-                        
-                        for s in ss:
-                            # can actually simplify Positions and possibly get a new solution!                            
-                            if s.jointeval is not None:
-                                for eq in s.jointeval:
-                                    if eq.is_number:
-                                        cond=othervar-eq.evalf()
-                                        if self.isExpressionUnique(handledconds+[tempeq[0] for tempeq in eqs],-cond) and self.isExpressionUnique(handledconds+[tempeq[0] for tempeq in eqs],cond):
-                                            if self.isHinge(othervar.name):
-                                                evalcond=AST.fmod(cond+pi,2*pi)-pi
-                                            else:
-                                                evalcond=cond
-                                            eqs.append([cond,evalcond,[(sothervar,sin(eq).evalf()),(sin(othervar),sin(eq).evalf()),(cothervar,cos(eq).evalf()),(cos(othervar),cos(eq).evalf()),(othervar,eq)]])
-                            elif s.jointevalsin is not None:
-                                for eq in s.jointevalsin:
-                                    if eq.is_number:
-                                        cond=othervar-asin(eq).evalf()
-                                        if self.isExpressionUnique(handledconds+[tempeq[0] for tempeq in eqs],-cond) and self.isExpressionUnique(handledconds+[tempeq[0] for tempeq in eqs],cond):
-                                            if self.isHinge(othervar.name):
-                                                evalcond=AST.fmod(cond+pi,2*pi)-pi
-                                            else:
-                                                evalcond=cond
-                                            eqs.append([cond,evalcond,[(sothervar,eq),(sin(othervar),eq),(cothervar,sqrt(1-eq*eq).evalf()),(cos(othervar),sqrt(1-eq*eq).evalf()),(othervar,asin(eq).evalf())]])
-                                        cond=othervar-(pi-asin(eq).evalf())
-                                        if self.isExpressionUnique(handledconds+[tempeq[0] for tempeq in eqs],-cond) and self.isExpressionUnique(handledconds+[tempeq[0] for tempeq in eqs],cond):
-                                            if self.isHinge(othervar.name):
-                                                evalcond=AST.fmod(cond+pi,2*pi)-pi
-                                            else:
-                                                evalcond=cond
-                                            eqs.append([cond,evalcond,[(sothervar,eq),(sin(othervar),eq),(cothervar,-sqrt(1-eq*eq).evalf()),(cos(othervar),-sqrt(1-eq*eq).evalf()),(othervar,(pi-asin(eq)).evalf())]])
-                            elif s.jointevalcos is not None:
-                                for eq in s.jointevalcos:
-                                    if eq.is_number:
-                                        cond=othervar-acos(eq).evalf()
-                                        if self.isExpressionUnique(handledconds+[tempeq[0] for tempeq in eqs],-cond) and self.isExpressionUnique(handledconds+[tempeq[0] for tempeq in eqs],cond):
-                                            if self.isHinge(othervar.name):
-                                                evalcond=AST.fmod(cond+pi,2*pi)-pi
-                                            else:
-                                                evalcond=cond
-                                            eqs.append([cond,evalcond,[(sothervar,sqrt(1-eq*eq).evalf()),(sin(othervar),sqrt(1-eq*eq).evalf()),(cothervar,eq),(cos(othervar),eq),(othervar,acos(eq).evalf())]])
-                                        cond=othervar+acos(eq).evalf()
-                                        if self.isExpressionUnique(handledconds+[tempeq[0] for tempeq in eqs],-cond) and self.isExpressionUnique(handledconds+[tempeq[0] for tempeq in eqs],cond):
-                                            if self.isHinge(othervar.name):
-                                                evalcond=AST.fmod(cond+pi,2*pi)-pi
-                                            else:
-                                                evalcond=cond
-                                            eqs.append([cond,evalcond,[(sothervar,-sqrt(1-eq*eq).evalf()),(sin(othervar),-sqrt(1-eq*eq).evalf()),(cothervar,eq),(cos(othervar),eq),(othervar,-acos(eq).evalf())]])
+                                ss += self.solveSingleVariable([checkzero.subs([(sothervar,sin(othervar)),(cothervar,cos(othervar))])],othervar,othersolvedvars)
+                            except polys.polynomial.PolynomialError:
+                                # checkzero was too complex
+                                pass
+                            
+                            except self.CannotSolveError,e:
+                                # this is actually a little tricky, sometimes really good solutions can have a divide that looks like:
+                                # ((0.405 + 0.331*cj2)**2 + 0.109561*sj2**2 (manusarm_left)
+                                # This will never be 0, but the solution cannot be solved. Instead of rejecting, add a condition to check if checkzero itself is 0 or not
+                                pass
+                            
+                            for s in ss:
+                                # can actually simplify Positions and possibly get a new solution!
+                                if s.jointeval is not None:
+                                    for eq in s.jointeval:
+                                        if eq.is_number:
+                                            cond=othervar-eq.evalf()
+                                            if self.isExpressionUnique(handledconds+[tempeq[0] for tempeq in eqs],-cond) and self.isExpressionUnique(handledconds+[tempeq[0] for tempeq in eqs],cond):
+                                                if self.isHinge(othervar.name):
+                                                    evalcond=AST.fmod(cond+pi,2*pi)-pi
+                                                else:
+                                                    evalcond=cond
+                                                eqs.append([cond,evalcond,[(sothervar,sin(eq).evalf()),(sin(othervar),sin(eq).evalf()),(cothervar,cos(eq).evalf()),(cos(othervar),cos(eq).evalf()),(othervar,eq)]])
+                                elif s.jointevalsin is not None:
+                                    for eq in s.jointevalsin:
+                                        if eq.is_number:
+                                            cond=othervar-asin(eq).evalf()
+                                            if self.isExpressionUnique(handledconds+[tempeq[0] for tempeq in eqs],-cond) and self.isExpressionUnique(handledconds+[tempeq[0] for tempeq in eqs],cond):
+                                                if self.isHinge(othervar.name):
+                                                    evalcond=AST.fmod(cond+pi,2*pi)-pi
+                                                else:
+                                                    evalcond=cond
+                                                eqs.append([cond,evalcond,[(sothervar,eq),(sin(othervar),eq),(cothervar,sqrt(1-eq*eq).evalf()),(cos(othervar),sqrt(1-eq*eq).evalf()),(othervar,asin(eq).evalf())]])
+                                            cond=othervar-(pi-asin(eq).evalf())
+                                            if self.isExpressionUnique(handledconds+[tempeq[0] for tempeq in eqs],-cond) and self.isExpressionUnique(handledconds+[tempeq[0] for tempeq in eqs],cond):
+                                                if self.isHinge(othervar.name):
+                                                    evalcond=AST.fmod(cond+pi,2*pi)-pi
+                                                else:
+                                                    evalcond=cond
+                                                eqs.append([cond,evalcond,[(sothervar,eq),(sin(othervar),eq),(cothervar,-sqrt(1-eq*eq).evalf()),(cos(othervar),-sqrt(1-eq*eq).evalf()),(othervar,(pi-asin(eq)).evalf())]])
+                                elif s.jointevalcos is not None:
+                                    for eq in s.jointevalcos:
+                                        if eq.is_number:
+                                            cond=othervar-acos(eq).evalf()
+                                            if self.isExpressionUnique(handledconds+[tempeq[0] for tempeq in eqs],-cond) and self.isExpressionUnique(handledconds+[tempeq[0] for tempeq in eqs],cond):
+                                                if self.isHinge(othervar.name):
+                                                    evalcond=AST.fmod(cond+pi,2*pi)-pi
+                                                else:
+                                                    evalcond=cond
+                                                eqs.append([cond,evalcond,[(sothervar,sqrt(1-eq*eq).evalf()),(sin(othervar),sqrt(1-eq*eq).evalf()),(cothervar,eq),(cos(othervar),eq),(othervar,acos(eq).evalf())]])
+                                            cond=othervar+acos(eq).evalf()
+                                            if self.isExpressionUnique(handledconds+[tempeq[0] for tempeq in eqs],-cond) and self.isExpressionUnique(handledconds+[tempeq[0] for tempeq in eqs],cond):
+                                                if self.isHinge(othervar.name):
+                                                    evalcond=AST.fmod(cond+pi,2*pi)-pi
+                                                else:
+                                                    evalcond=cond
+                                                eqs.append([cond,evalcond,[(sothervar,-sqrt(1-eq*eq).evalf()),(sin(othervar),-sqrt(1-eq*eq).evalf()),(cothervar,eq),(cos(othervar),eq),(othervar,-acos(eq).evalf())]])
                 
             if not var in nextsolutions:
                 newvars=curvars[:]
@@ -3417,31 +3458,40 @@ class IKFastSolver(AutoReloader):
             # if not equations found, try setting two variables at once
             # also try setting px, py, or pz to 0 (barrettwam4 lookat)
             for solution,var in usedsolutions:
-                for preal in [Symbol('px'),Symbol('py'),Symbol('pz')]:
-                    if checkzero.has_any_symbols(preal):
-                        # first check if the position alone can yield a zero
-                        eq = checkzero.subs([(preal,S.Zero)]).evalf()
-                        if eq == S.Zero:
-                            cond = abs(preal)
-                            evalcond = abs(preal)
-                            if self.isExpressionUnique(handledconds+[tempeq[0] for tempeq in eqs],-cond) and self.isExpressionUnique(handledconds+[tempeq[0] for tempeq in eqs],cond):
-                                eqs.append([cond,evalcond,[(preal,S.Zero)]])
-                                log.info('%s=0 in %s',preal,checkzero)
-                            continue
-                        for othervar in othersolvedvars:
-                            if not self.isHinge(othervar.name):
+                for checkzero in solution.checkforzeros:
+                    if checkzero.has_any_symbols(*allvars):
+                        log.info('ignoring special check for zero')
+                        continue
+                    
+                    # bother trying to extract something if too complex (takes a lot of computation time to check and most likely nothing will be extracted). 100 is an arbitrary value
+                    if self.codeComplexity(checkzero) > 120:
+                        continue
+                    
+                    for preal in [Symbol('px'),Symbol('py'),Symbol('pz')]:
+                        if checkzero.has_any_symbols(preal):
+                            # first check if the position alone can yield a zero
+                            eq = checkzero.subs([(preal,S.Zero)]).evalf()
+                            if eq == S.Zero:
+                                cond = abs(preal)
+                                evalcond = abs(preal)
+                                if self.isExpressionUnique(handledconds+[tempeq[0] for tempeq in eqs],-cond) and self.isExpressionUnique(handledconds+[tempeq[0] for tempeq in eqs],cond):
+                                    eqs.append([cond,evalcond,[(preal,S.Zero)]])
+                                    log.info('%s=0 in %s',preal,checkzero)
                                 continue
-                            sothervar = Symbol('s%s'%othervar.name)
-                            cothervar = Symbol('c%s'%othervar.name)
-                            if checkzero.has_any_symbols(othervar,sothervar,cothervar):
-                                for value in [S.Zero,pi/2,pi,-pi/2]:
-                                    eq = checkzero.subs([(othervar,value),(sothervar,sin(value).evalf()),(cothervar,cos(value).evalf()),(preal,S.Zero)]).evalf()
-                                    if eq == S.Zero:
-                                        cond = abs(othervar-value)+abs(preal)
-                                        evalcond = abs(AST.fmod(othervar-value+pi,2*pi)-pi)+abs(preal)
-                                        if self.isExpressionUnique(handledconds+[tempeq[0] for tempeq in eqs],-cond) and self.isExpressionUnique(handledconds+[tempeq[0] for tempeq in eqs],cond):
-                                            eqs.append([cond,evalcond,[(sothervar,sin(value).evalf()),(sin(othervar),sin(value).evalf()),(cothervar,cos(value).evalf()),(cos(othervar),cos(value).evalf()),(preal,S.Zero),(othervar,value)]])
-                                            log.info('%s=%s,%s=0 in %s', othervar,value,preal,checkzero)
+                            for othervar in othersolvedvars:
+                                if not self.isHinge(othervar.name):
+                                    continue
+                                sothervar = Symbol('s%s'%othervar.name)
+                                cothervar = Symbol('c%s'%othervar.name)
+                                if checkzero.has_any_symbols(othervar,sothervar,cothervar):
+                                    for value in [S.Zero,pi/2,pi,-pi/2]:
+                                        eq = checkzero.subs([(othervar,value),(sothervar,sin(value).evalf()),(cothervar,cos(value).evalf()),(preal,S.Zero)]).evalf()
+                                        if eq == S.Zero:
+                                            cond = abs(othervar-value)+abs(preal)
+                                            evalcond = abs(AST.fmod(othervar-value+pi,2*pi)-pi)+abs(preal)
+                                            if self.isExpressionUnique(handledconds+[tempeq[0] for tempeq in eqs],-cond) and self.isExpressionUnique(handledconds+[tempeq[0] for tempeq in eqs],cond):
+                                                eqs.append([cond,evalcond,[(sothervar,sin(value).evalf()),(sin(othervar),sin(value).evalf()),(cothervar,cos(value).evalf()),(cos(othervar),cos(value).evalf()),(preal,S.Zero),(othervar,value)]])
+                                                log.info('%s=%s,%s=0 in %s', othervar,value,preal,checkzero)
 
         # test the solutions
         zerobranches = []
@@ -3622,9 +3672,9 @@ class IKFastSolver(AutoReloader):
                         continue
                     
                     shape=Mall[0].shape
-                    Malltemp = [None,None,None]
+                    Malltemp = [None]*len(Mall)
                     M = zeros(shape)
-                    for idegree in range(3):
+                    for idegree in range(len(Mall)):
                         Malltemp[idegree] = zeros(shape)
                         for i in range(shape[0]):
                             for j in range(shape[1]):
@@ -3660,6 +3710,14 @@ class IKFastSolver(AutoReloader):
                     det = Poly(S.Zero,leftvar)
                     for eq in eqadds:
                         det += eq
+#                     if len(Mall) == 2:
+#                         log.info('attempting to simplify determinant...')
+#                         newdet = Poly(S.Zero,leftvar)
+#                         for c,m in det.iter_terms():
+#                             newc = self.trigsimp(c.subs(dictequations),othersolvedvars)
+#                             newdet += newc*leftvar**m[0]
+#                         dictequations = []
+#                         det = newdet
                     pfinals = [det]
                     break
                 except self.CannotSolveError,e:
@@ -3680,7 +3738,7 @@ class IKFastSolver(AutoReloader):
     def _createSimplifyFn(self,vars,varsubs,varsubsinv):
         return lambda eq: self.trigsimp(eq.subs(varsubsinv),vars).subs(varsubs)
                 
-    def solveVariablesLinearly(self,polyeqs,othersolvedvars):
+    def solveVariablesLinearly(self,polyeqs,othersolvedvars,maxsolvabledegree=4):
         log.debug('solveVariablesLinearly for %s: othersolvedvars=%s',polyeqs[0].symbols,othersolvedvars)
         nummonoms = [len(peq.monoms)-int(peq.coeff()!=S.Zero) for peq in polyeqs]
         mindegree = __builtin__.min(nummonoms)
@@ -3715,7 +3773,7 @@ class IKFastSolver(AutoReloader):
                     continue
                 
                 if len(allmonoms) == degree:
-                    if degree > 4:
+                    if degree > maxsolvabledegree:
                         log.warn('cannot handle linear solving for more than 4 equations')
                         continue
                     
@@ -3946,10 +4004,16 @@ class IKFastSolver(AutoReloader):
                 # remove coupled equations
                 if any([(m[0]>0)+(m[1]>0)+(m[2]>0)>1 for m in Poly(enew,varsym.cvar,varsym.svar,var).monoms]):
                     continue
+                
                 # ignore any equations with degree 3 or more
                 if Poly(enew,varsym.svar).degree > maxdegree or Poly(enew,varsym.cvar).degree > maxdegree:
                     log.debug('ignoring equation: ',enew)
                     continue
+                
+                if Poly(enew,varsym.svar,varsym.cvar,varsym.var).coeff() == S.Zero:
+                    log.debug('equation %s is allowing trivial solution for variable %s, ignoring ',e,varsym.name)
+                    continue
+                
                 rank = self.codeComplexity(enew)
                 for s in symbols:
                     rank += self.codeComplexity(s[1])
@@ -4461,13 +4525,6 @@ class IKFastSolver(AutoReloader):
             log.warn('failed to solve pairwise equation: %s'%str(finaleq))
             return [self.solvePairVariablesHalfAngle(raweqns,var0,var1,othersolvedvars)]
 
-        if useconic:
-            # conic roots solver not as robust as half-angle transform!
-            #return [SolverConicRoots(var.name,[finaleq],isHinge=self.isHinge(var.name))]
-            solution = self.solveHighDegreeEquationsHalfAngle([finaleq],varsym)
-            solution.checkforzeros += checkforzeros
-            return [solution]
-
         newunknownvars = unknownvars[:]
         newunknownvars.remove(unknownvar)
         if finaleq.has_any_symbols(*newunknownvars):
@@ -4477,6 +4534,13 @@ class IKFastSolver(AutoReloader):
         if not finaleq.has_any_symbols(unknownvar):
             # somehow removed all variables, so try the general method
             return [self.solvePairVariablesHalfAngle(raweqns,var0,var1,othersolvedvars)]
+
+        if useconic:
+            # conic roots solver not as robust as half-angle transform!
+            #return [SolverConicRoots(var.name,[finaleq],isHinge=self.isHinge(var.name))]
+            solution = self.solveHighDegreeEquationsHalfAngle([finaleq],varsym)
+            solution.checkforzeros += checkforzeros
+            return [solution]
 
         # now that everything is with respect to one variable, simplify and solve the equation
         eqnew, symbols = self.groupTerms(finaleq, unknownvars, symbolgen)

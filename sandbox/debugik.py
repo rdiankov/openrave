@@ -1153,7 +1153,7 @@ def detdialytically():
 def test_ik():
     from sympy import *
     import __builtin__
-    from openravepy.ikfast import AST
+    from openravepy.ikfast import AST, combinations
     ikmodel=self
     self = solver
     freeindices = ikmodel.freeindices
@@ -1179,6 +1179,8 @@ def test_ik():
         psubs.append((self.Tee[i],self.convertRealToRational(Tfinal[i].subs(valsubs).evalf())))
     for s,v in self.ppsubs+self.npxyzsubs+self.rxpsubs:
         psubs.append((s,v.subs(psubs)))
+    if len(self.globalsymbols) > 0:
+        psubs += [(s,v.subs(psubs+valsubs)) for s,v in self.globalsymbols]
     if len(raghavansolutiontree) > 0:
         psubs += [(s,v.subs(psubs)) for s,v in raghavansolutiontree[0].subs]
     dummyvaluesubs = [(dvar,self.convertRealToRational(var.subs(valsubs).evalf())) for dvar,var in dummyvars]

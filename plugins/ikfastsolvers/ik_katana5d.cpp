@@ -12,7 +12,7 @@
 /// See the License for the specific language governing permissions and
 /// limitations under the License.
 ///
-/// ikfast version 39 generated on 2011-03-08 00:00:38.569698
+/// ikfast version 40 generated on 2011-03-08 20:21:05.306314
 /// To compile with gcc:
 ///     gcc -lstdc++ ik.cpp
 /// To compile without any main function as a shared object:
@@ -136,16 +136,17 @@ inline double IKabs(double f) { return fabs(f); }
 inline float IKlog(float f) { return logf(f); }
 inline double IKlog(double f) { return log(f); }
 
+#define IKFAST_SINCOS_THRESH ((IKReal)0.000001)
 inline float IKasin(float f)
 {
-IKFAST_ASSERT( f > -1.001f && f < 1.001f ); // any more error implies something is wrong with the solver
+IKFAST_ASSERT( f > -1-IKFAST_SINCOS_THRESH && f < 1+IKFAST_SINCOS_THRESH ); // any more error implies something is wrong with the solver
 if( f <= -1 ) return -IKPI_2;
 else if( f >= 1 ) return IKPI_2;
 return asinf(f);
 }
 inline double IKasin(double f)
 {
-IKFAST_ASSERT( f > -1.001 && f < 1.001 ); // any more error implies something is wrong with the solver
+IKFAST_ASSERT( f > -1-IKFAST_SINCOS_THRESH && f < 1+IKFAST_SINCOS_THRESH ); // any more error implies something is wrong with the solver
 if( f <= -1 ) return -IKPI_2;
 else if( f >= 1 ) return IKPI_2;
 return asin(f);
@@ -171,14 +172,14 @@ inline float IKfmod(double x, double y)
 
 inline float IKacos(float f)
 {
-IKFAST_ASSERT( f > -1.001f && f < 1.001f ); // any more error implies something is wrong with the solver
+IKFAST_ASSERT( f > -1-IKFAST_SINCOS_THRESH && f < 1+IKFAST_SINCOS_THRESH ); // any more error implies something is wrong with the solver
 if( f <= -1 ) return IKPI;
 else if( f >= 1 ) return 0.0f;
 return acosf(f);
 }
 inline double IKacos(double f)
 {
-IKFAST_ASSERT( f > -1.001 && f < 1.001 ); // any more error implies something is wrong with the solver
+IKFAST_ASSERT( f > -1-IKFAST_SINCOS_THRESH && f < 1+IKFAST_SINCOS_THRESH ); // any more error implies something is wrong with the solver
 if( f <= -1 ) return IKPI;
 else if( f >= 1 ) return 0.0;
 return acos(f);
@@ -210,14 +211,6 @@ inline double IKatan2(double fy, double fx) {
     return atan2(fy,fx);
 }
 
-IKFAST_API int getNumFreeParameters() { return 0; }
-IKFAST_API int* getFreeParameters() { return NULL; }
-IKFAST_API int getNumJoints() { return 5; }
-
-IKFAST_API int getIKRealSize() { return sizeof(IKReal); }
-
-IKFAST_API int getIKType() { return 0x56000007; }
-
 /// solves the inverse kinematics equations.
 /// \param pfree is an array specifying the free joints of the chain.
 IKFAST_API void fk(const IKReal* j, IKReal* eetrans, IKReal* eerot) {
@@ -240,23 +233,17 @@ eerot[1]=((((x0)*(x8)))+(((-1.00000000000000)*(x9)*(((((x5)*(((((x1)*(x4)*(x6)))
 eerot[2]=((-1.00000000000000)*(x9)*(((((x5)*(((((x1)*(x2)))+(((-1.00000000000000)*(x3)*(x4)))))))+(((x7)*(((((x1)*(x4)))+(((x2)*(x3))))))))));
 }
 
+IKFAST_API int getNumFreeParameters() { return 0; }
+IKFAST_API int* getFreeParameters() { return NULL; }
+IKFAST_API int getNumJoints() { return 5; }
+
+IKFAST_API int getIKRealSize() { return sizeof(IKReal); }
+
+IKFAST_API int getIKType() { return 0x56000007; }
+
 class IKSolver {
 public:
-IKReal j0, cj0, sj0, htj0,
-j1, cj1, sj1, htj1,
-j2, cj2, sj2, htj2,
-j3, cj3, sj3, htj3,
-j4, cj4, sj4, htj4,
-new_r00, r00, rxp0_0,
-new_r01, r01, rxp0_1,
-new_r02, r02, rxp0_2,
-new_r10, r10, rxp1_0,
-new_r11, r11, rxp1_1,
-new_r12, r12, rxp1_2,
-new_r20, r20, rxp2_0,
-new_r21, r21, rxp2_1,
-new_r22, r22, rxp2_2,
-new_px, new_py, new_pz, px, py, pz, npx, npy, npz, pp;
+IKReal j0,cj0,sj0,htj0,j1,cj1,sj1,htj1,j2,cj2,sj2,htj2,j3,cj3,sj3,htj3,j4,cj4,sj4,htj4,new_r00,r00,rxp0_0,new_r01,r01,rxp0_1,new_r02,r02,rxp0_2,new_px,px,npx,new_py,py,npy,new_pz,pz,npz,pp;
 
 bool ik(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::vector<IKSolution>& vsolutions) {
 for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
@@ -544,6 +531,15 @@ for(int ij1 = 0; ij1 < numsolutions; ++ij1)
 htj1 = IKtan(j1/2);
 
 {
+IKReal dummyeval[1];
+dummyeval[0]=((((21.9038857493319)*(cj1)*(px)*(pz)*(r00)))+(((21.9038857493319)*(cj1)*(py)*(pz)*(r01)))+(((10.9519428746660)*(pp)*(r01)*(sj0)*(sj1)))+(((-10.9519428746660)*(cj1)*(pp)*(r02)))+(((-21.9038857493319)*(cj0)*(r00)*(sj1)*((px)*(px))))+(((-21.9038857493319)*(py)*(pz)*(r02)*(sj0)*(sj1)))+(((4.16173829237307)*(px)*(r00)))+(((-21.9038857493319)*(cj0)*(px)*(py)*(r01)*(sj1)))+(((21.9038857493319)*(cj1)*(r02)*((pz)*(pz))))+(((cj1)*(r02)))+(((-21.9038857493319)*(r01)*(sj0)*(sj1)*((py)*(py))))+(((-21.9038857493319)*(px)*(py)*(r00)*(sj0)*(sj1)))+(((4.16173829237307)*(pz)*(r02)))+(((-1.00000000000000)*(r01)*(sj0)*(sj1)))+(((4.16173829237307)*(py)*(r01)))+(((-21.9038857493319)*(cj0)*(px)*(pz)*(r02)*(sj1)))+(((10.9519428746660)*(cj0)*(pp)*(r00)*(sj1)))+(((-1.00000000000000)*(cj0)*(r00)*(sj1))));
+if( IKabs(dummyeval[0]) < 0.0000010000000000  )
+{
+continue;
+
+} else
+{
+{
 IKReal j2array[1], cj2array[1], sj2array[1];
 bool j2valid[1]={false};
 IKReal x187=((0.380000000000000)*(py)*(r01));
@@ -729,6 +725,10 @@ continue;
 }
 }
 }
+}
+
+}
+
 }
     }
 }

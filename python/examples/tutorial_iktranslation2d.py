@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)
+# Copyright (C) 2009-2011 Rosen Diankov (rosen.diankov@gmail.com)
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,11 +16,11 @@
 .. image:: ../../images/example_tutorials/iktranslation2d.jpg
   :height: 200
 
-Shows how to use translational inverse kinematics for an arm with few joints
+Shows how to use the TranslationXY2D planar translation inverse kinematics type for an arm with few joints.
 """
 from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
-__copyright__ = '2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
+__copyright__ = '2009-2011 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Apache License, Version 2.0'
 
 from openravepy import __build_doc__
@@ -54,7 +54,6 @@ def run(args=None):
     robot = env.GetRobots()[0]
     if options.manipname is not None:
         robot.SetActiveManipulator(options.manipname)
-    lower,upper = robot.GetDOFLimits(robot.GetActiveManipulator().GetArmIndices())
 
     # generate the ik solver
     ikmodel = databases.inversekinematics.InverseKinematicsModel(robot, iktype=IkParameterization.Type.TranslationXY2D)

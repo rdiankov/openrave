@@ -296,6 +296,8 @@ if __name__ == "__main__":
     handler.setFormatter(format)
     multiprocess.log.addHandler(handler)
     multiprocess.log.setLevel(options.debug)
+    ikfast.log.addHandler(handler)
+    ikfast.log.setLevel(options.debug)
 
     multiprocess._instantiate_plugins = [capture.Capture, xunitmultiprocess.Xunitmp, callableclass.CallableClass]
 

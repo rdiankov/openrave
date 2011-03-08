@@ -267,16 +267,17 @@ inline double IKabs(double f) { return fabs(f); }
 inline float IKlog(float f) { return logf(f); }
 inline double IKlog(double f) { return log(f); }
 
+#define IKFAST_SINCOS_THRESH ((IKReal)0.000001)
 inline float IKasin(float f)
 {
-IKFAST_ASSERT( f > -1.001f && f < 1.001f ); // any more error implies something is wrong with the solver
+IKFAST_ASSERT( f > -1-IKFAST_SINCOS_THRESH && f < 1+IKFAST_SINCOS_THRESH ); // any more error implies something is wrong with the solver
 if( f <= -1 ) return -IKPI_2;
 else if( f >= 1 ) return IKPI_2;
 return asinf(f);
 }
 inline double IKasin(double f)
 {
-IKFAST_ASSERT( f > -1.001 && f < 1.001 ); // any more error implies something is wrong with the solver
+IKFAST_ASSERT( f > -1-IKFAST_SINCOS_THRESH && f < 1+IKFAST_SINCOS_THRESH ); // any more error implies something is wrong with the solver
 if( f <= -1 ) return -IKPI_2;
 else if( f >= 1 ) return IKPI_2;
 return asin(f);
@@ -302,14 +303,14 @@ inline float IKfmod(double x, double y)
 
 inline float IKacos(float f)
 {
-IKFAST_ASSERT( f > -1.001f && f < 1.001f ); // any more error implies something is wrong with the solver
+IKFAST_ASSERT( f > -1-IKFAST_SINCOS_THRESH && f < 1+IKFAST_SINCOS_THRESH ); // any more error implies something is wrong with the solver
 if( f <= -1 ) return IKPI;
 else if( f >= 1 ) return 0.0f;
 return acosf(f);
 }
 inline double IKacos(double f)
 {
-IKFAST_ASSERT( f > -1.001 && f < 1.001 ); // any more error implies something is wrong with the solver
+IKFAST_ASSERT( f > -1-IKFAST_SINCOS_THRESH && f < 1+IKFAST_SINCOS_THRESH ); // any more error implies something is wrong with the solver
 if( f <= -1 ) return IKPI;
 else if( f >= 1 ) return 0.0;
 return acos(f);
@@ -910,7 +911,7 @@ int main(int argc, char** argv)
             numsolutions = 2*len(node.jointevalcos)
             eqcode += self.writeEquations(lambda i: 'c%sarray[%d]'%(name,allnumsolutions+2*i),node.jointevalcos)
             for i in range(len(node.jointevalcos)):
-                eqcode += 'if( c%sarray[%d] >= -1.0001 && c%sarray[%d] <= 1.0001 )\n{\n'%(name,allnumsolutions+2*i,name,allnumsolutions+2*i)
+                eqcode += 'if( c%sarray[%d] >= -1-IKFAST_SINCOS_THRESH && c%sarray[%d] <= 1+IKFAST_SINCOS_THRESH )\n{\n'%(name,allnumsolutions+2*i,name,allnumsolutions+2*i)
                 eqcode += '    %svalid[%d] = %svalid[%d] = true;\n'%(name,allnumsolutions+2*i,name,allnumsolutions+2*i+1)
                 eqcode += '    %sarray[%d] = IKacos(c%sarray[%d]);\n'%(name,allnumsolutions+2*i,name,allnumsolutions+2*i)
                 eqcode += '    s%sarray[%d] = IKsin(%sarray[%d]);\n'%(name,allnumsolutions+2*i,name,allnumsolutions+2*i)
@@ -930,7 +931,7 @@ int main(int argc, char** argv)
             numsolutions = 2*len(node.jointevalsin)
             eqcode += self.writeEquations(lambda i: 's%sarray[%d]'%(name,allnumsolutions+2*i),node.jointevalsin)
             for i in range(len(node.jointevalsin)):
-                eqcode += 'if( s%sarray[%d] >= -1.0001 && s%sarray[%d] <= 1.0001 )\n{\n'%(name,allnumsolutions+2*i,name,allnumsolutions+2*i)
+                eqcode += 'if( s%sarray[%d] >= -1-IKFAST_SINCOS_THRESH && s%sarray[%d] <= 1+IKFAST_SINCOS_THRESH )\n{\n'%(name,allnumsolutions+2*i,name,allnumsolutions+2*i)
                 eqcode += '    %svalid[%d] = %svalid[%d] = true;\n'%(name,allnumsolutions+2*i,name,allnumsolutions+2*i+1)
                 eqcode += '    %sarray[%d] = IKasin(s%sarray[%d]);\n'%(name,allnumsolutions+2*i,name,allnumsolutions+2*i)
                 eqcode += '    c%sarray[%d] = IKcos(%sarray[%d]);\n'%(name,allnumsolutions+2*i,name,allnumsolutions+2*i)
@@ -1401,12 +1402,12 @@ int main(int argc, char** argv)
                 code += 'IKacos('
                 code2,sepcode = self.writeExprCode(expr.args[0])
                 code += code2
-                sepcode += 'if( (%s) < -1.0001 || (%s) > 1.0001 )\n    continue;\n'%(code2,code2)
+                sepcode += 'if( (%s) < -1-IKFAST_SINCOS_THRESH || (%s) > 1+IKFAST_SINCOS_THRESH )\n    continue;\n'%(code2,code2)
             elif expr.func == asin:
                 code += 'IKasin('
                 code2,sepcode = self.writeExprCode(expr.args[0])
                 code += code2
-                sepcode += 'if( (%s) < -1.0001 || (%s) > 1.0001 )\n    continue;\n'%(code2,code2)
+                sepcode += 'if( (%s) < -1-IKFAST_SINCOS_THRESH || (%s) > 1+IKFAST_SINCOS_THRESH )\n    continue;\n'%(code2,code2)
             elif expr.func == atan2:
                 code += 'IKatan2('
                 # check for divides by 0 in arguments, this could give two possible solutions?!?

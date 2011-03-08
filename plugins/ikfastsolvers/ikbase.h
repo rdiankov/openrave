@@ -142,6 +142,7 @@ class IkFastSolver : public IkSolverBase
 
     virtual bool Solve(const IkParameterization& param, int filteroptions, std::vector< std::vector<dReal> >& qSolutions)
     {
+        qSolutions.resize(0);
         if( param.GetType() != _iktype ) {
             RAVELOG_WARN(str(boost::format("ik solver only supports type %d, given %d\n")%_iktype%param.GetType()));
             return false;
@@ -155,7 +156,6 @@ class IkFastSolver : public IkSolverBase
         RobotBase::RobotStateSaver saver(probot);
         probot->SetActiveDOFs(pmanip->GetArmIndices());
         std::vector<IKReal> vfree(_vfreeparams.size());
-        qSolutions.resize(0);
         bool bCheckEndEffector = true;
         if( ComposeSolution(_vfreeparams, vfree, 0, vector<dReal>(), boost::bind(&IkFastSolver::_SolveAll,shared_solver(), param,boost::ref(vfree),filteroptions,boost::ref(qSolutions),boost::ref(bCheckEndEffector))) == SR_Quit ) {
             return false;
@@ -188,6 +188,7 @@ class IkFastSolver : public IkSolverBase
     }
     virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, int filteroptions, std::vector< std::vector<dReal> >& qSolutions)
     {
+        qSolutions.resize(0);
         if( param.GetType() != _iktype ) {
             RAVELOG_WARN(str(boost::format("ik solver only supports type %d, given %d")%_iktype%param.GetType()));
             return false;
@@ -207,7 +208,6 @@ class IkFastSolver : public IkSolverBase
         for(size_t i = 0; i < _vfreeparams.size(); ++i) {
             vfree[i] = vFreeParameters[i]*(_qupper[_vfreeparams[i]]-_qlower[_vfreeparams[i]]) + _qlower[_vfreeparams[i]];
         }
-        qSolutions.resize(0);
         bool bCheckEndEffector = true;
         if( _SolveAll(param,vfree,filteroptions,qSolutions,bCheckEndEffector) == SR_Quit ) {
             return false;
@@ -302,13 +302,13 @@ private:
                 TransformMatrix t = param.GetTransform6D();
                 IKReal eetrans[3] = {t.trans.x, t.trans.y, t.trans.z};
                 IKReal eerot[9] = {t.m[0],t.m[1],t.m[2],t.m[4],t.m[5],t.m[6],t.m[8],t.m[9],t.m[10]};
-    //            stringstream ss; ss << "./ik " << std::setprecision(16);
-    //            ss << eerot[0]  << " " << eerot[1]  << " " << eerot[2]  << " " << eetrans[0]  << " " << eerot[3]  << " " << eerot[4]  << " " << eerot[5]  << " " << eetrans[1]  << " " << eerot[6]  << " " << eerot[7]  << " " << eerot[8]  << " " << eetrans[2] << " ";
-    //            FOREACH(itfree,vfree) {
-    //                ss << *itfree << " ";
-    //            }
-    //            ss << endl;
-    //            RAVELOG_INFO(ss.str());
+//                stringstream ss; ss << "./ik " << std::setprecision(16);
+//                ss << eerot[0]  << " " << eerot[1]  << " " << eerot[2]  << " " << eetrans[0]  << " " << eerot[3]  << " " << eerot[4]  << " " << eerot[5]  << " " << eetrans[1]  << " " << eerot[6]  << " " << eerot[7]  << " " << eerot[8]  << " " << eetrans[2] << " ";
+//                FOREACH(itfree,vfree) {
+//                    ss << *itfree << " ";
+//                }
+//                ss << endl;
+                //RAVELOG_INFO(ss.str());
                 return _pfnik(eetrans, eerot, vfree.size()>0?&vfree[0]:NULL, vsolutions);
             }
             case IkParameterization::Type_Rotation3D: {
