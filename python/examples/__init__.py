@@ -10,6 +10,7 @@ import tutorial_ik5d
 import tutorial_iklookat
 import tutorial_iksolutions
 import tutorial_iktranslation
+import tutorial_iktranslation2d
 import tutorial_inversereachability
 import tutorial_plotting
 

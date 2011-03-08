@@ -466,6 +466,20 @@ class InverseKinematicsModel(OpenRAVEModel):
                 kwargs['rawbasepos'] = rawbasepos
                 return ikfast.IKFastSolver.solveFullIK_Translation3D(*args,**kwargs)
             solvefn=solveFullIK_Translation3D
+        elif self.iktype == IkParameterization.Type.TranslationXY2D:
+            rawbasepos=self.manip.GetGraspTransform()[0:2,3]
+            def solveFullIK_TranslationXY2D(*args,**kwargs):
+                kwargs['rawbasepos'] = rawbasepos
+                return ikfast.IKFastSolver.solveFullIK_TranslationXY2D(*args,**kwargs)
+            solvefn=solveFullIK_TranslationXY2D
+        elif self.iktype == IkParameterization.Type.TranslationXYOrientation3D:
+            rawbasepos=self.manip.GetGraspTransform()[0:2,3]
+            rawangle=normalizeAxisRotation([0,0,1],-self.manip.GetGraspTransform()[0:3,0:3][0])
+            def solveFullIK_TranslationXYOrientation3D(*args,**kwargs):
+                kwargs['rawbasepos'] = rawbasepos
+                kwargs['rawangle'] = rawangle
+                return ikfast.IKFastSolver.solveFullIK_TranslationXYOrientation3D(*args,**kwargs)
+            solvefn=solveFullIK_TranslationXYOrientation3D
         elif self.iktype == IkParameterization.Type.Transform6D:
             Tgripperraw=self.manip.GetGraspTransform()
             def solveFullIK_6D(*args,**kwargs):

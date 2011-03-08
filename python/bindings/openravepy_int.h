@@ -131,6 +131,12 @@ inline RaveVector<float> ExtractFloat3(const object& o)
 }
 
 template <typename T>
+inline Vector ExtractVector2Type(const object& o)
+{
+    return Vector(extract<T>(o[0]), extract<T>(o[1]),0);
+}
+
+template <typename T>
 inline Vector ExtractVector3Type(const object& o)
 {
     return Vector(extract<T>(o[0]), extract<T>(o[1]), extract<T>(o[2]));
@@ -140,6 +146,11 @@ template <typename T>
 inline Vector ExtractVector4Type(const object& o)
 {
     return Vector(extract<T>(o[0]), extract<T>(o[1]), extract<T>(o[2]), extract<T>(o[3]));
+}
+
+inline Vector ExtractVector2(const object& oraw)
+{
+    return ExtractVector2Type<dReal>(oraw);
 }
 
 inline Vector ExtractVector3(const object& oraw)
@@ -271,6 +282,11 @@ inline object toPyArray3(const std::vector<RaveVector<double> >& v)
         }
     }
     return static_cast<numeric::array>(handle<>(pyvalues));
+}
+
+inline object toPyVector2(Vector v)
+{
+    return numeric::array(boost::python::make_tuple(v.x,v.y));
 }
 
 inline object toPyVector3(Vector v)

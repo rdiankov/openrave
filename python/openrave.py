@@ -140,9 +140,11 @@ if __name__ == "__main__":
             robots=env.GetRobots()
             robot=None if len(robots) == 0 else robots[0]
             if options.robotmanipulators:
-                rows = [['name','base','end','arm-dof','gripper-dof']]
+                rows = [['name','base','end','arm-dof','gripper-dof','arm','gripper']]
                 for m in robot.GetManipulators():
-                    rows.append([m.GetName(),m.GetBase().GetName(),m.GetEndEffector().GetName(),str(len(m.GetArmIndices())),str(len(m.GetGripperIndices()))])
+                    armindices = ','.join(str(i) for i in m.GetArmIndices())
+                    gripperindices = ','.join(str(i) for i in m.GetGripperIndices())
+                    rows.append([m.GetName(),m.GetBase().GetName(),m.GetEndEffector().GetName(),str(len(m.GetArmIndices())),str(len(m.GetGripperIndices())),armindices,gripperindices])
                 colwidths = [max([len(row[i]) for row in rows]) for i in range(len(rows[0]))]
                 for i,row in enumerate(rows):
                     print ' '.join([row[j].ljust(colwidths[j]) for j in range(len(colwidths))])

@@ -1153,7 +1153,7 @@ def detdialytically():
 def test_ik():
     from sympy import *
     import __builtin__
-    from openravepy.ikfast import SolverStoreSolution, SolverSolution, combinations, SolverSequence, fmod, SolverRotation, SolverIKChainTransform6D, SolverBranchConds, SolverMatrixInverse, SolverCoeffFunction, SolverCheckZeros, SolverBreak, SolverConditionedSolution, SolverPolynomialRoots
+    from openravepy.ikfast import AST
     ikmodel=self
     self = solver
     freeindices = ikmodel.freeindices

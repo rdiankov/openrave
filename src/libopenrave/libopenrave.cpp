@@ -216,6 +216,8 @@ class RaveGlobal : private boost::noncopyable, public boost::enable_shared_from_
         _mapikparameterization[IkParameterization::Type_Ray4D] = "Ray4D";
         _mapikparameterization[IkParameterization::Type_Lookat3D] = "Lookat3D";
         _mapikparameterization[IkParameterization::Type_TranslationDirection5D] = "TranslationDirection5D";
+        _mapikparameterization[IkParameterization::Type_TranslationXY2D] = "TranslationXY2D";
+        _mapikparameterization[IkParameterization::Type_TranslationXYOrientation3D] = "TranslationXYOrientation3D";
         BOOST_ASSERT(_mapikparameterization.size()==IkParameterization::Type_NumberOfParameterizations);
     }
 public:

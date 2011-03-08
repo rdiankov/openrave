@@ -39,6 +39,7 @@
 #endif
 
 #include <locale>
+#include <boost/format.hpp>
 
 //const QMetaObject Viewer::staticMetaObject;
 const float TIMER_SENSOR_INTERVAL = (1.0f/60.0f);
@@ -77,7 +78,7 @@ QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
       ViewerBase(penv), _ivOffscreen(SbViewportRegion(VIDEO_WIDTH, VIDEO_HEIGHT))
 {
 #if QT_VERSION >= 0x040000 // check for qt4
-    setWindowTitle("OpenRAVE");
+    setWindowTitle(str(boost::format("OpenRAVE %s")%OPENRAVE_VERSION_STRING).c_str());
     statusBar()->showMessage(tr("Status Bar"));
 #endif
     __description = ":Interface Author: Rosen Diankov\nProvides a GUI using the Coin3D, Qt4, and SoQt libraries.";

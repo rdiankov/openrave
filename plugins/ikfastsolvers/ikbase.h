@@ -346,7 +346,6 @@ private:
             case IkParameterization::Type_Lookat3D: {
                 Vector v = param.GetLookat3D();
                 IKReal eetrans[3] = {v.x, v.y, v.z};
-                //RAVELOG_INFO("lookat: %f %f %f\n",v.x,v.y,v.z);
                 return _pfnik(eetrans, NULL, vfree.size()>0?&vfree[0]:NULL, vsolutions);
             }
             case IkParameterization::Type_TranslationDirection5D: {
@@ -357,6 +356,16 @@ private:
                     return false;
                 }
                 return true;
+            }
+            case IkParameterization::Type_TranslationXY2D: {
+                Vector v = param.GetTranslationXY2D();
+                IKReal eetrans[3] = {v.x, v.y,0};
+                return _pfnik(eetrans, NULL, vfree.size()>0?&vfree[0]:NULL, vsolutions);
+            }
+            case IkParameterization::Type_TranslationXYOrientation3D: {
+                Vector v = param.GetTranslationXYOrientation3D();
+                IKReal eetrans[3] = {v.x, v.y,v.z};
+                return _pfnik(eetrans, NULL, vfree.size()>0?&vfree[0]:NULL, vsolutions);
             }
             default:
                 BOOST_ASSERT(0);

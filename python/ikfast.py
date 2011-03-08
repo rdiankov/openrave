@@ -147,7 +147,7 @@ The global functions are:
 
 Parameters:
   
-- ``eetrans`` - 3 translation values.
+- ``eetrans`` - 3 translation values. For iktype **TranslationXYOrientation3D**, the z-axis is the orientation.
 - ``eerot`` - 9 values for the rotation matrix. For iktypes **Direction3D**, **Ray4D**, and **TranslationDirection5D**, the first 3 values represent the target direction.
 - ``IKSolution`` - The discrete solutions are returned in this structure. Sometimes the joint axes of the robot can align allowing an infinite number of solutions. The ``IKSolution`` structure stores all these solutions in the form of free variables that the user has to set when querying the solution. Its prototype is:
 
@@ -644,6 +644,28 @@ class AST:
             self.Pfk = Tleft[0:3,0:3]*self.Pfk+Tleft[0:3,3]
             self.Pee = Tleftinv[0:3,0:3]*self.Pee+Tleftinv[0:3,3]
 
+    class SolverIKChainTranslationXY2D:
+        solvejointvars = None
+        freejointvars = None
+        jointtree = None
+        Pfk = None
+        Pee = None
+        dictequations = None
+        def __init__(self, solvejointvars, freejointvars, Pee, jointtree,Pfk=None):
+            self.solvejointvars = solvejointvars
+            self.freejointvars = freejointvars
+            self.Pee = Pee
+            self.jointtree = jointtree
+            self.Pfk=Pfk
+            self.dictequations = []
+        def generate(self, generator):
+            return generator.generateIKChainTranslationXY2D(self)
+        def end(self, generator):
+            return generator.endIKChainTranslationXY2D(self)
+        def leftmultiply(self,Tleft,Tleftinv):
+            self.Pfk = Tleft[0:2,0:2]*self.Pfk+Tleft[0:2,3]
+            self.Pee = Tleftinv[0:2,0:2]*self.Pee+Tleftinv[0:2,3]
+            
     class SolverIKChainDirection3D:
         solvejointvars = None
         freejointvars = None
@@ -1283,7 +1305,7 @@ class IKFastSolver(AutoReloader):
         self.rxpsubs = []
         for i in range(3):
             self.rxp.append([Symbol('rxp%d_%d'%(i,j)) for j in range(3)])
-            c = self.Tee[0:3,i].cross(self.Tee[0:3,3])    
+            c = self.Tee[0:3,i].cross(self.Tee[0:3,3])
             self.rxpsubs += [(self.rxp[-1][j],c[j]) for j in range(3)]
         self.pvars = self.Tee[0:12]+self.npxyz+[self.pp]+self.rxp[0]+self.rxp[1]+self.rxp[2]
         self.Teeinv = self.affineInverse(self.Tee)
@@ -1478,6 +1500,58 @@ class IKFastSolver(AutoReloader):
         chaintree = AST.SolverIKChainTranslation3D([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(v,i) for v,i in izip(self.freejointvars,self.ifreejointvars)], Pee=self.Tee[0:3,3], jointtree=transtree, Pfk = Tfinal[0:3,3])
         chaintree.dictequations += self.ppsubs
         return chaintree
+
+    def solveFullIK_TranslationXY2D(self,LinksRaw, jointvars, isolvejointvars, rawbasepos=Matrix(2,1,[S.Zero,S.Zero])):
+        self.ppsubs = [] # disable since pz is not valid
+        self.pp = None
+        basepos = Matrix(2,1,[self.convertRealToRational(x) for x in rawbasepos])
+        Links = LinksRaw[:]
+        LinksInv = [self.affineInverse(link) for link in Links]
+        Tfinal = self.multiplyMatrix(Links)
+        Tfinal[0:2,3] = Tfinal[0:2,0:2]*basepos+Tfinal[0:2,3]
+        self.testconsistentvalues = self.computeConsistentValues(jointvars,Tfinal,numsolutions=4)
+        endbranchtree = [AST.SolverStoreSolution (jointvars)]
+        solvejointvars = [jointvars[i] for i in isolvejointvars]
+        if len(solvejointvars) != 2:
+            raise self.CannotSolveError('need 2 joints')
+
+        log.info('ikfast translationxy2d: %s',solvejointvars)
+        Tbaseposinv = eye(4)
+        Tbaseposinv[2,2] = S.Zero
+        Tbaseposinv[0:2,3] = -basepos
+        Tbasepos = eye(4)
+        Tbasepos[2,2] = S.Zero
+        Tbasepos[0:2,3] = basepos
+        T1links = [Tbaseposinv]+LinksInv[::-1]+[self.Tee]
+        T1linksinv = [Tbasepos]+Links[::-1]+[self.Teeinv]
+        Taccum = eye(4)
+        numvarsdone = 1
+        Positions = []
+        Positionsee = []
+        for i in range(len(T1links)-1):
+            Taccum = T1linksinv[i]*Taccum
+            hasvars = [self.has_any_symbols(Taccum,v) for v in solvejointvars]
+            if __builtin__.sum(hasvars) == numvarsdone:
+                Positions.append(Taccum[0:2,3])
+                Positionsee.append(self.multiplyMatrix(T1links[(i+1):])[0:2,3])
+                numvarsdone += 1
+            if numvarsdone > 2:
+                # more than 2 variables is almost always useless
+                break
+        if len(Positions) == 0:
+            Positions.append(zeros((2,1)))
+            Positionsee.append(self.multiplyMatrix(T1links)[0:2,3])
+        AllEquations = self.buildEquationsFromTwoSides(Positions,Positionsee,solvejointvars+self.freejointvars,uselength=True)
+
+        self.checkSolvability(AllEquations,solvejointvars,self.freejointvars)
+        transtree = self.solveAllEquations(AllEquations,curvars=solvejointvars[:],othersolvedvars=self.freejointvars,solsubs = self.freevarsubs[:],endbranchtree=endbranchtree)
+        transtree = self.verifyAllEquations(AllEquations,solvejointvars,self.freevarsubs,transtree)
+        chaintree = AST.SolverIKChainTranslationXY2D([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(v,i) for v,i in izip(self.freejointvars,self.ifreejointvars)], Pee=self.Tee[0:2,3], jointtree=transtree, Pfk = Tfinal[0:2,3])
+        chaintree.dictequations += self.ppsubs
+        return chaintree
+
+    def solveFullIK_TranslationXYOrientation3D(self,LinksRaw, jointvars, isolvejointvars, rawbasepos=Matrix(2,1,[S.Zero,S.Zero]), rawangle=S.Zero):
+        raise self.CannotSolveError('TranslationXYOrientation3D not implemented yet')
 
     def solveFullIK_Ray4D(self,LinksRaw, jointvars, isolvejointvars, rawbasedir=Matrix(3,1,[S.Zero,S.Zero,S.One]),rawbasepos=Matrix(3,1,[S.Zero,S.Zero,S.Zero])):
         """basedir,basepos needs to be filled with a direction and position of the ray to control"""
@@ -1840,7 +1914,7 @@ class IKFastSolver(AutoReloader):
     def buildEquationsFromTwoSides(self,leftside, rightside, usedvars, uselength=True):
         # try to shift all the constants of each Position expression to one side
         for i in range(len(leftside)):
-            for j in range(3):
+            for j in range(leftside[i].shape[0]):
                 p = leftside[i][j]
                 pee = rightside[i][j]
                 pconstterm = None
@@ -1865,15 +1939,18 @@ class IKFastSolver(AutoReloader):
 
         AllEquations = []
         for i in range(len(leftside)):
-            for j in range(3):
+            for j in range(leftside[i].shape[0]):
                 e = self.trigsimp(leftside[i][j] - rightside[i][j],usedvars)
                 if self.codeComplexity(e) < 1500:
                     e = self.simplifyTransform(e)
                 if self.isExpressionUnique(AllEquations,e) and self.isExpressionUnique(AllEquations,-e):
                     AllEquations.append(e)
             if uselength:
-                p2 = leftside[i][0]**2+leftside[i][1]**2+leftside[i][2]**2
-                pe2 = rightside[i][0]**2+rightside[i][1]**2+rightside[i][2]**2
+                p2 = S.Zero
+                pe2 = S.Zero
+                for j in range(leftside[i].shape[0]):
+                    p2 += leftside[i][j]**2
+                    pe2 += rightside[i][j]**2
                 if self.codeComplexity(p2) < 1200 and self.codeComplexity(pe2) < 1200:
                     # sympy's trigsimp/customtrigsimp give up too easily
                     e = self.simplifyTransform(self.trigsimp(p2,usedvars)-self.trigsimp(pe2,usedvars))
@@ -3019,28 +3096,30 @@ class IKFastSolver(AutoReloader):
                     eq = neweq
                     changed = True
 
-        # add positions
-        ip = 9
-        inp = 12
-        ipp = 15
-        irxp = 16
-        allsymbols += list(self.Tee[0:3,3])+self.npxyz+[self.pp]+self.rxp[0]+self.rxp[1]+self.rxp[2]
-        normgroups.append([self.Tee[0,3],self.Tee[1,3],self.Tee[2,3],self.pp])
-        for i in range(3):
-            dotgroups.append([[i,ip],[i+3,ip+1],[i+6,ip+2],self.npxyz[i]])
-            dotgroups.append([[3*i+0,inp],[3*i+1,inp+1],[3*i+2,inp+2],self.Tee[i,3]])
-            # column i cross position
-            crossgroups.append([[i+3,ip+2],[i+6,ip+1],irxp+3*i+0])
-            crossgroups.append([[i+6,ip+0],[i,ip+2],irxp+3*i+1])
-            crossgroups.append([[i,ip+1],[i+3,ip+0],irxp+3*i+2])
-        changed = True
-        while changed and eq.has_any_symbols(*allsymbols):
-            changed = False
-            for fn in fns:
-                neweq = fn(eq)
-                if neweq is not None:
-                    eq = neweq
-                    changed = True
+        # check if full 3D position is available
+        if self.pp is not None:
+            # add positions
+            ip = 9
+            inp = 12
+            ipp = 15
+            irxp = 16
+            allsymbols += list(self.Tee[0:3,3])+self.npxyz+[self.pp]+self.rxp[0]+self.rxp[1]+self.rxp[2]
+            normgroups.append([self.Tee[0,3],self.Tee[1,3],self.Tee[2,3],self.pp])
+            for i in range(3):
+                dotgroups.append([[i,ip],[i+3,ip+1],[i+6,ip+2],self.npxyz[i]])
+                dotgroups.append([[3*i+0,inp],[3*i+1,inp+1],[3*i+2,inp+2],self.Tee[i,3]])
+                # column i cross position
+                crossgroups.append([[i+3,ip+2],[i+6,ip+1],irxp+3*i+0])
+                crossgroups.append([[i+6,ip+0],[i,ip+2],irxp+3*i+1])
+                crossgroups.append([[i,ip+1],[i+3,ip+0],irxp+3*i+2])
+            changed = True
+            while changed and eq.has_any_symbols(*allsymbols):
+                changed = False
+                for fn in fns:
+                    neweq = fn(eq)
+                    if neweq is not None:
+                        eq = neweq
+                        changed = True
 
         return eq
 
@@ -4743,7 +4822,7 @@ class IKFastSolver(AutoReloader):
     @staticmethod
     def GetSolvers():
         """Returns a dictionary of all the supported solvers and their official identifier names"""
-        return {'transform6d':IKFastSolver.solveFullIK_6D, 'rotation3d':IKFastSolver.solveFullIK_Rotation3D, 'translation3d':IKFastSolver.solveFullIK_Translation3D, 'direction3d':IKFastSolver.solveFullIK_Direction3D, 'ray4d':IKFastSolver.solveFullIK_Ray4D, 'lookat3d':IKFastSolver.solveFullIK_Lookat3D, 'translationdirection5d':IKFastSolver.solveFullIK_TranslationDirection5D}
+        return {'transform6d':IKFastSolver.solveFullIK_6D, 'rotation3d':IKFastSolver.solveFullIK_Rotation3D, 'translation3d':IKFastSolver.solveFullIK_Translation3D, 'direction3d':IKFastSolver.solveFullIK_Direction3D, 'ray4d':IKFastSolver.solveFullIK_Ray4D, 'lookat3d':IKFastSolver.solveFullIK_Lookat3D, 'translationdirection5d':IKFastSolver.solveFullIK_TranslationDirection5D,'translationxy2d':IKFastSolver.solveFullIK_TranslationXY2D,'translationxyorientation3d':IKFastSolver.solveFullIK_TranslationXYOrientation3D}
 
 if __name__ == '__main__':
     import openravepy

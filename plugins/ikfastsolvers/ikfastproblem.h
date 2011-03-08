@@ -1056,6 +1056,15 @@ public:
             dReal facos = RaveAcos(min(dReal(1),ik0.GetTranslationDirection5D().dir.dot(ik1.GetTranslationDirection5D().dir)));
             return (ik0.GetTranslationDirection5D().pos-ik1.GetTranslationDirection5D().pos).lengthsqr3() + 0.4*facos*facos;
         }
+        case IkParameterization::Type_TranslationXY2D: {
+            return (ik0.GetTranslationXY2D()-ik1.GetTranslationXY2D()).lengthsqr2();
+        }
+        case IkParameterization::Type_TranslationXYOrientation3D: {
+            Vector v0 = ik0.GetTranslationXYOrientation3D();
+            Vector v1 = ik1.GetTranslationXYOrientation3D();
+            dReal anglediff = ANGLE_DIFF(v0.z,v1.z);
+            return (v0-v1).lengthsqr2() + anglediff*anglediff;
+        }
         default:
             BOOST_ASSERT(0);
         }
@@ -1099,6 +1108,16 @@ public:
             Vector dir = param.GetTranslationDirection5D().dir;
             Vector pos = param.GetTranslationDirection5D().pos;
             o << dir.x << " " << dir.y << " " << dir.z << " " << pos.x << " 0 0 0 " << pos.y << " 0 0 0 " << pos.z << " ";
+            break;
+        }
+        case IkParameterization::Type_TranslationXY2D: {
+            Vector v = param.GetTranslationXY2D();
+            o << "0 0 0 " << v.x << " 0 0 0 " << v.y << " 0 0 0 0 ";
+            break;
+        }
+        case IkParameterization::Type_TranslationXYOrientation3D: {
+            Vector v = param.GetTranslationXYOrientation3D();
+            o << "0 0 0 " << v.x << " 0 0 0 " << v.y << " 0 0 0 " << v.z << " ";
             break;
         }
         default:

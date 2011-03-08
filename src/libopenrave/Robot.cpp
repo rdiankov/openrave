@@ -151,6 +151,16 @@ IkParameterization RobotBase::Manipulator::GetIkParameterization(IkParameterizat
         ikp.SetTranslationDirection5D(RAY(t.trans,t.rotate(_vdirection)));
         break;
     }
+    case IkParameterization::Type_TranslationXY2D: {
+        ikp.SetTranslationXY2D(GetEndEffectorTransform().trans);
+        break;
+    }
+    case IkParameterization::Type_TranslationXYOrientation3D: {
+        Transform t = GetEndEffectorTransform();
+        dReal zangle = -normalizeAxisRotation(Vector(0,0,1),GetEndEffectorTransform().rot).first;
+        ikp.SetTranslationXYOrientation3D(Vector(t.trans.x,t.trans.y,zangle));
+        break;
+    }
     default:
         throw openrave_exception(str(boost::format("invalid ik type %d")%iktype));
     }

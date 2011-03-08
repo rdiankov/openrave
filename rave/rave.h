@@ -824,7 +824,9 @@ public:
         Type_Ray4D=0x46000005, ///< ray on end effector coordinate system reaches desired global ray
         Type_Lookat3D=0x23000006, ///< direction on end effector coordinate system points to desired 3D position
         Type_TranslationDirection5D=0x56000007, ///< end effector origin and direction reaches desired 3D translation and direction. Can be thought of as Ray IK where the origin of the ray must coincide.
-        Type_NumberOfParameterizations=7, ///< number of parameterizations (does not count Type_None)
+        Type_TranslationXY2D=0x22000008, ///< 2D translation along XY plane
+        Type_TranslationXYOrientation3D=0x33000009, ///< 2D translation along XY plane and 1D rotation around Z axis. The offset of the rotation is measured starting at +X, so at +X is it 0, at +Y it is pi/2.
+        Type_NumberOfParameterizations=9, ///< number of parameterizations (does not count Type_None)
     };
 
     IkParameterization() : _type(Type_None) {}
@@ -867,6 +869,8 @@ public:
     /// \brief the ray direction is not used for IK, however it is needed in order to compute the error
     inline void SetLookat3D(const RAY& ray) { _type = Type_Lookat3D; _transform.trans = ray.pos; _transform.rot = ray.dir; }
     inline void SetTranslationDirection5D(const RAY& ray) { _type = Type_TranslationDirection5D; _transform.trans = ray.pos; _transform.rot = ray.dir; }
+    inline void SetTranslationXY2D(const Vector& trans) { _type = Type_TranslationXY2D; _transform.trans.x = trans.x; _transform.trans.y = trans.y; _transform.trans.z = 0; _transform.trans.w = 0; }
+    inline void SetTranslationXYOrientation3D(const Vector& trans) { _type = Type_TranslationXYOrientation3D; _transform.trans.x = trans.x; _transform.trans.y = trans.y; _transform.trans.z = trans.z; _transform.trans.w = 0; }
 
     inline const Transform& GetTransform6D() const { return _transform; }
     inline const Vector& GetRotation3D() const { return _transform.rot; }
@@ -876,6 +880,8 @@ public:
     inline const Vector& GetLookat3D() const { return _transform.trans; }
     inline const Vector& GetLookat3DDirection() const { return _transform.rot; }
     inline const RAY GetTranslationDirection5D() const { return RAY(_transform.trans,_transform.rot); }
+    inline const Vector& GetTranslationXY2D() const { return _transform.trans; }
+    inline const Vector& GetTranslationXYOrientation3D() const { return _transform.trans; }
 
     /// \deprecated (11/02/15)
     //@{
@@ -929,6 +935,17 @@ inline IkParameterization operator* (const Transform& t, const IkParameterizatio
     case IkParameterization::Type_TranslationDirection5D:
         local.SetTranslationDirection5D(RAY(t*ikparam.GetTranslationDirection5D().pos,t.rotate(ikparam.GetTranslationDirection5D().dir)));
         break;
+    case IkParameterization::Type_TranslationXY2D:
+        local.SetTranslationXY2D(t*ikparam.GetTranslationXY2D());
+        break;
+    case IkParameterization::Type_TranslationXYOrientation3D: {
+        Vector v = ikparam.GetTranslationXYOrientation3D();
+        Vector voldtrans(v.x,v.y,0);
+        Vector vnewtrans = t*voldtrans;
+        dReal zangle = -normalizeAxisRotation(Vector(0,0,1),t.rot).first;
+        local.SetTranslationXYOrientation3D(Vector(vnewtrans.y,vnewtrans.y,v.z+zangle));
+        break;
+    }
     default:
         throw openrave_exception(str(boost::format("does not support parameterization %d")%ikparam.GetType()));
     }
@@ -967,6 +984,16 @@ inline std::ostream& operator<<(std::ostream& O, const IkParameterization& ikpar
     case IkParameterization::Type_TranslationDirection5D:
         O << ikparam.GetTranslationDirection5D();
         break;
+    case IkParameterization::Type_TranslationXY2D: {
+        Vector v = ikparam.GetTranslationXY2D();
+        O << v.x << " " << v.y << " ";
+        break;
+    }
+    case IkParameterization::Type_TranslationXYOrientation3D: {
+        Vector v = ikparam.GetTranslationXYOrientation3D();
+        O << v.x << " " << v.y << " " << v.z << " ";
+        break;
+    }
     default:
         throw openrave_exception(str(boost::format("does not support parameterization %d")%ikparam.GetType()));
     }
@@ -986,6 +1013,8 @@ inline std::istream& operator>>(std::istream& I, IkParameterization& ikparam)
     case IkParameterization::Type_Ray4D: { RAY r; I >> r; ikparam.SetRay4D(r); break; }
     case IkParameterization::Type_Lookat3D: { Vector v; I >> v.x >> v.y >> v.z; ikparam.SetLookat3D(v); break; }
     case IkParameterization::Type_TranslationDirection5D: { RAY r; I >> r; ikparam.SetTranslationDirection5D(r); break; }
+    case IkParameterization::Type_TranslationXY2D: { Vector v; I >> v.y >> v.y; ikparam.SetTranslationXY2D(v); break; }
+    case IkParameterization::Type_TranslationXYOrientation3D: { Vector v; I >> v.y >> v.y >> v.z; ikparam.SetTranslationXYOrientation3D(v); break; }
     default: throw openrave_exception(str(boost::format("does not support parameterization %d")%ikparam.GetType()));
     }
     return I;

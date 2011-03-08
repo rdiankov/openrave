@@ -6,6 +6,7 @@
     <Body name="Base" type="dynamic">
       <Translation>0.0  0.0  0.0</Translation>
       <Geom type="cylinder">
+        <rotationaxis>1 0 0 90</rotationaxis>
         <radius>0.03</radius>
         <height>0.02</height>
         <diffuseColor>0.05 0.05 0.05</diffuseColor>
@@ -18,10 +19,10 @@
       <!-- body should be relative to another link-->
       <offsetfrom>Base</offsetfrom>
       <!-- Translation relative to Base-->
-      <Translation>0 0.005 0</Translation>
+      <Translation>0 0 0.005</Translation>
       <Geom type="box">
         <Translation>0.08 0 0</Translation>
-        <Extents>0.08 0.005 0.01</Extents>
+        <Extents>0.08 0.01 0.005</Extents>
       </Geom>
     </Body>
     <!-- declare a circular hinge joint (circular joints have no limits) -->
@@ -31,7 +32,7 @@
       <offsetfrom>Arm0</offsetfrom>
       <weight>4</weight>
       <limitsdeg>-180 180</limitsdeg>
-      <axis>0 1 0</axis>
+      <axis>0 0 1</axis>
       <maxvel>3</maxvel>
       <resolution>1</resolution>
     </Joint>
@@ -39,10 +40,10 @@
     <!-- the second movable link-->
     <Body name="Arm1" type="dynamic">
       <offsetfrom>Arm0</offsetfrom>
-      <Translation>0.14 0.01 0</Translation>
+      <Translation>0.14 0 0.01</Translation>
       <Geom type="box">
         <Translation>0.08 0.0 0</Translation>
-        <Extents>0.08 0.005 0.0075</Extents>
+        <Extents>0.08 0.0075 0.005</Extents>
       </Geom>
     </Body>
     <!-- declare a circular hinge joint (circular joints have no limits) -->
@@ -52,7 +53,7 @@
       <offsetfrom>Arm1</offsetfrom>
       <weight>3</weight>
       <limitsdeg>-180 180</limitsdeg>
-      <axis>0 1 0</axis>
+      <axis>0 0 1</axis>
       <maxvel>4</maxvel>
       <resolution>1</resolution>
     </Joint>
@@ -60,7 +61,7 @@
     <!-- the third movable link-->
     <Body name="Arm2" type="dynamic">
       <offsetfrom>Arm1</offsetfrom>
-      <Translation>0.14 0.01 0</Translation>
+      <Translation>0.14 0 0.01</Translation>
       <Geom type="box">
         <Translation>0.04 0 0</Translation>
         <Extents>0.04 0.005 0.005</Extents>
@@ -73,7 +74,7 @@
       <offsetfrom>Arm2</offsetfrom>
       <weight>3</weight>
       <limitsdeg>-180 180</limitsdeg>
-      <axis>0 1 0</axis>
+      <axis>0 0 1</axis>
       <maxvel>2</maxvel>
       <resolution>2</resolution>
     </Joint>
@@ -82,8 +83,8 @@
     <!-- right gripper-->
     <Body name="RClaw" type="dynamic">
       <offsetfrom>Arm2</offsetfrom>
-      <Translation>0.08 0.005 0</Translation>
-      <RotationMat>0 1 0 0 0 -1 -1 0 0</RotationMat>
+      <Translation>0.08 0 0.005</Translation>
+      <rotationaxis>0 0 1 -90</rotationaxis>
       <Geom type="trimesh">
         <Data>models/puma/RClaw.iv</Data>
         <Render>models/puma/RClaw.iv</Render>
@@ -103,8 +104,8 @@
     <!--left gripper-->
     <Body name="LClaw" type="dynamic">
       <Translation>0.08 0.005 0</Translation>
+      <rotationaxis>0 0 1 -90</rotationaxis>
       <offsetfrom>Arm2</offsetfrom>
-      <RotationMat>0 1 0 0 0 -1 -1 0 0</RotationMat>
       <Geom type="trimesh">
         <Data>models/puma/LClaw.iv</Data>
         <Render>models/puma/LClaw.iv</Render>
@@ -132,12 +133,11 @@
     <!-- the id of the inverse kinematics solver, it is not necessary to-->
     <!-- specify an ik solver for every robot. But if there is one,-->
     <!-- use iksolver field to identity it.-->
-    <iksolver>MyTriDOFSolver</iksolver>
+    <!-- <iksolver>MyTriDOFSolver</iksolver> -->
     <!-- joint values of the closed and opened positions-->
     <closingdirection>1 1</closingdirection>
     <direction>1 0 0</direction>
     <!-- grasp goal with respect to the effector-->
     <Translation>0.125 0 0</Translation>
-    <RotationAxis>1 0 0 90</RotationAxis>
   </Manipulator>
 </Robot>
