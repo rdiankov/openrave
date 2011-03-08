@@ -108,6 +108,7 @@ def robotstats(description,robotfilename,manipname, iktypestr,freeindices):
             solutionresults = []                
             cmd = 'DebugIK robot %s '%robot.GetName()
             cmd += 'numtests %d '%int(options.numiktests[len(freeindices)])
+            cmd += 'threshold %f '%options.errorthreshold
             res = ikfastproblem.SendCommand(cmd).split()
             numtested = int(res[0])
             numsuccessful = int(res[1])
@@ -213,24 +214,6 @@ def test_robots():
         # for some reason the plugindatabase _threadPluginLoader thread is on a different process
         # than the main threading waiting for it to finish, so it is necessary to call RaveDestroy
         RaveDestroy()
-
-def generaterst(stats,outputdir,jenkinsbuildurl):
-    iktypes = ', '.join(iktype.name for iktype in IkParameterization.Type.values.values())
-    text="""
---------------------------------------------------------
-OpenRAVE %s IKFast %s Database
---------------------------------------------------------
-
-This database is a collection for robots and statistics for the compiled inverse kinematics files using the IKFast program. The database generates all possible IKs for each robot's manipulator. It supports the following `inverse kinematics types`_: **%s**,
-
-
-For example, a 7DOF arm will have 7 differnet 6D transform IKs, and 21 different 5 DOF IKs depending on the free joint used. Links to the robots, genreated ik files, and detailed test result are also provided.
-
-Testing 
-
-.. _`inverse kinematics types`: http://openrave.programmingvision.com/ordocs/en/openravepy-html/openravepy.ikfast-module.html#rst-ik-types
-
-"""%(openravepy.__version__,ikfast.__version__,iktypes)
     
 if __name__ == "__main__":
     import test_ikfast
@@ -255,13 +238,15 @@ if __name__ == "__main__":
                       help='increment of revolute free joints (default=%default)')
     parser.add_option('--freeinctrans',action='store',type='float',dest='freeinctrans',default='0.01',
                       help='percentage increment of the free joints, this should be scaled with robot size (default=%default)')
-    parser.add_option('--minimumsuccess',action='store',type='float',dest='minimumsuccess',default='0.5',
+    parser.add_option('--errorthreshold',action='store',type='float',dest='errorthreshold',default='0.001',
+                      help='The error threshold between ik parameterizations defining boundary of wrong solutions (default=%default)')
+    parser.add_option('--minimumsuccess',action='store',type='float',dest='minimumsuccess',default='0.4',
                       help='Minimum success rate required to count test as passing (default=%default)')
-    parser.add_option('--maximumnosolutions',action='store',type='float',dest='maximumnosolutions',default='0.5',
+    parser.add_option('--maximumnosolutions',action='store',type='float',dest='maximumnosolutions',default='0.6',
                       help='Maximum no-solutions rate allowed before test is decalred as a failure. In other words, if IK never finds anything, it is useless. (default=%default)')
     parser.add_option('--outputdir',action='store',type='string',dest='outputdir',default='rst',
                       help='Directory to output the RST files used to show off the ikfast results. The root file in this directory is index.rst. (default=%default)')
-    parser.add_option('--jenkinsbuildurl',action='store',type='string',dest='jenkinsbuildurl',default='http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/',
+    parser.add_option('--jenkinsbuild',action='store',type='string',dest='jenkinsbuild_url',default='http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/',
                       help='URL for the test results published by jenkins. This URL will be used to create links from the robot pages to the test page. (default=%default)')
     (options, args) = parser.parse_args()
     
@@ -290,7 +275,7 @@ if __name__ == "__main__":
             options.robotfilenames.append(robot)
     options.numiktests = [int(s) for s in options.numiktests.split(',')]
     test_ikfast.options = options
-
+    
     format = logging.Formatter('%(name)s: %(levelname)s %(message)s')
     handler = logging.StreamHandler(sys.stderr)
     handler.setFormatter(format)
@@ -298,7 +283,7 @@ if __name__ == "__main__":
     multiprocess.log.setLevel(options.debug)
     ikfast.log.addHandler(handler)
     ikfast.log.setLevel(options.debug)
-
+    
     multiprocess._instantiate_plugins = [capture.Capture, xunitmultiprocess.Xunitmp, callableclass.CallableClass]
 
     header = 'name=\"%s robots\" package=\"%s\"'%(options.robots,ikfast.__name__)
@@ -309,5 +294,5 @@ if __name__ == "__main__":
     stats = []
     while not test_ikfast.globalstats.empty():
         stats.append(test_ikfast.globalstats.get())
-    generaterst(stats,options.outputdir,options.jenkinsbuildurl)
-    pickle.dump(stats,open('ikfaststats.pp','w'))
+    generaterst(stats,options.outputdir,options.jenkinsbuild_url)
+    pickle.dump([stats,options],open('ikfaststats.pp','w'))
