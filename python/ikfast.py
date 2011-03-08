@@ -70,7 +70,9 @@ The main file ikfast.py can be used both as a library and as an executable progr
 
 ``$OPENRAVE_INSTALL/share/openrave/openravepy/ikfast.py``
 
-It is also possible to use run ikfast.py as a stand-alone program, which makes it mostly independent of the OpenRAVE run-time. However, the recommended way of using IKFast is through the OpenRAVE `databases.inversekinematics` database generator which directly loads the IK into OpenRAVE as an interface. 
+It is also possible to use run ikfast.py as a stand-alone program, which makes it mostly independent of the OpenRAVE run-time. 
+
+**However, the recommended way of using IKFast** is through the OpenRAVE `databases.inversekinematics` database generator which directly loads the IK into OpenRAVE as an interface. 
 
 Stand-alone Executable
 ======================
@@ -111,7 +113,7 @@ The C++ file uses the following defines:
 - IKFAST_CLIBRARY - Define this linking statically or dynamically to get correct visibility.
 - IKFAST_NO_MAIN - Remove the ``main`` function, usually used with IKFAST_CLIBRARY
 - IKFAST_ASSERT - Define in order to get a custom assert called when NaNs, divides by zero, and other invalid conditions are detected.
-- IKFAST_REAL - Use to define or force a custom real number type.
+- IKFAST_REAL - Use to force a custom real number type for IKReal.
 - IKFAST_NAMESPACE - Enclose all functions and classes in this namespace, the ``main`` function is excluded.
 - IKFAST_HEADER - specify a header file to include at the top. This would in the form of ``"header.h"``. In a compiler command line, it would look like: ``-DIKFAST_HEADER="\\\"header.h\\\""``
 
