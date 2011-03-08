@@ -15,6 +15,7 @@ foreach(ik_name ${ik_names})
   add_library(ik_${ik_name} STATIC ik_${ik_name}.cpp)
   set_target_properties(ik_${ik_name} PROPERTIES COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS} -DIKFAST_NAMESPACE=${ik_name} -DIKFAST_HEADER=\"\\\"plugindefs.h\\\"\"")
   set(ik_libraries ${ik_libraries} ik_${ik_name})
+  add_dependencies(ik_${ik_name} libopenrave)
 endforeach()
 
 add_library(ikfastsolvers SHARED ikfastsolvers.cpp ikfastproblem.h plugindefs.h)
