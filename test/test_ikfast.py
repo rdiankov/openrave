@@ -27,6 +27,8 @@ import time, os, sys, logging, multiprocessing
 import nose
 from noseplugins import multiprocess, xunitmultiprocess, capture, callableclass
 
+import cPickle as pickle
+
 #global variables
 _multiprocess_can_split_ = True
 globalstats = multiprocessing.Queue() # used for gathering statistics
@@ -160,7 +162,7 @@ def robotstats(description,robotfilename,manipname, iktypestr,freeindices):
                     print prefix + ' '.join([row[j].ljust(colwidths[j]) for j in range(len(colwidths))])
             # jenkins plot measurement data
             print measurement('compile-time (s)', '%.3f'%compiletime)
-            print measurement('success'%(numsuccessful, numtested), '%.4f'%successrate)
+            print measurement('success', '%.4f'%successrate)
             print measurement('wrong solutions','%.4f'%wrongrate)
             print measurement('no solutions', '%.4f'%nosolutions)
             print measurement('missing solutions', '%.4f'%(float(len(solutionresults[2]))/numtested))
@@ -213,19 +215,22 @@ def test_robots():
         RaveDestroy()
 
 def generaterst(stats,outputdir,jenkinsbuildurl):
+    iktypes = ', '.join(iktype.name for iktype in IkParameterization.Type.values.values())
     text="""
 --------------------------------------------------------
 OpenRAVE %s IKFast %s Database
 --------------------------------------------------------
 
-This database is a collection for robots and statistics for the compiled inverse kinematics files using the IKFast program. The database generates all possible IKs for each robot's manipulator. supporting the following inverse kinematics types: .%s
+This database is a collection for robots and statistics for the compiled inverse kinematics files using the IKFast program. The database generates all possible IKs for each robot's manipulator. It supports the following `inverse kinematics types`_: **%s**,
 
 
 For example, a 7DOF arm will have 7 differnet 6D transform IKs, and 21 different 5 DOF IKs depending on the free joint used. Links to the robots, genreated ik files, and detailed test result are also provided.
 
 Testing 
 
-"""%(openravepy.__version__,ikfast.__version__)
+.. _`inverse kinematics types`: http://openrave.programmingvision.com/ordocs/en/openravepy-html/openravepy.ikfast-module.html#rst-ik-types
+
+"""%(openravepy.__version__,ikfast.__version__,iktypes)
     
 if __name__ == "__main__":
     import test_ikfast
@@ -278,7 +283,7 @@ if __name__ == "__main__":
         elif robot == 'pr2':
             options.robotfilenames += ['robots/pr2-beta-static.zae']
         elif robot == '*':
-            options.robotfilenames += ['robots/unimation-pumaarm.zae','robots/barrettwam.robot.xml','robots/pr2-beta-static.zae','robots/neuronics-katana.zae','robots/mitsubishi-pa10.zae','robots/schunk-lwa3.zae','robots/darpa-arm.zae','robots/exactdynamics-manusarmleft.zae','robots/kuka-kr5-r650.zae','robots/kuka-kr5-r850.zae']
+            options.robotfilenames += ['robots/unimation-pumaarm.zae','robots/barrettwam.robot.xml','robots/pr2-beta-static.zae','robots/neuronics-katana.zae','robots/mitsubishi-pa10.zae','robots/schunk-lwa3.zae','robots/darpa-arm.zae','robots/exactdynamics-manusarmleft.zae','robots/kuka-kr5-r650.zae','robots/kuka-kr5-r850.zae','robots/kuka-kr30l16.zae']
         elif options.robots == 'random':
             options.robotfilenames.append('random')
         else:
