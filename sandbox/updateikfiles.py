@@ -18,7 +18,7 @@ def updateik(robotfilename,manipname,iktype,destfilename):
             if not ikmodel.load():
                 ikmodel.autogenerate()
             ikmodel.setrobot()
-            successrate, wrongrate = ikmodel.testik('100') # sanity check
+            successrate, wrongrate = ikmodel.testik('100' if ikmodel.manip.GetIkSolver().GetNumFreeParameters() <= 1 else '10') # sanity check
             assert(wrongrate==0)
             print 'success: ',successrate
             code = open(ikmodel.getsourcefilename(True),'r').read()

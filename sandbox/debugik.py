@@ -1150,6 +1150,46 @@ def detdialytically():
             dictequations.append([sym,c])
             det += sym*leftvar**m[0]
 
+    @staticmethod
+    def _LUdecompositionFF(M,*vars):
+        """
+        Function from sympy.
+        Returns 4 matrices P, L, D, U such that PA = L D**-1 U.
+
+        From the paper "fraction-free matrix factors..." by Zhou and Jeffrey
+        """
+        n, m = M.rows, M.cols
+        U, L, P = M[:,:], eye(n), eye(n)
+        DD = zeros(n) # store it smarter since it's just diagonal
+        oldpivot = 1
+
+        for k in range(n-1):
+            if U[k,k] == S.Zero:
+                for kpivot in range(k+1, n):
+                    if U[kpivot, k] != S.Zero:
+                        break
+                else:
+                    raise IKFastSolver.CannotSolveError("Matrix is not full rank")
+                U[k, k:], U[kpivot, k:] = U[kpivot, k:], U[k, k:]
+                L[k, :k], L[kpivot, :k] = L[kpivot, :k], L[k, :k]
+                P[k, :], P[kpivot, :] = P[kpivot, :], P[k, :]
+            L[k,k] = Ukk = U[k,k]
+            DD[k,k] = oldpivot * Ukk
+            for i in range(k+1, n):
+                L[i,k] = Uik = U[i,k]
+                for j in range(k+1, m):
+                    if len(vars) == 0:
+                        U[i,j] = (Ukk * U[i,j] - U[k,j]*Uik) / oldpivot
+                    else:
+                        log.debug('LU %d,%d: %s',i,j,oldpivot)
+                        q,r = div(Poly(Ukk * U[i,j] - U[k,j]*Uik,*vars),oldpivot)
+                        assert(r==S.Zero)
+                        U[i,j] = q
+                U[i,k] = S.Zero
+            oldpivot = Ukk
+        DD[n-1,n-1] = oldpivot
+        return P, L, DD, U
+
 def test_ik():
     from sympy import *
     import __builtin__
@@ -1158,6 +1198,7 @@ def test_ik():
     self = solver
     freeindices = ikmodel.freeindices
     log = ikfast.log
+    log.setLevel(logging.DEBUG)
     
     chaintree = solver.generateIkSolver(baselink=baselink,eelink=eelink,freeindices=freeindices,solvefn=solvefn)
     code=ikfast_generator_cpp.CodeGenerator().generate(chaintree)

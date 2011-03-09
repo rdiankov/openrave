@@ -12,7 +12,7 @@
 /// See the License for the specific language governing permissions and
 /// limitations under the License.
 ///
-/// ikfast version 40 generated on 2011-03-08 19:28:26.778876
+/// ikfast version 41 generated on 2011-03-09 14:22:53.354329
 /// To compile with gcc:
 ///     gcc -lstdc++ ik.cpp
 /// To compile without any main function as a shared object:
@@ -136,7 +136,10 @@ inline double IKabs(double f) { return fabs(f); }
 inline float IKlog(float f) { return logf(f); }
 inline double IKlog(double f) { return log(f); }
 
+#ifndef IKFAST_SINCOS_THRESH
 #define IKFAST_SINCOS_THRESH ((IKReal)0.000001)
+#endif
+
 inline float IKasin(float f)
 {
 IKFAST_ASSERT( f > -1-IKFAST_SINCOS_THRESH && f < 1+IKFAST_SINCOS_THRESH ); // any more error implies something is wrong with the solver
@@ -209,6 +212,26 @@ inline double IKatan2(double fy, double fx) {
     else if( isnan(fx) )
         return 0;
     return atan2(fy,fx);
+}
+
+inline float IKsign(float f) {
+    if( f > 0 ) {
+        return 1.0f;
+    }
+    else if( f < 0 ) {
+        return -1.0f;
+    }
+    return 0.0f;
+}
+
+inline double IKsign(double f) {
+    if( f > 0 ) {
+        return 1.0;
+    }
+    else if( f < 0 ) {
+        return -1.0;
+    }
+    return 0.0;
 }
 
 /// solves the inverse kinematics equations.

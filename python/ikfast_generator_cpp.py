@@ -94,7 +94,6 @@ def customcse(rawexprs,symbols=None):
         symbols = cse_main.numbered_symbols('x')
     # fractions can get big, so evaluate as many decimals as possible
     allexprs = [evalNumbers(expr) for expr in rawexprs]
-    # calling cse on many long expressions will freeze it, so try to divide the problem
     replacements,reduced_exprs = cse(allexprs,symbols=symbols)
     newreplacements = []
     # look for any expressions of the order of (x**(1/a))**b, usually computer wants x^(b/a)
@@ -267,7 +266,10 @@ inline double IKabs(double f) { return fabs(f); }
 inline float IKlog(float f) { return logf(f); }
 inline double IKlog(double f) { return log(f); }
 
+#ifndef IKFAST_SINCOS_THRESH
 #define IKFAST_SINCOS_THRESH ((IKReal)0.000001)
+#endif
+
 inline float IKasin(float f)
 {
 IKFAST_ASSERT( f > -1-IKFAST_SINCOS_THRESH && f < 1+IKFAST_SINCOS_THRESH ); // any more error implies something is wrong with the solver
@@ -340,6 +342,26 @@ inline double IKatan2(double fy, double fx) {
     else if( isnan(fx) )
         return 0;
     return atan2(fy,fx);
+}
+
+inline float IKsign(float f) {
+    if( f > 0 ) {
+        return 1.0f;
+    }
+    else if( f < 0 ) {
+        return -1.0f;
+    }
+    return 0.0f;
+}
+
+inline double IKsign(double f) {
+    if( f > 0 ) {
+        return 1.0;
+    }
+    else if( f < 0 ) {
+        return -1.0;
+    }
+    return 0.0;
 }
 
 """%(self.version,str(datetime.datetime.now()))
@@ -862,6 +884,10 @@ int main(int argc, char** argv)
         name = node.jointname
         node.HasFreeVar = False
         allnumsolutions = 0
+        for var,value in node.dictequations:
+            eqcode += 'IKReal %s;\n'%var
+            eqcode += self.writeEquations(lambda k: var,value)
+
         if node.jointeval is not None:
             numsolutions = len(node.jointeval)
             equations = []
@@ -1396,6 +1422,10 @@ int main(int argc, char** argv)
         if expr.is_Function:
             if expr.func == abs:
                 code += 'IKabs('
+                code2,sepcode = self.writeExprCode(expr.args[0])
+                code += code2
+            elif expr.func == sign:
+                code += 'IKsign('
                 code2,sepcode = self.writeExprCode(expr.args[0])
                 code += code2
             elif expr.func == acos:

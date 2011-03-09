@@ -294,5 +294,4 @@ if __name__ == "__main__":
     stats = []
     while not test_ikfast.globalstats.empty():
         stats.append(test_ikfast.globalstats.get())
-    generaterst(stats,options.outputdir,options.jenkinsbuild_url)
     pickle.dump([stats,options],open('ikfaststats.pp','w'))

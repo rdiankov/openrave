@@ -197,7 +197,7 @@ from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2011 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Lesser GPL, Version 3'
-__version__ = '40'
+__version__ = '41'
 
 import sys, copy, time, math, datetime
 import __builtin__
@@ -260,6 +260,7 @@ class AST:
         thresh = None
         AddHalfTanValue = False
         dictequations = None
+        presetcheckforzeros = None
         """Meaning of FeasibleIsZeros:
         If set to false, then solution is feasible only if all of these equations evalute to non-zero.
         If set to true, solution is feasible only if all these equations evaluate to zero.
@@ -274,6 +275,7 @@ class AST:
             self.AddPiIfNegativeEq = AddPiIfNegativeEq
             self.isHinge=isHinge
             self.thresh = thresh
+            self.presetcheckforzeros = []
             self.dictequations = []
             assert self.checkValidSolution()
         def subs(self,solsubs):
@@ -285,6 +287,8 @@ class AST:
                 self.jointevalsin = [e.subs(solsubs) for e in self.jointevalsin]
             if self.checkforzeros is not None:
                 self.checkforzeros = [e.subs(solsubs) for e in self.checkforzeros]
+            self.dictequations = [(s,v.subs(solsubs)) for s,v in self.dictequations]
+            self.presetcheckforzeros = [e.subs(solsubs) for e in self.presetcheckforzeros]
             if not self.checkValidSolution():
                 raise IKFastSolver.CannotSolveError('substitution produced invalid results')
             return self
@@ -312,7 +316,7 @@ class AST:
                 valid &= all([IKFastSolver.isValidSolution(e) for e in self.jointevalcos])
             return valid
         def getPresetCheckForZeros(self):
-            return []
+            return self.presetcheckforzeros
 
     class SolverPolynomialRoots:
         """find all roots of the polynomial and plug it into jointeval. poly should be polys.polynomial.Poly
@@ -351,6 +355,7 @@ class AST:
                 self.postcheckfornonzeros = [e.subs(solsubs) for e in self.postcheckfornonzeros]
             if self.postcheckforrange is not None:
                 self.postcheckforrange = [e.subs(solsubs) for e in self.postcheckforrange]
+            self.dictequations = [(s,v.subs(solsubs)) for s,v in self.dictequations]
             if self.poly is not None:
                 self.poly = self.poly.subs(solsubs)
             assert self.checkValidSolution()
@@ -408,6 +413,8 @@ class AST:
                 self.jointevalsin = [e.subs(solsubs) for e in self.jointevalsin]
             if self.checkforzeros is not None:
                 self.checkforzeros = [e.subs(solsubs) for e in self.checkforzeros]
+            self.dictequations = [(s,v.subs(solsubs)) for s,v in self.dictequations]
+            self.presetcheckforzeros = [e.subs(solsubs) for e in self.presetcheckforzeros]
             #if self.poly is not None:
             #    self.poly = self.poly.subs(solsubs)
             assert self.checkValidSolution()
@@ -743,11 +750,11 @@ class AST:
             self.Dfk = Tleft[0:3,0:3]*self.Dfk
             self.Pee = Tleftinv[0:3,0:3]*self.Pee+Tleftinv[0:3,3]
 
-    class fmod(core.function.Function):
-        """defines floating-point mod"""
-        nargs = 2
-        is_real = True
-        is_Function = True
+class fmod(core.function.Function):
+    """defines floating-point mod"""
+    nargs = 2
+    is_real = True
+    is_Function = True
 
 class IKFastSolver(AutoReloader):
     """Solves the analytical inverse kinematics equations. The symbol naming conventions are as follows:
@@ -1159,6 +1166,11 @@ class IKFastSolver(AutoReloader):
                 subexprs = sol.jointevalcos
             else:
                 return sol.score
+
+            # have to also check solution dictionary
+            for s,v in sol.dictequations:
+                sol.score += self.codeComplexity(v)
+                sol.checkforzeros += self.checkForDivideByZero(v)
             
             def checkpow(expr,sexprs):
                 score = 0
@@ -1167,16 +1179,12 @@ class IKFastSolver(AutoReloader):
                     if expr.base.is_finite is not None and not expr.base.is_finite:
                         return oo # infinity
                     if expr.exp.is_number and expr.exp < 0:
-                        #exprbase = self.subsExpressions(expr.base,subexprs)
                         # check if exprbase contains any variables that have already been solved
                         containsjointvar = expr.base.has_any_symbols(*solvedvars)
                         cancheckexpr = not expr.base.has_any_symbols(*unsolvedvars)
                         score += 10000
                         if not cancheckexpr:
                             score += 100000
-#                        else:
-#                             if self.isExpressionUnique(sol.checkforzeros,-expr.base) and self.isExpressionUnique(sol.checkforzeros,expr.base):
-#                                 sol.checkforzeros.append(self.removecommonexprs(expr.base,onlygcd=False,onlynumbers=True))
                 elif not self.isValidSolution(expr):
                     return oo # infinity
                 return score
@@ -3389,7 +3397,7 @@ class IKFastSolver(AutoReloader):
                                             cond=othervar-eq.evalf()
                                             if self.isExpressionUnique(handledconds+[tempeq[0] for tempeq in eqs],-cond) and self.isExpressionUnique(handledconds+[tempeq[0] for tempeq in eqs],cond):
                                                 if self.isHinge(othervar.name):
-                                                    evalcond=AST.fmod(cond+pi,2*pi)-pi
+                                                    evalcond=fmod(cond+pi,2*pi)-pi
                                                 else:
                                                     evalcond=cond
                                                 eqs.append([cond,evalcond,[(sothervar,sin(eq).evalf()),(sin(othervar),sin(eq).evalf()),(cothervar,cos(eq).evalf()),(cos(othervar),cos(eq).evalf()),(othervar,eq)]])
@@ -3399,14 +3407,14 @@ class IKFastSolver(AutoReloader):
                                             cond=othervar-asin(eq).evalf()
                                             if self.isExpressionUnique(handledconds+[tempeq[0] for tempeq in eqs],-cond) and self.isExpressionUnique(handledconds+[tempeq[0] for tempeq in eqs],cond):
                                                 if self.isHinge(othervar.name):
-                                                    evalcond=AST.fmod(cond+pi,2*pi)-pi
+                                                    evalcond=fmod(cond+pi,2*pi)-pi
                                                 else:
                                                     evalcond=cond
                                                 eqs.append([cond,evalcond,[(sothervar,eq),(sin(othervar),eq),(cothervar,sqrt(1-eq*eq).evalf()),(cos(othervar),sqrt(1-eq*eq).evalf()),(othervar,asin(eq).evalf())]])
                                             cond=othervar-(pi-asin(eq).evalf())
                                             if self.isExpressionUnique(handledconds+[tempeq[0] for tempeq in eqs],-cond) and self.isExpressionUnique(handledconds+[tempeq[0] for tempeq in eqs],cond):
                                                 if self.isHinge(othervar.name):
-                                                    evalcond=AST.fmod(cond+pi,2*pi)-pi
+                                                    evalcond=fmod(cond+pi,2*pi)-pi
                                                 else:
                                                     evalcond=cond
                                                 eqs.append([cond,evalcond,[(sothervar,eq),(sin(othervar),eq),(cothervar,-sqrt(1-eq*eq).evalf()),(cos(othervar),-sqrt(1-eq*eq).evalf()),(othervar,(pi-asin(eq)).evalf())]])
@@ -3416,14 +3424,14 @@ class IKFastSolver(AutoReloader):
                                             cond=othervar-acos(eq).evalf()
                                             if self.isExpressionUnique(handledconds+[tempeq[0] for tempeq in eqs],-cond) and self.isExpressionUnique(handledconds+[tempeq[0] for tempeq in eqs],cond):
                                                 if self.isHinge(othervar.name):
-                                                    evalcond=AST.fmod(cond+pi,2*pi)-pi
+                                                    evalcond=fmod(cond+pi,2*pi)-pi
                                                 else:
                                                     evalcond=cond
                                                 eqs.append([cond,evalcond,[(sothervar,sqrt(1-eq*eq).evalf()),(sin(othervar),sqrt(1-eq*eq).evalf()),(cothervar,eq),(cos(othervar),eq),(othervar,acos(eq).evalf())]])
                                             cond=othervar+acos(eq).evalf()
                                             if self.isExpressionUnique(handledconds+[tempeq[0] for tempeq in eqs],-cond) and self.isExpressionUnique(handledconds+[tempeq[0] for tempeq in eqs],cond):
                                                 if self.isHinge(othervar.name):
-                                                    evalcond=AST.fmod(cond+pi,2*pi)-pi
+                                                    evalcond=fmod(cond+pi,2*pi)-pi
                                                 else:
                                                     evalcond=cond
                                                 eqs.append([cond,evalcond,[(sothervar,-sqrt(1-eq*eq).evalf()),(sin(othervar),-sqrt(1-eq*eq).evalf()),(cothervar,eq),(cos(othervar),eq),(othervar,-acos(eq).evalf())]])
@@ -3488,7 +3496,7 @@ class IKFastSolver(AutoReloader):
                                         eq = checkzero.subs([(othervar,value),(sothervar,sin(value).evalf()),(cothervar,cos(value).evalf()),(preal,S.Zero)]).evalf()
                                         if eq == S.Zero:
                                             cond = abs(othervar-value)+abs(preal)
-                                            evalcond = abs(AST.fmod(othervar-value+pi,2*pi)-pi)+abs(preal)
+                                            evalcond = abs(fmod(othervar-value+pi,2*pi)-pi)+abs(preal)
                                             if self.isExpressionUnique(handledconds+[tempeq[0] for tempeq in eqs],-cond) and self.isExpressionUnique(handledconds+[tempeq[0] for tempeq in eqs],cond):
                                                 eqs.append([cond,evalcond,[(sothervar,sin(value).evalf()),(sin(othervar),sin(value).evalf()),(cothervar,cos(value).evalf()),(cos(othervar),cos(value).evalf()),(preal,S.Zero),(othervar,value)]])
                                                 log.info('%s=%s,%s=0 in %s', othervar,value,preal,checkzero)
@@ -4010,7 +4018,7 @@ class IKFastSolver(AutoReloader):
                     log.debug('ignoring equation: ',enew)
                     continue
                 
-                if Poly(enew,varsym.svar,varsym.cvar,varsym.var).coeff() == S.Zero:
+                if Poly(enew,varsym.svar).coeff() == S.Zero or Poly(enew,varsym.cvar) == S.Zero or Poly(enew,varsym.var) == S.Zero:
                     log.debug('equation %s is allowing trivial solution for variable %s, ignoring ',e,varsym.name)
                     continue
                 
@@ -4052,18 +4060,18 @@ class IKFastSolver(AutoReloader):
                     goodsolution = 0
                     for svarsol,cvarsol in sollist:
                         # solutions cannot be trivial
-                        if self.chop((svarsol-cvarsol).subs(listsymbols)) == S.Zero:
+                        if (svarsol-cvarsol).subs(listsymbols).expand() == S.Zero:
                             break
-                        if self.chop(svarsol.subs(listsymbols)) == S.Zero and self.chop(abs(cvarsol.subs(listsymbols)) - S.One) != S.Zero:
+                        if svarsol.subs(listsymbols).expand() == S.Zero and abs(cvarsol.subs(listsymbols).expand()) - S.One != S.Zero:
                             break
-                        if self.chop(cvarsol.subs(listsymbols)) == S.Zero and self.chop(abs(svarsol.subs(listsymbols)) - S.One) != S.Zero:
+                        if cvarsol.subs(listsymbols).expand() == S.Zero and abs(svarsol.subs(listsymbols).expand()) - S.One != S.Zero:
                             break
                         # check the numerator and denominator if solutions are the same or for possible divide by zeros
                         svarfrac=fraction(svarsol)
                         svarfrac = [svarfrac[0].subs(listsymbols), svarfrac[1].subs(listsymbols)]
                         cvarfrac=fraction(cvarsol)
                         cvarfrac = [cvarfrac[0].subs(listsymbols), cvarfrac[1].subs(listsymbols)]
-                        if self.chop(svarfrac[0]-cvarfrac[0]) == 0 and self.chop(svarfrac[1]-cvarfrac[1]) == 0:
+                        if self.equal(svarfrac[0],cvarfrac[0]) and self.equal(svarfrac[1],cvarfrac[1]):
                             break
                         if not self.isValidSolution(svarfrac[0]) or not self.isValidSolution(svarfrac[1]) or not self.isValidSolution(cvarfrac[0]) or not self.isValidSolution(cvarfrac[1]):
                             continue
@@ -4081,15 +4089,19 @@ class IKFastSolver(AutoReloader):
                         if self.chop(cvarfrac[1])== 0:
                             break
                         # sometimes the returned simplest solution makes really gross approximations
-                        svarsolsimp = self.trigsimp(svarfrac[0],othersolvedvars)/self.trigsimp(svarfrac[1],othersolvedvars)
-                        svarsol = svarfrac[0]/svarfrac[1]
-                        if self.codeComplexity(svarsolsimp) < self.codeComplexity(svarsol):
-                            svarsol = svarsolsimp
-                        cvarsolsimp = self.trigsimp(cvarfrac[0],othersolvedvars)/self.trigsimp(cvarfrac[1],othersolvedvars)
-                        cvarsol = cvarfrac[0]/cvarfrac[1]
-                        if self.codeComplexity(cvarsolsimp) < self.codeComplexity(cvarsol):
-                            cvarsol = cvarsolsimp
-                        expandedsol = atan2(svarsol,cvarsol)
+                        svarfracsimp_denom = self.trigsimp(svarfrac[1],othersolvedvars)
+                        cvarfracsimp_denom = self.trigsimp(cvarfrac[1],othersolvedvars)
+                        if self.equal(svarfracsimp_denom,cvarfracsimp_denom) and not svarfracsimp_denom.is_number:
+                            log.debug('denominator is equal %s, doing a global substitution',svarfracsimp_denom)
+                            denom = self.gsymbolgen.next()
+                            solversolution.dictequations.append((denom,sign(svarfracsimp_denom)))
+                            svarsolsimp = self.trigsimp(svarfrac[0],othersolvedvars)*denom
+                            cvarsolsimp = self.trigsimp(cvarfrac[0],othersolvedvars)*denom
+                            solversolution.presetcheckforzeros.append(svarfracsimp_denom)
+                        else:
+                            svarsolsimp = self.trigsimp(svarfrac[0],othersolvedvars)/svarfracsimp_denom
+                            cvarsolsimp = self.trigsimp(cvarfrac[0],othersolvedvars)/cvarfracsimp_denom
+                        expandedsol = atan2(svarsolsimp,cvarsolsimp)
                         solversolution.jointeval.append(expandedsol)
                         if len(self.checkForDivideByZero(expandedsol)) == 0:
                             goodsolution += 1
@@ -4668,15 +4680,6 @@ class IKFastSolver(AutoReloader):
             result = expr
         return result,symbols
 
-    def subsExpressions(self, expr, subexprs):
-        changed = True
-        while changed:
-            newexpr = expr.subs(subexprs)
-            if self.equal(expr,newexpr):
-                break
-            expr = newexpr
-        return expr
-
     @staticmethod
     def frontnumbers(eq):
         if eq.is_Number:
@@ -4826,46 +4829,6 @@ class IKFastSolver(AutoReloader):
             det = sign * M[n-1, n-1]
             
         return det.expand()
-
-    @staticmethod
-    def _LUdecompositionFF(M,*vars):
-        """
-        Function from sympy.
-        Returns 4 matrices P, L, D, U such that PA = L D**-1 U.
-
-        From the paper "fraction-free matrix factors..." by Zhou and Jeffrey
-        """
-        n, m = M.rows, M.cols
-        U, L, P = M[:,:], eye(n), eye(n)
-        DD = zeros(n) # store it smarter since it's just diagonal
-        oldpivot = 1
-
-        for k in range(n-1):
-            if U[k,k] == S.Zero:
-                for kpivot in range(k+1, n):
-                    if U[kpivot, k] != S.Zero:
-                        break
-                else:
-                    raise IKFastSolver.CannotSolveError("Matrix is not full rank")
-                U[k, k:], U[kpivot, k:] = U[kpivot, k:], U[k, k:]
-                L[k, :k], L[kpivot, :k] = L[kpivot, :k], L[k, :k]
-                P[k, :], P[kpivot, :] = P[kpivot, :], P[k, :]
-            L[k,k] = Ukk = U[k,k]
-            DD[k,k] = oldpivot * Ukk
-            for i in range(k+1, n):
-                L[i,k] = Uik = U[i,k]
-                for j in range(k+1, m):
-                    if len(vars) == 0:
-                        U[i,j] = (Ukk * U[i,j] - U[k,j]*Uik) / oldpivot
-                    else:
-                        log.debug('LU %d,%d: %s',i,j,oldpivot)
-                        q,r = div(Poly(Ukk * U[i,j] - U[k,j]*Uik,*vars),oldpivot)
-                        assert(r==S.Zero)
-                        U[i,j] = q
-                U[i,k] = S.Zero
-            oldpivot = Ukk
-        DD[n-1,n-1] = oldpivot
-        return P, L, DD, U
 
     @staticmethod
     def tolatex(e):
