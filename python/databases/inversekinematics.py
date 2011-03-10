@@ -474,7 +474,7 @@ class InverseKinematicsModel(OpenRAVEModel):
             solvefn=solveFullIK_TranslationXY2D
         elif self.iktype == IkParameterization.Type.TranslationXYOrientation3D:
             rawbasepos=self.manip.GetGraspTransform()[0:2,3]
-            rawangle=normalizeAxisRotation([0,0,1],-self.manip.GetGraspTransform()[0:3,0:3][0])
+            rawangle=normalizeAxisRotation([0,0,1],-self.manip.GetGraspTransform()[0:3,0:3])[0]
             def solveFullIK_TranslationXYOrientation3D(*args,**kwargs):
                 kwargs['rawbasepos'] = rawbasepos
                 kwargs['rawangle'] = rawangle

@@ -6,31 +6,13 @@
 
 \~english
 
-%OpenRAVE provides an environment for testing, developing, and deploying motion planning and
-higher-level intelligence algorithms in real-world robotics applications. This document covers the
-core %OpenRAVE concepts, the C++ API, examples, and usage of the plugins offered in the base
-installation. Please visit the \homepage{<b>official home page</b>} for up to date information on
-robotics systems using %OpenRAVE, official %OpenRAVE releases, and videos/tutorials.
+This document covers the core %OpenRAVE concepts, the C++ API, C++ examples, and C++ usage of the plugins offered in the base
+installation. Please visit the \homepage{<b>official documentation page</b>} for information on all %OpenRAVE features.
 
 \~japanese
 
-%OpenRAVEは現実世界の自律型ロボットアプリケーションをターゲットとし，そのテストと開発のためのモーションプランニングと高度な知的アルゴリズムを備えた開発環境を提供します．このドキュメントは%OpenRAVEの主要な概念，C++のAPI，使用例，インストール時に提供されたプラグインの使い方について記載しています．%OpenRAVEを用いたロボットシステム，%OpenRAVEの公式リリース，ビデオ／チュートリアルなどの最新情報は\homepage{<b>公式HP</b>}をご参照ください．
+このドキュメントは%OpenRAVEの主要な概念，C++のAPI，使用例，インストール時に提供されたプラグインの使い方について記載しています．%OpenRAVEを用いたロボットシステム，%OpenRAVEの公式リリース，ビデオ／チュートリアルなどの最新情報は\homepage{<b>公式HP</b>}をご参照ください．
 
-\~english
-
-%OpenRAVE includes a seamless integration of simulation, visualization, planning, scripting and
-control. The plugin architecture allows users to easily write custom controllers or extend
-functionality. Using %OpenRAVE plugins, any planning algorithm, robot control, or sensing-based
-subsystem can be distributed and dynamically loaded at run-time; this distributed nature frees
-developers from struggling with monolithic code-bases. Users of %OpenRAVE can concentrate on the
-development of planning and scripting aspects of a problem without having to explicitly manage the
-details of robot kinematics and dynamics, collision detection, world updates, and robot control. It
-should be noted that %OpenRAVE's sole focus on simulation and analysis of geometric and dynamic
-information allows is to be easily integrated into existing robotics systems that concentrate on
-low-level control, message protocols, and perception systems.
-
-\~japanese
-%OpenRAVEはシミュレーション，可視化，動作計画，スクリプトと制御機能等の統合環境を備えています．そのプラグインアーキテクチャを使い，ユーザーは簡単にコントローラの変更や機能の拡張をすることができます．使用するプラグイン，動作計画アルゴリズム，ロボットの自律制御，またはセンシングを考慮した動作は個々のモジュールになっており，実行時に動的に呼び出されます．これによって開発者は多くのモジュールが１つの大きな塊となった巨大なコードと格闘することから解放されます．さらに%OpenRAVEのユーザーは，ロボットの運動学と動力学、幾何学的干渉、環境変化、ロボット制御などの詳細が分からなくても知的動作とスクリプトの開発に集中することができます．また%OpenRAVEは，制御ドライバ，通信規格，認識システム等に焦点をあてた世の中に存在する他のロボットシステムとは異なり，幾何学と動力学のシミュレーションと解析に焦点をおいているため，それらのシステムとも容易に共存することが可能です．
 
 \~english  \section main_started Getting Started
 \~japanese \section main_started はじめに

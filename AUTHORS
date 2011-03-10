@@ -1,8 +1,9 @@
-core developer
---------------
-Rosen Diankov (rosen.diankov@gmail.com)
+Core Developers
+---------------
 
-contributors
+`Rosen Diankov`_ - project leader
+
+Contributors
 ------------
 
 Achint Aggarwal - dual manipulation
@@ -11,5 +12,7 @@ Makoto Furukawa - japanese documentation
 Juan Gonzalez - ode velocity controller
 Beatriz Leon - help with physics and sensor interfaces
 Huan Liu - invaluable feedback, tutorial_inversereachability
-Gustavo Puche Rodríguez - collada
+Gustavo Puche Rodríguez - collada help
 Masaru Ryumae - initial japanese documentation
+
+.. _`Rosen Diankov`: http://www.programmingvision.com

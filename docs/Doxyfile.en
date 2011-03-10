@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 PAPER_TYPE             = letter
 OUTPUT_LANGUAGE = English
-OUTPUT_DIRECTORY = ./en/
+OUTPUT_DIRECTORY = ./build/en/
 ALIASES                += openravepy{1}="<a href=\"http://openrave.programmingvision.com/ordocs/en/openravepy-html/index.html\">\1</a>"
 ALIASES                += openrave_py{1}="<a href=\"http://openrave.programmingvision.com/ordocs/en/openravepy-html/index.html#rst-openrave-py\">\1</a>"
 ALIASES                += openrave_py_dir{1}="<a href=\"http://openrave.programmingvision.com/ordocs/en/openravepy-html/index.html#rst-directory-structure\">\1</a>"

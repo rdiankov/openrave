@@ -90,7 +90,7 @@ Uses python docutils, sphinx, breathe, and xml2rst.""")
     parser.add_option('-o', action="store",type='string',dest='outfile',default='../python/bindings/docstrings.cpp',
                       help='Output C++ files that offers the comments.')
     parser.add_option('--languagecode','-l', action="append",type='string',dest='languagecodes',default=[],
-                      help='Add a language code, the doxygen directory that will be searched for is LANG/xml.')
+                      help='Add a language code, the doxygen directory that will be searched for is build/LANG/coreapixml.')
     (options, args) = parser.parse_args()
     if len(options.languagecodes) == 0:
         print 'need to specify at least one language code!'
@@ -131,7 +131,7 @@ Uses python docutils, sphinx, breathe, and xml2rst.""")
 
     comments = ''
     for lang in options.languagecodes:
-        project_info_factory.update({projectname:lang+'/xml'},projectname)
+        project_info_factory.update({projectname:os.path.join('build',lang,'coreapixml')},projectname)
         project_info = project_info_factory.create_project_info({})
         finder = finder_factory.create_finder(project_info)
 
@@ -255,7 +255,7 @@ Uses python docutils, sphinx, breathe, and xml2rst.""")
             outF.close()
 
     open(options.outfile,'w').write("""// -*- coding: utf-8 -*-
-// Copyright (C) 2006-2010 Rosen Diankov (rosen.diankov@gmail.com)
+// Copyright (C) 2006-2011 Rosen Diankov (rosen.diankov@gmail.com)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify

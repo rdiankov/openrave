@@ -425,8 +425,7 @@ source `openrave-config --prefix`/share/openrave/openravebash
 \en
 \page installation_win Building and Installing on Windows
 
-
-<b>NOTE:</b> Only Windows XP has been tested. Windows 7 and others have been reported to work, but might need to modify the executable properties to <b>windows95 compatibility mode</b> after the executable has been built. This requies the <b>msvcp71.dll</b> to be inserted into the system.
+<b>NOTE:</b> Only Windows XP has been tested. Windows 7 and others have been reported to work, but might need to modify the executable properties to <b>windows95 compatibility mode</b> after the executable has been built. This requies the <b>msvcp71.dll</b> to be inserted into the system. Although it is recommended to install from sources in order to get all features working, it is possible to try out OpenRAVE by unzipping <a href="http://www.programmingvision.com/openrave_latest.zip">openrave_latest.zip</a> in \c C:\Program Files.
 
 \section iwin_octavematlab Installation of 3rd Party Software
 

@@ -17,6 +17,7 @@ from numpy import *
 from optparse import OptionParser
 import os
 import subprocess
+import shutil
 
 def getsvnurl(dirname):
     outinfo=subprocess.Popen(['svn','info',dirname],stdout=subprocess.PIPE).communicate()[0]
@@ -29,16 +30,22 @@ def getsvnurl(dirname):
 
 if __name__ == "__main__":
     parser = OptionParser(description='Builds an rst file of the interfaces provided')
-    parser.add_option('-o', action="store",type='string',dest='outdir',default='sphinx',
+    parser.add_option('--outdir',action="store",type='string',dest='outdir',default='build/en',
                       help='Output directory to write all interfaces reStructuredText files to, the root file is interfaces.rst (default=%default).')
     (options, args) = parser.parse_args()
+    interfacesdir = 'interface_types'
+    try:
+        # have to clean the directory since cached files can get in the way
+        shutil.rmtree(os.path.join(options.outdir,interfacesdir))
+    except OSError:
+        pass
     env=Environment()
     try:
         plugininfo=RaveGetPluginInfo()
         text="""
-----------
-Interfaces
-----------
+---------------
+Interface Types
+---------------
 """
         interfaceinfo = {}
         for type in InterfaceType.values.values():
@@ -80,19 +87,19 @@ Interfaces
             descs = interfaceinfo[type]
             # sort by interface name (lowercase)
             descs.sort(key = lambda x: x[0].lower())
-            typedir = os.path.join(options.outdir,'interfaces',str(type))
+            typedir = os.path.join(options.outdir,interfacesdir,str(type))
             mkdir_recursive(typedir)
             text += '.. _interface-%s:\n\n'%str(type) # link
             text += str(type) + '\n' + '-'*len(str(type)) + '\n.. toctree::\n  :maxdepth: 1\n  \n'
             for name,pluginname,itext in descs:
-                text += '  interfaces/' + str(type) + '/' + name.lower() + '\n'
+                text += '  ' + interfacesdir + '/' + str(type) + '/' + name.lower() + '\n'
                 interfacefile = os.path.join(typedir,name.lower()+'.rst')
                 open(interfacefile,'w').write(itext)
             text += '\n\n'
         text += """
 """
         mkdir_recursive(options.outdir)
-        open(os.path.join(options.outdir,'interfaces.rst'),'w').write(text)
+        open(os.path.join(options.outdir,'interface_types.rst'),'w').write(text)
 
         coreplugins = {}
         corepluginsdir = '../plugins'

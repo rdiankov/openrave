@@ -178,11 +178,32 @@ Using a BiRRT Planner
 
   from openravepy import *
   env = Environment() # create the environment
-  env.Load('data/lab1.env.xml') # load a scene
   env.SetViewer('qtcoin') # start the viewer
+  env.Load('data/lab1.env.xml') # load a scene
   robot = env.GetRobots()[0] # get the first robot
   manipprob = interfaces.BaseManipulation(robot) # create the interface for basic manipulation programs
   res = manipprob.MoveManipulator(goal=[-0.75,1.24,-0.064,2.33,-1.16,-1.548,1.19]) # call motion planner with goal joint angles
+  robot.WaitForController(0) # wait
+  env.Destroy()
+
+Move End Effector with IK
+=========================
+
+.. code-block:: python
+
+  from openravepy import *
+  import numpy
+  env = Environment() # create the environment
+  env.SetViewer('qtcoin') # start the viewer
+  env.Load('data/pr2test1.env.xml') # load a scene
+  robot = env.GetRobots()[0] # get the first robot
+  robot.SetActiveManipulator('leftarm_torso') # set the manipulator to leftarm + torso
+  ikmodel = databases.inversekinematics.InverseKinematicsModel(robot,iktype=IkParameterization.Type.Transform6D)
+  if not ikmodel.load():
+      ikmodel.autogenerate()
+  manipprob = interfaces.BaseManipulation(robot) # create the interface for basic manipulation programs
+  Tgoal = numpy.array([[0,-1,0,-0.21],[-1,0,0,0.04],[0,0,-1,0.92],[0,0,0,1]])
+  res = manipprob.MoveToHandPosition(matrices=[Tgoal],seedik=10) # call motion planner with goal joint angles
   robot.WaitForController(0) # wait
   env.Destroy()
 

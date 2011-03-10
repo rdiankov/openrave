@@ -1,11 +1,7 @@
 #!/bin/bash
-# Internal use
-# script creates the doc files, and sends them over to the programmingvision server
-# packages used: doxygen, python-docutils, python-pygments, python-epydoc, python-sphinx, python-lxml, python-sphinx
-# for latex: dot2tex, texlive-base, texlive-latex-base, texlive-pictures, texlive-fonts-recommended
-# for japanese: latex-cjk-japanese
-
-# create all the temporary doxygen files
+# Internal use, see documentation_system.rst
+rm -rf build ordocs.tgz
+mkdir -p build
 curdir=`pwd`
 cd ..
 rootdir=`pwd`
@@ -14,38 +10,36 @@ doxycommands="STRIP_FROM_PATH        = $rootdir
 PROJECT_NUMBER = `openrave-config --version`
 ALIASES += openraveversion=`openrave-config --version`
 "
-echo "$doxycommands" | cat Doxyfile.html Doxyfile.en - > Doxyfile.html.en
-echo "$doxycommands" | cat Doxyfile.latex Doxyfile.en - > Doxyfile.latex.en
-echo "$doxycommands" | cat Doxyfile.html Doxyfile.ja - > Doxyfile.html.ja
-echo "$doxycommands" | cat Doxyfile.latex Doxyfile.ja - > Doxyfile.latex.ja
+echo "$doxycommands" | cat Doxyfile.html Doxyfile.en - > build/Doxyfile.html.en
+echo "$doxycommands" | cat Doxyfile.latex Doxyfile.en - > build/Doxyfile.latex.en
+echo "$doxycommands" | cat Doxyfile.html Doxyfile.ja - > build/Doxyfile.html.ja
+echo "$doxycommands" | cat Doxyfile.latex Doxyfile.ja - > build/Doxyfile.latex.ja
 
 #bash makeimages.sh
 
-rm -rf en ja openrave.pdf ordocs.tgz
+# doxygen
+doxygen build/Doxyfile.html.en
+doxygen build/Doxyfile.latex.en
+python build_latex.py build/en/latex
+cp build/en/latex/refman.pdf build/en/openrave.pdf
 
-# run doxygen, assuming v1.7.1+
-doxygen Doxyfile.html.en
-doxygen Doxyfile.latex.en
-python build_latex.py en/latex
-cp en/latex/refman.pdf en/openrave.pdf
-
-doxygen Doxyfile.html.ja
-#python build_latex.py ja/latex
-#cp ja/latex/refman.pdf ja/openrave_ja.pdf
+doxygen build/Doxyfile.html.ja
+#python build_latex.py build/ja/latex
+#cp ja/latex/refman.pdf build/ja/openrave_ja.pdf
 
 # build internal openravepy docs
 python build_openravepy_internal.py --languagecode en --languagecode ja
-# have to rebuild openravepy_int!!
+# have to rebuild openravepy_int to get correct docstrings!
 
 # build openravepy documentation
 prevlang=$LANG
 export LANG=en_US.UTF-8
-python build_doc.py build_doc --outdir="en/openravepy-html" --languagecode=en
-export LANG=ja_JP.UTF-8
-python build_doc.py build_doc --outdir="ja/openravepy-html" --languagecode=ja
-export LANG=$prevlang
+python build_doc.py build_doc --outdir="build/en/openravepy-html" --languagecode=en
+python build_interfaces.py --outdir=en
+sphinx-build -b html -c . en build/en/sphinx
 
-# build interfaces
-rm -rf sphinx/interfaces sphinx/sphinx-docs
-python build_interfaces.py
-sphinx-build sphinx sphinx/sphinx-docs
+export LANG=ja_JP.UTF-8
+python build_doc.py build_doc --outdir="build/ja/openravepy-html" --languagecode=ja
+python build_interfaces.py --outdir=ja/
+sphinx-build -b html . build/ja/sphinx
+export LANG=$prevlang

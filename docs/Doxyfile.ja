@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 PAPER_TYPE             = a4wide
 OUTPUT_LANGUAGE = Japanese
-OUTPUT_DIRECTORY = ./ja/
+OUTPUT_DIRECTORY = ./build/ja/
 ALIASES                += openravepy{1}="<a href=\"http://openrave.programmingvision.com/ordocs/ja/openravepy-html/index.html\">\1</a>"
 ALIASES                += openrave_py{1}="<a href=\"http://openrave.programmingvision.com/ordocs/ja/openravepy-html/index.html#rst-openrave-py\">\1</a>"
 ALIASES                += openrave_py_dir{1}="<a href=\"http://openrave.programmingvision.com/ordocs/ja/openravepy-html/index.html#rst-directory-structure\">\1</a>"

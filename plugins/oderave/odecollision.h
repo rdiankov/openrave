@@ -92,7 +92,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
  ODECollisionChecker(EnvironmentBasePtr penv) : OpenRAVE::CollisionCheckerBase(penv), odespace(new ODESpace(penv,GetCollisionInfo,false)) {
         _options = 0;
         geomray = NULL;
-        _nMaxStartContacts = 16;
+        _nMaxStartContacts = 32;
         __description = ":Interface Author: Rosen Diankov\n\nOpen Dynamics Engine collision checker (fast, but inaccurate for triangle meshes)";
     }
     ~ODECollisionChecker() {
