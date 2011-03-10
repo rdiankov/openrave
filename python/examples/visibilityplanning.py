@@ -414,6 +414,7 @@ class PA10GraspExample(VisibilityGrasping):
                         if not self.target.GetEnv().CheckCollision(self.target):
                             self.Tgoals.append(T)
 
+@with_destroy
 def run(args=None):
     """Executes the visibilityplanning example
 
@@ -427,12 +428,9 @@ def run(args=None):
                       help='If set, will not open any camera views')
     (options, leftargs) = parser.parse_args(args=args)
     env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
-    try:
-        scene = PA10GraspExample(env)
-        scene.loadscene(scenefilename=options.scene,sensorname='wristcam',usecameraview=options.usecameraview)
-        scene.start()
-    finally:
-        RaveDestroy()
+    scene = PA10GraspExample(env)
+    scene.loadscene(scenefilename=options.scene,sensorname='wristcam',usecameraview=options.usecameraview)
+    scene.start()
 
 if __name__=='__main__':
     run()

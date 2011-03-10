@@ -12,14 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
-.. lang-block:: en
-
-  Convex decomposition of the link geometry of the robot.
-
-.. lang-block:: ja
-
-  剛体を複数の凸形状での近似
+"""Convex decomposition of the link geometry of the robot.
 
 .. image:: ../../images/databases_convexdecomposition_wam.jpg
   :height: 200
@@ -54,13 +47,6 @@ Dynamically load the convex hulls for a robot:
   if not cdmodel.load():
       cdmodel.autogenerate()
 
-.. lang-block:: ja
-
-  **解説**
-
-  凸形状の一つの利点は体積が計算出来る．
-
-
 Description
 -----------
 
@@ -80,9 +66,10 @@ __license__ = 'Apache License, Version 2.0'
 from openravepy import __build_doc__
 if not __build_doc__:
     from openravepy import *
+    from openravepy.databases import DatabaseGenerator
     from numpy import *
 else:
-    from openravepy import OpenRAVEModel
+    from openravepy.databases import DatabaseGenerator
     from numpy import array
 
 from openravepy import convexdecompositionpy
@@ -90,14 +77,14 @@ import time, os
 from optparse import OptionParser
 from itertools import izip
 
-class ConvexDecompositionModel(OpenRAVEModel):
+class ConvexDecompositionModel(DatabaseGenerator):
     """Computes the convex decomposition of all of the robot's links"""
     def __init__(self,robot):
-        OpenRAVEModel.__init__(self,robot=robot)
+        DatabaseGenerator.__init__(self,robot=robot)
         self.linkgeometry = None
         self.convexparams = None
     def clone(self,envother):
-        clone = OpenRAVEModel.clone(self,envother)
+        clone = DatabaseGenerator.clone(self,envother)
         #TODO need to set convex decomposition?
         return clone
     def has(self):
@@ -106,7 +93,7 @@ class ConvexDecompositionModel(OpenRAVEModel):
         return 2
     def load(self):
         try:
-            params = OpenRAVEModel.load(self)
+            params = DatabaseGenerator.load(self)
             if params is None:
                 return False
             self.linkgeometry,self.convexparams = params
@@ -122,7 +109,7 @@ class ConvexDecompositionModel(OpenRAVEModel):
             return False
 
     def save(self):
-        OpenRAVEModel.save(self,(self.linkgeometry,self.convexparams))
+        DatabaseGenerator.save(self,(self.linkgeometry,self.convexparams))
 
     def getfilename(self,read=False):
         return RaveFindDatabaseFile(os.path.join('robot.'+self.robot.GetKinematicsGeometryHash(), 'convexdecomposition.pp'),read)
@@ -311,7 +298,7 @@ class ConvexDecompositionModel(OpenRAVEModel):
 
     @staticmethod
     def CreateOptionParser():
-        parser = OpenRAVEModel.CreateOptionParser(useManipulator=False)
+        parser = DatabaseGenerator.CreateOptionParser(useManipulator=False)
         parser.description='Computes the set of convex hulls for each triangle mesh geometry.using convexdecomposition'
         parser.usage='openrave.py --database convexdecomposition [options]'
         parser.add_option('--skinWidth',action='store',type='float',dest='skinWidth',default=0.0,
@@ -343,7 +330,7 @@ class ConvexDecompositionModel(OpenRAVEModel):
         try:
             if Model is None:
                 Model = lambda robot: ConvexDecompositionModel(robot=robot)
-            OpenRAVEModel.RunFromParser(env=env,Model=Model,parser=parser,allowkinbody=True,**kwargs)
+            DatabaseGenerator.RunFromParser(env=env,Model=Model,parser=parser,allowkinbody=True,**kwargs)
         finally:
             env.Destroy()
             RaveDestroy()

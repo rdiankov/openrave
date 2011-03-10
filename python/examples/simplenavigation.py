@@ -69,6 +69,7 @@ class SimpleNavigationPlanning(metaclass.AutoReloader):
             print 'waiting for controller'
             self.robot.WaitForController(0)
 
+@with_destroy
 def run(args=None):
     """Executes the simplenavigation example
 
@@ -81,16 +82,12 @@ def run(args=None):
                       help='Scene file to load (default=%default)')
     (options, leftargs) = parser.parse_args(args=args)
     env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
-    try:
-        env.Load(options.scene)
-        robot = env.GetRobots()[0]
-        env.UpdatePublishedBodies()
-        time.sleep(0.1) # give time for environment to update
-        self = SimpleNavigationPlanning(robot)
-        self.performNavigationPlanning()
-    finally:
-        env.Destroy()
-        RaveDestroy()
+    env.Load(options.scene)
+    robot = env.GetRobots()[0]
+    env.UpdatePublishedBodies()
+    time.sleep(0.1) # give time for environment to update
+    self = SimpleNavigationPlanning(robot)
+    self.performNavigationPlanning()
 
 if __name__ == "__main__":
     run()

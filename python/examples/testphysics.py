@@ -21,6 +21,7 @@ from numpy import *
 import time
 from optparse import OptionParser
 
+@with_destroy
 def run(args=None):
     """Executes the testphysics example
 

@@ -12,14 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
-.. lang-block:: en
-
-  Computes statistics on body links like swept volumes.
-
-.. lang-block:: ja
-
-  掃引体積等のリンク統計
+"""Computes statistics on body links like swept volumes.
 
 .. image:: ../../images/databases_linkstatistics_wam_sweptvolume_j0.jpg
   :height: 200
@@ -64,9 +57,10 @@ __license__ = 'Apache License, Version 2.0'
 from openravepy import __build_doc__
 if not __build_doc__:
     from openravepy import *
+    from openravepy.databases import DatabaseGenerator
     from numpy import *
 else:
-    from openravepy import OpenRAVEModel
+    from openravepy.databases import DatabaseGenerator
     from numpy import array
 
 from openravepy import pyANN
@@ -76,10 +70,10 @@ import time
 from optparse import OptionParser
 from itertools import izip
 
-class LinkStatisticsModel(OpenRAVEModel):
+class LinkStatisticsModel(DatabaseGenerator):
     """Computes the convex decomposition of all of the robot's links"""
     def __init__(self,robot):
-        OpenRAVEModel.__init__(self,robot=robot)
+        DatabaseGenerator.__init__(self,robot=robot)
         self.cdmodel = convexdecomposition.ConvexDecompositionModel(self.robot)
         self.linkstats = None
         self.jointvolumes = None
@@ -92,7 +86,7 @@ class LinkStatisticsModel(OpenRAVEModel):
         try:
             if not self.cdmodel.load():
                 self.cdmodel.autogenerate()
-            params = OpenRAVEModel.load(self)
+            params = DatabaseGenerator.load(self)
             if params is None:
                 return False
             self.linkstats,self.jointvolumes,self.affinevolumes,self.samplingdelta = params
@@ -101,7 +95,7 @@ class LinkStatisticsModel(OpenRAVEModel):
             return False
 
     def save(self):
-        OpenRAVEModel.save(self,(self.linkstats,self.jointvolumes,self.affinevolumes,self.samplingdelta))
+        DatabaseGenerator.save(self,(self.linkstats,self.jointvolumes,self.affinevolumes,self.samplingdelta))
 
     def getfilename(self,read=False):
         return RaveFindDatabaseFile(os.path.join('robot.'+self.robot.GetKinematicsGeometryHash(), 'linkstatistics.pp'),read)
@@ -433,7 +427,7 @@ class LinkStatisticsModel(OpenRAVEModel):
 
     @staticmethod
     def CreateOptionParser():
-        parser = OpenRAVEModel.CreateOptionParser(useManipulator=False)
+        parser = DatabaseGenerator.CreateOptionParser(useManipulator=False)
         parser.description='Computes statistics about the link geometry'
         parser.usage='openrave.py --database linkstatistics [options]'
         parser.add_option('--samplingdelta',action='store',type='float',dest='samplingdelta',default=None,
@@ -447,7 +441,7 @@ class LinkStatisticsModel(OpenRAVEModel):
         try:
             if Model is None:
                 Model = lambda robot: LinkStatisticsModel(robot=robot)
-            OpenRAVEModel.RunFromParser(env=env,Model=Model,parser=parser,**kwargs)
+            DatabaseGenerator.RunFromParser(env=env,Model=Model,parser=parser,**kwargs)
         finally:
             env.Destroy()
             RaveDestroy()

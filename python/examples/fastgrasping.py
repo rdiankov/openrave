@@ -68,7 +68,7 @@ class FastGrasping(metaclass.AutoReloader):
         except self.GraspingException, e:
             return e.args
 
-        
+@with_destroy 
 def run(args=None):
     """Executes the fastgrasping example
 
@@ -82,23 +82,19 @@ def run(args=None):
                       help='Choose the manipulator to perform the grasping for')
     (options, leftargs) = parser.parse_args(args=args)
     env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
-    try:
-        env.Load(options.scene)
-        robot = env.GetRobots()[0]
-        if options.manipname is not None:
-            robot.SetActiveManipulator(options.manipname)
-        # find an appropriate target
-        bodies = [b for b in env.GetBodies() if not b.IsRobot() and linalg.norm(b.ComputeAABB().extents()) < 0.2]
-        self = FastGrasping(robot,target=bodies[0])
-        grasp,jointvalues = self.computeGrasp()
-        if grasp is not None:
-            print 'grasp is found!'
-            self.gmodel.showgrasp(grasp)
-            self.robot.SetDOFValues(jointvalues)
-            raw_input('press any key to exit')
-    finally:
-        env.Destroy()
-        RaveDestroy()
+    env.Load(options.scene)
+    robot = env.GetRobots()[0]
+    if options.manipname is not None:
+        robot.SetActiveManipulator(options.manipname)
+    # find an appropriate target
+    bodies = [b for b in env.GetBodies() if not b.IsRobot() and linalg.norm(b.ComputeAABB().extents()) < 0.2]
+    self = FastGrasping(robot,target=bodies[0])
+    grasp,jointvalues = self.computeGrasp()
+    if grasp is not None:
+        print 'grasp is found!'
+        self.gmodel.showgrasp(grasp)
+        self.robot.SetDOFValues(jointvalues)
+        raw_input('press any key to exit')
 
 if __name__ == "__main__":
     run()

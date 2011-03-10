@@ -193,50 +193,46 @@ from openravepy import Environment, rotationMatrixFromAxisAngle, axisAngleFromRo
 from numpy import eye, dot, pi
 
 def run(args=None):
-    try:
-        env = Environment()
-        env.SetViewer('qtcoin')
-        body = env.ReadKinBodyXMLFile(filename='data/mug2.kinbody.xml')
-        env.AddKinBody(body)
-        body.SetTransform(eye(4))
-        tran = body.GetTransform()
-    
-        handles=[]
-        handles.append(env.drawarrow(p1=[0.0,0.0,0.0],p2=[0.5,0.0,0.0],linewidth=0.01,color=[1.0,0.0,0.0]))
-        handles.append(env.drawarrow(p1=[0.0,0.0,0.0],p2=[0.0,0.5,0.0],linewidth=0.01,color=[0.0,1.0,0.0]))
-        handles.append(env.drawarrow(p1=[0.0,0.0,0.0],p2=[0.0,0.0,0.5],linewidth=0.01,color=[0.0,0.0,0.1]))
-    
-        deg = raw_input('X軸の回転角度を入力して下さい．[degree] X = ')
-        if len(deg) == 0:
-            deg = -45
-        rot_mat = rotationMatrixFromAxisAngle([1,0,0],float(deg)*pi/180.0)
-        print 'AxisAngle = ',axisAngleFromRotationMatrix(rot_mat)
-        tran[0:3,0:3] = dot(rot_mat, tran[0:3,0:3])
+    env = Environment()
+    env.SetViewer('qtcoin')
+    body = env.ReadKinBodyXMLFile(filename='data/mug2.kinbody.xml')
+    env.AddKinBody(body)
+    body.SetTransform(eye(4))
+    tran = body.GetTransform()
+
+    handles=[]
+    handles.append(env.drawarrow(p1=[0.0,0.0,0.0],p2=[0.5,0.0,0.0],linewidth=0.01,color=[1.0,0.0,0.0]))
+    handles.append(env.drawarrow(p1=[0.0,0.0,0.0],p2=[0.0,0.5,0.0],linewidth=0.01,color=[0.0,1.0,0.0]))
+    handles.append(env.drawarrow(p1=[0.0,0.0,0.0],p2=[0.0,0.0,0.5],linewidth=0.01,color=[0.0,0.0,0.1]))
+
+    deg = raw_input('X軸の回転角度を入力して下さい．[degree] X = ')
+    if len(deg) == 0:
+        deg = -45
+    rot_mat = rotationMatrixFromAxisAngle([1,0,0],float(deg)*pi/180.0)
+    print 'AxisAngle = ',axisAngleFromRotationMatrix(rot_mat)
+    tran[0:3,0:3] = dot(rot_mat, tran[0:3,0:3])
+    body.SetTransform(tran)
+
+    P1 = dot(rot_mat, [0,0,1])
+    handles.append(env.drawarrow([0.0,0.0,0.0],P1,linewidth=0.01,color=[1.0,1.0,0.0]))
+
+    deg = raw_input('Y軸の回転角度を入力して下さい．[degree] Y = ')
+    if len(deg) == 0:
+        deg = 45
+    rot_mat = rotationMatrixFromAxisAngle([0,1,0],float(deg)*pi/180.0)
+    print 'AxisAngle = ',axisAngleFromRotationMatrix(rot_mat)
+    tran[0:3,0:3] = dot(rot_mat, tran[0:3,0:3])
+    body.SetTransform(tran)
+
+    P2 = dot(rot_mat, P1)
+    handles.append(env.drawarrow([0.0,0.0,0.0],P2,linewidth=0.01,color=[1.0,1.0,0.0]))
+
+    while True:
+        raw_input('キーを押すと回転しながら移動します．')
+        Tdelta = matrixFromAxisAngle ([0,0,0.5])
+        Tdelta[2,3] = 0.01
+        tran = dot(tran, Tdelta)
         body.SetTransform(tran)
-
-        P1 = dot(rot_mat, [0,0,1])
-        handles.append(env.drawarrow([0.0,0.0,0.0],P1,linewidth=0.01,color=[1.0,1.0,0.0]))
-
-        deg = raw_input('Y軸の回転角度を入力して下さい．[degree] Y = ')
-        if len(deg) == 0:
-            deg = 45
-        rot_mat = rotationMatrixFromAxisAngle([0,1,0],float(deg)*pi/180.0)
-        print 'AxisAngle = ',axisAngleFromRotationMatrix(rot_mat)
-        tran[0:3,0:3] = dot(rot_mat, tran[0:3,0:3])
-        body.SetTransform(tran)
-
-        P2 = dot(rot_mat, P1)
-        handles.append(env.drawarrow([0.0,0.0,0.0],P2,linewidth=0.01,color=[1.0,1.0,0.0]))
-
-        while True:
-            raw_input('キーを押すと回転しながら移動します．')
-            Tdelta = matrixFromAxisAngle ([0,0,0.5])
-            Tdelta[2,3] = 0.01
-            tran = dot(tran, Tdelta)
-            body.SetTransform(tran)
-
-    finally:
-        env.Destroy()
 
 if __name__ == "__main__":
     run()

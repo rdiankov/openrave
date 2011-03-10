@@ -21,10 +21,10 @@ Getting Started
 ---------------
 
 * `Install from sources <http://openrave.programmingvision.com/ordocs/en/html/installation.html>`_
- * See `ChangeLog`_ for what's new.
-* :ref:`tutorials`
 
-* :ref:`examples`
+ * See `ChangeLog`_ for what's new.
+
+* :ref:`tutorials`
 
 * :ref:`overview`
 
@@ -33,7 +33,7 @@ Getting Started
 Licenses
 --------
 
-The core C++ API is licenced under the `Lesser GPL <http://www.gnu.org/licenses/lgpl.html>`_, which makes it possible for commercial use but allows us to maintain its quality and evolution. Most of the examples and scripts outside the core are licensed under `Apache License, Version 2.0 <http://www.apache.org/licenses/LICENSE-2.0.html>`_, which is much less restrictive (similar to BSD). Plugins can be released with any license the authors wish.
+The core C++ API is licenced under the `Lesser GPL <http://www.gnu.org/licenses/lgpl.html>`_, which makes it possible for commercial use but allows the OpenRAVE developers to guarantee a consistent API. Most of the examples and scripts outside the core are licensed under `Apache License, Version 2.0 <http://www.apache.org/licenses/LICENSE-2.0.html>`_, which is much less restrictive (similar to BSD). Plugins can be released in any license the plugin authors choose to.
 
 Please support OpenRAVE development by referencing it in your works/publications/projects with::
 

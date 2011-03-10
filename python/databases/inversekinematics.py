@@ -13,13 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-.. lang-block:: en
-
-  Python interface to ikfast that manages the compiled inverse kinematics files for robots.
-
-.. lang-block:: ja
-
-  逆運動学解析解の自動作成
+Python interface to ikfast that manages the compiled inverse kinematics files for robots.
 
 .. image:: ../../images/databases_inversekinematics_wam.png
   :height: 250
@@ -136,9 +130,10 @@ __license__ = 'Apache License, Version 2.0'
 from openravepy import __build_doc__
 if not __build_doc__:
     from openravepy import *
+    from openravepy.databases import DatabaseGenerator
     from numpy import *
 else:
-    from openravepy import OpenRAVEModel
+    from openravepy.databases import DatabaseGenerator
     from numpy import array
 
 from openravepy import ikfast
@@ -150,14 +145,14 @@ from optparse import OptionParser
 
 log = logging.getLogger(__name__)
 
-class InverseKinematicsModel(OpenRAVEModel):
+class InverseKinematicsModel(DatabaseGenerator):
     """Generates analytical inverse-kinematics solutions, compiles them into a shared object/DLL, and sets the robot's iksolver. Only generates the models for the robot's active manipulator. To generate IK models for each manipulator in the robot, mulitple InverseKinematicsModel classes have to be created.
     """
     def __init__(self,robot,iktype=None,forceikfast=False,freeindices=None,freejoints=None):
         """
         :param forceikfast: if set will always force the ikfast solver
         """
-        OpenRAVEModel.__init__(self,robot=robot)
+        DatabaseGenerator.__init__(self,robot=robot)
         self.ikfastproblem = RaveCreateProblem(self.env,'ikfast')
         if self.ikfastproblem is not None:
             self.env.LoadProblem(self.ikfastproblem,'')
@@ -188,7 +183,7 @@ class InverseKinematicsModel(OpenRAVEModel):
             except openrave_exception, e:
                 log.debug('__del__ %s',e)
     def clone(self,envother):
-        clone = OpenRAVEModel.clone(self,envother)
+        clone = DatabaseGenerator.clone(self,envother)
         clone.ikfastproblem = RaveCreateProblem(envother,'ikfast')
         if clone.ikfastproblem is not None:
             envother.LoadProblem(clone.ikfastproblem,'')
@@ -659,7 +654,7 @@ class InverseKinematicsModel(OpenRAVEModel):
 
     @staticmethod
     def CreateOptionParser():
-        parser = OpenRAVEModel.CreateOptionParser()
+        parser = DatabaseGenerator.CreateOptionParser()
         parser.description='Uses ikfast to compute the closed-form inverse kinematics equations of a robot manipulator, generates a C++ file, and compiles this file into a shared object which can then be loaded by OpenRAVE.'
         parser.usage='openrave.py --database inversekinematics [options]'
         parser.add_option('--freejoint', action='append', type='string', dest='freejoints',default=None,
@@ -702,7 +697,7 @@ class InverseKinematicsModel(OpenRAVEModel):
         else:
             iktype = IkParameterization.Type.Transform6D
         Model = lambda robot: InverseKinematicsModel(robot=robot,iktype=iktype,forceikfast=True)
-        OpenRAVEModel.RunFromParser(Model=Model,parser=parser,robotatts={'skipgeometry':'1'},args=args,**kwargs)
+        DatabaseGenerator.RunFromParser(Model=Model,parser=parser,robotatts={'skipgeometry':'1'},args=args,**kwargs)
         if options.iktests is not None or options.perftiming is not None:
             log.info('testing the success rate of robot %s ',options.robot)
             env = Environment()

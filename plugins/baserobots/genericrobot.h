@@ -20,7 +20,7 @@ class GenericRobot : public RobotBase
  public:
     enum RobotState { ST_NONE=0, ST_PD_CONTROL, ST_PATH_FOLLOW };
  GenericRobot(EnvironmentBasePtr penv) : RobotBase(penv), _state(ST_NONE) {
-        __description = ":Interface Author: Rosen Diankov\nSimplest robot possible that just passes the trajectories to the controller";
+        __description = ":Interface Author: Rosen Diankov\n\nSimplest robot possible that just passes the trajectories to the controller";
     }
     virtual ~GenericRobot() {}
 

@@ -235,40 +235,37 @@ from numpy import eye
 from numpy.random import rand
 
 def run(args=None):
-    try:
-        env = Environment()
-        env.SetViewer('qtcoin')
-        env.AddKinBody(env.ReadKinBodyXMLFile(filename='data/mug1.kinbody.xml'))
-        env.AddKinBody(env.ReadKinBodyXMLFile(filename='data/mug2.kinbody.xml'))
-        bodies = env.GetBodies()
-        body1 = bodies[0]
-        body1.SetTransform(eye(4))
-        body2 = env.GetKinBody('mug2')
-        body2.SetTransform([1,0,0,0,0,0,0])
-        raw_input('キーを押すとXに+0.2移動し，移動前と移動後の変換行列を出力します．')
-        tran1 = body1.GetTransform()
-        print '移動前'
-        print tran1
-        tran1[0,3] = 0.2 
+    env = Environment()
+    env.SetViewer('qtcoin')
+    env.AddKinBody(env.ReadKinBodyXMLFile(filename='data/mug1.kinbody.xml'))
+    env.AddKinBody(env.ReadKinBodyXMLFile(filename='data/mug2.kinbody.xml'))
+    bodies = env.GetBodies()
+    body1 = bodies[0]
+    body1.SetTransform(eye(4))
+    body2 = env.GetKinBody('mug2')
+    body2.SetTransform([1,0,0,0,0,0,0])
+    raw_input('キーを押すとXに+0.2移動し，移動前と移動後の変換行列を出力します．')
+    tran1 = body1.GetTransform()
+    print '移動前'
+    print tran1
+    tran1[0,3] = 0.2 
+    body1.SetTransform(tran1)
+    print '移動後'
+    print tran1
+    raw_input('キーを押すとYに+0.1移動し，移動前と移動後のポーズを出力します．')
+    pose1 = poseFromMatrix (tran1)
+    print '移動前'
+    print 'pose: ',pose1
+    pose1[5] = 0.1
+    body1.SetTransform(pose1)
+    print '移動後'
+    print 'pose: ',pose1
+    while True:
+        raw_input("キーを押すとランダムに移動します．")
+        tran1[0:3,3] = 0.2*(rand(3)-0.5)
         body1.SetTransform(tran1)
-        print '移動後'
-        print tran1
-        raw_input('キーを押すとYに+0.1移動し，移動前と移動後のポーズを出力します．')
-        pose1 = poseFromMatrix (tran1)
-        print '移動前'
-        print 'pose: ',pose1
-        pose1[5] = 0.1
-        body1.SetTransform(pose1)
-        print '移動後'
-        print 'pose: ',pose1
-        while True:
-            raw_input("キーを押すとランダムに移動します．")
-            tran1[0:3,3] = 0.2*(rand(3)-0.5)
-            body1.SetTransform(tran1)
-            print "X=%f Y=%f Z=%f"%(tran1[0,3],tran1[1,3],tran1[2,3])
-            print 'pose: ',poseFromMatrix(tran1)
-    finally:
-        env.Destroy()
+        print "X=%f Y=%f Z=%f"%(tran1[0,3],tran1[1,3],tran1[2,3])
+        print 'pose: ',poseFromMatrix(tran1)
 
 if __name__ == "__main__":
     run()

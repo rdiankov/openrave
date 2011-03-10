@@ -27,15 +27,8 @@ First the inversekinematics database generator is called querying a **Transform6
   if not ikmodel.load():
       ikmodel.autogenerate()
 
-.. lang-block:: ja
-
-  衝突していない状態に動かす
-
-.. lang-block:: en
-
-  Then a collision-free random configuration is set on the robot:
-
-.. 
+Then a collision-free random configuration is set on the robot:
+ 
 .. code-block:: python
 
   lower,upper = [v[ikmodel.manip.GetArmIndices()] for v in ikmodel.robot.GetDOFLimits()]
@@ -74,7 +67,7 @@ from openravepy import __build_doc__
 if not __build_doc__:
     from openravepy import *
 else:
-    from openravepy import OpenRAVEModel, OpenRAVEGlobalArguments
+    from openravepy import OpenRAVEGlobalArguments
 from numpy import random, array, linspace
 from optparse import OptionParser
 import time
@@ -153,4 +146,7 @@ def run(args=None):
     del newrobots
 
 if __name__ == "__main__":
-    run()
+    try:
+        run()
+    finally:
+        RaveDestroy()

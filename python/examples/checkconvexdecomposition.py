@@ -27,10 +27,11 @@ __author__ = 'Rosen Diankov'
 __copyright__ = '2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Apache License, Version 2.0'
 
-from openravepy import databases, OpenRAVEGlobalArguments, RaveDestroy
+from openravepy import databases, OpenRAVEGlobalArguments, with_destroy
 import numpy
 from optparse import OptionParser
-        
+
+@with_destroy        
 def run(args=None):
     """Executes the checkconvexdecomposition example
 
@@ -45,28 +46,25 @@ def run(args=None):
     (options, leftargs) = parser.parse_args(args=args)
     env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
     samplingdelta = options.samplingdelta
-    try:
-        env.Load(options.target)
-        body = env.GetBodies()[0]
-        cdmodel = databases.convexdecomposition.ConvexDecompositionModel(body)
-        if not cdmodel.load():
-            cdmodel.autogenerate()
-        ab = body.ComputeAABB()
-        if samplingdelta is None:
-            samplingdelta = numpy.linalg.norm(ab.extents())/30.0
-        boxmin = ab.pos()-ab.extents()
-        boxmax = ab.pos()+ab.extents()
-        X,Y,Z = numpy.mgrid[boxmin[0]:boxmax[0]:samplingdelta,boxmin[1]:boxmax[1]:samplingdelta,boxmin[2]:boxmax[2]:samplingdelta]
-        points = numpy.c_[X.flat,Y.flat,Z.flat]
-        print 'computing %d points...'%len(points)
-        inside = cdmodel.testPointsInside(points)
-        plottedpoints = points[numpy.flatnonzero(inside),:]
-        plottedpoints[:,1] += ab.extents()[1]*2
-        print '%d points are inside'%len(plottedpoints)
-        h = env.plot3(plottedpoints,2)
-        raw_input('press any key to exit')
-    finally:
-        RaveDestroy()
+    env.Load(options.target)
+    body = env.GetBodies()[0]
+    cdmodel = databases.convexdecomposition.ConvexDecompositionModel(body)
+    if not cdmodel.load():
+        cdmodel.autogenerate()
+    ab = body.ComputeAABB()
+    if samplingdelta is None:
+        samplingdelta = numpy.linalg.norm(ab.extents())/30.0
+    boxmin = ab.pos()-ab.extents()
+    boxmax = ab.pos()+ab.extents()
+    X,Y,Z = numpy.mgrid[boxmin[0]:boxmax[0]:samplingdelta,boxmin[1]:boxmax[1]:samplingdelta,boxmin[2]:boxmax[2]:samplingdelta]
+    points = numpy.c_[X.flat,Y.flat,Z.flat]
+    print 'computing %d points...'%len(points)
+    inside = cdmodel.testPointsInside(points)
+    plottedpoints = points[numpy.flatnonzero(inside),:]
+    plottedpoints[:,1] += ab.extents()[1]*2
+    print '%d points are inside'%len(plottedpoints)
+    h = env.plot3(plottedpoints,2)
+    raw_input('press any key to exit')
 
 if __name__ == "__main__":
     run()

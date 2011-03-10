@@ -130,6 +130,7 @@ class Schunkplanner:
 
         print ('Body %s successfully manipulated'%(obj))
 
+@with_destroy
 def run(args=None):
     """Executes the dualarmdemo_schunk example
 
@@ -145,31 +146,26 @@ def run(args=None):
     env.Load(options.scene)
     schunk = Schunkplanner(env)
     time.sleep(1)    
-    try:
-        while True:
-            # initialize
-            with env:
-                jointvalues=schunk.robot.GetDOFValues()
-                schunk.robot.SetActiveManipulator(schunk.rightArm)
-                obj=env.GetKinBody('Object1')
-                while True:
-                    with obj:
-                        T=obj.GetTransform()
-                        T[0:3,3] += 0.4*(random.rand(3)-0.5) # yz only
-                        obj.SetTransform(T)
-                        if not env.CheckCollision(obj):
-                            break
-                obj.SetTransform(T)
-            try:
-                schunk.graspAndMoveObject(jointvalues,obj)
-                schunk.WaitForController()
-                print "Path Planning complete...."
-            except planning_error:
-                pass
-    finally:
-        del schunk
-        env.Destroy() # done with the environment
-        RaveDestroy()
+    while True:
+        # initialize
+        with env:
+            jointvalues=schunk.robot.GetDOFValues()
+            schunk.robot.SetActiveManipulator(schunk.rightArm)
+            obj=env.GetKinBody('Object1')
+            while True:
+                with obj:
+                    T=obj.GetTransform()
+                    T[0:3,3] += 0.4*(random.rand(3)-0.5) # yz only
+                    obj.SetTransform(T)
+                    if not env.CheckCollision(obj):
+                        break
+            obj.SetTransform(T)
+        try:
+            schunk.graspAndMoveObject(jointvalues,obj)
+            schunk.WaitForController()
+            print "Path Planning complete...."
+        except planning_error:
+            pass
 
 if __name__ == "__main__":
     run()

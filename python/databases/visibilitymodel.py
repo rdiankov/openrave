@@ -12,14 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
-.. lang-block:: en
-
-  Samples visible locations of a target object and a sensor.
-
-.. lang-block:: ja
-
-  認識可能な空間を利用したセンサ視認性計画
+"""Samples visible locations of a target object and a sensor.
 
 .. image:: ../../images/databases_visibilitymodel_extents.jpg
   :height: 250
@@ -80,17 +73,14 @@ __license__ = 'Apache License, Version 2.0'
 import time, os
 
 from openravepy import __build_doc__
-if not __build_doc__:
-    from openravepy import *
-    from numpy import *
-else:
-    from openravepy import OpenRAVEModel
-    from numpy import array
+from openravepy import *
+from openravepy.databases import DatabaseGenerator
+from numpy import *
 
 from openravepy.databases import inversekinematics, kinematicreachability
 from openravepy.interfaces import BaseManipulation, TaskManipulation, VisualFeedback
 
-class VisibilityModel(OpenRAVEModel):
+class VisibilityModel(DatabaseGenerator):
     class GripperVisibility:
         """Used to hide links not beloning to gripper.
 
@@ -122,7 +112,7 @@ class VisibilityModel(OpenRAVEModel):
         not belong to the current robot in the case that a robot is holding the target with its
         manipulator. Providing the target allows visibility information to be computed.
         """
-        OpenRAVEModel.__init__(self,robot=robot)
+        DatabaseGenerator.__init__(self,robot=robot)
         self.sensorrobot = sensorrobot if sensorrobot is not None else robot
         self.target = target
         self.visualprob = VisualFeedback(self.robot,maxvelmult=maxvelmult)
@@ -140,7 +130,7 @@ class VisibilityModel(OpenRAVEModel):
         self.preshapes = None
         self.preprocess()
     def clone(self,envother):
-        clone = OpenRAVEModel.clone(self,envother)
+        clone = DatabaseGenerator.clone(self,envother)
         clone.rmodel = self.rmodel.clone(envother) if not self.rmodel is None else None
         clone.preshapes = array(self.preshapes) if not self.preshapes is None else None
         clone.ikmodel = self.ikmodel.clone(envother) if not self.ikmodel is None else None
@@ -156,7 +146,7 @@ class VisibilityModel(OpenRAVEModel):
         return RaveFindDatabaseFile(os.path.join('robot.'+self.robot.GetKinematicsGeometryHash(), 'visibility.' + self.manip.GetStructureHash() + '.' + self.attachedsensor.GetStructureHash() + '.' + self.target.GetKinematicsGeometryHash()+'.pp'),read)
     def load(self):
         try:
-            params = OpenRAVEModel.load(self)
+            params = DatabaseGenerator.load(self)
             if params is None:
                 return False
             self.visibilitytransforms,self.convexhull,self.KK,self.dims,self.preshapes = params
@@ -165,7 +155,7 @@ class VisibilityModel(OpenRAVEModel):
         except e:
             return False
     def save(self):
-        OpenRAVEModel.save(self,(self.visibilitytransforms,self.convexhull,self.KK,self.dims,self.preshapes))
+        DatabaseGenerator.save(self,(self.visibilitytransforms,self.convexhull,self.KK,self.dims,self.preshapes))
 
     def preprocess(self):
         with self.env:
@@ -237,6 +227,7 @@ class VisibilityModel(OpenRAVEModel):
                 b.Enable(enable)
 
     def SetCameraTransforms(self,transforms):
+        """Sets the camera transforms to the visual feedback problem"""
         self.visualprob.SetCameraTransforms(transforms=transforms)
     def showtransforms(self,options=None):
         pts = array([dot(self.target.GetTransform(),matrixFromPose(pose))[0:3,3] for pose in self.visibilitytransforms])
@@ -359,7 +350,7 @@ class VisibilityModel(OpenRAVEModel):
 
     @staticmethod
     def CreateOptionParser():
-        parser = OpenRAVEModel.CreateOptionParser()
+        parser = DatabaseGenerator.CreateOptionParser()
         parser.description='Computes and manages the visibility transforms for a manipulator/target.'
         parser.add_option('--target',action="store",type='string',dest='target',
                           help='OpenRAVE kinbody target filename')
@@ -390,7 +381,7 @@ class VisibilityModel(OpenRAVEModel):
                 env.AddKinBody(target)
             if Model is None:
                 Model = lambda robot: VisibilityModel(robot=robot,target=target,sensorname=options.sensorname)
-            OpenRAVEModel.RunFromParser(env=env,Model=Model,parser=parser,args=args,**kwargs)
+            DatabaseGenerator.RunFromParser(env=env,Model=Model,parser=parser,args=args,**kwargs)
         finally:
             env.Destroy()
             RaveDestroy()

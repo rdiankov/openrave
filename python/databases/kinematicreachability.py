@@ -12,14 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
-.. lang-block:: en
-
-  6D kinematic reachability space of a robot's manipulators.
-
-.. lang-block:: ja
-
-  6D運動学的到達範囲の生成と使用
+"""  6D kinematic reachability space of a robot's manipulators.
 
 .. image:: ../../images/databases_reachability.jpg
   :height: 300
@@ -56,9 +49,11 @@ __license__ = 'Apache License, Version 2.0'
 from openravepy import __build_doc__
 if not __build_doc__:
     from openravepy import *
+    from openravepy.databases import DatabaseGenerator
     from numpy import *
 else:
-    from openravepy import OpenRAVEModel, metaclass
+    from openravepy import metaclass
+    from openravepy.databases import DatabaseGenerator
     from numpy import array
 
 from openravepy import pyANN
@@ -67,7 +62,7 @@ import time
 import heapq # for nth smallest element
 from optparse import OptionParser
 
-class ReachabilityModel(OpenRAVEModel):
+class ReachabilityModel(DatabaseGenerator):
     """Computes the robot manipulator's reachability space (stores it in 6D) and
     offers several functions to use it effectively in planning."""
 
@@ -105,7 +100,7 @@ class ReachabilityModel(OpenRAVEModel):
             return neighs,dists,kball
 
     def __init__(self,robot):
-        OpenRAVEModel.__init__(self,robot=robot)
+        DatabaseGenerator.__init__(self,robot=robot)
         self.ikmodel = inversekinematics.InverseKinematicsModel(robot=robot,iktype=IkParameterization.Type.Transform6D)
         self.reachabilitystats = None
         self.reachability3d = None
@@ -116,7 +111,7 @@ class ReachabilityModel(OpenRAVEModel):
         self.kdtree6d = None
         self.kdtree3d = None
     def clone(self,envother):
-        clone = OpenRAVEModel.clone(self,envother)
+        clone = DatabaseGenerator.clone(self,envother)
         return clone
     def has(self):
         return len(self.reachabilitydensity3d) > 0 and len(self.reachability3d) > 0
@@ -126,7 +121,7 @@ class ReachabilityModel(OpenRAVEModel):
         try:
             if not self.ikmodel.load():
                 self.ikmodel.autogenerate()
-            params = OpenRAVEModel.load(self)
+            params = DatabaseGenerator.load(self)
             if params is None:
                 return False
             self.reachabilitystats,self.reachabilitydensity3d,self.reachability3d,self.pointscale,self.xyzdelta,self.quatdelta = params
@@ -134,7 +129,7 @@ class ReachabilityModel(OpenRAVEModel):
         except e:
             return False
     def save(self):
-        OpenRAVEModel.save(self,(self.reachabilitystats,self.reachabilitydensity3d,self.reachability3d, self.pointscale,self.xyzdelta,self.quatdelta))
+        DatabaseGenerator.save(self,(self.reachabilitystats,self.reachabilitydensity3d,self.reachability3d, self.pointscale,self.xyzdelta,self.quatdelta))
 
     def getfilename(self,read=False):
         return RaveFindDatabaseFile(os.path.join('robot.'+self.robot.GetKinematicsGeometryHash(), 'reachability.' + self.manip.GetStructureHash() + '.pp'),read)
@@ -324,7 +319,7 @@ class ReachabilityModel(OpenRAVEModel):
             return self.kdtree6d
     @staticmethod
     def CreateOptionParser():
-        parser = OpenRAVEModel.CreateOptionParser()
+        parser = DatabaseGenerator.CreateOptionParser()
         parser.description='Computes the reachability region of a robot manipulator and python pickles it into a file.'
         parser.usage='openrave.py --database kinematicreachability [options]'
         parser.add_option('--maxradius',action='store',type='float',dest='maxradius',default=None,
@@ -349,7 +344,7 @@ class ReachabilityModel(OpenRAVEModel):
         try:
             if Model is None:
                 Model = lambda robot: ReachabilityModel(robot=robot)
-            OpenRAVEModel.RunFromParser(env=env,Model=Model,parser=parser,args=args,**kwargs)
+            DatabaseGenerator.RunFromParser(env=env,Model=Model,parser=parser,args=args,**kwargs)
         finally:
             env.Destroy()
             RaveDestroy()

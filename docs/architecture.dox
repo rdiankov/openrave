@@ -36,8 +36,10 @@ to testing new algorithms. The Python scripting is so powerful, that most of the
 and demo code are offered through it. In fact, users should treat the scripting language as an
 integral part of the entire system, not as a replacement to the C++ API.
 
-- <b>Robot Database Layer</b> Kinematically and dynamically analyze and the robot and its task and
-  store such information for later re-use.
+- <b>Robot Database Layer</b> Implements a planning knowledge-base and provides simple interfaces
+for its access and generation parameters. The database itself mostly consists of kinematic,
+quasi-static, dynamic, and geometric analyses of the robot and the task. If the robot is defined
+properly, then all these functions should work out of the box.
 
 All the base planners and problem interfaces should be applicable to any robot structure that can be
 thrown at it. One of OpenRAVE's strongest points when compared with other planning packages is the
@@ -47,8 +49,17 @@ properties like convex hull decomposition, grasp sets, reachability maps, analyt
 kinematics, etc. If the robot is defined properly, then all these functions should work out of the
 box.
 
-It is possible to send a \b help command to every \ref OpenRAVE::InterfaceBase "interface" to get a
-description of the commands it supports and what they do.
+The main API is coded in C++ using the Boost C++ libraries [Dawes et al (1998- present)] as a really
+solid basis of low-level management and storage structures. The Boost flavors of shared pointers
+allow object pointers to be safely reference counted in a heavily multi-threaded environment. Shared
+pointers also allow handles and interfaces to be passed to the user without having to every worry
+about the user calling upon invalid objects or un- loaded shared objects. Furthermore, OpenRAVE uses
+functors and other abstracted objects commonly seen in higher level languages to specify function
+pointers for sampling distri- butions, event callbacks, setting robot configuration state, etc. The
+Boost-enabled design makes the the C++ API really safe and reliable to use along with saving the
+users a lot of trouble doing bookkeeping on their end. Furthermore, it allows the Resource
+Acquisition Is Initialization (RAII) design pattern [Stroustrup (2001)] to be fully exploited
+allowing users to ignore the complexities of multi-threaded resource management.
 
 \ja
 \section fundamental_structure 基盤構造
@@ -109,26 +120,53 @@ mutex. (Note that this only applies to environment functions, and not interface 
 \~
 \subsection arch_locking Locking
 
-Because %OpenRAVE is a highly multi-threaded environment, there are many threads that can be
-accessing the environment state (kinbodides and loaded interfaces, etc). It is necessary to lock the
-environment before modifying or shared state like body information, etc. All the functions exposed
-in EnvironmentBase implicitly lock the environment before doing anything state-changing, so they are
-thread-safe. However, directly accessing the KinBody and RobotBase objects is dangerous without
+Because %OpenRAVE is a highly multi-threaded environment, the environment state like
+bodies and loaded interfaces could be simultaneously accessed. In order to safely write or
+read the state, a user has to lock the environment, which prevents any other process from
+modifying the environment while the user is working. By using recursive locks, it allows a
+lock to be locked as many times as needed within the same thread, greatly reducing the lock
+management when a state changing function calls another state changing function. This
+safety measure helps users by always guaranteeing the environment is locked when calling
+global level environment functions like creating new bodies or loading scenes, regardless if the
+user has locked it. However, directly accessing the bodies and robots is dangerous without
 having the environment lock acquired.
 
 \subsection arch_simulation Simulation Thread
 
-A thread is always running in the background periodically calling SimulationStep on all the
-controllers and problem interfaces, and calling the physics engine SimulateStep. The simulation
-thread keeps track the the global time.
+Every environment has an internal time and a simulation thread directly attached to a physics
+engine. The thread is always running in the background and periodically steps the simulation
+time by a small delta for the physics engine and on all the simulation-enabled interfaces. By
+default, the thread is always running and can always potentially modify the environment
+state; therefore, users always need to explicitly lock the environment whenever playing with
+the internal state like modifying bodies by setting joint values or link transformations. If
+not careful, the controller or physics engine will overwrite them. By default, the simulation
+thread just sets the object positions depending on their controller inputs, but a physics
+engine can be attached to integrate velocities, accelerations, forces, and torques.
 
-\en
+The simulation thread can feel like a nuisance at first, but its division of robot control
+into control input computation and execution greatly helps users only concentrate on feeding
+commands to the robot without worrying about the simulation loop. It also allows a world
+update to happen in one one discrete time step.
+
+
+\~
 \subsection arch_cloning Cloning
     
 One of the strengths of %OpenRAVE is in allowing multiple \ref OpenRAVE::EnvironmentBase
 "environments" work simultaneously in the same process. Environment cloning allows %OpenRAVE to
 become truly parallel by managing multiple environments and running simultaneous planners on top of
 them.
+
+
+One of the strengths of OpenRAVE is in allowing multiple environments to work simul-
+taneously in the same process. Environment cloning allows OpenRAVE to become truly
+parallel by managing multiple environments and running simultaneous planners on top of
+them. Because there is no shared state across the clone and the original environment, it is
+not possible to use an interface created from one environment in another For example, if a
+planner is created in one environment, it should be used only by objects in that environment.
+It is not possible to set a planner to plan for objects belonging to a different environment.
+This is because a planner will lock the environment and expect the objects it controls to be
+exclusively under its control.
 
 Creating a clone is simple, in C++ just type:
 
@@ -140,33 +178,64 @@ to create a clone that copies all the existing bodies (with attachments and grab
 their current states. Basically the clone can perform any operations that would have
 been done with the original enviornment.
 
-Because there is no shared state across the clone and the original environment, it is not possible
-to use an interface created from one environment in another! For example, if a planner is created in
-one environment, it should be used only by objects in that environment. It is not possible to set a
-planner to plan for objects belonging to a different environment. In this case, it is recommend to
-just create another instance if the planner to use for every new environment clone.
+Because the environment state is very complex, the cloning process can control how
+much of it gets transferred to the new clone. For example, all existing bodies and robots
+can be cloned, their attached controllers can be cloned, the attached viewer can be cloned,
+the collision checker state can be cloned, and the simulation state can be cloned. Basically
+the clone should be able to perform any operations that can be done with the original
+environment without any modification in the input parameters.
 
-When using on real robots, one extremely important feature that cloning offers is the ability to
-maintain a real-time view of the world (that sensors constantly feed into). When a planner is
-instantiated, it then copies the environment. This is a guarantee for the planner that the scene
-will not change while it is planning. Because the real-world environment possibly has robot
-controllers connected to real robots, having a clone gives the ability to set only simulation
-controllers in order to guarantee robot safety (ie, commands from clone environment don't
-accidentally start the robot).
+When cloning real robots, one extremely important feature that OpenRAVE cloning offers is the
+ability to maintain a real-time view of the world that sensors continuously update with new
+information. When a planner is instantiated, it should make a copy of the environment that it can
+exclusively control without interfering with the updating operations.  Furthermore, the real-world
+environment possibly has robot controllers connected to real robots, having a clone gives the
+ability to set simulation controllers guarantees robot safety while planning; commands from a cloned
+environment would not accidentally send commands to the real robot.
+
+\subsection arch_validating_plugins Validating Plugins
+
+Every plugin needs to export several functions to notify the core what interfaces it has and to
+instantiate the interfaces. When a plugin is first loaded, it is validated by the environment and
+its interface information is queried so the core can register the names.
+
+There are many mechanisms in the validation process to prevent old plugins to be loaded by the
+core. OpenRAVE is updated frequently and all user plugins are not necessarily recompiled when the
+OpenRAVE API changes. Therefore, we will encounter many cases when a plugin exports the correct
+functions, but does not implement the correct API. Using interfaces from plugins compiled with a
+mismatching The API can lead to unexpected crashes that are very difficult to debug, so it is
+absolutely necessary to detect this condition. One possible solution is to add version numbers to
+the API to enforce checking before an interface is returned from the plugin to the environment, but
+this method is brittle. It forces to keep track of a version number for every interface along with a
+global version number.  Furthermore, every developer has to remember to increment the version when
+something even small changes, which can be easily forgotten and lead to serious errors later on.
+
+We solve interface validation by computing a unique hash of the interface functions and members by
+running each interface through a C++ lexer, gathering the tokens that affect the C++ code structure,
+and then creating a 128bit unique MD5 hash. We create a hash for each interface definition and the
+environment. The hashes are hard coded into the C++ header files and can be queried by two methods:
+a static function returning the hash of the program calling the function, and a virtual function
+returning the hash the interface was compiled with. An interface is only valid if its virtual hash
+is equivalent to the static hash of the core environment. For a plugin to be loaded correctly, first
+the environment hashes have to match. If they do, then the individual interfaces checked and only
+matching interfaces are returned to the core, and from there dispatched to other plugins. Such
+consistency checks ensure that stale plugins will never be loaded.
+
 
 \subsection arch_cloning_parallel Parallel Execution
 
-Multithreading and Parallel Execution of planning algorithms and pipelined robot control is very
-important. One of the goals of OpenRAVE is to be able to take advantage of tens of computers
-simultaneously while freeing real-time robot execution from the planning and perception
-threads. Cloning allows planners to call kinematics and collision functions in multiple threads (one
-environment clone for each thread) without worrying about data corruption.
-
-
-\ja
-\subsection arch_cloning クローン作成
-    
-%OpenRAVEの１つの強みは，同じプロセスで複数の環境を同時に稼働できることです，
+Being able to execute a planner in multiple threads is important for applications that require
+speed and solution quality Because there is always a trade-off between solution quality and time of
+computation, some applications like industrial robots require the quickest and smoothest past to
+their destinations. Fortunately, environment cloning allows planners to create an independent
+environment for every thread they create, which enables them to call kinematics and collision
+functions in each respective thread without worrying about data corruption. Growing an RRT tree in a
+multi-threaded environment just requires one copy of the kd-tree structure to be maintained. The
+query operations mostly work with Euclidean distance on the configuration space, so are really
+fast. Furthermore, adding a new point takes O(log) time, so it shouldn’t be a bottleneck in the
+search process compared to collision checking. Finally, environment locking allows threads to gain
+exclusive access to the environment. The rule of thumb is that any interface belonging or added to
+the environment requires an environment lock before any of its methods can be called.
 
 \en
 \section arch_dualnature Dual Simulation/Control Nature
@@ -211,6 +280,34 @@ example). Otherwise, the controller or physics engine will overwrite them.
 
 \en  
 \section arch_exceptions Exception Handling
+
+By using the C++ Standard and Boost libraries, OpenRAVE can recover from almost all errors that a
+user can experience without causing the program to shutdown on the spot.  Invalid pointer and
+out-of-range accesses are extremely dangerous because they can modify unrelated memory, which causes
+the program to crash at a place completely unrelated to the root cause of the problem. Avoiding such
+problems has been one of the the highest priorities for the design. The core always surrounds any
+user code coming from plugins and callbacks with try/catch blocks, this allows the core to properly
+handle the error and notify the user of a problem without tearing down the environment. Because
+exception handling is slow, there is a fine balance of when a function should return an error code
+and what it should throw an exception. In OpenRAVE, exceptions should never occur in normal
+operation of the program, they should only be for unexpected events of the program. For example,
+planners failing is an expected event dependent on the current environment, so planners should
+return an error code with the cause of the failure rather than throw an exception. In other words,
+exceptions convey the structural errors of the program that point to places in the code that should
+be fixed by the user. The following operations should throw exceptions in OpenRAVE:
+
+- invalid plugin or interface hashes,
+- invalid commands being sent to interfaces,
+- invalid arguments passed to functions,
+- invalid pointers or out-of-range parts of lists are accessed,
+- environment is not locked when it should be
+- a resource is present when it should be,
+- a math operation is not consistent with the rest of the environment,
+- environment naming constraints are not maintained,
+- unrecognized enumerated types are given, and
+- instantiation order is not maintained.
+
+\en
 
 Any type of boost error, or null pointer access throws an openrave_exception. This greatly reduces
 the amount of error checking code people do. For example, C code usually has this pattern:
@@ -267,8 +364,7 @@ catch(const openrave_exception& ex) {
 When using openravepy in python, such unhandled C++ errors throw a python exception, which can be
 safely caught and processed there.
 
-\ja  
-\section arch_exceptions 例外処理
+\ja
 
 全てのboostエラー，nullポインタアクセスはopenrave_exceptionを投げます．これによって人々が行っているエラーをチェックするコードの量を大幅に減らすことができます．例えば，Cのコードにはよくこのパターンがあります．</br>
 
@@ -322,6 +418,40 @@ catch(const openrave_exception& ex) {
 
 openravepyを使っている場合は，そのような処理されないC++エラーはpythonの例外処理に投げられ，安全にキャッチされてプロセスは進行します．
 
+\~
+\section arch_body_hashes Hashes for Body Structure
+
+A new concept that came out of OpenRAVE is the idea of creating unique hashes of a body’s
+structure. Every body has an online state that includes:
+
+- names of the body, its links, its joints,
+- link transformations, velocities, and accelerations in the world,
+- and attached bodies.
+
+All other information is independent of the environment and can be categorized into the kinematics,
+geometry, and dynamics of the body. Furthermore, robots have categories for attached sensors and
+manipulators. The planning knowledge-base stores all cached information about a body and a robot, so
+it needs an consistent way of indexing this information.  Indexing by robot names is not reliable
+because it is very difficult to remind a user to change the name every time the body structure is
+changed. Therefore, OpenRAVE provides functionality to serialize the different categories of a body
+and create a 128-bit MD5 hash. Each of the models in the planning knowledge-base relies on different
+categories of the robot. For example:
+
+- inverse kinematics generation only uses the kinematics of a sub-chain of the robot
+defined by the manipulator and the grasp coordinate system,
+- kinematic reachability cares about the robot geometry of the manipulator because it
+implicitly stores self-collision results,
+- inverse reachability further uses the links connecting the base robot link to the base
+manipulator link,
+- grasping cares about the geometry of the target body and the kinematics and geometry
+of the gripper,
+- convex decompositions only care about the link geometry, and
+- inverse dynamics cares only about the dynamics properties of each link and the kinematics.
+
+There are several challenges to developing a consistent index across all operating systems
+and compilers since floating point errors could creep in when normalizing floating-point
+values. However, the idea of such an index could greatly help in developing a worldwide
+robot database that anyone can use.
 
 */
 
@@ -346,7 +476,7 @@ EnvironmentBase::CheckCollision.
 /** 
 \page interface_concepts Base Interface Concepts
 
-Interfaces are provided by plugins and are usually dynamically loaded into %OpenRAVE. All interfaces
+New interfaces are provided by plugins and are dynamically loaded into %OpenRAVE. All interfaces
 are derived from the \ref OpenRAVE::InterfaceBase class and contain basic information such as the type, the
 owning \ref OpenRAVE::EnvironmentBase "environment", setting user data, cloning, and allowing custom string commands to be sent.
 

@@ -25,9 +25,20 @@ piwikTracker.enableLinkTracking();
 <link rel="shortcut icon" href="_static/favicon.ico">
 
 <div style="background-color: white; text-align: left; padding: 10px 10px 15px 15px">
-<a href="http://openrave.programmingvision.com"><img src="{{
-pathto("_static/openrave_logo.png", 1) }}" border="0" alt="openrave"/></a>
+<table width="680" id="topnav-table">
+  <td width="400" valign="top">
+    <a href="http://openrave.programmingvision.com"><img src="{{pathto("_static/openrave_logo.png", 1) }}" border="0" alt="openrave.org"/></a></td>
+  <td valign="middle" align="right">
+    <form class="search" action="{{ pathto('search') }}" method="get">
+      <input type="text" name="q" size="18" autocomplete="on" />
+      <input type="submit" value="{{ _('search') }}" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+  </td>
+</table>
 </div>
+
 {{ super() }}
 {% endblock %}
 

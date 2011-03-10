@@ -40,7 +40,8 @@ import numpy,time,traceback
 from optparse import OptionParser
 from itertools import izip
 import time
-        
+       
+@with_destroy 
 def run(args=None):
     """Executes the movehandstraight2 example
 
@@ -56,55 +57,51 @@ def run(args=None):
                       help='Choose the manipulator to perform movement for')
     (options, leftargs) = parser.parse_args(args=args)
     env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
-    try:
-        env.Load(options.scene)
-        robot = env.GetRobots()[0]
-        if options.manipname is not None:
-            robot.SetActiveManipulator(options.manipname)
-        with env:
-            ikmodel = databases.inversekinematics.InverseKinematicsModel(robot=robot,iktype=IkParameterization.Type.Translation3D)
-            if not ikmodel.load():
-                ikmodel.autogenerate()
-            basemanip = interfaces.BaseManipulation(robot)
-            taskmanip = interfaces.TaskManipulation(robot)
+    env.Load(options.scene)
+    robot = env.GetRobots()[0]
+    if options.manipname is not None:
+        robot.SetActiveManipulator(options.manipname)
+    with env:
+        ikmodel = databases.inversekinematics.InverseKinematicsModel(robot=robot,iktype=IkParameterization.Type.Translation3D)
+        if not ikmodel.load():
+            ikmodel.autogenerate()
+        basemanip = interfaces.BaseManipulation(robot)
+        taskmanip = interfaces.TaskManipulation(robot)
 
-        armlength = 0
-        armjoints = [j for j in robot.GetDependencyOrderedJoints() if j.GetJointIndex() in ikmodel.manip.GetArmIndices()]
-        eetrans = ikmodel.manip.GetEndEffectorTransform()[0:3,3]
-        for j in armjoints[::-1]:
-            armlength += sqrt(sum((eetrans-j.GetAnchor())**2))
-            eetrans = j.GetAnchor()
-        stepsize=0.01
-        failedattempt = 0
-        while True:
-            with env:
-                #Tee = dot(ikmodel.manip.GetEndEffectorTransform(),matrixFromAxisAngle(random.rand(3)-0.5,0.2*random.rand()))
-                Tee = matrixFromAxisAngle(random.rand(3)-0.5,pi*random.rand())
-                direction = random.rand(3)
-                direction /= linalg.norm(direction)
-                x = random.rand(3)-0.5
-                length = 0.7*random.rand()*armlength
-                Tee[0:3,3] = eetrans + x/linalg.norm(x)*(armlength-length)
-                maxsteps=int(length/stepsize)
-                minsteps = maxsteps/2
-                h = env.drawlinelist(array([Tee[0:3,3],Tee[0:3,3]+direction*maxsteps*stepsize]),1)
-            try:
-                # setting ignorefirstcollision to 0.01 of initial collision before moving straight, this is very useful when lifting objects in collision with a table
-                success = basemanip.MoveHandStraight(direction=direction,starteematrix=Tee,stepsize=stepsize,minsteps=minsteps,maxsteps=maxsteps,ignorefirstcollision=0.0)
-                params = (direction,Tee)
-                print '%d failed attemps before found'%failedattempt
-                failedattempt = 0
-                h = env.drawlinelist(array([Tee[0:3,3],Tee[0:3,3]+direction*maxsteps*stepsize]),4,[0,0,0.5])
-                while not robot.GetController().IsDone():
-                    with env:
-                        hend = env.plot3(ikmodel.manip.GetEndEffectorTransform()[0:3,3],10,[0.2,0.2,1])
-                    time.sleep(0.01)
-                #robot.WaitForController(0)
-            except planning_error,e:
-                failedattempt += 1
-            
-    finally:
-        RaveDestroy()
+    armlength = 0
+    armjoints = [j for j in robot.GetDependencyOrderedJoints() if j.GetJointIndex() in ikmodel.manip.GetArmIndices()]
+    eetrans = ikmodel.manip.GetEndEffectorTransform()[0:3,3]
+    for j in armjoints[::-1]:
+        armlength += sqrt(sum((eetrans-j.GetAnchor())**2))
+        eetrans = j.GetAnchor()
+    stepsize=0.01
+    failedattempt = 0
+    while True:
+        with env:
+            #Tee = dot(ikmodel.manip.GetEndEffectorTransform(),matrixFromAxisAngle(random.rand(3)-0.5,0.2*random.rand()))
+            Tee = matrixFromAxisAngle(random.rand(3)-0.5,pi*random.rand())
+            direction = random.rand(3)
+            direction /= linalg.norm(direction)
+            x = random.rand(3)-0.5
+            length = 0.7*random.rand()*armlength
+            Tee[0:3,3] = eetrans + x/linalg.norm(x)*(armlength-length)
+            maxsteps=int(length/stepsize)
+            minsteps = maxsteps/2
+            h = env.drawlinelist(array([Tee[0:3,3],Tee[0:3,3]+direction*maxsteps*stepsize]),1)
+        try:
+            # setting ignorefirstcollision to 0.01 of initial collision before moving straight, this is very useful when lifting objects in collision with a table
+            success = basemanip.MoveHandStraight(direction=direction,starteematrix=Tee,stepsize=stepsize,minsteps=minsteps,maxsteps=maxsteps,ignorefirstcollision=0.0)
+            params = (direction,Tee)
+            print '%d failed attemps before found'%failedattempt
+            failedattempt = 0
+            h = env.drawlinelist(array([Tee[0:3,3],Tee[0:3,3]+direction*maxsteps*stepsize]),4,[0,0,0.5])
+            while not robot.GetController().IsDone():
+                with env:
+                    hend = env.plot3(ikmodel.manip.GetEndEffectorTransform()[0:3,3],10,[0.2,0.2,1])
+                time.sleep(0.01)
+            #robot.WaitForController(0)
+        except planning_error,e:
+            failedattempt += 1
 
 if __name__ == "__main__":
     run()

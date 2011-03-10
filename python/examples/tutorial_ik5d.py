@@ -27,11 +27,12 @@ from openravepy import __build_doc__
 if not __build_doc__:
     from openravepy import *
 else:
-    from openravepy import OpenRAVEModel, OpenRAVEGlobalArguments
+    from openravepy import OpenRAVEGlobalArguments
 from numpy import random, array, linspace, linalg
 from optparse import OptionParser
 import time
 
+@with_destroy
 def run(args=None):
     """Executes tutorial_ik5d
 

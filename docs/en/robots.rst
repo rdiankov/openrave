@@ -1,4 +1,4 @@
 .. _robots:
 
-Robots Database
-===============
+Robot Database
+==============

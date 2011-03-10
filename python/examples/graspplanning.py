@@ -301,6 +301,7 @@ class GraspPlanning(metaclass.AutoReloader):
                 print 'failed to grasp object %s'%graspables[i][0].target.GetName()
                 print e
 
+@with_destroy
 def run(args=None):
     """Executes the graspplanning example
 
@@ -317,16 +318,12 @@ def run(args=None):
                       help='If set, will not randomize the bodies and robot position in the scene.')
     (options, leftargs) = parser.parse_args(args=args)
     env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
-    try:
-        env.Load(options.scene)
-        robot = env.GetRobots()[0]
-        env.UpdatePublishedBodies()
-        time.sleep(0.1) # give time for environment to update
-        self = GraspPlanning(robot,randomize=options.randomize,nodestinations=options.nodestinations)
-        self.performGraspPlanning()
-    finally:
-        env.Destroy()
-        RaveDestroy()
+    env.Load(options.scene)
+    robot = env.GetRobots()[0]
+    env.UpdatePublishedBodies()
+    time.sleep(0.1) # give time for environment to update
+    self = GraspPlanning(robot,randomize=options.randomize,nodestinations=options.nodestinations)
+    self.performGraspPlanning()
 
 if __name__ == "__main__":
     run()

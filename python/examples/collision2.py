@@ -21,6 +21,7 @@ from numpy import *
 from optparse import OptionParser
 import time
 
+@with_destroy
 def run(args=None):
     """Executes the collision example
     
@@ -31,43 +32,41 @@ def run(args=None):
     (options, leftargs) = parser.parse_args(args=args)
     env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
     env.Load('data/pr2test1.env.xml')
-    try:
-        robot=env.GetRobots()[0]
-        raw_input('press key to show at least one contact point')
+    robot=env.GetRobots()[0]
+    raw_input('press key to show at least one contact point')
 
-        with env:
-            # move both arms to collision
-            lindex = robot.GetJoint('l_shoulder_pan_joint').GetDOFIndex()
-            rindex = robot.GetJoint('r_shoulder_pan_joint').GetDOFIndex()
-            robot.SetDOFValues([0.226,-1.058],[lindex,rindex])
+    with env:
+        # move both arms to collision
+        lindex = robot.GetJoint('l_shoulder_pan_joint').GetDOFIndex()
+        rindex = robot.GetJoint('r_shoulder_pan_joint').GetDOFIndex()
+        robot.SetDOFValues([0.226,-1.058],[lindex,rindex])
 
-            # setup the collision checker to return contacts
-            env.GetCollisionChecker().SetCollisionOptions(CollisionOptions.Contacts)
+        # setup the collision checker to return contacts
+        env.GetCollisionChecker().SetCollisionOptions(CollisionOptions.Contacts)
 
-            # get first collision
-            report = CollisionReport()
-            collision=env.CheckCollision(robot,report=report)
-            print '%d contacts'%len(report.contacts)
-            positions = [c.pos for c in report.contacts]
+        # get first collision
+        report = CollisionReport()
+        collision=env.CheckCollision(robot,report=report)
+        print '%d contacts'%len(report.contacts)
+        positions = [c.pos for c in report.contacts]
 
-        h1=env.plot3(array(positions),20)
+    h1=env.plot3(array(positions),20)
 
-        raw_input('press key to show collisions with links')
+    raw_input('press key to show collisions with links')
 
-        with env:
-            # collisions with individual links
-            positions = []
-            for link in robot.GetLinks():
-                collision=env.CheckCollision(link,report=report)
-                if len(report.contacts) > 0:
-                    print 'link %s %d contacts'%(link.GetName(),len(report.contacts))
-                    positions += [c.pos for c in report.contacts]
+    with env:
+        # collisions with individual links
+        positions = []
+        for link in robot.GetLinks():
+            collision=env.CheckCollision(link,report=report)
+            if len(report.contacts) > 0:
+                print 'link %s %d contacts'%(link.GetName(),len(report.contacts))
+                positions += [c.pos for c in report.contacts]
 
-        h2=env.plot3(array(positions),20)
+    h2=env.plot3(array(positions),20)
 
-        raw_input('press any key to exit')
-    finally:
-        RaveDestroy()
+    raw_input('press any key to exit')
+
 
 if __name__ == "__main__":
     run()

@@ -11,10 +11,9 @@ Contents
    
    index
    overview
-   tutorials
+   tutorials/index
    examples
    database_generators
    plugin_interfaces
    robots
    devel/index
-

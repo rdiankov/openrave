@@ -6,6 +6,6 @@ ALIASES                += openravepy{1}="<a href=\"http://openrave.programmingvi
 ALIASES                += openrave_py{1}="<a href=\"http://openrave.programmingvision.com/ordocs/en/openravepy-html/index.html#rst-openrave-py\">\1</a>"
 ALIASES                += openrave_py_dir{1}="<a href=\"http://openrave.programmingvision.com/ordocs/en/openravepy-html/index.html#rst-directory-structure\">\1</a>"
 ALIASES                += octave{1}="<a href=\"http://openrave.programmingvision.com/index.php/Started:Scripting\">\1</a>"
-ALIASES                += homepage{1}="<a href=\"http://openrave.programmingvision.com\">\1</a>"
+ALIASES                += homepage{1}="<a href=\"../sphinx/index.html">\1</a>"
 ALIASES                += envvarwiki{1}="<a href=\"http://en.wikipedia.org/wiki/Environment_variable\">\1</a>"
-ALIASES                += provided_interfaces{1}="<a href=\"http://openrave.programmingvision.com/ordocs/sphinx/sphinx-docs/index.html\">\1</a>"
+

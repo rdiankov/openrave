@@ -52,6 +52,8 @@ class CheckVisibility(metaclass.AutoReloader):
                 print vmodel.sensorname
                 pilutil.imshow(vmodel.getCameraImage())
                 shownsensors.append(vmodel.sensorname)
+
+@with_destroy
 def run(args=None):
     """Executes the checkvisibility example
 
@@ -64,16 +66,12 @@ def run(args=None):
                       help='Scene file to load (default=%default)')
     (options, leftargs) = parser.parse_args(args=args)
     env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
-    try:
-        env.Load(options.scene)
-        robot = env.GetRobots()[0]
-        self = CheckVisibility(robot)
-        while True:
-            self.computeVisibleObjects()
-            time.sleep(0.01)
-    finally:
-        env.Destroy()
-        RaveDestroy()
+    env.Load(options.scene)
+    robot = env.GetRobots()[0]
+    self = CheckVisibility(robot)
+    while True:
+        self.computeVisibleObjects()
+        time.sleep(0.01)
 
 if __name__ == "__main__":
     run()

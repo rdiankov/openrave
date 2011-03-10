@@ -173,16 +173,13 @@ from numpy import eye
 #from time import sleep
 
 def run(args=None):
-    try:
-        env = Environment()
-        env.SetViewer('qtcoin')
-        body = env.ReadKinBodyXMLFile(filename='data/mug1.kinbody.xml')
-        env.AddKinBody(body)
-        body.SetTransform(eye(4))
-        raw_input('キーを押すとリセットします．')
-        env.Reset()
-    finally:
-        env.Destroy()
+    env = Environment()
+    env.SetViewer('qtcoin')
+    body = env.ReadKinBodyXMLFile(filename='data/mug1.kinbody.xml')
+    env.AddKinBody(body)
+    body.SetTransform(eye(4))
+    raw_input('キーを押す破壊とします．')
+    env.Destroy()
 
 if __name__ == "__main__":
     run()

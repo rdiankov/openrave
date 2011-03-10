@@ -21,6 +21,7 @@ from openravepy import *
 from openravepy.interfaces import BaseManipulation
 from numpy import *
 
+@with_destroy
 def run(args=None):
     """Executes the testupdatingbodies example
 
@@ -51,8 +52,6 @@ def run(args=None):
             time.sleep(0.1)
     
     raw_input('press any key to exit: ')
-    env.Destroy() # done with the environment
-    RaveDestroy()
 
 if __name__ == "__main__":
     run()

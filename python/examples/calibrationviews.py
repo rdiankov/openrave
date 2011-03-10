@@ -268,6 +268,7 @@ class CalibrationViews(metaclass.AutoReloader):
             target.SetTransform(dot(self.vmodel.attachedsensor.GetTransform(),T))
         return self.computeAndMoveToObservations(waitcond=waitcond,**kwargs), self.vmodel.target
 
+@with_destroy
 def run(args=None):
     """Executes the calibrationviews example
 
@@ -289,37 +290,33 @@ def run(args=None):
                       help='An average distance between gathered poses. The smaller the value, the more poses robot will gather close to each other')
     (options, leftargs) = parser.parse_args(args=args)
     env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
+    env.Load(options.scene)
+    robot = env.GetRobots()[0]
+    sensorrobot = None if options.sensorrobot is None else env.GetRobot(options.sensorrobot)
+    env.UpdatePublishedBodies()
+    time.sleep(0.1) # give time for environment to update
+    self = CalibrationViews(robot,sensorname=options.sensorname,sensorrobot=sensorrobot,randomize=options.randomize)
+
+    # create a camera viewer for every camera sensor
     try:
-        env.Load(options.scene)
-        robot = env.GetRobots()[0]
-        sensorrobot = None if options.sensorrobot is None else env.GetRobot(options.sensorrobot)
-        env.UpdatePublishedBodies()
-        time.sleep(0.1) # give time for environment to update
-        self = CalibrationViews(robot,sensorname=options.sensorname,sensorrobot=sensorrobot,randomize=options.randomize)
+        attachedsensor = self.vmodel.attachedsensor
+        if attachedsensor.GetSensor() is not None:
+            sensordata = attachedsensor.GetSensor().GetSensorData()
+            if sensordata is not None and sensordata.type == Sensor.Type.Camera:
+                attachedsensor.GetSensor().SendCommand('power 1')
+                if len(attachedsensor.GetName()) > 0:
+                    title = 'calibrationviews: ' + attachedsensor.GetName()
+                else:
+                    title = 'calibrationviews: ' + attachedsensor.GetSensor().GetName()
+                viewer = CameraViewerGUI(sensor=attachedsensor.GetSensor(),title=title)
+                viewer.start()
+    except NameError,e:
+        print 'failed to create camera gui: ',e
+        viewers = []
 
-        # create a camera viewer for every camera sensor
-        try:
-            attachedsensor = self.vmodel.attachedsensor
-            if attachedsensor.GetSensor() is not None:
-                sensordata = attachedsensor.GetSensor().GetSensorData()
-                if sensordata is not None and sensordata.type == Sensor.Type.Camera:
-                    attachedsensor.GetSensor().SendCommand('power 1')
-                    if len(attachedsensor.GetName()) > 0:
-                        title = 'calibrationviews: ' + attachedsensor.GetName()
-                    else:
-                        title = 'calibrationviews: ' + attachedsensor.GetSensor().GetName()
-                    viewer = CameraViewerGUI(sensor=attachedsensor.GetSensor(),title=title)
-                    viewer.start()
-        except NameError,e:
-            print 'failed to create camera gui: ',e
-            viewers = []
-
-        while True:
-            self.computeAndMoveToObservations(usevisibility=options.usevisibility,posedist=options.posedist)
+    while True:
+        self.computeAndMoveToObservations(usevisibility=options.usevisibility,posedist=options.posedist)
         
-    finally:
-        env.Destroy()
-        RaveDestroy()
 
 if __name__ == "__main__":
     run()

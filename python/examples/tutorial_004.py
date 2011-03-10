@@ -197,49 +197,45 @@ from openravepy import Environment, poseFromMatrix, quatFromAxisAngle, axisAngle
 from numpy import pi, r_
 
 def run(args=None):
-    try:
-        env = Environment()
-        env.SetViewer('qtcoin')
-        body = env.ReadKinBodyXMLFile(filename='data/mug2.kinbody.xml')
-        env.AddKinBody(body)
-        body.SetTransform([1,0,0,0,0,0,0])
-        pose = poseFromMatrix(body.GetTransform())
+    env = Environment()
+    env.SetViewer('qtcoin')
+    body = env.ReadKinBodyXMLFile(filename='data/mug2.kinbody.xml')
+    env.AddKinBody(body)
+    body.SetTransform([1,0,0,0,0,0,0])
+    pose = poseFromMatrix(body.GetTransform())
 
-        handles=[]
-        handles.append(env.drawarrow(p1=[0.0,0.0,0.0],p2=[0.5,0.0,0.0],linewidth=0.01,color=[1.0,0.0,0.0]))
-        handles.append(env.drawarrow(p1=[0.0,0.0,0.0],p2=[0.0,0.5,0.0],linewidth=0.01,color=[0.0,1.0,0.0]))
-        handles.append(env.drawarrow(p1=[0.0,0.0,0.0],p2=[0.0,0.0,0.5],linewidth=0.01,color=[0.0,0.0,0.1]))
+    handles=[]
+    handles.append(env.drawarrow(p1=[0.0,0.0,0.0],p2=[0.5,0.0,0.0],linewidth=0.01,color=[1.0,0.0,0.0]))
+    handles.append(env.drawarrow(p1=[0.0,0.0,0.0],p2=[0.0,0.5,0.0],linewidth=0.01,color=[0.0,1.0,0.0]))
+    handles.append(env.drawarrow(p1=[0.0,0.0,0.0],p2=[0.0,0.0,0.5],linewidth=0.01,color=[0.0,0.0,0.1]))
 
-        deg = raw_input('X軸の回転角度を入力して下さい．[degree] X = ')
-        if len(deg) == 0:
-            deg = -45
-        rot_quat = quatFromAxisAngle([1,0,0],float(deg)*pi/180.0)
-        print 'AxisAngle = ',axisAngleFromQuat(rot_quat)
-        pose[0:4] = quatMult(rot_quat, pose[0:4])
+    deg = raw_input('X軸の回転角度を入力して下さい．[degree] X = ')
+    if len(deg) == 0:
+        deg = -45
+    rot_quat = quatFromAxisAngle([1,0,0],float(deg)*pi/180.0)
+    print 'AxisAngle = ',axisAngleFromQuat(rot_quat)
+    pose[0:4] = quatMult(rot_quat, pose[0:4])
+    body.SetTransform(pose)
+
+    P1 = quatRotate(rot_quat, [0,0,1])
+    handles.append(env.drawarrow([0.0,0.0,0.0],P1,linewidth=0.01,color=[1.0,1.0,0.0]))
+
+    deg = raw_input('Y軸の回転角度を入力して下さい．[degree] Y = ')
+    if len(deg) == 0:
+        deg = 45
+    rot_quat = quatFromAxisAngle([0,1,0],float(deg)*pi/180.0)
+    print 'AxisAngle = ',axisAngleFromQuat(rot_quat)
+    pose[0:4] = quatMult(rot_quat, pose[0:4])
+    body.SetTransform(pose)
+
+    P2 = quatRotate(rot_quat, P1)
+    handles.append(env.drawarrow([0.0,0.0,0.0],P2,linewidth=0.01,color=[1.0,1.0,0.0]))
+
+    while True:
+        raw_input('キーを押すと回転しながら移動します．')
+        posedelta = r_[quatFromAxisAngle([0,0,0.5]), 0, 0, 0.01]
+        pose=poseMult(pose, posedelta)
         body.SetTransform(pose)
-        
-        P1 = quatRotate(rot_quat, [0,0,1])
-        handles.append(env.drawarrow([0.0,0.0,0.0],P1,linewidth=0.01,color=[1.0,1.0,0.0]))
-
-        deg = raw_input('Y軸の回転角度を入力して下さい．[degree] Y = ')
-        if len(deg) == 0:
-            deg = 45
-        rot_quat = quatFromAxisAngle([0,1,0],float(deg)*pi/180.0)
-        print 'AxisAngle = ',axisAngleFromQuat(rot_quat)
-        pose[0:4] = quatMult(rot_quat, pose[0:4])
-        body.SetTransform(pose)
-
-        P2 = quatRotate(rot_quat, P1)
-        handles.append(env.drawarrow([0.0,0.0,0.0],P2,linewidth=0.01,color=[1.0,1.0,0.0]))
-
-        while True:
-            raw_input('キーを押すと回転しながら移動します．')
-            posedelta = r_[quatFromAxisAngle([0,0,0.5]), 0, 0, 0.01]
-            pose=poseMult(pose, posedelta)
-            body.SetTransform(pose)
-
-    finally:
-        env.Destroy()
 
 if __name__ == "__main__":
     run()

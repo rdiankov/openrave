@@ -122,7 +122,6 @@ if not __build_doc__:
     from openravepy import *
     from numpy import *
 else:
-    from openravepy import OpenRAVEModel
     from numpy import inf, array
 
 from optparse import OptionParser
@@ -153,6 +152,7 @@ class GraspTransform:
         O_T_R_goal = dot(O_T_G_goal,G_T_R) # final robot transform R_goal in global frame O                
         self.robot.SetTransform(O_T_R_goal)
 
+@with_destroy
 def run(args=None):
     """
     
@@ -163,45 +163,38 @@ def run(args=None):
     OpenRAVEGlobalArguments.addOptions(parser)
     (options, leftargs) = parser.parse_args(args=args) # use default options 
     env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True) # the special setup for openrave tutorial
-    try:
-        robot = env.ReadRobotXMLFile('robots/pr2-beta-static.zae')
-        env.AddRobot(robot)
-        target = env.ReadKinBodyXMLFile('data/mug2.kinbody.xml')
-        env.AddKinBody(target)
-    
-        # init target pose
-        O_T_Target = array([[1,0,0,1],
-                            [0,1,0,1],
-                            [0,0,1,1],
-                            [0,0,0,1]])
-        target.SetTransform(O_T_Target)
-    
-        robot.SetActiveManipulator('leftarm')
-        # init robot pose: l_shoulder_pan, r_shoulder_pan, torso, l_gripper_l_finger_joint
-        names = ['l_shoulder_pan_joint', 'r_shoulder_pan_joint', 'torso_lift_joint', 'l_gripper_l_finger_joint']
-        dofs = [robot.GetJoint(name).GetDOFIndex() for name in names]
-        robot.SetDOFValues([pi/2,-pi/2,0.31,0.54],dofs)
-        gt = GraspTransform(env,target)
-        handles = []
-        raw_input('This demo shows how to find the transform that moves the hand to the target.\npress ENTER to continue...')
-        print 'showing robot transform in global frame O_T_R'
-        handles = gt.drawTransform(gt.robot.GetTransform())
-        raw_input('press ENTER to continue...')
-        print 'showing target transform in global frame O_T_Target'
-        handles = gt.drawTransform(gt.target.GetTransform())
-        raw_input('press ENTER to continue...')
-        print 'showing grasping frame in global frame O_T_G'
-        handles = gt.drawTransform(gt.robot.GetActiveManipulator().GetEndEffectorTransform())
-        raw_input('press ENTER to continue...')
-        raw_input('Guess what the robot will look like when the hand is on the target?\npress ENTER to continue...')
-        gt.showGrasp(target.GetTransform())
-        raw_input('press ENTER to exit')
-    except openrave_exception, e:
-        print e
-    finally:
-        # destroy planning environment and clean up
-        env.Destroy()
-        RaveDestroy()
+    robot = env.ReadRobotXMLFile('robots/pr2-beta-static.zae')
+    env.AddRobot(robot)
+    target = env.ReadKinBodyXMLFile('data/mug2.kinbody.xml')
+    env.AddKinBody(target)
+
+    # init target pose
+    O_T_Target = array([[1,0,0,1],
+                        [0,1,0,1],
+                        [0,0,1,1],
+                        [0,0,0,1]])
+    target.SetTransform(O_T_Target)
+
+    robot.SetActiveManipulator('leftarm')
+    # init robot pose: l_shoulder_pan, r_shoulder_pan, torso, l_gripper_l_finger_joint
+    names = ['l_shoulder_pan_joint', 'r_shoulder_pan_joint', 'torso_lift_joint', 'l_gripper_l_finger_joint']
+    dofs = [robot.GetJoint(name).GetDOFIndex() for name in names]
+    robot.SetDOFValues([pi/2,-pi/2,0.31,0.54],dofs)
+    gt = GraspTransform(env,target)
+    handles = []
+    raw_input('This demo shows how to find the transform that moves the hand to the target.\npress ENTER to continue...')
+    print 'showing robot transform in global frame O_T_R'
+    handles = gt.drawTransform(gt.robot.GetTransform())
+    raw_input('press ENTER to continue...')
+    print 'showing target transform in global frame O_T_Target'
+    handles = gt.drawTransform(gt.target.GetTransform())
+    raw_input('press ENTER to continue...')
+    print 'showing grasping frame in global frame O_T_G'
+    handles = gt.drawTransform(gt.robot.GetActiveManipulator().GetEndEffectorTransform())
+    raw_input('press ENTER to continue...')
+    raw_input('Guess what the robot will look like when the hand is on the target?\npress ENTER to continue...')
+    gt.showGrasp(target.GetTransform())
+    raw_input('press ENTER to exit')
 
 if __name__ == '__main__':
     run()

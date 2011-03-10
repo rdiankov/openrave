@@ -12,14 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
-.. lang-block:: en
-
-  Inverse reachability space clustering.
-
-.. lang-block:: ja
-
-  逆運動学的到達範囲の分布と使用
+"""Inverse reachability space clustering.
 
 .. image:: ../../images/databases_inversereachability_wam1.jpg
   :height: 250
@@ -33,13 +26,7 @@
 Description
 -----------
 
-.. lang-block:: en
-
   Clusters the reachability space for a base-placement sampling distribution that can be used to find out where the robot should stand in order to perform a manipulation task.
-
-.. lang-block:: ja
-
-  胴体をどこに置いて物体を掴められるかかを計算するのに、到達範囲を利用した逆範囲の分布で求められます。
 
 .. image:: ../../images/databases_inversereachability_wam2.jpg
   :height: 200
@@ -58,9 +45,10 @@ import time,bisect,itertools
 from openravepy import __build_doc__
 if not __build_doc__:
     from openravepy import *
+    from openravepy.databases import DatabaseGenerator
     from numpy import *
 else:
-    from openravepy import OpenRAVEModel
+    from openravepy.databases import DatabaseGenerator
     from numpy import array
 
 from openravepy import pyANN
@@ -73,10 +61,10 @@ except ImportError:
     pass
 #from IPython.Debugger import Tracer; debug_here = Tracer()
 
-class InverseReachabilityModel(OpenRAVEModel):
+class InverseReachabilityModel(DatabaseGenerator):
     """Inverts the reachability and computes probability distributions of the robot's base given an end effector position"""
     def __init__(self,robot,id=None):
-        OpenRAVEModel.__init__(self,robot=robot)
+        DatabaseGenerator.__init__(self,robot=robot)
         self.rmodel = kinematicreachability.ReachabilityModel(robot=robot)
         self.ikmodel = inversekinematics.InverseKinematicsModel(robot=robot,iktype=IkParameterization.Type.Transform6D)
         self.equivalenceclasses = None
@@ -85,7 +73,7 @@ class InverseReachabilityModel(OpenRAVEModel):
         with self.robot:
             self.jointvalues = self.robot.GetDOFValues(self.getdofindices(self.manip))
     def clone(self,envother):
-        clone = OpenRAVEModel.clone(self,envother)
+        clone = DatabaseGenerator.clone(self,envother)
         return clone        
     def has(self):
         return self.equivalenceclasses is not None and len(self.equivalenceclasses) > 0
@@ -95,7 +83,7 @@ class InverseReachabilityModel(OpenRAVEModel):
         try:
             if not self.ikmodel.load():
                 self.ikmodel.autogenerate()
-            params = OpenRAVEModel.load(self)
+            params = DatabaseGenerator.load(self)
             if params is None:
                 return False
             self.equivalenceclasses,self.rotweight,self.xyzdelta,self.quatdelta,self.jointvalues = params
@@ -118,7 +106,7 @@ class InverseReachabilityModel(OpenRAVEModel):
         self.equivalenceoffset = array([self.classnormalizationconst(e[1]+samplingbandwidth) for e in self.equivalenceclasses])
 
     def save(self):
-        OpenRAVEModel.save(self,(self.equivalenceclasses,self.rotweight,self.xyzdelta,self.quatdelta,self.jointvalues))
+        DatabaseGenerator.save(self,(self.equivalenceclasses,self.rotweight,self.xyzdelta,self.quatdelta,self.jointvalues))
 
     def getfilename(self,read=False):
         if self.id is None:
@@ -702,7 +690,7 @@ class InverseReachabilityModel(OpenRAVEModel):
 
     @staticmethod
     def CreateOptionParser():
-        parser = OpenRAVEModel.CreateOptionParser()
+        parser = DatabaseGenerator.CreateOptionParser()
         parser.description = 'Generates model storing the inverse reachability space and its clusters.'
         parser.usage='openrave.py --database inversereachability [options]'
         parser.add_option('--heightthresh',action='store',type='float',dest='heightthresh',default=None,
@@ -724,7 +712,7 @@ class InverseReachabilityModel(OpenRAVEModel):
            parser = InverseReachabilityModel.CreateOptionParser()
         (options, leftargs) = parser.parse_args(args=args)
         Model = lambda robot: InverseReachabilityModel(robot=robot)
-        OpenRAVEModel.RunFromParser(Model=Model,parser=parser,args=args,**kwargs)
+        DatabaseGenerator.RunFromParser(Model=Model,parser=parser,args=args,**kwargs)
 
 def run(*args,**kwargs):
     """Executes the inversereachability database generation,  ``args`` specifies a list of the arguments to the script.

@@ -35,7 +35,7 @@ __copyright__ = '2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Apache License, Version 2.0'
 
 import time
-from openravepy import Environment, IkParameterization, planning_error, raveLogInfo, raveLogWarn, OpenRAVEGlobalArguments, RaveDestroy
+from openravepy import Environment, IkParameterization, planning_error, raveLogInfo, raveLogWarn, OpenRAVEGlobalArguments, with_destroy
 from openravepy.interfaces import BaseManipulation, TaskManipulation
 from openravepy.databases import inversekinematics
 from numpy import array, arange, linalg, pi, dot, vstack, cos, sin, cross, r_, c_
@@ -197,6 +197,7 @@ class HanoiPuzzle:
             self.hanoisolve(1, pegfrom, pegto, pegby)
             self.hanoisolve(n-1, pegby, pegto, pegfrom)
 
+@with_destroy
 def run(args=None):
     """Executes the example, ``args`` specifies a list of the arguments to the script.
     
@@ -211,15 +212,11 @@ def run(args=None):
                       help='Scene file to load (default=%default)')
     (options, leftargs) = parser.parse_args(args=args)
     env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
-    try:
-        while True:
-            env.Reset()
-            env.Load(options.scene)
-            hanoi = HanoiPuzzle(env,env.GetRobots()[0])
-            hanoi.hanoisolve(3,hanoi.srcpeg,hanoi.destpeg,hanoi.peg)
-    finally:
-        env.Destroy() # done with the environment
-        RaveDestroy()
+    while True:
+        env.Reset()
+        env.Load(options.scene)
+        hanoi = HanoiPuzzle(env,env.GetRobots()[0])
+        hanoi.hanoisolve(3,hanoi.srcpeg,hanoi.destpeg,hanoi.peg)
 
 if __name__ == "__main__":
     run()

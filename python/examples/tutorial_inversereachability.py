@@ -325,7 +325,6 @@ if not __build_doc__:
     from openravepy import *
     from numpy import *
 else:
-    from openravepy import OpenRAVEModel
     from numpy import inf, array
 
 import time,sys
@@ -470,6 +469,7 @@ class InverseReachabilityDemo:
 def pause():
     raw_input('press ENTER to continue...')
 
+@with_destroy
 def run(args=None):
     """
     
@@ -486,38 +486,30 @@ def run(args=None):
                       help='filename of the target to use (default=%default)')
     (options, leftargs) = parser.parse_args(args=args) # use default options 
     env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True) # the special setup for openrave tutorial
-    try:
-        robot = env.ReadRobotXMLFile(options.robot)
-        env.AddRobot(robot)
-        
-        if options.manipname is not None:
-            robot.SetActiveManipulator(options.manipname)
-        else:
-            robot.SetActiveManipulator('leftarm')
-        target = env.ReadKinBodyXMLFile(options.target)
-        env.AddKinBody(target)
-        # initialize target pose, for visualization and collision checking purpose only
-        O_T_Target = mat([[1,0,0,1],[0,1,0,0],[0,0,1,.9],[0,0,0,1]])
-        target.SetTransform(array(O_T_Target))
-        
-        # set up goal grasp transform
-        # goal grasp transform specified in global frame, this equals manip.GetEndEffectorTransform() in the goal state    
-        O_T_grasp = array([[ -9.88017917e-01,  -1.54339954e-01 ,  0.00000000e+00 ,  1.06494129e+00],
-                           [  1.54339954e-01,  -9.88017917e-01 ,  0.00000000e+00 ,  5.51449812e-05],
-                           [  0.00000000e+00 ,  0.00000000e+00 ,  1.00000000e+00 ,  9.55221763e-01],
-                           [  0.00000000e+00 ,  0.00000000e+00,   0.00000000e+00  , 1.00000000e+00]])
-       
-        gripper_angle = .1
-    
-        # use inversereachability dabase to find the possible robot base poses for the grasp  
-        gr = InverseReachabilityDemo(robot)
-        gr.showPossibleBasePoses(O_T_grasp,gripper_angle,10)
-    
-    finally:
-        # destroy planning environment and clean up
-        env.Destroy()
-        RaveDestroy()
+    robot = env.ReadRobotXMLFile(options.robot)
+    env.AddRobot(robot)
+    if options.manipname is not None:
+        robot.SetActiveManipulator(options.manipname)
+    else:
+        robot.SetActiveManipulator('leftarm')
+    target = env.ReadKinBodyXMLFile(options.target)
+    env.AddKinBody(target)
+    # initialize target pose, for visualization and collision checking purpose only
+    O_T_Target = mat([[1,0,0,1],[0,1,0,0],[0,0,1,.9],[0,0,0,1]])
+    target.SetTransform(array(O_T_Target))
 
+    # set up goal grasp transform
+    # goal grasp transform specified in global frame, this equals manip.GetEndEffectorTransform() in the goal state    
+    O_T_grasp = array([[ -9.88017917e-01,  -1.54339954e-01 ,  0.00000000e+00 ,  1.06494129e+00],
+                       [  1.54339954e-01,  -9.88017917e-01 ,  0.00000000e+00 ,  5.51449812e-05],
+                       [  0.00000000e+00 ,  0.00000000e+00 ,  1.00000000e+00 ,  9.55221763e-01],
+                       [  0.00000000e+00 ,  0.00000000e+00,   0.00000000e+00  , 1.00000000e+00]])
+
+    gripper_angle = .1
+
+    # use inversereachability dabase to find the possible robot base poses for the grasp  
+    gr = InverseReachabilityDemo(robot)
+    gr.showPossibleBasePoses(O_T_grasp,gripper_angle,10)
 
 if __name__=='__main__':
     run()

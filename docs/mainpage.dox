@@ -19,11 +19,10 @@ installation. Please visit the \homepage{<b>official documentation page</b>} for
 \~
 - \subpage installation
 - \subpage p_basic_usage
-- \subpage conventions
 - \subpage environment_variables
 
 \~english  \section main_architecture Architecture
-\~japanese \section main_architecture 構造
+\~japanese \section main_architecture アーキテクチャー
 \~
 - \subpage architecture_concepts
 - \subpage interface_concepts
@@ -31,19 +30,13 @@ installation. Please visit the \homepage{<b>official documentation page</b>} for
 - \ref arch_controller_writing
 
 \~english  \section main_system Components
-- <a href="http://openrave.programmingvision.com/index.php/Main_Page#Knowledge-base_Generators">Knowledge-base Generators</a>
+- <a href="../sphinx/database_generators.html">Knowledge-base Generators</a>
 - <a href="http://openrave.programmingvision.com/index.php/Started:Formats">XML File Format</a>
-- Scripting
- - \openravepy{Python Scripting with <b>openravepy </b>}
- - \octave{Octave/MATLAB Scripting}
 - \ref arch_cloning
 
 \~japanese \section main_system 構成要素
-- <a href="http://openrave.programmingvision.com/index.php/Main_Page/ja#.E7.9F.A5.E8.AD.98.E3.83.99.E3.83.BC.E3.82.B9.E7.94.9F.E6.88.90">知識ベース生成</a>
+- <a href="../sphinx/database_generators.html"">知識ベース生成</a>
 - <a href="http://openrave.programmingvision.com/index.php/Started:Formats/ja">XMLロボット用フォーマット</a>
-- スクリプト環境
- - \openravepy{Python}
- - \octave{Octave/MATLAB}
 - \ref arch_cloning
 \~
 
@@ -52,7 +45,6 @@ installation. Please visit the \homepage{<b>official documentation page</b>} for
 \~japanese \section main_reference 参考資料
 \~
 - \subpage interfaces
-- \provided_interfaces{List of Interface Implementations}
 - \subpage executables
 - \subpage geometric_primitives
 - \subpage affine_math
@@ -106,92 +98,11 @@ openraveと似たコマンドに\openrave_py{openrave.py}というコマンド�
 
 */
 
-/** 
-
-\~english \page conventions System Conventions and Guidelines
-
-This is the set of conventions all users are highly recommended to follow. Sticking to them will
-guarantee that a certain party's %OpenRAVE modules can inter-operate with other modules.
-
-- Internal matrices are in column-order, row-major format. If this is confusing, check out this
-guide. This means affine matrix representation is using the standard math way. All matrices are
-serialized in column-major format, this is to make it simpler for Octave/Matlab to convert between
-matrices. Note that python expects row-major matrices, which require transposition when passed
-around the two interfaces.
-
-- Quaternions, the preferred way of representing rotations, are defined with the scalar value as
-the first component. For example <b>[w x y z]</b> or <b>[cos sin*axis]</b>.
-
-- A pose is an affine transformation specified as a quaternion and translation. It serializes into
-7 values, the first 4 being the quaternion.
-
-- Distances between two rotations is \f$\cos^{-1} | q_1 \cdot q_2 |\f$, where each rotation is
-  represented as a quaternion. For rotations close to each other, this is sometimes approximated as: \f$\min\left( | q1 - q2 | \; , \; | q1 + q2 |\right)\f$.
-
-- A robot's up direction is on the positive z-axis, forward direction is the positive x-axis.
-
-- Mobile manipulation is performed in the XY plane.
-
-- The origin of a robot should be defined so that its base perfectly rests on a floor at z=0, and
-its rotation around the z-axis is the center of rotation when the base makes a natural in-place
-turn.
-
-- All objects/robots of human-environment scale should be specified in meters. There are many
-default thresholds and parameters that assume this convention, and not following it will result in
-explosion of computation. A more general convention is that the unit should be chosen so that the
-arm length of the robot is closest to 1.
-
-- Every body added to the environment should have a unique name.
-
-- Every link/manipulator/sensor/joint in a robot/kinbody should have a name that will
-differentiate it from the others.
-
-- Joint axis rotation is counter-cockwise.
-
-\~japanese \page conventions システム開発上で覚えておくべきこと
-
-すべてのOpenRAVEモジュールは以下のルールに従っています．新しいモジュールを作成する際にも，この規則を守れば互いの機能を使うことが容易になりますので是非覚えておきましょう．
-
-- 座標は右手系です．
-
-- OpenRAVEの変換行列は列ベクトルを使い，メモリ配置は横（行）に並べます（詳細は[[Started:MatrixFormats|
-  ここで参照]]）．言い換えると標準的な線形代数の慣習に従っています．しかし，Octave/Matlabの使い方を容易
-  にするためにシリアライズする際にはメモリ配置を縦（列）で入出力します．Pythonの行列メモリ配置は横（行）
-  並びであるため，シリアライズを行った場合には転置する必要があることに注意して下さい．
-
-- 回転を示す時にはクオータニオンを使うことが推奨されます．クオータニオンのスカラーは最初の要素です．
-  例えば<b>[w x y z]</b>か<b>[cos sin*axis]</b>・
-
-- \b poseは変換行列をクオータニオンと移動で指定されています．7値にシリアライズされていて，最初の4つがクオータ
-  ニオンの値を示し，残りの3つは移動の<b>[x y z]</b>を示しています．
-
-- 2つの回転の距離は\f$\cos^{-1} | q_1 \cdot q_2 |\f$で定義されています．\f$q_1\f$，\f$q_2\f$はクオータニオンとして表現され，最小角度を示しています．回転が互いに近い場合は\f$\min\left( | q1 - q2 | \; , \; | q1 + q2 |\right)\f$に近似することが出来ます．
-
-- ロボットの上方向は\b +Z軸，進行方向は\b +X軸とします．
-
-- モバイルマニピュレーションは\b XY平面でのみ行うことができます．
-
-- ロボットの座標原点は，ベースリンクがZ=0の平面に配置されます．ロボットが移動し，回転する時にもっとも自
-  然的な回転軸の原点が座標原点に一致します．
-
-- 人間環境で活動するロボットの長さの単位はメートル（m)です．あらゆるしきい値がそれを仮定しているた
-  め，別の単位を使う場合は計算時間が膨大になる可能性があります．単位を選ぶ時にもっとも一般的な慣習
-  は，<b>アームの長さ</b>を大体1にすることです．
-
-- OpenRAVE環境に加えられている物体は固有の名前を持つ必要があります．
-
-- 物体の中で定義されているリンク，マニピュレーター，センサー，関節の名前は互いに固有である必要があります．
-
-- 関節の回転方向は逆時計回りになっています．
-
-*/
-
 /**
 \~english \page environment_variables Environment Variables
 
-This page describes system environment variables read by %OpenRAVE environments on
-initialization. \envvarwiki{This page} describes how to set environment variables for the particular
-system running %OpenRAVE.
+System environment variables read by %OpenRAVE environments on
+initialization. (\envvarwiki{This page} describes how to set environment variables for your OS).
 
 - \b OPENRAVE_DATA - Use ':' to separate each directory (';' for Windows). Search paths/URLs for loading
   robot/environment/model files. The default data directory \c $OPENRAVE_INSTALL/share/openrave is
@@ -487,10 +398,8 @@ Allows %OpenRAVE installation to be found when using the CMake build system.
 /**
 \page executables Executable Programs
 
-- \subpage openrave
-- \subpage openrave-config
-- \subpage \openrave_py{openrave.py}
-- \subpage \openrave_py{openrave-hash.py}
+- \subpage openrave_exe
+- \subpage openrave_config
 
 */
 

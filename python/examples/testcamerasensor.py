@@ -118,6 +118,7 @@ class OpenRAVEScene:
         self.quitviewers()
         self.orenv.Destroy()
 
+@with_destroy
 def run(args=None):
     """Executes the testcamerasensor example
 
@@ -133,19 +134,16 @@ def run(args=None):
                       help='Specific robot sensors to display (otherwise first robot found will be displayed)')
     (options, leftargs) = parser.parse_args(args=args)
     env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
-    try:
-        scene = OpenRAVEScene(env,options.scene,options.robotname)
-        while(True):
-            cmd = raw_input('Enter command (q-quit,c-capture image): ')
-            if cmd == 'q':
-                break
-            elif cmd == 'c':
-                for i,viewer in enumerate(scene.viewers):
-                    print 'saving image%d.png'%i
-                    viewer.saveimage('image%d.png'%i)
-        scene.quitviewers()
-    finally:
-        RaveDestroy()
+    scene = OpenRAVEScene(env,options.scene,options.robotname)
+    while(True):
+        cmd = raw_input('Enter command (q-quit,c-capture image): ')
+        if cmd == 'q':
+            break
+        elif cmd == 'c':
+            for i,viewer in enumerate(scene.viewers):
+                print 'saving image%d.png'%i
+                viewer.saveimage('image%d.png'%i)
+    scene.quitviewers()
 
 if __name__=='__main__':
     run()

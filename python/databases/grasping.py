@@ -12,14 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
-.. lang-block:: en
-
-  Simulate grasping of objects and computing force closure metrics.  
-
-.. lang-block:: ja
-
-  把持を探索する手法と接触点による安定性の計算
+"""Simulate grasping of objects and computing force closure metrics.  
 
 .. image:: ../../images/databases_grasping.jpg
   :height: 170
@@ -44,10 +37,6 @@ Dynamically generate/load the grasping set for a robot manipulator and target ob
 
 Description
 -----------
-
-.. lang-block:: ja
-
-  コメントです
 
 OpenRAVE can simulate grasps for any type of robotic hand, evaluate the quality of the grasps, and
 use those grasps in a more complex grasp planning framework. This tutorial is meant to introduce you
@@ -127,9 +116,10 @@ import os,sys,itertools,traceback,time
 from openravepy import __build_doc__
 if not __build_doc__:
     from openravepy import *
+    from openravepy.databases import DatabaseGenerator
     from numpy import *
 else:
-    from openravepy import OpenRAVEModel
+    from openravepy.databases import DatabaseGenerator
     from numpy import inf, array
 
 from openravepy.interfaces import Grasper, BaseManipulation, TaskManipulation
@@ -150,7 +140,7 @@ except:
         for prod in result:
             yield tuple(prod)
 
-class GraspingModel(OpenRAVEModel):
+class GraspingModel(DatabaseGenerator):
     """Holds all functions/data related to a grasp between a robot hand and a target"""
 
     class GripperVisibility:
@@ -175,7 +165,7 @@ class GraspingModel(OpenRAVEModel):
                     geom.SetDraw(isdraw)
 
     def __init__(self,robot,target,maxvelmult=None):
-        OpenRAVEModel.__init__(self,robot=robot)
+        DatabaseGenerator.__init__(self,robot=robot)
         self.target = target
         self.grasps = []
         self.graspindices = dict()
@@ -192,7 +182,7 @@ class GraspingModel(OpenRAVEModel):
             self.graspindices[name] = range(self.totaldof,self.totaldof+dof)
             self.totaldof += dof
     def clone(self,envother):
-        clone = OpenRAVEModel.clone(self,envother)
+        clone = DatabaseGenerator.clone(self,envother)
         clone.basemanip = self.basemanip.clone(envother)
         clone.grasper = self.grasper.clone(envother)
         clone.target = clone.env.GetKinBody(self.target.GetName())
@@ -207,7 +197,7 @@ class GraspingModel(OpenRAVEModel):
         self.grasps = []
     def load(self):
         try:
-            params = OpenRAVEModel.load(self)
+            params = DatabaseGenerator.load(self)
             if params is None:
                 return False;
             self.grasps,self.graspindices,friction,linknames,plannername = params
@@ -217,11 +207,11 @@ class GraspingModel(OpenRAVEModel):
         except:
             return False
     def save(self):
-        OpenRAVEModel.save(self,(self.grasps,self.graspindices,self.grasper.friction,[link.GetName() for link in self.grasper.avoidlinks],self.grasper.plannername))
+        DatabaseGenerator.save(self,(self.grasps,self.graspindices,self.grasper.friction,[link.GetName() for link in self.grasper.avoidlinks],self.grasper.plannername))
     def getfilename(self,read=False):
         return RaveFindDatabaseFile(os.path.join('robot.'+self.robot.GetKinematicsGeometryHash(), 'graspset.' + self.manip.GetStructureHash() + '.' + self.target.GetKinematicsGeometryHash()+'.pp'),read)
 
-        return OpenRAVEModel.getfilename(self,read,)
+        return DatabaseGenerator.getfilename(self,read,)
     def preprocess(self):
         with self.env:
             self.jointmaxlengths = zeros(len(self.robot.GetJoints()))
@@ -755,7 +745,7 @@ class GraspingModel(OpenRAVEModel):
         return self.env.drawtrimesh(points=allpoints,indices=None,colors=array((1,0.4,0.4,transparency)))
     @staticmethod
     def CreateOptionParser():
-        parser = OpenRAVEModel.CreateOptionParser()
+        parser = DatabaseGenerator.CreateOptionParser()
         parser.description='Grasp set generation example for any robot/body pair.'
         parser.usage='openrave.py --database grasping [options]'
         parser.add_option('--plannername',action="store",type='string',dest='plannername',default=None,
@@ -804,7 +794,7 @@ class GraspingModel(OpenRAVEModel):
 #             if options.useviewer:
 #                 env.SetViewer('qtcoin')
 #                 env.UpdatePublishedBodies()
-            OpenRAVEModel.RunFromParser(env=env,Model=Model,parser=parser,args=args,defaultviewer=True,**kwargs)
+            DatabaseGenerator.RunFromParser(env=env,Model=Model,parser=parser,args=args,defaultviewer=True,**kwargs)
         finally:
             env.Destroy()
             RaveDestroy()
