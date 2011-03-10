@@ -26,7 +26,7 @@ public:
  RrtPlanner(EnvironmentBasePtr penv) : PlannerBase(penv)
     {
         __description = "\
-:Interface Author:  Rosen Diankov\n\
+:Interface Author:  Rosen Diankov\n\n\
 Uses the Rapidly-Exploring Random Trees Algorithm.\n\
 ";
         _report.reset(new CollisionReport());
@@ -586,7 +586,7 @@ public:
     };
 
     ExplorationPlanner(EnvironmentBasePtr penv) : RrtPlanner<SimpleNode>(penv) {
-        __description = ":Interface Author: Rosen Diankov\nRRT-based exploration planner";
+        __description = ":Interface Author: Rosen Diankov\n\nRRT-based exploration planner";
     }
     virtual ~ExplorationPlanner() {}
 

@@ -256,7 +256,7 @@ class SimpleTextServer : public ProblemInstance
         _nNextFigureId = 1;
         _bWorking = false;
         bDestroying = false;
-        
+        __description=":Interface Author: Rosen Diankov\n\nSimple text-based server using sockets.";
         mapNetworkFns["body_checkcollision"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orEnvCheckCollision, this, _1, _2, _3), OpenRaveWorkerFn(), true);
         mapNetworkFns["body_getjoints"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orBodyGetJointValues, this,_1, _2, _3), OpenRaveWorkerFn(), true);
         mapNetworkFns["body_destroy"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orBodyDestroy,this,_1,_2,_3), OpenRaveWorkerFn(), false);

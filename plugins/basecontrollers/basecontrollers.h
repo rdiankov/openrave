@@ -19,7 +19,7 @@ class IdealController : public ControllerBase
 {
  public:
     IdealController(EnvironmentBasePtr penv) : ControllerBase(penv), cmdid(0), _bPause(false), _bIsDone(true) {
-        __description = ":Interface Author: Rosen Diankov\nIdeal controller used for planning and non-physics simulations. Forces exact robot positions.";
+        __description = ":Interface Author: Rosen Diankov\n\nIdeal controller used for planning and non-physics simulations. Forces exact robot positions.";
         fTime = 0;
         _fSpeed = 1;
         _nControlTransformation = 0;

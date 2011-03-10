@@ -20,7 +20,7 @@ class ShortcutLinearPlanner : public PlannerBase
 public:
 ShortcutLinearPlanner(EnvironmentBasePtr penv) : PlannerBase(penv)
     {
-        __description = "path optimizer using linear shortcuts (author: rosen diankov)";
+        __description = ":Interface Author: Rosen Diankov\n\npath optimizer using linear shortcuts.";
     }
     virtual ~ShortcutLinearPlanner() {}
 

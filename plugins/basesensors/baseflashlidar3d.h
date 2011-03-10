@@ -116,7 +116,7 @@ public:
 
  BaseFlashLidar3DSensor(EnvironmentBasePtr penv) : SensorBase(penv)
     {
-        __description = ":Interface Author: Rosen Diankov\nProvides a simulated 3D flash lidar sensor. A flash LIDAR instantaneously returns the depth measurements in the form of an image.";
+        __description = ":Interface Author: Rosen Diankov\n\nProvides a simulated 3D flash lidar sensor. A flash LIDAR instantaneously returns the depth measurements in the form of an image.";
         RegisterCommand("render",boost::bind(&BaseFlashLidar3DSensor::_Render,this,_1,_2),
                         "Set rendering of the plots (1 or 0).");
         RegisterCommand("collidingbodies",boost::bind(&BaseFlashLidar3DSensor::_CollidingBodies,this,_1,_2),

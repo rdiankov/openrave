@@ -119,7 +119,7 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
     }
 
  ODEPhysicsEngine(OpenRAVE::EnvironmentBasePtr penv) : OpenRAVE::PhysicsEngineBase(penv), odespace(new ODESpace(penv, GetPhysicsInfo, true)) {
-        __description = ":Interface Author: Rosen Diankov\nODE physics engine";
+        __description = ":Interface Author: Rosen Diankov\n\nODE physics engine";
         _globalfriction = 1.0f;
         _options = OpenRAVE::PEO_SelfCollisions;
 

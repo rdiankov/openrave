@@ -24,7 +24,7 @@ class LoggingProblem : public ProblemInstance
  public:
  LoggingProblem(EnvironmentBasePtr penv) : ProblemInstance(penv)
     {
-        __description = ":Interface Author: Rosen Diankov\nCan save the entire scene to an XML file";
+        __description = ":Interface Author: Rosen Diankov\n\nCan save the entire scene to an XML file";
         RegisterCommand("savescene",boost::bind(&LoggingProblem::SaveScene,this,_1,_2),
                         "Saves the entire scene in an xml file. If paths are relative,\n"
                         "should only be opened from the dirctory openrave was launched in\n"

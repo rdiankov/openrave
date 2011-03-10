@@ -95,7 +95,7 @@ class BaseCameraSensor : public SensorBase
     }
     
  BaseCameraSensor(EnvironmentBasePtr penv) : SensorBase(penv) {
-        __description = ":Interface Author: Rosen Diankov\nProvides a simulated camera using the standard pinhole projection.";
+        __description = ":Interface Author: Rosen Diankov\n\nProvides a simulated camera using the standard pinhole projection.";
         RegisterCommand("power",boost::bind(&BaseCameraSensor::_Power,this,_1,_2),
                         "Set the power (1 or 0) of the sensor.");
         RegisterCommand("render",boost::bind(&BaseCameraSensor::_Render,this,_1,_2),

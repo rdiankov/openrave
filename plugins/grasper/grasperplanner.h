@@ -29,7 +29,7 @@ class GrasperPlanner:  public PlannerBase
 
 public:
  GrasperPlanner(EnvironmentBasePtr penv) : PlannerBase(penv), _report(new CollisionReport()) {
-        __description = ":Interface Authors: Rosen Diankov, Dmitry Berenson\nSimple planner that performs a follow and squeeze operation of a robotic hand.";
+        __description = ":Interface Authors: Rosen Diankov, Dmitry Berenson\n\nSimple planner that performs a follow and squeeze operation of a robotic hand.";
     }
     bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams)
     {

@@ -32,7 +32,7 @@ class GraspGradientPlanner : public PlannerBase
     };
 
 GraspGradientPlanner(EnvironmentBasePtr penv) : PlannerBase(penv) {
-        __description = ":Interface Author: Rosen Diankov\nGrasp Planning with Stochastic Gradient Descent";
+        __description = ":Interface Author: Rosen Diankov\n\nGrasp Planning with Stochastic Gradient Descent";
         _report.reset(new CollisionReport());
     }
     virtual ~GraspGradientPlanner() {}

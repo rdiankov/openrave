@@ -57,7 +57,7 @@ class GrasperProblem : public ProblemInstance
 
  public:
  GrasperProblem(EnvironmentBasePtr penv)  : ProblemInstance(penv), errfile(NULL) {
-        __description = ":Interface Author: Rosen Diankov\nUsed to simulate a hand grasping an object by closing its fingers until collision with all links. ";
+        __description = ":Interface Author: Rosen Diankov\n\nUsed to simulate a hand grasping an object by closing its fingers until collision with all links. ";
         RegisterCommand("Grasp",boost::bind(&GrasperProblem::Grasp,this,_1,_2),
                         "Performs a grasp and returns contact points");
         RegisterCommand("ComputeDistanceMap",boost::bind(&GrasperProblem::ComputeDistanceMap,this,_1,_2),

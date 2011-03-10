@@ -35,7 +35,7 @@ public:
  WorkspaceTrajectoryTracker(EnvironmentBasePtr penv) : PlannerBase(penv)
     {
         __description = "\
-:Interface Author:  Rosen Diankov\n\
+:Interface Author:  Rosen Diankov\n\n\
 Given a workspace trajectory of the end effector of a manipulator (active manipulator of the robot), finds a configuration space trajectory that tracks it using analytical inverse kinematics.\n\
 Options can be specified to prioritize trajectory time, trajectory smoothness, and planning time\n\
 In the simplest case, the workspace trajectory can be a straight line from one point to another.\n\

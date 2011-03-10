@@ -315,7 +315,7 @@ private:
 
 public:
  BulletCollisionChecker(EnvironmentBasePtr penv) : CollisionCheckerBase(penv), bulletspace(new BulletSpace(penv, GetCollisionInfo, false)), _options(0) {
-        __description = ":Interface Author: Rosen Diankov\nCollision checker from the `Bullet Physics Package <http://bulletphysics.org>`";
+        __description = ":Interface Author: Rosen Diankov\n\nCollision checker from the `Bullet Physics Package <http://bulletphysics.org>`";
     }
     virtual ~BulletCollisionChecker() {}
     
