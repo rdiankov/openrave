@@ -14,8 +14,6 @@
 # limitations under the License.
 """環境に読み込んだ物体の移動
 
-.. contents::
-
 実行
 --------------------------------------
 

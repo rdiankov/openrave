@@ -71,11 +71,14 @@ __copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)
 __license__ = 'Apache License, Version 2.0'
 
 import time, os
-
 from openravepy import __build_doc__
-from openravepy import *
-from openravepy.databases import DatabaseGenerator
-from numpy import *
+if not __build_doc__:
+    from openravepy import *
+    from openravepy.databases import DatabaseGenerator
+    from numpy import *
+else:
+    from openravepy.databases import DatabaseGenerator
+    from numpy import array
 
 from openravepy.databases import inversekinematics, kinematicreachability
 from openravepy.interfaces import BaseManipulation, TaskManipulation, VisualFeedback

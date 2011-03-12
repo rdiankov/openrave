@@ -16,6 +16,8 @@ from openravepy import *
 from numpy import *
 from copy import copy as shallowcopy
 class BaseManipulation:
+    """Interface wrapper for :ref:`probleminstance-basemanipulation`
+    """
     def __init__(self,robot,plannername=None,maxvelmult=None):
         env = robot.GetEnv()
         self.prob = RaveCreateProblem(env,'BaseManipulation')
@@ -37,10 +39,12 @@ class BaseManipulation:
             raise ValueError('problem failed to initialize')
         return clone
     def TrajFromData(self,data):
-        """.. interface-command:: BaseManipulation TrajFromData
+        """See :ref:`probleminstance-basemanipulation-traj`
         """
         return self.prob.SendCommand('traj stream ' + data)
     def MoveHandStraight(self,direction,minsteps=None,maxsteps=None,stepsize=None,ignorefirstcollision=None,starteematrix=None,greedysearch=True,execute=None,outputtraj=None,maxdeviationangle=None):
+        """See :ref:`probleminstance-basemanipulation-movehandstraight`
+        """
         cmd = 'MoveHandStraight direction %f %f %f '%(direction[0],direction[1],direction[2])
         if minsteps is not None:
             cmd += 'minsteps %d '%minsteps
@@ -65,6 +69,8 @@ class BaseManipulation:
             raise planning_error('MoveHandStraight')
         return res
     def MoveManipulator(self,goal,maxiter=None,execute=None,outputtraj=None,maxtries=None):
+        """See :ref:`probleminstance-basemanipulation-movemanipulator`
+        """
         assert(len(goal) == len(self.robot.GetActiveManipulator().GetArmIndices()) and len(goal) > 0)
         cmd = 'MoveManipulator goal ' + ' '.join(str(f) for f in goal) + ' '
         if execute is not None:
@@ -80,6 +86,8 @@ class BaseManipulation:
             raise planning_error('MoveManipulator')
         return res
     def MoveActiveJoints(self,goal,steplength=None,maxiter=None,maxtries=None,execute=None,outputtraj=None):
+        """See :ref:`probleminstance-basemanipulation-moveactivejoints`
+        """
         assert(len(goal) == self.robot.GetActiveDOF() and len(goal) > 0)
         cmd = 'MoveActiveJoints goal ' + ' '.join(str(f) for f in goal)+' '
         if steplength is not None:
@@ -97,6 +105,8 @@ class BaseManipulation:
             raise planning_error('MoveActiveJoints')
         return res
     def MoveToHandPosition(self,matrices=None,affinedofs=None,maxiter=None,maxtries=None,translation=None,rotation=None,seedik=None,constraintfreedoms=None,constraintmatrix=None,constrainterrorthresh=None,execute=None,outputtraj=None):
+        """See :ref:`probleminstance-basemanipulation-movetohandposition`
+        """
         cmd = 'MoveToHandPosition '
         if matrices is not None:
             cmd += 'matrices %d '%len(matrices)
@@ -127,6 +137,8 @@ class BaseManipulation:
             raise planning_error('MoveToHandPosition')
         return res
     def MoveUnsyncJoints(self,jointvalues,jointinds,maxtries=None,planner=None,maxdivision=None,execute=None,outputtraj=None):
+        """See :ref:`probleminstance-basemanipulation-moveunsyncjoints`
+        """
         assert(len(jointinds)==len(jointvalues) and len(jointinds)>0)
         cmd = 'MoveUnsyncJoints handjoints %d %s %s '%(len(jointinds),' '.join(str(f) for f in jointvalues), ' '.join(str(f) for f in jointinds))
         if planner is not None:
@@ -143,91 +155,9 @@ class BaseManipulation:
         if res is None:
             raise planning_error('MoveUnsyncJoints')
         return res
-    def CloseFingers(self,offset=None,movingdir=None,execute=None,outputtraj=None,outputfinal=None,coarsestep=None):
-        cmd = 'CloseFingers '
-        dof=len(self.robot.GetActiveManipulator().GetGripperIndices())
-        if offset is not None:
-            assert(len(offset) == dof)
-            cmd += 'offset ' + ' '.join(str(f) for f in offset) + ' '
-        if movingdir is not None:
-            assert(len(movingdir) == dof)
-            cmd += 'movingdir %s '%(' '.join(str(f) for f in movingdir))
-        if execute is not None:
-            cmd += 'execute %d '%execute
-        if coarsestep is not None:
-            cmd += 'coarsestep %f '%coarsestep
-        if outputtraj is not None and outputtraj:
-            cmd += 'outputtraj '
-        if outputfinal:
-            cmd += 'outputfinal'
-        res = self.prob.SendCommand(cmd)
-        if res is None:
-            raise planning_error('CloseFingers')
-        resvalues = res.split()
-        if outputfinal:
-            final = array([float64(resvalues[i]) for i in range(dof)])
-            resvalues=resvalues[dof:]
-        else:
-            final=None
-        if outputtraj is not None and outputtraj:
-            traj = ' '.join(resvalues)
-        else:
-            traj = None
-        return final,traj
-    def ReleaseFingers(self,target=None,movingdir=None,execute=None,outputtraj=None,outputfinal=None):
-        cmd = 'ReleaseFingers '
-        dof=len(self.robot.GetActiveManipulator().GetGripperIndices())
-        if target is not None:
-            cmd += 'target %s '%target.GetName()
-        if movingdir is not None:
-            assert(len(movingdir) == dof)
-            cmd += 'movingdir %s '%(' '.join(str(f) for f in movingdir))
-        if execute is not None:
-            cmd += 'execute %d '%execute
-        if outputtraj is not None and outputtraj:
-            cmd += 'outputtraj '
-        if outputfinal:
-            cmd += 'outputfinal'
-        res = self.prob.SendCommand(cmd)
-        if res is None:
-            raise planning_error('ReleaseFingers')
-        resvalues = res.split()
-        if outputfinal:
-            final = array([float64(resvalues[i]) for i in range(dof)])
-            resvalues=resvalues[len(final):]
-        else:
-            final=None
-        if outputtraj is not None and outputtraj:
-            traj = ' '.join(resvalues)
-        else:
-            traj = None
-        return final,traj
-    def ReleaseActive(self,movingdir=None,execute=None,outputtraj=None,outputfinal=None):
-        cmd = 'ReleaseActive '
-        if movingdir is not None:
-            assert(len(movingdir) == self.robot.GetActiveDOF())
-            cmd += 'movingdir %s '%(' '.join(str(f) for f in movingdir))
-        if execute is not None:
-            cmd += 'execute %d '%execute
-        if outputtraj is not None and outputtraj:
-            cmd += 'outputtraj '
-        if outputfinal:
-            cmd += 'outputfinal'
-        res = self.prob.SendCommand(cmd)
-        if res is None:
-            raise planning_error('ReleaseActive')
-        resvalues = res.split()
-        if outputfinal:
-            final = array([float64(resvalues[i]) for i in range(self.robot.GetActiveDOF())])
-            resvalues=resvalues[len(final):]
-        else:
-            final=None
-        if outputtraj is not None and outputtraj:
-            traj = ' '.join(resvalues)
-        else:
-            traj = None
-        return final,traj
     def JitterActive(self,maxiter=None,jitter=None,execute=None,outputtraj=None,outputfinal=None):
+        """See :ref:`probleminstance-basemanipulation-jitteractive`
+        """
         cmd = 'JitterActive '
         if maxiter is not None:
             cmd += 'maxiter %d '%maxiter
@@ -254,6 +184,8 @@ class BaseManipulation:
             traj = None
         return final,traj
     def FindIKWithFilters(self,ikparam,cone=None,solveall=None,filteroptions=None):
+        """See :ref:`probleminstance-basemanipulation-findikwithfilters`
+        """
         cmd = 'FindIKWithFilters ikparam %s '%str(ikparam)
         if cone is not None:            
             cmd += 'cone %s '%(' '.join(str(f) for f in cone))

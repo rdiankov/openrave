@@ -14,26 +14,8 @@
 # limitations under the License.
 """Computes statistics on body links like swept volumes.
 
-.. image:: ../../images/databases_linkstatistics_wam_sweptvolume_j0.jpg
-  :height: 200
-
-.. image:: ../../images/databases_linkstatistics_wam_sweptvolume_j1.jpg
-  :height: 200
-
-.. image:: ../../images/databases_linkstatistics_wam_sweptvolume_j2.jpg
-  :height: 200
-
-.. image:: ../../images/databases_linkstatistics_wam_sweptvolume_j3.jpg
-  :height: 200
-
-.. image:: ../../images/databases_linkstatistics_wam_sweptvolume_j4.jpg
-  :height: 200
-
-.. image:: ../../images/databases_linkstatistics_wam_sweptvolume_j5.jpg
-  :height: 200
-
-.. image:: ../../images/databases_linkstatistics_wam_sweptvolume_j6.jpg
-  :height: 200
+.. image:: ../../images/databases_linkstatistics.jpg
+  :width: 200
 
 **Running the Generator**
 

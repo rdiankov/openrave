@@ -17,6 +17,8 @@ from numpy import *
 from copy import copy as shallowcopy
 
 class TaskManipulation:
+    """Interface wrapper for :ref:`probleminstance-taskmanipulation`
+    """
     def __init__(self,robot,plannername=None,maxvelmult=None,graspername=None):
         env = robot.GetEnv()
         self.prob = RaveCreateProblem(env,'TaskManipulation')
@@ -41,6 +43,8 @@ class TaskManipulation:
         return clone
     def GraspPlanning(self,graspindices,grasps,target,approachoffset=0,destposes=None,seedgrasps=None,seeddests=None,seedik=None,maxiter=None,randomgrasps=None,randomdests=None, execute=None,outputtraj=None):
         cmd = 'graspplanning target %s approachoffset %f grasps %d %d '%(target.GetName(),approachoffset, grasps.shape[0],grasps.shape[1])
+        """See :ref:`probleminstance-taskmanipulation-graspplanning`
+        """
         for f in grasps.flat:
             cmd += str(f) + ' '
         for name,valuerange in graspindices.iteritems():
@@ -90,6 +94,8 @@ class TaskManipulation:
             trajdata = ' '.join(resvalues)
         return goals,graspindex,searchtime,trajdata
     def EvaluateConstraints(self,freedoms,configs,targetframematrix=None,targetframepose=None,errorthresh=None):
+        """See :ref:`probleminstance-taskmanipulation-evaluateconstraints`
+        """
         cmd = 'EvaluateConstraints constraintfreedoms %s '%(' '.join(str(f) for f in freedoms))
         if targetframematrix is not None:
             cmd += 'constraintmatrix %s '%matrixSerialization(targetframematrix)
@@ -105,6 +111,8 @@ class TaskManipulation:
         newconfigs = reshape(array([float64(s) for s in resvalues[len(configs):]]),(len(configs),self.robot.GetActiveDOF()))
         return iters,newconfigs
     def CloseFingers(self,offset=None,movingdir=None,execute=None,outputtraj=None,outputfinal=None,coarsestep=None):
+        """See :ref:`probleminstance-taskmanipulation-closefingers`
+        """
         cmd = 'CloseFingers '
         dof=len(self.robot.GetActiveManipulator().GetGripperIndices())
         if offset is not None:
@@ -136,6 +144,8 @@ class TaskManipulation:
             traj = None
         return final,traj
     def ReleaseFingers(self,target=None,movingdir=None,execute=None,outputtraj=None,outputfinal=None,coarsestep=None):
+        """See :ref:`probleminstance-taskmanipulation-releasefingers`
+        """
         cmd = 'ReleaseFingers '
         dof=len(self.robot.GetActiveManipulator().GetGripperIndices())
         if target is not None:
@@ -166,6 +176,8 @@ class TaskManipulation:
             traj = None
         return final,traj
     def ReleaseActive(self,movingdir=None,execute=None,outputtraj=None,outputfinal=None):
+        """See :ref:`probleminstance-taskmanipulation-releaseactive`
+        """
         cmd = 'ReleaseActive '
         if movingdir is not None:
             assert(len(movingdir) == self.robot.GetActiveDOF())
@@ -191,6 +203,8 @@ class TaskManipulation:
             traj = None
         return final,traj
     def SwitchModels(self,switchpatterns=None,unregister=None,switchtofat=None,clearpatterns=None,clearmodels=None,update=None):
+        """See :ref:`probleminstance-taskmanipulation-switchmodels`
+        """
         cmd = 'switchmodels '
         if switchpatterns is not None:
             for pattern,filename in switchpatterns:

@@ -14,8 +14,8 @@
 # limitations under the License.
 """  6D kinematic reachability space of a robot's manipulators.
 
-.. image:: ../../images/databases_reachability.jpg
-  :height: 300
+.. image:: ../../images/databases_kinematicreachability.jpg
+  :width: 640
 
 **Running the Generator**
 

@@ -1,7 +1,4 @@
 """
-Database Generator Concepts
-===========================
-
 Kinematic, quasi-static, dynamic, and geometric analyses are precomputed and used as databases during the run-time. All database generators rely on a specific robot and provide many helpful methods to use the information after it has been generated.
 
 The base abstract class is `databases.DatabaseGenerator` and always takes a robot as its
@@ -19,8 +16,10 @@ try:
 except:
     import pickle
 
+import openravepy
 from .. import metaclass
 from .. import mkdir_recursive
+from .. import OpenRAVEGlobalArguments
  
 class DatabaseGenerator(metaclass.AutoReloader):
     """The base class defining the structure of the openrave database generators.

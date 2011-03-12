@@ -15,8 +15,6 @@ This tutorial shows how to generate and use the inverse-reachability database in
 .. image:: ../../images/example_tutorials/ir_10_solutions_top.png
    :width: 200 px
 
-.. contents::
-
 Prerequisite
 ------------
 
@@ -325,6 +323,7 @@ if not __build_doc__:
     from openravepy import *
     from numpy import *
 else:
+    from openravepy import with_destroy
     from numpy import inf, array
 
 import time,sys

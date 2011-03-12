@@ -29,7 +29,7 @@ from openravepy import __build_doc__
 if not __build_doc__:
     from openravepy import *
 else:
-    from openravepy import OpenRAVEGlobalArguments
+    from openravepy import OpenRAVEGlobalArguments, with_destroy
 from numpy import random, array, linspace
 from optparse import OptionParser
 import time

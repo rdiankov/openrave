@@ -5,8 +5,6 @@ Move Hand To Target: Find Transforms
 
 This tutorial shows how to find the transform that moves the hand to the target.
 
-.. contents::
-
 Run this tutorial
 -----------------
 
@@ -122,6 +120,7 @@ if not __build_doc__:
     from openravepy import *
     from numpy import *
 else:
+    from openravepy import with_destroy
     from numpy import inf, array
 
 from optparse import OptionParser

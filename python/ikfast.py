@@ -4770,7 +4770,7 @@ class IKFastSolver(AutoReloader):
     @staticmethod
     def det_bareis(M,*vars,**kwargs):
         """Function from sympy with a couple of improvements.
-        Compute matrix determinant using Bareis' fraction-free
+           Compute matrix determinant using Bareis' fraction-free
            algorithm which is an extension of the well known Gaussian
            elimination method. This approach is best suited for dense
            symbolic matrices and will result in a determinant with

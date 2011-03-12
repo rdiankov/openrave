@@ -20,6 +20,8 @@ from openravepy import *
 from copy import copy as shallowcopy
 
 class VisualFeedback:
+    """Interface wrapper for :ref:`probleminstance-visualfeedback`
+    """
     def __init__(self,robot,maxvelmult=None):
         env = robot.GetEnv()
         self.prob = RaveCreateProblem(env,'VisualFeedback')
@@ -39,7 +41,7 @@ class VisualFeedback:
             raise ValueError('problem failed to initialize')
         return clone
     def SetCameraAndTarget(self,sensorindex=None,sensorname=None,manipname=None,convexdata=None,sensorrobot=None,target=None,raydensity=None):
-        """.. interface-command:: VisualFeedback SetCameraAndTarget
+        """See :ref:`probleminstance-visualfeedback-setcameraandtarget`
         """
         cmd = 'SetCameraAndTarget '
         if target is not None:
@@ -63,7 +65,7 @@ class VisualFeedback:
             raise planning_error()
         return res
     def ProcessVisibilityExtents(self,localtargetcenter=None,numrolls=None,transforms=None,extents=None,sphere=None,conedirangles=None):
-        """.. interface-command:: VisualFeedback ProcessVisibilityExtents
+        """See :ref:`probleminstance-visualfeedback-processvisibilityextents`
         """
         cmd = 'ProcessVisibilityExtents '
         if localtargetcenter is not None:
@@ -91,7 +93,7 @@ class VisualFeedback:
         visibilitytransforms = array([float(s) for s in res.split()],float)
         return reshape(visibilitytransforms,(len(visibilitytransforms)/7,7))
     def SetCameraTransforms(self,transforms,mindist=None):
-        """.. interface-command:: VisualFeedback SetCameraTransforms
+        """See :ref:`probleminstance-visualfeedback-setcameratransforms`
         """
         cmd = 'SetCameraTransforms transforms %d '%len(transforms)
         for f in reshape(transforms,len(transforms)*7):
@@ -103,7 +105,7 @@ class VisualFeedback:
             raise planning_error()
         return res
     def ComputeVisibility(self):
-        """.. interface-command:: VisualFeedback ComputeVisibility
+        """See :ref:`probleminstance-visualfeedback-computevisibility`
         """
         cmd = 'ComputeVisibility '
         res = self.prob.SendCommand(cmd)
@@ -111,7 +113,7 @@ class VisualFeedback:
             raise planning_error()
         return int(res)
     def ComputeVisibleConfiguration(self,pose):
-        """.. interface-command:: VisualFeedback ComputeVisibleConfiguration
+        """See :ref:`probleminstance-visualfeedback-computevisibleconfiguration`
         """
         cmd = 'ComputeVisibleConfiguration '
         cmd += 'pose '
@@ -122,7 +124,7 @@ class VisualFeedback:
             raise planning_error()
         return array([float(s) for s in res.split()])
     def SampleVisibilityGoal(self,numsamples=None):
-        """.. interface-command:: VisualFeedback SampleVisibilityGoal
+        """See :ref:`probleminstance-visualfeedback-samplevisibilitygoal`
         """
         cmd = 'SampleVisibilityGoal '
         if numsamples is not None:
@@ -134,7 +136,7 @@ class VisualFeedback:
         returnedsamples = int(samples[0])
         return reshape(array(samples[1:],float),(returnedsamples,(len(samples)-1)/returnedsamples))
     def MoveToObserveTarget(self,affinedofs=None,smoothpath=None,planner=None,sampleprob=None,maxiter=None,execute=None,outputtraj=None):
-        """.. interface-command:: VisualFeedback MoveToObserveTarget
+        """See :ref:`probleminstance-visualfeedback-movetoobservetarget`
         """
         cmd = 'MoveToObserveTarget '
         if affinedofs is not None:
@@ -156,7 +158,7 @@ class VisualFeedback:
             raise planning_error()
         return res
     def VisualFeedbackGrasping(self,graspset,usevisibility=None,planner=None,graspdistthresh=None,visgraspthresh=None,numgradientsamples=None,maxiter=None,execute=None,outputtraj=None):
-        """.. interface-command:: VisualFeedback VisualFeedbackGrasping
+        """See :ref:`probleminstance-visualfeedback-visualfeedbackgrasping`
         """
         cmd = 'VisualFeedbackGrasping '
         if graspset is not None:
@@ -184,7 +186,7 @@ class VisualFeedback:
             raise planning_error()
         return res
     def SetParameter(self,raydensity=None,raymindist=None,allowableocclusion=None):
-        """.. interface-command:: VisualFeedback SetParameter
+        """See :ref:`probleminstance-visualfeedback-setparameter`
         """
         cmd = 'SetParameter '
         if raydensity is not None:

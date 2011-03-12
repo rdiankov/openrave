@@ -17,6 +17,8 @@ from numpy import *
 from copy import copy as shallowcopy
 
 class Grasper:
+    """Interface wrapper for :ref:`probleminstance-grasper`
+    """
     def __init__(self,robot,friction=0.3,avoidlinks=None,plannername=None):
         env = robot.GetEnv()
         self.prob = RaveCreateProblem(env,'Grasper')
@@ -40,6 +42,8 @@ class Grasper:
             raise ValueError('problem failed to initialize')
         return clone
     def Grasp(self,direction=None,roll=None,position=None,standoff=None,target=None,stablecontacts=False,forceclosure=False,transformrobot=True,onlycontacttarget=True,tightgrasp=False,graspingnoise=None,execute=None,translationstepmult=None,outputfinal=False):
+        """See :ref:`probleminstance-grasper-grasp`
+        """
         cmd = 'Grasp '
         if direction is not None:
             cmd += 'direction %f %f %f '%(direction[0],direction[1],direction[2])
@@ -81,6 +85,8 @@ class Grasper:
         contacts = reshape(array([float64(s) for s in resvalues],float64),(len(resvalues)/6,6))
         return contacts,finalconfig,mindist,volume
     def ConvexHull(self,points,returnplanes=True,returnfaces=True,returntriangles=True):
+        """See :ref:`probleminstance-grasper-convexhull`
+        """
         dim = len(points[0])
         cmd = 'ConvexHull points %d %d '%(len(points),dim) + ' '.join(str(f) for f in points.flat) + ' '
         if returnplanes is not None:

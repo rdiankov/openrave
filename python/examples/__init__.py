@@ -1,4 +1,19 @@
-# all 'runnable' examples
+"""Examples showing common planning and usage scenarios.
+
+Unlike the tutorials, python examples are installed with openravepy and their list can be retrieved with:
+
+.. code-block:: bash
+
+  openrave.py --listexamples
+
+Execute example ``X`` using:
+
+.. code-block:: bash
+
+  openrave.py --example X
+
+Each sub-module contains a 'run' function that can be called directly with options to configure the example.
+"""
 
 # tutorials showing a single functionality (simple)
 import tutorial_001
