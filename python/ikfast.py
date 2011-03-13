@@ -1767,7 +1767,7 @@ class IKFastSolver(AutoReloader):
                 log.info('found 3 consecutive intersecting axes: %s, translation=%s',transvars,rotvars)
                 tree = self.solve6DIntersectingAxes(T0links,T1links,transvars,rotvars,solveRotationFirst=solveRotationFirst, endbranchtree=endbranchtree)
                 break
-            except self.CannotSolveError, e:
+            except (self.CannotSolveError,self.IKFeasibilityError), e:
                 log.warn('%s',e)
                         
         if tree is None:
@@ -1776,7 +1776,7 @@ class IKFastSolver(AutoReloader):
                     log.info('found 3 consecutive non-intersecting axes')
                     tree = self.solveFullIK_6DGeneral(T0links, T1links, solvejointvars, endbranchtree)
                     break
-                except self.CannotSolveError, e:
+                except (self.CannotSolveError,self.IKFeasibilityError), e:
                     log.warn('%s',e)
 
         if tree is None:

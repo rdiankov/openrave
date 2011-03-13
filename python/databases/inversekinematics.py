@@ -312,10 +312,23 @@ class InverseKinematicsModel(DatabaseGenerator):
         else:
             solveindices, freeindices = self.solveindices, self.freeindices
 
-        basename = 'ikfast%s.%s.%s.'%(self.getversion(),self.iktype,platform.machine()) + '_'.join(str(ind) for ind in solveindices)
-        if len(freeindices)>0:
-            basename += '_f'+'_'.join(str(ind) for ind in freeindices)
-        return RaveFindDatabaseFile(os.path.join('kinematics.'+self.manip.GetKinematicsStructureHash(),ccompiler.new_compiler().shared_object_filename(basename=basename)),read)
+        index = -1
+        while True:
+            basename = 'ikfast%s.%s.%s.'%(self.getversion(),self.iktype,platform.machine()) + '_'.join(str(ind) for ind in solveindices)
+            if len(freeindices)>0:
+                basename += '_f'+'_'.join(str(ind) for ind in freeindices)
+            filename = RaveFindDatabaseFile(os.path.join('kinematics.'+self.manip.GetKinematicsStructureHash(),ccompiler.new_compiler().shared_object_filename(basename=basename)),read)
+            if not read or len(filename) > 0 or self.freeindices is not None:
+                break
+            # user did not specify a set of freeindices, so the expected behavior is to search for the next loadable one
+            index += 1
+            dofexpected = IkParameterization.GetDOF(self.iktype)
+            allfreeindices = [f for f in ikfast.combinations(self.manip.GetArmIndices(),len(self.manip.GetArmIndices())-dofexpected)]
+            if index >= len(allfreeindices):
+                break
+            freeindices = allfreeindices[index]
+            solveindices = [i for i in self.manip.GetArmIndices() if not i in freeindices]
+        return filename
 
     def getsourcefilename(self,read=False,outputlang='cpp'):
         if self.iktype is None:

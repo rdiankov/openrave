@@ -298,7 +298,9 @@ public:
             // striktype is already correct, so check that it exists in RaveGetIkParameterizationMap
             std::transform(striktype.begin(), striktype.end(), striktype.begin(), ::tolower);
             FOREACHC(it,RaveGetIkParameterizationMap()) {
-                if( it->second == striktype ) {
+                string mapiktype = it->second;
+                std::transform(mapiktype.begin(), mapiktype.end(), mapiktype.begin(), ::tolower);
+                if( mapiktype == striktype ) {
                     niktype = it->first;
                     break;
                 }
