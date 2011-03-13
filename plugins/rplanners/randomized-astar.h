@@ -238,7 +238,7 @@ public:
 
 RandomizedAStarPlanner(EnvironmentBasePtr penv) : PlannerBase(penv)
     {
-        __description = ":Interface Author: Rosen Diankov\nRandomized A*";
+        __description = ":Interface Author: Rosen Diankov\n\nRandomized A*";
         _report.reset(new CollisionReport());
         bUseGauss = false;
         nIndex = 0;

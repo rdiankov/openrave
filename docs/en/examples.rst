@@ -3,22 +3,13 @@
 Examples
 ========
 
-Complete examples showing common planning and usage scenarios. Beginners should first go thorugh the :ref:`tutorials`.
+Complete examples showing common planning and usage scenarios. Beginners should first go thorugh the :ref:`getting_started`.
 
-Python
-------
+.. todo::
 
-Unlike the tutorials, python examples are installed with openravepy and their list can be retrieved with:
+   Make a gallery of the examples.
 
-.. code-block:: bash
-
-  openrave.py --listexamples
-
-Execute example ``X`` using:
-
-.. code-block:: bash
-
-  openrave.py --example X
+:ref:`openravepy.examples`
 
 C++
 ---

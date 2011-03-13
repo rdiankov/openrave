@@ -14,8 +14,8 @@
 # limitations under the License.
 """Simulate grasping of objects and computing force closure metrics.  
 
-.. image:: ../../images/databases_grasping.jpg
-  :height: 170
+.. image:: ../../images/databases.grasping.jpg
+  :width: 640
 
 **Running the Generator**
 

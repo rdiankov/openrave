@@ -14,8 +14,8 @@
 # limitations under the License.
 """Computes statistics on body links like swept volumes.
 
-.. image:: ../../images/databases_linkstatistics.jpg
-  :width: 200
+.. image:: ../../images/databases.linkstatistics.jpg
+  :width: 640
 
 **Running the Generator**
 

@@ -1,4 +1,6 @@
 .. _robots:
 
-Robot Database
-==============
+Robots Database
+===============
+
+:ref:`robots_overview`

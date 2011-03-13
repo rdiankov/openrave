@@ -251,7 +251,7 @@ URL: https://jsk-ros-pkg.svn.sourceforge.net/svnroot/jsk-ros-pkg/trunk/openrave_
 rplanners
 ---------
 
-Offers: :ref:`planner:RA* <planner-ra*>` :ref:`planner:BiRRT <planner-birrt>` :ref:`planner:BasicRRT <planner-basicrrt>` :ref:`planner:ExplorationRRT <planner-explorationrrt>` :ref:`planner:GraspGradient <planner-graspgradient>` :ref:`planner:shortcut_linear <planner-shortcut_linear>` :ref:`planner:WorkspaceTrajectoryTracker <planner-workspacetrajectorytracker>` 
+Offers: :ref:`planner:RAStar <planner-rastar>` :ref:`planner:BiRRT <planner-birrt>` :ref:`planner:BasicRRT <planner-basicrrt>` :ref:`planner:ExplorationRRT <planner-explorationrrt>` :ref:`planner:GraspGradient <planner-graspgradient>` :ref:`planner:shortcut_linear <planner-shortcut_linear>` :ref:`planner:WorkspaceTrajectoryTracker <planner-workspacetrajectorytracker>` 
 
 OpenRAVE Version: 0.2.19
 

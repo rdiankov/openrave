@@ -716,7 +716,7 @@ public:
  TaskCaging(EnvironmentBasePtr penv) : ProblemInstance(penv) {
         __description = ":Interface Author: Rosen Diankov\n\n\
 .. image:: ../../../images/taskcaging_concept.jpg\n\
-  :width: 500\n\
+  :width: 500\n\n\
 Implements various algorithms to open and close \
 doors by having the hand cage the handles instead of tightly grip. \
 This greatly relaxes the constraints on the robot (see the door manipluation example). The relevant paper is:\n\n\

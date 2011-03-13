@@ -22,8 +22,7 @@ kinematic world, and all its interfaces into a coherent robotics world state.
 implementations of the \ref interfaces that are loaded dynamically into the \ref
 OpenRAVE::EnvironmentBase "environment". Plugins can be linked with other robotics libraries
 allowing OpenRAVE to expand its functionality, or it can offer OpenRAVE services to another robotics
-system.  During startup, %OpenRAVE parses the \ref environment_variables "OPENRAVE_PLUGINS"
-environment variable and loads all the plugins it finds.
+system.  During startup, %OpenRAVE parses the \envvars{OPENRAVE_PLUGINS} environment variable and loads all the plugins it finds.
  - Refer to \ref writing_plugins for a tutorial on how to build and compile plugins.
  - Refer to \ref interface_concepts for interface details.
 
@@ -72,7 +71,7 @@ allowing users to ignore the complexities of multi-threaded resource management.
 
 - <b>コア</b> コアは主に\ref interfacesのセットで構成されています．これらのクラスはプラグインが互いに情報を得る方法を定義しています．コアは実際の環境と%OpenRAVEのシミュレーション環境とを接続する橋渡しの役割をし，ゲートウェイとして%OpenRAVEで提供されてた全ての機能にその情報を提供します．%OpenRAVE全体の状態としてコアは，読み出されたプラグイン，複数の独立した環境，そしてログを管理します．一方，環境クラスは干渉検知器，ビューワ，物理エンジン，運動学などの全てのインターフェースを１つのまとまったロボット世界の状態にまとめています．
 
-- <b>プラグイン</b> %OpenRAVEはプラグインを基盤とした構造で設計されています．プラグインは環境クラスのなかに動的に読み出される\ref interfacesの実装を提供します．プラグインは%OpenRAVEの機能拡張の為に他のロボットライブラリとリンクすることができ，また%OpenRAVEのサービスを他のロボットシステムに提供することも可能です．プラグインは%OpenRAVEに，それがどのような機能を提供しているかという情報を集めることと，インターフェースを生成することのできる機能を外部に提供する必要があります．起動時に%OpenRAVEは\ref environment_variables "OPENRAVE_PLUGINS"の環境変数を渡し，全ての共用オブジェクトを読み出します．<br/>
+- <b>プラグイン</b> %OpenRAVEはプラグインを基盤とした構造で設計されています．プラグインは環境クラスのなかに動的に読み出される\ref interfacesの実装を提供します．プラグインは%OpenRAVEの機能拡張の為に他のロボットライブラリとリンクすることができ，また%OpenRAVEのサービスを他のロボットシステムに提供することも可能です．プラグインは%OpenRAVEに，それがどのような機能を提供しているかという情報を集めることと，インターフェースを生成することのできる機能を外部に提供する必要があります．起動時に%OpenRAVEは\envvars{OPENRAVE_PLUGINS}の環境変数を渡し，全ての共用オブジェクトを読み出します．<br/>
  - プラグインのビルドとコンパイルのチュートリアルは\ref writing_pluginsを参照してください．
  - インターフェースの詳細は\ref interface_conceptsを参照してください．
 

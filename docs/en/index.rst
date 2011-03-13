@@ -8,15 +8,6 @@ Welcome to Open Robotics Automation Virtual Environment
 
   OpenRAVE provides an environment for testing, developing, and deploying motion planning algorithms in real-world robotics applications. The main focus is on simulation and analysis of kinematic and geometric information related to motion planning. OpenRAVE's stand-alone nature allows is to be easily integrated into existing robotics systems. An important target application is industrial robotics automation. 
 
-This document is automatically generated for every OpenRAVE release and binds together all versioned resources and databases:
-    
-* `Core API`_
-* `Python API`_
-* :ref:`examples`
-* :ref:`database_generators`
-* :ref:`robots`
-* :ref:`plugin_interfaces`
-
 Getting Started
 ---------------
 
@@ -24,11 +15,28 @@ Getting Started
 
  * See `ChangeLog`_ for what's new.
 
-* :ref:`tutorials`
+ * Latest source code from Subversion
+::
+
+  svn co https://openrave.svn.sourceforge.net/svnroot/openrave/trunk openrave
+
+* :ref:`getting_started`
 
 * :ref:`overview`
 
-* `Architecture`_
+Resources
+---------
+
+This document is automatically generated for every OpenRAVE release and binds together the following versioned resources:
+
+* `Core C++ API`_
+* :ref:`Python API <package-openravepy>`
+* :ref:`plugin_interfaces`
+* `Database Generators <databases.html>`_
+* `Examples <examples.html>`_
+* :ref:`robots`
+
+The `official wiki`_ describes latest news, projects using OpenRAVE, and how to link OpenRAVE with other systems.
 
 Licenses
 --------

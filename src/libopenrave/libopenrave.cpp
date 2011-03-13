@@ -1389,34 +1389,55 @@ void InterfaceBase::UnregisterCommand(const std::string& cmdname)
 bool InterfaceBase::_GetCommandHelp(std::ostream& o, std::istream& sinput) const
 {
     boost::mutex::scoped_lock lock(_mutexInterface);
-    string cmd;
-    sinput >> cmd;
+    string cmd, label;
     CMDMAP::const_iterator it;
-    if( !!sinput && cmd == "commands" ) {
-        for(it = __mapCommands.begin(); it != __mapCommands.end(); ++it) {
-            o << it->first << " ";
+    while(!sinput.eof()) {
+        sinput >> cmd;
+        if( !sinput ) {
+            break;
         }
-    }
-    else {
-        it = __mapCommands.find(cmd);
-        if( !sinput || it == __mapCommands.end() ) {
-            // display full help string
-            o << endl << GetXMLId() << " Commands" << endl;
-            for(size_t i = 0; i < GetXMLId().size(); ++i) {
-                o << "=";
-            }
-            o << "=========" << endl << endl;
+        std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
+        
+        if( cmd == "commands" ) {
             for(it = __mapCommands.begin(); it != __mapCommands.end(); ++it) {
-                o << endl << "**" << it->first << "**" << endl;
-                for(size_t i = 0; i < it->first.size()+4; ++i) {
-                    o << "~";
-                }
-                o << endl << endl << it->second->help << endl;
+                o << it->first << " ";
             }
+            return true;
+        }
+        else if( cmd == "label" ) {
+            sinput >> label;
         }
         else {
-            o << it->second->help;
+            it = __mapCommands.find(cmd);
+            if( it != __mapCommands.end() ) {
+                o << it->second->help;
+                return true;
+            }
         }
+
+        if( !sinput ) {
+            RAVELOG_ERROR(str(boost::format("failed processing command %s\n")%cmd));
+            return false;
+        }
+    }
+
+    // display full help string
+    o << endl << GetXMLId() << " Commands" << endl;
+    for(size_t i = 0; i < GetXMLId().size(); ++i) {
+        o << "=";
+    }
+    o << "=========" << endl << endl;
+    for(it = __mapCommands.begin(); it != __mapCommands.end(); ++it) {
+        if( label.size() > 0 ) {
+            string strlower = it->first;
+            std::transform(strlower.begin(), strlower.end(), strlower.begin(), ::tolower);
+            o << endl << ".. _" << label << strlower << ":" << endl << endl;
+        }
+        o << endl << it->first << endl;
+        for(size_t i = 0; i < it->first.size(); ++i) {
+            o << "~";
+        }
+        o << endl << endl << it->second->help << endl;
     }
     return true;
 }

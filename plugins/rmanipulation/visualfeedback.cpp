@@ -401,8 +401,7 @@ public:
     {
         __description = ":Interface Author: Rosen Diankov\n\n\
 .. image:: ../../../images/visualfeedback_concept.jpg\n\
-  :width: 500\n\
-\n\
+  :width: 500\n\n\
 Adds grasp planning taking into account camera visibility constraints. The relevant paper is:\n\n\
 - Rosen Diankov, Takeo Kanade, James Kuffner. Integrating Grasp Planning and Visual Feedback for Reliable Manipulation, IEEE-RAS Intl. Conf. on Humanoid Robots, December 2009.\n\
 \n\

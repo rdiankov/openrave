@@ -1,7 +1,5 @@
-Common Tools
-============
-
-The openravepy directory structure is as follows.
+Command Line Tools
+==================
 
 openrave.py
 -----------
@@ -78,8 +76,9 @@ Can query all the hashes openrave uses to manage robot descriptions::
   openrave-hash.py data/mug1.kinbody.xml
   openrave.py --robothash robots/barrettsegway.robot.xml
 
+openrave
+--------
 
-Environment Variables
----------------------
+Simple executable written in C++ that can start an OpenRAVE environment and load problems. It provides simple configuration of parameters for easy testing. 
 
-See `Environment Variables`_
+It is possible to save robots into 

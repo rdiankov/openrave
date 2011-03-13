@@ -14,7 +14,7 @@
 # limitations under the License.
 """Convex decomposition of the link geometry of the robot.
 
-.. image:: ../../images/databases_convexdecomposition.jpg
+.. image:: ../../images/databases.convexdecomposition.jpg
   :width: 640
 
 **Running the Generator**

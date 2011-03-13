@@ -12,9 +12,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""  6D kinematic reachability space of a robot's manipulators.
+"""6D kinematic reachability space of a robot's manipulators.
 
-.. image:: ../../images/databases_kinematicreachability.jpg
+.. image:: ../../images/databases.kinematicreachability.jpg
   :width: 640
 
 **Running the Generator**
@@ -33,12 +33,6 @@ Description
 -----------
 
 This is the reachability when counting the total number of configurations possible at each pose. 
-
-.. image:: ../../images/databases_reachability_wamfull.png
-  :height: 200
-
-.. image:: ../../images/databases_reachability_pa10full.png
-  :height: 200
 
 """
 from __future__ import with_statement # for python 2.5

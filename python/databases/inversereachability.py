@@ -12,10 +12,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Inverse reachability space clustering.
+"""Inverse reachability space of manipulators.
 
-.. image:: ../../images/databases_inversereachability_wam1.jpg
-  :height: 250
+.. image:: ../../images/databases_inversereachability.jpg
+  :width: 640
 
 **Running the Generator**
 

@@ -64,20 +64,16 @@ Interface Types
                     if interface is None:
                         print 'failed to create ',type,name
                     else:
-                        try:
-                            helptext = interface.SendCommand('help')
-                            commands = interface.SendCommand('help commands').split()
-                        except (openrave_exception,RuntimeError):
-                            helptext = ''
-                            commands = []
-                            print e
                         ititle = name + ' - ' + pluginname
                         itext = '.. _%s-%s:\n\n'%(type,name.lower())
                         itext += ititle + '\n' + '-'*len(ititle) + '\n\n'
                         itext += ':Type: :ref:`interface-%s`\n\n'%(type)
                         itext += ':Plugin: :ref:`plugin-%s`\n\n'%(pluginname)
                         itext += interface.GetDescription() + '\n\n'
-                        itext += helptext
+                        try:
+                            itext +=  interface.SendCommand('help label %s-%s-'%(type,name.lower()))
+                        except (openrave_exception,RuntimeError),e:
+                            print e
                         interfaceinfo[type].append([name,pluginname,itext])
                         interface = None # destroy
         

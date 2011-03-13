@@ -11,9 +11,11 @@ Contents
    
    index
    overview
-   tutorials/index
+   getting_started
    examples
-   database_generators
+   databases
    plugin_interfaces
    robots
    devel/index
+   openravepy/openravepy
+   

@@ -12,11 +12,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
-Python interface to ikfast that manages the compiled inverse kinematics files for robots.
+"""Manages compiled inverse kinematics files for robots using ikfast.
 
-.. image:: ../../images/databases_inversekinematics_wam.png
-  :height: 250
+.. image:: ../../images/databases.inversekinematics.jpg
+  :width: 640
 
 **Running the Generator**
 

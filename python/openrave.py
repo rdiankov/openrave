@@ -34,6 +34,7 @@ except ImportError:
             sys.path.append("C:\\Program Files\\openrave\\share\\openrave")
     from openravepy import *
 
+from types import ModuleType
 from numpy import *
 from optparse import OptionParser
 
@@ -71,12 +72,22 @@ if __name__ == "__main__":
     if options.listdatabases:
         for name in dir(databases):
             if not name.startswith('__'):
-                print name
+                try:
+                    m=__import__('openravepy.databases.'+name)
+                    if type(m) is ModuleType:
+                        print ' ' + name
+                except ImportError:
+                    pass
         sys.exit(0)
     if options.listexamples:
         for name in dir(examples):
             if not name.startswith('__'):
-                print name
+                try:
+                    m=__import__('openravepy.examples.'+name)
+                    if type(m) is ModuleType:
+                        print ' ' + name
+                except ImportError:
+                    pass
         sys.exit(0)
     if options.database is not None:
         args = options.database[0].split() + options.database[1:] # the first arg might also include the options
@@ -86,7 +97,12 @@ if __name__ == "__main__":
             print 'bad database generator, current list of executable generators are:'
             for name in dir(databases):
                 if not name.startswith('__'):
-                    print ' ' + name
+                    try:
+                        m=__import__('openravepy.databases.'+name)
+                        if type(m) is ModuleType:
+                            print ' ' + name
+                    except ImportError:
+                        pass
             sys.exit(1)
         database.run(args=args)
         sys.exit(0)
@@ -98,7 +114,12 @@ if __name__ == "__main__":
             print 'bad example, current list of executable examples are:'
             for name in dir(examples):
                 if not name.startswith('__'):
-                    print ' ' + name
+                    try:
+                        m=__import__('openravepy.examples.'+name)
+                        if type(m) is ModuleType:
+                            print ' ' + name
+                    except ImportError:
+                        pass
             sys.exit(1)
         example.run(args=args)
         sys.exit(0)

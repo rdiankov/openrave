@@ -10,7 +10,7 @@ subsystem can be distributed and dynamically loaded at run-time; this distribute
 developers from struggling with monolithic code-bases. Users of OpenRAVE can concentrate on the
 development of planning and scripting aspects of a problem without having to explicitly manage the
 details of robot kinematics and dynamics, collision detection, world updates, and robot
-control. OpenRAVE provides a powerful `Python API`_ for scripting demos, which makes it simple to
+control. OpenRAVE provides a powerful :ref:`Python API <package-openravepy>` for scripting demos, which makes it simple to
 control and monitor the demo and environment state. There are also interfaces for Octave and Matlab.
 
 OpenRAVE's major design goals and features are:
@@ -43,10 +43,12 @@ code-bases.
 
 * `Architecture`_
 * `Interface Concepts`_
+* :ref:`package-databases`
 
 .. toctree::
    :maxdepth: 1
 
+   robots_overview
    geometric_conventions
 
 History

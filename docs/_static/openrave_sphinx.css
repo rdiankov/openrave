@@ -16,20 +16,20 @@ body {
     border: 1px solid #aaa;
 
     margin: 0px 80px 0px 80px;
-    min-width: 700px;
+    min-width: 925px;
 }
 
 a {
 	text-decoration: none;
-	color: #265;
+	color: #276;
 }
 a:link {
 	text-decoration: none;
-	color: #265;
+	color: #276;
 }
 a:visited {
 	text-decoration: none;
-	color: #265;
+	color: #276;
 }
 a:hover {
 	text-decoration: underline;

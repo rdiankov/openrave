@@ -14,8 +14,8 @@
 # limitations under the License.
 """Samples visible locations of a target object and a sensor.
 
-.. image:: ../../images/databases_visibilitymodel_extents.jpg
-  :height: 250
+.. image:: ../../images/databases.visibilitymodel.jpg
+  :width: 640
 
 **Running the Generator**
 
@@ -47,17 +47,8 @@ Description
 
 As long as a sensor is attached to a robot arm, can be applied to any robot to get immediate visibiliy configuration sampling:
 
-.. image:: ../../images/databases_visibilitymodel_hrp3_camera.jpg
-  :height: 200
-
-.. image:: ../../images/databases_visibilitymodel_pa10_camera.jpg
-  :height: 200
-
-.. image:: ../../images/databases_visibilitymodel_hrp2_camera.jpg
-  :height: 200
-
-.. image:: ../../images/databases_visibilitymodel_wam_camera.jpg
-  :height: 200
+.. image:: ../../images/databases_visibilitymodel_extents.jpg
+  :height: 250
 
 The visibility database generator uses the `VisualFeedback interface`_ for the underlying visibility
 computation. The higher level functions it provides are sampling configurations, computing all valid

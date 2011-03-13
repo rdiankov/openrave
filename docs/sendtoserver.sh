@@ -1,6 +1,6 @@
 #!/bin/bash
 rm -rf images_temp; svn export images images_temp
-tar cjf ordocs.tgz build/en/coreapihtml build/en/openravepy-html build/en/openrave.pdf images_temp build/ja/coreapihtml build/ja/openravepy-html build/en/sphinx build/ja/sphinx
+tar cjf ordocs.tgz build/en/coreapihtml build/en/main images_temp build/ja/coreapihtml build/ja/main 
 rm -rf images_temp
 
 # send to server

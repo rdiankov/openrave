@@ -7,7 +7,7 @@
 \~english
 
 This document covers the core %OpenRAVE concepts, the C++ API, C++ examples, and C++ usage of the plugins offered in the base
-installation. Please visit the \homepage{<b>official documentation page</b>} for information on all %OpenRAVE features.
+installation. Visit the \homepage{<b>official documentation page</b>} for information on all other %OpenRAVE features.
 
 \~japanese
 
@@ -19,7 +19,7 @@ installation. Please visit the \homepage{<b>official documentation page</b>} for
 \~
 - \subpage installation
 - \subpage p_basic_usage
-- \subpage environment_variables
+- \envvars{Environment Variables}
 
 \~english  \section main_architecture Architecture
 \~japanese \section main_architecture アーキテクチャー
@@ -28,18 +28,7 @@ installation. Please visit the \homepage{<b>official documentation page</b>} for
 - \subpage interface_concepts
 - \subpage writing_plugins
 - \ref arch_controller_writing
-
-\~english  \section main_system Components
-- <a href="../sphinx/database_generators.html">Knowledge-base Generators</a>
-- <a href="http://openrave.programmingvision.com/index.php/Started:Formats">XML File Format</a>
 - \ref arch_cloning
-
-\~japanese \section main_system 構成要素
-- <a href="../sphinx/database_generators.html"">知識ベース生成</a>
-- <a href="http://openrave.programmingvision.com/index.php/Started:Formats/ja">XMLロボット用フォーマット</a>
-- \ref arch_cloning
-\~
-
 
 \~english \section main_reference Reference
 \~japanese \section main_reference 参考資料
@@ -95,44 +84,6 @@ openrave robots/puma.robot.xml -problem MyProblem 'myarguments'
 \endverbatim
 
 openraveと似たコマンドに\openrave_py{openrave.py}というコマンドがあります．こちらはPythonで書かれているためOpenRAVEで提供されているすべてのモジュールにアクセスすることが可能で非常に機能的です．一方，openraveコマンドは既にC++でコンパイルされているため，Pythonがインストールされている開発環境でなくても実行することが可能です．
-
-*/
-
-/**
-\~english \page environment_variables Environment Variables
-
-System environment variables read by %OpenRAVE environments on
-initialization. (\envvarwiki{This page} describes how to set environment variables for your OS).
-
-- \b OPENRAVE_DATA - Use ':' to separate each directory (';' for Windows). Search paths/URLs for loading
-  robot/environment/model files. The default data directory \c $OPENRAVE_INSTALL/share/openrave is
-  always included, so there's no need to specify it again.
-
-- \b OPENRAVE_DATABASE - Use ':' to separate each directory (';' for Windows). Search paths for
-  loading database files created by the openrave database system. Databases are used to store useful
-  information/statistics about the robot, target object, and sensors that take a long time to
-  pre-compute or rely on real-world data. When writing, the first valid directory is used. If
-  environment variable is not set, then $OPENRAVE_HOME is used.
-
-- \b OPENRAVE_HOME - Used to set the directory of the openrave local cache and log files. The
-  default directory is <b>$HOME/.openrave</b>.
-
-- \b OPENRAVE_PLUGINS - Use ':' to separate each directory (';' for Windows). At startup, %OpenRAVE
-  searches for every shared object/dll plugin in these directories and loads them. The default
-  plugins in \c $OPENRAVE_INSTALL/share/openrave/plugins are always loaded, so there is no need to
-  include them.
-
-\~japanese \page environment_variables 環境変数の設定
-
-このページでは%OpenRAVEが最初に読み出す環境変数の設定の方法について説明します．
-
-- \b OPENRAVE_PLUGINS - %OpenRAVEは起動時に，ここに設定されたディレクトリの全てのobject/dllプラグインを探索し読み出します．複数のディレクトリを設定する場合，個々のディレクトリは ':' （Windows環境の場合は ';' ）を使って分けてください．\c $OPENRAVE_INSTALL/share/openrave/pluginsにあるデフォルトのプラグインは常に読み出されますので，設定する必要はありません．
-
-- \b OPENRAVE_DATABASE 知識ベースが保存されているところ。複数のディレクトリを設定する場合，個々のディレクトリは ':' （Windows環境の場合は ';' ）を使って分けてください．指定されていない場合、\c $OPENRAVE_HOMEが使われます。
-
-- \b OPENRAVE_DATA - %OpenRAVEは常に，ここに設定されたディレクトリのファイルを探索し読み出します．複数のディレクトリを設定する場合，個々のディレクトリは ':' （Windows環境の場合は ';' ）を使って分けてください．デフォルトは\c $OPENRAVE_INSTALL/share/openraveですので，これは再度設定する必要はありません．
-
-- \b OPENRAVE_HOME - 全ての%OpenRAVEの固有データを保存する場所を指定しています．%OpenRAVEの固有データとは，逆運動学の解析結果のようなロボットの事前に計算された結果や生成されたデータベース等のことです．デフォルトのディレクトリは<b>$HOME/.openrave</b>です．
 
 */
 
@@ -244,7 +195,7 @@ $OPENRAVE_INSTALL\\include directories.
 
 There are several ways to load the generated plugin.
 
-- The most simplest method is to add its installation directory to the \ref environment_variables "OPENRAVE_PLUGINS" environment variable. %OpenRAVE will automatically load it up at start up. You can confirm this is the case using:
+- The most simplest method is to add its installation directory to \envvars{OPENRAVE_PLUGINS}. %OpenRAVE will automatically load it up at start up. You can confirm this is the case using:
 \verbatim
 openrave --listplugins
 \endverbatim

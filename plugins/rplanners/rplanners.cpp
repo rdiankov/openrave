@@ -27,7 +27,7 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
 {
     switch(type) {
     case OpenRAVE::PT_Planner:
-        if( interfacename == "ra*")
+        if( interfacename == "rastar" || interfacename == "ra*")
             return InterfaceBasePtr(new RandomizedAStarPlanner(penv));
         else if( interfacename == "birrt") {
             return InterfaceBasePtr(new BirrtPlanner(penv));
@@ -60,7 +60,7 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
 
 void GetPluginAttributesValidated(PLUGININFO& info)
 {
-    info.interfacenames[PT_Planner].push_back("RA*");
+    info.interfacenames[PT_Planner].push_back("RAStar");
     info.interfacenames[PT_Planner].push_back("BiRRT");
     info.interfacenames[PT_Planner].push_back("BasicRRT");
     info.interfacenames[PT_Planner].push_back("ExplorationRRT");

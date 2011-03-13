@@ -34,12 +34,7 @@ python build_openravepy_internal.py --languagecode en --languagecode ja
 # build openravepy documentation
 prevlang=$LANG
 export LANG=en_US.UTF-8
-python build_doc.py build_doc --outdir="build/en/openravepy-html" --languagecode=en
-python build_interfaces.py --outdir=en
-sphinx-build -b html -c . en build/en/sphinx
-
+./build_sphinx.sh en
 export LANG=ja_JP.UTF-8
-python build_doc.py build_doc --outdir="build/ja/openravepy-html" --languagecode=ja
-python build_interfaces.py --outdir=ja/
-sphinx-build -b html . build/ja/sphinx
+./build_sphinx.sh ja
 export LANG=$prevlang

@@ -83,7 +83,7 @@ planner
   interface_types/planner/explorationrrt
   interface_types/planner/grasper
   interface_types/planner/graspgradient
-  interface_types/planner/ra*
+  interface_types/planner/rastar
   interface_types/planner/shortcut_linear
   interface_types/planner/workspacetrajectorytracker
 
