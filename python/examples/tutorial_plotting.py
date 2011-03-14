@@ -11,6 +11,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Example plotting calls.
+
+.. image:: ../../images/examples/tutorial_plotting.jpg
+  :width: 300
+
+**Running the Example**::
+
+  openrave.py --example tutorial_plotting
+
+"""
+
 from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
 __copyright__ = '2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'

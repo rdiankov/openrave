@@ -1,10 +1,10 @@
-Welcome to Open Robotics Automation Virtual Environment
-=======================================================
-
 .. htmlonly::
-
+   
    :Release: |version|
    :Date: |today|
+
+Welcome to Open Robotics Automation Virtual Environment
+=======================================================
 
   OpenRAVE provides an environment for testing, developing, and deploying motion planning algorithms in real-world robotics applications. The main focus is on simulation and analysis of kinematic and geometric information related to motion planning. OpenRAVE's stand-alone nature allows is to be easily integrated into existing robotics systems. An important target application is industrial robotics automation. 
 
@@ -23,7 +23,7 @@ Getting Started
 
 * :ref:`getting_started`
 
- * :ref:`command_line_tools`, :ref:`openravepy_beginning`, `Writing Plugins in C++ <../coreapihtml/writing_plugins.html>`_, :ref:`environment_variables`, `Octave/MATLAB <http://openrave.programmingvision.com/index.php/Started:Scripting>`_
+ * :ref:`openravepy_beginning`, :ref:`command_line_tools`, `Writing Plugins in C++ <../coreapihtml/writing_plugins.html>`_, :ref:`environment_variables`, `Octave/MATLAB <http://openrave.programmingvision.com/index.php/Started:Scripting>`_
 
 * :ref:`overview`
 
@@ -32,7 +32,7 @@ Getting Started
 Resources
 ---------
 
-This document is automatically generated for every OpenRAVE release and binds together the following versioned resources:
+This document is automatically generated for every release and binds together the following versioned resources:
 
 * `Core C++ API`_
 * :ref:`Python API <package-openravepy>`
@@ -41,7 +41,11 @@ This document is automatically generated for every OpenRAVE release and binds to
 * `Examples <examples.html>`_
 * :ref:`robots`
 
-The `official wiki`_ describes latest news, projects using OpenRAVE, and how to link OpenRAVE with other systems.
+Other
+~~~~~
+
+* `Official Wiki`_ - latest news, projects using OpenRAVE, and how to link OpenRAVE with other systems
+* :ref:`developers_guide`
 
 Licenses
 --------

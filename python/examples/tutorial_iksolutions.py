@@ -54,6 +54,10 @@ In order to render the ik solutions, create a new robot for every solution and m
   newrobot.SetTransform(robot.GetTransform())
   newrobot.SetDOFValues(solution,ikmodel.manip.GetArmIndices())
 
+Command-line
+------------
+
+.. shell-block:: openrave.py --example tutorial_iksolutions --help
 
 """
 from __future__ import with_statement # for python 2.5
@@ -74,10 +78,6 @@ def run(args=None):
     """Executes tutorial_iksolutions.
 
     :type args: arguments for script to parse, if not specified will use sys.argv
-
-    **Help**
-    
-    .. shell-block:: openrave.py --example tutorial_solutions --help
     """
 
     parser = OptionParser(description='Shows how to generate a 6D inverse kinematics solver and use it for getting all solutions.')

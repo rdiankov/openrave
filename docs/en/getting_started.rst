@@ -6,11 +6,13 @@ Getting Started Tutorials
 .. toctree::
    :maxdepth: 2
    
-   command_line_tools
-   environment_variables
    tutorials/openravepy_beginning
-   tutorials/openravepy_advanced
    tutorials/openravepy_examples
+   command_line_tools
+   tutorials/openravepy_advanced
+   environment_variables
+
+Building your own robot
 
 .. htmlonly::
    - `Writing Plugins and Interfaces in C++ <../coreapihtml/writing_plugins.html>`_

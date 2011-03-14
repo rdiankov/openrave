@@ -37,7 +37,6 @@ Using a BiRRT Planner
   manipprob = interfaces.BaseManipulation(robot) # create the interface for basic manipulation programs
   res = manipprob.MoveManipulator(goal=[-0.75,1.24,-0.064,2.33,-1.16,-1.548,1.19]) # call motion planner with goal joint angles
   robot.WaitForController(0) # wait
-  env.Destroy()
 
 Move End Effector with IK
 -------------------------
@@ -58,7 +57,6 @@ Move End Effector with IK
   Tgoal = numpy.array([[0,-1,0,-0.21],[-1,0,0,0.04],[0,0,-1,0.92],[0,0,0,1]])
   res = manipprob.MoveToHandPosition(matrices=[Tgoal],seedik=10) # call motion planner with goal joint angles
   robot.WaitForController(0) # wait
-  env.Destroy()
 
 Logging
 -------
@@ -72,4 +70,3 @@ Here is an example on how to save the current scene using the '''logging''' plug
   env.Load('data/lab1.env.xml') # load a simple scene
   logger = env.CreateProblem('logging')
   logger.SendCommand('savescene filename myscene.env.xml')
-  env.Destroy() # explicitly destroy the environment once done with it

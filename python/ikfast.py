@@ -48,6 +48,8 @@ Features
 - Invalid solutions are detected by checking if square roots are given negative values or arc sines and arc cosines are given inputs exceeding the [-1,1] range.
 - All divide by zero conditions are automatically checked and handled.
 
+.. _ikfast_types:
+
 IK Types
 --------
 

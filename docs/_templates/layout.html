@@ -11,24 +11,11 @@
 {% endblock %}
 
 {% block relbar1 %}
-<!-- Piwik -->
-<script type="text/javascript">
-var pkBaseURL = (("https:" == document.location.protocol) ? "https://sourceforge.net/apps/piwik/openrave/" : "http://sourceforge.net/apps/piwik/openrave/");
-document.write(unescape("%3Cscript src='" + pkBaseURL + "piwik.js' type='text/javascript'%3E%3C/script%3E"));
-</script><script type="text/javascript">
-try {
-var piwikTracker = Piwik.getTracker(pkBaseURL + "piwik.php", 1);
-piwikTracker.trackPageView();
-piwikTracker.enableLinkTracking();
-} catch( err ) {}
-</script><noscript><p><img src="http://sourceforge.net/apps/piwik/openrave/piwik.php?idsite=1" style="border:0" alt=""/></p></noscript>
-<!-- End Piwik Tag -->
-<link rel="shortcut icon" href="_static/favicon.ico">
 
 <div style="background-color: white; text-align: left; padding: 10px 10px 15px 15px">
 <table width="680" id="topnav-table">
   <td width="400" valign="top">
-    <a href="http://openrave.programmingvision.com/wiki"><img src="{{pathto("_static/openrave_logo.png", 1) }}" border="0" alt="openrave.org"/></a></td>
+    <a href="{{ pathto('index') }}"><img src="{{pathto("_static/openrave_logo.png", 1) }}" border="0" alt="openrave.org"/></a></td>
   <td valign="middle" align="right">
     <form class="search" action="{{ pathto('search') }}" method="get">
       <input type="text" name="q" size="18" autocomplete="on" />

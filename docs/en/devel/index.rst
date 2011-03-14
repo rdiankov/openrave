@@ -1,13 +1,15 @@
-================
+.. _developers_guide:
+
 Developers Guide
 ================
 
 These pages are meant for OpenRAVE developers and contributors. Internal OpenRAVE logistics,
 management, and quality control are explained. Current release information, milestones, and bug
-reports **are not covered**. Instead, `manage tickets and official releases with Trac
-<http://sourceforge.net/apps/trac/openrave/>`_.
+reports **are not covered**. 
 
-`Source code and release downloads are handled by Sourceforge <http://sourceforge.net/projects/openrave/>`_
+* `Trac - Manage tickets and milestones <http://sourceforge.net/apps/trac/openrave/>`_.
+
+* `Sourceforge - Source code and Releases <http://sourceforge.net/projects/openrave/>`_
 
 .. htmlonly::
 
