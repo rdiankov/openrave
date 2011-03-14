@@ -125,8 +125,9 @@ class BaseCameraSensor : public SensorBase
     virtual void Reset(int options)
     {
         _iconhandle.reset();
-        _pdata->vimagedata.resize(3*_pgeom->width*_pgeom->height);
-        vimagedata.resize(3*_pgeom->width*_pgeom->height);
+        _pdata->vimagedata.resize(0);
+        _pdata->__stamp = 0;
+        _vimagedata.resize(3*_pgeom->width*_pgeom->height);
         fTimeToImage = 0;
         _bUpdateCameraPlot = true;
     }
@@ -181,11 +182,11 @@ class BaseCameraSensor : public SensorBase
                 fTimeToImage = 1 / (float)framerate;
                 GetEnv()->UpdatePublishedBodies();
                 if( !!GetEnv()->GetViewer() ) {
-                    if( GetEnv()->GetViewer()->GetCameraImage(vimagedata, _pgeom->width, _pgeom->height, _trans, _pgeom->KK) ) {
+                    if( GetEnv()->GetViewer()->GetCameraImage(_vimagedata, _pgeom->width, _pgeom->height, _trans, _pgeom->KK) ) {
                         // copy the data
                         boost::mutex::scoped_lock lock(_mutexdata);
                         pdata->t = _trans;
-                        pdata->vimagedata = vimagedata;
+                        pdata->vimagedata = _vimagedata;
                         pdata->__stamp = GetEnv()->GetSimulationTime();
                     }
                 }
@@ -214,10 +215,12 @@ class BaseCameraSensor : public SensorBase
 
     virtual bool GetSensorData(SensorDataPtr psensordata)
     {
-        if( psensordata->GetType() == ST_Camera ) {
+        if( _bPower && psensordata->GetType() == ST_Camera ) {
             boost::mutex::scoped_lock lock(_mutexdata);
-            *boost::dynamic_pointer_cast<CameraSensorData>(psensordata) = *_pdata;
-            return true;
+            if( _pdata->vimagedata.size() > 0 ) {
+                *boost::dynamic_pointer_cast<CameraSensorData>(psensordata) = *_pdata;
+                return true;
+            }
         }
         return false;
     }
@@ -227,6 +230,11 @@ class BaseCameraSensor : public SensorBase
     bool _Power(ostream& sout, istream& sinput)
     {
         sinput >> _bPower;
+        if( !_bPower ) {
+            // should reset!
+            _pdata->vimagedata.resize(0);
+            _pdata->__stamp = 0;
+        }
         return !!sinput;
     }
     bool _Render(ostream& sout, istream& sinput)
@@ -276,7 +284,7 @@ class BaseCameraSensor : public SensorBase
     boost::shared_ptr<CameraSensorData> _pdata;
 
     // more geom stuff
-    vector<uint8_t> vimagedata;
+    vector<uint8_t> _vimagedata;
     RaveVector<float> _vColor;
 
     Transform _trans;

@@ -114,7 +114,7 @@ class VisibilityModel(DatabaseGenerator):
         self.convexhull = None
         self.sensorname = sensorname
         if self.sensorname is None:
-            possiblesensors = [s.GetName() for s in self.sensorrobot.GetAttachedSensors() if s.GetSensor() is not None and s.GetData() is not None and s.GetData().type == Sensor.Type.Camera]
+            possiblesensors = [s.GetName() for s in self.sensorrobot.GetAttachedSensors() if s.GetSensor() is not None and s.GetSensor().Supports(Sensor.Type.Camera)]
             if len(possiblesensors) > 0:
                 self.sensorname = possiblesensors[0]
         self.manip = robot.GetActiveManipulator()

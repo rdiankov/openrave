@@ -300,10 +300,11 @@ def run(args=None):
     # create a camera viewer for every camera sensor
     try:
         attachedsensor = self.vmodel.attachedsensor
-        if attachedsensor.GetSensor() is not None:
-            sensordata = attachedsensor.GetSensor().GetSensorData()
-            if sensordata is not None and sensordata.type == Sensor.Type.Camera:
-                attachedsensor.GetSensor().SendCommand('power 1')
+        if attachedsensor.GetSensor() is not None and attachedsensor.GetSensor().Supports(Sensor.Type.Camera):
+            attachedsensor.GetSensor().SendCommand('power 1')
+            time.sleep(1) # wait for sensor to initialize
+            sensordata = attachedsensor.GetSensor().GetSensorData(Sensor.Type.Camera)
+            if sensordata is not None:
                 if len(attachedsensor.GetName()) > 0:
                     title = 'calibrationviews: ' + attachedsensor.GetName()
                 else:

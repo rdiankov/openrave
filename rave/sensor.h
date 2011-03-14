@@ -59,7 +59,7 @@ public:
         /// Serialize the sensor data to stream in XML format
         virtual bool serialize(std::ostream& O) const;
 
-        uint64_t __stamp; ///< time stamp of the sensor data in microseconds (floating-point precision is bad here). This can be either simulation or real time depending on the sensor.
+        uint64_t __stamp; ///< time stamp of the sensor data in microseconds. If 0, then the data is uninitialized! (floating-point precision is bad here). This can be either simulation or real time depending on the sensor.
     };
     typedef boost::shared_ptr<SensorData> SensorDataPtr;
     typedef boost::shared_ptr<SensorData const> SensorDataConstPtr;

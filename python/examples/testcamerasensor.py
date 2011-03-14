@@ -84,6 +84,7 @@ class OpenRAVEScene:
             raise ValueError('no robots found in scene %s'%scenefilename)
 
         with env:
+            sensors = []
             if robotname is None:
                 self.robot = self.orenv.GetRobots()[0]
             else:
@@ -92,16 +93,20 @@ class OpenRAVEScene:
             # create a camera viewer for every camera sensor
             self.viewers = []
             for attachedsensor in self.robot.GetAttachedSensors():
-                if attachedsensor.GetSensor() is not None:
-                    sensordata = attachedsensor.GetSensor().GetSensorData()
-                    if sensordata is not None and sensordata.type == Sensor.Type.Camera:
-                        attachedsensor.GetSensor().SendCommand('power 1')
-                        title = attachedsensor.GetName()
+                if attachedsensor.GetSensor() is not None and attachedsensor.GetSensor().Supports(Sensor.Type.Camera):
+                    attachedsensor.GetSensor().SendCommand('power 1')
+                    sensors.append(attachedsensor)
+        time.sleep(1) # wait a while for sensors to initialize
+        with env:
+            for attachedsensor in sensors:
+                sensordata = attachedsensor.GetSensor().GetSensorData(Sensor.Type.Camera)
+                if sensordata is not None:
+                    title = attachedsensor.GetName()
+                    if len(title) == 0:
+                        title = attachedsensor.GetSensor().GetName()
                         if len(title) == 0:
-                            title = attachedsensor.GetSensor().GetName()
-                            if len(title) == 0:
-                                title = 'Camera Sensor'
-                        self.viewers.append(CameraViewerGUI(sensor=attachedsensor.GetSensor(),title=title))
+                            title = 'Camera Sensor'
+                    self.viewers.append(CameraViewerGUI(sensor=attachedsensor.GetSensor(),title=title))
         print 'found %d camera sensors on robot %s'%(len(self.viewers),self.robot.GetName())
         for viewer in self.viewers:
             viewer.start()

@@ -95,26 +95,32 @@ class VisibilityGrasping(metaclass.AutoReloader):
         with self.orenvreal:
             self.basemanip = BaseManipulation(self.robotreal)
             self.homevalues = self.robotreal.GetDOFValues()
+            self.viewers = []
+            attachedsensors = []
+            if usecameraview:
+                Tk # check if Tk exists
+                if showsensors:
+                    for attachedsensor in self.robotreal.GetAttachedSensors():
+                        if attachedsensor.GetSensor() is not None and attachedsensor.GetSensor().Supports(Sensor.Type.Camera):
+                            attachedsensor.GetSensor().SendCommand('power 1')
+                            attachedsensors.append(attachedsensor)
+
+        time.sleep(1) # wait for sensors to initialize
+        with self.orenvreal:
             # create a camera viewer for every camera sensor
             try:
-                self.viewers = []
-                if usecameraview:
-                    Tk # check if Tk exists
-                    if showsensors:
-                        for attachedsensor in self.robotreal.GetAttachedSensors():
-                            if attachedsensor.GetSensor() is not None:
-                                sensordata = attachedsensor.GetSensor().GetSensorData()
-                                if sensordata is not None and sensordata.type == Sensor.Type.Camera:
-                                    attachedsensor.GetSensor().SendCommand('power 1')
-                                    if len(attachedsensor.GetName()) > 0:
-                                        title = 'visibilityplanning: ' + attachedsensor.GetName()
-                                    else:
-                                        title = 'visibilityplanning: ' + attachedsensor.GetSensor().GetName()
-                                    self.viewers.append(CameraViewerGUI(sensor=attachedsensor.GetSensor(),title=title))
-                                    break # can only support one camera
-                        print 'found %d camera sensors on robot %s'%(len(self.viewers),self.robotreal.GetName())
-                        for viewer in self.viewers:
-                            viewer.start()
+                for attachedsensor in attachedsensors:
+                    sensordata = attachedsensor.GetSensor().GetSensorData(Sensor.Type.Camera)
+                    if sensordata is not None:
+                        if len(attachedsensor.GetName()) > 0:
+                            title = 'visibilityplanning: ' + attachedsensor.GetName()
+                        else:
+                            title = 'visibilityplanning: ' + attachedsensor.GetSensor().GetName()
+                        self.viewers.append(CameraViewerGUI(sensor=attachedsensor.GetSensor(),title=title))
+                        break # can only support one camera
+                print 'found %d camera sensors on robot %s'%(len(self.viewers),self.robotreal.GetName())
+                for viewer in self.viewers:
+                    viewer.start()
             except NameError,e:
                 print 'failed to create camera gui: ',e
                 self.viewers = []
