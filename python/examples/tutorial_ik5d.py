@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-.. image:: ../../images/example_tutorials/ik5d.jpg
+.. image:: ../../images/examples/tutorial_ik5d.jpg
   :height: 200
 
 Shows how to use 5D translation+direction inverse kinematics for an arm with >= 5 joints.

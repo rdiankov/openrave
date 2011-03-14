@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 # Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,13 +14,22 @@
 # limitations under the License.
 """Builds the convex decomposition of the robot and plots all points inside its volume.
 
-.. image:: ../../images/examples_checkconvexdecomposition.jpg
+.. image:: ../../images/examples/checkconvexdecomposition.jpg
   :height: 200
+
+**Running the Example**::
+
+  openrave.py --example checkconvexdecomposition
 
 Description
 -----------
 
 Uses the python database.convexdecomposition.ConvexDecompositionModel.testPointsInside function.
+
+Command-line
+------------
+
+.. shell-block:: openrave.py --example checkconvexdecomposition --help
 
 """
 from __future__ import with_statement # for python 2.5
@@ -31,7 +41,7 @@ from openravepy import databases, OpenRAVEGlobalArguments, with_destroy
 import numpy
 from optparse import OptionParser
 
-@with_destroy        
+@with_destroy
 def run(args=None):
     """Executes the checkconvexdecomposition example
 

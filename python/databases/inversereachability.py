@@ -14,7 +14,7 @@
 # limitations under the License.
 """Inverse reachability space of manipulators.
 
-.. image:: ../../images/databases_inversereachability.jpg
+.. image:: ../../images/databases/inversereachability.jpg
   :width: 640
 
 **Running the Generator**
@@ -28,11 +28,16 @@ Description
 
   Clusters the reachability space for a base-placement sampling distribution that can be used to find out where the robot should stand in order to perform a manipulation task.
 
-.. image:: ../../images/databases_inversereachability_wam2.jpg
+.. image:: ../../images/databases/inversereachability_wam2.jpg
   :height: 200
 
-.. image:: ../../images/databases_inversereachability_wam3.jpg
+.. image:: ../../images/databases/inversereachability_wam3.jpg
   :height: 200
+
+Command-line
+------------
+
+.. shell-block:: openrave.py --database inversereachability --help
 
 """
 from __future__ import with_statement # for python 2.5
@@ -716,10 +721,6 @@ class InverseReachabilityModel(DatabaseGenerator):
 
 def run(*args,**kwargs):
     """Executes the inversereachability database generation,  ``args`` specifies a list of the arguments to the script.
-    
-    **Help**
-    
-    .. shell-block:: openrave.py --database inversereachability --help
     """
     InverseReachabilityModel.RunFromParser(*args,**kwargs)
             

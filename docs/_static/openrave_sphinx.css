@@ -21,19 +21,19 @@ body {
 
 a {
 	text-decoration: none;
-	color: #276;
+	color: #207060!important;
 }
 a:link {
 	text-decoration: none;
-	color: #276;
+    color: #207060!important;
 }
 a:visited {
 	text-decoration: none;
-	color: #276;
+    color: #207060!important;
 }
 a:hover {
 	text-decoration: underline;
-	color: #EE9816;
+	color: #EE9816!important;
 }
 pre {
     font-family: 'Consolas', 'Deja Vu Sans Mono', 'Bitstream Vera Sans Mono', monospace;

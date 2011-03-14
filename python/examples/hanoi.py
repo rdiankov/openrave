@@ -13,7 +13,7 @@
 # limitations under the License.
 """Solves the hanoi problem using simple arm planning.
 
-.. image:: ../../images/examples_hanoi.jpg
+.. image:: ../../images/examples/hanoi.jpg
   :height: 200
 
 **Running the Example**::
@@ -27,6 +27,11 @@ This example solves the Hanoi Puzzle using the Puma arm. You can easily change t
 pegs, disks, or add obstacles in the environment files **data/hanoi_complex.env.xml** and
 **data/hanoi.env.xml** to make the problem harder. The default planner used is the rBiRRT, you can
 easily change it to a different planner by changing the arguments to the BaseManipulation problem.
+
+Command-line
+------------
+
+.. shell-block:: openrave.py --example hanoi --help
 
 """
 from __future__ import with_statement # for python 2.5

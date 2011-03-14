@@ -29,24 +29,24 @@
 
 - チュートリアルを実行すると，OpenRAVEのGUIが立ち上がり，下のような画像が現れます．
 
-  .. image:: ../../images/example_tutorials/002_two_mugs_read_kinbody.png
+  .. image:: ../../images/examples/tutorial_002_two_mugs_read_kinbody.png
     :height: 200
 
 - いま同じ場所に２つのマグカップを読み出してしまったため，重なってしまいました．このため，青いマグカップを移動させてみましょう．\n
   物体を移動するには変換行列を使う方法と，poseを使う方法の２種類があります．まずは変換行列を使って移動させます．\n
   キーを１回押すと青いマグカップが移動し，移動前後の変換行列を出力します．
 
-  .. image:: ../../images/example_tutorials/002_two_mugs_move1.png
+  .. image:: ../../images/examples/tutorial_002_two_mugs_move1.png
     :height: 200
 
 - 次にposeを使って移動させます．キーを１回押すと青いマグカップが再度移動し，移動前後のposeを出力します．
 
-  .. image:: ../../images/example_tutorials/002_two_mugs_move2.png
+  .. image:: ../../images/examples/tutorial_002_two_mugs_move2.png
     :height: 200
 
 - この次からは，キーを押す度に青いマグカップがランダムに移動します．
 
-  .. image:: ../../images/example_tutorials/002_two_mugs_moverand.png
+  .. image:: ../../images/examples/tutorial_002_two_mugs_moverand.png
     :height: 200
 
 ソースコード

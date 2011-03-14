@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+
 # -*- coding: utf-8 -*-
 # Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)
 # 
@@ -14,7 +14,7 @@
 # limitations under the License.
 """Computes statistics on body links like swept volumes.
 
-.. image:: ../../images/databases.linkstatistics.jpg
+.. image:: ../../images/databases/linkstatistics.jpg
   :width: 640
 
 **Running the Generator**
@@ -28,6 +28,11 @@
 .. code-block:: bash
 
   openrave.py --database linkstatistics --robot=robots/barrettsegway.robot.xml --show
+
+Command-line
+------------
+
+.. shell-block:: openrave.py --database linkstatistics --help
 
 """
 
@@ -430,10 +435,6 @@ class LinkStatisticsModel(DatabaseGenerator):
 
 def run(*args,**kwargs):
     """Executes the linkstatistics database generation,  ``args`` specifies a list of the arguments to the script.
-    
-    **Help**
-    
-    .. shell-block:: openrave.py --database linkstatistics --help
     """
     LinkStatisticsModel.RunFromParser(*args,**kwargs)
 

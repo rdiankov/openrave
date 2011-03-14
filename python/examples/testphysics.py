@@ -11,6 +11,75 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Shows how to enable physics.
+
+.. image:: ../../images/examples/testphysics.jpg
+  :width: 400
+
+**Running the Example**::
+
+  openrave.py --example testphysics
+
+Description
+-----------
+
+When simulations are turned on, an internal timer starts and the SimulationStep functions of all classes are called. Note that simulations extend beyond physics. That's why there's the distinction between simulation and physics and both are set separately. To start the internal simulation with a timestep of 0.01 seconds do
+
+.. code-block:: python
+
+  env = Environment()
+  env.StartSimulation(timestep=0.01)
+
+To stop it do
+
+.. code-block:: python
+
+  env.StopSimulation()
+
+In a plugin, every state is accessible directly through memory. In scripting (Octave/Matlab), there's a thread safe loop that serializes information to the socket. KinBody/Robot information can be accessed from any thread as long as EvironmentBase::LockPhysics is called. In a SimulationStep call, this is not necessary as OpenRAVE locks physics before calling it.
+
+To set the physics engine to ODE, use
+
+.. code-block:: python
+
+  env.SetPhysicsEngine(env.CreatePhysicsEngine('ode'))
+
+octave:
+
+orEnvSetOptions('physics ODE');
+
+To set gravity:
+
+.. code-block:: python
+
+  env.GetPhysicsEngine().SetGravity([0,0,-9.81])
+
+Make sure that whatever object you don't want moving (like floors) are declared static. Setting Properites through XML Files
+
+It is possible to create and setup a physics engine in the <environment> tag in the XML file description. The ode physics engine uses a custom XML reader to define a special odeproperties tag that can be used to specify friction, gravity, etc. For example:
+
+.. code-block:: xml
+
+  <environment>
+    <!-- ... other definitions ... -->
+    <physicsengine type="ode">
+      <odeproperties>
+        <friction>0.5</friction>
+        <gravity>0 0 -9.8</gravity>
+        <selfcollision>1</selfcollision>
+      </odeproperties>
+    </physicsengine>
+  </environment>
+
+Take a look at the **share/openrave/data/testphysics.env.xml** for a working example.
+
+
+Command-line
+------------
+
+.. shell-block:: openrave.py --example testphysics --help
+
+"""
 from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
 __copyright__ = '2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'

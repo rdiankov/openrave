@@ -86,7 +86,8 @@ def create_package_file(root, master_package, subroot, py_files, opts, subs):
     """Build the text of the file and write the file."""
     package = os.path.split(root)[-1]
     text = ".. _package-%s:\n\n"%package
-    text += format_heading(1, '%s Package' %package)
+    # this adds too many headers since __init__ also adds a Package header
+    #text += format_heading(1, '%s Package' %package)
     file_links = []
     # add each package's module
     for py_file in py_files:
@@ -102,7 +103,7 @@ def create_package_file(root, master_package, subroot, py_files, opts, subs):
         filetext = format_heading(2, heading)
         filetext += format_directive(is_package and subroot or py_path, master_package)
         filetext += '\n'
-        if opts.sepfiles:
+        if opts.sepfiles and not is_package:
             file_links.append(py_path)
             write_file(py_path, filetext, opts)
         else:
@@ -118,7 +119,6 @@ def create_package_file(root, master_package, subroot, py_files, opts, subs):
     subs = [sub for sub in subs if os.path.isfile(os.path.join(root, sub, INIT))]
     # if there are some package directories, add a TOC for theses subpackages
     if subs:
-        text += format_heading(2, 'Subpackages')
         text += '.. toctree::\n\n'
         for sub in subs:
             text += '    %s.%s\n' % (makename(master_package, subroot), sub)

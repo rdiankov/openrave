@@ -14,7 +14,7 @@
 # limitations under the License.
 """Samples visible locations of a target object and a sensor.
 
-.. image:: ../../images/databases.visibilitymodel.jpg
+.. image:: ../../images/databases/visibilitymodel.jpg
   :width: 640
 
 **Running the Generator**
@@ -47,14 +47,18 @@ Description
 
 As long as a sensor is attached to a robot arm, can be applied to any robot to get immediate visibiliy configuration sampling:
 
-.. image:: ../../images/databases_visibilitymodel_extents.jpg
+.. image:: ../../images/databases/visibilitymodel_extents.jpg
   :height: 250
 
-The visibility database generator uses the `VisualFeedback interface`_ for the underlying visibility
+The visibility database generator uses the :ref:`probleminstance-visualfeedback` for the underlying visibility
 computation. The higher level functions it provides are sampling configurations, computing all valid
 configurations with the manipulator, and display.
 
-.. _`VisualFeedback interface`: http://openrave.programmingvision.com/ordocs/sphinx/sphinx-docs/interfaces/probleminstance/visualfeedback.html
+Command-line
+------------
+
+.. shell-block:: openrave.py --database visibilitymodel --help
+
 """
 from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
@@ -382,10 +386,6 @@ class VisibilityModel(DatabaseGenerator):
 
 def run(*args,**kwargs):
     """Executes the visibilitymodel database generation,  ``args`` specifies a list of the arguments to the script.
-    
-    **Help**
-    
-    .. shell-block:: openrave.py --database visibilitymodel --help
     """
     VisibilityModel.RunFromParser(*args,**kwargs)
 

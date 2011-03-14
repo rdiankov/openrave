@@ -29,25 +29,25 @@
 
 - チュートリアルを実行すると，OpenRAVEのGUIが立ち上がり，下のような画像が現れます．
 
-  .. image:: ../../images/example_tutorials/003_mug_origin.png
+  .. image:: ../../images/examples/tutorial_003_mug_origin.png
     :height: 200
 
 - 画面内で矢印は座標軸を表し，RGBの色はそれぞれXYZ軸に対応しています．\n
   X軸の回転角度を入力してみましょう．矢印の向きに向かって反時計まわりがプラスの回転方向です．
 
-  .. image:: ../../images/example_tutorials/003_mug_rot_Xaxis.png
+  .. image:: ../../images/examples/tutorial_003_mug_rot_Xaxis.png
     :height: 200
 
 - 例ではX軸に-45度回転させました．新しく現れた黄色の矢印はカップの上方向が回転した結果の向きを示しています．\n
   次にY軸の回転角度を入力してみましょう．
 
-  .. image:: ../../images/example_tutorials/003_mug_rot_Yaxis.png
+  .. image:: ../../images/examples/tutorial_003_mug_rot_Yaxis.png
     :height: 200
 
 - 例ではY軸に+45度回転させました．黄色の矢印は先ほどと同じくカップの上方向が回転した結果の向きを示しています．\n
   次に何かキーを押してみましょう．
 
-  .. image:: ../../images/example_tutorials/003_mug_rot_Zaxis.png
+  .. image:: ../../images/examples/tutorial_003_mug_rot_Zaxis.png
     :height: 200
 
 - この次からは，キーを押す度に先ほどの黄色の矢印を軸にしてマグカップが回転しながら移動します．

@@ -246,11 +246,20 @@ namespace OpenRAVEXMLParser
     
     bool CreateTriMeshData(const std::string& filename, const Vector& vscale, KinBody::Link::TRIMESH& trimesh, RaveVector<float>& diffuseColor, RaveVector<float>& ambientColor, float& ftransparency)
     {
+        string extension;
+        if( filename.find_last_of('.') != string::npos ) {
+            extension = filename.substr(filename.find_last_of('.')+1);
+            std::transform(extension.begin(), extension.end(), extension.begin(), ::tolower);
+        }
+        
 #ifdef OPENRAVE_ASSIMP
-        aiSceneManaged scene(filename.c_str(),aiProcess_JoinIdenticalVertices|aiProcess_Triangulate);
-        if( !!scene._scene && !!scene._scene->mRootNode && !!scene._scene->HasMeshes() ) {
-            if( _AssimpCreateTriMesh(scene._scene,scene._scene->mRootNode, vscale, trimesh, diffuseColor, ambientColor, ftransparency) ) {
-                return true;
+        // assimp doesn't support vrml/iv, so don't waste time
+        if( extension != "iv" && extension != "wrl" && extension != "vrml" ) {
+            aiSceneManaged scene(filename.c_str(),aiProcess_JoinIdenticalVertices|aiProcess_Triangulate);
+            if( !!scene._scene && !!scene._scene->mRootNode && !!scene._scene->HasMeshes() ) {
+                if( _AssimpCreateTriMesh(scene._scene,scene._scene->mRootNode, vscale, trimesh, diffuseColor, ambientColor, ftransparency) ) {
+                    return true;
+                }
             }
         }
 #endif

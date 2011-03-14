@@ -11,6 +11,43 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Opens a GUI window showing the images from the camera sensors attached on a robot.
+
+.. image:: ../../images/examples/testcamerasensor.jpg
+  :width: 640
+
+**Running the Example**::
+
+  openrave.py --example testcamerasensor
+
+Description
+-----------
+
+The basesensors plugin also has a simple implementation of a pinhole camera. Run examples/testcamerasensor.m to see a robot with a camera attached to its wrist. The example opens bin/data/testwamcamera.env.xml and queries image data from the sensor as fast as possible. The image data is displayed in Octave/Matlab using imshow. The image will change in real-time as the robot is moved around the scene. The wireframe frustum rendered next to the robot shows the camera's field of view. 
+
+The XML required to attach a camera to the robot similar to the example above is:
+
+.. code-block:: xml
+
+  <AttachedSensor>
+    <link>wam4</link>
+    <translation>0 -0.2 0</translation>
+    <rotationaxis>0 1 0 -90</rotationaxis>
+    <sensor type="BaseCamera" args="">
+      <KK>640 480 320 240</KK>
+      <width>640</width>
+      <height>480</height>
+      <framerate>5</framerate>
+      <color>0.5 0.5 1</color>
+    </sensor>
+  </AttachedSensor>
+
+Command-line
+------------
+
+.. shell-block:: openrave.py --example testcamerasensor --help
+
+"""
 from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
 __copyright__ = '2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'

@@ -12,12 +12,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
+"""Shows how to call an IK solver and render all the solutions.
 
-.. image:: ../../images/example_tutorials/iksolutions.jpg
+.. image:: ../../images/examples/tutorial_iksolutions.jpg
   :height: 200
-
-Shows how to call an IK solver and render all the solutions.
 
 First the inversekinematics database generator is called querying a **Transform6D** IK.
 

@@ -12,11 +12,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
-.. image:: ../../images/example_tutorials/iktranslation.jpg
+"""Shows how to use translational inverse kinematics for an arm with few joints.
+
+.. image:: ../../images/examples/tutorial_iktranslation.jpg
   :height: 200
 
-Shows how to use translational inverse kinematics for an arm with few joints
 """
 from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'

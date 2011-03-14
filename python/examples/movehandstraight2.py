@@ -13,7 +13,7 @@
 # limitations under the License.
 """Tests moving the end effctor of the manipulator in straight paths using just the translation.
 
-.. image:: ../../images/examples_movehandstraight2.jpg
+.. image:: ../../images/examples/movehandstraight2.jpg
   :height: 600
 
 **Running the Example**::
@@ -24,6 +24,11 @@ Description
 -----------
 
 Shows how to use the MoveHandStraight basemanipulation command. The example picks a random trajectory of the end effector and tests if this trajectory is feasible to achieve in the robot.
+
+Command-line
+------------
+
+.. shell-block:: openrave.py --example movehandstraight2 --help
 
 """
 

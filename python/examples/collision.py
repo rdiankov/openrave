@@ -11,15 +11,29 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Check collision calls and setting collision checkers.
+
+.. image:: ../../images/examples/collision.jpg
+  :height: 256
+
+**Running the Example**::
+
+  openrave.py --example collision
+
+"""
 from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
 __copyright__ = '2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Apache License, Version 2.0'
 
-from openravepy import *
-from numpy import *
 from optparse import OptionParser
 import time
+from openravepy import __build_doc__
+if not __build_doc__:
+    from numpy import *
+    from openravepy import *
+else:
+    from openravepy import with_destroy
 
 def collisioncallback(report,fromphysics):
     """Whenever a collision or physics detects a collision, this function is called"""

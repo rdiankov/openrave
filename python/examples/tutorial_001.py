@@ -39,7 +39,7 @@
 
 - チュートリアルを実行すると，OpenRAVEのGUIが立ち上がり，下のような画像が現れます．
 
-  .. image:: ../../images/example_tutorials/001_mug_read_kinbody.png
+  .. image:: ../../images/examples/tutorial_001_mug_read_kinbody.png
     :height: 200
 
 ソースコード

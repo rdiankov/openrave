@@ -15,14 +15,19 @@ Getting Started
 
  * See `ChangeLog`_ for what's new.
 
- * Latest source code from Subversion
+ * Latest source code from Subversion:
+
 ::
 
   svn co https://openrave.svn.sourceforge.net/svnroot/openrave/trunk openrave
 
 * :ref:`getting_started`
 
+ * :ref:`command_line_tools`, :ref:`openravepy_beginning`, `Writing Plugins in C++ <../coreapihtml/writing_plugins.html>`_, :ref:`environment_variables`, `Octave/MATLAB <http://openrave.programmingvision.com/index.php/Started:Scripting>`_
+
 * :ref:`overview`
+
+ * `Architecture`_, `Interface Concepts`_, :ref:`package-databases`, :ref:`robots_overview`, :ref:`geometric_conventions`
 
 Resources
 ---------

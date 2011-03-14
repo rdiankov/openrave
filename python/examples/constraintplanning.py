@@ -11,6 +11,52 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Shows how to use simple gradient-based jacobians to constrain the motion of the robot while planning.
+
+.. image:: ../../images/examples/constraintplanning.jpg
+  :width: 300
+
+**Running the Example**::
+
+  openrave.py --example constraintplanning
+
+Description
+-----------
+
+A good introduction to these methods can be found in [1]_.
+
+A GripperJacobianConstrains class is defined in the rmanipulation plugin. It holds a RetractionConstraint function that takes in a robot configuration, and constrains the manipulator to lie in a certain manifold specified by a target frame and the degrees of freedom to constraint (translation and rotation about axes). If the projection succeeded, it returns true along with the new configuration. Such functions can be set to any planner at any time by filling the PlannerBase::PlannerParameters::_constraintfn field. In the example above, the constraint function is set inside basemanipulation.h in the following way: 
+
+.. code-block:: cpp
+
+  PlannerBase::PlannerParametersPtr params(new PlannerBase::PlannerParameters());
+  
+  // ...
+  // other params initialization like distance metrics (_distmetricfn)
+  // ...
+  
+  // constrained params initialization
+  Transform tConstraintTargetWorldFrame; // target frame in world coordinates
+  RobotBase::ManipulatorPtr manip = robot->GetActiveManipulator(); // manipulator
+  boost::array<double,6> vconstraintfreedoms = {{1,1,0,0,0,0}}; // rotx, roty, rotz, transx, transy, transz
+  double constrainterrorthresh = 0.02; // threshold
+  // create the class
+  boost::shared_ptr<CM::GripperJacobianConstrains<double> > pconstraints(new CM::GripperJacobianConstrains<double>(manip,tConstraintTargetWorldFrame,vconstraintfreedoms,constrainterrorthresh));
+  
+  // set the distance metric used from the one already defined in params
+  pconstraints->_distmetricfn = params->_distmetricfn;
+  
+  // set the constraint function
+  params->_constraintfn = boost::bind(&CM::GripperJacobianConstrains<double>::RetractionConstraint,pconstraints,_1,_2,_3);
+
+Command-line
+------------
+
+.. shell-block:: openrave.py --example constraintplanning --help
+
+.. [1] Mike Stilman. Task constrained motion planning in robot joint space. In: Proceedings of the IEEE International Conference on Intelligent Robots and Systems (IROS), 2007. 
+
+"""
 from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
 __copyright__ = '2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'

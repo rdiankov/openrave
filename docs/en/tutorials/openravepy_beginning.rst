@@ -1,13 +1,26 @@
+.. _openravepy_beginning:
+
 Beginning with openravepy
 =========================
 
-`openravepy` allows Python to use the C++ API seamlessly. The bindings are developed using the
+:ref:`package-openravepy` allows Python to use the C++ API seamlessly. The bindings are developed using the
 `Boost.Python <http://www.boost.org/doc/libs/release/libs/python/doc>`_ library. Because
-`openravepy` directly links with OpenRAVE instead of going through the network, it allows much
+openravepy directly links with OpenRAVE instead of going through the network, it allows much
 faster execution times in a much more natural setting. In fact, most of the python bindings match
 the exactly C++ header files exactly.
 
-`openravepy` can be found in ``${OPENRAVE_INSTALL_DIR}/share/openrave`` on unix-based systems and ``C:\\Program Files\\openrave\\share\\openrave`` on Windows. For unix-based systems, the follow command can be used to retrieve the path:
+The main components are:
+
+* :mod:`openravepy_int` - provides C++ internal bindinings, is generated using Boost Python.
+* :mod:`openravepy_ext` - provides useful functions/classes to be used by rest of classes
+
+There are 3 major subcomponents:
+
+* :ref:`package-databases` - database generators
+* :ref:`package-examples` - runnable examples
+* :ref:`package-interfaces` - bindings to interfaces offered through OpenRAVE plugins.
+
+**openravepy** can be found in ``${OPENRAVE_INSTALL_DIR}/share/openrave`` on unix-based systems and ``C:\\Program Files\\openrave\\share\\openrave`` on Windows. For unix-based systems, the follow command can be used to retrieve the path:
 
 .. code-block:: bash
 

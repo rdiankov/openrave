@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 # Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,6 +12,78 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Planning with a wrist camera to look at the target object before grasping.
+
+.. image:: ../../images/examples/visibilityplanning.jpg
+  :width: 640
+
+**Running the Example**::
+
+  openrave.py --example visibilityplanning
+
+
+Description
+-----------
+
+This example shows a vision-centric manipulation framework for that can be used to perform more reliable reach-and-grasp tasks. The biggest problem with a lot of autonomous manipulation frameworks is that they perform the full grasp planning step as soon as the object is detected into view by a camera. Due to uncertainty in sensors and perception algorithms, usually the object error is huge when a camera is viewing it from far away. This is why OpenRAVE provides a module to plan with cameras attached to the gripper that implements [1]_.
+
+By combining grasp planning and visual feedback algorithms, and constantly considering sensor
+visibility, the framework can recover from sensor calibration errors and unexpected changes in the
+environment. The planning phase generates a plan to move the robot manipulator as close as safely
+possible to the target object such that the target is easily detectable by the on-board sensors. The
+execution phase is responsible for continuously choosing and validating a grasp for the target while
+updating the environment with more accurate information. It is vital to perform the grasp selection
+for the target during visual-feedback execution because more precise information about the target's
+location and its surroundings is available. Here is a small chart outlining the differences between
+the common manipulation frameworks:
+
+.. image:: ../../images/examples/visibilityplanning_framework.png
+  :width: 500
+
+First Stage: Sampling Camera Locations
+--------------------------------------
+
+Handling Occlusions
+~~~~~~~~~~~~~~~~~~~
+
+Occlusions are handled by shooting rays from the camera and computing where they hit. If any ray hits another object, the target is occluded.
+
+.. image:: ../../images/examples/visibilityplanning_raycollision.png
+  :width: 640
+
+Object Visibility Extents
+~~~~~~~~~~~~~~~~~~~~~~~~~
+The places where a camera could be in order for object detection to work are recorded.
+
+Visibility detection extents.jpg
+
+# gather data
+# create a probability distribution
+# resample 
+
+Adding Robot Kinematics
+~~~~~~~~~~~~~~~~~~~~~~~
+
+The final sampling algorithm is:
+
+.. image:: ../../images/examples/visibilityplanning_samplingalgorithm.jpg
+  :width: 640
+
+The final planner just involves an RRT that uses this goal sampler. The next figure shows the two-stage planning proposed in the paper.
+
+.. image:: ../../images/examples/visibilityplanning_twostage.jpg
+  :width: 640
+
+For comparison reasons the one-stage planning is shown above. Interestingly, visibility acts like a key-hole configuration that allows the two-stage planner to finish both paths in a very fast time. The times are comparible to the first stage.
+
+Command-line
+------------
+
+.. shell-block:: openrave.py --example visibilityplanning --help
+
+.. [1] Rosen Diankov, Takeo Kanade, James Kuffner. Integrating Grasp Planning and Visual Feedback for Reliable Manipulation, IEEE-RAS Intl. Conf. on Humanoid Robots, December 2009. 
+
+"""
 from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
 __copyright__ = '2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
@@ -18,11 +91,16 @@ __license__ = 'Apache License, Version 2.0'
 
 import sys, os, time, signal, threading
 import numpy # nice to be able to explicitly call some functions
-from numpy import *
 from optparse import OptionParser
-from openravepy import *
 from openravepy.interfaces import BaseManipulation, TaskManipulation
 from openravepy.databases import grasping, visibilitymodel
+
+from openravepy import __build_doc__
+if not __build_doc__:
+    from numpy import *
+    from openravepy import *
+else:
+    from openravepy import with_destroy, metaclass
 
 try:
     from Tkinter import *

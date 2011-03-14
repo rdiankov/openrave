@@ -14,7 +14,7 @@
 # limitations under the License.
 """Manages compiled inverse kinematics files for robots using ikfast.
 
-.. image:: ../../images/databases.inversekinematics.jpg
+.. image:: ../../images/databases/inversekinematics.jpg
   :width: 640
 
 **Running the Generator**
@@ -63,7 +63,7 @@ Generating the 3d rotation IK for the stage below is:
   openrave.py --database inversekinematics --robot=robots/rotation_stage.robot.xml --iktype=rotation3d
 
 
-.. image:: ../../images/databases_inversekinematics_rotation_stage.jpg
+.. image:: ../../images/databases/inversekinematics_rotation_stage.jpg
   :height: 200
 
 Generating the ray inverse kinematics for the 4 degrees of freedom barrett wam is:
@@ -119,6 +119,10 @@ Reference
 
 .. _`IKFast Robot Database`: http://openrave.programmingvision.com/ikfast
 
+Command-line
+------------
+
+.. shell-block:: openrave.py --database inversekinematics --help
 
 """
 from __future__ import with_statement # for python 2.5

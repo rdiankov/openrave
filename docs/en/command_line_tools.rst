@@ -1,3 +1,5 @@
+.. _command_line_tools:
+
 Command Line Tools
 ==================
 
@@ -68,6 +70,11 @@ features it supports:
 
 Given that environment xml files can now contain tags for any interface, it is possible to setup all the used interfaces in the XML, open it with **openrave.py -i**, and immediately start introspecting on the state.
 
+Command-line
+~~~~~~~~~~~~
+
+.. shell-block:: openrave.py --help
+
 openrave-hash.py
 ----------------
 
@@ -76,9 +83,19 @@ Can query all the hashes openrave uses to manage robot descriptions::
   openrave-hash.py data/mug1.kinbody.xml
   openrave.py --robothash robots/barrettsegway.robot.xml
 
+Command-line
+~~~~~~~~~~~~
+
+.. shell-block:: openrave-hash.py --help
+
 openrave
 --------
 
 Simple executable written in C++ that can start an OpenRAVE environment and load problems. It provides simple configuration of parameters for easy testing. 
 
 It is possible to save robots into 
+
+Command-line
+~~~~~~~~~~~~
+
+.. shell-block:: openrave --help

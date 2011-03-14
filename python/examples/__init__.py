@@ -20,7 +20,7 @@ import tutorial_001
 import tutorial_002
 import tutorial_003
 import tutorial_004
-import tutorial_grasp_transform
+import tutorial_grasptransform
 import tutorial_ik5d
 import tutorial_iklookat
 import tutorial_iksolutions

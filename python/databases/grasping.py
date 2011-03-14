@@ -14,7 +14,7 @@
 # limitations under the License.
 """Simulate grasping of objects and computing force closure metrics.  
 
-.. image:: ../../images/databases.grasping.jpg
+.. image:: ../../images/databases/grasping.jpg
   :width: 640
 
 **Running the Generator**
@@ -55,7 +55,7 @@ unwanted results due to possible concavities like the handle of a cup. A simpler
 the bounding box of the object and sample its surface uniformly (see
 `GraspingModel.computeBoxApproachRays`).
 
-.. image:: ../../images/grasping_box_sampling.jpg
+.. image:: ../../images/databases/grasping_box_sampling.jpg
   :width: 250
 
 Once the surface of the box is sampled, the intersection of the object and a ray originating from
@@ -63,30 +63,30 @@ each point going inward is taken. The normal of the object's surface from each o
 points is taken to be the approaching direction of the end-effector. The red lines in the above
 image indicate the rays along which the end-effector will approach the cup.
 
-.. image:: ../../images/grasping_surface_sampling.jpg
+.. image:: ../../images/databases/grasping_surface_sampling.jpg
   :width: 200
 
 Once the initial pose, preshape, and approach direction are chosen, the grasper planner is called,
 which queries the contact points of the grasp and analyzes them for force closure.
 
-.. image:: ../../images/barrett_grasp_strategy.jpg
+.. image:: ../../images/databases/barrett_grasp_strategy.jpg
   :width: 700
 
 Render the final configuration of the end-effector closing down on the target object along with the
 friction cones at each contact point (red transparent cones).
 
-.. image:: ../../images/grasping_barrett_mug1.jpg
+.. image:: ../../images/databases/grasping_barrett_mug1.jpg
   :width: 300
 
-.. image:: ../../images/grasping_barrett_mug3.jpg
+.. image:: ../../images/databases/grasping_barrett_mug3.jpg
   :width: 300
 
 Calling `GraspingModel.generate` generates tables for a ketchup bottle.
 
-.. image:: ../../images/grasping_barrett_ketchup1.jpg
+.. image:: ../../images/databases/grasping_barrett_ketchup1.jpg
   :width: 250
 
-.. image:: ../../images/grasping_barrett_ketchup2.jpg
+.. image:: ../../images/databases/grasping_barrett_ketchup2.jpg
   :width: 350
 
 Features
@@ -105,6 +105,11 @@ Here's a short list of features of the grasper planner and problem interfaces:
 - Because the grasper planner reads the gripper links from the manipulator definition, it can now function correctly just by being passed the full robot. Inside the loop, the gripper is separated momentarily to complete the grasping process, the rest of the body is ignored. This allows users to test grasps on a real scene without having to introduce a floating hand into the scene.
 
 .. _`grasper plugin`: http://openrave.programmingvision.com/ordocs/sphinx/sphinx-docs/plugins.html#grasper
+
+Command-line
+------------
+
+.. shell-block:: openrave.py --database grasping --help
 
 """
 from __future__ import with_statement # for python 2.5
@@ -801,10 +806,6 @@ class GraspingModel(DatabaseGenerator):
 
 def run(*args,**kwargs):
     """Executes the grasping database generation, ``args`` specifies a list of the arguments to the script.
-    
-    **Help**
-    
-    .. shell-block:: openrave.py --database grasping --help
     """
     GraspingModel.RunFromParser(*args,**kwargs)
 

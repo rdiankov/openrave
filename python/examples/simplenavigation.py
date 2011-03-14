@@ -11,6 +11,22 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Shows how to use RRTs for navigation planning by setting affine degrees of freedom.
+
+.. image:: ../../images/examples/simplenavigation.jpg
+  :width: 300
+
+**Running the Example**::
+
+  openrave.py --example simplenavigation
+
+
+Command-line
+------------
+
+.. shell-block:: openrave.py --example simplenavigation --help
+
+"""
 from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
 __copyright__ = '2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'

@@ -12,18 +12,54 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Combine the power of grasp sets and randomized planners to get any robot arm picking up objects from a table and putting them in a dish rack. 
+
+.. image:: ../../images/examples/graspplanning.jpg
+  :width: 300
+
+**Running the Example**::
+
+  openrave.py --example graspplanning
+
+Description
+-----------
+
+The example uses the powerful TaskManipulation problem interface, which takes advantage of many OpenRAVE features. It performs:
+
+* Pick grasps and validate them with the grasper planner
+* Move to the appropriate grasp preshape while avoiding obstacles
+* Use an RRT and Jacobian-based gradient descent methods to safely move close to an obstacle
+* Use CloseFingers to grasp the object while checking for collisions with other unwanted objects
+* Use body grabbing to grasp the object and move it to its destination
+* Lower the object until collision and then release and move away from it. 
+
+The scene is randomized every run in order to show the powerful of the planners.
+
+More screen shots: 
+
+Command-line
+------------
+
+.. shell-block:: openrave.py --example graspplanning --help
+
+"""
 from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
 __copyright__ = '2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Apache License, Version 2.0'
 
-from openravepy import *
 from openravepy.interfaces import BaseManipulation, TaskManipulation
 from openravepy.databases import convexdecomposition,grasping,inversekinematics
-from numpy import *
 import numpy,time,traceback
 from optparse import OptionParser
 from itertools import izip
+
+from openravepy import __build_doc__
+if not __build_doc__:
+    from numpy import *
+    from openravepy import *
+else:
+    from openravepy import with_destroy, metaclass
 
 class GraspPlanning(metaclass.AutoReloader):
     def __init__(self,robot,randomize=False,dests=None,nodestinations=False,switchpatterns=None):

@@ -14,7 +14,7 @@
 # limitations under the License.
 """Convex decomposition of the link geometry of the robot.
 
-.. image:: ../../images/databases.convexdecomposition.jpg
+.. image:: ../../images/databases/convexdecomposition.jpg
   :width: 640
 
 **Running the Generator**
@@ -48,8 +48,13 @@ Approximates each of the links with a set of convex hulls using John Ratcliff's 
 
 .. _`convexdecomposition library`: http://codesuppository.blogspot.com/2009/11/convex-decomposition-library-now.html
 
-.. image:: ../../images/databases_convexdecomposition_wamenv.jpg
+.. image:: ../../images/databases/convexdecomposition_wamenv.jpg
   :height: 250
+
+Command-line
+------------
+
+.. shell-block:: openrave.py --database convexdecomposition --help
 
 """
 from __future__ import with_statement # for python 2.5
@@ -331,10 +336,6 @@ class ConvexDecompositionModel(DatabaseGenerator):
 
 def run(*args,**kwargs):
     """Executes the convexdecomposition database generation,  ``args`` specifies a list of the arguments to the script.
-    
-    **Help**
-    
-    .. shell-block:: openrave.py --database convexdecomposition --help
     """
     ConvexDecompositionModel.RunFromParser(*args,**kwargs)
 

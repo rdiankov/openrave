@@ -11,6 +11,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License. 
+"""Library allows OpenRAVE to be used through Python.
+
+Beginners should first check out :ref:`openravepy_beginning`.
+
+Internals
+---------
+
+There is a __build_doc__ external variable that is set to True only when building docs. This allows package to clean their symbols and documentation.
+"""
 try:
     __build_doc__ = __openravepy_build_doc__
     if __build_doc__:

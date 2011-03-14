@@ -1,18 +1,17 @@
 #!/usr/bin/env python
-"""
+"""This tutorial shows how to generate and use the inverse-reachability database in OpenRAVE for the PR2 robot.
+
 ======================================================
 Move Hand to Target: Use Inverse Reachability Database
 ======================================================
 
-This tutorial shows how to generate and use the inverse-reachability database in OpenRAVE for the PR2 robot.
-
-.. image:: ../../images/example_tutorials/ir_grasps.png
+.. image:: ../../images/examples/tutorial_inversereachability_ir_grasps.png
    :width: 200px
 
-.. image:: ../../images/example_tutorials/ir_reachability_front.png
+.. image:: ../../images/examples/tutorial_inversereachability_front.png
    :width: 200 px
    
-.. image:: ../../images/example_tutorials/ir_10_solutions_top.png
+.. image:: ../../images/examples/tutorial_inversereachability.jpg
    :width: 200 px
 
 Prerequisite
@@ -109,7 +108,7 @@ Visualize inverse-reachability database
 
 This tutorial visualizes the database for one grasp, there will be another tutorial that will show how to visualize the base distribution for all possible grasps for an object. 
 
-.. Figure:: ../../images/example_tutorials/ir_grasps.png
+.. Figure:: ../../images/examples/tutorial_inversereachability_ir_grasps.png
    :width: 640px
     
    The blue cloud indicates possible base positions for grasping the object.
@@ -122,12 +121,12 @@ Command::
 
    openrave.py --database kinematicreachability --robot=robots/pr2-beta-static.zae --show
 
-.. figure:: ../../images/example_tutorials/ir_reachability_front.png
+.. figure:: ../../images/examples/tutorial_inversereachability_front.png
    :width: 640 px
     
    The color indicates reachability.
 
-.. figure:: ../../images/example_tutorials/ir_reachability_back.png
+.. figure:: ../../images/examples/tutorial_inversereachability_back.png
    :width: 640 px
     
    The color indicates reachability.
@@ -135,7 +134,7 @@ Command::
 Use database: Move the robot where it can perform a specific grasp
 ------------------------------------------------------------------
 
-.. figure:: ../../images/example_tutorials/ir_goal.png
+.. figure:: ../../images/examples/tutorial_inversereachability_goal.png
    :width: 640 px
 
    Robot in a place where it can grasp the cup.
@@ -161,7 +160,7 @@ Set up goal
                        [  0.00000000e+00 ,  0.00000000e+00 ,  1.00000000e+00 ,  9.55221763e-01],
                        [  0.00000000e+00 ,  0.00000000e+00,   0.00000000e+00  , 1.00000000e+00]]) 
 
-.. figure:: ../../images/example_tutorials/ir_goal_grasp.png
+.. figure:: ../../images/examples/tutorial_inversereachability_goal_grasp.png
    :width: 640 px
    
    Goal grasp
@@ -178,7 +177,7 @@ Set up robot
         v[self.robot.GetJoint('l_gripper_l_finger_joint').GetDOFIndex()] = .54
         self.robot.SetActiveDOFValues(v)
 
-.. figure:: ../../images/example_tutorials/ir_before.png
+.. figure:: ../../images/examples/tutorial_inversereachability_before.png
    :width: 640 px
 
    Robot starting state
@@ -266,7 +265,7 @@ Move robot to valid poses
             self.robot.SetTransform(pose)
             self.robot.SetDOFValues(values)
 
-.. figure:: ../../images/example_tutorials/ir_after.png
+.. figure:: ../../images/examples/tutorial_inversereachability_after.png
    :width: 640 px
    
    One sample from the goal distribution.
@@ -297,12 +296,12 @@ Code fragment from `databases.inversereachability`
                 newrobots.append(newrobot)
 
 
-.. figure:: ../../images/example_tutorials/ir_10_solutions_top.png
+.. figure:: ../../images/examples/tutorial_inversereachability.jpg
    :width: 640 px
    
    Top view of ten samples.
 
-.. figure:: ../../images/example_tutorials/ir_10_solutions_side.png
+.. figure:: ../../images/examples/tutorial_inversereachability_10_solutions_side.png
    :width: 640 px
    
    Side view of ten samples.

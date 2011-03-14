@@ -12,8 +12,6 @@ Contents
    index
    overview
    getting_started
-   examples
-   databases
    plugin_interfaces
    robots
    devel/index

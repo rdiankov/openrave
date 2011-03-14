@@ -32,6 +32,9 @@ def with_destroy(fn):
             return fn(*args,**kwargs)
         finally:
             openravepy.RaveDestroy()
+    newfn.__doc__ = fn.__doc__
+    newfn.__module__ = fn.__module__
+    newfn.__name__ = fn.__name__
     return newfn
 
 def mkdir_recursive(newdir):

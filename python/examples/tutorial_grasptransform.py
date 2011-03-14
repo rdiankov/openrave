@@ -1,9 +1,8 @@
 #!/usr/bin/env python
-"""
+"""This tutorial shows how to find the transform that moves the hand to the target.
+
 Move Hand To Target: Find Transforms
 ====================================
-
-This tutorial shows how to find the transform that moves the hand to the target.
 
 Run this tutorial
 -----------------
@@ -14,13 +13,15 @@ Run this tutorial
 
 Initial setup
 -------------
-.. figure:: ../../images/example_tutorials/grasp_transform_tutorial_initial.png
+
+.. figure:: ../../images/examples/tutorial_grasptransform.jpg
    :width: 642 px
    
    Initial robot configuration
 
 Initialize the environment
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 .. code-block:: python
 
     # set up planning environment
@@ -29,6 +30,7 @@ Initialize the environment
 
 Load the robot and object
 ~~~~~~~~~~~~~~~~~~~~~~~~~
+
 .. code-block:: python
 
     robot = env.ReadRobotXMLFile('robots/pr2-beta-static.zae')
@@ -38,6 +40,7 @@ Load the robot and object
 
 Move the object
 ~~~~~~~~~~~~~~~
+
 .. code-block:: python
 
     # init target pose
@@ -49,6 +52,7 @@ Move the object
     
 Open arms, raise torso, open gripper
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 .. code-block:: python
 
     # init robot pose
@@ -61,6 +65,7 @@ Open arms, raise torso, open gripper
 
 Doing transform
 ---------------
+
 Given:
 
 .. code-block:: python
@@ -83,28 +88,29 @@ Solution:
     O_T_G_goal = self.robot.GetTransform() # final grasping frame G_goal in global frame O 
     O_T_R_goal = dot(O_T_G_goal,G_T_R) # final robot transform R_goal in global frame O
 
-.. figure:: ../../images/example_tutorials/grasp_transform_tutorial_O_T_R.png
+.. figure:: ../../images/examples/tutorial_grasptransform_O_T_R.png
    :width: 642 px
    
    robot frame R in global frame O
 
-.. figure:: ../../images/example_tutorials/grasp_transform_tutorial_O_T_Target.png
+.. figure:: ../../images/examples/tutorial_grasptransform_O_T_Target.png
    :width: 642 px
    
    target frame Target in global frame O
    
-.. figure:: ../../images/example_tutorials/grasp_transform_tutorial_O_T_G.png
+.. figure:: ../../images/examples/tutorial_grasptransform_O_T_G.png
    :width: 642 px
    
    grasping frame G in global frame O
    
-.. figure:: ../../images/example_tutorials/grasp_transform_tutorial_final.png
+.. figure:: ../../images/examples/tutorial_grasptransform_final.png
    :width: 642 px
    
    Robot goal configuration
    
 Related Functions
 -----------------
+
  `Environment.ReadRobotXMLFile` , `Environment.AddRobot` , `Environment.ReadKinBodyXMLFile` , `Environment.AddKinBody` , 
  `KinBody.GetTransform` , `KinBody.SetTransform` , 
  `Robot.GetActiveDOFValues` , `Robot.SetActiveDOFValues` , `Robot.GetTransform` , `Robot.SetTransform` , `Robot.GetActiveManipulator`,

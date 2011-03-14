@@ -8,7 +8,7 @@ Installation
 
 .. code-block:: bash
 
-  apt-get install python-pygments python-setuptools python-lxml python-matplotlib dvipng
+  apt-get install python-pygments python-setuptools python-lxml python-matplotlib dvipng dia-common
   easy_install --upgrade docutils
   easy_install sphinx
 

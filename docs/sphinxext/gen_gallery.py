@@ -29,6 +29,7 @@ def gen_gallery_internal(app, doctree,parentname,includedocstring,maxwidth,maxhe
     imageext = 'jpg'
     link_template = """<td><p><b>%s</b></p><a href="%s"><img src="%s" border="0" class="thumbimage" alt="%s"/></a>%s</td>\n"""
 
+    openravepy.mkdir_recursive(os.path.join(imagewritedir,parentname))
     parentmodule = __import__('openravepy.'+parentname,fromlist=['openravepy'])
     modulenames = []
     for name in dir(parentmodule):
@@ -47,22 +48,20 @@ def gen_gallery_internal(app, doctree,parentname,includedocstring,maxwidth,maxhe
 
     rows = []
     for modulename, name, docstring in modulenames:
-        basename = parentname+'.'+name
-        imthumbname = basename+'_thumb.'+imageext
+        imthumbname = name+'_thumb.'+imageext
         try:
-            im = Image.open(os.path.join(imagereaddir,basename+'.'+imageext))
+            im = Image.open(os.path.join(imagereaddir,parentname,name+'.'+imageext))
             if im.size[0]*maxheight/im.size[1] > maxwidth:
                 newsize = [maxwidth,im.size[1]*maxwidth/im.size[0]]
             else:
                 newsize = [im.size[0]*maxheight/im.size[1],maxheight]
             imthumb = im.resize(newsize, Image.ANTIALIAS)
-            imthumb.save(open(os.path.join(imagewritedir,imthumbname),'w'))
+            imthumb.save(open(os.path.join(imagewritedir,parentname,imthumbname),'w'))
         except IOError,e:
             print e
-        link = linkdir+basename+'.html'
         if len(docstring) > 0:
             docstring = '<p>%s</p>'%docstring
-        rows.append(link_template%(name,linkdir+'/'+basename+'.html', imagelinkdir+'/'+imthumbname, name,docstring))
+        rows.append(link_template%(name,linkdir+'/'+parentname+'.'+name+'.html', imagelinkdir+'/'+parentname+'/'+imthumbname, name,docstring))
 
     # Only write out the file if the contents have actually changed.
     # Otherwise, this triggers a full rebuild of the docs
@@ -75,7 +74,7 @@ def gen_gallery_internal(app, doctree,parentname,includedocstring,maxwidth,maxhe
             rowstext += '</tr>'
     if parentname == 'databases':
         rowstext = """
-<p><a href="openravepy/databases.__init__.html">Database Generators Overview</a></p>
+<p><a href="openravepy/openravepy.databases.html">Database Generators Overview</a></p>
 
 <h1>Database Generators</h1>
 <p>Run with <b>openrave.py --database X</b></p>
@@ -116,7 +115,7 @@ def gen_gallery(app, doctree):
         return
 
     gen_gallery_internal(app,doctree,'databases',True,630,150,1)
-    gen_gallery_internal(app,doctree,'examples',False,200,150,3)
+    gen_gallery_internal(app,doctree,'examples',True,200,150,3)
 
 def setup(app):
     app.connect('env-updated', gen_gallery)

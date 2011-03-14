@@ -14,7 +14,10 @@
 # limitations under the License.
 """6D kinematic reachability space of a robot's manipulators.
 
-.. image:: ../../images/databases.kinematicreachability.jpg
+.. image:: ../../images/databases/kinematicreachability.jpg
+  :width: 640
+
+.. image:: ../../images/databases/kinematicreachability_side.jpg
   :width: 640
 
 **Running the Generator**
@@ -33,6 +36,11 @@ Description
 -----------
 
 This is the reachability when counting the total number of configurations possible at each pose. 
+
+Command-line
+------------
+
+.. shell-block:: openrave.py --database kinematicreachability --help
 
 """
 from __future__ import with_statement # for python 2.5
@@ -345,10 +353,6 @@ class ReachabilityModel(DatabaseGenerator):
 
 def run(*args,**kwargs):
     """Executes the kinematicreachability database generation,  ``args`` specifies a list of the arguments to the script.
-    
-    **Help**
-    
-    .. shell-block:: openrave.py --database kinematicreachability --help
     """
     ReachabilityModel.RunFromParser(*args,**kwargs)
 
