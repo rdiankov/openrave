@@ -2533,6 +2533,23 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, bool bCheckLi
     for(size_t i = 0; i < vPassiveJointValues.size(); ++i) {
         if( !_vPassiveJoints[i]->IsMimic() ) {
             _vPassiveJoints[i]->GetValues(vPassiveJointValues[i]);
+            // check if out of limits!
+            for(size_t j = 0; j < vPassiveJointValues[i].size(); ++j) {
+                if( !_vPassiveJoints[i]->IsCircular(j) ) {
+                    if( vPassiveJointValues[i][j] < _vPassiveJoints[i]->_vlowerlimit.at(j) ) {
+                        if( vPassiveJointValues[i][j] < _vPassiveJoints[i]->_vlowerlimit.at(j)-10*g_fEpsilon ) {
+                            RAVELOG_WARN(str(boost::format("dummy joint out of lower limit! %e < %e\n")%_vPassiveJoints[i]->_vlowerlimit.at(j)%vPassiveJointValues[i][j]));
+                        }
+                        vPassiveJointValues[i][j] = _vPassiveJoints[i]->_vlowerlimit.at(j);
+                    }
+                    else if( vPassiveJointValues[i][j] > _vPassiveJoints[i]->_vupperlimit.at(j) ) {
+                        if( vPassiveJointValues[i][j] > _vPassiveJoints[i]->_vupperlimit.at(j)+10*g_fEpsilon ) {
+                            RAVELOG_WARN(str(boost::format("dummy joint out of upper limit! %e > %e\n")%_vPassiveJoints[i]->_vupperlimit.at(j)%vPassiveJointValues[i][j]));
+                        }
+                        vPassiveJointValues[i][j] = _vPassiveJoints[i]->_vupperlimit.at(j);
+                    }
+                }
+            }
         }
         else {
             vPassiveJointValues[i].reserve(_vPassiveJoints[i]->GetDOF()); // do not resize so that we can catch hierarchy errors
@@ -2542,9 +2559,9 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, bool bCheckLi
     std::vector<uint8_t> vlinkscomputed(_veclinks.size(),0);
     vlinkscomputed[0] = 1;
 
-    for(size_t i = 0; i < _vTopologicallySortedJointsAll.size(); ++i) {
-        JointPtr pjoint = _vTopologicallySortedJointsAll[i];
-        int jointindex = _vTopologicallySortedJointIndicesAll[i];
+    for(size_t ijoint = 0; ijoint < _vTopologicallySortedJointsAll.size(); ++ijoint) {
+        JointPtr pjoint = _vTopologicallySortedJointsAll[ijoint];
+        int jointindex = _vTopologicallySortedJointIndicesAll[ijoint];
         int dofindex = pjoint->GetDOFIndex();
         const dReal* pvalues=dofindex >= 0 ? pJointValues + dofindex : NULL;
         if( pjoint->IsMimic() ) {
