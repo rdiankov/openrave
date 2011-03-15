@@ -483,7 +483,7 @@ int main(int argc, char** argv)
             code += "/// \\param pfree is an array specifying the free joints of the chain.\n"
             code += "IKFAST_API void fk(const IKReal* j, IKReal* eetrans, IKReal* eerot) {\n"
             allvars = node.solvejointvars + node.freejointvars
-            subexprs,reduced_exprs=customcse (node.Tfk[0:3,0:4].subs([(v[0],Symbol('j[%d]'%v[1])) for v in allvars]))
+            subexprs,reduced_exprs=customcse (node.Tfk[0:3,0:4].subs([(v[0],Symbol('j[%d]'%v[1])) for v in allvars]),self.symbolgen)
             outputnames = ['eerot[0]','eerot[1]','eerot[2]','eetrans[0]','eerot[3]','eerot[4]','eerot[5]','eetrans[1]','eerot[6]','eerot[7]','eerot[8]','eetrans[2]']
             fcode = ''
             if len(subexprs) > 0:
@@ -541,7 +541,7 @@ int main(int argc, char** argv)
             code += "/// \\param pfree is an array specifying the free joints of the chain.\n"
             code += "IKFAST_API void fk(const IKReal* j, IKReal* eetrans, IKReal* eerot) {\n"
             allvars = node.solvejointvars + node.freejointvars
-            subexprs,reduced_exprs=customcse (node.Rfk[0:3,0:3].subs([(v[0],Symbol('j[%d]'%v[1])) for v in allvars]))
+            subexprs,reduced_exprs=customcse (node.Rfk[0:3,0:3].subs([(v[0],Symbol('j[%d]'%v[1])) for v in allvars]),self.symbolgen)
             outputnames = ['eerot[0]','eerot[1]','eerot[2]','eerot[3]','eerot[4]','eerot[5]','eerot[6]','eerot[7]','eerot[8]']
             fcode = ''
             if len(subexprs) > 0:
@@ -601,7 +601,7 @@ int main(int argc, char** argv)
             eqs = []
             for eq in node.Pfk[0:3]:
                 eqs.append(eq.subs(allsubs))
-            subexprs,reduced_exprs=customcse (eqs)
+            subexprs,reduced_exprs=customcse (eqs,self.symbolgen)
             outputnames = ['eetrans[0]','eetrans[1]','eetrans[2]']
             fcode = ''
             if len(subexprs) > 0:
@@ -656,7 +656,7 @@ int main(int argc, char** argv)
             eqs = []
             for eq in node.Pfk[0:2]:
                 eqs.append(eq.subs(allsubs))
-            subexprs,reduced_exprs=customcse (eqs)
+            subexprs,reduced_exprs=customcse (eqs,self.symbolgen)
             outputnames = ['eetrans[0]','eetrans[1]']
             fcode = ''
             if len(subexprs) > 0:
@@ -711,7 +711,7 @@ int main(int argc, char** argv)
             eqs = []
             for eq in node.Dfk:
                 eqs.append(eq.subs(allsubs))
-            subexprs,reduced_exprs=customcse (eqs)
+            subexprs,reduced_exprs=customcse (eqs,self.symbolgen)
             outputnames = ['eerot[0]','eerot[1]','eerot[2]']
             fcode = ''
             if len(subexprs) > 0:
@@ -770,7 +770,7 @@ int main(int argc, char** argv)
                 eqs.append(eq.subs(allsubs))
             for eq in node.Dfk[0:3]:
                 eqs.append(eq.subs(allsubs))
-            subexprs,reduced_exprs=customcse (eqs)
+            subexprs,reduced_exprs=customcse (eqs,self.symbolgen)
             outputnames = ['eetrans[0]','eetrans[1]','eetrans[2]','eerot[0]','eerot[1]','eerot[2]']
             fcode = ''
             if len(subexprs) > 0:
@@ -838,7 +838,7 @@ int main(int argc, char** argv)
                 eqs.append(eq.subs(allsubs))
             for eq in node.Dfk[0:3]:
                 eqs.append(eq.subs(allsubs))
-            subexprs,reduced_exprs=customcse (eqs)
+            subexprs,reduced_exprs=customcse (eqs,self.symbolgen)
             outputnames = ['eetrans[0]','eetrans[1]','eetrans[2]','eerot[0]','eerot[1]','eerot[2]']
             fcode = ''
             if len(subexprs) > 0:

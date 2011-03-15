@@ -23,7 +23,6 @@ def build(stats,options,outputdir):
     text="""
 .. _ikfast-database:
 
---------------------------------------------------------
 IKFast v%s Database
 ========================
 

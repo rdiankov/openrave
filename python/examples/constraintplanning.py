@@ -14,7 +14,7 @@
 """Shows how to use simple gradient-based jacobians to constrain the motion of the robot while planning.
 
 .. image:: ../../images/examples/constraintplanning.jpg
-  :width: 300
+  :width: 640
 
 **Running the Example**::
 

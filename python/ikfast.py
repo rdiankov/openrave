@@ -1858,7 +1858,7 @@ class IKFastSolver(AutoReloader):
         transtree = self.solveAllEquations(AllEquations,curvars=curvars,othersolvedvars=othersolvedvars[:],solsubs=solsubs,endbranchtree=newendbranchtree)
         transtree = self.verifyAllEquations(AllEquations,rotvars if solveRotationFirst else transvars+rotvars,self.freevarsubs[:],transtree)
         solvertree= []
-        solvedvarsubs = self.freevarsubs
+        solvedvarsubs = self.freevarsubs[:]
         if solveRotationFirst:
             storesolutiontree = transtree
         else:
@@ -3505,6 +3505,7 @@ class IKFastSolver(AutoReloader):
 
         # test the solutions
         zerobranches = []
+        accumequations = []
         for cond,evalcond,othervarsubs in eqs:
             # have to convert to fractions before substituting!
             if not all([self.isValidSolution(v) for s,v in othervarsubs]):
@@ -3526,13 +3527,17 @@ class IKFastSolver(AutoReloader):
                 if extrazerochecks is not None:
                     newcases = set(currentcases)
                     newcases.add(cond)
-                    zerobranches.append(([evalcond]+extrazerochecks,self.solveAllEquations(NewEquations,curvars,othersolvedvars,solsubs,endbranchtree,currentcases=newcases)))
+                    newtree = self.solveAllEquations(NewEquations,curvars,othersolvedvars,solsubs,endbranchtree,currentcases=newcases)
+                    accumequations.append(NewEquations) # store the equations for debugging purposes
+                    zerobranches.append(([evalcond]+extrazerochecks,newtree))
                     self.degeneratecases.addcases(newcases)
             except self.CannotSolveError:
                 continue
 
         if len(zerobranches) > 0:
-            lastbranch.append(AST.SolverBranchConds(zerobranches+[(None,[AST.SolverBreak()])]))
+            branchconds = AST.SolverBranchConds(zerobranches+[(None,[AST.SolverBreak()])])
+            branchconds.accumequations = accumequations
+            lastbranch.append(branchconds)
         else:
             lastbranch.append(AST.SolverBreak())
 

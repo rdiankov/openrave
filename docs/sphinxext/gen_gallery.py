@@ -50,15 +50,19 @@ def gen_gallery_internal(app, doctree,parentname,includedocstring,maxwidth,maxhe
     for modulename, name, docstring in modulenames:
         imthumbname = name+'_thumb.'+imageext
         try:
-            im = Image.open(os.path.join(imagereaddir,parentname,name+'.'+imageext))
+            im = Image.open(os.path.join(imagereaddir,parentname,name+'_thumb.'+imageext))
+        except IOError:
+            try:
+                im = Image.open(os.path.join(imagereaddir,parentname,name+'.'+imageext))
+            except IOError:
+                im = None
+        if im is not None:
             if im.size[0]*maxheight/im.size[1] > maxwidth:
                 newsize = [maxwidth,im.size[1]*maxwidth/im.size[0]]
             else:
                 newsize = [im.size[0]*maxheight/im.size[1],maxheight]
             imthumb = im.resize(newsize, Image.ANTIALIAS)
             imthumb.save(open(os.path.join(imagewritedir,parentname,imthumbname),'w'))
-        except IOError,e:
-            print e
         if len(docstring) > 0:
             docstring = '<p>%s</p>'%docstring
         rows.append(link_template%(name,linkdir+'/'+parentname+'.'+name+'.html', imagelinkdir+'/'+parentname+'/'+imthumbname, name,docstring))

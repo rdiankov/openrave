@@ -15,7 +15,7 @@
 """Combine the power of grasp sets and randomized planners to get any robot arm picking up objects from a table and putting them in a dish rack. 
 
 .. image:: ../../images/examples/graspplanning.jpg
-  :width: 300
+  :width: 640
 
 **Running the Example**::
 
