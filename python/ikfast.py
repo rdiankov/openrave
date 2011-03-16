@@ -17,6 +17,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
+.. _ikfast_compiler:
 
 IKFast: The Robot Kinematics Compiler
 -------------------------------------
@@ -38,10 +39,7 @@ Closed-form solutions are necessary for motion planning due to two reasons:
 Features
 ========
 
-- Generate inverse kinematics for 6 joints for an end effector rotation and translation (6D). Can handle robots with arbitrary joint complexity.
-- Generate inverse kinematics for 3 joints for an end effector rotation only (3D).
-- Generate inverse kinematics for 3 joints for an end effector translation only (3D).
-- Generate inverse kinematics for 4 joints for a ray's direction and position (4D).
+- Can handle robots with arbitrary joint complexity like non-intersecting axes.
 - All possible discrete solutions calculated (can be up to 16).
 - Generated C++ code **independent** of OpenRAVE or any other library.
 - Automatically detects degenerate cases where 2 or more axes align and cause infinite solutions.
@@ -53,15 +51,16 @@ Features
 IK Types
 --------
 
-The supported IK types are:
+The following inverse kinematics types are supported:
 
-- **Transform6D** - end effector reaches desired 6D transformation
-- **Rotation3D** - end effector reaches desired 3D rotation
-- **Translation3D** - end effector origin reaches desired 3D translation
-- **Direction3D** - direction on end effector coordinate system reaches desired direction
-- **Ray4D** - ray on end effector coordinate system reaches desired global ray
-- **Lookat3D** - direction on end effector coordinate system points to desired 3D position
-- **TranslationDirection5D** - end effector origin and direction reaches desired 3D translation and direction. Can be thought of as Ray IK where the origin of the ray must coincide.
+* **Transform6D** - end effector reaches desired 6D transformation
+* **Rotation3D** - end effector reaches desired 3D rotation
+* **Translation3D** - end effector origin reaches desired 3D translation
+* **Direction3D** - direction on end effector coordinate system reaches desired direction
+* **Ray4D** - ray on end effector coordinate system reaches desired global ray
+* **Lookat3D** - direction on end effector coordinate system points to desired 3D position
+* **TranslationDirection5D** - end effector origin and direction reaches desired 3D translation and direction. Can be thought of as Ray IK where the origin of the ray must coincide.
+* **TranslationXY2D** - end effector origin reaches desired XY translation position, Z is ignored. The coordinate system with relative to the base link.
 
 The possible solve methods are defined by `ikfast.IKFastSolver.GetSolvers()`
 

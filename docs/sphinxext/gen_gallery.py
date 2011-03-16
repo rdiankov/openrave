@@ -78,9 +78,10 @@ def gen_gallery_internal(app, doctree,parentname,includedocstring,maxwidth,maxhe
             rowstext += '</tr>'
     if parentname == 'databases':
         rowstext = """
+<h1>Database Generators</h1>
+
 <p><a href="openravepy/openravepy.databases.html">Database Generators Overview</a></p>
 
-<h1>Database Generators</h1>
 <p>Run with <b>openrave.py --database X</b></p>
 <table border="1">
 %s

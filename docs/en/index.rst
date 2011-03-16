@@ -11,7 +11,7 @@ Welcome to Open Robotics Automation Virtual Environment
 Getting Started
 ---------------
 
-* `Install from sources <http://openrave.programmingvision.com/ordocs/en/html/installation.html>`_
+* `Installation`_
 
  * See `ChangeLog`_ for what's new.
 
@@ -23,7 +23,7 @@ Getting Started
 
 * :ref:`getting_started`
 
- * :ref:`openravepy_beginning`, :ref:`command_line_tools`, `Writing Plugins in C++ <../coreapihtml/writing_plugins.html>`_, :ref:`environment_variables`, `Octave/MATLAB <http://openrave.programmingvision.com/index.php/Started:Scripting>`_
+ * :ref:`openravepy_beginning`, :ref:`command_line_tools`, `Writing Plugins in C++ <../coreapihtml/writing_plugins.html>`_, :ref:`environment_variables`, `Octave/MATLAB`_
 
 * :ref:`overview`
 

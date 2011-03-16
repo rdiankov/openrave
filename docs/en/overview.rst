@@ -45,6 +45,8 @@ code-bases.
 * `Interface Concepts`_
 * :ref:`package-databases`
 
+ * :ref:`ikfast_compiler`
+
 .. toctree::
    :maxdepth: 1
 

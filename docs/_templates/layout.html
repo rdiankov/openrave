@@ -3,7 +3,7 @@
 {% block rootrellink %}
         <li><a href="{{ pathto('index') }}">home</a>|&nbsp;</li>
         <li><a href="{{ pathto('examples') }}">examples</a>|&nbsp;</li>
-        <li><a href="{{ pathto('robots') }}">robots</a>|&nbsp;</li>
+        <li><a href="{{ pathto('ikfast/index') }}">robots</a>|&nbsp;</li>
         <li><a href="{{ pathto('plugin_interfaces') }}">plugins</a>|&nbsp;</li>
         <li><a href="{{ pathto('databases') }}">database generators</a>|&nbsp;</li>
         <li><a href="http://openrave.programmingvision.com/wiki">wiki</a>|&nbsp;</li>
@@ -14,8 +14,10 @@
 
 <div style="background-color: white; text-align: left; padding: 10px 10px 15px 15px">
 <table width="680" id="topnav-table">
-  <td width="400" valign="top">
-    <a href="{{ pathto('index') }}"><img src="{{pathto("_static/openrave_logo.png", 1) }}" border="0" alt="openrave.org"/></a></td>
+  <td width="400" valign="top"><a href="{{ pathto('index') }}">
+<!-- <img src="{{pathto("_static/openrave_logo.png", 1) }}" border="0" alt="openrave.org"/> -->
+<h1>OpenRAVE</h1>
+</a></td>
   <td valign="middle" align="right">
     <form class="search" action="{{ pathto('search') }}" method="get">
       <input type="text" name="q" size="18" autocomplete="on" />

@@ -17,6 +17,8 @@
 .. image:: ../../images/databases/inversekinematics.jpg
   :width: 640
 
+`[source] <../_modules/openravepy/databases/inversekinematics.html>`_
+
 **Running the Generator**
 
 .. code-block:: bash
@@ -46,11 +48,12 @@ The supported types are defined by `IkParameterization.Type` and are propagated 
 Description
 -----------
 
-This database allows users to generate OpenRAVE inverse kinematics solvers for any robot
-manipulator. The manipulator's arm joints are used for obtaining the joints to solve for. The user
-can specify the IK type (Rotation, Translation, Full 6D, Ray 4D, etc), the free joints of the
-kinematics, and the precision. For example, generating the right arm 6D IK for the PR2 robot where
-the free joint is the first joint and the free increment is 0.01 radians is:
+This database generator uses :ref:`ikfast_compiler` to generate optimized and stable analytic
+inverse kinematics solvers for any robot manipulator. The manipulator's arm joints are used for
+obtaining the joints to solve for. The user can specify the IK type (Rotation, Translation, Full 6D,
+Ray 4D, etc), the free joints of the kinematics, and the precision. For example, generating the
+right arm 6D IK for the PR2 robot where the free joint is the first joint and the free increment is
+0.01 radians is:
 
 .. code-block:: bash
 
@@ -106,24 +109,26 @@ Loading from C++
 ----------------
 
 It is possible to use the auto-generation process through c++ by loading the IKFast problem and
-calling LoadIKFastSolver command. Check out the `ikfastloader.cpp`_ example program.
+calling LoadIKFastSolver command.
+
+`ikfastloader.cpp`_ - example for loading IK in C++.
 
 Reference
 ---------
 
-`IKFast Robot Database`_ - statistics and performance results for many robots.
+* :ref:`ikfast-database` - statistics and performance results of ikfast for many robots
 
-`openravepy.ikfast` - details on the technology behind IKFast
+* :ref:`ikfast_compiler` - details on the technology behind IKFast
 
-.. _`ikfastloader.cpp`: http://openrave.programmingvision.com/ordocs/en/html/ikfastloader_8cpp-example.html
-
-.. _`IKFast Robot Database`: http://openrave.programmingvision.com/ikfast
+.. _`ikfastloader.cpp`: ../coreapihtml/ikfastloader_8cpp-example.html
 
 Command-line
 ------------
 
 .. shell-block:: openrave.py --database inversekinematics --help
 
+Class Definitions
+-----------------
 """
 from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'

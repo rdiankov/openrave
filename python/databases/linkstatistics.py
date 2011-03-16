@@ -17,6 +17,8 @@
 .. image:: ../../images/databases/linkstatistics.jpg
   :width: 640
 
+`[source] <../_modules/openravepy/databases/linkstatistics.html>`_
+
 **Running the Generator**
 
 .. code-block:: bash
@@ -33,6 +35,9 @@ Command-line
 ------------
 
 .. shell-block:: openrave.py --database linkstatistics --help
+
+Class Definitions
+-----------------
 
 """
 

@@ -17,6 +17,8 @@
 .. image:: ../../images/databases/grasping.jpg
   :width: 640
 
+`[source] <../_modules/openravepy/databases/grasping.html>`_
+
 **Running the Generator**
 
 .. code-block:: bash
@@ -110,6 +112,9 @@ Command-line
 ------------
 
 .. shell-block:: openrave.py --database grasping --help
+
+Class Definitions
+-----------------
 
 """
 from __future__ import with_statement # for python 2.5

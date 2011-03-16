@@ -13,7 +13,7 @@ Contents
    overview
    getting_started
    plugin_interfaces
-   robots
+   ikfast/index
    devel/index
    openravepy/openravepy
    

@@ -1,14 +1,13 @@
 Quick examples in openravepy
 ============================
 
-Short snippets of code to help get the feel for OpenRAVE functionality. Code is written using the openravepy bindings. Can be directly executed inside the python interpreter.
+Short snippets of code to help get the feel for OpenRAVE functionality. Code can be directly executed inside the python interpreter.
 
 
 Simple Environment Loading
 --------------------------
 
-Here is a small example that loads up an environment, attaches a viewer, loads a scene, and requests
-various information about the robot
+Loads up an environment, attaches a viewer, loads a scene, and requests information about the robot.
 
 .. code-block:: python
 
@@ -21,11 +20,11 @@ various information about the robot
   robot.SetDOFValues([0.5],[0]) # set joint 0 to value 0.5
   T = robot.GetLinks()[1].GetTransform() # get the transform of link 1
   print "The transformation of link 1 is:\\n",T
-  env.Destroy() # explicitly destroy the environment once done with it
-
 
 Using a BiRRT Planner
 ---------------------
+
+Use a planner to get a collision free path to a configuration space goal.
 
 .. code-block:: python
 
@@ -40,6 +39,8 @@ Using a BiRRT Planner
 
 Move End Effector with IK
 -------------------------
+
+Use a planner to get a collision free path to a workspace goal of the end effector.
 
 .. code-block:: python
 
@@ -61,7 +62,7 @@ Move End Effector with IK
 Logging
 -------
 
-Here is an example on how to save the current scene using the '''logging''' plugin:
+Save the current scene using the '''logging''' plugin:
 
 .. code-block:: python
 
