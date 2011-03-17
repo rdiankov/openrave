@@ -1437,7 +1437,7 @@ bool InterfaceBase::_GetCommandHelp(std::ostream& o, std::istream& sinput) const
         for(size_t i = 0; i < it->first.size(); ++i) {
             o << "~";
         }
-        o << endl << endl << it->second->help << endl;
+        o << endl << endl << it->second->help << endl << endl << "~~~~" << endl << endl;
     }
     return true;
 }

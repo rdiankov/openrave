@@ -33,7 +33,7 @@ Offers: :ref:`controller:IdealController <controller-idealcontroller>` :ref:`con
 
 OpenRAVE Version: 0.2.19
 
-Core Plugin: Last updated r2159
+Core Plugin: Last updated r2160
 
 URL: https://openrave.svn.sourceforge.net/svnroot/openrave/trunk/plugins/basecontrollers
 
@@ -46,7 +46,7 @@ Offers: :ref:`robot:GenericRobot <robot-genericrobot>` :ref:`robot:CollisionMapR
 
 OpenRAVE Version: 0.2.19
 
-Core Plugin: Last updated r2040
+Core Plugin: Last updated r2161
 
 URL: https://openrave.svn.sourceforge.net/svnroot/openrave/trunk/plugins/baserobots
 
@@ -59,7 +59,7 @@ Offers: :ref:`sensor:BaseLaser2D <sensor-baselaser2d>` :ref:`sensor:BaseSpinning
 
 OpenRAVE Version: 0.2.19
 
-Core Plugin: Last updated r2159
+Core Plugin: Last updated r2166
 
 URL: https://openrave.svn.sourceforge.net/svnroot/openrave/trunk/plugins/basesensors
 
@@ -122,7 +122,7 @@ Offers: :ref:`probleminstance:ikfast <probleminstance-ikfast>` :ref:`inversekine
 
 OpenRAVE Version: 0.2.19
 
-Core Plugin: Last updated r2159
+Core Plugin: Last updated r2165
 
 URL: https://openrave.svn.sourceforge.net/svnroot/openrave/trunk/plugins/ikfastsolvers
 
@@ -159,7 +159,7 @@ Offers: :ref:`controller:odevelocity <controller-odevelocity>` :ref:`physicsengi
 
 OpenRAVE Version: 0.2.19
 
-Core Plugin: Last updated r2159
+Core Plugin: Last updated r2160
 
 URL: https://openrave.svn.sourceforge.net/svnroot/openrave/trunk/plugins/oderave
 
@@ -220,7 +220,7 @@ Offers: :ref:`probleminstance:BaseManipulation <probleminstance-basemanipulation
 
 OpenRAVE Version: 0.2.19
 
-Core Plugin: Last updated r2159
+Core Plugin: Last updated r2164
 
 URL: https://openrave.svn.sourceforge.net/svnroot/openrave/trunk/plugins/rmanipulation
 
@@ -255,7 +255,7 @@ Offers: :ref:`planner:RAStar <planner-rastar>` :ref:`planner:BiRRT <planner-birr
 
 OpenRAVE Version: 0.2.19
 
-Core Plugin: Last updated r2159
+Core Plugin: Last updated r2164
 
 URL: https://openrave.svn.sourceforge.net/svnroot/openrave/trunk/plugins/rplanners
 

@@ -39,7 +39,7 @@ This document is automatically generated for every release and binds together th
 * :ref:`plugin_interfaces`
 * `Database Generators <databases.html>`_
 * `Examples <examples.html>`_
-* :ref:`robots`
+* :ref:`ikfast-database`
 
 Other
 ~~~~~

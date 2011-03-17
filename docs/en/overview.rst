@@ -60,9 +60,8 @@ OpenRAVE was founded by `Rosen Diankov <http://www.programmingvision.com>`_ at t
 Technology Center <http://www.cmu.edu/qolt>`_ in the `Carnegie Mellon University Robotics Institute
 <http://www.ri.cmu.edu/>`_. It was inspired from the RAVE simulator `James Kuffner
 <http://www.kuffner.org/james/>`_ had started developing in 1995 and used for his experiments ever
-since. The OpenRAVE project was started in 2006 and is a complete rewrite of RAVE. The main goal
-with OpenRAVE is to create a planning architecture that would give robotics researchers an easy
-open-source interface to plan for their robots both in simulation and in the real-world.
+since. The OpenRAVE project was started in 2006 and is a complete rewrite of RAVE. It is actively
+being maintained at the `JSK Lab at University of Tokyo <http://www.jsk.t.u-tokyo.ac.jp/>`_.
 
 Developers/Contributors
 -----------------------

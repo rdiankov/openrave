@@ -101,7 +101,7 @@ def robotstats(description,robotfilename,manipname, iktypestr,freeindices):
             if ikmodel.ikfeasibility is not None:
                 # nothing more to do than print the text
                 print ikmodel.ikfeasibility # will repeat text if just generated
-                globalstats.put([robotfilename,manip.GetName(),iktypestr,description,None,None,None,None,None])
+                globalstats.put([robotfilename,manip.GetName(),iktypestr,freeindices,description,None,None,None,None,None])
                 return
 
             ikmodel.freeinc = ikmodel.getDefaultFreeIncrements(options.freeincrot,options.freeinctrans)
@@ -170,13 +170,13 @@ def robotstats(description,robotfilename,manipname, iktypestr,freeindices):
             print measurement('number tests',str(numtested))
             print measurement('run-time mean (s)','%.6f'%numpy.mean(results))
             print measurement('run-time max (s)','%.6f'%numpy.max(results))
-            globalstats.put([robotfilename,manip.GetName(),iktypestr,description,ikmodel.getsourcefilename(read=True),numpy.mean(results),numpy.max(results),successrate,wrongrate])
+            globalstats.put([robotfilename,manip.GetName(),iktypestr,freeindices,description,ikmodel.getsourcefilename(read=True),numpy.mean(results),numpy.max(results),successrate,wrongrate])
             assert(len(solutionresults[0])==0)
             assert(successrate > options.minimumsuccess)
             assert(nosolutions < options.maximumnosolutions)
         except ikfast.IKFastSolver.IKFeasibilityError,e:
             # this is expected, and is normal operation, have to notify
-            globalstats.put([robotfilename,manip.GetName(),iktypestr,description,None,None,None,None,None])
+            globalstats.put([robotfilename,manip.GetName(),iktypestr,freeindices,description,None,None,None,None,None])
             print e
 
 

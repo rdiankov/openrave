@@ -17,14 +17,112 @@ from optparse import OptionParser
 import os
 import scipy
 
-def build(stats,options,outputdir):
+imagedir = 'images/robots'#build/en/main/_images/robots'
+imagelinkdir = '../../images/robots'
+
+def buildrobot(outputdir, env, robotfilename, robotstats):
+    width=640
+    height=480
+    focal = 1000.0
+    robotname = os.path.split(os.path.splitext(robotfilename)[0])[1]
+    imagename = '%s.x.jpg'%robotname
+    if env is not None:
+        env.Reset()
+        r=env.ReadRobotXMLFile(robotfilename)
+        if r is None:
+            print 'failed ',robotfilename
+        else:
+            print 'processing ',robotname
+            env.AddRobot(r)
+            # transform the robot so we don't render it at its axis aligned (white robots completely disappear)
+            r.SetTransform(matrixFromQuat(quatRotateDirection([-1,0,0],[-1,1,0.5])))
+            ab = r.ComputeAABB()
+            K=[focal,focal,width/2,height/2]
+            L = ab.extents()[0] + max(ab.extents()[1]*focal/(0.5*width),ab.extents()[2]*focal/(0.5*height))
+            Tx=transformLookat(lookat=ab.pos(),camerapos=ab.pos()-array([-1.0,0,0])*L,cameraup=[0,0,-1])
+            Ix = viewer.GetCameraImage(width=width,height=height,transform=Tx,K=K)
+            L = ab.extents()[1] + max(ab.extents()[0]*focal/(0.5*width),ab.extents()[2]*focal/(0.5*height))
+            Ty=transformLookat(lookat=ab.pos(),camerapos=ab.pos()-array([0,1.0,0])*L,cameraup=[0,0,-1])
+            Iy = viewer.GetCameraImage(width=width,height=height,transform=Ty,K=K)
+            scipy.misc.pilutil.imsave(os.path.join(imagedir,imagename),hstack([Ix,Iy]))
+
+    robotlink = 'robot-'+robotname
+    robotxml = """.. _%s:\n\n%s Robot\n%s======
+
+  :filename: %s
+
+.. image:: %s/%s
+  :height: 300
+
+"""%(robotlink,robotname,'='*len(robotname),robotfilename, imagelinkdir,imagename)
+
+    prevmanipname = None
+    previktypestr = None
+    rownames = []
+    for manipname, iktypestr, description, sourcefilename, meantime, maxtime, successrate, wrongrate in robotstats:
+        if prevmanipname != manipname:
+            name = '**' + manipname + '** Manipulator'
+            robotxml += name + '\n' + '-'*len(name) + '\n\n'
+            prevmanipname = manipname
+        if previktypestr != iktypestr:
+            name = iktypestr + ' IK'
+            robotxml += name + '\n' + '~'*len(name) + '\n\n'
+            previktypestr = iktypestr
+        rows = []
+        rows.append(['success rate','wrong rate','mean time (s)','max time (s)'])
+        rows.append(['%.3f'%successrate,'%.3f'%wrongrate,'%.6f'%meantime,'%.6f'%maxtime])
+        colwidths = [max([len(row[i]) for row in rows]) for i in range(len(rows[0]))]
+        for row in rows:
+            for i in range(len(row)):
+                row[i] = row[i].ljust(colwidths[i])+'|'
+            row[0] = '|'+row[0]
+        seprow = ['-'*colwidth + '+' for colwidth in colwidths]
+        seprow[0] = '+'+seprow[0]
+        rows.insert(0,seprow)
+        rows.insert(2,seprow)
+        rows.append(seprow)
+        robotxml += '**%s**\n\n'%description[0]
+        for row in rows:
+            robotxml += ''.join(row)+'\n'
+        robotxml += '\n\n'
+    open(os.path.join(outputdir,robotname+'.rst'),'w').write(robotxml)
+    returnxml = """
+:ref:`%s`
+%s
+
+  :IK parameterizations: %d
+
+.. image:: %s/%s
+  :height: 200
+
+----
+
+"""%(robotlink,'-'*(len(robotlink)+7),len(robotstats),imagelinkdir,imagename)
+    return returnxml,robotname
+
+def build(allstats,options,outputdir,env):
     mkdir_recursive(outputdir)
+
+    # write each robot
+    robotdict = dict()
+    for stat in allstats:
+        if len(stat) == 9:
+            if not stat[0] in robotdict:
+                robotdict[stat[0]] = []
+            robotdict[stat[0]].append(stat[1:])
+    robotxml = ''
+    robotnames = []
+    for robotfilename, robotstats in robotdict.iteritems():
+        xml,robotname = buildrobot(outputdir,env,robotfilename, robotstats)
+        robotxml += xml
+        robotnames.append(robotname)
+
     iktypes = ', '.join(iktype.name for iktype in IkParameterization.Type.values.values())
     text="""
 .. _ikfast-database:
 
-IKFast Database
-========================
+IKFast Robot Database
+=====================
 
 .. htmlonly::
 
@@ -45,7 +143,22 @@ URL links to the robot files, genreated ik files, and test results history are p
 
 The following results originate from `this run <%s>`_.
 
-"""%(ikfast.__version__,options.jenkinsbuild_url)
+Robots
+======
+
+%s
+
+"""%(ikfast.__version__,options.jenkinsbuild_url,robotxml)
+    text += """
+List
+----
+
+.. toctree::
+  :maxdepth: 1
+
+"""
+    for robotname in robotnames:
+        text += '  %s\n'%robotname
     open(os.path.join(outputdir,'index.rst'),'w').write(text)
 
     freeparameters = ', '.join('%s free - %s tests'%(i,num) for i,num in enumerate(options.numiktests))
@@ -90,5 +203,12 @@ Degenerate configurations can frequently occur when the robot axes align, this p
     open(os.path.join(outputdir,'testing.rst'),'w').write(testing_text)
 
 if __name__ == "__main__":
-    stats,options = pickle.load(open('ikfaststats.pp','r'))
-    build(stats,options,'en/ikfast')
+    mkdir_recursive(imagedir)
+    allstats,options = pickle.load(open('ikfaststats.pp','r'))
+    env=Environment()
+    try:
+        env.SetViewer('qtcoin',False)
+        viewer=env.GetViewer()
+        build(allstats,options,'en/ikfast',env)
+    finally:
+        RaveDestroy()
