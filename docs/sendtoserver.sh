@@ -1,7 +1,5 @@
 #!/bin/bash
-rm -rf images_temp; svn export images images_temp
-tar cjf ordocs.tgz build/en/coreapihtml build/en/main images_temp build/ja/coreapihtml build/ja/main 
-rm -rf images_temp
+tar cjf ordocs.tgz build/en/coreapihtml build/en/main build/ja/coreapihtml build/ja/main 
 
 # send to server
 scp ordocs.tgz diankov@programmingvision.com:~/openrave/

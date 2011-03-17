@@ -15,16 +15,13 @@ echo "$doxycommands" | cat Doxyfile.latex Doxyfile.en - > build/Doxyfile.latex.e
 echo "$doxycommands" | cat Doxyfile.html Doxyfile.ja - > build/Doxyfile.html.ja
 echo "$doxycommands" | cat Doxyfile.latex Doxyfile.ja - > build/Doxyfile.latex.ja
 
-#bash makeimages.sh
+bash build_images.sh
 
 # doxygen
-doxygen build/Doxyfile.html.en
-doxygen build/Doxyfile.latex.en
-python build_latex.py build/en/latex
+python build_doxygen.py --lang=en
 cp build/en/latex/refman.pdf build/en/openrave.pdf
 
-doxygen build/Doxyfile.html.ja
-#python build_latex.py build/ja/latex
+python build_doxygen.py --lang=ja
 #cp ja/latex/refman.pdf build/ja/openrave_ja.pdf
 
 # build internal openravepy docs

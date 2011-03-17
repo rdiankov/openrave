@@ -7,7 +7,9 @@
 \~english
 
 This document covers the core %OpenRAVE concepts, the C++ API, C++ examples, and C++ usage of the plugins offered in the base
-installation. Visit the \homepage{<b>official documentation page</b>} for information on all other %OpenRAVE features.
+installation.
+
+Visit the \homepage{<b>official documentation page</b>} for information on all other %OpenRAVE features.
 
 \~japanese
 
@@ -286,11 +288,13 @@ if not offered through the %OpenRAVE's channels.
 */
 
 /**
+\examples
+
 \page cpp_examples C++ Examples
 
 \section cpp_examples_build Building
 
-All C++ examples are stored in \c $OPENRAVE_INSTALL/share/openrave/cppexamples. Use the \c CMakeLists.txt file the build the examples by:
+All C++ examples are stored in \c $OPENRAVE_INSTALL/share/openrave/cppexamples. Use the \c CMakeLists.txt file to build the examples by:
 \verbatim
 cd `openrave-config --prefix`/share/openrave/cppexamples
 mkdir build
@@ -298,6 +302,10 @@ cd build
 cmake ..
 make
 \endverbatim
+
+\subsection Detecting OpenRAVE Installations
+
+- \ref FindOpenRAVE.cmake - include this in cmake projects for automatic detection of OpenRAVE.
 
 \section cpp_examples_plugins Examples Plugins
 
@@ -314,7 +322,8 @@ make
 - \ref orplanning_ik.cpp
 - \ref orplanning_planner.cpp
 - \ref orplanning_problem.cpp
-- \ref orrobot.cpp
+- \ref orpythonbinding.cpp
+- \ref ortrajectory.cpp
 
 */
 

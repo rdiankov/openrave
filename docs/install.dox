@@ -109,7 +109,7 @@ cmake -DOPT_PLUGINS=OFF ..
   - models - 3D model resources
   - octave - All Octave scripting functions and examples. Include this directory into the OCTAVE_PATH.
   - plugins - Plugins compiled by the %OpenRAVE main distribution.
-  - openravepy - Python bindings, database generators, and examples. Directory structure is explained \openrave_py_dir{here}.
+  - openravepy - Python bindings, database generators, and examples. Directory structure is explained \openravepy{here}.
   - robots - Robot XML files usually containing just a \c \<robot\> or \c \<kinbody\> tag.
 
 \ja \section install_structure インストールディレクトリの構造
@@ -133,7 +133,7 @@ cmake -DOPT_PLUGINS=OFF ..
   - matlab - 全てのMatlabスクリプトと実行例．このスクリプトを実行するためにMATLABのパスにこのディレクトリを追加する必要があります．
   - octave - 全てのOctaveスクリプトと実行例．このスクリプトを実行するためにOCTAVEのパスにこのディレクトリを追加する必要があります．
   - plugins - コンパイルされたプラグイン
-  - openravepy - Pythonと連動した，データベース生成器や実行例．ディレクトリ構造の詳細は\openrave_py_dir{ここ}をご参照ください．
+  - openravepy - Pythonと連動した，データベース生成器や実行例．ディレクトリ構造の詳細は\openravepy{ここ}をご参照ください．
   - robots - \c \<robot\> or \c \<kinbody\> を含む，ロボットXMLファイル
 
 

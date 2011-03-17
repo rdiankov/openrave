@@ -203,12 +203,19 @@ Degenerate configurations can frequently occur when the robot axes align, this p
     open(os.path.join(outputdir,'testing.rst'),'w').write(testing_text)
 
 if __name__ == "__main__":
+    parser = OptionParser(description='Builds the ik database')
+    parser.add_option('--outdir',action="store",type='string',dest='outdir',default='en/ikfast',
+                      help='Output directory to write all interfaces reStructuredText files to, the root file is interfaces.rst (default=%default).')
+parser.add_option('--ikfaststats',action="store",type='string',dest='ikfaststats',default='ikfaststats.pp',
+                      help='The python pickled file containing ikfast statistics.')
+    (options, args) = parser.parse_args()
+
     mkdir_recursive(imagedir)
-    allstats,options = pickle.load(open('ikfaststats.pp','r'))
+    allstats,options = pickle.load(open(options.ikfaststats,'r'))
     env=Environment()
     try:
         env.SetViewer('qtcoin',False)
         viewer=env.GetViewer()
-        build(allstats,options,'en/ikfast',env)
+        build(allstats,options,options.outdir,env)
     finally:
         RaveDestroy()
