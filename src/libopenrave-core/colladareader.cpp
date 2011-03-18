@@ -146,6 +146,12 @@ class ColladaReader : public daeErrorHandler
             if( itatt->first == "skipgeometry" ) {
                 _bSkipGeometry = stricmp(itatt->second.c_str(), "true") == 0 || itatt->second=="1";
             }
+            else if( itatt->first == "prefix" ) {
+                RAVELOG_VERBOSE(str(boost::format("collada reader prefix=%s is processed from xmlreaders side")%itatt->second));
+            }
+            else if( itatt->first == "name" ) {
+                RAVELOG_VERBOSE(str(boost::format("collada reader robot name=%s is processed from xmlreaders side")%itatt->second));
+            }
             else {
                 RAVELOG_WARN(str(boost::format("collada reader unprocessed attribute pair: %s:%s")%itatt->first%itatt->second));
             }

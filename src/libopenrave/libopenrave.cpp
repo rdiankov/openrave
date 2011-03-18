@@ -2094,6 +2094,7 @@ std::string GetMD5HashString(const std::vector<uint8_t>& v)
 
 std::string& SearchAndReplace(std::string& out, const std::string& in, const std::vector< std::pair<std::string, std::string> >& pairs)
 {
+    BOOST_ASSERT(&out != &in);
     FOREACHC(itp,pairs) {
         BOOST_ASSERT(itp->first.size()>0);
     }

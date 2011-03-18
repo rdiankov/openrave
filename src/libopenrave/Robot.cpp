@@ -2271,7 +2271,7 @@ void RobotBase::_ComputeInternalInformation()
         FOREACHC(itjointname,(*itmanip)->_vgripperjointnames) {
             JointPtr pjoint = GetJoint(*itjointname);
             if( !pjoint ) {
-                RAVELOG_WARN(str(boost::format("could not find gripper joint %s")%*itjointname));
+                RAVELOG_WARN(str(boost::format("could not find gripper joint %s for manipulator %s")%*itjointname%(*itmanip)->GetName()));
                 iclosingdirection++;
             }
             else {

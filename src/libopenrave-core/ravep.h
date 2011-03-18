@@ -178,6 +178,14 @@ class ColladaWriter;
 
 #include "openrave-core.h"
 
+// exports from libopenrave.h
+namespace OpenRAVE
+{
+    OPENRAVE_API std::string GetMD5HashString(const std::string& s);
+    OPENRAVE_API std::string GetMD5HashString(const std::vector<uint8_t>& v);
+    OPENRAVE_API std::string& SearchAndReplace(std::string& out, const std::string& in, const std::vector< std::pair<std::string, std::string> >& pairs);
+}
+
 using namespace OpenRAVE;
 using namespace std;
 

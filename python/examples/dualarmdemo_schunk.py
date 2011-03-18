@@ -153,8 +153,9 @@ def run(args=None):
             schunk.robot.SetActiveManipulator(schunk.rightArm)
             obj=env.GetKinBody('Object1')
             while True:
+                Toriginal=obj.GetTransform()
                 with obj:
-                    T=obj.GetTransform()
+                    T=array(Toriginal)
                     T[0:3,3] += 0.4*(random.rand(3)-0.5) # yz only
                     obj.SetTransform(T)
                     if not env.CheckCollision(obj):

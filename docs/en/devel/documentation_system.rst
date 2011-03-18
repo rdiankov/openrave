@@ -74,22 +74,24 @@ Because the documentation for openravepy is built from the install directory, wh
 C++ Core Documentation (doxygen)
 --------------------------------
 
-Compiling HTML:
+Compiling HTML and Latex:
 
 .. code-block:: bash
 
   cd docs
-  doxygen Doxygen.html.en
-  firefox en/html/index.html
+  python build_doxygen.py --lang=en
+  firefox build/en/coreapihtml/index.html
+  evince build/en/coreapilatex/refman.pdf
 
-Compiling Latex:
+The **build_doxygen.py** script internally makes these calls:
 
 .. code-block:: bash
 
   cd docs
-  doxygen Doxygen.latex.en
-  ./build_latex.py en/latex
-  evince en/latex/refman.pdf
+  doxygen build/Doxyfile.html.en
+  doxygen build/Doxyfile.latex.en
+
+The **build/Doxyfile.html.en** file is generated from **Doxyfile.html** and **Doxyfile.en**. The separation is necessary in order to provide better localization support for multiple languages.
 
 The mainpage and bulk of the documentation is in **docs/mainpage.dox**. Installation instructions are in **docs/install.dox**.
 
@@ -112,9 +114,14 @@ To build the webpage of interface descriptions, run
 
 This outputs a set of reStructuredText files, which can be used by sphinx to build up the page.
 
-Robots
-------
+Robots Database
+---------------
 
 Generate a set of webpages for each robot using the statistics file output from **test/test_ikfast.py**.
 
-An image of all the robots in openrave can be extracted using the **build_robots.py** script.
+An image of all the robots in openrave can be extracted using the **build_ikdatabase.py** script:
+
+.. code-block:: bash
+
+  cd docs
+  python build_ikdatabase.py --outdir="en/ikfast" --ikfaststats=ikfaststats.pp

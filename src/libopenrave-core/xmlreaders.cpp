@@ -1891,7 +1891,7 @@ namespace OpenRAVEXMLParser
     class KinBodyXMLReader : public InterfaceXMLReader
     {
     public:
-    KinBodyXMLReader(EnvironmentBasePtr penv, InterfaceBasePtr& pchain, InterfaceType type, const AttributesList& atts, int rootoffset, int rootjoffset) : InterfaceXMLReader(penv,pchain,type,"kinbody",atts), rootoffset(rootoffset), rootjoffset(rootjoffset) {
+        KinBodyXMLReader(EnvironmentBasePtr penv, InterfaceBasePtr& pchain, InterfaceType type, const AttributesList& atts, int rootoffset, int rootjoffset, int rootjpoffset) : InterfaceXMLReader(penv,pchain,type,"kinbody",atts), rootoffset(rootoffset), rootjoffset(rootjoffset), rootjpoffset(rootjpoffset) {
             _bSkipGeometry = false;
             _pchain = RaveInterfaceCast<KinBody>(_pinterface);
             _masstype = LinkXMLReader::MT_None;
@@ -2187,6 +2187,9 @@ namespace OpenRAVEXMLParser
                     for(vector<KinBody::JointPtr>::iterator itjoint = _pchain->_vecjoints.begin()+rootjoffset; itjoint != _pchain->_vecjoints.end(); ++itjoint) {
                         (*itjoint)->_name = _prefix +(*itjoint)->_name;
                     }
+                    for(vector<KinBody::JointPtr>::iterator itjoint = _pchain->_vPassiveJoints.begin()+rootjpoffset; itjoint != _pchain->_vPassiveJoints.end(); ++itjoint) {
+                        (*itjoint)->_name = _prefix +(*itjoint)->_name;
+                    }
                 }
 
                 if( _bOverwriteDiffuse ) {
@@ -2241,7 +2244,7 @@ namespace OpenRAVEXMLParser
         Transform _trans;
 
         // default mass type passed to every LinkXMLReader
-        int rootoffset, rootjoffset;                 ///< the initial number of links when KinBody is created (so that global translations and rotations only affect the new links)
+        int rootoffset, rootjoffset, rootjpoffset;                 ///< the initial number of links when KinBody is created (so that global translations and rotations only affect the new links)
         LinkXMLReader::MassType _masstype;             ///< if true, mass is craeted so that it mimics the geometry
         float _fMassValue;               ///< density or total mass
         Vector _vMassExtents;
@@ -2688,7 +2691,7 @@ namespace OpenRAVEXMLParser
     class RobotXMLReader : public InterfaceXMLReader
     {
     public:
-    RobotXMLReader(EnvironmentBasePtr penv, InterfaceBasePtr& probot, const AttributesList& atts, int rootoffset, int rootjoffset, int rootsoffset, int rootmoffset) : InterfaceXMLReader(penv,probot,PT_Robot,"robot",atts), rootoffset(rootoffset), rootjoffset(rootjoffset), rootsoffset(rootsoffset), rootmoffset(rootmoffset) {
+        RobotXMLReader(EnvironmentBasePtr penv, InterfaceBasePtr& probot, const AttributesList& atts, int rootoffset, int rootjoffset, int rootjpoffset, int rootsoffset, int rootmoffset) : InterfaceXMLReader(penv,probot,PT_Robot,"robot",atts), rootoffset(rootoffset), rootjoffset(rootjoffset), rootjpoffset(rootjpoffset), rootsoffset(rootsoffset), rootmoffset(rootmoffset) {
             _probot = RaveInterfaceCast<RobotBase>(_pinterface);
             _bSkipGeometry = false;
             FOREACHC(itatt, atts) {
@@ -2814,40 +2817,6 @@ namespace OpenRAVEXMLParser
                     SetXMLFilename(_filename);
                 }
 
-                // add prefix
-                if( _prefix.size() > 0 ) {
-                    vector<KinBody::LinkPtr>::iterator itlink = _probot->_veclinks.begin()+rootoffset;
-                    while(itlink != _probot->_veclinks.end()) {
-                        (*itlink)->_name = _prefix + (*itlink)->_name;
-                        ++itlink;
-                    }
-                    vector<KinBody::JointPtr>::iterator itjoint = _probot->_vecjoints.begin()+rootjoffset;
-                    while(itjoint != _probot->_vecjoints.end()) {
-                        (*itjoint)->_name = _prefix +(*itjoint)->_name;
-                        ++itjoint;
-                    }
-                    vector<RobotBase::AttachedSensorPtr>::iterator itsensor = _probot->GetAttachedSensors().begin()+rootsoffset;
-                    while(itsensor != _probot->GetAttachedSensors().end()) {
-                        (*itsensor)->_name = _prefix + (*itsensor)->_name;
-                        ++itsensor;
-                    }
-                    vector<RobotBase::ManipulatorPtr>::iterator itmanip = _probot->GetManipulators().begin()+rootmoffset;
-                    while(itmanip != _probot->GetManipulators().end()) {
-                        (*itmanip)->_name = _prefix + (*itmanip)->_name;
-                        FOREACH(itgrippername,(*itmanip)->_vgripperjointnames) {
-                            *itgrippername = _prefix + *itgrippername;
-                        }
-                        ++itmanip;
-                    }
-                }
-        
-                // transform all "new" bodies with trans
-                vector<KinBody::LinkPtr>::iterator itlink = _probot->_veclinks.begin()+rootoffset;
-                while(itlink != _probot->_veclinks.end()) {
-                    (*itlink)->SetTransform(_trans * (*itlink)->GetTransform());
-                    ++itlink;
-                }
-        
                 // put the sensors and manipulators in front of what was declared. this is necessary so that user-based manipulator definitions come before the pre-defined ones.
                 if( cursoffset > 0 && cursoffset < _probot->GetAttachedSensors().size() ) {
                     size_t prevsize = _probot->GetAttachedSensors().size();
@@ -2864,6 +2833,62 @@ namespace OpenRAVEXMLParser
                     _probot->GetManipulators().resize(prevsize);
                 }
 
+                // add prefix
+                if( _prefix.size() > 0 ) {
+                    vector<KinBody::LinkPtr>::iterator itlink = _probot->_veclinks.begin()+rootoffset;
+                    while(itlink != _probot->_veclinks.end()) {
+                        (*itlink)->_name = _prefix + (*itlink)->_name;
+                        ++itlink;
+                    }
+                    std::vector< std::pair<std::string, std::string> > jointnamepairs;
+                    jointnamepairs.reserve(_probot->_vecjoints.size());
+                    vector<KinBody::JointPtr>::iterator itjoint = _probot->_vecjoints.begin()+rootjoffset;
+                    list<KinBody::JointPtr> listjoints;
+                    while(itjoint != _probot->_vecjoints.end()) {
+                        jointnamepairs.push_back(make_pair((*itjoint)->_name, _prefix +(*itjoint)->_name));
+                        (*itjoint)->_name = _prefix +(*itjoint)->_name;
+                        listjoints.push_back(*itjoint);
+                        ++itjoint;
+                    }
+                    itjoint = _probot->_vPassiveJoints.begin()+rootjpoffset;
+                    while(itjoint != _probot->_vPassiveJoints.end()) {
+                        jointnamepairs.push_back(make_pair((*itjoint)->_name, _prefix +(*itjoint)->_name));
+                        (*itjoint)->_name = _prefix +(*itjoint)->_name;
+                        listjoints.push_back(*itjoint);
+                        ++itjoint;
+                    }
+                    // repeat again for the mimic equations, if any exist
+                    FOREACH(itjoint, listjoints) {
+                        for(int idof = 0; idof < (*itjoint)->GetDOF(); ++idof) {
+                            if( (*itjoint)->IsMimic(idof) ) {
+                                for(int ieq = 0; ieq < 3; ++ieq) {
+                                    string neweq;
+                                    SearchAndReplace(neweq,(*itjoint)->_vmimic[idof]->_equations[ieq],jointnamepairs);
+                                    (*itjoint)->_vmimic[idof]->_equations[ieq] = neweq;
+                                }
+                            }
+                        }
+                    }
+                    vector<RobotBase::AttachedSensorPtr>::iterator itsensor = _probot->GetAttachedSensors().begin();
+                    for(int isensor = rootsoffset; isensor < (int)_probot->GetAttachedSensors().size(); ++isensor, ++itsensor) {
+                        (*itsensor)->_name = _prefix + (*itsensor)->_name;
+                    }
+                    vector<RobotBase::ManipulatorPtr>::iterator itmanip = _probot->GetManipulators().begin();
+                    for(int imanip = rootmoffset; imanip < (int)_probot->GetManipulators().size(); ++imanip, ++itmanip) {
+                        (*itmanip)->_name = _prefix + (*itmanip)->_name;
+                        FOREACH(itgrippername,(*itmanip)->_vgripperjointnames) {
+                            *itgrippername = _prefix + *itgrippername;
+                        }
+                    }
+                }
+        
+                // transform all "new" bodies with trans
+                vector<KinBody::LinkPtr>::iterator itlink = _probot->_veclinks.begin()+rootoffset;
+                while(itlink != _probot->_veclinks.end()) {
+                    (*itlink)->SetTransform(_trans * (*itlink)->GetTransform());
+                    ++itlink;
+                }
+        
                 // forces robot to reupdate its internal objects
                 _probot->SetTransform(_probot->GetTransform());
         
@@ -2901,7 +2926,7 @@ namespace OpenRAVEXMLParser
         Transform _trans;
         bool _bSkipGeometry;
         int rootoffset;                 ///< the initial number of links when Robot is created (so that global translations and rotations only affect the new links)
-        int rootjoffset; ///< the initial number of joints when Robot is created
+        int rootjoffset, rootjpoffset; ///< the initial number of joints when Robot is created
         int rootsoffset; ///< the initial number of attached sensors when Robot is created
         int rootmoffset; ///< the initial number of manipulators when Robot is created
         size_t curmoffset; ///< initial number of manipulators for current xml reader
@@ -3233,14 +3258,15 @@ namespace OpenRAVEXMLParser
         case PT_Planner: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_Planner>(penv,pinterface,xmltag,atts));
         case PT_Robot: {
             RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pinterface);
-            int rootoffset = 0, rootjoffset = 0, rootsoffset = 0, rootmoffset = 0;
+            int rootoffset = 0, rootjoffset = 0, rootjpoffset = 0, rootsoffset = 0, rootmoffset = 0;
             if( !!probot ) {
                 rootoffset = (int)probot->GetLinks().size();
                 rootjoffset = (int)probot->GetJoints().size();
+                rootjpoffset = (int)probot->GetPassiveJoints().size();
                 rootsoffset = (int)probot->GetAttachedSensors().size();
                 rootmoffset = (int)probot->GetManipulators().size();
             }
-            return InterfaceXMLReaderPtr(new RobotXMLReader(penv,pinterface,atts,rootoffset,rootjoffset,rootsoffset,rootmoffset));
+            return InterfaceXMLReaderPtr(new RobotXMLReader(penv,pinterface,atts,rootoffset,rootjoffset,rootjpoffset, rootsoffset,rootmoffset));
         }
         case PT_SensorSystem: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_SensorSystem>(penv,pinterface,xmltag,atts));
         case PT_Controller: return InterfaceXMLReaderPtr(new ControllerXMLReader(penv,pinterface,atts));
@@ -3248,14 +3274,15 @@ namespace OpenRAVEXMLParser
         case PT_InverseKinematicsSolver: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_InverseKinematicsSolver>(penv,pinterface,xmltag,atts));
         case PT_KinBody: {
             KinBodyPtr pbody = RaveInterfaceCast<KinBody>(pinterface);
-            int rootoffset = 0, rootjoffset = 0;
+            int rootoffset = 0, rootjoffset = 0, rootjpoffset = 0;
             if( !!pbody ) {
                 vector<Transform> vTransforms;
                 pbody->GetBodyTransformations(vTransforms);
                 rootoffset = vTransforms.size();
                 rootjoffset = (int)pbody->GetJoints().size();
+                rootjpoffset = (int)pbody->GetPassiveJoints().size();
             }
-            return InterfaceXMLReaderPtr(new KinBodyXMLReader(penv,pinterface,type,atts,rootoffset,rootjoffset));
+            return InterfaceXMLReaderPtr(new KinBodyXMLReader(penv,pinterface,type,atts,rootoffset,rootjoffset, rootjpoffset));
         }
         case PT_PhysicsEngine: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_PhysicsEngine>(penv,pinterface,xmltag,atts));
         case PT_Sensor: return InterfaceXMLReaderPtr(new SensorXMLReader(penv,pinterface,atts));

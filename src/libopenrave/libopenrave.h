@@ -156,13 +156,13 @@ inline std::string tolowerstring(const std::string & s)
     return d;
 }
 
-std::string GetMD5HashString(const std::string& s);
-std::string GetMD5HashString(const std::vector<uint8_t>& v);
+OPENRAVE_API std::string GetMD5HashString(const std::string& s);
+OPENRAVE_API std::string GetMD5HashString(const std::vector<uint8_t>& v);
 
 /// \brief search and replace all for all pairs
 ///
 /// \return returns a reference to the out string
-std::string& SearchAndReplace(std::string& out, const std::string& in, const std::vector< std::pair<std::string, std::string> >& pairs);
+OPENRAVE_API std::string& SearchAndReplace(std::string& out, const std::string& in, const std::vector< std::pair<std::string, std::string> >& pairs);
 
 #define SERIALIZATION_PRECISION 4
 template<typename T>
