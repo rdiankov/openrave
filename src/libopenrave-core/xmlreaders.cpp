@@ -1481,6 +1481,11 @@ namespace OpenRAVEXMLParser
                     for(int i = 0; i < numindices; ++i) {
                         if( _pjoint->_vlowerlimit[i] < -PI || _pjoint->_vupperlimit[i] > PI ) {
                             _pjoint->_offsets[i] = 0.5f * (_pjoint->_vlowerlimit[i] + _pjoint->_vupperlimit[i]);
+                            if( _pjoint->_vupperlimit[i] - _pjoint->_offsets[i] > PI ) {
+                                RAVELOG_WARN(str(boost::format("joint %s, cannot allow joint ranges of more than 360 degrees\n")%_pjoint->GetName()));
+                                _pjoint->_vupperlimit[i] = _pjoint->_offsets[i] + PI - 1e-5;
+                                _pjoint->_vlowerlimit[i] = _pjoint->_offsets[i] - PI + 1e-5;
+                            }
                         }
                     }
                 }

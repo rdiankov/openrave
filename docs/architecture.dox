@@ -640,7 +640,7 @@ robot temporarily. This functionality is necessary for manipulation planning. Wh
 carrying a body, all collisions between the robot and that item should be ignored once the body has
 been grasped.
 
-\subsection arch_robot_sensors Attaching Sensors
+\section arch_robot_sensors Attaching Sensors
 
 Can attach any number of sensors to the robot's links through the \ref
 OpenRAVE::RobotBase::AttachedSensor "AttachedSensor" class. The sensor transformation will be
