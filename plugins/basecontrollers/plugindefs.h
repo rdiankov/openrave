@@ -86,6 +86,11 @@ inline uint32_t timeGetTime()
 
 #define FORIT(it, v) for(it = (v).begin(); it != (v).end(); (it)++)
 
+template <class T> boost::shared_ptr<T> sptr_from(boost::weak_ptr<T> const& wpt)
+{
+    return boost::shared_ptr<T>(wpt); // throws on wpt.expired()
+}
+
 using namespace OpenRAVE;
 
 #include "basecontrollers.h"

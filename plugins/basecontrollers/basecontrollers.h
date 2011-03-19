@@ -40,6 +40,8 @@ class IdealController : public ControllerBase
             flog << GetXMLId() << " " << _probot->GetName() << endl << endl;
             _dofindices = dofindices;
             _nControlTransformation = nControlTransformation;
+            _cblimits = _probot->RegisterChangeCallback(KinBody::Prop_JointLimits,boost::bind(&IdealController::_SetJointLimits,boost::bind(&sptr_from<IdealController>, weak_controller())));
+            _SetJointLimits();
         }
         _bPause = false;
         return true;
@@ -173,6 +175,17 @@ class IdealController : public ControllerBase
     virtual RobotBasePtr GetRobot() const { return _probot; }
 
 private:
+    inline boost::shared_ptr<IdealController> shared_controller() { return boost::static_pointer_cast<IdealController>(shared_from_this()); }
+    inline boost::shared_ptr<IdealController const> shared_controller_const() const { return boost::static_pointer_cast<IdealController const>(shared_from_this()); }
+    inline boost::weak_ptr<IdealController> weak_controller() { return shared_controller(); }
+
+    virtual void _SetJointLimits()
+    {
+        if( !!_probot ) {
+            _probot->GetDOFLimits(_vlower,_vupper);
+        }
+    }
+
     virtual void _SetDOFValues(const std::vector<dReal>& values)
     {
         vector<dReal> curvalues, curvel;
@@ -185,6 +198,7 @@ private:
             curvalues.at(*it) = values.at(i++);
             curvel.at(*it) = 0;
         }
+        _CheckLimits(curvalues);
         _probot->SetDOFValues(curvalues,true);
         _probot->SetDOFVelocities(curvel,linearvel,angularvel);
     }
@@ -199,8 +213,21 @@ private:
             curvalues.at(*it) = values.at(i++);
             curvel.at(*it) = 0;
         }
+        _CheckLimits(curvalues);
         _probot->SetDOFValues(curvalues,t, true);
         _probot->SetDOFVelocities(curvel,Vector(),Vector());
+    }
+    
+    void _CheckLimits(std::vector<dReal>& curvalues)
+    {
+        for(size_t i = 0; i < _vlower.size(); ++i) {
+            if( curvalues.at(i) < _vlower[i]-g_fEpsilon*10 ) {
+                RAVELOG_WARN(str(boost::format("robot %s dof %d is violating lower limit %s < %s")%_probot->GetName()%i%_vlower[i]%curvalues[i]));
+            }
+            if( curvalues.at(i) > _vupper[i]+g_fEpsilon*10 ) {
+                RAVELOG_WARN(str(boost::format("robot %s dof %d is violating upper limit %s > %s")%_probot->GetName()%i%_vupper[i]%curvalues[i]));
+            }
+        }
     }
 
     RobotBasePtr _probot;           ///< controlled body
@@ -213,11 +240,13 @@ private:
     Transform _tdesired;
 
     std::vector<int> _dofindices;
+    std::vector<dReal> _vlower, _vupper;
     int _nControlTransformation;
     ofstream flog;
     int cmdid;
     bool _bPause;
     bool _bIsDone;
+    boost::shared_ptr<void> _cblimits;
 };
 
 class RedirectController : public ControllerBase
