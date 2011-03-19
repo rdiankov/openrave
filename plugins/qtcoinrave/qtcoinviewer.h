@@ -308,6 +308,8 @@ protected:
 
     virtual void _UpdateEnvironment();
 
+    bool SetFiguresInCamera(ostream& sout, istream& sinput);
+
     // selection and deselection handling
     static void _SelectHandler(void *, class SoPath *); 
     static void _DeselectHandler(void *, class SoPath *);
@@ -419,7 +421,7 @@ protected:
     bool _bSaveVideo;
     bool _bRealtimeVideo;
     bool _bAutoSetCamera;
-    
+    bool _bRenderFiguresInCamera;
     // ode thread related
     bool _bQuitMainLoop;
     bool _bUpdateEnvironment;

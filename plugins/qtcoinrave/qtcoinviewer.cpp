@@ -82,6 +82,8 @@ QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
     statusBar()->showMessage(tr("Status Bar"));
 #endif
     __description = ":Interface Author: Rosen Diankov\n\nProvides a GUI using the Coin3D, Qt4, and SoQt libraries.";
+    RegisterCommand("SetFiguresInCamera",boost::bind(&QtCoinViewer::SetFiguresInCamera,this,_1,_2),
+                    "Accepts 0/1 value that decides whether to render the figure plots in the camera image through GetCameraImage");
     _bLockEnvironment = true;
     _bAVIInit = false;
     _pToggleDebug = NULL;
@@ -91,6 +93,7 @@ QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
     _bInIdleThread = false;
     _bAutoSetCamera = true;
     _videocodec = -1;
+    _bRenderFiguresInCamera = false;
 
     //vlayout = new QVBoxLayout(this);
     view1 = new QGroupBox(this);
@@ -2851,9 +2854,14 @@ bool QtCoinViewer::_GetCameraImage(std::vector<uint8_t>& memory, int width, int 
     GetCamera()->viewportMapping = SoCamera::LEAVE_ALONE;
     
     _pFigureRoot->ref();
-    _ivRoot->removeChild(_pFigureRoot);
+    bool bRenderFiguresInCamera = *(bool*)&_bRenderFiguresInCamera; // will this be optimized by compiler?
+    if( !bRenderFiguresInCamera ) {
+        _ivRoot->removeChild(_pFigureRoot);
+    }
     bool bSuccess = _ivOffscreen.render(_pOffscreenVideo);
-    _ivRoot->addChild(_pFigureRoot);
+    if( !bRenderFiguresInCamera ) {
+        _ivRoot->addChild(_pFigureRoot);
+    }
     _pFigureRoot->unref();
 
     if( bSuccess ) {
@@ -3138,4 +3146,10 @@ void QtCoinViewer::EnvMessage::callerexecute()
 void QtCoinViewer::EnvMessage::viewerexecute()
 {
     _plock.reset();
+}
+
+bool QtCoinViewer::SetFiguresInCamera(ostream& sout, istream& sinput)
+{
+    sinput >> _bRenderFiguresInCamera;
+    return !!sinput;
 }

@@ -2417,6 +2417,8 @@ public:
     void SetCamera(object transform) { _pviewer->SetCamera(ExtractTransform(transform)); }
     void SetCamera(object transform, float focalDistance) { _pviewer->SetCamera(ExtractTransform(transform),focalDistance); }
 
+    void SetBkgndColor(object ocolor) { _pviewer->SetBkgndColor(ExtractVector3(ocolor)); }
+
     object GetCameraTransform() { return ReturnTransform(_pviewer->GetCameraTransform()); }
 
     object GetCameraImage(int width, int height, object extrinsic, object oKK)
@@ -4457,6 +4459,7 @@ In python, the syntax is::\n\n\
             .def("EnvironmentSync",&PyViewerBase::EnvironmentSync, DOXY_FN(ViewerBase,EnvironmentSync))
             .def("SetCamera",setcamera1,args("transform"), DOXY_FN(ViewerBase,SetCamera))
             .def("SetCamera",setcamera2,args("transform","focalDistance"), DOXY_FN(ViewerBase,SetCamera))
+            .def("SetBkgndColor",&PyViewerBase::SetBkgndColor,DOXY_FN(ViewerBase,SetBkgndColor))
             .def("GetCameraTransform",&PyViewerBase::GetCameraTransform, DOXY_FN(ViewerBase,GetCameraTransform))
             .def("GetCameraImage",&PyViewerBase::GetCameraImage,args("width","height","transform","K"), DOXY_FN(ViewerBase,GetCameraImage))
             ;

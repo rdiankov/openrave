@@ -44,6 +44,7 @@ import movehandstraight
 import movehandstraight2
 import simplenavigation
 import testcamerasensor
+import testlasersensor
 import testphysics
 import testphysics_controller
 import testphysics_diffdrive

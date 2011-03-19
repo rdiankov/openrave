@@ -19,17 +19,11 @@
 
 `[source] <../_modules/openravepy/databases/inversekinematics.html>`_
 
-**Running the Generator**
+**Running:**
 
 .. code-block:: bash
 
-  openrave.py --database inversekinematics --robot=robots/barrettsegway.robot.xml
-
-**Testing the Solvers**
-
-.. code-block:: bash
-
-  openrave.py --database inversekinematics --robot=robots/barrettsegway.robot.xml --iktests=100
+  openrave.py --database inversekinematics
 
 Usage
 -----

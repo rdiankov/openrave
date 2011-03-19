@@ -113,7 +113,11 @@ public:
     }
 
  BaseLaser2DSensor(EnvironmentBasePtr penv) : SensorBase(penv) {
-        __description = ":Interface Author: Rosen Diankov\n\nProvides a simulated 2D laser range finder.";
+        __description = ":Interface Author: Rosen Diankov\n\nProvides a simulated 2D laser range finder.\n\
+\n\
+.. image:: ../../../images/interface_baselaser.jpg\n\
+  :width: 400\n\
+";
         RegisterCommand("render",boost::bind(&BaseLaser2DSensor::_Render,this,_1,_2),
                         "Set rendering of the plots (1 or 0).");
         RegisterCommand("collidingbodies",boost::bind(&BaseLaser2DSensor::_CollidingBodies,this,_1,_2),
@@ -414,7 +418,14 @@ public:
     }
 
  BaseSpinningLaser2DSensor(EnvironmentBasePtr penv) : BaseLaser2DSensor(penv) {
-        __description = ":Interface Author: Rosen Diankov\n\nProvides a simulated spinning 2D laser range finder.";
+        __description = ":Interface Author: Rosen Diankov\n\nProvides a simulated spinning 2D laser range finder. Includes all the XML parameters from :ref:`sensor-baselaser` along with:\n\
+* spinaxis - the second axis to spin on\n\
+* spinpos - center of rotation of second spin axis\n\
+* spinspeed - how fast to spin in rad/s\n\
+\n\
+.. image:: ../../../images/interface_basespinninglaser.jpg\n\
+  :width: 400\n\
+";
         _fGeomSpinSpeed = 0;
         _vGeomSpinAxis = Vector(1,0,0);
         _fCurAngle = 0;

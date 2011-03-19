@@ -10,7 +10,7 @@ File Formats
 
 * `COLLADA Robot Extensions`_ (*.dae, *.zae) - Robots are standardized with the COLLADA 1.5 file format. OpenRAVE defines these for storing information like manipulators, sensors, and collision data. COLLADA files saved as **dae** store the raw XML, files stored as **zae** stored the compressed XML. In order to preserve space, all robots in OpenRAVE are stored as **zae**.
 
-* `OpenRAVE XML`_ (*.xml) - Because COLLADA can be a little difficult to edit by hand, OpenRAVE also defines its own format to help users quickly get robots into the environment. It is possible to convert these custom robots into COLLADA using the following command:
+* `OpenRAVE XML`_ (\*.xml) - Because COLLADA can be a little difficult to edit by hand, OpenRAVE also defines its own format to help users quickly get robots into the environment. It is possible to convert these custom robots into COLLADA using the following command:
 
 .. code-block:: bash
 

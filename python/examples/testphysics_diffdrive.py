@@ -12,6 +12,24 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Shows how to enable differential drive with physics
+
+.. image:: ../../images/examples/testphysics_diffdrive.jpg
+  :width: 400
+
+**Running the Example**::
+
+  openrave.py --example testphysics_diffdrive
+
+Command-line
+------------
+
+.. shell-block:: openrave.py --example testphysics_diffdrive --help
+
+Class Definitions
+-----------------
+"""
+
 from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'

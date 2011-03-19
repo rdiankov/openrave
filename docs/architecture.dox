@@ -605,37 +605,48 @@ Robots are a special type of KinBody that need higher level functionality for th
 movement in the environment. There are a couple of differences between a Robot and a regular
 KinBody.
 
-- \ref OpenRAVE::RobotBase::Manipulator "Manipulator" - Every robot supports a list of manipulators
-  that describe the links the robot should use when manipulating parts of the environment. Usually
-  manipulators are serial chains with a Base link and an End Effector link. Each manipulator is also
-  decomposed into two parts: the arm and the hand. The hand usually makes contact with the objects
-  while the arm transfers the hand to its destination. The Manipulator class also has an optional
-  pointer to a IkSolverBase class providing inverse kinematics functionality. The IK solver used by
-  a Manipulator can be changed by Manipulator::SetIKSolver, so plugins can provide and set their own
-  IK solvers.
+\section arch_robot_manipulator Manipulators
 
-- Active Degrees of Freedom - When controlling and planning for a robot, it is possible to set the
-  degrees of freedom that should be used. For example, consider a humanoid robot. There should be in
-  easy way to specify to planners that only the right hand of the robot should be taken into
-  consideration when planning; the rest of the joints should be ignored. Or consider the case where
-  we care about navigation of the humanoid robot. Here we would want to control the translation of
-  the robot on the plane and its orientation. Perhaps we want to do footstep planning and also care
-  about controlling the two legs. All this is possible with the Active Degrees of Freedom feature
-  provided by OpenRAVE. First call RobotBase::SetActiveDOFs to set the degrees of freedom of the
-  robot; it is also possible to set translation about the XYZ axes or the angle around a rotation
-  axis as a degree of freedom. Each RobotBase function with the word Active expects the active DOF
-  values to be specified. Basically, for any function in KinBody that deals with Joints, there is a
-  corresponding active function in RobotBase.
+Every robot supports a list of \ref OpenRAVE::RobotBase::Manipulator "Manipulator" objects
+that describe the links the robot should use when manipulating parts of the environment. Usually
+manipulators are serial chains with a Base link and an End Effector link. Each manipulator is also
+decomposed into two parts: the arm and the hand. The hand usually makes contact with the objects
+while the arm transfers the hand to its destination. The Manipulator class also has an optional
+pointer to a IkSolverBase class providing inverse kinematics functionality. The IK solver used by a
+Manipulator can be changed by Manipulator::SetIKSolver, so plugins can provide and set their own IK
+solvers.
 
-- Grabbing bodies - It is possible for a robot to attach a KinBody onto one of its links so that
-  when the link moves, the KinBody also moves. Because collision detection will stop being checked
-  between the robot and the KinBody, you could say that the KinBody becomes a part of the robot
-  temporarily. This functionality is necessary for manipulation planning. Whenever the robot is
-  carrying a body, all collisions between the robot and that item should be ignored once the body
-  has been grasped.
+\section arch_robot_activedof Active Degrees of Freedom
 
-- \ref OpenRAVE::RobotBase::AttachedSensor "AttachedSensor" - Can attach any number of sensors to
-  the robot's links. The sensor transformations will be completely owned by the robot.
+When controlling and planning for a robot, it is possible to set the
+degrees of freedom that should be used. For example, consider a humanoid robot. There should be in
+easy way to specify to planners that only the right hand of the robot should be taken into
+consideration when planning; the rest of the joints should be ignored. Or consider the case where
+we care about navigation of the humanoid robot. Here we would want to control the translation of
+the robot on the plane and its orientation. Perhaps we want to do footstep planning and also care
+about controlling the two legs. All this is possible with the Active Degrees of Freedom feature
+provided by OpenRAVE. First call RobotBase::SetActiveDOFs to set the degrees of freedom of the
+robot; it is also possible to set translation about the XYZ axes or the angle around a rotation
+axis as a degree of freedom. Each RobotBase function with the word Active expects the active DOF
+values to be specified. Basically, for any function in KinBody that deals with Joints, there is a
+corresponding active function in RobotBase.
+
+\section arch_robot_grabbing Grabbing Bodies
+
+It is possible for a robot to attach a \ref OpenRAVE::KinBody "KinBody" onto one of its links so
+that when the link moves, the KinBody also moves. Because collision detection will stop being
+checked between the robot and the KinBody, you could say that the KinBody becomes a part of the
+robot temporarily. This functionality is necessary for manipulation planning. Whenever the robot is
+carrying a body, all collisions between the robot and that item should be ignored once the body has
+been grasped.
+
+\subsection arch_robot_sensors Attaching Sensors
+
+Can attach any number of sensors to the robot's links through the \ref
+OpenRAVE::RobotBase::AttachedSensor "AttachedSensor" class. The sensor transformation will be
+completely owned by the robot. A robot can be attached with any number of sensors on any number of links. As the robot link moves, the sensor moves with it preserving its relative transformation.
+
+AttachedSensor object holds a \ref OpenRAVE::SensorBase "SensorBase" object that contains the actual object gathering and publishing data.
 
 \section arch_robot_options Loading Options
 
@@ -866,6 +877,15 @@ A sensor measures physical properties from the environment and converts them to 
 associated with a particular position in space, has a geometry with properties defining the type of
 sensor, and can be queried for sensor data. Available sensor types are specified by \ref
 OpenRAVE::SensorBase::SensorType "SensorType".
+
+By default, all the sensors defined in '''basesensors''' start with a sensor power off, meaning that the sensor does not gather data. The power can be turned on by sending each sensor the '''power 1''' command, or by adding the '''<power>1</power>''' XML tag in the sensor description. All the demos manually turn sensor power on.
+
+Each sensor can be sent text commands using '''SensorBase::SendCommand'''. 
+
+Check out the '''basesensors''' plugin for an example of how to implement a 2D laser range finder. The sensor has a special rendering option that allows it to render its data to the GUI window. Call 
+
+to enable rendering. An example showing how all the pieces come together in Octave/Matlab can be seen in '''examples/testlasersensor.m'''. Just execute the script by changing directions and typing:
+
 */
 
 /**
