@@ -439,7 +439,7 @@ class LinkStatisticsModel(DatabaseGenerator):
             RaveDestroy()
 
 def run(*args,**kwargs):
-    """Executes the linkstatistics database generation,  ``args`` specifies a list of the arguments to the script.
+    """Command-line execution of the example. ``args`` specifies a list of the arguments to the script.
     """
     LinkStatisticsModel.RunFromParser(*args,**kwargs)
 

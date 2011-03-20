@@ -1,5 +1,6 @@
 #!/usr/bin/env python
-# Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)
+# -*- coding: utf-8 -*-
+# Copyright (C) 2009-2011 Rosen Diankov (rosen.diankov@gmail.com)
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,12 +14,7 @@
 # limitations under the License.
 """Shows how to use simple gradient-based jacobians to constrain the motion of the robot while planning.
 
-.. image:: ../../images/examples/constraintplanning.jpg
-  :width: 640
-
-**Running the Example**::
-
-  openrave.py --example constraintplanning
+.. examplepre-block:: constraintplanning
 
 Description
 -----------
@@ -49,39 +45,33 @@ A GripperJacobianConstrains class is defined in the rmanipulation plugin. It hol
   // set the constraint function
   params->_constraintfn = boost::bind(&CM::GripperJacobianConstrains<double>::RetractionConstraint,pconstraints,_1,_2,_3);
 
-Command-line
-------------
-
-.. shell-block:: openrave.py --example constraintplanning --help
+.. examplepost-block:: constraintplanning
 
 .. [1] Mike Stilman. Task constrained motion planning in robot joint space. In: Proceedings of the IEEE International Conference on Intelligent Robots and Systems (IROS), 2007. 
 
 """
 from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
-__copyright__ = '2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
-__license__ = 'Apache License, Version 2.0'
 
-from openravepy import *
-from openravepy.interfaces import BaseManipulation, TaskManipulation
-from openravepy.databases import grasping,inversekinematics
-from numpy import *
-import numpy,time
-from optparse import OptionParser
+import time
+from openravepy import __build_doc__
+if not __build_doc__:
+    from openravepy import *
+    from numpy import *
 
-class ConstraintPlanning(metaclass.AutoReloader):
+class ConstraintPlanning:
     def __init__(self,robot,randomize=False,dests=None,switchpatterns=None):
         self.envreal = robot.GetEnv()
         self.robot = robot
         self.manip = self.robot.GetActiveManipulator()
-        self.ikmodel = inversekinematics.InverseKinematicsModel(robot=robot,iktype=IkParameterization.Type.Transform6D)
+        self.ikmodel = databases.inversekinematics.InverseKinematicsModel(robot=robot,iktype=IkParameterization.Type.Transform6D)
         if not self.ikmodel.load():
             self.ikmodel.autogenerate()
-        self.gmodel = grasping.GraspingModel(robot=self.robot,target=self.envreal.GetKinBody('mug1'))
+        self.gmodel = databases.grasping.GraspingModel(robot=self.robot,target=self.envreal.GetKinBody('mug1'))
         if not self.gmodel.load():
             self.gmodel.autogenerate()
-        self.basemanip = BaseManipulation(self.robot)
-        self.taskmanip = TaskManipulation(self.robot,graspername=self.gmodel.grasper.plannername)
+        self.basemanip = interfaces.BaseManipulation(self.robot)
+        self.taskmanip = interfaces.TaskManipulation(self.robot,graspername=self.gmodel.grasper.plannername)
 
     def graspAndMove(self,showgoalcup=True):
         target = self.gmodel.target
@@ -147,11 +137,23 @@ class ConstraintPlanning(metaclass.AutoReloader):
             if showtarget is not None:
                 self.envreal.Remove(showtarget)
 
+def main(env,options):
+    "Main example code."
+    env.Load(options.scene)
+    robot = env.GetRobots()[0]
+    env.UpdatePublishedBodies()
+    time.sleep(0.1) # give time for environment to update
+    self = ConstraintPlanning(robot)
+    self.graspAndMove()
+
+from optparse import OptionParser
+from openravepy import OpenRAVEGlobalArguments, with_destroy
+
 @with_destroy
 def run(args=None):
-    """Executes the constraintplanning example
-    
-    :type args: arguments for script to parse, if not specified will use sys.argv
+    """Command-line execution of the example.
+
+    :param args: arguments for script to parse, if not specified will use sys.argv
     """
     parser = OptionParser(description='RRT motion planning with constraints on the robot end effector.')
     OpenRAVEGlobalArguments.addOptions(parser)
@@ -160,12 +162,7 @@ def run(args=None):
                       help='Scene file to load (default=%default)')
     (options, leftargs) = parser.parse_args(args=args)
     env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
-    env.Load(options.scene)
-    robot = env.GetRobots()[0]
-    env.UpdatePublishedBodies()
-    time.sleep(0.1) # give time for environment to update
-    self = ConstraintPlanning(robot)
-    self.graspAndMove()
+    main(env,options)
 
 if __name__ == "__main__":
     run()

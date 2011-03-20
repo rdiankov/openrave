@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)
+# Copyright (C) 2009-2011 Rosen Diankov (rosen.diankov@gmail.com)
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,47 +14,25 @@
 # limitations under the License.
 """Builds the convex decomposition of the robot and plots all points inside its volume.
 
-.. image:: ../../images/examples/checkconvexdecomposition.jpg
-  :height: 200
-
-**Running the Example**::
-
-  openrave.py --example checkconvexdecomposition
+.. examplepre-block:: checkconvexdecomposition
+  :image-width: 400
 
 Description
 -----------
 
-Uses the python database.convexdecomposition.ConvexDecompositionModel.testPointsInside function.
+Uses :meth:`.ConvexDecompositionModel.testPointsInside` from :mod:`.convexdecomposition`.
 
-Command-line
-------------
-
-.. shell-block:: openrave.py --example checkconvexdecomposition --help
+.. examplepost-block:: checkconvexdecomposition
 
 """
 from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
-__copyright__ = '2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
-__license__ = 'Apache License, Version 2.0'
 
-from openravepy import databases, OpenRAVEGlobalArguments, with_destroy
+from openravepy import databases
 import numpy
-from optparse import OptionParser
 
-@with_destroy
-def run(args=None):
-    """Executes the checkconvexdecomposition example
-
-    :type args: arguments for script to parse, if not specified will use sys.argv
-    """
-    parser = OptionParser(description='Builds the convex decomposition of the robot and plots all the points that are tested inside of it.')
-    OpenRAVEGlobalArguments.addOptions(parser)
-    parser.add_option('--target', action="store",type='string',dest='target',default='robots/barrettwam.robot.xml',
-                      help='Target body to load (default=%default)')
-    parser.add_option('--samplingdelta', action="store",type='float',dest='samplingdelta',default=None,
-                      help='The sampling rate for the robot (default=%default)')
-    (options, leftargs) = parser.parse_args(args=args)
-    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
+def main(env,options):
+    "Main example code."
     samplingdelta = options.samplingdelta
     env.Load(options.target)
     body = env.GetBodies()[0]
@@ -75,6 +53,24 @@ def run(args=None):
     print '%d points are inside'%len(plottedpoints)
     h = env.plot3(plottedpoints,2)
     raw_input('press any key to exit')
+
+from optparse import OptionParser
+from openravepy import OpenRAVEGlobalArguments, with_destroy
+@with_destroy
+def run(args=None):
+    """Command-line execution of the example.
+
+    :param args: arguments for script to parse, if not specified will use sys.argv
+    """
+    parser = OptionParser(description='Builds the convex decomposition of the robot and plots all the points that are tested inside of it.')
+    OpenRAVEGlobalArguments.addOptions(parser)
+    parser.add_option('--target', action="store",type='string',dest='target',default='robots/barrettwam.robot.xml',
+                      help='Target body to load (default=%default)')
+    parser.add_option('--samplingdelta', action="store",type='float',dest='samplingdelta',default=None,
+                      help='The sampling rate for the robot (default=%default)')
+    (options, leftargs) = parser.parse_args(args=args)
+    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
+    run(env,options)
 
 if __name__ == "__main__":
     run()

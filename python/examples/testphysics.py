@@ -1,5 +1,6 @@
 #!/usr/bin/env python
-# Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)
+# -*- coding: utf-8 -*-
+# Copyright (C) 2009-2011 Rosen Diankov (rosen.diankov@gmail.com)
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,12 +14,8 @@
 # limitations under the License.
 """Shows how to enable physics.
 
-.. image:: ../../images/examples/testphysics.jpg
-  :width: 400
-
-**Running the Example**::
-
-  openrave.py --example testphysics
+.. examplepre-block:: testphysics
+  :image-width: 400
 
 Description
 -----------
@@ -73,34 +70,20 @@ It is possible to create and setup a physics engine in the <environment> tag in 
 
 Take a look at the **share/openrave/data/testphysics.env.xml** for a working example.
 
-
-Command-line
-------------
-
-.. shell-block:: openrave.py --example testphysics --help
-
+.. examplepost-block:: testphysics
 """
 from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
-__copyright__ = '2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
-__license__ = 'Apache License, Version 2.0'
 
-from openravepy import *
-from numpy import *
 import time
-from optparse import OptionParser
+from openravepy import __build_doc__
+if not __build_doc__:
+    from openravepy import *
+    from numpy import* 
 
-@with_destroy
-def run(args=None):
-    """Executes the testphysics example
-
-    :type args: arguments for script to parse, if not specified will use sys.argv
-    """
-    parser = OptionParser(description="test physics")
-    OpenRAVEGlobalArguments.addOptions(parser)
-    (options, leftargs) = parser.parse_args(args=args)
-    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
-    env.Load('data/hanoi.env.xml')
+def main(env,options):
+    "Main example code."
+    env.Load(options.scene)
     if options._physics is None:
         # no physics engine set, so set one
         physics = RaveCreatePhysicsEngine(env,'ode')
@@ -127,6 +110,23 @@ def run(args=None):
         simtime = env.GetSimulationTime()*1e-6
         realtime = time.time()-starttime
         print 'sim time: %fs, real time: %fs, diff = %fs'%(simtime,realtime,simtime-realtime)
+
+from optparse import OptionParser
+from openravepy import OpenRAVEGlobalArguments, with_destroy
+
+@with_destroy
+def run(args=None):
+    """Command-line execution of the example.
+
+    :param args: arguments for script to parse, if not specified will use sys.argv
+    """
+    parser = OptionParser(description="test physics")
+    OpenRAVEGlobalArguments.addOptions(parser)
+    parser.add_option('--scene',action="store",type='string',dest='scene',default='data/hanoi.env.xml',
+                      help='Scene file to load (default=%default)')
+    (options, leftargs) = parser.parse_args(args=args)
+    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
+    main(env,options)
 
 if __name__=='__main__':
     run()

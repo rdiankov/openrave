@@ -1,5 +1,6 @@
 #!/usr/bin/env python
-# Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)
+# -*- coding: utf-8 -*-
+# Copyright (C) 2009-2011 Rosen Diankov (rosen.diankov@gmail.com)
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,14 +14,7 @@
 # limitations under the License.
 """Examples of laser sensors attached to a robot.
 
-.. image:: ../../images/examples/testlasersensor.jpg
-  :width: 640
-
-**Running:**
-
-.. code-block:: bash
-
-  openrave.py --example testlasersensor
+.. examplepre-block:: testlasersensor
 
 Description
 -----------
@@ -66,40 +60,19 @@ To OpenRAVE XML to attach a flash LIDAR sensor is:
 
 See `Sensor Concepts`_ for more infromation on sensors.
 
-Command-line
-------------
-
-.. shell-block:: openrave.py --example testlasersensor --help
-
-Class Definitions
------------------
+.. examplepost-block:: testlasersensor
 """
 from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
-__copyright__ = '2009-2011 Rosen Diankov (rosen.diankov@gmail.com)'
-__license__ = 'Apache License, Version 2.0'
 
-from openravepy import *
-from numpy import *
-import time, signal, threading
-from optparse import OptionParser
+import time, threading
+from openravepy import __build_doc__
+if not __build_doc__:
+    from openravepy import *
+    from numpy import *
 
-@with_destroy
-def run(args=None):
-    """Executes the testlasersensor example
-
-    :type args: arguments for script to parse, if not specified will use sys.argv
-    """
-    parser = OptionParser(description='Examples of laser sensors attached to a robot.')
-    OpenRAVEGlobalArguments.addOptions(parser)
-    parser.add_option('--scene',
-                      action="store",type='string',dest='scene',default='data/testwamlaser.env.xml',
-                      help='OpenRAVE scene to load')
-    parser.add_option('--robotname',
-                      action="store",type='string',dest='robotname',default=None,
-                      help='Specific robot sensors to display (otherwise first robot found will be displayed)')
-    (options, leftargs) = parser.parse_args(args=args)
-    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
+def main(env,options):
+    "Main example code."
     env.Load(options.scene)
     if options.robotname is not None:
         robot = env.GetRobot(options.robotname)
@@ -113,5 +86,27 @@ def run(args=None):
         print 'showing sensor %s, try moving obstacles'%sensors[ienablesensor].GetName()
         time.sleep(5)
         ienablesensor = (ienablesensor+1)%len(sensors)
+
+from optparse import OptionParser
+from openravepy import OpenRAVEGlobalArguments, with_destroy
+
+@with_destroy
+def run(args=None):
+    """Command-line execution of the example.
+
+    :param args: arguments for script to parse, if not specified will use sys.argv
+    """
+    parser = OptionParser(description='Examples of laser sensors attached to a robot.')
+    OpenRAVEGlobalArguments.addOptions(parser)
+    parser.add_option('--scene',
+                      action="store",type='string',dest='scene',default='data/testwamlaser.env.xml',
+                      help='OpenRAVE scene to load')
+    parser.add_option('--robotname',
+                      action="store",type='string',dest='robotname',default=None,
+                      help='Specific robot sensors to display (otherwise first robot found will be displayed)')
+    (options, leftargs) = parser.parse_args(args=args)
+    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
+    main(env,options)
+
 if __name__=='__main__':
     run()

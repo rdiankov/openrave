@@ -1,5 +1,6 @@
 #!/usr/bin/env python
-# Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)
+# -*- coding: utf-8 -*-
+# Copyright (C) 2009-2011 Rosen Diankov (rosen.diankov@gmail.com)
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,14 +14,7 @@
 # limitations under the License.
 """Opens a GUI window showing the images from the camera sensors attached on a robot.
 
-.. image:: ../../images/examples/testcamerasensor.jpg
-  :width: 640
-
-**Running:**
-
-.. code-block:: bash
-
-  openrave.py --example testcamerasensor
+.. examplepre-block:: testcamerasensor
 
 Description
 -----------
@@ -52,23 +46,16 @@ The OpenRAVE XML required to attach a camera to the robot similar to the example
 
 See `Sensor Concepts`_ for more infromation on sensors.
 
-Command-line
-------------
-
-.. shell-block:: openrave.py --example testcamerasensor --help
-
-Class Definitions
------------------
+.. examplepost-block:: testcamerasensor
 """
 from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
-__copyright__ = '2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
-__license__ = 'Apache License, Version 2.0'
 
-from openravepy import *
-from numpy import *
-import time, signal, threading
-from optparse import OptionParser
+import time, threading
+from openravepy import __build_doc__
+if not __build_doc__:
+    from openravepy import *
+    from numpy import *
 
 try:
     from Tkinter import *
@@ -159,24 +146,36 @@ class OpenRAVEScene:
         print 'found %d camera sensors on robot %s'%(len(self.viewers),self.robot.GetName())
         for viewer in self.viewers:
             viewer.start()
-        self.prevaction = signal.signal(signal.SIGINT,lambda x,y: self.sighandle(x,y))
     
-    def sighandle(self,x,y):
-        self.quitviewers()
-        self.prevaction(x,y)
-
     def quitviewers(self):
         for viewer in self.viewers:
             viewer.main.quit()
     def __del__(self):
         self.quitviewers()
-        self.orenv.Destroy()
+
+def main(env,options):
+    "Main example code."
+    scene = OpenRAVEScene(env,options.scene,options.robotname)
+    try:
+        while(True):
+            cmd = raw_input('Enter command (q-quit,c-capture image): ')
+            if cmd == 'q':
+                break
+            elif cmd == 'c':
+                for i,viewer in enumerate(scene.viewers):
+                    print 'saving image%d.png'%i
+                    viewer.saveimage('image%d.png'%i)
+    finally:
+        scene.quitviewers()
+    
+from optparse import OptionParser
+from openravepy import OpenRAVEGlobalArguments, with_destroy
 
 @with_destroy
 def run(args=None):
-    """Executes the testcamerasensor example
+    """Command-line execution of the example.
 
-    :type args: arguments for script to parse, if not specified will use sys.argv
+    :param args: arguments for script to parse, if not specified will use sys.argv
     """
     parser = OptionParser(description='Displays all images of all camera sensors attached to a robot.')
     OpenRAVEGlobalArguments.addOptions(parser)
@@ -188,16 +187,7 @@ def run(args=None):
                       help='Specific robot sensors to display (otherwise first robot found will be displayed)')
     (options, leftargs) = parser.parse_args(args=args)
     env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
-    scene = OpenRAVEScene(env,options.scene,options.robotname)
-    while(True):
-        cmd = raw_input('Enter command (q-quit,c-capture image): ')
-        if cmd == 'q':
-            break
-        elif cmd == 'c':
-            for i,viewer in enumerate(scene.viewers):
-                print 'saving image%d.png'%i
-                viewer.saveimage('image%d.png'%i)
-    scene.quitviewers()
+    main(env,options)
 
 if __name__=='__main__':
     run()

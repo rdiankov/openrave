@@ -15,17 +15,17 @@
 """環境に読み込んだ物体の移動
 
 実行
---------------------------------------
+---------
 
 実行方法
-========
+===============
 
 .. code-block:: bash
 
   openrave.py --example tutorial_002
 
 内容説明
-========
+================
 
 - チュートリアルを実行すると，OpenRAVEのGUIが立ち上がり，下のような画像が現れます．
 
@@ -215,24 +215,23 @@
 関連関数
 --------------------------------------
 
- `Environment.GetBodies` , `Environment.GetKinBody` , `KinBody.GetTransform` , `poseFromMatrix`
+- :meth:`.Environment.GetBodies` , :meth:`.Environment.GetKinBody` , :meth:`.KinBody.GetTransform` , :func:`.poseFromMatrix`
 
 関連チュートリアル
 --------------------------------------
 
-- `examples.tutorial_003` - 環境に読み込んだ物体の回転（回転行列）
-- `examples.tutorial_004` - 環境に読み込んだ物体の回転（クォータニオン）
+- :mod:`.tutorial_003` - 環境に読み込んだ物体の回転（回転行列）
+- :mod:`.tutorial_004` - 環境に読み込んだ物体の回転（クォータニオン）
 
 """
 from __future__ import with_statement # for python 2.5
 __author__ = 'Makoto Furukawa'
-__copyright__ = '2010 Makoto Furukawa'
-__license__ = 'Apache License, Version 2.0'
-from openravepy import Environment,poseFromMatrix
+from openravepy import Environment,poseFromMatrix, with_destroy
 from numpy import eye
 from numpy.random import rand
 
-def run(args=None):
+def main():
+    "Main example code."
     env = Environment()
     env.SetViewer('qtcoin')
     env.AddKinBody(env.ReadKinBodyXMLFile(filename='data/mug1.kinbody.xml'))
@@ -264,6 +263,10 @@ def run(args=None):
         body1.SetTransform(tran1)
         print "X=%f Y=%f Z=%f"%(tran1[0,3],tran1[1,3],tran1[2,3])
         print 'pose: ',poseFromMatrix(tran1)
+
+@with_destroy
+def run(args=None):
+    main()
 
 if __name__ == "__main__":
     run()

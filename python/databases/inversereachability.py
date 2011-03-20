@@ -725,7 +725,7 @@ class InverseReachabilityModel(DatabaseGenerator):
         DatabaseGenerator.RunFromParser(Model=Model,parser=parser,args=args,**kwargs)
 
 def run(*args,**kwargs):
-    """Executes the inversereachability database generation,  ``args`` specifies a list of the arguments to the script.
+    """Command-line execution of the example. ``args`` specifies a list of the arguments to the script.
     """
     InverseReachabilityModel.RunFromParser(*args,**kwargs)
             

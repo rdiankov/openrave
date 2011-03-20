@@ -1,5 +1,6 @@
 #!/usr/bin/env python
-# Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)
+# -*- coding: utf-8 -*-
+# Copyright (C) 2009-2011 Rosen Diankov (rosen.diankov@gmail.com)
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,12 +14,7 @@
 # limitations under the License.
 """Solves the hanoi problem using simple arm planning.
 
-.. image:: ../../images/examples/hanoi.jpg
-  :height: 200
-
-**Running the Example**::
-
-  openrave.py --example hanoi
+.. examplepre-block:: hanoi
 
 Description
 -----------
@@ -28,35 +24,29 @@ pegs, disks, or add obstacles in the environment files **data/hanoi_complex.env.
 **data/hanoi.env.xml** to make the problem harder. The default planner used is the rBiRRT, you can
 easily change it to a different planner by changing the arguments to the BaseManipulation problem.
 
-Command-line
-------------
-
-.. shell-block:: openrave.py --example hanoi --help
+.. examplepost-block:: hanoi
 
 """
 from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
-__copyright__ = '2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
-__license__ = 'Apache License, Version 2.0'
 
 import time
-from openravepy import Environment, IkParameterization, planning_error, raveLogInfo, raveLogWarn, OpenRAVEGlobalArguments, with_destroy
-from openravepy.interfaces import BaseManipulation, TaskManipulation
-from openravepy.databases import inversekinematics
-from numpy import array, arange, linalg, pi, dot, vstack, cos, sin, cross, r_, c_
-from optparse import OptionParser
+from openravepy import __build_doc__
+if not __build_doc__:
+    from openravepy import *
+    from numpy import *
 
 class HanoiPuzzle:
     def __init__(self,env,robot):
         self.env = env
         self.robot = robot
         # load the IK solver
-        self.ikmodel = inversekinematics.InverseKinematicsModel(robot=robot,iktype=IkParameterization.Type.Transform6D)
+        self.ikmodel = databases.inversekinematics.InverseKinematicsModel(robot=robot,iktype=IkParameterization.Type.Transform6D)
         if not self.ikmodel.load():
             self.ikmodel.autogenerate() # autogenerate if one doesn't exist
         with self.env: # lock the environment
-            self.basemanip = BaseManipulation(self.robot)
-            self.taskmanip = TaskManipulation(self.robot)
+            self.basemanip = interfaces.BaseManipulation(self.robot)
+            self.taskmanip = interfaces.TaskManipulation(self.robot)
             disknames = ['disk0','disk1','disk2']
             self.heights = array([0.021,0.062,0.103])+0.01
             disks = []
@@ -202,26 +192,30 @@ class HanoiPuzzle:
             self.hanoisolve(1, pegfrom, pegto, pegby)
             self.hanoisolve(n-1, pegby, pegto, pegfrom)
 
-@with_destroy
-def run(args=None):
-    """Executes the example, ``args`` specifies a list of the arguments to the script.
-    
-    **Help**
-    
-    .. shell-block:: openrave.py --example hanoi --help
-    """
-    parser = OptionParser(description='Manipulation planning example solving the hanoi problem.', usage='openrave.py --example hanoi [options]')
-    OpenRAVEGlobalArguments.addOptions(parser)
-    parser.add_option('--scene',
-                      action="store",type='string',dest='scene',default='data/hanoi_complex2.env.xml',
-                      help='Scene file to load (default=%default)')
-    (options, leftargs) = parser.parse_args(args=args)
-    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
+def main(env,options):
+    "Main example code."
     while True:
         env.Reset()
         env.Load(options.scene)
         hanoi = HanoiPuzzle(env,env.GetRobots()[0])
         hanoi.hanoisolve(3,hanoi.srcpeg,hanoi.destpeg,hanoi.peg)
+
+from optparse import OptionParser
+from openravepy import OpenRAVEGlobalArguments, with_destroy
+
+@with_destroy
+def run(args=None):
+    """Command-line execution of the example.
+
+    :param args: arguments for script to parse, if not specified will use sys.argv
+    """
+    parser = OptionParser(description='Manipulation planning example solving the hanoi problem.', usage='openrave.py --example hanoi [options]')
+    OpenRAVEGlobalArguments.addOptions(parser)
+    parser.add_option('--scene',action="store",type='string',dest='scene',default='data/hanoi_complex2.env.xml',
+                      help='Scene file to load (default=%default)')
+    (options, leftargs) = parser.parse_args(args=args)
+    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
+    main(env,options)
 
 if __name__ == "__main__":
     run()

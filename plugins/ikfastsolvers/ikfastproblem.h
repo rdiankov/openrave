@@ -187,17 +187,17 @@ public:
         __description = ":Interface Author: Rosen Diankov\n\nAllows dynamic loading and registering of ikfast shared objects to openrave plugins.\nAlso contains several test routines for inverse kinematics.";
         RegisterCommand("AddIkLibrary",boost::bind(&IKFastProblem::AddIkLibrary,this,_1,_2),
                         "Dynamically adds an ik solver to openrave by loading a shared object (based on ikfast code generation).\n"
-                        "Usage:\n    AddIkLibrary iksolvername iklibrarypath\n"
+                        "Usage::\n\n  AddIkLibrary iksolvername iklibrarypath\n\n"
                         "return the type of inverse kinematics solver (IkParamterization::Type)");
 #ifdef Boost_IOSTREAMS_FOUND
         RegisterCommand("LoadIKFastSolver",boost::bind(&IKFastProblem::LoadIKFastSolver,this,_1,_2),
                         "Dynamically calls the inversekinematics.py script to generate an ik solver for a robot, or to load an existing one\n"
-                        "Usage:\n    LoadIKFastSolver robotname iktype_id [free increment]\n"
+                        "Usage::\n\n  LoadIKFastSolver robotname iktype_id [free increment]\n\n"
                         "return nothing, but does call the SetIKSolver for the robot");
 #endif
         RegisterCommand("PerfTiming",boost::bind(&IKFastProblem::PerfTiming,this,_1,_2),
                         "Times the ik call of a given library.\n"
-                        "Usage:\n    PerfTiming [options] iklibrarypath\n"
+                        "Usage::\n\n  PerfTiming [options] iklibrarypath\n\n"
                         "return the set of time measurements made in nano-seconds");
         RegisterCommand("IKTest",boost::bind(&IKFastProblem::IKtest,this,_1,_2),
                         "Tests for an IK solution if active manipulation has an IK solver attached");

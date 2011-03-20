@@ -1,5 +1,6 @@
 #!/usr/bin/env python
-# Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)
+# -*- coding: utf-8 -*-
+# Copyright (C) 2009-2011 Rosen Diankov (rosen.diankov@gmail.com)
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,40 +14,28 @@
 # limitations under the License.
 """Shows how to use RRTs for navigation planning by setting affine degrees of freedom.
 
-.. image:: ../../images/examples/simplenavigation.jpg
-  :width: 300
+.. examplepre-block:: simplenavigation
+  :image-width: 400
 
-**Running the Example**::
-
-  openrave.py --example simplenavigation
-
-
-Command-line
-------------
-
-.. shell-block:: openrave.py --example simplenavigation --help
-
+.. examplepost-block:: simplenavigation
 """
 from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
-__copyright__ = '2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
-__license__ = 'Apache License, Version 2.0'
 
-from openravepy import *
-from openravepy.interfaces import BaseManipulation
-from openravepy.databases import convexdecomposition
-from numpy import *
-import numpy,time
-from optparse import OptionParser
+import time,numpy
+from openravepy import __build_doc__
+if not __build_doc__:
+    from openravepy import *
+    from numpy import *
 
-class SimpleNavigationPlanning(metaclass.AutoReloader):
+class SimpleNavigationPlanning:
     def __init__(self,robot,randomize=False,dests=None,switchpatterns=None):
         self.env = robot.GetEnv()
         self.robot = robot
-        self.cdmodel = convexdecomposition.ConvexDecompositionModel(self.robot)
+        self.cdmodel = databases.convexdecomposition.ConvexDecompositionModel(self.robot)
         if not self.cdmodel.load():
             self.cdmodel.autogenerate()
-        self.basemanip = BaseManipulation(self.robot)
+        self.basemanip = interfaces.BaseManipulation(self.robot)
     def performNavigationPlanning(self):
         # find the boundaries of the environment
         with self.env:
@@ -85,11 +74,23 @@ class SimpleNavigationPlanning(metaclass.AutoReloader):
             print 'waiting for controller'
             self.robot.WaitForController(0)
 
+def main(env,options):
+    "Main example code."
+    env.Load(options.scene)
+    robot = env.GetRobots()[0]
+    env.UpdatePublishedBodies()
+    time.sleep(0.1) # give time for environment to update
+    self = SimpleNavigationPlanning(robot)
+    self.performNavigationPlanning()
+
+from optparse import OptionParser
+from openravepy import OpenRAVEGlobalArguments, with_destroy
+
 @with_destroy
 def run(args=None):
-    """Executes the simplenavigation example
+    """Command-line execution of the example.
 
-    :type args: arguments for script to parse, if not specified will use sys.argv
+    :param args: arguments for script to parse, if not specified will use sys.argv
     """
     parser = OptionParser(description='Simple navigation planning using RRTs.')
     OpenRAVEGlobalArguments.addOptions(parser)
@@ -98,12 +99,7 @@ def run(args=None):
                       help='Scene file to load (default=%default)')
     (options, leftargs) = parser.parse_args(args=args)
     env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
-    env.Load(options.scene)
-    robot = env.GetRobots()[0]
-    env.UpdatePublishedBodies()
-    time.sleep(0.1) # give time for environment to update
-    self = SimpleNavigationPlanning(robot)
-    self.performNavigationPlanning()
+    main(env,options)
 
 if __name__ == "__main__":
     run()

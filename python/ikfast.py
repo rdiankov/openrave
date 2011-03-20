@@ -22,6 +22,9 @@
 IKFast: The Robot Kinematics Compiler
 -------------------------------------
 
+.. image:: ../../images/ikfast_robots.jpg
+  :width: 640
+
 IKFast analytically solves robot inverse kinematics equations and generates optimized C++ files.
 
 The inverse kinematics equations arise from attemping to place the robot end effector coordinate

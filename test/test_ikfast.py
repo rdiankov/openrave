@@ -43,13 +43,13 @@ def setup_robotstats():
     success = RaveLoadPlugin('libikfastsolvers')
     assert(success)
     RaveSetDebugLevel(DebugLevel.Error) # set to error in order to avoid expected plugin loading errors
-    format = logging.Formatter('%(name)s: %(message)s')
-    handler = logging.StreamHandler(sys.stderr)
-    handler.setFormatter(format)
-    databases.inversekinematics.log.addHandler(handler)
-    databases.inversekinematics.log.setLevel(logging.ERROR)
-    ikfast.log.addHandler(handler)
-    ikfast.log.setLevel(logging.ERROR)
+    #format = logging.Formatter('%(name)s: %(message)s')
+    #handler = logging.StreamHandler(sys.stderr)
+    #handler.setFormatter(format)
+    #databases.inversekinematics.log.addHandler(handler)
+    #databases.inversekinematics.log.setLevel(logging.ERROR)
+    #ikfast.log.addHandler(handler)
+    #ikfast.log.setLevel(logging.ERROR)
     env=Environment()
     env.StopSimulation()
     ikfastproblem = RaveCreateProblem(env,'ikfast')
@@ -131,53 +131,55 @@ def robotstats(description,robotfilename,manipname, iktypestr,freeindices):
             resultsstr = ikfastproblem.SendCommand('PerfTiming num 10000 maxtime %f %s'%(options.perftime,ikmodel.getfilename(True)))
             results = [numpy.double(s)*1e-9 for s in resultsstr.split()]
             jointnames = ', '.join(robot.GetJointFromDOFIndex(dof).GetName() for dof in ikmodel.manip.GetArmIndices())
-            print 'ikfast version: %s'%ikfast.__version__
-            #print 'SECTION Robot Information'
-            print 'robot: %s, manipulator: '%(robotfilename)
-            print 'free joint increment: %s'%ikmodel.freeinc
-            print 'manipulator %s: %s %s [%s]'%(manipname, ikmodel.manip.GetBase().GetName(),ikmodel.manip.GetEndEffector().GetName(),jointnames)
-            lower,upper = robot.GetDOFLimits(ikmodel.manip.GetArmIndices())
-            print 'lower limits: '+' '.join(str(f) for f in lower)
-            print 'upper limits: '+' '.join(str(f) for f in upper)
-            if len(solutionresults[0])>0 or len(solutionresults[1])>0:
-                #print '\nSECTION Problematic IK'
-                print '\n\nThe following IK parameterizations are when link %s is at the origin, the last %d values are the normalized free variables [%s].\n'%(ikmodel.manip.GetBase().GetName(),len(freeindices),str(freeindicesstr))
-            for isol in range(2):
-                if len(solutionresults[isol]) == 0:
-                    continue
-                prefix = ''
-                if isol == 0:
-                    #prefix = 'ERROR '
-                    print '\n\nExamples of Wrong Solutions:\n',
-                else:
-                    #prefix = 'WARN '
-                    print '\n\nExamples of No Solutions:\n'
-                rows = []
-                numprint = min(10,len(solutionresults[isol]))
-                for index in numpy.random.permutation(len(solutionresults[isol]))[0:numprint]:
-                    ikparam,freevalues = solutionresults[isol][index]
-                    ikparamvalues = [str(f) for f in ikparam.GetTransform6D()[0:3,0:4].flatten()]
-                    rows.append(ikparamvalues+freevalues)
-                colwidths = [max([len(row[i]) for row in rows]) for i in range(len(rows[0]))]
-                for i,row in enumerate(rows):
-                    print prefix + ' '.join([row[j].ljust(colwidths[j]) for j in range(len(colwidths))])
-            # jenkins plot measurement data
-            print measurement('compile-time (s)', '%.3f'%compiletime)
-            print measurement('success', '%.4f'%successrate)
-            print measurement('wrong solutions','%.4f'%wrongrate)
-            print measurement('no solutions', '%.4f'%nosolutions)
-            print measurement('missing solutions', '%.4f'%(float(len(solutionresults[2]))/numtested))
-            print measurement('number tests',str(numtested))
-            print measurement('run-time mean (s)','%.6f'%numpy.mean(results))
-            print measurement('run-time max (s)','%.6f'%numpy.max(results))
-            globalstats.put([robotfilename,manip.GetName(),iktypestr,freeindices,description,ikmodel.getsourcefilename(read=True),numpy.mean(results),numpy.max(results),successrate,wrongrate])
-            assert(len(solutionresults[0])==0)
-            assert(successrate > options.minimumsuccess)
-            assert(nosolutions < options.maximumnosolutions)
         except ikfast.IKFastSolver.IKFeasibilityError,e:
             # this is expected, and is normal operation, have to notify
             globalstats.put([robotfilename,manip.GetName(),iktypestr,freeindices,description,None,None,None,None,None])
             print e
+            return
+
+        print 'ikfast version: %s'%ikfast.__version__
+        #print 'SECTION Robot Information'
+        print 'robot: %s, manipulator: '%(robotfilename)
+        print 'free joint increment: %s'%ikmodel.freeinc
+        print 'manipulator %s: %s %s [%s]'%(manipname, ikmodel.manip.GetBase().GetName(),ikmodel.manip.GetEndEffector().GetName(),jointnames)
+        lower,upper = robot.GetDOFLimits(ikmodel.manip.GetArmIndices())
+        print 'lower limits: '+' '.join(str(f) for f in lower)
+        print 'upper limits: '+' '.join(str(f) for f in upper)
+        if len(solutionresults[0])>0 or len(solutionresults[1])>0:
+            #print '\nSECTION Problematic IK'
+            print '\n\nThe following IK parameterizations are when link %s is at the origin, the last %d values are the normalized free variables [%s].\n'%(ikmodel.manip.GetBase().GetName(),len(freeindices),str(freeindicesstr))
+        for isol in range(2):
+            if len(solutionresults[isol]) == 0:
+                continue
+            prefix = ''
+            if isol == 0:
+                #prefix = 'ERROR '
+                print '\n\nExamples of Wrong Solutions:\n',
+            else:
+                #prefix = 'WARN '
+                print '\n\nExamples of No Solutions:\n'
+            rows = []
+            numprint = min(10,len(solutionresults[isol]))
+            for index in numpy.random.permutation(len(solutionresults[isol]))[0:numprint]:
+                ikparam,freevalues = solutionresults[isol][index]
+                ikparamvalues = [str(f) for f in ikparam.GetTransform6D()[0:3,0:4].flatten()]
+                rows.append(ikparamvalues+freevalues)
+            colwidths = [max([len(row[i]) for row in rows]) for i in range(len(rows[0]))]
+            for i,row in enumerate(rows):
+                print prefix + ' '.join([row[j].ljust(colwidths[j]) for j in range(len(colwidths))])
+        # jenkins plot measurement data
+        print measurement('compile-time (s)', '%.3f'%compiletime)
+        print measurement('success', '%.4f'%successrate)
+        print measurement('wrong solutions','%.4f'%wrongrate)
+        print measurement('no solutions', '%.4f'%nosolutions)
+        print measurement('missing solutions', '%.4f'%(float(len(solutionresults[2]))/numtested))
+        print measurement('number tests',str(numtested))
+        print measurement('run-time mean (s)','%.6f'%numpy.mean(results))
+        print measurement('run-time max (s)','%.6f'%numpy.max(results))
+        globalstats.put([robotfilename,manip.GetName(),iktypestr,freeindices,description,ikmodel.getsourcefilename(read=True),numpy.mean(results),numpy.max(results),successrate,wrongrate])
+        assert(len(solutionresults[0])==0)
+        assert(successrate > options.minimumsuccess)
+        assert(nosolutions < options.maximumnosolutions)
 
 
 class RunRobotStats:
@@ -282,8 +284,8 @@ if __name__ == "__main__":
     handler.setFormatter(format)
     multiprocess.log.addHandler(handler)
     multiprocess.log.setLevel(options.debug)
-    ikfast.log.addHandler(handler)
-    ikfast.log.setLevel(options.debug)
+    #ikfast.log.addHandler(handler)
+    #ikfast.log.setLevel(options.debug)
     
     multiprocess._instantiate_plugins = [capture.Capture, xunitmultiprocess.Xunitmp, callableclass.CallableClass]
 
@@ -291,11 +293,11 @@ if __name__ == "__main__":
     argv=['nosetests','-v','--with-xunitmp','--xunit-file=test_ikfast.xml','--xunit-header=%s'%header,'--processes=%d'%options.numprocesses,'--process-timeout=%f'%options.timeout,'--process-restartworker','--with-callableclass','test_ikfast.py']
     plugins=[capture.Capture(),multiprocess.MultiProcess(),xunitmultiprocess.Xunitmp(),callableclass.CallableClass()]
     prog=nose.core.TestProgram(argv=argv,plugins=plugins,exit=False)
-    # process the global stats
+    print 'processing the global stats'
     stats = []
     while not test_ikfast.globalstats.empty():
         stat = test_ikfast.globalstats.get()
-        if not stat[4] is None:
-            stat[4] = open(stat[4],'r').read()
+        if not stat[5] is None:
+            stat[5] = open(stat[5],'r').read()
         stats.append(stat)
     pickle.dump([stats,options],open('ikfaststats.pp','w'))

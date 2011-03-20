@@ -154,23 +154,21 @@
 関連関数
 --------------------------------------
 
- `Environment` , `Environment.SetViewer` , `Environment.ReadKinBodyXMLFile` , `Environment.AddKinBody` , `KinBody.SetTransform` , `Environment.Reset` , `Environment.Destroy`
+- :class:`.Environment` , :meth:`.Environment.SetViewer` , :meth:`.Environment.ReadKinBodyXMLFile` , :meth:`.Environment.AddKinBody` , :meth:`.KinBody.SetTransform` , :meth:`.Environment.Reset` , :meth:`.Environment.Destroy`
 
 関連チュートリアル
 --------------------------------------
 
-- `examples.tutorial_002` - 環境に読み込んだ物体の移動
+- :mod:`.tutorial_002` - 環境に読み込んだ物体の移動
 
 """
 from __future__ import with_statement # for python 2.5
 __author__ = 'Makoto Furukawa'
-__copyright__ = '2010 Makoto Furukawa'
-__license__ = 'Apache License, Version 2.0'
-from openravepy import Environment
+from openravepy import Environment, with_destroy
 from numpy import eye
-#from time import sleep
 
-def run(args=None):
+def main():
+    "Main example code."
     env = Environment()
     env.SetViewer('qtcoin')
     body = env.ReadKinBodyXMLFile(filename='data/mug1.kinbody.xml')
@@ -178,6 +176,10 @@ def run(args=None):
     body.SetTransform(eye(4))
     raw_input('キーを押す破壊とします．')
     env.Destroy()
+
+@with_destroy
+def run(args=None):
+    main()
 
 if __name__ == "__main__":
     run()

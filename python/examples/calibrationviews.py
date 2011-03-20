@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)
+# Copyright (C) 2009-2011 Rosen Diankov (rosen.diankov@gmail.com)
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,26 +14,46 @@
 # limitations under the License.
 """Calibrates a camera attached on a robot by moving it around a pattern.
 
-Command-line
-------------
+.. examplepre-block:: calibrationviews
 
-.. shell-block:: openrave.py --example calibrationviews --help
+Description
+-----------
 
+The pattern is attached to the robot gripper and robot uses moves it to gather data. Uses :mod:`.visibilitymodel` to determine which robot configurations make the pattern fully visible inside the camera view.
+
+It is also possible to calibrate an environment camera with this exapmle using:
+
+.. code-block:: bash
+
+  openrave.py --example calibrationviews --scene=data/pa10calib_envcamera.env.xml --sensorrobot=ceilingcamera  
+
+.. image:: ../../images/examples/calibrationviews_envcamera.jpg
+  :width: 640
+
+Calibration
+-----------
+
+Although this example does not contain calibration code, the frames of reference are the following:
+
+.. image:: ../../images/examples/calibrationviews_frames.jpg
+  :width: 640
+
+
+**T_pattern^world** and **T_camera^link** are unknown, while **T_pattern^camera** and **T_link^world** are known.
+
+.. examplepost-block:: calibrationviews
 """
 from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
-__copyright__ = '2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
-__license__ = 'Apache License, Version 2.0'
-__docformat__ = "restructuredtext en"
 
-import sys, os, time, signal, threading
-import numpy # nice to be able to explicitly call some functions
-from numpy import *
-from optparse import OptionParser
-from openravepy import *
-from openravepy.interfaces import BaseManipulation
-from openravepy.databases import inversekinematics,visibilitymodel
-
+import sys, os, time, threading
+from openravepy import __build_doc__
+if not __build_doc__:
+    from numpy import *
+    from openravepy import *
+else:
+    from numpy import array, arange, inf
+    from openravepy import interfaces, databases
 
 try:
     from Tkinter import *
@@ -84,7 +104,7 @@ class CameraViewerGUI(threading.Thread):
         self.main.after(0,self.updateimage)
         self.main.mainloop()
 
-class CalibrationViews(metaclass.AutoReloader):
+class CalibrationViews:
     def __init__(self,robot,sensorname=None,sensorrobot=None,target=None,maxvelmult=None,randomize=False):
         """Starts a calibration sequencer using a robot and a sensor.
 
@@ -95,20 +115,20 @@ class CalibrationViews(metaclass.AutoReloader):
         """
         self.env = robot.GetEnv()
         self.robot = robot
-        self.basemanip = BaseManipulation(self.robot,maxvelmult=maxvelmult)
+        self.basemanip = interfaces.BaseManipulation(self.robot,maxvelmult=maxvelmult)
         if target is None:
             target = self.env.GetKinBody('calibration')
         if randomize and target is not None:
             pose = poseFromMatrix(target.GetTransform())
             target.SetTransform(pose)
-        self.vmodel = visibilitymodel.VisibilityModel(robot=robot,sensorrobot=sensorrobot,target=target,sensorname=sensorname)
+        self.vmodel = databases.visibilitymodel.VisibilityModel(robot=robot,sensorrobot=sensorrobot,target=target,sensorname=sensorname)
         self.vmodel.load()
         self.Tpatternrobot = None
         if self.vmodel.robot != self.vmodel.sensorrobot and target is not None:
             print 'Assuming target \'%s\' is attached to %s'%(target.GetName(),self.vmodel.manip)
             self.Tpatternrobot = dot(linalg.inv(self.vmodel.target.GetTransform()),self.vmodel.manip.GetEndEffectorTransform())
 
-    def computevisibilityposes(self,dists=arange(0.05,2.0,0.15),orientationdensity=1,num=inf):
+    def computevisibilityposes(self,dists=arange(0.05,1.5,0.2),orientationdensity=1,num=inf):
         """Computes robot poses using visibility information from the target.
 
         Sample the transformations of the camera. the camera x and y axes should always be aligned with the 
@@ -276,28 +296,8 @@ class CalibrationViews(metaclass.AutoReloader):
             target.SetTransform(dot(self.vmodel.attachedsensor.GetTransform(),T))
         return self.computeAndMoveToObservations(waitcond=waitcond,**kwargs), self.vmodel.target
 
-@with_destroy
-def run(args=None):
-    """Executes the calibrationviews example
-
-    :type args: arguments for script to parse, if not specified will use sys.argv
-    """
-    parser = OptionParser(description='Views a calibration pattern from multiple locations.')
-    OpenRAVEGlobalArguments.addOptions(parser)
-    parser.add_option('--scene',action="store",type='string',dest='scene',default='data/pa10calib.env.xml',
-                      help='Scene file to load (default=%default)')
-    parser.add_option('--sensorname',action="store",type='string',dest='sensorname',default=None,
-                      help='Name of the sensor whose views to generate (default is first sensor on robot)')
-    parser.add_option('--sensorrobot',action="store",type='string',dest='sensorrobot',default=None,
-                      help='Name of the robot the sensor is attached to (default=%default)')
-    parser.add_option('--norandomize', action='store_false',dest='randomize',default=True,
-                      help='If set, will not randomize the bodies and robot position in the scene.')
-    parser.add_option('--novisibility', action='store_false',dest='usevisibility',default=True,
-                      help='If set, will not perform any visibility searching.')
-    parser.add_option('--posedist',action="store",type='float',dest='posedist',default=0.05,
-                      help='An average distance between gathered poses. The smaller the value, the more poses robot will gather close to each other')
-    (options, leftargs) = parser.parse_args(args=args)
-    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
+def main(env,options):
+    "Main example code."
     env.Load(options.scene)
     robot = env.GetRobots()[0]
     sensorrobot = None if options.sensorrobot is None else env.GetRobot(options.sensorrobot)
@@ -323,9 +323,40 @@ def run(args=None):
         print 'failed to create camera gui: ',e
         viewers = []
 
-    while True:
-        self.computeAndMoveToObservations(usevisibility=options.usevisibility,posedist=options.posedist)
-        
+    try:
+        while True:
+            print 'computing all locations, might take more than a minute...'
+            self.computeAndMoveToObservations(usevisibility=options.usevisibility,posedist=options.posedist)
+    finally:
+        for viewer in viewers:
+            viewer.main.quit()
+
+from optparse import OptionParser
+from openravepy import OpenRAVEGlobalArguments, with_destroy
+
+@with_destroy
+def run(args=None):
+    """Command-line execution of the example.
+
+    :param args: arguments for script to parse, if not specified will use sys.argv
+    """
+    parser = OptionParser(description='Views a calibration pattern from multiple locations.')
+    OpenRAVEGlobalArguments.addOptions(parser)
+    parser.add_option('--scene',action="store",type='string',dest='scene',default='data/pa10calib.env.xml',
+                      help='Scene file to load (default=%default)')
+    parser.add_option('--sensorname',action="store",type='string',dest='sensorname',default=None,
+                      help='Name of the sensor whose views to generate (default is first sensor on robot)')
+    parser.add_option('--sensorrobot',action="store",type='string',dest='sensorrobot',default=None,
+                      help='Name of the robot the sensor is attached to (default=%default)')
+    parser.add_option('--norandomize', action='store_false',dest='randomize',default=True,
+                      help='If set, will not randomize the bodies and robot position in the scene.')
+    parser.add_option('--novisibility', action='store_false',dest='usevisibility',default=True,
+                      help='If set, will not perform any visibility searching.')
+    parser.add_option('--posedist',action="store",type='float',dest='posedist',default=0.05,
+                      help='An average distance between gathered poses. The smaller the value, the more poses robot will gather close to each other')
+    (options, leftargs) = parser.parse_args(args=args)
+    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
+    main(env,options)        
 
 if __name__ == "__main__":
     run()

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)
+# Copyright (C) 2009-2011 Rosen Diankov (rosen.diankov@gmail.com)
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,26 +12,23 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Shows velocity control with ode controller.
+
+.. examplepre-block:: testphysics_controller
+
+.. examplepost-block:: testphysics_controller
+"""
 from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
-__copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
-__license__ = 'Apache License, Version 2.0'
 
-from openravepy import *
-from numpy import *
 import time
-from optparse import OptionParser
+from openravepy import __build_doc__
+if not __build_doc__:
+    from openravepy import *
+    from numpy import *
 
-@with_destroy
-def run(args=None):
-    """Executes the testphysicscontroller example
-
-    :type args: arguments for script to parse, if not specified will use sys.argv
-    """
-    parser = OptionParser(description="test physics")
-    OpenRAVEGlobalArguments.addOptions(parser)
-    (options, leftargs) = parser.parse_args(args=args)
-    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
+def main(env,options):
+    "Main example code."
     env.Load('data/hanoi.env.xml')
     if options._physics is None:
         # no physics engine set, so set one
@@ -50,6 +47,21 @@ def run(args=None):
         velocities = 0.5*(random.rand(robot.GetDOF())-0.5)
         robot.GetController().SendCommand('setvelocity '+' '.join(str(f) for f in velocities))
         time.sleep(2.0)
+
+from optparse import OptionParser
+from openravepy import OpenRAVEGlobalArguments, with_destroy
+
+@with_destroy
+def run(args=None):
+    """Command-line execution of the example.
+
+    :param args: arguments for script to parse, if not specified will use sys.argv
+    """
+    parser = OptionParser(description="test physics")
+    OpenRAVEGlobalArguments.addOptions(parser)
+    (options, leftargs) = parser.parse_args(args=args)
+    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
+    main(env,options)
 
 if __name__=='__main__':
     run()

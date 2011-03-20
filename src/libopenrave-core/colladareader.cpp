@@ -921,7 +921,7 @@ class ColladaReader : public daeErrorHandler
                                 if( pjoint->_vlowerlimit[ic] < -PI || pjoint->_vupperlimit[ic] > PI ) {
                                     pjoint->_offsets[ic] = 0.5f * (pjoint->_vlowerlimit[ic] + pjoint->_vupperlimit[ic]);
                                     if( pjoint->_vupperlimit[ic] - pjoint->_offsets[ic] > PI ) {
-                                        RAVELOG_WARN(str(boost::format("joint %s, cannot allow joint range [%f,%f] of more than 360 degrees\n")%pjoint->GetName()%pjoint->_vlowerlimit[ic]%pjoint->_vupperlimit[ic]));
+                                        RAVELOG_WARN(str(boost::format("joint %s, cannot allow joint range [%f,%f] of more than 2*pi radians\n")%pjoint->GetName()%pjoint->_vlowerlimit[ic]%pjoint->_vupperlimit[ic]));
                                         pjoint->_vupperlimit[ic] = pjoint->_offsets[ic] + PI - 1e-5;
                                         pjoint->_vlowerlimit[ic] = pjoint->_offsets[ic] - PI + 1e-5;
                                     }
@@ -954,7 +954,7 @@ class ColladaReader : public daeErrorHandler
                                 if( pjoint->_vlowerlimit[ic] < -PI || pjoint->_vupperlimit[ic] > PI ) {
                                     pjoint->_offsets[ic] = 0.5f * (pjoint->_vlowerlimit[ic] + pjoint->_vupperlimit[ic]);
                                     if( pjoint->_vupperlimit[ic] - pjoint->_offsets[ic] > PI ) {
-                                        RAVELOG_WARN(str(boost::format("joint %s, cannot allow joint range [%f,%f] of more than 360 degrees\n")%pjoint->GetName()%pjoint->_vlowerlimit[ic]%pjoint->_vupperlimit[ic]));
+                                        RAVELOG_WARN(str(boost::format("joint %s, cannot allow joint range [%f,%f] of more than 2*pi radians\n")%pjoint->GetName()%pjoint->_vlowerlimit[ic]%pjoint->_vupperlimit[ic]));
                                         pjoint->_vupperlimit[ic] = pjoint->_offsets[ic] + PI - 1e-5;
                                         pjoint->_vlowerlimit[ic] = pjoint->_offsets[ic] - PI + 1e-5;
                                     }

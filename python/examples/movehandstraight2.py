@@ -1,5 +1,6 @@
 #!/usr/bin/env python
-# Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)
+# -*- coding: utf-8 -*-
+# Copyright (C) 2009-2011 Rosen Diankov (rosen.diankov@gmail.com)
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,55 +14,26 @@
 # limitations under the License.
 """Tests moving the end effctor of the manipulator in straight paths using just the translation.
 
-.. image:: ../../images/examples/movehandstraight2.jpg
-  :height: 600
-
-**Running the Example**::
-
-  openrave.py --example movehandstraight2
+.. examplepre-block:: movehandstraight2
 
 Description
 -----------
 
 Shows how to use the MoveHandStraight basemanipulation command. The example picks a random trajectory of the end effector and tests if this trajectory is feasible to achieve in the robot.
 
-Command-line
-------------
-
-.. shell-block:: openrave.py --example movehandstraight2 --help
-
+.. examplepost-block:: movehandstraight2
 """
-
 from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
-__copyright__ = '2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
-__license__ = 'Apache License, Version 2.0'
 
-from openravepy import *
-from openravepy.interfaces import BaseManipulation, TaskManipulation
-from openravepy.databases import convexdecomposition,grasping,inversekinematics
-from numpy import *
-import numpy,time,traceback
-from optparse import OptionParser
-from itertools import izip
 import time
-       
-@with_destroy 
-def run(args=None):
-    """Executes the movehandstraight2 example
+from openravepy import __build_doc__
+if not __build_doc__:
+    from openravepy import *
+    from numpy import *
 
-    :type args: arguments for script to parse, if not specified will use sys.argv
-    """
-    parser = OptionParser(description='Shows how choose IK solutions so that move hand straight can move without discontinuities.')
-    OpenRAVEGlobalArguments.addOptions(parser)
-    parser.add_option('--scene',
-                      action="store",type='string',dest='scene',default='data/katanatable.env.xml',
-                      help='Scene file to load (default=%default)')
-    parser.add_option('--manipname',
-                      action="store",type='string',dest='manipname',default=None,
-                      help='Choose the manipulator to perform movement for')
-    (options, leftargs) = parser.parse_args(args=args)
-    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
+def main(env,options):
+    "Main example code."
     env.Load(options.scene)
     robot = env.GetRobots()[0]
     if options.manipname is not None:
@@ -107,6 +79,27 @@ def run(args=None):
             #robot.WaitForController(0)
         except planning_error,e:
             failedattempt += 1
+
+from optparse import OptionParser
+from openravepy import OpenRAVEGlobalArguments, with_destroy
+
+@with_destroy 
+def run(args=None):
+    """Command-line execution of the example.
+
+    :param args: arguments for script to parse, if not specified will use sys.argv
+    """
+    parser = OptionParser(description='Shows how choose IK solutions so that move hand straight can move without discontinuities.')
+    OpenRAVEGlobalArguments.addOptions(parser)
+    parser.add_option('--scene',
+                      action="store",type='string',dest='scene',default='data/katanatable.env.xml',
+                      help='Scene file to load (default=%default)')
+    parser.add_option('--manipname',
+                      action="store",type='string',dest='manipname',default=None,
+                      help='Choose the manipulator to perform movement for')
+    (options, leftargs) = parser.parse_args(args=args)
+    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
+    main(env,options)
 
 if __name__ == "__main__":
     run()

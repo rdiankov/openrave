@@ -175,22 +175,20 @@
 関連関数
 --------------------------------------
 
- `Environment.drawarrow` , `rotationMatrixFromAxisAngle` , `axisAngleFromRotationMatrix` , `matrixFromAxisAngle` , `matrixFromPose` , `matrixFromQuat` , `quatFromRotationMatrix` , `rotationMatrixFromQuat`
+- :meth:`.Environment.drawarrow` , :func:`.rotationMatrixFromAxisAngle` , :func:`.axisAngleFromRotationMatrix` , :func:`.matrixFromAxisAngle` , :func:`.matrixFromPose` , :func:`.matrixFromQuat` , :func:`.quatFromRotationMatrix` , :func:`.rotationMatrixFromQuat`
 
 関連チュートリアル
 --------------------------------------
 
-- `examples.tutorial_004` - 環境に読み込んだ物体の回転（クォータニオン）
+- :mod:`.tutorial_004` - 環境に読み込んだ物体の回転（クォータニオン）
 
 """
 from __future__ import with_statement # for python 2.5
 __author__ = 'Makoto Furukawa'
-__copyright__ = '2010 Makoto Furukawa'
-__license__ = 'Apache License, Version 2.0'
-from openravepy import Environment, rotationMatrixFromAxisAngle, axisAngleFromRotationMatrix, matrixFromAxisAngle
+from openravepy import Environment, rotationMatrixFromAxisAngle, axisAngleFromRotationMatrix, matrixFromAxisAngle, with_destroy
 from numpy import eye, dot, pi
 
-def run(args=None):
+def main():
     env = Environment()
     env.SetViewer('qtcoin')
     body = env.ReadKinBodyXMLFile(filename='data/mug2.kinbody.xml')
@@ -231,6 +229,10 @@ def run(args=None):
         Tdelta[2,3] = 0.01
         tran = dot(tran, Tdelta)
         body.SetTransform(tran)
+
+@with_destroy
+def run(args=None):
+    main()
 
 if __name__ == "__main__":
     run()

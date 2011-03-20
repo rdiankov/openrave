@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)
+# Copyright (C) 2009-2011 Rosen Diankov (rosen.diankov@gmail.com)
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,8 +14,10 @@
 # limitations under the License.
 """Shows how to call an IK solver and render all the solutions.
 
-.. image:: ../../images/examples/tutorial_iksolutions.jpg
-  :height: 200
+.. examplepre-block:: tutorial_iksolutions
+
+Description
+-----------
 
 First the inversekinematics database generator is called querying a **Transform6D** IK.
 
@@ -54,44 +56,19 @@ In order to render the ik solutions, create a new robot for every solution and m
   newrobot.SetTransform(robot.GetTransform())
   newrobot.SetDOFValues(solution,ikmodel.manip.GetArmIndices())
 
-Command-line
-------------
-
-.. shell-block:: openrave.py --example tutorial_iksolutions --help
-
+.. examplepost-block:: tutorial_iksolutions
 """
 from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
-__copyright__ = '2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
-__license__ = 'Apache License, Version 2.0'
 
+import time
 from openravepy import __build_doc__
 if not __build_doc__:
     from openravepy import *
-else:
-    from openravepy import OpenRAVEGlobalArguments
-from numpy import random, array, linspace
-from optparse import OptionParser
-import time
+    from numpy import *
 
-def run(args=None):
-    """Executes tutorial_iksolutions.
-
-    :type args: arguments for script to parse, if not specified will use sys.argv
-    """
-
-    parser = OptionParser(description='Shows how to generate a 6D inverse kinematics solver and use it for getting all solutions.')
-    OpenRAVEGlobalArguments.addOptions(parser)
-    parser.add_option('--scene',action="store",type='string',dest='scene',default='data/lab1.env.xml',
-                      help='Scene file to load (default=%default)')
-    parser.add_option('--transparency',action="store",type='float',dest='transparency',default=0.8,
-                      help='Transparency for every robot (default=%default)')
-    parser.add_option('--maxnumber',action="store",type='int',dest='maxnumber',default=10,
-                      help='Max number of robots to render (default=%default)')
-    parser.add_option('--manipname',action="store",type='string',dest='manipname',default=None,
-                      help='name of manipulator to use (default=%default)')
-    (options, leftargs) = parser.parse_args(args=args)
-    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
+def main(env,options):
+    "Main example code."
     env.Load(options.scene)
     robot = env.GetRobots()[0]
     if options.manipname is not None:
@@ -143,8 +120,28 @@ def run(args=None):
             env.Remove(newrobot)
     del newrobots
 
+from optparse import OptionParser
+from openravepy import OpenRAVEGlobalArguments, with_destroy
+
+@with_destroy
+def run(args=None):
+    """Command-line execution of the example.
+
+    :param args: arguments for script to parse, if not specified will use sys.argv
+    """
+    parser = OptionParser(description='Shows how to generate a 6D inverse kinematics solver and use it for getting all solutions.')
+    OpenRAVEGlobalArguments.addOptions(parser)
+    parser.add_option('--scene',action="store",type='string',dest='scene',default='data/lab1.env.xml',
+                      help='Scene file to load (default=%default)')
+    parser.add_option('--transparency',action="store",type='float',dest='transparency',default=0.8,
+                      help='Transparency for every robot (default=%default)')
+    parser.add_option('--maxnumber',action="store",type='int',dest='maxnumber',default=10,
+                      help='Max number of robots to render (default=%default)')
+    parser.add_option('--manipname',action="store",type='string',dest='manipname',default=None,
+                      help='name of manipulator to use (default=%default)')
+    (options, leftargs) = parser.parse_args(args=args)
+    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
+    main(env,options)
+
 if __name__ == "__main__":
-    try:
-        run()
-    finally:
-        RaveDestroy()
+    run()

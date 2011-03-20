@@ -14,43 +14,21 @@
 # limitations under the License.
 """Shows how to use the TranslationXY2D planar translation inverse kinematics type for an arm with few joints.
 
-.. image:: ../../images/examples/tutorial_iktranslation2d.jpg
-  :width: 400
+.. examplepre-block:: tutorial_iktranslation2d
 
+.. examplepost-block:: tutorial_iktranslation2d
 """
 from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
-__copyright__ = '2009-2011 Rosen Diankov (rosen.diankov@gmail.com)'
-__license__ = 'Apache License, Version 2.0'
 
+import time
 from openravepy import __build_doc__
 if not __build_doc__:
     from openravepy import *
-else:
-    from openravepy import OpenRAVEGlobalArguments, with_destroy
-from numpy import random, array, linspace
-from optparse import OptionParser
-import time
+    from numpy import *
 
-@with_destroy
-def run(args=None):
-    """Executes tutorial_iktranslation2d
-
-    :type args: arguments for script to parse, if not specified will use sys.argv
-
-    **Help**
-    
-    .. shell-block:: openrave.py --example tutorial_iktranslation2d --help
-    """
-
-    parser = OptionParser(description='Shows how to use different IK solutions for arms with few joints.')
-    OpenRAVEGlobalArguments.addOptions(parser)
-    parser.add_option('--scene',action="store",type='string',dest='scene',default='data/tridoftable.env.xml',
-                      help='Scene file to load (default=%default)')
-    parser.add_option('--manipname',action="store",type='string',dest='manipname',default=None,
-                      help='name of manipulator to use (default=%default)')
-    (options, leftargs) = parser.parse_args(args=args)
-    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
+def main(env,options):
+    "Main example code."
     env.Load(options.scene)
     robot = env.GetRobots()[0]
     if options.manipname is not None:
@@ -75,6 +53,25 @@ def run(args=None):
                 env.UpdatePublishedBodies()
             time.sleep(0.05)
         h=None
+
+from optparse import OptionParser
+from openravepy import OpenRAVEGlobalArguments, with_destroy
+
+@with_destroy
+def run(args=None):
+    """Command-line execution of the example.
+
+    :param args: arguments for script to parse, if not specified will use sys.argv
+    """
+    parser = OptionParser(description='Shows how to use different IK solutions for arms with few joints.')
+    OpenRAVEGlobalArguments.addOptions(parser)
+    parser.add_option('--scene',action="store",type='string',dest='scene',default='data/tridoftable.env.xml',
+                      help='Scene file to load (default=%default)')
+    parser.add_option('--manipname',action="store",type='string',dest='manipname',default=None,
+                      help='name of manipulator to use (default=%default)')
+    (options, leftargs) = parser.parse_args(args=args)
+    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
+    main(env,options)
 
 if __name__ == "__main__":
     run()

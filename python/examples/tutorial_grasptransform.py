@@ -1,23 +1,24 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# Copyright (C) 2010-2011 Huan Liu (liuhuanjim013@gmail.com)
+# 
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#     http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 """This tutorial shows how to find the transform that moves the hand to the target.
 
-Move Hand To Target: Find Transforms
-====================================
+.. examplepre-block:: tutorial_grasptransform
+  :image-width: 400
 
-Run this tutorial
------------------
-
-.. code-block:: bash
-
-   openrave.py --example tutorial_grasp_transform
-
-Initial setup
--------------
-
-.. figure:: ../../images/examples/tutorial_grasptransform.jpg
-   :width: 642 px
-   
-   Initial robot configuration
+Description
+-----------
 
 Initialize the environment
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -89,22 +90,22 @@ Solution:
     O_T_R_goal = dot(O_T_G_goal,G_T_R) # final robot transform R_goal in global frame O
 
 .. figure:: ../../images/examples/tutorial_grasptransform_O_T_R.png
-   :width: 642 px
+   :width: 400
    
    robot frame R in global frame O
 
 .. figure:: ../../images/examples/tutorial_grasptransform_O_T_Target.png
-   :width: 642 px
+   :width: 400
    
    target frame Target in global frame O
    
 .. figure:: ../../images/examples/tutorial_grasptransform_O_T_G.png
-   :width: 642 px
+   :width: 400
    
    grasping frame G in global frame O
    
 .. figure:: ../../images/examples/tutorial_grasptransform_final.png
-   :width: 642 px
+   :width: 400
    
    Robot goal configuration
    
@@ -115,21 +116,18 @@ Related Functions
  `KinBody.GetTransform` , `KinBody.SetTransform` , 
  `Robot.GetActiveDOFValues` , `Robot.SetActiveDOFValues` , `Robot.GetTransform` , `Robot.SetTransform` , `Robot.GetActiveManipulator`,
  `Robot.Manipulator.GetEndEffectorTransform`
+
+.. examplepost-block:: tutorial_grasptransform
 """
 from __future__ import with_statement # for python 2.5
 __author__ = 'Huan Liu'
-__copyright__ = 'Copyright (C) 2010 Huan Liu (liuhuanjim013@gmail.com)'
-__license__ = 'Apache License, Version 2.0'
 
 from openravepy import __build_doc__
 if not __build_doc__:
     from openravepy import *
     from numpy import *
 else:
-    from openravepy import with_destroy
     from numpy import inf, array
-
-from optparse import OptionParser
 
 class GraspTransform:
     def __init__(self,env,target):
@@ -157,17 +155,8 @@ class GraspTransform:
         O_T_R_goal = dot(O_T_G_goal,G_T_R) # final robot transform R_goal in global frame O                
         self.robot.SetTransform(O_T_R_goal)
 
-@with_destroy
-def run(args=None):
-    """
-    
-    :param args: arguments for script to parse, if not specified will use sys.argv
-    """
-    # set up planning environment
-    parser = OptionParser(description='Find the transform that moves the hand to target')
-    OpenRAVEGlobalArguments.addOptions(parser)
-    (options, leftargs) = parser.parse_args(args=args) # use default options 
-    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True) # the special setup for openrave tutorial
+def main(env,options):
+    "Main example code."
     robot = env.ReadRobotXMLFile('robots/pr2-beta-static.zae')
     env.AddRobot(robot)
     target = env.ReadKinBodyXMLFile('data/mug2.kinbody.xml')
@@ -200,6 +189,22 @@ def run(args=None):
     raw_input('Guess what the robot will look like when the hand is on the target?\npress ENTER to continue...')
     gt.showGrasp(target.GetTransform())
     raw_input('press ENTER to exit')
+
+from optparse import OptionParser
+from openravepy import OpenRAVEGlobalArguments, with_destroy
+
+@with_destroy
+def run(args=None):
+    """Command-line execution of the example.
+
+    :param args: arguments for script to parse, if not specified will use sys.argv
+    """
+    # set up planning environment
+    parser = OptionParser(description='Find the transform that moves the hand to target')
+    OpenRAVEGlobalArguments.addOptions(parser)
+    (options, leftargs) = parser.parse_args(args=args) # use default options 
+    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True) # the special setup for openrave tutorial
+    main(env,options)
 
 if __name__ == '__main__':
     run()

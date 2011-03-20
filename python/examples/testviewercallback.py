@@ -1,5 +1,6 @@
 #!/usr/bin/env python
-# Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)
+# -*- coding: utf-8 -*-
+# Copyright (C) 2009-2011 Rosen Diankov (rosen.diankov@gmail.com)
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,22 +14,18 @@
 # limitations under the License.
 """Shows how to setup a callback for mouse clicks on the viewer.
 
-.. image:: ../../images/examples/testviewercallback.jpg
-  :height: 256
+.. examplepre-block:: testviewercallback
+  :image-width: 400
 
-**Running the Example**::
-
-  openrave.py --example testviewercallback
-
+.. examplepost-block:: testviewercallback
 """
 from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
-__copyright__ = '2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
-__license__ = 'Apache License, Version 2.0'
 
-from openravepy import *
-from numpy import *
-from optparse import OptionParser
+from openravepy import __build_doc__
+if not __build_doc__:
+    from openravepy import *
+    from numpy import *
 
 ghandle = None
 def itemselectioncb(link,pos,org,env):
@@ -37,11 +34,26 @@ def itemselectioncb(link,pos,org,env):
     ghandle = env.plot3(points=pos,pointsize=25.0,colors=array((1,0,0)))
     return 0
 
+def main(env,options):
+    "Main example code."
+    env.Load(options.scene)
+    handle = env.GetViewer().RegisterCallback(Viewer.Events.ItemSelection,lambda link,pos,org: itemselectioncb(link,pos,org,env))
+    if handle is None:
+        print 'failed to register handle'
+        sys.exit(1)
+    while True:
+        cmd = raw_input('In selection mode (ESC), click anywhere on the viewer. Enter command (q-quit): ')
+        if cmd == 'q':
+            break
+
+from optparse import OptionParser
+from openravepy import OpenRAVEGlobalArguments, with_destroy
+
 @with_destroy
 def run(args=None):
-    """Executes the testviewercallback example
+    """Command-line execution of the example.
 
-    :type args: arguments for script to parse, if not specified will use sys.argv
+    :param args: arguments for script to parse, if not specified will use sys.argv
     """
     parser = OptionParser(description='Shows how to attach a callback to a viewer to perform functions.')
     OpenRAVEGlobalArguments.addOptions(parser)
@@ -50,15 +62,7 @@ def run(args=None):
                       help='OpenRAVE scene to load')
     (options, leftargs) = parser.parse_args(args=args)
     env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
-    env.Load(options.scene)
-    handle = env.GetViewer().RegisterCallback(Viewer.Events.ItemSelection,lambda link,pos,org: itemselectioncb(link,pos,org,env))
-    if handle is None:
-        print 'failed to register handle'
-        sys.exit(1)
-    while True:
-        cmd = raw_input('In selection mode, click anywhere on the viewer. Enter command (q-quit): ')
-        if cmd == 'q':
-            break
+    main(env,options)
 
 if __name__=='__main__':
     run()

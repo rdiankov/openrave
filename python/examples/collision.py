@@ -1,5 +1,6 @@
 #!/usr/bin/env python
-# Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)
+# -*- coding: utf-8 -*-
+# Copyright (C) 2009-2011 Rosen Diankov (rosen.diankov@gmail.com)
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,15 +12,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Check collision calls and setting collision checkers.
+"""Check collision calls, use collision reports, and do distance queries.
 
-.. image:: ../../images/examples/collision.jpg
-  :height: 256
+.. examplepre-block:: collision
+  :image-width: 300
 
-**Running the Example**::
-
-  openrave.py --example collision
-
+.. examplepost-block:: collision
 """
 from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
@@ -51,18 +49,9 @@ def collisioncallback(report,fromphysics):
     print 'from physics: ',fromphysics
     return CollisionAction.DefaultAction
 
-@with_destroy
-def run(args=None):
-    """Executes the collision example
-    
-    :type args: arguments for script to parse, if not specified will use sys.argv
-    """
-    parser = OptionParser(description='Example shows how to query collision detection information using openravepy')
-    OpenRAVEGlobalArguments.addOptions(parser)
-    (options, leftargs) = parser.parse_args(args=args)
-    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
+def main(env,options):
+    "Main example code."
     env.Load('robots/barrettwam.robot.xml')
-
     # register an optional collision callback
     handle = env.RegisterCollisionCallback(collisioncallback)
     robot1 = env.GetRobots()[0]
@@ -126,6 +115,18 @@ def run(args=None):
             contacts += report.contacts
         handles = [env.drawlinestrip(points=array((c.pos,c.pos-c.depth*c.norm)), linewidth=3.0, colors=array((1,0,0,1))) for c in contacts]
         time.sleep(0.1)
+
+@with_destroy
+def run(args=None):
+    """Command-line execution of the example.
+
+    :param args: arguments for script to parse, if not specified will use sys.argv
+    """
+    parser = OptionParser(description='Example shows how to query collision detection information using openravepy')
+    OpenRAVEGlobalArguments.addOptions(parser)
+    (options, leftargs) = parser.parse_args(args=args)
+    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
+    main(env,options)
 
 if __name__ == "__main__":
     run()

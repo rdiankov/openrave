@@ -79,6 +79,7 @@ TrajectoryBase::TrajectoryBase(EnvironmentBasePtr penv, int nDOF) : InterfaceBas
     _interpMethod = LINEAR;
     _maxAffineTranslationVel = Vector(1,1,1);
     _maxAffineRotationQuatVel = 1;
+    __description = ":Interface Author: Rosen Diankov, James Kuffner\n\n";
 }
 
 void TrajectoryBase::Reset(int nDOF)

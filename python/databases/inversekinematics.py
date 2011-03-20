@@ -139,13 +139,20 @@ else:
     from numpy import array
 
 from openravepy import ikfast
-import time,platform,shutil,os
+import time,platform,shutil,os,sys
 import distutils
 import logging
 from distutils import ccompiler
 from optparse import OptionParser
 
 log = logging.getLogger(__name__)
+format = logging.Formatter('%(name)s: %(message)s')
+handler = logging.StreamHandler(sys.stdout)
+handler.setFormatter(format)
+log.addHandler(handler)
+log.setLevel(logging.INFO)
+ikfast.log.addHandler(handler)
+ikfast.log.setLevel(logging.INFO)
 
 class InverseKinematicsModel(DatabaseGenerator):
     """Generates analytical inverse-kinematics solutions, compiles them into a shared object/DLL, and sets the robot's iksolver. Only generates the models for the robot's active manipulator. To generate IK models for each manipulator in the robot, mulitple InverseKinematicsModel classes have to be created.
@@ -693,13 +700,6 @@ class InverseKinematicsModel(DatabaseGenerator):
         return parser
     @staticmethod
     def RunFromParser(Model=None,parser=None,args=None,**kwargs):
-        format = logging.Formatter('%(name)s: %(message)s')
-        handler = logging.StreamHandler(sys.stdout)
-        handler.setFormatter(format)
-        log.addHandler(handler)
-        log.setLevel(logging.INFO)
-        ikfast.log.addHandler(handler)
-        ikfast.log.setLevel(logging.INFO)
         if parser is None:
             parser = InverseKinematicsModel.CreateOptionParser()
         (options, leftargs) = parser.parse_args(args=args)
@@ -734,11 +734,7 @@ class InverseKinematicsModel(DatabaseGenerator):
                 RaveDestroy()
 
 def run(*args,**kwargs):
-    """Executes the inversekinematics database generation,  ``args`` specifies a list of the arguments to the script.
-    
-    **Help**
-    
-    .. shell-block:: openrave.py --database inversekinematics --help
+    """Command-line execution of the example. ``args`` specifies a list of the arguments to the script.
     """
     InverseKinematicsModel.RunFromParser(*args,**kwargs)
 

@@ -81,8 +81,6 @@ def gen_gallery_internal(app, doctree,parentname,includedocstring,maxwidth,maxhe
 <h1>Database Generators</h1>
 
 <p><a href="openravepy/openravepy.databases.html">Database Generators Overview</a></p>
-
-<p>Run with <b>openrave.py --database X</b></p>
 <table border="1">
 %s
 </table>"""%rowstext
@@ -93,7 +91,6 @@ def gen_gallery_internal(app, doctree,parentname,includedocstring,maxwidth,maxhe
 <p><a href="../coreapihtml/examples.html">C++ Examples Page</a></p>
 
 <h1>Python Examples</h1>
-<p>Run with <b>openrave.py --example X</b></p>
 
 <table border="1">
 %s

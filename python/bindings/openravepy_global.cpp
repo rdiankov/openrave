@@ -36,9 +36,6 @@ void raveLog(const string& s, DebugLevel level)
 {
     if( s.size() > 0 ) {
         RavePrintfA(s,level);
-        if( s[s.size()-1] != '\n') {
-            RavePrintfA("\n",level);
-        }
     }
 }
 

@@ -1,5 +1,6 @@
 #!/usr/bin/env python
-# Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)
+# -*- coding: utf-8 -*-
+# Copyright (C) 2009-2011 Rosen Diankov (rosen.diankov@gmail.com)
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,29 +12,26 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Manually call the simulation loop to update the bodies while environment is locked.
+
+.. examplepre-block:: testupdatingbodies
+
+.. examplepost-block:: testupdatingbodies
+"""
 from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
-__copyright__ = '2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
-__license__ = 'Apache License, Version 2.0'
 
 import time
-from openravepy import *
-from openravepy.interfaces import BaseManipulation
-from numpy import *
+from openravepy import __build_doc__
+if not __build_doc__:
+    from openravepy import *
+    from numpy import *
 
-@with_destroy
-def run(args=None):
-    """Executes the testupdatingbodies example
-
-    :type args: arguments for script to parse, if not specified will use sys.argv
-    """
-    print 'Example shows how to manually update the environment published bodies for the viewer while the environment is locked'
-    env = Environment()
+def main(env,options):
     env.Load('data/lab1.env.xml')
-    env.SetViewer('qtcoin')
     robot = env.GetRobots()[0]
-    manipprob = BaseManipulation(robot)
-
+    manipprob = interfaces.BaseManipulation(robot)
+    
     Tcamera = array(((0.84028,  -0.14715,   0.52179,0.930986),
                      (0.52639,   0.45182,  -0.72026,-1.233453),
                      (-0.12976,   0.87989,   0.45711,2.412977)))
@@ -49,9 +47,23 @@ def run(args=None):
         while not robot.GetController().IsDone():
             env.StepSimulation(0.01)
             env.UpdatePublishedBodies() # used to publish body information while environment is locked
-            time.sleep(0.1)
-    
+            time.sleep(0.1)    
     raw_input('press any key to exit: ')
+
+from optparse import OptionParser
+from openravepy import OpenRAVEGlobalArguments, with_destroy
+
+@with_destroy
+def run(args=None):
+    """Command-line execution of the example.
+
+    :param args: arguments for script to parse, if not specified will use sys.argv
+    """
+    parser = OptionParser(description="test physics")
+    OpenRAVEGlobalArguments.addOptions(parser)
+    (options, leftargs) = parser.parse_args(args=args)
+    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
+    main(env,options)
 
 if __name__ == "__main__":
     run()

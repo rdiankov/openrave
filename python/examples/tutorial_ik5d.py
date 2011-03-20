@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)
+# Copyright (C) 2009-2011 Rosen Diankov (rosen.diankov@gmail.com)
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,45 +12,23 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
-.. image:: ../../images/examples/tutorial_ik5d.jpg
-  :height: 200
+"""Shows how to use 5D translation+direction inverse kinematics for an arm with >= 5 joints.
 
-Shows how to use 5D translation+direction inverse kinematics for an arm with >= 5 joints.
+.. examplepre-block:: tutorial_ik5d
+
+.. examplepost-block:: tutorial_ik5d
 """
 from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
-__copyright__ = '2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
-__license__ = 'Apache License, Version 2.0'
 
+import time
 from openravepy import __build_doc__
 if not __build_doc__:
     from openravepy import *
-else:
-    from openravepy import OpenRAVEGlobalArguments, with_destroy
-from numpy import random, array, linspace, linalg
-from optparse import OptionParser
-import time
+    from numpy import *
 
-@with_destroy
-def run(args=None):
-    """Executes tutorial_ik5d
-
-    :type args: arguments for script to parse, if not specified will use sys.argv
-
-    **Help**
-    
-    .. shell-block:: openrave.py --example tutorial_ik5d --help
-    """
-
-    parser = OptionParser(description='Shows how to use the 5DOF IK solution for arms with >= 5 joints.')
-    OpenRAVEGlobalArguments.addOptions(parser)
-    parser.add_option('--scene',action="store",type='string',dest='scene',default='data/katanatable.env.xml',
-                      help='Scene file to load (default=%default)')
-    parser.add_option('--manipname',action="store",type='string',dest='manipname',default='arm',
-                      help='name of manipulator to use (default=%default)')
-    (options, leftargs) = parser.parse_args(args=args)
-    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
+def main(env,options):
+    "Main example code."
     env.Load(options.scene)
     robot = env.GetRobots()[0]
     robot.SetActiveManipulator(options.manipname)
@@ -76,6 +54,25 @@ def run(args=None):
                 env.UpdatePublishedBodies()
             time.sleep(0.2)
         h=None
+
+from optparse import OptionParser
+from openravepy import OpenRAVEGlobalArguments, with_destroy
+
+@with_destroy
+def run(args=None):
+    """Command-line execution of the example.
+
+    :param args: arguments for script to parse, if not specified will use sys.argv
+    """
+    parser = OptionParser(description='Shows how to use the 5DOF IK solution for arms with >= 5 joints.')
+    OpenRAVEGlobalArguments.addOptions(parser)
+    parser.add_option('--scene',action="store",type='string',dest='scene',default='data/katanatable.env.xml',
+                      help='Scene file to load (default=%default)')
+    parser.add_option('--manipname',action="store",type='string',dest='manipname',default='arm',
+                      help='name of manipulator to use (default=%default)')
+    (options, leftargs) = parser.parse_args(args=args)
+    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
+    main(env,options)
 
 if __name__ == "__main__":
     run()

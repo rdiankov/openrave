@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)
+# Copyright (C) 2009-2011 Rosen Diankov (rosen.diankov@gmail.com)
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,50 +12,24 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Shows how to enable differential drive with physics
+"""Shows how to enable differential drive with physics.
 
-.. image:: ../../images/examples/testphysics_diffdrive.jpg
-  :width: 400
+.. examplepre-block:: testphysics_diffdrive
+  :image-width: 300
 
-**Running the Example**::
-
-  openrave.py --example testphysics_diffdrive
-
-Command-line
-------------
-
-.. shell-block:: openrave.py --example testphysics_diffdrive --help
-
-Class Definitions
------------------
+.. examplepost-block:: testphysics_diffdrive
 """
-
 from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
-__copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
-__license__ = 'Apache License, Version 2.0'
 
-from openravepy import *
-from numpy import *
 import time
-from optparse import OptionParser
+from openravepy import __build_doc__
+if not __build_doc__:
+    from openravepy import *
+    from numpy import *
 
-@with_destroy
-def run(args=None):
-    """Executes the testphysics_diffdrive example.
-    
-    :type args: arguments for script to parse, if not specified will use sys.argv
-    
-    **Help**
-    
-    .. shell-block:: openrave.py --example testphysics_diffdrive --help
-    """
-    parser = OptionParser(description="test physics diff drive controller")
-    parser.add_option('--scene',action="store",type='string',dest='scene',default='data/diffdrive_sample.env.xml',
-                      help='Scene file to load (default=%default)')
-    OpenRAVEGlobalArguments.addOptions(parser)
-    (options, leftargs) = parser.parse_args(args=args)
-    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
+def main(env,options):
+    "Main example code."
     env.Load(options.scene)
     if options._physics is None:
         # no physics engine set, so set one
@@ -75,6 +49,23 @@ def run(args=None):
         print 'velocities: ',velocities
         robot.GetController().SendCommand('setvelocity '+' '.join(str(f) for f in velocities))
         time.sleep(2.0)
+
+from optparse import OptionParser
+from openravepy import OpenRAVEGlobalArguments, with_destroy
+
+@with_destroy
+def run(args=None):
+    """Command-line execution of the example.
+
+    :param args: arguments for script to parse, if not specified will use sys.argv
+    """
+    parser = OptionParser(description="test physics diff drive controller")
+    parser.add_option('--scene',action="store",type='string',dest='scene',default='data/diffdrive_sample.env.xml',
+                      help='Scene file to load (default=%default)')
+    OpenRAVEGlobalArguments.addOptions(parser)
+    (options, leftargs) = parser.parse_args(args=args)
+    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
+    main(env,options)
 
 if __name__=='__main__':
     run()

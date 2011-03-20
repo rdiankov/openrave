@@ -810,7 +810,7 @@ class GraspingModel(DatabaseGenerator):
             RaveDestroy()
 
 def run(*args,**kwargs):
-    """Executes the grasping database generation, ``args`` specifies a list of the arguments to the script.
+    """Command-line execution of the example. ``args`` specifies a list of the arguments to the script.
     """
     GraspingModel.RunFromParser(*args,**kwargs)
 

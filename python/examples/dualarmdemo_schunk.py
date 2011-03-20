@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+# Copyright (C) 2009-2011 Achint Aggarwal
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -13,15 +15,20 @@
 #
 #Created: 5 January 2010 
 #Modified: 20 March 2010
+"""Dual arm manipulation example.
+
+.. examplepre-block:: dualarmdemo_schunk
+
+.. examplepost-block:: dualarmdemo_schunk
+"""
 from __future__ import with_statement # for python 2.5
 __author__ = 'Achint Aggarwal'
-__copyright__ = '2010 Achint Aggarwal'
-__license__ = 'Apache License, Version 2.0'
 
-from openravepy import *
-from numpy import *
-from optparse import OptionParser
 import time
+from openravepy import __build_doc__
+if not __build_doc__:
+    from openravepy import *
+    from numpy import *
 
 class Schunkplanner:
     probsmanip = None
@@ -130,19 +137,8 @@ class Schunkplanner:
 
         print ('Body %s successfully manipulated'%(obj))
 
-@with_destroy
-def run(args=None):
-    """Executes the dualarmdemo_schunk example
-
-    :type args: arguments for script to parse, if not specified will use sys.argv
-    """
-    parser = OptionParser(description="Schunk Manipulation planning example\nFor a dual arm robot with Schunk LWA3 arms, plan trajectories for grasping an object and manipulating it on a shelf.")
-    OpenRAVEGlobalArguments.addOptions(parser)
-    parser.add_option('--scene',
-                      action="store",type='string',dest='scene',default='data/dualarmmanipulation.env.xml',
-                      help='Scene file to load')   
-    (options, leftargs) = parser.parse_args(args=args)
-    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)    
+def main(env,options):
+    "Main example code."
     env.Load(options.scene)
     schunk = Schunkplanner(env)
     time.sleep(1)    
@@ -168,18 +164,23 @@ def run(args=None):
         except planning_error:
             pass
 
+from optparse import OptionParser
+from openravepy import OpenRAVEGlobalArguments, with_destroy
+
+@with_destroy
+def run(args=None):
+    """Command-line execution of the example.
+
+    :param args: arguments for script to parse, if not specified will use sys.argv
+    """
+    parser = OptionParser(description="Schunk Manipulation planning example\nFor a dual arm robot with Schunk LWA3 arms, plan trajectories for grasping an object and manipulating it on a shelf.")
+    OpenRAVEGlobalArguments.addOptions(parser)
+    parser.add_option('--scene',
+                      action="store",type='string',dest='scene',default='data/dualarmmanipulation.env.xml',
+                      help='Scene file to load')   
+    (options, leftargs) = parser.parse_args(args=args)
+    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)    
+    main(env,options)
+
 if __name__ == "__main__":
     run()
-
-def test():
-    import dualarmdemo_schunk
-    env = Environment()
-    env.SetCollisionChecker(RaveCreateCollisionChecker(env,'ode'))
-    env.SetViewer('qtcoin')
-    env.Load('data/dualarmmanipulation.env.xml')
-    self = dualarmdemo_schunk.Schunkplanner(env)
-    T=array([0,0,0,0,0,0,0,0,0,0,0,0,0,0])#Set initial position		
-    self.robot.SetActiveDOFValues(T)
-    self.robot.SetActiveManipulator(1)#Set left arm as the active manipulator	
-    obj=env.GetKinBody('Object1')
-    self.graspAndMoveObject(T,obj)

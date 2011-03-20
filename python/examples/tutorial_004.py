@@ -179,18 +179,16 @@
 関連関数
 --------------------------------------
 
- `poseFromMatrix` , `quatFromAxisAngle` , `axisAngleFromQuat` , `quatRotate` , `quatMult` , `poseMult` , `matrixFromPose` , `matrixFromQuat` , `quatFromRotationMatrix` , `rotationMatrixFromQuat`
+- :func:`.poseFromMatrix` , :func:`.quatFromAxisAngle` , :func:`.axisAngleFromQuat` , :func:`.quatRotate` , :func:`.quatMult` , :func:`.poseMult` , :func:`.matrixFromPose` , :func:`.matrixFromQuat` , :func:`.quatFromRotationMatrix` , :func:`.rotationMatrixFromQuat`
 
 関連チュートリアル
 --------------------------------------
 
-- `examples.tutorial_003` - 環境に読み込んだ物体の回転（回転行列）
+- :mod:`.tutorial_003` - 環境に読み込んだ物体の回転（回転行列）
 
 """
 from __future__ import with_statement # for python 2.5
 __author__ = 'Makoto Furukawa'
-__copyright__ = '2010 Makoto Furukawa'
-__license__ = 'Apache License, Version 2.0'
 from openravepy import Environment, poseFromMatrix, quatFromAxisAngle, axisAngleFromQuat, quatRotate, quatMult, poseMult
 from numpy import pi, r_
 

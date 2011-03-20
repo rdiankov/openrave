@@ -1,18 +1,21 @@
 #!/usr/bin/env python
-"""This tutorial shows how to generate and use the inverse-reachability database in OpenRAVE for the PR2 robot.
+# -*- coding: utf-8 -*-
+# Copyright (C) 2010-2011 Huan Liu (liuhuanjim013@gmail.com)
+# 
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#     http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""Generate and use the inverse-reachability database in OpenRAVE for the PR2 robot.
 
-======================================================
-Move Hand to Target: Use Inverse Reachability Database
-======================================================
-
-.. image:: ../../images/examples/tutorial_inversereachability_ir_grasps.png
-   :width: 200px
-
-.. image:: ../../images/examples/tutorial_inversereachability_front.png
-   :width: 200 px
-   
-.. image:: ../../images/examples/tutorial_inversereachability.jpg
-   :width: 200 px
+.. examplepre-block:: tutorial_inversereachability
+   :image-width: 400
 
 Prerequisite
 ------------
@@ -109,7 +112,7 @@ Visualize inverse-reachability database
 This tutorial visualizes the database for one grasp, there will be another tutorial that will show how to visualize the base distribution for all possible grasps for an object. 
 
 .. Figure:: ../../images/examples/tutorial_inversereachability_ir_grasps.png
-   :width: 640px
+   :width: 640
     
    The blue cloud indicates possible base positions for grasping the object.
 
@@ -122,7 +125,7 @@ Command::
    openrave.py --database kinematicreachability --robot=robots/pr2-beta-static.zae --show
 
 .. figure:: ../../images/examples/tutorial_inversereachability_front.png
-   :width: 640 px
+   :width: 640
     
    The color indicates reachability.
 
@@ -200,9 +203,8 @@ Load database
                 self.irmodel.autogenerate()
                 self.irmodel.load()
             else:
-                self.env.Destroy()
-                RaveDestroy()
-                sys.exit()
+                raise ValueError('')
+                
         print 'time to load inverse-reachability model: %fs'%(time.time()-starttime)
 
 Get robot base distribution
@@ -311,23 +313,20 @@ Related classes
 
 - `databases.inversereachability` - Code that generates the inverse-reachability database
 - `databases.kinematicreachability` - Code that generates the reachability database
+
+.. examplepost-block:: tutorial_inversereachability
    
 """
 from __future__ import with_statement # for python 2.5
 __author__ = 'Huan Liu'
-__copyright__ = 'Copyright (C) 2010 Huan Liu (liuhuanjim013@gmail.com)'
-__license__ = 'Apache License, Version 2.0'
+
+import time
 from openravepy import __build_doc__
 if not __build_doc__:
     from openravepy import *
     from numpy import *
 else:
-    from openravepy import with_destroy
-    from numpy import inf, array
-
-import time,sys
-from optparse import OptionParser
-from openravepy.databases import inversereachability,grasping
+    from numpy import inf
 
 class InverseReachabilityDemo:
     def __init__(self,robot):
@@ -344,7 +343,7 @@ class InverseReachabilityDemo:
         self.robot.SetActiveDOFValues(v)
     
         # load inverserechability database
-        self.irmodel = inversereachability.InverseReachabilityModel(robot=self.robot)
+        self.irmodel = databases.inversereachability.InverseReachabilityModel(robot=self.robot)
         starttime = time.time()
         print 'loading irmodel'
         if not self.irmodel.load():            
@@ -355,9 +354,7 @@ class InverseReachabilityDemo:
                 self.irmodel.autogenerate()
                 self.irmodel.load()
             else:
-                self.env.Destroy()
-                RaveDestroy()
-                sys.exit()
+                raise ValueError('')
         print 'time to load inverse-reachability model: %fs'%(time.time()-starttime)
         # make sure the robot and manipulator match the database
         assert self.irmodel.robot == self.robot and self.irmodel.manip == self.robot.GetActiveManipulator()   
@@ -452,7 +449,7 @@ class InverseReachabilityDemo:
         v = probot.GetActiveDOFValues()
         v[self.robot.GetJoint('l_gripper_l_finger_joint').GetDOFIndex()] = angle
         probot.SetActiveDOFValues(v)
-        with grasping.GraspingModel.GripperVisibility(pmanip): # show only the gripper
+        with databases.grasping.GraspingModel.GripperVisibility(pmanip): # show only the gripper
             O_T_R = probot.GetTransform() # robot transform R in global frame O 
             O_T_G = pmanip.GetEndEffectorTransform() # grasping frame G in global frame O
             G_T_O = linalg.inv(O_T_G) # global frame O in grasping frame G
@@ -467,23 +464,8 @@ class InverseReachabilityDemo:
 def pause():
     raw_input('press ENTER to continue...')
 
-@with_destroy
-def run(args=None):
-    """
-    
-    :param args: arguments for script to parse, if not specified will use sys.argv
-    """
-    # set up planning environment
-    parser = OptionParser(description='Move base where the robot can perform target grasp using inversereachability database.')
-    OpenRAVEGlobalArguments.addOptions(parser)
-    parser.add_option('--robot',action="store",type='string',dest='robot',default='robots/pr2-beta-static.zae',
-                      help='Robot filename to use (default=%default)')
-    parser.add_option('--manipname',action="store",type='string',dest='manipname',default=None,
-                      help='name of manipulator to use (default=%default)')
-    parser.add_option('--target',action="store",type='string',dest='target',default='data/mug2.kinbody.xml',
-                      help='filename of the target to use (default=%default)')
-    (options, leftargs) = parser.parse_args(args=args) # use default options 
-    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True) # the special setup for openrave tutorial
+def main(env,options):
+    "Main example code."
     robot = env.ReadRobotXMLFile(options.robot)
     env.AddRobot(robot)
     if options.manipname is not None:
@@ -508,6 +490,27 @@ def run(args=None):
     # use inversereachability dabase to find the possible robot base poses for the grasp  
     gr = InverseReachabilityDemo(robot)
     gr.showPossibleBasePoses(O_T_grasp,gripper_angle,10)
+
+from optparse import OptionParser
+from openravepy import OpenRAVEGlobalArguments, with_destroy
+
+@with_destroy
+def run(args=None):
+    """Command-line execution of the example.
+
+    :param args: arguments for script to parse, if not specified will use sys.argv
+    """
+    parser = OptionParser(description='Move base where the robot can perform target grasp using inversereachability database.')
+    OpenRAVEGlobalArguments.addOptions(parser)
+    parser.add_option('--robot',action="store",type='string',dest='robot',default='robots/pr2-beta-static.zae',
+                      help='Robot filename to use (default=%default)')
+    parser.add_option('--manipname',action="store",type='string',dest='manipname',default=None,
+                      help='name of manipulator to use (default=%default)')
+    parser.add_option('--target',action="store",type='string',dest='target',default='data/mug2.kinbody.xml',
+                      help='filename of the target to use (default=%default)')
+    (options, leftargs) = parser.parse_args(args=args) # use default options 
+    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True) # the special setup for openrave tutorial
+    main(env,options)
 
 if __name__=='__main__':
     run()

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)
+# Copyright (C) 2009-2011 Rosen Diankov (rosen.diankov@gmail.com)
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,13 +14,7 @@
 # limitations under the License.
 """Planning with a wrist camera to look at the target object before grasping.
 
-.. image:: ../../images/examples/visibilityplanning.jpg
-  :width: 640
-
-**Running the Example**::
-
-  openrave.py --example visibilityplanning
-
+.. examplepre-block:: visibilityplanning
 
 Description
 -----------
@@ -76,31 +70,18 @@ The final planner just involves an RRT that uses this goal sampler. The next fig
 
 For comparison reasons the one-stage planning is shown above. Interestingly, visibility acts like a key-hole configuration that allows the two-stage planner to finish both paths in a very fast time. The times are comparible to the first stage.
 
-Command-line
-------------
-
-.. shell-block:: openrave.py --example visibilityplanning --help
-
 .. [1] Rosen Diankov, Takeo Kanade, James Kuffner. Integrating Grasp Planning and Visual Feedback for Reliable Manipulation, IEEE-RAS Intl. Conf. on Humanoid Robots, December 2009. 
 
+.. examplepost-block:: visibilityplanning
 """
 from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
-__copyright__ = '2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
-__license__ = 'Apache License, Version 2.0'
 
-import sys, os, time, signal, threading
-import numpy # nice to be able to explicitly call some functions
-from optparse import OptionParser
-from openravepy.interfaces import BaseManipulation, TaskManipulation
-from openravepy.databases import grasping, visibilitymodel
-
+import sys, os, time, threading
 from openravepy import __build_doc__
 if not __build_doc__:
     from numpy import *
     from openravepy import *
-else:
-    from openravepy import with_destroy, metaclass
 
 try:
     from Tkinter import *
@@ -151,7 +132,7 @@ class CameraViewerGUI(threading.Thread):
         self.main.after(0,self.updateimage)
         self.main.mainloop()
 
-class VisibilityGrasping(metaclass.AutoReloader):
+class VisibilityGrasping:
     """Calls on the openrave grasp planners to get a robot to pick up objects while guaranteeing visibility with its cameras"""
     def __init__(self,env):
         self.orenvreal = env
@@ -171,7 +152,7 @@ class VisibilityGrasping(metaclass.AutoReloader):
             self.robotreal = [r for r in self.orenvreal.GetRobots() if r.GetName()==robotname][0]
 
         with self.orenvreal:
-            self.basemanip = BaseManipulation(self.robotreal)
+            self.basemanip = interfaces.BaseManipulation(self.robotreal)
             self.homevalues = self.robotreal.GetDOFValues()
             self.viewers = []
             attachedsensors = []
@@ -208,7 +189,7 @@ class VisibilityGrasping(metaclass.AutoReloader):
             self.manip = [m for m in self.robotreal.GetManipulators() if m.GetEndEffector() == self.sensor.GetAttachingLink()][0]
             self.robotreal.SetActiveManipulator(self.manip)
     def computevisibilitymodel(self,target):
-        vmodel = visibilitymodel.VisibilityModel(robot=self.robot,target=target,sensorname=self.sensor.GetName())
+        vmodel = databases.visibilitymodel.VisibilityModel(robot=self.robot,target=target,sensorname=self.sensor.GetName())
         if not vmodel.load():
             vmodel.autogenerate()
         return vmodel
@@ -309,7 +290,7 @@ class VisibilityGrasping(metaclass.AutoReloader):
             vmodel = self.computevisibilitymodel(self.target)
             vmodelreal = vmodel.clone(self.orenvreal)
             vmodelreal.moveToPreshape()
-            basemanip = BaseManipulation(self.robot)
+            basemanip = interfaces.BaseManipulation(self.robot)
             self.robot.GetController().SetDesired(self.robotreal.GetDOFValues()) # update the robot
             try:
                 trajdata = vmodel.visualprob.MoveToObserveTarget(sampleprob=0.001,maxiter=4000,execute=False,outputtraj=True)
@@ -338,10 +319,10 @@ class VisibilityGrasping(metaclass.AutoReloader):
                 time.sleep(0.1)
 
             # start visual servoing step
-            gmodel = grasping.GraspingModel(robot=self.robot,target=self.target)
+            gmodel = databases.grasping.GraspingModel(robot=self.robot,target=self.target)
             if not gmodel.load():
                 gmodel.autogenerate()
-            taskmanip = TaskManipulation(self.robot,graspername=gmodel.grasper.plannername)
+            taskmanip = interfaces.TaskManipulation(self.robot,graspername=gmodel.grasper.plannername)
             trajdata = None
             with self.robot:
                 validgrasps,validindices = gmodel.computeValidGrasps()
@@ -498,11 +479,20 @@ class PA10GraspExample(VisibilityGrasping):
                         if not self.target.GetEnv().CheckCollision(self.target):
                             self.Tgoals.append(T)
 
+def main(env,options):
+    "Main example code."
+    scene = PA10GraspExample(env)
+    scene.loadscene(scenefilename=options.scene,sensorname='wristcam',usecameraview=options.usecameraview)
+    scene.start()
+
+from optparse import OptionParser
+from openravepy import OpenRAVEGlobalArguments, with_destroy
+
 @with_destroy
 def run(args=None):
-    """Executes the visibilityplanning example
+    """Command-line execution of the example.
 
-    :type args: arguments for script to parse, if not specified will use sys.argv
+    :param args: arguments for script to parse, if not specified will use sys.argv
     """
     parser = OptionParser(description='Visibility Planning Module.')
     OpenRAVEGlobalArguments.addOptions(parser)
@@ -512,9 +502,7 @@ def run(args=None):
                       help='If set, will not open any camera views')
     (options, leftargs) = parser.parse_args(args=args)
     env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
-    scene = PA10GraspExample(env)
-    scene.loadscene(scenefilename=options.scene,sensorname='wristcam',usecameraview=options.usecameraview)
-    scene.start()
+    main(env,options)
 
 if __name__=='__main__':
     run()
