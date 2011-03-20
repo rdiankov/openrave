@@ -3,13 +3,19 @@ Adding a Python Example
 
 Adding an **example0** to the openravepy.examples module requires:
 
-# Add example0.py to python/examples/ directory
-# Add **import examples0** to python/exmaples/__init__.py
-# Add to svn: using::
+* Add example0.py to ``python/examples/`` directory
+
+* Add **import example0** to ``python/exmaples/__init__.py``
+
+* Add to svn: using
+
+.. code-block:: bash
 
   svn add tutorial0.py
 
-# Once installed, make sure it is executable through::
+* Once installed, make sure it is executable through
+
+.. code-block:: bash
 
   openrave.py --example tutorial0
 
@@ -22,7 +28,7 @@ Every example must follow this format when documenting it::
   
   .. examplepre-block:: example0
 
-  [usre-specific text]
+  [user-specific text]
 
   .. examplepost-block:: example0
   """
@@ -32,18 +38,18 @@ Every example must follow this format when documenting it::
 Images
 ------
 
-All images should be put in the **docs/images/examples** directory and prefixed with the example name. The image that represents the example has to be in JPEG format and have the same name as the example:
+All images should be put in the ``docs/images/examples`` directory and prefixed with the example name. The image that represents the example has to be in JPEG format and have the same name as the example:
 
-* docs/images/examples/example0.jpg
+* ``docs/images/examples/example0.jpg``
 
 This same image will be used as a thumb image on the examples gallery. It can be replaced with a different image by adding:
 
-* docs/images/examples/example0_thumb.jpg
+* ``docs/images/examples/example0_thumb.jpg``
 
 Other images part of the example can be:
 
-* docs/images/examples/example0_myimage.png
-* docs/images/examples/example0_anotherimage.jpg
+* ``docs/images/examples/example0_myimage.png``
+* ``docs/images/examples/example0_anotherimage.jpg``
 
 To reference an image use::
 
