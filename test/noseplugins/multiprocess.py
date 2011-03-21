@@ -358,12 +358,14 @@ class MultiProcessTestRunner(TextTestRunner):
                         workers[iworker].keyboardCaught = keyboardCaught
                         workers[iworker].start()
             except Empty:
-                log.debug("Timed out with %s tasks pending", len(tasks))
+                log.debug("Timed out with %s tasks pending (empty testQueue=%d): %s", len(tasks),testQueue.empty(),str(tasks))
                 any_alive = False
                 for iworker, w in enumerate(workers):
                     if w.is_alive():
                         worker_addr = w.currentaddr.value
                         timeprocessing = time.time()-w.currentstart.value
+                        if len(worker_addr) == 0 and timeprocessing > self.config.multiprocess_timeout-0.1:
+                            log.debug('worker %d has finished its work item, but is not exiting? do we wait for it?',iworker)
                         if len(worker_addr) > 0 and timeprocessing > self.config.multiprocess_timeout-0.1:
                             log.debug('timed out worker %s: %s',iworker,worker_addr)
                             w.currentaddr.value = ''
