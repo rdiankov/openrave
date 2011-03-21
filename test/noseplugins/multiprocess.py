@@ -347,6 +347,7 @@ class MultiProcessTestRunner(TextTestRunner):
                     # in fact, for workers that add to testQueue, they will not terminate until all their items are read
                     workers[iworker].join(timeout=1)
                     if not shouldStop.is_set() and not testQueue.empty():
+                        log.debug('starting new process on worker %s',iworker)
                         currentaddr = Array('c',' '*1000)
                         currentaddr.value = ''
                         currentstart = Value('d')
@@ -366,6 +367,8 @@ class MultiProcessTestRunner(TextTestRunner):
                         timeprocessing = time.time()-w.currentstart.value
                         if len(worker_addr) == 0 and timeprocessing > self.config.multiprocess_timeout-0.1:
                             log.debug('worker %d has finished its work item, but is not exiting? do we wait for it?',iworker)
+                        else:
+                            any_alive = True
                         if len(worker_addr) > 0 and timeprocessing > self.config.multiprocess_timeout-0.1:
                             log.debug('timed out worker %s: %s',iworker,worker_addr)
                             w.currentaddr.value = ''
@@ -393,7 +396,6 @@ class MultiProcessTestRunner(TextTestRunner):
                                     break
                                 os.kill(w.pid, signal.SIGINT)
                                 time.sleep(0.1)
-                        any_alive = True
                 if not any_alive and testQueue.empty():
                     log.debug("All workers dead")
                     break
