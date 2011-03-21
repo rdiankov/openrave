@@ -31,7 +31,8 @@ import cPickle as pickle
 
 #global variables
 _multiprocess_can_split_ = True
-globalstats = multiprocessing.Queue() # used for gathering statistics
+globalmanager = multiprocessing.Manager()
+globalstats = globalmanager.list() # used for gathering statistics
 options = None
 env=None
 ikfastproblem=None
@@ -101,7 +102,7 @@ def robotstats(description,robotfilename,manipname, iktypestr,freeindices):
             if ikmodel.ikfeasibility is not None:
                 # nothing more to do than print the text
                 print ikmodel.ikfeasibility # will repeat text if just generated
-                globalstats.put([robotfilename,manip.GetName(),iktypestr,freeindices,description,None,None,None,None,None])
+                globalstats.append([robotfilename,manip.GetName(),iktypestr,freeindices,description,None,None,None,None,None])
                 return
 
             ikmodel.freeinc = ikmodel.getDefaultFreeIncrements(options.freeincrot,options.freeinctrans)
@@ -133,7 +134,7 @@ def robotstats(description,robotfilename,manipname, iktypestr,freeindices):
             jointnames = ', '.join(robot.GetJointFromDOFIndex(dof).GetName() for dof in ikmodel.manip.GetArmIndices())
         except ikfast.IKFastSolver.IKFeasibilityError,e:
             # this is expected, and is normal operation, have to notify
-            globalstats.put([robotfilename,manip.GetName(),iktypestr,freeindices,description,None,None,None,None,None])
+            globalstats.append([robotfilename,manip.GetName(),iktypestr,freeindices,description,None,None,None,None,None])
             print e
             return
 
@@ -176,7 +177,7 @@ def robotstats(description,robotfilename,manipname, iktypestr,freeindices):
         print measurement('number tests',str(numtested))
         print measurement('run-time mean (s)','%.6f'%numpy.mean(results))
         print measurement('run-time max (s)','%.6f'%numpy.max(results))
-        globalstats.put([robotfilename,manip.GetName(),iktypestr,freeindices,description,ikmodel.getsourcefilename(read=True),numpy.mean(results),numpy.max(results),successrate,wrongrate])
+        globalstats.append([robotfilename,manip.GetName(),iktypestr,freeindices,description,ikmodel.getsourcefilename(read=True),numpy.mean(results),numpy.max(results),successrate,wrongrate])
         assert(len(solutionresults[0])==0)
         assert(successrate > options.minimumsuccess)
         assert(nosolutions < options.maximumnosolutions)
@@ -295,8 +296,8 @@ if __name__ == "__main__":
     prog=nose.core.TestProgram(argv=argv,plugins=plugins,exit=False)
     print 'processing the global stats'
     stats = []
-    while not test_ikfast.globalstats.empty():
-        stat = test_ikfast.globalstats.get()
+    while len(test_ikfast.globalstats) > 0:
+        stat = test_ikfast.globalstats.pop(0)
         if not stat[5] is None:
             stat[5] = open(stat[5],'r').read()
         stats.append(stat)

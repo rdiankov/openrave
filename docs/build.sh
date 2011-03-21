@@ -1,6 +1,6 @@
 #!/bin/bash
 # Internal use, see documentation_system.rst
-rm -rf build ordocs.tgz _templates/examples.html _templates/databases.html _templates/database_generator_template.rst
+rm -rf build ordocs.tgz
 mkdir -p build
 curdir=`pwd`
 cd ..

@@ -57,7 +57,7 @@ set(CMAKE_SKIP_BUILD_RPATH  FALSE)
 set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
 
 # The RPATH to be used when installing
-set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX}")
 
 # Add the automatically determined parts of the RPATH
 # which point to directories outside the build tree to the install RPATH
@@ -215,13 +215,13 @@ if( MSVC )
   endif()
 
   # make sure to install the library since it will be necessary for linking
-  install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/lib/win32/libxml2.lib DESTINATION lib)
-  install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/lib/win32/libxml2d.lib DESTINATION lib)
+  install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/lib/win32/libxml2.lib DESTINATION lib${LIB_SUFFIX})
+  install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/lib/win32/libxml2d.lib DESTINATION lib${LIB_SUFFIX})
   install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/inc/stdint.h DESTINATION include)
   install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/inc/boost DESTINATION include)
 
   file(GLOB boost_lib_files ${CMAKE_CURRENT_SOURCE_DIR}/lib/win32/boost_*.lib)
-  install(FILES ${boost_lib_files} DESTINATION lib)
+  install(FILES ${boost_lib_files} DESTINATION lib${LIB_SUFFIX})
 
 else()
   if( NOT $ENV{BOOST_INCLUDEDIR} STREQUAL "" )
@@ -393,9 +393,13 @@ endif()
 
 pkg_check_modules(COLLADA collada15dom>=2.3.0)
 
-# require minizip regardless of collada presence
-add_subdirectory(3rdparty/minizip)
-set(MINIZIP_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/minizip ${ZLIB_INCLUDE_DIR})
+pkg_check_modules(minizip minizip)
+if(minizip_FOUND)
+  set(MINIZIP_INCLUDE_DIR ${minizip_INCLUDE_DIRS})
+else()
+  add_subdirectory(3rdparty/minizip)
+  set(MINIZIP_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/minizip ${ZLIB_INCLUDE_DIR})
+endif()
 
 if( NOT COLLADA_FOUND AND ZLIB_FOUND AND Boost_FILESYSTEM_FOUND AND Boost_SYSTEM_FOUND )
   pkg_check_modules(libpcrecpp libpcrecpp)
@@ -572,7 +576,7 @@ configure_file(
   "${CMAKE_CURRENT_BINARY_DIR}/openrave.pc" @ONLY IMMEDIATE)
 
 if(UNIX)
-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/openrave.pc DESTINATION lib/pkgconfig)
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/openrave.pc DESTINATION lib${LIB_SUFFIX}/pkgconfig)
 endif()
 
 

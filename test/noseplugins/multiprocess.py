@@ -434,7 +434,9 @@ class MultiProcessTestRunner(TextTestRunner):
             for iworker,worker in enumerate(workers):
                 if worker.is_alive():
                     log.debug('joining worker %s',iworker)
-                    worker.join()
+                    worker.join()#10)
+                    if worker.is_alive():
+                        log.debug('failed to join worker %s',iworker)
         except KeyboardInterrupt:
             print 'parent received ctrl-c'
             for worker in workers:
