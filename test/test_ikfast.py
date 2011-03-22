@@ -299,6 +299,6 @@ if __name__ == "__main__":
     while len(test_ikfast.globalstats) > 0:
         stat = test_ikfast.globalstats.pop(0)
         if not stat[5] is None:
-            stat[5] = open(stat[5],'r').read()
+            stat.append(open(stat[5],'r').read())
         stats.append(stat)
     pickle.dump([stats,options],open('ikfaststats.pp','w'))
