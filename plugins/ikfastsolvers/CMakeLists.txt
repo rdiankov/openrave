@@ -25,6 +25,5 @@ else()
   target_link_libraries(ikfastsolvers libopenrave ${ik_libraries})
 endif()
 add_dependencies(ikfastsolvers libopenrave ${ik_libraries})
-set_target_properties(ikfastsolvers PROPERTIES COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS}"
-                                      LINK_FLAGS "${PLUGIN_LINK_FLAGS}")
-install(TARGETS ikfastsolvers DESTINATION share/openrave/plugins )
+set_target_properties(ikfastsolvers PROPERTIES COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS}" LINK_FLAGS "${PLUGIN_LINK_FLAGS}")
+install(TARGETS ikfastsolvers DESTINATION ${OPENRAVE_PLUGINS_INSTALL_DIR})

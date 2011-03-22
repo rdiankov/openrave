@@ -28,10 +28,9 @@ if(bullet_FOUND)
     set(openrave_bullet_LDFLAGS_OTHER "${openrave_bullet_LDFLAGS_OTHER} ${arg}")
   endforeach()
 
-  set_target_properties(bulletrave PROPERTIES COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS} ${openrave_bullet_CFLAGS_OTHER}"
-                                LINK_FLAGS "${PLUGIN_LINK_FLAGS} ${openrave_bullet_LDFLAGS_OTHER}")
+  set_target_properties(bulletrave PROPERTIES COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS} ${openrave_bullet_CFLAGS_OTHER}" LINK_FLAGS "${PLUGIN_LINK_FLAGS} ${openrave_bullet_LDFLAGS_OTHER}")
 
-  install(TARGETS bulletrave DESTINATION share/openrave/plugins )
+  install(TARGETS bulletrave DESTINATION ${OPENRAVE_PLUGINS_INSTALL_DIR})
 
 #  link_directories(${OPENRAVE_LINK_DIRS})
 else()

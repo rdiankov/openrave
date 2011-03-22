@@ -18,6 +18,5 @@ else()
 endif()
 
 add_dependencies(dualmanipulation libopenrave)
-set_target_properties(dualmanipulation PROPERTIES COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS}"
-                                       LINK_FLAGS "${PLUGIN_LINK_FLAGS}")
-install(TARGETS dualmanipulation DESTINATION share/openrave/plugins )
+set_target_properties(dualmanipulation PROPERTIES COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS}" LINK_FLAGS "${PLUGIN_LINK_FLAGS}")
+install(TARGETS dualmanipulation DESTINATION ${OPENRAVE_PLUGINS_INSTALL_DIR})

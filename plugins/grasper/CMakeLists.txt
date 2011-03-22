@@ -19,6 +19,5 @@ else()
 endif()
 
 add_dependencies(grasper libopenrave)
-set_target_properties(grasper PROPERTIES COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS}"
-                              LINK_FLAGS "${PLUGIN_LINK_FLAGS}")
-install(TARGETS grasper DESTINATION share/openrave/plugins )
+set_target_properties(grasper PROPERTIES COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS}" LINK_FLAGS "${PLUGIN_LINK_FLAGS}")
+install(TARGETS grasper DESTINATION ${OPENRAVE_PLUGINS_INSTALL_DIR})

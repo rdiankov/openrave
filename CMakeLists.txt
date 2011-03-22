@@ -96,13 +96,37 @@ include(CheckCXXSourceRuns)
 include(CheckCXXCompilerFlag)
 include(CheckTypeSize)
 include(FindPkgConfig)
+include(FindPythonInterp)
 
-set(OPENRAVE_PLUGINS_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/share/openrave/plugins")
-set(OPENRAVE_DATA_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/share/openrave")
-set(OPENRAVE_PYTHON_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/share/openrave")
-set(OPENRAVE_OCTAVE_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/share/openrave/octave")
-set(OPENRAVE_MATLAB_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/share/openrave/matlab")
-set(OPENRAVEPY_INSTALL_DIR "${OPENRAVE_PYTHON_INSTALL_DIR}/openravepy")
+## check python
+find_package(PythonLibs) # using PYTHON_INCLUDE_PATH instead of PYTHON_INCLUDE_DIR
+if( NOT PYTHON_EXECUTABLE )
+  # look specifically for 2.6
+  FIND_PROGRAM(PYTHON_EXECUTABLE
+    NAMES python2.6 python
+    PATHS [HKEY_LOCAL_MACHINE\\SOFTWARE\\Python\\PythonCore\\2.6\\InstallPath])
+endif()
+
+if( PYTHON_EXECUTABLE )
+  # get the site-packages directory
+  execute_process(
+    COMMAND ${PYTHON_EXECUTABLE} -c "from distutils.sysconfig import get_python_lib; print get_python_lib()"
+    OUTPUT_VARIABLE _python_sitepackage OUTPUT_STRIP_TRAILING_WHITESPACE
+    RESULT_VARIABLE _python_failed)
+  if( ${_python_failed} EQUAL 0 )
+    string(REGEX REPLACE "[\r\n]" "" _python_sitepackage "${_python_sitepackage}")
+    set(PYTHON_INCLUDE_PATH ${PYTHON_INCLUDE_PATH} ${_python_sitepackage}/numpy/core/include)
+  else()
+    message(STATUS "failed to get python site-package directory")
+  endif()
+endif()
+
+set(OPENRAVE_DATA_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/share/openrave" CACHE PATH "Scene and robot files installation directory")
+set(OPENRAVE_PLUGINS_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/share/openrave/plugins" CACHE PATH "OpenRAVE plugins installation directory")
+set(OPENRAVE_OCTAVE_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/share/openrave/octave" CACHE PATH "OpenRAVE Octave bindings installation directory")
+set(OPENRAVE_MATLAB_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/share/openrave/matlab" CACHE PATH "OpenRAVE MATLAB bindings installation directory")
+set(OPENRAVE_PYTHON_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/share/openrave" CACHE PATH "Internal python libraries installation directory")
+set(OPENRAVEPY_INSTALL_DIR "${OPENRAVE_PYTHON_INSTALL_DIR}/openravepy" CACHE PATH "OpenRAVE Python bindings (openravepy) installation directory")
 
 # very important to only test release since default is debug, and it usually reuquires special libraries
 set(CMAKE_TRY_COMPILE_CONFIGURATION Release)
@@ -324,8 +348,14 @@ find_package(MPFR)
 find_package(MPFI)
 
 if( OPT_ACCURATEMATH AND NOT MSVC )
+#  check_library_exists(crlibm crlibm_init "" CRLIBM_FOUND_LIB)
+#  check_include_file(crlibm.h HAVE_CRLIBM_H)
+#  if(NOT CRLIBM_FOUND_LIB OR NOT HAVE_CRLIBM_H)
   add_subdirectory(3rdparty/crlibm-1.0beta4)
   set(CRLIBM_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/crlibm-1.0beta4")
+#  else()
+#    message(STATUS "Using system-wide crlibm")
+#  endif()
   set(CRLIBM_FOUND 1)
   set(CRLIBM_LIBRARY crlibm)
 else()
@@ -494,14 +524,17 @@ else()
   set(ANN_FOUND 1)
 endif()
 
-## check FLANN library
-set(BUILD_MATLAB_BINDINGS false)
-set(BUILD_PYTHON_BINDINGS true)
-set(BUILD_C_BINDINGS true)
-message(STATUS "compiling local flann library")
-add_subdirectory(3rdparty/flann-1.6.6)
-set(FLANN_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/flann-1.6.6/src/cpp")
-set(FLANN_FOUND 1) # use flann_cpp_s to link statically
+pkg_check_modules(FLANN flann)
+if( NOT FLANN_FOUND) 
+  ## check FLANN library
+  set(BUILD_MATLAB_BINDINGS false)
+  set(BUILD_PYTHON_BINDINGS true)
+  set(BUILD_C_BINDINGS true)
+  message(STATUS "compiling local flann library")
+  add_subdirectory(3rdparty/flann-1.6.6)
+  set(FLANN_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/flann-1.6.6/src/cpp")
+  set(FLANN_FOUND 1) # use flann_cpp_s to link statically
+endif()
 
 # function expression parser library
 add_subdirectory(3rdparty/fparser-4.3)
@@ -518,15 +551,6 @@ else()
   set(CONVEXDECOMPOSITION_CFLAGS "")
 endif()
 set(CONVEXDECOMPOSITION_FOUND 1)
-
-## check python
-find_package(PythonInterp)
-if( NOT PYTHON_EXECUTABLE )
-  # look specifically for 2.6
-  FIND_PROGRAM(PYTHON_EXECUTABLE
-    NAMES python2.6 python
-    PATHS [HKEY_LOCAL_MACHINE\\SOFTWARE\\Python\\PythonCore\\2.6\\InstallPath])
-endif()
 
 if( PYTHON_EXECUTABLE )
   message(STATUS "python executable is ${PYTHON_EXECUTABLE}")

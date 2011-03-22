@@ -14,6 +14,5 @@ else()
 endif()
 
 add_dependencies(textserver libopenrave)
-set_target_properties(textserver PROPERTIES COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS}"
-                              LINK_FLAGS "${PLUGIN_LINK_FLAGS}")
-install(TARGETS textserver DESTINATION share/openrave/plugins )
+set_target_properties(textserver PROPERTIES COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS}" LINK_FLAGS "${PLUGIN_LINK_FLAGS}")
+install(TARGETS textserver DESTINATION ${OPENRAVE_PLUGINS_INSTALL_DIR})

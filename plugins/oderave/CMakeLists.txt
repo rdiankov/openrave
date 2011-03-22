@@ -44,9 +44,8 @@ if(ODE_LIBRARY_FOUND)
 
   target_link_libraries(oderave libopenrave ${ODE_LIBRARY})
   add_dependencies(oderave libopenrave)
-  set_target_properties(oderave PROPERTIES COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS} ${ODE_CXXFLAGS}"
-    LINK_FLAGS "${PLUGIN_LINK_FLAGS}")
-  install(TARGETS oderave DESTINATION share/openrave/plugins )
+  set_target_properties(oderave PROPERTIES COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS} ${ODE_CXXFLAGS}" LINK_FLAGS "${PLUGIN_LINK_FLAGS}")
+  install(TARGETS oderave DESTINATION ${OPENRAVE_PLUGINS_INSTALL_DIR})
 else()
   message(STATUS "Could not find ODE. Please install ODE (http://www.ode.org)")
 endif()

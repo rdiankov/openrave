@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """
 Kinematic, quasi-static, dynamic, and geometric analyses are precomputed and used as databases during the run-time. All database generators rely on a specific robot and provide many helpful methods to use the information after it has been generated.
 
