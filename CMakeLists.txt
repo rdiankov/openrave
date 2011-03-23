@@ -567,17 +567,36 @@ file(GLOB rave_header_files ${CMAKE_CURRENT_SOURCE_DIR}/rave/*.h ${CMAKE_CURRENT
 add_subdirectory(src)
 add_subdirectory(octave_matlab)
 
-# extract sympy
-if( NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/sympy/__init__.py" OR NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/sympy/solvers/tests")
-  message(STATUS "extracting sympy to ${CMAKE_CURRENT_SOURCE_DIR}")
+if( PYTHON_EXECUTABLE )
+  # get the sympy version
   execute_process(
-    COMMAND ${CMAKE_COMMAND} -E tar xzf "${CMAKE_CURRENT_SOURCE_DIR}/sympy_0.6.7.tgz"
-    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
+    COMMAND ${PYTHON_EXECUTABLE} -c "import sympy; print sympy.__version__"
+    OUTPUT_VARIABLE _sympy_version OUTPUT_STRIP_TRAILING_WHITESPACE
+    RESULT_VARIABLE _sympy_failed)
+  if( ${_sympy_failed} EQUAL 0 )
+    string(REGEX REPLACE "[\r\n]" "" _sympy_version "${_sympy_version}")
+    set(PYTHON_INCLUDE_PATH ${PYTHON_INCLUDE_PATH} ${_sympy_version}/numpy/core/include)
+  else()
+    message(STATUS "failed to get python site-package directory")
+  endif()
 endif()
-if("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION}" STRGREATER "2.4.3")
-  install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/sympy" DESTINATION ${OPENRAVE_PYTHON_INSTALL_DIR} PATTERN ".svn" EXCLUDE)
+
+if( "${_sympy_version}" STREQUAL "0.6.7")
+  message(STATUS "Found sympy 0.6.7, will rely on this instead of installing a new version (could have been previously installed by openrave?)")
 else()
-  message(WARNING "Could not install sympy needed by ikfast (cmake version ${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION} needs to be >= 2.4.6)")
+  message(STATUS "System sympy (v=${_sympy_version}) is not version 0.6.7, installing from sources")
+  # extract sympy
+  if( NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/sympy/__init__.py" OR NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/sympy/solvers/tests")
+    message(STATUS "extracting sympy to ${CMAKE_CURRENT_SOURCE_DIR}")
+    execute_process(
+      COMMAND ${CMAKE_COMMAND} -E tar xzf "${CMAKE_CURRENT_SOURCE_DIR}/sympy_0.6.7.tgz"
+      WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
+  endif()
+  if("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION}" STRGREATER "2.4.3")
+    install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/sympy" DESTINATION ${OPENRAVE_PYTHON_INSTALL_DIR} PATTERN ".svn" EXCLUDE)
+  else()
+    message(WARNING "Could not install sympy needed by ikfast (cmake version ${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION} needs to be >= 2.4.6)")
+  endif()
 endif()
 
 if(OPT_PYTHON)

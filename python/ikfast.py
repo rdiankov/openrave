@@ -248,6 +248,138 @@ try:
 except ImportError:
     pass
 
+# changes to sympy:
+
+# core/power.py Pow
+def Pow_eval_subs(self, old, new):
+    if self == old:
+        return new
+    
+    if old.func is self.func and self.base == old.base:
+        coeff1, terms1 = self.exp.as_coeff_terms()
+        coeff2, terms2 = old.exp.as_coeff_terms()
+        if terms1==terms2:
+            # only divide if coeff2 is a divisor of coeff1
+            if coeff1.is_integer and coeff2.is_integer and (coeff1/coeff2).is_integer:
+                return new ** (coeff1/coeff2) # (x**(2*y)).subs(x**(3*y),z) -> z**(2/3*y)
+            
+    if old.func is C.exp:
+        coeff1,terms1 = old.args[0].as_coeff_terms()
+        coeff2,terms2 = (self.exp * C.log(self.base)).as_coeff_terms()
+        if terms1==terms2:
+            # only divide if coeff2 is a divisor of coeff1
+            if coeff1.is_integer and coeff2.is_integer and (coeff1/coeff2).is_integer:
+                return new ** (coeff1/coeff2) # (x**(2*y)).subs(exp(3*y*log(x)),z) -> z**(2/3*y)
+            
+    return self.base._eval_subs(old, new) ** self.exp._eval_subs(old, new)
+
+power.Pow._eval_subs = Pow_eval_subs
+
+# simplify/simplify.py
+# def custom_trigsimp_nonrecursive(expr, deep=False):
+#     """
+#     A nonrecursive trig simplifier, used from trigsimp.
+# 
+#     == Usage ==
+#         trigsimp_nonrecursive(expr) -> reduces expression by using known trig
+#                                        identities
+# 
+#     == Notes ==
+# 
+#     deep ........ apply trigsimp inside functions
+# 
+#     == Examples ==
+#         >>> from sympy import cos, sin, log
+#         >>> from sympy.simplify.simplify import trigsimp, trigsimp_nonrecursive
+#         >>> from sympy.abc import x, y
+#         >>> e = 2*sin(x)**2 + 2*cos(x)**2
+#         >>> trigsimp(e)
+#         2
+#         >>> trigsimp_nonrecursive(log(e))
+#         log(2*cos(x)**2 + 2*sin(x)**2)
+#         >>> trigsimp_nonrecursive(log(e), deep=True)
+#         log(2)
+# 
+#     """
+#     from sympy.core.basic import S
+#     sin, cos, tan, cot = C.sin, C.cos, C.tan, C.cot
+# 
+#     if expr.is_Function:
+#         if deep:
+#             return expr.func(trigsimp_nonrecursive(expr.args[0], deep))
+#     elif expr.is_Mul:
+#         ret = S.One
+#         for x in expr.args:
+#             ret *= trigsimp_nonrecursive(x, deep)
+# 
+#         return ret
+#     elif expr.is_Pow:
+#         return Pow(trigsimp_nonrecursive(expr.base, deep),
+#                 trigsimp_nonrecursive(expr.exp, deep))
+#     elif expr.is_Add:
+#         # TODO this needs to be faster
+# 
+#         # The types of trig functions we are looking for
+#         a,b,c = map(Wild, 'abc')
+#         matchers = (
+#             (a*sin(b)**2, a - a*cos(b)**2),
+#             (a*tan(b)**2, a*(1/cos(b))**2 - a),
+#             (a*cot(b)**2, a*(1/sin(b))**2 - a)
+#         )
+# 
+#         # Scan for the terms we need
+#         ret = S.Zero
+#         for term in expr.args:
+#             term = trigsimp_nonrecursive(term, deep)
+#             res = None
+#             for pattern, result in matchers:
+#                 res = term.match(pattern)
+#                 if res is not None:
+#                     ret += result.subs(res)
+#                     break
+#             if res is None:
+#                 ret += term
+# 
+#         # Reduce any lingering artifacts, such as sin(x)**2 changing
+#         # to 1-cos(x)**2 when sin(x)**2 was "simpler"
+#         artifacts = (
+#             (a - a*cos(b)**2 + c, a*sin(b)**2 + c, cos),
+#             (a - a*(1/cos(b))**2 + c, -a*tan(b)**2 + c, cos),
+#             (a - a*(1/sin(b))**2 + c, -a*cot(b)**2 + c, sin)
+#         )
+# 
+#         expr = ret
+#         for pattern, result, ex in artifacts:
+#             # Substitute a new wild that excludes some function(s)
+#             # to help influence a better match. This is because
+#             # sometimes, for example, 'a' would match sec(x)**2
+#             a_t = Wild('a', exclude=[ex])
+#             pattern = pattern.subs(a, a_t)
+#             result = result.subs(a, a_t)
+#             if expr.is_number:
+#                 continue
+#             try:
+#                 m = expr.match(pattern)
+#             except (TypeError):
+#                 break
+# 
+#             while m is not None:
+#                 if m[a_t] == 0 or -m[a_t] in m[c].args or m[a_t] + m[c] == 0:
+#                     break
+#                 expr = result.subs(m)
+#                 if expr.is_number:
+#                     continue
+#                 try:
+#                     m = expr.match(pattern)
+#                 except (TypeError):
+#                     break
+# 
+# 
+#         return expr
+#     return expr
+# 
+# simplify.simplify.trigsimp_nonrecursive = custom_trigsimp_nonrecursive
+
 class AST:
     """Abstarct Syntax Tree class definitions specific for evaluating complex math equations."""
 

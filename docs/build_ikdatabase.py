@@ -39,6 +39,8 @@ def buildrobot(outputdir, env, robotfilename, robotstats):
     height=480
     focal = 10000.0 # bigger values make orthographic view
     robotname = os.path.split(os.path.splitext(robotfilename)[0])[1]
+    sourcedir = os.path.join(outputdir,robotname)
+    mkdir_recursive(sourcedir)
     imagename = '%s.jpg'%robotname
     if env is not None:
         env.Reset()
@@ -89,7 +91,7 @@ def buildrobot(outputdir, env, robotfilename, robotstats):
     prevmanipname = None
     previktypestr = None
     rownames = []
-    for manipname, iktypestr, description, sourcefilename, meantime, maxtime, successrate, wrongrate in robotstats:
+    for manipname, iktypestr, freeindices, description, sourcefilename, meantime, maxtime, successrate, wrongrate, sourcecode in robotstats:
         if prevmanipname != manipname:
             name = '**' + manipname + '** Manipulator'
             robotxml += name + '\n' + '-'*len(name) + '\n\n'
@@ -136,7 +138,9 @@ def build(allstats,options,outputdir,env):
     # write each robot
     robotdict = dict()
     for stat in allstats:
-        if len(stat) == 9:
+        if len(stat) == 10:
+            stat.append(None)
+        if len(stat) == 11:
             if not stat[0] in robotdict:
                 robotdict[stat[0]] = []
             robotdict[stat[0]].append(stat[1:])
