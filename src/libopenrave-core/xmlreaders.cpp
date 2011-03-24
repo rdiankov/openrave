@@ -2896,10 +2896,6 @@ namespace OpenRAVEXMLParser
         
                 // forces robot to reupdate its internal objects
                 _probot->SetTransform(_probot->GetTransform());
-        
-                if( !_probot->GetEnv()->GetPhysicsEngine()->InitKinBody(_probot) )
-                    RAVELOG_WARN("physics engine failed to init robot %s\n", _probot->GetName().c_str());
-
                 return true;
             }
             return false;
