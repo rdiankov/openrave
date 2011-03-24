@@ -107,8 +107,10 @@ IKFast can also be used as a library in python. Generating 6D IK for the Barrett
   code = solver.writeIkSolver(chaintree)
   open('ik.cpp','w').write(code)
 
-Generated IK Files
-==================
+.. _ikfast_generatedcpp:
+
+Using Generated IK Files
+========================
 
 The common usage is to generate a C++ file that can be compiled into a stand-alone shared object/DLL, an executable program, or linked in statically to a bigger project. For more complex kinematics, LAPACK_ is needed.
 

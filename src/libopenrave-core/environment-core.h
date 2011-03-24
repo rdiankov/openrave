@@ -429,9 +429,9 @@ class Environment : public EnvironmentBase
             SetEnvironmentId(pbody);
             _nBodiesModifiedStamp++;
         }
+        pbody->_ComputeInternalInformation();
         _pCurrentChecker->InitKinBody(pbody);
         _pPhysicsEngine->InitKinBody(pbody);
-        pbody->_ComputeInternalInformation();
         return true;
     }
 
@@ -463,9 +463,9 @@ class Environment : public EnvironmentBase
             SetEnvironmentId(robot);
             _nBodiesModifiedStamp++;
         }
+        robot->_ComputeInternalInformation();
         _pCurrentChecker->InitKinBody(robot);
         _pPhysicsEngine->InitKinBody(robot);
-        robot->_ComputeInternalInformation();
         return true;
     }
 
@@ -1432,12 +1432,12 @@ protected:
                     itgrab->vNonCollidingLinks = vnew;
                 }
             }
+            FOREACH(itbody,_vecbodies) {
+                (*itbody)->_ComputeInternalInformation();
+            }
             FOREACH(itbody, _vecbodies) {
                 GetCollisionChecker()->InitKinBody(*itbody);
                 GetPhysicsEngine()->InitKinBody(*itbody);
-            }
-            FOREACH(itbody,_vecbodies) {
-                (*itbody)->_ComputeInternalInformation();
             }
         }
         if( options & Clone_Sensors ) {
