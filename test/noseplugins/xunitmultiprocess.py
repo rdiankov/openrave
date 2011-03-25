@@ -37,6 +37,7 @@ Here is an abbreviated version of what an XML test report might look like::
 .. _Hudson: https://hudson.dev.java.net/
 
 """
+__author__ = "original xunit author, Rosen Diankov (rosen.diankov@gmail.com)"
 
 import doctest
 import os
