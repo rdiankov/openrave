@@ -567,24 +567,35 @@ file(GLOB rave_header_files ${CMAKE_CURRENT_SOURCE_DIR}/rave/*.h ${CMAKE_CURRENT
 add_subdirectory(src)
 add_subdirectory(octave_matlab)
 
+set(OPENRAVE_USE_LOCAL_SYMPY 1)
 if( PYTHON_EXECUTABLE )
-  # get the sympy version
+  # check if sympy substitution is ok
   execute_process(
-    COMMAND ${PYTHON_EXECUTABLE} -c "import sympy; print sympy.__version__"
-    OUTPUT_VARIABLE _sympy_version OUTPUT_STRIP_TRAILING_WHITESPACE
-    RESULT_VARIABLE _sympy_failed)
-  if( ${_sympy_failed} EQUAL 0 )
-    string(REGEX REPLACE "[\r\n]" "" _sympy_version "${_sympy_version}")
-    set(PYTHON_INCLUDE_PATH ${PYTHON_INCLUDE_PATH} ${_sympy_version}/numpy/core/include)
+    COMMAND ${PYTHON_EXECUTABLE} -c "import sympy, sys;  x=sympy.Symbol('x'); sys.exit((x**3).subs(x**2,sympy.Symbol('y')) != x**3)"
+    OUTPUT_VARIABLE _sympy_check OUTPUT_STRIP_TRAILING_WHITESPACE
+    RESULT_VARIABLE _sympy_check_failed)
+  if( ${_sympy_check_failed} EQUAL 0 )
+    set(OPENRAVE_USE_LOCAL_SYMPY 0)
   else()
-    message(STATUS "failed to get python site-package directory")
+    # get the sympy version
+    execute_process(
+      COMMAND ${PYTHON_EXECUTABLE} -c "import sympy; print sympy.__version__"
+      OUTPUT_VARIABLE _sympy_version OUTPUT_STRIP_TRAILING_WHITESPACE
+      RESULT_VARIABLE _sympy_version_failed)
+    if( ${_sympy_version_failed} EQUAL 0 )
+      string(REGEX REPLACE "[\r\n]" "" _sympy_version "${_sympy_version}")
+      if( "${_sympy_version}" STREQUAL "0.6.7")
+        message(STATUS "Found sympy 0.6.7, will patch this instead of installing local version (could have been previously installed by openrave?)")
+        set(OPENRAVE_USE_LOCAL_SYMPY 0)
+      endif()
+    else()
+      message(STATUS "failed to get python site-package directory")
+    endif()
   endif()
 endif()
 
-if( "${_sympy_version}" STREQUAL "0.6.7")
-  message(STATUS "Found sympy 0.6.7, will rely on this instead of installing a new version (could have been previously installed by openrave?)")
-else()
-  message(STATUS "System sympy (v=${_sympy_version}) is not version 0.6.7, installing from sources")
+if( ${OPENRAVE_USE_LOCAL_SYMPY} )
+  message(STATUS "System sympy (v=${_sympy_version}) is not version 0.6.7, using local sympy")
   # extract sympy
   if( NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/sympy/__init__.py" OR NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/sympy/solvers/tests")
     message(STATUS "extracting sympy to ${CMAKE_CURRENT_SOURCE_DIR}")

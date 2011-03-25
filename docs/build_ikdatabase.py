@@ -78,8 +78,8 @@ def buildrobot(outputdir, env, robotfilename, robotstats,buildoptions):
                 N = [float(len(robot.GetJoints())),float(len(robot.GetPassiveJoints()))]
                 scale = 0.3*linalg.norm(ab.extents())
                 linewidth = 2
-                h = [env.drawlinelist(array([j.GetAnchor()-scale*j.GetAxis(0),j.GetAnchor()+scale*j.GetAxis(0)]),linewidth,floatRgb(float(j.GetDOFIndex())/(N[0]+N[1])))  for j in robot.GetJoints()]
-                hpassive = [env.drawlinelist(array([j.GetAnchor()-scale*j.GetAxis(0),j.GetAnchor()+scale*j.GetAxis(0)]),linewidth,floatRgb((jindex+N[0])/(N[0]+N[1])))  for jindex,j in enumerate(robot.GetPassiveJoints())]
+                h = [env.drawlinelist(array([j.GetAnchor()-scale*j.GetAxis(0),j.GetAnchor()+scale*j.GetAxis(0)]),linewidth,floatRgb(float(j.GetDOFIndex())/(N[0]+N[1])))  for j in robot.GetJoints() if not j.IsStatic()]
+                hpassive = [env.drawlinelist(array([j.GetAnchor()-scale*j.GetAxis(0),j.GetAnchor()+scale*j.GetAxis(0)]),linewidth,floatRgb((jindex+N[0])/(N[0]+N[1])))  for jindex,j in enumerate(robot.GetPassiveJoints()) if not j.IsStatic()]
 
             K=[focal,focal,width/2,height/2]
             Lall = max(linalg.norm(ab.extents())*focal/(0.5*width),linalg.norm(ab.extents())*focal/(0.5*height))

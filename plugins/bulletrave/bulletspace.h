@@ -121,8 +121,7 @@ public:
         pinfo->_bulletspace = weak_space();
         pinfo->vlinks.reserve(pbody->GetLinks().size());
         pinfo->vjoints.reserve(pbody->GetJoints().size());
-    
-        pinfo->vlinks.reserve(pbody->GetLinks().size());
+        
         float fmargin=0.0004f;
         FOREACHC(itlink, pbody->GetLinks()) {
             boost::shared_ptr<KinBodyInfo::LINK> link(new KinBodyInfo::LINK());
