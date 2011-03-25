@@ -929,7 +929,11 @@ class Environment : public EnvironmentBase
         else {
             InterfaceBasePtr pinterface = robot;
             BaseXMLReaderPtr preader = OpenRAVEXMLParser::CreateInterfaceReader(shared_from_this(), PT_Robot, pinterface, "robot", atts);
+            if( !preader ) {
+                return RobotBasePtr();
+            }
             bool bSuccess = ParseXMLFile(preader, filename);
+            preader->endElement("robot"); // have to end the tag!
             robot = RaveInterfaceCast<RobotBase>(pinterface);
             if( !bSuccess || !robot ) {
                 return RobotBasePtr();
@@ -960,7 +964,11 @@ class Environment : public EnvironmentBase
         else {
             InterfaceBasePtr pinterface = robot;
             BaseXMLReaderPtr preader = OpenRAVEXMLParser::CreateInterfaceReader(shared_from_this(), PT_Robot, pinterface, "robot", atts);
+            if( !preader ) {
+                return RobotBasePtr();
+            }
             bool bSuccess = ParseXMLData(preader, data);
+            preader->endElement("robot"); // have to end the tag!
             robot = RaveInterfaceCast<RobotBase>(pinterface);
             if( !bSuccess || !robot ) {
                 return RobotBasePtr();
@@ -1014,7 +1022,11 @@ class Environment : public EnvironmentBase
         else {
             InterfaceBasePtr pinterface = body;
             BaseXMLReaderPtr preader = OpenRAVEXMLParser::CreateInterfaceReader(shared_from_this(), PT_KinBody, pinterface, "kinbody", atts);
+            if( !preader ) {
+                return KinBodyPtr();
+            }
             bool bSuccess = ParseXMLFile(preader, filename);
+            preader->endElement("kinbody"); // have to end the tag!
             body = RaveInterfaceCast<KinBody>(pinterface);
             if( !bSuccess || !body ) {
                 return KinBodyPtr();
@@ -1045,7 +1057,11 @@ class Environment : public EnvironmentBase
         else {
             InterfaceBasePtr pinterface = body;
             BaseXMLReaderPtr preader = OpenRAVEXMLParser::CreateInterfaceReader(shared_from_this(), PT_KinBody, pinterface, "kinbody", atts);
+            if( !preader ) {
+                return KinBodyPtr();
+            }
             bool bSuccess = ParseXMLData(preader, data);
+            preader->endElement("kinbody"); // have to end the tag!
             body = RaveInterfaceCast<KinBody>(pinterface);
             if( !bSuccess || !body ) {
                 return KinBodyPtr();
@@ -1061,11 +1077,15 @@ class Environment : public EnvironmentBase
             EnvironmentMutex::scoped_lock lockenv(GetMutex());
             OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
             BaseXMLReaderPtr preader = OpenRAVEXMLParser::CreateInterfaceReader(shared_from_this(),atts);
+            if( !preader ) {
+                return InterfaceBasePtr();
+            }
             bool bSuccess = ParseXMLFile(preader, filename);
             boost::shared_ptr<OpenRAVEXMLParser::InterfaceXMLReadable> preadable = boost::dynamic_pointer_cast<OpenRAVEXMLParser::InterfaceXMLReadable>(preader->GetReadable());
             if( !bSuccess || !preadable || !preadable->_pinterface) {
                 return InterfaceBasePtr();
             }
+            preader->endElement(RaveGetInterfaceName(preadable->_pinterface->GetInterfaceType())); // have to end the tag!
             preadable->_pinterface->__strxmlfilename = filename;
             return preadable->_pinterface;
         }
@@ -1109,6 +1129,7 @@ class Environment : public EnvironmentBase
                 if( !ParseXMLFile(preader, filename) ) {
                     return InterfaceBasePtr();
                 }
+                preader->endElement(RaveGetInterfaceName(pinterface->GetInterfaceType())); // have to end the tag!
                 pinterface = preadable->_pinterface;
             }
             else {
@@ -1128,7 +1149,11 @@ class Environment : public EnvironmentBase
 
         // check for collada?
         BaseXMLReaderPtr preader = OpenRAVEXMLParser::CreateInterfaceReader(shared_from_this(), type, pinterface, RaveGetInterfaceName(type), atts);
+        if( !preader ) {
+            return InterfaceBasePtr();
+        }
         bool bSuccess = ParseXMLData(preader, data);
+        preader->endElement(RaveGetInterfaceName(pinterface->GetInterfaceType())); // have to end the tag!
         if( !bSuccess ) {
             return InterfaceBasePtr();
         }

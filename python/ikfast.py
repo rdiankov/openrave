@@ -1085,6 +1085,9 @@ class IKFastSolver(AutoReloader):
             jointvars = []
             jointinds = []
             for i,joint in enumerate(chainjoints):
+                if len(joint.GetName()) == 0:
+                    raise self.CannotSolveError('chain %s:%s contains a joint with no name!'%(chainlinks[0].GetName(),chainlinks[-1].GetName()))
+                
                 if chainjoints[i].GetHierarchyParentLink() == chainlinks[i]:
                     TLeftjoint = self.numpyMatrixToSympy(joint.GetInternalHierarchyLeftTransform())
                     TRightjoint = self.numpyMatrixToSympy(joint.GetInternalHierarchyRightTransform())

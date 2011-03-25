@@ -34,7 +34,7 @@
   </Body>
 
   <KinBody prefix="L_" file="schunk_fingers/fingerA_plane_reverse.kinbody.xml">
-    <Body name="finger">
+    <Body name="L_finger">
       <offsetfrom>gripper_base</offsetfrom>
       <Translation>0.000 -0.009 0.163</Translation>
       <RotationAxis>0 0 1 90</RotationAxis>
@@ -42,7 +42,7 @@
   </KinBody>
 
   <KinBody prefix="R_" file="schunk_fingers/fingerA_plane_reverse.kinbody.xml">
-    <Body name="finger">
+    <Body name="R_finger">
       <offsetfrom>gripper_base</offsetfrom>
       <Translation>0.000 0.009 0.163</Translation>
       <RotationAxis>0 0 1 270</RotationAxis>

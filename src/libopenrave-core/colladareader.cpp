@@ -147,7 +147,7 @@ class ColladaReader : public daeErrorHandler
                 _bSkipGeometry = stricmp(itatt->second.c_str(), "true") == 0 || itatt->second=="1";
             }
             else if( itatt->first == "prefix" ) {
-                RAVELOG_VERBOSE(str(boost::format("collada reader prefix=%s is processed from xmlreaders side")%itatt->second));
+                _prefix = itatt->second;
             }
             else if( itatt->first == "name" ) {
                 RAVELOG_VERBOSE(str(boost::format("collada reader robot name=%s is processed from xmlreaders side")%itatt->second));
@@ -226,7 +226,27 @@ class ColladaReader : public daeErrorHandler
             return false;
         }
 
-        //  parse each instance kinematics scene, prioritize robots
+        _setInitialLinks.clear();
+        _setInitialJoints.clear();
+        _setInitialManipulators.clear();
+        _setInitialSensors.clear();
+        if( !!probot ) {
+            FOREACH(itlink,probot->GetLinks()) {
+                _setInitialLinks.insert(*itlink);
+            }
+            FOREACH(itjoint,probot->GetJoints()) {
+                _setInitialJoints.insert(*itjoint);
+            }
+            FOREACH(itmanip,probot->GetManipulators()) {
+                _setInitialManipulators.insert(*itmanip);
+            }
+            FOREACH(itsensor,probot->GetAttachedSensors()) {
+                _setInitialSensors.insert(*itsensor);
+            }
+        }
+
+        // parse each instance kinematics scene, prioritize robots
+        bool bSuccess = false;
         for (size_t iscene = 0; iscene < allscene->getInstance_kinematics_scene_array().getCount(); iscene++) {
             domInstance_kinematics_sceneRef kiscene = allscene->getInstance_kinematics_scene_array()[iscene];
             domKinematics_sceneRef kscene = daeSafeCast<domKinematics_scene> (kiscene->getUrl().getElement().cast());
@@ -237,8 +257,12 @@ class ColladaReader : public daeErrorHandler
             _ExtractKinematicsVisualBindings(allscene->getInstance_visual_scene(),kiscene,*bindings);
             for(size_t ias = 0; ias < kscene->getInstance_articulated_system_array().getCount(); ++ias) {
                 if( ExtractArticulatedSystem(probot, kscene->getInstance_articulated_system_array()[ias], *bindings) && !!probot ) {
-                    return true;
+                    bSuccess = true;
+                    break;
                 }
+            }
+            if( bSuccess ) {
+                break;
             }
             for(size_t ikmodel = 0; ikmodel < kscene->getInstance_kinematics_model_array().getCount(); ++ikmodel) {
                 listPossibleBodies.push_back(make_pair(kscene->getInstance_kinematics_model_array()[ikmodel], bindings));
@@ -248,11 +272,39 @@ class ColladaReader : public daeErrorHandler
         KinBodyPtr pbody = probot;
         FOREACH(it, listPossibleBodies) {
             if( ExtractKinematicsModel(pbody, it->first, *it->second) && !!pbody ) {
-                return true;
+                bSuccess = true;
+                break;
             }
         }
 
-        return false;
+        if( bSuccess ) {
+            if( _prefix.size() > 0 ) {
+                FOREACH(itlink,probot->GetLinks()) {
+                    if( _setInitialLinks.find(*itlink) == _setInitialLinks.end()) {
+                        (*itlink)->_name = _prefix + (*itlink)->_name;
+                    }
+                }
+                FOREACH(itjoint,probot->GetJoints()) {
+                    if( _setInitialJoints.find(*itjoint) == _setInitialJoints.end()) {
+                        (*itjoint)->_name = _prefix + (*itjoint)->_name;
+                    }
+                }
+                FOREACH(itmanip,probot->GetManipulators()) {
+                    if( _setInitialManipulators.find(*itmanip) == _setInitialManipulators.end()) {
+                        (*itmanip)->_name = _prefix + (*itmanip)->_name;
+                        FOREACH(itgrippername,(*itmanip)->_vgripperjointnames) {
+                            *itgrippername = _prefix + *itgrippername;
+                        }
+                    }
+                }
+                FOREACH(itsensor, probot->GetAttachedSensors()) {
+                    if( _setInitialSensors.find(*itsensor) == _setInitialSensors.end() ) {
+                        (*itsensor)->_name = _prefix + (*itsensor)->_name;
+                    }
+                }
+            }
+        }
+        return bSuccess;
     }
 
     bool Extract(KinBodyPtr& pbody)
@@ -262,6 +314,18 @@ class ColladaReader : public daeErrorHandler
             return false;
         }
 
+        _setInitialLinks.clear();
+        _setInitialJoints.clear();
+        if( !!pbody ) {
+            FOREACH(itlink,pbody->GetLinks()) {
+                _setInitialLinks.insert(*itlink);
+            }
+            FOREACH(itjoint,pbody->GetJoints()) {
+                _setInitialJoints.insert(*itjoint);
+            }
+        }
+
+        bool bSuccess = false;
         //  parse each instance kinematics scene for the first available model
         for (size_t iscene = 0; iscene < allscene->getInstance_kinematics_scene_array().getCount(); iscene++) {
             domInstance_kinematics_sceneRef kiscene = allscene->getInstance_kinematics_scene_array()[iscene];
@@ -273,8 +337,12 @@ class ColladaReader : public daeErrorHandler
             _ExtractKinematicsVisualBindings(allscene->getInstance_visual_scene(),kiscene,bindings);
             for(size_t ikmodel = 0; ikmodel < kscene->getInstance_kinematics_model_array().getCount(); ++ikmodel) {
                 if( ExtractKinematicsModel(pbody, kscene->getInstance_kinematics_model_array()[ikmodel], bindings) && !!pbody ) {
-                    return true;
+                    bSuccess = true;
+                    break;
                 }
+            }
+            if( bSuccess ) {
+                break;
             }
         }
 
@@ -286,11 +354,27 @@ class ColladaReader : public daeErrorHandler
             for (size_t node = 0; node < visual_scene->getNode_array().getCount(); node++) {
                 pbody = ExtractKinematicsModel(visual_scene->getNode_array()[node], domPhysics_modelRef(),listAxisBindingsAll,vprocessednodes);
                 if( !!pbody ) {
-                    return true;
+                    bSuccess = true;
+                    break;
                 }
             }
         }
-        return true;
+
+        if( bSuccess ) {
+            if( _prefix.size() > 0 ) {
+                FOREACH(itlink,pbody->GetLinks()) {
+                    if( _setInitialLinks.find(*itlink) == _setInitialLinks.end()) {
+                        (*itlink)->_name = _prefix + (*itlink)->_name;
+                    }
+                }
+                FOREACH(itjoint,pbody->GetJoints()) {
+                    if( _setInitialJoints.find(*itjoint) == _setInitialJoints.end()) {
+                        (*itjoint)->_name = _prefix + (*itjoint)->_name;
+                    }
+                }
+            }
+        }
+        return bSuccess;
     }
 
     /// \brief extracts an articulated system. Note that an articulated system can include other articulated systems
@@ -2761,10 +2845,15 @@ class ColladaReader : public daeErrorHandler
     dReal _fGlobalScale;
     std::map<KinBody::JointPtr, std::vector<dReal> > _mapJointUnits;
     std::map<std::string,KinBody::JointPtr> _mapJointIds;
+    string _prefix;
     int _nGlobalSensorId, _nGlobalManipulatorId, _nGlobalIndex;
     std::string _filename;
     bool _bOpeningZAE;
     bool _bSkipGeometry;
+    std::set<KinBody::LinkPtr> _setInitialLinks;
+    std::set<KinBody::JointPtr> _setInitialJoints;
+    std::set<RobotBase::ManipulatorPtr> _setInitialManipulators;
+    std::set<RobotBase::AttachedSensorPtr> _setInitialSensors;
 };
 
 bool RaveParseColladaFile(EnvironmentBasePtr penv, const string& filename,const AttributesList& atts)

@@ -88,7 +88,7 @@ def main(env,options):
         # no physics engine set, so set one
         physics = RaveCreatePhysicsEngine(env,'ode')
         env.SetPhysicsEngine(physics)
-        physics.SetGravity(array((0,0,-9.8)))
+    env.GetPhysicsEngine().SetGravity([0,0,-9.81])
     bodynames = ['data/lego2.kinbody.xml', 'data/lego4.kinbody.xml', 'data/mug1.kinbody.xml']
     numbodies = 0
     env.StopSimulation()

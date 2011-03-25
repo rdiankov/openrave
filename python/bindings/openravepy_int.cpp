@@ -208,7 +208,7 @@ public:
         return object(sout.str());
     }
 
-    virtual string __repr__() { return boost::str(boost::format("<env.CreateInterface(InterfaceType.%s,'%s')>")%RaveGetInterfaceName(_pbase->GetInterfaceType())%_pbase->GetXMLId()); }
+    virtual string __repr__() { return boost::str(boost::format("<RaveCreateInterface(RaveGetEnvironment(%d),InterfaceType.%s,'%s')>")%RaveGetEnvironmentId(_pbase->GetEnv())%RaveGetInterfaceName(_pbase->GetInterfaceType())%_pbase->GetXMLId()); }
     virtual string __str__() { return boost::str(boost::format("<%s:%s>")%RaveGetInterfaceName(_pbase->GetInterfaceType())%_pbase->GetXMLId()); }
     virtual bool __eq__(PyInterfaceBasePtr p) { return !!p && _pbase == p->GetInterfaceBase(); }
     virtual bool __ne__(PyInterfaceBasePtr p) { return !p || _pbase != p->GetInterfaceBase(); }
@@ -345,7 +345,7 @@ public:
             return boost::python::make_tuple(toPyVector3(linearvel),toPyVector3(angularvel));
         }
 
-        string __repr__() { return boost::str(boost::format("<env.GetKinBody('%s').GetLink('%s')>")%_plink->GetParent()->GetName()%_plink->GetName()); }
+        string __repr__() { return boost::str(boost::format("<RaveGetEnvironment(%d).GetKinBody('%s').GetLink('%s')>")%RaveGetEnvironmentId(_plink->GetParent()->GetEnv())%_plink->GetParent()->GetName()%_plink->GetName()); }
         string __str__() { return boost::str(boost::format("<link:%s (%d), parent=%s>")%_plink->GetName()%_plink->GetIndex()%_plink->GetParent()->GetName()); }
         bool __eq__(boost::shared_ptr<PyLink> p) { return !!p && _plink == p->_plink; }
         bool __ne__(boost::shared_ptr<PyLink> p) { return !p || _plink != p->_plink; }
@@ -449,7 +449,7 @@ public:
             return _pjoint->AddTorque(vtorques);
         }
         
-        string __repr__() { return boost::str(boost::format("<env.GetKinBody('%s').GetJoint('%s')>")%_pjoint->GetParent()->GetName()%_pjoint->GetName()); }
+        string __repr__() { return boost::str(boost::format("<RaveGetEnvironment(%d).GetKinBody('%s').GetJoint('%s')>")%RaveGetEnvironmentId(_pjoint->GetParent()->GetEnv())%_pjoint->GetParent()->GetName()%_pjoint->GetName()); }
         string __str__() { return boost::str(boost::format("<joint:%s (%d), dof=%d, parent=%s>")%_pjoint->GetName()%_pjoint->GetJointIndex()%_pjoint->GetDOFIndex()%_pjoint->GetParent()->GetName()); }
         bool __eq__(boost::shared_ptr<PyJoint> p) { return !!p && _pjoint==p->_pjoint; }
         bool __ne__(boost::shared_ptr<PyJoint> p) { return !p || _pjoint!=p->_pjoint; }
@@ -478,7 +478,7 @@ public:
         bool IsLocked() { return _pdata->IsLocked(); }
         bool Lock(bool bDoLock) { return _pdata->Lock(bDoLock); }
 
-        string __repr__() { return boost::str(boost::format("<env.GetKinBody('%s').GetManageData()>")%_pdata->GetOffsetLink()->GetParent()->GetName()); }
+        string __repr__() { return boost::str(boost::format("<RaveGetEnvironment(%d).GetKinBody('%s').GetManageData()>")%RaveGetEnvironmentId(_pdata->GetOffsetLink()->GetParent()->GetEnv())%_pdata->GetOffsetLink()->GetParent()->GetName()); }
         string __str__() {
             KinBody::LinkPtr plink = _pdata->GetOffsetLink();
             SensorSystemBasePtr psystem = _pdata->GetSystem();
@@ -1070,7 +1070,7 @@ public:
     PyVoidHandle CreateKinBodyStateSaver() { return PyVoidHandle(boost::shared_ptr<void>(new KinBody::KinBodyStateSaver(_pbody))); }
     PyVoidHandle CreateKinBodyStateSaver(int options) { return PyVoidHandle(boost::shared_ptr<void>(new KinBody::KinBodyStateSaver(_pbody, options))); }
 
-    virtual string __repr__() { return boost::str(boost::format("<env.GetKinBody('%s')>")%_pbody->GetName()); }
+    virtual string __repr__() { return boost::str(boost::format("<RaveGetEnvironment(%d).GetKinBody('%s')>")%RaveGetEnvironmentId(_pbody->GetEnv())%_pbody->GetName()); }
     virtual string __str__() { return boost::str(boost::format("<%s:%s - %s (%s)>")%RaveGetInterfaceName(_pbody->GetInterfaceType())%_pbody->GetXMLId()%_pbody->GetName()%_pbody->GetKinematicsGeometryHash()); }
     virtual void __enter__();
     virtual void __exit__(object type, object value, object traceback);
@@ -1405,7 +1405,7 @@ public:
 
     string GetName() { return _psensor->GetName(); }
     
-    virtual string __repr__() { return boost::str(boost::format("<env.GetSensor('%s')>")%_psensor->GetName()); }
+    virtual string __repr__() { return boost::str(boost::format("<RaveGetEnvironment(%d).GetSensor('%s')>")%RaveGetEnvironmentId(_psensor->GetEnv())%_psensor->GetName()); }
     virtual string __str__() { return boost::str(boost::format("<%s:%s - %s>")%RaveGetInterfaceName(_psensor->GetInterfaceType())%_psensor->GetXMLId()%_psensor->GetName()); }
 };
 
@@ -1710,7 +1710,7 @@ public:
 
         string GetStructureHash() const { return _pmanip->GetStructureHash(); }
         string GetKinematicsStructureHash() const { return _pmanip->GetKinematicsStructureHash(); }
-        string __repr__() { return boost::str(boost::format("<env.GetRobot('%s').GetManipulator('%s')>")%_pmanip->GetRobot()->GetName()%_pmanip->GetName()); }
+        string __repr__() { return boost::str(boost::format("<RaveGetEnvironment(%d).GetRobot('%s').GetManipulator('%s')>")%RaveGetEnvironmentId(_pmanip->GetRobot()->GetEnv())%_pmanip->GetRobot()->GetName()%_pmanip->GetName()); }
         string __str__() { return boost::str(boost::format("<manipulator:%s, parent=%s>")%_pmanip->GetName()%_pmanip->GetRobot()->GetName()); }
         bool __eq__(boost::shared_ptr<PyManipulator> p) { return !!p && _pmanip==p->_pmanip; }
         bool __ne__(boost::shared_ptr<PyManipulator> p) { return !p || _pmanip!=p->_pmanip; }
@@ -1746,7 +1746,7 @@ public:
 
         void SetRelativeTransform(object transform) { _pattached->SetRelativeTransform(ExtractTransform(transform)); }
         string GetStructureHash() const { return _pattached->GetStructureHash(); }
-        string __repr__() { return boost::str(boost::format("<env.GetRobot('%s').GetSensor('%s')>")%_pattached->GetRobot()->GetName()%_pattached->GetName()); }
+        string __repr__() { return boost::str(boost::format("<RaveGetEnvironment(%d).GetRobot('%s').GetSensor('%s')>")%RaveGetEnvironmentId(_pattached->GetRobot()->GetEnv())%_pattached->GetRobot()->GetName()%_pattached->GetName()); }
         string __str__() { return boost::str(boost::format("<attachedsensor:%s, parent=%s>")%_pattached->GetName()%_pattached->GetRobot()->GetName()); }
         bool __eq__(boost::shared_ptr<PyAttachedSensor> p) { return !!p && _pattached==p->_pattached; }
         bool __ne__(boost::shared_ptr<PyAttachedSensor> p) { return !p || _pattached!=p->_pattached; }
@@ -2089,7 +2089,7 @@ public:
     PyVoidHandle CreateRobotStateSaver() { return PyVoidHandle(boost::shared_ptr<void>(new RobotBase::RobotStateSaver(_probot))); }
     PyVoidHandle CreateRobotStateSaver(int options) { return PyVoidHandle(boost::shared_ptr<void>(new RobotBase::RobotStateSaver(_probot,options))); }
 
-    virtual string __repr__() { return boost::str(boost::format("<env.GetRobot('%s')>")%_probot->GetName()); }
+    virtual string __repr__() { return boost::str(boost::format("<RaveGetEnvironment(%d).GetRobot('%s')>")%RaveGetEnvironmentId(_probot->GetEnv())%_probot->GetName()); }
     virtual string __str__() { return boost::str(boost::format("<%s:%s - %s (%s)>")%RaveGetInterfaceName(_probot->GetInterfaceType())%_probot->GetXMLId()%_probot->GetName()%_probot->GetRobotStructureHash()); }
     virtual void __enter__();
 };
@@ -3413,6 +3413,8 @@ public:
 
     bool __eq__(PyEnvironmentBasePtr p) { return !!p && _penv==p->_penv; }
     bool __ne__(PyEnvironmentBasePtr p) { return !p || _penv!=p->_penv; }
+    string __repr__() { return boost::str(boost::format("<RaveGetEnvironment(%d)>")%RaveGetEnvironmentId(_penv)); }
+    string __str__() { return boost::str(boost::format("<env %d>")%RaveGetEnvironmentId(_penv)); }
 
     EnvironmentBasePtr GetEnv() const { return _penv; }
 };
@@ -4628,6 +4630,8 @@ In python, the syntax is::\n\n\
             .def("__exit__",&PyEnvironmentBase::__exit__)
             .def("__eq__",&PyEnvironmentBase::__eq__)
             .def("__ne__",&PyEnvironmentBase::__ne__)
+            .def("__repr__",&PyEnvironmentBase::__repr__)
+            .def("__str__",&PyEnvironmentBase::__str__)
             ;
 
         enum_<EnvironmentBase::TriangulateOptions>("TriangulateOptions" DOXY_ENUM(TriangulateOptions))

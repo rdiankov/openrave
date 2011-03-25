@@ -10,12 +10,14 @@
     </body>
   </KinBody>
   <!-- left arm -->
-  <Robot prefix="l_" file="robots/barrettwam.robot.xml">
+  <Robot>
+    <Robot prefix="l_" file="robots/barrettwam.robot.xml"></Robot>
     <RotationAxis>1 0 0 90</RotationAxis>
     <translation>0 -0.35 0.7</translation>
   </Robot>
   <!-- right arm -->
-  <Robot prefix="r_" file="robots/barrettwam.robot.xml">
+  <Robot>
+    <Robot prefix="r_" file="robots/barrettwam.robot.xml"></Robot>
     <RotationAxis>1 0 0 -90</RotationAxis>
     <translation>0 0.35 0.7</translation>
   </Robot>

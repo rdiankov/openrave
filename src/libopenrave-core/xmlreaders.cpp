@@ -383,10 +383,12 @@ namespace OpenRAVEXMLParser
     static void DefaultCharactersSAXFunc(void *ctx, const xmlChar *ch, int len)
     {
         XMLREADERDATA* pdata = (XMLREADERDATA*)ctx;
-        if( !!pdata->_pdummy )
+        if( !!pdata->_pdummy ) {
             pdata->_pdummy->characters(string((const char*)ch, len));
-        else
+        }
+        else {
             pdata->_preader->characters(string((const char*)ch, len));
+        }
     }
 
     static void RaveXMLErrorFunc(void *ctx, const char *msg, ...)
@@ -418,9 +420,9 @@ namespace OpenRAVEXMLParser
         if (ctxt == NULL)
             return false;
 #ifdef LIBXML_SAX1_ENABLED
-        if ((ctxt->sax) &&  (ctxt->sax->initialized == XML_SAX2_MAGIC) &&
-            ((ctxt->sax->startElementNs != NULL) ||
-             (ctxt->sax->endElementNs != NULL))) ctxt->sax2 = 1;
+        if ((ctxt->sax) &&  (ctxt->sax->initialized == XML_SAX2_MAGIC) && ((ctxt->sax->startElementNs != NULL) || (ctxt->sax->endElementNs != NULL))) {
+            ctxt->sax2 = 1;
+        }
 #else
         ctxt->sax2 = 1;
 #endif // LIBXML_SAX1_ENABLED
@@ -428,8 +430,9 @@ namespace OpenRAVEXMLParser
         ctxt->str_xml = xmlDictLookup(ctxt->dict, BAD_CAST "xml", 3);
         ctxt->str_xmlns = xmlDictLookup(ctxt->dict, BAD_CAST "xmlns", 5);
         ctxt->str_xml_ns = xmlDictLookup(ctxt->dict, XML_XML_NAMESPACE, 36);
-        if ((ctxt->str_xml==NULL) || (ctxt->str_xmlns==NULL) || (ctxt->str_xml_ns == NULL))
+        if ((ctxt->str_xml==NULL) || (ctxt->str_xmlns==NULL) || (ctxt->str_xml_ns == NULL)) {
             return false;
+        }
         return true;
     }
 
@@ -437,11 +440,13 @@ namespace OpenRAVEXMLParser
     {
         int ret = 0;
         xmlParserCtxtPtr ctxt;
-    
         ctxt = xmlCreateFileParserCtxt(filename.c_str());
-        if (ctxt == NULL) return -1;
-        if (ctxt->sax != (xmlSAXHandlerPtr) &xmlDefaultSAXHandler)
+        if (ctxt == NULL) {
+            return -1;
+        }
+        if (ctxt->sax != (xmlSAXHandlerPtr) &xmlDefaultSAXHandler) {
             xmlFree(ctxt->sax);
+        }
         ctxt->sax = sax;
         xmlDetectSAX2(ctxt);
 
@@ -450,22 +455,25 @@ namespace OpenRAVEXMLParser
 
         xmlParseDocument(ctxt);
     
-        if (ctxt->wellFormed)
+        if (ctxt->wellFormed) {
             ret = 0;
-        else {
-            if (ctxt->errNo != 0)
-                ret = ctxt->errNo;
-            else
-                ret = -1;
         }
-        if (sax != NULL)
+        else {
+            if (ctxt->errNo != 0) {
+                ret = ctxt->errNo;
+            }
+            else {
+                ret = -1;
+            }
+        }
+        if (sax != NULL) {
             ctxt->sax = NULL;
+        }
         if (ctxt->myDoc != NULL) {
             xmlFreeDoc(ctxt->myDoc);
             ctxt->myDoc = NULL;
         }
         xmlFreeParserCtxt(ctxt);
-    
         return ret;
     }
 
@@ -475,33 +483,37 @@ namespace OpenRAVEXMLParser
         xmlParserCtxtPtr ctxt;
     
         ctxt = xmlCreateMemoryParserCtxt(buffer, size);
-        if (ctxt == NULL) return -1;
-        if (ctxt->sax != (xmlSAXHandlerPtr) &xmlDefaultSAXHandler)
+        if (ctxt == NULL) {
+            return -1;
+        }
+        if (ctxt->sax != (xmlSAXHandlerPtr) &xmlDefaultSAXHandler) {
             xmlFree(ctxt->sax);
+        }
         ctxt->sax = sax;
         xmlDetectSAX2(ctxt);
 
         XMLREADERDATA reader(preader, ctxt);
         ctxt->userData = &reader;
-    
         xmlParseDocument(ctxt);
-    
-        if (ctxt->wellFormed)
+        if (ctxt->wellFormed) {
             ret = 0;
-        else {
-            if (ctxt->errNo != 0)
-                ret = ctxt->errNo;
-            else
-                ret = -1;
         }
-        if (sax != NULL)
+        else {
+            if (ctxt->errNo != 0) {
+                ret = ctxt->errNo;
+            }
+            else {
+                ret = -1;
+            }
+        }
+        if (sax != NULL) {
             ctxt->sax = NULL;
+        }
         if (ctxt->myDoc != NULL) {
             xmlFreeDoc(ctxt->myDoc);
             ctxt->myDoc = NULL;
         }
         xmlFreeParserCtxt(ctxt);
-    
         return ret;
     }
 
@@ -1685,7 +1697,8 @@ namespace OpenRAVEXMLParser
     class InterfaceXMLReader : public StreamXMLReader
     {
     public:
-    InterfaceXMLReader(EnvironmentBasePtr penv, InterfaceBasePtr& pinterface, InterfaceType type, const string& xmltag, const AttributesList& atts) : _penv(penv), _type(type), _pinterface(pinterface), _xmltag(xmltag) {
+        InterfaceXMLReader(EnvironmentBasePtr penv, InterfaceBasePtr& pinterface, InterfaceType type, const string& xmltag, const AttributesList& atts) : _penv(penv), _type(type), _pinterface(pinterface), _xmltag(xmltag) {
+            _bProcessedLastTag = false;
             string strtype;
             FOREACHC(itatt,atts) {
                 if( itatt->first == "type" ) {
@@ -1863,8 +1876,13 @@ namespace OpenRAVEXMLParser
                 }
                 _interfaceprocessingtag.resize(0);
             }
-            else if( xmlname == _xmltag )
+            else if( xmlname == _xmltag ) {
+                if( _bProcessedLastTag ) {
+                    RAVELOG_WARN(str(boost::format("already processed last tag for %s!\n")%xmlname));
+                }
+                _bProcessedLastTag = true;
                 return true;
+            }
             return false;
         }
 
@@ -1890,13 +1908,14 @@ namespace OpenRAVEXMLParser
         BaseXMLReaderPtr _pcustomreader;
         string _xmltag, _interfaceprocessingtag;
         string _interfacename, _readername;
+        bool _bProcessedLastTag;
     };
     /// KinBody reader
     /// reads kinematic chain specific entries, can instantiate this reader from another reader
     class KinBodyXMLReader : public InterfaceXMLReader
     {
     public:
-        KinBodyXMLReader(EnvironmentBasePtr penv, InterfaceBasePtr& pchain, InterfaceType type, const AttributesList& atts, int rootoffset, int rootjoffset, int rootjpoffset) : InterfaceXMLReader(penv,pchain,type,"kinbody",atts), rootoffset(rootoffset), rootjoffset(rootjoffset), rootjpoffset(rootjpoffset) {
+        KinBodyXMLReader(EnvironmentBasePtr penv, InterfaceBasePtr& pchain, InterfaceType type, const AttributesList& atts) : InterfaceXMLReader(penv,pchain,type,"kinbody",atts) {
             _bSkipGeometry = false;
             _pchain = RaveInterfaceCast<KinBody>(_pinterface);
             _masstype = LinkXMLReader::MT_None;
@@ -1923,7 +1942,10 @@ namespace OpenRAVEXMLParser
                     RAVELOG_WARN(str(boost::format("unknown kinbody attribute %s\n")%itatt->first));
                 }
             }
-
+            rootoffset = (int)_pchain->GetLinks().size();
+            rootjoffset = (int)_pchain->GetJoints().size();
+            rootjpoffset = (int)_pchain->GetPassiveJoints().size();
+            //RAVELOG_INFO(str(boost::format("links: %d, prefix: %s: %x\n")%_pchain->GetLinks().size()%_prefix%this));
             // reisze _vTransforms to be the same size as the initial number of links
             _pchain->GetBodyTransformations(_vTransforms);
             _pchain->SetGuiData(UserDataPtr());
@@ -2186,6 +2208,7 @@ namespace OpenRAVEXMLParser
 
                 // add prefix
                 if( _prefix.size() > 0 ) {
+                    //RAVELOG_INFO("write prefix: links: %d-%d, 0x%x\n",rootoffset,(int)_pchain->_veclinks.size(),this);
                     for(vector<KinBody::LinkPtr>::iterator itlink = _pchain->_veclinks.begin()+rootoffset; itlink != _pchain->_veclinks.end(); ++itlink) {
                         (*itlink)->_name = _prefix + (*itlink)->_name;
                     }
@@ -2696,7 +2719,7 @@ namespace OpenRAVEXMLParser
     class RobotXMLReader : public InterfaceXMLReader
     {
     public:
-        RobotXMLReader(EnvironmentBasePtr penv, InterfaceBasePtr& probot, const AttributesList& atts, int rootoffset, int rootjoffset, int rootjpoffset, int rootsoffset, int rootmoffset) : InterfaceXMLReader(penv,probot,PT_Robot,"robot",atts), rootoffset(rootoffset), rootjoffset(rootjoffset), rootjpoffset(rootjpoffset), rootsoffset(rootsoffset), rootmoffset(rootmoffset) {
+        RobotXMLReader(EnvironmentBasePtr penv, InterfaceBasePtr& probot, const AttributesList& atts) : InterfaceXMLReader(penv,probot,PT_Robot,"robot",atts) {
             _probot = RaveInterfaceCast<RobotBase>(_pinterface);
             _bSkipGeometry = false;
             FOREACHC(itatt, atts) {
@@ -2710,12 +2733,14 @@ namespace OpenRAVEXMLParser
                     _bSkipGeometry = stricmp(itatt->second.c_str(), "true") == 0 || itatt->second=="1";
                 }
             }
-            if( !!_probot ) {
-                curmoffset = _probot->GetManipulators().size();
-                cursoffset = _probot->GetAttachedSensors().size();
+            rootoffset = (int)_probot->GetLinks().size();
+            rootjoffset = (int)_probot->GetJoints().size();
+            rootjpoffset = (int)_probot->GetPassiveJoints().size();
+            FOREACH(itmanip,_probot->GetManipulators()) {
+                _setInitialManipulators.insert(*itmanip);
             }
-            else {
-                curmoffset = cursoffset = 0;
+            FOREACH(itsensor,_probot->GetAttachedSensors()) {
+                _setInitialSensors.insert(*itsensor);
             }
         }
 
@@ -2823,19 +2848,29 @@ namespace OpenRAVEXMLParser
                 }
 
                 // put the sensors and manipulators in front of what was declared. this is necessary so that user-based manipulator definitions come before the pre-defined ones.
-                if( cursoffset > 0 && cursoffset < _probot->GetAttachedSensors().size() ) {
-                    size_t prevsize = _probot->GetAttachedSensors().size();
-                    std::vector<RobotBase::AttachedSensorPtr> vtemp(_probot->GetAttachedSensors().begin()+cursoffset,_probot->GetAttachedSensors().end());
-                    vtemp.insert(vtemp.end(),_probot->GetAttachedSensors().begin(),_probot->GetAttachedSensors().begin()+cursoffset);
+                if( _setInitialSensors.size() > 0 ) {
+                    std::vector<RobotBase::AttachedSensorPtr> vtemp; vtemp.reserve(_probot->GetAttachedSensors().size());
+                    FOREACH(itsensor,_probot->GetAttachedSensors()) {
+                        if( _setInitialSensors.find(*itsensor) == _setInitialSensors.end() ) {
+                            vtemp.insert(vtemp.begin(),*itsensor);
+                        }
+                        else {
+                            vtemp.push_back(*itsensor);
+                        }
+                    }
                     _probot->GetAttachedSensors().swap(vtemp);
-                    _probot->GetAttachedSensors().resize(prevsize);
                 }
-                if( curmoffset > 0 && curmoffset < _probot->GetManipulators().size() ) {
-                    size_t prevsize = _probot->GetManipulators().size();
-                    std::vector<RobotBase::ManipulatorPtr> vtemp(_probot->GetManipulators().begin()+curmoffset,_probot->GetManipulators().end());
-                    vtemp.insert(vtemp.end(),_probot->GetManipulators().begin(),_probot->GetManipulators().begin()+curmoffset);
+                if( _setInitialManipulators.size() > 0 ) {
+                    std::vector<RobotBase::ManipulatorPtr> vtemp; vtemp.reserve(_probot->GetManipulators().size());
+                    FOREACH(itmanip,_probot->GetManipulators()) {
+                        if( _setInitialManipulators.find(*itmanip) == _setInitialManipulators.end() ) {
+                            vtemp.insert(vtemp.begin(),*itmanip);
+                        }
+                        else {
+                            vtemp.push_back(*itmanip);
+                        }
+                    }
                     _probot->GetManipulators().swap(vtemp);
-                    _probot->GetManipulators().resize(prevsize);
                 }
 
                 // add prefix
@@ -2874,16 +2909,18 @@ namespace OpenRAVEXMLParser
                             }
                         }
                     }
-                    vector<RobotBase::AttachedSensorPtr>::iterator itsensor = _probot->GetAttachedSensors().begin();
-                    for(int isensor = rootsoffset; isensor < (int)_probot->GetAttachedSensors().size(); ++isensor, ++itsensor) {
-                        (*itsensor)->_name = _prefix + (*itsensor)->_name;
-                    }
-                    vector<RobotBase::ManipulatorPtr>::iterator itmanip = _probot->GetManipulators().begin();
-                    for(int imanip = rootmoffset; imanip < (int)_probot->GetManipulators().size(); ++imanip, ++itmanip) {
-                        (*itmanip)->_name = _prefix + (*itmanip)->_name;
-                        FOREACH(itgrippername,(*itmanip)->_vgripperjointnames) {
-                            *itgrippername = _prefix + *itgrippername;
+                    FOREACH(itsensor, _probot->GetAttachedSensors()) {
+                        if( _setInitialSensors.find(*itsensor) == _setInitialSensors.end() ) {
+                            (*itsensor)->_name = _prefix + (*itsensor)->_name;
                         }
+                    }
+                    FOREACH(itmanip,_probot->GetManipulators()) {
+                        if( _setInitialManipulators.find(*itmanip) == _setInitialManipulators.end()) {
+                            (*itmanip)->_name = _prefix + (*itmanip)->_name;
+                            FOREACH(itgrippername,(*itmanip)->_vgripperjointnames) {
+                                *itgrippername = _prefix + *itgrippername;
+                            }
+                        }                
                     }
                 }
         
@@ -2928,10 +2965,8 @@ namespace OpenRAVEXMLParser
         bool _bSkipGeometry;
         int rootoffset;                 ///< the initial number of links when Robot is created (so that global translations and rotations only affect the new links)
         int rootjoffset, rootjpoffset; ///< the initial number of joints when Robot is created
-        int rootsoffset; ///< the initial number of attached sensors when Robot is created
-        int rootmoffset; ///< the initial number of manipulators when Robot is created
-        size_t curmoffset; ///< initial number of manipulators for current xml reader
-        size_t cursoffset; ///< initial number of manipulators for current xml reader
+        std::set<RobotBase::ManipulatorPtr> _setInitialManipulators;
+        std::set<RobotBase::AttachedSensorPtr> _setInitialSensors;
     };
 
     template <InterfaceType type> class DummyInterfaceXMLReader : public InterfaceXMLReader
@@ -3257,34 +3292,12 @@ namespace OpenRAVEXMLParser
     {
         switch(type) {
         case PT_Planner: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_Planner>(penv,pinterface,xmltag,atts));
-        case PT_Robot: {
-            RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pinterface);
-            int rootoffset = 0, rootjoffset = 0, rootjpoffset = 0, rootsoffset = 0, rootmoffset = 0;
-            if( !!probot ) {
-                rootoffset = (int)probot->GetLinks().size();
-                rootjoffset = (int)probot->GetJoints().size();
-                rootjpoffset = (int)probot->GetPassiveJoints().size();
-                rootsoffset = (int)probot->GetAttachedSensors().size();
-                rootmoffset = (int)probot->GetManipulators().size();
-            }
-            return InterfaceXMLReaderPtr(new RobotXMLReader(penv,pinterface,atts,rootoffset,rootjoffset,rootjpoffset, rootsoffset,rootmoffset));
-        }
+        case PT_Robot: return InterfaceXMLReaderPtr(new RobotXMLReader(penv,pinterface,atts));
         case PT_SensorSystem: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_SensorSystem>(penv,pinterface,xmltag,atts));
         case PT_Controller: return InterfaceXMLReaderPtr(new ControllerXMLReader(penv,pinterface,atts));
         case PT_ProblemInstance: return InterfaceXMLReaderPtr(new ProblemXMLReader(penv,pinterface,atts));
         case PT_InverseKinematicsSolver: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_InverseKinematicsSolver>(penv,pinterface,xmltag,atts));
-        case PT_KinBody: {
-            KinBodyPtr pbody = RaveInterfaceCast<KinBody>(pinterface);
-            int rootoffset = 0, rootjoffset = 0, rootjpoffset = 0;
-            if( !!pbody ) {
-                vector<Transform> vTransforms;
-                pbody->GetBodyTransformations(vTransforms);
-                rootoffset = vTransforms.size();
-                rootjoffset = (int)pbody->GetJoints().size();
-                rootjpoffset = (int)pbody->GetPassiveJoints().size();
-            }
-            return InterfaceXMLReaderPtr(new KinBodyXMLReader(penv,pinterface,type,atts,rootoffset,rootjoffset, rootjpoffset));
-        }
+        case PT_KinBody: return InterfaceXMLReaderPtr(new KinBodyXMLReader(penv,pinterface,type,atts));
         case PT_PhysicsEngine: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_PhysicsEngine>(penv,pinterface,xmltag,atts));
         case PT_Sensor: return InterfaceXMLReaderPtr(new SensorXMLReader(penv,pinterface,atts));
         case PT_CollisionChecker: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_CollisionChecker>(penv,pinterface,xmltag,atts));
