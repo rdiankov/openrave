@@ -231,16 +231,16 @@ class ColladaReader : public daeErrorHandler
         _setInitialManipulators.clear();
         _setInitialSensors.clear();
         if( !!probot ) {
-            FOREACH(itlink,probot->GetLinks()) {
+            FOREACH(itlink,probot->_veclinks) {
                 _setInitialLinks.insert(*itlink);
             }
-            FOREACH(itjoint,probot->GetJoints()) {
+            FOREACH(itjoint,probot->_vecjoints) {
                 _setInitialJoints.insert(*itjoint);
             }
-            FOREACH(itmanip,probot->GetManipulators()) {
+            FOREACH(itmanip,probot->_vecManipulators) {
                 _setInitialManipulators.insert(*itmanip);
             }
-            FOREACH(itsensor,probot->GetAttachedSensors()) {
+            FOREACH(itsensor,probot->_vecSensors) {
                 _setInitialSensors.insert(*itsensor);
             }
         }
@@ -279,17 +279,17 @@ class ColladaReader : public daeErrorHandler
 
         if( bSuccess ) {
             if( _prefix.size() > 0 ) {
-                FOREACH(itlink,probot->GetLinks()) {
+                FOREACH(itlink,probot->_veclinks) {
                     if( _setInitialLinks.find(*itlink) == _setInitialLinks.end()) {
                         (*itlink)->_name = _prefix + (*itlink)->_name;
                     }
                 }
-                FOREACH(itjoint,probot->GetJoints()) {
+                FOREACH(itjoint,probot->_vecjoints) {
                     if( _setInitialJoints.find(*itjoint) == _setInitialJoints.end()) {
                         (*itjoint)->_name = _prefix + (*itjoint)->_name;
                     }
                 }
-                FOREACH(itmanip,probot->GetManipulators()) {
+                FOREACH(itmanip,probot->_vecManipulators) {
                     if( _setInitialManipulators.find(*itmanip) == _setInitialManipulators.end()) {
                         (*itmanip)->_name = _prefix + (*itmanip)->_name;
                         FOREACH(itgrippername,(*itmanip)->_vgripperjointnames) {
@@ -297,7 +297,7 @@ class ColladaReader : public daeErrorHandler
                         }
                     }
                 }
-                FOREACH(itsensor, probot->GetAttachedSensors()) {
+                FOREACH(itsensor, probot->_vecSensors) {
                     if( _setInitialSensors.find(*itsensor) == _setInitialSensors.end() ) {
                         (*itsensor)->_name = _prefix + (*itsensor)->_name;
                     }
@@ -317,10 +317,10 @@ class ColladaReader : public daeErrorHandler
         _setInitialLinks.clear();
         _setInitialJoints.clear();
         if( !!pbody ) {
-            FOREACH(itlink,pbody->GetLinks()) {
+            FOREACH(itlink,pbody->_veclinks) {
                 _setInitialLinks.insert(*itlink);
             }
-            FOREACH(itjoint,pbody->GetJoints()) {
+            FOREACH(itjoint,pbody->_vecjoints) {
                 _setInitialJoints.insert(*itjoint);
             }
         }
@@ -362,12 +362,12 @@ class ColladaReader : public daeErrorHandler
 
         if( bSuccess ) {
             if( _prefix.size() > 0 ) {
-                FOREACH(itlink,pbody->GetLinks()) {
+                FOREACH(itlink,pbody->_veclinks) {
                     if( _setInitialLinks.find(*itlink) == _setInitialLinks.end()) {
                         (*itlink)->_name = _prefix + (*itlink)->_name;
                     }
                 }
-                FOREACH(itjoint,pbody->GetJoints()) {
+                FOREACH(itjoint,pbody->_vecjoints) {
                     if( _setInitialJoints.find(*itjoint) == _setInitialJoints.end()) {
                         (*itjoint)->_name = _prefix + (*itjoint)->_name;
                     }
