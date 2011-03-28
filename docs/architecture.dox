@@ -894,7 +894,7 @@ GetSensorData(). Usually the data can be very heavy, especially when a sensor's 
 so data rendering is turned off by default. If the power is off, data should not be rendered. To
 configure this, use the SensorBase::CC_RenderGeometryX commands.
 
-Check out the <a href="../main/plugins.html#basesensors"basesensors</a> plugin for an example of how
+Check out the <a href="../main/plugins.html#basesensors">basesensors</a> plugin for an example of how
 to implement a basic laser range and camera sensors.
 
 */
