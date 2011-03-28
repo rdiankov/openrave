@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2010 Rosen Diankov (rdiankov@cs.cmu.edu)
+// Copyright (C) 2006-2011 Rosen Diankov (rdiankov@cs.cmu.edu)
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
@@ -63,7 +63,7 @@ protected:
                 ss >> _psensor->_pgeom->max_range;
             }
             else if( name == "scantime" ) {
-                ss >> _psensor->fScanTime;
+                ss >> _psensor->_pgeom->time_scan;
             }
             else if( name == "color" ) {
                 ss >> _psensor->_vColor.x >> _psensor->_vColor.y >> _psensor->_vColor.z;
@@ -133,49 +133,64 @@ public:
         _pdata.reset(new LaserSensorData());
         _report.reset(new CollisionReport());
 
-        _bRender = false;
+        _bRenderData = false;
+        _bRenderGeometry = true;
+        _bPower = false;
         _pgeom->min_angle[0] = -PI/2; _pgeom->min_angle[1] = 0;
         _pgeom->max_angle[0] = PI/2; _pgeom->max_angle[1] = 0;
         _pgeom->max_range = 100;
         _pgeom->KK.fx = 500; _pgeom->KK.fy = 500; _pgeom->KK.cx = 250; _pgeom->KK.cy = 250;
         _pgeom->width = 64; _pgeom->height = 64;
-        fTimeToScan = 0;
+        _fTimeToScan = 0;
         _vColor = RaveVector<float>(0.5f,0.5f,1,1);
+        _Reset();
     }
-    ~BaseFlashLidar3DSensor() { Reset(0); }
-    
-    virtual bool Init(const string& args)
+
+    virtual int Configure(ConfigureCommand command, bool blocking)
     {
-        _iKK[0] = 1.0f / _pgeom->KK.fx;
-        _iKK[1] = 1.0f / _pgeom->KK.fy;
-        _iKK[2] = -_pgeom->KK.cx / _pgeom->KK.fx;
-        _iKK[3] = -_pgeom->KK.cy / _pgeom->KK.fy;
+        switch(command) {
+        case CC_PowerOn:
+            _bPower = true;
+            return _bPower;
+        case CC_PowerOff:
+            _bPower = false;
+            _Reset();
+            return _bPower;
+        case CC_PowerCheck:
+            return _bPower;
+        case CC_RenderDataOn:
+            _bRenderData = true;
+            return _bRenderData;
+        case CC_RenderDataOff: {
+            boost::mutex::scoped_lock lock(_mutexdata);
+            _listGraphicsHandles.clear();
+            _bRenderData = false;
+            return _bRenderData;
+        }
+        case CC_RenderDataCheck:
+            return _bRenderData;
+        case CC_RenderGeometryOn:
+            _bRenderGeometry = true;
+            _RenderGeometry();
+            return _bRenderData;
+        case CC_RenderGeometryOff: {
+            boost::mutex::scoped_lock lock(_mutexdata);
+            _graphgeometry.reset();
+            _bRenderGeometry = false;
+            return _bRenderData;
+        }
+        case CC_RenderGeometryCheck:
+            return _bRenderGeometry;
+        }
+        throw openrave_exception(str(boost::format("SensorBase::Configure: unknown command 0x%x")%command));
+    }
     
-        Reset(0);
-
-        return true;
-    }
-    virtual void Reset(int options)
-    {
-        _listGraphicsHandles.clear();
-        _iconhandle.reset();
-
-        _pdata->positions.clear();
-        _pdata->ranges.resize(_pgeom->width*_pgeom->height);
-        _pdata->intensity.resize(_pgeom->width*_pgeom->height);
-        _databodyids.resize(_pgeom->width*_pgeom->height);
-
-        FOREACH(it, _pdata->ranges)
-            *it = Vector(0,0,0);
-        FOREACH(it, _pdata->intensity)
-            *it = 0;
-    }
-
     virtual bool SimulationStep(dReal fTimeElapsed)
     {
-        fTimeToScan -= fTimeElapsed;
-        if( fTimeToScan <= 0 ) {
-            fTimeToScan = fScanTime;
+        _RenderGeometry();
+        _fTimeToScan -= fTimeElapsed;
+        if( _fTimeToScan <= 0 && _bPower ) {
+            _fTimeToScan = _pgeom->time_scan;
 
             RAY r;
     
@@ -223,7 +238,7 @@ public:
 
             GetEnv()->GetCollisionChecker()->SetCollisionOptions(0);
     
-            if( _bRender ) {
+            if( _bRenderData ) {
 
                 // If can render, check if some time passed before last update
                 list<GraphHandlePtr> listhandles;
@@ -303,7 +318,7 @@ public:
 
     bool _Render(ostream& sout, istream& sinput)
     {
-        sinput >> _bRender;
+        sinput >> _bRenderData;
         return !!sinput;
     }
     bool _CollidingBodies(ostream& sout, istream& sinput)
@@ -318,10 +333,54 @@ public:
     virtual void SetTransform(const Transform& trans)
     {
         _trans = trans;
+    }
+
+    virtual Transform GetTransform() { return _trans; }
+
+    virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions)
+    {
+        SensorBase::Clone(preference,cloningoptions);
+        boost::shared_ptr<BaseFlashLidar3DSensor const> r = boost::dynamic_pointer_cast<BaseFlashLidar3DSensor const>(preference);
+        *_pgeom = *r->_pgeom;
+        _vColor = r->_vColor;
+        std::copy(&r->_iKK[0],&r->_iKK[4],&_iKK[0]);
+        _trans = r->_trans;
+        _fTimeToScan = r->_fTimeToScan;
+        _bRenderGeometry = r->_bRenderGeometry;
+        _bRenderData = r->_bRenderData;
+        _bPower = r->_bPower;
+        _Reset();
+    }
+
+protected:
+    virtual void _Reset()
+    {
+        _iKK[0] = 1.0f / _pgeom->KK.fx;
+        _iKK[1] = 1.0f / _pgeom->KK.fy;
+        _iKK[2] = -_pgeom->KK.cx / _pgeom->KK.fx;
+        _iKK[3] = -_pgeom->KK.cy / _pgeom->KK.fy;
+        _listGraphicsHandles.clear();
+        _pdata->positions.clear();
+        _pdata->ranges.resize(_pgeom->width*_pgeom->height);
+        _pdata->intensity.resize(_pgeom->width*_pgeom->height);
+        _databodyids.resize(_pgeom->width*_pgeom->height);
+        FOREACH(it, _pdata->ranges) {
+            *it = Vector(0,0,0);
+        }
+        FOREACH(it, _pdata->intensity) {
+            *it = 0;
+        }
+    }
+
+    void _RenderGeometry()
+    {
+        if( !_bRenderGeometry ) {
+            return;
+        }
         Transform t = GetTransform();
-        if( !_iconhandle ) {
-            viconpoints.resize(5);
-            viconindices.resize(6*3);
+        if( !_graphgeometry ) {
+            vector<RaveVector<float> > viconpoints(5);
+            vector<int> viconindices(6*3);
             viconpoints[0] = Vector(0,0,0);
             viconpoints[1] = 0.1f*Vector(_iKK[2], _iKK[3],1);
             viconpoints[2] = 0.1f*Vector(_iKK[2], (float)_pgeom->height*_iKK[1] + _iKK[3],1);
@@ -338,35 +397,28 @@ public:
             RaveVector<float> vcolor = _vColor*0.5f;
             vcolor.w = 0.7f;
 
-            _iconhandle = GetEnv()->drawtrimesh(viconpoints[0], sizeof(viconpoints[0]), &viconindices[0], 6, vcolor);
+            _graphgeometry = GetEnv()->drawtrimesh(viconpoints[0], sizeof(viconpoints[0]), &viconindices[0], 6, vcolor);
         }
-        if( !!_iconhandle ) {
-            _iconhandle->SetTransform(t);
+        if( !!_graphgeometry ) {
+            _graphgeometry->SetTransform(t);
         }
     }
-
-    virtual Transform GetTransform() { return _trans; }
-
-protected:
 
     boost::shared_ptr<BaseFlashLidar3DGeom> _pgeom;
     boost::shared_ptr<LaserSensorData> _pdata;
     vector<int> _databodyids; ///< if non 0, for each point in _data, specifies the body that was hit
     CollisionReportPtr _report;
     // more geom stuff
-    dReal _fGeomMinRange;
     RaveVector<float> _vColor;
     float _iKK[4]; // inverse of KK
 
     Transform _trans;
     list<GraphHandlePtr> _listGraphicsHandles;
-    GraphHandlePtr _iconhandle;
-    vector<RaveVector<float> > viconpoints;
-    vector<int> viconindices;
-    dReal fTimeToScan, fScanTime;
+    GraphHandlePtr _graphgeometry;
+    dReal _fTimeToScan;
 
     boost::mutex _mutexdata;
-    bool _bRender;
+    bool _bRenderData, _bRenderGeometry, _bPower;
 
     friend class BaseFlashLidar3DXMLReader;
 };

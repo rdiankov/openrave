@@ -1,4 +1,4 @@
-// Copyright (C) 2006-2008 Rosen Diankov (rdiankov@cs.cmu.edu), Carnegie Mellon University
+// Copyright (C) 2006-2011 Rosen Diankov (rdiankov@cs.cmu.edu), Carnegie Mellon University
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
@@ -109,77 +109,67 @@ class BaseCameraSensor : public SensorBase
         _bPower = false;
         _vColor = RaveVector<float>(0.5f,0.5f,1,1);
         framerate = 5;
-        _bUpdateCameraPlot = true;
+        _bRenderGeometry = true;
+        _bRenderData = false;
+        _Reset();
     }
     
-    ~BaseCameraSensor() {
-        Reset(0);
-    }
-    
-    virtual bool Init(const string& args)
+    virtual int Configure(ConfigureCommand command, bool blocking)
     {
-        Reset(0);
-        return true;
+        switch(command) {
+        case CC_PowerOn:
+            _bPower = true;
+            return _bPower;
+        case CC_PowerOff:
+            _bPower = false;
+            _Reset();
+            return _bPower;
+        case CC_PowerCheck:
+            return _bPower;
+        case CC_RenderDataOn:
+            _bRenderData = true;
+            return _bRenderData;
+        case CC_RenderDataOff: {
+            boost::mutex::scoped_lock lock(_mutexdata);
+            _bRenderData = false;
+            return _bRenderData;
+        }
+        case CC_RenderDataCheck:
+            return _bRenderData;
+        case CC_RenderGeometryOn:
+            _bRenderGeometry = true;
+            _RenderGeometry();
+            return _bRenderData;
+        case CC_RenderGeometryOff: {
+            boost::mutex::scoped_lock lock(_mutexdata);
+            _graphgeometry.reset();
+            _bRenderGeometry = false;
+            return _bRenderData;
+        }
+        case CC_RenderGeometryCheck:
+            return _bRenderGeometry;
+        }
+        throw openrave_exception(str(boost::format("SensorBase::Configure: unknown command 0x%x")%command));
     }
 
-    virtual void Reset(int options)
+    virtual void _Reset()
     {
-        _iconhandle.reset();
         _pdata->vimagedata.resize(0);
         _pdata->__stamp = 0;
         _vimagedata.resize(3*_pgeom->width*_pgeom->height);
-        fTimeToImage = 0;
-        _bUpdateCameraPlot = true;
+        _fTimeToImage = 0;
+        _graphgeometry.reset();
     }
     
     virtual bool SimulationStep(dReal fTimeElapsed)
     {
         boost::shared_ptr<CameraSensorData> pdata = _pdata;
 
-        if( _bUpdateCameraPlot ) {            
-            if( !_iconhandle ) {
-                // render a simple frustum outlining camera's dimension
-                // the frustum is colored with vColor, the x and y axes are colored separetely
-                Vector points[7];
-                float ik0 = 1/_pgeom->KK.fx, ik1 = 1/_pgeom->KK.fy;
-                points[0] = Vector(0,0,0);
-                points[1] = Vector(((float)_pgeom->width-_pgeom->KK.cx)*ik0, ((float)_pgeom->height-_pgeom->KK.cy)*ik1, 1);
-                points[2] = Vector(-_pgeom->KK.cx*ik0, ((float)_pgeom->height-_pgeom->KK.cy)*ik1, 1);
-                points[3] = Vector(-_pgeom->KK.cx*ik0, -_pgeom->KK.cy*ik1, 1);
-                points[4] = Vector(((float)_pgeom->width-_pgeom->KK.cx)*ik0, -_pgeom->KK.cy*ik1, 1);
-                points[5] = Vector(0.5f,0,0);
-                points[6] = Vector(0,0.5f,0);
-
-                boost::array<int,16> inds = {{0,1,2,3,4,1,4,0,2,3,0,0,5,0,0,6}};
-
-                viconpoints.resize(inds.size());
-                vector<float> vcolors(inds.size()*3);
-
-                for(size_t i = 0; i < inds.size(); ++i) {
-                    viconpoints[i] = 0.02*points[inds[i]];
-                    vcolors[3*i+0] = _vColor.x;
-                    vcolors[3*i+1] = _vColor.y;
-                    vcolors[3*i+2] = _vColor.z;
-                }
-
-                float xaxis[3] = {1,0,0};
-                float yaxis[3] = {0,1,0};
-                float* pstart = &vcolors[vcolors.size()-3*5];
-                for(int i = 0; i < 3; ++i) {
-                    pstart[i] = pstart[3+i] = pstart[6+i] = xaxis[i];
-                    pstart[9+i] = pstart[12+i] = yaxis[i];
-                }
-                _iconhandle = GetEnv()->drawlinestrip(viconpoints[0], viconpoints.size(), sizeof(viconpoints[0]), 1, &vcolors[0]);
-            }
-            if( !!_iconhandle ) {
-                _iconhandle->SetTransform(_trans);
-            }
-        }
-
+        _RenderGeometry();
         if( _pgeom->width > 0 && _pgeom->height > 0 && _bPower) {
-            fTimeToImage -= fTimeElapsed;
-            if( fTimeToImage <= 0 ) {
-                fTimeToImage = 1 / (float)framerate;
+            _fTimeToImage -= fTimeElapsed;
+            if( _fTimeToImage <= 0 ) {
+                _fTimeToImage = 1 / (float)framerate;
                 GetEnv()->UpdatePublishedBodies();
                 if( !!GetEnv()->GetViewer() ) {
                     if( GetEnv()->GetViewer()->GetCameraImage(_vimagedata, _pgeom->width, _pgeom->height, _trans, _pgeom->KK) ) {
@@ -239,7 +229,7 @@ class BaseCameraSensor : public SensorBase
     }
     bool _Render(ostream& sout, istream& sinput)
     {
-        sinput >> _bUpdateCameraPlot;
+        sinput >> _bRenderGeometry;
         return !!sinput;
     }
     bool _SetIntrinsic(ostream& sout, istream& sinput)
@@ -251,7 +241,7 @@ class BaseCameraSensor : public SensorBase
     {
         sinput >> _pgeom->width >> _pgeom->height;
         if( !!sinput ) {
-            Reset(0);
+            _Reset();
             return true;
         }
         return false;
@@ -260,26 +250,70 @@ class BaseCameraSensor : public SensorBase
     virtual void SetTransform(const Transform& trans)
     {
         _trans = trans;
-        _bUpdateCameraPlot = true;
     }
 
     virtual Transform GetTransform() { return _trans; }
 
-    virtual bool Clone(InterfaceBaseConstPtr preference, int cloningoptions)
+    virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     {
+        SensorBase::Clone(preference,cloningoptions);
         boost::shared_ptr<BaseCameraSensor const> r = boost::dynamic_pointer_cast<BaseCameraSensor const>(preference);
         *_pgeom = *r->_pgeom;
         _vColor = r->_vColor;
         _trans = r->_trans;
-        fTimeToImage = r->fTimeToImage;
+        _fTimeToImage = r->_fTimeToImage;
         framerate = r->framerate;
-        _bUpdateCameraPlot = r->_bUpdateCameraPlot;
+        _bRenderGeometry = r->_bRenderGeometry;
+        _bRenderData = r->_bRenderData;
         _bPower = r->_bPower;
-        Reset(0);
-        return true;
+        _Reset();
     }
 
  protected:
+    void _RenderGeometry()
+    {
+        if( !_bRenderGeometry ) {
+            return;
+        }
+        if( !_graphgeometry ) {
+            // render a simple frustum outlining camera's dimension
+            // the frustum is colored with vColor, the x and y axes are colored separetely
+            Vector points[7];
+            float ik0 = 1/_pgeom->KK.fx, ik1 = 1/_pgeom->KK.fy;
+            points[0] = Vector(0,0,0);
+            points[1] = Vector(((float)_pgeom->width-_pgeom->KK.cx)*ik0, ((float)_pgeom->height-_pgeom->KK.cy)*ik1, 1);
+            points[2] = Vector(-_pgeom->KK.cx*ik0, ((float)_pgeom->height-_pgeom->KK.cy)*ik1, 1);
+            points[3] = Vector(-_pgeom->KK.cx*ik0, -_pgeom->KK.cy*ik1, 1);
+            points[4] = Vector(((float)_pgeom->width-_pgeom->KK.cx)*ik0, -_pgeom->KK.cy*ik1, 1);
+            points[5] = Vector(0.5f,0,0);
+            points[6] = Vector(0,0.5f,0);
+
+            boost::array<int,16> inds = {{0,1,2,3,4,1,4,0,2,3,0,0,5,0,0,6}};
+
+            vector<RaveVector<float> > viconpoints(inds.size());
+            vector<float> vcolors(inds.size()*3);
+
+            for(size_t i = 0; i < inds.size(); ++i) {
+                viconpoints[i] = 0.02*points[inds[i]];
+                vcolors[3*i+0] = _vColor.x;
+                vcolors[3*i+1] = _vColor.y;
+                vcolors[3*i+2] = _vColor.z;
+            }
+
+            float xaxis[3] = {1,0,0};
+            float yaxis[3] = {0,1,0};
+            float* pstart = &vcolors[vcolors.size()-3*5];
+            for(int i = 0; i < 3; ++i) {
+                pstart[i] = pstart[3+i] = pstart[6+i] = xaxis[i];
+                pstart[9+i] = pstart[12+i] = yaxis[i];
+            }
+            _graphgeometry = GetEnv()->drawlinestrip(viconpoints[0], viconpoints.size(), sizeof(viconpoints[0]), 1, &vcolors[0]);
+        }
+        if( !!_graphgeometry ) {
+            _graphgeometry->SetTransform(_trans);
+        }
+    }
+
     boost::shared_ptr<CameraGeomData> _pgeom;
     boost::shared_ptr<CameraSensorData> _pdata;
 
@@ -288,14 +322,13 @@ class BaseCameraSensor : public SensorBase
     RaveVector<float> _vColor;
 
     Transform _trans;
-    dReal fTimeToImage;
+    dReal _fTimeToImage;
     int framerate;
-    GraphHandlePtr _iconhandle;
-    vector<RaveVector<float> > viconpoints;
+    GraphHandlePtr _graphgeometry;
 
     mutable boost::mutex _mutexdata;
 
-    bool _bUpdateCameraPlot;
+    bool _bRenderGeometry, _bRenderData;
     bool _bPower; ///< if true, gather data, otherwise don't
 
     friend class BaseCameraXMLReader;

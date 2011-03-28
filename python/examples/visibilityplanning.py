@@ -161,7 +161,7 @@ class VisibilityGrasping:
                 if showsensors:
                     for attachedsensor in self.robotreal.GetAttachedSensors():
                         if attachedsensor.GetSensor() is not None and attachedsensor.GetSensor().Supports(Sensor.Type.Camera):
-                            attachedsensor.GetSensor().SendCommand('power 1')
+                            attachedsensor.GetSensor().Configure(Sensor.ConfigureCommand.PowerOn)
                             attachedsensors.append(attachedsensor)
 
         time.sleep(1) # wait for sensors to initialize
@@ -277,7 +277,7 @@ class VisibilityGrasping:
             self.robot = self.orenv.GetRobot(self.robotreal.GetName())
             for sensor in self.robot.GetAttachedSensors():
                 if sensor.GetSensor() is not None:
-                    sensor.GetSensor().SendCommand('power 0')
+                    sensor.GetSensor().Configure(Sensor.ConfigureCommand.PowerOff)
             
             if self.orenv.CheckCollision(self.robot):
                 print 'robot in collision, trying again...'

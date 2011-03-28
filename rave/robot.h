@@ -578,7 +578,7 @@ public:
     virtual bool CheckLinkCollision(int ilinkindex, const Transform& tlinktrans, CollisionReportPtr report = CollisionReportPtr());
     
     /// does not clone the grabbed bodies since it requires pointers from other bodies (that might not be initialized yet)
-    virtual bool Clone(InterfaceBaseConstPtr preference, int cloningoptions);
+    virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions);
 
     /// \return true if this body is derived from RobotBase
     virtual bool IsRobot() const { return true; }

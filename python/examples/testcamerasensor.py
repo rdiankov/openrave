@@ -130,7 +130,7 @@ class OpenRAVEScene:
             self.viewers = []
             for attachedsensor in self.robot.GetAttachedSensors():
                 if attachedsensor.GetSensor() is not None and attachedsensor.GetSensor().Supports(Sensor.Type.Camera):
-                    attachedsensor.GetSensor().SendCommand('power 1')
+                    attachedsensor.GetSensor().Configure(Sensor.ConfigureCommand.PowerOn)
                     sensors.append(attachedsensor)
         time.sleep(1) # wait a while for sensors to initialize
         with env:

@@ -8,7 +8,7 @@ set( CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS TRUE )
 # Define here the needed parameters
 set (OPENRAVE_VERSION_MAJOR 0)
 set (OPENRAVE_VERSION_MINOR 2)
-set (OPENRAVE_VERSION_PATCH 19)
+set (OPENRAVE_VERSION_PATCH 20)
 set (OPENRAVE_VERSION ${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}.${OPENRAVE_VERSION_PATCH})
 set (OPENRAVE_SOVERSION ${OPENRAVE_VERSION_MAJOR})
 message(STATUS "Compiling OpenRAVE Version ${OPENRAVE_VERSION}")
@@ -27,19 +27,18 @@ if("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}" GREATER 2.4)
    cmake_policy(SET CMP0003 NEW)
 endif("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}" GREATER 2.4)
 
-
 # Differences between CMake 2.4 and 2.6
-if("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}" GREATER 2.4)
-   # CMP0003: add the link paths to the link command as with cmake 2.4
-   cmake_policy(SET CMP0003 OLD)
-   # CMake 2.6 uses the full file names of the libraries when linking and so
-   # doesn't use -L anymore to list the link dirs. Now the dependencies created
-   # export_library_dependencies() lists the in-project libraries without
-   # path, i.e. with only the logical name ("kdecore"), so they don't link
-   # Setting this variable to true has the effect that the link dirs are
-   # listed nevertheless also with CMake 2.6.
-   set(CMAKE_LINK_OLD_PATHS TRUE)
-endif("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}" GREATER 2.4)
+#if("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}" GREATER 2.4)
+#   # CMP0003: add the link paths to the link command as with cmake 2.4
+#   cmake_policy(SET CMP0003 OLD)
+#   # CMake 2.6 uses the full file names of the libraries when linking and so
+#   # doesn't use -L anymore to list the link dirs. Now the dependencies created
+#   # export_library_dependencies() lists the in-project libraries without
+#   # path, i.e. with only the logical name ("kdecore"), so they don't link
+#   # Setting this variable to true has the effect that the link dirs are
+#   # listed nevertheless also with CMake 2.6.
+#   set(CMAKE_LINK_OLD_PATHS TRUE)
+#endif("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}" GREATER 2.4)
 
 if("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION}" STRLESS "2.4.3")
   message(STATUS "cmake version too low, might not be able to install directories")

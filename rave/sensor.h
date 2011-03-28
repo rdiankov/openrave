@@ -38,7 +38,8 @@ public:
         ST_IMU=5,
         ST_Odometry=6,
         ST_Tactile=7,
-        ST_NumberofSensorTypes=7
+        ST_Actuator=8,
+        ST_NumberofSensorTypes=8
     };
 
     class CameraIntrinsics
@@ -137,14 +138,27 @@ public:
         boost::array<dReal,9> force_covariance; ///< row major 3x3 matrix of the uncertainty on the xyz force measurements
     };
 
-    // eventually will have an actuator sensor
-//    enum ActuatorState {
-//        AS_Undefined=0, ///< returned when no state is defined
-//        AS_Idle=1,  ///< this actuator is idle
-//        AS_Moving=2, ///< this actuator is in motion from previous commands
-//        AS_Stalled=3, ///< the actuator is stalled, needs to be unstalled by sending a ready signal
-//        AS_Braked=4, ///< the actuator is braked
-//    };
+    /// \brief An actuator for modeling motors and other mechanisms that produce torque/force. The actuator has only one degree of freedom.
+    class OPENRAVE_API ActuatorSensorData : public SensorData
+    {
+    public:
+        /// \brief the state of the actuator
+        enum ActuatorState {
+            AS_Undefined=0, ///< returned when no state is defined
+            AS_Idle=1,  ///< this actuator is idle
+            AS_Moving=2, ///< this actuator is in motion from previous commands
+            AS_Stalled=3, ///< the actuator is stalled, needs to be unstalled by sending a ready signal
+            AS_Braked=4, ///< the actuator is braked
+        };
+        
+        ActuatorSensorData() : state(AS_Undefined), measuredcurrent(0), measuredtemperature(0), appliedcurrent(0) {}
+        virtual SensorType GetType() { return ST_Actuator; }
+        
+        ActuatorState state;
+        dReal measuredcurrent; ///< measured current from the actuator
+        dReal measuredtemperature; ///< measured temperature from the actuator
+        dReal appliedcurrent; ///< current sent to the actuator
+    };
 
     /// permanent properties of the sensors
     class OPENRAVE_API SensorGeometry
@@ -171,6 +185,7 @@ public:
     class OPENRAVE_API CameraGeomData : public SensorGeometry
     {
     public:
+        CameraGeomData() : width(0), height(0) {}
         virtual SensorType GetType() { return ST_Camera; }
         CameraIntrinsics KK; ///< intrinsic matrix
         int width, height; ///< width and height of image
@@ -178,7 +193,9 @@ public:
     class OPENRAVE_API JointEncoderGeomData : public SensorGeometry
     {
     public:
+        JointEncoderGeomData() : resolution(0) {}
         virtual SensorType GetType() { return ST_JointEncoder; }
+        std::vector<dReal> resolution; ///< the delta value of one encoder tick
     };
     class OPENRAVE_API Force6DGeomData : public SensorGeometry
     {
@@ -197,6 +214,7 @@ public:
         virtual SensorType GetType() { return ST_Odometry; }
         std::string targetid; ///< id of the target whose odometry/pose messages are being published for
     };
+
     class OPENRAVE_API TactileGeomData : public SensorGeometry
     {
     public:
@@ -216,24 +234,51 @@ public:
         std::map<std::string, Friction> _mapfriction; ///< friction coefficients references by target objects
     };
 
+    class OPENRAVE_API ActuatorGeomData : public SensorGeometry
+    {
+    public:
+        virtual SensorType GetType() { return ST_Actuator; }
+        dReal maxtorque; ///< Maximum possible torque actuator can apply (on output side). This includes the actuator's rotor, if one exists.
+        dReal maxcurrent; ///< Maximum permissible current of the actuator. If this current value is exceeded for a prolonged period of time, then an error could occur (due to heat, etc).
+        dReal nominalcurrent;  ///< Rated current of the actuator.
+        dReal maxvelocity; ///< Maximum permissible velocity of the system (on output side).
+        dReal maxacceleration; ///< Maximum permissible acceleration of the system (on output side).
+        dReal maxjerk; ///< Maximum permissible jerking of the system (on output side). The jerk results from a sudden change in acceleration. 
+        dReal staticfriction; ///< minimum torque that must be applied for actuator to overcome static friction
+        dReal viscousfriction; ///< friction depending on the velocity of the actuator
+    };
+
     SensorBase(EnvironmentBasePtr penv) : InterfaceBase(PT_Sensor, penv) {}
     virtual ~SensorBase() {}
 
     /// return the static interface type this class points to (used for safe casting)
     static inline InterfaceType GetInterfaceTypeStatic() { return PT_Sensor; }
-    
-    /// Initializes the sensor.
-    /// \param cmd extra arguments that the sensor
-    /// \return true on successful initialization
-    virtual bool Init(const std::string& cmd) = 0;
 
-    /// Resets any state associated with the sensor
-    virtual void Reset(int options) = 0;
+    /// \brief A set of commands used for run-time sensor configuration.
+    enum ConfigureCommand
+    {
+        CC_PowerOn=0x10, ///< turns the sensor on, starts gathering data and using processor cycles. If the power is already on, servers as a reset. (off by default)
+        CC_PowerOff=0x11, ///< turns the sensor off, stops gathering data (off by default).
+        CC_PowerCheck=0x12, ///< returns whether power is on
+        CC_RenderDataOn=0x20, ///< turns on any rendering of the sensor data (off by default)
+        CC_RenderDataOff=0x21, ///< turns off any rendering of the sensor data (off by default)
+        CC_RenderDataCheck=0x23, ///< returns whether data rendering is on
+        CC_RenderGeometryOn=0x30, ///< turns on any rendering of the sensor geometry (on by default)
+        CC_RenderGeometryOff=0x31, ///< turns off any rendering of the sensor geometry (on by default)
+        CC_RenderGeometryCheck=0x32, ///< returns whether geometry rendering is on
+    };
+
+    /// \brief Configures properties of the sensor like power.
+    ///
+    /// \param type \ref ConfigureCommand
+    /// \param blocking If set to true, makes sure the configuration ends before this function returns.(might cause problems if environment is locked).
+    /// \throw openrave_exception if command doesn't succeed
+    virtual int Configure(ConfigureCommand command, bool blocking=false) = 0;
 
     /// \brief Simulate one step forward for sensors.
     ///
     /// Only valid if this sensor is simulation based. A sensor hooked up to a real device can ignore this call
-    virtual bool SimulationStep(dReal fTimeElapsed) = 0;
+    virtual bool SimulationStep(dReal fTimeElapsed) { throw openrave_exception("SensorBase::SimulationStep not implemented",ORE_NotImplemented); }
 
     /// \brief Returns the sensor geometry. This method is thread safe.
     ///

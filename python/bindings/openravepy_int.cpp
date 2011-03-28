@@ -182,9 +182,9 @@ public:
     string GetDescription() const { return _pbase->GetDescription(); }
     PyEnvironmentBasePtr GetEnv() const { return _pyenv; }
     
-    bool Clone(PyInterfaceBasePtr preference, int cloningoptions) {
+    void Clone(PyInterfaceBasePtr preference, int cloningoptions) {
         CHECK_POINTER(preference); 
-        return _pbase->Clone(preference->GetInterfaceBase(),cloningoptions);
+        _pbase->Clone(preference->GetInterfaceBase(),cloningoptions);
     }
 
     void SetUserData(PyUserData pdata) { _pbase->SetUserData(pdata._handle); }
@@ -1277,9 +1277,11 @@ public:
         {
             encoderValues = toPyArray(pdata->encoderValues);
             encoderVelocity = toPyArray(pdata->encoderVelocity);
+            resolution = toPyArray(pgeom->resolution);
         }
         virtual ~PyJointEncoderSensorData() {}
         object encoderValues, encoderVelocity;
+        object resolution;
     };
 
     class PyForce6DSensorData : public PySensorData
@@ -1337,6 +1339,7 @@ public:
         object pose, linear_velocity, angular_velocity, pose_covariance, velocity_covariance;
         std::string targetid;
     };
+
     class PyTactileSensorData : public PySensorData
     {
     public:
@@ -1351,12 +1354,41 @@ public:
         object forces, force_covariance;
     };
 
+    class PyActuatorSensorData : public PySensorData
+    {
+    public:
+        PyActuatorSensorData(boost::shared_ptr<SensorBase::ActuatorGeomData> pgeom, boost::shared_ptr<SensorBase::ActuatorSensorData> pdata) : PySensorData(pdata)
+        {
+            state = pdata->state;
+            appliedcurrent = pdata->appliedcurrent;
+            measuredcurrent = pdata->measuredcurrent;
+            measuredtemperature = pdata->measuredtemperature;
+            maxtorque = pgeom->maxtorque;
+            maxcurrent = pgeom->maxcurrent;
+            nominalcurrent = pgeom->nominalcurrent;
+            maxvelocity = pgeom->maxvelocity;
+            maxacceleration = pgeom->maxacceleration;
+            maxjerk = pgeom->maxjerk;
+            staticfriction = pgeom->staticfriction;
+            viscousfriction = pgeom->viscousfriction;
+        }
+        virtual ~PyActuatorSensorData() {}
+        SensorBase::ActuatorSensorData::ActuatorState state;
+        dReal measuredcurrent, measuredtemperature, appliedcurrent;
+        dReal maxtorque, maxcurrent, nominalcurrent, maxvelocity, maxacceleration, maxjerk, staticfriction, viscousfriction;
+    };
+
     PySensorBase(SensorBasePtr psensor, PyEnvironmentBasePtr pyenv) : PyInterfaceBase(psensor, pyenv), _psensor(psensor)
     {
     }
     virtual ~PySensorBase() { }
 
     SensorBasePtr GetSensor() { return _psensor; }
+
+    int Configure(SensorBase::ConfigureCommand command, bool blocking=false)
+    {
+        return _psensor->Configure(command,blocking);
+    }
 
     boost::shared_ptr<PySensorData> GetSensorData()
     {
@@ -1390,6 +1422,8 @@ public:
             return boost::shared_ptr<PySensorData>(new PyOdometrySensorData(boost::static_pointer_cast<SensorBase::OdometryGeomData>(_psensor->GetSensorGeometry()), boost::static_pointer_cast<SensorBase::OdometrySensorData>(psensordata)));
         case SensorBase::ST_Tactile:
             return boost::shared_ptr<PySensorData>(new PyTactileSensorData(boost::static_pointer_cast<SensorBase::TactileGeomData>(_psensor->GetSensorGeometry()), boost::static_pointer_cast<SensorBase::TactileSensorData>(psensordata)));
+        case SensorBase::ST_Actuator:
+            return boost::shared_ptr<PySensorData>(new PyActuatorSensorData(boost::static_pointer_cast<SensorBase::ActuatorGeomData>(_psensor->GetSensorGeometry()), boost::static_pointer_cast<SensorBase::ActuatorSensorData>(psensordata)));
         case SensorBase::ST_Invalid:
             break;
         }
@@ -3001,8 +3035,8 @@ public:
     bool AddKinBody(PyKinBodyPtr pbody, bool bAnonymous) { CHECK_POINTER(pbody); return _penv->AddKinBody(pbody->GetBody(),bAnonymous); }
     bool AddRobot(PyRobotBasePtr robot) { CHECK_POINTER(robot); return _penv->AddRobot(robot->GetRobot()); }
     bool AddRobot(PyRobotBasePtr robot, bool bAnonymous) { CHECK_POINTER(robot); return _penv->AddRobot(robot->GetRobot(),bAnonymous); }
-    bool AddSensor(PySensorBasePtr sensor, const std::string& args) { CHECK_POINTER(sensor); return _penv->AddSensor(sensor->GetSensor(),args); }
-    bool AddSensor(PySensorBasePtr sensor, const std::string& args, bool bAnonymous) { CHECK_POINTER(sensor); return _penv->AddSensor(sensor->GetSensor(),args, bAnonymous); }
+    bool AddSensor(PySensorBasePtr sensor) { CHECK_POINTER(sensor); return _penv->AddSensor(sensor->GetSensor()); }
+    bool AddSensor(PySensorBasePtr sensor, bool bAnonymous) { CHECK_POINTER(sensor); return _penv->AddSensor(sensor->GetSensor(),bAnonymous); }
     bool RemoveKinBody(PyKinBodyPtr pbody) { CHECK_POINTER(pbody); RAVELOG_WARN("openravepy RemoveKinBody deprecated, use Remove\n"); return _penv->Remove(pbody->GetBody()); }
     
     PyKinBodyPtr GetKinBody(const string& name)
@@ -3609,7 +3643,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetOffset_overloads, SetOffset, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMaxVel_overloads, GetMaxVel, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMaxAccel_overloads, GetMaxAccel, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMaxTorque_overloads, GetMaxTorque, 0, 1)
-
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Configure_overloads, Configure, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Load_overloads, Load, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Save_overloads, Save, 1, 2)
 
@@ -4375,6 +4409,7 @@ In python, the syntax is::\n\n\
         boost::shared_ptr<PySensorBase::PySensorData> (PySensorBase::*GetSensorData1)() = &PySensorBase::GetSensorData;
         boost::shared_ptr<PySensorBase::PySensorData> (PySensorBase::*GetSensorData2)(SensorBase::SensorType) = &PySensorBase::GetSensorData;
         scope sensor = class_<PySensorBase, boost::shared_ptr<PySensorBase>, bases<PyInterfaceBase> >("Sensor", DOXY_CLASS(SensorBase), no_init)
+            .def("Configure",&PySensorBase::Configure, Configure_overloads(args("command","blocking"), DOXY_FN(SensorBase,Configure)))
             .def("GetSensorData",GetSensorData1, DOXY_FN(SensorBase,GetSensorData))
             .def("GetSensorData",GetSensorData2, DOXY_FN(SensorBase,GetSensorData))
             .def("SetTransform",&PySensorBase::SetTransform, DOXY_FN(SensorBase,SetTransform))
@@ -4403,6 +4438,7 @@ In python, the syntax is::\n\n\
         class_<PySensorBase::PyJointEncoderSensorData, boost::shared_ptr<PySensorBase::PyJointEncoderSensorData>, bases<PySensorBase::PySensorData> >("JointEncoderSensorData", DOXY_CLASS(SensorBase::JointEncoderSensorData),no_init)
             .def_readonly("encoderValues",&PySensorBase::PyJointEncoderSensorData::encoderValues)
             .def_readonly("encoderVelocity",&PySensorBase::PyJointEncoderSensorData::encoderVelocity)
+            .def_readonly("resolution",&PySensorBase::PyJointEncoderSensorData::resolution)
             ;
         class_<PySensorBase::PyForce6DSensorData, boost::shared_ptr<PySensorBase::PyForce6DSensorData>, bases<PySensorBase::PySensorData> >("Force6DSensorData", DOXY_CLASS(SensorBase::Force6DSensorData),no_init)
             .def_readonly("force",&PySensorBase::PyForce6DSensorData::force)
@@ -4428,6 +4464,29 @@ In python, the syntax is::\n\n\
             .def_readonly("forces",&PySensorBase::PyTactileSensorData::forces)
             .def_readonly("force_covariance",&PySensorBase::PyTactileSensorData::force_covariance)
             ;
+        {
+            class_<PySensorBase::PyActuatorSensorData, boost::shared_ptr<PySensorBase::PyActuatorSensorData>, bases<PySensorBase::PySensorData> >("ActuatorSensorData", DOXY_CLASS(SensorBase::ActuatorSensorData),no_init)
+                .def_readonly("state",&PySensorBase::PyActuatorSensorData::state)
+                .def_readonly("measuredcurrent",&PySensorBase::PyActuatorSensorData::measuredcurrent)
+                .def_readonly("measuredtemperature",&PySensorBase::PyActuatorSensorData::measuredtemperature)
+                .def_readonly("appliedcurrent",&PySensorBase::PyActuatorSensorData::appliedcurrent)
+                .def_readonly("maxtorque",&PySensorBase::PyActuatorSensorData::maxtorque)
+                .def_readonly("maxcurrent",&PySensorBase::PyActuatorSensorData::maxcurrent)
+                .def_readonly("nominalcurrent",&PySensorBase::PyActuatorSensorData::nominalcurrent)
+                .def_readonly("maxvelocity",&PySensorBase::PyActuatorSensorData::maxvelocity)
+                .def_readonly("maxacceleration",&PySensorBase::PyActuatorSensorData::maxacceleration)
+                .def_readonly("maxjerk",&PySensorBase::PyActuatorSensorData::maxjerk)
+                .def_readonly("staticfriction",&PySensorBase::PyActuatorSensorData::staticfriction)
+                .def_readonly("viscousfriction",&PySensorBase::PyActuatorSensorData::viscousfriction)
+                ;
+            enum_<SensorBase::ActuatorSensorData::ActuatorState>("ActuatorState" DOXY_ENUM(ActuatorState))
+                .value("Undefined",SensorBase::ActuatorSensorData::AS_Undefined)
+                .value("Idle",SensorBase::ActuatorSensorData::AS_Idle)
+                .value("Moving",SensorBase::ActuatorSensorData::AS_Moving)
+                .value("Stalled",SensorBase::ActuatorSensorData::AS_Stalled)
+                .value("Braked",SensorBase::ActuatorSensorData::AS_Braked)
+                ;
+        }
 
         enum_<SensorBase::SensorType>("Type" DOXY_ENUM(SensorType))
             .value("Invalid",SensorBase::ST_Invalid)
@@ -4438,6 +4497,18 @@ In python, the syntax is::\n\n\
             .value("IMU",SensorBase::ST_IMU)
             .value("Odometry",SensorBase::ST_Odometry)
             .value("Tactile",SensorBase::ST_Tactile)
+            .value("Actuator",SensorBase::ST_Actuator)
+            ;
+        enum_<SensorBase::ConfigureCommand>("ConfigureCommand" DOXY_ENUM(ConfigureCommand))
+            .value("PowerOn",SensorBase::CC_PowerOn)
+            .value("PowerOff",SensorBase::CC_PowerOff)
+            .value("PowerCheck",SensorBase::CC_PowerCheck)
+            .value("RenderDataOn",SensorBase::CC_RenderDataOn)
+            .value("RenderDataOff",SensorBase::CC_RenderDataOff)
+            .value("RenderDataCheck",SensorBase::CC_RenderDataCheck)
+            .value("RenderGeometryOn",SensorBase::CC_RenderGeometryOn)
+            .value("RenderGeometryOff",SensorBase::CC_RenderGeometryOff)
+            .value("RenderGeometryCheck",SensorBase::CC_RenderGeometryCheck)
             ;
     }
 
@@ -4501,8 +4572,8 @@ In python, the syntax is::\n\n\
         bool (PyEnvironmentBase::*addkinbody2)(PyKinBodyPtr,bool) = &PyEnvironmentBase::AddKinBody;
         bool (PyEnvironmentBase::*addrobot1)(PyRobotBasePtr) = &PyEnvironmentBase::AddRobot;
         bool (PyEnvironmentBase::*addrobot2)(PyRobotBasePtr,bool) = &PyEnvironmentBase::AddRobot;
-        bool (PyEnvironmentBase::*addsensor1)(PySensorBasePtr, const std::string&) = &PyEnvironmentBase::AddSensor;
-        bool (PyEnvironmentBase::*addsensor2)(PySensorBasePtr,const std::string&,bool) = &PyEnvironmentBase::AddSensor;
+        bool (PyEnvironmentBase::*addsensor1)(PySensorBasePtr) = &PyEnvironmentBase::AddSensor;
+        bool (PyEnvironmentBase::*addsensor2)(PySensorBasePtr,bool) = &PyEnvironmentBase::AddSensor;
         void (PyEnvironmentBase::*setuserdata1)(PyUserData) = &PyEnvironmentBase::SetUserData;
         void (PyEnvironmentBase::*setuserdata2)(object) = &PyEnvironmentBase::SetUserData;
         PyRobotBasePtr (PyEnvironmentBase::*readrobotxmlfile1)(const string&) = &PyEnvironmentBase::ReadRobotXMLFile;
@@ -4580,8 +4651,8 @@ In python, the syntax is::\n\n\
             .def("AddKinBody",addkinbody2,args("body","anonymous"), DOXY_FN(EnvironmentBase,AddKinBody))
             .def("AddRobot",addrobot1,args("robot"), DOXY_FN(EnvironmentBase,AddRobot))
             .def("AddRobot",addrobot2,args("robot","anonymous"), DOXY_FN(EnvironmentBase,AddRobot))
-            .def("AddSensor",addsensor1,args("sensor","args"), DOXY_FN(EnvironmentBase,AddSensor))
-            .def("AddSensor",addsensor2,args("sensor","args","anonymous"), DOXY_FN(EnvironmentBase,AddSensor))
+            .def("AddSensor",addsensor1,args("sensor"), DOXY_FN(EnvironmentBase,AddSensor))
+            .def("AddSensor",addsensor2,args("sensor","anonymous"), DOXY_FN(EnvironmentBase,AddSensor))
             .def("RemoveKinBody",&PyEnvironmentBase::RemoveKinBody,args("body"), DOXY_FN(EnvironmentBase,RemoveKinBody))
             .def("Remove",&PyEnvironmentBase::Remove,args("interface"), DOXY_FN(EnvironmentBase,Remove))
             .def("GetKinBody",&PyEnvironmentBase::GetKinBody,args("name"), DOXY_FN(EnvironmentBase,GetKinBody))

@@ -309,7 +309,7 @@ def main(env,options):
     try:
         attachedsensor = self.vmodel.attachedsensor
         if attachedsensor.GetSensor() is not None and attachedsensor.GetSensor().Supports(Sensor.Type.Camera):
-            attachedsensor.GetSensor().SendCommand('power 1')
+            attachedsensor.GetSensor().Configure(Sensor.ConfigureCommand.PowerOn)
             time.sleep(1) # wait for sensor to initialize
             sensordata = attachedsensor.GetSensor().GetSensorData(Sensor.Type.Camera)
             if sensordata is not None:

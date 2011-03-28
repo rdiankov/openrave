@@ -2390,15 +2390,12 @@ void RobotBase::_ParametersChanged(int parameters)
     }
 }
 
-bool RobotBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
+void RobotBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
 {
     // note that grabbed bodies are not cloned (check out Environment::Clone)
-    if( !KinBody::Clone(preference,cloningoptions) ) {
-        return false;
-    }
+    KinBody::Clone(preference,cloningoptions);
     RobotBaseConstPtr r = RaveInterfaceConstCast<RobotBase>(preference);
-    __hashrobotstructure = r->__hashrobotstructure;
-    
+    __hashrobotstructure = r->__hashrobotstructure;    
     _vecManipulators.clear();
     FOREACHC(itmanip, r->_vecManipulators) {
         _vecManipulators.push_back(ManipulatorPtr(new Manipulator(shared_robot(),**itmanip)));
@@ -2449,11 +2446,8 @@ bool RobotBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
         }
         if( !SetController(RaveCreateController(GetEnv(), "IdealController"),dofindices, 1) ) {
             RAVELOG_WARN("failed to set IdealController\n");
-            return false;
         }
     }
-    
-    return true;
 }
 
 void RobotBase::serialize(std::ostream& o, int options) const

@@ -4059,11 +4059,9 @@ const std::set<int>& KinBody::GetAdjacentLinks() const
     return _setAdjacentLinks;
 }
 
-bool KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
+void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
 {
-    if( !InterfaceBase::Clone(preference,cloningoptions) ) {
-        return false;
-    }
+    InterfaceBase::Clone(preference,cloningoptions);
     KinBodyConstPtr r = RaveInterfaceConstCast<KinBody>(preference);
 
     _name = r->_name;
@@ -4164,9 +4162,7 @@ bool KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
 
     // cache
     _ResetInternalCollisionCache();
-
     _nUpdateStampId++; // update the stamp instead of copying
-    return true;
 }
 
 void KinBody::_ParametersChanged(int parameters)

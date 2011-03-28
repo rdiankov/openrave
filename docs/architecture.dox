@@ -712,8 +712,7 @@ functions defined in KinBody. The usage of a planner is simple:
 \subsection planner_parameters Planner Parameters - Calling a Planner
 
 All the information defining a planning problem should be specified in
-[http://openrave.programmingvision.com/ordocs/html/annotated.html
-PlannerBase::PlannerParameters]. <code>PlannerParameters</code> tries to cover most of the common
+\ref PlannerBase::PlannerParameters. <code>PlannerParameters</code> tries to cover most of the common
 data like distance metrics, sampling distributions, initial and goal configurations. However there
 are many different types of inputs to a planner, so it is impossible to cover everything with one
 class. Instead, <code>PlannerParameters</code> has a very flexible and safe way to extend its
@@ -878,13 +877,25 @@ associated with a particular position in space, has a geometry with properties d
 sensor, and can be queried for sensor data. Available sensor types are specified by \ref
 OpenRAVE::SensorBase::SensorType "SensorType".
 
-By default, all the sensors defined in '''basesensors''' start with a sensor power off, meaning that the sensor does not gather data. The power can be turned on by sending each sensor the '''power 1''' command, or by adding the '''<power>1</power>''' XML tag in the sensor description. All the demos manually turn sensor power on.
+By default, all the sensors start with power off, meaning that the sensor does not gather data. The
+power can be turned on by using \ref OpenRAVE::SensorBase::Configure and sending the \ref
+SensorBase::CC_PowerOn command. All programs should manually turn sensor power on before using the
+sensors.
 
-Each sensor can be sent text commands using '''SensorBase::SendCommand'''. 
+The sensor has two different rendering options:.
 
-Check out the '''basesensors''' plugin for an example of how to implement a 2D laser range finder. The sensor has a special rendering option that allows it to render its data to the GUI window. Call 
+- <b>Geometry Rendering</b> - Renders a small icon that represents where the laser is placed in the
+environment, the icon's image should only be dependent on the geometry parameters of the sensor, and
+not the actual sensor data. Geometry rendering should be turned on by default. To configure this,
+use the SensorBase::CC_RenderDataX commands.
 
-to enable rendering. An example showing how all the pieces come together in Octave/Matlab can be seen in '''examples/testlasersensor.m'''. Just execute the script by changing directions and typing:
+- <b>Data Rendering</b> - Data rendering shows the measured sensor data coming out of the
+GetSensorData(). Usually the data can be very heavy, especially when a sensor's update rate is high,
+so data rendering is turned off by default. If the power is off, data should not be rendered. To
+configure this, use the SensorBase::CC_RenderGeometryX commands.
+
+Check out the <a href="../main/plugins.html#basesensors"basesensors</a> plugin for an example of how
+to implement a basic laser range and camera sensors.
 
 */
 

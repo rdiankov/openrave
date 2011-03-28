@@ -90,6 +90,7 @@ public:
             GEOMPROPERTIES(boost::shared_ptr<Link> parent);
             virtual ~GEOMPROPERTIES() {}
 
+            /// \brief Local transformation of the geom primitive with respect to the link's coordinate system.
             inline const Transform& GetTransform() const { return _t; }
             inline GeomType GetType() const { return _type; }
             inline const Vector& GetRenderScale() const { return vRenderScale; }
@@ -104,7 +105,11 @@ public:
             inline const Vector& GetBoxExtents() const { return vGeomData; }
             inline const RaveVector<float>& GetDiffuseColor() const { return diffuseColor; }
             inline const RaveVector<float>& GetAmbientColor() const { return ambientColor; }
-            
+
+            /// \brief collision data of the specific object in its local coordinate system.
+            ///
+            /// Should be transformed by \ref GEOMPROPERTIES::GetTransform() before rendering.
+            /// For spheres and cylinders, an appropriate discretization value is chosen. 
             inline const TRIMESH& GetCollisionMesh() const { return collisionmesh; }
             
             virtual AABB ComputeAABB(const Transform& t) const;
@@ -133,14 +138,13 @@ public:
             bool InitCollisionMesh(float fTessellation=1);
 
             boost::weak_ptr<Link> _parent;
-            Transform _t;                ///< local transformation of the geom primitive with respect to the link's coordinate system
+            Transform _t; ///< see \ref GetTransform
             Vector vGeomData; ///< for boxes, first 3 values are extents
                                          ///< for sphere it is radius
                                          ///< for cylinder, first 2 values are radius and height
                                          ///< for trimesh, none
             RaveVector<float> diffuseColor, ambientColor; ///< hints for how to color the meshes
-            TRIMESH collisionmesh; ///< collision data of the specific object. For spheres and cylinders, an appropriate
-                                   ///< discretization value is chosen. Should be transformed by _t before rendering
+            TRIMESH collisionmesh; ///< see \ref GetCollisionMesh
             GeomType _type;         ///< the type of geometry primitive
             std::string renderfile;  ///< render resource file, should be transformed by _t before rendering
             Vector vRenderScale; ///< render scale of the object (x,y,z)
@@ -1019,10 +1023,7 @@ public:
     /// Currently stamps monotonically increment for every transformation/joint angle change.
     virtual int GetUpdateStamp() const { return _nUpdateStampId; }
 
-    /// Preserves the collision, physics, user, gui data fields.
-    /// Preserves the attached bodies
-    /// Preserves the XML readers
-    virtual bool Clone(InterfaceBaseConstPtr preference, int cloningoptions);
+    virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions);
 
     /// \brief Register a callback with the interface.
     ///

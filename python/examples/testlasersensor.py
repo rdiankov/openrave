@@ -82,7 +82,12 @@ def main(env,options):
     sensors = [sensor for sensor in robot.GetAttachedSensors() if sensor.GetSensor() is not None]
     while True:
         for i,sensor in enumerate(sensors):
-            sensor.GetSensor().SendCommand('render %d'%(i==ienablesensor))
+            if i==ienablesensor:
+                sensor.GetSensor().Configure(Sensor.ConfigureCommand.PowerOn)
+                sensor.GetSensor().Configure(Sensor.ConfigureCommand.RenderDataOn)
+            else:
+                sensor.GetSensor().Configure(Sensor.ConfigureCommand.PowerOff)
+                sensor.GetSensor().Configure(Sensor.ConfigureCommand.RenderDataOff)
         print 'showing sensor %s, try moving obstacles'%sensors[ienablesensor].GetName()
         time.sleep(5)
         ienablesensor = (ienablesensor+1)%len(sensors)

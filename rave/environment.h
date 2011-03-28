@@ -293,12 +293,11 @@ public:
     /// \param[in] bAnonymous if true and there exists a body/robot with the same name, will make robot's name unique
     virtual bool AddRobot(RobotBasePtr robot, bool bAnonymous=false) = 0;
 
-    /// \brief add a sensor to the environment and initialize it
+    /// \brief registers the sensor with the environment and turns its power on.
     ///
     /// \param[in] sensor the pointer to an initialized sensor
-    /// \param[in] args arguments to pass into SensorBase::Init
     /// \param[in] bAnonymous if true and there exists a sensor with the same name, will make sensor's name unique
-    virtual bool AddSensor(SensorBasePtr sensor, const std::string& args, bool bAnonymous=false) = 0;
+    virtual bool AddSensor(SensorBasePtr sensor, bool bAnonymous=false) = 0;
 
     /// \deprecated (10/09/15) see \ref EnvironmentBase::Remove
     virtual bool RemoveKinBody(KinBodyPtr body) RAVE_DEPRECATED = 0;

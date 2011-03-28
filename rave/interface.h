@@ -83,7 +83,8 @@ public:
     ///
     /// \param preference the interface whose information to clone
     /// \param cloningoptions mask of CloningOptions
-    virtual bool Clone(InterfaceBaseConstPtr preference, int cloningoptions);
+    /// \throw openrave_exception if command doesn't succeed
+    virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions);
 
     /** \brief Used to send special commands to the interface and receive output.
 

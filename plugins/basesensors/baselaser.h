@@ -122,51 +122,67 @@ public:
                         "Set rendering of the plots (1 or 0).");
         RegisterCommand("collidingbodies",boost::bind(&BaseLaser2DSensor::_CollidingBodies,this,_1,_2),
                         "Returns the ids of the bodies that the laser beams have hit.");
-
         _pgeom.reset(new LaserGeomData());
         _pdata.reset(new LaserSensorData());
-        _bRender = false;
         _pgeom->min_angle[0] = -PI/2; _pgeom->min_angle[1] = 0;
         _pgeom->max_angle[0] = PI/2; _pgeom->max_angle[1] = 0;
         _pgeom->resolution[0] = 0.01f; _pgeom->resolution[1] = 0;
         _pgeom->min_range = 0.03;
         _pgeom->max_range = 100;
-        fTimeToScan = 0;
+        _fTimeToScan = 0;
         _vColor = RaveVector<float>(0.5f,0.5f,1,1);
         _report.reset(new CollisionReport());
+        _bPower = false;
+        _bRenderData = false;
+        _bRenderGeometry = true;
+        _Reset();
     }
-    ~BaseLaser2DSensor() { Reset(0); }
     
-    virtual bool Init(const string& args)
+    virtual int Configure(ConfigureCommand command, bool blocking)
     {
-        Reset(0);
-        return true;
-    }
-
-    virtual void Reset(int options)
-    {
-        _listGraphicsHandles.clear();
-        _iconhandle.reset();
-
-        int N = (int)( (_pgeom->max_angle[0]-_pgeom->min_angle[0])/_pgeom->resolution[0] + 0.5f)+1;
-    
-        _pdata->positions.clear();
-        _pdata->ranges.resize(N);
-        _pdata->intensity.resize(N);
-        _databodyids.resize(N);
-        FOREACH(it, _pdata->ranges) {
-            *it = Vector(0,0,0);
+        switch(command) {
+        case CC_PowerOn:
+            _bPower = true;
+            return _bPower;
+        case CC_PowerOff:
+            _bPower = false;
+            _Reset();
+            return _bPower;
+        case CC_PowerCheck:
+            return _bPower;
+        case CC_RenderDataOn:
+            _bRenderData = true;
+            return _bRenderData;
+        case CC_RenderDataOff: {
+            boost::mutex::scoped_lock lock(_mutexdata);
+            _listGraphicsHandles.clear();
+            _bRenderData = false;
+            return _bRenderData;
         }
-        FOREACH(it, _pdata->intensity) {
-            *it = 0;
+        case CC_RenderDataCheck:
+            return _bRenderData;
+        case CC_RenderGeometryOn:
+            _bRenderGeometry = true;
+            _RenderGeometry();
+            return _bRenderData;
+        case CC_RenderGeometryOff: {
+            boost::mutex::scoped_lock lock(_mutexdata);
+            _graphgeometry.reset();
+            _bRenderGeometry = false;
+            return _bRenderData;
         }
+        case CC_RenderGeometryCheck:
+            return _bRenderGeometry;
+        }
+        throw openrave_exception(str(boost::format("SensorBase::Configure: unknown command 0x%x")%command));
     }
 
     virtual bool SimulationStep(dReal fTimeElapsed)
     {
-        fTimeToScan -= fTimeElapsed;
-        if( fTimeToScan <= 0 ) {
-            fTimeToScan = _pgeom->time_scan;
+        _RenderGeometry();
+        _fTimeToScan -= fTimeElapsed;
+        if( _bPower && _fTimeToScan <= 0 ) {
+            _fTimeToScan = _pgeom->time_scan;
             Vector rotaxis(0,0,1);
             RAY r;
     
@@ -207,8 +223,7 @@ public:
 
             GetEnv()->GetCollisionChecker()->SetCollisionOptions(0);
     
-            if( _bRender ) {
-
+            if( _bRenderData ) {
                 // If can render, check if some time passed before last update
                 list<GraphHandlePtr> listhandles;
                 int N = 0;
@@ -287,7 +302,7 @@ public:
 
     bool _Render(ostream& sout, istream& sinput)
     {
-        sinput >> _bRender;
+        sinput >> _bRenderData;
         return !!sinput;
     }
     bool _CollidingBodies(ostream& sout, istream& sinput)
@@ -302,8 +317,58 @@ public:
     virtual void SetTransform(const Transform& trans)
     {
         _trans = trans;
+    }
+
+    virtual Transform GetTransform() { return _trans; }
+
+    virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions)
+    {
+        SensorBase::Clone(preference,cloningoptions);
+        boost::shared_ptr<BaseLaser2DSensor const> r = boost::dynamic_pointer_cast<BaseLaser2DSensor const>(preference);
+        *_pgeom = *r->_pgeom;
+        _vColor = r->_vColor;
+        _trans = r->_trans;
+        _fTimeToScan = r->_fTimeToScan;
+        _bRenderGeometry = r->_bRenderGeometry;
+        _bRenderData = r->_bRenderData;
+        _bPower = r->_bPower;
+        _Reset();
+    }
+
+protected:
+
+    virtual Transform GetLaserPlaneTransform() { return _trans; }
+
+    virtual void _Reset()
+    {
+        boost::mutex::scoped_lock lock(_mutexdata);
+        int N = (int)( (_pgeom->max_angle[0]-_pgeom->min_angle[0])/_pgeom->resolution[0] + 0.5f)+1;
+        _pdata->positions.clear();
+        _pdata->ranges.resize(N);
+        _pdata->intensity.resize(N);
+        _databodyids.resize(N);
+        FOREACH(it, _pdata->ranges) {
+            *it = Vector(0,0,0);
+        }
+        FOREACH(it, _pdata->intensity) {
+            *it = 0;
+        }
+        _fTimeToScan = 0;
+        _listGraphicsHandles.clear();
+        _graphgeometry.reset();
+        _RenderGeometry();
+    }
+
+    void _RenderGeometry()
+    {
+        if( !_bRenderGeometry ) {
+            return;
+        }
+
         Transform t = GetLaserPlaneTransform();
-        if( !_iconhandle ) {
+        if( !_graphgeometry ) {
+            vector<RaveVector<float> > viconpoints;
+            vector<int> viconindices;
             int N = 10;
             viconpoints.resize(N+2);
             viconindices.resize(3*N);
@@ -322,18 +387,12 @@ public:
 
             RaveVector<float> vcolor = _vColor*0.5f;
             vcolor.w = 0.7f;
-            _iconhandle = GetEnv()->drawtrimesh(viconpoints[0], sizeof(viconpoints[0]), &viconindices[0], N, vcolor);
+            _graphgeometry = GetEnv()->drawtrimesh(viconpoints[0], sizeof(viconpoints[0]), &viconindices[0], N, vcolor);
         }
-        if( !!_iconhandle ) {
-            _iconhandle->SetTransform(t);
+        if( !!_graphgeometry ) {
+            _graphgeometry->SetTransform(t);
         }
     }
-
-    virtual Transform GetTransform() { return _trans; }
-
-protected:
-
-    virtual Transform GetLaserPlaneTransform() { return _trans; }
 
     boost::shared_ptr<LaserGeomData> _pgeom;
     boost::shared_ptr<LaserSensorData> _pdata;
@@ -341,18 +400,15 @@ protected:
     CollisionReportPtr _report;
 
     // more geom stuff
-    dReal _fGeomMinRange;
     RaveVector<float> _vColor;
 
     Transform _trans;
     list<GraphHandlePtr> _listGraphicsHandles;
-    GraphHandlePtr _iconhandle;
-    vector<RaveVector<float> > viconpoints;
-    vector<int> viconindices;
-    dReal fTimeToScan;
+    GraphHandlePtr _graphgeometry;
+    dReal _fTimeToScan;
 
     boost::mutex _mutexdata;
-    bool _bRender;
+    bool _bRenderData, _bRenderGeometry, _bPower;
 
     friend class BaseLaser2DXMLReader;
 };
@@ -429,28 +485,19 @@ public:
         _fGeomSpinSpeed = 0;
         _vGeomSpinAxis = Vector(1,0,0);
         _fCurAngle = 0;
-        _bSpinning = true;
     }
     
-    virtual void Reset(int options)
-    {
-        BaseLaser2DSensor::Reset(options);
-        _fCurAngle = 0;
-        _bSpinning = true;
-    }
-
     virtual bool SimulationStep(dReal fTimeElapsed)
     {
-        if( _bSpinning ) {
+        if( _bPower ) {
             _fCurAngle += _fGeomSpinSpeed*fTimeElapsed;
             if( _fCurAngle > 2*PI )
                 _fCurAngle -= 2*PI;
-            if( fTimeToScan <= fTimeElapsed ) {
+            if( _fTimeToScan <= fTimeElapsed ) {
                 // have to update
                 SetTransform(_trans);
             }
         }
-
         return BaseLaser2DSensor::SimulationStep(fTimeElapsed);
     }
 
@@ -464,28 +511,23 @@ public:
         return SensorGeometryPtr(pgeom);
     }
 
-    virtual bool SendCommand(std::ostream& os, std::istream& is)
+    virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     {
-        string cmd;
-        streampos pos = is.tellg();
-        is >> cmd;
-        if( !is )
-            throw openrave_exception("no command",ORE_InvalidArguments);
-        std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
-
-        if( cmd == "spin" ) {
-            is >> _bSpinning;
-            SetTransform(_trans);
-        }
-        else {
-            is.seekg(pos);
-            return BaseLaser2DSensor::SendCommand(os,is);
-        }
-
-        return !!is;
+        BaseLaser2DSensor::Clone(preference,cloningoptions);
+        boost::shared_ptr<BaseSpinningLaser2DSensor const> r = boost::dynamic_pointer_cast<BaseSpinningLaser2DSensor const>(preference);
+        _fGeomSpinSpeed = r->_fGeomSpinSpeed;
+        _vGeomSpinAxis = r->_vGeomSpinAxis;
+        _vGeomSpinPos = r->_vGeomSpinPos;
+        _fCurAngle = r->_fCurAngle;
     }
 
 protected:
+    virtual void _Reset()
+    {
+        BaseLaser2DSensor::_Reset();
+        _fCurAngle = 0;
+    }
+
     virtual Transform GetLaserPlaneTransform()
     {
         Transform trot;
@@ -497,9 +539,7 @@ protected:
     dReal _fGeomSpinSpeed;
     Vector _vGeomSpinAxis;
     Vector _vGeomSpinPos;
-
     dReal _fCurAngle;
-    bool _bSpinning;
 };
 
 #endif

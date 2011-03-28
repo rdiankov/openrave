@@ -1915,7 +1915,7 @@ namespace OpenRAVEXMLParser
     class KinBodyXMLReader : public InterfaceXMLReader
     {
     public:
-        KinBodyXMLReader(EnvironmentBasePtr penv, InterfaceBasePtr& pchain, InterfaceType type, const AttributesList& atts) : InterfaceXMLReader(penv,pchain,type,"kinbody",atts) {
+        KinBodyXMLReader(EnvironmentBasePtr penv, InterfaceBasePtr& pchain, InterfaceType type, const AttributesList& atts, int roottransoffset) : InterfaceXMLReader(penv,pchain,type,"kinbody",atts), roottransoffset(roottransoffset) {
             _bSkipGeometry = false;
             _pchain = RaveInterfaceCast<KinBody>(_pinterface);
             _masstype = LinkXMLReader::MT_None;
@@ -2245,7 +2245,7 @@ namespace OpenRAVEXMLParser
                 // transform all the bodies with trans
                 Transform cur;
 
-                for(vector<KinBody::LinkPtr>::iterator itlink = _pchain->_veclinks.begin()+rootoffset; itlink != _pchain->_veclinks.end(); ++itlink) {
+                for(vector<KinBody::LinkPtr>::iterator itlink = _pchain->_veclinks.begin()+roottransoffset; itlink != _pchain->_veclinks.end(); ++itlink) {
                     (*itlink)->SetTransform(_trans * (*itlink)->GetTransform());
                 }
                 Vector com = _pchain->GetCenterOfMass();
@@ -2272,7 +2272,7 @@ namespace OpenRAVEXMLParser
         Transform _trans;
 
         // default mass type passed to every LinkXMLReader
-        int rootoffset, rootjoffset, rootjpoffset;                 ///< the initial number of links when KinBody is created (so that global translations and rotations only affect the new links)
+        int rootoffset, rootjoffset, rootjpoffset, roottransoffset;                 ///< the initial number of links when KinBody is created (so that global translations and rotations only affect the new links)
         LinkXMLReader::MassType _masstype;             ///< if true, mass is craeted so that it mimics the geometry
         float _fMassValue;               ///< density or total mass
         Vector _vMassExtents;
@@ -2639,20 +2639,15 @@ namespace OpenRAVEXMLParser
                     RAVELOG_VERBOSE("Attached robot sensor %s points to no real sensor!\n",_psensor->GetName().c_str());
                 }
                 else {
-                    if( !_psensor->psensor->Init(args) ) {
-                        RAVELOG_WARN("failed to initialize sensor %s\n", _psensor->GetName().c_str());
-                        _psensor->psensor.reset();
-                    }
-                    else {
-                        _psensor->pdata = _psensor->psensor->CreateSensorData();
-                        if( _psensor->pattachedlink.expired() ) {
-                            RAVELOG_INFOA("no attached link, setting to base of robot\n");
-                            if( _probot->GetLinks().size() == 0 ) {
-                                RAVELOG_INFOA("robot has no links!\n");
-                                _psensor->pattachedlink.reset();
-                            }
-                            else
-                                _psensor->pattachedlink = _probot->GetLinks().at(0);
+                    _psensor->pdata = _psensor->psensor->CreateSensorData();
+                    if( _psensor->pattachedlink.expired() ) {
+                        RAVELOG_INFOA("no attached link, setting to base of robot\n");
+                        if( _probot->GetLinks().size() == 0 ) {
+                            RAVELOG_INFOA("robot has no links!\n");
+                            _psensor->pattachedlink.reset();
+                        }
+                        else {
+                            _psensor->pattachedlink = _probot->GetLinks().at(0);
                         }
                     }
                 }
@@ -2719,7 +2714,7 @@ namespace OpenRAVEXMLParser
     class RobotXMLReader : public InterfaceXMLReader
     {
     public:
-        RobotXMLReader(EnvironmentBasePtr penv, InterfaceBasePtr& probot, const AttributesList& atts) : InterfaceXMLReader(penv,probot,PT_Robot,"robot",atts) {
+        RobotXMLReader(EnvironmentBasePtr penv, InterfaceBasePtr& probot, const AttributesList& atts, int roottransoffset) : InterfaceXMLReader(penv,probot,PT_Robot,"robot",atts), roottransoffset(roottransoffset) {
             _probot = RaveInterfaceCast<RobotBase>(_pinterface);
             _bSkipGeometry = false;
             FOREACHC(itatt, atts) {
@@ -2925,7 +2920,7 @@ namespace OpenRAVEXMLParser
                 }
         
                 // transform all "new" bodies with trans
-                vector<KinBody::LinkPtr>::iterator itlink = _probot->_veclinks.begin()+rootoffset;
+                vector<KinBody::LinkPtr>::iterator itlink = _probot->_veclinks.begin()+roottransoffset;
                 while(itlink != _probot->_veclinks.end()) {
                     (*itlink)->SetTransform(_trans * (*itlink)->GetTransform());
                     ++itlink;
@@ -2963,7 +2958,7 @@ namespace OpenRAVEXMLParser
 
         Transform _trans;
         bool _bSkipGeometry;
-        int rootoffset;                 ///< the initial number of links when Robot is created (so that global translations and rotations only affect the new links)
+        int rootoffset, roottransoffset;                 ///< the initial number of links when Robot is created (so that global translations and rotations only affect the new links)
         int rootjoffset, rootjpoffset; ///< the initial number of joints when Robot is created
         std::set<RobotBase::ManipulatorPtr> _setInitialManipulators;
         std::set<RobotBase::AttachedSensorPtr> _setInitialSensors;
@@ -3013,7 +3008,7 @@ namespace OpenRAVEXMLParser
                     strname = itatt->second;
                 }
                 else if( itatt->first == "args" ) {
-                    _args = itatt->second;
+                    RAVELOG_WARN("sensor args has been deprecated.\n");
                 }
             }
 
@@ -3211,7 +3206,7 @@ namespace OpenRAVEXMLParser
                     }
                     else if( !!boost::dynamic_pointer_cast<SensorXMLReader>(_pcurreader) ) {
                         BOOST_ASSERT(_pinterface->GetInterfaceType()==PT_Sensor);
-                        _penv->AddSensor(RaveInterfaceCast<SensorBase>(_pinterface),boost::dynamic_pointer_cast<SensorXMLReader>(_pcurreader)->GetArgs());
+                        _penv->AddSensor(RaveInterfaceCast<SensorBase>(_pinterface));
                     }
                     else if( !!boost::dynamic_pointer_cast< DummyInterfaceXMLReader<PT_PhysicsEngine> >(_pcurreader) ) {
                         BOOST_ASSERT(_pinterface->GetInterfaceType()==PT_PhysicsEngine);
@@ -3292,12 +3287,26 @@ namespace OpenRAVEXMLParser
     {
         switch(type) {
         case PT_Planner: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_Planner>(penv,pinterface,xmltag,atts));
-        case PT_Robot: return InterfaceXMLReaderPtr(new RobotXMLReader(penv,pinterface,atts));
+        case PT_Robot: {
+            KinBodyPtr pbody = RaveInterfaceCast<KinBody>(pinterface); 
+            int rootoffset = 0;
+            if( !!pbody ) {
+                rootoffset = (int)pbody->GetLinks().size();
+            }
+            return InterfaceXMLReaderPtr(new RobotXMLReader(penv,pinterface,atts,rootoffset));
+        }
         case PT_SensorSystem: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_SensorSystem>(penv,pinterface,xmltag,atts));
         case PT_Controller: return InterfaceXMLReaderPtr(new ControllerXMLReader(penv,pinterface,atts));
         case PT_ProblemInstance: return InterfaceXMLReaderPtr(new ProblemXMLReader(penv,pinterface,atts));
         case PT_InverseKinematicsSolver: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_InverseKinematicsSolver>(penv,pinterface,xmltag,atts));
-        case PT_KinBody: return InterfaceXMLReaderPtr(new KinBodyXMLReader(penv,pinterface,type,atts));
+        case PT_KinBody: {
+            KinBodyPtr pbody = RaveInterfaceCast<KinBody>(pinterface); 
+            int rootoffset = 0;
+            if( !!pbody ) {
+                rootoffset = (int)pbody->GetLinks().size();
+            }
+            return InterfaceXMLReaderPtr(new KinBodyXMLReader(penv,pinterface,type,atts,rootoffset));
+        }
         case PT_PhysicsEngine: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_PhysicsEngine>(penv,pinterface,xmltag,atts));
         case PT_Sensor: return InterfaceXMLReaderPtr(new SensorXMLReader(penv,pinterface,atts));
         case PT_CollisionChecker: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_CollisionChecker>(penv,pinterface,xmltag,atts));

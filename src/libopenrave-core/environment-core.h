@@ -216,7 +216,8 @@ class Environment : public EnvironmentBase
                 _vPublishedBodies.clear();
                 _nBodiesModifiedStamp++;
                 FOREACH(itsensor,_listSensors) {
-                    (*itsensor)->Reset(0);
+                    (*itsensor)->Configure(SensorBase::CC_PowerOff);
+                    (*itsensor)->Configure(SensorBase::CC_RenderGeometryOff);
                 }
                 _listSensors.clear();
                 _listProblems.clear();
@@ -268,7 +269,8 @@ class Environment : public EnvironmentBase
             _mapBodies.clear();
 
             FOREACH(itsensor,_listSensors) {
-                (*itsensor)->Reset(0);
+                (*itsensor)->Configure(SensorBase::CC_PowerOff);
+                (*itsensor)->Configure(SensorBase::CC_RenderGeometryOff);
             }
             _listSensors.clear();
         }
@@ -469,7 +471,7 @@ class Environment : public EnvironmentBase
         return true;
     }
 
-    virtual bool AddSensor(SensorBasePtr psensor, const std::string& args, bool bAnonymous)
+    virtual bool AddSensor(SensorBasePtr psensor, bool bAnonymous)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         CHECK_INTERFACE(psensor);
@@ -491,7 +493,7 @@ class Environment : public EnvironmentBase
             boost::mutex::scoped_lock lock(_mutexInterfaces);
             _listSensors.push_back(psensor);
         }
-        psensor->Init(args);
+        psensor->Configure(SensorBase::CC_PowerOn);
         return true;
     }
 
@@ -538,7 +540,7 @@ class Environment : public EnvironmentBase
             SensorBasePtr psensor = RaveInterfaceCast<SensorBase>(interface);
             list<SensorBasePtr>::iterator it = std::find(_listSensors.begin(), _listSensors.end(), psensor);
             if( it != _listSensors.end() ) {
-                (*it)->Reset(0);
+                (*it)->Configure(SensorBase::CC_PowerOff);
                 _listSensors.erase(it);
                 return true;
             }
@@ -1384,46 +1386,43 @@ protected:
         if( options & Clone_Bodies ) {
             boost::mutex::scoped_lock lock(r->_mutexInterfaces);
             FOREACHC(itrobot, r->_vecrobots) {
-                RobotBasePtr pnewrobot = RaveCreateRobot(shared_from_this(), (*itrobot)->GetXMLId());
-                if( !pnewrobot ) {
-                    RAVELOG_ERROR("failed to create robot %s\n", (*itrobot)->GetXMLId().c_str());
-                    continue;
+                try {
+                    RobotBasePtr pnewrobot = RaveCreateRobot(shared_from_this(), (*itrobot)->GetXMLId());
+                    pnewrobot->Clone(*itrobot, options);
+                    pnewrobot->_environmentid = (*itrobot)->GetEnvironmentId();
+
+                    // note that pointers will not be correct
+                    pnewrobot->_vGrabbedBodies = (*itrobot)->_vGrabbedBodies;
+                    pnewrobot->_listAttachedBodies = (*itrobot)->_listAttachedBodies;
+
+                    BOOST_ASSERT( _mapBodies.find(pnewrobot->GetEnvironmentId()) == _mapBodies.end() );
+                    _mapBodies[pnewrobot->GetEnvironmentId()] = pnewrobot;
+                    _vecbodies.push_back(pnewrobot);
+                    _vecrobots.push_back(pnewrobot);
                 }
-
-                if( !pnewrobot->Clone(*itrobot, options)) {
-                    RAVELOG_ERROR("failed to clone robot %s\n", (*itrobot)->GetName().c_str());
-                    continue;
+                catch(const openrave_exception& ex) {
+                    RAVELOG_ERROR(str(boost::format("failed to clone robot %s")%(*itrobot)->GetName()));
                 }
-
-                pnewrobot->_environmentid = (*itrobot)->GetEnvironmentId();
-
-                // note that pointers will not be correct
-                pnewrobot->_vGrabbedBodies = (*itrobot)->_vGrabbedBodies;
-                pnewrobot->_listAttachedBodies = (*itrobot)->_listAttachedBodies;
-
-                BOOST_ASSERT( _mapBodies.find(pnewrobot->GetEnvironmentId()) == _mapBodies.end() );
-                _mapBodies[pnewrobot->GetEnvironmentId()] = pnewrobot;
-                _vecbodies.push_back(pnewrobot);
-                _vecrobots.push_back(pnewrobot);
             }
             FOREACHC(itbody, r->_vecbodies) {
                 if( _mapBodies.find((*itbody)->GetEnvironmentId()) != _mapBodies.end() ) {
                     continue;
                 }
-                KinBodyPtr pnewbody(new KinBody(PT_KinBody,shared_from_this()));
-                if( !pnewbody->Clone(*itbody,options) ) {
-                    RAVELOG_ERROR("failed to clone body %s\n", (*itbody)->GetName().c_str());
-                    continue;
+                try {
+                    KinBodyPtr pnewbody(new KinBody(PT_KinBody,shared_from_this()));
+                    pnewbody->Clone(*itbody,options);
+                    pnewbody->_environmentid = (*itbody)->GetEnvironmentId();
+                    
+                    // note that pointers will not be correct
+                    pnewbody->_listAttachedBodies = (*itbody)->_listAttachedBodies;
+                    
+                    // note that pointers will not be correct
+                    _mapBodies[pnewbody->GetEnvironmentId()] = pnewbody;
+                    _vecbodies.push_back(pnewbody);
                 }
-
-                pnewbody->_environmentid = (*itbody)->GetEnvironmentId();
-                
-                // note that pointers will not be correct
-                pnewbody->_listAttachedBodies = (*itbody)->_listAttachedBodies;
-
-                // note that pointers will not be correct
-                _mapBodies[pnewbody->GetEnvironmentId()] = pnewbody;
-                _vecbodies.push_back(pnewbody);
+                catch(const openrave_exception& ex) {
+                    RAVELOG_ERROR(str(boost::format("failed to clone body %s")%(*itbody)->GetName()));
+                }
             }
 
             // process attached bodies
@@ -1468,16 +1467,14 @@ protected:
         if( options & Clone_Sensors ) {
             boost::mutex::scoped_lock lock(r->_mutexInterfaces);
             FOREACHC(itsensor,r->_listSensors) {
-                SensorBasePtr pnewsensor = RaveCreateSensor(shared_from_this(), (*itsensor)->GetXMLId());
-                if( !pnewsensor ) {
-                    RAVELOG_ERROR("failed to create sensor %s\n", (*itsensor)->GetXMLId().c_str());
-                    continue;
+                try {
+                    SensorBasePtr pnewsensor = RaveCreateSensor(shared_from_this(), (*itsensor)->GetXMLId());
+                    pnewsensor->Clone(*itsensor, options);
+                    _listSensors.push_back(pnewsensor);
                 }
-                if( !pnewsensor->Clone(*itsensor, options)) {
-                    RAVELOG_ERROR("failed to clone sensor %s\n", (*itsensor)->GetName().c_str());
-                    continue;
+                catch(const openrave_exception& ex) {
+                    RAVELOG_ERROR(str(boost::format("failed to clone sensor %s")%(*itsensor)->GetName()));
                 }
-                _listSensors.push_back(pnewsensor);
             }
         }
 

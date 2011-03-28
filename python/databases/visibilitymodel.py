@@ -344,12 +344,12 @@ class VisibilityModel(DatabaseGenerator):
 
     def getCameraImage(self,delay=1.0):
         sensor=self.attachedsensor.GetSensor()
-        sensor.SendCommand('power 1')
+        sensor.Configure(Sensor.ConfigureCommand.PowerOn)
         try:
             time.sleep(delay)
             return sensor.GetSensorData().imagedata
         finally:
-            sensor.SendCommand('power 0')
+            sensor.Configure(Sensor.ConfigureCommand.PowerOff)
 
     @staticmethod
     def CreateOptionParser():

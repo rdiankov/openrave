@@ -1871,10 +1871,6 @@ class ColladaReader : public daeErrorHandler
         }
         _ProcessXMLReader(pcurreader,domsensor);
         psensor->__mapReadableInterfaces[psensor->GetXMLId()] = pcurreader->GetReadable();
-        if( !psensor->Init(instance_sensor->getAttribute("args")) ) {
-            RAVELOG_WARN(str(boost::format("failed to initialize sensor %s\n")));
-            psensor.reset();
-        }
         return true;
     }
 

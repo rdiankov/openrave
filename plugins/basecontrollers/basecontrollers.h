@@ -316,18 +316,12 @@ class RedirectController : public ControllerBase
     virtual void GetTorque(std::vector<dReal>& torque) const { return _pcontroller->GetTorque(torque); }
     virtual RobotBasePtr GetRobot() const { return _probot; }
 
-    virtual bool Clone(InterfaceBaseConstPtr preference, int cloningoptions)
+    virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     {
+        ControllerBase::Clone(preference,cloningoptions);
         boost::shared_ptr<RedirectController const> r = boost::dynamic_pointer_cast<RedirectController const>(preference);
-        if( !r ) {
-            return false;
-        }
-        if( !ControllerBase::Clone(preference,cloningoptions) ) {
-            return false;
-        }
         _probot = GetEnv()->GetRobot(r->_probot->GetName());
         _pcontroller = r->_pcontroller; // hmm......... this requires some thought
-        return true;
     }
 
     virtual bool SendCommand(std::ostream& os, std::istream& is)

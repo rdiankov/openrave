@@ -101,7 +101,7 @@ class CheckVisibility:
         for sensor in self.robot.GetAttachedSensors():
             # if sensor is a camera
             if sensor.GetSensor() is not None and sensor.GetSensor().Supports(Sensor.Type.Camera):
-                sensor.GetSensor().SendCommand('power 1')
+                sensor.GetSensor().Configure(Sensor.ConfigureCommand.PowerOn)
                 # go through all objects
                 for target in self.env.GetBodies():
                     # load the visibility model

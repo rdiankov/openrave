@@ -29,9 +29,9 @@ python build_openravepy_internal.py --languagecode en --languagecode ja
 # have to rebuild openravepy_int to get correct docstrings!
 
 # build openravepy documentation
-prevlang=$LANG
-export LANG=en_US.UTF-8
-./build_sphinx.sh en
-export LANG=ja_JP.UTF-8
-./build_sphinx.sh ja
-export LANG=$prevlang
+#prevlang=$LANG
+#export LANG=en_US.UTF-8
+#./build_sphinx.sh en
+#export LANG=ja_JP.UTF-8
+#./build_sphinx.sh ja
+#export LANG=$prevlang
