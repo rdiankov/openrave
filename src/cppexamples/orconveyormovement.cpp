@@ -137,7 +137,7 @@ int main(int argc, char ** argv)
     EnvironmentBasePtr penv = RaveCreateEnvironment();
 
     // load the environment
-    string scenefilename = "robots/pr2-beta-static.robot.xml";
+    string scenefilename = "robots/pr2-beta-static.zae";
     string viewername = "qtcoin";
     boost::thread thviewer(boost::bind(SetViewer,penv,viewername)); // create the viewer
     penv->Load(scenefilename);
