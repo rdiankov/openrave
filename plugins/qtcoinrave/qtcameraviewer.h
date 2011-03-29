@@ -38,6 +38,12 @@ public:
         }
     }
     virtual ~QtCameraViewer() {
+        QWidgetList widgets = QApplication::topLevelWidgets();
+        // post on all of them
+        for(int i = 0; i < widgets.length(); ++i) {
+            QApplication::postEvent(widgets.at(i),new MyCallbackEvent(boost::bind(&QtCameraViewer::_DestroyImageWindow,_imagewindow)));
+        }
+        _imagewindow.reset();
     }
 
     virtual int main(bool bShow = true)
@@ -108,6 +114,10 @@ protected:
             _imagewindow.reset(new QtImageWindow(_psensor));
             _imagewindow->show();
         }
+    }
+
+    static void _DestroyImageWindow(boost::shared_ptr<QtImageWindow> imagewindow)
+    {
     }
 
     SensorBasePtr _psensor;

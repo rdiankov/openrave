@@ -318,6 +318,7 @@ make
 - \ref orcollision.cpp
 - \ref orconveyormovement.cpp
 - \ref orloadviewer.cpp
+- \ref orshowsensors.cpp
 - \ref ormulticontrol.cpp
 - \ref orplanning_ik.cpp
 - \ref orplanning_planner.cpp
