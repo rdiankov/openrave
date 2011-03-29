@@ -24,16 +24,18 @@ public:
         string name; sinput >> name;
         _psensor = penv->GetSensor(name);
         if( !_psensor || !_psensor->Supports(SensorBase::ST_Camera) ) {
-            throw openrave_exception(str(boost::format("failed to find camera sensor %s")%name));
-        }
-        QWidgetList widgets = QApplication::topLevelWidgets();
-        if( widgets.empty() ) {
-            RAVELOG_WARN("no qt viewer active, so cannot display camera images\n");
+            RAVELOG_WARN(str(boost::format("failed to find camera sensor %s")%name));
         }
         else {
-            // post on all of them
-            for(int i = 0; i < widgets.length(); ++i) {
-                QApplication::postEvent(widgets.at(i),new MyCallbackEvent(boost::bind(&QtCameraViewer::_CreateImageWindow,this)));
+            QWidgetList widgets = QApplication::topLevelWidgets();
+            if( widgets.empty() ) {
+                RAVELOG_WARN("no qt viewer active, so cannot display camera images\n");
+            }
+            else {
+                // post on all of them
+                for(int i = 0; i < widgets.length(); ++i) {
+                    QApplication::postEvent(widgets.at(i),new MyCallbackEvent(boost::bind(&QtCameraViewer::_CreateImageWindow,this)));
+                }
             }
         }
     }
