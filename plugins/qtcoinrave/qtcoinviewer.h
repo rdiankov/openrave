@@ -1,4 +1,4 @@
-// Copyright (C) 2006-2010 Rosen Diankov (rdiankov@cs.cmu.edu)
+// Copyright (C) 2006-2011 Rosen Diankov (rdiankov@cs.cmu.edu)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -129,10 +129,11 @@ public:
 
     virtual void SetEnvironmentSync(bool bUpdate);
     virtual void EnvironmentSync();
-
     virtual bool _RecordVideo();
 
     virtual RaveTransform<float> GetCameraTransform();
+
+    virtual void customEvent(QEvent * e);
 
     virtual void UnregisterCallback(std::list<std::pair<int,ViewerCallbackFn > >::iterator it)
     {
@@ -338,7 +339,6 @@ protected:
     SoTimerSensor*      _timerVideo;    ///< used for video recording
 
     // the GUI
-    QWidget       *_pQtWidget;
     SoQtExaminerViewer* _pviewer;
     QActionGroup* _pToggleDebug, *_pSelectedCollisionChecker, *_pSelectedPhysicsEngine, *_pActionSendCommand;
     QAction* _pToggleSimulation, *_pToggleSelfCollision;

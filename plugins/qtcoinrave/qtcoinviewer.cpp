@@ -2009,6 +2009,14 @@ void QtCoinViewer::SetupMenus()
 #endif
 }
 
+void QtCoinViewer::customEvent(QEvent * e)
+{
+    if (e->type() == QEvent::User) {
+        static_cast<MyCallbackEvent*>(e)->_fn();
+        e->setAccepted(true);
+    }
+}
+
 int QtCoinViewer::main(bool bShow)
 {
     _StartPlaybackTimer();
@@ -2688,6 +2696,7 @@ void QtCoinViewer::Quit()
 
 void QtCoinViewer::ViewCameraParams()
 {
+    stringstream ss; ss << "BarrettWAM_camera";
     PrintCamera();
 }
 

@@ -83,55 +83,6 @@ if not __build_doc__:
     from numpy import *
     from openravepy import *
 
-try:
-    from Tkinter import *
-    import tkFileDialog
-    import Image, ImageDraw, ImageTk
-except ImportError:
-    pass
-
-class CameraViewerGUI(threading.Thread):
-    class Container:
-        pass
-    def __init__(self,sensor,title='Camera Viewer'):
-        threading.Thread.__init__(self)
-        self.sensor = sensor
-        self.title = title
-        self.laststamp = None
-        self.imagelck = threading.Lock()
-    def updateimage(self):
-        data = self.sensor.GetSensorData()
-        if data is not None and not self.laststamp == data.stamp:
-            width = data.imagedata.shape[1]
-            height = data.imagedata.shape[0]
-            self.imagelck.acquire()
-            self.image = Image.frombuffer('RGB',[width,height], data.imagedata.tostring(), 'raw','RGB',0,1)
-            self.imagelck.release()
-            photo = ImageTk.PhotoImage(self.image)
-            if self.container is None:
-                self.container = self.Container()
-                self.container.width = width
-                self.container.height = height
-                self.container.main = self.main
-                self.container.canvas = Canvas(self.main, width=width, height=height)
-                self.container.canvas.pack(expand=1, fill=BOTH)#side=TOP,fill=X)#
-                self.container.obr = None
-            self.container.canvas.create_image(self.container.width/2, self.container.height/2, image=photo)
-            self.container.obr = photo
-            self.laststamp = data.stamp
-        self.main.after(100,self.updateimage)
-    def saveimage(self,filename):
-        self.imagelck.acquire()
-        self.image.save(filename)
-        self.imagelck.release()
-    def run(self):
-        self.main = Tk()
-        self.main.title(self.title)      # window title
-        self.main.resizable(width=True, height=True)
-        self.container = None
-        self.main.after(0,self.updateimage)
-        self.main.mainloop()
-
 class VisibilityGrasping:
     """Calls on the openrave grasp planners to get a robot to pick up objects while guaranteeing visibility with its cameras"""
     def __init__(self,env):
@@ -154,36 +105,17 @@ class VisibilityGrasping:
         with self.orenvreal:
             self.basemanip = interfaces.BaseManipulation(self.robotreal)
             self.homevalues = self.robotreal.GetDOFValues()
-            self.viewers = []
             attachedsensors = []
             if usecameraview:
-                Tk # check if Tk exists
                 if showsensors:
                     for attachedsensor in self.robotreal.GetAttachedSensors():
                         if attachedsensor.GetSensor() is not None and attachedsensor.GetSensor().Supports(Sensor.Type.Camera):
                             attachedsensor.GetSensor().Configure(Sensor.ConfigureCommand.PowerOn)
+                            attachedsensor.GetSensor().Configure(Sensor.ConfigureCommand.RenderDataOn)
                             attachedsensors.append(attachedsensor)
 
         time.sleep(1) # wait for sensors to initialize
         with self.orenvreal:
-            # create a camera viewer for every camera sensor
-            try:
-                for attachedsensor in attachedsensors:
-                    sensordata = attachedsensor.GetSensor().GetSensorData(Sensor.Type.Camera)
-                    if sensordata is not None:
-                        if len(attachedsensor.GetName()) > 0:
-                            title = 'visibilityplanning: ' + attachedsensor.GetName()
-                        else:
-                            title = 'visibilityplanning: ' + attachedsensor.GetSensor().GetName()
-                        self.viewers.append(CameraViewerGUI(sensor=attachedsensor.GetSensor(),title=title))
-                        break # can only support one camera
-                print 'found %d camera sensors on robot %s'%(len(self.viewers),self.robotreal.GetName())
-                for viewer in self.viewers:
-                    viewer.start()
-            except NameError,e:
-                print 'failed to create camera gui: ',e
-                self.viewers = []
-
             self.sensor = [s for s in self.robotreal.GetAttachedSensors() if s.GetName()==sensorname][0]
             # find a manipulator whose end effector is the camera
             self.manip = [m for m in self.robotreal.GetManipulators() if m.GetEndEffector() == self.sensor.GetAttachingLink()][0]
@@ -378,13 +310,6 @@ class VisibilityGrasping:
 
             if not success:
                 continue
-
-    def quitviewers(self):
-        for viewer in self.viewers:
-            viewer.main.quit()
-    def __del__(self):
-        self.quitviewers()
-        self.orenv.Destroy()
 
 class PA10GraspExample(VisibilityGrasping):
     """Specific class to setup an PA10 scene for visibility grasping"""

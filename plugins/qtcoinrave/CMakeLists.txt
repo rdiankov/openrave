@@ -8,8 +8,9 @@ endif(APPLE)
 if( MSVC )
   set(QT_MOC_EXECUTABLE "${CMAKE_CURRENT_SOURCE_DIR}/moc.exe")
   set(QT_FOUND 1)
+  set(QT_LIBRARIES Qt3Support4 QtCore4 QtGui4 QtOpenGL4)
 else()
-  find_package(Qt4)
+  find_package(Qt4 COMPONENTS QtCore QtGui REQUIRED)
   if (NOT QT_FOUND)
     message(STATUS "WARNING: Qt4 not found, disabling QtCoin GUI plugin")
   endif ()
@@ -26,31 +27,32 @@ if(NOT OPENGL_FOUND)
 endif()
 
 if (QT_FOUND AND SOQT_LIBRARY_FOUND AND OPENGL_FOUND)
-
   message(STATUS "Detected SoQt/Coin3D GUI, making plugin")
-
-  include_directories(${OPENGL_INCLUDE_DIR} ${QT_INCLUDE_DIRS} ${SOQT_INCLUDE_DIRS})
+  include_directories(${OPENGL_INCLUDE_DIR} ${SOQT_INCLUDE_DIRS})
   link_directories(${OPENRAVE_LINK_DIRS} ${SOQT_LINK_DIRS})
 
   # generate rules for building source files from the resources
   set(QTCOIN_MOCS qtcoinviewer.h)
 
   if( MSVC )
-    set(MOC_OUTPUT_FILES "${CMAKE_CURRENT_BINARY_DIR}/moc_qtcoinviewer.cpp")
-    add_custom_command(
-      OUTPUT ${MOC_OUTPUT_FILES}
-      COMMAND ${QT_MOC_EXECUTABLE}
-      ARGS -I${CMAKE_SOURCE_DIR}/inc/qt/include -I${CMAKE_SOURCE_DIR}/inc/qt/include/qt -I${CMAKE_SOURCE_DIR}/inc/qt/include/qtgui -I${CMAKE_SOURCE_DIR}/inc/qt/include/qtcore -I${CMAKE_SOURCE_DIR}/inc/qt/include/qtopengl -o ${MOC_OUTPUT_FILES} ${CMAKE_CURRENT_SOURCE_DIR}/qtcoinviewer.h
-      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/qtcoinviewer.h
-      )
+    set(MOC_OUTPUT_FILES)
+    foreach(MOC_FILE ${QTCOIN_MOCS})
+      set(MOC_OUTPUT_FILE "${CMAKE_CURRENT_BINARY_DIR}/moc_${MOC_FILE}.cpp")
+      set(MOC_OUTPUT_FILES ${MOC_OUTPUT_FILES} ${MOC_FILE})
+      add_custom_command(
+        OUTPUT ${MOC_OUTPUT_FILE}
+        COMMAND ${QT_MOC_EXECUTABLE}
+        ARGS -I${CMAKE_SOURCE_DIR}/inc/qt/include -I${CMAKE_SOURCE_DIR}/inc/qt/include/qt -I${CMAKE_SOURCE_DIR}/inc/qt/include/qtgui -I${CMAKE_SOURCE_DIR}/inc/qt/include/qtcore -I${CMAKE_SOURCE_DIR}/inc/qt/include/qtopengl -o ${MOC_OUTPUT_FILE} ${CMAKE_CURRENT_SOURCE_DIR}/${MOC_FILE}
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${MOC_FILE}
+        )
+    endforeach()
   else()
-    include( ${QT_USE_FILE} )
+    include(${QT_USE_FILE})
     qt4_wrap_cpp(MOC_OUTPUT_FILES ${QTCOIN_MOCS})
-    #QT4_ADD_RESOURCES(QTCOIN_RCC_SRCS ${QTCOIN_RCCS})
   endif()
 
    # build sources, moc'd sources, and rcc'd sources
-  add_library(qtcoinrave SHARED aviUtil.cpp IvSelector.cpp Item.cpp qtcoinviewer.cpp qtcoinrave.cpp ${MOC_OUTPUT_FILES} Item.h IvSelector.h qtcoin.h qtcoinviewer.h)
+  add_library(qtcoinrave SHARED aviUtil.cpp IvSelector.cpp Item.cpp qtcoinviewer.cpp qtcoinrave.cpp ${MOC_OUTPUT_FILES} Item.h IvSelector.h qtcoin.h qtcoinviewer.h qtcameraviewer.h qtimagewindow.h)
 
   if( OPT_VIDEORECORDING )
     pkg_check_modules(FFMPEG libavformat libavcodec)

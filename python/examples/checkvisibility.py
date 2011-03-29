@@ -35,73 +35,19 @@ if not __build_doc__:
     from openravepy import *
     from numpy import *
 
-try:
-    from Tkinter import *
-    import tkFileDialog
-    import Image, ImageDraw, ImageTk
-except ImportError:
-    pass
-
-class CameraViewerGUI(threading.Thread):
-    class Container:
-        pass
-    def __init__(self,sensor,title='Camera Viewer'):
-        threading.Thread.__init__(self)
-        self.sensor = sensor
-        self.title = title
-        self.lastid = -1
-        self.imagelck = threading.Lock()
-
-    def updateimage(self):
-        data = self.sensor.GetSensorData()
-        if data is not None and not self.lastid == data.stamp:
-            width = data.imagedata.shape[1]
-            height = data.imagedata.shape[0]
-            self.imagelck.acquire()
-            self.image = Image.frombuffer('RGB',[width,height], data.imagedata.tostring(), 'raw','RGB',0,1)
-            self.imagelck.release()
-
-            photo = ImageTk.PhotoImage(self.image)
-            if self.container is None:
-                self.container = self.Container()
-                self.container.width = width
-                self.container.height = height
-                self.container.main = self.main
-                self.container.canvas = Canvas(self.main, width=width, height=height)
-                self.container.canvas.pack(expand=1, fill=BOTH)#side=TOP,fill=X)#
-                self.container.obr = None
-
-            self.container.canvas.create_image(self.container.width/2, self.container.height/2, image=photo)
-            self.container.obr = photo
-            self.lastid = data.stamp
-        self.main.after(100,self.updateimage)
-
-    def saveimage(self,filename):
-        self.imagelck.acquire()
-        self.image.save(filename)
-        self.imagelck.release()
-
-    def run(self):
-        self.main = Tk()
-        self.main.title(self.title)      # window title
-        self.main.resizable(width=True, height=True)
-        self.container = None
-        self.main.after(0,self.updateimage)
-        self.main.mainloop()
-
 class CheckVisibility:
     def __init__(self,robot):
         self.robot = robot
         self.vmodels = []
         self.handles = None
-        self.viewers = []
         self.env = self.robot.GetEnv()
         # through all sensors
-        sensors = []
+        self.sensors = []
         for sensor in self.robot.GetAttachedSensors():
             # if sensor is a camera
             if sensor.GetSensor() is not None and sensor.GetSensor().Supports(Sensor.Type.Camera):
                 sensor.GetSensor().Configure(Sensor.ConfigureCommand.PowerOn)
+                sensor.GetSensor().Configure(Sensor.ConfigureCommand.RenderDataOn)
                 # go through all objects
                 for target in self.env.GetBodies():
                     # load the visibility model
@@ -111,16 +57,7 @@ class CheckVisibility:
                     # set internal discretization parameters 
                     vmodel.visualprob.SetParameter(raydensity=0.002,allowableocclusion=0.0)
                     self.vmodels.append(vmodel)
-                sensors.append(sensor.GetSensor())
-
-        try:
-            for sensor in sensors:
-                self.viewers.append(CameraViewerGUI(sensor=sensor))
-            for viewer in self.viewers:
-                viewer.start()
-            self.env.GetViewer().SendCommand('SetFiguresInCamera 1')
-        except NameError,e:
-            print 'failed to create camera gui: ',e
+                self.sensors.append(sensor.GetSensor())
 
     def computeVisibleObjects(self):
         print '-----'
@@ -156,14 +93,10 @@ def main(env,options):
             T[0:3,3] = [-0.14,0.146,0.938]
             body.SetTransform(T)
     self = CheckVisibility(robot)
-    try:
-        print 'try moving objects in and out of the sensor view. green is inside'
-        while True:
-            self.computeVisibleObjects()
-            time.sleep(0.01)
-    finally:
-        for viewer in self.viewers:
-            viewer.main.quit()
+    print 'try moving objects in and out of the sensor view. green is inside'
+    while True:
+        self.computeVisibleObjects()
+        time.sleep(0.01)
 
 from optparse import OptionParser
 from openravepy import OpenRAVEGlobalArguments, with_destroy

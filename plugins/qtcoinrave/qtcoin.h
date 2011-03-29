@@ -102,6 +102,7 @@ inline uint64_t GetMicroTime()
 #include <boost/thread/condition.hpp>
 #include <boost/version.hpp>
 #include <boost/array.hpp>
+#include <boost/function.hpp>
 
 using namespace OpenRAVE;
 using namespace std;
@@ -216,6 +217,14 @@ template <class T> boost::shared_ptr<T> sptr_from(boost::weak_ptr<T> const& wpt)
 class QtCoinViewer;
 typedef boost::shared_ptr<QtCoinViewer> QtCoinViewerPtr;
 typedef boost::shared_ptr<QtCoinViewer const> QtCoinViewerConstPtr;
+
+class MyCallbackEvent : public QEvent
+{
+ public:
+ MyCallbackEvent(const boost::function<void()>& fn) : QEvent(QEvent::User), _fn(fn) {}
+    virtual ~MyCallbackEvent() {}
+    boost::function<void()> _fn;
+};
 
 #include "Item.h"
 #include "IvSelector.h"

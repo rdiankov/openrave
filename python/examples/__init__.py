@@ -24,6 +24,7 @@ import tutorial_004
 import tutorial_grasptransform
 import tutorial_ik5d
 import tutorial_iklookat
+import tutorial_iklookat_multiple
 import tutorial_iksolutions
 import tutorial_iktranslation
 import tutorial_iktranslation2d
@@ -43,9 +44,8 @@ import hanoi
 import graspplanning
 import movehandstraight
 import movehandstraight2
+import showsensors
 import simplenavigation
-import testcamerasensor
-import testlasersensor
 import testphysics
 import testphysics_controller
 import testphysics_diffdrive

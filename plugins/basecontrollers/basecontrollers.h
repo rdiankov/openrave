@@ -221,10 +221,10 @@ private:
     void _CheckLimits(std::vector<dReal>& curvalues)
     {
         for(size_t i = 0; i < _vlower.size(); ++i) {
-            if( curvalues.at(i) < _vlower[i]-g_fEpsilon*10 ) {
+            if( curvalues.at(i) < _vlower[i]-5e-5f ) {
                 RAVELOG_WARN(str(boost::format("robot %s dof %d is violating lower limit %s < %s")%_probot->GetName()%i%_vlower[i]%curvalues[i]));
             }
-            if( curvalues.at(i) > _vupper[i]+g_fEpsilon*10 ) {
+            if( curvalues.at(i) > _vupper[i]+5e-5f ) {
                 RAVELOG_WARN(str(boost::format("robot %s dof %d is violating upper limit %s > %s")%_probot->GetName()%i%_vupper[i]%curvalues[i]));
             }
         }

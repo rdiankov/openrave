@@ -1,4 +1,4 @@
-<sensor type="BaseCamera" args="">
+<sensor type="BaseCamera">
   <KK>640 640 320 240</KK>
   <width>640</width>
   <height>480</height>

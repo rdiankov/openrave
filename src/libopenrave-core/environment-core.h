@@ -182,7 +182,6 @@ class Environment : public EnvironmentBase
 
         RAVELOG_DEBUG("resetting raveviewer\n");
         if( !!_pCurrentViewer ) {
-            _pCurrentViewer->deselect();
             _pCurrentViewer->Reset();
             _pCurrentViewer->quitmainloop();
         }
@@ -237,7 +236,6 @@ class Environment : public EnvironmentBase
         // destruction order is *very* important, don't touch it without consultation
         RAVELOG_DEBUG("resetting raveviewer\n");
         if( !!_pCurrentViewer ) {
-            _pCurrentViewer->deselect();
             _pCurrentViewer->Reset();
         }
     
@@ -1666,7 +1664,6 @@ protected:
             _cond.notify_all();
         }
 
-        virtual void deselect() {}
         virtual void Reset() {}
         virtual void SetBkgndColor(const RaveVector<float>& color) {}
         

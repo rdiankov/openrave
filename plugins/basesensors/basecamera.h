@@ -96,14 +96,14 @@ class BaseCameraSensor : public SensorBase
     
  BaseCameraSensor(EnvironmentBasePtr penv) : SensorBase(penv) {
         __description = ":Interface Author: Rosen Diankov\n\nProvides a simulated camera using the standard pinhole projection.";
-        RegisterCommand("power",boost::bind(&BaseCameraSensor::_Power,this,_1,_2),
-                        "Set the power (1 or 0) of the sensor.");
-        RegisterCommand("render",boost::bind(&BaseCameraSensor::_Render,this,_1,_2),
-                        "Set rendering of the plots (1 or 0).");
+        RegisterCommand("power",boost::bind(&BaseCameraSensor::_Power,this,_1,_2), "deprecated");
+        RegisterCommand("render",boost::bind(&BaseCameraSensor::_Render,this,_1,_2),"deprecated");
         RegisterCommand("setintrinsic",boost::bind(&BaseCameraSensor::_SetIntrinsic,this,_1,_2),
                         "Set the intrinsic parameters of the camera (fx,fy,cx,cy).");
         RegisterCommand("setdims",boost::bind(&BaseCameraSensor::_SetDims,this,_1,_2),
                     "Set the dimensions of the image (width,height)");
+        RegisterCommand("SaveImage",boost::bind(&BaseCameraSensor::_SaveImage,this,_1,_2),
+                        "Saves the next camera image to the given filename");
         _pgeom.reset(new CameraGeomData());
         _pdata.reset(new CameraSensorData());
         _bPower = false;
@@ -126,11 +126,24 @@ class BaseCameraSensor : public SensorBase
             return _bPower;
         case CC_PowerCheck:
             return _bPower;
-        case CC_RenderDataOn:
-            _bRenderData = true;
+        case CC_RenderDataOn: {
+            try {
+                stringstream ss;
+                ss << "qtcameraviewer " << GetName(); 
+                _dataviewer = RaveCreateViewer(GetEnv(),ss.str());
+                _bRenderData = !!_dataviewer;
+                if( _bRenderData ) {
+                    _dataviewer->main();
+                }
+            }
+            catch(const openrave_exception& ex) {
+                RAVELOG_WARN(str(boost::format("BaseCameraSensor::Configure: %s")%ex.what()));
+            }
             return _bRenderData;
+        }
         case CC_RenderDataOff: {
             boost::mutex::scoped_lock lock(_mutexdata);
+            _dataviewer.reset();
             _bRenderData = false;
             return _bRenderData;
         }
@@ -159,6 +172,7 @@ class BaseCameraSensor : public SensorBase
         _vimagedata.resize(3*_pgeom->width*_pgeom->height);
         _fTimeToImage = 0;
         _graphgeometry.reset();
+        _dataviewer.reset();
     }
     
     virtual bool SimulationStep(dReal fTimeElapsed)
@@ -219,6 +233,7 @@ class BaseCameraSensor : public SensorBase
 
     bool _Power(ostream& sout, istream& sinput)
     {
+        RAVELOG_WARN("power command deprecated, use SensorBase::Configure(CC_PowerOn)\n");
         sinput >> _bPower;
         if( !_bPower ) {
             // should reset!
@@ -229,6 +244,7 @@ class BaseCameraSensor : public SensorBase
     }
     bool _Render(ostream& sout, istream& sinput)
     {
+        RAVELOG_WARN("Render command deprecated, use SensorBase::Configure(CC_RenderGeometryOn)\n");
         sinput >> _bRenderGeometry;
         return !!sinput;
     }
@@ -244,6 +260,11 @@ class BaseCameraSensor : public SensorBase
             _Reset();
             return true;
         }
+        return false;
+    }
+    bool _SaveImage(ostream& sout, istream& sinput)
+    {
+        RAVELOG_WARN("SaveImage not implemented yet\n");
         return false;
     }
 
@@ -325,6 +346,7 @@ class BaseCameraSensor : public SensorBase
     dReal _fTimeToImage;
     int framerate;
     GraphHandlePtr _graphgeometry;
+    ViewerBasePtr _dataviewer;
 
     mutable boost::mutex _mutexdata;
 

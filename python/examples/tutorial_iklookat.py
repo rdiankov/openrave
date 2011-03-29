@@ -49,14 +49,11 @@ def main(env,options):
         h=env.plot3(array([target]),20.0)
         for i in random.permutation(len(solutions))[0:min(100,len(solutions))]:
             with env:
-                # first test to see if dot product is positive before displaying the solution
-                with KinBodyStateSaver(robot):
-                    robot.SetDOFValues(solutions[i],ikmodel.manip.GetArmIndices())
-                    T = ikmodel.manip.GetEndEffectorTransform()
-                    globaldir = numpy.dot(T[0:3,0:3],ikmodel.manip.GetDirection())
-                # draw
                 robot.SetDOFValues(solutions[i],ikmodel.manip.GetArmIndices())
-                hray = env.drawlinelist(array([T[0:3,3], T[0:3,3]+globaldir]),5,colors=[0.1,0.1,1])
+                T = ikmodel.manip.GetEndEffectorTransform()
+                globaldir = numpy.dot(T[0:3,0:3],ikmodel.manip.GetDirection())
+                dist = linalg.norm(T[0:3,3]-target)+0.4
+                hray = env.drawlinelist(array([T[0:3,3], T[0:3,3]+dist*globaldir]),5,colors=[0.1,0.1,1])
                 env.UpdatePublishedBodies()
             time.sleep(0.1)
 

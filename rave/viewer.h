@@ -141,8 +141,6 @@ protected:
     virtual GraphHandlePtr drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const RaveVector<float>& color) { throw openrave_exception("ViewerBase::drawtrimesh not implemented",ORE_NotImplemented); }
     virtual GraphHandlePtr drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const boost::multi_array<float,2>& colors) { throw openrave_exception("ViewerBase::drawtrimesh not implemented",ORE_NotImplemented); }
 
-    virtual void deselect() { throw openrave_exception("ViewerBase::deselect not implemented",ORE_NotImplemented); }
-
 private:
     virtual const char* GetHash() const { return OPENRAVE_VIEWER_HASH; }
 

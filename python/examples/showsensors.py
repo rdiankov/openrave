@@ -12,12 +12,52 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Examples of laser sensors attached to a robot.
+"""Opens a GUI window showing the sensor data of a scene.
 
-.. examplepre-block:: testlasersensor
+.. examplepre-block:: showsensors
+  .image-width: 200
 
 Description
 -----------
+
+See `Sensor Concepts`_ for detailed infromation on sensors.
+
+Camera
+~~~~~~
+
+.. image:: ../../images/examples/showsensors_camera.jpg
+  :width: 640
+
+The :ref:`sensor-basecamera` interface has a simple implementation of a pinhole camera. This example shows a robot
+with a camera attached to its wrist. The example opens ``data/testwamcamera.env.xml`` and
+queries image data from the sensor as fast as possible. The image will change in real-time as the
+robot is moved around the scene. The wireframe frustum rendered next to the robot shows the camera's
+field of view.
+
+The OpenRAVE XML required to attach a camera to the robot similar to the example above is:
+
+.. code-block:: xml
+
+  <Robot>
+    <AttachedSensor>
+      <link>wam4</link>
+      <translation>0 -0.2 0</translation>
+      <rotationaxis>0 1 0 -90</rotationaxis>
+      <sensor type="BaseCamera" args="">
+        <KK>640 480 320 240</KK>
+        <width>640</width>
+        <height>480</height>
+        <framerate>5</framerate>
+        <color>0.5 0.5 1</color>
+      </sensor>
+    </AttachedSensor>
+  </Robot>
+
+Lasers
+~~~~~~
+
+.. image:: ../../images/examples/showsensors_laser.jpg
+  :width: 640
 
 The :ref:`sensor-baselaser2d` interface has a simple implementation of ray-casting laser sensors. The following OpenRAVE XML attaches a simple 2D laser to the **wam1** link of the robot:
 
@@ -58,9 +98,7 @@ To OpenRAVE XML to attach a flash LIDAR sensor is:
     </AttachedSensor>
   </Robot>
 
-See `Sensor Concepts`_ for more infromation on sensors.
-
-.. examplepost-block:: testlasersensor
+.. examplepost-block:: showsensors
 """
 from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
@@ -69,25 +107,20 @@ import time, threading
 from openravepy import __build_doc__
 if not __build_doc__:
     from openravepy import *
-    from numpy import *
 
 def main(env,options):
     "Main example code."
     env.Load(options.scene)
-    if options.robotname is not None:
-        robot = env.GetRobot(options.robotname)
-    else:
-        robot = env.GetRobots()[0]
     ienablesensor = 0
-    sensors = [sensor for sensor in robot.GetAttachedSensors() if sensor.GetSensor() is not None]
     while True:
+        sensors = env.GetSensors()
         for i,sensor in enumerate(sensors):
             if i==ienablesensor:
-                sensor.GetSensor().Configure(Sensor.ConfigureCommand.PowerOn)
-                sensor.GetSensor().Configure(Sensor.ConfigureCommand.RenderDataOn)
+                sensor.Configure(Sensor.ConfigureCommand.PowerOn)
+                sensor.Configure(Sensor.ConfigureCommand.RenderDataOn)
             else:
-                sensor.GetSensor().Configure(Sensor.ConfigureCommand.PowerOff)
-                sensor.GetSensor().Configure(Sensor.ConfigureCommand.RenderDataOff)
+                sensor.Configure(Sensor.ConfigureCommand.PowerOff)
+                sensor.Configure(Sensor.ConfigureCommand.RenderDataOff)
         print 'showing sensor %s, try moving obstacles'%sensors[ienablesensor].GetName()
         time.sleep(5)
         ienablesensor = (ienablesensor+1)%len(sensors)
@@ -101,14 +134,11 @@ def run(args=None):
 
     :param args: arguments for script to parse, if not specified will use sys.argv
     """
-    parser = OptionParser(description='Examples of laser sensors attached to a robot.')
+    parser = OptionParser(description='Displays all images of all camera sensors attached to a robot.')
     OpenRAVEGlobalArguments.addOptions(parser)
     parser.add_option('--scene',
-                      action="store",type='string',dest='scene',default='data/testwamlaser.env.xml',
+                      action="store",type='string',dest='scene',default='data/testwamcamera.env.xml',
                       help='OpenRAVE scene to load')
-    parser.add_option('--robotname',
-                      action="store",type='string',dest='robotname',default=None,
-                      help='Specific robot sensors to display (otherwise first robot found will be displayed)')
     (options, leftargs) = parser.parse_args(args=args)
     env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
     main(env,options)

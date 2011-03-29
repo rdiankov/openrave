@@ -13,6 +13,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "qtcoin.h"
+#include "qtcameraviewer.h"
 #include <rave/plugin.h>
 
 InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
@@ -27,6 +28,9 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
             }
             return InterfaceBasePtr(new QtCoinViewer(penv));
         }
+        if( interfacename == "qtcameraviewer" ) {
+            return InterfaceBasePtr(new QtCameraViewer(penv,sinput));
+        }
         break;
     default:
         break;
@@ -37,6 +41,7 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
 void GetPluginAttributesValidated(PLUGININFO& info)
 {
     info.interfacenames[PT_Viewer].push_back("qtcoin");
+    info.interfacenames[PT_Viewer].push_back("qtcameraviewer");
 }
 
 OPENRAVE_PLUGIN_API void DestroyPlugin()
