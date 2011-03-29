@@ -75,7 +75,7 @@
     <Body>wam2</Body>
     <Body>wam3</Body>
     <offsetfrom>wam3</offsetfrom>
-    <axis>0 0 -1</axis>
+    <axis>0 0 1</axis>
     <limitsdeg>-157 157</limitsdeg>
     <weight>0.882397</weight>
     <maxvel>2.0944</maxvel>
