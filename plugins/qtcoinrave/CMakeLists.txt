@@ -52,7 +52,7 @@ if (QT_FOUND AND SOQT_LIBRARY_FOUND AND OPENGL_FOUND)
   endif()
 
    # build sources, moc'd sources, and rcc'd sources
-  add_library(qtcoinrave SHARED aviUtil.cpp IvSelector.cpp Item.cpp qtcoinviewer.cpp qtcoinrave.cpp ${MOC_OUTPUT_FILES} Item.h IvSelector.h qtcoin.h qtcoinviewer.h qtcameraviewer.h qtimagewindow.h)
+  add_library(qtcoinrave SHARED aviUtil.cpp IvSelector.cpp Item.cpp qtcoinviewer.cpp qtcoinrave.cpp ${MOC_OUTPUT_FILES} Item.h IvSelector.h qtcoin.h qtcoinviewer.h qtcameraviewer.h)
 
   if( OPT_VIDEORECORDING )
     pkg_check_modules(FFMPEG libavformat libavcodec)
