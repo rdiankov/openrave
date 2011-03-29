@@ -15,7 +15,7 @@
 """Opens a GUI window showing the sensor data of a scene.
 
 .. examplepre-block:: showsensors
-  .image-width: 200
+  :image-width: 200
 
 Description
 -----------
@@ -25,14 +25,15 @@ See `Sensor Concepts`_ for detailed infromation on sensors.
 Camera
 ~~~~~~
 
-.. image:: ../../images/examples/showsensors_camera.jpg
-  :width: 640
 
 The :ref:`sensor-basecamera` interface has a simple implementation of a pinhole camera. This example shows a robot
 with a camera attached to its wrist. The example opens ``data/testwamcamera.env.xml`` and
 queries image data from the sensor as fast as possible. The image will change in real-time as the
 robot is moved around the scene. The wireframe frustum rendered next to the robot shows the camera's
 field of view.
+
+.. image:: ../../images/examples/showsensors_camera.jpg
+  :width: 640
 
 The OpenRAVE XML required to attach a camera to the robot similar to the example above is:
 
@@ -56,10 +57,12 @@ The OpenRAVE XML required to attach a camera to the robot similar to the example
 Lasers
 ~~~~~~
 
+The :ref:`sensor-baselaser2d` interface has a simple implementation of ray-casting laser sensors. 
+
 .. image:: ../../images/examples/showsensors_laser.jpg
   :width: 640
 
-The :ref:`sensor-baselaser2d` interface has a simple implementation of ray-casting laser sensors. The following OpenRAVE XML attaches a simple 2D laser to the **wam1** link of the robot:
+The following OpenRAVE XML attaches a simple 2D laser to the **wam1** link of the robot:
 
 .. code-block:: xml
 

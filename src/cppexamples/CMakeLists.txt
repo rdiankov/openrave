@@ -44,6 +44,12 @@ set_target_properties(orloadviewer PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}
 target_link_libraries(orloadviewer ${OPENRAVE_LIBRARY} ${OPENRAVE_CORE_LIBRARY})
 install(TARGETS orloadviewer DESTINATION . )
 
+add_executable(orshowsensors orshowsensors.cpp)
+set_target_properties(orshowsensors PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
+set_target_properties(orshowsensors PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
+target_link_libraries(orshowsensors ${OPENRAVE_LIBRARY} ${OPENRAVE_CORE_LIBRARY})
+install(TARGETS orshowsensors DESTINATION . )
+
 add_executable(ikfastloader ikfastloader.cpp)
 set_target_properties(ikfastloader PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
 set_target_properties(ikfastloader PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
