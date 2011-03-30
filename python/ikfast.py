@@ -3606,7 +3606,7 @@ class IKFastSolver(AutoReloader):
         if hascheckzeros and len(eqs) == 0:
             # if not equations found, try setting two variables at once
             # also try setting px, py, or pz to 0 (barrettwam4 lookat)
-            for solution,var in usedsolutions:
+            for checkzero in checkforzeros:
                 for checkzero in solution.checkforzeros:
                     if checkzero.has_any_symbols(*allvars):
                         log.info('ignoring special check for zero')
