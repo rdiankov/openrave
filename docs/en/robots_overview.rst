@@ -5,8 +5,10 @@ Robots Overview
 
 * :ref:`geometric_conventions` - Standards for the coordinate system and scale of the robot.
 
-Repositories
-------------
+.. _robots_repositories:
+
+Robot Repositories
+------------------
 
 * Subversion: https://openrave.svn.sourceforge.net/svnroot/openrave/trunk/src/robots
 

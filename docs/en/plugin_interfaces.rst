@@ -4,7 +4,7 @@ Plugin Interfaces
 -----------------
 
 Documentation of OpenRAVE-loadable plugins. Each plugin offers a set of interfaces derived from
-:class:`.InterfaceBase`.
+:class:`.Interface`.
 
 See `Interface Concepts`_ for more details.
 

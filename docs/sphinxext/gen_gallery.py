@@ -86,11 +86,11 @@ def gen_gallery_internal(app, doctree,parentname,includedocstring,maxwidth,maxhe
 </table>"""%rowstext
     elif parentname == 'examples':
         rowstext = """
-<p>Complete examples showing common planning and usage scenarios.</p>
+<h1>Examples</h1>
 <p><a href="getting_started.html">Getting Started Tutorials</a></p>
-<p><a href="../coreapihtml/examples.html">C++ Examples Page</a></p>
-
-<h1>Python Examples</h1>
+<p><a href="../coreapihtml/cpp_examples.html">C++ Examples Page</a></p>
+<h3>Python Examples</h3>
+<br/>
 
 <table border="1">
 %s

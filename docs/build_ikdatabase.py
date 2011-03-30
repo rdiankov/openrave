@@ -14,7 +14,7 @@
 from openravepy import *
 from numpy import *
 from optparse import OptionParser
-import os
+import os, operator
 import scipy
 import shutil
 
@@ -106,6 +106,13 @@ def buildrobot(outputdir, env, robotfilename, robotstats,buildoptions):
 
 """%(robotlink,robotname,'='*len(robotname),imagelinkdir,imagename,robotfilename)
 
+    # sort the stats based on manipulator name and ik type
+    def statscmp(x,y):
+        if x[0] == y[0]:
+            return cmp(x[1],y[1])
+        else:
+            return cmp(x[0],y[0])
+    robotstats.sort(statscmp)
     prevmanipname = None
     previktypestr = None
     rownames = ['free indices','success rate','wrong rate','mean time (s)','max time (s)','source','detailed results']
@@ -174,14 +181,15 @@ def buildrobot(outputdir, env, robotfilename, robotstats,buildoptions):
 :ref:`%s`
 %s
 
-  :IK parameterizations: %d
+**IK parameterizations:** %d
 
 .. image:: %s/%s
   :width: 640
+  :target: ikfast/%s.html
 
 ----
 
-"""%(robotlink,'~'*(len(robotlink)+7),len(robotstats),imagelinkdir,imagename)
+"""%(robotlink,'~'*(len(robotlink)+7),len(robotstats),imagelinkdir,imagename,robotname)
     return returnxml,robotname
 
 def build(allstats,buildoptions,outputdir,env):
@@ -196,9 +204,10 @@ def build(allstats,buildoptions,outputdir,env):
             if not stat[0] in robotdict:
                 robotdict[stat[0]] = []
             robotdict[stat[0]].append(stat[1:])
+    robotlist = sorted(robotdict.iteritems(), key=operator.itemgetter(0))
     robotxml = ''
     robotnames = []
-    for robotfilename, robotstats in robotdict.iteritems():
+    for robotfilename, robotstats in robotlist:
         xml,robotname = buildrobot(outputdir,env,robotfilename, robotstats,buildoptions)
         robotxml += xml
         robotnames.append(robotname)
@@ -225,11 +234,9 @@ Robots
 
 %s
 
-List
-~~~~
-
 .. toctree::
   :maxdepth: 1
+  :hidden:
 
 """%(buildoptions.jenkinsbuild_url, robotxml)
     for robotname in robotnames:

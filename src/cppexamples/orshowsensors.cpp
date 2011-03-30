@@ -17,12 +17,10 @@
 #include <boost/thread/thread.hpp>
 #include <boost/bind.hpp>
 
-#ifndef _WIN32
-#include <unistd.h>
-#define Sleep(milli) usleep(1000*milli)
-#else
+#ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <winsock2.h>
+#define usleep(micro) Sleep(micro/1000)
 #endif
 
 using namespace OpenRAVE;
@@ -57,7 +55,7 @@ int main(int argc, char ** argv)
             sensors[isensor]->Configure(isensor == ienablesensor ? SensorBase::CC_RenderDataOn : SensorBase::CC_RenderDataOff);
         }
         ienablesensor = (ienablesensor+1)%sensors.size();
-        Sleep(5000); // 5s
+        usleep(5000000); // 5s
     }
     return 0;
 }
