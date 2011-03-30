@@ -14,15 +14,15 @@ Installation
 
 `doxygen <http://www.stack.nl/~dimitri/doxygen/download.html#latestsrc>`_ version 1.7.1 or later is required.
 
-`breath <http://github.com/michaeljones/breathe>`_ is used for converting doxygen to python comments so that python users can be internal help for the C++ bindings. The breathe sources are in **docs/breathe**.
+`breathe <http://github.com/michaeljones/breathe>`_ is used for converting doxygen to python comments so that python users can be internal help for the C++ bindings. The breathe sources are in **docs/breathe**.
 
 If using latex, install::
 
- dot2tex, texlive-base, texlive-latex-base, texlive-pictures, texlive-fonts-recommended
+  apt-get install  dot2tex, texlive-base, texlive-latex-base, texlive-pictures, texlive-fonts-recommended
 
 For japanese fonts install::
 
-  latex-cjk-japanese
+  apt-get install latex-cjk-japanese
 
 Getting Started
 ---------------

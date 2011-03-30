@@ -28,5 +28,9 @@ python build_doxygen.py --lang=ja
 python build_openravepy_internal.py --languagecode en --languagecode ja
 # have to rebuild openravepy_int to get correct docstrings!
 
+cd ../build
+make install
+cd $curdir
+
 ./build_sphinx en
 ./build_sphinx ja
