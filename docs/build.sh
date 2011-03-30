@@ -34,5 +34,3 @@ cd $curdir
 
 ./build_sphinx.sh en
 #./build_sphinx.sh ja
-
-tar cjf openravedocs-`openrave-config --version`.tgz build/en/coreapihtml build/en/main build/ja/coreapihtml build/ja/main 
