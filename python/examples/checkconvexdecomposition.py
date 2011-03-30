@@ -70,7 +70,7 @@ def run(args=None):
                       help='The sampling rate for the robot (default=%default)')
     (options, leftargs) = parser.parse_args(args=args)
     env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
-    run(env,options)
+    main(env,options)
 
 if __name__ == "__main__":
     run()
