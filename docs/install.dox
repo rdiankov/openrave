@@ -216,7 +216,7 @@ sudo apt-get install --ignore-missing libmpfr-dev libgmp3-dev libmpfi-dev libgmp
 
 For python:
 \verbatim
-sudo apt-get install libboost-python-dev python python-dev python-numpy python-scipy python-imaging-tk
+sudo apt-get install libboost-python-dev python python-dev python-numpy python-scipy ipython
 \endverbatim
 
 Optional:
@@ -309,7 +309,7 @@ make install
 In order to use the python bindings through the \openravepy{openravepy} module, install  the following packages before compiling %OpenRAVE:
 
 \verbatim
-sudo apt-get install libboost-python-dev python python-dev python-numpy python-scipy python-imaging-tk
+sudo apt-get install libboost-python-dev python python-dev python-numpy python-scipy ipython
 \endverbatim
 
 To setup the python path in bash add the following line:
@@ -323,7 +323,7 @@ export PYTHONPATH=$PYTHONPATH:`openrave-config --python-dir`
 \openravepy{openravepy}を利用するために%OpenRAVEをコンパイルする前に以下のパッケージをインストールしてください．
 
 \verbatim
-sudo apt-get install libboost-python-dev python python-dev python-numpy python-scipy python-imaging-tk
+sudo apt-get install libboost-python-dev python python-dev python-numpy python-scipy ipython
 \endverbatim
 
 Pythonパスを設定するために，bashファイルに以下の行を追加してください．
