@@ -109,9 +109,15 @@ def buildrobot(outputdir, env, robotfilename, robotstats,buildoptions):
     # sort the stats based on manipulator name and ik type
     def statscmp(x,y):
         if x[0] == y[0]:
-            return cmp(x[1],y[1])
+            if x[1] == y[1]:
+                return cmp(x[2],y[2])
+            
+            else:
+                return cmp(x[1],y[1])
+            
         else:
             return cmp(x[0],y[0])
+        
     robotstats.sort(statscmp)
     prevmanipname = None
     previktypestr = None
@@ -156,11 +162,11 @@ def buildrobot(outputdir, env, robotfilename, robotstats,buildoptions):
             rows = [list(rownames)]
         row = [','.join(str(index) for index in freeindices),]
         if successrate is not None:
-            row.append('%.3f'%successrate)
+            row.append('%.4f'%successrate)
         else:
             row.append('')
         if wrongrate is not None:
-            row.append('%.3f'%wrongrate)
+            row.append('%.4f'%wrongrate)
         else:
             row.append('')
         if meantime is not None:

@@ -33,7 +33,7 @@ public:
             }
             else {
                 // post on all of them
-                for(int i = 0; i < widgets.length(); ++i) {
+                for(int i = 0; i < widgets.size(); ++i) {
                     QApplication::postEvent(widgets.at(i),new MyCallbackEvent(boost::bind(&QtCameraViewer::_CreateImageWindow,this)));
                 }
             }
@@ -42,7 +42,7 @@ public:
     virtual ~QtCameraViewer() {
         QWidgetList widgets = QApplication::topLevelWidgets();
         // post on all of them
-        for(int i = 0; i < widgets.length(); ++i) {
+        for(int i = 0; i < widgets.size(); ++i) {
             QApplication::postEvent(widgets.at(i),new MyCallbackEvent(boost::bind(&QtCameraViewer::_DestroyImageWindow,_imagewindow)));
         }
         _imagewindow.reset();

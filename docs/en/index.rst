@@ -44,7 +44,8 @@ This document is automatically generated for every release and binds together th
 Other
 ~~~~~
 
-* `Official Wiki`_ - latest news, projects using OpenRAVE, and how to link OpenRAVE with other systems
+* `Official Wiki`_ - latest news, projects using OpenRAVE, and how to link OpenRAVE with other systems. Users can freely add their own project information on it.
+
 * :ref:`developers_guide` - for core OpenRAVE development
 
 Licenses
