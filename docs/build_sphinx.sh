@@ -1,7 +1,7 @@
 #!/bin/bash
 # argument $1 is language: en, ja
 # build the python documentation and openrave homepage
-if [ "$1" -eq "ja" ]; then
+if [ "$1" == "ja" ]; then
     export LANG=ja_JP.UTF-8
 else
     export LANG=en_US.UTF-8
