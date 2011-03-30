@@ -7,7 +7,7 @@
     \image latex showsensors_camera.jpg "Camera Sensor." width=20cm
 
     \image html showsensors_laser.jpg "Laser Sensor."
-    \image latexshowsensors_laser.jpg "Laser Sensor." width=20cm
+    \image latex showsensors_laser.jpg "Laser Sensor." width=20cm
 
     <b>Full Example Code:</b>
 */    

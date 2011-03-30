@@ -24,13 +24,14 @@ cp build/en/latex/refman.pdf build/en/openrave.pdf
 python build_doxygen.py --lang=ja
 #cp ja/latex/refman.pdf build/ja/openrave_ja.pdf
 
-# build internal openravepy docs
-python build_openravepy_internal.py --languagecode en --languagecode ja
-# have to rebuild openravepy_int to get correct docstrings!
-
-cd ../build
-make install
-cd $curdir
+if [ "$1" == "internal" ]; then
+    # build internal openravepy docs
+    python build_openravepy_internal.py --languagecode en --languagecode ja
+    # have to rebuild openravepy_int to get correct docstrings!
+    cd ../build
+    make install
+    cd $curdir
+fi
 
 ./build_sphinx.sh en
 #./build_sphinx.sh ja
