@@ -32,5 +32,5 @@ cd ../build
 make install
 cd $curdir
 
-./build_sphinx en
-./build_sphinx ja
+./build_sphinx.sh en
+#./build_sphinx.sh ja

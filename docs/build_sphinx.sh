@@ -10,5 +10,5 @@ rm -rf _templates/examples.html _templates/databases.html _templates/database_ge
 python build_interfaces.py --outdir=$1
 mkdir -p $1/openravepy
 python sphinx-autopackage-script/generate_modules.py --dest-dir=$1/openravepy --suffix=rst --maxdepth=3 --no-toc --sep-files `openrave-config --python-dir`/openravepy pyflann
-python build_ikdatabase.py
+python build_ikdatabase.py --lang=$1 --ikfaststats=../test/ikfaststats.pp
 sphinx-build -b html -c . $1 build/$1/main

@@ -30,7 +30,7 @@ def getsvnurl(dirname):
 
 if __name__ == "__main__":
     parser = OptionParser(description='Builds an rst file of the interfaces provided')
-    parser.add_option('--outdir',action="store",type='string',dest='outdir',default='build/en',
+    parser.add_option('--outdir',action="store",type='string',dest='outdir',default='en',
                       help='Output directory to write all interfaces reStructuredText files to, the root file is interfaces.rst (default=%default).')
     (options, args) = parser.parse_args()
     interfacesdir = 'interface_types'
