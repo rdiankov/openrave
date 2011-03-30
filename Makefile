@@ -19,6 +19,10 @@ test: all
 	cd build && $(MAKE) $(PARALLEL_JOBS) install
 	export PATH=`sh build/openrave-config --prefix`/bin:$(PATH) && export PYTHONPATH=`openrave-config --python-dir`:$(PYTHONPATH) && export LD_LIBRARY_PATH=`openrave-config --prefix`/lib:$(LD_LIBRARY_PATH) && cd test && python test_ikfast.py $(PARALLEL_JOBS)
 
+docs: all
+	cd build && $(MAKE) $(PARALLEL_JOBS) install
+	export PATH=`sh build/openrave-config --prefix`/bin:$(PATH) && export PYTHONPATH=`openrave-config --python-dir`:$(PYTHONPATH) && export LD_LIBRARY_PATH=`openrave-config --prefix`/lib:$(LD_LIBRARY_PATH) && cd docs && ./build.sh
+
 clean:
 	-cd build && $(MAKE) clean
 	rm -rf build
