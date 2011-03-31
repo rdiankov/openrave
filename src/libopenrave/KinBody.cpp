@@ -375,8 +375,8 @@ bool KinBody::Link::GEOMPROPERTIES::InitCollisionMesh(float fTessellation)
 
             collisionmesh.indices.push_back(0);       collisionmesh.indices.push_back(off-2);       collisionmesh.indices.push_back(off);
             collisionmesh.indices.push_back(1);       collisionmesh.indices.push_back(off+1);       collisionmesh.indices.push_back(off-1);
-            collisionmesh.indices.push_back(off-2);   collisionmesh.indices.push_back(off);         collisionmesh.indices.push_back(off-1);
-            collisionmesh.indices.push_back(off);   collisionmesh.indices.push_back(off+1);         collisionmesh.indices.push_back(off-1);
+            collisionmesh.indices.push_back(off-2);   collisionmesh.indices.push_back(off-1);         collisionmesh.indices.push_back(off);
+            collisionmesh.indices.push_back(off);   collisionmesh.indices.push_back(off-1);         collisionmesh.indices.push_back(off+1);
         }
         break;
     }
