@@ -320,8 +320,9 @@ bool KinBody::Link::GEOMPROPERTIES::InitCollisionMesh(float fTessellation)
         // log_2 (1+ tess)
         GenerateSphereTriangulation(collisionmesh, 3 + (int)(logf(fTessellation) / logf(2.0f)) );
         dReal fRadius = GetSphereRadius();
-        FOREACH(it, collisionmesh.vertices)
+        FOREACH(it, collisionmesh.vertices) {
             *it *= fRadius;
+        }
         break;
     }
     case KinBody::Link::GEOMPROPERTIES::GeomBox: {
@@ -337,29 +338,19 @@ bool KinBody::Link::GEOMPROPERTIES::InitCollisionMesh(float fTessellation)
                         Vector(-ex.x, -ex.y, -ex.z) };
         const int nindices = 36;
         int indices[] = {
-            0, 1, 2,
+            0, 2, 1,
             1, 2, 3,
             4, 5, 6,
-            5, 6, 7,
+            5, 7, 6,
             0, 1, 4,
-            1, 4, 5,
-            2, 3, 6,
+            1, 5, 4,
+            2, 6, 3,
             3, 6, 7,
-            0, 2, 4,
+            0, 4, 2,
             2, 4, 6,
             1, 3, 5,
-            3, 5, 7
+            3, 7, 5
         };
-
-        for(int i = 0; i < nindices; i += 3 ) {
-            Vector v1 = v[indices[i]];
-            Vector v2 = v[indices[i+1]];
-            Vector v3 = v[indices[i+2]];
-            if( v1.dot3(v2-v1.cross(v3-v1)) < 0 ) {
-                swap(indices[i], indices[i+1]);
-            }
-        }
-
         collisionmesh.vertices.resize(8);
         std::copy(&v[0],&v[8],collisionmesh.vertices.begin());
         collisionmesh.indices.resize(nindices);
@@ -367,28 +358,25 @@ bool KinBody::Link::GEOMPROPERTIES::InitCollisionMesh(float fTessellation)
         break;
     }
     case KinBody::Link::GEOMPROPERTIES::GeomCylinder: {
-        // cylinder is on y axis
+        // cylinder is on z axis
         dReal rad = GetCylinderRadius(), len = GetCylinderHeight()*0.5f;
-
         int numverts = (int)(fTessellation*24.0f) + 3;
         dReal dtheta = 2 * PI / (dReal)numverts;
         collisionmesh.vertices.push_back(Vector(0,0,len));
         collisionmesh.vertices.push_back(Vector(0,0,-len));
         collisionmesh.vertices.push_back(Vector(rad,0,len));
         collisionmesh.vertices.push_back(Vector(rad,0,-len));
-
         for(int i = 0; i < numverts+1; ++i) {
             dReal s = rad * RaveSin(dtheta * (dReal)i);
             dReal c = rad * RaveCos(dtheta * (dReal)i);
-
             int off = (int)collisionmesh.vertices.size();
             collisionmesh.vertices.push_back(Vector(c, s, len));
             collisionmesh.vertices.push_back(Vector(c, s, -len));
 
-            collisionmesh.indices.push_back(0);       collisionmesh.indices.push_back(off);       collisionmesh.indices.push_back(off-2);
-            collisionmesh.indices.push_back(1);       collisionmesh.indices.push_back(off-1);       collisionmesh.indices.push_back(off+1);
+            collisionmesh.indices.push_back(0);       collisionmesh.indices.push_back(off-2);       collisionmesh.indices.push_back(off);
+            collisionmesh.indices.push_back(1);       collisionmesh.indices.push_back(off+1);       collisionmesh.indices.push_back(off-1);
             collisionmesh.indices.push_back(off-2);   collisionmesh.indices.push_back(off);         collisionmesh.indices.push_back(off-1);
-            collisionmesh.indices.push_back(off);   collisionmesh.indices.push_back(off-1);         collisionmesh.indices.push_back(off+1);
+            collisionmesh.indices.push_back(off);   collisionmesh.indices.push_back(off+1);         collisionmesh.indices.push_back(off-1);
         }
         break;
     }

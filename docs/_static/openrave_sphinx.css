@@ -280,7 +280,7 @@ h2 {
 }
 
 h3 {
-    margin: 1em 0 -0.3em 0;
+    margin: 1em 0 -0.1em 0;
     font-size: 1.2em;
 	color: #777;
 }
@@ -513,4 +513,8 @@ ul.search li div.context {
 
 ul.keywordmatches li.goodmatch a {
     font-weight: bold;
+}
+
+.red {
+    color: red;
 }

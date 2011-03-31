@@ -441,7 +441,7 @@ Check out the openrave sources <b>in a path whose directories do not contain spa
 A lot of the 3rd party libraries like boost 1.39 are already inside the openrave sources. However, the following need to be installed:
 
 - <a href="http://www.cmake.org/cmake/resources/software.html">CMake</a>.
-- <a href="http://python.org/download">Python 2.6</a>, <a href="http://sourceforge.net/projects/numpy/files">numpy superpack</a>, <a href="http://www.pythonware.com/products/pil">Python Imaging Library (PIL)</a> for openravepy python bindings.
+- For openravepy python bindings: <a href="http://python.org/download/releases/2.6.6">Python 2.6.6</a>, <a href="http://sourceforge.net/projects/numpy/files">numpy superpack</a> .
  - \b openravepy will not compile in Debug mode unless the Python debug libraries are also installed.
  - <a href="http://ipython.scipy.org">IPython</a> is recommended for python development.
  - <a href="http://sourceforge.net/projects/scipy/files/">SciPy</a> - the scientific library for Python is recommended (necessary for some of the examples).

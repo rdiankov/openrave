@@ -83,11 +83,14 @@
     <!-- right gripper-->
     <Body name="RClaw" type="dynamic">
       <offsetfrom>Arm2</offsetfrom>
-      <Translation>0.08 0 0.005</Translation>
-      <rotationaxis>0 0 1 -90</rotationaxis>
-      <Geom type="trimesh">
-        <Data>models/puma/RClaw.iv</Data>
-        <Render>models/puma/RClaw.iv</Render>
+      <Translation>0.08 0 -0.005</Translation>
+      <Geom type="box">
+        <extents>0.005 0.02 0.01</extents>
+        <translation>0 -0.01 0</translation>
+      </Geom>
+      <Geom type="box">
+        <extents>0.03 0.005 0.01</extents>
+        <translation>0.03 -0.03 0</translation>
       </Geom>
     </Body>
     <Joint name="j1" type="hinge">
@@ -95,7 +98,7 @@
       <Body>RClaw</Body>
       <offsetfrom>RClaw</offsetfrom>
       <weight>0.2</weight>
-      <limitsdeg>-56 16</limitsdeg>
+      <limitsdeg>-16 30</limitsdeg>
       <axis>0 0 1</axis>
       <maxvel>0.4</maxvel>
       <resolution>3</resolution>
@@ -103,12 +106,15 @@
     
     <!--left gripper-->
     <Body name="LClaw" type="dynamic">
-      <Translation>0.08 0.005 0</Translation>
-      <rotationaxis>0 0 1 -90</rotationaxis>
+      <Translation>0.08 0 -0.005</Translation>
       <offsetfrom>Arm2</offsetfrom>
-      <Geom type="trimesh">
-        <Data>models/puma/LClaw.iv</Data>
-        <Render>models/puma/LClaw.iv</Render>
+      <Geom type="box">
+        <extents>0.005 0.02 0.01</extents>
+        <translation>0 0.01 0</translation>
+      </Geom>
+      <Geom type="box">
+        <extents>0.03 0.005 0.01</extents>
+        <translation>0.03 0.03 0</translation>
       </Geom>
     </Body>
     <Joint name="j2" type="hinge">
@@ -116,13 +122,11 @@
       <Body>LClaw</Body>
       <offsetfrom>LClaw</offsetfrom>
       <weight>0.2</weight>
-      <limitsdeg>-56 16</limitsdeg>
+      <limitsdeg>-16 30</limitsdeg>
       <axis>0 0 -1</axis>
       <maxvel>0.4</maxvel>
       <resolution>3</resolution>
     </Joint>
-    <!-- set the transparency of every geometry in the KinBody-->
-    <transparency>0.1</transparency>
   </KinBody>
   
   <!-- Specifying the manipulator structure-->

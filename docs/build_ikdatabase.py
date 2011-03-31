@@ -17,6 +17,7 @@ from optparse import OptionParser
 import os, operator
 import scipy
 import shutil
+import pysvn
 
 imagedir = 'images/robots'
 imagelinkdir = '../images/robots'
@@ -58,6 +59,7 @@ def buildrobot(lang, outputdir, env, robotfilename, robotstats,buildoptions):
     mkdir_recursive(sourceoutputdir)
     imagename = '%s.jpg'%robotname
     robot = None
+    roboturl = ''
     if env is not None:
         env.Reset()
         robot=env.ReadRobotXMLFile(robotfilename)
@@ -66,6 +68,17 @@ def buildrobot(lang, outputdir, env, robotfilename, robotstats,buildoptions):
         else:
             print 'processing ',robotname
             env.AddRobot(robot)
+            try:
+                entry = pysvn.Client().info(robot.GetXMLFilename())
+                roboturl = str(entry.url)
+            except pysvn.ClientError:
+                try:
+                    # try looking in the current robots directory
+                    entry = pysvn.Client().info(os.path.join('..','src','robots',os.path.split(robot.GetXMLFilename())[1]))
+                    roboturl = str(entry.url)
+                except pysvn.ClientError:
+                    pass
+                
             # transform the robot so we don't render it at its axis aligned (white robots completely disappear)
             #robot.SetTransform(matrixFromQuat(quatRotateDirection([-1,0,0],[-1,1,0.5])))
             with env:
@@ -100,11 +113,11 @@ def buildrobot(lang, outputdir, env, robotfilename, robotstats,buildoptions):
 .. image:: ../%s/%s
   :width: 640
 
-**filename:** %s
+**filename:** `%s <%s>`_
 
 :ref:`ikfast_generatedcpp`
 
-"""%(robotlink,robotname,'='*len(robotname),imagelinkdir,imagename,robotfilename)
+"""%(robotlink,robotname,'='*len(robotname),imagelinkdir,imagename,robotfilename,roboturl)
 
     # sort the stats based on manipulator name and ik type
     def statscmp(x,y):
@@ -123,6 +136,7 @@ def buildrobot(lang, outputdir, env, robotfilename, robotstats,buildoptions):
     previktypestr = None
     rownames = ['free indices','success rate','wrong rate','mean time (s)','max time (s)','source','detailed results']
     rows = None
+    successes = 0
     for manipname, iktypestr, freeindices, description, sourcefilename, meantime, maxtime, successrate, wrongrate, sourcecode in robotstats:
         if prevmanipname != manipname:
             if rows is not None:
@@ -148,7 +162,7 @@ def buildrobot(lang, outputdir, env, robotfilename, robotstats,buildoptions):
             open(os.path.join(sourceoutputdir,sourcefilename_tail),'w').write(sourcecode)
             sourcename = ':download:`C++ Code <%s/%s>`'%(robotname,sourcefilename_tail)
         else:
-            sourcename = 'Failed'
+            sourcename = ':red:`Failed`'
         descriptionurl = description[0].replace(':','_')
         descriptionurl = descriptionurl.replace(' ','_')
         descriptionurl = descriptionurl.replace('[','_')
@@ -166,7 +180,11 @@ def buildrobot(lang, outputdir, env, robotfilename, robotstats,buildoptions):
         else:
             row.append('')
         if wrongrate is not None:
-            row.append('%.4f'%wrongrate)
+            if wrongrate == 0:
+                row.append('%.4f'%wrongrate)
+                successes += 1
+            else:
+                row.append(':red:`%.4f`'%wrongrate)
         else:
             row.append('')
         if meantime is not None:
@@ -187,7 +205,7 @@ def buildrobot(lang, outputdir, env, robotfilename, robotstats,buildoptions):
 :ref:`%s`
 %s
 
-**IK parameterizations:** %d
+**IK parameterizations:** %d, **Success:** %d%%
 
 .. image:: %s/%s
   :width: 640
@@ -195,7 +213,7 @@ def buildrobot(lang, outputdir, env, robotfilename, robotstats,buildoptions):
 
 ----
 
-"""%(robotlink,'~'*(len(robotlink)+7),len(robotstats),imagelinkdir,imagename,outputdir,robotname)
+"""%(robotlink,'~'*(len(robotlink)+7),len(robotstats),100*float(successes)/len(robotstats),imagelinkdir,imagename,outputdir,robotname)
     return returnxml,robotname
 
 def build(allstats,buildoptions,lang,outputdir,env):

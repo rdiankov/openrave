@@ -268,11 +268,11 @@ if __name__ == "__main__":
     options.robotfilenames = []
     for robot in robots:
         if robot == 'basic':
-            options.robotfilenames += ['robots/unimation-pumaarm.zae','robots/barrettwam.robot.xml']
+            options.robotfilenames += ['robots/unimation-pumaarm.zae','robots/barrett-wam.zae']
         elif robot == 'pr2':
-            options.robotfilenames += ['robots/pr2-beta-static.zae']
+            options.robotfilenames += ['robots/willowgarage-pr2.zae']
         elif robot == '*':
-            options.robotfilenames += ['robots/unimation-pumaarm.zae','robots/barrettwam.robot.xml','robots/pr2-beta-static.zae','robots/neuronics-katana.zae','robots/mitsubishi-pa10.zae','robots/schunk-lwa3.zae','robots/darpa-arm.zae','robots/exactdynamics-manusarmleft.zae','robots/kuka-kr5-r650.zae','robots/kuka-kr5-r850.zae','robots/kuka-kr30l16.zae','robots/tridof.robot.xml','robots/barrettwam4.robot.xml']
+            options.robotfilenames += ['robots/unimation-pumaarm.zae','robots/barrett-wam.zae','robots/willowgarage-pr2.zae','robots/neuronics-katana.zae','robots/mitsubishi-pa10.zae','robots/schunk-lwa3.zae','robots/darpa-arm.zae','robots/exactdynamics-manusarmleft.zae','robots/kuka-kr5-r650.zae','robots/kuka-kr5-r850.zae','robots/kuka-kr30l16.zae','robots/tridof.robot.xml','robots/barrett-wam4.zae']
         elif options.robots == 'random':
             options.robotfilenames.append('random')
         else:
