@@ -642,8 +642,7 @@ endif()
 
 if( WIN32 )
   # copy the dlls
-  file(GLOB dll_files ${CMAKE_CURRENT_SOURCE_DIR}/bin/*.dll)
-  install(FILES ${dll_files} DESTINATION bin)
+  install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/bin/*.dll DESTINATION bin)
 endif()
 
 install(FILES ${rave_header_files} ${interfacehashes_h} DESTINATION include/rave)
