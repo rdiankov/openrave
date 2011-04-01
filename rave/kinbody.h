@@ -55,7 +55,7 @@ public:
         Link(KinBodyPtr parent); ///< pass in a ODE world
         virtual ~Link();
         
-        /// user data for trimesh geometries
+        /// \brief User data for trimesh geometries. Vertices are defined in counter-clockwise order for outward pointing faces.
         class OPENRAVE_API TRIMESH
         {
         public:

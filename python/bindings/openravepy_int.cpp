@@ -2094,7 +2094,7 @@ public:
             return true;
         }
         bool bSuccess = true;
-        Py_BEGIN_ALLOW_THREADS
+        Py_BEGIN_ALLOW_THREADS;
 
         try {
             uint64_t starttime = GetMicroTime();
@@ -2114,8 +2114,6 @@ public:
         }
         
         Py_END_ALLOW_THREADS;
-
-
         return bSuccess;
     }
 
@@ -3109,47 +3107,49 @@ public:
     void StopSimulation() { _penv->StopSimulation(); }
     uint64_t GetSimulationTime() { return _penv->GetSimulationTime(); }
 
-    void Lock(bool bLock)
+    void Lock()
+    {
+        Py_BEGIN_ALLOW_THREADS;
+#if BOOST_VERSION < 103500
+        boost::mutex::scoped_lock envlock(_envmutex);
+        if( _listfreelocks.size() > 0 ) {
+            _listfreelocks.back()->lock();
+            _listenvlocks.splice(_listenvlocks.end(),_listfreelocks,--_listfreelocks.end());
+        }
+        else {
+            _listenvlocks.push_back(boost::shared_ptr<EnvironmentMutex::scoped_lock>(new EnvironmentMutex::scoped_lock(_penv->GetMutex())));
+        }
+#else
+        _penv->GetMutex().lock();
+#endif
+        Py_END_ALLOW_THREADS;
+    }
+    void Unlock()
     {
 #if BOOST_VERSION < 103500
         boost::mutex::scoped_lock envlock(_envmutex);
-        if( bLock ) {
-            if( _listfreelocks.size() > 0 ) {
-                _listfreelocks.back()->lock();
-                _listenvlocks.splice(_listenvlocks.end(),_listfreelocks,--_listfreelocks.end());
-            }
-            else {
-                _listenvlocks.push_back(boost::shared_ptr<EnvironmentMutex::scoped_lock>(new EnvironmentMutex::scoped_lock(_penv->GetMutex())));
-            }
-        }
-        else {
-            BOOST_ASSERT(_listenvlocks.size()>0);
-            _listenvlocks.back()->unlock();
-            _listfreelocks.splice(_listfreelocks.end(),_listenvlocks,--_listenvlocks.end());
-        }
+        BOOST_ASSERT(_listenvlocks.size()>0);
+        _listenvlocks.back()->unlock();
+        _listfreelocks.splice(_listfreelocks.end(),_listenvlocks,--_listenvlocks.end());
 #else
-        if( bLock ) {
-            _penv->GetMutex().lock();
-        }
-        else {
-            _penv->GetMutex().unlock();
-        }
+        _penv->GetMutex().unlock();
 #endif
     }
-    void Lock(bool bLock, float timeout)
+
+    void Lock(float timeout)
     {
         RAVELOG_WARN("Environment.Lock timeout is ignored\n");
-        Lock(bLock);
+        Lock();
     }
 
     void __enter__()
     {
-        Lock(true);
+        Lock();
     }
 
     void __exit__(object type, object value, object traceback)
     {
-        Lock(false);
+        Unlock();
     }
 
     bool SetViewer(const string& viewername, bool showviewer=true)
@@ -3457,7 +3457,7 @@ void PyKinBody::__enter__()
 {
     // necessary to lock physics to prevent multiple threads from interfering
     if( _listStateSavers.size() == 0 ) {
-        _pyenv->Lock(true);
+        _pyenv->Lock();
     }
     _listStateSavers.push_back(boost::shared_ptr<void>(new KinBody::KinBodyStateSaver(_pbody)));
 }
@@ -3467,7 +3467,7 @@ void PyKinBody::__exit__(object type, object value, object traceback)
     BOOST_ASSERT(_listStateSavers.size()>0);
     _listStateSavers.pop_back();
     if( _listStateSavers.size() == 0 ) {
-        _pyenv->Lock(false);
+        _pyenv->Unlock();
     }
 }
 
@@ -3475,7 +3475,7 @@ void PyRobotBase::__enter__()
 {
     // necessary to lock physics to prevent multiple threads from interfering
     if( _listStateSavers.size() == 0 ) {
-        _pyenv->Lock(true);
+        _pyenv->Lock();
     }
     _listStateSavers.push_back(boost::shared_ptr<void>(new RobotBase::RobotStateSaver(_probot)));
 }
@@ -4562,8 +4562,8 @@ In python, the syntax is::\n\n\
         bool (PyEnvironmentBase::*pcoly)(boost::shared_ptr<PyRay>) = &PyEnvironmentBase::CheckCollision;
         bool (PyEnvironmentBase::*pcolyr)(boost::shared_ptr<PyRay>, PyCollisionReportPtr) = &PyEnvironmentBase::CheckCollision;
 
-        void (PyEnvironmentBase::*Lock1)(bool) = &PyEnvironmentBase::Lock;
-        void (PyEnvironmentBase::*Lock2)(bool, float) = &PyEnvironmentBase::Lock;
+        void (PyEnvironmentBase::*Lock1)() = &PyEnvironmentBase::Lock;
+        void (PyEnvironmentBase::*Lock2)(float) = &PyEnvironmentBase::Lock;
 
         object (PyEnvironmentBase::*drawplane1)(object, object, const boost::multi_array<float,2>&) = &PyEnvironmentBase::drawplane;
         object (PyEnvironmentBase::*drawplane2)(object, object, const boost::multi_array<float,3>&) = &PyEnvironmentBase::drawplane;
@@ -4671,8 +4671,9 @@ In python, the syntax is::\n\n\
             .def("StartSimulation",&PyEnvironmentBase::StartSimulation,StartSimulation_overloads(args("timestep","realtime"), DOXY_FN(EnvironmentBase,StartSimulation)))
             .def("StopSimulation",&PyEnvironmentBase::StopSimulation, DOXY_FN(EnvironmentBase,StopSimulation))
             .def("GetSimulationTime",&PyEnvironmentBase::GetSimulationTime, DOXY_FN(EnvironmentBase,GetSimulationTime))
-            .def("Lock",Lock1,args("lock"), "Locks the environment mutex.")
-            .def("Lock",Lock2,args("lock","timeout"), "Locks the environment mutex with a timeout.")
+            .def("Lock",Lock1,"Locks the environment mutex.")
+            //.def("Lock",Lock2,args("timeout"), "Locks the environment mutex with a timeout.")
+            .def("Lock",&PyEnvironmentBase::Unlock,"Unlocks the environment mutex.")
             .def("LockPhysics",Lock1,args("lock"), "Locks the environment mutex.")
             .def("LockPhysics",Lock2,args("lock","timeout"), "Locks the environment mutex with a timeout.")
             .def("SetViewer",&PyEnvironmentBase::SetViewer,SetViewer_overloads(args("viewername","showviewer"), "Attaches the viewer and starts its thread"))

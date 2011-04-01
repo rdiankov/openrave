@@ -1,7 +1,7 @@
 .. htmlonly::
    
    :Version: |version| |release|
-   :Date: |today|
+   :Last Updated: |today|
 
 Welcome to Open Robotics Automation Virtual Environment
 =======================================================

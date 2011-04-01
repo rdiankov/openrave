@@ -289,9 +289,7 @@ public:
 
     virtual bool Init(bool bLoadAllPlugins)
     {
-        EnvironmentMutex::scoped_lock lock(_mutex);
         _threadPluginLoader.reset(new boost::thread(boost::bind(&RaveDatabase::_PluginLoaderThread, this)));
-
         std::vector<std::string> vplugindirs;
         RaveParseDirectories(getenv("OPENRAVE_PLUGINS"), vplugindirs);
         bool bExists=false;
@@ -318,7 +316,11 @@ public:
         FOREACH(it, vplugindirs) {
             if( it->size() > 0 ) {
                 _listplugindirs.push_back(*it);
-                if( bLoadAllPlugins ) {
+            }
+        }
+        if( bLoadAllPlugins ) {
+            FOREACH(it, vplugindirs) {
+                if( it->size() > 0 ) {
                     AddDirectory(it->c_str());
                 }
             }
@@ -340,18 +342,22 @@ public:
             _threadPluginLoader.reset();
         }
         {
-            EnvironmentMutex::scoped_lock lock(_mutex);
+            boost::mutex::scoped_lock lock(_mutex);
             _listplugins.clear();
         }
-        _listplugindirs.clear();
+        // cannot lock mutex due to __erase_iterator
         _listRegisteredInterfaces.clear();
-        CleanupUnusedLibraries();
+        {
+            boost::mutex::scoped_lock lock(_mutex);
+            _CleanupUnusedLibraries();
+        }
+        _listplugindirs.clear();
         RAVELOG_DEBUG("openrave plugin database destroyed\n");
     }
 
     void GetPlugins(std::list<PluginPtr>& listplugins) const
     {
-        EnvironmentMutex::scoped_lock lock(_mutex);
+        boost::mutex::scoped_lock lock(_mutex);
         listplugins = _listplugins;
     }
     
@@ -388,8 +394,15 @@ public:
                 return InterfaceBasePtr();
             }
             
-            EnvironmentMutex::scoped_lock lock(_mutex);
-            FOREACH(it, _listRegisteredInterfaces) {
+            // have to copy in order to allow plugins to register stuff inside their creation methods
+            std::list<RegisteredInterface> listRegisteredInterfaces;
+            list<PluginPtr> listplugins;
+            {
+                boost::mutex::scoped_lock lock(_mutex);
+                listRegisteredInterfaces = _listRegisteredInterfaces;
+                listplugins = _listplugins;
+            }
+            FOREACH(it, listRegisteredInterfaces) {
                 if( nInterfaceNameLength >= it->_name.size() && strnicmp(name.c_str(),it->_name.c_str(),it->_name.size()) == 0 ) {
                     std::stringstream sinput(name);
                     std::string interfacename;
@@ -414,8 +427,8 @@ public:
 
             if( !pointer ) {
                 const char* hash = RaveGetInterfaceHash(type);
-                list<PluginPtr>::iterator itplugin = _listplugins.begin();
-                while(itplugin != _listplugins.end()) {
+                list<PluginPtr>::iterator itplugin = listplugins.begin();
+                while(itplugin != listplugins.end()) {
                     pointer = (*itplugin)->CreateInterface(type, name, hash, penv);
                     if( !!pointer ) {
                         if( strcmp(pointer->GetHash(), hash) ) {
@@ -436,12 +449,11 @@ public:
                             break;
                         }
                     }
-                    if( (*itplugin)->IsValid() ) {
-                        ++itplugin;
+                    if( !(*itplugin)->IsValid() ) {
+                        boost::mutex::scoped_lock lock(_mutex);
+                        _listplugins.remove(*itplugin);
                     }
-                    else {
-                        itplugin = _listplugins.erase(itplugin);
-                    }
+                    ++itplugin;
                 }
             }
         }
@@ -469,7 +481,6 @@ public:
     /// If pdir is already specified, reloads all 
     bool AddDirectory(const std::string& pdir)
     {
-        EnvironmentMutex::scoped_lock lock(_mutex);
 #ifdef _WIN32
         WIN32_FIND_DATAA FindFileData;
         HANDLE hFind;
@@ -518,19 +529,19 @@ public:
 
     void ReloadPlugins()
     {
-        EnvironmentMutex::scoped_lock lock(_mutex);
+        boost::mutex::scoped_lock lock(_mutex);
         FOREACH(itplugin,_listplugins) {
             PluginPtr newplugin = _LoadPlugin((*itplugin)->ppluginname);
             if( !!newplugin ) {
                 *itplugin = newplugin;
             }
         }
-        CleanupUnusedLibraries();   
+        _CleanupUnusedLibraries();   
     }
 
     bool LoadPlugin(const std::string& pluginname)
     {
-        EnvironmentMutex::scoped_lock lock(_mutex);
+        boost::mutex::scoped_lock lock(_mutex);
         std::list<PluginPtr>::iterator it = _GetPlugin(pluginname);
         string newpluginname;
         if( it != _listplugins.end() ) {
@@ -545,25 +556,25 @@ public:
         if( !!p ) {
             _listplugins.push_back(p);
         }
-        CleanupUnusedLibraries();
+        _CleanupUnusedLibraries();
         return !!p;
     }
 
     bool RemovePlugin(const std::string& pluginname)
     {
-        EnvironmentMutex::scoped_lock lock(_mutex);
+        boost::mutex::scoped_lock lock(_mutex);
         std::list<PluginPtr>::iterator it = _GetPlugin(pluginname);
         if( it == _listplugins.end() ) {
             return false;
         }
         _listplugins.erase(it);
-        CleanupUnusedLibraries();
+        _CleanupUnusedLibraries();
         return true;
     }
 
     virtual bool HasInterface(InterfaceType type, const string& interfacename)
     {
-        EnvironmentMutex::scoped_lock lock(_mutex);
+        boost::mutex::scoped_lock lock(_mutex);
         FOREACHC(it,_listRegisteredInterfaces) {
             if( interfacename.size() >= it->_name.size() && strnicmp(interfacename.c_str(),it->_name.c_str(),it->_name.size()) == 0 ) {
                 return true;
@@ -577,19 +588,10 @@ public:
         return false;
     }
 
-    void CleanupUnusedLibraries()
-    {
-        EnvironmentMutex::scoped_lock lock(_mutex);
-        FOREACH(it,_listDestroyLibraryQueue) {
-            RaveDatabase::_SysCloseLibrary(*it);
-        }
-        _listDestroyLibraryQueue.clear();
-    }
-
     void GetPluginInfo(std::list< std::pair<std::string, PLUGININFO> >& plugins) const
     {
         plugins.clear();
-        EnvironmentMutex::scoped_lock lock(_mutex);
+        boost::mutex::scoped_lock lock(_mutex);
         FOREACHC(itplugin, _listplugins) {
             PLUGININFO info;
             if( (*itplugin)->GetInfo(info) ) {
@@ -608,7 +610,7 @@ public:
     void GetLoadedInterfaces(std::map<InterfaceType, std::vector<std::string> >& interfacenames) const
     {
         interfacenames.clear();
-        EnvironmentMutex::scoped_lock lock(_mutex);
+        boost::mutex::scoped_lock lock(_mutex);
         FOREACHC(it,_listRegisteredInterfaces) {
             interfacenames[it->_type].push_back(it->_name);
         }
@@ -637,20 +639,27 @@ public:
         if( strcmp(interfacehash, RaveGetInterfaceHash(type)) ) {
             throw openrave_exception(str(boost::format("interface %s invalid hash %s!=%s\n")%RaveGetInterfaceName(type)%interfacehash%RaveGetInterfaceHash(type)),ORE_InvalidInterfaceHash);
         }
-        EnvironmentMutex::scoped_lock lock(_mutex);
+        boost::mutex::scoped_lock lock(_mutex);
         return boost::shared_ptr<void>(new std::list<RegisteredInterface>::iterator(_listRegisteredInterfaces.insert(_listRegisteredInterfaces.end(),RegisteredInterface(type,name,createfn))), boost::bind(RaveDatabase::__erase_iterator,boost::weak_ptr<RaveDatabase>(shared_from_this()), _1));
     }
 
     static const char* GetInterfaceHash(InterfaceBasePtr pint) { return pint->GetHash(); }
 
 protected:
+    void _CleanupUnusedLibraries()
+    {
+        FOREACH(it,_listDestroyLibraryQueue) {
+            RaveDatabase::_SysCloseLibrary(*it);
+        }
+        _listDestroyLibraryQueue.clear();
+    }
+
     /// \brief Deletes the plugin from the database
     ///
     /// It is safe to delete a plugin even if interfaces currently reference it because this function just decrements
     /// the reference count instead of unloading from memory.
     std::list<PluginPtr>::iterator _GetPlugin(const std::string& pluginname)
     {
-        EnvironmentMutex::scoped_lock lock(_mutex);
         FOREACH(it,_listplugins) {
             if( pluginname == (*it)->ppluginname ) {
                 return it;
@@ -823,7 +832,6 @@ protected:
 
     void _QueueLibraryDestruction(void* lib)
     {
-        EnvironmentMutex::scoped_lock lock(_mutex);
         _listDestroyLibraryQueue.push_back(lib);
     }
 
@@ -885,7 +893,7 @@ protected:
         if( !!pit ) {
             boost::shared_ptr<RaveDatabase> pdb = pweakdb.lock();
             if( !!pdb ) {
-                EnvironmentMutex::scoped_lock lock(pdb->_mutex);
+                boost::mutex::scoped_lock lock(pdb->_mutex);
                 pdb->_listRegisteredInterfaces.erase(*pit);
             }
             delete pit;
@@ -893,7 +901,7 @@ protected:
     }
     
     list<PluginPtr> _listplugins;
-    mutable EnvironmentMutex _mutex; ///< changing plugin database
+    mutable boost::mutex _mutex; ///< changing plugin database
     std::list<void*> _listDestroyLibraryQueue;
     std::list<RegisteredInterface> _listRegisteredInterfaces;
     std::list<std::string> _listplugindirs;
