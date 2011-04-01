@@ -205,7 +205,7 @@ if( MSVC )
   endif()
 
   set(Boost_FOUND 1)
-  set(Boost_INCLUDE_DIRS ${BOOST_ROOT})
+  set(Boost_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/inc")
   set(Boost_LIBRARY_DIRS)
   set(Boost_REGEX_FOUND 0)
   set(Boost_FILESYSTEM_FOUND 1)
