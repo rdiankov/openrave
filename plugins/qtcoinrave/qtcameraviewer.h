@@ -99,8 +99,8 @@ protected:
 #if QT_VERSION >= 0x040200 // qt4.2+
                     _label->setPixmap(QPixmap::fromImage(QImage(&_pdatanew->vimagedata[0], _pgeom->width,_pgeom->height,QImage::Format_RGB888)));
 #else
-                    vimagedata.resize(4*pgeom->width*pgeom->height);
-                    for(int i = 0; i < pgeom->width*pgeom->height; ++i) {
+                    vimagedata.resize(4*_pgeom->width*_pgeom->height);
+                    for(int i = 0; i < _pgeom->width*_pgeom->height; ++i) {
                         vimagedata[4*i+0] = _pdatanew->vimagedata[3*i+0];
                         vimagedata[4*i+1] = _pdatanew->vimagedata[3*i+1];
                         vimagedata[4*i+2] = _pdatanew->vimagedata[3*i+2];

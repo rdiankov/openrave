@@ -659,7 +659,11 @@ protected:
 #ifdef HAVE_BOOST_FILESYSTEM
         // try matching partial base names without path and extension
         boost::filesystem::path pluginpath(pluginname, boost::filesystem::native);
+#if defined(BOOST_FILESYSTEM_VERSION) && BOOST_FILESYSTEM_VERSION >= 3
+        string stem = pluginpath.stem().string();
+#else
         string stem = pluginpath.stem();
+#endif
         FOREACH(it, _listplugins) {
             if( stem == boost::filesystem::path((*it)->ppluginname, boost::filesystem::native).stem() ) {
                 return it;
@@ -684,7 +688,11 @@ protected:
         if( plibrary == NULL ) {
             // try adding from the current plugin libraries
             FOREACH(itdir,_listplugindirs) {
+#if defined(BOOST_FILESYSTEM_VERSION) && BOOST_FILESYSTEM_VERSION >= 3
+                string newlibraryname = boost::filesystem::absolute(libraryname,*itdir).string();
+#else
                 string newlibraryname = boost::filesystem::complete(libraryname,*itdir).string();
+#endif
                 plibrary = _SysLoadLibrary(newlibraryname.c_str(),OPENRAVE_LAZY_LOADING);
                 if( !!plibrary ) {
                     libraryname = newlibraryname;

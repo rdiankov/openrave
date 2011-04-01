@@ -347,13 +347,13 @@ class SimpleTextServer : public ProblemInstance
             return -1;
         }
 
-        err = bind(server_sockfd, (struct sockaddr *)&server_address, server_len);
+        err = ::bind(server_sockfd, (struct sockaddr *)&server_address, server_len);
         if( err ) {
             RAVELOG_ERROR("failed to bind server to port %d, error=%d\n", _nPort, err);
             return -1;
         }
 
-        err = listen(server_sockfd, 16);
+        err = ::listen(server_sockfd, 16);
         if( err ) {
             RAVELOG_ERROR("failed to listen to server port %d, error=%d\n", _nPort, err);
             return -1;
