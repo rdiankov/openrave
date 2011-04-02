@@ -2468,7 +2468,7 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, bool bCheckLi
             BOOST_ASSERT( (*it)->GetDOF() <= 3 );
             (*it)->GetLimits(lowerlim, upperlim);
             if( (*it)->GetType() == Joint::JointSpherical ) {
-                dReal fcurang = fmodf(RaveSqrt(p[0]*p[0]+p[1]*p[1]+p[2]*p[2]),2*PI);
+                dReal fcurang = fmod(RaveSqrt(p[0]*p[0]+p[1]*p[1]+p[2]*p[2]),2*PI);
                 if( fcurang < lowerlim[0] ) {
                     if( fcurang < 1e-10 ) {
                         *ptempjoints++ = lowerlim[0]; *ptempjoints++ = 0; *ptempjoints++ = 0;

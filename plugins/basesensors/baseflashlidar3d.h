@@ -410,7 +410,7 @@ protected:
     CollisionReportPtr _report;
     // more geom stuff
     RaveVector<float> _vColor;
-    float _iKK[4]; // inverse of KK
+    dReal _iKK[4]; // inverse of KK
 
     Transform _trans;
     list<GraphHandlePtr> _listGraphicsHandles;

@@ -197,7 +197,7 @@ public:
         
                 t = GetLaserPlaneTransform();
                 size_t index = 0;
-                for(float frotangle = _pgeom->min_angle[0]; frotangle <= _pgeom->max_angle[0]; frotangle += _pgeom->resolution[0], ++index) {
+                for(dReal frotangle = _pgeom->min_angle[0]; frotangle <= _pgeom->max_angle[0]; frotangle += _pgeom->resolution[0], ++index) {
                     if( index >= _pdata->ranges.size() ) {
                         break;
                     }
@@ -210,8 +210,9 @@ public:
                         _pdata->intensity[index] = 1;
                         // store the colliding bodies
                         KinBody::LinkConstPtr plink = !!_report->plink1 ? _report->plink1 : _report->plink2;
-                        if( !!plink )
+                        if( !!plink ) {
                             _databodyids[index] = plink->GetParent()->GetEnvironmentId();
+                        }
                     }
                     else {
                         _databodyids[index] = 0;

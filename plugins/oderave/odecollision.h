@@ -233,7 +233,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
     int _GeomCollide(dGeomID geom1, dGeomID geom2, vector<dContact>& vcontacts)
     {
         vcontacts.resize(_nMaxStartContacts);
-        int log2limit = ceil(OpenRAVE::RaveLog(vcontacts.size())/OpenRAVE::RaveLog(2));
+        int log2limit = (int)ceil(OpenRAVE::RaveLog(vcontacts.size())/OpenRAVE::RaveLog(2));
         while(1) {
             int N = dCollide (geom1, geom2,vcontacts.size(),&vcontacts[0].geom,sizeof(vcontacts[0]));
             // this is weird, but it seems that ode returns approx log2(vcontacts.size()) less than the limit...

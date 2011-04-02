@@ -3,7 +3,7 @@ set (openrave_SOURCES openrave.cpp)
 
 include_directories(${OPENRAVE_INCLUDE_DIRS})
 
-set(openrave_libraries ${LIBXML2_LIBRARIES} ${Boost_THREAD_LIBRARY} openrave-md5)
+set(openrave_libraries ${LIBXML2_LIBRARIES} ${Boost_DATE_TIME_LIBRARY} ${Boost_THREAD_LIBRARY} openrave-md5)
 if( Boost_FILESYSTEM_FOUND AND Boost_SYSTEM_FOUND )
   set(openrave_libraries ${openrave_libraries} ${Boost_FILESYSTEM_LIBRARY} ${Boost_SYSTEM_LIBRARY})
   add_definitions(-DHAVE_BOOST_FILESYSTEM)
@@ -66,7 +66,7 @@ else()
   set(SOCKET_LIBS)
 endif()
 
-target_link_libraries (openrave ${Boost_THREAD_LIBRARY} ${SOCKET_LIBS} libopenrave libopenrave-core)
+target_link_libraries (openrave ${Boost_DATE_TIME_LIBRARY} ${Boost_THREAD_LIBRARY} ${SOCKET_LIBS} libopenrave libopenrave-core)
 
 # always extract the models since we don't know when models.tgz has been changed
 #if( NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/models/WAM" OR NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/robots/pr2-beta-static.dae")

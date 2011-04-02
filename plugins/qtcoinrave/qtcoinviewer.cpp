@@ -3014,10 +3014,12 @@ void QtCoinViewer::CollisionCheckerChanged(QAction* pact)
         GetEnv()->SetCollisionChecker(CollisionCheckerBasePtr());
     else {
         CollisionCheckerBasePtr p = RaveCreateCollisionChecker(GetEnv(),pact->data().toString().toStdString());
-        if( !!p )
+        if( !!p ) {
             GetEnv()->SetCollisionChecker(p);
-        else
+        }
+        else {
             _UpdateCollisionChecker();
+        }
     }
 }
 
@@ -3032,8 +3034,7 @@ void QtCoinViewer::_UpdateCollisionChecker()
                     return;
                 }
             }
-
-            RAVELOG_WARN(str(boost::format("cannot find collision checker menu item %s\n")%p->GetXMLId()));
+            RAVELOG_VERBOSE(str(boost::format("cannot find collision checker menu item %s\n")%p->GetXMLId()));
         }
 
         // set to default
@@ -3047,10 +3048,12 @@ void QtCoinViewer::PhysicsEngineChanged(QAction* pact)
         GetEnv()->SetPhysicsEngine(PhysicsEngineBasePtr());
     else {
         PhysicsEngineBasePtr p = RaveCreatePhysicsEngine(GetEnv(),pact->data().toString().toStdString());
-        if( !!p )
+        if( !!p ) {
             GetEnv()->SetPhysicsEngine(p);
-        else
+        }
+        else {
             _UpdatePhysicsEngine();
+        }
     }
 }
 
@@ -3101,10 +3104,12 @@ void QtCoinViewer::DynamicSelfCollision(bool on)
     PhysicsEngineBasePtr p = GetEnv()->GetPhysicsEngine();
     if( !!p ) {
         int opts = p->GetPhysicsOptions();
-        if( on )
+        if( on ) {
             opts |= PEO_SelfCollisions;
-        else
+        }
+        else {
             opts &= ~PEO_SelfCollisions;
+        }
         p->SetPhysicsOptions(opts);
     }
 }
@@ -3147,8 +3152,9 @@ void QtCoinViewer::EnvMessage::callerexecute()
         _pviewer->_listMessages.push_back(shared_from_this());
     }
     
-    if( bWaitForMutex )
+    if( bWaitForMutex ) {
         boost::mutex::scoped_lock lock(_mutex);
+    }
 }
 
 /// execute the command in the viewer

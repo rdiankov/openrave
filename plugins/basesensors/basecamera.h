@@ -300,17 +300,16 @@ class BaseCameraSensor : public SensorBase
             // render a simple frustum outlining camera's dimension
             // the frustum is colored with vColor, the x and y axes are colored separetely
             Vector points[7];
-            float ik0 = 1/_pgeom->KK.fx, ik1 = 1/_pgeom->KK.fy;
+            dReal ik0 = 1/_pgeom->KK.fx, ik1 = 1/_pgeom->KK.fy;
             points[0] = Vector(0,0,0);
-            points[1] = Vector(((float)_pgeom->width-_pgeom->KK.cx)*ik0, ((float)_pgeom->height-_pgeom->KK.cy)*ik1, 1);
-            points[2] = Vector(-_pgeom->KK.cx*ik0, ((float)_pgeom->height-_pgeom->KK.cy)*ik1, 1);
+            points[1] = Vector(((dReal)_pgeom->width-_pgeom->KK.cx)*ik0, ((dReal)_pgeom->height-_pgeom->KK.cy)*ik1, 1);
+            points[2] = Vector(-_pgeom->KK.cx*ik0, ((dReal)_pgeom->height-_pgeom->KK.cy)*ik1, 1);
             points[3] = Vector(-_pgeom->KK.cx*ik0, -_pgeom->KK.cy*ik1, 1);
-            points[4] = Vector(((float)_pgeom->width-_pgeom->KK.cx)*ik0, -_pgeom->KK.cy*ik1, 1);
+            points[4] = Vector(((dReal)_pgeom->width-_pgeom->KK.cx)*ik0, -_pgeom->KK.cy*ik1, 1);
             points[5] = Vector(0.5f,0,0);
             points[6] = Vector(0,0.5f,0);
 
             boost::array<int,16> inds = {{0,1,2,3,4,1,4,0,2,3,0,0,5,0,0,6}};
-
             vector<RaveVector<float> > viconpoints(inds.size());
             vector<float> vcolors(inds.size()*3);
 

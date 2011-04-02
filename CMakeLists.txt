@@ -76,6 +76,7 @@ option(OPT_PYTHON "Build python bindings" ON)
 option(OPT_OCTAVE "Build octave bindings" ON)
 option(OPT_MATLAB "Build matlab bindings" ON)
 option(OPT_STATIC "Build static libraries" OFF)
+option(OPT_COLLADA "Build with COLLADA support" ON)
 
 ##############################################################################
 # Required packages
@@ -95,37 +96,39 @@ include(CheckCXXSourceRuns)
 include(CheckCXXCompilerFlag)
 include(CheckTypeSize)
 include(FindPkgConfig)
-include(FindPythonInterp)
 
-## check python
-find_package(PythonLibs) # using PYTHON_INCLUDE_PATH instead of PYTHON_INCLUDE_DIR
-if( NOT PYTHON_EXECUTABLE )
-  # look specifically for 2.6
-  FIND_PROGRAM(PYTHON_EXECUTABLE
-    NAMES python2.6 python
-    PATHS [HKEY_LOCAL_MACHINE\\SOFTWARE\\Python\\PythonCore\\2.6\\InstallPath])
-endif()
+if( OPT_PYTHON )
+  include(FindPythonInterp)
+  ## check python
+  find_package(PythonLibs) # using PYTHON_INCLUDE_PATH instead of PYTHON_INCLUDE_DIR
+  if( NOT PYTHON_EXECUTABLE )
+    # look specifically for 2.6
+    FIND_PROGRAM(PYTHON_EXECUTABLE
+      NAMES python2.6 python
+      PATHS [HKEY_LOCAL_MACHINE\\SOFTWARE\\Python\\PythonCore\\2.6\\InstallPath])
+  endif()
 
-if( PYTHON_EXECUTABLE )
-  # get the site-packages directory
-  execute_process(
-    COMMAND ${PYTHON_EXECUTABLE} -c "from distutils.sysconfig import get_python_lib; print get_python_lib()"
-    OUTPUT_VARIABLE _python_sitepackage OUTPUT_STRIP_TRAILING_WHITESPACE
-    RESULT_VARIABLE _python_failed)
-  if( ${_python_failed} EQUAL 0 )
-    string(REGEX REPLACE "[\r\n]" "" _python_sitepackage "${_python_sitepackage}")
-    set(PYTHON_INCLUDE_PATH ${PYTHON_INCLUDE_PATH} ${_python_sitepackage}/numpy/core/include)
-  else()
-    message(STATUS "failed to get python site-package directory")
+  if( PYTHON_EXECUTABLE )
+    # get the site-packages directory
+    execute_process(
+      COMMAND ${PYTHON_EXECUTABLE} -c "from distutils.sysconfig import get_python_lib; print get_python_lib()"
+      OUTPUT_VARIABLE _python_sitepackage OUTPUT_STRIP_TRAILING_WHITESPACE
+      RESULT_VARIABLE _python_failed)
+    if( ${_python_failed} EQUAL 0 )
+      string(REGEX REPLACE "[\r\n]" "" _python_sitepackage "${_python_sitepackage}")
+      set(PYTHON_INCLUDE_PATH ${PYTHON_INCLUDE_PATH} ${_python_sitepackage}/numpy/core/include)
+    else()
+      message(STATUS "failed to get python site-package directory")
+    endif()
   endif()
 endif()
 
 set(OPENRAVE_DATA_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/share/openrave" CACHE PATH "Scene and robot files installation directory")
 set(OPENRAVE_PLUGINS_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/share/openrave/plugins" CACHE PATH "OpenRAVE plugins installation directory")
-set(OPENRAVE_OCTAVE_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/share/openrave/octave" CACHE PATH "OpenRAVE Octave bindings installation directory")
-set(OPENRAVE_MATLAB_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/share/openrave/matlab" CACHE PATH "OpenRAVE MATLAB bindings installation directory")
 set(OPENRAVE_PYTHON_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/share/openrave" CACHE PATH "Internal python libraries installation directory")
 set(OPENRAVEPY_INSTALL_DIR "${OPENRAVE_PYTHON_INSTALL_DIR}/openravepy" CACHE PATH "OpenRAVE Python bindings (openravepy) installation directory")
+set(OPENRAVE_OCTAVE_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/share/openrave/octave" CACHE PATH "OpenRAVE Octave bindings installation directory")
+set(OPENRAVE_MATLAB_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/share/openrave/matlab" CACHE PATH "OpenRAVE MATLAB bindings installation directory")
 
 # very important to only test release since default is debug, and it usually reuquires special libraries
 set(CMAKE_TRY_COMPILE_CONFIGURATION Release)
@@ -169,9 +172,6 @@ set(OPENRAVE_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR})
 set(OPENRAVE_CORE_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/src/libopenrave-core)
 set(OPENRAVE_LINK_DIRS "")
 
-# to facilitate compilation, all visual studio libraries are included locally
-set(Boost_ADDITIONAL_VERSIONS "1.46" "1.45" "1.44" "1.43" "1.42" "1.41" "1.40" "1.39" "1.38" "1.37.0" "1.37" "1.35.0" "1.34.1" "1.34.0" "1.34" "1.33.1" "1.33.0" "1.33")
-
 if( MSVC )
   add_definitions( -D_CRT_SECURE_NO_WARNINGS)
   add_definitions( -D_CRT_SECURE_NO_DEPRECATE)
@@ -198,72 +198,27 @@ if( MSVC )
 
   include_directories("${CMAKE_CURRENT_SOURCE_DIR}/inc")
   set(OPENRAVE_LINK_DIRS ${OPENRAVE_LINK_DIRS} "${CMAKE_CURRENT_SOURCE_DIR}/lib/win32")
-
-  # manually set boost root, find_package errors due to tgz file
-  if( NOT BOOST_ROOT )
-    set(BOOST_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/inc")
-  endif()
-
-  set(Boost_FOUND 1)
-  set(Boost_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/inc")
-  set(Boost_LIBRARY_DIRS)
-  set(Boost_REGEX_FOUND 0)
-  set(Boost_FILESYSTEM_FOUND 1)
-  set(Boost_IOSTREAMS_FOUND 1)
-  set(Boost_SYSTEM_FOUND 1)
-  set(Boost_PYTHON_FOUND 1)
-  set(Boost_THREAD_FOUND 1)
-  set(Boost_SIGNALS_FOUND 1)
-  set(Boost_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/inc")
-  set(Boost_CFLAGS "-DBOOST_ALL_DYN_LINK -DBOOST_ALL_NO_LIB")
-  # have to add to required flags for applications that will test linking with boost
-  set(CMAKE_REQUIRED_FLAGS "-DBOOST_ALL_DYN_LINK -DBOOST_ALL_NO_LIB")
-  if( MSVC70 OR MSVC71 )
-    set(Boost_THREAD_LIBRARY ${CMAKE_CURRENT_SOURCE_DIR}/lib/win32/boost_date_time-vc71-mt-1_44.lib ${CMAKE_CURRENT_SOURCE_DIR}/lib/win32/boost_thread-vc71-mt-1_44.lib)
-    set(Boost_SYSTEM_LIBRARY ${CMAKE_CURRENT_SOURCE_DIR}/lib/win32/boost_system-vc71-mt-1_44.lib)
-    set(Boost_FILESYSTEM_LIBRARY ${CMAKE_CURRENT_SOURCE_DIR}/lib/win32/boost_filesystem-vc71-mt-1_44.lib)
-    set(Boost_PYTHON_LIBRARY ${CMAKE_CURRENT_SOURCE_DIR}/lib/win32/boost_python-vc71-mt-1_44.lib)
-    set(Boost_IOSTREAMS_LIBRARY ${CMAKE_CURRENT_SOURCE_DIR}/lib/win32/boost_iostreams-vc71-mt-1_44.lib)
-  elseif( MSVC80 )
-    set(Boost_THREAD_LIBRARY ${CMAKE_CURRENT_SOURCE_DIR}/lib/win32/boost_date_time-vc80-mt-1_44.lib ${CMAKE_CURRENT_SOURCE_DIR}/lib/win32/boost_thread-vc80-mt-1_44.lib)
-    set(Boost_SYSTEM_LIBRARY ${CMAKE_CURRENT_SOURCE_DIR}/lib/win32/boost_system-vc80-mt-1_44.lib)
-    set(Boost_FILESYSTEM_LIBRARY ${CMAKE_CURRENT_SOURCE_DIR}/lib/win32/boost_filesystem-vc80-mt-1_44.lib)
-    set(Boost_PYTHON_LIBRARY ${CMAKE_CURRENT_SOURCE_DIR}/lib/win32/boost_python-vc80-mt-1_44.lib)
-    set(Boost_IOSTREAMS_LIBRARY ${CMAKE_CURRENT_SOURCE_DIR}/lib/win32/boost_iostreams-vc80-mt-1_44.lib)
-  elseif( MSVC90 )
-    set(Boost_THREAD_LIBRARY ${CMAKE_CURRENT_SOURCE_DIR}/lib/win32/boost_date_time-vc90-mt-1_44.lib ${CMAKE_CURRENT_SOURCE_DIR}/lib/win32/boost_thread-vc90-mt-1_44.lib)
-    set(Boost_SYSTEM_LIBRARY ${CMAKE_CURRENT_SOURCE_DIR}/lib/win32/boost_system-vc90-mt-1_44.lib)
-    set(Boost_FILESYSTEM_LIBRARY ${CMAKE_CURRENT_SOURCE_DIR}/lib/win32/boost_filesystem-vc90-mt-1_44.lib)
-    set(Boost_PYTHON_LIBRARY ${CMAKE_CURRENT_SOURCE_DIR}/lib/win32/boost_python-vc90-mt-1_44.lib)
-    set(Boost_IOSTREAMS_LIBRARY ${CMAKE_CURRENT_SOURCE_DIR}/lib/win32/boost_iostreams-vc90-mt-1_44.lib)
-  else()
-    set(Boost_THREAD_LIBRARY ${CMAKE_CURRENT_SOURCE_DIR}/lib/win32/boost_date_time-vc100-mt-1_44.lib ${CMAKE_CURRENT_SOURCE_DIR}/lib/win32/boost_thread-vc100-mt-1_44.lib)
-    set(Boost_SYSTEM_LIBRARY ${CMAKE_CURRENT_SOURCE_DIR}/lib/win32/boost_system-vc100-mt-1_44.lib)
-    set(Boost_FILESYSTEM_LIBRARY ${CMAKE_CURRENT_SOURCE_DIR}/lib/win32/boost_filesystem-vc100-mt-1_44.lib)
-    set(Boost_PYTHON_LIBRARY ${CMAKE_CURRENT_SOURCE_DIR}/lib/win32/boost_python-vc100-mt-1_44.lib)
-    set(Boost_IOSTREAMS_LIBRARY ${CMAKE_CURRENT_SOURCE_DIR}/lib/win32/boost_iostreams-vc100-mt-1_44.lib)
-  endif()
-
+  
   # make sure to install the library since it will be necessary for linking
   install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/lib/win32/libxml2.lib DESTINATION lib${LIB_SUFFIX})
   install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/lib/win32/libxml2d.lib DESTINATION lib${LIB_SUFFIX})
   install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/inc/stdint.h DESTINATION include)
-  install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/inc/boost DESTINATION include)
-
-  file(GLOB boost_lib_files ${CMAKE_CURRENT_SOURCE_DIR}/lib/win32/boost_*.lib)
-  install(FILES ${boost_lib_files} DESTINATION lib${LIB_SUFFIX})
-
-else()
-  if( NOT $ENV{BOOST_INCLUDEDIR} STREQUAL "" )
-    set(Boost_INCLUDE_DIR $ENV{BOOST_INCLUDEDIR})
-  endif()
-  if( NOT $ENV{BOOST_LIBRARYDIR} STREQUAL "" )
-    set(Boost_LIBRARY_DIRS $ENV{BOOST_LIBRARYDIR})
-  endif()
-  find_package(Boost COMPONENTS regex filesystem system python thread iostreams)
+  install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin/ DESTINATION bin FILES_MATCHING PATTERN "*.dll")
+  # force multi-threaded DLL boost
+  set(Boost_USE_MULTITHREAD ON)
+  set(Boost_USE_STATIC_LIBS OFF)
+  set(Boost_CFLAGS "-DBOOST_ALL_DYN_LINK -DBOOST_ALL_NO_LIB")
 endif()
 
-message(STATUS "found boost version: ${Boost_VERSION}")
+if( NOT $ENV{BOOST_INCLUDEDIR} STREQUAL "" )
+  set(Boost_INCLUDE_DIR $ENV{BOOST_INCLUDEDIR})
+endif()
+if( NOT $ENV{BOOST_LIBRARYDIR} STREQUAL "" )
+  set(Boost_LIBRARY_DIRS $ENV{BOOST_LIBRARYDIR})
+endif()
+# to facilitate compilation, all visual studio libraries are included locally
+set(Boost_ADDITIONAL_VERSIONS "1.46.1" "1.45" "1.44" "1.43" "1.42" "1.41" "1.40" "1.39" "1.38" "1.37.0" "1.37" "1.35.0" "1.34.1" "1.34.0" "1.34" "1.33.1" "1.33.0" "1.33" ${Boost_ADDITIONAL_VERSIONS})
+find_package(Boost COMPONENTS regex filesystem system python thread iostreams date_time)
 
 if( Boost_FOUND )
   include_directories(${Boost_INCLUDE_DIRS})
@@ -271,10 +226,67 @@ if( Boost_FOUND )
 elseif(Boost_VERSION AND NOT "${Boost_VERSION}" STREQUAL "0")
   include_directories(${Boost_INCLUDE_DIRS})
   set(OPENRAVE_LINK_DIRS ${OPENRAVE_LINK_DIRS} ${Boost_LIBRARY_DIRS})
+elseif( MSVC )
+  if( NOT BOOST_ROOT )
+    set(BOOST_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/msvc_boost")
+  endif()
+  message(STATUS "using local boost libraries for MSVC")
+  set(Boost_FOUND 1)
+  set(Boost_INCLUDE_DIRS "${BOOST_ROOT}")
+  set(Boost_INCLUDE_DIR "${BOOST_ROOT}")
+  set(Boost_LIBRARY_DIRS "${BOOST_ROOT}/lib")
+  set(Boost_REGEX_FOUND 0)
+  set(Boost_FILESYSTEM_FOUND 1)
+  set(Boost_IOSTREAMS_FOUND 1)
+  set(Boost_SYSTEM_FOUND 1)
+  set(Boost_PYTHON_FOUND 1)
+  set(Boost_THREAD_FOUND 1)
+  set(Boost_DATE_TIME_FOUND 1)
+  set(Boost_SIGNALS_FOUND 1)
+  # have to add to required flags for applications that will test linking with boost
+  set(CMAKE_REQUIRED_FLAGS "-DBOOST_ALL_DYN_LINK -DBOOST_ALL_NO_LIB")
+  if( MSVC70 OR MSVC71 )
+    set(Boost_DATE_TIME_LIBRARY "${Boost_LIBRARY_DIRS}/boost_date_time-vc71-mt-1_44.lib")
+    set(Boost_THREAD_LIBRARY "${Boost_LIBRARY_DIRS}/boost_thread-vc71-mt-1_44.lib")
+    set(Boost_SYSTEM_LIBRARY "${Boost_LIBRARY_DIRS}/boost_system-vc71-mt-1_44.lib")
+    set(Boost_FILESYSTEM_LIBRARY "${Boost_LIBRARY_DIRS}/boost_filesystem-vc71-mt-1_44.lib")
+    set(Boost_PYTHON_LIBRARY "${Boost_LIBRARY_DIRS}/boost_python-vc71-mt-1_44.lib")
+    set(Boost_IOSTREAMS_LIBRARY "${Boost_LIBRARY_DIRS}/boost_iostreams-vc71-mt-1_44.lib")
+  elseif( MSVC80 )
+    set(Boost_DATE_TIME_LIBRARY "${Boost_LIBRARY_DIRS}/boost_date_time-vc80-mt-1_44.lib")
+    set(Boost_THREAD_LIBRARY "${Boost_LIBRARY_DIRS}/boost_thread-vc80-mt-1_44.lib")
+    set(Boost_SYSTEM_LIBRARY "${Boost_LIBRARY_DIRS}/boost_system-vc80-mt-1_44.lib")
+    set(Boost_FILESYSTEM_LIBRARY "${Boost_LIBRARY_DIRS}/boost_filesystem-vc80-mt-1_44.lib")
+    set(Boost_PYTHON_LIBRARY "${Boost_LIBRARY_DIRS}/boost_python-vc80-mt-1_44.lib")
+    set(Boost_IOSTREAMS_LIBRARY "${Boost_LIBRARY_DIRS}/boost_iostreams-vc80-mt-1_44.lib")
+  elseif( MSVC90 )
+    set(Boost_DATE_TIME_LIBRARY "${Boost_LIBRARY_DIRS}/boost_date_time-vc90-mt-1_44.lib")
+    set(Boost_THREAD_LIBRARY "${Boost_LIBRARY_DIRS}/boost_thread-vc90-mt-1_44.lib")
+    set(Boost_SYSTEM_LIBRARY "${Boost_LIBRARY_DIRS}/boost_system-vc90-mt-1_44.lib")
+    set(Boost_FILESYSTEM_LIBRARY "${Boost_LIBRARY_DIRS}/boost_filesystem-vc90-mt-1_44.lib")
+    set(Boost_PYTHON_LIBRARY "${Boost_LIBRARY_DIRS}/boost_python-vc90-mt-1_44.lib")
+    set(Boost_IOSTREAMS_LIBRARY "${Boost_LIBRARY_DIRS}/boost_iostreams-vc90-mt-1_44.lib")
+  else()
+    set(Boost_DATE_TIME_LIBRARY "${Boost_LIBRARY_DIRS}/boost_date_time-vc100-mt-1_44.lib")
+    set(Boost_THREAD_LIBRARY "${Boost_LIBRARY_DIRS}/boost_thread-vc100-mt-1_44.lib")
+    set(Boost_SYSTEM_LIBRARY "${Boost_LIBRARY_DIRS}/boost_system-vc100-mt-1_44.lib")
+    set(Boost_FILESYSTEM_LIBRARY "${Boost_LIBRARY_DIRS}/boost_filesystem-vc100-mt-1_44.lib")
+    set(Boost_PYTHON_LIBRARY "${Boost_LIBRARY_DIRS}/boost_python-vc100-mt-1_44.lib")
+    set(Boost_IOSTREAMS_LIBRARY "${Boost_LIBRARY_DIRS}/boost_iostreams-vc100-mt-1_44.lib")
+  endif()
+
+  install(DIRECTORY "${Boost_INCLUDE_DIR}/boost" DESTINATION include)
+  install(DIRECTORY "${Boost_LIBRARY_DIRS}"/ DESTINATION bin FILES_MATCHING PATTERN "*.dll")
+  install(DIRECTORY "${Boost_LIBRARY_DIRS}"/ DESTINATION lib${LIB_SUFFIX} FILES_MATCHING PATTERN "*.lib")
 else()
   message(FATAL_ERROR "Could not find boost libraries!")
 endif()
 
+message(STATUS "found boost version: ${Boost_VERSION}")
+if( NOT Boost_THREAD_LIBRARY OR NOT Boost_DATE_TIME_LIBRARY )
+  message(FATAL_ERROR "boost thread and date_time libraries are necessary")
+endif()
+    
 set(OPENRAVE_BOOST_INCLUDE_DIRS)
 foreach(idir ${Boost_INCLUDE_DIRS})
   set(OPENRAVE_BOOST_INCLUDE_DIRS "${OPENRAVE_BOOST_INCLUDE_DIRS} -I${idir}")
@@ -427,48 +439,51 @@ if( NOT ZLIB_FOUND )
   set(ZLIB_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/zlib)
 endif()
 
-pkg_check_modules(COLLADA collada15dom>=2.3.0)
+if( OPT_COLLADA )
+  pkg_check_modules(COLLADA collada15dom>=2.3.0)
 
-pkg_check_modules(minizip minizip)
-if(minizip_FOUND)
-  set(MINIZIP_INCLUDE_DIR ${minizip_INCLUDE_DIRS})
-else()
-  add_subdirectory(3rdparty/minizip)
-  set(MINIZIP_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/minizip ${ZLIB_INCLUDE_DIR})
-endif()
+  pkg_check_modules(minizip minizip)
+  if(minizip_FOUND)
+    set(MINIZIP_INCLUDE_DIR ${minizip_INCLUDE_DIRS})
+  else()
+    add_subdirectory(3rdparty/minizip)
+    set(MINIZIP_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/minizip ${ZLIB_INCLUDE_DIR})
+  endif()
 
-if( NOT COLLADA_FOUND AND ZLIB_FOUND AND Boost_FILESYSTEM_FOUND AND Boost_SYSTEM_FOUND )
-  pkg_check_modules(libpcrecpp libpcrecpp)
-  if( libpcrecpp_FOUND )
-    set(CMAKE_REQUIRED_INCLUDES ${libpcrecpp_INCLUDE_DIRS})
-    check_include_file_cxx(pcrecpp.h HAVE_PCRECPP_H)
-    set(CMAKE_REQUIRED_INCLUDES)
-    if( NOT HAVE_PCRECPP_H )
-      set(libpcrecpp_FOUND 0)
+  if( NOT COLLADA_FOUND AND ZLIB_FOUND AND Boost_FILESYSTEM_FOUND AND Boost_SYSTEM_FOUND )
+    pkg_check_modules(libpcrecpp libpcrecpp)
+    if( libpcrecpp_FOUND )
+      set(CMAKE_REQUIRED_INCLUDES ${libpcrecpp_INCLUDE_DIRS})
+      check_include_file_cxx(pcrecpp.h HAVE_PCRECPP_H)
+      set(CMAKE_REQUIRED_INCLUDES)
+      if( NOT HAVE_PCRECPP_H )
+        set(libpcrecpp_FOUND 0)
+      endif()
     endif()
-  endif()
 
-  if( NOT libpcrecpp_FOUND )
-    message(STATUS "System pcre not found, using local from sources")
-    # include the local pcre
-    add_subdirectory(3rdparty/pcre-8.02)
-    set(libpcrecpp_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/pcre-8.02)
-    set(libpcrecpp_LIBRARY_DIRS)
-    set(libpcrecpp_LIBRARIES pcrecpp_local)
-    set(libpcrecpp_CFLAGS_OTHERS "-DPCRE_STATIC")
-    set(libpcrecpp_LDFLAGS_OTHERS)
-  endif()
+    if( NOT libpcrecpp_FOUND )
+      message(STATUS "System pcre not found, using local from sources")
+      # include the local pcre
+      add_subdirectory(3rdparty/pcre-8.02)
+      set(libpcrecpp_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/pcre-8.02)
+      set(libpcrecpp_LIBRARY_DIRS)
+      set(libpcrecpp_LIBRARIES pcrecpp_local)
+      set(libpcrecpp_CFLAGS_OTHERS "-DPCRE_STATIC")
+      set(libpcrecpp_LDFLAGS_OTHERS)
+    endif()
 
-  add_subdirectory(3rdparty/collada)
-  set(COLLADA_FOUND 1)
-  set(COLLADA_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/collada/include ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/collada/include/1.5)
-  set(COLLADA_LIBRARY_DIRS)
-  set(COLLADA_LIBRARIES collada15reader)
-  set(COLLADA_CFLAGS_OTHER)
-  set(COLLADA_LDFLAGS_OTHER)
-else()
-  set(OPENRAVE_LINK_DIRS ${OPENRAVE_LINK_DIRS} ${COLLADA_LIBRARY_DIRS})
+    add_subdirectory(3rdparty/collada)
+    set(COLLADA_FOUND 1)
+    set(COLLADA_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/collada/include ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/collada/include/1.5)
+    set(COLLADA_LIBRARY_DIRS)
+    set(COLLADA_LIBRARIES collada15reader)
+    set(COLLADA_CFLAGS_OTHER)
+    set(COLLADA_LDFLAGS_OTHER)
+  else()
+    set(OPENRAVE_LINK_DIRS ${OPENRAVE_LINK_DIRS} ${COLLADA_LIBRARY_DIRS})
+  endif()
 endif()
+
 if( NOT COLLADA_FOUND )
   message(STATUS "no COLLADA support found")
 endif()
@@ -534,7 +549,11 @@ pkg_check_modules(FLANN flann)
 if( NOT FLANN_FOUND) 
   ## check FLANN library
   set(BUILD_MATLAB_BINDINGS false)
-  set(BUILD_PYTHON_BINDINGS true)
+  if( OPT_PYTHON )
+    set(BUILD_PYTHON_BINDINGS true)
+  else()
+    set(BUILD_PYTHON_BINDINGS false)
+  endif()
   set(BUILD_C_BINDINGS true)
   message(STATUS "compiling local flann library")
   add_subdirectory(3rdparty/flann-1.6.6)
@@ -558,14 +577,6 @@ else()
 endif()
 set(CONVEXDECOMPOSITION_FOUND 1)
 
-if( PYTHON_EXECUTABLE )
-  message(STATUS "python executable is ${PYTHON_EXECUTABLE}")
-  set(IKFAST_INSTALLED_EXECUTABLE "${PYTHON_EXECUTABLE} \\\"${OPENRAVEPY_INSTALL_DIR}/ikfast.py\\\"")
-else()
-  message(STATUS "python executable not found")
-  set(IKFAST_INSTALLED_EXECUTABLE "")
-endif()
-
 CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/rave/config.h)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 file(GLOB rave_header_files ${CMAKE_CURRENT_SOURCE_DIR}/rave/*.h ${CMAKE_CURRENT_BINARY_DIR}/rave/config.h)
@@ -573,50 +584,50 @@ file(GLOB rave_header_files ${CMAKE_CURRENT_SOURCE_DIR}/rave/*.h ${CMAKE_CURRENT
 add_subdirectory(src)
 add_subdirectory(octave_matlab)
 
-set(OPENRAVE_USE_LOCAL_SYMPY 1)
-if( PYTHON_EXECUTABLE )
-  # check if sympy substitution is ok
-  execute_process(
-    COMMAND ${PYTHON_EXECUTABLE} -c "import sympy, sys;  x=sympy.Symbol('x'); sys.exit((x**3).subs(x**2,sympy.Symbol('y')) != x**3)"
-    OUTPUT_VARIABLE _sympy_check OUTPUT_STRIP_TRAILING_WHITESPACE
-    RESULT_VARIABLE _sympy_check_failed)
-  if( ${_sympy_check_failed} EQUAL 0 )
-    set(OPENRAVE_USE_LOCAL_SYMPY 0)
-  else()
-    # get the sympy version
+if(OPT_PYTHON)
+  set(OPENRAVE_USE_LOCAL_SYMPY 1)
+  if( PYTHON_EXECUTABLE )
+    # check if sympy substitution is ok
     execute_process(
-      COMMAND ${PYTHON_EXECUTABLE} -c "import sympy; print sympy.__version__"
-      OUTPUT_VARIABLE _sympy_version OUTPUT_STRIP_TRAILING_WHITESPACE
-      RESULT_VARIABLE _sympy_version_failed)
-    if( ${_sympy_version_failed} EQUAL 0 )
-      string(REGEX REPLACE "[\r\n]" "" _sympy_version "${_sympy_version}")
-      if( "${_sympy_version}" STREQUAL "0.6.7")
-        message(STATUS "Found sympy 0.6.7, will patch this instead of installing local version (could have been previously installed by openrave?)")
-        set(OPENRAVE_USE_LOCAL_SYMPY 0)
-      endif()
+      COMMAND ${PYTHON_EXECUTABLE} -c "import sympy, sys;  x=sympy.Symbol('x'); sys.exit((x**3).subs(x**2,sympy.Symbol('y')) != x**3)"
+      OUTPUT_VARIABLE _sympy_check OUTPUT_STRIP_TRAILING_WHITESPACE
+      RESULT_VARIABLE _sympy_check_failed)
+    if( ${_sympy_check_failed} EQUAL 0 )
+      set(OPENRAVE_USE_LOCAL_SYMPY 0)
     else()
-      message(STATUS "failed to get python site-package directory")
+      # get the sympy version
+      execute_process(
+        COMMAND ${PYTHON_EXECUTABLE} -c "import sympy; print sympy.__version__"
+        OUTPUT_VARIABLE _sympy_version OUTPUT_STRIP_TRAILING_WHITESPACE
+        RESULT_VARIABLE _sympy_version_failed)
+      if( ${_sympy_version_failed} EQUAL 0 )
+        string(REGEX REPLACE "[\r\n]" "" _sympy_version "${_sympy_version}")
+        if( "${_sympy_version}" STREQUAL "0.6.7")
+          message(STATUS "Found sympy 0.6.7, will patch this instead of installing local version (could have been previously installed by openrave?)")
+          set(OPENRAVE_USE_LOCAL_SYMPY 0)
+        endif()
+      else()
+        message(STATUS "failed to find python sympy system installation")
+      endif()
     endif()
   endif()
-endif()
 
-if( ${OPENRAVE_USE_LOCAL_SYMPY} )
-  message(STATUS "System sympy (v=${_sympy_version}) is not version 0.6.7, using local sympy")
-  # extract sympy
-  if( NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/sympy/__init__.py" OR NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/sympy/solvers/tests")
-    message(STATUS "extracting sympy to ${CMAKE_CURRENT_SOURCE_DIR}")
-    execute_process(
-      COMMAND ${CMAKE_COMMAND} -E tar xzf "${CMAKE_CURRENT_SOURCE_DIR}/sympy_0.6.7.tgz"
-      WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
+  if( ${OPENRAVE_USE_LOCAL_SYMPY} )
+    message(STATUS "System sympy (v=${_sympy_version}) is not version 0.6.7, using local sympy")
+    # extract sympy
+    if( NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/sympy/__init__.py" OR NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/sympy/solvers/tests")
+      message(STATUS "extracting sympy to ${CMAKE_CURRENT_SOURCE_DIR}")
+      execute_process(
+        COMMAND ${CMAKE_COMMAND} -E tar xzf "${CMAKE_CURRENT_SOURCE_DIR}/sympy_0.6.7.tgz"
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
+    endif()
+    if("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION}" STRGREATER "2.4.3")
+      install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/sympy" DESTINATION ${OPENRAVE_PYTHON_INSTALL_DIR} PATTERN ".svn" EXCLUDE)
+    else()
+      message(WARNING "Could not install sympy needed by ikfast (cmake version ${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION} needs to be >= 2.4.6)")
+    endif()
   endif()
-  if("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION}" STRGREATER "2.4.3")
-    install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/sympy" DESTINATION ${OPENRAVE_PYTHON_INSTALL_DIR} PATTERN ".svn" EXCLUDE)
-  else()
-    message(WARNING "Could not install sympy needed by ikfast (cmake version ${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION} needs to be >= 2.4.6)")
-  endif()
-endif()
 
-if(OPT_PYTHON)
   add_subdirectory(python)
 endif()
 
@@ -637,12 +648,6 @@ configure_file(
 
 if(UNIX)
     install(FILES ${CMAKE_CURRENT_BINARY_DIR}/openrave.pc DESTINATION lib${LIB_SUFFIX}/pkgconfig)
-endif()
-
-
-if( WIN32 )
-  # copy the dlls
-  install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin/ DESTINATION bin FILES_MATCHING PATTERN "*.dll")
 endif()
 
 install(FILES ${rave_header_files} ${interfacehashes_h} DESTINATION include/rave)

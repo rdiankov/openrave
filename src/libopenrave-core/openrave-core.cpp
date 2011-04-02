@@ -65,22 +65,19 @@ bool RaveParseColladaData(EnvironmentBasePtr penv, RobotBasePtr& probot, const s
 }
 
 
-bool RaveWriteColladaFile(EnvironmentBasePtr penv, const string& filename)
+void RaveWriteColladaFile(EnvironmentBasePtr penv, const string& filename)
 {
     RAVELOG_ERROR("collada files not supported\n");
-    return false;
 }
 
-bool RaveWriteColladaFile(KinBodyPtr pbody, const string& filename)
+void RaveWriteColladaFile(KinBodyPtr pbody, const string& filename)
 {
     RAVELOG_ERROR("collada files not supported\n");
-    return false;
 }
 
-bool RaveWriteColladaFile(RobotBasePtr probot, const string& filename)
+void RaveWriteColladaFile(RobotBasePtr probot, const string& filename)
 {
     RAVELOG_ERROR("collada files not supported\n");
-    return false;
 }
 
 #endif

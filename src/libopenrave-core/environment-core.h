@@ -1399,7 +1399,7 @@ protected:
                     _vecrobots.push_back(pnewrobot);
                 }
                 catch(const openrave_exception& ex) {
-                    RAVELOG_ERROR(str(boost::format("failed to clone robot %s")%(*itrobot)->GetName()));
+                    RAVELOG_ERROR(str(boost::format("failed to clone robot %s: %s")%(*itrobot)->GetName()%ex.what()));
                 }
             }
             FOREACHC(itbody, r->_vecbodies) {
@@ -1419,7 +1419,7 @@ protected:
                     _vecbodies.push_back(pnewbody);
                 }
                 catch(const openrave_exception& ex) {
-                    RAVELOG_ERROR(str(boost::format("failed to clone body %s")%(*itbody)->GetName()));
+                    RAVELOG_ERROR(str(boost::format("failed to clone body %s: %s")%(*itbody)->GetName()%ex.what()));
                 }
             }
 
@@ -1445,12 +1445,14 @@ protected:
                     itgrab->plinkrobot = (*itrobot)->GetLinks().at(KinBody::LinkPtr(itgrab->plinkrobot)->GetIndex());
 
                     vector<KinBody::LinkConstPtr> vnew;
-                    FOREACH(itlink, itgrab->vCollidingLinks)
+                    FOREACH(itlink, itgrab->vCollidingLinks) {
                         vnew.push_back((*itrobot)->_veclinks.at((*itlink)->GetIndex()));
+                    }
                     itgrab->vCollidingLinks = vnew;
                     vnew.resize(0);
-                    FOREACH(itlink, itgrab->vNonCollidingLinks)
+                    FOREACH(itlink, itgrab->vNonCollidingLinks) {
                         vnew.push_back((*itrobot)->_veclinks.at((*itlink)->GetIndex()));
+                    }
                     itgrab->vNonCollidingLinks = vnew;
                 }
             }
@@ -1471,7 +1473,7 @@ protected:
                     _listSensors.push_back(pnewsensor);
                 }
                 catch(const openrave_exception& ex) {
-                    RAVELOG_ERROR(str(boost::format("failed to clone sensor %s")%(*itsensor)->GetName()));
+                    RAVELOG_ERROR(str(boost::format("failed to clone sensor %s: %s")%(*itsensor)->GetName()%ex.what()));
                 }
             }
         }

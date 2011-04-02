@@ -319,7 +319,7 @@ public:
     virtual void SetName(const std::string& newname) { _name = newname; }
 
     /// \deprecated (11/03/28)
-    virtual bool Init(const std::string&) RAVE_DEPRECATED { RAVELOG_WARN("SensorBase::Init has been deprecated\n"); return Configure(CC_PowerOn); }
+    virtual bool Init(const std::string&) RAVE_DEPRECATED { RAVELOG_WARN("SensorBase::Init has been deprecated\n"); return Configure(CC_PowerOn)>0; }
     virtual void Reset(int) RAVE_DEPRECATED { RAVELOG_WARN("SensorBase::Reset has been deprecated\n"); Configure(CC_PowerOff); }
 
 protected:

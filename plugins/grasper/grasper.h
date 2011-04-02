@@ -537,10 +537,10 @@ class GrasperProblem : public ProblemInstance
 
         while(i < N) {
             r.dir.z = 2*RaveRandomFloat()-1;
-            dReal R = sqrtf(1 - r.dir.x * r.dir.x);
+            dReal R = RaveSqrt(1 - r.dir.x * r.dir.x);
             dReal U2 = 2 * PI * RaveRandomFloat();
-            r.dir.x = R * cos(U2);
-            r.dir.y = R * sin(U2);
+            r.dir.x = R * RaveCos(U2);
+            r.dir.y = R * RaveSin(U2);
 
             r.pos = com - 10.0f*r.dir;
             r.dir *= 1000;
@@ -747,24 +747,27 @@ class GrasperProblem : public ProblemInstance
     // vpoints needs to already be initialized
     void _ComputeDistanceMap(vector<CollisionReport::CONTACT>& vpoints, dReal fTheta)
     {
-        dReal fCosTheta = cosf(fTheta);
+        dReal fCosTheta = RaveCos(fTheta);
         int N;
-        if(fTheta < 0.01)
+        if(fTheta < 0.01f) {
             N = 1;
-    
+        }
         RAY r;
 
         GetEnv()->GetCollisionChecker()->SetCollisionOptions(CO_Distance);
 
         // set number of rays to randomly sample
-        if( fTheta < 1e-2 )
+        if( fTheta < 0.01f ) {
             N = 1;
-        else
+        }
+        else {
             N = (int)ceil(fTheta * (64.0f/(PI/12.0f))); // sample 64 points when at pi/12
+        }
         for(int i = 0; i < (int)vpoints.size(); ++i) {
-
             Vector vright = Vector(1,0,0);
-            if( fabsf(vpoints[i].norm.x) > 0.9 ) vright.y = 1;
+            if( RaveFabs(vpoints[i].norm.x) > 0.9 ) {
+                vright.y = 1;
+            }
             vright -= vpoints[i].norm * vright.dot3(vpoints[i].norm);
             vright.normalize3();
             Vector vup = vpoints[i].norm.cross(vright);
@@ -773,7 +776,7 @@ class GrasperProblem : public ProblemInstance
             for(int j = 0; j < N; ++j) {
                 // sample around a cone
                 dReal fAng = fCosTheta + (1-fCosTheta)*RaveRandomFloat();
-                dReal R = sqrtf(1 - fAng * fAng);
+                dReal R = RaveSqrt(1 - fAng * fAng);
                 dReal U2 = 2 * PI * RaveRandomFloat();
                 r.dir = 1000.0f*(fAng * vpoints[i].norm + R * RaveCos(U2) * vright + R * RaveSin(U2) * vup);
 

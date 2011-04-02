@@ -206,20 +206,20 @@ class InverseKinematicsModel(DatabaseGenerator):
         pickle.dump((self.getversion(),self.statistics,self.ikfeasibility,self.solveindices,self.freeindices,self.freeinc), open(statsfilename, 'w'))
         log.info('inversekinematics generation is done, compiled shared object: %s',self.getfilename(False))
 
-    def load(self,freeinc=None,*args,**kwargs):
+    def load(self,freeinc=None,checkforloaded=True,*args,**kwargs):
         try:
             filename = self.getstatsfilename(True)
             if len(filename) == 0:
-                return False
+                return checkforloaded and self.manip.GetIkSolver() is not None # might have ik already loaded
             
             modelversion,self.statistics,self.ikfeasibility,self.solveindices,self.freeindices,self.freeinc = pickle.load(open(filename, 'r'))
             if modelversion != self.getversion():
                 log.warn('version is wrong %s!=%s',modelversion,self.getversion())
-                return False
+                return checkforloaded and self.manip.GetIkSolver() is not None # might have ik already loaded
                 
         except Exception,e:
             print e
-            return False
+            return checkforloaded and self.manip.GetIkSolver() is not None # might have ik already loaded
             
         if self.ikfeasibility is not None:
             # ik is infeasible, but load successfully completed, so return success
