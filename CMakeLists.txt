@@ -211,7 +211,7 @@ if( MSVC )
 endif()
 
 # only look for installed boost if not an old version of msvc
-if(NOT MSVC71 AND NOT MSVC80 AND NOT MSVC90)
+if(NOT MSVC )#MSVC71 AND NOT MSVC80 AND NOT MSVC90)
   if( NOT $ENV{BOOST_INCLUDEDIR} STREQUAL "" )
     set(Boost_INCLUDE_DIR $ENV{BOOST_INCLUDEDIR})
   endif()
