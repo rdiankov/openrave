@@ -367,6 +367,12 @@ private:
                 IKReal eetrans[3] = {v.x, v.y,v.z};
                 return _pfnik(eetrans, NULL, vfree.size()>0?&vfree[0]:NULL, vsolutions);
             }
+            case IkParameterization::Type_TranslationLocalGlobal6D: {
+                std::pair<Vector,Vector> p = param.GetTranslationLocalGlobal6D();
+                IKReal eetrans[3] = {p.second.x, p.second.y, p.second.z};
+                IKReal eerot[9] = {p.first.x, 0, 0, 0, p.first.y, 0, 0, 0, p.first.z};
+                return _pfnik(eetrans, eerot, vfree.size()>0?&vfree[0]:NULL, vsolutions);
+            }
             default:
                 BOOST_ASSERT(0);
                 break;

@@ -1016,16 +1016,17 @@ class ColladaWriter : public daeErrorHandler
                 }
                 size_t offset = 0;
                 FOREACHC(itdofformat, pjoint->_vmimic[iaxis]->_vdofformat) {
-                    if(offset<sequations[itype].size());
-                    daeElementRef pelt = pftec->add("equation");
-                    pelt->setAttribute("type",sequationids[itype]);
-                    KinBody::JointPtr pmimic = itdofformat->jointindex < (int)pbody->GetJoints().size() ? pbody->GetJoints().at(itdofformat->jointindex) : pbody->GetPassiveJoints().at(itdofformat->jointindex-(int)pbody->GetJoints().size());
-                    std::string smimicid = str(boost::format("%s/joint%d")%kmodel->getID()%pmimic->GetJointIndex());
-                    pelt->setAttribute("target",smimicid.c_str());
-                    offset += XMLtoDAE::Parse(pelt, sequations[itype].c_str()+offset, sequations[itype].size()-offset);
-                    if( offset == 0 ) {
-                        RAVELOG_WARN(str(boost::format("failed to parse joint %s first partial: %s\n")%pjoint->GetName()%sequations[itype]));
-                        break;
+                    if(offset<sequations[itype].size()) {
+                        daeElementRef pelt = pftec->add("equation");
+                        pelt->setAttribute("type",sequationids[itype]);
+                        KinBody::JointPtr pmimic = itdofformat->jointindex < (int)pbody->GetJoints().size() ? pbody->GetJoints().at(itdofformat->jointindex) : pbody->GetPassiveJoints().at(itdofformat->jointindex-(int)pbody->GetJoints().size());
+                        std::string smimicid = str(boost::format("%s/joint%d")%kmodel->getID()%pmimic->GetJointIndex());
+                        pelt->setAttribute("target",smimicid.c_str());
+                        offset += XMLtoDAE::Parse(pelt, sequations[itype].c_str()+offset, sequations[itype].size()-offset);
+                        if( offset == 0 ) {
+                            RAVELOG_WARN(str(boost::format("failed to parse joint %s first partial: %s\n")%pjoint->GetName()%sequations[itype]));
+                            break;
+                        }
                     }
                 }
             }

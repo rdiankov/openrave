@@ -1463,6 +1463,7 @@ public:
         case IkParameterization::Type_TranslationDirection5D: SetTranslationDirection5D(extract<boost::shared_ptr<PyRay> >(o)); break;
         case IkParameterization::Type_TranslationXY2D: SetTranslationXY2D(o); break;
         case IkParameterization::Type_TranslationXYOrientation3D: SetTranslationXYOrientation3D(o); break;
+        case IkParameterization::Type_TranslationLocalGlobal6D: SetTranslationLocalGlobal6D(o[0],o[1]); break;
         default: throw openrave_exception(boost::str(boost::format("incorrect ik parameterization type %d")%type));
         }
     }
@@ -1478,6 +1479,7 @@ public:
     void SetTranslationDirection5D(boost::shared_ptr<PyRay> ray) { _param.SetTranslationDirection5D(ray->r); }
     void SetTranslationXY2D(object o) { _param.SetTranslationXY2D(ExtractVector2(o)); }
     void SetTranslationXYOrientation3D(object o) { _param.SetTranslationXYOrientation3D(ExtractVector3(o)); }
+    void SetTranslationLocalGlobal6D(object olocaltrans, object otrans) { _param.SetTranslationLocalGlobal6D(ExtractVector3(olocaltrans),ExtractVector3(otrans)); }
 
     object GetTransform6D() { return ReturnTransform(_param.GetTransform6D()); }
     object GetRotation3D() { return toPyVector4(_param.GetRotation3D()); }
@@ -1488,6 +1490,7 @@ public:
     PyRay GetTranslationDirection5D() { return PyRay(_param.GetTranslationDirection5D()); }
     object GetTranslationXY2D() { return toPyVector2(_param.GetTranslationXY2D()); }
     object GetTranslationXYOrientation3D() { return toPyVector3(_param.GetTranslationXYOrientation3D()); }
+    object GetTranslationLocalGlobal6D() { return boost::python::make_tuple(toPyVector3(_param.GetTranslationLocalGlobal6D().first),toPyVector3(_param.GetTranslationLocalGlobal6D().second)); }
 
     IkParameterization _param;
 
@@ -3742,6 +3745,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
         .value("TranslationDirection5D",IkParameterization::Type_TranslationDirection5D)
         .value("TranslationXY2D",IkParameterization::Type_TranslationXY2D)
         .value("TranslationXYOrientation3D",IkParameterization::Type_TranslationXYOrientation3D)
+        .value("TranslationLocalGlobal6D",IkParameterization::Type_TranslationLocalGlobal6D)
         ;
     
     class_< boost::shared_ptr< void > >("VoidPointer", "Holds auto-managed resources, deleting it releases its shared data.");
@@ -4107,6 +4111,7 @@ In python, the syntax is::\n\n\
             .def("SetTranslationDirection5D",&PyIkParameterization::SetTranslationDirection5D,args("quat"), DOXY_FN(IkParameterization,SetTranslationDirection5D))
             .def("SetTranslationXY2D",&PyIkParameterization::SetTranslationXY2D,args("pos"), DOXY_FN(IkParameterization,SetTranslationXY2D))
             .def("SetTranslationXYOrientation3D",&PyIkParameterization::SetTranslationXYOrientation3D,args("posangle"), DOXY_FN(IkParameterization,SetTranslationXYOrientation3D))
+            .def("SetTranslationLocalGlobal6D",&PyIkParameterization::SetTranslationLocalGlobal6D,args("localpos","pos"), DOXY_FN(IkParameterization,SetTranslationLocalGlobal6D))
             .def("GetTransform6D",&PyIkParameterization::GetTransform6D, DOXY_FN(IkParameterization,GetTransform6D))
             .def("GetRotation3D",&PyIkParameterization::GetRotation3D, DOXY_FN(IkParameterization,GetRotation3D))
             .def("GetTranslation3D",&PyIkParameterization::GetTranslation3D, DOXY_FN(IkParameterization,GetTranslation3D))
@@ -4116,6 +4121,7 @@ In python, the syntax is::\n\n\
             .def("GetTranslationDirection5D",&PyIkParameterization::GetTranslationDirection5D, DOXY_FN(IkParameterization,GetTranslationDirection5D))
             .def("GetTranslationXY2D",&PyIkParameterization::GetTranslationXY2D, DOXY_FN(IkParameterization,GetTranslationXY2D))
             .def("GetTranslationXYOrientation3D",&PyIkParameterization::GetTranslationXYOrientation3D, DOXY_FN(IkParameterization,GetTranslationXYOrientation3D))
+            .def("GetTranslationLocalGlobal6D",&PyIkParameterization::GetTranslationLocalGlobal6D, DOXY_FN(IkParameterization,GetTranslationLocalGlobal6D))
             .def("GetDOF", getdof1,args("type"), DOXY_FN(IkParameterization,GetDOF))
             .staticmethod("GetDOF")
             .def("GetNumberOfValues",getnumberofvalues1,args("type"), DOXY_FN(IkParameterization,GetNumberOfValues))

@@ -19,4 +19,5 @@ Internal logistics, management, and quality control:
    working_with_sources
    documentation_system
    adding_examples
+   releases
    testing

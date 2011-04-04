@@ -430,7 +430,7 @@ source `openrave-config --prefix`/share/openrave/openravebash
 \section iwin_octavematlab Installation of 3rd Party Software
 
 Download the sources from \sourcesdownload{sourceforge} (<a
-href="http://tortoisesvn.tigris.org/">Tortoise SVN</a> is recommended). The subversion url is:
+href="http://tortoisesvn.net/downloads.html/">Tortoise SVN</a> is recommended). The subversion url is:
 
 \verbatim
 https://openrave.svn.sourceforge.net/svnroot/openrave/trunk
@@ -440,10 +440,16 @@ Check out the openrave sources <b>in a path whose directories do not contain spa
 
 A lot of the 3rd party libraries like boost 1.39 are already inside the openrave sources. However, the following need to be installed:
 
+- <a href="http://www.boostpro.com/download/">Latest Boost C++ Libraries</a> - Select <b>Multithreaded DLL</b>!
+  - Make sure boost python is compiled with Python 2.6.
+  - A local boost installation is included in the sources in case cannot use a system install.
 - <a href="http://www.cmake.org/cmake/resources/software.html">CMake</a>.
-- For openravepy python bindings: <a href="http://python.org/download/releases/2.6.6">Python 2.6.6</a>, <a href="http://sourceforge.net/projects/numpy/files">numpy superpack</a> (<b>install only Python 2.6 compatible versions!</b>).
- - <b>Highly Recommended:</b> <a href="http://ipython.scipy.org/moin/PyReadline/Intro">PyReadline</a> and <a href="http://ipython.scipy.org">IPython</a>
- - <a href="http://sourceforge.net/projects/scipy/files/">SciPy</a> - the scientific library for Python is recommended (necessary for some of the examples).
+- For openravepy python bindings (<b>install only Python 2.6 compatible versions!</b>):
+ - <a href="http://python.org/download/releases/2.6.6">Python 2.6.6</a>
+ - <a href="http://sourceforge.net/projects/numpy/files">numpy superpack</a>
+ - <b>Highly Recommended:</b> <a href="http://ipython.scipy.org/moin/PyReadline/Intro">PyReadline</a> and <a href="http://ipython.scipy.org/moin/Download">IPython</a>
+ - <b>Recommended:</b> <a href="http://sourceforge.net/projects/scipy/files/">SciPy</a> - the scientific library for Python is recommended.
+ - <a href="http://code.google.com/p/sympy/downloads/list">SymPy</a> - Python Symbolic Mathematics.
  - \b openravepy will not compile in Debug mode unless the Python debug libraries are also installed.
 
 \subsection iwin_octavematlab Octave/Matlab
@@ -503,13 +509,16 @@ installed/uninstalled), it is recommended to clear the cmake cache by first remo
 
 ソースコードを\sourcesdownload{sourceforge}からダウンロードしてください．（subversionのソフトウェアとしては<a href="http://tortoisesvn.tigris.org/">Tortoise SVN</a>がお勧めです．）ソースコードをチェックアウトするディレクトリには<b>スペースを含めないように注意してください</b>．例えば\c C:\\openraveのように指定してください．
 
-boost1.39のような多くの第三者ライブラリは既にopenraveのソースに含まれています．しかし，以下のものはインストールが必要です．
+以下のものはインストールが必要です．
 
+- <a href="http://www.boostpro.com/download/">Boost C++</a> - 最新のBoostライブラリー。<b>Multithreaded DLL</b>を選択!.
+  - 既にopenraveのソースに含まれている。
 - <a href="http://www.cmake.org/cmake/resources/software.html">CMake</a>.
 - <a href="http://python.org/download">Python 2.6</a>, <a href="http://sourceforge.net/projects/numpy/files">numpy superpack</a>, <a href="http://www.pythonware.com/products/pil">Python Imaging Library (PIL)</a> openravepy用
  - Pythonデバッグライブラリもインストールされないと，<b>openravepy</b>はデバッグモードでコンパイルされません．
  - <a href="http://ipython.scipy.org">IPython</a> がPythonスクリプトでの開発には推奨されます．
  - <a href="http://sourceforge.net/projects/scipy/files/">SciPy</a> - 科学，工学のためのpython用ライブラリ（いくつかの実行例を試すには必要です）
+ - <a href="http://code.google.com/p/sympy/downloads/list">SymPy</a> - Python Symbolic Mathematics.
 
 \subsection iwin_octavematlab Octave/Matlab
 

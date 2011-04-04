@@ -724,7 +724,18 @@ public:
                 }
 
                 robot->SetActiveDOFValues(vrealsolution,true);
-                twrist = pmanip->GetIkParameterization(itiktype->first);
+                if( itiktype->first == IkParameterization::Type_Lookat3D) {
+                    twrist.SetLookat3D(Vector(RaveRandomFloat()-0.5,RaveRandomFloat()-0.5,RaveRandomFloat()-0.5)*10);
+                    twrist = pmanip->GetIkParameterization(twrist);
+                }
+                else if( itiktype->first == IkParameterization::Type_TranslationLocalGlobal6D) {
+                    twrist.SetTranslationLocalGlobal6D(Vector(RaveRandomFloat()-0.5,RaveRandomFloat()-0.5,RaveRandomFloat()-0.5),Vector());
+                    twrist = pmanip->GetIkParameterization(twrist);
+                }
+                else {
+                    twrist = pmanip->GetIkParameterization(itiktype->first);
+                }
+                
                 if( !pmanip->GetIkSolver()->GetFreeParameters(vfreeparameters_real) ) {
                     RAVELOG_WARN("failed to get freeparameters");
                 }
@@ -773,7 +784,7 @@ public:
                 }
                 else {
                     robot->SetActiveDOFValues(viksolution);
-                    twrist_out = pmanip->GetIkParameterization(itiktype->first);
+                    twrist_out = pmanip->GetIkParameterization(twrist);
                     if( !pmanip->GetIkSolver()->GetFreeParameters(vfreeparameters_out) ) {
                         RAVELOG_WARN("failed to get freeparameters");
                     }
@@ -831,7 +842,7 @@ public:
                     bool bfoundinput = false;
                     FOREACH(itsol, viksolutions) {
                         robot->SetActiveDOFValues(*itsol, true);
-                        twrist_out = pmanip->GetIkParameterization(itiktype->first);
+                        twrist_out = pmanip->GetIkParameterization(twrist);
                         if( !pmanip->GetIkSolver()->GetFreeParameters(vfreeparameters_out) ) {
                             RAVELOG_WARN("failed to get freeparameters");
                         }
@@ -888,7 +899,7 @@ public:
                 robot->SetActiveDOFValues(vrand, true);
                 if( DebugIKFindSolution(pmanip, twrist, viksolution, 0, vfreeparameters, vfreeparameters_out.size()-1) ) {
                     robot->SetActiveDOFValues(viksolution, true);
-                    twrist_out = pmanip->GetIkParameterization(itiktype->first);
+                    twrist_out = pmanip->GetIkParameterization(twrist);
                     if(DistIkParameterization2(twrist, twrist_out) > fthreshold ) {
                         vwrongsolutions.push_back(make_pair(twrist,vfreeparameters));
                         bsuccess = false;
@@ -938,7 +949,7 @@ public:
                 bool bfail = false;
                 FOREACH(itsol, viksolutions) {
                     robot->SetActiveDOFValues(*itsol, true);
-                    twrist_out = pmanip->GetIkParameterization(itiktype->first);
+                    twrist_out = pmanip->GetIkParameterization(twrist);
                     if(DistIkParameterization2(twrist, twrist_out) > fthreshold ) {
                         vwrongsolutions.push_back(make_pair(twrist,vfreeparameters_out));
                         s.str("");
@@ -1038,6 +1049,10 @@ public:
             dReal anglediff = ANGLE_DIFF(v0.z,v1.z);
             return (v0-v1).lengthsqr2() + anglediff*anglediff;
         }
+        case IkParameterization::Type_TranslationLocalGlobal6D: {
+            std::pair<Vector,Vector> p0 = ik0.GetTranslationLocalGlobal6D(), p1 = ik1.GetTranslationLocalGlobal6D();
+            return (p0.first-p1.first).lengthsqr3() + (p0.second-p1.second).lengthsqr3();
+        }
         default:
             BOOST_ASSERT(0);
         }
@@ -1091,6 +1106,11 @@ public:
         case IkParameterization::Type_TranslationXYOrientation3D: {
             Vector v = param.GetTranslationXYOrientation3D();
             o << "0 0 0 " << v.x << " 0 0 0 " << v.y << " 0 0 0 " << v.z << " ";
+            break;
+        }
+        case IkParameterization::Type_TranslationLocalGlobal6D: {
+            std::pair<Vector,Vector> p = param.GetTranslationLocalGlobal6D();
+            o << p.first.x << " 0 0 " << p.second.x << " 0 " << p.first.y << " 0 " << p.second.y << " 0 0 " << p.first.z << " " << p.second.z << " ";
             break;
         }
         default:

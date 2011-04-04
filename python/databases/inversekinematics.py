@@ -298,7 +298,7 @@ class InverseKinematicsModel(DatabaseGenerator):
         remainingindices = list(self.manip.GetArmIndices())
         if len(remainingindices) > dofexpected:
             for i in range(len(remainingindices) - dofexpected):
-                if self.iktype == IkParameterization.Type.Transform6D or self.iktype == IkParameterization.Type.Translation3D:
+                if self.iktype == IkParameterization.Type.Transform6D or self.iktype == IkParameterization.Type.Translation3D or self.iktype == IkParameterization.Type.TranslationLocalGlobal6D:
                     freeindices.append(remainingindices.pop(2))
                 elif self.iktype == IkParameterization.Type.Lookat3D:
                     # usually head (rotation joints) are at the end
@@ -421,7 +421,7 @@ class InverseKinematicsModel(DatabaseGenerator):
             if freejoints is None:
                 # take the torso joint
                 freejoints=[self.robot.GetJoints()[self.manip.GetArmIndices()[0]].GetName()]
-        elif self.manip.GetKinematicsStructureHash()=='ab9d03903279e44bc692e896791bcd05': # katana
+        elif self.manip.GetKinematicsStructureHash()=='ab9d03903279e44bc692e896791bcd05' or self.manip.GetKinematicsStructureHash()=='afe50514bf09aff5f2a84beb078bafbd': # katana
             if iktype==IkParameterization.Type.Translation3D or (iktype==None and self.iktype==IkParameterization.Type.Translation3D):
                 freejoints = [self.robot.GetJoints()[ind].GetName() for ind in self.manip.GetArmIndices()[3:]]
             if iktype==None:
@@ -511,6 +511,12 @@ class InverseKinematicsModel(DatabaseGenerator):
                 kwargs['rawbasepos'] = rawbasepos
                 return ikfast.IKFastSolver.solveFullIK_Lookat3D(*args,**kwargs)
             solvefn=solveFullIK_Lookat3D
+        elif self.iktype == IkParameterization.Type.TranslationLocalGlobal6D:
+            Tgripperraw=self.manip.GetGraspTransform()
+            def solveFullIK_TranslationLocalGlobal6D(*args,**kwargs):
+                kwargs['Tgripperraw'] = Tgripperraw
+                return ikfast.IKFastSolver.solveFullIK_TranslationLocalGlobal6D(*args,**kwargs)
+            solvefn=solveFullIK_TranslationLocalGlobal6D
         else:
             raise ValueError('bad type')
 

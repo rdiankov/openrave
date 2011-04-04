@@ -170,6 +170,7 @@ def buildrobot(lang, outputdir, env, robotfilename, robotstats,buildoptions):
         descriptionurl = descriptionurl.replace('(','_')
         descriptionurl = descriptionurl.replace(')','_')
         descriptionurl = descriptionurl.replace(',','_')
+        descriptionurl = descriptionurl.replace('/','_')
         description_parts = descriptionurl.split('.')
         testingname = '`View <%stestReport/(root)/%s/_%s_>`_'%(buildoptions.jenkinsbuild_url,description_parts[0],description_parts[1])
         if rows is None:

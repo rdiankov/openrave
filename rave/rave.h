@@ -826,7 +826,8 @@ public:
         Type_TranslationDirection5D=0x56000007, ///< end effector origin and direction reaches desired 3D translation and direction. Can be thought of as Ray IK where the origin of the ray must coincide.
         Type_TranslationXY2D=0x22000008, ///< 2D translation along XY plane
         Type_TranslationXYOrientation3D=0x33000009, ///< 2D translation along XY plane and 1D rotation around Z axis. The offset of the rotation is measured starting at +X, so at +X is it 0, at +Y it is pi/2.
-        Type_NumberOfParameterizations=9, ///< number of parameterizations (does not count Type_None)
+        Type_TranslationLocalGlobal6D=0x3600000a, ///< local point on end effector origin reaches desired 3D global point
+        Type_NumberOfParameterizations=10, ///< number of parameterizations (does not count Type_None)
     };
 
     IkParameterization() : _type(Type_None) {}
@@ -871,6 +872,7 @@ public:
     inline void SetTranslationDirection5D(const RAY& ray) { _type = Type_TranslationDirection5D; _transform.trans = ray.pos; _transform.rot = ray.dir; }
     inline void SetTranslationXY2D(const Vector& trans) { _type = Type_TranslationXY2D; _transform.trans.x = trans.x; _transform.trans.y = trans.y; _transform.trans.z = 0; _transform.trans.w = 0; }
     inline void SetTranslationXYOrientation3D(const Vector& trans) { _type = Type_TranslationXYOrientation3D; _transform.trans.x = trans.x; _transform.trans.y = trans.y; _transform.trans.z = trans.z; _transform.trans.w = 0; }
+    inline void SetTranslationLocalGlobal6D(const Vector& localtrans, const Vector& trans) { _type = Type_TranslationLocalGlobal6D; _transform.rot.x = localtrans.x; _transform.rot.y = localtrans.y; _transform.rot.z = localtrans.z; _transform.rot.w = 0; _transform.trans.x = trans.x; _transform.trans.y = trans.y; _transform.trans.z = trans.z; _transform.trans.w = 0; }
 
     inline const Transform& GetTransform6D() const { return _transform; }
     inline const Vector& GetRotation3D() const { return _transform.rot; }
@@ -882,6 +884,7 @@ public:
     inline const RAY GetTranslationDirection5D() const { return RAY(_transform.trans,_transform.rot); }
     inline const Vector& GetTranslationXY2D() const { return _transform.trans; }
     inline const Vector& GetTranslationXYOrientation3D() const { return _transform.trans; }
+    inline std::pair<Vector,Vector> GetTranslationLocalGlobal6D() const { return std::make_pair(_transform.rot,_transform.trans); }
 
     /// \deprecated (11/02/15)
     //@{
@@ -946,6 +949,9 @@ inline IkParameterization operator* (const Transform& t, const IkParameterizatio
         local.SetTranslationXYOrientation3D(Vector(vnewtrans.y,vnewtrans.y,v.z+zangle));
         break;
     }
+    case IkParameterization::Type_TranslationLocalGlobal6D:
+        local.SetTranslationLocalGlobal6D(ikparam.GetTranslationLocalGlobal6D().first, t*ikparam.GetTranslationLocalGlobal6D().second);
+        break;
     default:
         throw openrave_exception(str(boost::format("does not support parameterization %d")%ikparam.GetType()));
     }
@@ -994,6 +1000,11 @@ inline std::ostream& operator<<(std::ostream& O, const IkParameterization& ikpar
         O << v.x << " " << v.y << " " << v.z << " ";
         break;
     }
+    case IkParameterization::Type_TranslationLocalGlobal6D: {
+        std::pair<Vector,Vector> p = ikparam.GetTranslationLocalGlobal6D();
+        O << p.first.x << " " << p.first.y << " " << p.first.z << " " << p.second.x << " " << p.second.y << " " << p.second.z << " ";
+        break;
+    }
     default:
         throw openrave_exception(str(boost::format("does not support parameterization %d")%ikparam.GetType()));
     }
@@ -1015,6 +1026,7 @@ inline std::istream& operator>>(std::istream& I, IkParameterization& ikparam)
     case IkParameterization::Type_TranslationDirection5D: { RAY r; I >> r; ikparam.SetTranslationDirection5D(r); break; }
     case IkParameterization::Type_TranslationXY2D: { Vector v; I >> v.y >> v.y; ikparam.SetTranslationXY2D(v); break; }
     case IkParameterization::Type_TranslationXYOrientation3D: { Vector v; I >> v.y >> v.y >> v.z; ikparam.SetTranslationXYOrientation3D(v); break; }
+    case IkParameterization::Type_TranslationLocalGlobal6D: { Vector localtrans, trans; I >> localtrans.x >> localtrans.y >> localtrans.z >> trans.x >> trans.y >> trans.z; ikparam.SetTranslationLocalGlobal6D(localtrans,trans); break; }
     default: throw openrave_exception(str(boost::format("does not support parameterization %d")%ikparam.GetType()));
     }
     return I;

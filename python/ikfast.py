@@ -64,6 +64,7 @@ The following inverse kinematics types are supported:
 * **Lookat3D** - direction on end effector coordinate system points to desired 3D position
 * **TranslationDirection5D** - end effector origin and direction reaches desired 3D translation and direction. Can be thought of as Ray IK where the origin of the ray must coincide.
 * **TranslationXY2D** - end effector origin reaches desired XY translation position, Z is ignored. The coordinate system with relative to the base link.
+* **TranslationLocalGlobal6D** - local point on end effector origin reaches desired 3D global point. Because both local point and global point can be specified, there are 6 values.
 
 The possible solve methods are defined by `ikfast.IKFastSolver.GetSolvers()`
 
@@ -774,6 +775,7 @@ class AST:
         Pfk = None
         Pee = None
         dictequations = None
+        uselocaltrans = False
         def __init__(self, solvejointvars, freejointvars, Pee, jointtree,Pfk=None):
             self.solvejointvars = solvejointvars
             self.freejointvars = freejointvars
@@ -1643,8 +1645,19 @@ class IKFastSolver(AutoReloader):
         tree = self.verifyAllEquations(AllEquations,solvejointvars,self.freevarsubs,tree)
         return AST.SolverIKChainRotation3D([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(v,i) for v,i in izip(self.freejointvars,self.ifreejointvars)], (self.Tee[0:3,0:3] * self.affineInverse(Tfirstright)[0:3,0:3]).subs(self.freevarsubs), tree, Rfk = Tfinal[0:3,0:3] * Tfirstright[0:3,0:3])
 
+    def solveFullIK_TranslationLocalGlobal6D(self,LinksRaw, jointvars, isolvejointvars, Tgripperraw=eye(4)):
+        Tgripper = eye(4)
+        for i in range(4):
+            for j in range(4):
+                Tgripper[i,j] = self.convertRealToRational(Tgripperraw[i,j])
+        localpos = Matrix(3,1,[self.Tee[0,0],self.Tee[1,1],self.Tee[2,2]])
+        chain = self._solveFullIK_Translation3D(LinksRaw,jointvars,isolvejointvars,Tgripper[0:3,3]+Tgripper[0:3,0:3]*localpos,False)
+        chain.uselocaltrans = True
+        return chain
     def solveFullIK_Translation3D(self,LinksRaw, jointvars, isolvejointvars, rawbasepos=Matrix(3,1,[S.Zero,S.Zero,S.Zero])):
         basepos = Matrix(3,1,[self.convertRealToRational(x) for x in rawbasepos])
+        return self._solveFullIK_Translation3D(LinksRaw,jointvars,isolvejointvars,basepos)
+    def _solveFullIK_Translation3D(self,LinksRaw, jointvars, isolvejointvars, basepos,check=True):
         Links = LinksRaw[:]
         LinksInv = [self.affineInverse(link) for link in Links]
         Tfinal = self.multiplyMatrix(Links)
@@ -1661,7 +1674,8 @@ class IKFastSolver(AutoReloader):
         T1links = [Tbaseposinv]+LinksInv[::-1]+[self.Tee]
         T1linksinv = [self.affineInverse(Tbaseposinv)]+Links[::-1]+[self.Teeinv]
         AllEquations = self.buildEquationsFromPositions(T1links,T1linksinv,solvejointvars,self.freejointvars,uselength=True)
-        self.checkSolvability(AllEquations,solvejointvars,self.freejointvars)
+        if check:
+            self.checkSolvability(AllEquations,solvejointvars,self.freejointvars)
         transtree = self.solveAllEquations(AllEquations,curvars=solvejointvars[:],othersolvedvars=self.freejointvars,solsubs = self.freevarsubs[:],endbranchtree=endbranchtree)
         transtree = self.verifyAllEquations(AllEquations,solvejointvars,self.freevarsubs,transtree)
         chaintree = AST.SolverIKChainTranslation3D([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(v,i) for v,i in izip(self.freejointvars,self.ifreejointvars)], Pee=self.Tee[0:3,3], jointtree=transtree, Pfk = Tfinal[0:3,3])

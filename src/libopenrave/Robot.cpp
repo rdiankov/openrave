@@ -145,7 +145,7 @@ IkParameterization RobotBase::Manipulator::GetIkParameterization(IkParameterizat
         break;
     }
     case IkParameterization::Type_Lookat3D: {
-        // have goal a distance of 1 from the origin
+        RAVELOG_WARN("RobotBase::Manipulator::GetIkParameterization: Lookat3D type setting goal a distance of 1 from the origin.\n");
         Transform t = GetEndEffectorTransform();
         Vector vdir = t.rotate(_vdirection);
         ikp.SetLookat3D(RAY(t.trans + vdir,vdir));
@@ -166,8 +166,58 @@ IkParameterization RobotBase::Manipulator::GetIkParameterization(IkParameterizat
         ikp.SetTranslationXYOrientation3D(Vector(t.trans.x,t.trans.y,zangle));
         break;
     }
+    case IkParameterization::Type_TranslationLocalGlobal6D: {
+        RAVELOG_WARN("RobotBase::Manipulator::GetIkParameterization: TranslationLocalGlobal6D type setting local translation to (0,0,0).\n");
+        ikp.SetTranslationLocalGlobal6D(Vector(0,0,0),GetEndEffectorTransform().trans); break;
+    }
     default:
-        throw openrave_exception(str(boost::format("invalid ik type %d")%iktype));
+        throw openrave_exception(str(boost::format("invalid ik type 0x%x")%iktype));
+    }
+    return ikp;
+}
+
+IkParameterization RobotBase::Manipulator::GetIkParameterization(const IkParameterization& ikparam) const
+{
+    IkParameterization ikp;
+    switch(ikparam.GetType()) {
+    case IkParameterization::Type_Transform6D: ikp.SetTransform6D(GetEndEffectorTransform()); break;
+    case IkParameterization::Type_Rotation3D: ikp.SetRotation3D(GetEndEffectorTransform().rot); break;
+    case IkParameterization::Type_Translation3D: ikp.SetTranslation3D(GetEndEffectorTransform().trans); break;
+    case IkParameterization::Type_Direction3D: ikp.SetDirection3D(GetEndEffectorTransform().rotate(_vdirection)); break;
+    case IkParameterization::Type_Ray4D: {
+        Transform t = GetEndEffectorTransform();
+        ikp.SetRay4D(RAY(t.trans,t.rotate(_vdirection)));
+        break;
+    }
+    case IkParameterization::Type_Lookat3D: {
+        // find the closest point to ikparam.GetLookat3D() to the current ray
+        Transform t = GetEndEffectorTransform();
+        Vector vdir = t.rotate(_vdirection);
+        ikp.SetLookat3D(RAY(t.trans + vdir*vdir.dot(ikparam.GetLookat3D()-t.trans),vdir));
+        break;
+    }
+    case IkParameterization::Type_TranslationDirection5D: {
+        Transform t = GetEndEffectorTransform();
+        ikp.SetTranslationDirection5D(RAY(t.trans,t.rotate(_vdirection)));
+        break;
+    }
+    case IkParameterization::Type_TranslationXY2D: {
+        ikp.SetTranslationXY2D(GetEndEffectorTransform().trans);
+        break;
+    }
+    case IkParameterization::Type_TranslationXYOrientation3D: {
+        Transform t = GetEndEffectorTransform();
+        dReal zangle = -normalizeAxisRotation(Vector(0,0,1),GetEndEffectorTransform().rot).first;
+        ikp.SetTranslationXYOrientation3D(Vector(t.trans.x,t.trans.y,zangle));
+        break;
+    }
+    case IkParameterization::Type_TranslationLocalGlobal6D: {
+        Vector localtrans = ikparam.GetTranslationLocalGlobal6D().first;
+        ikp.SetTranslationLocalGlobal6D(localtrans,GetEndEffectorTransform() * localtrans);
+        break;
+    }
+    default:
+        throw openrave_exception(str(boost::format("invalid ik type 0x%x")%ikparam.GetType()));
     }
     return ikp;
 }

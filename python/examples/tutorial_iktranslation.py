@@ -17,6 +17,15 @@
 .. examplepre-block:: tutorial_iktranslation
   :image-width: 400
 
+Description
+-----------
+
+There are two different types of translation 3D IKs:
+
+* **Translation3D** - Align the origin of the manipulation coordinate system with the desired world position
+
+* **TranslationLocalGlobal6D** - Align a dynamically chosen position with respect ot the manipulation coordinate system with the desired world position
+
 .. examplepost-block:: tutorial_iktranslation
 """
 from __future__ import with_statement # for python 2.5
@@ -35,7 +44,8 @@ def main(env,options):
     robot.SetActiveManipulator(options.manipname)
 
     # generate the ik solver
-    ikmodel = databases.inversekinematics.InverseKinematicsModel(robot, iktype=IkParameterization.Type.Translation3D)
+    iktype = IkParameterization.Type.Translation3D if not options.withlocal else IkParameterization.Type.TranslationLocalGlobal6D
+    ikmodel = databases.inversekinematics.InverseKinematicsModel(robot, iktype=iktype,freeindices=robot.GetActiveManipulator().GetArmIndices()[3:])
     if not ikmodel.load():
         ikmodel.autogenerate()
 
@@ -43,13 +53,21 @@ def main(env,options):
         with env:
             while True:
                 target=ikmodel.manip.GetEndEffectorTransform()[0:3,3]+(random.rand(3)-0.5)
-                solutions = ikmodel.manip.FindIKSolutions(IkParameterization(target,IkParameterization.Type.Translation3D),IkFilterOptions.CheckEnvCollisions)
+                if options.withlocal:
+                    localtarget = 0.5*(random.rand(3)-0.5)
+                    ikparam = IkParameterization([localtarget,target],IkParameterization.Type.TranslationLocalGlobal6D)
+                else:
+                    localtarget = zeros(3)
+                    ikparam = IkParameterization(target,IkParameterization.Type.Translation3D)
+                solutions = ikmodel.manip.FindIKSolutions(ikparam,IkFilterOptions.CheckEnvCollisions)
                 if solutions is not None and len(solutions) > 0: # if found, then break
                     break
         h=env.plot3(array([target]),10.0)
         for i in random.permutation(len(solutions))[0:min(80,len(solutions))]:
             with env:
                 robot.SetDOFValues(solutions[i],ikmodel.manip.GetArmIndices())
+                T = ikmodel.manip.GetEndEffectorTransform()
+                h2=env.plot3(dot(T[0:3,0:3],localtarget)+T[0:3,3],15.0,[0,1,0])
                 env.UpdatePublishedBodies()
             time.sleep(0.05)
         h=None
@@ -69,6 +87,8 @@ def run(args=None):
                       help='Scene file to load (default=%default)')
     parser.add_option('--manipname',action="store",type='string',dest='manipname',default='arm',
                       help='name of manipulator to use (default=%default)')
+    parser.add_option('--withlocal',action="store_true",dest='withlocal',default=False,
+                      help='If set, will use the TranslationLocalGlobal6D type to further specify the target point in the manipulator coordinate system')
     (options, leftargs) = parser.parse_args(args=args)
     env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
     main(env,options)

@@ -603,10 +603,17 @@ int main(int argc, char** argv)
                 eqs.append(eq.subs(allsubs))
             subexprs,reduced_exprs=customcse (eqs,self.symbolgen)
             outputnames = ['eetrans[0]','eetrans[1]','eetrans[2]']
-            fcode = ''
+            if node.uselocaltrans:
+                fcode = """
+// necessary for local/global translation3d
+eerot[0] = eerot[4] = eerot[8] = 0;
+IKReal r00 = 0, r11 = 0, r22 = 0;
+"""
+            else:
+                fcode = ''
             if len(subexprs) > 0:
                 vars = [var for var,expr in subexprs]
-                fcode = 'IKReal ' + ','.join(str(var) for var,expr in subexprs) + ';\n'
+                fcode += 'IKReal ' + ','.join(str(var) for var,expr in subexprs) + ';\n'
                 for var,expr in subexprs:
                     fcode += self.writeEquations(lambda k: str(var),collect(expr,vars))
             for i in range(len(outputnames)):
@@ -614,13 +621,19 @@ int main(int argc, char** argv)
             code += self.indentCode(fcode,4)
             code += '}\n\n'
 
-        code += self.getClassInit(node,IkType.Translation3D,userotation=0)
+        if node.uselocaltrans:
+            code += self.getClassInit(node,IkType.TranslationLocalGlobal6D,userotation=7)
+        else:
+            code += self.getClassInit(node,IkType.Translation3D,userotation=0)
         code += "bool ik(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::vector<IKSolution>& vsolutions) {\n"
         code += "for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {\n"
         fcode = "vsolutions.resize(0); vsolutions.reserve(8);\n"
         for i in range(len(node.freejointvars)):
             name = node.freejointvars[i][0].name
             fcode += '%s=pfree[%d]; c%s=cos(pfree[%d]); s%s=sin(pfree[%d]);\n'%(name,i,name,i,name,i)
+        if node.uselocaltrans:
+            for i in range(3):
+                fcode += "r%d%d = eerot[%d];\n"%(i,i,4*i)
         fcode += "px = eetrans[0]; py = eetrans[1]; pz = eetrans[2];\n\n"
 
         psymbols = ["new_px","new_py","new_pz"]

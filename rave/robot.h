@@ -134,8 +134,17 @@ public:
                 BOOST_ASSERT( dist(manip->GetIkParameterization(iktype), ikparam) <= epsilon );
             }
             \endcode
+            \param iktype the type of parameterization to request
         */
         virtual IkParameterization GetIkParameterization(IkParameterization::Type iktype) const;
+
+        /** \brief returns a full parameterization of a given IK type for the current manipulator position using an existing IkParameterization as the seed.
+            
+            Ideally pluging the returned ik parameterization into FindIkSolution should return the a manipulator configuration
+            such that a new call to GetIkParameterization returns the same values.
+            \param ikparam Some IK types like Lookat3D and TranslationLocalGlobal6D set constraints in the global coordinate system of the manipulator. Because these values are not stored in manipulator itself, they have to be passed in through an existing IkParameterization.
+        */
+        virtual IkParameterization GetIkParameterization(const IkParameterization& ikparam) const;
 
         /// \brief Get all child joints of the manipulator starting at the pEndEffector link
         virtual void GetChildJoints(std::vector<JointPtr>& vjoints) const;

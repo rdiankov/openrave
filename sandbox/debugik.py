@@ -1227,17 +1227,14 @@ def test_ik():
     dummyvaluesubs = [(dvar,self.convertRealToRational(var.subs(valsubs).evalf())) for dvar,var in dummyvars]
     allsubs = valsubs+psubs+dummyvaluesubs
     localsymbolsvalues = [(var,value.subs(valsubs+psubs)) for var,value in localsymbols]
-    #localsymbolsvalues = []
-    #for i in range(len(localsymbols)):
-    #    localsymbolsvalues.append((localsymbols[i][0],localsymbols[i][1].subs(localsymbolsvalues+psubs).evalf()))
 
-    correctsols = [Poly(S.Zero,*newreducedeqs[0].symbols).add_term(S.One,m).subs(allsubs).evalf() for m in allmonoms]
-    correctsols = Matrix(len(allmonoms),1,[Poly(S.Zero,*newreducedeqs[0].symbols).add_term(S.One,m).subs(allsubs).evalf() for m in allmonoms])
-
-    D = zeros((16,16))
-    D[:8,8:] = eye(8)
-    D[8:,:8] = -newA.evalf().inv()*newC.evalf()
-    D[8:,8:] = -newA.evalf().inv()*newB.evalf()
+    for var,value in izip(jointvars,jointvalues):
+        valsubs += [(var,value),(Symbol('c%s'%var.name),(cos(value).evalf())),(Symbol('s%s'%var.name),(sin(value).evalf())),(Symbol('t%s'%var.name),(tan(value).evalf())),(Symbol('ht%s'%var.name),(tan(value/2).evalf()))]
+    psubs = []
+    for i in range(12):
+        psubs.append((self.Tee[i],(Tfinal[i].subs(psubs+valsubs).evalf())))
+    for s,v in self.ppsubs+self.npxyzsubs+self.rxpsubs:
+        psubs.append((s,v.subs(psubs)))
 """
 ikfast notes;
 

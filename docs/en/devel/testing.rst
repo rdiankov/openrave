@@ -1,3 +1,5 @@
+.. _testing_framework:
+
 OpenRAVE Testing Framework
 ==========================
 
@@ -48,7 +50,21 @@ Tests
 
 Running 'make test' in the root directory should setup the OpenRAVE environment from local **build** folder and run all tests. If the PARALLEL_JOBS environment variable is set to "-jX", then will distribute the computation onto X processes.
 
+Compilation
+~~~~~~~~~~~
+
+* single precision, double precision
+* wihtout python bindings, without octave bindings, without plugins, without collada
+* boost versions: 1.35, 1.39, 1.44
+* cmake versions: 2.6, 2.8
+* test ik generation
+
 IKFast
 ~~~~~~
 
 Once building is successful, IKFast tests are run for every robot in its database using the **test/test_ikfast.py** script. The `statistics  <http://www.openrave.org/testing/job/openrave/>`_ are used to generate reStructuredText for the :ref:`robots` page. :ref:`ikfast-testing` goes into details about what is tested.
+
+Compatibility
+~~~~~~~~~~~~~
+
+OpenRAVE patch releases should always be binary compatible so that newer versions can read old plugins. See `ABI Compatibility <http://www.ros.org/reps/rep-0009.html>`_ for an excellent discussion.
