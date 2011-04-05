@@ -1,8 +1,0 @@
-# -*- coding: utf-8 -*-
-PAPER_TYPE             = letter
-OUTPUT_LANGUAGE = English
-OUTPUT_DIRECTORY = ./build/en/
-ALIASES                += openravepy{1}="<a href=\"http://openrave.programmingvision.com/en/main/tutorials/openravepy_beginning.html#openravepy-beginning\">\1</a>"
-ALIASES                += openrave_py{1}="<a href=\"http://openrave.programmingvision.com/en/main/command_line_tools.html#openrave-py\">\1</a>"
-ALIASES                += octave{1}="<a href=\"http://openrave.programmingvision.com/wiki/index.php/OctaveMATLAB\">\1</a>"
-ALIASES                += envvarwiki{1}="<a href=\"http://en.wikipedia.org/wiki/Environment_variable\">\1</a>"

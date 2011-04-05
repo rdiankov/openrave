@@ -1,7 +1,0 @@
-<sensor type="BaseCamera">
-  <KK>640 640 320 240</KK>
-  <width>640</width>
-  <height>480</height>
-  <framerate>5</framerate>
-  <color>0.5 0.5 1</color>
-</sensor>
