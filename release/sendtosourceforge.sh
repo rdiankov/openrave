@@ -10,8 +10,8 @@ mv "$basename-linux-src.tar.bz2" latest_donotdownload/
 tar cf latest_donotdownload.tgz latest_donotdownload
 rm -rf "$basename-linux-src" latest_donotdownload
 
-ssh rdiankov,openrave@shell.sourceforge.net create # always create
-scp latest_donotdownload.tgz rdiankov,openrave@frs.sourceforge.net:/home/frs/project/o/op/openrave/
-ssh rdiankov,openrave@shell.sourceforge.net "cd /home/frs/project/o/op/openrave; tar xf latest_donotdownload.tgz; rm -rf latest latest_donotdownload.tgz; mv latest_donotdownload latest"
+ssh openravetesting,openrave@shell.sourceforge.net create # always create
+scp latest_donotdownload.tgz openravetesting,openrave@frs.sourceforge.net:/home/frs/project/o/op/openrave/
+ssh openravetesting,openrave@shell.sourceforge.net "cd /home/frs/project/o/op/openrave; tar xf latest_donotdownload.tgz; rm -rf latest latest_donotdownload.tgz; mv latest_donotdownload latest"
 
-#ssh-keygen -t dsa -f ~/.ssh/id_dsa.rdiankov.sf -P "" -C "rdiankov@shell.sourceforge.net"
+#ssh-keygen -t dsa -f ~/.ssh/id_dsa.openravetesting.sf -P "" -C "openravetesting@shell.sourceforge.net"
