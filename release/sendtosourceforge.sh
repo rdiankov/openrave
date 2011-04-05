@@ -1,25 +1,26 @@
 #!/bin/bash
 trunk=$1
+# only update latest_stable if the revisions changed
 revision=`python -c "import pysvn; print pysvn.Client().info('$trunk').revision.number"`
+prevrevision=`python -c "import pysvn; revision=pysvn.Client().info2('$trunk',recurse=False)[0][1].rev; print pysvn.Client().log('$trunk',revision,revision)[0].message.split()[-1]"`
 
-basename="openrave-r$revision"
-svn export $trunk "$basename-linux-src"
-rm -rf "$basename-linux-src"/msvc_files.tgz # too big to include into openrave
-tar cjf "$basename-linux-src.tar.bz2" "$basename-linux-src"
-mkdir -p latest_donotdownload
-mv "$basename-linux-src.tar.bz2" latest_donotdownload/
-tar cf latest_donotdownload.tgz latest_donotdownload
-rm -rf "$basename-linux-src" latest_donotdownload
+if [ "$revision" != "$prevrevision" ]; then
+    basename="openrave-r$revision"
+    svn export $trunk "$basename-linux-src"
+    rm -rf "$basename-linux-src"/msvc_files.tgz # too big to include into openrave
+    tar cjf "$basename-linux-src.tar.bz2" "$basename-linux-src"
+    mkdir -p latest_donotdownload
+    mv "$basename-linux-src.tar.bz2" latest_donotdownload/
+    tar cf latest_donotdownload.tgz latest_donotdownload
+    rm -rf "$basename-linux-src" latest_donotdownload
 
-ssh openravetesting,openrave@shell.sourceforge.net create # always create
-scp latest_donotdownload.tgz openravetesting,openrave@frs.sourceforge.net:/home/frs/project/o/op/openrave/
-ssh openravetesting,openrave@shell.sourceforge.net "cd /home/frs/project/o/op/openrave; tar xf latest_donotdownload.tgz; chmod -R g+w latest_donotdownload; rm -rf latest_stable latest_donotdownload.tgz; mv latest_donotdownload latest_stable"
-rm -f latest_donotdownload.tgz
+    ssh openravetesting,openrave@shell.sourceforge.net create # always create
+    scp latest_donotdownload.tgz openravetesting,openrave@frs.sourceforge.net:/home/frs/project/o/op/openrave/
+    ssh openravetesting,openrave@shell.sourceforge.net "cd /home/frs/project/o/op/openrave; tar xf latest_donotdownload.tgz; chmod -R g+w latest_donotdownload; rm -rf latest_stable latest_donotdownload.tgz; mv latest_donotdownload latest_stable"
+    rm -f latest_donotdownload.tgz
 
-#prevrevision=`python -c "import pysvn; revision=pysvn.Client().info2('$trunk',recurse=False)[0][1].rev; print pysvn.Client().log('$trunk',revision,revision)[0].message.split()[-1]"`
-svn rm --non-interactive --username openravetesting -m "Delete Latest Stable Tab (Tagged by Jenkins)." https://openrave.svn.sourceforge.net/svnroot/openrave/tags/latest_stable
-svn cp --non-interactive --username openravetesting -m "Latest Stable Tab (Tagged by Jenkins). Revision: $SVN_REVISION" $trunk https://openrave.svn.sourceforge.net/svnroot/openrave/tags/latest_stable
-#svn merge latest_stable@HEAD trunk@HEAD latest_stable
-#svn commit -m "Latest Stable Tab (Tagged by Jenkins). Revision: $SVN_REVISION" latest_stable
+    svn rm --non-interactive --username openravetesting -m "Delete Latest Stable Tab (Tagged by Jenkins)." https://openrave.svn.sourceforge.net/svnroot/openrave/tags/latest_stable
+    svn cp --non-interactive --username openravetesting -m "Latest Stable Tab (Tagged by Jenkins). Revision: $SVN_REVISION" $trunk https://openrave.svn.sourceforge.net/svnroot/openrave/tags/latest_stable
+fi
 
 #ssh-keygen -t dsa -f ~/.ssh/id_dsa.openravetesting.sf -P "" -C "openravetesting@shell.sourceforge.net"
