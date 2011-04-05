@@ -12,6 +12,7 @@ rm -rf "$basename-linux-src" latest_donotdownload
 
 ssh openravetesting,openrave@shell.sourceforge.net create # always create
 scp latest_donotdownload.tgz openravetesting,openrave@frs.sourceforge.net:/home/frs/project/o/op/openrave/
-ssh openravetesting,openrave@shell.sourceforge.net "cd /home/frs/project/o/op/openrave; tar xf latest_donotdownload.tgz; rm -rf latest latest_donotdownload.tgz; mv latest_donotdownload latest"
+ssh openravetesting,openrave@shell.sourceforge.net "cd /home/frs/project/o/op/openrave; tar xf latest_donotdownload.tgz; chmod -R g+w latest_donotdownload; rm -rf latest_stable latest_donotdownload.tgz; mv latest_donotdownload latest_stable"
+rm -f latest_donotdownload.tgz
 
 #ssh-keygen -t dsa -f ~/.ssh/id_dsa.openravetesting.sf -P "" -C "openravetesting@shell.sourceforge.net"
