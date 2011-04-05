@@ -24,7 +24,11 @@ There are two different types of translation 3D IKs:
 
 * **Translation3D** - Align the origin of the manipulation coordinate system with the desired world position
 
-* **TranslationLocalGlobal6D** - Align a dynamically chosen position with respect ot the manipulation coordinate system with the desired world position
+* **TranslationLocalGlobal6D** - Align a dynamically chosen position with respect ot the manipulation coordinate system with the desired world position. To see this in action, execute the example with:
+
+.. code-block:: bash
+
+  openrave.py --example tutorial_iktranslation --withlocal
 
 .. examplepost-block:: tutorial_iktranslation
 """
