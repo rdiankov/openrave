@@ -1,7 +1,7 @@
 #!/bin/bash
 trunk=$1
 revision=`python -c "import pysvn; print pysvn.Client().info('$trunk').revision.number"`
-basename="openrave-`openrave-config --version`-r$revision"
+basename="openrave-r$revision"
 svn export $trunk "$basename-linux-src"
 rm -rf "$basename-linux-src"/msvc_files.tgz # too big to include into openrave
 tar cjf "$basename-linux-src.tar.bz2" "$basename-linux-src"
