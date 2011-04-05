@@ -15,4 +15,7 @@ scp latest_donotdownload.tgz openravetesting,openrave@frs.sourceforge.net:/home/
 ssh openravetesting,openrave@shell.sourceforge.net "cd /home/frs/project/o/op/openrave; tar xf latest_donotdownload.tgz; chmod -R g+w latest_donotdownload; rm -rf latest_stable latest_donotdownload.tgz; mv latest_donotdownload latest_stable"
 rm -f latest_donotdownload.tgz
 
+svn rm --username openravetesting -m "Remove Old Stable Tag" https://openrave.svn.sourceforge.net/svnroot/openrave/tags/latest_stable
+svn cp --username openravetesting -m "Latest Stable Tab (Tagged by Jenkins). Revision: $SVN_REVISION" $trunk https://openrave.svn.sourceforge.net/svnroot/openrave/tags/latest_stable
+
 #ssh-keygen -t dsa -f ~/.ssh/id_dsa.openravetesting.sf -P "" -C "openravetesting@shell.sourceforge.net"
