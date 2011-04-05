@@ -19,4 +19,3 @@ svn rm --non-interactive --username openravetesting -m "Delete Latest Stable Tab
 svn cp --non-interactive --username openravetesting -m "Latest Stable Tab (Tagged by Jenkins). Revision: $SVN_REVISION" $trunk https://openrave.svn.sourceforge.net/svnroot/openrave/tags/latest_stable
 
 #ssh-keygen -t dsa -f ~/.ssh/id_dsa.openravetesting.sf -P "" -C "openravetesting@shell.sourceforge.net"
-
