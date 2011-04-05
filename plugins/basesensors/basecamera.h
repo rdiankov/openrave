@@ -128,12 +128,14 @@ class BaseCameraSensor : public SensorBase
             return _bPower;
         case CC_RenderDataOn: {
             try {
-                stringstream ss;
-                ss << "qtcameraviewer " << GetName(); 
-                _dataviewer = RaveCreateViewer(GetEnv(),ss.str());
-                _bRenderData = !!_dataviewer;
-                if( _bRenderData ) {
-                    _dataviewer->main();
+                if( !_bRenderData ) {
+                    stringstream ss;
+                    ss << "qtcameraviewer " << GetName(); 
+                    _dataviewer = RaveCreateViewer(GetEnv(),ss.str());
+                    _bRenderData = !!_dataviewer;
+                    if( _bRenderData ) {
+                        _dataviewer->main();
+                    }
                 }
             }
             catch(const openrave_exception& ex) {
