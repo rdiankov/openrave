@@ -1,0 +1,105 @@
+<!-- Table is 1.83m long, 0.61m wide, .035m thick -->
+<KinBody name="table">
+  <Body name="table" type="dynamic">
+    <Geom type="box">
+      <extents>.7515 0.305 0.02</extents>
+      <diffuseColor>0.9 0.9 0.9</diffuseColor>
+    </Geom>
+    <Geom type="cylinder">
+      <translation>0.7 0.25 -0.375</translation>
+      <rotationaxis>1 0 0 -90</rotationaxis>
+      <radius>0.02</radius>
+      <height>0.75</height>
+      <diffuseColor>0.9 0.9 0.9</diffuseColor>
+    </Geom>
+    <Geom type="cylinder">
+      <translation>-0.7 0.25 -0.375</translation>
+      <rotationaxis>1 0 0 -90</rotationaxis>
+      <radius>0.02</radius>
+      <height>0.75</height>
+      <diffuseColor>0.9 0.9 0.9</diffuseColor>
+    </Geom>
+    <Geom type="cylinder">
+      <translation>0.7 -0.25 -0.375</translation>
+      <rotationaxis>1 0 0 -90</rotationaxis>
+      <radius>0.02</radius>
+      <height>0.75</height>
+      <diffuseColor>0.9 0.9 0.9</diffuseColor>
+    </Geom>
+    <Geom type="cylinder">
+      <translation>-0.7 -0.25 -0.375</translation>
+      <rotationaxis>1 0 0 -90</rotationaxis>
+      <radius>0.02</radius>
+      <height>0.75</height>
+      <diffuseColor>0.9 0.9 0.9</diffuseColor>
+    </Geom>
+    <!-- markers -->
+    <Geom type="cylinder">
+      <translation>0.677 0.206 0.02</translation>
+      <rotationaxis>1 0 0 -90</rotationaxis>
+      <radius>0.052</radius>
+      <height>0.01</height>
+      <diffusecolor>0 1 0</diffusecolor>
+    </Geom>
+    <Geom type="cylinder">
+      <translation>0.499 0.206 0.02</translation>
+      <rotationaxis>1 0 0 -90</rotationaxis>
+      <radius>0.052</radius>
+      <height>0.01</height>
+      <diffusecolor>0 1 0</diffusecolor>
+    </Geom>
+  </Body>
+
+  <!-- dishrack has to be first body -->
+  <Body name="dishrack" type="dynamic">
+    <Translation>0 -0.03 0</Translation>
+    <RotationAxis>1 0 0 90</RotationAxis>
+    <Geom type="box">
+      <Translation>0 0.02 0</Translation>
+      <diffuseColor>0.5 0.5 0.5</diffuseColor>
+      <extents>0.245 0.02 0.25</extents>
+    </Geom>
+	<Geom type="box">
+	  <Translation>-0.245 0.085 0</Translation>
+      <extents>0.02 0.105 0.25</extents>
+      <diffuseColor>0.5 0.5 0.5</diffuseColor>
+    </Geom>
+	<Geom type="box">
+	  <Translation>0.245 0.085 0</Translation>
+      <extents>0.02 0.105 0.25</extents>
+      <diffuseColor>0.5 0.5 0.5</diffuseColor>
+    </Geom>
+
+    <!--weird sides-->
+	<Geom type="box">
+	  <Translation> -0.18 0.085 0.25</Translation>
+      <extents>0.085 0.105 0.02</extents>
+      <diffuseColor>0.5 0.5 0.5</diffuseColor>
+    </Geom>
+	<Geom type="box">
+	  <Translation> 0 0.085 0.25</Translation>
+      <extents>0.265 0.0675 0.02</extents>
+      <diffuseColor>0.5 0.5 0.5</diffuseColor>
+    </Geom>
+	<Geom type="box">
+	  <Translation> 0.245 0.085 0.25</Translation>
+      <extents>0.02 0.105 0.02</extents>
+      <diffuseColor>0.5 0.5 0.5</diffuseColor>
+    </Geom>
+	<Geom type="box">
+	  <Translation> -0.18 0.085 -0.25</Translation>
+      <extents>0.085 0.105 0.02</extents>
+      <diffuseColor>0.5 0.5 0.5</diffuseColor>
+    </Geom>
+	<Geom type="box">
+	  <Translation> 0 0.085 -0.25</Translation>
+      <extents>0.265 0.0675 0.02</extents>
+      <diffuseColor>0.5 0.5 0.5</diffuseColor>
+    </Geom>
+	<Geom type="box">
+	  <Translation> 0.245 0.085 -0.25</Translation>
+      <extents>0.02 0.105 0.02</extents>
+      <diffuseColor>0.5 0.5 0.5</diffuseColor>
+    </Geom>
+  </Body>
+</KinBody>

@@ -1,0 +1,125 @@
+Summary of changes between version 1.0beta1 and version 0.18beta1
+==========================================================
+<Christoph Lauter>
+        Large performance improvement in asin and acos, now in asincos.c
+        Added asinpi and acospi
+Summary of changes between version 0.18beta1 and version 0.17beta1
+==========================================================
+<Florent de Dinechin> 
+	Added atanpi
+
+Summary of changes between version 0.17beta1 and version 0.14beta1
+==========================================================
+<Florent de Dinechin> 
+	Added sinpi, cospi, tanpi
+<Christoph Lauter>
+        Added power, currently unproven
+	
+Summary of changes between version 0.14beta1 and version 0.13beta1
+==========================================================
+<Christoph Lauter>
+	Added log1p
+	Added tests/computemd5list.sh
+<Florent de Dinechin> 
+	Documentation updates, added more worst cases
+<Alex Bernier and Florent de Dinechin>
+	Interval functions for exp and log (in the CVS, not yet in the release)
+
+Summary of changes between version 0.13beta1 (never released) and version 0.11beta1
+==========================================================
+<Christoph Lauter>
+	Added expm1, acos
+	Corrected small possible bug in asin 
+
+Summary of changes between version 0.11beta1 and version 0.10beta
+==========================================================
+<Christoph Lauter>
+	Added asin
+	More Gappa
+<Florent de Dinechin>
+        Correction of a serious bug (found by Paul Zimmermann) 
+  	  in the computation of rounding constants. 
+	  (Fortunately the bug was in the proof, the code was OK)
+	More Gappa proofs
+	
+Summary of changes between version 0.10beta and version 0.8
+==========================================================
+<Christoph Lauter>
+	Added log2 and log10 using triple double (log2-td.*, log10-td.*)
+	Triple-double versions of exp and log (exp-td.*, log-td.*)
+<Florent de Dinechin>
+	log-de, using double-extended, much faster on IA32 and IA64
+	Cleaning up, autotoolization of the new functions
+	Proofs using the Gappa tool
+	
+Summary of changes between version 0.8 and version 0.8beta4
+==========================================================
+<David Defour>
+	Cleaning up and fixes to improve portability
+<Florent de Dinechin>
+	Finished proofs of trigonometric functions
+	Some cleaning up and documentation improvement
+	Fixed bug for large arguments to sinh and cosh
+	Added crlibm.spec (to build RPMs)
+	
+Summary of changes between version 0.8beta4 and version 0.8beta3
+==========================================================
+       
+<Florent de Dinechin>
+        Added crlibm_generate_test_vectors
+	Added test vectors to all functions, including some 
+	  of Lefevre/Muller worst cases
+	Cleant up the accurate trig functions, now in trigo.c
+	Cleant up cosh and sinh
+	Added Gappa input file to assist the proof of the trig functions
+<Patrice Pelissier>
+	Added AMD64 architecture to autoconf stuff
+	Improved timings on x86
+
+
+Summary of changes between version 0.8beta3 and version 0.8beta2
+==========================================================
+       
+<Florent de Dinechin>
+        Added crlibm_blindtest and automatic testsuite
+	Consequently corrected quite a few bugs in extreme cases
+	Cleant up cosh and sinh
+
+Summary of changes between version 0.8beta2 and version 0.8beta
+==========================================================
+       
+<David Defour and Florent de Dinechin>
+	Rewritten faster trigonometric functions
+<Florent de Dinechin>
+        Added crlibm_blindtest and automatic testsuite 
+        Added crlibm_exit()
+	crlibm_init() now returns the old processor status flag
+	Proof for the trigonometric functions in progress
+<Philippe Defert>
+	Added crlibm.spec file to build rpms  to the CVS
+	
+Summary of changes between version 0.8beta and version 0.2:
+==========================================================
+
+<Catherine Daramy & Florent de Dinechin>
+	Added functions : sin cos tan
+
+<Nicolas Gast>
+	Added function atan 
+	Added function atan specialized for pentium (atan-pentium.c)
+
+<Matthieu Gallet>
+	Added functions sinh cosh
+
+<Florent de Dinechin>
+	Changed Maple files from .mw and .mws to .mpl
+	Added FMA support in crlibm_private.h
+	Added polish to some of the proofs
+	Improved performance tests for tighter timing, 
+	Fairer speed comparison to mpfr: We now compare to mpfr with
+	 53-bit mantissa, although this doesnot provide correct rounding
+	 if the result is a denormal (double rounding). Previously we
+	 compared to 150-bit mpfr.
+
+Version 0.2 : exp and log
+

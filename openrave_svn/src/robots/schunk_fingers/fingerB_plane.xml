@@ -1,0 +1,34 @@
+<KinBody name="FingerTypeAPlane">
+  <Body name="finger">
+    <Geom type="box" modifiable="false">
+      <Extents>0.0025 0.015 0.010</Extents>
+      <Translation>-0.0025 0.000 0.000</Translation>
+    </Geom>
+    <Geom type="box" modifiable="false">
+      <Extents>0.0045 0.015 0.005</Extents>
+      <Translation>0.0045 0.000 0.005</Translation>
+    </Geom>
+    <Geom type="box" modifiable="false">
+      <Extents>0.0025 0.015 0.0355</Extents>
+      <Translation>-0.0025 0.000 0.0455</Translation>
+    </Geom>
+    <Geom type="box" modifiable="false">
+      <Extents>0.0045 0.015 0.0025</Extents>
+      <Translation>0.0045 0.000 0.0725</Translation>
+    </Geom>
+    <Geom type="box" modifiable="false">
+      <Extents>0.0025 0.015 0.0025</Extents>
+      <Translation>0.0065 0.000 0.0875</Translation>
+    </Geom>
+    <Geom type="box" modifiable="false">
+      <Extents>0.0035 0.015 0.00635</Extents>
+      <Translation>0.002 0.000 0.083</Translation>
+      <RotationAxis>0 1 0 45</RotationAxis>
+    </Geom>
+    <Geom type="box" modifiable="false">
+      <Extents>0.0035 0.015 0.0035</Extents>
+      <Translation>0.004 0.000 0.075</Translation>
+      <RotationAxis>0 1 0 45</RotationAxis>
+    </Geom>
+  </Body>
+</KinBody>

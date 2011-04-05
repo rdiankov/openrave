@@ -1,0 +1,28 @@
+diff -rBu sympy-0.6.7-old/sympy/simplify/simplify.py sympy-0.6.7/sympy/simplify/simplify.py
+--- sympy/simplify/simplify.py	2010-10-07 16:17:56.779050618 +0900
++++ sympy/simplify/simplify.py	2010-10-07 16:19:32.148148254 +0900
+@@ -1013,13 +1013,22 @@
+             result = result.subs(a, a_t)
+             if expr.is_number:
+                 continue
++            try:
++                m = expr.match(pattern)
++            except (TypeError):
++                break
+ 
+-            m = expr.match(pattern)
+             while m is not None:
+                 if m[a_t] == 0 or -m[a_t] in m[c].args or m[a_t] + m[c] == 0:
+                     break
+                 expr = result.subs(m)
+-                m = expr.match(pattern)
++                if expr.is_number:
++                    continue
++                try:
++                    m = expr.match(pattern)
++                except (TypeError):
++                    break
++
+ 
+         return expr
+     return expr

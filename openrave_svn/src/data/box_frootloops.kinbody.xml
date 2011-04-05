@@ -1,0 +1,9 @@
+<KinBody name="frootloops">
+  <Body>
+    <Geom type="box">
+      <extents>0.0212 0.036 0.059</extents>
+      <translation>0 0 0.059</translation>
+      <diffusecolor>0 1 0</diffusecolor>
+    </Geom>
+  </Body>
+</KinBody>

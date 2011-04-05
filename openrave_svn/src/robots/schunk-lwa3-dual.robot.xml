@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- shows how to combine two schunk arms -->
+<Robot name="schunk-lwa3-dual">
+  <KinBody>
+    <body name="chest">
+      <geom type="box">
+        <extents>0.1 0.1 0.4</extents>
+        <translation>0 0 0.4</translation>
+      </geom>
+    </body>
+  </KinBody>
+  <!-- left arm -->
+  <Robot>
+    <Robot prefix="l_" file="schunk-lwa3.zae"></Robot>
+    <RotationAxis>1 0 0 90</RotationAxis>
+    <translation>0 -0.1 0.7</translation>
+  </Robot>
+  <!-- right arm -->
+  <Robot>
+    <Robot prefix="r_" file="schunk-lwa3.zae"></Robot>
+    <RotationAxis>1 0 0 -90</RotationAxis>
+    <translation>0 0.1 0.7</translation>
+  </Robot>
+
+  <Robot>
+    <!-- connect the two arms with dummy joints -->
+    <KinBody>
+      <joint name="leftdummy" type="hinge" enable="false">
+        <body>chest</body>
+        <body>l_base</body>
+        <limitsdeg>0 0</limitsdeg>
+      </joint>
+      <joint name="rightdummy" type="hinge" enable="false">
+        <body>chest</body>
+        <body>r_base</body>
+        <limitsdeg>0 0</limitsdeg>
+      </joint>
+    </KinBody>
+    <Manipulator name="leftarm">
+      <base>l_base</base>
+      <effector>l_link7</effector>
+      <iksolver>ikfast_schunk_lwa3</iksolver>
+    </Manipulator>
+    <Manipulator name="rightarm">
+      <base>r_base</base>
+      <effector>r_link7</effector>
+      <iksolver>ikfast_schunk_lwa3</iksolver>
+    </Manipulator>
+  </Robot>
+</Robot>

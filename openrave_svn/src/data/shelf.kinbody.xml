@@ -1,0 +1,12 @@
+<Kinbody name="Shelf">
+    <Body>
+        <Translation>-0 0 0 </Translation>
+        <Geom type="trimesh">
+            <Data>models/furniture/shelf.wrl .0010</Data>
+            <diffuseColor>0.4 0.25 0</diffuseColor>
+        </Geom>
+        <mass type="custom">
+            <total>10</total>
+        </mass>
+    </Body>
+</Kinbody>

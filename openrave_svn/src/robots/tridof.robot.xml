@@ -1,0 +1,147 @@
+<Robot name="3DOFRobot">
+  <KinBody>
+    <!-- Create the base body, it should never move-->
+    <!-- Note that all translations and rotations are with respect to this base-->
+    <!-- For example, the robot at the identity transformation is equivalent to the identity transformation of the first body.-->
+    <Body name="Base" type="dynamic">
+      <Translation>0.0  0.0  0.0</Translation>
+      <Geom type="cylinder">
+        <rotationaxis>1 0 0 90</rotationaxis>
+        <radius>0.03</radius>
+        <height>0.02</height>
+        <diffuseColor>0.05 0.05 0.05</diffuseColor>
+      </Geom>
+    </Body>
+    
+    <!-- the first movable link-->
+    <Body name="Arm0" type="dynamic">
+      <!-- Offset from is a fast way of specifying that the translation and rotation of this-->
+      <!-- body should be relative to another link-->
+      <offsetfrom>Base</offsetfrom>
+      <!-- Translation relative to Base-->
+      <Translation>0 0 0.005</Translation>
+      <Geom type="box">
+        <Translation>0.08 0 0</Translation>
+        <Extents>0.08 0.01 0.005</Extents>
+      </Geom>
+    </Body>
+    <!-- declare a circular hinge joint (circular joints have no limits) -->
+    <Joint circular="true" name="Arm0" type="hinge">
+      <Body>Base</Body>
+      <Body>Arm0</Body>
+      <offsetfrom>Arm0</offsetfrom>
+      <weight>4</weight>
+      <limitsdeg>-180 180</limitsdeg>
+      <axis>0 0 1</axis>
+      <maxvel>3</maxvel>
+      <resolution>1</resolution>
+    </Joint>
+    
+    <!-- the second movable link-->
+    <Body name="Arm1" type="dynamic">
+      <offsetfrom>Arm0</offsetfrom>
+      <Translation>0.14 0 0.01</Translation>
+      <Geom type="box">
+        <Translation>0.08 0.0 0</Translation>
+        <Extents>0.08 0.0075 0.005</Extents>
+      </Geom>
+    </Body>
+    <!-- declare a circular hinge joint (circular joints have no limits) -->
+    <Joint circular="true" name="Arm1" type="hinge">
+      <Body>Arm0</Body>
+      <Body>Arm1</Body>
+      <offsetfrom>Arm1</offsetfrom>
+      <weight>3</weight>
+      <limitsdeg>-180 180</limitsdeg>
+      <axis>0 0 1</axis>
+      <maxvel>4</maxvel>
+      <resolution>1</resolution>
+    </Joint>
+    
+    <!-- the third movable link-->
+    <Body name="Arm2" type="dynamic">
+      <offsetfrom>Arm1</offsetfrom>
+      <Translation>0.14 0 0.01</Translation>
+      <Geom type="box">
+        <Translation>0.04 0 0</Translation>
+        <Extents>0.04 0.005 0.005</Extents>
+      </Geom>
+    </Body>
+    <!-- declare a circular hinge joint (circular joints have no limits) -->
+    <Joint circular="true" name="Arm2" type="hinge">
+      <Body>Arm1</Body>
+      <Body>Arm2</Body>
+      <offsetfrom>Arm2</offsetfrom>
+      <weight>3</weight>
+      <limitsdeg>-180 180</limitsdeg>
+      <axis>0 0 1</axis>
+      <maxvel>2</maxvel>
+      <resolution>2</resolution>
+    </Joint>
+    
+    <!-- Create the gripper joints:-->
+    <!-- right gripper-->
+    <Body name="RClaw" type="dynamic">
+      <offsetfrom>Arm2</offsetfrom>
+      <Translation>0.08 0 -0.005</Translation>
+      <Geom type="box">
+        <extents>0.005 0.02 0.01</extents>
+        <translation>0 -0.01 0</translation>
+      </Geom>
+      <Geom type="box">
+        <extents>0.03 0.005 0.01</extents>
+        <translation>0.03 -0.03 0</translation>
+      </Geom>
+    </Body>
+    <Joint name="j1" type="hinge">
+      <Body>Arm2</Body>
+      <Body>RClaw</Body>
+      <offsetfrom>RClaw</offsetfrom>
+      <weight>0.2</weight>
+      <limitsdeg>-16 30</limitsdeg>
+      <axis>0 0 1</axis>
+      <maxvel>0.4</maxvel>
+      <resolution>3</resolution>
+    </Joint>
+    
+    <!--left gripper-->
+    <Body name="LClaw" type="dynamic">
+      <Translation>0.08 0 -0.005</Translation>
+      <offsetfrom>Arm2</offsetfrom>
+      <Geom type="box">
+        <extents>0.005 0.02 0.01</extents>
+        <translation>0 0.01 0</translation>
+      </Geom>
+      <Geom type="box">
+        <extents>0.03 0.005 0.01</extents>
+        <translation>0.03 0.03 0</translation>
+      </Geom>
+    </Body>
+    <Joint name="j2" type="hinge">
+      <Body>Arm2</Body>
+      <Body>LClaw</Body>
+      <offsetfrom>LClaw</offsetfrom>
+      <weight>0.2</weight>
+      <limitsdeg>-16 30</limitsdeg>
+      <axis>0 0 -1</axis>
+      <maxvel>0.4</maxvel>
+      <resolution>3</resolution>
+    </Joint>
+  </KinBody>
+  
+  <!-- Specifying the manipulator structure-->
+  <Manipulator name="arm">
+    <effector>Arm2</effector>   <!-- last link where end effector is attached-->
+    <base>Base</base>           <!-- base link-->
+    <joints>j1 j2</joints>      <!-- the gripper joints used for contact-->
+    <!-- the id of the inverse kinematics solver, it is not necessary to-->
+    <!-- specify an ik solver for every robot. But if there is one,-->
+    <!-- use iksolver field to identity it.-->
+    <!-- <iksolver>MyTriDOFSolver</iksolver> -->
+    <!-- joint values of the closed and opened positions-->
+    <closingdirection>1 1</closingdirection>
+    <direction>1 0 0</direction>
+    <!-- grasp goal with respect to the effector-->
+    <Translation>0.125 0 0</Translation>
+  </Manipulator>
+</Robot>

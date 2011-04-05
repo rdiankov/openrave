@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!-- just the kinematic body of the 7 DOF version of the Whole Arm Manipulator,
+     real robots are defined in other files and have attached hands -->
+<KinBody name="WAM7">
+  <Body name="wam0" type="dynamic">
+    <Translation>-0.22 -0.14 -0.346</Translation>
+    <Geom type="trimesh">
+      <Data>models/WAM/wam0.iv 1.0</Data>
+      <Render>models/WAM/wam0.iv  1.0</Render>
+    </Geom>
+    <mass type="custom">
+      <total>10</total>
+    </mass>
+  </Body>
+
+  <Body name="wam1" type="dynamic">
+    <offsetfrom>wam0</offsetfrom>
+    <Translation>0.22 0.14 0.346</Translation>
+    <Geom type="trimesh">
+      <Data>models/WAM/wam1.iv 1.0</Data>
+      <Render>models/WAM/wam1.iv  1.0</Render>
+    </Geom>
+    <mass type="custom">
+      <total>8.3936</total>
+      <com>0.0006286 -0.1326795 0.0003506</com>
+      <!-- inertia>0.2070507372 -0.0002626542 -0.0000931687 -0.0002626542 0.0920367003 0.0006365542 -0.0000931687 0.0006365542 0.2429198516</inertia -->
+    </mass>
+  </Body>
+
+  <Joint name="Shoulder_Yaw" type="hinge">
+    <Body>wam0</Body>
+    <Body>wam1</Body>
+    <offsetfrom>wam1</offsetfrom>
+    <axis>0 0 1</axis>
+    <limitsdeg>-150 150</limitsdeg>
+    <maxvel>1.5708</maxvel>
+    <weight>1.92154</weight>
+    <resolution>0.25</resolution>
+  </Joint>
+  <Body name="wam2" type="dynamic">
+    <offsetfrom>wam1</offsetfrom>
+    <Translation>0  0  0</Translation>
+    <RotationMat>1 0 0 0 0 1 0 -1 0</RotationMat>
+    <Geom type="trimesh">
+      <Data>models/WAM/wam2.iv  1.0</Data>
+      <Render>models/WAM/wam2.iv  1.0</Render>
+    </Geom>
+    <mass type="custom">
+      <total>4.8487</total>
+    </mass>
+  </Body>
+  <Joint name="Shoulder_Pitch" type="hinge">
+    <Body>wam1</Body>
+    <Body>wam2</Body>
+    <offsetfrom>wam2</offsetfrom>
+    <axis>0 0 1</axis>
+    <limitsdeg>-113 113</limitsdeg>
+    <weight>0.91739941</weight>
+    <maxvel>1.0472</maxvel>
+    <resolution>0.5</resolution>
+  </Joint>
+  <Body name="wam3" type="dynamic">
+    <offsetfrom>wam2</offsetfrom>
+    <RotationMat>1 0 0 0 0 -1 0 1 0</RotationMat>
+    <Geom type="trimesh">
+      <Data>models/WAM/wam3.iv  1.0</Data>
+      <Render>models/WAM/wam3.iv  1.0</Render>
+    </Geom>
+    <mass type="custom">
+      <total>1.7251</total>
+    </mass>
+  </Body>
+  <Joint name="Shoulder_Roll" type="hinge">
+    <Body>wam2</Body>
+    <Body>wam3</Body>
+    <offsetfrom>wam3</offsetfrom>
+    <axis>0 0 1</axis>
+    <limitsdeg>-157 157</limitsdeg>
+    <weight>0.882397</weight>
+    <maxvel>2.0944</maxvel>
+    <resolution>0.5</resolution>
+  </Joint>
+  <Body name="wam4" type="dynamic">
+    <offsetfrom>wam3</offsetfrom>
+    <Translation>0.045 0 0.55</Translation>
+    <RotationMat>1 0 0 0 0 1 0 -1 0</RotationMat>
+    <Geom type="trimesh">
+      <Data>models/WAM/wam4.iv  1.0</Data>
+      <Render>models/WAM/wam4.iv  1.0</Render>
+    </Geom>
+    <mass type="custom">
+      <total>0.4809</total>
+    </mass>
+  </Body>
+  <Joint name="Elbow" type="hinge">
+    <Body>wam3</Body>
+    <Body>wam4</Body>
+    <offsetfrom>wam4</offsetfrom>
+    <axis>0 0 1</axis>
+    <limitsdeg>-50 180</limitsdeg>
+    <weight>0.45504</weight>
+    <maxvel>2.0944</maxvel>
+    <resolution>1</resolution>
+  </Joint>
+  <Body name="wam5" type="dynamic">
+    <offsetfrom>wam4</offsetfrom>
+    <Translation>-0.045 0 0</Translation>
+    <RotationMat>1 0 0 0 0 -1 0 1 0</RotationMat>
+    <Geom type="trimesh">
+      <Data>models/WAM/wam5.iv  1.0</Data>
+      <Render>models/WAM/wam5.iv  1.0</Render>
+    </Geom>
+    <mass type="custom">
+      <total>1.6015</total>
+    </mass>
+  </Body>
+  <Joint name="Wrist_Yaw" type="hinge">
+    <Body>wam4</Body>
+    <Body>wam5</Body>
+    <offsetfrom>wam5</offsetfrom>
+    <axis>0 0 1</axis>
+    <limitsdeg>-275 75</limitsdeg>
+    <weight>0.40141</weight>
+    <maxvel>4.1888</maxvel>
+    <resolution>1.11</resolution>
+  </Joint>
+
+  <Body name="wam6" type="dynamic">
+    <offsetfrom>wam5</offsetfrom>
+    <Translation>0 0 0.3</Translation>
+    <RotationMat>1 0 0 0 0 1 0 -1 0</RotationMat>
+    <Geom type="trimesh">
+      <Data>models/WAM/wam6.iv  1.0</Data>
+      <Render>models/WAM/wam6.iv  1.0</Render>
+    </Geom>
+    <mass type="custom">
+      <total>0.3067</total>
+    </mass>
+  </Body>
+
+  <Joint name="Wrist_Pitch" type="hinge">
+    <Body>wam5</Body>
+    <Body>wam6</Body>
+    <offsetfrom>wam6</offsetfrom>
+    <axis>0 0 1</axis>
+    <limitsdeg>-90 90</limitsdeg>
+    <weight>0.22841245</weight>
+    <maxvel>4.1888</maxvel>
+    <resolution>1.62</resolution>
+  </Joint>
+  <Body name="wam7" type="dynamic">
+    <offsetfrom>wam6</offsetfrom>
+    <Translation>0.0  0.0  0.0</Translation>
+    <RotationMat>1 0 0 0 0 -1 0 1 0</RotationMat>
+    <Geom type="trimesh">
+      <data>models/WAM/wam7.iv 1.0</data>
+      <Render>models/WAM/wam7.iv 1.0</Render>
+    </Geom>
+    <mass type="custom">
+      <total>1.18</total>
+    </mass>
+  </Body>
+
+  <Joint name="Wrist_Roll" type="hinge">
+    <Body>wam6</Body>
+    <Body>wam7</Body>
+    <offsetfrom>wam7</offsetfrom>
+    <axis>0 0 1</axis>
+    <limitsdeg>-172 172</limitsdeg>
+    <weight>0.20178</weight>
+    <maxvel>1.0472</maxvel>
+    <resolution>1.62</resolution>
+  </Joint>
+
+  <adjacent>wam1 wam3</adjacent>
+  <adjacent>wam4 wam6</adjacent>
+  <adjacent>wam4 wam7</adjacent>
+</KinBody>

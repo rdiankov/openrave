@@ -1,0 +1,19 @@
+<!-- demonstrates very simple spherical joint -->
+<KinBody name="test">
+  <body name="b0">
+    <geom type="box">
+      <extents>1 0.2 0.2</extents>
+    </geom>
+  </body>
+  <body name="b1">
+    <translation>2 0 0</translation>
+    <geom type="box">
+      <extents>1 0.1 0.1</extents>
+    </geom>
+  </body>
+  <joint type="spherical">
+    <body>b0</body>
+    <body>b1</body>
+    <anchor>1 0 0</anchor>
+  </joint>
+</KinBody>

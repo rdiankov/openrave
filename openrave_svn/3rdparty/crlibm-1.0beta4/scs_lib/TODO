@@ -1,0 +1,4 @@
+(in order of importance/priority)
+Fix the number of iterations in the division
+Check the precision in the configure script
+Add back SPARC optimisations

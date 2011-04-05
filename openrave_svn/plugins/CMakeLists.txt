@@ -1,0 +1,23 @@
+include_directories("${OPENRAVE_INCLUDE_DIRS}") # needed since plugins include rave/rave.h
+set(PLUGIN_LINK_FLAGS "")
+
+if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
+  set(PLUGIN_COMPILE_FLAGS "-DOPENRAVE_DLL ${Boost_CFLAGS} -fPIC")
+else()
+  set(PLUGIN_COMPILE_FLAGS "-DOPENRAVE_DLL ${Boost_CFLAGS}")
+endif()
+
+add_subdirectory(basecontrollers)
+add_subdirectory(rmanipulation)
+add_subdirectory(baserobots)
+add_subdirectory(basesensors)
+add_subdirectory(bulletrave)
+add_subdirectory(grasper)
+add_subdirectory(ikfastsolvers)
+add_subdirectory(oderave)
+add_subdirectory(logging)
+add_subdirectory(pqprave)
+add_subdirectory(qtcoinrave)
+add_subdirectory(rplanners)
+add_subdirectory(dualmanipulation)
+add_subdirectory(textserver)

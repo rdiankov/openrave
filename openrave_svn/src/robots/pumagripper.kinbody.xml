@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<KinBody name="PumaGripper">
+  <Body name="Puma6" type="dynamic">
+    <Geom modifiable="false" type="trimesh">
+      <quat>0.707106769 0.707106769 0 0</quat>
+      <Data>models/puma/puma6.iv</Data>
+      <Render>models/puma/puma6.iv</Render>
+    </Geom>
+    <Geom modifiable="false" type="trimesh">
+      <quat>0.707106769 0.707106769 0 0</quat>
+      <Translation>0 0 0.1</Translation>
+	  <Data>models/puma/ClawBase.iv</Data>
+      <Render>models/puma/ClawBase.iv</Render>
+    </Geom>
+    <mass type="sphere">
+      <total>0.24</total>
+      <radius>1</radius>
+    </mass>
+  </Body>
+
+  <Body name="RClaw" type="dynamic">
+	<Translation>0 0 0.1</Translation>
+	<offsetfrom>Puma6</offsetfrom>
+    <Geom modifiable="false" type="trimesh">
+      <quat>0.707106769 0.707106769 0 0</quat>
+      <Data>models/puma/RClaw.iv</Data>
+      <Render>models/puma/RClaw.iv</Render>
+    </Geom>
+    <mass type="sphere">
+      <total>0.1</total>
+      <radius>1</radius>
+    </mass>
+  </Body>
+
+  <Joint name="m1" type="hinge">
+    <Body>Puma6</Body>
+    <Body>RClaw</Body>
+    <offsetfrom>RClaw</offsetfrom>
+    <weight>0.2</weight>
+    <limitsdeg>-56 8</limitsdeg>
+    <axis>0 -1 0</axis>
+    <maxvel>0.8</maxvel>
+    <resolution>3</resolution>
+  </Joint>
+
+  <Body name="LClaw" type="dynamic">
+	<Translation>0 0 0.1</Translation>
+	<offsetfrom>Puma6</offsetfrom>
+    <Geom modifiable="false" type="trimesh">
+      <quat>0.707106769 0.707106769 0 0</quat>
+      <Data>models/puma/LClaw.iv</Data>
+      <Render>models/puma/LClaw.iv</Render>
+    </Geom>
+    <mass type="sphere">
+      <total>0.1</total>
+      <radius>1</radius>
+    </mass>
+  </Body>
+
+  <Joint name="m2" type="hinge" enable="false" mimic_pos="m1" mimic_vel="|m1 1" mimic_accel="|m1 0">
+    <Body>Puma6</Body>
+    <Body>LClaw</Body>
+    <offsetfrom>LClaw</offsetfrom>
+    <weight>0.2</weight>
+    <limitsdeg>-56 8</limitsdeg>
+    <axis>0 1 0</axis>
+    <maxvel>0.8</maxvel>
+    <resolution>3</resolution>
+  </Joint>
+</KinBody>
