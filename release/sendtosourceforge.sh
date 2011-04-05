@@ -17,7 +17,9 @@ ssh openravetesting,openrave@shell.sourceforge.net "cd /home/frs/project/o/op/op
 rm -f latest_donotdownload.tgz
 
 #prevrevision=`python -c "import pysvn; revision=pysvn.Client().info2('$trunk',recurse=False)[0][1].rev; print pysvn.Client().log('$trunk',revision,revision)[0].message.split()[-1]"`
-#svn rm --non-interactive --username openravetesting -m "Delete Latest Stable Tab (Tagged by Jenkins)." https://openrave.svn.sourceforge.net/svnroot/openrave/tags/latest_stable
-#svn cp --non-interactive --username openravetesting -m "Latest Stable Tab (Tagged by Jenkins). Revision: $SVN_REVISION" $trunk https://openrave.svn.sourceforge.net/svnroot/openrave/tags/latest_stable
+svn rm --non-interactive --username openravetesting -m "Delete Latest Stable Tab (Tagged by Jenkins)." https://openrave.svn.sourceforge.net/svnroot/openrave/tags/latest_stable
+svn cp --non-interactive --username openravetesting -m "Latest Stable Tab (Tagged by Jenkins). Revision: $SVN_REVISION" $trunk https://openrave.svn.sourceforge.net/svnroot/openrave/tags/latest_stable
+#svn merge latest_stable@HEAD trunk@HEAD latest_stable
+#svn commit -m "Latest Stable Tab (Tagged by Jenkins). Revision: $SVN_REVISION" latest_stable
 
 #ssh-keygen -t dsa -f ~/.ssh/id_dsa.openravetesting.sf -P "" -C "openravetesting@shell.sourceforge.net"
