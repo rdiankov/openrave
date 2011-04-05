@@ -1,0 +1,14 @@
+<KinBody name="segway">
+  <Body type="dynamic"> 
+    <Geom type="trimesh">
+      <Data>models/segwayrmp/segwayrmp.iv</Data>
+      <Render>models/segwayrmp/segwayrmp.iv</Render>
+    </Geom>
+    <Geom type="cylinder">
+      <radius>0.34</radius>
+      <RotationAxis>1 0 0 90</RotationAxis>
+      <height>0.035</height>
+      <diffusecolor>1 1 1</diffusecolor>
+    </Geom>
+  </Body>
+</KinBody>

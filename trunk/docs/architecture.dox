@@ -1,0 +1,948 @@
+/** 
+\en  \page architecture_concepts Introduction to the OpenRAVE Architecture 
+\ja \page architecture_concepts 基本設計概念の紹介
+
+\en
+\section fundamental_structure Fundamental Structure
+
+\image html openrave_architecture.png %OpenRAVE architecture
+
+\image latex openrave_architecture.pdf "OpenRAVE architecture" width=15cm
+
+%OpenRAVE is divided in four main components as shown in the above figure:
+
+- <b>Core Layer</b> The core is composed of a set of \ref interfaces defining how plugins share
+information, and it provides an environment interface that maintains a world state, which serves as
+the gateway to all functions offered through %OpenRAVE. The global openrave state manages the loaded
+plugins, multiple independent environments, and logging. On the other hand, the \ref
+OpenRAVE::EnvironmentBase "environment" combines collision checkers, viewers, physics engines, the
+kinematic world, and all its interfaces into a coherent robotics world state.
+
+- <b>Plugins Layer</b> %OpenRAVE is designed as a plugin-based architecture where a plugin offers
+implementations of the \ref interfaces that are loaded dynamically into the \ref
+OpenRAVE::EnvironmentBase "environment". Plugins can be linked with other robotics libraries
+allowing OpenRAVE to expand its functionality, or it can offer OpenRAVE services to another robotics
+system.  During startup, %OpenRAVE parses the \envvars{OPENRAVE_PLUGINS} environment variable and loads all the plugins it finds.
+ - Refer to \ref writing_plugins for a tutorial on how to build and compile plugins.
+ - Refer to \ref interface_concepts for interface details.
+
+- <b>Scripting Layer</b> %OpenRAVE provides scripting environments for \openravepy{Python} and
+\octave{Octave/Matlab}. Python communicates with the core layer directly with in-memory calls,
+making it extremely fast. On the other hand, the Octave/Matlab scripting protocol send commands
+through TCP/IP, with a plugin offering a text server on the %OpenRAVE core side. Scripting allows
+real-time modifications to any aspect of the environment without requiring shutdown, making it ideal
+to testing new algorithms. The Python scripting is so powerful, that most of the %OpenRAVE examples
+and demo code are offered through it. In fact, users should treat the scripting language as an
+integral part of the entire system, not as a replacement to the C++ API.
+
+- <b>Robot Database Layer</b> Implements a planning knowledge-base and provides simple interfaces
+for its access and generation parameters. The database itself mostly consists of kinematic,
+quasi-static, dynamic, and geometric analyses of the robot and the task. If the robot is defined
+properly, then all these functions should work out of the box.
+
+All the base planners and problem interfaces should be applicable to any robot structure that can be
+thrown at it. One of OpenRAVE's strongest points when compared with other planning packages is the
+idea of being able to apply algorithms in openrave to any robot, with very little
+modification. Recently, a planning database structure has been introduced that allows computation of
+properties like convex hull decomposition, grasp sets, reachability maps, analytic inverse
+kinematics, etc. If the robot is defined properly, then all these functions should work out of the
+box.
+
+The main API is coded in C++ using the Boost C++ libraries [Dawes et al (1998- present)] as a really
+solid basis of low-level management and storage structures. The Boost flavors of shared pointers
+allow object pointers to be safely reference counted in a heavily multi-threaded environment. Shared
+pointers also allow handles and interfaces to be passed to the user without having to every worry
+about the user calling upon invalid objects or un- loaded shared objects. Furthermore, OpenRAVE uses
+functors and other abstracted objects commonly seen in higher level languages to specify function
+pointers for sampling distri- butions, event callbacks, setting robot configuration state, etc. The
+Boost-enabled design makes the the C++ API really safe and reliable to use along with saving the
+users a lot of trouble doing bookkeeping on their end. Furthermore, it allows the Resource
+Acquisition Is Initialization (RAII) design pattern [Stroustrup (2001)] to be fully exploited
+allowing users to ignore the complexities of multi-threaded resource management.
+
+\ja
+\section fundamental_structure 基盤構造
+
+\image html openrave_architecture_jp.png
+
+\image latex openrave_architecture_jp.pdf "抽象アーキテクチャー" width=15cm
+
+%OpenRAVEは上図で示す４つの主要な構成要素に分けられています．
+
+- <b>コア</b> コアは主に\ref interfacesのセットで構成されています．これらのクラスはプラグインが互いに情報を得る方法を定義しています．コアは実際の環境と%OpenRAVEのシミュレーション環境とを接続する橋渡しの役割をし，ゲートウェイとして%OpenRAVEで提供されてた全ての機能にその情報を提供します．%OpenRAVE全体の状態としてコアは，読み出されたプラグイン，複数の独立した環境，そしてログを管理します．一方，環境クラスは干渉検知器，ビューワ，物理エンジン，運動学などの全てのインターフェースを１つのまとまったロボット世界の状態にまとめています．
+
+- <b>プラグイン</b> %OpenRAVEはプラグインを基盤とした構造で設計されています．プラグインは環境クラスのなかに動的に読み出される\ref interfacesの実装を提供します．プラグインは%OpenRAVEの機能拡張の為に他のロボットライブラリとリンクすることができ，また%OpenRAVEのサービスを他のロボットシステムに提供することも可能です．プラグインは%OpenRAVEに，それがどのような機能を提供しているかという情報を集めることと，インターフェースを生成することのできる機能を外部に提供する必要があります．起動時に%OpenRAVEは\envvars{OPENRAVE_PLUGINS}の環境変数を渡し，全ての共用オブジェクトを読み出します．<br/>
+ - プラグインのビルドとコンパイルのチュートリアルは\ref writing_pluginsを参照してください．
+ - インターフェースの詳細は\ref interface_conceptsを参照してください．
+
+- <b>スクリプト</b> %OpenRAVEは\openravepy{Python}と\octave{Octave/Matlab}の為のスクリプト開発環境を提供します．Pythonではコアと直接通信を行い，メモリ内で呼び出しを行うことで非常に高速に実行することができます．一方，Octave/Matlabでは，プラグインによって%OpenRAVEのコア上で提供されているテキストサーバで，TCP/IPを通して命令を送ります．スクリプトを使うことにより，いちいち%OpenRAVEの再起動をしなくても環境の変化をすぐに反映することが可能です．これにより新しいアルゴリズムを試験することは容易になるでしょう．Pythonのスクリプト開発環境は非常に強力です．多くの%OpenRAVEの実行例やデモはこれによって提供されています．事実，ユーザーはスクリプト言語をC++ APIの置き換えとしてではなく，全システムの統合的な部分として扱うべきです．
+
+- <b>データベース</b> 編集中
+
+全ての基本的なプランナーと問題のインターフェースはどんなロボット構造にでも適用可能である必要があります．他のプランニングパッケージと比較して%OpenRAVEの大きな強みの１つは，非常に少ない変更でどんなロボットにもそのアルゴリズムを適用できるということです．最近，データベースの構造に凸形状分解，把持セット，逆運動学解析解，運動学的到達範囲などが導入されました．もしロボットが定義されたなら，全てのこれらの機能は実行できなければなりません．
+
+全ての\ref OpenRAVE::InterfaceBase "インターフェース"は<b>help</b>命令で，それが提供する命令の詳細と何を実行するかを調べることが可能です．
+
+\~
+
+\en
+\section arch_environment Environment Concepts
+
+All of %OpenRAVE's services are offered through the environment. For example, requesting a
+planner interface called 'BiRRT' is done through \ref RaveCreatePlanner(). The environment supports:
+
+- \ref env_plugin_functionality "managing and communicating with plugins"
+- \ref env_collision_checking "collision checking"
+- \ref env_loading "loading scenes and objects"
+- \ref env_objects "managing objects and triangulation"
+- \ref env_plotting "drawing/plotting"
+
+Whenever objects in the environment are written or read, the user has to \b lock the environment
+mutex mutex GetMutex(). This prevents any other process from modifying the enviornment while the
+user is working. Because the environment uses 'recursive mutexes, it allows a mutex to be locked
+as many times as needed within the same thread. This has allowed all environment functions that
+require locking to always guarantee the mutex is locked, regardless if the user has locked the
+mutex. (Note that this only applies to environment functions, and not interface functions).
+
+\ja
+\section arch_environment 環境の概念
+全ての%OpenRAVEのサービスはその環境を通じて提供されます．例えば，'BiRRT'と呼ばれるプランナーインターフェースへの要求はRaveCreatePlanner()を通じて行われます．環境は以下をサポートします．
+
+- \ref env_plugin_functionality "プラグインの管理と通信"
+- \ref env_collision_checking "幾何学的干渉検知"
+- \ref env_loading "物体と場面の読み出し"
+- \ref env_objects "managing objects and triangulation"
+- \ref env_plotting "図やグラフのの描画"
+
+環境内の物体が読み書きされるときはいつでも，ユーザーはGetMutex()コマンドで<b>ロック</b>しなければなりません．これはユーザーが作業している間，他のプロセスから環境が変更されることを防止します．なぜなら環境は再帰的な相互排除を使っているからです．それは同じスレッド内で必要なだけロックをかけることが可能です．さらにユーザーが相互排除をロックしたかどうかに依らず，ロックを要求する全ての環境関数に常に相互排除はロックされることを保証しています．（これは環境関数のみに適用され，インターフェース関数には適用されません）
+
+\~
+\subsection arch_locking Locking
+
+Because %OpenRAVE is a highly multi-threaded environment, the environment state like
+bodies and loaded interfaces could be simultaneously accessed. In order to safely write or
+read the state, a user has to lock the environment, which prevents any other process from
+modifying the environment while the user is working. By using recursive locks, it allows a
+lock to be locked as many times as needed within the same thread, greatly reducing the lock
+management when a state changing function calls another state changing function. This
+safety measure helps users by always guaranteeing the environment is locked when calling
+global level environment functions like creating new bodies or loading scenes, regardless if the
+user has locked it. However, directly accessing the bodies and robots is dangerous without
+having the environment lock acquired.
+
+\subsection arch_simulation Simulation Thread
+
+Every environment has an internal time and a simulation thread directly attached to a physics
+engine. The thread is always running in the background and periodically steps the simulation
+time by a small delta for the physics engine and on all the simulation-enabled interfaces. By
+default, the thread is always running and can always potentially modify the environment
+state; therefore, users always need to explicitly lock the environment whenever playing with
+the internal state like modifying bodies by setting joint values or link transformations. If
+not careful, the controller or physics engine will overwrite them. By default, the simulation
+thread just sets the object positions depending on their controller inputs, but a physics
+engine can be attached to integrate velocities, accelerations, forces, and torques.
+
+The simulation thread can feel like a nuisance at first, but its division of robot control
+into control input computation and execution greatly helps users only concentrate on feeding
+commands to the robot without worrying about the simulation loop. It also allows a world
+update to happen in one one discrete time step.
+
+
+\~
+\subsection arch_cloning Cloning
+    
+One of the strengths of %OpenRAVE is in allowing multiple \ref OpenRAVE::EnvironmentBase
+"environments" work simultaneously in the same process. Environment cloning allows %OpenRAVE to
+become truly parallel by managing multiple environments and running simultaneous planners on top of
+them.
+
+
+One of the strengths of OpenRAVE is in allowing multiple environments to work simul-
+taneously in the same process. Environment cloning allows OpenRAVE to become truly
+parallel by managing multiple environments and running simultaneous planners on top of
+them. Because there is no shared state across the clone and the original environment, it is
+not possible to use an interface created from one environment in another For example, if a
+planner is created in one environment, it should be used only by objects in that environment.
+It is not possible to set a planner to plan for objects belonging to a different environment.
+This is because a planner will lock the environment and expect the objects it controls to be
+exclusively under its control.
+
+Creating a clone is simple, in C++ just type:
+
+\code
+EnvironmentBasePtr pNewEnvironment = GetEnv()->CloneSelf(Clone_Bodies)
+\endcode
+
+to create a clone that copies all the existing bodies (with attachments and grabbed bodies) and
+their current states. Basically the clone can perform any operations that would have
+been done with the original enviornment.
+
+Because the environment state is very complex, the cloning process can control how
+much of it gets transferred to the new clone. For example, all existing bodies and robots
+can be cloned, their attached controllers can be cloned, the attached viewer can be cloned,
+the collision checker state can be cloned, and the simulation state can be cloned. Basically
+the clone should be able to perform any operations that can be done with the original
+environment without any modification in the input parameters.
+
+When cloning real robots, one extremely important feature that OpenRAVE cloning offers is the
+ability to maintain a real-time view of the world that sensors continuously update with new
+information. When a planner is instantiated, it should make a copy of the environment that it can
+exclusively control without interfering with the updating operations.  Furthermore, the real-world
+environment possibly has robot controllers connected to real robots, having a clone gives the
+ability to set simulation controllers guarantees robot safety while planning; commands from a cloned
+environment would not accidentally send commands to the real robot.
+
+\subsection arch_validating_plugins Validating Plugins
+
+Every plugin needs to export several functions to notify the core what interfaces it has and to
+instantiate the interfaces. When a plugin is first loaded, it is validated by the environment and
+its interface information is queried so the core can register the names.
+
+There are many mechanisms in the validation process to prevent old plugins to be loaded by the
+core. OpenRAVE is updated frequently and all user plugins are not necessarily recompiled when the
+OpenRAVE API changes. Therefore, we will encounter many cases when a plugin exports the correct
+functions, but does not implement the correct API. Using interfaces from plugins compiled with a
+mismatching The API can lead to unexpected crashes that are very difficult to debug, so it is
+absolutely necessary to detect this condition. One possible solution is to add version numbers to
+the API to enforce checking before an interface is returned from the plugin to the environment, but
+this method is brittle. It forces to keep track of a version number for every interface along with a
+global version number.  Furthermore, every developer has to remember to increment the version when
+something even small changes, which can be easily forgotten and lead to serious errors later on.
+
+We solve interface validation by computing a unique hash of the interface functions and members by
+running each interface through a C++ lexer, gathering the tokens that affect the C++ code structure,
+and then creating a 128bit unique MD5 hash. We create a hash for each interface definition and the
+environment. The hashes are hard coded into the C++ header files and can be queried by two methods:
+a static function returning the hash of the program calling the function, and a virtual function
+returning the hash the interface was compiled with. An interface is only valid if its virtual hash
+is equivalent to the static hash of the core environment. For a plugin to be loaded correctly, first
+the environment hashes have to match. If they do, then the individual interfaces checked and only
+matching interfaces are returned to the core, and from there dispatched to other plugins. Such
+consistency checks ensure that stale plugins will never be loaded.
+
+
+\subsection arch_cloning_parallel Parallel Execution
+
+Being able to execute a planner in multiple threads is important for applications that require
+speed and solution quality Because there is always a trade-off between solution quality and time of
+computation, some applications like industrial robots require the quickest and smoothest past to
+their destinations. Fortunately, environment cloning allows planners to create an independent
+environment for every thread they create, which enables them to call kinematics and collision
+functions in each respective thread without worrying about data corruption. Growing an RRT tree in a
+multi-threaded environment just requires one copy of the kd-tree structure to be maintained. The
+query operations mostly work with Euclidean distance on the configuration space, so are really
+fast. Furthermore, adding a new point takes O(log) time, so it shouldn’t be a bottleneck in the
+search process compared to collision checking. Finally, environment locking allows threads to gain
+exclusive access to the environment. The rule of thumb is that any interface belonging or added to
+the environment requires an environment lock before any of its methods can be called.
+
+\en
+\section arch_dualnature Dual Simulation/Control Nature
+
+OpenRAVE can be simultaneously used as a simulation, a controller, or both at the same time. Here
+are a couple of things to keep in mind:
+
+- It can be used as a simulator by attaching a physics engine and setting torques to the joints and
+  applying forces to the links.
+
+- The physics engine directly reflects the internal openrave state.
+
+- A controller can be set that sets torques/velocities/positions to the physics engine every time
+  step. Physics simulation time steps are constantly called in an internal "openrave thread" if
+  simulations are set to true (default)
+
+- The default physics engine doesn't touch the openrave state, nor does it simulate velocities or
+  dynamics
+
+- The default controller just sets positions at the specified times
+
+This is why users need to explicitly lock the environment mutex whenever playing with the internal
+openrave state like setting joint values or link transformations (in planners for
+example). Otherwise, the controller or physics engine will overwrite them.
+
+\ja
+\section arch_dualnature 2重のシミュレーション/制御機能
+
+%OpenRAVEはシミュレーション，制御，もしくはその両方に対して同時に使うことができます．以下にいくつかの覚えておくべきことを記載します．
+
+- %OpenRAVEは物理エンジンを搭載し，関節にトルクを設定し，リンクに力を働かせることによってシミュレーターとして使うことができます．
+
+- 物理エンジンは関節の値やリンクの変換などの内部状態をダイレクトに反映します．
+
+- コントローラはトルク/速度/位置のセットを物理エンジンに毎時間ステップに設定できます．もしシミュレーションの設定がTrueならば（デフォルト），物理シミュレーションの時間ステップは内部の"openrave thread"によって連続的に呼び出されます．
+
+- デフォルトの物理エンジンはopenraveの状態に作用しません，また速度もしくは動力学をシミュレートしません．
+
+- デフォルトのコントローラは位置と時間のみを設定できます．
+
+このためユーザーは，関節の値やリンクの変換などの内部状態をセットするときにはいつでも，環境相互排除をロックする必要があります．さもなければ，コントローラーもしくは物理エンジンはそれらを上書きしてしまいます．
+
+\en  
+\section arch_exceptions Exception Handling
+
+By using the C++ Standard and Boost libraries, OpenRAVE can recover from almost all errors that a
+user can experience without causing the program to shutdown on the spot.  Invalid pointer and
+out-of-range accesses are extremely dangerous because they can modify unrelated memory, which causes
+the program to crash at a place completely unrelated to the root cause of the problem. Avoiding such
+problems has been one of the the highest priorities for the design. The core always surrounds any
+user code coming from plugins and callbacks with try/catch blocks, this allows the core to properly
+handle the error and notify the user of a problem without tearing down the environment. Because
+exception handling is slow, there is a fine balance of when a function should return an error code
+and what it should throw an exception. In OpenRAVE, exceptions should never occur in normal
+operation of the program, they should only be for unexpected events of the program. For example,
+planners failing is an expected event dependent on the current environment, so planners should
+return an error code with the cause of the failure rather than throw an exception. In other words,
+exceptions convey the structural errors of the program that point to places in the code that should
+be fixed by the user. The following operations should throw exceptions in OpenRAVE:
+
+- invalid plugin or interface hashes,
+- invalid commands being sent to interfaces,
+- invalid arguments passed to functions,
+- invalid pointers or out-of-range parts of lists are accessed,
+- environment is not locked when it should be
+- a resource is present when it should be,
+- a math operation is not consistent with the rest of the environment,
+- environment naming constraints are not maintained,
+- unrecognized enumerated types are given, and
+- instantiation order is not maintained.
+
+\en
+
+Any type of boost error, or null pointer access throws an openrave_exception. This greatly reduces
+the amount of error checking code people do. For example, C code usually has this pattern:
+
+\code
+bool somefun(KinBodyPtr pbody)
+{
+    if( !pbody )
+        return false;
+    pbody->GetTransform();
+    ...
+}
+\endcode
+
+or
+
+\code
+bool somefun(KinBodyPtr pbody)
+{
+    assert( !!pbody );
+    pbody->GetTransform();
+    ...
+}
+\endcode
+
+If these checks are not done, the code would segfault. However, these checks can really clutter the
+code. In openrave, it is safe to get away with:
+
+\code
+bool somefun(KinBodyPtr pbody)
+{
+    pbody->GetTransform();
+    ...
+}
+\endcode
+
+then for handling errors (for example in the most top-level script), do
+
+\code
+try {
+    ...
+    somefun(pbody)
+    ...
+}
+catch(const openrave_exception& ex) {
+    RAVELOG_WARN("exception caught: %s\n",ex.what());
+    if( ex.GetCode() == ORE_EnvironmentNotLocked ) {
+        RAVELOG_WARN("user forgot to lock environment!\n");
+    }
+    ...
+}
+\endcode
+
+When using openravepy in python, such unhandled C++ errors throw a python exception, which can be
+safely caught and processed there.
+
+\ja
+
+全てのboostエラー，nullポインタアクセスはopenrave_exceptionを投げます．これによって人々が行っているエラーをチェックするコードの量を大幅に減らすことができます．例えば，Cのコードにはよくこのパターンがあります．</br>
+
+\code
+bool somefun(KinBodyPtr pbody)
+{
+    if( !pbody )
+        return false;
+    pbody->GetTransform();
+    ...
+}
+\endcode
+
+もしくは，</br>
+
+\code
+bool somefun(KinBodyPtr pbody)
+{
+    assert( !!pbody );
+    pbody->GetTransform();
+    ...
+}
+\endcode
+
+もしこれらがチェックされなければ，コードはセグメンテーション違反となるでしょう．しかしながら，これらのチェックはコードを乱雑にするだけです．openraveでは，安全にエラー免れることができます．例えば，
+
+\code
+bool somefun(KinBodyPtr pbody)
+{
+    pbody->GetTransform();
+    ...
+}
+\endcode
+
+エラーを処理するためには以下のようにします．
+
+\code
+try {
+    ...
+    somefun(pbody)
+    ...
+}
+catch(const openrave_exception& ex) {
+    RAVELOG_WARN("exception caught: %s\n",ex.what());
+    if( ex.GetCode() == ORE_EnvironmentNotLocked ) {
+        RAVELOG_WARN("user forgot to lock environment!\n");
+    }
+    ...
+}
+\endcode
+
+openravepyを使っている場合は，そのような処理されないC++エラーはpythonの例外処理に投げられ，安全にキャッチされてプロセスは進行します．
+
+\~
+\section arch_body_hashes Hashes for Body Structure
+
+A new concept that came out of OpenRAVE is the idea of creating unique hashes of a body’s
+structure. Every body has an online state that includes:
+
+- names of the body, its links, its joints,
+- link transformations, velocities, and accelerations in the world,
+- and attached bodies.
+
+All other information is independent of the environment and can be categorized into the kinematics,
+geometry, and dynamics of the body. Furthermore, robots have categories for attached sensors and
+manipulators. The planning knowledge-base stores all cached information about a body and a robot, so
+it needs an consistent way of indexing this information.  Indexing by robot names is not reliable
+because it is very difficult to remind a user to change the name every time the body structure is
+changed. Therefore, OpenRAVE provides functionality to serialize the different categories of a body
+and create a 128-bit MD5 hash. Each of the models in the planning knowledge-base relies on different
+categories of the robot. For example:
+
+- inverse kinematics generation only uses the kinematics of a sub-chain of the robot
+defined by the manipulator and the grasp coordinate system,
+- kinematic reachability cares about the robot geometry of the manipulator because it
+implicitly stores self-collision results,
+- inverse reachability further uses the links connecting the base robot link to the base
+manipulator link,
+- grasping cares about the geometry of the target body and the kinematics and geometry
+of the gripper,
+- convex decompositions only care about the link geometry, and
+- inverse dynamics cares only about the dynamics properties of each link and the kinematics.
+
+There are several challenges to developing a consistent index across all operating systems
+and compilers since floating point errors could creep in when normalizing floating-point
+values. However, the idea of such an index could greatly help in developing a worldwide
+robot database that anyone can use.
+
+*/
+
+/**
+\page arch_collisionchecker Collision Checker Concepts
+\b Reference: \ref OpenRAVE::CollisionCheckerBase.
+
+All \b CheckCollision functions accept an optional pointer to a \ref OpenRAVE::CollisionReport
+struct, which gets filled with information about the collision that takes place. Usually requesting
+more precise information like distance to obstacles is computationally expensive; therefore to save
+computation, the user can specify what collision information should be filled in the \ref
+OpenRAVE::CollisionReport with the \ref SetCollisionOptions function.
+
+OpenRAVE is not tied to a particular collision checker. Collision checkers can be changed with \ref
+SetCollisionChecker. In order to add a new collision checker, derive a class from \ref
+OpenRAVE::CollisionCheckerBase and fill all the methods it provides. Then register it in
+'src/environment.cpp' and CollisionCheckers. All collision checking is done through the overloaded
+EnvironmentBase::CheckCollision.
+
+*/
+
+/** 
+\page interface_concepts Base Interface Concepts
+
+New interfaces are provided by plugins and are dynamically loaded into %OpenRAVE. All interfaces
+are derived from the \ref OpenRAVE::InterfaceBase class and contain basic information such as the type, the
+owning \ref OpenRAVE::EnvironmentBase "environment", setting user data, cloning, and allowing custom string commands to be sent.
+
+Every instantiated interface belongs to only one \ref OpenRAVE::EnvironmentBase
+"environment". Interfaces can be cloned using \ref OpenRAVE::InterfaceBase::Clone.
+
+Every interface can have its own custom commands. Sending \b help will return a list of all the
+commands the interface supports (think of it as a command-line way of sending commands to the
+interface). The GetDescription() returns a string briefly explaining the functionality, the
+authors, and the license of the plugin.
+
+Ability to register custom xml reader interfaces.
+
+\subsection arch_interface_templates Interface Templates
+
+- \subpage arch_collisionchecker
+- \subpage arch_controller
+- \subpage arch_iksolver
+- \subpage arch_kinbody
+- \subpage arch_physicsengine
+- \subpage arch_planner
+- \subpage arch_problem
+- \subpage arch_robot
+- \subpage arch_sensor
+- \subpage arch_sensorsystem
+- \subpage arch_trajectory
+- \subpage arch_viewer
+
+*/
+
+/**
+\page arch_controller Controller Concepts
+\b Reference: \ref OpenRAVE::ControllerBase
+
+In order for openrave to control certain robot hardware, a \ref OpenRAVE::ControllerBase controller
+has to be created that will interface with the hardware-specific libraries. This controller
+interface then has to be created through the environment and set onto an existing robot. All
+commands given to the robot are first filtered through the controller, then translated to joint
+commands. Different controllers can have different path inputs (ie: a robot walking on a floor might
+just have x,y,angle), but the default is the DOF joint values.
+
+\section arch_controller_writing Writing and Using Controllers
+
+Assuming that there exists a plugin with a controller interface named \b MyController, here are some ways to set an openrave robot to use it:
+
+- XML
+ - add a \b <controller> tag in the openrave robot XML file like this:
+\verbatim
+<robot file="robots/schunk-lwa3.robot.xml">
+  <controller type="MyController controller arguments here"></controller>
+</robot>
+\endverbatim
+ - It is also possible to set a controller outside of the robot definition by specifying the robot's name. For example: 
+\verbatim
+<environment>
+  <robot name="schunk-lwa3" file="robots/schunk-lwa3.robot.xml">
+  </robot>
+  <controller type="MyController" robot="schunk-lwa3 controller arguments here"></controller>
+  </environment>
+\endverbatim
+
+- C++ 
+\code
+RobotBasePtr probot = GetEnv()->GetRobot("schunk-lwa3");
+ControllerBasePtr pcontroller = RaveCreateController(GetEnv(),"MyController controller arguments here");
+vector<int> dofindices(probot->GetDOF());
+for(int i = 0; i < probot->GetDOF(); ++i) {
+    dofindices[i] = i;
+}
+int nControlTransformation = 1;
+probot->SetController(pcontroller,dofindices,nControlTransformation);
+\endcode
+
+- Python 
+\code
+robot = env.GetRobot('schunk-lwa3')
+controller = RaveCreateController(env,'MyController controller arguments here')
+robot.SetController(controller,range(robot.GetDOF()),controltransform=1)
+\endcode
+
+- Octave/MATLAB 
+\verbatim
+robotid = orEnvGetBody('schunk-lwa3');
+orRobotControllerSet(robotid,'MyController','controller arguments here')
+\endverbatim
+
+*/
+
+/**
+\page arch_iksolver Inverse Kinematics Solver Concepts
+\b Reference: \ref OpenRAVE::IkSolverBase
+
+Each IK solver is defined on a subset of joints of a Robot specified by the robot's manipulator.
+Given the position in the 3D workspace that an end effector should go to, an IK solver will find the
+joint configuration to take that end-effector there.  Because it is common for an IK solution to
+have a null space, the IK solver give functionality to expose the free parameters to move the joints
+in null space.
+*/
+
+/**
+\page arch_kinbody Kinematics Body Concepts
+\b Reference: \ref OpenRAVE::KinBody
+
+Each KinBody can be thought of as the basic rigid body element in OpenRAVE. It is composed of a collection of links (rigid bodies) connected with joints. The KinBody class provides a lot of functionality (from a planning perspective) needed to perform complex tasks:
+
+- Setting and getting joint values
+- Setting and getting the transformations of all links
+- Getting the velocities of each joint (or link)
+- Self collision detection functions
+- Kinematic hierarchy querying - The underlying structure of KinBody is a list of links, not a tree. However, after some careful analysis, the parent and child links of a particular link can be extracted.
+- Jacobian calculation - both translational and rotational.
+- Attaching bodies online - a necessary function for manipulation planning; is called, for example, when an object is rigidly grasped by a hand
+
+\section arch_kinbody_options Loading Options
+
+This is the set of loading options passed as a AttributesList into functions like OpenRAVE::EnvironmentBase::ReadKinBodyXMLFile:
+- <b>prefix</b>: prefix link, joint, manipulator, and sensor names with a string
+- <b>skipgeometry</b>: if 1 or true, will skip loading all geometry of the links
+
+*/
+
+/**
+\page arch_robot Robot Concepts
+\b Reference: \ref OpenRAVE::RobotBase
+
+Robots are a special type of KinBody that need higher level functionality for their control and
+movement in the environment. There are a couple of differences between a Robot and a regular
+KinBody.
+
+\section arch_robot_manipulator Manipulators
+
+Every robot supports a list of \ref OpenRAVE::RobotBase::Manipulator "Manipulator" objects
+that describe the links the robot should use when manipulating parts of the environment. Usually
+manipulators are serial chains with a Base link and an End Effector link. Each manipulator is also
+decomposed into two parts: the arm and the hand. The hand usually makes contact with the objects
+while the arm transfers the hand to its destination. The Manipulator class also has an optional
+pointer to a IkSolverBase class providing inverse kinematics functionality. The IK solver used by a
+Manipulator can be changed by Manipulator::SetIKSolver, so plugins can provide and set their own IK
+solvers.
+
+\section arch_robot_activedof Active Degrees of Freedom
+
+When controlling and planning for a robot, it is possible to set the
+degrees of freedom that should be used. For example, consider a humanoid robot. There should be in
+easy way to specify to planners that only the right hand of the robot should be taken into
+consideration when planning; the rest of the joints should be ignored. Or consider the case where
+we care about navigation of the humanoid robot. Here we would want to control the translation of
+the robot on the plane and its orientation. Perhaps we want to do footstep planning and also care
+about controlling the two legs. All this is possible with the Active Degrees of Freedom feature
+provided by OpenRAVE. First call RobotBase::SetActiveDOFs to set the degrees of freedom of the
+robot; it is also possible to set translation about the XYZ axes or the angle around a rotation
+axis as a degree of freedom. Each RobotBase function with the word Active expects the active DOF
+values to be specified. Basically, for any function in KinBody that deals with Joints, there is a
+corresponding active function in RobotBase.
+
+\section arch_robot_grabbing Grabbing Bodies
+
+It is possible for a robot to attach a \ref OpenRAVE::KinBody "KinBody" onto one of its links so
+that when the link moves, the KinBody also moves. Because collision detection will stop being
+checked between the robot and the KinBody, you could say that the KinBody becomes a part of the
+robot temporarily. This functionality is necessary for manipulation planning. Whenever the robot is
+carrying a body, all collisions between the robot and that item should be ignored once the body has
+been grasped.
+
+\section arch_robot_sensors Attaching Sensors
+
+Can attach any number of sensors to the robot's links through the \ref
+OpenRAVE::RobotBase::AttachedSensor "AttachedSensor" class. The sensor transformation will be
+completely owned by the robot. A robot can be attached with any number of sensors on any number of links. As the robot link moves, the sensor moves with it preserving its relative transformation.
+
+AttachedSensor object holds a \ref OpenRAVE::SensorBase "SensorBase" object that contains the actual object gathering and publishing data.
+
+\section arch_robot_options Loading Options
+
+This is the set of loading options passed as a AttributesList into functions like OpenRAVE::EnvironmentBase::ReadRobotXMLFile.
+
+KinBody \ref arch_kinbody_options is also valid.
+
+  */
+
+/**
+\page arch_physicsengine Physics Engine Concepts
+\b Reference: \ref OpenRAVE::PhysicsEngineBase
+
+The physics engine for the environment can be set through \ref
+OpenRAVE::EnvironmentBase::SetPhysicsEngine.
+
+*/
+
+/**
+\page arch_planner Planner Concepts
+\b Reference: \ref OpenRAVE::PlannerBase
+
+Planner should be able to query sensor information from the Robot like its current camera image
+etc. Planner should be compatible with Robot presented (some hand-shaking happens between the two
+classes). Examples of planners are: 
+- Manipulation - manipulable objects need to be specified. Objects like doors should be special cases that planners knows about.
+- Following - Goal easily changes. Attributes can change.
+- Object Building - Need to describe how parts of object fit together into a bigger part.
+- Dish Washing - Specific goals are not specified, just a condition that all plates need to be inside.
+- Foot step planning - Need discrete footsteps and other capabilities from robot.
+
+\section planner_intro Introduction
+
+In OpenRAVE, the basic purpose of a planner is to find a trajectory starting at some initial
+configuration that reaches a goal condition while satisfying various navigation constraints. All
+planners are assumed to be geometric in nature (ie, not planning in the space of policies that
+depend on sensor data). Planners only plan for Robots and as default they should use the active
+degrees of freedom specified by the robot to plan. If a ConfigurationState class is specified in
+PlannerParameters, then a planner has to use it to set the state of the robot. This gives the user
+flexibility in choosing the configuration space. A planner should never use the raw joint values
+functions defined in KinBody. The usage of a planner is simple:
+
+- Acquire its pointer from RaveCreatePlanner. You **MUST** always do this, even if the
+  planner is defined in the same plugin that uses it.
+
+- Fill a \ref OpenRAVE::PlannerBase::PlannerParameters "PlannerParameters" structure defining the
+  instance of the problem. The structure has many fields for describing planning entities like start
+  position, goal condition, and the distance metric. Try to use these fields as much as
+  possible. Later on, this will allow users to easily swap planners without having to change the
+  PlannerBase::PlannerParameters structure much.
+
+- Call \ref OpenRAVE::PlannerBase::InitPlan "InitPlan" passing in the robot and planner parameters. This also resets any
+  previous information the planner had stored.
+
+- Call \ref OpenRAVE::PlannerBase::PlanPath "PlanPath" passing in a \ref OpenRAVE::TrajectoryBase
+  "trajectory" (and optionally an output stream) to start planning. If the function returns true,
+  then the Trajectory will be filled with the geometric solution in the active DOF configuration
+  space of the robot. By calling SetParameters, then PlanPath again, it could be possible to
+  preserve the previous search space for the planner while changing the goal conditions.
+
+\section planner_planning Planning Details
+
+\subsection planner_parameters Planner Parameters - Calling a Planner
+
+All the information defining a planning problem should be specified in
+\ref PlannerBase::PlannerParameters. <code>PlannerParameters</code> tries to cover most of the common
+data like distance metrics, sampling distributions, initial and goal configurations. However there
+are many different types of inputs to a planner, so it is impossible to cover everything with one
+class. Instead, <code>PlannerParameters</code> has a very flexible and safe way to extend its
+parameters without destroying compatibility with a particular planner or user of the planner. This
+is enabled by the serialization to XML capabilities of <code>PlannerParameters</code>
+
+\code
+PlannerBase::PlannerParametersPtr params(new PlannerBase::PlannerParameters);
+params->vinitialconfig.push_back(2);
+ostream os;
+os << *params;
+\endcode
+
+will produce something in the form of
+\verbatim
+<PlannerParameters>
+  <initialconfig>2</initialconfig>
+</PlannerParameters>
+\endverbatim
+
+Furthermore \ref OpenRAVE::PlannerBase::PlannerParameters "PlannerParameters" can read such an XML file given an input stream
+\verbatim
+istream is;
+os >> *params;
+\endverbatim
+
+Using XML as a medium, it is easy to exchange data across different derivations of \ref
+OpenRAVE::PlannerBase::PlannerParameters "PlannerParameters" without much effort. To add new
+parameters for planners to take advantage of
+
+- make a derived class from  \ref OpenRAVE::PlannerBase::PlannerParameters "PlannerParameters"
+- overload the \ref OpenRAVE::PlannerBase::PlannerParameters::serialize "PlannerParameters", \ref OpenRAVE::PlannerBase::PlannerParameters::startElement "startElement", \ref OpenRAVE::PlannerBase::PlannerParameters::endElement "endElement", and \ref OpenRAVE::PlannerBase::PlannerParameters::characters "characters" functions to process the new variables.
+
+As long as the user of the planner passes a \c PlannerParameters that can serialize to the
+same format of data that the planner expects, the data will be passed. This allows the planner and
+the caller of \ref OpenRAVE::PlannerBase::PlanPath "PlanPath" to use different \c PlannerParameters.
+definitions without any conflicts.
+
+\subsection planner_basicusage Basic Usage
+
+This is a simple call to a birrt planner, let \b activegoal hold the goal configuration and \b
+activejoints hold indices to the robot joints interested to plan for.
+
+\code
+PlannerBase::PlannerParametersPtr params(new PlannerBase::PlannerParameters);
+params->SetRobotActiveJoints(robot); // sets the active joint indices 
+robot->GetActiveDOFValues(params.vinitialconfig); // set initial config (use current robot configuration)
+params.vgoalconfig = activegoal;
+ 
+// set other params values like
+ 
+PlannerBasePtr rrtplanner = RaveCreatePlanner(GetEnv(),"rBiRRT");
+TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF());
+if( !rrtplanner->InitPlan(robot, params) )
+    return false;
+ 
+if( !rrtplanner->PlanPath(ptraj) )
+    return false;
+ 
+robot->SetActiveMotion(ptraj); // trajectory is done, execute on the robot
+\endcode
+
+\subsection planner_extraparameters Defining Extra Planner Parameters
+
+Here is how to derive from a \ref OpenRAVE::PlannerBase::PlannerParameters "PlannerParameters" class in order to introduce new parameters.
+
+\code
+class BasicRRTParameters : public PlannerBase::PlannerParameters
+{
+public:
+BasicRRTParameters() : _fGoalBiasProb(0.05f), _bProcessing(false) {
+        _vXMLParameters.push_back("goalbias");
+    }
+    
+    dReal _fGoalBiasProb; 
+
+ protected:
+    bool _bProcessing;
+    virtual bool serialize(std::ostream& O) const
+    {
+        if( !PlannerParameters::serialize(O) )
+            return false;
+        O << "<goalbias>" << _fGoalBiasProb << "</goalbias>" << endl;
+        return !!O;
+    }
+
+    ProcessElement startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts)
+    {
+        if( _bProcessing )
+            return PE_Ignore;
+        switch( PlannerBase::PlannerParameters::startElement(name,atts) ) {
+            case PE_Pass: break;
+            case PE_Support: return PE_Support;
+            case PE_Ignore: return PE_Ignore;
+        }
+        
+        _bProcessing = name=="goalbias";
+        return _bProcessing ? PE_Support : PE_Pass;
+    }
+    
+    virtual bool endElement(const string& name)
+    {
+        if( _bProcessing ) {
+            if( name == "goalbias")
+                _ss >> _fGoalBiasProb;
+            else
+                RAVELOG_WARN(str(boost::format("unknown tag %s\n")%name));
+            _bProcessing = false;
+            return false;
+        }
+
+        // give a chance for the default parameters to get processed
+        return PlannerParameters::endElement(name);
+    }
+};
+\endcode
+
+\section planner_pathoptimization Path Optimization
+
+Path smoothing/optimization is regarded as a post-processing step to planners. "Path optimization"
+algorithms take in an existing trajectory and filter it using the existing constraints of the
+planner. In fact, functionality there is no difference between a "path optimization" planner and a
+regular planner besides the fact that a trajectory is used as input. Because PlannerBase::PlanPath
+already has a trajectory as an argument, this does not cause any major API changes to the
+infrastructure.
+
+However, the PlannerParameters structure had to reflect what 'path optimization' algorithm to use
+for post processing the trajectory. This is now reflected in the _sPathOptimizationPlanner and
+_sPathOptimizationParameters arguments. By default, this is the default "linear shortcut" path
+optimizer. There is also a helper function in PlannerBase to help users easily call the
+post-processing step:
+
+\code
+_OptimizePath(RobotBasePtr probot, TrajectoryBasePtr ptraj);
+\endcode
+
+Please take a look at how the default RRT algorithms are now structured.
+
+Planner post-processing actually allows users to chain planners in the same way that filters are
+chained, all through specifying planner parameters. Of course, users can continue to smooth in
+planners without relying on this framework. However, explicit control of path smoothing allows
+custom parameter to be easily specified.
+
+*/
+
+/**
+\page arch_problem Modular Problem Concepts
+\b Reference: \ref OpenRAVE::ProblemInstance
+
+Base class for problem instances the user might want to instantiate. A problem instance
+registers itself with OpenRAVE's SimulateStep calls and can accept commands from the server or
+other plugins via SendCommand. A problem instance stops receiving commands when it is
+destroyed. Problems are an easy way for developers to run and test their own code.
+*/
+
+/**
+\page arch_sensor Sensor Concepts
+\b Reference: \ref OpenRAVE::SensorBase
+
+A sensor measures physical properties from the environment and converts them to data. Each sensor is
+associated with a particular position in space, has a geometry with properties defining the type of
+sensor, and can be queried for sensor data. Available sensor types are specified by \ref
+OpenRAVE::SensorBase::SensorType "SensorType".
+
+By default, all the sensors start with power off, meaning that the sensor does not gather data. The
+power can be turned on by using \ref OpenRAVE::SensorBase::Configure and sending the \ref
+SensorBase::CC_PowerOn command. All programs should manually turn sensor power on before using the
+sensors.
+
+The sensor has two different rendering options:.
+
+- <b>Geometry Rendering</b> - Renders a small icon that represents where the laser is placed in the
+environment, the icon's image should only be dependent on the geometry parameters of the sensor, and
+not the actual sensor data. Geometry rendering should be turned on by default. To configure this,
+use the SensorBase::CC_RenderDataX commands.
+
+- <b>Data Rendering</b> - Data rendering shows the measured sensor data coming out of the
+GetSensorData(). Usually the data can be very heavy, especially when a sensor's update rate is high,
+so data rendering is turned off by default. If the power is off, data should not be rendered. To
+configure this, use the SensorBase::CC_RenderGeometryX commands.
+
+Check out the <a href="../main/plugins.html#basesensors">basesensors</a> plugin for an example of how
+to implement a basic laser range and camera sensors.
+
+*/
+
+/**
+\page arch_sensorsystem Sensor System Concepts
+\b Reference: \ref OpenRAVE::SensorSystemBase
+New objects can be created, existing objects can be updated. Every managed object should set the
+kinbody's Manager pointer
+*/
+
+/**
+\page arch_trajectory Trajectory Concepts
+\b Reference: \ref OpenRAVE::TrajectoryBase
+
+A trajectory is a path between a set of configuration space points. It
+performs smoothing and filtering on this path.
+
+\b Exporting options:
+The file format is:
+\verbatim
+#points #dof #options
+[timestamp 1] [dof joint values 1] [transform 1] [dof joint velocities 1] [linear and angular velocity 1]
+[timestamp 2] [dof joint values 2] [transform 2] [dof joint velocities 2] [linear and angular velocity 2]
+...
+\endverbatim
+
+Export format:
+- linear velocity - xyz velocity
+- angular velocity - axis * angular_speed
+- transform - outputs quaternion first then translation
+
+An example file that contains 2 points linearly interpolated with timestamps for a 3 dof robot is:
+\verbatim
+2 3 68
+0.5 0 0   0
+1.5 1 2.2 3.3
+\endverbatim
+
+where 4 (TO_OneLine) + 64*1 (LINEAR) = 68.
+
+Cubic blend would be 4 (TO_OneLine) + 64*3 (CUBIC) = 196.
+
+*/
+
+/**
+\page arch_viewer Viewer Concepts
+\b Reference: \ref OpenRAVE::ViewerBase
+Viewer is responsible only for the environment it is attached to.
+
+*/

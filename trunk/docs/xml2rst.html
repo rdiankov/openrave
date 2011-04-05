@@ -1,0 +1,145 @@
+<?xml version="1.0" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>xml2rst.xsl - An XSLT script to convert Docutils XML to reStructuredText</title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<link rev="made" href="mailto:root@localhost" />
+</head>
+
+<body style="background-color: white">
+
+<p><a name="__index__"></a></p>
+<!-- INDEX BEGIN -->
+
+<ul>
+
+	<li><a href="#name">NAME</a></li>
+	<li><a href="#synopsis">SYNOPSIS</a></li>
+	<li><a href="#description">DESCRIPTION</a></li>
+	<ul>
+
+		<li><a href="#options">Options</a></li>
+		<li><a href="#unsupported_features">Unsupported features</a></li>
+	</ul>
+
+	<li><a href="#installation">INSTALLATION</a></li>
+	<li><a href="#author">AUTHOR</a></li>
+	<li><a href="#license">LICENSE</a></li>
+	<li><a href="#availabilty">AVAILABILTY</a></li>
+</ul>
+<!-- INDEX END -->
+
+<hr />
+<p>
+</p>
+<h1><a name="name">NAME</a></h1>
+<p>xml2rst.xsl - An XSLT script to convert Docutils XML to reStructuredText</p>
+<p>
+</p>
+<hr />
+<h1><a name="synopsis">SYNOPSIS</a></h1>
+<pre>
+  Xalan docutils.xml xml2rst.xsl</pre>
+<p>
+</p>
+<hr />
+<h1><a name="description">DESCRIPTION</a></h1>
+<p><strong>xml2rst.xsl</strong> is an XSLT script to convert Docutils XML to
+reStructuredText. You can use your favorite XSLT processor supporting
+EXSLT (e.g. xsltproc from the Gnome project) to generate
+reStructuredText from the Docutils intermediate XML representation.
+Its main use is to generate reStructuredText from some other format
+where a converter to Docutils XML already exists.</p>
+<p>
+</p>
+<h2><a name="options">Options</a></h2>
+<p>The following options are supported. They are XSLT parameters for the
+whole script and must be given to the XSLT processor by the respective
+option (Xalan: <strong>-p</strong>).</p>
+<dl>
+<dt><strong><a name="item_adornment">adornment</a></strong></dt>
+
+<dd>
+<p>Configures title markup to use so different styles can be requested
+easily.</p>
+<p>The value of the parameter must be a string made up of a sequence of
+character pairs. The first character of a pair is <code>o</code> (overline) or
+<code>u</code> (underline) and the second character is the character to use for
+the markup.</p>
+<p>The first and the second character pair is used for document title and
+subtitle, the following pairs are used for section titles where the
+third pair is used for the top level section title.</p>
+<p>Defaults to <code>o=o-u=u-u~u:u.u`</code>.</p>
+</dd>
+<dt><strong><a name="item_fold">fold</a></strong></dt>
+
+<dd>
+<p>Configures whether long text lines in paragraphs should be folded and
+to which length. This option is for input not coming from reST which
+may have no internal line feeds in plain text strings.</p>
+<p>If folding is enabled text strings not in a line feed preserving
+context are first white-space normalized and then broken according to
+the folding rules. Folding rules put out the first word and continue
+to do so with the following words unless the next word would cross
+the folding boundary. Words are delimited by white-space.</p>
+<p>Defaults to <code>0</code>, i.e. no folding.</p>
+</dd>
+</dl>
+<p>
+</p>
+<h2><a name="unsupported_features">Unsupported features</a></h2>
+<p>It is generally not possible to create an exact reproduction of an
+original reStructuredText source from an intermediate XML file. The
+reason is that Docutils transports pretty much but not all information
+of the original source into the XML. Also the sequence is changed
+sometimes.</p>
+<p>However, the coverage of Docutils features of <strong>xml2rst.xsl</strong> is pretty
+good. A few minor features are not supported:</p>
+<ul>
+<li><strong><a name="item_fully_minimized_style_for_literal_blocks">Fully minimized style for literal blocks</a></strong>
+
+</li>
+<li><strong><a name="item_substitution_references_for_replace_3a_3a_substitu">Substitution references for <code>replace::</code> substitutions</a></strong>
+
+</li>
+<li><strong><a name="item_counting_roman_numbers_in_enumerated_lists">Counting roman numbers in enumerated lists</a></strong>
+
+</li>
+<li><strong><a name="item_special_table_types_like_list_2dtable_3a_3a_and_cs">Special table types like <code>list-table::</code> and <code>csv-table::</code></a></strong>
+
+</li>
+<li><strong><a name="item_custom_role_definitions">Custom role definitions</a></strong>
+
+</li>
+</ul>
+<p>
+</p>
+<hr />
+<h1><a name="installation">INSTALLATION</a></h1>
+<p>Installation is not necessary. Just use the file as downloaded with
+your favorite XSLT processor supporting EXSLT. For instance you can
+use <strong>xsltproc</strong> from the Gnome project.</p>
+<p>
+</p>
+<hr />
+<h1><a name="author">AUTHOR</a></h1>
+<p>Stefan Merten &lt;<a href="mailto:smerten@oekonux.de">smerten@oekonux.de</a>&gt; based on works by David Priest.</p>
+<p>
+</p>
+<hr />
+<h1><a name="license">LICENSE</a></h1>
+<p>This program is licensed under the terms of the GPL. See</p>
+<pre>
+        <a href="http://www.gnu.org/licenses/gpl.txt">http://www.gnu.org/licenses/gpl.txt</a></pre>
+<p>
+</p>
+<hr />
+<h1><a name="availabilty">AVAILABILTY</a></h1>
+<p>See</p>
+<pre>
+        <a href="http://www.merten-home.de/FreeSoftware/xml2rst/">http://www.merten-home.de/FreeSoftware/xml2rst/</a></pre>
+
+</body>
+
+</html>

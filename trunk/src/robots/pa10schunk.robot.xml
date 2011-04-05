@@ -1,0 +1,44 @@
+<Robot name="PA10" file="mitsubishi-pa10.zae">
+  <KinBody>
+    <body name="staticbase" type="static">
+      <geom type="box">
+        <extents>0.001 0.001 0.001</extents>
+      </geom>
+    </body>
+    <joint type="hinge" enable="false">
+      <body>staticbase</body>
+      <body>link0</body>
+      <limitsdeg>0 0</limitsdeg>
+    </joint>
+    <KinBody file="schunk_manip.kinbody.xml"></KinBody>
+    <Joint name="dummy" type="hinge" enable="false">
+      <body>link7</body>
+      <body>gripper_base</body>
+      <axis>0 0 1</axis>
+      <limitsdeg>0 0</limitsdeg>
+    </Joint>
+  </KinBody>
+  
+  <AttachedSensor name="wristcam">
+    <link>gripper_base</link>
+    <translation>-0.06514 -0.00494 0.12267</translation>
+    <rotationmat>0.93581   0.02765   0.35142  -0.03113   0.99951   0.00426  -0.35113  -0.01493   0.93621</rotationmat>
+    <sensor type="BaseCamera" args="">
+      <KK>600 600 320 240</KK>
+      <width>640</width>
+      <height>480</height>
+      <framerate>5</framerate>
+      <color>0.5 0.5 1</color>
+      <power>0</power>
+    </sensor>
+  </AttachedSensor>
+
+  <Manipulator name="arm">
+    <base>link0</base>
+    <effector>gripper_base</effector>
+    <joints>jfinger_L</joints>
+    <closingdirection>-1</closingdirection>
+    <direction>0 0 1</direction>
+    <iksolver>PA10ikfast 0.1</iksolver>
+  </Manipulator>
+</Robot>

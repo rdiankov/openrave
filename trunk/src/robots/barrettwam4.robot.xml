@@ -1,0 +1,28 @@
+<Robot name="BarrettWAM">
+  <KinBody file="wam4.kinbody.xml">
+    <Body name="wam7">
+      <offsetfrom>wam4</offsetfrom>
+      <geom type="box">
+        <extents>0.001 0.001 0.001</extents>
+      </geom>
+    </Body>
+  </KinBody>
+  <KinBody file="barretthand.kinbody.xml">
+    <!-- create a dummy joint between wam4 and wam7 -->
+    <Joint type="hinge">
+      <body>wam4</body>
+      <body>wam7</body>
+      <limits>0 0</limits>
+      <axis>0 0 1</axis>
+    </Joint>
+  </KinBody>
+
+  <Manipulator name="arm">
+    <base>wam0</base>
+    <effector>wam4</effector>
+    <joints>JF1 JF2 JF3 JF4</joints>
+    <closingdirection>1 1 1 0</closingdirection>
+    <direction>0 0 1</direction>
+    <translation>0 0 0.18</translation>
+  </Manipulator>
+</Robot>

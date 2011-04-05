@@ -1,0 +1,100 @@
+Index: dom/Makefile
+===================================================================
+--- dom/Makefile	2008-10-02 17:48:30.000000000 -0700
++++ dom/Makefile	2010-03-03 14:44:09.162398249 -0800
+@@ -55,7 +55,7 @@
+ conf := release
+ 
+ # Collada version: '1.4', '1.5', or 'all'
+-colladaVersion := 1.4
++colladaVersion := 1.5
+ 
+ # parser: 'libxml', 'tinyxml', or 'all'.
+ parser := libxml
+@@ -188,7 +188,7 @@
+ ifneq ($(filter install uninstall installTest,$(MAKECMDGOALS)),)
+ # You can only install on Mac or Linux. Check for that.
+ ifeq ($(oss),linux)
+-prefix := /usr/local
++prefix := ../../../
+ else ifeq ($(oss),mac)
+ prefix := /Library/Frameworks
+ else
+Index: dom/make/common.mk
+===================================================================
+--- dom/make/common.mk	2008-05-14 17:30:42.000000000 -0700
++++ dom/make/common.mk	2010-04-07 17:16:11.000000000 -0700
+@@ -17,6 +17,8 @@
+ debugSuffix :=
+ endif
+ 
++ccFlags += $(shell rosboost-cfg --cflags)
++
+ ifeq ($(os),mac)
+ # Add the -arch flags to specify what architectures we're building for.
+ ccFlags += $(addprefix -arch ,$(subst x86,i386,$(archs)))
+Index: dom/make/domTest.mk
+===================================================================
+--- dom/make/domTest.mk	2008-09-03 08:51:18.000000000 -0700
++++ dom/make/domTest.mk	2010-04-07 17:17:18.000000000 -0700
+@@ -55,13 +55,7 @@
+ endif
+ 
+ # Boost defs
+-ifeq ($(os),linux)
+-libOpts += -lboost_filesystem
+-else
+-includeOpts += -Iexternal-libs/boost
+-libOpts += external-libs/boost/lib/$(buildID)/libboost_system.a
+-libOpts += external-libs/boost/lib/$(buildID)/libboost_filesystem.a
+-endif
++libOpts += $(shell rosboost-cfg --lflags system,filesystem)
+ ifeq ($(os),ps3)
+ # PS3 doesn't support C++ locales, so tell boost not to use them
+ ccFlags += -DBOOST_NO_STD_LOCALE
+
+--- dom/src/dae/daeSIDResolver.cpp
++++ dom/src/dae/daeSIDResolver.cpp
+@@ -152,6 +152,18 @@
+ 	                         list<string>& remainingPart) {
+ 		remainingPart.clear();
+ 
++        // custom change for following instance urls (Rosen Diankov)
++        if ( strncmp( container->getElementName(), "instance_", 9 ) == 0 ) {
++            daeURI *uri = (daeURI*)container->getAttributeValue("url");
++            if ( uri != NULL && uri->getElement() != NULL ) {
++                daeElement *e = findWithDots( uri->getElement(), s, profile, finder, remainingPart );
++                if ( e != NULL ) {
++                    //found it
++                    return e;
++                }
++            }
++        }
++
+ 		// First see if the whole thing resolves correctly
+ 		if (daeElement* result = finder(container, s, profile))
+ 			return result;
+@@ -355,6 +367,23 @@
+ 		if ((!member.empty() || haveArrayIndex1)  &&  result.scalar == NULL)
+ 			return daeSidRef::resolveData();
+ 
++        if( !!result.elt && !result.array && !result.scalar ) {
++            // if newparam, follow its SIDREF (Rosen Diankov)
++            if( strcmp(result.elt->getElementName(),"newparam") == 0) {
++                daeElement* psidref = result.elt->getChild("SIDREF");
++                if( !!psidref ) {
++                    daeSidRef::resolveData newresult;
++                    newresult = resolveImpl(daeSidRef(string("./") + psidref->getCharData(),result.elt->getParent(),sidRef.profile));
++                    if( !newresult.elt ) {
++                        newresult = resolveImpl(daeSidRef(psidref->getCharData(),result.elt->getParent(),sidRef.profile));
++                    }
++                    if( !!newresult.elt ) {
++                        return newresult;
++                    }
++                }
++            }
++        }
++
+ 		// SID resolution was successful.
+ 		return result;
+ 	}

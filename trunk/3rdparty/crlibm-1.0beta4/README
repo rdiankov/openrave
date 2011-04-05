@@ -1,0 +1,31 @@
+cr-libm, a portable, efficient, correctly rounded mathematical library.
+
+To compile: 
+./configure; make;
+
+(for options see ./configure --help)
+
+To run the selftest:
+make check;
+
+
+
+Beta release note: 
+
+This version contains one state-of-the-art implementation. The log
+comes in two versions, log-td (portable) and log-de (optimised for
+processors with double-extended hardware). The ./configure should
+enable the one that is best for your system, except on Itanium: see
+below. 
+
+There is no known bug, but several shortcomings are listed in
+the TODO file.
+
+
+Note for Itanium systems: Out-of-the box it should compile and
+selftest on Linux under both gcc and icc (feedback on HPUX is
+welcome). However, optimised versions of log and atan are
+disabled. They currently require icc 8.1 or later. See the beginning
+of log-de.c and atan-itanium.c for instructions on how to enable them.
+
+

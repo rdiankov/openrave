@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<KinBody name="TestChain">
+  <!-- Possible attributes are: name, type (static, dynamic(def)) -->
+  <Body name="Body1" type="dynamic">
+    <Geom type="box">
+      <Extents>2 1 1</Extents>
+     </Geom>
+  </Body>
+</KinBody>

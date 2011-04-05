@@ -1,0 +1,36 @@
+<robot name="diffdrive">
+  <kinbody>
+    <body name="base">
+      <geom type="box">
+        <extents>0.1 0.4 0.15</extents>
+        <translation>0 0 0.2</translation>
+      </geom>
+    </body>
+    <body name="wheel_left">
+      <geom type="cylinder">
+        <radius>0.2</radius>
+        <height>0.1</height>
+        <translation>0 0.46 0.2</translation>
+      </geom>
+    </body>
+    <body name="wheel_right">
+      <geom type="cylinder">
+        <radius>0.2</radius>
+        <height>0.1</height>
+        <translation>0 -0.46 0.2</translation>
+      </geom>
+    </body>
+    <joint name="wheel_left" type="hinge" circular="true">
+      <body>base</body>
+      <body>wheel_left</body>
+      <anchor>0 0 0.2</anchor>
+      <axis>0 1 0</axis>
+    </joint>
+    <joint name="wheel_right" type="hinge" circular="true">
+      <body>base</body>
+      <body>wheel_right</body>
+      <anchor>0 0 0.2</anchor>
+      <axis>0 1 0</axis>
+    </joint>
+  </kinbody>
+</robot>

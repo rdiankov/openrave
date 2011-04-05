@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+  <KinBody name="jack">
+    <Body type="dynamic">
+      <Geom type="cylinder">
+        <diffuseColor>0.5 0 0</diffuseColor>
+        <radius>0.03</radius>
+        <height>0.60</height>
+      </Geom>
+    </Body>
+     <Body type="dynamic">
+      <Geom type="cylinder">
+        <RotationAxis>1 0 0 90</RotationAxis>
+        <diffuseColor>0.5 0 0</diffuseColor>
+        <radius>0.03</radius>
+        <height>0.60</height>
+      </Geom>
+    </Body>
+     <Body type="dynamic">
+      <Geom type="cylinder">
+        <RotationAxis>0 0 1 90</RotationAxis>
+        <diffuseColor>0.5 0 0</diffuseColor>
+        <radius>0.03</radius>
+        <height>0.60</height>
+      </Geom>
+    </Body>
+
+
+
+  </KinBody>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<KinBody name="Lego2">
+  <!-- Possible attributes are: name, type (static, dynamic(def)) -->
+  <Body type="dynamic">
+    <!-- The body transform affects all geometry objects -->
+    <Mass type="mimicgeom">
+      <density>3000</density>
+    </Mass>
+    <Geom type="box">
+      <diffuseColor>0.5 0 0</diffuseColor>
+      <Translation>-1 1.5 0</Translation>
+      <Extents>0.01 0.01 0.01</Extents>
+    </Geom>
+  </Body>
+</KinBody>

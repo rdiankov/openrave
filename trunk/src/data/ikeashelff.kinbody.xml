@@ -1,0 +1,46 @@
+<KinBody name="ikeashelf">
+  <Body>
+    <!-- horizontal shelf -->
+    <Geom type="box">
+      <Translation>0 0 1.050</Translation>
+      <extents>0.14 0.4 0.04</extents>
+      <diffusecolor>0.4 0 0.1</diffusecolor>
+    </Geom>
+    <Geom type="box">
+      <Translation>0 0 0.764</Translation>
+      <extents>0.14 0.4 0.03</extents>
+      <diffusecolor>0.4 0 0.1</diffusecolor>
+    </Geom>
+    <Geom type="box">
+      <Translation>0 0 0.467</Translation>
+      <extents>0.14 0.4 0.03</extents>
+      <diffusecolor>0.4 0 0.1</diffusecolor>
+    </Geom>
+    <Geom type="box">
+      <Translation>0 0 0.095</Translation>
+      <extents>0.14 0.4 0.03</extents>
+      <diffusecolor>0.4 0 0.1</diffusecolor>
+    </Geom>
+    <!-- vertical -->
+    <Geom type="box">
+      <Translation>0 0.39 0.53</Translation>
+      <extents>0.14 0.05 0.53</extents>
+      <diffusecolor>0.4 0 0.1</diffusecolor>
+    </Geom>
+    <Geom type="box">
+      <Translation>0 -0.39 0.53</Translation>
+      <extents>0.14 0.05 0.53</extents>
+      <diffusecolor>0.4 0 0.1</diffusecolor>
+    </Geom>
+    <Geom type="box">
+      <Translation>-0.13 0 0.53</Translation>
+      <extents>0.04 0.4 0.53</extents>
+      <diffusecolor>0.4 0 0.1</diffusecolor>
+    </Geom>
+    <Geom type="box">
+      <Translation>0.1 0 0.0425</Translation>
+      <extents>0.04 0.4 0.0425</extents>
+      <diffusecolor>0.4 0 0.1</diffusecolor>
+    </Geom>
+  </Body>
+</KinBody>

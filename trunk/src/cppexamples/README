@@ -1,0 +1,7 @@
+Simple stand-alone OpenRAVE plugin using CMake build system.  To compile, type:
+
+cmake .
+make
+
+
+When creating your own project, make sure to copy FindOpenRAVE.cmake with the CMakeLists.txt, since it is needed to get the correct openrave libraries included.
