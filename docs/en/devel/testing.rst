@@ -12,7 +12,7 @@ Configuring
 
 Because it is not necessary to cater to the lowest common denominator, use easy_install to get latest test packages::
 
-  sudo apt-get install graphviz
+  sudo apt-get install graphviz python-svn
   sudo easy_install nose coverage
 
 Jenkins
@@ -59,6 +59,7 @@ Compilation
 * wihtout python bindings, without octave bindings, without plugins, without collada
 * boost versions: 1.35, 1.39, 1.44
 * cmake versions: 2.6, 2.8
+* 32bit vs 64bit
 * test ik generation
 
 IKFast

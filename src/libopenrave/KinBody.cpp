@@ -1483,7 +1483,7 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
     }
 
     stringstream sVars;
-    if( resultVars.size() > 0 ) {
+    if( !resultVars.empty() ) {
         sVars << resultVars.at(0);
         for(size_t i = 1; i < resultVars.size(); ++i) {
             sVars << "," << resultVars[i];
@@ -1580,12 +1580,12 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int,dReal> 
         std::map< std::pair<MIMIC::DOFFormat, int>, dReal >::iterator it = mapcachedpartials.find(key);
         if( it == mapcachedpartials.end() ) {
             // not in the cache so compute using the chain rule
-            if( vtempvalues.size() == 0 ) {
+            if( vtempvalues.empty() ) {
                 FOREACHC(itdofformat, _vmimic[iaxis]->_vdofformat) {
                     vtempvalues.push_back(itdofformat->GetJoint(parent)->GetValue(itdofformat->axis));
                 }
             }
-            dReal fvel = _vmimic[iaxis]->_velfns.at(itmimicdof->dofformatindex)->Eval(vtempvalues.size() > 0 ? &vtempvalues[0] : NULL);
+            dReal fvel = _vmimic[iaxis]->_velfns.at(itmimicdof->dofformatindex)->Eval(vtempvalues.empty() ? NULL : &vtempvalues[0]);
             const MIMIC::DOFFormat& dofformat = _vmimic[iaxis]->_vdofformat.at(itmimicdof->dofformatindex);
             if( dofformat.GetJoint(parent)->IsMimic(dofformat.axis) ) {
                 dofformat.GetJoint(parent)->_ComputePartialVelocities(vtemppartials,dofformat.axis,mapcachedpartials);
@@ -2215,7 +2215,7 @@ bool KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocity, const Vec
                         else {
                             partialvelocity = vPassiveJointVelocities.at(vdofformat[varindex].jointindex-_vecjoints.size()).at(vdofformat[varindex].axis);
                         }
-                        dummyvalues[i] += (*itfn)->Eval(vtempvalues.size() > 0 ? &vtempvalues[0] : NULL) * partialvelocity;
+                        dummyvalues[i] += (*itfn)->Eval(vtempvalues.empty() ? NULL : &vtempvalues[0]) * partialvelocity;
                         ++varindex;
                     }
 
@@ -2566,7 +2566,7 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, bool bCheckLi
                         }
                     }
                     //dummyvalues[i] = pjoint->_vmimic.at(i)->_posfn->Eval(vtempvalues.size() > 0 ? &vtempvalues[0] : NULL);
-                    pjoint->_vmimic.at(i)->_posfn->EvalMulti(veval, vtempvalues.size() > 0 ? &vtempvalues[0] : NULL);
+                    pjoint->_vmimic.at(i)->_posfn->EvalMulti(veval, vtempvalues.empty() ? NULL : &vtempvalues[0]);
                     if( pjoint->_vmimic.at(i)->_posfn->EvalError() ) {
                         RAVELOG_WARN(str(boost::format("failed to evaluate joint %s, fparser error %d")%pjoint->GetName()%pjoint->_vmimic.at(i)->_posfn->EvalError()));
                     }
@@ -2601,7 +2601,7 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, bool bCheckLi
                         }
                     }
                     
-                    if( veval.size() == 0 ) {
+                    if( veval.empty() ) {
                         FORIT(iteval,vevalcopy) {
                             if( pjoint->GetType() == Joint::JointSpherical || pjoint->IsCircular(i) ) {
                                 veval.push_back(*iteval);
@@ -2618,7 +2618,7 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, bool bCheckLi
                                 veval.push_back(*iteval);
                             }
                         }
-                        if( veval.size() == 0 ) {
+                        if( veval.empty() ) {
                             throw openrave_exception(str(boost::format("SetDOFValues: no valid values for joint %s")%pjoint->GetName()),ORE_Assert);
                         }
                     }
@@ -3347,7 +3347,7 @@ void KinBody::_ComputeInternalInformation()
             S.push_back(P);
             vuniquepaths[*itv].push_back(P);
         }
-        while(S.size() > 0) {
+        while(!S.empty()) {
             std::list<int>& P = S.front();
             int u = P.back();
             FOREACH(itv,vlinkadjacency[u]) {
@@ -3523,7 +3523,7 @@ void KinBody::_ComputeInternalInformation()
         bool bcontinuesorting = true;
         while(bcontinuesorting) {
             bcontinuesorting = false;
-            while(noincomingedges.size() > 0) {
+            while(!noincomingedges.empty()) {
                 int n = noincomingedges.front();
                 noincomingedges.pop_front();
                 _vTopologicallySortedJointIndicesAll.push_back(n);

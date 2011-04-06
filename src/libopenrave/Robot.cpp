@@ -90,7 +90,7 @@ bool RobotBase::Manipulator::FindIKSolution(const IkParameterization& goal, cons
         throw openrave_exception(str(boost::format("manipulator %s:%s does not have an IK solver set")%RobotBasePtr(_probot)->GetName()%GetName()));
     }
     RobotBasePtr probot = GetRobot();
-    EnvironmentMutex::scoped_lock lock(probot->GetEnv()->GetMutex());
+    EnvironmentMutex::scoped_lock lock(probot->GetEnv()->GetMutex()); // lock just in case since many users call this without locking...
     BOOST_ASSERT(_pIkSolver->GetManipulator() == shared_from_this() );
     vector<dReal> temp;
     probot->GetDOFValues(temp);
@@ -119,7 +119,7 @@ bool RobotBase::Manipulator::FindIKSolutions(const IkParameterization& goal, con
     if( !_pIkSolver ) {
         throw openrave_exception(str(boost::format("manipulator %s:%s does not have an IK solver set")%RobotBasePtr(_probot)->GetName()%GetName()));
     }
-    EnvironmentMutex::scoped_lock lock(GetRobot()->GetEnv()->GetMutex());
+    EnvironmentMutex::scoped_lock lock(GetRobot()->GetEnv()->GetMutex()); // lock just in case since many users call this without locking...
     BOOST_ASSERT(_pIkSolver->GetManipulator() == shared_from_this() );
     IkParameterization localgoal;
     if( !!_pBase ) {
@@ -455,7 +455,7 @@ bool RobotBase::Manipulator::CheckIndependentCollision(CollisionReportPtr report
             // check if any grabbed bodies are attached to this link
             FOREACHC(itgrabbed,probot->_vGrabbedBodies) {
                 if( itgrabbed->plinkrobot == *itlink ) {
-                    if( vbodyexcluded.size() == 0 ) {
+                    if( vbodyexcluded.empty() ) {
                         vbodyexcluded.push_back(KinBodyConstPtr(probot));
                     }
                     KinBodyPtr pbody = itgrabbed->pbody.lock();
