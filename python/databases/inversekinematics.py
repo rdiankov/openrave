@@ -521,7 +521,8 @@ class InverseKinematicsModel(DatabaseGenerator):
             raise ValueError('bad type')
 
         dofexpected = IkParameterization.GetDOF(self.iktype)
-        self.freeindices = freeindices
+        if freeindices is not None:
+            self.freeindices = freeindices
         if self.freeindices is None:
             if freejoints is not None:
                 self.freeindices = self.getIndicesFromJointNames(freejoints)

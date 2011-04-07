@@ -145,7 +145,7 @@ cmake -DOPT_PLUGINS=OFF ..
 Download the sources from \sourcesdownload{sourceforge}.
 
 \verbatim
-svn co https://openrave.svn.sourceforge.net/svnroot/openrave/trunk openrave
+svn co https://openrave.svn.sourceforge.net/svnroot/openrave/tags/latest_stable openrave
 \endverbatim
 
 %OpenRAVE works only with qt4! Before compiling SoQt or %OpenRAVE make sure to remove any qt3 related dev packages like \c qt3-dev-tools or \c libqt3-headers.
@@ -157,7 +157,7 @@ If there are compilation errors with templates, might have to use gcc version 4.
 最新のソースコードは\sourcesdownload{sourceforge}から入手できます．まずは以下のコマンドを入力しソースコードをダウンロードしてください．
 
 \verbatim
-svn co https://openrave.svn.sourceforge.net/svnroot/openrave/trunk openrave
+svn co https://openrave.svn.sourceforge.net/svnroot/openrave/tags/latest_stable openrave
 \endverbatim
 
 %OpenRAVEはqt4でのみ動作します．SoQtまたは%OpenRAVEをコンパイルする前に\c qt3-dev-tools や \c libqt3-headers のような，全てのqt3に関連するパッケージを削除してください．
@@ -433,7 +433,7 @@ Download the sources from \sourcesdownload{sourceforge} (<a
 href="http://tortoisesvn.net/downloads.html/">Tortoise SVN</a> is recommended). The subversion url is:
 
 \verbatim
-https://openrave.svn.sourceforge.net/svnroot/openrave/trunk
+https://openrave.svn.sourceforge.net/svnroot/openrave/tags/latest_stable
 \endverbatim
 
 Check out the openrave sources <b>in a path whose directories do not contain spaces</b>!!!. For example \c C:\\openrave.
