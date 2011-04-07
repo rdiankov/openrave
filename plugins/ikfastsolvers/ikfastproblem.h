@@ -6,9 +6,14 @@
 #include <boost/lexical_cast.hpp>
 
 #ifdef Boost_IOSTREAMS_FOUND
-#define BOOST_IOSTREAMS_USE_DEPRECATED // needed for newer versions of boost
 #include <boost/iostreams/device/file_descriptor.hpp>
 #include <boost/iostreams/stream.hpp>
+#include <boost/version.hpp>
+#if BOOST_VERSION >= 104400
+#define FILE_DESCRIPTOR_FLAG boost::iostreams::never_close_handle
+#else
+#define FILE_DESCRIPTOR_FLAG false
+#endif
 #endif
 
 #include <errno.h>
@@ -315,7 +320,7 @@ public:
             string cmdhas = str(boost::format("openrave.py --database inversekinematics --gethas --robot=\"%s\" --manipname=%s --iktype=%s")%probot->GetXMLFilename()%probot->GetActiveManipulator()->GetName()%striktype);
             FILE* pipe = MYPOPEN(cmdhas.c_str(), "r");
             {
-                boost::iostreams::stream_buffer<boost::iostreams::file_descriptor_source> fpstream(fileno(pipe));
+                boost::iostreams::stream_buffer<boost::iostreams::file_descriptor_source> fpstream(fileno(pipe),FILE_DESCRIPTOR_FLAG);
                 std::istream in(&fpstream);
                 std::getline(in, hasik);
             }            
@@ -344,7 +349,7 @@ public:
         string ikfilename;
         FILE* pipe = MYPOPEN(cmdfilename.c_str(), "r");
         {
-            boost::iostreams::stream_buffer<boost::iostreams::file_descriptor_source> fpstream(fileno(pipe));
+            boost::iostreams::stream_buffer<boost::iostreams::file_descriptor_source> fpstream(fileno(pipe),FILE_DESCRIPTOR_FLAG);
             std::istream in(&fpstream);
             std::getline(in, ikfilename);
             if( !in ) {
