@@ -209,9 +209,10 @@ class VisibilityModel(DatabaseGenerator):
             with self.env:
                 sensor = self.attachedsensor.GetSensor()
                 if sensor is not None: # set power to 0?
-                    sensordata = sensor.GetSensorData()
+                    sensordata = sensor.GetSensorGeometry(Sensor.Type.Camera)
                     self.KK = sensordata.KK
                     self.dims = sensordata.imagedata.shape
+                        
                 with RobotStateSaver(self.robot):
                     # find better way of handling multiple grasps
                     if len(self.preshapes) > 0:

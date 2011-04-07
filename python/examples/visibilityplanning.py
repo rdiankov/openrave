@@ -114,7 +114,7 @@ class VisibilityGrasping:
                             attachedsensor.GetSensor().Configure(Sensor.ConfigureCommand.RenderDataOn)
                             attachedsensors.append(attachedsensor)
 
-        time.sleep(1) # wait for sensors to initialize
+        time.sleep(5) # wait for sensors to initialize
         with self.orenvreal:
             self.sensor = [s for s in self.robotreal.GetAttachedSensors() if s.GetName()==sensorname][0]
             # find a manipulator whose end effector is the camera
