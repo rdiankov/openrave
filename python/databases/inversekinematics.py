@@ -210,16 +210,16 @@ class InverseKinematicsModel(DatabaseGenerator):
         try:
             filename = self.getstatsfilename(True)
             if len(filename) == 0:
-                return checkforloaded and self.manip.GetIkSolver() is not None and self.manip.GetIkSolver().Supports(IkParameterization.Type.self.iktype) # might have ik already loaded
+                return checkforloaded and self.manip.GetIkSolver() is not None and self.manip.GetIkSolver().Supports(self.iktype) # might have ik already loaded
             
             modelversion,self.statistics,self.ikfeasibility,self.solveindices,self.freeindices,self.freeinc = pickle.load(open(filename, 'r'))
             if modelversion != self.getversion():
                 log.warn('version is wrong %s!=%s',modelversion,self.getversion())
-                return checkforloaded and self.manip.GetIkSolver() is not None  and self.manip.GetIkSolver().Supports(IkParameterization.Type.self.iktype) # might have ik already loaded
+                return checkforloaded and self.manip.GetIkSolver() is not None  and self.manip.GetIkSolver().Supports(self.iktype) # might have ik already loaded
                 
         except Exception,e:
             print e
-            return checkforloaded and self.manip.GetIkSolver() is not None and self.manip.GetIkSolver().Supports(IkParameterization.Type.self.iktype) # might have ik already loaded
+            return checkforloaded and self.manip.GetIkSolver() is not None and self.manip.GetIkSolver().Supports(self.iktype) # might have ik already loaded
             
         if self.ikfeasibility is not None:
             # ik is infeasible, but load successfully completed, so return success
@@ -521,7 +521,8 @@ class InverseKinematicsModel(DatabaseGenerator):
             raise ValueError('bad type')
 
         dofexpected = IkParameterization.GetDOF(self.iktype)
-        self.freeindices = freeindices
+        if freeindices is not None:
+            self.freeindices = freeindices
         if self.freeindices is None:
             if freejoints is not None:
                 self.freeindices = self.getIndicesFromJointNames(freejoints)

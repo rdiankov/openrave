@@ -625,7 +625,7 @@ public:
     class BodyState
     {
     public:
-        BodyState() {}
+        BodyState() : environmentid(0){}
         virtual ~BodyState() {}
         KinBodyPtr pbody;
         std::vector<RaveTransform<dReal> > vectrans;

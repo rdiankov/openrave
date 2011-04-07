@@ -70,7 +70,7 @@ class OPENRAVE_API SimpleSensorSystem : public SensorSystemBase
 public:
     class OPENRAVE_API XMLData : public XMLReadable {
     public:
-    XMLData(const std::string& xmlid) : XMLReadable(xmlid) {}
+    XMLData(const std::string& xmlid) : XMLReadable(xmlid), id(0) {}
         virtual void copy(boost::shared_ptr<XMLData const> pdata) { *this = *pdata; }
 
         std::string sid; ///< global id for the system id 

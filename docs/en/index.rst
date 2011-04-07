@@ -19,7 +19,7 @@ Getting Started
 
 ::
 
-  svn co https://openrave.svn.sourceforge.net/svnroot/openrave/trunk openrave
+  svn co https://openrave.svn.sourceforge.net/svnroot/openrave/tags/latest_stable openrave
 
 * :ref:`getting_started`
 

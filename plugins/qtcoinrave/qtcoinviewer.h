@@ -365,7 +365,7 @@ protected:
 
     /// for movie recording
     SoOffscreenRenderer _ivOffscreen;
-    SoSeparator* _pOffscreenVideo, *_pFigureRoot;
+    SoSeparator *_pFigureRoot;
     uint64_t _nLastVideoFrame, _nVideoTimeOffset;
     bool _bCanRenderOffscreen;
     int _videocodec;

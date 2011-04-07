@@ -1145,7 +1145,7 @@ class ColladaReader : public daeErrorHandler
         }
 
         //  Switch between different type of geometry PRIMITIVES
-        for (; itgeom != plink->_listGeomProperties.end(); itgeom++) {
+        for (; itgeom != plink->_listGeomProperties.end(); ++itgeom) {
             itgeom->_t = tnodegeom;
             switch (itgeom->GetType()) {
             case KinBody::Link::GEOMPROPERTIES::GeomBox:

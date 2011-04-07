@@ -50,7 +50,7 @@ BOOST_STATIC_ASSERT(sizeof(xmlChar) == 1);
 #endif
 
 #ifdef OPENRAVE_IVCON
-#include "ivcon.h"
+#include <ivcon.h>
 #endif
 
 #ifdef OPENRAVE_COIN3D
@@ -2893,13 +2893,13 @@ namespace OpenRAVEXMLParser
                         ++itjoint;
                     }
                     // repeat again for the mimic equations, if any exist
-                    FOREACH(itjoint, listjoints) {
-                        for(int idof = 0; idof < (*itjoint)->GetDOF(); ++idof) {
-                            if( (*itjoint)->IsMimic(idof) ) {
+                    FOREACH(itjoint2, listjoints) {
+                        for(int idof = 0; idof < (*itjoint2)->GetDOF(); ++idof) {
+                            if( (*itjoint2)->IsMimic(idof) ) {
                                 for(int ieq = 0; ieq < 3; ++ieq) {
                                     string neweq;
-                                    SearchAndReplace(neweq,(*itjoint)->_vmimic[idof]->_equations[ieq],jointnamepairs);
-                                    (*itjoint)->_vmimic[idof]->_equations[ieq] = neweq;
+                                    SearchAndReplace(neweq,(*itjoint2)->_vmimic[idof]->_equations[ieq],jointnamepairs);
+                                    (*itjoint2)->_vmimic[idof]->_equations[ieq] = neweq;
                                 }
                             }
                         }

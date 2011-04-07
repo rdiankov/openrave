@@ -1,8 +1,9 @@
 #!/bin/bash
 trunk=$1
+latest_stable="https://openrave.svn.sourceforge.net/svnroot/openrave/tags/latest_stable"
 # only update latest_stable if the revisions changed
-revision=`python -c "import pysvn; print pysvn.Client().info('$trunk').revision.number"`
-prevrevision=`python -c "import pysvn; revision=pysvn.Client().info2('$trunk',recurse=False)[0][1].rev; print pysvn.Client().log('$trunk',revision,revision)[0].message.split()[-1]"`
+revision=`python -c "import pysvn; print pysvn.Client().info('$trunk').commit_revision.number"`
+prevrevision=`python -c "import pysvn; revision=pysvn.Client().info2('$latest_stable',recurse=False)[0][1].rev; print pysvn.Client().log('$latest_stable',revision,revision)[0].message.split()[-1]"`
 
 if [ "$revision" != "$prevrevision" ]; then
     basename="openrave-r$revision"
@@ -19,9 +20,8 @@ if [ "$revision" != "$prevrevision" ]; then
     ssh openravetesting,openrave@shell.sourceforge.net "cd /home/frs/project/o/op/openrave; tar xf latest_donotdownload.tgz; chmod -R g+w latest_donotdownload; rm -rf latest_stable latest_donotdownload.tgz; mv latest_donotdownload latest_stable"
     rm -f latest_donotdownload.tgz
 
-    svn rm --non-interactive --username openravetesting -m "Delete Latest Stable Tab (Tagged by Jenkins)." https://openrave.svn.sourceforge.net/svnroot/openrave/tags/latest_stable
-    svn cp --non-interactive --username openravetesting -m "Latest Stable Tab (Tagged by Jenkins). Revision: $SVN_REVISION" $trunk https://openrave.svn.sourceforge.net/svnroot/openrave/tags/latest_stable
+    svn rm --non-interactive --username openravetesting -m "Delete Latest Stable Tab (Tagged by Jenkins)." $latest_stable
+    svn cp --non-interactive --username openravetesting -m "Latest Stable Tab (Tagged by Jenkins). Revision: $SVN_REVISION" $trunk $latest_stable
 fi
 
 #ssh-keygen -t dsa -f ~/.ssh/id_dsa.openravetesting.sf -P "" -C "openravetesting@shell.sourceforge.net"
-

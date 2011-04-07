@@ -37,10 +37,10 @@ build openrave must include (used in place of rave.h). Precompiled header.
 #include <boost/typeof/std/set.hpp>
 #include <boost/typeof/std/string.hpp>
 
-#define FOREACH(it, v) for(BOOST_TYPEOF(v)::iterator it = (v).begin(); it != (v).end(); (it)++)
+#define FOREACH(it, v) for(BOOST_TYPEOF(v)::iterator it = (v).begin(); it != (v).end(); ++(it))
 #define FOREACH_NOINC(it, v) for(BOOST_TYPEOF(v)::iterator it = (v).begin(); it != (v).end(); )
 
-#define FOREACHC(it, v) for(BOOST_TYPEOF(v)::const_iterator it = (v).begin(); it != (v).end(); (it)++)
+#define FOREACHC(it, v) for(BOOST_TYPEOF(v)::const_iterator it = (v).begin(); it != (v).end(); ++(it))
 #define FOREACHC_NOINC(it, v) for(BOOST_TYPEOF(v)::const_iterator it = (v).begin(); it != (v).end(); )
 #define RAVE_REGISTER_BOOST
 
@@ -219,7 +219,7 @@ namespace OpenRAVEXMLParser
 #define stricmp strcasecmp
 #endif
 
-#define FORIT(it, v) for(it = (v).begin(); it != (v).end(); (it)++)
+#define FORIT(it, v) for(it = (v).begin(); it != (v).end(); ++(it))
 
 template<class T>
 inline T CLAMP_ON_RANGE(T value, T min, T max)

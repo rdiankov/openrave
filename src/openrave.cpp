@@ -47,10 +47,6 @@ void sigint_handler(int sig);
 
 #define FORIT(it, v) for(it = (v).begin(); it != (v).end(); (it)++)
 
-#ifndef ARRAYSIZE
-#define ARRAYSIZE(x) (sizeof(x)/(sizeof( (x)[0] )))
-#endif
-
 //void sigint_handler(int);
 void MainOpenRAVEThread();
 

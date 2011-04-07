@@ -145,7 +145,7 @@ cmake -DOPT_PLUGINS=OFF ..
 Download the sources from \sourcesdownload{sourceforge}.
 
 \verbatim
-svn co https://openrave.svn.sourceforge.net/svnroot/openrave/trunk openrave
+svn co https://openrave.svn.sourceforge.net/svnroot/openrave/tags/latest_stable openrave
 \endverbatim
 
 %OpenRAVE works only with qt4! Before compiling SoQt or %OpenRAVE make sure to remove any qt3 related dev packages like \c qt3-dev-tools or \c libqt3-headers.
@@ -157,7 +157,7 @@ If there are compilation errors with templates, might have to use gcc version 4.
 最新のソースコードは\sourcesdownload{sourceforge}から入手できます．まずは以下のコマンドを入力しソースコードをダウンロードしてください．
 
 \verbatim
-svn co https://openrave.svn.sourceforge.net/svnroot/openrave/trunk openrave
+svn co https://openrave.svn.sourceforge.net/svnroot/openrave/tags/latest_stable openrave
 \endverbatim
 
 %OpenRAVEはqt4でのみ動作します．SoQtまたは%OpenRAVEをコンパイルする前に\c qt3-dev-tools や \c libqt3-headers のような，全てのqt3に関連するパッケージを削除してください．
@@ -199,7 +199,7 @@ switch to the unstripped versions when recording.
 \~ \subsection ilinux_ubuntu9 Ubuntu 9.x
 
 \verbatim
-sudo apt-get install g++ cmake libqt4-dev qt4-dev-tools ffmpeg libavcodec-dev libavformat-dev libxvidcore4-dev libfaac-dev libogg-dev libvorbis-dev libdc1394-22-dev libgsm1-dev libboost-dev libboost-regex-dev libxml2-dev libsoqt4-dev libboost-graph-dev libode0-dev libboost-wave-dev libboost-serialization-dev libboost-filesystem-dev libpcre3-dev libboost-thread-dev libswscale-dev
+sudo apt-get install g++ cmake libqt4-dev qt4-dev-tools ffmpeg libavcodec-dev libavformat-dev libxvidcore4-dev libfaac-dev libogg-dev libvorbis-dev libdc1394-22-dev libgsm1-dev libboost-dev libboost-regex-dev libxml2-dev libsoqt4-dev libboost-graph-dev libode0-dev libboost-wave-dev libboost-serialization-dev libboost-filesystem-dev libpcre3-dev libboost-thread-dev libswscale-dev libsimage-dev
 \endverbatim
 
 \~ \subsection ilinux_ubuntu10 Ubuntu 10.x
@@ -433,7 +433,7 @@ Download the sources from \sourcesdownload{sourceforge} (<a
 href="http://tortoisesvn.net/downloads.html/">Tortoise SVN</a> is recommended). The subversion url is:
 
 \verbatim
-https://openrave.svn.sourceforge.net/svnroot/openrave/trunk
+https://openrave.svn.sourceforge.net/svnroot/openrave/tags/latest_stable
 \endverbatim
 
 Check out the openrave sources <b>in a path whose directories do not contain spaces</b>!!!. For example \c C:\\openrave.

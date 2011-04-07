@@ -29,6 +29,7 @@
 #include <Inventor/nodes/SoTextureCoordinate2.h>
 #include <Inventor/nodes/SoTextureScalePolicy.h>
 #include <Inventor/nodes/SoTransparencyType.h>
+#include <Inventor/misc/SoGLImage.h>
 #include <Inventor/events/SoLocation2Event.h>
 #include <Inventor/SoPickedPoint.h>
 
@@ -55,18 +56,21 @@ int QtCoinViewer::s_InitRefCount = 0;
 static SoErrorCB* s_DefaultHandlerCB=NULL;
 void CustomCoinHandlerCB(const class SoError * error, void * data)
 {
-    if( error != NULL )
+    if( error != NULL ) {
         // extremely annoying errors
         if( strstr(error->getDebugString().getString(),"Coin warning in SbLine::setValue()") != NULL ||
             strstr(error->getDebugString().getString(),"Coin warning in SbDPLine::setValue()") != NULL ||
             strstr(error->getDebugString().getString(),"Coin warning in SbVec3f::setValue()") != NULL ||
             strstr(error->getDebugString().getString(),"Coin warning in SoNormalGenerator::calcFaceNormal()") != NULL ||
             strstr(error->getDebugString().getString(),"Coin error in SoGroup::removeChild(): tried to remove non-existent child") != NULL ||
-            strstr(error->getDebugString().getString(),"Coin error in SoSwitch::doAction(): whichChild 0 out of range -- switch node has no children!") != NULL )
+            strstr(error->getDebugString().getString(),"Coin error in SoSwitch::doAction(): whichChild 0 out of range -- switch node has no children!") != NULL ) {
             return;
-
-    if( s_DefaultHandlerCB != NULL )
+        }
+    }
+    
+    if( s_DefaultHandlerCB != NULL ) {
         s_DefaultHandlerCB(error,data);
+    }
 }
 
 QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
@@ -155,19 +159,20 @@ QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
     _ivRoot->addSelectionCallback(_SelectHandler, this);
     _ivRoot->addDeselectionCallback(_DeselectHandler, this);
 
+    SoComplexity* pcomplexity = new SoComplexity();
+    pcomplexity->value = 0.1f; // default =0.5, lower is faster
+    pcomplexity->type = SoComplexity::SCREEN_SPACE;
+    pcomplexity->textureQuality = 1.0; // good texture quality
+    _ivRoot->addChild(pcomplexity);
+    SoTextureScalePolicy* ppolicy = new SoTextureScalePolicy();
+    ppolicy->policy = SoTextureScalePolicy::FRACTURE; // requires in order to support non-power of 2 textures
+    _ivRoot->addChild(ppolicy);
+
     _pFigureRoot = new SoSeparator();
     {
-        SoComplexity* pcomplexity = new SoComplexity();
-        pcomplexity->value = 0.1f; // default =0.5, lower is faster
-        pcomplexity->type = SoComplexity::SCREEN_SPACE;
-        pcomplexity->textureQuality = 1.0; // good texture quality
-        _pFigureRoot->addChild(pcomplexity);
         SoLightModel* plightmodel = new SoLightModel();
         plightmodel->model = SoLightModel::BASE_COLOR; // disable lighting
         _pFigureRoot->addChild(plightmodel);
-        SoTextureScalePolicy* ppolicy = new SoTextureScalePolicy();
-        ppolicy->policy = SoTextureScalePolicy::FRACTURE; // requires in order to support non-power of 2 textures
-        _pFigureRoot->addChild(ppolicy);
     }
     _ivRoot->addChild(_pFigureRoot);
     
@@ -248,14 +253,14 @@ QtCoinViewer::~QtCoinViewer()
         STOP_AVI();
     }
 
-    _ivRoot->unref();
-    _pOffscreenVideo->unref();
     _ivRoot->deselectAll();
 
-    if (_timerSensor->isScheduled())
-        _timerSensor->unschedule(); 
-    if (_timerVideo->isScheduled())
-        _timerVideo->unschedule(); 
+    if (_timerSensor->isScheduled()) {
+        _timerSensor->unschedule();
+    }
+    if (_timerVideo->isScheduled()) {
+        _timerVideo->unschedule();
+    }
 
     _eventKeyboardCB->removeEventCallback(SoKeyboardEvent::getClassTypeId(), _KeyHandler, this);
     _ivRoot->removeSelectionCallback(_SelectHandler, this);
@@ -2037,17 +2042,7 @@ void QtCoinViewer::quitmainloop()
 
 void QtCoinViewer::InitOffscreenRenderer()
 {
-    // off screen target
     _ivOffscreen.setComponents(SoOffscreenRenderer::RGB);
-
-    _pOffscreenVideo = new SoSeparator();
-    _pOffscreenVideo->ref();
-
-    // lighting model
-    _pOffscreenVideo->addChild(_pviewer->getHeadlight());
-    _pOffscreenVideo->addChild(_ivRoot);
-    _ivRoot->ref();
-
     _bCanRenderOffscreen = true;
 }
 
@@ -2850,9 +2845,10 @@ bool QtCoinViewer::_GetCameraImage(std::vector<uint8_t>& memory, int width, int 
     SoSFFloat nearDistance = GetCamera()->nearDistance;
     SoSFFloat farDistance = GetCamera()->farDistance;
 
+    SoOffscreenRenderer* ivOffscreen = &_ivOffscreen;
     SbViewportRegion vpr(width, height);
     vpr.setViewport(SbVec2f(KK.cx/(float)(width)-0.5f, 0.5f-KK.cy/(float)(height)), SbVec2f(1,1));
-    _ivOffscreen.setViewportRegion(vpr);
+    ivOffscreen->setViewportRegion(vpr);
 
     GetCamera()->position.setValue(t.trans.x, t.trans.y, t.trans.z);
     GetCamera()->orientation.setValue(t.rot.y, t.rot.z, t.rot.w, t.rot.x);
@@ -2867,7 +2863,7 @@ bool QtCoinViewer::_GetCameraImage(std::vector<uint8_t>& memory, int width, int 
     if( !bRenderFiguresInCamera ) {
         _ivRoot->removeChild(_pFigureRoot);
     }
-    bool bSuccess = _ivOffscreen.render(_pOffscreenVideo);
+    bool bSuccess = ivOffscreen->render(_pviewer->getSceneManager()->getSceneGraph());
     if( !bRenderFiguresInCamera ) {
         _ivRoot->addChild(_pFigureRoot);
     }
@@ -2876,12 +2872,13 @@ bool QtCoinViewer::_GetCameraImage(std::vector<uint8_t>& memory, int width, int 
     if( bSuccess ) {
         // vertically flip since we want upper left corner to correspond to (0,0)
         memory.resize(width*height*3);
-        for(int i = 0; i < height; ++i)
-            memcpy(&memory[i*width*3], _ivOffscreen.getBuffer()+(height-i-1)*width*3, width*3);
+        for(int i = 0; i < height; ++i) {
+            memcpy(&memory[i*width*3], ivOffscreen->getBuffer()+(height-i-1)*width*3, width*3);
+        }
     }
     else {
         RAVELOG_WARN("offscreen renderer failed (check video driver), disabling\n");
-        _bCanRenderOffscreen = false; // need this or _ivOffscreen.render will freeze next time
+        _bCanRenderOffscreen = false; // need this or ivOffscreen.render will freeze next time
     }
 
     GetCamera()->position = position;
@@ -2926,7 +2923,7 @@ bool QtCoinViewer::_WriteCameraImage(int width, int height, const RaveTransform<
     _ivRoot->removeChild(_pFigureRoot);
 
     bool bSuccess = true;
-    if( !_ivOffscreen.render(_pOffscreenVideo) ) {
+    if( !_ivOffscreen.render(_pviewer->getSceneManager()->getSceneGraph()) ) {
         RAVELOG_WARN("offscreen renderer failed (check video driver), disabling\n");
         _bCanRenderOffscreen = false;
         bSuccess = false;
@@ -2973,7 +2970,7 @@ bool QtCoinViewer::_RecordVideo()
         return false;
 
     _ivOffscreen.setViewportRegion(SbViewportRegion(VIDEO_WIDTH, VIDEO_HEIGHT));
-    _ivOffscreen.render(_pOffscreenVideo);
+    _ivOffscreen.render(_pviewer->getSceneManager()->getSceneGraph());
     
     if( _ivOffscreen.getBuffer() == NULL ) {
         RAVELOG_WARN("offset buffer null, disabling\n");
