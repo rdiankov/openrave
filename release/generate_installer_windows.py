@@ -491,7 +491,9 @@ Section "Uninstall"
   ${un.EnvVarUpdate} $0 "PYTHONPATH"  "R" "HKLM" "$INSTDIR\\share\\openrave"
   ${un.EnvVarUpdate} $0 "Path"  "R" "HKLM" "$INSTDIR\\bin"
 
+  # have to store install dir since it gets wiped out somewhere
   StrCpy $1 "$INSTDIR"
+  
   # Always delete uninstaller first?
   Delete "$INSTDIR\\uninstall.exe"
 
@@ -504,7 +506,7 @@ Section "Uninstall"
   RMDir /r "$1\\include"
   RMDir /r "$1\\lib"
   RMDir /r "$1\\share"
-  RMDir "$INSTDIR"
+  RMDir "$1"
 SectionEnd
 """
 
