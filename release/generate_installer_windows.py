@@ -399,10 +399,11 @@ Section
   # check for boost installation
   ClearErrors
   ReadRegStr $0 HKLM "SOFTWARE\\boostpro.com\\%(boost_version)s" InstallRoot
-  IfErrors 0 +10
-  File "installers\%(boost_installer)s"
+  IfErrors 0 +11
+  File "installers\\%(boost_installer)s"
   MessageBox MB_OK "Need to install boost %(boost_version)s"
-  ExecWait '"$INSTDIR\%(boost_installer)s"' $1
+  ExecWait '"$INSTDIR\\%(boost_installer)s"' $1
+  Delete "$INSTDIR\\%(boost_installer)s"
   DetailPrint $1
   ClearErrors
   ReadRegStr $0 HKLM "SOFTWARE\\boostpro.com\\%(boost_version)s" InstallRoot
@@ -443,7 +444,7 @@ Section
 %(install_dll)s
 
   FileOpen $0 $INSTDIR\\include\\rave\\config.h w
-  ${StrRep} $2 "$INSTDIR" "\" "\\"
+  ${StrRep} $2 "$INSTDIR" "\\" "\\\\"
   ${StrRep} $1 "%(openrave_config)s" "__INSTDIR__" $2
   FileWrite $0 $1
   FileClose $0
@@ -490,13 +491,20 @@ Section "Uninstall"
   ${un.EnvVarUpdate} $0 "PYTHONPATH"  "R" "HKLM" "$INSTDIR\\share\\openrave"
   ${un.EnvVarUpdate} $0 "Path"  "R" "HKLM" "$INSTDIR\\bin"
 
+  StrCpy $1 "$INSTDIR"
   # Always delete uninstaller first?
-  Delete $INSTDIR\\uninstall.exe
+  Delete "$INSTDIR\\uninstall.exe"
 
 %(uninstall_dll)s
   
   RMDir /r "$SMPROGRAMS\\OpenRAVE-%(openrave_version)s"
-  RMDir /r /REBOOTOK "$INSTDIR"
+  # have to set current path outside of installation dir
+  SetOutPath "$1\\.."
+  RMDir /r "$1\\bin"
+  RMDir /r "$1\\include"
+  RMDir /r "$1\\lib"
+  RMDir /r "$1\\share"
+  RMDir "$INSTDIR"
 SectionEnd
 """
 
