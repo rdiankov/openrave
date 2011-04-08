@@ -12,6 +12,7 @@ if [ "$revision" != "$prevrevision" ]; then
     tar cjf "$basename-linux-src.tar.bz2" "$basename-linux-src"
     mkdir -p latest_donotdownload
     mv "$basename-linux-src.tar.bz2" latest_donotdownload/
+    mv *.exe latest_donotdownload/ # windows setup files
     tar cf latest_donotdownload.tgz latest_donotdownload
     rm -rf "$basename-linux-src" latest_donotdownload
 
