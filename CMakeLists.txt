@@ -244,6 +244,7 @@ elseif( MSVC )
   set(Boost_THREAD_FOUND 1)
   set(Boost_DATE_TIME_FOUND 1)
   set(Boost_SIGNALS_FOUND 1)
+  set(Boost_VERSION "1.44")
   # have to add to required flags for applications that will test linking with boost
   set(CMAKE_REQUIRED_FLAGS "-DBOOST_ALL_DYN_LINK -DBOOST_ALL_NO_LIB")
   if( MSVC70 OR MSVC71 )
@@ -644,22 +645,25 @@ if(OPT_PLUGINS)
   add_subdirectory(plugins)
 endif()
 
-configure_file(
-  "${CMAKE_CURRENT_SOURCE_DIR}/openrave-config.in"
-  "${CMAKE_CURRENT_BINARY_DIR}/openrave-config"
-  IMMEDIATE @ONLY)
-install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/openrave-config DESTINATION bin)
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/openravebash DESTINATION share/openrave)
+if( NOT MSVC )
+  # install only if bash or sh is present
+  configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/openrave-config.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/openrave-config"
+    IMMEDIATE @ONLY)
+  install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/openrave-config DESTINATION bin)
+  install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/openravebash DESTINATION share/openrave)
+endif()
 
-configure_file(
-  "${CMAKE_CURRENT_SOURCE_DIR}/openrave.pc.cmake.in"
-  "${CMAKE_CURRENT_BINARY_DIR}/openrave.pc" @ONLY IMMEDIATE)
-
-if(UNIX)
-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/openrave.pc DESTINATION lib${LIB_SUFFIX}/pkgconfig)
+if(UNIX OR CYGWIN)
+  configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/openrave.pc.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/openrave.pc" @ONLY IMMEDIATE)
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/openrave.pc DESTINATION lib${LIB_SUFFIX}/pkgconfig)
 endif()
 
 install(FILES ${rave_header_files} ${interfacehashes_h} DESTINATION include/rave)
+install(FILES LICENSE.lgpl LICENSE.apache DESTINATION share/openrave)
 
 # add make uninstall capability
 configure_file(
