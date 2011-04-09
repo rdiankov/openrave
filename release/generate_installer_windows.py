@@ -519,7 +519,7 @@ if __name__ == "__main__":
     (options,args) = parser.parse_args()
 
     sys.path.insert(0,os.path.join(options.installdir,'share','openrave'))
-    os.environ['PATH'] += ';'+os.path.join(options.installdir,'bin')
+    os.environ['PATH'] = os.path.join(os.path.abspath(options.installdir),'bin')+';'+os.environ['PATH']
     openravepy = __import__('openravepy')
     
     args = dict()
