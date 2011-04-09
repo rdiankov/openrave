@@ -423,7 +423,7 @@ Section
     Abort "Cannot install"
 SectionEnd
 
-Section "Append Python Path"
+Section "Add to Python Path"
   ${EnvVarUpdate} $0 "PYTHONPATH"  "A" "HKLM" "$INSTDIR\\share\\openrave"  
 SectionEnd
 SectionGroupEnd
@@ -464,7 +464,7 @@ Section "Start Menu Shortcuts" secstart
   %(openrave_shortcuts)s
 SectionEnd
 
-Section "Append Environment Path" secpath
+Section "Add to Path" secpath
   ${EnvVarUpdate} $0 "Path"  "A" "HKLM" "$INSTDIR\\bin"  
 SectionEnd
 

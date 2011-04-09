@@ -107,6 +107,16 @@ if( OPT_PYTHON )
     else()
       message(STATUS "failed to get python site-package directory")
     endif()
+    # get the major.minor python version
+    execute_process(
+      COMMAND ${PYTHON_EXECUTABLE} -c "import sys; print('%d.%d'%sys.version_info[0:2])"
+      OUTPUT_VARIABLE _python_version OUTPUT_STRIP_TRAILING_WHITESPACE
+      RESULT_VARIABLE _python_failed)
+    if( ${_python_failed} EQUAL 0 )
+      string(REGEX REPLACE "[\r\n]" "" PYTHON_MAJORMINOR_VERSION "${_python_version}")
+    else()
+      message(STATUS "failed to get python version")
+    endif()
   endif()
 endif()
 
@@ -195,11 +205,12 @@ if( MSVC )
   # force multi-threaded DLL boost
   set(Boost_USE_MULTITHREAD ON)
   set(Boost_USE_STATIC_LIBS OFF)
+  set(Boost_USE_STATIC_RUNTIME OFF)
   set(Boost_CFLAGS "-DBOOST_ALL_DYN_LINK -DBOOST_ALL_NO_LIB")
 endif()
 
 # only look for installed boost if not an old version of msvc
-if(NOT MSVC )#MSVC71 AND NOT MSVC80 AND NOT MSVC90)
+if(NOT MSVC71 AND NOT MSVC80)
   if( NOT $ENV{BOOST_INCLUDEDIR} STREQUAL "" )
     set(Boost_INCLUDE_DIR $ENV{BOOST_INCLUDEDIR})
   endif()
@@ -209,6 +220,9 @@ if(NOT MSVC )#MSVC71 AND NOT MSVC80 AND NOT MSVC90)
   # to facilitate compilation, all visual studio libraries are included locally
   set(Boost_ADDITIONAL_VERSIONS "1.46.1" "1.45" "1.44" "1.43" "1.42" "1.41" "1.40" "1.39" "1.38" "1.37.0" "1.37" "1.35.0" "1.34.1" "1.34.0" "1.34" "1.33.1" "1.33.0" "1.33" ${Boost_ADDITIONAL_VERSIONS})
   find_package(Boost COMPONENTS regex filesystem system python thread iostreams date_time)
+else()
+  # have to rely on local boost
+  add_definitions(-DTEMP_SPIRIT_HACK)
 endif()
 
 if( Boost_FOUND )
@@ -283,6 +297,9 @@ endif()
 message(STATUS "found boost version: ${Boost_VERSION}")
 if( NOT Boost_THREAD_LIBRARY OR NOT Boost_DATE_TIME_LIBRARY )
   message(FATAL_ERROR "boost thread and date_time libraries are necessary")
+endif()
+if( OPT_PYTHON AND MSVC AND Boost_VERSION GREATER 104600 AND ${PYTHON_MAJORMINOR_VERSION} STRGREATER "2.6")
+  message(STATUS "Boost python library ${Boost_PYTHON_LIBRARY} might not be compiled for Python ${PYTHON_MAJORMINOR_VERSION}")
 endif()
     
 set(OPENRAVE_BOOST_INCLUDE_DIRS)
