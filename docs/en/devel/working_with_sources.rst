@@ -1,5 +1,5 @@
-Woring With the Source Code
-===========================
+Working With the Source Code
+============================
 
 Most of these guidelines are for Linux users.
 

@@ -159,7 +159,7 @@ Planner Parameters\n\
         }
         
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
-        uint32_t basetime = timeGetTime();
+        uint32_t basetime = GetMilliTime();
         RobotBase::RobotStateSaver savestate(_robot);
         _robot->SetActiveDOFs(_manip->GetArmIndices()); // should be set by user anyway, but this is an extra precaution
         CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
@@ -289,7 +289,7 @@ Planner Parameters\n\
             return false;
         }
 
-        RAVELOG_DEBUG(str(boost::format("workspace trajectory tracker plan success, path=%d points, time=%f computed in %fs\n")%poutputtraj->GetPoints().size()%ftime%((0.001f*(float)(timeGetTime()-basetime)))));
+        RAVELOG_DEBUG(str(boost::format("workspace trajectory tracker plan success, path=%d points, time=%f computed in %fs\n")%poutputtraj->GetPoints().size()%ftime%((0.001f*(float)(GetMilliTime()-basetime)))));
         return true;
     }
 

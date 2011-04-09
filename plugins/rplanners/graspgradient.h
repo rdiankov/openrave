@@ -116,7 +116,7 @@ GraspGradientPlanner(EnvironmentBasePtr penv) : PlannerBase(penv) {
         }
 
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());    
-        uint32_t basetime = timeGetTime();    
+        uint32_t basetime = GetMilliTime();    
         RobotBase::RobotStateSaver savestate(_robot);
         CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
 
@@ -187,7 +187,7 @@ GraspGradientPlanner(EnvironmentBasePtr penv) : PlannerBase(penv) {
         FOREACH(it, listbestpath)
             ptraj->AddPoint(Trajectory::TPOINT(*it,0));
 
-        RAVELOG_DEBUG(str(boost::format("plan %s, path=%d points in %fs\n")%(bSuccess?"success":"failure")%ptraj->GetPoints().size()%(0.001f*(float)(timeGetTime()-basetime))));
+        RAVELOG_DEBUG(str(boost::format("plan %s, path=%d points in %fs\n")%(bSuccess?"success":"failure")%ptraj->GetPoints().size()%(0.001f*(float)(GetMilliTime()-basetime))));
     
         return bSuccess;
     }

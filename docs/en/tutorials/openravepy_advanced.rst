@@ -18,7 +18,11 @@ OpenRAVE C++ exceptions in the form of the openrave_exception class are automati
 Locking/Thread-safety Mechanisms
 --------------------------------
 
-When doing heavy operations, the environment should always be locked to keep other users from changing it. This is possible with **Environment.LockPhysics(dolock)**. Scoped locking can be implemented using a try/finally block or the python **with** statement:
+When doing heavy operations, the environment should **always be locked** to keep other users from changing it. All environment methods are multi-thread safe, but any other method to kinbodies, robots, controllers, planners, etc are **not thread safe**!
+
+
+Locking is done with **Environment.Lock(dolock)**. Scoped locking can be implemented using a
+try/finally block or the python **with** statement:
 
 .. code-block:: python
 

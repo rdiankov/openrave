@@ -228,7 +228,7 @@ class BirrtPlanner : public RrtPlanner<SimpleNode>
         }
     
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
-        uint32_t basetime = timeGetTime();
+        uint32_t basetime = GetMilliTime();
 
         // the main planning loop
         bool bConnected = false;
@@ -287,7 +287,7 @@ class BirrtPlanner : public RrtPlanner<SimpleNode>
         }
     
         if( !bConnected ) {
-            RAVELOG_WARN("plan failed, %fs\n",0.001f*(float)(timeGetTime()-basetime));
+            RAVELOG_WARN("plan failed, %fs\n",0.001f*(float)(GetMilliTime()-basetime));
             return false;
         }
     
@@ -329,7 +329,7 @@ class BirrtPlanner : public RrtPlanner<SimpleNode>
             ptraj->AddPoint(pt);
         }
 
-        RAVELOG_DEBUG(str(boost::format("plan success, path=%d points in %fs\n")%ptraj->GetPoints().size()%(0.001f*(float)(timeGetTime()-basetime))));
+        RAVELOG_DEBUG(str(boost::format("plan success, path=%d points in %fs\n")%ptraj->GetPoints().size()%(0.001f*(float)(GetMilliTime()-basetime))));
         return _OptimizePath(_robot,ptraj);
     }
 
@@ -425,7 +425,7 @@ class BasicRrtPlanner : public RrtPlanner<SimpleNode>
         }
     
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
-        uint32_t basetime = timeGetTime();
+        uint32_t basetime = GetMilliTime();
 
         int lastnode = 0;    
         bool bSuccess = false;
@@ -483,7 +483,7 @@ class BasicRrtPlanner : public RrtPlanner<SimpleNode>
         }
     
         if( !bSuccess ) {
-            RAVELOG_DEBUG("plan failed, %fs\n",0.001f*(float)(timeGetTime()-basetime));
+            RAVELOG_DEBUG("plan failed, %fs\n",0.001f*(float)(GetMilliTime()-basetime));
             return false;
         }
     
@@ -512,7 +512,7 @@ class BasicRrtPlanner : public RrtPlanner<SimpleNode>
         }
 
         bSuccess = _OptimizePath(_robot,ptraj);
-        RAVELOG_DEBUG(str(boost::format("plan success, path=%d points in %fs\n")%ptraj->GetPoints().size()%((0.001f*(float)(timeGetTime()-basetime)))));
+        RAVELOG_DEBUG(str(boost::format("plan success, path=%d points in %fs\n")%ptraj->GetPoints().size()%((0.001f*(float)(GetMilliTime()-basetime)))));
     
         return bSuccess;
     }

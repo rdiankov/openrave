@@ -71,19 +71,6 @@ inline T CLAMP_ON_RANGE(T value, T min, T max)
     return value;
 }
 
-inline uint32_t timeGetTime()
-{
-#ifdef _WIN32
-    _timeb t;
-    _ftime(&t);
-#else
-    timeb t;
-    ftime(&t);
-#endif
-
-    return (uint32_t)(t.time*1000+t.millitm);
-}
-
 #define FORIT(it, v) for(it = (v).begin(); it != (v).end(); (it)++)
 
 inline uint64_t GetMicroTime()

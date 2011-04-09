@@ -183,7 +183,7 @@ class LoggingProblem : public ProblemInstance
 
     void _log_thread()
     {
-        while(!bDestroyThread) {
+        //while(!bDestroyThread) {
             // record
             //        if( pfLog == NULL ) {
             //            pfLog = fopen("motion.txt", "wb");
@@ -218,8 +218,8 @@ class LoggingProblem : public ProblemInstance
             //            
             //            fLogTime = fTotalTime;
             //        }
-            Sleep(1);
-        }
+            //Sleep(1);
+            //}
     }
 
     boost::shared_ptr<boost::thread> _threadlog;

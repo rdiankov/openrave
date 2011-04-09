@@ -52,15 +52,18 @@ Tests
 
 Running 'make test' in the root directory should setup the OpenRAVE environment from local **build** folder and run all tests. If the PARALLEL_JOBS environment variable is set to "-jX", then will distribute the computation onto X processes.
 
-Compilation
+Basic Tests
 ~~~~~~~~~~~
 
+All these tests must pass for a release candidate:
+
 * single precision, double precision
-* wihtout python bindings, without octave bindings, without plugins, without collada
+* compile wihtout python bindings, without octave bindings, without plugins, without collada
 * boost versions: 1.35, 1.39, 1.44
 * cmake versions: 2.6, 2.8
 * 32bit vs 64bit
-* test ik generation
+* Visual Studio 2005 (sp1), 2008, and 2010.
+* All exapmles/databases run without throwing exceptions
 
 IKFast
 ~~~~~~
