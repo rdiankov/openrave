@@ -100,8 +100,8 @@ public:
                         if( bEnable ) dGeomEnable(dGeomTransformGetGeom(curgeom));
                         else dGeomDisable(dGeomTransformGetGeom(curgeom));
                     }
-        
-                    curgeom = dGeomGetBodyNext(curgeom);
+
+                    curgeom = dBodyGetNextGeom(curgeom);
                 }
             }
 
@@ -133,7 +133,7 @@ public:
             FOREACH(itlink, vlinks) {
                 dGeomID curgeom = (*itlink)->geom;
                 while(curgeom) {
-                    dGeomID pnextgeom = dGeomGetBodyNext(curgeom);
+                    dGeomID pnextgeom = dBodyGetNextGeom(curgeom);
                     if( dGeomGetClass(curgeom) == dGeomTransformClass ) {
                         dGeomID childgeom = dGeomTransformGetGeom(curgeom);
                         if( childgeom != NULL && dGeomGetClass(childgeom) == dTriMeshClass ) {

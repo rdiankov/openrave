@@ -18,6 +18,8 @@ __license__ = 'Apache License, Version 2.0'
 
 from optparse import OptionParser
 import os, sys, re, shutil, urllib
+import numpy
+import sympy
 from types import ModuleType
 
 EnvVarUpdate = """
@@ -355,6 +357,7 @@ nsiscript = """
 !include "MUI2.nsh"
 !include "StrFunc.nsh"
 !include "Library.nsh"
+!include "StrFunc.nsh"
 %(EnvVarUpdate)s
 
 Name "OpenRAVE %(openrave_version)s"
@@ -371,7 +374,7 @@ XPStyle on
 SetCompress auto
 #SetCompressor lzma
 InstallDir "$PROGRAMFILES\\OpenRAVE-%(openrave_version)s"
-AutoCloseWindow true          
+AutoCloseWindow false
 SetOverwrite on
 
 InstallDirRegKey HKLM "Software\\OpenRAVE" "InstallRoot"
@@ -395,34 +398,104 @@ RequestExecutionLevel admin
 !insertmacro MUI_UNPAGE_INSTFILES
 !insertmacro MUI_LANGUAGE "English"
 
+${StrTrimNewLines}
+
 Section  
   # check for boost installation
   ClearErrors
   ReadRegStr $0 HKLM "SOFTWARE\\boostpro.com\\%(boost_version)s" InstallRoot
-  IfErrors 0 +11
-  File "installers\\%(boost_installer)s"
-  MessageBox MB_OK "Need to install boost %(boost_version)s"
-  ExecWait '"$INSTDIR\\%(boost_installer)s"' $1
-  Delete "$INSTDIR\\%(boost_installer)s"
-  DetailPrint $1
-  ClearErrors
-  ReadRegStr $0 HKLM "SOFTWARE\\boostpro.com\\%(boost_version)s" InstallRoot
-  IfErrors 0 +2
-  MessageBox MB_OK "Failed to find boost %(boost_version)s"
-  Abort "Cannot install"
-    
+  IfErrors 0 done
+    File "installers\\%(boost_installer)s"
+    MessageBox MB_OK "Need to install boost %(boost_version)s"
+    ExecWait '"$INSTDIR\\%(boost_installer)s"' $1
+    Delete "$INSTDIR\\%(boost_installer)s"
+    DetailPrint $1
+    ClearErrors
+    ReadRegStr $0 HKLM "SOFTWARE\\boostpro.com\\%(boost_version)s" InstallRoot
+    IfErrors 0 done
+      MessageBox MB_OK "Failed to find boost %(boost_version)s"
+      Abort "Cannot install"
+      Quit
+done:
+  DetailPrint "boost installation at: $0"
 SectionEnd
 
+Function GetPython
+  MessageBox MB_OK "OpenRAVE needs Python %(python_version)s, it will now be downloaded and installed" 
+  StrCpy $2 "$TEMP\\python-%(python_version_full)s.msi"      
+  nsisdl::download /TIMEOUT=30000 http://www.python.org/ftp/python/%(python_version_full)s/python-%(python_version_full)s%(python_architecture)s.msi $2
+  Pop $R0 ;Get the return value
+  StrCmp $R0 "success" install
+    MessageBox MB_OK "Download failed: $R0"
+    Quit
+install:
+  ExecWait '"msiexec" /i $2'
+  Delete $2
+FunctionEnd 
+Function DetectPython
+ClearErrors
+  ReadRegStr $0 HKLM "SOFTWARE\\Python\\PythonCore\\%(python_version)s\\InstallPath" ""
+  IfErrors 0 done
+    Call GetPython
+  done:
+FunctionEnd
+
+Function GetNumPy
+  MessageBox MB_OK "OpenRAVE needs Python NumPy Library, an appropriate version will be downloaded and installed" 
+  StrCpy $2 "numpy-%(numpy_version)s-win32-superpack-python%(python_version)s.exe"
+  nsisdl::download /TIMEOUT=30000 http://downloads.sourceforge.net/project/numpy/NumPy/%(numpy_version)s/$2 $TEMP\\$2
+  Pop $R0 ;Get the return value
+  StrCmp $R0 "success" install
+    MessageBox MB_OK "Download failed: $R0"
+    Quit
+install:
+  ExecWait "$TEMP\\$2"
+  Delete "$TEMP\\$2"
+FunctionEnd 
+Function DetectNumPy
+  ClearErrors
+  ReadRegStr $1 HKLM "SOFTWARE\\Python\\PythonCore\\%(python_version)s\\InstallPath" ""
+  IfErrors 0 start
+    MessageBox MB_OK "Failed to find python installation"
+    Quit
+start:
+  ExecWait '"$1\\python.exe" -c "import numpy"' $0
+  StrCmp $0 "0" done
+    Call GetNumPy
+done:
+FunctionEnd
+
+Function GetSymPy
+  MessageBox MB_OK "OpenRAVE needs Python SymPy Library, an appropriate version will be downloaded and installed" 
+  StrCpy $2 "sympy-%(sympy_version)s.win32.exe"
+  nsisdl::download /TIMEOUT=30000 http://sympy.googlecode.com/files/$2 $TEMP\\$2
+  Pop $R0 ;Get the return value
+  StrCmp $R0 "success" install
+    MessageBox MB_OK "Download failed: $R0"
+    Quit
+install:
+  ExecWait "$TEMP\\$2"
+  Delete "$TEMP\\$2"
+FunctionEnd 
+Function DetectSymPy
+  ClearErrors
+  ReadRegStr $1 HKLM "SOFTWARE\\Python\\PythonCore\\%(python_version)s\\InstallPath" ""
+  IfErrors 0 start
+    MessageBox MB_OK "Failed to find python installation"
+    Quit
+start:
+  ExecWait '"$1\\python.exe" -c "import sympy"' $0
+  StrCmp $0 "0" done
+    Call GetSymPy
+done:
+FunctionEnd
+    
 SectionGroup /e "PythonBindings" secpython
 Section
-  # check for boost installation
-  ClearErrors
-  ReadRegStr $0 HKLM "SOFTWARE\\Python\\PythonCore\\%(python_version)s\\PythonPath" ""
-  IfErrors 0 +3
-    MessageBox MB_OK "Failed to find python %(python_version)s installation"
-    Abort "Cannot install"
+Call DetectPython
+Call DetectNumPy
+Call DetectSymPy
 SectionEnd
-
 Section "Add to Python Path"
   ${EnvVarUpdate} $0 "PYTHONPATH"  "A" "HKLM" "$INSTDIR\\share\\openrave"  
 SectionEnd
@@ -431,7 +504,6 @@ SectionGroupEnd
 Section /o "Register Octave Bindings" secoctave
 SectionEnd
 
-# default section start; every NSIS script has at least one section.
 Section
   SetOutPath $INSTDIR  
   WriteRegStr HKLM SOFTWARE\\OpenRAVE\\%(openrave_version)s "InstallRoot" "$INSTDIR"
@@ -449,8 +521,36 @@ Section
   FileWrite $0 $1
   FileClose $0
   
-  DetailPrint "boost installation at: $0"
   WriteUninstaller $INSTDIR\\uninstall.exe
+SectionEnd
+
+Section /o "Extra Robots" secrobots
+  DetailPrint "Getting robot list"
+  nsisdl::download /TIMEOUT=30000 https://openrave.svn.sourceforge.net/svnroot/openrave/data/robots/manipulatorlist $TEMP\\manipulatorlist
+  Pop $R0 ;Get the return value
+  StrCmp $R0 "success" getrobots
+    MessageBox MB_OK "Robot List download failed: $R0"
+    Goto done
+getrobots:
+  ClearErrors
+  FileOpen $2 $TEMP\\manipulatorlist r
+readrobot:
+  FileRead $2 $1
+  IfErrors donerobot
+  ${StrTrimNewLines} $3 "$INSTDIR\\share\\openrave\\robots\\$1"
+  ${StrTrimNewLines} $4 https://openrave.svn.sourceforge.net/svnroot/openrave/data/robots/$1
+  DetailPrint "Robot '$1' from $4"
+  nsisdl::download /TIMEOUT=30000 "$4" "$TEMP\\robot"
+  Pop $R0 ;Get the return value
+  StrCmp $R0 "success" copyrobot
+    DetailPrint "$1: $R0"
+    Goto readrobot
+copyrobot:
+  CopyFiles "$TEMP\\robot" "$3"
+  Goto readrobot
+donerobot:
+  FileClose $2
+done:
 SectionEnd
 
 # Optional section (can be disabled by the user)
@@ -468,13 +568,12 @@ Section "Add to Path" secpath
   ${EnvVarUpdate} $0 "Path"  "A" "HKLM" "$INSTDIR\\bin"  
 SectionEnd
 
-#Section Descriptions
-
-;Language strings
+#Language strings
 LangString desc_secpython ${LANG_ENGLISH} "Installs Python bindings."
 LangString desc_secoctave ${LANG_ENGLISH} "Installs Octave bindings."
 LangString desc_secstart ${LANG_ENGLISH} "Installs start menu icons."
 LangString desc_secpath ${LANG_ENGLISH} "Sets the environment path so OpenRAVE DLLs can be found."
+LangString desc_secrobots ${LANG_ENGLISH} "Downloads and installs all extra COLLADA robots."
 
 #Assign language strings to sections
 !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
@@ -482,6 +581,7 @@ LangString desc_secpath ${LANG_ENGLISH} "Sets the environment path so OpenRAVE D
 !insertmacro MUI_DESCRIPTION_TEXT ${secoctave} $(desc_secoctave)
 !insertmacro MUI_DESCRIPTION_TEXT ${secstart} $(desc_secstart)
 !insertmacro MUI_DESCRIPTION_TEXT ${secpath} $(desc_secpath)
+!insertmacro MUI_DESCRIPTION_TEXT ${secrobots} $(desc_secrobots)
 !insertmacro MUI_FUNCTION_DESCRIPTION_END
 
 # create a section to define what the uninstaller does.
@@ -519,7 +619,7 @@ if __name__ == "__main__":
     (options,args) = parser.parse_args()
 
     sys.path.insert(0,os.path.join(options.installdir,'share','openrave'))
-    os.environ['PATH'] = os.path.join(os.path.abspath(options.installdir),'bin')+';'+os.environ['PATH']
+    os.environ['Path'] = os.path.join(os.path.abspath(options.installdir),'bin')+';'+os.environ['PATH']
     openravepy = __import__('openravepy')
     
     args = dict()
@@ -571,24 +671,37 @@ if __name__ == "__main__":
     open(os.path.join(options.installdir,'include','rave','config.h'),'w').write(config)
     
     # boost installation
-    booststart = config.find('OPENRAVE_BOOST_VERSION "')+24
+    boostdef = 'OPENRAVE_BOOST_VERSION "'
+    booststart = config.find(boostdef)+len(boostdef)
     boostend = config.find('"',booststart)
-    args['boost_version'] = config[booststart:boostend]
-    args['boost_installer'] = 'boost_%s_setup.exe'%args['boost_version'].replace('.','_')
-    if not os.path.exists(os.path.join('installers',args['boost_installer'])):
-        localfile, headers = urllib.urlretrieve('http://www.boostpro.com/download/'+args['boost_installer'])
-        if headers['content-type'].find('application') < 0:
-            raise ValueError('failed to find boost setup')
-            
-        try:
-            os.mkdir('installers')
-        except OSError:
-            pass
-            
-        shutil.copyfile(localfile,os.path.join('installers',args['boost_installer']))
+    boostversionnum = int(config[booststart:boostend])
+    boostversionsep = [boostversionnum/100000,(boostversionnum/100)%1000,boostversionnum%100]
+    for boost_version in ['%d.%d.%d'%tuple(boostversionsep),'%d.%d'%tuple(boostversionsep[0:2])]:
+        boost_installer = 'boost_%s_setup.exe'%boost_version.replace('.','_')
+        if not os.path.exists(os.path.join('installers',boost_installer)):
+            boosturl = 'http://www.boostpro.com/download/'+boost_installer
+            localfile, headers = urllib.urlretrieve(boosturl)
+            if headers['content-type'].find('application') < 0:
+                continue
+                
+            try:
+                os.mkdir('installers')
+            except OSError:
+                pass
+                
+            shutil.copyfile(localfile,os.path.join('installers',boost_installer))
+        args['boost_installer'] = boost_installer
+        args['boost_version'] = boost_version
+        break
+    if not 'boost_version' in args:
+        raise ValueError('failed to find boost installer for version %s'%boostversionsep)
     
     # python installation
-    args['python_version'] = '%s.%s'%(sys.version_info[0],sys.version_info[1])
+    args['python_version'] = '%s.%s'%(sys.version_info[0:2])
+    args['python_version_full'] = '%s.%s.%s'%(sys.version_info[0:3])
+    args['python_architecture'] = ''
+    args['numpy_version'] = numpy.version.version
+    args['sympy_version'] = sympy.__version__
     open(args['output_name']+'.nsi','w').write(nsiscript%args)
     os.system('"C:\\Program Files\\NSIS\\makensis.exe" %s.nsi'%args['output_name'])
   
