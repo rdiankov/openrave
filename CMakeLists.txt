@@ -316,7 +316,7 @@ message(STATUS "found boost version: ${Boost_VERSION}")
 if( NOT Boost_THREAD_LIBRARY OR NOT Boost_DATE_TIME_LIBRARY )
   message(FATAL_ERROR "boost thread and date_time libraries are necessary")
 endif()
-if( OPT_PYTHON AND MSVC AND Boost_VERSION GREATER 104600 AND ${PYTHON_MAJORMINOR_VERSION} STRGREATER "2.6")
+if( OPT_PYTHON AND MSVC AND Boost_VERSION GREATER 104600 AND PYTHON_MAJORMINOR_VERSION STRGREATER "2.6")
   message(STATUS "Boost python library ${Boost_PYTHON_LIBRARY} might not be compiled for Python ${PYTHON_MAJORMINOR_VERSION}")
 endif()
     
