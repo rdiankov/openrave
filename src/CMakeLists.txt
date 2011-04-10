@@ -78,12 +78,19 @@ execute_process(
 
 install(TARGETS openrave DESTINATION bin)
 
-# install resources
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cppexamples/runcmake_win.bat.in" "${CMAKE_CURRENT_BINARY_DIR}/cppexamples/runcmake_win.bat" IMMEDIATE @ONLY)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/cppexamples/runcmake_win.bat DESTINATION share/openrave/cppexamples)
+  
+if( MSVC )
+  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cppexamples/FindOpenRAVE.cmake.in" "${CMAKE_CURRENT_BINARY_DIR}/cppexamples/FindOpenRAVE.cmake" IMMEDIATE @ONLY)
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/cppexamples/FindOpenRAVE.cmake DESTINATION share/openrave/cppexamples)
+endif()
+  
 if("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION}" STRGREATER "2.4.3")
   install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/models DESTINATION share/openrave PATTERN ".svn" EXCLUDE)
   install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/robots DESTINATION share/openrave PATTERN ".svn" EXCLUDE)
   install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/data DESTINATION share/openrave PATTERN ".svn" EXCLUDE)
-  install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/cppexamples  DESTINATION share/openrave FILES_MATCHING PATTERN "*.cpp" PATTERN "*.xml" PATTERN "*.txt" PATTERN "*.bat" PATTERN "*.cmake" PATTERN ".svn" EXCLUDE)
+  install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/cppexamples  DESTINATION share/openrave FILES_MATCHING PATTERN "*.cpp" PATTERN "*.xml" PATTERN "*.txt" PATTERN ".svn" EXCLUDE)
 else()
   # manually install
   file(GLOB robot_files ${CMAKE_CURRENT_SOURCE_DIR}/robots/*.xml)

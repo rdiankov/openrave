@@ -360,7 +360,7 @@ nsiscript = """
 !include "StrFunc.nsh"
 %(EnvVarUpdate)s
 
-Name "OpenRAVE %(openrave_version_full)s"
+Name "OpenRAVE %(openrave_version)s"
 Caption "Open Robotics Automation Virtual Environment %(openrave_version_full)s for %(vsversion)s"
 outFile "%(output_name)s.exe"
 
@@ -381,7 +381,7 @@ InstallDirRegKey HKLM "Software\\OpenRAVE" "InstallRoot"
 
 RequestExecutionLevel admin
 
-!define MUI_WELCOMEPAGE_TEXT "http://www.openrave.org$\\n$\\nC++ Developers: All DLLs are compiled with Multithreaded DLL Runtime Library.$\\n$\\nMost examples are written in Python and can be directly executed from the Start Menu."
+!define MUI_WELCOMEPAGE_TEXT "http://www.openrave.org$\\n$\\nSubversion Revision %(openrave_revision)s$\\n$\\nC++ Developers: All DLLs are compiled with Multithreaded DLL Runtime Library.$\\n$\\nMost examples are written in Python and can be directly executed from the Start Menu."
 
 !define MUI_ABORTWARNING
 !insertmacro MUI_PAGE_WELCOME
@@ -507,7 +507,8 @@ Section /o "Register Octave Bindings" secoctave
 SectionEnd
 
 Section
-  SetOutPath $INSTDIR  
+  SetOutPath $INSTDIR
+  WriteRegStr HKLM SOFTWARE\\OpenRAVE "" "%(openrave_version)s"
   WriteRegStr HKLM SOFTWARE\\OpenRAVE\\%(openrave_version)s "InstallRoot" "$INSTDIR"
   
   File /r /x *.dll %(installdir)s\\bin 
@@ -588,6 +589,10 @@ LangString desc_secrobots ${LANG_ENGLISH} "Downloads and installs all extra COLL
 # the section will always be named "Uninstall"
 Section "Uninstall"
   DeleteRegKey HKLM SOFTWARE\\OpenRAVE\\%(openrave_version)s
+  ReadRegStr $0 HKLM "SOFTWARE\\OpenRAVE" ""
+  StrCmp %(openrave_version)s $0 0 noremove
+    DeleteRegValue HKLM SOFTWARE\\OpenRAVE ""
+noremove:
   ${un.EnvVarUpdate} $0 "PYTHONPATH"  "R" "HKLM" "$INSTDIR\\share\\openrave"
   ${un.EnvVarUpdate} $0 "Path"  "R" "HKLM" "$INSTDIR\\bin"
 
@@ -627,8 +632,10 @@ if __name__ == "__main__":
     args = dict()
     args['openrave_version'] = openravepy.__version__
     args['openrave_version_full'] = openravepy.__version__
+    args['openrave_revision'] = ''
     if options.revision is not None:
         args['openrave_version_full'] += '-r%s'%options.revision
+        args['openrave_revision'] = options.revision
     args['vsversion'] = os.path.split(options.installdir)[1]
     args['openrave_shortcuts'] = ''
     args['output_name'] = 'openrave-%(openrave_version_full)s-win32-%(vsversion)s-setup'%args

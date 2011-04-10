@@ -670,10 +670,7 @@ endif()
 
 if( NOT MSVC )
   # install only if bash or sh is present
-  configure_file(
-    "${CMAKE_CURRENT_SOURCE_DIR}/openrave-config.in"
-    "${CMAKE_CURRENT_BINARY_DIR}/openrave-config"
-    IMMEDIATE @ONLY)
+  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/openrave-config.in" "${CMAKE_CURRENT_BINARY_DIR}/openrave-config" IMMEDIATE @ONLY)
   install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/openrave-config DESTINATION bin)
   install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/openravebash DESTINATION share/openrave)
 endif()
