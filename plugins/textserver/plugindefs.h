@@ -59,8 +59,7 @@ using namespace std;
 #include <sys/time.h>
 #define Sleep(milli) usleep(1000*milli)
 #else
-#define WIN32_LEAN_AND_MEAN
-#include <winsock2.h>
+#include <windows.h>
 #endif
 
 template<class T>
@@ -69,19 +68,6 @@ inline T CLAMP_ON_RANGE(T value, T min, T max)
     if (value < min) return min;
     if (value > max) return max;
     return value;
-}
-
-inline uint32_t timeGetTime()
-{
-#ifdef _WIN32
-    _timeb t;
-    _ftime(&t);
-#else
-    timeb t;
-    ftime(&t);
-#endif
-
-    return (uint32_t)(t.time*1000+t.millitm);
 }
 
 #define FORIT(it, v) for(it = (v).begin(); it != (v).end(); (it)++)

@@ -308,9 +308,9 @@ public:
     /// interfaces of the environment. This does not destroy the interface, but it does remove all 
     /// references managed. Some interfaces like problems have destroy methods that are called to signal
     /// unloading. Note that the active interfaces are different from the owned interfaces.
-    /// \param[in] interface interface to remove
+    /// \param[in] obj interface to remove
     /// \return true if the interface was successfully removed from the environment.
-    virtual bool Remove(InterfaceBasePtr interface) = 0;
+    virtual bool Remove(InterfaceBasePtr obj) = 0;
 
     /// \brief Query a body from its name. <b>[multi-thread safe]</b>
     /// \return first KinBody (including robots) that matches with name

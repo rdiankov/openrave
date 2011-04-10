@@ -324,11 +324,11 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
                     return true;
                 }
 
-                geom2 = dGeomGetBodyNext(geom2);
+                geom2 = dBodyGetNextGeom(geom2);
                 ++igeom2;
             }
 
-            geom1 = dGeomGetBodyNext(geom1);
+            geom1 = dBodyGetNextGeom(geom1);
             ++igeom1;
         }
 
@@ -450,7 +450,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
                 }
 
                 if( index >= N ) {
-                    geom1 = dGeomGetBodyNext(geom1);
+                    geom1 = dBodyGetNextGeom(geom1);
                     continue;
                 }
 
@@ -459,7 +459,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
                     if( report->numCols ) {
                         // collided already, see if this point is closer
                         if( report->minDistance < vcontacts[index].geom.depth ) {
-                            geom1 = dGeomGetBodyNext(geom1);
+                            geom1 = dBodyGetNextGeom(geom1);
                             continue;
                         }
                     }
@@ -507,7 +507,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
                 }
             }
 
-            geom1 = dGeomGetBodyNext(geom1);
+            geom1 = dBodyGetNextGeom(geom1);
         }
 
         return bCollision;

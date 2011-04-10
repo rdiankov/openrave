@@ -22,6 +22,7 @@
 #ifdef HAVE_BOOST_FILESYSTEM
 #include <boost/filesystem.hpp>
 #endif
+#include <boost/version.hpp>
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -665,7 +666,7 @@ protected:
                 return it;
             }
         }
-#ifdef HAVE_BOOST_FILESYSTEM
+#if defined(HAVE_BOOST_FILESYSTEM) && BOOST_VERSION >= 103600 // stem() was introduced in 1.36
         // try matching partial base names without path and extension
         boost::filesystem::path pluginpath(pluginname, boost::filesystem::native);
 #if defined(BOOST_FILESYSTEM_VERSION) && BOOST_FILESYSTEM_VERSION >= 3

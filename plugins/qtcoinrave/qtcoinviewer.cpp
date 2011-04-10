@@ -2334,7 +2334,7 @@ void QtCoinViewer::AdvanceFrame(bool bForward)
     // frame counting
     static int nToNextFPSUpdate = 1;
     static int UPDATE_FRAMES = 16;
-    static uint32_t basetime = timeGetTime();
+    static uint32_t basetime = GetMilliTime();
     static uint32_t nFrame = 0;
     static float fFPS = 0;
 
@@ -2346,7 +2346,7 @@ void QtCoinViewer::AdvanceFrame(bool bForward)
 //    }
 
     if( --nToNextFPSUpdate <= 0 ) {
-        uint32_t newtime = timeGetTime();
+        uint32_t newtime = GetMilliTime();
         fFPS = UPDATE_FRAMES * 1000.0f / (float)max((int)(newtime-basetime),1);
         basetime = newtime;
 

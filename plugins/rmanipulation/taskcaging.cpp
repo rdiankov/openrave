@@ -908,7 +908,7 @@ private:
             return false;
         }
 
-        uint32_t basetime = timeGetTime();
+        uint32_t basetime = GetMilliTime();
         TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),_robot->GetActiveDOF());
 
         if( !planner->PlanPath(ptraj) ) {
@@ -917,7 +917,7 @@ private:
         }
     
 
-        RAVELOG_INFO(str(boost::format("finished computing grasp set: pts=%d in %dms\n")%ptraj->GetPoints().size()%(timeGetTime()-basetime)));
+        RAVELOG_INFO(str(boost::format("finished computing grasp set: pts=%d in %dms\n")%ptraj->GetPoints().size()%(GetMilliTime()-basetime)));
     
         vtargetvalues = graspfn->vtargetvalues;
         RobotBase::ManipulatorPtr pmanip = _robot->GetActiveManipulator();
@@ -1140,7 +1140,7 @@ private:
     
         boost::shared_ptr<Trajectory> ptraj(RaveCreateTrajectory(GetEnv(),_robot->GetActiveDOF()));
     
-        uint32_t basetime = timeGetTime(), finaltime;
+        uint32_t basetime = GetMilliTime(), finaltime;
         taskdata->SetRobot(_robot);
 
         boost::shared_ptr<Trajectory> ptrajtemp(RaveCreateTrajectory(GetEnv(),taskdata->GetDOF()));
@@ -1183,7 +1183,7 @@ private:
             }
 
             if( !bSucceed ) {
-                RAVELOG_WARN("failed to find goal configuration = %dms\n", timeGetTime()-basetime);
+                RAVELOG_WARN("failed to find goal configuration = %dms\n", GetMilliTime()-basetime);
                 return false;
             }
         
@@ -1203,7 +1203,7 @@ private:
             //        }
             //
             //        if( !bSucceed ) {
-            //            RAVELOG_WARN("failed to find initial configuration = %dms\n", timeGetTime()-basetime);
+            //            RAVELOG_WARN("failed to find initial configuration = %dms\n", GetMilliTime()-basetime);
             //            return false;
             //        }
 
@@ -1226,7 +1226,7 @@ private:
             
                 if( !bHasIK ) {
                     // no ik solution found for this grasp, so quit
-                    RAVELOG_ERROR(str(boost::format("failure, due to ik time=%dms, %d/%d\n")%(timeGetTime()-basetime)%ivgrasp%taskdata->vtargettraj.size()));
+                    RAVELOG_ERROR(str(boost::format("failure, due to ik time=%dms, %d/%d\n")%(GetMilliTime()-basetime)%ivgrasp%taskdata->vtargettraj.size()));
                     break;
                 }
             }
@@ -1247,7 +1247,7 @@ private:
         
             RAVELOG_WARN("planning a caging grasp...\n");
             if( !pra->PlanPath(ptrajtemp) ) {
-                RAVELOG_WARN("planner failure, time = %dms\n", timeGetTime()-basetime);
+                RAVELOG_WARN("planner failure, time = %dms\n", GetMilliTime()-basetime);
                 return false;
             }
         }
@@ -1306,7 +1306,7 @@ private:
             
                 if( !bHasIK ) {
                     // no ik solution found for this grasp, so quit
-                    RAVELOG_ERROR(str(boost::format("failure, due to ik time=%dms, %d/%d, col=%d\n")%(timeGetTime()-basetime)%realindex%taskdata->vtargettraj.size()%bIndependentCollision));
+                    RAVELOG_ERROR(str(boost::format("failure, due to ik time=%dms, %d/%d, col=%d\n")%(GetMilliTime()-basetime)%realindex%taskdata->vtargettraj.size()%bIndependentCollision));
                     if( bIndependentCollision )
                         RAVELOG_ERROR(str(boost::format("colliding %s:%s with %s:%s\n")%report->plink1->GetParent()->GetName()%report->plink1->GetName()%report->plink2->GetParent()->GetName()%report->plink2->GetName()));
                     break;
@@ -1342,12 +1342,12 @@ private:
             }
 
             if( !bSuccess ) {
-                RAVELOG_WARN("failure, time=%dms\n", timeGetTime()-basetime);
+                RAVELOG_WARN("failure, time=%dms\n", GetMilliTime()-basetime);
                 return false;
             }
         }
 
-        finaltime = timeGetTime()-basetime;
+        finaltime = GetMilliTime()-basetime;
 
         Trajectory::TPOINT tp;
         if( bReverseTrajectory ) {
@@ -1531,7 +1531,7 @@ private:
         _robot->SetActiveDOFs(pmanip->GetArmIndices());
         taskdata->SetRobot(_robot);
 
-        uint32_t basetime = timeGetTime();
+        uint32_t basetime = GetMilliTime();
 
         vector<vector<dReal> > solutions;
         list<vector<dReal> > vtrajectory;
@@ -1579,7 +1579,7 @@ private:
                 break;
         }
 
-        uint32_t finaltime = timeGetTime()-basetime;
+        uint32_t finaltime = GetMilliTime()-basetime;
 
         if( !bSuccess ) {
             RAVELOG_WARN("failure, time=%dms\n", finaltime);

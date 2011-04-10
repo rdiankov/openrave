@@ -56,16 +56,6 @@
 
 using namespace std;
 
-#include <sys/timeb.h>    // ftime(), struct timeb
-
-#ifndef _WIN32
-#include <sys/time.h>
-#define Sleep(milli) usleep(1000*milli)
-#else
-#define WIN32_LEAN_AND_MEAN
-#include <winsock2.h>
-#endif
-
 template<class T>
 inline T CLAMP_ON_RANGE(T value, T min, T max)
 {
@@ -74,34 +64,7 @@ inline T CLAMP_ON_RANGE(T value, T min, T max)
     return value;
 }
 
-inline uint32_t timeGetTime()
-{
-#ifdef _WIN32
-    _timeb t;
-    _ftime(&t);
-#else
-    timeb t;
-    ftime(&t);
-#endif
-
-    return (uint32_t)(t.time*1000+t.millitm);
-}
-
 #define FORIT(it, v) for(it = (v).begin(); it != (v).end(); (it)++)
-
-inline uint64_t GetMicroTime()
-{
-#ifdef _WIN32
-    LARGE_INTEGER count, freq;
-    QueryPerformanceCounter(&count);
-    QueryPerformanceFrequency(&freq);
-    return (count.QuadPart * 1000000) / freq.QuadPart;
-#else
-    struct timeval t;
-    gettimeofday(&t, NULL);
-    return (uint64_t)t.tv_sec*1000000+t.tv_usec;
-#endif
-}
 
 // OpenRAVE includes a dReal typedef which could cause conflict with ODEs, so don't include it
 using OpenRAVE::BaseXMLReader;

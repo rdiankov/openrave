@@ -223,7 +223,9 @@ rst_epilog = """
 
 .. _`Sensor Concepts`: ../coreapihtml/arch_sensor.html
 
-.. _`Installation`: ../coreapihtml/installation.html
+.. _`Installer Packages`: http://sourceforge.net/projects/openrave/files/latest_stable
+
+.. _`Compile/Install From Sources`: ../coreapihtml/installation.html
 
 .. _`Octave/MATLAB`: http://openrave.programmingvision.com/wiki/index.php/OctaveMATLAB
 

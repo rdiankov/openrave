@@ -56,52 +56,85 @@
 
 using namespace std;
 
-#include <sys/timeb.h>    // ftime(), struct timeb
+#include <time.h>
 
 #ifndef _WIN32
+#if POSIX_TIMERS <= 0 && _POSIX_TIMERS <= 0
 #include <sys/time.h>
+#endif
 #define Sleep(milli) usleep(1000*milli)
 #else
 #define WIN32_LEAN_AND_MEAN
-#include <winsock2.h>
+#include <windows.h>
+#include <sys/timeb.h>    // ftime(), struct timeb
 #endif
 
-template<class T>
-inline T CLAMP_ON_RANGE(T value, T min, T max)
+#ifdef _WIN32
+inline static uint32_t GetMilliTime()
 {
-    if (value < min) return min;
-    if (value > max) return max;
-    return value;
+    LARGE_INTEGER count, freq;
+    QueryPerformanceCounter(&count);
+    QueryPerformanceFrequency(&freq);
+    return (uint32_t)((count.QuadPart * 1000) / freq.QuadPart);
 }
 
-inline uint32_t timeGetTime()
+inline static uint64_t GetMicroTime()
 {
-#ifdef _WIN32
-    _timeb t;
-    _ftime(&t);
-#else
-    timeb t;
-    ftime(&t);
-#endif
-
-    return (uint32_t)(t.time*1000+t.millitm);
-}
-
-#define FORIT(it, v) for(it = (v).begin(); it != (v).end(); (it)++)
-
-inline uint64_t GetMicroTime()
-{
-#ifdef _WIN32
     LARGE_INTEGER count, freq;
     QueryPerformanceCounter(&count);
     QueryPerformanceFrequency(&freq);
     return (count.QuadPart * 1000000) / freq.QuadPart;
+}
+
+inline static uint64_t GetNanoTime()
+{
+    LARGE_INTEGER count, freq;
+    QueryPerformanceCounter(&count);
+    QueryPerformanceFrequency(&freq);
+    return (count.QuadPart * 1000000000) / freq.QuadPart;
+}
+
 #else
-    struct timeval t;
-    gettimeofday(&t, NULL);
-    return (uint64_t)t.tv_sec*1000000+t.tv_usec;
+
+inline static void getWallTime(uint32_t& sec, uint32_t& nsec)
+{
+#if defined(CLOCK_GETTIME_FOUND) && (POSIX_TIMERS > 0 || _POSIX_TIMERS > 0)
+  struct timespec start;
+  clock_gettime(CLOCK_REALTIME, &start);
+  sec  = start.tv_sec;
+  nsec = start.tv_nsec;
+#else
+  struct timeval timeofday;
+  gettimeofday(&timeofday,NULL);
+  sec  = timeofday.tv_sec;
+  nsec = timeofday.tv_usec * 1000;
 #endif
 }
+
+inline static uint64_t GetNanoTime()
+{
+    uint32_t sec,nsec;
+    getWallTime(sec,nsec);
+    return (uint64_t)sec*1000000000 + (uint64_t)nsec;
+}
+
+inline static uint64_t GetMicroTime()
+{
+    uint32_t sec,nsec;
+    getWallTime(sec,nsec);
+    return (uint64_t)sec*1000000 + (uint64_t)nsec/1000;
+}
+
+inline static uint32_t GetMilliTime()
+{
+    uint32_t sec,nsec;
+    getWallTime(sec,nsec);
+    return (uint64_t)sec*1000 + (uint64_t)nsec/1000000;
+}
+
+#endif
+
+#define FORIT(it, v) for(it = (v).begin(); it != (v).end(); (it)++)
 
 struct null_deleter
 {

@@ -190,8 +190,8 @@ class RaveGlobal : private boost::noncopyable, public boost::enable_shared_from_
     RaveGlobal()
     {
         // is this really necessary? just makes bugs hard to reproduce...
-        //srand(timeGetTime());
-        //RaveInitRandomGeneration(timeGetTime());
+        //srand(GetMilliTime());
+        //RaveInitRandomGeneration(GetMilliTime());
         _nDebugLevel = Level_Info;
         _nGlobalEnvironmentId = 0;
 

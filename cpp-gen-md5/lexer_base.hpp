@@ -22,9 +22,7 @@
 #ifndef lexer_base_hpp_included
 #define lexer_base_hpp_included
 
-#ifdef _MSC_VER
-#define TEMP_SPIRIT_HACK // changes eof to eof() in ../inc/boost/spirit/iterator/multi_pass.hpp
-#endif
+//#define TEMP_SPIRIT_HACK // requires changes eof to eof() in ../inc/boost/spirit/iterator/multi_pass.hpp
 
 #include "lexer_token_base.hpp"
 
@@ -143,7 +141,6 @@ TokenT const&
 input_policy<TokenT>::eof
     = token_traits<TokenT>::eof_token;
 #endif
-
 
 template < typename TokenT >
 class my_iterator_base {

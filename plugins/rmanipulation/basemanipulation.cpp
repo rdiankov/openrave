@@ -865,7 +865,7 @@ protected:
             }
         }
 
-        uint32_t starttime = timeGetTime();
+        uint32_t starttime = GetMilliTime();
 
         if( CM::JitterActiveDOF(robot) == 0 ) {
             RAVELOG_WARN("failed to jitter robot out of collision\n");
@@ -889,7 +889,7 @@ protected:
         bool bExecuted = CM::SetActiveTrajectory(robot, ptraj, bExecute, strsavetraj, pOutputTrajStream,_fMaxVelMult);
         sout << (int)bExecuted << " ";
 
-        sout << (timeGetTime()-starttime)/1000.0f << " ";
+        sout << (GetMilliTime()-starttime)/1000.0f << " ";
         FOREACH(it, ptraj->GetPoints().back().q) {
             sout << *it << " ";
         }

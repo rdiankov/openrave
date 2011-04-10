@@ -1,6 +1,6 @@
 .. htmlonly::
    
-   :Version: |version| |release|
+   :Version: |version| (|release|)
    :Last Updated: |today|
 
 Welcome to Open Robotics Automation Virtual Environment
@@ -11,15 +11,16 @@ OpenRAVE provides an environment for testing, developing, and deploying motion p
 Getting Started
 ---------------
 
-* `Installation`_
+* `Installer Packages`_
+* `Compile/Install From Sources`_
 
- * `ChangeLog`_
-
- * Latest source code from Subversion:
+ * Latest stable source code (constantly updated):
 
 ::
 
   svn co https://openrave.svn.sourceforge.net/svnroot/openrave/tags/latest_stable openrave
+
+* `ChangeLog`_
 
 * :ref:`getting_started`
 

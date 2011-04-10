@@ -56,7 +56,7 @@ ShortcutLinearPlanner(EnvironmentBasePtr penv) : PlannerBase(penv)
     {
         if( !_parameters || !ptraj || ptraj->GetPoints().size() < 2 )
             return false;
-        uint32_t basetime = timeGetTime();
+        uint32_t basetime = GetMilliTime();
         PlannerParametersConstPtr parameters = GetParameters();
 
         // subsample trajectory and add to list
@@ -107,7 +107,7 @@ ShortcutLinearPlanner(EnvironmentBasePtr penv) : PlannerBase(penv)
         FOREACH(it, path) {
             ptraj->AddPoint(Trajectory::TPOINT(*it,0));
         }
-        RAVELOG_DEBUG(str(boost::format("path optimizing - time=%fs\n")%(0.001f*(float)(timeGetTime()-basetime))));
+        RAVELOG_DEBUG(str(boost::format("path optimizing - time=%fs\n")%(0.001f*(float)(GetMilliTime()-basetime))));
         return true;
     }
 

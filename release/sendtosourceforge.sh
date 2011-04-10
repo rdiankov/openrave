@@ -5,7 +5,7 @@ latest_stable="https://openrave.svn.sourceforge.net/svnroot/openrave/tags/latest
 revision=`python -c "import pysvn; print pysvn.Client().info('$trunk').commit_revision.number"`
 prevrevision=`python -c "import pysvn; revision=pysvn.Client().info2('$latest_stable',recurse=False)[0][1].rev; print pysvn.Client().log('$latest_stable',revision,revision)[0].message.split()[-1]"`
 
-#if [ "$revision" != "$prevrevision" ]; then
+if [ "$revision" != "$prevrevision" ]; then
     basename="openrave-r$revision"
     svn export $trunk "$basename-linux-src"
     rm -rf "$basename-linux-src"/msvc_files.tgz # too big to include into openrave
@@ -23,6 +23,6 @@ prevrevision=`python -c "import pysvn; revision=pysvn.Client().info2('$latest_st
 
     svn rm --non-interactive --username openravetesting -m "Delete Latest Stable Tab (Tagged by Jenkins)." $latest_stable
     svn cp --non-interactive --username openravetesting -m "Latest Stable Tab (Tagged by Jenkins). Revision: $SVN_REVISION" $trunk $latest_stable
-#fi
+fi
 
 #ssh-keygen -t dsa -f ~/.ssh/id_dsa.openravetesting.sf -P "" -C "openravetesting@shell.sourceforge.net"

@@ -425,7 +425,9 @@ source `openrave-config --prefix`/share/openrave/openravebash
 \en
 \page installation_win Building and Installing on Windows
 
-<b>NOTE:</b> Only Windows XP has been tested. Windows 7 and others have been reported to work, but might need to modify the executable properties to <b>windows95 compatibility mode</b> after the executable has been built. This requies the <b>msvcp71.dll</b> to be inserted into the system. Although it is recommended to install from sources in order to get all features working, it is possible to try out OpenRAVE by unzipping <a href="http://www.programmingvision.com/openrave_latest.zip">openrave_latest.zip</a> in \c C:\Program Files.
+<b>NOTE:</b> Only Windows XP has been tested. Windows 7 and others have been reported to work, but might need to modify the executable properties to <b>windows95 compatibility mode</b> after the executable has been built. This requies the <b>msvcp71.dll</b> to be inserted into the system.
+
+It is recommended to use OpenRAVE from the official <a href="http://sourceforge.net/projects/openrave/files/">Windows Installers on Sourceforge</a>.
 
 \section iwin_octavematlab Installation of 3rd Party Software
 
@@ -438,13 +440,12 @@ https://openrave.svn.sourceforge.net/svnroot/openrave/tags/latest_stable
 
 Check out the openrave sources <b>in a path whose directories do not contain spaces</b>!!!. For example \c C:\\openrave.
 
-A lot of the 3rd party libraries like boost 1.39 are already inside the openrave sources. However, the following need to be installed:
+A lot of the 3rd party libraries are already inside the openrave sources. However, the following need to be installed:
 
 - <a href="http://www.boostpro.com/download/">Latest Boost C++ Libraries</a> - Select <b>Multithreaded DLL</b>!
-  - Make sure boost python is compiled with Python 2.6.
   - A local boost installation is included in the sources in case cannot use a system install.
 - <a href="http://www.cmake.org/cmake/resources/software.html">CMake</a>.
-- For openravepy python bindings (<b>install only Python 2.6 compatible versions!</b>):
+- For openravepy python bindings (<b>make sure Python version is compatible with Boost.Python! 2.6 is recommended!</b>):
  - <a href="http://python.org/download/releases/2.6.6">Python 2.6.6</a>
  - <a href="http://sourceforge.net/projects/numpy/files">numpy superpack</a>
  - <b>Highly Recommended:</b> <a href="http://ipython.scipy.org/moin/PyReadline/Intro">PyReadline</a> and <a href="http://ipython.scipy.org/moin/Download">IPython</a>

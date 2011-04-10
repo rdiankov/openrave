@@ -27,19 +27,6 @@ if("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}" GREATER 2.4)
    cmake_policy(SET CMP0003 NEW)
 endif("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}" GREATER 2.4)
 
-# Differences between CMake 2.4 and 2.6
-#if("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}" GREATER 2.4)
-#   # CMP0003: add the link paths to the link command as with cmake 2.4
-#   cmake_policy(SET CMP0003 OLD)
-#   # CMake 2.6 uses the full file names of the libraries when linking and so
-#   # doesn't use -L anymore to list the link dirs. Now the dependencies created
-#   # export_library_dependencies() lists the in-project libraries without
-#   # path, i.e. with only the logical name ("kdecore"), so they don't link
-#   # Setting this variable to true has the effect that the link dirs are
-#   # listed nevertheless also with CMake 2.6.
-#   set(CMAKE_LINK_OLD_PATHS TRUE)
-#endif("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}" GREATER 2.4)
-
 if("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION}" STRLESS "2.4.3")
   message(STATUS "cmake version too low, might not be able to install directories")
 endif()
@@ -120,6 +107,16 @@ if( OPT_PYTHON )
     else()
       message(STATUS "failed to get python site-package directory")
     endif()
+    # get the major.minor python version
+    execute_process(
+      COMMAND ${PYTHON_EXECUTABLE} -c "import sys; print('%d.%d'%sys.version_info[0:2])"
+      OUTPUT_VARIABLE _python_version OUTPUT_STRIP_TRAILING_WHITESPACE
+      RESULT_VARIABLE _python_failed)
+    if( ${_python_failed} EQUAL 0 )
+      string(REGEX REPLACE "[\r\n]" "" PYTHON_MAJORMINOR_VERSION "${_python_version}")
+    else()
+      message(STATUS "failed to get python version")
+    endif()
   endif()
 endif()
 
@@ -130,8 +127,9 @@ set(OPENRAVEPY_INSTALL_DIR "${OPENRAVE_PYTHON_INSTALL_DIR}/openravepy" CACHE PAT
 set(OPENRAVE_OCTAVE_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/share/openrave/octave" CACHE PATH "OpenRAVE Octave bindings installation directory")
 set(OPENRAVE_MATLAB_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/share/openrave/matlab" CACHE PATH "OpenRAVE MATLAB bindings installation directory")
 
-# very important to only test release since default is debug, and it usually reuquires special libraries
-set(CMAKE_TRY_COMPILE_CONFIGURATION Release)
+set(CMAKE_TRY_COMPILE_CONFIGURATION Release CACHE STRING "very important to only test release since default is debug, and it usually reuquires special libraries")
+set(REQUIRED_INCLUDES "" CACHE STRING "Includes to always force  when compiling")
+include_directories(${REQUIRED_INCLUDES})
 
 if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
   add_definitions("-fno-strict-aliasing -Wall")
@@ -173,14 +171,14 @@ set(OPENRAVE_CORE_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/src/libopenrave-core)
 set(OPENRAVE_LINK_DIRS "")
 
 if( MSVC )
-  add_definitions( -D_CRT_SECURE_NO_WARNINGS)
-  add_definitions( -D_CRT_SECURE_NO_DEPRECATE)
+  add_definitions(-D_CRT_SECURE_NO_WARNINGS -D_CRT_SECURE_NO_DEPRECATE)
+  add_definitions(-D_SCL_SECURE_NO_WARNINGS -D_SCL_SECURE_NO_DEPRECATE)
 
   #gives linking problems
   #string(REGEX REPLACE "/MDd" "/MD" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
   #string(REGEX REPLACE "/MDd" "/MD" CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
 
-  # allow extern "C" functions to throw exceptions
+  # /EHc- allow extern "C" functions to throw exceptions
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHc- ")
   set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /EHc- ")
   set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /EHc- ")
@@ -201,17 +199,36 @@ if( MSVC )
   
   # make sure to install the library since it will be necessary for linking
   install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/lib/win32/libxml2.lib DESTINATION lib${LIB_SUFFIX})
-  install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/lib/win32/libxml2d.lib DESTINATION lib${LIB_SUFFIX})
   install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/inc/stdint.h DESTINATION include)
-  install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/bin/" DESTINATION bin FILES_MATCHING PATTERN "*.dll")
+  # have to install dlls manually
+  install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/bin/coin2.dll" DESTINATION bin)
+  install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/bin/libxml2.dll" DESTINATION bin)
+  install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/bin/pthreadVC2.dll" DESTINATION bin)
+  install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/bin/Qt3Support4.dll" DESTINATION bin)
+  install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/bin/QtCore4.dll" DESTINATION bin)
+  install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/bin/QtGui4.dll" DESTINATION bin)
+  install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/bin/QtOpenGL4.dll" DESTINATION bin)
+  install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/bin/simage1.dll" DESTINATION bin)
+  if( MSVC70 OR MSVC71 OR MSVC80 )
+    install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/bin/soqt1.dll" DESTINATION bin)
+    install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/bin/ode_double-vc80-mt-0.11.1.dll" DESTINATION bin)
+  else()
+    install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/bin/soqt1_vc9.dll" DESTINATION bin)
+    if( MSVC90 )
+      install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/bin/ode_double-vc90-mt-0.11.1.dll" DESTINATION bin)
+    else()
+      install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/bin/ode_double-vc100-mt-0.11.1.dll" DESTINATION bin)
+    endif()
+  endif()
   # force multi-threaded DLL boost
   set(Boost_USE_MULTITHREAD ON)
   set(Boost_USE_STATIC_LIBS OFF)
+  set(Boost_USE_STATIC_RUNTIME OFF)
   set(Boost_CFLAGS "-DBOOST_ALL_DYN_LINK -DBOOST_ALL_NO_LIB")
 endif()
 
 # only look for installed boost if not an old version of msvc
-if(NOT MSVC )#MSVC71 AND NOT MSVC80 AND NOT MSVC90)
+if(NOT MSVC71 AND NOT MSVC80)
   if( NOT $ENV{BOOST_INCLUDEDIR} STREQUAL "" )
     set(Boost_INCLUDE_DIR $ENV{BOOST_INCLUDEDIR})
   endif()
@@ -221,6 +238,9 @@ if(NOT MSVC )#MSVC71 AND NOT MSVC80 AND NOT MSVC90)
   # to facilitate compilation, all visual studio libraries are included locally
   set(Boost_ADDITIONAL_VERSIONS "1.46.1" "1.45" "1.44" "1.43" "1.42" "1.41" "1.40" "1.39" "1.38" "1.37.0" "1.37" "1.35.0" "1.34.1" "1.34.0" "1.34" "1.33.1" "1.33.0" "1.33" ${Boost_ADDITIONAL_VERSIONS})
   find_package(Boost COMPONENTS regex filesystem system python thread iostreams date_time)
+else()
+  # have to rely on local boost
+  add_definitions(-DTEMP_SPIRIT_HACK)
 endif()
 
 if( Boost_FOUND )
@@ -295,6 +315,9 @@ endif()
 message(STATUS "found boost version: ${Boost_VERSION}")
 if( NOT Boost_THREAD_LIBRARY OR NOT Boost_DATE_TIME_LIBRARY )
   message(FATAL_ERROR "boost thread and date_time libraries are necessary")
+endif()
+if( OPT_PYTHON AND MSVC AND Boost_VERSION GREATER 104600 AND ${PYTHON_MAJORMINOR_VERSION} STRGREATER "2.6")
+  message(STATUS "Boost python library ${Boost_PYTHON_LIBRARY} might not be compiled for Python ${PYTHON_MAJORMINOR_VERSION}")
 endif()
     
 set(OPENRAVE_BOOST_INCLUDE_DIRS)
@@ -429,7 +452,7 @@ if( LIBXML2_FOUND )
   message(STATUS "libxml2 found")
 else()
   if( MSVC )
-    set(LIBXML2_LIBRARIES optimized libxml2 debug libxml2d)
+    set(LIBXML2_LIBRARIES libxml2)
     set(LIBXML2_INCLUDE_DIR)
     set(LIBXML2_DEFINITIONS)
   else()
@@ -463,7 +486,7 @@ if( OPT_COLLADA )
   if( NOT COLLADA_FOUND AND ZLIB_FOUND AND Boost_FILESYSTEM_FOUND AND Boost_SYSTEM_FOUND )
     pkg_check_modules(libpcrecpp libpcrecpp)
     if( libpcrecpp_FOUND )
-      set(CMAKE_REQUIRED_INCLUDES ${libpcrecpp_INCLUDE_DIRS})
+      set(CMAKE_REQUIRED_INCLUDES ${libpcrecpp_INCLUDE_DIRS} ${REQUIRED_INCLUDES})
       check_include_file_cxx(pcrecpp.h HAVE_PCRECPP_H)
       set(CMAKE_REQUIRED_INCLUDES)
       if( NOT HAVE_PCRECPP_H )
