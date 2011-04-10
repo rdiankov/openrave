@@ -59,7 +59,6 @@ using namespace std;
 #include <sys/time.h>
 #define Sleep(milli) usleep(1000*milli)
 #else
-#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #endif
 
