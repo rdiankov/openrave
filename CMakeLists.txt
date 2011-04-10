@@ -178,7 +178,7 @@ if( MSVC )
   #string(REGEX REPLACE "/MDd" "/MD" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
   #string(REGEX REPLACE "/MDd" "/MD" CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
 
-  # allow extern "C" functions to throw exceptions
+  # /EHc- allow extern "C" functions to throw exceptions
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHc- ")
   set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /EHc- ")
   set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /EHc- ")

@@ -65,7 +65,7 @@
 #define Sleep(milli) usleep(1000*milli)
 #else
 #define WIN32_LEAN_AND_MEAN
-#include <winsock2.h>
+#include <windows.h>
 #include <sys/timeb.h>    // ftime(), struct timeb
 #endif
 

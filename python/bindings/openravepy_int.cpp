@@ -3138,7 +3138,7 @@ public:
 
     int LoadProblem(PyProblemInstancePtr prob, const string& args) { CHECK_POINTER(prob); return _penv->LoadProblem(prob->GetProblem(),args); }
     bool RemoveProblem(PyProblemInstancePtr prob) { CHECK_POINTER(prob); RAVELOG_WARN("openravepy RemoveProblem deprecated, use Remove\n");return _penv->Remove(prob->GetProblem()); }
-    bool Remove(PyInterfaceBasePtr interface) { CHECK_POINTER(interface); return _penv->Remove(interface->GetInterfaceBase()); }
+    bool Remove(PyInterfaceBasePtr obj) { CHECK_POINTER(obj); return _penv->Remove(obj->GetInterfaceBase()); }
     
     object GetLoadedProblems()
     {

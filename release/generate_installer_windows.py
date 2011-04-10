@@ -406,7 +406,7 @@ Section
   ReadRegStr $0 HKLM "SOFTWARE\\boostpro.com\\%(boost_version)s" InstallRoot
   IfErrors 0 done
     File "installers\\%(boost_installer)s"
-    MessageBox MB_OK "Need to install boost %(boost_version)s"
+    MessageBox MB_OK "Need to install boost %(boost_version)s. Select 'Multithreaded, DLL'"
     ExecWait '"$INSTDIR\\%(boost_installer)s"' $1
     Delete "$INSTDIR\\%(boost_installer)s"
     DetailPrint $1

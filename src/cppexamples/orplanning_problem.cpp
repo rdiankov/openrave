@@ -17,7 +17,7 @@ using namespace std;
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
-#include <winsock2.h>
+#include <windows.h>
 #define usleep(micro) Sleep(micro/1000)
 #endif
 
