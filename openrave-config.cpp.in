@@ -1,0 +1,26 @@
+﻿// compiler options program for Microsoft Visual Studio C++
+#include <string>
+#include <iostream>
+using namespace std;
+int main(int argc,char** argv)
+{
+    char* usage = "Usage: openrave-config.exe [--boost-version] [--version]";
+    if( argc <= 1 ) {
+        cout << usage << endl;
+        return 1;
+    }
+    for(int i = 1; i < argc; ++i) {
+        string s = argv[i];
+        if( s == "--boost-version" ) {
+            cout << "@Boost_MAJOR_VERSION@.@Boost_MINOR_VERSION@" << endl;
+        }
+        else if( s == "--version" ) {
+            cout << "@OPENRAVE_VERSION@" << endl;
+        }
+        else {
+            cout << usage << endl;
+            return 1;
+        }
+    }
+    return 0;
+}

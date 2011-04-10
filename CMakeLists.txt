@@ -322,12 +322,20 @@ endif()
     
 set(OPENRAVE_BOOST_INCLUDE_DIRS)
 foreach(idir ${Boost_INCLUDE_DIRS})
-  set(OPENRAVE_BOOST_INCLUDE_DIRS "${OPENRAVE_BOOST_INCLUDE_DIRS} -I${idir}")
+  if( MSVC )
+    set(OPENRAVE_BOOST_INCLUDE_DIRS "${OPENRAVE_BOOST_INCLUDE_DIRS} /I\"${idir}\"")
+  else()
+    set(OPENRAVE_BOOST_INCLUDE_DIRS "${OPENRAVE_BOOST_INCLUDE_DIRS} -I${idir}")
+  endif()
 endforeach()
 
 set(OPENRAVE_BOOST_LIB_DIRS)
 foreach(ldir ${Boost_LIBRARY_DIRS})
-  set(OPENRAVE_BOOST_LIB_DIRS "${OPENRAVE_BOOST_LIB_DIRS} -L${ldir}")
+  if( MSVC )
+    set(OPENRAVE_BOOST_LIB_DIRS "${OPENRAVE_BOOST_LIB_DIRS} /LIBPATH:\"${ldir}\"")
+  else()
+    set(OPENRAVE_BOOST_LIB_DIRS "${OPENRAVE_BOOST_LIB_DIRS} -L${ldir}")
+  endif()
 endforeach()
 
 if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
@@ -668,17 +676,20 @@ if(OPT_PLUGINS)
   add_subdirectory(plugins)
 endif()
 
-if( NOT MSVC )
-  # install only if bash or sh is present
+if( WIN32 )
+  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/openrave-config.cpp.in" "${CMAKE_CURRENT_BINARY_DIR}/openrave-config.cpp" IMMEDIATE @ONLY)
+  add_executable(openrave-config "${CMAKE_CURRENT_BINARY_DIR}/openrave-config.cpp")
+  install(TARGETS openrave-config DESTINATION bin)
+else()
   configure_file("${CMAKE_CURRENT_SOURCE_DIR}/openrave-config.in" "${CMAKE_CURRENT_BINARY_DIR}/openrave-config" IMMEDIATE @ONLY)
   install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/openrave-config DESTINATION bin)
-  install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/openravebash DESTINATION share/openrave)
 endif()
 
-if(UNIX OR CYGWIN)
-  configure_file(
-    "${CMAKE_CURRENT_SOURCE_DIR}/openrave.pc.cmake.in"
-    "${CMAKE_CURRENT_BINARY_DIR}/openrave.pc" @ONLY IMMEDIATE)
+
+if( UNIX OR CYGWIN)
+  # install only if bash or sh is present
+  install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/openravebash DESTINATION share/openrave)
+  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/openrave.pc.cmake.in" "${CMAKE_CURRENT_BINARY_DIR}/openrave.pc" @ONLY IMMEDIATE)
   install(FILES ${CMAKE_CURRENT_BINARY_DIR}/openrave.pc DESTINATION lib${LIB_SUFFIX}/pkgconfig)
 endif()
 

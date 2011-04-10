@@ -51,7 +51,6 @@ else()
   endif()
 endif()
 
-
 add_subdirectory(libopenrave)
 add_subdirectory(libopenrave-core)
 
@@ -78,13 +77,12 @@ execute_process(
 
 install(TARGETS openrave DESTINATION bin)
 
+if( MSVC )
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cppexamples/runcmake_win.bat.in" "${CMAKE_CURRENT_BINARY_DIR}/cppexamples/runcmake_win.bat" IMMEDIATE @ONLY)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/cppexamples/runcmake_win.bat DESTINATION share/openrave/cppexamples)
-  
-if( MSVC )
-  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cppexamples/FindOpenRAVE.cmake.in" "${CMAKE_CURRENT_BINARY_DIR}/cppexamples/FindOpenRAVE.cmake" IMMEDIATE @ONLY)
-  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/cppexamples/FindOpenRAVE.cmake DESTINATION share/openrave/cppexamples)
 endif()
+
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/cppexamples/FindOpenRAVE.cmake DESTINATION share/openrave/cppexamples)
   
 if("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION}" STRGREATER "2.4.3")
   install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/models DESTINATION share/openrave PATTERN ".svn" EXCLUDE)
