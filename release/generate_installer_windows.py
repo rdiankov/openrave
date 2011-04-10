@@ -360,8 +360,8 @@ nsiscript = """
 !include "StrFunc.nsh"
 %(EnvVarUpdate)s
 
-Name "OpenRAVE %(openrave_version)s"
-Caption "Open Robotics Automation Virtual Environment %(openrave_version)s for %(vsversion)s"
+Name "OpenRAVE %(openrave_version_full)s"
+Caption "Open Robotics Automation Virtual Environment %(openrave_version_full)s for %(vsversion)s"
 outFile "%(output_name)s.exe"
 
 SetDateSave on
@@ -616,6 +616,8 @@ if __name__ == "__main__":
                       help='Language folder.')
     parser.add_option('--installdir',action="store",type='string',dest='installdir',default=None,
                       help='Directory of the cmake installation')
+    parser.add_option('--revision',action="store",type='string',dest='revision',default=None,
+                      help='Subversion revision to append to the output filename.')
     (options,args) = parser.parse_args()
 
     sys.path.insert(0,os.path.join(options.installdir,'share','openrave'))
@@ -624,9 +626,12 @@ if __name__ == "__main__":
     
     args = dict()
     args['openrave_version'] = openravepy.__version__
+    args['openrave_version_full'] = openravepy.__version__
+    if options.revision is not None:
+        args['openrave_version_full'] += '-r%s'%options.revision
     args['vsversion'] = os.path.split(options.installdir)[1]
     args['openrave_shortcuts'] = ''
-    args['output_name'] = 'openrave-%(openrave_version)s-win32-%(vsversion)s-setup'%args
+    args['output_name'] = 'openrave-%(openrave_version_full)s-win32-%(vsversion)s-setup'%args
     args['installdir'] = os.path.abspath(options.installdir)
     args['install_dll'] = ''
     args['uninstall_dll'] = ''

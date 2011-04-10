@@ -10,16 +10,17 @@ if [ "$revision" != "$prevrevision" ]; then
     svn export $trunk "$basename-linux-src"
     rm -rf "$basename-linux-src"/msvc_files.tgz # too big to include into openrave
     tar cjf "$basename-linux-src.tar.bz2" "$basename-linux-src"
-    mkdir -p latest_donotdownload
-    mv "$basename-linux-src.tar.bz2" latest_donotdownload/
-    cp *.exe latest_donotdownload/ # windows setup files
-    tar cf latest_donotdownload.tgz latest_donotdownload
-    rm -rf "$basename-linux-src" latest_donotdownload
+    mkdir -p latest_stable
+    mv "$basename-linux-src.tar.bz2" latest_stable/
+    cp *.exe latest_stable/ # windows setup files
+    tar cf latest_stable.tgz latest_stable
+    rm -rf "$basename-linux-src" latest_stable
 
     ssh openravetesting,openrave@shell.sourceforge.net create # always create
-    scp latest_donotdownload.tgz openravetesting,openrave@frs.sourceforge.net:/home/frs/project/o/op/openrave/
-    ssh openravetesting,openrave@shell.sourceforge.net "cd /home/frs/project/o/op/openrave; tar xf latest_donotdownload.tgz; chmod -R g+w latest_donotdownload; rm -rf latest_stable latest_donotdownload.tgz; mv latest_donotdownload latest_stable"
-    rm -f latest_donotdownload.tgz
+    scp latest_stable.tgz openravetesting,openrave@frs.sourceforge.net:/home/frs/project/o/op/openrave/
+    # remove files 7 or more days old
+    ssh openravetesting,openrave@shell.sourceforge.net "cd /home/frs/project/o/op/openrave; tar xf latest_stable.tgz; chmod -R g+w latest_stable; rm -f latest_stable.tgz; find latest_stable -mtime +7 -type f -exec rm -rf {} \;"
+    rm -f latest_stable.tgz
 
     svn rm --non-interactive --username openravetesting -m "Delete Latest Stable Tab (Tagged by Jenkins)." $latest_stable
     svn cp --non-interactive --username openravetesting -m "Latest Stable Tab (Tagged by Jenkins). Revision: $SVN_REVISION" $trunk $latest_stable
