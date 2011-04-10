@@ -37,6 +37,7 @@ The following Jenkins plugins should be installed:
 * Dependency Graph View Plugin
 * Join Plugin
 * Release Plugin
+* Parameterized Trigger Plugin
 
 The tests are designed to output to Jenkins-friendly format using the python nose and `Jenkins xUnit <http://wiki.jenkins-ci.org/display/JENKINS/xUnit+Plugin>`_ plugins.
 
