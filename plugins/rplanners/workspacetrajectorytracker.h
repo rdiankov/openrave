@@ -179,7 +179,8 @@ Planner Parameters\n\
         dReal fstarttime = 0, fendtime = workspacetraj->GetTotalDuration();
         bool bPrevInCollision = true;
         list<Transform> listtransforms;
-        for(dReal ftime = 0; ftime < workspacetraj->GetTotalDuration(); ftime += _parameters->_fStepLength) {
+        dReal ftime = 0;
+        for(; ftime < workspacetraj->GetTotalDuration(); ftime += _parameters->_fStepLength) {
             workspacetraj->SampleTrajectory(ftime,pt);
             listtransforms.push_back(pt.trans);
             if( _iktype == IkParameterization::Type_Transform6D ) {
@@ -250,7 +251,7 @@ Planner Parameters\n\
 
         list<Transform>::iterator ittrans = listtransforms.begin();
         bPrevInCollision = true;
-        dReal ftime = 0;
+        ftime = 0;
         for(; ftime < fendtime; ftime += _parameters->_fStepLength, ++ittrans) {
             _filteroptions = (ftime >= fstarttime) ? IKFO_CheckEnvCollisions : 0;
             IkParameterization ikparam(*ittrans,_iktype);
