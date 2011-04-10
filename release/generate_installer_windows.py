@@ -381,21 +381,23 @@ InstallDirRegKey HKLM "Software\\OpenRAVE" "InstallRoot"
 
 RequestExecutionLevel admin
 
-#LicenseData "%(license)s"
-#Page license
-#Page components
-#Page directory
-#Page instfiles
-#UninstPage uninstConfirm
-#UninstPage instfiles
+!define MUI_WELCOMEPAGE_TEXT "http://www.openrave.org$\\n$\\nC++ Developers: All DLLs are compiled with Multithreaded DLL Runtime Library.$\\n$\\nMost examples are written in Python and can be directly executed from the Start Menu."
 
 !define MUI_ABORTWARNING
+!insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_LICENSE "%(license)s"
 !insertmacro MUI_PAGE_COMPONENTS
 !insertmacro MUI_PAGE_DIRECTORY
+;Start Menu Folder Page Configuration
+Var StartMenuFolder
+!define MUI_STARTMENUPAGE_REGISTRY_ROOT "HKCU" 
+!define MUI_STARTMENUPAGE_REGISTRY_KEY "Software\\OpenRAVE\\%(openrave_version)s" 
+!define MUI_STARTMENUPAGE_REGISTRY_VALUENAME "Start Menu Folder"
+!insertmacro MUI_PAGE_STARTMENU Application $StartMenuFolder
 !insertmacro MUI_PAGE_INSTFILES
 !insertmacro MUI_UNPAGE_CONFIRM
 !insertmacro MUI_UNPAGE_INSTFILES
+
 !insertmacro MUI_LANGUAGE "English"
 
 ${StrTrimNewLines}
@@ -522,6 +524,17 @@ Section
   FileClose $0
   
   WriteUninstaller $INSTDIR\\uninstall.exe
+  
+  # start menu
+  !insertmacro MUI_STARTMENU_WRITE_BEGIN Application
+  CreateDirectory "$SMPROGRAMS\\$StartMenuFolder"
+  CreateDirectory "$SMPROGRAMS\\$StartMenuFolder\\examples"
+  #CreateDirectory "$SMPROGRAMS\\$StartMenuFolder\\databases"
+  CreateShortCut "$SMPROGRAMS\\$StartMenuFolder\\openrave.lnk" "$INSTDIR\\bin\\openrave.exe" "" "$INSTDIR\\bin\\openrave.exe" 0
+  CreateShortCut "$SMPROGRAMS\\$StartMenuFolder\\openravepy ipython.lnk" "$INSTDIR\\bin\\openrave.py" "-i" "$INSTDIR\\bin\\openrave.py" 0
+  CreateShortCut "$SMPROGRAMS\\$StartMenuFolder\\Uninstall.lnk" "$INSTDIR\\uninstall.exe" "" "$INSTDIR\\uninstall.exe" 0
+  %(openrave_shortcuts)s
+  !insertmacro MUI_STARTMENU_WRITE_END
 SectionEnd
 
 Section /o "Extra Robots" secrobots
@@ -553,17 +566,6 @@ donerobot:
 done:
 SectionEnd
 
-# Optional section (can be disabled by the user)
-Section "Start Menu Shortcuts" secstart
-  CreateDirectory "$SMPROGRAMS\\OpenRAVE-%(openrave_version)s"
-  CreateDirectory "$SMPROGRAMS\\OpenRAVE-%(openrave_version)s\\examples"
-  #CreateDirectory "$SMPROGRAMS\\OpenRAVE-%(openrave_version)s\\databases"
-  CreateShortCut "$SMPROGRAMS\\OpenRAVE-%(openrave_version)s\\openrave.lnk" "$INSTDIR\\bin\\openrave.exe" "" "$INSTDIR\\bin\\openrave.exe" 0
-  CreateShortCut "$SMPROGRAMS\\OpenRAVE-%(openrave_version)s\\openravepy ipython.lnk" "$INSTDIR\\bin\\openrave.py" "-i" "$INSTDIR\\bin\\openrave.py" 0
-  CreateShortCut "$SMPROGRAMS\\OpenRAVE-%(openrave_version)s\\Uninstall.lnk" "$INSTDIR\\uninstall.exe" "" "$INSTDIR\\uninstall.exe" 0
-  %(openrave_shortcuts)s
-SectionEnd
-
 Section "Add to Path" secpath
   ${EnvVarUpdate} $0 "Path"  "A" "HKLM" "$INSTDIR\\bin"  
 SectionEnd
@@ -571,7 +573,6 @@ SectionEnd
 #Language strings
 LangString desc_secpython ${LANG_ENGLISH} "Installs Python bindings."
 LangString desc_secoctave ${LANG_ENGLISH} "Installs Octave bindings."
-LangString desc_secstart ${LANG_ENGLISH} "Installs start menu icons."
 LangString desc_secpath ${LANG_ENGLISH} "Sets the environment path so OpenRAVE DLLs can be found."
 LangString desc_secrobots ${LANG_ENGLISH} "Downloads and installs all extra COLLADA robots."
 
@@ -579,7 +580,6 @@ LangString desc_secrobots ${LANG_ENGLISH} "Downloads and installs all extra COLL
 !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
 !insertmacro MUI_DESCRIPTION_TEXT ${secpython} $(desc_secpython)
 !insertmacro MUI_DESCRIPTION_TEXT ${secoctave} $(desc_secoctave)
-!insertmacro MUI_DESCRIPTION_TEXT ${secstart} $(desc_secstart)
 !insertmacro MUI_DESCRIPTION_TEXT ${secpath} $(desc_secpath)
 !insertmacro MUI_DESCRIPTION_TEXT ${secrobots} $(desc_secrobots)
 !insertmacro MUI_FUNCTION_DESCRIPTION_END
@@ -599,7 +599,7 @@ Section "Uninstall"
 
 %(uninstall_dll)s
   
-  RMDir /r "$SMPROGRAMS\\OpenRAVE-%(openrave_version)s"
+  RMDir /r "$SMPROGRAMS\\$StartMenuFolder"
   # have to set current path outside of installation dir
   SetOutPath "$1\\.."
   RMDir /r "$1\\bin"
@@ -649,8 +649,8 @@ if __name__ == "__main__":
                 m=__import__('openravepy.examples.'+name)
                 if type(m) is ModuleType:
                     path = '$INSTDIR\\share\\openrave\\openravepy\\examples\\%s.py'%name
-                    args['openrave_shortcuts'] += 'CreateShortCut "$SMPROGRAMS\\OpenRAVE-%s\\examples\\%s.lnk" "%s" "" "%s" 0\n'%(openravepy.__version__,name,path,path)
-                    args['openrave_shortcuts'] += 'CreateShortCut "$SMPROGRAMS\\OpenRAVE-%s\\examples\\%s Documentation.lnk" "http://openrave.programmingvision.com/en/main/openravepy/examples.%s.html" "" "C:\WINDOWS\system32\shell32.dll" 979\n'%(openravepy.__version__,name,name)
+                    args['openrave_shortcuts'] += 'CreateShortCut "$SMPROGRAMS\\$StartMenuFolder\\examples\\%s.lnk" "%s" "" "%s" 0\n'%(name,path,path)
+                    args['openrave_shortcuts'] += 'CreateShortCut "$SMPROGRAMS\\$StartMenuFolder\\examples\\%s Documentation.lnk" "http://openrave.programmingvision.com/en/main/openravepy/examples.%s.html" "" "C:\WINDOWS\system32\shell32.dll" 979\n'%(name,name)
             except ImportError:
                 pass
     # not sure how useful this would be, perhaps a database generator GUI would help?
@@ -660,7 +660,7 @@ if __name__ == "__main__":
                 m=__import__('openravepy.databases.'+name)
                 if type(m) is ModuleType:
                     path = '$INSTDIR\\share\\openrave\\openravepy\\databases\\%s.py'%name
-                    args['openrave_shortcuts'] += 'CreateShortCut "$SMPROGRAMS\\OpenRAVE-%s\\databases\\%s.lnk" "%s" "" "%s" 0\n'%(openravepy.__version__,name,path,path)
+                    args['openrave_shortcuts'] += 'CreateShortCut "$SMPROGRAMS\\$StartMenuFolder\\databases\\%s.lnk" "%s" "" "%s" 0\n'%(name,path,path)
             except ImportError:
                 pass
 
