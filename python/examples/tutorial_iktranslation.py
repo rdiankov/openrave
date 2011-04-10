@@ -15,7 +15,7 @@
 """Shows how to use translational inverse kinematics for an arm with few joints.
 
 .. examplepre-block:: tutorial_iktranslation
-  :image-width: 400
+  :image-width: 640
 
 Description
 -----------
@@ -53,6 +53,18 @@ def main(env,options):
     if not ikmodel.load():
         ikmodel.autogenerate()
 
+    with env:
+        robot2 = env.ReadRobotXMLFile(robot.GetXMLFilename())
+        env.AddRobot(robot2)
+        T = robot.GetTransform()
+        T[0,3] -= 1
+        robot2.SetTransform(T)
+        robot2.Enable(False)
+        robot2.SetActiveManipulator(robot.GetActiveManipulator().GetName())
+        for link in robot2.GetLinks():
+            for geom in link.GetGeometries():
+                geom.SetTransparency(0.2)
+
     while True:
         with env:
             while True:
@@ -67,14 +79,16 @@ def main(env,options):
                 if solutions is not None and len(solutions) > 0: # if found, then break
                     break
         h=env.plot3(array([target]),10.0)
+        T2 = robot2.GetActiveManipulator().GetEndEffectorTransform()
+        h2=env.plot3(dot(T2[0:3,0:3],localtarget)+T2[0:3,3],15.0,[0,1,0])
         for i in random.permutation(len(solutions))[0:min(80,len(solutions))]:
             with env:
                 robot.SetDOFValues(solutions[i],ikmodel.manip.GetArmIndices())
                 T = ikmodel.manip.GetEndEffectorTransform()
-                h2=env.plot3(dot(T[0:3,0:3],localtarget)+T[0:3,3],15.0,[0,1,0])
                 env.UpdatePublishedBodies()
             time.sleep(0.05)
         h=None
+        h2=None
 
 from optparse import OptionParser
 from openravepy import OpenRAVEGlobalArguments, with_destroy
