@@ -223,6 +223,9 @@ rst_epilog = """
 
 .. _`Sensor Concepts`: ../coreapihtml/arch_sensor.html
 
+.. _`FindOpenRAVE.cmake`: ../coreapihtml/FindOpenRAVE_8cmake-example.html
+
+
 .. _`Installer Packages`: http://sourceforge.net/projects/openrave/files/latest_stable
 
 .. _`Compile/Install From Sources`: ../coreapihtml/installation.html

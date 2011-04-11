@@ -568,7 +568,8 @@ done:
 SectionEnd
 
 Section "Add to Path" secpath
-  ${EnvVarUpdate} $0 "Path"  "A" "HKLM" "$INSTDIR\\bin"  
+  ${EnvVarUpdate} $0 "Path"  "A" "HKLM" "$INSTDIR\\bin"
+  ${EnvVarUpdate} $0 "Path"  "A" "HKLM" "$INSTDIR\\share\\openrave\\plugins"
 SectionEnd
 
 #Language strings
@@ -595,6 +596,7 @@ Section "Uninstall"
 noremove:
   ${un.EnvVarUpdate} $0 "PYTHONPATH"  "R" "HKLM" "$INSTDIR\\share\\openrave"
   ${un.EnvVarUpdate} $0 "Path"  "R" "HKLM" "$INSTDIR\\bin"
+  ${un.EnvVarUpdate} $0 "Path"  "R" "HKLM" "$INSTDIR\\share\\openrave\\plugins"
 
   # have to store install dir since it gets wiped out somewhere
   StrCpy $1 "$INSTDIR"
