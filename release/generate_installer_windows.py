@@ -361,7 +361,7 @@ nsiscript = """
 %(EnvVarUpdate)s
 
 Name "OpenRAVE %(openrave_version)s"
-Caption "Open Robotics Automation Virtual Environment %(openrave_version_full)s for %(vsversion)s"
+Caption "Open Robotics Automation Virtual Environment %(openrave_version_full)s for vc%(vcversion)s"
 outFile "%(output_name)s.exe"
 
 SetDateSave on
@@ -402,9 +402,23 @@ Var StartMenuFolder
 
 ${StrTrimNewLines}
 
-Section  
+Section
+  SetOutPath $INSTDIR  
+  # check for the visual studio runtime
+  GetDLLVersion "MSVCR%(vcversion)s" $R0 $R1
+  StrCmp $R0 "" 0 vcdone
+    MessageBox MB_YESNO "Need to install Microsoft Visual Studio Runtime Redistributable (x86) for vc%(vcversion)s. Continue with auto-download and install?" IDNO vcdone
+    nsisdl::download /TIMEOUT=30000 "%(vcredist_url)s" $TEMP\\vcredist.exe
+    Pop $R0 ;Get the return value
+    StrCmp $R0 "success" vcinstall
+      MessageBox MB_OK "Download failed: $R0"
+      Quit
+vcinstall:
+    ExecWait "$TEMP\\vcredist.exe"
+    Delete "$TEMP\\vcredist.exe"
+  
+vcdone:
   # check for boost installation
-  SetOutPath $INSTDIR
   File "installers\\%(boost_installer)s"
   ClearErrors
   ReadRegStr $0 HKLM "SOFTWARE\\boostpro.com\\%(boost_version)s" InstallRoot
@@ -622,6 +636,8 @@ noremove:
 SectionEnd
 """
 
+vcredist_urls = {'100':"http://www.microsoft.com/downloads/info.aspx?na=41&SrcFamilyId=A7B7A05E-6DE6-4D3A-A423-37BF0912DB84&SrcDisplayLang=en&u=http%3a%2f%2fdownload.microsoft.com%2fdownload%2f5%2fB%2fC%2f5BC5DBB3-652D-4DCE-B14A-475AB85EEF6E%2fvcredist_x86.exe",
+                 '90':"http://www.microsoft.com/downloads/info.aspx?na=41&SrcFamilyId=A5C84275-3B97-4AB7-A40D-3802B2AF5FC2&SrcDisplayLang=en&u=http%3a%2f%2fdownload.microsoft.com%2fdownload%2fd%2fd%2f9%2fdd9a82d0-52ef-40db-8dab-795376989c03%2fvcredist_x86.exe"}
 if __name__ == "__main__":
     parser = OptionParser(description='Creates a NSI installer for windows')
     parser.add_option('--lang',action="store",type='string',dest='lang',default='en',
@@ -643,9 +659,10 @@ if __name__ == "__main__":
     if options.revision is not None:
         args['openrave_version_full'] += '-r%s'%options.revision
         args['openrave_revision'] = options.revision
-    args['vsversion'] = os.path.split(options.installdir)[1]
+    args['vcversion'] = os.path.split(options.installdir)[1][2:]
+    args['vcredist_url'] = vcredist_urls[args['vcversion']]
     args['openrave_shortcuts'] = ''
-    args['output_name'] = 'openrave-%(openrave_version_full)s-win32-%(vsversion)s-setup'%args
+    args['output_name'] = 'openrave-%(openrave_version_full)s-win32-vc%(vcversion)s-setup'%args
     args['installdir'] = os.path.abspath(options.installdir)
     args['install_dll'] = ''
     args['uninstall_dll'] = ''
