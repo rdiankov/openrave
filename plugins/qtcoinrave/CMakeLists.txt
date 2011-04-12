@@ -5,17 +5,6 @@ if(APPLE)
   set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -undefined dynamic_lookup")
 endif(APPLE)
 
-if( MSVC )
-  set(QT_MOC_EXECUTABLE "${CMAKE_CURRENT_SOURCE_DIR}/moc.exe")
-  set(QT_FOUND 1)
-  set(QT_LIBRARIES Qt3Support4 QtCore4 QtGui4 QtOpenGL4)
-else()
-  find_package(Qt4 COMPONENTS QtCore QtGui REQUIRED)
-  if (NOT QT_FOUND)
-    message(STATUS "WARNING: Qt4 not found, disabling QtCoin GUI plugin")
-  endif ()
-endif()
-
 find_package(SoQt4)
 if (NOT SOQT_LIBRARY_FOUND)
   message(STATUS "WARNING: SoQt4 not found, disabling QtCoin GUI plugin. Please install SoQt (http://www.coin3d.org)")
@@ -33,23 +22,8 @@ if (QT_FOUND AND SOQT_LIBRARY_FOUND AND OPENGL_FOUND)
 
   # generate rules for building source files from the resources
   set(QTCOIN_MOCS qtcoinviewer.h)
-
-  if( MSVC )
-    set(MOC_OUTPUT_FILES)
-    foreach(MOC_FILE ${QTCOIN_MOCS})
-      set(MOC_OUTPUT_FILE "${CMAKE_CURRENT_BINARY_DIR}/moc_${MOC_FILE}.cpp")
-      set(MOC_OUTPUT_FILES ${MOC_OUTPUT_FILES} ${MOC_OUTPUT_FILE})
-      add_custom_command(
-        OUTPUT ${MOC_OUTPUT_FILE}
-        COMMAND ${QT_MOC_EXECUTABLE}
-        ARGS -I${CMAKE_SOURCE_DIR}/inc/qt/include -I${CMAKE_SOURCE_DIR}/inc/qt/include/qt -I${CMAKE_SOURCE_DIR}/inc/qt/include/qtgui -I${CMAKE_SOURCE_DIR}/inc/qt/include/qtcore -I${CMAKE_SOURCE_DIR}/inc/qt/include/qtopengl -o ${MOC_OUTPUT_FILE} ${CMAKE_CURRENT_SOURCE_DIR}/${MOC_FILE}
-        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${MOC_FILE}
-        )
-    endforeach()
-  else()
-    include(${QT_USE_FILE})
-    qt4_wrap_cpp(MOC_OUTPUT_FILES ${QTCOIN_MOCS})
-  endif()
+  include(${QT_USE_FILE})
+  qt4_wrap_cpp(MOC_OUTPUT_FILES ${QTCOIN_MOCS})
 
    # build sources, moc'd sources, and rcc'd sources
   add_library(qtcoinrave SHARED aviUtil.cpp IvSelector.cpp Item.cpp qtcoinviewer.cpp qtcoinrave.cpp ${MOC_OUTPUT_FILES} Item.h IvSelector.h qtcoin.h qtcoinviewer.h qtcameraviewer.h)
@@ -102,8 +76,6 @@ if (QT_FOUND AND SOQT_LIBRARY_FOUND AND OPENGL_FOUND)
 
   if( MSVC )
     set(extLIBS ${extLIBS} winmm imm32 ws2_32)
-    # soqt libs not compiled correct so multiply defined symbols
-    set(QTCOIN_LINK_FLAGS "${QTCOIN_LINK_FLAGS} /FORCE:MULTIPLE")
   endif()
 
   target_link_libraries (qtcoinrave ${extLIBS} libopenrave)

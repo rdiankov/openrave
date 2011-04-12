@@ -301,7 +301,8 @@ public:
         RaveParseDirectories(getenv("OPENRAVE_PLUGINS"), vplugindirs);
         bool bExists=false;
         string installdir = OPENRAVE_PLUGINS_INSTALL_DIR;
-        if( !ifstream(installdir.c_str()) ) {
+#ifdef HAVE_BOOST_FILESYSTEM
+        if( !boost::filesystem::is_directory(boost::filesystem::path(installdir)) ) {
 #ifdef _WIN32
             HKEY hkey;
             if(RegOpenKeyEx(HKEY_LOCAL_MACHINE, TEXT("Software\\OpenRAVE\\"OPENRAVE_VERSION_STRING), 0, KEY_QUERY_VALUE, &hkey) == ERROR_SUCCESS) {
@@ -319,7 +320,6 @@ public:
                 RAVELOG_WARN(str(boost::format("%s doesn't exist")%installdir));
             }
         }
-#ifdef HAVE_BOOST_FILESYSTEM
         boost::filesystem::path pluginsfilename = boost::filesystem::system_complete(boost::filesystem::path(installdir, boost::filesystem::native));
         FOREACH(itname, vplugindirs) {
             if( pluginsfilename == boost::filesystem::system_complete(boost::filesystem::path(*itname, boost::filesystem::native)) ) {

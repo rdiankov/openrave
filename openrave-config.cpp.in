@@ -4,7 +4,7 @@
 using namespace std;
 int main(int argc,char** argv)
 {
-    char* usage = "Usage: openrave-config.exe [--boost-version] [--version]";
+    char* usage = "Usage: openrave-config.exe [--boost-version] [--version] [--qt-version]";
     if( argc <= 1 ) {
         cout << usage << endl;
         return 1;
@@ -16,6 +16,9 @@ int main(int argc,char** argv)
         }
         else if( s == "--version" ) {
             cout << "@OPENRAVE_VERSION@" << endl;
+        }
+        else if( s == "--qt-version" ) {
+            cout << "@QT_VERSION_MAJOR@.@QT_VERSION_MINOR@.@QT_VERSION_PATCH@" << endl;
         }
         else {
             cout << usage << endl;
