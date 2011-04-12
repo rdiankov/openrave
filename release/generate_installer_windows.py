@@ -404,10 +404,11 @@ ${StrTrimNewLines}
 
 Section  
   # check for boost installation
+  SetOutPath $INSTDIR
+  File "installers\\%(boost_installer)s"
   ClearErrors
   ReadRegStr $0 HKLM "SOFTWARE\\boostpro.com\\%(boost_version)s" InstallRoot
   IfErrors 0 done
-    File "installers\\%(boost_installer)s"
     MessageBox MB_YESNO "Need to install boost %(boost_version)s. Select 'Multithreaded, DLL' and make sure the installed DLLs are added to 'Path'. Continue with auto-download and install?" IDNO done
     ExecWait '"$INSTDIR\\%(boost_installer)s"' $1
     Delete "$INSTDIR\\%(boost_installer)s"
@@ -433,17 +434,19 @@ Function GetPython
 install:
   ExecWait '"msiexec" /i $2'
   Delete $2
+done:
 FunctionEnd 
+
 Function DetectPython
-ClearErrors
+  ClearErrors
   ReadRegStr $0 HKLM "SOFTWARE\\Python\\PythonCore\\%(python_version)s\\InstallPath" ""
   IfErrors 0 done
     Call GetPython
-  done:
+done:
 FunctionEnd
 
 Function GetNumPy
-  MessageBox MB_OK "Need to install Python NumPy Library. Continue with auto-download and install? IDNO  done
+  MessageBox MB_OK "Need to install Python NumPy Library. Continue with auto-download and install?" IDNO  done
   StrCpy $2 "numpy-%(numpy_version)s-win32-superpack-python%(python_version)s.exe"
   nsisdl::download /TIMEOUT=30000 http://downloads.sourceforge.net/project/numpy/NumPy/%(numpy_version)s/$2 $TEMP\\$2
   Pop $R0 ;Get the return value
@@ -453,7 +456,9 @@ Function GetNumPy
 install:
   ExecWait "$TEMP\\$2"
   Delete "$TEMP\\$2"
-FunctionEnd 
+done:
+FunctionEnd
+
 Function DetectNumPy
   ClearErrors
   ReadRegStr $1 HKLM "SOFTWARE\\Python\\PythonCore\\%(python_version)s\\InstallPath" ""
@@ -478,7 +483,9 @@ Function GetSymPy
 install:
   ExecWait "$TEMP\\$2"
   Delete "$TEMP\\$2"
+done:
 FunctionEnd 
+
 Function DetectSymPy
   ClearErrors
   ReadRegStr $1 HKLM "SOFTWARE\\Python\\PythonCore\\%(python_version)s\\InstallPath" ""
