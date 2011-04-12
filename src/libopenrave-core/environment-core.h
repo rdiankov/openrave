@@ -53,9 +53,11 @@ class Environment : public EnvironmentBase
         _bEnableSimulation = true; // need to start by default
     
         {
+            bool bExists=false;
             RaveParseDirectories(getenv("OPENRAVE_DATA"), _vdatadirs);
             string installdir = OPENRAVE_DATA_INSTALL_DIR;
-            if( !ifstream(installdir.c_str()) ) {
+#ifdef HAVE_BOOST_FILESYSTEM
+            if( !boost::filesystem::is_directory(boost::filesystem::path(installdir)) ) {
 #ifdef _WIN32
                 HKEY hkey;
                 if(RegOpenKeyEx(HKEY_LOCAL_MACHINE, TEXT("Software\\OpenRAVE\\"OPENRAVE_VERSION_STRING), 0, KEY_QUERY_VALUE, &hkey) == ERROR_SUCCESS) {
@@ -73,8 +75,6 @@ class Environment : public EnvironmentBase
                     RAVELOG_WARN(str(boost::format("%s doesn't exist")%installdir));
                 }
             }
-            bool bExists=false;
-#ifdef HAVE_BOOST_FILESYSTEM
             boost::filesystem::path datafilename = boost::filesystem::system_complete(boost::filesystem::path(installdir, boost::filesystem::native));
             FOREACH(itname, _vdatadirs) {
                 if( datafilename == boost::filesystem::system_complete(boost::filesystem::path(*itname, boost::filesystem::native)) ) {

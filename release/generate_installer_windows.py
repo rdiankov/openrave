@@ -21,6 +21,7 @@ import os, sys, re, shutil, urllib
 import numpy
 import sympy
 from types import ModuleType
+from subprocess import Popen, PIPE
 
 EnvVarUpdate = """
 /**
@@ -402,39 +403,90 @@ Var StartMenuFolder
 
 ${StrTrimNewLines}
 
-Section
-  SetOutPath $INSTDIR  
+Function GetVCRedist
   # check for the visual studio runtime
-  GetDLLVersion "MSVCR%(vcversion)s" $R0 $R1
-  StrCmp $R0 "" 0 vcdone
-    MessageBox MB_YESNO "Need to install Microsoft Visual Studio Runtime Redistributable (x86) for vc%(vcversion)s. Continue with auto-download and install?" IDNO vcdone
-    nsisdl::download /TIMEOUT=30000 "%(vcredist_url)s" $TEMP\\vcredist.exe
-    Pop $R0 ;Get the return value
-    StrCmp $R0 "success" vcinstall
-      MessageBox MB_OK "Download failed: $R0"
-      Quit
-vcinstall:
+  MessageBox MB_YESNO "Need to install Microsoft Visual Studio Runtime Redistributable (x86) for vc%(vcversion)s. Continue with auto-download and install?" IDNO done
+  nsisdl::download /TIMEOUT=30000 "%(vcredist_url)s" $TEMP\\vcredist.exe
+  Pop $R0 ;Get the return value
+  StrCmp $R0 "success" install
+    MessageBox MB_OK "Download failed: $R0"
+    Quit
+install:
     ExecWait "$TEMP\\vcredist.exe"
     Delete "$TEMP\\vcredist.exe"
-  
-vcdone:
-  # check for boost installation
+done:
+FunctionEnd
+
+Function DetectVCRedist
+  GetDLLVersion "MSVCR%(vcversion)s" $R0 $R1
+  StrCmp $R0 "" 0 done
+    Call GetVCRedist
+done:
+FunctionEnd
+
+# check for boost installation
+Function GetBoost
+  MessageBox MB_YESNO "Need to install boost %(boost_version)s. Select 'Multithreaded, DLL' and make sure the installed DLLs are added to 'Path'. Continue with auto-download and install?" IDNO done
+  ExecWait '"$INSTDIR\\%(boost_installer)s"' $1
+  Delete "$INSTDIR\\%(boost_installer)s"
+  DetailPrint $1
+  ClearErrors
+  ReadRegStr $0 HKLM "SOFTWARE\\boostpro.com\\%(boost_version)s" InstallRoot
+  IfErrors 0 done
+    MessageBox MB_OK "Failed to find boost %(boost_version)s"
+    Abort "Cannot install"
+    Quit
+done:
+FunctionEnd
+
+Function DetectBoost
   File "installers\\%(boost_installer)s"
   ClearErrors
   ReadRegStr $0 HKLM "SOFTWARE\\boostpro.com\\%(boost_version)s" InstallRoot
   IfErrors 0 done
-    MessageBox MB_YESNO "Need to install boost %(boost_version)s. Select 'Multithreaded, DLL' and make sure the installed DLLs are added to 'Path'. Continue with auto-download and install?" IDNO done
-    ExecWait '"$INSTDIR\\%(boost_installer)s"' $1
-    Delete "$INSTDIR\\%(boost_installer)s"
-    DetailPrint $1
-    ClearErrors
-    ReadRegStr $0 HKLM "SOFTWARE\\boostpro.com\\%(boost_version)s" InstallRoot
-    IfErrors 0 done
-      MessageBox MB_OK "Failed to find boost %(boost_version)s"
-      Abort "Cannot install"
-      Quit
+    Call GetBoost
 done:
-  DetailPrint "boost installation at: $0"
+  DetailPrint "boost installation at: $0, copying necessary DLLs"
+  CopyFiles $0\\lib\\boost*vc%(vcversion)s*.dll $INSTDIR\\bin
+FunctionEnd
+
+Function GetQt4
+  MessageBox MB_YESNO "Need to install Qt %(qt_version)s in 'C:\\Qt\\%(qt_version)s'. Continue with auto-download and install?" IDNO done
+  nsisdl::download /TIMEOUT=30000 "%(qt_url)s" $TEMP\\qt-installer.exe
+  Pop $R0 ;Get the return value
+  StrCmp $R0 "success" install
+    MessageBox MB_OK "Download failed: $R0"
+    Quit
+install:
+    ExecWait "$TEMP\\qt-installer.exe"
+    Delete "$TEMP\\qt-installer.exe"
+done:
+FunctionEnd
+
+Function DetectQt4
+  GetDLLVersion "C:\\Qt\\%(qt_version)s\\bin\\QtCore4.dll" $R0 $R1
+  IntOp $R2 $R0 >> 16
+  IntOp $R2 $R2 & 0x0000ffff
+  IntOp $R3 $R0 & 0x0000ffff
+  IntOp $R4 $R1 >> 16
+  IntOp $R4 $R4 & 0x0000ffff
+  IntOp $R5 $R1 & 0x0000ffff
+  StrCpy $0 "$R2.$R3.$R4"
+  Strcmp $0 "%(qt_version)s" done 0
+    Call GetQt4
+done:
+  CopyFiles C:\\Qt\\%(qt_version)s\\bin\\QtCore4.dll $INSTDIR\\bin
+  CopyFiles C:\\Qt\\%(qt_version)s\\bin\\QtGui4.dll $INSTDIR\\bin
+  CopyFiles C:\\Qt\\%(qt_version)s\\bin\\QtOpenGL4.dll $INSTDIR\\bin
+  CopyFiles C:\\Qt\\%(qt_version)s\\bin\\Qt3Support4.dll $INSTDIR\\bin
+FunctionEnd
+
+Section
+  SetOutPath $INSTDIR
+  CreateDirectory $INSTDIR\\bin # for copying DLLs
+  Call DetectVCRedist  
+  Call DetectBoost
+  Call DetectQt4
 SectionEnd
 
 Function GetPython
@@ -636,8 +688,12 @@ noremove:
 SectionEnd
 """
 
-vcredist_urls = {'100':"http://www.microsoft.com/downloads/info.aspx?na=41&SrcFamilyId=A7B7A05E-6DE6-4D3A-A423-37BF0912DB84&SrcDisplayLang=en&u=http%3a%2f%2fdownload.microsoft.com%2fdownload%2f5%2fB%2fC%2f5BC5DBB3-652D-4DCE-B14A-475AB85EEF6E%2fvcredist_x86.exe",
-                 '90':"http://www.microsoft.com/downloads/info.aspx?na=41&SrcFamilyId=A5C84275-3B97-4AB7-A40D-3802B2AF5FC2&SrcDisplayLang=en&u=http%3a%2f%2fdownload.microsoft.com%2fdownload%2fd%2fd%2f9%2fdd9a82d0-52ef-40db-8dab-795376989c03%2fvcredist_x86.exe"}
+vcredist_urls = {'100':'http://www.microsoft.com/downloads/info.aspx?na=41&SrcFamilyId=A7B7A05E-6DE6-4D3A-A423-37BF0912DB84&SrcDisplayLang=en&u=http%3a%2f%2fdownload.microsoft.com%2fdownload%2f5%2fB%2fC%2f5BC5DBB3-652D-4DCE-B14A-475AB85EEF6E%2fvcredist_x86.exe',
+                 '90':'http://www.microsoft.com/downloads/info.aspx?na=41&SrcFamilyId=A5C84275-3B97-4AB7-A40D-3802B2AF5FC2&SrcDisplayLang=en&u=http%3a%2f%2fdownload.microsoft.com%2fdownload%2fd%2fd%2f9%2fdd9a82d0-52ef-40db-8dab-795376989c03%2fvcredist_x86.exe'}
+                 
+qt_urls = {'100':'http://qt-msvc-installer.googlecode.com/files/qt-win32-opensource-%s-vs2008.exe',
+           '90':'http://qt-msvc-installer.googlecode.com/files/qt-win32-opensource-%s-vs2008.exe'}
+           
 if __name__ == "__main__":
     parser = OptionParser(description='Creates a NSI installer for windows')
     parser.add_option('--lang',action="store",type='string',dest='lang',default='en',
@@ -661,6 +717,8 @@ if __name__ == "__main__":
         args['openrave_revision'] = options.revision
     args['vcversion'] = os.path.split(options.installdir)[1][2:]
     args['vcredist_url'] = vcredist_urls[args['vcversion']]
+    args['qt_version'] = Popen(['openrave-config','--qt-version'],stdout=PIPE).communicate()[0].strip()
+    args['qt_url'] = qt_urls[args['vcversion']]%args['qt_version']
     args['openrave_shortcuts'] = ''
     args['output_name'] = 'openrave-%(openrave_version_full)s-win32-vc%(vcversion)s-setup'%args
     args['installdir'] = os.path.abspath(options.installdir)

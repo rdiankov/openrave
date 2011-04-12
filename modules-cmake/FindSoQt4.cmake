@@ -58,19 +58,17 @@ else(SOQT_CONFIG_EXECUTABLE)
   # soqt include files in local directory
   if( MSVC )
     set(SOQT_LIBRARY_FOUND 1)
-    set( SOQT_CXXFLAGS "-DSOQT_NOT_DLL -DQT3_SUPPORT")
+    set( SOQT_CXXFLAGS "-DQT3_SUPPORT -DSOQT_DLL")
     set( SOQT_LINK_FLAGS "")
-    set( SOQT_INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/inc/qt/include
-      ${CMAKE_SOURCE_DIR}/inc/qt/include/qt
-      ${CMAKE_SOURCE_DIR}/inc/qt/include/qtgui
-      ${CMAKE_SOURCE_DIR}/inc/qt/include/qtcore
-      ${CMAKE_SOURCE_DIR}/inc/qt/include/qtopengl)
+    set( SOQT_INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/inc)
     set( SOQT_LINK_DIRS "" )
 
     if( MSVC70 OR MSVC71 OR MSVC80 )
-      set(SOQT_LIBRARY soqt1s Qt3Support4 QtCore4 QtGui4 QtOpenGL4)
-	  else()
-      set(SOQT_LIBRARY soqt1s_vc9 Qt3Support4 QtCore4 QtGui4 QtOpenGL4)
+      set(SOQT_LIBRARY soqt1.5-vc80-mt)
+	  elseif(MSVC90)
+      set(SOQT_LIBRARY soqt1.5-vc90-mt)
+    else() # vc100+
+      set(SOQT_LIBRARY soqt1.5-vc100-mt)
     endif()
     set( SOQT_LIBRARY_RELEASE ${SOQT_LIBRARY})
     set( SOQT_LIBRARY_DEBUG ${SOQT_LIBRARY})
