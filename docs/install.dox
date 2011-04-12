@@ -96,10 +96,13 @@ cmake -DOPT_PLUGINS=OFF ..
  - \ref openrave_config - configuration file that helps users find the %OpenRAVE installation.
  - \ref openrave-hash.py - Query the body and robot hashes.
 - include
- - rave - Directory for all public %OpenRAVE header files.
+ - openrave - Directory for all public %OpenRAVE header files.
+ - \b openrave-core.h - Header file for instantiating the OpenRAVE Core
 - lib
  - \b libopenrave (.so, .a, .dll, .lib) - Library that all plugins should link to offering the \ref interfaces.
  - \b libopenrave-core (.so, .a, .dll, .lib) - Library that allows any application to start the %OpenRAVE core internally.
+ - cmake
+  - \b openrave-config.cmake - cmake file for searching for openrave installations
 - share
  - openrave
   - cppexamples - All C++ examples
@@ -425,7 +428,7 @@ source `openrave-config --prefix`/share/openrave/openravebash
 \en
 \page installation_win Building and Installing on Windows
 
-<b>NOTE:</b> Only Windows XP has been tested. Windows 7 and others have been reported to work, but might need to modify the executable properties to <b>windows95 compatibility mode</b> after the executable has been built. This requies the <b>msvcp71.dll</b> to be inserted into the system.
+<b>NOTE:</b> Only Windows XP has been tested. Windows 7 and others have been reported to work, but might need to modify the executable properties to <b>windows95 compatibility mode</b> after the executable has been built.
 
 It is recommended to use OpenRAVE from the official <a href="http://sourceforge.net/projects/openrave/files/">Windows Installers on Sourceforge</a>.
 
@@ -444,6 +447,7 @@ A lot of the 3rd party libraries are already inside the openrave sources. Howeve
 
 - <a href="http://www.boostpro.com/download/">Latest Boost C++ Libraries</a> - Select <b>Multithreaded DLL</b>!
   - A local boost installation is included in the sources in case cannot use a system install.
+- <a href="http://code.google.com/p/qt-msvc-installer/downloads/list">Qt4 MSVC Installer</a>
 - <a href="http://www.cmake.org/cmake/resources/software.html">CMake</a>.
 - For openravepy python bindings (<b>make sure Python version is compatible with Boost.Python! 2.6 is recommended!</b>):
  - <a href="http://python.org/download/releases/2.6.6">Python 2.6.6</a>
@@ -504,7 +508,7 @@ installed/uninstalled), it is recommended to clear the cmake cache by first remo
 \page installation_win Windowsユーザーのためのインストール方法
 
 
-<b>注意：</b> 現在はWindows XPのみサポートしています．事前にコンパイルされた実行プログラムが含まれているため、<b>msvcp71.dll</b>のファイルが必要です。
+<b>注意：</b> 現在はWindows XPのみサポートされていますが、Windows 7でも動けるはずです。
 
 \section iwin_thirdparty 第三者ソフトウェアのインストール
 
@@ -515,6 +519,7 @@ installed/uninstalled), it is recommended to clear the cmake cache by first remo
 - <a href="http://www.boostpro.com/download/">Boost C++</a> - 最新のBoostライブラリー。<b>Multithreaded DLL</b>を選択!.
   - 既にopenraveのソースに含まれている。
 - <a href="http://www.cmake.org/cmake/resources/software.html">CMake</a>.
+- <a href="http://code.google.com/p/qt-msvc-installer/downloads/list">Qt4 MSVC Installer</a>
 - <a href="http://python.org/download">Python 2.6</a>, <a href="http://sourceforge.net/projects/numpy/files">numpy superpack</a>, <a href="http://www.pythonware.com/products/pil">Python Imaging Library (PIL)</a> openravepy用
  - Pythonデバッグライブラリもインストールされないと，<b>openravepy</b>はデバッグモードでコンパイルされません．
  - <a href="http://ipython.scipy.org">IPython</a> がPythonスクリプトでの開発には推奨されます．
