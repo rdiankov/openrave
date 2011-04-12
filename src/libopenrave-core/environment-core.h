@@ -55,7 +55,7 @@ class Environment : public EnvironmentBase
         {
             RaveParseDirectories(getenv("OPENRAVE_DATA"), _vdatadirs);
             string installdir = OPENRAVE_DATA_INSTALL_DIR;
-            if( !!ifstream(installdir.c_str()) ) {
+            if( !ifstream(installdir.c_str()) ) {
 #ifdef _WIN32
                 HKEY hkey;
                 if(RegOpenKeyEx(HKEY_LOCAL_MACHINE, TEXT("Software\\OpenRAVE\\"OPENRAVE_VERSION_STRING), 0, KEY_QUERY_VALUE, &hkey) == ERROR_SUCCESS) {
