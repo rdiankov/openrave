@@ -54,9 +54,28 @@ class Environment : public EnvironmentBase
     
         {
             RaveParseDirectories(getenv("OPENRAVE_DATA"), _vdatadirs);
+            string installdir = OPENRAVE_DATA_INSTALL_DIR;
+            if( !!ifstream(installdir.c_str()) ) {
+#ifdef _WIN32
+                HKEY hkey;
+                if(RegOpenKeyEx(HKEY_LOCAL_MACHINE, TEXT("Software\\OpenRAVE\\"OPENRAVE_VERSION_STRING), 0, KEY_QUERY_VALUE, &hkey) == ERROR_SUCCESS) {
+                    DWORD dwType = REG_SZ;
+                    CHAR szInstallRoot[4096]; // dont' take chances, it is windows
+                    DWORD dwSize = sizeof(szInstallRoot);
+                    RegQueryValueEx(hkey, TEXT("InstallRoot"), NULL, &dwType, (PBYTE)szInstallRoot, &dwSize);
+                    RegCloseKey(hkey);
+                    installdir.assign(szInstallRoot);
+                    installdir += str(boost::format("%cshare%copenrave")%s_filesep%s_filesep);
+                }
+                else
+#endif
+                {
+                    RAVELOG_WARN(str(boost::format("%s doesn't exist")%installdir));
+                }
+            }
             bool bExists=false;
 #ifdef HAVE_BOOST_FILESYSTEM
-            boost::filesystem::path datafilename = boost::filesystem::system_complete(boost::filesystem::path(OPENRAVE_DATA_INSTALL_DIR, boost::filesystem::native));
+            boost::filesystem::path datafilename = boost::filesystem::system_complete(boost::filesystem::path(installdir, boost::filesystem::native));
             FOREACH(itname, _vdatadirs) {
                 if( datafilename == boost::filesystem::system_complete(boost::filesystem::path(*itname, boost::filesystem::native)) ) {
                     bExists = true;
@@ -64,16 +83,16 @@ class Environment : public EnvironmentBase
                 }
             }
 #else
-            string datafilename=OPENRAVE_DATA_INSTALL_DIR;
+            string datafilename=installdir;
             FOREACH(itname, _vdatadirs) {
-                if( datafilename == OPENRAVE_DATA_INSTALL_DIR ) {
+                if( datafilename == installdir ) {
                     bExists = true;
                     break;
                 }
             }
 #endif
             if( !bExists ) {
-                _vdatadirs.push_back(OPENRAVE_DATA_INSTALL_DIR);
+                _vdatadirs.push_back(installdir);
             }
        }
     }

@@ -49,6 +49,12 @@
 #include <boost/thread/condition.hpp>
 #include <boost/thread/mutex.hpp>
 
+#ifdef _WIN32
+const char s_filesep = '\\';
+#else
+const char s_filesep = '/';
+#endif
+
 namespace OpenRAVE {
 
 /// database of planners, obstacles, sensors, and problem from plugins
@@ -294,8 +300,27 @@ public:
         std::vector<std::string> vplugindirs;
         RaveParseDirectories(getenv("OPENRAVE_PLUGINS"), vplugindirs);
         bool bExists=false;
+        string installdir = OPENRAVE_PLUGINS_INSTALL_DIR;
+        if( !!ifstream(installdir.c_str()) ) {
+#ifdef _WIN32
+            HKEY hkey;
+            if(RegOpenKeyEx(HKEY_LOCAL_MACHINE, TEXT("Software\\OpenRAVE\\"OPENRAVE_VERSION_STRING), 0, KEY_QUERY_VALUE, &hkey) == ERROR_SUCCESS) {
+                DWORD dwType = REG_SZ;
+                CHAR szInstallRoot[4096]; // dont' take chances, it is windows
+                DWORD dwSize = sizeof(szInstallRoot);
+                RegQueryValueEx(hkey, TEXT("InstallRoot"), NULL, &dwType, (PBYTE)szInstallRoot, &dwSize);
+                RegCloseKey(hkey);
+                installdir.assign(szInstallRoot);
+                installdir += str(boost::format("%cshare%copenrave%cplugins")%s_filesep%s_filesep%s_filesep);
+            }
+            else
+#endif
+            {
+                RAVELOG_WARN(str(boost::format("%s doesn't exist")%installdir));
+            }
+        }
 #ifdef HAVE_BOOST_FILESYSTEM
-        boost::filesystem::path pluginsfilename = boost::filesystem::system_complete(boost::filesystem::path(OPENRAVE_PLUGINS_INSTALL_DIR, boost::filesystem::native));
+        boost::filesystem::path pluginsfilename = boost::filesystem::system_complete(boost::filesystem::path(installdir, boost::filesystem::native));
         FOREACH(itname, vplugindirs) {
             if( pluginsfilename == boost::filesystem::system_complete(boost::filesystem::path(*itname, boost::filesystem::native)) ) {
                 bExists = true;
@@ -303,7 +328,7 @@ public:
             }
         }
 #else
-        string pluginsfilename=OPENRAVE_PLUGINS_INSTALL_DIR;
+        string pluginsfilename=installdir;
         FOREACH(itname, vplugindirs) {
             if( pluginsfilename == *itname ) {
                 bExists = true;
@@ -312,7 +337,7 @@ public:
         }
 #endif
         if( !bExists ) {
-            vplugindirs.push_back(OPENRAVE_PLUGINS_INSTALL_DIR);
+            vplugindirs.push_back(installdir);
         }
         FOREACH(it, vplugindirs) {
             if( it->size() > 0 ) {

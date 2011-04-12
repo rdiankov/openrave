@@ -12,7 +12,7 @@ Configuring
 
 Because it is not necessary to cater to the lowest common denominator, use easy_install to get latest test packages::
 
-  sudo apt-get install graphviz python-svn
+  sudo apt-get install graphviz python-svn gnu-pgagent
   sudo easy_install nose coverage
 
 Jenkins
@@ -47,6 +47,10 @@ Measurements and their history are recorded with the `Jenkins Measurement Plots 
 
   <measurement><name>myvaluename</name><value>14.669</value></measurement>
 
+chroot
+~~~~~~
+
+Can build entire ubuntu environments using `debootstrap <https://wiki.ubuntu.com/DebootstrapChroot>`_.
 
 Tests
 -----
