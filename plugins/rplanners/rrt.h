@@ -253,8 +253,13 @@ class BirrtPlanner : public RrtPlanner<SimpleNode>
                 }
             }
 
-            if( !_parameters->_samplefn(_randomConfig) )
+            if( iter == 1 && _parameters->GetDOF() <= (int)_parameters->vgoalconfig.size() ) {
+                _randomConfig.resize(_parameters->GetDOF());
+                std::copy(_parameters->vgoalconfig.begin(),_parameters->vgoalconfig.begin()+_parameters->GetDOF(),_randomConfig.begin());
+            }
+            else if( !_parameters->_samplefn(_randomConfig) ) {
                 continue;
+            }
             
             // extend A
             ExtendType et = TreeA->Extend(_randomConfig, iConnectedA);
@@ -448,10 +453,12 @@ class BasicRrtPlanner : public RrtPlanner<SimpleNode>
                 }
             }
 
-            if( RaveRandomFloat() < _fGoalBiasProb && _vecGoals.size() > 0 )
+            if( iter == 1 || RaveRandomFloat() < _fGoalBiasProb && _vecGoals.size() > 0 ) {
                 _randomConfig = _vecGoals[RaveRandomInt()%_vecGoals.size()];
-            else if( !_parameters->_samplefn(_randomConfig) )
+            }
+            else if( !_parameters->_samplefn(_randomConfig) ) {
                 continue;
+            }
 
             // extend A
             ExtendType et = _treeForward.Extend(_randomConfig, lastnode, _bOneStep);
