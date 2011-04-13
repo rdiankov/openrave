@@ -25,7 +25,11 @@ except ImportError:
     # use openrave-config to get the correct install path
     from subprocess import Popen, PIPE
     try:
-        openravepy_path = Popen(['openrave-config','--python-dir'],stdout=PIPE).communicate()
+        openrave_config = Popen(['openrave-config','--python-dir'],stdout=PIPE)
+        openravepy_path = openrave_config.communicate()
+        if openrave_config.returncode != 0:
+            raise OSError('bad args')
+            
         sys.path.append(openravepy_path[0].strip())
     except OSError:
         import platform
