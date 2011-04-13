@@ -720,7 +720,7 @@ noremove:
   RMDir /r "$1\\include"
   RMDir /r "$1\\lib"
   RMDir /r "$1\\share"
-  Delete "$INSTDIR\\%(boost_installer)s"
+  Delete "$1\\%(boost_installer)s"
   RMDir "$1"
 SectionEnd
 """
