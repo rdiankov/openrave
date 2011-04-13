@@ -38,11 +38,12 @@ using namespace std;
 void sigint_handler(int sig);
 #endif
 
-#ifndef _WIN32
+#ifdef _WIN32
+#define usleep(micro) Sleep((micro)/1000)
+#else
 #define strnicmp strncasecmp
 #define stricmp strcasecmp
 #include <sys/time.h>
-#define Sleep(milli) usleep(1000*milli)
 #endif
 
 #define FORIT(it, v) for(it = (v).begin(); it != (v).end(); (it)++)
@@ -377,18 +378,19 @@ void MainOpenRAVEThread()
 
         if( s_saveScene.size() > 0 ) {
             s_penv->Save(s_saveScene);
-    //        if( !bSaveScene )
-    //            RAVELOG_ERROR("save scene at file %s failed\n", s_saveScene);
-    //        else
-    //            RAVELOG_INFOA("save scene at file %s succeeded\n", s_saveScene);
-            
             s_bThreadDestroyed = true;
             return;
         }
     }
-    
-    s_penv->GetViewer()->main(bShowGUI);
+
+    // need to keep a local pointer around to guarantee destruction order
+    ViewerBasePtr pviewer = s_penv->GetViewer();
+    pviewer->main(bShowGUI);
     s_bThreadDestroyed = true;
+    while(pviewer.use_count() > 1) {
+        RAVELOG_WARN("viewer use count > 1, waiting for others to release viewer so can guarantee destruction in correct thread\n");
+        usleep(10000);
+    }
 }
 
 #ifndef _WIN32
