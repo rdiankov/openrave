@@ -57,12 +57,7 @@ if( OPT_STATIC )
                                            CLEAN_DIRECT_OUTPUT 1
                                            COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS}"
                                            LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS}")
-  if( MSVC )
-    # set "link library dependencies" for visual studio in order to include symbols for other statically linked libs
-    # this is such an unbelievable hack, that it's disgusting
-    set_target_properties(libopenrave_static PROPERTIES STATIC_LIBRARY_FLAGS "\" LinkLibraryDependencies=\"true")
-  endif()
-
+  
   target_link_libraries(libopenrave_static ${openrave_libraries})
   add_dependencies(libopenrave_static interfacehashes_target openrave-md5)
   if( CRLIBM_LIBRARY )

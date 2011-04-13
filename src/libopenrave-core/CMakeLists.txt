@@ -44,13 +44,12 @@ if( CLOCK_GETTIME_FOUND )
 endif()
 
 add_library(libopenrave-core SHARED ${openrave_core_SOURCES})
-add_dependencies(libopenrave-core libopenrave)
 
 if( COLLADA_FOUND )
-  add_dependencies(libopenrave-core ${COLLADA_LIBRARIES})
+  set(coreLIBS ${coreLIBS} ${COLLADA_LIBRARIES})
 endif()
 if( IVCON_FOUND )
-  add_dependencies(libopenrave-core ${IVCON_LIBRARY})
+  set(coreLIBS ${coreLIBS} ${IVCON_LIBRARY})
 endif()
 
 set_target_properties(libopenrave-core PROPERTIES OUTPUT_NAME openrave-core
@@ -79,25 +78,13 @@ if( OPT_STATIC )
     set(LIBOPENRAVE_CORE_NAME openrave-core)
   endif()
 
-  if( COLLADA_FOUND )
-    add_dependencies(libopenrave-core_static ${COLLADA_LIBRARIES})
-  endif()
-  if( IVCON_FOUND )
-    add_dependencies(libopenrave-core_static ${IVCON_LIBRARY})
-  endif()
-
   set_target_properties(libopenrave-core_static PROPERTIES OUTPUT_NAME ${LIBOPENRAVE_CORE_NAME}
                                                 SOVERSION ${OPENRAVE_SOVERSION}
                                                 VERSION ${OPENRAVE_VERSION}
                                                 CLEAN_DIRECT_OUTPUT 1
                                                 COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} "
                                                 LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS}")
-  if( MSVC )
-    # set "link library dependencies" for visual studio in order to include symbols for other statically linked libs
-    # this is such an unbelievable hack, that it's ridiculous
-    set_target_properties(libopenrave-core_static PROPERTIES STATIC_LIBRARY_FLAGS "\" LinkLibraryDependencies=\"true")
-  endif()
-
+  
   target_link_libraries (libopenrave-core_static libopenrave_static ${coreLIBS})
   install(TARGETS libopenrave-core_static DESTINATION lib${LIB_SUFFIX})
 endif()

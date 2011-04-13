@@ -1,5 +1,5 @@
 set(OCTAVE OCTAVE-NOTFOUND)
-FIND_PROGRAM(OCTAVE NAME "mkoctfile" PATHS)
+find_program(OCTAVE NAME "mkoctfile" PATHS)
 
 if(OCTAVE)
 
@@ -35,5 +35,5 @@ if(OCTAVE)
   add_dependencies(orwrite_octave orread_octave) # used to force mex to be called once at a time
   install(FILES ${OCTAVE_ORWRITE_MEX} DESTINATION ${OPENRAVE_OCTAVE_INSTALL_DIR})
 else()
-  message(STATUS "Octave installation not found")
+  message(STATUS "Octave installation not found, is 'mkoctfile' in the system path?")
 endif(OCTAVE)
