@@ -565,29 +565,46 @@ start:
 done:
 FunctionEnd
     
-SectionGroup /e "PythonBindings" secpython
+SectionGroup /e "Python Bindings" secpython
 Section
-Call DetectPython
-Call DetectNumPy
-Call DetectSymPy
+  SetOutPath $INSTDIR
+  Call DetectPython
+  Call DetectNumPy
+  Call DetectSymPy
+  File /r *.py %(installdir)s\\bin 
+  File /r /x *.pyd %(installdir)s\\share\\openrave\\openravepy
+  
+%(install_python_dll)s
+
 SectionEnd
-Section "Add to Python Path"
+Section "Add to PYTHONPATH"
   ${EnvVarUpdate} $0 "PYTHONPATH"  "A" "HKLM" "$INSTDIR\\share\\openrave"  
 SectionEnd
 SectionGroupEnd
 
-Section /o "Register Octave Bindings" secoctave
+SectionGroup /e "Octave Bindings" secoctave
+Section
+  File /r %(installdir)s\\share\\openrave\\octave
 SectionEnd
+Section "Add to OCTAVE_PATH"
+  ${EnvVarUpdate} $0 "OCTAVE_PATH"  "A" "HKLM" "$INSTDIR\\share\\openrave\\octave"
+SectionEnd
+SectionGroupEnd
 
 Section
   SetOutPath $INSTDIR
   WriteRegStr HKLM SOFTWARE\\OpenRAVE "" "%(openrave_version)s"
   WriteRegStr HKLM SOFTWARE\\OpenRAVE\\%(openrave_version)s "InstallRoot" "$INSTDIR"
   
-  File /r /x *.dll %(installdir)s\\bin 
+  File /r /x *.dll /x *.py %(installdir)s\\bin 
   File /r %(installdir)s\\include
   File /r %(installdir)s\\lib
-  File /r /x *.pyd %(installdir)s\\share
+  File /r %(installdir)s\\share\\cppexamples
+  File /r %(installdir)s\\share\\data
+  File /r %(installdir)s\\share\\models
+  File /r %(installdir)s\\share\\plugins
+  File /r %(installdir)s\\share\\robots
+  File /r %(installdir)s\\share\\LICENSE*
 
 %(install_dll)s
 
@@ -667,6 +684,7 @@ Section "Uninstall"
     DeleteRegValue HKLM SOFTWARE\\OpenRAVE ""
 noremove:
   ${un.EnvVarUpdate} $0 "PYTHONPATH"  "R" "HKLM" "$INSTDIR\\share\\openrave"
+  ${un.EnvVarUpdate} $0 "OCTAVE_PATH"  "R" "HKLM" "$INSTDIR\\share\\openrave\\octave"
   ${un.EnvVarUpdate} $0 "Path"  "R" "HKLM" "$INSTDIR\\bin"
 
   # have to store install dir since it gets wiped out somewhere
@@ -723,6 +741,7 @@ if __name__ == "__main__":
     args['output_name'] = 'openrave-%(openrave_version_full)s-win32-vc%(vcversion)s-setup'%args
     args['installdir'] = os.path.abspath(options.installdir)
     args['install_dll'] = ''
+    args['install_python_dll'] = ''
     args['uninstall_dll'] = ''
     args['EnvVarUpdate'] = EnvVarUpdate
     args['license'] = os.path.join(options.installdir,'share','openrave','LICENSE.lgpl')
@@ -734,7 +753,7 @@ if __name__ == "__main__":
     # python dlls
     for dllname in os.listdir(os.path.join(options.installdir,'share','openrave','openravepy')):
         if os.path.splitext(dllname)[1] == '.pyd':
-            args['install_dll'] += '!insertmacro InstallLib DLL NOTSHARED NOREBOOT_PROTECTED %s\\share\\openrave\\openravepy\\%s $INSTDIR\\share\\openrave\\openravepy\\%s $INSTDIR\n'%(args['installdir'],dllname,dllname)
+            args['install_python_dll'] += '!insertmacro InstallLib DLL NOTSHARED NOREBOOT_PROTECTED %s\\share\\openrave\\openravepy\\%s $INSTDIR\\share\\openrave\\openravepy\\%s $INSTDIR\n'%(args['installdir'],dllname,dllname)
             args['uninstall_dll'] += '!insertmacro UninstallLib DLL NOTSHARED NOREBOOT_PROTECTED $INSTDIR\\share\\openrave\\openravepy\\%s\n'%(dllname)
     # add the runable examples 
     for name in dir(openravepy.examples):

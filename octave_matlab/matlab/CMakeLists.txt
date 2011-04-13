@@ -4,10 +4,11 @@
 
 set(MATLAB MATLAB-NOTFOUND)
 if( WIN32 )
-  FIND_PROGRAM(MATLAB NAME "mex.bat" PATHS )
+  set(MEX_EXECUTABLE "mex.bat")
 else()
-  FIND_PROGRAM(MATLAB NAME "mex" PATHS )
+  set(MEX_EXECUTABLE "mex")
 endif()
+find_program(MATLAB NAME ${MEX_EXECUTABLE} PATHS )
 
 set(MEX_CXXFLAGS)
 if( CMAKE_COMPILER_IS_GNUC OR CMAKE_COMPILER_IS_GNUCXX )
@@ -90,5 +91,5 @@ if( USE_MATLAB )
   add_dependencies(orwrite_matlab orread_matlab) # used to force mex to be called once at a time
   install(FILES ${MATLAB_MEX_OUT}/${MATLAB_ORWRITE_MEX} DESTINATION ${OPENRAVE_MATLAB_INSTALL_DIR})
 else()
-  message(STATUS "MATLAB installation not found")
+  message(STATUS "MATLAB installation not found, is ${MEX_EXECUTABLE} in the system path?")
 endif()
