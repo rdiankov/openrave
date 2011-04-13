@@ -489,6 +489,12 @@ Section
   Call DetectVCRedist  
   Call DetectBoost
   Call DetectQt4
+  
+  # start menu
+  !insertmacro MUI_STARTMENU_WRITE_BEGIN Application
+  CreateDirectory "$SMPROGRAMS\\$StartMenuFolder"
+  #CreateDirectory "$SMPROGRAMS\\$StartMenuFolder\\databases"
+  !insertmacro MUI_STARTMENU_WRITE_END
 SectionEnd
 
 Function GetPython
@@ -581,6 +587,11 @@ Section
   
 %(install_python_dll)s
 
+  !insertmacro MUI_STARTMENU_WRITE_BEGIN Application
+  CreateShortCut "$SMPROGRAMS\\$StartMenuFolder\\openravepy ipython.lnk" "$INSTDIR\\bin\\openrave.py" "-i" "$INSTDIR\\bin\\openrave.py" 0
+  CreateDirectory "$SMPROGRAMS\\$StartMenuFolder\\Python Examples"
+  %(openrave_python_shortcuts)s
+  !insertmacro MUI_STARTMENU_WRITE_END
 SectionEnd
 Section "Add to PYTHONPATH"
   ${EnvVarUpdate} $0 "PYTHONPATH"  "A" "HKLM" "$INSTDIR\\share\\openrave"  
@@ -591,6 +602,9 @@ SectionGroup /e "Octave Bindings" secoctave
 Section
   SetOutPath $INSTDIR\\share\\openrave
   File /r %(installdir)s\\share\\openrave\\octave
+  !insertmacro MUI_STARTMENU_WRITE_BEGIN Application
+  CreateShortCut "$SMPROGRAMS\\$StartMenuFolder\\Octave Examples.lnk" "$INSTDIR\\share\\openrave\\octave" "" "$INSTDIR\\share\\openrave\\octave" 0
+  !insertmacro MUI_STARTMENU_WRITE_END
 SectionEnd
 Section "Add to OCTAVE_PATH"
   ${EnvVarUpdate} $0 "OCTAVE_PATH"  "A" "HKLM" "$INSTDIR\\share\\openrave\\octave"
@@ -624,13 +638,9 @@ Section
   
   WriteUninstaller $INSTDIR\\uninstall.exe
   
-  # start menu
   !insertmacro MUI_STARTMENU_WRITE_BEGIN Application
-  CreateDirectory "$SMPROGRAMS\\$StartMenuFolder"
-  CreateDirectory "$SMPROGRAMS\\$StartMenuFolder\\examples"
-  #CreateDirectory "$SMPROGRAMS\\$StartMenuFolder\\databases"
   CreateShortCut "$SMPROGRAMS\\$StartMenuFolder\\openrave.lnk" "$INSTDIR\\bin\\openrave.exe" "" "$INSTDIR\\bin\\openrave.exe" 0
-  CreateShortCut "$SMPROGRAMS\\$StartMenuFolder\\openravepy ipython.lnk" "$INSTDIR\\bin\\openrave.py" "-i" "$INSTDIR\\bin\\openrave.py" 0
+  CreateShortCut "$SMPROGRAMS\\$StartMenuFolder\\C++ Examples.lnk" "$INSTDIR\\share\\openrave\\cppexamples" "" "$INSTDIR\\share\\openrave\\cppexamples" 0
   CreateShortCut "$SMPROGRAMS\\$StartMenuFolder\\Uninstall.lnk" "$INSTDIR\\uninstall.exe" "" "$INSTDIR\\uninstall.exe" 0
   %(openrave_shortcuts)s
   !insertmacro MUI_STARTMENU_WRITE_END
@@ -710,6 +720,7 @@ noremove:
   RMDir /r "$1\\include"
   RMDir /r "$1\\lib"
   RMDir /r "$1\\share"
+  Delete "$INSTDIR\\%(boost_installer)s"
   RMDir "$1"
 SectionEnd
 """
@@ -746,6 +757,7 @@ if __name__ == "__main__":
     args['qt_version'] = Popen(['openrave-config','--qt-version'],stdout=PIPE).communicate()[0].strip()
     args['qt_url'] = qt_urls[args['vcversion']]%args['qt_version']
     args['openrave_shortcuts'] = ''
+    args['openrave_python_shortcuts'] = ''
     args['output_name'] = 'openrave-%(openrave_version_full)s-win32-vc%(vcversion)s-setup'%args
     args['installdir'] = os.path.abspath(options.installdir)
     args['install_dll'] = ''
@@ -770,8 +782,8 @@ if __name__ == "__main__":
                 m=__import__('openravepy.examples.'+name)
                 if type(m) is ModuleType:
                     path = '$INSTDIR\\share\\openrave\\openravepy\\examples\\%s.py'%name
-                    args['openrave_shortcuts'] += 'CreateShortCut "$SMPROGRAMS\\$StartMenuFolder\\examples\\%s.lnk" "%s" "" "%s" 0\n'%(name,path,path)
-                    args['openrave_shortcuts'] += 'CreateShortCut "$SMPROGRAMS\\$StartMenuFolder\\examples\\%s Documentation.lnk" "http://openrave.programmingvision.com/en/main/openravepy/examples.%s.html" "" "C:\WINDOWS\system32\shell32.dll" 979\n'%(name,name)
+                    args['openrave_python_shortcuts'] += 'CreateShortCut "$SMPROGRAMS\\$StartMenuFolder\\Python Examples\\%s.lnk" "%s" "" "%s" 0\n'%(name,path,path)
+                    args['openrave_python_shortcuts'] += 'CreateShortCut "$SMPROGRAMS\\$StartMenuFolder\\Python Examples\\%s Documentation.lnk" "http://openrave.programmingvision.com/en/main/openravepy/examples.%s.html" "" "C:\WINDOWS\system32\shell32.dll" 979\n'%(name,name)
             except ImportError:
                 pass
     # not sure how useful this would be, perhaps a database generator GUI would help?
@@ -781,7 +793,7 @@ if __name__ == "__main__":
                 m=__import__('openravepy.databases.'+name)
                 if type(m) is ModuleType:
                     path = '$INSTDIR\\share\\openrave\\openravepy\\databases\\%s.py'%name
-                    args['openrave_shortcuts'] += 'CreateShortCut "$SMPROGRAMS\\$StartMenuFolder\\databases\\%s.lnk" "%s" "" "%s" 0\n'%(name,path,path)
+                    args['openrave_python_shortcuts'] += 'CreateShortCut "$SMPROGRAMS\\$StartMenuFolder\\Databases\\%s.lnk" "%s" "" "%s" 0\n'%(name,path,path)
             except ImportError:
                 pass
 
