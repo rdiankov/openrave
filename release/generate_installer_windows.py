@@ -427,6 +427,7 @@ FunctionEnd
 # check for boost installation
 Function GetBoost
   MessageBox MB_YESNO "Need to install boost %(boost_version)s. Select 'Multithreaded, DLL' and make sure the installed DLLs are added to 'Path'. Continue with auto-download and install?" IDNO done
+  File "installers\\%(boost_installer)s"
   ExecWait '"$INSTDIR\\%(boost_installer)s"' $1
   Delete "$INSTDIR\\%(boost_installer)s"
   DetailPrint $1
@@ -440,7 +441,6 @@ done:
 FunctionEnd
 
 Function DetectBoost
-  File "installers\\%(boost_installer)s"
   ClearErrors
   ReadRegStr $0 HKLM "SOFTWARE\\boostpro.com\\%(boost_version)s" InstallRoot
   IfErrors 0 done
@@ -484,6 +484,8 @@ FunctionEnd
 Section
   SetOutPath $INSTDIR
   CreateDirectory $INSTDIR\\bin # for copying DLLs
+  CreateDirectory $INSTDIR\\share
+  CreateDirectory $INSTDIR\\share\\openrave
   Call DetectVCRedist  
   Call DetectBoost
   Call DetectQt4
@@ -571,7 +573,10 @@ Section
   Call DetectPython
   Call DetectNumPy
   Call DetectSymPy
-  File /r *.py %(installdir)s\\bin 
+  SetOutPath $INSTDIR\\bin
+  File /r %(installdir)s\\bin\\*.py
+  SetOutPath $INSTDIR\\share\\openrave
+  CreateDirectory $INSTDIR\\share\\openrave\\openravepy
   File /r /x *.pyd %(installdir)s\\share\\openrave\\openravepy
   
 %(install_python_dll)s
@@ -584,6 +589,7 @@ SectionGroupEnd
 
 SectionGroup /e "Octave Bindings" secoctave
 Section
+  SetOutPath $INSTDIR\\share\\openrave
   File /r %(installdir)s\\share\\openrave\\octave
 SectionEnd
 Section "Add to OCTAVE_PATH"
@@ -599,13 +605,15 @@ Section
   File /r /x *.dll /x *.py %(installdir)s\\bin 
   File /r %(installdir)s\\include
   File /r %(installdir)s\\lib
-  File /r %(installdir)s\\share\\cppexamples
-  File /r %(installdir)s\\share\\data
-  File /r %(installdir)s\\share\\models
-  File /r %(installdir)s\\share\\plugins
-  File /r %(installdir)s\\share\\robots
-  File /r %(installdir)s\\share\\LICENSE*
-
+  SetOutPath $INSTDIR\\share\\openrave
+  File /r %(installdir)s\\share\\openrave\\cppexamples
+  File /r %(installdir)s\\share\\openrave\\data
+  File /r %(installdir)s\\share\\openrave\\models
+  File /r %(installdir)s\\share\\openrave\\plugins
+  File /r %(installdir)s\\share\\openrave\\robots
+  File /r %(installdir)s\\share\\openrave\\LICENSE*
+  SetOutPath $INSTDIR
+  
 %(install_dll)s
 
   FileOpen $0 $INSTDIR\\include\\rave\\config.h w
