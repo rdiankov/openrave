@@ -453,7 +453,7 @@ class BasicRrtPlanner : public RrtPlanner<SimpleNode>
                 }
             }
 
-            if( iter == 1 || RaveRandomFloat() < _fGoalBiasProb && _vecGoals.size() > 0 ) {
+            if( (iter == 1 || RaveRandomFloat() < _fGoalBiasProb) && _vecGoals.size() > 0 ) {
                 _randomConfig = _vecGoals[RaveRandomInt()%_vecGoals.size()];
             }
             else if( !_parameters->_samplefn(_randomConfig) ) {
