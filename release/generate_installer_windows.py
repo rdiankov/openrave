@@ -813,7 +813,7 @@ if __name__ == "__main__":
     
     # boost installation
     boostversion = Popen(['openrave-config','--boost-version'],stdout=PIPE).communicate()[0].strip()
-    boostversionsep = boostversionsep.split('.')
+    boostversionsep = boostversion.split('.')
     if len(boostversionsep) == 2:
         boostversionsep.append('0')
     for boost_version in ['%s.%s.%s'%tuple(boostversionsep),'%s.%s'%tuple(boostversionsep[0:2])]:
