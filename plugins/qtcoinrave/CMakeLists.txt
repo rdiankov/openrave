@@ -32,7 +32,7 @@ if (QT_FOUND AND SOQT_LIBRARY_FOUND AND OPENGL_FOUND AND COIN_LIBRARY_FOUND)
   if( OPT_VIDEORECORDING )
     pkg_check_modules(FFMPEG libavformat libavcodec)
     add_definitions(-DENABLE_VIDEORECORDING)
-    if (FFMPEG_FOUND)
+    if (NOT MSVC AND FFMPEG_FOUND)
       message(STATUS "enabling FFMPEG support")
       pkg_check_modules(FFMPEG_SWSCALE libswscale)
 

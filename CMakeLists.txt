@@ -188,9 +188,7 @@ if( MSVC )
   include_directories("${CMAKE_CURRENT_SOURCE_DIR}/inc")
   set(OPENRAVE_LINK_DIRS ${OPENRAVE_LINK_DIRS} "${CMAKE_CURRENT_SOURCE_DIR}/lib/win32")
   
-  # make sure to install the library since it will be necessary for linking
-  install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/lib/win32/libxml2.lib DESTINATION lib${LIB_SUFFIX})
-  install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/inc/stdint.h DESTINATION include)
+  install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/inc/stdint.h DESTINATION include/openrave-${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR})
   # have to install dlls manually
   install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/bin/libxml2.dll" DESTINATION bin)
   if( MSVC70 OR MSVC71 )
