@@ -388,7 +388,7 @@ void MainOpenRAVEThread()
     pviewer->main(bShowGUI);
     s_bThreadDestroyed = true;
     while(pviewer.use_count() > 1) {
-        RAVELOG_WARN("viewer use count > 1, waiting for others to release viewer so can guarantee destruction in correct thread\n");
+        RAVELOG_DEBUG("viewer use count > 1, waiting for others to release viewer so can guarantee destruction in correct thread\n");
         usleep(10000);
     }
 }

@@ -14,7 +14,9 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "qtcoin.h"
 #include "qtcameraviewer.h"
-#include <rave/plugin.h>
+#include <openrave/plugin.h>
+
+ProblemInstancePtr CreateIvModelLoader(EnvironmentBasePtr penv);
 
 InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
 {
@@ -32,16 +34,22 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
             return InterfaceBasePtr(new QtCameraViewer(penv,sinput));
         }
         break;
+    case PT_ProblemInstance:
+        if( interfacename == "ivmodelloader" ) {
+            return CreateIvModelLoader(penv);
+        }
+        break;
     default:
         break;
-    }    
+    }
     return InterfaceBasePtr();
 }
 
 void GetPluginAttributesValidated(PLUGININFO& info)
 {
-    info.interfacenames[PT_Viewer].push_back("qtcoin");
-    info.interfacenames[PT_Viewer].push_back("qtcameraviewer");
+    info.interfacenames[PT_Viewer].push_back("QtCoin");
+    info.interfacenames[PT_Viewer].push_back("QtCameraViewer");
+    info.interfacenames[PT_ProblemInstance].push_back("IvModelLoader");
 }
 
 OPENRAVE_PLUGIN_API void DestroyPlugin()

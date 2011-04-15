@@ -14,7 +14,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "plugindefs.h"
 #include "collisionPQP.h"
-#include <rave/plugin.h>
+#include <openrave/plugin.h>
 
 InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
 {

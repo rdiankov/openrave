@@ -14,7 +14,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "plugindefs.h"
 #include "ikbase.h"
-#include <rave/plugin.h>
+#include <openrave/plugin.h>
 
 #include "ikfastproblem.h"
 

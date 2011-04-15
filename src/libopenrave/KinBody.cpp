@@ -123,6 +123,36 @@ void KinBody::Link::TRIMESH::serialize(std::ostream& o, int options) const
     }
 }
 
+std::ostream& operator<<(std::ostream& O, const KinBody::Link::TRIMESH& trimesh)
+{
+    trimesh.serialize(O,0);
+    return O;
+}
+
+std::istream& operator>>(std::istream& I, KinBody::Link::TRIMESH& trimesh)
+{
+    trimesh.vertices.resize(0);
+    trimesh.indices.resize(0);
+    size_t s=0;
+    I >> s;
+    if( !I ) {
+        return I;
+    }
+    trimesh.vertices.resize(s);
+    FOREACH(it,trimesh.vertices) {
+        I >> it->x >> it->y >> it->z;
+    }
+    I >> s;
+    if( !I ) {
+        return I;
+    }
+    trimesh.indices.resize(s);
+    FOREACH(it,trimesh.indices) {
+        I >> *it;
+    }
+    return I;
+}
+
 KinBody::Link::GEOMPROPERTIES::GEOMPROPERTIES(KinBody::LinkPtr parent) : _parent(parent)
 {
     diffuseColor = Vector(1,1,1);

@@ -16,7 +16,7 @@
 // Plugin exposes 3 functions to OpenRAVE.
 #include "plugindefs.h"
 #include "loggingproblem.h"
-#include <rave/plugin.h>
+#include <openrave/plugin.h>
 
 InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
 {

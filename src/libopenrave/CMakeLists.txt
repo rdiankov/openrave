@@ -36,9 +36,9 @@ set_target_properties(libopenrave PROPERTIES OUTPUT_NAME openrave
                                   LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS}")
 target_link_libraries(libopenrave ${openrave_libraries} ${FPARSER_LIBRARY})
 if( MSVC )
-  install(TARGETS libopenrave RUNTIME DESTINATION bin LIBRARY DESTINATION bin ARCHIVE DESTINATION lib${LIB_SUFFIX})
+  install(TARGETS libopenrave EXPORT openrave-targets RUNTIME DESTINATION bin LIBRARY DESTINATION bin ARCHIVE DESTINATION lib${LIB_SUFFIX})
 else()
-  install(TARGETS libopenrave DESTINATION lib${LIB_SUFFIX})
+  install(TARGETS libopenrave EXPORT openrave-targets DESTINATION lib${LIB_SUFFIX})
 endif()
 
 if( OPT_STATIC )
@@ -63,5 +63,5 @@ if( OPT_STATIC )
   if( CRLIBM_LIBRARY )
     add_dependencies(libopenrave_static check_libm_accuracy) # forces check to be run before libopenrave is compilde
   endif()
-  install(TARGETS libopenrave_static DESTINATION lib${LIB_SUFFIX})
+  install(TARGETS libopenrave_static EXPORT openrave-targets DESTINATION lib${LIB_SUFFIX})
 endif()

@@ -70,7 +70,10 @@ public:
             void Append(const TRIMESH& mesh, const Transform& trans);
 
             AABB ComputeAABB() const;
-            void serialize(std::ostream& o, int options) const;
+            void serialize(std::ostream& o, int options=0) const;
+
+            friend std::ostream& operator<<(std::ostream& O, const TRIMESH& trimesh);
+            friend std::istream& operator>>(std::istream& I, TRIMESH& trimesh);
         };
 
         /// Describes the properties of a basic geometric primitive.
@@ -1155,6 +1158,9 @@ private:
     friend class SensorSystemBase;
     friend class RaveDatabase;
 };
+
+OPENRAVE_API std::ostream& operator<<(std::ostream& O, const KinBody::Link::TRIMESH& trimesh);
+OPENRAVE_API std::istream& operator>>(std::istream& I, KinBody::Link::TRIMESH& trimesh);
 
 } // end namespace OpenRAVE
 

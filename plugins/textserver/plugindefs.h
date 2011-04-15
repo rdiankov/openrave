@@ -15,7 +15,7 @@
 #ifndef OPENRAVE_PLUGINDEFS_H
 #define OPENRAVE_PLUGINDEFS_H
 
-#include <rave/rave.h> // should be included first in order to get boost throwing openrave exceptions
+#include <openrave/openrave.h> // should be included first in order to get boost throwing openrave exceptions
 
 // include boost for vc++ only (to get typeof working)
 #ifdef _MSC_VER

@@ -220,31 +220,14 @@ bool TrajectoryBase::SampleTrajectory(dReal time, TPOINT &sample) const
         }
     }
 
-    // sample using the given method
     switch (_interpMethod) {
-        case LINEAR:
-          // linear interpolation 
-          return _SampleLinear(p0, p1, seg, time, sample);
-
-        case LINEAR_BLEND:
-          // linear with quadratic blends
-          return _SampleLinearBlend(p0, p1, seg, time, sample);
-          break;
-
-        case CUBIC:
-          // cubic spline interpolation
-          return _SampleCubic(p0, p1, seg, time, sample);
-          break;
-
-        case QUINTIC:
-          // quintic min-jerk interpolation 
-          return _SampleQuintic(p0, p1, seg, time, sample);
-          break;
-
+        case LINEAR: return _SampleLinear(p0, p1, seg, time, sample);
+        case LINEAR_BLEND: return _SampleLinearBlend(p0, p1, seg, time, sample);
+        case CUBIC: return _SampleCubic(p0, p1, seg, time, sample);
+        case QUINTIC: return _SampleQuintic(p0, p1, seg, time, sample);
         default:
             BOOST_ASSERT(0);
     }
-
     return false;
 }
 

@@ -85,7 +85,7 @@ QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
     setWindowTitle(str(boost::format("OpenRAVE %s")%OPENRAVE_VERSION_STRING).c_str());
     statusBar()->showMessage(tr("Status Bar"));
 #endif
-    __description = ":Interface Author: Rosen Diankov\n\nProvides a GUI using the Coin3D, Qt4, and SoQt libraries.";
+    __description = ":Interface Author: Rosen Diankov\n\nProvides a GUI using the Qt4, Coin3D, and SoQt libraries. Depending on the version, Coin3D and SoQt might be licensed under GPL.";
     RegisterCommand("SetFiguresInCamera",boost::bind(&QtCoinViewer::SetFiguresInCamera,this,_1,_2),
                     "Accepts 0/1 value that decides whether to render the figure plots in the camera image through GetCameraImage");
     _bLockEnvironment = true;
@@ -3077,7 +3077,6 @@ void QtCoinViewer::_UpdatePhysicsEngine()
 
 void QtCoinViewer::UpdateInterfaces()
 {
-    RAVELOG_WARN("updating send command\n");
     list<ProblemInstancePtr> listProblems;
     vector<KinBodyPtr> vbodies;
     GetEnv()->GetLoadedProblems(listProblems);

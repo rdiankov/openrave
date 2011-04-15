@@ -21,7 +21,7 @@
 #include "pathoptimizers.h"
 #include "workspacetrajectorytracker.h"
 
-#include <rave/plugin.h>
+#include <openrave/plugin.h>
 
 InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
 {

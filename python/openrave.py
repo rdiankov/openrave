@@ -18,6 +18,10 @@ __copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)
 __license__ = 'Apache License, Version 2.0'
 
 import sys,time
+from types import ModuleType
+from numpy import *
+from optparse import OptionParser
+
 try:
     from openravepy import *
 except ImportError:
@@ -32,15 +36,15 @@ except ImportError:
             
         sys.path.append(openravepy_path[0].strip())
     except OSError:
-        import platform
+        import os, platform
         if sys.platform.startswith('win') or platform.system().lower() == 'windows':
             # in windows so add the default openravepy installation
-            sys.path.append("C:\\Program Files\\openrave\\share\\openrave")
+            rootsharedir = "C:\\Program Files\\openrave\\share"
+            allnames = os.listdir(rootsharedir)
+            possibledirs = [os.path.join(rootsharedir,name) for name in allnames if name.startswith('openrave')]
+            if len(possibledirs) > 0:
+                sys.path.append(possibledirs[0])
     from openravepy import *
-
-from types import ModuleType
-from numpy import *
-from optparse import OptionParser
 
 def vararg_callback(option, opt_str, value, parser):
     assert value is None

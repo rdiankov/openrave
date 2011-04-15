@@ -1,39 +1,24 @@
-#############################################################################
-# Project info
-##############################################################################
-cmake_minimum_required (VERSION 2.4.6) # need INSTALL(DIRECTORY ...)
-project (openrave)
+cmake_minimum_required (VERSION 2.6.0) # using import/export targets
+project(OpenRAVE)
 set( CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS TRUE )
 
 # Define here the needed parameters
 set (OPENRAVE_VERSION_MAJOR 0)
-set (OPENRAVE_VERSION_MINOR 2)
-set (OPENRAVE_VERSION_PATCH 20)
+set (OPENRAVE_VERSION_MINOR 3)
+set (OPENRAVE_VERSION_PATCH 0)
 set (OPENRAVE_VERSION ${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}.${OPENRAVE_VERSION_PATCH})
-set (OPENRAVE_SOVERSION ${OPENRAVE_VERSION_MAJOR})
-message(STATUS "Compiling OpenRAVE Version ${OPENRAVE_VERSION}")
+set (OPENRAVE_SOVERSION ${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR})
+message(STATUS "Compiling OpenRAVE Version ${OPENRAVE_VERSION}, soversion=${OPENRAVE_SOVERSION}")
 
-# Differences between CMake 2.4 and 2.6
-if("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}" GREATER 2.4)
-   message(STATUS "Using cmake version ${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}" )
-   # some developers may be using an cmake cvs version which didn't have set_property() yet
-   # Tell them that a more recent version is required.
-   if(NOT COMMAND SET_PROPERTY)
-      message(FATAL_ERROR "You are using an old version of CMake from cvs, please update to CMake >= 2.6.0 or cvs at least from Feb 20th, 2008")
-   endif(NOT COMMAND SET_PROPERTY)
-   # http://www.cmake.org/cmake/help/cmake-2.6.html#policy:CMP0002
-   cmake_policy(SET CMP0002 NEW)
-   # http://www.cmake.org/cmake/help/cmake-2.6.html#policy:CMP0003
-   cmake_policy(SET CMP0003 NEW)
-endif("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}" GREATER 2.4)
+message(STATUS "Using cmake version ${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION}" )
+# http://www.cmake.org/cmake/help/cmake-2.6.html#policy:CMP0002
+cmake_policy(SET CMP0002 NEW)
+# http://www.cmake.org/cmake/help/cmake-2.6.html#policy:CMP0003
+cmake_policy(SET CMP0003 NEW)
 
 if("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION}" STRLESS "2.4.3")
   message(STATUS "cmake version too low, might not be able to install directories")
 endif()
-
-##############################################################################
-# Sets the location of nonstandard shared libraries
-##############################################################################
 
 # Use, i.e. don't skip the full RPATH for the build tree
 set(CMAKE_SKIP_BUILD_RPATH  FALSE)
@@ -51,10 +36,7 @@ set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 message(STATUS "installing to ${CMAKE_INSTALL_PREFIX}")
 
-##############################################################################
 # Custom CMake options
-##############################################################################
-
 option(OPT_VIDEORECORDING "Enable video recording" ON)
 option(OPT_PLUGINS "Build the pluings" ON)
 option(OPT_DOUBLE_PRECISION "Use double precision" ON)
@@ -64,10 +46,6 @@ option(OPT_OCTAVE "Build octave bindings" ON)
 option(OPT_MATLAB "Build matlab bindings" ON)
 option(OPT_STATIC "Build static libraries" OFF)
 option(OPT_COLLADA "Build with COLLADA support" ON)
-
-##############################################################################
-# Required packages
-##############################################################################
 
 # Additional CMake modules for 3rd party library checks reside here
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/modules-cmake")
@@ -103,7 +81,7 @@ if( OPT_PYTHON )
       RESULT_VARIABLE _python_failed)
     if( ${_python_failed} EQUAL 0 )
       string(REGEX REPLACE "[\r\n]" "" _python_sitepackage "${_python_sitepackage}")
-      if( NOT IS_DIRECTORY ${_python_sitepackage}/numpy/core/include )
+      if( NOT IS_DIRECTORY "${_python_sitepackage}/numpy/core/include" )
         message(STATUS "cannot find python_dir: ${_python_sitepackage}, trying arch-specific directory")
         execute_process(
           COMMAND ${PYTHON_EXECUTABLE} -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)"
@@ -131,12 +109,13 @@ if( OPT_PYTHON )
   endif()
 endif()
 
-set(OPENRAVE_DATA_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/share/openrave" CACHE PATH "Scene and robot files installation directory")
-set(OPENRAVE_PLUGINS_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/share/openrave/plugins" CACHE PATH "OpenRAVE plugins installation directory")
-set(OPENRAVE_PYTHON_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/share/openrave" CACHE PATH "Internal python libraries installation directory")
+set(OPENRAVE_SHARE_DIR "share/openrave-${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}")
+set(OPENRAVE_DATA_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/${OPENRAVE_SHARE_DIR}" CACHE PATH "Scene and robot files installation directory")
+set(OPENRAVE_PLUGINS_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/${OPENRAVE_SHARE_DIR}/plugins" CACHE PATH "OpenRAVE plugins installation directory")
+set(OPENRAVE_PYTHON_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/${OPENRAVE_SHARE_DIR}" CACHE PATH "Internal python libraries installation directory")
 set(OPENRAVEPY_INSTALL_DIR "${OPENRAVE_PYTHON_INSTALL_DIR}/openravepy" CACHE PATH "OpenRAVE Python bindings (openravepy) installation directory")
-set(OPENRAVE_OCTAVE_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/share/openrave/octave" CACHE PATH "OpenRAVE Octave bindings installation directory")
-set(OPENRAVE_MATLAB_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/share/openrave/matlab" CACHE PATH "OpenRAVE MATLAB bindings installation directory")
+set(OPENRAVE_OCTAVE_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/${OPENRAVE_SHARE_DIR}/octave" CACHE PATH "OpenRAVE Octave bindings installation directory")
+set(OPENRAVE_MATLAB_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/${OPENRAVE_SHARE_DIR}/matlab" CACHE PATH "OpenRAVE MATLAB bindings installation directory")
 
 set(CMAKE_TRY_COMPILE_CONFIGURATION Release CACHE STRING "very important to only test release since default is debug, and it usually reuquires special libraries")
 set(REQUIRED_INCLUDES "" CACHE STRING "Includes to always force  when compiling")
@@ -147,7 +126,8 @@ if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
 endif()
 
 if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
-  set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG -DBOOST_DISABLE_ASSERTS -D_SECURE_SCL=0") # this practically removes all checks making it a very dangerous options to play with
+  set(CMAKE_CXX_FLAGS_OPTIMIZED "-O2 -DNDEBUG -DBOOST_DISABLE_ASSERTS -D_SECURE_SCL=0") # this practically removes all checks making it a very dangerous options to play with
+  set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG") 
   set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g")
   set(CMAKE_CXX_FLAGS_DEBUG "-g -D_DEBUG")
 endif()
@@ -177,7 +157,7 @@ if( APPLE OR ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
   add_definitions("-Dfopen64=fopen -Dfseeko64=fseeko -Dfseek64=fseek -Dftell64=ftell -Dftello64=ftello")
 endif()
 
-set(OPENRAVE_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR})
+set(OPENRAVE_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include)
 set(OPENRAVE_CORE_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/src/libopenrave-core)
 set(OPENRAVE_LINK_DIRS "")
 
@@ -213,13 +193,18 @@ if( MSVC )
   install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/inc/stdint.h DESTINATION include)
   # have to install dlls manually
   install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/bin/libxml2.dll" DESTINATION bin)
-  if( MSVC70 OR MSVC71 OR MSVC80 )
-    install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/bin/" DESTINATION bin FILES_MATCHING PATTERN "*-vc80-*.dll")
+  if( MSVC70 OR MSVC71 )
+    set(MESSAGE "Visual Studio 2003 and before are not supported!")
+    set(MSVC_PREFIX "vc80")
+  elseif( MSVC80 )
+    set(MSVC_PREFIX "vc80")
   elseif( MSVC90 )
-    install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/bin/" DESTINATION bin FILES_MATCHING PATTERN "*-vc90-*.dll")
+    set(MSVC_PREFIX "vc90")
   else()
-    install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/bin/" DESTINATION bin FILES_MATCHING PATTERN "*-vc100-*.dll")
+    set(MSVC_PREFIX "vc100")
   endif()
+  install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/bin/" DESTINATION bin FILES_MATCHING PATTERN "*-${MSVC_PREFIX}-*.dll")
+
   # force multi-threaded DLL boost
   set(Boost_USE_MULTITHREAD ON)
   set(Boost_USE_STATIC_LIBS OFF)
@@ -264,47 +249,17 @@ elseif( MSVC )
   set(Boost_THREAD_FOUND 1)
   set(Boost_DATE_TIME_FOUND 1)
   set(Boost_SIGNALS_FOUND 1)
-  set(Boost_VERSION "1.44")
+  set(Boost_VERSION "104400")
   # have to add to required flags for applications that will test linking with boost
   set(CMAKE_REQUIRED_FLAGS "-DBOOST_ALL_DYN_LINK -DBOOST_ALL_NO_LIB")
-  if( MSVC70 OR MSVC71 )
-    set(Boost_DATE_TIME_LIBRARY "${Boost_LIBRARY_DIRS}/boost_date_time-vc71-mt-1_44.lib")
-    set(Boost_THREAD_LIBRARY "${Boost_LIBRARY_DIRS}/boost_thread-vc71-mt-1_44.lib")
-    set(Boost_SYSTEM_LIBRARY "${Boost_LIBRARY_DIRS}/boost_system-vc71-mt-1_44.lib")
-    set(Boost_FILESYSTEM_LIBRARY "${Boost_LIBRARY_DIRS}/boost_filesystem-vc71-mt-1_44.lib")
-    set(Boost_PYTHON_LIBRARY "${Boost_LIBRARY_DIRS}/boost_python-vc71-mt-1_44.lib")
-    set(Boost_IOSTREAMS_LIBRARY "${Boost_LIBRARY_DIRS}/boost_iostreams-vc71-mt-1_44.lib")
-    install(DIRECTORY "${Boost_LIBRARY_DIRS}/" DESTINATION bin FILES_MATCHING PATTERN "*-vc71-*.dll")
-    install(DIRECTORY "${Boost_LIBRARY_DIRS}/" DESTINATION lib${LIB_SUFFIX} FILES_MATCHING PATTERN "*-vc71-*.lib")
-  elseif( MSVC80 )
-    set(Boost_DATE_TIME_LIBRARY "${Boost_LIBRARY_DIRS}/boost_date_time-vc80-mt-1_44.lib")
-    set(Boost_THREAD_LIBRARY "${Boost_LIBRARY_DIRS}/boost_thread-vc80-mt-1_44.lib")
-    set(Boost_SYSTEM_LIBRARY "${Boost_LIBRARY_DIRS}/boost_system-vc80-mt-1_44.lib")
-    set(Boost_FILESYSTEM_LIBRARY "${Boost_LIBRARY_DIRS}/boost_filesystem-vc80-mt-1_44.lib")
-    set(Boost_PYTHON_LIBRARY "${Boost_LIBRARY_DIRS}/boost_python-vc80-mt-1_44.lib")
-    set(Boost_IOSTREAMS_LIBRARY "${Boost_LIBRARY_DIRS}/boost_iostreams-vc80-mt-1_44.lib")
-    install(DIRECTORY "${Boost_LIBRARY_DIRS}/" DESTINATION bin FILES_MATCHING PATTERN "*-vc80-*.dll")
-    install(DIRECTORY "${Boost_LIBRARY_DIRS}/" DESTINATION lib${LIB_SUFFIX} FILES_MATCHING PATTERN "*-vc80-*.lib")
-  elseif( MSVC90 )
-    set(Boost_DATE_TIME_LIBRARY "${Boost_LIBRARY_DIRS}/boost_date_time-vc90-mt-1_44.lib")
-    set(Boost_THREAD_LIBRARY "${Boost_LIBRARY_DIRS}/boost_thread-vc90-mt-1_44.lib")
-    set(Boost_SYSTEM_LIBRARY "${Boost_LIBRARY_DIRS}/boost_system-vc90-mt-1_44.lib")
-    set(Boost_FILESYSTEM_LIBRARY "${Boost_LIBRARY_DIRS}/boost_filesystem-vc90-mt-1_44.lib")
-    set(Boost_PYTHON_LIBRARY "${Boost_LIBRARY_DIRS}/boost_python-vc90-mt-1_44.lib")
-    set(Boost_IOSTREAMS_LIBRARY "${Boost_LIBRARY_DIRS}/boost_iostreams-vc90-mt-1_44.lib")
-    install(DIRECTORY "${Boost_LIBRARY_DIRS}/" DESTINATION bin FILES_MATCHING PATTERN "*-vc90-*.dll")
-    install(DIRECTORY "${Boost_LIBRARY_DIRS}/" DESTINATION lib${LIB_SUFFIX} FILES_MATCHING PATTERN "*-vc90-*.lib")
-  else()
-    set(Boost_DATE_TIME_LIBRARY "${Boost_LIBRARY_DIRS}/boost_date_time-vc100-mt-1_44.lib")
-    set(Boost_THREAD_LIBRARY "${Boost_LIBRARY_DIRS}/boost_thread-vc100-mt-1_44.lib")
-    set(Boost_SYSTEM_LIBRARY "${Boost_LIBRARY_DIRS}/boost_system-vc100-mt-1_44.lib")
-    set(Boost_FILESYSTEM_LIBRARY "${Boost_LIBRARY_DIRS}/boost_filesystem-vc100-mt-1_44.lib")
-    set(Boost_PYTHON_LIBRARY "${Boost_LIBRARY_DIRS}/boost_python-vc100-mt-1_44.lib")
-    set(Boost_IOSTREAMS_LIBRARY "${Boost_LIBRARY_DIRS}/boost_iostreams-vc100-mt-1_44.lib")
-    install(DIRECTORY "${Boost_LIBRARY_DIRS}/" DESTINATION bin FILES_MATCHING PATTERN "*-vc100-*.dll")
-    install(DIRECTORY "${Boost_LIBRARY_DIRS}/" DESTINATION lib${LIB_SUFFIX} FILES_MATCHING PATTERN "*-vc100-*.lib")
-  endif()
-
+  set(Boost_DATE_TIME_LIBRARY "${Boost_LIBRARY_DIRS}/boost_date_time-${MSVC_PREFIX}-mt-1_44.lib")
+  set(Boost_THREAD_LIBRARY "${Boost_LIBRARY_DIRS}/boost_thread-${MSVC_PREFIX}-mt-1_44.lib")
+  set(Boost_SYSTEM_LIBRARY "${Boost_LIBRARY_DIRS}/boost_system-${MSVC_PREFIX}-mt-1_44.lib")
+  set(Boost_FILESYSTEM_LIBRARY "${Boost_LIBRARY_DIRS}/boost_filesystem-${MSVC_PREFIX}-mt-1_44.lib")
+  set(Boost_PYTHON_LIBRARY "${Boost_LIBRARY_DIRS}/boost_python-${MSVC_PREFIX}-mt-1_44.lib")
+  set(Boost_IOSTREAMS_LIBRARY "${Boost_LIBRARY_DIRS}/boost_iostreams-${MSVC_PREFIX}-mt-1_44.lib")
+  install(DIRECTORY "${Boost_LIBRARY_DIRS}/" DESTINATION bin FILES_MATCHING PATTERN "*-${MSVC_PREFIX}-*.dll")
+  install(DIRECTORY "${Boost_LIBRARY_DIRS}/" DESTINATION lib${LIB_SUFFIX} FILES_MATCHING PATTERN "*-${MSVC_PREFIX}-*.lib")
   install(DIRECTORY "${Boost_INCLUDE_DIR}/boost" DESTINATION include)
   include_directories(${Boost_INCLUDE_DIRS})
   set(OPENRAVE_LINK_DIRS ${OPENRAVE_LINK_DIRS} ${Boost_LIBRARY_DIRS})
@@ -363,40 +318,40 @@ else()
   message(STATUS "Using single precision")
 endif()
 
-set(interfacehashes_h ${CMAKE_CURRENT_BINARY_DIR}/rave/interfacehashes.h)
+set(interfacehashes_h ${CMAKE_CURRENT_BINARY_DIR}/include/openrave/interfacehashes.h)
 add_custom_command(
   OUTPUT ${interfacehashes_h}
   COMMAND ${CPPGENMD5}
-  ARGS "${OPENRAVE_PRECISION}" "${CMAKE_CURRENT_SOURCE_DIR}/rave/interface.h"
-       "${CMAKE_CURRENT_SOURCE_DIR}/rave/collisionchecker.h" OPENRAVE_COLLISIONCHECKER_HASH
-       "${CMAKE_CURRENT_SOURCE_DIR}/rave/robot.h" OPENRAVE_ROBOT_HASH
-       "${CMAKE_CURRENT_SOURCE_DIR}/rave/planner.h" OPENRAVE_PLANNER_HASH
-       "${CMAKE_CURRENT_SOURCE_DIR}/rave/kinbody.h" OPENRAVE_KINBODY_HASH
-       "${CMAKE_CURRENT_SOURCE_DIR}/rave/sensorsystem.h" OPENRAVE_SENSORSYSTEM_HASH
-       "${CMAKE_CURRENT_SOURCE_DIR}/rave/controller.h" OPENRAVE_CONTROLLER_HASH
-       "${CMAKE_CURRENT_SOURCE_DIR}/rave/problems.h" OPENRAVE_PROBLEM_HASH
-       "${CMAKE_CURRENT_SOURCE_DIR}/rave/iksolver.h" OPENRAVE_IKSOLVER_HASH
-       "${CMAKE_CURRENT_SOURCE_DIR}/rave/physicsengine.h" OPENRAVE_PHYSICSENGINE_HASH
-       "${CMAKE_CURRENT_SOURCE_DIR}/rave/sensor.h" OPENRAVE_SENSOR_HASH
-       "${CMAKE_CURRENT_SOURCE_DIR}/rave/viewer.h" OPENRAVE_VIEWER_HASH
-       "${CMAKE_CURRENT_SOURCE_DIR}/rave/trajectory.h" OPENRAVE_TRAJECTORY_HASH
-       "${CMAKE_CURRENT_SOURCE_DIR}/rave/environment.h" OPENRAVE_ENVIRONMENT_HASH
-       "${CMAKE_CURRENT_SOURCE_DIR}/rave/plugininfo.h" OPENRAVE_PLUGININFO_HASH
+  ARGS "${OPENRAVE_PRECISION}" "${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/interface.h"
+       "${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/collisionchecker.h" OPENRAVE_COLLISIONCHECKER_HASH
+       "${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/robot.h" OPENRAVE_ROBOT_HASH
+       "${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/planner.h" OPENRAVE_PLANNER_HASH
+       "${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/kinbody.h" OPENRAVE_KINBODY_HASH
+       "${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/sensorsystem.h" OPENRAVE_SENSORSYSTEM_HASH
+       "${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/controller.h" OPENRAVE_CONTROLLER_HASH
+       "${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/problems.h" OPENRAVE_PROBLEM_HASH
+       "${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/iksolver.h" OPENRAVE_IKSOLVER_HASH
+       "${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/physicsengine.h" OPENRAVE_PHYSICSENGINE_HASH
+       "${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/sensor.h" OPENRAVE_SENSOR_HASH
+       "${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/viewer.h" OPENRAVE_VIEWER_HASH
+       "${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/trajectory.h" OPENRAVE_TRAJECTORY_HASH
+       "${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/environment.h" OPENRAVE_ENVIRONMENT_HASH
+       "${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/plugininfo.h" OPENRAVE_PLUGININFO_HASH
        > "${interfacehashes_h}"
   DEPENDS cpp-gen-md5
-  ${CMAKE_CURRENT_SOURCE_DIR}/rave/collisionchecker.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/rave/robot.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/rave/planner.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/rave/kinbody.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/rave/sensorsystem.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/rave/controller.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/rave/problems.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/rave/iksolver.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/rave/physicsengine.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/rave/sensor.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/rave/viewer.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/rave/trajectory.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/rave/environment.h)
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/collisionchecker.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/robot.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/planner.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/kinbody.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/sensorsystem.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/controller.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/problems.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/iksolver.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/physicsengine.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/sensor.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/viewer.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/trajectory.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/environment.h)
 
 add_custom_target(interfacehashes_target ALL DEPENDS ${interfacehashes_h} ${EXTRA_MSVC_DEPEND})
 
@@ -410,10 +365,9 @@ if( OPT_ACCURATEMATH AND NOT MSVC )
   check_library_exists(crlibm crlibm_init "" CRLIBM_FOUND_LIB)
   check_include_file(crlibm.h HAVE_CRLIBM_H)
   if(NOT CRLIBM_FOUND_LIB OR NOT HAVE_CRLIBM_H)
+    message(STATUS "Using local crlibm")
     add_subdirectory(3rdparty/crlibm-1.0beta4)
     set(CRLIBM_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/crlibm-1.0beta4")
-  else()
-    message(STATUS "Using system-wide crlibm")
   endif()
   set(CRLIBM_FOUND 1)
   set(CRLIBM_LIBRARY crlibm)
@@ -422,7 +376,6 @@ else()
 endif()
 
 pkg_check_modules(ASSIMP assimp)
-find_package(Coin)
 
 if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
   check_cxx_source_runs("
@@ -545,15 +498,11 @@ endif()
 
 link_directories(${OPENRAVE_LINK_DIRS})
 
-if( NOT ASSIMP_FOUND )
-  # if assimp is not found, then have to rely on the ivcon converter
-  add_subdirectory(3rdparty/ivcon)
-  set(IVCON_FOUND 1)
-  set(IVCON_LIBRARY ivcon)
-  set(IVCON_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/ivcon")
-else()
-  set(IVCON_FOUND 0)
-endif()
+# have to rely on the ivcon converter as a backup plan since assimp does not support iv/vrml
+add_subdirectory(3rdparty/ivcon)
+set(IVCON_FOUND 1)
+set(IVCON_LIBRARY ivcon)
+set(IVCON_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/ivcon")
 
 ## check qhull library
 check_library_exists(qhull qh_new_qhull "" QHULL_FOUND_LIB)
@@ -632,9 +581,8 @@ else()
 endif()
 set(CONVEXDECOMPOSITION_FOUND 1)
 
-CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/rave/config.h)
-include_directories(${CMAKE_CURRENT_BINARY_DIR})
-file(GLOB rave_header_files ${CMAKE_CURRENT_SOURCE_DIR}/rave/*.h ${CMAKE_CURRENT_BINARY_DIR}/rave/config.h)
+CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/include/openrave/config.h)
+include_directories(${CMAKE_CURRENT_BINARY_DIR}/include)
 
 add_subdirectory(src)
 add_subdirectory(octave_matlab)
@@ -699,16 +647,24 @@ else()
   install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/openrave-config DESTINATION bin)
 endif()
 
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/openrave-config.cmake.in" "${CMAKE_CURRENT_BINARY_DIR}/openrave-config.cmake" IMMEDIATE @ONLY)
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/openrave-config-version.cmake.in" "${CMAKE_CURRENT_BINARY_DIR}/openrave-config-version.cmake" IMMEDIATE @ONLY)
+
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/openrave-config.cmake" "${CMAKE_CURRENT_BINARY_DIR}/openrave-config-version.cmake" DESTINATION "lib${LIB_SUFFIX}/cmake/openrave-${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}")
 
 if( UNIX OR CYGWIN)
   # install only if bash or sh is present
-  install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/openravebash DESTINATION share/openrave)
-  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/openrave.pc.cmake.in" "${CMAKE_CURRENT_BINARY_DIR}/openrave.pc" @ONLY IMMEDIATE)
-  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/openrave.pc DESTINATION lib${LIB_SUFFIX}/pkgconfig)
+  install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/openravebash DESTINATION ${OPENRAVE_SHARE_DIR})
+  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/openrave.pc.cmake.in" "${CMAKE_CURRENT_BINARY_DIR}/openrave-${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}.pc" @ONLY IMMEDIATE)
+  install(FILES "${CMAKE_CURRENT_BINARY_DIR}/openrave-${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}.pc" DESTINATION lib${LIB_SUFFIX}/pkgconfig)
 endif()
 
-install(FILES ${rave_header_files} ${interfacehashes_h} DESTINATION include/rave)
-install(FILES LICENSE.lgpl LICENSE.apache DESTINATION share/openrave)
+file(GLOB rave_header_files ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/*.h)
+install(FILES ${rave_header_files} ${interfacehashes_h} ${CMAKE_CURRENT_BINARY_DIR}/include/openrave/config.h DESTINATION include/openrave-${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}/openrave)
+install(FILES rave/rave.h rave/plugin.h DESTINATION include/openrave-${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}/rave) # deprecated
+install(FILES LICENSE.lgpl LICENSE.apache DESTINATION ${OPENRAVE_SHARE_DIR})
+
+#install(EXPORT openrave-targets DESTINATION lib/cmake/openrave-${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR})
 
 # add make uninstall capability
 configure_file(
@@ -716,5 +672,4 @@ configure_file(
   "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
   IMMEDIATE @ONLY)
 
-add_custom_target(uninstall
-  "${CMAKE_COMMAND}" -P "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake")
+add_custom_target(uninstall "${CMAKE_COMMAND}" -P "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake")

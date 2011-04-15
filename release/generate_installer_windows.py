@@ -520,7 +520,7 @@ done:
 FunctionEnd
 
 Function GetNumPy
-  MessageBox MB_OK "Need to install Python NumPy Library. Continue with auto-download and install?" IDNO  done
+  MessageBox MB_YESNO "Need to install Python NumPy Library. Continue with auto-download and install?" IDNO  done
   StrCpy $2 "numpy-%(numpy_version)s-win32-superpack-python%(python_version)s.exe"
   nsisdl::download /TIMEOUT=30000 http://downloads.sourceforge.net/project/numpy/NumPy/%(numpy_version)s/$2 $TEMP\\$2
   Pop $R0 ;Get the return value
@@ -547,7 +547,7 @@ done:
 FunctionEnd
 
 Function GetSymPy
-  MessageBox MB_OK "Need to install Python SymPy Library. Continue with auto-download and install?" IDNO done
+  MessageBox MB_YESNO "Need to install Python SymPy Library. Continue with auto-download and install?" IDNO done
   StrCpy $2 "sympy-%(sympy_version)s.win32.exe"
   nsisdl::download /TIMEOUT=30000 http://sympy.googlecode.com/files/$2 $TEMP\\$2
   Pop $R0 ;Get the return value
@@ -641,6 +641,7 @@ Section
   !insertmacro MUI_STARTMENU_WRITE_BEGIN Application
   CreateShortCut "$SMPROGRAMS\\$StartMenuFolder\\openrave.lnk" "$INSTDIR\\bin\\openrave.exe" "" "$INSTDIR\\bin\\openrave.exe" 0
   CreateShortCut "$SMPROGRAMS\\$StartMenuFolder\\C++ Examples.lnk" "$INSTDIR\\share\\openrave\\cppexamples" "" "$INSTDIR\\share\\openrave\\cppexamples" 0
+  CreateShortCut "$SMPROGRAMS\\$StartMenuFolder\\Robots.lnk" "$INSTDIR\\share\\openrave\\robots" "" "$INSTDIR\\share\\openrave\\robots" 0
   CreateShortCut "$SMPROGRAMS\\$StartMenuFolder\\Uninstall.lnk" "$INSTDIR\\uninstall.exe" "" "$INSTDIR\\uninstall.exe" 0
   %(openrave_shortcuts)s
   !insertmacro MUI_STARTMENU_WRITE_END
@@ -748,6 +749,7 @@ if __name__ == "__main__":
     args = dict()
     args['openrave_version'] = openravepy.__version__
     args['openrave_version_full'] = openravepy.__version__
+    args['openrave_soversion'] = openravepy.__version__
     args['openrave_revision'] = ''
     if options.revision is not None:
         args['openrave_version_full'] += '-r%s'%options.revision

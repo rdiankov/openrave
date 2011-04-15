@@ -27,7 +27,7 @@ while True:
 
     <b>Full Example Code:</b>
 */
-#include <rave/rave.h>
+#include <openrave/openrave.h>
 
 #include <boost/python.hpp>
 #include <boost/python/exception_translator.hpp>

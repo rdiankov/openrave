@@ -4,7 +4,7 @@ if( HAVE_MKSTEMP )
 endif()
 
 set(coreLIBS ${openrave_libraries})
-set(openrave_core_SOURCES openrave-core.cpp environment-core.h  openrave-core.h ravep.h   xmlreaders.cpp)
+set(openrave_core_SOURCES openrave-core.cpp environment-core.h openrave-core.h ravep.h xmlreaders.cpp)
 
 if( COLLADA_FOUND )
   set(LIBOPENRAVE_COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} -DOPENRAVE_COLLADA_SUPPORT ${COLLADA_CFLAGS_OTHER}")
@@ -21,20 +21,13 @@ if( ASSIMP_FOUND )
   set(LIBOPENRAVE_COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} -DOPENRAVE_ASSIMP ${ASSIMP_CFLAGS_OTHER}")
   set(LIBOPENRAVE_LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS} ${ASSIMP_LDFLAGS_OTHER}")
   message(STATUS "Geometry Parsing: Using Open Asset Import Library (assimp)")
-elseif( IVCON_FOUND )
+endif()
+
+if( IVCON_FOUND )
   message(STATUS "Geometry Parsing: Using ivcon")
   include_directories(${IVCON_INCLUDE_DIR})
   set(LIBOPENRAVE_COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} -DOPENRAVE_IVCON")
   set(coreLIBS ${coreLIBS} ${IVCON_LIBRARY})
-endif()
-# because assimp cannot import IV/VRML files, still need coin3d
-if( COIN_LIBRARY_FOUND )
-  include_directories(${COIN_INCLUDE_DIRS})
-  set(OPENRAVE_LINK_DIRS ${OPENRAVE_LINK_DIRS} ${COIN_LINK_DIRS})
-  set(coreLIBS ${coreLIBS} ${COIN_LIBRARY})
-  set(LIBOPENRAVE_COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} -DOPENRAVE_COIN3D ${COIN_CXXFLAGS}")
-  set(LIBOPENRAVE_LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS} ${COIN_LINK_FLAGS}")
-  message(STATUS "Geometry Parsing: Using Coin3D")
 endif()
 
 link_directories(${OPENRAVE_LINK_DIRS})
@@ -61,11 +54,11 @@ set_target_properties(libopenrave-core PROPERTIES OUTPUT_NAME openrave-core
 
 target_link_libraries (libopenrave-core libopenrave ${coreLIBS})
 if( MSVC )
-  install(TARGETS libopenrave-core RUNTIME DESTINATION bin LIBRARY DESTINATION bin ARCHIVE DESTINATION lib)
+  install(TARGETS libopenrave-core RUNTIME DESTINATION bin LIBRARY DESTINATION bin ARCHIVE DESTINATION lib${LIB_SUFFIX})
 else()
   install(TARGETS libopenrave-core DESTINATION lib${LIB_SUFFIX})
 endif()
-install(FILES openrave-core.h DESTINATION include)
+install(FILES openrave-core.h DESTINATION include/openrave-${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR})
 
 if( OPT_STATIC )
   # visual studio needs static built
