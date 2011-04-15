@@ -615,6 +615,8 @@ Section
   SetOutPath $INSTDIR
   WriteRegStr HKLM SOFTWARE\\OpenRAVE "" "%(openrave_version)s"
   WriteRegStr HKLM SOFTWARE\\OpenRAVE\\%(openrave_version)s "InstallRoot" "$INSTDIR"
+  # register with cmake installer
+  WriteRegStr HKLM SOFTWARE\\Kitware\\CMake\\Packages\\OpenRAVE" "%(openrave_version)s" "$INSTDIR"
   
   File /r /x *.dll /x *.py %(installdir)s\\bin 
   File /r %(installdir)s\\include
@@ -698,6 +700,7 @@ LangString desc_secrobots ${LANG_ENGLISH} "Downloads and installs all extra COLL
 # the section will always be named "Uninstall"
 Section "Uninstall"
   DeleteRegKey HKLM SOFTWARE\\OpenRAVE\\%(openrave_version)s
+  DeleteRegValue HKLM SOFTWARE\\Kitware\\CMake\\Packages\\OpenRAVE" "%(openrave_version)s"
   ReadRegStr $0 HKLM "SOFTWARE\\OpenRAVE" ""
   StrCmp %(openrave_version)s $0 0 noremove
     DeleteRegValue HKLM SOFTWARE\\OpenRAVE ""
