@@ -1,0 +1,91 @@
+# - Find Open Robotics Automation Virtual Enviornment (OpenRAVE) Installation
+# http://www.openrave.org
+#
+# OpenRAVE provides an environment for testing, developing, and deploying motion planning algorithms
+# in real-world robotics applications. The main focus is on simulation and analysis of kinematic and
+# geometric information related to motion planning. OpenRAVE’s stand-alone nature allows is to be easily
+# integrated into existing robotics systems. An important target application is industrial robotics automation.
+#
+# Users can set the following variables before calling the module:
+#  OpenRAVE_DIR - The preferred installation prefix for searching for OpenRAVE. Set by the user.
+#
+# OpenRAVE_ROOT_DIR - the root directory where the installation can be found
+# OpenRAVE_CXXFLAGS - extra flags
+# OpenRAVE_INCLUDE_DIRS - include directories
+# OpenRAVE_LIBRARY_DIRS - link directories
+# OpenRAVE_LIBRARIES - libraries to link plugins with
+# OpenRAVE_CORE_LIBRARIES - libraries to link openrave run-time with
+# OpenRAVE_Boost_VERSION - the boost version openrave was compiled with
+
+#==================================================================================
+# Copyright (C) 2009-2011 Rosen Diankov
+#
+# Distributed under the OSI-approved BSD License (the "License");
+# see accompanying file Copyright.txt for details.
+#
+# This software is distributed WITHOUT ANY WARRANTY; without even the
+# implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the License for more information.
+#=============================================================================
+# (To distributed this file outside of CMake, substitute the full
+#  License text for the above reference.)
+#==================================================================================
+get_filename_component(_PREFIX "${CMAKE_CURRENT_LIST_FILE}" PATH)
+get_filename_component(_PREFIX "${_PREFIX}" PATH)
+get_filename_component(_PREFIX "${_PREFIX}" PATH)
+get_filename_component(OpenRAVE_ROOT_DIR "${_PREFIX}" PATH)
+
+set( OpenRAVE_CXXFLAGS "-DOPENRAVE_DLL -DOPENRAVE_CORE_DLL" )
+if( WIN32 )
+  set( OpenRAVE_CXXFLAGS "${OpenRAVE_CXXFLAGS} -DBOOST_ALL_DYN_LINK -DBOOST_ALL_NO_LIB")
+endif()
+if( MSVC )
+  set( OpenRAVE_CXXFLAGS "${OpenRAVE_CXXFLAGS} /EHc-")
+endif()
+set( OpenRAVE_LINK_FLAGS "" )
+set( OpenRAVE_INCLUDE_DIRS "${OpenRAVE_ROOT_DIR}/include/openrave-@OPENRAVE_VERSION_MAJOR@.@OPENRAVE_VERSION_MINOR@")
+set( OpenRAVE_LIBRARY_DIRS "${OpenRAVE_ROOT_DIR}/lib")
+set( OpenRAVE_LIBRARIES openrave)
+set( OpenRAVE_CORE_LIBRARIES openrave-core)
+set( OpenRAVE_Boost_VERSION "@Boost_MAJOR_VERSION@.@Boost_MINOR_VERSION@")
+
+#if( WIN32 )
+#  # search for the boost version openrave was compiled with
+#  set(Boost_USE_MULTITHREAD ON)
+#  set(Boost_USE_STATIC_LIBS OFF)
+#  set(Boost_USE_STATIC_RUNTIME OFF)
+#  set(Boost_FIND_VERSION_EXACT 1)
+#  find_package(Boost ${OpenRAVE_Boost_VERSION} COMPONENTS thread date_time)
+#  if(Boost_VERSION AND NOT "${Boost_VERSION}" STREQUAL "0")
+#    set(OpenRAVE_FOUND 1)
+#    
+#    set( OpenRAVE_LINK_FLAGS " ")
+#    set( OpenRAVE_INCLUDE_DIRS "${OpenRAVE_ROOT_DIR}/include" ${Boost_INCLUDE_DIRS})
+#    set( OpenRAVE_LIBRARY_DIRS "${OpenRAVE_ROOT_DIR}/lib" ${Boost_LIBRARY_DIRS})
+#    set( OpenRAVE_LIBRARIES openrave libxml2)
+#    set( OpenRAVE_CORE_LIBRARIES ${OpenRAVE_LIBRARIES} openrave-core ${Boost_THREAD_LIBRARY} ${Boost_DATE_TIME_LIBRARY})
+#  else(Boost_VERSION AND NOT "${Boost_VERSION}" STREQUAL "0")
+#    message(WARNING "Failed to find Boost @Boost_MAJOR_VERSION@.@Boost_MINOR_VERSION@ necessary OpenRAVE")
+#  endif(Boost_VERSION AND NOT "${Boost_VERSION}" STREQUAL "0")
+#endif( WIN32 )
+
+MARK_AS_ADVANCED(
+  OpenRAVE_ROOT_DIR
+  OpenRAVE_CXXFLAGS
+  OpenRAVE_LINK_FLAGS
+  OpenRAVE_INCLUDE_DIRS
+  OpenRAVE_LIBRARIES
+  OpenRAVE_CORE_LIBRARIES
+  OpenRAVE_Boost_VERSION
+)
+
+#add_library(openrave SHARED IMPORTED)
+#if( MSVC )
+#  set_property(TARGET openrave PROPERTY IMPORTED_LOCATION c:/path/to/bar.dll IMPORTED_IMPLIB c:/path/to/bar.lib)
+#endif()
+
+#if("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION}" GREATER 2.6.1)
+#  find_library(FOO_LIBRARY NAMES foo)
+#  add_library(foo UNKNOWN IMPORTED)
+#  set_property(TARGET foo PROPERTY IMPORTED_LOCATION "${FOO_LIBRARY}")
+#endif()
