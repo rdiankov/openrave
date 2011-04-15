@@ -72,8 +72,8 @@ public:
             AABB ComputeAABB() const;
             void serialize(std::ostream& o, int options=0) const;
 
-            friend std::ostream& operator<<(std::ostream& O, const TRIMESH& trimesh);
-            friend std::istream& operator>>(std::istream& I, TRIMESH& trimesh);
+            friend OPENRAVE_API std::ostream& operator<<(std::ostream& O, const TRIMESH& trimesh);
+            friend OPENRAVE_API std::istream& operator>>(std::istream& I, TRIMESH& trimesh);
         };
 
         /// Describes the properties of a basic geometric primitive.

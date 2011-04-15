@@ -1,4 +1,4 @@
-include_directories("${OPENRAVE_INCLUDE_DIRS}") # needed since plugins include rave/rave.h
+include_directories("${OPENRAVE_INCLUDE_DIRS}") # needed since plugins include openrave/openrave.h
 set(PLUGIN_LINK_FLAGS "")
 
 if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
