@@ -748,10 +748,10 @@ if __name__ == "__main__":
     os.environ['Path'] = os.path.join(os.path.abspath(options.installdir),'bin')+';'+os.environ['PATH']
     qt_version = Popen(['openrave-config','--qt-version'],stdout=PIPE).communicate()[0].strip()
     version = Popen(['openrave-config','--version'],stdout=PIPE).communicate()[0].strip()
-    soversion = '.'.join(openravepy.__version__.split('.')[0:2])
+    soversion = '.'.join(version.split('.')[0:2])
     sys.path.insert(0,os.path.join(options.installdir,'share','openrave-'+soversion))
     openravepy = __import__('openravepy')
-    
+    assert(openravepy.__version__==version)
     args = dict()
     args['openrave_version'] = openravepy.__version__
     args['openrave_version_full'] = openravepy.__version__
