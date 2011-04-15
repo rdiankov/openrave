@@ -812,12 +812,11 @@ if __name__ == "__main__":
     open(os.path.join(options.installdir,'include','openrave-'+soversion,'openrave','config.h'),'w').write(config)
     
     # boost installation
-    boostdef = 'OPENRAVE_BOOST_VERSION "'
-    booststart = config.find(boostdef)+len(boostdef)
-    boostend = config.find('"',booststart)
-    boostversionnum = int(config[booststart:boostend])
-    boostversionsep = [boostversionnum/100000,(boostversionnum/100)%1000,boostversionnum%100]
-    for boost_version in ['%d.%d.%d'%tuple(boostversionsep),'%d.%d'%tuple(boostversionsep[0:2])]:
+    boostversion = Popen(['openrave-config','--boost-version'],stdout=PIPE).communicate()[0].strip()
+    boostversionsep = boostversionsep.split('.')
+    if len(boostversionsep) == 2:
+        boostversionsep.append('0')
+    for boost_version in ['%s.%s.%s'%tuple(boostversionsep),'%s.%s'%tuple(boostversionsep[0:2])]:
         boost_installer = 'boost_%s_setup.exe'%boost_version.replace('.','_')
         if not os.path.exists(os.path.join('installers',boost_installer)):
             boosturl = 'http://www.boostpro.com/download/'+boost_installer

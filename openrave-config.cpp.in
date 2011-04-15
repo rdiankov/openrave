@@ -12,7 +12,7 @@ int main(int argc,char** argv)
     for(int i = 1; i < argc; ++i) {
         string s = argv[i];
         if( s == "--boost-version" ) {
-            cout << "@Boost_MAJOR_VERSION@.@Boost_MINOR_VERSION@" << endl;
+            cout << "@Boost_MAJOR_VERSION@.@Boost_MINOR_VERSION@.@Boost_PATCH_VERSION@" << endl;
         }
         else if( s == "--version" ) {
             cout << "@OPENRAVE_VERSION@" << endl;
