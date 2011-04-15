@@ -87,8 +87,8 @@ int main(int argc, char ** argv)
     bool bListPlugins = false;
 
     std::set<std::string> geometryextensions;
-    for(size_t i = 0; i < sizeof(s_geometryextentsions)/sizeof(s_geometryextentsions[0]); ++i) {
-        geometryextensions.insert(s_geometryextentsions[i]);
+    for(size_t iext = 0; iext < sizeof(s_geometryextentsions)/sizeof(s_geometryextentsions[0]); ++iext) {
+        geometryextensions.insert(s_geometryextentsions[iext]);
     }
 
     // parse command line arguments
