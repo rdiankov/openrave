@@ -33,10 +33,10 @@ using namespace std;
 #include <boost/bind.hpp>
 #include <boost/algorithm/string.hpp>
 
-#ifndef _WIN32
+//#ifndef _WIN32
 #include <signal.h>
 void sigint_handler(int sig);
-#endif
+//#endif
 
 #ifdef _WIN32
 #define usleep(micro) Sleep((micro)/1000)
@@ -95,7 +95,7 @@ int main(int argc, char ** argv)
     int i = 1;
     while(i < argc) {
         if( stricmp(argv[i], "-h") == 0 || stricmp(argv[i], "-?") == 0 || stricmp(argv[i], "/?") == 0 || stricmp(argv[i], "--help") == 0 || stricmp(argv[i], "-help") == 0 ) {
-            RAVELOG_INFO("RAVE Simulator Usage\n"
+            RAVELOG_INFO("OpenRAVE Usage\n"
                          "--nogui             Run without a GUI (does not initialize the graphics engine nor communicate with any window manager)\n"
                          "--hidegui           Run with a hidden GUI, this allows 3D rendering and images to be captured\n"
                          "--listplugins       List all plugins and the interfaces they provide\n"
@@ -203,7 +203,7 @@ int main(int argc, char ** argv)
                     continue;
                 }
             }
-            RAVELOG_INFOA("Error in input parameters at %s\ntype --help to see a list of command line options\n", argv[i]);
+            RAVELOG_INFO("Error in input parameters at %s\ntype --help to see a list of command line options\n", argv[i]);
             return 0;
         }
     }
@@ -218,10 +218,10 @@ int main(int argc, char ** argv)
         RaveLoadPlugin(*it);
     }
 
-#ifndef _WIN32
+//#ifndef _WIN32
     // add a signal handler
     signal(SIGINT,sigint_handler); // control C
-#endif
+//#endif
 
     if( bListPlugins ) {
 
@@ -292,7 +292,6 @@ int main(int argc, char ** argv)
     s_bThreadDestroyed = false;
     s_mainThread.reset(new boost::thread(boost::bind(MainOpenRAVEThread)));
     s_mainThread->join();
-    s_penv->Destroy();
     s_penv.reset();
     RaveDestroy();
     return 0;
@@ -387,20 +386,25 @@ void MainOpenRAVEThread()
     ViewerBasePtr pviewer = s_penv->GetViewer();
     pviewer->main(bShowGUI);
     s_bThreadDestroyed = true;
-    while(pviewer.use_count() > 1) {
-        RAVELOG_DEBUG("viewer use count > 1, waiting for others to release viewer so can guarantee destruction in correct thread\n");
-        usleep(10000);
+    EnvironmentBasePtr penv = s_penv; // need to do this since s_penv can be reset at any time
+    if( !!penv ) {
+        penv->AttachViewer(ViewerBasePtr());
+        penv.reset();
+        s_penv.reset();
+        while(pviewer.use_count() > 1) {
+            RAVELOG_DEBUG("viewer use count > 1, waiting for others to release viewer so can guarantee destruction in correct thread\n");
+            usleep(10000);
+        }
     }
 }
 
-#ifndef _WIN32
 void sigint_handler(int sig)
 {
-    s_penv->Destroy();
     s_penv.reset();
     RaveDestroy();
+#ifndef _WIN32
     // have to let the default sigint properly shutdown the program
 	signal(SIGINT, SIG_DFL);
 	kill(getpid(), SIGINT);
-}
 #endif
+}
