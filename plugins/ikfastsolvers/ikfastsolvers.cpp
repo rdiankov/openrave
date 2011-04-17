@@ -29,6 +29,7 @@ namespace pr2_rightarm { IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr, cons
 namespace pr2_rightarm_torso { IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr, const std::vector<dReal>& vfreeinc); }
 namespace schunk_lwa3 { IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr, const std::vector<dReal>& vfreeinc); }
 namespace katana5d { IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr, const std::vector<dReal>& vfreeinc); }
+namespace katana5d_trans { IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr, const std::vector<dReal>& vfreeinc); }
 
 #include "ikfastproblem.h"
 
@@ -83,6 +84,9 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
             else if( interfacename == "ikfast_katana5d" ) {
                 return katana5d::CreateIkSolver(penv, vfreeinc);
             }
+            else if( interfacename == "ikfast_katana5d_trans" ) {
+                return katana5d_trans::CreateIkSolver(penv, vfreeinc);
+            }
         }
         break;
     }        
@@ -112,6 +116,7 @@ void GetPluginAttributesValidated(PLUGININFO& info)
     info.interfacenames[PT_InverseKinematicsSolver].push_back("ikfast_pr2_leftarm_torso");
     info.interfacenames[PT_InverseKinematicsSolver].push_back("ikfast_schunk_lwa3");
     info.interfacenames[PT_InverseKinematicsSolver].push_back("ikfast_katana5d");
+    info.interfacenames[PT_InverseKinematicsSolver].push_back("ikfast_katana5d_trans");
 }
 
 OPENRAVE_PLUGIN_API void DestroyPlugin()
