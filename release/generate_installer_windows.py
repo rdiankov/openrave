@@ -614,9 +614,9 @@ SectionGroupEnd
 Section
   SetOutPath $INSTDIR
   WriteRegStr HKLM SOFTWARE\\OpenRAVE "" "%(openrave_version)s"
-  WriteRegStr HKLM SOFTWARE\\OpenRAVE\\%(openrave_version)s "InstallRoot" "$INSTDIR"
+  WriteRegStr HKLM "SOFTWARE\\OpenRAVE\\%(openrave_version)s" "InstallRoot" "$INSTDIR"
   # register with cmake installer
-  WriteRegStr HKLM SOFTWARE\\Kitware\\CMake\\Packages\\OpenRAVE" "%(openrave_version)s" "$INSTDIR"\\lib\\cmake\\openrave-%(openrave_soversion)s
+  WriteRegStr HKLM "SOFTWARE\\Kitware\\CMake\\Packages\\OpenRAVE" "%(openrave_version)s" "$INSTDIR\\lib\\cmake\\openrave-%(openrave_soversion)s"
   
   File /r /x *.dll /x *.py %(installdir)s\\bin 
   File /r %(installdir)s\\include

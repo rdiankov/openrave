@@ -285,19 +285,22 @@ public:
         EnvironmentMutex::scoped_lock envlock(GetEnv()->GetMutex());
         string robotname;
         string striktype;
+        bool bForceIK = false;
         sinput >> robotname;
         sinput >> striktype;
         if( !sinput ) {
             return false;
         }
+        sinput >> bForceIK; // optional
         RobotBasePtr probot = GetEnv()->GetRobot(robotname);
         if( !probot || !probot->GetActiveManipulator() ) {
             return false;
         }
-        int niktype = -1;
+        RobotBase::ManipulatorPtr pmanip = probot->GetActiveManipulator();
+        IkParameterization::Type niktype = IkParameterization::Type_None;
         try {
-            niktype = boost::lexical_cast<int>(striktype);
-            striktype = RaveGetIkParameterizationMap().find(static_cast<IkParameterization::Type>(niktype))->second;
+            niktype = static_cast<IkParameterization::Type>(boost::lexical_cast<int>(striktype));
+            striktype = RaveGetIkParameterizationMap().find(niktype)->second;
         }
         catch(const boost::bad_lexical_cast&) {
             // striktype is already correct, so check that it exists in RaveGetIkParameterizationMap
@@ -310,14 +313,14 @@ public:
                     break;
                 }
             }
-            if(niktype == -1) {
+            if(niktype == IkParameterization::Type_None) {
                 throw openrave_exception(str(boost::format("could not find iktype %s")%striktype));
             }
         }
 
         {
             string hasik;
-            string cmdhas = str(boost::format("openrave.py --database inversekinematics --gethas --robot=\"%s\" --manipname=%s --iktype=%s")%probot->GetXMLFilename()%probot->GetActiveManipulator()->GetName()%striktype);
+            string cmdhas = str(boost::format("openrave.py --database inversekinematics --gethas --robot=\"%s\" --manipname=%s --iktype=%s")%probot->GetXMLFilename()%pmanip->GetName()%striktype);
             FILE* pipe = MYPOPEN(cmdhas.c_str(), "r");
             {
                 boost::iostreams::stream_buffer<boost::iostreams::file_descriptor_source> fpstream(fileno(pipe),FILE_DESCRIPTOR_FLAG);
@@ -331,8 +334,8 @@ public:
             }
             boost::trim(hasik);
             if( hasik != "1" ) {
-                RAVELOG_INFO(str(boost::format("Generating inverse kinematics for manip %s:%s, will take several minutes...\n")%probot->GetName()%probot->GetActiveManipulator()->GetName()));
-                string cmdgen = str(boost::format("openrave.py --database inversekinematics --usecached --robot=\"%s\" --manipname=%s --iktype=%s")%probot->GetXMLFilename()%probot->GetActiveManipulator()->GetName()%striktype);
+                RAVELOG_INFO(str(boost::format("Generating inverse kinematics for manip %s:%s, will take several minutes...\n")%probot->GetName()%pmanip->GetName()));
+                string cmdgen = str(boost::format("openrave.py --database inversekinematics --usecached --robot=\"%s\" --manipname=%s --iktype=%s")%probot->GetXMLFilename()%pmanip->GetName()%striktype);
                 // use raw system call, popen causes weird crash in the inversekinematics compiler 
                 int generateexit = system(cmdgen.c_str());
                 //FILE* pipe = MYPOPEN(cmdgen.c_str(), "r");
@@ -344,7 +347,7 @@ public:
             }
         }
         
-        string cmdfilename = str(boost::format("openrave.py --database inversekinematics --getfilename --robot=\"%s\" --manipname=%s --iktype=%s")%probot->GetXMLFilename()%probot->GetActiveManipulator()->GetName()%striktype);
+        string cmdfilename = str(boost::format("openrave.py --database inversekinematics --getfilename --robot=\"%s\" --manipname=%s --iktype=%s")%probot->GetXMLFilename()%pmanip->GetName()%striktype);
         RAVELOG_INFO("executing shell command:\n%s\n",cmdfilename.c_str());
         string ikfilename;
         FILE* pipe = MYPOPEN(cmdfilename.c_str(), "r");
@@ -365,19 +368,31 @@ public:
         }
         
         boost::trim(ikfilename);
-        string ikfastname = str(boost::format("ikfast.%s.%s")%probot->GetRobotStructureHash()%probot->GetActiveManipulator()->GetName());
+        string ikfastname = str(boost::format("ikfast.%s.%s")%probot->GetRobotStructureHash()%pmanip->GetName());
         boost::shared_ptr<IKLibrary> lib = _AddIkLibrary(ikfastname,ikfilename);
+        bool bsuccess = true;
         if( !lib ) {
+            bsuccess = false;
+        }
+        else {
+            if( lib->GetIKType() != (int)niktype ) {
+                bsuccess = false;
+            }
+            else {
+                IkSolverBasePtr iksolver = lib->CreateSolver(GetEnv(), vector<dReal>());
+                if( !iksolver ) {
+                    bsuccess = false;
+                }
+                else {
+                    bsuccess = pmanip->SetIkSolver(iksolver);
+                }
+            }
+        }
+        // if not forcing the ik, then return true as long as a valid ik solver is set
+        if( bForceIK && !bsuccess ) {
             return false;
         }
-        if( lib->GetIKType() != niktype ) {
-            return false;
-        }
-        IkSolverBasePtr iksolver = lib->CreateSolver(GetEnv(), vector<dReal>());
-        if( !iksolver ) {
-            return false;
-        }
-        return probot->GetActiveManipulator()->SetIkSolver(iksolver);
+        return !!pmanip->GetIkSolver() && pmanip->GetIkSolver()->Supports(niktype);
     }
 #endif
     

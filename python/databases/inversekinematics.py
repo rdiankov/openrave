@@ -566,6 +566,7 @@ class InverseKinematicsModel(DatabaseGenerator):
                     raise ValueError('failed to generate ik solver for robot %s:%s'%(self.robot.GetName(),self.manip.GetName()))
                 
                 self.statistics['generationtime'] = time.time()-generationstart
+                self.statistics['usinglapack'] = solver.usinglapack
                 open(sourcefilename,'w').write(code)
             except ikfast.IKFastSolver.IKFeasibilityError, e:
                 self.ikfeasibility = str(e)
@@ -586,10 +587,15 @@ class InverseKinematicsModel(DatabaseGenerator):
                     objectfiles = compiler.compile(sources=[platformsourcefilename],macros=[('IKFAST_CLIBRARY',1),('IKFAST_NO_MAIN',1)],extra_postargs=compile_flags,output_dir=output_dir)
                     # because some parts of ikfast require lapack, always try to link with it
                     try:
-                        compiler.link_shared_object(objectfiles,output_filename=output_filename,libraries=['lapack'])
-                    except distutils.errors.LinkError:
-                        log.info('linking without lapack...')
-                        compiler.link_shared_object(objectfiles,output_filename=output_filename)
+                        libraries = []
+                        if self.statistics.get('usinglapack',False):
+                            libraries.append('lapack')
+                        compiler.link_shared_object(objectfiles,output_filename=output_filename,libraries=libraries)
+                    except distutils.errors.LinkError,e:
+                        print e
+                        log.info('linking again... (MSVC bug?)')
+                        compiler.link_shared_object(objectfiles,output_filename=output_filename,libraries=libraries)
+                        
                     if not self.setrobot():
                         return ValueError('failed to generate ik solver')
                 finally:
