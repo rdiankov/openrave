@@ -588,7 +588,7 @@ class InverseKinematicsModel(DatabaseGenerator):
                     # because some parts of ikfast require lapack, always try to link with it
                     try:
                         libraries = []
-                        if self.statistics.get('usinglapack',False):
+                        if self.statistics.get('usinglapack',True):
                             libraries.append('lapack')
                         compiler.link_shared_object(objectfiles,output_filename=output_filename,libraries=libraries)
                     except distutils.errors.LinkError,e:

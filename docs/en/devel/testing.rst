@@ -74,8 +74,3 @@ IKFast
 ~~~~~~
 
 Once building is successful, IKFast tests are run for every robot in its database using the **test/test_ikfast.py** script. The `statistics  <http://www.openrave.org/testing/job/openrave/>`_ are used to generate reStructuredText for the :ref:`robots` page. :ref:`ikfast-testing` goes into details about what is tested.
-
-Compatibility
-~~~~~~~~~~~~~
-
-OpenRAVE patch releases should always be binary compatible so that newer versions can read old plugins. See `ABI Compatibility <http://www.ros.org/reps/rep-0009.html>`_ for an excellent discussion.

@@ -8,6 +8,9 @@ Versioning
 
 Should allow multiple openrave versions to be installed simultaneously. This requires using suffixing several files and executables with $MAJOR.$MINOR similar to how python and `boost <https://svn.boost.org/trac/boost/wiki/ImprovingPractices>`_ work.
 
+OpenRAVE patch releases should always be binary compatible so that newer versions can read old plugins. In otherwords all 0.3.x releases should be binary compatible with each other. See `ABI Compatibility <http://www.ros.org/reps/rep-0009.html>`_ for an excellent discussion. There is an `ABI compliance checker <http://ispras.linux-foundation.org/index.php/ABI_compliance_checker>`_ that can ensure this is so. For Linux systems, SO version is always the OpenRAVE $MAJOR.$MINOR version.
+
+
 Windows Installer
 -----------------
 
@@ -17,7 +20,7 @@ The installer:
 
 * automatically installs python, boost, numpy, and sympy,
 * unpacks the openrave files in a user-specified location,
-* modifies **rave/config.h** to point to the user-installed location,
+* modifies **openrave/config.h** to point to the user-installed location,
 * adds options to install Octave/Python bindings,
 * registers the necessary DLLs and adds registry keys for OpenRAVE
  * Under **HKEY_LOCAL_MACHINE\SOFTWARE\OpenRAVE** will be every OpenRAVE version that is installed. For example "|version|". Under that will be **InstallRoot**.
