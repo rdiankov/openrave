@@ -500,7 +500,7 @@ SectionEnd
 Function GetPython
   MessageBox MB_YESNO "Need to install Python %(python_version)s. Continue with auto-download and install?"  IDNO done
   StrCpy $2 "$TEMP\\python-%(python_version_full)s.msi"      
-  nsisdl::download /TIMEOUT=30000 http://www.python.org/ftp/python/%(python_version_full)s/python-%(python_version_full)s%(python_architecture)s.msi $2
+  nsisdl::download /TIMEOUT=30000 %(python_url)s $2
   Pop $R0 ;Get the return value
   StrCmp $R0 "success" install
     MessageBox MB_OK "Download failed: $R0"
@@ -522,7 +522,7 @@ FunctionEnd
 Function GetNumPy
   MessageBox MB_YESNO "Need to install Python NumPy Library. Continue with auto-download and install?" IDNO  done
   StrCpy $2 "numpy-%(numpy_version)s-win32-superpack-python%(python_version)s.exe"
-  nsisdl::download /TIMEOUT=30000 http://downloads.sourceforge.net/project/numpy/NumPy/%(numpy_version)s/$2 $TEMP\\$2
+  nsisdl::download /TIMEOUT=30000 %(python_numpy_url)s $TEMP\\$2
   Pop $R0 ;Get the return value
   StrCmp $R0 "success" install
     MessageBox MB_OK "Download failed: $R0"
@@ -549,7 +549,7 @@ FunctionEnd
 Function GetSymPy
   MessageBox MB_YESNO "Need to install Python SymPy Library. Continue with auto-download and install?" IDNO done
   StrCpy $2 "sympy-%(sympy_version)s.win32.exe"
-  nsisdl::download /TIMEOUT=30000 http://sympy.googlecode.com/files/$2 $TEMP\\$2
+  nsisdl::download /TIMEOUT=30000 %(python_sympy_url)s $TEMP\\$2
   Pop $R0 ;Get the return value
   StrCmp $R0 "success" install
     MessageBox MB_OK "Download failed: $R0"
@@ -842,6 +842,14 @@ if __name__ == "__main__":
     args['python_architecture'] = ''
     args['numpy_version'] = numpy.version.version
     args['sympy_version'] = sympy.__version__
+
+    python_url = 'http://www.python.org/ftp/python/%(python_version_full)s/python-%(python_version_full)s%(python_architecture)s.msi'%args
+    args['python_url'] = python_url
+    python_numpy_url = 'http://downloads.sourceforge.net/project/numpy/NumPy/%(numpy_version)s/numpy-%(numpy_version)s-win32-superpack-python%(python_version)s.exe'%args
+    args['python_numpy_url'] = python_numpy_url
+    python_sympy_url = 'http://sympy.googlecode.com/files/sympy-%(sympy_version)s.win32.exe'%args
+    args['python_sympy_url'] = python_sympy_url
+
     open(args['output_name']+'.nsi','w').write(nsiscript%args)
     os.system('"C:\\Program Files\\NSIS\\makensis.exe" %s.nsi'%args['output_name'])
   
