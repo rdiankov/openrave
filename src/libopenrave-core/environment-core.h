@@ -1193,7 +1193,7 @@ class Environment : public EnvironmentBase
         if( !ptrimesh ) {
             ptrimesh.reset(new KinBody::Link::TRIMESH());
         }
-        if( !OpenRAVEXMLParser::CreateTriMeshData(filedata->second, vscale, *ptrimesh, diffuseColor, ambientColor, ftransparency) ) {
+        if( !OpenRAVEXMLParser::CreateTriMeshData(shared_from_this(),filedata->second, vscale, *ptrimesh, diffuseColor, ambientColor, ftransparency) ) {
             ptrimesh.reset();
         }
         return ptrimesh;

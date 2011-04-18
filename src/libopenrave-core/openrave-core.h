@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2010 Rosen Diankov (rosen.diankov@gmail.com)
+// Copyright (C) 2006-2011 Rosen Diankov (rosen.diankov@gmail.com)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -18,8 +18,8 @@
 #ifndef OPENRAVE_CORE_H
 #define OPENRAVE_CORE_H
 
-// public headers
-#include <rave/rave.h>
+// public OpenRAVE header
+#include <openrave/openrave.h>
 
 #if defined(OPENRAVE_CORE_DLL)
   #ifdef OPENRAVE_CORE_DLL_EXPORTS

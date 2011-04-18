@@ -719,6 +719,16 @@ protected:
                 plibrary = _SysLoadLibrary(libraryname.c_str(),OPENRAVE_LAZY_LOADING);
             }
         }
+#ifndef _WIN32
+        if( plibrary == NULL ) {
+            // unix libraries are prefixed with 'lib'
+            if( libraryname.size() > 3 && libraryname.substr(0,3) != string("lib") ) {
+                libraryname = string("lib") + libraryname;
+                plibrary = _SysLoadLibrary(libraryname.c_str(),OPENRAVE_LAZY_LOADING);
+            }
+        }
+#endif
+
 #ifdef HAVE_BOOST_FILESYSTEM
         if( plibrary == NULL ) {
             // try adding from the current plugin libraries

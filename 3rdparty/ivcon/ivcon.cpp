@@ -2673,7 +2673,7 @@ bool ReadFile(const char* pfilename, std::vector<float>& vertices, std::vector<i
 
     // read in the data
     vertices.resize(cor3_num*3);
-    for(size_t i = 0; i < vertices.size(); ++i) {
+    for(size_t i = 0; i < cor3_num; ++i) {
         vertices[3*i+0] = cor3[0][i];
         vertices[3*i+1] = cor3[1][i];
         vertices[3*i+2] = cor3[2][i];

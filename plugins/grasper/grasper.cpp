@@ -15,7 +15,7 @@
 #include "plugindefs.h"
 #include "grasperplanner.h"
 #include "grasper.h"
-#include <rave/plugin.h>
+#include <openrave/plugin.h>
 
 InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
 {

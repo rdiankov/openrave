@@ -125,7 +125,7 @@ Example \ref plugincpp.cpp "plugincpp.cpp" creates a \ref OpenRAVE::ProblemInsta
 
 \dontinclude plugincpp.cpp
 
-The first \#include the compiler sees has to be \ref rave/rave.h. Then for the main C++ file, we include \ref rave/plugin.h for several helper functions.
+The first \#include the compiler sees has to be \ref openrave/openrave.h. Then for the main C++ file, we include \ref rave/plugin.h for several helper functions.
 
 \until {
 

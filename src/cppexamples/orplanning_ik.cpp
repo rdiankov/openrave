@@ -61,6 +61,8 @@ int main(int argc, char ** argv)
     ssin << "LoadIKFastSolver " << probot->GetName() << " " << (int)IkParameterization::Type_Transform6D;
     if( !pikfast->SendCommand(ssout,ssin) ) {
         RAVELOG_ERROR("failed to load iksolver\n");
+    }
+    if( !pmanip->GetIkSolver()) {
         penv->Destroy();
         return 1;
     }

@@ -15,7 +15,7 @@
 #include "plugindefs.h"
 #include "genericrobot.h"
 #include "collisionmaprobot.h"
-#include <rave/plugin.h>
+#include <openrave/plugin.h>
 
 static boost::shared_ptr<void> s_RegisteredReader;
 

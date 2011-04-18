@@ -5,8 +5,8 @@
 
     <b>Full Example Code:</b>
 */
-#include <rave/rave.h>
-#include <rave/plugin.h>
+#include <openrave/openrave.h>
+#include <openrave/plugin.h>
 #include <boost/bind.hpp>
 
 using namespace std;

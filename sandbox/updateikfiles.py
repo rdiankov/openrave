@@ -4,7 +4,7 @@ from openravepy import *
 import time,platform,os
 import logging
 
-def updateik(robotfilename,manipname,iktype,destfilename):
+def updateik(robotfilename,manipname,iktype,destfilename,freeindices=None):
     print robotfilename, manipname, iktype, destfilename
     env=Environment()
     try:
@@ -13,7 +13,7 @@ def updateik(robotfilename,manipname,iktype,destfilename):
             env.AddRobot(robot)
             if manipname is not None:
                 manip = robot.SetActiveManipulator(manipname)
-            ikmodel = databases.inversekinematics.InverseKinematicsModel(robot,iktype=iktype)
+            ikmodel = databases.inversekinematics.InverseKinematicsModel(robot,iktype=iktype,freeindices=freeindices)
             ikmodel.manip.SetIKSolver(None)
             if not ikmodel.load():
                 ikmodel.autogenerate()
@@ -64,6 +64,7 @@ if __name__ == "__main__":
         updateik('robots/pr2-beta-static.zae','rightarm_torso',IkParameterization.Type.Transform6D,destdir+'/ik_pr2_rightarm_torso.cpp')
         updateik('robots/schunk-lwa3.zae',None,IkParameterization.Type.Transform6D,os.path.join(destdir,'ik_schunk_lwa3.cpp'))
         updateik('robots/neuronics-katana.zae',None,IkParameterization.Type.TranslationDirection5D,os.path.join(destdir,'ik_katana5d.cpp'))
+        updateik('robots/neuronics-katana.zae',None,IkParameterization.Type.Translation3D,os.path.join(destdir,'ik_katana5d_trans.cpp'),[3,4])
         print 'finished updating all files'
     finally:
         RaveDestroy()

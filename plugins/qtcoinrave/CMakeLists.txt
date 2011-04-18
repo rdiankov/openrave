@@ -5,6 +5,7 @@ if(APPLE)
   set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -undefined dynamic_lookup")
 endif(APPLE)
 
+find_package(Coin)
 find_package(SoQt4)
 if (NOT SOQT_LIBRARY_FOUND)
   message(STATUS "WARNING: SoQt4 not found, disabling QtCoin GUI plugin. Please install SoQt (http://www.coin3d.org)")
@@ -15,10 +16,10 @@ if(NOT OPENGL_FOUND)
   message(STATUS "WARNING: OpenGL not found")
 endif()
 
-if (QT_FOUND AND SOQT_LIBRARY_FOUND AND OPENGL_FOUND)
+if (QT_FOUND AND SOQT_LIBRARY_FOUND AND OPENGL_FOUND AND COIN_LIBRARY_FOUND)
   message(STATUS "Detected SoQt/Coin3D GUI, making plugin")
-  include_directories(${OPENGL_INCLUDE_DIR} ${SOQT_INCLUDE_DIRS})
-  link_directories(${OPENRAVE_LINK_DIRS} ${SOQT_LINK_DIRS})
+  include_directories(${OPENGL_INCLUDE_DIR} ${SOQT_INCLUDE_DIRS} ${COIN_INCLUDE_DIRS})
+  link_directories(${OPENRAVE_LINK_DIRS} ${SOQT_LINK_DIRS} ${COIN_LINK_DIRS})
 
   # generate rules for building source files from the resources
   set(QTCOIN_MOCS qtcoinviewer.h)
@@ -26,12 +27,12 @@ if (QT_FOUND AND SOQT_LIBRARY_FOUND AND OPENGL_FOUND)
   qt4_wrap_cpp(MOC_OUTPUT_FILES ${QTCOIN_MOCS})
 
    # build sources, moc'd sources, and rcc'd sources
-  add_library(qtcoinrave SHARED aviUtil.cpp IvSelector.cpp Item.cpp qtcoinviewer.cpp qtcoinrave.cpp ${MOC_OUTPUT_FILES} Item.h IvSelector.h qtcoin.h qtcoinviewer.h qtcameraviewer.h)
+  add_library(qtcoinrave SHARED aviUtil.cpp IvSelector.cpp Item.cpp qtcoinviewer.cpp qtcoinrave.cpp ${MOC_OUTPUT_FILES} Item.h IvSelector.h qtcoin.h qtcoinviewer.h qtcameraviewer.h ivmodelloader.cpp)
 
   if( OPT_VIDEORECORDING )
     pkg_check_modules(FFMPEG libavformat libavcodec)
     add_definitions(-DENABLE_VIDEORECORDING)
-    if (FFMPEG_FOUND)
+    if (NOT MSVC AND FFMPEG_FOUND)
       message(STATUS "enabling FFMPEG support")
       pkg_check_modules(FFMPEG_SWSCALE libswscale)
 

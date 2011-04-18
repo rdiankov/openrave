@@ -53,18 +53,6 @@ BOOST_STATIC_ASSERT(sizeof(xmlChar) == 1);
 #include <ivcon.h>
 #endif
 
-#ifdef OPENRAVE_COIN3D
-#include <Inventor/SoDB.h>
-#include <Inventor/SoInput.h>
-#include <Inventor/nodes/SoMaterial.h>
-#include <Inventor/nodes/SoSeparator.h>
-#include <Inventor/actions/SoSearchAction.h>
-#include <Inventor/SbMatrix.h>
-#include <Inventor/SoPrimitiveVertex.h>
-#include <Inventor/actions/SoCallbackAction.h>
-#include <Inventor/nodes/SoShape.h>
-#endif
-
 namespace OpenRAVEXMLParser
 {
     static boost::once_flag __onceCreateXMLMutex = BOOST_ONCE_INIT;
@@ -186,65 +174,8 @@ namespace OpenRAVEXMLParser
         return true;
     }
 #endif
-
-#ifdef OPENRAVE_COIN3D
-    // Coin specific routines
-    static SbMatrix& GetModelMatrix() {
-        static SbMatrix m;
-        return m;
-    }
-    static void _Coin3dTriangulateCB(void *data, SoCallbackAction *action, const SoPrimitiveVertex *vertex1, const SoPrimitiveVertex *vertex2, const SoPrimitiveVertex *vertex3)
-    {
-        KinBody::Link::TRIMESH* ptri = (KinBody::Link::TRIMESH*)data;
-        GetModelMatrix() = action->getModelMatrix();
-
-        // set the vertices (SCALED)
-        //    ptri->vertices.push_back(Vector(&vertex1->getPoint()[0]));
-        //    ptri->vertices.push_back(Vector(&vertex2->getPoint()[0]));
-        //    ptri->vertices.push_back(Vector(&vertex3->getPoint()[0]));
-        SbVec3f v;
-        GetModelMatrix().multVecMatrix(vertex1->getPoint(), v);
-        ptri->vertices.push_back(Vector(&v[0]));
-
-        GetModelMatrix().multVecMatrix(vertex2->getPoint(), v);
-        ptri->vertices.push_back(Vector(&v[0]));
-
-        GetModelMatrix().multVecMatrix(vertex3->getPoint(), v);
-        ptri->vertices.push_back(Vector(&v[0]));
-    }
-
-    static void _Coin3dCreateTriMeshData(SoNode* pnode, KinBody::Link::TRIMESH& tri)
-    {
-        tri.vertices.resize(0);
-        tri.vertices.reserve(256);
-
-        // create the collision model and triangulate
-        SoCallbackAction triAction;
-
-        // add the callbacks for all nodes
-        triAction.addTriangleCallback(SoShape::getClassTypeId(), _Coin3dTriangulateCB, &tri);
-        pnode->ref();
-        triAction.apply(pnode);
-        //pnode->unref();
-
-        Vector scale;
-        SbMatrix s_ModelMatrix = GetModelMatrix();
-        scale.x = sqrtf(s_ModelMatrix[0][0]*s_ModelMatrix[0][0]+s_ModelMatrix[1][0]*s_ModelMatrix[1][0]+s_ModelMatrix[2][0]*s_ModelMatrix[2][0]);
-        scale.y = sqrtf(s_ModelMatrix[0][1]*s_ModelMatrix[0][1]+s_ModelMatrix[1][1]*s_ModelMatrix[1][1]+s_ModelMatrix[2][1]*s_ModelMatrix[2][1]);
-        scale.z = sqrtf(s_ModelMatrix[0][2]*s_ModelMatrix[0][2]+s_ModelMatrix[1][2]*s_ModelMatrix[1][2]+s_ModelMatrix[2][2]*s_ModelMatrix[2][2]);
-
-        tri.indices.resize(tri.vertices.size());
-        for(size_t i = 0; i < tri.vertices.size(); ++i) {
-            tri.indices[i] = i;
-            tri.vertices[i].x *= scale.x;
-            tri.vertices[i].y *= scale.y;
-            tri.vertices[i].z *= scale.z;
-        }
-    }
-
-#endif
     
-    bool CreateTriMeshData(const std::string& filename, const Vector& vscale, KinBody::Link::TRIMESH& trimesh, RaveVector<float>& diffuseColor, RaveVector<float>& ambientColor, float& ftransparency)
+    bool CreateTriMeshData(EnvironmentBasePtr penv, const std::string& filename, const Vector& vscale, KinBody::Link::TRIMESH& trimesh, RaveVector<float>& diffuseColor, RaveVector<float>& ambientColor, float& ftransparency)
     {
         string extension;
         if( filename.find_last_of('.') != string::npos ) {
@@ -263,58 +194,24 @@ namespace OpenRAVEXMLParser
             }
         }
 #endif
-#ifdef OPENRAVE_COIN3D
-        if(!SoDB::isInitialized()) {
-            SoDB::init();
-        }
-        SoDB::readlock(); // have to lock coin3d, or otherwise state gets corrupted
-        SoInput mySceneInput;
-        if (!mySceneInput.openFile(filename.c_str())) {
-            RAVELOG_WARN(str(boost::format("Failed to open %s for KinBody:TriMesh\n")%filename));
-            GetXMLErrorCount()++;
-        }
-        else {
-            // SoDB::readAll memory leaks!
-            SoSeparator* psep = SoDB::readAll(&mySceneInput);
-            if( !!psep ) {
-                // try to extract a material
-                SoSearchAction search;
-                search.setType(SoMaterial::getClassTypeId());
-                search.setInterest(SoSearchAction::ALL);
-                psep->ref();
-                search.apply(psep);
-                for(int i = 0; i < search.getPaths().getLength(); ++i) {
-                    SoPath* path = search.getPaths()[i];
-                    SoMaterial* pmtrl = (SoMaterial*)path->getTail();
-                    if( !pmtrl ) {
-                        continue;
+
+        ProblemInstancePtr ivmodelloader = RaveCreateProblem(penv,"ivmodelloader");
+        if( !!ivmodelloader ) {
+            stringstream sout, sin;
+            sin << "LoadModel " << filename; 
+            sout << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+            if( ivmodelloader->SendCommand(sout,sin) ) {
+                sout >> trimesh >> diffuseColor >> ambientColor >> ftransparency;
+                if( !!sout ) {
+                    FOREACH(it,trimesh.vertices) {
+                        it->x *= vscale.x;
+                        it->y *= vscale.y;
+                        it->z *= vscale.z;
                     }
-                    if( !!pmtrl->diffuseColor.getValues(0) ) {
-                        diffuseColor.x = pmtrl->diffuseColor.getValues(0)->getValue()[0];
-                        diffuseColor.y = pmtrl->diffuseColor.getValues(0)->getValue()[1];
-                        diffuseColor.z = pmtrl->diffuseColor.getValues(0)->getValue()[2];
-                    }
-                    if( !!pmtrl->ambientColor.getValues(0) ) {
-                        ambientColor.x = pmtrl->ambientColor.getValues(0)->getValue()[0];
-                        ambientColor.y = pmtrl->ambientColor.getValues(0)->getValue()[1];
-                        ambientColor.z = pmtrl->ambientColor.getValues(0)->getValue()[2];
-                                                
-                    }
-                    if( !!pmtrl->transparency.getValues(0) ) {
-                        ftransparency = pmtrl->transparency.getValues(0)[0];
-                    }
+                    return true;
                 }
-                _Coin3dCreateTriMeshData(psep, trimesh);
-                psep->unref();
-                FOREACH(it, trimesh.vertices) {
-                    *it *= vscale;
-                }
-                return true;
             }
-        }                        
-        mySceneInput.closeFile();
-        SoDB::readunlock();
-#endif
+        }
 
 #ifdef OPENRAVE_IVCON
         RAVELOG_DEBUG("using ivcon for geometry reading\n");
@@ -1068,7 +965,7 @@ namespace OpenRAVEXMLParser
                         if( _collisionfilename.first.size() > 0 ) {
                             _itgeomprop->vRenderScale = _renderfilename.second;
                             _itgeomprop->renderfile = _renderfilename.first;
-                            if( !CreateTriMeshData(_collisionfilename.first, _collisionfilename.second, _itgeomprop->collisionmesh, _itgeomprop->diffuseColor, _itgeomprop->ambientColor, _itgeomprop->ftransparency) ) {
+                            if( !CreateTriMeshData(_pparent->GetEnv(),_collisionfilename.first, _collisionfilename.second, _itgeomprop->collisionmesh, _itgeomprop->diffuseColor, _itgeomprop->ambientColor, _itgeomprop->ftransparency) ) {
                                 RAVELOG_WARN(str(boost::format("failed to find %s\n")%_collisionfilename.first));
                             }
                             else {
@@ -1079,7 +976,7 @@ namespace OpenRAVEXMLParser
                             _itgeomprop->vRenderScale = _renderfilename.second;
                             _itgeomprop->renderfile = _renderfilename.first;
                             if( !bSuccess ) {
-                                if( !CreateTriMeshData(_renderfilename.first, _renderfilename.second, _itgeomprop->collisionmesh, _itgeomprop->diffuseColor, _itgeomprop->ambientColor, _itgeomprop->ftransparency) ) {
+                                if( !CreateTriMeshData(_pparent->GetEnv(), _renderfilename.first, _renderfilename.second, _itgeomprop->collisionmesh, _itgeomprop->diffuseColor, _itgeomprop->ambientColor, _itgeomprop->ftransparency) ) {
                                     RAVELOG_WARN(str(boost::format("failed to find %s\n")%_renderfilename.first));
                                 }
                                 else {

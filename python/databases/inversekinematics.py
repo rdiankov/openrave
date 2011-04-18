@@ -196,7 +196,8 @@ class InverseKinematicsModel(DatabaseGenerator):
         clone.ikfastproblem = RaveCreateProblem(envother,'ikfast')
         if clone.ikfastproblem is not None:
             envother.LoadProblem(clone.ikfastproblem,'')
-        clone.setrobot(self.freeinc)
+        if self.has():
+            clone.setrobot(self.freeinc)
         return clone
     def has(self):
         return self.iksolver is not None and self.manip.GetIkSolver() is not None and self.manip.GetIkSolver().Supports(self.iktype)
@@ -565,6 +566,7 @@ class InverseKinematicsModel(DatabaseGenerator):
                     raise ValueError('failed to generate ik solver for robot %s:%s'%(self.robot.GetName(),self.manip.GetName()))
                 
                 self.statistics['generationtime'] = time.time()-generationstart
+                self.statistics['usinglapack'] = solver.usinglapack
                 open(sourcefilename,'w').write(code)
             except ikfast.IKFastSolver.IKFeasibilityError, e:
                 self.ikfeasibility = str(e)
@@ -585,10 +587,15 @@ class InverseKinematicsModel(DatabaseGenerator):
                     objectfiles = compiler.compile(sources=[platformsourcefilename],macros=[('IKFAST_CLIBRARY',1),('IKFAST_NO_MAIN',1)],extra_postargs=compile_flags,output_dir=output_dir)
                     # because some parts of ikfast require lapack, always try to link with it
                     try:
-                        compiler.link_shared_object(objectfiles,output_filename=output_filename,libraries=['lapack'])
-                    except distutils.errors.LinkError:
-                        log.info('linking without lapack...')
-                        compiler.link_shared_object(objectfiles,output_filename=output_filename)
+                        libraries = []
+                        if self.statistics.get('usinglapack',False):
+                            libraries.append('lapack')
+                        compiler.link_shared_object(objectfiles,output_filename=output_filename,libraries=libraries)
+                    except distutils.errors.LinkError,e:
+                        print e
+                        log.info('linking again... (MSVC bug?)')
+                        compiler.link_shared_object(objectfiles,output_filename=output_filename,libraries=libraries)
+                        
                     if not self.setrobot():
                         return ValueError('failed to generate ik solver')
                 finally:
@@ -719,7 +726,7 @@ class InverseKinematicsModel(DatabaseGenerator):
         else:
             iktype = IkParameterization.Type.Transform6D
         Model = lambda robot: InverseKinematicsModel(robot=robot,iktype=iktype,forceikfast=True)
-        DatabaseGenerator.RunFromParser(Model=Model,parser=parser,robotatts={'skipgeometry':'1'},args=args,**kwargs)
+        model = DatabaseGenerator.RunFromParser(Model=Model,parser=parser,robotatts={'skipgeometry':'1'},args=args,**kwargs)
         if options.iktests is not None or options.perftiming is not None:
             log.info('testing the success rate of robot %s ',options.robot)
             env = Environment()
@@ -728,7 +735,7 @@ class InverseKinematicsModel(DatabaseGenerator):
                 env.AddRobot(robot)
                 if options.manipname is not None:
                     robot.SetActiveManipulator(options.manipname)
-                ikmodel = InverseKinematicsModel(robot,iktype=iktype,forceikfast=True,freejoints=options.freejoints)
+                ikmodel = InverseKinematicsModel(robot,iktype=model.iktype,forceikfast=True,freeindices=model.freeindices)
                 if not ikmodel.load():
                     raise ValueError('failed to load ik')
                 if options.iktests is not None:

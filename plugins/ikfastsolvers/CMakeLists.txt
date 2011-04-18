@@ -9,7 +9,7 @@ if( Boost_IOSTREAMS_FOUND )
   set(PLUGIN_COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS} -DBoost_IOSTREAMS_FOUND")
 endif()
 
-set(ik_names barrettwam katana5d pa10 pr2_head pr2_head_torso pr2_leftarm pr2_leftarm_torso pr2_rightarm pr2_rightarm_torso puma schunk_lwa3)
+set(ik_names barrettwam katana5d katana5d_trans pa10 pr2_head pr2_head_torso pr2_leftarm pr2_leftarm_torso pr2_rightarm pr2_rightarm_torso puma schunk_lwa3)
 set(ik_libraries)
 foreach(ik_name ${ik_names})
   add_library(ik_${ik_name} STATIC ik_${ik_name}.cpp)

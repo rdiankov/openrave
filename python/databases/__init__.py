@@ -154,8 +154,9 @@ class DatabaseGenerator(metaclass.AutoReloader):
                 if not model.load():
                     raise ValueError('failed to find cached model %s:%s'%(model.getfilename(True),model.getfilename(False)))
                 model.show(options=options)
-                return
+                return model
             model.autogenerate(options=options)
+            return model
         finally:
             if destroyenv:
                 env.Destroy()
