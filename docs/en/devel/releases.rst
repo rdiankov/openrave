@@ -36,7 +36,7 @@ Ubuntu Releases
 The packages are separated into:
 
 * openrave$V: all openrave related packages
-* openrave$V-minimal: core libraries and tools
+* openrave$V-base: core libraries and tools
 * openrave$V-scenes: basic scenes required for examples
 * openrave$V-dev: development files and examples
 * openrave$V-python: openravepy python bindings

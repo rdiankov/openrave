@@ -62,34 +62,38 @@ if( USE_MATLAB )
   set(MATLAB_ORCREATE_MEX "orcreate.${MEXEXT}")
   add_custom_command(
     OUTPUT ${MATLAB_MEX_OUT}/${MATLAB_ORCREATE_MEX}
-    COMMAND ${MATLAB}
-    ARGS -I\"${MATLAB_FILES_DIR}\" ${MEX_CXXFLAGS} -outdir \"${MATLAB_MEX_OUT}\" -output \"${MATLAB_ORCREATE_MEX}\" \"${MATLAB_FILES_DIR}/orcreate.cpp\"
-    DEPENDS ${MATLAB_FILES_DIR}/orcreate.cpp ${MATLAB_FILES_DIR}/socketconnect.h
+    COMMAND "${MATLAB}"
+    ARGS -I\"${OCTAVEMATLAB_FILES_DIR}\" ${MEX_CXXFLAGS} -outdir \"${MATLAB_MEX_OUT}\" -output \"${MATLAB_ORCREATE_MEX}\" \"${OCTAVEMATLAB_FILES_DIR}/orcreate.cpp\"
+    DEPENDS "${OCTAVEMATLAB_FILES_DIR}/orcreate.cpp" "${OCTAVEMATLAB_FILES_DIR}/socketconnect.h"
     )
   add_custom_target(orcreate_matlab ALL DEPENDS ${MATLAB_MEX_OUT}/${MATLAB_ORCREATE_MEX})
-  install(FILES ${MATLAB_MEX_OUT}/${MATLAB_ORCREATE_MEX} DESTINATION ${OPENRAVE_MATLAB_INSTALL_DIR})
+  install(FILES ${MATLAB_MEX_OUT}/${MATLAB_ORCREATE_MEX} DESTINATION ${OPENRAVE_MATLAB_INSTALL_DIR} COMPONENT openrave-matlab)
 
   set(MATLAB_ORREAD_MEX "orread.${MEXEXT}")
   add_custom_command(
     OUTPUT ${MATLAB_MEX_OUT}/${MATLAB_ORREAD_MEX}
-    COMMAND ${MATLAB}
-    ARGS -I\"${MATLAB_FILES_DIR}\" ${MEX_CXXFLAGS} -outdir \"${MATLAB_MEX_OUT}\" -output \"${MATLAB_ORREAD_MEX}\" \"${MATLAB_FILES_DIR}/orread.cpp\"
-    DEPENDS ${MATLAB_FILES_DIR}/orread.cpp ${MATLAB_FILES_DIR}/socketconnect.h
+    COMMAND "${MATLAB}"
+    ARGS -I\"${OCTAVEMATLAB_FILES_DIR}\" ${MEX_CXXFLAGS} -outdir \"${MATLAB_MEX_OUT}\" -output \"${MATLAB_ORREAD_MEX}\" \"${OCTAVEMATLAB_FILES_DIR}/orread.cpp\"
+    DEPENDS "${OCTAVEMATLAB_FILES_DIR}/orread.cpp" "${OCTAVEMATLAB_FILES_DIR}/socketconnect.h"
     )
   add_custom_target(orread_matlab ALL DEPENDS ${MATLAB_MEX_OUT}/${MATLAB_ORREAD_MEX})
   add_dependencies(orread_matlab orcreate_matlab) # used to force mex to be called once at a time
-  install(FILES ${MATLAB_MEX_OUT}/${MATLAB_ORREAD_MEX} DESTINATION ${OPENRAVE_MATLAB_INSTALL_DIR})
+  install(FILES ${MATLAB_MEX_OUT}/${MATLAB_ORREAD_MEX} DESTINATION ${OPENRAVE_MATLAB_INSTALL_DIR} COMPONENT openrave-matlab)
 
   set(MATLAB_ORWRITE_MEX "orwrite.${MEXEXT}")
   add_custom_command(
     OUTPUT ${MATLAB_MEX_OUT}/${MATLAB_ORWRITE_MEX}
-    COMMAND ${MATLAB}
-    ARGS -I\"${MATLAB_FILES_DIR}\" ${MEX_CXXFLAGS} -outdir \"${MATLAB_MEX_OUT}\" -output \"${MATLAB_ORWRITE_MEX}\" \"${MATLAB_FILES_DIR}/orwrite.cpp\"
-    DEPENDS ${MATLAB_FILES_DIR}/orwrite.cpp ${MATLAB_FILES_DIR}/socketconnect.h
+    COMMAND "${MATLAB}"
+    ARGS -I\"${OCTAVEMATLAB_FILES_DIR}\" ${MEX_CXXFLAGS} -outdir \"${MATLAB_MEX_OUT}\" -output \"${MATLAB_ORWRITE_MEX}\" \"${OCTAVEMATLAB_FILES_DIR}/orwrite.cpp\"
+    DEPENDS "${OCTAVEMATLAB_FILES_DIR}/orwrite.cpp" "${OCTAVEMATLAB_FILES_DIR}/socketconnect.h"
     )
   add_custom_target(orwrite_matlab ALL DEPENDS ${MATLAB_MEX_OUT}/${MATLAB_ORWRITE_MEX})
   add_dependencies(orwrite_matlab orread_matlab) # used to force mex to be called once at a time
-  install(FILES ${MATLAB_MEX_OUT}/${MATLAB_ORWRITE_MEX} DESTINATION ${OPENRAVE_MATLAB_INSTALL_DIR})
+  install(FILES ${MATLAB_MEX_OUT}/${MATLAB_ORWRITE_MEX} DESTINATION ${OPENRAVE_MATLAB_INSTALL_DIR} COMPONENT openrave-matlab)
+
+  install(DIRECTORY "${OCTAVEMATLAB_FILES_DIR}" DESTINATION ${OPENRAVE_MATLAB_INSTALL_DIR} COMPONENT openrave-matlab FILES_MATCHING PATTERN "*.m")
+  install(DIRECTORY "${OCTAVEMATLAB_FILES_DIR}/examples" DESTINATION ${OPENRAVE_MATLAB_INSTALL_DIR} COMPONENT openrave-matlab PATTERN ".svn" EXCLUDE)
+  set(CPACK_COMPONENTS_ALL ${CPACK_COMPONENTS_ALL} openrave-matlab)
 else()
   message(STATUS "MATLAB installation not found, is ${MEX_EXECUTABLE} in the system path?")
 endif()

@@ -232,8 +232,6 @@ rst_epilog = """
 
 .. _`Octave/MATLAB`: http://openrave.programmingvision.com/wiki/index.php/OctaveMATLAB
 
-.. _ChangeLog: https://sourceforge.net/apps/trac/openrave/wiki/ChangeLog
-
 .. _`Official Wiki`: http://openrave.programmingvision.com/wiki
 
 .. _`COLLADA Robot Extensions`: http://openrave.programmingvision.com/wiki/index.php/Format:COLLADA

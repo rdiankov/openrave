@@ -10,4 +10,4 @@ add_library(basecontrollers SHARED basecontrollers.cpp basecontrollers.h plugind
 target_link_libraries(basecontrollers libopenrave)
 add_dependencies(basecontrollers libopenrave)
 set_target_properties(basecontrollers PROPERTIES COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS}" LINK_FLAGS "${PLUGIN_LINK_FLAGS}" OUTPUT_NAME basecontrollers)
-install(TARGETS basecontrollers DESTINATION ${OPENRAVE_PLUGINS_INSTALL_DIR} )
+install(TARGETS basecontrollers DESTINATION ${OPENRAVE_PLUGINS_INSTALL_DIR} COMPONENT plugins-base)

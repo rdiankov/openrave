@@ -19,4 +19,7 @@ endif()
 
 add_dependencies(dualmanipulation libopenrave)
 set_target_properties(dualmanipulation PROPERTIES COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS}" LINK_FLAGS "${PLUGIN_LINK_FLAGS}")
-install(TARGETS dualmanipulation DESTINATION ${OPENRAVE_PLUGINS_INSTALL_DIR})
+install(TARGETS dualmanipulation DESTINATION ${OPENRAVE_PLUGINS_INSTALL_DIR} COMPONENT plugin-dualmanipulation)
+set(CPACK_COMPONENTS_ALL ${CPACK_COMPONENTS_ALL} plugin-dualmanipulation PARENT_SCOPE)
+set(CPACK_COMPONENT_PLUGIN-DUALMANIPULATION_DESCRIPTION "Dual manipulation functionality." PARENT_SCOPE)
+set(CPACK_COMPONENT_PLUGIN-DUALMANIPULATION_DEPENDS openrave-base PARENT_SCOPE)

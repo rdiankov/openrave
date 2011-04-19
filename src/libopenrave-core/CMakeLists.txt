@@ -54,11 +54,11 @@ set_target_properties(libopenrave-core PROPERTIES OUTPUT_NAME openrave-core
 
 target_link_libraries (libopenrave-core libopenrave ${coreLIBS})
 if( MSVC )
-  install(TARGETS libopenrave-core RUNTIME DESTINATION bin LIBRARY DESTINATION bin ARCHIVE DESTINATION lib${LIB_SUFFIX})
+  install(TARGETS libopenrave-core RUNTIME DESTINATION bin COMPONENT openrave-base LIBRARY DESTINATION bin COMPONENT openrave-base ARCHIVE DESTINATION lib${LIB_SUFFIX} COMPONENT openrave-dev)
 else()
-  install(TARGETS libopenrave-core DESTINATION lib${LIB_SUFFIX})
+  install(TARGETS libopenrave-core DESTINATION lib${LIB_SUFFIX} COMPONENT openrave-dev)
 endif()
-install(FILES openrave-core.h DESTINATION include/openrave-${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR})
+install(FILES openrave-core.h DESTINATION include/openrave-${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR} COMPONENT openrave-dev)
 
 if( OPT_STATIC )
   # visual studio needs static built
@@ -79,5 +79,5 @@ if( OPT_STATIC )
                                                 LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS}")
   
   target_link_libraries (libopenrave-core_static libopenrave_static ${coreLIBS})
-  install(TARGETS libopenrave-core_static DESTINATION lib${LIB_SUFFIX})
+  install(TARGETS libopenrave-core_static DESTINATION lib${LIB_SUFFIX} COMPONENT openrave-dev)
 endif()
