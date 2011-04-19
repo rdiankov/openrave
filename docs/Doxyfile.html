@@ -85,7 +85,7 @@ WARN_LOGFILE           =
 #---------------------------------------------------------------------------
 # configuration options related to the input files
 #---------------------------------------------------------------------------
-INPUT                  = ../src/cppexamples ../rave ./mainpage.dox ./install.dox ./architecture.dox ../src/libopenrave-core/openrave-core.h ../cpp-gen-md5/cpp-gen-md5.cpp ../src/libopenrave/KinBody.cpp ../src/libopenrave/Robot.cpp ../src/libopenrave/Trajectory.cpp
+INPUT                  = ../src/cppexamples ../build/include/openrave ../include/openrave ./mainpage.dox ./install.dox ./architecture.dox ../src/libopenrave-core/openrave-core.h ../cpp-gen-md5/cpp-gen-md5.cpp ../src/libopenrave/KinBody.cpp ../src/libopenrave/Robot.cpp ../src/libopenrave/Trajectory.cpp ../src/libopenrave/libopenrave.cpp
 INPUT_ENCODING         = UTF-8
 FILE_PATTERNS          = *.c \
                          *.cc \
@@ -195,7 +195,7 @@ ENABLE_PREPROCESSING   = YES
 MACRO_EXPANSION        = NO
 EXPAND_ONLY_PREDEF     = NO
 SEARCH_INCLUDES        = YES
-INCLUDE_PATH           = rave
+INCLUDE_PATH           = ../build/include/openrave
 PREDEFINED             = 
 EXPAND_AS_DEFINED      = 
 SKIP_FUNCTION_MACROS   = YES

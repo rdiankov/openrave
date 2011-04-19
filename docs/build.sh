@@ -1,6 +1,6 @@
 #!/bin/bash
 # Internal use, see documentation_system.rst
-rm -rf build ordocs.tgz
+rm -rf build
 mkdir -p build
 curdir=`pwd`
 cd ..
