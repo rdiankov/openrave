@@ -3,6 +3,20 @@
 ChangeLog
 #########
 
+Version 0.3.1
+=============
+
+Subversion Revision: 
+
+Initial Release: 
+
+Release
+-------
+
+* The openravepy python bindings now get installed into the python site-packages/dist-packages folder.
+
+* using cpack to componentize all the installs and create debian source packages.
+
 Version 0.3.0
 =============
 

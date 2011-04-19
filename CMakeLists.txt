@@ -44,7 +44,9 @@ option(OPT_BUILD_PACKAGES "Set to ON to generate CPack configuration files and p
 
 # Additional CMake modules for 3rd party library checks reside here
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/modules-cmake")
-set(CPACK_COMPONENTS_ALL openrave-base openrave-dev openrave-data)
+set(COMPONENT_PREFIX openrave${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}-)
+string(TOUPPER ${COMPONENT_PREFIX} COMPONENT_PREFIX_UPPER)
+set(CPACK_COMPONENTS_ALL ${COMPONENT_PREFIX}base ${COMPONENT_PREFIX}dev ${COMPONENT_PREFIX}data)
 
 message(STATUS "detected system processor: ${CMAKE_SYSTEM_PROCESSOR}")
 
@@ -194,9 +196,9 @@ if( MSVC )
   include_directories("${CMAKE_CURRENT_SOURCE_DIR}/inc")
   set(OPENRAVE_LINK_DIRS ${OPENRAVE_LINK_DIRS} "${CMAKE_CURRENT_SOURCE_DIR}/lib/win32")
   
-  install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/inc/stdint.h DESTINATION include/openrave-${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR} COMPONENT openrave-dev)
+  install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/inc/stdint.h DESTINATION include/openrave-${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR} COMPONENT ${COMPONENT_PREFIX}dev)
   # have to install dlls manually
-  install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/bin/libxml2.dll" DESTINATION bin COMPONENT openrave-base)
+  install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/bin/libxml2.dll" DESTINATION bin COMPONENT ${COMPONENT_PREFIX}base)
   if( MSVC70 OR MSVC71 )
     set(MESSAGE "Visual Studio 2003 and before are not supported!")
     set(MSVC_PREFIX "vc80")
@@ -207,7 +209,7 @@ if( MSVC )
   else()
     set(MSVC_PREFIX "vc100")
   endif()
-  install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/bin/" DESTINATION bin FILES_MATCHING PATTERN "*-${MSVC_PREFIX}-*.dll" COMPONENT openrave-base)
+  install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/bin/" DESTINATION bin FILES_MATCHING PATTERN "*-${MSVC_PREFIX}-*.dll" COMPONENT ${COMPONENT_PREFIX}base)
 
   # force multi-threaded DLL boost
   set(Boost_USE_MULTITHREAD ON)
@@ -262,9 +264,9 @@ elseif( MSVC )
   set(Boost_FILESYSTEM_LIBRARY "${Boost_LIBRARY_DIRS}/boost_filesystem-${MSVC_PREFIX}-mt-1_44.lib")
   set(Boost_PYTHON_LIBRARY "${Boost_LIBRARY_DIRS}/boost_python-${MSVC_PREFIX}-mt-1_44.lib")
   set(Boost_IOSTREAMS_LIBRARY "${Boost_LIBRARY_DIRS}/boost_iostreams-${MSVC_PREFIX}-mt-1_44.lib")
-  install(DIRECTORY "${Boost_LIBRARY_DIRS}/" DESTINATION bin FILES_MATCHING PATTERN "*-${MSVC_PREFIX}-*.dll" COMPONENT openrave-base)
-  install(DIRECTORY "${Boost_LIBRARY_DIRS}/" DESTINATION lib${LIB_SUFFIX} FILES_MATCHING PATTERN "*-${MSVC_PREFIX}-*.lib" COMPONENT openrave-dev)
-  install(DIRECTORY "${Boost_INCLUDE_DIR}/boost" DESTINATION include COMPONENT openrave-dev)
+  install(DIRECTORY "${Boost_LIBRARY_DIRS}/" DESTINATION bin FILES_MATCHING PATTERN "*-${MSVC_PREFIX}-*.dll" COMPONENT ${COMPONENT_PREFIX}base)
+  install(DIRECTORY "${Boost_LIBRARY_DIRS}/" DESTINATION lib${LIB_SUFFIX} FILES_MATCHING PATTERN "*-${MSVC_PREFIX}-*.lib" COMPONENT ${COMPONENT_PREFIX}dev)
+  install(DIRECTORY "${Boost_INCLUDE_DIR}/boost" DESTINATION include COMPONENT ${COMPONENT_PREFIX}dev)
   include_directories(${Boost_INCLUDE_DIRS})
   set(OPENRAVE_LINK_DIRS ${OPENRAVE_LINK_DIRS} ${Boost_LIBRARY_DIRS})
 else()
@@ -629,7 +631,7 @@ if(OPT_PYTHON AND PYTHON_EXECUTABLE)
         COMMAND ${CMAKE_COMMAND} -E tar xzf "${CMAKE_CURRENT_SOURCE_DIR}/sympy_0.6.7.tgz"
         WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
     endif()
-    install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/sympy" DESTINATION ${OPENRAVE_PYTHON_INSTALL_DIR} COMPONENT openrave-python PATTERN ".svn" EXCLUDE)
+    install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/sympy" DESTINATION ${OPENRAVE_PYTHON_INSTALL_DIR} COMPONENT ${COMPONENT_PREFIX}python PATTERN ".svn" EXCLUDE)
   endif()
 
   add_subdirectory(python)
@@ -642,28 +644,28 @@ endif()
 if( WIN32 )
   configure_file("${CMAKE_CURRENT_SOURCE_DIR}/openrave-config.cpp.in" "${CMAKE_CURRENT_BINARY_DIR}/openrave-config.cpp" IMMEDIATE @ONLY)
   add_executable(openrave-config "${CMAKE_CURRENT_BINARY_DIR}/openrave-config.cpp")
-  install(TARGETS openrave-config DESTINATION bin COMPONENT openrave-base)
+  install(TARGETS openrave-config DESTINATION bin COMPONENT ${COMPONENT_PREFIX}base)
 else()
   configure_file("${CMAKE_CURRENT_SOURCE_DIR}/openrave-config.in" "${CMAKE_CURRENT_BINARY_DIR}/openrave-config" IMMEDIATE @ONLY)
-  install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/openrave-config DESTINATION bin COMPONENT openrave-base)
+  install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/openrave-config DESTINATION bin COMPONENT ${COMPONENT_PREFIX}base)
 endif()
 
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/openrave-config.cmake.in" "${CMAKE_CURRENT_BINARY_DIR}/openrave-config.cmake" IMMEDIATE @ONLY)
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/openrave-config-version.cmake.in" "${CMAKE_CURRENT_BINARY_DIR}/openrave-config-version.cmake" IMMEDIATE @ONLY)
 
-install(FILES "${CMAKE_CURRENT_BINARY_DIR}/openrave-config.cmake" "${CMAKE_CURRENT_BINARY_DIR}/openrave-config-version.cmake" DESTINATION "lib${LIB_SUFFIX}/cmake/openrave-${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}" COMPONENT openrave-dev)
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/openrave-config.cmake" "${CMAKE_CURRENT_BINARY_DIR}/openrave-config-version.cmake" DESTINATION "lib${LIB_SUFFIX}/cmake/openrave-${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}" COMPONENT ${COMPONENT_PREFIX}dev)
 
 if( UNIX OR CYGWIN)
   # install only if bash or sh is present
-  install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/openravebash DESTINATION ${OPENRAVE_SHARE_DIR} COMPONENT openrave-base)
+  install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/openravebash DESTINATION ${OPENRAVE_SHARE_DIR} COMPONENT ${COMPONENT_PREFIX}base)
   configure_file("${CMAKE_CURRENT_SOURCE_DIR}/openrave.pc.in" "${CMAKE_CURRENT_BINARY_DIR}/openrave-${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}.pc" @ONLY IMMEDIATE)
-  install(FILES "${CMAKE_CURRENT_BINARY_DIR}/openrave-${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}.pc" DESTINATION lib${LIB_SUFFIX}/pkgconfig COMPONENT openrave-dev)
+  install(FILES "${CMAKE_CURRENT_BINARY_DIR}/openrave-${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}.pc" DESTINATION lib${LIB_SUFFIX}/pkgconfig COMPONENT ${COMPONENT_PREFIX}dev)
 endif()
 
 file(GLOB rave_header_files ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/*.h)
-install(FILES ${rave_header_files} ${interfacehashes_h} ${CMAKE_CURRENT_BINARY_DIR}/include/openrave/config.h DESTINATION include/openrave-${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}/openrave COMPONENT openrave-dev)
-install(FILES rave/rave.h rave/plugin.h DESTINATION include/openrave-${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}/rave COMPONENT openrave-dev) # deprecated
-install(FILES LICENSE.lgpl LICENSE.apache DESTINATION ${OPENRAVE_SHARE_DIR} COMPONENT openrave-base)
+install(FILES ${rave_header_files} ${interfacehashes_h} ${CMAKE_CURRENT_BINARY_DIR}/include/openrave/config.h DESTINATION include/openrave-${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}/openrave COMPONENT ${COMPONENT_PREFIX}dev)
+install(FILES rave/rave.h rave/plugin.h DESTINATION include/openrave-${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}/rave COMPONENT ${COMPONENT_PREFIX}dev) # deprecated
+install(FILES LICENSE.lgpl LICENSE.apache DESTINATION ${OPENRAVE_SHARE_DIR} COMPONENT ${COMPONENT_PREFIX}base)
 
 #install(EXPORT openrave-targets DESTINATION lib/cmake/openrave-${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR})
 
@@ -673,8 +675,9 @@ add_custom_target(uninstall "${CMAKE_COMMAND}" -P "${CMAKE_CURRENT_BINARY_DIR}/c
 
 if(CMAKE_CPACK_COMMAND AND UNIX AND OPT_BUILD_PACKAGES)
   # Packing information, most of it is specific for Debian source packages
-  set(CPACK_PACKAGE_NAME "OpenRAVE")
-  set(CPACK_PACKAGE_VENDOR "Mujin")
+  set(CPACK_PACKAGE_CONTACT "Rosen Diankov")  
+  set(CPACK_PACKAGE_NAME OpenRAVE)
+  set(CPACK_PACKAGE_VENDOR "http://openrave.org")
   set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Open Robotics Automation Virtual Environment")
   set(CPACK_PACKAGE_VERSION ${OPENRAVE_VERSION})
   set(CPACK_PACKAGE_VERSION_MAJOR ${OPENRAVE_VERSION_MAJOR})
@@ -683,13 +686,12 @@ if(CMAKE_CPACK_COMMAND AND UNIX AND OPT_BUILD_PACKAGES)
   set(CPACK_PACKAGE_INSTALL_DIRECTORY "openrave${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}")
   set(CPACK_PACKAGE_DESCRIPTION_FILE ${CMAKE_CURRENT_SOURCE_DIR}/docs/en/description.rst)
   set(CPACK_RESOURCE_FILE_LICENSE ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.lgpl)
-  
-  set(CPACK_COMPONENT_OPENRAVE-BASE_REQUIRED 1)
-  
-  set(CPACK_COMPONENT_OPENRAVE-BASE_DESCRIPTION "core libraries and tools")
-  set(CPACK_COMPONENT_OPENRAVE-BASE_DISPLAY_NAME openrave${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}-minimal)
-  set(CPACK_COMPONENT_OPENRAVE-DEV_DESCRIPTION "development files and examples")
-  set(CPACK_COMPONENT_OPENRAVE-DATA_DESCRIPTION "basic robots, models, and scene files used in the examples")
+
+  set(CPACK_COMPONENT_${COMPONENT_PREFIX_UPPER}BASE_REQUIRED 1)  
+  set(CPACK_COMPONENT_${COMPONENT_PREFIX_UPPER}BASE_DESCRIPTION "core libraries and tools")
+  set(CPACK_COMPONENT_${COMPONENT_PREFIX_UPPER}BASE_DISPLAY_NAME openrave${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}-base)
+  set(CPACK_COMPONENT_${COMPONENT_PREFIX_UPPER}DEV_DESCRIPTION "development files and examples")
+  set(CPACK_COMPONENT_${COMPONENT_PREFIX_UPPER}DATA_DESCRIPTION "basic robots, models, and scene files used in the examples")
 
   execute_process(COMMAND lsb_release -is
     OUTPUT_VARIABLE _os_distro_name OUTPUT_STRIP_TRAILING_WHITESPACE
@@ -702,9 +704,10 @@ if(CMAKE_CPACK_COMMAND AND UNIX AND OPT_BUILD_PACKAGES)
       OUTPUT_VARIABLE CPACK_DEBIAN_DISTRIBUTION_CODENAME OUTPUT_STRIP_TRAILING_WHITESPACE
       RESULT_VARIABLE _lsb_release_failed)
 
-    set(CPACK_COMPONENT_OPENRAVE-BASE_DEPENDS libxml2 libboost-thread${Boost_MAJOR_VERSION}.${Boost_MINOR_VERSION}.${Boost_SUBMINOR_VERSION} libboost-date-time${Boost_MAJOR_VERSION}.${Boost_MINOR_VERSION}.${Boost_SUBMINOR_VERSION} libboost-filesystem${Boost_MAJOR_VERSION}.${Boost_MINOR_VERSION}.${Boost_SUBMINOR_VERSION} libboost-system${Boost_MAJOR_VERSION}.${Boost_MINOR_VERSION}.${Boost_SUBMINOR_VERSION} libpcre3 zlib1g)
-    set(CPACK_COMPONENT_OPENRAVE-DEV_DEPENDS libboost-thread${Boost_MAJOR_VERSION}.${Boost_MINOR_VERSION}.${Boost_SUBMINOR_VERSION}-dev libboost-date-time${Boost_MAJOR_VERSION}.${Boost_MINOR_VERSION}.${Boost_SUBMINOR_VERSION}-dev)
-    set(CPACK_COMPONENT_OPENRAVE-DATA_DEPENDS )
+    set(CPACK_COMPONENT_${COMPONENT_PREFIX_UPPER}BASE_DEPENDS libxml2 libboost-thread${Boost_MAJOR_VERSION}.${Boost_MINOR_VERSION}.${Boost_SUBMINOR_VERSION} libboost-date-time${Boost_MAJOR_VERSION}.${Boost_MINOR_VERSION}.${Boost_SUBMINOR_VERSION} libboost-filesystem${Boost_MAJOR_VERSION}.${Boost_MINOR_VERSION}.${Boost_SUBMINOR_VERSION} libboost-system${Boost_MAJOR_VERSION}.${Boost_MINOR_VERSION}.${Boost_SUBMINOR_VERSION} libpcre3 zlib1g)
+    set(CPACK_COMPONENT_${COMPONENT_PREFIX_UPPER}DEV_DEPENDS libboost-thread${Boost_MAJOR_VERSION}.${Boost_MINOR_VERSION}.${Boost_SUBMINOR_VERSION}-dev libboost-date-time${Boost_MAJOR_VERSION}.${Boost_MINOR_VERSION}.${Boost_SUBMINOR_VERSION}-dev)
+    set(CPACK_COMPONENT_${COMPONENT_PREFIX_UPPER}DATA_DEPENDS )
+
     set(CPACK_DEBIAN_BUILD_DEPENDS cmake python-dev libxml2-dev libboost${Boost_MAJOR_VERSION}.${Boost_MINOR_VERSION}.${Boost_SUBMINOR_VERSION}-dev g++ ffmpeg libpcre3-dev zlib1g-dev)
     # plugins
     set(CPACK_DEBIAN_BUILD_DEPENDS ${CPACK_DEBIAN_BUILD_DEPENDS} libqt4-dev qt4-dev-tools libcoin60-dev libsoqt4-dev libqhull-dev libavcodec-dev libavformat-dev libsimage-dev)
@@ -722,6 +725,15 @@ if(CMAKE_CPACK_COMMAND AND UNIX AND OPT_BUILD_PACKAGES)
   else()
     message(STATUS "do not support building packages for '${_os_distro_name}'")
   endif()
+
+  # debian
+  set(CPACK_DEBIAN_PACKAGE_PRIORITY optional)
+  set(CPACK_DEBIAN_PACKAGE_SECTION devel)
+  set(CPACK_DEBIAN_PACKAGE_DEPENDS ${CPACK_COMPONENTS_ALL})
+  set(CPACK_DEBIAN_PACKAGE_NAME openrave${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR})
+  set(CPACK_DEBIAN_PACKAGE_REMOVE_SOURCE_FILES docs release sandbox test sympy msvc_files.tgz sympy_0.6.7.tgz sympy_0.6.7_patches.diff models.tgz src/robots src/data 3rdparty/pcre-8.02 3rdparty/qhull 3rdparty/zlib)
+  
+  set(CPACK_DEBIAN_PACKAGE_SOURCE_COPY svn export --force)
 
   #openrave$V-plugin-X$U: individual plugins and their versions
   #openrave-robots-extra: extra robot CAD model files

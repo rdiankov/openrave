@@ -32,13 +32,21 @@ foreach(LINE ${DESC_LINES})
 endforeach(LINE ${DESC_LINES})
 
 file(REMOVE_RECURSE ${CMAKE_BINARY_DIR}/Debian)
-set(DEBIAN_SOURCE_DIR ${CMAKE_BINARY_DIR}/Debian/${CPACK_DEBIAN_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-source)
-execute_process(COMMAND ${CMAKE_COMMAND} -E
-  copy_directory ${CMAKE_SOURCE_DIR} ${DEBIAN_SOURCE_DIR}
-  )
-execute_process(COMMAND ${CMAKE_COMMAND} -E
-  remove_directory ${DEBIAN_SOURCE_DIR}/.git
-  )
+set(DEBIAN_SOURCE_DIR ${CMAKE_BINARY_DIR}/Debian/${CPACK_DEBIAN_PACKAGE_NAME}-src)
+file(MAKE_DIRECTORY ${DEBIAN_SOURCE_DIR})
+
+if( CPACK_DEBIAN_PACKAGE_SOURCE_COPY )
+  execute_process(COMMAND ${CPACK_DEBIAN_PACKAGE_SOURCE_COPY} "${CMAKE_SOURCE_DIR}" "${DEBIAN_SOURCE_DIR}")
+else()
+  execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR} ${DEBIAN_SOURCE_DIR})
+  execute_process(COMMAND ${CMAKE_COMMAND} -E remove_directory ${DEBIAN_SOURCE_DIR}/.git)
+  execute_process(COMMAND ${CMAKE_COMMAND} -E remove_directory ${DEBIAN_SOURCE_DIR}/.svn)
+endif()
+
+# remove unnecessary folders
+foreach(REMOVE_DIR ${CPACK_DEBIAN_PACKAGE_REMOVE_SOURCE_FILES})
+  file(REMOVE_RECURSE ${DEBIAN_SOURCE_DIR}/${REMOVE_DIR})
+endforeach()
 
 file(MAKE_DIRECTORY ${DEBIAN_SOURCE_DIR}/debian)
 
@@ -57,25 +65,32 @@ foreach(DEP ${CPACK_DEBIAN_BUILD_DEPENDS})
   file(APPEND ${DEBIAN_CONTROL} "${DEP}, ")
 endforeach(DEP ${CPACK_DEBIAN_BUILD_DEPENDS})  
 
-file(APPEND ${DEBIAN_CONTROL} "cmake\n"
+file(APPEND ${DEBIAN_CONTROL} "\n"
   "Standards-Version: 3.8.4\n"
   "Homepage: ${CPACK_PACKAGE_VENDOR}\n"
   "\n"
   "Package: ${CPACK_DEBIAN_PACKAGE_NAME}\n"
   "Architecture: any\n"
-  "Depends: ${CPACK_DEBIAN_PACKAGE_DEPENDS}\n"
+  "Depends: "
+)
+
+foreach(DEP ${CPACK_DEBIAN_PACKAGE_DEPENDS})
+  file(APPEND ${DEBIAN_CONTROL} "${DEP}, ")
+endforeach(DEP ${CPACK_DEBIAN_PACKAGE_DEPENDS})  
+
+file(APPEND ${DEBIAN_CONTROL} "\n"
   "Description: ${CPACK_PACKAGE_DESCRIPTION_SUMMARY}\n"
   "${DEB_LONG_DESCRIPTION}"
   )
 
 foreach(COMPONENT ${CPACK_COMPONENTS_ALL})
   string(TOUPPER ${COMPONENT} UPPER_COMPONENT)
-  set(DEPENDS "${CPACK_DEBIAN_PACKAGE_NAME}")
+  set(DEPENDS)
   foreach(DEP ${CPACK_COMPONENT_${UPPER_COMPONENT}_DEPENDS})
-    set(DEPENDS "${DEPENDS}, ${DEP}")
+    set(DEPENDS "${DEP}, ${DEPENDS}")
   endforeach(DEP ${CPACK_COMPONENT_${UPPER_COMPONENT}_DEPENDS})
   file(APPEND ${DEBIAN_CONTROL} "\n"
-    "Package: ${CPACK_DEBIAN_PACKAGE_NAME}-${COMPONENT}\n"
+    "Package: ${COMPONENT}\n"
     "Architecture: any\n"
     "Depends: ${DEPENDS}\n"
     "Description: ${CPACK_PACKAGE_DESCRIPTION_SUMMARY}"
@@ -154,7 +169,7 @@ set(DEBIAN_CHANGELOG ${DEBIAN_SOURCE_DIR}/debian/changelog)
 execute_process(COMMAND date -R  OUTPUT_VARIABLE DATE_TIME)
 file(WRITE ${DEBIAN_CHANGELOG}
   "${CPACK_DEBIAN_PACKAGE_NAME} (${CPACK_PACKAGE_VERSION}) ${CPACK_DEBIAN_DISTRIBUTION_CODENAME}; urgency=low\n\n"
-  "  * Package built with CMake\n"
+  "  * Package built with CMake\n\n"
   "  * Change Log can be found at https://openrave.svn.sourceforge.net/svnroot/openrave/tags/${OPENRAVE_VERSION}/docs/en/changelog.rst\n\n"
   " -- ${CPACK_PACKAGE_CONTACT}  ${DATE_TIME}"
   )

@@ -68,22 +68,20 @@ endif()
 target_link_libraries (openrave ${Boost_DATE_TIME_LIBRARY} ${Boost_THREAD_LIBRARY} ${SOCKET_LIBS} libopenrave libopenrave-core)
 
 # always extract the models since we don't know when models.tgz has been changed
-#if( NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/models/WAM" OR NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/robots/pr2-beta-static.dae")
-message(STATUS "extracting models to ${CMAKE_CURRENT_SOURCE_DIR}")
-execute_process(
-  COMMAND ${CMAKE_COMMAND} -E tar xzf "${CMAKE_CURRENT_SOURCE_DIR}/../models.tgz"
-  WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
-#endif()
+if( EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../models.tgz" )
+  message(STATUS "extracting models to ${CMAKE_CURRENT_SOURCE_DIR}")
+  execute_process(COMMAND ${CMAKE_COMMAND} -E tar xzf "${CMAKE_CURRENT_SOURCE_DIR}/../models.tgz" WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
+endif()
 
-install(TARGETS openrave DESTINATION bin COMPONENT openrave-base)
+install(TARGETS openrave DESTINATION bin COMPONENT ${COMPONENT_PREFIX}base)
 
 if( MSVC )
   configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cppexamples/runcmake_win.bat.in" "${CMAKE_CURRENT_BINARY_DIR}/cppexamples/runcmake_win.bat" IMMEDIATE @ONLY)
-  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/cppexamples/runcmake_win.bat DESTINATION ${OPENRAVE_SHARE_DIR}/cppexamples COMPONENT openrave-dev)
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/cppexamples/runcmake_win.bat DESTINATION ${OPENRAVE_SHARE_DIR}/cppexamples COMPONENT ${COMPONENT_PREFIX}dev)
 endif()
 
-install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/cppexamples/FindOpenRAVE.cmake" DESTINATION ${OPENRAVE_SHARE_DIR}/cppexamples COMPONENT openrave-dev)
-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/models DESTINATION ${OPENRAVE_SHARE_DIR} COMPONENT openrave-data PATTERN ".svn" EXCLUDE)
-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/robots DESTINATION ${OPENRAVE_SHARE_DIR} COMPONENT openrave-data PATTERN ".svn" EXCLUDE)
-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/data DESTINATION ${OPENRAVE_SHARE_DIR} COMPONENT openrave-data PATTERN ".svn" EXCLUDE)
-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/cppexamples  DESTINATION ${OPENRAVE_SHARE_DIR} COMPONENT openrave-dev FILES_MATCHING PATTERN "*.cpp" PATTERN "*.xml" PATTERN "*.txt" PATTERN ".svn" EXCLUDE)
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/cppexamples/FindOpenRAVE.cmake" DESTINATION ${OPENRAVE_SHARE_DIR}/cppexamples COMPONENT ${COMPONENT_PREFIX}dev)
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/models DESTINATION ${OPENRAVE_SHARE_DIR} COMPONENT ${COMPONENT_PREFIX}data PATTERN ".svn" EXCLUDE)
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/robots DESTINATION ${OPENRAVE_SHARE_DIR} COMPONENT ${COMPONENT_PREFIX}data PATTERN ".svn" EXCLUDE)
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/data DESTINATION ${OPENRAVE_SHARE_DIR} COMPONENT ${COMPONENT_PREFIX}data PATTERN ".svn" EXCLUDE)
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/cppexamples  DESTINATION ${OPENRAVE_SHARE_DIR} COMPONENT ${COMPONENT_PREFIX}dev FILES_MATCHING PATTERN "*.cpp" PATTERN "*.xml" PATTERN "*.txt" PATTERN ".svn" EXCLUDE)
