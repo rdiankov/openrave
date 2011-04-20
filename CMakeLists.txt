@@ -41,12 +41,20 @@ option(OPT_MATLAB "Build matlab bindings" ON)
 option(OPT_STATIC "Build static libraries" OFF)
 option(OPT_COLLADA "Build with COLLADA support" ON)
 option(OPT_BUILD_PACKAGES "Set to ON to generate CPack configuration files and packaging targets" OFF)
+option(OPT_BIN_SUFFIX "Add the MAJOR.MINOR openrave version suffixes to all executable installed files" OFF)
+option(OPT_FLANN "Temporary switch to force building of flann" OFF)
 
 # Additional CMake modules for 3rd party library checks reside here
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/modules-cmake")
 set(COMPONENT_PREFIX openrave${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}-)
 string(TOUPPER ${COMPONENT_PREFIX} COMPONENT_PREFIX_UPPER)
 set(CPACK_COMPONENTS_ALL ${COMPONENT_PREFIX}base ${COMPONENT_PREFIX}dev ${COMPONENT_PREFIX}data)
+
+if( OPT_BIN_SUFFIX )
+  set(OPENRAVE_BIN_SUFFIX ${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR})
+else()
+  set(OPENRAVE_BIN_SUFFIX)
+endif()
 
 message(STATUS "detected system processor: ${CMAKE_SYSTEM_PROCESSOR}")
 
@@ -218,6 +226,10 @@ if( MSVC )
   set(Boost_CFLAGS "-DBOOST_ALL_DYN_LINK -DBOOST_ALL_NO_LIB")
 endif()
 
+#set(CPACK_BOOST_DEPENDS_VERSIONS "1.42.0" "1.40.0" "1.38.0" "1.34.1")
+#macro(add_boost_library_depends BOOST_LIBRARY VAR)
+#endmacro()
+
 # only look for installed boost if not an old version of msvc
 if(NOT MSVC71 AND NOT MSVC80)
   if( NOT $ENV{BOOST_INCLUDEDIR} STREQUAL "" )
@@ -226,11 +238,10 @@ if(NOT MSVC71 AND NOT MSVC80)
   if( NOT $ENV{BOOST_LIBRARYDIR} STREQUAL "" )
     set(Boost_LIBRARY_DIRS $ENV{BOOST_LIBRARYDIR})
   endif()
-  # to facilitate compilation, all visual studio libraries are included locally
   set(Boost_ADDITIONAL_VERSIONS "1.46.1" "1.45" "1.44" "1.43" "1.42" "1.41" "1.40" "1.39" "1.38" "1.37.0" "1.37" "1.35.0" "1.34.1" "1.34.0" "1.34" "1.33.1" "1.33.0" "1.33" ${Boost_ADDITIONAL_VERSIONS})
   find_package(Boost COMPONENTS regex filesystem system python thread iostreams date_time)
 else()
-  # have to rely on local boost
+  # have to rely on local boost and a hack
   add_definitions(-DTEMP_SPIRIT_HACK)
 endif()
 
@@ -241,6 +252,7 @@ elseif(Boost_VERSION AND NOT "${Boost_VERSION}" STREQUAL "0")
   include_directories(${Boost_INCLUDE_DIRS})
   set(OPENRAVE_LINK_DIRS ${OPENRAVE_LINK_DIRS} ${Boost_LIBRARY_DIRS})
 elseif( MSVC )
+  # to facilitate compilation, visual studio libraries are included locally
   message(STATUS "using local boost libraries for MSVC")
   set(BOOST_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/msvc_boost")
   set(Boost_FOUND 1)
@@ -300,6 +312,7 @@ foreach(ldir ${Boost_LIBRARY_DIRS})
 endforeach()
 
 if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
+  add_definitions(-fPIC) # this is a very important switch and some libraries seem now to have it....
   set(EXTRA_COMPILE_FLAGS "-fPIC")
 else()
   set(EXTRA_COMPILE_FLAGS "")
@@ -475,7 +488,7 @@ if( OPT_COLLADA )
       endif()
     endif()
 
-    if( NOT libpcrecpp_FOUND )
+    if( 1 ) #NOT libpcrecpp_FOUND )
       message(STATUS "System pcre not found, using local from sources")
       # include the local pcre
       add_subdirectory(3rdparty/pcre-8.02)
@@ -555,20 +568,22 @@ else()
   set(ANN_FOUND 1)
 endif()
 
-pkg_check_modules(FLANN flann)
-if( NOT FLANN_FOUND) 
-  ## check FLANN library
-  set(BUILD_MATLAB_BINDINGS false)
-  if( OPT_PYTHON AND PYTHON_EXECUTABLE )
-    set(BUILD_PYTHON_BINDINGS true)
-  else()
-    set(BUILD_PYTHON_BINDINGS false)
+if( OPT_FLANN )
+  find_package(FLANN)
+  if( NOT FLANN_FOUND)
+    ## check FLANN library
+    set(BUILD_MATLAB_BINDINGS false)
+    if( OPT_PYTHON AND PYTHON_EXECUTABLE )
+      set(BUILD_PYTHON_BINDINGS true)
+    else()
+      set(BUILD_PYTHON_BINDINGS false)
+    endif()
+    set(BUILD_C_BINDINGS true)
+    message(STATUS "compiling local flann library")
+    add_subdirectory(3rdparty/flann-1.6.6)
+    set(FLANN_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/flann-1.6.6/src/cpp")
+    set(FLANN_FOUND 1) # use flann_cpp_s to link statically
   endif()
-  set(BUILD_C_BINDINGS true)
-  message(STATUS "compiling local flann library")
-  add_subdirectory(3rdparty/flann-1.6.6)
-  set(FLANN_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/flann-1.6.6/src/cpp")
-  set(FLANN_FOUND 1) # use flann_cpp_s to link statically
 endif()
 
 # function expression parser library
@@ -596,7 +611,7 @@ add_subdirectory(octave_matlab)
 if(OPT_PYTHON AND PYTHON_EXECUTABLE)
   set(OPENRAVE_USE_LOCAL_SYMPY 1)
   if( PYTHON_EXECUTABLE )
-    set(SYMPY_MINIMUM_VERSION "0.6.6")
+    set(SYMPY_MINIMUM_VERSION "0.6.3")
     # check if sympy substitution is ok
     execute_process(
       COMMAND ${PYTHON_EXECUTABLE} -c "import sympy, sys;  x=sympy.Symbol('x'); sys.exit((x**3).subs(x**2,sympy.Symbol('y')) != x**3)"
@@ -622,8 +637,8 @@ if(OPT_PYTHON AND PYTHON_EXECUTABLE)
     endif()
   endif()
 
-  if( ${OPENRAVE_USE_LOCAL_SYMPY} )
-    message(STATUS "System sympy (v=${_sympy_version}) is not version 0.6.7, using local sympy")
+  if( OPENRAVE_USE_LOCAL_SYMPY )
+    message(STATUS "System sympy (v=${_sympy_version}) is not right version, using local sympy")
     # extract sympy
     if( NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/sympy/__init__.py" OR NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/sympy/solvers/tests")
       message(STATUS "extracting sympy to ${CMAKE_CURRENT_SOURCE_DIR}")
@@ -644,6 +659,7 @@ endif()
 if( WIN32 )
   configure_file("${CMAKE_CURRENT_SOURCE_DIR}/openrave-config.cpp.in" "${CMAKE_CURRENT_BINARY_DIR}/openrave-config.cpp" IMMEDIATE @ONLY)
   add_executable(openrave-config "${CMAKE_CURRENT_BINARY_DIR}/openrave-config.cpp")
+  set_target_properties(openrave-config PROPERTIES OUTPUT_NAME openrave${OPENRAVE_BIN_SUFFIX}-config)
   install(TARGETS openrave-config DESTINATION bin COMPONENT ${COMPONENT_PREFIX}base)
 else()
   configure_file("${CMAKE_CURRENT_SOURCE_DIR}/openrave-config.in" "${CMAKE_CURRENT_BINARY_DIR}/openrave-config" IMMEDIATE @ONLY)
@@ -674,9 +690,9 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/modules-cmake/cmake_uninstall.cmake.
 add_custom_target(uninstall "${CMAKE_COMMAND}" -P "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake")
 
 if(CMAKE_CPACK_COMMAND AND UNIX AND OPT_BUILD_PACKAGES)
-  # Packing information, most of it is specific for Debian source packages
-  set(CPACK_PACKAGE_CONTACT "Rosen Diankov")  
+  # Packing information
   set(CPACK_PACKAGE_NAME OpenRAVE)
+  set(CPACK_PACKAGE_CONTACT "OpenRAVE Testing (Testing and Releasing of OpenRAVE Packages) <openrave.testing@gmail.com>") # used for PGP signing
   set(CPACK_PACKAGE_VENDOR "http://openrave.org")
   set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Open Robotics Automation Virtual Environment")
   set(CPACK_PACKAGE_VERSION ${OPENRAVE_VERSION})
@@ -693,47 +709,37 @@ if(CMAKE_CPACK_COMMAND AND UNIX AND OPT_BUILD_PACKAGES)
   set(CPACK_COMPONENT_${COMPONENT_PREFIX_UPPER}DEV_DESCRIPTION "development files and examples")
   set(CPACK_COMPONENT_${COMPONENT_PREFIX_UPPER}DATA_DESCRIPTION "basic robots, models, and scene files used in the examples")
 
-  execute_process(COMMAND lsb_release -is
-    OUTPUT_VARIABLE _os_distro_name OUTPUT_STRIP_TRAILING_WHITESPACE
-    RESULT_VARIABLE _lsb_release_failed)
-  if( "${_os_distro_name}" STREQUAL "Ubuntu" )
-    execute_process(COMMAND lsb_release -rs
-      OUTPUT_VARIABLE _os_distro_release OUTPUT_STRIP_TRAILING_WHITESPACE
-      RESULT_VARIABLE _lsb_release_failed)
-    execute_process(COMMAND lsb_release -cs
-      OUTPUT_VARIABLE CPACK_DEBIAN_DISTRIBUTION_CODENAME OUTPUT_STRIP_TRAILING_WHITESPACE
-      RESULT_VARIABLE _lsb_release_failed)
+#  execute_process(COMMAND lsb_release -is
+#    OUTPUT_VARIABLE _os_distro_name OUTPUT_STRIP_TRAILING_WHITESPACE
+#    RESULT_VARIABLE _lsb_release_failed)
+#  if( "${_os_distro_name}" STREQUAL "Ubuntu" )
+#    execute_process(COMMAND lsb_release -rs
+#      OUTPUT_VARIABLE _os_distro_release OUTPUT_STRIP_TRAILING_WHITESPACE
+#      RESULT_VARIABLE _lsb_release_failed)
+#    execute_process(COMMAND lsb_release -cs
+#      OUTPUT_VARIABLE CPACK_DEBIAN_DISTRIBUTION_CODENAME OUTPUT_STRIP_TRAILING_WHITESPACE
+#      RESULT_VARIABLE _lsb_release_failed)
 
-    set(CPACK_COMPONENT_${COMPONENT_PREFIX_UPPER}BASE_DEPENDS libxml2 libboost-thread${Boost_MAJOR_VERSION}.${Boost_MINOR_VERSION}.${Boost_SUBMINOR_VERSION} libboost-date-time${Boost_MAJOR_VERSION}.${Boost_MINOR_VERSION}.${Boost_SUBMINOR_VERSION} libboost-filesystem${Boost_MAJOR_VERSION}.${Boost_MINOR_VERSION}.${Boost_SUBMINOR_VERSION} libboost-system${Boost_MAJOR_VERSION}.${Boost_MINOR_VERSION}.${Boost_SUBMINOR_VERSION} libpcre3 zlib1g)
-    set(CPACK_COMPONENT_${COMPONENT_PREFIX_UPPER}DEV_DEPENDS libboost-thread${Boost_MAJOR_VERSION}.${Boost_MINOR_VERSION}.${Boost_SUBMINOR_VERSION}-dev libboost-date-time${Boost_MAJOR_VERSION}.${Boost_MINOR_VERSION}.${Boost_SUBMINOR_VERSION}-dev)
-    set(CPACK_COMPONENT_${COMPONENT_PREFIX_UPPER}DATA_DEPENDS )
+    #set(CPACK_COMPONENT_${COMPONENT_PREFIX_UPPER}BASE_DEPENDS libxml2 libboost-thread${Boost_MAJOR_VERSION}.${Boost_MINOR_VERSION}.${Boost_SUBMINOR_VERSION} libboost-date-time${Boost_MAJOR_VERSION}.${Boost_MINOR_VERSION}.${Boost_SUBMINOR_VERSION} libboost-filesystem${Boost_MAJOR_VERSION}.${Boost_MINOR_VERSION}.${Boost_SUBMINOR_VERSION} libboost-system${Boost_MAJOR_VERSION}.${Boost_MINOR_VERSION}.${Boost_SUBMINOR_VERSION} libpcre3 zlib1g)
+    #set(CPACK_COMPONENT_${COMPONENT_PREFIX_UPPER}DEV_DEPENDS ${COMPONENT_PREFIX}base libboost-thread${Boost_MAJOR_VERSION}.${Boost_MINOR_VERSION}.${Boost_SUBMINOR_VERSION}-dev libboost-date-time${Boost_MAJOR_VERSION}.${Boost_MINOR_VERSION}.${Boost_SUBMINOR_VERSION}-dev)
+    #set(CPACK_COMPONENT_${COMPONENT_PREFIX_UPPER}DATA_DEPENDS)
 
-    set(CPACK_DEBIAN_BUILD_DEPENDS cmake python-dev libxml2-dev libboost${Boost_MAJOR_VERSION}.${Boost_MINOR_VERSION}.${Boost_SUBMINOR_VERSION}-dev g++ ffmpeg libpcre3-dev zlib1g-dev)
+    set(CPACK_DEBIAN_BUILD_DEPENDS cmake python-dev libxml2-dev libboost-dev ffmpeg libpcre3-dev zlib1g-dev python-numpy "python-sympy (>=0.6.3)" desktop-file-utils libboost-filesystem-dev libboost-system-dev libboost-python-dev libboost-thread-dev libboost-date-time-dev "octave3.2-headers | octave3.0-headers")
     # plugins
-    set(CPACK_DEBIAN_BUILD_DEPENDS ${CPACK_DEBIAN_BUILD_DEPENDS} libqt4-dev qt4-dev-tools libcoin60-dev libsoqt4-dev libqhull-dev libavcodec-dev libavformat-dev libsimage-dev)
-    
-    if( "${_os_distro_release}" STREQUAL "8.04")
-      set(CPACK_DEBIAN_BUILD_DEPENDS ${CPACK_DEBIAN_BUILD_DEPENDS} libode0-dev)
-    elseif( "${_os_distro_release}" STREQUAL "9.04")
-      set(CPACK_DEBIAN_BUILD_DEPENDS ${CPACK_DEBIAN_BUILD_DEPENDS} libode0-dev)
-    elseif( "${_os_distro_release}" STREQUAL "9.10")
-      set(CPACK_DEBIAN_BUILD_DEPENDS ${CPACK_DEBIAN_BUILD_DEPENDS} libode0-dev)
-    elseif( "${_os_distro_release}" STREQUAL "10.04")
-      set(CPACK_DEBIAN_BUILD_DEPENDS ${CPACK_DEBIAN_BUILD_DEPENDS} libode-dev)
-    else()
-    endif()
-  else()
-    message(STATUS "do not support building packages for '${_os_distro_name}'")
-  endif()
+    set(CPACK_DEBIAN_BUILD_DEPENDS ${CPACK_DEBIAN_BUILD_DEPENDS} libboost-iostreams-dev libboost-regex-dev libqt4-dev qt4-dev-tools libqhull-dev libavcodec-dev libavformat-dev libsimage-dev "libode-dev|libode0-dev" "libcoin60-dev|libcoin40-dev" "libsoqt4-dev|libsoqt-dev")
+#  else()
+#    message(STATUS "do not support building packages for '${_os_distro_name}'")
+#  endif()
 
   # debian
   set(CPACK_DEBIAN_PACKAGE_PRIORITY optional)
   set(CPACK_DEBIAN_PACKAGE_SECTION devel)
   set(CPACK_DEBIAN_PACKAGE_DEPENDS ${CPACK_COMPONENTS_ALL})
+  set(CPACK_DEBIAN_PACKAGE_SUGGESTS "ipython")
   set(CPACK_DEBIAN_PACKAGE_NAME openrave${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR})
-  set(CPACK_DEBIAN_PACKAGE_REMOVE_SOURCE_FILES docs release sandbox test sympy msvc_files.tgz sympy_0.6.7.tgz sympy_0.6.7_patches.diff models.tgz src/robots src/data 3rdparty/pcre-8.02 3rdparty/qhull 3rdparty/zlib)
-  
+  set(CPACK_DEBIAN_PACKAGE_REMOVE_SOURCE_FILES docs release sandbox test sympy msvc_files.tgz sympy_0.6.7.tgz sympy_0.6.7_patches.diff 3rdparty/pcre-8.02 3rdparty/qhull 3rdparty/zlib 3rdparty/flann-1.6.6)
   set(CPACK_DEBIAN_PACKAGE_SOURCE_COPY svn export --force)
+  set(CPACK_DEBIAN_DISTRIBUTION_CODENAME unstable)
 
   #openrave$V-plugin-X$U: individual plugins and their versions
   #openrave-robots-extra: extra robot CAD model files

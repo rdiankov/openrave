@@ -3,7 +3,7 @@ set(openrave_lib_SOURCES KinBody.cpp math.cpp libopenrave.cpp Robot.cpp Trajecto
 
 if( CRLIBM_LIBRARY )
   # check the accuracy of the current math library with crlibm
-  add_executable(check_libm_accuracy check_libm_accuracy.cpp)
+  add_executable(check_libm_accuracy check_libm_accuracy_main.cpp)
   set_target_properties(check_libm_accuracy PROPERTIES COMPILE_FLAGS "-I${CRLIBM_INCLUDE_DIR}")
   target_link_libraries(check_libm_accuracy ${CRLIBM_LIBRARY})
   set(libm_accuracy_results_h "${CMAKE_CURRENT_BINARY_DIR}/libm_accuracy_results.h")

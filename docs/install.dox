@@ -209,7 +209,7 @@ sudo apt-get install g++ cmake libqt4-dev qt4-dev-tools ffmpeg libavcodec-dev li
 
 Required:
 \verbatim
-sudo apt-get install g++ cmake libqt4-dev qt4-dev-tools ffmpeg  libboost-dev libboost-regex-dev libxml2-dev libsoqt4-dev libboost-graph-dev libode0-dev libboost-wave-dev libboost-serialization-dev libboost-filesystem-dev libboost-system-dev libpcre3-dev libboost-thread-dev libsimage-dev libboost-iostreams-dev
+sudo apt-get install g++ cmake libqt4-dev qt4-dev-tools ffmpeg  libboost-dev libboost-regex-dev libxml2-dev libsoqt4-dev libboost-graph-dev libode-dev libboost-wave-dev libboost-serialization-dev libboost-filesystem-dev libboost-system-dev libpcre3-dev libboost-thread-dev libsimage-dev libboost-iostreams-dev
 \endverbatim
 
 Recommended for accuracy/precision/reliability:

@@ -63,7 +63,7 @@ file(WRITE ${DEBIAN_CONTROL}
 
 foreach(DEP ${CPACK_DEBIAN_BUILD_DEPENDS})
   file(APPEND ${DEBIAN_CONTROL} "${DEP}, ")
-endforeach(DEP ${CPACK_DEBIAN_BUILD_DEPENDS})  
+endforeach(DEP ${CPACK_DEBIAN_BUILD_DEPENDS})
 
 file(APPEND ${DEBIAN_CONTROL} "\n"
   "Standards-Version: 3.8.4\n"
@@ -71,6 +71,7 @@ file(APPEND ${DEBIAN_CONTROL} "\n"
   "\n"
   "Package: ${CPACK_DEBIAN_PACKAGE_NAME}\n"
   "Architecture: any\n"
+  "Suggests: ${CPACK_DEBIAN_BUILD_SUGGESTS}\n"
   "Depends: "
 )
 
@@ -85,9 +86,9 @@ file(APPEND ${DEBIAN_CONTROL} "\n"
 
 foreach(COMPONENT ${CPACK_COMPONENTS_ALL})
   string(TOUPPER ${COMPONENT} UPPER_COMPONENT)
-  set(DEPENDS)
+  set(DEPENDS "\${shlibs:Depends}, \${misc:Depends}")
   foreach(DEP ${CPACK_COMPONENT_${UPPER_COMPONENT}_DEPENDS})
-    set(DEPENDS "${DEP}, ${DEPENDS}")
+    set(DEPENDS "${DEPENDS}, ${DEP}")
   endforeach(DEP ${CPACK_COMPONENT_${UPPER_COMPONENT}_DEPENDS})
   file(APPEND ${DEBIAN_CONTROL} "\n"
     "Package: ${COMPONENT}\n"
@@ -118,8 +119,8 @@ file(WRITE ${DEBIAN_RULES}
   "\n"
   "build:\n"
   "	mkdir $(BUILDDIR)\n"
-  "	cd $(BUILDDIR); cmake ..\n"
-  "	make -C $(BUILDDIR) preinstall\n"
+  "	cd $(BUILDDIR); cmake -DCMAKE_INSTALL_PREFIX=/usr ..\n"
+  "	$(MAKE) -C $(BUILDDIR) preinstall\n"
   "	touch build\n"
   "\n"
   "binary: binary-indep binary-arch\n"
@@ -127,8 +128,8 @@ file(WRITE ${DEBIAN_RULES}
   "binary-indep: build\n"
   "\n"
   "binary-arch: build\n"
-  "	cd $(BUILDDIR); cmake -DCOMPONENT=Unspecified -DCMAKE_INSTALL_PREFIX=../debian/tmp/usr -P cmake_install.cmake\n"
-  "	mkdir debian/tmp/DEBIAN\n"
+  "	cd $(BUILDDIR); cmake -DCOMPONENT=Unspecified -DCMAKE_INSTALL_PREFIX=../debian/tmp/usr -P cmake_install.cmake; $(MAKE) install\n"
+  "	mkdir -p debian/tmp/DEBIAN\n"
   "	dpkg-gencontrol -p${CPACK_DEBIAN_PACKAGE_NAME}\n"
   "	dpkg --build debian/tmp ..\n"
   )
@@ -137,8 +138,8 @@ foreach(COMPONENT ${CPACK_COMPONENTS_ALL})
   set(PATH debian/tmp_${COMPONENT})
   set(PACKAGE ${CPACK_DEBIAN_PACKAGE_NAME}-${COMPONENT})
   file(APPEND ${DEBIAN_RULES}
-    "	cd $(BUILDDIR); cmake -DCOMPONENT=${COMPONENT} -DCMAKE_INSTALL_PREFIX=../${PATH}/usr -P cmake_install.cmake\n"
-    "	mkdir ${PATH}/DEBIAN\n"
+    "	cd $(BUILDDIR); cmake -DCOMPONENT=${COMPONENT} -DCMAKE_INSTALL_PREFIX=../${PATH}/usr -P cmake_install.cmake; $(MAKE) install\n"
+    "	mkdir -p ${PATH}/DEBIAN\n"
     "	dpkg-gencontrol -p${PACKAGE} -P${PATH}\n"
     "	dpkg --build ${PATH} ..\n"
     )
@@ -170,7 +171,7 @@ execute_process(COMMAND date -R  OUTPUT_VARIABLE DATE_TIME)
 file(WRITE ${DEBIAN_CHANGELOG}
   "${CPACK_DEBIAN_PACKAGE_NAME} (${CPACK_PACKAGE_VERSION}) ${CPACK_DEBIAN_DISTRIBUTION_CODENAME}; urgency=low\n\n"
   "  * Package built with CMake\n\n"
-  "  * Change Log can be found at https://openrave.svn.sourceforge.net/svnroot/openrave/tags/${OPENRAVE_VERSION}/docs/en/changelog.rst\n\n"
+  "  * ChangeLog can be found at https://openrave.svn.sourceforge.net/svnroot/openrave/tags/${OPENRAVE_VERSION}/docs/en/changelog.rst\n\n"
   " -- ${CPACK_PACKAGE_CONTACT}  ${DATE_TIME}"
   )
 
