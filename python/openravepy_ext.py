@@ -222,7 +222,7 @@ def fitCircle(points):
         points=numpy.dot(points2,R)
     x = numpy.linalg.lstsq(numpy.c_[points[:,0],points[:,1],numpy.ones(len(points))],-points[:,0]**2-points[:,1]**2)[0]
     if points.shape[1] == 3:
-        return numpy.array(numpy.dot(R,[-0.5*x[0],-0.5*x[1],0])), numpy.sqrt((x[0]**2+x[1]**2)/4-x[2])
+        return M+numpy.array(numpy.dot(R,[-0.5*x[0],-0.5*x[1],0])), numpy.sqrt((x[0]**2+x[1]**2)/4-x[2])
     
     return numpy.array([-0.5*x[0],-0.5*x[1]]), numpy.sqrt((x[0]**2+x[1]**2)/4-x[2])
 

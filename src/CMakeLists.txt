@@ -10,12 +10,13 @@ if( Boost_FILESYSTEM_FOUND AND Boost_SYSTEM_FOUND )
 endif()
 if( CRLIBM_FOUND )
   set(openrave_libraries ${openrave_libraries} ${CRLIBM_LIBRARY})
-  include_directories(${CRLIBM_INCLUDE_DIR})
+  if( CRLIBM_INCLUDE_DIR )
+    include_directories(${CRLIBM_INCLUDE_DIR})
+  endif()
   add_definitions("-DUSE_CRLIBM")
 
   # check the accuracy of the current math library with crlibm
   add_executable(check_libm_accuracy check_libm_accuracy_main.cpp)
-  set_target_properties(check_libm_accuracy PROPERTIES COMPILE_FLAGS "-I${CRLIBM_INCLUDE_DIR}")
   target_link_libraries(check_libm_accuracy ${CRLIBM_LIBRARY})
   set(libm_accuracy_results_h "${CMAKE_CURRENT_BINARY_DIR}/libm_accuracy_results.h")
   add_custom_command(TARGET check_libm_accuracy POST_BUILD
