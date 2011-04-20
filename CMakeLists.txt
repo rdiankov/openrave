@@ -292,6 +292,7 @@ foreach(ldir ${Boost_LIBRARY_DIRS})
 endforeach()
 
 if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
+  add_definitions(-fPIC) # this is a very important switch and some libraries seem now to have it....
   set(EXTRA_COMPILE_FLAGS "-fPIC")
 else()
   set(EXTRA_COMPILE_FLAGS "")
