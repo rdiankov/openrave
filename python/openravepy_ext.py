@@ -215,10 +215,15 @@ def fitCircle(points):
     """Very simple function to return the best fit circle. Used from time time and there's no other place to put it. Returns [center, radius]"""
     if points.shape[1] == 3:
         M = numpy.mean(points,0)
-        points2=numpy.c_[points-numpy.tile(M,[len(points),1]),numpy.ones(len(points))]
-        T=numpy.dot(points2.transpose(),points2)
-        plane=numpy.linalg.svd(T)[2][-1,:]
+        points2=points-numpy.tile(M,[len(points),1])
+        # use the svd to get the plane normal from the null space
+        planenormal=numpy.linalg.svd(numpy.dot(points2.transpose(),points2))[2][-1,:]
+        R=openravepy.rotationMatrixFromQuat(openravepy.quatRotateDirection([0,0,1],planenormal))
+        points=numpy.dot(points2,R)
     x = numpy.linalg.lstsq(numpy.c_[points[:,0],points[:,1],numpy.ones(len(points))],-points[:,0]**2-points[:,1]**2)[0]
+    if points.shape[1] == 3:
+        return numpy.array(numpy.dot(R,[-0.5*x[0],-0.5*x[1],0])), numpy.sqrt((x[0]**2+x[1]**2)/4-x[2])
+    
     return numpy.array([-0.5*x[0],-0.5*x[1]]), numpy.sqrt((x[0]**2+x[1]**2)/4-x[2])
 
 def sequence_cross_product(*sequences):
