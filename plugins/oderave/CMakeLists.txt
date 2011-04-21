@@ -1,10 +1,6 @@
 ###########################################
 # oderave openrave plugin
 ###########################################
-if(APPLE)
-  set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -undefined dynamic_lookup")
-endif(APPLE)
-
 include(${CMAKE_CURRENT_SOURCE_DIR}/FindODE.cmake)
 if(ODE_LIBRARY_FOUND)
   link_directories(${OPENRAVE_LINK_DIRS} ${ODE_LINK_DIRS})
@@ -43,7 +39,6 @@ if(ODE_LIBRARY_FOUND)
   message(STATUS "ODE found, building oderave plugin, precision=${ODE_PRECISION}")
 
   target_link_libraries(oderave libopenrave ${ODE_LIBRARY})
-  add_dependencies(oderave libopenrave)
   set_target_properties(oderave PROPERTIES COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS} ${ODE_CXXFLAGS}" LINK_FLAGS "${PLUGIN_LINK_FLAGS}")
   install(TARGETS oderave DESTINATION ${OPENRAVE_PLUGINS_INSTALL_DIR} COMPONENT ${COMPONENT_PREFIX}plugin-oderave)
   set(CPACK_COMPONENT_${COMPONENT_PREFIX_UPPER}PLUGIN-ODERAVE_DESCRIPTION "Plugin for Open Dyanmics Physics/Collision." PARENT_SCOPE)

@@ -1,5 +1,6 @@
 ##
 # Copyright (c) 2010 Daniel Pfeifer <daniel@pfeifer-mail.de>
+# Modifications by Rosen Diankov <rosen.diankov@gmail.com>
 ##
 
 find_program(DEBUILD_EXECUTABLE debuild)
@@ -57,6 +58,7 @@ file(WRITE ${DEBIAN_CONTROL}
   "Source: ${CPACK_DEBIAN_PACKAGE_NAME}\n"
   "Section: ${CPACK_DEBIAN_PACKAGE_SECTION}\n"
   "Priority: ${CPACK_DEBIAN_PACKAGE_PRIORITY}\n"
+  "DM-Upload-Allowed: yes\n"
   "Maintainer: ${CPACK_PACKAGE_CONTACT}\n"
   "Build-Depends: "
   )
@@ -86,7 +88,7 @@ file(APPEND ${DEBIAN_CONTROL} "\n"
 
 foreach(COMPONENT ${CPACK_COMPONENTS_ALL})
   string(TOUPPER ${COMPONENT} UPPER_COMPONENT)
-  set(DEPENDS "\${shlibs:Depends}, \${misc:Depends}")
+  set(DEPENDS "\${shlibs:Depends}")
   foreach(DEP ${CPACK_COMPONENT_${UPPER_COMPONENT}_DEPENDS})
     set(DEPENDS "${DEPENDS}, ${DEP}")
   endforeach(DEP ${CPACK_COMPONENT_${UPPER_COMPONENT}_DEPENDS})
@@ -119,7 +121,7 @@ file(WRITE ${DEBIAN_RULES}
   "\n"
   "build:\n"
   "	mkdir $(BUILDDIR)\n"
-  "	cd $(BUILDDIR); cmake -DCMAKE_INSTALL_PREFIX=/usr ..\n"
+  "	cd $(BUILDDIR); cmake -DOPT_BIN_SUFFIX=ON -DCMAKE_INSTALL_PREFIX=/usr ..\n"
   "	$(MAKE) -C $(BUILDDIR) preinstall\n"
   "	touch build\n"
   "\n"
@@ -128,19 +130,30 @@ file(WRITE ${DEBIAN_RULES}
   "binary-indep: build\n"
   "\n"
   "binary-arch: build\n"
-  "	cd $(BUILDDIR); cmake -DCOMPONENT=Unspecified -DCMAKE_INSTALL_PREFIX=../debian/tmp/usr -P cmake_install.cmake; $(MAKE) install\n"
+  "	cd $(BUILDDIR); cmake -DCOMPONENT=Unspecified -DCMAKE_INSTALL_PREFIX=../debian/tmp/usr -P cmake_install.cmake\n"
   "	mkdir -p debian/tmp/DEBIAN\n"
+  "	dpkg-gensymbols -p${CPACK_DEBIAN_PACKAGE_NAME}\n"
+  )
+
+foreach(COMPONENT ${CPACK_COMPONENTS_ALL})
+  set(PATH debian/${COMPONENT})
+  file(APPEND ${DEBIAN_RULES}
+    "	cd $(BUILDDIR); cmake -DCOMPONENT=${COMPONENT} -DCMAKE_INSTALL_PREFIX=../${PATH}/usr -P cmake_install.cmake\n"
+    "	mkdir -p ${PATH}/DEBIAN\n"
+    "	dpkg-gensymbols -p${COMPONENT} -P${PATH}\n"
+    )
+endforeach(COMPONENT ${CPACK_COMPONENTS_ALL})
+
+file(APPEND ${DEBIAN_RULES}
+  "	dh_shlibdeps\n"
   "	dpkg-gencontrol -p${CPACK_DEBIAN_PACKAGE_NAME}\n"
   "	dpkg --build debian/tmp ..\n"
   )
 
 foreach(COMPONENT ${CPACK_COMPONENTS_ALL})
-  set(PATH debian/tmp_${COMPONENT})
-  set(PACKAGE ${CPACK_DEBIAN_PACKAGE_NAME}-${COMPONENT})
+  set(PATH debian/${COMPONENT})
   file(APPEND ${DEBIAN_RULES}
-    "	cd $(BUILDDIR); cmake -DCOMPONENT=${COMPONENT} -DCMAKE_INSTALL_PREFIX=../${PATH}/usr -P cmake_install.cmake; $(MAKE) install\n"
-    "	mkdir -p ${PATH}/DEBIAN\n"
-    "	dpkg-gencontrol -p${PACKAGE} -P${PATH}\n"
+    "	dpkg-gencontrol -p${COMPONENT} -P${PATH} -Tdebian/${COMPONENT}.substvars\n"
     "	dpkg --build ${PATH} ..\n"
     )
 endforeach(COMPONENT ${CPACK_COMPONENTS_ALL})

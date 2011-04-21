@@ -24,9 +24,9 @@ set_target_properties(libopenrave PROPERTIES OUTPUT_NAME openrave
                                   LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS}")
 target_link_libraries(libopenrave ${openrave_libraries} ${FPARSER_LIBRARY})
 if( MSVC )
-  install(TARGETS libopenrave EXPORT openrave-targets RUNTIME DESTINATION bin COMPONENT ${COMPONENT_PREFIX}base LIBRARY DESTINATION bin COMPONENT ${COMPONENT_PREFIX}base ARCHIVE DESTINATION lib${LIB_SUFFIX} COMPONENT ${COMPONENT_PREFIX}dev)
+  install(TARGETS libopenrave EXPORT openrave-targets RUNTIME DESTINATION bin COMPONENT ${COMPONENT_PREFIX}base LIBRARY DESTINATION bin COMPONENT ${COMPONENT_PREFIX}base ARCHIVE DESTINATION lib${LIB_SUFFIX} COMPONENT ${COMPONENT_PREFIX}base)
 else()
-  install(TARGETS libopenrave EXPORT openrave-targets DESTINATION lib${LIB_SUFFIX} COMPONENT ${COMPONENT_PREFIX}dev)
+  install(TARGETS libopenrave EXPORT openrave-targets DESTINATION lib${LIB_SUFFIX} COMPONENT ${COMPONENT_PREFIX}base)
 endif()
 
 if( OPT_STATIC )

@@ -66,7 +66,7 @@ add_subdirectory(libopenrave)
 add_subdirectory(libopenrave-core)
 
 add_executable(openrave ${openrave_SOURCES})
-set_target_properties(openrave PROPERTIES COMPILE_FLAGS "${Boost_CFLAGS} -DOPENRAVE_CORE_DLL")
+set_target_properties(openrave PROPERTIES COMPILE_FLAGS "${Boost_CFLAGS} -DOPENRAVE_CORE_DLL" OUTPUT_NAME openrave${OPENRAVE_BIN_SUFFIX})
 
 add_dependencies(openrave libopenrave libopenrave-core)
 
@@ -78,13 +78,14 @@ endif()
 
 target_link_libraries (openrave ${Boost_DATE_TIME_LIBRARY} ${Boost_THREAD_LIBRARY} ${SOCKET_LIBS} libopenrave libopenrave-core)
 
+install(TARGETS openrave DESTINATION bin COMPONENT ${COMPONENT_PREFIX}base)
+install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink openrave${OPENRAVE_BIN_SUFFIX} openrave WORKING_DIRECTORY \${CMAKE_INSTALL_PREFIX}/bin)" COMPONENT ${COMPONENT_PREFIX}base)
+
 # always extract the models since we don't know when models.tgz has been changed
 if( EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../models.tgz" )
   message(STATUS "extracting models to ${CMAKE_CURRENT_SOURCE_DIR}")
   execute_process(COMMAND ${CMAKE_COMMAND} -E tar xzf "${CMAKE_CURRENT_SOURCE_DIR}/../models.tgz" WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
 endif()
-
-install(TARGETS openrave DESTINATION bin COMPONENT ${COMPONENT_PREFIX}base)
 
 if( MSVC )
   configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cppexamples/runcmake_win.bat.in" "${CMAKE_CURRENT_BINARY_DIR}/cppexamples/runcmake_win.bat" IMMEDIATE @ONLY)

@@ -1,6 +1,10 @@
 include_directories("${OPENRAVE_INCLUDE_DIRS}") # needed since plugins include openrave/openrave.h
 set(PLUGIN_LINK_FLAGS "")
 
+if(APPLE)
+  set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -undefined dynamic_lookup")
+endif(APPLE)
+
 if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
   set(PLUGIN_COMPILE_FLAGS "-DOPENRAVE_DLL ${Boost_CFLAGS} -fPIC")
 else()

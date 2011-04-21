@@ -1,10 +1,6 @@
 ###########################################
 # ikfastsolvers openrave plugin
 ###########################################
-if(APPLE)
-  set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -undefined dynamic_lookup")
-endif(APPLE)
-
 if( Boost_IOSTREAMS_FOUND )
   set(PLUGIN_COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS} -DBoost_IOSTREAMS_FOUND")
 endif()
@@ -24,7 +20,6 @@ if( Boost_IOSTREAMS_FOUND )
 else()
   target_link_libraries(ikfastsolvers libopenrave ${ik_libraries})
 endif()
-add_dependencies(ikfastsolvers libopenrave ${ik_libraries})
 set_target_properties(ikfastsolvers PROPERTIES COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS}" LINK_FLAGS "${PLUGIN_LINK_FLAGS}")
 install(TARGETS ikfastsolvers DESTINATION ${OPENRAVE_PLUGINS_INSTALL_DIR} COMPONENT ${COMPONENT_PREFIX}plugin-ikfastsolvers)
 set(CPACK_COMPONENT_${COMPONENT_PREFIX_UPPER}PLUGIN-IKFASTSOLVERS_DESCRIPTION "Interfaces to IKFast" PARENT_SCOPE)

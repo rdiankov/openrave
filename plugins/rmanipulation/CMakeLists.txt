@@ -1,10 +1,6 @@
 ###########################################
 # rmanipulation openrave plugin
 ###########################################
-if(APPLE)
-  set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -undefined dynamic_lookup")
-endif(APPLE)
-
 add_library(rmanipulation SHARED rmanipulation.cpp basemanipulation.cpp    plugindefs.h  taskmanipulation.cpp commonmanipulation.h  taskcaging.cpp  visualfeedback.cpp)
 
 # check boost regex
@@ -17,6 +13,5 @@ else()
   target_link_libraries(rmanipulation libopenrave)
 endif()
 
-add_dependencies(rmanipulation libopenrave)
 set_target_properties(rmanipulation PROPERTIES COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS}" LINK_FLAGS "${PLUGIN_LINK_FLAGS}")
 install(TARGETS rmanipulation DESTINATION ${OPENRAVE_PLUGINS_INSTALL_DIR} COMPONENT ${PLUGINS_BASE})

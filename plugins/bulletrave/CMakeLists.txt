@@ -1,10 +1,6 @@
 ###########################################
 # bulletrave openrave plugin
 ###########################################
-if(APPLE)
-  set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -undefined dynamic_lookup")
-endif(APPLE)
-
 pkg_check_modules(bullet bullet)
 
 if(bullet_FOUND)
@@ -16,7 +12,6 @@ if(bullet_FOUND)
   #message(STATUS "Bullet found ${bullet_INCLUDE_DIRS}, libs: ${bullet_LIBRARIES}, cflags=${bullet_CFLAGS_OTHER}, lflags=${bullet_LDFLAGS_OTHER}, building bulletrave plugin")
 
   target_link_libraries(bulletrave libopenrave ${bullet_LIBRARIES})
-  add_dependencies(bulletrave libopenrave)
 
   # for some reason the flags come out as a list, so convert to a string
   set(openrave_bullet_CFLAGS_OTHER)

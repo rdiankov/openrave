@@ -1,3 +1,6 @@
+# Programmable completion for openrave under bash. Source this file 
+# or add it to ~/.bash_completion or /etc/bash_completion.d
+
 function _complete_openravepy {
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"

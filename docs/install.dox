@@ -102,7 +102,12 @@ cmake -DOPT_PLUGINS=OFF ..
  - \b libopenrave (.so, .a, .dll, .lib) - Library that all plugins should link to offering the \ref interfaces.
  - \b libopenrave-core (.so, .a, .dll, .lib) - Library that allows any application to start the %OpenRAVE core internally.
  - cmake
-  - \b openrave-config.cmake - cmake file for searching for openrave installations
+  - openraveX.Y
+    - \b openrave-config.cmake - cmake file for searching for openrave installations
+    - \b openrave-config-version.cmake - cmake file for searching for openrave installations
+ - pythonX.Y
+  - site-packages (dist-packages)
+    - openravepy - Python bindings, database generators, and examples. Directory structure is explained \openravepy{here}.
 - share
  - openrave
   - cppexamples - All C++ examples
@@ -112,7 +117,6 @@ cmake -DOPT_PLUGINS=OFF ..
   - models - 3D model resources
   - octave - All Octave scripting functions and examples. Include this directory into the OCTAVE_PATH.
   - plugins - Plugins compiled by the %OpenRAVE main distribution.
-  - openravepy - Python bindings, database generators, and examples. Directory structure is explained \openravepy{here}.
   - robots - Robot XML files usually containing just a \c \<robot\> or \c \<kinbody\> tag.
 
 \ja \section install_structure インストールディレクトリの構造
@@ -127,6 +131,13 @@ cmake -DOPT_PLUGINS=OFF ..
 - lib
  - \b libopenrave (.so, .a, .dll, .lib) - 提供されている\ref interfacesにリンクした全てのプラグインライブラリ
  - \b libopenrave-core (.so, .a, .dll, .lib) - 内部で%OpenRAVEコアを起動することを許可されたアプリケーションのライブラリ
+ - cmake
+  - openraveX.Y
+    - \b openrave-config.cmake - cmake file for searching for openrave installations
+    - \b openrave-config-version.cmake - cmake file for searching for openrave installations
+ - pythonX.Y
+  - site-packages (dist-packages)
+    - openravepy - Pythonと連動した，データベース生成器や実行例．ディレクトリ構造の詳細は\openravepy{ここ}をご参照ください．
 - share
  - openrave
   - cppexamples - 全てのC++実行例
@@ -136,7 +147,6 @@ cmake -DOPT_PLUGINS=OFF ..
   - matlab - 全てのMatlabスクリプトと実行例．このスクリプトを実行するためにMATLABのパスにこのディレクトリを追加する必要があります．
   - octave - 全てのOctaveスクリプトと実行例．このスクリプトを実行するためにOCTAVEのパスにこのディレクトリを追加する必要があります．
   - plugins - コンパイルされたプラグイン
-  - openravepy - Pythonと連動した，データベース生成器や実行例．ディレクトリ構造の詳細は\openravepy{ここ}をご参照ください．
   - robots - \c \<robot\> or \c \<kinbody\> を含む，ロボットXMLファイル
 
 
