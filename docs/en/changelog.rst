@@ -10,6 +10,11 @@ Subversion Revision:
 
 Initial Release: 
 
+Python
+------
+
+* openravepy now gets copied onto the python site-packages or dist-packages folder. For Linux users, this means it is not necessary to set the PYTHONPATH anymore when installing to /usr or /usr/local.
+
 Release
 -------
 

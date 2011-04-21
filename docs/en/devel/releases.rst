@@ -37,11 +37,12 @@ The packages are separated into:
 
 * openrave$V: all openrave related packages
 * openrave$V-base: core libraries and tools
-* openrave$V-scenes: basic scenes required for examples
+* openrave$V-data: basic scenes required for examples
 * openrave$V-dev: development files and examples
-* openrave$V-python: openravepy python bindings
 * openrave$V-octave: octave bindings
-* openrave$V-plugin-X$U: individual plugins and their versions
+* openrave$V-plugin-X: individual plugins and their versions
+* openrave$V-plugins-all: all plugins
+* openrave$V-python: openravepy python bindings
 * openrave-robots-extra: extra robot CAD model files
 
 `Packaging Guide <https://wiki.ubuntu.com/PackagingGuide/Complete>`_
