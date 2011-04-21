@@ -120,7 +120,7 @@ file(WRITE ${DEBIAN_RULES}
   "\n"
   "build:\n"
   "	mkdir $(BUILDDIR)\n"
-  "	cd $(BUILDDIR); cmake -DCMAKE_BUILD_TYPE=Release -DOPT_BIN_SUFFIX=ON -DCMAKE_INSTALL_PREFIX=/usr ..\n"
+  "	cd $(BUILDDIR); cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -DOPT_BIN_SUFFIX=ON -DBASH_COMPLETION_DIR=/etc/bash_completion.d -DCMAKE_INSTALL_PREFIX=/usr ..\n"
   "	$(MAKE) -C $(BUILDDIR) preinstall\n"
   "	touch build\n"
   "\n"

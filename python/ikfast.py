@@ -217,6 +217,7 @@ except:
 
 import numpy # required for fast eigenvalue computation
 from sympy import *
+import mpmath # on some distributions, sympy does not have mpmath in its scope
 try:
     import re # for latex cleanup
 except ImportError:
