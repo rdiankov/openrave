@@ -1,0 +1,26 @@
+Metadata-Version: 1.0
+Name: openravepy
+Version: @OPENRAVE_VERSION@
+Summary: Python bindings for OpenRAVE
+Home-page: http://www.openrave.org
+Author: Rosen Diankov
+Author-email: rosen.diankov@gmail.com
+License: Apache License, Version 2.0
+Download-URL: https://sourceforge.net/projects/openrave/files/
+Description: OpenRAVE provides an environment for testing, developing, and deploying motion planning algorithms in real-world robotics applications. The main focus is on simulation and analysis of kinematic and geometric information related to motion planning. OpenRAVE’s stand-alone nature allows is to be easily integrated into existing robotics systems.
+
+             It provides many command line tools to work with robots and planners, and the run-time core is small enough to be used inside controllers and bigger frameworks. An important target application is industrial robotics automation.
+        
+Classifier: Development Status :: 5 - Production/Stable
+Classifier: Intended Audience :: Developers
+Classifier: Intended Audience :: Information Technology
+License :: OSI Approved :: Apache Software License
+License :: OSI Approved :: GNU Library or Lesser General Public License (LGPL)
+Classifier: Programming Language :: Python :: 2.5
+Classifier: Programming Language :: Python :: 2.6
+Classifier: Programming Language :: Python :: 2.7
+Classifier: Programming Language :: C++
+Classifier: Operating System :: OS Independent
+Topic :: Scientific/Engineering :: Artificial Intelligence
+Topic :: Scientific/Engineering :: Visualization
+Classifier: Topic :: Software Development :: Libraries :: Python Modules

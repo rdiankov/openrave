@@ -1,10 +1,6 @@
 ###########################################
 # textserver openrave plugin
 ###########################################
-if(APPLE)
-  set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -undefined dynamic_lookup")
-endif(APPLE)
-
 add_library(textserver SHARED textserver.cpp textserver.h plugindefs.h)
 
 if( MSVC )
@@ -13,6 +9,7 @@ else()
   target_link_libraries(textserver libopenrave)
 endif()
 
-add_dependencies(textserver libopenrave)
 set_target_properties(textserver PROPERTIES COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS}" LINK_FLAGS "${PLUGIN_LINK_FLAGS}")
-install(TARGETS textserver DESTINATION ${OPENRAVE_PLUGINS_INSTALL_DIR})
+install(TARGETS textserver DESTINATION ${OPENRAVE_PLUGINS_INSTALL_DIR} COMPONENT ${COMPONENT_PREFIX}plugin-textserver)
+set(CPACK_COMPONENT_${COMPONENT_PREFIX_UPPER}PLUGIN-TEXTSERVER_DISPLAY_NAME "Plugin for a text socket-based server" PARENT_SCOPE)
+set(PLUGIN_COMPONENT ${COMPONENT_PREFIX}plugin-textserver PARENT_SCOPE)

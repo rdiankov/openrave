@@ -22,6 +22,7 @@ import numpy
 import sympy
 from types import ModuleType
 from subprocess import Popen, PIPE
+from distutils.sysconfig import get_python_lib
 
 EnvVarUpdate = """
 /**
@@ -582,8 +583,8 @@ Section
   SetOutPath $INSTDIR\\bin
   File /r %(installdir)s\\bin\\*.py
   SetOutPath $INSTDIR\\share\\openrave-%(openrave_soversion)s
-  CreateDirectory $INSTDIR\\share\\openrave-%(openrave_soversion)s\\openravepy
-  File /r /x *.pyd %(installdir)s\\share\\openrave-%(openrave_soversion)s\\openravepy
+  CreateDirectory $INSTDIR\\%(openravepy_reldir)s\\openravepy
+  File /r /x *.pyd %(installdir)s\\%(openravepy_reldir)s\\openravepy
   
 %(install_python_dll)s
 
@@ -594,7 +595,7 @@ Section
   !insertmacro MUI_STARTMENU_WRITE_END
 SectionEnd
 Section "Add to PYTHONPATH"
-  ${EnvVarUpdate} $0 "PYTHONPATH"  "A" "HKLM" "$INSTDIR\\share\\openrave-%(openrave_soversion)s"
+  ${EnvVarUpdate} $0 "PYTHONPATH"  "A" "HKLM" "$INSTDIR\\%(openravepy_reldir)s"
 SectionEnd
 SectionGroupEnd
 
@@ -628,6 +629,7 @@ Section
   File /r %(installdir)s\\share\\openrave-%(openrave_soversion)s\\plugins
   File /r %(installdir)s\\share\\openrave-%(openrave_soversion)s\\robots
   File /r %(installdir)s\\share\\openrave-%(openrave_soversion)s\\LICENSE*
+  File /r %(installdir)s\\share\\openrave-%(openrave_soversion)s\\COPYING
   SetOutPath $INSTDIR
   
 %(install_dll)s
@@ -705,7 +707,7 @@ Section "Uninstall"
   StrCmp %(openrave_version)s $0 0 noremove
     DeleteRegValue HKLM SOFTWARE\\OpenRAVE ""
 noremove:
-  ${un.EnvVarUpdate} $0 "PYTHONPATH"  "R" "HKLM" "$INSTDIR\\share\\openrave-%(openrave_soversion)s"
+  ${un.EnvVarUpdate} $0 "PYTHONPATH"  "R" "HKLM" "$INSTDIR\\%(openravepy_reldir)s"
   ${un.EnvVarUpdate} $0 "OCTAVE_PATH"  "R" "HKLM" "$INSTDIR\\share\\openrave-%(openrave_soversion)s\\octave"
   ${un.EnvVarUpdate} $0 "Path"  "R" "HKLM" "$INSTDIR\\bin"
 
@@ -745,11 +747,14 @@ if __name__ == "__main__":
                       help='Subversion revision to append to the output filename.')
     (options,args) = parser.parse_args()
 
+    python_installdir = 'Lib\\site-packages\\'
     os.environ['Path'] = os.path.join(os.path.abspath(options.installdir),'bin')+';'+os.environ['PATH']
     qt_version = Popen(['openrave-config','--qt-version'],stdout=PIPE).communicate()[0].strip()
     version = Popen(['openrave-config','--version'],stdout=PIPE).communicate()[0].strip()
     soversion = '.'.join(version.split('.')[0:2])
-    sys.path.insert(0,os.path.join(options.installdir,'share','openrave-'+soversion))
+    openravepy_dir = os.path.abspath(get_python_lib(1,prefix=options.installdir))
+    openravepy_reldir = os.path.relpath(openravepy_dir,os.path.abspath(options.installdir))
+    sys.path.insert(0,openravepy_dir)
     openravepy = __import__('openravepy')
     assert(openravepy.__version__==version)
     args = dict()
@@ -770,26 +775,27 @@ if __name__ == "__main__":
     args['installdir'] = os.path.abspath(options.installdir)
     args['install_dll'] = ''
     args['install_python_dll'] = ''
+    args['openravepy_reldir'] = openravepy_reldir
     args['uninstall_dll'] = ''
     args['EnvVarUpdate'] = EnvVarUpdate
-    args['license'] = os.path.join(options.installdir,'share','openrave-'+soversion,'LICENSE.lgpl')
+    args['license'] = os.path.join(options.installdir,'share','openrave-'+soversion,'COPYING')
     # install the dlls (allows us to use them without modifying the path)
     for dllname in os.listdir(os.path.join(options.installdir,'bin')):
         if os.path.splitext(dllname)[1] == '.dll':
             args['install_dll'] += '!insertmacro InstallLib DLL NOTSHARED NOREBOOT_PROTECTED %s\\bin\\%s $INSTDIR\\bin\\%s $INSTDIR\n'%(args['installdir'],dllname,dllname)
             args['uninstall_dll'] += '!insertmacro UninstallLib DLL NOTSHARED NOREBOOT_PROTECTED $INSTDIR\\bin\\%s\n'%(dllname)
     # python dlls
-    for dllname in os.listdir(os.path.join(options.installdir,'share','openrave-'+soversion,'openravepy')):
+    for dllname in os.listdir(os.path.join(openravepy_dir,'openravepy')):
         if os.path.splitext(dllname)[1] == '.pyd':
-            args['install_python_dll'] += '!insertmacro InstallLib DLL NOTSHARED NOREBOOT_PROTECTED %s\\share\\openrave-%s\\openravepy\\%s $INSTDIR\\share\\openrave-%s\\openravepy\\%s $INSTDIR\n'%(args['installdir'],soversion,dllname,soversion,dllname)
-            args['uninstall_dll'] += '!insertmacro UninstallLib DLL NOTSHARED NOREBOOT_PROTECTED $INSTDIR\\share\\openrave-%s\\openravepy\\%s\n'%(soversion,dllname)
+            args['install_python_dll'] += '!insertmacro InstallLib DLL NOTSHARED NOREBOOT_PROTECTED %s\\openravepy\\%s $INSTDIR\\%s\\openravepy\\%s $INSTDIR\n'%(openravepy_dir,dllname,openravepy_reldir,dllname)
+            args['uninstall_dll'] += '!insertmacro UninstallLib DLL NOTSHARED NOREBOOT_PROTECTED $INSTDIR\\%s\\openravepy\\%s\n'%(openravepy_reldir,dllname)
     # add the runable examples 
     for name in dir(openravepy.examples):
         if not name.startswith('__'):
             try:
                 m=__import__('openravepy.examples.'+name)
                 if type(m) is ModuleType:
-                    path = '$INSTDIR\\share\\openrave-%s\\openravepy\\examples\\%s.py'%(soversion,name)
+                    path = '$INSTDIR\\%s\\openravepy\\examples\\%s.py'%(openravepy_reldir,name)
                     args['openrave_python_shortcuts'] += 'CreateShortCut "$SMPROGRAMS\\$StartMenuFolder\\Python Examples\\%s.lnk" "%s" "" "%s" 0\n'%(name,path,path)
                     args['openrave_python_shortcuts'] += 'CreateShortCut "$SMPROGRAMS\\$StartMenuFolder\\Python Examples\\%s Documentation.lnk" "http://openrave.programmingvision.com/en/main/openravepy/examples.%s.html" "" "C:\WINDOWS\system32\shell32.dll" 979\n'%(name,name)
             except ImportError:
@@ -800,7 +806,7 @@ if __name__ == "__main__":
             try:
                 m=__import__('openravepy.databases.'+name)
                 if type(m) is ModuleType:
-                    path = '$INSTDIR\\share\\openrave-%s\\openravepy\\databases\\%s.py'%(soversion,name)
+                    path = '$INSTDIR\\%s\\openravepy\\databases\\%s.py'%(openravepy_reldir,name)
                     args['openrave_python_shortcuts'] += 'CreateShortCut "$SMPROGRAMS\\$StartMenuFolder\\Databases\\%s.lnk" "%s" "" "%s" 0\n'%(name,path,path)
             except ImportError:
                 pass

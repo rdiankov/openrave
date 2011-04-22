@@ -14,7 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-/** \file rave.h
+/** \file openrave.h
     \brief  Defines the public headers that every plugin must include in order to use openrave properly.
 */
 #ifndef OPENRAVE_H

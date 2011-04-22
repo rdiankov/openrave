@@ -16,4 +16,4 @@ Contents
    robots
    devel/index
    openravepy/openravepy
-   
+   changelog

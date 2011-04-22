@@ -391,17 +391,19 @@ void MainOpenRAVEThread()
         penv->AttachViewer(ViewerBasePtr());
         penv.reset();
         s_penv.reset();
-        while(pviewer.use_count() > 1) {
+        int iter = 0;
+        while(pviewer.use_count() > 1 && iter < 200) {
             RAVELOG_DEBUG("viewer use count > 1, waiting for others to release viewer so can guarantee destruction in correct thread\n");
             usleep(10000);
+            ++iter;
         }
     }
 }
 
 void sigint_handler(int sig)
 {
-    s_penv.reset();
     RaveDestroy();
+    s_penv.reset();
 #ifndef _WIN32
     // have to let the default sigint properly shutdown the program
 	signal(SIGINT, SIG_DFL);

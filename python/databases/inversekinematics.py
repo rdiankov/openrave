@@ -138,7 +138,6 @@ else:
     from openravepy.databases import DatabaseGenerator
     from numpy import array
 
-from openravepy import ikfast
 import time,platform,shutil,os,sys
 import distutils
 import logging
@@ -151,8 +150,13 @@ handler = logging.StreamHandler(sys.stdout)
 handler.setFormatter(format)
 log.addHandler(handler)
 log.setLevel(logging.INFO)
-ikfast.log.addHandler(handler)
-ikfast.log.setLevel(logging.INFO)
+
+try:
+    from openravepy import ikfast
+    ikfast.log.addHandler(handler)
+    ikfast.log.setLevel(logging.INFO)
+except ImportError, e:
+    pass
 
 class InverseKinematicsModel(DatabaseGenerator):
     """Generates analytical inverse-kinematics solutions, compiles them into a shared object/DLL, and sets the robot's iksolver. Only generates the models for the robot's active manipulator. To generate IK models for each manipulator in the robot, mulitple InverseKinematicsModel classes have to be created.

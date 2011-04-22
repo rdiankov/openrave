@@ -13,7 +13,7 @@ if [ "$revision" != "$prevrevision" ]; then
     mkdir -p latest_stable
     mv "$basename-linux-src.tar.bz2" latest_stable/
     cp *.exe latest_stable/ # windows setup files
-    mv $trunk/release/README.rst .
+    cp $trunk/release/README.rst .
     tar cf latest_stable.tgz latest_stable README.rst
     rm -rf "$basename-linux-src" latest_stable README.rst
 
