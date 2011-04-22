@@ -72,7 +72,7 @@ foreach(REMOVE_DIR ${CPACK_DEBIAN_PACKAGE_REMOVE_SOURCE_FILES})
 endforeach()
 
 # create the original source tar
-execute_process(COMMAND ${CMAKE_COMMAND} -E tar czf "${CMAKE_BINARY_DIR}/Debian/${CPACK_DEBIAN_PACKAGE_NAME}_${CPACK_PACKAGE_VERSION}.orig.tar.gz" "${DEBIAN_SOURCE_ORIG_DIR}.orig" WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/Debian)
+execute_process(COMMAND ${CMAKE_COMMAND} -E tar czf "${CPACK_DEBIAN_PACKAGE_NAME}_${CPACK_PACKAGE_VERSION}.orig.tar.gz" "${CPACK_DEBIAN_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}.orig" WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/Debian)
 
 set(DEB_SOURCE_CHANGES)
 foreach(RELEASE ${CPACK_DEBIAN_DISTRIBUTION_RELEASES})
@@ -173,6 +173,7 @@ foreach(RELEASE ${CPACK_DEBIAN_DISTRIBUTION_RELEASES})
 
   file(APPEND ${DEBIAN_RULES}
     "	dh_shlibdeps\n"
+    "	dh_strip\n" # for reducing size
     "	dpkg-gencontrol -p${CPACK_DEBIAN_PACKAGE_NAME}\n"
     "	dpkg --build debian/tmp ..\n"
     )
