@@ -131,7 +131,7 @@ set(OPENRAVEPY_INSTALL_DIR "${OPENRAVE_PYTHON_INSTALL_DIR}/openravepy" CACHE PAT
 set(OPENRAVE_OCTAVE_INSTALL_DIR "${OPENRAVE_SHARE_DIR}/octave" CACHE PATH "OpenRAVE Octave bindings installation directory")
 set(OPENRAVE_MATLAB_INSTALL_DIR "${OPENRAVE_SHARE_DIR}/matlab" CACHE PATH "OpenRAVE MATLAB bindings installation directory")
 
-message(STATUS "installing to ${CMAKE_INSTALL_PREFIX}, python to ${OPENRAVE_PYTHON_INSTALL_DIR}, program suffix is '${OPENRAVE_BIN_SUFFIX}'")
+message(STATUS "installing to ${CMAKE_INSTALL_PREFIX}, python subdir is ${OPENRAVE_PYTHON_INSTALL_DIR}, program suffix is '${OPENRAVE_BIN_SUFFIX}'")
 
 set(CMAKE_TRY_COMPILE_CONFIGURATION Release CACHE STRING "very important to only test release since default is debug, and it usually reuquires special libraries")
 set(REQUIRED_INCLUDES "" CACHE STRING "Includes to always force  when compiling")
@@ -691,8 +691,9 @@ if(CMAKE_CPACK_COMMAND AND UNIX AND OPT_BUILD_PACKAGES)
   set(CPACK_PACKAGE_NAME OpenRAVE)
   set(CPACK_PACKAGE_CONTACT "OpenRAVE Testing (Testing and Releasing of OpenRAVE Packages) <openrave.testing@gmail.com>" CACHE STRING "Package maintainer and PGP signer.")
   set(CPACK_PACKAGE_VENDOR "http://openrave.org")
-  set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "OpenRAVE ${OPENRAVE_VERSION}")
-  set(CPACK_PACKAGE_VERSION ${OPENRAVE_VERSION} CACHE STRING "cpack package version.")
+  set(CPACK_PACKAGE_DISPLAY_NAME "OpenRAVE ${OPENRAVE_VERSION}")
+  set(CPACK_PACKAGE_DESCRIPTION_SUMMARY " - Open Robotics Automation Virtual Environment")
+  set(CPACK_PACKAGE_VERSION ${OPENRAVE_VERSION} CACHE STRING "package version")
   set(CPACK_PACKAGE_VERSION_MAJOR ${OPENRAVE_VERSION_MAJOR})
   set(CPACK_PACKAGE_VERSION_MINOR ${OPENRAVE_VERSION_MINOR})
   set(CPACK_PACKAGE_VERSION_PATCH ${OPENRAVE_VERSION_PATCH})
@@ -723,6 +724,8 @@ if(CMAKE_CPACK_COMMAND AND UNIX AND OPT_BUILD_PACKAGES)
     OUTPUT_VARIABLE CPACK_DEBIAN_DISTRIBUTION_CODENAME OUTPUT_STRIP_TRAILING_WHITESPACE
     RESULT_VARIABLE _lsb_release_failed)
   
+  set(CPACK_COMPONENT_OPENRAVE_DEPENDS openrave${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR})
+  set(CPACK_COMPONENTS_ALL ${CPACK_COMPONENTS_ALL} openrave)
   #TODO: extra robot CAD model files from: https://openrave.svn.sourceforge.net/svnroot/openrave/data/robots
 
   set(DPUT_HOST "ppa:openrave/release")

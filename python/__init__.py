@@ -42,7 +42,7 @@ import metaclass
 try:
     import ikfast
 except ImportError, e:
-    print 'openravepy: Failed to import ikfast: ',e
+    pass
 import pyANN
 import convexdecompositionpy
 import interfaces

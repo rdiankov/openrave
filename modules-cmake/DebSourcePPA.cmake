@@ -82,7 +82,7 @@ foreach(DEP ${CPACK_DEBIAN_PACKAGE_DEPENDS})
 endforeach(DEP ${CPACK_DEBIAN_PACKAGE_DEPENDS})  
 
 file(APPEND ${DEBIAN_CONTROL} "\n"
-  "Description: ${CPACK_PACKAGE_DESCRIPTION_SUMMARY}\n"
+  "Description: ${CPACK_PACKAGE_DISPLAY_NAME} ${CPACK_PACKAGE_DESCRIPTION_SUMMARY}\n"
   "${DEB_LONG_DESCRIPTION}"
   )
 
@@ -96,7 +96,7 @@ foreach(COMPONENT ${CPACK_COMPONENTS_ALL})
     "Package: ${COMPONENT}\n"
     "Architecture: any\n"
     "Depends: ${DEPENDS}\n"
-    "Description: ${CPACK_PACKAGE_DESCRIPTION_SUMMARY} ${CPACK_COMPONENT_${UPPER_COMPONENT}_DISPLAY_NAME}\n"
+    "Description: ${CPACK_PACKAGE_DISPLAY_NAME} ${CPACK_COMPONENT_${UPPER_COMPONENT}_DISPLAY_NAME}\n"
     "${DEB_LONG_DESCRIPTION}"
     " .\n"
     " ${CPACK_COMPONENT_${UPPER_COMPONENT}_DESCRIPTION}\n"
@@ -120,7 +120,7 @@ file(WRITE ${DEBIAN_RULES}
   "\n"
   "build:\n"
   "	mkdir $(BUILDDIR)\n"
-  "	cd $(BUILDDIR); cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -DOPT_BIN_SUFFIX=ON -DBASH_COMPLETION_DIR=/etc/bash_completion.d -DCMAKE_INSTALL_PREFIX=/usr ..\n"
+  "	cd $(BUILDDIR); cmake -DCMAKE_BUILD_TYPE=Release -DOPT_BIN_SUFFIX=ON -DBASH_COMPLETION_DIR=/etc/bash_completion.d -DCMAKE_INSTALL_PREFIX=/usr ..\n"
   "	$(MAKE) -C $(BUILDDIR) preinstall\n"
   "	touch build\n"
   "\n"
