@@ -669,7 +669,7 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/openrave-config-version.cmake.in" "$
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/openrave-config.cmake" "${CMAKE_CURRENT_BINARY_DIR}/openrave-config-version.cmake" DESTINATION "lib${LIB_SUFFIX}/cmake/openrave-${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}" COMPONENT ${COMPONENT_PREFIX}dev)
 
 if( UNIX OR CYGWIN)
-  set(BASH_COMPLETION_DIR ${OPENRAVE_SHARE_DIR} CACHE PATH "Directory where all bash completion files are stored in, on linux it is /etc/bash_completion.d")
+  set(BASH_COMPLETION_DIR ${OPENRAVE_SHARE_DIR} CACHE PATH "Directory where bash completion files will be installed in, on linux it is /etc/bash_completion.d")
   install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/openravebash DESTINATION ${BASH_COMPLETION_DIR} COMPONENT ${COMPONENT_PREFIX}base)
   configure_file("${CMAKE_CURRENT_SOURCE_DIR}/openrave.pc.in" "${CMAKE_CURRENT_BINARY_DIR}/openrave-${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}.pc" @ONLY IMMEDIATE)
   install(FILES "${CMAKE_CURRENT_BINARY_DIR}/openrave-${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}.pc" DESTINATION lib${LIB_SUFFIX}/pkgconfig COMPONENT ${COMPONENT_PREFIX}dev)
@@ -729,7 +729,7 @@ if(CMAKE_CPACK_COMMAND AND UNIX AND OPT_BUILD_PACKAGES)
   if( ${CPACK_DEBIAN_DISTRIBUTION_NAME} STREQUAL "ubuntu" )
     set(CPACK_DEBIAN_DISTRIBUTION_RELEASES karmic lucid maverick natty CACHE STRING "Release code-names of the distrubiton release")
   endif()
-  
+  set(CPACK_DEBIAN_RELEASE_VERSION "0" CACHE STRING "Release version used to differentiate packages with patches")
   set(CPACK_COMPONENT_OPENRAVE_DEPENDS openrave${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR})
   set(CPACK_COMPONENTS_ALL ${CPACK_COMPONENTS_ALL} openrave)
   #TODO: extra robot CAD model files from: https://openrave.svn.sourceforge.net/svnroot/openrave/data/robots
