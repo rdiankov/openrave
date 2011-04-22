@@ -595,7 +595,7 @@ Section
   !insertmacro MUI_STARTMENU_WRITE_END
 SectionEnd
 Section "Add to PYTHONPATH"
-  ${EnvVarUpdate} $0 "PYTHONPATH"  "A" "HKLM" "$INSTDIR\\share\\openrave-%(openrave_soversion)s"
+  ${EnvVarUpdate} $0 "PYTHONPATH"  "A" "HKLM" "$INSTDIR\\%(openravepy_reldir)s"
 SectionEnd
 SectionGroupEnd
 
@@ -706,7 +706,7 @@ Section "Uninstall"
   StrCmp %(openrave_version)s $0 0 noremove
     DeleteRegValue HKLM SOFTWARE\\OpenRAVE ""
 noremove:
-  ${un.EnvVarUpdate} $0 "PYTHONPATH"  "R" "HKLM" "$INSTDIR\\share\\openrave-%(openrave_soversion)s"
+  ${un.EnvVarUpdate} $0 "PYTHONPATH"  "R" "HKLM" "$INSTDIR\\%(openravepy_reldir)s"
   ${un.EnvVarUpdate} $0 "OCTAVE_PATH"  "R" "HKLM" "$INSTDIR\\share\\openrave-%(openrave_soversion)s\\octave"
   ${un.EnvVarUpdate} $0 "Path"  "R" "HKLM" "$INSTDIR\\bin"
 
