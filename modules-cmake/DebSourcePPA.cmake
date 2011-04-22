@@ -1,4 +1,5 @@
-##
+## Debian Source Package Generator
+#
 # Copyright (c) 2010 Daniel Pfeifer <daniel@pfeifer-mail.de>
 # Many modifications by Rosen Diankov <rosen.diankov@gmail.com>
 #
@@ -77,7 +78,7 @@ execute_process(COMMAND ${CMAKE_COMMAND} -E tar czf "${CMAKE_BINARY_DIR}/Debian/
 set(DEB_SOURCE_CHANGES)
 foreach(RELEASE ${CPACK_DEBIAN_DISTRIBUTION_RELEASES})
   set(DEBIAN_SOURCE_DIR "${DEBIAN_SOURCE_ORIG_DIR}${CPACK_DEBIAN_DISTRIBUTION_NAME}1~${RELEASE}1")
-  set(RELEASE_PACKAGE_VERSION "${CPACK_PACKAGE_VERSION}-${CPACK_DEBIAN_DISTRIBUTION_NAME}1~${RELEASE}1")
+  set(RELEASE_PACKAGE_VERSION "${CPACK_PACKAGE_VERSION}-${CPACK_DEBIAN_RELEASE_VERSION}${CPACK_DEBIAN_DISTRIBUTION_NAME}1~${RELEASE}1")
   file(MAKE_DIRECTORY ${DEBIAN_SOURCE_DIR}/debian)
   ##############################################################################
   # debian/control
