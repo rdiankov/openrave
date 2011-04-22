@@ -402,8 +402,8 @@ void MainOpenRAVEThread()
 
 void sigint_handler(int sig)
 {
-    s_penv.reset();
     RaveDestroy();
+    s_penv.reset();
 #ifndef _WIN32
     // have to let the default sigint properly shutdown the program
 	signal(SIGINT, SIG_DFL);
