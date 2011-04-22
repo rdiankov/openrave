@@ -729,7 +729,6 @@ if(CMAKE_CPACK_COMMAND AND UNIX AND OPT_BUILD_PACKAGES)
   if( ${CPACK_DEBIAN_DISTRIBUTION_NAME} STREQUAL "ubuntu" )
     set(CPACK_DEBIAN_DISTRIBUTION_RELEASES karmic lucid maverick natty CACHE STRING "Release code-names of the distrubiton release")
   endif()
-  set(CPACK_DEBIAN_RELEASE_VERSION "0" CACHE STRING "Release version used to differentiate packages with patches")
   set(CPACK_COMPONENT_OPENRAVE_DEPENDS openrave${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR})
   set(CPACK_COMPONENTS_ALL ${CPACK_COMPONENTS_ALL} openrave)
   #TODO: extra robot CAD model files from: https://openrave.svn.sourceforge.net/svnroot/openrave/data/robots
