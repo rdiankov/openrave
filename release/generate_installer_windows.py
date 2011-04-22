@@ -629,6 +629,7 @@ Section
   File /r %(installdir)s\\share\\openrave-%(openrave_soversion)s\\plugins
   File /r %(installdir)s\\share\\openrave-%(openrave_soversion)s\\robots
   File /r %(installdir)s\\share\\openrave-%(openrave_soversion)s\\LICENSE*
+  File /r %(installdir)s\\share\\openrave-%(openrave_soversion)s\\COPYING
   SetOutPath $INSTDIR
   
 %(install_dll)s
@@ -777,7 +778,7 @@ if __name__ == "__main__":
     args['openravepy_reldir'] = openravepy_reldir
     args['uninstall_dll'] = ''
     args['EnvVarUpdate'] = EnvVarUpdate
-    args['license'] = os.path.join(options.installdir,'share','openrave-'+soversion,'LICENSE.lgpl')
+    args['license'] = os.path.join(options.installdir,'share','openrave-'+soversion,'COPYING')
     # install the dlls (allows us to use them without modifying the path)
     for dllname in os.listdir(os.path.join(options.installdir,'bin')):
         if os.path.splitext(dllname)[1] == '.dll':

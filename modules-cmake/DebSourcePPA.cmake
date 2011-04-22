@@ -1,6 +1,14 @@
 ##
 # Copyright (c) 2010 Daniel Pfeifer <daniel@pfeifer-mail.de>
-# Modifications by Rosen Diankov <rosen.diankov@gmail.com>
+# Many modifications by Rosen Diankov <rosen.diankov@gmail.com>
+#
+# Creates source debian files and manages library dependencies
+#
+# Features:
+# 
+# - Automatically generates symbols and run-time dependencies from the build dependencies
+# - Custom copy of source directory via CPACK_DEBIAN_PACKAGE_SOURCE_COPY
+# - 
 ##
 
 find_program(DEBUILD_EXECUTABLE debuild)
@@ -183,7 +191,7 @@ execute_process(COMMAND date -R  OUTPUT_VARIABLE DATE_TIME)
 file(WRITE ${DEBIAN_CHANGELOG}
   "${CPACK_DEBIAN_PACKAGE_NAME} (${CPACK_PACKAGE_VERSION}) ${CPACK_DEBIAN_DISTRIBUTION_CODENAME}; urgency=low\n\n"
   "  * Package built with CMake\n\n"
-  "  * ChangeLog can be found at https://openrave.svn.sourceforge.net/svnroot/openrave/tags/${OPENRAVE_VERSION}/docs/en/changelog.rst\n\n"
+  "${CPACK_DEBIAN_CHANGELOG}"
   " -- ${CPACK_PACKAGE_CONTACT}  ${DATE_TIME}"
   )
 

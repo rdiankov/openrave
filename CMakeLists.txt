@@ -678,7 +678,7 @@ endif()
 file(GLOB rave_header_files ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/*.h)
 install(FILES ${rave_header_files} ${interfacehashes_h} ${CMAKE_CURRENT_BINARY_DIR}/include/openrave/config.h DESTINATION include/openrave-${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}/openrave COMPONENT ${COMPONENT_PREFIX}dev)
 install(FILES rave/rave.h rave/plugin.h DESTINATION include/openrave-${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}/rave COMPONENT ${COMPONENT_PREFIX}dev) # deprecated
-install(FILES LICENSE.lgpl LICENSE.apache DESTINATION ${OPENRAVE_SHARE_DIR} COMPONENT ${COMPONENT_PREFIX}base)
+install(FILES COPYING LICENSE.lgpl LICENSE.apache DESTINATION ${OPENRAVE_SHARE_DIR} COMPONENT ${COMPONENT_PREFIX}base)
 
 #install(EXPORT openrave-targets DESTINATION lib/cmake/openrave-${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR})
 
@@ -699,7 +699,7 @@ if(CMAKE_CPACK_COMMAND AND UNIX AND OPT_BUILD_PACKAGES)
   set(CPACK_PACKAGE_VERSION_PATCH ${OPENRAVE_VERSION_PATCH})
   set(CPACK_PACKAGE_INSTALL_DIRECTORY "openrave${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}")
   set(CPACK_PACKAGE_DESCRIPTION_FILE ${CMAKE_CURRENT_SOURCE_DIR}/docs/en/description.rst)
-  set(CPACK_RESOURCE_FILE_LICENSE ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.lgpl)
+  set(CPACK_RESOURCE_FILE_LICENSE ${CMAKE_CURRENT_SOURCE_DIR}/COPYING)
 
   set(CPACK_COMPONENT_${COMPONENT_PREFIX_UPPER}BASE_REQUIRED 1)
   set(CPACK_COMPONENT_${COMPONENT_PREFIX_UPPER}BASE_DISPLAY_NAME "core libraries and tools")
@@ -720,6 +720,7 @@ if(CMAKE_CPACK_COMMAND AND UNIX AND OPT_BUILD_PACKAGES)
   set(CPACK_DEBIAN_PACKAGE_NAME openrave${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR})
   set(CPACK_DEBIAN_PACKAGE_REMOVE_SOURCE_FILES docs release sandbox test sympy msvc_files.tgz sympy_0.6.7.tgz sympy_0.6.7_patches.diff 3rdparty/pcre-8.02 3rdparty/qhull 3rdparty/zlib 3rdparty/flann-1.6.6)
   set(CPACK_DEBIAN_PACKAGE_SOURCE_COPY svn export --force)
+  set(CPACK_DEBIAN_CHANGELOG "  * ChangeLog can be found at https://openrave.svn.sourceforge.net/svnroot/openrave/tags/${OPENRAVE_VERSION}/docs/en/changelog.rst\n\n")
   execute_process(COMMAND lsb_release -cs
     OUTPUT_VARIABLE CPACK_DEBIAN_DISTRIBUTION_CODENAME OUTPUT_STRIP_TRAILING_WHITESPACE
     RESULT_VARIABLE _lsb_release_failed)
@@ -728,7 +729,7 @@ if(CMAKE_CPACK_COMMAND AND UNIX AND OPT_BUILD_PACKAGES)
   set(CPACK_COMPONENTS_ALL ${CPACK_COMPONENTS_ALL} openrave)
   #TODO: extra robot CAD model files from: https://openrave.svn.sourceforge.net/svnroot/openrave/data/robots
 
-  set(DPUT_HOST "ppa:openrave/release")
+  set(DPUT_HOST "ppa:openrave/release" CACHE STRING "PPA repository to upload the debian sources")
   include(CPack)
   include(DebSourcePPA)
 endif()
