@@ -71,7 +71,9 @@ Interface Types
                         itext += ':Plugin: :ref:`plugin-%s`\n\n'%(pluginname)
                         itext += interface.GetDescription() + '\n\n'
                         try:
-                            itext +=  interface.SendCommand('help label %s-%s-'%(type,name.lower()))
+                            commandtext = interface.SendCommand('help label %s-%s-'%(type,name.lower()))
+                            if commandtext is not None:
+                                itext +=  commandtext
                         except (openrave_exception,RuntimeError),e:
                             print e
                         interfaceinfo[type].append([name,pluginname,itext])

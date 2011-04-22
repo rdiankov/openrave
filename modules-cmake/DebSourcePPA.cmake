@@ -209,7 +209,7 @@ foreach(RELEASE ${CPACK_DEBIAN_DISTRIBUTION_RELEASES})
   set(DEBIAN_CHANGELOG ${DEBIAN_SOURCE_DIR}/debian/changelog)
   execute_process(COMMAND date -R  OUTPUT_VARIABLE DATE_TIME)
   file(WRITE ${DEBIAN_CHANGELOG}
-    "${CPACK_DEBIAN_PACKAGE_NAME} (${RELEASE_PACKAGE_VERSION}) karmic; urgency=low\n\n"
+    "${CPACK_DEBIAN_PACKAGE_NAME} (${RELEASE_PACKAGE_VERSION}) ${RELEASE}; urgency=low\n\n"
     "  * Package built with CMake\n\n"
     "${CPACK_DEBIAN_CHANGELOG}"
     " -- ${CPACK_PACKAGE_CONTACT}  ${DATE_TIME}"
