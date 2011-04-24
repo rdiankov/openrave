@@ -41,21 +41,9 @@ Note that the provides DLLs are all compiled in Multithreaded DLL runtime.
 Debian Source Packages
 ----------------------
 
-Official release archive is: `ppa:openrave/release <https://launchpad.net/~openrave/+archive/release>`_
+`ppa:openrave/release <https://launchpad.net/~openrave/+archive/release>`_ - official release archive
 
-Testing archive holding the newest builds is: `ppa:openrave/testing <https://launchpad.net/~openrave/+archive/testing>`_
-
-Debian source packages for Ubuntu/Debian can be prepared by calling cmake with::
-
-  cmake -DOPT_BUILD_PACKAGES=ON ..
-
-To upload the packges on the server do::
-
-  make dput
-
-It is possible to customize the PGP signer, the host to upload them, and what distributions to compile them for using::
-
-  cmake -DOPT_BUILD_PACKAGES=ON -DCPACK_DEBIAN_DISTRIBUTION_RELEASES="lucid;maverick;natty" -DCPACK_PACKAGE_CONTACT="new signer" -DDPUT_HOST="ppa:new_signer/name" ..
+`ppa:openrave/testing <https://launchpad.net/~openrave/+archive/testing>`_ - testing archive holding the newest builds
 
 Each package is separated into:
 
@@ -69,6 +57,26 @@ Each package is separated into:
 * openrave$V-plugins-all: all plugins
 * openrave$V-python: openravepy python bindings
 * openrave-robots-extra: extra robot CAD model files
+
+Building
+~~~~~~~~
+
+Debian source packages for Ubuntu/Debian can be prepared by calling cmake with::
+
+  cmake -DOPT_BUILD_PACKAGES=ON ..
+
+To upload the packges on the server do::
+
+  make dput
+
+Many times, a special "distribution version" is attached to the OpenRAVE version::
+
+  cmake -DOPT_BUILD_PACKAGES=ON -DCPACK_PACKAGE_VERSION="|version|.w" ..
+
+It is possible to customize the PGP signer, the host to upload them, and what distributions to compile them for using::
+
+  cmake -DOPT_BUILD_PACKAGES=ON -DCPACK_DEBIAN_DISTRIBUTION_RELEASES="lucid;maverick;natty" -DCPACK_PACKAGE_CONTACT="new signer" -DDPUT_HOST="ppa:new_signer/name" ..
+
 
 `Ubuntu Debian Packaging Guide <https://wiki.ubuntu.com/PackagingGuide/Complete>`_
 

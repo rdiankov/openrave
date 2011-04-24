@@ -6,9 +6,9 @@ ChangeLog
 Version 0.3.1
 =============
 
-Subversion Revision: 
+Subversion Revision: 2401
 
-Initial Release: 
+Initial Release: 2011/04/24
 
 Core
 ----

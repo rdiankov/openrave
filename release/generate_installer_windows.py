@@ -825,17 +825,21 @@ if __name__ == "__main__":
     for boost_version in ['%s.%s.%s'%tuple(boostversionsep),'%s.%s'%tuple(boostversionsep[0:2])]:
         boost_installer = 'boost_%s_setup.exe'%boost_version.replace('.','_')
         if not os.path.exists(os.path.join('installers',boost_installer)):
-            boosturl = 'http://www.boostpro.com/download/'+boost_installer
-            localfile, headers = urllib.urlretrieve(boosturl)
-            if headers['content-type'].find('application') < 0:
-                continue
-                
             try:
-                os.mkdir('installers')
-            except OSError:
-                pass
+                boosturl = 'http://www.boostpro.com/download/'+boost_installer
+                localfile, headers = urllib.urlretrieve(boosturl)
+                if headers['content-type'].find('application') < 0:
+                    continue
+
+                try:
+                    os.mkdir('installers')
+                except OSError:
+                    pass
+
+                shutil.copyfile(localfile,os.path.join('installers',boost_installer))
                 
-            shutil.copyfile(localfile,os.path.join('installers',boost_installer))
+            except IOError:
+                continue # website down?
         args['boost_installer'] = boost_installer
         args['boost_version'] = boost_version
         break
