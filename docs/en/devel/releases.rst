@@ -39,6 +39,7 @@ The packages are separated into:
 * openrave$V-base: core libraries and tools
 * openrave$V-data: basic scenes required for examples
 * openrave$V-dev: development files and examples
+* openrave$V-ikfast: Robot Kinematics Compiler
 * openrave$V-octave: octave bindings
 * openrave$V-plugin-X: individual plugins and their versions
 * openrave$V-plugins-all: all plugins
