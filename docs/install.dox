@@ -283,15 +283,7 @@ Although %OpenRAVE is not tied to any particular collision checker, it requires 
  - If not using enable-new-trimesh, disabling asserts (via \c --disable-asserts) is necessary due to some weird bug in normalization bug.
  - For 0.10+. If installing on x86-64 distro, configure ODE with \c --enable-shared.
 
-- <a href="http://www.bulletphysics.com">Bullet Collision</a> (use v2.74 or greater) - Need to install to a system directory so %OpenRAVE can find it using \c pkg-config. If using autotools \c configure, need to remove \c install-sh before running \c autogen.sh. The command lines become:
-\verbatim
-rm install-sh
-./autogen.sh
-./configure
-make
-make install
-\endverbatim
- Bullet is detected using \c pkg-config, so \c bullet.pc is needed.
+- <a href="http://www.bulletphysics.com">Bullet Collision</a> (use v2.74 or greater) - Need to install to a system directory so %OpenRAVE can find it using \c pkg-config. If using autotools \c configure, need to remove \c install-sh before running \c autogen.sh. Bullet is detected using \c pkg-config, so \c bullet.pc is needed.
 
 - <a href="http://www.cs.unc.edu/~geom/SSV/">PQP Collision</a> - source code separate inside \b pqprave plugin.
 
@@ -304,16 +296,7 @@ make install
  - もしenable-new-trimeshオプションを使用しない場合，奇妙なバグのためにassertsを無効にする（\c --disable-asserts）ことが必要です．
  - 0.10以上のバージョンでx86-64のディストリビューションにインストールする場合，ODEの構成を\c --enable-sharedにしてください．
 
-- <a href="http://www.bulletphysics.com">Bullet Collision</a> (v2.74以上) - システムディレクトリにインストールすることが必要です．そうすれば%OpenRAVEは\c pkg-configで見つけることができます．もし\c configureの自動ツールを使っている場合，\c autogen.shを実行する前に\c install-shを削除する必要があります．コマンドラインでは以下のようになります．</br>
-
-\verbatim
-rm install-sh
-./autogen.sh
-./configure
-make
-make install
-\endverbatim
- Bulletのインストールは\c pkg-configで認識されているから，\c bullet.pcが必要です．
+- <a href="http://www.bulletphysics.com">Bullet Collision</a> (v2.74以上) - システムディレクトリにインストールすることが必要です．そうすれば%OpenRAVEは\c pkg-configで見つけることができます．もし\c configureの自動ツールを使っている場合，\c autogen.shを実行する前に\c install-shを削除する必要があります．コマンドラインでは以下のようになります． Bulletのインストールは\c pkg-configで認識されているから，\c bullet.pcが必要です．
 
 - <a href="http://www.cs.unc.edu/~geom/SSV/">PQP</a> - ソースコードは内部の\b pqpraveプラグインに含まれています．
 
@@ -378,13 +361,19 @@ After all necessary libraries have been installed, it is time to finally build a
 make
 \endverbatim
 
-This will compile all files. To install the files type
+This will compile all files. To install all the files type
 
 \verbatim
 make install
 \endverbatim
 
-Currently the default install directory is \c /usr/local. To choose a different install directory, type
+Because multiple openrave versions can co-exist in a system, to install all files except symlinks so that previous installations are not clobbered, do:
+
+\verbatim
+make altinstall
+\endverbatim
+
+To choose a different install directory, type
 
 \verbatim
 make prefix=/my/new/dir
@@ -408,7 +397,12 @@ If the cached files are not removed, the new system settings will not be noticed
 make install
 \endverbatim
 
-現在のデフォルトのインストール先は\c /usr/localです．異なるインストール先を指定したい場合は，以下のオプションと共にmakeを実行してください．
+既にOpenRAVEのシステムインストールがある場合で、そのインストールを保護するために以下のコマンドも実行できます。（symlinkがインストールされない）
+\verbatim
+make altinstall
+\endverbatim
+
+異なるインストール先を指定したい場合は，以下のオプションと共にmakeを実行してください．
 
 \verbatim
 make prefix=/my/new/dir

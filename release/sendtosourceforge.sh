@@ -1,4 +1,5 @@
 #!/bin/bash
+# Puts the newest files into latest_stable, and deletes any files that are more than 7 days old.
 trunk=$1
 latest_stable="https://openrave.svn.sourceforge.net/svnroot/openrave/tags/latest_stable"
 # only update latest_stable if the revisions changed

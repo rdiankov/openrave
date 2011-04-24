@@ -10,6 +10,7 @@
 # - Automatically generates symbols and run-time dependencies from the build dependencies
 # - Custom copy of source directory via CPACK_DEBIAN_PACKAGE_SOURCE_COPY
 # - Simultaneous output of multiple debian source packages for each distribution
+# - Can specificy distribution-specific dependencies by suffixing DEPENDS with _${DISTRO_NAME}, for example: CPACK_DEBIAN_PACKAGE_DEPENDS_LUCID, CPACK_COMPONENT_MYCOMP0_DEPENDS_LUCID
 #
 # Usage:
 #
@@ -17,6 +18,7 @@
 # set(CPACK_DEBIAN_PACKAGE_PRIORITY optional)
 # set(CPACK_DEBIAN_PACKAGE_SECTION devel)
 # set(CPACK_DEBIAN_PACKAGE_DEPENDS mycomp0 mycomp1 some_ubuntu_package)
+# set(CPACK_DEBIAN_PACKAGE_DEPENDS_LUCID mycomp0 mycomp1 lucid_specific_package)
 # set(CPACK_DEBIAN_PACKAGE_NAME mypackage)
 # set(CPACK_DEBIAN_PACKAGE_REMOVE_SOURCE_FILES unnecessary_file unnecessary_dir/file0)
 # set(CPACK_DEBIAN_PACKAGE_SOURCE_COPY svn export --force) # if using subversion
@@ -72,12 +74,13 @@ foreach(REMOVE_DIR ${CPACK_DEBIAN_PACKAGE_REMOVE_SOURCE_FILES})
 endforeach()
 
 # create the original source tar
-execute_process(COMMAND ${CMAKE_COMMAND} -E tar czf "${CMAKE_BINARY_DIR}/Debian/${CPACK_DEBIAN_PACKAGE_NAME}_${CPACK_PACKAGE_VERSION}.orig.tar.gz" "${DEBIAN_SOURCE_ORIG_DIR}.orig" WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/Debian)
+execute_process(COMMAND ${CMAKE_COMMAND} -E tar czf "${CPACK_DEBIAN_PACKAGE_NAME}_${CPACK_PACKAGE_VERSION}.orig.tar.gz" "${CPACK_DEBIAN_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}.orig" WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/Debian)
 
 set(DEB_SOURCE_CHANGES)
 foreach(RELEASE ${CPACK_DEBIAN_DISTRIBUTION_RELEASES})
   set(DEBIAN_SOURCE_DIR "${DEBIAN_SOURCE_ORIG_DIR}-${CPACK_DEBIAN_DISTRIBUTION_NAME}1~${RELEASE}1")
   set(RELEASE_PACKAGE_VERSION "${CPACK_PACKAGE_VERSION}-${CPACK_DEBIAN_DISTRIBUTION_NAME}1~${RELEASE}1")
+  string(TOUPPER ${RELEASE} RELEASE_UPPER)
   file(MAKE_DIRECTORY ${DEBIAN_SOURCE_DIR}/debian)
   ##############################################################################
   # debian/control
@@ -91,10 +94,17 @@ foreach(RELEASE ${CPACK_DEBIAN_DISTRIBUTION_RELEASES})
     "Build-Depends: "
     )
 
-  foreach(DEP ${CPACK_DEBIAN_BUILD_DEPENDS})
-    file(APPEND ${DEBIAN_CONTROL} "${DEP}, ")
-  endforeach(DEP ${CPACK_DEBIAN_BUILD_DEPENDS})
+  if( CPACK_DEBIAN_BUILD_DEPENDS_${RELEASE_UPPER} )
+    foreach(DEP ${CPACK_DEBIAN_BUILD_DEPENDS_${RELEASE_UPPER}})
+      file(APPEND ${DEBIAN_CONTROL} "${DEP}, ")
+    endforeach(DEP ${CPACK_DEBIAN_BUILD_DEPENDS_${RELEASE_UPPER}})
+  else( CPACK_DEBIAN_BUILD_DEPENDS_${RELEASE_UPPER} )
+    foreach(DEP ${CPACK_DEBIAN_BUILD_DEPENDS})
+      file(APPEND ${DEBIAN_CONTROL} "${DEP}, ")
+    endforeach(DEP ${CPACK_DEBIAN_BUILD_DEPENDS})
+  endif( CPACK_DEBIAN_BUILD_DEPENDS_${RELEASE_UPPER} )
 
+    
   file(APPEND ${DEBIAN_CONTROL} "\n"
     "Standards-Version: 3.8.4\n"
     "Homepage: ${CPACK_PACKAGE_VENDOR}\n"
@@ -105,10 +115,16 @@ foreach(RELEASE ${CPACK_DEBIAN_DISTRIBUTION_RELEASES})
     "Depends: "
     )
 
-  foreach(DEP ${CPACK_DEBIAN_PACKAGE_DEPENDS})
-    file(APPEND ${DEBIAN_CONTROL} "${DEP}, ")
-  endforeach(DEP ${CPACK_DEBIAN_PACKAGE_DEPENDS})  
-
+  if( CPACK_DEBIAN_PACKAGE_DEPENDS_${RELEASE_UPPER} )
+    foreach(DEP ${CPACK_DEBIAN_PACKAGE_DEPENDS_${RELEASE_UPPER}})
+      file(APPEND ${DEBIAN_CONTROL} "${DEP}, ")
+    endforeach(DEP ${CPACK_DEBIAN_PACKAGE_DEPENDS_${RELEASE_UPPER}})
+  else( CPACK_DEBIAN_PACKAGE_DEPENDS_${RELEASE_UPPER} )
+    foreach(DEP ${CPACK_DEBIAN_PACKAGE_DEPENDS})
+      file(APPEND ${DEBIAN_CONTROL} "${DEP}, ")
+    endforeach(DEP ${CPACK_DEBIAN_PACKAGE_DEPENDS})  
+  endif( CPACK_DEBIAN_PACKAGE_DEPENDS_${RELEASE_UPPER} )
+  
   file(APPEND ${DEBIAN_CONTROL} "\n"
     "Description: ${CPACK_PACKAGE_DISPLAY_NAME} ${CPACK_PACKAGE_DESCRIPTION_SUMMARY}\n"
     "${DEB_LONG_DESCRIPTION}"
@@ -117,9 +133,16 @@ foreach(RELEASE ${CPACK_DEBIAN_DISTRIBUTION_RELEASES})
   foreach(COMPONENT ${CPACK_COMPONENTS_ALL})
     string(TOUPPER ${COMPONENT} UPPER_COMPONENT)
     set(DEPENDS "\${shlibs:Depends}")
-    foreach(DEP ${CPACK_COMPONENT_${UPPER_COMPONENT}_DEPENDS})
-      set(DEPENDS "${DEPENDS}, ${DEP}")
-    endforeach(DEP ${CPACK_COMPONENT_${UPPER_COMPONENT}_DEPENDS})
+    if( CPACK_COMPONENT_${UPPER_COMPONENT}_DEPENDS_${RELEASE_UPPER} )
+      foreach(DEP ${CPACK_COMPONENT_${UPPER_COMPONENT}_DEPENDS_${RELEASE_UPPER}})
+        set(DEPENDS "${DEPENDS}, ${DEP}")
+      endforeach(DEP ${CPACK_COMPONENT_${UPPER_COMPONENT}_DEPENDS_${RELEASE_UPPER}})
+    else( CPACK_COMPONENT_${UPPER_COMPONENT}_DEPENDS_${RELEASE_UPPER} )
+      foreach(DEP ${CPACK_COMPONENT_${UPPER_COMPONENT}_DEPENDS})
+        set(DEPENDS "${DEPENDS}, ${DEP}")
+      endforeach(DEP ${CPACK_COMPONENT_${UPPER_COMPONENT}_DEPENDS})
+    endif( CPACK_COMPONENT_${UPPER_COMPONENT}_DEPENDS_${RELEASE_UPPER} )
+
     file(APPEND ${DEBIAN_CONTROL} "\n"
       "Package: ${COMPONENT}\n"
       "Architecture: any\n"
@@ -173,6 +196,7 @@ foreach(RELEASE ${CPACK_DEBIAN_DISTRIBUTION_RELEASES})
 
   file(APPEND ${DEBIAN_RULES}
     "	dh_shlibdeps\n"
+    "	dh_strip\n" # for reducing size
     "	dpkg-gencontrol -p${CPACK_DEBIAN_PACKAGE_NAME}\n"
     "	dpkg --build debian/tmp ..\n"
     )
@@ -209,7 +233,7 @@ foreach(RELEASE ${CPACK_DEBIAN_DISTRIBUTION_RELEASES})
   set(DEBIAN_CHANGELOG ${DEBIAN_SOURCE_DIR}/debian/changelog)
   execute_process(COMMAND date -R  OUTPUT_VARIABLE DATE_TIME)
   file(WRITE ${DEBIAN_CHANGELOG}
-    "${CPACK_DEBIAN_PACKAGE_NAME} (${RELEASE_PACKAGE_VERSION}) karmic; urgency=low\n\n"
+    "${CPACK_DEBIAN_PACKAGE_NAME} (${RELEASE_PACKAGE_VERSION}) ${RELEASE}; urgency=low\n\n"
     "  * Package built with CMake\n\n"
     "${CPACK_DEBIAN_CHANGELOG}"
     " -- ${CPACK_PACKAGE_CONTACT}  ${DATE_TIME}"

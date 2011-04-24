@@ -366,7 +366,7 @@ class MultiProcessTestRunner(TextTestRunner):
                 any_alive = False
                 for iworker, w in enumerate(workers):
                     if w.is_alive():
-                        worker_addr = str(w.currentaddr.value,'ascii')
+                        worker_addr = str(w.currentaddr.value)
                         timeprocessing = time.time()-w.currentstart.value
                         if len(worker_addr) == 0 and timeprocessing > self.config.multiprocess_timeout-0.1:
                             log.debug('worker %d has finished its work item, but is not exiting? do we wait for it?',iworker)

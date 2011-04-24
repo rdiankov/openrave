@@ -20,6 +20,8 @@ class IdealController : public ControllerBase
  public:
     IdealController(EnvironmentBasePtr penv) : ControllerBase(penv), cmdid(0), _bPause(false), _bIsDone(true) {
         __description = ":Interface Author: Rosen Diankov\n\nIdeal controller used for planning and non-physics simulations. Forces exact robot positions.";
+        RegisterCommand("Pause",boost::bind(&IdealController::_Pause,this,_1,_2),
+                        "pauses the controller from reacting to commands");
         fTime = 0;
         _fSpeed = 1;
         _nControlTransformation = 0;
@@ -154,27 +156,17 @@ class IdealController : public ControllerBase
         }
     }
 
-    virtual bool SendCommand(std::ostream& os, std::istream& is)
-    {
-        string cmd;
-        is >> cmd;
-        if( !is ) {
-            throw openrave_exception("invalid argument",ORE_InvalidArguments);
-        }
-        std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
-        if( cmd == "pause" ) {
-            is >> _bPause;
-        }
-        else {
-            throw openrave_exception("not commands supported",ORE_CommandNotSupported);
-        }
-        return true;
-    }
     virtual bool IsDone() { return _bIsDone; }
     virtual dReal GetTime() const { return fTime; }
     virtual RobotBasePtr GetRobot() const { return _probot; }
 
 private:
+    virtual bool _Pause(std::ostream& os, std::istream& is)
+    {
+        is >> _bPause;
+        return !!is;
+    }
+
     inline boost::shared_ptr<IdealController> shared_controller() { return boost::static_pointer_cast<IdealController>(shared_from_this()); }
     inline boost::shared_ptr<IdealController const> shared_controller_const() const { return boost::static_pointer_cast<IdealController const>(shared_from_this()); }
     inline boost::weak_ptr<IdealController> weak_controller() { return shared_controller(); }
@@ -349,6 +341,9 @@ class RedirectController : public ControllerBase
         }
 
         is.seekg(pos);
+        if( !_pcontroller ) {
+            return false;
+        }
         return _pcontroller->SendCommand(os,is);
     }
     

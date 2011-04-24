@@ -11,6 +11,7 @@ Contents
    
    index
    overview
+   install
    getting_started
    plugin_interfaces
    robots

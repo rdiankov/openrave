@@ -11,16 +11,9 @@ Welcome to Open Robotics Automation Virtual Environment
 Getting Started
 ---------------
 
-* `Installer Packages`_
-* `Compile/Install From Sources`_
+* :ref:`install`
 
- * Latest stable source code (constantly updated):
-
-::
-
-  svn co https://openrave.svn.sourceforge.net/svnroot/openrave/tags/latest_stable openrave
-
-* :ref:`changelog`
+ * :ref:`changelog`
 
 * :ref:`getting_started`
 

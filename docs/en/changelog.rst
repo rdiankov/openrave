@@ -6,21 +6,30 @@ ChangeLog
 Version 0.3.1
 =============
 
-Subversion Revision: 
+Subversion Revision: 2401
 
-Initial Release: 
+Initial Release: 2011/04/24
+
+Core
+----
+
+* Fixed OpenRAVE freeze when closed with Ctrl-C
+
+* Fixed problem with detecting system crlibm installs
 
 Python
 ------
 
 * openravepy now gets copied onto the python site-packages or dist-packages folder. For Linux users, this means it is not necessary to set the PYTHONPATH anymore when installing to /usr or /usr/local.
 
+* ikfast fixes inclusion of math libraries and python-mpmath
+
 Release
 -------
 
 * The openravepy python bindings now get installed into the python site-packages/dist-packages folder.
 
-* using cpack to componentize all the installs and create debian source packages.
+* Using cpack to componentize all the installs and create debian source packages. The debian source packages are created with DebSourcePPA.cmake and can handle multiple distributions.
 
 Version 0.3.0
 =============
