@@ -6,7 +6,7 @@ ChangeLog
 Version 0.3.1
 =============
 
-Subversion Revision: 2401
+Subversion Revision: 2402
 
 Initial Release: 2011/04/24
 
@@ -230,7 +230,7 @@ COLLADA
 
 * fixed many bugs in colladareader units
 
-* all collada robots are offered as zae. Many previous *.robot.xml robots were removed to prefer the COLLADA counterparts. The models.tgz file size reduced greatly.
+* all collada robots are offered as zae. Many previous .robot.xml robots were removed to prefer the COLLADA counterparts. The models.tgz file size reduced greatly.
 
 * There is now a folder dedicated to all possible COLLADA robots that is seaprate from the openrave trunk:
 
@@ -362,8 +362,7 @@ Velocities and Physics API
 
 * Setting velocity behaves similar to setting dof values. the default physics engine now stores velocities (it did not before).
 
-* Some discussion for these changes can be found in this ticket:
-http://sourceforge.net/apps/trac/openrave/ticket/69
+* Some discussion for these changes can be found in `this ticket <http://sourceforge.net/apps/trac/openrave/ticket/69>`_.
 
 Controller API
 --------------
@@ -446,9 +445,7 @@ Sensors
 
 * All the sensors in the environment can be queried using Environment.GetSensors, this returns all sensors attached to all the robots and all the environment sensors. Individual sensors can be queried by name using :meth:`.Environment.GetSensor`
 
-* Can now store sensor parameters in side *.sensor.xml files and include them from a parent xml file using the file="..." attribute. This applies to all interface types, not just sensors. Here's a tutorial:
-
-http://openrave.programmingvision.com/wiki/index.php/Format:XML#Sensor
+* Can now store sensor parameters in side *.sensor.xml files and include them from a parent xml file using the file="..." attribute. This applies to all interface types, not just sensors. `Here's a tutorial <http://openrave.programmingvision.com/wiki/index.php/Format:XML#Sensor>`_.
 
 * Added IMU sensor definitions
 
@@ -502,7 +499,6 @@ Kinematics
 ikfast
 ------
 
-* IKFast has been greatly improved, the ray inverse kinematics is also
-working nicely
+* IKFast has been greatly improved, the ray inverse kinematics is also working nicely
 
 * It is now possible to use the inversekinematics.py database generator through the ikfast problem instance using :ref:`probleminstance-ikfast-loadikfastsolver` command.
