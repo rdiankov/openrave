@@ -709,14 +709,9 @@ if(CMAKE_CPACK_COMMAND AND UNIX AND OPT_BUILD_PACKAGES)
   set(CPACK_COMPONENT_${COMPONENT_PREFIX_UPPER}DEV_DISPLAY_NAME "development files and examples")
   set(CPACK_COMPONENT_${COMPONENT_PREFIX_UPPER}DEV_DEPENDS ${COMPONENT_PREFIX}base libboost-thread-dev libboost-date-time-dev)
   
-  set(DEBIAN_BUILD_DEPENDS debhelper cmake python-dev libxml2-dev libboost-dev ffmpeg libpcre3-dev zlib1g-dev python-numpy "python-sympy (>=0.6.3)" desktop-file-utils libboost-filesystem-dev libboost-system-dev libboost-python-dev libboost-thread-dev libboost-date-time-dev)
+  set(DEBIAN_BUILD_DEPENDS debhelper cmake python-dev libxml2-dev libboost-dev ffmpeg libpcre3-dev zlib1g-dev python-numpy "python-sympy (>=0.6.3)" desktop-file-utils libboost-filesystem-dev libboost-system-dev libboost-python-dev libboost-thread-dev libboost-date-time-dev octave3.2-headers )
   # plugins
-  set(DEBIAN_BUILD_DEPENDS ${DEBIAN_BUILD_DEPENDS} libboost-iostreams-dev libboost-regex-dev libqt4-dev qt4-dev-tools libqhull-dev libavcodec-dev libavformat-dev libswscale-dev libsimage-dev libode-dev libsoqt4-dev)
-  set(CPACK_DEBIAN_BUILD_DEPENDS ${DEBIAN_BUILD_DEPENDS} libcoin60-dev octave3.2-headers)
-  set(CPACK_DEBIAN_BUILD_DEPENDS_NATTY ${DEBIAN_BUILD_DEPENDS} libcoin40-dev octave3.2-headers)
-  set(CPACK_DEBIAN_BUILD_DEPENDS_MAVERICK ${DEBIAN_BUILD_DEPENDS} libcoin40-dev octave3.2-headers)
-  set(CPACK_DEBIAN_BUILD_DEPENDS_LUCID ${DEBIAN_BUILD_DEPENDS} libcoin40-dev octave3.2-headers)
-  set(CPACK_DEBIAN_BUILD_DEPENDS_KARMIC ${DEBIAN_BUILD_DEPENDS} libcoin40-dev octave3.2-headers)
+  set(DEBIAN_BUILD_DEPENDS ${DEBIAN_BUILD_DEPENDS} libboost-iostreams-dev libboost-regex-dev libqt4-dev qt4-dev-tools libqhull-dev libavcodec-dev libavformat-dev libswscale-dev libsimage-dev libode-dev libsoqt4-dev "libcoin40-dev|libcoin60-dev")
   
   # debian
   set(CPACK_DEBIAN_PACKAGE_PRIORITY optional)

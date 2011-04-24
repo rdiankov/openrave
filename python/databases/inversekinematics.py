@@ -252,7 +252,7 @@ class InverseKinematicsModel(DatabaseGenerator):
 #             self.iksolver = RaveCreateIkSolver(self.env,self.manip.GetIKSolverName()+iksuffix)
         if self.iksolver is None:
             with self.env:
-                ikname = 'ikfast.%s.%s'%(self.manip.GetKinematicsStructureHash(),self.manip.GetName())
+                ikname = 'ikfast.%s.%s.%s'%(self.manip.GetKinematicsStructureHash(),str(self.iktype),self.manip.GetName())
                 iktype = self.ikfastproblem.SendCommand('AddIkLibrary %s %s'%(ikname,self.getfilename(True)))
                 if iktype is None:
                     if self.forceikfast:
