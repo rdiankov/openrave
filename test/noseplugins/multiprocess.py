@@ -106,7 +106,7 @@ from nose.core import TextTestRunner
 from nose import failure
 from nose import loader
 from nose.plugins.base import Plugin
-from nose.pyversion import bytes_
+#from nose.pyversion import bytes_
 from nose.result import TextTestResult
 from nose.suite import ContextSuite
 from nose.util import test_address
