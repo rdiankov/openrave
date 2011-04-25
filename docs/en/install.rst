@@ -19,7 +19,7 @@ Platforms
 
 .. code-block:: bash
    
-  sudo add-apt-repository ppa:openrave/releasae
+  sudo add-apt-repository ppa:openrave/release
   sudo apt-get update
   sudo apt-get install openrave
 
