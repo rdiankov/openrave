@@ -122,6 +122,13 @@ try:
 except ImportError:
     import StringIO
 
+if sys.version_info >= (3, 0):
+    def bytes_(s, encoding='utf8'):
+        return bytes(s, encoding)
+else:
+    def bytes_(s, encoding=None):
+        return str(s)
+
 # this is a list of plugin classes that will be checked for and created inside 
 # each worker process
 _instantiate_plugins = None
