@@ -78,15 +78,20 @@ Command-line
 openrave-hash.py
 ----------------
 
-Can query all the hashes openrave uses to manage robot descriptions::
+Queries information about OpenRAVE-loadable robots.
 
-  openrave-hash.py data/mug1.kinbody.xml
-  openrave.py --robothash robots/barrettsegway.robot.xml
+Can query all the hashes openrave uses to manage robot descriptions:
+
+.. code-block:: bash
+
+  openrave-robot.py data/mug1.kinbody.xml --hash body
+  openrave-robot.py robots/barrettsegway.robot.xml --hash robot
+  openrave-robot.py robots/barrettsegway.robot.xml --manipname=arm --hash kinematics
 
 Command-line
 ~~~~~~~~~~~~
 
-.. shell-block:: openrave-hash.py --help
+.. shell-block:: openrave-robot.py --help
 
 openrave
 --------

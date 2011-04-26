@@ -964,13 +964,14 @@ public:
         _pbody->SetDOFValues(values,true);
     }
 
-    void SubtractDOFValues(object ovalues1, object ovalues2)
+    object SubtractDOFValues(object ovalues0, object ovalues1)
     {
+        vector<dReal> values0 = ExtractArray<dReal>(ovalues0);
         vector<dReal> values1 = ExtractArray<dReal>(ovalues1);
-        vector<dReal> values2 = ExtractArray<dReal>(ovalues2);
+        BOOST_ASSERT((int)values0.size() == GetDOF() );
         BOOST_ASSERT((int)values1.size() == GetDOF() );
-        BOOST_ASSERT((int)values2.size() == GetDOF() );
-        _pbody->SubtractDOFValues(values1,values2);
+        _pbody->SubtractDOFValues(values0,values1);
+        return toPyArray(values0);
     }
 
     void SetJointTorques(object otorques, bool bAdd)
@@ -2056,6 +2057,16 @@ public:
         return toPyArray(values);
     }
 
+    object GetActiveDOFWeights() const
+    {
+        if( _probot->GetActiveDOF() == 0 ) {
+            return numeric::array(boost::python::list());
+        }
+        vector<dReal> weights;
+        _probot->GetActiveDOFWeights(weights);
+        return toPyArray(weights);
+    }
+
     void SetActiveDOFVelocities(object velocities)
     {
         _probot->SetActiveDOFVelocities(ExtractArray<dReal>(velocities));
@@ -2092,6 +2103,16 @@ public:
 
     object GetActiveJointIndices() { RAVELOG_WARN("GetActiveJointIndices deprecated. Use GetActiveDOFIndices\n"); return toPyArray(_probot->GetActiveDOFIndices()); }
     object GetActiveDOFIndices() { return toPyArray(_probot->GetActiveDOFIndices()); }
+
+    object SubtractActiveDOFValues(object ovalues0, object ovalues1)
+    {
+        vector<dReal> values0 = ExtractArray<dReal>(ovalues0);
+        vector<dReal> values1 = ExtractArray<dReal>(ovalues1);
+        BOOST_ASSERT((int)values0.size() == GetActiveDOF() );
+        BOOST_ASSERT((int)values1.size() == GetActiveDOF() );
+        _probot->SubtractActiveDOFValues(values0,values1);
+        return toPyArray(values0);
+    }
 
     boost::multi_array<dReal,2> CalculateActiveJacobian(int index, object offset) const
     {
@@ -3962,7 +3983,7 @@ In python, the syntax is::\n\n\
             .def("SetJointValues",psetdofvalues2,args("values","dofindices"), DOXY_FN(KinBody,SetDOFValues "const std::vector; bool"))
             .def("SetDOFValues",psetdofvalues1,args("values"), DOXY_FN(KinBody,SetDOFValues "const std::vector; bool"))
             .def("SetDOFValues",psetdofvalues2,args("values","dofindices"), DOXY_FN(KinBody,SetDOFValues "const std::vector; bool"))
-            .def("SubtractDOFValues",&PyKinBody::SubtractDOFValues,args("values1","values2"), DOXY_FN(KinBody,SubtractDOFValues))
+            .def("SubtractDOFValues",&PyKinBody::SubtractDOFValues,args("values0","values1"), DOXY_FN(KinBody,SubtractDOFValues))
             .def("SetJointTorques",&PyKinBody::SetJointTorques,args("torques","add"), DOXY_FN(KinBody,SetJointTorques))
             .def("SetTransformWithJointValues",&PyKinBody::SetTransformWithDOFValues,args("transform","values"), DOXY_FN(KinBody,SetDOFValues "const std::vector; const Transform; bool"))
             .def("SetTransformWithDOFValues",&PyKinBody::SetTransformWithDOFValues,args("transform","values"), DOXY_FN(KinBody,SetDOFValues "const std::vector; const Transform; bool"))
@@ -4295,11 +4316,13 @@ In python, the syntax is::\n\n\
             .def("GetAffineRotationQuatWeights",&PyRobotBase::GetAffineRotationQuatWeights, DOXY_FN(RobotBase,GetAffineRotationQuatWeights))
             .def("SetActiveDOFValues",&PyRobotBase::SetActiveDOFValues,args("values"), DOXY_FN(RobotBase,SetActiveDOFValues))
             .def("GetActiveDOFValues",&PyRobotBase::GetActiveDOFValues, DOXY_FN(RobotBase,GetActiveDOFValues))
+            .def("GetActiveDOFWeights",&PyRobotBase::GetActiveDOFValues, DOXY_FN(RobotBase,GetActiveDOFWeights))
             .def("SetActiveDOFVelocities",&PyRobotBase::SetActiveDOFVelocities, DOXY_FN(RobotBase,SetActiveDOFVelocities))
             .def("GetActiveDOFVelocities",&PyRobotBase::GetActiveDOFVelocities, DOXY_FN(RobotBase,GetActiveDOFVelocities))
             .def("GetActiveDOFLimits",&PyRobotBase::GetActiveDOFLimits, DOXY_FN(RobotBase,GetActiveDOFLimits))
             .def("GetActiveJointIndices",&PyRobotBase::GetActiveJointIndices)
             .def("GetActiveDOFIndices",&PyRobotBase::GetActiveDOFIndices, DOXY_FN(RobotBase,GetActiveDOFIndices))
+            .def("SubtractActiveDOFValues",&PyRobotBase::SubtractActiveDOFValues, args("values0","values1"), DOXY_FN(RobotBase,SubtractActiveDOFValues))
             .def("CalculateActiveJacobian",&PyRobotBase::CalculateActiveJacobian,args("linkindex","offset"), DOXY_FN(RobotBase,CalculateActiveJacobian "int; const Vector; boost::multi_array"))
             .def("CalculateActiveRotationJacobian",&PyRobotBase::CalculateActiveRotationJacobian,args("linkindex","quat"), DOXY_FN(RobotBase,CalculateActiveRotationJacobian "int; const Vector; boost::multi_array"))
             .def("CalculateActiveAngularVelocityJacobian",&PyRobotBase::CalculateActiveAngularVelocityJacobian,args("linkindex"), DOXY_FN(RobotBase,CalculateActiveAngularVelocityJacobian "int; boost::multi_array"))
