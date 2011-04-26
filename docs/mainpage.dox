@@ -4,6 +4,8 @@
 
 \mainpage Open Robotics Automation Virtual Environment
 
+Version: $projectnumber
+
 \~english
 
 This document covers the core %OpenRAVE concepts, the C++ API, C++ examples, and C++ usage of the plugins offered in the base

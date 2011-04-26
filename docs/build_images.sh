@@ -8,3 +8,7 @@ ps2pdf -dEPSCrop images/openrave_architecture.eps images/openrave_architecture.p
 dia -e images/openrave_architecture_jp.eps images/openrave_architecture_jp.dia
 dia -e images/openrave_architecture_jp.png -s 700 images/openrave_architecture_jp.dia
 ps2pdf -dEPSCrop images/openrave_architecture_jp.eps images/openrave_architecture_jp.pdf
+
+cp -f ../resources/openrave_banner.png _static/
+cp -f ../resources/openrave_banner_dark.png build/en/coreapihtml/
+cp -f ../resources/openrave_banner_dark.png build/ja/coreapihtml/
