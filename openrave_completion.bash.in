@@ -81,30 +81,5 @@ function _complete_openravepy {
     fi
 }
 
-function _complete_openravepy {
-    cur="${COMP_WORDS[COMP_CWORD]}"
-    prev="${COMP_WORDS[COMP_CWORD-1]}"
-    case "${prev}" in
-        --robotmanipulators)
-            COMPREPLY=($(compgen -f -X "!*.+(dae|zae|xml)" -- ${cur}))
-            return 0
-            ;;
-        --robotsensors)
-            COMPREPLY=($(compgen -f -X "!*.+(dae|zae|xml)" -- ${cur}))
-            return 0
-            ;;
-        *)
-            ;;
-    esac
-
-    # not processing a current option, so offer all the options again
-    opts="--manipname --sensorname --robothash --kinematics"
-    COMPREPLY=($(compgen -W "$opts" -- ${cur}))
-    if [[ ${cur} != -* ]] ; then
-        # add in xml and dae and zae files
-        COMPREPLY=($(compgen -f -X "!*.+(dae|zae|xml)" -- ${cur}) ${COMPREPLY[@]})
-    fi
-}
-
 complete -F "_complete_openravepy" -o filenames -o plusdirs "openrave.py"
 complete -F "_complete_openravepy" -o filenames -o plusdirs "openrave@OPENRAVE_BIN_SUFFIX@.py"

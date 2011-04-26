@@ -37,13 +37,13 @@ except ImportError:
         sys.path.append(openravepy_path[0].strip())
     except OSError:
         import os, platform
+        from distutils.sysconfig import get_python_lib
         if sys.platform.startswith('win') or platform.system().lower() == 'windows':
             # in windows so add the default openravepy installation
-            rootsharedir = "C:\\Program Files\\openrave\\share"
-            allnames = os.listdir(rootsharedir)
-            possibledirs = [os.path.join(rootsharedir,name) for name in allnames if name.startswith('openrave')]
+            allnames = os.listdir('C:\\Program Files')
+            possibledirs = [os.path.join('C:\\Program Files',name) for name in allnames if name.startswith('openrave')]
             if len(possibledirs) > 0:
-                sys.path.append(possibledirs[0])
+                sys.path.append(get_python_lib(1,prefix=possibledirs[0]))
     from openravepy import *
 
 def vararg_callback(option, opt_str, value, parser):
