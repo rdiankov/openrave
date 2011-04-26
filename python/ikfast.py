@@ -1370,6 +1370,9 @@ class IKFastSolver(AutoReloader):
         return sol.score
 
     def checkSolvability(self,AllEquations,checkvars,othervars):
+        pass
+
+    def checkSolvabilityReal(self,AllEquations,checkvars,othervars):
         """returns true if there are enough equations to solve for checkvars
         """
         subs = []
@@ -1397,8 +1400,8 @@ class IKFastSolver(AutoReloader):
             if numhigherpowers > 0:
                 log.info('checkSolvability has %d higher powers, returning solvable if > 6'%numhigherpowers)
                 if numhigherpowers > 6:
-                    return
-
+                    found = True
+                    break
             for var in checkvars:
                 varsym = self.Variable(var)
                 if self.isHinge(var.name):
@@ -1408,13 +1411,17 @@ class IKFastSolver(AutoReloader):
             setusedsymbols = set(usedsymbols)
             if any([len(setusedsymbols.intersection(self.Variable(var).vars)) == 0 for var in checkvars]):
                 continue
+            
             try:
                 sol=solve_poly_system(eqs)
                 if sol is not None and len(sol) > 0 and len(sol[0]) == len(usedsymbols):
-                    return
+                    found = True
+                    break
             except:
                 pass
-        raise self.IKFeasibilityError(AllEquations,checkvars)
+            
+        if not found:
+            raise self.IKFeasibilityError(AllEquations,checkvars)
                 
     def writeIkSolver(self,chaintree,lang=None):
         """write the ast into a specific langauge, prioritize c++

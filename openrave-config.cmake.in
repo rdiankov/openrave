@@ -10,7 +10,8 @@
 #  OpenRAVE_DIR - The preferred installation prefix for searching for OpenRAVE. Set by the user.
 #
 # OpenRAVE_ROOT_DIR - the root directory where the installation can be found
-# OpenRAVE_CXXFLAGS - extra flags
+# OpenRAVE_CXX_FLAGS - extra flags for compilation
+# OpenRAVE_LINK_FLAGS - extra flags for linking
 # OpenRAVE_INCLUDE_DIRS - include directories
 # OpenRAVE_LIBRARY_DIRS - link directories
 # OpenRAVE_LIBRARIES - libraries to link plugins with
@@ -35,13 +36,14 @@ get_filename_component(_PREFIX "${_PREFIX}" PATH)
 get_filename_component(_PREFIX "${_PREFIX}" PATH)
 get_filename_component(OpenRAVE_ROOT_DIR "${_PREFIX}" PATH)
 
-set( OpenRAVE_CXXFLAGS "-DOPENRAVE_DLL -DOPENRAVE_CORE_DLL" )
+set( OpenRAVE_CXX_FLAGS "-DOPENRAVE_DLL -DOPENRAVE_CORE_DLL" )
 if( WIN32 )
-  set( OpenRAVE_CXXFLAGS "${OpenRAVE_CXXFLAGS} -DBOOST_ALL_DYN_LINK -DBOOST_ALL_NO_LIB")
+  set( OpenRAVE_CXX_FLAGS "${OpenRAVE_CXX_FLAGS} -DBOOST_ALL_DYN_LINK -DBOOST_ALL_NO_LIB")
 endif()
 if( MSVC )
-  set( OpenRAVE_CXXFLAGS "${OpenRAVE_CXXFLAGS} /EHc-")
+  set( OpenRAVE_CXX_FLAGS "${OpenRAVE_CXX_FLAGS} /EHc-")
 endif()
+set( OpenRAVE_CXXFLAGS "${OpenRAVE_CXX_FLAGS)") # deprecated
 set( OpenRAVE_LINK_FLAGS "" )
 set( OpenRAVE_INCLUDE_DIRS "${OpenRAVE_ROOT_DIR}/include/openrave-@OPENRAVE_VERSION_MAJOR@.@OPENRAVE_VERSION_MINOR@")
 set( OpenRAVE_LIBRARY_DIRS "${OpenRAVE_ROOT_DIR}/lib")
@@ -67,6 +69,7 @@ endif( WIN32 )
 MARK_AS_ADVANCED(
   OpenRAVE_ROOT_DIR
   OpenRAVE_CXXFLAGS
+  OpenRAVE_CXX_FLAGS
   OpenRAVE_LINK_FLAGS
   OpenRAVE_INCLUDE_DIRS
   OpenRAVE_LIBRARIES

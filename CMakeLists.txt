@@ -41,22 +41,14 @@ option(OPT_MATLAB "Build matlab bindings" ON)
 option(OPT_STATIC "Build static libraries" OFF)
 option(OPT_COLLADA "Build with COLLADA support" ON)
 option(OPT_BUILD_PACKAGES "Set to ON to generate CPack configuration files and packaging targets" OFF)
-option(OPT_BIN_SUFFIX "Add the MAJOR.MINOR openrave version suffixes to all executable installed files" OFF)
 option(OPT_FLANN "Temporary switch to force building of flann" OFF)
 
-# Additional CMake modules for 3rd party library checks reside here
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/modules-cmake")
 set(COMPONENT_PREFIX openrave${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}-)
 string(TOUPPER ${COMPONENT_PREFIX} COMPONENT_PREFIX_UPPER)
 set(CPACK_COMPONENTS_ALL ${COMPONENT_PREFIX}base ${COMPONENT_PREFIX}dev ${COMPONENT_PREFIX}data)
 
 message(STATUS "detected system processor: ${CMAKE_SYSTEM_PROCESSOR}")
-
-if( OPT_BIN_SUFFIX )
-  set(OPENRAVE_BIN_SUFFIX ${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR})
-else()
-  set(OPENRAVE_BIN_SUFFIX)
-endif()
 
 include(CheckIncludeFile)
 include(CheckIncludeFileCXX)
@@ -130,6 +122,13 @@ set(OPENRAVE_PLUGINS_INSTALL_DIR "${OPENRAVE_SHARE_DIR}/plugins" CACHE PATH "Ope
 set(OPENRAVEPY_INSTALL_DIR "${OPENRAVE_PYTHON_INSTALL_DIR}/openravepy" CACHE PATH "OpenRAVE Python bindings (openravepy) installation directory")
 set(OPENRAVE_OCTAVE_INSTALL_DIR "${OPENRAVE_SHARE_DIR}/octave" CACHE PATH "OpenRAVE Octave bindings installation directory")
 set(OPENRAVE_MATLAB_INSTALL_DIR "${OPENRAVE_SHARE_DIR}/matlab" CACHE PATH "OpenRAVE MATLAB bindings installation directory")
+
+set(OPENRAVE_BIN_SUFFIX ${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR} CACHE STRING "Add the MAJOR.MINOR openrave version suffixes to all executable installed files")
+
+if( UNIX OR CYGWIN)
+  # cache has to be STRING instead of PATH for path to remain relative
+  set(BASH_COMPLETION_DIR ${OPENRAVE_SHARE_DIR} CACHE STRING "Directory where bash completion files will be installed in, on linux it is /etc/bash_completion.d")# Additional CMake modules for 3rd party library checks reside here
+endif()
 
 message(STATUS "installing to ${CMAKE_INSTALL_PREFIX}, python subdir is ${OPENRAVE_PYTHON_INSTALL_DIR}, program suffix is '${OPENRAVE_BIN_SUFFIX}'")
 
@@ -669,9 +668,8 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/openrave-config-version.cmake.in" "$
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/openrave-config.cmake" "${CMAKE_CURRENT_BINARY_DIR}/openrave-config-version.cmake" DESTINATION "lib${LIB_SUFFIX}/cmake/openrave-${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}" COMPONENT ${COMPONENT_PREFIX}dev)
 
 if( UNIX OR CYGWIN)
-  # cache has to be STRING instead of PATH for path to remain relative
-  set(BASH_COMPLETION_DIR ${OPENRAVE_SHARE_DIR} CACHE STRING "Directory where bash completion files will be installed in, on linux it is /etc/bash_completion.d")
-  install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/openravebash DESTINATION ${BASH_COMPLETION_DIR} COMPONENT ${COMPONENT_PREFIX}base)
+  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/openrave_completion.bash.in" "${CMAKE_CURRENT_BINARY_DIR}/openrave_completion.bash" @ONLY IMMEDIATE)
+  install(FILES "${CMAKE_CURRENT_BINARY_DIR}/openrave_completion.bash" DESTINATION ${BASH_COMPLETION_DIR} COMPONENT ${COMPONENT_PREFIX}base )
   configure_file("${CMAKE_CURRENT_SOURCE_DIR}/openrave.pc.in" "${CMAKE_CURRENT_BINARY_DIR}/openrave-${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}.pc" @ONLY IMMEDIATE)
   install(FILES "${CMAKE_CURRENT_BINARY_DIR}/openrave-${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}.pc" DESTINATION lib${LIB_SUFFIX}/pkgconfig COMPONENT ${COMPONENT_PREFIX}dev)
 endif()
@@ -709,9 +707,9 @@ if(CMAKE_CPACK_COMMAND AND UNIX AND OPT_BUILD_PACKAGES)
   set(CPACK_COMPONENT_${COMPONENT_PREFIX_UPPER}DEV_DISPLAY_NAME "development files and examples")
   set(CPACK_COMPONENT_${COMPONENT_PREFIX_UPPER}DEV_DEPENDS ${COMPONENT_PREFIX}base libboost-thread-dev libboost-date-time-dev)
   
-  set(CPACK_DEBIAN_BUILD_DEPENDS debhelper cmake python-dev libxml2-dev libboost-dev ffmpeg libpcre3-dev zlib1g-dev python-numpy "python-sympy (>=0.6.3)" desktop-file-utils libboost-filesystem-dev libboost-system-dev libboost-python-dev libboost-thread-dev libboost-date-time-dev octave3.2-headers )
+  set(CPACK_DEBIAN_BUILD_DEPENDS debhelper cmake python-dev libxml2-dev libboost-dev ffmpeg libpcre3-dev zlib1g-dev python-numpy "python-sympy (>=0.6.3)" desktop-file-utils libboost-filesystem-dev libboost-system-dev libboost-python-dev libboost-thread-dev libboost-date-time-dev octave3.2-headers)
   # plugins
-  set(CPACK_DEBIAN_BUILD_DEPENDS ${CPACK_DEBIAN_BUILD_DEPENDS} libboost-iostreams-dev libboost-regex-dev libqt4-dev qt4-dev-tools libqhull-dev libavcodec-dev libavformat-dev libswscale-dev libsimage-dev libode-dev libsoqt4-dev)
+  set(CPACK_DEBIAN_BUILD_DEPENDS ${CPACK_DEBIAN_BUILD_DEPENDS} libboost-iostreams-dev libboost-regex-dev libqt4-dev qt4-dev-tools libqhull-dev libavcodec-dev libavformat-dev libswscale-dev libsimage-dev libode-dev libsoqt4-dev libassimp-dev libbullet-dev)
 
   # debian
   set(CPACK_DEBIAN_PACKAGE_PRIORITY optional)

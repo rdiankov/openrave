@@ -3,9 +3,9 @@
 Installing OpenRAVE
 ===================
 
-:ref:`release_organization` - detailed information about releases, versioning, and updates.
-
 :ref:`changelog`
+
+:ref:`release_organization` - detailed information about releases, versioning, and updates.
 
 Platforms
 ---------
