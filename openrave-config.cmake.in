@@ -62,7 +62,7 @@ if( WIN32 )
     set( OpenRAVE_LIBRARY_DIRS "${OpenRAVE_LIBRARY_DIRS}" ${Boost_LIBRARY_DIRS})
     set( OpenRAVE_CORE_LIBRARIES ${OpenRAVE_CORE_LIBRARIES} ${Boost_THREAD_LIBRARY} ${Boost_DATE_TIME_LIBRARY})
   else(Boost_VERSION AND NOT "${Boost_VERSION}" STREQUAL "0")
-    message(WARNING "Failed to find Boost 1.44 necessary OpenRAVE")
+    message(WARNING "Failed to find Boost ${OpenRAVE_Boost_VERSION} necessary OpenRAVE")
   endif(Boost_VERSION AND NOT "${Boost_VERSION}" STREQUAL "0")
 endif( WIN32 )
 

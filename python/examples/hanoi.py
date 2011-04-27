@@ -44,6 +44,13 @@ class HanoiPuzzle:
         self.ikmodel = databases.inversekinematics.InverseKinematicsModel(robot=robot,iktype=IkParameterization.Type.Transform6D)
         if not self.ikmodel.load():
             self.ikmodel.autogenerate() # autogenerate if one doesn't exist
+        self.lmodel = databases.linkstatistics.LinkStatisticsModel(self.robot)
+        if self.lmodel.load():
+            self.lmodel.setRobotWeights()
+            self.lmodel.setRobotResolutions(xyzdelta=0.003) # the pegs are really thin
+            print 'robot resolutions: ',robot.GetDOFResolutions()
+            print 'robot weights: ',robot.GetDOFWeights()
+            
         with self.env: # lock the environment
             self.basemanip = interfaces.BaseManipulation(self.robot)
             self.taskmanip = interfaces.TaskManipulation(self.robot)
