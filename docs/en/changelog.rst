@@ -17,7 +17,7 @@ Core
 
 * added openrave-createplugin.py which allows new users to easily setup the plugin directories and get something running. also works on creating executables. added bash completion for it.
 
-* changed way of searching for collada to prepare for 2.3.1 release.
+* changed way of searching for collada-dom to prepare for its 2.3.1 release.
 
 * small changes to the way symlinks are handled on install/uninstall
 

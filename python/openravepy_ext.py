@@ -552,6 +552,8 @@ class OpenRAVEGlobalArguments:
     def parseAndCreate(options,createenv=openravepy.Environment,**kwargs):
         """Parse all options and create the global Environment. The left over arguments are passed to the parse functions"""
         openravepy.RaveInitialize(True)
+        for plugin in options._loadplugins:
+            openravepy.RaveLoadPlugin(plugin)
         OpenRAVEGlobalArguments.parseGlobal(options,**kwargs)
         if createenv is None:
             return None

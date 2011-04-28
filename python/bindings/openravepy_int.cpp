@@ -2124,7 +2124,7 @@ public:
     boost::multi_array<dReal,2> CalculateActiveRotationJacobian(int index, object q) const
     {
         boost::multi_array<dReal,2> mjacobian;
-        _probot->CalculateActiveJacobian(index,ExtractVector4(q),mjacobian);
+        _probot->CalculateActiveRotationJacobian(index,ExtractVector4(q),mjacobian);
         return mjacobian;
     }
 

@@ -452,18 +452,18 @@ endif ()
 
 link_directories(${OPENRAVE_LINK_DIRS})
 
-find_package(ZLIB)
-if( NOT ZLIB_FOUND )
-  message(STATUS "compiling zlib from souces")
-  # compile from sources
-  add_subdirectory(3rdparty/zlib)
-  set(ZLIB_FOUND 1)
-  set(ZLIB_LIBRARIES zlib)
-  set(ZLIB_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/zlib)
-endif()
-
 if( OPT_COLLADA )
   find_package(COLLADA_DOM 2.3 COMPONENTS 1.5)
+
+  find_package(ZLIB)
+  if( NOT ZLIB_FOUND )
+    message(STATUS "compiling zlib from souces")
+    # compile from sources
+    add_subdirectory(3rdparty/zlib)
+    set(ZLIB_FOUND 1)
+    set(ZLIB_LIBRARIES zlib)
+    set(ZLIB_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/zlib)
+  endif()
 
   pkg_check_modules(minizip minizip)
   if(minizip_FOUND)
