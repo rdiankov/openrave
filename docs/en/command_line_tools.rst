@@ -3,7 +3,7 @@
 Command Line Tools
 ==================
 
-.. _tool-openravepy
+.. _tool-openravepy:
 
 openrave.py
 -----------
@@ -77,7 +77,7 @@ Command-line
 
 .. shell-block:: openrave.py --help
 
-.. _tool-openrave-robot
+.. _tool-openrave-robot:
 
 openrave-robot.py
 -----------------
@@ -97,12 +97,14 @@ Command-line
 
 .. shell-block:: openrave-robot.py --help
 
-.. _tool-openrave-createplugin
+.. _tool-openrave-createplugin:
 
 openrave-createplugin.py
 ------------------------
 
-Sets up a project directory and initial files for creating OpenRAVE plugins and executables. For example:
+Sets up a project directory and initial files for creating OpenRAVE plugins and executables.
+
+This command line will create a plugin that offers a **MyNewProblem** :class:`.ProblemInstance`:
 
 .. code-block:: bash
 
@@ -113,7 +115,7 @@ Command-line
 
 .. shell-block:: openrave-createplugin.py --help
 
-.. _tool-openrave
+.. _tool-openrave:
 
 openrave
 --------
@@ -127,7 +129,7 @@ Command-line
 
 .. shell-block:: openrave --help
 
-.. _tool-openrave-config
+.. _tool-openrave-config:
 
 openrave-config
 ---------------

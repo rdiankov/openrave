@@ -8,10 +8,11 @@ Getting Started Tutorials
    
    tutorials/openravepy_beginning
    tutorials/openravepy_examples
+   tutorials/writing_plugins
    command_line_tools
    tutorials/openravepy_advanced
    environment_variables
-   writing_plugins
 
+.. htmlonly::
    - `Writing and Using Controllers in C++ <../coreapihtml/arch_controller.html>`_
    - `Octave/MATLAB`_ Scripting

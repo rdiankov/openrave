@@ -48,7 +48,7 @@ if __name__ == "__main__":
     (options, args) = parser.parse_args()
     plugindir = args[0]
     pluginname = os.path.split(plugindir)[1]
-    mkdir_recursive(plugindir)
+    iswindows = sys.platform.startswith('win') or platform.system().lower() == 'windows'
 
     args = {'pluginname':pluginname}
 
@@ -177,7 +177,8 @@ clean:
   <robot file="../robots/myrobot.robot.xml"/>
 </environment>
 """
-    if sys.platform.startswith('win') or platform.system().lower() == 'windows':
+
+    if iswindows:
         README = """Use your favorite generator. For example:
 
 mkdir build
@@ -193,9 +194,11 @@ make
 python testplugin.py
 """
 
+    mkdir_recursive(plugindir)
     open(os.path.join(plugindir,pluginname.lower()+'.cpp'),'w').write(code_cpp)
     open(os.path.join(plugindir,'CMakeLists.txt'),'w').write(CMakeLists_txt)
-    open(os.path.join(plugindir,'Makefile'),'w').write(Makefile)
+    if not iswindows:
+        open(os.path.join(plugindir,'Makefile'),'w').write(Makefile)
     mkdir_recursive(os.path.join(plugindir,'scenes'))
     open(os.path.join(plugindir,'scenes','myscene.env.xml'),'w').write(scene_xml)
     mkdir_recursive(os.path.join(plugindir,'robots'))

@@ -74,12 +74,12 @@ while test $# -gt 0; do
       echo @CMAKE_INSTALL_PREFIX@/@OPENRAVE_SHARE_DIR@
       ;;
     --usage)
-      echo "${usage}" 1>&2
-      exit 1
+      echo "${usage}"
+      exit 0
       ;;
     --help)
-      echo "${usage}" 1>&2
-      exit 1
+      echo "${usage}"
+      exit 0
       ;;
     *)
       echo "${usage}" 1>&2
