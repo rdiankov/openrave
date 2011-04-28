@@ -3,6 +3,29 @@
 ChangeLog
 #########
 
+Version 0.3.2
+=============
+
+Subversion Revision: **Unreleased**
+
+Initial Release: **Unreleased**
+
+Core
+----
+
+* added openrave-robot.py which allows introspection into robot files. This deprecates openrave-hash.py. added bash completion for it.
+
+* added openrave-createplugin.py which allows new users to easily setup the plugin directories and get something running. also works on creating executables. added bash completion for it.
+
+* changed way of searching for collada to prepare for 2.3.1 release.
+
+* small changes to the way symlinks are handled on install/uninstall
+
+Testing
+-------
+
+* fixed bugs in multiprocess plugin
+
 Version 0.3.1
 =============
 

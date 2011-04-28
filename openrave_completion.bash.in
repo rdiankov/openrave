@@ -61,7 +61,7 @@ function _complete_openravepy {
     esac
 
     # not processing a current option, so offer all the options again
-    opts="--loadplugin --collision --physics --viewer --server --serverport --level --ipython --pythoncmd --listinterfaces --listplugins  --listdatabases --listexamples"
+    opts="--loadplugin --collision --physics --viewer --server --serverport --level --ipython --pythoncmd --listinterfaces --listplugins  --listdatabases --listexamples --help"
     if [[ $COMP_CWORD == 1 ]]; then
         # these options transfer the args to another program
         opts="$opts --database --example"
@@ -116,7 +116,7 @@ function _complete_openrave_robotpy {
     esac
 
     # not processing a current option, so offer all the options again
-    opts="--manipname --sensorname --hash --info --list"
+    opts="--manipname --sensorname --hash --info --list --help"
     COMPREPLY=($(compgen -W "$opts" -- ${cur}))
     if [[ ${cur} != -* ]] ; then
         # add in xml and dae and zae files
@@ -124,7 +124,15 @@ function _complete_openrave_robotpy {
     fi
 }
 
+function _complete_openrave_createpluginpy {
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    prev="${COMP_WORDS[COMP_CWORD-1]}"
+    opts="--usecore --planner --robot --sensorsystem --controller --probleminstance --iksolver --kinbody --physicsengine --sensor --collisionchecker --trajectory --help"
+    COMPREPLY=($(compgen -W "$opts" -- ${cur}))
+}
 complete -F "_complete_openravepy" -o filenames -o plusdirs "openrave.py"
 complete -F "_complete_openrave_robotpy" -o filenames -o plusdirs "openrave-robot.py"
+complete -F "_complete_openrave_createpluginpy" "openrave-createplugin.py"
 complete -F "_complete_openravepy" -o filenames -o plusdirs "openrave@OPENRAVE_BIN_SUFFIX@.py"
 complete -F "_complete_openrave_robotpy" -o filenames -o plusdirs "openrave@OPENRAVE_BIN_SUFFIX@-robot.py"
+complete -F "_complete_openrave_createpluginpy" "openrave@OPENRAVE_BIN_SUFFIX@-createplugin.py"

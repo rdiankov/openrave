@@ -200,7 +200,7 @@ class RaveGlobal : private boost::noncopyable, public boost::enable_shared_from_
         _mapinterfacenames[PT_SensorSystem] = "sensorsystem";
         _mapinterfacenames[PT_Controller] = "controller";
         _mapinterfacenames[PT_ProblemInstance] = "probleminstance";
-        _mapinterfacenames[PT_InverseKinematicsSolver] = "inversekinematicssolver";
+        _mapinterfacenames[PT_IkSolver] = "iksolver";
         _mapinterfacenames[PT_KinBody] = "kinbody";
         _mapinterfacenames[PT_PhysicsEngine] = "physicsengine";
         _mapinterfacenames[PT_Sensor] = "sensor";
@@ -596,7 +596,12 @@ ControllerBasePtr RaveCreateController(EnvironmentBasePtr penv, const std::strin
 
 ProblemInstancePtr RaveCreateProblem(EnvironmentBasePtr penv, const std::string& name)
 {
-    return RaveGlobal::instance()->GetDatabase()->CreateProblem(penv, name);
+    return RaveGlobal::instance()->GetDatabase()->CreateProblemInstance(penv, name);
+}
+
+ProblemInstancePtr RaveCreateProblemInstance(EnvironmentBasePtr penv, const std::string& name)
+{
+    return RaveGlobal::instance()->GetDatabase()->CreateProblemInstance(penv, name);
 }
 
 IkSolverBasePtr RaveCreateIkSolver(EnvironmentBasePtr penv, const std::string& name)

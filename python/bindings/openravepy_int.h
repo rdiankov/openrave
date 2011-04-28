@@ -354,7 +354,7 @@ namespace openravepy
     PyPlannerBasePtr RaveCreatePlanner(PyEnvironmentBasePtr pyenv, const std::string& name);
     PySensorSystemBasePtr RaveCreateSensorSystem(PyEnvironmentBasePtr pyenv, const std::string& name);
     PyControllerBasePtr RaveCreateController(PyEnvironmentBasePtr pyenv, const std::string& name);
-    PyProblemInstancePtr RaveCreateProblem(PyEnvironmentBasePtr pyenv, const std::string& name);
+    PyProblemInstancePtr RaveCreateProblemInstance(PyEnvironmentBasePtr pyenv, const std::string& name);
     PyIkSolverBasePtr RaveCreateIkSolver(PyEnvironmentBasePtr pyenv, const std::string& name);
     PyPhysicsEngineBasePtr RaveCreatePhysicsEngine(PyEnvironmentBasePtr pyenv, const std::string& name);
     PySensorBasePtr RaveCreateSensor(PyEnvironmentBasePtr pyenv, const std::string& name);

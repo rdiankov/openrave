@@ -142,7 +142,7 @@ void GetPluginAttributesValidated(PLUGININFO& info)
     info.interfacenames[PT_Controller].push_back("CustomController");
 }
 
-RAVE_PLUGIN_API void DestroyPlugin()
+OPENRAVE_PLUGIN_API void DestroyPlugin()
 {
     s_RegisteredReader.reset(); // unregister the reader
 }

@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2011 Rosen Diankov (rosen.diankov@gmail.com)
+// Copyright (C) 2006-2011 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -591,6 +591,7 @@ enum InterfaceType
     PT_SensorSystem=3, ///< describes \ref SensorSystemBase interface
     PT_Controller=4, ///< describes \ref ControllerBase interface
     PT_ProblemInstance=5, ///< describes \ref ProblemInstance interface
+    PT_IkSolver=6, ///< describes \ref IkSolverBase interface
     PT_InverseKinematicsSolver=6, ///< describes \ref IkSolverBase interface
     PT_KinBody=7, ///< describes \ref KinBody
     PT_PhysicsEngine=8, ///< describes \ref PhysicsEngineBase
@@ -1186,6 +1187,7 @@ OPENRAVE_API PlannerBasePtr RaveCreatePlanner(EnvironmentBasePtr penv, const std
 OPENRAVE_API SensorSystemBasePtr RaveCreateSensorSystem(EnvironmentBasePtr penv, const std::string& name);
 OPENRAVE_API ControllerBasePtr RaveCreateController(EnvironmentBasePtr penv, const std::string& name);
 OPENRAVE_API ProblemInstancePtr RaveCreateProblem(EnvironmentBasePtr penv, const std::string& name);
+OPENRAVE_API ProblemInstancePtr RaveCreateProblemInstance(EnvironmentBasePtr penv, const std::string& name);
 OPENRAVE_API IkSolverBasePtr RaveCreateIkSolver(EnvironmentBasePtr penv, const std::string& name);
 OPENRAVE_API PhysicsEngineBasePtr RaveCreatePhysicsEngine(EnvironmentBasePtr penv, const std::string& name);
 OPENRAVE_API SensorBasePtr RaveCreateSensor(EnvironmentBasePtr penv, const std::string& name);

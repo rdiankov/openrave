@@ -2583,7 +2583,7 @@ protected:
         case PT_SensorSystem: return PySensorSystemBasePtr(new PySensorSystemBase(boost::static_pointer_cast<SensorSystemBase>(pinterface),shared_from_this()));
         case PT_Controller: return PyControllerBasePtr(new PyControllerBase(boost::static_pointer_cast<ControllerBase>(pinterface),shared_from_this()));
         case PT_ProblemInstance: return PyProblemInstancePtr(new PyProblemInstance(boost::static_pointer_cast<ProblemInstance>(pinterface),shared_from_this()));
-        case PT_InverseKinematicsSolver: return PyIkSolverBasePtr(new PyIkSolverBase(boost::static_pointer_cast<IkSolverBase>(pinterface),shared_from_this()));
+        case PT_IkSolver: return PyIkSolverBasePtr(new PyIkSolverBase(boost::static_pointer_cast<IkSolverBase>(pinterface),shared_from_this()));
         case PT_KinBody: return PyKinBodyPtr(new PyKinBody(boost::static_pointer_cast<KinBody>(pinterface),shared_from_this()));
         case PT_PhysicsEngine: return PyPhysicsEngineBasePtr(new PyPhysicsEngineBase(boost::static_pointer_cast<PhysicsEngineBase>(pinterface),shared_from_this()));
         case PT_Sensor: return PySensorBasePtr(new PySensorBase(boost::static_pointer_cast<SensorBase>(pinterface),shared_from_this()));
@@ -2723,7 +2723,7 @@ public:
     PyProblemInstancePtr CreateProblem(const string& name)
     {
         RAVELOG_WARN("Environment.CreateProblem deprecated, use RaveCreateProblem\n");
-        return openravepy::RaveCreateProblem(shared_from_this(),name);
+        return openravepy::RaveCreateProblemInstance(shared_from_this(),name);
     }
     PyIkSolverBasePtr CreateIkSolver(const string& name)
     {
@@ -3641,9 +3641,9 @@ namespace openravepy
         return PyControllerBasePtr(new PyControllerBase(p,pyenv));
     }
 
-    PyProblemInstancePtr RaveCreateProblem(PyEnvironmentBasePtr pyenv, const std::string& name)
+    PyProblemInstancePtr RaveCreateProblemInstance(PyEnvironmentBasePtr pyenv, const std::string& name)
     {
-        ProblemInstancePtr p = OpenRAVE::RaveCreateProblem(pyenv->GetEnv(), name);
+        ProblemInstancePtr p = OpenRAVE::RaveCreateProblemInstance(pyenv->GetEnv(), name);
         if( !p ) {
             return PyProblemInstancePtr();
         }
@@ -3783,7 +3783,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
         .value(RaveGetInterfaceName(PT_SensorSystem).c_str(),PT_SensorSystem)
         .value(RaveGetInterfaceName(PT_Controller).c_str(),PT_Controller)
         .value(RaveGetInterfaceName(PT_ProblemInstance).c_str(),PT_ProblemInstance)
-        .value(RaveGetInterfaceName(PT_InverseKinematicsSolver).c_str(),PT_InverseKinematicsSolver)
+        .value(RaveGetInterfaceName(PT_IkSolver).c_str(),PT_IkSolver)
         .value(RaveGetInterfaceName(PT_KinBody).c_str(),PT_KinBody)
         .value(RaveGetInterfaceName(PT_PhysicsEngine).c_str(),PT_PhysicsEngine)
         .value(RaveGetInterfaceName(PT_Sensor).c_str(),PT_Sensor)
@@ -4833,7 +4833,8 @@ In python, the syntax is::\n\n\
     def("RaveCreatePlanner",openravepy::RaveCreatePlanner,args("env","name"),DOXY_FN1(RaveCreatePlanner));
     def("RaveCreateSensorSystem",openravepy::RaveCreateSensorSystem,args("env","name"),DOXY_FN1(RaveCreateSensorSystem));
     def("RaveCreateController",openravepy::RaveCreateController,args("env","name"),DOXY_FN1(RaveCreateController));
-    def("RaveCreateProblem",openravepy::RaveCreateProblem,args("env","name"),DOXY_FN1(RaveCreateProblem));
+    def("RaveCreateProblem",openravepy::RaveCreateProblemInstance,args("env","name"),DOXY_FN1(RaveCreateProblemInstance));
+    def("RaveCreateProblemInstance",openravepy::RaveCreateProblemInstance,args("env","name"),DOXY_FN1(RaveCreateProblemInstance));
     def("RaveCreateIkSolver",openravepy::RaveCreateIkSolver,args("env","name"),DOXY_FN1(RaveCreateIkSolver));
     def("RaveCreatePhysicsEngine",openravepy::RaveCreatePhysicsEngine,args("env","name"),DOXY_FN1(RaveCreatePhysicsEngine));
     def("RaveCreateSensor",openravepy::RaveCreateSensor,args("env","name"),DOXY_FN1(RaveCreateSensor));
