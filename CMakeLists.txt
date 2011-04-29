@@ -124,7 +124,12 @@ set(OPENRAVEPY_INSTALL_DIR "${OPENRAVE_PYTHON_INSTALL_DIR}/openravepy" CACHE PAT
 set(OPENRAVE_OCTAVE_INSTALL_DIR "${OPENRAVE_SHARE_DIR}/octave" CACHE PATH "OpenRAVE Octave bindings installation directory")
 set(OPENRAVE_MATLAB_INSTALL_DIR "${OPENRAVE_SHARE_DIR}/matlab" CACHE PATH "OpenRAVE MATLAB bindings installation directory")
 
-set(OPENRAVE_BIN_SUFFIX ${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR} CACHE STRING "Add the MAJOR.MINOR openrave version suffixes to all executable installed files")
+if( WIN32 )
+  # does not support symlinks
+  set(OPENRAVE_BIN_SUFFIX)
+else()
+  set(OPENRAVE_BIN_SUFFIX ${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR} CACHE STRING "Add the MAJOR.MINOR openrave version suffixes to all executable installed files")
+endif()
 
 if( UNIX OR CYGWIN)
   # cache has to be STRING instead of PATH for path to remain relative
@@ -193,23 +198,25 @@ if( MSVC )
   set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} /EHc- ")
 
   # untar the source files
-  add_custom_command(
-    OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/inc
-    COMMAND ${CMAKE_COMMAND} -E chdir
-    ARGS "${CMAKE_CURRENT_SOURCE_DIR}" ${CMAKE_COMMAND} -E tar xzf "${CMAKE_CURRENT_SOURCE_DIR}/msvc_files.tgz"
-    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/msvc_files.tgz)
-  add_custom_target(msvc_files ALL DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/inc)
-  set(EXTRA_MSVC_DEPEND msvc_files)
+  set(EXTRA_MSVC_DEPEND msvc_boost msvc_collada msvc_libxml2 msvc_ode msvc_soqt)
+  foreach(MSVC_LIBRARY ${EXTRA_MSVC_DEPEND})
+    add_custom_command(
+      OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/${MSVC_LIBRARY}
+      COMMAND ${CMAKE_COMMAND} -E chdir
+      ARGS "${CMAKE_CURRENT_SOURCE_DIR}" ${CMAKE_COMMAND} -E tar xzf "${CMAKE_CURRENT_SOURCE_DIR}/${MSVC_LIBRARY}.tgz"
+      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${MSVC_LIBRARY}.tgz)
+    add_custom_target(${MSVC_LIBRARY} ALL DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${MSVC_LIBRARY})
+  endforeach()
 
-  include_directories("${CMAKE_CURRENT_SOURCE_DIR}/inc")
-  set(OPENRAVE_LINK_DIRS ${OPENRAVE_LINK_DIRS} "${CMAKE_CURRENT_SOURCE_DIR}/lib/win32")
+  check_include_file(stdint.h HAVE_STDINT_H)
+  if( NOT HAVE_STDINT_H )
+    install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/msvc_include/stdint.h DESTINATION include/openrave-${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}/openrave COMPONENT ${COMPONENT_PREFIX}dev)
+    include_directories(${CMAKE_CURRENT_SOURCE_DIR}/msvc_include)
+  endif()
   
-  install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/inc/stdint.h DESTINATION include/openrave-${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR} COMPONENT ${COMPONENT_PREFIX}dev)
   # have to install dlls manually
-  install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/bin/libxml2.dll" DESTINATION bin COMPONENT ${COMPONENT_PREFIX}base)
   if( MSVC70 OR MSVC71 )
-    set(MESSAGE "Visual Studio 2003 and before are not supported!")
-    set(MSVC_PREFIX "vc80")
+    set(MSVC_PREFIX "vc70")
   elseif( MSVC80 )
     set(MSVC_PREFIX "vc80")
   elseif( MSVC90 )
@@ -217,8 +224,8 @@ if( MSVC )
   else()
     set(MSVC_PREFIX "vc100")
   endif()
-  install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/bin/" DESTINATION bin COMPONENT ${COMPONENT_PREFIX}base FILES_MATCHING PATTERN "*-${MSVC_PREFIX}-*.dll")
-
+  set(OPENRAVE_LIBRARY_SUFFIX "${OPENRAVE_SOVERSION}-${MSVC_PREFIX}-mt")
+  
   # force multi-threaded DLL boost
   set(Boost_USE_MULTITHREAD ON)
   set(Boost_USE_STATIC_LIBS OFF)
@@ -319,7 +326,9 @@ add_subdirectory(cpp-gen-md5)
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/cpp-gen-md5")
 
 if( MSVC )
-  add_dependencies(cpp-gen-md5 ${EXTRA_MSVC_DEPEND})
+  if( EXTRA_MSVC_DEPEND )
+    add_dependencies(cpp-gen-md5 ${EXTRA_MSVC_DEPEND})
+  endif()
   set(CPPGENMD5 cpp-gen-md5)
 else()
   set(CPPGENMD5 "${CMAKE_CURRENT_BINARY_DIR}/cpp-gen-md5/cpp-gen-md5")
@@ -427,9 +436,14 @@ if( LIBXML2_FOUND )
   message(STATUS "libxml2 found")
 else()
   if( MSVC )
-    set(LIBXML2_LIBRARIES libxml2)
-    set(LIBXML2_INCLUDE_DIR)
+    set(LIBXML2_LIBRARIES ${CMAKE_CURRENT_SOURCE_DIR}/msvc_libxml2/lib/libxml2-${MSVC_PREFIX}-mt.lib)
+    set(LIBXML2_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/msvc_libxml2/include)
     set(LIBXML2_DEFINITIONS)
+    set(LIBXML2_FOUND 1)
+    include_directories(${LIBXML2_INCLUDE_DIR})
+    # have to copy the DLLs, but not the other stuff in the lib dir
+    file(GLOB libxml_dlls "${CMAKE_CURRENT_SOURCE_DIR}/msvc_libxml2/lib/*-${MSVC_PREFIX}-*.dll")
+    install(FILES ${libxml_dlls} DESTINATION bin COMPONENT ${COMPONENT_PREFIX}base)
   else()
     message(FATAL_ERROR "Could not find libxml2")
   endif()
@@ -453,8 +467,9 @@ endif ()
 link_directories(${OPENRAVE_LINK_DIRS})
 
 if( OPT_COLLADA )
-  find_package(COLLADA_DOM 2.3 COMPONENTS 1.5)
-
+  # MSVC has prepackaged collada libraries
+  find_package(COLLADA_DOM 2.3 COMPONENTS 1.5 PATHS ${CMAKE_CURRENT_SOURCE_DIR}/msvc_collada)
+  
   find_package(ZLIB)
   if( NOT ZLIB_FOUND )
     message(STATUS "compiling zlib from souces")
@@ -473,41 +488,52 @@ if( OPT_COLLADA )
     set(MINIZIP_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/minizip ${ZLIB_INCLUDE_DIR})
   endif()
 
-  if( NOT COLLADA_DOM_FOUND AND ZLIB_FOUND AND Boost_FILESYSTEM_FOUND AND Boost_SYSTEM_FOUND )
-    pkg_check_modules(libpcrecpp libpcrecpp)
-    if( libpcrecpp_FOUND )
-      set(CMAKE_REQUIRED_INCLUDES ${libpcrecpp_INCLUDE_DIRS} ${REQUIRED_INCLUDES})
-      check_include_file_cxx(pcrecpp.h HAVE_PCRECPP_H)
-      set(CMAKE_REQUIRED_INCLUDES)
-      if( NOT HAVE_PCRECPP_H )
-        set(libpcrecpp_FOUND 0)
-      endif()
+  if( COLLADA_DOM_FOUND )
+    if( MSVC )
+      # have to copy the DLLs, but not the other stuff in the lib dir
+      file(GLOB collada_dlls "${COLLADA_DOM_LIBRARY_DIRS}/*-${MSVC_PREFIX}-*.dll")
+      install(FILES ${collada_dlls} DESTINATION bin COMPONENT ${COMPONENT_PREFIX}base)
     endif()
-
-    if( NOT libpcrecpp_FOUND )
-      message(STATUS "System pcre not found, using local from sources")
-      # include the local pcre
-      add_subdirectory(3rdparty/pcre-8.02)
-      set(libpcrecpp_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/pcre-8.02)
-      set(libpcrecpp_LIBRARY_DIRS)
-      set(libpcrecpp_LIBRARIES pcrecpp_local)
-      set(libpcrecpp_CFLAGS_OTHERS "-DPCRE_STATIC")
-      set(libpcrecpp_LDFLAGS_OTHERS)
-    endif()
-
-    add_subdirectory(3rdparty/collada)
-    set(COLLADA_DOM_FOUND 1)
-    set(COLLADA_DOM_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/collada/include ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/collada/include/1.5)
-    set(COLLADA_DOM_LIBRARY_DIRS)
-    set(COLLADA_DOM_LIBRARIES collada15reader)
-    set(COLLADA_DOM_CFLAGS_OTHER)
-    set(COLLADA_DOM_LDFLAGS_OTHER)
   else()
-    set(OPENRAVE_LINK_DIRS ${OPENRAVE_LINK_DIRS} ${COLLADA_DOM_LIBRARY_DIRS})
+    if( ZLIB_FOUND AND Boost_FILESYSTEM_FOUND AND Boost_SYSTEM_FOUND )
+      pkg_check_modules(libpcrecpp libpcrecpp)
+      if( libpcrecpp_FOUND )
+        set(CMAKE_REQUIRED_INCLUDES ${libpcrecpp_INCLUDE_DIRS} ${REQUIRED_INCLUDES})
+        check_include_file_cxx(pcrecpp.h HAVE_PCRECPP_H)
+        set(CMAKE_REQUIRED_INCLUDES)
+        if( NOT HAVE_PCRECPP_H )
+          set(libpcrecpp_FOUND 0)
+        endif()
+      endif()
+
+      if( NOT libpcrecpp_FOUND )
+        message(STATUS "System pcre not found, using local from sources")
+        # include the local pcre
+        add_subdirectory(3rdparty/pcre-8.02)
+        set(libpcrecpp_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/pcre-8.02)
+        set(libpcrecpp_LIBRARY_DIRS)
+        set(libpcrecpp_LIBRARIES pcrecpp_local)
+        set(libpcrecpp_CFLAGS_OTHERS "-DPCRE_STATIC")
+        set(libpcrecpp_LDFLAGS_OTHERS)
+      endif()
+
+      add_subdirectory(3rdparty/collada)
+      set(COLLADA_DOM_FOUND 1)
+      set(COLLADA_DOM_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/collada/include ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/collada/include/1.5)
+      set(COLLADA_DOM_LIBRARY_DIRS)
+      set(COLLADA_DOM_LIBRARIES collada15reader)
+      set(COLLADA_DOM_CFLAGS_OTHER)
+      set(COLLADA_DOM_LDFLAGS_OTHER)
+    else()
+      set(OPENRAVE_LINK_DIRS ${OPENRAVE_LINK_DIRS} ${COLLADA_DOM_LIBRARY_DIRS})
+    endif()
   endif()
 endif()
 
-if( NOT COLLADA_DOM_FOUND )
+if( COLLADA_DOM_FOUND )
+  # because several programs rely on linking with openrave-core, need to expose the link library
+  set(OPENRAVE_LINK_DIRS ${OPENRAVE_LINK_DIRS} ${COLLADA_DOM_LIBRARY_DIRS})
+else()
   message(STATUS "no COLLADA support found")
 endif()
 

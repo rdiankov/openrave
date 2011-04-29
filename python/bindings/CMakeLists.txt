@@ -25,7 +25,7 @@ if( Boost_PYTHON_FOUND AND Boost_THREAD_FOUND )
     if( HAVE_ALL_PYTHON_HEADERS )
       message(STATUS "python and boost-python found")
       include_directories(${PYTHON_INCLUDE_PATH} ${OPENRAVE_INCLUDE_DIRS} ${OPENRAVE_CORE_INCLUDE_DIRS})
-
+      
       set(extralibs)
       if( CLOCK_GETTIME_FOUND )
         set(extralibs ${extralibs} rt)

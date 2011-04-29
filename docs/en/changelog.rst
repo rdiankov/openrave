@@ -19,7 +19,14 @@ Core
 
 * changed way of searching for collada-dom to prepare for its 2.3.1 release.
 
-* small changes to the way symlinks are handled on install/uninstall
+Windows
+-------
+
+* small changes to the way symlinks are handled on install/uninstall since windows does not handle symlinks.
+
+* rearranged the windows pre-compiled DLLs and added official libcollada pre-compiled DLLs. 
+
+* All openrave DLLs are now suffixed with the msvc version and openrave soversion.
 
 Testing
 -------

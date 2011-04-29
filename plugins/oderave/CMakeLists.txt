@@ -43,6 +43,11 @@ if(ODE_LIBRARY_FOUND)
   install(TARGETS oderave DESTINATION ${OPENRAVE_PLUGINS_INSTALL_DIR} COMPONENT ${COMPONENT_PREFIX}plugin-oderave)
   set(CPACK_COMPONENT_${COMPONENT_PREFIX_UPPER}PLUGIN-ODERAVE_DISPLAY_NAME "Plugin for Open Dyanmics Engine (ode) Physics/Collision" PARENT_SCOPE)
   set(PLUGIN_COMPONENT ${COMPONENT_PREFIX}plugin-oderave PARENT_SCOPE)
+  
+  if( MSVC )
+    # have to install the DLLs
+    install(DIRECTORY "${ODE_LINK_DIRS}/" DESTINATION bin COMPONENT ${COMPONENT_PREFIX}plugin-oderave FILES_MATCHING PATTERN "*-${MSVC_PREFIX}-*.dll")
+  endif()
 else()
   message(STATUS "Could not find ODE. Please install ODE (http://www.ode.org)")
 endif()
