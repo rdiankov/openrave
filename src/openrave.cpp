@@ -33,10 +33,9 @@ using namespace std;
 #include <boost/bind.hpp>
 #include <boost/algorithm/string.hpp>
 
-//#ifndef _WIN32
 #include <signal.h>
 void sigint_handler(int sig);
-//#endif
+void MainOpenRAVEThread();
 
 #ifdef _WIN32
 #define usleep(micro) Sleep((micro)/1000)
@@ -47,9 +46,6 @@ void sigint_handler(int sig);
 #endif
 
 #define FORIT(it, v) for(it = (v).begin(); it != (v).end(); (it)++)
-
-//void sigint_handler(int);
-void MainOpenRAVEThread();
 
 static bool bDisplayGUI = true, bShowGUI = true;
 
@@ -218,10 +214,8 @@ int main(int argc, char ** argv)
         RaveLoadPlugin(*it);
     }
 
-//#ifndef _WIN32
     // add a signal handler
     signal(SIGINT,sigint_handler); // control C
-//#endif
 
     if( bListPlugins ) {
 

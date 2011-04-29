@@ -19,6 +19,8 @@ Core
 
 * changed way of searching for collada-dom to prepare for its 2.3.1 release.
 
+* removed a dependency on mathextra.h from geometry.h
+
 Windows
 -------
 
