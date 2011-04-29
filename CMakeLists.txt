@@ -467,8 +467,11 @@ endif ()
 link_directories(${OPENRAVE_LINK_DIRS})
 
 if( OPT_COLLADA )
-  # MSVC has prepackaged collada libraries
-  find_package(COLLADA_DOM 2.3 COMPONENTS 1.5 PATHS ${CMAKE_CURRENT_SOURCE_DIR}/msvc_collada)
+  if( MSVC )
+    # MSVC has prepackaged collada libraries
+    set(COLLADA_PATH ${CMAKE_CURRENT_SOURCE_DIR}/msvc_collada)
+  endif()
+  find_package(COLLADA_DOM 2.3 COMPONENTS 1.5 PATHS ${COLLADA_PATH})
   
   find_package(ZLIB)
   if( NOT ZLIB_FOUND )
