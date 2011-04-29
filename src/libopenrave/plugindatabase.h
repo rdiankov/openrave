@@ -312,7 +312,7 @@ public:
                 RegQueryValueEx(hkey, TEXT("InstallRoot"), NULL, &dwType, (PBYTE)szInstallRoot, &dwSize);
                 RegCloseKey(hkey);
                 installdir.assign(szInstallRoot);
-                installdir += str(boost::format("%cshare%copenrave%cplugins")%s_filesep%s_filesep%s_filesep);
+                installdir += str(boost::format("%cshare%copenrave-%d.%d%cplugins")%s_filesep%s_filesep%OPENRAVE_VERSION_MAJOR%OPENRAVE_VERSION_MINOR%s_filesep);
             }
             else
 #endif
