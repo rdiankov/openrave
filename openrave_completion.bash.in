@@ -1,0 +1,138 @@
+# Programmable completion for openrave under bash. Source this file 
+# or add it to ~/.bash_completion or /etc/bash_completion.d
+
+function _complete_openravepy {
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    prev="${COMP_WORDS[COMP_CWORD-1]}"
+
+    if [[ $COMP_CWORD -ge 2 ]]; then
+        if [[ $COMP_CWORD == 2 ]]; then
+            case ${COMP_WORDS[1]} in
+                --listinterfaces)
+                    opts="planner robot sensorsystem controller probleminstance inversekinematicssolver kinbody physicsengine sensor collisionchecker trajectory viewer"
+                    COMPREPLY=($(compgen -W "$opts" -- ${cur}))
+                    return 0
+                    ;;
+                --example)
+                    opts=`openrave@OPENRAVE_BIN_SUFFIX@.py --listexamples`
+                    COMPREPLY=($(compgen -W "$opts" -- ${cur}))
+                    return 0
+                    ;;
+                --database)
+                    opts=`openrave@OPENRAVE_BIN_SUFFIX@.py --listdatabases`
+                    COMPREPLY=($(compgen -W "$opts" -- ${cur}))
+                    return 0
+                    ;;
+            esac
+        else
+            # just add in the xml and dae files, we don't have auto-completations for the examples/databases yet
+            COMPREPLY=($(compgen -f -X "!*.+(dae|zae|xml)" -- ${cur}))
+            return 0
+        fi
+    fi
+
+    case "${prev}" in
+        --level|-l)
+            opts="fatal error warn info debug verbose"
+            COMPREPLY=($(compgen -W "$opts" -- ${cur}))
+            return 0
+            ;;
+        --collision)
+            opts=`openrave@OPENRAVE_BIN_SUFFIX@.py --listinterfaces collisionchecker`
+            COMPREPLY=($(compgen -W "$opts" -- ${cur}))
+            return 0
+            ;;
+        --viewer)
+            opts=`openrave@OPENRAVE_BIN_SUFFIX@.py --listinterfaces viewer`
+            COMPREPLY=($(compgen -W "$opts" -- ${cur}))
+            return 0
+            ;;
+        --physics)
+            opts=`openrave@OPENRAVE_BIN_SUFFIX@.py --listinterfaces physics`
+            COMPREPLY=($(compgen -W "$opts" -- ${cur}))
+            return 0
+            ;;
+        --loadplugin)
+            COMPREPLY=($(compgen -f -X "!*.so" -- ${cur}))
+            return 0
+            ;;
+        *)
+            ;;
+    esac
+
+    # not processing a current option, so offer all the options again
+    opts="--loadplugin --collision --physics --viewer --server --serverport --level --ipython --pythoncmd --listinterfaces --listplugins  --listdatabases --listexamples --help"
+    if [[ $COMP_CWORD == 1 ]]; then
+        # these options transfer the args to another program
+        opts="$opts --database --example"
+    fi
+    COMPREPLY=($(compgen -W "$opts" -- ${cur}))
+    if [[ ${cur} != -* ]] ; then
+        # add in xml and dae and zae files
+        COMPREPLY=($(compgen -f -X "!*.+(dae|zae|xml)" -- ${cur}) ${COMPREPLY[@]})
+    fi
+}
+
+function _complete_openrave_robotpy {
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    prev="${COMP_WORDS[COMP_CWORD-1]}"
+
+    case "${prev}" in
+        --info)
+            opts="manipulators sensors links joints"
+            COMPREPLY=($(compgen -W "$opts" -- ${cur}))
+            return 0
+            ;;
+        --list)
+            opts="manipulators sensors links joints"
+            COMPREPLY=($(compgen -W "$opts" -- ${cur}))
+            return 0
+            ;;
+        --hash)
+            opts="body kinematics robot"
+            COMPREPLY=($(compgen -W "$opts" -- ${cur}))
+            return 0
+            ;;
+        --manipname)
+            COMP_WORDS2=("${COMP_WORDS[@]}")
+            unset COMP_WORDS2[COMP_CWORD]
+            unset COMP_WORDS2[COMP_CWORD-1]
+            unset COMP_WORDS2[0]
+            opts=`openrave0.3-robot.py ${COMP_WORDS2[@]} --list manipulators`
+            COMPREPLY=($(compgen -W "$opts" -- ${cur}))
+            return 0
+            ;;
+        --sensorname)
+            COMP_WORDS2=("${COMP_WORDS[@]}")
+            unset COMP_WORDS2[COMP_CWORD]
+            unset COMP_WORDS2[COMP_CWORD-1]
+            unset COMP_WORDS2[0]
+            opts=`openrave0.3-robot.py ${COMP_WORDS2[@]} --list sensors`
+            COMPREPLY=($(compgen -W "$opts" -- ${cur}))
+            return 0
+            ;;
+        *)
+            ;;
+    esac
+
+    # not processing a current option, so offer all the options again
+    opts="--manipname --sensorname --hash --info --list --help"
+    COMPREPLY=($(compgen -W "$opts" -- ${cur}))
+    if [[ ${cur} != -* ]] ; then
+        # add in xml and dae and zae files
+        COMPREPLY=($(compgen -f -X "!*.+(dae|zae|xml)" -- ${cur}) ${COMPREPLY[@]})
+    fi
+}
+
+function _complete_openrave_createpluginpy {
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    prev="${COMP_WORDS[COMP_CWORD-1]}"
+    opts="--usecore --planner --robot --sensorsystem --controller --probleminstance --iksolver --kinbody --physicsengine --sensor --collisionchecker --trajectory --help"
+    COMPREPLY=($(compgen -W "$opts" -- ${cur}))
+}
+complete -F "_complete_openravepy" -o filenames -o plusdirs "openrave.py"
+complete -F "_complete_openrave_robotpy" -o filenames -o plusdirs "openrave-robot.py"
+complete -F "_complete_openrave_createpluginpy" "openrave-createplugin.py"
+complete -F "_complete_openravepy" -o filenames -o plusdirs "openrave@OPENRAVE_BIN_SUFFIX@.py"
+complete -F "_complete_openrave_robotpy" -o filenames -o plusdirs "openrave@OPENRAVE_BIN_SUFFIX@-robot.py"
+complete -F "_complete_openrave_createpluginpy" "openrave@OPENRAVE_BIN_SUFFIX@-createplugin.py"

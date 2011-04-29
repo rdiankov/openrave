@@ -36,7 +36,7 @@ namespace katana5d_trans { IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr, co
 InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
 {
     switch(type) {
-    case PT_InverseKinematicsSolver: {
+    case PT_IkSolver: {
         if( interfacename == "ikfast" ) {
             string ikfastname;
             sinput >> ikfastname;
@@ -104,19 +104,19 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
 void GetPluginAttributesValidated(PLUGININFO& info)
 {
     info.interfacenames[PT_ProblemInstance].push_back("ikfast");
-    info.interfacenames[PT_InverseKinematicsSolver].push_back("ikfast");
-    info.interfacenames[PT_InverseKinematicsSolver].push_back("wam7ikfast");
-    info.interfacenames[PT_InverseKinematicsSolver].push_back("pa10ikfast");
-    info.interfacenames[PT_InverseKinematicsSolver].push_back("pumaikfast");
-    info.interfacenames[PT_InverseKinematicsSolver].push_back("ikfast_pr2_head");
-    info.interfacenames[PT_InverseKinematicsSolver].push_back("ikfast_pr2_head_torso");
-    info.interfacenames[PT_InverseKinematicsSolver].push_back("ikfast_pr2_rightarm");
-    info.interfacenames[PT_InverseKinematicsSolver].push_back("ikfast_pr2_rightarm_torso");
-    info.interfacenames[PT_InverseKinematicsSolver].push_back("ikfast_pr2_leftarm");
-    info.interfacenames[PT_InverseKinematicsSolver].push_back("ikfast_pr2_leftarm_torso");
-    info.interfacenames[PT_InverseKinematicsSolver].push_back("ikfast_schunk_lwa3");
-    info.interfacenames[PT_InverseKinematicsSolver].push_back("ikfast_katana5d");
-    info.interfacenames[PT_InverseKinematicsSolver].push_back("ikfast_katana5d_trans");
+    info.interfacenames[PT_IkSolver].push_back("ikfast");
+    info.interfacenames[PT_IkSolver].push_back("wam7ikfast");
+    info.interfacenames[PT_IkSolver].push_back("pa10ikfast");
+    info.interfacenames[PT_IkSolver].push_back("pumaikfast");
+    info.interfacenames[PT_IkSolver].push_back("ikfast_pr2_head");
+    info.interfacenames[PT_IkSolver].push_back("ikfast_pr2_head_torso");
+    info.interfacenames[PT_IkSolver].push_back("ikfast_pr2_rightarm");
+    info.interfacenames[PT_IkSolver].push_back("ikfast_pr2_rightarm_torso");
+    info.interfacenames[PT_IkSolver].push_back("ikfast_pr2_leftarm");
+    info.interfacenames[PT_IkSolver].push_back("ikfast_pr2_leftarm_torso");
+    info.interfacenames[PT_IkSolver].push_back("ikfast_schunk_lwa3");
+    info.interfacenames[PT_IkSolver].push_back("ikfast_katana5d");
+    info.interfacenames[PT_IkSolver].push_back("ikfast_katana5d_trans");
 }
 
 OPENRAVE_PLUGIN_API void DestroyPlugin()

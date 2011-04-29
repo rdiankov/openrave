@@ -3,6 +3,8 @@
 Command Line Tools
 ==================
 
+.. _tool-openravepy:
+
 openrave.py
 -----------
 
@@ -75,18 +77,45 @@ Command-line
 
 .. shell-block:: openrave.py --help
 
-openrave-hash.py
-----------------
+.. _tool-openrave-robot:
 
-Can query all the hashes openrave uses to manage robot descriptions::
+openrave-robot.py
+-----------------
 
-  openrave-hash.py data/mug1.kinbody.xml
-  openrave.py --robothash robots/barrettsegway.robot.xml
+Queries information about OpenRAVE-loadable robots.
+
+Can query all the hashes openrave uses to manage robot descriptions:
+
+.. code-block:: bash
+
+  openrave-robot.py data/mug1.kinbody.xml --hash body
+  openrave-robot.py robots/barrettsegway.robot.xml --hash robot
+  openrave-robot.py robots/barrettsegway.robot.xml --manipname=arm --hash kinematics
 
 Command-line
 ~~~~~~~~~~~~
 
-.. shell-block:: openrave-hash.py --help
+.. shell-block:: openrave-robot.py --help
+
+.. _tool-openrave-createplugin:
+
+openrave-createplugin.py
+------------------------
+
+Sets up a project directory and initial files for creating OpenRAVE plugins and executables.
+
+This command line will create a plugin that offers a **MyNewProblem** :class:`.ProblemInstance`:
+
+.. code-block:: bash
+
+  openrave-createplugin.py myplugin --problem MyNewProblem
+
+Command-line
+~~~~~~~~~~~~
+
+.. shell-block:: openrave-createplugin.py --help
+
+.. _tool-openrave:
 
 openrave
 --------
@@ -99,3 +128,15 @@ Command-line
 ~~~~~~~~~~~~
 
 .. shell-block:: openrave --help
+
+.. _tool-openrave-config:
+
+openrave-config
+---------------
+
+Used to find the openrave installation directories, used libraries, headers, and shared files.
+
+Command-line
+~~~~~~~~~~~~
+
+.. shell-block:: openrave-config --help

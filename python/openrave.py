@@ -37,13 +37,13 @@ except ImportError:
         sys.path.append(openravepy_path[0].strip())
     except OSError:
         import os, platform
+        from distutils.sysconfig import get_python_lib
         if sys.platform.startswith('win') or platform.system().lower() == 'windows':
             # in windows so add the default openravepy installation
-            rootsharedir = "C:\\Program Files\\openrave\\share"
-            allnames = os.listdir(rootsharedir)
-            possibledirs = [os.path.join(rootsharedir,name) for name in allnames if name.startswith('openrave')]
+            allnames = os.listdir('C:\\Program Files')
+            possibledirs = [os.path.join('C:\\Program Files',name) for name in allnames if name.startswith('openrave')]
             if len(possibledirs) > 0:
-                sys.path.append(possibledirs[0])
+                sys.path.append(get_python_lib(1,prefix=possibledirs[0]))
     from openravepy import *
 
 def vararg_callback(option, opt_str, value, parser):
@@ -72,10 +72,6 @@ if __name__ == "__main__":
                       help='Lists the available core database generators')
     parser.add_option('--listexamples',action='store_true',dest='listexamples',default=False,
                       help='Lists the available examples.')
-    parser.add_option('--robotmanipulators',action='store_true',dest='robotmanipulators',default=False,
-                      help='Lists the manipulator information of a single robot.')
-    parser.add_option('--robotsensors',action='store_true',dest='robotsensors',default=False,
-                      help='Lists the attached sensor information of a single robot.')
     (options, args) = parser.parse_args()
     if options.listdatabases:
         for name in dir(databases):
@@ -168,28 +164,6 @@ if __name__ == "__main__":
         with env:
             robots=env.GetRobots()
             robot=None if len(robots) == 0 else robots[0]
-            if options.robotmanipulators:
-                rows = [['name','base','end','arm-dof','gripper-dof','arm','gripper']]
-                for m in robot.GetManipulators():
-                    armindices = ','.join(str(i) for i in m.GetArmIndices())
-                    gripperindices = ','.join(str(i) for i in m.GetGripperIndices())
-                    rows.append([m.GetName(),m.GetBase().GetName(),m.GetEndEffector().GetName(),str(len(m.GetArmIndices())),str(len(m.GetGripperIndices())),armindices,gripperindices])
-                colwidths = [max([len(row[i]) for row in rows]) for i in range(len(rows[0]))]
-                for i,row in enumerate(rows):
-                    print ' '.join([row[j].ljust(colwidths[j]) for j in range(len(colwidths))])
-                    if i == 0:
-                        print '-'*(sum(colwidths)+len(colwidths)-1)
-                sys.exit(0)
-            if options.robotsensors:
-                rows = [['name','type','link']]
-                for s in robot.GetAttachedSensors():
-                    rows.append([s.GetName(),str(s.GetSensor()),s.GetAttachingLink().GetName()])
-                colwidths = [max([len(row[i]) for row in rows]) for i in range(len(rows[0]))]
-                for i,row in enumerate(rows):
-                    print ' '.join([row[j].ljust(colwidths[j]) for j in range(len(colwidths))])
-                    if i == 0:
-                        print '-'*(sum(colwidths)+len(colwidths)-1)
-                sys.exit(0)
         if options.pythoncmd is not None:
             eval(compile(options.pythoncmd,'<string>','exec'))
         if options._viewer is None:

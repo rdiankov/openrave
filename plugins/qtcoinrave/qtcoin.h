@@ -164,6 +164,34 @@ inline T CLAMP_ON_RANGE(T value, T min, T max)
     return value;
 }
 
+#ifdef _MSC_VER
+// because openrave includes stdint.h, make sure these are defined
+#ifndef HAVE_INT8_T
+#define HAVE_INT8_T 1
+#endif
+#ifndef HAVE_UINT8_T 
+#define HAVE_UINT8_T 1
+#endif
+#ifndef HAVE_INT16_T
+#define HAVE_INT16_T 1
+#endif
+#ifndef HAVE_UINT16_T
+#define HAVE_UINT16_T 1
+#endif
+#ifndef HAVE_INT32_T
+#define HAVE_INT32_T 1
+#endif
+#ifndef HAVE_UINT32_T
+#define HAVE_UINT32_T 1
+#endif
+#ifndef HAVE_INT64_T
+#define HAVE_INT64_T 1
+#endif
+#ifndef HAVE_UINT64_T
+#define HAVE_UINT64_T 1
+#endif
+#endif
+
 #include <Inventor/SbColor.h>
 #include <Inventor/SoDB.h>
 #include <Inventor/SoOffscreenRenderer.h>

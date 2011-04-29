@@ -6,17 +6,18 @@ endif()
 set(coreLIBS ${openrave_libraries})
 set(openrave_core_SOURCES openrave-core.cpp environment-core.h openrave-core.h ravep.h xmlreaders.cpp)
 
-if( COLLADA_FOUND )
-  set(LIBOPENRAVE_COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} -DOPENRAVE_COLLADA_SUPPORT ${COLLADA_CFLAGS_OTHER}")
-  set(LIBOPENRAVE_LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS} ${COLLADA_LDFLAGS_OTHER}")
-  include_directories(${COLLADA_INCLUDE_DIRS} ${MINIZIP_INCLUDE_DIR})
-  set (coreLIBS ${coreLIBS} ${COLLADA_LIBRARIES} minizip)
+if( COLLADA_DOM_FOUND )
+  set(LIBOPENRAVE_COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} -DOPENRAVE_COLLADA_SUPPORT ${COLLADA_DOM_CFLAGS_OTHER}")
+  set(LIBOPENRAVE_LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS} ${COLLADA_DOM_LDFLAGS_OTHER}")
+  set(OPENRAVE_LINK_DIRS ${OPENRAVE_LINK_DIRS} ${COLLADA_DOM_LIBRARY_DIRS})
+  include_directories(${COLLADA_DOM_INCLUDE_DIRS} ${MINIZIP_INCLUDE_DIR})
+  set (coreLIBS ${coreLIBS} ${COLLADA_DOM_LIBRARIES} minizip)
   set(openrave_core_SOURCES ${openrave_core_SOURCES} colladareader.cpp colladawriter.cpp)
 endif()
 
 if( ASSIMP_FOUND )
   include_directories(${ASSIMP_INCLUDE_DIRS})
-  set(OPENRAVE_LINK_DIRS ${OPENRAVE_LINK_DIRS} ${COLLADA_LIBRARY_DIRS})
+  set(OPENRAVE_LINK_DIRS ${OPENRAVE_LINK_DIRS} ${ASSIMP_LIBRARY_DIRS})
   set(coreLIBS ${coreLIBS} ${ASSIMP_LIBRARIES})
   set(LIBOPENRAVE_COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} -DOPENRAVE_ASSIMP ${ASSIMP_CFLAGS_OTHER}")
   set(LIBOPENRAVE_LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS} ${ASSIMP_LDFLAGS_OTHER}")
@@ -38,14 +39,14 @@ endif()
 
 add_library(libopenrave-core SHARED ${openrave_core_SOURCES})
 
-if( COLLADA_FOUND )
-  set(coreLIBS ${coreLIBS} ${COLLADA_LIBRARIES})
+if( COLLADA_DOM_FOUND )
+  set(coreLIBS ${coreLIBS} ${COLLADA_DOM_LIBRARIES})
 endif()
 if( IVCON_FOUND )
   set(coreLIBS ${coreLIBS} ${IVCON_LIBRARY})
 endif()
 
-set_target_properties(libopenrave-core PROPERTIES OUTPUT_NAME openrave-core
+set_target_properties(libopenrave-core PROPERTIES OUTPUT_NAME openrave-core${OPENRAVE_LIBRARY_SUFFIX}
                                   SOVERSION ${OPENRAVE_SOVERSION}
                                   VERSION ${OPENRAVE_VERSION}
                                   CLEAN_DIRECT_OUTPUT 1
@@ -66,9 +67,9 @@ if( OPT_STATIC )
 
   if( MSVC )
     # static version needs to have different name
-    set(LIBOPENRAVE_CORE_NAME libopenrave-core-s)
+    set(LIBOPENRAVE_CORE_NAME libopenrave-core${OPENRAVE_LIBRARY_SUFFIX})
   else()
-    set(LIBOPENRAVE_CORE_NAME openrave-core)
+    set(LIBOPENRAVE_CORE_NAME openrave-core${OPENRAVE_LIBRARY_SUFFIX})
   endif()
 
   set_target_properties(libopenrave-core_static PROPERTIES OUTPUT_NAME ${LIBOPENRAVE_CORE_NAME}

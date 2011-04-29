@@ -9,7 +9,7 @@ prevrevision=`python -c "import pysvn; revision=pysvn.Client().info2('$latest_st
 if [ "$revision" != "$prevrevision" ]; then
     basename="openrave-r$revision"
     svn export $trunk "$basename-linux-src"
-    rm -rf "$basename-linux-src"/msvc_files.tgz # too big to include into openrave
+    rm -rf "$basename-linux-src"/msvc_* # too big to include into openrave
     tar cjf "$basename-linux-src.tar.bz2" "$basename-linux-src"
     mkdir -p latest_stable
     mv "$basename-linux-src.tar.bz2" latest_stable/

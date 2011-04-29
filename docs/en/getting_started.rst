@@ -8,12 +8,11 @@ Getting Started Tutorials
    
    tutorials/openravepy_beginning
    tutorials/openravepy_examples
+   tutorials/writing_plugins
    command_line_tools
    tutorials/openravepy_advanced
    environment_variables
 
 .. htmlonly::
-   - `FindOpenRAVE.cmake`_ - searches for the OpenRAVE installation when using CMake build system.
-   - `Writing Plugins and Interfaces in C++ <../coreapihtml/writing_plugins.html>`_
    - `Writing and Using Controllers in C++ <../coreapihtml/arch_controller.html>`_
    - `Octave/MATLAB`_ Scripting

@@ -67,7 +67,7 @@ class Environment : public EnvironmentBase
                     RegQueryValueEx(hkey, TEXT("InstallRoot"), NULL, &dwType, (PBYTE)szInstallRoot, &dwSize);
                     RegCloseKey(hkey);
                     installdir.assign(szInstallRoot);
-                    installdir += str(boost::format("%cshare%copenrave")%s_filesep%s_filesep);
+                    installdir += str(boost::format("%cshare%copenrave%d-%d")%s_filesep%s_filesep%OPENRAVE_VERSION_MAJOR%OPENRAVE_VERSION_MINOR);
                 }
                 else
 #endif

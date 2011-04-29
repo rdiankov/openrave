@@ -2341,12 +2341,12 @@ namespace OpenRAVEXMLParser
                 string iklibraryname = _ss.str();
 
                 IkSolverBasePtr piksolver;
-                if( RaveHasInterface(PT_InverseKinematicsSolver,iklibraryname) ) {
+                if( RaveHasInterface(PT_IkSolver,iklibraryname) ) {
                     piksolver = RaveCreateIkSolver(_probot->GetEnv(), iklibraryname);
                 }
                 if( !piksolver ) {
                     // try adding the current directory
-                    if( RaveHasInterface(PT_InverseKinematicsSolver,GetParseDirectory()+s_filesep+iklibraryname)) {
+                    if( RaveHasInterface(PT_IkSolver,GetParseDirectory()+s_filesep+iklibraryname)) {
                         string fullname = GetParseDirectory(); fullname.push_back(s_filesep); fullname += iklibraryname;
                         piksolver = RaveCreateIkSolver(_probot->GetEnv(), fullname);
                     }
@@ -3195,7 +3195,7 @@ namespace OpenRAVEXMLParser
         case PT_SensorSystem: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_SensorSystem>(penv,pinterface,xmltag,atts));
         case PT_Controller: return InterfaceXMLReaderPtr(new ControllerXMLReader(penv,pinterface,atts));
         case PT_ProblemInstance: return InterfaceXMLReaderPtr(new ProblemXMLReader(penv,pinterface,atts));
-        case PT_InverseKinematicsSolver: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_InverseKinematicsSolver>(penv,pinterface,xmltag,atts));
+        case PT_IkSolver: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_IkSolver>(penv,pinterface,xmltag,atts));
         case PT_KinBody: {
             KinBodyPtr pbody = RaveInterfaceCast<KinBody>(pinterface); 
             int rootoffset = 0;

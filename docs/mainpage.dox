@@ -4,6 +4,8 @@
 
 \mainpage Open Robotics Automation Virtual Environment
 
+Version: $projectnumber
+
 \~english
 
 This document covers the core %OpenRAVE concepts, the C++ API, C++ examples, and C++ usage of the plugins offered in the base
@@ -105,27 +107,13 @@ what interfaces it has. When a plugin is first loaded, it is validated by the en
 the names of its provided interfaces. Plugins themselves can query functionality offer by other
 plugins through the environment's \ref env_plugin_functionality "interface querying functions".
 
-\section writing_plugins_hash Loading Plugins
-
-Many mechanisms have been put in place to prevent mismatching/old plugins to be loaded by the
-core. Using interfaces from stale plugins can lead to unexpected crashes that are very difficult to
-debug. It is possible to automatically come up with a unique hash of the interface functions and
-members by running each interface through a C++ lexer and then creating a 128bit unique md5 hash.
-In order to protect plugins compiled with a different version, %OpenRAVE creates a md5 hash from
-each interface class definition using \ref cpp-gen-md5 and stores them in \ref rave/classhashes.h.
-
-The interface hash can be retrieved using \ref OpenRAVE::RaveGetInterfaceHash. For an interface to
-be loaded successfully, the plugin has to check that the hash the core is using matches the hash
-compiled with the plugin. These types of checks ensure that stale plugins will never be loaded;
-helper functions are offered in \ref rave/plugin.h, which all plugin authors should use.
-
-\section writing_plugins_example Providing a Simple Interface
+\section writing_plugins_example Making a Simple Interface
 
 Example \ref plugincpp.cpp "plugincpp.cpp" creates a \ref OpenRAVE::ProblemInstance interface named \b MyProblem and have it offer two commands: \b numbodies and \b load.
 
 \dontinclude plugincpp.cpp
 
-The first \#include the compiler sees has to be \ref openrave/openrave.h. Then for the main C++ file, we include \ref rave/plugin.h for several helper functions.
+The first \#include the compiler sees has to be \ref openrave/openrave.h. Then for the main C++ file, we include \ref openrave/plugin.h for several helper functions.
 
 \until {
 
@@ -138,7 +126,7 @@ Provide the implementations for the member functions:
 \skipline bool
 \until };
 
-It is recommend to plugin authors to include \ref rave/plugin.h in their main C++
+It is recommend to plugin authors to include \ref openrave/plugin.h in their main C++
 file, this will provide implementations for the export functions and ask the user to provide a new
 set of functions \ref CreateInterfaceValidated and \ref GetPluginAttributesValidated.
 
@@ -154,27 +142,19 @@ In order to tell %OpenRAVE what is provided, have to define:
 
 \section writing_plugins_build Building the Plugin
 
-\subsection writing_plugins_cmake Using CMake
+\subsection writing_plugins_cmake Using CMake (Linux and Windows)
 
-The main build system of %OpenRAVE is cmake, and \ref FindOpenRAVE.cmake "FindOpenRAVE.cmake" can be used to find the %OpenRAVE installation (found in <tt>$OPENRAVE_INSTALL/share/openrave/cppexamples/FindOpenRAVE.cmake</tt>). An example of the \c CMakeLists.txt file for compiling a plugin using \ref FindOpenRAVE.cmake "FindOpenRAVE.cmake" is:
+The main build system of %OpenRAVE is cmake, and \ref FindOpenRAVE.cmake "FindOpenRAVE.cmake" can be used to find the %OpenRAVE installation. An example of the \c CMakeLists.txt file for compiling a plugin using \ref FindOpenRAVE.cmake "FindOpenRAVE.cmake" is:
 
 \verbatim
-cmake_minimum_required (VERSION 2.4)
+cmake_minimum_required (VERSION 2.6)
 project (plugincpp)
-
-# Include OpenRAVE paths
-include(FindOpenRAVE.cmake) 
-if( NOT OPENRAVE_FOUND )
-  message(FATAL_ERROR "could not find openrave, check for openrave-config in path")
-endif( NOT OPENRAVE_FOUND )
-
-# Create the plugincpp plugin
-include_directories(${OPENRAVE_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR})
-link_directories(${OPENRAVE_LINK_DIRS})
+find_package(OpenRAVE REQUIRED)
+include_directories(${OpenRAVE_INCLUDE_DIRS})
+link_directories(${OpenRAVE_LIBRARY_DIRS})
 add_library(plugincpp SHARED plugincpp.cpp)
-set_target_properties(plugincpp PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
-set_target_properties(plugincpp PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
-target_link_libraries(plugincpp ${OPENRAVE_LIBRARY})
+set_target_properties(plugincpp PROPERTIES COMPILE_FLAGS "${OpenRAVE_CXX_FLAGS}" LINK_FLAGS "${OpenRAVE_LINK_FLAGS}")
+target_link_libraries(plugincpp ${OpenRAVE_LIBRARIES})
 \endverbatim
 
 \subsection writing_plugins_linux Other Build Systems
@@ -186,12 +166,6 @@ If not using CMake, then here's how the development files are organized:
 Depending on where openrave was installed, a \ref openrave_config should have been created in the \c $OPENRAVE_INSTALL/bin
 directory. It is possible to call <tt>openrave-config --cflags</tt> to get the correct paths and
 flags to include in gcc to link with \c libopenrave.so.
-
-<b>Windows Users</b>
-
-Because Windows does not provide a way to share libraries and DLLs, All the include headers and DLLs
-of libraries that %OpenRAVE links with are provided in the \c $OPENRAVE_INSTALL\\bin and \c
-$OPENRAVE_INSTALL\\include directories.
 
 \section writing_plugins_usage Using the Plugin
 
@@ -213,22 +187,22 @@ openrave --loadplugin ./libplugincpp.so
 - Another way is to load it from the C++/Python/APIs:<br/>
 \b C++
 \code
-env->LoadPlugin("libplugincpp");
+RaveLoadPlugin(env,"plugincpp");
 \endcode
 \b Python
 \verbatim
-env.LoadPlugin('libplugincpp');
+RaveLoadPlugin(env,'plugincpp');
 \endverbatim
 \b Octave
 \verbatim
-orEnvLoadPlugin('libplugincpp');
+orEnvLoadPlugin('plugincpp');
 \endverbatim
 
 Once the plugin is loaded, we can create the interface and call its commands to load an environment and return the number of bodies:
 
 \b C++
 \code
-ProblemInstancePtr prob = env->CreateProblem("MyProblem");
+ProblemInstancePtr prob = RaveCreateProblem(env,"MyProblem");
 env->LoadProblem(prob,"");
 stringstream sinput, sout;
 // input the load command
@@ -248,7 +222,7 @@ else {
 
 \b Python
 \verbatim
-prob = env.CreateProblem('MyProblem')
+prob = RaveCreateProblem(env,'MyProblem')
 env.LoadProblem(prob,args='')
 cmdout = prob.SendCommand('load data/lab1.env.xml')
 if cmdout is None:
@@ -284,6 +258,20 @@ The reason why doxygen and other commenting tools are not adopted for plugin doc
 because the \ref interfaces are the only binding between plugins. Even if the header file or
 provided functions of a particular plugin were provided, other plugins would not be able to use them
 if not offered through the %OpenRAVE's channels.
+
+\section writing_plugins_hash Loading Plugins
+
+Many mechanisms have been put in place to prevent mismatching/old plugins to be loaded by the
+core. Using interfaces from stale plugins can lead to unexpected crashes that are very difficult to
+debug. It is possible to automatically come up with a unique hash of the interface functions and
+members by running each interface through a C++ lexer and then creating a 128bit unique md5 hash.
+In order to protect plugins compiled with a different version, %OpenRAVE creates a md5 hash from
+each interface class definition using \ref cpp-gen-md5 and stores them in \ref openrave/interfacehashes.h.
+
+The interface hash can be retrieved using \ref OpenRAVE::RaveGetInterfaceHash. For an interface to
+be loaded successfully, the plugin has to check that the hash the core is using matches the hash
+compiled with the plugin. These types of checks ensure that stale plugins will never be loaded;
+helper functions are offered in \ref openrave/plugin.h, which all plugin authors should use.
 
 */
 

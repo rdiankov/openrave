@@ -5,7 +5,7 @@ set( CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS TRUE )
 # Define here the needed parameters
 set (OPENRAVE_VERSION_MAJOR 0)
 set (OPENRAVE_VERSION_MINOR 3)
-set (OPENRAVE_VERSION_PATCH 1)
+set (OPENRAVE_VERSION_PATCH 2)
 set (OPENRAVE_VERSION ${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}.${OPENRAVE_VERSION_PATCH})
 set (OPENRAVE_SOVERSION ${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR})
 message(STATUS "Compiling OpenRAVE Version ${OPENRAVE_VERSION}, soversion=${OPENRAVE_SOVERSION}")
@@ -41,22 +41,14 @@ option(OPT_MATLAB "Build matlab bindings" ON)
 option(OPT_STATIC "Build static libraries" OFF)
 option(OPT_COLLADA "Build with COLLADA support" ON)
 option(OPT_BUILD_PACKAGES "Set to ON to generate CPack configuration files and packaging targets" OFF)
-option(OPT_BIN_SUFFIX "Add the MAJOR.MINOR openrave version suffixes to all executable installed files" OFF)
 option(OPT_FLANN "Temporary switch to force building of flann" OFF)
 
-# Additional CMake modules for 3rd party library checks reside here
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/modules-cmake")
 set(COMPONENT_PREFIX openrave${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}-)
 string(TOUPPER ${COMPONENT_PREFIX} COMPONENT_PREFIX_UPPER)
 set(CPACK_COMPONENTS_ALL ${COMPONENT_PREFIX}base ${COMPONENT_PREFIX}dev ${COMPONENT_PREFIX}data)
 
 message(STATUS "detected system processor: ${CMAKE_SYSTEM_PROCESSOR}")
-
-if( OPT_BIN_SUFFIX )
-  set(OPENRAVE_BIN_SUFFIX ${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR})
-else()
-  set(OPENRAVE_BIN_SUFFIX)
-endif()
 
 include(CheckIncludeFile)
 include(CheckIncludeFileCXX)
@@ -66,7 +58,8 @@ include(CheckCXXSourceCompiles)
 include(CheckCXXSourceRuns)
 include(CheckCXXCompilerFlag)
 include(CheckTypeSize)
-include(FindPkgConfig)
+
+find_package(PkgConfig) # pkg_check_modules
 
 set(OPENRAVE_PYTHON_INSTALL_DIR)
 
@@ -131,6 +124,18 @@ set(OPENRAVEPY_INSTALL_DIR "${OPENRAVE_PYTHON_INSTALL_DIR}/openravepy" CACHE PAT
 set(OPENRAVE_OCTAVE_INSTALL_DIR "${OPENRAVE_SHARE_DIR}/octave" CACHE PATH "OpenRAVE Octave bindings installation directory")
 set(OPENRAVE_MATLAB_INSTALL_DIR "${OPENRAVE_SHARE_DIR}/matlab" CACHE PATH "OpenRAVE MATLAB bindings installation directory")
 
+if( WIN32 )
+  # does not support symlinks
+  set(OPENRAVE_BIN_SUFFIX)
+else()
+  set(OPENRAVE_BIN_SUFFIX ${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR} CACHE STRING "Add the MAJOR.MINOR openrave version suffixes to all executable installed files")
+endif()
+
+if( UNIX OR CYGWIN)
+  # cache has to be STRING instead of PATH for path to remain relative
+  set(BASH_COMPLETION_DIR ${OPENRAVE_SHARE_DIR} CACHE STRING "Directory where bash completion files will be installed in, on linux it is /etc/bash_completion.d")# Additional CMake modules for 3rd party library checks reside here
+endif()
+
 message(STATUS "installing to ${CMAKE_INSTALL_PREFIX}, python subdir is ${OPENRAVE_PYTHON_INSTALL_DIR}, program suffix is '${OPENRAVE_BIN_SUFFIX}'")
 
 set(CMAKE_TRY_COMPILE_CONFIGURATION Release CACHE STRING "very important to only test release since default is debug, and it usually reuquires special libraries")
@@ -193,23 +198,25 @@ if( MSVC )
   set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} /EHc- ")
 
   # untar the source files
-  add_custom_command(
-    OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/inc
-    COMMAND ${CMAKE_COMMAND} -E chdir
-    ARGS "${CMAKE_CURRENT_SOURCE_DIR}" ${CMAKE_COMMAND} -E tar xzf "${CMAKE_CURRENT_SOURCE_DIR}/msvc_files.tgz"
-    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/msvc_files.tgz)
-  add_custom_target(msvc_files ALL DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/inc)
-  set(EXTRA_MSVC_DEPEND msvc_files)
+  set(EXTRA_MSVC_DEPEND msvc_boost msvc_collada msvc_libxml2 msvc_ode msvc_soqt)
+  foreach(MSVC_LIBRARY ${EXTRA_MSVC_DEPEND})
+    add_custom_command(
+      OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/${MSVC_LIBRARY}
+      COMMAND ${CMAKE_COMMAND} -E chdir
+      ARGS "${CMAKE_CURRENT_SOURCE_DIR}" ${CMAKE_COMMAND} -E tar xzf "${CMAKE_CURRENT_SOURCE_DIR}/${MSVC_LIBRARY}.tgz"
+      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${MSVC_LIBRARY}.tgz)
+    add_custom_target(${MSVC_LIBRARY} ALL DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${MSVC_LIBRARY})
+  endforeach()
 
-  include_directories("${CMAKE_CURRENT_SOURCE_DIR}/inc")
-  set(OPENRAVE_LINK_DIRS ${OPENRAVE_LINK_DIRS} "${CMAKE_CURRENT_SOURCE_DIR}/lib/win32")
+  check_include_file(stdint.h HAVE_STDINT_H)
+  if( NOT HAVE_STDINT_H )
+    install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/msvc_include/stdint.h DESTINATION include/openrave-${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}/openrave COMPONENT ${COMPONENT_PREFIX}dev)
+    include_directories(${CMAKE_CURRENT_SOURCE_DIR}/msvc_include)
+  endif()
   
-  install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/inc/stdint.h DESTINATION include/openrave-${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR} COMPONENT ${COMPONENT_PREFIX}dev)
   # have to install dlls manually
-  install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/bin/libxml2.dll" DESTINATION bin COMPONENT ${COMPONENT_PREFIX}base)
   if( MSVC70 OR MSVC71 )
-    set(MESSAGE "Visual Studio 2003 and before are not supported!")
-    set(MSVC_PREFIX "vc80")
+    set(MSVC_PREFIX "vc70")
   elseif( MSVC80 )
     set(MSVC_PREFIX "vc80")
   elseif( MSVC90 )
@@ -217,8 +224,8 @@ if( MSVC )
   else()
     set(MSVC_PREFIX "vc100")
   endif()
-  install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/bin/" DESTINATION bin COMPONENT ${COMPONENT_PREFIX}base FILES_MATCHING PATTERN "*-${MSVC_PREFIX}-*.dll")
-
+  set(OPENRAVE_LIBRARY_SUFFIX "${OPENRAVE_SOVERSION}-${MSVC_PREFIX}-mt")
+  
   # force multi-threaded DLL boost
   set(Boost_USE_MULTITHREAD ON)
   set(Boost_USE_STATIC_LIBS OFF)
@@ -319,7 +326,9 @@ add_subdirectory(cpp-gen-md5)
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/cpp-gen-md5")
 
 if( MSVC )
-  add_dependencies(cpp-gen-md5 ${EXTRA_MSVC_DEPEND})
+  if( EXTRA_MSVC_DEPEND )
+    add_dependencies(cpp-gen-md5 ${EXTRA_MSVC_DEPEND})
+  endif()
   set(CPPGENMD5 cpp-gen-md5)
 else()
   set(CPPGENMD5 "${CMAKE_CURRENT_BINARY_DIR}/cpp-gen-md5/cpp-gen-md5")
@@ -427,9 +436,14 @@ if( LIBXML2_FOUND )
   message(STATUS "libxml2 found")
 else()
   if( MSVC )
-    set(LIBXML2_LIBRARIES libxml2)
-    set(LIBXML2_INCLUDE_DIR)
+    set(LIBXML2_LIBRARIES ${CMAKE_CURRENT_SOURCE_DIR}/msvc_libxml2/lib/libxml2-${MSVC_PREFIX}-mt.lib)
+    set(LIBXML2_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/msvc_libxml2/include)
     set(LIBXML2_DEFINITIONS)
+    set(LIBXML2_FOUND 1)
+    include_directories(${LIBXML2_INCLUDE_DIR})
+    # have to copy the DLLs, but not the other stuff in the lib dir
+    file(GLOB libxml_dlls "${CMAKE_CURRENT_SOURCE_DIR}/msvc_libxml2/lib/*-${MSVC_PREFIX}-*.dll")
+    install(FILES ${libxml_dlls} DESTINATION bin COMPONENT ${COMPONENT_PREFIX}base)
   else()
     message(FATAL_ERROR "Could not find libxml2")
   endif()
@@ -452,18 +466,19 @@ endif ()
 
 link_directories(${OPENRAVE_LINK_DIRS})
 
-find_package(ZLIB)
-if( NOT ZLIB_FOUND )
-  message(STATUS "compiling zlib from souces")
-  # compile from sources
-  add_subdirectory(3rdparty/zlib)
-  set(ZLIB_FOUND 1)
-  set(ZLIB_LIBRARIES zlib)
-  set(ZLIB_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/zlib)
-endif()
-
 if( OPT_COLLADA )
-  pkg_check_modules(COLLADA collada15dom>=2.3.0)
+  # MSVC has prepackaged collada libraries
+  find_package(COLLADA_DOM 2.3 COMPONENTS 1.5 PATHS ${CMAKE_CURRENT_SOURCE_DIR}/msvc_collada)
+  
+  find_package(ZLIB)
+  if( NOT ZLIB_FOUND )
+    message(STATUS "compiling zlib from souces")
+    # compile from sources
+    add_subdirectory(3rdparty/zlib)
+    set(ZLIB_FOUND 1)
+    set(ZLIB_LIBRARIES zlib)
+    set(ZLIB_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/zlib)
+  endif()
 
   pkg_check_modules(minizip minizip)
   if(minizip_FOUND)
@@ -473,41 +488,52 @@ if( OPT_COLLADA )
     set(MINIZIP_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/minizip ${ZLIB_INCLUDE_DIR})
   endif()
 
-  if( NOT COLLADA_FOUND AND ZLIB_FOUND AND Boost_FILESYSTEM_FOUND AND Boost_SYSTEM_FOUND )
-    pkg_check_modules(libpcrecpp libpcrecpp)
-    if( libpcrecpp_FOUND )
-      set(CMAKE_REQUIRED_INCLUDES ${libpcrecpp_INCLUDE_DIRS} ${REQUIRED_INCLUDES})
-      check_include_file_cxx(pcrecpp.h HAVE_PCRECPP_H)
-      set(CMAKE_REQUIRED_INCLUDES)
-      if( NOT HAVE_PCRECPP_H )
-        set(libpcrecpp_FOUND 0)
-      endif()
+  if( COLLADA_DOM_FOUND )
+    if( MSVC )
+      # have to copy the DLLs, but not the other stuff in the lib dir
+      file(GLOB collada_dlls "${COLLADA_DOM_LIBRARY_DIRS}/*-${MSVC_PREFIX}-*.dll")
+      install(FILES ${collada_dlls} DESTINATION bin COMPONENT ${COMPONENT_PREFIX}base)
     endif()
-
-    if( NOT libpcrecpp_FOUND )
-      message(STATUS "System pcre not found, using local from sources")
-      # include the local pcre
-      add_subdirectory(3rdparty/pcre-8.02)
-      set(libpcrecpp_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/pcre-8.02)
-      set(libpcrecpp_LIBRARY_DIRS)
-      set(libpcrecpp_LIBRARIES pcrecpp_local)
-      set(libpcrecpp_CFLAGS_OTHERS "-DPCRE_STATIC")
-      set(libpcrecpp_LDFLAGS_OTHERS)
-    endif()
-
-    add_subdirectory(3rdparty/collada)
-    set(COLLADA_FOUND 1)
-    set(COLLADA_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/collada/include ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/collada/include/1.5)
-    set(COLLADA_LIBRARY_DIRS)
-    set(COLLADA_LIBRARIES collada15reader)
-    set(COLLADA_CFLAGS_OTHER)
-    set(COLLADA_LDFLAGS_OTHER)
   else()
-    set(OPENRAVE_LINK_DIRS ${OPENRAVE_LINK_DIRS} ${COLLADA_LIBRARY_DIRS})
+    if( ZLIB_FOUND AND Boost_FILESYSTEM_FOUND AND Boost_SYSTEM_FOUND )
+      pkg_check_modules(libpcrecpp libpcrecpp)
+      if( libpcrecpp_FOUND )
+        set(CMAKE_REQUIRED_INCLUDES ${libpcrecpp_INCLUDE_DIRS} ${REQUIRED_INCLUDES})
+        check_include_file_cxx(pcrecpp.h HAVE_PCRECPP_H)
+        set(CMAKE_REQUIRED_INCLUDES)
+        if( NOT HAVE_PCRECPP_H )
+          set(libpcrecpp_FOUND 0)
+        endif()
+      endif()
+
+      if( NOT libpcrecpp_FOUND )
+        message(STATUS "System pcre not found, using local from sources")
+        # include the local pcre
+        add_subdirectory(3rdparty/pcre-8.02)
+        set(libpcrecpp_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/pcre-8.02)
+        set(libpcrecpp_LIBRARY_DIRS)
+        set(libpcrecpp_LIBRARIES pcrecpp_local)
+        set(libpcrecpp_CFLAGS_OTHERS "-DPCRE_STATIC")
+        set(libpcrecpp_LDFLAGS_OTHERS)
+      endif()
+
+      add_subdirectory(3rdparty/collada)
+      set(COLLADA_DOM_FOUND 1)
+      set(COLLADA_DOM_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/collada/include ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/collada/include/1.5)
+      set(COLLADA_DOM_LIBRARY_DIRS)
+      set(COLLADA_DOM_LIBRARIES collada15reader)
+      set(COLLADA_DOM_CFLAGS_OTHER)
+      set(COLLADA_DOM_LDFLAGS_OTHER)
+    else()
+      set(OPENRAVE_LINK_DIRS ${OPENRAVE_LINK_DIRS} ${COLLADA_DOM_LIBRARY_DIRS})
+    endif()
   endif()
 endif()
 
-if( NOT COLLADA_FOUND )
+if( COLLADA_DOM_FOUND )
+  # because several programs rely on linking with openrave-core, need to expose the link library
+  set(OPENRAVE_LINK_DIRS ${OPENRAVE_LINK_DIRS} ${COLLADA_DOM_LIBRARY_DIRS})
+else()
   message(STATUS "no COLLADA support found")
 endif()
 
@@ -669,9 +695,8 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/openrave-config-version.cmake.in" "$
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/openrave-config.cmake" "${CMAKE_CURRENT_BINARY_DIR}/openrave-config-version.cmake" DESTINATION "lib${LIB_SUFFIX}/cmake/openrave-${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}" COMPONENT ${COMPONENT_PREFIX}dev)
 
 if( UNIX OR CYGWIN)
-  # cache has to be STRING instead of PATH for path to remain relative
-  set(BASH_COMPLETION_DIR ${OPENRAVE_SHARE_DIR} CACHE STRING "Directory where bash completion files will be installed in, on linux it is /etc/bash_completion.d")
-  install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/openravebash DESTINATION ${BASH_COMPLETION_DIR} COMPONENT ${COMPONENT_PREFIX}base)
+  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/openrave_completion.bash.in" "${CMAKE_CURRENT_BINARY_DIR}/openrave_completion.bash" @ONLY IMMEDIATE)
+  install(FILES "${CMAKE_CURRENT_BINARY_DIR}/openrave_completion.bash" DESTINATION ${BASH_COMPLETION_DIR} COMPONENT ${COMPONENT_PREFIX}base )
   configure_file("${CMAKE_CURRENT_SOURCE_DIR}/openrave.pc.in" "${CMAKE_CURRENT_BINARY_DIR}/openrave-${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}.pc" @ONLY IMMEDIATE)
   install(FILES "${CMAKE_CURRENT_BINARY_DIR}/openrave-${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}.pc" DESTINATION lib${LIB_SUFFIX}/pkgconfig COMPONENT ${COMPONENT_PREFIX}dev)
 endif()
@@ -709,17 +734,17 @@ if(CMAKE_CPACK_COMMAND AND UNIX AND OPT_BUILD_PACKAGES)
   set(CPACK_COMPONENT_${COMPONENT_PREFIX_UPPER}DEV_DISPLAY_NAME "development files and examples")
   set(CPACK_COMPONENT_${COMPONENT_PREFIX_UPPER}DEV_DEPENDS ${COMPONENT_PREFIX}base libboost-thread-dev libboost-date-time-dev)
   
-  set(DEBIAN_BUILD_DEPENDS debhelper cmake python-dev libxml2-dev libboost-dev ffmpeg libpcre3-dev zlib1g-dev python-numpy "python-sympy (>=0.6.3)" desktop-file-utils libboost-filesystem-dev libboost-system-dev libboost-python-dev libboost-thread-dev libboost-date-time-dev octave3.2-headers )
+  set(CPACK_DEBIAN_BUILD_DEPENDS debhelper cmake python-dev libxml2-dev libboost-dev ffmpeg zlib1g-dev python-numpy "python-sympy (>=0.6.3)" desktop-file-utils libboost-filesystem-dev libboost-system-dev libboost-python-dev libboost-thread-dev libboost-date-time-dev octave3.2-headers "libcollada15dom-dev (>=2.3.1)" pkg-config)
   # plugins
-  set(DEBIAN_BUILD_DEPENDS ${DEBIAN_BUILD_DEPENDS} libboost-iostreams-dev libboost-regex-dev libqt4-dev qt4-dev-tools libqhull-dev libavcodec-dev libavformat-dev libswscale-dev libsimage-dev libode-dev libsoqt4-dev "libcoin40-dev|libcoin60-dev")
-  
+  set(CPACK_DEBIAN_BUILD_DEPENDS ${CPACK_DEBIAN_BUILD_DEPENDS} libboost-iostreams-dev libboost-regex-dev libqt4-dev qt4-dev-tools libqhull-dev libavcodec-dev libavformat-dev libswscale-dev libsimage-dev libode-dev libsoqt4-dev libassimp-dev)
+
   # debian
   set(CPACK_DEBIAN_PACKAGE_PRIORITY optional)
   set(CPACK_DEBIAN_PACKAGE_SECTION devel)
   set(CPACK_DEBIAN_PACKAGE_DEPENDS ${CPACK_COMPONENTS_ALL})
-  set(CPACK_DEBIAN_PACKAGE_SUGGESTS "ipython")#, libcollada15dom-dev (>=2.3)")
+  set(CPACK_DEBIAN_PACKAGE_SUGGESTS "ipython")
   set(CPACK_DEBIAN_PACKAGE_NAME openrave${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR})
-  set(CPACK_DEBIAN_PACKAGE_REMOVE_SOURCE_FILES docs release sandbox test sympy msvc_files.tgz sympy_0.6.7.tgz sympy_0.6.7_patches.diff 3rdparty/pcre-8.02 3rdparty/qhull 3rdparty/zlib 3rdparty/flann-1.6.6)
+  set(CPACK_DEBIAN_PACKAGE_REMOVE_SOURCE_FILES docs release sandbox test sympy msvc_files.tgz sympy_0.6.7.tgz sympy_0.6.7_patches.diff 3rdparty/pcre-8.02 3rdparty/qhull 3rdparty/zlib 3rdparty/flann-1.6.6 3rdparty/collada)
   set(CPACK_DEBIAN_PACKAGE_SOURCE_COPY svn export --force)
   set(CPACK_DEBIAN_CHANGELOG "  * ChangeLog can be found at https://openrave.svn.sourceforge.net/svnroot/openrave/tags/${OPENRAVE_VERSION}/docs/en/changelog.rst\n\n")
   execute_process(COMMAND lsb_release -is
@@ -734,7 +759,7 @@ if(CMAKE_CPACK_COMMAND AND UNIX AND OPT_BUILD_PACKAGES)
   set(CPACK_COMPONENTS_ALL ${CPACK_COMPONENTS_ALL} openrave)
   #TODO: extra robot CAD model files from: https://openrave.svn.sourceforge.net/svnroot/openrave/data/robots
 
-  set(DPUT_HOST "ppa:openrave/release" CACHE STRING "PPA repository to upload the debian sources")
+  set(DPUT_HOST "ppa:openrave/testing" CACHE STRING "PPA repository to upload the debian sources")
   include(CPack)
   include(DebSourcePPA)
 endif()

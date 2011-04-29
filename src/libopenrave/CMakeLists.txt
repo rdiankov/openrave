@@ -16,7 +16,7 @@ add_dependencies(libopenrave interfacehashes_target openrave-md5)
 if( CRLIBM_FOUND )
   add_dependencies(libopenrave check_libm_accuracy) # forces check to be run before libopenrave is compile
 endif()
-set_target_properties(libopenrave PROPERTIES OUTPUT_NAME openrave
+set_target_properties(libopenrave PROPERTIES OUTPUT_NAME openrave${OPENRAVE_LIBRARY_SUFFIX}
                                   SOVERSION ${OPENRAVE_SOVERSION}
                                   VERSION ${OPENRAVE_VERSION}
                                   CLEAN_DIRECT_OUTPUT 1
@@ -33,9 +33,9 @@ if( OPT_STATIC )
   # visual studio needs static lib built
   if( MSVC )
     # static version needs to have different name
-    set(LIBOPENRAVE_NAME libopenrave-s)
+    set(LIBOPENRAVE_NAME libopenrave${OPENRAVE_LIBRARY_SUFFIX})
   else()
-    set(LIBOPENRAVE_NAME openrave)
+    set(LIBOPENRAVE_NAME openrave${OPENRAVE_LIBRARY_SUFFIX})
   endif()
 
   add_library(libopenrave_static STATIC ${openrave_lib_SOURCES})

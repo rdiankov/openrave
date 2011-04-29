@@ -964,13 +964,14 @@ public:
         _pbody->SetDOFValues(values,true);
     }
 
-    void SubtractDOFValues(object ovalues1, object ovalues2)
+    object SubtractDOFValues(object ovalues0, object ovalues1)
     {
+        vector<dReal> values0 = ExtractArray<dReal>(ovalues0);
         vector<dReal> values1 = ExtractArray<dReal>(ovalues1);
-        vector<dReal> values2 = ExtractArray<dReal>(ovalues2);
+        BOOST_ASSERT((int)values0.size() == GetDOF() );
         BOOST_ASSERT((int)values1.size() == GetDOF() );
-        BOOST_ASSERT((int)values2.size() == GetDOF() );
-        _pbody->SubtractDOFValues(values1,values2);
+        _pbody->SubtractDOFValues(values0,values1);
+        return toPyArray(values0);
     }
 
     void SetJointTorques(object otorques, bool bAdd)
@@ -2056,6 +2057,16 @@ public:
         return toPyArray(values);
     }
 
+    object GetActiveDOFWeights() const
+    {
+        if( _probot->GetActiveDOF() == 0 ) {
+            return numeric::array(boost::python::list());
+        }
+        vector<dReal> weights;
+        _probot->GetActiveDOFWeights(weights);
+        return toPyArray(weights);
+    }
+
     void SetActiveDOFVelocities(object velocities)
     {
         _probot->SetActiveDOFVelocities(ExtractArray<dReal>(velocities));
@@ -2093,6 +2104,16 @@ public:
     object GetActiveJointIndices() { RAVELOG_WARN("GetActiveJointIndices deprecated. Use GetActiveDOFIndices\n"); return toPyArray(_probot->GetActiveDOFIndices()); }
     object GetActiveDOFIndices() { return toPyArray(_probot->GetActiveDOFIndices()); }
 
+    object SubtractActiveDOFValues(object ovalues0, object ovalues1)
+    {
+        vector<dReal> values0 = ExtractArray<dReal>(ovalues0);
+        vector<dReal> values1 = ExtractArray<dReal>(ovalues1);
+        BOOST_ASSERT((int)values0.size() == GetActiveDOF() );
+        BOOST_ASSERT((int)values1.size() == GetActiveDOF() );
+        _probot->SubtractActiveDOFValues(values0,values1);
+        return toPyArray(values0);
+    }
+
     boost::multi_array<dReal,2> CalculateActiveJacobian(int index, object offset) const
     {
         boost::multi_array<dReal,2> mjacobian;
@@ -2103,7 +2124,7 @@ public:
     boost::multi_array<dReal,2> CalculateActiveRotationJacobian(int index, object q) const
     {
         boost::multi_array<dReal,2> mjacobian;
-        _probot->CalculateActiveJacobian(index,ExtractVector4(q),mjacobian);
+        _probot->CalculateActiveRotationJacobian(index,ExtractVector4(q),mjacobian);
         return mjacobian;
     }
 
@@ -2562,7 +2583,7 @@ protected:
         case PT_SensorSystem: return PySensorSystemBasePtr(new PySensorSystemBase(boost::static_pointer_cast<SensorSystemBase>(pinterface),shared_from_this()));
         case PT_Controller: return PyControllerBasePtr(new PyControllerBase(boost::static_pointer_cast<ControllerBase>(pinterface),shared_from_this()));
         case PT_ProblemInstance: return PyProblemInstancePtr(new PyProblemInstance(boost::static_pointer_cast<ProblemInstance>(pinterface),shared_from_this()));
-        case PT_InverseKinematicsSolver: return PyIkSolverBasePtr(new PyIkSolverBase(boost::static_pointer_cast<IkSolverBase>(pinterface),shared_from_this()));
+        case PT_IkSolver: return PyIkSolverBasePtr(new PyIkSolverBase(boost::static_pointer_cast<IkSolverBase>(pinterface),shared_from_this()));
         case PT_KinBody: return PyKinBodyPtr(new PyKinBody(boost::static_pointer_cast<KinBody>(pinterface),shared_from_this()));
         case PT_PhysicsEngine: return PyPhysicsEngineBasePtr(new PyPhysicsEngineBase(boost::static_pointer_cast<PhysicsEngineBase>(pinterface),shared_from_this()));
         case PT_Sensor: return PySensorBasePtr(new PySensorBase(boost::static_pointer_cast<SensorBase>(pinterface),shared_from_this()));
@@ -2702,7 +2723,7 @@ public:
     PyProblemInstancePtr CreateProblem(const string& name)
     {
         RAVELOG_WARN("Environment.CreateProblem deprecated, use RaveCreateProblem\n");
-        return openravepy::RaveCreateProblem(shared_from_this(),name);
+        return openravepy::RaveCreateProblemInstance(shared_from_this(),name);
     }
     PyIkSolverBasePtr CreateIkSolver(const string& name)
     {
@@ -3620,9 +3641,9 @@ namespace openravepy
         return PyControllerBasePtr(new PyControllerBase(p,pyenv));
     }
 
-    PyProblemInstancePtr RaveCreateProblem(PyEnvironmentBasePtr pyenv, const std::string& name)
+    PyProblemInstancePtr RaveCreateProblemInstance(PyEnvironmentBasePtr pyenv, const std::string& name)
     {
-        ProblemInstancePtr p = OpenRAVE::RaveCreateProblem(pyenv->GetEnv(), name);
+        ProblemInstancePtr p = OpenRAVE::RaveCreateProblemInstance(pyenv->GetEnv(), name);
         if( !p ) {
             return PyProblemInstancePtr();
         }
@@ -3762,7 +3783,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
         .value(RaveGetInterfaceName(PT_SensorSystem).c_str(),PT_SensorSystem)
         .value(RaveGetInterfaceName(PT_Controller).c_str(),PT_Controller)
         .value(RaveGetInterfaceName(PT_ProblemInstance).c_str(),PT_ProblemInstance)
-        .value(RaveGetInterfaceName(PT_InverseKinematicsSolver).c_str(),PT_InverseKinematicsSolver)
+        .value(RaveGetInterfaceName(PT_IkSolver).c_str(),PT_IkSolver)
         .value(RaveGetInterfaceName(PT_KinBody).c_str(),PT_KinBody)
         .value(RaveGetInterfaceName(PT_PhysicsEngine).c_str(),PT_PhysicsEngine)
         .value(RaveGetInterfaceName(PT_Sensor).c_str(),PT_Sensor)
@@ -3962,7 +3983,7 @@ In python, the syntax is::\n\n\
             .def("SetJointValues",psetdofvalues2,args("values","dofindices"), DOXY_FN(KinBody,SetDOFValues "const std::vector; bool"))
             .def("SetDOFValues",psetdofvalues1,args("values"), DOXY_FN(KinBody,SetDOFValues "const std::vector; bool"))
             .def("SetDOFValues",psetdofvalues2,args("values","dofindices"), DOXY_FN(KinBody,SetDOFValues "const std::vector; bool"))
-            .def("SubtractDOFValues",&PyKinBody::SubtractDOFValues,args("values1","values2"), DOXY_FN(KinBody,SubtractDOFValues))
+            .def("SubtractDOFValues",&PyKinBody::SubtractDOFValues,args("values0","values1"), DOXY_FN(KinBody,SubtractDOFValues))
             .def("SetJointTorques",&PyKinBody::SetJointTorques,args("torques","add"), DOXY_FN(KinBody,SetJointTorques))
             .def("SetTransformWithJointValues",&PyKinBody::SetTransformWithDOFValues,args("transform","values"), DOXY_FN(KinBody,SetDOFValues "const std::vector; const Transform; bool"))
             .def("SetTransformWithDOFValues",&PyKinBody::SetTransformWithDOFValues,args("transform","values"), DOXY_FN(KinBody,SetDOFValues "const std::vector; const Transform; bool"))
@@ -4295,11 +4316,13 @@ In python, the syntax is::\n\n\
             .def("GetAffineRotationQuatWeights",&PyRobotBase::GetAffineRotationQuatWeights, DOXY_FN(RobotBase,GetAffineRotationQuatWeights))
             .def("SetActiveDOFValues",&PyRobotBase::SetActiveDOFValues,args("values"), DOXY_FN(RobotBase,SetActiveDOFValues))
             .def("GetActiveDOFValues",&PyRobotBase::GetActiveDOFValues, DOXY_FN(RobotBase,GetActiveDOFValues))
+            .def("GetActiveDOFWeights",&PyRobotBase::GetActiveDOFValues, DOXY_FN(RobotBase,GetActiveDOFWeights))
             .def("SetActiveDOFVelocities",&PyRobotBase::SetActiveDOFVelocities, DOXY_FN(RobotBase,SetActiveDOFVelocities))
             .def("GetActiveDOFVelocities",&PyRobotBase::GetActiveDOFVelocities, DOXY_FN(RobotBase,GetActiveDOFVelocities))
             .def("GetActiveDOFLimits",&PyRobotBase::GetActiveDOFLimits, DOXY_FN(RobotBase,GetActiveDOFLimits))
             .def("GetActiveJointIndices",&PyRobotBase::GetActiveJointIndices)
             .def("GetActiveDOFIndices",&PyRobotBase::GetActiveDOFIndices, DOXY_FN(RobotBase,GetActiveDOFIndices))
+            .def("SubtractActiveDOFValues",&PyRobotBase::SubtractActiveDOFValues, args("values0","values1"), DOXY_FN(RobotBase,SubtractActiveDOFValues))
             .def("CalculateActiveJacobian",&PyRobotBase::CalculateActiveJacobian,args("linkindex","offset"), DOXY_FN(RobotBase,CalculateActiveJacobian "int; const Vector; boost::multi_array"))
             .def("CalculateActiveRotationJacobian",&PyRobotBase::CalculateActiveRotationJacobian,args("linkindex","quat"), DOXY_FN(RobotBase,CalculateActiveRotationJacobian "int; const Vector; boost::multi_array"))
             .def("CalculateActiveAngularVelocityJacobian",&PyRobotBase::CalculateActiveAngularVelocityJacobian,args("linkindex"), DOXY_FN(RobotBase,CalculateActiveAngularVelocityJacobian "int; boost::multi_array"))
@@ -4810,7 +4833,8 @@ In python, the syntax is::\n\n\
     def("RaveCreatePlanner",openravepy::RaveCreatePlanner,args("env","name"),DOXY_FN1(RaveCreatePlanner));
     def("RaveCreateSensorSystem",openravepy::RaveCreateSensorSystem,args("env","name"),DOXY_FN1(RaveCreateSensorSystem));
     def("RaveCreateController",openravepy::RaveCreateController,args("env","name"),DOXY_FN1(RaveCreateController));
-    def("RaveCreateProblem",openravepy::RaveCreateProblem,args("env","name"),DOXY_FN1(RaveCreateProblem));
+    def("RaveCreateProblem",openravepy::RaveCreateProblemInstance,args("env","name"),DOXY_FN1(RaveCreateProblemInstance));
+    def("RaveCreateProblemInstance",openravepy::RaveCreateProblemInstance,args("env","name"),DOXY_FN1(RaveCreateProblemInstance));
     def("RaveCreateIkSolver",openravepy::RaveCreateIkSolver,args("env","name"),DOXY_FN1(RaveCreateIkSolver));
     def("RaveCreatePhysicsEngine",openravepy::RaveCreatePhysicsEngine,args("env","name"),DOXY_FN1(RaveCreatePhysicsEngine));
     def("RaveCreateSensor",openravepy::RaveCreateSensor,args("env","name"),DOXY_FN1(RaveCreateSensor));

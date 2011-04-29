@@ -286,8 +286,8 @@ public:
     PlannerBasePtr CreatePlanner(EnvironmentBasePtr penv, const std::string& name) { return RaveInterfaceCast<PlannerBase>(Create(penv, PT_Planner, name)); }
     SensorSystemBasePtr CreateSensorSystem(EnvironmentBasePtr penv, const std::string& name) { return RaveInterfaceCast<SensorSystemBase>(Create(penv, PT_SensorSystem, name)); }
     ControllerBasePtr CreateController(EnvironmentBasePtr penv, const std::string& name) { return RaveInterfaceCast<ControllerBase>(Create(penv, PT_Controller, name)); }
-    ProblemInstancePtr CreateProblem(EnvironmentBasePtr penv, const std::string& name) { return RaveInterfaceCast<ProblemInstance>(Create(penv, PT_ProblemInstance, name)); }
-    IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr penv, const std::string& name) { return RaveInterfaceCast<IkSolverBase>(Create(penv, PT_InverseKinematicsSolver, name)); }
+    ProblemInstancePtr CreateProblemInstance(EnvironmentBasePtr penv, const std::string& name) { return RaveInterfaceCast<ProblemInstance>(Create(penv, PT_ProblemInstance, name)); }
+    IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr penv, const std::string& name) { return RaveInterfaceCast<IkSolverBase>(Create(penv, PT_IkSolver, name)); }
     PhysicsEngineBasePtr CreatePhysicsEngine(EnvironmentBasePtr penv, const std::string& name) { return RaveInterfaceCast<PhysicsEngineBase>(Create(penv, PT_PhysicsEngine, name)); }
     SensorBasePtr CreateSensor(EnvironmentBasePtr penv, const std::string& name) { return RaveInterfaceCast<SensorBase>(Create(penv, PT_Sensor, name)); }
     CollisionCheckerBasePtr CreateCollisionChecker(EnvironmentBasePtr penv, const std::string& name) { return RaveInterfaceCast<CollisionCheckerBase>(Create(penv, PT_CollisionChecker, name)); }
@@ -312,7 +312,7 @@ public:
                 RegQueryValueEx(hkey, TEXT("InstallRoot"), NULL, &dwType, (PBYTE)szInstallRoot, &dwSize);
                 RegCloseKey(hkey);
                 installdir.assign(szInstallRoot);
-                installdir += str(boost::format("%cshare%copenrave%cplugins")%s_filesep%s_filesep%s_filesep);
+                installdir += str(boost::format("%cshare%copenrave-%d.%d%cplugins")%s_filesep%s_filesep%OPENRAVE_VERSION_MAJOR%OPENRAVE_VERSION_MINOR%s_filesep);
             }
             else
 #endif
@@ -721,11 +721,23 @@ protected:
         }
 #ifndef _WIN32
         if( plibrary == NULL ) {
-            // unix libraries are prefixed with 'lib'
-            if( libraryname.size() > 3 && libraryname.substr(0,3) != string("lib") ) {
-                libraryname = string("lib") + libraryname;
+            // unix libraries are prefixed with 'lib', first have to split
+#if defined(HAVE_BOOST_FILESYSTEM) && BOOST_VERSION >= 103600 // stem() was introduced in 1.36
+            boost::filesystem::path _librarypath(libraryname, boost::filesystem::native);
+            string librarypath = _librarypath.parent_path().string();
+#if defined(BOOST_FILESYSTEM_VERSION) && BOOST_FILESYSTEM_VERSION >= 3
+            string libraryfilename = _librarypath.filename().string();
+#else
+            string libraryfilename = _librarypath.filename();
+#endif
+            if( libraryfilename.size() > 3 && libraryfilename.substr(0,3) != string("lib") ) {
+                libraryname = librarypath;
+                libraryname += s_filesep;
+                libraryname += string("lib");
+                libraryname += libraryfilename;
                 plibrary = _SysLoadLibrary(libraryname.c_str(),OPENRAVE_LAZY_LOADING);
             }
+#endif
         }
 #endif
 

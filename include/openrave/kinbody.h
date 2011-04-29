@@ -840,6 +840,7 @@ public:
     /// Takes into account joint limits and wrapping of circular joints.
     virtual void SubtractDOFValues(std::vector<dReal>& values1, const std::vector<dReal>& values2) const;
 
+    /// \deprecated (01/01/11)
     virtual void SubtractJointValues(std::vector<dReal>& q1, const std::vector<dReal>& q2) const RAVE_DEPRECATED { SubtractDOFValues(q1,q2); }
 
     /// \brief Adds a torque to every joint.

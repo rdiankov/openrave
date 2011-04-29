@@ -25,7 +25,8 @@ from optparse import OptionParser
 
 import time, os, sys, logging, multiprocessing
 import nose
-from noseplugins import multiprocess, xunitmultiprocess, capture, callableclass
+#from nose.plugins import multiprocess
+from noseplugins import multiprocess,xunitmultiprocess, capture, callableclass
 
 import cPickle as pickle
 
