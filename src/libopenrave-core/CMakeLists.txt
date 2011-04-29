@@ -31,7 +31,6 @@ if( IVCON_FOUND )
   set(coreLIBS ${coreLIBS} ${IVCON_LIBRARY})
 endif()
 
-message(STATUS "link dirs: ${OPENRAVE_LINK_DIRS}")
 link_directories(${OPENRAVE_LINK_DIRS})
 
 if( CLOCK_GETTIME_FOUND )
