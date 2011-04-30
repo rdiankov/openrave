@@ -19,7 +19,7 @@
 # set(CPACK_DEBIAN_PACKAGE_SECTION devel)
 # set(CPACK_DEBIAN_CMAKE_OPTIONS "-DMYOPTION=myvalue")
 # set(CPACK_DEBIAN_PACKAGE_DEPENDS mycomp0 mycomp1 some_ubuntu_package)
-# set(CPACK_DEBIAN_PACKAGE_DEPENDS_LUCID mycomp0 mycomp1 lucid_specific_package)
+# set(CPACK_DEBIAN_PACKAGE_DEPENDS_UBUNTU_LUCID mycomp0 mycomp1 lucid_specific_package)
 # set(CPACK_DEBIAN_PACKAGE_NAME mypackage)
 # set(CPACK_DEBIAN_PACKAGE_REMOVE_SOURCE_FILES unnecessary_file unnecessary_dir/file0)
 # set(CPACK_DEBIAN_PACKAGE_SOURCE_COPY svn export --force) # if using subversion
