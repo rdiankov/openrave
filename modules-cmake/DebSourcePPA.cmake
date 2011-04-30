@@ -17,6 +17,7 @@
 # set(CPACK_DEBIAN_BUILD_DEPENDS debhelper cmake)
 # set(CPACK_DEBIAN_PACKAGE_PRIORITY optional)
 # set(CPACK_DEBIAN_PACKAGE_SECTION devel)
+# set(CPACK_DEBIAN_CMAKE_OPTIONS "-DMYOPTION=myvalue")
 # set(CPACK_DEBIAN_PACKAGE_DEPENDS mycomp0 mycomp1 some_ubuntu_package)
 # set(CPACK_DEBIAN_PACKAGE_DEPENDS_LUCID mycomp0 mycomp1 lucid_specific_package)
 # set(CPACK_DEBIAN_PACKAGE_NAME mypackage)
@@ -171,7 +172,7 @@ foreach(RELEASE ${CPACK_DEBIAN_DISTRIBUTION_RELEASES})
     "\n"
     "build:\n"
     "	mkdir $(BUILDDIR)\n"
-    "	cd $(BUILDDIR); cmake -DCMAKE_BUILD_TYPE=Release -DBASH_COMPLETION_DIR=../etc/bash_completion.d -DCMAKE_INSTALL_PREFIX=/usr ..\n"
+    "	cd $(BUILDDIR); cmake -DCMAKE_BUILD_TYPE=Release ${CPACK_DEBIAN_CMAKE_OPTIONS} -DCMAKE_INSTALL_PREFIX=/usr ..\n"
     "	$(MAKE) -C $(BUILDDIR) preinstall\n"
     "	touch build\n"
     "\n"
