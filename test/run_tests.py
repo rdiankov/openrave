@@ -1,0 +1,32 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# Copyright (C) 2011 Rosen Diankov <rosen.diankov@gmail.com>
+# 
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#     http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+import sys
+from optparse import OptionParser
+import nose
+from noseplugins import multiprocess, xunitmultiprocess, capture
+
+if __name__ == "__main__":
+    import test_kinematics
+    parser = OptionParser(description='OpenRAVE unit tests')
+    parser.add_option('--timeout','-t', action='store', type='float', dest='timeout',default='600',
+                      help='Timeout for each ikfast run, this includes time for generation and performance measurement. (default=%default)')
+    parser.add_option('-j', action='store', type='int', dest='numprocesses',default='4',
+                      help='Number of processors to run this in (default=%default).')
+    (options, args) = parser.parse_args()
+
+    multiprocess._instantiate_plugins = [capture.Capture, xunitmultiprocess.Xunitmp]
+    argv=['nosetests','-v','--with-xunitmp','--xunit-file=results.xml','--processes=%d'%options.numprocesses,'--process-timeout=%f'%options.timeout,'--process-restartworker','-s']
+    plugins=[capture.Capture(),multiprocess.MultiProcess(),xunitmultiprocess.Xunitmp()]
+    prog=nose.core.TestProgram(argv=argv,plugins=plugins,exit=False)

@@ -211,9 +211,12 @@ class Xunitmp(Plugin):
             type = 'error'
             self.xunitstats[0] += 1
         tb = ''.join(traceback.format_exception(*err))
-        id=test.shortDescription()
-        if id is None:
-            id = test.id()
+        try:
+            id=test.shortDescription()
+            if id is None:
+                id = test.id()
+        except AttributeError:
+            id=''
         id = id.split('.')
         name = self._quoteattr(id[-1])
         systemout = ''
@@ -232,9 +235,12 @@ class Xunitmp(Plugin):
         taken = self._timeTaken()
         tb = ''.join(traceback.format_exception(*err))
         self.xunitstats[1] += 1
-        id=test.shortDescription()
-        if id is None:
-            id = test.id()
+        try:
+            id=test.shortDescription()
+            if id is None:
+                id = test.id()
+        except AttributeError:
+            id=''
         id = id.split('.')
         name = self._quoteattr(id[-1])
         systemout = ''
@@ -252,9 +258,12 @@ class Xunitmp(Plugin):
         """
         taken = self._timeTaken()
         self.xunitstats[2] += 1
-        id=test.shortDescription()
-        if id is None:
-            id = test.id()
+        try:
+            id=test.shortDescription()
+            if id is None:
+                id = test.id()
+        except AttributeError:
+            id=''
         id = id.split('.')
         name = self._quoteattr(id[-1])
         systemout=''
