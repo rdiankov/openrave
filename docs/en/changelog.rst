@@ -21,7 +21,12 @@ Core
 
 * removed a dependency on mathextra.h from geometry.h
 
-* ReadKinBody*, ReadRobot*, and Load can now process rigid body models like IV, VRML, STL, etc and convert them automatically to KinBody objects.
+* ReadKinBody*, ReadRobot*, and Load can now process rigid body models like IV, VRML, STL, etc and convert them automatically to KinBody objects. For example::
+
+  openrave windmill.iv
+  openrave test1.iv
+  Environment.Load('test1.iv')
+  Environment.ReadKinBodyXMLFile('test1.iv')
 
 Windows
 -------

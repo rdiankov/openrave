@@ -159,8 +159,7 @@ if __name__ == "__main__":
     try:
         # load files after viewer is loaded since they may contain information about where to place the camera
         for arg in args:
-            if arg.endswith('.xml') or arg.endswith('.dae') or arg.endswith('.zae'):
-                env.Load(arg)
+            env.Load(arg)
         with env:
             robots=env.GetRobots()
             robot=None if len(robots) == 0 else robots[0]
