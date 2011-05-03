@@ -123,16 +123,16 @@ QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
     _ivCamera->orientation.setValue(SbVec3f(1,0,0), -0.5f);
     _ivCamera->aspectRatio = (float)view1->size().width() / (float)view1->size().height();
 
-    {
+    _ivBodies = NULL;
+    if( !!ifstream("environment.iv") ) {
         SoDBLock dblock();
         SoInput mySceneInput;
-        _ivBodies = NULL;
         if( mySceneInput.openFile("environment.iv") ) {
             _ivBodies = SoDB::readAll(&mySceneInput);
         }
-        if( _ivBodies == NULL ) {
-            _ivBodies = new SoSeparator();
-        }
+    }
+    if( _ivBodies == NULL ) {
+        _ivBodies = new SoSeparator();
     }
 
     // add the message texts
