@@ -30,3 +30,6 @@ if __name__ == "__main__":
     argv=['nosetests','-v','--with-xunitmp','--xunit-file=results.xml','--processes=%d'%options.numprocesses,'--process-timeout=%f'%options.timeout,'--process-restartworker','-s']
     plugins=[capture.Capture(),multiprocess.MultiProcess(),xunitmultiprocess.Xunitmp()]
     prog=nose.core.TestProgram(argv=argv,plugins=plugins,exit=False)
+
+
+    prog=nose.core.TestProgram(argv=['test_kinematics.py'],exit=False)

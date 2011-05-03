@@ -1,4 +1,4 @@
-// Copyright (C) 2006-2010 Rosen Diankov (rdiankov@cs.cmu.edu)
+
 // -*- coding: utf-8 -*-
 //
 // This file is part of OpenRAVE.
@@ -336,6 +336,11 @@ public:
         {
             CHECK_POINTER(plink);
             return _plink->IsRigidlyAttached(plink->GetLink());
+        }
+
+        void SetVelocity(object olinear, object oangular)
+        {
+            _plink->SetVelocity(ExtractVector3(olinear),ExtractVector3(oangular));
         }
 
         object GetVelocity() const
@@ -4050,6 +4055,7 @@ In python, the syntax is::\n\n\
                 .def("GetRigidlyAttachedLinks",&PyKinBody::PyLink::GetRigidlyAttachedLinks, DOXY_FN(KinBody::Link,GetRigidlyAttachedLinks))
                 .def("IsRigidlyAttached",&PyKinBody::PyLink::IsRigidlyAttached, DOXY_FN(KinBody::Link,IsRigidlyAttached))
                 .def("GetVelocity",&PyKinBody::PyLink::GetVelocity,DOXY_FN(KinBody::Link,GetVelocity))
+                .def("SetVelocity",&PyKinBody::PyLink::SetVelocity,DOXY_FN(KinBody::Link,SetVelocity))
                 .def("__repr__", &PyKinBody::PyLink::__repr__)
                 .def("__str__", &PyKinBody::PyLink::__str__)
                 .def("__eq__",&PyKinBody::PyLink::__eq__)

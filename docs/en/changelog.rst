@@ -21,6 +21,8 @@ Core
 
 * removed a dependency on mathextra.h from geometry.h
 
+* ReadKinBody*, ReadRobot*, and Load can now process rigid body models like IV, VRML, STL, etc and convert them automatically to KinBody objects.
+
 Windows
 -------
 
@@ -34,6 +36,8 @@ Testing
 -------
 
 * fixed bugs in multiprocess plugin
+
+* added basic kinematics tests
 
 Version 0.3.1
 =============

@@ -2809,17 +2809,7 @@ class ColladaReader : public daeErrorHandler
         if( name.size() == 0 ) {
             return str(boost::format("__dummy%d")%_nGlobalIndex++);
         }
-        if( IsValidName(name) ) {
-            return name;
-        }
-        std::string newname = name;
-        for(size_t i = 0; i < newname.size(); ++i) {
-            if( !IsValidCharInName(newname[i]) ) {
-                newname[i] = '_';
-            }
-        }
-        RAVELOG_WARN(str(boost::format("name '%s' is not a valid OpenRAVE name, converting to '%s'")%name%newname));
-        return newname;
+        return ConvertToOpenRAVEName(name);
     }
 
     inline static dReal _GetUnitScale(daeElementRef pelt, dReal startscale)

@@ -718,6 +718,7 @@ void KinBody::Link::GetVelocity(Vector& linearvel, Vector& angularvel) const
 
 KinBody::Link::GEOMPROPERTIES& KinBody::Link::GetGeometry(int index)
 {
+    BOOST_ASSERT(index >= 0 && index < (int)_listGeomProperties.size());
     std::list<GEOMPROPERTIES>::iterator it = _listGeomProperties.begin();
     advance(it,index);
     return *it;

@@ -884,7 +884,7 @@ public:
     /// \praam checklimits if true, will excplicitly check the joint velocity limits before setting the values.
     virtual bool SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, bool checklimits = false);
 
-    /// Returns the linear and angular velocities for each link
+    /// \brief Returns the linear and angular velocities for each link
     virtual bool GetLinkVelocities(std::vector<std::pair<Vector,Vector> >& velocities) const;
 
     /** \en \brief set the transform of the first link (the rest of the links are computed based on the joint values).
