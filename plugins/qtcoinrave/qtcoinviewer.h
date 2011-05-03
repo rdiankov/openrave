@@ -85,6 +85,7 @@ public:
 
     virtual SoPerspectiveCamera* GetCamera() { return _ivCamera; }
     virtual SoSelection* GetRoot() { return _ivRoot; }
+    virtual SoSeparator* GetBodiesRoot() { return _ivBodies; }
 
     virtual void UpdateCameraTransform();
     static void _PlayCB(void *userData, SoSensor *);

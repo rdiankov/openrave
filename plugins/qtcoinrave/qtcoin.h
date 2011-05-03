@@ -292,6 +292,14 @@ class MyCallbackEvent : public QEvent
     boost::function<void()> _fn;
 };
 
+
+class SoDBLock
+{
+ public:
+    SoDBLock() { SoDB::readlock(); }
+    virtual ~SoDBLock() { SoDB::readunlock(); }
+};
+
 #include "Item.h"
 #include "IvSelector.h"
 #include "qtcoinviewer.h"
