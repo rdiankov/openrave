@@ -24,12 +24,13 @@ if __name__ == "__main__":
                       help='Timeout for each ikfast run, this includes time for generation and performance measurement. (default=%default)')
     parser.add_option('-j', action='store', type='int', dest='numprocesses',default='4',
                       help='Number of processors to run this in (default=%default).')
+    parser.add_option('--with-coverage',action='store_true',dest='with_coverage',default=False,
+                      help='set to create coverage statistics')
     (options, args) = parser.parse_args()
 
     multiprocess._instantiate_plugins = [capture.Capture, xunitmultiprocess.Xunitmp]
     argv=['nosetests','-v','--with-xunitmp','--xunit-file=results.xml','--processes=%d'%options.numprocesses,'--process-timeout=%f'%options.timeout,'--process-restartworker','-s']
+    if options.with_coverage:
+        argv += ['--with-coverage', '--cover-package=openravepy','--cover-html']
     plugins=[capture.Capture(),multiprocess.MultiProcess(),xunitmultiprocess.Xunitmp()]
     prog=nose.core.TestProgram(argv=argv,plugins=plugins,exit=False)
-
-
-    prog=nose.core.TestProgram(argv=['test_kinematics.py'],exit=False)

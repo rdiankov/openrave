@@ -49,7 +49,7 @@ if( MSVC )
   endif()
   set(OpenRAVE_LIBRARY_SUFFIX "${OpenRAVE_VERSION_MAJOR}.${OpenRAVE_VERSION_MINOR}-${MSVC_PREFIX}-mt" CACHE STRING "the suffix for the openrave libraries" FORCE)
 else()
-  set(OpenRAVE_LIBRARY_SUFFIX)
+  set(OpenRAVE_LIBRARY_SUFFIX "${OpenRAVE_VERSION_MAJOR}.${OpenRAVE_VERSION_MINOR}" CACHE STRING "the suffix for the openrave libraries" FORCE)
 endif()
   
 set( OpenRAVE_CXX_FLAGS "-DOPENRAVE_DLL -DOPENRAVE_CORE_DLL" )

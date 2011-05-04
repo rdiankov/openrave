@@ -28,6 +28,8 @@ Core
   Environment.Load('test1.iv')
   Environment.ReadKinBodyXMLFile('test1.iv')
 
+* adding the soversion suffix to all libopenrave libraries: libopenrave -> libopenraveX.Y. There is no libopenrave or libopenrave-core anymore, so linking with "-lopenrave" or "-lopenrave-core" will fail.
+
 Windows
 -------
 
@@ -42,7 +44,7 @@ Testing
 
 * fixed bugs in multiprocess plugin
 
-* added basic kinematics tests
+* added extensive basic math and kinematics tests
 
 Version 0.3.1
 =============

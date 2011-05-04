@@ -137,8 +137,9 @@ object rotationMatrixFromQArray(object qarray)
 {
     boost::python::list orots;
     int N = len(qarray);
-    for(int i = 0; i < N; ++i)
+    for(int i = 0; i < N; ++i) {
         orots.append(rotationMatrixFromQuat(qarray[i]));
+    }
     return orots;
 }
 
@@ -176,8 +177,9 @@ object matrixFromPoses(object oposes)
 {
     boost::python::list omatrices;
     int N = len(oposes);
-    for(int i = 0; i < N; ++i)
+    for(int i = 0; i < N; ++i) {
         omatrices.append(matrixFromPose(oposes[i]));
+    }
     return omatrices;
 }
 
@@ -196,9 +198,9 @@ object poseFromMatrix(object o)
 object poseFromMatrices(object otransforms)
 {
     int N = len(otransforms);
-    if( N == 0 )
+    if( N == 0 ) {
         return static_cast<numeric::array>(handle<>());
-
+    }
     npy_intp dims[] = {N,7};
     PyObject *pyvalues = PyArray_SimpleNew(2,dims, sizeof(dReal)==8?PyArray_DOUBLE:PyArray_FLOAT);
     dReal* pvalues = (dReal*)PyArray_DATA(pyvalues);
@@ -222,9 +224,9 @@ object poseFromMatrices(object otransforms)
 object invertPoses(object o)
 {
     int N = len(o);
-    if( N == 0 )
+    if( N == 0 ) {
         return numeric::array(boost::python::list());
-
+    }
     npy_intp dims[] = {N,7};
     PyObject *pytrans = PyArray_SimpleNew(2,dims, sizeof(dReal)==8?PyArray_DOUBLE:PyArray_FLOAT);
     dReal* ptrans = (dReal*)PyArray_DATA(pytrans);
@@ -257,6 +259,20 @@ object quatMult(object oquat1, object oquat2)
 object poseMult(object opose1, object opose2)
 {
     return toPyArray(ExtractTransformType<dReal>(opose1)*ExtractTransformType<dReal>(opose2));
+}
+
+object poseTransformPoints(object opose, object opoints)
+{
+    Transform t = ExtractTransformType<dReal>(opose);
+    int N = len(opoints);
+    npy_intp dims[] = {N,3};
+    PyObject *pytrans = PyArray_SimpleNew(2,dims, sizeof(dReal)==8?PyArray_DOUBLE:PyArray_FLOAT);
+    dReal* ptrans = (dReal*)PyArray_DATA(pytrans);
+    for(int i = 0; i < N; ++i, ptrans += 3) {
+        Vector newpoint = t*ExtractVector3(opoints[i]);
+        ptrans[0] = newpoint.x; ptrans[1] = newpoint.y; ptrans[2] = newpoint.z;
+    }
+    return static_cast<numeric::array>(handle<>(pytrans));
 }
 
 object transformLookat(object olookat, object ocamerapos, object ocameraup)
@@ -334,6 +350,7 @@ void init_openravepy_global()
     def("quatMult",openravepy::quatMult,args("quat0","quat1"),DOXY_FN1(quatMultiply));
     def("quatMultiply",openravepy::quatMult,args("quat0","quat1"),DOXY_FN1(quatMultiply));
     def("poseMult",openravepy::poseMult,args("pose1","pose2"),"multiplies two poses.\n\n:param pose1: 7 values\n\n:param pose2: 7 values\n");
+    def("poseTransformPoints",openravepy::poseTransformPoints,args("pose","points"),"left-transforms a set of points by a pose transformation.\n\n:param pose: 7 values\n\n:param points: Nx3 values");
     def("transformLookat",openravepy::transformLookat,args("lookat","camerapos","cameraup"),"Returns a camera matrix that looks along a ray with a desired up vector.\n\n:param lookat: unit axis, 3 values\n\n:param camerapos: 3 values\n\n:param cameraup: unit axis, 3 values\n");
     def("matrixSerialization",openravepy::matrixSerialization,args("transform"),"Serializes a transformation into a string representing a 3x4 matrix.\n\n:param transform: 3x4 or 4x4 array\n");
     def("poseSerialization",openravepy::poseSerialization, args("pose"), "Serializes a transformation into a string representing a quaternion with translation.\n\n:param pose: 7 values\n");

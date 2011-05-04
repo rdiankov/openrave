@@ -142,7 +142,7 @@ if( WIN32 )
   # does not support symlinks
   set(OPENRAVE_BIN_SUFFIX)
 else()
-  set(OPENRAVE_BIN_SUFFIX ${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR} CACHE STRING "Add the MAJOR.MINOR openrave version suffixes to all executable installed files")
+  set(OPENRAVE_BIN_SUFFIX ${OPENRAVE_SOVERSION} CACHE STRING "Add the MAJOR.MINOR openrave version suffixes to all executable installed files")
 endif()
 
 if( UNIX OR CYGWIN)
@@ -245,6 +245,8 @@ if( MSVC )
   set(Boost_USE_STATIC_LIBS OFF)
   set(Boost_USE_STATIC_RUNTIME OFF)
   set(Boost_CFLAGS "-DBOOST_ALL_DYN_LINK -DBOOST_ALL_NO_LIB")
+else()
+  set(OPENRAVE_LIBRARY_SUFFIX "${OPENRAVE_SOVERSION}")
 endif()
 
 # only look for installed boost if not an old version of msvc
@@ -708,6 +710,7 @@ if( UNIX OR CYGWIN)
   install(FILES "${CMAKE_CURRENT_BINARY_DIR}/openrave_completion.bash" DESTINATION ${BASH_COMPLETION_DIR} COMPONENT ${COMPONENT_PREFIX}base )
   configure_file("${CMAKE_CURRENT_SOURCE_DIR}/openrave.pc.in" "${CMAKE_CURRENT_BINARY_DIR}/openrave-${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}.pc" @ONLY IMMEDIATE)
   install(FILES "${CMAKE_CURRENT_BINARY_DIR}/openrave-${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}.pc" DESTINATION lib${LIB_SUFFIX}/pkgconfig COMPONENT ${COMPONENT_PREFIX}dev)
+  install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink openrave-${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}.pc openrave.pc WORKING_DIRECTORY \${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX}/pkgconfig)" COMPONENT ${COMPONENT_PREFIX}base)
 endif()
 
 file(GLOB rave_header_files ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/*.h)
