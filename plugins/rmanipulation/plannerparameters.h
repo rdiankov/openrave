@@ -36,8 +36,9 @@ ExplorationParameters() : _fExploreProb(0), _nExpectedDataSize(100), _bProcessin
     // save the extra data to XML
     virtual bool serialize(std::ostream& O) const
     {
-        if( !PlannerParameters::serialize(O) )
+        if( !PlannerParameters::serialize(O) ) {
             return false;
+        }
         O << "<exploreprob>" << _fExploreProb << "</exploreprob>" << endl;
         O << "<expectedsize>" << _nExpectedDataSize << "</expectedsize>" << endl;
         return !!O;
@@ -45,8 +46,9 @@ ExplorationParameters() : _fExploreProb(0), _nExpectedDataSize(100), _bProcessin
 
     ProcessElement startElement(const std::string& name, const AttributesList& atts)
     {
-        if( _bProcessingExploration )
+        if( _bProcessingExploration ) {
             return PE_Ignore;
+        }
         switch( PlannerBase::PlannerParameters::startElement(name,atts) ) {
             case PE_Pass: break;
             case PE_Support: return PE_Support;
@@ -62,12 +64,15 @@ ExplorationParameters() : _fExploreProb(0), _nExpectedDataSize(100), _bProcessin
     {
         // _ss is an internal stringstream that holds the data of the tag
         if( _bProcessingExploration ) {
-            if( name == "exploreprob")
+            if( name == "exploreprob") {
                 _ss >> _fExploreProb;
-            else if( name == "expectedsize" )
+            }
+            else if( name == "expectedsize" ) {
                 _ss >> _nExpectedDataSize;
-            else
+            }
+            else {
                 RAVELOG_WARN(str(boost::format("unknown tag %s\n")%name));
+            }
             _bProcessingExploration = false;
             return false;
         }
@@ -97,9 +102,9 @@ RAStarParameters() : fRadius(0.1f), fDistThresh(0.03f), fGoalCoeff(1), nMaxChild
     bool _bProcessingRA;
     virtual bool serialize(std::ostream& O) const
     {
-        if( !PlannerParameters::serialize(O) )
+        if( !PlannerParameters::serialize(O) ) {
             return false;
-
+        }
         O << "<radius>" << fRadius << "</radius>" << endl;
         O << "<distthresh>" << fDistThresh << "</distthresh>" << endl;
         O << "<goalcoeff>" << fGoalCoeff << "</goalcoeff>" << endl;
@@ -111,8 +116,9 @@ RAStarParameters() : fRadius(0.1f), fDistThresh(0.03f), fGoalCoeff(1), nMaxChild
 
     ProcessElement startElement(const std::string& name, const AttributesList& atts)
     {
-        if( _bProcessingRA )
+        if( _bProcessingRA ) {
             return PE_Ignore;
+        }
         switch( PlannerBase::PlannerParameters::startElement(name,atts) ) {
             case PE_Pass: break;
             case PE_Support: return PE_Support;
@@ -124,18 +130,24 @@ RAStarParameters() : fRadius(0.1f), fDistThresh(0.03f), fGoalCoeff(1), nMaxChild
     virtual bool endElement(const string& name)
     {
         if( _bProcessingRA ) {
-            if( name == "radius")
+            if( name == "radius") {
                 _ss >> fRadius;
-            else if( name == "distthresh")
+            }
+            else if( name == "distthresh") {
                 _ss >> fDistThresh;
-            else if( name == "goalcoeff")
+            }
+            else if( name == "goalcoeff") {
                 _ss >> fGoalCoeff;
-            else if( name == "maxchildren")
+            }
+            else if( name == "maxchildren") {
                 _ss >> nMaxChildren;
-            else if( name == "maxsampletries")
+            }
+            else if( name == "maxsampletries") {
                 _ss >> nMaxSampleTries;
-            else
+            }
+            else {
                 RAVELOG_WARN(str(boost::format("unknown tag %s\n")%name));
+            }
             _bProcessingRA = false;
             return false;
         }
@@ -166,11 +178,13 @@ GraspSetParameters(EnvironmentBasePtr penv) : _nGradientSamples(5), _fVisibiltyG
     bool _bProcessingGS;
     virtual bool serialize(std::ostream& O) const
     {
-        if( !PlannerParameters::serialize(O) )
+        if( !PlannerParameters::serialize(O) ) {
             return false;
+        }
         O << "<grasps>" << _vgrasps.size() << " ";
-        FOREACHC(it, _vgrasps)
+        FOREACHC(it, _vgrasps) {
             O << *it << " ";
+        }
         O << "</grasps>" << endl;
         O << "<target>" << (!!_ptarget?_ptarget->GetEnvironmentId():0) << "</target>" << endl;
         O << "<numgradsamples>" << _nGradientSamples << "</numgradsamples>" << endl;
@@ -181,8 +195,9 @@ GraspSetParameters(EnvironmentBasePtr penv) : _nGradientSamples(5), _fVisibiltyG
 
     ProcessElement startElement(const std::string& name, const AttributesList& atts)
     {
-        if( _bProcessingGS )
+        if( _bProcessingGS ) {
             return PE_Ignore;
+        }
         switch( PlannerBase::PlannerParameters::startElement(name,atts) ) {
             case PE_Pass: break;
             case PE_Support: return PE_Support;
@@ -200,22 +215,27 @@ GraspSetParameters(EnvironmentBasePtr penv) : _nGradientSamples(5), _fVisibiltyG
                 int ngrasps=0;
                 _ss >> ngrasps;
                 _vgrasps.resize(ngrasps);
-                FOREACH(it, _vgrasps)
+                FOREACH(it, _vgrasps) {
                         _ss >> *it;
+                }
             }
             else if( name == "target" ) {
                 int id = 0;
                 _ss >> id;
                 _ptarget = _penv->GetBodyFromEnvironmentId(id);
             }
-            else if( name == "numgradsamples" )
+            else if( name == "numgradsamples" ) {
                 _ss >> _nGradientSamples;
-            else if( name == "visgraspthresh" )
+            }
+            else if( name == "visgraspthresh" ) {
                 _ss >> _fVisibiltyGraspThresh;
-            else if( name == "graspdistthresh")
+            }
+            else if( name == "graspdistthresh") {
                 _ss >> _fGraspDistThresh;
-            else
+            }
+            else {
                 RAVELOG_WARN(str(boost::format("unknown tag %s\n")%name));
+            }
             _bProcessingGS = false;
             return false;
         }
@@ -270,8 +290,9 @@ GraspParameters(EnvironmentBasePtr penv) : PlannerBase::PlannerParameters(), fst
     // save the extra data to XML
     virtual bool serialize(std::ostream& O) const
     {
-        if( !PlannerParameters::serialize(O) )
+        if( !PlannerParameters::serialize(O) ) {
             return false;
+        }
         O << "<fstandoff>" << fstandoff << "</fstandoff>" << endl;
         O << "<targetbody>" << (int)(!targetbody ? 0 : targetbody->GetEnvironmentId()) << "</targetbody>" << endl;
         O << "<ftargetroll>" << ftargetroll << "</ftargetroll>" << endl;
@@ -283,8 +304,9 @@ GraspParameters(EnvironmentBasePtr penv) : PlannerBase::PlannerParameters(), fst
         O << "<btightgrasp>" << btightgrasp << "</btightgrasp>" << endl;
         O << "<bavoidcontact>" << bavoidcontact << "</bavoidcontact>" << endl;
         O << "<vavoidlinkgeometry>" << endl;
-        FOREACHC(it,vavoidlinkgeometry)
+        FOREACHC(it,vavoidlinkgeometry) {
             O << *it << " ";
+        }
         O << "</vavoidlinkgeometry>" << endl;
         O << "<fcoarsestep>" << fcoarsestep << "</fcoarsestep>" << endl;
         O << "<ffinestep>" << ffinestep << "</ffinestep>" << endl;
@@ -295,8 +317,9 @@ GraspParameters(EnvironmentBasePtr penv) : PlannerBase::PlannerParameters(), fst
 
     ProcessElement startElement(const std::string& name, const AttributesList& atts)
     {
-        if( _bProcessingGrasp )
+        if( _bProcessingGrasp ) {
             return PE_Ignore;
+        }
         switch( PlannerBase::PlannerParameters::startElement(name,atts) ) {
             case PE_Pass: break;
             case PE_Support: return PE_Support;
@@ -316,43 +339,57 @@ GraspParameters(EnvironmentBasePtr penv) : PlannerBase::PlannerParameters(), fst
     {
         // _ss is an internal stringstream that holds the data of the tag
         if( _bProcessingGrasp ) {
-            if( name == "vavoidlinkgeometry" )
+            if( name == "vavoidlinkgeometry" ) {
                 vavoidlinkgeometry = vector<string>((istream_iterator<string>(_ss)), istream_iterator<string>());
-            else if( name == "fstandoff")
+            }
+            else if( name == "fstandoff") {
                 _ss >> fstandoff;
+            }
             else if( name == "targetbody") {
                 int id = 0;
                 _ss >> id;
                 targetbody = _penv->GetBodyFromEnvironmentId(id);
             }
-            else if( name == "ftargetroll")
+            else if( name == "ftargetroll") {
                 _ss >> ftargetroll;
+            }
             else if( name == "vtargetdirection") {
                 _ss >> vtargetdirection;
                 vtargetdirection.normalize3();
             }
-            else if( name == "vtargetposition")
+            else if( name == "vtargetposition") {
                 _ss >> vtargetposition;
-            else if( name == "btransformrobot")
+            }
+            else if( name == "btransformrobot") {
                 _ss >> btransformrobot;
-            else if( name == "breturntrajectory")
+            }
+            else if( name == "breturntrajectory") {
                 _ss >> breturntrajectory;
-            else if( name == "bonlycontacttarget")
+            }
+            else if( name == "bonlycontacttarget") {
                 _ss >> bonlycontacttarget;
-            else if( name == "btightgrasp" )
+            }
+            else if( name == "btightgrasp" ) {
                 _ss >> btightgrasp;
-            else if( name == "bavoidcontact" )
+            }
+            else if( name == "bavoidcontact" ) {
                 _ss >> bavoidcontact;
-            else if( name == "fcoarsestep" )
+            }
+            else if( name == "fcoarsestep" ) {
                 _ss >> fcoarsestep;
-            else if( name == "ffinestep" )
+            }
+            else if( name == "ffinestep" ) {
                 _ss >> ffinestep;
-            else if( name == "fgraspingnoise" )
+            }
+            else if( name == "fgraspingnoise" ) {
                 _ss >> fgraspingnoise;
-            else if( name == "ftranslationstepmult" )
+            }
+            else if( name == "ftranslationstepmult" ) {
                 _ss >> ftranslationstepmult;
-            else
+            }
+            else {
                 RAVELOG_WARN(str(boost::format("unknown tag %s\n")%name));
+            }
             _bProcessingGrasp = false;
             return false;
         }

@@ -129,6 +129,10 @@ QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
         SoInput mySceneInput;
         if( mySceneInput.openFile("environment.iv") ) {
             _ivBodies = SoDB::readAll(&mySceneInput);
+            if( !!_ivBodies ) {
+                // environment should take care of this
+                _pviewer->setHeadlight(false);
+            }
         }
     }
     if( _ivBodies == NULL ) {
