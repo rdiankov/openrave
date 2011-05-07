@@ -758,7 +758,7 @@ if(CMAKE_CPACK_COMMAND AND UNIX AND OPT_BUILD_PACKAGES)
   # add once infinite precision computations are enabled:
   # libmpfr-dev libgmp3-dev libmpfi-dev libgmpxx4ldbl python-gmpy
   # plugins:
-  set(CPACK_DEBIAN_BUILD_DEPENDS_UBUNTU ${CPACK_DEBIAN_BUILD_DEPENDS_UBUNTU} libboost-iostreams-dev libboost-regex-dev libqt4-dev qt4-dev-tools libqhull-dev libavcodec-dev libavformat-dev libswscale-dev libsimage-dev libode-dev libsoqt4-dev)# libassimp-dev)
+  set(CPACK_DEBIAN_BUILD_DEPENDS_UBUNTU ${CPACK_DEBIAN_BUILD_DEPENDS_UBUNTU} libboost-iostreams-dev libboost-regex-dev libqt4-dev qt4-dev-tools libqhull-dev libavcodec-dev libavformat-dev libswscale-dev libsimage-dev libode-dev libsoqt4-dev assimp-dev)
 
   # debian
   set(CPACK_DEBIAN_PACKAGE_PRIORITY optional)

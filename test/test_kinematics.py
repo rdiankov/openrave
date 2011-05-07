@@ -15,111 +15,10 @@
 from openravepy import *
 from numpy import *
 from itertools import izip, combinations
-from optparse import OptionParser
 import nose
+from common_test_openrave import *
 
 _multiprocess_can_split_ = True
-_epsilon = 1e-7
-
-def setup_module(module):
-    RaveInitialize(load_all_plugins=True)
-    
-def teardown_module(module):
-    RaveDestroy()
-
-def transdist(list0,list1):
-    return sum([sum(abs(item0-item1)) for item0, item1 in izip(list0,list1)])
-
-def randtrans():
-    T = matrixFromAxisAngle(random.rand(3)*6-3)
-    T[0:3,3] = random.rand(3)-0.5            
-    return T
-
-def randquat(N=1):
-    q = random.rand(N,4)-0.5
-    return q/tile(sqrt(sum(q**2,1)),(4,1)).transpose()
-
-def randpose(N=1):
-    poses = random.rand(N,7)-0.5
-    poses[:,0:4] /= tile(sqrt(sum(poses[:,0:4]**2,1)),(4,1)).transpose()
-    return poses
-
-def randlimits(lower,upper):
-    return lower+random.rand(len(lower))*(upper-lower)
-
-_envfiles = ['data/lab1.env.xml','data/pr2wam_test1.env.xml','data/hanoi_complex.env.xml']
-_robotfiles = ['robots/pr2-beta-static.zae','robots/barrettsegway.robot.xml','robots/neuronics-katana.zae']
-
-class TestKinematics():
-    def setup(self):
-        self.env=Environment()
-    def teardown(self):
-        self.env.Destroy()
-        self.env=None
-
-    def test_bodybasic(self):
-        """checks if the joint/link set/get space conversion commands are consistent"""
-        for envfile in _envfiles:
-            self.env.Reset()
-            self.env.Load(envfile)
-            for i in range(10):
-                T = eye(4)
-                for body in self.env.GetBodies():
-                    Told = body.GetTransform()
-                    Tallold = body.GetBodyTransformations()
-                    dofvaluesold = body.GetDOFValues()
-                    T = randtrans()
-                    body.SetTransform(T)
-                    assert( transdist(T,body.GetTransform()) <= _epsilon )
-                    body.SetBodyTransformations(Tallold)
-                    assert( transdist(Tallold,body.GetBodyTransformations()) <= _epsilon )
-                    Tallnew = [randtrans() for j in range(len(Tallold))]
-                    body.SetBodyTransformations(Tallnew)
-                    assert( transdist(Tallnew,body.GetBodyTransformations()) <= _epsilon )
-                    for link, T in izip(body.GetLinks(),Tallold):
-                        link.SetTransform(T)
-                    assert( transdist(Tallold,body.GetBodyTransformations()) <= _epsilon )
-                    # dof
-                    assert( transdist(dofvaluesold,body.GetDOFValues()) <= _epsilon )
-                    dofvaluesnew = randlimits(*body.GetDOFLimits())
-                    body.SetDOFValues(dofvaluesnew)
-                    assert( transdist(dofvaluesnew,body.GetDOFValues()) <= _epsilon )
-                    Tallnew = body.GetBodyTransformations()
-                    body.SetTransformWithDOFValues(body.GetTransform(),dofvaluesnew)
-                    assert( transdist(Tallnew,body.GetBodyTransformations()) <= _epsilon )
-                    assert( transdist(dofvaluesnew,body.GetDOFValues()) <= _epsilon )
-                    for joint in body.GetJoints():
-                        assert( transdist(joint.GetValues(), dofvaluesnew[joint.GetDOFIndex():(joint.GetDOFIndex()+joint.GetDOF())]) <= _epsilon )
-                    body.SetBodyTransformations(Tallold)
-                    # velocities
-                    oldlinkvels = body.GetLinkVelocities()
-                    dofvelnew = randlimits(*body.GetDOFVelocityLimits())
-                    link0vel = [random.rand(3)-0.5,random.rand(3)-0.5]
-                    body.SetVelocity(*link0vel)
-                    assert( sum(abs(body.GetDOFVelocities())) <= _epsilon )
-                    body.SetDOFVelocities(dofvelnew,*link0vel,checklimits=True)
-                    linkvels = body.GetLinkVelocities()
-                    assert( transdist(body.GetDOFVelocities(),dofvelnew) <= _epsilon )
-                    body.SetDOFVelocities(dofvelnew,linear=[0,0,0],angular=[0,0,0],checklimits=True)
-                    newlinkvels = random.rand(*linkvels.shape)-0.5
-                    for link,vel in izip(body.GetLinks(),newlinkvels):
-                        link.SetVelocity(vel[0:3],vel[3:6])
-                    assert( transdist(body.GetLinkVelocities(),newlinkvels) <= _epsilon )
-                    body.SetDOFVelocities(body.GetDOFVelocities(),newlinkvels[0][0:3],newlinkvels[0][3:6],checklimits=False)
-                    print body.GetLinkVelocities()
-                    print newlinkvels
-                    assert( transdist(body.GetLinkVelocities(),newlinkvels) <= _epsilon )
-                    for joint in body.GetJoints():
-                        assert( transdist(joint.GetVelocities(), dofvelnew[joint.GetDOFIndex():(joint.GetDOFIndex()+joint.GetDOF())]) <= _epsilon )
-                    for link,vel in izip(body.GetLinks(),newlinkvels):
-                        assert( transdist(link.GetVelocity(),[vel[0:3],vel[3:6]]) <= _epsilon )
-    def test_jacobian(self):
-        for envfile in _envfiles:
-            #self.env.Reset()
-            #self.env.Load(envfile)
-            for i in range(10):
-                pass
-
 
 def test_transformations():
     """tests basic math transformations"""
@@ -138,54 +37,284 @@ def test_transformations():
         T1 = matrixFromPose(pose0)
         poses = poseFromMatrices([T0,T1])
         T2,T3 = matrixFromPoses(poses)
-        assert(sum(abs(R0-R1)) <= _epsilon)
-        assert(abs(sum(quat0**2)-1) <= _epsilon)
+        assert(sum(abs(R0-R1)) <= g_epsilon)
+        assert(abs(sum(quat0**2)-1) <= g_epsilon)
         assert(sum(abs(linalg.inv(R0)-R0.transpose())))
         assert(sum(abs(linalg.inv(T0[0:3,0:3])-R0[0:3,0:3])))
-        assert(sum(abs(T0-T1)) <= _epsilon and sum(abs(T0-T2)) <= _epsilon and sum(abs(T0-T3)) <= _epsilon)
-        assert(abs(abs(dot(quat0,quat1))-1) <= _epsilon)
-        assert(sum(abs(axisangle0-axisangle1)) <= _epsilon and sum(abs(axisangle0-axisangle2)) <= _epsilon)
+        assert(sum(abs(T0-T1)) <= g_epsilon and sum(abs(T0-T2)) <= g_epsilon and sum(abs(T0-T3)) <= g_epsilon)
+        assert(abs(abs(dot(quat0,quat1))-1) <= g_epsilon)
+        assert(sum(abs(axisangle0-axisangle1)) <= g_epsilon and sum(abs(axisangle0-axisangle2)) <= g_epsilon)
         # test multiplication
         X = random.rand(10,3)-0.5
         Xnew = quatRotateArrayT(quat0,X)
-        assert( sum(abs(Xnew-dot(X,R0.transpose()))) <= _epsilon )
-        assert( sum(abs(quatRotate(quat0,X[0]) - Xnew[0])) <= _epsilon )
-        assert( sum(abs(transformPoints(T0,X)-Xnew-tile(trans,(len(X),1)))) <= _epsilon )
-        assert( sum(abs(rotationMatrixFromQuat(quatMult(quat0,quat0)) - dot(R0,R0))) <= _epsilon )
-        assert( sum(abs(dot(T0,T0)-matrixFromPose(poseMult(pose0,pose0)))) <= _epsilon )
+        assert( sum(abs(Xnew-dot(X,R0.transpose()))) <= g_epsilon )
+        assert( sum(abs(quatRotate(quat0,X[0]) - Xnew[0])) <= g_epsilon )
+        assert( sum(abs(transformPoints(T0,X)-Xnew-tile(trans,(len(X),1)))) <= g_epsilon )
+        assert( sum(abs(rotationMatrixFromQuat(quatMult(quat0,quat0)) - dot(R0,R0))) <= g_epsilon )
+        assert( sum(abs(dot(T0,T0)-matrixFromPose(poseMult(pose0,pose0)))) <= g_epsilon )
         qarray0 = randquat(5)
         qarray1 = quatArrayTMult(qarray0,quat0)
-        assert( sum(abs(quatArrayTRotate(qarray0,Xnew[0])-quatArrayTRotate(qarray1,X[0]))) <= _epsilon )
-        assert( sum(abs(quatArrayRotate(qarray0.transpose(),Xnew[0])-quatArrayRotate(qarray1.transpose(),X[0]))) <= _epsilon )
+        assert( sum(abs(quatArrayTRotate(qarray0,Xnew[0])-quatArrayTRotate(qarray1,X[0]))) <= g_epsilon )
+        assert( sum(abs(quatArrayRotate(qarray0.transpose(),Xnew[0])-quatArrayRotate(qarray1.transpose(),X[0]))) <= g_epsilon )
         qarray2 = quatMultArrayT(quat0,qarray0)
-        assert( sum(abs(quatRotateArrayT(quat0,quatArrayTRotate(qarray0,X[0]))-quatArrayTRotate(qarray2,X[0]))) <= _epsilon )
+        assert( sum(abs(quatRotateArrayT(quat0,quatArrayTRotate(qarray0,X[0]))-quatArrayTRotate(qarray2,X[0]))) <= g_epsilon )
         dists = quatArrayTDist(qarray0[0],qarray0)
-        assert( all(dists>=0) and sum(dists)>0 and dists[0] <= _epsilon )                    
+        assert( all(dists>=0) and sum(dists)>0 and dists[0] <= g_epsilon )                    
         posearray0 = randpose(5)
         posearray1 = poseMultArrayT(pose0,posearray0)
-        assert( sum(abs(poseMult(pose0,posearray0[0])-posearray1[0])) <= _epsilon )
+        assert( sum(abs(poseMult(pose0,posearray0[0])-posearray1[0])) <= g_epsilon )
         for j in range(len(posearray0)):
             poseTransformPoints(pose0,poseTransformPoints(posearray0[j],X))
             poseTransformPoints(posearray1[j],X)
-            assert( sum(abs(poseTransformPoints(pose0,poseTransformPoints(posearray0[j],X)) - poseTransformPoints(posearray1[j],X))) <= _epsilon )
+            assert( sum(abs(poseTransformPoints(pose0,poseTransformPoints(posearray0[j],X)) - poseTransformPoints(posearray1[j],X))) <= g_epsilon )
         # inverses
         matrices = matrixFromPoses(posearray0)
         posearrayinv0 = invertPoses(posearray0)
         for j in range(len(posearray0)):
-            assert( sum(abs(transformInversePoints(matrices[j],X) - poseTransformPoints(posearrayinv0[j],X))) <= _epsilon )
+            assert( sum(abs(transformInversePoints(matrices[j],X) - poseTransformPoints(posearrayinv0[j],X))) <= g_epsilon )
         
 def test_fitcircle():
     perturbation = 0.001
-    for i in range(10):
+    for i in range(40):
         T = randtrans()
-        radius = random.rand()*5+0.1
+        radius = random.rand()*5+0.3
         angles = random.rand(5)*2*pi
         points = c_[radius*cos(angles)+perturbation*(random.rand(len(angles))-0.5),radius*sin(angles)+perturbation*(random.rand(len(angles))-0.5),perturbation*(random.rand(len(angles))-0.5)]
         newpoints = transformPoints(T,points)
         newcenter, newradius = fitCircle(newpoints)
-        assert( sum(abs(T[0:3,3]-newcenter)) <= perturbation*2 )
-        assert( sum(abs(radius-newradius)) <= perturbation*2 )
+        assert( sum(abs(T[0:3,3]-newcenter)) <= perturbation*10 )
+        assert( sum(abs(radius-newradius)) <= perturbation*10 )
         newpoints2d = points[:,0:2] + T[0:2,3]
         newcenter2d, newradius2d = fitCircle(newpoints2d)
-        assert( sum(abs(T[0:2,3]-newcenter2d)) <= perturbation*2 )
-        assert( sum(abs(radius-newradius2d)) <= perturbation*2 )
+        assert( sum(abs(T[0:2,3]-newcenter2d)) <= perturbation*10 )
+        assert( sum(abs(radius-newradius2d)) <= perturbation*10 )
+
+class TestKinematics(EnvironmentSetup):
+    def test_bodybasic(self):
+        """checks if the joint/link set/get functions are consistent along with jacobians"""
+        with self.env:
+            for envfile in g_envfiles:
+                self.env.Reset()
+                self.env.Load(envfile)
+                for i in range(10):
+                    T = eye(4)
+                    for body in self.env.GetBodies():
+                        Told = body.GetTransform()
+                        Tallold = body.GetBodyTransformations()
+                        dofvaluesold = body.GetDOFValues()
+                        T = randtrans()
+                        body.SetTransform(T)
+                        assert( transdist(T,body.GetTransform()) <= g_epsilon )
+                        body.SetBodyTransformations(Tallold)
+                        assert( transdist(Tallold,body.GetBodyTransformations()) <= g_epsilon )
+                        Tallnew = [randtrans() for j in range(len(Tallold))]
+                        body.SetBodyTransformations(Tallnew)
+                        assert( transdist(Tallnew,body.GetBodyTransformations()) <= g_epsilon )
+                        for link, T in izip(body.GetLinks(),Tallold):
+                            link.SetTransform(T)
+                        assert( transdist(Tallold,body.GetBodyTransformations()) <= g_epsilon )
+                        # dof
+                        assert( transdist(dofvaluesold,body.GetDOFValues()) <= g_epsilon )
+                        dofvaluesnew = randlimits(*body.GetDOFLimits())
+                        body.SetDOFValues(dofvaluesnew)
+                        assert( transdist(dofvaluesnew,body.GetDOFValues()) <= g_epsilon )
+                        Tallnew = body.GetBodyTransformations()
+                        body.SetTransformWithDOFValues(body.GetTransform(),dofvaluesnew)
+                        assert( transdist(Tallnew,body.GetBodyTransformations()) <= g_epsilon )
+                        assert( transdist(dofvaluesnew,body.GetDOFValues()) <= g_epsilon )
+                        for joint in body.GetJoints():
+                            assert( transdist(joint.GetValues(), dofvaluesnew[joint.GetDOFIndex():(joint.GetDOFIndex()+joint.GetDOF())]) <= g_epsilon )
+                        Tallnew2 = [randtrans() for link in body.GetLinks()]
+                        for link,T in izip(body.GetLinks(),Tallnew2):
+                            link.SetTransform(T)
+                        assert( transdist(body.GetBodyTransformations(),Tallnew2) <= g_epsilon )
+                        body.SetBodyTransformations(Tallnew)
+                        for idir in range(10):
+                            deltavalues0 = array([g_jacobianstep*(random.randint(3)-1) for j in range(body.GetDOF())])
+                            localtrans = randtrans()
+                            for ilink,link in enumerate(body.GetLinks()):
+                                jointchain = body.GetChain(0,link.GetIndex())
+                                if len(jointchain) == 0:
+                                    continue                            
+                                body.SetDOFValues(dofvaluesnew)
+                                Tlink = dot(link.GetTransform(),localtrans)
+                                worldtrans = Tlink[0:3,3]
+                                worldquat = quatFromRotationMatrix(Tlink[0:3,0:3]) # should use localquat
+                                worldaxisangle = axisAngleFromRotationMatrix(Tlink[0:3,0:3])
+                                Jtrans = body.CalculateJacobian(ilink,worldtrans)
+                                Jquat = body.CalculateRotationJacobian(ilink,worldquat)
+                                Jangvel = body.CalculateAngularVelocityJacobian(ilink)
+                                body.SetDOFValues(dofvaluesnew+deltavalues0)
+                                deltavalues = body.GetDOFValues()-dofvaluesnew
+                                armlength = bodymaxjointdist(link,localtrans[0:3,3])
+                                thresh = armlength*sum(abs(deltavalues))*1.1
+                                Tlinknew=dot(link.GetTransform(),localtrans)
+                                newaxisangle = axisAngleFromRotationMatrix(Tlinknew[0:3,0:3])
+                                newquat = quatFromRotationMatrix(Tlinknew[0:3,0:3])
+                                if dot(worldquat,newquat) < 0:
+                                    newquat = -newquat
+                                deltatrans = Tlinknew[0:3,3] - worldtrans
+                                assert( transdist(dot(Jtrans,deltavalues),deltatrans) <= thresh )
+                                assert( transdist(dot(Jquat,deltavalues)+worldquat,newquat) <= thresh )
+                                assert( axisangledist(dot(Jangvel,deltavalues)+worldaxisangle,newaxisangle) <= 2*thresh )
+
+    def test_bodyvelocities(self):
+        """checks physics/dynamics properties"""
+        with self.env:
+            for envfile in g_envfiles:
+                self.env.Reset()
+                self.env.Load(envfile)
+                # try all loadable physics engines
+                #self.env.SetPhysicsEngine()
+                for i in range(10):
+                    T = eye(4)
+                    for body in self.env.GetBodies():
+                        for ijoint,joint in enumerate(body.GetJoints()):
+                            assert(joint.GetJointIndex()==ijoint and body.GetJointIndex(joint.GetName()) == ijoint )
+                            assert(joint == body.GetJoint(joint.GetName()) )
+                            assert(joint == body.GetJointFromDOFIndex(joint.GetDOFIndex()) )
+                        # velocities, has to do with physics engine
+                        oldlinkvels = body.GetLinkVelocities()
+                        dofvelnew = randlimits(*body.GetDOFVelocityLimits())
+                        link0vel = [random.rand(3)-0.5,random.rand(3)-0.5]
+                        body.SetVelocity(*link0vel)
+                        assert( sum(abs(body.GetDOFVelocities())) <= g_epsilon )
+                        body.SetDOFVelocities(dofvelnew,*link0vel,checklimits=True)
+                        assert( transdist(body.GetDOFVelocities(),dofvelnew) <= g_epsilon )
+                        linkvels = body.GetLinkVelocities()
+                        newlinkvels = random.rand(len(body.GetLinks()),6)-0.5
+                        for link,vel in izip(body.GetLinks(),newlinkvels):
+                            link.SetVelocity(vel[0:3],vel[3:6])
+                            assert( transdist(link.GetVelocity(),[vel[0:3],vel[3:6]]) <= g_epsilon )
+                        assert( transdist(body.GetLinkVelocities(),newlinkvels) <= g_epsilon )
+                        body.SetDOFVelocities(dofvelnew,linear=[0,0,0],angular=[0,0,0],checklimits=True)
+                        assert( transdist(body.GetDOFVelocities(),dofvelnew) <= g_epsilon )
+                        for link,vel in izip(body.GetLinks(),linkvels):
+                            link.SetVelocity(vel[0:3],vel[3:6])
+                        assert( transdist(body.GetLinkVelocities(),linkvels) <= g_epsilon and transdist(body.GetDOFVelocities(),dofvelnew) <= g_epsilon )
+                        for joint in body.GetJoints():
+                            assert( transdist(joint.GetVelocities(), dofvelnew[joint.GetDOFIndex():(joint.GetDOFIndex()+joint.GetDOF())]) <= g_epsilon )
+                        for link,vel in izip(body.GetLinks(),linkvels):
+                            assert( transdist(link.GetVelocity(),[vel[0:3],vel[3:6]]) <= g_epsilon )
+                        # test consistency with kinematics
+
+    def test_hierarchy(self):
+        """tests the kinematics hierarchy"""
+        with self.env:
+            for robotfile in g_robotfiles:
+                self.env.Reset()
+                self.env.Load(robotfile)
+                body = self.env.GetBodies()[0]
+                lowerlimit,upperlimit = body.GetDOFLimits()
+                for i in range(len(lowerlimit)):
+                    if upperlimit[i] - lowerlimit[i] > pi:
+                        upperlimit[i] = lowerlimit[i]+pi
+                body.SetDOFValues(lowerlimit)
+                for ijoint,joint in enumerate(body.GetJoints()):
+                    for ilink, link in enumerate(body.GetLinks()):
+                        affect = body.DoesAffect(ijoint,ilink)
+                        body.SetDOFValues([lowerlimit[joint.GetDOFIndex()]],[joint.GetDOFIndex()])
+                        Tlink = link.GetTransform()
+                        body.SetDOFValues([upperlimit[joint.GetDOFIndex()]],[joint.GetDOFIndex()])
+                        Tlinknew = link.GetTransform()
+                        if affect != 0 and not joint.IsStatic():
+                            assert( lowerlimit[joint.GetDOFIndex()] < upperlimit[joint.GetDOFIndex()] )
+                            assert( transdist(Tlink,Tlinknew) >= (upperlimit[joint.GetDOFIndex()]-lowerlimit[joint.GetDOFIndex()])*0.1 )
+                        else:
+                            assert( transdist(Tlink,Tlinknew) <= g_epsilon )
+                body.SetDOFValues(lowerlimit)
+                jointaxes0 = [joint.GetAxis(0) for joint in body.GetDependencyOrderedJoints()]
+                jointanchors0 = [joint.GetAnchor() for joint in body.GetDependencyOrderedJoints()]
+                assert( len(body.GetDependencyOrderedJoints()) == len(body.GetJoints()) )
+                for ijoint in range(len(body.GetDependencyOrderedJoints())-1,0,-1):
+                    joint = body.GetDependencyOrderedJoints()[ijoint]
+                    body.SetDOFValues([upperlimit[joint.GetDOFIndex()]],[joint.GetDOFIndex()])
+                    for ijoint2,joint2 in enumerate(body.GetDependencyOrderedJoints()[:ijoint]):
+                        assert( transdist(joint2.GetAxis(0), jointaxes0[ijoint2]) <= g_epsilon )
+                        assert( transdist(joint2.GetAnchor(), jointanchors0[ijoint2]) <= g_epsilon )
+                for ilink0,ilink1 in combinations(range(len(body.GetLinks())),2):
+                    link0 = body.GetLinks()[ilink0]
+                    link1 = body.GetLinks()[ilink1]
+                    jointchain = body.GetChain( ilink0, ilink1, returnjoints = True )
+                    linkchain = body.GetChain( ilink0, ilink1, returnjoints = False )
+                    assert( len(jointchain)+1 == len(linkchain) )
+                    assert( jointchain[::-1] == body.GetChain( ilink1, ilink0, returnjoints = True ))
+                    assert( linkchain[::-1] == body.GetChain( ilink1, ilink0, returnjoints = False ))
+                    for ilink in range(len(linkchain)-1):
+                        j = jointchain[ilink]
+                        if j.GetDOFIndex() >= 0:
+                            assert( body.IsDOFInChain(linkchain[ilink].GetIndex(),linkchain[ilink+1].GetIndex(),j.GetDOFIndex()) )
+                        assert( linkchain[ilink].IsParentLink(linkchain[ilink+1]) or linkchain[ilink+1].IsParentLink(linkchain[ilink]) )
+                        assert( linkchain[ilink] == j.GetHierarchyChildLink() or linkchain[ilink] == j.GetHierarchyParentLink())
+                        assert( linkchain[ilink+1] == j.GetHierarchyChildLink() or linkchain[ilink+1] == j.GetHierarchyParentLink())
+                        
+                #loops = body.GetClosedLoops()
+                #for loop in loops:
+                #    lknotindex = [i for i,(link,joint) in enumerate(loop) if link.GetIndex() == knot]
+                #    lknownindex = [i for i,(link,joint) in enumerate(loop) if link == knownlink]
+                    
+    def test_collada(self):
+        """test that collada import/export works"""
+        epsilon = 100*g_epsilon # because exporting, expect to lose precision
+        for robotfile in g_robotfiles:
+            self.env.Reset()
+            robot0=self.env.ReadRobotXMLFile(robotfile)
+            self.env.AddRobot(robot0,True)
+            robot0.SetTransform(eye(4))
+            self.env.Save('test.zae')
+            robot1=self.env.ReadRobotXMLFile('test.zae')
+            self.env.AddRobot(robot1,True)
+            robot1.SetTransform(eye(4))
+            assert(len(robot0.GetJoints())==len(robot1.GetJoints()))
+            assert(len(robot0.GetPassiveJoints()) == len(robot1.GetPassiveJoints()))
+            joints0 = robot0.GetJoints()+robot0.GetPassiveJoints()
+            joints1 = robot1.GetJoints()+robot1.GetPassiveJoints()
+            for j0 in joints0:
+                j1s = [j1 for j1 in joints1 if j0.GetName() == j1.GetName()]
+                assert( len(j1s) == 1 )
+                j1 = j1s[0]
+                assert( transdist(j0.GetAnchor(),j1.GetAnchor()) <= epsilon )
+                assert( j0.GetDOF() == j1.GetDOF() and j0.GetType() == j1.GetType() )
+                assert( j0.GetHierarchyParentLink().GetName() == j1.GetHierarchyParentLink().GetName() and j0.GetHierarchyChildLink().GetName() == j1.GetHierarchyChildLink().GetName() )
+                assert( transdist(j0.GetInternalHierarchyLeftTransform(),j1.GetInternalHierarchyLeftTransform()) <= epsilon )
+                assert( transdist(j0.GetInternalHierarchyRightTransform(),j1.GetInternalHierarchyRightTransform()) <= epsilon )
+                assert( j0.IsStatic() == j1.IsStatic() )
+                assert( transdist(j0.GetLimits(),j1.GetLimits()) <= epsilon )
+                for idof in range(j0.GetDOF()):
+                    assert( abs(j0.GetMaxVel(idof)-j1.GetMaxVel(idof)) <= epsilon )
+                    assert( abs(j0.GetMaxAccel(idof)-j1.GetMaxAccel(idof)) <= epsilon )
+                    assert( j0.IsCircular(idof) == j1.IsCircular(idof) )
+                    assert( j0.IsRevolute(idof) == j1.IsRevolute(idof) )
+                    assert( j0.IsPrismatic(idof) == j1.IsPrismatic(idof) )
+                    assert( transdist(j0.GetInternalHierarchyAxis(idof),j1.GetInternalHierarchyAxis(idof)) <= epsilon )
+                    assert( j0.IsMimic(idof) == j1.IsMimic(idof) )
+                    if j0.IsMimic(idof):
+                        mimicjoints0 = [robot0.GetJointFromDOFIndex(index).GetName() for index in j0.GetMimicDOFIndices(idof)]
+                        mimicjoints1 = [robot1.GetJointFromDOFIndex(index).GetName() for index in j1.GetMimicDOFIndices(idof)]
+                        assert( mimicjoints0 == mimicjoints1 )
+                        # is it possible to compare equations?
+                        # assert( j0.GetMimicEquation(idof) == j1.GetMimicEquation(idof) )
+                    #todo: GetResolution, GetWeight
+            assert(len(robot0.GetLinks())==len(robot1.GetLinks()))
+            for link0 in robot0.GetLinks():
+                link1s = [link1 for link1 in robot1.GetLinks() if link0.GetName() == link1.GetName()]
+                assert( len(link1s) == 1 )
+                link1 = link1s[0]
+                assert( transdist(link0.GetTransform(),link1.GetTransform()) <= epsilon )
+                assert( link0.IsStatic() == link1.IsStatic() )
+                assert( len(link0.GetParentLinks()) == len(link1.GetParentLinks()) )
+                assert( all([lp0.GetName()==lp1.GetName() for lp0, lp1 in izip(link0.GetParentLinks(),link1.GetParentLinks())]) )
+                assert( len(link0.GetGeometries()) == len(link1.GetGeometries()) )
+                # todo: compare geometry
+
+    def test_initkinbody(self):
+        """tests initializing a kinematics body"""
+        with self.env:
+            k = self.env.CreateKinBody()
+            boxes = array(((0,0.5,0,0.1,0.2,0.3),(0.5,0,0,0.2,0.2,0.2)))
+            k.InitFromBoxes(boxes,True)
+            k.SetName('temp')
+            self.env.AddKinBody(k)
+            assert( len(k.GetLinks()) == 1 and len(k.GetLinks()[0].GetGeometries()) == 2 )
+            assert( k.GetLinks()[0].GetGeometries()[0].GetType() == KinBody.Link.GeomProperties.Type.Box )
+            assert( k.GetLinks()[0].GetGeometries()[1].GetType() == KinBody.Link.GeomProperties.Type.Box )

@@ -13,6 +13,8 @@ Initial Release: **Unreleased**
 Core
 ----
 
+* fixed major bug in synchronizing collision and openrave world
+
 * added openrave-robot.py which allows introspection into robot files. This deprecates openrave-hash.py. added bash completion for it.
 
 * added openrave-createplugin.py which allows new users to easily setup the plugin directories and get something running. also works on creating executables. added bash completion for it.

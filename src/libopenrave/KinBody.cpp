@@ -3137,6 +3137,9 @@ void KinBody::_ComputeInternalInformation()
     FOREACH(itlink,_veclinks) {
         BOOST_ASSERT( lindex == (*itlink)->GetIndex() );
         (*itlink)->_vParentLinks.clear();
+        if( _veclinks.size() > 1 && (*itlink)->GetName().size() == 0 ) {
+            RAVELOG_WARN(str(boost::format("%s link index %d has no name")%GetName()%lindex));
+        }
         lindex++;
     }
 
@@ -3805,6 +3808,17 @@ void KinBody::_ComputeInternalInformation()
         }
     }
 
+    for(size_t ijoint = 0; ijoint < _vecjoints.size(); ++ijoint ) {
+        if( _vecjoints[ijoint]->GetName().size() == 0 ) {
+            RAVELOG_WARN(str(boost::format("%s joint index %d has no name")%GetName()%ijoint));
+        }
+    }
+    for(size_t ijoint = 0; ijoint < _vPassiveJoints.size(); ++ijoint ) {
+        if( _vPassiveJoints[ijoint]->GetName().size() == 0 ) {
+            RAVELOG_WARN(str(boost::format("%s passive joint index %d has no name")%GetName()%ijoint));
+        }
+    }
+
     {
         // force all joints to 0 when computing hashes?
         ostringstream ss;
@@ -4043,6 +4057,7 @@ const std::set<int>& KinBody::GetNonAdjacentLinks(int adjacentoptions) const
         for(size_t i = 0; i < _veclinks.size(); ++i) {
             boost::static_pointer_cast<Link>(_veclinks[i])->_t = _vInitialLinkTransformations.at(i);
         }
+        _nUpdateStampId++; // because transforms were modified
         for(size_t i = 0; i < _veclinks.size(); ++i) {
             for(size_t j = i+1; j < _veclinks.size(); ++j) {
                 if( _setAdjacentLinks.find(i|(j<<16)) == _setAdjacentLinks.end() && !GetEnv()->CheckCollision(LinkConstPtr(_veclinks[i]), LinkConstPtr(_veclinks[j])) ) {
@@ -4050,6 +4065,7 @@ const std::set<int>& KinBody::GetNonAdjacentLinks(int adjacentoptions) const
                 }
             }
         }
+        _nUpdateStampId++; // because transforms were modified
         _nNonAdjacentLinkCache = 0;
     }
     if( (_nNonAdjacentLinkCache&adjacentoptions) != adjacentoptions ) {

@@ -310,8 +310,9 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
                             }
                         }
 
-                        if( listcallbacks.size() == 0 )
+                        if( listcallbacks.size() == 0 ) {
                             GetEnv()->GetRegisteredCollisionCallbacks(listcallbacks);
+                        }
                         FOREACHC(itfn, listcallbacks) {
                             OpenRAVE::CollisionAction action = (*itfn)(report,false);
                             if( action != OpenRAVE::CA_DefaultAction ) {

@@ -190,51 +190,6 @@ def test_kinematicsstructure():
         joints = robot.GetChain(manip.GetEndEffector().GetIndex(),manip.GetBase().GetIndex())
         print [joint.GetJointIndex() for joint in joints]
 
-def test_chain():
-    hand = env.CreateKinBody();
-    hand.SetName('object')
-    hand.InitFromFile('robots/barretthand.kinbody.xml')
-    env.AddKinBody(hand)
-    palm = hand.GetLink('wam7')
-    tip = hand.GetLink('Finger0-2')
-    print palm, tip # first print
-    print hand.GetChain( tip.GetIndex(), palm.GetIndex() ) # second print
-    print hand.GetChain( palm.GetIndex(), tip.GetIndex() ) # third print
-
-    
-def test_dualarm_grabbing():
-    env = Environment()
-    robot = env.ReadRobotXMLFile('robots/schunk-lwa3-dual.robot.xml')
-    env.AddRobot(robot)
-    manips = robot.GetManipulators()
-    body = env.ReadKinBodyXMLFile('data/box3.kinbody.xml')
-    env.AddKinBody(body)
-    T = eye(4)
-    T[1,3] = -1.18
-    T[2,3] = 0.712
-    body.SetTransform(T)
-    robot.SetActiveManipulator(manips[0])
-    robot.Grab(body)
-    robot.SetJointValues(array([  0.00000000e+00,  -1.43329144e+00,  -3.99190831e-15, -1.86732388e+00,   5.77239752e-01,  -3.37631690e-07, 6.67713991e-08,   0.00000000e+00,  -1.70089030e+00, -6.42544150e-01,  -1.25030589e+00,  -3.33493233e-08, -5.58212676e-08,   1.60115015e-08]))
-    assert robot.CheckSelfCollision()
-def test_boxes():
-    env = Environment()
-    k = env.CreateKinBody()
-    boxes = array(((0,0.5,0,0.1,0.2,0.3),(0.5,0,0,0.2,0.2,0.2)))
-    k.InitFromBoxes(boxes,True)
-    k.SetName('temp')
-    env.AddKinBody(k)
-    env.SetViewer('qtcoin')
-
-def test_save():
-    env=Environment()
-    env.SetViewer('qtcoin')
-    robot=env.ReadRobotXMLFile('robots/barretthand.robot.xml')
-    env.AddRobot(robot)
-    env.Save('test.dae')
-    env.Reset()
-    env.Load('test.dae')
-
 def test_drawjoints():
     """draws the joint axes of the robot
     """
@@ -257,65 +212,6 @@ def test_trimesh():
     indices = array()
     body.InitFromTrimesh(KinBody.Link.TriMesh(vertices,indices),True)
     env.AddKinBody(body)
-
-def test_kinematics():
-    env = Environment()
-    robot = env.ReadRobotXMLFile('robots/barrettwam.robot.xml')
-    env.AddRobot(robot)
-    # use jacobians for validation
-    with env:
-        thresh=1e-5
-        lower,upper = robot.GetDOFLimits()
-        vlower,vupper = robot.GetDOFVelocityLimits()
-        for j in range(robot.GetDOF()):
-            valuestotest = []
-            velocities = linspace(0.1,1.0,robot.GetDOF())
-            if j%2:
-                velocities[0::2] *= -1
-            else:
-                velocities[0::2] *= -1
-            velocities = numpy.minimum(vupper,numpy.maximum(vlower,velocities))
-            robot.SetDOFVelocities(velocities,True)
-            assert linalg.norm(robot.GetDOFVelocities()-velocities) < thresh
-            
-            if 0 >= lower[j] and 0 <= upper[j]:
-                valuestotest.append(0)
-            if lower[j] != upper[j]:
-                valuestotest.append(0.2*upper[j]+0.8*lower[j])
-                valuestotest.append(0.8*upper[j]+0.2*lower[j])
-            for value in valuestotest:
-                robot.SetDOFValues([value],[j])
-                values = robot.GetDOFValues()
-                assert linalg.norm(robot.GetDOFValues()-values) < thresh
-                Tlinks = robot.GetBodyTransformations()
-                robot.SetBodyTransformations(Tlinks)
-                assert linalg.norm(robot.GetDOFValues()-values) < thresh                
-                # test velocities
-                robot.SetDOFVelocities(velocities,True)
-                linkvelocities = robot.GetLinkVelocities()
-                assert linalg.norm(robot.GetDOFVelocities()-velocities) < thresh
-                
-                with robot:
-                    # move each joint a little
-                    for ilink in range(len(robot.GetLinks())):
-                        localtrans = [0.1,0.2,0.3]
-                        worldtrans = transformPoints(Tlinks[ilink],[localtrans])[0]
-                        localquat = [1.0,0.0,0.0,0.0]
-                        worldquat = quatFromRotationMatrix(Tlinks[ilink][0:3,0:3])
-                        Jtrans = robot.CalculateJacobian(ilink,worldtrans)
-                        Jquat = robot.CalculateRotationJacobian(ilink,worldquat)
-                        Jangvel = robot.CalculateAngularVelocityJacobian(ilink)
-                        robot.SetJointValues(values+(upper-lower)*0.001*sign(velocities))
-                        deltavalues = robot.GetJointValues()-values
-                        T=robot.GetLinks()[ilink].GetTransform()
-                        deltatrans = worldtrans - transformPoints(T,[localtrans])[0]
-                        deltarot = dot(linalg.inv(Tlinks[ilink][0:3,0:3]),T[0:3,0:3])
-                        deltaquat = quatFromRotationMatrix(deltarot)
-                        deltaangvel = axisAngleFromRotationMatrix(deltarot)
-                        print dot(Jtrans,deltavalues) - deltatrans
-                        print dot(Jquat,deltavalues) - deltaquat
-                        print dot(Jangvel,deltavalues) - deltaangvel
-
 
 def derive_normalizeAxisRotation():
     """Find the rotation theta around axis v such that rot(v,theta) * q is closest to the identity"""

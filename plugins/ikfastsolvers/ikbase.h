@@ -144,7 +144,7 @@ class IkFastSolver : public IkSolverBase
     {
         qSolutions.resize(0);
         if( param.GetType() != _iktype ) {
-            RAVELOG_WARN(str(boost::format("ik solver only supports type %d, given %d\n")%_iktype%param.GetType()));
+            RAVELOG_WARN(str(boost::format("ik solver only supports type 0x%x, given 0x%x\n")%_iktype%param.GetType()));
             return false;
         }
         RobotBase::ManipulatorPtr pmanip(_pmanip);
@@ -166,7 +166,7 @@ class IkFastSolver : public IkSolverBase
     virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, const std::vector<dReal>& vFreeParameters, int filteroptions, boost::shared_ptr< std::vector<dReal> > result)
     {
         if( param.GetType() != _iktype ) {
-            RAVELOG_WARN(str(boost::format("ik solver only supports type %d, given %d\n")%_iktype%param.GetType()));
+            RAVELOG_WARN(str(boost::format("ik solver only supports type 0x%x, given 0x%x\n")%_iktype%param.GetType()));
             return false;
         }
         if( vFreeParameters.size() != _vfreeparams.size() ) {
@@ -190,7 +190,7 @@ class IkFastSolver : public IkSolverBase
     {
         qSolutions.resize(0);
         if( param.GetType() != _iktype ) {
-            RAVELOG_WARN(str(boost::format("ik solver only supports type %d, given %d")%_iktype%param.GetType()));
+            RAVELOG_WARN(str(boost::format("ik solver only supports type 0x%x, given 0x%x")%_iktype%param.GetType()));
             return false;
         }
         if( vFreeParameters.size() != _vfreeparams.size() ) {
@@ -379,11 +379,11 @@ private:
             }
         }
         catch(const std::exception& e) {
-            RAVELOG_WARN(str(boost::format("ik call failed for ik %s:%d: %s")%GetXMLId()%param.GetType()%e.what()));
+            RAVELOG_WARN(str(boost::format("ik call failed for ik %s:0x%x: %s")%GetXMLId()%param.GetType()%e.what()));
             return false;
         }
 
-        throw openrave_exception(str(boost::format("don't support ik parameterization %d")%param.GetType()),ORE_InvalidArguments);
+        throw openrave_exception(str(boost::format("don't support ik parameterization 0x%x")%param.GetType()),ORE_InvalidArguments);
     }
 
     static bool SortSolutionDistances(const pair<int,dReal>& p1, const pair<int,dReal>& p2)

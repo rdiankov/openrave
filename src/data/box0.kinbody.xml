@@ -1,5 +1,5 @@
 <KinBody name="box0">
-  <Body>
+  <Body name="base">
     <Geom type="box">
       <extents>0.1 0.05 0.1</extents>
       <translation>0 0 0.1</translation>

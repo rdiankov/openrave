@@ -789,12 +789,13 @@ void RobotBase::SetTransform(const Transform& trans)
 
 void RobotBase::_UpdateGrabbedBodies()
 {
-    // update grabbed objects
+    RAVELOG_VERBOSE("update grabbed objects\n");
     vector<Grabbed>::iterator itbody;
     FORIT(itbody, _vGrabbedBodies) {
         KinBodyPtr pbody = itbody->pbody.lock();
-        if( !!pbody )
+        if( !!pbody ) {
             pbody->SetTransform(itbody->plinkrobot->GetTransform() * itbody->troot);
+        }
         else {
             RAVELOG_DEBUG(str(boost::format("erasing invaliding grabbed body from %s")%GetName()));
             itbody = _vGrabbedBodies.erase(itbody);

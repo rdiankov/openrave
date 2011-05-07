@@ -1,4 +1,3 @@
-
 // -*- coding: utf-8 -*-
 //
 // This file is part of OpenRAVE.
@@ -20,148 +19,6 @@
 static bool s_bReturnTransformQuaternions = false;
 bool GetReturnTransformQuaternions() { return s_bReturnTransformQuaternions; }
 void SetReturnTransformQuaternions(bool bset) { s_bReturnTransformQuaternions = bset; }
-
-class PyUserData
-{
-public:
-    PyUserData() {}
-    PyUserData(UserDataPtr handle) : _handle(handle) {}
-    void close() { _handle.reset(); }
-    UserDataPtr _handle;
-};
-
-class PyUserObject : public UserData
-{
-public:
-    PyUserObject(object o) : _o(o) {}
-    object _o;
-};
-
-template <typename T>
-inline object ReturnTransform(T t)
-{
-    if( s_bReturnTransformQuaternions) {
-        return toPyArray(Transform(t));
-    }
-    else {
-        return toPyArray(TransformMatrix(t));
-    }
-}
-
-class PyRay
-{
-public:
-    PyRay() {}
-    PyRay(object newpos, object newdir) {
-        r.pos = ExtractVector3(newpos);
-        r.dir = ExtractVector3(newdir);
-    }
-    PyRay(const RAY& newr) : r(newr) {}
-
-    object dir() { return toPyVector3(r.dir); }
-    object pos() { return toPyVector3(r.pos); }
-
-    virtual string __repr__() { return boost::str(boost::format("<Ray([%f,%f,%f],[%f,%f,%f])>")%r.pos.x%r.pos.y%r.pos.z%r.dir.x%r.dir.y%r.dir.z); }
-    virtual string __str__() { return boost::str(boost::format("<%f %f %f %f %f %f>")%r.pos.x%r.pos.y%r.pos.z%r.dir.x%r.dir.y%r.dir.z); }
-
-    RAY r;
-};
-
-class Ray_pickle_suite : public pickle_suite
-{
-public:
-    static tuple getinitargs(const PyRay& r)
-    {
-        return boost::python::make_tuple(toPyVector3(r.r.pos),toPyVector3(r.r.dir));
-    }
-};
-
-class PyAABB
-{
-public:
-    PyAABB() {}
-    PyAABB(object newpos, object newextents) {
-        ab.pos = ExtractVector3(newpos);
-        ab.extents = ExtractVector3(newextents);
-    }
-    PyAABB(const AABB& newab) : ab(newab) {}
-
-    object extents() { return toPyVector3(ab.extents); }
-    object pos() { return toPyVector3(ab.pos); }
-
-    virtual string __repr__() { return boost::str(boost::format("<AABB([%f,%f,%f],[%f,%f,%f])>")%ab.pos.x%ab.pos.y%ab.pos.z%ab.extents.x%ab.extents.y%ab.extents.z); }
-    virtual string __str__() { return boost::str(boost::format("<%f %f %f %f %f %f>")%ab.pos.x%ab.pos.y%ab.pos.z%ab.extents.x%ab.extents.y%ab.extents.z); }
-
-    AABB ab;
-};
-
-class AABB_pickle_suite : public pickle_suite
-{
-public:
-    static tuple getinitargs(const PyAABB& ab)
-    {
-        return boost::python::make_tuple(toPyVector3(ab.ab.pos),toPyVector3(ab.ab.extents));
-    }
-};
-
-class PyTriMesh
-{
-public:
-    PyTriMesh() {}
-    PyTriMesh(object vertices, object indices) : vertices(vertices), indices(indices) {}
-    PyTriMesh(const KinBody::Link::TRIMESH& mesh) {
-        npy_intp dims[] = {mesh.vertices.size(),3};
-        PyObject *pyvertices = PyArray_SimpleNew(2,dims, sizeof(dReal)==8?PyArray_DOUBLE:PyArray_FLOAT);
-        dReal* pvdata = (dReal*)PyArray_DATA(pyvertices);
-        FOREACHC(itv, mesh.vertices) {
-            *pvdata++ = itv->x;
-            *pvdata++ = itv->y;
-            *pvdata++ = itv->z;
-        }
-        vertices = static_cast<numeric::array>(handle<>(pyvertices));
-
-        dims[0] = mesh.indices.size()/3;
-        dims[1] = 3;
-        PyObject *pyindices = PyArray_SimpleNew(2,dims, PyArray_INT);
-        int* pidata = (int*)PyArray_DATA(pyindices);
-        FOREACHC(it, mesh.indices)
-            *pidata++ = *it;
-        indices = static_cast<numeric::array>(handle<>(pyindices));
-    }
-
-    void GetTriMesh(KinBody::Link::TRIMESH& mesh) {
-        int numverts = len(vertices);
-        mesh.vertices.resize(numverts);
-        for(int i = 0; i < numverts; ++i) {
-            object ov = vertices[i];
-            mesh.vertices[i].x = extract<dReal>(ov[0]);
-            mesh.vertices[i].y = extract<dReal>(ov[1]);
-            mesh.vertices[i].z = extract<dReal>(ov[2]);
-        }
-
-        int numtris = len(indices);
-        mesh.indices.resize(3*numtris);
-        for(int i = 0; i < numtris; ++i) {
-            object oi = indices[i];
-            mesh.indices[3*i+0] = extract<int>(oi[0]);
-            mesh.indices[3*i+1] = extract<int>(oi[1]);
-            mesh.indices[3*i+2] = extract<int>(oi[2]);
-        }
-    }
-
-    string __str__() { return boost::str(boost::format("<trimesh: verts %d, tris=%d>")%len(vertices)%len(indices)); }
-            
-    object vertices,indices;
-};
-
-class TriMesh_pickle_suite : public pickle_suite
-{
-public:
-    static tuple getinitargs(const PyTriMesh& r)
-    {
-        return boost::python::make_tuple(r.vertices,r.indices);
-    }
-};
 
 class PyInterfaceBase
 {
@@ -234,14 +91,18 @@ public:
         public:
             PyGeomProperties(KinBody::LinkPtr plink, int geomindex) : _plink(plink), _geomindex(geomindex) {}
 
-            virtual void SetCollisionMesh(boost::shared_ptr<PyTriMesh> pytrimesh)
+            virtual void SetCollisionMesh(object pytrimesh)
             {
                 KinBody::Link::TRIMESH mesh;
-                pytrimesh->GetTriMesh(mesh);
-                _plink->GetGeometry(_geomindex).SetCollisionMesh(mesh);
+                if( ExtractTriMesh(pytrimesh,mesh) ) {
+                    _plink->GetGeometry(_geomindex).SetCollisionMesh(mesh);
+                }
+                else {
+                    throw openrave_exception("bad trimesh");
+                }
             }
 
-            boost::shared_ptr<PyTriMesh> GetCollisionMesh() { return boost::shared_ptr<PyTriMesh>(new PyTriMesh(_plink->GetGeometry(_geomindex).GetCollisionMesh())); }
+            object GetCollisionMesh() { return toPyTriMesh(_plink->GetGeometry(_geomindex).GetCollisionMesh()); }
             void SetDraw(bool bDraw) { _plink->GetGeometry(_geomindex).SetDraw(bDraw); }
             void SetTransparency(float f) { _plink->GetGeometry(_geomindex).SetTransparency(f); }
             void SetAmbientColor(object ocolor) { _plink->GetGeometry(_geomindex).SetAmbientColor(ExtractVector3(ocolor)); }
@@ -290,8 +151,8 @@ public:
             return _plink->IsParentLink(pylink->GetLink());
         }
         
-        boost::shared_ptr<PyTriMesh> GetCollisionData() { return boost::shared_ptr<PyTriMesh>(new PyTriMesh(_plink->GetCollisionData())); }
-        boost::shared_ptr<PyAABB> ComputeAABB() const { return boost::shared_ptr<PyAABB>(new PyAABB(_plink->ComputeAABB())); }
+        object GetCollisionData() { return toPyTriMesh(_plink->GetCollisionData()); }
+        object ComputeAABB() const { return toPyAABB(_plink->ComputeAABB()); }
         object GetTransform() const { return ReturnTransform(_plink->GetTransform()); }
         
         object GetCOMOffset() const { return toPyVector3(_plink->GetCOMOffset()); }
@@ -521,11 +382,15 @@ public:
         }
         return _pbody->InitFromBoxes(vaabbs,bDraw);
     }
-    bool InitFromTrimesh(boost::shared_ptr<PyTriMesh> pytrimesh, bool bDraw)
+    bool InitFromTrimesh(object pytrimesh, bool bDraw)
     {
         KinBody::Link::TRIMESH mesh;
-        pytrimesh->GetTriMesh(mesh);
-        return _pbody->InitFromTrimesh(mesh,bDraw);
+        if( ExtractTriMesh(pytrimesh,mesh) ) {
+            return _pbody->InitFromTrimesh(mesh,bDraw);
+        }
+        else {
+            throw openrave_exception("bad trimesh");
+        }
     }
 
     void SetName(const string& name) { _pbody->SetName(name); }
@@ -832,6 +697,11 @@ public:
         return _pbody->IsDOFInChain(linkindex1,linkindex2,dofindex);
     }
 
+    int GetJointIndex(const std::string& jointname) const
+    {
+        return _pbody->GetJointIndex(jointname);
+    }
+
     PyJointPtr GetJoint(const std::string& jointname) const
     {
         KinBody::JointPtr pjoint = _pbody->GetJoint(jointname);
@@ -916,7 +786,7 @@ public:
         return static_cast<numeric::array>(handle<>(pyvel));
     }
 
-    boost::shared_ptr<PyAABB> ComputeAABB() { return boost::shared_ptr<PyAABB>(new PyAABB(_pbody->ComputeAABB())); }
+    object ComputeAABB() { return toPyAABB(_pbody->ComputeAABB()); }
     void Enable(bool bEnable) { _pbody->Enable(bEnable); }
     bool IsEnabled() const { return _pbody->IsEnabled(); }
 
@@ -946,27 +816,39 @@ public:
         _pbody->SetDOFValues(values,ExtractTransform(otrans),true);
     }
 
-    void SetDOFValues(object o, object indices)
+    void SetDOFValues(object o, object indices, bool checklimits)
     {
-        if( _pbody->GetDOF() == 0 || len(indices) == 0 ) {
+        if( _pbody->GetDOF() == 0 ) {
             return;
         }
         vector<dReal> vsetvalues = ExtractArray<dReal>(o);
-        vector<int> vindices = ExtractArray<int>(indices);
-        if( vsetvalues.size() != vindices.size() ) {
-            throw openrave_exception("sizes do not match");
+        if( !indices ) {
+            _pbody->SetDOFValues(vsetvalues,checklimits);
         }
-        vector<dReal> values;
-        _pbody->GetDOFValues(values);
-        vector<dReal>::iterator itv = vsetvalues.begin();
-        FOREACH(it, vindices) {
-            if( *it < 0 || *it >= _pbody->GetDOF() ) {
-                throw openrave_exception(boost::str(boost::format("bad index passed")%(*it)));
+        else {
+            if( len(indices) == 0 ) {
+                return;
             }
-            values[*it] = *itv++;
+            vector<int> vindices = ExtractArray<int>(indices);
+            if( vsetvalues.size() != vindices.size() ) {
+                throw openrave_exception("sizes do not match");
+            }
+            vector<dReal> values;
+            _pbody->GetDOFValues(values);
+            vector<dReal>::iterator itv = vsetvalues.begin();
+            FOREACH(it, vindices) {
+                if( *it < 0 || *it >= _pbody->GetDOF() ) {
+                    throw openrave_exception(boost::str(boost::format("bad index passed")%(*it)));
+                }
+                values[*it] = *itv++;
+            }
+            _pbody->SetDOFValues(values,checklimits);
         }
+    }
 
-        _pbody->SetDOFValues(values,true);
+    void SetDOFValues(object o, object indices)
+    {
+        SetDOFValues(o,indices,true);
     }
 
     object SubtractDOFValues(object ovalues0, object ovalues1)
@@ -1117,17 +999,22 @@ public:
         numCols = report->numCols;
         minDistance = report->minDistance;
         numWithinTol = report->numWithinTol;
-        if( !!report->plink1 )
+        if( !!report->plink1 ) {
             plink1.reset(new PyKinBody::PyLink(boost::const_pointer_cast<KinBody::Link>(report->plink1), pyenv));
-        else
+        }
+        else {
             plink1.reset();
-        if( !!report->plink2 )
+        }
+        if( !!report->plink2 ) {
             plink2.reset(new PyKinBody::PyLink(boost::const_pointer_cast<KinBody::Link>(report->plink2), pyenv));
-        else
+        }
+        else {
             plink2.reset();
+        }
         boost::python::list newcontacts;
-        FOREACH(itc, report->contacts)
+        FOREACH(itc, report->contacts) {
             newcontacts.append(PYCONTACT(*itc));
+        }
         contacts = newcontacts;
     }
 
@@ -1516,80 +1403,6 @@ public:
     virtual string __str__() { return boost::str(boost::format("<%s:%s - %s>")%RaveGetInterfaceName(_psensor->GetInterfaceType())%_psensor->GetXMLId()%_psensor->GetName()); }
 };
 
-class PyIkParameterization
-{
-public:
-    PyIkParameterization() {}
-    PyIkParameterization(const string& s) {
-        stringstream ss(s);
-        ss >> _param;
-    }
-    PyIkParameterization(object o, IkParameterization::Type type)
-    {
-        switch(type) {
-        case IkParameterization::Type_Transform6D: SetTransform6D(o); break;
-        case IkParameterization::Type_Rotation3D: SetRotation3D(o); break;
-        case IkParameterization::Type_Translation3D: SetTranslation3D(o); break;
-        case IkParameterization::Type_Direction3D: SetDirection3D(o); break;
-        case IkParameterization::Type_Ray4D: SetRay4D(extract<boost::shared_ptr<PyRay> >(o)); break;
-        case IkParameterization::Type_Lookat3D: SetLookat3D(o); break;
-        case IkParameterization::Type_TranslationDirection5D: SetTranslationDirection5D(extract<boost::shared_ptr<PyRay> >(o)); break;
-        case IkParameterization::Type_TranslationXY2D: SetTranslationXY2D(o); break;
-        case IkParameterization::Type_TranslationXYOrientation3D: SetTranslationXYOrientation3D(o); break;
-        case IkParameterization::Type_TranslationLocalGlobal6D: SetTranslationLocalGlobal6D(o[0],o[1]); break;
-        default: throw openrave_exception(boost::str(boost::format("incorrect ik parameterization type %d")%type));
-        }
-    }
-
-    IkParameterization::Type GetType() { return _param.GetType(); }
-
-    void SetTransform6D(object o) { _param.SetTransform6D(ExtractTransform(o)); }
-    void SetRotation3D(object o) { _param.SetRotation3D(ExtractVector4(o)); }
-    void SetTranslation3D(object o) { _param.SetTranslation3D(ExtractVector3(o)); }
-    void SetDirection3D(object o) { _param.SetDirection3D(ExtractVector3(o)); }
-    void SetRay4D(boost::shared_ptr<PyRay> ray) { _param.SetRay4D(ray->r); }
-    void SetLookat3D(object o) { _param.SetLookat3D(ExtractVector3(o)); }
-    void SetTranslationDirection5D(boost::shared_ptr<PyRay> ray) { _param.SetTranslationDirection5D(ray->r); }
-    void SetTranslationXY2D(object o) { _param.SetTranslationXY2D(ExtractVector2(o)); }
-    void SetTranslationXYOrientation3D(object o) { _param.SetTranslationXYOrientation3D(ExtractVector3(o)); }
-    void SetTranslationLocalGlobal6D(object olocaltrans, object otrans) { _param.SetTranslationLocalGlobal6D(ExtractVector3(olocaltrans),ExtractVector3(otrans)); }
-
-    object GetTransform6D() { return ReturnTransform(_param.GetTransform6D()); }
-    object GetRotation3D() { return toPyVector4(_param.GetRotation3D()); }
-    object GetTranslation3D() { return toPyVector3(_param.GetTranslation3D()); }
-    object GetDirection3D() { return toPyVector3(_param.GetDirection3D()); }
-    PyRay GetRay4D() { return PyRay(_param.GetRay4D()); }
-    object GetLookat3D() { return toPyVector3(_param.GetLookat3D()); }
-    PyRay GetTranslationDirection5D() { return PyRay(_param.GetTranslationDirection5D()); }
-    object GetTranslationXY2D() { return toPyVector2(_param.GetTranslationXY2D()); }
-    object GetTranslationXYOrientation3D() { return toPyVector3(_param.GetTranslationXYOrientation3D()); }
-    object GetTranslationLocalGlobal6D() { return boost::python::make_tuple(toPyVector3(_param.GetTranslationLocalGlobal6D().first),toPyVector3(_param.GetTranslationLocalGlobal6D().second)); }
-
-    IkParameterization _param;
-
-    string __repr__() {
-        stringstream ss;
-        ss << std::setprecision(std::numeric_limits<dReal>::digits10+1); /// have to do this or otherwise precision gets lost
-        ss << _param;
-        return boost::str(boost::format("<IkParameterization('%s')>")%ss.str());
-    }
-    string __str__() {
-        stringstream ss;
-        ss << std::setprecision(std::numeric_limits<dReal>::digits10+1); /// have to do this or otherwise precision gets lost
-        ss << _param;
-        return ss.str();
-    }
-};
-
-class IkParameterization_pickle_suite : public pickle_suite
-{
-public:
-    static tuple getinitargs(const PyIkParameterization& r)
-    {
-        return boost::python::make_tuple(r._param.GetTransform6D(),r._param.GetType());
-    }
-};
-
 class PyIkSolverBase : public PyInterfaceBase
 {
 protected:
@@ -1670,10 +1483,11 @@ public:
         object FindIKSolution(object oparam, int filteroptions) const
         {
             vector<dReal> solution;
-            extract<boost::shared_ptr<PyIkParameterization> > ikparam(oparam);
-            if( ikparam.check() ) {
-                if( !_pmanip->FindIKSolution(((boost::shared_ptr<PyIkParameterization>)ikparam)->_param,solution,filteroptions) )
+            IkParameterization ikparam;
+            if( ExtractIkParameterization(oparam,ikparam) ) {
+                if( !_pmanip->FindIKSolution(ikparam,solution,filteroptions) ) {
                     return object();
+                }
             }
             // assume transformation matrix
             else if( !_pmanip->FindIKSolution(ExtractTransform(oparam),solution,filteroptions) ) {
@@ -1685,10 +1499,11 @@ public:
         object FindIKSolution(object oparam, object freeparams, int filteroptions) const
         {
             vector<dReal> solution, vfreeparams = ExtractArray<dReal>(freeparams);
-            extract<boost::shared_ptr<PyIkParameterization> > ikparam(oparam);
-            if( ikparam.check() ) {
-                if( !_pmanip->FindIKSolution(((boost::shared_ptr<PyIkParameterization>)ikparam)->_param,vfreeparams,solution,filteroptions) )
+            IkParameterization ikparam;
+            if( ExtractIkParameterization(oparam,ikparam) ) {
+                if( !_pmanip->FindIKSolution(ikparam,vfreeparams,solution,filteroptions) ) {
                     return object();
+                }
             }
             // assume transformation matrix
             else if( !_pmanip->FindIKSolution(ExtractTransform(oparam),vfreeparams, solution,filteroptions) ) {
@@ -1700,10 +1515,10 @@ public:
         object FindIKSolutions(object oparam, int filteroptions) const
         {
             std::vector<std::vector<dReal> > vsolutions;
-            extract<boost::shared_ptr<PyIkParameterization> > ikparam(oparam);
             boost::python::list solutions;
-            if( ikparam.check() ) {
-                if( !_pmanip->FindIKSolutions(((boost::shared_ptr<PyIkParameterization>)ikparam)->_param,vsolutions,filteroptions) ) {
+            IkParameterization ikparam;
+            if( ExtractIkParameterization(oparam,ikparam) ) {
+                if( !_pmanip->FindIKSolutions(ikparam,vsolutions,filteroptions) ) {
                     return solutions;
                 }
             }
@@ -1721,10 +1536,10 @@ public:
         {
             std::vector<std::vector<dReal> > vsolutions;
             vector<dReal> vfreeparams = ExtractArray<dReal>(freeparams);
-            extract<boost::shared_ptr<PyIkParameterization> > ikparam(oparam);
             boost::python::list solutions;
-            if( ikparam.check() ) {
-                if( !_pmanip->FindIKSolutions(((boost::shared_ptr<PyIkParameterization>)ikparam)->_param,vfreeparams,vsolutions,filteroptions) ) {
+            IkParameterization ikparam;
+            if( ExtractIkParameterization(oparam,ikparam) ) {
+                if( !_pmanip->FindIKSolutions(ikparam,vfreeparams,vsolutions,filteroptions) ) {
                     return solutions;
                 }
             }
@@ -3108,21 +2923,21 @@ public:
     {
         return _toPyInterface(_penv->ReadInterfaceXMLFile(filename, toAttributesList(odictatts)));
     }
-    boost::shared_ptr<PyTriMesh> ReadTrimeshFile(const std::string& filename)
+    object ReadTrimeshFile(const std::string& filename)
     {
         boost::shared_ptr<KinBody::Link::TRIMESH> ptrimesh = _penv->ReadTrimeshFile(boost::shared_ptr<KinBody::Link::TRIMESH>(),filename);
         if( !ptrimesh ) {
-            return boost::shared_ptr<PyTriMesh>();
+            return object();
         }
-        return boost::shared_ptr<PyTriMesh>(new PyTriMesh(*ptrimesh));
+        return toPyTriMesh(*ptrimesh);
     }
-    boost::shared_ptr<PyTriMesh> ReadTrimeshFile(const std::string& filename, dict odictatts)
+    object ReadTrimeshFile(const std::string& filename, dict odictatts)
     {
         boost::shared_ptr<KinBody::Link::TRIMESH> ptrimesh = _penv->ReadTrimeshFile(boost::shared_ptr<KinBody::Link::TRIMESH>(),filename,toAttributesList(odictatts));
         if( !ptrimesh ) {
-            return boost::shared_ptr<PyTriMesh>();
+            return object();
         }
-        return boost::shared_ptr<PyTriMesh>(new PyTriMesh(*ptrimesh));
+        return toPyTriMesh(*ptrimesh);
     }
 
     bool AddKinBody(PyKinBodyPtr pbody) { CHECK_POINTER(pbody); return _penv->AddKinBody(pbody->GetBody()); }
@@ -3506,22 +3321,22 @@ public:
         _penv->UpdatePublishedBodies();
     }
 
-    boost::shared_ptr<PyTriMesh> Triangulate(PyKinBodyPtr pbody)
+    object Triangulate(PyKinBodyPtr pbody)
     {
         CHECK_POINTER(pbody);
         KinBody::Link::TRIMESH mesh;
         if( !_penv->Triangulate(mesh,pbody->GetBody()) ) {
             throw openrave_exception(boost::str(boost::format("failed to triangulate body %s")%pbody->GetBody()->GetName()));
         }
-        return boost::shared_ptr<PyTriMesh>(new PyTriMesh(mesh));
+        return toPyTriMesh(mesh);
     }
-    boost::shared_ptr<PyTriMesh> TriangulateScene(EnvironmentBase::TriangulateOptions opts, const string& name)
+    object TriangulateScene(EnvironmentBase::TriangulateOptions opts, const string& name)
     {
         KinBody::Link::TRIMESH mesh;
         if( !_penv->TriangulateScene(mesh,opts,name) ) {
             throw openrave_exception(boost::str(boost::format("failed to triangulate scene: %d, %s")%opts%name));
         }
-        return boost::shared_ptr<PyTriMesh>(new PyTriMesh(mesh));
+        return toPyTriMesh(mesh);
     }
 
     void SetDebugLevel(DebugLevel level) { _penv->SetDebugLevel(level); }
@@ -3768,111 +3583,25 @@ BOOST_PYTHON_MODULE(openravepy_int)
     exception_translator<openrave_exception>();
     exception_translator<std::runtime_error>();
 
-    enum_<DebugLevel>("DebugLevel" DOXY_ENUM(DebugLevel))
-        .value("Fatal",Level_Fatal)
-        .value("Error",Level_Error)
-        .value("Warn",Level_Warn)
-        .value("Info",Level_Info)
-        .value("Debug",Level_Debug)
-        .value("Verbose",Level_Verbose)
-        ;
-    enum_<SerializationOptions>("SerializationOptions" DOXY_ENUM(SerializationOptions))
-        .value("Kinematics",SO_Kinematics)
-        .value("Dynamics",SO_Dynamics)
-        .value("BodyState",SO_BodyState)
-        .value("NamesAndFiles",SO_NamesAndFiles)
-        ;
-    enum_<InterfaceType>("InterfaceType" DOXY_ENUM(InterfaceType))
-        .value(RaveGetInterfaceName(PT_Planner).c_str(),PT_Planner)
-        .value(RaveGetInterfaceName(PT_Robot).c_str(),PT_Robot)
-        .value(RaveGetInterfaceName(PT_SensorSystem).c_str(),PT_SensorSystem)
-        .value(RaveGetInterfaceName(PT_Controller).c_str(),PT_Controller)
-        .value(RaveGetInterfaceName(PT_ProblemInstance).c_str(),PT_ProblemInstance)
-        .value(RaveGetInterfaceName(PT_IkSolver).c_str(),PT_IkSolver)
-        .value(RaveGetInterfaceName(PT_KinBody).c_str(),PT_KinBody)
-        .value(RaveGetInterfaceName(PT_PhysicsEngine).c_str(),PT_PhysicsEngine)
-        .value(RaveGetInterfaceName(PT_Sensor).c_str(),PT_Sensor)
-        .value(RaveGetInterfaceName(PT_CollisionChecker).c_str(),PT_CollisionChecker)
-        .value(RaveGetInterfaceName(PT_Trajectory).c_str(),PT_Trajectory)
-        .value(RaveGetInterfaceName(PT_Viewer).c_str(),PT_Viewer)
-        ;
-    enum_<CollisionOptions>("CollisionOptions" DOXY_ENUM(CollisionOptions))
-        .value("Distance",CO_Distance)
-        .value("UseTolerance",CO_UseTolerance)
-        .value("Contacts",CO_Contacts)
-        .value("RayAnyHit",CO_RayAnyHit)
-        .value("ActiveDOFs",CO_ActiveDOFs);
-        ;
-    enum_<CollisionAction>("CollisionAction" DOXY_ENUM(CollisionAction))
-        .value("DefaultAction",CA_DefaultAction)
-        .value("Ignore",CA_Ignore)
-        ;
-    enum_<CloningOptions>("CloningOptions" DOXY_ENUM(CloningOptions))
-        .value("Bodies",Clone_Bodies)
-        .value("Viewer",Clone_Viewer)
-        .value("Simulation",Clone_Simulation)
-        .value("RealControllers",Clone_RealControllers)
-        .value("Sensors",Clone_Sensors)
-        ;
-    enum_<PhysicsEngineOptions>("PhysicsEngineOptions" DOXY_ENUM(PhysicsEngineOptions))
-        .value("SelfCollisions",PEO_SelfCollisions)
-        ;
-    enum_<IkFilterOptions>("IkFilterOptions" DOXY_ENUM(IkFilterOptions))
-        .value("CheckEnvCollisions",IKFO_CheckEnvCollisions)
-        .value("IgnoreSelfCollisions",IKFO_IgnoreSelfCollisions)
-        .value("IgnoreJointLimits",IKFO_IgnoreJointLimits)
-        .value("IgnoreCustomFilter",IKFO_IgnoreCustomFilter)
-        ;
-    enum_<IkFilterReturn>("IkFilterReturn" DOXY_ENUM(IkFilterReturn))
-        .value("Success",IKFR_Success)
-        .value("Reject",IKFR_Reject)
-        .value("Quit",IKFR_Quit)
-        ;
-    object iktype = enum_<IkParameterization::Type>("IkParameterizationType" DOXY_ENUM(IkParameterization::Type))
-        .value("Transform6D",IkParameterization::Type_Transform6D)
-        .value("Rotation3D",IkParameterization::Type_Rotation3D)
-        .value("Translation3D",IkParameterization::Type_Translation3D)
-        .value("Direction3D",IkParameterization::Type_Direction3D)
-        .value("Ray4D",IkParameterization::Type_Ray4D)
-        .value("Lookat3D",IkParameterization::Type_Lookat3D)
-        .value("TranslationDirection5D",IkParameterization::Type_TranslationDirection5D)
-        .value("TranslationXY2D",IkParameterization::Type_TranslationXY2D)
-        .value("TranslationXYOrientation3D",IkParameterization::Type_TranslationXYOrientation3D)
-        .value("TranslationLocalGlobal6D",IkParameterization::Type_TranslationLocalGlobal6D)
-        ;
-    
-    class_< boost::shared_ptr< void > >("VoidPointer", "Holds auto-managed resources, deleting it releases its shared data.");
-
     class_<PyEnvironmentBase, boost::shared_ptr<PyEnvironmentBase> > classenv("Environment", DOXY_CLASS(EnvironmentBase));
-    class_<PyGraphHandle, boost::shared_ptr<PyGraphHandle> >("GraphHandle", DOXY_CLASS(GraphHandle), no_init)
-        .def("SetTransform",&PyGraphHandle::SetTransform,DOXY_FN(GraphHandle,SetTransform))
-        .def("SetShow",&PyGraphHandle::SetShow,DOXY_FN(GraphHandle,SetShow))
+
+    class_<PyCollisionReport::PYCONTACT, boost::shared_ptr<PyCollisionReport::PYCONTACT> >("Contact", DOXY_CLASS(CollisionReport::CONTACT))
+        .def_readonly("pos",&PyCollisionReport::PYCONTACT::pos)
+        .def_readonly("norm",&PyCollisionReport::PYCONTACT::norm)
+        .def_readonly("depth",&PyCollisionReport::PYCONTACT::depth)
+        .def("__str__",&PyCollisionReport::PYCONTACT::__str__)
         ;
-    class_<PyRay, boost::shared_ptr<PyRay> >("Ray", DOXY_CLASS(geometry::ray))
-        .def(init<object,object>(args("pos","dir")))
-        .def("dir",&PyRay::dir)
-        .def("pos",&PyRay::pos)
-        .def("__str__",&PyRay::__str__)
-        .def("__repr__",&PyRay::__repr__)
-        .def_pickle(Ray_pickle_suite())
+    class_<PyCollisionReport, boost::shared_ptr<PyCollisionReport> >("CollisionReport", DOXY_CLASS(CollisionReport))
+        .def_readonly("options",&PyCollisionReport::options)
+        .def_readonly("plink1",&PyCollisionReport::plink1)
+        .def_readonly("plink2",&PyCollisionReport::plink2)
+        .def_readonly("numCols",&PyCollisionReport::numCols)
+        .def_readonly("minDistance",&PyCollisionReport::minDistance)
+        .def_readonly("numWithinTol",&PyCollisionReport::numWithinTol)
+        .def_readonly("contacts",&PyCollisionReport::contacts)
+        .def("__str__",&PyCollisionReport::__str__)
         ;
-    class_<PyAABB, boost::shared_ptr<PyAABB> >("AABB", DOXY_CLASS(geometry::aabb))
-        .def(init<object,object>(args("pos","extents")))
-        .def("extents",&PyAABB::extents)
-        .def("pos",&PyAABB::pos)
-        .def("__str__",&PyAABB::__str__)
-        .def("__repr__",&PyAABB::__repr__)
-        .def_pickle(AABB_pickle_suite())
-        ;
-    class_<PyTriMesh, boost::shared_ptr<PyTriMesh> >("TriMesh", DOXY_CLASS(KinBody::Link::TRIMESH))
-        .def(init<object,object>(args("vertices","indices")))
-        .def_readwrite("vertices",&PyTriMesh::vertices)
-        .def_readwrite("indices",&PyTriMesh::indices)
-        .def("__str__",&PyTriMesh::__str__)
-        .def_pickle(TriMesh_pickle_suite())
-        ;
-    class_<InterfaceBase, InterfaceBasePtr, boost::noncopyable >("InterfaceBase", DOXY_CLASS(InterfaceBase), no_init)
-        ;
+
     {
         void (PyInterfaceBase::*setuserdata1)(PyUserData) = &PyInterfaceBase::SetUserData;
         void (PyInterfaceBase::*setuserdata2)(object) = &PyInterfaceBase::SetUserData;
@@ -3899,16 +3628,12 @@ In python, the syntax is::\n\n\
             ;
     }
 
-    class_<PyPluginInfo, boost::shared_ptr<PyPluginInfo> >("PluginInfo", DOXY_CLASS(PLUGININFO),no_init)
-        .def_readonly("interfacenames",&PyPluginInfo::interfacenames)
-        .def_readonly("version",&PyPluginInfo::version)
-        ;
-
     {    
         bool (PyKinBody::*pkinbodyself)() = &PyKinBody::CheckSelfCollision;
         bool (PyKinBody::*pkinbodyselfr)(PyCollisionReportPtr) = &PyKinBody::CheckSelfCollision;
         void (PyKinBody::*psetdofvalues1)(object) = &PyKinBody::SetDOFValues;
         void (PyKinBody::*psetdofvalues2)(object,object) = &PyKinBody::SetDOFValues;
+        void (PyKinBody::*psetdofvalues3)(object,object,bool) = &PyKinBody::SetDOFValues;
         PyVoidHandle (PyKinBody::*statesaver1)() = &PyKinBody::CreateKinBodyStateSaver;
         PyVoidHandle (PyKinBody::*statesaver2)(int) = &PyKinBody::CreateKinBodyStateSaver;
         object (PyKinBody::*getdofvalues1)() const = &PyKinBody::GetDOFValues;
@@ -3969,6 +3694,7 @@ In python, the syntax is::\n\n\
             .def("GetRigidlyAttachedLinks",&PyKinBody::GetRigidlyAttachedLinks,args("linkindex"), DOXY_FN(KinBody,GetRigidlyAttachedLinks))
             .def("GetChain",&PyKinBody::GetChain,GetChain_overloads(args("linkindex1","linkindex2","returnjoints"), sGetChainDoc.c_str()))
             .def("IsDOFInChain",&PyKinBody::IsDOFInChain,args("linkindex1","linkindex2","dofindex"), DOXY_FN(KinBody,IsDOFInChain))
+            .def("GetJointIndex",&PyKinBody::GetJointIndex,args("name"), DOXY_FN(KinBody,GetJointIndex))
             .def("GetJoint",&PyKinBody::GetJoint,args("name"), DOXY_FN(KinBody,GetJoint))
             .def("GetJointFromDOFIndex",&PyKinBody::GetJointFromDOFIndex,args("dofindex"), DOXY_FN(KinBody,GetJointFromDOFIndex))
             .def("GetTransform",&PyKinBody::GetTransform, DOXY_FN(KinBody,GetTransform))
@@ -3988,6 +3714,7 @@ In python, the syntax is::\n\n\
             .def("SetJointValues",psetdofvalues2,args("values","dofindices"), DOXY_FN(KinBody,SetDOFValues "const std::vector; bool"))
             .def("SetDOFValues",psetdofvalues1,args("values"), DOXY_FN(KinBody,SetDOFValues "const std::vector; bool"))
             .def("SetDOFValues",psetdofvalues2,args("values","dofindices"), DOXY_FN(KinBody,SetDOFValues "const std::vector; bool"))
+            .def("SetDOFValues",psetdofvalues3,args("values","dofindices","checklimits"), DOXY_FN(KinBody,SetDOFValues "const std::vector; bool"))
             .def("SubtractDOFValues",&PyKinBody::SubtractDOFValues,args("values0","values1"), DOXY_FN(KinBody,SubtractDOFValues))
             .def("SetJointTorques",&PyKinBody::SetJointTorques,args("torques","add"), DOXY_FN(KinBody,SetJointTorques))
             .def("SetTransformWithJointValues",&PyKinBody::SetTransformWithDOFValues,args("transform","values"), DOXY_FN(KinBody,SetDOFValues "const std::vector; const Transform; bool"))
@@ -4172,76 +3899,6 @@ In python, the syntax is::\n\n\
         }
     }
 
-    class_<PyCollisionReport::PYCONTACT, boost::shared_ptr<PyCollisionReport::PYCONTACT> >("Contact", DOXY_CLASS(CollisionReport::CONTACT))
-        .def_readonly("pos",&PyCollisionReport::PYCONTACT::pos)
-        .def_readonly("norm",&PyCollisionReport::PYCONTACT::norm)
-        .def_readonly("depth",&PyCollisionReport::PYCONTACT::depth)
-        .def("__str__",&PyCollisionReport::PYCONTACT::__str__)
-        ;
-    class_<PyCollisionReport, boost::shared_ptr<PyCollisionReport> >("CollisionReport", DOXY_CLASS(CollisionReport))
-        .def_readonly("options",&PyCollisionReport::options)
-        .def_readonly("plink1",&PyCollisionReport::plink1)
-        .def_readonly("plink2",&PyCollisionReport::plink2)
-        .def_readonly("numCols",&PyCollisionReport::numCols)
-        .def_readonly("minDistance",&PyCollisionReport::minDistance)
-        .def_readonly("numWithinTol",&PyCollisionReport::numWithinTol)
-        .def_readonly("contacts",&PyCollisionReport::contacts)
-        .def("__str__",&PyCollisionReport::__str__)
-        ;
-
-    {
-        int (*getdof1)(IkParameterization::Type) = &IkParameterization::GetDOF;
-        int (*getnumberofvalues1)(IkParameterization::Type) = &IkParameterization::GetNumberOfValues;
-        scope ikparameterization = class_<PyIkParameterization, boost::shared_ptr<PyIkParameterization> >("IkParameterization", DOXY_CLASS(IkParameterization))
-            .def(init<object,IkParameterization::Type>(args("primitive","type")))
-            .def(init<string>(args("str")))
-            .def("GetType",&PyIkParameterization::GetType, DOXY_FN(IkParameterization,GetType))
-            .def("SetTransform6D",&PyIkParameterization::SetTransform6D,args("transform"), DOXY_FN(IkParameterization,SetTransform6D))
-            .def("SetRotation3D",&PyIkParameterization::SetRotation3D,args("quat"), DOXY_FN(IkParameterization,SetRotation3D))
-            .def("SetTranslation3D",&PyIkParameterization::SetTranslation3D,args("pos"), DOXY_FN(IkParameterization,SetTranslation3D))
-            .def("SetDirection3D",&PyIkParameterization::SetDirection3D,args("dir"), DOXY_FN(IkParameterization,SetDirection3D))
-            .def("SetRay4D",&PyIkParameterization::SetRay4D,args("quat"), DOXY_FN(IkParameterization,SetRay4D))
-            .def("SetLookat3D",&PyIkParameterization::SetLookat3D,args("pos"), DOXY_FN(IkParameterization,SetLookat3D))
-            .def("SetTranslationDirection5D",&PyIkParameterization::SetTranslationDirection5D,args("quat"), DOXY_FN(IkParameterization,SetTranslationDirection5D))
-            .def("SetTranslationXY2D",&PyIkParameterization::SetTranslationXY2D,args("pos"), DOXY_FN(IkParameterization,SetTranslationXY2D))
-            .def("SetTranslationXYOrientation3D",&PyIkParameterization::SetTranslationXYOrientation3D,args("posangle"), DOXY_FN(IkParameterization,SetTranslationXYOrientation3D))
-            .def("SetTranslationLocalGlobal6D",&PyIkParameterization::SetTranslationLocalGlobal6D,args("localpos","pos"), DOXY_FN(IkParameterization,SetTranslationLocalGlobal6D))
-            .def("GetTransform6D",&PyIkParameterization::GetTransform6D, DOXY_FN(IkParameterization,GetTransform6D))
-            .def("GetRotation3D",&PyIkParameterization::GetRotation3D, DOXY_FN(IkParameterization,GetRotation3D))
-            .def("GetTranslation3D",&PyIkParameterization::GetTranslation3D, DOXY_FN(IkParameterization,GetTranslation3D))
-            .def("GetDirection3D",&PyIkParameterization::GetDirection3D, DOXY_FN(IkParameterization,GetDirection3D))
-            .def("GetRay4D",&PyIkParameterization::GetRay4D, DOXY_FN(IkParameterization,GetRay4D))
-            .def("GetLookat3D",&PyIkParameterization::GetLookat3D, DOXY_FN(IkParameterization,GetLookat3D))
-            .def("GetTranslationDirection5D",&PyIkParameterization::GetTranslationDirection5D, DOXY_FN(IkParameterization,GetTranslationDirection5D))
-            .def("GetTranslationXY2D",&PyIkParameterization::GetTranslationXY2D, DOXY_FN(IkParameterization,GetTranslationXY2D))
-            .def("GetTranslationXYOrientation3D",&PyIkParameterization::GetTranslationXYOrientation3D, DOXY_FN(IkParameterization,GetTranslationXYOrientation3D))
-            .def("GetTranslationLocalGlobal6D",&PyIkParameterization::GetTranslationLocalGlobal6D, DOXY_FN(IkParameterization,GetTranslationLocalGlobal6D))
-            .def("GetDOF", getdof1,args("type"), DOXY_FN(IkParameterization,GetDOF))
-            .staticmethod("GetDOF")
-            .def("GetNumberOfValues",getnumberofvalues1,args("type"), DOXY_FN(IkParameterization,GetNumberOfValues))
-            .staticmethod("GetNumberOfValues")
-            .def_pickle(IkParameterization_pickle_suite())
-
-            // deprecated
-            .def("SetTransform",&PyIkParameterization::SetTransform6D,args("transform"), DOXY_FN(IkParameterization,SetTransform6D))
-            .def("SetRotation",&PyIkParameterization::SetRotation3D,args("quat"), DOXY_FN(IkParameterization,SetRotation3D))
-            .def("SetTranslation",&PyIkParameterization::SetTranslation3D,args("pos"), DOXY_FN(IkParameterization,SetTranslation3D))
-            .def("SetDirection",&PyIkParameterization::SetDirection3D,args("dir"), DOXY_FN(IkParameterization,SetDirection3D))
-            .def("SetRay",&PyIkParameterization::SetRay4D,args("quat"), DOXY_FN(IkParameterization,SetRay4D))
-            .def("SetLookat",&PyIkParameterization::SetLookat3D,args("pos"), DOXY_FN(IkParameterization,SetLookat3D))
-            .def("SetTranslationDirection",&PyIkParameterization::SetTranslationDirection5D,args("quat"), DOXY_FN(IkParameterization,SetTranslationDirection5D))
-            .def("GetTransform",&PyIkParameterization::GetTransform6D, DOXY_FN(IkParameterization,GetTransform6D))
-            .def("GetRotation",&PyIkParameterization::GetRotation3D, DOXY_FN(IkParameterization,GetRotation3D))
-            .def("GetTranslation",&PyIkParameterization::GetTranslation3D, DOXY_FN(IkParameterization,GetTranslation3D))
-            .def("GetDirection",&PyIkParameterization::GetDirection3D, DOXY_FN(IkParameterization,GetDirection3D))
-            .def("GetRay",&PyIkParameterization::GetRay4D, DOXY_FN(IkParameterization,GetRay4D))
-            .def("GetLookat",&PyIkParameterization::GetLookat3D, DOXY_FN(IkParameterization,GetLookat3D))
-            .def("GetTranslationDirection",&PyIkParameterization::GetTranslationDirection5D, DOXY_FN(IkParameterization,GetTranslationDirection5D))
-            .def("__str__",&PyIkParameterization::__str__)
-            .def("__repr__",&PyIkParameterization::__repr__)
-            ;
-        ikparameterization.attr("Type") = iktype;
-    }
 
     {
         void (PyRobotBase::*psetactivedofs1)(object) = &PyRobotBase::SetActiveDOFs;
@@ -4689,8 +4346,8 @@ In python, the syntax is::\n\n\
         PyKinBodyPtr (PyEnvironmentBase::*readkinbodyxmldata2)(const string&,dict) = &PyEnvironmentBase::ReadKinBodyXMLData;
         PyInterfaceBasePtr (PyEnvironmentBase::*readinterfacexmlfile1)(const string&) = &PyEnvironmentBase::ReadInterfaceXMLFile;
         PyInterfaceBasePtr (PyEnvironmentBase::*readinterfacexmlfile2)(const string&,dict) = &PyEnvironmentBase::ReadInterfaceXMLFile;
-        boost::shared_ptr<PyTriMesh> (PyEnvironmentBase::*readtrimeshfile1)(const std::string&) = &PyEnvironmentBase::ReadTrimeshFile;
-        boost::shared_ptr<PyTriMesh> (PyEnvironmentBase::*readtrimeshfile2)(const std::string&,dict) = &PyEnvironmentBase::ReadTrimeshFile;
+        object (PyEnvironmentBase::*readtrimeshfile1)(const std::string&) = &PyEnvironmentBase::ReadTrimeshFile;
+        object (PyEnvironmentBase::*readtrimeshfile2)(const std::string&,dict) = &PyEnvironmentBase::ReadTrimeshFile;
         scope env = classenv
             .def(init<>())
             .def("Reset",&PyEnvironmentBase::Reset, DOXY_FN(EnvironmentBase,Reset))
@@ -4776,7 +4433,7 @@ In python, the syntax is::\n\n\
             .def("GetSimulationTime",&PyEnvironmentBase::GetSimulationTime, DOXY_FN(EnvironmentBase,GetSimulationTime))
             .def("Lock",Lock1,"Locks the environment mutex.")
             //.def("Lock",Lock2,args("timeout"), "Locks the environment mutex with a timeout.")
-            .def("Lock",&PyEnvironmentBase::Unlock,"Unlocks the environment mutex.")
+            .def("Unlock",&PyEnvironmentBase::Unlock,"Unlocks the environment mutex.")
             .def("LockPhysics",Lock1,args("lock"), "Locks the environment mutex.")
             .def("LockPhysics",Lock2,args("lock","timeout"), "Locks the environment mutex with a timeout.")
             .def("SetViewer",&PyEnvironmentBase::SetViewer,SetViewer_overloads(args("viewername","showviewer"), "Attaches the viewer and starts its thread"))
