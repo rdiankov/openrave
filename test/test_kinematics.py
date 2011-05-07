@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # Copyright (C) 2011 Rosen Diankov <rosen.diankov@gmail.com>
 # 
@@ -74,8 +73,9 @@ def test_transformations():
             assert( sum(abs(transformInversePoints(matrices[j],X) - poseTransformPoints(posearrayinv0[j],X))) <= g_epsilon )
         
 def test_fitcircle():
+    """fits 2d/3d circles to a set of points"""
     perturbation = 0.001
-    for i in range(40):
+    for i in range(400):
         T = randtrans()
         radius = random.rand()*5+0.3
         angles = random.rand(5)*2*pi
@@ -96,7 +96,7 @@ class TestKinematics(EnvironmentSetup):
             for envfile in g_envfiles:
                 self.env.Reset()
                 self.env.Load(envfile)
-                for i in range(10):
+                for i in range(16):
                     T = eye(4)
                     for body in self.env.GetBodies():
                         Told = body.GetTransform()
@@ -129,7 +129,7 @@ class TestKinematics(EnvironmentSetup):
                             link.SetTransform(T)
                         assert( transdist(body.GetBodyTransformations(),Tallnew2) <= g_epsilon )
                         body.SetBodyTransformations(Tallnew)
-                        for idir in range(10):
+                        for idir in range(16):
                             deltavalues0 = array([g_jacobianstep*(random.randint(3)-1) for j in range(body.GetDOF())])
                             localtrans = randtrans()
                             for ilink,link in enumerate(body.GetLinks()):
@@ -157,6 +157,61 @@ class TestKinematics(EnvironmentSetup):
                                 assert( transdist(dot(Jtrans,deltavalues),deltatrans) <= thresh )
                                 assert( transdist(dot(Jquat,deltavalues)+worldquat,newquat) <= thresh )
                                 assert( axisangledist(dot(Jangvel,deltavalues)+worldaxisangle,newaxisangle) <= 2*thresh )
+
+#     def RetractionConstraint(self,prev,cur,thresh=1e-4):
+#         """jacobian gradient descent"""
+#         new = array(cur)
+#         robot.SetActiveDOFValues(prev)
+#         distprev = sum((prev-cur)**2)
+#         distcur = 0
+#         lasterror = 0
+#         for iter in range(10):
+#             Jrotation = robot.CalculateActiveAngularVelocityJacobian(manip.GetEndEffector().GetIndex())
+#             Jtranslation = robot.CalculateActiveJacobian(manip.GetEndEffector().GetIndex(),manip.GetEndEffectorTransform()[0:3,3])
+#             J = r_[Jrotation,Jtranslation]
+#             JJt = dot(J,transpose(J))+eye(6)*1e-8
+#             invJ = dot(transpose(J),linalg.inv(JJt))
+#             Terror = dot(dot(targetframematrix,linalg.inv(Tee)),manip.GetEndEffectorTransform())
+#             poseerror = poseFromMatrix(Terror)
+#             error = r_[Terror[0:3,3],[2.0*arctan2(poseerror[i],poseerror[0]) for i in range(1,4)]]
+#             error *= array([1,0,0,1,1,1])
+#             print 'error: ', sum(error**2)
+#             if sum(error**2) < thresh**2:
+#                 return True
+#             if sum(error**2) > lasterror and distcur > distprev:
+#                 return False;
+#             qdelta = dot(invJ,error)
+#             vnew -= qdelta
+#             robot.SetActiveDOFValues(vnew)
+#             distcur = sum((vnew-vcur)**2)
+#             print manip.GetEndEffectorTransform()
+# 
+#     def test_jacobianconstraints():
+#         env = Environment()
+#         robot = env.ReadRobotXMLFile('robots/barrettwam.robot.xml')
+#         env.AddRobot(robot)
+#         manip = robot.GetActiveManipulator()
+#         taskmanip = TaskManipulation(robot)
+#         robot.SetActiveDOFs(manip.GetArmJoints())
+#         vorg = robot.GetActiveDOFValues()
+# 
+#         freedoms = [1,1,1,1,1,1]
+#         v = array(vorg)
+#         v[1] += 0.2
+#         configs = [v]
+#         targetframematrix = eye(4)
+#         env.SetDebugLevel(DebugLevel.Debug)
+# 
+#         robot.SetActiveDOFValues(vorg)
+#         Tee = manip.GetEndEffectorTransform()
+#         print manip.GetEndEffectorTransform()
+#         errorthresh = 1e-3
+#         iters,newconfigs = taskmanip.EvaluateConstraints(freedoms=freedoms,targetframematrix=targetframematrix,configs=configs,errorthresh=errorthresh)
+#         print 'iters: ',iters
+#         robot.SetActiveDOFValues(configs[0])
+#         print 'old: ', manip.GetEndEffectorTransform()
+#         robot.SetActiveDOFValues(newconfigs[0])
+#         print 'new: ', manip.GetEndEffectorTransform()
 
     def test_bodyvelocities(self):
         """checks physics/dynamics properties"""
@@ -318,3 +373,27 @@ class TestKinematics(EnvironmentSetup):
             assert( len(k.GetLinks()) == 1 and len(k.GetLinks()[0].GetGeometries()) == 2 )
             assert( k.GetLinks()[0].GetGeometries()[0].GetType() == KinBody.Link.GeomProperties.Type.Box )
             assert( k.GetLinks()[0].GetGeometries()[1].GetType() == KinBody.Link.GeomProperties.Type.Box )
+            k2 = self.env.CreateKinBody()
+            k2.InitFromTrimesh(TriMesh(*ComputeBoxMesh([0.1,0.2,0.3])),True)
+            k2.SetName('temp')
+            self.env.AddKinBody(k2,True)
+            assert( transdist(k2.ComputeAABB().extents(),[0.1,0.2,0.3]) <= g_epsilon )
+
+    def test_geometrychange(self):
+        """change geometry and test if changes are updated"""
+        with self.env:
+            self.env.Load(g_envfiles[0])
+            body = [body for body in self.env.GetBodies() if not body.IsRobot()][0]
+            link = body.GetLinks()[-1]
+            geom = link.GetGeometries()[0]
+            geom.SetCollisionMesh(TriMesh(*ComputeBoxMesh([1,1,0.1])))
+
+    def test_hashes(self):
+        robot = self.env.ReadRobotXMLFile(g_robotfiles[0])
+        self.env.AddRobot(robot)
+        s = robot.serialize(SerializationOptions.Kinematics)
+        hash0 = robot.GetKinematicsGeometryHash()
+        robot.SetBodyTransformations([randtrans() for link in robot.GetLinks()])
+        hash1 = robot.GetKinematicsGeometryHash()
+        assert( hash0 == hash1 )
+        

@@ -15,6 +15,7 @@
 import sys
 from optparse import OptionParser
 import nose
+from nose.plugins import failuredetail
 from noseplugins import multiprocess, xunitmultiprocess, capture
 
 if __name__ == "__main__":
@@ -26,11 +27,15 @@ if __name__ == "__main__":
                       help='Number of processors to run this in (default=%default).')
     parser.add_option('--with-coverage',action='store_true',dest='with_coverage',default=False,
                       help='set to create coverage statistics')
+    parser.add_option('--os-only',action='store_true',dest='os_only',default=False,
+                      help='set to run only tests that test program execution to make sure things run on the current OS')
     (options, args) = parser.parse_args()
 
-    multiprocess._instantiate_plugins = [capture.Capture, xunitmultiprocess.Xunitmp]
-    argv=['nosetests','-v','--with-xunitmp','--xunit-file=results.xml','--processes=%d'%options.numprocesses,'--process-timeout=%f'%options.timeout,'--process-restartworker','-s']
+    multiprocess._instantiate_plugins = [capture.Capture, xunitmultiprocess.Xunitmp,failuredetail.FailureDetail]
+    argv=['nosetests','-v','--with-xunitmp','--xunit-file=results.xml','--processes=%d'%options.numprocesses,'--process-timeout=%f'%options.timeout,'--process-restartworker','-s','-d']
+    if options.os_only:
+        argv.append('test_programs.py')
     if options.with_coverage:
         argv += ['--with-coverage', '--cover-package=openravepy','--cover-html']
-    plugins=[capture.Capture(),multiprocess.MultiProcess(),xunitmultiprocess.Xunitmp()]
+    plugins=[capture.Capture(),multiprocess.MultiProcess(),xunitmultiprocess.Xunitmp(),failuredetail.FailureDetail()]
     prog=nose.core.TestProgram(argv=argv,plugins=plugins,exit=False)

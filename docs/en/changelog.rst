@@ -48,6 +48,8 @@ Testing
 
 * added extensive basic math and kinematics tests
 
+* added a 'testmode' in all python examples so unit testing can run the examples safely
+
 Version 0.3.1
 =============
 

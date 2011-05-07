@@ -499,7 +499,7 @@ class RobotStateSaver:
 class OpenRAVEGlobalArguments:
     """manages a global set of command-line options applicable to all openrave environments"""
     @staticmethod
-    def addOptions(parser):
+    def addOptions(parser,testmode=True):
         ogroup = optparse.OptionGroup(parser,"OpenRAVE Environment Options")
         ogroup.add_option('--loadplugin', action="append",type='string',dest='_loadplugins',default=[],
                           help='List all plugins and the interfaces they provide.')
@@ -515,6 +515,9 @@ class OpenRAVEGlobalArguments:
                           help='port to load server on (default=%default).')
         ogroup.add_option('--level','-l', action="store",type='string',dest='_level',default=None,
                           help='Debug level, one of (%s)'%(','.join(str(debugname).lower() for debuglevel,debugname in openravepy.DebugLevel.values.iteritems())))
+        if testmode:
+            ogroup.add_option('--testmode', action="store_true",dest='testmode',default=False,
+                              help='if set, will run the program in a finite amount of time and spend computation time validating results. Used for testing')
         parser.add_option_group(ogroup)
     @staticmethod
     def parseGlobal(options,**kwargs):

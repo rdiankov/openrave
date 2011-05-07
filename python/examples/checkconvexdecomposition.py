@@ -52,7 +52,8 @@ def main(env,options):
     plottedpoints[:,1] += ab.extents()[1]*2
     print '%d points are inside'%len(plottedpoints)
     h = env.plot3(plottedpoints,2)
-    raw_input('press any key to exit')
+    if not options.testmode:
+        raw_input('press any key to exit')
 
 from optparse import OptionParser
 from openravepy import OpenRAVEGlobalArguments, with_destroy

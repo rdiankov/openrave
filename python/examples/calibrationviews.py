@@ -170,8 +170,8 @@ class CalibrationViews:
 
     def moveToObservations(self,poses,configs,waitcond=None,maxobservations=inf,posedist=0.05):
         """
+        order the poses with respect to distance
         """
-        # order the poses with respect to distance
         assert len(poses) == len(configs)
         poseorder=arange(len(poses))
         observations=[]
@@ -180,6 +180,7 @@ class CalibrationViews:
                 with self.env:
                     self.robot.Grab(self.vmodel.target,self.vmodel.manip.GetEndEffector())
             while len(poseorder) > 0:
+                print 'left over poses: %d'%len(poseorder)
                 with self.robot:
                     curconfig=self.robot.GetDOFValues(self.vmodel.manip.GetArmIndices())
                 index=argmin(sum((configs[poseorder]-tile(curconfig,(len(poseorder),1)))**2,1))
@@ -264,6 +265,8 @@ def main(env,options):
     while True:
         print 'computing all locations, might take more than a minute...'
         self.computeAndMoveToObservations(usevisibility=options.usevisibility,posedist=options.posedist)
+        if options.testmode:
+            break
 
 
 from optparse import OptionParser
