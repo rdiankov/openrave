@@ -1821,12 +1821,12 @@ class ColladaReader : public daeErrorHandler
                         }
                         pattachedsensor->trelative = _ExtractFullTransformFromChildren(pframe_origin);
                     }
-//                    if( !_ExtractSensor(pattachedsensor->psensor,tec->getChild("instance_sensor")) ) {
-//                        RAVELOG_WARN(str(boost::format("cannot find instance_sensor for attached sensor %s:%s\n")%probot->GetName()%name));
-//                    }
-//                    else {
-//                        pattachedsensor->pdata = pattachedsensor->GetSensor()->CreateSensorData();
-//                    }
+                    if( !_ExtractSensor(pattachedsensor->psensor,tec->getChild("instance_sensor")) ) {
+                        RAVELOG_WARN(str(boost::format("cannot find instance_sensor for attached sensor %s:%s\n")%probot->GetName()%name));
+                    }
+                    else {
+                        pattachedsensor->pdata = pattachedsensor->GetSensor()->CreateSensorData();
+                    }
                     probot->GetAttachedSensors().push_back(pattachedsensor);
                 }
                 else {

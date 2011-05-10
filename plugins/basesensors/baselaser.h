@@ -46,22 +46,26 @@ protected:
                     _pcurreader.reset();
                 return false;
             }
-            else if( name == "sensor" )
+            else if( name == "sensor" ) {
                 return true;
+            }
             else if( name == "minangle" ) {
                 ss >> _psensor->_pgeom->min_angle[0];
-                if( !!ss )
+                if( !!ss ) {
                     _psensor->_pgeom->min_angle[0] *= PI/180.0f; // convert to radians
+                }
             }
             else if( name == "maxangle" ) {
                 ss >> _psensor->_pgeom->max_angle[0];
-                if( !!ss )
+                if( !!ss ) {
                     _psensor->_pgeom->max_angle[0] *= PI/180.0f; // convert to radians
+                }
             }
             else if( name == "resolution" ) {
                 ss >> _psensor->_pgeom->resolution[0];
-                if( !!ss )
+                if( !!ss ) {
                     _psensor->_pgeom->resolution[0] *= PI/180.0f; // convert to radians
+                }
             }
             else if( name == "maxrange" ) {
                 ss >> _psensor->_pgeom->max_range;
@@ -78,15 +82,16 @@ protected:
             else if( name == "color" ) {
                 ss >> _psensor->_vColor.x >> _psensor->_vColor.y >> _psensor->_vColor.z;
                 // ok if not everything specified
-                if( !ss )
+                if( !ss ) {
                     ss.clear();
+                }
             }
-            else
+            else {
                 RAVELOG_WARN(str(boost::format("bad tag: %s")%name));
-
-            if( !ss )
+            }
+            if( !ss ) {
                 RAVELOG_WARN(str(boost::format("error parsing %s\n")%name));
-
+            }
             return false;
         }
 
@@ -143,6 +148,7 @@ public:
         switch(command) {
         case CC_PowerOn:
             _bPower = true;
+            _Reset();
             return _bPower;
         case CC_PowerOff:
             _bPower = false;

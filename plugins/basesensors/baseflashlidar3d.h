@@ -151,6 +151,7 @@ public:
         switch(command) {
         case CC_PowerOn:
             _bPower = true;
+            _Reset();
             return _bPower;
         case CC_PowerOff:
             _bPower = false;
