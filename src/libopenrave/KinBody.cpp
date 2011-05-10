@@ -747,7 +747,7 @@ bool KinBody::Link::ValidateContactNormal(const Vector& position, Vector& normal
         return _listGeomProperties.front().ValidateContactNormal(position,normal);
     }
     else if( _listGeomProperties.size() > 1 ) {
-        RAVELOG_VERBOSE(str(boost::format("cannot validate normal when there is more then one geometry in link '%s' (do not know colliding geometry")%_name));
+        RAVELOG_VERBOSE(str(boost::format("cannot validate normal when there is more then one geometry in link '%s(%d)' (do not know colliding geometry)")%_name%GetIndex()));
     }
     return false;
 }
