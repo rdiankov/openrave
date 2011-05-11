@@ -83,7 +83,7 @@ if __name__ == "__main__":
                 env.Load(args[0])
                 body=env.GetBodies()[0]
                 for joint in body.GetJoints():
-                    print link.GetJoint()                    
+                    print joint.GetName()                    
             else:
                 sys.exit(1)            
         elif options.doinfo is not None:
