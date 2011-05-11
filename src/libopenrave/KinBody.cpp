@@ -3822,7 +3822,7 @@ void KinBody::_ComputeInternalInformation()
         JointPtr pjoint0 = _vTopologicallySortedJointsAll[ijoint0];
         for(size_t ijoint1 = ijoint0+1; ijoint1 < _vTopologicallySortedJointsAll.size(); ++ijoint1 ) {
             JointPtr pjoint1 = _vTopologicallySortedJointsAll[ijoint1];
-            if( pjoint0->GetName() == pjoint1->GetName() ) {
+            if( pjoint0->GetName() == pjoint1->GetName() && (pjoint0->GetJointIndex() >= 0 || pjoint1->GetJointIndex() >= 0) ) {
                 RAVELOG_WARN(str(boost::format("joint indices %d and %d share the same name %s")%pjoint0->GetJointIndex()%pjoint1->GetJointIndex()%pjoint0->GetName()));
             }
         }
