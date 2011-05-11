@@ -206,6 +206,8 @@ def main(env,options):
         env.Load(options.scene)
         hanoi = HanoiPuzzle(env,env.GetRobots()[0])
         hanoi.hanoisolve(3,hanoi.srcpeg,hanoi.destpeg,hanoi.peg)
+        if options.testmode:
+            break
 
 from optparse import OptionParser
 from openravepy import OpenRAVEGlobalArguments, with_destroy

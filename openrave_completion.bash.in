@@ -1,5 +1,6 @@
 # Programmable completion for openrave under bash. Source this file 
 # or add it to ~/.bash_completion or /etc/bash_completion.d
+resource_types="dae|zae|xml|iv|vrml|wrl|stl|blend|3ds|ase|obj|ply|dxf|lwo|lxo|ac|ms3d|x|mesh.xml|irrmesh|irr|nff|off|raw"
 
 function _complete_openravepy {
     cur="${COMP_WORDS[COMP_CWORD]}"
@@ -26,7 +27,7 @@ function _complete_openravepy {
             esac
         else
             # just add in the xml and dae files, we don't have auto-completations for the examples/databases yet
-            COMPREPLY=($(compgen -f -X "!*.+(dae|zae|xml)" -- ${cur}))
+            COMPREPLY=($(compgen -f -X "!*.+(${resource_types})" -- ${cur}))
             return 0
         fi
     fi
@@ -69,7 +70,7 @@ function _complete_openravepy {
     COMPREPLY=($(compgen -W "$opts" -- ${cur}))
     if [[ ${cur} != -* ]] ; then
         # add in xml and dae and zae files
-        COMPREPLY=($(compgen -f -X "!*.+(dae|zae|xml)" -- ${cur}) ${COMPREPLY[@]})
+        COMPREPLY=($(compgen -f -X "!*.+(${resource_types})" -- ${cur}) ${COMPREPLY[@]})
     fi
 }
 
@@ -120,7 +121,7 @@ function _complete_openrave_robotpy {
     COMPREPLY=($(compgen -W "$opts" -- ${cur}))
     if [[ ${cur} != -* ]] ; then
         # add in xml and dae and zae files
-        COMPREPLY=($(compgen -f -X "!*.+(dae|zae|xml)" -- ${cur}) ${COMPREPLY[@]})
+        COMPREPLY=($(compgen -f -X "!*.+(${resource_types})" -- ${cur}) ${COMPREPLY[@]})
     fi
 }
 

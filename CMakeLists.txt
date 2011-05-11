@@ -41,10 +41,24 @@ option(OPT_MATLAB "Build matlab bindings" ON)
 option(OPT_STATIC "Build static libraries" OFF)
 option(OPT_COLLADA "Build with COLLADA support" ON)
 option(OPT_BUILD_PACKAGES "Set to ON to generate CPack configuration files and packaging targets" OFF)
+option(OPT_BUILD_PACKAGE_DEFAULT "Set to ON to generate a default openrave package pointing to the version specific one" ON)
 option(OPT_FLANN "Temporary switch to force building of flann" OFF)
 
+set(PACKAGE_VERSION "0" CACHE STRING "the package-specific version used for uploading the sources")
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/modules-cmake")
-set(COMPONENT_PREFIX openrave${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}-)
+set(CPACK_DEBIAN_PACKAGE_NAME openrave${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR})
+
+if(OPT_DOUBLE_PRECISION)
+  set(OPENRAVE_PRECISION 1)
+  set(CPACK_DEBIAN_PACKAGE_NAME "${CPACK_DEBIAN_PACKAGE_NAME}-dp")
+  message(STATUS "Using double precision")
+else()
+  set(OPENRAVE_PRECISION 0)
+  set(CPACK_DEBIAN_PACKAGE_NAME "${CPACK_DEBIAN_PACKAGE_NAME}-sp")
+  message(STATUS "Using single precision")
+endif()
+
+set(COMPONENT_PREFIX "${CPACK_DEBIAN_PACKAGE_NAME}-")
 string(TOUPPER ${COMPONENT_PREFIX} COMPONENT_PREFIX_UPPER)
 set(CPACK_COMPONENTS_ALL ${COMPONENT_PREFIX}base ${COMPONENT_PREFIX}dev ${COMPONENT_PREFIX}data)
 
@@ -128,7 +142,7 @@ if( WIN32 )
   # does not support symlinks
   set(OPENRAVE_BIN_SUFFIX)
 else()
-  set(OPENRAVE_BIN_SUFFIX ${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR} CACHE STRING "Add the MAJOR.MINOR openrave version suffixes to all executable installed files")
+  set(OPENRAVE_BIN_SUFFIX ${OPENRAVE_SOVERSION} CACHE STRING "Add the MAJOR.MINOR openrave version suffixes to all executable installed files")
 endif()
 
 if( UNIX OR CYGWIN)
@@ -231,6 +245,8 @@ if( MSVC )
   set(Boost_USE_STATIC_LIBS OFF)
   set(Boost_USE_STATIC_RUNTIME OFF)
   set(Boost_CFLAGS "-DBOOST_ALL_DYN_LINK -DBOOST_ALL_NO_LIB")
+else()
+  set(OPENRAVE_LIBRARY_SUFFIX "${OPENRAVE_SOVERSION}")
 endif()
 
 # only look for installed boost if not an old version of msvc
@@ -332,14 +348,6 @@ if( MSVC )
   set(CPPGENMD5 cpp-gen-md5)
 else()
   set(CPPGENMD5 "${CMAKE_CURRENT_BINARY_DIR}/cpp-gen-md5/cpp-gen-md5")
-endif()
-
-if(OPT_DOUBLE_PRECISION)
-  set(OPENRAVE_PRECISION 1)
-  message(STATUS "Using double precision")
-else()
-  set(OPENRAVE_PRECISION 0)
-  message(STATUS "Using single precision")
 endif()
 
 set(interfacehashes_h ${CMAKE_CURRENT_BINARY_DIR}/include/openrave/interfacehashes.h)
@@ -467,8 +475,11 @@ endif ()
 link_directories(${OPENRAVE_LINK_DIRS})
 
 if( OPT_COLLADA )
-  # MSVC has prepackaged collada libraries
-  find_package(COLLADA_DOM 2.3 COMPONENTS 1.5 PATHS ${CMAKE_CURRENT_SOURCE_DIR}/msvc_collada)
+  if( MSVC )
+    # MSVC has prepackaged collada libraries
+    set(COLLADA_PATH ${CMAKE_CURRENT_SOURCE_DIR}/msvc_collada)
+  endif()
+  find_package(COLLADA_DOM 2.3 COMPONENTS 1.5 PATHS ${COLLADA_PATH})
   
   find_package(ZLIB)
   if( NOT ZLIB_FOUND )
@@ -699,6 +710,7 @@ if( UNIX OR CYGWIN)
   install(FILES "${CMAKE_CURRENT_BINARY_DIR}/openrave_completion.bash" DESTINATION ${BASH_COMPLETION_DIR} COMPONENT ${COMPONENT_PREFIX}base )
   configure_file("${CMAKE_CURRENT_SOURCE_DIR}/openrave.pc.in" "${CMAKE_CURRENT_BINARY_DIR}/openrave-${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}.pc" @ONLY IMMEDIATE)
   install(FILES "${CMAKE_CURRENT_BINARY_DIR}/openrave-${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}.pc" DESTINATION lib${LIB_SUFFIX}/pkgconfig COMPONENT ${COMPONENT_PREFIX}dev)
+  install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink openrave-${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}.pc openrave.pc WORKING_DIRECTORY \${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX}/pkgconfig)" COMPONENT ${COMPONENT_PREFIX}base)
 endif()
 
 file(GLOB rave_header_files ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/*.h)
@@ -718,8 +730,13 @@ if(CMAKE_CPACK_COMMAND AND UNIX AND OPT_BUILD_PACKAGES)
   set(CPACK_PACKAGE_CONTACT "OpenRAVE Testing (Testing and Releasing of OpenRAVE Packages) <openrave.testing@gmail.com>" CACHE STRING "Package maintainer and PGP signer.")
   set(CPACK_PACKAGE_VENDOR "http://openrave.org")
   set(CPACK_PACKAGE_DISPLAY_NAME "OpenRAVE ${OPENRAVE_VERSION}")
-  set(CPACK_PACKAGE_DESCRIPTION_SUMMARY " - Open Robotics Automation Virtual Environment")
-  set(CPACK_PACKAGE_VERSION ${OPENRAVE_VERSION} CACHE STRING "package version")
+  set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "- Open Robotics Automation Virtual Environment")
+  if( OPT_DOUBLE_PRECISION )
+    set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "${CPACK_PACKAGE_DESCRIPTION_SUMMARY} using double precision")
+  else()
+    set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "${CPACK_PACKAGE_DESCRIPTION_SUMMARY} using single precision")
+  endif()
+  set(CPACK_PACKAGE_VERSION "${OPENRAVE_VERSION}.${PACKAGE_VERSION}")
   set(CPACK_PACKAGE_VERSION_MAJOR ${OPENRAVE_VERSION_MAJOR})
   set(CPACK_PACKAGE_VERSION_MINOR ${OPENRAVE_VERSION_MINOR})
   set(CPACK_PACKAGE_VERSION_PATCH ${OPENRAVE_VERSION_PATCH})
@@ -734,17 +751,22 @@ if(CMAKE_CPACK_COMMAND AND UNIX AND OPT_BUILD_PACKAGES)
   set(CPACK_COMPONENT_${COMPONENT_PREFIX_UPPER}DEV_DISPLAY_NAME "development files and examples")
   set(CPACK_COMPONENT_${COMPONENT_PREFIX_UPPER}DEV_DEPENDS ${COMPONENT_PREFIX}base libboost-thread-dev libboost-date-time-dev)
   
-  set(CPACK_DEBIAN_BUILD_DEPENDS debhelper cmake python-dev libxml2-dev libboost-dev ffmpeg zlib1g-dev python-numpy "python-sympy (>=0.6.3)" desktop-file-utils libboost-filesystem-dev libboost-system-dev libboost-python-dev libboost-thread-dev libboost-date-time-dev octave3.2-headers "libcollada15dom-dev (>=2.3.1)" pkg-config)
-  # plugins
-  set(CPACK_DEBIAN_BUILD_DEPENDS ${CPACK_DEBIAN_BUILD_DEPENDS} libboost-iostreams-dev libboost-regex-dev libqt4-dev qt4-dev-tools libqhull-dev libavcodec-dev libavformat-dev libswscale-dev libsimage-dev libode-dev libsoqt4-dev libassimp-dev)
+  # base
+  set(CPACK_DEBIAN_BUILD_DEPENDS_UBUNTU debhelper cmake python-dev libxml2-dev libboost-dev ffmpeg zlib1g-dev python-numpy "python-sympy (>=0.6.3)" desktop-file-utils libboost-filesystem-dev libboost-system-dev libboost-python-dev libboost-thread-dev libboost-date-time-dev octave3.2-headers "libcollada15dom-dev (>=2.3.1)" pkg-config)
+  # developer tools for devs
+  set(CPACK_DEBIAN_BUILD_DEPENDS_UBUNTU ${CPACK_DEBIAN_BUILD_DEPENDS_UBUNTU} python-scipy ipython)
+  # add once infinite precision computations are enabled:
+  # libmpfr-dev libgmp3-dev libmpfi-dev libgmpxx4ldbl python-gmpy
+  # plugins:
+  set(CPACK_DEBIAN_BUILD_DEPENDS_UBUNTU ${CPACK_DEBIAN_BUILD_DEPENDS_UBUNTU} libboost-iostreams-dev libboost-regex-dev libqt4-dev qt4-dev-tools libqhull-dev libavcodec-dev libavformat-dev libswscale-dev libsimage-dev libode-dev libsoqt4-dev assimp-dev)
 
   # debian
   set(CPACK_DEBIAN_PACKAGE_PRIORITY optional)
   set(CPACK_DEBIAN_PACKAGE_SECTION devel)
   set(CPACK_DEBIAN_PACKAGE_DEPENDS ${CPACK_COMPONENTS_ALL})
+  set(CPACK_DEBIAN_CMAKE_OPTIONS "-DBASH_COMPLETION_DIR=../etc/bash_completion.d -DOPT_DOUBLE_PRECISION=${OPT_DOUBLE_PRECISION}")
   set(CPACK_DEBIAN_PACKAGE_SUGGESTS "ipython")
-  set(CPACK_DEBIAN_PACKAGE_NAME openrave${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR})
-  set(CPACK_DEBIAN_PACKAGE_REMOVE_SOURCE_FILES docs release sandbox test sympy msvc_files.tgz sympy_0.6.7.tgz sympy_0.6.7_patches.diff 3rdparty/pcre-8.02 3rdparty/qhull 3rdparty/zlib 3rdparty/flann-1.6.6 3rdparty/collada)
+  set(CPACK_DEBIAN_PACKAGE_REMOVE_SOURCE_FILES docs release sandbox test sympy msvc_boost.tgz msvc_collada.tgz msvc_libxml2.tgz msvc_ode.tgz msvc_soqt.tgz msvc_include sympy_0.6.7.tgz sympy_0.6.7_patches.diff 3rdparty/pcre-8.02 3rdparty/qhull 3rdparty/zlib 3rdparty/flann-1.6.6 3rdparty/collada)
   set(CPACK_DEBIAN_PACKAGE_SOURCE_COPY svn export --force)
   set(CPACK_DEBIAN_CHANGELOG "  * ChangeLog can be found at https://openrave.svn.sourceforge.net/svnroot/openrave/tags/${OPENRAVE_VERSION}/docs/en/changelog.rst\n\n")
   execute_process(COMMAND lsb_release -is
@@ -755,8 +777,12 @@ if(CMAKE_CPACK_COMMAND AND UNIX AND OPT_BUILD_PACKAGES)
   if( ${CPACK_DEBIAN_DISTRIBUTION_NAME} STREQUAL "ubuntu" )
     set(CPACK_DEBIAN_DISTRIBUTION_RELEASES karmic lucid maverick natty CACHE STRING "Release code-names of the distrubiton release")
   endif()
-  set(CPACK_COMPONENT_OPENRAVE_DEPENDS openrave${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR})
-  set(CPACK_COMPONENTS_ALL ${CPACK_COMPONENTS_ALL} openrave)
+  if( OPT_BUILD_PACKAGE_DEFAULT )
+    set(CPACK_COMPONENT_OPENRAVE_DEPENDS ${CPACK_DEBIAN_PACKAGE_NAME})
+    set(CPACK_COMPONENT_OPENRAVE_DISPLAY_NAME "${CPACK_PACKAGE_DESCRIPTION_SUMMARY}")
+    set(CPACK_COMPONENTS_ALL ${CPACK_COMPONENTS_ALL} openrave)
+  endif()
+  
   #TODO: extra robot CAD model files from: https://openrave.svn.sourceforge.net/svnroot/openrave/data/robots
 
   set(DPUT_HOST "ppa:openrave/testing" CACHE STRING "PPA repository to upload the debian sources")

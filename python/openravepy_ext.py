@@ -159,9 +159,20 @@ def quatArrayRotate(qarray,trans):
     yw = qarray[2,:] * qarray[0,:]
     zz = qarray[3,:] * qarray[3,:]
     zw = qarray[3,:] * qarray[0,:]
-    return 2*numpy.vstack(((0.5-yy-zz)*trans[0]+(xy-zw)*trans[1]+(xz+yw)*trans[2],
-                           (xy+zw)*trans[0]+(0.5-xx-zz)*trans[1]+(yz-xw)*trans[2],
-                           (xz-yw)*trans[0]+(yz+xw)*trans[1]+(0.5-xx-yy)*trans[2]))
+    return 2*numpy.vstack(((0.5-yy-zz)*trans[0]+(xy-zw)*trans[1]+(xz+yw)*trans[2], (xy+zw)*trans[0]+(0.5-xx-zz)*trans[1]+(yz-xw)*trans[2], (xz-yw)*trans[0]+(yz+xw)*trans[1]+(0.5-xx-yy)*trans[2]))
+
+def quatArrayTRotate(qarray,trans):
+    """rotates a point by an array of Nx4 quaternions. Returns a Nx3 vector"""
+    xx = qarray[:,1] * qarray[:,1]
+    xy = qarray[:,1] * qarray[:,2]
+    xz = qarray[:,1] * qarray[:,3]
+    xw = qarray[:,1] * qarray[:,0]
+    yy = qarray[:,2] * qarray[:,2]
+    yz = qarray[:,2] * qarray[:,3]
+    yw = qarray[:,2] * qarray[:,0]
+    zz = qarray[:,3] * qarray[:,3]
+    zw = qarray[:,3] * qarray[:,0]
+    return 2*numpy.c_[(0.5-yy-zz)*trans[0]+(xy-zw)*trans[1]+(xz+yw)*trans[2], (xy+zw)*trans[0]+(0.5-xx-zz)*trans[1]+(yz-xw)*trans[2], (xz-yw)*trans[0]+(yz+xw)*trans[1]+(0.5-xx-yy)*trans[2]]
 
 def quatRotate(q,trans):
     """rotates a point by a 4-elt quaternion. Returns a 3 elt vector"""
@@ -212,7 +223,10 @@ def transformInversePoints(T,points):
     return numpy.dot(points-numpy.tile(T[0:kminus,kminus],(len(points),1)),T[0:kminus,0:kminus])
 
 def fitCircle(points):
-    """Very simple function to return the best fit circle. Used from time time and there's no other place to put it. Returns [center, radius]"""
+    """Very simple function to return the best fit circle. Used when fitting real data to joint trajectories.
+
+    :return: [center, radius]
+    """
     if points.shape[1] == 3:
         M = numpy.mean(points,0)
         points2=points-numpy.tile(M,[len(points),1])
@@ -485,7 +499,7 @@ class RobotStateSaver:
 class OpenRAVEGlobalArguments:
     """manages a global set of command-line options applicable to all openrave environments"""
     @staticmethod
-    def addOptions(parser):
+    def addOptions(parser,testmode=True):
         ogroup = optparse.OptionGroup(parser,"OpenRAVE Environment Options")
         ogroup.add_option('--loadplugin', action="append",type='string',dest='_loadplugins',default=[],
                           help='List all plugins and the interfaces they provide.')
@@ -501,6 +515,9 @@ class OpenRAVEGlobalArguments:
                           help='port to load server on (default=%default).')
         ogroup.add_option('--level','-l', action="store",type='string',dest='_level',default=None,
                           help='Debug level, one of (%s)'%(','.join(str(debugname).lower() for debuglevel,debugname in openravepy.DebugLevel.values.iteritems())))
+        if testmode:
+            ogroup.add_option('--testmode', action="store_true",dest='testmode',default=False,
+                              help='if set, will run the program in a finite amount of time and spend computation time validating results. Used for testing')
         parser.add_option_group(ogroup)
     @staticmethod
     def parseGlobal(options,**kwargs):

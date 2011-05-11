@@ -55,7 +55,7 @@ def vararg_callback(option, opt_str, value, parser):
 if __name__ == "__main__":
     parser = OptionParser(description='OpenRAVE %s'%openravepy.__version__,version=openravepy.__version__,
                           usage='%prog [options] [loadable openrave xml/robot files...]')
-    OpenRAVEGlobalArguments.addOptions(parser)
+    OpenRAVEGlobalArguments.addOptions(parser,testmode=False)
     parser.add_option('--database', action="callback",callback=vararg_callback, dest='database',default=None,
                       help='If specified, the next arguments will be used to call a database generator from the openravepy.databases module. The first argument is used to find the database module. For example:     %s --database grasping --robot=robots/pr2-beta-sim.robot.xml'%(sys.argv[0]))
     parser.add_option('--example', action="callback",callback=vararg_callback, dest='example',default=None,
@@ -159,8 +159,7 @@ if __name__ == "__main__":
     try:
         # load files after viewer is loaded since they may contain information about where to place the camera
         for arg in args:
-            if arg.endswith('.xml') or arg.endswith('.dae') or arg.endswith('.zae'):
-                env.Load(arg)
+            env.Load(arg)
         with env:
             robots=env.GetRobots()
             robot=None if len(robots) == 0 else robots[0]

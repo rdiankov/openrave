@@ -705,7 +705,7 @@ namespace OpenRAVEXMLParser
             MT_Custom, // manually specify center of mass and inertia matrix
         };
         
-  LinkXMLReader(KinBody::LinkPtr& plink, KinBodyPtr pparent, const AttributesList& atts) : _plink(plink) {
+        LinkXMLReader(KinBody::LinkPtr& plink, KinBodyPtr pparent, const AttributesList& atts) : _plink(plink) {
             _pparent = pparent;
             _masstype = MT_None;
             _fMassDensity = 1;
@@ -762,6 +762,12 @@ namespace OpenRAVEXMLParser
             _itgeomprop = _plink->_listGeomProperties.end();
         }
         virtual ~LinkXMLReader() {}
+
+        // hack
+        static void SetRenderFilename(KinBody::Link::GEOMPROPERTIES& geom, const std::string& renderfile)
+        {
+            geom.renderfile = renderfile;
+        }
 
         virtual ProcessElement startElement(const std::string& xmlname, const AttributesList& atts)
         {
@@ -1245,6 +1251,13 @@ namespace OpenRAVEXMLParser
         float _fMassDensity, _fTotalMass;
         Vector _vMassExtents;           ///< used only if mass is a box
     };
+
+    // hack
+    void SetRenderFilename(KinBody::Link::GEOMPROPERTIES& geom, const std::string& renderfile)
+    {
+        LinkXMLReader::SetRenderFilename(geom,renderfile);
+    }
+
 
     // Joint Reader
     class JointXMLReader : public StreamXMLReader

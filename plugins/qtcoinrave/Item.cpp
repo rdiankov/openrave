@@ -40,13 +40,13 @@ Item::Item(QtCoinViewerPtr viewer) : _viewer(viewer)
     _ivTransparency->value = SoGLRenderAction::SORTED_OBJECT_SORTED_TRIANGLE_BLEND;
     _ivGeom->insertChild(_ivTransparency, 0);
 
-    _viewer->GetRoot()->addChild(_ivRoot);
+    _viewer->GetBodiesRoot()->addChild(_ivRoot);
 }
 
 Item::~Item()
 {
     if( _ivRoot != NULL ) {
-        _viewer->GetRoot()->removeChild(_ivRoot);
+        _viewer->GetBodiesRoot()->removeChild(_ivRoot);
         _ivRoot->unref();
     }
     
@@ -97,8 +97,9 @@ KinBodyItem::KinBodyItem(QtCoinViewerPtr viewer, KinBodyPtr pchain, ViewGeometry
 
 void KinBodyItem::Load()
 {
-    FOREACH(itlink,_veclinks)
+    FOREACH(itlink,_veclinks) {
         _ivGeom->removeChild(itlink->psep);
+    }
     _veclinks.resize(0);
 
     vector<KinBody::LinkPtr>::const_iterator it;

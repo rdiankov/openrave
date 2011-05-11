@@ -331,7 +331,7 @@ def main(env,options):
     env.UpdatePublishedBodies()
     time.sleep(0.1) # give time for environment to update
     self = GraspPlanning(robot,randomize=options.randomize,nodestinations=options.nodestinations)
-    self.performGraspPlanning()
+    self.performGraspPlanning(withreplacement=not options.testmode)
 
 from optparse import OptionParser
 from openravepy import OpenRAVEGlobalArguments, with_destroy

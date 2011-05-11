@@ -429,8 +429,9 @@ public:
     {
         KinBodyInfoPtr pinfo = boost::dynamic_pointer_cast<KinBodyInfo>(GetInfo(pbody));
         BOOST_ASSERT( pinfo->pbody == pbody );
-        FOREACH(it, pinfo->vlinks)
+        FOREACH(it, pinfo->vlinks) {
             (*it)->Enable(bEnable);
+        }
         return true;
     }
 
@@ -453,8 +454,9 @@ public:
         FOREACHC(itbody, vbodies) {
             KinBodyInfoPtr pinfo = boost::dynamic_pointer_cast<KinBodyInfo>(GetInfo(*itbody));
             BOOST_ASSERT( pinfo->pbody == *itbody );
-            if( pinfo->nLastStamp != (*itbody)->GetUpdateStamp() )
+            if( pinfo->nLastStamp != (*itbody)->GetUpdateStamp() ) {
                 Synchronize(pinfo);
+            }
         }
     }
 
@@ -462,8 +464,9 @@ public:
     {
         KinBodyInfoPtr pinfo = boost::dynamic_pointer_cast<KinBodyInfo>(GetInfo(pbody));
         BOOST_ASSERT( pinfo->pbody == pbody );
-        if( pinfo->nLastStamp != pbody->GetUpdateStamp() )
+        if( pinfo->nLastStamp != pbody->GetUpdateStamp() ) {
             Synchronize(pinfo);
+        }
     }
 
     dSpaceID GetBodySpace(KinBodyConstPtr pbody)
@@ -520,9 +523,9 @@ private:
             dBodySetQuaternion(pinfo->vlinks[i]->body, t.rot);
             dBodySetPosition(pinfo->vlinks[i]->body, t.trans.x, t.trans.y, t.trans.z);
         }
-
-        if( !!_synccallback )
+        if( !!_synccallback ) {
             _synccallback(pinfo);
+        }
     }
 
     void GeometryChangedCallback(KinBodyWeakPtr _pbody)
@@ -530,8 +533,9 @@ private:
         EnvironmentMutex::scoped_lock lock(_penv->GetMutex());
         KinBodyPtr pbody(_pbody);
         KinBodyInfoPtr pinfo = boost::dynamic_pointer_cast<KinBodyInfo>(GetInfo(pbody));
-        if( !pinfo )
-            return;        
+        if( !pinfo ) {
+            return;
+        }
         BOOST_ASSERT(boost::shared_ptr<ODESpace>(pinfo->_odespace) == shared_from_this());
         BOOST_ASSERT(pinfo->pbody==pbody);
         InitKinBody(pbody,pinfo);

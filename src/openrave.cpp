@@ -33,10 +33,9 @@ using namespace std;
 #include <boost/bind.hpp>
 #include <boost/algorithm/string.hpp>
 
-//#ifndef _WIN32
 #include <signal.h>
 void sigint_handler(int sig);
-//#endif
+void MainOpenRAVEThread();
 
 #ifdef _WIN32
 #define usleep(micro) Sleep((micro)/1000)
@@ -48,9 +47,6 @@ void sigint_handler(int sig);
 
 #define FORIT(it, v) for(it = (v).begin(); it != (v).end(); (it)++)
 
-//void sigint_handler(int);
-void MainOpenRAVEThread();
-
 static bool bDisplayGUI = true, bShowGUI = true;
 
 static EnvironmentBasePtr s_penv;
@@ -60,8 +56,7 @@ static string s_saveScene; // if not NULL, saves the scene and exits
 static boost::shared_ptr<string> s_viewerName;
 
 static list< pair<string, string> > s_listProblems; // problems to initially create
-static vector<string> vIvFiles; // iv files to open
-static vector<string> vXMLFiles; // xml files to open
+static vector<string> vResourceFiles; // xml files to open
 static int s_WindowWidth = 1024, s_WindowHeight = 768;
 static int s_WindowPosX, s_WindowPosY;
 static bool s_bSetWindowPosition = false;
@@ -187,24 +182,10 @@ int main(int argc, char ** argv)
             nServPort = atoi(argv[i+1]);
             i += 2;
         }
-        else if( strstr(argv[i], ".xml") != NULL || strstr(argv[i], ".dae") != NULL || strstr(argv[i], ".zae") != NULL ) {
-            vXMLFiles.push_back(argv[i]);
-            i++;
-        }
         else {
-            std::string filename = argv[i];
-            size_t index = filename.find_last_of('.');
-            if( index != std::string::npos ) {
-                std::string extension = filename.substr(index+1);
-                std::transform(extension.begin(), extension.end(), extension.begin(), ::tolower);
-                if( geometryextensions.find(extension) != geometryextensions.end() ) {
-                    vIvFiles.push_back(filename);
-                    i++;
-                    continue;
-                }
-            }
-            RAVELOG_INFO("Error in input parameters at %s\ntype --help to see a list of command line options\n", argv[i]);
-            return 0;
+            // try to load as xml files
+            vResourceFiles.push_back(argv[i]);
+            i++;
         }
     }
 
@@ -218,10 +199,8 @@ int main(int argc, char ** argv)
         RaveLoadPlugin(*it);
     }
 
-//#ifndef _WIN32
     // add a signal handler
     signal(SIGINT,sigint_handler); // control C
-//#endif
 
     if( bListPlugins ) {
 
@@ -328,32 +307,16 @@ void MainOpenRAVEThread()
             }
         }
         
-        if( !pviewer )
+        if( !pviewer ) {
             RAVELOG_WARN("failed to find an OpenRAVE viewer.\n");
+        }
         else {
             RAVELOG_DEBUG("using %s viewer\n", pviewer->GetXMLId().c_str());
-
             pviewer->ViewerSetSize(s_WindowWidth, s_WindowHeight);
-            if( s_bSetWindowPosition )
+            if( s_bSetWindowPosition ) {
                 pviewer->ViewerMove(s_WindowPosX,s_WindowPosY);
-            s_penv->AttachViewer(pviewer);
-            boost::shared_ptr<KinBody::Link::TRIMESH> ptrimesh(new KinBody::Link::TRIMESH());
-            for(size_t i = 0; i < vIvFiles.size(); ++i) {
-                bool bsuccess = false;
-                boost::shared_ptr<KinBody::Link::TRIMESH> pnewtrimesh = s_penv->ReadTrimeshFile(ptrimesh, vIvFiles[i]);
-                if( !!pnewtrimesh ) {
-                    KinBodyPtr pbody = RaveCreateKinBody(s_penv,"");
-                    pbody->SetName("object");
-                    if( pbody->InitFromTrimesh(*pnewtrimesh,true) ) {
-                        if( s_penv->AddKinBody(pbody,true) ) {
-                            bsuccess = true;
-                        }
-                    }
-                }
-                if( !bsuccess ) {
-                    RAVELOG_WARN(str(boost::format("failed to open %s\n")%vIvFiles[i]));
-                }
             }
+            s_penv->AttachViewer(pviewer);
         }
     }
 
@@ -364,7 +327,7 @@ void MainOpenRAVEThread()
             s_penv->Load(s_sceneFile);
         }
         vector<string>::iterator it;
-        FORIT(it, vXMLFiles) {
+        FORIT(it, vResourceFiles) {
             s_penv->Load(*it);
         }
         list< pair<string, string> >::iterator itprob;

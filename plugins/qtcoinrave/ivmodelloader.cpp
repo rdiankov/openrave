@@ -40,13 +40,6 @@ public:
         return 0;
     }
 
-    class SoDBLock
-    {
-    public:
-        SoDBLock() { SoDB::readlock(); }
-        virtual ~SoDBLock() { SoDB::readunlock(); }
-    };
-
     bool _LoadModel(ostream& sout, istream& sinput)
     {
         string filename;

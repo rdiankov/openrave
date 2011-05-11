@@ -159,6 +159,7 @@ inline static uint32_t GetMilliTime()
 #endif
 
 #include <boost/bind.hpp>
+#include <boost/version.hpp>
 
 #ifdef HAVE_BOOST_FILESYSTEM
 #include <boost/filesystem/operations.hpp>

@@ -162,8 +162,12 @@ class TestLet:
             self._id = case.id()
         except AttributeError:
             pass
-        self._short_description = case.shortDescription()
-        self._str = str(case)
+        try:
+            self._short_description = case.shortDescription()
+            self._str = str(case)
+        except AttributeError:
+            self._short_description = ''
+            self._str = ''
 
     def id(self):
         return self._id

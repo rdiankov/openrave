@@ -314,6 +314,19 @@ inline AttributesList toAttributesList(boost::python::dict odict)
     return atts;
 }
 
+bool GetReturnTransformQuaternions();
+
+template <typename T>
+inline object ReturnTransform(T t)
+{
+    if( GetReturnTransformQuaternions() ) {
+        return toPyArray(Transform(t));
+    }
+    else {
+        return toPyArray(TransformMatrix(t));
+    }
+}
+
 class PyPluginInfo
 {
 public:
@@ -344,6 +357,44 @@ public:
 private:
     GraphHandlePtr _handle;
 };
+
+
+class PyUserData
+{
+public:
+    PyUserData() {}
+    PyUserData(UserDataPtr handle) : _handle(handle) {}
+    void close() { _handle.reset(); }
+    UserDataPtr _handle;
+};
+
+class PyUserObject : public UserData
+{
+public:
+    PyUserObject(object o) : _o(o) {}
+    object _o;
+};
+
+class PyRay
+{
+public:
+    PyRay() {}
+    PyRay(object newpos, object newdir);
+    PyRay(const RAY& newr) : r(newr) {}
+    object dir();
+    object pos();
+    virtual string __repr__();
+    virtual string __str__();
+    RAY r;
+};
+
+bool ExtractIkParameterization(object o, IkParameterization& ikparam);
+object toPyAABB(const AABB& ab);
+object toPyRay(const RAY& r);
+RAY ExtractRay(object o);
+bool ExtractRay(object o, RAY& r);
+object toPyTriMesh(const KinBody::Link::TRIMESH& mesh);
+bool ExtractTriMesh(object o, KinBody::Link::TRIMESH& mesh);
 
 namespace openravepy
 {

@@ -348,10 +348,12 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
         odespace->Synchronize();
 
         bool bHasCallbacks = GetEnv()->HasRegisteredCollisionCallbacks();
-        if( bHasCallbacks )
+        if( bHasCallbacks ) {
             GetEnv()->GetRegisteredCollisionCallbacks(_listcallbacks);
-        else
+        }
+        else {
             _listcallbacks.clear();
+        }
 
         dSpaceCollide (odespace->GetSpace(),this,nearCallback);
     

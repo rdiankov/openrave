@@ -718,6 +718,7 @@ void KinBody::Link::GetVelocity(Vector& linearvel, Vector& angularvel) const
 
 KinBody::Link::GEOMPROPERTIES& KinBody::Link::GetGeometry(int index)
 {
+    BOOST_ASSERT(index >= 0 && index < (int)_listGeomProperties.size());
     std::list<GEOMPROPERTIES>::iterator it = _listGeomProperties.begin();
     advance(it,index);
     return *it;
@@ -746,7 +747,7 @@ bool KinBody::Link::ValidateContactNormal(const Vector& position, Vector& normal
         return _listGeomProperties.front().ValidateContactNormal(position,normal);
     }
     else if( _listGeomProperties.size() > 1 ) {
-        RAVELOG_VERBOSE(str(boost::format("cannot validate normal when there is more then one geometry in link '%s' (do not know colliding geometry")%_name));
+        RAVELOG_VERBOSE(str(boost::format("cannot validate normal when there is more then one geometry in link '%s(%d)' (do not know colliding geometry)")%_name%GetIndex()));
     }
     return false;
 }
@@ -3136,6 +3137,9 @@ void KinBody::_ComputeInternalInformation()
     FOREACH(itlink,_veclinks) {
         BOOST_ASSERT( lindex == (*itlink)->GetIndex() );
         (*itlink)->_vParentLinks.clear();
+        if( _veclinks.size() > 1 && (*itlink)->GetName().size() == 0 ) {
+            RAVELOG_WARN(str(boost::format("%s link index %d has no name")%GetName()%lindex));
+        }
         lindex++;
     }
 
@@ -3804,6 +3808,26 @@ void KinBody::_ComputeInternalInformation()
         }
     }
 
+    for(size_t ijoint = 0; ijoint < _vecjoints.size(); ++ijoint ) {
+        if( _vecjoints[ijoint]->GetName().size() == 0 ) {
+            RAVELOG_WARN(str(boost::format("%s joint index %d has no name")%GetName()%ijoint));
+        }
+    }
+    for(size_t ijoint = 0; ijoint < _vPassiveJoints.size(); ++ijoint ) {
+        if( _vPassiveJoints[ijoint]->GetName().size() == 0 ) {
+            RAVELOG_WARN(str(boost::format("%s passive joint index %d has no name")%GetName()%ijoint));
+        }
+    }
+    for(size_t ijoint0 = 0; ijoint0 < _vTopologicallySortedJointsAll.size(); ++ijoint0 ) {
+        JointPtr pjoint0 = _vTopologicallySortedJointsAll[ijoint0];
+        for(size_t ijoint1 = ijoint0+1; ijoint1 < _vTopologicallySortedJointsAll.size(); ++ijoint1 ) {
+            JointPtr pjoint1 = _vTopologicallySortedJointsAll[ijoint1];
+            if( pjoint0->GetName() == pjoint1->GetName() && (pjoint0->GetJointIndex() >= 0 || pjoint1->GetJointIndex() >= 0) ) {
+                RAVELOG_WARN(str(boost::format("joint indices %d and %d share the same name %s")%pjoint0->GetJointIndex()%pjoint1->GetJointIndex()%pjoint0->GetName()));
+            }
+        }
+    }
+
     {
         // force all joints to 0 when computing hashes?
         ostringstream ss;
@@ -4042,6 +4066,7 @@ const std::set<int>& KinBody::GetNonAdjacentLinks(int adjacentoptions) const
         for(size_t i = 0; i < _veclinks.size(); ++i) {
             boost::static_pointer_cast<Link>(_veclinks[i])->_t = _vInitialLinkTransformations.at(i);
         }
+        _nUpdateStampId++; // because transforms were modified
         for(size_t i = 0; i < _veclinks.size(); ++i) {
             for(size_t j = i+1; j < _veclinks.size(); ++j) {
                 if( _setAdjacentLinks.find(i|(j<<16)) == _setAdjacentLinks.end() && !GetEnv()->CheckCollision(LinkConstPtr(_veclinks[i]), LinkConstPtr(_veclinks[j])) ) {
@@ -4049,6 +4074,7 @@ const std::set<int>& KinBody::GetNonAdjacentLinks(int adjacentoptions) const
                 }
             }
         }
+        _nUpdateStampId++; // because transforms were modified
         _nNonAdjacentLinkCache = 0;
     }
     if( (_nNonAdjacentLinkCache&adjacentoptions) != adjacentoptions ) {

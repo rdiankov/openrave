@@ -82,9 +82,21 @@ Command-line
 openrave-robot.py
 -----------------
 
-Queries information about OpenRAVE-loadable robots.
+Queries information about OpenRAVE-loadable robots. Allows to query simple information for robot links, joints, manipulators, sensor as fast as possible.
 
-Can query all the hashes openrave uses to manage robot descriptions:
+For example, getting info of all the manipulators is as simple as:
+
+.. code-block:: bash
+
+  openrave-robot.py robots/pr2-beta-static.zae --info manipulators
+
+or can just get a list of the manipulator names:
+
+.. code-block:: bash
+
+  openrave-robot.py robots/pr2-beta-static.zae --list manipulators
+
+Each robot can hold several different types of hashes depending on the information being queried. Hashes are retrieved with the **--hash** option:
 
 .. code-block:: bash
 

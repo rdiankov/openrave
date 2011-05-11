@@ -789,12 +789,13 @@ void RobotBase::SetTransform(const Transform& trans)
 
 void RobotBase::_UpdateGrabbedBodies()
 {
-    // update grabbed objects
+    RAVELOG_VERBOSE("update grabbed objects\n");
     vector<Grabbed>::iterator itbody;
     FORIT(itbody, _vGrabbedBodies) {
         KinBodyPtr pbody = itbody->pbody.lock();
-        if( !!pbody )
+        if( !!pbody ) {
             pbody->SetTransform(itbody->plinkrobot->GetTransform() * itbody->troot);
+        }
         else {
             RAVELOG_DEBUG(str(boost::format("erasing invaliding grabbed body from %s")%GetName()));
             itbody = _vGrabbedBodies.erase(itbody);
@@ -1510,10 +1511,12 @@ void RobotBase::GetFullTrajectoryFromActive(TrajectoryBasePtr pFullTraj, Traject
         Transform tbase = GetTransform();
         FOREACHC(it, pActiveTraj->GetPoints()) {
             Trajectory::TPOINT p = *it;
-            if( bOverwriteTransforms )
+            if( bOverwriteTransforms ) {
                 p.trans = tbase;
-            else
+            }
+            else {
                 p.trans = it->trans;
+            }
             pFullTraj->AddPoint(p);
         }
     }
@@ -1593,9 +1596,9 @@ void RobotBase::CalculateActiveJacobian(int index, const Vector& offset, boost::
         }
     }
 
-    if( _nAffineDOFs == DOF_NoTransform )
+    if( _nAffineDOFs == DOF_NoTransform ) {
         return;
-
+    }
     size_t ind = _vActiveDOFIndices.size();
     if( _nAffineDOFs & DOF_X ) {
         mjacobian[0][ind] = 1;
@@ -2332,13 +2335,18 @@ void RobotBase::_ComputeInternalInformation()
             else {
                 if( pjoint->GetDOFIndex() >= 0 ) {
                     for(int i = 0; i < pjoint->GetDOF(); ++i) {
-                        (*itmanip)->__vgripperdofindices.push_back(pjoint->GetDOFIndex()+i);
-                        if( iclosingdirection < (*itmanip)->_vClosingDirection.size() ) {
-                            vClosingDirection.push_back((*itmanip)->_vClosingDirection[iclosingdirection++]);
+                        if( find((*itmanip)->__varmdofindices.begin(), (*itmanip)->__varmdofindices.end(), pjoint->GetDOFIndex()+i) != (*itmanip)->__varmdofindices.end() ) {
+                            RAVELOG_ERROR(str(boost::format("manipulator %s gripper dof %d is also part of arm dof! excluding from gripper...")%(*itmanip)->GetName()%(pjoint->GetDOFIndex()+i)));
                         }
                         else {
-                            vClosingDirection.push_back(0);
-                            RAVELOG_WARN(str(boost::format("manipulator %s closing direction not correct length, might get bad closing/release grasping")%(*itmanip)->GetName()));
+                            (*itmanip)->__vgripperdofindices.push_back(pjoint->GetDOFIndex()+i);
+                            if( iclosingdirection < (*itmanip)->_vClosingDirection.size() ) {
+                                vClosingDirection.push_back((*itmanip)->_vClosingDirection[iclosingdirection++]);
+                            }
+                            else {
+                                vClosingDirection.push_back(0);
+                                RAVELOG_WARN(str(boost::format("manipulator %s closing direction not correct length, might get bad closing/release grasping")%(*itmanip)->GetName()));
+                            }
                         }
                     }
                 }

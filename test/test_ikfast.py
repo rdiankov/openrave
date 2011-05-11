@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# Copyright (C) 2011 Rosen Diankov (rosen.diankov@gmail.com)
+# Copyright (C) 2011 Rosen Diankov <rosen.diankov@gmail.com>
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -42,7 +42,7 @@ def setup_robotstats():
     global env,ikfastproblem
     # just load the plugin we'll be using
     RaveInitialize(load_all_plugins=False)
-    success = RaveLoadPlugin('libikfastsolvers')
+    success = RaveLoadPlugin('ikfastsolvers')
     assert(success)
     RaveSetDebugLevel(DebugLevel.Error) # set to error in order to avoid expected plugin loading errors
     #format = logging.Formatter('%(name)s: %(message)s')
@@ -197,6 +197,8 @@ class RunRobotStats:
             teardown_robotstats()
 
 def test_robots():
+    if options is None:
+        return
     RaveInitialize(load_all_plugins=False)
     RaveSetDebugLevel(DebugLevel.Error) # set to error in order to avoid expected plugin loading errosr
     envlocal=Environment()

@@ -797,7 +797,8 @@ public:
 
     /** \en \brief Computes the minimal chain of joints that are between two links in the order of linkindex1 to linkindex2
     
-        Passive joints are also used in the computation of the chain and can be returned. Note that a passive joint has a joint index and dof index of -1.
+        Passive joints are also used in the computation of the chain and can be returned.
+        Note that a passive joint has a joint index and dof index of -1.
         \param[in] linkindex1 the link index to start the search
         \param[in] linkindex2 the link index where the search ends
         \param[out] vjoints the joints to fill that describe the chain
@@ -805,7 +806,8 @@ public:
 
         \ja \brief 2つのリンクを繋ぐ関節の最短経路を計算する．
         
-        受動的な関節は，位置関係が固定されているリンクを見つけるために調べられている．受動的な関節も返される可能があるから，注意する必要があります．
+        受動的な関節は，位置関係が固定されているリンクを見つけるために調べられている
+        受動的な関節も返される可能があるから，注意する必要があります．
         \param[in] linkindex1 始点リンクインデックス
         \param[in] linkindex2 終点リンクインデックス
         \param[out] vjoints　関節の経路
@@ -866,16 +868,18 @@ public:
     /// \param angularvel is the rotation axis * angular speed
     virtual bool SetVelocity(const Vector& linearvel, const Vector& angularvel);
 
-    /// \brief Sets the velocity of the base link and each of the joints.
-    ///
-    /// Computes internally what the correponding velocities of each of the links should be in order to 
-    /// achieve consistent results with the joint velocities. Sends the velocities to the physics engine.
-    /// Velocities correspond to the link's coordinate system origin.
-    /// \param[in] linearvel linear velocity of base link
-    /// \param[in] angularvel angular velocity rotation_axis*theta_dot
-    /// \param[in] vDOFVelocities - velocities of each of the degrees of freeom
-    /// \praam checklimits if true, will excplicitly check the joint velocity limits before setting the values.
-    virtual bool SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const Vector& linearvel, const Vector& angularvel,bool checklimits = false);
+    /** \brief Sets the velocity of the base link and each of the joints.
+        
+        Computes internally what the correponding velocities of each of the links should be in order to 
+        achieve consistent results with the joint velocities. Sends the velocities to the physics engine.
+        Velocities correspond to the link's coordinate system origin.
+        \param[in] linearvel linear velocity of base link
+        \param[in] angularvel angular velocity rotation_axis*theta_dot
+        \param[in] vDOFVelocities - velocities of each of the degrees of freeom
+        \param checklimits if true, will excplicitly check the joint velocity limits before setting the values.
+    */
+    virtual bool SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const Vector& linearvel,
+                                  const Vector& angularvel,bool checklimits = false);
 
     /// \brief Sets the velocity of the joints.
     ///
@@ -884,7 +888,7 @@ public:
     /// \praam checklimits if true, will excplicitly check the joint velocity limits before setting the values.
     virtual bool SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, bool checklimits = false);
 
-    /// Returns the linear and angular velocities for each link
+    /// \brief Returns the linear and angular velocities for each link
     virtual bool GetLinkVelocities(std::vector<std::pair<Vector,Vector> >& velocities) const;
 
     /** \en \brief set the transform of the first link (the rest of the links are computed based on the joint values).
@@ -1123,7 +1127,7 @@ protected:
     std::vector<Transform> _vInitialLinkTransformations; ///< the initial transformations of each link specifying at least one pose where the robot is collision free
 
     int _environmentid; ///< \see GetEnvironmentId
-    int _nUpdateStampId; ///< \see GetUpdateStamp
+    mutable int _nUpdateStampId; ///< \see GetUpdateStamp
     int _nParametersChanged; ///< set of parameters that changed and need callbacks
     UserDataPtr _pGuiData; ///< \see SetGuiData
     UserDataPtr _pPhysicsData; ///< \see SetPhysicsData

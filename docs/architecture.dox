@@ -452,6 +452,24 @@ and compilers since floating point errors could creep in when normalizing floati
 values. However, the idea of such an index could greatly help in developing a worldwide
 robot database that anyone can use.
 
+\section supported_formats Resource File Formats
+
+OpenRAVE defines its own \customxmlformat format that allows instantiation of any OpenRAVE interface
+and quick builing of robots and and kinematics structures. The rigid body geometries resources can
+be specified in virtually any 3D file format. For example:
+
+- iv, vrml, wrl, stl, blend, 3ds, ase, obj, ply, dxf, lwo, lxo, ac, ms3d, x, mesh.xml, irrmesh, irr, nff, off, raw
+
+These files can be used inside the <geom> tags, or can be read directly into any of the environment ReadRobotX and
+ReadKinBodyX methods to create a single world body.
+
+OpenRAVE also supports the <a href="http://www.collada.org">COLLADA</a> international standard on 3D
+geometry and modeling. COLLADA is augmented with these <a
+href="http://openrave.programmingvision.com/wiki/index.php/Format:COLLADA">OpenRAVE robot-specific
+extensions</a>.
+
+<a href="../main/robots_overview.html#file-formats">More information here.</a>
+
 */
 
 /**

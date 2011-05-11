@@ -183,58 +183,13 @@ svn co https://openrave.svn.sourceforge.net/svnroot/openrave/tags/latest_stable 
 
 %OpenRAVEはいくつかの標準パッケージを使用して開発されています．あなたのPC環境に合わせてパッケージマネージャから必要なパッケージをインストールしてください．
 
-\en \subsection ilinux_ubuntu804 Ubuntu 8.04 or earlier
-\ja \subsection ilinux_ubuntu804 Ubuntu 8.04 もしくはそれ以前
-
-\~ \verbatim
-sudo apt-get install g++ cmake libqt4-dev qt4-dev-tools ffmpeg libavcodec-dev libavformat-dev libxvidcore-dev libx264-dev libfaac-dev libogg-dev libvorbis-dev libdc1394-dev liblame-dev libgsm1-dev libboost-dev libboost-regex-dev libxml2-dev libglew-dev  libboost-graph-dev libboost-wave-dev libboost-serialization-dev libboost-filesystem-dev libpcre3-dev libboost-thread-dev
-\endverbatim
-
-\~ \subsection ilinux_ubuntu810 Ubuntu 8.10
+\~ \subsection ilinux_ubuntu Ubuntu
 
 \verbatim
-sudo apt-get install g++ cmake libqt4-dev qt4-dev-tools ffmpeg libavcodec-dev libavformat-dev libxvidcore4-dev libx264-dev libfaac-dev libogg-dev libvorbis-dev libdc1394-22-dev libgsm1-dev libboost-dev libboost-regex-dev libxml2-dev libglew1.5-dev libsoqt4-dev libboost-graph-dev libode0-dev libboost-wave-dev libboost-serialization-dev libboost-filesystem-dev libpcre3-dev libboost-thread-dev
-\endverbatim
-
-\en
-The \b avcodec library in Ubuntu 8.10 has removed all mpeg encoders due to legal issues, this means
-that %OpenRAVE recording will always fail with a <b>codec not found</b> message. To get it working,
-please install the \b libavformat-unstripped-52 and \b libavcodec-unstripped-51
-packages. Unfortunately, these packages cannot coexist with the dev packages, so you should first
-compile openrave with the normal \b libavcodec-dev and \b libavformat-dev packages, and then
-switch to the unstripped versions when recording.
-
-\ja
-%OpenRAVEはそのシミュレーション動画を録画する機能をもっています．しかしUbuntu 8.10以降，法的な問題で<b>avcodec</b>から全てのmpegエンコーダが削除されました．これは録画機能を使おうとすると，常に<b>codec not found</b>というエラーメッセージが発生することを意味しています．これを避けるため，<b>libavformat-unstripped-52</b>と<b>libavcodec-unstripped-51</b>のパッケージをインストールしてください．
-
-残念ながら，これらのパッケージはdevパッケージと共存することができません．このため始めに通常の<b>libavcodec-dev</b>と<b>libavformat-dev</b>で%OpenRAVEのコンパイルを行い，その後録画機能をお使いの際にunstrippedバージョンに切り替えてください．
-
-\~ \subsection ilinux_ubuntu9 Ubuntu 9.x
-
-\verbatim
-sudo apt-get install g++ cmake libqt4-dev qt4-dev-tools ffmpeg libavcodec-dev libavformat-dev libxvidcore4-dev libfaac-dev libogg-dev libvorbis-dev libdc1394-22-dev libgsm1-dev libboost-dev libboost-regex-dev libxml2-dev libsoqt4-dev libboost-graph-dev libode0-dev libboost-wave-dev libboost-serialization-dev libboost-filesystem-dev libpcre3-dev libboost-thread-dev libswscale-dev libsimage-dev
-\endverbatim
-
-\~ \subsection ilinux_ubuntu10 Ubuntu 10.x
-
-Required:
-\verbatim
-sudo apt-get install g++ cmake libqt4-dev qt4-dev-tools ffmpeg  libboost-dev libboost-regex-dev libxml2-dev libsoqt4-dev libboost-graph-dev libode-dev libboost-wave-dev libboost-serialization-dev libboost-filesystem-dev libboost-system-dev libpcre3-dev libboost-thread-dev libsimage-dev libboost-iostreams-dev
-\endverbatim
-
-Recommended for accuracy/precision/reliability:
-\verbatim
-sudo apt-get install --ignore-missing libmpfr-dev libgmp3-dev libmpfi-dev libgmpxx4ldbl python-gmpy python-mpmath
-\endverbatim
-
-For python:
-\verbatim
-sudo apt-get install libboost-python-dev python python-dev python-numpy python-scipy ipython
-\endverbatim
-
-Optional:
-\verbatim
-sudo apt-get install --ignore-missing libavcodec-dev libavformat-dev libxvidcore4-dev libfaac-dev libogg-dev libvorbis-dev libdc1394-22-dev libgsm1-dev libswscale-dev
+sudo add-apt-repository ppa:openrave/release
+sudo sh -c 'echo "deb-src http://ppa.launchpad.net/openrave/release/ubuntu `lsb_release -cs` main" >> /etc/apt/sources.list.d/openrave-release-`lsb_release -cs`.list'
+sudo apt-get update
+sudo apt-get build-dep openrave
 \endverbatim
 
 \en \subsection ilinux_fedora Fedora Core Users
@@ -302,11 +257,7 @@ Although %OpenRAVE is not tied to any particular collision checker, it requires 
 
 \en \section ilinux_python Python
 
-In order to use the python bindings through the \openravepy{openravepy} module, install  the following packages before compiling %OpenRAVE:
-
-\verbatim
-sudo apt-get install libboost-python-dev python python-dev python-numpy python-scipy ipython
-\endverbatim
+In order to use the python bindings through the \openravepy{openravepy} module, you'll need to install python, boost python, python numpy, and python sympy. .
 
 To setup the python path in bash add the following line:
 

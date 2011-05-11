@@ -1821,12 +1821,12 @@ class ColladaReader : public daeErrorHandler
                         }
                         pattachedsensor->trelative = _ExtractFullTransformFromChildren(pframe_origin);
                     }
-//                    if( !_ExtractSensor(pattachedsensor->psensor,tec->getChild("instance_sensor")) ) {
-//                        RAVELOG_WARN(str(boost::format("cannot find instance_sensor for attached sensor %s:%s\n")%probot->GetName()%name));
-//                    }
-//                    else {
-//                        pattachedsensor->pdata = pattachedsensor->GetSensor()->CreateSensorData();
-//                    }
+                    if( !_ExtractSensor(pattachedsensor->psensor,tec->getChild("instance_sensor")) ) {
+                        RAVELOG_WARN(str(boost::format("cannot find instance_sensor for attached sensor %s:%s\n")%probot->GetName()%name));
+                    }
+                    else {
+                        pattachedsensor->pdata = pattachedsensor->GetSensor()->CreateSensorData();
+                    }
                     probot->GetAttachedSensors().push_back(pattachedsensor);
                 }
                 else {
@@ -2809,17 +2809,7 @@ class ColladaReader : public daeErrorHandler
         if( name.size() == 0 ) {
             return str(boost::format("__dummy%d")%_nGlobalIndex++);
         }
-        if( IsValidName(name) ) {
-            return name;
-        }
-        std::string newname = name;
-        for(size_t i = 0; i < newname.size(); ++i) {
-            if( !IsValidCharInName(newname[i]) ) {
-                newname[i] = '_';
-            }
-        }
-        RAVELOG_WARN(str(boost::format("name '%s' is not a valid OpenRAVE name, converting to '%s'")%name%newname));
-        return newname;
+        return ConvertToOpenRAVEName(name);
     }
 
     inline static dReal _GetUnitScale(daeElementRef pelt, dReal startscale)

@@ -19,7 +19,7 @@
       <translation>0.22 0.14 0.346</translation>
       <translation>-0.15 -0.14 0.742</translation>
     </body>
-    <joint type="hinge" enable="false">
+    <joint name="dummy0" type="hinge" enable="false">
       <body>segway</body>
       <body>wam0</body>
       <limits>0 0</limits>

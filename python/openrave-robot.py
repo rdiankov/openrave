@@ -50,7 +50,7 @@ if __name__ == "__main__":
     parser.add_option('--info',action='store',type='string',dest='doinfo',default=None,
                       help='Prints detailed information on manipulators/sensors/links/joints information of a robot.')
     parser.add_option('--hash',action='store',type='string',dest='dohash',default=None,
-                      help='if set, will output hashes of the loaded body depending if manipname or sensorname are set. Can be one of (body,kinematics,robot)')
+                      help='If set, will output hashes of the loaded body depending if manipname or sensorname are set. Can be one of (body,kinematics,robot)')
     parser.add_option('--manipname', action="store",type='string',dest='manipname',default=None,
                       help='if manipulator name is specified will return the manipulator hash of the robot')
     parser.add_option('--sensorname', action="store",type='string',dest='sensorname',default=None,
@@ -83,7 +83,7 @@ if __name__ == "__main__":
                 env.Load(args[0])
                 body=env.GetBodies()[0]
                 for joint in body.GetJoints():
-                    print link.GetJoint()                    
+                    print joint.GetName()                    
             else:
                 sys.exit(1)            
         elif options.doinfo is not None:

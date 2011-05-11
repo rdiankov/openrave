@@ -208,6 +208,7 @@ namespace OpenRAVEXMLParser
     BaseXMLReaderPtr CreateInterfaceReader(EnvironmentBasePtr penv, InterfaceType type, InterfaceBasePtr& pinterface, const std::string& xmltag, const AttributesList& atts);
     BaseXMLReaderPtr CreateInterfaceReader(EnvironmentBasePtr penv, const AttributesList& atts);
     bool CreateTriMeshData(EnvironmentBasePtr, const std::string& filename, const Vector& vscale, KinBody::Link::TRIMESH& trimesh, RaveVector<float>& diffuseColor, RaveVector<float>& ambientColor, float& ftransparency);
+    void SetRenderFilename(KinBody::Link::GEOMPROPERTIES& geom, const std::string& renderfile);
 }
 
 #ifdef _WIN32
@@ -237,6 +238,7 @@ inline T CLAMP_ON_RANGE(T value, T min, T max)
 #include <boost/thread/condition.hpp>
 #include <boost/tuple/tuple.hpp>
 #include <boost/assert.hpp>
+#include <boost/version.hpp>
 
 template<class P>
 struct smart_pointer_deleter
@@ -268,6 +270,21 @@ inline bool IsValidName(const std::string& s) {
         return false;
     }
     return std::count_if(s.begin(), s.end(), IsValidCharInName) == (int)s.size();
+}
+
+inline std::string ConvertToOpenRAVEName(const std::string& name)
+{
+    if( IsValidName(name) ) {
+        return name;
+    }
+    std::string newname = name;
+    for(size_t i = 0; i < newname.size(); ++i) {
+        if( !IsValidCharInName(newname[i]) ) {
+            newname[i] = '_';
+        }
+    }
+    RAVELOG_WARN(str(boost::format("name '%s' is not a valid OpenRAVE name, converting to '%s'")%name%newname));
+    return newname;
 }
 
 bool RaveParseColladaFile(EnvironmentBasePtr penv, const std::string& filename,const AttributesList& atts);

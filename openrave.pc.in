@@ -8,7 +8,7 @@ includedir=@CMAKE_INSTALL_PREFIX@/include
 Name: openrave
 Description: Open Robotics Automation Virtual Environment
 Version: @OPENRAVE_VERSION@
-URL: http://openrave.programmingvision.com
-Libs: -L${libdir} -lopenrave
+URL: http://openrave.org
+Libs: -L${libdir} -lopenrave@OPENRAVE_LIBRARY_SUFFIX@
 Libs.private: @OPENRAVE_BOOST_LIB_DIRS@ @Boost_THREAD_LIBRARY@
 Cflags: -I${includedir} @OPENRAVE_BOOST_INCLUDE_DIRS@

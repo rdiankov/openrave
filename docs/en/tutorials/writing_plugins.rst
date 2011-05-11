@@ -4,7 +4,7 @@ Writing OpenRAVE Programs
 Plugins
 -------
 
-Creating OpenRAVE plugins allows others to use your work by just instantiating the interfaces through the **RaveCreateX** methods. Althugh it is highly recommended to start working with Python/Octave, eventually users should create plugins to offer their functionality through them. 
+Creating OpenRAVE plugins allows others to use your work by just instantiating the interfaces through the **RaveCreateX** methods. Although it is highly recommended to start working with Python/Octave, eventually users should create plugins to offer their functionality through them. 
 
 The simplest way to create a plugin is through the :ref:`tool-openrave-createplugin` program:
 

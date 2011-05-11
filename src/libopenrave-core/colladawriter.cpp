@@ -260,7 +260,7 @@ class ColladaWriter : public daeErrorHandler
     };
 
 
- ColladaWriter(EnvironmentBaseConstPtr penv) : _dom(NULL), _penv(penv)
+    ColladaWriter(EnvironmentBaseConstPtr penv) : _dom(NULL), _penv(penv)
     {
         daeErrorHandler::setErrorHandler(this);
 

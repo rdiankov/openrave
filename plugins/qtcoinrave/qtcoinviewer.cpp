@@ -123,7 +123,21 @@ QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
     _ivCamera->orientation.setValue(SbVec3f(1,0,0), -0.5f);
     _ivCamera->aspectRatio = (float)view1->size().width() / (float)view1->size().height();
 
-    _ivBodies = new SoSeparator();
+    _ivBodies = NULL;
+    if( !!ifstream("environment.iv") ) {
+        SoDBLock dblock();
+        SoInput mySceneInput;
+        if( mySceneInput.openFile("environment.iv") ) {
+            _ivBodies = SoDB::readAll(&mySceneInput);
+            if( !!_ivBodies ) {
+                // environment should take care of this
+                _pviewer->setHeadlight(false);
+            }
+        }
+    }
+    if( _ivBodies == NULL ) {
+        _ivBodies = new SoSeparator();
+    }
 
     // add the message texts
     SoSeparator* pmsgsep = new SoSeparator();
@@ -175,7 +189,7 @@ QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
         _pFigureRoot->addChild(plightmodel);
     }
     _ivRoot->addChild(_pFigureRoot);
-    
+
     _pviewer->setSceneGraph(_ivRoot);
     _pviewer->setAutoClippingStrategy(SoQtViewer::CONSTANT_NEAR_PLANE, 0.01f);
     _pviewer->setSeekTime(1.0f);
@@ -462,7 +476,7 @@ bool QtCoinViewer::LoadModel(const string& pfilename)
 {
     SoInput mySceneInput;
     if (mySceneInput.openFile(pfilename.c_str())) {
-        GetRoot()->addChild(SoDB::readAll(&mySceneInput));
+        GetBodiesRoot()->addChild(SoDB::readAll(&mySceneInput));
         return true;
     }
 

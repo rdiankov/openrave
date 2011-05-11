@@ -385,10 +385,16 @@ class Environment : public EnvironmentBase
     virtual bool Load(const std::string& filename)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        bool bSuccess;
+        bool bSuccess = false;
         if( _IsColladaFile(filename) ) {
             OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
             bSuccess = RaveParseColladaFile(shared_from_this(), filename, AttributesList());
+        }
+        else if( !_IsOpenRAVEFile(filename) && _IsRigidModelFile(filename) ) {
+            KinBodyPtr pbody = ReadKinBodyXMLFile(filename);
+            if( !!pbody ) {
+                bSuccess = AddKinBody(pbody,true);
+            }
         }
         else {
             bSuccess = ParseXMLFile(OpenRAVEXMLParser::CreateEnvironmentReader(shared_from_this(),AttributesList()), filename);
@@ -906,25 +912,7 @@ class Environment : public EnvironmentBase
 
     virtual RobotBasePtr ReadRobotXMLFile(const std::string& filename)
     {
-        try {
-            if( _IsColladaFile(filename) ) {
-                RobotBasePtr robot;
-                OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
-                if( !RaveParseColladaFile(shared_from_this(), robot, filename, AttributesList()) ) {
-                    return RobotBasePtr();
-                }
-                return robot;
-            }
-            else {
-                InterfaceBasePtr pinterface = ReadInterfaceXMLFile(filename,AttributesList());
-                BOOST_ASSERT(pinterface->GetInterfaceType() == PT_Robot );
-                return RaveInterfaceCast<RobotBase>(pinterface);
-            }
-        }
-        catch(const openrave_exception& ex) {
-            RAVELOG_ERROR(str(boost::format("ReadRobotXMLFile exception: %s\n")%ex.what()));
-        }
-        return RobotBasePtr();
+        return ReadRobotXMLFile(RobotBasePtr(),filename,AttributesList());
     }
 
     virtual RobotBasePtr ReadRobotXMLFile(RobotBasePtr robot, const std::string& filename, const AttributesList& atts)
@@ -943,6 +931,34 @@ class Environment : public EnvironmentBase
             OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
             if( !RaveParseColladaFile(shared_from_this(), robot, filename, atts) ) {
                 return RobotBasePtr();
+            }
+        }
+        else if( !_IsOpenRAVEFile(filename) && _IsRigidModelFile(filename) ) {
+            if( !robot ) {
+                robot = RaveCreateRobot(shared_from_this(),"GenericRobot");
+            }
+            if( !robot ) {
+                robot = RaveCreateRobot(shared_from_this(),"");
+            }
+            if( !!robot ) {
+                boost::shared_ptr<KinBody::Link::TRIMESH> ptrimesh;
+                ptrimesh = ReadTrimeshFile(ptrimesh,filename,atts);
+                if( robot->InitFromTrimesh(*ptrimesh,true) ) {
+                    // have to set the render file
+                    OpenRAVEXMLParser::SetRenderFilename(robot->_veclinks.at(0)->GetGeometry(0), filename);
+#if defined(HAVE_BOOST_FILESYSTEM) && BOOST_VERSION >= 103600 // stem() was introduced in 1.36
+                    boost::filesystem::path pfilename(filename, boost::filesystem::native);
+#if defined(BOOST_FILESYSTEM_VERSION) && BOOST_FILESYSTEM_VERSION >= 3
+                    robot->SetName(ConvertToOpenRAVEName(pfilename.stem().string()));
+#else
+                    robot->SetName(ConvertToOpenRAVEName(pfilename.stem()));
+#endif
+#else
+                    robot->SetName("object");
+#endif
+                    return robot;
+                }
+                robot.reset();
             }
         }
         else {
@@ -999,25 +1015,7 @@ class Environment : public EnvironmentBase
 
     virtual KinBodyPtr ReadKinBodyXMLFile(const std::string& filename)
     {
-        try {
-            if( _IsColladaFile(filename) ) {
-                KinBodyPtr body;
-                OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
-                if( !RaveParseColladaFile(shared_from_this(), body, filename, AttributesList()) ) {
-                    return KinBodyPtr();
-                }
-                return body;
-            }
-            else {
-                InterfaceBasePtr pinterface = ReadInterfaceXMLFile(filename,AttributesList());
-                BOOST_ASSERT(pinterface->GetInterfaceType() == PT_KinBody );
-                return RaveInterfaceCast<KinBody>(pinterface);
-            }
-        }
-        catch(const openrave_exception& ex) {
-            RAVELOG_ERROR(str(boost::format("ReadRobotXMLFile exception: %s\n")%ex.what()));
-        }
-        return KinBodyPtr();
+        return ReadKinBodyXMLFile(KinBodyPtr(),filename,AttributesList());
     }
 
     virtual KinBodyPtr ReadKinBodyXMLFile(KinBodyPtr body, const std::string& filename, const AttributesList& atts)
@@ -1036,6 +1034,31 @@ class Environment : public EnvironmentBase
             OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
             if( !RaveParseColladaFile(shared_from_this(), body, filename, atts) ) {
                 return KinBodyPtr();
+            }
+        }
+        else if( !_IsOpenRAVEFile(filename) && _IsRigidModelFile(filename) ) {
+            if( !body ) {
+                body = RaveCreateKinBody(shared_from_this(),"");
+            }
+            if( !!body ) {
+                boost::shared_ptr<KinBody::Link::TRIMESH> ptrimesh;
+                ptrimesh = ReadTrimeshFile(ptrimesh,filename,atts);
+                if( body->InitFromTrimesh(*ptrimesh,true) ) {
+                    // have to set the render file
+                    OpenRAVEXMLParser::SetRenderFilename(body->_veclinks.at(0)->GetGeometry(0), filename);
+#if defined(HAVE_BOOST_FILESYSTEM) && BOOST_VERSION >= 103600 // stem() was introduced in 1.36
+                    boost::filesystem::path pfilename(filename, boost::filesystem::native);
+#if defined(BOOST_FILESYSTEM_VERSION) && BOOST_FILESYSTEM_VERSION >= 3
+                    body->SetName(ConvertToOpenRAVEName(pfilename.stem().string()));
+#else
+                    body->SetName(ConvertToOpenRAVEName(pfilename.stem()));
+#endif
+#else
+                    body->SetName("object");
+#endif
+                    return body;
+                }
+                body.reset();
             }
         }
         else {
@@ -1798,6 +1821,39 @@ protected:
     static bool _IsColladaData(const std::string& data)
     {
         return data.find("<COLLADA") != std::string::npos;
+    }
+    static bool _IsOpenRAVEFile(const std::string& filename)
+    {
+        size_t len = filename.size();
+        if( len < 4 ) {
+            return false;
+        }
+        if( filename[len-4] == '.' && ::tolower(filename[len-3]) == 'x' && ::tolower(filename[len-2]) == 'm' && ::tolower(filename[len-1]) == 'l' ) {
+            return true;
+        }
+        return false;
+    }
+    static bool _IsRigidModelFile(const std::string& filename)
+    {
+        static boost::array<std::string,21> s_geometryextentsions = {{"iv","vrml","wrl","stl","blend","3ds","ase","obj","ply","dxf","lwo","lxo","ac","ms3d","x","mesh.xml","irrmesh","irr","nff","off","raw"}};
+        FOREACH(it, s_geometryextentsions) {
+            if( filename.size() > it->size()+1 ) {
+                size_t len = filename.size();
+                if( filename.at(len-it->size()-1) == '.' ) {
+                    bool bsuccess = true;
+                    for(size_t i = 0; i < it->size(); ++i) {
+                        if( ::tolower(filename[len-i-1]) != (*it)[it->size()-i-1] ) {
+                            bsuccess = false;
+                            break;
+                        }
+                    }
+                    if( bsuccess ) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     std::vector<RobotBasePtr> _vecrobots;  ///< robots (possibly controlled)

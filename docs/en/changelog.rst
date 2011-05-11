@@ -13,11 +13,24 @@ Initial Release: **Unreleased**
 Core
 ----
 
+* fixed major bug in synchronizing collision and openrave world
+
 * added openrave-robot.py which allows introspection into robot files. This deprecates openrave-hash.py. added bash completion for it.
 
 * added openrave-createplugin.py which allows new users to easily setup the plugin directories and get something running. also works on creating executables. added bash completion for it.
 
 * changed way of searching for collada-dom to prepare for its 2.3.1 release.
+
+* removed a dependency on mathextra.h from geometry.h
+
+* ReadKinBody*, ReadRobot*, and Load can now process rigid body models like IV, VRML, STL, etc and convert them automatically to KinBody objects. For example::
+
+  openrave windmill.iv
+  openrave test1.iv
+  Environment.Load('test1.iv')
+  Environment.ReadKinBodyXMLFile('test1.iv')
+
+* fixed collada bug in parsing robot sensors, added a barrett-wam-sensors.zae file to show a working example.
 
 Windows
 -------
@@ -32,6 +45,17 @@ Testing
 -------
 
 * fixed bugs in multiprocess plugin
+
+* added extensive basic math and kinematics tests
+
+* added a 'testmode' in all python examples so unit testing can run the examples safely
+
+Release
+-------
+
+* adding the soversion suffix to all libopenrave libraries: libopenrave -> libopenraveX.Y. There is no libopenrave or libopenrave-core anymore, so linking with "-lopenrave" or "-lopenrave-core" will fail.
+
+* releases are now suffxed with floating-point precision mode
 
 Version 0.3.1
 =============

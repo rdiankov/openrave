@@ -9,7 +9,7 @@
   </KinBody>
   <KinBody file="barretthand.kinbody.xml">
     <!-- create a dummy joint between wam4 and wam7 -->
-    <Joint type="hinge">
+    <Joint name="dummy" type="hinge">
       <body>wam4</body>
       <body>wam7</body>
       <limits>0 0</limits>
