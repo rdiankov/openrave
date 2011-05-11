@@ -3818,6 +3818,15 @@ void KinBody::_ComputeInternalInformation()
             RAVELOG_WARN(str(boost::format("%s passive joint index %d has no name")%GetName()%ijoint));
         }
     }
+    for(size_t ijoint0 = 0; ijoint0 < _vTopologicallySortedJointsAll.size(); ++ijoint0 ) {
+        JointPtr pjoint0 = _vTopologicallySortedJointsAll[ijoint0];
+        for(size_t ijoint1 = ijoint0+1; ijoint1 < _vTopologicallySortedJointsAll.size(); ++ijoint1 ) {
+            JointPtr pjoint1 = _vTopologicallySortedJointsAll[ijoint1];
+            if( pjoint0->GetName() == pjoint1->GetName() ) {
+                RAVELOG_WARN(str(boost::format("joint indices %d and %d share the same name %s")%pjoint0->GetJointIndex()%pjoint1->GetJointIndex()%pjoint0->GetName()));
+            }
+        }
+    }
 
     {
         // force all joints to 0 when computing hashes?
