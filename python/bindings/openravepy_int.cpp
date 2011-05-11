@@ -822,7 +822,7 @@ public:
             return;
         }
         vector<dReal> vsetvalues = ExtractArray<dReal>(o);
-        if( !indices ) {
+        if( indices == object() ) {
             _pbody->SetDOFValues(vsetvalues,checklimits);
         }
         else {

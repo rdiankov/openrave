@@ -30,7 +30,7 @@ Core
   Environment.Load('test1.iv')
   Environment.ReadKinBodyXMLFile('test1.iv')
 
-* adding the soversion suffix to all libopenrave libraries: libopenrave -> libopenraveX.Y. There is no libopenrave or libopenrave-core anymore, so linking with "-lopenrave" or "-lopenrave-core" will fail.
+* fixed collada bug in parsing robot sensors, added a barrett-wam-sensors.zae file to show a working example.
 
 Windows
 -------
@@ -49,6 +49,13 @@ Testing
 * added extensive basic math and kinematics tests
 
 * added a 'testmode' in all python examples so unit testing can run the examples safely
+
+Release
+-------
+
+* adding the soversion suffix to all libopenrave libraries: libopenrave -> libopenraveX.Y. There is no libopenrave or libopenrave-core anymore, so linking with "-lopenrave" or "-lopenrave-core" will fail.
+
+* releases are now suffxed with floating-point precision mode
 
 Version 0.3.1
 =============

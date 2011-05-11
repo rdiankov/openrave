@@ -1,6 +1,9 @@
 Documentation System
 ====================
 
+.. image:: ../../images/openrave_documentation.png
+  :width: 640
+
 Describes the OpenRAVE documentation system and all necessary function calls for generating and maintaining the documents. This is mean for developers.
 
 Installation
