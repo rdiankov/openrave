@@ -3,12 +3,29 @@
 ChangeLog
 #########
 
-Version 0.3.2
+Version 0.3.3
 =============
 
 Subversion Revision: **Unreleased**
 
 Initial Release: **Unreleased**
+
+Core
+----
+
+* fixed collada loading of formulas
+
+IK
+--
+
+* implemented --show command for inversekinematics
+
+Version 0.3.2
+=============
+
+Subversion Revision: 2452
+
+Initial Release: 2011/05/11
 
 Core
 ----

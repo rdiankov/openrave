@@ -163,9 +163,8 @@ class GraspingModel(DatabaseGenerator):
             self.hiddengeoms = []
             with self.robot.GetEnv():
                 # stop rendering the non-gripper links
-                childlinkids = [link.GetIndex() for link in self.manip.GetChildLinks()]
                 for link in self.robot.GetLinks():
-                    if link.GetIndex() not in childlinkids:
+                    if link not in self.manip.GetChildLinks():
                         for geom in link.GetGeometries():
                             self.hiddengeoms.append((geom,geom.IsDraw()))
                             geom.SetDraw(False)

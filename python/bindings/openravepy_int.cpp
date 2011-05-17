@@ -117,6 +117,7 @@ public:
             object GetBoxExtents() const { return toPyVector3(_plink->GetGeometry(_geomindex).GetBoxExtents()); }
             object GetRenderScale() const { return toPyVector3(_plink->GetGeometry(_geomindex).GetRenderScale()); }
             string GetRenderFilename() const { return _plink->GetGeometry(_geomindex).GetRenderFilename(); }
+            float GetTransparency() const { return _plink->GetGeometry(_geomindex).GetTransparency(); }
 
             bool __eq__(boost::shared_ptr<PyGeomProperties> p) { return !!p && _plink == p->_plink && _geomindex == p->_geomindex; }
             bool __ne__(boost::shared_ptr<PyGeomProperties> p) { return !p || _plink != p->_plink || _geomindex != p->_geomindex; }
@@ -1553,6 +1554,11 @@ public:
             return solutions;
         }
         
+        object GetIkParameterization(IkParameterization::Type iktype)
+        {
+            return toPyIkParameterization(_pmanip->GetIkParameterization(iktype));
+        }
+
         object GetChildJoints() {
             std::vector<KinBody::JointPtr> vjoints;
             _pmanip->GetChildJoints(vjoints);
@@ -1566,8 +1572,9 @@ public:
             std::vector<int> vdofindices;
             _pmanip->GetChildDOFIndices(vdofindices);
             boost::python::list dofindices;
-            FOREACH(itindex,vdofindices)
+            FOREACH(itindex,vdofindices) {
                 dofindices.append(*itindex);
+            }
             return dofindices;
         }
 
@@ -1575,8 +1582,9 @@ public:
             std::vector<KinBody::LinkPtr> vlinks;
             _pmanip->GetChildLinks(vlinks);
             boost::python::list links;
-            FOREACH(itlink,vlinks)
+            FOREACH(itlink,vlinks) {
                 links.append(PyLinkPtr(new PyLink(*itlink,_pyenv)));
+            }
             return links;
         }
         
@@ -1590,8 +1598,9 @@ public:
             std::vector<KinBody::LinkPtr> vlinks;
             _pmanip->GetIndependentLinks(vlinks);
             boost::python::list links;
-            FOREACH(itlink,vlinks)
+            FOREACH(itlink,vlinks) {
                 links.append(PyLinkPtr(new PyLink(*itlink,_pyenv)));
+            }
             return links;
         }
 
@@ -3806,6 +3815,7 @@ In python, the syntax is::\n\n\
                     .def("GetBoxExtents",&PyKinBody::PyLink::PyGeomProperties::GetBoxExtents, DOXY_FN(KinBody::Link::GEOMPROPERTIES,GetBoxExtents))
                     .def("GetRenderScale",&PyKinBody::PyLink::PyGeomProperties::GetRenderScale, DOXY_FN(KinBody::Link::GEOMPROPERTIES,GetRenderScale))
                     .def("GetRenderFilename",&PyKinBody::PyLink::PyGeomProperties::GetRenderFilename, DOXY_FN(KinBody::Link::GEOMPROPERTIES,GetRenderFilename))
+                    .def("GetTransparency",&PyKinBody::PyLink::PyGeomProperties::GetTransparency,DOXY_FN(KinBody::Link::GEOMPROPERTIES,GetTransparency))
                     .def("__eq__",&PyKinBody::PyLink::PyGeomProperties::__eq__)
                     .def("__ne__",&PyKinBody::PyLink::PyGeomProperties::__ne__)
                     ;
@@ -4029,6 +4039,7 @@ In python, the syntax is::\n\n\
             .def("FindIKSolution",pmanipikf,args("param","freevalues","filteroptions"), DOXY_FN(RobotBase::Manipulator,FindIKSolution "const IkParameterization; const std::vector; std::vector; int"))
             .def("FindIKSolutions",pmanipiks,args("param","filteroptions"), DOXY_FN(RobotBase::Manipulator,FindIKSolutions "const IkParameterization; std::vector; int"))
             .def("FindIKSolutions",pmanipiksf,args("param","freevalues","filteroptions"), DOXY_FN(RobotBase::Manipulator,FindIKSolutions "const IkParameterization; const std::vector; std::vector; int"))
+            .def("GetIkParameterization",&PyRobotBase::PyManipulator::GetIkParameterization, args("iktype"), DOXY_FN(RobotBase::Manipulator::GetIkParameterization, "IkParameterization::Type"))
             .def("GetBase",&PyRobotBase::PyManipulator::GetBase, DOXY_FN(RobotBase::Manipulator,GetBase))
             .def("GetEndEffector",&PyRobotBase::PyManipulator::GetEndEffector, DOXY_FN(RobotBase::Manipulator,GetEndEffector))
             .def("GetGraspTransform",&PyRobotBase::PyManipulator::GetGraspTransform, DOXY_FN(RobotBase::Manipulator,GetGraspTransform))
@@ -4144,7 +4155,7 @@ In python, the syntax is::\n\n\
     class_<PyIkSolverBase, boost::shared_ptr<PyIkSolverBase>, bases<PyInterfaceBase> >("IkSolver", DOXY_CLASS(IkSolverBase), no_init)
         .def("GetNumFreeParameters",&PyIkSolverBase::GetNumFreeParameters, DOXY_FN(IkSolverBase,GetNumFreeParameters))
         .def("GetFreeParameters",&PyIkSolverBase::GetFreeParameters, DOXY_FN(IkSolverBase,GetFreeParameters))
-        .def("Supports",&PyIkSolverBase::Supports, DOXY_FN(IkSolverBase,Supports))
+        .def("Supports",&PyIkSolverBase::Supports, args("iktype"), DOXY_FN(IkSolverBase,Supports))
         ;
 
     class_<PyPhysicsEngineBase, boost::shared_ptr<PyPhysicsEngineBase>, bases<PyInterfaceBase> >("PhysicsEngine", DOXY_CLASS(PhysicsEngineBase), no_init)

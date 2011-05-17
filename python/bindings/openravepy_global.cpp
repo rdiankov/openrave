@@ -190,6 +190,7 @@ public:
         default: throw openrave_exception(boost::str(boost::format("incorrect ik parameterization type %d")%type));
         }
     }
+    PyIkParameterization(const IkParameterization& ikparam) : _param(ikparam) {}
 
     IkParameterization::Type GetType() { return _param.GetType(); }
 
@@ -238,6 +239,12 @@ bool ExtractIkParameterization(object o, IkParameterization& ikparam) {
         return true;
     }
     return false;
+}
+
+
+object toPyIkParameterization(const IkParameterization& ikparam)
+{
+    return object(boost::shared_ptr<PyIkParameterization>(new PyIkParameterization(ikparam)));
 }
 
 class IkParameterization_pickle_suite : public pickle_suite

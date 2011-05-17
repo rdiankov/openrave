@@ -389,6 +389,7 @@ public:
 };
 
 bool ExtractIkParameterization(object o, IkParameterization& ikparam);
+object toPyIkParameterization(const IkParameterization& ikparam);
 object toPyAABB(const AABB& ab);
 object toPyRay(const RAY& r);
 RAY ExtractRay(object o);

@@ -186,7 +186,6 @@ protected:
         }
         
         bool bResetTrans = false; sinput >> bResetTrans;
-        dReal fmaxvelmult = 1; sinput >> fmaxvelmult;
     
         if( bResetTrans ) {
             RAVELOG_VERBOSE("resetting transformations of trajectory\n");
@@ -198,8 +197,8 @@ protected:
         }
 
         if( ptraj->GetTotalDuration() == 0 ) {
-            RAVELOG_VERBOSE(str(boost::format("retiming trajectory: %f\n")%fmaxvelmult));
-            ptraj->CalcTrajTiming(robot,TrajectoryBase::CUBIC,true,false,fmaxvelmult);
+            RAVELOG_VERBOSE(str(boost::format("retiming trajectory: %f\n")%_fMaxVelMult));
+            ptraj->CalcTrajTiming(robot,TrajectoryBase::CUBIC,true,false,_fMaxVelMult);
         }
         RAVELOG_VERBOSE(str(boost::format("executing traj with %d points\n")%ptraj->GetPoints().size()));
         robot->SetMotion(ptraj);

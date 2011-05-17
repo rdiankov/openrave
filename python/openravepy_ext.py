@@ -257,6 +257,19 @@ def sequence_cross_product(*sequences):
         else:
             break
 
+def TSP(solutions,distfn):
+    """solution to travelling salesman problem. orders the set of solutions such that visiting them one after another is fast.
+    """
+    newsolutions = numpy.array(solutions)
+    for i in range(newsolutions.shape[0]-2):
+        n = newsolutions.shape[0]-i-1
+        dists = [distfn(newsolutions[i,:],newsolutions[j,:]) for j in range(i+1,newsolutions.shape[0])]
+        minind = numpy.argmin(dists)+i+1
+        sol = numpy.array(newsolutions[i+1,:])
+        newsolutions[i+1,:] = newsolutions[minind,:]
+        newsolutions[minind,:] = sol
+    return newsolutions
+
 class MultiManipIKSolver:
     """Finds the simultaneous IK solutions of all disjoint manipulators (no manipulators share a joint).
 

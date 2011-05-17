@@ -642,13 +642,13 @@ class ColladaReader : public daeErrorHandler
             }
 
             daeTArray<daeElementRef> children;
-            pf->getTechnique_common()->getChildren(children);
-
             domTechniqueRef popenravetec = _ExtractOpenRAVEProfile(pf->getTechnique_array());
             if( !!popenravetec ) {
                 for(size_t ic = 0; ic < popenravetec->getContents().getCount(); ++ic) {
                     daeElementRef pequation = popenravetec->getContents()[ic];
                     if( pequation->getElementName() == string("equation") ) {
+                        children.clear();
+                        pequation->getChildren(children);
                         if( !pequation->hasAttribute("type") ) {
                             RAVELOG_WARN("equaiton needs 'type' attribute, ignoring\n");
                             continue;
@@ -696,6 +696,7 @@ class ColladaReader : public daeErrorHandler
             }
             else if (!!pf->getTechnique_common()) {
                 try {
+                    pf->getTechnique_common()->getChildren(children);
                     for(size_t ic = 0; ic < children.getCount(); ++ic) {
                         string eq = _ExtractMathML(pf,pkinbody,children[ic]);
                         if( ftargetunit != 1 ) {
