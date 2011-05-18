@@ -33,7 +33,7 @@ protected:
                 return PE_Ignore;
             }
             
-            if( name != "sensor" && name != "minangle" && name != "maxangle" && name != "maxrange" && name != "scantime" && name != "color" && name != "kk" && name != "width" && name != "height" ) {
+            if( name != "sensor" && name != "minangle" && name != "maxangle" && name != "maxrange" && name != "scantime" && name != "color" && name != "kk" && name != "width" && name != "height" && name != "power") {
                 return PE_Pass;
             }
             ss.str("");
@@ -47,8 +47,12 @@ protected:
                     _pcurreader.reset();
                 return false;
             }
-            else if( name == "sensor" )
+            else if( name == "sensor" ) {
                 return true;
+            }
+            else if( name == "power" ) {
+                ss >> _psensor->_bPower;
+            }
             else if( name == "minangle" ) {
                 ss >> _psensor->_pgeom->min_angle[0];
                 if( !!ss )
@@ -201,11 +205,12 @@ public:
             {
                 // Lock the data mutex and fill with the range data (get all in one timestep)
                 boost::mutex::scoped_lock lock(_mutexdata);
-                _pdata->t = GetTransform();
+                //_pdata->t = GetTransform();
                 _pdata->__stamp = GetEnv()->GetSimulationTime();
         
                 t = GetTransform();
                 r.pos = t.trans;
+                _pdata->positions.at(0) = t.trans;
 
                 for(int w = 0; w < _pgeom->width; ++w) {
                     for(int h = 0; h < _pgeom->height; ++h) {
@@ -213,7 +218,7 @@ public:
                         vdir.x = (float)w*_iKK[0] + _iKK[2];
                         vdir.y = (float)h*_iKK[1] + _iKK[3];
                         vdir.z = 1.0f;
-                        vdir = _pdata->t.rotate(vdir.normalize3());
+                        vdir = t.rotate(vdir.normalize3());
                         r.dir = _pgeom->max_range*vdir;
 
                         int index = w*_pgeom->height+h;
@@ -223,8 +228,9 @@ public:
                             _pdata->intensity[index] = 1;
                             // store the colliding bodies
                             KinBody::LinkConstPtr plink = !!_report->plink1 ? _report->plink1 : _report->plink2;
-                            if( !!plink )
+                            if( !!plink ) {
                                 _databodyids[index] = plink->GetParent()->GetEnvironmentId();
+                            }
                         }
                         else {
                             _databodyids[index] = 0;
@@ -361,7 +367,7 @@ protected:
         _iKK[2] = -_pgeom->KK.cx / _pgeom->KK.fx;
         _iKK[3] = -_pgeom->KK.cy / _pgeom->KK.fy;
         _listGraphicsHandles.clear();
-        _pdata->positions.clear();
+        _pdata->positions.resize(1);
         _pdata->ranges.resize(_pgeom->width*_pgeom->height);
         _pdata->intensity.resize(_pgeom->width*_pgeom->height);
         _databodyids.resize(_pgeom->width*_pgeom->height);

@@ -1129,7 +1129,6 @@ public:
     public:
         PyLaserSensorData(boost::shared_ptr<SensorBase::LaserGeomData> pgeom, boost::shared_ptr<SensorBase::LaserSensorData> pdata) : PySensorData(pdata)
         {
-            transform = ReturnTransform(pdata->t);
             positions = toPyArray3(pdata->positions);
             ranges = toPyArray3(pdata->ranges);
             intensity = toPyArrayN(pdata->intensity.size()>0?&pdata->intensity[0]:NULL,pdata->intensity.size());
@@ -1138,7 +1137,7 @@ public:
         }
         virtual ~PyLaserSensorData() {}
 
-        object transform, positions, ranges, intensity;
+        object positions, ranges, intensity;
     };
 
     class PyCameraIntrinsics
@@ -4220,7 +4219,6 @@ In python, the syntax is::\n\n\
             .def_readonly("stamp",&PySensorBase::PySensorData::stamp)
             ;
         class_<PySensorBase::PyLaserSensorData, boost::shared_ptr<PySensorBase::PyLaserSensorData>, bases<PySensorBase::PySensorData> >("LaserSensorData", DOXY_CLASS(SensorBase::LaserSensorData),no_init)
-            .def_readonly("transform",&PySensorBase::PyLaserSensorData::transform)
             .def_readonly("positions",&PySensorBase::PyLaserSensorData::positions)
             .def_readonly("ranges",&PySensorBase::PyLaserSensorData::ranges)
             .def_readonly("intensity",&PySensorBase::PyLaserSensorData::intensity)

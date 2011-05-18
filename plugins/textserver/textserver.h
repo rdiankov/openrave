@@ -1166,20 +1166,31 @@ protected:
         case SensorBase::ST_Laser: {
             boost::shared_ptr<SensorBase::LaserSensorData> plaserdata = boost::static_pointer_cast<SensorBase::LaserSensorData>(psensordata);
             os << plaserdata->ranges.size() << " ";
-            if( plaserdata->positions.size() != plaserdata->ranges.size() )
+            if( plaserdata->positions.size() != plaserdata->ranges.size() ) {
                 os << "1 ";
-            else
+            }
+            else {
                 os << plaserdata->positions.size() << " ";
+            }
         
-            if( options & 1 )
+            if( options & 1 ) {
                 os << plaserdata->intensity.size() << " ";
-            else
+            }
+            else {
                 os << "0 "; // don't send any intensity data
+            }
 
-            FOREACH(it, plaserdata->ranges)
+            FOREACH(it, plaserdata->ranges) {
                 os << it->x << " " << it->y << " " << it->z << " ";
-            if( plaserdata->positions.size() != plaserdata->ranges.size() )
-                os << plaserdata->t.trans.x << " " << plaserdata->t.trans.y << " " << plaserdata->t.trans.z << " ";
+            }
+            if( plaserdata->positions.size() != plaserdata->ranges.size() ) {
+                if( plaserdata->positions.size() > 0 ) {
+                    os << plaserdata->positions.at(0).x << " " << plaserdata->positions.at(0).y << " " << plaserdata->positions.at(0).z << " ";
+                }
+                else {
+                    os << " 0 0 0 ";
+                }
+            }
         
             if( options & 1 ) {
                 FOREACH(it, plaserdata->intensity)

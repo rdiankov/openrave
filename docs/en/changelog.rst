@@ -27,6 +27,8 @@ Misc
 
 * camera intrinsics now include distortion model and focal length, viewer rendering respects the focal length
 
+* removed transform from laser data, all sensors have a transform data type that is not part of the data state
+
 Version 0.3.2
 =============
 

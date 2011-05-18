@@ -80,7 +80,7 @@ public:
     public:
         virtual SensorType GetType() { return ST_Laser; }
 
-        Transform t;     ///< the coordinate system all the measurements are in
+        //Transform t;     ///< the coordinate system all the measurements are in
         std::vector<RaveVector<dReal> > positions; ///< world coordinates of the origins of each of the laser points.
                                        ///< if positions is empty, assume the origin is t.trans for all points
         std::vector<RaveVector<dReal> > ranges; ///< Range and direction readings in the form of direction*distance. The direction is in world coordinates. The values should be returned in the order laser detected them in.
