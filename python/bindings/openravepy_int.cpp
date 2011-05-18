@@ -1141,10 +1141,30 @@ public:
         object transform, positions, ranges, intensity;
     };
 
+    class PyCameraIntrinsics
+    {
+    public:
+        PyCameraIntrinsics(const SensorBase::CameraIntrinsics& intrinsics = SensorBase::CameraIntrinsics())
+        {
+            numeric::array arr(boost::python::make_tuple(intrinsics.fx,0,intrinsics.cx,0,intrinsics.fy,intrinsics.cy,0,0,1));
+            arr.resize(3,3);
+            K = arr;
+            distortion_model = intrinsics.distortion_model;
+            distortion_coeffs = toPyArray(intrinsics.distortion_coeffs);
+            focal_length = intrinsics.focal_length;
+        }
+        virtual ~PyCameraIntrinsics() {}
+
+        object K;
+        string distortion_model;
+        object distortion_coeffs;
+        dReal focal_length;
+    };
+
     class PyCameraSensorData : public PySensorData
     {
     public:
-        PyCameraSensorData(boost::shared_ptr<SensorBase::CameraGeomData> pgeom, boost::shared_ptr<SensorBase::CameraSensorData> pdata) : PySensorData(pdata)
+        PyCameraSensorData(boost::shared_ptr<SensorBase::CameraGeomData> pgeom, boost::shared_ptr<SensorBase::CameraSensorData> pdata) : PySensorData(pdata), intrinsics(pgeom->KK)
         {
             if( (int)pdata->vimagedata.size() != pgeom->height*pgeom->width*3 ) {
                 throw openrave_exception("bad image data");
@@ -1158,11 +1178,7 @@ public:
                 }
                 imagedata = static_cast<numeric::array>(handle<>(pyvalues));
             }
-            {
-                numeric::array arr(boost::python::make_tuple(pgeom->KK.fx,0,pgeom->KK.cx,0,pgeom->KK.fy,pgeom->KK.cy,0,0,1));
-                arr.resize(3,3);
-                KK = arr;
-            }
+            KK = intrinsics.K;
         }
         PyCameraSensorData(boost::shared_ptr<SensorBase::CameraGeomData> pgeom) : PySensorData(SensorBase::ST_Camera)
         {
@@ -1180,6 +1196,7 @@ public:
         }
         virtual ~PyCameraSensorData() {}
         object transform, imagedata, KK;
+        PyCameraIntrinsics intrinsics;
     };
 
     class PyJointEncoderSensorData : public PySensorData
@@ -4189,6 +4206,13 @@ In python, the syntax is::\n\n\
             .def("Supports",&PySensorBase::Supports, DOXY_FN(SensorBase,Supports))
             .def("__str__",&PySensorBase::__str__)
             .def("__repr__",&PySensorBase::__repr__)
+            ;
+
+        class_<PySensorBase::PyCameraIntrinsics, boost::shared_ptr<PySensorBase::PyCameraIntrinsics> >("CameraIntrinsics", DOXY_CLASS(SensorBase::CameraIntrinsics))
+            .def_readonly("K",&PySensorBase::PyCameraIntrinsics::K)
+            .def_readonly("distortion_model",&PySensorBase::PyCameraIntrinsics::distortion_model)
+            .def_readonly("distortion_coeffs",&PySensorBase::PyCameraIntrinsics::distortion_coeffs)
+            .def_readonly("focal_length",&PySensorBase::PyCameraIntrinsics::focal_length)
             ;
 
         class_<PySensorBase::PySensorData, boost::shared_ptr<PySensorBase::PySensorData> >("SensorData", DOXY_CLASS(SensorBase::SensorData),no_init)

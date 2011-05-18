@@ -341,6 +341,9 @@ void QtCoinViewer::_mousemove_cb(SoEventCallback * node)
             _vMouseSurfacePosition.x = pt->getPoint()[0];
             _vMouseSurfacePosition.y = pt->getPoint()[1];
             _vMouseSurfacePosition.z = pt->getPoint()[2];
+            _vMouseSurfaceNormal.x = pt->getNormal()[0];
+            _vMouseSurfaceNormal.y = pt->getNormal()[1];
+            _vMouseSurfaceNormal.z = pt->getNormal()[2];
             SbVec3f cp = GetCamera()->position.getValue();
             RaveVector<float> camerapos (cp[0],cp[1],cp[2]);
             _vMouseRayDirection = _vMouseSurfacePosition-camerapos;
@@ -358,28 +361,13 @@ void QtCoinViewer::_mousemove_cb(SoEventCallback * node)
                 ss << "(NULL)";
             }
 
-//            RaveVector<dReal> vsurfacenormal;
-//            bool bHaveNormals=false;
-//            boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = LockEnvironment(100000);
-//            if( !!lockenv ) {
-//                CollisionReportPtr report(new CollisionReport());
-//                if( GetEnv()->CheckCollision(RAY(camerapos,dReal(2)*(_vMouseSurfacePosition-camerapos)),report) ) {
-//                    if( report->contacts.size() > 0 ) {
-//                        bHaveNormals = true;
-//                        vsurfacenormal = report->contacts.at(0).norm;
-//                    }
-//                }
-//                lockenv.reset();
-//            }
-            ss << " (" << std::fixed << std::setprecision(4)
+            ss << " (" << std::fixed << std::setprecision(5)
                << std::setw(8) << std::left << pt->getPoint()[0] << ", "
                << std::setw(8) << std::left << pt->getPoint()[1] << ", "
                << std::setw(8) << std::left << pt->getPoint()[2] << ")";
-//            if( bHaveNormals ) {
-//                ss << ", n=(" << std::setw(8) << std::left << vsurfacenormal.x << ", "
-//                   << std::setw(8) << std::left << vsurfacenormal.y << ", "
-//                   << std::setw(8) << std::left << vsurfacenormal.z << ")";
-//            }
+            ss << ", n=(" << std::setw(8) << std::left << _vMouseSurfaceNormal.x << ", "
+               << std::setw(8) << std::left << _vMouseSurfaceNormal.y << ", "
+               << std::setw(8) << std::left << _vMouseSurfaceNormal.z << ")";
             ss << endl;
             _strMouseMove = ss.str();
         }
@@ -1772,8 +1760,9 @@ void QtCoinViewer::_SetTriangleMesh(SoSeparator* pparent, const float* ppoints, 
     SoFaceSet* faceset = new SoFaceSet();
     // this makes it crash!
     //faceset->numVertices.set1Value(numTriangles-1,3);
-    for(int i = 0; i < numTriangles; ++i)
+    for(int i = 0; i < numTriangles; ++i) {
         faceset->numVertices.set1Value(i,3);
+    }
     //faceset->generateDefaultNormals(SoShape, SoNormalCache);
 
     pparent->addChild(faceset);
@@ -2841,7 +2830,7 @@ void QtCoinViewer::_RecordSetup(bool bOn, bool bRealtimeVideo)
 #endif
 }
 
-bool QtCoinViewer::_GetCameraImage(std::vector<uint8_t>& memory, int width, int height, const RaveTransform<float>& _t, const SensorBase::CameraIntrinsics& KK)
+bool QtCoinViewer::_GetCameraImage(std::vector<uint8_t>& memory, int width, int height, const RaveTransform<float>& _t, const SensorBase::CameraIntrinsics& intrinsics)
 {
     if( !_bCanRenderOffscreen ) {
         RAVELOG_WARN("cannot render offscreen\n");
@@ -2861,15 +2850,15 @@ bool QtCoinViewer::_GetCameraImage(std::vector<uint8_t>& memory, int width, int 
 
     SoOffscreenRenderer* ivOffscreen = &_ivOffscreen;
     SbViewportRegion vpr(width, height);
-    vpr.setViewport(SbVec2f(KK.cx/(float)(width)-0.5f, 0.5f-KK.cy/(float)(height)), SbVec2f(1,1));
+    vpr.setViewport(SbVec2f(intrinsics.cx/(float)(width)-0.5f, 0.5f-intrinsics.cy/(float)(height)), SbVec2f(1,1));
     ivOffscreen->setViewportRegion(vpr);
 
     GetCamera()->position.setValue(t.trans.x, t.trans.y, t.trans.z);
     GetCamera()->orientation.setValue(t.rot.y, t.rot.z, t.rot.w, t.rot.x);
-    GetCamera()->aspectRatio = (KK.fy/(float)height) / (KK.fx/(float)width);
-    GetCamera()->heightAngle = 2.0f*atanf(0.5f*height/KK.fy);
-    GetCamera()->nearDistance = 0.01f;
-    GetCamera()->farDistance = 100.0f;
+    GetCamera()->aspectRatio = (intrinsics.fy/(float)height) / (intrinsics.fx/(float)width);
+    GetCamera()->heightAngle = 2.0f*atanf(0.5f*height/intrinsics.fy);
+    GetCamera()->nearDistance = intrinsics.focal_length*1.2;
+    GetCamera()->farDistance = intrinsics.focal_length*12000; // control the precision
     GetCamera()->viewportMapping = SoCamera::LEAVE_ALONE;
     
     _pFigureRoot->ref();
@@ -2905,7 +2894,7 @@ bool QtCoinViewer::_GetCameraImage(std::vector<uint8_t>& memory, int width, int 
     return bSuccess;
 }
 
-bool QtCoinViewer::_WriteCameraImage(int width, int height, const RaveTransform<float>& _t, const SensorBase::CameraIntrinsics& KK, const std::string& filename, const std::string& extension)
+bool QtCoinViewer::_WriteCameraImage(int width, int height, const RaveTransform<float>& _t, const SensorBase::CameraIntrinsics& intrinsics, const std::string& filename, const std::string& extension)
 {
     if( !_bCanRenderOffscreen ) {
         return false;
@@ -2922,15 +2911,15 @@ bool QtCoinViewer::_WriteCameraImage(int width, int height, const RaveTransform<
     SoSFFloat farDistance = GetCamera()->farDistance;
     
     SbViewportRegion vpr(width, height);
-    vpr.setViewport(SbVec2f(KK.cx/(float)(width)-0.5f, 0.5f-KK.cy/(float)(height)), SbVec2f(1,1));
+    vpr.setViewport(SbVec2f(intrinsics.cx/(float)(width)-0.5f, 0.5f-intrinsics.cy/(float)(height)), SbVec2f(1,1));
     _ivOffscreen.setViewportRegion(vpr);
 
     GetCamera()->position.setValue(t.trans.x, t.trans.y, t.trans.z);
     GetCamera()->orientation.setValue(t.rot.y, t.rot.z, t.rot.w, t.rot.x);
-    GetCamera()->aspectRatio = (KK.fy/(float)height) / (KK.fx/(float)width);
-    GetCamera()->heightAngle = 2.0f*atanf(0.5f*height/KK.fy);
-    GetCamera()->nearDistance = 0.01f;
-    GetCamera()->farDistance = 100.0f;
+    GetCamera()->aspectRatio = (intrinsics.fy/(float)height) / (intrinsics.fx/(float)width);
+    GetCamera()->heightAngle = 2.0f*atanf(0.5f*height/intrinsics.fy);
+    GetCamera()->nearDistance = intrinsics.focal_length*1.2;
+    GetCamera()->farDistance = intrinsics.focal_length*12000; // control the precision
     GetCamera()->viewportMapping = SoCamera::LEAVE_ALONE;
     
     _pFigureRoot->ref();

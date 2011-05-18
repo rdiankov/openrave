@@ -31,7 +31,7 @@ class BaseCameraSensor : public SensorBase
                 return PE_Ignore;
             }
             
-            if( name != "sensor" && name != "kk" && name != "width" && name != "height" && name != "framerate" && name != "power" && name != "color" ) {
+            if( name != "sensor" && name != "kk" && name != "width" && name != "height" && name != "framerate" && name != "power" && name != "color" && name != "focal_length" ) {
                 return PE_Pass;
             }
             ss.str("");
@@ -45,18 +45,27 @@ class BaseCameraSensor : public SensorBase
                     _pcurreader.reset();
                 return false;
             }
-            else if( name == "sensor" )
+            else if( name == "sensor" ) {
                 return true;
-            else if( name == "kk" )
+            }
+            else if( name == "kk" || name == "K" ) {
                 ss >> _psensor->_pgeom->KK.fx >> _psensor->_pgeom->KK.fy >> _psensor->_pgeom->KK.cx >> _psensor->_pgeom->KK.cy;
-            else if( name == "width" )
+            }
+            else if( name == "focal_length" ) {
+                ss >> _psensor->_pgeom->KK.focal_length;
+            }
+            else if( name == "width" ) {
                 ss >> _psensor->_pgeom->width;
-            else if( name == "height" )
+            }
+            else if( name == "height" ) {
                 ss >> _psensor->_pgeom->height;
-            else if( name == "framerate" )
+            }
+            else if( name == "framerate" ) {
                 ss >> _psensor->framerate;
-            else if( name == "power" )
+            }
+            else if( name == "power" ) {
                 ss >> _psensor->_bPower;
+            }
             else if( name == "color" ) {
                 ss >> _psensor->_vColor.x >> _psensor->_vColor.y >> _psensor->_vColor.z;
                 // ok if not everything specified
@@ -317,7 +326,7 @@ class BaseCameraSensor : public SensorBase
             vector<float> vcolors(inds.size()*3);
 
             for(size_t i = 0; i < inds.size(); ++i) {
-                viconpoints[i] = 0.02*points[inds[i]];
+                viconpoints[i] = _pgeom->KK.focal_length*points[inds[i]];
                 vcolors[3*i+0] = _vColor.x;
                 vcolors[3*i+1] = _vColor.y;
                 vcolors[3*i+2] = _vColor.z;

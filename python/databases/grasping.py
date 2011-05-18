@@ -329,7 +329,6 @@ class GraspingModel(DatabaseGenerator):
         with self.env:
             Ttarget = self.target.GetTransform()
             Trobotorig = self.robot.GetTransform()
-
         # transform each ray into the global coordinate system in order to plot it
         gapproachrays = c_[dot(approachrays[:,0:3],transpose(Ttarget[0:3,0:3]))+tile(Ttarget[0:3,3],(N,1)),dot(approachrays[:,3:6],transpose(Ttarget[0:3,0:3]))]
         approachgraphs = [self.env.plot3(points=gapproachrays[:,0:3],pointsize=5,colors=array((1,0,0))),
@@ -707,6 +706,8 @@ class GraspingModel(DatabaseGenerator):
                 for side in sides:
                     ex = sqrt(sum(side[6:9]**2))
                     ey = sqrt(sum(side[9:12]**2))
+                    if ex/delta > 1000:
+                        raise ValueError('object is way too big for its discretization! %f > 1000'%(ex/delta))
                     XX,YY = meshgrid(r_[arange(-ex,-0.25*delta,delta),0,arange(delta,ex,delta)],
                                      r_[arange(-ey,-0.25*delta,delta),0,arange(delta,ey,delta)])
                     localpos = outer(XX.flatten(),side[6:9]/ex)+outer(YY.flatten(),side[9:12]/ey)

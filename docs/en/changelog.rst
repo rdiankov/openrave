@@ -20,6 +20,13 @@ IK
 
 * implemented --show command for inversekinematics
 
+Misc
+----
+
+* viewer showing scene normals
+
+* camera intrinsics now include distortion model and focal length, viewer rendering respects the focal length
+
 Version 0.3.2
 =============
 

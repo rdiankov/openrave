@@ -42,12 +42,22 @@ public:
         ST_NumberofSensorTypes=8
     };
 
+    /// \brief intrinsic parameters for a camera.
     class CameraIntrinsics
     {
     public:
-        CameraIntrinsics() : fx(0),fy(0),cx(0),cy(0) {}
-        CameraIntrinsics(dReal fx, dReal fy, dReal cx, dReal cy) : fx(fx), fy(fy), cx(cx), cy(cy) {}
+        CameraIntrinsics() : fx(0),fy(0),cx(0),cy(0), focal_length(0.01) {}
+        CameraIntrinsics(dReal fx, dReal fy, dReal cx, dReal cy) : fx(fx), fy(fy), cx(cx), cy(cy), focal_length(0.01) {}
         dReal fx,fy, cx,cy;
+
+        /** \brief distortion model of the camera. if left empty, no distortion model is used.
+
+            Possible values are:
+            - "plumb_bob" - Brown. "Decentering Distortion of Lenses", Photometric Engineering, pages 444-462, Vol. 32, No. 3, 1966
+        */
+        std::string distortion_model;
+        std::vector<dReal> distortion_coeffs; ///< coefficients of the distortion model
+        dReal focal_length; ///< physical focal length distance since focal length cannot be recovered from the intrinsic matrix, but is necessary for determining the lens plane.
     };
 
     /// used to pass sensor data around

@@ -362,7 +362,7 @@ protected:
     
     ItemPtr          _pSelectedItem;      ///< the currently selected item
     KinBody::LinkWeakPtr _pMouseOverLink;
-    RaveVector<float> _vMouseSurfacePosition,_vMouseRayDirection;
+    RaveVector<float> _vMouseSurfacePosition,_vMouseRayDirection, _vMouseSurfaceNormal;
 
     /// for movie recording
     SoOffscreenRenderer _ivOffscreen;
