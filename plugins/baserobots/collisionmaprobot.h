@@ -1,6 +1,8 @@
-// Copyright (C) 2006-2010 Carnegie Mellon University (rdiankov@cs.cmu.edu)
+// -*- coding: utf-8 --*
+// Copyright (C) 2006-2011 Rosen Diankov <rosen.diankov@gmail.com>
 //
-// This program is free software: you can redistribute it and/or modify
+// This file is part of OpenRAVE.
+// OpenRAVE is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // at your option) any later version.

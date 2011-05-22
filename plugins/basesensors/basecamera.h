@@ -30,8 +30,8 @@ class BaseCameraSensor : public SensorBase
                     return PE_Support;
                 return PE_Ignore;
             }
-            
-            if( name != "sensor" && name != "kk" && name != "width" && name != "height" && name != "framerate" && name != "power" && name != "color" && name != "focal_length" ) {
+            static boost::array<string, 8> tags = {{"sensor", "kk", "width", "height", "framerate", "power", "color", "focal_length"}};
+            if( find(tags.begin(),tags.end(),name) == tags.end() ) {
                 return PE_Pass;
             }
             ss.str("");
@@ -41,8 +41,9 @@ class BaseCameraSensor : public SensorBase
         virtual bool endElement(const std::string& name)
         {
             if( !!_pcurreader ) {
-                if( _pcurreader->endElement(name) )
+                if( _pcurreader->endElement(name) ) {
                     _pcurreader.reset();
+                }
                 return false;
             }
             else if( name == "sensor" ) {

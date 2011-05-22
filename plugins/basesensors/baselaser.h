@@ -32,7 +32,8 @@ protected:
                     return PE_Support;
                 return PE_Ignore;
             }
-            if( name != "sensor" && name != "minangle" && name != "maxangle" && name != "maxrange" && name != "minrange" && name != "scantime" && name != "color" && name != "resolution" && name != "time_scan" && name != "time_increment" && name != "power") {
+            static boost::array<string, 15> tags = {{"sensor", "minangle", "min_angle", "maxangle", "max_angle", "maxrange", "max_range", "minrange", "min_range", "scantime", "color", "time_scan", "time_increment", "power"}};
+            if( find(tags.begin(),tags.end(),name) == tags.end() ) {
                 return PE_Pass;
             }
             ss.str("");
@@ -52,13 +53,13 @@ protected:
             else if( name == "power" ) {
                 ss >> _psensor->_bPower;
             }
-            else if( name == "minangle" ) {
+            else if( name == "minangle" || name == "min_angle" ) {
                 ss >> _psensor->_pgeom->min_angle[0];
                 if( !!ss ) {
                     _psensor->_pgeom->min_angle[0] *= PI/180.0f; // convert to radians
                 }
             }
-            else if( name == "maxangle" ) {
+            else if( name == "maxangle" || name == "max_angle" ) {
                 ss >> _psensor->_pgeom->max_angle[0];
                 if( !!ss ) {
                     _psensor->_pgeom->max_angle[0] *= PI/180.0f; // convert to radians
@@ -70,10 +71,10 @@ protected:
                     _psensor->_pgeom->resolution[0] *= PI/180.0f; // convert to radians
                 }
             }
-            else if( name == "maxrange" ) {
+            else if( name == "maxrange" || name == "max_range" ) {
                 ss >> _psensor->_pgeom->max_range;
             }
-            else if( name == "minrange" ) {
+            else if( name == "minrange" || name == "min_range" ) {
                 ss >> _psensor->_pgeom->min_range;
             }
             else if( name == "scantime" || name == "time_scan" ) {
@@ -434,8 +435,9 @@ protected:
 
         virtual ProcessElement startElement(const std::string& name, const AttributesList& atts)
         {
-            if( _bProcessing )
+            if( _bProcessing ) {
                 return PE_Ignore;
+            }
             switch( BaseLaser2DXMLReader::startElement(name,atts) ) {
                 case PE_Pass: break;
                 case PE_Support: return PE_Support;
@@ -451,16 +453,21 @@ protected:
             if( _bProcessing ) {
                 boost::shared_ptr<BaseSpinningLaser2DSensor> psensor = boost::dynamic_pointer_cast<BaseSpinningLaser2DSensor>(_psensor);
             
-                if( name == "spinaxis" )
+                if( name == "spinaxis" ) {
                     ss >> psensor->_vGeomSpinAxis.x >> psensor->_vGeomSpinAxis.y >> psensor->_vGeomSpinAxis.z;
-                else if( name == "spinpos" )
+                }
+                else if( name == "spinpos" ) {
                     ss >> psensor->_vGeomSpinPos.x >> psensor->_vGeomSpinPos.y >> psensor->_vGeomSpinPos.z;
-                else if( name == "spinspeed" )
+                }
+                else if( name == "spinspeed" ) {
                     ss >> psensor->_fGeomSpinSpeed;
-                else
+                }
+                else {
                     RAVELOG_WARN("invalid tag\n");
-                if( !ss )
+                }
+                if( !ss ) {
                     RAVELOG_WARN(str(boost::format("error parsing %s\n")%name));
+                }
                 _bProcessing = false;
                 return false;
             }

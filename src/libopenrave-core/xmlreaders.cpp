@@ -2995,6 +2995,9 @@ namespace OpenRAVEXMLParser
             else if( InterfaceXMLReader::endElement(xmlname) ) {
                 if( !!_psensor ) {
                     _psensor->SetTransform(_tsensor);
+                    // reset the sensor
+                    int ispower = _psensor->Configure(SensorBase::CC_PowerCheck);
+                    _psensor->Configure(ispower ? SensorBase::CC_PowerOn : SensorBase::CC_PowerOff);
                 }
                 return true;
             }

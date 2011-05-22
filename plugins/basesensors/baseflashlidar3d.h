@@ -28,12 +28,13 @@ protected:
         virtual ProcessElement startElement(const std::string& name, const AttributesList& atts)
         {
             if( !!_pcurreader ) {
-                if( _pcurreader->startElement(name,atts) == PE_Support )
+                if( _pcurreader->startElement(name,atts) == PE_Support ) {
                     return PE_Support;
+                }
                 return PE_Ignore;
             }
-            
-            if( name != "sensor" && name != "minangle" && name != "maxangle" && name != "maxrange" && name != "scantime" && name != "color" && name != "kk" && name != "width" && name != "height" && name != "power") {
+            static boost::array<string, 18> tags = {{"sensor", "minangle", "min_angle", "maxangle", "max_angle", "maxrange", "max_range", "minrange", "min_range", "scantime", "color", "time_scan", "time_increment", "power", "kk", "width", "height"}};
+            if( find(tags.begin(),tags.end(),name) == tags.end() ) {
                 return PE_Pass;
             }
             ss.str("");
@@ -43,8 +44,9 @@ protected:
         virtual bool endElement(const std::string& name)
         {
             if( !!_pcurreader ) {
-                if( _pcurreader->endElement(name) )
+                if( _pcurreader->endElement(name) ) {
                     _pcurreader.reset();
+                }
                 return false;
             }
             else if( name == "sensor" ) {
@@ -53,46 +55,51 @@ protected:
             else if( name == "power" ) {
                 ss >> _psensor->_bPower;
             }
-            else if( name == "minangle" ) {
+            else if( name == "minangle" || name == "min_angle" ) {
                 ss >> _psensor->_pgeom->min_angle[0];
                 if( !!ss )
                     _psensor->_pgeom->min_angle[0] *= PI/180.0f; // convert to radians
             }
-            else if( name == "maxangle" ) {
+            else if( name == "maxangle" || name == "max_angle" ) {
                 ss >> _psensor->_pgeom->max_angle[0];
                 if( !!ss )
                     _psensor->_pgeom->max_angle[0] *= PI/180.0f; // convert to radians
             }
-            else if( name == "maxrange" ) {
+            else if( name == "maxrange" || name == "max_range" ) {
                 ss >> _psensor->_pgeom->max_range;
             }
-            else if( name == "scantime" ) {
+            else if( name == "scantime" || name == "time_scan" ) {
                 ss >> _psensor->_pgeom->time_scan;
             }
             else if( name == "color" ) {
                 ss >> _psensor->_vColor.x >> _psensor->_vColor.y >> _psensor->_vColor.z;
                 // ok if not everything specified
-                if( !ss )
+                if( !ss ) {
                     ss.clear();
+                }
             }
-            else if( name == "kk" )
+            else if( name == "kk" ) {
                 ss >> _psensor->_pgeom->KK.fx >> _psensor->_pgeom->KK.fy >> _psensor->_pgeom->KK.cx >> _psensor->_pgeom->KK.cy;
-            else if( name == "width" )
+            }
+            else if( name == "width" ) {
                 ss >> _psensor->_pgeom->width;
-            else if( name == "height" )
+            }
+            else if( name == "height" ) {
                 ss >> _psensor->_pgeom->height;
-            else
+            }
+            else {
                 RAVELOG_WARN(str(boost::format("bad tag: %s")%name));
-
-            if( !ss )
+            }
+            if( !ss ) {
                 RAVELOG_WARN(str(boost::format("error parsing %s\n")%name));
-
+            }
             return false;
         }
         virtual void characters(const std::string& ch)
         {
-            if( !!_pcurreader )
+            if( !!_pcurreader ) {
                 _pcurreader->characters(ch);
+            }
             else {
                 ss.clear();
                 ss << ch;
@@ -246,7 +253,6 @@ public:
             GetEnv()->GetCollisionChecker()->SetCollisionOptions(0);
     
             if( _bRenderData ) {
-
                 // If can render, check if some time passed before last update
                 list<GraphHandlePtr> listhandles;
                 int N = 0;
