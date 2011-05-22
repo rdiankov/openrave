@@ -560,8 +560,9 @@ Visibility computation checks occlusion with other objects using ray sampling in
                             vnorm = -vnorm;
                         }
                         vnorm.z = -(vnorm.x*vprev.x+vnorm.y*vprev.y);
-                        if( vnorm.lengthsqr3() > 1e-10 )
+                        if( vnorm.lengthsqr3() > 1e-10 ) {
                             _vconvexplanes.push_back(vnorm.normalize3());
+                        }
                         vprev = *itv;
                     }
 

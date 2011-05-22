@@ -2428,6 +2428,15 @@ void RobotBase::_ComputeInternalInformation()
         }
         SetController(RaveCreateController(GetEnv(), "IdealController"),dofindices,1);
     }
+
+    // reset the power on the sensors
+    FOREACH(itsensor,_vecSensors) {
+        SensorBasePtr psensor = (*itsensor)->GetSensor();
+        if( !!psensor ) {
+            int ispower = psensor->Configure(SensorBase::CC_PowerCheck);
+            psensor->Configure(ispower ? SensorBase::CC_PowerOn : SensorBase::CC_PowerOff);
+        }
+    }
 }
 
 void RobotBase::_ParametersChanged(int parameters)
