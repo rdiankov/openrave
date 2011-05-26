@@ -1133,11 +1133,13 @@ public:
         {
             type = pdata->GetType();
             stamp = pdata->__stamp;
+            transform = ReturnTransform(pdata->__trans);
         }
         virtual ~PySensorData() {}
         
         SensorBase::SensorType type;
         uint64_t stamp;
+        object transform;
     };
 
     class PyLaserSensorData : public PySensorData
@@ -1184,7 +1186,6 @@ public:
             if( (int)pdata->vimagedata.size() != pgeom->height*pgeom->width*3 ) {
                 throw openrave_exception("bad image data");
             }
-            transform = ReturnTransform(pdata->t);
             {
                 npy_intp dims[] = {pgeom->height,pgeom->width,3};
                 PyObject *pyvalues = PyArray_SimpleNew(3,dims, PyArray_UINT8);
@@ -1210,7 +1211,7 @@ public:
             }
         }
         virtual ~PyCameraSensorData() {}
-        object transform, imagedata, KK;
+        object imagedata, KK;
         PyCameraIntrinsics intrinsics;
     };
 

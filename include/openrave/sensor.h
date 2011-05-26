@@ -71,6 +71,7 @@ public:
         virtual bool serialize(std::ostream& O) const;
 
         uint64_t __stamp; ///< time stamp of the sensor data in microseconds. If 0, then the data is uninitialized! (floating-point precision is bad here). This can be either simulation or real time depending on the sensor.
+        Transform __trans;     ///< the coordinate system the sensor was when the measurement was taken, this is taken directly from SensorBase::GetTransform
     };
     typedef boost::shared_ptr<SensorData> SensorDataPtr;
     typedef boost::shared_ptr<SensorData const> SensorDataConstPtr;
@@ -80,7 +81,6 @@ public:
     public:
         virtual SensorType GetType() { return ST_Laser; }
 
-        //Transform t;     ///< the coordinate system all the measurements are in
         std::vector<RaveVector<dReal> > positions; ///< world coordinates of the origins of each of the laser points.
                                        ///< if positions is empty, assume the origin is t.trans for all points
         std::vector<RaveVector<dReal> > ranges; ///< Range and direction readings in the form of direction*distance. The direction is in world coordinates. The values should be returned in the order laser detected them in.
@@ -92,7 +92,6 @@ public:
     {
     public:
         virtual SensorType GetType() { return ST_Camera; }
-        Transform t;     ///< the coordinate system all the measurements were taken in
         std::vector<uint8_t> vimagedata; ///< rgb image data, if camera only outputs in grayscale, fill each channel with the same value
         virtual bool serialize(std::ostream& O) const;
     };

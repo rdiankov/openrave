@@ -202,9 +202,9 @@ class BaseCameraSensor : public SensorBase
                     if( GetEnv()->GetViewer()->GetCameraImage(_vimagedata, _pgeom->width, _pgeom->height, _trans, _pgeom->KK) ) {
                         // copy the data
                         boost::mutex::scoped_lock lock(_mutexdata);
-                        pdata->t = _trans;
                         pdata->vimagedata = _vimagedata;
                         pdata->__stamp = GetEnv()->GetSimulationTime();
+                        pdata->__trans = _trans;
                     }
                 }
             }

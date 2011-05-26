@@ -1215,7 +1215,7 @@ protected:
                 return false;
             }
 
-            os << pgeom->width << " " << pgeom->height << " " << pgeom->KK.fx << " " << pgeom->KK.fy << " " << pgeom->KK.cx << " " << pgeom->KK.cy << " " << TransformMatrix(pcameradata->t) << " ";
+            os << pgeom->width << " " << pgeom->height << " " << pgeom->KK.fx << " " << pgeom->KK.fy << " " << pgeom->KK.cx << " " << pgeom->KK.cy << " " << TransformMatrix(pcameradata->__trans) << " ";
 
             // RLE encoding (about 3x faster than sending raw images)
             int curvalue = 0, lastdiff = 0, lastvalue = 0xffffff&*(int*)&pcameradata->vimagedata[0];

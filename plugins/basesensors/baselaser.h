@@ -43,8 +43,9 @@ protected:
         virtual bool endElement(const std::string& name)
         {    
             if( !!_pcurreader ) {
-                if( _pcurreader->endElement(name) )
+                if( _pcurreader->endElement(name) ) {
                     _pcurreader.reset();
+                }
                 return false;
             }
             else if( name == "sensor" ) {
@@ -204,7 +205,7 @@ public:
             {
                 // Lock the data mutex and fill with the range data (get all in one timestep)
                 boost::mutex::scoped_lock lock(_mutexdata);
-                //_pdata->t = GetTransform();
+                _pdata->__trans = GetTransform();
                 _pdata->__stamp = GetEnv()->GetSimulationTime();
                 t = GetLaserPlaneTransform();
                 _pdata->positions.at(0) = t.trans;
