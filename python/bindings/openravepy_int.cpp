@@ -233,7 +233,6 @@ public:
         KinBody::JointPtr GetJoint() { return _pjoint; }
 
         string GetName() { return _pjoint->GetName(); }
-        int GetMimicJointIndex() const { RAVELOG_WARN("GetMimicJointIndex is deprecated!\n"); return _pjoint->GetMimicJointIndex(); }
         bool IsMimic(int iaxis=-1) { return _pjoint->IsMimic(iaxis); }
         string GetMimicEquation(int iaxis=0, int itype=0, const std::string& format="") { return _pjoint->GetMimicEquation(iaxis,itype,format); }
         object GetMimicDOFIndices(int iaxis=0) {
@@ -282,7 +281,6 @@ public:
         object GetAxis(int iaxis=0) { return toPyVector3(_pjoint->GetAxis(iaxis)); }
         PyLinkPtr GetHierarchyParentLink() const { return  !_pjoint->GetHierarchyParentLink() ? PyLinkPtr() : PyLinkPtr(new PyLink(_pjoint->GetHierarchyParentLink(),_pyenv)); }
         PyLinkPtr GetHierarchyChildLink() const { return  !_pjoint->GetHierarchyChildLink() ? PyLinkPtr() : PyLinkPtr(new PyLink(_pjoint->GetHierarchyChildLink(),_pyenv)); }
-        object GetInternalHierarchyAnchor() const { RAVELOG_WARN("GetInternalHierarchyAnchor is deprecated\n"); return toPyVector3(_pjoint->GetInternalHierarchyAnchor()); }
         object GetInternalHierarchyAxis(int iaxis) { return toPyVector3(_pjoint->GetInternalHierarchyAxis(iaxis)); }
         object GetInternalHierarchyLeftTransform() { return ReturnTransform(_pjoint->GetInternalHierarchyLeftTransform()); }
         object GetInternalHierarchyRightTransform() { return ReturnTransform(_pjoint->GetInternalHierarchyRightTransform()); }
@@ -291,6 +289,11 @@ public:
             vector<dReal> lower, upper;
             _pjoint->GetLimits(lower,upper);
             return boost::python::make_tuple(toPyArray(lower),toPyArray(upper));
+        }
+        object GetVelocityLimits() const {
+            vector<dReal> vlower,vupper;
+            _pjoint->GetVelocityLimits(vlower,vupper);
+            return boost::python::make_tuple(toPyArray(vlower),toPyArray(vupper));
         }
         object GetWeights() const {
             vector<dReal> weights(_pjoint->GetDOF());
@@ -501,8 +504,8 @@ public:
 
     object GetDOFMaxVel() const
     {
-        vector<dReal> values;
-        _pbody->GetDOFMaxVel(values);
+        vector<dReal> values, dummy;
+        _pbody->GetDOFVelocityLimits(dummy,values);
         return toPyArray(values);
     }
     object GetDOFWeights() const
@@ -581,8 +584,8 @@ public:
     object GetJointMaxVel() const
     {
         RAVELOG_WARN("KinBody.GetJointMaxVel deprecated, use KinBody.GetDOFMaxVel\n");
-        vector<dReal> values;
-        _pbody->GetDOFMaxVel(values);
+        vector<dReal> values, dummy;
+        _pbody->GetDOFVelocityLimits(dummy,values);
         return toPyArray(values);
     }
     object GetJointWeights() const
@@ -730,7 +733,7 @@ public:
 
     object GetTransform() const { return ReturnTransform(_pbody->GetTransform()); }
     
-    object GetBodyTransformations() const
+    object GetLinkTransformations() const
     {
         boost::python::list transforms;
         FOREACHC(itlink, _pbody->GetLinks()) {
@@ -739,7 +742,7 @@ public:
         return transforms;
     }
 
-    void SetBodyTransformations(object transforms)
+    void SetLinkTransformations(object transforms)
     {
         size_t numtransforms = len(transforms);
         if( numtransforms != _pbody->GetLinks().size() ) {
@@ -749,7 +752,7 @@ public:
         for(size_t i = 0; i < numtransforms; ++i) {
             vtransforms[i] = ExtractTransform(transforms[i]);
         }
-        _pbody->SetBodyTransformations(vtransforms);
+        _pbody->SetLinkTransformations(vtransforms);
     }
 
     bool SetVelocity(object olinearvel, object oangularvel)
@@ -3742,8 +3745,10 @@ In python, the syntax is::\n\n\
             .def("GetJoint",&PyKinBody::GetJoint,args("name"), DOXY_FN(KinBody,GetJoint))
             .def("GetJointFromDOFIndex",&PyKinBody::GetJointFromDOFIndex,args("dofindex"), DOXY_FN(KinBody,GetJointFromDOFIndex))
             .def("GetTransform",&PyKinBody::GetTransform, DOXY_FN(KinBody,GetTransform))
-            .def("GetBodyTransformations",&PyKinBody::GetBodyTransformations, DOXY_FN(KinBody,GetBodyTransformations))
-            .def("SetBodyTransformations",&PyKinBody::SetBodyTransformations,args("transforms"), DOXY_FN(KinBody,SetBodyTransformations))
+            .def("GetLinkTransformations",&PyKinBody::GetLinkTransformations, DOXY_FN(KinBody,GetLinkTransformations))
+            .def("GetBodyTransformations",&PyKinBody::GetLinkTransformations, DOXY_FN(KinBody,GetLinkTransformations))
+            .def("SetLinkTransformations",&PyKinBody::SetLinkTransformations,args("transforms"), DOXY_FN(KinBody,SetLinkTransformations))
+            .def("SetBodyTransformations",&PyKinBody::SetLinkTransformations,args("transforms"), DOXY_FN(KinBody,SetLinkTransformations))
             .def("SetVelocity",&PyKinBody::SetVelocity, args("linear","angular"), DOXY_FN(KinBody,SetVelocity "const Vector; const Vector"))
             .def("SetDOFVelocities",setdofvelocities1, args("dofvelocities"), DOXY_FN(KinBody,SetDOFVelocities "const std::vector; bool"))
             .def("SetDOFVelocities",setdofvelocities2, args("dofvelocities","linear","angular"), DOXY_FN(KinBody,SetDOFVelocities "const std::vector; const Vector; const Vector; bool"))
@@ -3867,7 +3872,6 @@ In python, the syntax is::\n\n\
         {
             scope joint = class_<PyKinBody::PyJoint, boost::shared_ptr<PyKinBody::PyJoint> >("Joint", DOXY_CLASS(KinBody::Joint),no_init)
                 .def("GetName", &PyKinBody::PyJoint::GetName, DOXY_FN(KinBody::Joint,GetName))
-                .def("GetMimicJointIndex", &PyKinBody::PyJoint::GetMimicJointIndex, DOXY_FN(KinBody::Joint,GetMimicJointIndex))
                 .def("IsMimic",&PyKinBody::PyJoint::IsMimic,IsMimic_overloads(args("axis"), DOXY_FN(KinBody::Joint,IsMimic)))
                 .def("GetMimicEquation",&PyKinBody::PyJoint::GetMimicEquation,GetMimicEquation_overloads(args("axis","type","format"), DOXY_FN(KinBody::Joint,GetMimicEquation)))
                 .def("GetMimicDOFIndices",&PyKinBody::PyJoint::GetMimicDOFIndices,GetMimicDOFIndices_overloads(args("axis"), DOXY_FN(KinBody::Joint,GetMimicDOFIndices)))
@@ -3892,11 +3896,11 @@ In python, the syntax is::\n\n\
                 .def("GetAxis", &PyKinBody::PyJoint::GetAxis,GetAxis_overloads(args("axis"), DOXY_FN(KinBody::Joint,GetAxis)))
                 .def("GetHierarchyParentLink", &PyKinBody::PyJoint::GetHierarchyParentLink, DOXY_FN(KinBody::Joint,GetHierarchyParentLink))
                 .def("GetHierarchyChildLink", &PyKinBody::PyJoint::GetHierarchyChildLink, DOXY_FN(KinBody::Joint,GetHierarchyChildLink))
-                .def("GetInternalHierarchyAnchor", &PyKinBody::PyJoint::GetInternalHierarchyAnchor, DOXY_FN(KinBody::Joint,GetInternalHierarchyAnchor))
                 .def("GetInternalHierarchyAxis", &PyKinBody::PyJoint::GetInternalHierarchyAxis,args("axis"), DOXY_FN(KinBody::Joint,GetInternalHierarchyAxis))
                 .def("GetInternalHierarchyLeftTransform",&PyKinBody::PyJoint::GetInternalHierarchyLeftTransform, DOXY_FN(KinBody::Joint,GetInternalHierarchyLeftTransform))
                 .def("GetInternalHierarchyRightTransform",&PyKinBody::PyJoint::GetInternalHierarchyRightTransform, DOXY_FN(KinBody::Joint,GetInternalHierarchyRightTransform))
                 .def("GetLimits", &PyKinBody::PyJoint::GetLimits, DOXY_FN(KinBody::Joint,GetLimits))
+                .def("GetVelocityLimits", &PyKinBody::PyJoint::GetVelocityLimits, DOXY_FN(KinBody::Joint,GetVelocityLimits))
                 .def("GetWeights", &PyKinBody::PyJoint::GetWeights, DOXY_FN(KinBody::Joint,GetWeight))
                 .def("SetOffset",&PyKinBody::PyJoint::SetOffset,SetOffset_overloads(args("offset","axis"), DOXY_FN(KinBody::Joint,SetOffset)))
                 .def("GetOffset",&PyKinBody::PyJoint::GetOffset,GetOffset_overloads(args("axis"), DOXY_FN(KinBody::Joint,GetOffset)))

@@ -647,10 +647,10 @@ class ColladaWriter : public daeErrorHandler
             mai->setAxis(str(boost::format("%s/%s")%askid%axis_infosid).c_str());
             pjoint->GetVelocityLimits(vlower,vupper);
             domCommon_float_or_paramRef speed = daeSafeCast<domCommon_float_or_param>(mai->add(COLLADA_ELEMENT_SPEED));
-            daeSafeCast<domCommon_float_or_param::domFloat>(speed->add(COLLADA_ELEMENT_FLOAT))->setValue(pjoint->fMaxVel[iaxis]);
+            daeSafeCast<domCommon_float_or_param::domFloat>(speed->add(COLLADA_ELEMENT_FLOAT))->setValue(pjoint->_vmaxvel[iaxis]);
 
             domCommon_float_or_paramRef accel = daeSafeCast<domCommon_float_or_param>(mai->add(COLLADA_ELEMENT_ACCELERATION));
-            daeSafeCast<domCommon_float_or_param::domFloat>(accel->add(COLLADA_ELEMENT_FLOAT))->setValue(pjoint->fMaxAccel[iaxis]);
+            daeSafeCast<domCommon_float_or_param::domFloat>(accel->add(COLLADA_ELEMENT_FLOAT))->setValue(pjoint->_vmaxaccel[iaxis]);
 
         }
 

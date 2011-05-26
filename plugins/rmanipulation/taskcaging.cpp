@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2010 Rosen Diankov (rdiankov@cs.cmu.edu)
+// Copyright (C) 2006-2011 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
@@ -593,7 +593,7 @@ public:
 
                 if( iter > 0 ) {
                 
-                    plink->GetParent()->SetBodyTransformations(_vTargetTransforms);
+                    plink->GetParent()->SetLinkTransformations(_vTargetTransforms);
 
                     int niter=0;
                     for(niter = 0; niter < 100; niter++) {
@@ -613,7 +613,7 @@ public:
                 
                     bCaged = false;
                     FOREACH(itv, *itvv) {
-                        plink->GetParent()->SetBodyTransformations(*itv);
+                        plink->GetParent()->SetLinkTransformations(*itv);
                     
                         if( _robot->GetEnv()->CheckCollision(KinBodyConstPtr(_robot), KinBodyConstPtr(plink->GetParent())) ) {
                             bCaged = true;
@@ -630,7 +630,7 @@ public:
             }
 
             _robot->SetActiveDOFValues(pDestConf);
-            plink->GetParent()->SetBodyTransformations(_vTargetTransforms);
+            plink->GetParent()->SetLinkTransformations(_vTargetTransforms);
             return bCaged;
         }
 
@@ -657,7 +657,7 @@ public:
             vector< vector< vector<Transform> > >::iterator itvv = _vvvCachedTransforms.begin();
 
             plink->GetParent()->SetDOFValues(vtargetvalues);
-            plink->GetParent()->GetBodyTransformations(_vTargetTransforms);
+            plink->GetParent()->GetLinkTransformations(_vTargetTransforms);
             vector<int>::const_iterator itside = vTargetSides.begin();
 
             FOREACH(itjoint, vtargetjoints) {
@@ -670,7 +670,7 @@ public:
                         plink->GetParent()->SetDOFValues(values);
                     
                         itvv->push_back(vector<Transform>());
-                        plink->GetParent()->GetBodyTransformations(itvv->back());
+                        plink->GetParent()->GetLinkTransformations(itvv->back());
                     }
                     ++itvv;
                 }
@@ -682,7 +682,7 @@ public:
                         plink->GetParent()->SetDOFValues(values);
 
                         itvv->push_back(vector<Transform>());
-                        plink->GetParent()->GetBodyTransformations(itvv->back());
+                        plink->GetParent()->GetLinkTransformations(itvv->back());
                                 
                     }
                     ++itvv;

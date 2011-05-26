@@ -64,11 +64,6 @@ bool RobotBase::Manipulator::SetIkSolver(IkSolverBasePtr iksolver)
     return true;
 }
 
-bool RobotBase::Manipulator::InitIKSolver()
-{
-    return !_pIkSolver ? false : _pIkSolver->Init(shared_from_this());
-}
-
 int RobotBase::Manipulator::GetNumFreeParameters() const
 {
     return !_pIkSolver ? 0 : _pIkSolver->GetNumFreeParameters();
@@ -773,9 +768,9 @@ void RobotBase::SetDOFValues(const std::vector<dReal>& vJointValues, const Trans
     KinBody::SetDOFValues(vJointValues, transbase, bCheckLimits); // should call RobotBase::SetDOFValues, so no need to upgrade grabbed bodies, attached sensors
 }
 
-void RobotBase::SetBodyTransformations(const std::vector<Transform>& vbodies)
+void RobotBase::SetLinkTransformations(const std::vector<Transform>& vbodies)
 {
-    KinBody::SetBodyTransformations(vbodies);
+    KinBody::SetLinkTransformations(vbodies);
     _UpdateGrabbedBodies();
     _UpdateAttachedSensors();
 }
@@ -1381,8 +1376,9 @@ void RobotBase::GetActiveDOFWeights(std::vector<dReal>& weights) const
 
 void RobotBase::GetActiveDOFMaxVel(std::vector<dReal>& maxvel) const
 {
+    std::vector<dReal> dummy;
     if( _nActiveDOF < 0 ) {
-        GetDOFMaxVel(maxvel);
+        GetDOFVelocityLimits(dummy,maxvel);
         return;
     }
     maxvel.resize(GetActiveDOF());
@@ -1391,7 +1387,7 @@ void RobotBase::GetActiveDOFMaxVel(std::vector<dReal>& maxvel) const
     }
     dReal* pMaxVel = &maxvel[0];
 
-    GetDOFMaxVel(_vTempRobotJoints);
+    GetDOFVelocityLimits(dummy,_vTempRobotJoints);
     FOREACHC(it, _vActiveDOFIndices) {
         *pMaxVel++ = _vTempRobotJoints[*it];
     }

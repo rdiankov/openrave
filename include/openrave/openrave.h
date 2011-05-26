@@ -603,9 +603,6 @@ enum InterfaceType
     PT_NumberOfInterfaces=12 ///< number of interfaces, do not forget to update
 };
 
-/// \deprecated (10/01/01)
-typedef InterfaceType PluginType RAVE_DEPRECATED;
-
 class CollisionReport;
 class InterfaceBase;
 class IkSolverBase;

@@ -57,15 +57,6 @@ public:
         /// \brief Returns the currently set ik solver
         virtual IkSolverBasePtr GetIkSolver() const { return _pIkSolver; }
 
-        /// \deprecated (10/07/29)
-        virtual bool SetIKSolver(IkSolverBasePtr iksolver) RAVE_DEPRECATED { return SetIkSolver(iksolver); }
-        /// \deprecated (10/07/29)
-        virtual bool InitIKSolver() RAVE_DEPRECATED;
-        /// \deprecated (10/07/29)
-        virtual const std::string& GetIKSolverName() const RAVE_DEPRECATED { return _strIkSolver; }
-        /// \deprecated (10/07/29)
-        virtual bool HasIKSolver() const RAVE_DEPRECATED { return !!_pIkSolver; }
-
         /// \deprecated (11/02/08) use GetIkSolver()->GetNumFreeParameters()
         virtual int GetNumFreeParameters() const RAVE_DEPRECATED;
 
@@ -84,12 +75,6 @@ public:
         /// \brief Gripper indices of the joints that the  manipulator controls.
         virtual const std::vector<int>& GetGripperIndices() const { return __vgripperdofindices; }
 
-        /// \deprecated (10/07/22) see GetGripperIndices()
-        virtual const std::vector<int>& GetGripperJoints() const RAVE_DEPRECATED { return __vgripperdofindices; }
-        
-        /// \deprecated (10/07/22) see GetArmIndices()
-        virtual const std::vector<int>& GetArmJoints() const RAVE_DEPRECATED { return __varmdofindices; }
-
         /// \brief Return the indices of the DOFs of the arm (used for IK, etc).
         ///
         /// Usually the DOF indices from pBase to pEndEffector
@@ -97,9 +82,6 @@ public:
 
         /// \brief return the normal direction to move joints to 'close' the hand
         virtual const std::vector<dReal>& GetClosingDirection() const { return _vClosingDirection; }
-
-        /// \deprecated (10/07/01) see GetDirection()
-        virtual Vector GetPalmDirection() const RAVE_DEPRECATED { return _vdirection; }
 
         /// direction of palm/head/manipulator used for approaching inside the grasp coordinate system
         virtual Vector GetDirection() const { return _vdirection; }
@@ -293,9 +275,6 @@ public:
         std::vector<LinkConstPtr> vCollidingLinks, vNonCollidingLinks; ///< robot links that already collide with the body
         Transform troot; ///< root transform (of first link of body) relative to plinkrobot's transform. In other words, pbody->GetTransform() == plinkrobot->GetTransform()*troot
     };
-
-    /// \deprecated (10/07/10) 
-    typedef Grabbed GRABBED RAVE_DEPRECATED;
     
     /// \brief Helper class derived from KinBodyStateSaver to additionaly save robot information.
     class OPENRAVE_API RobotStateSaver : public KinBodyStateSaver
@@ -328,14 +307,12 @@ public:
     virtual std::vector<ManipulatorPtr>& GetManipulators() { return _vecManipulators; }
     virtual bool SetMotion(TrajectoryBaseConstPtr ptraj) { return false; }
 
-    /// \deprecated (10/07/10) 
-    virtual std::vector<AttachedSensorPtr>& GetSensors() RAVE_DEPRECATED { RAVELOG_WARN("RobotBase::GetSensors() is deprecated\n"); return _vecSensors; }
     virtual std::vector<AttachedSensorPtr>& GetAttachedSensors() { return _vecSensors; }
 
     virtual void SetDOFValues(const std::vector<dReal>& vJointValues, bool bCheckLimits = false);
     virtual void SetDOFValues(const std::vector<dReal>& vJointValues, const Transform& transbase, bool bCheckLimits = false);
 
-    virtual void SetBodyTransformations(const std::vector<Transform>& vbodies);
+    virtual void SetLinkTransformations(const std::vector<Transform>& vbodies);
 
     /// Transforms the robot and updates the attached sensors and grabbed bodies.
     virtual void SetTransform(const Transform& trans);
@@ -385,9 +362,6 @@ public:
 
     /// \brief If dof is set in the affine dofs, returns its index in the dof values array, otherwise returns -1
     virtual int GetAffineDOFIndex(DOFAffine dof) const;
-
-    /// \deprecated (10/07/25)
-    virtual const std::vector<int>& GetActiveJointIndices() const RAVE_DEPRECATED { return GetActiveDOFIndices(); }
 
     /// \brief Return the set of active dof indices of the joints.
     virtual const std::vector<int>& GetActiveDOFIndices() const;

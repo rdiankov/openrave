@@ -866,7 +866,6 @@ class ColladaReader : public daeErrorHandler
                 KinBody::JointPtr pjoint(new KinBody::Joint(pkinbody));
                 int jointtype = vdomaxes.getCount();
                 pjoint->_bActive = true; // if not active, put into the passive list
-                pjoint->_vweights.resize(vdomaxes.getCount());
                 FOREACH(it,pjoint->_vweights) {
                     *it = 1;
                 }
@@ -886,13 +885,13 @@ class ColladaReader : public daeErrorHandler
                     domAxis_constraintRef pdomaxis = vdomaxes[ic];
                     if( strcmp(pdomaxis->getElementName(), "revolute") == 0 ) {
                         pjoint->_type = KinBody::Joint::JointRevolute;
-                        pjoint->fMaxVel[ic] = 0.5;
+                        pjoint->_vmaxvel[ic] = 0.5;
                     }
                     else if( strcmp(pdomaxis->getElementName(), "prismatic") == 0 ) {
                         pjoint->_type = KinBody::Joint::JointPrismatic;
                         vaxisunits[ic] = _GetUnitScale(pdomaxis,_fGlobalScale);
                         jointtype |= 1<<(4+ic);
-                        pjoint->fMaxVel[ic] = 0.01;
+                        pjoint->_vmaxvel[ic] = 0.01;
                     }
                     else {
                         RAVELOG_WARN(str(boost::format("unsupported joint type: %s\n")%pdomaxis->getElementName()));
@@ -941,9 +940,6 @@ class ColladaReader : public daeErrorHandler
                     pkinbody->_veclinks.push_back(pchildlink);
                 }
 
-                pjoint->_vlowerlimit.resize(vdomaxes.getCount());
-                pjoint->_vupperlimit.resize(vdomaxes.getCount());
-
                 for (size_t ic = 0; ic < vdomaxes.getCount(); ++ic) {
                     domKinematics_axis_infoRef kinematics_axis_info;
                     domMotion_axis_infoRef motion_axis_info;
@@ -967,7 +963,7 @@ class ColladaReader : public daeErrorHandler
                         pjoint->vAxes[ic] = Vector(0,0,1);
                     }
 
-                    pjoint->_offsets[ic] = 0; // to overcome -pi to pi boundary
+                    pjoint->_voffsets[ic] = 0; // to overcome -pi to pi boundary
                     if (pkinbody->IsRobot() && !motion_axis_info) {
                         RAVELOG_WARN(str(boost::format("No motion axis info for joint %s\n")%pjoint->GetName()));
                     }
@@ -975,11 +971,11 @@ class ColladaReader : public daeErrorHandler
                     //  Sets the Speed and the Acceleration of the joint
                     if (!!motion_axis_info) {
                         if (!!motion_axis_info->getSpeed()) {
-                            pjoint->fMaxVel[ic] = resolveFloat(motion_axis_info->getSpeed(),motion_axis_info);
+                            pjoint->_vmaxvel[ic] = resolveFloat(motion_axis_info->getSpeed(),motion_axis_info);
                             RAVELOG_VERBOSE("... Joint Speed: %f...\n",pjoint->GetMaxVel());
                         }
                         if (!!motion_axis_info->getAcceleration()) {
-                            pjoint->fMaxAccel[ic] = resolveFloat(motion_axis_info->getAcceleration(),motion_axis_info);
+                            pjoint->_vmaxaccel[ic] = resolveFloat(motion_axis_info->getAcceleration(),motion_axis_info);
                             RAVELOG_VERBOSE("... Joint Acceleration: %f...\n",pjoint->GetMaxAccel());
                         }
                     }
@@ -994,21 +990,21 @@ class ColladaReader : public daeErrorHandler
                         
                         if (joint_locked) { // If joint is locked set limits to the static value.
                             RAVELOG_WARN("lock joint!!\n");
-                            pjoint->_vlowerlimit[ic] = 0;
-                            pjoint->_vupperlimit[ic] = 0;
+                            pjoint->_vlowerlimit.at(ic) = 0;
+                            pjoint->_vupperlimit.at(ic) = 0;
                         }
                         else if (kinematics_axis_info->getLimits()) { // If there are articulated system kinematics limits
                             kinematics_limits   = true;
                             dReal fscale = pjoint->IsRevolute(ic)?(PI/180.0f):_GetUnitScale(kinematics_axis_info,_fGlobalScale);
-                            pjoint->_vlowerlimit[ic] = fscale*(dReal)(resolveFloat(kinematics_axis_info->getLimits()->getMin(),kinematics_axis_info));
-                            pjoint->_vupperlimit[ic] = fscale*(dReal)(resolveFloat(kinematics_axis_info->getLimits()->getMax(),kinematics_axis_info));
+                            pjoint->_vlowerlimit.at(ic) = fscale*(dReal)(resolveFloat(kinematics_axis_info->getLimits()->getMin(),kinematics_axis_info));
+                            pjoint->_vupperlimit.at(ic) = fscale*(dReal)(resolveFloat(kinematics_axis_info->getLimits()->getMax(),kinematics_axis_info));
                             if( pjoint->IsRevolute(ic) ) {
-                                if( pjoint->_vlowerlimit[ic] < -PI || pjoint->_vupperlimit[ic] > PI ) {
-                                    pjoint->_offsets[ic] = 0.5f * (pjoint->_vlowerlimit[ic] + pjoint->_vupperlimit[ic]);
-                                    if( pjoint->_vupperlimit[ic] - pjoint->_offsets[ic] > PI ) {
-                                        RAVELOG_WARN(str(boost::format("joint %s, cannot allow joint range [%f,%f] of more than 2*pi radians\n")%pjoint->GetName()%pjoint->_vlowerlimit[ic]%pjoint->_vupperlimit[ic]));
-                                        pjoint->_vupperlimit[ic] = pjoint->_offsets[ic] + PI - 1e-5;
-                                        pjoint->_vlowerlimit[ic] = pjoint->_offsets[ic] - PI + 1e-5;
+                                if( pjoint->_vlowerlimit.at(ic) < -PI || pjoint->_vupperlimit[ic] > PI ) {
+                                    pjoint->_voffsets[ic] = 0.5f * (pjoint->_vlowerlimit.at(ic) + pjoint->_vupperlimit[ic]);
+                                    if( pjoint->_vupperlimit[ic] - pjoint->_voffsets[ic] > PI ) {
+                                        RAVELOG_WARN(str(boost::format("joint %s, cannot allow joint range [%f,%f] of more than 2*pi radians\n")%pjoint->GetName()%pjoint->_vlowerlimit.at(ic)%pjoint->_vupperlimit[ic]));
+                                        pjoint->_vupperlimit.at(ic) = pjoint->_voffsets[ic] + PI - 1e-5;
+                                        pjoint->_vlowerlimit.at(ic) = pjoint->_voffsets[ic] - PI + 1e-5;
                                     }
                                 }
                             }
@@ -1037,11 +1033,11 @@ class ColladaReader : public daeErrorHandler
                             pjoint->_vupperlimit[ic] = (dReal)pdomaxis->getLimits()->getMax()->getValue()*fscale;
                             if( pjoint->IsRevolute(ic) ) {
                                 if( pjoint->_vlowerlimit[ic] < -PI || pjoint->_vupperlimit[ic] > PI ) {
-                                    pjoint->_offsets[ic] = 0.5f * (pjoint->_vlowerlimit[ic] + pjoint->_vupperlimit[ic]);
-                                    if( pjoint->_vupperlimit[ic] - pjoint->_offsets[ic] > PI ) {
+                                    pjoint->_voffsets[ic] = 0.5f * (pjoint->_vlowerlimit[ic] + pjoint->_vupperlimit[ic]);
+                                    if( pjoint->_vupperlimit[ic] - pjoint->_voffsets[ic] > PI ) {
                                         RAVELOG_WARN(str(boost::format("joint %s, cannot allow joint range [%f,%f] of more than 2*pi radians\n")%pjoint->GetName()%pjoint->_vlowerlimit[ic]%pjoint->_vupperlimit[ic]));
-                                        pjoint->_vupperlimit[ic] = pjoint->_offsets[ic] + PI - 1e-5;
-                                        pjoint->_vlowerlimit[ic] = pjoint->_offsets[ic] - PI + 1e-5;
+                                        pjoint->_vupperlimit[ic] = pjoint->_voffsets[ic] + PI - 1e-5;
+                                        pjoint->_vlowerlimit[ic] = pjoint->_voffsets[ic] - PI + 1e-5;
                                     }
                                 }
                             }

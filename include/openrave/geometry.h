@@ -232,9 +232,6 @@ public:
         rot.x = 1; rot.y = rot.z = rot.w = 0;
         trans.x = trans.y = trans.z = 0;
     }
-    
-    /// \deprecated (10/07/26) use quatFromAxisAngle
-    template <typename U> inline RaveTransform<T>& rotfromaxisangle(const RaveVector<U>& axis, U angle) RAVE_DEPRECATED;
 
     /// transform a 3 dim vector
     inline RaveVector<T> operator* (const RaveVector<T>& r) const {
@@ -344,9 +341,6 @@ public:
         m[8] = 0; m[9] = 0; m[10] = 1;
         trans.x = trans.y = trans.z = 0;
     }
-
-    /// \deprecated (10/07/26) use matrixFromAxisAngle
-    template <typename U> inline RaveTransformMatrix<T>& rotfromaxisangle(const RaveVector<U>& axis, U angle) RAVE_DEPRECATED;
 
     inline void rotfrommat(T m_00, T m_01, T m_02, T m_10, T m_11, T m_12, T m_20, T m_21, T m_22) {
         m[0] = m_00; m[1] = m_01; m[2] = m_02; m[3] = 0;
@@ -802,24 +796,10 @@ inline RaveVector<T> quatSlerp(const RaveVector<T>& quat0, const RaveVector<T>& 
     return qm;
 }
 
-/// \deprecated (10/07/26) use quatSlerp
-template <typename T>
-inline RaveVector<T> dQSlerp(const RaveVector<T>& qa, const RaveVector<T>& _qb, T t) RAVE_DEPRECATED;
-
 template <typename T>
 inline RaveVector<T> dQSlerp(const RaveVector<T>& qa, const RaveVector<T>& _qb, T t)
 {
     return quatSlerp<T>(qa,_qb,t);
-}
-
-/// \deprecated (10/07/26) use quatFromAxisAngle
-template <typename T> inline RaveVector<T> AxisAngle2Quat(const RaveVector<T>& rotaxis, T angle) RAVE_DEPRECATED;
-
-template <typename T> inline RaveVector<T> AxisAngle2Quat(const RaveVector<T>& rotaxis, T angle)
-{
-    angle *= (T)0.5;
-    T fsin = MATH_SIN(angle);
-    return RaveVector<T>(MATH_COS(angle), rotaxis.x*fsin, rotaxis.y * fsin, rotaxis.z * fsin);
 }
 
 /// \brief transform a vector by a quaternion
@@ -939,21 +919,6 @@ RaveTransformMatrix<T>::RaveTransformMatrix(const RaveTransform<T>& t)
 
 }
 
-template <typename T> template <typename U> inline RaveTransformMatrix<T>& RaveTransformMatrix<T>::rotfromaxisangle(const RaveVector<U>& axis, U angle)
-{
-    *this = matrixFromAxisAngle(axis,angle);
-}
-
-template <typename T> template <typename U> inline RaveTransform<T>& RaveTransform<T>::rotfromaxisangle(const RaveVector<U>& axis, U angle) {
-    U sinang = (U)MATH_SIN(angle/2);
-    rot.x = (U)MATH_COS(angle/2);
-    rot.y = axis.x*sinang;
-    rot.z = axis.y*sinang;
-    rot.w = axis.z*sinang;
-    T fnorm = rot.lengthsqr4();
-    MATH_ASSERT( fnorm > 0.99f && fnorm < 1.01f );
-    return *this;
-}
 /// \brief Returns a camera matrix that looks along a ray with a desired up vector.
 ///
 /// \ingroup affine_math

@@ -783,17 +783,17 @@ KinBody::Joint::Joint(KinBodyPtr parent)
     FOREACH(it,vAxes) {
         *it = Vector(0,0,1);
     }
-    FOREACH(it,_offsets) {
+    FOREACH(it,_voffsets) {
         *it = 0;
     }
     fResolution = dReal(0.02);
-    FOREACH(it,fMaxVel) {
+    FOREACH(it,_vmaxvel) {
         *it = 1e5f;
     }
-    FOREACH(it,fMaxAccel) {
+    FOREACH(it,_vmaxaccel) {
         *it = 1e5f;
     }
-    FOREACH(it,fMaxTorque) {
+    FOREACH(it,_vmaxtorque) {
         *it = 1e5f;
     }
     jointindex=-1;
@@ -866,9 +866,7 @@ bool KinBody::Joint::IsStatic() const
         if( IsCircular(i) ) {
             return false;
         }
-    }
-    for(size_t i = 0; i < _vlowerlimit.size(); ++i) {
-        if( _vlowerlimit[i] < _vupperlimit[i] ) {
+        if( _vlowerlimit.at(i) < _vupperlimit.at(i) ) {
             return false;
         }
     }
@@ -908,7 +906,7 @@ void KinBody::Joint::GetValues(vector<dReal>& pValues, bool bAppend) const
             else if( f > PI ) {
                 f -= 2*PI;
             }
-            pValues.push_back(_offsets[0]+f);
+            pValues.push_back(_voffsets[0]+f);
             vec1 = (vAxes[0] - axis2cur.dot(vAxes[0])*axis2cur).normalize();
             vec2 = (axis1cur - axis2cur.dot(axis1cur)*axis2cur).normalize();
             vec3 = axis2cur.cross(vec1);
@@ -919,7 +917,7 @@ void KinBody::Joint::GetValues(vector<dReal>& pValues, bool bAppend) const
             else if( f > PI ) {
                 f -= 2*PI;
             }
-            pValues.push_back(_offsets[1]+f);
+            pValues.push_back(_voffsets[1]+f);
             break;
         }
         case JointSpherical: {
@@ -966,11 +964,11 @@ void KinBody::Joint::GetValues(vector<dReal>& pValues, bool bAppend) const
                 else if( f > PI ) {
                     f -= 2*PI;
                 }
-                pValues.push_back(_offsets[i]+f);
+                pValues.push_back(_voffsets[i]+f);
             }
             else { // prismatic
                 f = tjoint.trans.x*vaxis.x+tjoint.trans.y*vaxis.y+tjoint.trans.z*vaxis.z;
-                pValues.push_back(_offsets[i]+f);
+                pValues.push_back(_voffsets[i]+f);
                 if( i+1 < GetDOF() ) {
                     tjoint.trans -= vaxis*f;
                 }
@@ -1006,7 +1004,7 @@ dReal KinBody::Joint::GetValue(int iaxis) const
                 else if( f > PI ) {
                     f -= 2*PI;
                 }
-                return _offsets[0]+f;
+                return _voffsets[0]+f;
             }
             else if( iaxis == 1 ) {
                 vec1 = (vAxes[0] - axis2cur.dot(vAxes[0])*axis2cur).normalize();
@@ -1019,7 +1017,7 @@ dReal KinBody::Joint::GetValue(int iaxis) const
                 else if( f > PI ) {
                     f -= 2*PI;
                 }
-                return _offsets[1]+f;
+                return _voffsets[1]+f;
             }
             break;
         }
@@ -1051,7 +1049,7 @@ dReal KinBody::Joint::GetValue(int iaxis) const
     }
     else {
         if( _type == JointPrismatic ) {
-            return _offsets[0]+(tjoint.trans.x*vAxes[0].x+tjoint.trans.y*vAxes[0].y+tjoint.trans.z*vAxes[0].z);
+            return _voffsets[0]+(tjoint.trans.x*vAxes[0].x+tjoint.trans.y*vAxes[0].y+tjoint.trans.z*vAxes[0].z);
         }
         else if( _type == JointRevolute ) {
             f = 2.0f*RaveAtan2(tjoint.rot.y*vAxes[0].x+tjoint.rot.z*vAxes[0].y+tjoint.rot.w*vAxes[0].z, tjoint.rot.x);
@@ -1062,7 +1060,7 @@ dReal KinBody::Joint::GetValue(int iaxis) const
             else if( f > PI ) {
                 f -= 2*PI;
             }
-            return _offsets[0]+f;
+            return _voffsets[0]+f;
         }
 
         // chain of revolute and prismatic joints
@@ -1089,13 +1087,13 @@ dReal KinBody::Joint::GetValue(int iaxis) const
                     f -= 2*PI;
                 }
                 if( i == iaxis ) {
-                    return _offsets[i]+f;
+                    return _voffsets[i]+f;
                 }
             }
             else { // prismatic
                 f = tjoint.trans.x*vaxis.x+tjoint.trans.y*vaxis.y+tjoint.trans.z*vaxis.z;
                 if( i == iaxis ) {
-                    return _offsets[i]+f;
+                    return _voffsets[i]+f;
                 }
                 if( i+1 < GetDOF() ) {
                     tjoint.trans -= vaxis*f;
@@ -1245,20 +1243,20 @@ void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1,
             
         Transform toffset;
         if( IsRevolute(0) ) {
-            toffset.rot = quatFromAxisAngle(vAxes[0], _offsets[0]);
+            toffset.rot = quatFromAxisAngle(vAxes[0], _voffsets[0]);
         }
         else {
-            toffset.trans = vAxes[0]*_offsets[0];
+            toffset.trans = vAxes[0]*_voffsets[0];
         }
         _tLeft = _tLeftNoOffset * toffset;
         _tRight = _tRightNoOffset;
         if( GetDOF() > 1 ) {
             // right multiply by the offset of the last axis, might be buggy?
             if( IsRevolute(GetDOF()-1) ) {
-                _tRight = matrixFromAxisAngle(vAxes[0], _offsets[GetDOF()-1]) * _tRight;
+                _tRight = matrixFromAxisAngle(vAxes[0], _voffsets[GetDOF()-1]) * _tRight;
             }
             else {
-                _tRight.trans += vAxes[0]*_offsets[GetDOF()-1];
+                _tRight.trans += vAxes[0]*_voffsets[GetDOF()-1];
             }
         }
     }
@@ -1301,26 +1299,43 @@ Transform KinBody::Joint::GetInternalHierarchyRightTransform() const
 
 void KinBody::Joint::GetLimits(std::vector<dReal>& vLowerLimit, std::vector<dReal>& vUpperLimit, bool bAppend) const
 {
-    if( bAppend ) {
-        vLowerLimit.insert(vLowerLimit.end(),_vlowerlimit.begin(),_vlowerlimit.end());
-        vUpperLimit.insert(vUpperLimit.end(),_vupperlimit.begin(),_vupperlimit.end());
-    }
-    else {
-        vLowerLimit = _vlowerlimit;
-        vUpperLimit = _vupperlimit;
-    }
-}
-
-void KinBody::Joint::GetVelocityLimits(std::vector<dReal>& vLowerLimit, std::vector<dReal>& vUpperLimit, bool bAppend) const
-{
     if( !bAppend ) {
         vLowerLimit.resize(0);
         vUpperLimit.resize(0);
     }
     for(int i = 0; i < GetDOF(); ++i) {
-        vLowerLimit.push_back(-GetMaxVel());
-        vUpperLimit.push_back(GetMaxVel());
+        vLowerLimit.push_back(_vlowerlimit[i]);
+        vUpperLimit.push_back(_vupperlimit[i]);
     }
+}
+
+void KinBody::Joint::SetLimits(const std::vector<dReal>& vLowerLimit, const std::vector<dReal>& vUpperLimit)
+{
+    for(int i = 0; i < GetDOF(); ++i) {
+        _vlowerlimit[i] = vLowerLimit.at(i);
+        _vupperlimit[i] = vUpperLimit.at(i);
+    }
+    GetParent()->_ParametersChanged(Prop_JointLimits);
+}
+
+void KinBody::Joint::GetVelocityLimits(std::vector<dReal>& vlower, std::vector<dReal>& vupper, bool bAppend) const
+{
+    if( !bAppend ) {
+        vlower.resize(0);
+        vupper.resize(0);
+    }
+    for(int i = 0; i < GetDOF(); ++i) {
+        vlower.push_back(-_vmaxvel[i]);
+        vupper.push_back(_vmaxvel[i]);
+    }
+}
+
+void KinBody::Joint::SetVelocityLimits(const std::vector<dReal>& vmaxvel)
+{
+    for(int i = 0; i < GetDOF(); ++i) {
+        _vmaxvel[i] = vmaxvel.at(i);
+    }
+    GetParent()->_ParametersChanged(Prop_JointVelocityLimits);
 }
 
 dReal KinBody::Joint::GetWeight(int iaxis) const
@@ -1330,15 +1345,8 @@ dReal KinBody::Joint::GetWeight(int iaxis) const
 
 void KinBody::Joint::SetOffset(dReal newoffset, int iaxis)
 {
-    _offsets.at(iaxis) = newoffset;
+    _voffsets.at(iaxis) = newoffset;
     GetParent()->_ParametersChanged(Prop_JointOffset);
-}
-
-void KinBody::Joint::SetLimits(const std::vector<dReal>& vLowerLimit, const std::vector<dReal>& vUpperLimit)
-{
-    _vlowerlimit = vLowerLimit;
-    _vupperlimit = vUpperLimit;
-    GetParent()->_ParametersChanged(Prop_JointLimits);
 }
 
 void KinBody::Joint::SetResolution(dReal resolution)
@@ -1349,7 +1357,9 @@ void KinBody::Joint::SetResolution(dReal resolution)
 
 void KinBody::Joint::SetWeights(const std::vector<dReal>& vweights)
 {
-    _vweights = vweights;
+    for(int i = 0; i < GetDOF(); ++i) {
+        _vweights[i] = vweights.at(i);
+    }
     GetParent()->_ParametersChanged(Prop_JointProperties);
 }
 
@@ -1685,7 +1695,7 @@ void KinBody::Joint::serialize(std::ostream& o, int options) const
         SerializeRound(o,_tRight);
         SerializeRound(o,_tLeft);
         for(int i = 0; i < GetDOF(); ++i) {
-            SerializeRound(o,_offsets[i]);
+            SerializeRound(o,_voffsets[i]);
         }
         for(int i = 0; i < GetDOF(); ++i) {
             SerializeRound3(o,vAxes[i]);
@@ -1698,20 +1708,12 @@ void KinBody::Joint::serialize(std::ostream& o, int options) const
         o << (!_attachedbodies[0]?-1:_attachedbodies[0]->GetIndex()) << " " << (!_attachedbodies[1]?-1:_attachedbodies[1]->GetIndex()) << " ";
     }
     if( options & SO_Dynamics ) {
-        FOREACHC(it,fMaxVel) {
-            SerializeRound(o,*it);
-        }
-        FOREACHC(it,fMaxAccel) {
-            SerializeRound(o,*it);
-        }
-        FOREACHC(it,fMaxTorque) {
-            SerializeRound(o,*it);
-        }
-        FOREACHC(it,_vlowerlimit) {
-            SerializeRound(o,*it);
-        }
-        FOREACHC(it,_vupperlimit) {
-            SerializeRound(o,*it);
+        for(int i = 0; i < GetDOF(); ++i) {
+            SerializeRound(o,_vmaxvel[i]);
+            SerializeRound(o,_vmaxaccel[i]);
+            SerializeRound(o,_vmaxtorque[i]);
+            SerializeRound(o,_vlowerlimit[i]);
+            SerializeRound(o,_vupperlimit[i]);
         }
     }
 }
@@ -1719,7 +1721,7 @@ void KinBody::Joint::serialize(std::ostream& o, int options) const
 KinBody::KinBodyStateSaver::KinBodyStateSaver(KinBodyPtr pbody, int options) : _options(options), _pbody(pbody)
 {
     if( _options & Save_LinkTransformation ) {
-        _pbody->GetBodyTransformations(_vLinkTransforms);
+        _pbody->GetLinkTransformations(_vLinkTransforms);
     }
     if( _options & Save_LinkEnable ) {
         _vEnabledLinks.resize(_pbody->GetLinks().size());
@@ -1732,7 +1734,7 @@ KinBody::KinBodyStateSaver::KinBodyStateSaver(KinBodyPtr pbody, int options) : _
 KinBody::KinBodyStateSaver::~KinBodyStateSaver()
 {
     if( _options & Save_LinkTransformation ) {
-        _pbody->SetBodyTransformations(_vLinkTransforms);
+        _pbody->SetLinkTransformations(_vLinkTransforms);
     }
     if( _options & Save_LinkEnable ) {
         for(size_t i = 0; i < _vEnabledLinks.size(); ++i) {
@@ -2013,29 +2015,18 @@ void KinBody::GetDOFLimits(std::vector<dReal>& vLowerLimit, std::vector<dReal>& 
     }
 }
 
-void KinBody::GetDOFVelocityLimits(std::vector<dReal>& vLowerLimit, std::vector<dReal>& vUpperLimit) const
+void KinBody::GetDOFVelocityLimits(std::vector<dReal>& vlower, std::vector<dReal>& vupper) const
 {
-    vLowerLimit.resize(0);
-    if( (int)vLowerLimit.capacity() < GetDOF() ) {
-        vLowerLimit.reserve(GetDOF());
+    vlower.resize(0);
+    vupper.resize(0);
+    if( (int)vlower.capacity() < GetDOF() ) {
+        vlower.reserve(GetDOF());
     }
-    vUpperLimit.resize(0);
-    if( (int)vUpperLimit.capacity() < GetDOF() ) {
-        vUpperLimit.reserve(GetDOF());
+    if( (int)vupper.capacity() < GetDOF() ) {
+        vupper.reserve(GetDOF());
     }
     FOREACHC(it,_vDOFOrderedJoints) {
-        (*it)->GetVelocityLimits(vLowerLimit,vUpperLimit,true);
-    }
-}
-
-void KinBody::GetDOFMaxVel(std::vector<dReal>& v) const
-{
-    v.resize(0);
-    if( (int)v.capacity() < GetDOF() ) {
-        v.reserve(GetDOF());
-    }
-    FOREACHC(it, _vDOFOrderedJoints) {
-        v.insert(v.end(),(*it)->GetDOF(),(*it)->GetMaxVel());
+        (*it)->GetVelocityLimits(vlower,vupper,true);
     }
 }
 
@@ -2079,97 +2070,6 @@ void KinBody::GetDOFWeights(std::vector<dReal>& v) const
         for(int i = 0; i < (*it)->GetDOF(); ++i) {
             *itv++ = (*it)->GetWeight(i);
         }
-    }
-}
-
-void KinBody::GetJointValues(std::vector<dReal>& v) const
-{
-    v.resize(0);
-    if( (int)v.capacity() < GetDOF() ) {
-        v.reserve(GetDOF());
-    }
-    FOREACHC(it, _vecjoints) {
-        (*it)->GetValues(v,true);
-    }
-}
-
-void KinBody::GetJointVelocities(std::vector<dReal>& v) const
-{
-    v.resize(0);
-    if( (int)v.capacity() < GetDOF() ) {
-        v.reserve(GetDOF());
-    }
-    FOREACHC(it, _vecjoints) {
-        (*it)->GetVelocities(v,true);
-    }
-}
-
-void KinBody::GetJointLimits(std::vector<dReal>& vLowerLimit, std::vector<dReal>& vUpperLimit) const
-{
-    vLowerLimit.resize(0);
-    if( (int)vLowerLimit.capacity() < GetDOF() ) {
-        vLowerLimit.reserve(GetDOF());
-    }
-    vUpperLimit.resize(0);
-    if( (int)vUpperLimit.capacity() < GetDOF() ) {
-        vUpperLimit.reserve(GetDOF());
-    }
-    FOREACHC(it,_vecjoints) {
-        (*it)->GetLimits(vLowerLimit,vUpperLimit,true);
-    }
-}
-
-void KinBody::GetJointMaxVel(std::vector<dReal>& v) const
-{
-    v.resize(0);
-    if( (int)v.capacity() < GetDOF() ) {
-        v.reserve(GetDOF());
-    }
-    FOREACHC(it, _vecjoints) {
-        v.insert(v.end(),(*it)->GetDOF(),(*it)->GetMaxVel());
-    }
-}
-
-void KinBody::GetJointMaxAccel(std::vector<dReal>& v) const
-{
-    v.resize(0);
-    if( (int)v.capacity() < GetDOF() ) {
-        v.reserve(GetDOF());
-    }
-    FOREACHC(it, _vecjoints) {
-        v.insert(v.end(),(*it)->GetDOF(),(*it)->GetMaxAccel());
-    }
-}
-
-void KinBody::GetJointMaxTorque(std::vector<dReal>& v) const
-{
-    v.resize(0);
-    if( (int)v.capacity() < GetDOF() ) {
-        v.reserve(GetDOF());
-    }
-    FOREACHC(it, _vecjoints) {
-        v.insert(v.end(),(*it)->GetDOF(),(*it)->GetMaxTorque());
-    }
-}
-
-void KinBody::GetJointResolutions(std::vector<dReal>& v) const
-{
-    v.resize(0);
-    if( (int)v.capacity() < GetDOF() ) {
-        v.reserve(GetDOF());
-    }
-    FOREACHC(it, _vecjoints) {
-        v.insert(v.end(),(*it)->GetDOF(),(*it)->GetResolution());
-    }
-}
-
-void KinBody::GetJointWeights(std::vector<dReal>& v) const
-{
-    v.resize(GetDOF());
-    std::vector<dReal>::iterator itv = v.begin();
-    FOREACHC(it, _vecjoints) {
-        for(int i = 0; i < (*it)->GetDOF(); ++i)
-            *itv++ = (*it)->GetWeight(i);
     }
 }
 
@@ -2306,10 +2206,10 @@ bool KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocity, const Vec
 
         if( checklimits && dofindex >= 0 ) {
             for(int i = 0; i < pjoint->GetDOF(); ++i) {
-                if( pvalues[i] < vlower[dofindex+i] ) {
+                if( pvalues[i] < vlower.at(dofindex+i) ) {
                     dummyvalues[i] = vlower[i];
                 }
-                else if( pvalues[i] > vupper[dofindex+i] ) {
+                else if( pvalues[i] > vupper.at(dofindex+i) ) {
                     dummyvalues[i] = vupper[i];
                 }
                 else {
@@ -2397,7 +2297,7 @@ bool KinBody::GetLinkVelocities(std::vector<std::pair<Vector,Vector> >& velociti
     return GetEnv()->GetPhysicsEngine()->GetLinkVelocities(shared_kinbody_const(),velocities);
 }
 
-void KinBody::GetBodyTransformations(vector<Transform>& vtrans) const
+void KinBody::GetLinkTransformations(vector<Transform>& vtrans) const
 {
     vtrans.resize(_veclinks.size());
     vector<Transform>::iterator it;
@@ -2478,7 +2378,7 @@ Vector KinBody::GetCenterOfMass() const
     return center;
 }
 
-void KinBody::SetBodyTransformations(const std::vector<Transform>& vbodies)
+void KinBody::SetLinkTransformations(const std::vector<Transform>& vbodies)
 {
     if( vbodies.size() != _veclinks.size() ) {
         throw openrave_exception(str(boost::format("links not equal %d!=%d")%vbodies.size()%_veclinks.size()),ORE_InvalidArguments);
@@ -3868,7 +3768,7 @@ void KinBody::_ComputeInternalInformation()
 
     // create the adjacency list
     {
-        GetBodyTransformations(_vInitialLinkTransformations);
+        GetLinkTransformations(_vInitialLinkTransformations);
         _setAdjacentLinks.clear();
         FOREACH(itadj, _vForcedAdjacentLinks) {
             LinkPtr pl0 = GetLink(itadj->first);
@@ -3938,11 +3838,11 @@ void KinBody::_ComputeInternalInformation()
     // because of mimic joints, need to call SetDOFValues at least once, also use this to check for links that are off
     {
         vector<Transform> vprevtrans, vnewtrans;
-        GetBodyTransformations(vprevtrans);
+        GetLinkTransformations(vprevtrans);
         vector<dReal> vcurrentvalues;
         GetDOFValues(vcurrentvalues);
         SetDOFValues(vcurrentvalues);
-        GetBodyTransformations(vnewtrans);        
+        GetLinkTransformations(vnewtrans);        
         for(size_t i = 0; i < vprevtrans.size(); ++i) {
             if( TransformDistanceFast(vprevtrans[i],vnewtrans[i]) > 1e-5 ) {
                 RAVELOG_VERBOSE(str(boost::format("link %d has different transformation after SetDOFValues (error=%f), this could be due to mimic joint equations kicking into effect.")%_veclinks.at(i)->GetName()%TransformDistanceFast(vprevtrans[i],vnewtrans[i])));
@@ -4076,7 +3976,7 @@ const std::set<int>& KinBody::GetNonAdjacentLinks(int adjacentoptions) const
     class TransformsSaver
     {
     public:
-        TransformsSaver(KinBodyConstPtr pbody) : _pbody(pbody) { _pbody->GetBodyTransformations(vcurtrans); }
+        TransformsSaver(KinBodyConstPtr pbody) : _pbody(pbody) { _pbody->GetLinkTransformations(vcurtrans); }
         ~TransformsSaver() {
             for(size_t i = 0; i < _pbody->_veclinks.size(); ++i) {
                 boost::static_pointer_cast<Link>(_pbody->_veclinks[i])->_t = vcurtrans.at(i);

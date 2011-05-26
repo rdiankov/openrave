@@ -15,6 +15,8 @@ Core
 
 * fixed collada loading of formulas
 
+* fixed caching issue with ik files in ikfastsolvers
+
 IK
 --
 

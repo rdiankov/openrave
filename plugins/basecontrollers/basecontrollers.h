@@ -1,4 +1,5 @@
-// Copyright (C) 2006-2008 Carnegie Mellon University (rdiankov@cs.cmu.edu)
+// -*- coding: utf-8 -*-
+// Copyright (C) 2006-2011 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
@@ -352,8 +353,8 @@ private:
     {
         if( !!_pcontroller ) {
             vector<Transform> vtrans;
-            _pcontroller->GetRobot()->GetBodyTransformations(vtrans);
-            _probot->SetBodyTransformations(vtrans);
+            _pcontroller->GetRobot()->GetLinkTransformations(vtrans);
+            _probot->SetLinkTransformations(vtrans);
             _bSyncDone = _pcontroller->IsDone();
         }
     }

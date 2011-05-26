@@ -1,4 +1,5 @@
-// Copyright (C) 2006-2008 Carnegie Mellon University (rdiankov@cs.cmu.edu)
+// -*- coding: utf-8 -*-
+// Copyright (C) 2006-2011 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -1093,7 +1094,7 @@ protected:
             return false;
 
         vector<Transform> trans;
-        body->GetBodyTransformations(trans);
+        body->GetLinkTransformations(trans);
         FOREACHC(it, trans)
             os << TransformMatrix(*it) << " ";
         return true;
