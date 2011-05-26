@@ -1,4 +1,5 @@
 // -*- coding: utf-8 -*-
+// Copyright (C) 2006-2011 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -383,6 +384,18 @@ public:
         }
         return _pbody->InitFromBoxes(vaabbs,bDraw);
     }
+    bool InitFromSpheres(const boost::multi_array<dReal,2>& vspheres, bool bDraw)
+    {
+        if( vspheres.shape()[1] != 4 ) {
+            throw openrave_exception("spheres needs to be a Nx4 vector\n");
+        }
+        std::vector<Vector> vvspheres(vspheres.shape()[0]);
+        for(size_t i = 0; i < vvspheres.size(); ++i) {
+            vvspheres[i] = Vector(vspheres[i][0],vspheres[i][1],vspheres[i][2],vspheres[i][3]);
+        }
+        return _pbody->InitFromSpheres(vvspheres,bDraw);
+    }
+
     bool InitFromTrimesh(object pytrimesh, bool bDraw)
     {
         KinBody::Link::TRIMESH mesh;
@@ -1709,9 +1722,9 @@ public:
             grabbedbody.reset(new PyKinBody(KinBodyPtr(grabbed.pbody),pyenv));
             linkrobot.reset(new PyLink(KinBody::LinkPtr(grabbed.plinkrobot),pyenv));
 
-            FOREACHC(it, grabbed.vCollidingLinks)
+            FOREACHC(it, grabbed.vCollidingLinks) {
                 validColLinks.append(PyLinkPtr(new PyLink(boost::const_pointer_cast<KinBody::Link>(*it),pyenv)));
-            
+            }
             troot = ReturnTransform(grabbed.troot);
         }
         virtual ~PyGrabbed() {}
@@ -1729,8 +1742,9 @@ public:
     object GetManipulators()
     {
         boost::python::list manips;
-        FOREACH(it, _probot->GetManipulators())
+        FOREACH(it, _probot->GetManipulators()) {
             manips.append(_GetManipulator(*it));
+        }
         return manips;
     }
 
@@ -1738,16 +1752,18 @@ public:
     {
         boost::python::list manips;
         FOREACH(it, _probot->GetManipulators()) {
-            if( (*it)->GetName() == manipname )
+            if( (*it)->GetName() == manipname ) {
                 manips.append(_GetManipulator(*it));
+            }
         }
         return manips;
     }
     PyManipulatorPtr GetManipulator(const string& manipname)
     {
         FOREACH(it, _probot->GetManipulators()) {
-            if( (*it)->GetName() == manipname )
+            if( (*it)->GetName() == manipname ) {
                 return _GetManipulator(*it);
+            }
         }
         return PyManipulatorPtr();
     }
@@ -1767,8 +1783,9 @@ public:
     object GetAttachedSensors()
     {
         boost::python::list sensors;
-        FOREACH(itsensor, _probot->GetAttachedSensors())
+        FOREACH(itsensor, _probot->GetAttachedSensors()) {
             sensors.append(boost::shared_ptr<PyAttachedSensor>(new PyAttachedSensor(*itsensor,_pyenv)));
+        }
         return sensors;
     }
     boost::shared_ptr<PyAttachedSensor> GetSensor(const string& sensorname)
@@ -1780,8 +1797,9 @@ public:
     boost::shared_ptr<PyAttachedSensor> GetAttachedSensor(const string& sensorname)
     {
         FOREACH(itsensor, _probot->GetAttachedSensors()) {
-            if( (*itsensor)->GetName() == sensorname )
+            if( (*itsensor)->GetName() == sensorname ) {
                 return boost::shared_ptr<PyAttachedSensor>(new PyAttachedSensor(*itsensor,_pyenv));
+            }
         }
         return boost::shared_ptr<PyAttachedSensor>();
     }
@@ -3133,10 +3151,10 @@ public:
                 int num = extract<int>(pointshape[0]);
                 int dim = extract<int>(pointshape[1]);
                 vpoints = ExtractArray<float>(opoints.attr("flat"));
-                if(dim != 3) {
+                if(dim % 3) {
                     throw openrave_exception(boost::str(boost::format("points have bad size %dx%d")%num%dim),ORE_InvalidArguments);
                 }
-                return num;
+                return num*(dim/3);
             }
             default:
                 throw openrave_exception("points have bad dimension");
@@ -3687,6 +3705,7 @@ In python, the syntax is::\n\n\
             .def("InitFromFile",&PyKinBody::InitFromFile,args("filename"),DOXY_FN(KinBody,InitFromFile))
             .def("InitFromData",&PyKinBody::InitFromData,args("data"), DOXY_FN(KinBody,InitFromData))
             .def("InitFromBoxes",&PyKinBody::InitFromBoxes,args("boxes","draw"), sInitFromBoxesDoc.c_str())
+            .def("InitFromSpheres",&PyKinBody::InitFromSpheres,args("spherex","draw"), DOXY_FN(KinBody,InitFromSpheres))
             .def("InitFromTrimesh",&PyKinBody::InitFromTrimesh,args("trimesh","draw"), DOXY_FN(KinBody,InitFromTrimesh))
             .def("SetName", &PyKinBody::SetName,args("name"),DOXY_FN(KinBody,SetName))
             .def("GetName",&PyKinBody::GetName,DOXY_FN(KinBody,GetName))

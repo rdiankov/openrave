@@ -1,5 +1,5 @@
-// Copyright (C) 2006-2010 Rosen Diankov (rdiankov@cs.cmu.edu)
 // -*- coding: utf-8 -*-
+// Copyright (C) 2006-2011 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -172,17 +172,18 @@ inline RaveVector<T> ExtractVector34(const object& oraw,T fdefaultw)
         v.w = fdefaultw;
         return v;
     }
-    else if( n == 4 )
+    else if( n == 4 ) {
         return ExtractVector4Type<T>(oraw);
+    }
     throw openrave_exception("unexpected vector size");
 }
 
 template <typename T>
 inline Transform ExtractTransformType(const object& o)
 {
-    if( len(o) == 7 )
-        return Transform(Vector(extract<T>(o[0]), extract<T>(o[1]), extract<T>(o[2]), extract<T>(o[3])),
-                         Vector(extract<T>(o[4]), extract<T>(o[5]), extract<T>(o[6])));
+    if( len(o) == 7 ) {
+        return Transform(Vector(extract<T>(o[0]), extract<T>(o[1]), extract<T>(o[2]), extract<T>(o[3])), Vector(extract<T>(o[4]), extract<T>(o[5]), extract<T>(o[6])));
+    }
     TransformMatrix t;
     for(int i = 0; i < 3; ++i) {
         object orow = o[i];
@@ -197,9 +198,9 @@ inline Transform ExtractTransformType(const object& o)
 template <typename T>
 inline TransformMatrix ExtractTransformMatrixType(const object& o)
 {
-    if( len(o) == 7 )
-        return Transform(Vector(extract<T>(o[0]), extract<T>(o[1]), extract<T>(o[2]), extract<T>(o[3])),
-                         Vector(extract<T>(o[4]), extract<T>(o[5]), extract<T>(o[6])));
+    if( len(o) == 7 ) {
+        return Transform(Vector(extract<T>(o[0]), extract<T>(o[1]), extract<T>(o[2]), extract<T>(o[3])), Vector(extract<T>(o[4]), extract<T>(o[5]), extract<T>(o[6])));
+    }
     TransformMatrix t;
     for(int i = 0; i < 3; ++i) {
         object orow = o[i];

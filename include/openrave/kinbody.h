@@ -729,6 +729,11 @@ public:
     /// \param bDraw if true, the boxes will be rendered in the scene
     virtual bool InitFromBoxes(const std::vector<OBB>& boxes, bool draw);
 
+    /// \brief Create a kinbody with one link composed of an array of spheres
+    ///
+    /// \param vspheres the XYZ position of the spheres with the W coordinate representing the individual radius
+    virtual bool InitFromSpheres(const std::vector<Vector>& vspheres, bool draw);
+
     /// \brief Create a kinbody with one link composed of a triangle mesh surface
     ///
     /// \param trimesh the triangle mesh

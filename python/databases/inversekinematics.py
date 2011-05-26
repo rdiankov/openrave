@@ -687,6 +687,7 @@ class InverseKinematicsModel(DatabaseGenerator):
     def show(self,delay=0.1,options=None,forceclosure=True):
         self.env.SetViewer('qtcoin')
         with self.ArmVisibility(self.manip,0.9):
+            time.sleep(3) # let viewer load
             while True:
                 with self.env:
                     lower,upper = self.robot.GetDOFLimits(self.manip.GetArmIndices())

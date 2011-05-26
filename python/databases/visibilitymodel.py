@@ -263,6 +263,8 @@ class VisibilityModel(DatabaseGenerator):
                         raw_input(msg)
     def show(self,options=None):
         self.env.SetViewer('qtcoin')
+        self.attachedsensor.GetSensor().Configure(Sensor.ConfigureCommand.PowerOn)
+        self.attachedsensor.GetSensor().Configure(Sensor.ConfigureCommand.RenderDataOn)
         return self.showtransforms(options)
     def moveToPreshape(self):
         """uses a planner to safely move the hand to the preshape and returns the trajectory"""

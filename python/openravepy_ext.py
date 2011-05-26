@@ -222,8 +222,10 @@ def transformInversePoints(T,points):
     kminus = T.shape[1]-1
     return numpy.dot(points-numpy.tile(T[0:kminus,kminus],(len(points),1)),T[0:kminus,0:kminus])
 
-def fitCircle(points):
-    """Very simple function to return the best fit circle. Used when fitting real data to joint trajectories.
+def fitCircle(points,geometric_refinement=True):
+    """Very simple function to return the best fit circle.
+
+    Used when fitting real data to joint trajectories. Currently this fits the algebraic distance, a further refinement step for geometric distance should be inserted.
 
     :return: [center, radius]
     """
@@ -234,11 +236,20 @@ def fitCircle(points):
         planenormal=numpy.linalg.svd(numpy.dot(points2.transpose(),points2))[2][-1,:]
         R=openravepy.rotationMatrixFromQuat(openravepy.quatRotateDirection([0,0,1],planenormal))
         points=numpy.dot(points2,R)
-    x = numpy.linalg.lstsq(numpy.c_[points[:,0],points[:,1],numpy.ones(len(points))],-points[:,0]**2-points[:,1]**2)[0]
+    x,error = numpy.linalg.lstsq(numpy.c_[points[:,0],points[:,1],numpy.ones(len(points))],-points[:,0]**2-points[:,1]**2)[0:2]
     if points.shape[1] == 3:
-        return M+numpy.array(numpy.dot(R,[-0.5*x[0],-0.5*x[1],0])), numpy.sqrt((x[0]**2+x[1]**2)/4-x[2])
+        # error should also include off-plane offsets!
+        return M+numpy.array(numpy.dot(R,[-0.5*x[0],-0.5*x[1],0])), numpy.sqrt((x[0]**2+x[1]**2)/4-x[2]),error
     
-    return numpy.array([-0.5*x[0],-0.5*x[1]]), numpy.sqrt((x[0]**2+x[1]**2)/4-x[2])
+    return numpy.array([-0.5*x[0],-0.5*x[1]]), numpy.sqrt((x[0]**2+x[1]**2)/4-x[2]),error
+
+def fitSphere(points,geometric_refinement=True):
+    """Very simple function to return the best fit sphere from 3D points.
+
+    :return: [center, radius]
+    """
+    x,error = numpy.linalg.lstsq(numpy.c_[points,numpy.ones(len(points))],-numpy.sum(points**2,1))[0:2]
+    return numpy.array([-0.5*x[0],-0.5*x[1], -0.5*x[2]]), numpy.sqrt((x[0]**2+x[1]**2+x[2]**2)/4-x[3]),error
 
 def sequence_cross_product(*sequences):
     """iterates through the cross product of all items in the sequences"""

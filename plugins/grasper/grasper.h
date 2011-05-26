@@ -146,8 +146,9 @@ class GrasperProblem : public ProblemInstance
             if( cmd == "body" || cmd == "target" ) {
                 string name; sinput >> name;
                 params->targetbody = GetEnv()->GetKinBody(name);
-                if( !params->targetbody )
+                if( !params->targetbody ) {
                     RAVELOG_WARN(str(boost::format("failed to find target %s\n")%name));
+                }
             }
             else if( cmd == "bodyid" ) {
                 int id = 0; sinput >> id;
@@ -162,42 +163,58 @@ class GrasperProblem : public ProblemInstance
                 sinput >> linkname;
                 params->vavoidlinkgeometry.push_back(linkname);
             }
-            else if( cmd == "notrans" )
+            else if( cmd == "notrans" ) {
                 params->btransformrobot = false;
-            else if( cmd == "transformrobot" )
+            }
+            else if( cmd == "transformrobot" ) {
                 sinput >> params->btransformrobot;
-            else if( cmd == "onlycontacttarget" )
+            }
+            else if( cmd == "onlycontacttarget" ) {
                 sinput >> params->bonlycontacttarget;
-            else if( cmd == "tightgrasp" )
+            }
+            else if( cmd == "tightgrasp" ) {
                 sinput >> params->btightgrasp;
-            else if( cmd == "execute" )
+            }
+            else if( cmd == "execute" ) {
                 sinput >> bExecute;
-            else if( cmd == "writetraj" )
+            }
+            else if( cmd == "writetraj" ) {
                 sinput >> strsavetraj;
-            else if( cmd == "outputfinal" )
+            }
+            else if( cmd == "outputfinal" ) {
                 sinput >> bOutputFinal;
-            else if( cmd == "graspingnoise" )
+            }
+            else if( cmd == "graspingnoise" ) {
                 sinput >> params->fgraspingnoise;
-            else if( cmd == "roll" )
+            }
+            else if( cmd == "roll" ) {
                 sinput >> params->ftargetroll;
-            else if( cmd == "centeroffset" || cmd == "position" )
+            }
+            else if( cmd == "centeroffset" || cmd == "position" ) {
                 sinput >> params->vtargetposition.x >> params->vtargetposition.y >> params->vtargetposition.z;
-            else if( cmd == "standoff" )
+            }
+            else if( cmd == "standoff" ) {
                 sinput >> params->fstandoff;
-            else if( cmd == "friction" )
+            }
+            else if( cmd == "friction" ) {
                 sinput >> friction;
-            else if( cmd == "getlinkcollisions" )
+            }
+            else if( cmd == "getlinkcollisions" ) {
                 bGetLinkCollisions = true;
-            else if( cmd == "stablecontacts" )
+            }
+            else if( cmd == "stablecontacts" ) {
                 sinput >> bComputeStableContacts;
-            else if( cmd == "forceclosure" )
+            }
+            else if( cmd == "forceclosure" ) {
                 sinput >> bComputeForceClosure;
+            }
             else if( cmd == "collision" ) {
                 string name; sinput >> name;
                 pcheckermngr.reset(new CollisionCheckerMngr(GetEnv(), name));
             }
-            else if( cmd == "translationstepmult" )
+            else if( cmd == "translationstepmult" ) {
                 sinput >> params->ftranslationstepmult;
+            }
             else {
                 RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
@@ -210,8 +227,9 @@ class GrasperProblem : public ProblemInstance
         }
 
         boost::shared_ptr<KinBody::KinBodyStateSaver> bodysaver;
-        if( !!params->targetbody )
+        if( !!params->targetbody ) {
             bodysaver.reset(new KinBody::KinBodyStateSaver(params->targetbody));
+        }
 
         RobotBase::RobotStateSaver saver(_robot);
         _robot->Enable(true);
@@ -313,14 +331,17 @@ class GrasperProblem : public ProblemInstance
         Vector vmapcenter;
         while(!sinput.eof()) {
             sinput >> cmd;
-            if( !sinput )
+            if( !sinput ) {
                 break;
+            }
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
 
-            if( cmd == "conewidth" )
+            if( cmd == "conewidth" ) {
                 sinput >> conewidth;
-            else if( cmd == "mapsamples" )
+            }
+            else if( cmd == "mapsamples" ) {
                 sinput >> nDistMapSamples;
+            }
             else if( cmd == "target" ) {
                 string name; sinput >> name;
                 targetbody = GetEnv()->GetKinBody(name);

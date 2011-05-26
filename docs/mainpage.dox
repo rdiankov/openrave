@@ -191,7 +191,7 @@ RaveLoadPlugin(env,"plugincpp");
 \endcode
 \b Python
 \verbatim
-RaveLoadPlugin(env,'plugincpp');
+RaveLoadPlugin('plugincpp')
 \endverbatim
 \b Octave
 \verbatim

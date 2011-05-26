@@ -1883,6 +1883,36 @@ bool KinBody::InitFromBoxes(const std::vector<OBB>& vobbs, bool bDraw)
     return true;
 }
 
+bool KinBody::InitFromSpheres(const std::vector<Vector>& vspheres, bool bDraw)
+{
+    if( GetEnvironmentId() ) {
+        throw openrave_exception(str(boost::format("KinBody::Init for %s, cannot Init a body while it is added to the environment\n")%GetName()));
+    }
+    Destroy();
+    LinkPtr plink(new Link(shared_kinbody()));
+    plink->_index = 0;
+    plink->_name = "base";
+    plink->bStatic = true;
+    Link::TRIMESH trimesh;
+    FOREACHC(itv, vspheres) {
+        plink->_listGeomProperties.push_back(Link::GEOMPROPERTIES(plink));
+        Link::GEOMPROPERTIES& geom = plink->_listGeomProperties.back();
+        geom._type = Link::GEOMPROPERTIES::GeomSphere;
+        geom._t.trans.x = itv->x; geom._t.trans.y = itv->y; geom._t.trans.z = itv->z;
+        geom._bDraw = bDraw;
+        geom.vGeomData.x = itv->w;
+        geom.InitCollisionMesh();
+        geom.diffuseColor=Vector(1,0.5f,0.5f,1);
+        geom.ambientColor=Vector(0.1,0.0f,0.0f,0);
+        trimesh = geom.GetCollisionMesh();
+        trimesh.ApplyTransform(geom._t);
+        plink->collision.Append(trimesh);
+    }
+    
+    _veclinks.push_back(plink);
+    return true;
+}
+
 bool KinBody::InitFromTrimesh(const KinBody::Link::TRIMESH& trimesh, bool draw)
 {
     if( GetEnvironmentId() ) {
