@@ -528,7 +528,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
         }
         Vector vnormdir = ray.dir*(1/cb.fraymaxdist);
         dGeomRaySet(geomray, ray.pos.x, ray.pos.y, ray.pos.z, vnormdir.x, vnormdir.y, vnormdir.z);
-        dGeomRaySetClosestHit(geomray, !(_options&OpenRAVE::CO_RayAnyHit)); // only care about the closest points
+        dGeomRaySetClosestHit(geomray, 0);//!(_options&OpenRAVE::CO_RayAnyHit)); // only care about the closest points
         //dSpaceAdd(pbody->GetSpace(), geomray);
         dSpaceCollide2((dGeomID)odespace->GetBodySpace(pbody), geomray, &cb, RayCollisionCallback);
         //dSpaceRemove(pbody->GetSpace(), geomray);

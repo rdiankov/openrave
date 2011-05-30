@@ -2327,6 +2327,16 @@ public:
         return _pPhysicsEngine->AddJointTorque(pjoint->GetJoint(),ExtractArray<dReal>(torques));
     }
 
+    object GetLinkForceTorque(PyKinBody::PyLinkPtr plink)
+    {
+        CHECK_POINTER(plink);
+        Vector force, torque;
+        if( !_pPhysicsEngine->GetLinkForceTorque(plink->GetLink(),force,torque) ) {
+            return object();
+        }
+        return boost::python::make_tuple(toPyVector3(force),toPyVector3(torque));
+    }
+
     void SetGravity(object gravity) { _pPhysicsEngine->SetGravity(ExtractVector3(gravity)); }
     object GetGravity() { return toPyVector3(_pPhysicsEngine->GetGravity()); }
 
@@ -4211,6 +4221,7 @@ In python, the syntax is::\n\n\
         .def("SetBodyForce",&PyPhysicsEngineBase::SetBodyForce, DOXY_FN(PhysicsEngineBase,SetBodyForce))
         .def("SetBodyTorque",&PyPhysicsEngineBase::SetBodyTorque, DOXY_FN(PhysicsEngineBase,SetBodyTorque))
         .def("AddJointTorque",&PyPhysicsEngineBase::AddJointTorque, DOXY_FN(PhysicsEngineBase,AddJointTorque))
+        .def("GetLinkForceTorque",&PyPhysicsEngineBase::GetLinkForceTorque, DOXY_FN(PhysicsEngineBase,GetLinkForceTorque))
         .def("SetGravity",&PyPhysicsEngineBase::SetGravity, DOXY_FN(PhysicsEngineBase,SetGravity))
         .def("GetGravity",&PyPhysicsEngineBase::GetGravity, DOXY_FN(PhysicsEngineBase,GetGravity))
         .def("SimulateStep",&PyPhysicsEngineBase::SimulateStep, DOXY_FN(PhysicsEngineBase,SimulateStep))

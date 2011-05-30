@@ -10,10 +10,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
-/// A simple openrave plugin that registers a custom XML reader. This allows users
-/// to extend the XML files to add their own tags. 
-/// Once the plugin is compiled, cd to where the plugin was installed and open customreader.env.xml with openrave
 #ifndef OPENRAVE_ODE_CONTROLLER
 #define OPENRAVE_ODE_CONTROLLER
 

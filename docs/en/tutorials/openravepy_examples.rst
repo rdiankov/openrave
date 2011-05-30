@@ -20,7 +20,7 @@ Loads up an environment, attaches a viewer, loads a scene, and requests informat
       print "Robot ",robot.GetName()," has ",robot.GetDOF()," joints with values:\\n",robot.GetJointValues()
       robot.SetDOFValues([0.5],[0]) # set joint 0 to value 0.5
       T = robot.GetLinks()[1].GetTransform() # get the transform of link 1
-      print "The transformation of link 1 is:\\n",T
+      print "The transformation of link 1 is:\n",T
 
 Using a BiRRT Planner
 ---------------------

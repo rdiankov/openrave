@@ -63,13 +63,13 @@ public:
         /// \deprecated (11/02/08) use GetIkSolver()->GetFreeParameters()
         virtual bool GetFreeParameters(std::vector<dReal>& vFreeParameters) const RAVE_DEPRECATED;
 
-        /// the base used for the iksolver
+        /// \brief the base used for the iksolver
         virtual LinkPtr GetBase() const { return _pBase; }
 
-        /// the end effector link (used to define workspace distance)
+        /// \brief the end effector link (used to define workspace distance)
         virtual LinkPtr GetEndEffector() const { return _pEndEffector; }
 
-        /// \return transform with respect to end effector defining the grasp coordinate system
+        /// \brief Return transform with respect to end effector defining the grasp coordinate system
         virtual Transform GetGraspTransform() const { return _tGrasp; }
 
         /// \brief Gripper indices of the joints that the  manipulator controls.
@@ -83,24 +83,27 @@ public:
         /// \brief return the normal direction to move joints to 'close' the hand
         virtual const std::vector<dReal>& GetClosingDirection() const { return _vClosingDirection; }
 
-        /// direction of palm/head/manipulator used for approaching inside the grasp coordinate system
+        /// \brief direction of palm/head/manipulator used for approaching inside the grasp coordinate system
         virtual Vector GetDirection() const { return _vdirection; }
 
-        /// will find a close solution to the current robot's joint values. The function is a wrapper around the IkSolver interface.
+        /// \brief Find a close solution to the current robot's joint values.
+        ///
+        /// The function is a wrapper around the IkSolver interface.
         /// Note that the solution returned is not guaranteed to be the closest solution. In order to compute that, will have to
         /// compute all the ik solutions using FindIKSolutions.
-        /// \param goal The transformation of the end-effector in the global coord system
+        /// \param param The transformation of the end-effector in the global coord system
         /// \param solution Will be of size GetArmIndices().size() and contain the best solution
         /// \param[in] filteroptions A bitmask of \ref IkFilterOptions values controlling what is checked for each ik solution.
-        virtual bool FindIKSolution(const IkParameterization& goal, std::vector<dReal>& solution, int filteroptions) const;
-        virtual bool FindIKSolution(const IkParameterization& goal, const std::vector<dReal>& vFreeParameters, std::vector<dReal>& solution, int filteroptions) const;
+        virtual bool FindIKSolution(const IkParameterization& param, std::vector<dReal>& solution, int filteroptions) const;
+        virtual bool FindIKSolution(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, std::vector<dReal>& solution, int filteroptions) const;
 
-        /// will find all the IK solutions for the given end effector transform
-        /// \param goal The transformation of the end-effector in the global coord system
+        /// \brief Find all the IK solutions for the given end effector transform
+        ///
+        /// \param param The transformation of the end-effector in the global coord system
         /// \param solutions An array of all solutions, each element in solutions is of size GetArmIndices().size()
         /// \param[in] filteroptions A bitmask of \ref IkFilterOptions values controlling what is checked for each ik solution.
-        virtual bool FindIKSolutions(const IkParameterization& goal, std::vector<std::vector<dReal> >& solutions, int filteroptions) const;
-        virtual bool FindIKSolutions(const IkParameterization& goal, const std::vector<dReal>& vFreeParameters, std::vector<std::vector<dReal> >& solutions, int filteroptions) const;
+        virtual bool FindIKSolutions(const IkParameterization& param, std::vector<std::vector<dReal> >& solutions, int filteroptions) const;
+        virtual bool FindIKSolutions(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, std::vector<std::vector<dReal> >& solutions, int filteroptions) const;
 
         /** \brief returns the parameterization of a given IK type for the current manipulator position.
             
