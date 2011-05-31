@@ -42,7 +42,9 @@ public:
         /// \brief Return the transformation of the end effector (manipulator frame).
         /// 
         /// All inverse kinematics and grasping queries are specifying this frame.
-        virtual Transform GetEndEffectorTransform() const;
+        virtual Transform GetTransform() const;
+
+        virtual Transform GetEndEffectorTransform() const { return GetTransform(); }
 
         virtual const std::string& GetName() const { return _name; }
         virtual RobotBasePtr GetRobot() const { return RobotBasePtr(_probot); }

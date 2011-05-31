@@ -300,7 +300,7 @@ class CM
     GripperJacobianConstrains(RobotBase::ManipulatorPtr pmanip, const Transform& tTargetWorldFrame, const boost::array<T,6>& vfreedoms, T errorthresh=1e-3) : _pmanip(pmanip), _vfreedoms(vfreedoms) {
             _errorthresh2 = errorthresh*errorthresh;
             _probot = _pmanip->GetRobot();
-            _tOriginalEE = _pmanip->GetEndEffectorTransform();
+            _tOriginalEE = _pmanip->GetTransform();
             _tTargetFrameLeft = tTargetWorldFrame*_tOriginalEE.inverse();
             _tTargetFrameRight = tTargetWorldFrame.inverse();
             _J.resize(6,_probot->GetActiveDOF());
@@ -319,7 +319,7 @@ class CM
             dReal fdistprev = _distmetricfn(vprev,vcur), fdistcur=0;
             _lasterror=0;
             for(_iter = 0; _iter < _nMaxIterations; ++_iter) {
-                Transform tEE = _pmanip->GetEndEffectorTransform();
+                Transform tEE = _pmanip->GetTransform();
                 Transform t = _tTargetFrameLeft * tEE * _tTargetFrameRight;
 
                 T totalerror=0;

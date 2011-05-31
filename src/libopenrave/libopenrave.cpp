@@ -745,14 +745,24 @@ void DummyXMLReader::characters(const std::string& ch)
 void subtractstates(std::vector<dReal>& q1, const std::vector<dReal>& q2)
 {
     BOOST_ASSERT(q1.size()==q2.size());
-    for(size_t i = 0; i < q1.size(); ++i)
+    for(size_t i = 0; i < q1.size(); ++i) {
         q1[i] -= q2[i];
+    }
+}
+
+void addstates(std::vector<dReal>& q, const std::vector<dReal>& qdelta)
+{
+    BOOST_ASSERT(q.size()==qdelta.size());
+    for(size_t i = 0; i < q.size(); ++i) {
+        q[i] += qdelta[i];
+    }
 }
 
 // PlannerParameters class
 PlannerBase::PlannerParameters::PlannerParameters() : XMLReadable("plannerparameters"), _fStepLength(0.04f), _nMaxIterations(0), _sPathOptimizationPlanner("shortcut_linear")
 {
     _diffstatefn = subtractstates;
+    _neighstatefn = addstates;
     _vXMLParameters.reserve(10);
     _vXMLParameters.push_back("_vinitialconfig");
     _vXMLParameters.push_back("_vgoalconfig");
@@ -778,6 +788,7 @@ PlannerBase::PlannerParameters& PlannerBase::PlannerParameters::operator=(const 
     _setstatefn = r._setstatefn;
     _getstatefn = r._getstatefn;
     _diffstatefn = r._diffstatefn;
+    _neighstatefn = r._neighstatefn;
 
     _tWorkspaceGoal.reset();
     vinitialconfig.resize(0);
@@ -1063,6 +1074,7 @@ void PlannerBase::PlannerParameters::SetRobotActiveJoints(RobotBasePtr robot)
     _setstatefn = boost::bind(&RobotBase::SetActiveDOFValues,robot,_1,false);
     _getstatefn = boost::bind(&RobotBase::GetActiveDOFValues,robot,_1);
     _diffstatefn = boost::bind(&RobotBase::SubtractActiveDOFValues,robot,_1,_2);
+    _neighstatefn = addstates; // probably ok...
     robot->GetActiveDOFLimits(_vConfigLowerLimit,_vConfigUpperLimit);
     robot->GetActiveDOFResolutions(_vConfigResolution);
     robot->GetActiveDOFValues(vinitialconfig);

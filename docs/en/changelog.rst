@@ -17,6 +17,11 @@ Core
 
 * fixed caching issue with ik files in ikfastsolvers
 
+Planning
+--------
+
+* added a new planner parameter _neighstatefn that adds two states together.
+
 IK
 --
 

@@ -96,8 +96,8 @@ public:
         ///
         /// If valid, the function should be called
         /// at every iteration. Any type of goal sampling probabilities and conditions can be encoded inside the function.
-        // The dimension of the returned sample is the dimension of the configuration space.
-        // success = samplegoalfn(newsample)
+        /// The dimension of the returned sample is the dimension of the configuration space.
+        /// success = samplegoalfn(newsample)
         boost::function<bool(std::vector<dReal>&)> _samplegoalfn;
 
         /// \brief Returns a random configuration around a neighborhood (optional).
@@ -113,12 +113,20 @@ public:
         boost::function<void(const std::vector<dReal>&)> _setstatefn;
         /// \brief Gets the state of the robot. Default is active robot joints (mandatory).
         boost::function<void(std::vector<dReal>&)> _getstatefn;
+
         /// \brief  Computes the difference of two states.
         ///
         /// An explicit difference function is necessary for correct interpolation when there are circular joints.
         /// Default is regular subtraction.
         /// _diffstatefn(q1,q2) -> q1 -= q2
         boost::function<void(std::vector<dReal>&,const std::vector<dReal>&)> _diffstatefn;
+
+        /// \brief Adds a delta state to a curent state, acting like a next-nearest-neighbor function along a given direction.
+        ///
+        /// In RRTs this is used for the extension operation. The new state is stored in the first parameter q
+        /// 
+        /// _neighstatefn(q,qdelta) -> q += qdelta
+        boost::function<void(std::vector<dReal>&,const std::vector<dReal>&)> _neighstatefn;
 
         /// to specify multiple goal configurations, put them into the vector in series (note: not all planners support multiple goals)
         std::vector<dReal> vinitialconfig, vgoalconfig;

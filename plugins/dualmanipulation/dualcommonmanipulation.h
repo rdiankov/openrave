@@ -136,8 +136,8 @@ class CM
     class DualArmManipulation {
     public:
     DualArmManipulation(RobotBasePtr probot, RobotBase::ManipulatorPtr pmanipA, RobotBase::ManipulatorPtr pmanipI) : _probot(probot), _pmanipA(pmanipA), _pmanipI(pmanipI) {
-            _tOriginalEEI = _pmanipI->GetEndEffectorTransform();
-            _tOriginalEEA = _pmanipA->GetEndEffectorTransform();
+            _tOriginalEEI = _pmanipI->GetTransform();
+            _tOriginalEEA = _pmanipA->GetTransform();
             _diff = _tOriginalEEA.inverse()*_tOriginalEEI;
                            
         }
@@ -153,7 +153,7 @@ class CM
         
             std::vector<dReal> vold, vsolution;
             _probot->GetDOFValues(vold);  //gets the current robot config
-            Transform tA = _pmanipA->GetEndEffectorTransform();
+            Transform tA = _pmanipA->GetTransform();
         
             Transform tInew= tA*_diff;  //this is (wTRANSl)*(lTRANSr)
             bool a= _pmanipI->FindIKSolution(tInew,vsolution, false);
@@ -175,8 +175,8 @@ class CM
             //now checking
             //  vnew=vcur;
             _probot->SetActiveDOFValues(vcur);
-            Transform tI = _pmanipI->GetEndEffectorTransform();
-            tA = _pmanipA->GetEndEffectorTransform();
+            Transform tI = _pmanipI->GetTransform();
+            tA = _pmanipA->GetTransform();
             Transform tnew = tA.inverse()*tI;
        
             for(int i = 0; i < 4; ++i) {

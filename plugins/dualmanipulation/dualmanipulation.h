@@ -415,8 +415,8 @@ class DualManipulation : public ProblemInstance
             return false;
         }
 
-        Transform handTr0 = pmanip0->GetEndEffectorTransform();
-        Transform handTr1 = pmanip1->GetEndEffectorTransform();
+        Transform handTr0 = pmanip0->GetTransform();
+        Transform handTr1 = pmanip1->GetTransform();
 
         point.q = vPrevValues;
         ptraj->AddPoint(point);

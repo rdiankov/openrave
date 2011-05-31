@@ -200,7 +200,7 @@ public:
 
             f = 0;
             int linkindex = _robot->GetActiveManipulator()->GetEndEffector()->GetIndex();
-            Transform tEE = _robot->GetActiveManipulator()->GetEndEffectorTransform();
+            Transform tEE = _robot->GetActiveManipulator()->GetTransform();
             _robot->CalculateActiveJacobian(linkindex, tEE.trans, _J);
             //_robot->CalculateActiveRotationalJacobian(linkindex, tEE.trans, &_J[3*robot->GetActiveDOF()]);
         
@@ -342,7 +342,7 @@ public:
                     continue;
 
                 if( pdata->status == 0 ) {
-                    pdata->tcurgrasp = _robot->GetActiveManipulator()->GetEndEffectorTransform();
+                    pdata->tcurgrasp = _robot->GetActiveManipulator()->GetTransform();
                     pdata->fThresh2 = fGraspThresh*fGraspThresh;
                     pdata->tlink = ptargetlink->GetTransform();
 
@@ -950,7 +950,7 @@ private:
 
             // convert the active dofs to a transform and save
             _robot->SetActiveDOFValues(itp->q, false);
-            sout << tlinknew.inverse() * (!pmanip ? _robot->GetTransform() : pmanip->GetEndEffectorTransform()) << " "  << nContact << " ";
+            sout << tlinknew.inverse() * (!pmanip ? _robot->GetTransform() : pmanip->GetTransform()) << " "  << nContact << " ";
         }
 
         if( !!ptarget )
@@ -1699,7 +1699,7 @@ private:
     
         vector<dReal> qprevrobot(qprev.begin(),qprev.begin()+_robot->GetActiveDOF());
         _robot->SetActiveDOFValues(qprevrobot);
-        Transform tprevgrasp = pmanip->GetEndEffectorTransform();
+        Transform tprevgrasp = pmanip->GetTransform();
     
         vector<dReal> preshape;
         bool bFoundAtLeastOne = false;

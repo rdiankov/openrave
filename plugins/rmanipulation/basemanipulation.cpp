@@ -50,7 +50,7 @@ Method wraps the WorkspaceTrajectoryTracker planner. For more details on paramet
                         "Jitters the active DOF for a collision-free position.");
         RegisterCommand("FindIKWithFilters",boost::bind(&BaseManipulation::FindIKWithFilters,this,_1,_2),
                         "Samples IK solutions using custom filters that constrain the end effector in the world. Parameters:\n\n\
-- cone - Constraint the direction of a local axis with respect to a cone in the world. Takes in: worldaxis(3), localaxis(3), anglelimit. \n\
+- cone - Constraint the direction of a local axis with respect to a cone in the world. Takes in: worldaxis(3), localaxis(3), anglelimit. \n \
 - solveall - When specified, will return all possible solutions.\n\
 - ikparam - The serialized ik parameterization to use for FindIKSolution(s).\n\
 - filteroptions\n\
@@ -65,7 +65,7 @@ Method wraps the WorkspaceTrajectoryTracker planner. For more details on paramet
         robot.reset();
         ProblemInstance::Destroy();
     }
-
+    
     virtual void Reset()
     {
         ProblemInstance::Reset();
@@ -82,26 +82,31 @@ Method wraps the WorkspaceTrajectoryTracker planner. For more details on paramet
         string cmd;
         while(!ss.eof()) {
             ss >> cmd;
-            if( !ss )
+            if( !ss ) {
                 break;
+            }
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
-            if( cmd == "planner" )
+            if( cmd == "planner" ) {
                 ss >> _strRRTPlannerName;
-            else if( cmd == "maxvelmult" )
+            }
+            else if( cmd == "maxvelmult" ) {
                 ss >> _fMaxVelMult;
-
-            if( ss.fail() || !ss )
+            }
+            if( ss.fail() || !ss ) {
                 break;
+            }
         }
 
         PlannerBasePtr planner;
-        if( _strRRTPlannerName.size() > 0 )
+        if( _strRRTPlannerName.size() > 0 ) {
             planner = RaveCreatePlanner(GetEnv(),_strRRTPlannerName);
+        }
         if( !planner ) {
             _strRRTPlannerName = "BiRRT";
             planner = RaveCreatePlanner(GetEnv(),_strRRTPlannerName);
-            if( !planner )
+            if( !planner ) {
                 _strRRTPlannerName = "";
+            }
         }
 
         RAVELOG_DEBUG(str(boost::format("BaseManipulation: using %s planner\n")%_strRRTPlannerName));
@@ -293,7 +298,7 @@ protected:
         if( !starteematrix ) {
             CM::JitterActiveDOF(robot,100); // try to jitter out, don't worry if it fails
             robot->GetActiveDOFValues(params->vinitialconfig);
-            Tee = pmanip->GetEndEffectorTransform();
+            Tee = pmanip->GetTransform();
         }
         else {
             params->vinitialconfig.resize(0); // set by SetRobotActiveJoints
@@ -502,9 +507,9 @@ protected:
             }
         }
 
-        if( (int)params->vgoalconfig.size() != robot->GetActiveDOF() )
+        if( (int)params->vgoalconfig.size() != robot->GetActiveDOF() ) {
             return false;
-    
+        }
         RobotBase::RobotStateSaver saver(robot);
 
         if( CM::JitterActiveDOF(robot) == 0 ) {
@@ -550,8 +555,9 @@ protected:
             }
         }
 
-        if( !bSuccess )
+        if( !bSuccess ) {
             return false;
+        }
         CM::SetActiveTrajectory(robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream,_fMaxVelMult);
         return true;
     }
@@ -559,9 +565,8 @@ protected:
     bool MoveToHandPosition(ostream& sout, istream& sinput)
     {
         RAVELOG_DEBUG("Starting MoveToHandPosition...\n");
-        RobotBase::ManipulatorConstPtr pmanip = robot->GetActiveManipulator();
-        
-        list<IkParameterization> listgoals;
+        RobotBase::ManipulatorConstPtr pmanip = robot->GetActiveManipulator();        
+        std::list<IkParameterization> listgoals;
     
         string strtrajfilename;
         bool bExecute = true;
@@ -1095,7 +1100,7 @@ protected:
  protected:
     IkFilterReturn _FilterWorldAxisIK(std::vector<dReal>& values, RobotBase::ManipulatorPtr pmanip, const IkParameterization& ikparam, const Vector& vlocalaxis, const Vector& vworldaxis, dReal coslimit)
     {
-        if( RaveFabs(vworldaxis.dot3(pmanip->GetEndEffectorTransform().rotate(vlocalaxis))) < coslimit ) {
+        if( RaveFabs(vworldaxis.dot3(pmanip->GetTransform().rotate(vlocalaxis))) < coslimit ) {
             return IKFR_Reject;
         }
         return IKFR_Success;

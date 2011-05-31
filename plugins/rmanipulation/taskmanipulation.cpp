@@ -590,7 +590,7 @@ Task-based manipulation planning involving target objects. A lot of the algorith
                         vglobalpalmdir = transTarg.rotate(Vector(pgrasp[iGraspDir], pgrasp[iGraspDir+1], pgrasp[iGraspDir+2]));
                     }
                     else {
-                        vglobalpalmdir = pmanip->GetEndEffectorTransform().rotate(pmanip->GetDirection());
+                        vglobalpalmdir = pmanip->GetTransform().rotate(pmanip->GetDirection());
                     }
 
                     while(GetEnv()->CheckCollision(KinBodyConstPtr(_robot),KinBodyConstPtr(ptarget))) {
@@ -599,7 +599,7 @@ Task-based manipulation planning involving target objects. A lot of the algorith
                     }
                 }
 
-                tGoalEndEffector = t * _robot->GetTransform().inverse() * pmanip->GetEndEffectorTransform(); // find the end effector transform
+                tGoalEndEffector = t * _robot->GetTransform().inverse() * pmanip->GetTransform(); // find the end effector transform
                 vFinalGripperValues.resize(pmanip->GetGripperIndices().size());
                 std::copy(phandtraj->GetPoints().back().q.begin(),phandtraj->GetPoints().back().q.begin()+vFinalGripperValues.size(),vFinalGripperValues.begin());
             }

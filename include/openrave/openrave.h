@@ -78,37 +78,6 @@
 #include <boost/multi_array.hpp>
 //#include <boost/cstdint.hpp>
 
-#if defined(_WIN32) || defined(__CYGWIN__) || defined(_MSC_VER)
-  #define OPENRAVE_HELPER_DLL_IMPORT __declspec(dllimport)
-  #define OPENRAVE_HELPER_DLL_EXPORT __declspec(dllexport)
-  #define OPENRAVE_HELPER_DLL_LOCAL
-#else
-  #if __GNUC__ >= 4
-    #define OPENRAVE_HELPER_DLL_IMPORT __attribute__ ((visibility("default")))
-    #define OPENRAVE_HELPER_DLL_EXPORT __attribute__ ((visibility("default")))
-    #define OPENRAVE_HELPER_DLL_LOCAL  __attribute__ ((visibility("hidden")))
-  #else
-    #define OPENRAVE_HELPER_DLL_IMPORT
-    #define OPENRAVE_HELPER_DLL_EXPORT
-    #define OPENRAVE_HELPER_DLL_LOCAL
-  #endif
-#endif
-
-// Now we use the generic helper definitions above to define OPENRAVE_API and OPENRAVE_LOCAL.
-// OPENRAVE_API is used for the public API symbols. It either DLL imports or DLL exports (or does nothing for static build)
-// OPENRAVE_LOCAL is used for non-api symbols.
-#if defined(OPENRAVE_DLL) || defined(OPENRAVE_CORE_DLL) // defined if OpenRAVE is compiled as a DLL
-  #ifdef OPENRAVE_DLL_EXPORTS // defined if we are building the OpenRAVE DLL (instead of using it)
-    #define OPENRAVE_API OPENRAVE_HELPER_DLL_EXPORT
-  #else
-    #define OPENRAVE_API OPENRAVE_HELPER_DLL_IMPORT
-  #endif // OPENRAVE_DLL_EXPORTS
-  #define OPENRAVE_LOCAL OPENRAVE_HELPER_DLL_LOCAL
-#else // OPENRAVE_DLL is not defined: this means OpenRAVE is a static lib.
-  #define OPENRAVE_API
-  #define OPENRAVE_LOCAL
-#endif // OPENRAVE_DLL
-
 #if defined(__GNUC__)
 #define RAVE_DEPRECATED __attribute__((deprecated))
 #else
@@ -1024,7 +993,7 @@ inline std::istream& operator>>(std::istream& I, IkParameterization& ikparam)
     case IkParameterization::Type_Lookat3D: { Vector v; I >> v.x >> v.y >> v.z; ikparam.SetLookat3D(v); break; }
     case IkParameterization::Type_TranslationDirection5D: { RAY r; I >> r; ikparam.SetTranslationDirection5D(r); break; }
     case IkParameterization::Type_TranslationXY2D: { Vector v; I >> v.y >> v.y; ikparam.SetTranslationXY2D(v); break; }
-    case IkParameterization::Type_TranslationXYOrientation3D: { Vector v; I >> v.y >> v.y >> v.z; ikparam.SetTranslationXYOrientation3D(v); break; }
+      case IkParameterization::Type_TranslationXYOrientation3D: { Vector v; I >> v.y >> v.y >> v.z; ikparam.SetTranslationXYOrientation3D(v); break; }
     case IkParameterization::Type_TranslationLocalGlobal6D: { Vector localtrans, trans; I >> localtrans.x >> localtrans.y >> localtrans.z >> trans.x >> trans.y >> trans.z; ikparam.SetTranslationLocalGlobal6D(localtrans,trans); break; }
     default: throw openrave_exception(str(boost::format("does not support parameterization %d")%ikparam.GetType()));
     }

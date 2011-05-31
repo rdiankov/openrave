@@ -144,21 +144,26 @@ protected:
                 vector<dReal>::const_iterator itres = parameters->_vConfigResolution.begin();
                 for (i = 0; i < parameters->GetDOF(); i++,itres++) {
                     int steps;
-                    if( *itres != 0 )
+                    if( *itres != 0 ) {
                         steps = (int)(fabs(dq[i]) / *itres);
-                    else
+                    }
+                    else {
                         steps = (int)(fabs(dq[i]) * 100);
-                    if (steps > numSteps)
+                    }
+                    if (steps > numSteps) {
                         numSteps = steps;
+                    }
                 }
                 dReal fisteps = dReal(1.0f)/numSteps;
                 FOREACH(it,dq) {
                     *it *= fisteps;
                 }
+                for (i = 0; i < parameters->GetDOF(); i++) {
+                    q[i] = q0[i];
+                }
                 for (int f = 0; f < numSteps; f++) {
-                    for (i = 0; i < parameters->GetDOF(); i++)
-                        q[i] = q0[i] + dq[i]*f;
                     listpoints.push_back(q);
+                    parameters->_neighstatefn(q,dq);
                 }
             }
             listpoints.push_back(ptraj->GetPoints().back().q);

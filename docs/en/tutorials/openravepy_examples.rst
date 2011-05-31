@@ -55,6 +55,7 @@ Use a planner to get a collision free path to a workspace goal of the end effect
   ikmodel = databases.inversekinematics.InverseKinematicsModel(robot,iktype=IkParameterization.Type.Transform6D)
   if not ikmodel.load():
       ikmodel.autogenerate()
+  
   manipprob = interfaces.BaseManipulation(robot) # create the interface for basic manipulation programs
   Tgoal = numpy.array([[0,-1,0,-0.21],[-1,0,0,0.04],[0,0,-1,0.92],[0,0,0,1]])
   res = manipprob.MoveToHandPosition(matrices=[Tgoal],seedik=10) # call motion planner with goal joint angles

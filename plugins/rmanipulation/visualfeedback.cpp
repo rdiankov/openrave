@@ -639,7 +639,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
                 }
             }
 
-            _ttogripper = psensor->GetTransform().inverse()*pmanip->GetEndEffectorTransform();
+            _ttogripper = psensor->GetTransform().inverse()*pmanip->GetTransform();
         }
         else {
             if( !pmanip ) {
@@ -647,7 +647,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
             }
 
             if( !!_target ) {
-                _ttogripper = _target->GetTransform().inverse() * pmanip->GetEndEffectorTransform();
+                _ttogripper = _target->GetTransform().inverse() * pmanip->GetTransform();
             }
         }
 

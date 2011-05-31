@@ -127,7 +127,7 @@ GraspGradientPlanner(EnvironmentBasePtr penv) : PlannerBase(penv) {
 
         // prioritize the grasps and go through each one
         _parameters->_setstatefn(_parameters->vinitialconfig);
-        Transform tcurgrasp = _pmanip->GetEndEffectorTransform();
+        Transform tcurgrasp = _pmanip->GetTransform();
 
         Transform tobject = _parameters->_ptarget->GetTransform();
         vector<GRASP> vgrasps; vgrasps.reserve(_parameters->_vgrasps.size());
@@ -167,7 +167,7 @@ GraspGradientPlanner(EnvironmentBasePtr penv) : PlannerBase(penv) {
 
                 if( itgrasp->bProcessed ) {
                     // find the grasp distance
-                    Transform t = _pmanip->GetEndEffectorTransform();
+                    Transform t = _pmanip->GetTransform();
                     dReal graspdist2 = TransformDistance2(t,itgrasp->tgrasp,0.2f);
                     if( bestgraspdist > graspdist2 ) {
                         bestgraspdist = graspdist2;
@@ -298,7 +298,7 @@ private:
                             _parameters->_setstatefn(*itq);
 
                             // check if grasp is closer than threshold
-                            dReal graspdist2 = TransformDistance2(_pmanip->GetEndEffectorTransform(),g.tgrasp,0.2f);
+                            dReal graspdist2 = TransformDistance2(_pmanip->GetTransform(),g.tgrasp,0.2f);
                             //RAVELOG_DEBUG("graspdist: %f\n",RaveSqrt(graspdist));
                             if( graspdist2 > _parameters->_fVisibiltyGraspThresh*_parameters->_fVisibiltyGraspThresh ) {
                                 _parameters->_setstatefn(qnew);

@@ -49,7 +49,7 @@ RobotBase::Manipulator::Manipulator(RobotBasePtr probot, const RobotBase::Manipu
         _pIkSolver = RaveCreateIkSolver(probot->GetEnv(), _strIkSolver);
 }
 
-Transform RobotBase::Manipulator::GetEndEffectorTransform() const
+Transform RobotBase::Manipulator::GetTransform() const
 {
     return _pEndEffector->GetTransform() * _tGrasp;
 }
@@ -130,40 +130,40 @@ IkParameterization RobotBase::Manipulator::GetIkParameterization(IkParameterizat
 {
     IkParameterization ikp;
     switch(iktype) {
-    case IkParameterization::Type_Transform6D: ikp.SetTransform6D(GetEndEffectorTransform()); break;
-    case IkParameterization::Type_Rotation3D: ikp.SetRotation3D(GetEndEffectorTransform().rot); break;
-    case IkParameterization::Type_Translation3D: ikp.SetTranslation3D(GetEndEffectorTransform().trans); break;
-    case IkParameterization::Type_Direction3D: ikp.SetDirection3D(GetEndEffectorTransform().rotate(_vdirection)); break;
+    case IkParameterization::Type_Transform6D: ikp.SetTransform6D(GetTransform()); break;
+    case IkParameterization::Type_Rotation3D: ikp.SetRotation3D(GetTransform().rot); break;
+    case IkParameterization::Type_Translation3D: ikp.SetTranslation3D(GetTransform().trans); break;
+    case IkParameterization::Type_Direction3D: ikp.SetDirection3D(GetTransform().rotate(_vdirection)); break;
     case IkParameterization::Type_Ray4D: {
-        Transform t = GetEndEffectorTransform();
+        Transform t = GetTransform();
         ikp.SetRay4D(RAY(t.trans,t.rotate(_vdirection)));
         break;
     }
     case IkParameterization::Type_Lookat3D: {
         RAVELOG_WARN("RobotBase::Manipulator::GetIkParameterization: Lookat3D type setting goal a distance of 1 from the origin.\n");
-        Transform t = GetEndEffectorTransform();
+        Transform t = GetTransform();
         Vector vdir = t.rotate(_vdirection);
         ikp.SetLookat3D(RAY(t.trans + vdir,vdir));
         break;
     }
     case IkParameterization::Type_TranslationDirection5D: {
-        Transform t = GetEndEffectorTransform();
+        Transform t = GetTransform();
         ikp.SetTranslationDirection5D(RAY(t.trans,t.rotate(_vdirection)));
         break;
     }
     case IkParameterization::Type_TranslationXY2D: {
-        ikp.SetTranslationXY2D(GetEndEffectorTransform().trans);
+        ikp.SetTranslationXY2D(GetTransform().trans);
         break;
     }
     case IkParameterization::Type_TranslationXYOrientation3D: {
-        Transform t = GetEndEffectorTransform();
-        dReal zangle = -normalizeAxisRotation(Vector(0,0,1),GetEndEffectorTransform().rot).first;
+        Transform t = GetTransform();
+        dReal zangle = -normalizeAxisRotation(Vector(0,0,1),GetTransform().rot).first;
         ikp.SetTranslationXYOrientation3D(Vector(t.trans.x,t.trans.y,zangle));
         break;
     }
     case IkParameterization::Type_TranslationLocalGlobal6D: {
         RAVELOG_WARN("RobotBase::Manipulator::GetIkParameterization: TranslationLocalGlobal6D type setting local translation to (0,0,0).\n");
-        ikp.SetTranslationLocalGlobal6D(Vector(0,0,0),GetEndEffectorTransform().trans); break;
+        ikp.SetTranslationLocalGlobal6D(Vector(0,0,0),GetTransform().trans); break;
     }
     default:
         throw openrave_exception(str(boost::format("invalid ik type 0x%x")%iktype));
@@ -175,40 +175,40 @@ IkParameterization RobotBase::Manipulator::GetIkParameterization(const IkParamet
 {
     IkParameterization ikp;
     switch(ikparam.GetType()) {
-    case IkParameterization::Type_Transform6D: ikp.SetTransform6D(GetEndEffectorTransform()); break;
-    case IkParameterization::Type_Rotation3D: ikp.SetRotation3D(GetEndEffectorTransform().rot); break;
-    case IkParameterization::Type_Translation3D: ikp.SetTranslation3D(GetEndEffectorTransform().trans); break;
-    case IkParameterization::Type_Direction3D: ikp.SetDirection3D(GetEndEffectorTransform().rotate(_vdirection)); break;
+    case IkParameterization::Type_Transform6D: ikp.SetTransform6D(GetTransform()); break;
+    case IkParameterization::Type_Rotation3D: ikp.SetRotation3D(GetTransform().rot); break;
+    case IkParameterization::Type_Translation3D: ikp.SetTranslation3D(GetTransform().trans); break;
+    case IkParameterization::Type_Direction3D: ikp.SetDirection3D(GetTransform().rotate(_vdirection)); break;
     case IkParameterization::Type_Ray4D: {
-        Transform t = GetEndEffectorTransform();
+        Transform t = GetTransform();
         ikp.SetRay4D(RAY(t.trans,t.rotate(_vdirection)));
         break;
     }
     case IkParameterization::Type_Lookat3D: {
         // find the closest point to ikparam.GetLookat3D() to the current ray
-        Transform t = GetEndEffectorTransform();
+        Transform t = GetTransform();
         Vector vdir = t.rotate(_vdirection);
         ikp.SetLookat3D(RAY(t.trans + vdir*vdir.dot(ikparam.GetLookat3D()-t.trans),vdir));
         break;
     }
     case IkParameterization::Type_TranslationDirection5D: {
-        Transform t = GetEndEffectorTransform();
+        Transform t = GetTransform();
         ikp.SetTranslationDirection5D(RAY(t.trans,t.rotate(_vdirection)));
         break;
     }
     case IkParameterization::Type_TranslationXY2D: {
-        ikp.SetTranslationXY2D(GetEndEffectorTransform().trans);
+        ikp.SetTranslationXY2D(GetTransform().trans);
         break;
     }
     case IkParameterization::Type_TranslationXYOrientation3D: {
-        Transform t = GetEndEffectorTransform();
-        dReal zangle = -normalizeAxisRotation(Vector(0,0,1),GetEndEffectorTransform().rot).first;
+        Transform t = GetTransform();
+        dReal zangle = -normalizeAxisRotation(Vector(0,0,1),GetTransform().rot).first;
         ikp.SetTranslationXYOrientation3D(Vector(t.trans.x,t.trans.y,zangle));
         break;
     }
     case IkParameterization::Type_TranslationLocalGlobal6D: {
         Vector localtrans = ikparam.GetTranslationLocalGlobal6D().first;
-        ikp.SetTranslationLocalGlobal6D(localtrans,GetEndEffectorTransform() * localtrans);
+        ikp.SetTranslationLocalGlobal6D(localtrans,GetTransform() * localtrans);
         break;
     }
     default:
@@ -377,7 +377,7 @@ void RobotBase::Manipulator::GetIndependentLinks(std::vector<LinkPtr>& vlinks) c
 bool RobotBase::Manipulator::CheckEndEffectorCollision(const Transform& tEE, CollisionReportPtr report) const
 {
     RobotBasePtr probot(_probot);
-    Transform toldEE = GetEndEffectorTransform();
+    Transform toldEE = GetTransform();
     Transform tdelta = tEE*toldEE.inverse();
     // get all child links of the manipualtor
     int iattlink = _pEndEffector->GetIndex();
@@ -544,7 +544,7 @@ void RobotBase::Manipulator::serialize(std::ostream& o, int options) const
             SerializeRound(o,tbaseinv * _tGrasp);
         }
         else {
-            SerializeRound(o,tbaseinv * GetEndEffectorTransform());
+            SerializeRound(o,tbaseinv * GetTransform());
         }
         o << __varmdofindices.size() << " ";
         FOREACHC(it,__varmdofindices) {

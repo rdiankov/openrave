@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2010 Rosen Diankov (rosen.diankov@gmail.com)
+// Copyright (C) 2006-2011 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
@@ -85,7 +85,7 @@ Planner Parameters\n\
             vector<dReal> dummyvalues;
             for(size_t i = 0; i < testvalues.size(); ++i) {
                 parameters->_setstatefn(*testvalues[i]);
-                Transform tstate = _manip->GetEndEffectorTransform();
+                Transform tstate = _manip->GetTransform();
                 _robot->SetActiveDOFs(_manip->GetArmIndices());
                 _robot->GetActiveDOFValues(dummyvalues);
                 for(size_t j = 0; j < dummyvalues.size(); ++j) {
@@ -453,7 +453,7 @@ protected:
 //                Jerror(0,0) = direction.x*stepsize; Jerror(1,0) = direction.y*stepsize; Jerror(2,0) = direction.z*stepsize;
 //            }
 //
-//            robot->CalculateActiveJacobian(eeindex,robot->GetActiveManipulator()->GetEndEffectorTransform().trans,vjacobian);
+//            robot->CalculateActiveJacobian(eeindex,robot->GetActiveManipulator()->GetTransform().trans,vjacobian);
 //            const double lambda2 = 1e-8; // normalization constant
 //            for(size_t j = 0; j < 3; ++j) {
 //                std::copy(vjacobian[j].begin(),vjacobian[j].end(),J.find2(0,j,0));
@@ -483,7 +483,7 @@ protected:
 //            }
 //            robot->SetActiveDOFValues(point.q);
 //            bool bInCollision = robot->CheckSelfCollision();
-//            Transform tdelta = handTr.inverse()*robot->GetActiveManipulator()->GetEndEffectorTransform();
+//            Transform tdelta = handTr.inverse()*robot->GetActiveManipulator()->GetTransform();
 };
 
 #endif
