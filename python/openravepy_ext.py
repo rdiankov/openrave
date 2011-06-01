@@ -497,6 +497,8 @@ class SpaceSampler:
         return pts
 
 class KinBodyStateSaver:
+    """Saves/restores the body state, use **with** statement.
+    """
     def __init__(self,body,options=None):
         self.body = body
         self.options=options
@@ -509,6 +511,8 @@ class KinBodyStateSaver:
         self.handle.close()
 
 class RobotStateSaver:
+    """Saves/restores the robot state, use **with** statement.
+    """
     def __init__(self,robot,options=None):
         self.robot = robot
         self.options = options

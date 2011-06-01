@@ -35,6 +35,8 @@ class TaskManipulation:
     def  __del__(self):
         self.prob.GetEnv().Remove(self.prob)
     def clone(self,envother):
+        """Clones the interface into another environment
+        """
         clone = shallowcopy(self)
         clone.prob = RaveCreateProblem(envother,'TaskManipulation')
         clone.robot = envother.GetRobot(self.robot.GetName())

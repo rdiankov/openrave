@@ -1,18 +1,52 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-# Copyright (C) 2010 Makoto Furukawa
-# 
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#     http://www.apache.org/licenses/LICENSE-2.0
-# 
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-"""環境に読み込んだ物体の回転（回転行列）
+チュートリアル003：環境に読み込んだ物体の回転（回転行列）
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+ :作者: 古川誠
+
+.. code-block:: python
+
+  from openravepy import Environment, rotationMatrixFromAxisAngle, axisAngleFromRotationMatrix, matrixFromAxisAngle, with_destroy
+  from numpy import eye, dot, pi
+  env = Environment()
+  env.SetViewer('qtcoin')
+  body = env.ReadKinBodyXMLFile(filename='data/mug2.kinbody.xml')
+  env.AddKinBody(body)
+  body.SetTransform(eye(4))
+  tran = body.GetTransform()
+
+  handles=[]
+  handles.append(env.drawarrow(p1=[0.0,0.0,0.0],p2=[0.5,0.0,0.0],linewidth=0.01,color=[1.0,0.0,0.0]))
+  handles.append(env.drawarrow(p1=[0.0,0.0,0.0],p2=[0.0,0.5,0.0],linewidth=0.01,color=[0.0,1.0,0.0]))
+  handles.append(env.drawarrow(p1=[0.0,0.0,0.0],p2=[0.0,0.0,0.5],linewidth=0.01,color=[0.0,0.0,0.1]))
+
+  deg = raw_input('X軸の回転角度を入力して下さい．[degree] X = ')
+  if len(deg) == 0:
+      deg = -45
+  rot_mat = rotationMatrixFromAxisAngle([1,0,0],float(deg)*pi/180.0)
+  print 'AxisAngle = ',axisAngleFromRotationMatrix(rot_mat)
+  tran[0:3,0:3] = dot(rot_mat, tran[0:3,0:3])
+  body.SetTransform(tran)
+
+  P1 = dot(rot_mat, [0,0,1])
+  handles.append(env.drawarrow([0.0,0.0,0.0],P1,linewidth=0.01,color=[1.0,1.0,0.0]))
+
+  deg = raw_input('Y軸の回転角度を入力して下さい．[degree] Y = ')
+  if len(deg) == 0:
+      deg = 45
+  rot_mat = rotationMatrixFromAxisAngle([0,1,0],float(deg)*pi/180.0)
+  print 'AxisAngle = ',axisAngleFromRotationMatrix(rot_mat)
+  tran[0:3,0:3] = dot(rot_mat, tran[0:3,0:3])
+  body.SetTransform(tran)
+
+  P2 = dot(rot_mat, P1)
+  handles.append(env.drawarrow([0.0,0.0,0.0],P2,linewidth=0.01,color=[1.0,1.0,0.0]))
+
+  while True:
+      raw_input('キーを押すと回転しながら移動します．')
+      Tdelta = matrixFromAxisAngle ([0,0,0.5])
+      Tdelta[2,3] = 0.01
+      tran = dot(tran, Tdelta)
+      body.SetTransform(tran)
 
 実行
 --------------------------------------
@@ -51,45 +85,6 @@
     :height: 200
 
 - この次からは，キーを押す度に先ほどの黄色の矢印を軸にしてマグカップが回転しながら移動します．
-
-ソースコード
---------------------------------------
-
-.. code-block:: python
-
-  #!/usr/bin/env python
-  from openravepy import Environment, rotationMatrixFromAxisAngle, axisAngleFromRotationMatrix, matrixFromAxisAngle
-  from numpy import eye, dot, pi
-  env = Environment()
-  env.SetViewer('qtcoin')
-  body = env.ReadKinBodyXMLFile(filename='data/mug2.kinbody.xml')
-  env.AddKinBody(body)
-  body.SetTransform(eye(4))
-  tran = body.GetTransform()
-  handles=[]
-  handles.append(env.drawarrow(p1=[0.0,0.0,0.0],p2=[0.5,0.0,0.0],linewidth=0.01,color=[1.0,0.0,0.0]))
-  handles.append(env.drawarrow(p1=[0.0,0.0,0.0],p2=[0.0,0.5,0.0],linewidth=0.01,color=[0.0,1.0,0.0]))
-  handles.append(env.drawarrow(p1=[0.0,0.0,0.0],p2=[0.0,0.0,0.5],linewidth=0.01,color=[0.0,0.0,0.1]))
-  deg = raw_input('X軸の回転角度を入力して下さい．[degree] X = ')
-  rot_mat = rotationMatrixFromAxisAngle([1,0,0],float(deg)*pi/180.0)
-  print 'AxisAngle = ',axisAngleFromRotationMatrix(rot_mat)
-  tran[0:3,0:3] = dot(rot_mat, tran[0:3,0:3])
-  body.SetTransform(tran)
-  P1 = dot(rot_mat, [0,0,1])
-  handles.append(env.drawarrow([0.0,0.0,0.0],P1,linewidth=0.01,color=[1.0,1.0,0.0]))
-  deg = raw_input('Y軸の回転角度を入力して下さい．[degree] Y = ')
-  rot_mat = rotationMatrixFromAxisAngle([0,1,0],float(deg)*pi/180.0)
-  print 'AxisAngle = ',axisAngleFromRotationMatrix(rot_mat)
-  tran[0:3,0:3] = dot(rot_mat, tran[0:3,0:3])
-  body.SetTransform(tran)
-  P2 = dot(rot_mat, P1)
-  handles.append(env.drawarrow([0.0,0.0,0.0],P2,linewidth=0.01,color=[1.0,1.0,0.0]))
-  while True:
-      raw_input('キーを押すと回転しながら移動します．')
-      Tdelta = matrixFromAxisAngle ([0,0,0.5])
-      Tdelta[2,3] = 0.01
-      tran = dot(tran, Tdelta)
-      body.SetTransform(tran)
 
 解説
 ------------------------------------
@@ -182,57 +177,3 @@
 
 - :mod:`.tutorial_004` - 環境に読み込んだ物体の回転（クォータニオン）
 
-"""
-from __future__ import with_statement # for python 2.5
-__author__ = 'Makoto Furukawa'
-from openravepy import Environment, rotationMatrixFromAxisAngle, axisAngleFromRotationMatrix, matrixFromAxisAngle, with_destroy
-from numpy import eye, dot, pi
-
-def main():
-    env = Environment()
-    env.SetViewer('qtcoin')
-    body = env.ReadKinBodyXMLFile(filename='data/mug2.kinbody.xml')
-    env.AddKinBody(body)
-    body.SetTransform(eye(4))
-    tran = body.GetTransform()
-
-    handles=[]
-    handles.append(env.drawarrow(p1=[0.0,0.0,0.0],p2=[0.5,0.0,0.0],linewidth=0.01,color=[1.0,0.0,0.0]))
-    handles.append(env.drawarrow(p1=[0.0,0.0,0.0],p2=[0.0,0.5,0.0],linewidth=0.01,color=[0.0,1.0,0.0]))
-    handles.append(env.drawarrow(p1=[0.0,0.0,0.0],p2=[0.0,0.0,0.5],linewidth=0.01,color=[0.0,0.0,0.1]))
-
-    deg = raw_input('X軸の回転角度を入力して下さい．[degree] X = ')
-    if len(deg) == 0:
-        deg = -45
-    rot_mat = rotationMatrixFromAxisAngle([1,0,0],float(deg)*pi/180.0)
-    print 'AxisAngle = ',axisAngleFromRotationMatrix(rot_mat)
-    tran[0:3,0:3] = dot(rot_mat, tran[0:3,0:3])
-    body.SetTransform(tran)
-
-    P1 = dot(rot_mat, [0,0,1])
-    handles.append(env.drawarrow([0.0,0.0,0.0],P1,linewidth=0.01,color=[1.0,1.0,0.0]))
-
-    deg = raw_input('Y軸の回転角度を入力して下さい．[degree] Y = ')
-    if len(deg) == 0:
-        deg = 45
-    rot_mat = rotationMatrixFromAxisAngle([0,1,0],float(deg)*pi/180.0)
-    print 'AxisAngle = ',axisAngleFromRotationMatrix(rot_mat)
-    tran[0:3,0:3] = dot(rot_mat, tran[0:3,0:3])
-    body.SetTransform(tran)
-
-    P2 = dot(rot_mat, P1)
-    handles.append(env.drawarrow([0.0,0.0,0.0],P2,linewidth=0.01,color=[1.0,1.0,0.0]))
-
-    while True:
-        raw_input('キーを押すと回転しながら移動します．')
-        Tdelta = matrixFromAxisAngle ([0,0,0.5])
-        Tdelta[2,3] = 0.01
-        tran = dot(tran, Tdelta)
-        body.SetTransform(tran)
-
-@with_destroy
-def run(args=None):
-    main()
-
-if __name__ == "__main__":
-    run()
