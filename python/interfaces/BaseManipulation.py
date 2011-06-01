@@ -68,7 +68,7 @@ class BaseManipulation:
             cmd += 'maxdeviationangle %f '%maxdeviationangle
         res = self.prob.SendCommand(cmd)
         if res is None:
-            raise planning_error('MoveHandStraight')
+            raise openravepy.planning_error('MoveHandStraight')
         return res
     def MoveManipulator(self,goal,maxiter=None,execute=None,outputtraj=None,maxtries=None):
         """See :ref:`probleminstance-basemanipulation-movemanipulator`
@@ -85,7 +85,7 @@ class BaseManipulation:
             cmd += 'maxtries %d '%maxtries
         res = self.prob.SendCommand(cmd)
         if res is None:
-            raise planning_error('MoveManipulator')
+            raise openravepy.planning_error('MoveManipulator')
         return res
     def MoveActiveJoints(self,goal,steplength=None,maxiter=None,maxtries=None,execute=None,outputtraj=None):
         """See :ref:`probleminstance-basemanipulation-moveactivejoints`
@@ -104,7 +104,7 @@ class BaseManipulation:
             cmd += 'maxtries %d '%maxtries
         res = self.prob.SendCommand(cmd)
         if res is None:
-            raise planning_error('MoveActiveJoints')
+            raise openravepy.planning_error('MoveActiveJoints')
         return res
     def MoveToHandPosition(self,matrices=None,affinedofs=None,maxiter=None,maxtries=None,translation=None,rotation=None,seedik=None,constraintfreedoms=None,constraintmatrix=None,constrainterrorthresh=None,execute=None,outputtraj=None):
         """See :ref:`probleminstance-basemanipulation-movetohandposition`
@@ -136,7 +136,7 @@ class BaseManipulation:
             cmd += 'outputtraj '
         res = self.prob.SendCommand(cmd)
         if res is None:
-            raise planning_error('MoveToHandPosition')
+            raise openravepy.planning_error('MoveToHandPosition')
         return res
     def MoveUnsyncJoints(self,jointvalues,jointinds,maxtries=None,planner=None,maxdivision=None,execute=None,outputtraj=None):
         """See :ref:`probleminstance-basemanipulation-moveunsyncjoints`
@@ -155,7 +155,7 @@ class BaseManipulation:
             cmd += 'maxdivision %d '%maxdivision
         res = self.prob.SendCommand(cmd)
         if res is None:
-            raise planning_error('MoveUnsyncJoints')
+            raise openravepy.planning_error('MoveUnsyncJoints')
         return res
     def JitterActive(self,maxiter=None,jitter=None,execute=None,outputtraj=None,outputfinal=None):
         """See :ref:`probleminstance-basemanipulation-jitteractive`
@@ -173,7 +173,7 @@ class BaseManipulation:
             cmd += 'outputfinal'
         res = self.prob.SendCommand(cmd)
         if res is None:
-            raise planning_error('JitterActive')
+            raise openravepy.planning_error('JitterActive')
         resvalues = res.split()
         if outputfinal:
             final = numpy.array([numpy.float64(resvalues[i]) for i in range(self.robot.GetActiveDOF())])
@@ -197,7 +197,7 @@ class BaseManipulation:
             cmd += 'filteroptions %d '%filteroptions        
         res = self.prob.SendCommand(cmd)
         if res is None:
-            raise planning_error('FindIKWithFilters')
+            raise openravepy.planning_error('FindIKWithFilters')
         resvalues = res.split()
         num = int(resvalues[0])
         dim = (len(resvalues)-1)/num

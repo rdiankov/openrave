@@ -61,7 +61,7 @@ class VisualFeedback:
                 cmd += str(f) + ' '
         res = self.prob.SendCommand(cmd)
         if res is None:
-            raise planning_error()
+            raise openravepy.planning_error()
         return res
     def ProcessVisibilityExtents(self,localtargetcenter=None,numrolls=None,transforms=None,extents=None,sphere=None,conedirangles=None):
         """See :ref:`probleminstance-visualfeedback-processvisibilityextents`
@@ -88,7 +88,7 @@ class VisualFeedback:
                 cmd += 'conedirangle %f %f %f '%(conedirangle[0],conedirangle[1],conedirangle[2])
         res = self.prob.SendCommand(cmd)
         if res is None:
-            raise planning_error()
+            raise openravepy.planning_error()
         visibilitytransforms = numpy.array([numpy.float(s) for s in res.split()],numpy.float)
         return numpy.reshape(visibilitytransforms,(len(visibilitytransforms)/7,7))
     def SetCameraTransforms(self,transforms,mindist=None):
@@ -101,7 +101,7 @@ class VisualFeedback:
             cmd += 'mindist %f '%(mindist)
         res = self.prob.SendCommand(cmd)
         if res is None:
-            raise planning_error()
+            raise openravepy.planning_error()
         return res
     def ComputeVisibility(self):
         """See :ref:`probleminstance-visualfeedback-computevisibility`
@@ -109,7 +109,7 @@ class VisualFeedback:
         cmd = 'ComputeVisibility '
         res = self.prob.SendCommand(cmd)
         if res is None:
-            raise planning_error()
+            raise openravepy.planning_error()
         return int(res)
     def ComputeVisibleConfiguration(self,pose):
         """See :ref:`probleminstance-visualfeedback-computevisibleconfiguration`
@@ -120,7 +120,7 @@ class VisualFeedback:
             cmd += str(pose[i]) + ' '
         res = self.prob.SendCommand(cmd)
         if res is None:
-            raise planning_error()
+            raise openravepy.planning_error()
         return numpy.array([float(s) for s in res.split()])
     def SampleVisibilityGoal(self,numsamples=None):
         """See :ref:`probleminstance-visualfeedback-samplevisibilitygoal`
@@ -130,7 +130,7 @@ class VisualFeedback:
             cmd += 'numsamples %d '%numsamples
         res = self.prob.SendCommand(cmd)
         if res is None:
-            raise planning_error()
+            raise openravepy.planning_error()
         samples = [float(s) for s in res.split()]
         returnedsamples = int(samples[0])
         return numpy.reshape(numpy.array(samples[1:],float),(returnedsamples,(len(samples)-1)/returnedsamples))
@@ -154,7 +154,7 @@ class VisualFeedback:
             cmd += 'maxiter %d '%maxiter
         res = self.prob.SendCommand(cmd)
         if res is None:
-            raise planning_error()
+            raise openravepy.planning_error()
         return res
     def VisualFeedbackGrasping(self,graspset,usevisibility=None,planner=None,graspdistthresh=None,visgraspthresh=None,numgradientsamples=None,maxiter=None,execute=None,outputtraj=None):
         """See :ref:`probleminstance-visualfeedback-visualfeedbackgrasping`
@@ -182,7 +182,7 @@ class VisualFeedback:
             cmd += 'maxiter %d '%maxiter
         res = self.prob.SendCommand(cmd)
         if res is None:
-            raise planning_error()
+            raise openravepy.planning_error()
         return res
     def SetParameter(self,raydensity=None,raymindist=None,allowableocclusion=None):
         """See :ref:`probleminstance-visualfeedback-setparameter`

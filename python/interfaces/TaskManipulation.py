@@ -15,7 +15,6 @@ __license__ = 'Apache License, Version 2.0'
 from openravepy import *
 from numpy import *
 from copy import copy as shallowcopy
-
 class TaskManipulation:
     """Interface wrapper for :ref:`probleminstance-taskmanipulation`
     """
@@ -79,7 +78,7 @@ class TaskManipulation:
             cmd += 'outputtraj '
         res = self.prob.SendCommand(cmd)
         if res is None:
-            raise planning_error()
+            raise openravepy.planning_error()
         resvalues = res.split()
         numgoals = int(resvalues.pop(0))
         goals = []
@@ -133,7 +132,7 @@ class TaskManipulation:
             cmd += 'outputfinal'
         res = self.prob.SendCommand(cmd)
         if res is None:
-            raise planning_error('CloseFingers')
+            raise openravepy.planning_error('CloseFingers')
         resvalues = res.split()
         if outputfinal:
             final = array([float64(resvalues[i]) for i in range(dof)])
@@ -165,7 +164,7 @@ class TaskManipulation:
             cmd += 'coarsestep %f '%coarsestep
         res = self.prob.SendCommand(cmd)
         if res is None:
-            raise planning_error('ReleaseFingers')
+            raise openravepy.planning_error('ReleaseFingers')
         resvalues = res.split()
         if outputfinal:
             final = array([float64(resvalues[i]) for i in range(dof)])
@@ -192,7 +191,7 @@ class TaskManipulation:
             cmd += 'outputfinal'
         res = self.prob.SendCommand(cmd)
         if res is None:
-            raise planning_error('ReleaseActive')
+            raise openravepy.planning_error('ReleaseActive')
         resvalues = res.split()
         if outputfinal:
             final = array([float64(resvalues[i]) for i in range(self.robot.GetActiveDOF())])
