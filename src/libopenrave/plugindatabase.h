@@ -732,7 +732,9 @@ protected:
 #endif
             if( libraryfilename.size() > 3 && libraryfilename.substr(0,3) != string("lib") ) {
                 libraryname = librarypath;
-                libraryname += s_filesep;
+                if( libraryname.size() > 0 ) {
+                    libraryname += s_filesep;
+                }
                 libraryname += string("lib");
                 libraryname += libraryfilename;
                 plibrary = _SysLoadLibrary(libraryname.c_str(),OPENRAVE_LAZY_LOADING);

@@ -55,12 +55,14 @@ def setup_robotstats():
     env=Environment()
     env.StopSimulation()
     ikfastproblem = RaveCreateProblem(env,'ikfast')
+    assert(ikfastproblem is not None)
     env.LoadProblem(ikfastproblem,'')
 
 def teardown_robotstats():
     global env,ikfastproblem
-    env.Remove(ikfastproblem)
-    env.Destroy()
+    if env is not None:
+        env.Remove(ikfastproblem)
+        env.Destroy()
     RaveDestroy()
 
 def measurement(name,value):
@@ -294,7 +296,7 @@ if __name__ == "__main__":
     multiprocess._instantiate_plugins = [capture.Capture, xunitmultiprocess.Xunitmp, callableclass.CallableClass]
 
     header = 'name=\"%s robots\" package=\"%s\"'%(options.robots,ikfast.__name__)
-    argv=['nosetests','-v','--with-xunitmp','--xunit-file=test_ikfast.xml','--xunit-header=%s'%header,'--processes=%d'%options.numprocesses,'--process-timeout=%f'%options.timeout,'--process-restartworker','--with-callableclass','test_ikfast.py']
+    argv=['nosetests','-s','-v','--with-xunitmp','--xunit-file=test_ikfast.xml','--xunit-header=%s'%header,'--processes=%d'%options.numprocesses,'--process-timeout=%f'%options.timeout,'--process-restartworker','--with-callableclass','test_ikfast.py']
     plugins=[capture.Capture(),multiprocess.MultiProcess(),xunitmultiprocess.Xunitmp(),callableclass.CallableClass()]
     prog=nose.core.TestProgram(argv=argv,plugins=plugins,exit=False)
     print 'processing the global stats'

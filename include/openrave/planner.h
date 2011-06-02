@@ -186,8 +186,8 @@ public:
         /// expects \verbatim <PlannerParameters> \endverbatim to be the first token. Parses stream until \verbatim </PlannerParameters> \endverbatim reached
         friend OPENRAVE_API std::istream& operator>>(std::istream& I, PlannerParameters& v);
     };
-    typedef boost::shared_ptr<PlannerParameters> PlannerParametersPtr;
-    typedef boost::shared_ptr<PlannerParameters const> PlannerParametersConstPtr;
+    typedef boost::shared_ptr<PlannerBase::PlannerParameters> PlannerParametersPtr;
+    typedef boost::shared_ptr<PlannerBase::PlannerParameters const> PlannerParametersConstPtr;
 
     PlannerBase(EnvironmentBasePtr penv) : InterfaceBase(PT_Planner, penv) {}
     virtual ~PlannerBase() {}

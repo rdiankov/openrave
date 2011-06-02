@@ -553,6 +553,11 @@ DefineRavePrintfA(_VERBOSELEVEL)
 
 #define IS_DEBUGLEVEL(level) (OpenRAVE::RaveGetDebugLevel()>=(level))
 
+#define OPENRAVE_EXCEPTION_FORMAT0(s, errorcode) openrave_exception(str(boost::format("[%s:%d] "s)%(__PRETTY_FUNCTION__)%(__LINE__)),errorcode)
+
+/// adds the function name and line number to an openrave exception
+#define OPENRAVE_EXCEPTION_FORMAT(s, args,errorcode) openrave_exception(str(boost::format("[%s:%d] "s)%(__PRETTY_FUNCTION__)%(__LINE__)%args),errorcode)
+
 /// \brief Enumeration of all the interfaces.
 enum InterfaceType
 {

@@ -17,7 +17,7 @@ if( CRLIBM_FOUND )
   add_dependencies(libopenrave check_libm_accuracy) # forces check to be run before libopenrave is compile
 endif()
 set_target_properties(libopenrave PROPERTIES OUTPUT_NAME openrave${OPENRAVE_LIBRARY_SUFFIX}
-                                  SOVERSION ${OPENRAVE_SOVERSION}
+                                  SOVERSION 0 # always have it 0 since we're including the soversion as part of the library name
                                   VERSION ${OPENRAVE_VERSION}
                                   CLEAN_DIRECT_OUTPUT 1
                                   COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} -DOPENRAVE_DLL_EXPORTS -DOPENRAVE_DLL"
@@ -45,7 +45,7 @@ if( OPT_STATIC )
 
   add_library(libopenrave_static STATIC ${openrave_lib_SOURCES})
   set_target_properties(libopenrave_static PROPERTIES OUTPUT_NAME ${LIBOPENRAVE_NAME}
-                                           SOVERSION ${OPENRAVE_VERSION}
+                                           SOVERSION 0 # always have it 0 since we're including the soversion as part of the library name
                                            VERSION ${OPENRAVE_VERSION}
                                            CLEAN_DIRECT_OUTPUT 1
                                            COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS}"

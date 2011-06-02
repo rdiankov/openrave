@@ -115,8 +115,9 @@ public:
             /// Should be transformed by \ref GEOMPROPERTIES::GetTransform() before rendering.
             /// For spheres and cylinders, an appropriate discretization value is chosen. 
             inline const TRIMESH& GetCollisionMesh() const { return collisionmesh; }
-            
-            virtual AABB ComputeAABB(const Transform& t) const;
+
+            /// \brief returns an axis aligned bounding box given that the geometry is transformed by trans
+            virtual AABB ComputeAABB(const Transform& trans) const;
             virtual void serialize(std::ostream& o, int options) const;
 
             /// \brief sets a new collision mesh and notifies every registered callback about it
@@ -193,7 +194,7 @@ public:
         inline int GetIndex() const { return _index; }
         inline const TRIMESH& GetCollisionData() const { return collision; }
 
-        /// \return the aabb of all the geometries of the link in the world coordinate system
+        /// \brief Compute the aabb of all the geometries of the link in the world coordinate system
         virtual AABB ComputeAABB() const;
 
         /// \brief Return the current transformation of the link in the world coordinate system. 
@@ -307,9 +308,9 @@ public:
 #endif
         friend class KinBody;
     };
-    typedef boost::shared_ptr<Link> LinkPtr;
-    typedef boost::shared_ptr<Link const> LinkConstPtr;
-    typedef boost::weak_ptr<Link> LinkWeakPtr;
+    typedef boost::shared_ptr<KinBody::Link> LinkPtr;
+    typedef boost::shared_ptr<KinBody::Link const> LinkConstPtr;
+    typedef boost::weak_ptr<KinBody::Link> LinkWeakPtr;
 
     /// \brief Information about a joint that controls the relationship between two links.
     class OPENRAVE_API Joint : public boost::enable_shared_from_this<Joint>
@@ -631,9 +632,9 @@ public:
 #endif
         friend class KinBody;
     };
-    typedef boost::shared_ptr<Joint> JointPtr;
-    typedef boost::shared_ptr<Joint const> JointConstPtr;
-    typedef boost::weak_ptr<Joint> JointWeakPtr;
+    typedef boost::shared_ptr<KinBody::Joint> JointPtr;
+    typedef boost::shared_ptr<KinBody::Joint const> JointConstPtr;
+    typedef boost::weak_ptr<KinBody::Joint> JointWeakPtr;
 
     /// \brief Stores the state of the current body that is published in a thread safe way from the environment without requiring locking the environment.
     class BodyState
@@ -648,8 +649,8 @@ public:
         std::string strname; ///< name of the body
         int environmentid;
     };
-    typedef boost::shared_ptr<BodyState> BodyStatePtr;
-    typedef boost::shared_ptr<BodyState const> BodyStateConstPtr;
+    typedef boost::shared_ptr<KinBody::BodyState> BodyStatePtr;
+    typedef boost::shared_ptr<KinBody::BodyState const> BodyStateConstPtr;
 
     /// \brief Access point of the sensor system that manages the body.
     class OPENRAVE_API ManageData : public boost::enable_shared_from_this<ManageData>
@@ -687,8 +688,8 @@ public:
         SensorSystemBaseWeakPtr _psensorsystem;
     };
 
-    typedef boost::shared_ptr<ManageData> ManageDataPtr;
-    typedef boost::shared_ptr<ManageData const> ManageDataConstPtr;
+    typedef boost::shared_ptr<KinBody::ManageData> ManageDataPtr;
+    typedef boost::shared_ptr<KinBody::ManageData const> ManageDataConstPtr;
 
     /// \brief Parameters passed into the state savers to control what information gets saved.
     enum SaveParameters
@@ -930,10 +931,10 @@ public:
     */
     virtual void SetTransform(const Transform& transform);
 
-    /// \brief Return an axis-aligned bounding box of the entire object.
+    /// \brief Return an axis-aligned bounding box of the entire object in the world coordinate system.
     virtual AABB ComputeAABB() const;
 
-    /// \brief Return the center of mass of entire robot.
+    /// \brief Return the center of mass of entire robot in the world coordinate system.
     virtual Vector GetCenterOfMass() const;
 
     /// \brief Enables or disables the bodies.

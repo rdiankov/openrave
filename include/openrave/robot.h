@@ -219,9 +219,9 @@ public:
 #endif
         friend class RobotBase;
     };
-    typedef boost::shared_ptr<Manipulator> ManipulatorPtr;
-    typedef boost::shared_ptr<Manipulator const> ManipulatorConstPtr;
-    typedef boost::weak_ptr<Manipulator> ManipulatorWeakPtr;
+    typedef boost::shared_ptr<RobotBase::Manipulator> ManipulatorPtr;
+    typedef boost::shared_ptr<RobotBase::Manipulator const> ManipulatorConstPtr;
+    typedef boost::weak_ptr<RobotBase::Manipulator> ManipulatorWeakPtr;
 
     /// \brief Attaches a sensor to a link on the robot.
     class OPENRAVE_API AttachedSensor : public boost::enable_shared_from_this<AttachedSensor>
@@ -268,8 +268,8 @@ public:
 #endif
         friend class RobotBase;
     };
-    typedef boost::shared_ptr<AttachedSensor> AttachedSensorPtr;
-    typedef boost::shared_ptr<AttachedSensor const> AttachedSensorConstPtr;
+    typedef boost::shared_ptr<RobotBase::AttachedSensor> AttachedSensorPtr;
+    typedef boost::shared_ptr<RobotBase::AttachedSensor const> AttachedSensorConstPtr;
 
     /// \brief The information of a currently grabbed body.
     class OPENRAVE_API Grabbed

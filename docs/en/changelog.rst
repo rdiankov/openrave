@@ -36,6 +36,8 @@ Misc
 
 * removed transform from laser data, all sensors have a transform data type that is not part of the data state
 
+* added more tests: openrave global runtime
+
 Version 0.3.2
 =============
 

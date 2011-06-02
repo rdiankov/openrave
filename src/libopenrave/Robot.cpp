@@ -18,7 +18,7 @@
 
 #define CHECK_INTERNAL_COMPUTATION { \
     if( _nHierarchyComputed != 2 ) { \
-        throw openrave_exception(str(boost::format("%s: joint hierarchy needs to be computed (is body added to environment?)\n")%__PRETTY_FUNCTION__)); \
+        throw OPENRAVE_EXCEPTION_FORMAT0("joint hierarchy needs to be computed (is body added to environment?)", ORE_Failed); \
     } \
 } \
 
@@ -82,7 +82,7 @@ bool RobotBase::Manipulator::FindIKSolution(const IkParameterization& goal, vect
 bool RobotBase::Manipulator::FindIKSolution(const IkParameterization& goal, const std::vector<dReal>& vFreeParameters, vector<dReal>& solution, int filteroptions) const
 {
     if( !_pIkSolver ) {
-        throw openrave_exception(str(boost::format("manipulator %s:%s does not have an IK solver set")%RobotBasePtr(_probot)->GetName()%GetName()));
+        throw OPENRAVE_EXCEPTION_FORMAT("manipulator %s:%s does not have an IK solver set",RobotBasePtr(_probot)->GetName()%GetName(),ORE_Failed);
     }
     RobotBasePtr probot = GetRobot();
     EnvironmentMutex::scoped_lock lock(probot->GetEnv()->GetMutex()); // lock just in case since many users call this without locking...
@@ -112,7 +112,7 @@ bool RobotBase::Manipulator::FindIKSolutions(const IkParameterization& goal, std
 bool RobotBase::Manipulator::FindIKSolutions(const IkParameterization& goal, const std::vector<dReal>& vFreeParameters, std::vector<std::vector<dReal> >& solutions, int filteroptions) const
 {
     if( !_pIkSolver ) {
-        throw openrave_exception(str(boost::format("manipulator %s:%s does not have an IK solver set")%RobotBasePtr(_probot)->GetName()%GetName()));
+        throw OPENRAVE_EXCEPTION_FORMAT("manipulator %s:%s does not have an IK solver set", RobotBasePtr(_probot)->GetName()%GetName(),ORE_Failed);
     }
     EnvironmentMutex::scoped_lock lock(GetRobot()->GetEnv()->GetMutex()); // lock just in case since many users call this without locking...
     BOOST_ASSERT(_pIkSolver->GetManipulator() == shared_from_this() );
@@ -166,7 +166,7 @@ IkParameterization RobotBase::Manipulator::GetIkParameterization(IkParameterizat
         ikp.SetTranslationLocalGlobal6D(Vector(0,0,0),GetTransform().trans); break;
     }
     default:
-        throw openrave_exception(str(boost::format("invalid ik type 0x%x")%iktype));
+        throw OPENRAVE_EXCEPTION_FORMAT("invalid ik type 0x%x",iktype,ORE_InvalidArguments);
     }
     return ikp;
 }
@@ -212,7 +212,7 @@ IkParameterization RobotBase::Manipulator::GetIkParameterization(const IkParamet
         break;
     }
     default:
-        throw openrave_exception(str(boost::format("invalid ik type 0x%x")%ikparam.GetType()));
+        throw OPENRAVE_EXCEPTION_FORMAT("invalid ik type 0x%x",ikparam.GetType(),ORE_InvalidArguments);
     }
     return ikp;
 }
@@ -839,7 +839,7 @@ int RobotBase::GetAffineDOFIndex(DOFAffine dof) const
     if( dof&DOF_RotationQuat ) {
         return index;
     }
-    throw openrave_exception("unspecified dow",ORE_InvalidArguments);
+    throw OPENRAVE_EXCEPTION_FORMAT0("unspecified dow",ORE_InvalidArguments);
 }
 
 void RobotBase::SetAffineTranslationLimits(const Vector& lower, const Vector& upper)
@@ -959,7 +959,7 @@ void RobotBase::SetActiveDOFs(const std::vector<int>& vJointIndices, int nAffine
 {
     FOREACHC(itj, vJointIndices) {
         if( *itj < 0 || *itj >= (int)GetDOF() ) {
-            throw openrave_exception("bad indices",ORE_InvalidArguments);
+            throw OPENRAVE_EXCEPTION_FORMAT("bad indices %d",*itj,ORE_InvalidArguments);
         }
     }
     // only reset the cache if the dof values are different
@@ -1015,8 +1015,8 @@ void RobotBase::SetActiveDOFValues(const std::vector<dReal>& values, bool bCheck
         SetDOFValues(values,bCheckLimits);
         return;
     }
-    if( (int)values.size() != GetActiveDOF() ) {
-        throw openrave_exception(str(boost::format("dof not equal %d!=%d")%values.size()%GetActiveDOF()),ORE_InvalidArguments);
+    if( (int)values.size() < GetActiveDOF() ) {
+        throw OPENRAVE_EXCEPTION_FORMAT("not enough values %d<%d",values.size()%GetActiveDOF(),ORE_InvalidArguments);
     }
 
     Transform t;
@@ -1158,7 +1158,7 @@ void RobotBase::SetActiveDOFVelocities(const std::vector<dReal>& velocities, boo
             angularvel.z = *pAffineValues++;
         }
         else if( _nAffineDOFs & DOF_RotationQuat ) {
-            throw openrave_exception("quaternions not supported",ORE_InvalidArguments);
+            throw OPENRAVE_EXCEPTION_FORMAT0("quaternions not supported",ORE_InvalidArguments);
         }
 
         if( _vActiveDOFIndices.size() == 0 ) {
@@ -1218,7 +1218,7 @@ void RobotBase::GetActiveDOFVelocities(std::vector<dReal>& velocities) const
         *pVelocities++ = angularvel.z;
     }
     else if( _nAffineDOFs & DOF_RotationQuat ) {
-        throw openrave_exception("quaternions not supported",ORE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT0("quaternions not supported",ORE_InvalidArguments);
     }
 }
 
@@ -1911,7 +1911,7 @@ const std::set<int>& RobotBase::GetNonAdjacentLinks(int adjacentoptions) const
             }
         }
         if( requestedoptions & ~(AO_Enabled|AO_ActiveDOFs) ) {
-            throw openrave_exception(str(boost::format("RobotBase::GetNonAdjacentLinks does not support adjacentoptions %d")%adjacentoptions),ORE_InvalidArguments);
+            throw OPENRAVE_EXCEPTION_FORMAT("does not support adjacentoptions %d",adjacentoptions,ORE_InvalidArguments);
         }
 
         // compute it
@@ -1970,10 +1970,10 @@ bool RobotBase::Grab(KinBodyPtr pbody, const std::set<int>& setRobotLinksToIgnor
 bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr plink)
 {
     if( !pbody || !plink || plink->GetParent() != shared_kinbody() ) {
-        throw openrave_exception("invalid grab arguments",ORE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT0("invalid grab arguments",ORE_InvalidArguments);
     }
     if( pbody == shared_kinbody() ) {
-        throw openrave_exception("robot cannot grab itself",ORE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT("robot %s cannot grab itself",pbody->GetName(), ORE_InvalidArguments);
     }
     if( IsGrabbing(pbody) ) {
         RAVELOG_VERBOSE(str(boost::format("Robot %s: body %s already grabbed\n")%GetName()%pbody->GetName()));
@@ -2006,10 +2006,10 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr plink)
 bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr pRobotLinkToGrabWith, const std::set<int>& setRobotLinksToIgnore)
 {
     if( !pbody || !pRobotLinkToGrabWith || pRobotLinkToGrabWith->GetParent() != shared_kinbody() ) {
-        throw openrave_exception("invalid grab arguments",ORE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT0("invalid grab arguments",ORE_InvalidArguments);
     }
     if( pbody == shared_kinbody() ) {
-        throw openrave_exception("robot cannot grab itself",ORE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT("robot %s cannot grab itself",pbody->GetName(), ORE_InvalidArguments);
     }
     if( IsGrabbing(pbody) ) {
         RAVELOG_VERBOSE(str(boost::format("Robot %s: body %s already grabbed\n")%GetName()%pbody->GetName()));
@@ -2129,7 +2129,7 @@ void RobotBase::SetActiveManipulator(const std::string& manipname)
                 return;
             }
         }
-        throw openrave_exception(str(boost::format("failed to find manipulator with name: %s")%manipname));
+        throw OPENRAVE_EXCEPTION_FORMAT("failed to find manipulator with name: %s", manipname, ORE_InvalidArguments);
     }
 
     _nActiveManip = -1;
@@ -2275,7 +2275,7 @@ void RobotBase::_ComputeInternalInformation()
             (*itmanip)->_name = ss.str();
         }
         else if( !IsValidName((*itmanip)->GetName()) ) {
-            throw openrave_exception(str(boost::format("manipulator name \"%s\" is not valid")%(*itmanip)->GetName()));
+            throw OPENRAVE_EXCEPTION_FORMAT("manipulator name \"%s\" is not valid", (*itmanip)->GetName(), ORE_Failed);
         }
         if( !!(*itmanip)->GetBase() && !!(*itmanip)->GetEndEffector() ) {
             vector<JointPtr> vjoints;
@@ -2371,7 +2371,7 @@ void RobotBase::_ComputeInternalInformation()
             (*itsensor)->_name = ss.str();
         }
         else if( !IsValidName((*itsensor)->GetName()) ) {
-            throw openrave_exception(str(boost::format("sensor name \"%s\" is not valid")%(*itsensor)->GetName()));
+            throw OPENRAVE_EXCEPTION_FORMAT("sensor name \"%s\" is not valid", (*itsensor)->GetName(), ORE_Failed);
         }
         if( !!(*itsensor)->GetSensor() ) {
             stringstream ss; ss << GetName() << "_" << (*itsensor)->GetName(); // global unique name?

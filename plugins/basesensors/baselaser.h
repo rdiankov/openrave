@@ -41,7 +41,7 @@ protected:
         }
 
         virtual bool endElement(const std::string& name)
-        {    
+        {
             if( !!_pcurreader ) {
                 if( _pcurreader->endElement(name) ) {
                     _pcurreader.reset();

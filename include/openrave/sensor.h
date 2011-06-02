@@ -73,8 +73,8 @@ public:
         uint64_t __stamp; ///< time stamp of the sensor data in microseconds. If 0, then the data is uninitialized! (floating-point precision is bad here). This can be either simulation or real time depending on the sensor.
         Transform __trans;     ///< the coordinate system the sensor was when the measurement was taken, this is taken directly from SensorBase::GetTransform
     };
-    typedef boost::shared_ptr<SensorData> SensorDataPtr;
-    typedef boost::shared_ptr<SensorData const> SensorDataConstPtr;
+    typedef boost::shared_ptr<SensorBase::SensorData> SensorDataPtr;
+    typedef boost::shared_ptr<SensorBase::SensorData const> SensorDataConstPtr;
 
     class OPENRAVE_API LaserSensorData : public SensorData
     {
@@ -176,8 +176,8 @@ public:
         virtual ~SensorGeometry() {}
         virtual SensorType GetType() = 0;
     };
-    typedef boost::shared_ptr<SensorGeometry> SensorGeometryPtr;
-    typedef boost::shared_ptr<SensorGeometry const> SensorGeometryConstPtr;
+    typedef boost::shared_ptr<SensorBase::SensorGeometry> SensorGeometryPtr;
+    typedef boost::shared_ptr<SensorBase::SensorGeometry const> SensorGeometryConstPtr;
 
     class OPENRAVE_API LaserGeomData : public SensorGeometry
     {

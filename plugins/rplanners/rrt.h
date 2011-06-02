@@ -40,34 +40,36 @@ Uses the Rapidly-Exploring Random Trees Algorithm.\n\
         _robot = pbase;
 
         RobotBase::RobotStateSaver savestate(_robot);
-        if( (int)params->vinitialconfig.size() != params->GetDOF() ) {
+        if( (int)params->vinitialconfig.size() % params->GetDOF() ) {
             RAVELOG_ERROR(str(boost::format("initial config wrong dim: %d\n")%params->vinitialconfig.size()));
             return false;
         }
 
-        if(CollisionFunctions::CheckCollision(params,_robot,params->vinitialconfig, _report)) {
-            RAVELOG_DEBUG("BirrtPlanner::InitPlan - Error: Initial configuration in collision\n");
-            return false;
-        }
-            
         _randomConfig.resize(params->GetDOF());
-    
-        // set up the initial state
-        if( !!params->_constraintfn ) {
-            params->_setstatefn(params->vinitialconfig);
-            if( !params->_constraintfn(params->vinitialconfig, params->vinitialconfig,0) ) {
-                // failed
-                RAVELOG_WARN("initial state rejected by constraint fn\n");
-                return false;
-            }
-        }
-
         _treeForward.Reset(shared_planner(), params->GetDOF());;
         _treeForward._fStepLength = params->_fStepLength;
         _treeForward._distmetricfn = params->_distmetricfn;
-        _treeForward.AddNode(-1, params->vinitialconfig);
+        std::vector<dReal> vinitialconfig(params->GetDOF());
+        for(size_t index = 0; index < params->vinitialconfig.size(); index += params->GetDOF()) {
+            std::copy(params->vinitialconfig.begin()+index,params->vinitialconfig.begin()+index+params->GetDOF(),vinitialconfig.begin());
+            if(CollisionFunctions::CheckCollision(params,_robot,vinitialconfig, _report)) {
+                RAVELOG_DEBUG(str(boost::format("initial configuration %d in collision")%(index/params->GetDOF())));
+                continue;
+            }
+    
+            // set up the initial state
+            if( !!params->_constraintfn ) {
+                params->_setstatefn(vinitialconfig);
+                if( !params->_constraintfn(vinitialconfig, vinitialconfig,0) ) {
+                    RAVELOG_WARN(str(boost::format("initial state %d rejected by constraint fn")%(index/params->GetDOF())));
+                    continue;
+                }
+            }
 
-        return true;
+            _treeForward.AddNode(-1, vinitialconfig);
+        }
+
+        return _treeForward._nodes.size()>0;
     }
 
     // simple path optimization
