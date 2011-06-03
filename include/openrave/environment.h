@@ -352,7 +352,6 @@ public:
 
     /// Get the corresponding body from its unique network id
     virtual KinBodyPtr GetBodyFromEnvironmentId(int id) = 0;
-    virtual KinBodyPtr GetBodyFromNetworkId(int id) RAVE_DEPRECATED = 0;
 
     /// A set of options specifying what to triangulate
     enum TriangulateOptions

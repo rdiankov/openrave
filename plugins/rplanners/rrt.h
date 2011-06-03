@@ -45,7 +45,7 @@ Uses the Rapidly-Exploring Random Trees Algorithm.\n\
             return false;
         }
 
-        _randomConfig.resize(params->GetDOF());
+        _sampleConfig.resize(params->GetDOF());
         _treeForward.Reset(shared_planner(), params->GetDOF());;
         _treeForward._fStepLength = params->_fStepLength;
         _treeForward._distmetricfn = params->_distmetricfn;
@@ -86,7 +86,6 @@ Uses the Rapidly-Exploring Random Trees Algorithm.\n\
         int nrejected = 0;
         int i = numiterations;
         while(i > 0 && nrejected < (int)path.size()+4 ) {
-
             --i;
 
             // pick a random node on the path, and a random jump ahead
@@ -102,7 +101,6 @@ Uses the Rapidly-Exploring Random Trees Algorithm.\n\
             // check if the nodes can be connected by a straight line
             vconfigs.resize(0);
             if (CollisionFunctions::CheckCollision(params,_robot,(*startNode)->q, (*endNode)->q, IT_Open, &vconfigs)) {
-
                 if( nrejected++ > (int)path.size()+8 ) {
                     break;
                 }
@@ -127,7 +125,7 @@ Uses the Rapidly-Exploring Random Trees Algorithm.\n\
 protected:
     RobotBasePtr         _robot;
 
-    std::vector<dReal>         _randomConfig;
+    std::vector<dReal>         _sampleConfig;
     CollisionReportPtr _report;
 
     SpatialTree< RrtPlanner<Node>, Node > _treeForward;
@@ -260,15 +258,15 @@ class BirrtPlanner : public RrtPlanner<SimpleNode>
             }
 
             if( iter == 1 && _parameters->GetDOF() <= (int)_parameters->vgoalconfig.size() ) {
-                _randomConfig.resize(_parameters->GetDOF());
-                std::copy(_parameters->vgoalconfig.begin(),_parameters->vgoalconfig.begin()+_parameters->GetDOF(),_randomConfig.begin());
+                _sampleConfig.resize(_parameters->GetDOF());
+                std::copy(_parameters->vgoalconfig.begin(),_parameters->vgoalconfig.begin()+_parameters->GetDOF(),_sampleConfig.begin());
             }
-            else if( !_parameters->_samplefn(_randomConfig) ) {
+            else if( !_parameters->_samplefn(_sampleConfig) ) {
                 continue;
             }
             
             // extend A
-            ExtendType et = TreeA->Extend(_randomConfig, iConnectedA);
+            ExtendType et = TreeA->Extend(_sampleConfig, iConnectedA);
 
             // although check isn't necessary, having it improves running times
             if( et == ET_Failed ) {
@@ -463,14 +461,14 @@ class BasicRrtPlanner : public RrtPlanner<SimpleNode>
             }
 
             if( (iter == 1 || RaveRandomFloat() < _fGoalBiasProb) && _vecGoals.size() > 0 ) {
-                _randomConfig = _vecGoals[RaveRandomInt()%_vecGoals.size()];
+                _sampleConfig = _vecGoals[RaveRandomInt()%_vecGoals.size()];
             }
-            else if( !_parameters->_samplefn(_randomConfig) ) {
+            else if( !_parameters->_samplefn(_sampleConfig) ) {
                 continue;
             }
 
             // extend A
-            ExtendType et = _treeForward.Extend(_randomConfig, lastnode, _bOneStep);
+            ExtendType et = _treeForward.Extend(_sampleConfig, lastnode, _bOneStep);
 
             if( et == ET_Connected ) {
                 FOREACH(itgoal, _vecGoals) {

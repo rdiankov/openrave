@@ -25,7 +25,7 @@ template<typename Value_t> class FunctionParserBase;
 
 namespace OpenRAVE {
 
-/** \brief <b>[interface]</b> A kinematic body of links and joints. See \ref arch_kinbody.
+/** \brief <b>[interface]</b> A kinematic body of links and joints. <b>Methods not multi-thread safe.</b> See \ref arch_kinbody.
     \ingroup interfaces
 */
 class OPENRAVE_API KinBody : public InterfaceBase

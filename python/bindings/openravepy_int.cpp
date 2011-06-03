@@ -2437,6 +2437,50 @@ public:
     }
 };
 
+class PySpaceSamplerBase : public PyInterfaceBase
+{
+protected:
+    SpaceSamplerBasePtr _pspacesampler;
+public:
+    PySpaceSamplerBase(SpaceSamplerBasePtr pspacesampler, PyEnvironmentBasePtr pyenv) : PyInterfaceBase(pspacesampler, pyenv), _pspacesampler(pspacesampler) {}
+    virtual ~PySpaceSamplerBase() {}
+
+    SpaceSamplerBasePtr GetSpaceSampler() { return _pspacesampler; }
+
+    void SetSeed(uint32_t seed) { _pspacesampler->SetSeed(seed); }
+    void SetSpaceDOF(int dof) { _pspacesampler->SetSpaceDOF(dof); }
+    int GetDOF() { return _pspacesampler->GetDOF(); }
+    int GetNumberOfValues() { return _pspacesampler->GetNumberOfValues(); }
+    
+    object SampleSequence(size_t num,IntervalType interval)
+    {
+        std::vector<dReal> samples;
+        _pspacesampler->SampleSequence(samples,num,interval);
+        return toPyArray(samples);
+    }
+
+    object SampleSequence(size_t num)
+    {
+        std::vector<uint32_t> samples;
+        _pspacesampler->SampleSequence(samples,num);
+        return toPyArray(samples);
+    }
+
+    object SampleComplete(size_t num,IntervalType interval)
+    {
+        std::vector<dReal> samples;
+        _pspacesampler->SampleComplete(samples,num,interval);
+        return toPyArray(samples);
+    }
+
+    object SampleComplete(size_t num)
+    {
+        std::vector<uint32_t> samples;
+        _pspacesampler->SampleComplete(samples,num);
+        return toPyArray(samples);
+    }
+};
+
 class PyEnvironmentBase : public boost::enable_shared_from_this<PyEnvironmentBase>
 {
 #if BOOST_VERSION < 103500
@@ -2467,6 +2511,7 @@ protected:
         case PT_CollisionChecker: return PyCollisionCheckerBasePtr(new PyCollisionCheckerBase(boost::static_pointer_cast<CollisionCheckerBase>(pinterface),shared_from_this()));
         case PT_Trajectory: return PyTrajectoryBasePtr(new PyTrajectoryBase(boost::static_pointer_cast<TrajectoryBase>(pinterface),shared_from_this()));
         case PT_Viewer: return PyViewerBasePtr(new PyViewerBase(boost::static_pointer_cast<ViewerBase>(pinterface),shared_from_this()));
+        case PT_SpaceSampler: return PySpaceSamplerBasePtr(new PySpaceSamplerBase(boost::static_pointer_cast<SpaceSamplerBase>(pinterface),shared_from_this()));
         }
         return PyInterfaceBasePtr();
     }
@@ -2645,13 +2690,17 @@ public:
         return pnewenv;
     }
 
-    bool SetCollisionChecker(PyCollisionCheckerBasePtr pchecker) {
-        if( !pchecker )
+    bool SetCollisionChecker(PyCollisionCheckerBasePtr pchecker)
+    {
+        if( !pchecker ) {
             return _penv->SetCollisionChecker(CollisionCheckerBasePtr());
+        }
         return _penv->SetCollisionChecker(pchecker->GetCollisionChecker());
     }
-    PyCollisionCheckerBasePtr GetCollisionChecker() { return PyCollisionCheckerBasePtr(new PyCollisionCheckerBase(_penv->GetCollisionChecker(), shared_from_this())); }
-
+    PyCollisionCheckerBasePtr GetCollisionChecker()
+    {
+        return PyCollisionCheckerBasePtr(new PyCollisionCheckerBase(_penv->GetCollisionChecker(), shared_from_this()));
+    }
     bool CheckCollision(PyKinBodyPtr pbody1)
     {
         CHECK_POINTER(pbody1);
@@ -3563,15 +3612,6 @@ namespace openravepy
         return PyCollisionCheckerBasePtr(new PyCollisionCheckerBase(p,pyenv));
     }
 
-    PyViewerBasePtr RaveCreateViewer(PyEnvironmentBasePtr pyenv, const std::string& name)
-    {
-        ViewerBasePtr p = OpenRAVE::RaveCreateViewer(pyenv->GetEnv(), name);
-        if( !p ) {
-            return PyViewerBasePtr();
-        }
-        return PyViewerBasePtr(new PyViewerBase(p,pyenv));
-    }
-
     PyKinBodyPtr RaveCreateKinBody(PyEnvironmentBasePtr pyenv, const std::string& name)
     {
         KinBodyPtr p = OpenRAVE::RaveCreateKinBody(pyenv->GetEnv(), name);
@@ -3588,6 +3628,24 @@ namespace openravepy
             return PyTrajectoryBasePtr();
         }
         return PyTrajectoryBasePtr(new PyTrajectoryBase(p,pyenv));
+    }
+
+    PyViewerBasePtr RaveCreateViewer(PyEnvironmentBasePtr pyenv, const std::string& name)
+    {
+        ViewerBasePtr p = OpenRAVE::RaveCreateViewer(pyenv->GetEnv(), name);
+        if( !p ) {
+            return PyViewerBasePtr();
+        }
+        return PyViewerBasePtr(new PyViewerBase(p,pyenv));
+    }
+
+    PySpaceSamplerBasePtr RaveCreateSpaceSampler(PyEnvironmentBasePtr pyenv, const std::string& name)
+    {
+        SpaceSamplerBasePtr p = OpenRAVE::RaveCreateSpaceSampler(pyenv->GetEnv(), name);
+        if( !p ) {
+            return PySpaceSamplerBasePtr();
+        }
+        return PySpaceSamplerBasePtr(new PySpaceSamplerBase(p,pyenv));
     }
 }
 
@@ -4372,6 +4430,23 @@ In python, the syntax is::\n\n\
     }
 
     {
+        object (PySpaceSamplerBase::*SampleSequence1)(size_t,IntervalType) = &PySpaceSamplerBase::SampleSequence;
+        object (PySpaceSamplerBase::*SampleSequence2)(size_t) = &PySpaceSamplerBase::SampleSequence;
+        object (PySpaceSamplerBase::*SampleComplete1)(size_t,IntervalType) = &PySpaceSamplerBase::SampleComplete;
+        object (PySpaceSamplerBase::*SampleComplete2)(size_t) = &PySpaceSamplerBase::SampleComplete;
+        scope spacesampler = class_<PySpaceSamplerBase, boost::shared_ptr<PySpaceSamplerBase>, bases<PyInterfaceBase> >("SpaceSampler", DOXY_CLASS(SpaceSamplerBase), no_init)
+            .def("SetSeed",&PySpaceSamplerBase::SetSeed, args("seed"), DOXY_FN(SpaceSamplerBase,SetSeed))
+            .def("SetSpaceDOF",&PySpaceSamplerBase::SetSpaceDOF, args("dof"), DOXY_FN(SpaceSamplerBase,SetSpaceDOF))
+            .def("GetDOF",&PySpaceSamplerBase::GetDOF, DOXY_FN(SpaceSamplerBase,GetDOF))
+            .def("GetNumberOfValues",&PySpaceSamplerBase::GetNumberOfValues, args("seed"), DOXY_FN(SpaceSamplerBase,GetNumberOfValues))
+            .def("SampleSequence",SampleSequence1, args("num","interval"), DOXY_FN(SpaceSamplerBase,SampleSequence "std::vector<dReal>; size_t; IntervalType"))
+            .def("SampleSequence",SampleSequence2, args("num"), DOXY_FN(SpaceSamplerBase,SampleSequence "std::vector<uint32_t>; size_t"))
+            .def("SampleComplete",SampleComplete1, args("num","interval"), DOXY_FN(SpaceSamplerBase,SampleComplete "std::vector<dReal>; size_t; IntervalType"))
+            .def("SampleComplete",SampleComplete2, args("num"), DOXY_FN(SpaceSamplerBase,SampleComplete "std::vector<uint32_t>; size_t"))
+            ;
+    }
+
+    {
         bool (PyEnvironmentBase::*pcolb)(PyKinBodyPtr) = &PyEnvironmentBase::CheckCollision;
         bool (PyEnvironmentBase::*pcolbr)(PyKinBodyPtr, PyCollisionReportPtr) = &PyEnvironmentBase::CheckCollision;
         bool (PyEnvironmentBase::*pcolbb)(PyKinBodyPtr,PyKinBodyPtr) = &PyEnvironmentBase::CheckCollision;
@@ -4571,7 +4646,8 @@ In python, the syntax is::\n\n\
     def("RaveCreatePhysicsEngine",openravepy::RaveCreatePhysicsEngine,args("env","name"),DOXY_FN1(RaveCreatePhysicsEngine));
     def("RaveCreateSensor",openravepy::RaveCreateSensor,args("env","name"),DOXY_FN1(RaveCreateSensor));
     def("RaveCreateCollisionChecker",openravepy::RaveCreateCollisionChecker,args("env","name"),DOXY_FN1(RaveCreateCollisionChecker));
-    def("RaveCreateViewer",openravepy::RaveCreateViewer,args("env","name"),DOXY_FN1(RaveCreateViewer));
     def("RaveCreateKinBody",openravepy::RaveCreateKinBody,args("env","name"),DOXY_FN1(RaveCreateKinBody));
     def("RaveCreateTrajectory",openravepy::RaveCreateTrajectory,args("env","name"),DOXY_FN1(RaveCreateTrajectory));
+    def("RaveCreateViewer",openravepy::RaveCreateViewer,args("env","name"),DOXY_FN1(RaveCreateViewer));
+    def("RaveCreateSpaceSampler",openravepy::RaveCreateSpaceSampler,args("env","name"),DOXY_FN1(RaveCreateSpaceSampler));
 }

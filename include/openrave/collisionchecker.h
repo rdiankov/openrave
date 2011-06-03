@@ -93,9 +93,6 @@ public:
     /// \brief get the current collision options
     virtual int GetCollisionOptions() const = 0;
 
-    /// \deprecated (10/11/18) use SendCommand instead
-    virtual bool SetCollisionOptions(std::ostream& sout, std::istream& sinput) RAVE_DEPRECATED { throw openrave_exception("SetCollisionsOptions not supported",ORE_NotImplemented); }
-
     virtual void SetTolerance(dReal tolerance) = 0;
 
     /// notified when a new body has been initialized in the environment

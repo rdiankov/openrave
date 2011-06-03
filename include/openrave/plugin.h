@@ -57,13 +57,13 @@ void GetPluginAttributesValidated(OpenRAVE::PLUGININFO& info);
 OPENRAVE_PLUGIN_API OpenRAVE::InterfaceBasePtr OpenRAVECreateInterface(OpenRAVE::InterfaceType type, const std::string& name, const char* interfacehash, const char* envhash, OpenRAVE::EnvironmentBasePtr penv)
 {
     if( strcmp(interfacehash,OpenRAVE::RaveGetInterfaceHash(type)) ) {
-        throw OpenRAVE::openrave_exception(str(boost::format("bad interface %s hash")%RaveGetInterfaceName(type)),OpenRAVE::ORE_InvalidInterfaceHash);
+        throw OPENRAVE_EXCEPTION_FORMAT("bad interface %s hash: %s!=%s",RaveGetInterfaceName(type)%interfacehash%OpenRAVE::RaveGetInterfaceHash(type),OpenRAVE::ORE_InvalidInterfaceHash);
     }
     if( !penv ) {
-        throw OpenRAVE::openrave_exception("bad environment",OpenRAVE::ORE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT0("need to set environment",OpenRAVE::ORE_InvalidArguments);
     }
     if( strcmp(envhash,OPENRAVE_ENVIRONMENT_HASH) ) {
-        throw OpenRAVE::openrave_exception("bad environment hash",OpenRAVE::ORE_InvalidPlugin);
+        throw OPENRAVE_EXCEPTION_FORMAT("bad environment hash: %s!=%s",envhash%OPENRAVE_ENVIRONMENT_HASH,OpenRAVE::ORE_InvalidPlugin);
     }
     OpenRAVE::RaveInitializeFromState(penv->GlobalState()); // make sure global state is set
     std::stringstream sinput(name);
@@ -78,13 +78,13 @@ OPENRAVE_PLUGIN_API OpenRAVE::InterfaceBasePtr OpenRAVECreateInterface(OpenRAVE:
 OPENRAVE_PLUGIN_API void OpenRAVEGetPluginAttributes(OpenRAVE::PLUGININFO* pinfo, int size, const char* infohash)
 {
     if( pinfo == NULL ) {
-        throw OpenRAVE::openrave_exception("bad data",OpenRAVE::ORE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT0("bad data",OpenRAVE::ORE_InvalidArguments);
     }
     if( size != sizeof(OpenRAVE::PLUGININFO) ) {
-        throw OpenRAVE::openrave_exception(str(boost::format("bad plugin info sizes %d != %d")%size%sizeof(OpenRAVE::PLUGININFO)),OpenRAVE::ORE_InvalidPlugin);
+        throw OPENRAVE_EXCEPTION_FORMAT("bad plugin info sizes %d != %d", size%sizeof(OpenRAVE::PLUGININFO),OpenRAVE::ORE_InvalidPlugin);
     }
     if( strcmp(infohash,OPENRAVE_PLUGININFO_HASH) ) {
-        throw OpenRAVE::openrave_exception("bad plugin info hash",OpenRAVE::ORE_InvalidPlugin);
+        throw OPENRAVE_EXCEPTION_FORMAT0("bad plugin info hash",OpenRAVE::ORE_InvalidPlugin);
     }
     GetPluginAttributesValidated(*pinfo);
     pinfo->version = OPENRAVE_VERSION;

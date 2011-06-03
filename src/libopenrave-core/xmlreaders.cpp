@@ -3222,6 +3222,7 @@ namespace OpenRAVEXMLParser
         case PT_CollisionChecker: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_CollisionChecker>(penv,pinterface,xmltag,atts));
         case PT_Trajectory: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_Trajectory>(penv,pinterface,xmltag,atts));
         case PT_Viewer: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_Viewer>(penv,pinterface,xmltag,atts));
+        case PT_SpaceSampler: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_SpaceSampler>(penv,pinterface,xmltag,atts));
         }
 
         throw openrave_exception(str(boost::format("could not create interface of type %d")%type),ORE_InvalidArguments);

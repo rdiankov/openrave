@@ -21,7 +21,6 @@
 #include <boost/thread/once.hpp>
 
 #include <streambuf>
-#include "mt19937ar.h"
 #include "md5.h"
 
 #ifndef _WIN32
@@ -207,6 +206,7 @@ class RaveGlobal : private boost::noncopyable, public boost::enable_shared_from_
         _mapinterfacenames[PT_CollisionChecker] = "collisionchecker";
         _mapinterfacenames[PT_Trajectory] = "trajectory";
         _mapinterfacenames[PT_Viewer] = "viewer";
+        _mapinterfacenames[PT_SpaceSampler] = "spacesampler";
         BOOST_ASSERT(_mapinterfacenames.size()==PT_NumberOfInterfaces);
 
         _mapikparameterization[IkParameterization::Type_Transform6D] = "Transform6d";
@@ -234,7 +234,7 @@ public:
     
     int Initialize(bool bLoadAllPlugins, DebugLevel level)
     {
-        if( IsInitialized() ) {
+        if( _IsInitialized() ) {
             return 0; // already initialized
         }
 
@@ -296,7 +296,7 @@ public:
         }
         mapenvironments.clear();
         _mapenvironments.clear();
-
+        _pdefaultsampler.reset();
         _mapreaders.clear();
         _pdatabase.reset();
 #ifdef USE_CRLIBM
@@ -425,6 +425,16 @@ public:
         }
     }
 
+    SpaceSamplerBasePtr GetDefaultSampler()
+    { 
+        if( !_pdefaultsampler ) {
+            boost::mutex::scoped_lock lock(_mutexXML);
+            BOOST_ASSERT( _mapenvironments.size() > 0 );
+            _pdefaultsampler = GetDatabase()->CreateSpaceSampler(_mapenvironments.begin()->second->shared_from_this(),"MT19937");
+        }
+        return _pdefaultsampler;
+    }
+
 protected:
     static void _UnregisterXMLReader(boost::weak_ptr<RaveGlobal> pweakstate, InterfaceType type, const std::string& xmltag, const CreateXMLReaderFn& oldfn)
     {
@@ -442,7 +452,7 @@ protected:
         }
     }
 
-    bool IsInitialized() const { return !!_pdatabase; }
+    bool _IsInitialized() const { return !!_pdatabase; }
 
 private:
     static boost::shared_ptr<RaveGlobal> _state;
@@ -459,6 +469,7 @@ private:
     std::string _homedirectory;
     std::vector<std::string> _vdbdirectories;
     int _nGlobalEnvironmentId;
+    SpaceSamplerBasePtr _pdefaultsampler;
 #ifdef USE_CRLIBM
     long long _crlibm_fpu_state;
 #endif
@@ -518,7 +529,7 @@ UserDataPtr RaveGlobalState()
 {
     // only return valid pointer if initialized!
     boost::shared_ptr<RaveGlobal> state = RaveGlobal::_state;
-    if( !!state && state->IsInitialized() ) {
+    if( !!state && state->_IsInitialized() ) {
         return state;
     }
     return UserDataPtr();
@@ -646,6 +657,11 @@ TrajectoryBasePtr RaveCreateTrajectory(EnvironmentBasePtr penv, int nDOF)
 TrajectoryBasePtr RaveCreateTrajectory(EnvironmentBasePtr penv, const std::string& name)
 {
     return RaveGlobal::instance()->GetDatabase()->CreateTrajectory(penv, name);
+}
+
+SpaceSamplerBasePtr RaveCreateSpaceSampler(EnvironmentBasePtr penv, const std::string& name)
+{
+    return RaveGlobal::instance()->GetDatabase()->CreateSpaceSampler(penv, name);
 }
 
 boost::shared_ptr<void> RaveRegisterInterface(InterfaceType type, const std::string& name, const char* interfacehash, const char* envhash, const boost::function<InterfaceBasePtr(EnvironmentBasePtr, std::istream&)>& createfn)
@@ -996,81 +1012,66 @@ class SimpleDistMetric
     vector<dReal> weights;
 };
 
-class SimpleSampleFunction
+class NeighSampleFunction
 {
 public:
-    SimpleSampleFunction(RobotBasePtr robot, const boost::function<dReal(const std::vector<dReal>&, const std::vector<dReal>&)>& distmetricfn) : _robot(robot), _distmetricfn(distmetricfn) {
-        _robot->GetActiveDOFLimits(lower, upper);
-        range.resize(lower.size());
-        for(int i = 0; i < (int)range.size(); ++i) {
-            range[i] = upper[i] - lower[i];
-        }
-    }
-    virtual bool Sample(vector<dReal>& pNewSample) {
-        pNewSample.resize(lower.size());
-        for (size_t i = 0; i < lower.size(); i++) {
-            pNewSample[i] = lower[i] + RaveRandomFloat()*range[i];
-        }
-        return true;
-    }
+    NeighSampleFunction(SpaceSamplerBasePtr psampler, const boost::function<dReal(const std::vector<dReal>&, const std::vector<dReal>&)>& distmetricfn) : _psampler(psampler), _distmetricfn(distmetricfn) {}
 
-    virtual bool SampleNeigh(vector<dReal>& pNewSample, const vector<dReal>& pCurSample, dReal fRadius)
+    virtual bool SampleNeigh(vector<dReal>& vNewSample, const vector<dReal>& vCurSample, dReal fRadius)
     {
-        BOOST_ASSERT(pCurSample.size()==lower.size());
-        sample.resize(lower.size());
-        int dof = lower.size();
-        for (int i = 0; i < dof; i++) {
-            sample[i] = pCurSample[i] + 10.0f*fRadius*(RaveRandomFloat()-0.5f);
-        }
-        // normalize
-        dReal fRatio = max((dReal)1e-5f,fRadius*(0.1f+0.9f*RaveRandomFloat()));
-            
-        //assert(_robot->ConfigDist(&_vzero[0], &_vSampleConfig[0]) < B+1);
-        dReal fDist = _distmetricfn(sample,pCurSample);
-        while(fDist > fRatio) {
-            for (int i = 0; i < dof; i++) {
-                sample[i] = 0.5f*pCurSample[i]+0.5f*sample[i];
+        _psampler->SampleSequence(vNewSample);
+        size_t dof = vCurSample.size();
+        BOOST_ASSERT(dof==vNewSample.size());
+        dReal fDist = _distmetricfn(vNewSample,vCurSample);
+        //fRadius *= 0.1+0.9*RaveRandomFloat();
+        while(fDist > fRadius) {
+            for (size_t i = 0; i < dof; i++) {
+                vNewSample[i] = 0.5f*vCurSample[i]+0.5f*vNewSample[i];
             }
-            fDist = _distmetricfn(sample,pCurSample);
+            fDist = _distmetricfn(vNewSample,vCurSample);
         }
     
         for(int iter = 0; iter < 20; ++iter) {
-            while(_distmetricfn(sample, pCurSample) < fRatio ) {
-                for (int i = 0; i < dof; i++) {
-                    sample[i] = 1.2f*sample[i]-0.2f*pCurSample[i];
+            while(_distmetricfn(vNewSample, vCurSample) < fRadius ) {
+                for (size_t i = 0; i < dof; i++) {
+                    vNewSample[i] = 1.2f*vNewSample[i]-0.2f*vCurSample[i];
                 }
             }
         }
 
-        pNewSample.resize(lower.size());
-        for (int i = 0; i < dof; i++) {
-            if( sample[i] < lower[i] ) {
-                pNewSample[i] = lower[i];
-            }
-            else if( sample[i] > upper[i] ) {
-                pNewSample[i] = upper[i];
-            }
-            else {
-                pNewSample[i] = sample[i];
-            }
-        }
+//        vNewSample.resize(lower.size());
+//        for (size_t i = 0; i < dof; i++) {
+//            if( sample[i] < lower[i] ) {
+//                vNewSample[i] = lower[i];
+//            }
+//            else if( sample[i] > upper[i] ) {
+//                vNewSample[i] = upper[i];
+//            }
+//            else {
+//                vNewSample[i] = sample[i];
+//            }
+//        }
 
         return true;
     }
 
- protected:
-    RobotBasePtr _robot;
-    vector<dReal> lower, upper, range,sample;
+    bool Sample(std::vector<dReal>& samples)
+    {
+        _psampler->SampleSequence(samples,1,IT_Closed);
+        return samples.size()>0;
+    }
+
+    SpaceSamplerBasePtr _psampler;
     boost::function<dReal(const std::vector<dReal>&, const std::vector<dReal>&)> _distmetricfn;
 };
-
 
 void PlannerBase::PlannerParameters::SetRobotActiveJoints(RobotBasePtr robot)
 {
     _distmetricfn = boost::bind(&SimpleDistMetric::Eval,boost::shared_ptr<SimpleDistMetric>(new SimpleDistMetric(robot)),_1,_2);
-    boost::shared_ptr<SimpleSampleFunction> defaultsamplefn(new SimpleSampleFunction(robot,_distmetricfn));
-    _samplefn = boost::bind(&SimpleSampleFunction::Sample,defaultsamplefn,_1);
-    _sampleneighfn = boost::bind(&SimpleSampleFunction::SampleNeigh,defaultsamplefn,_1,_2,_3);
+    SpaceSamplerBasePtr pconfigsampler = RaveCreateSpaceSampler(robot->GetEnv(),str(boost::format("robotconfiguration %s")%robot->GetName()));
+    boost::shared_ptr<NeighSampleFunction> defaultsamplefn(new NeighSampleFunction(pconfigsampler,_distmetricfn));
+    _samplefn = boost::bind(&NeighSampleFunction::Sample,defaultsamplefn,_1);
+    _sampleneighfn = boost::bind(&NeighSampleFunction::SampleNeigh,defaultsamplefn,_1,_2,_3);
     _setstatefn = boost::bind(&RobotBase::SetActiveDOFValues,robot,_1,false);
     _getstatefn = boost::bind(&RobotBase::GetActiveDOFValues,robot,_1);
     _diffstatefn = boost::bind(&RobotBase::SubtractActiveDOFValues,robot,_1,_2);
@@ -2013,57 +2014,28 @@ CollisionOptionsStateSaver::~CollisionOptionsStateSaver()
 
 void RaveInitRandomGeneration(uint32_t seed)
 {
-    init_genrand(seed);
+    RaveGlobal::instance()->GetDefaultSampler()->SetSeed(seed);
 }
 
 uint32_t RaveRandomInt()
 {
-    return genrand_int32();
-}
-
-void RaveRandomInt(int n, std::vector<int>& v)
-{
-    v.resize(n);
-    FOREACH(it, v) *it = genrand_int32();
+    std::vector<dReal> sample;
+    RaveGlobal::instance()->GetDefaultSampler()->SampleSequence(sample);
+    return sample.at(0);
 }
 
 float RaveRandomFloat(IntervalType interval)
 {
-    switch(interval) {
-    case IT_Open: return (((float)genrand_int32()) + 0.5f)*(1.0f/4294967296.0f);
-    case IT_OpenStart: return (((float)genrand_int32()) + 1.0f)*(1.0f/4294967296.0f);
-    case IT_OpenEnd: return (float)genrand_int32()*(1.0f/4294967296.0f); 
-    case IT_Closed: return (float)genrand_int32()*(1.0f/4294967295.0f);
-    }
-    BOOST_ASSERT(0);
-}
-
-void RaveRandomFloat(int n, std::vector<float>& v)
-{
-    v.resize(n);
-    FOREACH(it, v) {
-        *it = RaveRandomFloat();
-    }
+    std::vector<dReal> sample;
+    RaveGlobal::instance()->GetDefaultSampler()->SampleSequence(sample,1,interval);
+    return sample.at(0);
 }
 
 double RaveRandomDouble(IntervalType interval)
 {
-    unsigned long a=genrand_int32()>>5, b=genrand_int32()>>6;
-    switch(interval) {
-    case IT_Open: return (a*67108864.0+b+0.5)*(1.0/9007199254740992.0);
-    case IT_OpenStart: return (a*67108864.0+b+1.0)*(1.0/9007199254740992.0);
-    case IT_OpenEnd: return (a*67108864.0+b)*(1.0/9007199254740992.0);
-    case IT_Closed: return (a*67108864.0+b)*(1.0/9007199254740991.0);
-    }
-    BOOST_ASSERT(0);
-}
-
-void RaveRandomDouble(int n, std::vector<double>& v)
-{
-    v.resize(n);
-    FOREACH(it, v) {
-        *it = RaveRandomDouble();
-    }
+    std::vector<dReal> sample;
+    RaveGlobal::instance()->GetDefaultSampler()->SampleSequence(sample,1,interval);
+    return sample.at(0);
 }
 
 std::string GetMD5HashString(const std::string& s)

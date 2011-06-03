@@ -287,7 +287,7 @@ public:
     /// \brief Simulate one step forward for sensors.
     ///
     /// Only valid if this sensor is simulation based. A sensor hooked up to a real device can ignore this call
-    virtual bool SimulationStep(dReal fTimeElapsed) { throw openrave_exception("SensorBase::SimulationStep not implemented",ORE_NotImplemented); }
+    virtual bool SimulationStep(dReal fTimeElapsed) OPENRAVE_DUMMY_IMPLEMENTATION;
 
     /// \brief Returns the sensor geometry. This method is thread safe.
     ///
@@ -321,7 +321,7 @@ public:
     /// \brief Register a callback whenever new sensor data comes in.
     /// \param type the sensor type to register for
     /// \param callback the user function to call, note that this might block the thread generating/receiving sensor data
-    virtual boost::shared_ptr<void> RegisterDataCallback(SensorType type, const boost::function<void(SensorDataConstPtr)>& callback) { throw openrave_exception("SensorBase::RegisterDataCallback",ORE_NotImplemented); }
+    virtual boost::shared_ptr<void> RegisterDataCallback(SensorType type, const boost::function<void(SensorDataConstPtr)>& callback) OPENRAVE_DUMMY_IMPLEMENTATION;
 	
     /// \return the name of the sensor
     virtual const std::string& GetName() const { return _name; }

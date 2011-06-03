@@ -77,6 +77,7 @@ class PyControllerBase;
 class PyTrajectoryBase;
 class PyProblemInstance;
 class PyViewerBase;
+class PySpaceSamplerBase;
 
 typedef boost::shared_ptr<PyInterfaceBase> PyInterfaceBasePtr;
 typedef boost::shared_ptr<PyInterfaceBase const> PyInterfaceBaseConstPtr;
@@ -108,6 +109,8 @@ typedef boost::shared_ptr<PyProblemInstance> PyProblemInstancePtr;
 typedef boost::shared_ptr<PyProblemInstance const> PyProblemInstanceConstPtr;
 typedef boost::shared_ptr<PyViewerBase> PyViewerBasePtr;
 typedef boost::shared_ptr<PyViewerBase const> PyViewerBaseConstPtr;
+typedef boost::shared_ptr<PySpaceSamplerBase> PySpaceSamplerBasePtr;
+typedef boost::shared_ptr<PySpaceSamplerBase const> PySpaceSamplerBaseConstPtr;
 
 inline uint64_t GetMicroTime()
 {
@@ -413,6 +416,7 @@ namespace openravepy
     PySensorBasePtr RaveCreateSensor(PyEnvironmentBasePtr pyenv, const std::string& name);
     PyCollisionCheckerBasePtr RaveCreateCollisionChecker(PyEnvironmentBasePtr pyenv, const std::string& name);
     PyViewerBasePtr RaveCreateViewer(PyEnvironmentBasePtr pyenv, const std::string& name);
+    PySpaceSamplerBasePtr RaveCreateSpaceSampler(PyEnvironmentBasePtr pyenv, const std::string& name);
     PyKinBodyPtr RaveCreateKinBody(PyEnvironmentBasePtr pyenv, const std::string& name);
     PyTrajectoryBasePtr RaveCreateTrajectory(PyEnvironmentBasePtr pyenv, const std::string& name);
     void init_openravepy_global();

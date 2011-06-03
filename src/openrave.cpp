@@ -279,16 +279,17 @@ int main(int argc, char ** argv)
 // use to control openrave
 void MainOpenRAVEThread()
 {
+    EnvironmentBasePtr penv = s_penv; // need to do this since s_penv can be reset at any time
     if( bDisplayGUI && (!s_viewerName || s_viewerName->size()>0) ) {
         ViewerBasePtr pviewer;
         // find a viewer
         if( !!s_viewerName && s_viewerName->size() > 0 ) {
-            pviewer = RaveCreateViewer(s_penv, *s_viewerName);
+            pviewer = RaveCreateViewer(penv, *s_viewerName);
         }
         if( !pviewer ) {
             boost::array<string,1> viewer_prefs = {{"qtcoin"}};
             for(size_t i = 0; i < viewer_prefs.size(); ++i) {
-                pviewer = RaveCreateViewer(s_penv, viewer_prefs[i]);
+                pviewer = RaveCreateViewer(penv, viewer_prefs[i]);
                 if( !!pviewer ) {
                     break;
                 }
@@ -300,7 +301,7 @@ void MainOpenRAVEThread()
             RaveGetLoadedInterfaces(interfacenames);
             std::vector<std::string>::const_iterator itname;
             FORIT(itname, interfacenames[PT_Viewer]) {
-                pviewer = RaveCreateViewer(s_penv, *itname);
+                pviewer = RaveCreateViewer(penv, *itname);
                 if( !!pviewer ) {
                     break;
                 }
@@ -316,40 +317,39 @@ void MainOpenRAVEThread()
             if( s_bSetWindowPosition ) {
                 pviewer->ViewerMove(s_WindowPosX,s_WindowPosY);
             }
-            s_penv->AttachViewer(pviewer);
+            penv->AttachViewer(pviewer);
         }
     }
 
     {
-        EnvironmentMutex::scoped_lock lock(s_penv->GetMutex());
+        EnvironmentMutex::scoped_lock lock(penv->GetMutex());
 
         if( s_sceneFile.size() > 0 ) {
-            s_penv->Load(s_sceneFile);
+            penv->Load(s_sceneFile);
         }
         vector<string>::iterator it;
         FORIT(it, vResourceFiles) {
-            s_penv->Load(*it);
+            penv->Load(*it);
         }
         list< pair<string, string> >::iterator itprob;
         FORIT(itprob, s_listProblems) {
-            ProblemInstancePtr prob = RaveCreateProblem(s_penv, itprob->first);
+            ProblemInstancePtr prob = RaveCreateProblem(penv, itprob->first);
             if( !!prob ) {
-                s_penv->LoadProblem(prob, itprob->second);
+                penv->LoadProblem(prob, itprob->second);
             }
         }
 
         if( s_saveScene.size() > 0 ) {
-            s_penv->Save(s_saveScene);
+            penv->Save(s_saveScene);
             s_bThreadDestroyed = true;
             return;
         }
     }
 
     // need to keep a local pointer around to guarantee destruction order
-    ViewerBasePtr pviewer = s_penv->GetViewer();
+    ViewerBasePtr pviewer = penv->GetViewer();
     pviewer->main(bShowGUI);
     s_bThreadDestroyed = true;
-    EnvironmentBasePtr penv = s_penv; // need to do this since s_penv can be reset at any time
     if( !!penv ) {
         penv->AttachViewer(ViewerBasePtr());
         penv.reset();

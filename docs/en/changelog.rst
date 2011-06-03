@@ -17,6 +17,10 @@ Core
 
 * fixed caching issue with ik files in ikfastsolvers
 
+* added a new SpaceSampler interface for sophisticated discrete/deterministic/randomized samplers.
+
+* deprecated the RaveRandomX functions in favor of the new samplers
+ 
 Planning
 --------
 
@@ -36,7 +40,7 @@ Misc
 
 * removed transform from laser data, all sensors have a transform data type that is not part of the data state
 
-* added more tests: openrave global runtime
+* added more tests: openrave global runtime, API Sanity Autotest
 
 Version 0.3.2
 =============

@@ -56,10 +56,14 @@ class TokenDB: public symbols<TokenID> {
 public:
     typedef symbols<TokenID> super_t;
 
-    TokenID next;
-    std::vector<std::string> list;
+    TokenID next, _next_start;
+    std::vector<std::string> list, _list_start;
+    
 
-    TokenDB(TokenID next_): next(next_) {}
+    TokenDB(TokenID next_): next(next_) { set(); }
+
+    void set() { _next_start = next; _list_start = list; }
+    void reset() { next = _next_start; list = _list_start; }
 
     TokenID add(char const* text, TokenID id)
     {
@@ -172,6 +176,7 @@ namespace {
             add("bitor"    , Op_BitOr         );
 
             add("_"        , Ident__          );
+            set();
         }
     };
 
@@ -208,6 +213,7 @@ namespace {
             add("using"            , Kwd_using           );
             add("virtual"          , Kwd_virtual         );
             add("wchar_t"          , Kwd_wchar_t         );
+            set();
         }
     };
 
@@ -278,6 +284,7 @@ namespace {
 
             add("@"  , Op_At            );
             add("$"  , Op_Dollar        );
+            set();
         }
     };
 
@@ -286,12 +293,14 @@ namespace {
             add("::" , Op_Scope     );
             add(".*" , Op_Member_Ref);
             add("->*", Op_Member_Ptr);
+            set();
         }
     };
 
     struct integers_db: TokenDB {
         integers_db(): TokenDB(Integer_next) {
             add("0", Integer_zero);
+            set();
         }
     };
 
@@ -306,13 +315,27 @@ namespace {
     integers_db      integerDB;
     TokenDB          floatingDB  (Floating_next);
     TokenDB          stringDB    (String_next);
-
 }
 
 // Internal transfer. Used in cpp_lexer.cpp.
 extern
 parser<symbols<TokenID> > const&
 cpp_operator_p = operatorDB;
+
+void clearstate() {
+    //this is such a hack, but that's what you get with global state.........
+    identifierDB.~cpp_keywords_db();
+    new (&identifierDB) cpp_keywords_db();
+    operatorDB.~cpp_operators_db();
+    new (&operatorDB) cpp_operators_db();
+    integerDB.~integers_db();
+    new (&integerDB) integers_db();
+    floatingDB.~TokenDB();
+    new (&floatingDB) TokenDB(Floating_next);
+    stringDB.~TokenDB();
+    new (&stringDB) TokenDB(String_next);
+}
+
 
 ///////////////////////////////////////////////////////////////////////////////
 // Token ID definitions.

@@ -22,7 +22,7 @@
 
 namespace OpenRAVE {
 
-/** \brief <b>[interface]</b> Abstract base class to encapsulate a local controller. See \ref arch_controller.
+/** \brief <b>[interface]</b> Abstract base class to encapsulate a local controller. <b>Methods not multi-thread safe.</b> See \ref arch_controller.
     \ingroup interfaces
 */
 class OPENRAVE_API ControllerBase : public InterfaceBase
@@ -92,19 +92,16 @@ public:
     virtual bool IsDone() = 0;
 
     /// \return the time along the current command
-    virtual dReal GetTime() const { throw openrave_exception("ControllerBase::GetTime not implemented",ORE_NotImplemented); }
+    virtual dReal GetTime() const OPENRAVE_DUMMY_IMPLEMENTATION;
 
     /// \brief get velocity of the controlled DOFs
     /// \param vel [out] - current velocity of robot from the dof
-    virtual void GetVelocity(std::vector<dReal>& vel) const { throw openrave_exception("ControllerBase::GetVelocity not implemented",ORE_NotImplemented); }
+    virtual void GetVelocity(std::vector<dReal>& vel) const OPENRAVE_DUMMY_IMPLEMENTATION;
 
     /// get torque/current/strain values
     /// \param torque [out] - returns the current torque/current/strain exerted by each of the dofs from outside forces.
     /// The feedforward and friction terms should be subtracted out already
-    virtual void GetTorque(std::vector<dReal>& torque) const { throw openrave_exception("ControllerBase::GetTorque not implemented",ORE_NotImplemented); }
-
-    /// \deprecated (10/11/16)
-    virtual int GetActuatorState(int index) const RAVE_DEPRECATED { throw openrave_exception("actuator state deprecated"); }
+    virtual void GetTorque(std::vector<dReal>& torque) const OPENRAVE_DUMMY_IMPLEMENTATION;
 
 //        Specifies the controlled degrees of freedom used to control the robot through torque In the
 //        general sense, it is not always the case that there's a one-to-one mapping between a robot's

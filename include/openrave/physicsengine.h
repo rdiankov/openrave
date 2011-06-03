@@ -83,27 +83,27 @@ public:
     /// \param force the direction and magnitude of the force
     /// \param position in the world where the force is getting applied
     /// \param bAdd if true, force is added to previous forces, otherwise it is set
-    virtual bool SetBodyForce(KinBody::LinkPtr link, const Vector& force, const Vector& position, bool bAdd) { throw openrave_exception("PhysicsEngineBase::SetBodyForce not implemented",ORE_NotImplemented); }
+    virtual bool SetBodyForce(KinBody::LinkPtr link, const Vector& force, const Vector& position, bool bAdd) OPENRAVE_DUMMY_IMPLEMENTATION;
 
     /// adds torque to a body (absolute coords)
     /// \param link the link to add a torque to
     /// \param torque torque vector
     /// \param bAdd if true, torque is added to previous torques, otherwise it is set
-    virtual bool SetBodyTorque(KinBody::LinkPtr link, const Vector& torque, bool bAdd) { throw openrave_exception("PhysicsEngineBase::SetBodyTorque not implemented",ORE_NotImplemented); }
+    virtual bool SetBodyTorque(KinBody::LinkPtr link, const Vector& torque, bool bAdd) OPENRAVE_DUMMY_IMPLEMENTATION;
 
     /// adds torque to a joint
     /// \param pjoint - the joint the torque is added to
     /// \param pTorques - the torques added to the joint. Pointer because the joint dof can be greater than 1.
-    virtual bool AddJointTorque(KinBody::JointPtr pjoint, const std::vector<dReal>& pTorques) { throw openrave_exception("PhysicsEngineBase::AddJointTorque not implemented",ORE_NotImplemented); }
+    virtual bool AddJointTorque(KinBody::JointPtr pjoint, const std::vector<dReal>& pTorques) OPENRAVE_DUMMY_IMPLEMENTATION;
 
     /// \param[in] link the link
     /// \param[out] force current accumulated force on the COM of the link
     /// \param[out] torque current accumulated torque on the COM of the link
-    virtual bool GetLinkForceTorque(KinBody::LinkConstPtr link, Vector& force, Vector& torque) { throw openrave_exception("PhysicsEngineBase::GetLinkForceTorque not implemented",ORE_NotImplemented); }
+    virtual bool GetLinkForceTorque(KinBody::LinkConstPtr link, Vector& force, Vector& torque) OPENRAVE_DUMMY_IMPLEMENTATION;
     
     /// set the gravity direction
-    virtual void SetGravity(const Vector& gravity) { throw openrave_exception("PhysicsEngineBase::SetGravity not implemented",ORE_NotImplemented); }
-    virtual Vector GetGravity() { throw openrave_exception("PhysicsEngineBase::GetGravity not implemented",ORE_NotImplemented); }
+    virtual void SetGravity(const Vector& gravity) OPENRAVE_DUMMY_IMPLEMENTATION;
+    virtual Vector GetGravity() OPENRAVE_DUMMY_IMPLEMENTATION;
 
     /// dynamically simulate system for fTimeElapsed seconds
     /// add torques to the joints of the body. Torques disappear after one timestep of simulation

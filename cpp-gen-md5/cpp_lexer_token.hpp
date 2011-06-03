@@ -443,6 +443,10 @@ SetCommentToken(Token& dest, file_position const& filePos)
     return SetSpecialToken(dest, filePos, Comment_token);
 }
 
+// clears the state of the lexer
+void clearstate();
+
+
 } // cpp
 
 #endif

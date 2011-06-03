@@ -1311,11 +1311,6 @@ class Environment : public EnvironmentBase
     {
         return _pCurrentViewer->drawtrimesh(ppoints, stride, pIndices, numTriangles, colors);
     }
-    virtual KinBodyPtr GetBodyFromNetworkId(int id)
-    {
-        RAVELOG_INFO("GetBodyFromNetworkId is deprecated, use GetBodyFromEnvironmentId instead\n");
-        return GetBodyFromEnvironmentId(id);
-    }
 
     virtual KinBodyPtr GetBodyFromEnvironmentId(int id)
     {
