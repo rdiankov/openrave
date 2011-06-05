@@ -18,50 +18,10 @@
 using namespace OpenRAVE;
 using namespace std;
 
-namespace sampling_halton {
-
-dReal arc_cosine ( dReal c );
-dReal atan4 ( dReal y, dReal x );
-char digit_to_ch ( int i );
-int get_seed ( void );
-bool halham_leap_check ( int dim_num, int leap[] );
-bool halham_n_check ( int n );
-bool halham_dim_num_check ( int dim_num );
-bool halham_seed_check ( int dim_num, int seed[] );
-bool halham_step_check ( int step );
-void halham_write ( int dim_num, int n, int step, int seed[], int leap[], int base[], 
-  dReal r[], char *file_out_name );
-void halton ( dReal r[] );
-bool halton_base_check ( int dim_num, int base[] );
-int *halton_base_get ( void );
-void halton_base_set ( int base[] );
-int *halton_leap_get ( void );
-void halton_leap_set ( int leap[] );
-int halton_dim_num_get ( void );
-void halton_dim_num_set ( int dim_num );
-int *halton_seed_get ( void );
-void halton_seed_set ( int seed[] );
-void halton_sequence ( int n, dReal r[] );
-int halton_step_get ( void );
-void halton_step_set ( int step );
-int i4_log_10 ( int i );
-int i4_min ( int i1, int i2 );
-void i4_to_halton ( int dim_num, int step, int seed[], int leap[], int base[], 
-  dReal r[] );
-void i4_to_halton_sequence ( int dim_num, int n, int step, int seed[], int leap[],
-  int base[], dReal r[] );
-char *i4_to_s ( int i );
-void i4vec_transpose_print ( int n, int a[], char *title );
-int prime ( int n );
-dReal r8_epsilon ( void );
-dReal r8vec_dot_product ( int n, dReal *r1, dReal *r2 );
-dReal r8vec_norm_l2 ( int n, dReal a[] );
-int s_len_trim ( char *s );
-
 class HaltonSampler : public SpaceSamplerBase
 {
 public:
-    HaltonSampler(EnvironmentBasePtr penv, std::istream& sinput) : SpaceSamplerBase(penv), _dof(0)
+    HaltonSampler(EnvironmentBasePtr penv, std::istream& sinput) : SpaceSamplerBase(penv)
     {
         __description = ":Interface Author: John Burkardt\n\n\
 References:\n\n\
@@ -69,28 +29,33 @@ References:\n\n\
 2. John Halton, GB Smith, Algorithm 247: Radical-Inverse Quasi-Random Point Sequence, Communications of the ACM, Volume 7, 1964, pages 701-702.\n\n\
 3. Ladislav Kocis, William Whiten, Computational Investigations of Low-Discrepancy Sequences, ACM Transactions on Mathematical Software, Volume 23, Number 2, 1997, pages 266-294.\n\n\
 ";
-        SetSeed(0);
+        halton_BASE = NULL;
+        halton_LEAP = NULL;
+        halton_DIM_NUM = -1;
+        halton_SEED = NULL;
+        halton_STEP = -1;
         SetSpaceDOF(1);
+        SetSeed(0);
+        halton_step_set (1);
     }
     
     void SetSeed(uint32_t seed) {
-        vector<int> vseed(_dof,0);
-        sampling_halton::halton_seed_set ( &vseed[0] );
+        vector<int> vseed(halton_dim_num_get(),0);
+        halton_seed_set ( &vseed[0] );
     }
-
+    
     void SetSpaceDOF(int dof) {
-        _dof = dof;
-        halton_dim_num_set ( _dof );
+        halton_dim_num_set ( dof );
     }
-    int GetDOF() const { return _dof; }
-    int GetNumberOfValues() const { return _dof; }
+    int GetDOF() const { return halton_dim_num_get(); }
+    int GetNumberOfValues() const { return halton_dim_num_get(); }
     bool Supports(SampleDataType type) const { return type==SDT_Real; }
 
     void GetLimits(std::vector<dReal>& vLowerLimit, std::vector<dReal>& vUpperLimit) const
     {
-        vLowerLimit.resize(_dof);
-        vUpperLimit.resize(_dof);
-        for(int i = 0; i < _dof; ++i) {
+        vLowerLimit.resize(halton_dim_num_get());
+        vUpperLimit.resize(halton_dim_num_get());
+        for(int i = 0; i < halton_dim_num_get(); ++i) {
             vLowerLimit[i] = 0;
             vUpperLimit[i] = 1;
         }
@@ -98,33 +63,57 @@ References:\n\n\
     
     void SampleSequence(std::vector<dReal>& samples, size_t num=1,IntervalType interval=IT_Closed)
     {
-        
+        samples.resize(halton_dim_num_get()*num);
+        halton_sequence(num,&samples[0]);
     }
-
-//    void SampleSequence(std::vector<uint32_t>& samples, size_t num=1,IntervalType interval=IT_Closed)
-//    {
-//        samples.resize(_dof*num);
-//        for(size_t i = 0; i < samples.size(); ++i) {
-//            samples[i] = genrand_int32();
-//        }
-//    }
-
-    void SampleComplete(std::vector<dReal>& samples, size_t num,IntervalType interval=IT_Closed)
-    {
-        halton_step_set (1);
-        samples.resize(_dof*num);
-        sampling_halton::halton_sequence(num,&samples[0]);
-    }
-
-//    void SampleComplete(std::vector<uint32_t>& samples, size_t num)
-//    {
-//        //SampleSequence(samples,num);
-//    }
 
 protected:
-    int _dof;
-};
+    dReal arc_cosine ( dReal c );
+    dReal atan4 ( dReal y, dReal x );
+    char digit_to_ch ( int i );
+    int get_seed ( void );
+    bool halham_leap_check ( int dim_num, int leap[] );
+    bool halham_n_check ( int n );
+    bool halham_dim_num_check ( int dim_num );
+    bool halham_seed_check ( int dim_num, int seed[] );
+    bool halham_step_check ( int step );
+    void halham_write ( int dim_num, int n, int step, int seed[], int leap[], int base[], 
+                        dReal r[], char *file_out_name );
+    void halton ( dReal r[] );
+    bool halton_base_check ( int dim_num, int base[] );
+    int *halton_base_get ( void ) const;
+    void halton_base_set ( int base[] );
+    int *halton_leap_get ( void ) const;
+    void halton_leap_set ( int leap[] );
+    int halton_dim_num_get ( void ) const;
+    void halton_dim_num_set ( int dim_num );
+    int *halton_seed_get ( void ) const;
+    void halton_seed_set ( int seed[] );
+    void halton_sequence ( int n, dReal r[] );
+    int halton_step_get ( void );
+    void halton_step_set ( int step );
+    int i4_log_10 ( int i );
+    int i4_min ( int i1, int i2 );
+    void i4_to_halton ( int dim_num, int step, int seed[], int leap[], int base[], 
+                        dReal r[] );
+    void i4_to_halton_sequence ( int dim_num, int n, int step, int seed[], int leap[],
+                                 int base[], dReal r[] );
+    char *i4_to_s ( int i );
+    void i4vec_transpose_print ( int n, int a[], char *title );
+    int prime ( int n );
+    dReal r8_epsilon ( void );
+    dReal r8vec_dot_product ( int n, dReal *r1, dReal *r2 );
+    dReal r8vec_norm_l2 ( int n, dReal a[] );
+    int s_len_trim ( char *s );
 
-}
+    //
+    //  These variables are accessible to the user via calls to routines.
+    //
+    int *halton_BASE;
+    int *halton_LEAP;
+    int  halton_DIM_NUM;
+    int *halton_SEED;
+    int  halton_STEP;
+};
 
 #endif

@@ -125,15 +125,15 @@ class HanoiPuzzle:
                     print('Tnewhand2 invalid')
                     continue
             try:
-                self.basemanip.MoveToHandPosition(matrices=[Tnewhand])
+                self.basemanip.MoveToHandPosition(matrices=[Tnewhand],maxtries=1)
                 raveLogInfo('move to position above source peg')
                 self.waitrobot() # wait for robot to complete all trajectories
 
-                self.basemanip.MoveToHandPosition(matrices=[Tnewhand2])
+                self.basemanip.MoveToHandPosition(matrices=[Tnewhand2],maxtries=1)
                 raveLogInfo('move to position above dest peg')
                 self.waitrobot() # wait for robot to complete all trajectories
 
-                self.basemanip.MoveToHandPosition(matrices=[T])
+                self.basemanip.MoveToHandPosition(matrices=[T],maxtries=1)
                 raveLogInfo('move to dest peg')
                 self.waitrobot() # wait for robot to complete all trajectories
                 return True
@@ -161,7 +161,7 @@ class HanoiPuzzle:
                 Tgrasps = self.GetGrasp(Tdisk, disk.radius, [ang1,ang2]) # get the grasp transform given the two angles
                 for Tgrasp in Tgrasps: # for each of the grasps
                     try:
-                        self.basemanip.MoveToHandPosition(matrices=[Tgrasp])
+                        self.basemanip.MoveToHandPosition(matrices=[Tgrasp],maxtries=1)
                         raveLogInfo('moving hand to location')
                         self.waitrobot()
                         # succeeded so grab the disk

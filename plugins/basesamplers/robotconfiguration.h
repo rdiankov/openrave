@@ -23,7 +23,7 @@ public:
         __description = ":Interface Author: Rosen Diankov\n\n\
 Samples the robot active configuration space, treats revolute and circular joints appropriately. When creating pass the following parameters::\n\n\
   RobotConfiguration [robot name] [sampler name]\n\n\
-The default sampler is 'halton'.\n\
+The sampler needs to return values in the range [0,1]. Default sampler is 'halton'.\n\
 ";
         string robotname;
         sinput >> robotname;
@@ -37,11 +37,16 @@ The default sampler is 'halton'.\n\
         string samplername;
         sinput >> samplername;
         if( samplername.size() == 0 ) {
-            samplername = "MT19937";
+            samplername = "halton";
         }
         _psampler = RaveCreateSpaceSampler(penv,samplername);
         if( !!_psampler && !!_probot ) {
             _UpdateDOFs();
+            vector<dReal> vsamplerlower, vsamplerupper;
+            _psampler->GetLimits(vsamplerlower, vsamplerupper);
+            for(int i = 0; i < GetDOF(); ++i) {
+                BOOST_ASSERT(vsamplerlower[i] == 0 && vsamplerupper[i] == 1);
+            }
         }
     }
 
@@ -63,25 +68,9 @@ The default sampler is 'halton'.\n\
     void SampleSequence(std::vector<dReal>& samples, size_t num=1,IntervalType interval=IT_Closed)
     {
         _psampler->SampleSequence(samples,num,interval);
-        if( samples.size() > 0 ) {
-            BOOST_ASSERT(samples.size()==num*_lower.size());
-            for (size_t inum = 0; inum < num*_lower.size(); inum += _lower.size()) {
-                for (size_t i = 0; i < _lower.size(); i++) {
-                    samples[inum+i] = _lower[i] + samples[inum+i]*_range[i];
-                }
-            }
-        }
-    }
-
-    void SampleComplete(std::vector<dReal>& samples, size_t num,IntervalType interval=IT_Closed)
-    {
-        _psampler->SampleComplete(samples,num,interval);
-        if( samples.size() > 0 ) {
-            BOOST_ASSERT(samples.size()==num*_lower.size());
-            for (size_t inum = 0; inum < num*_lower.size(); inum += _lower.size()) {
-                for (size_t i = 0; i < _lower.size(); i++) {
-                    samples[inum+i] = _lower[i] + samples[inum+i]*_range[i];
-                }
+        for (size_t inum = 0; inum < num*_lower.size(); inum += _lower.size()) {
+            for (size_t i = 0; i < _lower.size(); i++) {
+                samples[inum+i] = _lower[i] + samples[inum+i]*_range[i];
             }
         }
     }
@@ -89,18 +78,19 @@ The default sampler is 'halton'.\n\
  protected:
     void _UpdateDOFs()
     {
-        _probot->GetActiveDOFWeights(_weights);
         _probot->GetActiveDOFLimits(_lower, _upper);
         _range.resize(_lower.size());
-        for(int i = 0; i < (int)_range.size(); ++i) {
+        dReal maxvalue = 0;
+        for(size_t i = 0; i < _range.size(); ++i) {
             _range[i] = _upper[i] - _lower[i];
         }
         _psampler->SetSpaceDOF(_lower.size());
+        _tempsamples.resize(GetDOF());
     }
 
     SpaceSamplerBasePtr _psampler;
     RobotBasePtr _probot;
     boost::shared_ptr<void> _updatedofscallback;
-    vector<dReal> _weights;
-    vector<dReal> _lower, _upper, _range;
+    vector<dReal> _lower, _upper, _range, _rangescaled;
+    vector<dReal> _tempsamples;
 };

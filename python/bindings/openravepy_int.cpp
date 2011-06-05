@@ -2474,12 +2474,12 @@ public:
         if( type == SDT_Real ) {
             std::vector<dReal> samples;
             _pspacesampler->SampleSequence(samples,num,interval);
-            return toPyArray(samples);
+            return _ReturnSamples(samples);
         }
         else if( type == SDT_Uint32 ) {
             std::vector<uint32_t> samples;
             _pspacesampler->SampleSequence(samples,num);
-            return toPyArray(samples);
+            return _ReturnSamples(samples);
         }
         throw OPENRAVE_EXCEPTION_FORMAT("%d sampling type not supported",type,ORE_InvalidArguments);
     }
@@ -2489,12 +2489,12 @@ public:
         if( type == SDT_Real ) {
             std::vector<dReal> samples;
             _pspacesampler->SampleSequence(samples,num);
-            return toPyArray(samples);
+            return _ReturnSamples(samples);
         }
         else if( type == SDT_Uint32 ) {
             std::vector<uint32_t> samples;
             _pspacesampler->SampleSequence(samples,num);
-            return toPyArray(samples);
+            return _ReturnSamples(samples);
         }
         throw OPENRAVE_EXCEPTION_FORMAT("%d sampling type not supported",type,ORE_InvalidArguments);
     }
@@ -2504,12 +2504,12 @@ public:
         if( type == SDT_Real ) {
             std::vector<dReal> samples;
             _pspacesampler->SampleComplete(samples,num,interval);
-            return toPyArray(samples);
+            return _ReturnSamples(samples);
         }
         else if( type == SDT_Uint32 ) {
             std::vector<uint32_t> samples;
             _pspacesampler->SampleComplete(samples,num);
-            return toPyArray(samples);
+            return _ReturnSamples(samples);
         }
         throw OPENRAVE_EXCEPTION_FORMAT("%d sampling type not supported",type,ORE_InvalidArguments);
     }
@@ -2519,16 +2519,34 @@ public:
         if( type == SDT_Real ) {
             std::vector<dReal> samples;
             _pspacesampler->SampleComplete(samples,num);
-            return toPyArray(samples);
+            return _ReturnSamples(samples);
         }
         else if( type == SDT_Uint32 ) {
             std::vector<uint32_t> samples;
             _pspacesampler->SampleComplete(samples,num);
-            return toPyArray(samples);
+            return _ReturnSamples(samples);
         }
         throw OPENRAVE_EXCEPTION_FORMAT("%d sampling type not supported",type,ORE_InvalidArguments);
     }
 
+protected:
+    object _ReturnSamples(const std::vector<dReal>& samples)
+    {
+        int dim = _pspacesampler->GetNumberOfValues();
+        npy_intp dims[] = {samples.size()/dim,dim};
+        PyObject *pyvalues = PyArray_SimpleNew(2,dims, sizeof(dReal)==8?PyArray_DOUBLE:PyArray_FLOAT);
+        memcpy(PyArray_DATA(pyvalues),&samples.at(0),samples.size()*sizeof(samples[0]));
+        return static_cast<numeric::array>(handle<>(pyvalues));
+    }
+
+    object _ReturnSamples(const std::vector<uint32_t>& samples)
+    {
+        int dim = _pspacesampler->GetNumberOfValues();
+        npy_intp dims[] = {samples.size()/dim,dim};
+        PyObject *pyvalues = PyArray_SimpleNew(2,dims, PyArray_UINT32);
+        memcpy(PyArray_DATA(pyvalues),&samples.at(0),samples.size()*sizeof(samples[0]));
+        return static_cast<numeric::array>(handle<>(pyvalues));
+    }
 };
 
 class PyEnvironmentBase : public boost::enable_shared_from_this<PyEnvironmentBase>

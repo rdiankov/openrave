@@ -111,16 +111,6 @@ Mersenne twister sampling algorithm that is based on matrix linear recurrence ov
         }
     }
 
-    void SampleComplete(std::vector<dReal>& samples, size_t num,IntervalType interval=IT_Closed)
-    {
-        SampleSequence(samples,num,interval);
-    }
-
-    void SampleComplete(std::vector<uint32_t>& samples, size_t num)
-    {
-        SampleSequence(samples,num);
-    }
-
 private:
 
     /* initializes mt[N] with a seed */

@@ -31,6 +31,8 @@ Planning
 
 * added a RobotConfiguration sampler for sampling robot active DOFs used for planning
 
+* added a Halton Sequence sampler
+
 Inverse Kinematics
 ------------------
 

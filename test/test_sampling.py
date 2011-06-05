@@ -23,6 +23,7 @@ class TestKinematics(EnvironmentSetup):
         for type in SampleDataType.values.values():
             if sp.Supports(type):
                 for dim in [1,5]:
+                    print samplername,type,dim
                     sp.SetSpaceDOF(dim)
                     lower,upper = sp.GetLimits(type)
                     assert(len(lower)==dim and len(upper) == dim)
@@ -30,13 +31,14 @@ class TestKinematics(EnvironmentSetup):
                         lowerN = tile(lower,(N,1))
                         upperN = tile(upper,(N,1))
                         closedvalues = sp.SampleSequence(type,N,Interval.Closed)
-                        openvalues = sp.SampleSequence(type,N,Interval.Open)
-                        openendvalues = sp.SampleSequence(type,N,Interval.OpenEnd)
-                        openstartvalues = sp.SampleSequence(type,N,Interval.OpenStart)
                         assert(len(closedvalues) == N and all(closedvalues>=lowerN) and all(closedvalues<=upperN))
-                        assert(len(openvalues) == N and all(openvalues>lowerN) and all(openvalues<upperN))
-                        assert(len(openendvalues) == N and all(openendvalues>=lowerN) and all(openendvalues<upperN))
-                        assert(len(openstartvalues) == N and all(openstartvalues>lowerN) and all(openstartvalues<=upperN))
+                        if type == SampleDataType.Real:
+                            openvalues = sp.SampleSequence(type,N,Interval.Open)
+                            openendvalues = sp.SampleSequence(type,N,Interval.OpenEnd)
+                            openstartvalues = sp.SampleSequence(type,N,Interval.OpenStart)
+                            assert(len(openvalues) == N and all(openvalues>lowerN) and all(openvalues<upperN))
+                            assert(len(openendvalues) == N and all(openendvalues>=lowerN) and all(openendvalues<upperN))
+                            assert(len(openstartvalues) == N and all(openstartvalues>lowerN) and all(openstartvalues<=upperN))
                         
     def test_default(self):
         sp=RaveCreateSpaceSampler(self.env,'MT19937')
@@ -51,7 +53,7 @@ class TestKinematics(EnvironmentSetup):
         sp=RaveCreateSpaceSampler(self.env,'RobotConfiguration %s'%robot.GetName())
         assert(sp.Supports(SampleDataType.Real))
         values = sp.SampleSequence(SampleDataType.Real,1)
-        assert(len(values) == robot.GetActiveDOF())
+        assert(len(values[0]) == robot.GetActiveDOF())
         robot.SetActiveDOFs(range(robot.GetDOF()-4),Robot.DOFAffine.X|Robot.DOFAffine.Y|Robot.DOFAffine.RotationAxis,[0,0,1])
         values = sp.SampleSequence(SampleDataType.Real,1)
-        assert(len(values) == robot.GetActiveDOF())
+        assert(len(values[0]) == robot.GetActiveDOF())

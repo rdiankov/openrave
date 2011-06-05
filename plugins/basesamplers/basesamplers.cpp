@@ -27,7 +27,7 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
             return InterfaceBasePtr(new MT19937Sampler(penv,sinput));
         }
         else if( interfacename == "halton" ) {
-            return InterfaceBasePtr(new sampling_halton::HaltonSampler(penv,sinput));
+            return InterfaceBasePtr(new HaltonSampler(penv,sinput));
         }
         else if( interfacename == "robotconfiguration" ) {
             return InterfaceBasePtr(new RobotConfigurationSampler(penv,sinput));

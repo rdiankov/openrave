@@ -19,18 +19,7 @@ using namespace std;
 
 # include "halton.h"
 
-namespace sampling_halton {
-
-//
-//  These variables are accessible to the user via calls to routines.
-//
-static int *halton_BASE = NULL;
-static int *halton_LEAP = NULL;
-static int  halton_DIM_NUM = -1;
-static int *halton_SEED = NULL;
-static int  halton_STEP = -1;
-
-char digit_to_ch ( int i )
+char HaltonSampler::digit_to_ch ( int i )
 
 //****************************************************************************80
 //
@@ -83,7 +72,7 @@ char digit_to_ch ( int i )
 }
 //****************************************************************************80
 
-int get_seed ( )
+int HaltonSampler::get_seed ( )
 
 //****************************************************************************80
 //
@@ -164,7 +153,7 @@ int get_seed ( )
 }
 //****************************************************************************80
 
-bool halham_dim_num_check ( int dim_num )
+bool HaltonSampler::halham_dim_num_check ( int dim_num )
 
 //****************************************************************************80
 //
@@ -211,7 +200,7 @@ bool halham_dim_num_check ( int dim_num )
 }
 //****************************************************************************80
 
-bool halham_leap_check ( int dim_num, int leap[] )
+bool HaltonSampler::halham_leap_check ( int dim_num, int leap[] )
 
 //****************************************************************************80
 //
@@ -263,7 +252,7 @@ bool halham_leap_check ( int dim_num, int leap[] )
 }
 //****************************************************************************80
 
-bool halham_n_check ( int n )
+bool HaltonSampler::halham_n_check ( int n )
 
 //****************************************************************************80
 //
@@ -310,7 +299,7 @@ bool halham_n_check ( int n )
 }
 //****************************************************************************80
 
-bool halham_seed_check ( int dim_num, int seed[] )
+bool HaltonSampler::halham_seed_check ( int dim_num, int seed[] )
 
 //****************************************************************************80
 //
@@ -362,7 +351,7 @@ bool halham_seed_check ( int dim_num, int seed[] )
 }
 //****************************************************************************80
 
-bool halham_step_check ( int step )
+bool HaltonSampler::halham_step_check ( int step )
 
 //****************************************************************************80
 //
@@ -413,7 +402,7 @@ bool halham_step_check ( int step )
 
 //****************************************************************************80
 
-void halton ( dReal r[] )
+void HaltonSampler::halton ( dReal r[] )
 
 //****************************************************************************80
 //
@@ -559,7 +548,7 @@ void halton ( dReal r[] )
 }
 //****************************************************************************80
 
-bool halton_base_check ( int dim_num, int base[] )
+bool HaltonSampler::halton_base_check ( int dim_num, int base[] )
 
 //****************************************************************************80
 //
@@ -610,7 +599,7 @@ bool halton_base_check ( int dim_num, int base[] )
 }
 //****************************************************************************80
 
-int *halton_base_get ( )
+int *HaltonSampler::halton_base_get ( ) const
 
 //****************************************************************************80
 //
@@ -639,7 +628,7 @@ int *halton_base_get ( )
 }
 //****************************************************************************80
 
-void halton_base_set ( int base[] )
+void HaltonSampler::halton_base_set ( int base[] )
 
 //****************************************************************************80
 //
@@ -681,7 +670,7 @@ void halton_base_set ( int base[] )
 }
 //****************************************************************************80
 
-int *halton_leap_get ( )
+int *HaltonSampler::halton_leap_get ( ) const
 
 //****************************************************************************80
 //
@@ -711,7 +700,7 @@ int *halton_leap_get ( )
 }
 //****************************************************************************80
 
-void halton_leap_set ( int leap[] )
+void HaltonSampler::halton_leap_set ( int leap[] )
 
 //****************************************************************************80
 //
@@ -753,7 +742,7 @@ void halton_leap_set ( int leap[] )
 }
 //****************************************************************************80
 
-int halton_dim_num_get ( )
+int HaltonSampler::halton_dim_num_get ( ) const
 
 //****************************************************************************80
 //
@@ -782,7 +771,7 @@ int halton_dim_num_get ( )
 }
 //****************************************************************************80
 
-void halton_dim_num_set ( int dim_num )
+void HaltonSampler::halton_dim_num_set ( int dim_num )
 
 //****************************************************************************80
 //
@@ -847,7 +836,7 @@ void halton_dim_num_set ( int dim_num )
 }
 //****************************************************************************80
 
-int *halton_seed_get ( )
+int *HaltonSampler::halton_seed_get ( ) const
 
 //****************************************************************************80
 //
@@ -877,7 +866,7 @@ int *halton_seed_get ( )
 }
 //****************************************************************************80
 
-void halton_seed_set ( int seed[] )
+void HaltonSampler::halton_seed_set ( int seed[] )
 
 //****************************************************************************80
 //
@@ -919,7 +908,7 @@ void halton_seed_set ( int seed[] )
 }
 //****************************************************************************80
 
-void halton_sequence ( int n, dReal r[] )
+void HaltonSampler::halton_sequence ( int n, dReal r[] )
 
 //****************************************************************************80
 //
@@ -1078,7 +1067,7 @@ void halton_sequence ( int n, dReal r[] )
 }
 //****************************************************************************80
 
-int halton_step_get ( )
+int HaltonSampler::halton_step_get ( )
 
 //****************************************************************************80
 //
@@ -1107,7 +1096,7 @@ int halton_step_get ( )
 }
 //****************************************************************************80
 
-void halton_step_set ( int step )
+void HaltonSampler::halton_step_set ( int step )
 
 //****************************************************************************80
 //
@@ -1146,7 +1135,7 @@ void halton_step_set ( int step )
 }
 //****************************************************************************80
 
-int i4_log_10 ( int i )
+int HaltonSampler::i4_log_10 ( int i )
 
 //****************************************************************************80
 //
@@ -1222,7 +1211,7 @@ int i4_log_10 ( int i )
 }
 //****************************************************************************80
 
-int i4_min ( int i1, int i2 )
+int HaltonSampler::i4_min ( int i1, int i2 )
 
 //****************************************************************************80
 //
@@ -1262,7 +1251,7 @@ int i4_min ( int i1, int i2 )
 }
 //****************************************************************************80
 
-void i4_to_halton ( int dim_num, int step, int seed[], int leap[], int base[],
+void HaltonSampler::i4_to_halton ( int dim_num, int step, int seed[], int leap[], int base[],
                     dReal r[] )
 
 //****************************************************************************80
@@ -1378,7 +1367,7 @@ void i4_to_halton ( int dim_num, int step, int seed[], int leap[], int base[],
 }
 //****************************************************************************80
 
-void i4_to_halton_sequence ( int dim_num, int n, int step, int seed[],
+void HaltonSampler::i4_to_halton_sequence ( int dim_num, int n, int step, int seed[],
                              int leap[], int base[], dReal r[] )
 
 //****************************************************************************80
@@ -1538,7 +1527,7 @@ void i4_to_halton_sequence ( int dim_num, int n, int step, int seed[],
 }
 //****************************************************************************80
 
-char *i4_to_s ( int i )
+char *HaltonSampler::i4_to_s ( int i )
 
 //****************************************************************************80
 //
@@ -1634,7 +1623,7 @@ char *i4_to_s ( int i )
 }
 //****************************************************************************80
 
-void i4vec_transpose_print ( int n, int a[], char *title )
+void HaltonSampler::i4vec_transpose_print ( int n, int a[], char *title )
 
 //****************************************************************************80
 //
@@ -1720,7 +1709,7 @@ void i4vec_transpose_print ( int n, int a[], char *title )
 }
 //****************************************************************************80
 
-int prime ( int n )
+int HaltonSampler::prime ( int n )
 
 //****************************************************************************80
 //
@@ -1957,7 +1946,7 @@ int prime ( int n )
 }
 //****************************************************************************80
 
-dReal r8_epsilon ( )
+dReal HaltonSampler::r8_epsilon ( )
 
 //****************************************************************************80
 //
@@ -2003,7 +1992,7 @@ dReal r8_epsilon ( )
 }
 //****************************************************************************80
 
-dReal r8vec_dot_product ( int n, dReal *r1, dReal *r2 )
+dReal HaltonSampler::r8vec_dot_product ( int n, dReal *r1, dReal *r2 )
 
 //****************************************************************************80
 //
@@ -2049,7 +2038,7 @@ dReal r8vec_dot_product ( int n, dReal *r1, dReal *r2 )
 }
 //****************************************************************************80
 
-dReal r8vec_norm_l2 ( int n, dReal a[] )
+dReal HaltonSampler::r8vec_norm_l2 ( int n, dReal a[] )
 
 //****************************************************************************80
 //
@@ -2099,7 +2088,7 @@ dReal r8vec_norm_l2 ( int n, dReal a[] )
 }
 //****************************************************************************80
 
-int s_len_trim ( char *s )
+int HaltonSampler::s_len_trim ( char *s )
 
 //****************************************************************************80
 //
@@ -2146,53 +2135,3 @@ int s_len_trim ( char *s )
     return n;
 }
 //****************************************************************************80
-
-void timestamp ( )
-
-//****************************************************************************80
-//
-//  Purpose:
-//
-//    TIMESTAMP prints the current YMDHMS date as a time stamp.
-//
-//  Example:
-//
-//    31 May 2001 09:45:54 AM
-//
-//  Licensing:
-//
-//    This code is distributed under the GNU LGPL license.
-//
-//  Modified:
-//
-//    08 July 2009
-//
-//  Author:
-//
-//    John Burkardt
-//
-//  Parameters:
-//
-//    None
-//
-{
-# define TIME_SIZE 40
-
-    static char time_buffer[TIME_SIZE];
-    const struct std::tm *tm_ptr;
-    size_t len;
-    std::time_t now;
-
-    now = std::time ( NULL );
-    tm_ptr = std::localtime ( &now );
-
-    len = std::strftime ( time_buffer, TIME_SIZE, "%d %B %Y %I:%M:%S %p", tm_ptr );
-
-    std::cout << time_buffer << "\n";
-
-    return;
-# undef TIME_SIZE
-}
-//****************************************************************************80
-
-} // end sampling_halton namespace
