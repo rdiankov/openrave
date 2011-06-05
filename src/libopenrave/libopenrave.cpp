@@ -994,7 +994,10 @@ class SimpleDistMetric
 {
  public:
     SimpleDistMetric(RobotBasePtr robot) : _robot(robot) {
-        _robot->GetActiveDOFWeights(weights);
+        _robot->GetActiveDOFWeights(weights2);
+        FOREACH(it,weights2) {
+            *it *= *it;
+        }
     }
     virtual dReal Eval(const std::vector<dReal>& c0, const std::vector<dReal>& c1)
     {
@@ -1002,14 +1005,14 @@ class SimpleDistMetric
         _robot->SubtractActiveDOFValues(c,c1);
         dReal dist = 0;
         for(int i=0; i < _robot->GetActiveDOF(); i++) {
-            dist += weights.at(i)*c.at(i)*c.at(i);
+            dist += weights2.at(i)*c.at(i)*c.at(i);
         }
         return RaveSqrt(dist);
     }
 
  protected:
     RobotBasePtr _robot;
-    vector<dReal> weights;
+    vector<dReal> weights2;
 };
 
 class NeighSampleFunction
@@ -1021,21 +1024,24 @@ public:
     {
         _psampler->SampleSequence(vNewSample);
         size_t dof = vCurSample.size();
-        BOOST_ASSERT(dof==vNewSample.size());
+        BOOST_ASSERT(dof==vNewSample.size() && &vNewSample != &vCurSample);
         dReal fDist = _distmetricfn(vNewSample,vCurSample);
-        //fRadius *= 0.1+0.9*RaveRandomFloat();
         while(fDist > fRadius) {
             for (size_t i = 0; i < dof; i++) {
                 vNewSample[i] = 0.5f*vCurSample[i]+0.5f*vNewSample[i];
             }
             fDist = _distmetricfn(vNewSample,vCurSample);
         }
-    
         for(int iter = 0; iter < 20; ++iter) {
-            while(_distmetricfn(vNewSample, vCurSample) < fRadius ) {
+            for (size_t i = 0; i < dof; i++) {
+                vNewSample[i] = 1.2f*vNewSample[i]-0.2f*vCurSample[i];
+            }
+            if(_distmetricfn(vNewSample, vCurSample) > fRadius ) {
+                // take the previous
                 for (size_t i = 0; i < dof; i++) {
-                    vNewSample[i] = 1.2f*vNewSample[i]-0.2f*vCurSample[i];
+                    vNewSample[i] = 0.833333333333333f*vNewSample[i]-0.16666666666666669*vCurSample[i];
                 }
+                break;
             }
         }
 
@@ -2019,7 +2025,7 @@ void RaveInitRandomGeneration(uint32_t seed)
 
 uint32_t RaveRandomInt()
 {
-    std::vector<dReal> sample;
+    std::vector<uint32_t> sample;
     RaveGlobal::instance()->GetDefaultSampler()->SampleSequence(sample);
     return sample.at(0);
 }

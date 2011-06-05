@@ -66,7 +66,29 @@ Mersenne twister sampling algorithm that is based on matrix linear recurrence ov
     void SetSpaceDOF(int dof) { _dof = dof; }
     int GetDOF() const { return _dof; }
     int GetNumberOfValues() const { return _dof; }
-    
+
+    bool Supports(SampleDataType type) const { return true; }
+
+    void GetLimits(std::vector<dReal>& vLowerLimit, std::vector<dReal>& vUpperLimit) const
+    {
+        vLowerLimit.resize(_dof);
+        vUpperLimit.resize(_dof);
+        for(int i = 0; i < _dof; ++i) {
+            vLowerLimit[i] = 0;
+            vUpperLimit[i] = 1;
+        }
+    }
+
+    void GetLimits(std::vector<uint32_t>& vLowerLimit, std::vector<uint32_t>& vUpperLimit) const
+    {
+        vLowerLimit.resize(_dof);
+        vUpperLimit.resize(_dof);
+        for(int i = 0; i < _dof; ++i) {
+            vLowerLimit[i] = 0;
+            vUpperLimit[i] = 0xffffffff;
+        }
+    }
+
     void SampleSequence(std::vector<dReal>& samples, size_t num=1,IntervalType interval=IT_Closed)
     {
         samples.resize(_dof*num);
@@ -81,7 +103,7 @@ Mersenne twister sampling algorithm that is based on matrix linear recurrence ov
         }
     }
 
-    void SampleSequence(std::vector<uint32_t>& samples, size_t num=1,IntervalType interval=IT_Closed)
+    void SampleSequence(std::vector<uint32_t>& samples, size_t num)
     {
         samples.resize(_dof*num);
         for(size_t i = 0; i < samples.size(); ++i) {

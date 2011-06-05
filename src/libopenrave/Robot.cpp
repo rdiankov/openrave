@@ -1007,6 +1007,7 @@ void RobotBase::SetActiveDOFs(const std::vector<int>& vJointIndices, int nAffine
         _nActiveDOF += 4;
     }
     _nActiveDOF += vJointIndices.size();
+    _ParametersChanged(Prop_RobotActiveDOFs);
 }
 
 void RobotBase::SetActiveDOFValues(const std::vector<dReal>& values, bool bCheckLimits)

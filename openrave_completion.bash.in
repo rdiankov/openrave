@@ -128,7 +128,7 @@ function _complete_openrave_robotpy {
 function _complete_openrave_createpluginpy {
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
-    opts="--usecore --planner --robot --sensorsystem --controller --probleminstance --iksolver --kinbody --physicsengine --sensor --collisionchecker --trajectory --help"
+    opts="--usecore --planner --robot --sensorsystem --controller --probleminstance --iksolver --kinbody --physicsengine --sensor --collisionchecker --trajectory --viewer --spacesampler --help"
     COMPREPLY=($(compgen -W "$opts" -- ${cur}))
 }
 complete -F "_complete_openravepy" -o filenames -o plusdirs "openrave.py"

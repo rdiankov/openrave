@@ -2451,34 +2451,84 @@ public:
     void SetSpaceDOF(int dof) { _pspacesampler->SetSpaceDOF(dof); }
     int GetDOF() { return _pspacesampler->GetDOF(); }
     int GetNumberOfValues() { return _pspacesampler->GetNumberOfValues(); }
+
+    bool Supports(SampleDataType type) { return _pspacesampler->Supports(type); }
     
-    object SampleSequence(size_t num,IntervalType interval)
+    object GetLimits(SampleDataType type)
     {
-        std::vector<dReal> samples;
-        _pspacesampler->SampleSequence(samples,num,interval);
-        return toPyArray(samples);
+        if( type == SDT_Real ) {
+            vector<dReal> vlower, vupper;
+            _pspacesampler->GetLimits(vlower,vupper);
+            return boost::python::make_tuple(toPyArray(vlower),toPyArray(vupper));
+        }
+        else if( type == SDT_Uint32 ) {
+            vector<uint32_t> vlower, vupper;
+            _pspacesampler->GetLimits(vlower,vupper);
+            return boost::python::make_tuple(toPyArray(vlower),toPyArray(vupper));
+        }
+        throw OPENRAVE_EXCEPTION_FORMAT("%d sampling type not supported",type,ORE_InvalidArguments);
     }
 
-    object SampleSequence(size_t num)
+    object SampleSequence(SampleDataType type, size_t num,IntervalType interval)
     {
-        std::vector<uint32_t> samples;
-        _pspacesampler->SampleSequence(samples,num);
-        return toPyArray(samples);
+        if( type == SDT_Real ) {
+            std::vector<dReal> samples;
+            _pspacesampler->SampleSequence(samples,num,interval);
+            return toPyArray(samples);
+        }
+        else if( type == SDT_Uint32 ) {
+            std::vector<uint32_t> samples;
+            _pspacesampler->SampleSequence(samples,num);
+            return toPyArray(samples);
+        }
+        throw OPENRAVE_EXCEPTION_FORMAT("%d sampling type not supported",type,ORE_InvalidArguments);
     }
 
-    object SampleComplete(size_t num,IntervalType interval)
+    object SampleSequence(SampleDataType type, size_t num)
     {
-        std::vector<dReal> samples;
-        _pspacesampler->SampleComplete(samples,num,interval);
-        return toPyArray(samples);
+        if( type == SDT_Real ) {
+            std::vector<dReal> samples;
+            _pspacesampler->SampleSequence(samples,num);
+            return toPyArray(samples);
+        }
+        else if( type == SDT_Uint32 ) {
+            std::vector<uint32_t> samples;
+            _pspacesampler->SampleSequence(samples,num);
+            return toPyArray(samples);
+        }
+        throw OPENRAVE_EXCEPTION_FORMAT("%d sampling type not supported",type,ORE_InvalidArguments);
     }
 
-    object SampleComplete(size_t num)
+    object SampleComplete(SampleDataType type, size_t num,IntervalType interval)
     {
-        std::vector<uint32_t> samples;
-        _pspacesampler->SampleComplete(samples,num);
-        return toPyArray(samples);
+        if( type == SDT_Real ) {
+            std::vector<dReal> samples;
+            _pspacesampler->SampleComplete(samples,num,interval);
+            return toPyArray(samples);
+        }
+        else if( type == SDT_Uint32 ) {
+            std::vector<uint32_t> samples;
+            _pspacesampler->SampleComplete(samples,num);
+            return toPyArray(samples);
+        }
+        throw OPENRAVE_EXCEPTION_FORMAT("%d sampling type not supported",type,ORE_InvalidArguments);
     }
+
+    object SampleComplete(SampleDataType type, size_t num)
+    {
+        if( type == SDT_Real ) {
+            std::vector<dReal> samples;
+            _pspacesampler->SampleComplete(samples,num);
+            return toPyArray(samples);
+        }
+        else if( type == SDT_Uint32 ) {
+            std::vector<uint32_t> samples;
+            _pspacesampler->SampleComplete(samples,num);
+            return toPyArray(samples);
+        }
+        throw OPENRAVE_EXCEPTION_FORMAT("%d sampling type not supported",type,ORE_InvalidArguments);
+    }
+
 };
 
 class PyEnvironmentBase : public boost::enable_shared_from_this<PyEnvironmentBase>
@@ -2600,18 +2650,6 @@ public:
         if( !!_threadviewer ) {
             _threadviewer->join();
         }
-    }
-
-    object GetPluginInfo()
-    {
-        RAVELOG_WARN("Environment.GetPluginInfo deprecated, use RaveGetPluginInfo\n");
-        return openravepy::RaveGetPluginInfo();
-    }
-
-    object GetLoadedInterfaces()
-    {
-        RAVELOG_WARN("Environment.GetLoadedInterfaces deprecated, use RaveGetLoadedInterfaces\n");
-        return openravepy::RaveGetLoadedInterfaces();
     }
 
     bool LoadPlugin(const string& name) { RAVELOG_WARN("Environment.LoadPlugin deprecated, use RaveLoadPlugin\n");  return RaveLoadPlugin(name.c_str()); }
@@ -4430,15 +4468,17 @@ In python, the syntax is::\n\n\
     }
 
     {
-        object (PySpaceSamplerBase::*SampleSequence1)(size_t,IntervalType) = &PySpaceSamplerBase::SampleSequence;
-        object (PySpaceSamplerBase::*SampleSequence2)(size_t) = &PySpaceSamplerBase::SampleSequence;
-        object (PySpaceSamplerBase::*SampleComplete1)(size_t,IntervalType) = &PySpaceSamplerBase::SampleComplete;
-        object (PySpaceSamplerBase::*SampleComplete2)(size_t) = &PySpaceSamplerBase::SampleComplete;
+        object (PySpaceSamplerBase::*SampleSequence1)(SampleDataType,size_t,IntervalType) = &PySpaceSamplerBase::SampleSequence;
+        object (PySpaceSamplerBase::*SampleSequence2)(SampleDataType,size_t) = &PySpaceSamplerBase::SampleSequence;
+        object (PySpaceSamplerBase::*SampleComplete1)(SampleDataType,size_t,IntervalType) = &PySpaceSamplerBase::SampleComplete;
+        object (PySpaceSamplerBase::*SampleComplete2)(SampleDataType,size_t) = &PySpaceSamplerBase::SampleComplete;
         scope spacesampler = class_<PySpaceSamplerBase, boost::shared_ptr<PySpaceSamplerBase>, bases<PyInterfaceBase> >("SpaceSampler", DOXY_CLASS(SpaceSamplerBase), no_init)
             .def("SetSeed",&PySpaceSamplerBase::SetSeed, args("seed"), DOXY_FN(SpaceSamplerBase,SetSeed))
             .def("SetSpaceDOF",&PySpaceSamplerBase::SetSpaceDOF, args("dof"), DOXY_FN(SpaceSamplerBase,SetSpaceDOF))
             .def("GetDOF",&PySpaceSamplerBase::GetDOF, DOXY_FN(SpaceSamplerBase,GetDOF))
             .def("GetNumberOfValues",&PySpaceSamplerBase::GetNumberOfValues, args("seed"), DOXY_FN(SpaceSamplerBase,GetNumberOfValues))
+            .def("Supports",&PySpaceSamplerBase::Supports, args("seed"), DOXY_FN(SpaceSamplerBase,Supports))
+            .def("GetLimits",&PySpaceSamplerBase::GetLimits, args("seed"), DOXY_FN(SpaceSamplerBase,GetLimits))
             .def("SampleSequence",SampleSequence1, args("num","interval"), DOXY_FN(SpaceSamplerBase,SampleSequence "std::vector<dReal>; size_t; IntervalType"))
             .def("SampleSequence",SampleSequence2, args("num"), DOXY_FN(SpaceSamplerBase,SampleSequence "std::vector<uint32_t>; size_t"))
             .def("SampleComplete",SampleComplete1, args("num","interval"), DOXY_FN(SpaceSamplerBase,SampleComplete "std::vector<dReal>; size_t; IntervalType"))
@@ -4496,8 +4536,6 @@ In python, the syntax is::\n\n\
             .def(init<>())
             .def("Reset",&PyEnvironmentBase::Reset, DOXY_FN(EnvironmentBase,Reset))
             .def("Destroy",&PyEnvironmentBase::Destroy, DOXY_FN(EnvironmentBase,Destroy))
-            .def("GetPluginInfo",&PyEnvironmentBase::GetPluginInfo, DOXY_FN(EnvironmentBase,GetPluginInfo))
-            .def("GetLoadedInterfaces",&PyEnvironmentBase::GetLoadedInterfaces, DOXY_FN(EnvironmentBase,GetLoadedInterfaces))
             .def("LoadPlugin",&PyEnvironmentBase::LoadPlugin,args("filename"), DOXY_FN(EnvironmentBase,LoadPlugin))
             .def("ReloadPlugins",&PyEnvironmentBase::ReloadPlugins, DOXY_FN(EnvironmentBase,ReloadPlugins))
             .def("CreateInterface", &PyEnvironmentBase::CreateInterface,args("type","name"), DOXY_FN(EnvironmentBase,ReloadPlugins))

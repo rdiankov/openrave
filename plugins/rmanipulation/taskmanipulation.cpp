@@ -208,12 +208,16 @@ Task-based manipulation planning involving target objects. A lot of the algorith
     public:
     ActiveDistMetric(RobotBasePtr robot) : _robot(robot) {
             _robot->GetActiveDOFWeights(weights);
+            FOREACH(it,weights) {
+                *it *= *it;
+            }
         }
         virtual dReal Eval(const std::vector<dReal>& c0, const std::vector<dReal>& c1)
         {
             dReal out = 0;
-            for(int i=0; i < _robot->GetActiveDOF(); i++)
+            for(int i=0; i < _robot->GetActiveDOF(); i++) {
                 out += weights.at(i) * (c0.at(i)-c1.at(i))*(c0[i]-c1[i]);    
+            }
             return RaveSqrt(out);
         }
 

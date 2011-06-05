@@ -20,14 +20,19 @@ Core
 * added a new SpaceSampler interface for sophisticated discrete/deterministic/randomized samplers.
 
 * deprecated the RaveRandomX functions in favor of the new samplers
+
+* Added a Prop_RobotActiveDOFs change callback in order to catch SetActiveDOFs messages
+
  
 Planning
 --------
 
 * added a new planner parameter _neighstatefn that adds two states together.
 
-IK
---
+* added a RobotConfiguration sampler for sampling robot active DOFs used for planning
+
+Inverse Kinematics
+------------------
 
 * implemented --show command for inversekinematics
 

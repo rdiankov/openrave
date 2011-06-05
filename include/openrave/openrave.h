@@ -521,10 +521,10 @@ DefineRavePrintfA(_VERBOSELEVEL)
 
 #define IS_DEBUGLEVEL(level) (OpenRAVE::RaveGetDebugLevel()>=(level))
 
-#define OPENRAVE_EXCEPTION_FORMAT0(s, errorcode) OpenRAVE::openrave_exception(str(boost::format("[%s:%d] "s)%(__PRETTY_FUNCTION__)%(__LINE__)),errorcode)
+#define OPENRAVE_EXCEPTION_FORMAT0(s, errorcode) OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] "s)%(__PRETTY_FUNCTION__)%(__LINE__)),errorcode)
 
 /// adds the function name and line number to an openrave exception
-#define OPENRAVE_EXCEPTION_FORMAT(s, args,errorcode) OpenRAVE::openrave_exception(str(boost::format("[%s:%d] "s)%(__PRETTY_FUNCTION__)%(__LINE__)%args),errorcode)
+#define OPENRAVE_EXCEPTION_FORMAT(s, args,errorcode) OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] "s)%(__PRETTY_FUNCTION__)%(__LINE__)%args),errorcode)
 
 #define OPENRAVE_DUMMY_IMPLEMENTATION { throw OPENRAVE_EXCEPTION_FORMAT0("not implemented",ORE_NotImplemented); }
 

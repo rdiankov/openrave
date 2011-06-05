@@ -35,6 +35,9 @@ class CM
     public:
     SimpleDistMetric(RobotBasePtr robot) : _robot(robot) {
             _robot->GetActiveDOFWeights(weights);
+            FOREACH(it,weights) {
+                *it *= *it;
+            }
         }
         virtual dReal Eval(const std::vector<dReal>& c0, const std::vector<dReal>& c1)
         {

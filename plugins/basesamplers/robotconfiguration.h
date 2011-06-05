@@ -29,12 +29,7 @@ The default sampler is 'halton'.\n\
         sinput >> robotname;
         _probot = GetEnv()->GetRobot(robotname);
         if( !!_probot ) {
-            _probot->GetActiveDOFWeights(_weights);
-            _probot->GetActiveDOFLimits(_lower, _upper);
-            _range.resize(_lower.size());
-            for(int i = 0; i < (int)_range.size(); ++i) {
-                _range[i] = _upper[i] - _lower[i];
-            }
+            _updatedofscallback = _probot->RegisterChangeCallback(RobotBase::Prop_RobotActiveDOFs,boost::bind(&RobotConfigurationSampler::_UpdateDOFs,this));
         }
         else {
             RAVELOG_WARN(str(boost::format("failed to find robot '%s'\n")%robotname));
@@ -46,7 +41,7 @@ The default sampler is 'halton'.\n\
         }
         _psampler = RaveCreateSpaceSampler(penv,samplername);
         if( !!_psampler && !!_probot ) {
-            _psampler->SetSpaceDOF(_lower.size());
+            _UpdateDOFs();
         }
     }
 
@@ -57,6 +52,13 @@ The default sampler is 'halton'.\n\
     void SetSpaceDOF(int dof) { BOOST_ASSERT(dof==(int)_lower.size()); }
     int GetDOF() const { return (int)_lower.size(); }
     int GetNumberOfValues() const { return (int)_lower.size(); }
+    bool Supports(SampleDataType type) const { return !!_probot && !!_psampler && type==SDT_Real; }
+    
+    void GetLimits(std::vector<dReal>& vLowerLimit, std::vector<dReal>& vUpperLimit) const
+    {
+        vLowerLimit = _lower;
+        vUpperLimit = _upper;
+    }
 
     void SampleSequence(std::vector<dReal>& samples, size_t num=1,IntervalType interval=IT_Closed)
     {
@@ -85,8 +87,20 @@ The default sampler is 'halton'.\n\
     }
 
  protected:
+    void _UpdateDOFs()
+    {
+        _probot->GetActiveDOFWeights(_weights);
+        _probot->GetActiveDOFLimits(_lower, _upper);
+        _range.resize(_lower.size());
+        for(int i = 0; i < (int)_range.size(); ++i) {
+            _range[i] = _upper[i] - _lower[i];
+        }
+        _psampler->SetSpaceDOF(_lower.size());
+    }
+
     SpaceSamplerBasePtr _psampler;
     RobotBasePtr _probot;
+    boost::shared_ptr<void> _updatedofscallback;
     vector<dReal> _weights;
     vector<dReal> _lower, _upper, _range;
 };

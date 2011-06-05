@@ -318,13 +318,13 @@ object RaveGetLoadedInterfaces()
 {
     std::map<InterfaceType, std::vector<std::string> > interfacenames;
     OpenRAVE::RaveGetLoadedInterfaces(interfacenames);
-    boost::python::list ointerfacenames;
+    boost::python::dict ointerfacenames;
     FOREACHC(it, interfacenames) {
         boost::python::list names;
         FOREACHC(itname,it->second) {
             names.append(*itname);
         }
-        ointerfacenames.append(boost::python::make_tuple(it->first,names));
+        ointerfacenames[it->first] = names;
     }
     return ointerfacenames;
 }
@@ -605,6 +605,10 @@ void init_openravepy_global()
         .value("OpenEnd",IT_OpenEnd)
         .value("Closed",IT_Closed)
         ;
+    enum_<SampleDataType>("SampleDataType" DOXY_ENUM(SampleDataType))
+        .value("Real",SDT_Real)
+        .value("Uint32",SDT_Uint32)
+        ;
     object iktype = enum_<IkParameterization::Type>("IkParameterizationType" DOXY_ENUM(IkParameterization::Type))
         .value("Transform6D",IkParameterization::Type_Transform6D)
         .value("Rotation3D",IkParameterization::Type_Rotation3D)
@@ -726,7 +730,7 @@ void init_openravepy_global()
     def("RaveInitialize",RaveInitialize,RaveInitialize_overloads(args("load_all_plugins","level"),DOXY_FN1(RaveInitialize)));
     def("RaveDestroy",RaveDestroy,DOXY_FN1(RaveDestroy));
     def("RaveGetPluginInfo",openravepy::RaveGetPluginInfo,DOXY_FN1(RaveGetPluginInfo));
-    def("RaveGetLoadedInterfaces",openravepy::RaveGetLoadedInterfaces,DOXY_FN1(raveGetLoadedInterfaces));
+    def("RaveGetLoadedInterfaces",openravepy::RaveGetLoadedInterfaces,DOXY_FN1(RaveGetLoadedInterfaces));
     def("RaveReloadPlugins",OpenRAVE::RaveReloadPlugins,DOXY_FN1(RaveReloadPlugins));
     def("RaveLoadPlugin",OpenRAVE::RaveLoadPlugin,args("filename"),DOXY_FN1(RaveLoadPlugins));
     def("RaveHasInterface",OpenRAVE::RaveHasInterface,args("type","name"),DOXY_FN1(RaveHasInterface));

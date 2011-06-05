@@ -403,8 +403,6 @@ bool ExtractTriMesh(object o, KinBody::Link::TRIMESH& mesh);
 
 namespace openravepy
 {
-    object RaveGetPluginInfo();
-    object RaveGetLoadedInterfaces();
     PyInterfaceBasePtr RaveCreateInterface(PyEnvironmentBasePtr pyenv, InterfaceType type, const std::string& name);
     PyRobotBasePtr RaveCreateRobot(PyEnvironmentBasePtr pyenv, const std::string& name);
     PyPlannerBasePtr RaveCreatePlanner(PyEnvironmentBasePtr pyenv, const std::string& name);

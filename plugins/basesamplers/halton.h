@@ -84,6 +84,17 @@ References:\n\n\
     }
     int GetDOF() const { return _dof; }
     int GetNumberOfValues() const { return _dof; }
+    bool Supports(SampleDataType type) const { return type==SDT_Real; }
+
+    void GetLimits(std::vector<dReal>& vLowerLimit, std::vector<dReal>& vUpperLimit) const
+    {
+        vLowerLimit.resize(_dof);
+        vUpperLimit.resize(_dof);
+        for(int i = 0; i < _dof; ++i) {
+            vLowerLimit[i] = 0;
+            vUpperLimit[i] = 1;
+        }
+    }
     
     void SampleSequence(std::vector<dReal>& samples, size_t num=1,IntervalType interval=IT_Closed)
     {

@@ -30,6 +30,11 @@ enum IntervalType {
     IT_Closed=3, ///< [a,b]
 };
 
+enum SampleDataType {
+    SDT_Real=1,
+    SDT_Uint32=2,
+};
+
 /** \brief <b>[interface]</b> Contains space samplers commonly used in planners. <b>Methods not multi-thread safe.</b> See \ref arch_spacesampler.
     \ingroup interfaces
 */
@@ -58,12 +63,24 @@ public:
     */
     virtual int GetNumberOfValues() const = 0;
 
+    virtual bool Supports(SampleDataType type) const = 0;
+
+    /// \brief returns the minimum and maximum values returned for each dimension (size is GetNumberOfValues())
+    ///
+    ///  By default the limits should be in [0,1]^N.
+    virtual void GetLimits(std::vector<dReal>& vLowerLimit, std::vector<dReal>& vUpperLimit) const OPENRAVE_DUMMY_IMPLEMENTATION;
+
+    /// \brief returns the minimum and maximum values returned for each dimension (size is GetNumberOfValues())
+    ///
+    /// By default the limits should be [0,2^32-1]
+    virtual void GetLimits(std::vector<uint32_t>& vLowerLimit, std::vector<uint32_t>& vUpperLimit) const OPENRAVE_DUMMY_IMPLEMENTATION;
+
     /** \brief sequentially sampling returning the next 'num' samples
         
         The sampler can fail by returning an array of size 0.
         \param sample the values of the samples. This is a num*GetNumberOfValues() array.
         \param num number of samples to return
-        \param interval the sampling intervel for each of the dimensions. By default the values are returned in [0,1]
+        \param interval the sampling intervel for each of the dimensions.
      */
     virtual void SampleSequence(std::vector<dReal>& samples, size_t num=1,IntervalType interval=IT_Closed) OPENRAVE_DUMMY_IMPLEMENTATION;
 

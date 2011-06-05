@@ -134,7 +134,7 @@ if __name__ == "__main__":
     RaveInitialize(True,level=level)
     if options.listinterfaces is not None:
         interfaces = RaveGetLoadedInterfaces()
-        for type,names in interfaces:
+        for type,names in interfaces.iteritems():
             if options.listinterfaces.lower() == str(type).lower():
                 for name in names:
                     print name

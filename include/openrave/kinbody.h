@@ -44,9 +44,13 @@ public:
         Prop_JointMimic=0x100, ///< joint mimic equations
         Prop_JointVelocityLimits=0x200, ///< velocity limits
         // robot only
-        Prop_Manipulators = 0x00010000, ///< [robot only] all properties of all manipulators
-        Prop_Sensors = 0x00020000, ///< [robot only] all properties of all sensors
-        Prop_SensorPlacement = 0x00040000, ///< [robot only] relative sensor placement of sensors
+        Prop_RobotManipulators = 0x00010000, ///< [robot only] all properties of all manipulators
+        Prop_Manipulators = 0x00010000,
+        Prop_RobotSensors = 0x00020000, ///< [robot only] all properties of all sensors
+        Prop_Sensors = 0x00020000,
+        Prop_RobotSensorPlacement = 0x00040000, ///< [robot only] relative sensor placement of sensors
+        Prop_SensorPlacement = 0x00040000,
+        Prop_RobotActiveDOFs = 0x00080000, ///< [robot only] active dofs changed
     };
 
     /// \brief A rigid body holding all its collision and rendering data.
