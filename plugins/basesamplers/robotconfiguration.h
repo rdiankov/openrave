@@ -23,7 +23,7 @@ public:
         __description = ":Interface Author: Rosen Diankov\n\n\
 Samples the robot active configuration space, treats revolute and circular joints appropriately. When creating pass the following parameters::\n\n\
   RobotConfiguration [robot name] [sampler name]\n\n\
-The sampler needs to return values in the range [0,1]. Default sampler is 'halton'.\n\
+The sampler needs to return values in the range [0,1]. Default sampler is 'mt19937'.\n\
 ";
         string robotname;
         sinput >> robotname;
@@ -37,7 +37,7 @@ The sampler needs to return values in the range [0,1]. Default sampler is 'halto
         string samplername;
         sinput >> samplername;
         if( samplername.size() == 0 ) {
-            samplername = "halton";
+            samplername = "mt19937";
         }
         _psampler = RaveCreateSpaceSampler(penv,samplername);
         if( !!_psampler && !!_probot ) {

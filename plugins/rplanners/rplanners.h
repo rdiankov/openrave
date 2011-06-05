@@ -105,7 +105,9 @@ class CollisionFunctions
                 vlastconfig = pQ0;
             }
             if( pvCheckedConfigurations != NULL ) {
-                params->_getstatefn(vtempconfig); // query again in order to get normalizations/joint limits
+                if( !!params->_getstatefn ) {
+                    params->_getstatefn(vtempconfig); // query again in order to get normalizations/joint limits
+                }
                 pvCheckedConfigurations->push_back(vtempconfig);
             }
             if( robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot)) || (robot->CheckSelfCollision()) ) {

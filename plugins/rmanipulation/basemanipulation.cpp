@@ -320,7 +320,7 @@ protected:
             robot->SetAffineRotationQuatMaxVels(foldrot);
         }
 
-        boost::shared_ptr<PlannerBase> planner = RaveCreatePlanner(GetEnv(),"workspacetrajectorytracker");
+        PlannerBasePtr planner = RaveCreatePlanner(GetEnv(),"workspacetrajectorytracker");
         if( !planner ) {
             RAVELOG_WARN("failed to create planner\n");
             return false;
@@ -331,7 +331,7 @@ protected:
             return false;
         }
 
-        boost::shared_ptr<Trajectory> poutputtraj(RaveCreateTrajectory(GetEnv(),""));
+        TrajectoryBasePtr poutputtraj = RaveCreateTrajectory(GetEnv(),"");
         if( !planner->PlanPath(poutputtraj) ) {
             return false;
         }
@@ -402,7 +402,7 @@ protected:
         params->SetRobotActiveJoints(robot);
         CM::JitterActiveDOF(robot);
     
-        boost::shared_ptr<Trajectory> ptraj(RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF()));
+        TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF());
 
         std::vector<dReal> values;
         robot->GetActiveDOFValues(values);
@@ -423,7 +423,7 @@ protected:
         }
         robot->GetActiveDOFValues(params->vinitialconfig);
 
-        boost::shared_ptr<PlannerBase> rrtplanner = RaveCreatePlanner(GetEnv(),_strRRTPlannerName);
+        PlannerBasePtr rrtplanner = RaveCreatePlanner(GetEnv(),_strRRTPlannerName);
         if( !rrtplanner ) {
             RAVELOG_WARN("failed to create planner\n");
             return false;
@@ -528,14 +528,13 @@ protected:
             return false;
         }
 
-        boost::shared_ptr<PlannerBase> rrtplanner = RaveCreatePlanner(GetEnv(),_strRRTPlannerName);
-
+        PlannerBasePtr rrtplanner = RaveCreatePlanner(GetEnv(),_strRRTPlannerName);
         if( !rrtplanner ) {
             RAVELOG_ERROR("failed to create BiRRTs\n");
             return false;
         }
     
-        boost::shared_ptr<Trajectory> ptraj(RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF()));
+        TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF());
     
         RAVELOG_DEBUG("starting planning\n");
         bool bSuccess = false;
@@ -760,8 +759,7 @@ protected:
         // restore
         robot->SetActiveDOFValues(params->vinitialconfig);
 
-        boost::shared_ptr<Trajectory> ptraj(RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF()));
-
+        TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF());
         Trajectory::TPOINT pt;
         pt.q = params->vinitialconfig;
         ptraj->AddPoint(pt);
@@ -773,7 +771,7 @@ protected:
         }
         robot->GetActiveDOFValues(params->vinitialconfig);
 
-        boost::shared_ptr<PlannerBase> rrtplanner = RaveCreatePlanner(GetEnv(),_strRRTPlannerName);
+        PlannerBasePtr rrtplanner = RaveCreatePlanner(GetEnv(),_strRRTPlannerName);
         if( !rrtplanner ) {
             RAVELOG_ERROR("failed to create BiRRTs\n");
             return false;
@@ -875,7 +873,7 @@ protected:
             RAVELOG_WARN("failed to jitter robot out of collision\n");
         }
 
-        boost::shared_ptr<Trajectory> ptraj(RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF()));
+        TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF());
     
         bool bSuccess = false;
         for(int itry = 0; itry < nMaxTries; ++itry) {
@@ -943,7 +941,7 @@ protected:
         }
 
         RobotBase::RobotStateSaver saver(robot);
-        boost::shared_ptr<Trajectory> ptraj(RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF()));
+        TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF());
 
         // have to add the first point
         Trajectory::TPOINT ptfirst;

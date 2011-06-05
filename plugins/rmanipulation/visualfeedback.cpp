@@ -393,7 +393,7 @@ public:
 
         Transform _ttarget; ///< transform of target
         Vector _vTargetLocalCenter;
-        RandomPermuationExecutor _sphereperms;
+        RandomPermutationExecutor _sphereperms;
         vector<Transform> _vcameras; ///< camera transformations in local coord systems
     };
 

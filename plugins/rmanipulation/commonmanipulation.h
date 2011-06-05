@@ -627,38 +627,40 @@ class CM
 /// returns a random sequence of permuations
 template <class T> void PermutateRandomly(vector<T>& vpermutation)
 {
-    if( vpermutation.size() <= 1 )
+    if( vpermutation.size() <= 1 ) {
         return;
-    for(size_t i = 0; i < vpermutation.size()-1; ++i)
+    }
+    for(size_t i = 0; i < vpermutation.size()-1; ++i) {
         std::swap(vpermutation[i], vpermutation[i+(rand()%(vpermutation.size()-i))]);
+    }
 }
 
 /// permute a sequence of n numbers
 /// and execute a function for each number in that sequence
 /// if the function returns true, break from executing further
 /// functions, otherwise continue
-class RandomPermuationExecutor
+class RandomPermutationExecutor
 {
 public:
- RandomPermuationExecutor() : nextindex(-1) {}
- RandomPermuationExecutor(const boost::function<bool(int)>& fn) : _fn(fn), nextindex(-1) {}
+ RandomPermutationExecutor() : nextindex(-1) {}
+ RandomPermutationExecutor(const boost::function<bool(int)>& fn) : _fn(fn), nextindex(-1) {}
 
     /// returns the index of the permutation that the function returned true in
     /// or -1 if function never returned true
     void PermuteStart(unsigned int permutationsize) {
         BOOST_ASSERT( permutationsize > 0);
         vpermutation.resize(permutationsize);
-        for(unsigned int i = 0; i < permutationsize; ++i)
+        for(unsigned int i = 0; i < permutationsize; ++i) {
             vpermutation[i] = i;
-
+        }
         nextindex = 0;
     }
 
     /// continue from last time
     int PermuteContinue() {
-        if( nextindex < 0 || nextindex >= vpermutation.size() )
+        if( nextindex < 0 || nextindex >= vpermutation.size() ) {
             return -1;
-        
+        }
         for(unsigned int i = nextindex; i < vpermutation.size(); ++i) {
             std::swap(vpermutation[i], vpermutation[i+(rand()%(vpermutation.size()-i))]);
             if( _fn(vpermutation[i]) ) {
@@ -724,7 +726,7 @@ template <typename T> inline RaveVector<T> GetRandomQuat()
 
 #ifdef RAVE_REGISTER_BOOST
 #include BOOST_TYPEOF_INCREMENT_REGISTRATION_GROUP()
-BOOST_TYPEOF_REGISTER_TYPE(RandomPermuationExecutor)
+BOOST_TYPEOF_REGISTER_TYPE(RandomPermutationExecutor)
 #endif
 
 #endif

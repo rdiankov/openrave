@@ -1472,7 +1472,14 @@ void* QtCoinViewer::_drawlinelist(SoSwitch* handle, const float* ppoints, int nu
     }
     SoSeparator* pparent = new SoSeparator(); handle->addChild(pparent);
     pparent->addChild(new SoTransform());
-    _SetMaterial(pparent,colors);
+
+    boost::multi_array<float,2> vcolors; vcolors.resize(boost::extents[numPoints][3]);
+    for(int i = 0; i < numPoints; ++i) {
+        vcolors[i][0] = colors[3*i+0];
+        vcolors[i][1] = colors[3*i+1];
+        vcolors[i][2] = colors[3*i+2];
+    }
+    _SetMaterial(pparent,vcolors);
 
     vector<float> mypoints(numPoints*3);
     for(int i = 0; i < numPoints; ++i) {

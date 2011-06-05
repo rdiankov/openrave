@@ -332,7 +332,7 @@ public:
                     // create a new permuter
                     pdata.reset(new FINDGRASPDATA());
                     pdata->status = 0;
-                    pdata->pexecutor.reset(new RandomPermuationExecutor(boost::bind(&ConstrainedTaskData::FindGraspPermutation,shared_from_this(),_1,pdata)));
+                    pdata->pexecutor.reset(new RandomPermutationExecutor(boost::bind(&ConstrainedTaskData::FindGraspPermutation,shared_from_this(),_1,pdata)));
                     mapgrasps[bestid] = pdata;
                 }
                 else
@@ -538,7 +538,7 @@ public:
     protected:
         struct FINDGRASPDATA
         {
-            boost::shared_ptr<RandomPermuationExecutor> pexecutor;
+            boost::shared_ptr<RandomPermutationExecutor> pexecutor;
             boost::shared_ptr< vector< Transform > > pgrasps;
             Transform tcurgrasp;
             Transform tlink;
