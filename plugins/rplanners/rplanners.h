@@ -75,7 +75,8 @@ template <typename Planner, typename Node>
 class SpatialTree : public SpatialTreeBase
 {
  public:
-    SpatialTree() {
+    SpatialTree(int fromgoal) {
+        _fromgoal = fromgoal;
         _fStepLength = 0.04f;
         _dof = 0;
         _fBestDist = 0;
@@ -156,7 +157,7 @@ class SpatialTree : public SpatialTreeBase
             for(int i = 0; i < _dof; ++i) {
                 _vDeltaConfig[i] *= fdist;
             }
-            if( !params->_neighstatefn(_vNewConfig,_vDeltaConfig) ) {
+            if( !params->_neighstatefn(_vNewConfig,_vDeltaConfig,_fromgoal) ) {
                 return ET_Failed;
             }
         
@@ -168,7 +169,7 @@ class SpatialTree : public SpatialTreeBase
                 return ET_Failed;
             }
 
-            if( !params->_checkpathconstraintsfn(pnode->q, _vNewConfig, IT_OpenStart, PlannerBase::ConfigurationListPtr()) ) {
+            if( !params->_checkpathconstraintsfn(_fromgoal ? _vNewConfig : pnode->q, _fromgoal ? pnode->q : _vNewConfig, _fromgoal ? IT_OpenEnd : IT_OpenStart, PlannerBase::ConfigurationListPtr()) ) {
                 if(bHasAdded) {
                     return ET_Sucess;
                 }
@@ -198,7 +199,7 @@ class SpatialTree : public SpatialTreeBase
  private:
     vector<dReal> _vNewConfig, _vDeltaConfig;
     boost::weak_ptr<Planner> _planner;
-    int _dof;
+    int _dof, _fromgoal;
 };
 
 inline dReal TransformDistance2(const Transform& t1, const Transform& t2, dReal frotweight=1, dReal ftransweight=1)

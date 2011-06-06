@@ -83,6 +83,7 @@ public:
             When called, q0 is guaranteed to be set on the robot.
             The function returns true if the path to q1 satisfies all the constraints of the planner.
             If q0==q1, and interval==IT_OpenStart or IT_OpenEnd, then only one configuration should be checked. It is recommended to use IT_OpenStart.
+            Because this function can internally use neighstatefn, need to make sure that Q0->Q1 is going from initial to goal direction.
             
             \param q0 is the configuration the robot is coming from (currently set).
             \param q1 is the configuration the robot should move to.
@@ -100,10 +101,18 @@ public:
         /// \brief Samples a valid goal configuration (optional).
         ///
         /// If valid, the function should be called
-        /// at every iteration. Any type of goal sampling probabilities and conditions can be encoded inside the function.
+        /// at every iteration. Any type of sampling probabilities and conditions can be encoded inside the function.
         /// The dimension of the returned sample is the dimension of the configuration space.
         /// success = samplegoalfn(newsample)
         boost::function<bool(std::vector<dReal>&)> _samplegoalfn;
+
+        /// \brief Samples a valid initial configuration (optional).
+        ///
+        /// If valid, the function should be called
+        /// at every iteration. Any type of sampling probabilities and conditions can be encoded inside the function.
+        /// The dimension of the returned sample is the dimension of the configuration space.
+        /// success = sampleinitialfn(newsample)
+        boost::function<bool(std::vector<dReal>&)> _sampleinitialfn;
 
         /** \brief Returns a random configuration around a neighborhood (optional).
          
@@ -132,12 +141,15 @@ public:
 
         /** \brief Adds a delta state to a curent state, acting like a next-nearest-neighbor function along a given direction.
             
-            success = _neighstatefn(q,qdelta) -> q = Filter(q+qdelta)
-
+            success = _neighstatefn(q,qdelta,fromgoal) -> q = Filter(q+qdelta)
+            \param q the current state
+            \param qdelta the delta to add
+            \param fromgoal 1 if q is coming from a goal state, 0 if it is coming from an initial state
+            
             In RRTs this is used for the extension operation. The new state is stored in the first parameter q.
             Note that the function can also add a filter to the final destination (like projecting onto a constraint manifold).
         */
-        boost::function<bool(std::vector<dReal>&,const std::vector<dReal>&)> _neighstatefn;
+        boost::function<bool(std::vector<dReal>&,const std::vector<dReal>&, int)> _neighstatefn;
 
         /// to specify multiple initial or goal configurations, put them into the vector in series
         /// (note: not all planners support multiple goals)

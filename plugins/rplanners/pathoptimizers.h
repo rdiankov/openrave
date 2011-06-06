@@ -163,7 +163,7 @@ protected:
                 }
                 for (int f = 0; f < numSteps; f++) {
                     listpoints.push_back(q);
-                    if( !parameters->_neighstatefn(q,dq) ) {
+                    if( !parameters->_neighstatefn(q,dq,0) ) {
                         RAVELOG_WARN("neigh failed, not sure what to do\n");
                     }
                 }

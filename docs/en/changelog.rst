@@ -37,6 +37,10 @@ Planning
 
 * removed the PlannerParameters::_tWorkspaceGoal parameter since it is non-generic and not used in openrave.
 
+* added PlannerParameters::_sampleinitialfn to sample initial goals for the planner
+
+* added a _fromgoal parameter to PlannerParameters::_neighstatefn so users can know which direction the tree is growing in.
+
 Inverse Kinematics
 ------------------
 

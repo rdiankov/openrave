@@ -56,7 +56,7 @@ class CM
     };
 
     /// \return 0 if jitter failed and robot is in collision, -1 if robot originally not in collision, 1 if jitter succeeded
-    typedef boost::function<bool(std::vector<dReal>&, const std::vector<dReal>&)> NeighStateFn;
+    typedef boost::function<bool(std::vector<dReal>&, const std::vector<dReal>&, int)> NeighStateFn;
     static int JitterActiveDOF(RobotBasePtr robot,int nMaxIterations=5000,dReal fRand=0.03f,const NeighStateFn& neighstatefn = NeighStateFn())
     {
         RAVELOG_VERBOSE("starting jitter active dof...\n");
@@ -68,7 +68,7 @@ class CM
         bool bCollision = false;
         bool bConstraint = !!neighstatefn;
         vector<dReal> deltadof(curdof.size(),0);
-        if( !bConstraint || neighstatefn(curdof,deltadof) ) {
+        if( !bConstraint || neighstatefn(curdof,deltadof,0) ) {
             if( bConstraint ) {
                 // curdof might have changed from constraint function
                 robot->SetActiveDOFValues(curdof);
@@ -102,7 +102,7 @@ class CM
                 for(size_t j = 0; j < newdof.size(); ++j) {
                     deltadof[j] = fRand * (RaveRandomFloat()-0.5f);
                 }
-                if( bConstraint && !neighstatefn(newdof,deltadof) ) {
+                if( bConstraint && !neighstatefn(newdof,deltadof,0) ) {
                     continue;
                 }
                 robot->SetActiveDOFValues(newdof,true);

@@ -23,7 +23,7 @@ class RrtPlanner : public PlannerBase
 {
 public:
     
- RrtPlanner(EnvironmentBasePtr penv) : PlannerBase(penv)
+    RrtPlanner(EnvironmentBasePtr penv) : PlannerBase(penv), _treeForward(0)
     {
         __description = "\
 :Interface Author:  Rosen Diankov\n\n\
@@ -122,8 +122,8 @@ protected:
 
 class BirrtPlanner : public RrtPlanner<SimpleNode>
 {
- public:
- BirrtPlanner(EnvironmentBasePtr penv) : RrtPlanner<SimpleNode>(penv)
+public:
+    BirrtPlanner(EnvironmentBasePtr penv) : RrtPlanner<SimpleNode>(penv), _treeBackward(1)
     {
         __description += "Bi-directional RRTs. See\n\n\
 - J.J. Kuffner and S.M. LaValle. RRT-Connect: An efficient approach to single-query path planning. In Proc. IEEE Int'l Conf. on Robotics and Automation (ICRA'2000), pages 995-1001, San Francisco, CA, April 2000.";
@@ -212,11 +212,18 @@ class BirrtPlanner : public RrtPlanner<SimpleNode>
             RAVELOG_VERBOSE("iter: %d\n", iter);
             ++iter;
 
-            if( !!_parameters->_samplegoalfn ) {//  _treeBackward._nodes.size() == 0 ) {
+            if( !!_parameters->_samplegoalfn ) {
                 vector<dReal> vgoal;
                 if( _parameters->_samplegoalfn(vgoal) ) {
                     RAVELOG_VERBOSE("found goal\n");
                     _treeBackward.AddNode(-10000,vgoal);
+                }
+            }
+            if( !!_parameters->_sampleinitialfn ) {
+                vector<dReal> vinitial;
+                if( _parameters->_sampleinitialfn(vinitial) ) {
+                    RAVELOG_VERBOSE("found initial\n");
+                    _treeForward.AddNode(-1,vinitial);
                 }
             }
 
@@ -241,11 +248,10 @@ class BirrtPlanner : public RrtPlanner<SimpleNode>
                 continue;
             }
 
-            // extend B toward A
-            et = TreeB->Extend(TreeA->GetConfig(iConnectedA), iConnectedB);
-            //GetEnv()->UpdatePublishedBodies();
-            // if connected, success
+            et = TreeB->Extend(TreeA->GetConfig(iConnectedA), iConnectedB); // extend B toward A
+
             if( et == ET_Connected ) {
+                // if connected, success
                 bConnected = true;
                 break;
             }
@@ -403,6 +409,13 @@ class BasicRrtPlanner : public RrtPlanner<SimpleNode>
                 if( _parameters->_samplegoalfn(vgoal) ) {
                     RAVELOG_VERBOSE("found goal\n");
                     _vecGoals.push_back(vgoal);
+                }
+            }
+            if( !!_parameters->_sampleinitialfn ) {
+                vector<dReal> vinitial;
+                if( _parameters->_sampleinitialfn(vinitial) ) {
+                    RAVELOG_VERBOSE("found initial\n");
+                    _treeForward.AddNode(-1,vinitial);
                 }
             }
 

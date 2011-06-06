@@ -766,7 +766,7 @@ void subtractstates(std::vector<dReal>& q1, const std::vector<dReal>& q2)
     }
 }
 
-bool addstates(std::vector<dReal>& q, const std::vector<dReal>& qdelta)
+bool addstates(std::vector<dReal>& q, const std::vector<dReal>& qdelta, int fromgoal)
 {
     BOOST_ASSERT(q.size()==qdelta.size());
     for(size_t i = 0; i < q.size(); ++i) {
@@ -800,6 +800,7 @@ PlannerBase::PlannerParameters& PlannerBase::PlannerParameters::operator=(const 
     _samplefn = r._samplefn;
     _sampleneighfn = r._sampleneighfn;
     _samplegoalfn = r._samplegoalfn;
+    _sampleinitialfn = r._sampleinitialfn;
     _setstatefn = r._setstatefn;
     _getstatefn = r._getstatefn;
     _diffstatefn = r._diffstatefn;
@@ -1064,7 +1065,7 @@ class LineCollisionConstraint
             vtempconfig[i] = pQ0[i];
         }
         if( start > 0 ) {
-            params->_neighstatefn(vtempconfig, dQ);
+            params->_neighstatefn(vtempconfig, dQ,0);
         }
         for (int f = start; f < numSteps; f++) {
             params->_setstatefn(vtempconfig);
@@ -1077,7 +1078,7 @@ class LineCollisionConstraint
             if( robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot)) || (robot->CheckSelfCollision()) ) {
                 return false;
             }
-            params->_neighstatefn(vtempconfig,dQ);
+            params->_neighstatefn(vtempconfig,dQ,0);
         }
 
         if( bCheckEnd && !!pvCheckedConfigurations ) {
