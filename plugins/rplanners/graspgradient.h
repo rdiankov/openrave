@@ -51,8 +51,8 @@ GraspGradientPlanner(EnvironmentBasePtr penv) : PlannerBase(penv) {
             return false;
         }
 
-        if(CollisionFunctions::CheckCollision(parameters,_robot,parameters->vinitialconfig, _report)) {
-            RAVELOG_DEBUG("BirrtPlanner::InitPlan - Error: Initial configuration in collision\n");
+        if( !_parameters->_checkpathconstraintsfn(parameters->vinitialconfig,parameters->vinitialconfig,IT_OpenStart,ConfigurationListPtr()) ) {
+            RAVELOG_DEBUG("BirrtPlanner::InitPlan - Error: Initial configuration not in free space\n");
             return false;
         }
 
@@ -90,19 +90,15 @@ GraspGradientPlanner(EnvironmentBasePtr penv) : PlannerBase(penv) {
         }
             
         // set up the initial state
-        if( !!parameters->_constraintfn ) {
-            // filter
-            parameters->_setstatefn(parameters->vinitialconfig);
-            if( !parameters->_constraintfn(parameters->vinitialconfig, parameters->vinitialconfig,0) ) {
-                // failed
-                RAVELOG_WARN("initial state rejected by constraint fn\n");
-                //return false;
-            }
+        if( !parameters->_checkpathconstraintsfn(parameters->vinitialconfig, parameters->vinitialconfig,IT_OpenStart,ConfigurationListPtr()) ) {
+            // failed
+            RAVELOG_WARN("initial state rejected by constraint fn\n");
+            //return false;
         }
 
-        if( parameters->_nMaxIterations <= 0 )
+        if( parameters->_nMaxIterations <= 0 ) {
             parameters->_nMaxIterations = 10000;
-
+        }
         _parameters = parameters;
         return true;
     }
@@ -255,8 +251,6 @@ private:
 
         RAVELOG_INFOA("goaldist: %f\n",g.fgoaldist);
         g.bProcessed = true;
-
-        vector< vector<dReal> > vpath;
         qbest.resize(0);
         dReal bestdist=0;
 
@@ -285,47 +279,20 @@ private:
                             q[i] = listpath.back()[i]+qgoaldir[i];
                     }
                 }
-                else
+                else {
                     _parameters->_sampleneighfn(q,listpath.back(),fRadius);
+                }
 
-                vpath.resize(0);
-                if( !CollisionFunctions::CheckCollision(_parameters,_robot,listpath.back(),q,IT_OpenStart,&vpath) ) {
-                    BOOST_ASSERT(vpath.size()>0);
-                    if( !!_parameters->_constraintfn ) {
-                        vector<dReal> qnew(_robot->GetActiveDOF());
-                        int goodind = -1;
-                        FOREACH(itq,vpath) {
-                            _parameters->_setstatefn(*itq);
-
-                            // check if grasp is closer than threshold
-                            dReal graspdist2 = TransformDistance2(_pmanip->GetTransform(),g.tgrasp,0.2f);
-                            //RAVELOG_DEBUG("graspdist: %f\n",RaveSqrt(graspdist));
-                            if( graspdist2 > _parameters->_fVisibiltyGraspThresh*_parameters->_fVisibiltyGraspThresh ) {
-                                _parameters->_setstatefn(qnew);
-                                if( !_parameters->_constraintfn(*itq, qnew, 0) )
-                                    break;
-                                q = qnew;
-                            }
-                            else
-                                q = *itq;
-
-                            ++goodind;
-                        }
-
-                        if( goodind < 0 )
-                            continue;
-                    }
-                    else
-                        q = vpath.back();
-
+                if( _parameters->_checkpathconstraintsfn(listpath.back(),q,IT_OpenStart,ConfigurationListPtr()) ) {
                     // if new sample is closer than the best, accept it
                     dReal dist = _parameters->_distmetricfn(q,g.qgoal);
                     if( qbest.size() == 0 || dist < bestdist ) {
                         RAVELOG_DEBUG("dist: %f\n",dist);
                         qbest = q;
                         bestdist = dist;
-                        if( giter == 0 ) // goal reached
+                        if( giter == 0 ) { // goal reached
                             break;
+                        }
                     }
                 }
             }
@@ -344,7 +311,7 @@ private:
 
     RobotBase::ManipulatorPtr _pmanip;
     boost::shared_ptr<GraspSetParameters> _parameters;
-    RobotBasePtr         _robot;
+    RobotBasePtr _robot;
     CollisionReportPtr _report;
 
     std::vector<dReal>         _randomConfig;

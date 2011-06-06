@@ -154,11 +154,6 @@ private:
 #endif
 };
 
-typedef ViewerBase RaveViewerBase RAVE_DEPRECATED;
-typedef ViewerBasePtr RaveViewerBasePtr RAVE_DEPRECATED;
-typedef ViewerBaseConstPtr RaveViewerBaseConstPtr RAVE_DEPRECATED;
-typedef ViewerBaseWeakPtr RaveViewerBaseWeakPtr RAVE_DEPRECATED;
-
 } // end namespace OpenRAVE
 
 #endif

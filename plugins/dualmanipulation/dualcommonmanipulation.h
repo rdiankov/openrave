@@ -32,9 +32,9 @@ class CM
         dReal fRand = 0.03f;
         int iter = 0;
 
-        if(robot->CheckSelfCollision())
+        if(robot->CheckSelfCollision()) {
             RAVELOG_WARN("JitterActiveDOFs: initial config in self collision!\n");
-
+        }
         while(robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot)) || robot->CheckSelfCollision() ) {
             if( iter > nMaxIterations ) {
                 RAVELOG_WARN("Failed to find noncolliding position for robot\n");
@@ -143,8 +143,12 @@ class CM
         }
         virtual ~DualArmManipulation() {}
 
-        bool DualArmConstrained(const std::vector<dReal>& vprev, std::vector<dReal>& vcur, int settings)
+        bool DualArmConstrained(std::vector<dReal>& vprev, const std::vector<dReal>& vdelta)
         {
+            std::vector<dReal> vcur = vprev;
+            for(size_t i = 0; i < vcur.size(); ++i) {
+                vcur[i] += vdelta.at(i);
+            }
             std::vector<dReal> vnew = vcur;
             bool pstatus=true;
             double errorRot=0.1;
@@ -162,19 +166,21 @@ class CM
                 vector<int> JointIndicesI = _pmanipI->GetArmIndices();
 
                 for (size_t i=0;i<JointIndicesI.size();i++) {//this check is important to make sure the IK solution does not fly too far away since there are multiple Ik solutions possible
-                    if(fabs(vsolution.at(i)-vprev[JointIndicesI.at(i)])<errorRot*2)
-                        vcur[JointIndicesI.at(i)]=vsolution[i];
-                    else 
+                    if(fabs(vsolution.at(i)-vprev[JointIndicesI.at(i)])<errorRot*2) {
+                        vprev[JointIndicesI.at(i)]=vsolution[i];
+                    }
+                    else {
                         return false;
+                    }
                 }
                 pstatus=true;
             }
-            else 
+            else  {
                 return false;
+            }
 
             //now checking
-            //  vnew=vcur;
-            _probot->SetActiveDOFValues(vcur);
+            _probot->SetActiveDOFValues(vprev);
             Transform tI = _pmanipI->GetTransform();
             tA = _pmanipA->GetTransform();
             Transform tnew = tA.inverse()*tI;

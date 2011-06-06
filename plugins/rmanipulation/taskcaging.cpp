@@ -574,15 +574,15 @@ public:
             fRandPerturb[3] = fRandPerturb[4] = fRandPerturb[5] = fRandPerturb[6] = 0.07f;
         }
     
-        virtual bool Constraint(const vector<dReal>& pSrcConf, vector<dReal>& pDestConf, int settings)
+        virtual bool Constraint(const vector<dReal>& pSrcConf, const vector<dReal>& pDestConf, IntervalType interval, PlannerBase::ConfigurationListPtr configurations)
         {
-            if( !plink || vtargetjoints.size() == 0)
+            if( !plink || vtargetjoints.size() == 0) {
                 return true;
-        
+            }
             _robot->SetActiveDOFValues(pDestConf);
-
-            if( _robot->GetEnv()->CheckCollision(KinBodyConstPtr(_robot)) || _robot->CheckSelfCollision() )
+            if( _robot->GetEnv()->CheckCollision(KinBodyConstPtr(_robot)) || _robot->CheckSelfCollision() ) {
                 return false;
+            }
 
             bool bCaged = false;
             vector<dReal> vrobotconfig;
@@ -590,9 +590,7 @@ public:
 
             // find N noncolliding grasps and check if they still cage the object
             for(int iter = 0; iter < Nrandconfigs; ++iter) {
-
-                if( iter > 0 ) {
-                
+                if( iter > 0 ) {                
                     plink->GetParent()->SetLinkTransformations(_vTargetTransforms);
 
                     int niter=0;
@@ -601,32 +599,34 @@ public:
                             vrobotconfig[i] = pDestConf[i] + fRandPerturb[i]*(RaveRandomFloat()-0.5f);
 
                         _robot->SetActiveDOFValues(vrobotconfig);
-                        if( !_robot->GetEnv()->CheckCollision(KinBodyConstPtr(_robot)) && !_robot->CheckSelfCollision() )
+                        if( !_robot->GetEnv()->CheckCollision(KinBodyConstPtr(_robot)) && !_robot->CheckSelfCollision() ) {
                             break;
+                        }
                     }
 
-                    if( niter >= 100 )
+                    if( niter >= 100 ) {
                         continue;
+                    }
                 }
 
                 FOREACH(itvv, _vvvCachedTransforms) {
-                
                     bCaged = false;
                     FOREACH(itv, *itvv) {
                         plink->GetParent()->SetLinkTransformations(*itv);
-                    
                         if( _robot->GetEnv()->CheckCollision(KinBodyConstPtr(_robot), KinBodyConstPtr(plink->GetParent())) ) {
                             bCaged = true;
                             break;
                         }
                     }
                 
-                    if( !bCaged )
+                    if( !bCaged ) {
                         break;
+                    }
                 }
 
-                if( !bCaged )
+                if( !bCaged ) {
                     break;
+                }
             }
 
             _robot->SetActiveDOFValues(pDestConf);
@@ -638,8 +638,9 @@ public:
         {
             BOOST_ASSERT(v1.size()==7&&v2.size()==7);
             dReal frot1=0,frot2=0,ftrans=0;
-            for(int i = 0; i < 3; ++i)
+            for(int i = 0; i < 3; ++i) {
                 ftrans += (v1[i]-v2[i])*(v1[i]-v2[i]);
+            }
             for(int i = 3; i < 7; ++i) {
                 frot1 += (v1[i]-v2[i])*(v1[i]-v2[i]);
                 frot2 += (v1[i]+v2[i])*(v1[i]+v2[i]);
@@ -661,8 +662,6 @@ public:
             vector<int>::const_iterator itside = vTargetSides.begin();
 
             FOREACH(itjoint, vtargetjoints) {
-            
-
                 if( *itside <= 0 ) {
                     itvv->resize(0);
                     for(dReal finc = fIncrement; finc < fCagedConfig; finc += fIncrement) {
@@ -896,7 +895,7 @@ private:
         _robot->SetActiveDOFs(vector<int>(), RobotBase::DOF_X|RobotBase::DOF_Y|RobotBase::DOF_Z|RobotBase::DOF_RotationQuat);
         _robot->GetActiveDOFValues(params->vinitialconfig);
         params->SetRobotActiveJoints(_robot);
-        params->_constraintfn = boost::bind(&GraspConstraint::Constraint,graspfn,_1,_2,_3);
+        params->_checkpathconstraintsfn = boost::bind(&GraspConstraint::Constraint,graspfn,_1,_2,_3,_4);
         params->_distmetricfn = boost::bind(&GraspConstraint::Dist6D,graspfn,_1,_2);
    
         params->_fStepLength = fStep;

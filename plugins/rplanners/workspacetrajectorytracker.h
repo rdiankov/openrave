@@ -118,16 +118,16 @@ Planner Parameters\n\
         //if(CollisionFunctions::CheckCollision(parameters,_robot,parameters->vinitialconfig, _report)) {
     
         // validate the initial state if one exists
-        if( parameters->vinitialconfig.size() > 0 && !!parameters->_constraintfn ) {
+        if( parameters->vinitialconfig.size() > 0 ) {
             if( (int)parameters->vinitialconfig.size() != parameters->GetDOF() ) {
                 RAVELOG_ERROR(str(boost::format("initial config wrong dim: %d\n")%parameters->vinitialconfig.size()));
                 return false;
             }
             parameters->_setstatefn(parameters->vinitialconfig);
-            if( !parameters->_constraintfn(parameters->vinitialconfig, parameters->vinitialconfig,0) ) {
-                RAVELOG_WARN("initial state rejected by constraint fn\n");
-                return false;
-            }
+//            if( !parameters->_checkpathconstraintsfn(parameters->vinitialconfig, parameters->vinitialconfig,IT_OpenStart,ConfigurationListPtr()) ) {
+//                RAVELOG_WARN("initial state rejected by constraint fn\n");
+//                return false;
+//            }
         }
 
         if( !_manip->GetIkSolver() ) {
@@ -329,18 +329,8 @@ protected:
 
     IkFilterReturn _ValidateSolution(std::vector<dReal>& vsolution, RobotBase::ManipulatorPtr pmanip, const IkParameterization& ikp)
     {
-        if( !!_parameters->_constraintfn ) {
-            _vtempsolution = vsolution;
-            if( !_parameters->_constraintfn(_vprevsolution.size() > 0 ? _vprevsolution : vsolution, _vtempsolution,0) ) {
-                return IKFR_Reject;
-            }
-            // check if solution was changed
-            for(size_t j = 0; j < _vtempsolution.size(); ++j) {
-                if( RaveFabs(_vtempsolution[j] - vsolution[j]) > 2*g_fEpsilon ) {
-                    RAVELOG_WARN("solution changed by constraint function\n");
-                    return IKFR_Reject;
-                }
-            }
+        if( !_parameters->_checkpathconstraintsfn(_vprevsolution.size() > 0 ? _vprevsolution : vsolution, vsolution,IT_Open,ConfigurationListPtr()) ) {
+            return IKFR_Reject;
         }
         
         // check if continuous with previous solution using the jacobian
@@ -418,7 +408,7 @@ protected:
         if( _filteroptions & IKFO_CheckEnvCollisions ) {
             if( _vprevsolution.size() > 0 ) {
                 // check rest of environment collisions
-                if( CollisionFunctions::CheckCollision(_parameters,_robot,_vprevsolution,vsolution,IT_Open) ) {
+                if( !_parameters->_checkpathconstraintsfn(_vprevsolution,vsolution,IT_Open,ConfigurationListPtr()) ) {
                     return IKFR_Reject;
                 }
             }
@@ -438,7 +428,7 @@ protected:
     Transform _tbaseinv;
     boost::multi_array<dReal,2> _mjacobian, _mquatjacobian;
     IkParameterization _ikprev;
-    vector<dReal> _vprevsolution, _vtempsolution;
+    vector<dReal> _vprevsolution;
 
     // moving straight using jacobian (doesn't work as well)
 //            if( !pconstraints ) {

@@ -56,8 +56,8 @@ class CM
     };
 
     /// \return 0 if jitter failed and robot is in collision, -1 if robot originally not in collision, 1 if jitter succeeded
-    typedef boost::function<bool(const std::vector<dReal>&, std::vector<dReal>&, int)> ConstraintFn;
-    static int JitterActiveDOF(RobotBasePtr robot,int nMaxIterations=5000,dReal fRand=0.03f,const ConstraintFn& constraintfn = ConstraintFn())
+    typedef boost::function<bool(std::vector<dReal>&, const std::vector<dReal>&)> NeighStateFn;
+    static int JitterActiveDOF(RobotBasePtr robot,int nMaxIterations=5000,dReal fRand=0.03f,const NeighStateFn& neighstatefn = NeighStateFn())
     {
         RAVELOG_VERBOSE("starting jitter active dof...\n");
         vector<dReal> curdof, newdof;
@@ -66,8 +66,9 @@ class CM
         CollisionReport report;
         CollisionReportPtr preport(&report,null_deleter());
         bool bCollision = false;
-        bool bConstraint = !!constraintfn;
-        if( !bConstraint || constraintfn(curdof,curdof,0) ) {
+        bool bConstraint = !!neighstatefn;
+        vector<dReal> deltadof(curdof.size(),0);
+        if( !bConstraint || neighstatefn(curdof,deltadof) ) {
             if( bConstraint ) {
                 // curdof might have changed from constraint function
                 robot->SetActiveDOFValues(curdof);
@@ -96,13 +97,21 @@ class CM
                 robot->SetActiveDOFValues(curdof,true);
                 return 0;
             }
-            for(int j = 0; j < robot->GetActiveDOF(); j++) {
-                newdof[j] = curdof[j] + fRand * (RaveRandomFloat()-0.5f);
+            if( bCollision ) {
+                newdof = curdof;
+                for(size_t j = 0; j < newdof.size(); ++j) {
+                    deltadof[j] = fRand * (RaveRandomFloat()-0.5f);
+                }
+                if( bConstraint && !neighstatefn(newdof,deltadof) ) {
+                    continue;
+                }
+                robot->SetActiveDOFValues(newdof,true);
             }
-            robot->SetActiveDOFValues(newdof,true);
-            robot->GetActiveDOFValues(newdof);
-            if( bConstraint && !constraintfn(curdof,newdof,0) ) {
-                continue;
+            else {
+                for(int j = 0; j < robot->GetActiveDOF(); j++) {
+                    newdof[j] = curdof[j] + fRand * (RaveRandomFloat()-0.5f);
+                }
+                robot->SetActiveDOFValues(newdof,true);
             }
         } while(robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot)) || robot->CheckSelfCollision() );
     
@@ -282,10 +291,12 @@ class CM
                 return false;
             }
     
-            if( !planner->InitPlan(robot, params) )
+            if( !planner->InitPlan(robot, params) ) {
                 return false;
-            if( !planner->PlanPath(ptraj) )
+            }
+            if( !planner->PlanPath(ptraj) ) {
                 return false;
+            }
 
             //ptraj->CalcTrajTiming(robot, ptraj->GetInterpMethod(), true, true);
             return true;
@@ -309,17 +320,27 @@ class CM
             _J.resize(6,_probot->GetActiveDOF());
             _invJJt.resize(6,6);
             _error.resize(6,1);
-            _nMaxIterations = 20;
+            _nMaxIterations = 40;
+            _pmanip->GetRobot()->GetActiveDOFLimits(_vlower,_vupper);
             
         }
         virtual ~GripperJacobianConstrains() {}
 
-        bool RetractionConstraint(const std::vector<dReal>& vprev, std::vector<dReal>& vcur, int settings)
+        bool RetractionConstraint(std::vector<dReal>& vprev, const std::vector<dReal>& vdelta)
         {
             const T lambda2 = 1e-8; // normalization constant
             using namespace boost::numeric::ublas;
-            std::vector<dReal> vnew = vcur;
-            dReal fdistprev = _distmetricfn(vprev,vcur), fdistcur=0;
+            std::vector<dReal> vnew = vprev;
+            for(size_t i = 0; i < vnew.size(); ++i) {
+                vnew[i] += vdelta.at(i);
+                if( vnew[i] < _vlower[i] ) {
+                    vnew[i] = _vlower[i];
+                }
+                else if( vnew[i] > _vupper[i] ) {
+                    vnew[i] = _vupper[i];
+                }
+            }
+            dReal fdistprev = _distmetricfn(vprev,vnew), fdistcur=0;
             _lasterror=0;
             for(_iter = 0; _iter < _nMaxIterations; ++_iter) {
                 Transform tEE = _pmanip->GetTransform();
@@ -339,7 +360,7 @@ class CM
                     totalerror += _error(i,0)*_error(i,0) + _error(3+i,0)*_error(3+i,0);
                 }
                 if( totalerror < _errorthresh2 ) {
-                    vcur = vnew;
+                    vprev = vnew;
                     return true;
                 }
                 // 4.0 is an arbitrary number...
@@ -382,7 +403,7 @@ class CM
                 for(size_t i = 0; i < vnew.size(); ++i) {
                     vnew.at(i) += _qdelta(i,0);
                 }
-                fdistcur = _distmetricfn(vcur,vnew);
+                fdistcur = _distmetricfn(vprev,vnew);
                 _probot->SetActiveDOFValues(vnew); // for next iteration
             }
             
@@ -416,6 +437,7 @@ class CM
         RobotBasePtr _probot;
         RobotBase::ManipulatorPtr _pmanip;
         Transform _tTargetFrameLeft, _tTargetFrameRight,_tOriginalEE;
+        vector<dReal> _vlower, _vupper;
         boost::array<T,6> _vfreedoms;
         T _errorthresh2;
         boost::multi_array<dReal,2> _vjacobian;

@@ -730,7 +730,7 @@ protected:
             RAVELOG_DEBUG("setting jacobian constraint function in planner parameters\n");
             boost::shared_ptr<CM::GripperJacobianConstrains<double> > pconstraints(new CM::GripperJacobianConstrains<double>(robot->GetActiveManipulator(),tConstraintTargetWorldFrame,vconstraintfreedoms,constrainterrorthresh));
             pconstraints->_distmetricfn = params->_distmetricfn;
-            params->_constraintfn = boost::bind(&CM::GripperJacobianConstrains<double>::RetractionConstraint,pconstraints,_1,_2,_3);
+            params->_neighstatefn = boost::bind(&CM::GripperJacobianConstrains<double>::RetractionConstraint,pconstraints,_1,_2);
         }
 
         robot->SetActiveDOFs(pmanip->GetArmIndices(), 0);
@@ -742,7 +742,7 @@ protected:
             robot->SetActiveDOFValues(v);
             robot->SetActiveDOFs(pmanip->GetArmIndices(), affinedofs);
 
-            if( CM::JitterActiveDOF(robot,5000,0.03,params->_constraintfn) ) {
+            if( CM::JitterActiveDOF(robot,5000,0.03,params->_neighstatefn) ) {
                 robot->GetActiveDOFValues(vgoals);
                 params->vgoalconfig.insert(params->vgoalconfig.end(), vgoals.begin(), vgoals.end());
             }
@@ -765,7 +765,7 @@ protected:
         ptraj->AddPoint(pt);
     
         // jitter again for initial collision
-        if( CM::JitterActiveDOF(robot,5000,0.03,params->_constraintfn) == 0 ) {
+        if( CM::JitterActiveDOF(robot,5000,0.03,params->_neighstatefn) == 0 ) {
             RAVELOG_WARN("jitter failed for initial\n");
             return false;
         }

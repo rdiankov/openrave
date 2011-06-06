@@ -80,7 +80,6 @@ The sampler needs to return values in the range [0,1]. Default sampler is 'mt199
     {
         _probot->GetActiveDOFLimits(_lower, _upper);
         _range.resize(_lower.size());
-        dReal maxvalue = 0;
         for(size_t i = 0; i < _range.size(); ++i) {
             _range[i] = _upper[i] - _lower[i];
         }

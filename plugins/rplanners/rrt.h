@@ -29,7 +29,6 @@ public:
 :Interface Author:  Rosen Diankov\n\n\
 Uses the Rapidly-Exploring Random Trees Algorithm.\n\
 ";
-        _report.reset(new CollisionReport());
     }
     virtual ~RrtPlanner() {}
 
@@ -52,20 +51,9 @@ Uses the Rapidly-Exploring Random Trees Algorithm.\n\
         std::vector<dReal> vinitialconfig(params->GetDOF());
         for(size_t index = 0; index < params->vinitialconfig.size(); index += params->GetDOF()) {
             std::copy(params->vinitialconfig.begin()+index,params->vinitialconfig.begin()+index+params->GetDOF(),vinitialconfig.begin());
-            if(CollisionFunctions::CheckCollision(params,_robot,vinitialconfig, _report)) {
-                RAVELOG_DEBUG(str(boost::format("initial configuration %d in collision")%(index/params->GetDOF())));
+            if( !params->_checkpathconstraintsfn(vinitialconfig,vinitialconfig,IT_OpenStart,ConfigurationListPtr()) ) {
                 continue;
             }
-    
-            // set up the initial state
-            if( !!params->_constraintfn ) {
-                params->_setstatefn(vinitialconfig);
-                if( !params->_constraintfn(vinitialconfig, vinitialconfig,0) ) {
-                    RAVELOG_WARN(str(boost::format("initial state %d rejected by constraint fn")%(index/params->GetDOF())));
-                    continue;
-                }
-            }
-
             _treeForward.AddNode(-1, vinitialconfig);
         }
 
@@ -81,7 +69,7 @@ Uses the Rapidly-Exploring Random Trees Algorithm.\n\
         PlannerParametersConstPtr params = GetParameters();
 
         typename list<Node*>::iterator startNode, endNode;
-        vector< vector<dReal> > vconfigs;
+        ConfigurationListPtr listconfigs(new ConfigurationList());
 
         int nrejected = 0;
         int i = numiterations;
@@ -99,8 +87,8 @@ Uses the Rapidly-Exploring Random Trees Algorithm.\n\
             nrejected++;
 
             // check if the nodes can be connected by a straight line
-            vconfigs.resize(0);
-            if (CollisionFunctions::CheckCollision(params,_robot,(*startNode)->q, (*endNode)->q, IT_Open, &vconfigs)) {
+            listconfigs->clear();
+            if (!params->_checkpathconstraintsfn((*startNode)->q, (*endNode)->q, IT_Open, listconfigs)) {
                 if( nrejected++ > (int)path.size()+8 ) {
                     break;
                 }
@@ -108,7 +96,7 @@ Uses the Rapidly-Exploring Random Trees Algorithm.\n\
             }
 
             ++startNode;
-            FOREACHC(itc, vconfigs) {
+            FOREACHC(itc, *listconfigs) {
                 path.insert(startNode, _treeForward._nodes.at(_treeForward.AddNode(-1,*itc)));
             }
             // splice out in-between nodes in path
@@ -124,9 +112,7 @@ Uses the Rapidly-Exploring Random Trees Algorithm.\n\
     virtual RobotBasePtr GetRobot() const { return _robot; }
 protected:
     RobotBasePtr         _robot;
-
     std::vector<dReal>         _sampleConfig;
-    CollisionReportPtr _report;
 
     SpatialTree< RrtPlanner<Node>, Node > _treeForward;
 
@@ -177,35 +163,12 @@ class BirrtPlanner : public RrtPlanner<SimpleNode>
                 goal_index++;
             }
         
-            if(!CollisionFunctions::CheckCollision(_parameters,_robot,vgoal)) {
-
-                bool bSuccess = true;     
-                if( !!_parameters->_constraintfn ) {
-                    // filter
-                    if( !_parameters->_constraintfn(vgoal, vgoal, 0) ) {
-                        // failed
-                        stringstream ss; ss << "goal state rejected by constraint fn: ";
-                        FOREACH(it,vgoal) {
-                            ss << *it << " ";
-                        }
-                        ss << endl;
-                        RAVELOG_WARN(ss.str());
-                        //_parameters->_constraintfn(vgoal, vgoal, 0);
-                        bSuccess = false;
-                    }
-                }
-            
-                if( bSuccess ) {
-                    // set up the goal states
-                    _treeBackward.AddNode(-num_goals-1, vgoal);
-                    num_goals++;
-                }
+            if( _parameters->_checkpathconstraintsfn(vgoal,vgoal,IT_OpenStart,ConfigurationListPtr()) ) {
+                _treeBackward.AddNode(-num_goals-1, vgoal);
+                num_goals++;
             }
             else {
-                RAVELOG_WARN("goal in collision %s\n", _robot->CheckSelfCollision()?"(self)":NULL);
-                if( GetEnv()->CheckCollision(KinBodyConstPtr(_robot), _report) || _robot->CheckSelfCollision(_report) ) {
-                    RAVELOG_WARN(str(boost::format("birrt: robot initially in collision %s!\n")%_report->__str__()));
-                }
+                RAVELOG_WARN("goal fails constraints\n");
             }
         }
     
@@ -390,28 +353,11 @@ class BasicRrtPlanner : public RrtPlanner<SimpleNode>
                 goal_index++;
             }
         
-            if(!CollisionFunctions::CheckCollision(GetParameters(),_robot,vgoal)) {
-
-                bool bSuccess = true;     
-                if( !!_parameters->_constraintfn ) {
-                    // filter
-                    if( !_parameters->_constraintfn(vgoal, vgoal, 0) ) {
-                        // failed
-                        RAVELOG_WARN("goal state rejected by constraint fn\n");
-                        bSuccess = false;
-                    }
-                }
-            
-                if( bSuccess ) {
-                    // set up the goal states
-                    _vecGoals.push_back(vgoal);
-                }
+            if( GetParameters()->_checkpathconstraintsfn(vgoal,vgoal,IT_OpenStart,ConfigurationListPtr()) ) {
+                _vecGoals.push_back(vgoal);
             }
             else {
-                RAVELOG_WARN("goal in collision %s\n", _robot->CheckSelfCollision()?"(self)":NULL);
-                if( GetEnv()->CheckCollision(KinBodyConstPtr(_robot), _report) || _robot->CheckSelfCollision(_report)) {
-                    RAVELOG_WARN(str(boost::format("birrt: robot initially in collision %s!\n")%_report->__str__()));
-                }
+                RAVELOG_WARN("goal in collision\n");
             }
         
             if(goal_index == (int)_parameters->vgoalconfig.size()) {
@@ -647,14 +593,7 @@ public:
                 if( !_parameters->_sampleneighfn(vSampleConfig,pnode->q,_parameters->_fStepLength) ) {
                     return false;
                 }
-                if( !!_parameters->_constraintfn ) {
-                    _parameters->_setstatefn(vSampleConfig);
-                    if( !_parameters->_constraintfn(pnode->q, vSampleConfig, 0) ) {
-                        continue;
-                    }
-                }
-
-                if( !CollisionFunctions::CheckCollision(GetParameters(),_robot,pnode->q, vSampleConfig, IT_OpenStart) ) {
+                if( GetParameters()->_checkpathconstraintsfn(pnode->q, vSampleConfig, IT_OpenStart,ConfigurationListPtr()) ) {
                     _treeForward.AddNode(inode,vSampleConfig);
                     GetEnv()->UpdatePublishedBodies();
                     RAVELOG_DEBUG(str(boost::format("size %d\n")%_treeForward._nodes.size()));

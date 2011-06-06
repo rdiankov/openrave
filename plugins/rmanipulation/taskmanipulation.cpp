@@ -274,18 +274,23 @@ Task-based manipulation planning involving target objects. A lot of the algorith
         RobotBase::RobotStateSaver saver(_robot);
 
         ActiveDistMetric distmetric(_robot);
-        vector<dReal> vprev;
+        vector<dReal> vprev, vdelta;
         _robot->GetActiveDOFValues(vprev);
         CM::GripperJacobianConstrains<double> constraints(_robot->GetActiveManipulator(),tTargetWorldFrame,vfreedoms,errorthresh);
         constraints._distmetricfn = boost::bind(&ActiveDistMetric::Eval,&distmetric,_1,_2);
+        vdelta.resize(vprev.size());
         FOREACH(itconfig,listconfigs) {
             _robot->SetActiveDOFValues(*itconfig);
-            constraints.RetractionConstraint(vprev,*itconfig,0);
+            for(size_t j = 0; j < vprev.size(); ++j) {
+                vdelta[j] = (*itconfig)[j] - vprev[j];
+            }
+            constraints.RetractionConstraint(vprev,vdelta);
             sout << constraints._iter << " ";
         }
         FOREACH(itconfig,listconfigs) {
-            FOREACH(it,*itconfig)
+            FOREACH(it,*itconfig) {
                 sout << *it << " ";
+            }
         }
         
         return true;

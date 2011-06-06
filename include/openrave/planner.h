@@ -28,10 +28,8 @@ namespace OpenRAVE {
 class OPENRAVE_API PlannerBase : public InterfaceBase
 {
 public:
-    /// Options for constraint planning.
-    enum ConstraintSettings  {
-        CS_TimeBackward=1, ///< if not specified, time is forward
-    };
+    typedef std::list< std::vector<dReal> > ConfigurationList;
+    typedef boost::shared_ptr< ConfigurationList > ConfigurationListPtr;
 
     /** \brief Describes a common and serializable interface for planning parameters.
 
@@ -64,27 +62,34 @@ public:
         /// \param cost the cost of being in the current state
         boost::function<dReal(const std::vector<dReal>&)> _costfn;
 
-        /// \brief Goal heuristic function.
+        /// \brief Goal heuristic function.(optional)
         ///
-        /// goal is complete when returns 0 (optional)
         /// distance = goalfn(config)
+        ///
+        /// Goal is complete when returns 0
         /// \param distance - distance to closest goal
         boost::function<dReal(const std::vector<dReal>&)> _goalfn;
 
-        /// optional, Distance metric between configuration spaces, two configurations are considered the same when this returns 0: distmetric(config1,config2)
+        /// \brief optional, Distance metric between configuration spaces, two configurations are considered the same when this returns 0: distmetric(config1,config2)
         boost::function<dReal(const std::vector<dReal>&, const std::vector<dReal>&)> _distmetricfn;
 
-        /// \brief Filters the current robot configurations (optional).
-        ///
-        /// optional, used to maintain certains a movement from a src robot configuration to robot configuration:
-        /// success = _constraintfn(vprevconf,vnewconf,settings)
-        /// When called, vnewconf is guaranteed to be set on the robot. The function returns true if vnewconf is accepted.
-        /// Note that the function can also modify vnewconf (like projecting onto a constraint manifold),
-        /// therefore the planner will use the new vnewconf value after this call.
-        /// \param vprevconf is the configuration the robot is coming from
-        /// \param vnewconf is the configuration the robot is current at, which needs to be filtered
-        /// \param settings options specified in ConstraingSettings 
-        boost::function<bool(const std::vector<dReal>&, std::vector<dReal>&, int)> _constraintfn;
+        typedef boost::function<bool(const std::vector<dReal>&, const std::vector<dReal>&, IntervalType, PlannerBase::ConfigurationListPtr)> CheckPathConstraintFn;
+        /** \brief Checks that all the constraints are satisfied between two configurations.
+        
+            The simplest and most fundamental constraint is line-collision checking. The robot goes from q0 to q1.
+
+            success = _checkpathconstraints(q0,q1,interval,configurations)
+        
+            When called, q0 is guaranteed to be set on the robot.
+            The function returns true if the path to q1 satisfies all the constraints of the planner.
+            If q0==q1, and interval==IT_OpenStart or IT_OpenEnd, then only one configuration should be checked. It is recommended to use IT_OpenStart.
+            
+            \param q0 is the configuration the robot is coming from (currently set).
+            \param q1 is the configuration the robot should move to.
+            \param interval Specifies whether to check the end points of the interval for constraints
+            \param configurations Optional argument that will hold the path between the two configurations if requested
+        */
+        CheckPathConstraintFn _checkpathconstraintsfn;
 
         /// \brief Samples a random configuration (mandatory)
         ///
@@ -100,13 +105,15 @@ public:
         /// success = samplegoalfn(newsample)
         boost::function<bool(std::vector<dReal>&)> _samplegoalfn;
 
-        /// \brief Returns a random configuration around a neighborhood (optional).
-        /// 
-        /// _sampleneighfn(newsample,pCurSample,fRadius)
-        /// \param pCurSample - the neighborhood to sample around
-        /// \param  fRadius - specifies the max distance of sampling. The higher the value, the farther the samples will go
-        ///             The distance metric can be arbitrary, but is usually PlannerParameters::pdistmetric.
-        /// \return if sample was successfully generated return true, otherwise false
+        /** \brief Returns a random configuration around a neighborhood (optional).
+         
+            _sampleneighfn(newsample,pCurSample,fRadius)
+
+            \param pCurSample - the neighborhood to sample around
+            \param  fRadius - specifies the max distance of sampling. The higher the value, the farther the samples will go
+                              The distance metric can be arbitrary, but is usually PlannerParameters::pdistmetric.
+            \return if sample was successfully generated return true, otherwise false
+        */
         boost::function<bool(std::vector<dReal>&, const std::vector<dReal>&, dReal)> _sampleneighfn;
 
         /// \brief Sets the state of the robot. Default is active robot joints (mandatory).
@@ -114,52 +121,60 @@ public:
         /// \brief Gets the state of the robot. Default is active robot joints (mandatory).
         boost::function<void(std::vector<dReal>&)> _getstatefn;
 
-        /// \brief  Computes the difference of two states.
-        ///
-        /// An explicit difference function is necessary for correct interpolation when there are circular joints.
-        /// Default is regular subtraction.
-        /// _diffstatefn(q1,q2) -> q1 -= q2
+        /** \brief  Computes the difference of two states.
+           
+            _diffstatefn(q1,q2) -> q1 -= q2
+        
+            An explicit difference function is necessary for correct interpolation when there are circular joints.
+            Default is regular subtraction.
+        */
         boost::function<void(std::vector<dReal>&,const std::vector<dReal>&)> _diffstatefn;
 
-        /// \brief Adds a delta state to a curent state, acting like a next-nearest-neighbor function along a given direction.
-        ///
-        /// In RRTs this is used for the extension operation. The new state is stored in the first parameter q
-        /// 
-        /// _neighstatefn(q,qdelta) -> q += qdelta
-        boost::function<void(std::vector<dReal>&,const std::vector<dReal>&)> _neighstatefn;
+        /** \brief Adds a delta state to a curent state, acting like a next-nearest-neighbor function along a given direction.
+            
+            success = _neighstatefn(q,qdelta) -> q = Filter(q+qdelta)
 
-        /// to specify multiple goal configurations, put them into the vector in series (note: not all planners support multiple goals)
+            In RRTs this is used for the extension operation. The new state is stored in the first parameter q.
+            Note that the function can also add a filter to the final destination (like projecting onto a constraint manifold).
+        */
+        boost::function<bool(std::vector<dReal>&,const std::vector<dReal>&)> _neighstatefn;
+
+        /// to specify multiple initial or goal configurations, put them into the vector in series
+        /// (note: not all planners support multiple goals)
         std::vector<dReal> vinitialconfig, vgoalconfig;
 
-        /// goal transformation in workspace, can be the end effector or absolute transformation ,etc
-        boost::shared_ptr<Transform> _tWorkspaceGoal;
-
-        /// the absolute limits of the configuration space.
+        /// \brief the absolute limits of the configuration space.
         std::vector<dReal> _vConfigLowerLimit,_vConfigUpperLimit;
 
-        /// the discretization resolution of each dimension of the configuration space
+        /// \brief the discretization resolution of each dimension of the configuration space
         std::vector<dReal> _vConfigResolution;
         
-        /// a minimum distance between neighbors when searching. If 0 or less, planner chooses best step length
+        /// \brief a minimum distance between neighbors when searching. If 0 or less, planner chooses best step length
         dReal _fStepLength;
 
-        /// maximum number of iterations before the planner gives up. If 0 or less, planner chooses best iterations.
+        /// \brief maximum number of iterations before the planner gives up. If 0 or less, planner chooses best iterations.
         int _nMaxIterations;
 
-        /// specifies the planner that will perform the post-processing path smoothing before returning.
+        /// \brief Specifies the planner that will perform the post-processing path smoothing before returning.
+        ///
         /// If empty, will not path smooth the returned trajectories (used to measure algorithm time)
         std::string _sPathOptimizationPlanner;
-        /// The serialized planner parameters to pass to the path optimizer. For example:
-        /// std::stringstream(_sPathOptimizationParameters) >> _parameters;
+        
+        /// \brief The serialized planner parameters to pass to the path optimizer.
+        ///
+        /// For example: std::stringstream(_sPathOptimizationParameters) >> _parameters;
         std::string _sPathOptimizationParameters;
 
-        /// extra parameters data that does not fit within this planner parameters structure, but is still important not to lose all the information.
+        /// \brief Extra parameters data that does not fit within this planner parameters structure, but is still important not to lose all the information.
         std::string _sExtraParameters;
 
-        /// \return the degrees of freedom of the planning configuration space
+        /// \brief Return the degrees of freedom of the planning configuration space
         virtual int GetDOF() const { return (int)_vConfigLowerLimit.size(); }
 
     protected:
+        inline boost::shared_ptr<PlannerBase::PlannerParameters> shared_parameters() { return boost::static_pointer_cast<PlannerBase::PlannerParameters>(shared_from_this()); }
+        inline boost::shared_ptr<PlannerBase::PlannerParameters const > shared_parameters_const() const { return boost::static_pointer_cast<PlannerBase::PlannerParameters const>(shared_from_this()); }
+
         /// output the planner parameters in a string (in XML format)
         /// don't use PlannerParameters as a tag!
         virtual bool serialize(std::ostream& O) const;
@@ -173,7 +188,7 @@ public:
         /// all the top-level XML parameter tags (lower case) that are handled by this parameter structure, should be registered in the constructor
         std::vector<std::string> _vXMLParameters;
         //@}
-
+        
     private:
         /// disallow copy constructors since it gets complicated with virtualization
         PlannerParameters(const PlannerParameters& r) : XMLReadable("") { BOOST_ASSERT(0); }
@@ -188,6 +203,7 @@ public:
     };
     typedef boost::shared_ptr<PlannerBase::PlannerParameters> PlannerParametersPtr;
     typedef boost::shared_ptr<PlannerBase::PlannerParameters const> PlannerParametersConstPtr;
+    typedef boost::weak_ptr<PlannerBase::PlannerParameters> PlannerParametersWeakPtr;
 
     PlannerBase(EnvironmentBasePtr penv) : InterfaceBase(PT_Planner, penv) {}
     virtual ~PlannerBase() {}

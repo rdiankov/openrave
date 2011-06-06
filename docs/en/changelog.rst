@@ -33,10 +33,14 @@ Planning
 
 * added a Halton Sequence sampler
 
+* removed the PlannerParameters::_constraintfn and replaced it with PlannerParameters::_checkpathconstraints. Combined with _neighstatefn, the behavior of the old PlannerParameters::_constraintfn can be achieved. Allows us to remove all collision calls and dependencies on robots from planners!!
+
+* removed the PlannerParameters::_tWorkspaceGoal parameter since it is non-generic and not used in openrave.
+
 Inverse Kinematics
 ------------------
 
-* implemented --show command for inversekinematics
+* implemented '--show' command for inversekinematics
 
 Misc
 ----

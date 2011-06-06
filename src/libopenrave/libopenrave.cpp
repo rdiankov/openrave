@@ -766,15 +766,15 @@ void subtractstates(std::vector<dReal>& q1, const std::vector<dReal>& q2)
     }
 }
 
-void addstates(std::vector<dReal>& q, const std::vector<dReal>& qdelta)
+bool addstates(std::vector<dReal>& q, const std::vector<dReal>& qdelta)
 {
     BOOST_ASSERT(q.size()==qdelta.size());
     for(size_t i = 0; i < q.size(); ++i) {
         q[i] += qdelta[i];
     }
+    return true;
 }
 
-// PlannerParameters class
 PlannerBase::PlannerParameters::PlannerParameters() : XMLReadable("plannerparameters"), _fStepLength(0.04f), _nMaxIterations(0), _sPathOptimizationPlanner("shortcut_linear")
 {
     _diffstatefn = subtractstates;
@@ -785,7 +785,6 @@ PlannerBase::PlannerParameters::PlannerParameters() : XMLReadable("plannerparame
     _vXMLParameters.push_back("_vconfiglowerlimit");
     _vXMLParameters.push_back("_vconfigupperlimit");
     _vXMLParameters.push_back("_vconfigresolution");
-    _vXMLParameters.push_back("_tworkspacegoal");
     _vXMLParameters.push_back("_nmaxiterations");
     _vXMLParameters.push_back("_fsteplength");
     _vXMLParameters.push_back("_pathoptimization");
@@ -797,7 +796,7 @@ PlannerBase::PlannerParameters& PlannerBase::PlannerParameters::operator=(const 
     _costfn = r._costfn;
     _goalfn = r._goalfn;
     _distmetricfn = r._distmetricfn;
-    _constraintfn = r._constraintfn;
+    _checkpathconstraintsfn = r._checkpathconstraintsfn;
     _samplefn = r._samplefn;
     _sampleneighfn = r._sampleneighfn;
     _samplegoalfn = r._samplegoalfn;
@@ -806,7 +805,6 @@ PlannerBase::PlannerParameters& PlannerBase::PlannerParameters::operator=(const 
     _diffstatefn = r._diffstatefn;
     _neighstatefn = r._neighstatefn;
 
-    _tWorkspaceGoal.reset();
     vinitialconfig.resize(0);
     vgoalconfig.resize(0);
     _vConfigLowerLimit.resize(0);
@@ -835,28 +833,30 @@ void PlannerBase::PlannerParameters::copy(boost::shared_ptr<PlannerParameters co
 bool PlannerBase::PlannerParameters::serialize(std::ostream& O) const
 {
     O << "<_vinitialconfig>";
-    FOREACHC(it, vinitialconfig)
+    FOREACHC(it, vinitialconfig) {
         O << *it << " ";
+    }
     O << "</_vinitialconfig>" << endl;
     O << "<_vgoalconfig>";
-    FOREACHC(it, vgoalconfig)
+    FOREACHC(it, vgoalconfig) {
         O << *it << " ";
+    }
     O << "</_vgoalconfig>" << endl;
     O << "<_vconfiglowerlimit>";
-    FOREACHC(it, _vConfigLowerLimit)
+    FOREACHC(it, _vConfigLowerLimit) {
         O << *it << " ";
+    }
     O << "</_vconfiglowerlimit>" << endl;
     O << "<_vconfigupperlimit>";
-    FOREACHC(it, _vConfigUpperLimit)
+    FOREACHC(it, _vConfigUpperLimit) {
         O << *it << " ";
+    }
     O << "</_vconfigupperlimit>" << endl;
     O << "<_vconfigresolution>";
-    FOREACHC(it, _vConfigResolution)
+    FOREACHC(it, _vConfigResolution) {
         O << *it << " ";
+    }
     O << "</_vconfigresolution>" << endl;
-    
-    if( !!_tWorkspaceGoal )
-        O << "<_tworkspacegoal>" << *_tWorkspaceGoal << "</_tworkspacegoal>" << endl;
     
     O << "<_nmaxiterations>" << _nMaxIterations << "</_nmaxiterations>" << endl;
     O << "<_fsteplength>" << _fStepLength << "</_fsteplength>" << endl;
@@ -907,7 +907,7 @@ BaseXMLReader::ProcessElement PlannerBase::PlannerParameters::startElement(const
         return PE_Support;
     }
 
-    if( name=="_vinitialconfig"||name=="_vgoalconfig"||name=="_vconfiglowerlimit"||name=="_vconfigupperlimit"||name=="_vconfigresolution"||name=="_tworkspacegoal"||name=="_nmaxiterations"||name=="_fsteplength"||name=="_pathoptimization" ) {
+    if( name=="_vinitialconfig"||name=="_vgoalconfig"||name=="_vconfiglowerlimit"||name=="_vconfigupperlimit"||name=="_vconfigresolution"||name=="_nmaxiterations"||name=="_fsteplength"||name=="_pathoptimization" ) {
         __processingtag = name;
         return PE_Support;
     }
@@ -951,10 +951,6 @@ bool PlannerBase::PlannerParameters::endElement(const std::string& name)
         else if( name == "_vconfigresolution") {
             _vConfigResolution = vector<dReal>((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
         }
-        else if( name == "_tworkspacegoal") {
-            _tWorkspaceGoal.reset(new Transform());
-            _ss >> *_tWorkspaceGoal.get();
-        }
         else if( name == "_nmaxiterations") {
             _ss >> _nMaxIterations;
         }
@@ -989,6 +985,111 @@ std::ostream& operator<<(std::ostream& O, const PlannerBase::PlannerParameters& 
     O << "</" << v.GetXMLId() << ">" << endl;
     return O;
 }
+
+class LineCollisionConstraint
+{
+ public:
+    LineCollisionConstraint() {
+        _report.reset(new CollisionReport());
+    }
+    bool Check(PlannerBase::PlannerParametersWeakPtr _params, RobotBasePtr robot, const vector<dReal>& pQ0, const vector<dReal>& pQ1, IntervalType interval, PlannerBase::ConfigurationListPtr pvCheckedConfigurations)
+    {
+        // set the bounds based on the interval type
+        PlannerBase::PlannerParametersPtr params = _params.lock();
+        if( !params ) {
+            return false;
+        }
+        int start=0;
+        bool bCheckEnd=false;
+        switch (interval) {
+        case IT_Open:
+            start = 1;  bCheckEnd = false;
+            break;
+        case IT_OpenStart:
+            start = 1;  bCheckEnd = true;
+            break;
+        case IT_OpenEnd:
+            start = 0;  bCheckEnd = false;
+            break;
+        case IT_Closed:
+            start = 0;  bCheckEnd = true;
+            break;
+        default:
+            BOOST_ASSERT(0);
+        }
+        
+        // first make sure the end is free
+        vtempconfig.resize(params->GetDOF());
+        if (bCheckEnd) {
+            params->_setstatefn(pQ1);
+            if (robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot)) || (robot->CheckSelfCollision()) ) {
+                if( !!pvCheckedConfigurations ) {
+                    pvCheckedConfigurations->push_back(pQ1);
+                }
+                return false;
+            }
+        }
+
+        // compute  the discretization
+        dQ = pQ1;
+        params->_diffstatefn(dQ,pQ0);
+        int i, numSteps = 1;
+        vector<dReal>::const_iterator itres = params->_vConfigResolution.begin();
+        int totalsteps = 0;
+        for (i = 0; i < params->GetDOF(); i++,itres++) {
+            int steps;
+            if( *itres != 0 ) {
+                steps = (int)(fabs(dQ[i]) / *itres);
+            }
+            else {
+                steps = (int)(fabs(dQ[i]) * 100);
+            }
+            totalsteps += steps;
+            if (steps > numSteps) {
+                numSteps = steps;
+            }
+        }
+        if( totalsteps == 0 && start > 0 ) {
+            return true;
+        }
+
+        dReal fisteps = dReal(1.0f)/numSteps;
+        FOREACH(it,dQ) {
+            *it *= fisteps;
+        }
+        // check for collision along the straight-line path
+        // NOTE: this does not check the end config, and may or may
+        // not check the start based on the value of 'start'
+        for (i = 0; i < params->GetDOF(); i++) {
+            vtempconfig[i] = pQ0[i];
+        }
+        if( start > 0 ) {
+            params->_neighstatefn(vtempconfig, dQ);
+        }
+        for (int f = start; f < numSteps; f++) {
+            params->_setstatefn(vtempconfig);
+            if( !!pvCheckedConfigurations ) {
+                if( !!params->_getstatefn ) {
+                    params->_getstatefn(vtempconfig); // query again in order to get normalizations/joint limits
+                }
+                pvCheckedConfigurations->push_back(vtempconfig);
+            }
+            if( robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot)) || (robot->CheckSelfCollision()) ) {
+                return false;
+            }
+            params->_neighstatefn(vtempconfig,dQ);
+        }
+
+        if( bCheckEnd && !!pvCheckedConfigurations ) {
+            pvCheckedConfigurations->push_back(pQ1);
+        }
+        return true;
+    }
+
+protected:
+    vector<dReal> vtempconfig, dQ;
+    CollisionReportPtr _report;
+};
 
 class SimpleDistMetric
 {
@@ -1082,6 +1183,10 @@ void PlannerBase::PlannerParameters::SetRobotActiveJoints(RobotBasePtr robot)
     _getstatefn = boost::bind(&RobotBase::GetActiveDOFValues,robot,_1);
     _diffstatefn = boost::bind(&RobotBase::SubtractActiveDOFValues,robot,_1,_2);
     _neighstatefn = addstates; // probably ok...
+
+    boost::shared_ptr<LineCollisionConstraint> pcollision(new LineCollisionConstraint());
+    _checkpathconstraintsfn = boost::bind(&LineCollisionConstraint::Check,pcollision,PlannerParametersWeakPtr(shared_parameters()), robot, _1, _2, _3, _4);
+
     robot->GetActiveDOFLimits(_vConfigLowerLimit,_vConfigUpperLimit);
     robot->GetActiveDOFResolutions(_vConfigResolution);
     robot->GetActiveDOFValues(vinitialconfig);

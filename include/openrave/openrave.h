@@ -984,6 +984,7 @@ inline std::istream& operator>>(std::istream& I, IkParameterization& ikparam)
 
 #include <openrave/plugininfo.h>
 #include <openrave/interface.h>
+#include <openrave/spacesampler.h>
 #include <openrave/kinbody.h>
 #include <openrave/trajectory.h>
 #include <openrave/problems.h>
@@ -996,7 +997,6 @@ inline std::istream& operator>>(std::istream& I, IkParameterization& ikparam)
 #include <openrave/physicsengine.h>
 #include <openrave/sensorsystem.h>
 #include <openrave/viewer.h>
-#include <openrave/spacesampler.h>
 #include <openrave/environment.h>
 
 namespace OpenRAVE {

@@ -64,7 +64,7 @@ ShortcutLinearPlanner(EnvironmentBasePtr penv) : PlannerBase(penv)
         _SubsampleTrajectory(ptraj,path);
         
         list< vector<dReal> >::iterator startNode, endNode;
-        vector< vector<dReal> > vconfigs;
+        ConfigurationListPtr vconfigs(new ConfigurationList());
 
         int nrejected = 0;
         int i = parameters->_nMaxIterations;
@@ -83,16 +83,16 @@ ShortcutLinearPlanner(EnvironmentBasePtr penv) : PlannerBase(penv)
             nrejected++;
 
             // check if the nodes can be connected by a straight line
-            vconfigs.resize(0);
-            if (CollisionFunctions::CheckCollision(parameters,_robot,*startNode, *endNode, IT_Open, &vconfigs)) {
-
-                if( nrejected++ > (int)path.size()+8 )
+            vconfigs->clear();
+            if (!_parameters->_checkpathconstraintsfn(*startNode, *endNode, IT_Open, vconfigs)) {
+                if( nrejected++ > (int)path.size()+8 ) {
                     break;
+                }
                 continue;
             }
 
             ++startNode;
-            FOREACHC(itc, vconfigs) {
+            FOREACHC(itc, *vconfigs) {
                 path.insert(startNode, *itc);
             }
             // splice out in-between nodes in path
@@ -163,7 +163,9 @@ protected:
                 }
                 for (int f = 0; f < numSteps; f++) {
                     listpoints.push_back(q);
-                    parameters->_neighstatefn(q,dq);
+                    if( !parameters->_neighstatefn(q,dq) ) {
+                        RAVELOG_WARN("neigh failed, not sure what to do\n");
+                    }
                 }
             }
             listpoints.push_back(ptraj->GetPoints().back().q);

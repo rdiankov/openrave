@@ -278,7 +278,7 @@ class DualManipulation : public ProblemInstance
             RAVELOG_DEBUG("setting DualArmConstrained function in planner parameters\n");
             boost::shared_ptr<CM::DualArmManipulation<double> > dplanner(new CM::DualArmManipulation<double>(robot,pmanipA,pmanipI));
             dplanner->_distmetricfn = params->_distmetricfn;
-            params->_constraintfn = boost::bind(&CM::DualArmManipulation<double>::DualArmConstrained,dplanner,_1,_2,_3);//this juts means that the function is called upon pconstraints object and the function takes 3 arguments specified as _1,_2 and _3
+            params->_neighstatefn = boost::bind(&CM::DualArmManipulation<double>::DualArmConstrained,dplanner,_1,_2);
             params->_nMaxIterations = 1000;
         }
 

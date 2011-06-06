@@ -189,13 +189,12 @@ public:
             return true;
         }
 
-        virtual bool Constraint(const vector<dReal>& pSrcConf, vector<dReal>& pDestConf, int settings)
+        virtual bool Constraint(const PlannerBase::PlannerParameters::CheckPathConstraintFn& oldfn, const vector<dReal>& pSrcConf, const vector<dReal>& pDestConf, IntervalType interval, PlannerBase::ConfigurationListPtr configurations)
         {
-            if( IsVisible() ) {
-                pDestConf = pSrcConf;
-                return true;
+            if( !oldfn(pSrcConf,pDestConf,interval,configurations) ) {
+                return false;
             }
-            return false;
+            return IsVisible();
         }
 
         /// samples the ik
@@ -1215,7 +1214,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
         if( bUseVisibility ) {
             RAVELOG_DEBUG("using visibility constraints\n");
             boost::shared_ptr<VisibilityConstraintFunction> pconstraint(new VisibilityConstraintFunction(shared_problem()));
-            params->_constraintfn = boost::bind(&VisibilityConstraintFunction::Constraint,pconstraint,_1,_2,_3);
+            params->_checkpathconstraintsfn = boost::bind(&VisibilityConstraintFunction::Constraint,pconstraint,params->_checkpathconstraintsfn,_1,_2,_3,_4);
         }
 
         params->_ptarget = _target;
@@ -1240,7 +1239,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
             bSuccess = true;
         }
         else RAVELOG_WARN("PlanPath failed\n");
-
+            
         float felapsed = (GetMicroTime()-starttime)*0.000001f;
         RAVELOG_INFOA("total planning time: %fs\n", felapsed);
         if( !bSuccess ) {
