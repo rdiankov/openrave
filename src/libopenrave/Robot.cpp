@@ -784,7 +784,7 @@ void RobotBase::SetTransform(const Transform& trans)
 
 void RobotBase::_UpdateGrabbedBodies()
 {
-    RAVELOG_VERBOSE("update grabbed objects\n");
+    //RAVELOG_VERBOSE("update grabbed objects\n");
     vector<Grabbed>::iterator itbody;
     FORIT(itbody, _vGrabbedBodies) {
         KinBodyPtr pbody = itbody->pbody.lock();

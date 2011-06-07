@@ -327,7 +327,7 @@ class BasicRrtPlanner : public RrtPlanner<SimpleNode>
     {
         __description = "Rosen's BiRRT planner";
         _fGoalBiasProb = 0.05f;
-        _bOneStep = true;
+        _bOneStep = false;
     }
     virtual ~BasicRrtPlanner() {}
 
@@ -340,7 +340,6 @@ class BasicRrtPlanner : public RrtPlanner<SimpleNode>
             _parameters.reset();
             return false;
         }
-        //_bOneStep = parameters->vnParameters[0]>0;
     
         //read in all goals
         int goal_index = 0;
@@ -434,6 +433,7 @@ class BasicRrtPlanner : public RrtPlanner<SimpleNode>
                     if( _treeForward._distmetricfn(*itgoal, _treeForward._nodes.at(lastnode)->q) < 2*_treeForward._fStepLength ) {
                         bSuccess = true;
                         igoalindex = (int)(itgoal-_vecGoals.begin());
+                        RAVELOG_DEBUG(str(boost::format("found goal index: %d\n")%igoalindex));
                         break;
                     }
                 }
@@ -443,7 +443,8 @@ class BasicRrtPlanner : public RrtPlanner<SimpleNode>
             if( et != ET_Failed && !!_parameters->_goalfn ) {
                 if( _parameters->_goalfn(_treeForward._nodes.at(lastnode)->q) <= 1e-4f ) {
                     bSuccess = true;
-                    igoalindex = 0;
+                    igoalindex = -1;
+                    RAVELOG_DEBUG("node at goal\n");
                     break;
                 }
             }
@@ -473,8 +474,6 @@ class BasicRrtPlanner : public RrtPlanner<SimpleNode>
         }
 
         _SimpleOptimizePath(vecnodes,10);
-        
-        BOOST_ASSERT( igoalindex >= 0 );
         if( pOutStream != NULL ) {
             *pOutStream << igoalindex;
         }

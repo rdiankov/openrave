@@ -86,8 +86,10 @@ QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
     statusBar()->showMessage(tr("Status Bar"));
 #endif
     __description = ":Interface Author: Rosen Diankov\n\nProvides a GUI using the Qt4, Coin3D, and SoQt libraries. Depending on the version, Coin3D and SoQt might be licensed under GPL.";
-    RegisterCommand("SetFiguresInCamera",boost::bind(&QtCoinViewer::SetFiguresInCamera,this,_1,_2),
+    RegisterCommand("SetFiguresInCamera",boost::bind(&QtCoinViewer::_SetFiguresInCamera,this,_1,_2),
                     "Accepts 0/1 value that decides whether to render the figure plots in the camera image through GetCameraImage");
+    RegisterCommand("SetWatermark",boost::bind(&QtCoinViewer::_SetWatermark,this,_1,_2),
+                    "Set a WxHx4 image as a watermark. Each color is an unsigned integer ordered as A|B|G|R. The origin should be the top left corner");
     _bLockEnvironment = true;
     _bAVIInit = false;
     _pToggleDebug = NULL;
@@ -2625,10 +2627,13 @@ void QtCoinViewer::_Reset()
 
     {
         boost::mutex::scoped_lock lock(_mutexItems);
-        FOREACH(it,_listRemoveItems)
+        FOREACH(it,_listRemoveItems) {
             delete *it;
+        }
         _listRemoveItems.clear();
     }
+
+    _vwatermarkimage.resize(boost::extents[0][0]);
 }
 
 void QtCoinViewer::UpdateCameraTransform()
@@ -2880,6 +2885,7 @@ bool QtCoinViewer::_GetCameraImage(std::vector<uint8_t>& memory, int width, int 
     _pFigureRoot->unref();
 
     if( bSuccess ) {
+        _AddWatermarkToImage(_ivOffscreen.getBuffer(), VIDEO_WIDTH, VIDEO_HEIGHT);
         // vertically flip since we want upper left corner to correspond to (0,0)
         memory.resize(width*height*3);
         for(int i = 0; i < height; ++i) {
@@ -2957,8 +2963,10 @@ bool QtCoinViewer::_WriteCameraImage(int width, int height, const RaveTransform<
             RAVELOG_INFO(ss.str().c_str());
             bSuccess = false;
         }
-        else
+        else {
+            _AddWatermarkToImage(_ivOffscreen.getBuffer(), width, height);
             bSuccess = _ivOffscreen.writeToFile(SbString(filename.c_str()), SbString(extension.c_str()));
+        }
     }
 
     _ivRoot->addChild(_pFigureRoot);
@@ -2995,6 +3003,7 @@ bool QtCoinViewer::_RecordVideo()
             swap(ptr[0], ptr[2]);
         }
     }
+    _AddWatermarkToImage(_ivOffscreen.getBuffer(), VIDEO_WIDTH, VIDEO_HEIGHT);
     
     uint64_t curtime = _bRealtimeVideo ? GetMicroTime() : GetEnv()->GetSimulationTime();
     _nVideoTimeOffset += (curtime-_nLastVideoFrame);
@@ -3169,8 +3178,41 @@ void QtCoinViewer::EnvMessage::viewerexecute()
     _plock.reset();
 }
 
-bool QtCoinViewer::SetFiguresInCamera(ostream& sout, istream& sinput)
+bool QtCoinViewer::_SetFiguresInCamera(ostream& sout, istream& sinput)
 {
     sinput >> _bRenderFiguresInCamera;
     return !!sinput;
+}
+
+bool QtCoinViewer::_SetWatermark(ostream& sout, istream& sinput)
+{
+    int W, H;
+    sinput >> W >> H;
+    _vwatermarkimage.resize(boost::extents[H][W]);
+    for(int i = 0; i < H; ++i) {
+        for(int j = 0; j < W; ++j) {
+            sinput >> _vwatermarkimage[i][j];
+        }
+    }
+    return !!sinput;
+}
+
+void QtCoinViewer::_AddWatermarkToImage(unsigned char* image, int width, int height)
+{
+    if( _vwatermarkimage.size() == 0 ) {
+        return;
+    }
+    // the origin of the image is the bottom left corner
+    for(int i = 0; i < height; ++i) {
+        for(int j = 0; j < width; ++j) {
+            int iwater = _vwatermarkimage.shape()[0]-(i%_vwatermarkimage.shape()[0])-1;
+            int jwater = j%_vwatermarkimage.shape()[1];
+            uint32_t color = _vwatermarkimage[iwater][jwater];
+            uint32_t A = color>>24;
+            for(int k = 0; k < 3; ++k) {
+                image[k] = ((uint32_t)image[k]*(255-A)+((color>>(8*k))&0xff)*A)>>8;
+            }
+            image += 3;
+        }
+    }
 }

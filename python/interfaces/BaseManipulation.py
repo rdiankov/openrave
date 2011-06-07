@@ -40,10 +40,10 @@ class BaseManipulation:
         if envother.LoadProblem(clone.prob,clone.args) != 0:
             raise ValueError('problem failed to initialize')
         return clone
-    def TrajFromData(self,data):
+    def TrajFromData(self,data,resettrans=False,resettiming=False):
         """See :ref:`probleminstance-basemanipulation-traj`
         """
-        return self.prob.SendCommand('traj stream ' + data)
+        return self.prob.SendCommand('traj stream ' + data + ' %d %d '%(resettiming,resettiming))
     def MoveHandStraight(self,direction,minsteps=None,maxsteps=None,stepsize=None,ignorefirstcollision=None,starteematrix=None,greedysearch=True,execute=None,outputtraj=None,maxdeviationangle=None):
         """See :ref:`probleminstance-basemanipulation-movehandstraight`
         """

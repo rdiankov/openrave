@@ -158,6 +158,9 @@ class SpatialTree : public SpatialTreeBase
                 _vDeltaConfig[i] *= fdist;
             }
             if( !params->_neighstatefn(_vNewConfig,_vDeltaConfig,_fromgoal) ) {
+                if(bHasAdded) {
+                    return ET_Sucess;
+                }
                 return ET_Failed;
             }
         

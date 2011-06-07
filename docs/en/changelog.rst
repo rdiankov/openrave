@@ -57,6 +57,8 @@ Misc
 
 * added more tests: openrave global runtime, API Sanity Autotest
 
+* viewer added watermarking support through :ref:`viewer-qtcoin-setwatermark <SetWatermark command>`
+
 Version 0.3.2
 =============
 

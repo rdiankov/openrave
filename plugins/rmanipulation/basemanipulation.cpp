@@ -191,7 +191,8 @@ protected:
         }
         
         bool bResetTrans = false; sinput >> bResetTrans;
-    
+        bool bResetTiming = false; sinput >> bResetTiming;
+
         if( bResetTrans ) {
             RAVELOG_VERBOSE("resetting transformations of trajectory\n");
             Transform tcur = robot->GetTransform();
@@ -201,7 +202,7 @@ protected:
             }
         }
 
-        if( ptraj->GetTotalDuration() == 0 ) {
+        if( ptraj->GetTotalDuration() == 0 || bResetTiming ) {
             RAVELOG_VERBOSE(str(boost::format("retiming trajectory: %f\n")%_fMaxVelMult));
             ptraj->CalcTrajTiming(robot,TrajectoryBase::CUBIC,true,false,_fMaxVelMult);
         }
