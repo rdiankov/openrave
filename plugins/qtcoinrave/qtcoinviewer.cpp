@@ -2028,8 +2028,13 @@ void QtCoinViewer::SetupMenus()
 
 void QtCoinViewer::customEvent(QEvent * e)
 {
-    if (e->type() == QEvent::User) {
-        static_cast<MyCallbackEvent*>(e)->_fn();
+    if (e->type() == CALLBACK_EVENT) {
+        MyCallbackEvent* pe = dynamic_cast<MyCallbackEvent*>(e);
+        if( !pe ) {
+            RAVELOG_WARN("got a qt message that isn't of MyCallbackEvent, converting statically (dangerous)\n");
+            pe = static_cast<MyCallbackEvent*>(e);
+        }
+        pe->_fn();
         e->setAccepted(true);
     }
 }

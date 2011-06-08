@@ -284,10 +284,12 @@ class QtCoinViewer;
 typedef boost::shared_ptr<QtCoinViewer> QtCoinViewerPtr;
 typedef boost::shared_ptr<QtCoinViewer const> QtCoinViewerConstPtr;
 
+#define CALLBACK_EVENT QEvent::Type(QEvent::User+101)
+
 class MyCallbackEvent : public QEvent
 {
- public:
- MyCallbackEvent(const boost::function<void()>& fn) : QEvent(QEvent::User), _fn(fn) {}
+public:
+    MyCallbackEvent(const boost::function<void()>& fn) : QEvent(CALLBACK_EVENT), _fn(fn) {}
     virtual ~MyCallbackEvent() {}
     boost::function<void()> _fn;
 };
@@ -295,7 +297,7 @@ class MyCallbackEvent : public QEvent
 
 class SoDBLock
 {
- public:
+public:
     SoDBLock() { SoDB::readlock(); }
     virtual ~SoDBLock() { SoDB::readunlock(); }
 };
