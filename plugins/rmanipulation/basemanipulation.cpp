@@ -299,7 +299,7 @@ protected:
         params->SetRobotActiveJoints(robot);
 
         if( !starteematrix ) {
-            CM::JitterActiveDOF(robot,100); // try to jitter out, don't worry if it fails
+            planningutils::JitterActiveDOF(robot,100); // try to jitter out, don't worry if it fails
             robot->GetActiveDOFValues(params->vinitialconfig);
             Tee = pmanip->GetTransform();
         }
@@ -403,7 +403,7 @@ protected:
 
         robot->SetActiveDOFs(pmanip->GetArmIndices());
         params->SetRobotActiveJoints(robot);
-        CM::JitterActiveDOF(robot);
+        planningutils::JitterActiveDOF(robot);
     
         TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF());
 
@@ -412,7 +412,7 @@ protected:
 
         // make sure the initial and goal configs are not in collision
         robot->SetActiveDOFValues(goals, true);
-        if( CM::JitterActiveDOF(robot) == 0 ) {
+        if( planningutils::JitterActiveDOF(robot) == 0 ) {
             RAVELOG_WARN("jitter failed\n");
             return false;
         }
@@ -420,7 +420,7 @@ protected:
         robot->SetActiveDOFValues(values);
     
         // jitter again for initial collision
-        if( CM::JitterActiveDOF(robot) == 0 ) {
+        if( planningutils::JitterActiveDOF(robot) == 0 ) {
             RAVELOG_WARN("jitter failed\n");
             return false;
         }
@@ -515,7 +515,7 @@ protected:
         }
         RobotBase::RobotStateSaver saver(robot);
 
-        if( CM::JitterActiveDOF(robot) == 0 ) {
+        if( planningutils::JitterActiveDOF(robot) == 0 ) {
             RAVELOG_WARN("failed\n");
             return false;
         }
@@ -526,7 +526,7 @@ protected:
         robot->SetActiveDOFValues(params->vgoalconfig);
     
         // jitter again for goal
-        if( CM::JitterActiveDOF(robot) == 0 ) {
+        if( planningutils::JitterActiveDOF(robot) == 0 ) {
             RAVELOG_WARN("failed\n");
             return false;
         }
@@ -702,7 +702,7 @@ protected:
         params->vgoalconfig.reserve(nSeedIkSolutions*robot->GetActiveDOF());
         while(nSeedIkSolutions > 0) {
             if( goalsampler.Sample(vgoal) ) {
-                if( constrainterrorthresh > 0 && !CM::JitterActiveDOF(robot,5000,0.03,params->_neighstatefn) ) {
+                if( constrainterrorthresh > 0 && !planningutils::JitterActiveDOF(robot,5000,0.03,params->_neighstatefn) ) {
                     RAVELOG_DEBUG("constraint function failed\n");
                     continue;
                 }
@@ -729,7 +729,7 @@ protected:
         ptraj->AddPoint(pt);
     
         // jitter again for initial collision
-        if( CM::JitterActiveDOF(robot,5000,0.03,params->_neighstatefn) == 0 ) {
+        if( planningutils::JitterActiveDOF(robot,5000,0.03,params->_neighstatefn) == 0 ) {
             RAVELOG_WARN("jitter failed for initial\n");
             return false;
         }
@@ -833,7 +833,7 @@ protected:
 
         RobotBase::RobotStateSaver saver(robot);
         uint32_t starttime = GetMilliTime();
-        if( CM::JitterActiveDOF(robot) == 0 ) {
+        if( planningutils::JitterActiveDOF(robot) == 0 ) {
             RAVELOG_WARN("failed to jitter robot out of collision\n");
         }
 
@@ -911,7 +911,7 @@ protected:
         Trajectory::TPOINT ptfirst;
         robot->GetActiveDOFValues(ptfirst.q);
         ptraj->AddPoint(ptfirst);
-        switch( CM::JitterActiveDOF(robot,nMaxIterations,fJitter) ) {
+        switch( planningutils::JitterActiveDOF(robot,nMaxIterations,fJitter) ) {
         case 0:
             RAVELOG_WARN("could not jitter out of collision\n");
             return false;

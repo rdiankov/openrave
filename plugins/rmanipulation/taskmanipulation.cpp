@@ -455,7 +455,7 @@ Task-based manipulation planning involving target objects. A lot of the algorith
         // check if robot is in collision with padded models
         if( GetEnv()->CheckCollision(KinBodyConstPtr(_robot)) ) {
             _robot->SetActiveDOFs(pmanip->GetArmIndices());
-            if( !CM::JitterActiveDOF(_robot) ) {
+            if( !planningutils::JitterActiveDOF(_robot) ) {
                 RAVELOG_ERROR("failed to jitter robot\n");
                 return false;
             }
@@ -983,7 +983,7 @@ Task-based manipulation planning involving target objects. A lot of the algorith
         // check if robot is in collision with padded models
         if( GetEnv()->CheckCollision(KinBodyConstPtr(_robot)) ) {
             _robot->SetActiveDOFs(pmanip->GetArmIndices());
-            if( !CM::JitterActiveDOF(_robot) ) {
+            if( !planningutils::JitterActiveDOF(_robot) ) {
                 RAVELOG_ERROR("failed to jitter robot\n");
                 return false;
             }
@@ -1177,7 +1177,7 @@ Task-based manipulation planning involving target objects. A lot of the algorith
         Trajectory::TPOINT ptfirst;
         _robot->GetActiveDOFValues(ptfirst.q);
         ptraj->AddPoint(ptfirst);
-        switch(CM::JitterActiveDOF(_robot) ) {
+        switch(planningutils::JitterActiveDOF(_robot) ) {
         case 0:
             RAVELOG_WARN("robot initially in collision\n");
             return false;
@@ -1222,7 +1222,7 @@ Task-based manipulation planning involving target objects. A lot of the algorith
             // check final trajectory for colliding points
             RobotBase::RobotStateSaver saver2(_robot);
             _robot->SetActiveDOFValues(ptraj->GetPoints().back().q);
-            if( CM::JitterActiveDOF(_robot) > 0 ) {
+            if( planningutils::JitterActiveDOF(_robot) > 0 ) {
                 RAVELOG_WARN("robot final configuration is in collision\n");
                 Trajectory::TPOINT pt = ptraj->GetPoints().back();
                 _robot->GetActiveDOFValues(pt.q);
@@ -1303,7 +1303,7 @@ Task-based manipulation planning involving target objects. A lot of the algorith
         Trajectory::TPOINT ptfirst;
         _robot->GetActiveDOFValues(ptfirst.q);
         ptraj->AddPoint(ptfirst);
-        switch( CM::JitterActiveDOF(_robot) ) {
+        switch( planningutils::JitterActiveDOF(_robot) ) {
         case 0:
             RAVELOG_WARN("robot initially in collision\n");
             return false;
@@ -1350,7 +1350,7 @@ Task-based manipulation planning involving target objects. A lot of the algorith
             // check final trajectory for colliding points
             RobotBase::RobotStateSaver saver2(_robot);
             _robot->SetActiveDOFValues(ptraj->GetPoints().back().q);
-            if( CM::JitterActiveDOF(_robot) > 0 ) {
+            if( planningutils::JitterActiveDOF(_robot) > 0 ) {
                 RAVELOG_WARN("robot final configuration is in collision\n");
                 Trajectory::TPOINT pt = ptraj->GetPoints().back();
                 _robot->GetActiveDOFValues(pt.q);
@@ -1522,7 +1522,7 @@ protected:
         _robot->SetActiveDOFValues(pzero);
     
         // jitter again for initial collision
-        if( !CM::JitterActiveDOF(_robot) ) {
+        if( !planningutils::JitterActiveDOF(_robot) ) {
             return ptraj;
         }
 

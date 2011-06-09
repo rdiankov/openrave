@@ -30,89 +30,6 @@
 class CM
 {
 public:
-    /// \brief Return 0 if jitter failed and robot is in collision, -1 if robot originally not in collision, 1 if jitter succeeded
-    static int JitterActiveDOF(RobotBasePtr robot,int nMaxIterations=5000,dReal fRand=0.03f,const PlannerBase::PlannerParameters::NeighStateFn& neighstatefn = PlannerBase::PlannerParameters::NeighStateFn())
-    {
-        RAVELOG_VERBOSE("starting jitter active dof...\n");
-        vector<dReal> curdof, newdof;
-        robot->GetActiveDOFValues(curdof);
-        int iter = 0;
-        CollisionReport report;
-        CollisionReportPtr preport(&report,null_deleter());
-        bool bCollision = false;
-        bool bConstraint = !!neighstatefn;
-        vector<dReal> deltadof(curdof.size(),0);
-        if( !bConstraint || neighstatefn(curdof,deltadof,0) ) {
-            if( bConstraint ) {
-                // curdof might have changed from constraint function
-                robot->SetActiveDOFValues(curdof);
-                //robot->GetActiveDOFValues(curdof); // necessary?
-            }
-            if(robot->CheckSelfCollision(preport)) {
-                bCollision = true;
-                RAVELOG_DEBUG(str(boost::format("JitterActiveDOFs: initial config in self collision: %s!\n")%report.__str__()));
-            }
-            if( robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot),preport) ) {
-                bCollision = true;
-                RAVELOG_DEBUG(str(boost::format("JitterActiveDOFs: initial config in collision: %s!\n")%report.__str__()));
-            }
-            if( !bCollision ) {
-                return -1;
-            }
-        }
-        else {
-            RAVELOG_DEBUG("constraint function failed\n");
-        }
-
-        newdof.resize(curdof.size());
-        do {
-            if( iter++ > nMaxIterations ) {
-                robot->SetActiveDOFValues(curdof,true);
-                robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot),preport) || robot->CheckSelfCollision(preport);
-                RAVELOG_WARN(str(boost::format("Failed to find noncolliding position for robot: %s\n")%report.__str__()));
-                return 0;
-            }
-            if( bCollision ) {
-                newdof = curdof;
-                for(size_t j = 0; j < newdof.size(); ++j) {
-                    deltadof[j] = fRand * (RaveRandomFloat()-0.5f);
-                }
-                if( bConstraint && !neighstatefn(newdof,deltadof,0) ) {
-                    continue;
-                }
-                robot->SetActiveDOFValues(newdof,true);
-            }
-            else {
-                for(int j = 0; j < robot->GetActiveDOF(); j++) {
-                    newdof[j] = curdof[j] + fRand * (RaveRandomFloat()-0.5f);
-                }
-                robot->SetActiveDOFValues(newdof,true);
-            }
-        } while(robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot)) || robot->CheckSelfCollision() );
-    
-        return 1;
-    }
-
-    static bool JitterTransform(KinBodyPtr pbody, float fJitter, int nMaxIterations=1000)
-    {
-        RAVELOG_VERBOSE("starting jitter transform...\n");
-
-        // randomly add small offset to the body until it stops being in collision
-        Transform transorig = pbody->GetTransform();
-        Transform transnew = transorig;
-        int iter = 0;
-        while(pbody->GetEnv()->CheckCollision(KinBodyConstPtr(pbody)) ) {
-            if( iter > nMaxIterations ) {
-                return false;
-            }
-            transnew.trans = transorig.trans + fJitter * Vector(RaveRandomFloat()-0.5f, RaveRandomFloat()-0.5f, RaveRandomFloat()-0.5f);
-            pbody->SetTransform(transnew);
-            ++iter;
-        }
-
-        return true;
-    }
-
     class MoveUnsync
     {
     public:
@@ -264,6 +181,7 @@ public:
             }
             dReal fdistprev = _distmetricfn(vprev,vnew), fdistcur=0;
             _lasterror=0;
+            _probot->SetActiveDOFValues(vnew);
             for(_iter = 0; _iter < _nMaxIterations; ++_iter) {
                 Transform tEE = _pmanip->GetTransform();
                 Transform t = _tTargetFrameLeft * tEE * _tTargetFrameRight;

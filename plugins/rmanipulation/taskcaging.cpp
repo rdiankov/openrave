@@ -885,7 +885,7 @@ private:
         // move the robot according to the way the target object moved
         _robot->SetTransform(tlinknew*tlinkorig.inverse()*_robot->GetTransform());
     
-        if( !CM::JitterTransform(_robot, 0.004f) ) {
+        if( !planningutils::JitterTransform(_robot, 0.004f) ) {
             RAVELOG_WARN("failed to jitter\n");
             return false;
         }

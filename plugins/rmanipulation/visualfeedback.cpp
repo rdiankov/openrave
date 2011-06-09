@@ -1102,7 +1102,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
         ptraj->AddPoint(pt);
     
         // jitter for initial collision
-        if( !CM::JitterActiveDOF(_robot) ) {
+        if( !planningutils::JitterActiveDOF(_robot) ) {
             RAVELOG_WARN("jitter failed for initial\n");
             return false;
         }

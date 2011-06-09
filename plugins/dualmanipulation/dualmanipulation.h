@@ -255,7 +255,7 @@ class DualManipulation : public ProblemInstance
     
         RobotBase::RobotStateSaver saver(robot);
 
-        if( !CM::JitterActiveDOF(robot) ) {
+        if( !planningutils::JitterActiveDOF(robot) ) {
             RAVELOG_WARN("failed\n");
             return false;
         }
@@ -266,7 +266,7 @@ class DualManipulation : public ProblemInstance
         robot->SetActiveDOFValues(params->vgoalconfig);
     
         // jitter again for goal
-        if( !CM::JitterActiveDOF(robot) ) {
+        if( !planningutils::JitterActiveDOF(robot) ) {
             RAVELOG_WARN("failed\n");
             return false;
         }
@@ -402,7 +402,7 @@ class DualManipulation : public ProblemInstance
         RobotBase::RobotStateSaver saver(robot);
 
         //robot->SetActiveDOFs(pmanip->GetArmIndices());
-        CM::JitterActiveDOF(robot,100); // try to jitter out, don't worry if it fails
+        planningutils::JitterActiveDOF(robot,100); // try to jitter out, don't worry if it fails
 
         boost::shared_ptr<Trajectory> ptraj(RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF()));
         Trajectory::TPOINT point;
