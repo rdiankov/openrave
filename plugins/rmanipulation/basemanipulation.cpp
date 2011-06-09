@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2010 Rosen Diankov (rdiankov@cs.cmu.edu)
+// Copyright (C) 2006-2011 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
@@ -24,6 +24,8 @@ public:
                         "Set the active manipulator");
         RegisterCommand("Traj",boost::bind(&BaseManipulation::Traj,this,_1,_2),
                         "Execute a trajectory from a file on the local filesystem");
+        RegisterCommand("ValidateTrajectory",boost::bind(&BaseManipulation::_ValidateTrajectory,this,_1,_2),
+                        "Validates the robot trajectory by checking collisions with the environment and other user-specified constraints.");
         RegisterCommand("GrabBody",boost::bind(&BaseManipulation::GrabBody,this,_1,_2),
                         "Robot calls ::Grab on a body with its current manipulator");
         RegisterCommand("ReleaseAll",boost::bind(&BaseManipulation::ReleaseAll,this,_1,_2),
@@ -574,7 +576,7 @@ protected:
 
         Vector vconstraintaxis, vconstraintpos;
         int affinedofs = 0;
-        int nSeedIkSolutions = 0; // no extra solutions
+        int nSeedIkSolutions = 8; // no extra solutions
         int nMaxTries = 3; // max tries for the planner
 
         PlannerBase::PlannerParametersPtr params(new PlannerBase::PlannerParameters());
@@ -681,47 +683,6 @@ protected:
 
         robot->RegrabAll();
         RobotBase::RobotStateSaver saver(robot);
-
-        std::vector<dReal> viksolution, armgoals;
-        if( nSeedIkSolutions < 0 ) {
-            vector<vector<dReal> > solutions;
-            FOREACH(ittrans, listgoals) {
-                pmanip->FindIKSolutions(*ittrans, solutions, true);            
-                armgoals.reserve(armgoals.size()+solutions.size()*pmanip->GetArmIndices().size());
-                FOREACH(itsol, solutions) {
-                    armgoals.insert(armgoals.end(), itsol->begin(), itsol->end());
-                }
-            }
-        }
-        else if( nSeedIkSolutions > 0 ) {
-            FOREACH(ittrans, listgoals) {
-                int nsampled = CM::SampleIkSolutions(robot, *ittrans, nSeedIkSolutions, armgoals);
-                if( nsampled != nSeedIkSolutions ) {
-                    RAVELOG_WARN("only found %d/%d ik solutions\n", nsampled, nSeedIkSolutions);
-                }
-            }
-        }
-        else {
-            FOREACH(ittrans, listgoals) {
-                if( pmanip->FindIKSolution(*ittrans, viksolution, true) ) {
-                    stringstream s;
-                    s << "ik sol: ";
-                    FOREACH(it, viksolution) {
-                        s << *it << " ";
-                    }
-                    s << endl;
-                    RAVELOG_DEBUG(s.str());
-                    armgoals.insert(armgoals.end(), viksolution.begin(), viksolution.end());
-                }
-            }
-        }
-
-        if( armgoals.size() == 0 ) {
-            RAVELOG_WARN("No IK Solution found\n");
-            return false;
-        }
-
-        RAVELOG_INFO(str(boost::format("MoveToHandPosition found %d solutions\n")%(armgoals.size()/pmanip->GetArmIndices().size())));
     
         robot->SetActiveDOFs(pmanip->GetArmIndices(), affinedofs);
         params->SetRobotActiveJoints(robot);
@@ -736,21 +697,23 @@ protected:
 
         robot->SetActiveDOFs(pmanip->GetArmIndices(), 0);
 
-        vector<dReal> vgoals;
-        params->vgoalconfig.reserve(armgoals.size());
-        for(int i = 0; i < (int)armgoals.size(); i += pmanip->GetArmIndices().size()) {
-            vector<dReal> v(armgoals.begin()+i,armgoals.begin()+i+pmanip->GetArmIndices().size());
-            robot->SetActiveDOFValues(v);
-            robot->SetActiveDOFs(pmanip->GetArmIndices(), affinedofs);
-
-            if( CM::JitterActiveDOF(robot,5000,0.03,params->_neighstatefn) ) {
-                robot->GetActiveDOFValues(vgoals);
-                params->vgoalconfig.insert(params->vgoalconfig.end(), vgoals.begin(), vgoals.end());
+        vector<dReal> vgoal;
+        planningutils::ManipulatorIKGoalSampler goalsampler(pmanip, listgoals);
+        params->vgoalconfig.reserve(nSeedIkSolutions*robot->GetActiveDOF());
+        while(nSeedIkSolutions > 0) {
+            if( goalsampler.Sample(vgoal) ) {
+                if( constrainterrorthresh > 0 && !CM::JitterActiveDOF(robot,5000,0.03,params->_neighstatefn) ) {
+                    RAVELOG_DEBUG("constraint function failed\n");
+                    continue;
+                }
+                params->vgoalconfig.insert(params->vgoalconfig.end(), vgoal.begin(), vgoal.end());
+                --nSeedIkSolutions;
             }
             else {
-                RAVELOG_DEBUG("constraint function failed for goal %d\n",i);
+                --nSeedIkSolutions;
             }
         }
+        params->_samplegoalfn = boost::bind(&planningutils::ManipulatorIKGoalSampler::Sample,&goalsampler,_1);
 
         if( params->vgoalconfig.size() == 0 ) {
             RAVELOG_WARN("jitter failed for goal\n");
@@ -868,8 +831,8 @@ protected:
             }
         }
 
+        RobotBase::RobotStateSaver saver(robot);
         uint32_t starttime = GetMilliTime();
-
         if( CM::JitterActiveDOF(robot) == 0 ) {
             RAVELOG_WARN("failed to jitter robot out of collision\n");
         }
@@ -902,7 +865,7 @@ protected:
 
     bool JitterActive(ostream& sout, istream& sinput)
     {
-        RAVELOG_DEBUG("Starting ReleaseFingers...\n");
+        RAVELOG_DEBUG("Starting JitterActive...\n");
         bool bExecute = true, bOutputFinal=false;
         boost::shared_ptr<ostream> pOutputTrajStream;
         string cmd;
@@ -1047,10 +1010,81 @@ protected:
         return true;
     }
 
+    bool _ValidateTrajectory(ostream& sout, istream& sinput)
+    {
+        TrajectoryBasePtr ptraj;
+        dReal samplingstep = 0.001;
+        bool bRecomputeTiming = false;
+        string cmd;
+        while(!sinput.eof()) {
+            sinput >> cmd;
+            if( !sinput ) {
+                break;
+            }
+            std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
+
+            if( cmd == "stream" ) {
+                ptraj = RaveCreateTrajectory(GetEnv(),robot->GetDOF());
+                if( !ptraj->Read(sinput,robot) ) {
+                    return false;
+                }
+            }
+            else if( cmd == "resettiming" ) {
+                sinput >> bRecomputeTiming;
+            }
+            else if( cmd == "resettrans" ) {
+                bool bReset = false;
+                sinput >> bReset;
+                if( bReset ) {
+                    FOREACH(it,ptraj->GetPoints()) {
+                        it->trans = robot->GetTransform();
+                    }
+                }
+            }
+            else if( cmd == "samplingstep" ) {
+                sinput >> samplingstep;
+            }
+            else {
+                RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
+                break;
+            }
+            if( !sinput ) {
+                RAVELOG_ERROR(str(boost::format("failed processing command %s\n")%cmd));
+                return false;
+            }
+        }
+        
+        if( !ptraj ) {
+            return false;
+        }
+
+        if( bRecomputeTiming || ptraj->GetTotalDuration() == 0 ) {
+            ptraj->CalcTrajTiming(robot,ptraj->GetInterpMethod(),true,false);
+        }
+
+        RobotBase::RobotStateSaver saver(robot);
+        CollisionReportPtr preport(new CollisionReport());
+
+        for(dReal t = 0; t <= ptraj->GetTotalDuration(); t += samplingstep) {
+            TrajectoryBase::TPOINT tp;
+            ptraj->SampleTrajectory(t,tp);
+            robot->SetDOFValues(tp.q, tp.trans,true);
+            if( GetEnv()->CheckCollision(robot,preport) ) {
+                RAVELOG_WARN(str(boost::format("CheckCollision failed at time %f")%t));
+                return false;
+            }
+            if( robot->CheckSelfCollision(preport) ) {
+                RAVELOG_WARN(str(boost::format("CheckSelfCollision failed at time %f")%t));
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     bool GrabBody(ostream& sout, istream& sinput)
     {
         RAVELOG_WARN("BaseManipulation GrabBody command is deprecated. Use Robot::Grab (11/03/07)\n");
-
         KinBodyPtr ptarget;
 
         string cmd;

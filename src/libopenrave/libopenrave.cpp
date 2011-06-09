@@ -31,6 +31,7 @@
 #include <locale>
 
 #include "plugindatabase.h"
+#include <openrave/planningutils.h>
 
 namespace OpenRAVE {
 
@@ -987,199 +988,14 @@ std::ostream& operator<<(std::ostream& O, const PlannerBase::PlannerParameters& 
     return O;
 }
 
-class LineCollisionConstraint
-{
- public:
-    LineCollisionConstraint() {
-        _report.reset(new CollisionReport());
-    }
-    bool Check(PlannerBase::PlannerParametersWeakPtr _params, RobotBasePtr robot, const vector<dReal>& pQ0, const vector<dReal>& pQ1, IntervalType interval, PlannerBase::ConfigurationListPtr pvCheckedConfigurations)
-    {
-        // set the bounds based on the interval type
-        PlannerBase::PlannerParametersPtr params = _params.lock();
-        if( !params ) {
-            return false;
-        }
-        int start=0;
-        bool bCheckEnd=false;
-        switch (interval) {
-        case IT_Open:
-            start = 1;  bCheckEnd = false;
-            break;
-        case IT_OpenStart:
-            start = 1;  bCheckEnd = true;
-            break;
-        case IT_OpenEnd:
-            start = 0;  bCheckEnd = false;
-            break;
-        case IT_Closed:
-            start = 0;  bCheckEnd = true;
-            break;
-        default:
-            BOOST_ASSERT(0);
-        }
-        
-        // first make sure the end is free
-        vtempconfig.resize(params->GetDOF());
-        if (bCheckEnd) {
-            params->_setstatefn(pQ1);
-            if (robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot)) || (robot->CheckSelfCollision()) ) {
-                if( !!pvCheckedConfigurations ) {
-                    pvCheckedConfigurations->push_back(pQ1);
-                }
-                return false;
-            }
-        }
-
-        // compute  the discretization
-        dQ = pQ1;
-        params->_diffstatefn(dQ,pQ0);
-        int i, numSteps = 1;
-        vector<dReal>::const_iterator itres = params->_vConfigResolution.begin();
-        int totalsteps = 0;
-        for (i = 0; i < params->GetDOF(); i++,itres++) {
-            int steps;
-            if( *itres != 0 ) {
-                steps = (int)(fabs(dQ[i]) / *itres);
-            }
-            else {
-                steps = (int)(fabs(dQ[i]) * 100);
-            }
-            totalsteps += steps;
-            if (steps > numSteps) {
-                numSteps = steps;
-            }
-        }
-        if( totalsteps == 0 && start > 0 ) {
-            return true;
-        }
-
-        dReal fisteps = dReal(1.0f)/numSteps;
-        FOREACH(it,dQ) {
-            *it *= fisteps;
-        }
-        // check for collision along the straight-line path
-        // NOTE: this does not check the end config, and may or may
-        // not check the start based on the value of 'start'
-        for (i = 0; i < params->GetDOF(); i++) {
-            vtempconfig[i] = pQ0[i];
-        }
-        if( start > 0 ) {
-            params->_neighstatefn(vtempconfig, dQ,0);
-        }
-        for (int f = start; f < numSteps; f++) {
-            params->_setstatefn(vtempconfig);
-            if( !!pvCheckedConfigurations ) {
-                if( !!params->_getstatefn ) {
-                    params->_getstatefn(vtempconfig); // query again in order to get normalizations/joint limits
-                }
-                pvCheckedConfigurations->push_back(vtempconfig);
-            }
-            if( robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot)) || (robot->CheckSelfCollision()) ) {
-                return false;
-            }
-            params->_neighstatefn(vtempconfig,dQ,0);
-        }
-
-        if( bCheckEnd && !!pvCheckedConfigurations ) {
-            pvCheckedConfigurations->push_back(pQ1);
-        }
-        return true;
-    }
-
-protected:
-    vector<dReal> vtempconfig, dQ;
-    CollisionReportPtr _report;
-};
-
-class SimpleDistMetric
-{
- public:
-    SimpleDistMetric(RobotBasePtr robot) : _robot(robot) {
-        _robot->GetActiveDOFWeights(weights2);
-        FOREACH(it,weights2) {
-            *it *= *it;
-        }
-    }
-    virtual dReal Eval(const std::vector<dReal>& c0, const std::vector<dReal>& c1)
-    {
-        std::vector<dReal> c = c0;
-        _robot->SubtractActiveDOFValues(c,c1);
-        dReal dist = 0;
-        for(int i=0; i < _robot->GetActiveDOF(); i++) {
-            dist += weights2.at(i)*c.at(i)*c.at(i);
-        }
-        return RaveSqrt(dist);
-    }
-
- protected:
-    RobotBasePtr _robot;
-    vector<dReal> weights2;
-};
-
-class NeighSampleFunction
-{
-public:
-    NeighSampleFunction(SpaceSamplerBasePtr psampler, const boost::function<dReal(const std::vector<dReal>&, const std::vector<dReal>&)>& distmetricfn) : _psampler(psampler), _distmetricfn(distmetricfn) {}
-
-    virtual bool SampleNeigh(vector<dReal>& vNewSample, const vector<dReal>& vCurSample, dReal fRadius)
-    {
-        _psampler->SampleSequence(vNewSample);
-        size_t dof = vCurSample.size();
-        BOOST_ASSERT(dof==vNewSample.size() && &vNewSample != &vCurSample);
-        dReal fDist = _distmetricfn(vNewSample,vCurSample);
-        while(fDist > fRadius) {
-            for (size_t i = 0; i < dof; i++) {
-                vNewSample[i] = 0.5f*vCurSample[i]+0.5f*vNewSample[i];
-            }
-            fDist = _distmetricfn(vNewSample,vCurSample);
-        }
-        for(int iter = 0; iter < 20; ++iter) {
-            for (size_t i = 0; i < dof; i++) {
-                vNewSample[i] = 1.2f*vNewSample[i]-0.2f*vCurSample[i];
-            }
-            if(_distmetricfn(vNewSample, vCurSample) > fRadius ) {
-                // take the previous
-                for (size_t i = 0; i < dof; i++) {
-                    vNewSample[i] = 0.833333333333333f*vNewSample[i]-0.16666666666666669*vCurSample[i];
-                }
-                break;
-            }
-        }
-
-//        vNewSample.resize(lower.size());
-//        for (size_t i = 0; i < dof; i++) {
-//            if( sample[i] < lower[i] ) {
-//                vNewSample[i] = lower[i];
-//            }
-//            else if( sample[i] > upper[i] ) {
-//                vNewSample[i] = upper[i];
-//            }
-//            else {
-//                vNewSample[i] = sample[i];
-//            }
-//        }
-
-        return true;
-    }
-
-    bool Sample(std::vector<dReal>& samples)
-    {
-        _psampler->SampleSequence(samples,1,IT_Closed);
-        return samples.size()>0;
-    }
-
-    SpaceSamplerBasePtr _psampler;
-    boost::function<dReal(const std::vector<dReal>&, const std::vector<dReal>&)> _distmetricfn;
-};
-
 void PlannerBase::PlannerParameters::SetRobotActiveJoints(RobotBasePtr robot)
 {
-    _distmetricfn = boost::bind(&SimpleDistMetric::Eval,boost::shared_ptr<SimpleDistMetric>(new SimpleDistMetric(robot)),_1,_2);
+    using namespace planningutils;
+    _distmetricfn = boost::bind(&SimpleDistanceMetric::Eval,boost::shared_ptr<SimpleDistanceMetric>(new SimpleDistanceMetric(robot)),_1,_2);
     SpaceSamplerBasePtr pconfigsampler = RaveCreateSpaceSampler(robot->GetEnv(),str(boost::format("robotconfiguration %s")%robot->GetName()));
-    boost::shared_ptr<NeighSampleFunction> defaultsamplefn(new NeighSampleFunction(pconfigsampler,_distmetricfn));
-    _samplefn = boost::bind(&NeighSampleFunction::Sample,defaultsamplefn,_1);
-    _sampleneighfn = boost::bind(&NeighSampleFunction::SampleNeigh,defaultsamplefn,_1,_2,_3);
+    boost::shared_ptr<SimpleNeighborhoodSampler> defaultsamplefn(new SimpleNeighborhoodSampler(pconfigsampler,_distmetricfn));
+    _samplefn = boost::bind(&SimpleNeighborhoodSampler::Sample,defaultsamplefn,_1);
+    _sampleneighfn = boost::bind(&SimpleNeighborhoodSampler::Sample,defaultsamplefn,_1,_2,_3);
     _setstatefn = boost::bind(&RobotBase::SetActiveDOFValues,robot,_1,false);
     _getstatefn = boost::bind(&RobotBase::GetActiveDOFValues,robot,_1);
     _diffstatefn = boost::bind(&RobotBase::SubtractActiveDOFValues,robot,_1,_2);

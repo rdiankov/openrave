@@ -220,11 +220,11 @@ Planner Parameters\n\
 
         listtransforms.push_back(tlasttrans);
         
+        _vchildlinks.resize(0);
         if( _iktype == IkParameterization::Type_Transform6D ) {
             // disable all child links since we've already checked their collision
-            vector<KinBody::LinkPtr> vlinks;
-            _manip->GetChildLinks(vlinks);
-            FOREACH(it,vlinks) {
+            _manip->GetChildLinks(_vchildlinks);
+            FOREACH(it,_vchildlinks) {
                 (*it)->Enable(false);
             }
         }
@@ -328,11 +328,7 @@ protected:
     }
 
     IkFilterReturn _ValidateSolution(std::vector<dReal>& vsolution, RobotBase::ManipulatorPtr pmanip, const IkParameterization& ikp)
-    {
-        if( !_parameters->_checkpathconstraintsfn(_vprevsolution.size() > 0 ? _vprevsolution : vsolution, vsolution,IT_Open,ConfigurationListPtr()) ) {
-            return IKFR_Reject;
-        }
-        
+    {        
         // check if continuous with previous solution using the jacobian
         if( _mjacobian.num_elements() > 0 ) {
             Vector expecteddeltatrans;
@@ -404,13 +400,26 @@ protected:
                 }
             }
         }
-
-        if( _filteroptions & IKFO_CheckEnvCollisions ) {
-            if( _vprevsolution.size() > 0 ) {
-                // check rest of environment collisions
-                if( !_parameters->_checkpathconstraintsfn(_vprevsolution,vsolution,IT_Open,ConfigurationListPtr()) ) {
+        else {
+            // should be very close to _vprevsolution
+            dReal fmaxdist = 0;
+            for(size_t i = 0; i < _vprevsolution.size(); ++i) {
+                if( RaveFabs(_vprevsolution[i]-vsolution.at(i)) > 0.1f ) {
                     return IKFR_Reject;
                 }
+            }
+        }
+
+        if( _filteroptions & IKFO_CheckEnvCollisions ) {
+            // check rest of environment collisions
+            FOREACH(it,_vchildlinks) {
+                (*it)->Enable(true);
+            }
+            if( !_parameters->_checkpathconstraintsfn(_vprevsolution.size() > 0 ? _vprevsolution : vsolution, vsolution,IT_Open,ConfigurationListPtr()) ) {
+                return IKFR_Reject;
+            }
+            FOREACH(it,_vchildlinks) {
+                (*it)->Enable(false);
             }
         }
         return IKFR_Success;
@@ -423,6 +432,7 @@ protected:
     dReal _fMaxCosDeviationAngle;
     int _filteroptions;
     IkParameterization::Type _iktype;
+    vector<KinBody::LinkPtr> _vchildlinks;
 
     // planning state
     Transform _tbaseinv;

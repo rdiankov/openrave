@@ -1114,7 +1114,7 @@ Task-based manipulation planning involving target objects. A lot of the algorith
 
     bool ReleaseFingers(ostream& sout, istream& sinput)
     {
-        RAVELOG_DEBUG("Starting ReleaseFingers...\n");
+        RAVELOG_VERBOSE("Starting ReleaseFingers...\n");
         bool bExecute = true, bOutputFinal=false;
         string strtrajfilename;
         boost::shared_ptr<ostream> pOutputTrajStream;
@@ -1129,8 +1129,9 @@ Task-based manipulation planning involving target objects. A lot of the algorith
         string cmd;
         while(!sinput.eof()) {
             sinput >> cmd;
-            if( !sinput )
+            if( !sinput ) {
                 break;
+            }
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
 
             if( cmd == "execute" ) {
@@ -1150,8 +1151,9 @@ Task-based manipulation planning involving target objects. A lot of the algorith
                 bOutputFinal = true;
             }
             else if( cmd == "movingdir" ) {
-                FOREACH(it,graspparams->vgoalconfig)
+                FOREACH(it,graspparams->vgoalconfig) {
                     sinput >> *it;
+                }
             }
             else if( cmd == "coarsestep" ) {
                 sinput >> graspparams->fcoarsestep;
@@ -1228,18 +1230,20 @@ Task-based manipulation planning involving target objects. A lot of the algorith
             }
         }
 
-        if( !!ptarget )
+        if( !!ptarget ) {
             _robot->Release(ptarget);
-
+            _robot->SetActiveDOFValues(ptraj->GetPoints().back().q);
+            if( GetEnv()->CheckCollision(KinBodyConstPtr(_robot),ptarget) ) {
+                RAVELOG_WARN(str(boost::format("even after releasing, in collision with target %s")%_robot->GetName()));
+            }
+        }
         CM::SetActiveTrajectory(_robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream,_fMaxVelMult);
-
         return true;
     }
 
     bool ReleaseActive(ostream& sout, istream& sinput)
     {
-        RAVELOG_DEBUG("Releasing active...\n");
-
+        RAVELOG_VERBOSE("Releasing active...\n");
         bool bExecute = true, bOutputFinal = false;
         string strtrajfilename;
         boost::shared_ptr<ostream> pOutputTrajStream;
@@ -1471,7 +1475,7 @@ protected:
     inline boost::shared_ptr<TaskManipulation> shared_problem() { return boost::static_pointer_cast<TaskManipulation>(shared_from_this()); }
     inline boost::shared_ptr<TaskManipulation const> shared_problem_const() const { return boost::static_pointer_cast<TaskManipulation const>(shared_from_this()); }
 
-    TrajectoryBasePtr _MoveArm(const vector<int>& activejoints, const vector<dReal>& activegoalconfig, int& nGoalIndex, int nMaxIterations)
+    TrajectoryBasePtr _MoveArm(const vector<int>& activejoints, const PlannerBase::PlannerParameters::SampleGoalFn& samplegoalfn, int& nGoalIndex, int nMaxIterations)
     {
         RAVELOG_DEBUG("Starting MoveArm...\n");
         BOOST_ASSERT( !!_pRRTPlanner );
@@ -1480,11 +1484,6 @@ protected:
 
         if( activejoints.size() == 0 ) {
             RAVELOG_WARN("move arm failed\n");
-            return ptraj;
-        }
-
-        if( (activegoalconfig.size()%activejoints.size()) != 0 ) {
-            RAVELOG_WARN(str(boost::format("Active goal configurations not a multiple (%d/%d)\n")%activegoalconfig.size()%activejoints.size()));
             return ptraj;
         }
 
@@ -1500,28 +1499,32 @@ protected:
         _robot->GetActiveDOFValues(pzero);
 
         // make sure the initial and goal configs are not in collision
-        params->vgoalconfig.reserve(activegoalconfig.size());
-        vector<dReal> vgoals;
-
-        for(int i = 0; i < (int)activegoalconfig.size(); i += activejoints.size()) {
-            _robot->SetActiveDOFValues(vector<dReal>(activegoalconfig.begin()+i,activegoalconfig.begin()+i+_robot->GetActiveDOF()), true);
-
-            // jitter only the manipulator! (jittering the hand causes big probs)
-            if( CM::JitterActiveDOF(_robot) ) {
-                _robot->GetActiveDOFValues(vgoals);
-                params->vgoalconfig.insert(params->vgoalconfig.end(), vgoals.begin(), vgoals.end());
+        int nSeedIkSolutions = 8;
+        vector<dReal> vgoal;
+        params->vgoalconfig.reserve(nSeedIkSolutions*_robot->GetActiveDOF());
+        while(nSeedIkSolutions > 0) {
+            if( samplegoalfn(vgoal) ) {
+                params->vgoalconfig.insert(params->vgoalconfig.end(), vgoal.begin(), vgoal.end());
+                --nSeedIkSolutions;
+            }
+            else {
+                --nSeedIkSolutions;
             }
         }
 
-        if( params->vgoalconfig.size() == 0 )
+        if( params->vgoalconfig.size() == 0 ) {
             return ptraj;
+        }
 
+        params->_samplegoalfn = samplegoalfn;
+        
         // restore
         _robot->SetActiveDOFValues(pzero);
     
         // jitter again for initial collision
-        if( !CM::JitterActiveDOF(_robot) )
+        if( !CM::JitterActiveDOF(_robot) ) {
             return ptraj;
+        }
 
         _robot->GetActiveDOFValues(params->vinitialconfig);
         ptraj = RaveCreateTrajectory(GetEnv(),_robot->GetActiveDOF());
@@ -1544,12 +1547,18 @@ protected:
             if( _pRRTPlanner->PlanPath(ptraj, boost::shared_ptr<ostream>(&ss,null_deleter())) ) {
                 ptraj->CalcTrajTiming(_robot, ptraj->GetInterpMethod(), true, true,_fMaxVelMult);
                 ss >> nGoalIndex; // extract the goal index
-                BOOST_ASSERT( nGoalIndex >= 0 && nGoalIndex < (int)params->vgoalconfig.size()/(int)activejoints.size() );
+                if( !ss ) {
+                    RAVELOG_WARN("failed to extract goal index\n");
+                }
+                else {
+                    RAVELOG_INFO(str(boost::format("finished planning, goal index: %d")%nGoalIndex));
+                }
                 bSuccess = true;
-                RAVELOG_INFO("finished planning, goal index: %d\n", nGoalIndex);
                 break;
             }
-            else RAVELOG_WARN("PlanPath failed\n");
+            else {
+                RAVELOG_WARN("PlanPath failed\n");
+            }
         }
     
         if( !bSuccess ) {
@@ -1607,28 +1616,22 @@ protected:
             RAVELOG_WARN("no preshape trajectory!");
         }
 
-        vector<dReal> vgoalconfigs;
+        std::list<IkParameterization> listgoals;
         FOREACH(itgoal, listgraspsused) {
-            BOOST_ASSERT( itgoal->viksolution.size() == pmanip->GetArmIndices().size() );
-            vgoalconfigs.insert(vgoalconfigs.end(), itgoal->viksolution.begin(), itgoal->viksolution.end());
-
-            int nsampled = CM::SampleIkSolutions(_robot, itgoal->tgrasp, nSeedIkSolutions, vgoalconfigs);
-            if( nsampled != nSeedIkSolutions ) {
-                RAVELOG_WARN("warning, only found %d/%d ik solutions. goal indices will be wrong!\n", nsampled, nSeedIkSolutions);
-                // fill the rest
-                while(nsampled++ < nSeedIkSolutions)
-                    vgoalconfigs.insert(vgoalconfigs.end(), itgoal->viksolution.begin(), itgoal->viksolution.end());
-            }
+            listgoals.push_back(IkParameterization(itgoal->tgrasp, IkParameterization::Type_Transform6D));
         }
+        planningutils::ManipulatorIKGoalSampler goalsampler(pmanip, listgoals);
                 
-        int nGraspIndex = 0;
-        ptraj = _MoveArm(pmanip->GetArmIndices(), vgoalconfigs, nGraspIndex, nMaxIterations);
-        if (!ptraj )
+        int nGoalIndex = -1;
+        ptraj = _MoveArm(pmanip->GetArmIndices(), boost::bind(&planningutils::ManipulatorIKGoalSampler::Sample,&goalsampler,_1), nGoalIndex, nMaxIterations);
+        if (!ptraj ) {
             return ptraj;
+        }
 
+        int nGraspIndex = goalsampler.GetIkParameterizationIndex(nGoalIndex);
+        BOOST_ASSERT( nGraspIndex >= 0 && nGraspIndex < (int)listgraspsused.size() );
         list<GRASPGOAL>::iterator it = listgraspsused.begin();
-        BOOST_ASSERT( nGraspIndex >= 0 && nGraspIndex/(1+nSeedIkSolutions) < (int)listgraspsused.size() );
-        advance(it,nGraspIndex/(1+nSeedIkSolutions));
+        advance(it,nGraspIndex);
         goalfound = *it;
 
         TrajectoryBasePtr pfulltraj = RaveCreateTrajectory(GetEnv(),_robot->GetDOF());

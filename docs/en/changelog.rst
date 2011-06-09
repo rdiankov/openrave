@@ -41,6 +41,17 @@ Planning
 
 * added a _fromgoal parameter to PlannerParameters::_neighstatefn so users can know which direction the tree is growing in.
 
+* added a new **openrave/planningutils.h** file that contains many functions/heuristics to help users build planning algorithms.
+
+ * LineCollisionConstraint
+ * SimpleDistanceMetric
+ * SimpleNeighborhoodSampler
+ * ManipulatorIKGoalSampler
+
+* added ValidateTrajectory command in BaseManipulation
+
+* fixed major bug in WorkspaceTrajectoryTracker (ie MoveHandStraight) due to obstacle checking
+
 Inverse Kinematics
 ------------------
 

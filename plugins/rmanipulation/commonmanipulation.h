@@ -29,35 +29,9 @@
 
 class CM
 {
- public:
-    class SimpleDistMetric
-    {
-    public:
-    SimpleDistMetric(RobotBasePtr robot) : _robot(robot) {
-            _robot->GetActiveDOFWeights(weights);
-            FOREACH(it,weights) {
-                *it *= *it;
-            }
-        }
-        virtual dReal Eval(const std::vector<dReal>& c0, const std::vector<dReal>& c1)
-        {
-            std::vector<dReal> c = c0;
-            _robot->SubtractActiveDOFValues(c,c1);
-            dReal dist = 0;
-            for(int i=0; i < _robot->GetActiveDOF(); i++) {
-                dist += weights.at(i)*c.at(i)*c.at(i);
-            }
-            return RaveSqrt(dist);
-        }
-
-    protected:
-        RobotBasePtr _robot;
-        vector<dReal> weights;
-    };
-
-    /// \return 0 if jitter failed and robot is in collision, -1 if robot originally not in collision, 1 if jitter succeeded
-    typedef boost::function<bool(std::vector<dReal>&, const std::vector<dReal>&, int)> NeighStateFn;
-    static int JitterActiveDOF(RobotBasePtr robot,int nMaxIterations=5000,dReal fRand=0.03f,const NeighStateFn& neighstatefn = NeighStateFn())
+public:
+    /// \brief Return 0 if jitter failed and robot is in collision, -1 if robot originally not in collision, 1 if jitter succeeded
+    static int JitterActiveDOF(RobotBasePtr robot,int nMaxIterations=5000,dReal fRand=0.03f,const PlannerBase::PlannerParameters::NeighStateFn& neighstatefn = PlannerBase::PlannerParameters::NeighStateFn())
     {
         RAVELOG_VERBOSE("starting jitter active dof...\n");
         vector<dReal> curdof, newdof;
@@ -93,8 +67,9 @@ class CM
         newdof.resize(curdof.size());
         do {
             if( iter++ > nMaxIterations ) {
-                RAVELOG_WARN("Failed to find noncolliding position for robot\n");
                 robot->SetActiveDOFValues(curdof,true);
+                robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot),preport) || robot->CheckSelfCollision(preport);
+                RAVELOG_WARN(str(boost::format("Failed to find noncolliding position for robot: %s\n")%report.__str__()));
                 return 0;
             }
             if( bCollision ) {
@@ -138,59 +113,6 @@ class CM
         return true;
     }
 
-    /// Samples numsamples of solutions and each solution to vsolutions
-    /// \return number of ik solutions sampled
-    static int SampleIkSolutions(RobotBasePtr robot, const IkParameterization& ikp, int numsamples, vector<dReal>& vsolutions)
-    {
-        RobotBase::ManipulatorConstPtr pmanip = robot->GetActiveManipulator();
-        if( numsamples <= 0 ) {
-            return 0;
-        }
-        // quickly prune grasp is end effector is in collision
-        if( ikp.GetType() == IkParameterization::Type_Transform6D ) {
-            CollisionReportPtr report(new CollisionReport());
-            if( pmanip->CheckEndEffectorCollision(ikp.GetTransform6D(),report) ) {
-                RAVELOG_VERBOSE(str(boost::format("sampleiksolutions gripper in collision: %s.\n")%report->__str__()));
-                return 0;
-            }
-        }
-
-        int _numsamples = numsamples;
-
-        vector< vector<dReal> > viksolutions;
-        vector<dReal> vfree(pmanip->GetIkSolver()->GetNumFreeParameters());
-        for(int iter = 0; iter < 50*numsamples; ++iter) {
-            for(int i = 0; i < (int)vfree.size(); ++i) {
-                vfree[i] = RaveRandomFloat();
-            }
-            if( pmanip->FindIKSolutions(ikp, vfree, viksolutions, true) ) {
-                FOREACH(itsol, viksolutions) {
-                    vsolutions.insert(vsolutions.end(), itsol->begin(), itsol->end());
-                    if( --_numsamples <= 0 ) {
-                        return numsamples;
-                    }
-                }
-            }
-        }
-        
-        bool bSuccess = pmanip->FindIKSolutions(ikp, viksolutions, true);
-        if( !bSuccess || viksolutions.size() == 0 ) {
-            //RAVELOG_WARN("findiksolutions returns nothing\n");
-            return false;
-        }
-
-        while(1) {
-            FOREACH(itsol, viksolutions) {
-                vsolutions.insert(vsolutions.end(), itsol->begin(), itsol->end());
-                if( --_numsamples <= 0 ) {
-                    return numsamples;
-                }
-            }
-        }
-
-        return numsamples-_numsamples;
-    }
-
     class MoveUnsync
     {
     public:
@@ -203,7 +125,7 @@ class CM
         virtual float Eval(const std::vector<dReal>& pConfiguration)
         {    
             // check if there's a collision when hand moves to final config
-            RobotBase::RobotStateSaver saver(_robot);            
+            RobotBase::RobotStateSaver saver(_robot);
             _robot->SetActiveDOFValues(pConfiguration);
             
             _robot->SetActiveDOFs(vhandjoints);
@@ -644,7 +566,6 @@ class CM
         tri = *pcur;
     }
 };
-
 
 /// returns a random sequence of permuations
 template <class T> void PermutateRandomly(vector<T>& vpermutation)

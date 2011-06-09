@@ -63,7 +63,7 @@ Mersenne twister sampling algorithm that is based on matrix linear recurrence ov
         init_genrand(seed);
     }
 
-    void SetSpaceDOF(int dof) { _dof = dof; }
+    void SetSpaceDOF(int dof) { BOOST_ASSERT(dof > 0); _dof = dof; }
     int GetDOF() const { return _dof; }
     int GetNumberOfValues() const { return _dof; }
 

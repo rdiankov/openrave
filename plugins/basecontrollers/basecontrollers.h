@@ -18,11 +18,16 @@
 
 class IdealController : public ControllerBase
 {
- public:
-    IdealController(EnvironmentBasePtr penv) : ControllerBase(penv), cmdid(0), _bPause(false), _bIsDone(true) {
+public:
+    IdealController(EnvironmentBasePtr penv) : ControllerBase(penv), cmdid(0), _bPause(false), _bIsDone(true), _bCheckCollision(false), _bThrowExceptions(false)
+    {
         __description = ":Interface Author: Rosen Diankov\n\nIdeal controller used for planning and non-physics simulations. Forces exact robot positions.";
         RegisterCommand("Pause",boost::bind(&IdealController::_Pause,this,_1,_2),
-                        "pauses the controller from reacting to commands");
+                        "pauses the controller from reacting to commands ");
+        RegisterCommand("SetCheckCollisions",boost::bind(&IdealController::_SetCheckCollisions,this,_1,_2),
+                        "If set, will check if the robot gets into a collision during movement");
+        RegisterCommand("SetThrowExceptions",boost::bind(&IdealController::_SetThrowExceptions,this,_1,_2),
+                        "If set, will throw exceptions instead of print warnings");
         fTime = 0;
         _fSpeed = 1;
         _nControlTransformation = 0;
@@ -167,6 +172,19 @@ private:
         is >> _bPause;
         return !!is;
     }
+    virtual bool _SetCheckCollisions(std::ostream& os, std::istream& is)
+    {
+        is >> _bCheckCollision;
+        if( _bCheckCollision ) {
+            _report.reset(new CollisionReport());
+        }
+        return !!is;
+    }
+    virtual bool _SetThrowExceptions(std::ostream& os, std::istream& is)
+    {
+        is >> _bThrowExceptions;
+        return !!is;
+    }
 
     inline boost::shared_ptr<IdealController> shared_controller() { return boost::static_pointer_cast<IdealController>(shared_from_this()); }
     inline boost::shared_ptr<IdealController const> shared_controller_const() const { return boost::static_pointer_cast<IdealController const>(shared_from_this()); }
@@ -194,6 +212,7 @@ private:
         _CheckLimits(curvalues);
         _probot->SetDOFValues(curvalues,true);
         _probot->SetDOFVelocities(curvel,linearvel,angularvel);
+        _CheckConfiguration();
     }
     virtual void _SetDOFValues(const std::vector<dReal>& values, const Transform& t)
     {
@@ -209,17 +228,40 @@ private:
         _CheckLimits(curvalues);
         _probot->SetDOFValues(curvalues,t, true);
         _probot->SetDOFVelocities(curvel,Vector(),Vector());
+        _CheckConfiguration();
     }
     
     void _CheckLimits(std::vector<dReal>& curvalues)
     {
         for(size_t i = 0; i < _vlower.size(); ++i) {
             if( curvalues.at(i) < _vlower[i]-5e-5f ) {
-                RAVELOG_WARN(str(boost::format("robot %s dof %d is violating lower limit %s < %s")%_probot->GetName()%i%_vlower[i]%curvalues[i]));
+                _ReportError(str(boost::format("robot %s dof %d is violating lower limit %s < %s")%_probot->GetName()%i%_vlower[i]%curvalues[i]));
             }
             if( curvalues.at(i) > _vupper[i]+5e-5f ) {
-                RAVELOG_WARN(str(boost::format("robot %s dof %d is violating upper limit %s > %s")%_probot->GetName()%i%_vupper[i]%curvalues[i]));
+                _ReportError(str(boost::format("robot %s dof %d is violating upper limit %s > %s")%_probot->GetName()%i%_vupper[i]%curvalues[i]));
             }
+        }
+    }
+    
+    void _CheckConfiguration()
+    {
+        if( _bCheckCollision ) {
+            if( GetEnv()->CheckCollision(_probot,_report) ) {
+                _ReportError(str(boost::format("collsion in trajectory: %s\n")%_report->__str__()));
+            }
+            if( _probot->CheckSelfCollision(_report) ) {
+                _ReportError(str(boost::format("self collsion in trajectory: %s\n")%_report->__str__()));
+            }
+        }
+    }
+    
+    void _ReportError(const std::string& s)
+    {
+        if( _bThrowExceptions ) {
+            throw openrave_exception(s,ORE_Assert);
+        }
+        else {
+            RAVELOG_WARN(s);
         }
     }
 
@@ -237,8 +279,8 @@ private:
     int _nControlTransformation;
     ofstream flog;
     int cmdid;
-    bool _bPause;
-    bool _bIsDone;
+    bool _bPause, _bIsDone, _bCheckCollision, _bThrowExceptions;
+    CollisionReportPtr _report;
     boost::shared_ptr<void> _cblimits;
 };
 

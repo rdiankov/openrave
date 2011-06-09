@@ -70,15 +70,17 @@ Uses the Rapidly-Exploring Random Trees Algorithm.\n\
 
         typename list<Node*>::iterator startNode, endNode;
         ConfigurationListPtr listconfigs(new ConfigurationList());
-
+        SpaceSamplerBasePtr psampler = RaveCreateSpaceSampler(GetEnv(),"mt19937");
+        std::vector<uint32_t> vindexsamples;
         int nrejected = 0;
         int i = numiterations;
         while(i > 0 && nrejected < (int)path.size()+4 ) {
             --i;
 
             // pick a random node on the path, and a random jump ahead
-            int endIndex = 2+(RaveRandomInt()%((int)path.size()-2));
-            int startIndex = RaveRandomInt()%(endIndex-1);
+            psampler->SampleSequence(vindexsamples,2);
+            int endIndex = 2+(vindexsamples.at(0)%((int)path.size()-2));
+            int startIndex = vindexsamples.at(1)%(endIndex-1);
         
             startNode = path.begin();
             advance(startNode, startIndex);
@@ -94,7 +96,7 @@ Uses the Rapidly-Exploring Random Trees Algorithm.\n\
                 }
                 continue;
             }
-
+            
             ++startNode;
             FOREACHC(itc, *listconfigs) {
                 path.insert(startNode, _treeForward._nodes.at(_treeForward.AddNode(-1,*itc)));
@@ -147,32 +149,26 @@ public:
         _treeBackward._distmetricfn = _parameters->_distmetricfn;
     
         //read in all goals
-        int goal_index = 0;
-        int num_goals = 0;
-        vector<dReal> vgoal(_parameters->GetDOF());
+        _numgoals = 0;
+        if( (_parameters->vgoalconfig.size() % _parameters->GetDOF()) != 0 ) {
+            RAVELOG_ERROR("BirrtPlanner::InitPlan - Error: goals are improperly specified:\n");
+            _parameters.reset();
+            return false;
+        }
 
-        while(goal_index < (int)_parameters->vgoalconfig.size()) {
-            for(int i = 0 ; i < _parameters->GetDOF(); i++) {
-                if(goal_index < (int)_parameters->vgoalconfig.size())
-                    vgoal[i] = _parameters->vgoalconfig[goal_index];
-                else {
-                    RAVELOG_ERROR("BirrtPlanner::InitPlan - Error: goals are improperly specified:\n");
-                    _parameters.reset();
-                    return false;
-                }
-                goal_index++;
-            }
-        
+        vector<dReal> vgoal(_parameters->GetDOF());
+        for(size_t igoal = 0; igoal < (int)_parameters->vgoalconfig.size(); igoal += _parameters->GetDOF()) {
+            std::copy(_parameters->vgoalconfig.begin()+igoal,_parameters->vgoalconfig.begin()+igoal+_parameters->GetDOF(),vgoal.begin());
             if( _parameters->_checkpathconstraintsfn(vgoal,vgoal,IT_OpenStart,ConfigurationListPtr()) ) {
-                _treeBackward.AddNode(-num_goals-1, vgoal);
-                num_goals++;
+                _treeBackward.AddNode(-_numgoals-1, vgoal);
+                _numgoals++;
             }
             else {
-                RAVELOG_WARN("goal fails constraints\n");
+                RAVELOG_WARN(str(boost::format("goal %d fails constraints\n")%igoal));
             }
         }
     
-        if( num_goals == 0 && !_parameters->_samplegoalfn ) {
+        if( _numgoals == 0 && !_parameters->_samplegoalfn ) {
             RAVELOG_WARN("no goals specified\n");
             _parameters.reset();
             return false;
@@ -186,7 +182,6 @@ public:
         return true;
     }
 
-    /// \param pOutStream returns which goal was chosen
     virtual bool PlanPath(TrajectoryBasePtr ptraj, boost::shared_ptr<std::ostream> pOutStream)
     {
         if(!_parameters) {
@@ -216,7 +211,8 @@ public:
                 vector<dReal> vgoal;
                 if( _parameters->_samplegoalfn(vgoal) ) {
                     RAVELOG_VERBOSE("found goal\n");
-                    _treeBackward.AddNode(-10000,vgoal);
+                    _treeBackward.AddNode(-_numgoals-1,vgoal);
+                    _numgoals += 1;
                 }
             }
             if( !!_parameters->_sampleinitialfn ) {
@@ -295,7 +291,7 @@ public:
         }
 
         BOOST_ASSERT( goalindex >= 0 );
-        if( pOutStream != NULL ) {
+        if( !!pOutStream ) {
             *pOutStream << goalindex;
         }
         _SimpleOptimizePath(vecnodes,10);
@@ -318,6 +314,7 @@ public:
  protected:
     PlannerParametersPtr _parameters;
     SpatialTree< RrtPlanner<SimpleNode>, SimpleNode > _treeBackward;
+    int _numgoals;
 };
 
 class BasicRrtPlanner : public RrtPlanner<SimpleNode>
@@ -474,7 +471,7 @@ class BasicRrtPlanner : public RrtPlanner<SimpleNode>
         }
 
         _SimpleOptimizePath(vecnodes,10);
-        if( pOutStream != NULL ) {
+        if( !!pOutStream ) {
             *pOutStream << igoalindex;
         }
         Trajectory::TPOINT pt; pt.q.resize(_parameters->GetDOF());

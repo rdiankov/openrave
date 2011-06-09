@@ -57,6 +57,7 @@ Creates a box and then update the box's geometry dynamically.
       body.SetName('testbody')
       body.InitFromBoxes(numpy.array([[0,0,0,0.1,0.2,0.3]]),True) # set geometry as one box of extents 0.1, 0.2, 0.3
       env.AddKinBody(body)
+
   time.sleep(4) # sleep 4 seconds
   with env:
       env.Remove(body)

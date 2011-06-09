@@ -43,7 +43,15 @@ class BaseManipulation:
     def TrajFromData(self,data,resettrans=False,resettiming=False):
         """See :ref:`probleminstance-basemanipulation-traj`
         """
-        return self.prob.SendCommand('traj stream ' + data + ' %d %d '%(resettiming,resettiming))
+        return self.prob.SendCommand('traj stream ' + data + ' %d %d '%(resettrans,resettiming))
+    def ValidateTrajectory(self,data,resettrans=False,resettiming=False,samplingstep=None):
+        """See :ref:`probleminstance-basemanipulation-validatetrajectory`
+        """
+        cmd = 'ValidateTrajectory stream ' + data + ' resettiming %d resettiming %d '%(resettrans,resettiming)
+        if samplingstep is not None:
+            cmd += 'samplingstep %f '%samplingstep
+        return self.prob.SendCommand(cmd)
+    
     def MoveHandStraight(self,direction,minsteps=None,maxsteps=None,stepsize=None,ignorefirstcollision=None,starteematrix=None,greedysearch=True,execute=None,outputtraj=None,maxdeviationangle=None):
         """See :ref:`probleminstance-basemanipulation-movehandstraight`
         """

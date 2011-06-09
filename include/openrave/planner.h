@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2010 Rosen Diankov (rosen.diankov@gmail.com)
+// Copyright (C) 2006-2011 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -54,26 +54,28 @@ public:
         virtual void copy(boost::shared_ptr<PlannerParameters const> r);
 
         /// sets up the planner parameters to use the active joints of the robot
-        void SetRobotActiveJoints(RobotBasePtr robot);
+        virtual void SetRobotActiveJoints(RobotBasePtr robot);
 
         /// \brief Cost function on the state pace (optional).
         ///
-        /// cost = costfn(config)
+        /// cost = _costfn(config)
         /// \param cost the cost of being in the current state
-        boost::function<dReal(const std::vector<dReal>&)> _costfn;
+        typedef boost::function<dReal(const std::vector<dReal>&)> CostFn;
+        CostFn _costfn;
 
         /// \brief Goal heuristic function.(optional)
         ///
-        /// distance = goalfn(config)
+        /// distance = _goalfn(config)
         ///
         /// Goal is complete when returns 0
         /// \param distance - distance to closest goal
-        boost::function<dReal(const std::vector<dReal>&)> _goalfn;
+        typedef boost::function<dReal(const std::vector<dReal>&)> GoalFn;
+        GoalFn _goalfn;
 
         /// \brief optional, Distance metric between configuration spaces, two configurations are considered the same when this returns 0: distmetric(config1,config2)
-        boost::function<dReal(const std::vector<dReal>&, const std::vector<dReal>&)> _distmetricfn;
+        typedef boost::function<dReal(const std::vector<dReal>&, const std::vector<dReal>&)> DistMetricFn;
+        DistMetricFn _distmetricfn;
 
-        typedef boost::function<bool(const std::vector<dReal>&, const std::vector<dReal>&, IntervalType, PlannerBase::ConfigurationListPtr)> CheckPathConstraintFn;
         /** \brief Checks that all the constraints are satisfied between two configurations.
         
             The simplest and most fundamental constraint is line-collision checking. The robot goes from q0 to q1.
@@ -90,13 +92,15 @@ public:
             \param interval Specifies whether to check the end points of the interval for constraints
             \param configurations Optional argument that will hold the path between the two configurations if requested
         */
+        typedef boost::function<bool(const std::vector<dReal>&, const std::vector<dReal>&, IntervalType, PlannerBase::ConfigurationListPtr)> CheckPathConstraintFn;
         CheckPathConstraintFn _checkpathconstraintsfn;
 
         /// \brief Samples a random configuration (mandatory)
         ///
         /// The dimension of the returned sample is the dimension of the configuration space.
         /// success = samplefn(newsample)
-        boost::function<bool(std::vector<dReal>&)> _samplefn;
+        typedef boost::function<bool(std::vector<dReal>&)> SampleFn;
+        SampleFn _samplefn;
 
         /// \brief Samples a valid goal configuration (optional).
         ///
@@ -104,7 +108,8 @@ public:
         /// at every iteration. Any type of sampling probabilities and conditions can be encoded inside the function.
         /// The dimension of the returned sample is the dimension of the configuration space.
         /// success = samplegoalfn(newsample)
-        boost::function<bool(std::vector<dReal>&)> _samplegoalfn;
+        typedef boost::function<bool(std::vector<dReal>&)> SampleGoalFn;
+        SampleGoalFn _samplegoalfn;
 
         /// \brief Samples a valid initial configuration (optional).
         ///
@@ -112,7 +117,8 @@ public:
         /// at every iteration. Any type of sampling probabilities and conditions can be encoded inside the function.
         /// The dimension of the returned sample is the dimension of the configuration space.
         /// success = sampleinitialfn(newsample)
-        boost::function<bool(std::vector<dReal>&)> _sampleinitialfn;
+        typedef boost::function<bool(std::vector<dReal>&)> SampleInitialFn;
+        SampleInitialFn _sampleinitialfn;
 
         /** \brief Returns a random configuration around a neighborhood (optional).
          
@@ -123,12 +129,15 @@ public:
                               The distance metric can be arbitrary, but is usually PlannerParameters::pdistmetric.
             \return if sample was successfully generated return true, otherwise false
         */
-        boost::function<bool(std::vector<dReal>&, const std::vector<dReal>&, dReal)> _sampleneighfn;
+        typedef boost::function<bool(std::vector<dReal>&, const std::vector<dReal>&, dReal)> SampleNeighFn;
+        SampleNeighFn _sampleneighfn;
 
         /// \brief Sets the state of the robot. Default is active robot joints (mandatory).
-        boost::function<void(const std::vector<dReal>&)> _setstatefn;
+        typedef boost::function<void(const std::vector<dReal>&)> SetStateFn;
+        SetStateFn _setstatefn;
         /// \brief Gets the state of the robot. Default is active robot joints (mandatory).
-        boost::function<void(std::vector<dReal>&)> _getstatefn;
+        typedef boost::function<void(std::vector<dReal>&)> GetStateFn;
+        GetStateFn _getstatefn;
 
         /** \brief  Computes the difference of two states.
            
@@ -137,7 +146,8 @@ public:
             An explicit difference function is necessary for correct interpolation when there are circular joints.
             Default is regular subtraction.
         */
-        boost::function<void(std::vector<dReal>&,const std::vector<dReal>&)> _diffstatefn;
+        typedef boost::function<void(std::vector<dReal>&,const std::vector<dReal>&)> DiffStateFn;
+        DiffStateFn _diffstatefn;
 
         /** \brief Adds a delta state to a curent state, acting like a next-nearest-neighbor function along a given direction.
             
@@ -149,14 +159,15 @@ public:
             In RRTs this is used for the extension operation. The new state is stored in the first parameter q.
             Note that the function can also add a filter to the final destination (like projecting onto a constraint manifold).
         */
-        boost::function<bool(std::vector<dReal>&,const std::vector<dReal>&, int)> _neighstatefn;
+        typedef boost::function<bool(std::vector<dReal>&,const std::vector<dReal>&, int)> NeighStateFn;
+        NeighStateFn _neighstatefn;
 
         /// to specify multiple initial or goal configurations, put them into the vector in series
         /// (note: not all planners support multiple goals)
         std::vector<dReal> vinitialconfig, vgoalconfig;
 
         /// \brief the absolute limits of the configuration space.
-        std::vector<dReal> _vConfigLowerLimit,_vConfigUpperLimit;
+        std::vector<dReal> _vConfigLowerLimit, _vConfigUpperLimit;
 
         /// \brief the discretization resolution of each dimension of the configuration space
         std::vector<dReal> _vConfigResolution;

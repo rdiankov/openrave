@@ -45,6 +45,7 @@ References:\n\n\
     }
     
     void SetSpaceDOF(int dof) {
+        BOOST_ASSERT(dof > 0);
         halton_dim_num_set ( dof );
     }
     int GetDOF() const { return halton_dim_num_get(); }
