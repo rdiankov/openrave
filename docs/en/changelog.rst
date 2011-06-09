@@ -57,18 +57,23 @@ Inverse Kinematics
 
 * implemented '--show' command for inversekinematics
 
-Misc
-----
-
-* viewer showing scene normals
+Sensors
+-------
 
 * camera intrinsics now include distortion model and focal length, viewer rendering respects the focal length
 
 * removed transform from laser data, all sensors have a transform data type that is not part of the data state
 
-* added more tests: openrave global runtime, API Sanity Autotest
+Misc
+----
+
+* viewer showing scene normals
+
+* added more tests: openrave global runtime, API Sanity Autotest XML
 
 * viewer added watermarking support through :ref:`viewer-qtcoin-setwatermark <SetWatermark command>`
+
+* added IkSolver.SetCustomFilter in openravepy
 
 Version 0.3.2
 =============

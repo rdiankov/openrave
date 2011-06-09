@@ -1441,6 +1441,9 @@ class PyIkSolverBase : public PyInterfaceBase
 {
 protected:
     IkSolverBasePtr _pIkSolver;
+
+    static IkFilterReturn _CallCustomFilter(object fncallback, PyEnvironmentBasePtr pyenv, std::vector<dReal>& values, RobotBase::ManipulatorPtr pmanip, const IkParameterization& ikparam);
+
 public:
     PyIkSolverBase(IkSolverBasePtr pIkSolver, PyEnvironmentBasePtr pyenv) : PyInterfaceBase(pIkSolver, pyenv), _pIkSolver(pIkSolver) {}
     virtual ~PyIkSolverBase() {}
@@ -1458,6 +1461,14 @@ public:
     }
 
     bool Supports(IkParameterization::Type type) { return _pIkSolver->Supports(type); }
+
+    void SetCustomFilter(object fncallback)
+    {
+        if( !fncallback ) {
+            throw OPENRAVE_EXCEPTION_FORMAT0("callback not specified",ORE_InvalidArguments);
+        }
+        _pIkSolver->SetCustomFilter(boost::bind(&PyIkSolverBase::_CallCustomFilter,fncallback,_pyenv,_1,_2,_3));
+    }
 };
 
 class PyRobotBase : public PyKinBody
@@ -2107,6 +2118,25 @@ bool PyControllerBase::Init(PyRobotBasePtr robot, object odofindices, int nContr
     return _pcontroller->Init(robot->GetRobot(),dofindices,nControlTransformation);
 }
 
+IkFilterReturn PyIkSolverBase::_CallCustomFilter(object fncallback, PyEnvironmentBasePtr pyenv, std::vector<dReal>& values, RobotBase::ManipulatorPtr pmanip, const IkParameterization& ikparam)
+{
+    object res;
+    PyGILState_STATE gstate = PyGILState_Ensure();
+    try {
+        res = fncallback(toPyArray(values), PyRobotBase::PyManipulatorPtr(new PyRobotBase::PyManipulator(pmanip,pyenv)),toPyIkParameterization(ikparam));
+    }
+    catch(...) {
+        RAVELOG_ERROR("exception occured in python viewer callback:\n");
+        PyErr_Print();
+    }
+    PyGILState_Release(gstate);
+    if( res == object() ) {
+        return IKFR_Reject;
+    }
+    extract<IkFilterReturn> ikfr(res);
+    return (IkFilterReturn)ikfr;
+}
+
 class PyPlannerBase : public PyInterfaceBase
 {
 protected:
@@ -2370,19 +2400,22 @@ protected:
             res = fncallback(PyKinBody::PyLinkPtr(new PyKinBody::PyLink(plink,pyenv)),toPyVector3(position),toPyVector3(direction));
         }
         catch(...) {
-            RAVELOG_ERRORA("exception occured in python viewer callback:\n");
+            RAVELOG_ERROR("exception occured in python viewer callback:\n");
             PyErr_Print();
         }
         PyGILState_Release(gstate);
         extract<bool> xb(res);
-        if( xb.check() )
+        if( xb.check() ) {
             return (bool)xb;
+        }
         extract<int> xi(res);
-        if( xi.check() )
+        if( xi.check() ) {
             return (int)xi;
+        }
         extract<double> xd(res);
-        if( xd.check() )
+        if( xd.check() ) {
             return (double)xd>0;
+        }
         return true;
     }
 public:
@@ -2618,7 +2651,7 @@ protected:
             res = fncallback(pyreport,bFromPhysics);
         }
         catch(...) {
-            RAVELOG_ERRORA("exception occured in python collision callback:\n");
+            RAVELOG_ERROR("exception occured in python collision callback:\n");
             PyErr_Print();
         }
         PyGILState_Release(gstate);
@@ -2629,7 +2662,7 @@ protected:
         if( xi.check() ) {
             return (CollisionAction)(int)xi;
         }
-        RAVELOG_WARNA("collision callback nothing returning, so executing default action\n");
+        RAVELOG_WARN("collision callback nothing returning, so executing default action\n");
         return CA_DefaultAction;
     }
 
@@ -2731,7 +2764,7 @@ public:
 
     PyEnvironmentBasePtr CloneSelf(int options)
     {
-        //RAVELOG_WARNA("cloning environment without permission!\n");
+        //RAVELOG_WARN("cloning environment without permission!\n");
         string strviewer;
         if( options & Clone_Viewer ) {
             boost::mutex::scoped_lock lockcreate(_mutexViewer);
@@ -2855,7 +2888,7 @@ public:
                 vbodyexcluded.push_back(pbody->GetBody());
             }
             else {
-                RAVELOG_ERRORA("failed to get excluded body\n");
+                RAVELOG_ERROR("failed to get excluded body\n");
             }
         }
         std::vector<KinBody::LinkConstPtr> vlinkexcluded;
@@ -2865,7 +2898,7 @@ public:
                 vlinkexcluded.push_back(plink->GetLink());
             }
             else {
-                RAVELOG_ERRORA("failed to get excluded link\n");
+                RAVELOG_ERROR("failed to get excluded link\n");
             }
         }
         return _penv->CheckCollision(KinBody::LinkConstPtr(plink->GetLink()),vbodyexcluded,vlinkexcluded);
@@ -2880,7 +2913,7 @@ public:
                 vbodyexcluded.push_back(pbody->GetBody());
             }
             else {
-                RAVELOG_ERRORA("failed to get excluded body\n");
+                RAVELOG_ERROR("failed to get excluded body\n");
             }
         }
         std::vector<KinBody::LinkConstPtr> vlinkexcluded;
@@ -2890,7 +2923,7 @@ public:
                 vlinkexcluded.push_back(plink->GetLink());
             }
             else {
-                RAVELOG_ERRORA("failed to get excluded link\n");
+                RAVELOG_ERROR("failed to get excluded link\n");
             }
         }
 
@@ -2911,7 +2944,7 @@ public:
                 vbodyexcluded.push_back(pbody->GetBody());
             }
             else {
-                RAVELOG_ERRORA("failed to get excluded body\n");
+                RAVELOG_ERROR("failed to get excluded body\n");
             }
         }
         std::vector<KinBody::LinkConstPtr> vlinkexcluded;
@@ -2921,7 +2954,7 @@ public:
                 vlinkexcluded.push_back(plink->GetLink());
             }
             else {
-                RAVELOG_ERRORA("failed to get excluded link\n");
+                RAVELOG_ERROR("failed to get excluded link\n");
             }
         }
         return _penv->CheckCollision(KinBodyConstPtr(pbody->GetBody()),vbodyexcluded,vlinkexcluded);
@@ -2936,7 +2969,7 @@ public:
                 vbodyexcluded.push_back(pbody->GetBody());
             }
             else {
-                RAVELOG_ERRORA("failed to get excluded body\n");
+                RAVELOG_ERROR("failed to get excluded body\n");
             }
         }
         std::vector<KinBody::LinkConstPtr> vlinkexcluded;
@@ -2946,7 +2979,7 @@ public:
                 vlinkexcluded.push_back(plink->GetLink());
             }
             else {
-                RAVELOG_ERRORA("failed to get excluded link\n");
+                RAVELOG_ERROR("failed to get excluded link\n");
             }
         }
 
@@ -3240,7 +3273,7 @@ public:
             _conditionViewer.wait(lock);
             
             if( !_penv->GetViewer() || _penv->GetViewer()->GetXMLId() != viewername ) {
-                RAVELOG_WARNA("failed to create viewer %s\n", viewername.c_str());
+                RAVELOG_WARN("failed to create viewer %s\n", viewername.c_str());
                 _threadviewer->join();
                 _threadviewer.reset();
                 return false;
@@ -4321,6 +4354,7 @@ In python, the syntax is::\n\n\
         .def("GetNumFreeParameters",&PyIkSolverBase::GetNumFreeParameters, DOXY_FN(IkSolverBase,GetNumFreeParameters))
         .def("GetFreeParameters",&PyIkSolverBase::GetFreeParameters, DOXY_FN(IkSolverBase,GetFreeParameters))
         .def("Supports",&PyIkSolverBase::Supports, args("iktype"), DOXY_FN(IkSolverBase,Supports))
+        .def("SetCustomFilter",&PyIkSolverBase::SetCustomFilter, args("callback"), DOXY_FN(IkSolverBase,SetCustomFilter))
         ;
 
     class_<PyPhysicsEngineBase, boost::shared_ptr<PyPhysicsEngineBase>, bases<PyInterfaceBase> >("PhysicsEngine", DOXY_CLASS(PhysicsEngineBase), no_init)
@@ -4471,7 +4505,7 @@ In python, the syntax is::\n\n\
             .def("Move",&PyViewerBase::ViewerMove, DOXY_FN(ViewerBase,ViewerMove))
             .def("SetTitle",&PyViewerBase::ViewerSetTitle, DOXY_FN(ViewerBase,ViewerSetTitle))
             .def("LoadModel",&PyViewerBase::LoadModel, DOXY_FN(ViewerBase,LoadModel))
-            .def("RegisterCallback",&PyViewerBase::RegisterCallback, DOXY_FN(ViewerBase,RegisterCallback))
+            .def("RegisterCallback",&PyViewerBase::RegisterCallback, args("callback"), DOXY_FN(ViewerBase,RegisterCallback))
             .def("EnvironmentSync",&PyViewerBase::EnvironmentSync, DOXY_FN(ViewerBase,EnvironmentSync))
             .def("SetCamera",setcamera1,args("transform"), DOXY_FN(ViewerBase,SetCamera))
             .def("SetCamera",setcamera2,args("transform","focalDistance"), DOXY_FN(ViewerBase,SetCamera))

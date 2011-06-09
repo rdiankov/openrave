@@ -1,4 +1,4 @@
-/** \example orplanning_ik.cpp
+/** \example orikfilter.cpp
     \author Rosen Diankov
 
     Shows how to use set a custom inverse kinematics filter to add extra constraints.
@@ -99,12 +99,12 @@ int main(int argc, char ** argv)
                 v[i] = vlower[i] + (vupper[i]-vlower[i])*RaveRandomFloat();
             }
             probot->SetActiveDOFValues(v);
-            bool bshouldsucceed = !penv->CheckCollision(probot) && !probot->CheckSelfCollision();
+            bool bincollision = !penv->CheckCollision(probot) && !probot->CheckSelfCollision();
             
             uint32_t starttime = GetMilliTime();
             pmanip->GetIkSolver()->SetCustomFilter(boost::bind(MyTimeoutFilter,_1,_2,_3,starttime));
             bool bsuccess = pmanip->FindIKSolution(pmanip->GetIkParameterization(IkParameterization::Type_Transform6D),v,IKFO_CheckEnvCollisions);
-            RAVELOG_INFO("should succeed: %d, real success %d, time passed: %d\n",bshouldsucceed,bsuccess,GetMilliTime()-starttime);
+            RAVELOG_INFO("in collision: %d, real success %d, time passed: %d\n",bincollision,bsuccess,GetMilliTime()-starttime);
         }
     }
 
