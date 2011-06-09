@@ -23,7 +23,7 @@ def updateik(robotfilename,manipname,iktype,destfilename,freeindices=None):
             assert(wrongrate==0)
             print 'success: ',successrate
             code = """#define IKFAST_NAMESPACE %s
-#define IKFAST_HEADER "plugindefs.h"
+#include "plugindefs.h"
 
 """%robotid
             code += open(ikmodel.getsourcefilename(True),'r').read()

@@ -402,7 +402,6 @@ protected:
         }
         else {
             // should be very close to _vprevsolution
-            dReal fmaxdist = 0;
             for(size_t i = 0; i < _vprevsolution.size(); ++i) {
                 if( RaveFabs(_vprevsolution[i]-vsolution.at(i)) > 0.1f ) {
                     return IKFR_Reject;

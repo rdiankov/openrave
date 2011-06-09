@@ -698,9 +698,9 @@ public:
     /// \brief Parameters passed into the state savers to control what information gets saved.
     enum SaveParameters
     {
-        Save_LinkTransformation=0x00000001, ///< save link transformations
-        Save_LinkEnable=0x00000002, ///< save link enable states
-        // robot only
+        Save_LinkTransformation=0x00000001, ///< [default] save link transformations
+        Save_LinkEnable=0x00000002, ///< [default] save link enable states
+        Save_LinkVelocities=0x00000004, ///< save the link velocities
         Save_ActiveDOF=0x00010000, ///< [robot only], saves and restores the current active degrees of freedom
         Save_ActiveManipulator=0x00020000, ///< [robot only], saves the active manipulator
         Save_GrabbedBodies=0x00040000, ///< [robot only], saves the grabbed state of the bodies. This does not affect the configuraiton of those bodies.
@@ -718,6 +718,7 @@ public:
         int _options; ///< saved options
         std::vector<Transform> _vLinkTransforms;
         std::vector<uint8_t> _vEnabledLinks;
+        std::vector<std::pair<Vector,Vector> > _vLinkVelocities;
         KinBodyPtr _pbody;
     };
 
@@ -912,18 +913,17 @@ public:
         \param[in] vDOFVelocities - velocities of each of the degrees of freeom
         \param checklimits if true, will excplicitly check the joint velocity limits before setting the values.
     */
-    virtual bool SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const Vector& linearvel,
-                                  const Vector& angularvel,bool checklimits = false);
+    virtual void SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const Vector& linearvel, const Vector& angularvel,bool checklimits = false);
 
     /// \brief Sets the velocity of the joints.
     ///
     /// Copies the current velocity of the base link and calls SetDOFVelocities(linearvel,angularvel,vDOFVelocities)
     /// \param[in] vDOFVelocity - velocities of each of the degrees of freeom    
     /// \praam checklimits if true, will excplicitly check the joint velocity limits before setting the values.
-    virtual bool SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, bool checklimits = false);
+    virtual void SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, bool checklimits = false);
 
     /// \brief Returns the linear and angular velocities for each link
-    virtual bool GetLinkVelocities(std::vector<std::pair<Vector,Vector> >& velocities) const;
+    virtual void GetLinkVelocities(std::vector<std::pair<Vector,Vector> >& velocities) const;
 
     /** \en \brief set the transform of the first link (the rest of the links are computed based on the joint values).
         
@@ -977,6 +977,9 @@ public:
 
     /// \deprecated (11/05/26)
     virtual void SetBodyTransformations(const std::vector<Transform>& transforms) RAVE_DEPRECATED { SetLinkTransformations(transforms); }
+
+    /// \brief sets the link velocities
+    virtual void SetLinkVelocities(const std::vector<std::pair<Vector,Vector> >& velocities);
 
     /// \brief Computes the translation jacobian with respect to a world position.
     /// 

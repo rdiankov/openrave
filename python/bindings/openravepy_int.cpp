@@ -755,29 +755,46 @@ public:
         _pbody->SetLinkTransformations(vtransforms);
     }
 
+    void SetLinkVelocities(object ovelocities)
+    {
+        std::vector<std::pair<Vector,Vector> > velocities;
+        velocities.resize(len(ovelocities));
+        for(size_t i = 0; i < velocities.size(); ++i) {
+            vector<dReal> v = ExtractArray<dReal>(ovelocities[i]);
+            BOOST_ASSERT(v.size()==6);
+            velocities[i].first.x = v[0];
+            velocities[i].first.y = v[1];
+            velocities[i].first.z = v[2];
+            velocities[i].second.x = v[3];
+            velocities[i].second.y = v[4];
+            velocities[i].second.z = v[5];
+        }
+        return _pbody->SetLinkVelocities(velocities);
+    }
+
     bool SetVelocity(object olinearvel, object oangularvel)
     {
         return _pbody->SetVelocity(ExtractVector3(olinearvel),ExtractVector3(oangularvel));
     }
 
-    bool SetDOFVelocities(object odofvelocities, object olinearvel, object oangularvel, bool checklimits)
+    void SetDOFVelocities(object odofvelocities, object olinearvel, object oangularvel, bool checklimits)
     {
-        return _pbody->SetDOFVelocities(ExtractArray<dReal>(odofvelocities),ExtractVector3(olinearvel),ExtractVector3(oangularvel),checklimits);
+        _pbody->SetDOFVelocities(ExtractArray<dReal>(odofvelocities),ExtractVector3(olinearvel),ExtractVector3(oangularvel),checklimits);
     }
 
-    bool SetDOFVelocities(object odofvelocities, object olinearvel, object oangularvel)
+    void SetDOFVelocities(object odofvelocities, object olinearvel, object oangularvel)
     {
-        return _pbody->SetDOFVelocities(ExtractArray<dReal>(odofvelocities),ExtractVector3(olinearvel),ExtractVector3(oangularvel));
+        _pbody->SetDOFVelocities(ExtractArray<dReal>(odofvelocities),ExtractVector3(olinearvel),ExtractVector3(oangularvel));
     }
 
-    bool SetDOFVelocities(object odofvelocities)
+    void SetDOFVelocities(object odofvelocities)
     {
-        return _pbody->SetDOFVelocities(ExtractArray<dReal>(odofvelocities));
+        _pbody->SetDOFVelocities(ExtractArray<dReal>(odofvelocities));
     }
 
-    bool SetDOFVelocities(object odofvelocities, bool checklimits)
+    void SetDOFVelocities(object odofvelocities, bool checklimits)
     {
-        return _pbody->SetDOFVelocities(ExtractArray<dReal>(odofvelocities),checklimits);
+        _pbody->SetDOFVelocities(ExtractArray<dReal>(odofvelocities),checklimits);
     }
 
     object GetLinkVelocities() const
@@ -786,9 +803,8 @@ public:
             return numeric::array(boost::python::list());
         }
         std::vector<std::pair<Vector,Vector> > velocities;
-        if( !_pbody->GetLinkVelocities(velocities) ) {
-            return object();
-        }
+        _pbody->GetLinkVelocities(velocities);
+
         npy_intp dims[] = {velocities.size(),6};
         PyObject *pyvel = PyArray_SimpleNew(2,dims, sizeof(dReal)==8?PyArray_DOUBLE:PyArray_FLOAT);
         dReal* pfvel = (dReal*)PyArray_DATA(pyvel);
@@ -3854,10 +3870,10 @@ In python, the syntax is::\n\n\
         object (PyKinBody::*getlinks2)(object) const = &PyKinBody::GetLinks;
         object (PyKinBody::*getjoints1)() const = &PyKinBody::GetJoints;
         object (PyKinBody::*getjoints2)(object) const = &PyKinBody::GetJoints;
-        bool (PyKinBody::*setdofvelocities1)(object) = &PyKinBody::SetDOFVelocities;
-        bool (PyKinBody::*setdofvelocities2)(object,object,object) = &PyKinBody::SetDOFVelocities;
-        bool (PyKinBody::*setdofvelocities3)(object,bool) = &PyKinBody::SetDOFVelocities;
-        bool (PyKinBody::*setdofvelocities4)(object,object,object,bool) = &PyKinBody::SetDOFVelocities;
+        void (PyKinBody::*setdofvelocities1)(object) = &PyKinBody::SetDOFVelocities;
+        void (PyKinBody::*setdofvelocities2)(object,object,object) = &PyKinBody::SetDOFVelocities;
+        void (PyKinBody::*setdofvelocities3)(object,bool) = &PyKinBody::SetDOFVelocities;
+        void (PyKinBody::*setdofvelocities4)(object,object,object,bool) = &PyKinBody::SetDOFVelocities;
         object (PyKinBody::*GetNonAdjacentLinks1)() const = &PyKinBody::GetNonAdjacentLinks;
         object (PyKinBody::*GetNonAdjacentLinks2)(int) const = &PyKinBody::GetNonAdjacentLinks;
         std::string sInitFromBoxesDoc = std::string(DOXY_FN(KinBody,InitFromBoxes "const std::vector< AABB; bool")) + std::string("\nboxes is a Nx6 array, first 3 columsn are position, last 3 are extents");
@@ -3907,6 +3923,7 @@ In python, the syntax is::\n\n\
             .def("GetBodyTransformations",&PyKinBody::GetLinkTransformations, DOXY_FN(KinBody,GetLinkTransformations))
             .def("SetLinkTransformations",&PyKinBody::SetLinkTransformations,args("transforms"), DOXY_FN(KinBody,SetLinkTransformations))
             .def("SetBodyTransformations",&PyKinBody::SetLinkTransformations,args("transforms"), DOXY_FN(KinBody,SetLinkTransformations))
+            .def("SetLinkVelocities",&PyKinBody::SetLinkVelocities,args("velocities"), DOXY_FN(KinBody,SetLinkVelocities))
             .def("SetVelocity",&PyKinBody::SetVelocity, args("linear","angular"), DOXY_FN(KinBody,SetVelocity "const Vector; const Vector"))
             .def("SetDOFVelocities",setdofvelocities1, args("dofvelocities"), DOXY_FN(KinBody,SetDOFVelocities "const std::vector; bool"))
             .def("SetDOFVelocities",setdofvelocities2, args("dofvelocities","linear","angular"), DOXY_FN(KinBody,SetDOFVelocities "const std::vector; const Vector; const Vector; bool"))

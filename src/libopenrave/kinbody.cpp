@@ -1729,6 +1729,9 @@ KinBody::KinBodyStateSaver::KinBodyStateSaver(KinBodyPtr pbody, int options) : _
             _vEnabledLinks[i] = _pbody->GetLinks().at(i)->IsEnabled();
         }
     }
+    if( _options & Save_LinkVelocities ) {
+        _pbody->GetLinkVelocities(_vLinkVelocities);
+    }
 }
 
 KinBody::KinBodyStateSaver::~KinBodyStateSaver()
@@ -1742,6 +1745,9 @@ KinBody::KinBodyStateSaver::~KinBodyStateSaver()
                 _pbody->GetLinks().at(i)->Enable(!!_vEnabledLinks[i]);
             }
         }
+    }
+    if( _options & Save_LinkVelocities ) {
+        _pbody->SetLinkVelocities(_vLinkVelocities);
     }
 }
 
@@ -2123,7 +2129,7 @@ bool KinBody::SetVelocity(const Vector& linearvel, const Vector& angularvel)
     return GetEnv()->GetPhysicsEngine()->SetLinkVelocities(shared_kinbody(),velocities);
 }
 
-bool KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocity, const Vector& linearvel, const Vector& angularvel, bool checklimits)
+void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocity, const Vector& linearvel, const Vector& angularvel, bool checklimits)
 {
     CHECK_INTERNAL_COMPUTATION;
     if( (int)vDOFVelocity.size() < GetDOF() ) {
@@ -2278,10 +2284,10 @@ bool KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocity, const Vec
         velocities.at(pjoint->GetHierarchyChildLink()->GetIndex()) = make_pair(vparent + tdelta.rotate(v) + wparent.cross(pjoint->GetHierarchyChildLink()->GetTransform().trans-tparent.trans), wparent + tdelta.rotate(w));
         vlinkscomputed[pjoint->GetHierarchyChildLink()->GetIndex()] = 1;
     }
-    return GetEnv()->GetPhysicsEngine()->SetLinkVelocities(shared_kinbody(),velocities);
+    SetLinkVelocities(velocities);
 }
 
-bool KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, bool checklimits)
+void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, bool checklimits)
 {
     Vector linearvel,angularvel;
     _veclinks.at(0)->GetVelocity(linearvel,angularvel);
@@ -2293,9 +2299,9 @@ void KinBody::GetVelocity(Vector& linearvel, Vector& angularvel) const
     GetEnv()->GetPhysicsEngine()->GetLinkVelocity(_veclinks.at(0), linearvel, angularvel);
 }
 
-bool KinBody::GetLinkVelocities(std::vector<std::pair<Vector,Vector> >& velocities) const
+void KinBody::GetLinkVelocities(std::vector<std::pair<Vector,Vector> >& velocities) const
 {
-    return GetEnv()->GetPhysicsEngine()->GetLinkVelocities(shared_kinbody_const(),velocities);
+    GetEnv()->GetPhysicsEngine()->GetLinkVelocities(shared_kinbody_const(),velocities);
 }
 
 void KinBody::GetLinkTransformations(vector<Transform>& vtrans) const
@@ -2390,6 +2396,11 @@ void KinBody::SetLinkTransformations(const std::vector<Transform>& vbodies)
         (*itlink)->SetTransform(*it);
     }
     _nUpdateStampId++;
+}
+
+void KinBody::SetLinkVelocities(const std::vector<std::pair<Vector,Vector> >& velocities)
+{
+    GetEnv()->GetPhysicsEngine()->SetLinkVelocities(shared_kinbody(),velocities);
 }
 
 void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, const Transform& transBase, bool bCheckLimits)

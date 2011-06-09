@@ -94,15 +94,48 @@ public:
                 RAVELOG_WARN("need to set ode physics engine\n");
                 return false;
             }
+            RobotBase::RobotStateSaver robotsaver(_probot,KinBody::Save_LinkVelocities);
             boost::shared_ptr<ODESpace> odespace(pinfo->_odespace);
             int dofindex = 0;
+            vector<dReal> valldofvelocities;
+            _probot->GetDOFVelocities(valldofvelocities);
             FOREACHC(it, _dofindices) {
                 KinBody::JointConstPtr pjoint = _probot->GetJointFromDOFIndex(*it);
                 dJointID jointid = pinfo->vjoints.at(pjoint->GetJointIndex());
-                int jindex = *it-pjoint->GetJointIndex();
-                BOOST_ASSERT(jindex>=0);
-                odespace->_jointset[dJointGetType(jointid)](jointid,dParamFMax+dParamGroup*jindex, pjoint->GetMaxTorque());
-                odespace->_jointset[dJointGetType(jointid)](jointid,dParamVel+dParamGroup*jindex, velocities.at(dofindex++));
+                int iaxis = *it-pjoint->GetDOFIndex();
+                BOOST_ASSERT(iaxis >= 0);
+                valldofvelocities.at(*it) = velocities.at(dofindex);
+                odespace->_jointset[dJointGetType(jointid)](jointid,dParamFMax+dParamGroup*iaxis, pjoint->GetMaxTorque(iaxis));
+                odespace->_jointset[dJointGetType(jointid)](jointid,dParamVel+dParamGroup*iaxis, velocities.at(dofindex++));
+            }
+            _probot->SetDOFVelocities(valldofvelocities);
+
+            // go through all passive joints and set their velocity if they are dependent on the current controlled indices
+            std::vector<int> vmimicdofs;
+            std::vector<dReal> values;
+            size_t ipassiveindex = _probot->GetJoints().size();
+            FOREACHC(itjoint, _probot->GetPassiveJoints()) {
+                values.resize(0);
+                for(int iaxis = 0; iaxis < (*itjoint)->GetDOF(); ++iaxis) {
+                    if( (*itjoint)->IsMimic(iaxis) ) {
+                        bool bset = false;
+                        (*itjoint)->GetMimicDOFIndices(vmimicdofs,iaxis);
+                        FOREACH(itdof, vmimicdofs) {
+                            if( find(_dofindices.begin(),_dofindices.end(),*itdof) != _dofindices.end() ) {
+                                bset = true;
+                            }
+                        }
+                        if( bset ) {
+                            if( values.size() == 0 ) {
+                                (*itjoint)->GetVelocities(values);
+                            }
+                            dJointID jointid = pinfo->vjoints.at(ipassiveindex);
+                            odespace->_jointset[dJointGetType(jointid)](jointid,dParamFMax+dParamGroup*iaxis, (*itjoint)->GetMaxTorque(iaxis));
+                            odespace->_jointset[dJointGetType(jointid)](jointid,dParamVel+dParamGroup*iaxis, values.at(iaxis));
+                        }
+                    }
+                }
+                ipassiveindex++;
             }
             _bVelocityMode = true;
             return true;

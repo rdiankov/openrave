@@ -1,13 +1,13 @@
 #!/bin/bash
 if test -z "$1"
 then
-    server="diankov@programmingvision.com"
+    server="rdiankov@openrave.org"
 else
     server=$1
 fi
 if test -z "$2"
 then
-    targetdir="~/openrave/"
+    targetdir="/var/openrave/"
 else
     targetdir=$2
 fi
