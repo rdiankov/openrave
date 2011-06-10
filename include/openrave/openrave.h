@@ -535,7 +535,8 @@ enum InterfaceType
     PT_Robot=2, ///< describes \ref RobotBase interface
     PT_SensorSystem=3, ///< describes \ref SensorSystemBase interface
     PT_Controller=4, ///< describes \ref ControllerBase interface
-    PT_ProblemInstance=5, ///< describes \ref ProblemInstance interface
+    PT_Module=5, ///< describes \ref ModuleBase interface
+    PT_ProblemInstance=5, ///< describes \ref ModuleBase interface
     PT_IkSolver=6, ///< describes \ref IkSolverBase interface
     PT_InverseKinematicsSolver=6, ///< describes \ref IkSolverBase interface
     PT_KinBody=7, ///< describes \ref KinBody
@@ -555,7 +556,7 @@ class TrajectoryBase;
 class ControllerBase;
 class PlannerBase;
 class RobotBase;
-class ProblemInstance;
+class ModuleBase;
 class EnvironmentBase;
 class KinBody;
 class SensorSystemBase;
@@ -592,9 +593,9 @@ typedef boost::weak_ptr<PhysicsEngineBase> PhysicsEngineBaseWeakPtr;
 typedef boost::shared_ptr<PlannerBase> PlannerBasePtr;
 typedef boost::shared_ptr<PlannerBase const> PlannerBaseConstPtr;
 typedef boost::weak_ptr<PlannerBase> PlannerBaseWeakPtr;
-typedef boost::shared_ptr<ProblemInstance> ProblemInstancePtr;
-typedef boost::shared_ptr<ProblemInstance const> ProblemInstanceConstPtr;
-typedef boost::weak_ptr<ProblemInstance> ProblemInstanceWeakPtr;
+typedef boost::shared_ptr<ModuleBase> ModuleBasePtr;
+typedef boost::shared_ptr<ModuleBase const> ModuleBaseConstPtr;
+typedef boost::weak_ptr<ModuleBase> ModuleBaseWeakPtr;
 typedef boost::shared_ptr<SensorBase> SensorBasePtr;
 typedef boost::shared_ptr<SensorBase const> SensorBaseConstPtr;
 typedef boost::weak_ptr<SensorBase> SensorBaseWeakPtr;
@@ -733,6 +734,7 @@ namespace OpenRAVE {
     typedef geometry::obb<dReal> OBB;
     typedef geometry::aabb<dReal> AABB;
     typedef geometry::ray<dReal> RAY;
+
     // for compatibility
     //@{
     using mathextra::dot2;
@@ -987,7 +989,7 @@ inline std::istream& operator>>(std::istream& I, IkParameterization& ikparam)
 #include <openrave/spacesampler.h>
 #include <openrave/kinbody.h>
 #include <openrave/trajectory.h>
-#include <openrave/problems.h>
+#include <openrave/module.h>
 #include <openrave/collisionchecker.h>
 #include <openrave/sensor.h>
 #include <openrave/robot.h>
@@ -1013,7 +1015,7 @@ inline const char* RaveGetInterfaceHash(InterfaceType type)
     case PT_Robot: return OPENRAVE_ROBOT_HASH;
     case PT_SensorSystem: return OPENRAVE_SENSORSYSTEM_HASH;
     case PT_Controller: return OPENRAVE_CONTROLLER_HASH;
-    case PT_ProblemInstance: return OPENRAVE_PROBLEM_HASH;
+    case PT_Module: return OPENRAVE_MODULE_HASH;
     case PT_InverseKinematicsSolver: return OPENRAVE_IKSOLVER_HASH;
     case PT_KinBody: return OPENRAVE_KINBODY_HASH;
     case PT_PhysicsEngine: return OPENRAVE_PHYSICSENGINE_HASH;
@@ -1135,8 +1137,9 @@ OPENRAVE_API RobotBasePtr RaveCreateRobot(EnvironmentBasePtr penv, const std::st
 OPENRAVE_API PlannerBasePtr RaveCreatePlanner(EnvironmentBasePtr penv, const std::string& name);
 OPENRAVE_API SensorSystemBasePtr RaveCreateSensorSystem(EnvironmentBasePtr penv, const std::string& name);
 OPENRAVE_API ControllerBasePtr RaveCreateController(EnvironmentBasePtr penv, const std::string& name);
-OPENRAVE_API ProblemInstancePtr RaveCreateProblem(EnvironmentBasePtr penv, const std::string& name);
-OPENRAVE_API ProblemInstancePtr RaveCreateProblemInstance(EnvironmentBasePtr penv, const std::string& name);
+OPENRAVE_API ModuleBasePtr RaveCreateModule(EnvironmentBasePtr penv, const std::string& name);
+OPENRAVE_API ModuleBasePtr RaveCreateProblem(EnvironmentBasePtr penv, const std::string& name);
+OPENRAVE_API ModuleBasePtr RaveCreateProblemInstance(EnvironmentBasePtr penv, const std::string& name);
 OPENRAVE_API IkSolverBasePtr RaveCreateIkSolver(EnvironmentBasePtr penv, const std::string& name);
 OPENRAVE_API PhysicsEngineBasePtr RaveCreatePhysicsEngine(EnvironmentBasePtr penv, const std::string& name);
 OPENRAVE_API SensorBasePtr RaveCreateSensor(EnvironmentBasePtr penv, const std::string& name);
@@ -1189,13 +1192,13 @@ OPENRAVE_API BaseXMLReaderPtr RaveCallXMLReader(InterfaceType type, const std::s
 //@}
 
 /// \deprecated (11/06/03), use \ref SpaceSamplerBase
-OPENRAVE_API void RaveInitRandomGeneration(uint32_t seed) RAVE_DEPRECATED;
+OPENRAVE_API void RaveInitRandomGeneration(uint32_t seed);
 /// \deprecated (11/06/03), use \ref SpaceSamplerBase
-OPENRAVE_API uint32_t RaveRandomInt() RAVE_DEPRECATED;
+OPENRAVE_API uint32_t RaveRandomInt();
 /// \deprecated (11/06/03), use \ref SpaceSamplerBase
-OPENRAVE_API float RaveRandomFloat(IntervalType interval=IT_Closed) RAVE_DEPRECATED;
+OPENRAVE_API float RaveRandomFloat(IntervalType interval=IT_Closed);
 /// \deprecated (11/06/03), use \ref SpaceSamplerBase
-OPENRAVE_API double RaveRandomDouble(IntervalType interval=IT_Closed) RAVE_DEPRECATED;
+OPENRAVE_API double RaveRandomDouble(IntervalType interval=IT_Closed);
 
 /// \brief separates the directories from a string and returns them in a vector
 inline bool RaveParseDirectories(const char* pdirs, std::vector<std::string>& vdirs)
@@ -1274,7 +1277,7 @@ BOOST_STATIC_ASSERT(OPENRAVE_VERSION_PATCH>=0&&OPENRAVE_VERSION_PATCH<=255);
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::InterfaceType)
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::UserData)
 
-BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::ProblemInstance)
+BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::ModuleBase)
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::ControllerBase)
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::PlannerBase)
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::PlannerBase::PlannerParameters)

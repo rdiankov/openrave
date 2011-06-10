@@ -2270,16 +2270,16 @@ bool PyControllerBase::SetPath(PyTrajectoryBasePtr ptraj)
     return _pcontroller->SetPath(!ptraj ? TrajectoryBasePtr() : ptraj->GetTrajectory());
 }
 
-class PyProblemInstance : public PyInterfaceBase
+class PyModuleBase : public PyInterfaceBase
 {
 protected:
-    ProblemInstancePtr _pproblem;
+    ModuleBasePtr _pmodule;
 public:
-    PyProblemInstance(ProblemInstancePtr pproblem, PyEnvironmentBasePtr pyenv) : PyInterfaceBase(pproblem, pyenv), _pproblem(pproblem) {}
-    virtual ~PyProblemInstance() {}
-    ProblemInstancePtr GetProblem() { return _pproblem; }
+    PyModuleBase(ModuleBasePtr pmodule, PyEnvironmentBasePtr pyenv) : PyInterfaceBase(pmodule, pyenv), _pmodule(pmodule) {}
+    virtual ~PyModuleBase() {}
+    ModuleBasePtr GetModule() { return _pmodule; }
 
-    bool SimulationStep(dReal fElapsedTime) { return _pproblem->SimulationStep(fElapsedTime); }
+    bool SimulationStep(dReal fElapsedTime) { return _pmodule->SimulationStep(fElapsedTime); }
 };
 
 class PyPhysicsEngineBase : public PyInterfaceBase
@@ -2447,7 +2447,6 @@ public:
     void ViewerSetSize(int w, int h) { _pviewer->ViewerSetSize(w,h); }
     void ViewerMove(int x, int y) { _pviewer->ViewerMove(x,y); }
     void ViewerSetTitle(const string& title) { _pviewer->ViewerSetTitle(title.c_str()); }
-    bool LoadModel(const string& filename) { return _pviewer->LoadModel(filename.c_str()); }
 
     PyVoidHandle RegisterCallback(ViewerBase::ViewerEvents properties, object fncallback)
     {
@@ -2455,6 +2454,18 @@ public:
             throw openrave_exception("callback not specified");
         }
         boost::shared_ptr<void> p = _pviewer->RegisterCallback(properties,boost::bind(&PyViewerBase::_ViewerCallback,fncallback,_pyenv,_1,_2,_3));
+        if( !p ) {
+            throw openrave_exception("no registration callback returned");
+        }
+        return PyVoidHandle(p);
+    }
+
+    PyVoidHandle RegisterItemSelectionCallback(object fncallback)
+    {
+        if( !fncallback ) {
+            throw openrave_exception("callback not specified");
+        }
+        boost::shared_ptr<void> p = _pviewer->RegisterItemSelectionCallback(boost::bind(&PyViewerBase::_ViewerCallback,fncallback,_pyenv,_1,_2,_3));
         if( !p ) {
             throw openrave_exception("no registration callback returned");
         }
@@ -2620,7 +2631,7 @@ protected:
         case PT_Robot: return PyRobotBasePtr(new PyRobotBase(boost::static_pointer_cast<RobotBase>(pinterface),shared_from_this()));
         case PT_SensorSystem: return PySensorSystemBasePtr(new PySensorSystemBase(boost::static_pointer_cast<SensorSystemBase>(pinterface),shared_from_this()));
         case PT_Controller: return PyControllerBasePtr(new PyControllerBase(boost::static_pointer_cast<ControllerBase>(pinterface),shared_from_this()));
-        case PT_ProblemInstance: return PyProblemInstancePtr(new PyProblemInstance(boost::static_pointer_cast<ProblemInstance>(pinterface),shared_from_this()));
+        case PT_Module: return PyModuleBasePtr(new PyModuleBase(boost::static_pointer_cast<ModuleBase>(pinterface),shared_from_this()));
         case PT_IkSolver: return PyIkSolverBasePtr(new PyIkSolverBase(boost::static_pointer_cast<IkSolverBase>(pinterface),shared_from_this()));
         case PT_KinBody: return PyKinBodyPtr(new PyKinBody(boost::static_pointer_cast<KinBody>(pinterface),shared_from_this()));
         case PT_PhysicsEngine: return PyPhysicsEngineBasePtr(new PyPhysicsEngineBase(boost::static_pointer_cast<PhysicsEngineBase>(pinterface),shared_from_this()));
@@ -2747,10 +2758,10 @@ public:
         RAVELOG_WARN("Environment.CreateController deprecated, use RaveCreateController\n");
         return openravepy::RaveCreateController(shared_from_this(),name);
     }
-    PyProblemInstancePtr CreateProblem(const string& name)
+    PyModuleBasePtr CreateProblem(const string& name)
     {
         RAVELOG_WARN("Environment.CreateProblem deprecated, use RaveCreateProblem\n");
-        return openravepy::RaveCreateProblemInstance(shared_from_this(),name);
+        return openravepy::RaveCreateModule(shared_from_this(),name);
     }
     PyIkSolverBasePtr CreateIkSolver(const string& name)
     {
@@ -3188,19 +3199,19 @@ public:
 
     PyTrajectoryBasePtr CreateTrajectory(int nDOF) { return PyTrajectoryBasePtr(new PyTrajectoryBase(RaveCreateTrajectory(_penv,nDOF),shared_from_this())); }
 
-    int LoadProblem(PyProblemInstancePtr prob, const string& args) { CHECK_POINTER(prob); return _penv->LoadProblem(prob->GetProblem(),args); }
-    bool RemoveProblem(PyProblemInstancePtr prob) { CHECK_POINTER(prob); RAVELOG_WARN("openravepy RemoveProblem deprecated, use Remove\n");return _penv->Remove(prob->GetProblem()); }
+    int LoadModule(PyModuleBasePtr prob, const string& args) { CHECK_POINTER(prob); return _penv->LoadModule(prob->GetModule(),args); }
+    bool RemoveProblem(PyModuleBasePtr prob) { CHECK_POINTER(prob); RAVELOG_WARN("openravepy RemoveProblem deprecated, use Remove\n");return _penv->Remove(prob->GetModule()); }
     bool Remove(PyInterfaceBasePtr obj) { CHECK_POINTER(obj); return _penv->Remove(obj->GetInterfaceBase()); }
     
-    object GetLoadedProblems()
+    object GetLoadedModules()
     {
-        std::list<ProblemInstancePtr> listProblems;
-        boost::shared_ptr<void> lock = _penv->GetLoadedProblems(listProblems);
-        boost::python::list problems;
-        FOREACHC(itprob, listProblems) {
-            problems.append(PyProblemInstancePtr(new PyProblemInstance(*itprob,shared_from_this())));
+        std::list<ModuleBasePtr> listModules;
+        boost::shared_ptr<void> lock = _penv->GetLoadedModules(listModules);
+        boost::python::list modules;
+        FOREACHC(itprob, listModules) {
+            modules.append(PyModuleBasePtr(new PyModuleBase(*itprob,shared_from_this())));
         }
-        return problems;
+        return modules;
     }
 
     bool SetPhysicsEngine(PyPhysicsEngineBasePtr pengine)
@@ -3672,13 +3683,13 @@ namespace openravepy
         return PyControllerBasePtr(new PyControllerBase(p,pyenv));
     }
 
-    PyProblemInstancePtr RaveCreateProblemInstance(PyEnvironmentBasePtr pyenv, const std::string& name)
+    PyModuleBasePtr RaveCreateModule(PyEnvironmentBasePtr pyenv, const std::string& name)
     {
-        ProblemInstancePtr p = OpenRAVE::RaveCreateProblemInstance(pyenv->GetEnv(), name);
+        ModuleBasePtr p = OpenRAVE::RaveCreateModule(pyenv->GetEnv(), name);
         if( !p ) {
-            return PyProblemInstancePtr();
+            return PyModuleBasePtr();
         }
-        return PyProblemInstancePtr(new PyProblemInstance(p,pyenv));
+        return PyModuleBasePtr(new PyModuleBase(p,pyenv));
     }
 
     PyIkSolverBasePtr RaveCreateIkSolver(PyEnvironmentBasePtr pyenv, const std::string& name)
@@ -4364,9 +4375,10 @@ In python, the syntax is::\n\n\
             .def("GetTorque",&PyControllerBase::GetTorque, DOXY_FN(ControllerBase,GetTorque))
             ;
     }
-    class_<PyProblemInstance, boost::shared_ptr<PyProblemInstance>, bases<PyInterfaceBase> >("Problem", DOXY_CLASS(ProblemInstance), no_init)
-        .def("SimulationStep",&PyProblemInstance::SimulationStep, DOXY_FN(ProblemInstance,"SimulationStep"))
+    class_<PyModuleBase, boost::shared_ptr<PyModuleBase>, bases<PyInterfaceBase> >("Module", DOXY_CLASS(ModuleBase), no_init)
+        .def("SimulationStep",&PyModuleBase::SimulationStep, DOXY_FN(ModuleBase,"SimulationStep"))
         ;
+
     class_<PyIkSolverBase, boost::shared_ptr<PyIkSolverBase>, bases<PyInterfaceBase> >("IkSolver", DOXY_CLASS(IkSolverBase), no_init)
         .def("GetNumFreeParameters",&PyIkSolverBase::GetNumFreeParameters, DOXY_FN(IkSolverBase,GetNumFreeParameters))
         .def("GetFreeParameters",&PyIkSolverBase::GetFreeParameters, DOXY_FN(IkSolverBase,GetFreeParameters))
@@ -4521,8 +4533,8 @@ In python, the syntax is::\n\n\
             .def("SetSize",&PyViewerBase::ViewerSetSize, DOXY_FN(ViewerBase,ViewerSetSize))
             .def("Move",&PyViewerBase::ViewerMove, DOXY_FN(ViewerBase,ViewerMove))
             .def("SetTitle",&PyViewerBase::ViewerSetTitle, DOXY_FN(ViewerBase,ViewerSetTitle))
-            .def("LoadModel",&PyViewerBase::LoadModel, DOXY_FN(ViewerBase,LoadModel))
-            .def("RegisterCallback",&PyViewerBase::RegisterCallback, args("callback"), DOXY_FN(ViewerBase,RegisterCallback))
+            .def("RegisterCallback",&PyViewerBase::RegisterCallback, args("callback"), DOXY_FN(ViewerBase,RegisterItemSelectionCallback))
+            .def("RegisterItemSelectionCallback",&PyViewerBase::RegisterItemSelectionCallback, args("callback"), DOXY_FN(ViewerBase,RegisterCallback))
             .def("EnvironmentSync",&PyViewerBase::EnvironmentSync, DOXY_FN(ViewerBase,EnvironmentSync))
             .def("SetCamera",setcamera1,args("transform"), DOXY_FN(ViewerBase,SetCamera))
             .def("SetCamera",setcamera2,args("transform","focalDistance"), DOXY_FN(ViewerBase,SetCamera))
@@ -4672,9 +4684,11 @@ In python, the syntax is::\n\n\
             .def("GetBodyFromEnvironmentId",&PyEnvironmentBase::GetBodyFromEnvironmentId , DOXY_FN(EnvironmentBase,GetBodyFromEnvironmentId))
             .def("CreateKinBody",&PyEnvironmentBase::CreateKinBody, DOXY_FN(EnvironmentBase,CreateKinBody))
             .def("CreateTrajectory",&PyEnvironmentBase::CreateTrajectory,args("dof"), DOXY_FN(EnvironmentBase,CreateTrajectory))
-            .def("LoadProblem",&PyEnvironmentBase::LoadProblem,args("problem","args"), DOXY_FN(EnvironmentBase,LoadProblem))
+            .def("LoadModule",&PyEnvironmentBase::LoadModule,args("module","args"), DOXY_FN(EnvironmentBase,LoadModule))
+            .def("LoadProblem",&PyEnvironmentBase::LoadModule,args("module","args"), DOXY_FN(EnvironmentBase,LoadModule))
             .def("RemoveProblem",&PyEnvironmentBase::RemoveProblem,args("prob"), DOXY_FN(EnvironmentBase,RemoveProblem))
-            .def("GetLoadedProblems",&PyEnvironmentBase::GetLoadedProblems, DOXY_FN(EnvironmentBase,GetLoadedProblems))
+            .def("GetLoadedModules",&PyEnvironmentBase::GetLoadedModules, DOXY_FN(EnvironmentBase,GetLoadedModules))
+            .def("GetLoadedProblems",&PyEnvironmentBase::GetLoadedModules, DOXY_FN(EnvironmentBase,GetLoadedModules))
             .def("SetPhysicsEngine",&PyEnvironmentBase::SetPhysicsEngine,args("physics"), DOXY_FN(EnvironmentBase,SetPhysicsEngine))
             .def("GetPhysicsEngine",&PyEnvironmentBase::GetPhysicsEngine, DOXY_FN(EnvironmentBase,GetPhysicsEngine))
             .def("RegisterCollisionCallback",&PyEnvironmentBase::RegisterCollisionCallback,args("callback"), DOXY_FN(EnvironmentBase,RegisterCollisionCallback))
@@ -4747,8 +4761,9 @@ In python, the syntax is::\n\n\
     def("RaveCreatePlanner",openravepy::RaveCreatePlanner,args("env","name"),DOXY_FN1(RaveCreatePlanner));
     def("RaveCreateSensorSystem",openravepy::RaveCreateSensorSystem,args("env","name"),DOXY_FN1(RaveCreateSensorSystem));
     def("RaveCreateController",openravepy::RaveCreateController,args("env","name"),DOXY_FN1(RaveCreateController));
-    def("RaveCreateProblem",openravepy::RaveCreateProblemInstance,args("env","name"),DOXY_FN1(RaveCreateProblemInstance));
-    def("RaveCreateProblemInstance",openravepy::RaveCreateProblemInstance,args("env","name"),DOXY_FN1(RaveCreateProblemInstance));
+    def("RaveCreateProblem",openravepy::RaveCreateModule,args("env","name"),DOXY_FN1(RaveCreateModule));
+    def("RaveCreateProblemInstance",openravepy::RaveCreateModule,args("env","name"),DOXY_FN1(RaveCreateModule));
+    def("RaveCreateModule",openravepy::RaveCreateModule,args("env","name"),DOXY_FN1(RaveCreateModule));
     def("RaveCreateIkSolver",openravepy::RaveCreateIkSolver,args("env","name"),DOXY_FN1(RaveCreateIkSolver));
     def("RaveCreatePhysicsEngine",openravepy::RaveCreatePhysicsEngine,args("env","name"),DOXY_FN1(RaveCreatePhysicsEngine));
     def("RaveCreateSensor",openravepy::RaveCreateSensor,args("env","name"),DOXY_FN1(RaveCreateSensor));

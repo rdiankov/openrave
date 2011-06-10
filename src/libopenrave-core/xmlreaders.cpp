@@ -195,7 +195,7 @@ namespace OpenRAVEXMLParser
         }
 #endif
 
-        ProblemInstancePtr ivmodelloader = RaveCreateProblem(penv,"ivmodelloader");
+        ModuleBasePtr ivmodelloader = RaveCreateModule(penv,"ivmodelloader");
         if( !!ivmodelloader ) {
             stringstream sout, sin;
             sin << "LoadModel " << filename; 
@@ -2366,11 +2366,11 @@ namespace OpenRAVEXMLParser
 
                     if( !piksolver ) {
                         // try loading the shared object
-                        ProblemInstancePtr pIKFastLoader;
+                        ModuleBasePtr pIKFastLoader;
                         {
-                            list<ProblemInstancePtr> listProblems;
-                            boost::shared_ptr<void> pmutex = _probot->GetEnv()->GetLoadedProblems(listProblems);
-                            FOREACHC(itprob, listProblems) {
+                            list<ModuleBasePtr> listModules;
+                            boost::shared_ptr<void> pmutex = _probot->GetEnv()->GetLoadedModules(listModules);
+                            FOREACHC(itprob, listModules) {
                                 if( stricmp((*itprob)->GetXMLId().c_str(),"ikfast") == 0 ) {
                                     pIKFastLoader = *itprob;
                                     break;
@@ -2379,9 +2379,9 @@ namespace OpenRAVEXMLParser
                         }
 
                         if( !pIKFastLoader ) {
-                            pIKFastLoader = RaveCreateProblem(_probot->GetEnv(), "ikfast");
+                            pIKFastLoader = RaveCreateModule(_probot->GetEnv(), "ikfast");
                             if( !!pIKFastLoader )
-                                _probot->GetEnv()->LoadProblem(pIKFastLoader,"");
+                                _probot->GetEnv()->LoadModule(pIKFastLoader,"");
                         }
 
                         if( !!pIKFastLoader ) {
@@ -2407,7 +2407,7 @@ namespace OpenRAVEXMLParser
                             }
                         }
                         else {
-                            RAVELOG_WARN("Failed to load IKFast problem\n");
+                            RAVELOG_WARN("Failed to load IKFast module\n");
                         }
                     }
                 }
@@ -2882,10 +2882,10 @@ namespace OpenRAVEXMLParser
         virtual ~DummyInterfaceXMLReader() {}
     };
 
-    class ProblemXMLReader : public InterfaceXMLReader
+    class ModuleXMLReader : public InterfaceXMLReader
     {
     public:
-        ProblemXMLReader(EnvironmentBasePtr penv, InterfaceBasePtr& pinterface, const AttributesList& atts) : InterfaceXMLReader(penv,pinterface,PT_ProblemInstance,RaveGetInterfaceName(PT_ProblemInstance),atts) {
+        ModuleXMLReader(EnvironmentBasePtr penv, InterfaceBasePtr& pinterface, const AttributesList& atts) : InterfaceXMLReader(penv,pinterface,PT_Module,RaveGetInterfaceName(PT_Module),atts) {
             FOREACHC(itatt,atts) {
                 if( itatt->first == "args" ) {
                     _args = itatt->second;
@@ -2893,12 +2893,12 @@ namespace OpenRAVEXMLParser
             }
 
             if( !!_pinterface ) {
-                ProblemInstancePtr problem = RaveInterfaceCast<ProblemInstance>(_pinterface);
-                if( !!problem ) {
-                    int ret = _penv->LoadProblem(problem,_args);
+                ModuleBasePtr module = RaveInterfaceCast<ModuleBase>(_pinterface);
+                if( !!module ) {
+                    int ret = _penv->LoadModule(module,_args);
                     if( ret ) {
-                        RAVELOG_WARN(str(boost::format("problem %s returned %d\n")%problem->GetXMLId()%ret));
-                        problem.reset();
+                        RAVELOG_WARN(str(boost::format("module %s returned %d\n")%module->GetXMLId()%ret));
+                        module.reset();
                         _pinterface.reset();
                     }
                 }
@@ -3207,7 +3207,7 @@ namespace OpenRAVEXMLParser
         }
         case PT_SensorSystem: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_SensorSystem>(penv,pinterface,xmltag,atts));
         case PT_Controller: return InterfaceXMLReaderPtr(new ControllerXMLReader(penv,pinterface,atts));
-        case PT_ProblemInstance: return InterfaceXMLReaderPtr(new ProblemXMLReader(penv,pinterface,atts));
+        case PT_Module: return InterfaceXMLReaderPtr(new ModuleXMLReader(penv,pinterface,atts));
         case PT_IkSolver: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_IkSolver>(penv,pinterface,xmltag,atts));
         case PT_KinBody: {
             KinBodyPtr pbody = RaveInterfaceCast<KinBody>(pinterface); 

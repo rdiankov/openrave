@@ -1,4 +1,5 @@
-// Copyright (C) 2006-2009 Rosen Diankov (rdiankov@cs.cmu.edu)
+// -*- coding: utf-8 -*-
+// Copyright (C) 2006-2011 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
@@ -15,15 +16,26 @@
 
 // Plugin exposes 3 functions to OpenRAVE.
 #include "plugindefs.h"
-#include "loggingproblem.h"
+#include "loggingmodule.h"
 #include <openrave/plugin.h>
+
+#ifdef ENABLE_VIDEORECORDING
+ModuleBasePtr CreateViewerRecorder(EnvironmentBasePtr penv, std::istream& sinput);
+void DestroyViewerRecordingStaticResources();
+#endif
 
 InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
 {
     switch(type) {
-    case OpenRAVE::PT_ProblemInstance:
-        if( interfacename == "logging")
-            return InterfaceBasePtr(new LoggingProblem(penv));
+    case OpenRAVE::PT_Module:
+        if( interfacename == "logging") {
+            return InterfaceBasePtr(new LoggingModule(penv));
+        }
+#ifdef ENABLE_VIDEORECORDING
+        else if( interfacename == "viewerrecorder" ) {
+            return CreateViewerRecorder(penv,sinput);
+        }
+#endif
         break;
     default:
         break;
@@ -33,9 +45,15 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
 
 void GetPluginAttributesValidated(PLUGININFO& info)
 {
-    info.interfacenames[OpenRAVE::PT_ProblemInstance].push_back("Logging");
+    info.interfacenames[OpenRAVE::PT_Module].push_back("Logging");
+#ifdef ENABLE_VIDEORECORDING
+    info.interfacenames[OpenRAVE::PT_Module].push_back("ViewerRecorder");
+#endif
 }
 
 OPENRAVE_PLUGIN_API void DestroyPlugin()
 {
+#ifdef ENABLE_VIDEORECORDING
+    DestroyViewerRecordingStaticResources();
+#endif
 }

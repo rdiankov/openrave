@@ -186,18 +186,18 @@ class Environment : public EnvironmentBase
         }
         _threadSimulation.reset();
 
-        // destroy the problems (their destructors could attempt to lock environment, so have to do it before global lock)
-        // however, do not clear the _listProblems yet
-        RAVELOG_DEBUG("destroy problems\n");
-        list<ProblemInstancePtr> listProblems;
+        // destroy the modules (their destructors could attempt to lock environment, so have to do it before global lock)
+        // however, do not clear the _listModules yet
+        RAVELOG_DEBUG("destroy module\n");
+        list<ModuleBasePtr> listModules;
         {
             boost::mutex::scoped_lock lock(_mutexInterfaces);
-            listProblems = _listProblems;
+            listModules = _listModules;
         }
-        FOREACH(itprob,listProblems) {
-            (*itprob)->Destroy();
+        FOREACH(itmodule,listModules) {
+            (*itmodule)->Destroy();
         }
-        listProblems.clear();
+        listModules.clear();
 
         RAVELOG_DEBUG("resetting raveviewer\n");
         if( !!_pCurrentViewer ) {
@@ -238,7 +238,7 @@ class Environment : public EnvironmentBase
                     (*itsensor)->Configure(SensorBase::CC_RenderGeometryOff);
                 }
                 _listSensors.clear();
-                _listProblems.clear();
+                _listModules.clear();
                 _listOwnedInterfaces.clear();
             }
         }
@@ -292,16 +292,16 @@ class Environment : public EnvironmentBase
             _listSensors.clear();
         }
 
-        list<ProblemInstancePtr> listProblems;
+        list<ModuleBasePtr> listModules;
         {
             boost::mutex::scoped_lock lock(_mutexInterfaces);
-            listProblems = _listProblems;
+            listModules = _listModules;
         }
 
-        FOREACH(itproblem,listProblems) {
-            (*itproblem)->Reset();
+        FOREACH(itmodule,listModules) {
+            (*itmodule)->Reset();
         }
-        listProblems.clear();
+        listModules.clear();
         _listOwnedInterfaces.clear();
 
         if( !!_pCurrentChecker ) {
@@ -327,7 +327,7 @@ class Environment : public EnvironmentBase
     virtual PlannerBasePtr CreatePlanner(const std::string& pname) { return RaveCreatePlanner(shared_from_this(),pname); }
     virtual SensorSystemBasePtr CreateSensorSystem(const std::string& pname) { return RaveCreateSensorSystem(shared_from_this(),pname); }
     virtual ControllerBasePtr CreateController(const std::string& pname) { return RaveCreateController(shared_from_this(),pname); }
-    virtual ProblemInstancePtr CreateProblem(const std::string& pname) { return RaveCreateProblem(shared_from_this(),pname); }
+    virtual ModuleBasePtr CreateProblem(const std::string& pname) { return RaveCreateModule(shared_from_this(),pname); }
     virtual IkSolverBasePtr CreateIkSolver(const std::string& pname) { return RaveCreateIkSolver(shared_from_this(),pname); }
     virtual PhysicsEngineBasePtr CreatePhysicsEngine(const std::string& pname) { return RaveCreatePhysicsEngine(shared_from_this(),pname); }
     virtual SensorBasePtr CreateSensor(const std::string& pname) { return RaveCreateSensor(shared_from_this(),pname); }
@@ -355,30 +355,30 @@ class Environment : public EnvironmentBase
         return penv;
     }
     
-    virtual int LoadProblem(ProblemInstancePtr prob, const std::string& cmdargs)
+    virtual int LoadModule(ModuleBasePtr module, const std::string& cmdargs)
     {
-        CHECK_INTERFACE(prob);
-        int ret = prob->main(cmdargs);
+        CHECK_INTERFACE(module);
+        int ret = module->main(cmdargs);
         if( ret != 0 ) {
-            RAVELOG_WARN(str(boost::format("Error %d with executing problem %s\n")%ret%prob->GetXMLId()));
+            RAVELOG_WARN(str(boost::format("Error %d with executing module %s\n")%ret%module->GetXMLId()));
         }
         else {
             boost::mutex::scoped_lock lock(_mutexInterfaces);
-            _listProblems.push_back(prob);
+            _listModules.push_back(module);
         }
 
         return ret;
     }
 
-    bool RemoveProblem(ProblemInstancePtr prob)
+    bool RemoveProblem(ModuleBasePtr prob)
     {
         return Remove(InterfaceBasePtr(prob));
     }
 
-    boost::shared_ptr<void> GetLoadedProblems(std::list<ProblemInstancePtr>& listProblems) const
+    boost::shared_ptr<void> GetLoadedModules(std::list<ModuleBasePtr>& listModules) const
     {
         boost::shared_ptr<boost::mutex::scoped_lock> plock(new boost::mutex::scoped_lock(_mutexInterfaces));
-        listProblems = _listProblems;
+        listModules = _listModules;
         return plock;
     }
 
@@ -569,12 +569,12 @@ class Environment : public EnvironmentBase
             }
             break;
         }
-        case PT_ProblemInstance: {
-            ProblemInstancePtr prob = RaveInterfaceCast<ProblemInstance>(interface);
-            list<ProblemInstancePtr>::iterator itprob = find(_listProblems.begin(), _listProblems.end(), prob);
-            if( itprob != _listProblems.end() ) {
-                (*itprob)->Destroy();
-                _listProblems.erase(itprob);
+        case PT_Module: {
+            ModuleBasePtr prob = RaveInterfaceCast<ModuleBase>(interface);
+            list<ModuleBasePtr>::iterator itmodule = find(_listModules.begin(), _listModules.end(), prob);
+            if( itmodule != _listModules.end() ) {
+                (*itmodule)->Destroy();
+                _listModules.erase(itmodule);
                 return true;
             }
             break;
@@ -790,13 +790,13 @@ class Environment : public EnvironmentBase
         vector<KinBodyPtr> vecbodies;
         vector<RobotBasePtr> vecrobots;
         list<SensorBasePtr> listSensors;
-        list<ProblemInstancePtr> listProblems;
+        list<ModuleBasePtr> listModules;
         {
             boost::mutex::scoped_lock lock(_mutexInterfaces);
             vecbodies = _vecbodies;
             vecrobots = _vecrobots;
             listSensors = _listSensors;
-            listProblems = _listProblems;
+            listModules = _listModules;
         }
         
         FOREACH(it, vecbodies) {
@@ -804,8 +804,8 @@ class Environment : public EnvironmentBase
                 (*it)->SimulationStep(fTimeStep);
             }
         }
-        FOREACH(itprob, listProblems) {
-            (*itprob)->SimulationStep(fTimeStep);
+        FOREACH(itmodule, listModules) {
+            (*itmodule)->SimulationStep(fTimeStep);
         }
 
         // simulate the sensors last (ie, they always reflect the most recent bodies
@@ -1854,7 +1854,7 @@ protected:
     std::vector<RobotBasePtr> _vecrobots;  ///< robots (possibly controlled)
     std::vector<KinBodyPtr> _vecbodies; ///< all objects that are collidable (includes robots)
 
-    list<ProblemInstancePtr> _listProblems; ///< problems loaded in the environment
+    list<ModuleBasePtr> _listModules; ///< modules loaded in the environment
     list<SensorBasePtr> _listSensors; ///< sensors loaded in the environment
 
     dReal _fDeltaSimTime;                ///< delta time for simulate step
@@ -1874,7 +1874,7 @@ protected:
 
     mutable EnvironmentMutex _mutexEnvironment;      ///< protects internal data from multithreading issues
     mutable boost::mutex _mutexEnvironmentIds;  ///< protects _vecbodies/_vecrobots from multithreading issues
-    mutable boost::mutex _mutexInterfaces; ///< lock when managing interfaces like _listOwnedInterfaces, _listProblems, _mapBodies
+    mutable boost::mutex _mutexInterfaces; ///< lock when managing interfaces like _listOwnedInterfaces, _listModules, _mapBodies
     mutable boost::mutex _mutexInit; ///< lock for destroying the environment
 
     vector<KinBody::BodyState> _vPublishedBodies;

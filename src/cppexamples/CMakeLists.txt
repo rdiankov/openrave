@@ -65,11 +65,11 @@ set_target_properties(ortrajectory PROPERTIES LINK_FLAGS "${OpenRAVE_LINK_FLAGS}
 target_link_libraries(ortrajectory ${OpenRAVE_LIBRARIES} ${OpenRAVE_CORE_LIBRARIES})
 install(TARGETS ortrajectory DESTINATION . )
 
-add_executable(orplanning_problem orplanning_problem.cpp)
-set_target_properties(orplanning_problem PROPERTIES COMPILE_FLAGS "${OpenRAVE_CXX_FLAGS}")
-set_target_properties(orplanning_problem PROPERTIES LINK_FLAGS "${OpenRAVE_LINK_FLAGS}")
-target_link_libraries(orplanning_problem ${OpenRAVE_LIBRARIES} ${OpenRAVE_CORE_LIBRARIES})
-install(TARGETS orplanning_problem DESTINATION . )
+add_executable(orplanning_module orplanning_module.cpp)
+set_target_properties(orplanning_module PROPERTIES COMPILE_FLAGS "${OpenRAVE_CXX_FLAGS}")
+set_target_properties(orplanning_module PROPERTIES LINK_FLAGS "${OpenRAVE_LINK_FLAGS}")
+target_link_libraries(orplanning_module ${OpenRAVE_LIBRARIES} ${OpenRAVE_CORE_LIBRARIES})
+install(TARGETS orplanning_module DESTINATION . )
 
 add_executable(orplanning_planner orplanning_planner.cpp)
 set_target_properties(orplanning_planner PROPERTIES COMPILE_FLAGS "${OpenRAVE_CXX_FLAGS}")

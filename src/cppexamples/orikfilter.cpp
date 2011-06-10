@@ -72,8 +72,8 @@ int main(int argc, char ** argv)
     RobotBase::ManipulatorPtr pmanip = probot->GetActiveManipulator();
 
     // load inverse kinematics using ikfast
-    ProblemInstancePtr pikfast = RaveCreateProblem(penv,"ikfast");
-    penv->LoadProblem(pikfast,"");
+    ModuleBasePtr pikfast = RaveCreateModule(penv,"ikfast");
+    penv->LoadModule(pikfast,"");
     stringstream ssin,ssout;
     vector<dReal> vsolution;
     ssin << "LoadIKFastSolver " << probot->GetName() << " " << (int)IkParameterization::Type_Transform6D;

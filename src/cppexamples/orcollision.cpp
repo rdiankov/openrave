@@ -150,7 +150,7 @@ int main(int argc, char ** argv)
 
     // get the transformations of all the links
     vector<Transform> vlinktransforms;
-    pbody->GetBodyTransformations(vlinktransforms);
+    pbody->GetLinkTransformations(vlinktransforms);
 
     penv->Destroy(); // destroy
     return contactpoints;

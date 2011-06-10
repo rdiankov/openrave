@@ -141,6 +141,7 @@ inline static uint32_t GetMilliTime()
 #include <boost/version.hpp>
 #include <boost/array.hpp>
 #include <boost/function.hpp>
+#include <boost/algorithm/string.hpp>
 
 using namespace OpenRAVE;
 using namespace std;
@@ -268,13 +269,6 @@ struct null_deleter
     void operator()(void const *) const {}
 };
 
-//@{ video recording
-bool START_AVI(const char* file_name, double _frameRate, int width, int height, int bits, int codecid=-1);
-bool ADD_FRAME_FROM_DIB_TO_AVI(void* pdata);
-bool STOP_AVI();
-std::list<std::pair<int,string> > GET_CODECS();
-//@}
-
 template <class T> boost::shared_ptr<T> sptr_from(boost::weak_ptr<T> const& wpt)
 {
     return boost::shared_ptr<T>(wpt); // throws on wpt.expired()
@@ -302,8 +296,8 @@ public:
     virtual ~SoDBLock() { SoDB::readunlock(); }
 };
 
-#include "Item.h"
-#include "IvSelector.h"
+#include "item.h"
+#include "ivselector.h"
 #include "qtcoinviewer.h"
 
 #endif

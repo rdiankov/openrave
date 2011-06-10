@@ -25,11 +25,11 @@ namespace OpenRAVE {
 /** \brief <b>[interface]</b> A loadable module of user code meant to solve a specific problem in robotics. See \ref arch_problem.
     \ingroup interfaces
 */
-class OPENRAVE_API ProblemInstance : public InterfaceBase
+class OPENRAVE_API ModuleBase : public InterfaceBase
 {
 public:
-    ProblemInstance(EnvironmentBasePtr penv) : InterfaceBase(PT_ProblemInstance, penv) {}
-    virtual ~ProblemInstance() {}
+    ModuleBase(EnvironmentBasePtr penv) : InterfaceBase(PT_Module, penv) {}
+    virtual ~ModuleBase() {}
 
     /// return the static interface type this class points to (used for safe casting)
     static inline InterfaceType GetInterfaceTypeStatic() { return PT_ProblemInstance; }
@@ -47,8 +47,13 @@ public:
 
     virtual bool SimulationStep(dReal fElapsedTime) {return false;}
 private:
-    virtual const char* GetHash() const { return OPENRAVE_PROBLEM_HASH; }
+    virtual const char* GetHash() const { return OPENRAVE_MODULE_HASH; }
 };
+
+typedef ModuleBase ProblemInstance;
+typedef ModuleBasePtr ProblemInstancePtr;
+typedef ModuleBaseWeakPtr ProblemInstanceConstPtr;
+typedef ModuleBaseConstPtr ProblemInstanceWeakPtr;
 
 } // end namespace OpenRAVE
 

@@ -174,9 +174,9 @@ inline string getfilename_withseparator(istream& sinput, char separator)
     size_t endpos = filename.find_last_not_of(" \t");
 
     // if all spaces or empty return an empty string  
-    if(( string::npos == startpos ) || ( string::npos == endpos))
+    if(( string::npos == startpos ) || ( string::npos == endpos)) {
         return "";
-
+    }
     filename = filename.substr( startpos, endpos-startpos+1 );
     return filename;
 }

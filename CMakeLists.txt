@@ -361,7 +361,7 @@ add_custom_command(
        "${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/kinbody.h" OPENRAVE_KINBODY_HASH
        "${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/sensorsystem.h" OPENRAVE_SENSORSYSTEM_HASH
        "${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/controller.h" OPENRAVE_CONTROLLER_HASH
-       "${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/problems.h" OPENRAVE_PROBLEM_HASH
+       "${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/module.h" OPENRAVE_MODULE_HASH
        "${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/iksolver.h" OPENRAVE_IKSOLVER_HASH
        "${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/physicsengine.h" OPENRAVE_PHYSICSENGINE_HASH
        "${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/sensor.h" OPENRAVE_SENSOR_HASH
@@ -378,7 +378,7 @@ add_custom_command(
   ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/kinbody.h
   ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/sensorsystem.h
   ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/controller.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/problems.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/module.h
   ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/iksolver.h
   ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/physicsengine.h
   ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/sensor.h

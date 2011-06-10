@@ -1,7 +1,7 @@
 /** \example plugincpp.cpp
     \author Rosen Diankov
 
-    Creates a simple OpenRAVE::ProblemInstance interface.
+    Creates a simple OpenRAVE::ModuleBase interface.
 
     <b>Full Example Code:</b>
 */
@@ -12,23 +12,24 @@
 using namespace std;
 using namespace OpenRAVE;
 
-class MyProblemInstance : public ProblemInstance
+class MyModule : public ModuleBase
 {
 public:
-    MyProblemInstance(EnvironmentBasePtr penv) : ProblemInstance(penv)
+    MyModule(EnvironmentBasePtr penv) : ModuleBase(penv)
     {
         __description = "A very simple plugin.";
-        RegisterCommand("numbodies",boost::bind(&MyProblemInstance::NumBodies,this,_1,_2),"returns bodies");
-        RegisterCommand("load",boost::bind(&MyProblemInstance::Load, this,_1,_2),"loads a given file");
+        RegisterCommand("numbodies",boost::bind(&MyModule::NumBodies,this,_1,_2),"returns bodies");
+        RegisterCommand("load",boost::bind(&MyModule::Load, this,_1,_2),"loads a given file");
     }
+    virtual ~MyModule() {}
 
     void Destroy() {
-        RAVELOG_INFO("problem unloaded from environment\n");
+        RAVELOG_INFO("module unloaded from environment\n");
     }
 
     int main(const string& cmd)
     {
-        RAVELOG_INFO("problem initialized cmd; %s\n", cmd.c_str());
+        RAVELOG_INFO("module initialized cmd; %s\n", cmd.c_str());
         return 0;
     }
 
@@ -51,15 +52,15 @@ public:
 
 InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
 {
-    if( type == PT_ProblemInstance && interfacename == "myproblem" ) {
-        return InterfaceBasePtr(new MyProblemInstance(penv));
+    if( type == PT_Module && interfacename == "mymodule" ) {
+        return InterfaceBasePtr(new MyModule(penv));
     }
     return InterfaceBasePtr();
 }
 
 void GetPluginAttributesValidated(PLUGININFO& info)
 {
-    info.interfacenames[PT_ProblemInstance].push_back("MyProblem");
+    info.interfacenames[PT_Module].push_back("MyModule");
 }
 
 OPENRAVE_PLUGIN_API void DestroyPlugin()

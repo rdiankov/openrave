@@ -1,6 +1,6 @@
-// Copyright (C) 2006-2011 Rosen Diankov (rdiankov@cs.cmu.edu)
+// -*- coding: utf-8 -*-
+// Copyright (C) 2006-2011 Rosen Diankov <rosen.diankov@gmail.com>
 //
-// This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
@@ -74,7 +74,7 @@ public:
     virtual void AdvanceFrame(bool bForward);
 
     static void GlobVideoFrame(void*, SoSensor*);
-    virtual void VideoFrame();
+    virtual void _VideoFrame();
 
     virtual void Select(SoNode *pNode) { _ivRoot->select(pNode); }
     
@@ -87,7 +87,7 @@ public:
     virtual SoSelection* GetRoot() { return _ivRoot; }
     virtual SoSeparator* GetBodiesRoot() { return _ivBodies; }
 
-    virtual void UpdateCameraTransform();
+    virtual void _UpdateCameraTransform();
     static void _PlayCB(void *userData, SoSensor *);
     
     virtual void resize ( int w, int h);
@@ -108,6 +108,7 @@ public:
     virtual boost::shared_ptr<void> LockGUI();
 
     virtual bool GetCameraImage(std::vector<uint8_t>& memory, int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK);
+
     virtual bool WriteCameraImage(int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK, const std::string& filename, const std::string& extension);
     virtual void SetCamera(const RaveTransform<float>& trans, float focalDistance=0);
     virtual void SetBkgndColor(const RaveVector<float>& color);
@@ -130,22 +131,35 @@ public:
 
     virtual void SetEnvironmentSync(bool bUpdate);
     virtual void EnvironmentSync();
-    virtual bool _RecordVideo();
+    virtual uint8_t* _GetVideoFrame();
 
-    virtual RaveTransform<float> GetCameraTransform();
+    virtual RaveTransform<float> GetCameraTransform() const;
+    virtual geometry::RaveCameraIntrinsics<float> GetCameraIntrinsics() const;
 
     virtual void customEvent(QEvent * e);
 
-    virtual void UnregisterCallback(std::list<std::pair<int,ViewerCallbackFn > >::iterator it)
+    virtual void UnregisterItemSelectionCallback(std::list<ItemSelectionCallbackFn>::iterator it)
     {
         boost::mutex::scoped_lock lock(_mutexCallbacks);
-        _listRegisteredCallbacks.erase(it);
+        _listItemSelectionCallbacks.erase(it);
         
     }
-    virtual boost::shared_ptr<void> RegisterCallback(int properties, const ViewerCallbackFn& fncallback) {
+    virtual boost::shared_ptr<void> RegisterItemSelectionCallback(const ItemSelectionCallbackFn& fncallback) {
         boost::mutex::scoped_lock lock(_mutexCallbacks);
-        return boost::shared_ptr<void>((void*)1,boost::bind(&QtCoinViewer::UnregisterCallback,this,_listRegisteredCallbacks.insert(_listRegisteredCallbacks.end(),make_pair(properties,fncallback))));
+        return boost::shared_ptr<void>((void*)1,boost::bind(&QtCoinViewer::UnregisterItemSelectionCallback,this,_listItemSelectionCallbacks.insert(_listItemSelectionCallbacks.end(),fncallback)));
     }
+
+    virtual void UnregisterViewerImageCallback(std::list<ViewerImageCallbackFn>::iterator it)
+    {
+        boost::mutex::scoped_lock lock(_mutexCallbacks);
+        _listViewerImageCallbacks.erase(it);
+        
+    }
+    virtual boost::shared_ptr<void> RegisterViewerImageCallback(const ViewerImageCallbackFn& fncallback) {
+        boost::mutex::scoped_lock lock(_mutexCallbacks);
+        return boost::shared_ptr<void>((void*)1,boost::bind(&QtCoinViewer::UnregisterViewerImageCallback,this,_listViewerImageCallbacks.insert(_listViewerImageCallbacks.end(),fncallback)));
+    }
+
 
     virtual void _DeleteItemCallback(Item* pItem)
     {
@@ -311,8 +325,6 @@ protected:
     virtual void _UpdateEnvironment();
 
     bool _SetFiguresInCamera(ostream& sout, istream& sinput);
-    bool _SetWatermark(ostream& sout, istream& sinput);
-    void _AddWatermarkToImage(unsigned char* image, int width, int height);
 
     // selection and deselection handling
     static void _SelectHandler(void *, class SoPath *); 
@@ -327,7 +339,8 @@ protected:
     // Message Queue
     list<EnvMessagePtr> _listMessages;
     list<Item*> _listRemoveItems;
-    boost::mutex _mutexItems, _mutexMessages, _mutexUpdating, _mutexMouseMove; ///< mutex protected messages
+    boost::mutex _mutexItems, _mutexUpdating, _mutexMouseMove; ///< mutex protected messages
+    mutable boost::mutex _mutexMessages;
 
     QVBoxLayout * vlayout;
     QGroupBox * view1;
@@ -355,11 +368,8 @@ protected:
     boost::array<SoText2*,2> _messageNodes;
     SoTranslation* _messageShadowTranslation;
 
-    boost::multi_array<uint32_t,2> _vwatermarkimage;
-
     bool _altDown[2];
     bool _ctrlDown[2];
-    bool _bAVIInit;
     int  _VideoFrameRate;
 
     std::map<KinBodyPtr, KinBodyItemPtr> _mapbodies;    ///< all the bodies created
@@ -371,12 +381,12 @@ protected:
     /// for movie recording
     SoOffscreenRenderer _ivOffscreen;
     SoSeparator *_pFigureRoot;
-    uint64_t _nLastVideoFrame, _nVideoTimeOffset;
     bool _bCanRenderOffscreen;
     int _videocodec;
 
     RaveTransform<float>     _initSelectionTrans;       ///< initial tarnsformation of selected item    
     RaveTransform<float> Tcam;
+    geometry::RaveCameraIntrinsics<float> _camintrinsics;
 
     unsigned int _fb;
     unsigned int _rb;
@@ -423,8 +433,7 @@ protected:
 
     bool _bTimeElapsed;
     //bool _bRecordMotion;
-    bool _bSaveVideo;
-    bool _bRealtimeVideo;
+    ModuleBasePtr _pvideorecorder;
     bool _bAutoSetCamera;
     bool _bRenderFiguresInCamera;
     // ode thread related
@@ -432,7 +441,8 @@ protected:
     bool _bUpdateEnvironment;
     ViewGeometry _viewGeometryMode;
 
-    std::list<std::pair<int,ViewerCallbackFn > > _listRegisteredCallbacks; ///< callbacks to call when particular properties of the body change.
+    std::list<ItemSelectionCallbackFn> _listItemSelectionCallbacks;
+    std::list<ViewerImageCallbackFn> _listViewerImageCallbacks;
 
     friend class EnvMessage;
     friend class ViewerSetSizeMessage;

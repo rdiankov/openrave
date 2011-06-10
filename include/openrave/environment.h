@@ -61,7 +61,7 @@ public:
     /// \deprecated (10/09/23) see \ref RaveCreateController
     virtual ControllerBasePtr CreateController(const std::string& name) RAVE_DEPRECATED =0;
     /// \deprecated (10/09/23) see \ref RaveCreateProblem
-    virtual ProblemInstancePtr CreateProblem(const std::string& name) RAVE_DEPRECATED =0;
+    virtual ModuleBasePtr CreateProblem(const std::string& name) RAVE_DEPRECATED =0;
     /// \deprecated (10/09/23) see \ref RaveCreateIkSolver
     virtual IkSolverBasePtr CreateIkSolver(const std::string& name) RAVE_DEPRECATED =0;
     /// \deprecated (10/09/23) see \ref RaveCreatePhysicsEngine
@@ -377,17 +377,21 @@ public:
     virtual bool TriangulateScene(KinBody::Link::TRIMESH& trimesh, TriangulateOptions options, const std::string& name) = 0;
     //@}
 
-    /// \brief Load a new problem, need to Lock if calling outside simulation thread
-    virtual int LoadProblem(ProblemInstancePtr prob, const std::string& cmdargs) = 0;
+    /// \brief Load a new module, need to Lock if calling outside simulation thread
+    virtual int LoadModule(ModuleBasePtr module, const std::string& cmdargs) = 0;
+
+    virtual int LoadProblem(ModuleBasePtr module, const std::string& cmdargs) { return LoadModule(module,cmdargs); }
 
     /// \deprecated (10/09/15) see \ref EnvironmentBase::Remove
-    virtual bool RemoveProblem(ProblemInstancePtr prob) RAVE_DEPRECATED = 0;
+    virtual bool RemoveProblem(ModuleBasePtr prob) RAVE_DEPRECATED = 0;
 
     /// \brief Returns a list of loaded problems with a pointer to a lock preventing the list from being modified.
     ///
     /// As long as the lock is held, the problems are guaranteed to stay loaded in the environment.
     /// \return returns a pointer to a Lock. Destroying the shared_ptr will release the lock
-    virtual boost::shared_ptr<void> GetLoadedProblems(std::list<ProblemInstancePtr>& listProblems) const = 0;
+    virtual boost::shared_ptr<void> GetLoadedModules(std::list<ModuleBasePtr>& listModules) const = 0;
+
+    virtual boost::shared_ptr<void> GetLoadedProblems(std::list<ModuleBasePtr>& listModules) const { return GetLoadedModules(listModules); }
 
     /// \brief Return the global environment mutex used to protect environment information access in multi-threaded environments.
     ///

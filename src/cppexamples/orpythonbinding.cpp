@@ -1,7 +1,7 @@
 /** \example orpythonbinding.cpp
     \author Rosen Diankov
 
-    Shows how to creating python bindings with an OpenRAVE C++ plugin. The demo registers a python function to be called inside the environment simulation thread using a Problem Instance.
+    Shows how to creating python bindings with an OpenRAVE C++ plugin. The demo registers a python function to be called inside the environment simulation thread using a Module interface.
 
     The compilation procedure will produce a orpythonbinding shared object or DLL, which can then be directly included into python.
     
@@ -20,7 +20,7 @@ def mysimfunction(elapsedtime):
     # return True to end the thread
     return totaltime > 5
 
-prob = orpythonbinding.RegisterSimulationFunction(RaveGetEnvironmentId(env),mysimfunction)
+module = orpythonbinding.RegisterSimulationFunction(RaveGetEnvironmentId(env),mysimfunction)
 while True:
     sleep(1)
     \endverbatim
@@ -53,13 +53,13 @@ public:
     boost::python::object simulationfn;
 };
 
-class PythonBindingProblemInstance : public ProblemInstance
+class PythonBindingModule : public ModuleBase
 {
 public:
-    PythonBindingProblemInstance(EnvironmentBasePtr penv, std::istream&) : ProblemInstance(penv) {
+    PythonBindingModule(EnvironmentBasePtr penv, std::istream&) : ModuleBase(penv) {
         SetUserData(UserDataPtr(new FunctionUserData()));
     }
-    virtual ~PythonBindingProblemInstance() {
+    virtual ~PythonBindingModule() {
         RAVELOG_DEBUG("destroying python binding\n");
     }
 
@@ -89,25 +89,25 @@ boost::shared_ptr<void> g_PythonBindingInterfaceHandle;
 
 InterfaceBasePtr PythonBindingCreateInterface(EnvironmentBasePtr penv, std::istream& istream)
 {
-    return InterfaceBasePtr(new PythonBindingProblemInstance(penv,istream));
+    return InterfaceBasePtr(new PythonBindingModule(penv,istream));
 }
 
 InterfaceBasePtr RegisterSimulationFunction(int environmentid, boost::python::object simulationfn)
 {
-    ProblemInstancePtr prob = RaveCreateProblem(RaveGetEnvironment(environmentid), "PythonBinding");
-    if( !!prob ) {
-        boost::shared_ptr<FunctionUserData> p = boost::dynamic_pointer_cast<FunctionUserData>(prob->GetUserData());
+    ModuleBasePtr module = RaveCreateModule(RaveGetEnvironment(environmentid), "PythonBinding");
+    if( !!module ) {
+        boost::shared_ptr<FunctionUserData> p = boost::dynamic_pointer_cast<FunctionUserData>(module->GetUserData());
         p->simulationfn = simulationfn;
-        prob->GetEnv()->LoadProblem(prob,"");
+        module->GetEnv()->LoadModule(module,"");
     }
-    return InterfaceBasePtr(prob);
+    return InterfaceBasePtr(module);
 }
 
 void Init(UserDataPtr globalstate)
 {
     RaveInitializeFromState(globalstate);
     if( !g_PythonBindingInterfaceHandle ) {
-        g_PythonBindingInterfaceHandle = RaveRegisterInterface(PT_ProblemInstance, "PythonBinding", OPENRAVE_PROBLEM_HASH,OPENRAVE_ENVIRONMENT_HASH, PythonBindingCreateInterface);
+        g_PythonBindingInterfaceHandle = RaveRegisterInterface(PT_Module, "PythonBinding", OPENRAVE_MODULE_HASH,OPENRAVE_ENVIRONMENT_HASH, PythonBindingCreateInterface);
     }
 }
 

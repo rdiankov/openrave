@@ -677,3 +677,6 @@ class planning_error(Exception):
         self.parameter = parameter
     def __str__(self):
         return 'openrave planning_error: '+repr(self.parameter)
+
+# deprecated
+openravepy.Problem = openravepy.Module

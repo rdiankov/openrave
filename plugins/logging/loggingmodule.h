@@ -1,4 +1,5 @@
-// Copyright (C) 2006-2008 Rosen Diankov (rdiankov@cs.cmu.edu)
+// -*- coding: utf-8 -*-
+// Copyright (C) 2006-2011 Rosen Diankov <rosen.diankov@gmail.co>m
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
@@ -16,27 +17,27 @@
 #define OPENRAVE_LOGGING_H
 
 /// used to log scene elements
-class LoggingProblem : public ProblemInstance
+class LoggingModule : public ModuleBase
 {
-    inline boost::shared_ptr<LoggingProblem> shared_problem() { return boost::static_pointer_cast<LoggingProblem>(shared_from_this()); }
-    inline boost::shared_ptr<LoggingProblem const> shared_problem_const() const { return boost::static_pointer_cast<LoggingProblem const>(shared_from_this()); }
+    inline boost::shared_ptr<LoggingModule> shared_module() { return boost::static_pointer_cast<LoggingModule>(shared_from_this()); }
+    inline boost::shared_ptr<LoggingModule const> shared_module_const() const { return boost::static_pointer_cast<LoggingModule const>(shared_from_this()); }
 
  public:
- LoggingProblem(EnvironmentBasePtr penv) : ProblemInstance(penv)
+ LoggingModule(EnvironmentBasePtr penv) : ProblemInstance(penv)
     {
         __description = ":Interface Author: Rosen Diankov\n\nCan save the entire scene to an XML file";
-        RegisterCommand("savescene",boost::bind(&LoggingProblem::SaveScene,this,_1,_2),
+        RegisterCommand("savescene",boost::bind(&LoggingModule::SaveScene,this,_1,_2),
                         "Saves the entire scene in an xml file. If paths are relative,\n"
                         "should only be opened from the dirctory openrave was launched in\n"
                         "Usage: [filename %s] [absolute (default is relative)]");
-        RegisterCommand("startreplay",boost::bind(&LoggingProblem::StartReplay,this,_1,_2),
+        RegisterCommand("startreplay",boost::bind(&LoggingModule::StartReplay,this,_1,_2),
                         "Starts replaying a recording given a speed (can be negative).\n"
                         "Usage: [speed %f] [filename %s]");
-        RegisterCommand("startrecording",boost::bind(&LoggingProblem::StartRecording,this,_1,_2),
+        RegisterCommand("startrecording",boost::bind(&LoggingModule::StartRecording,this,_1,_2),
                         "Starts recording the scene given a realtime delta.\n"
                         "If a current recording is in progress, stop it.\n"
                         "Usage: [filename %s] [realtime %f]");
-        RegisterCommand("stoprecording",boost::bind(&LoggingProblem::StopRecording,this,_1,_2),
+        RegisterCommand("stoprecording",boost::bind(&LoggingModule::StopRecording,this,_1,_2),
                         "Stop recording.\n"
                         "Usage: [speed %f] [filename %s]");
 
@@ -45,7 +46,7 @@ class LoggingProblem : public ProblemInstance
         bDoLog = false;
     }
 
-    virtual ~LoggingProblem() {}
+    virtual ~LoggingModule() {}
     virtual void Destroy()
     {
         bDestroyThread = true;
@@ -61,7 +62,7 @@ class LoggingProblem : public ProblemInstance
         Destroy();
 
         bDestroyThread = false;
-        _threadlog.reset(new boost::thread(boost::bind(&LoggingProblem::_log_thread,shared_problem())));
+        _threadlog.reset(new boost::thread(boost::bind(&LoggingModule::_log_thread,shared_module())));
         return 0;
     }
     

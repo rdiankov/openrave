@@ -23,7 +23,8 @@ Core
 
 * Added a Prop_RobotActiveDOFs change callback in order to catch SetActiveDOFs messages
 
- 
+* renamed ProblemInstance interface into Module. Users should use the ModuleBase class.
+
 Planning
 --------
 
@@ -64,16 +65,30 @@ Sensors
 
 * removed transform from laser data, all sensors have a transform data type that is not part of the data state
 
-Misc
-----
+Viewers
+-------
 
 * viewer showing scene normals
 
+* added a new :ref:`module-viewerrecorder` interface that can attach to viewers and record their images.
+
+* Removed ffmpeg/video recording from qtcoin viewer.
+
+* added watermarking support through :ref:`SetWatermark command <module-viewerrecorder-setwatermark>`
+
+* deprecated the ViewerBase::RegisterCallback function and added individdual functions for item
+  selection and new viewer image.
+
+* Added ViewerBase::GetCameraIntrinsics for the current camera location
+
+Misc
+----
+
 * added more tests: openrave global runtime, API Sanity Autotest XML
 
-* viewer added watermarking support through :ref:`viewer-qtcoin-setwatermark <SetWatermark command>`
-
 * added IkSolver.SetCustomFilter in openravepy
+
+* fixed bug in velocity controller mimic joints
 
 Version 0.3.2
 =============

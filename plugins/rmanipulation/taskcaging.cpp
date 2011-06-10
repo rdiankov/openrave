@@ -387,8 +387,9 @@ public:
                 if( pmanip->FindIKSolution(tgrasp, solution, true) ) {
                     if( pCurSolution.size() == solution.size() ) {
                         // make sure solution is close to current solution
-                        if( !AcceptConfig(pCurSolution, solution) )
+                        if( !AcceptConfig(pCurSolution, solution) ) {
                             return false;
+                        }
                     }
 
                     psolution = solution;
@@ -416,8 +417,9 @@ public:
                     curphi += deltaphi;
                     if( curphi > upperphi ) {
 
-                        if( startphi-deltaphi < lowerphi)
+                        if( startphi-deltaphi < lowerphi) {
                             break; // reached limit
+                        }
                         ++iter;
                         continue;
                     }
@@ -426,8 +428,9 @@ public:
                     curphi -= deltaphi;
                     if( curphi < lowerphi ) {
 
-                        if( startphi+deltaphi > upperphi )
+                        if( startphi+deltaphi > upperphi ) {
                             break; // reached limit
+                        }
                         ++iter;
                         deltaphi += incphi; // increment
                         continue;
@@ -442,8 +445,9 @@ public:
                 if( pmanip->FindIKSolution(tgrasp, _vfreeparams, solution, true) ) {
                     if( solution.size() == pCurSolution.size() ) {
                         // make sure solution is close to current solution
-                        if( !AcceptConfig(pCurSolution, solution) )
+                        if( !AcceptConfig(pCurSolution, solution) ) {
                             continue;
+                        }
                     }
 
                     psolution = solution;
@@ -481,15 +485,17 @@ public:
     
             if( bSortSolutions ) {
                 // fill the list
-                FOREACHC(itsol, solutions)
+                FOREACHC(itsol, solutions) {
                     g.iksolutions.push_back(ConstrainedTaskData::IKSOL(*itsol, EvalWithFeatures(*itsol)));
+                }
                 g.iksolutions.sort(IkSolutionCompare());
                 //RAVELOG_WARN("%f %f\n", g.iksolutions.at(0).second, g.iksolutions.back().second);
             }
             else {
                 // fill the list
-                FOREACHC(itsol, solutions)
+                FOREACHC(itsol, solutions) {
                     g.iksolutions.push_back(ConstrainedTaskData::IKSOL(*itsol, FEATURES()));
+                }
             }
         }
 
@@ -501,11 +507,13 @@ public:
 
         void Log(IKSOL& iksol)
         {
-            for(size_t i = 0; i < iksol.second.features.size(); ++i)
+            for(size_t i = 0; i < iksol.second.features.size(); ++i) {
                 flog << iksol.second.features[i] << " ";
+            }
             flog << iksol.second.bSuccess << " ";
-            FOREACH(it, iksol.first)
+            FOREACH(it, iksol.first) {
                 flog << *it << " ";
+            }
             flog << endl;
         }
 
@@ -595,8 +603,9 @@ public:
 
                     int niter=0;
                     for(niter = 0; niter < 100; niter++) {
-                        for(int i = 0; i < _robot->GetActiveDOF(); ++i)
+                        for(int i = 0; i < _robot->GetActiveDOF(); ++i) {
                             vrobotconfig[i] = pDestConf[i] + fRandPerturb[i]*(RaveRandomFloat()-0.5f);
+                        }
 
                         _robot->SetActiveDOFValues(vrobotconfig);
                         if( !_robot->GetEnv()->CheckCollision(KinBodyConstPtr(_robot)) && !_robot->CheckSelfCollision() ) {
@@ -761,8 +770,9 @@ This greatly relaxes the constraints on the robot (see the door manipluation exa
 
             BOOST_ASSERT( (int)tp.q.size() == itbody->ptarget->GetDOF());
 
-            if( tp.q.size() > 0 )
+            if( tp.q.size() > 0 ) {
                 itbody->ptarget->SetDOFValues(tp.q);
+            }
             itbody->ptarget->SetTransform(tp.trans);
 
             if( itbody->time > itbody->ptraj->GetTotalDuration() ) {
@@ -807,8 +817,9 @@ private:
         string cmd;
         while(!sinput.eof()) {
             sinput >> cmd;
-            if( !sinput )
+            if( !sinput ) {
                 break;
+            }
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
 
             if( cmd == "step" )
@@ -821,7 +832,6 @@ private:
                 string name;
                 int linkindex;
                 sinput >> name >> linkindex;
-
                 ptarget = GetEnv()->GetKinBody(name);
                 graspfn->plink = ptarget->GetLinks().at(linkindex);
             }
@@ -829,10 +839,12 @@ private:
                 int joint; sinput >> joint;
                 graspfn->vtargetjoints.push_back(joint);
             }
-            else if( cmd == "contactconfigdelta" )
+            else if( cmd == "contactconfigdelta" ) {
                 sinput >> fContactConfigDelta;
-            else if( cmd == "cagedconfig" )
+            }
+            else if( cmd == "cagedconfig" ) {
                 sinput >> graspfn->fCagedConfig;
+            }
             else if( cmd == "cagesides" ) {
                 vTargetSides.resize(graspfn->vtargetjoints.size());
                 FOREACH(it, vTargetSides)
@@ -854,8 +866,9 @@ private:
             return false;
         }
 
-        if( vTargetSides.size() == 0 )
+        if( vTargetSides.size() == 0 ) {
             vTargetSides.resize(graspfn->vtargetjoints.size(),0);
+        }
 
         string plannername = "ExplorationRRT";
         PlannerBasePtr planner = RaveCreatePlanner(GetEnv(),plannername);
@@ -874,9 +887,9 @@ private:
         vector<dReal> upper, lower;
         ptarget->GetDOFLimits(lower, upper);
         graspfn->vtargetvalues = lower;
-        for(size_t i = 0; i < lower.size(); ++i)
+        for(size_t i = 0; i < lower.size(); ++i) {
             graspfn->vtargetvalues[i] = 0.5f*(lower[i]+upper[i]);
-
+        }
         ptarget->SetDOFValues(graspfn->vtargetvalues);
         tlinknew = graspfn->plink->GetTransform();
 
@@ -920,8 +933,9 @@ private:
     
         vtargetvalues = graspfn->vtargetvalues;
         RobotBase::ManipulatorPtr pmanip = _robot->GetActiveManipulator();
-        if( !pmanip )
+        if( !pmanip ) {
             RAVELOG_WARN("robot doesn't have manipulator defined, storing robot transformation directly\n");
+        }
     
         FOREACHC(itp, ptraj->GetPoints()) {
         
@@ -952,8 +966,9 @@ private:
             sout << tlinknew.inverse() * (!pmanip ? _robot->GetTransform() : pmanip->GetTransform()) << " "  << nContact << " ";
         }
 
-        if( !!ptarget )
+        if( !!ptarget ) {
             ptarget->SetDOFValues(vorigvalues);
+        }
         return true;
     }
 
@@ -977,44 +992,60 @@ private:
         string cmd;
         while(!sinput.eof()) {
             sinput >> cmd;
-            if( !sinput )
+            if( !sinput ) {
                 break;
+            }
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
 
             if( cmd == "target" ) {
                 string name; sinput >> name;
                 taskdata->ptarget = GetEnv()->GetKinBody(name);
-                if( !taskdata->ptarget )
+                if( !taskdata->ptarget ) {
                     RAVELOG_WARN(str(boost::format("invalid target %s\n")%name));
+                }
             }
-            else if( cmd == "planner" )
+            else if( cmd == "planner" ) {
                 sinput >> plannername;
-            else if( cmd == "distthresh" )
+            }
+            else if( cmd == "distthresh" ) {
                 sinput >> params->fDistThresh;
-            else if( cmd == "sampleradius" )
+            }
+            else if( cmd == "sampleradius" ) {
                 sinput >> params->fRadius;
-            else if( cmd == "goalcoeff" )
+            }
+            else if( cmd == "goalcoeff" ) {
                 sinput >> params->fGoalCoeff;
-            else if( cmd == "numchildren")
+            }
+            else if( cmd == "numchildren") {
                 sinput >> params->nMaxChildren;
-            else if( cmd == "goalthresh") 
+            }
+            else if( cmd == "goalthresh") {
                 sinput >> taskdata->fGoalThresh;
-            else if( cmd == "targetlink")
+            }
+            else if( cmd == "targetlink") {
                 sinput >> nLinkIndex;
-            else if( cmd == "savetraj")
+            }
+            else if( cmd == "savetraj") {
                 strsavetraj = getfilename_withseparator(sinput,';');
-            else if( cmd == "savebodytraj")
+            }
+            else if( cmd == "savebodytraj") {
                 strbodytraj = getfilename_withseparator(sinput,';');
-            else if( cmd == "graspthresh")
+            }
+            else if( cmd == "graspthresh") {
                 sinput >> taskdata->fGraspThresh;
-            else if( cmd == "configthresh")
+            }
+            else if( cmd == "configthresh") {
                 sinput >> taskdata->fConfigThresh;
-            else if( cmd == "maxsamples")
+            }
+            else if( cmd == "maxsamples") {
                 sinput >> taskdata->nMaxSamples;
-            else if( cmd == "maxiterations")
+            }
+            else if( cmd == "maxiterations") {
                 sinput >> params->_nMaxIterations;
-            else if( cmd == "maxikiterations")
+            }
+            else if( cmd == "maxikiterations") {
                 sinput >> taskdata->nMaxIkIterations;
+            }
             else if( cmd == "targetjoints") {
                 int num=0;
                 sinput >> num;

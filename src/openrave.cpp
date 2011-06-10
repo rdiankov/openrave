@@ -55,7 +55,7 @@ static string s_sceneFile;
 static string s_saveScene; // if not NULL, saves the scene and exits
 static boost::shared_ptr<string> s_viewerName;
 
-static list< pair<string, string> > s_listProblems; // problems to initially create
+static list< pair<string, string> > s_listModules; // modules to initially create
 static vector<string> vResourceFiles; // xml files to open
 static int s_WindowWidth = 1024, s_WindowHeight = 768;
 static int s_WindowPosX, s_WindowPosY;
@@ -95,16 +95,16 @@ int main(int argc, char ** argv)
                          "--hidegui           Run with a hidden GUI, this allows 3D rendering and images to be captured\n"
                          "--listplugins       List all plugins and the interfaces they provide\n"
                          "--loadplugin [path] load a plugin at the following path\n"
-                         "-serverport [port] start up the server on a specific port (default is 4765)\n"
+                         "--serverport [port] start up the server on a specific port (default is 4765)\n"
                          "--collision [name]  Default collision checker to use\n"
                          "--viewer [name]     Default viewer to use\n"
-                         "-server [name]     Default server to use\n"
+                         "--server [name]     Default server to use\n"
                          "--physics [name]    Default physics engine to use\n"
                          "-d [debug-level]   start up OpenRAVE with the specified debug level (higher numbers print more).\n"
                          "                   Default level is 2 for release builds, and 4 for debug builds.\n"
                          "-wdims [width] [height] start up the GUI window with these dimensions\n"
                          "-wpos x y set the position of the GUI window\n"
-                         "-problem [problemname] [args] Start openrave with a problem instance. If args involves spaces, surround it with double quotes. args is optional.\n"
+                         "--module [modulename] [args] Start openrave with a module. If args involves spaces, surround it with double quotes. args is optional.\n"
                          "--version          Output the current openrave version\n\n"
                          "-f [scene]         Load a openrave environment file\n\n");
             return 0;
@@ -141,17 +141,17 @@ int main(int argc, char ** argv)
             physicsengine = argv[i+1];
             i += 2;
         }
-        else if( stricmp(argv[i],"-server") == 0 ) {
+        else if( stricmp(argv[i],"--server") == 0 || stricmp(argv[i],"-server") == 0 ) {
             servername = argv[i+1];
             i += 2;
         }
-        else if( stricmp(argv[i], "-problem") == 0 ) {
-            s_listProblems.push_back(pair<string, string>(argv[i+1], ""));
+        else if( stricmp(argv[i], "--module") == 0 || stricmp(argv[i], "-problem") == 0 ) {
+            s_listModules.push_back(pair<string, string>(argv[i+1], ""));
             i += 2;
 
             if( i < argc && argv[i][0] != '-' ) {
                 // set the args
-                s_listProblems.back().second = argv[i];
+                s_listModules.back().second = argv[i];
                 i++;
             }
         }
@@ -178,7 +178,7 @@ int main(int argc, char ** argv)
             s_bSetWindowPosition = true;
             i += 3;
         }
-        else if( stricmp(argv[i], "-serverport") == 0 ) {
+        else if( stricmp(argv[i], "--serverport") == 0 || stricmp(argv[i], "-serverport") == 0 ) {
             nServPort = atoi(argv[i+1]);
             i += 2;
         }
@@ -246,11 +246,11 @@ int main(int argc, char ** argv)
     }
 
     if( servername.size() > 0 && nServPort > 0 ) {
-        ProblemInstancePtr pserver = RaveCreateProblem(s_penv, servername);
+        ModuleBasePtr pserver = RaveCreateModule(s_penv, servername);
         if( !!pserver ) {
             stringstream ss;
             ss << nServPort;
-            if( s_penv->LoadProblem(pserver,ss.str()) != 0 )
+            if( s_penv->LoadModule(pserver,ss.str()) != 0 )
                 RAVELOG_WARN("failed to load server\n");
         }
     }
@@ -332,10 +332,10 @@ void MainOpenRAVEThread()
             penv->Load(*it);
         }
         list< pair<string, string> >::iterator itprob;
-        FORIT(itprob, s_listProblems) {
-            ProblemInstancePtr prob = RaveCreateProblem(penv, itprob->first);
+        FORIT(itprob, s_listModules) {
+            ModuleBasePtr prob = RaveCreateModule(penv, itprob->first);
             if( !!prob ) {
-                penv->LoadProblem(prob, itprob->second);
+                penv->LoadModule(prob, itprob->second);
             }
         }
 
