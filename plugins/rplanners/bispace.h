@@ -562,7 +562,7 @@ class BiSpacePlanner : public PlannerBase
             BOOST_ASSERT( _pmanip != NULL );
             vector<int>::const_iterator itjoint;
 
-            Transform tEEinv = _pmanip->GetEndEffectorTransform().inverse();
+            Transform tEEinv = _pmanip->GetTransform().inverse();
 
             FOREACHC(itlink, _robot->GetLinks()) {
 
@@ -727,10 +727,10 @@ class BiSpacePlanner : public PlannerBase
                             iconfignode = inode;
                             if( _pmanip != NULL ) {
                                 ptargworkconfig = &vworktemp[0];
-                                if( _workspacetree._spacetype == SST_3D ) _SetWorkspace3D(ptargworkconfig, _pmanip->GetEndEffectorTransform());
+                                if( _workspacetree._spacetype == SST_3D ) _SetWorkspace3D(ptargworkconfig, _pmanip->GetTransform());
                                 else {
                                     BOOST_ASSERT( _workspacetree._spacetype == SST_6D );
-                                    _SetWorkspace6D(ptargworkconfig, _pmanip->GetEndEffectorTransform());
+                                    _SetWorkspace6D(ptargworkconfig, _pmanip->GetTransform());
                                 }
                             }
                             else ptargworkconfig = &_vSampleConfig[0];
@@ -1257,11 +1257,11 @@ class BiSpacePlanner : public PlannerBase
         switch( _workspacetree._spacetype ) {
         case SST_3D:
             vworkconfig.resize(3);
-            _SetWorkspace3D(&vworkconfig[0], _pmanip->GetEndEffectorTransform());
+            _SetWorkspace3D(&vworkconfig[0], _pmanip->GetTransform());
             break;
         case SST_6D:
             vworkconfig.resize(7);
-            _SetWorkspace6D(&vworkconfig[0], _pmanip->GetEndEffectorTransform());
+            _SetWorkspace6D(&vworkconfig[0], _pmanip->GetTransform());
             break;
         default:
             vworkconfig.resize(_robot->GetActiveDOF());
@@ -1315,7 +1315,7 @@ class BiSpacePlanner : public PlannerBase
 
             FOREACH(it, _configtree._nodes) {
                 _SetRobotConfig((*it)->q, false);
-                t = TransformMatrix(_pmanip->GetEndEffectorTransform());
+                t = TransformMatrix(_pmanip->GetTransform());
 
                 for(int i = 0; i < 3; ++i)
                     fprintf(f, "%f %f %f ", t.m[4*i+0], t.m[4*i+1], t.m[4*i+2]);
@@ -1729,7 +1729,7 @@ class BiSpacePlanner : public PlannerBase
         // descend on the jacobian
         while(1) {
             // get the translation jacobian
-            Transform tEE = _pmanip->GetEndEffectorTransform();
+            Transform tEE = _pmanip->GetTransform();
 
             if( (target.trans-tEE.trans).lengthsqr3() <= JACOBIAN_TRANS_THRESH*JACOBIAN_TRANS_THRESH )
                 // done
@@ -1786,7 +1786,7 @@ class BiSpacePlanner : public PlannerBase
         //    // now perform the rotation (need to break up because math gets difficult)
         //    while(1) {
         //        // get the translation jacobian
-        //        Transform tEE = _pmanip->GetEndEffectorTransform();
+        //        Transform tEE = _pmanip->GetTransform();
         //
         //        if( (target.rot-tEE.rot).lengthsqr4() <= SQR(JACOBIAN_ROT_THRESH) )
         //            // done
@@ -1850,7 +1850,7 @@ class BiSpacePlanner : public PlannerBase
         J.resize(_robot->GetActiveDOF()*7);
 
         _SetRobotConfig(pcurconfig, false);
-        Transform tEE = _pmanip->GetEndEffectorTransform();
+        Transform tEE = _pmanip->GetTransform();
     
         // get the translation jacobian
         Transform tTarget;
@@ -1890,12 +1890,12 @@ class BiSpacePlanner : public PlannerBase
         case SST_3D:
             vworkconfig.resize(3);
             _SetRobotConfig(pfwdconfig, false);
-            _SetWorkspace3D(&vworkconfig[0], _pmanip->GetEndEffectorTransform());
+            _SetWorkspace3D(&vworkconfig[0], _pmanip->GetTransform());
             break;
         case SST_6D:
             vworkconfig.resize(7);
             _SetRobotConfig(pfwdconfig, false);
-            _SetWorkspace6D(&vworkconfig[0], _pmanip->GetEndEffectorTransform());
+            _SetWorkspace6D(&vworkconfig[0], _pmanip->GetTransform());
             break;
         default:
             vworkconfig.resize(_robot->GetActiveDOF());
@@ -1984,7 +1984,7 @@ class BiSpacePlanner : public PlannerBase
                 BOOST_ASSERT( _robot != NULL && _robot->GetActiveManipulator() != NULL && _robot->GetActiveManipulator()->pEndEffector != NULL );
             
                 _robot->SetActiveDOFValues(NULL,(const dReal *) c1);
-                Transform cur = _robot->GetActiveManipulator()->GetEndEffectorTransform();
+                Transform cur = _robot->GetActiveManipulator()->GetTransform();
 
                 return sqrtf(lengthsqr3(tgoal.trans - cur.trans));
             }

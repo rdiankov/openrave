@@ -75,7 +75,7 @@ public:
     ///
     /// \param filterfn - an optional filter function to be called, see \ref IkFilterCallbackFn.
     /// \exception openrave_exception Throw if filters are not supported.
-    virtual void SetCustomFilter(const IkFilterCallbackFn& filterfn) { throw openrave_exception("ik filters ignored",ORE_NotImplemented); }
+    virtual void SetCustomFilter(const IkFilterCallbackFn& filterfn) OPENRAVE_DUMMY_IMPLEMENTATION;
 
     /// \brief Number of free parameters defining the null solution space.
     ///
@@ -129,7 +129,7 @@ public:
     virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, int filteroptions, std::vector< std::vector<dReal> >& solutions) = 0;
 
     /// \brief returns true if the solver supports a particular ik parameterization as input.
-    virtual bool Supports(IkParameterization::Type iktype) const { throw openrave_exception("IkSolverBase::Supports not implemented",ORE_NotImplemented); }
+    virtual bool Supports(IkParameterization::Type iktype) const OPENRAVE_DUMMY_IMPLEMENTATION;
 
 private:
     virtual const char* GetHash() const { return OPENRAVE_IKSOLVER_HASH; }

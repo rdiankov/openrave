@@ -1,21 +1,24 @@
-// Copyright (C) 2006-2010 Rosen Diankov (rdiankov@cs.cmu.edu)
+// -*- coding: utf-8 --*
+// Copyright (C) 2006-2011 Rosen Diankov <rosen.diankov@gmail.com>
 //
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
+// This file is part of OpenRAVE.
+// OpenRAVE is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // at your option) any later version.
 //
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+// GNU Lesser General Public License for more details.
 //
-// You should have received a copy of the GNU General Public License
+// You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef OPENRAVE_PLUGINDEFS_H
 #define OPENRAVE_PLUGINDEFS_H
 
 #include <openrave/openrave.h> // should be included first in order to get boost throwing openrave exceptions
+#include <openrave/planningutils.h>
 
 // include boost for vc++ only (to get typeof working)
 #ifdef _MSC_VER

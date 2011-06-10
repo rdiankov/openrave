@@ -17,10 +17,6 @@ Each sub-module contains a 'run' function that can be called directly with optio
 """
 
 # tutorials showing a single functionality (simple)
-import tutorial_001
-import tutorial_002
-import tutorial_003
-import tutorial_004
 import tutorial_grasptransform
 import tutorial_ik5d
 import tutorial_iklookat

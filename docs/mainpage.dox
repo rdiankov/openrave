@@ -191,7 +191,7 @@ RaveLoadPlugin(env,"plugincpp");
 \endcode
 \b Python
 \verbatim
-RaveLoadPlugin(env,'plugincpp');
+RaveLoadPlugin('plugincpp')
 \endverbatim
 \b Octave
 \verbatim
@@ -305,6 +305,7 @@ make
 - \ref ikfastloader.cpp
 - \ref orcollision.cpp
 - \ref orconveyormovement.cpp
+- \ref orikfilter.cpp
 - \ref orloadviewer.cpp
 - \ref orshowsensors.cpp
 - \ref ormulticontrol.cpp

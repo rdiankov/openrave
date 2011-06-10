@@ -55,12 +55,14 @@ def setup_robotstats():
     env=Environment()
     env.StopSimulation()
     ikfastproblem = RaveCreateProblem(env,'ikfast')
+    assert(ikfastproblem is not None)
     env.LoadProblem(ikfastproblem,'')
 
 def teardown_robotstats():
     global env,ikfastproblem
-    env.Remove(ikfastproblem)
-    env.Destroy()
+    if env is not None:
+        env.Remove(ikfastproblem)
+        env.Destroy()
     RaveDestroy()
 
 def measurement(name,value):
@@ -271,11 +273,11 @@ if __name__ == "__main__":
     options.robotfilenames = []
     for robot in robots:
         if robot == 'basic':
-            options.robotfilenames += ['robots/unimation-pumaarm.zae','robots/barrett-wam.zae']
+            options.robotfilenames += ['robots/unimation-pumaarm.zae','robots/barrett-wam.zae','robots/kawada-hironx.zae']
         elif robot == 'pr2':
             options.robotfilenames += ['robots/pr2-beta-static.zae']
         elif robot == '*':
-            options.robotfilenames += ['robots/unimation-pumaarm.zae','robots/barrett-wam.zae','robots/pr2-beta-static.zae','robots/neuronics-katana.zae','robots/mitsubishi-pa10.zae','robots/schunk-lwa3.zae','robots/darpa-arm.zae','robots/exactdynamics-manusarmleft.zae','robots/kuka-kr5-r650.zae','robots/kuka-kr5-r850.zae','robots/kuka-kr30l16.zae','robots/tridof.robot.xml','robots/barrett-wam4.zae']
+            options.robotfilenames += ['robots/unimation-pumaarm.zae','robots/barrett-wam.zae','robots/pr2-beta-static.zae','robots/neuronics-katana.zae','robots/mitsubishi-pa10.zae','robots/schunk-lwa3.zae','robots/darpa-arm.zae','robots/exactdynamics-manusarmleft.zae','robots/kuka-kr5-r650.zae','robots/kuka-kr5-r850.zae','robots/kuka-kr30l16.zae','robots/tridof.robot.xml','robots/barrett-wam4.zae','robots/kawada-hironx.zae']
         elif options.robots == 'random':
             options.robotfilenames.append('random')
         else:
@@ -294,7 +296,7 @@ if __name__ == "__main__":
     multiprocess._instantiate_plugins = [capture.Capture, xunitmultiprocess.Xunitmp, callableclass.CallableClass]
 
     header = 'name=\"%s robots\" package=\"%s\"'%(options.robots,ikfast.__name__)
-    argv=['nosetests','-v','--with-xunitmp','--xunit-file=test_ikfast.xml','--xunit-header=%s'%header,'--processes=%d'%options.numprocesses,'--process-timeout=%f'%options.timeout,'--process-restartworker','--with-callableclass','test_ikfast.py']
+    argv=['nosetests','-s','-v','--with-xunitmp','--xunit-file=test_ikfast.xml','--xunit-header=%s'%header,'--processes=%d'%options.numprocesses,'--process-timeout=%f'%options.timeout,'--process-restartworker','--with-callableclass','test_ikfast.py']
     plugins=[capture.Capture(),multiprocess.MultiProcess(),xunitmultiprocess.Xunitmp(),callableclass.CallableClass()]
     prog=nose.core.TestProgram(argv=argv,plugins=plugins,exit=False)
     print 'processing the global stats'

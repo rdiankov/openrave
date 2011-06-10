@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2011 Rosen Diankov (rdiankov@cs.cmu.edu)
+// Copyright (C) 2006-2011 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -290,7 +290,7 @@ bool KinBodyItem::UpdateFromIv()
     
     boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = _viewer->LockEnvironment(50000,false);
     if( !!lockenv ) {
-        _pchain->SetBodyTransformations(vtrans);
+        _pchain->SetLinkTransformations(vtrans);
     }
     else {
         RAVELOG_WARN("failed to acquire environment lock for updating body (viewer updates might be choppy, otherwise this does not affect internal openrave state)\n");
@@ -326,7 +326,7 @@ bool KinBodyItem::UpdateFromModel()
         }
         // make sure the body is still present!
         if( _pchain->GetEnv()->GetBodyFromEnvironmentId(networkid) == _pchain ) {
-            _pchain->GetBodyTransformations(_vtrans);
+            _pchain->GetLinkTransformations(_vtrans);
             _pchain->GetDOFValues(vjointvalues);
         }
         else {
@@ -342,7 +342,7 @@ void KinBodyItem::GetDOFValues(vector<dReal>& vjoints) const
     vjoints = _vjointvalues;
 }
 
-void KinBodyItem::GetBodyTransformations(vector<Transform>& vtrans) const
+void KinBodyItem::GetLinkTransformations(vector<Transform>& vtrans) const
 {
     boost::mutex::scoped_lock lock(_mutexjoints);
     vtrans = _vtrans;

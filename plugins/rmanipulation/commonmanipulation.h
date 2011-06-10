@@ -29,156 +29,7 @@
 
 class CM
 {
- public:
-    class SimpleDistMetric
-    {
-    public:
-    SimpleDistMetric(RobotBasePtr robot) : _robot(robot) {
-            _robot->GetActiveDOFWeights(weights);
-        }
-        virtual dReal Eval(const std::vector<dReal>& c0, const std::vector<dReal>& c1)
-        {
-            std::vector<dReal> c = c0;
-            _robot->SubtractActiveDOFValues(c,c1);
-            dReal dist = 0;
-            for(int i=0; i < _robot->GetActiveDOF(); i++) {
-                dist += weights.at(i)*c.at(i)*c.at(i);
-            }
-            return RaveSqrt(dist);
-        }
-
-    protected:
-        RobotBasePtr _robot;
-        vector<dReal> weights;
-    };
-
-    /// \return 0 if jitter failed and robot is in collision, -1 if robot originally not in collision, 1 if jitter succeeded
-    typedef boost::function<bool(const std::vector<dReal>&, std::vector<dReal>&, int)> ConstraintFn;
-    static int JitterActiveDOF(RobotBasePtr robot,int nMaxIterations=5000,dReal fRand=0.03f,const ConstraintFn& constraintfn = ConstraintFn())
-    {
-        RAVELOG_VERBOSE("starting jitter active dof...\n");
-        vector<dReal> curdof, newdof;
-        robot->GetActiveDOFValues(curdof);
-        int iter = 0;
-        CollisionReport report;
-        CollisionReportPtr preport(&report,null_deleter());
-        bool bCollision = false;
-        bool bConstraint = !!constraintfn;
-        if( !bConstraint || constraintfn(curdof,curdof,0) ) {
-            if( bConstraint ) {
-                // curdof might have changed from constraint function
-                robot->SetActiveDOFValues(curdof);
-                //robot->GetActiveDOFValues(curdof); // necessary?
-            }
-            if(robot->CheckSelfCollision(preport)) {
-                bCollision = true;
-                RAVELOG_DEBUG(str(boost::format("JitterActiveDOFs: initial config in self collision: %s!\n")%report.__str__()));
-            }
-            if( robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot),preport) ) {
-                bCollision = true;
-                RAVELOG_DEBUG(str(boost::format("JitterActiveDOFs: initial config in collision: %s!\n")%report.__str__()));
-            }
-            if( !bCollision ) {
-                return -1;
-            }
-        }
-        else {
-            RAVELOG_DEBUG("constraint function failed\n");
-        }
-
-        newdof.resize(curdof.size());
-        do {
-            if( iter++ > nMaxIterations ) {
-                RAVELOG_WARN("Failed to find noncolliding position for robot\n");
-                robot->SetActiveDOFValues(curdof,true);
-                return 0;
-            }
-            for(int j = 0; j < robot->GetActiveDOF(); j++) {
-                newdof[j] = curdof[j] + fRand * (RaveRandomFloat()-0.5f);
-            }
-            robot->SetActiveDOFValues(newdof,true);
-            robot->GetActiveDOFValues(newdof);
-            if( bConstraint && !constraintfn(curdof,newdof,0) ) {
-                continue;
-            }
-        } while(robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot)) || robot->CheckSelfCollision() );
-    
-        return 1;
-    }
-
-    static bool JitterTransform(KinBodyPtr pbody, float fJitter, int nMaxIterations=1000)
-    {
-        RAVELOG_VERBOSE("starting jitter transform...\n");
-
-        // randomly add small offset to the body until it stops being in collision
-        Transform transorig = pbody->GetTransform();
-        Transform transnew = transorig;
-        int iter = 0;
-        while(pbody->GetEnv()->CheckCollision(KinBodyConstPtr(pbody)) ) {
-            if( iter > nMaxIterations ) {
-                return false;
-            }
-            transnew.trans = transorig.trans + fJitter * Vector(RaveRandomFloat()-0.5f, RaveRandomFloat()-0.5f, RaveRandomFloat()-0.5f);
-            pbody->SetTransform(transnew);
-            ++iter;
-        }
-
-        return true;
-    }
-
-    /// Samples numsamples of solutions and each solution to vsolutions
-    /// \return number of ik solutions sampled
-    static int SampleIkSolutions(RobotBasePtr robot, const IkParameterization& ikp, int numsamples, vector<dReal>& vsolutions)
-    {
-        RobotBase::ManipulatorConstPtr pmanip = robot->GetActiveManipulator();
-        if( numsamples <= 0 ) {
-            return 0;
-        }
-        // quickly prune grasp is end effector is in collision
-        if( ikp.GetType() == IkParameterization::Type_Transform6D ) {
-            CollisionReportPtr report(new CollisionReport());
-            if( pmanip->CheckEndEffectorCollision(ikp.GetTransform6D(),report) ) {
-                RAVELOG_VERBOSE(str(boost::format("sampleiksolutions gripper in collision: %s.\n")%report->__str__()));
-                return 0;
-            }
-        }
-
-        int _numsamples = numsamples;
-
-        vector< vector<dReal> > viksolutions;
-        vector<dReal> vfree(pmanip->GetIkSolver()->GetNumFreeParameters());
-        for(int iter = 0; iter < 50*numsamples; ++iter) {
-            for(int i = 0; i < (int)vfree.size(); ++i) {
-                vfree[i] = RaveRandomFloat();
-            }
-            if( pmanip->FindIKSolutions(ikp, vfree, viksolutions, true) ) {
-                FOREACH(itsol, viksolutions) {
-                    vsolutions.insert(vsolutions.end(), itsol->begin(), itsol->end());
-                    if( --_numsamples <= 0 ) {
-                        return numsamples;
-                    }
-                }
-            }
-        }
-        
-        bool bSuccess = pmanip->FindIKSolutions(ikp, viksolutions, true);
-        if( !bSuccess || viksolutions.size() == 0 ) {
-            //RAVELOG_WARN("findiksolutions returns nothing\n");
-            return false;
-        }
-
-        while(1) {
-            FOREACH(itsol, viksolutions) {
-                vsolutions.insert(vsolutions.end(), itsol->begin(), itsol->end());
-                if( --_numsamples <= 0 ) {
-                    return numsamples;
-                }
-            }
-        }
-
-        return numsamples-_numsamples;
-    }
-
+public:
     class MoveUnsync
     {
     public:
@@ -191,7 +42,7 @@ class CM
         virtual float Eval(const std::vector<dReal>& pConfiguration)
         {    
             // check if there's a collision when hand moves to final config
-            RobotBase::RobotStateSaver saver(_robot);            
+            RobotBase::RobotStateSaver saver(_robot);
             _robot->SetActiveDOFValues(pConfiguration);
             
             _robot->SetActiveDOFs(vhandjoints);
@@ -279,10 +130,12 @@ class CM
                 return false;
             }
     
-            if( !planner->InitPlan(robot, params) )
+            if( !planner->InitPlan(robot, params) ) {
                 return false;
-            if( !planner->PlanPath(ptraj) )
+            }
+            if( !planner->PlanPath(ptraj) ) {
                 return false;
+            }
 
             //ptraj->CalcTrajTiming(robot, ptraj->GetInterpMethod(), true, true);
             return true;
@@ -300,26 +153,37 @@ class CM
     GripperJacobianConstrains(RobotBase::ManipulatorPtr pmanip, const Transform& tTargetWorldFrame, const boost::array<T,6>& vfreedoms, T errorthresh=1e-3) : _pmanip(pmanip), _vfreedoms(vfreedoms) {
             _errorthresh2 = errorthresh*errorthresh;
             _probot = _pmanip->GetRobot();
-            _tOriginalEE = _pmanip->GetEndEffectorTransform();
+            _tOriginalEE = _pmanip->GetTransform();
             _tTargetFrameLeft = tTargetWorldFrame*_tOriginalEE.inverse();
             _tTargetFrameRight = tTargetWorldFrame.inverse();
             _J.resize(6,_probot->GetActiveDOF());
             _invJJt.resize(6,6);
             _error.resize(6,1);
-            _nMaxIterations = 20;
+            _nMaxIterations = 40;
+            _pmanip->GetRobot()->GetActiveDOFLimits(_vlower,_vupper);
             
         }
         virtual ~GripperJacobianConstrains() {}
 
-        bool RetractionConstraint(const std::vector<dReal>& vprev, std::vector<dReal>& vcur, int settings)
+        bool RetractionConstraint(std::vector<dReal>& vprev, const std::vector<dReal>& vdelta)
         {
             const T lambda2 = 1e-8; // normalization constant
             using namespace boost::numeric::ublas;
-            std::vector<dReal> vnew = vcur;
-            dReal fdistprev = _distmetricfn(vprev,vcur), fdistcur=0;
+            std::vector<dReal> vnew = vprev;
+            for(size_t i = 0; i < vnew.size(); ++i) {
+                vnew[i] += vdelta.at(i);
+                if( vnew[i] < _vlower[i] ) {
+                    vnew[i] = _vlower[i];
+                }
+                else if( vnew[i] > _vupper[i] ) {
+                    vnew[i] = _vupper[i];
+                }
+            }
+            dReal fdistprev = _distmetricfn(vprev,vnew), fdistcur=0;
             _lasterror=0;
+            _probot->SetActiveDOFValues(vnew);
             for(_iter = 0; _iter < _nMaxIterations; ++_iter) {
-                Transform tEE = _pmanip->GetEndEffectorTransform();
+                Transform tEE = _pmanip->GetTransform();
                 Transform t = _tTargetFrameLeft * tEE * _tTargetFrameRight;
 
                 T totalerror=0;
@@ -336,7 +200,7 @@ class CM
                     totalerror += _error(i,0)*_error(i,0) + _error(3+i,0)*_error(3+i,0);
                 }
                 if( totalerror < _errorthresh2 ) {
-                    vcur = vnew;
+                    vprev = vnew;
                     return true;
                 }
                 // 4.0 is an arbitrary number...
@@ -379,7 +243,7 @@ class CM
                 for(size_t i = 0; i < vnew.size(); ++i) {
                     vnew.at(i) += _qdelta(i,0);
                 }
-                fdistcur = _distmetricfn(vcur,vnew);
+                fdistcur = _distmetricfn(vprev,vnew);
                 _probot->SetActiveDOFValues(vnew); // for next iteration
             }
             
@@ -413,6 +277,7 @@ class CM
         RobotBasePtr _probot;
         RobotBase::ManipulatorPtr _pmanip;
         Transform _tTargetFrameLeft, _tTargetFrameRight,_tOriginalEE;
+        vector<dReal> _vlower, _vupper;
         boost::array<T,6> _vfreedoms;
         T _errorthresh2;
         boost::multi_array<dReal,2> _vjacobian;
@@ -620,42 +485,43 @@ class CM
     }
 };
 
-
 /// returns a random sequence of permuations
 template <class T> void PermutateRandomly(vector<T>& vpermutation)
 {
-    if( vpermutation.size() <= 1 )
+    if( vpermutation.size() <= 1 ) {
         return;
-    for(size_t i = 0; i < vpermutation.size()-1; ++i)
+    }
+    for(size_t i = 0; i < vpermutation.size()-1; ++i) {
         std::swap(vpermutation[i], vpermutation[i+(rand()%(vpermutation.size()-i))]);
+    }
 }
 
 /// permute a sequence of n numbers
 /// and execute a function for each number in that sequence
 /// if the function returns true, break from executing further
 /// functions, otherwise continue
-class RandomPermuationExecutor
+class RandomPermutationExecutor
 {
 public:
- RandomPermuationExecutor() : nextindex(-1) {}
- RandomPermuationExecutor(const boost::function<bool(int)>& fn) : _fn(fn), nextindex(-1) {}
+ RandomPermutationExecutor() : nextindex(-1) {}
+ RandomPermutationExecutor(const boost::function<bool(int)>& fn) : _fn(fn), nextindex(-1) {}
 
     /// returns the index of the permutation that the function returned true in
     /// or -1 if function never returned true
     void PermuteStart(unsigned int permutationsize) {
         BOOST_ASSERT( permutationsize > 0);
         vpermutation.resize(permutationsize);
-        for(unsigned int i = 0; i < permutationsize; ++i)
+        for(unsigned int i = 0; i < permutationsize; ++i) {
             vpermutation[i] = i;
-
+        }
         nextindex = 0;
     }
 
     /// continue from last time
     int PermuteContinue() {
-        if( nextindex < 0 || nextindex >= vpermutation.size() )
+        if( nextindex < 0 || nextindex >= vpermutation.size() ) {
             return -1;
-        
+        }
         for(unsigned int i = nextindex; i < vpermutation.size(); ++i) {
             std::swap(vpermutation[i], vpermutation[i+(rand()%(vpermutation.size()-i))]);
             if( _fn(vpermutation[i]) ) {
@@ -721,7 +587,7 @@ template <typename T> inline RaveVector<T> GetRandomQuat()
 
 #ifdef RAVE_REGISTER_BOOST
 #include BOOST_TYPEOF_INCREMENT_REGISTRATION_GROUP()
-BOOST_TYPEOF_REGISTER_TYPE(RandomPermuationExecutor)
+BOOST_TYPEOF_REGISTER_TYPE(RandomPermutationExecutor)
 #endif
 
 #endif

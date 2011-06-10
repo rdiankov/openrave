@@ -73,30 +73,39 @@ def test_transformations():
             assert( sum(abs(transformInversePoints(matrices[j],X) - poseTransformPoints(posearrayinv0[j],X))) <= g_epsilon )
         
 def test_fitcircle():
-    """fits 2d/3d circles to a set of points"""
+    """fits 2d and 3d circles to a set of points"""
     perturbation = 0.001
-    for i in range(400):
+    for i in range(1000):
         T = randtrans()
         radius = random.rand()*5+0.3
         angles = random.rand(5)*2*pi
         points = c_[radius*cos(angles)+perturbation*(random.rand(len(angles))-0.5),radius*sin(angles)+perturbation*(random.rand(len(angles))-0.5),perturbation*(random.rand(len(angles))-0.5)]
+        M = mean(points,0)
+        Z=dot(transpose(points-M),points-M)
+        eigvals = sort(linalg.eigvals(Z))
+        if min(sqrt(eigvals[1]),sqrt(eigvals[2])) < 0.5*radius:
+            # badly condition points, try again
+            continue
+
         newpoints = transformPoints(T,points)
-        newcenter, newradius = fitCircle(newpoints)
-        assert( sum(abs(T[0:3,3]-newcenter)) <= perturbation*10 )
-        assert( sum(abs(radius-newradius)) <= perturbation*10 )
+        newcenter, newradius, error = fitCircle(newpoints)
+        assert( sum(abs(T[0:3,3]-newcenter)) <= perturbation*4 )
+        assert( sum(abs(radius-newradius)) <= perturbation*4 )
+        assert( error <= perturbation*4 )
         newpoints2d = points[:,0:2] + T[0:2,3]
-        newcenter2d, newradius2d = fitCircle(newpoints2d)
-        assert( sum(abs(T[0:2,3]-newcenter2d)) <= perturbation*10 )
-        assert( sum(abs(radius-newradius2d)) <= perturbation*10 )
+        newcenter2d, newradius2d, error = fitCircle(newpoints2d)
+        assert( sum(abs(T[0:2,3]-newcenter2d)) <= perturbation*4 )
+        assert( sum(abs(radius-newradius2d)) <= perturbation*4 )
+        assert( error <= perturbation*4 )
 
 class TestKinematics(EnvironmentSetup):
     def test_bodybasic(self):
-        """checks if the joint/link set/get functions are consistent along with jacobians"""
+        """checks if the joint-link set-get functions are consistent along with jacobians"""
         with self.env:
             for envfile in g_envfiles:
                 self.env.Reset()
                 self.env.Load(envfile)
-                for i in range(16):
+                for i in range(20):
                     T = eye(4)
                     for body in self.env.GetBodies():
                         Told = body.GetTransform()
@@ -129,7 +138,7 @@ class TestKinematics(EnvironmentSetup):
                             link.SetTransform(T)
                         assert( transdist(body.GetBodyTransformations(),Tallnew2) <= g_epsilon )
                         body.SetBodyTransformations(Tallnew)
-                        for idir in range(16):
+                        for idir in range(20):
                             deltavalues0 = array([g_jacobianstep*(random.randint(3)-1) for j in range(body.GetDOF())])
                             localtrans = randtrans()
                             for ilink,link in enumerate(body.GetLinks()):
@@ -148,6 +157,8 @@ class TestKinematics(EnvironmentSetup):
                                 deltavalues = body.GetDOFValues()-dofvaluesnew
                                 armlength = bodymaxjointdist(link,localtrans[0:3,3])
                                 thresh = armlength*sum(abs(deltavalues))*1.1
+                                if armlength < 0.0001:
+                                    continue
                                 Tlinknew=dot(link.GetTransform(),localtrans)
                                 newaxisangle = axisAngleFromRotationMatrix(Tlinknew[0:3,0:3])
                                 newquat = quatFromRotationMatrix(Tlinknew[0:3,0:3])
@@ -155,7 +166,7 @@ class TestKinematics(EnvironmentSetup):
                                     newquat = -newquat
                                 deltatrans = Tlinknew[0:3,3] - worldtrans
                                 assert( transdist(dot(Jtrans,deltavalues),deltatrans) <= thresh )
-                                assert( transdist(dot(Jquat,deltavalues)+worldquat,newquat) <= thresh )
+                                assert( transdist(dot(Jquat,deltavalues)+worldquat,newquat) <= 2*thresh )
                                 assert( axisangledist(dot(Jangvel,deltavalues)+worldaxisangle,newaxisangle) <= 2*thresh )
 
 #     def RetractionConstraint(self,prev,cur,thresh=1e-4):

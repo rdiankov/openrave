@@ -239,7 +239,6 @@ public:
 RandomizedAStarPlanner(EnvironmentBasePtr penv) : PlannerBase(penv)
     {
         __description = ":Interface Author: Rosen Diankov\n\nRandomized A*";
-        _report.reset(new CollisionReport());
         bUseGauss = false;
         nIndex = 0;
     }
@@ -309,25 +308,17 @@ RandomizedAStarPlanner(EnvironmentBasePtr penv) : PlannerBase(penv)
         RobotBase::RobotStateSaver saver(_robot);
         Node* pcurrent=NULL, *pbest = NULL;
 
+        if( !_parameters->_checkpathconstraintsfn(_parameters->vinitialconfig,_parameters->vinitialconfig,IT_OpenStart,ConfigurationListPtr()) ) {
+            return false;
+        }
+
         _parameters->_setstatefn(_parameters->vinitialconfig);
         pcurrent = CreateNode(0, NULL, _parameters->vinitialconfig);
-
-        if( GetEnv()->CheckCollision(KinBodyConstPtr(_robot), _report) ) {
-            RAVELOG_WARN("RA*: robot initially in collision %s:%s!\n",
-                          _report->plink1!=NULL?_report->plink1->GetName().c_str():"(NULL)",
-                          _report->plink2!=NULL?_report->plink2->GetName().c_str():"(NULL)");
-            return false;
-        }
-        else if( _robot->CheckSelfCollision() ) {
-            RAVELOG_WARN("RA*: robot self-collision!\n");
-            return false;
-        }
     
         vector<dReal> tempconfig(GetDOF());
         int nMaxIter = _parameters->_nMaxIterations > 0 ? _parameters->_nMaxIterations : 8000;
 
         while(1) {
-
             if( _sortedtree.blocks.size() == 0 ) {
                 break;
             }
@@ -358,24 +349,15 @@ RandomizedAStarPlanner(EnvironmentBasePtr penv) : PlannerBase(penv)
                         break;
                     }
 
-                    if( !!_parameters->_constraintfn ) {
-                        _parameters->_setstatefn(_vSampleConfig);
-                        if( !_parameters->_constraintfn(pcurrent->q, _vSampleConfig, 0) )
-                            continue;
+                    if ( _parameters->_checkpathconstraintsfn(pcurrent->q, _vSampleConfig, IT_OpenStart, ConfigurationListPtr())) {
+                        continue;
                     }
-
-                    if (_CheckCollision(pcurrent->q, _vSampleConfig, OPEN))
-                        continue;
-                
                     _parameters->_setstatefn(_vSampleConfig);
-                    if( GetEnv()->CheckCollision(KinBodyConstPtr(_robot)) || (_robot->CheckSelfCollision()) )
-                        continue;
-
                     break;
-                
                 }
-                if( sample >= _parameters->nMaxSampleTries )
+                if( sample >= _parameters->nMaxSampleTries ) {
                     continue;
+                }
                         
                 //while (getchar() != '\n') usleep(1000);
 
@@ -397,19 +379,20 @@ RandomizedAStarPlanner(EnvironmentBasePtr penv) : PlannerBase(penv)
             }
         }
 
-        if( pbest == NULL )
+        if( !pbest ) {
             return false;
+        }
 
         RAVELOG_DEBUG("Path found, final node: %f, %f\n", pbest->fcost, pbest->ftotal-pbest->fcost);
-
-        _parameters->_setstatefn(pbest->q);
-        if( GetEnv()->CheckCollision(KinBodyConstPtr(_robot)) || (_robot->CheckSelfCollision()) )
-            RAVELOG_WARN("RA* collision\n");
+        if( !_parameters->_checkpathconstraintsfn(pbest->q,pbest->q,IT_OpenStart,ConfigurationListPtr()) ) {
+            RAVELOG_WARN("RA* bad initial config\n");
+        }
     
         stringstream ss;
         ss << endl << "Path found, final node: cost: " << pbest->fcost << ", goal: " << (pbest->ftotal-pbest->fcost)/_parameters->fGoalCoeff << endl;
-        for(int i = 0; i < GetDOF(); ++i)
+        for(int i = 0; i < GetDOF(); ++i) {
             ss << pbest->q[i] << " ";
+        }
         ss << "\n-------\n";
         RAVELOG_DEBUG(ss.str());
 
@@ -488,70 +471,6 @@ private:
         }
     }
 
-    bool _CheckCollision(const vector<dReal>& pQ0, const vector<dReal>& pQ1, IntervalType interval, vector< vector<dReal> >* pvCheckedConfigurations = NULL)
-    {
-        // set the bounds based on the interval type
-        int start=0;
-        bool bCheckEnd=false;
-        switch (interval) {
-        case OPEN:
-            start = 1;  bCheckEnd = false;
-            break;
-        case OPEN_START:
-            start = 1;  bCheckEnd = true;
-            break;
-        case OPEN_END:
-            start = 0;  bCheckEnd = false;
-            break;
-        case CLOSED:
-            start = 0;  bCheckEnd = true;
-            break;
-        default:
-            BOOST_ASSERT(0);
-        }
-
-        // first make sure the end is free
-        vector<dReal> vtempconfig(_parameters->GetDOF());
-        if (bCheckEnd) {
-            if( pvCheckedConfigurations != NULL )
-                pvCheckedConfigurations->push_back(pQ1);
-            _parameters->_setstatefn(pQ1);
-            if (GetEnv()->CheckCollision(KinBodyConstPtr(_robot)) || (_robot->CheckSelfCollision()) )
-                return true;
-        }
-
-        // compute  the discretization
-        int i, numSteps = 1;
-        dReal* pfresolution = &_jointResolutionInv[0];
-        for (i = 0; i < _parameters->GetDOF(); i++) {
-            int steps = (int)(fabs(pQ1[i] - pQ0[i]) * pfresolution[i]);
-            if (steps > numSteps)
-                numSteps = steps;
-        }
-
-        // compute joint increments
-        for (i = 0; i < _parameters->GetDOF(); i++)
-            _jointIncrement[i] = (pQ1[i] - pQ0[i])/((float)numSteps);
-
-        // check for collision along the straight-line path
-        // NOTE: this does not check the end config, and may or may
-        // not check the start based on the value of 'start'
-        for (int f = start; f < numSteps; f++) {
-            for (i = 0; i < _parameters->GetDOF(); i++)
-                vtempconfig[i] = pQ0[i] + (_jointIncrement[i] * f);
-        
-            if( pvCheckedConfigurations != NULL ) {
-                pvCheckedConfigurations->push_back(vtempconfig);
-            }
-            _parameters->_setstatefn(vtempconfig);
-            if( GetEnv()->CheckCollision(KinBodyConstPtr(_robot)) || (_robot->CheckSelfCollision()) ) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
     void _SimpleOptimizePath(list<Node*>& path)
     {
         if( path.size() <= 2 )
@@ -571,7 +490,7 @@ private:
             advance(endNode, endIndex-startIndex);
 
             // check if the nodes can be connected by a straight line
-            if (_CheckCollision((*startNode)->q, (*endNode)->q, OPEN)) {
+            if( !_parameters->_checkpathconstraintsfn((*startNode)->q, (*endNode)->q, IT_Open,ConfigurationListPtr()) ) {
                 continue;
             }
 
@@ -634,7 +553,6 @@ private:
     boost::shared_ptr<RAStarParameters> _parameters;
     SpatialTree _spatialtree;
     BinarySearchTree<Node*, dReal> _sortedtree;   // sorted by decreasing value
-    CollisionReportPtr _report;
 
     RobotBasePtr _robot;
 

@@ -22,22 +22,21 @@
 template <typename IKReal, typename Solution>
 class IkFastSolver : public IkSolverBase
 {
-    enum SolutionResults
-    {
+    enum SolutionResults {
         SR_Continue = 0, ///< go onto next set of parameters
         SR_Success = 1, ///< found solution
         SR_Quit = 2,  ///< failed due to collisions or other reasons that requires immediate failure
     };
-
+    
  public:
     typedef bool (*IkFn)(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::vector<Solution>& vsolutions);
     typedef bool (*FkFn)(const IKReal* j, IKReal* eetrans, IKReal* eerot);
     
- IkFastSolver(IkFn pfnik, const std::vector<int>& vfreeparams, const vector<dReal>& vFreeInc, int nTotalDOF, IkParameterization::Type iktype, boost::shared_ptr<void> resource, const std::string kinematicshash, EnvironmentBasePtr penv) : IkSolverBase(penv), _vfreeparams(vfreeparams), _pfnik(pfnik), _vFreeInc(vFreeInc), _nTotalDOF(nTotalDOF), _iktype(iktype), _resource(resource), _kinematicshash(kinematicshash) {
+    IkFastSolver(IkFn pfnik, const std::vector<int>& vfreeparams, const vector<dReal>& vFreeInc, int nTotalDOF, IkParameterization::Type iktype, boost::shared_ptr<void> resource, const std::string kinematicshash, EnvironmentBasePtr penv) : IkSolverBase(penv), _vfreeparams(vfreeparams), _pfnik(pfnik), _vFreeInc(vFreeInc), _nTotalDOF(nTotalDOF), _iktype(iktype), _resource(resource), _kinematicshash(kinematicshash) {
         __description = ":Interface Author: Rosen Diankov\n\nAn OpenRAVE wrapper for the ikfast generated files.\nIf 6D IK is used, will check if the end effector and other independent links are in collision before manipulator link collisions. If they are, the IK will terminate with failure immediately.\nBecause checking collisions is the slowest part of the IK, the custom filter function run before collision checking.";
     }
     virtual ~IkFastSolver() {}
-
+    
     inline boost::shared_ptr<IkFastSolver<IKReal,Solution> > shared_solver() { return boost::static_pointer_cast<IkFastSolver<IKReal,Solution> >(shared_from_this()); }
     inline boost::shared_ptr<IkFastSolver<IKReal,Solution> const> shared_solver_const() const { return boost::static_pointer_cast<IkFastSolver<IKReal,Solution> const>(shared_from_this()); }
     inline boost::weak_ptr<IkFastSolver<IKReal,Solution> > weak_solver() { return shared_solver(); }
@@ -68,7 +67,7 @@ class IkFastSolver : public IkSolverBase
     virtual bool Init(RobotBase::ManipulatorPtr pmanip)
     {
         if( _kinematicshash.size() > 0 && pmanip->GetKinematicsStructureHash() != _kinematicshash ) {
-            RAVELOG_ERROR(str(boost::format("inverse kinematics hashes do not match for manip %s:%s: %s!=%s\n")%pmanip->GetRobot()->GetName()%pmanip->GetName()%pmanip->GetKinematicsStructureHash()%_kinematicshash));
+            RAVELOG_ERROR(str(boost::format("inverse kinematics hashes do not match for manip %s:%s. IK will not work! %s!=%s\n")%pmanip->GetRobot()->GetName()%pmanip->GetName()%pmanip->GetKinematicsStructureHash()%_kinematicshash));
         }
         _pmanip = pmanip;
         RobotBasePtr probot = pmanip->GetRobot();

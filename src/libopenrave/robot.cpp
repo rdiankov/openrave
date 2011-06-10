@@ -18,7 +18,7 @@
 
 #define CHECK_INTERNAL_COMPUTATION { \
     if( _nHierarchyComputed != 2 ) { \
-        throw openrave_exception(str(boost::format("%s: joint hierarchy needs to be computed (is body added to environment?)\n")%__PRETTY_FUNCTION__)); \
+        throw OPENRAVE_EXCEPTION_FORMAT0("joint hierarchy needs to be computed (is body added to environment?)", ORE_Failed); \
     } \
 } \
 
@@ -49,7 +49,7 @@ RobotBase::Manipulator::Manipulator(RobotBasePtr probot, const RobotBase::Manipu
         _pIkSolver = RaveCreateIkSolver(probot->GetEnv(), _strIkSolver);
 }
 
-Transform RobotBase::Manipulator::GetEndEffectorTransform() const
+Transform RobotBase::Manipulator::GetTransform() const
 {
     return _pEndEffector->GetTransform() * _tGrasp;
 }
@@ -62,11 +62,6 @@ bool RobotBase::Manipulator::SetIkSolver(IkSolverBasePtr iksolver)
         return _pIkSolver->Init(shared_from_this());
     }
     return true;
-}
-
-bool RobotBase::Manipulator::InitIKSolver()
-{
-    return !_pIkSolver ? false : _pIkSolver->Init(shared_from_this());
 }
 
 int RobotBase::Manipulator::GetNumFreeParameters() const
@@ -87,7 +82,7 @@ bool RobotBase::Manipulator::FindIKSolution(const IkParameterization& goal, vect
 bool RobotBase::Manipulator::FindIKSolution(const IkParameterization& goal, const std::vector<dReal>& vFreeParameters, vector<dReal>& solution, int filteroptions) const
 {
     if( !_pIkSolver ) {
-        throw openrave_exception(str(boost::format("manipulator %s:%s does not have an IK solver set")%RobotBasePtr(_probot)->GetName()%GetName()));
+        throw OPENRAVE_EXCEPTION_FORMAT("manipulator %s:%s does not have an IK solver set",RobotBasePtr(_probot)->GetName()%GetName(),ORE_Failed);
     }
     RobotBasePtr probot = GetRobot();
     EnvironmentMutex::scoped_lock lock(probot->GetEnv()->GetMutex()); // lock just in case since many users call this without locking...
@@ -117,7 +112,7 @@ bool RobotBase::Manipulator::FindIKSolutions(const IkParameterization& goal, std
 bool RobotBase::Manipulator::FindIKSolutions(const IkParameterization& goal, const std::vector<dReal>& vFreeParameters, std::vector<std::vector<dReal> >& solutions, int filteroptions) const
 {
     if( !_pIkSolver ) {
-        throw openrave_exception(str(boost::format("manipulator %s:%s does not have an IK solver set")%RobotBasePtr(_probot)->GetName()%GetName()));
+        throw OPENRAVE_EXCEPTION_FORMAT("manipulator %s:%s does not have an IK solver set", RobotBasePtr(_probot)->GetName()%GetName(),ORE_Failed);
     }
     EnvironmentMutex::scoped_lock lock(GetRobot()->GetEnv()->GetMutex()); // lock just in case since many users call this without locking...
     BOOST_ASSERT(_pIkSolver->GetManipulator() == shared_from_this() );
@@ -135,43 +130,43 @@ IkParameterization RobotBase::Manipulator::GetIkParameterization(IkParameterizat
 {
     IkParameterization ikp;
     switch(iktype) {
-    case IkParameterization::Type_Transform6D: ikp.SetTransform6D(GetEndEffectorTransform()); break;
-    case IkParameterization::Type_Rotation3D: ikp.SetRotation3D(GetEndEffectorTransform().rot); break;
-    case IkParameterization::Type_Translation3D: ikp.SetTranslation3D(GetEndEffectorTransform().trans); break;
-    case IkParameterization::Type_Direction3D: ikp.SetDirection3D(GetEndEffectorTransform().rotate(_vdirection)); break;
+    case IkParameterization::Type_Transform6D: ikp.SetTransform6D(GetTransform()); break;
+    case IkParameterization::Type_Rotation3D: ikp.SetRotation3D(GetTransform().rot); break;
+    case IkParameterization::Type_Translation3D: ikp.SetTranslation3D(GetTransform().trans); break;
+    case IkParameterization::Type_Direction3D: ikp.SetDirection3D(GetTransform().rotate(_vdirection)); break;
     case IkParameterization::Type_Ray4D: {
-        Transform t = GetEndEffectorTransform();
+        Transform t = GetTransform();
         ikp.SetRay4D(RAY(t.trans,t.rotate(_vdirection)));
         break;
     }
     case IkParameterization::Type_Lookat3D: {
         RAVELOG_WARN("RobotBase::Manipulator::GetIkParameterization: Lookat3D type setting goal a distance of 1 from the origin.\n");
-        Transform t = GetEndEffectorTransform();
+        Transform t = GetTransform();
         Vector vdir = t.rotate(_vdirection);
         ikp.SetLookat3D(RAY(t.trans + vdir,vdir));
         break;
     }
     case IkParameterization::Type_TranslationDirection5D: {
-        Transform t = GetEndEffectorTransform();
+        Transform t = GetTransform();
         ikp.SetTranslationDirection5D(RAY(t.trans,t.rotate(_vdirection)));
         break;
     }
     case IkParameterization::Type_TranslationXY2D: {
-        ikp.SetTranslationXY2D(GetEndEffectorTransform().trans);
+        ikp.SetTranslationXY2D(GetTransform().trans);
         break;
     }
     case IkParameterization::Type_TranslationXYOrientation3D: {
-        Transform t = GetEndEffectorTransform();
-        dReal zangle = -normalizeAxisRotation(Vector(0,0,1),GetEndEffectorTransform().rot).first;
+        Transform t = GetTransform();
+        dReal zangle = -normalizeAxisRotation(Vector(0,0,1),GetTransform().rot).first;
         ikp.SetTranslationXYOrientation3D(Vector(t.trans.x,t.trans.y,zangle));
         break;
     }
     case IkParameterization::Type_TranslationLocalGlobal6D: {
         RAVELOG_WARN("RobotBase::Manipulator::GetIkParameterization: TranslationLocalGlobal6D type setting local translation to (0,0,0).\n");
-        ikp.SetTranslationLocalGlobal6D(Vector(0,0,0),GetEndEffectorTransform().trans); break;
+        ikp.SetTranslationLocalGlobal6D(Vector(0,0,0),GetTransform().trans); break;
     }
     default:
-        throw openrave_exception(str(boost::format("invalid ik type 0x%x")%iktype));
+        throw OPENRAVE_EXCEPTION_FORMAT("invalid ik type 0x%x",iktype,ORE_InvalidArguments);
     }
     return ikp;
 }
@@ -180,44 +175,44 @@ IkParameterization RobotBase::Manipulator::GetIkParameterization(const IkParamet
 {
     IkParameterization ikp;
     switch(ikparam.GetType()) {
-    case IkParameterization::Type_Transform6D: ikp.SetTransform6D(GetEndEffectorTransform()); break;
-    case IkParameterization::Type_Rotation3D: ikp.SetRotation3D(GetEndEffectorTransform().rot); break;
-    case IkParameterization::Type_Translation3D: ikp.SetTranslation3D(GetEndEffectorTransform().trans); break;
-    case IkParameterization::Type_Direction3D: ikp.SetDirection3D(GetEndEffectorTransform().rotate(_vdirection)); break;
+    case IkParameterization::Type_Transform6D: ikp.SetTransform6D(GetTransform()); break;
+    case IkParameterization::Type_Rotation3D: ikp.SetRotation3D(GetTransform().rot); break;
+    case IkParameterization::Type_Translation3D: ikp.SetTranslation3D(GetTransform().trans); break;
+    case IkParameterization::Type_Direction3D: ikp.SetDirection3D(GetTransform().rotate(_vdirection)); break;
     case IkParameterization::Type_Ray4D: {
-        Transform t = GetEndEffectorTransform();
+        Transform t = GetTransform();
         ikp.SetRay4D(RAY(t.trans,t.rotate(_vdirection)));
         break;
     }
     case IkParameterization::Type_Lookat3D: {
         // find the closest point to ikparam.GetLookat3D() to the current ray
-        Transform t = GetEndEffectorTransform();
+        Transform t = GetTransform();
         Vector vdir = t.rotate(_vdirection);
         ikp.SetLookat3D(RAY(t.trans + vdir*vdir.dot(ikparam.GetLookat3D()-t.trans),vdir));
         break;
     }
     case IkParameterization::Type_TranslationDirection5D: {
-        Transform t = GetEndEffectorTransform();
+        Transform t = GetTransform();
         ikp.SetTranslationDirection5D(RAY(t.trans,t.rotate(_vdirection)));
         break;
     }
     case IkParameterization::Type_TranslationXY2D: {
-        ikp.SetTranslationXY2D(GetEndEffectorTransform().trans);
+        ikp.SetTranslationXY2D(GetTransform().trans);
         break;
     }
     case IkParameterization::Type_TranslationXYOrientation3D: {
-        Transform t = GetEndEffectorTransform();
-        dReal zangle = -normalizeAxisRotation(Vector(0,0,1),GetEndEffectorTransform().rot).first;
+        Transform t = GetTransform();
+        dReal zangle = -normalizeAxisRotation(Vector(0,0,1),GetTransform().rot).first;
         ikp.SetTranslationXYOrientation3D(Vector(t.trans.x,t.trans.y,zangle));
         break;
     }
     case IkParameterization::Type_TranslationLocalGlobal6D: {
         Vector localtrans = ikparam.GetTranslationLocalGlobal6D().first;
-        ikp.SetTranslationLocalGlobal6D(localtrans,GetEndEffectorTransform() * localtrans);
+        ikp.SetTranslationLocalGlobal6D(localtrans,GetTransform() * localtrans);
         break;
     }
     default:
-        throw openrave_exception(str(boost::format("invalid ik type 0x%x")%ikparam.GetType()));
+        throw OPENRAVE_EXCEPTION_FORMAT("invalid ik type 0x%x",ikparam.GetType(),ORE_InvalidArguments);
     }
     return ikp;
 }
@@ -382,7 +377,7 @@ void RobotBase::Manipulator::GetIndependentLinks(std::vector<LinkPtr>& vlinks) c
 bool RobotBase::Manipulator::CheckEndEffectorCollision(const Transform& tEE, CollisionReportPtr report) const
 {
     RobotBasePtr probot(_probot);
-    Transform toldEE = GetEndEffectorTransform();
+    Transform toldEE = GetTransform();
     Transform tdelta = tEE*toldEE.inverse();
     // get all child links of the manipualtor
     int iattlink = _pEndEffector->GetIndex();
@@ -549,7 +544,7 @@ void RobotBase::Manipulator::serialize(std::ostream& o, int options) const
             SerializeRound(o,tbaseinv * _tGrasp);
         }
         else {
-            SerializeRound(o,tbaseinv * GetEndEffectorTransform());
+            SerializeRound(o,tbaseinv * GetTransform());
         }
         o << __varmdofindices.size() << " ";
         FOREACHC(it,__varmdofindices) {
@@ -773,9 +768,9 @@ void RobotBase::SetDOFValues(const std::vector<dReal>& vJointValues, const Trans
     KinBody::SetDOFValues(vJointValues, transbase, bCheckLimits); // should call RobotBase::SetDOFValues, so no need to upgrade grabbed bodies, attached sensors
 }
 
-void RobotBase::SetBodyTransformations(const std::vector<Transform>& vbodies)
+void RobotBase::SetLinkTransformations(const std::vector<Transform>& vbodies)
 {
-    KinBody::SetBodyTransformations(vbodies);
+    KinBody::SetLinkTransformations(vbodies);
     _UpdateGrabbedBodies();
     _UpdateAttachedSensors();
 }
@@ -789,7 +784,7 @@ void RobotBase::SetTransform(const Transform& trans)
 
 void RobotBase::_UpdateGrabbedBodies()
 {
-    RAVELOG_VERBOSE("update grabbed objects\n");
+    //RAVELOG_VERBOSE("update grabbed objects\n");
     vector<Grabbed>::iterator itbody;
     FORIT(itbody, _vGrabbedBodies) {
         KinBodyPtr pbody = itbody->pbody.lock();
@@ -844,7 +839,7 @@ int RobotBase::GetAffineDOFIndex(DOFAffine dof) const
     if( dof&DOF_RotationQuat ) {
         return index;
     }
-    throw openrave_exception("unspecified dow",ORE_InvalidArguments);
+    throw OPENRAVE_EXCEPTION_FORMAT0("unspecified dow",ORE_InvalidArguments);
 }
 
 void RobotBase::SetAffineTranslationLimits(const Vector& lower, const Vector& upper)
@@ -964,7 +959,7 @@ void RobotBase::SetActiveDOFs(const std::vector<int>& vJointIndices, int nAffine
 {
     FOREACHC(itj, vJointIndices) {
         if( *itj < 0 || *itj >= (int)GetDOF() ) {
-            throw openrave_exception("bad indices",ORE_InvalidArguments);
+            throw OPENRAVE_EXCEPTION_FORMAT("bad indices %d",*itj,ORE_InvalidArguments);
         }
     }
     // only reset the cache if the dof values are different
@@ -1012,6 +1007,7 @@ void RobotBase::SetActiveDOFs(const std::vector<int>& vJointIndices, int nAffine
         _nActiveDOF += 4;
     }
     _nActiveDOF += vJointIndices.size();
+    _ParametersChanged(Prop_RobotActiveDOFs);
 }
 
 void RobotBase::SetActiveDOFValues(const std::vector<dReal>& values, bool bCheckLimits)
@@ -1020,8 +1016,8 @@ void RobotBase::SetActiveDOFValues(const std::vector<dReal>& values, bool bCheck
         SetDOFValues(values,bCheckLimits);
         return;
     }
-    if( (int)values.size() != GetActiveDOF() ) {
-        throw openrave_exception(str(boost::format("dof not equal %d!=%d")%values.size()%GetActiveDOF()),ORE_InvalidArguments);
+    if( (int)values.size() < GetActiveDOF() ) {
+        throw OPENRAVE_EXCEPTION_FORMAT("not enough values %d<%d",values.size()%GetActiveDOF(),ORE_InvalidArguments);
     }
 
     Transform t;
@@ -1163,7 +1159,7 @@ void RobotBase::SetActiveDOFVelocities(const std::vector<dReal>& velocities, boo
             angularvel.z = *pAffineValues++;
         }
         else if( _nAffineDOFs & DOF_RotationQuat ) {
-            throw openrave_exception("quaternions not supported",ORE_InvalidArguments);
+            throw OPENRAVE_EXCEPTION_FORMAT0("quaternions not supported",ORE_InvalidArguments);
         }
 
         if( _vActiveDOFIndices.size() == 0 ) {
@@ -1223,7 +1219,7 @@ void RobotBase::GetActiveDOFVelocities(std::vector<dReal>& velocities) const
         *pVelocities++ = angularvel.z;
     }
     else if( _nAffineDOFs & DOF_RotationQuat ) {
-        throw openrave_exception("quaternions not supported",ORE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT0("quaternions not supported",ORE_InvalidArguments);
     }
 }
 
@@ -1381,8 +1377,9 @@ void RobotBase::GetActiveDOFWeights(std::vector<dReal>& weights) const
 
 void RobotBase::GetActiveDOFMaxVel(std::vector<dReal>& maxvel) const
 {
+    std::vector<dReal> dummy;
     if( _nActiveDOF < 0 ) {
-        GetDOFMaxVel(maxvel);
+        GetDOFVelocityLimits(dummy,maxvel);
         return;
     }
     maxvel.resize(GetActiveDOF());
@@ -1391,7 +1388,7 @@ void RobotBase::GetActiveDOFMaxVel(std::vector<dReal>& maxvel) const
     }
     dReal* pMaxVel = &maxvel[0];
 
-    GetDOFMaxVel(_vTempRobotJoints);
+    GetDOFVelocityLimits(dummy,_vTempRobotJoints);
     FOREACHC(it, _vActiveDOFIndices) {
         *pMaxVel++ = _vTempRobotJoints[*it];
     }
@@ -1915,7 +1912,7 @@ const std::set<int>& RobotBase::GetNonAdjacentLinks(int adjacentoptions) const
             }
         }
         if( requestedoptions & ~(AO_Enabled|AO_ActiveDOFs) ) {
-            throw openrave_exception(str(boost::format("RobotBase::GetNonAdjacentLinks does not support adjacentoptions %d")%adjacentoptions),ORE_InvalidArguments);
+            throw OPENRAVE_EXCEPTION_FORMAT("does not support adjacentoptions %d",adjacentoptions,ORE_InvalidArguments);
         }
 
         // compute it
@@ -1974,10 +1971,10 @@ bool RobotBase::Grab(KinBodyPtr pbody, const std::set<int>& setRobotLinksToIgnor
 bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr plink)
 {
     if( !pbody || !plink || plink->GetParent() != shared_kinbody() ) {
-        throw openrave_exception("invalid grab arguments",ORE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT0("invalid grab arguments",ORE_InvalidArguments);
     }
     if( pbody == shared_kinbody() ) {
-        throw openrave_exception("robot cannot grab itself",ORE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT("robot %s cannot grab itself",pbody->GetName(), ORE_InvalidArguments);
     }
     if( IsGrabbing(pbody) ) {
         RAVELOG_VERBOSE(str(boost::format("Robot %s: body %s already grabbed\n")%GetName()%pbody->GetName()));
@@ -2010,10 +2007,10 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr plink)
 bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr pRobotLinkToGrabWith, const std::set<int>& setRobotLinksToIgnore)
 {
     if( !pbody || !pRobotLinkToGrabWith || pRobotLinkToGrabWith->GetParent() != shared_kinbody() ) {
-        throw openrave_exception("invalid grab arguments",ORE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT0("invalid grab arguments",ORE_InvalidArguments);
     }
     if( pbody == shared_kinbody() ) {
-        throw openrave_exception("robot cannot grab itself",ORE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT("robot %s cannot grab itself",pbody->GetName(), ORE_InvalidArguments);
     }
     if( IsGrabbing(pbody) ) {
         RAVELOG_VERBOSE(str(boost::format("Robot %s: body %s already grabbed\n")%GetName()%pbody->GetName()));
@@ -2133,7 +2130,7 @@ void RobotBase::SetActiveManipulator(const std::string& manipname)
                 return;
             }
         }
-        throw openrave_exception(str(boost::format("failed to find manipulator with name: %s")%manipname));
+        throw OPENRAVE_EXCEPTION_FORMAT("failed to find manipulator with name: %s", manipname, ORE_InvalidArguments);
     }
 
     _nActiveManip = -1;
@@ -2279,7 +2276,7 @@ void RobotBase::_ComputeInternalInformation()
             (*itmanip)->_name = ss.str();
         }
         else if( !IsValidName((*itmanip)->GetName()) ) {
-            throw openrave_exception(str(boost::format("manipulator name \"%s\" is not valid")%(*itmanip)->GetName()));
+            throw OPENRAVE_EXCEPTION_FORMAT("manipulator name \"%s\" is not valid", (*itmanip)->GetName(), ORE_Failed);
         }
         if( !!(*itmanip)->GetBase() && !!(*itmanip)->GetEndEffector() ) {
             vector<JointPtr> vjoints;
@@ -2375,7 +2372,7 @@ void RobotBase::_ComputeInternalInformation()
             (*itsensor)->_name = ss.str();
         }
         else if( !IsValidName((*itsensor)->GetName()) ) {
-            throw openrave_exception(str(boost::format("sensor name \"%s\" is not valid")%(*itsensor)->GetName()));
+            throw OPENRAVE_EXCEPTION_FORMAT("sensor name \"%s\" is not valid", (*itsensor)->GetName(), ORE_Failed);
         }
         if( !!(*itsensor)->GetSensor() ) {
             stringstream ss; ss << GetName() << "_" << (*itsensor)->GetName(); // global unique name?
@@ -2427,6 +2424,15 @@ void RobotBase::_ComputeInternalInformation()
             dofindices.push_back(i);
         }
         SetController(RaveCreateController(GetEnv(), "IdealController"),dofindices,1);
+    }
+
+    // reset the power on the sensors
+    FOREACH(itsensor,_vecSensors) {
+        SensorBasePtr psensor = (*itsensor)->GetSensor();
+        if( !!psensor ) {
+            int ispower = psensor->Configure(SensorBase::CC_PowerCheck);
+            psensor->Configure(ispower ? SensorBase::CC_PowerOn : SensorBase::CC_PowerOff);
+        }
     }
 }
 

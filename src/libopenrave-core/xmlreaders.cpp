@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2011 Rosen Diankov (rosen.diankov@gmail.com)
+// Copyright (C) 2006-2011 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -1335,27 +1335,24 @@ namespace OpenRAVEXMLParser
                 }
             }
 
-            _pjoint->_vlowerlimit.resize(_pjoint->GetDOF());
-            _pjoint->_vupperlimit.resize(_pjoint->GetDOF());
             if( _pjoint->GetType() == KinBody::Joint::JointSlider ) {
                 for(int i = 0; i < _pjoint->GetDOF(); ++i) {
-                    _pjoint->_vlowerlimit[i] = -100000;
-                    _pjoint->_vupperlimit[i] = 100000;
+                    _pjoint->_vlowerlimit.at(i) = -100000;
+                    _pjoint->_vupperlimit.at(i) = 100000;
                 }
             }
             else if( _pjoint->GetType() == KinBody::Joint::JointSpherical ) {
                 for(int i = 0; i < _pjoint->GetDOF(); ++i) {
-                    _pjoint->_vlowerlimit[i] = -1000;
-                    _pjoint->_vupperlimit[i] = 1000;
+                    _pjoint->_vlowerlimit.at(i) = -1000;
+                    _pjoint->_vupperlimit.at(i) = 1000;
                 }
             }
             else {
                 for(int i = 0; i < _pjoint->GetDOF(); ++i) {
-                    _pjoint->_vlowerlimit[i] = -PI;
-                    _pjoint->_vupperlimit[i] = PI;
+                    _pjoint->_vlowerlimit.at(i) = -PI;
+                    _pjoint->_vupperlimit.at(i) = PI;
                 }
             }
-            _pjoint->_vweights.resize(_pjoint->GetDOF());
             FOREACH(it,_pjoint->_vweights) {
                 *it = 1;
             }
@@ -1402,11 +1399,11 @@ namespace OpenRAVEXMLParser
                 if( _pjoint->_type == KinBody::Joint::JointUniversal || _pjoint->_type == KinBody::Joint::JointHinge2 || _pjoint->_type == KinBody::Joint::JointHinge ) {
                     for(int i = 0; i < numindices; ++i) {
                         if( _pjoint->_vlowerlimit[i] < -PI || _pjoint->_vupperlimit[i] > PI ) {
-                            _pjoint->_offsets[i] = 0.5f * (_pjoint->_vlowerlimit[i] + _pjoint->_vupperlimit[i]);
-                            if( _pjoint->_vupperlimit[i] - _pjoint->_offsets[i] > PI ) {
+                            _pjoint->_voffsets[i] = 0.5f * (_pjoint->_vlowerlimit[i] + _pjoint->_vupperlimit[i]);
+                            if( _pjoint->_vupperlimit[i] - _pjoint->_voffsets[i] > PI ) {
                                 RAVELOG_WARN(str(boost::format("joint %s, cannot allow joint ranges of more than 360 degrees\n")%_pjoint->GetName()));
-                                _pjoint->_vupperlimit[i] = _pjoint->_offsets[i] + PI - 1e-5;
-                                _pjoint->_vlowerlimit[i] = _pjoint->_offsets[i] - PI + 1e-5;
+                                _pjoint->_vupperlimit[i] = _pjoint->_voffsets[i] + PI - 1e-5;
+                                _pjoint->_vlowerlimit[i] = _pjoint->_voffsets[i] - PI + 1e-5;
                             }
                         }
                     }
@@ -1430,8 +1427,9 @@ namespace OpenRAVEXMLParser
                 return true;
             }
             else if( xmlname == "weight" ) {
-                for(int i = 0; i < numindices; ++i)
+                for(int i = 0; i < numindices; ++i) {
                     _ss >> _pjoint->_vweights.at(i);
+                }
             }
             else if( xmlname == "body" ) {
                 // figure out which body
@@ -1472,24 +1470,22 @@ namespace OpenRAVEXMLParser
             else if( xmlname == "lostop" ) {
                 _bNegateJoint = true;
                 RAVELOG_ERROR(str(boost::format("%s: <lostop> is deprecated, please use <limits> (now in radians), <limitsrad>, or <limitsdeg> tag and negate your joint axis!\n")%_pparent->GetName()));
-                _pjoint->_vlowerlimit.resize(numindices);
-                FOREACH(it,_pjoint->_vlowerlimit) {
-                    _ss >> *it;
-                    *it *= fRatio;
+                for(int i = 0; i < numindices; ++i) {
+                    _ss >> _pjoint->_vlowerlimit.at(i);
+                    _pjoint->_vlowerlimit.at(i) *= fRatio;
                 }
             }
             else if( xmlname == "histop" ) {
                 _bNegateJoint = true;
                 RAVELOG_ERROR(str(boost::format("%s: <histop> deprecated, please use <limits> (now in radians), <limitsrad>, <limitsdeg> tag and negate your joint axis!\n")%_pparent->GetName()));
-                _pjoint->_vupperlimit.resize(numindices);
-                FOREACH(it,_pjoint->_vupperlimit) {
-                    _ss >> *it;
-                    *it *= fRatio;
+                for(int i = 0; i < numindices; ++i) {
+                    _ss >> _pjoint->_vupperlimit.at(i);
+                    _pjoint->_vupperlimit.at(i) *= fRatio;
                 }
             }
             else if( xmlname == "maxvel" ) {
                 for(int idof = 0; idof < _pjoint->GetDOF(); ++idof) {
-                    _ss >> _pjoint->fMaxVel[idof];
+                    _ss >> _pjoint->_vmaxvel[idof];
                 }
             }
             else if( xmlname == "hardmaxvel" ) {
@@ -1499,12 +1495,12 @@ namespace OpenRAVEXMLParser
             }
             else if( xmlname == "maxaccel" ) {
                 for(int idof = 0; idof < _pjoint->GetDOF(); ++idof) {
-                    _ss >> _pjoint->fMaxAccel[idof];
+                    _ss >> _pjoint->_vmaxaccel[idof];
                 }
             }
             else if( xmlname == "maxtorque" ) {
                 for(int idof = 0; idof < _pjoint->GetDOF(); ++idof) {
-                    _ss >> _pjoint->fMaxTorque[idof];
+                    _ss >> _pjoint->_vmaxtorque[idof];
                 }
             }
             else if( xmlname == "resolution" ) {
@@ -1525,8 +1521,9 @@ namespace OpenRAVEXMLParser
                 // could be type specific
                 switch(_pjoint->_type) {
                 case KinBody::Joint::JointHinge:
-                    if( xmlname == "anchor" )
+                    if( xmlname == "anchor" ) {
                         _ss >> _vanchor.x >> _vanchor.y >> _vanchor.z;
+                    }
                     else if( xmlname == "axis" ) {
                         _ss >> _pjoint->vAxes[0].x >> _pjoint->vAxes[0].y >> _pjoint->vAxes[0].z;
                         _pjoint->vAxes[0].normalize3();
@@ -1539,8 +1536,9 @@ namespace OpenRAVEXMLParser
                     }
                     break;
                 case KinBody::Joint::JointUniversal:
-                    if( xmlname == "anchor" )
+                    if( xmlname == "anchor" ) {
                         _ss >> _vanchor.x >> _vanchor.y >> _vanchor.z;
+                    }
                     else if( xmlname == "axis1" ) {
                         _ss >> _pjoint->vAxes[0].x >> _pjoint->vAxes[0].y >> _pjoint->vAxes[0].z;
                         _pjoint->vAxes[0].normalize3();
@@ -1551,8 +1549,9 @@ namespace OpenRAVEXMLParser
                     }
                     break;
                 case KinBody::Joint::JointHinge2:
-                    if( xmlname == "anchor" )
+                    if( xmlname == "anchor" ) {
                         _ss >> _vanchor.x >> _vanchor.y >> _vanchor.z;
+                    }
                     else if( xmlname == "axis1" ) {
                         _ss >> _pjoint->vAxes[0].x >> _pjoint->vAxes[0].y >> _pjoint->vAxes[0].z;
                         _pjoint->vAxes[0].normalize3();
@@ -1563,8 +1562,9 @@ namespace OpenRAVEXMLParser
                     }
                     break;
                 case KinBody::Joint::JointSpherical:
-                    if( xmlname == "anchor" )
+                    if( xmlname == "anchor" ) {
                         _ss >> _vanchor.x >> _vanchor.y >> _vanchor.z;
+                    }
                     break;
                 default:
                     throw openrave_exception(str(boost::format("bad joint type: 0x%x")%_pjoint->_type));
@@ -1857,7 +1857,7 @@ namespace OpenRAVEXMLParser
             rootjpoffset = (int)_pchain->GetPassiveJoints().size();
             //RAVELOG_INFO(str(boost::format("links: %d, prefix: %s: %x\n")%_pchain->GetLinks().size()%_prefix%this));
             // reisze _vTransforms to be the same size as the initial number of links
-            _pchain->GetBodyTransformations(_vTransforms);
+            _pchain->GetLinkTransformations(_vTransforms);
             _pchain->SetGuiData(UserDataPtr());
         }
 
@@ -2021,7 +2021,7 @@ namespace OpenRAVEXMLParser
                     else if( xmlname == "kinbody" ) {
                         // most likely new transforms were added, so update
                         _pchain = RaveInterfaceCast<KinBody>(_pinterface);
-                        _pchain->GetBodyTransformations(_vTransforms);
+                        _pchain->GetLinkTransformations(_vTransforms);
                     }
                     else
                         RAVELOG_INFOA(str(boost::format("releasing unknown tag %s\n")%xmlname));
@@ -3222,6 +3222,7 @@ namespace OpenRAVEXMLParser
         case PT_CollisionChecker: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_CollisionChecker>(penv,pinterface,xmltag,atts));
         case PT_Trajectory: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_Trajectory>(penv,pinterface,xmltag,atts));
         case PT_Viewer: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_Viewer>(penv,pinterface,xmltag,atts));
+        case PT_SpaceSampler: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_SpaceSampler>(penv,pinterface,xmltag,atts));
         }
 
         throw openrave_exception(str(boost::format("could not create interface of type %d")%type),ORE_InvalidArguments);

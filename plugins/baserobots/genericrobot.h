@@ -17,9 +17,13 @@
 
 class GenericRobot : public RobotBase
 {
- public:
-    enum RobotState { ST_NONE=0, ST_PD_CONTROL, ST_PATH_FOLLOW };
- GenericRobot(EnvironmentBasePtr penv) : RobotBase(penv), _state(ST_NONE) {
+public:
+    enum RobotState {
+        ST_NONE=0,
+        ST_PATH_FOLLOW
+    };
+    GenericRobot(EnvironmentBasePtr penv) : RobotBase(penv), _state(ST_NONE)
+    {
         __description = ":Interface Author: Rosen Diankov\n\nSimplest robot possible that just passes the trajectories to the controller";
     }
     virtual ~GenericRobot() {}
@@ -33,9 +37,9 @@ class GenericRobot : public RobotBase
                 _pController.reset();
                 return false;
             }
-
-            if( _state == ST_PATH_FOLLOW )
+            if( _state == ST_PATH_FOLLOW ) {
                 _pController->SetPath(_trajcur);
+            }
         }
         return true;
     }
@@ -56,7 +60,6 @@ class GenericRobot : public RobotBase
         TrajectoryBasePtr pfulltraj = RaveCreateTrajectory(GetEnv(),ptraj->GetDOF());
         GetFullTrajectoryFromActive(pfulltraj, ptraj);
         _trajcur = pfulltraj;
-
         _state = ST_PATH_FOLLOW;
         return _pController->SetPath(_trajcur);
     }

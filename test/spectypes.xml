@@ -1,0 +1,16 @@
+<!-- API Sanity Autotest configuration file -->
+<spec_type>
+  <kind>
+      common_env
+  </kind>
+
+  <init_code>
+      $[_ZN8OpenRAVE14RaveInitializeEbNS_10DebugLevelE];
+  </init_code>
+ 
+  <associating>
+    <except>
+        _ZN8OpenRAVE14RaveInitializeEbNS_10DebugLevelE
+    </except>
+  </associating>
+</spec_type>

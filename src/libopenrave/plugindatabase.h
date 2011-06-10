@@ -293,6 +293,7 @@ public:
     CollisionCheckerBasePtr CreateCollisionChecker(EnvironmentBasePtr penv, const std::string& name) { return RaveInterfaceCast<CollisionCheckerBase>(Create(penv, PT_CollisionChecker, name)); }
     ViewerBasePtr CreateViewer(EnvironmentBasePtr penv, const std::string& name) { return RaveInterfaceCast<ViewerBase>(Create(penv, PT_Viewer, name)); }
     TrajectoryBasePtr CreateTrajectory(EnvironmentBasePtr penv, const std::string& name) { return RaveInterfaceCast<TrajectoryBase>(Create(penv, PT_Trajectory, name)); }
+    SpaceSamplerBasePtr CreateSpaceSampler(EnvironmentBasePtr penv, const std::string& name) { return RaveInterfaceCast<SpaceSamplerBase>(Create(penv, PT_SpaceSampler, name)); }
 
     virtual bool Init(bool bLoadAllPlugins)
     {
@@ -732,7 +733,9 @@ protected:
 #endif
             if( libraryfilename.size() > 3 && libraryfilename.substr(0,3) != string("lib") ) {
                 libraryname = librarypath;
-                libraryname += s_filesep;
+                if( libraryname.size() > 0 ) {
+                    libraryname += s_filesep;
+                }
                 libraryname += string("lib");
                 libraryname += libraryfilename;
                 plibrary = _SysLoadLibrary(libraryname.c_str(),OPENRAVE_LAZY_LOADING);

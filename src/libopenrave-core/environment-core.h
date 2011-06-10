@@ -1311,11 +1311,6 @@ class Environment : public EnvironmentBase
     {
         return _pCurrentViewer->drawtrimesh(ppoints, stride, pIndices, numTriangles, colors);
     }
-    virtual KinBodyPtr GetBodyFromNetworkId(int id)
-    {
-        RAVELOG_INFO("GetBodyFromNetworkId is deprecated, use GetBodyFromEnvironmentId instead\n");
-        return GetBodyFromEnvironmentId(id);
-    }
 
     virtual KinBodyPtr GetBodyFromEnvironmentId(int id)
     {
@@ -1368,7 +1363,7 @@ class Environment : public EnvironmentBase
         vector<KinBody::BodyState>::iterator itstate = _vPublishedBodies.begin();
         FOREACH(itbody, _vecbodies) {
             itstate->pbody = *itbody;
-            (*itbody)->GetBodyTransformations(itstate->vectrans);
+            (*itbody)->GetLinkTransformations(itstate->vectrans);
             (*itbody)->GetDOFValues(itstate->jointvalues);
             itstate->strname =(*itbody)->GetName();
             itstate->pguidata = (*itbody)->GetGuiData();

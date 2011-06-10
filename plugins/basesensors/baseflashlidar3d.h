@@ -28,12 +28,13 @@ protected:
         virtual ProcessElement startElement(const std::string& name, const AttributesList& atts)
         {
             if( !!_pcurreader ) {
-                if( _pcurreader->startElement(name,atts) == PE_Support )
+                if( _pcurreader->startElement(name,atts) == PE_Support ) {
                     return PE_Support;
+                }
                 return PE_Ignore;
             }
-            
-            if( name != "sensor" && name != "minangle" && name != "maxangle" && name != "maxrange" && name != "scantime" && name != "color" && name != "kk" && name != "width" && name != "height" ) {
+            static boost::array<string, 18> tags = {{"sensor", "minangle", "min_angle", "maxangle", "max_angle", "maxrange", "max_range", "minrange", "min_range", "scantime", "color", "time_scan", "time_increment", "power", "kk", "width", "height"}};
+            if( find(tags.begin(),tags.end(),name) == tags.end() ) {
                 return PE_Pass;
             }
             ss.str("");
@@ -43,52 +44,62 @@ protected:
         virtual bool endElement(const std::string& name)
         {
             if( !!_pcurreader ) {
-                if( _pcurreader->endElement(name) )
+                if( _pcurreader->endElement(name) ) {
                     _pcurreader.reset();
+                }
                 return false;
             }
-            else if( name == "sensor" )
+            else if( name == "sensor" ) {
                 return true;
-            else if( name == "minangle" ) {
+            }
+            else if( name == "power" ) {
+                ss >> _psensor->_bPower;
+            }
+            else if( name == "minangle" || name == "min_angle" ) {
                 ss >> _psensor->_pgeom->min_angle[0];
                 if( !!ss )
                     _psensor->_pgeom->min_angle[0] *= PI/180.0f; // convert to radians
             }
-            else if( name == "maxangle" ) {
+            else if( name == "maxangle" || name == "max_angle" ) {
                 ss >> _psensor->_pgeom->max_angle[0];
                 if( !!ss )
                     _psensor->_pgeom->max_angle[0] *= PI/180.0f; // convert to radians
             }
-            else if( name == "maxrange" ) {
+            else if( name == "maxrange" || name == "max_range" ) {
                 ss >> _psensor->_pgeom->max_range;
             }
-            else if( name == "scantime" ) {
+            else if( name == "scantime" || name == "time_scan" ) {
                 ss >> _psensor->_pgeom->time_scan;
             }
             else if( name == "color" ) {
                 ss >> _psensor->_vColor.x >> _psensor->_vColor.y >> _psensor->_vColor.z;
                 // ok if not everything specified
-                if( !ss )
+                if( !ss ) {
                     ss.clear();
+                }
             }
-            else if( name == "kk" )
+            else if( name == "kk" ) {
                 ss >> _psensor->_pgeom->KK.fx >> _psensor->_pgeom->KK.fy >> _psensor->_pgeom->KK.cx >> _psensor->_pgeom->KK.cy;
-            else if( name == "width" )
+            }
+            else if( name == "width" ) {
                 ss >> _psensor->_pgeom->width;
-            else if( name == "height" )
+            }
+            else if( name == "height" ) {
                 ss >> _psensor->_pgeom->height;
-            else
+            }
+            else {
                 RAVELOG_WARN(str(boost::format("bad tag: %s")%name));
-
-            if( !ss )
+            }
+            if( !ss ) {
                 RAVELOG_WARN(str(boost::format("error parsing %s\n")%name));
-
+            }
             return false;
         }
         virtual void characters(const std::string& ch)
         {
-            if( !!_pcurreader )
+            if( !!_pcurreader ) {
                 _pcurreader->characters(ch);
+            }
             else {
                 ss.clear();
                 ss << ch;
@@ -201,11 +212,12 @@ public:
             {
                 // Lock the data mutex and fill with the range data (get all in one timestep)
                 boost::mutex::scoped_lock lock(_mutexdata);
-                _pdata->t = GetTransform();
+                t = GetTransform();
+                _pdata->__trans = t;
                 _pdata->__stamp = GetEnv()->GetSimulationTime();
         
-                t = GetTransform();
                 r.pos = t.trans;
+                _pdata->positions.at(0) = t.trans;
 
                 for(int w = 0; w < _pgeom->width; ++w) {
                     for(int h = 0; h < _pgeom->height; ++h) {
@@ -213,7 +225,7 @@ public:
                         vdir.x = (float)w*_iKK[0] + _iKK[2];
                         vdir.y = (float)h*_iKK[1] + _iKK[3];
                         vdir.z = 1.0f;
-                        vdir = _pdata->t.rotate(vdir.normalize3());
+                        vdir = t.rotate(vdir.normalize3());
                         r.dir = _pgeom->max_range*vdir;
 
                         int index = w*_pgeom->height+h;
@@ -223,8 +235,9 @@ public:
                             _pdata->intensity[index] = 1;
                             // store the colliding bodies
                             KinBody::LinkConstPtr plink = !!_report->plink1 ? _report->plink1 : _report->plink2;
-                            if( !!plink )
+                            if( !!plink ) {
                                 _databodyids[index] = plink->GetParent()->GetEnvironmentId();
+                            }
                         }
                         else {
                             _databodyids[index] = 0;
@@ -240,7 +253,6 @@ public:
             GetEnv()->GetCollisionChecker()->SetCollisionOptions(0);
     
             if( _bRenderData ) {
-
                 // If can render, check if some time passed before last update
                 list<GraphHandlePtr> listhandles;
                 int N = 0;
@@ -361,7 +373,7 @@ protected:
         _iKK[2] = -_pgeom->KK.cx / _pgeom->KK.fx;
         _iKK[3] = -_pgeom->KK.cy / _pgeom->KK.fy;
         _listGraphicsHandles.clear();
-        _pdata->positions.clear();
+        _pdata->positions.resize(1);
         _pdata->ranges.resize(_pgeom->width*_pgeom->height);
         _pdata->intensity.resize(_pgeom->width*_pgeom->height);
         _databodyids.resize(_pgeom->width*_pgeom->height);

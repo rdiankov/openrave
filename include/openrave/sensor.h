@@ -42,12 +42,22 @@ public:
         ST_NumberofSensorTypes=8
     };
 
+    /// \brief intrinsic parameters for a camera.
     class CameraIntrinsics
     {
     public:
-        CameraIntrinsics() : fx(0),fy(0),cx(0),cy(0) {}
-        CameraIntrinsics(dReal fx, dReal fy, dReal cx, dReal cy) : fx(fx), fy(fy), cx(cx), cy(cy) {}
+        CameraIntrinsics() : fx(0),fy(0),cx(0),cy(0), focal_length(0.01) {}
+        CameraIntrinsics(dReal fx, dReal fy, dReal cx, dReal cy) : fx(fx), fy(fy), cx(cx), cy(cy), focal_length(0.01) {}
         dReal fx,fy, cx,cy;
+
+        /** \brief distortion model of the camera. if left empty, no distortion model is used.
+
+            Possible values are:
+            - "plumb_bob" - Brown. "Decentering Distortion of Lenses", Photometric Engineering, pages 444-462, Vol. 32, No. 3, 1966
+        */
+        std::string distortion_model;
+        std::vector<dReal> distortion_coeffs; ///< coefficients of the distortion model
+        dReal focal_length; ///< physical focal length distance since focal length cannot be recovered from the intrinsic matrix, but is necessary for determining the lens plane.
     };
 
     /// used to pass sensor data around
@@ -61,16 +71,16 @@ public:
         virtual bool serialize(std::ostream& O) const;
 
         uint64_t __stamp; ///< time stamp of the sensor data in microseconds. If 0, then the data is uninitialized! (floating-point precision is bad here). This can be either simulation or real time depending on the sensor.
+        Transform __trans;     ///< the coordinate system the sensor was when the measurement was taken, this is taken directly from SensorBase::GetTransform
     };
-    typedef boost::shared_ptr<SensorData> SensorDataPtr;
-    typedef boost::shared_ptr<SensorData const> SensorDataConstPtr;
+    typedef boost::shared_ptr<SensorBase::SensorData> SensorDataPtr;
+    typedef boost::shared_ptr<SensorBase::SensorData const> SensorDataConstPtr;
 
     class OPENRAVE_API LaserSensorData : public SensorData
     {
     public:
         virtual SensorType GetType() { return ST_Laser; }
 
-        Transform t;     ///< the coordinate system all the measurements are in
         std::vector<RaveVector<dReal> > positions; ///< world coordinates of the origins of each of the laser points.
                                        ///< if positions is empty, assume the origin is t.trans for all points
         std::vector<RaveVector<dReal> > ranges; ///< Range and direction readings in the form of direction*distance. The direction is in world coordinates. The values should be returned in the order laser detected them in.
@@ -82,7 +92,6 @@ public:
     {
     public:
         virtual SensorType GetType() { return ST_Camera; }
-        Transform t;     ///< the coordinate system all the measurements were taken in
         std::vector<uint8_t> vimagedata; ///< rgb image data, if camera only outputs in grayscale, fill each channel with the same value
         virtual bool serialize(std::ostream& O) const;
     };
@@ -167,8 +176,8 @@ public:
         virtual ~SensorGeometry() {}
         virtual SensorType GetType() = 0;
     };
-    typedef boost::shared_ptr<SensorGeometry> SensorGeometryPtr;
-    typedef boost::shared_ptr<SensorGeometry const> SensorGeometryConstPtr;
+    typedef boost::shared_ptr<SensorBase::SensorGeometry> SensorGeometryPtr;
+    typedef boost::shared_ptr<SensorBase::SensorGeometry const> SensorGeometryConstPtr;
 
     class OPENRAVE_API LaserGeomData : public SensorGeometry
     {
@@ -278,7 +287,7 @@ public:
     /// \brief Simulate one step forward for sensors.
     ///
     /// Only valid if this sensor is simulation based. A sensor hooked up to a real device can ignore this call
-    virtual bool SimulationStep(dReal fTimeElapsed) { throw openrave_exception("SensorBase::SimulationStep not implemented",ORE_NotImplemented); }
+    virtual bool SimulationStep(dReal fTimeElapsed) OPENRAVE_DUMMY_IMPLEMENTATION;
 
     /// \brief Returns the sensor geometry. This method is thread safe.
     ///
@@ -312,7 +321,7 @@ public:
     /// \brief Register a callback whenever new sensor data comes in.
     /// \param type the sensor type to register for
     /// \param callback the user function to call, note that this might block the thread generating/receiving sensor data
-    virtual boost::shared_ptr<void> RegisterDataCallback(SensorType type, const boost::function<void(SensorDataConstPtr)>& callback) { throw openrave_exception("SensorBase::RegisterDataCallback",ORE_NotImplemented); }
+    virtual boost::shared_ptr<void> RegisterDataCallback(SensorType type, const boost::function<void(SensorDataConstPtr)>& callback) OPENRAVE_DUMMY_IMPLEMENTATION;
 	
     /// \return the name of the sensor
     virtual const std::string& GetName() const { return _name; }

@@ -255,7 +255,7 @@ class DualManipulation : public ProblemInstance
     
         RobotBase::RobotStateSaver saver(robot);
 
-        if( !CM::JitterActiveDOF(robot) ) {
+        if( !planningutils::JitterActiveDOF(robot) ) {
             RAVELOG_WARN("failed\n");
             return false;
         }
@@ -266,7 +266,7 @@ class DualManipulation : public ProblemInstance
         robot->SetActiveDOFValues(params->vgoalconfig);
     
         // jitter again for goal
-        if( !CM::JitterActiveDOF(robot) ) {
+        if( !planningutils::JitterActiveDOF(robot) ) {
             RAVELOG_WARN("failed\n");
             return false;
         }
@@ -278,7 +278,7 @@ class DualManipulation : public ProblemInstance
             RAVELOG_DEBUG("setting DualArmConstrained function in planner parameters\n");
             boost::shared_ptr<CM::DualArmManipulation<double> > dplanner(new CM::DualArmManipulation<double>(robot,pmanipA,pmanipI));
             dplanner->_distmetricfn = params->_distmetricfn;
-            params->_constraintfn = boost::bind(&CM::DualArmManipulation<double>::DualArmConstrained,dplanner,_1,_2,_3);//this juts means that the function is called upon pconstraints object and the function takes 3 arguments specified as _1,_2 and _3
+            params->_neighstatefn = boost::bind(&CM::DualArmManipulation<double>::DualArmConstrained,dplanner,_1,_2);
             params->_nMaxIterations = 1000;
         }
 
@@ -402,7 +402,7 @@ class DualManipulation : public ProblemInstance
         RobotBase::RobotStateSaver saver(robot);
 
         //robot->SetActiveDOFs(pmanip->GetArmIndices());
-        CM::JitterActiveDOF(robot,100); // try to jitter out, don't worry if it fails
+        planningutils::JitterActiveDOF(robot,100); // try to jitter out, don't worry if it fails
 
         boost::shared_ptr<Trajectory> ptraj(RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF()));
         Trajectory::TPOINT point;
@@ -415,8 +415,8 @@ class DualManipulation : public ProblemInstance
             return false;
         }
 
-        Transform handTr0 = pmanip0->GetEndEffectorTransform();
-        Transform handTr1 = pmanip1->GetEndEffectorTransform();
+        Transform handTr0 = pmanip0->GetTransform();
+        Transform handTr1 = pmanip1->GetTransform();
 
         point.q = vPrevValues;
         ptraj->AddPoint(point);

@@ -23,13 +23,13 @@
 // used for functions that are also used internally
 #define CHECK_INTERNAL_COMPUTATION0 { \
     if( _nHierarchyComputed == 0 ) { \
-        throw openrave_exception(str(boost::format("%s: joint hierarchy needs to be computed, current value is %d")%__PRETTY_FUNCTION__%_nHierarchyComputed)); \
+        throw OPENRAVE_EXCEPTION_FORMAT("joint hierarchy needs to be computed, current value is %d", _nHierarchyComputed, ORE_Failed); \
     } \
 } \
 
 #define CHECK_INTERNAL_COMPUTATION { \
     if( _nHierarchyComputed != 2 ) { \
-        throw openrave_exception(str(boost::format("%s: joint hierarchy needs to be computed, current value is %d")%__PRETTY_FUNCTION__%_nHierarchyComputed)); \
+        throw OPENRAVE_EXCEPTION_FORMAT("joint hierarchy needs to be computed, current value is %d", _nHierarchyComputed, ORE_Failed); \
     } \
 } \
 
@@ -411,7 +411,7 @@ bool KinBody::Link::GEOMPROPERTIES::InitCollisionMesh(float fTessellation)
         break;
     }
     default:
-        throw openrave_exception(str(boost::format("unrecognized geom type %d!\n")%_type));
+        throw OPENRAVE_EXCEPTION_FORMAT("unrecognized geom type %d!", _type, ORE_InvalidArguments);
     }
 
     return true;
@@ -433,7 +433,7 @@ void KinBody::Link::GEOMPROPERTIES::serialize(std::ostream& o, int options) cons
 void KinBody::Link::GEOMPROPERTIES::SetCollisionMesh(const TRIMESH& mesh)
 {
     if( !_bModifiable ) {
-        throw openrave_exception("geometry cannot be modified");
+        throw OPENRAVE_EXCEPTION_FORMAT0("geometry cannot be modified", ORE_Failed);
     }
     LinkPtr parent(_parent);
     collisionmesh = mesh;
@@ -598,7 +598,7 @@ void KinBody::Link::Enable(bool bEnable)
     if( _bIsEnabled != bEnable ) {
         KinBodyPtr parent = GetParent();
         if( !parent->GetEnv()->GetCollisionChecker()->EnableLink(LinkConstPtr(shared_from_this()),bEnable) ) {
-            throw openrave_exception(str(boost::format("failed to enable link %s:%s")%parent->GetName()%GetName()));
+            throw OPENRAVE_EXCEPTION_FORMAT("failed to enable link %s:%s", parent->GetName()%GetName(), ORE_Failed);
         }
         parent->_nNonAdjacentLinkCache &= ~AO_Enabled;
         _bIsEnabled = bEnable;
@@ -783,17 +783,17 @@ KinBody::Joint::Joint(KinBodyPtr parent)
     FOREACH(it,vAxes) {
         *it = Vector(0,0,1);
     }
-    FOREACH(it,_offsets) {
+    FOREACH(it,_voffsets) {
         *it = 0;
     }
     fResolution = dReal(0.02);
-    FOREACH(it,fMaxVel) {
+    FOREACH(it,_vmaxvel) {
         *it = 1e5f;
     }
-    FOREACH(it,fMaxAccel) {
+    FOREACH(it,_vmaxaccel) {
         *it = 1e5f;
     }
-    FOREACH(it,fMaxTorque) {
+    FOREACH(it,_vmaxtorque) {
         *it = 1e5f;
     }
     jointindex=-1;
@@ -818,7 +818,7 @@ int KinBody::Joint::GetDOF() const
         case JointUniversal: return 2;
         case JointSpherical: return 3;
         default:
-            throw openrave_exception(str(boost::format("invalid joint type 0x%x")%_type));
+            throw OPENRAVE_EXCEPTION_FORMAT("invalid joint type 0x%x", _type, ORE_Failed);
         }
     }
     return int(_type & 0xf);
@@ -866,9 +866,7 @@ bool KinBody::Joint::IsStatic() const
         if( IsCircular(i) ) {
             return false;
         }
-    }
-    for(size_t i = 0; i < _vlowerlimit.size(); ++i) {
-        if( _vlowerlimit[i] < _vupperlimit[i] ) {
+        if( _vlowerlimit.at(i) < _vupperlimit.at(i) ) {
             return false;
         }
     }
@@ -908,7 +906,7 @@ void KinBody::Joint::GetValues(vector<dReal>& pValues, bool bAppend) const
             else if( f > PI ) {
                 f -= 2*PI;
             }
-            pValues.push_back(_offsets[0]+f);
+            pValues.push_back(_voffsets[0]+f);
             vec1 = (vAxes[0] - axis2cur.dot(vAxes[0])*axis2cur).normalize();
             vec2 = (axis1cur - axis2cur.dot(axis1cur)*axis2cur).normalize();
             vec3 = axis2cur.cross(vec1);
@@ -919,7 +917,7 @@ void KinBody::Joint::GetValues(vector<dReal>& pValues, bool bAppend) const
             else if( f > PI ) {
                 f -= 2*PI;
             }
-            pValues.push_back(_offsets[1]+f);
+            pValues.push_back(_voffsets[1]+f);
             break;
         }
         case JointSpherical: {
@@ -939,7 +937,7 @@ void KinBody::Joint::GetValues(vector<dReal>& pValues, bool bAppend) const
             break;
         }
         default:
-            throw openrave_exception(str(boost::format("KinBody::Joint::GetValues: unknown joint type 0x%x\n")%_type));
+            throw OPENRAVE_EXCEPTION_FORMAT("unknown joint type 0x%x", _type, ORE_Failed);
         }
     }
     else {
@@ -966,11 +964,11 @@ void KinBody::Joint::GetValues(vector<dReal>& pValues, bool bAppend) const
                 else if( f > PI ) {
                     f -= 2*PI;
                 }
-                pValues.push_back(_offsets[i]+f);
+                pValues.push_back(_voffsets[i]+f);
             }
             else { // prismatic
                 f = tjoint.trans.x*vaxis.x+tjoint.trans.y*vaxis.y+tjoint.trans.z*vaxis.z;
-                pValues.push_back(_offsets[i]+f);
+                pValues.push_back(_voffsets[i]+f);
                 if( i+1 < GetDOF() ) {
                     tjoint.trans -= vaxis*f;
                 }
@@ -1006,7 +1004,7 @@ dReal KinBody::Joint::GetValue(int iaxis) const
                 else if( f > PI ) {
                     f -= 2*PI;
                 }
-                return _offsets[0]+f;
+                return _voffsets[0]+f;
             }
             else if( iaxis == 1 ) {
                 vec1 = (vAxes[0] - axis2cur.dot(vAxes[0])*axis2cur).normalize();
@@ -1019,7 +1017,7 @@ dReal KinBody::Joint::GetValue(int iaxis) const
                 else if( f > PI ) {
                     f -= 2*PI;
                 }
-                return _offsets[1]+f;
+                return _voffsets[1]+f;
             }
             break;
         }
@@ -1051,7 +1049,7 @@ dReal KinBody::Joint::GetValue(int iaxis) const
     }
     else {
         if( _type == JointPrismatic ) {
-            return _offsets[0]+(tjoint.trans.x*vAxes[0].x+tjoint.trans.y*vAxes[0].y+tjoint.trans.z*vAxes[0].z);
+            return _voffsets[0]+(tjoint.trans.x*vAxes[0].x+tjoint.trans.y*vAxes[0].y+tjoint.trans.z*vAxes[0].z);
         }
         else if( _type == JointRevolute ) {
             f = 2.0f*RaveAtan2(tjoint.rot.y*vAxes[0].x+tjoint.rot.z*vAxes[0].y+tjoint.rot.w*vAxes[0].z, tjoint.rot.x);
@@ -1062,7 +1060,7 @@ dReal KinBody::Joint::GetValue(int iaxis) const
             else if( f > PI ) {
                 f -= 2*PI;
             }
-            return _offsets[0]+f;
+            return _voffsets[0]+f;
         }
 
         // chain of revolute and prismatic joints
@@ -1089,13 +1087,13 @@ dReal KinBody::Joint::GetValue(int iaxis) const
                     f -= 2*PI;
                 }
                 if( i == iaxis ) {
-                    return _offsets[i]+f;
+                    return _voffsets[i]+f;
                 }
             }
             else { // prismatic
                 f = tjoint.trans.x*vaxis.x+tjoint.trans.y*vaxis.y+tjoint.trans.z*vaxis.z;
                 if( i == iaxis ) {
-                    return _offsets[i]+f;
+                    return _voffsets[i]+f;
                 }
                 if( i+1 < GetDOF() ) {
                     tjoint.trans -= vaxis*f;
@@ -1103,7 +1101,7 @@ dReal KinBody::Joint::GetValue(int iaxis) const
             }
         }
     }
-    throw openrave_exception(str(boost::format("KinBody::Joint::GetValues: unknown joint type 0x%x axis %d\n")%_type%iaxis));
+    throw OPENRAVE_EXCEPTION_FORMAT("unknown joint type 0x%x axis %d\n", _type%iaxis, ORE_Failed);
 }
 
 void KinBody::Joint::GetVelocities(std::vector<dReal>& pVelocities, bool bAppend) const
@@ -1136,7 +1134,7 @@ void KinBody::Joint::GetVelocities(std::vector<dReal>& pVelocities, bool bAppend
             break;
         }
         default:
-            throw openrave_exception(str(boost::format("KinBody::Joint::GetVelocities: unknown joint type 0x%x\n")%_type));
+            throw OPENRAVE_EXCEPTION_FORMAT("unknown joint type 0x%x", _type, ORE_InvalidArguments);
         }
     }
     else {
@@ -1176,7 +1174,7 @@ Vector KinBody::Joint::GetAxis(int iaxis) const
 void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1, const Vector& vanchorraw)
 {
     if( !plink0 || !plink1 ) {
-        throw openrave_exception(str(boost::format("one or more attached _attachedbodies are invalid for joint %s\n")%GetName()),ORE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT("one or more attached _attachedbodies are invalid for joint %s", GetName(),ORE_InvalidArguments);
     }
     KinBodyPtr parent(_parent);
     _bInitialized = false;
@@ -1226,7 +1224,7 @@ void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1,
             _tRight = _tRight * trel;
             break;
         default:
-            throw openrave_exception(str(boost::format("unrecognized joint type 0x%s\n")%_type));
+            throw OPENRAVE_EXCEPTION_FORMAT("unrecognized joint type 0x%x", _type, ORE_InvalidArguments);
         }
     }
     else {
@@ -1245,20 +1243,20 @@ void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1,
             
         Transform toffset;
         if( IsRevolute(0) ) {
-            toffset.rot = quatFromAxisAngle(vAxes[0], _offsets[0]);
+            toffset.rot = quatFromAxisAngle(vAxes[0], _voffsets[0]);
         }
         else {
-            toffset.trans = vAxes[0]*_offsets[0];
+            toffset.trans = vAxes[0]*_voffsets[0];
         }
         _tLeft = _tLeftNoOffset * toffset;
         _tRight = _tRightNoOffset;
         if( GetDOF() > 1 ) {
             // right multiply by the offset of the last axis, might be buggy?
             if( IsRevolute(GetDOF()-1) ) {
-                _tRight = matrixFromAxisAngle(vAxes[0], _offsets[GetDOF()-1]) * _tRight;
+                _tRight = matrixFromAxisAngle(vAxes[0], _voffsets[GetDOF()-1]) * _tRight;
             }
             else {
-                _tRight.trans += vAxes[0]*_offsets[GetDOF()-1];
+                _tRight.trans += vAxes[0]*_voffsets[GetDOF()-1];
             }
         }
     }
@@ -1301,26 +1299,43 @@ Transform KinBody::Joint::GetInternalHierarchyRightTransform() const
 
 void KinBody::Joint::GetLimits(std::vector<dReal>& vLowerLimit, std::vector<dReal>& vUpperLimit, bool bAppend) const
 {
-    if( bAppend ) {
-        vLowerLimit.insert(vLowerLimit.end(),_vlowerlimit.begin(),_vlowerlimit.end());
-        vUpperLimit.insert(vUpperLimit.end(),_vupperlimit.begin(),_vupperlimit.end());
-    }
-    else {
-        vLowerLimit = _vlowerlimit;
-        vUpperLimit = _vupperlimit;
-    }
-}
-
-void KinBody::Joint::GetVelocityLimits(std::vector<dReal>& vLowerLimit, std::vector<dReal>& vUpperLimit, bool bAppend) const
-{
     if( !bAppend ) {
         vLowerLimit.resize(0);
         vUpperLimit.resize(0);
     }
     for(int i = 0; i < GetDOF(); ++i) {
-        vLowerLimit.push_back(-GetMaxVel());
-        vUpperLimit.push_back(GetMaxVel());
+        vLowerLimit.push_back(_vlowerlimit[i]);
+        vUpperLimit.push_back(_vupperlimit[i]);
     }
+}
+
+void KinBody::Joint::SetLimits(const std::vector<dReal>& vLowerLimit, const std::vector<dReal>& vUpperLimit)
+{
+    for(int i = 0; i < GetDOF(); ++i) {
+        _vlowerlimit[i] = vLowerLimit.at(i);
+        _vupperlimit[i] = vUpperLimit.at(i);
+    }
+    GetParent()->_ParametersChanged(Prop_JointLimits);
+}
+
+void KinBody::Joint::GetVelocityLimits(std::vector<dReal>& vlower, std::vector<dReal>& vupper, bool bAppend) const
+{
+    if( !bAppend ) {
+        vlower.resize(0);
+        vupper.resize(0);
+    }
+    for(int i = 0; i < GetDOF(); ++i) {
+        vlower.push_back(-_vmaxvel[i]);
+        vupper.push_back(_vmaxvel[i]);
+    }
+}
+
+void KinBody::Joint::SetVelocityLimits(const std::vector<dReal>& vmaxvel)
+{
+    for(int i = 0; i < GetDOF(); ++i) {
+        _vmaxvel[i] = vmaxvel.at(i);
+    }
+    GetParent()->_ParametersChanged(Prop_JointVelocityLimits);
 }
 
 dReal KinBody::Joint::GetWeight(int iaxis) const
@@ -1330,15 +1345,8 @@ dReal KinBody::Joint::GetWeight(int iaxis) const
 
 void KinBody::Joint::SetOffset(dReal newoffset, int iaxis)
 {
-    _offsets.at(iaxis) = newoffset;
+    _voffsets.at(iaxis) = newoffset;
     GetParent()->_ParametersChanged(Prop_JointOffset);
-}
-
-void KinBody::Joint::SetLimits(const std::vector<dReal>& vLowerLimit, const std::vector<dReal>& vUpperLimit)
-{
-    _vlowerlimit = vLowerLimit;
-    _vupperlimit = vUpperLimit;
-    GetParent()->_ParametersChanged(Prop_JointLimits);
 }
 
 void KinBody::Joint::SetResolution(dReal resolution)
@@ -1349,7 +1357,9 @@ void KinBody::Joint::SetResolution(dReal resolution)
 
 void KinBody::Joint::SetWeights(const std::vector<dReal>& vweights)
 {
-    _vweights = vweights;
+    for(int i = 0; i < GetDOF(); ++i) {
+        _vweights[i] = vweights.at(i);
+    }
     GetParent()->_ParametersChanged(Prop_JointProperties);
 }
 
@@ -1430,13 +1440,13 @@ std::string KinBody::Joint::GetMimicEquation(int iaxis, int itype, const std::st
         }
         return sout;
     }
-    throw openrave_exception(str(boost::format("GetMimicEquation: unsupported math format %s")%format));
+    throw OPENRAVE_EXCEPTION_FORMAT("unsupported math format %s", format, ORE_InvalidArguments);
 }
 
 void KinBody::Joint::GetMimicDOFIndices(std::vector<int>& vmimicdofs, int iaxis) const
 {
     if( !_vmimic.at(iaxis) ) {
-        throw openrave_exception(str(boost::format("joint %s axis %d is not mimic")%GetName()%iaxis),ORE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT("joint %s axis %d is not mimic", GetName()%iaxis,ORE_InvalidArguments);
     }
     vmimicdofs.resize(0);
     FOREACHC(it, _vmimic.at(iaxis)->_vmimicdofs) {
@@ -1484,12 +1494,12 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
     std::string eq;
     int ret = mimic->_posfn->ParseAndDeduceVariables(SearchAndReplace(eq,mimic->_equations[0],jointnamepairs),resultVars);
     if( ret >= 0 ) {
-        throw openrave_exception(str(boost::format("SetMimicEquations: failed to set equation '%s' on %s:%s, at %d. Error is %s\n")%mimic->_equations[0]%parent->GetName()%GetName()%ret%mimic->_posfn->ErrorMsg()),ORE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT("failed to set equation '%s' on %s:%s, at %d. Error is %s\n", mimic->_equations[0]%parent->GetName()%GetName()%ret%mimic->_posfn->ErrorMsg(),ORE_InvalidArguments);
     }
     // process the variables
     FOREACH(itvar,resultVars) {
         if( itvar->find("joint") != 0 ) {
-            throw openrave_exception(str(boost::format("SetMimicEquations: equation '%s' uses unknown variable")%mimic->_equations[0]));
+            throw OPENRAVE_EXCEPTION_FORMAT("equation '%s' uses unknown variable", mimic->_equations[0], ORE_InvalidArguments);
         }
         MIMIC::DOFFormat dofformat;
         size_t axisindex = itvar->find('_');
@@ -1554,13 +1564,13 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
             }
             vector<string>::iterator itnameindex = find(resultVars.begin(),resultVars.end(),varname);
             if( itnameindex == resultVars.end() ) {
-                throw openrave_exception(str(boost::format("SetMimicEquations: variable %s from velocity equation is not referenced in the position, skipping...")%mapinvnames[varname]),ORE_InvalidArguments);
+                throw OPENRAVE_EXCEPTION_FORMAT("variable %s from velocity equation is not referenced in the position, skipping...", mapinvnames[varname],ORE_InvalidArguments);
             }
             
             boost::shared_ptr<FunctionParserBase<dReal> > fn(parent->_CreateFunctionParser());
             ret = fn->Parse(sequation,sVars.str());
             if( ret >= 0 ) {
-                throw openrave_exception(str(boost::format("SetMimicEquations: failed to set equation '%s' on %s:%s, at %d. Error is %s\n")%sequation%parent->GetName()%GetName()%ret%fn->ErrorMsg()),ORE_InvalidArguments);
+                throw OPENRAVE_EXCEPTION_FORMAT("failed to set equation '%s' on %s:%s, at %d. Error is %s", sequation%parent->GetName()%GetName()%ret%fn->ErrorMsg(),ORE_InvalidArguments);
             }
             vfns.at(itnameindex-resultVars.begin()) = fn;
         }
@@ -1593,7 +1603,7 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int,dReal> 
         return;
     }
     if( !_vmimic.at(iaxis) ) {
-        throw openrave_exception(str(boost::format("cannot compute partial velocities of joint %s")%_name));
+        throw OPENRAVE_EXCEPTION_FORMAT("cannot compute partial velocities of joint %s", _name, ORE_Failed);
     }
     KinBodyConstPtr parent(_parent);
     MIMIC::DOFFormat thisdofformat;
@@ -1685,7 +1695,7 @@ void KinBody::Joint::serialize(std::ostream& o, int options) const
         SerializeRound(o,_tRight);
         SerializeRound(o,_tLeft);
         for(int i = 0; i < GetDOF(); ++i) {
-            SerializeRound(o,_offsets[i]);
+            SerializeRound(o,_voffsets[i]);
         }
         for(int i = 0; i < GetDOF(); ++i) {
             SerializeRound3(o,vAxes[i]);
@@ -1698,20 +1708,12 @@ void KinBody::Joint::serialize(std::ostream& o, int options) const
         o << (!_attachedbodies[0]?-1:_attachedbodies[0]->GetIndex()) << " " << (!_attachedbodies[1]?-1:_attachedbodies[1]->GetIndex()) << " ";
     }
     if( options & SO_Dynamics ) {
-        FOREACHC(it,fMaxVel) {
-            SerializeRound(o,*it);
-        }
-        FOREACHC(it,fMaxAccel) {
-            SerializeRound(o,*it);
-        }
-        FOREACHC(it,fMaxTorque) {
-            SerializeRound(o,*it);
-        }
-        FOREACHC(it,_vlowerlimit) {
-            SerializeRound(o,*it);
-        }
-        FOREACHC(it,_vupperlimit) {
-            SerializeRound(o,*it);
+        for(int i = 0; i < GetDOF(); ++i) {
+            SerializeRound(o,_vmaxvel[i]);
+            SerializeRound(o,_vmaxaccel[i]);
+            SerializeRound(o,_vmaxtorque[i]);
+            SerializeRound(o,_vlowerlimit[i]);
+            SerializeRound(o,_vupperlimit[i]);
         }
     }
 }
@@ -1719,7 +1721,7 @@ void KinBody::Joint::serialize(std::ostream& o, int options) const
 KinBody::KinBodyStateSaver::KinBodyStateSaver(KinBodyPtr pbody, int options) : _options(options), _pbody(pbody)
 {
     if( _options & Save_LinkTransformation ) {
-        _pbody->GetBodyTransformations(_vLinkTransforms);
+        _pbody->GetLinkTransformations(_vLinkTransforms);
     }
     if( _options & Save_LinkEnable ) {
         _vEnabledLinks.resize(_pbody->GetLinks().size());
@@ -1727,12 +1729,15 @@ KinBody::KinBodyStateSaver::KinBodyStateSaver(KinBodyPtr pbody, int options) : _
             _vEnabledLinks[i] = _pbody->GetLinks().at(i)->IsEnabled();
         }
     }
+    if( _options & Save_LinkVelocities ) {
+        _pbody->GetLinkVelocities(_vLinkVelocities);
+    }
 }
 
 KinBody::KinBodyStateSaver::~KinBodyStateSaver()
 {
     if( _options & Save_LinkTransformation ) {
-        _pbody->SetBodyTransformations(_vLinkTransforms);
+        _pbody->SetLinkTransformations(_vLinkTransforms);
     }
     if( _options & Save_LinkEnable ) {
         for(size_t i = 0; i < _vEnabledLinks.size(); ++i) {
@@ -1740,6 +1745,9 @@ KinBody::KinBodyStateSaver::~KinBodyStateSaver()
                 _pbody->GetLinks().at(i)->Enable(!!_vEnabledLinks[i]);
             }
         }
+    }
+    if( _options & Save_LinkVelocities ) {
+        _pbody->SetLinkVelocities(_vLinkVelocities);
     }
 }
 
@@ -1821,7 +1829,7 @@ bool KinBody::InitFromData(const std::string& data, const AttributesList& atts)
 bool KinBody::InitFromBoxes(const std::vector<AABB>& vaabbs, bool bDraw)
 {
     if( GetEnvironmentId() ) {
-        throw openrave_exception(str(boost::format("KinBody::Init for %s, cannot Init a body while it is added to the environment\n")%GetName()));
+        throw OPENRAVE_EXCEPTION_FORMAT("%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
     }
     Destroy();
     LinkPtr plink(new Link(shared_kinbody()));
@@ -1851,7 +1859,7 @@ bool KinBody::InitFromBoxes(const std::vector<AABB>& vaabbs, bool bDraw)
 bool KinBody::InitFromBoxes(const std::vector<OBB>& vobbs, bool bDraw)
 {
     if( GetEnvironmentId() ) {
-        throw openrave_exception(str(boost::format("KinBody::Init for %s, cannot Init a body while it is added to the environment\n")%GetName()));
+        throw OPENRAVE_EXCEPTION_FORMAT("%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
     }
     Destroy();
     LinkPtr plink(new Link(shared_kinbody()));
@@ -1883,10 +1891,40 @@ bool KinBody::InitFromBoxes(const std::vector<OBB>& vobbs, bool bDraw)
     return true;
 }
 
+bool KinBody::InitFromSpheres(const std::vector<Vector>& vspheres, bool bDraw)
+{
+    if( GetEnvironmentId() ) {
+        throw OPENRAVE_EXCEPTION_FORMAT("%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
+    }
+    Destroy();
+    LinkPtr plink(new Link(shared_kinbody()));
+    plink->_index = 0;
+    plink->_name = "base";
+    plink->bStatic = true;
+    Link::TRIMESH trimesh;
+    FOREACHC(itv, vspheres) {
+        plink->_listGeomProperties.push_back(Link::GEOMPROPERTIES(plink));
+        Link::GEOMPROPERTIES& geom = plink->_listGeomProperties.back();
+        geom._type = Link::GEOMPROPERTIES::GeomSphere;
+        geom._t.trans.x = itv->x; geom._t.trans.y = itv->y; geom._t.trans.z = itv->z;
+        geom._bDraw = bDraw;
+        geom.vGeomData.x = itv->w;
+        geom.InitCollisionMesh();
+        geom.diffuseColor=Vector(1,0.5f,0.5f,1);
+        geom.ambientColor=Vector(0.1,0.0f,0.0f,0);
+        trimesh = geom.GetCollisionMesh();
+        trimesh.ApplyTransform(geom._t);
+        plink->collision.Append(trimesh);
+    }
+    
+    _veclinks.push_back(plink);
+    return true;
+}
+
 bool KinBody::InitFromTrimesh(const KinBody::Link::TRIMESH& trimesh, bool draw)
 {
     if( GetEnvironmentId() ) {
-        throw openrave_exception(str(boost::format("KinBody::Init for %s, cannot Init a body while it is added to the environment\n")%GetName()));
+        throw OPENRAVE_EXCEPTION_FORMAT("%s, cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
     }
     Destroy();
     LinkPtr plink(new Link(shared_kinbody()));
@@ -1917,9 +1955,9 @@ void KinBody::SetName(const std::string& newname)
 
 void KinBody::SetJointTorques(const std::vector<dReal>& torques, bool bAdd)
 {
-    if( (int)torques.size() != GetDOF() )
-        throw openrave_exception(str(boost::format("dof not equal %d!=%d")%torques.size()%GetDOF()),ORE_InvalidArguments);
-
+    if( (int)torques.size() < GetDOF() ) {
+        throw OPENRAVE_EXCEPTION_FORMAT("not enough values %d<%d", torques.size()%GetDOF(),ORE_InvalidArguments);
+    }
     if( !bAdd ) {
         FOREACH(itlink, _veclinks) {
             (*itlink)->SetForce(Vector(),Vector(),false);
@@ -1983,29 +2021,18 @@ void KinBody::GetDOFLimits(std::vector<dReal>& vLowerLimit, std::vector<dReal>& 
     }
 }
 
-void KinBody::GetDOFVelocityLimits(std::vector<dReal>& vLowerLimit, std::vector<dReal>& vUpperLimit) const
+void KinBody::GetDOFVelocityLimits(std::vector<dReal>& vlower, std::vector<dReal>& vupper) const
 {
-    vLowerLimit.resize(0);
-    if( (int)vLowerLimit.capacity() < GetDOF() ) {
-        vLowerLimit.reserve(GetDOF());
+    vlower.resize(0);
+    vupper.resize(0);
+    if( (int)vlower.capacity() < GetDOF() ) {
+        vlower.reserve(GetDOF());
     }
-    vUpperLimit.resize(0);
-    if( (int)vUpperLimit.capacity() < GetDOF() ) {
-        vUpperLimit.reserve(GetDOF());
+    if( (int)vupper.capacity() < GetDOF() ) {
+        vupper.reserve(GetDOF());
     }
     FOREACHC(it,_vDOFOrderedJoints) {
-        (*it)->GetVelocityLimits(vLowerLimit,vUpperLimit,true);
-    }
-}
-
-void KinBody::GetDOFMaxVel(std::vector<dReal>& v) const
-{
-    v.resize(0);
-    if( (int)v.capacity() < GetDOF() ) {
-        v.reserve(GetDOF());
-    }
-    FOREACHC(it, _vDOFOrderedJoints) {
-        v.insert(v.end(),(*it)->GetDOF(),(*it)->GetMaxVel());
+        (*it)->GetVelocityLimits(vlower,vupper,true);
     }
 }
 
@@ -2052,97 +2079,6 @@ void KinBody::GetDOFWeights(std::vector<dReal>& v) const
     }
 }
 
-void KinBody::GetJointValues(std::vector<dReal>& v) const
-{
-    v.resize(0);
-    if( (int)v.capacity() < GetDOF() ) {
-        v.reserve(GetDOF());
-    }
-    FOREACHC(it, _vecjoints) {
-        (*it)->GetValues(v,true);
-    }
-}
-
-void KinBody::GetJointVelocities(std::vector<dReal>& v) const
-{
-    v.resize(0);
-    if( (int)v.capacity() < GetDOF() ) {
-        v.reserve(GetDOF());
-    }
-    FOREACHC(it, _vecjoints) {
-        (*it)->GetVelocities(v,true);
-    }
-}
-
-void KinBody::GetJointLimits(std::vector<dReal>& vLowerLimit, std::vector<dReal>& vUpperLimit) const
-{
-    vLowerLimit.resize(0);
-    if( (int)vLowerLimit.capacity() < GetDOF() ) {
-        vLowerLimit.reserve(GetDOF());
-    }
-    vUpperLimit.resize(0);
-    if( (int)vUpperLimit.capacity() < GetDOF() ) {
-        vUpperLimit.reserve(GetDOF());
-    }
-    FOREACHC(it,_vecjoints) {
-        (*it)->GetLimits(vLowerLimit,vUpperLimit,true);
-    }
-}
-
-void KinBody::GetJointMaxVel(std::vector<dReal>& v) const
-{
-    v.resize(0);
-    if( (int)v.capacity() < GetDOF() ) {
-        v.reserve(GetDOF());
-    }
-    FOREACHC(it, _vecjoints) {
-        v.insert(v.end(),(*it)->GetDOF(),(*it)->GetMaxVel());
-    }
-}
-
-void KinBody::GetJointMaxAccel(std::vector<dReal>& v) const
-{
-    v.resize(0);
-    if( (int)v.capacity() < GetDOF() ) {
-        v.reserve(GetDOF());
-    }
-    FOREACHC(it, _vecjoints) {
-        v.insert(v.end(),(*it)->GetDOF(),(*it)->GetMaxAccel());
-    }
-}
-
-void KinBody::GetJointMaxTorque(std::vector<dReal>& v) const
-{
-    v.resize(0);
-    if( (int)v.capacity() < GetDOF() ) {
-        v.reserve(GetDOF());
-    }
-    FOREACHC(it, _vecjoints) {
-        v.insert(v.end(),(*it)->GetDOF(),(*it)->GetMaxTorque());
-    }
-}
-
-void KinBody::GetJointResolutions(std::vector<dReal>& v) const
-{
-    v.resize(0);
-    if( (int)v.capacity() < GetDOF() ) {
-        v.reserve(GetDOF());
-    }
-    FOREACHC(it, _vecjoints) {
-        v.insert(v.end(),(*it)->GetDOF(),(*it)->GetResolution());
-    }
-}
-
-void KinBody::GetJointWeights(std::vector<dReal>& v) const
-{
-    v.resize(GetDOF());
-    std::vector<dReal>::iterator itv = v.begin();
-    FOREACHC(it, _vecjoints) {
-        for(int i = 0; i < (*it)->GetDOF(); ++i)
-            *itv++ = (*it)->GetWeight(i);
-    }
-}
-
 void KinBody::SimulationStep(dReal fElapsedTime)
 {
 }
@@ -2170,8 +2106,9 @@ void KinBody::SetTransform(const Transform& trans)
     }
     Transform tbaseinv = _veclinks.front()->GetTransform().inverse();
     Transform tapply = trans * tbaseinv;
-    FOREACH(itlink, _veclinks)
+    FOREACH(itlink, _veclinks) {
         (*itlink)->SetTransform(tapply * (*itlink)->GetTransform());
+    }
 }
 
 Transform KinBody::GetTransform() const
@@ -2192,11 +2129,11 @@ bool KinBody::SetVelocity(const Vector& linearvel, const Vector& angularvel)
     return GetEnv()->GetPhysicsEngine()->SetLinkVelocities(shared_kinbody(),velocities);
 }
 
-bool KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocity, const Vector& linearvel, const Vector& angularvel, bool checklimits)
+void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocity, const Vector& linearvel, const Vector& angularvel, bool checklimits)
 {
     CHECK_INTERNAL_COMPUTATION;
-    if( (int)vDOFVelocity.size() != GetDOF() ) {
-        throw openrave_exception(str(boost::format("dof not equal %d!=%d")%vDOFVelocity.size()%GetDOF()),ORE_InvalidArguments);
+    if( (int)vDOFVelocity.size() < GetDOF() ) {
+        throw OPENRAVE_EXCEPTION_FORMAT("not enough values %d!=%d", vDOFVelocity.size()%GetDOF(),ORE_InvalidArguments);
     }
     std::vector<std::pair<Vector,Vector> > velocities(_veclinks.size());
     velocities.at(0).first = linearvel;
@@ -2276,10 +2213,10 @@ bool KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocity, const Vec
 
         if( checklimits && dofindex >= 0 ) {
             for(int i = 0; i < pjoint->GetDOF(); ++i) {
-                if( pvalues[i] < vlower[dofindex+i] ) {
+                if( pvalues[i] < vlower.at(dofindex+i) ) {
                     dummyvalues[i] = vlower[i];
                 }
-                else if( pvalues[i] > vupper[dofindex+i] ) {
+                else if( pvalues[i] > vupper.at(dofindex+i) ) {
                     dummyvalues[i] = vupper[i];
                 }
                 else {
@@ -2347,10 +2284,10 @@ bool KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocity, const Vec
         velocities.at(pjoint->GetHierarchyChildLink()->GetIndex()) = make_pair(vparent + tdelta.rotate(v) + wparent.cross(pjoint->GetHierarchyChildLink()->GetTransform().trans-tparent.trans), wparent + tdelta.rotate(w));
         vlinkscomputed[pjoint->GetHierarchyChildLink()->GetIndex()] = 1;
     }
-    return GetEnv()->GetPhysicsEngine()->SetLinkVelocities(shared_kinbody(),velocities);
+    SetLinkVelocities(velocities);
 }
 
-bool KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, bool checklimits)
+void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, bool checklimits)
 {
     Vector linearvel,angularvel;
     _veclinks.at(0)->GetVelocity(linearvel,angularvel);
@@ -2362,12 +2299,12 @@ void KinBody::GetVelocity(Vector& linearvel, Vector& angularvel) const
     GetEnv()->GetPhysicsEngine()->GetLinkVelocity(_veclinks.at(0), linearvel, angularvel);
 }
 
-bool KinBody::GetLinkVelocities(std::vector<std::pair<Vector,Vector> >& velocities) const
+void KinBody::GetLinkVelocities(std::vector<std::pair<Vector,Vector> >& velocities) const
 {
-    return GetEnv()->GetPhysicsEngine()->GetLinkVelocities(shared_kinbody_const(),velocities);
+    GetEnv()->GetPhysicsEngine()->GetLinkVelocities(shared_kinbody_const(),velocities);
 }
 
-void KinBody::GetBodyTransformations(vector<Transform>& vtrans) const
+void KinBody::GetLinkTransformations(vector<Transform>& vtrans) const
 {
     vtrans.resize(_veclinks.size());
     vector<Transform>::iterator it;
@@ -2448,10 +2385,10 @@ Vector KinBody::GetCenterOfMass() const
     return center;
 }
 
-void KinBody::SetBodyTransformations(const std::vector<Transform>& vbodies)
+void KinBody::SetLinkTransformations(const std::vector<Transform>& vbodies)
 {
-    if( vbodies.size() != _veclinks.size() ) {
-        throw openrave_exception(str(boost::format("links not equal %d!=%d")%vbodies.size()%_veclinks.size()),ORE_InvalidArguments);
+    if( vbodies.size() < _veclinks.size() ) {
+        throw OPENRAVE_EXCEPTION_FORMAT("not enough links %d<%d", vbodies.size()%_veclinks.size(),ORE_InvalidArguments);
     }
     vector<Transform>::const_iterator it;
     vector<LinkPtr>::iterator itlink;
@@ -2459,6 +2396,11 @@ void KinBody::SetBodyTransformations(const std::vector<Transform>& vbodies)
         (*itlink)->SetTransform(*it);
     }
     _nUpdateStampId++;
+}
+
+void KinBody::SetLinkVelocities(const std::vector<std::pair<Vector,Vector> >& velocities)
+{
+    GetEnv()->GetPhysicsEngine()->SetLinkVelocities(shared_kinbody(),velocities);
 }
 
 void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, const Transform& transBase, bool bCheckLimits)
@@ -2481,8 +2423,8 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, bool bCheckLi
 {
     CHECK_INTERNAL_COMPUTATION;
     _nUpdateStampId++;
-    if( (int)vJointValues.size() != GetDOF() ) {
-        throw openrave_exception(str(boost::format("dof not equal %d!=%d")%vJointValues.size()%GetDOF()),ORE_InvalidArguments);
+    if( (int)vJointValues.size() < GetDOF() ) {
+        throw OPENRAVE_EXCEPTION_FORMAT("not enough values %d<%d", vJointValues.size()%GetDOF(),ORE_InvalidArguments);
     }
     if( vJointValues.size() == 0 || _veclinks.size() == 0 ) {
         return;
@@ -2650,7 +2592,7 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, bool bCheckLi
                             }
                         }
                         if( veval.empty() ) {
-                            throw openrave_exception(str(boost::format("SetDOFValues: no valid values for joint %s")%pjoint->GetName()),ORE_Assert);
+                            throw OPENRAVE_EXCEPTION_FORMAT("no valid values for joint %s", pjoint->GetName(),ORE_Assert);
                         }
                     }
                     if( veval.size() > 1 ) {
@@ -2749,8 +2691,9 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, bool bCheckLi
 KinBody::LinkPtr KinBody::GetLink(const std::string& linkname) const
 {
     for(std::vector<LinkPtr>::const_iterator it = _veclinks.begin(); it != _veclinks.end(); ++it) {
-        if ( (*it)->GetName() == linkname )
+        if ( (*it)->GetName() == linkname ) {
             return *it;
+        }
     }
     return LinkPtr();
 }
@@ -2856,7 +2799,7 @@ void KinBody::CalculateJacobian(int linkindex, const Vector& trans, boost::multi
 {
     CHECK_INTERNAL_COMPUTATION;
     if( linkindex < 0 || linkindex >= (int)_veclinks.size() ) {
-        throw openrave_exception(str(boost::format("bad link index %d")%linkindex),ORE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT("bad link index %d", linkindex,ORE_InvalidArguments);
     }
     mjacobian.resize(boost::extents[3][GetDOF()]);
     if( GetDOF() == 0 ) {
@@ -2945,7 +2888,7 @@ void KinBody::CalculateRotationJacobian(int linkindex, const Vector& q, boost::m
 {
     CHECK_INTERNAL_COMPUTATION;
     if( linkindex < 0 || linkindex >= (int)_veclinks.size() ) {
-        throw openrave_exception(str(boost::format("bad link index %d")%linkindex),ORE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT("bad link index %d", linkindex,ORE_InvalidArguments);
     }
     mjacobian.resize(boost::extents[4][GetDOF()]);
     if( GetDOF() == 0 ) {
@@ -3036,7 +2979,7 @@ void KinBody::CalculateAngularVelocityJacobian(int linkindex, boost::multi_array
 {
     CHECK_INTERNAL_COMPUTATION;
     if( linkindex < 0 || linkindex >= (int)_veclinks.size() ) {
-        throw openrave_exception(str(boost::format("bad link index %d")%linkindex),ORE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT("bad link index %d", linkindex,ORE_InvalidArguments);
     }
     mjacobian.resize(boost::extents[3][GetDOF()]);
     if( GetDOF() == 0 ) {
@@ -3268,7 +3211,7 @@ void KinBody::_ComputeInternalInformation()
                         if( mimicparent->_vdofformat[itmimicdof->dofformatindex] == itmimic->first ) {
                             JointPtr pjoint = itmimic->first.GetJoint(shared_kinbody());
                             JointPtr pjointparent = itdofformat->GetJoint(shared_kinbody());
-                            throw openrave_exception(str(boost::format("joint index %s uses a mimic joint %s that also depends on %s! this is not allowed")%pjoint->GetName()%pjointparent->GetName()%pjoint->GetName()));
+                            throw OPENRAVE_EXCEPTION_FORMAT("joint index %s uses a mimic joint %s that also depends on %s! this is not allowed", pjoint->GetName()%pjointparent->GetName()%pjoint->GetName(), ORE_Failed);
                         }
                         h.dofindex = itmimicdof->dofindex;
                         if( find(mimic->_vmimicdofs.begin(),mimic->_vmimicdofs.end(),h) == mimic->_vmimicdofs.end() ) {
@@ -3838,7 +3781,7 @@ void KinBody::_ComputeInternalInformation()
 
     // create the adjacency list
     {
-        GetBodyTransformations(_vInitialLinkTransformations);
+        GetLinkTransformations(_vInitialLinkTransformations);
         _setAdjacentLinks.clear();
         FOREACH(itadj, _vForcedAdjacentLinks) {
             LinkPtr pl0 = GetLink(itadj->first);
@@ -3908,11 +3851,11 @@ void KinBody::_ComputeInternalInformation()
     // because of mimic joints, need to call SetDOFValues at least once, also use this to check for links that are off
     {
         vector<Transform> vprevtrans, vnewtrans;
-        GetBodyTransformations(vprevtrans);
+        GetLinkTransformations(vprevtrans);
         vector<dReal> vcurrentvalues;
         GetDOFValues(vcurrentvalues);
         SetDOFValues(vcurrentvalues);
-        GetBodyTransformations(vnewtrans);        
+        GetLinkTransformations(vnewtrans);        
         for(size_t i = 0; i < vprevtrans.size(); ++i) {
             if( TransformDistanceFast(vprevtrans[i],vnewtrans[i]) > 1e-5 ) {
                 RAVELOG_VERBOSE(str(boost::format("link %d has different transformation after SetDOFValues (error=%f), this could be due to mimic joint equations kicking into effect.")%_veclinks.at(i)->GetName()%TransformDistanceFast(vprevtrans[i],vnewtrans[i])));
@@ -4001,7 +3944,7 @@ void KinBody::Enable(bool bEnable)
     FOREACH(it, _veclinks) {
         if( (*it)->_bIsEnabled != bEnable ) {
             if( !p->EnableLink(LinkConstPtr(*it),bEnable) ) {
-                throw openrave_exception(str(boost::format("failed to enable link %s:%s")%GetName()%(*it)->GetName()));
+                throw OPENRAVE_EXCEPTION_FORMAT("failed to enable link %s:%s", GetName()%(*it)->GetName(), ORE_Failed);
             }
             (*it)->_bIsEnabled = bEnable;
             _nNonAdjacentLinkCache &= ~AO_Enabled;
@@ -4046,7 +3989,7 @@ const std::set<int>& KinBody::GetNonAdjacentLinks(int adjacentoptions) const
     class TransformsSaver
     {
     public:
-        TransformsSaver(KinBodyConstPtr pbody) : _pbody(pbody) { _pbody->GetBodyTransformations(vcurtrans); }
+        TransformsSaver(KinBodyConstPtr pbody) : _pbody(pbody) { _pbody->GetLinkTransformations(vcurtrans); }
         ~TransformsSaver() {
             for(size_t i = 0; i < _pbody->_veclinks.size(); ++i) {
                 boost::static_pointer_cast<Link>(_pbody->_veclinks[i])->_t = vcurtrans.at(i);
@@ -4091,7 +4034,7 @@ const std::set<int>& KinBody::GetNonAdjacentLinks(int adjacentoptions) const
             _nNonAdjacentLinkCache |= AO_Enabled;
         }
         else {
-            throw openrave_exception(str(boost::format("KinBody::GetNonAdjacentLinks does not support adjacentoptions %d")%adjacentoptions),ORE_InvalidArguments);
+            throw OPENRAVE_EXCEPTION_FORMAT("no support for adjacentoptions %d", adjacentoptions,ORE_InvalidArguments);
         }
     }
     return _setNonAdjacentLinks.at(adjacentoptions);
@@ -4166,7 +4109,7 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
                 _vTopologicallySortedJointsAll.push_back(_vPassiveJoints.at(it-r->_vPassiveJoints.begin()));
             }
             else {
-                throw openrave_exception("joint doesn't belong to anythong?",ORE_Assert);
+                throw OPENRAVE_EXCEPTION_FORMAT("joint %s doesn't belong to anythong?",(*itjoint)->GetName(), ORE_Assert);
             }
         }
     }
@@ -4195,7 +4138,7 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
                     _vClosedLoops.back().back().second = _vPassiveJoints.at(itjoint-r->_vPassiveJoints.begin());
                 }
                 else {
-                    throw openrave_exception("joint in closed loop doesn't belong to anythong?",ORE_Assert);
+                    throw OPENRAVE_EXCEPTION_FORMAT("joint %s in closed loop doesn't belong to anythong?",(*itjoint)->GetName(), ORE_Assert);
                 }
             }
         }

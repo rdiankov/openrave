@@ -288,12 +288,12 @@ void IvObjectDragger::GetMessage(ostream& sout)
     Transform t = pbody->GetTransform();
     sout << "Selected " << _selectedItem->GetName() << " (id=" << pbody->GetNetworkId() << ")" << endl
          << "  translation = ("
-         << std::fixed << std::setprecision(3) 
+         << std::fixed << std::setprecision(5) 
          << std::setw(8) << std::left << t.trans.x << ", "
          << std::setw(8) << std::left << t.trans.y << ", "
          << std::setw(8) << std::left << t.trans.z << ")" << endl
          << "  quaternion = ("
-         << std::fixed << std::setprecision(3) 
+         << std::fixed << std::setprecision(5) 
          << std::setw(8) << std::left << t.rot.x << ", "
          << std::setw(8) << std::left << t.rot.y << ", "
          << std::setw(8) << std::left << t.rot.z << ", "

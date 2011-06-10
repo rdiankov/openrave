@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2010 Carnegie Mellon University (rdiankov@cs.cmu.edu)
+// Copyright (C) 2006-2011 Rosen Diankov <rosen.diankov@gmail.com>, Dmitry Berenson
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -233,7 +233,7 @@ class CollisionCheckerPQP : public CollisionCheckerBase
         PQP_REAL R1[3][3], R2[3][3], T1[3], T2[3];
 
         std::vector<Transform> vtrans1,vtrans2;
-        plink->GetParent()->GetBodyTransformations(vtrans1);
+        plink->GetParent()->GetLinkTransformations(vtrans1);
 
         bool exclude_link2;
         FOREACH(itbody,vecbodies) {
@@ -250,7 +250,7 @@ class CollisionCheckerPQP : public CollisionCheckerBase
                 continue;
             }
             std::vector<KinBody::LinkPtr> veclinks2 = pbody2->GetLinks();
-            pbody2->GetBodyTransformations(vtrans2);
+            pbody2->GetLinkTransformations(vtrans2);
             GetPQPTransformFromTransform(vtrans1[plink->GetIndex()],R1,T1);
 
             exclude_link2 = false;
@@ -379,7 +379,7 @@ class CollisionCheckerPQP : public CollisionCheckerBase
         PQP_REAL R1[3][3], R2[3][3], T1[3], T2[3];
 
         std::vector<Transform> vtrans1,vtrans2;
-        pbody1->GetBodyTransformations(vtrans1);
+        pbody1->GetLinkTransformations(vtrans1);
     
         std::vector<KinBody::LinkPtr> veclinks1 = pbody1->GetLinks();
 
@@ -399,7 +399,7 @@ class CollisionCheckerPQP : public CollisionCheckerBase
             }
 
             std::vector<KinBody::LinkPtr> veclinks2 = pbody2->GetLinks();
-            pbody2->GetBodyTransformations(vtrans2);
+            pbody2->GetLinkTransformations(vtrans2);
         
             exclude_link1 = false;
             for(int i = 0; i < (int)vtrans1.size(); i++) {

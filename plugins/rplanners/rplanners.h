@@ -26,104 +26,6 @@ enum ExtendType {
     ET_Connected=2
 };
 
-class CollisionFunctions
-{
- public:
-    static bool CheckCollision(PlannerBase::PlannerParametersConstPtr params, RobotBasePtr robot, const vector<dReal>& pQ0, const vector<dReal>& pQ1, IntervalType interval, vector< vector<dReal> >* pvCheckedConfigurations = NULL)
-    {
-        // set the bounds based on the interval type
-        int start=0;
-        bool bCheckEnd=false;
-        switch (interval) {
-        case IT_Open:
-            start = 1;  bCheckEnd = false;
-            break;
-        case IT_OpenStart:
-            start = 1;  bCheckEnd = true;
-            break;
-        case IT_OpenEnd:
-            start = 0;  bCheckEnd = false;
-            break;
-        case IT_Closed:
-            start = 0;  bCheckEnd = true;
-            break;
-        default:
-            BOOST_ASSERT(0);
-        }
-
-        // first make sure the end is free
-        vector<dReal> vlastconfig(params->GetDOF()), vtempconfig(params->GetDOF());
-        if (bCheckEnd) {
-            params->_setstatefn(pQ1);
-            if (robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot)) || (robot->CheckSelfCollision()) ) {
-                if( pvCheckedConfigurations != NULL ) {
-                    pvCheckedConfigurations->push_back(pQ1);
-                }
-                return true;
-            }
-        }
-
-        // compute  the discretization
-        vector<dReal> dQ = pQ1;
-        params->_diffstatefn(dQ,pQ0);
-        int i, numSteps = 1;
-        vector<dReal>::const_iterator itres = params->_vConfigResolution.begin();
-        for (i = 0; i < params->GetDOF(); i++,itres++) {
-            int steps;
-            if( *itres != 0 )
-                steps = (int)(fabs(dQ[i]) / *itres);
-            else
-                steps = (int)(fabs(dQ[i]) * 100);
-            if (steps > numSteps)
-                numSteps = steps;
-        }
-        dReal fisteps = dReal(1.0f)/numSteps;
-        FOREACH(it,dQ)
-            *it *= fisteps;
-
-        if( !!params->_constraintfn )
-            vlastconfig = pQ0;
-        // check for collision along the straight-line path
-        // NOTE: this does not check the end config, and may or may
-        // not check the start based on the value of 'start'
-        for (int f = start; f < numSteps; f++) {
-            for (i = 0; i < params->GetDOF(); i++) {
-                vtempconfig[i] = pQ0[i] + (dQ[i] * f);
-            }
-            params->_setstatefn(vtempconfig);
-            if( !!params->_constraintfn ) {
-                if( !params->_constraintfn(vlastconfig,vtempconfig,0) ) {
-                    return true;
-                }
-                vlastconfig = pQ0;
-            }
-            if( pvCheckedConfigurations != NULL ) {
-                params->_getstatefn(vtempconfig); // query again in order to get normalizations/joint limits
-                pvCheckedConfigurations->push_back(vtempconfig);
-            }
-            if( robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot)) || (robot->CheckSelfCollision()) ) {
-                return true;
-            }
-        }
-
-        if( bCheckEnd && pvCheckedConfigurations != NULL ) {
-            pvCheckedConfigurations->push_back(pQ1);
-        }
-        return false;
-    }
-
-    /// check collision between body and environment
-    static bool CheckCollision(PlannerBase::PlannerParametersConstPtr params, RobotBasePtr robot, const vector<dReal>& pConfig, CollisionReportPtr report=CollisionReportPtr())
-    {
-        params->_setstatefn(pConfig);
-        bool bCol = robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot), report) || (robot->CheckSelfCollision(report));
-        if( bCol && !!report ) {
-            RAVELOG_WARN(str(boost::format("fcollision %s\n")%report->__str__()));
-        }
-        return bCol;
-    }
-};
-
 class SimpleCostMetric
 {
  public:
@@ -140,7 +42,7 @@ public:
     dReal Eval(const vector<dReal>& c1)
     {
         _robot->SetActiveDOFValues(c1);
-        Transform cur = _robot->GetActiveManipulator()->GetEndEffectorTransform();
+        Transform cur = _robot->GetActiveManipulator()->GetTransform();
         dReal f = RaveSqrt((tgoal.trans - cur.trans).lengthsqr3());
         return f < _thresh ? 0 : f;
     }
@@ -173,7 +75,8 @@ template <typename Planner, typename Node>
 class SpatialTree : public SpatialTreeBase
 {
  public:
-    SpatialTree() {
+    SpatialTree(int fromgoal) {
+        _fromgoal = fromgoal;
         _fStepLength = 0.04f;
         _dof = 0;
         _fBestDist = 0;
@@ -185,14 +88,15 @@ class SpatialTree : public SpatialTreeBase
     virtual void Reset(boost::weak_ptr<Planner> planner, int dof=0)
     {
         _planner = planner;
-
         typename vector<Node*>::iterator it;
-        FORIT(it, _nodes)
+        FORIT(it, _nodes) {
             delete *it;
+        }
         _nodes.resize(0);
 
         if( dof > 0 ) {
             _vNewConfig.resize(dof);
+            _vDeltaConfig.resize(dof);
             _dof = dof;
         }   
     }
@@ -242,35 +146,33 @@ class SpatialTree : public SpatialTreeBase
             if( fdist > _fStepLength ) {
                 fdist = _fStepLength / fdist;
             }
-            else if( fdist <= dReal(0.1) * _fStepLength ) { // return connect if the distance is very close
+            else if( fdist <= dReal(0.1) * _fStepLength ) {
+                // return connect if the distance is very close
                 return ET_Connected;
             }
         
-            _vNewConfig = pTargetConfig;
-            params->_diffstatefn(_vNewConfig,pnode->q);
-            for(int i = 0; i < _dof; ++i)
-                _vNewConfig[i] = pnode->q[i] + _vNewConfig[i]*fdist;
+            _vNewConfig = pnode->q;
+            _vDeltaConfig = pTargetConfig;
+            params->_diffstatefn(_vDeltaConfig,pnode->q);
+            for(int i = 0; i < _dof; ++i) {
+                _vDeltaConfig[i] *= fdist;
+            }
+            if( !params->_neighstatefn(_vNewConfig,_vDeltaConfig,_fromgoal) ) {
+                if(bHasAdded) {
+                    return ET_Sucess;
+                }
+                return ET_Failed;
+            }
         
-            // project to constraints
-            if( !!params->_constraintfn ) {
-                params->_setstatefn(_vNewConfig);
-                if( !params->_constraintfn(pnode->q, _vNewConfig, 0) ) {
-                    if(bHasAdded) {
-                        return ET_Sucess;
-                    }
-                    return ET_Failed;
+            // it could be the case that the node didn't move anywhere, in which case we would go into an infinite loop
+            if( _distmetricfn(pnode->q, _vNewConfig) <= dReal(0.0001)*_fStepLength ) {
+                if(bHasAdded) {
+                    return ET_Sucess;
                 }
-
-                // it could be the case that the node didn't move anywhere, in which case we would go into an infinite loop
-                if( _distmetricfn(pnode->q, _vNewConfig) <= dReal(0.01)*_fStepLength ) {
-                    if(bHasAdded) {
-                        return ET_Sucess;
-                    }
-                    return ET_Failed;
-                }
+                return ET_Failed;
             }
 
-            if( CollisionFunctions::CheckCollision(params,planner->GetRobot(),pnode->q, _vNewConfig, IT_OpenStart) ) {
+            if( !params->_checkpathconstraintsfn(_fromgoal ? _vNewConfig : pnode->q, _fromgoal ? pnode->q : _vNewConfig, _fromgoal ? IT_OpenEnd : IT_OpenStart, PlannerBase::ConfigurationListPtr()) ) {
                 if(bHasAdded) {
                     return ET_Sucess;
                 }
@@ -298,9 +200,9 @@ class SpatialTree : public SpatialTreeBase
     dReal _fStepLength;
 
  private:
-    vector<dReal> _vNewConfig;
+    vector<dReal> _vNewConfig, _vDeltaConfig;
     boost::weak_ptr<Planner> _planner;
-    int _dof;
+    int _dof, _fromgoal;
 };
 
 inline dReal TransformDistance2(const Transform& t1, const Transform& t2, dReal frotweight=1, dReal ftransweight=1)

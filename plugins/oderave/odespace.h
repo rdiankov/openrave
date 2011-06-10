@@ -1,4 +1,5 @@
-// Copyright (C) 2006-2009 Rosen Diankov (rdiankov@cs.cmu.edu)
+// -*- coding: utf-8 -*-
+// Copyright (C) 2006-2011 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
@@ -515,7 +516,7 @@ private:
     void Synchronize(KinBodyInfoPtr pinfo)
     {
         vector<Transform> vtrans;
-        pinfo->pbody->GetBodyTransformations(vtrans);
+        pinfo->pbody->GetLinkTransformations(vtrans);
         pinfo->nLastStamp = pinfo->pbody->GetUpdateStamp();
         BOOST_ASSERT( vtrans.size() == pinfo->vlinks.size() );
         for(size_t i = 0; i < vtrans.size(); ++i) {

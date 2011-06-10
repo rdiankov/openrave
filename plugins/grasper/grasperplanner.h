@@ -129,7 +129,7 @@ public:
                 tbase.trans = _parameters->vtargetposition;
 
                 // transform into base
-                tbase = tbase * pmanip->GetEndEffectorTransform().inverse() * pbase->GetTransform();
+                tbase = tbase * pmanip->GetTransform().inverse() * pbase->GetTransform();
             }
             else {
                 RAVELOG_DEBUG("no active manipulator for robot, cannot get palm direction\n");
@@ -202,7 +202,7 @@ public:
 
             if( !bInitialized ) {
                 RAVELOG_WARN("no objects in environment\n");
-                vTargetCenter = pmanip->GetEndEffectorTransform().trans;
+                vTargetCenter = pmanip->GetTransform().trans;
                 fTargetRadius = 0;
                 //return false;
             }

@@ -190,6 +190,7 @@ public:
         default: throw openrave_exception(boost::str(boost::format("incorrect ik parameterization type %d")%type));
         }
     }
+    PyIkParameterization(const IkParameterization& ikparam) : _param(ikparam) {}
 
     IkParameterization::Type GetType() { return _param.GetType(); }
 
@@ -238,6 +239,12 @@ bool ExtractIkParameterization(object o, IkParameterization& ikparam) {
         return true;
     }
     return false;
+}
+
+
+object toPyIkParameterization(const IkParameterization& ikparam)
+{
+    return object(boost::shared_ptr<PyIkParameterization>(new PyIkParameterization(ikparam)));
 }
 
 class IkParameterization_pickle_suite : public pickle_suite
@@ -311,13 +318,13 @@ object RaveGetLoadedInterfaces()
 {
     std::map<InterfaceType, std::vector<std::string> > interfacenames;
     OpenRAVE::RaveGetLoadedInterfaces(interfacenames);
-    boost::python::list ointerfacenames;
+    boost::python::dict ointerfacenames;
     FOREACHC(it, interfacenames) {
         boost::python::list names;
         FOREACHC(itname,it->second) {
             names.append(*itname);
         }
-        ointerfacenames.append(boost::python::make_tuple(it->first,names));
+        ointerfacenames[it->first] = names;
     }
     return ointerfacenames;
 }
@@ -558,6 +565,7 @@ void init_openravepy_global()
         .value(RaveGetInterfaceName(PT_CollisionChecker).c_str(),PT_CollisionChecker)
         .value(RaveGetInterfaceName(PT_Trajectory).c_str(),PT_Trajectory)
         .value(RaveGetInterfaceName(PT_Viewer).c_str(),PT_Viewer)
+        .value(RaveGetInterfaceName(PT_SpaceSampler).c_str(),PT_SpaceSampler)
         ;
     enum_<CollisionOptions>("CollisionOptions" DOXY_ENUM(CollisionOptions))
         .value("Distance",CO_Distance)
@@ -590,6 +598,16 @@ void init_openravepy_global()
         .value("Success",IKFR_Success)
         .value("Reject",IKFR_Reject)
         .value("Quit",IKFR_Quit)
+        ;
+    enum_<IntervalType>("Interval" DOXY_ENUM(IntervalType))
+        .value("Open",IT_Open)
+        .value("OpenStart",IT_OpenStart)
+        .value("OpenEnd",IT_OpenEnd)
+        .value("Closed",IT_Closed)
+        ;
+    enum_<SampleDataType>("SampleDataType" DOXY_ENUM(SampleDataType))
+        .value("Real",SDT_Real)
+        .value("Uint32",SDT_Uint32)
         ;
     object iktype = enum_<IkParameterization::Type>("IkParameterizationType" DOXY_ENUM(IkParameterization::Type))
         .value("Transform6D",IkParameterization::Type_Transform6D)
@@ -712,7 +730,7 @@ void init_openravepy_global()
     def("RaveInitialize",RaveInitialize,RaveInitialize_overloads(args("load_all_plugins","level"),DOXY_FN1(RaveInitialize)));
     def("RaveDestroy",RaveDestroy,DOXY_FN1(RaveDestroy));
     def("RaveGetPluginInfo",openravepy::RaveGetPluginInfo,DOXY_FN1(RaveGetPluginInfo));
-    def("RaveGetLoadedInterfaces",openravepy::RaveGetLoadedInterfaces,DOXY_FN1(raveGetLoadedInterfaces));
+    def("RaveGetLoadedInterfaces",openravepy::RaveGetLoadedInterfaces,DOXY_FN1(RaveGetLoadedInterfaces));
     def("RaveReloadPlugins",OpenRAVE::RaveReloadPlugins,DOXY_FN1(RaveReloadPlugins));
     def("RaveLoadPlugin",OpenRAVE::RaveLoadPlugin,args("filename"),DOXY_FN1(RaveLoadPlugins));
     def("RaveHasInterface",OpenRAVE::RaveHasInterface,args("type","name"),DOXY_FN1(RaveHasInterface));

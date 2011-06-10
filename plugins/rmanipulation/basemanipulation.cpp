@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2010 Rosen Diankov (rdiankov@cs.cmu.edu)
+// Copyright (C) 2006-2011 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
@@ -24,6 +24,8 @@ public:
                         "Set the active manipulator");
         RegisterCommand("Traj",boost::bind(&BaseManipulation::Traj,this,_1,_2),
                         "Execute a trajectory from a file on the local filesystem");
+        RegisterCommand("ValidateTrajectory",boost::bind(&BaseManipulation::_ValidateTrajectory,this,_1,_2),
+                        "Validates the robot trajectory by checking collisions with the environment and other user-specified constraints.");
         RegisterCommand("GrabBody",boost::bind(&BaseManipulation::GrabBody,this,_1,_2),
                         "Robot calls ::Grab on a body with its current manipulator");
         RegisterCommand("ReleaseAll",boost::bind(&BaseManipulation::ReleaseAll,this,_1,_2),
@@ -50,7 +52,7 @@ Method wraps the WorkspaceTrajectoryTracker planner. For more details on paramet
                         "Jitters the active DOF for a collision-free position.");
         RegisterCommand("FindIKWithFilters",boost::bind(&BaseManipulation::FindIKWithFilters,this,_1,_2),
                         "Samples IK solutions using custom filters that constrain the end effector in the world. Parameters:\n\n\
-- cone - Constraint the direction of a local axis with respect to a cone in the world. Takes in: worldaxis(3), localaxis(3), anglelimit. \n\
+- cone - Constraint the direction of a local axis with respect to a cone in the world. Takes in: worldaxis(3), localaxis(3), anglelimit. \n \
 - solveall - When specified, will return all possible solutions.\n\
 - ikparam - The serialized ik parameterization to use for FindIKSolution(s).\n\
 - filteroptions\n\
@@ -65,7 +67,7 @@ Method wraps the WorkspaceTrajectoryTracker planner. For more details on paramet
         robot.reset();
         ProblemInstance::Destroy();
     }
-
+    
     virtual void Reset()
     {
         ProblemInstance::Reset();
@@ -82,26 +84,31 @@ Method wraps the WorkspaceTrajectoryTracker planner. For more details on paramet
         string cmd;
         while(!ss.eof()) {
             ss >> cmd;
-            if( !ss )
+            if( !ss ) {
                 break;
+            }
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
-            if( cmd == "planner" )
+            if( cmd == "planner" ) {
                 ss >> _strRRTPlannerName;
-            else if( cmd == "maxvelmult" )
+            }
+            else if( cmd == "maxvelmult" ) {
                 ss >> _fMaxVelMult;
-
-            if( ss.fail() || !ss )
+            }
+            if( ss.fail() || !ss ) {
                 break;
+            }
         }
 
         PlannerBasePtr planner;
-        if( _strRRTPlannerName.size() > 0 )
+        if( _strRRTPlannerName.size() > 0 ) {
             planner = RaveCreatePlanner(GetEnv(),_strRRTPlannerName);
+        }
         if( !planner ) {
             _strRRTPlannerName = "BiRRT";
             planner = RaveCreatePlanner(GetEnv(),_strRRTPlannerName);
-            if( !planner )
+            if( !planner ) {
                 _strRRTPlannerName = "";
+            }
         }
 
         RAVELOG_DEBUG(str(boost::format("BaseManipulation: using %s planner\n")%_strRRTPlannerName));
@@ -186,8 +193,8 @@ protected:
         }
         
         bool bResetTrans = false; sinput >> bResetTrans;
-        dReal fmaxvelmult = 1; sinput >> fmaxvelmult;
-    
+        bool bResetTiming = false; sinput >> bResetTiming;
+
         if( bResetTrans ) {
             RAVELOG_VERBOSE("resetting transformations of trajectory\n");
             Transform tcur = robot->GetTransform();
@@ -197,9 +204,9 @@ protected:
             }
         }
 
-        if( ptraj->GetTotalDuration() == 0 ) {
-            RAVELOG_VERBOSE(str(boost::format("retiming trajectory: %f\n")%fmaxvelmult));
-            ptraj->CalcTrajTiming(robot,TrajectoryBase::CUBIC,true,false,fmaxvelmult);
+        if( ptraj->GetTotalDuration() == 0 || bResetTiming ) {
+            RAVELOG_VERBOSE(str(boost::format("retiming trajectory: %f\n")%_fMaxVelMult));
+            ptraj->CalcTrajTiming(robot,TrajectoryBase::CUBIC,true,false,_fMaxVelMult);
         }
         RAVELOG_VERBOSE(str(boost::format("executing traj with %d points\n")%ptraj->GetPoints().size()));
         robot->SetMotion(ptraj);
@@ -292,9 +299,9 @@ protected:
         params->SetRobotActiveJoints(robot);
 
         if( !starteematrix ) {
-            CM::JitterActiveDOF(robot,100); // try to jitter out, don't worry if it fails
+            planningutils::JitterActiveDOF(robot,100); // try to jitter out, don't worry if it fails
             robot->GetActiveDOFValues(params->vinitialconfig);
-            Tee = pmanip->GetEndEffectorTransform();
+            Tee = pmanip->GetTransform();
         }
         else {
             params->vinitialconfig.resize(0); // set by SetRobotActiveJoints
@@ -316,7 +323,7 @@ protected:
             robot->SetAffineRotationQuatMaxVels(foldrot);
         }
 
-        boost::shared_ptr<PlannerBase> planner = RaveCreatePlanner(GetEnv(),"workspacetrajectorytracker");
+        PlannerBasePtr planner = RaveCreatePlanner(GetEnv(),"workspacetrajectorytracker");
         if( !planner ) {
             RAVELOG_WARN("failed to create planner\n");
             return false;
@@ -327,7 +334,7 @@ protected:
             return false;
         }
 
-        boost::shared_ptr<Trajectory> poutputtraj(RaveCreateTrajectory(GetEnv(),""));
+        TrajectoryBasePtr poutputtraj = RaveCreateTrajectory(GetEnv(),"");
         if( !planner->PlanPath(poutputtraj) ) {
             return false;
         }
@@ -396,16 +403,16 @@ protected:
 
         robot->SetActiveDOFs(pmanip->GetArmIndices());
         params->SetRobotActiveJoints(robot);
-        CM::JitterActiveDOF(robot);
+        planningutils::JitterActiveDOF(robot);
     
-        boost::shared_ptr<Trajectory> ptraj(RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF()));
+        TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF());
 
         std::vector<dReal> values;
         robot->GetActiveDOFValues(values);
 
         // make sure the initial and goal configs are not in collision
         robot->SetActiveDOFValues(goals, true);
-        if( CM::JitterActiveDOF(robot) == 0 ) {
+        if( planningutils::JitterActiveDOF(robot) == 0 ) {
             RAVELOG_WARN("jitter failed\n");
             return false;
         }
@@ -413,13 +420,13 @@ protected:
         robot->SetActiveDOFValues(values);
     
         // jitter again for initial collision
-        if( CM::JitterActiveDOF(robot) == 0 ) {
+        if( planningutils::JitterActiveDOF(robot) == 0 ) {
             RAVELOG_WARN("jitter failed\n");
             return false;
         }
         robot->GetActiveDOFValues(params->vinitialconfig);
 
-        boost::shared_ptr<PlannerBase> rrtplanner = RaveCreatePlanner(GetEnv(),_strRRTPlannerName);
+        PlannerBasePtr rrtplanner = RaveCreatePlanner(GetEnv(),_strRRTPlannerName);
         if( !rrtplanner ) {
             RAVELOG_WARN("failed to create planner\n");
             return false;
@@ -503,12 +510,12 @@ protected:
             }
         }
 
-        if( (int)params->vgoalconfig.size() != robot->GetActiveDOF() )
+        if( (int)params->vgoalconfig.size() != robot->GetActiveDOF() ) {
             return false;
-    
+        }
         RobotBase::RobotStateSaver saver(robot);
 
-        if( CM::JitterActiveDOF(robot) == 0 ) {
+        if( planningutils::JitterActiveDOF(robot) == 0 ) {
             RAVELOG_WARN("failed\n");
             return false;
         }
@@ -519,19 +526,18 @@ protected:
         robot->SetActiveDOFValues(params->vgoalconfig);
     
         // jitter again for goal
-        if( CM::JitterActiveDOF(robot) == 0 ) {
+        if( planningutils::JitterActiveDOF(robot) == 0 ) {
             RAVELOG_WARN("failed\n");
             return false;
         }
 
-        boost::shared_ptr<PlannerBase> rrtplanner = RaveCreatePlanner(GetEnv(),_strRRTPlannerName);
-
+        PlannerBasePtr rrtplanner = RaveCreatePlanner(GetEnv(),_strRRTPlannerName);
         if( !rrtplanner ) {
             RAVELOG_ERROR("failed to create BiRRTs\n");
             return false;
         }
     
-        boost::shared_ptr<Trajectory> ptraj(RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF()));
+        TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF());
     
         RAVELOG_DEBUG("starting planning\n");
         bool bSuccess = false;
@@ -551,8 +557,9 @@ protected:
             }
         }
 
-        if( !bSuccess )
+        if( !bSuccess ) {
             return false;
+        }
         CM::SetActiveTrajectory(robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream,_fMaxVelMult);
         return true;
     }
@@ -560,9 +567,8 @@ protected:
     bool MoveToHandPosition(ostream& sout, istream& sinput)
     {
         RAVELOG_DEBUG("Starting MoveToHandPosition...\n");
-        RobotBase::ManipulatorConstPtr pmanip = robot->GetActiveManipulator();
-        
-        list<IkParameterization> listgoals;
+        RobotBase::ManipulatorConstPtr pmanip = robot->GetActiveManipulator();        
+        std::list<IkParameterization> listgoals;
     
         string strtrajfilename;
         bool bExecute = true;
@@ -570,7 +576,7 @@ protected:
 
         Vector vconstraintaxis, vconstraintpos;
         int affinedofs = 0;
-        int nSeedIkSolutions = 0; // no extra solutions
+        int nSeedIkSolutions = 8; // no extra solutions
         int nMaxTries = 3; // max tries for the planner
 
         PlannerBase::PlannerParametersPtr params(new PlannerBase::PlannerParameters());
@@ -677,47 +683,6 @@ protected:
 
         robot->RegrabAll();
         RobotBase::RobotStateSaver saver(robot);
-
-        std::vector<dReal> viksolution, armgoals;
-        if( nSeedIkSolutions < 0 ) {
-            vector<vector<dReal> > solutions;
-            FOREACH(ittrans, listgoals) {
-                pmanip->FindIKSolutions(*ittrans, solutions, true);            
-                armgoals.reserve(armgoals.size()+solutions.size()*pmanip->GetArmIndices().size());
-                FOREACH(itsol, solutions) {
-                    armgoals.insert(armgoals.end(), itsol->begin(), itsol->end());
-                }
-            }
-        }
-        else if( nSeedIkSolutions > 0 ) {
-            FOREACH(ittrans, listgoals) {
-                int nsampled = CM::SampleIkSolutions(robot, *ittrans, nSeedIkSolutions, armgoals);
-                if( nsampled != nSeedIkSolutions ) {
-                    RAVELOG_WARN("only found %d/%d ik solutions\n", nsampled, nSeedIkSolutions);
-                }
-            }
-        }
-        else {
-            FOREACH(ittrans, listgoals) {
-                if( pmanip->FindIKSolution(*ittrans, viksolution, true) ) {
-                    stringstream s;
-                    s << "ik sol: ";
-                    FOREACH(it, viksolution) {
-                        s << *it << " ";
-                    }
-                    s << endl;
-                    RAVELOG_DEBUG(s.str());
-                    armgoals.insert(armgoals.end(), viksolution.begin(), viksolution.end());
-                }
-            }
-        }
-
-        if( armgoals.size() == 0 ) {
-            RAVELOG_WARN("No IK Solution found\n");
-            return false;
-        }
-
-        RAVELOG_INFO(str(boost::format("MoveToHandPosition found %d solutions\n")%(armgoals.size()/pmanip->GetArmIndices().size())));
     
         robot->SetActiveDOFs(pmanip->GetArmIndices(), affinedofs);
         params->SetRobotActiveJoints(robot);
@@ -727,26 +692,28 @@ protected:
             RAVELOG_DEBUG("setting jacobian constraint function in planner parameters\n");
             boost::shared_ptr<CM::GripperJacobianConstrains<double> > pconstraints(new CM::GripperJacobianConstrains<double>(robot->GetActiveManipulator(),tConstraintTargetWorldFrame,vconstraintfreedoms,constrainterrorthresh));
             pconstraints->_distmetricfn = params->_distmetricfn;
-            params->_constraintfn = boost::bind(&CM::GripperJacobianConstrains<double>::RetractionConstraint,pconstraints,_1,_2,_3);
+            params->_neighstatefn = boost::bind(&CM::GripperJacobianConstrains<double>::RetractionConstraint,pconstraints,_1,_2);
         }
 
         robot->SetActiveDOFs(pmanip->GetArmIndices(), 0);
 
-        vector<dReal> vgoals;
-        params->vgoalconfig.reserve(armgoals.size());
-        for(int i = 0; i < (int)armgoals.size(); i += pmanip->GetArmIndices().size()) {
-            vector<dReal> v(armgoals.begin()+i,armgoals.begin()+i+pmanip->GetArmIndices().size());
-            robot->SetActiveDOFValues(v);
-            robot->SetActiveDOFs(pmanip->GetArmIndices(), affinedofs);
-
-            if( CM::JitterActiveDOF(robot,5000,0.03,params->_constraintfn) ) {
-                robot->GetActiveDOFValues(vgoals);
-                params->vgoalconfig.insert(params->vgoalconfig.end(), vgoals.begin(), vgoals.end());
+        vector<dReal> vgoal;
+        planningutils::ManipulatorIKGoalSampler goalsampler(pmanip, listgoals);
+        params->vgoalconfig.reserve(nSeedIkSolutions*robot->GetActiveDOF());
+        while(nSeedIkSolutions > 0) {
+            if( goalsampler.Sample(vgoal) ) {
+                if( constrainterrorthresh > 0 && !planningutils::JitterActiveDOF(robot,5000,0.03,params->_neighstatefn) ) {
+                    RAVELOG_DEBUG("constraint function failed\n");
+                    continue;
+                }
+                params->vgoalconfig.insert(params->vgoalconfig.end(), vgoal.begin(), vgoal.end());
+                --nSeedIkSolutions;
             }
             else {
-                RAVELOG_DEBUG("constraint function failed for goal %d\n",i);
+                --nSeedIkSolutions;
             }
         }
+        params->_samplegoalfn = boost::bind(&planningutils::ManipulatorIKGoalSampler::Sample,&goalsampler,_1);
 
         if( params->vgoalconfig.size() == 0 ) {
             RAVELOG_WARN("jitter failed for goal\n");
@@ -756,20 +723,19 @@ protected:
         // restore
         robot->SetActiveDOFValues(params->vinitialconfig);
 
-        boost::shared_ptr<Trajectory> ptraj(RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF()));
-
+        TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF());
         Trajectory::TPOINT pt;
         pt.q = params->vinitialconfig;
         ptraj->AddPoint(pt);
     
         // jitter again for initial collision
-        if( CM::JitterActiveDOF(robot,5000,0.03,params->_constraintfn) == 0 ) {
+        if( planningutils::JitterActiveDOF(robot,5000,0.03,params->_neighstatefn) == 0 ) {
             RAVELOG_WARN("jitter failed for initial\n");
             return false;
         }
         robot->GetActiveDOFValues(params->vinitialconfig);
 
-        boost::shared_ptr<PlannerBase> rrtplanner = RaveCreatePlanner(GetEnv(),_strRRTPlannerName);
+        PlannerBasePtr rrtplanner = RaveCreatePlanner(GetEnv(),_strRRTPlannerName);
         if( !rrtplanner ) {
             RAVELOG_ERROR("failed to create BiRRTs\n");
             return false;
@@ -865,13 +831,13 @@ protected:
             }
         }
 
+        RobotBase::RobotStateSaver saver(robot);
         uint32_t starttime = GetMilliTime();
-
-        if( CM::JitterActiveDOF(robot) == 0 ) {
+        if( planningutils::JitterActiveDOF(robot) == 0 ) {
             RAVELOG_WARN("failed to jitter robot out of collision\n");
         }
 
-        boost::shared_ptr<Trajectory> ptraj(RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF()));
+        TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF());
     
         bool bSuccess = false;
         for(int itry = 0; itry < nMaxTries; ++itry) {
@@ -899,7 +865,7 @@ protected:
 
     bool JitterActive(ostream& sout, istream& sinput)
     {
-        RAVELOG_DEBUG("Starting ReleaseFingers...\n");
+        RAVELOG_DEBUG("Starting JitterActive...\n");
         bool bExecute = true, bOutputFinal=false;
         boost::shared_ptr<ostream> pOutputTrajStream;
         string cmd;
@@ -939,13 +905,13 @@ protected:
         }
 
         RobotBase::RobotStateSaver saver(robot);
-        boost::shared_ptr<Trajectory> ptraj(RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF()));
+        TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF());
 
         // have to add the first point
         Trajectory::TPOINT ptfirst;
         robot->GetActiveDOFValues(ptfirst.q);
         ptraj->AddPoint(ptfirst);
-        switch( CM::JitterActiveDOF(robot,nMaxIterations,fJitter) ) {
+        switch( planningutils::JitterActiveDOF(robot,nMaxIterations,fJitter) ) {
         case 0:
             RAVELOG_WARN("could not jitter out of collision\n");
             return false;
@@ -1044,10 +1010,81 @@ protected:
         return true;
     }
 
+    bool _ValidateTrajectory(ostream& sout, istream& sinput)
+    {
+        TrajectoryBasePtr ptraj;
+        dReal samplingstep = 0.001;
+        bool bRecomputeTiming = false;
+        string cmd;
+        while(!sinput.eof()) {
+            sinput >> cmd;
+            if( !sinput ) {
+                break;
+            }
+            std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
+
+            if( cmd == "stream" ) {
+                ptraj = RaveCreateTrajectory(GetEnv(),robot->GetDOF());
+                if( !ptraj->Read(sinput,robot) ) {
+                    return false;
+                }
+            }
+            else if( cmd == "resettiming" ) {
+                sinput >> bRecomputeTiming;
+            }
+            else if( cmd == "resettrans" ) {
+                bool bReset = false;
+                sinput >> bReset;
+                if( bReset ) {
+                    FOREACH(it,ptraj->GetPoints()) {
+                        it->trans = robot->GetTransform();
+                    }
+                }
+            }
+            else if( cmd == "samplingstep" ) {
+                sinput >> samplingstep;
+            }
+            else {
+                RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
+                break;
+            }
+            if( !sinput ) {
+                RAVELOG_ERROR(str(boost::format("failed processing command %s\n")%cmd));
+                return false;
+            }
+        }
+        
+        if( !ptraj ) {
+            return false;
+        }
+
+        if( bRecomputeTiming || ptraj->GetTotalDuration() == 0 ) {
+            ptraj->CalcTrajTiming(robot,ptraj->GetInterpMethod(),true,false);
+        }
+
+        RobotBase::RobotStateSaver saver(robot);
+        CollisionReportPtr preport(new CollisionReport());
+
+        for(dReal t = 0; t <= ptraj->GetTotalDuration(); t += samplingstep) {
+            TrajectoryBase::TPOINT tp;
+            ptraj->SampleTrajectory(t,tp);
+            robot->SetDOFValues(tp.q, tp.trans,true);
+            if( GetEnv()->CheckCollision(robot,preport) ) {
+                RAVELOG_WARN(str(boost::format("CheckCollision failed at time %f")%t));
+                return false;
+            }
+            if( robot->CheckSelfCollision(preport) ) {
+                RAVELOG_WARN(str(boost::format("CheckSelfCollision failed at time %f")%t));
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     bool GrabBody(ostream& sout, istream& sinput)
     {
         RAVELOG_WARN("BaseManipulation GrabBody command is deprecated. Use Robot::Grab (11/03/07)\n");
-
         KinBodyPtr ptarget;
 
         string cmd;
@@ -1096,7 +1133,7 @@ protected:
  protected:
     IkFilterReturn _FilterWorldAxisIK(std::vector<dReal>& values, RobotBase::ManipulatorPtr pmanip, const IkParameterization& ikparam, const Vector& vlocalaxis, const Vector& vworldaxis, dReal coslimit)
     {
-        if( RaveFabs(vworldaxis.dot3(pmanip->GetEndEffectorTransform().rotate(vlocalaxis))) < coslimit ) {
+        if( RaveFabs(vworldaxis.dot3(pmanip->GetTransform().rotate(vlocalaxis))) < coslimit ) {
             return IKFR_Reject;
         }
         return IKFR_Success;

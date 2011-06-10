@@ -47,7 +47,7 @@ if( IVCON_FOUND )
 endif()
 
 set_target_properties(libopenrave-core PROPERTIES OUTPUT_NAME openrave-core${OPENRAVE_LIBRARY_SUFFIX}
-                                  SOVERSION ${OPENRAVE_SOVERSION}
+                                  SOVERSION 0 # always have it 0 since we're including the soversion as part of the library name
                                   VERSION ${OPENRAVE_VERSION}
                                   CLEAN_DIRECT_OUTPUT 1
                                   COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} -DOPENRAVE_CORE_DLL_EXPORTS -DOPENRAVE_CORE_DLL"
@@ -73,7 +73,7 @@ if( OPT_STATIC )
   endif()
 
   set_target_properties(libopenrave-core_static PROPERTIES OUTPUT_NAME ${LIBOPENRAVE_CORE_NAME}
-                                                SOVERSION ${OPENRAVE_SOVERSION}
+                                                SOVERSION 0 # always have it 0 since we're including the soversion as part of the library name
                                                 VERSION ${OPENRAVE_VERSION}
                                                 CLEAN_DIRECT_OUTPUT 1
                                                 COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} "

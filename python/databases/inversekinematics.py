@@ -39,6 +39,15 @@ First set the active manipulator, and then instantiate the InverseKinematicsMode
 
 The supported types are defined by `IkParameterization.Type` and are propagated throughout the entire OpenRAVE framework. All solve methods take in a `IkParameterization` structure, which handles each IK type's serialization, distances metrics, derivatives, and transformation.
 
+To show the manipulator and IK results do:
+
+.. image:: ../../images/databases/inversekinematics_pr2show.jpg
+  :height: 200
+
+.. code-block:: bash
+
+  openrave.py --database inversekinematics --show
+
 Description
 -----------
 
@@ -161,6 +170,33 @@ except ImportError, e:
 class InverseKinematicsModel(DatabaseGenerator):
     """Generates analytical inverse-kinematics solutions, compiles them into a shared object/DLL, and sets the robot's iksolver. Only generates the models for the robot's active manipulator. To generate IK models for each manipulator in the robot, mulitple InverseKinematicsModel classes have to be created.
     """
+
+    class ArmVisibility:
+        """When 'entered' will hide all the non-arm links in order to facilitate visiblity of the gripper"""
+        def __init__(self,manip,transparency=1):
+            self.manip = manip
+            self.robot = self.manip.GetRobot()
+            self.hiddengeoms = []
+            self.transparency = transparency
+        def __enter__(self):
+            self.hiddengeoms = []
+            with self.robot.GetEnv():
+                childlinks = self.robot.GetChain(self.manip.GetBase().GetIndex(),self.manip.GetEndEffector().GetIndex(),returnjoints=False)
+                for link in self.robot.GetLinks():
+                    if link not in childlinks:
+                        for geom in link.GetGeometries():
+                            self.hiddengeoms.append((geom,geom.IsDraw(),geom.GetTransparency()))
+                            if self.transparency >= 1:
+                                geom.SetDraw(False)
+                            else:
+                                geom.SetDraw(True)
+                                geom.SetTransparency(self.transparency)
+        def __exit__(self,type,value,traceback):
+            with self.robot.GetEnv():
+                for geom,isdraw,tr in self.hiddengeoms:
+                    geom.SetDraw(isdraw)
+                    geom.SetTransparency(tr)
+
     def __init__(self,robot,iktype=None,forceikfast=False,freeindices=None,freejoints=None):
         """
         :param forceikfast: if set will always force the ikfast solver
@@ -648,6 +684,24 @@ class InverseKinematicsModel(DatabaseGenerator):
             log.info('success rate: %f, wrong solutions: %f, no solutions: %f, missing solution: %f',float(res[1])/numtested,wrongrate,len(solutionresults[1])/numtested,len(solutionresults[2])/numtested)
         return successrate, wrongrate
 
+    def show(self,delay=0.1,options=None,forceclosure=True):
+        self.env.SetViewer('qtcoin')
+        with self.ArmVisibility(self.manip,0.9):
+            time.sleep(3) # let viewer load
+            while True:
+                with self.env:
+                    lower,upper = self.robot.GetDOFLimits(self.manip.GetArmIndices())
+                    self.robot.SetDOFValues(lower+random.rand(len(lower))*(upper-lower),self.manip.GetArmIndices())
+                    ikparam = self.manip.GetIkParameterization(self.iktype)
+                    sols = self.manip.FindIKSolutions(ikparam,IkFilterOptions.CheckEnvCollisions)
+                    weights = self.robot.GetDOFWeights(self.manip.GetArmIndices())
+                    sols = TSP(sols,lambda x,y: sum(weights*(x-y)**2))
+                    # find shortest route
+                    for sol in sols:
+                        self.robot.SetDOFValues(sol,self.manip.GetArmIndices())
+                        self.env.UpdatePublishedBodies()
+                        time.sleep(delay)
+
     @staticmethod
     def getcompiler():
         compiler = ccompiler.new_compiler()
@@ -730,7 +784,10 @@ class InverseKinematicsModel(DatabaseGenerator):
         else:
             iktype = IkParameterization.Type.Transform6D
         Model = lambda robot: InverseKinematicsModel(robot=robot,iktype=iktype,forceikfast=True)
-        model = DatabaseGenerator.RunFromParser(Model=Model,parser=parser,robotatts={'skipgeometry':'1'},args=args,**kwargs)
+        robotatts={}
+        if not options.show:
+            robotatts = {'skipgeometry':'1'}
+        model = DatabaseGenerator.RunFromParser(Model=Model,parser=parser,robotatts=robotatts,args=args,**kwargs)
         if options.iktests is not None or options.perftiming is not None:
             log.info('testing the success rate of robot %s ',options.robot)
             env = Environment()

@@ -53,6 +53,12 @@ set_target_properties(ikfastloader PROPERTIES LINK_FLAGS "${OpenRAVE_LINK_FLAGS}
 target_link_libraries(ikfastloader ${OpenRAVE_LIBRARIES} ${OpenRAVE_CORE_LIBRARIES})
 install(TARGETS ikfastloader DESTINATION . )
 
+add_executable(orikfilter orikfilter.cpp)
+set_target_properties(orikfilter PROPERTIES COMPILE_FLAGS "${OpenRAVE_CXX_FLAGS}")
+set_target_properties(orikfilter PROPERTIES LINK_FLAGS "${OpenRAVE_LINK_FLAGS}")
+target_link_libraries(orikfilter ${OpenRAVE_LIBRARIES} ${OpenRAVE_CORE_LIBRARIES})
+install(TARGETS orikfilter DESTINATION . )
+
 add_executable(ortrajectory ortrajectory.cpp)
 set_target_properties(ortrajectory PROPERTIES COMPILE_FLAGS "${OpenRAVE_CXX_FLAGS}")
 set_target_properties(ortrajectory PROPERTIES LINK_FLAGS "${OpenRAVE_LINK_FLAGS}")

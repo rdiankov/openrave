@@ -1,5 +1,5 @@
-// Copyright (C) 2006-2010 Rosen Diankov (rdiankov@cs.cmu.edu)
 // -*- coding: utf-8 -*-
+// Copyright (C) 2006-2011 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -77,6 +77,7 @@ class PyControllerBase;
 class PyTrajectoryBase;
 class PyProblemInstance;
 class PyViewerBase;
+class PySpaceSamplerBase;
 
 typedef boost::shared_ptr<PyInterfaceBase> PyInterfaceBasePtr;
 typedef boost::shared_ptr<PyInterfaceBase const> PyInterfaceBaseConstPtr;
@@ -108,6 +109,8 @@ typedef boost::shared_ptr<PyProblemInstance> PyProblemInstancePtr;
 typedef boost::shared_ptr<PyProblemInstance const> PyProblemInstanceConstPtr;
 typedef boost::shared_ptr<PyViewerBase> PyViewerBasePtr;
 typedef boost::shared_ptr<PyViewerBase const> PyViewerBaseConstPtr;
+typedef boost::shared_ptr<PySpaceSamplerBase> PySpaceSamplerBasePtr;
+typedef boost::shared_ptr<PySpaceSamplerBase const> PySpaceSamplerBaseConstPtr;
 
 inline uint64_t GetMicroTime()
 {
@@ -172,17 +175,18 @@ inline RaveVector<T> ExtractVector34(const object& oraw,T fdefaultw)
         v.w = fdefaultw;
         return v;
     }
-    else if( n == 4 )
+    else if( n == 4 ) {
         return ExtractVector4Type<T>(oraw);
+    }
     throw openrave_exception("unexpected vector size");
 }
 
 template <typename T>
 inline Transform ExtractTransformType(const object& o)
 {
-    if( len(o) == 7 )
-        return Transform(Vector(extract<T>(o[0]), extract<T>(o[1]), extract<T>(o[2]), extract<T>(o[3])),
-                         Vector(extract<T>(o[4]), extract<T>(o[5]), extract<T>(o[6])));
+    if( len(o) == 7 ) {
+        return Transform(Vector(extract<T>(o[0]), extract<T>(o[1]), extract<T>(o[2]), extract<T>(o[3])), Vector(extract<T>(o[4]), extract<T>(o[5]), extract<T>(o[6])));
+    }
     TransformMatrix t;
     for(int i = 0; i < 3; ++i) {
         object orow = o[i];
@@ -197,9 +201,9 @@ inline Transform ExtractTransformType(const object& o)
 template <typename T>
 inline TransformMatrix ExtractTransformMatrixType(const object& o)
 {
-    if( len(o) == 7 )
-        return Transform(Vector(extract<T>(o[0]), extract<T>(o[1]), extract<T>(o[2]), extract<T>(o[3])),
-                         Vector(extract<T>(o[4]), extract<T>(o[5]), extract<T>(o[6])));
+    if( len(o) == 7 ) {
+        return Transform(Vector(extract<T>(o[0]), extract<T>(o[1]), extract<T>(o[2]), extract<T>(o[3])), Vector(extract<T>(o[4]), extract<T>(o[5]), extract<T>(o[6])));
+    }
     TransformMatrix t;
     for(int i = 0; i < 3; ++i) {
         object orow = o[i];
@@ -389,6 +393,7 @@ public:
 };
 
 bool ExtractIkParameterization(object o, IkParameterization& ikparam);
+object toPyIkParameterization(const IkParameterization& ikparam);
 object toPyAABB(const AABB& ab);
 object toPyRay(const RAY& r);
 RAY ExtractRay(object o);
@@ -398,8 +403,6 @@ bool ExtractTriMesh(object o, KinBody::Link::TRIMESH& mesh);
 
 namespace openravepy
 {
-    object RaveGetPluginInfo();
-    object RaveGetLoadedInterfaces();
     PyInterfaceBasePtr RaveCreateInterface(PyEnvironmentBasePtr pyenv, InterfaceType type, const std::string& name);
     PyRobotBasePtr RaveCreateRobot(PyEnvironmentBasePtr pyenv, const std::string& name);
     PyPlannerBasePtr RaveCreatePlanner(PyEnvironmentBasePtr pyenv, const std::string& name);
@@ -411,6 +414,7 @@ namespace openravepy
     PySensorBasePtr RaveCreateSensor(PyEnvironmentBasePtr pyenv, const std::string& name);
     PyCollisionCheckerBasePtr RaveCreateCollisionChecker(PyEnvironmentBasePtr pyenv, const std::string& name);
     PyViewerBasePtr RaveCreateViewer(PyEnvironmentBasePtr pyenv, const std::string& name);
+    PySpaceSamplerBasePtr RaveCreateSpaceSampler(PyEnvironmentBasePtr pyenv, const std::string& name);
     PyKinBodyPtr RaveCreateKinBody(PyEnvironmentBasePtr pyenv, const std::string& name);
     PyTrajectoryBasePtr RaveCreateTrajectory(PyEnvironmentBasePtr pyenv, const std::string& name);
     void init_openravepy_global();

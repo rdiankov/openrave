@@ -1,18 +1,44 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-# Copyright (C) 2010 Makoto Furukawa
-# 
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#     http://www.apache.org/licenses/LICENSE-2.0
-# 
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-"""環境に読み込んだ物体の移動
+チュートリアル002：環境に読み込んだ物体の移動
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+ :作者: 古川誠
+
+.. code-block:: python
+
+  from openravepy import Environment,poseFromMatrix, with_destroy
+  from numpy import eye
+  from numpy.random import rand
+  env = Environment()
+  env.SetViewer('qtcoin')
+  env.AddKinBody(env.ReadKinBodyXMLFile(filename='data/mug1.kinbody.xml'))
+  env.AddKinBody(env.ReadKinBodyXMLFile(filename='data/mug2.kinbody.xml'))
+  bodies = env.GetBodies()
+  body1 = bodies[0]
+  body1.SetTransform(eye(4))
+  body2 = env.GetKinBody('mug2')
+  body2.SetTransform([1,0,0,0,0,0,0])
+  raw_input('キーを押すとXに+0.2移動し，移動前と移動後の変換行列を出力します．')
+  tran1 = body1.GetTransform()
+  print '移動前'
+  print tran1
+  tran1[0,3] = 0.2 
+  body1.SetTransform(tran1)
+  print '移動後'
+  print tran1
+  raw_input('キーを押すとYに+0.1移動し，移動前と移動後のポーズを出力します．')
+  pose1 = poseFromMatrix (tran1)
+  print '移動前'
+  print 'pose: ',pose1
+  pose1[5] = 0.1
+  body1.SetTransform(pose1)
+  print '移動後'
+  print 'pose: ',pose1
+  while True:
+      raw_input("キーを押すとランダムに移動します．")
+      tran1[0:3,3] = 0.2*(rand(3)-0.5)
+      body1.SetTransform(tran1)
+      print "X=%f Y=%f Z=%f"%(tran1[0,3],tran1[1,3],tran1[2,3])
+      print 'pose: ',poseFromMatrix(tran1)
 
 実行
 ---------
@@ -48,47 +74,6 @@
 
   .. image:: ../../images/examples/tutorial_002_two_mugs_moverand.png
     :height: 200
-
-ソースコード
---------------------------------------
-
-.. code-block:: python
-
-  #!/usr/bin/env python
-  from openravepy import Environment,poseFromMatrix
-  from numpy import eye
-  from numpy.random import rand
-  env = Environment()
-  env.SetViewer('qtcoin')
-  env.AddKinBody(env.ReadKinBodyXMLFile(filename='data/mug1.kinbody.xml'))
-  env.AddKinBody(env.ReadKinBodyXMLFile(filename='data/mug2.kinbody.xml'))
-  bodies = env.GetBodies()
-  body1 = bodies[0]
-  body1.SetTransform(eye(4))
-  body2 = env.GetKinBody('mug2')
-  body2.SetTransform([1,0,0,0,0,0,0])
-  raw_input('キーを押すとXに+0.2移動し，移動前と移動後の変換行列を出力します．')
-  tran1 = body1.GetTransform()
-  print '移動前'
-  print tran1
-  tran1[0,3] = 0.2 
-  body1.SetTransform(tran1)
-  print '移動後'
-  print tran1
-  raw_input('キーを押すとYに+0.1移動し，移動前と移動後のポーズを出力します．')
-  pose1 = poseFromMatrix (tran1)
-  print '移動前'
-  print 'pose: ',pose1
-  pose1[5] = 0.1
-  body1.SetTransform(pose1)
-  print '移動後'
-  print 'pose: ',pose1
-  while True:
-      raw_input("キーを押すとランダムに移動します．")
-      tran1[0:3,3] = 0.2*(rand(3)-0.5)
-      body1.SetTransform(tran1)
-      print "X=%f Y=%f Z=%f"%(tran1[0,3],tran1[1,3],tran1[2,3])
-      print 'pose: ',poseFromMatrix(tran1)
 
 解説
 --------------------------------------
@@ -223,50 +208,3 @@
 - :mod:`.tutorial_003` - 環境に読み込んだ物体の回転（回転行列）
 - :mod:`.tutorial_004` - 環境に読み込んだ物体の回転（クォータニオン）
 
-"""
-from __future__ import with_statement # for python 2.5
-__author__ = 'Makoto Furukawa'
-from openravepy import Environment,poseFromMatrix, with_destroy
-from numpy import eye
-from numpy.random import rand
-
-def main():
-    "Main example code."
-    env = Environment()
-    env.SetViewer('qtcoin')
-    env.AddKinBody(env.ReadKinBodyXMLFile(filename='data/mug1.kinbody.xml'))
-    env.AddKinBody(env.ReadKinBodyXMLFile(filename='data/mug2.kinbody.xml'))
-    bodies = env.GetBodies()
-    body1 = bodies[0]
-    body1.SetTransform(eye(4))
-    body2 = env.GetKinBody('mug2')
-    body2.SetTransform([1,0,0,0,0,0,0])
-    raw_input('キーを押すとXに+0.2移動し，移動前と移動後の変換行列を出力します．')
-    tran1 = body1.GetTransform()
-    print '移動前'
-    print tran1
-    tran1[0,3] = 0.2 
-    body1.SetTransform(tran1)
-    print '移動後'
-    print tran1
-    raw_input('キーを押すとYに+0.1移動し，移動前と移動後のポーズを出力します．')
-    pose1 = poseFromMatrix (tran1)
-    print '移動前'
-    print 'pose: ',pose1
-    pose1[5] = 0.1
-    body1.SetTransform(pose1)
-    print '移動後'
-    print 'pose: ',pose1
-    while True:
-        raw_input("キーを押すとランダムに移動します．")
-        tran1[0:3,3] = 0.2*(rand(3)-0.5)
-        body1.SetTransform(tran1)
-        print "X=%f Y=%f Z=%f"%(tran1[0,3],tran1[1,3],tran1[2,3])
-        print 'pose: ',poseFromMatrix(tran1)
-
-@with_destroy
-def run(args=None):
-    main()
-
-if __name__ == "__main__":
-    run()

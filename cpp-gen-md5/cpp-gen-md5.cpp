@@ -45,17 +45,21 @@ int main(int argc, char* argv[])
     if( vbasedata.size() > 0 ) {
         memcpy(&vbasedata[0],argv[1],vbasedata.size());
     }
-    getTokenData(argv[2],vbasedata);
-
+    if( strlen(argv[2]) > 0 ) {
+        getTokenData(argv[2],vbasedata);
+    }
     for(int i = 3; i < argc; i += 2) {
-        string md5hash = getmd5hash(argv[i],vbasedata);
-        if( md5hash == "" )
+        vector<char> vdata=vbasedata;
+        string md5hash = getmd5hash(argv[i],vdata);
+        if( md5hash == "" ) {
             return 1;
-
-        if( i+1 < argc )
+        }
+        if( i+1 < argc ) {
             cout << "#define " << argv[i+1] << " \"" << md5hash << "\"" << endl;
-        else
+        }
+        else {
             cout << md5hash << endl;
+        }
     }
     
     return 0;
@@ -69,20 +73,23 @@ void getTokenData(const char* fname,vector<char>& vdata)
         cerr << "Cannot open input file: " << fname << endl;
         return;
     }
-
+    
     fseek(f, 0, SEEK_END);
     int const size = ftell(f);
     fseek(f, 0, SEEK_SET);
     vector<char> buf(size);
-    fread(&buf[0], 1, size, f);
+    size_t read = fread(&buf[0], 1, size, f);
     fclose(f);
+    if( read == 0 || read != size ) {
+        return;
+    }
 
+    cpp::clearstate();
     cpp::lexer_iterator first(cpp::NewLexer(&buf[0], &buf[0]+buf.size(), fname));
     cpp::lexer_iterator last;
 
     while (first != last) {
         cpp::Token const& token = *first;
-        //cpp::PrintToken(token);
         switch(token.id) {
         case cpp::Unknown_token:
         case cpp::Directive_token:
@@ -97,18 +104,18 @@ void getTokenData(const char* fname,vector<char>& vdata)
                 vdata.push_back((token.id>>16)&0xff);
             }
             vdata.push_back((token.id>>24)&0xff);
-
-            if( (token.id&cpp::TokenTypeMask) == cpp::OperatorTokenType )
-                break;
-
-            if( (token.id&cpp::TokenTypeMask) == cpp::IdentifierTokenType ) {
-                if (token.id < cpp::Kwd_last)
-                    break;
-            }
-                        
             //cpp::PrintToken(token);
-            for(size_t i = 0; i < token.text.size(); ++i)
+            if( (token.id&cpp::TokenTypeMask) == cpp::OperatorTokenType ) {
+                break;
+            }
+            if( (token.id&cpp::TokenTypeMask) == cpp::IdentifierTokenType ) {
+                if (token.id < cpp::Kwd_last) {
+                    break;
+                }
+            }
+            for(size_t i = 0; i < token.text.size(); ++i) {
                 vdata.push_back(token.text[i]);
+            }
         }
                
         ++first;
@@ -123,12 +130,13 @@ string getmd5hash(const char* fname, const vector<char>& vbasedata)
 
     md5_state_t state;
 	md5_byte_t digest[16];
-	
+
 	md5_init(&state);
 	md5_append(&state, (const md5_byte_t *)&vdata[0], vdata.size());
 	md5_finish(&state, digest);
     char hex_output[16*2+1]; 
-    for (int di = 0; di < 16; ++di)
+    for (int di = 0; di < 16; ++di) {
 	    sprintf(hex_output + di * 2, "%02x", digest[di]);
+    }
     return string(hex_output);
 }

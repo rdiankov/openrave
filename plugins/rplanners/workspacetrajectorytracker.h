@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2010 Rosen Diankov (rosen.diankov@gmail.com)
+// Copyright (C) 2006-2011 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
@@ -85,7 +85,7 @@ Planner Parameters\n\
             vector<dReal> dummyvalues;
             for(size_t i = 0; i < testvalues.size(); ++i) {
                 parameters->_setstatefn(*testvalues[i]);
-                Transform tstate = _manip->GetEndEffectorTransform();
+                Transform tstate = _manip->GetTransform();
                 _robot->SetActiveDOFs(_manip->GetArmIndices());
                 _robot->GetActiveDOFValues(dummyvalues);
                 for(size_t j = 0; j < dummyvalues.size(); ++j) {
@@ -118,16 +118,16 @@ Planner Parameters\n\
         //if(CollisionFunctions::CheckCollision(parameters,_robot,parameters->vinitialconfig, _report)) {
     
         // validate the initial state if one exists
-        if( parameters->vinitialconfig.size() > 0 && !!parameters->_constraintfn ) {
+        if( parameters->vinitialconfig.size() > 0 ) {
             if( (int)parameters->vinitialconfig.size() != parameters->GetDOF() ) {
                 RAVELOG_ERROR(str(boost::format("initial config wrong dim: %d\n")%parameters->vinitialconfig.size()));
                 return false;
             }
             parameters->_setstatefn(parameters->vinitialconfig);
-            if( !parameters->_constraintfn(parameters->vinitialconfig, parameters->vinitialconfig,0) ) {
-                RAVELOG_WARN("initial state rejected by constraint fn\n");
-                return false;
-            }
+//            if( !parameters->_checkpathconstraintsfn(parameters->vinitialconfig, parameters->vinitialconfig,IT_OpenStart,ConfigurationListPtr()) ) {
+//                RAVELOG_WARN("initial state rejected by constraint fn\n");
+//                return false;
+//            }
         }
 
         if( !_manip->GetIkSolver() ) {
@@ -220,11 +220,11 @@ Planner Parameters\n\
 
         listtransforms.push_back(tlasttrans);
         
+        _vchildlinks.resize(0);
         if( _iktype == IkParameterization::Type_Transform6D ) {
             // disable all child links since we've already checked their collision
-            vector<KinBody::LinkPtr> vlinks;
-            _manip->GetChildLinks(vlinks);
-            FOREACH(it,vlinks) {
+            _manip->GetChildLinks(_vchildlinks);
+            FOREACH(it,_vchildlinks) {
                 (*it)->Enable(false);
             }
         }
@@ -328,21 +328,7 @@ protected:
     }
 
     IkFilterReturn _ValidateSolution(std::vector<dReal>& vsolution, RobotBase::ManipulatorPtr pmanip, const IkParameterization& ikp)
-    {
-        if( !!_parameters->_constraintfn ) {
-            _vtempsolution = vsolution;
-            if( !_parameters->_constraintfn(_vprevsolution.size() > 0 ? _vprevsolution : vsolution, _vtempsolution,0) ) {
-                return IKFR_Reject;
-            }
-            // check if solution was changed
-            for(size_t j = 0; j < _vtempsolution.size(); ++j) {
-                if( RaveFabs(_vtempsolution[j] - vsolution[j]) > 2*g_fEpsilon ) {
-                    RAVELOG_WARN("solution changed by constraint function\n");
-                    return IKFR_Reject;
-                }
-            }
-        }
-        
+    {        
         // check if continuous with previous solution using the jacobian
         if( _mjacobian.num_elements() > 0 ) {
             Vector expecteddeltatrans;
@@ -414,13 +400,25 @@ protected:
                 }
             }
         }
-
-        if( _filteroptions & IKFO_CheckEnvCollisions ) {
-            if( _vprevsolution.size() > 0 ) {
-                // check rest of environment collisions
-                if( CollisionFunctions::CheckCollision(_parameters,_robot,_vprevsolution,vsolution,IT_Open) ) {
+        else {
+            // should be very close to _vprevsolution
+            for(size_t i = 0; i < _vprevsolution.size(); ++i) {
+                if( RaveFabs(_vprevsolution[i]-vsolution.at(i)) > 0.1f ) {
                     return IKFR_Reject;
                 }
+            }
+        }
+
+        if( _filteroptions & IKFO_CheckEnvCollisions ) {
+            // check rest of environment collisions
+            FOREACH(it,_vchildlinks) {
+                (*it)->Enable(true);
+            }
+            if( !_parameters->_checkpathconstraintsfn(_vprevsolution.size() > 0 ? _vprevsolution : vsolution, vsolution,IT_Open,ConfigurationListPtr()) ) {
+                return IKFR_Reject;
+            }
+            FOREACH(it,_vchildlinks) {
+                (*it)->Enable(false);
             }
         }
         return IKFR_Success;
@@ -433,12 +431,13 @@ protected:
     dReal _fMaxCosDeviationAngle;
     int _filteroptions;
     IkParameterization::Type _iktype;
+    vector<KinBody::LinkPtr> _vchildlinks;
 
     // planning state
     Transform _tbaseinv;
     boost::multi_array<dReal,2> _mjacobian, _mquatjacobian;
     IkParameterization _ikprev;
-    vector<dReal> _vprevsolution, _vtempsolution;
+    vector<dReal> _vprevsolution;
 
     // moving straight using jacobian (doesn't work as well)
 //            if( !pconstraints ) {
@@ -453,7 +452,7 @@ protected:
 //                Jerror(0,0) = direction.x*stepsize; Jerror(1,0) = direction.y*stepsize; Jerror(2,0) = direction.z*stepsize;
 //            }
 //
-//            robot->CalculateActiveJacobian(eeindex,robot->GetActiveManipulator()->GetEndEffectorTransform().trans,vjacobian);
+//            robot->CalculateActiveJacobian(eeindex,robot->GetActiveManipulator()->GetTransform().trans,vjacobian);
 //            const double lambda2 = 1e-8; // normalization constant
 //            for(size_t j = 0; j < 3; ++j) {
 //                std::copy(vjacobian[j].begin(),vjacobian[j].end(),J.find2(0,j,0));
@@ -483,7 +482,7 @@ protected:
 //            }
 //            robot->SetActiveDOFValues(point.q);
 //            bool bInCollision = robot->CheckSelfCollision();
-//            Transform tdelta = handTr.inverse()*robot->GetActiveManipulator()->GetEndEffectorTransform();
+//            Transform tdelta = handTr.inverse()*robot->GetActiveManipulator()->GetTransform();
 };
 
 #endif

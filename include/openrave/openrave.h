@@ -78,37 +78,6 @@
 #include <boost/multi_array.hpp>
 //#include <boost/cstdint.hpp>
 
-#if defined(_WIN32) || defined(__CYGWIN__) || defined(_MSC_VER)
-  #define OPENRAVE_HELPER_DLL_IMPORT __declspec(dllimport)
-  #define OPENRAVE_HELPER_DLL_EXPORT __declspec(dllexport)
-  #define OPENRAVE_HELPER_DLL_LOCAL
-#else
-  #if __GNUC__ >= 4
-    #define OPENRAVE_HELPER_DLL_IMPORT __attribute__ ((visibility("default")))
-    #define OPENRAVE_HELPER_DLL_EXPORT __attribute__ ((visibility("default")))
-    #define OPENRAVE_HELPER_DLL_LOCAL  __attribute__ ((visibility("hidden")))
-  #else
-    #define OPENRAVE_HELPER_DLL_IMPORT
-    #define OPENRAVE_HELPER_DLL_EXPORT
-    #define OPENRAVE_HELPER_DLL_LOCAL
-  #endif
-#endif
-
-// Now we use the generic helper definitions above to define OPENRAVE_API and OPENRAVE_LOCAL.
-// OPENRAVE_API is used for the public API symbols. It either DLL imports or DLL exports (or does nothing for static build)
-// OPENRAVE_LOCAL is used for non-api symbols.
-#if defined(OPENRAVE_DLL) || defined(OPENRAVE_CORE_DLL) // defined if OpenRAVE is compiled as a DLL
-  #ifdef OPENRAVE_DLL_EXPORTS // defined if we are building the OpenRAVE DLL (instead of using it)
-    #define OPENRAVE_API OPENRAVE_HELPER_DLL_EXPORT
-  #else
-    #define OPENRAVE_API OPENRAVE_HELPER_DLL_IMPORT
-  #endif // OPENRAVE_DLL_EXPORTS
-  #define OPENRAVE_LOCAL OPENRAVE_HELPER_DLL_LOCAL
-#else // OPENRAVE_DLL is not defined: this means OpenRAVE is a static lib.
-  #define OPENRAVE_API
-  #define OPENRAVE_LOCAL
-#endif // OPENRAVE_DLL
-
 #if defined(__GNUC__)
 #define RAVE_DEPRECATED __attribute__((deprecated))
 #else
@@ -338,38 +307,6 @@ enum DebugLevel {
 #define OPENRAVECOLOR_DEBUGLEVEL 2 // green
 #define OPENRAVECOLOR_VERBOSELEVEL 4 // blue
 
-/// Random number generation
-//@{
-enum IntervalType {
-    IT_Open=0, ///< (a,b)
-    IT_OpenStart=1, ///< (a,b]
-    IT_OpenEnd=2, ///< [a,b)
-    IT_Closed=3, ///< [a,b]
-};
-
-OPENRAVE_API void RaveInitRandomGeneration(uint32_t seed);
-/// generate a random integer, 32bit precision
-OPENRAVE_API uint32_t RaveRandomInt();
-/// generate n random integers, 32bit precision
-OPENRAVE_API void RaveRandomInt(int n, std::vector<int>& v);
-
-/// \brief generate a random float in 0-1
-///
-/// \param interval specifies inclusion of 0 and 1 in the result
-OPENRAVE_API float RaveRandomFloat(IntervalType interval=IT_Closed);
-
-/// \deprecated (10/11/27)
-OPENRAVE_API void RaveRandomFloat(int n, std::vector<float>& v) RAVE_DEPRECATED;
-
-/// \brief generate a random double in 0-1, 53bit precision
-///
-/// \param interval specifies inclusion of 0 and 1 in the result
-OPENRAVE_API double RaveRandomDouble(IntervalType interval=IT_Closed);
-
-/// \deprecated (10/11/27)
-OPENRAVE_API void RaveRandomDouble(int n, std::vector<double>& v) RAVE_DEPRECATED;
-//@}
-
 /// Sets the global openrave debug level
 OPENRAVE_API void RaveSetDebugLevel(DebugLevel level);
 
@@ -584,6 +521,13 @@ DefineRavePrintfA(_VERBOSELEVEL)
 
 #define IS_DEBUGLEVEL(level) (OpenRAVE::RaveGetDebugLevel()>=(level))
 
+#define OPENRAVE_EXCEPTION_FORMAT0(s, errorcode) OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] "s)%(__PRETTY_FUNCTION__)%(__LINE__)),errorcode)
+
+/// adds the function name and line number to an openrave exception
+#define OPENRAVE_EXCEPTION_FORMAT(s, args,errorcode) OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] "s)%(__PRETTY_FUNCTION__)%(__LINE__)%args),errorcode)
+
+#define OPENRAVE_DUMMY_IMPLEMENTATION { throw OPENRAVE_EXCEPTION_FORMAT0("not implemented",ORE_NotImplemented); }
+
 /// \brief Enumeration of all the interfaces.
 enum InterfaceType
 {
@@ -600,11 +544,9 @@ enum InterfaceType
     PT_CollisionChecker=10, ///< describes \ref CollisionCheckerBase
     PT_Trajectory=11, ///< describes \ref TrajectoryBase
     PT_Viewer=12,///< describes \ref ViewerBase
-    PT_NumberOfInterfaces=12 ///< number of interfaces, do not forget to update
+    PT_SpaceSampler=13, ///< describes \ref SamplerBase
+    PT_NumberOfInterfaces=13 ///< number of interfaces, do not forget to update
 };
-
-/// \deprecated (10/01/01)
-typedef InterfaceType PluginType RAVE_DEPRECATED;
 
 class CollisionReport;
 class InterfaceBase;
@@ -621,6 +563,7 @@ class PhysicsEngineBase;
 class SensorBase;
 class CollisionCheckerBase;
 class ViewerBase;
+class SpaceSamplerBase;
 class IkParameterization;
 
 typedef boost::shared_ptr<CollisionReport> CollisionReportPtr;
@@ -664,6 +607,9 @@ typedef boost::weak_ptr<TrajectoryBase> TrajectoryBaseWeakPtr;
 typedef boost::shared_ptr<ViewerBase> ViewerBasePtr;
 typedef boost::shared_ptr<ViewerBase const> ViewerBaseConstPtr;
 typedef boost::weak_ptr<ViewerBase> ViewerBaseWeakPtr;
+typedef boost::shared_ptr<SpaceSamplerBase> SpaceSamplerBasePtr;
+typedef boost::shared_ptr<SpaceSamplerBase const> SpaceSamplerBaseConstPtr;
+typedef boost::weak_ptr<SpaceSamplerBase> SpaceSamplerBaseWeakPtr;
 typedef boost::shared_ptr<EnvironmentBase> EnvironmentBasePtr;
 typedef boost::shared_ptr<EnvironmentBase const> EnvironmentBaseConstPtr;
 typedef boost::weak_ptr<EnvironmentBase> EnvironmentBaseWeakPtr;
@@ -1027,7 +973,7 @@ inline std::istream& operator>>(std::istream& I, IkParameterization& ikparam)
     case IkParameterization::Type_Lookat3D: { Vector v; I >> v.x >> v.y >> v.z; ikparam.SetLookat3D(v); break; }
     case IkParameterization::Type_TranslationDirection5D: { RAY r; I >> r; ikparam.SetTranslationDirection5D(r); break; }
     case IkParameterization::Type_TranslationXY2D: { Vector v; I >> v.y >> v.y; ikparam.SetTranslationXY2D(v); break; }
-    case IkParameterization::Type_TranslationXYOrientation3D: { Vector v; I >> v.y >> v.y >> v.z; ikparam.SetTranslationXYOrientation3D(v); break; }
+      case IkParameterization::Type_TranslationXYOrientation3D: { Vector v; I >> v.y >> v.y >> v.z; ikparam.SetTranslationXYOrientation3D(v); break; }
     case IkParameterization::Type_TranslationLocalGlobal6D: { Vector localtrans, trans; I >> localtrans.x >> localtrans.y >> localtrans.z >> trans.x >> trans.y >> trans.z; ikparam.SetTranslationLocalGlobal6D(localtrans,trans); break; }
     default: throw openrave_exception(str(boost::format("does not support parameterization %d")%ikparam.GetType()));
     }
@@ -1038,6 +984,7 @@ inline std::istream& operator>>(std::istream& I, IkParameterization& ikparam)
 
 #include <openrave/plugininfo.h>
 #include <openrave/interface.h>
+#include <openrave/spacesampler.h>
 #include <openrave/kinbody.h>
 #include <openrave/trajectory.h>
 #include <openrave/problems.h>
@@ -1074,6 +1021,7 @@ inline const char* RaveGetInterfaceHash(InterfaceType type)
     case PT_CollisionChecker: return OPENRAVE_COLLISIONCHECKER_HASH;
     case PT_Trajectory: return OPENRAVE_TRAJECTORY_HASH;
     case PT_Viewer: return OPENRAVE_VIEWER_HASH;
+    case PT_SpaceSampler: return OPENRAVE_SPACESAMPLER_HASH;
     default:
         throw openrave_exception("failed to find openrave interface type",ORE_InvalidArguments);
         return NULL;
@@ -1194,6 +1142,7 @@ OPENRAVE_API PhysicsEngineBasePtr RaveCreatePhysicsEngine(EnvironmentBasePtr pen
 OPENRAVE_API SensorBasePtr RaveCreateSensor(EnvironmentBasePtr penv, const std::string& name);
 OPENRAVE_API CollisionCheckerBasePtr RaveCreateCollisionChecker(EnvironmentBasePtr penv, const std::string& name);
 OPENRAVE_API ViewerBasePtr RaveCreateViewer(EnvironmentBasePtr penv, const std::string& name);
+OPENRAVE_API SpaceSamplerBasePtr RaveCreateSpaceSampler(EnvironmentBasePtr penv, const std::string& name);
 OPENRAVE_API  KinBodyPtr RaveCreateKinBody(EnvironmentBasePtr penv, const std::string& name="");
 /// \brief Return an empty trajectory instance initialized to nDOF degrees of freedom. Will be deprecated soon
 OPENRAVE_API TrajectoryBasePtr RaveCreateTrajectory(EnvironmentBasePtr penv, int nDOF);
@@ -1238,6 +1187,15 @@ OPENRAVE_API void RaveGetEnvironments(std::list<EnvironmentBasePtr>& listenviron
 OPENRAVE_API BaseXMLReaderPtr RaveCallXMLReader(InterfaceType type, const std::string& xmltag, InterfaceBasePtr pinterface, const AttributesList& atts);
 
 //@}
+
+/// \deprecated (11/06/03), use \ref SpaceSamplerBase
+OPENRAVE_API void RaveInitRandomGeneration(uint32_t seed) RAVE_DEPRECATED;
+/// \deprecated (11/06/03), use \ref SpaceSamplerBase
+OPENRAVE_API uint32_t RaveRandomInt() RAVE_DEPRECATED;
+/// \deprecated (11/06/03), use \ref SpaceSamplerBase
+OPENRAVE_API float RaveRandomFloat(IntervalType interval=IT_Closed) RAVE_DEPRECATED;
+/// \deprecated (11/06/03), use \ref SpaceSamplerBase
+OPENRAVE_API double RaveRandomDouble(IntervalType interval=IT_Closed) RAVE_DEPRECATED;
 
 /// \brief separates the directories from a string and returns them in a vector
 inline bool RaveParseDirectories(const char* pdirs, std::vector<std::string>& vdirs)
@@ -1328,6 +1286,7 @@ BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::SimpleSensorSystem)
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::SimpleSensorSystem::XMLData)
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::IkSolverBase)
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::ViewerBase)
+BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::SpaceSamplerBase)
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::GraphHandle)
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::IkParameterization)
 BOOST_TYPEOF_REGISTER_TEMPLATE(OpenRAVE::RaveVector, 1)

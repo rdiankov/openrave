@@ -124,7 +124,7 @@ public:
     virtual int GetNetworkId() { return networkid; }
 
     virtual void GetDOFValues(vector<dReal>& vjoint) const;
-    virtual void GetBodyTransformations(vector<Transform>& vtrans) const;
+    virtual void GetLinkTransformations(vector<Transform>& vtrans) const;
     virtual void Load();
 protected:
     virtual void GeometryChangedCallback();

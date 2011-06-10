@@ -521,6 +521,7 @@ Ability to register custom xml reader interfaces.
 - \subpage arch_sensorsystem
 - \subpage arch_trajectory
 - \subpage arch_viewer
+- \subpage arch_spacesampler
 
 */
 
@@ -962,5 +963,17 @@ Cubic blend would be 4 (TO_OneLine) + 64*3 (CUBIC) = 196.
 \page arch_viewer Viewer Concepts
 \b Reference: \ref OpenRAVE::ViewerBase
 Viewer is responsible only for the environment it is attached to.
+
+*/
+
+/**
+\page arch_spacesampler SpaceSampler Concepts
+\b Reference: \ref OpenRAVE::SpaceSamplerBase
+
+Space samplers are responsible for generating samples in spaces like R^n, SO(3), SE(3), etc. The samples can be randomized or deterministic.
+
+Each sampler can support returning the values in a floating-point precision or unsigned integer format. There are sampling calls for each version. The samplers could choose to implement only one of the types of both, this should be clear in the Supports function.
+
+Each sampler has a state and can be configured with different dimensions and seeds. 
 
 */

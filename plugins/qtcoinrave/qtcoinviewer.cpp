@@ -86,8 +86,10 @@ QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
     statusBar()->showMessage(tr("Status Bar"));
 #endif
     __description = ":Interface Author: Rosen Diankov\n\nProvides a GUI using the Qt4, Coin3D, and SoQt libraries. Depending on the version, Coin3D and SoQt might be licensed under GPL.";
-    RegisterCommand("SetFiguresInCamera",boost::bind(&QtCoinViewer::SetFiguresInCamera,this,_1,_2),
+    RegisterCommand("SetFiguresInCamera",boost::bind(&QtCoinViewer::_SetFiguresInCamera,this,_1,_2),
                     "Accepts 0/1 value that decides whether to render the figure plots in the camera image through GetCameraImage");
+    RegisterCommand("SetWatermark",boost::bind(&QtCoinViewer::_SetWatermark,this,_1,_2),
+                    "Set a WxHx4 image as a watermark. Each color is an unsigned integer ordered as A|B|G|R. The origin should be the top left corner");
     _bLockEnvironment = true;
     _bAVIInit = false;
     _pToggleDebug = NULL;
@@ -341,6 +343,9 @@ void QtCoinViewer::_mousemove_cb(SoEventCallback * node)
             _vMouseSurfacePosition.x = pt->getPoint()[0];
             _vMouseSurfacePosition.y = pt->getPoint()[1];
             _vMouseSurfacePosition.z = pt->getPoint()[2];
+            _vMouseSurfaceNormal.x = pt->getNormal()[0];
+            _vMouseSurfaceNormal.y = pt->getNormal()[1];
+            _vMouseSurfaceNormal.z = pt->getNormal()[2];
             SbVec3f cp = GetCamera()->position.getValue();
             RaveVector<float> camerapos (cp[0],cp[1],cp[2]);
             _vMouseRayDirection = _vMouseSurfacePosition-camerapos;
@@ -358,28 +363,13 @@ void QtCoinViewer::_mousemove_cb(SoEventCallback * node)
                 ss << "(NULL)";
             }
 
-//            RaveVector<dReal> vsurfacenormal;
-//            bool bHaveNormals=false;
-//            boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = LockEnvironment(100000);
-//            if( !!lockenv ) {
-//                CollisionReportPtr report(new CollisionReport());
-//                if( GetEnv()->CheckCollision(RAY(camerapos,dReal(2)*(_vMouseSurfacePosition-camerapos)),report) ) {
-//                    if( report->contacts.size() > 0 ) {
-//                        bHaveNormals = true;
-//                        vsurfacenormal = report->contacts.at(0).norm;
-//                    }
-//                }
-//                lockenv.reset();
-//            }
-            ss << " (" << std::fixed << std::setprecision(4)
+            ss << " (" << std::fixed << std::setprecision(5)
                << std::setw(8) << std::left << pt->getPoint()[0] << ", "
                << std::setw(8) << std::left << pt->getPoint()[1] << ", "
                << std::setw(8) << std::left << pt->getPoint()[2] << ")";
-//            if( bHaveNormals ) {
-//                ss << ", n=(" << std::setw(8) << std::left << vsurfacenormal.x << ", "
-//                   << std::setw(8) << std::left << vsurfacenormal.y << ", "
-//                   << std::setw(8) << std::left << vsurfacenormal.z << ")";
-//            }
+            ss << ", n=(" << std::setw(8) << std::left << _vMouseSurfaceNormal.x << ", "
+               << std::setw(8) << std::left << _vMouseSurfaceNormal.y << ", "
+               << std::setw(8) << std::left << _vMouseSurfaceNormal.z << ")";
             ss << endl;
             _strMouseMove = ss.str();
         }
@@ -1484,7 +1474,14 @@ void* QtCoinViewer::_drawlinelist(SoSwitch* handle, const float* ppoints, int nu
     }
     SoSeparator* pparent = new SoSeparator(); handle->addChild(pparent);
     pparent->addChild(new SoTransform());
-    _SetMaterial(pparent,colors);
+
+    boost::multi_array<float,2> vcolors; vcolors.resize(boost::extents[numPoints][3]);
+    for(int i = 0; i < numPoints; ++i) {
+        vcolors[i][0] = colors[3*i+0];
+        vcolors[i][1] = colors[3*i+1];
+        vcolors[i][2] = colors[3*i+2];
+    }
+    _SetMaterial(pparent,vcolors);
 
     vector<float> mypoints(numPoints*3);
     for(int i = 0; i < numPoints; ++i) {
@@ -1772,8 +1769,9 @@ void QtCoinViewer::_SetTriangleMesh(SoSeparator* pparent, const float* ppoints, 
     SoFaceSet* faceset = new SoFaceSet();
     // this makes it crash!
     //faceset->numVertices.set1Value(numTriangles-1,3);
-    for(int i = 0; i < numTriangles; ++i)
+    for(int i = 0; i < numTriangles; ++i) {
         faceset->numVertices.set1Value(i,3);
+    }
     //faceset->generateDefaultNormals(SoShape, SoNormalCache);
 
     pparent->addChild(faceset);
@@ -2030,8 +2028,13 @@ void QtCoinViewer::SetupMenus()
 
 void QtCoinViewer::customEvent(QEvent * e)
 {
-    if (e->type() == QEvent::User) {
-        static_cast<MyCallbackEvent*>(e)->_fn();
+    if (e->type() == CALLBACK_EVENT) {
+        MyCallbackEvent* pe = dynamic_cast<MyCallbackEvent*>(e);
+        if( !pe ) {
+            RAVELOG_WARN("got a qt message that isn't of MyCallbackEvent, converting statically (dangerous)\n");
+            pe = static_cast<MyCallbackEvent*>(e);
+        }
+        pe->_fn();
         e->setAccepted(true);
     }
 }
@@ -2629,10 +2632,13 @@ void QtCoinViewer::_Reset()
 
     {
         boost::mutex::scoped_lock lock(_mutexItems);
-        FOREACH(it,_listRemoveItems)
+        FOREACH(it,_listRemoveItems) {
             delete *it;
+        }
         _listRemoveItems.clear();
     }
+
+    _vwatermarkimage.resize(boost::extents[0][0]);
 }
 
 void QtCoinViewer::UpdateCameraTransform()
@@ -2841,7 +2847,7 @@ void QtCoinViewer::_RecordSetup(bool bOn, bool bRealtimeVideo)
 #endif
 }
 
-bool QtCoinViewer::_GetCameraImage(std::vector<uint8_t>& memory, int width, int height, const RaveTransform<float>& _t, const SensorBase::CameraIntrinsics& KK)
+bool QtCoinViewer::_GetCameraImage(std::vector<uint8_t>& memory, int width, int height, const RaveTransform<float>& _t, const SensorBase::CameraIntrinsics& intrinsics)
 {
     if( !_bCanRenderOffscreen ) {
         RAVELOG_WARN("cannot render offscreen\n");
@@ -2861,15 +2867,15 @@ bool QtCoinViewer::_GetCameraImage(std::vector<uint8_t>& memory, int width, int 
 
     SoOffscreenRenderer* ivOffscreen = &_ivOffscreen;
     SbViewportRegion vpr(width, height);
-    vpr.setViewport(SbVec2f(KK.cx/(float)(width)-0.5f, 0.5f-KK.cy/(float)(height)), SbVec2f(1,1));
+    vpr.setViewport(SbVec2f(intrinsics.cx/(float)(width)-0.5f, 0.5f-intrinsics.cy/(float)(height)), SbVec2f(1,1));
     ivOffscreen->setViewportRegion(vpr);
 
     GetCamera()->position.setValue(t.trans.x, t.trans.y, t.trans.z);
     GetCamera()->orientation.setValue(t.rot.y, t.rot.z, t.rot.w, t.rot.x);
-    GetCamera()->aspectRatio = (KK.fy/(float)height) / (KK.fx/(float)width);
-    GetCamera()->heightAngle = 2.0f*atanf(0.5f*height/KK.fy);
-    GetCamera()->nearDistance = 0.01f;
-    GetCamera()->farDistance = 100.0f;
+    GetCamera()->aspectRatio = (intrinsics.fy/(float)height) / (intrinsics.fx/(float)width);
+    GetCamera()->heightAngle = 2.0f*atanf(0.5f*height/intrinsics.fy);
+    GetCamera()->nearDistance = intrinsics.focal_length*1.2;
+    GetCamera()->farDistance = intrinsics.focal_length*12000; // control the precision
     GetCamera()->viewportMapping = SoCamera::LEAVE_ALONE;
     
     _pFigureRoot->ref();
@@ -2884,6 +2890,7 @@ bool QtCoinViewer::_GetCameraImage(std::vector<uint8_t>& memory, int width, int 
     _pFigureRoot->unref();
 
     if( bSuccess ) {
+        _AddWatermarkToImage(_ivOffscreen.getBuffer(), VIDEO_WIDTH, VIDEO_HEIGHT);
         // vertically flip since we want upper left corner to correspond to (0,0)
         memory.resize(width*height*3);
         for(int i = 0; i < height; ++i) {
@@ -2905,7 +2912,7 @@ bool QtCoinViewer::_GetCameraImage(std::vector<uint8_t>& memory, int width, int 
     return bSuccess;
 }
 
-bool QtCoinViewer::_WriteCameraImage(int width, int height, const RaveTransform<float>& _t, const SensorBase::CameraIntrinsics& KK, const std::string& filename, const std::string& extension)
+bool QtCoinViewer::_WriteCameraImage(int width, int height, const RaveTransform<float>& _t, const SensorBase::CameraIntrinsics& intrinsics, const std::string& filename, const std::string& extension)
 {
     if( !_bCanRenderOffscreen ) {
         return false;
@@ -2922,15 +2929,15 @@ bool QtCoinViewer::_WriteCameraImage(int width, int height, const RaveTransform<
     SoSFFloat farDistance = GetCamera()->farDistance;
     
     SbViewportRegion vpr(width, height);
-    vpr.setViewport(SbVec2f(KK.cx/(float)(width)-0.5f, 0.5f-KK.cy/(float)(height)), SbVec2f(1,1));
+    vpr.setViewport(SbVec2f(intrinsics.cx/(float)(width)-0.5f, 0.5f-intrinsics.cy/(float)(height)), SbVec2f(1,1));
     _ivOffscreen.setViewportRegion(vpr);
 
     GetCamera()->position.setValue(t.trans.x, t.trans.y, t.trans.z);
     GetCamera()->orientation.setValue(t.rot.y, t.rot.z, t.rot.w, t.rot.x);
-    GetCamera()->aspectRatio = (KK.fy/(float)height) / (KK.fx/(float)width);
-    GetCamera()->heightAngle = 2.0f*atanf(0.5f*height/KK.fy);
-    GetCamera()->nearDistance = 0.01f;
-    GetCamera()->farDistance = 100.0f;
+    GetCamera()->aspectRatio = (intrinsics.fy/(float)height) / (intrinsics.fx/(float)width);
+    GetCamera()->heightAngle = 2.0f*atanf(0.5f*height/intrinsics.fy);
+    GetCamera()->nearDistance = intrinsics.focal_length*1.2;
+    GetCamera()->farDistance = intrinsics.focal_length*12000; // control the precision
     GetCamera()->viewportMapping = SoCamera::LEAVE_ALONE;
     
     _pFigureRoot->ref();
@@ -2961,8 +2968,10 @@ bool QtCoinViewer::_WriteCameraImage(int width, int height, const RaveTransform<
             RAVELOG_INFO(ss.str().c_str());
             bSuccess = false;
         }
-        else
+        else {
+            _AddWatermarkToImage(_ivOffscreen.getBuffer(), width, height);
             bSuccess = _ivOffscreen.writeToFile(SbString(filename.c_str()), SbString(extension.c_str()));
+        }
     }
 
     _ivRoot->addChild(_pFigureRoot);
@@ -2999,6 +3008,7 @@ bool QtCoinViewer::_RecordVideo()
             swap(ptr[0], ptr[2]);
         }
     }
+    _AddWatermarkToImage(_ivOffscreen.getBuffer(), VIDEO_WIDTH, VIDEO_HEIGHT);
     
     uint64_t curtime = _bRealtimeVideo ? GetMicroTime() : GetEnv()->GetSimulationTime();
     _nVideoTimeOffset += (curtime-_nLastVideoFrame);
@@ -3173,8 +3183,41 @@ void QtCoinViewer::EnvMessage::viewerexecute()
     _plock.reset();
 }
 
-bool QtCoinViewer::SetFiguresInCamera(ostream& sout, istream& sinput)
+bool QtCoinViewer::_SetFiguresInCamera(ostream& sout, istream& sinput)
 {
     sinput >> _bRenderFiguresInCamera;
     return !!sinput;
+}
+
+bool QtCoinViewer::_SetWatermark(ostream& sout, istream& sinput)
+{
+    int W, H;
+    sinput >> W >> H;
+    _vwatermarkimage.resize(boost::extents[H][W]);
+    for(int i = 0; i < H; ++i) {
+        for(int j = 0; j < W; ++j) {
+            sinput >> _vwatermarkimage[i][j];
+        }
+    }
+    return !!sinput;
+}
+
+void QtCoinViewer::_AddWatermarkToImage(unsigned char* image, int width, int height)
+{
+    if( _vwatermarkimage.size() == 0 ) {
+        return;
+    }
+    // the origin of the image is the bottom left corner
+    for(int i = 0; i < height; ++i) {
+        for(int j = 0; j < width; ++j) {
+            int iwater = _vwatermarkimage.shape()[0]-(i%_vwatermarkimage.shape()[0])-1;
+            int jwater = j%_vwatermarkimage.shape()[1];
+            uint32_t color = _vwatermarkimage[iwater][jwater];
+            uint32_t A = color>>24;
+            for(int k = 0; k < 3; ++k) {
+                image[k] = ((uint32_t)image[k]*(255-A)+((color>>(8*k))&0xff)*A)>>8;
+            }
+            image += 3;
+        }
+    }
 }

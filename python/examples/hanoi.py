@@ -75,14 +75,16 @@ class HanoiPuzzle:
         while not self.robot.GetController().IsDone():
             time.sleep(0.01)
     def MoveToPosition(self, values,indices):
-        """uses a planner to safely move the hand to the preshape and returns the trajectory"""
-        # move the robot out of the way so it can complete a preshape
+        """uses a planner to safely move the hand to the preshape and returns the trajectory.
+
+        move the robot out of the way so it can complete a preshape
+        """
         with self.robot:
             self.robot.SetActiveDOFs(indices)
             self.basemanip.MoveUnsyncJoints(jointvalues=values,jointinds=indices)
         self.waitrobot()
-        # move the hand to the preshape
         with self.robot:
+            # move the hand to the preshape
             self.robot.SetActiveDOFs(indices)
             self.basemanip.MoveActiveJoints(goal=values)
         self.waitrobot()
@@ -125,15 +127,15 @@ class HanoiPuzzle:
                     print('Tnewhand2 invalid')
                     continue
             try:
-                self.basemanip.MoveToHandPosition(matrices=[Tnewhand])
+                self.basemanip.MoveToHandPosition(matrices=[Tnewhand],maxtries=1)
                 raveLogInfo('move to position above source peg')
                 self.waitrobot() # wait for robot to complete all trajectories
 
-                self.basemanip.MoveToHandPosition(matrices=[Tnewhand2])
+                self.basemanip.MoveToHandPosition(matrices=[Tnewhand2],maxtries=1)
                 raveLogInfo('move to position above dest peg')
                 self.waitrobot() # wait for robot to complete all trajectories
 
-                self.basemanip.MoveToHandPosition(matrices=[T])
+                self.basemanip.MoveToHandPosition(matrices=[T],maxtries=1)
                 raveLogInfo('move to dest peg')
                 self.waitrobot() # wait for robot to complete all trajectories
                 return True
@@ -154,34 +156,39 @@ class HanoiPuzzle:
     def hanoimove(self, disk, srcpeg, destpeg, height):
         """Moves the arm and manipulator to grasp a peg and place it on a different peg"""
         openhandfn = lambda: self.MoveToPosition([-0.7],self.robot.GetActiveManipulator().GetGripperIndices())
-        openhandfn()
         Tdisk = disk.GetTransform()
         for ang2 in arange(-pi/2,1.5*pi,0.4):
             for ang1 in arange(-0.8,0,0.2):
                 Tgrasps = self.GetGrasp(Tdisk, disk.radius, [ang1,ang2]) # get the grasp transform given the two angles
                 for Tgrasp in Tgrasps: # for each of the grasps
                     try:
-                        self.basemanip.MoveToHandPosition(matrices=[Tgrasp])
+                        raveLogInfo('opening hand')
+                        openhandfn()
                         raveLogInfo('moving hand to location')
+                        self.basemanip.MoveToHandPosition(matrices=[Tgrasp],maxtries=1)
                         self.waitrobot()
-                        # succeeded so grab the disk
+                        raveLogInfo('succeeded so grab the disk')
                         self.taskmanip.CloseFingers()
                         self.waitrobot()
                         with self.env:
                             self.robot.Grab(disk)
 
-                        # try to pub the disk in the destination peg
+                        raveLogInfo('try to pub the disk in the destination peg')
                         self.putblock(disk, srcpeg, destpeg, height)
-                        self.waitrobot() # wait for robot to complete all trajectories
-                        with self.env:
-                            self.robot.ReleaseAllGrabbed()
-                        openhandfn()
+                        raveLogInfo('wait for robot to complete all trajectories')
+                        self.waitrobot()
+                        self.taskmanip.ReleaseFingers(target=disk)
+                        self.waitrobot()
+                        raveLogInfo('done with one disk')
                         return True
                     except planning_error,e:
                         raveLogWarn(str(e))
                         with self.env:
                             self.robot.ReleaseAllGrabbed()
+                            disk.Enable(False)
                         openhandfn()
+                        with self.env:
+                            disk.Enable(True)
         return False
 
     def hanoisolve(self, n, pegfrom, pegto, pegby):

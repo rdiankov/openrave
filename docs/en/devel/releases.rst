@@ -17,7 +17,11 @@ Versioning
 
 Should allow multiple openrave versions to be installed simultaneously. This requires using suffixing several files and executables with $MAJOR.$MINOR similar to how python and `boost <https://svn.boost.org/trac/boost/wiki/ImprovingPractices>`_ work.
 
-OpenRAVE patch releases should always be binary compatible so that newer versions can read old plugins. In otherwords all 0.3.x releases should be binary compatible with each other. See `ABI Compatibility <http://www.ros.org/reps/rep-0009.html>`_ for an excellent discussion. There is an `ABI compliance checker <http://ispras.linux-foundation.org/index.php/ABI_compliance_checker>`_ that can ensure this is so. For Linux systems, SO version is always the OpenRAVE $MAJOR.$MINOR version.
+OpenRAVE patch releases should always be binary compatible so that newer versions can read old plugins. In otherwords all 0.3.x releases should be binary compatible with each other. See `ABI Compatibility <http://www.ros.org/reps/rep-0009.html>`_ for an excellent discussion.
+
+For Linux systems, SOVERSION is always "0" since the important version numbers are part of the library name itself.
+
+There is an `ABI compliance checker <http://ispras.linux-foundation.org/index.php/ABI_compliance_checker>`_ that can report compatibility errors.  The `API Sanity Autotest <http://ispras.linuxfoundation.org/index.php/API_Sanity_Autotest>`_ is also an interesting tool that runs functions with reasonable inputs based on a static analysis of the code.
 
 Windows Installer
 -----------------

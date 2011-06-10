@@ -3,12 +3,84 @@
 ChangeLog
 #########
 
-Version 0.3.2
-=============
+Version 0.4.0 Unstable
+======================
 
 Subversion Revision: **Unreleased**
 
 Initial Release: **Unreleased**
+
+Core
+----
+
+* fixed collada loading of formulas
+
+* fixed caching issue with ik files in ikfastsolvers
+
+* added a new SpaceSampler interface for sophisticated discrete/deterministic/randomized samplers.
+
+* deprecated the RaveRandomX functions in favor of the new samplers
+
+* Added a Prop_RobotActiveDOFs change callback in order to catch SetActiveDOFs messages
+
+ 
+Planning
+--------
+
+* added a new planner parameter _neighstatefn that adds two states together.
+
+* added a RobotConfiguration sampler for sampling robot active DOFs used for planning
+
+* added a Halton Sequence sampler
+
+* removed the PlannerParameters::_constraintfn and replaced it with PlannerParameters::_checkpathconstraints. Combined with _neighstatefn, the behavior of the old PlannerParameters::_constraintfn can be achieved. Allows us to remove all collision calls and dependencies on robots from planners!!
+
+* removed the PlannerParameters::_tWorkspaceGoal parameter since it is non-generic and not used in openrave.
+
+* added PlannerParameters::_sampleinitialfn to sample initial goals for the planner
+
+* added a _fromgoal parameter to PlannerParameters::_neighstatefn so users can know which direction the tree is growing in.
+
+* added a new **openrave/planningutils.h** file that contains many functions/heuristics to help users build planning algorithms.
+
+ * LineCollisionConstraint
+ * SimpleDistanceMetric
+ * SimpleNeighborhoodSampler
+ * ManipulatorIKGoalSampler
+
+* added ValidateTrajectory command in BaseManipulation
+
+* fixed major bug in WorkspaceTrajectoryTracker (ie MoveHandStraight) due to obstacle checking
+
+Inverse Kinematics
+------------------
+
+* implemented '--show' command for inversekinematics
+
+Sensors
+-------
+
+* camera intrinsics now include distortion model and focal length, viewer rendering respects the focal length
+
+* removed transform from laser data, all sensors have a transform data type that is not part of the data state
+
+Misc
+----
+
+* viewer showing scene normals
+
+* added more tests: openrave global runtime, API Sanity Autotest XML
+
+* viewer added watermarking support through :ref:`viewer-qtcoin-setwatermark <SetWatermark command>`
+
+* added IkSolver.SetCustomFilter in openravepy
+
+Version 0.3.2
+=============
+
+Subversion Revision: 2452
+
+Initial Release: 2011/05/11
 
 Core
 ----

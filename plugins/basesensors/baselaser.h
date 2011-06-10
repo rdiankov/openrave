@@ -32,7 +32,8 @@ protected:
                     return PE_Support;
                 return PE_Ignore;
             }
-            if( name != "sensor" && name != "minangle" && name != "maxangle" && name != "maxrange" && name != "minrange" && name != "scantime" && name != "color" && name != "resolution" && name != "time_scan" && name != "time_increment" ) {
+            static boost::array<string, 15> tags = {{"sensor", "minangle", "min_angle", "maxangle", "max_angle", "maxrange", "max_range", "minrange", "min_range", "scantime", "color", "time_scan", "time_increment", "power"}};
+            if( find(tags.begin(),tags.end(),name) == tags.end() ) {
                 return PE_Pass;
             }
             ss.str("");
@@ -40,22 +41,26 @@ protected:
         }
 
         virtual bool endElement(const std::string& name)
-        {    
+        {
             if( !!_pcurreader ) {
-                if( _pcurreader->endElement(name) )
+                if( _pcurreader->endElement(name) ) {
                     _pcurreader.reset();
+                }
                 return false;
             }
             else if( name == "sensor" ) {
                 return true;
             }
-            else if( name == "minangle" ) {
+            else if( name == "power" ) {
+                ss >> _psensor->_bPower;
+            }
+            else if( name == "minangle" || name == "min_angle" ) {
                 ss >> _psensor->_pgeom->min_angle[0];
                 if( !!ss ) {
                     _psensor->_pgeom->min_angle[0] *= PI/180.0f; // convert to radians
                 }
             }
-            else if( name == "maxangle" ) {
+            else if( name == "maxangle" || name == "max_angle" ) {
                 ss >> _psensor->_pgeom->max_angle[0];
                 if( !!ss ) {
                     _psensor->_pgeom->max_angle[0] *= PI/180.0f; // convert to radians
@@ -67,10 +72,10 @@ protected:
                     _psensor->_pgeom->resolution[0] *= PI/180.0f; // convert to radians
                 }
             }
-            else if( name == "maxrange" ) {
+            else if( name == "maxrange" || name == "max_range" ) {
                 ss >> _psensor->_pgeom->max_range;
             }
-            else if( name == "minrange" ) {
+            else if( name == "minrange" || name == "min_range" ) {
                 ss >> _psensor->_pgeom->min_range;
             }
             else if( name == "scantime" || name == "time_scan" ) {
@@ -127,6 +132,8 @@ public:
                         "Set rendering of the plots (1 or 0).");
         RegisterCommand("collidingbodies",boost::bind(&BaseLaser2DSensor::_CollidingBodies,this,_1,_2),
                         "Returns the ids of the bodies that the laser beams have hit.");
+//        RegisterCommand("GatherData",boost::bind(&BaseLaser2DSensor::_CollidingBodies,this,_1,_2),
+//                        "Controls whether to gather all laser data, or delete the old one after every new scan.");
         _pgeom.reset(new LaserGeomData());
         _pdata.reset(new LaserSensorData());
         _pgeom->min_angle[0] = -PI/2; _pgeom->min_angle[1] = 0;
@@ -198,10 +205,10 @@ public:
             {
                 // Lock the data mutex and fill with the range data (get all in one timestep)
                 boost::mutex::scoped_lock lock(_mutexdata);
-                _pdata->t = GetTransform();
+                _pdata->__trans = GetTransform();
                 _pdata->__stamp = GetEnv()->GetSimulationTime();
-        
                 t = GetLaserPlaneTransform();
+                _pdata->positions.at(0) = t.trans;
                 size_t index = 0;
                 for(dReal frotangle = _pgeom->min_angle[0]; frotangle <= _pgeom->max_angle[0]; frotangle += _pgeom->resolution[0], ++index) {
                     if( index >= _pdata->ranges.size() ) {
@@ -242,8 +249,9 @@ public:
                     boost::mutex::scoped_lock lock(_mutexdata);
                     N = (int)_pdata->ranges.size();
                     vpoints.resize(N+1);
-                    for(int i = 0; i < N; ++i)
+                    for(int i = 0; i < N; ++i) {
                         vpoints[i] = _pdata->ranges[i] + t.trans;
+                    }
                     vpoints[N] = t.trans;
                 }
 
@@ -350,7 +358,7 @@ protected:
     {
         boost::mutex::scoped_lock lock(_mutexdata);
         int N = (int)( (_pgeom->max_angle[0]-_pgeom->min_angle[0])/_pgeom->resolution[0] + 0.5f)+1;
-        _pdata->positions.clear();
+        _pdata->positions.resize(1);
         _pdata->ranges.resize(N);
         _pdata->intensity.resize(N);
         _databodyids.resize(N);
@@ -430,8 +438,9 @@ protected:
 
         virtual ProcessElement startElement(const std::string& name, const AttributesList& atts)
         {
-            if( _bProcessing )
+            if( _bProcessing ) {
                 return PE_Ignore;
+            }
             switch( BaseLaser2DXMLReader::startElement(name,atts) ) {
                 case PE_Pass: break;
                 case PE_Support: return PE_Support;
@@ -447,16 +456,21 @@ protected:
             if( _bProcessing ) {
                 boost::shared_ptr<BaseSpinningLaser2DSensor> psensor = boost::dynamic_pointer_cast<BaseSpinningLaser2DSensor>(_psensor);
             
-                if( name == "spinaxis" )
+                if( name == "spinaxis" ) {
                     ss >> psensor->_vGeomSpinAxis.x >> psensor->_vGeomSpinAxis.y >> psensor->_vGeomSpinAxis.z;
-                else if( name == "spinpos" )
+                }
+                else if( name == "spinpos" ) {
                     ss >> psensor->_vGeomSpinPos.x >> psensor->_vGeomSpinPos.y >> psensor->_vGeomSpinPos.z;
-                else if( name == "spinspeed" )
+                }
+                else if( name == "spinspeed" ) {
                     ss >> psensor->_fGeomSpinSpeed;
-                else
+                }
+                else {
                     RAVELOG_WARN("invalid tag\n");
-                if( !ss )
+                }
+                if( !ss ) {
                     RAVELOG_WARN(str(boost::format("error parsing %s\n")%name));
+                }
                 _bProcessing = false;
                 return false;
             }
@@ -498,8 +512,9 @@ public:
     {
         if( _bPower ) {
             _fCurAngle += _fGeomSpinSpeed*fTimeElapsed;
-            if( _fCurAngle > 2*PI )
+            if( _fCurAngle > 2*PI ) {
                 _fCurAngle -= 2*PI;
+            }
             if( _fTimeToScan <= fTimeElapsed ) {
                 // have to update
                 SetTransform(_trans);

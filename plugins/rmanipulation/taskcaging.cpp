@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2010 Rosen Diankov (rdiankov@cs.cmu.edu)
+// Copyright (C) 2006-2011 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
@@ -200,7 +200,7 @@ public:
 
             f = 0;
             int linkindex = _robot->GetActiveManipulator()->GetEndEffector()->GetIndex();
-            Transform tEE = _robot->GetActiveManipulator()->GetEndEffectorTransform();
+            Transform tEE = _robot->GetActiveManipulator()->GetTransform();
             _robot->CalculateActiveJacobian(linkindex, tEE.trans, _J);
             //_robot->CalculateActiveRotationalJacobian(linkindex, tEE.trans, &_J[3*robot->GetActiveDOF()]);
         
@@ -332,7 +332,7 @@ public:
                     // create a new permuter
                     pdata.reset(new FINDGRASPDATA());
                     pdata->status = 0;
-                    pdata->pexecutor.reset(new RandomPermuationExecutor(boost::bind(&ConstrainedTaskData::FindGraspPermutation,shared_from_this(),_1,pdata)));
+                    pdata->pexecutor.reset(new RandomPermutationExecutor(boost::bind(&ConstrainedTaskData::FindGraspPermutation,shared_from_this(),_1,pdata)));
                     mapgrasps[bestid] = pdata;
                 }
                 else
@@ -342,7 +342,7 @@ public:
                     continue;
 
                 if( pdata->status == 0 ) {
-                    pdata->tcurgrasp = _robot->GetActiveManipulator()->GetEndEffectorTransform();
+                    pdata->tcurgrasp = _robot->GetActiveManipulator()->GetTransform();
                     pdata->fThresh2 = fGraspThresh*fGraspThresh;
                     pdata->tlink = ptargetlink->GetTransform();
 
@@ -538,7 +538,7 @@ public:
     protected:
         struct FINDGRASPDATA
         {
-            boost::shared_ptr<RandomPermuationExecutor> pexecutor;
+            boost::shared_ptr<RandomPermutationExecutor> pexecutor;
             boost::shared_ptr< vector< Transform > > pgrasps;
             Transform tcurgrasp;
             Transform tlink;
@@ -574,15 +574,15 @@ public:
             fRandPerturb[3] = fRandPerturb[4] = fRandPerturb[5] = fRandPerturb[6] = 0.07f;
         }
     
-        virtual bool Constraint(const vector<dReal>& pSrcConf, vector<dReal>& pDestConf, int settings)
+        virtual bool Constraint(const vector<dReal>& pSrcConf, const vector<dReal>& pDestConf, IntervalType interval, PlannerBase::ConfigurationListPtr configurations)
         {
-            if( !plink || vtargetjoints.size() == 0)
+            if( !plink || vtargetjoints.size() == 0) {
                 return true;
-        
+            }
             _robot->SetActiveDOFValues(pDestConf);
-
-            if( _robot->GetEnv()->CheckCollision(KinBodyConstPtr(_robot)) || _robot->CheckSelfCollision() )
+            if( _robot->GetEnv()->CheckCollision(KinBodyConstPtr(_robot)) || _robot->CheckSelfCollision() ) {
                 return false;
+            }
 
             bool bCaged = false;
             vector<dReal> vrobotconfig;
@@ -590,10 +590,8 @@ public:
 
             // find N noncolliding grasps and check if they still cage the object
             for(int iter = 0; iter < Nrandconfigs; ++iter) {
-
-                if( iter > 0 ) {
-                
-                    plink->GetParent()->SetBodyTransformations(_vTargetTransforms);
+                if( iter > 0 ) {                
+                    plink->GetParent()->SetLinkTransformations(_vTargetTransforms);
 
                     int niter=0;
                     for(niter = 0; niter < 100; niter++) {
@@ -601,36 +599,38 @@ public:
                             vrobotconfig[i] = pDestConf[i] + fRandPerturb[i]*(RaveRandomFloat()-0.5f);
 
                         _robot->SetActiveDOFValues(vrobotconfig);
-                        if( !_robot->GetEnv()->CheckCollision(KinBodyConstPtr(_robot)) && !_robot->CheckSelfCollision() )
+                        if( !_robot->GetEnv()->CheckCollision(KinBodyConstPtr(_robot)) && !_robot->CheckSelfCollision() ) {
                             break;
+                        }
                     }
 
-                    if( niter >= 100 )
+                    if( niter >= 100 ) {
                         continue;
+                    }
                 }
 
                 FOREACH(itvv, _vvvCachedTransforms) {
-                
                     bCaged = false;
                     FOREACH(itv, *itvv) {
-                        plink->GetParent()->SetBodyTransformations(*itv);
-                    
+                        plink->GetParent()->SetLinkTransformations(*itv);
                         if( _robot->GetEnv()->CheckCollision(KinBodyConstPtr(_robot), KinBodyConstPtr(plink->GetParent())) ) {
                             bCaged = true;
                             break;
                         }
                     }
                 
-                    if( !bCaged )
+                    if( !bCaged ) {
                         break;
+                    }
                 }
 
-                if( !bCaged )
+                if( !bCaged ) {
                     break;
+                }
             }
 
             _robot->SetActiveDOFValues(pDestConf);
-            plink->GetParent()->SetBodyTransformations(_vTargetTransforms);
+            plink->GetParent()->SetLinkTransformations(_vTargetTransforms);
             return bCaged;
         }
 
@@ -638,8 +638,9 @@ public:
         {
             BOOST_ASSERT(v1.size()==7&&v2.size()==7);
             dReal frot1=0,frot2=0,ftrans=0;
-            for(int i = 0; i < 3; ++i)
+            for(int i = 0; i < 3; ++i) {
                 ftrans += (v1[i]-v2[i])*(v1[i]-v2[i]);
+            }
             for(int i = 3; i < 7; ++i) {
                 frot1 += (v1[i]-v2[i])*(v1[i]-v2[i]);
                 frot2 += (v1[i]+v2[i])*(v1[i]+v2[i]);
@@ -657,12 +658,10 @@ public:
             vector< vector< vector<Transform> > >::iterator itvv = _vvvCachedTransforms.begin();
 
             plink->GetParent()->SetDOFValues(vtargetvalues);
-            plink->GetParent()->GetBodyTransformations(_vTargetTransforms);
+            plink->GetParent()->GetLinkTransformations(_vTargetTransforms);
             vector<int>::const_iterator itside = vTargetSides.begin();
 
             FOREACH(itjoint, vtargetjoints) {
-            
-
                 if( *itside <= 0 ) {
                     itvv->resize(0);
                     for(dReal finc = fIncrement; finc < fCagedConfig; finc += fIncrement) {
@@ -670,7 +669,7 @@ public:
                         plink->GetParent()->SetDOFValues(values);
                     
                         itvv->push_back(vector<Transform>());
-                        plink->GetParent()->GetBodyTransformations(itvv->back());
+                        plink->GetParent()->GetLinkTransformations(itvv->back());
                     }
                     ++itvv;
                 }
@@ -682,7 +681,7 @@ public:
                         plink->GetParent()->SetDOFValues(values);
 
                         itvv->push_back(vector<Transform>());
-                        plink->GetParent()->GetBodyTransformations(itvv->back());
+                        plink->GetParent()->GetLinkTransformations(itvv->back());
                                 
                     }
                     ++itvv;
@@ -886,7 +885,7 @@ private:
         // move the robot according to the way the target object moved
         _robot->SetTransform(tlinknew*tlinkorig.inverse()*_robot->GetTransform());
     
-        if( !CM::JitterTransform(_robot, 0.004f) ) {
+        if( !planningutils::JitterTransform(_robot, 0.004f) ) {
             RAVELOG_WARN("failed to jitter\n");
             return false;
         }
@@ -896,7 +895,7 @@ private:
         _robot->SetActiveDOFs(vector<int>(), RobotBase::DOF_X|RobotBase::DOF_Y|RobotBase::DOF_Z|RobotBase::DOF_RotationQuat);
         _robot->GetActiveDOFValues(params->vinitialconfig);
         params->SetRobotActiveJoints(_robot);
-        params->_constraintfn = boost::bind(&GraspConstraint::Constraint,graspfn,_1,_2,_3);
+        params->_checkpathconstraintsfn = boost::bind(&GraspConstraint::Constraint,graspfn,_1,_2,_3,_4);
         params->_distmetricfn = boost::bind(&GraspConstraint::Dist6D,graspfn,_1,_2);
    
         params->_fStepLength = fStep;
@@ -950,7 +949,7 @@ private:
 
             // convert the active dofs to a transform and save
             _robot->SetActiveDOFValues(itp->q, false);
-            sout << tlinknew.inverse() * (!pmanip ? _robot->GetTransform() : pmanip->GetEndEffectorTransform()) << " "  << nContact << " ";
+            sout << tlinknew.inverse() * (!pmanip ? _robot->GetTransform() : pmanip->GetTransform()) << " "  << nContact << " ";
         }
 
         if( !!ptarget )
@@ -1699,7 +1698,7 @@ private:
     
         vector<dReal> qprevrobot(qprev.begin(),qprev.begin()+_robot->GetActiveDOF());
         _robot->SetActiveDOFValues(qprevrobot);
-        Transform tprevgrasp = pmanip->GetEndEffectorTransform();
+        Transform tprevgrasp = pmanip->GetTransform();
     
         vector<dReal> preshape;
         bool bFoundAtLeastOne = false;

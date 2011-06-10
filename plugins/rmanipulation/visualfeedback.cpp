@@ -189,13 +189,12 @@ public:
             return true;
         }
 
-        virtual bool Constraint(const vector<dReal>& pSrcConf, vector<dReal>& pDestConf, int settings)
+        virtual bool Constraint(const PlannerBase::PlannerParameters::CheckPathConstraintFn& oldfn, const vector<dReal>& pSrcConf, const vector<dReal>& pDestConf, IntervalType interval, PlannerBase::ConfigurationListPtr configurations)
         {
-            if( IsVisible() ) {
-                pDestConf = pSrcConf;
-                return true;
+            if( !oldfn(pSrcConf,pDestConf,interval,configurations) ) {
+                return false;
             }
-            return false;
+            return IsVisible();
         }
 
         /// samples the ik
@@ -393,7 +392,7 @@ public:
 
         Transform _ttarget; ///< transform of target
         Vector _vTargetLocalCenter;
-        RandomPermuationExecutor _sphereperms;
+        RandomPermutationExecutor _sphereperms;
         vector<Transform> _vcameras; ///< camera transformations in local coord systems
     };
 
@@ -560,8 +559,9 @@ Visibility computation checks occlusion with other objects using ray sampling in
                             vnorm = -vnorm;
                         }
                         vnorm.z = -(vnorm.x*vprev.x+vnorm.y*vprev.y);
-                        if( vnorm.lengthsqr3() > 1e-10 )
+                        if( vnorm.lengthsqr3() > 1e-10 ) {
                             _vconvexplanes.push_back(vnorm.normalize3());
+                        }
                         vprev = *itv;
                     }
 
@@ -638,7 +638,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
                 }
             }
 
-            _ttogripper = psensor->GetTransform().inverse()*pmanip->GetEndEffectorTransform();
+            _ttogripper = psensor->GetTransform().inverse()*pmanip->GetTransform();
         }
         else {
             if( !pmanip ) {
@@ -646,7 +646,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
             }
 
             if( !!_target ) {
-                _ttogripper = _target->GetTransform().inverse() * pmanip->GetEndEffectorTransform();
+                _ttogripper = _target->GetTransform().inverse() * pmanip->GetTransform();
             }
         }
 
@@ -1102,7 +1102,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
         ptraj->AddPoint(pt);
     
         // jitter for initial collision
-        if( !CM::JitterActiveDOF(_robot) ) {
+        if( !planningutils::JitterActiveDOF(_robot) ) {
             RAVELOG_WARN("jitter failed for initial\n");
             return false;
         }
@@ -1214,7 +1214,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
         if( bUseVisibility ) {
             RAVELOG_DEBUG("using visibility constraints\n");
             boost::shared_ptr<VisibilityConstraintFunction> pconstraint(new VisibilityConstraintFunction(shared_problem()));
-            params->_constraintfn = boost::bind(&VisibilityConstraintFunction::Constraint,pconstraint,_1,_2,_3);
+            params->_checkpathconstraintsfn = boost::bind(&VisibilityConstraintFunction::Constraint,pconstraint,params->_checkpathconstraintsfn,_1,_2,_3,_4);
         }
 
         params->_ptarget = _target;
@@ -1239,7 +1239,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
             bSuccess = true;
         }
         else RAVELOG_WARN("PlanPath failed\n");
-
+            
         float felapsed = (GetMicroTime()-starttime)*0.000001f;
         RAVELOG_INFOA("total planning time: %fs\n", felapsed);
         if( !bSuccess ) {

@@ -6,6 +6,7 @@ import logging
 
 def updateik(robotfilename,manipname,iktype,destfilename,freeindices=None):
     print robotfilename, manipname, iktype, destfilename
+    robotid = os.path.split(destfilename)[1][:-4]
     env=Environment()
     try:
         with env:
@@ -21,9 +22,12 @@ def updateik(robotfilename,manipname,iktype,destfilename,freeindices=None):
             successrate, wrongrate = ikmodel.testik('100' if ikmodel.manip.GetIkSolver().GetNumFreeParameters() <= 1 else '10') # sanity check
             assert(wrongrate==0)
             print 'success: ',successrate
-            code = open(ikmodel.getsourcefilename(True),'r').read()
+            code = """#define IKFAST_NAMESPACE %s
+#include "plugindefs.h"
+
+"""%robotid
+            code += open(ikmodel.getsourcefilename(True),'r').read()
             code += """
-#if defined(IKFAST_HEADER) && defined(IKFAST_NAMESPACE)
 #include "ikbase.h"
 namespace IKFAST_NAMESPACE {
 #ifdef RAVE_REGISTER_BOOST
@@ -38,7 +42,6 @@ IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr penv, const std::vector<dReal>
     return IkSolverBasePtr(new IkFastSolver<IKReal,IKSolution>(ik,vfree,vfreeinc,getNumJoints(),(IkParameterization::Type)getIKType(), boost::shared_ptr<void>(), getKinematicsHash(), penv));
 }
 } // end namespace
-#endif
 """
             open(destfilename,'w').write(code)
     finally:

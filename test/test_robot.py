@@ -37,6 +37,13 @@ class TestRobot(EnvironmentSetup):
             robot.SetDOFValues(array([  0.00000000e+00,  -1.43329144e+00,  -3.99190831e-15, -1.86732388e+00,   5.77239752e-01,  -3.37631690e-07, 6.67713991e-08,   0.00000000e+00,  -1.70089030e+00, -6.42544150e-01,  -1.25030589e+00,  -3.33493233e-08, -5.58212676e-08,   1.60115015e-08]))
             assert(robot.CheckSelfCollision())
 
+    def test_basic(self):
+        with self.env:
+            for robotfile in g_robotfiles:
+                self.env.Reset()
+                robot = self.env.ReadRobotXMLFile(robotfile)
+                self.env.AddRobot(robot)
+                assert(robot.GetDOF() == robot.GetActiveDOF())
 
 # def test_ikgeneration():
 #     import inversekinematics

@@ -1,4 +1,5 @@
-// Copyright (C) 2006-2008 Carnegie Mellon University (rdiankov@cs.cmu.edu)
+// -*- coding: utf-8 -*-
+// Copyright (C) 2006-2011 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -1093,7 +1094,7 @@ protected:
             return false;
 
         vector<Transform> trans;
-        body->GetBodyTransformations(trans);
+        body->GetLinkTransformations(trans);
         FOREACHC(it, trans)
             os << TransformMatrix(*it) << " ";
         return true;
@@ -1166,20 +1167,31 @@ protected:
         case SensorBase::ST_Laser: {
             boost::shared_ptr<SensorBase::LaserSensorData> plaserdata = boost::static_pointer_cast<SensorBase::LaserSensorData>(psensordata);
             os << plaserdata->ranges.size() << " ";
-            if( plaserdata->positions.size() != plaserdata->ranges.size() )
+            if( plaserdata->positions.size() != plaserdata->ranges.size() ) {
                 os << "1 ";
-            else
+            }
+            else {
                 os << plaserdata->positions.size() << " ";
+            }
         
-            if( options & 1 )
+            if( options & 1 ) {
                 os << plaserdata->intensity.size() << " ";
-            else
+            }
+            else {
                 os << "0 "; // don't send any intensity data
+            }
 
-            FOREACH(it, plaserdata->ranges)
+            FOREACH(it, plaserdata->ranges) {
                 os << it->x << " " << it->y << " " << it->z << " ";
-            if( plaserdata->positions.size() != plaserdata->ranges.size() )
-                os << plaserdata->t.trans.x << " " << plaserdata->t.trans.y << " " << plaserdata->t.trans.z << " ";
+            }
+            if( plaserdata->positions.size() != plaserdata->ranges.size() ) {
+                if( plaserdata->positions.size() > 0 ) {
+                    os << plaserdata->positions.at(0).x << " " << plaserdata->positions.at(0).y << " " << plaserdata->positions.at(0).z << " ";
+                }
+                else {
+                    os << " 0 0 0 ";
+                }
+            }
         
             if( options & 1 ) {
                 FOREACH(it, plaserdata->intensity)
@@ -1203,7 +1215,7 @@ protected:
                 return false;
             }
 
-            os << pgeom->width << " " << pgeom->height << " " << pgeom->KK.fx << " " << pgeom->KK.fy << " " << pgeom->KK.cx << " " << pgeom->KK.cy << " " << TransformMatrix(pcameradata->t) << " ";
+            os << pgeom->width << " " << pgeom->height << " " << pgeom->KK.fx << " " << pgeom->KK.fy << " " << pgeom->KK.cx << " " << pgeom->KK.cy << " " << TransformMatrix(pcameradata->__trans) << " ";
 
             // RLE encoding (about 3x faster than sending raw images)
             int curvalue = 0, lastdiff = 0, lastvalue = 0xffffff&*(int*)&pcameradata->vimagedata[0];

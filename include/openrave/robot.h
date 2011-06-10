@@ -23,7 +23,7 @@
 
 namespace OpenRAVE {
 
-/** \brief <b>[interface]</b> A robot is a kinematic body that has attached manipulators, sensors, and controllers. See \ref arch_robot.    
+/** \brief <b>[interface]</b> A robot is a kinematic body that has attached manipulators, sensors, and controllers. <b>Methods not multi-thread safe.</b> See \ref arch_robot.
     \ingroup interfaces
 */
 class OPENRAVE_API RobotBase : public KinBody
@@ -42,7 +42,9 @@ public:
         /// \brief Return the transformation of the end effector (manipulator frame).
         /// 
         /// All inverse kinematics and grasping queries are specifying this frame.
-        virtual Transform GetEndEffectorTransform() const;
+        virtual Transform GetTransform() const;
+
+        virtual Transform GetEndEffectorTransform() const { return GetTransform(); }
 
         virtual const std::string& GetName() const { return _name; }
         virtual RobotBasePtr GetRobot() const { return RobotBasePtr(_probot); }
@@ -57,38 +59,23 @@ public:
         /// \brief Returns the currently set ik solver
         virtual IkSolverBasePtr GetIkSolver() const { return _pIkSolver; }
 
-        /// \deprecated (10/07/29)
-        virtual bool SetIKSolver(IkSolverBasePtr iksolver) RAVE_DEPRECATED { return SetIkSolver(iksolver); }
-        /// \deprecated (10/07/29)
-        virtual bool InitIKSolver() RAVE_DEPRECATED;
-        /// \deprecated (10/07/29)
-        virtual const std::string& GetIKSolverName() const RAVE_DEPRECATED { return _strIkSolver; }
-        /// \deprecated (10/07/29)
-        virtual bool HasIKSolver() const RAVE_DEPRECATED { return !!_pIkSolver; }
-
         /// \deprecated (11/02/08) use GetIkSolver()->GetNumFreeParameters()
         virtual int GetNumFreeParameters() const RAVE_DEPRECATED;
 
         /// \deprecated (11/02/08) use GetIkSolver()->GetFreeParameters()
         virtual bool GetFreeParameters(std::vector<dReal>& vFreeParameters) const RAVE_DEPRECATED;
 
-        /// the base used for the iksolver
+        /// \brief the base used for the iksolver
         virtual LinkPtr GetBase() const { return _pBase; }
 
-        /// the end effector link (used to define workspace distance)
+        /// \brief the end effector link (used to define workspace distance)
         virtual LinkPtr GetEndEffector() const { return _pEndEffector; }
 
-        /// \return transform with respect to end effector defining the grasp coordinate system
+        /// \brief Return transform with respect to end effector defining the grasp coordinate system
         virtual Transform GetGraspTransform() const { return _tGrasp; }
 
         /// \brief Gripper indices of the joints that the  manipulator controls.
         virtual const std::vector<int>& GetGripperIndices() const { return __vgripperdofindices; }
-
-        /// \deprecated (10/07/22) see GetGripperIndices()
-        virtual const std::vector<int>& GetGripperJoints() const RAVE_DEPRECATED { return __vgripperdofindices; }
-        
-        /// \deprecated (10/07/22) see GetArmIndices()
-        virtual const std::vector<int>& GetArmJoints() const RAVE_DEPRECATED { return __varmdofindices; }
 
         /// \brief Return the indices of the DOFs of the arm (used for IK, etc).
         ///
@@ -98,27 +85,27 @@ public:
         /// \brief return the normal direction to move joints to 'close' the hand
         virtual const std::vector<dReal>& GetClosingDirection() const { return _vClosingDirection; }
 
-        /// \deprecated (10/07/01) see GetDirection()
-        virtual Vector GetPalmDirection() const RAVE_DEPRECATED { return _vdirection; }
-
-        /// direction of palm/head/manipulator used for approaching inside the grasp coordinate system
+        /// \brief direction of palm/head/manipulator used for approaching inside the grasp coordinate system
         virtual Vector GetDirection() const { return _vdirection; }
 
-        /// will find a close solution to the current robot's joint values. The function is a wrapper around the IkSolver interface.
+        /// \brief Find a close solution to the current robot's joint values.
+        ///
+        /// The function is a wrapper around the IkSolver interface.
         /// Note that the solution returned is not guaranteed to be the closest solution. In order to compute that, will have to
         /// compute all the ik solutions using FindIKSolutions.
-        /// \param goal The transformation of the end-effector in the global coord system
+        /// \param param The transformation of the end-effector in the global coord system
         /// \param solution Will be of size GetArmIndices().size() and contain the best solution
         /// \param[in] filteroptions A bitmask of \ref IkFilterOptions values controlling what is checked for each ik solution.
-        virtual bool FindIKSolution(const IkParameterization& goal, std::vector<dReal>& solution, int filteroptions) const;
-        virtual bool FindIKSolution(const IkParameterization& goal, const std::vector<dReal>& vFreeParameters, std::vector<dReal>& solution, int filteroptions) const;
+        virtual bool FindIKSolution(const IkParameterization& param, std::vector<dReal>& solution, int filteroptions) const;
+        virtual bool FindIKSolution(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, std::vector<dReal>& solution, int filteroptions) const;
 
-        /// will find all the IK solutions for the given end effector transform
-        /// \param goal The transformation of the end-effector in the global coord system
+        /// \brief Find all the IK solutions for the given end effector transform
+        ///
+        /// \param param The transformation of the end-effector in the global coord system
         /// \param solutions An array of all solutions, each element in solutions is of size GetArmIndices().size()
         /// \param[in] filteroptions A bitmask of \ref IkFilterOptions values controlling what is checked for each ik solution.
-        virtual bool FindIKSolutions(const IkParameterization& goal, std::vector<std::vector<dReal> >& solutions, int filteroptions) const;
-        virtual bool FindIKSolutions(const IkParameterization& goal, const std::vector<dReal>& vFreeParameters, std::vector<std::vector<dReal> >& solutions, int filteroptions) const;
+        virtual bool FindIKSolutions(const IkParameterization& param, std::vector<std::vector<dReal> >& solutions, int filteroptions) const;
+        virtual bool FindIKSolutions(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, std::vector<std::vector<dReal> >& solutions, int filteroptions) const;
 
         /** \brief returns the parameterization of a given IK type for the current manipulator position.
             
@@ -232,9 +219,9 @@ public:
 #endif
         friend class RobotBase;
     };
-    typedef boost::shared_ptr<Manipulator> ManipulatorPtr;
-    typedef boost::shared_ptr<Manipulator const> ManipulatorConstPtr;
-    typedef boost::weak_ptr<Manipulator> ManipulatorWeakPtr;
+    typedef boost::shared_ptr<RobotBase::Manipulator> ManipulatorPtr;
+    typedef boost::shared_ptr<RobotBase::Manipulator const> ManipulatorConstPtr;
+    typedef boost::weak_ptr<RobotBase::Manipulator> ManipulatorWeakPtr;
 
     /// \brief Attaches a sensor to a link on the robot.
     class OPENRAVE_API AttachedSensor : public boost::enable_shared_from_this<AttachedSensor>
@@ -281,8 +268,8 @@ public:
 #endif
         friend class RobotBase;
     };
-    typedef boost::shared_ptr<AttachedSensor> AttachedSensorPtr;
-    typedef boost::shared_ptr<AttachedSensor const> AttachedSensorConstPtr;
+    typedef boost::shared_ptr<RobotBase::AttachedSensor> AttachedSensorPtr;
+    typedef boost::shared_ptr<RobotBase::AttachedSensor const> AttachedSensorConstPtr;
 
     /// \brief The information of a currently grabbed body.
     class OPENRAVE_API Grabbed
@@ -293,9 +280,6 @@ public:
         std::vector<LinkConstPtr> vCollidingLinks, vNonCollidingLinks; ///< robot links that already collide with the body
         Transform troot; ///< root transform (of first link of body) relative to plinkrobot's transform. In other words, pbody->GetTransform() == plinkrobot->GetTransform()*troot
     };
-
-    /// \deprecated (10/07/10) 
-    typedef Grabbed GRABBED RAVE_DEPRECATED;
     
     /// \brief Helper class derived from KinBodyStateSaver to additionaly save robot information.
     class OPENRAVE_API RobotStateSaver : public KinBodyStateSaver
@@ -328,14 +312,12 @@ public:
     virtual std::vector<ManipulatorPtr>& GetManipulators() { return _vecManipulators; }
     virtual bool SetMotion(TrajectoryBaseConstPtr ptraj) { return false; }
 
-    /// \deprecated (10/07/10) 
-    virtual std::vector<AttachedSensorPtr>& GetSensors() RAVE_DEPRECATED { RAVELOG_WARN("RobotBase::GetSensors() is deprecated\n"); return _vecSensors; }
     virtual std::vector<AttachedSensorPtr>& GetAttachedSensors() { return _vecSensors; }
 
     virtual void SetDOFValues(const std::vector<dReal>& vJointValues, bool bCheckLimits = false);
     virtual void SetDOFValues(const std::vector<dReal>& vJointValues, const Transform& transbase, bool bCheckLimits = false);
 
-    virtual void SetBodyTransformations(const std::vector<Transform>& vbodies);
+    virtual void SetLinkTransformations(const std::vector<Transform>& vbodies);
 
     /// Transforms the robot and updates the attached sensors and grabbed bodies.
     virtual void SetTransform(const Transform& trans);
@@ -385,9 +367,6 @@ public:
 
     /// \brief If dof is set in the affine dofs, returns its index in the dof values array, otherwise returns -1
     virtual int GetAffineDOFIndex(DOFAffine dof) const;
-
-    /// \deprecated (10/07/25)
-    virtual const std::vector<int>& GetActiveJointIndices() const RAVE_DEPRECATED { return GetActiveDOFIndices(); }
 
     /// \brief Return the set of active dof indices of the joints.
     virtual const std::vector<int>& GetActiveDOFIndices() const;

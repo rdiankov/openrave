@@ -310,7 +310,9 @@ protected:
 
     virtual void _UpdateEnvironment();
 
-    bool SetFiguresInCamera(ostream& sout, istream& sinput);
+    bool _SetFiguresInCamera(ostream& sout, istream& sinput);
+    bool _SetWatermark(ostream& sout, istream& sinput);
+    void _AddWatermarkToImage(unsigned char* image, int width, int height);
 
     // selection and deselection handling
     static void _SelectHandler(void *, class SoPath *); 
@@ -353,6 +355,8 @@ protected:
     boost::array<SoText2*,2> _messageNodes;
     SoTranslation* _messageShadowTranslation;
 
+    boost::multi_array<uint32_t,2> _vwatermarkimage;
+
     bool _altDown[2];
     bool _ctrlDown[2];
     bool _bAVIInit;
@@ -362,7 +366,7 @@ protected:
     
     ItemPtr          _pSelectedItem;      ///< the currently selected item
     KinBody::LinkWeakPtr _pMouseOverLink;
-    RaveVector<float> _vMouseSurfacePosition,_vMouseRayDirection;
+    RaveVector<float> _vMouseSurfacePosition,_vMouseRayDirection, _vMouseSurfaceNormal;
 
     /// for movie recording
     SoOffscreenRenderer _ivOffscreen;
