@@ -227,7 +227,7 @@ def fitCircle(points,geometric_refinement=True):
 
     Used when fitting real data to joint trajectories. Currently this fits the algebraic distance, a further refinement step for geometric distance should be inserted.
 
-    :return: [center, radius]
+    :return: center, radius, error
     """
     if points.shape[1] == 3:
         M = numpy.mean(points,0)

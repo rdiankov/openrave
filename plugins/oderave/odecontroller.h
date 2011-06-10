@@ -97,7 +97,7 @@ public:
             RobotBase::RobotStateSaver robotsaver(_probot,KinBody::Save_LinkVelocities);
             boost::shared_ptr<ODESpace> odespace(pinfo->_odespace);
             int dofindex = 0;
-            vector<dReal> valldofvelocities;
+            std::vector<OpenRAVE::dReal> valldofvelocities;
             _probot->GetDOFVelocities(valldofvelocities);
             FOREACHC(it, _dofindices) {
                 KinBody::JointConstPtr pjoint = _probot->GetJointFromDOFIndex(*it);
@@ -112,7 +112,7 @@ public:
 
             // go through all passive joints and set their velocity if they are dependent on the current controlled indices
             std::vector<int> vmimicdofs;
-            std::vector<dReal> values;
+            std::vector<OpenRAVE::dReal> values;
             size_t ipassiveindex = _probot->GetJoints().size();
             FOREACHC(itjoint, _probot->GetPassiveJoints()) {
                 values.resize(0);
