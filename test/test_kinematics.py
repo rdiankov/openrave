@@ -157,7 +157,7 @@ class TestKinematics(EnvironmentSetup):
                                 deltavalues = body.GetDOFValues()-dofvaluesnew
                                 armlength = bodymaxjointdist(link,localtrans[0:3,3])
                                 thresh = armlength*sum(abs(deltavalues))*1.1
-                                if thresh < 0.001:
+                                if armlength < 0.0001:
                                     continue
                                 Tlinknew=dot(link.GetTransform(),localtrans)
                                 newaxisangle = axisAngleFromRotationMatrix(Tlinknew[0:3,0:3])
@@ -166,7 +166,7 @@ class TestKinematics(EnvironmentSetup):
                                     newquat = -newquat
                                 deltatrans = Tlinknew[0:3,3] - worldtrans
                                 assert( transdist(dot(Jtrans,deltavalues),deltatrans) <= thresh )
-                                assert( transdist(dot(Jquat,deltavalues)+worldquat,newquat) <= thresh )
+                                assert( transdist(dot(Jquat,deltavalues)+worldquat,newquat) <= 2*thresh )
                                 assert( axisangledist(dot(Jangvel,deltavalues)+worldaxisangle,newaxisangle) <= 2*thresh )
 
 #     def RetractionConstraint(self,prev,cur,thresh=1e-4):

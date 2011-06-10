@@ -84,6 +84,7 @@ public:
             for(size_t i = 0; i < velocities.size(); ++i) {
                 is >> velocities[i];
                 if( !is ) {
+                    RAVELOG_WARN("setvelocity bad command\n");
                     return false;
                 }
             }
