@@ -73,7 +73,7 @@ def test_transformations():
             assert( sum(abs(transformInversePoints(matrices[j],X) - poseTransformPoints(posearrayinv0[j],X))) <= g_epsilon )
         
 def test_fitcircle():
-    """fits 2d/3d circles to a set of points"""
+    """fits 2d and 3d circles to a set of points"""
     perturbation = 0.001
     for i in range(400):
         T = randtrans()
@@ -81,17 +81,19 @@ def test_fitcircle():
         angles = random.rand(5)*2*pi
         points = c_[radius*cos(angles)+perturbation*(random.rand(len(angles))-0.5),radius*sin(angles)+perturbation*(random.rand(len(angles))-0.5),perturbation*(random.rand(len(angles))-0.5)]
         newpoints = transformPoints(T,points)
-        newcenter, newradius = fitCircle(newpoints)
+        newcenter, newradius, error = fitCircle(newpoints)
         assert( sum(abs(T[0:3,3]-newcenter)) <= perturbation*10 )
         assert( sum(abs(radius-newradius)) <= perturbation*10 )
+        assert( error <= perturbation*10 )
         newpoints2d = points[:,0:2] + T[0:2,3]
-        newcenter2d, newradius2d = fitCircle(newpoints2d)
+        newcenter2d, newradius2d, error = fitCircle(newpoints2d)
         assert( sum(abs(T[0:2,3]-newcenter2d)) <= perturbation*10 )
         assert( sum(abs(radius-newradius2d)) <= perturbation*10 )
+        assert( error <= perturbation*10 )
 
 class TestKinematics(EnvironmentSetup):
     def test_bodybasic(self):
-        """checks if the joint/link set/get functions are consistent along with jacobians"""
+        """checks if the joint-link set-get functions are consistent along with jacobians"""
         with self.env:
             for envfile in g_envfiles:
                 self.env.Reset()
