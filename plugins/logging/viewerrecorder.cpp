@@ -180,7 +180,7 @@ protected:
             _StartVideo(_filename,_frameRate,_nVideoWidth,_nVideoHeight,24,codecid);
             _starttime = _bSimTime ? GetEnv()->GetSimulationTime() : (GetNanoPerformanceTime()/1000);
             ViewerBasePtr pviewer;
-            _callback = pviewer->RegisterViewerImageCallback(boost::bind(&ViewerRecorder::_ViewerImageCallback,this,_1,_2,_3,_4));
+            _callback = pviewer->RegisterViewerImageCallback(boost::bind(&ViewerRecorder::_ViewerImageCallback,this,_1,_2,_3));
             BOOST_ASSERT(!!_callback);
             return !!_callback;
         }
