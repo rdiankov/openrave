@@ -220,11 +220,8 @@ protected:
         //_vwatermarkimage.resize(boost::extents[0][0]);
     }
 
-    void _ViewerImageCallback(const uint8_t*, int width, int height, uint64_t simtime)
+    void _ViewerImageCallback(const uint8_t*, int width, int height)
     {
-        if( _starttime == 0 ) {
-            _starttime = simtime;
-        }
         //_AddWatermarkToImage(_ivOffscreen.getBuffer(), VIDEO_WIDTH, VIDEO_HEIGHT);
         //
 
