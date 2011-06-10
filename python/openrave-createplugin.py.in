@@ -52,7 +52,7 @@ if __name__ == "__main__":
 
     args = {'pluginname':pluginname}
 
-    interface_classmapping = {InterfaceType.planner:['PT_Planner','PlannerBase'],InterfaceType.robot:['PT_Robot','RobotBase'],InterfaceType.sensorsystem:['PT_SensorSystem','SensorSystemBase'],InterfaceType.controller:['PT_Controller','ControllerBase'],InterfaceType.probleminstance:['PT_ProblemInstance','ProblemInstance'],InterfaceType.iksolver:['PT_IkSolver','IkSolverBase'],InterfaceType.kinbody:['PT_KinBody','KinBody'],InterfaceType.physicsengine:['PT_PhysicsEngine','PhysicsEngineBase'],InterfaceType.sensor:['PT_Sensor','SensorBase'],InterfaceType.collisionchecker:['PT_CollisionChecker','CollisionCheckerBase'],InterfaceType.trajectory:['PT_Trajectory','TrajectoryBase'],InterfaceType.viewer:['PT_Viewer','ViewerBase']}
+    interface_classmapping = {InterfaceType.planner:['PT_Planner','PlannerBase'],InterfaceType.robot:['PT_Robot','RobotBase'],InterfaceType.sensorsystem:['PT_SensorSystem','SensorSystemBase'],InterfaceType.controller:['PT_Controller','ControllerBase'],InterfaceType.probleminstance:['PT_ProblemInstance','ProblemInstance'],InterfaceType.iksolver:['PT_IkSolver','IkSolverBase'],InterfaceType.kinbody:['PT_KinBody','KinBody'],InterfaceType.physicsengine:['PT_PhysicsEngine','PhysicsEngineBase'],InterfaceType.sensor:['PT_Sensor','SensorBase'],InterfaceType.collisionchecker:['PT_CollisionChecker','CollisionCheckerBase'],InterfaceType.trajectory:['PT_Trajectory','TrajectoryBase'],InterfaceType.viewer:['PT_Viewer','ViewerBase'],InterfaceType.spacesampler:['PT_SpaceSampler','SpaceSamplerBase']}
     interface_contents = ''
     interface_tests_py = ''
     CreateInterfaceValidated = ''

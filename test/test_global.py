@@ -41,7 +41,10 @@ def test_createplugin():
         assert(os.system('python testplugin.py') == 0)
     finally:
         os.chdir(curdir)
-        shutil.rmtree('myplugin')
+        try:
+            shutil.rmtree('myplugin')
+        except:
+            pass
         
     try:
         assert(os.system('openrave-createplugin.py myprogram --usecore') == 0)
