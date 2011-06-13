@@ -25,6 +25,8 @@ Core
 
 * renamed ProblemInstance interface into Module. Users should use the ModuleBase class.
 
+* Environment can now support multiple viewers attached to it and can query them with their name. Plotting methods through the environment send commands to all viewers at once.
+
 Planning
 --------
 
@@ -77,7 +79,7 @@ Viewers
 * added watermarking support through :ref:`SetWatermark command <module-viewerrecorder-setwatermark>`
 
 * deprecated the ViewerBase::RegisterCallback function and added individdual functions for item
-  selection and new viewer image.
+  selection and new viewer image: RegisterItemSelectionCallback and RegisterViewerImageCallback
 
 * Added ViewerBase::GetCameraIntrinsics for the current camera location
 
@@ -89,6 +91,8 @@ Misc
 * added IkSolver.SetCustomFilter in openravepy
 
 * fixed bug in velocity controller mimic joints
+
+* added Kawada Hiro NX (robots/kawada-hironx.zae) industrial robot model
 
 Version 0.3.2
 =============

@@ -46,7 +46,7 @@ template<class T1, class T2>
     };
 
 // very simple interface to use the GrasperPlanner
-class GrasperProblem : public ProblemInstance
+class GrasperProblem : public ModuleBase
 {
     struct GRASPANALYSIS
     {
@@ -56,7 +56,7 @@ class GrasperProblem : public ProblemInstance
     };
 
  public:
- GrasperProblem(EnvironmentBasePtr penv)  : ProblemInstance(penv), errfile(NULL) {
+ GrasperProblem(EnvironmentBasePtr penv)  : ModuleBase(penv), errfile(NULL) {
         __description = ":Interface Author: Rosen Diankov\n\nUsed to simulate a hand grasping an object by closing its fingers until collision with all links. ";
         RegisterCommand("Grasp",boost::bind(&GrasperProblem::Grasp,this,_1,_2),
                         "Performs a grasp and returns contact points");
@@ -116,7 +116,7 @@ class GrasperProblem : public ProblemInstance
     virtual bool SendCommand(std::ostream& sout, std::istream& sinput)
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
-        return ProblemInstance::SendCommand(sout,sinput);
+        return ModuleBase::SendCommand(sout,sinput);
     }
 
     virtual bool Grasp(std::ostream& sout, std::istream& sinput)

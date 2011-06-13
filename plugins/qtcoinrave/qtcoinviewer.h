@@ -93,9 +93,10 @@ public:
     virtual void resize ( int w, int h);
     virtual void resize ( const QSize & qs);
 
-    virtual void ViewerSetSize(int w, int h);
-    virtual void ViewerMove(int x, int y);
-    virtual void ViewerSetTitle(const string& ptitle);
+    virtual void SetSize(int w, int h);
+    virtual void Move(int x, int y);
+    virtual void SetName(const string& name);
+    virtual const std::string& GetName() const { return _name; }
     
     virtual bool LoadModel(const string& filename);
 
@@ -265,9 +266,9 @@ protected:
     static void mousemove_cb(void * userdata, SoEventCallback * node);
     void _mousemove_cb(SoEventCallback * node);
 
-    virtual void _ViewerSetSize(int w, int h);
-    virtual void _ViewerMove(int x, int y);
-    virtual void _ViewerSetTitle(const string& ptitle);
+    virtual void _SetSize(int w, int h);
+    virtual void _Move(int x, int y);
+    virtual void _SetName(const string& ptitle);
 
     virtual bool _GetCameraImage(std::vector<uint8_t>& memory, int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK);
     virtual bool _WriteCameraImage(int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK, const std::string& filename, const std::string& extension);
@@ -372,6 +373,7 @@ protected:
     bool _ctrlDown[2];
     int  _VideoFrameRate;
 
+    std::string _name;
     std::map<KinBodyPtr, KinBodyItemPtr> _mapbodies;    ///< all the bodies created
     
     ItemPtr          _pSelectedItem;      ///< the currently selected item
@@ -447,7 +449,7 @@ protected:
     friend class EnvMessage;
     friend class ViewerSetSizeMessage;
     friend class ViewerMoveMessage;
-    friend class ViewerSetTitleMessage;
+    friend class ViewerSetNameMessage;
     friend class GetCameraImageMessage;
     friend class WriteCameraImageMessage;
     friend class SetCameraMessage;

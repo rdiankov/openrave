@@ -26,10 +26,10 @@
 #include <Inventor/actions/SoCallbackAction.h>
 #include <Inventor/nodes/SoShape.h>
 
-class IvModelLoader : public ProblemInstance
+class IvModelLoader : public ModuleBase
 {
 public:
-    IvModelLoader(EnvironmentBasePtr penv) : ProblemInstance(penv)
+    IvModelLoader(EnvironmentBasePtr penv) : ModuleBase(penv)
     {
         __description = ":Interface Author: Rosen Diankov\n\nProvides a simple model loader functionality returning a triangle mesh using the Coin3D library. Depending on the version, Coin3D might be licensed under GPL.";
         RegisterCommand("LoadModel",boost::bind(&IvModelLoader::_LoadModel,this,_1,_2),"Returns the triangle mesh given a model filename");
@@ -159,4 +159,4 @@ public:
     }
 };
 
-ProblemInstancePtr CreateIvModelLoader(EnvironmentBasePtr penv) { return ProblemInstancePtr(new IvModelLoader(penv)); }
+ModuleBasePtr CreateIvModelLoader(EnvironmentBasePtr penv) { return ModuleBasePtr(new IvModelLoader(penv)); }

@@ -2369,7 +2369,7 @@ namespace OpenRAVEXMLParser
                         ModuleBasePtr pIKFastLoader;
                         {
                             list<ModuleBasePtr> listModules;
-                            boost::shared_ptr<void> pmutex = _probot->GetEnv()->GetLoadedModules(listModules);
+                            boost::shared_ptr<void> pmutex = _probot->GetEnv()->GetModules(listModules);
                             FOREACHC(itprob, listModules) {
                                 if( stricmp((*itprob)->GetXMLId().c_str(),"ikfast") == 0 ) {
                                     pIKFastLoader = *itprob;
@@ -2381,7 +2381,7 @@ namespace OpenRAVEXMLParser
                         if( !pIKFastLoader ) {
                             pIKFastLoader = RaveCreateModule(_probot->GetEnv(), "ikfast");
                             if( !!pIKFastLoader )
-                                _probot->GetEnv()->LoadModule(pIKFastLoader,"");
+                                _probot->GetEnv()->AddModule(pIKFastLoader,"");
                         }
 
                         if( !!pIKFastLoader ) {
@@ -2895,7 +2895,7 @@ namespace OpenRAVEXMLParser
             if( !!_pinterface ) {
                 ModuleBasePtr module = RaveInterfaceCast<ModuleBase>(_pinterface);
                 if( !!module ) {
-                    int ret = _penv->LoadModule(module,_args);
+                    int ret = _penv->AddModule(module,_args);
                     if( ret ) {
                         RAVELOG_WARN(str(boost::format("module %s returned %d\n")%module->GetXMLId()%ret));
                         module.reset();

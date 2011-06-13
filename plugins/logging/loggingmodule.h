@@ -23,7 +23,7 @@ class LoggingModule : public ModuleBase
     inline boost::shared_ptr<LoggingModule const> shared_module_const() const { return boost::static_pointer_cast<LoggingModule const>(shared_from_this()); }
 
  public:
- LoggingModule(EnvironmentBasePtr penv) : ProblemInstance(penv)
+ LoggingModule(EnvironmentBasePtr penv) : ModuleBase(penv)
     {
         __description = ":Interface Author: Rosen Diankov\n\nCan save the entire scene to an XML file";
         RegisterCommand("savescene",boost::bind(&LoggingModule::SaveScene,this,_1,_2),

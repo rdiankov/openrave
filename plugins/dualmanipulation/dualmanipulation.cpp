@@ -19,7 +19,7 @@
 InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
 {
     switch(type) {
-    case PT_ProblemInstance:
+    case PT_Module:
         if( interfacename == "dualmanipulation")
             return InterfaceBasePtr(new DualManipulation(penv));
         break;
@@ -31,7 +31,7 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
 
 void GetPluginAttributesValidated(PLUGININFO& info)
 {
-    info.interfacenames[PT_ProblemInstance].push_back("DualManipulation");
+    info.interfacenames[PT_Module].push_back("DualManipulation");
 }
 
 OPENRAVE_PLUGIN_API void DestroyPlugin()

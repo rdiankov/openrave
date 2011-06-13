@@ -288,19 +288,27 @@ public:
     ///
     /// \param[in] body the pointer to an initialized body
     /// \param[in] bAnonymous if true and there exists a body/robot with the same name, will make body's name unique
-    virtual bool AddKinBody(KinBodyPtr body, bool bAnonymous=false) = 0;
+    /// \throw openrave_exception Throw if body is invalid or already added
+    virtual void AddKinBody(KinBodyPtr body, bool bAnonymous=false) = 0;
 
     /// \brief add a robot to the environment
     ///
     /// \param[in] robot the pointer to an initialized robot
     /// \param[in] bAnonymous if true and there exists a body/robot with the same name, will make robot's name unique
-    virtual bool AddRobot(RobotBasePtr robot, bool bAnonymous=false) = 0;
+    /// \throw openrave_exception Throw if robot is invalid or already added
+    virtual void AddRobot(RobotBasePtr robot, bool bAnonymous=false) = 0;
 
     /// \brief registers the sensor with the environment and turns its power on.
     ///
     /// \param[in] sensor the pointer to an initialized sensor
     /// \param[in] bAnonymous if true and there exists a sensor with the same name, will make sensor's name unique
-    virtual bool AddSensor(SensorBasePtr sensor, bool bAnonymous=false) = 0;
+    /// \throw openrave_exception Throw if sensor is invalid or already added
+    virtual void AddSensor(SensorBasePtr sensor, bool bAnonymous=false) = 0;
+
+    /// \brief Fill an array with all sensors loaded in the environment. <b>[multi-thread safe]</b>
+    ///
+    /// The sensors come from the currently loaded robots and the explicitly added sensors
+    virtual void GetSensors(std::vector<SensorBasePtr>& sensors) const = 0;
 
     /// \deprecated (10/09/15) see \ref EnvironmentBase::Remove
     virtual bool RemoveKinBody(KinBodyPtr body) RAVE_DEPRECATED = 0;
@@ -334,10 +342,25 @@ public:
     /// \brief Fill an array with all robots loaded in the environment. <b>[multi-thread safe]</b>
     virtual void GetRobots(std::vector<RobotBasePtr>& robots) const = 0;
 
-    /// \brief Fill an array with all sensors loaded in the environment. <b>[multi-thread safe]</b>
+    /// \brief adds a viewer to the environment
     ///
-    /// The sensors come from the currently loaded robots and the explicitly added sensors
-    virtual void GetSensors(std::vector<SensorBasePtr>& sensors) const = 0;
+    /// \throw openrave_exception Throw if body is invalid or already added
+    virtual void AddViewer(ViewerBasePtr pviewer) = 0;
+
+    /// \deprecated (11/06/13) see AddViewer
+    virtual bool AttachViewer(ViewerBasePtr pnewviewer) RAVE_DEPRECATED { AddViewer(pnewviewer); return true; }
+
+    /// \brief Return a viewer with a particular name.
+    ///
+    /// When no name is specified, the first loaded viewer is returned.
+    virtual ViewerBasePtr GetViewer(const std::string& name="") const = 0;    
+
+    /// \brief Returns a list of loaded viewers with a pointer to a lock preventing the list from being modified.
+    ///
+    /// As long as the lock is held, the problems are guaranteed to stay loaded in the environment.
+    /// \return returns a pointer to a Lock. Destroying the shared_ptr will release the lock
+    virtual boost::shared_ptr<boost::mutex::scoped_lock> GetViewers(std::list<ViewerBasePtr>& listViewers) const = 0;
+
     
     /// \brief Retrieve published bodies, completes even if environment is locked. <b>[multi-thread safe]</b>
     ///
@@ -378,9 +401,9 @@ public:
     //@}
 
     /// \brief Load a new module, need to Lock if calling outside simulation thread
-    virtual int LoadModule(ModuleBasePtr module, const std::string& cmdargs) = 0;
+    virtual int AddModule(ModuleBasePtr module, const std::string& cmdargs) = 0;
 
-    virtual int LoadProblem(ModuleBasePtr module, const std::string& cmdargs) { return LoadModule(module,cmdargs); }
+    virtual int LoadProblem(ModuleBasePtr module, const std::string& cmdargs) { return AddModule(module,cmdargs); }
 
     /// \deprecated (10/09/15) see \ref EnvironmentBase::Remove
     virtual bool RemoveProblem(ModuleBasePtr prob) RAVE_DEPRECATED = 0;
@@ -389,9 +412,9 @@ public:
     ///
     /// As long as the lock is held, the problems are guaranteed to stay loaded in the environment.
     /// \return returns a pointer to a Lock. Destroying the shared_ptr will release the lock
-    virtual boost::shared_ptr<void> GetLoadedModules(std::list<ModuleBasePtr>& listModules) const = 0;
+    virtual boost::shared_ptr<void> GetModules(std::list<ModuleBasePtr>& listModules) const = 0;
 
-    virtual boost::shared_ptr<void> GetLoadedProblems(std::list<ModuleBasePtr>& listModules) const { return GetLoadedModules(listModules); }
+    virtual boost::shared_ptr<void> GetLoadedProblems(std::list<ModuleBasePtr>& listModules) const { return GetModules(listModules); }
 
     /// \brief Return the global environment mutex used to protect environment information access in multi-threaded environments.
     ///
@@ -399,9 +422,6 @@ public:
     /// or changing any type of scene property should have the environment lock acquired. Once the environment
     /// is locked, the user is guaranteed that nnothing will change in the environment.
     virtual EnvironmentMutex& GetMutex() const = 0;
-
-    virtual bool AttachViewer(ViewerBasePtr pnewviewer) = 0;
-    virtual ViewerBasePtr GetViewer() const = 0;
 
     /// \name 3D plotting methods.
     /// \anchor env_plotting

@@ -17,10 +17,10 @@
 
 #include "dualcommonmanipulation.h"
 
-class DualManipulation : public ProblemInstance
+class DualManipulation : public ModuleBase
 {
  public:
- DualManipulation(EnvironmentBasePtr penv) : ProblemInstance(penv) {
+ DualManipulation(EnvironmentBasePtr penv) : ModuleBase(penv) {
         __description = ":Interface Author: Achint Aggarwal\n\nInterface for planners using more than one manipulator simultaneously.";
         RegisterCommand("SetActiveManip",boost::bind(&DualManipulation::SetActiveManip,this,_1,_2),
                         "Set the active manipulator");
@@ -39,12 +39,12 @@ class DualManipulation : public ProblemInstance
     virtual void Destroy()
     {
         robot.reset();
-        ProblemInstance::Destroy();
+        ModuleBase::Destroy();
     }
 
     virtual void Reset()
     {
-        ProblemInstance::Reset();
+        ModuleBase::Reset();
     }
 
     virtual int main(const std::string& args)
@@ -88,7 +88,7 @@ class DualManipulation : public ProblemInstance
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         robot = GetEnv()->GetRobot(_strRobotName);
-        return ProblemInstance::SendCommand(sout,sinput);
+        return ModuleBase::SendCommand(sout,sinput);
     }
  protected:
 

@@ -172,7 +172,12 @@ public:
         /// \brief the discretization resolution of each dimension of the configuration space
         std::vector<dReal> _vConfigResolution;
         
-        /// \brief a minimum distance between neighbors when searching. If 0 or less, planner chooses best step length
+        /** \brief a discretization between the path that connects two configurations
+            
+            This length represents how dense the samples get distributed across the configuration space.
+            It represents the maximum distance between neighbors when adding new configuraitons.
+            If 0 or less, planner chooses best step length.
+        */
         dReal _fStepLength;
 
         /// \brief maximum number of iterations before the planner gives up. If 0 or less, planner chooses best iterations.

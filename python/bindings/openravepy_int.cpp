@@ -2444,16 +2444,16 @@ public:
     int main(bool bShow) { return _pviewer->main(bShow); }
     void quitmainloop() { return _pviewer->quitmainloop(); }
 
-    void ViewerSetSize(int w, int h) { _pviewer->ViewerSetSize(w,h); }
-    void ViewerMove(int x, int y) { _pviewer->ViewerMove(x,y); }
-    void ViewerSetTitle(const string& title) { _pviewer->ViewerSetTitle(title.c_str()); }
+    void SetSize(int w, int h) { _pviewer->SetSize(w,h); }
+    void Move(int x, int y) { _pviewer->Move(x,y); }
+    void SetName(const string& title) { _pviewer->SetName(title); }
 
-    PyVoidHandle RegisterCallback(ViewerBase::ViewerEvents properties, object fncallback)
+    PyVoidHandle RegisterCallback(object properties, object fncallback)
     {
         if( !fncallback ) {
             throw openrave_exception("callback not specified");
         }
-        boost::shared_ptr<void> p = _pviewer->RegisterCallback(properties,boost::bind(&PyViewerBase::_ViewerCallback,fncallback,_pyenv,_1,_2,_3));
+        boost::shared_ptr<void> p = _pviewer->RegisterItemSelectionCallback(boost::bind(&PyViewerBase::_ViewerCallback,fncallback,_pyenv,_1,_2,_3));
         if( !p ) {
             throw openrave_exception("no registration callback returned");
         }
@@ -2615,6 +2615,7 @@ class PyEnvironmentBase : public boost::enable_shared_from_this<PyEnvironmentBas
     boost::mutex _envmutex;
     std::list<boost::shared_ptr<EnvironmentMutex::scoped_lock> > _listenvlocks, _listfreelocks;
 #endif
+    ViewerBasePtr _pviewer;
 protected:
     EnvironmentBasePtr _penv;
     boost::shared_ptr<boost::thread> _threadviewer;
@@ -2647,22 +2648,22 @@ protected:
 
     void _ViewerThread(const string& strviewer, bool bShowViewer)
     {
-        ViewerBasePtr pviewer;
+        _pviewer.reset();
         {
             boost::mutex::scoped_lock lock(_mutexViewer);
-            pviewer = RaveCreateViewer(_penv, strviewer.c_str());
-            if( !!pviewer ) {
-                _penv->AttachViewer(pviewer);
+            _pviewer = RaveCreateViewer(_penv, strviewer.c_str());
+            if( !!_pviewer ) {
+                _penv->AddViewer(_pviewer);
             }
             _conditionViewer.notify_all();
         }
 
-        if( !pviewer ) {
+        if( !_pviewer ) {
             return;
         }
-        pviewer->main(bShowViewer); // spin until quitfrommainloop is called
-        _penv->AttachViewer(ViewerBasePtr());
-        pviewer.reset();
+        _pviewer->main(bShowViewer); // spin until quitfrommainloop is called
+        _penv->Remove(_pviewer);
+        _pviewer.reset();
     }
 
     CollisionAction _CollisionCallback(object fncallback, CollisionReportPtr preport, bool bFromPhysics)
@@ -2711,15 +2712,11 @@ public:
 
     virtual ~PyEnvironmentBase()
     {
-        {
-            boost::mutex::scoped_lock lockcreate(_mutexViewer);
-            _penv->AttachViewer(ViewerBasePtr());
-        }
-
         if( !!_threadviewer ) {
             _threadviewer->join();
         }
         _threadviewer.reset();
+        _pviewer.reset();
     }
 
     void Reset() { _penv->Reset(); }
@@ -3162,12 +3159,14 @@ public:
         return toPyTriMesh(*ptrimesh);
     }
 
-    bool AddKinBody(PyKinBodyPtr pbody) { CHECK_POINTER(pbody); return _penv->AddKinBody(pbody->GetBody()); }
-    bool AddKinBody(PyKinBodyPtr pbody, bool bAnonymous) { CHECK_POINTER(pbody); return _penv->AddKinBody(pbody->GetBody(),bAnonymous); }
-    bool AddRobot(PyRobotBasePtr robot) { CHECK_POINTER(robot); return _penv->AddRobot(robot->GetRobot()); }
-    bool AddRobot(PyRobotBasePtr robot, bool bAnonymous) { CHECK_POINTER(robot); return _penv->AddRobot(robot->GetRobot(),bAnonymous); }
-    bool AddSensor(PySensorBasePtr sensor) { CHECK_POINTER(sensor); return _penv->AddSensor(sensor->GetSensor()); }
-    bool AddSensor(PySensorBasePtr sensor, bool bAnonymous) { CHECK_POINTER(sensor); return _penv->AddSensor(sensor->GetSensor(),bAnonymous); }
+    void AddKinBody(PyKinBodyPtr pbody) { CHECK_POINTER(pbody); _penv->AddKinBody(pbody->GetBody()); }
+    void AddKinBody(PyKinBodyPtr pbody, bool bAnonymous) { CHECK_POINTER(pbody); _penv->AddKinBody(pbody->GetBody(),bAnonymous); }
+    void AddRobot(PyRobotBasePtr robot) { CHECK_POINTER(robot); _penv->AddRobot(robot->GetRobot()); }
+    void AddRobot(PyRobotBasePtr robot, bool bAnonymous) { CHECK_POINTER(robot); _penv->AddRobot(robot->GetRobot(),bAnonymous); }
+    void AddSensor(PySensorBasePtr sensor) { CHECK_POINTER(sensor); _penv->AddSensor(sensor->GetSensor()); }
+    void AddSensor(PySensorBasePtr sensor, bool bAnonymous) { CHECK_POINTER(sensor); _penv->AddSensor(sensor->GetSensor(),bAnonymous); }
+    void AddViewer(PyViewerBasePtr viewer) { CHECK_POINTER(viewer); _penv->AddViewer(viewer->GetViewer()); }
+
     bool RemoveKinBody(PyKinBodyPtr pbody) { CHECK_POINTER(pbody); RAVELOG_WARN("openravepy RemoveKinBody deprecated, use Remove\n"); return _penv->Remove(pbody->GetBody()); }
     
     PyKinBodyPtr GetKinBody(const string& name)
@@ -3199,14 +3198,14 @@ public:
 
     PyTrajectoryBasePtr CreateTrajectory(int nDOF) { return PyTrajectoryBasePtr(new PyTrajectoryBase(RaveCreateTrajectory(_penv,nDOF),shared_from_this())); }
 
-    int LoadModule(PyModuleBasePtr prob, const string& args) { CHECK_POINTER(prob); return _penv->LoadModule(prob->GetModule(),args); }
+    int AddModule(PyModuleBasePtr prob, const string& args) { CHECK_POINTER(prob); return _penv->AddModule(prob->GetModule(),args); }
     bool RemoveProblem(PyModuleBasePtr prob) { CHECK_POINTER(prob); RAVELOG_WARN("openravepy RemoveProblem deprecated, use Remove\n");return _penv->Remove(prob->GetModule()); }
     bool Remove(PyInterfaceBasePtr obj) { CHECK_POINTER(obj); return _penv->Remove(obj->GetInterfaceBase()); }
     
-    object GetLoadedModules()
+    object GetModules()
     {
         std::list<ModuleBasePtr> listModules;
-        boost::shared_ptr<void> lock = _penv->GetLoadedModules(listModules);
+        boost::shared_ptr<void> lock = _penv->GetModules(listModules);
         boost::python::list modules;
         FOREACHC(itprob, listModules) {
             modules.append(PyModuleBasePtr(new PyModuleBase(*itprob,shared_from_this())));
@@ -3291,23 +3290,20 @@ public:
             _threadviewer->join();
         }
         _threadviewer.reset();
-        
-        _penv->AttachViewer(ViewerBasePtr());
 
         if( viewername.size() > 0 ) {
             boost::mutex::scoped_lock lock(_mutexViewer);
             _threadviewer.reset(new boost::thread(boost::bind(&PyEnvironmentBase::_ViewerThread, shared_from_this(), viewername, showviewer)));
             _conditionViewer.wait(lock);
-            
-            if( !_penv->GetViewer() || _penv->GetViewer()->GetXMLId() != viewername ) {
-                RAVELOG_WARN("failed to create viewer %s\n", viewername.c_str());
-                _threadviewer->join();
-                _threadviewer.reset();
-                return false;
-            }
-            else {
-                RAVELOG_INFOA("viewer %s successfully attached\n", viewername.c_str());
-            }
+//            if( !_penv->GetViewer() || _penv->GetViewer()->GetXMLId() != viewername ) {
+//                RAVELOG_WARN("failed to create viewer %s\n", viewername.c_str());
+//                _threadviewer->join();
+//                _threadviewer.reset();
+//                return false;
+//            }
+//            else {
+//                RAVELOG_INFOA("viewer %s successfully attached\n", viewername.c_str());
+//            }
         }
         return true;
     }
@@ -4530,9 +4526,10 @@ In python, the syntax is::\n\n\
         scope viewer = class_<PyViewerBase, boost::shared_ptr<PyViewerBase>, bases<PyInterfaceBase> >("Viewer", DOXY_CLASS(ViewerBase), no_init)
             .def("main",&PyViewerBase::main, DOXY_FN(ViewerBase,main))
             .def("quitmainloop",&PyViewerBase::quitmainloop, DOXY_FN(ViewerBase,quitmainloop))
-            .def("SetSize",&PyViewerBase::ViewerSetSize, DOXY_FN(ViewerBase,ViewerSetSize))
-            .def("Move",&PyViewerBase::ViewerMove, DOXY_FN(ViewerBase,ViewerMove))
-            .def("SetTitle",&PyViewerBase::ViewerSetTitle, DOXY_FN(ViewerBase,ViewerSetTitle))
+            .def("SetSize",&PyViewerBase::SetSize, DOXY_FN(ViewerBase,SetSize))
+            .def("Move",&PyViewerBase::Move, DOXY_FN(ViewerBase,Move))
+            .def("SetTitle",&PyViewerBase::SetName, DOXY_FN(ViewerBase,SetName))
+            .def("SetName",&PyViewerBase::SetName, DOXY_FN(ViewerBase,SetName))
             .def("RegisterCallback",&PyViewerBase::RegisterCallback, args("callback"), DOXY_FN(ViewerBase,RegisterItemSelectionCallback))
             .def("RegisterItemSelectionCallback",&PyViewerBase::RegisterItemSelectionCallback, args("callback"), DOXY_FN(ViewerBase,RegisterCallback))
             .def("EnvironmentSync",&PyViewerBase::EnvironmentSync, DOXY_FN(ViewerBase,EnvironmentSync))
@@ -4593,12 +4590,12 @@ In python, the syntax is::\n\n\
         object (PyEnvironmentBase::*drawplane1)(object, object, const boost::multi_array<float,2>&) = &PyEnvironmentBase::drawplane;
         object (PyEnvironmentBase::*drawplane2)(object, object, const boost::multi_array<float,3>&) = &PyEnvironmentBase::drawplane;
 
-        bool (PyEnvironmentBase::*addkinbody1)(PyKinBodyPtr) = &PyEnvironmentBase::AddKinBody;
-        bool (PyEnvironmentBase::*addkinbody2)(PyKinBodyPtr,bool) = &PyEnvironmentBase::AddKinBody;
-        bool (PyEnvironmentBase::*addrobot1)(PyRobotBasePtr) = &PyEnvironmentBase::AddRobot;
-        bool (PyEnvironmentBase::*addrobot2)(PyRobotBasePtr,bool) = &PyEnvironmentBase::AddRobot;
-        bool (PyEnvironmentBase::*addsensor1)(PySensorBasePtr) = &PyEnvironmentBase::AddSensor;
-        bool (PyEnvironmentBase::*addsensor2)(PySensorBasePtr,bool) = &PyEnvironmentBase::AddSensor;
+        void (PyEnvironmentBase::*addkinbody1)(PyKinBodyPtr) = &PyEnvironmentBase::AddKinBody;
+        void (PyEnvironmentBase::*addkinbody2)(PyKinBodyPtr,bool) = &PyEnvironmentBase::AddKinBody;
+        void (PyEnvironmentBase::*addrobot1)(PyRobotBasePtr) = &PyEnvironmentBase::AddRobot;
+        void (PyEnvironmentBase::*addrobot2)(PyRobotBasePtr,bool) = &PyEnvironmentBase::AddRobot;
+        void (PyEnvironmentBase::*addsensor1)(PySensorBasePtr) = &PyEnvironmentBase::AddSensor;
+        void (PyEnvironmentBase::*addsensor2)(PySensorBasePtr,bool) = &PyEnvironmentBase::AddSensor;
         void (PyEnvironmentBase::*setuserdata1)(PyUserData) = &PyEnvironmentBase::SetUserData;
         void (PyEnvironmentBase::*setuserdata2)(object) = &PyEnvironmentBase::SetUserData;
         PyRobotBasePtr (PyEnvironmentBase::*readrobotxmlfile1)(const string&) = &PyEnvironmentBase::ReadRobotXMLFile;
@@ -4676,6 +4673,7 @@ In python, the syntax is::\n\n\
             .def("AddRobot",addrobot2,args("robot","anonymous"), DOXY_FN(EnvironmentBase,AddRobot))
             .def("AddSensor",addsensor1,args("sensor"), DOXY_FN(EnvironmentBase,AddSensor))
             .def("AddSensor",addsensor2,args("sensor","anonymous"), DOXY_FN(EnvironmentBase,AddSensor))
+            .def("AddViewer",addsensor2,args("sensor","anonymous"), DOXY_FN(EnvironmentBase,AddViewer))
             .def("RemoveKinBody",&PyEnvironmentBase::RemoveKinBody,args("body"), DOXY_FN(EnvironmentBase,RemoveKinBody))
             .def("Remove",&PyEnvironmentBase::Remove,args("interface"), DOXY_FN(EnvironmentBase,Remove))
             .def("GetKinBody",&PyEnvironmentBase::GetKinBody,args("name"), DOXY_FN(EnvironmentBase,GetKinBody))
@@ -4684,11 +4682,11 @@ In python, the syntax is::\n\n\
             .def("GetBodyFromEnvironmentId",&PyEnvironmentBase::GetBodyFromEnvironmentId , DOXY_FN(EnvironmentBase,GetBodyFromEnvironmentId))
             .def("CreateKinBody",&PyEnvironmentBase::CreateKinBody, DOXY_FN(EnvironmentBase,CreateKinBody))
             .def("CreateTrajectory",&PyEnvironmentBase::CreateTrajectory,args("dof"), DOXY_FN(EnvironmentBase,CreateTrajectory))
-            .def("LoadModule",&PyEnvironmentBase::LoadModule,args("module","args"), DOXY_FN(EnvironmentBase,LoadModule))
-            .def("LoadProblem",&PyEnvironmentBase::LoadModule,args("module","args"), DOXY_FN(EnvironmentBase,LoadModule))
+            .def("AddModule",&PyEnvironmentBase::AddModule,args("module","args"), DOXY_FN(EnvironmentBase,AddModule))
+            .def("LoadProblem",&PyEnvironmentBase::AddModule,args("module","args"), DOXY_FN(EnvironmentBase,AddModule))
             .def("RemoveProblem",&PyEnvironmentBase::RemoveProblem,args("prob"), DOXY_FN(EnvironmentBase,RemoveProblem))
-            .def("GetLoadedModules",&PyEnvironmentBase::GetLoadedModules, DOXY_FN(EnvironmentBase,GetLoadedModules))
-            .def("GetLoadedProblems",&PyEnvironmentBase::GetLoadedModules, DOXY_FN(EnvironmentBase,GetLoadedModules))
+            .def("GetModules",&PyEnvironmentBase::GetModules, DOXY_FN(EnvironmentBase,GetModules))
+            .def("GetLoadedProblems",&PyEnvironmentBase::GetModules, DOXY_FN(EnvironmentBase,GetModules))
             .def("SetPhysicsEngine",&PyEnvironmentBase::SetPhysicsEngine,args("physics"), DOXY_FN(EnvironmentBase,SetPhysicsEngine))
             .def("GetPhysicsEngine",&PyEnvironmentBase::GetPhysicsEngine, DOXY_FN(EnvironmentBase,GetPhysicsEngine))
             .def("RegisterCollisionCallback",&PyEnvironmentBase::RegisterCollisionCallback,args("callback"), DOXY_FN(EnvironmentBase,RegisterCollisionCallback))

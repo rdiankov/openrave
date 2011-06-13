@@ -25,7 +25,7 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
             return InterfaceBasePtr(new GrasperPlanner(penv));
         }
         break;
-    case PT_ProblemInstance:
+    case PT_Module:
         if( interfacename == "grasper") {
             return InterfaceBasePtr(new GrasperProblem(penv));
         }
@@ -39,7 +39,7 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
 void GetPluginAttributesValidated(PLUGININFO& info)
 {
     info.interfacenames[OpenRAVE::PT_Planner].push_back("Grasper");
-    info.interfacenames[OpenRAVE::PT_ProblemInstance].push_back("Grasper");
+    info.interfacenames[OpenRAVE::PT_Module].push_back("Grasper");
 }
 
 OPENRAVE_PLUGIN_API void DestroyPlugin()

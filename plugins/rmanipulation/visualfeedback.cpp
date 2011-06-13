@@ -131,7 +131,7 @@ bool SampleProjectedOBBWithTest(const OBB& obb, dReal delta, const boost::functi
     return true;
 }
 
-class VisualFeedback : public ProblemInstance
+class VisualFeedback : public ModuleBase
 {
 public:
     inline boost::shared_ptr<VisualFeedback> shared_problem() { return boost::static_pointer_cast<VisualFeedback>(shared_from_this()); }
@@ -396,7 +396,7 @@ public:
         vector<Transform> _vcameras; ///< camera transformations in local coord systems
     };
 
-    VisualFeedback(EnvironmentBasePtr penv) : ProblemInstance(penv)
+    VisualFeedback(EnvironmentBasePtr penv) : ModuleBase(penv)
     {
         __description = ":Interface Author: Rosen Diankov\n\n\
 .. image:: ../../../images/interface_visualfeedback.jpg\n\
@@ -441,7 +441,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
 
     void Destroy()
     {
-        ProblemInstance::Destroy();
+        ModuleBase::Destroy();
     }
 
     int main(const string& args)
@@ -470,7 +470,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
     virtual bool SendCommand(std::ostream& sout, std::istream& sinput)
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
-        return ProblemInstance::SendCommand(sout,sinput);
+        return ModuleBase::SendCommand(sout,sinput);
     }
 
     bool SetCameraAndTarget(ostream& sout, istream& sinput)
@@ -1272,4 +1272,4 @@ protected:
 
 };
 
-ProblemInstancePtr CreateVisualFeedback(EnvironmentBasePtr penv) { return ProblemInstancePtr(new VisualFeedback(penv)); }
+ModuleBasePtr CreateVisualFeedback(EnvironmentBasePtr penv) { return ModuleBasePtr(new VisualFeedback(penv)); }

@@ -250,7 +250,7 @@ int main(int argc, char ** argv)
         if( !!pserver ) {
             stringstream ss;
             ss << nServPort;
-            if( s_penv->LoadModule(pserver,ss.str()) != 0 )
+            if( s_penv->AddModule(pserver,ss.str()) != 0 )
                 RAVELOG_WARN("failed to load server\n");
         }
     }
@@ -280,8 +280,8 @@ int main(int argc, char ** argv)
 void MainOpenRAVEThread()
 {
     EnvironmentBasePtr penv = s_penv; // need to do this since s_penv can be reset at any time
+    ViewerBasePtr pviewer;
     if( bDisplayGUI && (!s_viewerName || s_viewerName->size()>0) ) {
-        ViewerBasePtr pviewer;
         // find a viewer
         if( !!s_viewerName && s_viewerName->size() > 0 ) {
             pviewer = RaveCreateViewer(penv, *s_viewerName);
@@ -313,11 +313,11 @@ void MainOpenRAVEThread()
         }
         else {
             RAVELOG_DEBUG("using %s viewer\n", pviewer->GetXMLId().c_str());
-            pviewer->ViewerSetSize(s_WindowWidth, s_WindowHeight);
+            pviewer->SetSize(s_WindowWidth, s_WindowHeight);
             if( s_bSetWindowPosition ) {
-                pviewer->ViewerMove(s_WindowPosX,s_WindowPosY);
+                pviewer->Move(s_WindowPosX,s_WindowPosY);
             }
-            penv->AttachViewer(pviewer);
+            penv->AddViewer(pviewer);
         }
     }
 
@@ -335,7 +335,7 @@ void MainOpenRAVEThread()
         FORIT(itprob, s_listModules) {
             ModuleBasePtr prob = RaveCreateModule(penv, itprob->first);
             if( !!prob ) {
-                penv->LoadModule(prob, itprob->second);
+                penv->AddModule(prob, itprob->second);
             }
         }
 
@@ -347,11 +347,17 @@ void MainOpenRAVEThread()
     }
 
     // need to keep a local pointer around to guarantee destruction order
-    ViewerBasePtr pviewer = penv->GetViewer();
-    pviewer->main(bShowGUI);
-    s_bThreadDestroyed = true;
+    if( !!pviewer ) {
+        pviewer->main(bShowGUI);
+        s_bThreadDestroyed = true;
+    }
+    else {
+        while(!s_bThreadDestroyed) {
+            usleep(10000);
+        }
+    }
     if( !!penv ) {
-        penv->AttachViewer(ViewerBasePtr());
+        penv->Remove(pviewer);
         penv.reset();
         s_penv.reset();
         int iter = 0;

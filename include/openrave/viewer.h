@@ -130,9 +130,22 @@ public:
     /// Note that this method might not work if environment is locked in current thread
     virtual void EnvironmentSync() OPENRAVE_DUMMY_IMPLEMENTATION;
 
-    virtual void ViewerSetSize(int w, int h) OPENRAVE_DUMMY_IMPLEMENTATION;
-    virtual void ViewerMove(int x, int y) OPENRAVE_DUMMY_IMPLEMENTATION;
-    virtual void ViewerSetTitle(const std::string& ptitle) OPENRAVE_DUMMY_IMPLEMENTATION;
+    virtual void SetSize(int w, int h) OPENRAVE_DUMMY_IMPLEMENTATION;
+
+    /// \deprecated (11/06/13)
+    virtual void ViewerSetSize(int w, int h) RAVE_DEPRECATED { SetSize(w,h); }
+
+    virtual void Move(int x, int y) OPENRAVE_DUMMY_IMPLEMENTATION;
+
+    /// \deprecated (11/06/13)
+    virtual void ViewerMove(int x, int y) RAVE_DEPRECATED { Move(x,y); };
+
+    virtual void SetName(const std::string& name) OPENRAVE_DUMMY_IMPLEMENTATION;
+
+    /// \deprecated (11/06/13)
+    virtual void ViewerSetTitle(const std::string& ptitle) RAVE_DEPRECATED { SetName(ptitle); }
+
+    virtual const std::string& GetName() const OPENRAVE_DUMMY_IMPLEMENTATION;
 
     /// \deprecated (11/06/10)
     virtual void UpdateCameraTransform() RAVE_DEPRECATED OPENRAVE_DUMMY_IMPLEMENTATION;

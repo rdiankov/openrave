@@ -78,8 +78,9 @@ QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
 #endif
       ViewerBase(penv), _ivOffscreen(SbViewportRegion(VIDEO_WIDTH, VIDEO_HEIGHT))
 {
+    _name = str(boost::format("OpenRAVE %s")%OPENRAVE_VERSION_STRING);
 #if QT_VERSION >= 0x040000 // check for qt4
-    setWindowTitle(str(boost::format("OpenRAVE %s")%OPENRAVE_VERSION_STRING).c_str());
+    setWindowTitle(_name.c_str());
     statusBar()->showMessage(tr("Status Bar"));
 #endif
     __description = ":Interface Author: Rosen Diankov\n\nProvides a GUI using the Qt4, Coin3D, and SoQt libraries. Depending on the version, Coin3D and SoQt might be licensed under GPL.";
@@ -377,7 +378,7 @@ public:
         : EnvMessage(pviewer, ppreturn, false), _width(width), _height(height) {}
     
     virtual void viewerexecute() {
-        _pviewer->_ViewerSetSize(_width, _height);
+        _pviewer->_SetSize(_width, _height);
         EnvMessage::viewerexecute();
     }
 
@@ -385,13 +386,13 @@ private:
     int _width, _height;
 };
 
-void QtCoinViewer::ViewerSetSize(int w, int h)
+void QtCoinViewer::SetSize(int w, int h)
 {
     EnvMessagePtr pmsg(new ViewerSetSizeMessage(shared_viewer(), (void**)NULL, w, h));
     pmsg->callerexecute();
 }
 
-void QtCoinViewer::_ViewerSetSize(int w, int h)
+void QtCoinViewer::_SetSize(int w, int h)
 {
     resize(w,h);
 }
@@ -403,7 +404,7 @@ public:
         : EnvMessage(pviewer, ppreturn, false), _x(x), _y(y) {}
     
     virtual void viewerexecute() {
-        _pviewer->_ViewerMove(_x, _y);
+        _pviewer->_Move(_x, _y);
         EnvMessage::viewerexecute();
     }
 
@@ -411,25 +412,25 @@ private:
     int _x, _y;
 };
 
-void QtCoinViewer::ViewerMove(int x, int y)
+void QtCoinViewer::Move(int x, int y)
 {
     EnvMessagePtr pmsg(new ViewerMoveMessage(shared_viewer(), (void**)NULL, x, y));
     pmsg->callerexecute();
 }
 
-void QtCoinViewer::_ViewerMove(int x, int y)
+void QtCoinViewer::_Move(int x, int y)
 {
     move(x,y);
 }
 
-class ViewerSetTitleMessage : public QtCoinViewer::EnvMessage
+class ViewerSetNameMessage : public QtCoinViewer::EnvMessage
 {
 public:
-    ViewerSetTitleMessage(QtCoinViewerPtr pviewer, void** ppreturn, const string& ptitle)
+    ViewerSetNameMessage(QtCoinViewerPtr pviewer, void** ppreturn, const string& ptitle)
         : EnvMessage(pviewer, ppreturn, false), _title(ptitle) {}
     
     virtual void viewerexecute() {
-        _pviewer->_ViewerSetTitle(_title.c_str());
+        _pviewer->_SetName(_title.c_str());
         EnvMessage::viewerexecute();
     }
 
@@ -437,13 +438,14 @@ private:
     string _title;
 };
 
-void QtCoinViewer::ViewerSetTitle(const string& ptitle)
+void QtCoinViewer::SetName(const string& ptitle)
 {
-    EnvMessagePtr pmsg(new ViewerSetTitleMessage(shared_viewer(), (void**)NULL, ptitle));
+    _name = ptitle;
+    EnvMessagePtr pmsg(new ViewerSetNameMessage(shared_viewer(), (void**)NULL, ptitle));
     pmsg->callerexecute();
 }
 
-void QtCoinViewer::_ViewerSetTitle(const string& ptitle)
+void QtCoinViewer::_SetName(const string& ptitle)
 {
     setWindowTitle(ptitle.c_str());
 }
@@ -3127,7 +3129,7 @@ void QtCoinViewer::_UpdatePhysicsEngine()
 
 void QtCoinViewer::UpdateInterfaces()
 {
-    list<ProblemInstancePtr> listProblems;
+    list<ModuleBasePtr> listProblems;
     vector<KinBodyPtr> vbodies;
     GetEnv()->GetLoadedProblems(listProblems);
     GetEnv()->GetBodies(vbodies);

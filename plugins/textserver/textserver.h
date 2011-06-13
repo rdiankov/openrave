@@ -34,7 +34,7 @@ typedef int socklen_t;
 #endif
 
 /// manages all connections. At the moment, server can handle only one connectino at a time
-class SimpleTextServer : public ProblemInstance
+class SimpleTextServer : public ModuleBase
 {
     // socket just accepts connections
     class Socket
@@ -252,7 +252,7 @@ class SimpleTextServer : public ProblemInstance
     };
 
  public:
- SimpleTextServer(EnvironmentBasePtr penv) : ProblemInstance(penv) {
+ SimpleTextServer(EnvironmentBasePtr penv) : ModuleBase(penv) {
         _nIdIndex = 1;
         _nNextFigureId = 1;
         _bWorking = false;
@@ -642,7 +642,7 @@ class SimpleTextServer : public ProblemInstance
     map<string, RAVENETWORKFN> mapNetworkFns;
 
     int _nIdIndex;
-    map<int, ProblemInstancePtr > _mapProblems;
+    map<int, ModuleBasePtr > _mapProblems;
     map<int, GraphHandlePtr> _mapFigureIds;
     int _nNextFigureId;
 
@@ -855,11 +855,7 @@ protected:
             return false;
         }
         robot->SetName(robotname);
-        if( !GetEnv()->AddRobot(robot) ) {
-            RAVELOG_WARN("failed to add robot");
-            return false;
-        }
-
+        GetEnv()->AddRobot(robot);
         os << robot->GetEnvironmentId();
         return true;
     }
@@ -877,7 +873,7 @@ protected:
     
         if( bDestroyDuplicates ) {
             // if there's a duplicate problem instance, delete it
-            map<int, ProblemInstancePtr >::iterator itprob = _mapProblems.begin();
+            map<int, ModuleBasePtr >::iterator itprob = _mapProblems.begin();
             while(itprob != _mapProblems.end()) {
                 if( itprob->second->GetXMLId() == problemname ) {
                     RAVELOG_DEBUG("deleting duplicate problem %s\n", problemname.c_str());
@@ -889,13 +885,13 @@ protected:
             }
         }
     
-        ProblemInstancePtr prob = RaveCreateProblem(GetEnv(),problemname);
+        ModuleBasePtr prob = RaveCreateProblem(GetEnv(),problemname);
         if( !prob ) {
-            RAVELOG_ERROR("Cannot find probleminstance: %s\n", problemname.c_str());
+            RAVELOG_ERROR("Cannot find module: %s\n", problemname.c_str());
             return false;
         }
     
-        pdata.reset(new pair<ProblemInstancePtr,string>(prob,strargs));
+        pdata.reset(new pair<ModuleBasePtr,string>(prob,strargs));
         _mapProblems[_nIdIndex] = prob;
         os << _nIdIndex++;
         return true;
@@ -903,7 +899,7 @@ protected:
 
     bool worEnvCreateProblem(boost::shared_ptr<istream> is, boost::shared_ptr<void> pdata)
     {
-        if( GetEnv()->LoadProblem(boost::static_pointer_cast< pair<ProblemInstancePtr,string> >(pdata)->first, boost::static_pointer_cast< pair<ProblemInstancePtr,string> >(pdata)->second) != 0 ) {
+        if( GetEnv()->LoadProblem(boost::static_pointer_cast< pair<ModuleBasePtr,string> >(pdata)->first, boost::static_pointer_cast< pair<ModuleBasePtr,string> >(pdata)->second) != 0 ) {
             RAVELOG_WARN("failed to load problem");
             return false;
         }
@@ -916,7 +912,7 @@ protected:
         *is >> index;
         if( !*is )
             return false;
-        map<int, ProblemInstancePtr >::iterator it = _mapProblems.find(index);
+        map<int, ModuleBasePtr >::iterator it = _mapProblems.find(index);
         if( it != _mapProblems.end() ) {
             if( !GetEnv()->Remove(it->second) )
                 RAVELOG_WARN("orEnvDestroyProblem: failed to remove problem from environment\n");
@@ -946,10 +942,7 @@ protected:
         }
         body->SetName(bodyname);
 
-        if( !GetEnv()->AddKinBody(body) ) {
-            return false;
-        }
-
+        GetEnv()->AddKinBody(body);
         os << body->GetEnvironmentId();
         return true;
     }
@@ -2120,7 +2113,7 @@ protected:
         //EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
 
         if( problemid > 0 ) {
-            map<int, ProblemInstancePtr >::iterator it = _mapProblems.find(problemid);
+            map<int, ModuleBasePtr >::iterator it = _mapProblems.find(problemid);
             if( it == _mapProblems.end() ) {
                 RAVELOG_WARN("failed to find problem %d\n", problemid);
                 return false;
@@ -2129,7 +2122,7 @@ protected:
         }
         else {
             stringstream::streampos inputpos = is.tellg();
-            list<ProblemInstancePtr> listProblems;
+            list<ModuleBasePtr> listProblems;
             GetEnv()->GetLoadedProblems(listProblems);
             FOREACHC(itprob, listProblems) {
                 is.seekg(inputpos);

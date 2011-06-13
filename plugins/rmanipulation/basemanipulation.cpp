@@ -15,10 +15,10 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "commonmanipulation.h"
 
-class BaseManipulation : public ProblemInstance
+class BaseManipulation : public ModuleBase
 {
 public:
-    BaseManipulation(EnvironmentBasePtr penv) : ProblemInstance(penv) {
+    BaseManipulation(EnvironmentBasePtr penv) : ModuleBase(penv) {
         __description = ":Interface Author: Rosen Diankov\n\nVery useful routines for manipulation planning and planning in general. The planners use analytical inverse kinematics and search based techniques.";
         RegisterCommand("SetActiveManip",boost::bind(&BaseManipulation::SetActiveManip,this,_1,_2),
                         "Set the active manipulator");
@@ -40,7 +40,10 @@ Method wraps the WorkspaceTrajectoryTracker planner. For more details on paramet
         RegisterCommand("MoveManipulator",boost::bind(&BaseManipulation::MoveManipulator,this,_1,_2),
                         "Moves arm joints of active manipulator to a given set of joint values");
         RegisterCommand("MoveActiveJoints",boost::bind(&BaseManipulation::MoveActiveJoints,this,_1,_2),
-                        "Moves the current active joints to a specified goal destination\n");
+                        "Moves the current active joints to a specified goal destination:\n\n\
+- maxiter - The maximum number of iterations on the internal planner.\n\
+- maxtries - The maximum number of times to restart the planner.\n\
+- steplength - See PlannerParameters::_fStepLength\n\n");
         RegisterCommand("MoveToHandPosition",boost::bind(&BaseManipulation::MoveToHandPosition,this,_1,_2),
                         "Move the manipulator's end effector to some 6D pose.");
         RegisterCommand("MoveUnsyncJoints",boost::bind(&BaseManipulation::MoveUnsyncJoints,this,_1,_2),
@@ -65,12 +68,12 @@ Method wraps the WorkspaceTrajectoryTracker planner. For more details on paramet
     virtual void Destroy()
     {
         robot.reset();
-        ProblemInstance::Destroy();
+        ModuleBase::Destroy();
     }
     
     virtual void Reset()
     {
-        ProblemInstance::Reset();
+        ModuleBase::Reset();
     }
 
     virtual int main(const std::string& args)
@@ -123,7 +126,7 @@ Method wraps the WorkspaceTrajectoryTracker planner. For more details on paramet
     virtual bool SendCommand(std::ostream& sout, std::istream& sinput)
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
-        return ProblemInstance::SendCommand(sout,sinput);
+        return ModuleBase::SendCommand(sout,sinput);
     }
 protected:
 
@@ -1144,4 +1147,4 @@ protected:
     dReal _fMaxVelMult;
 };
 
-ProblemInstancePtr CreateBaseManipulation(EnvironmentBasePtr penv) { return ProblemInstancePtr(new BaseManipulation(penv)); }
+ModuleBasePtr CreateBaseManipulation(EnvironmentBasePtr penv) { return ModuleBasePtr(new BaseManipulation(penv)); }

@@ -41,12 +41,12 @@ class GraspVectorCompare : public RealVectorCompare
  GraspVectorCompare() : RealVectorCompare(GRASPTHRESH2) {}
 };
 
-class TaskManipulation : public ProblemInstance
+class TaskManipulation : public ModuleBase
 {
  public:
     typedef std::map<vector<dReal>, TrajectoryBasePtr, GraspVectorCompare > PRESHAPETRAJMAP;
 
- TaskManipulation(EnvironmentBasePtr penv) : ProblemInstance(penv) {
+ TaskManipulation(EnvironmentBasePtr penv) : ModuleBase(penv) {
         __description = ":Interface Author: Rosen Diankov\n\n\
 Task-based manipulation planning involving target objects. A lot of the algorithms and theory are covered in:\n\
 \n\
@@ -103,7 +103,7 @@ Task-based manipulation planning involving target objects. A lot of the algorith
 
     virtual void Destroy()
     {
-        ProblemInstance::Destroy();
+        ModuleBase::Destroy();
         listsystems.clear();
         _pGrasperPlanner.reset();
         _pRRTPlanner.reset();
@@ -113,7 +113,7 @@ Task-based manipulation planning involving target objects. A lot of the algorith
     virtual void Reset()
     {
         _listSwitchModels.clear();
-        ProblemInstance::Reset();
+        ModuleBase::Reset();
         listsystems.clear();
         // recreate the planners since they store state
         if( !!_pRRTPlanner )
@@ -179,7 +179,7 @@ Task-based manipulation planning involving target objects. A lot of the algorith
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         _robot = GetEnv()->GetRobot(_strRobotName);
-        return ProblemInstance::SendCommand(sout,sinput);
+        return ModuleBase::SendCommand(sout,sinput);
     }
 
     bool CreateSystem(ostream& sout, istream& sinput)
@@ -1701,4 +1701,4 @@ protected:
     friend class SwitchModelState;
 };
 
-ProblemInstancePtr CreateTaskManipulation(EnvironmentBasePtr penv) { return ProblemInstancePtr(new TaskManipulation(penv)); }
+ModuleBasePtr CreateTaskManipulation(EnvironmentBasePtr penv) { return ModuleBasePtr(new TaskManipulation(penv)); }

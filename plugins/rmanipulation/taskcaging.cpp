@@ -19,7 +19,7 @@
 // Manipulation Planning with Caging Grasps. IEEE-RAS Intl. Conf. on Humanoid Robots, December 2008.
 #include "commonmanipulation.h"
 
-class TaskCaging : public ProblemInstance
+class TaskCaging : public ModuleBase
 {
 public:
     struct BODYTRAJ
@@ -721,7 +721,7 @@ public:
     inline boost::shared_ptr<TaskCaging const> shared_problem_const() const { return boost::static_pointer_cast<TaskCaging const>(shared_from_this()); }
 
 public:
- TaskCaging(EnvironmentBasePtr penv) : ProblemInstance(penv) {
+ TaskCaging(EnvironmentBasePtr penv) : ModuleBase(penv) {
         __description = ":Interface Author: Rosen Diankov\n\n\
 .. image:: ../../../images/interface_taskcaging.jpg\n\
   :width: 500\n\n\
@@ -745,13 +745,13 @@ This greatly relaxes the constraints on the robot (see the door manipluation exa
     virtual void Destroy()
     {
         _robot.reset();
-        ProblemInstance::Destroy();
+        ModuleBase::Destroy();
         _listBodyTrajs.clear();
     }
 
     virtual void Reset()
     {
-        ProblemInstance::Reset();
+        ModuleBase::Reset();
         _listBodyTrajs.clear();
     }
 
@@ -791,7 +791,7 @@ This greatly relaxes the constraints on the robot (see the door manipluation exa
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         _robot = GetEnv()->GetRobot(_strRobotName);
-        return ProblemInstance::SendCommand(sout,sinput);
+        return ModuleBase::SendCommand(sout,sinput);
     }
 
 private:
@@ -1897,4 +1897,4 @@ BOOST_TYPEOF_REGISTER_TYPE(TaskCaging::ConstrainedTaskData::FINDGRASPDATA)
 
 #endif
 
-ProblemInstancePtr CreateTaskCaging(EnvironmentBasePtr penv) { return ProblemInstancePtr(new TaskCaging(penv)); }
+ModuleBasePtr CreateTaskCaging(EnvironmentBasePtr penv) { return ModuleBasePtr(new TaskCaging(penv)); }
