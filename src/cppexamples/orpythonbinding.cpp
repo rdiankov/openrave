@@ -98,7 +98,7 @@ InterfaceBasePtr RegisterSimulationFunction(int environmentid, boost::python::ob
     if( !!module ) {
         boost::shared_ptr<FunctionUserData> p = boost::dynamic_pointer_cast<FunctionUserData>(module->GetUserData());
         p->simulationfn = simulationfn;
-        module->GetEnv()->LoadModule(module,"");
+        module->GetEnv()->AddModule(module,"");
     }
     return InterfaceBasePtr(module);
 }

@@ -40,7 +40,7 @@ for its access and generation parameters. The database itself mostly consists of
 quasi-static, dynamic, and geometric analyses of the robot and the task. If the robot is defined
 properly, then all these functions should work out of the box.
 
-All the base planners and problem interfaces should be applicable to any robot structure that can be
+All the base planners and modules should be applicable to any robot structure that can be
 thrown at it. One of OpenRAVE's strongest points when compared with other planning packages is the
 idea of being able to apply algorithms in openrave to any robot, with very little
 modification. Recently, a planning database structure has been introduced that allows computation of
@@ -515,7 +515,7 @@ Ability to register custom xml reader interfaces.
 - \subpage arch_kinbody
 - \subpage arch_physicsengine
 - \subpage arch_planner
-- \subpage arch_problem
+- \subpage arch_module
 - \subpage arch_robot
 - \subpage arch_sensor
 - \subpage arch_sensorsystem
@@ -878,13 +878,13 @@ custom parameter to be easily specified.
 */
 
 /**
-\page arch_problem Modular Problem Concepts
-\b Reference: \ref OpenRAVE::ProblemInstance
+\page arch_module Module Concepts
+\b Reference: \ref OpenRAVE::ModuleBase
 
-Base class for problem instances the user might want to instantiate. A problem instance
+Base class for modules the user might want to instantiate. A module
 registers itself with OpenRAVE's SimulateStep calls and can accept commands from the server or
-other plugins via SendCommand. A problem instance stops receiving commands when it is
-destroyed. Problems are an easy way for developers to run and test their own code.
+other plugins via SendCommand. A module stops receiving commands when it is
+destroyed. Modules are an easy way for developers to run and test their own code.
 */
 
 /**

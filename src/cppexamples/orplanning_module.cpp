@@ -54,7 +54,7 @@ int main(int argc, char ** argv)
     probot->SetActiveDOFs(vindices);
 
     ModuleBasePtr pbasemanip = RaveCreateModule(penv,"basemanipulation"); // create the module
-    penv->LoadModule(pbasemanip,probot->GetName()); // load the module
+    penv->AddModule(pbasemanip,probot->GetName()); // load the module
 
     while(1) {
         {

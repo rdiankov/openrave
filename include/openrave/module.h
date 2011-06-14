@@ -14,15 +14,15 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-/** \file problems.h
-    \brief Problem instances and functions related to characterization of robotics problems.
+/** \file module.h
+    \brief Modules containing useful routines and algorithms.
 */
 #ifndef OPENRAVE_COMMAND_PROBLEM_INSTANCE_H
 #define OPENRAVE_COMMAND_PROBLEM_INSTANCE_H
 
 namespace OpenRAVE {
 
-/** \brief <b>[interface]</b> A loadable module of user code meant to solve a specific problem in robotics. See \ref arch_problem.
+/** \brief <b>[interface]</b> A loadable module of user code meant to solve a specific domain. See \ref arch_module.
     \ingroup interfaces
 */
 class OPENRAVE_API ModuleBase : public InterfaceBase

@@ -24,7 +24,7 @@ using namespace std;
 void SetViewer(EnvironmentBasePtr penv, const string& viewername)
 {
     ViewerBasePtr viewer = RaveCreateViewer(penv,viewername);
-    penv->AttachViewer(viewer);
+    penv->AddViewer(viewer);
     viewer->main(true);
 }
 
@@ -55,7 +55,7 @@ int main(int argc, char ** argv)
 
     // load inverse kinematics using ikfast
     ModuleBasePtr pikfast = RaveCreateModule(penv,"ikfast");
-    penv->LoadModule(pikfast,"");
+    penv->AddModule(pikfast,"");
     stringstream ssin,ssout;
     vector<dReal> vsolution;
     ssin << "LoadIKFastSolver " << probot->GetName() << " " << (int)IkParameterization::Type_Transform6D;
@@ -68,7 +68,7 @@ int main(int argc, char ** argv)
     }
 
     ModuleBasePtr pbasemanip = RaveCreateModule(penv,"basemanipulation"); // create the module
-    penv->LoadModule(pbasemanip,probot->GetName()); // load the module
+    penv->AddModule(pbasemanip,probot->GetName()); // load the module
 
     while(1) {
         {

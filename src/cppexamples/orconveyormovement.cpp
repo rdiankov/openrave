@@ -128,7 +128,7 @@ private:
 void SetViewer(EnvironmentBasePtr penv, const string& viewername)
 {
     ViewerBasePtr viewer = RaveCreateViewer(penv,viewername);
-    penv->AttachViewer(viewer);
+    penv->AddViewer(viewer);
     viewer->main(true);
 }
 
@@ -147,7 +147,7 @@ int main(int argc, char ** argv)
 
     // create the conveyor module and add a couple of bodies for simulation
     ModuleBasePtr p = RaveCreateModule(penv,"conveyorbelt");
-    penv->LoadModule(p,"");
+    penv->AddModule(p,"");
     stringstream sout, sin("registerbody data/mug1.kinbody.xml 0.6");
     p->SendCommand(sout,sin);
     sin.clear();
