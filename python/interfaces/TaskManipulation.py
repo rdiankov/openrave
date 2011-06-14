@@ -18,7 +18,7 @@ from copy import copy as shallowcopy
 class TaskManipulation:
     """Interface wrapper for :ref:`module-taskmanipulation`
     """
-    def __init__(self,robot,plannername=None,maxvelmult=None,graspername=None):
+    def __init__(self,robot,plannername=None,maxvelmult=None,graspername=None,validatetrajectory=None):
         env = robot.GetEnv()
         self.prob = RaveCreateModule(env,'TaskManipulation')
         self.robot = robot
@@ -29,6 +29,8 @@ class TaskManipulation:
             self.args += ' maxvelmult %f '%maxvelmult
         if graspername is not None and len(graspername)>0:
             self.args += ' graspername %s '%graspername
+        if validatetrajectory is not None:
+            self.args += ' validatetrajectory %d '%validatetrajectory
         if env.AddModule(self.prob,self.args) != 0:
             raise ValueError('module failed to initialize')
     def  __del__(self):

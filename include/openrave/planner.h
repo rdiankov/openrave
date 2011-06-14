@@ -29,7 +29,7 @@ class OPENRAVE_API PlannerBase : public InterfaceBase
 {
 public:
     typedef std::list< std::vector<dReal> > ConfigurationList;
-    typedef boost::shared_ptr< ConfigurationList > ConfigurationListPtr;
+    typedef boost::shared_ptr< PlannerBase::ConfigurationList > ConfigurationListPtr;
 
     /** \brief Describes a common and serializable interface for planning parameters.
 
@@ -90,7 +90,7 @@ public:
             \param q0 is the configuration the robot is coming from (currently set).
             \param q1 is the configuration the robot should move to.
             \param interval Specifies whether to check the end points of the interval for constraints
-            \param configurations Optional argument that will hold the path between the two configurations if requested
+            \param configurations Optional argument that will hold the path between the two configurations if requested. The configurations are appended after the objects already stored on the list.
         */
         typedef boost::function<bool(const std::vector<dReal>&, const std::vector<dReal>&, IntervalType, PlannerBase::ConfigurationListPtr)> CheckPathConstraintFn;
         CheckPathConstraintFn _checkpathconstraintsfn;

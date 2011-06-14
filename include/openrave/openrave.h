@@ -144,6 +144,7 @@ enum OpenRAVEErrorCode {
     ORE_InvalidPlugin=5, ///< shared object is not a valid plugin
     ORE_InvalidInterfaceHash=6, ///< interface hashes do not match between plugins
     ORE_NotImplemented=7, ///< function is not implemented by the interface.
+    ORE_InconsistentConstraints=8, ///< return solutions or trajectories do not follow the constraints of the planner/module
 };
 
 /// \brief Exception that all OpenRAVE internal methods throw; the error codes are held in \ref OpenRAVEErrorCode.

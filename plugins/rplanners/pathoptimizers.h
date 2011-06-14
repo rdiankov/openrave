@@ -18,21 +18,23 @@
 class ShortcutLinearPlanner : public PlannerBase
 {
 public:
-ShortcutLinearPlanner(EnvironmentBasePtr penv) : PlannerBase(penv)
+    ShortcutLinearPlanner(EnvironmentBasePtr penv) : PlannerBase(penv)
     {
         __description = ":Interface Author: Rosen Diankov\n\npath optimizer using linear shortcuts.";
     }
     virtual ~ShortcutLinearPlanner() {}
-
+    
     virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr params)
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         _parameters.reset(new PlannerParameters());
         _parameters->copy(params);
-        if( _parameters->_nMaxIterations <= 0 )
+        if( _parameters->_nMaxIterations <= 0 ) {
             _parameters->_nMaxIterations = 100;
-        if( _parameters->_fStepLength <= 0 )
+        }
+        if( _parameters->_fStepLength <= 0 ) {
             _parameters->_fStepLength = 0.04;
+        }
         _robot = pbase;
         return true;
     }
@@ -42,10 +44,12 @@ ShortcutLinearPlanner(EnvironmentBasePtr penv) : PlannerBase(penv)
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         _parameters.reset(new PlannerParameters());
         isParameters >> *_parameters;
-        if( _parameters->_nMaxIterations <= 0 )
+        if( _parameters->_nMaxIterations <= 0 ) {
             _parameters->_nMaxIterations = 100;
-        if( _parameters->_fStepLength <= 0 )
+        }
+        if( _parameters->_fStepLength <= 0 ) {
             _parameters->_fStepLength = 0.04;
+        }
         _robot = pbase;
         return true;
     }
@@ -54,8 +58,9 @@ ShortcutLinearPlanner(EnvironmentBasePtr penv) : PlannerBase(penv)
     
     virtual bool PlanPath(TrajectoryBasePtr ptraj, boost::shared_ptr<std::ostream> pOutStream)
     {
-        if( !_parameters || !ptraj || ptraj->GetPoints().size() < 2 )
+        if( !_parameters || !ptraj || ptraj->GetPoints().size() < 2 ) {
             return false;
+        }
         uint32_t basetime = GetMilliTime();
         PlannerParametersConstPtr parameters = GetParameters();
 
@@ -69,7 +74,6 @@ ShortcutLinearPlanner(EnvironmentBasePtr penv) : PlannerBase(penv)
         int nrejected = 0;
         int i = parameters->_nMaxIterations;
         while(i > 0 && nrejected < (int)path.size()+4 && path.size() > 2 ) {
-
             --i;
 
             // pick a random node on the path, and a random jump ahead
@@ -99,8 +103,9 @@ ShortcutLinearPlanner(EnvironmentBasePtr penv) : PlannerBase(penv)
             path.erase(startNode, endNode);
             nrejected = 0;
 
-            if( path.size() <= 2 )
+            if( path.size() <= 2 ) {
                 break;
+            }
         }
 
         ptraj->Clear();
@@ -164,7 +169,7 @@ protected:
                 for (int f = 0; f < numSteps; f++) {
                     listpoints.push_back(q);
                     if( !parameters->_neighstatefn(q,dq,0) ) {
-                        RAVELOG_WARN("neigh failed, not sure what to do\n");
+                        RAVELOG_DEBUG("neighstatefn failed, perhaps non-linear constraints are used?\n");
                         break;
                     }
                 }

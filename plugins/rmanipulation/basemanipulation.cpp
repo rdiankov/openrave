@@ -24,7 +24,7 @@ public:
                         "Set the active manipulator");
         RegisterCommand("Traj",boost::bind(&BaseManipulation::Traj,this,_1,_2),
                         "Execute a trajectory from a file on the local filesystem");
-        RegisterCommand("ValidateTrajectory",boost::bind(&BaseManipulation::_ValidateTrajectory,this,_1,_2),
+        RegisterCommand("ValidateTrajectory",boost::bind(&BaseManipulation::_ValidateTrajectoryCommand,this,_1,_2),
                         "Validates the robot trajectory by checking collisions with the environment and other user-specified constraints.");
         RegisterCommand("GrabBody",boost::bind(&BaseManipulation::GrabBody,this,_1,_2),
                         "Robot calls ::Grab on a body with its current manipulator");
@@ -32,7 +32,7 @@ public:
                         "Releases all grabbed bodies (RobotBase::ReleaseAllGrabbed).");
         RegisterCommand("MoveHandStraight",boost::bind(&BaseManipulation::MoveHandStraight,this,_1,_2),
                         "Move the active end-effector in a straight line until collision or IK fails. Parameters:\n\n\
-- stepsize - the increments in workspace in which the robot tests for the next configuration.\n\n\
+- steplength - the increments in workspace in which the robot tests for the next configuration.\n\n\
 - minsteps - The minimum number of steps that need to be taken in order for success to declared. If robot doesn't reach this number of steps, it fails.\n\n\
 - maxsteps - The maximum number of steps the robot should take.\n\n\
 - direction - The workspace direction to move end effector in.\n\n\
@@ -60,7 +60,6 @@ Method wraps the WorkspaceTrajectoryTracker planner. For more details on paramet
 - ikparam - The serialized ik parameterization to use for FindIKSolution(s).\n\
 - filteroptions\n\
 ");
-        _fMaxVelMult=1;
     }
 
     virtual ~BaseManipulation() {}
@@ -78,12 +77,14 @@ Method wraps the WorkspaceTrajectoryTracker planner. For more details on paramet
 
     virtual int main(const std::string& args)
     {
+        _fMaxVelMult=1;
+        _bValidateTrajectory = false;
+
         string strRobotName;
         stringstream ss(args);
         ss >> strRobotName;
         robot = GetEnv()->GetRobot(strRobotName);
 
-        _fMaxVelMult=1;
         string cmd;
         while(!ss.eof()) {
             ss >> cmd;
@@ -96,6 +97,9 @@ Method wraps the WorkspaceTrajectoryTracker planner. For more details on paramet
             }
             else if( cmd == "maxvelmult" ) {
                 ss >> _fMaxVelMult;
+            }
+            else if( cmd == "validatetrajectory" ) {
+                ss >> _bValidateTrajectory;
             }
             if( ss.fail() || !ss ) {
                 break;
@@ -250,7 +254,7 @@ protected:
             else if( cmd == "maxsteps") {
                 sinput >> maxsteps;
             }
-            else if( cmd == "stepsize") {
+            else if( cmd == "steplength" || cmd == "stepsize") {
                 sinput >> params->_fStepLength;
             }
             else if( cmd == "execute" ) {
@@ -340,6 +344,9 @@ protected:
         TrajectoryBasePtr poutputtraj = RaveCreateTrajectory(GetEnv(),"");
         if( !planner->PlanPath(poutputtraj) ) {
             return false;
+        }
+        if( _bValidateTrajectory ) {
+            planningutils::ValidateTrajectory(params,poutputtraj);
         }
         CM::SetActiveTrajectory(robot, poutputtraj, bExecute, strtrajfilename, pOutputTrajStream,_fMaxVelMult);
         return true;
@@ -449,11 +456,16 @@ protected:
                 RAVELOG_INFO("finished planning\n");
                 break;
             }
-            else RAVELOG_WARN("PlanPath failed\n");
+            else {
+                RAVELOG_WARN("PlanPath failed\n");
+            }
         }
 
         if( !bSuccess ) {
             return false;
+        }
+        if( _bValidateTrajectory ) {
+            planningutils::ValidateTrajectory(params, ptraj);
         }
         CM::SetActiveTrajectory(robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream,_fMaxVelMult);
         sout << "1";
@@ -563,6 +575,9 @@ protected:
         if( !bSuccess ) {
             return false;
         }
+        if( _bValidateTrajectory ) {
+            planningutils::ValidateTrajectory(params, ptraj);
+        }
         CM::SetActiveTrajectory(robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream,_fMaxVelMult);
         return true;
     }
@@ -659,6 +674,9 @@ protected:
             else if( cmd == "seedik" ) {
                 sinput >> nSeedIkSolutions;
             }
+            else if( cmd == "steplength" ) {
+                sinput >> params->_fStepLength;
+            }
             else if( cmd == "constraintfreedoms" ) {
                 FOREACH(it,vconstraintfreedoms) {
                     sinput >> *it;
@@ -696,6 +714,7 @@ protected:
             boost::shared_ptr<CM::GripperJacobianConstrains<double> > pconstraints(new CM::GripperJacobianConstrains<double>(robot->GetActiveManipulator(),tConstraintTargetWorldFrame,vconstraintfreedoms,constrainterrorthresh));
             pconstraints->_distmetricfn = params->_distmetricfn;
             params->_neighstatefn = boost::bind(&CM::GripperJacobianConstrains<double>::RetractionConstraint,pconstraints,_1,_2);
+            params->_sPathOptimizationPlanner = "";
         }
 
         robot->SetActiveDOFs(pmanip->GetArmIndices(), 0);
@@ -758,14 +777,18 @@ protected:
                 RAVELOG_INFO("finished planning\n");
                 break;
             }
-            else
+            else {
                 RAVELOG_WARN("PlanPath failed\n");
+            }
         }
 
         rrtplanner.reset(); // have to destroy before environment
     
         if( !bSuccess ) {
             return false;
+        }
+        if( _bValidateTrajectory ) {
+            planningutils::ValidateTrajectory(params, ptraj);
         }
         CM::SetActiveTrajectory(robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream,_fMaxVelMult);
         sout << "1";
@@ -1013,7 +1036,7 @@ protected:
         return true;
     }
 
-    bool _ValidateTrajectory(ostream& sout, istream& sinput)
+    bool _ValidateTrajectoryCommand(ostream& sout, istream& sinput)
     {
         TrajectoryBasePtr ptraj;
         dReal samplingstep = 0.001;
@@ -1066,23 +1089,16 @@ protected:
         }
 
         RobotBase::RobotStateSaver saver(robot);
-        CollisionReportPtr preport(new CollisionReport());
-
-        for(dReal t = 0; t <= ptraj->GetTotalDuration(); t += samplingstep) {
-            TrajectoryBase::TPOINT tp;
-            ptraj->SampleTrajectory(t,tp);
-            robot->SetDOFValues(tp.q, tp.trans,true);
-            if( GetEnv()->CheckCollision(robot,preport) ) {
-                RAVELOG_WARN(str(boost::format("CheckCollision failed at time %f")%t));
-                return false;
-            }
-            if( robot->CheckSelfCollision(preport) ) {
-                RAVELOG_WARN(str(boost::format("CheckSelfCollision failed at time %f")%t));
-                return false;
-            }
+        PlannerBase::PlannerParametersPtr params(new PlannerBase::PlannerParameters());
+        params->SetRobotActiveJoints(robot);
+        try{
+            planningutils::ValidateTrajectory(params,ptraj,samplingstep);
+            return true;
         }
-
-        return true;
+        catch(const openrave_exception& ex) {
+            RAVELOG_WARN("%s\n",ex.what());
+        }
+        return false;
     }
 
     bool GrabBody(ostream& sout, istream& sinput)
@@ -1145,6 +1161,7 @@ protected:
     RobotBasePtr robot;
     string _strRRTPlannerName;
     dReal _fMaxVelMult;
+    bool _bValidateTrajectory;
 };
 
 ModuleBasePtr CreateBaseManipulation(EnvironmentBasePtr penv) { return ModuleBasePtr(new BaseManipulation(penv)); }

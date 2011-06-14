@@ -52,8 +52,11 @@ Planning
  * SimpleDistanceMetric
  * SimpleNeighborhoodSampler
  * ManipulatorIKGoalSampler
+ * ValidateTrajectory
+ * JitterActiveDOF
+ * JitterTransform
 
-* added ValidateTrajectory command in BaseManipulation
+* added ValidateTrajectory command in BaseManipulation, added 'validatetrajectory' option to always check trajectories
 
 * fixed major bug in WorkspaceTrajectoryTracker (ie MoveHandStraight) due to obstacle checking
 

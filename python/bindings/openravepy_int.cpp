@@ -3319,7 +3319,7 @@ public:
             case 1:
                 vpoints = ExtractArray<float>(opoints);
                 if( vpoints.size()%3 ) {
-                    throw openrave_exception(boost::str(boost::format("points have bad size %d")%vpoints.size()),ORE_InvalidArguments);
+                    throw OPENRAVE_EXCEPTION_FORMAT("points have bad size %d", vpoints.size(),ORE_InvalidArguments);
                 }
                 return vpoints.size()/3;
             case 2: {
@@ -3327,7 +3327,7 @@ public:
                 int dim = extract<int>(pointshape[1]);
                 vpoints = ExtractArray<float>(opoints.attr("flat"));
                 if(dim % 3) {
-                    throw openrave_exception(boost::str(boost::format("points have bad size %dx%d")%num%dim),ORE_InvalidArguments);
+                    throw OPENRAVE_EXCEPTION_FORMAT("points have bad size %dx%d", num%dim,ORE_InvalidArguments);
                 }
                 return num*(dim/3);
             }
@@ -3338,7 +3338,7 @@ public:
         // assume it is a regular 1D list
         vpoints = ExtractArray<float>(opoints);
         if( vpoints.size()% 3 ) {
-            throw openrave_exception(boost::str(boost::format("points have bad size %d")%vpoints.size()),ORE_InvalidArguments);
+            throw OPENRAVE_EXCEPTION_FORMAT("points have bad size %d", vpoints.size(),ORE_InvalidArguments);
         }
         return vpoints.size()/3;
     }
@@ -3356,13 +3356,13 @@ public:
                     int numcolors = extract<int>(colorshape[0]);
                     int colordim = extract<int>(colorshape[1]);
                     if( colordim != 3 && colordim != 4 ) {
-                        throw openrave_exception("colors dim needs to be 3 or 4");
+                        throw OPENRAVE_EXCEPTION_FORMAT("colors dim %d needs to be 3 or 4",colordim, ORE_InvalidArguments);
                     }
                     vcolors = ExtractArray<float>(ocolors.attr("flat"));
                     return numcolors;
                 }
                 default:
-                    throw openrave_exception("colors has wrong number of dimensions",ORE_InvalidArguments);
+                    throw OPENRAVE_EXCEPTION_FORMAT("colors has %d dimensions",len(colorshape), ORE_InvalidArguments);
                 }
             }
             vcolors = ExtractArray<float>(ocolors);
@@ -3370,7 +3370,7 @@ public:
                 vcolors.push_back(1.0f);
             }
             else if( vcolors.size() != 4 ) {
-                throw openrave_exception("colors has incorrect number of values",ORE_InvalidArguments);
+                throw OPENRAVE_EXCEPTION_FORMAT("colors has incorrect number of values %d",vcolors.size(), ORE_InvalidArguments);
             }
             return 1;
         }

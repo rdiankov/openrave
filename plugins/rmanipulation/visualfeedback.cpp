@@ -449,6 +449,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
         stringstream ss(args);
         string robotname;
         _fMaxVelMult=1;
+        _bValidateTrajectory = false;
         ss >> robotname;
         string cmd;
         while(!ss.eof()) {
@@ -459,6 +460,10 @@ Visibility computation checks occlusion with other objects using ray sampling in
             if( cmd == "maxvelmult" ) {
                 ss >> _fMaxVelMult;
             }
+            else if( cmd == "validatetrajectory" ) {
+                ss >> _bValidateTrajectory;
+            }
+
             if( ss.fail() || !ss ) {
                 break;
             }
@@ -1127,13 +1132,18 @@ Visibility computation checks occlusion with other objects using ray sampling in
                 RAVELOG_INFOA("finished planning\n");
                 break;
             }
-            else RAVELOG_WARN("PlanPath failed\n");
+            else {
+                RAVELOG_WARN("PlanPath failed\n");
+            }
         }
 
         float felapsed = (GetMicroTime()-starttime)*0.000001f;
         RAVELOG_INFOA("total planning time: %fs\n", felapsed);
         if( !bSuccess ) {
             return false;
+        }
+        if( _bValidateTrajectory ) {
+            planningutils::ValidateTrajectory(params,ptraj);
         }
         CM::SetActiveTrajectory(_robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream,_fMaxVelMult);
         return true;
@@ -1238,12 +1248,17 @@ Visibility computation checks occlusion with other objects using ray sampling in
         if( planner->PlanPath(ptraj) ) {
             bSuccess = true;
         }
-        else RAVELOG_WARN("PlanPath failed\n");
+        else {
+            RAVELOG_WARN("PlanPath failed\n");
+        }
             
         float felapsed = (GetMicroTime()-starttime)*0.000001f;
         RAVELOG_INFOA("total planning time: %fs\n", felapsed);
         if( !bSuccess ) {
             return false;
+        }
+        if( _bValidateTrajectory ) {
+            planningutils::ValidateTrajectory(params,ptraj);
         }
         CM::SetActiveTrajectory(_robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream,_fMaxVelMult);
         return true;
@@ -1269,7 +1284,7 @@ protected:
 
     vector<Vector> _vconvexplanes; ///< the planes defining the bounding visibility region (posive is inside)
     Vector _vcenterconvex; ///< center point on the z=1 plane of the convex region
-
+    bool _bValidateTrajectory;
 };
 
 ModuleBasePtr CreateVisualFeedback(EnvironmentBasePtr penv) { return ModuleBasePtr(new VisualFeedback(penv)); }

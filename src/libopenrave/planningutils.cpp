@@ -103,6 +103,56 @@ namespace planningutils {
         return true;
     }
 
+    void ValidateTrajectory(TrajectoryBaseConstPtr trajectory, PlannerBase::PlannerParametersConstPtr parameters)
+    {
+        BOOST_ASSERT((int)parameters->_vConfigLowerLimit.size() == parameters->GetDOF());
+        BOOST_ASSERT((int)parameters->_vConfigUpperLimit.size() == parameters->GetDOF());
+        BOOST_ASSERT((int)parameters->_vConfigResolution.size() == parameters->GetDOF());
+        PlannerBase::ConfigurationListPtr configs(new PlannerBase::ConfigurationList());
+        dReal fthresh = 5e-5f;
+        vector<dReal> deltaq(parameters->GetDOF(),0);
+        for(size_t ipoint = 0; ipoint < trajectory->GetPoints().size(); ++ipoint) {
+            const TrajectoryBase::TPOINT& tp = trajectory->GetPoints()[ipoint];
+            BOOST_ASSERT((int)tp.q.size() == parameters->GetDOF());
+            for(size_t i = 0; i < tp.q.size(); ++i) {
+                BOOST_ASSERT(tp.q[i] >= parameters->_vConfigLowerLimit[i]-fthresh);
+                BOOST_ASSERT(tp.q[i] <= parameters->_vConfigUpperLimit[i]+fthresh);
+            }
+            parameters->_setstatefn(tp.q);
+            vector<dReal> newq;
+            parameters->_getstatefn(newq);
+            BOOST_ASSERT(tp.q.size() == newq.size());
+            for(size_t i = 0; i < newq.size(); ++i) {
+                if( RaveFabs(tp.q.at(i) - newq.at(i)) > 0.001 * parameters->_vConfigResolution[i] ) {
+                    throw OPENRAVE_EXCEPTION_FORMAT("setstate/getstate inconsistent configuration %d dof %d: %f != %f",ipoint%i%tp.q.at(i)%newq.at(i),ORE_InconsistentConstraints);
+                }
+            }
+            if( !!parameters->_neighstatefn ) {
+                FOREACH(it,newq) {
+                    *it = 0;
+                }
+                newq = tp.q;
+                if( !parameters->_neighstatefn(newq,deltaq,0) ) {
+                    throw OPENRAVE_EXCEPTION_FORMAT("neighstatefn is rejecting configuration %d",ipoint,ORE_InconsistentConstraints);
+                }
+            }
+        }
+        
+        for(size_t i = 1; i < trajectory->GetPoints().size(); ++i) {
+            if( !!parameters->_checkpathconstraintsfn ) {
+                configs->clear();
+                if( !parameters->_checkpathconstraintsfn(trajectory->GetPoints()[i-1].q,trajectory->GetPoints()[i].q,IT_Closed, configs) ) {
+                    throw OPENRAVE_EXCEPTION_FORMAT("checkpathconstraintsfn failed at %d-%d",(i-1)%i,ORE_InconsistentConstraints);
+                }
+                FOREACH(itconfig, *configs) {
+                    if( !parameters->_neighstatefn(*itconfig,deltaq,0) ) {
+                        throw OPENRAVE_EXCEPTION_FORMAT("neighstatefn is rejecting configurations from checkpathconstraintsfn %d-%d",(i-1)%i,ORE_InconsistentConstraints);
+                    }   
+                }
+            }
+        }
+    }
+
     LineCollisionConstraint::LineCollisionConstraint()
     {
         _report.reset(new CollisionReport());

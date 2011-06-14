@@ -248,7 +248,7 @@ public:
             }
             
             _iter = -1;
-            RAVELOG_WARN("constraint function exceeded iterations\n");
+            RAVELOG_DEBUG("constraint function exceeded iterations\n");
             return false;
         }
 

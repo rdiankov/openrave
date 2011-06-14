@@ -18,7 +18,7 @@ from copy import copy as shallowcopy
 class BaseManipulation:
     """Interface wrapper for :ref:`module-basemanipulation`
     """
-    def __init__(self,robot,plannername=None,maxvelmult=None):
+    def __init__(self,robot,plannername=None,maxvelmult=None,validatetrajectory=None):
         env = robot.GetEnv()
         self.prob = openravepy.RaveCreateModule(env,'BaseManipulation')
         self.robot = robot
@@ -27,6 +27,8 @@ class BaseManipulation:
             self.args += ' planner ' + plannername
         if maxvelmult is not None:
             self.args += ' maxvelmult %f '%maxvelmult
+        if validatetrajectory is not None:
+            self.args += ' validatetrajectory %d '%validatetrajectory
         if env.AddModule(self.prob,self.args) != 0:
             raise ValueError('module failed to initialize')
     def  __del__(self):
@@ -52,7 +54,7 @@ class BaseManipulation:
             cmd += 'samplingstep %f '%samplingstep
         return self.prob.SendCommand(cmd)
     
-    def MoveHandStraight(self,direction,minsteps=None,maxsteps=None,stepsize=None,ignorefirstcollision=None,starteematrix=None,greedysearch=True,execute=None,outputtraj=None,maxdeviationangle=None):
+    def MoveHandStraight(self,direction,minsteps=None,maxsteps=None,stepsize=None,ignorefirstcollision=None,starteematrix=None,greedysearch=True,execute=None,outputtraj=None,maxdeviationangle=None,steplength=None):
         """See :ref:`module-basemanipulation-movehandstraight`
         """
         cmd = 'MoveHandStraight direction %f %f %f '%(direction[0],direction[1],direction[2])
@@ -61,7 +63,9 @@ class BaseManipulation:
         if maxsteps is not None:
             cmd += 'maxsteps %d '%maxsteps
         if stepsize is not None:
-            cmd += 'stepsize %f '%stepsize
+            cmd += 'steplength %f '%stepsize
+        if steplength is not None:
+            cmd += 'steplength %f '%steplength
         if execute is not None:
             cmd += 'execute %d '%execute
         if starteematrix is not None:
@@ -114,7 +118,7 @@ class BaseManipulation:
         if res is None:
             raise openravepy.planning_error('MoveActiveJoints')
         return res
-    def MoveToHandPosition(self,matrices=None,affinedofs=None,maxiter=None,maxtries=None,translation=None,rotation=None,seedik=None,constraintfreedoms=None,constraintmatrix=None,constrainterrorthresh=None,execute=None,outputtraj=None):
+    def MoveToHandPosition(self,matrices=None,affinedofs=None,maxiter=None,maxtries=None,translation=None,rotation=None,seedik=None,constraintfreedoms=None,constraintmatrix=None,constrainterrorthresh=None,execute=None,outputtraj=None,steplength=None):
         """See :ref:`module-basemanipulation-movetohandposition`
         """
         cmd = 'MoveToHandPosition '
@@ -138,6 +142,8 @@ class BaseManipulation:
             cmd += 'constraintmatrix %s '%openravepy.matrixSerialization(constraintmatrix)
         if constrainterrorthresh is not None:
             cmd += 'constrainterrorthresh %s '%constrainterrorthresh
+        if steplength is not None:
+            cmd += 'steplength %f '%steplength
         if execute is not None:
             cmd += 'execute %d '%execute
         if outputtraj is not None and outputtraj:

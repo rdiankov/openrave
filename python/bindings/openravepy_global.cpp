@@ -187,7 +187,7 @@ public:
         case IkParameterization::Type_TranslationXY2D: SetTranslationXY2D(o); break;
         case IkParameterization::Type_TranslationXYOrientation3D: SetTranslationXYOrientation3D(o); break;
         case IkParameterization::Type_TranslationLocalGlobal6D: SetTranslationLocalGlobal6D(o[0],o[1]); break;
-        default: throw openrave_exception(boost::str(boost::format("incorrect ik parameterization type %d")%type));
+        default: throw OPENRAVE_EXCEPTION_FORMAT("incorrect ik parameterization type 0x%x", type, ORE_InvalidArguments);
         }
     }
     PyIkParameterization(const IkParameterization& ikparam) : _param(ikparam) {}

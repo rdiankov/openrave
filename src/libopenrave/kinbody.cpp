@@ -1422,6 +1422,10 @@ std::string KinBody::Joint::GetMimicEquation(int iaxis, int itype, const std::st
         }
         if( itype == 0 ) {
             _vmimic.at(iaxis)->_posfn->toMathML(sout,Vars);
+            if( sout.size() > 9 && sout.substr(0,9) == "<csymbol>") {
+                // due to a bug in ROS robot_model, have to return with <apply> (remove this in 2012).
+                sout = boost::str(boost::format("<apply>\n  <plus/><cn type=\"real\">0</cn>\n  %s\n  </apply>")%sout);
+            }
             sout = str(mathfmt%sout);
         }
         else if( itype == 1 ) {

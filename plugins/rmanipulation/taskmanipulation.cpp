@@ -116,10 +116,12 @@ Task-based manipulation planning involving target objects. A lot of the algorith
         ModuleBase::Reset();
         listsystems.clear();
         // recreate the planners since they store state
-        if( !!_pRRTPlanner )
+        if( !!_pRRTPlanner ) {
             _pRRTPlanner = RaveCreatePlanner(GetEnv(),_pRRTPlanner->GetXMLId());
-        if( !!_pGrasperPlanner )
+        }
+        if( !!_pGrasperPlanner ) {
             _pGrasperPlanner = RaveCreatePlanner(GetEnv(),_pGrasperPlanner->GetXMLId());
+        }
     }
 
     int main(const string& args)
@@ -127,6 +129,7 @@ Task-based manipulation planning involving target objects. A lot of the algorith
         string name;
         stringstream ss(args);
         _fMaxVelMult=1;
+        _bValidateTrajectory = false;
         ss >> _strRobotName;
     
         string plannername, graspername = "Grasper";
@@ -146,6 +149,9 @@ Task-based manipulation planning involving target objects. A lot of the algorith
             }
             else if( cmd == "graspername" ) {
                 ss >> graspername;
+            }
+            else if( cmd == "validatetrajectory" ) {
+                ss >> _bValidateTrajectory;
             }
 
             if( ss.fail() || !ss ) {
@@ -1553,6 +1559,9 @@ protected:
                 else {
                     RAVELOG_INFO(str(boost::format("finished planning, goal index: %d")%nGoalIndex));
                 }
+                if( _bValidateTrajectory ) {
+                    planningutils::ValidateTrajectory(params,ptraj);
+                }
                 bSuccess = true;
                 break;
             }
@@ -1697,6 +1706,7 @@ protected:
     PlannerBasePtr _pRRTPlanner, _pGrasperPlanner;
     list<pair<string,string> > _listSwitchModelPatterns;
     list<SwitchModelContainerPtr> _listSwitchModels;
+    bool _bValidateTrajectory;
 
     friend class SwitchModelState;
 };
