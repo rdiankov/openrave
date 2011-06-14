@@ -165,6 +165,7 @@ protected:
                     listpoints.push_back(q);
                     if( !parameters->_neighstatefn(q,dq,0) ) {
                         RAVELOG_WARN("neigh failed, not sure what to do\n");
+                        break;
                     }
                 }
             }
