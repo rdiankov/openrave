@@ -34,8 +34,8 @@ class TestMoving(EnvironmentSetup):
             constraintfreedoms=array([1,1,0,0,0,1]) # can rotate along z, translate along y
             constraintmatrix=array([[1,0,0,0], [0,1,0,0], [0,0,1,0], [0,0,0,1]])
             for constrainterrorthresh in [.005,0.01]:
-                success = basemanip.MoveToHandPosition(matrices=[Tgoal],maxiter=4000,maxtries=3,seedik=16, constraintfreedoms=constraintfreedoms, constraintmatrix=constraintmatrix, constrainterrorthresh=constrainterrorthresh,execute=False)
-                assert(success)
+                ret = basemanip.MoveToHandPosition(matrices=[Tgoal],maxiter=6000,maxtries=3,seedik=16, constraintfreedoms=constraintfreedoms, constraintmatrix=constraintmatrix, constrainterrorthresh=constrainterrorthresh,execute=False,steplength=0.01)
+                assert(ret is not None)
 
     def test_movehandstraight(self):
         env = self.env
@@ -52,7 +52,6 @@ class TestMoving(EnvironmentSetup):
             for dofvalues, direction in testvalues:
                 robot.SetDOFValues(dofvalues)
                 assert( not env.CheckCollision(robot) )
-                trajdata = basemanip.MoveHandStraight(direction=direction, ignorefirstcollision=False,stepsize=0.001,minsteps=19,maxsteps=20, execute=False, outputtraj=True)
-                assert( trajdata is not None )
-                assert( basemanip.ValidateTrajectory(data=trajdata) is not None )
+                ret = basemanip.MoveHandStraight(direction=direction, ignorefirstcollision=False,stepsize=0.001,minsteps=19,maxsteps=20, execute=False)
+                assert(ret is not None)
                 

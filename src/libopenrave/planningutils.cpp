@@ -103,7 +103,7 @@ namespace planningutils {
         return true;
     }
 
-    void ValidateTrajectory(TrajectoryBaseConstPtr trajectory, PlannerBase::PlannerParametersConstPtr parameters)
+    void ValidateTrajectory(TrajectoryBaseConstPtr trajectory, PlannerBase::PlannerParametersConstPtr parameters, dReal samplingstep=0)
     {
         BOOST_ASSERT((int)parameters->_vConfigLowerLimit.size() == parameters->GetDOF());
         BOOST_ASSERT((int)parameters->_vConfigUpperLimit.size() == parameters->GetDOF());
@@ -111,6 +111,9 @@ namespace planningutils {
         PlannerBase::ConfigurationListPtr configs(new PlannerBase::ConfigurationList());
         dReal fthresh = 5e-5f;
         vector<dReal> deltaq(parameters->GetDOF(),0);
+        if( samplingstep > 0 ) {
+            RAVELOG_WARN("currently not using samplingstep\n");
+        }
         for(size_t ipoint = 0; ipoint < trajectory->GetPoints().size(); ++ipoint) {
             const TrajectoryBase::TPOINT& tp = trajectory->GetPoints()[ipoint];
             BOOST_ASSERT((int)tp.q.size() == parameters->GetDOF());
