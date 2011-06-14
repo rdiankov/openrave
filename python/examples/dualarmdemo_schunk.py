@@ -35,10 +35,10 @@ class Schunkplanner:
     def __init__(self,env):
         self.env = env
         self.robot = self.env.GetRobots()[0]
-        self.probsmanip = RaveCreateProblem(self.env,'dualmanipulation')
+        self.probsmanip = RaveCreateModule(self.env,'dualmanipulation')
         args = self.robot.GetName()
         #args += ' planner birrt' 
-        self.env.LoadProblem(self.probsmanip,args)
+        self.env.AddModule(self.probsmanip,args)
         self.leftArm=self.robot.GetManipulator('leftarm')
         self.rightArm=self.robot.GetManipulator('rightarm')
         self.dualsolver = MultiManipIKSolver([self.leftArm,self.rightArm])

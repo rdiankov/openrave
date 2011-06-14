@@ -16,11 +16,11 @@ from openravepy import *
 from numpy import *
 from copy import copy as shallowcopy
 class TaskManipulation:
-    """Interface wrapper for :ref:`probleminstance-taskmanipulation`
+    """Interface wrapper for :ref:`module-taskmanipulation`
     """
     def __init__(self,robot,plannername=None,maxvelmult=None,graspername=None):
         env = robot.GetEnv()
-        self.prob = RaveCreateProblem(env,'TaskManipulation')
+        self.prob = RaveCreateModule(env,'TaskManipulation')
         self.robot = robot
         self.args = self.robot.GetName()
         if plannername is not None and len(plannername) > 0:
@@ -29,22 +29,22 @@ class TaskManipulation:
             self.args += ' maxvelmult %f '%maxvelmult
         if graspername is not None and len(graspername)>0:
             self.args += ' graspername %s '%graspername
-        if env.LoadProblem(self.prob,self.args) != 0:
-            raise ValueError('problem failed to initialize')
+        if env.AddModule(self.prob,self.args) != 0:
+            raise ValueError('module failed to initialize')
     def  __del__(self):
         self.prob.GetEnv().Remove(self.prob)
     def clone(self,envother):
         """Clones the interface into another environment
         """
         clone = shallowcopy(self)
-        clone.prob = RaveCreateProblem(envother,'TaskManipulation')
+        clone.prob = RaveCreateModule(envother,'TaskManipulation')
         clone.robot = envother.GetRobot(self.robot.GetName())
-        if envother.LoadProblem(clone.prob,clone.args) != 0:
-            raise ValueError('problem failed to initialize')
+        if envother.AddModule(clone.prob,clone.args) != 0:
+            raise ValueError('module failed to initialize')
         return clone
     def GraspPlanning(self,graspindices,grasps,target,approachoffset=0,destposes=None,seedgrasps=None,seeddests=None,seedik=None,maxiter=None,randomgrasps=None,randomdests=None, execute=None,outputtraj=None):
         cmd = 'graspplanning target %s approachoffset %f grasps %d %d '%(target.GetName(),approachoffset, grasps.shape[0],grasps.shape[1])
-        """See :ref:`probleminstance-taskmanipulation-graspplanning`
+        """See :ref:`module-taskmanipulation-graspplanning`
         """
         for f in grasps.flat:
             cmd += str(f) + ' '
@@ -95,7 +95,7 @@ class TaskManipulation:
             trajdata = ' '.join(resvalues)
         return goals,graspindex,searchtime,trajdata
     def EvaluateConstraints(self,freedoms,configs,targetframematrix=None,targetframepose=None,errorthresh=None):
-        """See :ref:`probleminstance-taskmanipulation-evaluateconstraints`
+        """See :ref:`module-taskmanipulation-evaluateconstraints`
         """
         cmd = 'EvaluateConstraints constraintfreedoms %s '%(' '.join(str(f) for f in freedoms))
         if targetframematrix is not None:
@@ -112,7 +112,7 @@ class TaskManipulation:
         newconfigs = reshape(array([float64(s) for s in resvalues[len(configs):]]),(len(configs),self.robot.GetActiveDOF()))
         return iters,newconfigs
     def CloseFingers(self,offset=None,movingdir=None,execute=None,outputtraj=None,outputfinal=None,coarsestep=None):
-        """See :ref:`probleminstance-taskmanipulation-closefingers`
+        """See :ref:`module-taskmanipulation-closefingers`
         """
         cmd = 'CloseFingers '
         dof=len(self.robot.GetActiveManipulator().GetGripperIndices())
@@ -145,7 +145,7 @@ class TaskManipulation:
             traj = None
         return final,traj
     def ReleaseFingers(self,target=None,movingdir=None,execute=None,outputtraj=None,outputfinal=None,coarsestep=None):
-        """See :ref:`probleminstance-taskmanipulation-releasefingers`
+        """See :ref:`module-taskmanipulation-releasefingers`
         """
         cmd = 'ReleaseFingers '
         dof=len(self.robot.GetActiveManipulator().GetGripperIndices())
@@ -177,7 +177,7 @@ class TaskManipulation:
             traj = None
         return final,traj
     def ReleaseActive(self,movingdir=None,execute=None,outputtraj=None,outputfinal=None):
-        """See :ref:`probleminstance-taskmanipulation-releaseactive`
+        """See :ref:`module-taskmanipulation-releaseactive`
         """
         cmd = 'ReleaseActive '
         if movingdir is not None:
@@ -204,7 +204,7 @@ class TaskManipulation:
             traj = None
         return final,traj
     def SwitchModels(self,switchpatterns=None,unregister=None,switchtofat=None,clearpatterns=None,clearmodels=None,update=None):
-        """See :ref:`probleminstance-taskmanipulation-switchmodels`
+        """See :ref:`module-taskmanipulation-switchmodels`
         """
         cmd = 'switchmodels '
         if switchpatterns is not None:

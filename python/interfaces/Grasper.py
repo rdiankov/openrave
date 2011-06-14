@@ -17,11 +17,11 @@ from numpy import *
 from copy import copy as shallowcopy
 
 class Grasper:
-    """Interface wrapper for :ref:`probleminstance-grasper`
+    """Interface wrapper for :ref:`module-grasper`
     """
     def __init__(self,robot,friction=0.3,avoidlinks=None,plannername=None):
         env = robot.GetEnv()
-        self.prob = RaveCreateProblem(env,'Grasper')
+        self.prob = RaveCreateModule(env,'Grasper')
         self.robot = robot
         self.friction = friction
         self.avoidlinks = avoidlinks
@@ -29,22 +29,22 @@ class Grasper:
         self.args = self.robot.GetName()
         if plannername is not None and len(plannername)>0:
             self.args += ' planner %s '%plannername
-        if env.LoadProblem(self.prob,self.args) != 0:
-            raise ValueError('problem failed to initialize')
+        if env.AddModule(self.prob,self.args) != 0:
+            raise ValueError('module failed to initialize')
     def  __del__(self):
         self.prob.GetEnv().Remove(self.prob)
     def clone(self,envother):
         """Clones the interface into another environment
         """
         clone = shallowcopy(self)
-        clone.prob = RaveCreateProblem(envother,'Grasper')
+        clone.prob = RaveCreateModule(envother,'Grasper')
         clone.robot = envother.GetRobot(self.robot.GetName())
         clone.avoidlinks = [clone.robot.GetLink(link.GetName()) for link in self.avoidlinks]
-        if envother.LoadProblem(clone.prob,clone.args) != 0:
-            raise ValueError('problem failed to initialize')
+        if envother.AddModule(clone.prob,clone.args) != 0:
+            raise ValueError('module failed to initialize')
         return clone
     def Grasp(self,direction=None,roll=None,position=None,standoff=None,target=None,stablecontacts=False,forceclosure=False,transformrobot=True,onlycontacttarget=True,tightgrasp=False,graspingnoise=None,execute=None,translationstepmult=None,outputfinal=False):
-        """See :ref:`probleminstance-grasper-grasp`
+        """See :ref:`module-grasper-grasp`
         """
         cmd = 'Grasp '
         if direction is not None:
@@ -87,7 +87,7 @@ class Grasper:
         contacts = reshape(array([float64(s) for s in resvalues],float64),(len(resvalues)/6,6))
         return contacts,finalconfig,mindist,volume
     def ConvexHull(self,points,returnplanes=True,returnfaces=True,returntriangles=True):
-        """See :ref:`probleminstance-grasper-convexhull`
+        """See :ref:`module-grasper-convexhull`
         """
         dim = len(points[0])
         cmd = 'ConvexHull points %d %d '%(len(points),dim) + ' '.join(str(f) for f in points.flat) + ' '

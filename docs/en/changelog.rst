@@ -27,6 +27,8 @@ Core
 
 * Environment can now support multiple viewers attached to it and can query them with their name. Plotting methods through the environment send commands to all viewers at once.
 
+* **Compatibility Break:** EnvironmentBase AddKinBody/AddRobot/AddSensor return void instead of bool.
+
 Planning
 --------
 

@@ -19,7 +19,7 @@
 Description
 -----------
 
-Uses the :mod:`.visibiltymodel` generator and :ref:`probleminstance-visualfeedback` interface.
+Uses the :mod:`.visibiltymodel` generator and :ref:`module-visualfeedback` interface.
 
 .. examplepost-block:: checkvisibility
 
