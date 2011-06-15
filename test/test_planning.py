@@ -33,8 +33,8 @@ class TestMoving(EnvironmentSetup):
             Tgoal=array([[0,0,1,.6], [0,1,0,.2], [-1,0,0,.73], [0,0,0,1]])
             constraintfreedoms=array([1,1,0,0,0,1]) # can rotate along z, translate along y
             constraintmatrix=array([[1,0,0,0], [0,1,0,0], [0,0,1,0], [0,0,0,1]])
-            for constrainterrorthresh in [.005,0.01]:
-                ret = basemanip.MoveToHandPosition(matrices=[Tgoal],maxiter=6000,maxtries=3,seedik=16, constraintfreedoms=constraintfreedoms, constraintmatrix=constraintmatrix, constrainterrorthresh=constrainterrorthresh,execute=False,steplength=0.01)
+            for constrainterrorthresh in [0.002,0.005]:
+                ret = basemanip.MoveToHandPosition(matrices=[Tgoal],maxiter=6000,maxtries=2,seedik=16, constraintfreedoms=constraintfreedoms, constraintmatrix=constraintmatrix, constrainterrorthresh=constrainterrorthresh,execute=False,outputtraj=True,steplength=0.005)
                 assert(ret is not None)
 
     def test_movehandstraight(self):

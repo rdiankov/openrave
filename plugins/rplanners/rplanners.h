@@ -74,7 +74,7 @@ class SpatialTreeBase
 template <typename Planner, typename Node>
 class SpatialTree : public SpatialTreeBase
 {
- public:
+public:
     SpatialTree(int fromgoal) {
         _fromgoal = fromgoal;
         _fStepLength = 0.04f;

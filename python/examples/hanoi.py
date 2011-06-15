@@ -37,7 +37,7 @@ if not __build_doc__:
     from numpy import *
 
 class HanoiPuzzle:
-    def __init__(self,env,robot):
+    def __init__(self,env,robot,plannername=None):
         self.env = env
         self.robot = robot
         # load the IK solver
@@ -52,8 +52,8 @@ class HanoiPuzzle:
             print 'robot weights: ',robot.GetDOFWeights()
             
         with self.env: # lock the environment
-            self.basemanip = interfaces.BaseManipulation(self.robot)
-            self.taskmanip = interfaces.TaskManipulation(self.robot)
+            self.basemanip = interfaces.BaseManipulation(self.robot,plannername=plannername)
+            self.taskmanip = interfaces.TaskManipulation(self.robot,plannername=plannername)
             disknames = ['disk0','disk1','disk2']
             self.heights = array([0.021,0.062,0.103])+0.01
             disks = []
@@ -211,7 +211,7 @@ def main(env,options):
     while True:
         env.Reset()
         env.Load(options.scene)
-        hanoi = HanoiPuzzle(env,env.GetRobots()[0])
+        hanoi = HanoiPuzzle(env,env.GetRobots()[0],plannername=options.planner)
         hanoi.hanoisolve(3,hanoi.srcpeg,hanoi.destpeg,hanoi.peg)
         if options.testmode:
             break
@@ -229,6 +229,8 @@ def run(args=None):
     OpenRAVEGlobalArguments.addOptions(parser)
     parser.add_option('--scene',action="store",type='string',dest='scene',default='data/hanoi_complex2.env.xml',
                       help='Scene file to load (default=%default)')
+    parser.add_option('--planner',action="store",type='string',dest='planner',default=None,
+                      help='the planner to use')
     (options, leftargs) = parser.parse_args(args=args)
     env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
     main(env,options)

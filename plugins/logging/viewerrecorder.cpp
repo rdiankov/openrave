@@ -98,14 +98,14 @@ public:
         _frameRate = 0;
         _bSimTime = true;
         _starttime = 0;
-        _bWroteURL = false;
-        _bWroteHeader = false;
 #ifdef _WIN32
         _pfile = NULL; 
         _ps = NULL;
         _psCompressed = NULL; 
         _biSizeImage = 0;
 #else
+        _bWroteURL = false;
+        _bWroteHeader = false;
         _output = NULL;
         _stream = NULL;
         _picture = NULL;
@@ -269,13 +269,13 @@ protected:
     int _biSizeImage;
 
     void _GetCodecs(std::list<std::pair<int,std::string> >& lcodecs) { lcodecs.clear(); }
-.. 
+
     void _StartVideo(const std::string& filename, double frameRate, int width, int height, int bits, int codecid=-1)
     {
         _nFrameCount = 0;
-        HRESULT hr = AVIFileOpenA(_pfile, filename.c_str(), OF_WRITE | OF_CREATE, NULL);
+        HRESULT hr = AVIFileOpenA(&_pfile, filename.c_str(), OF_WRITE | OF_CREATE, NULL);
         BOOST_ASSERT( hr == AVIERR_OK );
-        _CreateStream(pfile, &ps, (int)frameRate, width*height/bits, width, height, "none");
+        _CreateStream(_pfile, &_ps, (int)_frameRate, width*height/bits, width, height, "none");
 
         BITMAPINFOHEADER bi;
         memset(&bi, 0, sizeof(bi));
