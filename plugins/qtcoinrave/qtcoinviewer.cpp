@@ -230,12 +230,12 @@ QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
     _timerSensor->setInterval(SbTime(TIMER_SENSOR_INTERVAL));
 
     _timerVideo = new SoTimerSensor(GlobVideoFrame, this);
-    _timerVideo->setInterval(SbTime(1.0/VIDEO_FRAMERATE));
+    _timerVideo->setInterval(SbTime(0.7/VIDEO_FRAMERATE)); // better to produce more frames than get slow video
     if (!_timerVideo->isScheduled()) {
         _timerVideo->schedule();
     }
     
-    SoDB::setRealTimeInterval(SbTime(1/VIDEO_FRAMERATE));
+    SoDB::setRealTimeInterval(SbTime(0.7/VIDEO_FRAMERATE));  // better to produce more frames than get slow video
     
     // set to the classic locale so that number serialization/hashing works correctly
     // for some reason qt4 resets the locale to the default locale at some point, and openrave stops working
@@ -272,6 +272,7 @@ QtCoinViewer::~QtCoinViewer()
 
     _condUpdateModels.notify_all();
 
+    _pvideorecorder.reset();
     // don't dereference
 //    if( --s_InitRefCount <= 0 )
 //        SoQt::done();
@@ -2508,7 +2509,7 @@ void QtCoinViewer::_VideoFrame()
         return;
     }
     FOREACH(itcallback,listViewerImageCallbacks) {
-        (*itcallback)(memory,VIDEO_WIDTH,VIDEO_HEIGHT);
+        (*itcallback)(memory,VIDEO_WIDTH,VIDEO_HEIGHT,3);
     }
 }
 
@@ -2645,20 +2646,6 @@ void QtCoinViewer::_Reset()
         itbody->first->SetGuiData(UserDataPtr());
     }
     _mapbodies.clear();
-
-    std::list<ItemSelectionCallbackFn> listItemSelectionCallbacks;
-    {
-        boost::mutex::scoped_lock lock(_mutexCallbacks);
-        listItemSelectionCallbacks.swap(_listItemSelectionCallbacks);
-    }
-    listItemSelectionCallbacks.clear();
-
-    std::list<ViewerImageCallbackFn> listViewerImageCallbacks;
-    {
-        boost::mutex::scoped_lock lock(_mutexCallbacks);
-        listViewerImageCallbacks.swap(_listViewerImageCallbacks);
-    }
-    listViewerImageCallbacks.clear();
 
     if( !!_pvideorecorder ) {
         SoDB::enableRealTimeSensor(true);
@@ -2878,7 +2865,7 @@ void QtCoinViewer::_RecordSetup(bool bOn, bool bRealtimeVideo)
             else {
                 sin << "timing simtime ";
             }
-            sin << " filename " << s.toAscii().data();
+            sin << " viewer " << GetName() << endl << " filename " << s.toAscii().data() << endl;
             if( !_pvideorecorder->SendCommand(sout,sin) ) {
                 _pvideorecorder.reset();
                 RAVELOG_DEBUG("video recording failed");
@@ -3215,4 +3202,40 @@ bool QtCoinViewer::_SetFiguresInCamera(ostream& sout, istream& sinput)
 {
     sinput >> _bRenderFiguresInCamera;
     return !!sinput;
+}
+
+void QtCoinViewer::_UnregisterItemSelectionCallback(ViewerBaseWeakPtr pweakviewer, std::list<ItemSelectionCallbackFn>::iterator* pit)
+{
+    if( !!pit ) {
+        boost::shared_ptr<QtCoinViewer> pviewer = boost::dynamic_pointer_cast<QtCoinViewer>(pweakviewer.lock());
+        if( !!pviewer ) {
+            boost::mutex::scoped_lock lock(pviewer->_mutexCallbacks);
+            pviewer->_listItemSelectionCallbacks.erase(*pit);
+        }
+        delete pit;
+    }   
+}
+
+boost::shared_ptr<void> QtCoinViewer::RegisterItemSelectionCallback(const ItemSelectionCallbackFn& fncallback)
+{
+    boost::mutex::scoped_lock lock(_mutexCallbacks);
+    return boost::shared_ptr<void>(new std::list<ItemSelectionCallbackFn>::iterator(_listItemSelectionCallbacks.insert(_listItemSelectionCallbacks.end(),fncallback)), boost::bind(QtCoinViewer::_UnregisterItemSelectionCallback,ViewerBaseWeakPtr(shared_viewer()), _1));
+}
+
+void QtCoinViewer::_UnregisterViewerImageCallback(ViewerBaseWeakPtr pweakviewer, std::list<ViewerImageCallbackFn>::iterator* pit)
+{
+    if( !!pit ) {
+        boost::shared_ptr<QtCoinViewer> pviewer = boost::dynamic_pointer_cast<QtCoinViewer>(pweakviewer.lock());
+        if( !!pviewer ) {
+            boost::mutex::scoped_lock lock(pviewer->_mutexCallbacks);
+            pviewer->_listViewerImageCallbacks.erase(*pit);
+        }
+        delete pit;
+    }
+}
+
+boost::shared_ptr<void> QtCoinViewer::RegisterViewerImageCallback(const ViewerImageCallbackFn& fncallback)
+{
+    boost::mutex::scoped_lock lock(_mutexCallbacks);
+    return boost::shared_ptr<void>(new std::list<ViewerImageCallbackFn>::iterator(_listViewerImageCallbacks.insert(_listViewerImageCallbacks.end(),fncallback)), boost::bind(QtCoinViewer::_UnregisterViewerImageCallback,ViewerBaseWeakPtr(shared_viewer()), _1));
 }

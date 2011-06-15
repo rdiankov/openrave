@@ -18,7 +18,7 @@ from copy import copy as shallowcopy
 class BaseManipulation:
     """Interface wrapper for :ref:`module-basemanipulation`
     """
-    def __init__(self,robot,plannername=None,maxvelmult=None,validatetrajectory=None):
+    def __init__(self,robot,plannername=None,maxvelmult=None):
         env = robot.GetEnv()
         self.prob = openravepy.RaveCreateModule(env,'BaseManipulation')
         self.robot = robot
@@ -27,8 +27,6 @@ class BaseManipulation:
             self.args += ' planner ' + plannername
         if maxvelmult is not None:
             self.args += ' maxvelmult %f '%maxvelmult
-        if validatetrajectory is not None:
-            self.args += ' validatetrajectory %d '%validatetrajectory
         if env.AddModule(self.prob,self.args) != 0:
             raise ValueError('module failed to initialize')
     def  __del__(self):
@@ -46,10 +44,10 @@ class BaseManipulation:
         """See :ref:`module-basemanipulation-traj`
         """
         return self.prob.SendCommand('traj stream ' + data + ' %d %d '%(resettrans,resettiming))
-    def ValidateTrajectory(self,data,resettrans=False,resettiming=False,samplingstep=None):
-        """See :ref:`module-basemanipulation-validatetrajectory`
+    def VerifyTrajectory(self,data,resettrans=False,resettiming=False,samplingstep=None):
+        """See :ref:`module-basemanipulation-verifytrajectory`
         """
-        cmd = 'ValidateTrajectory stream ' + data + ' resettiming %d resettiming %d '%(resettrans,resettiming)
+        cmd = 'VerifyTrajectory stream ' + data + ' resettiming %d resettiming %d '%(resettrans,resettiming)
         if samplingstep is not None:
             cmd += 'samplingstep %f '%samplingstep
         return self.prob.SendCommand(cmd)

@@ -43,7 +43,7 @@ namespace planningutils {
         \param samplingstep If == 0, then will only test the supports points in trajectory->GetPoints(). If > 0, then will sample the trajectory at this time interval.
         \throw openrave_exception If the trajectory is invalid, will throw ORE_InconsistentConstraints.
     */
-    OPENRAVE_API void ValidateTrajectory(PlannerBase::PlannerParametersConstPtr parameters, TrajectoryBaseConstPtr trajectory, dReal samplingstep=0);
+    OPENRAVE_API void VerifyTrajectory(PlannerBase::PlannerParametersConstPtr parameters, TrajectoryBaseConstPtr trajectory, dReal samplingstep=0);
 
     /// \brief Line collision
     class OPENRAVE_API LineCollisionConstraint

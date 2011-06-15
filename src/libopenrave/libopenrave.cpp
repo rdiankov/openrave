@@ -233,7 +233,7 @@ public:
         return _state;
     }
     
-    int Initialize(bool bLoadAllPlugins, DebugLevel level)
+    int Initialize(bool bLoadAllPlugins, uint32_t level)
     {
         if( _IsInitialized() ) {
             return 0; // already initialized
@@ -332,12 +332,12 @@ public:
         return "";
     }
 
-    void SetDebugLevel(DebugLevel level)
+    void SetDebugLevel(uint32_t level)
     {
         _nDebugLevel = level;
     }
 
-    DebugLevel GetDebugLevel()
+    int GetDebugLevel()
     {
         return _nDebugLevel;
     }
@@ -461,7 +461,7 @@ private:
 
     // state that is initialized/destroyed
     boost::shared_ptr<RaveDatabase> _pdatabase;
-    DebugLevel _nDebugLevel;
+    uint32_t _nDebugLevel;
     boost::mutex _mutexXML;
     std::map<InterfaceType, READERSMAP > _mapreaders;
     std::map<InterfaceType,string> _mapinterfacenames;
@@ -481,12 +481,12 @@ private:
 
 boost::shared_ptr<RaveGlobal> RaveGlobal::_state;
 
-void RaveSetDebugLevel(DebugLevel level)
+void RaveSetDebugLevel(uint32_t level)
 {
     RaveGlobal::instance()->SetDebugLevel(level);
 }
 
-DebugLevel RaveGetDebugLevel()
+int RaveGetDebugLevel()
 {
     return RaveGlobal::instance()->GetDebugLevel();
 }
@@ -516,7 +516,7 @@ std::string RaveFindDatabaseFile(const std::string& filename, bool bRead)
     return RaveGlobal::instance()->FindDatabaseFile(filename,bRead);
 }
 
-int RaveInitialize(bool bLoadAllPlugins, DebugLevel level)
+int RaveInitialize(bool bLoadAllPlugins, uint32_t level)
 {
     return RaveGlobal::instance()->Initialize(bLoadAllPlugins,level);
 }

@@ -24,8 +24,8 @@ public:
                         "Set the active manipulator");
         RegisterCommand("Traj",boost::bind(&BaseManipulation::Traj,this,_1,_2),
                         "Execute a trajectory from a file on the local filesystem");
-        RegisterCommand("ValidateTrajectory",boost::bind(&BaseManipulation::_ValidateTrajectoryCommand,this,_1,_2),
-                        "Validates the robot trajectory by checking collisions with the environment and other user-specified constraints.");
+        RegisterCommand("VerifyTrajectory",boost::bind(&BaseManipulation::_VerifyTrajectoryCommand,this,_1,_2),
+                        "Verifies the robot trajectory by checking collisions with the environment and other user-specified constraints.");
         RegisterCommand("GrabBody",boost::bind(&BaseManipulation::GrabBody,this,_1,_2),
                         "Robot calls ::Grab on a body with its current manipulator");
         RegisterCommand("ReleaseAll",boost::bind(&BaseManipulation::ReleaseAll,this,_1,_2),
@@ -78,7 +78,6 @@ Method wraps the WorkspaceTrajectoryTracker planner. For more details on paramet
     virtual int main(const std::string& args)
     {
         _fMaxVelMult=1;
-        _bValidateTrajectory = false;
 
         string strRobotName;
         stringstream ss(args);
@@ -97,9 +96,6 @@ Method wraps the WorkspaceTrajectoryTracker planner. For more details on paramet
             }
             else if( cmd == "maxvelmult" ) {
                 ss >> _fMaxVelMult;
-            }
-            else if( cmd == "validatetrajectory" ) {
-                ss >> _bValidateTrajectory;
             }
             if( ss.fail() || !ss ) {
                 break;
@@ -345,8 +341,8 @@ protected:
         if( !planner->PlanPath(poutputtraj) ) {
             return false;
         }
-        if( _bValidateTrajectory ) {
-            planningutils::ValidateTrajectory(params,poutputtraj);
+        if( RaveGetDebugLevel() & Level_VerifyPlans ) {
+            planningutils::VerifyTrajectory(params,poutputtraj);
         }
         CM::SetActiveTrajectory(robot, poutputtraj, bExecute, strtrajfilename, pOutputTrajStream,_fMaxVelMult);
         return true;
@@ -464,8 +460,8 @@ protected:
         if( !bSuccess ) {
             return false;
         }
-        if( _bValidateTrajectory ) {
-            planningutils::ValidateTrajectory(params, ptraj);
+        if( RaveGetDebugLevel() & Level_VerifyPlans ) {
+            planningutils::VerifyTrajectory(params, ptraj);
         }
         CM::SetActiveTrajectory(robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream,_fMaxVelMult);
         sout << "1";
@@ -575,8 +571,8 @@ protected:
         if( !bSuccess ) {
             return false;
         }
-        if( _bValidateTrajectory ) {
-            planningutils::ValidateTrajectory(params, ptraj);
+        if( RaveGetDebugLevel() & Level_VerifyPlans ) {
+            planningutils::VerifyTrajectory(params, ptraj);
         }
         CM::SetActiveTrajectory(robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream,_fMaxVelMult);
         return true;
@@ -786,8 +782,8 @@ protected:
         if( !bSuccess ) {
             return false;
         }
-        if( _bValidateTrajectory ) {
-            planningutils::ValidateTrajectory(params, ptraj);
+        if( RaveGetDebugLevel() & Level_VerifyPlans ) {
+            planningutils::VerifyTrajectory(params, ptraj);
         }
         CM::SetActiveTrajectory(robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream,_fMaxVelMult);
         sout << "1";
@@ -1035,7 +1031,7 @@ protected:
         return true;
     }
 
-    bool _ValidateTrajectoryCommand(ostream& sout, istream& sinput)
+    bool _VerifyTrajectoryCommand(ostream& sout, istream& sinput)
     {
         TrajectoryBasePtr ptraj;
         dReal samplingstep = 0.001;
@@ -1091,7 +1087,7 @@ protected:
         PlannerBase::PlannerParametersPtr params(new PlannerBase::PlannerParameters());
         params->SetRobotActiveJoints(robot);
         try{
-            planningutils::ValidateTrajectory(params,ptraj,samplingstep);
+            planningutils::VerifyTrajectory(params,ptraj,samplingstep);
             return true;
         }
         catch(const openrave_exception& ex) {
@@ -1160,7 +1156,6 @@ protected:
     RobotBasePtr robot;
     string _strRRTPlannerName;
     dReal _fMaxVelMult;
-    bool _bValidateTrajectory;
 };
 
 ModuleBasePtr CreateBaseManipulation(EnvironmentBasePtr penv) { return ModuleBasePtr(new BaseManipulation(penv)); }

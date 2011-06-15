@@ -29,6 +29,8 @@ Core
 
 * **Compatibility Break:** EnvironmentBase AddKinBody/AddRobot/AddSensor return void instead of bool.
 
+* added a Level_VerifyPlans debug level that notifies planners/modules to double check their outputs. Used for testing.
+
 Planning
 --------
 
@@ -52,11 +54,11 @@ Planning
  * SimpleDistanceMetric
  * SimpleNeighborhoodSampler
  * ManipulatorIKGoalSampler
- * ValidateTrajectory
+ * VerifyTrajectory
  * JitterActiveDOF
  * JitterTransform
 
-* added ValidateTrajectory command in BaseManipulation, added 'validatetrajectory' option to always check trajectories
+* added VerifyTrajectory command in BaseManipulation.
 
 * fixed major bug in WorkspaceTrajectoryTracker (ie MoveHandStraight) due to obstacle checking
 
@@ -77,14 +79,13 @@ Viewers
 
 * viewer showing scene normals
 
-* added a new :ref:`module-viewerrecorder` interface that can attach to viewers and record their images.
+* added a new :ref:`module-viewerrecorder` interface that can attach to viewers and record their images. The recorder works on a separate thread, so it should have a minimal impact on performance.
 
 * Removed ffmpeg/video recording from qtcoin viewer.
 
 * added watermarking support through :ref:`SetWatermark command <module-viewerrecorder-setwatermark>`
 
-* deprecated the ViewerBase::RegisterCallback function and added individdual functions for item
-  selection and new viewer image: RegisterItemSelectionCallback and RegisterViewerImageCallback
+* deprecated the ViewerBase::RegisterCallback function and added individdual functions for item selection and new viewer image: RegisterItemSelectionCallback and RegisterViewerImageCallback
 
 * Added ViewerBase::GetCameraIntrinsics for the current camera location
 

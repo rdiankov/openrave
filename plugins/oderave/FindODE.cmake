@@ -14,16 +14,20 @@ find_program(ODE_CONFIG_EXECUTABLE NAMES ode-config DOC "ode-config executable")
 mark_as_advanced(ODE_CONFIG_EXECUTABLE)
 
 if(ODE_CONFIG_EXECUTABLE)
-  execute_process(
-    COMMAND ${ODE_CONFIG_EXECUTABLE} --cflags
-    OUTPUT_VARIABLE _odeconfig_cflags
-    RESULT_VARIABLE _odeconfig_failed)
-  string(REGEX REPLACE "[\r\n]" " " _odeconfig_cflags "${_odeconfig_cflags}")
-  execute_process(
-    COMMAND ${ODE_CONFIG_EXECUTABLE} --libs
-    OUTPUT_VARIABLE _odeconfig_lflags
-    RESULT_VARIABLE _odeconfig_failed)
-  string(REGEX REPLACE "[\r\n]" " " _odeconfig_lflags "${_odeconfig_lflags}")
+  if( NOT _odeconfig_cflags ) # could be cached
+    execute_process(
+      COMMAND ${ODE_CONFIG_EXECUTABLE} --cflags
+      OUTPUT_VARIABLE _odeconfig_cflags
+      RESULT_VARIABLE _odeconfig_failed)
+    string(REGEX REPLACE "[\r\n]" " " _odeconfig_cflags "${_odeconfig_cflags}")
+  endif()
+  if(  NOT _odeconfig_lflags)
+    execute_process(
+      COMMAND ${ODE_CONFIG_EXECUTABLE} --libs
+      OUTPUT_VARIABLE _odeconfig_lflags
+      RESULT_VARIABLE _odeconfig_failed)
+    string(REGEX REPLACE "[\r\n]" " " _odeconfig_lflags "${_odeconfig_lflags}")
+  endif()
 endif()
 
 if(_odeconfig_cflags AND _odeconfig_lflags)
@@ -37,8 +41,11 @@ if(_odeconfig_cflags AND _odeconfig_lflags)
   string(REGEX REPLACE "(^| )-l([./+-_\\a-zA-Z]*)" " " _odeconfig_lflags "${_odeconfig_lflags}")
   string(REGEX REPLACE "(^| )-L([./+-_\\a-zA-Z]*)" " " _odeconfig_lflags "${_odeconfig_lflags}")
  
+  string(REGEX MATCHALL "(^| )-I([./+-_\\a-zA-Z]*)" _odeconfig_includedirs "${_odeconfig_cflags}")
+  string(REGEX REPLACE "(^| )-I" "" _odeconfig_includedirs "${_odeconfig_includedirs}")
+
   set( ODE_CXXFLAGS "${_odeconfig_cflags} ${_odeconfig_lflags}" )
-  set( ODE_INCLUDE_DIRS "")
+  set( ODE_INCLUDE_DIRS ${_odeconfig_includedirs})
   set( ODE_LINK_DIRS ${_odeconfig_ldirs})
   set( ODE_LIBRARY ${_odeconfig_libs})
   set( ODE_LIBRARY_RELEASE ${ODE_LIBRARY})

@@ -103,7 +103,7 @@ namespace planningutils {
         return true;
     }
 
-    void ValidateTrajectory(PlannerBase::PlannerParametersConstPtr parameters, TrajectoryBaseConstPtr trajectory, dReal samplingstep)
+    void VerifyTrajectory(PlannerBase::PlannerParametersConstPtr parameters, TrajectoryBaseConstPtr trajectory, dReal samplingstep)
     {
         BOOST_ASSERT((int)parameters->_vConfigLowerLimit.size() == parameters->GetDOF());
         BOOST_ASSERT((int)parameters->_vConfigUpperLimit.size() == parameters->GetDOF());

@@ -271,7 +271,7 @@ std::string openravepyCompilerVersion()
     return ss.str();
 }
 
-void raveLog(const string& s, DebugLevel level)
+void raveLog(const string& s, int level)
 {
     if( s.size() > 0 ) {
         RavePrintfA(s,level);
@@ -542,6 +542,7 @@ void init_openravepy_global()
         .value("Info",Level_Info)
         .value("Debug",Level_Debug)
         .value("Verbose",Level_Verbose)
+        .value("VerifyPlans",Level_VerifyPlans)
         ;
     enum_<SerializationOptions>("SerializationOptions" DOXY_ENUM(SerializationOptions))
         .value("Kinematics",SO_Kinematics)

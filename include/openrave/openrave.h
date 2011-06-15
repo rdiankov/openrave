@@ -298,7 +298,9 @@ enum DebugLevel {
     Level_Warn=2,
     Level_Info=3,
     Level_Debug=4,
-    Level_Verbose=5
+    Level_Verbose=5,
+    Level_OutputMask=0xf,
+    Level_VerifyPlans=0x80000000, ///< if set, should verify every plan returned. the verification is left up to the planners or the modules calling the planners. See \ref planningutils::ValidateTrajectory
 };
 
 #define OPENRAVECOLOR_FATALLEVEL 5 // magenta
@@ -308,11 +310,11 @@ enum DebugLevel {
 #define OPENRAVECOLOR_DEBUGLEVEL 2 // green
 #define OPENRAVECOLOR_VERBOSELEVEL 4 // blue
 
-/// Sets the global openrave debug level
-OPENRAVE_API void RaveSetDebugLevel(DebugLevel level);
+/// \brief Sets the global openrave debug level. A combination of \ref DebugLevel
+OPENRAVE_API void RaveSetDebugLevel(uint32_t level);
 
 /// Returns the openrave debug level
-OPENRAVE_API DebugLevel RaveGetDebugLevel();
+OPENRAVE_API int RaveGetDebugLevel();
 
 /// extracts only the filename
 inline const char* RaveGetSourceFilename(const char* pfilename)
@@ -367,7 +369,7 @@ inline const char* RaveGetSourceFilename(const char* pfilename)
         return r; \
     }
 
-inline int RavePrintfA(const std::string& s, DebugLevel level)
+inline int RavePrintfA(const std::string& s, uint32_t level)
 {
     if( s.size() == 0 || s[s.size()-1] != '\n' ) { // automatically add a new line
         printf("%s\n", s.c_str());
@@ -447,9 +449,9 @@ DefineRavePrintfA(_INFOLEVEL)
     } \
 
 
-inline int RavePrintfA(const std::string& s, DebugLevel level)
+inline int RavePrintfA(const std::string& s, uint32_t level)
 {
-    if( OpenRAVE::RaveGetDebugLevel()>=level ) {
+    if( (OpenRAVE::RaveGetDebugLevel()&OpenRAVE::Level_OutputMask)>=level ) {
         int color = 0;
         switch(level) {
         case Level_Fatal: color = OPENRAVECOLOR_FATALLEVEL; break;
@@ -497,8 +499,8 @@ DefineRavePrintfA(_VERBOSELEVEL)
 
 // different logging levels. The higher the suffix number, the less important the information is.
 // 0 log level logs all the time. OpenRAVE starts up with a log level of 0.
-#define RAVELOG_LEVELW(LEVEL,level) OpenRAVE::RaveGetDebugLevel()>=(level)&&(RAVEPRINTHEADER(LEVEL)>0)&&OpenRAVE::RavePrintfW##LEVEL
-#define RAVELOG_LEVELA(LEVEL,level) OpenRAVE::RaveGetDebugLevel()>=(level)&&(RAVEPRINTHEADER(LEVEL)>0)&&OpenRAVE::RavePrintfA##LEVEL
+#define RAVELOG_LEVELW(LEVEL,level) (OpenRAVE::RaveGetDebugLevel()&OpenRAVE::Level_OutputMask)>=(level)&&(RAVEPRINTHEADER(LEVEL)>0)&&OpenRAVE::RavePrintfW##LEVEL
+#define RAVELOG_LEVELA(LEVEL,level) (OpenRAVE::RaveGetDebugLevel()&OpenRAVE::Level_OutputMask)>=(level)&&(RAVEPRINTHEADER(LEVEL)>0)&&OpenRAVE::RavePrintfA##LEVEL
 
 // define log4cxx equivalents (eventually OpenRAVE will move to log4cxx logging)
 #define RAVELOG_FATALW RAVELOG_LEVELW(_FATALLEVEL,OpenRAVE::Level_Fatal)
@@ -520,7 +522,7 @@ DefineRavePrintfA(_VERBOSELEVEL)
 #define RAVELOG_VERBOSEA RAVELOG_LEVELA(_VERBOSELEVEL,OpenRAVE::Level_Verbose)
 #define RAVELOG_VERBOSE RAVELOG_VERBOSEA
 
-#define IS_DEBUGLEVEL(level) (OpenRAVE::RaveGetDebugLevel()>=(level))
+#define IS_DEBUGLEVEL(level) ((OpenRAVE::RaveGetDebugLevel()&OpenRAVE::Level_OutputMask)>=(level))
 
 #define OPENRAVE_EXCEPTION_FORMAT0(s, errorcode) OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] "s)%(__PRETTY_FUNCTION__)%(__LINE__)),errorcode)
 
@@ -1091,7 +1093,7 @@ OPENRAVE_API std::string RaveFindDatabaseFile(const std::string& filename, bool 
 /// explicit control of when this happens.
 /// \param bLoadAllPlugins If true will load all the openrave plugins automatically that can be found in the OPENRAVE_PLUGINS environment path
 /// \return 0 if successful, otherwise an error code
-OPENRAVE_API int RaveInitialize(bool bLoadAllPlugins=true, DebugLevel level = Level_Info);
+OPENRAVE_API int RaveInitialize(bool bLoadAllPlugins=true, uint32_t level = Level_Info);
 
 /// \brief Initializes the global state from an already loaded OpenRAVE environment.
 ///

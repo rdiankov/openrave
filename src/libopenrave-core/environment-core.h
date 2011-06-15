@@ -1426,7 +1426,7 @@ class Environment : public EnvironmentBase
         _bEnableSimulation = true;
         _fDeltaSimTime = fDeltaTime;
         _bRealTime = bRealTime;
-        _nCurSimTime = 0;
+        //_nCurSimTime = 0; // don't reset since it is important to keep time monotonic
         _nSimStartTime = GetMicroTime();
     }
 
@@ -1440,8 +1440,8 @@ class Environment : public EnvironmentBase
     }
     virtual uint64_t GetSimulationTime() { return _nCurSimTime; }
 
-    virtual void SetDebugLevel(DebugLevel level) { RaveSetDebugLevel(level); }
-    virtual DebugLevel GetDebugLevel() const { return RaveGetDebugLevel(); }
+    virtual void SetDebugLevel(uint32_t level) { RaveSetDebugLevel(level); }
+    virtual uint32_t GetDebugLevel() const { return RaveGetDebugLevel(); }
 
     virtual void GetPublishedBodies(std::vector<KinBody::BodyState>& vbodies)
     {

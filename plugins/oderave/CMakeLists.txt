@@ -17,7 +17,7 @@ if(ODE_LIBRARY_FOUND)
 
   include_directories(${ODE_INCLUDE_DIRS})
   add_library(oderave SHARED oderave.cpp odecollision.h odephysics.h odespace.h odecontroller.h plugindefs.h)
-
+  
   # test for ode version 0.10
   set(CMAKE_REQUIRED_INCLUDES ${ODE_INCLUDE_DIRS})
   set(CMAKE_REQUIRED_FLAGS "${ODE_CXXFLAGS}")

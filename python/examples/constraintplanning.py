@@ -60,7 +60,7 @@ if not __build_doc__:
     from numpy import *
 
 class ConstraintPlanning:
-    def __init__(self,robot,randomize=False,dests=None,switchpatterns=None):
+    def __init__(self,robot,randomize=False,dests=None,switchpatterns=None,plannername=None):
         self.envreal = robot.GetEnv()
         self.robot = robot
         self.manip = self.robot.GetActiveManipulator()
@@ -70,8 +70,8 @@ class ConstraintPlanning:
         self.gmodel = databases.grasping.GraspingModel(robot=self.robot,target=self.envreal.GetKinBody('mug1'))
         if not self.gmodel.load():
             self.gmodel.autogenerate()
-        self.basemanip = interfaces.BaseManipulation(self.robot)
-        self.taskmanip = interfaces.TaskManipulation(self.robot,graspername=self.gmodel.grasper.plannername)
+        self.basemanip = interfaces.BaseManipulation(self.robot,plannername=plannername)
+        self.taskmanip = interfaces.TaskManipulation(self.robot,graspername=self.gmodel.grasper.plannername,plannername=plannername)
 
     def graspAndMove(self,showgoalcup=True):
         target = self.gmodel.target

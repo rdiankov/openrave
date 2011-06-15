@@ -100,7 +100,7 @@ public:
     /// the parent environment unchanged.
     /// By default a clone only copies the collision checkers and physics engine.
     /// When bodies are cloned, the unique ids are preserved across environments (each body can be referenced with its id in both environments). The attached and grabbed bodies of each body/robot are also copied to the new environment.
-    /// \param options A set of CloningOptions describing what is actually cloned.
+    /// \param options A set of \ref CloningOptions describing what is actually cloned.
     /// \return An environment of the same type as this environment containing the copied information.
     virtual EnvironmentBasePtr CloneSelf(int options) = 0;
 
@@ -521,8 +521,8 @@ public:
     /// \param level 0 for no debug, 1 - to print all debug messeges. Default
     ///             value for release builds is 0, for debug builds it is 1
     /// declaring variables with stdcall can be a little complex
-    virtual void SetDebugLevel(DebugLevel level) = 0;
-    virtual DebugLevel GetDebugLevel() const = 0;
+    virtual void SetDebugLevel(uint32_t level) = 0;
+    virtual uint32_t GetDebugLevel() const = 0;
     //@}
 
 protected:

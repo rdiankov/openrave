@@ -16,6 +16,9 @@
 #define __STDC_CONSTANT_MACROS
 #include "plugindefs.h"
 
+#include <boost/thread/mutex.hpp>
+#include <boost/thread/condition.hpp>
+
 #ifdef _WIN32
 
 #define AVIIF_KEYFRAME  0x00000010L // this frame is a key frame.
@@ -73,20 +76,36 @@ static boost::shared_ptr<VideoGlobalState> s_pVideoGlobalState;
 
 class ViewerRecorder : public ModuleBase
 {
+    struct VideoFrame
+    {
+        VideoFrame() : _timestamp(0), _bProcessed(false) {}
+        vector<uint8_t> _vimagememory;
+        int _width, _height, _pixeldepth;
+        uint64_t _timestamp;
+        bool _bProcessed;
+    };
+
+    boost::mutex _mutex;
+    boost::condition _condnewframe;
+    bool _bContinueThread;
+    boost::shared_ptr<boost::thread> _threadrecord;
+
     boost::multi_array<uint32_t,2> _vwatermarkimage;
     int _nFrameCount, _nVideoWidth, _nVideoHeight;
-    float _frameRate;
-    uint64_t _starttime;
-    bool _bSimTime;
+    float _framerate;
+    uint64_t _starttime, _frametime;
     std::string _filename;
     boost::shared_ptr<void> _callback;
+    bool _bUseSimulationTime;
+    list<boost::shared_ptr<VideoFrame> > _listAddFrames, _listFinishedFrames;
+    boost::shared_ptr<VideoFrame> _frameLastAdded;
     
 public:
     ViewerRecorder(EnvironmentBasePtr penv, std::istream& sinput) : ModuleBase(penv)
     {
         __description = ":Interface Author: Rosen Diankov\n\nRecords the images produced from a viewer into video file. The recordings can be synchronized to real-time or simulation time, by default simulation time is used. Each instance can record only one file at a time. To record multiple files simultaneously, create multiple VideoRecorder instances";
         RegisterCommand("Start",boost::bind(&ViewerRecorder::_StartCommand,this,_1,_2),
-                        "Starts recording a file, this will stop all previous recordings and overwrite any previous files stored in this location. Format::\n\n  Start [width] [height] [framerate] codec [codec] timing [simtime/realtime] filename [filename]\n\n");
+                        "Starts recording a file, this will stop all previous recordings and overwrite any previous files stored in this location. Format::\n\n  Start [width] [height] [framerate] codec [codec] timing [simtime/realtime] viewer [name]\\n filename [filename]\\n\n\nBecause the viewer and filenames can have spaces, the names are ready until a newline is encountered");
         RegisterCommand("Stop",boost::bind(&ViewerRecorder::_StopCommand,this,_1,_2),
                         "Stops recording and saves the file. Format::\n\n  Stop\n\n");
         RegisterCommand("GetCodecs",boost::bind(&ViewerRecorder::_GetCodecsCommand,this,_1,_2),
@@ -94,9 +113,10 @@ public:
         RegisterCommand("SetWatermark",boost::bind(&ViewerRecorder::_SetWatermarkCommand,this,_1,_2),
                         "Set a WxHx4 image as a watermark. Each color is an unsigned integer ordered as A|B|G|R. The origin should be the top left corner");
         _nFrameCount = _nVideoWidth = _nVideoHeight = 0;
-        _frameRate = 0;
-        _bSimTime = true;
+        _framerate = 0;
+        _bUseSimulationTime = true;
         _starttime = 0;
+        _bContinueThread = true;
 #ifdef _WIN32
         _pfile = NULL; 
         _ps = NULL;
@@ -114,10 +134,17 @@ public:
         _picture_size = 0;
         _outbuf_size = 0;
 #endif
+        _threadrecord.reset(new boost::thread(boost::bind(&ViewerRecorder::_RecordThread,this)));
     }
     virtual ~ViewerRecorder()
     {
+        _bContinueThread = false;
         _Reset();
+        {
+            boost::mutex::scoped_lock lock(_mutex);
+            _condnewframe.notify_all();
+        }
+        _threadrecord->join();
     }
 
 protected:
@@ -127,12 +154,10 @@ protected:
             s_pVideoGlobalState.reset(new VideoGlobalState());
         }
         try {
+            ViewerBasePtr pviewer;
             int codecid=-1;
-            _frameRate = 30000.0f/1001.0;
-            _bSimTime = true;
-            _filename = "";
             _Reset();
-            sinput >> _nVideoWidth >> _nVideoHeight >> _frameRate;
+            sinput >> _nVideoWidth >> _nVideoHeight >> _framerate;
             string cmd;
             while(!sinput.eof()) {
                 sinput >> cmd;
@@ -144,7 +169,6 @@ protected:
                     sinput >> codecid;
                 }
                 else if( cmd == "filename" ) {
-                    // raed the rest
                     if( !getline(sinput, _filename) ) {
                         return false;
                     }
@@ -155,14 +179,22 @@ protected:
                     string type;
                     sinput >> type;
                     if( type == "simtime" ) {
-                        _bSimTime = true;
+                        _bUseSimulationTime = true;
                     }
                     else if( type == "realtime" ) {
-                        _bSimTime = false;
+                        _bUseSimulationTime = false;
                     }
                     else {
                         RAVELOG_WARN("unknown cmd");
                     }
+                }
+                else if( cmd == "viewer" ) {
+                    string name;
+                    if( !getline(sinput, name) ) {
+                        return false;
+                    }
+                    boost::trim(name);
+                    pviewer = GetEnv()->GetViewer(name);
                 }
                 else {
                     return false;
@@ -175,11 +207,13 @@ protected:
                 RAVELOG_WARN("invalid format");
                 return false;
             }
-
-            _StartVideo(_filename,_frameRate,_nVideoWidth,_nVideoHeight,24,codecid);
-            _starttime = _bSimTime ? GetEnv()->GetSimulationTime() : (GetNanoPerformanceTime()/1000);
-            ViewerBasePtr pviewer;
-            _callback = pviewer->RegisterViewerImageCallback(boost::bind(&ViewerRecorder::_ViewerImageCallback,this,_1,_2,_3));
+            if( !pviewer ) {
+                RAVELOG_WARN("invalid viewer");
+            }
+            _StartVideo(_filename,_framerate,_nVideoWidth,_nVideoHeight,24,codecid);
+            _starttime = 0;
+            _frametime = (uint64_t)(1000000/_framerate);
+            _callback = pviewer->RegisterViewerImageCallback(boost::bind(&ViewerRecorder::_ViewerImageCallback,this,_1,_2,_3,_4));
             BOOST_ASSERT(!!_callback);
             return !!_callback;
         }
@@ -189,11 +223,13 @@ protected:
         }
         return false;
     }
+    
     bool _StopCommand(ostream& sout, istream& sinput)
     {
         _Reset();
         return true;
     }
+    
     bool _GetCodecsCommand(ostream& sout, istream& sinput)
     {
         std::list<std::pair<int,string> > listcodecs;
@@ -207,6 +243,7 @@ protected:
 
     bool _SetWatermarkCommand(ostream& sout, istream& sinput)
     {
+        boost::mutex::scoped_lock lock(_mutex);
         int W, H;
         sinput >> W >> H;
         _vwatermarkimage.resize(boost::extents[H][W]);
@@ -216,31 +253,112 @@ protected:
             }
         }
         return !!sinput;
-        //_vwatermarkimage.resize(boost::extents[0][0]);
     }
 
-    void _ViewerImageCallback(const uint8_t*, int width, int height)
+    void _ViewerImageCallback(const uint8_t* memory, int width, int height, int pixeldepth)
     {
-        //_AddWatermarkToImage(_ivOffscreen.getBuffer(), VIDEO_WIDTH, VIDEO_HEIGHT);
-        //
+        uint64_t timestamp = _bUseSimulationTime ? GetEnv()->GetSimulationTime() : GetMicroTime();
+        boost::mutex::scoped_lock lock(_mutex);
+        boost::shared_ptr<VideoFrame> frame;
 
-//    uint64_t curtime = _bRealtimeVideo ? GetMicroTime() : GetEnv()->GetSimulationTime();
-//    _nVideoTimeOffset += (curtime-_nLastVideoFrame);
-//    
-//    while(_nVideoTimeOffset >= (1000000.0/VIDEO_FRAMERATE) ) {
-//        if( !ADD_FRAME_FROM_DIB_TO_AVI(_ivOffscreen.getBuffer()) ) {
-//            RAVELOG_WARN("Failed adding frames, stopping avi recording\n");
-//            _bSaveVideo = false;
-//            return true;
-//        }
-//        
-//        _nVideoTimeOffset -= (1000000.0/VIDEO_FRAMERATE);
-//    }  
-//    _nLastVideoFrame = curtime;
-
+        if( _listAddFrames.size() > 0 ) {
+            BOOST_ASSERT( timestamp-_starttime >= _listAddFrames.back()->_timestamp-_starttime );
+            if( _listAddFrames.back()->_timestamp == timestamp ) {
+                // if the timestamps match, then take the newest frame
+                frame = _listAddFrames.back();
+                _listAddFrames.pop_back();
+            }
+        }
+        if( !frame ) {
+            if( _listFinishedFrames.size() > 0 ) {
+                frame = _listFinishedFrames.back();
+                _listFinishedFrames.pop_back();
+            }
+            else {
+                frame.reset(new VideoFrame());
+            }
+        }
+        frame->_width = width;
+        frame->_height = height;
+        frame->_pixeldepth = pixeldepth;
+        frame->_timestamp = timestamp;
+        frame->_vimagememory.resize(width*height*pixeldepth);
+        std::copy(memory,memory+width*height*pixeldepth,frame->_vimagememory.begin());
+        _listAddFrames.push_back(frame);
+        if( _starttime == 0 ) {
+            _starttime = timestamp;
+        }
+        RAVELOG_INFO(str(boost::format("new frame %d\n")%(timestamp-_starttime)));
+        _condnewframe.notify_one();
     }
 
-    void _AddWatermarkToImage(unsigned char* image, int width, int height)
+    void _RecordThread()
+    {
+        while(_bContinueThread) {
+            boost::shared_ptr<VideoFrame> frame;
+            uint64_t numstores=0;
+            {
+                boost::mutex::scoped_lock lock(_mutex);
+                if( _listAddFrames.size() == 0 ) {
+                    _condnewframe.wait(lock);
+                    if( _listAddFrames.size() == 0 ) {
+                        continue;
+                    }
+                }
+                
+                if( _listAddFrames.front()->_timestamp-_starttime > _frametime && !!_frameLastAdded ) {
+                    frame = _frameLastAdded;
+                    numstores = (_listAddFrames.front()->_timestamp-_starttime-1)/_frametime;
+                    RAVELOG_DEBUG(str(boost::format("previous frame repeated %d times\n")%numstores));
+                }
+                else {
+                    uint64_t lastoffset = _listAddFrames.back()->_timestamp - _starttime;
+                    if( lastoffset < _frametime ) {
+                        // not enough frames to predict what's coming next so wait
+                        continue;
+                    }
+                    list<boost::shared_ptr<VideoFrame> >::iterator itframe = _listAddFrames.begin(), itbest = _listAddFrames.end();
+                    uint64_t bestdist = 0;
+                    while(itframe != _listAddFrames.end()) {
+                        uint64_t offset = (*itframe)->_timestamp - _starttime;
+                        uint64_t dist = offset >= _frametime ? (offset-_frametime) : (_frametime-offset);
+                        if( itbest == _listAddFrames.end() || bestdist > dist ) {
+                            itbest = itframe;
+                            bestdist = dist;
+                        }
+                        ++itframe;
+                    }
+                    frame = *itbest;
+                    size_t prevsize = _listAddFrames.size();
+                    _listAddFrames.erase(_listAddFrames.begin(),itbest);
+                    if( frame->_timestamp-_starttime <= _frametime ) {
+                        // the frame is before the next mark, so erase it
+                        _listAddFrames.erase(itbest);
+                    }
+                    RAVELOG_DEBUG(str(boost::format("frame size: %d -> %d\n")%prevsize%_listAddFrames.size()));
+                    numstores = 1;
+                }
+            }
+
+            if( !frame->_bProcessed ) {
+                _AddWatermarkToImage(&frame->_vimagememory.at(0), frame->_width, frame->_height, frame->_pixeldepth);
+                frame->_bProcessed = true;
+            }
+            
+            try {
+                _starttime += _frametime*numstores;
+                for(uint64_t i = 0; i < numstores; ++i) {
+                    _AddFrame(&frame->_vimagememory.at(0));
+                }
+                _frameLastAdded = frame;
+            }
+            catch(const openrave_exception& ex) {
+                RAVELOG_WARN("%s\n",ex.what());
+            }
+        }
+    }
+
+    void _AddWatermarkToImage(uint8_t* memory, int width, int height, int pixeldepth)
     {
         if( _vwatermarkimage.size() == 0 ) {
             return;
@@ -252,12 +370,28 @@ protected:
                 int jwater = j%_vwatermarkimage.shape()[1];
                 uint32_t color = _vwatermarkimage[iwater][jwater];
                 uint32_t A = color>>24;
-                for(int k = 0; k < 3; ++k) {
-                    image[k] = ((uint32_t)image[k]*(255-A)+((color>>(8*k))&0xff)*A)>>8;
+                for(int k = 0; k < min(pixeldepth,3); ++k) {
+                    memory[k] = ((uint32_t)memory[k]*(255-A)+((color>>(8*k))&0xff)*A)>>8;
                 }
-                image += 3;
+                memory += pixeldepth;
             }
         }
+    }
+
+    void _Reset()
+    {
+        boost::mutex::scoped_lock lock(_mutex);
+        _nFrameCount = 0;
+        _nVideoWidth = _nVideoHeight = 0;
+        _framerate = 30000.0f/1001.0;
+        _starttime = 0;
+        _callback.reset();
+        _bUseSimulationTime = true;
+        _listAddFrames.clear();
+        _listFinishedFrames.clear();
+        _frameLastAdded.reset();
+        _filename = "";
+        _ResetLibrary();
     }
 
 #ifdef _WIN32
@@ -272,7 +406,7 @@ protected:
         _nFrameCount = 0;
         HRESULT hr = AVIFileOpenA(&_pfile, filename.c_str(), OF_WRITE | OF_CREATE, NULL);
         BOOST_ASSERT( hr == AVIERR_OK );
-        _CreateStream((int)_frameRate, width*height/bits, width, height, "none");
+        _CreateStream((int)_framerate, width*height/bits, width, height, "none");
 
         BITMAPINFOHEADER bi;
         memset(&bi, 0, sizeof(bi));
@@ -287,7 +421,7 @@ protected:
         _biSizeImage = bi.biSizeImage;
     }
 
-    void _Reset()
+    void _ResetLibrary()
     {
         if (!!_ps) {
             AVIStreamClose(_ps);
@@ -441,9 +575,8 @@ protected:
     int _outbuf_size;
     bool _bWroteURL, _bWroteHeader;
 
-    void _Reset()
+    void _ResetLibrary()
     {
-        RAVELOG_DEBUG("stopping avi\n");
         free(_picture_buf); _picture_buf = NULL;
         free(_picture); _picture = NULL;
         free(_yuv420p); _yuv420p = NULL;
@@ -454,6 +587,7 @@ protected:
         }
 
         if( !!_output ) {
+            RAVELOG_DEBUG("stopping avi\n");
             if( _bWroteHeader ) {
                 av_write_trailer(_output);
             }

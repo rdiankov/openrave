@@ -139,29 +139,11 @@ public:
 
     virtual void customEvent(QEvent * e);
 
-    virtual void UnregisterItemSelectionCallback(std::list<ItemSelectionCallbackFn>::iterator it)
-    {
-        boost::mutex::scoped_lock lock(_mutexCallbacks);
-        _listItemSelectionCallbacks.erase(it);
-        
-    }
-    virtual boost::shared_ptr<void> RegisterItemSelectionCallback(const ItemSelectionCallbackFn& fncallback) {
-        boost::mutex::scoped_lock lock(_mutexCallbacks);
-        return boost::shared_ptr<void>((void*)1,boost::bind(&QtCoinViewer::UnregisterItemSelectionCallback,this,_listItemSelectionCallbacks.insert(_listItemSelectionCallbacks.end(),fncallback)));
-    }
+    static void _UnregisterItemSelectionCallback(ViewerBaseWeakPtr pweakviewer, std::list<ItemSelectionCallbackFn>::iterator* pit);
+    virtual boost::shared_ptr<void> RegisterItemSelectionCallback(const ItemSelectionCallbackFn& fncallback);
 
-    virtual void UnregisterViewerImageCallback(std::list<ViewerImageCallbackFn>::iterator it)
-    {
-        boost::mutex::scoped_lock lock(_mutexCallbacks);
-        _listViewerImageCallbacks.erase(it);
-        
-    }
-    virtual boost::shared_ptr<void> RegisterViewerImageCallback(const ViewerImageCallbackFn& fncallback) {
-        boost::mutex::scoped_lock lock(_mutexCallbacks);
-        return boost::shared_ptr<void>((void*)1,boost::bind(&QtCoinViewer::UnregisterViewerImageCallback,this,_listViewerImageCallbacks.insert(_listViewerImageCallbacks.end(),fncallback)));
-    }
-
-
+    static void _UnregisterViewerImageCallback(ViewerBaseWeakPtr pweakviewer, std::list<ViewerImageCallbackFn>::iterator* pit);
+    virtual boost::shared_ptr<void> RegisterViewerImageCallback(const ViewerImageCallbackFn& fncallback);
     virtual void _DeleteItemCallback(Item* pItem)
     {
         boost::mutex::scoped_lock lock(_mutexItems);

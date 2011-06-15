@@ -111,11 +111,10 @@ public:
     virtual boost::shared_ptr<void> RegisterItemSelectionCallback(const ItemSelectionCallbackFn& fncallback) OPENRAVE_DUMMY_IMPLEMENTATION;
 
     /// \brief callback function for item selection
-    /// callback(imagememory,width,height,simtime)
+    /// callback(imagememory,width,height,pixeldepth)
     ///
-    /// \param imagememory WxHx3 RGB image
-    /// \param simtime the simulation time image is taken at
-    typedef boost::function<void(const uint8_t*,int,int)> ViewerImageCallbackFn;
+    /// \param imagememory width x height x pixeldepth RGB image
+    typedef boost::function<void(const uint8_t*,int,int,int)> ViewerImageCallbackFn;
 
     /// \brief registers a function with the viewer that gets called for every new image rendered.
     ///
@@ -177,6 +176,9 @@ protected:
     
     virtual GraphHandlePtr drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const RaveVector<float>& color) OPENRAVE_DUMMY_IMPLEMENTATION;
     virtual GraphHandlePtr drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const boost::multi_array<float,2>& colors) OPENRAVE_DUMMY_IMPLEMENTATION;
+
+    inline ViewerBasePtr shared_viewer() { return boost::static_pointer_cast<ViewerBase>(shared_from_this()); }
+    inline ViewerBaseConstPtr shared_viewer_const() const { return boost::static_pointer_cast<ViewerBase const>(shared_from_this()); }
 
 private:
     virtual const char* GetHash() const { return OPENRAVE_VIEWER_HASH; }

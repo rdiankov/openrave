@@ -19,15 +19,13 @@ from copy import copy as shallowcopy
 class VisualFeedback:
     """Interface wrapper for :ref:`module-visualfeedback`
     """
-    def __init__(self,robot,maxvelmult=None,validatetrajectory=None):
+    def __init__(self,robot,maxvelmult=None):
         env = robot.GetEnv()
         self.prob = openravepy.RaveCreateModule(env,'VisualFeedback')
         self.robot = robot
         self.args = self.robot.GetName()
         if maxvelmult is not None:
             self.args += ' maxvelmult %f '%maxvelmult
-        if validatetrajectory is not None:
-            self.args += ' validatetrajectory %d '%validatetrajectory
         if env.AddModule(self.prob,self.args) != 0:
             raise ValueError('module failed to initialize')
     def  __del__(self):

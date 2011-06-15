@@ -3557,8 +3557,8 @@ public:
         return toPyTriMesh(mesh);
     }
 
-    void SetDebugLevel(DebugLevel level) { _penv->SetDebugLevel(level); }
-    DebugLevel GetDebugLevel() const { return _penv->GetDebugLevel(); }
+    void SetDebugLevel(int level) { _penv->SetDebugLevel(level); }
+    int GetDebugLevel() const { return _penv->GetDebugLevel(); }
 
     string GetHomeDirectory() { RAVELOG_WARN("Environment.GetHomeDirectory is deprecated, use RaveGetHomeDirectory\n"); return RaveGetHomeDirectory(); }
 
