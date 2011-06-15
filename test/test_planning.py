@@ -37,9 +37,6 @@ class TestMoving(EnvironmentSetup):
                 ret = basemanip.MoveToHandPosition(matrices=[Tgoal],maxiter=6000,maxtries=2,seedik=16, constraintfreedoms=constraintfreedoms, constraintmatrix=constraintmatrix, constrainterrorthresh=constrainterrorthresh,execute=False,outputtraj=True,steplength=0.001)
                 assert(ret is not None)
 
-    def test_constraint(self):
-        examples.ConstraintPlanning
-
     def test_movehandstraight(self):
         env = self.env
         env.Load('data/lab1.env.xml')
