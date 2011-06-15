@@ -70,7 +70,7 @@ public:
         RegisterCommand("MyCommand",boost::bind(&%(name)s::MyCommand,this,_1,_2),
                         "This is an example command");
     }
-    virtual ~%(names)s() {}
+    virtual ~%(name)s() {}
     
     bool MyCommand(std::ostream& sout, std::istream& sinput)
     {
