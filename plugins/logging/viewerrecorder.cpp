@@ -14,7 +14,6 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define __STDC_CONSTANT_MACROS
-
 #include "plugindefs.h"
 
 #ifdef _WIN32
@@ -129,7 +128,7 @@ protected:
         }
         try {
             int codecid=-1;
-            _frameRate = 30000.0/1001.0;
+            _frameRate = 30000.0f/1001.0;
             _bSimTime = true;
             _filename = "";
             _Reset();
@@ -263,19 +262,17 @@ protected:
 
 #ifdef _WIN32
     PAVIFILE _pfile;
-    PAVISTREAM _ps;
-    PAVISTREAM _psCompressed; 
-    PAVISTREAM _psText;
+    PAVISTREAM _ps, _psCompressed, _psText;
     int _biSizeImage;
 
     void _GetCodecs(std::list<std::pair<int,std::string> >& lcodecs) { lcodecs.clear(); }
-
+    
     void _StartVideo(const std::string& filename, double frameRate, int width, int height, int bits, int codecid=-1)
     {
         _nFrameCount = 0;
         HRESULT hr = AVIFileOpenA(&_pfile, filename.c_str(), OF_WRITE | OF_CREATE, NULL);
         BOOST_ASSERT( hr == AVIERR_OK );
-        _CreateStream(_pfile, &_ps, (int)_frameRate, width*height/bits, width, height, "none");
+        _CreateStream((int)_frameRate, width*height/bits, width, height, "none");
 
         BITMAPINFOHEADER bi;
         memset(&bi, 0, sizeof(bi));
@@ -323,6 +320,19 @@ protected:
         }
     }
 
+    DWORD getFOURCC(const char* value)
+    {
+	    if(stricmp(value, "DIB") == 0) {
+		    return mmioFOURCC(value[0],value[1],value[2],' ');
+	    }
+	    else if((stricmp(value, "CVID") == 0) || (stricmp(value, "IV32") == 0) || (stricmp(value, "MSVC") == 0) || (stricmp(value, "IV50") == 0)) {
+		    return mmioFOURCC(value[0],value[1],value[2],value[3]);
+	    }
+	    else {
+		    return NULL;
+	    }
+    }
+
     // Fill in the header for the video stream....
     // The video stream will run in rate ths of a second....
     void _CreateStream(int rate, unsigned long buffersize, int rectwidth, int rectheight, const char* _compressor)
@@ -330,7 +340,7 @@ protected:
         AVISTREAMINFO strhdr;
         memset(&strhdr, 0, sizeof(strhdr));
         strhdr.fccType                = streamtypeVIDEO;// stream type
-        strhdr.fccHandler             = getFOURCC(_compressor);
+        strhdr.fccHandler             = _getFOURCC(_compressor);
         //strhdr.fccHandler             = 0; // no compression!
         //strhdr.fccHandler             = mmioFOURCC('D','I','B',' '); // Uncompressed
         //strhdr.fccHandler             = mmioFOURCC('C','V','I','D'); // Cinpak
@@ -355,7 +365,7 @@ protected:
         //strcpy(strhdr.szName, "Full Frames (Uncompressed)");
 
         // And create the stream;
-        HRESULT hr = AVIFileCreateStream(pfile, _ps, &strhdr);
+        HRESULT hr = AVIFileCreateStream(_pfile, &_ps, &strhdr);
         BOOST_ASSERT(hr == AVIERR_OK);
     }
 
@@ -370,15 +380,15 @@ protected:
 
         /* display the compression options dialog box if specified compressor is unknown */
         if(getFOURCC(_compressor) == NULL) {
-            if (!AVISaveOptions(NULL, 0, 1, _ps, (LPAVICOMPRESSOPTIONS FAR *) &aopts)) {
+            if (!AVISaveOptions(NULL, 0, 1, &_ps, (LPAVICOMPRESSOPTIONS FAR *) &aopts)) {
                 throw OPENRAVE_EXCEPTION_FORMAT0("failed to set options",ORE_Assert);
             }
         }
 
-        HRESULT hr = AVIMakeCompressedStream(_psCompressed, *_ps, &opts, NULL);
+        HRESULT hr = AVIMakeCompressedStream(&_psCompressed, _ps, &opts, NULL);
         BOOST_ASSERT(hr == AVIERR_OK);
     
-        hr = AVIStreamSetFormat(*_psCompressed, 0, lpbi/*stream format*/, lpbi->biSize + lpbi->biClrUsed * sizeof(RGBQUAD)/*format size*/);
+        hr = AVIStreamSetFormat(_psCompressed, 0, lpbi/*stream format*/, lpbi->biSize + lpbi->biClrUsed * sizeof(RGBQUAD)/*format size*/);
         BOOST_ASSERT(hr == AVIERR_OK);
     }
 
@@ -408,7 +418,7 @@ protected:
 
     void _AddFrame(void* pdata)
     {
-        HRESULT hr = AVIStreamWrite(psCompressed/*stream pointer*/, _nFrameCount/*time of this frame*/, 1/*number to write*/, pdata, _biSizeImage/*size of this frame*/, AVIIF_KEYFRAME/*flags....*/, NULL, NULL);
+        HRESULT hr = AVIStreamWrite(_psCompressed/*stream pointer*/, _nFrameCount/*time of this frame*/, 1/*number to write*/, pdata, _biSizeImage/*size of this frame*/, AVIIF_KEYFRAME/*flags....*/, NULL, NULL);
         BOOST_ASSERT(hr == AVIERR_OK);
         _nFrameCount++;
     }
@@ -417,7 +427,6 @@ protected:
     {
         HRESULT hr = AVIStreamWrite(_psText, time,  1, szText, strlen(szText) + 1, AVIIF_KEYFRAME, NULL, NULL);
         BOOST_ASSERT(hr == AVIERR_OK);
-        return hr == AVIERR_OK;
     }
 
 #else
@@ -610,6 +619,6 @@ ModuleBasePtr CreateViewerRecorder(EnvironmentBasePtr penv, std::istream& sinput
 void DestroyViewerRecordingStaticResources()
 {
 #ifdef _WIN32
-    s_pVideoGlobalState.clear();
+    s_pVideoGlobalState.reset();
 #endif
 }
