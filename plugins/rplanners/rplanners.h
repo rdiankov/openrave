@@ -63,7 +63,7 @@ SimpleNode(int parent, const vector<dReal>& q) : parent(parent), q(q) {}
 
 class SpatialTreeBase
 {
- public:
+public:
     virtual int AddNode(int parent, const vector<dReal>& config) = 0;
     virtual int GetNN(const vector<dReal>& q) = 0;
     virtual const vector<dReal>& GetConfig(int inode) = 0;
@@ -141,7 +141,8 @@ public:
         boost::shared_ptr<Planner> planner(_planner);
         PlannerBase::PlannerParametersConstPtr params = planner->GetParameters();
         // extend
-        while(1) {
+        for(int iter = 0; iter < 100; ++iter) { // to avoid infinite loops
+
             dReal fdist = _distmetricfn(pTargetConfig,pnode->q);
             if( fdist > _fStepLength ) {
                 fdist = _fStepLength / fdist;
@@ -165,7 +166,7 @@ public:
             }
         
             // it could be the case that the node didn't move anywhere, in which case we would go into an infinite loop
-            if( _distmetricfn(pnode->q, _vNewConfig) <= dReal(0.0001)*_fStepLength ) {
+            if( _distmetricfn(pnode->q, _vNewConfig) <= dReal(0.01)*_fStepLength ) {
                 if(bHasAdded) {
                     return ET_Sucess;
                 }
@@ -173,10 +174,7 @@ public:
             }
 
             if( !params->_checkpathconstraintsfn(_fromgoal ? _vNewConfig : pnode->q, _fromgoal ? pnode->q : _vNewConfig, _fromgoal ? IT_OpenEnd : IT_OpenStart, PlannerBase::ConfigurationListPtr()) ) {
-                if(bHasAdded) {
-                    return ET_Sucess;
-                }
-                return ET_Failed;
+                return bHasAdded ? ET_Sucess : ET_Failed;
             }
 
             lastindex = AddNode(lastindex, _vNewConfig);
@@ -187,7 +185,7 @@ public:
             }
         }
     
-        return ET_Failed;
+        return bHasAdded ? ET_Sucess : ET_Failed;
     }
 
     virtual const vector<dReal>& GetConfig(int inode) { return _nodes.at(inode)->q; }

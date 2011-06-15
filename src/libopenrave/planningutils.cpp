@@ -234,7 +234,9 @@ namespace planningutils {
             _vtempconfig[i] = pQ0[i];
         }
         if( start > 0 ) {
-            params->_neighstatefn(_vtempconfig, dQ,0);
+            if( !params->_neighstatefn(_vtempconfig, dQ,0) ) {
+                return false;
+            }
         }
         for (int f = start; f < numSteps; f++) {
             params->_setstatefn(_vtempconfig);
@@ -247,7 +249,9 @@ namespace planningutils {
             if( robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot)) || (robot->CheckSelfCollision()) ) {
                 return false;
             }
-            params->_neighstatefn(_vtempconfig,dQ,0);
+            if( !params->_neighstatefn(_vtempconfig,dQ,0) ) {
+                return false;
+            }
         }
 
         if( bCheckEnd && !!pvCheckedConfigurations ) {
