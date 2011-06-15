@@ -66,7 +66,7 @@ class EnvironmentSetup(object):
     def setup(self):
         self.env=Environment()
         self.env.StopSimulation()
-        RaveSetDebugLevel(Level_Debug|Level_VerifyPlans)
+        RaveSetDebugLevel(DebugLevel.Debug|DebugLevel.VerifyPlans)
     def teardown(self):
         self.env.Destroy()
         self.env=None

@@ -28,6 +28,7 @@ class TestMoving(EnvironmentSetup):
             manip=robot.SetActiveManipulator('leftarm_torso')
             basemanip = interfaces.BaseManipulation(robot)
             robot.SetDOFValues([.31],[robot.GetJoint('torso_lift_joint').GetDOFIndex()])
+            T=array([[0,0,1,.6], [0,1,0,.1], [-1,0,0,.73], [0,0,0,1]])
             robot.SetDOFValues(manip.FindIKSolution(T,IkFilterOptions.CheckEnvCollisions),manip.GetArmIndices())
             Tgoal=array([[0,0,1,.6], [0,1,0,.3], [-1,0,0,.73], [0,0,0,1]])
             constraintfreedoms=array([1,1,0,1,0,0]) # can rotate along z, translate along y
