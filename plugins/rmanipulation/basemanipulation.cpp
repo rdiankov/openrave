@@ -44,8 +44,9 @@ Method wraps the WorkspaceTrajectoryTracker planner. For more details on paramet
 - maxiter - The maximum number of iterations on the internal planner.\n\
 - maxtries - The maximum number of times to restart the planner.\n\
 - steplength - See PlannerParameters::_fStepLength\n\n");
-        RegisterCommand("MoveToHandPosition",boost::bind(&BaseManipulation::MoveToHandPosition,this,_1,_2),
-                        "Move the manipulator's end effector to some 6D pose.");
+        RegisterCommand("MoveToHandPosition",boost::bind(&BaseManipulation::_MoveToHandPosition,this,_1,_2),
+                        "Move the manipulator's end effector to reach a set of 6D poses. Parameters:\n\n\
+- ");
         RegisterCommand("MoveUnsyncJoints",boost::bind(&BaseManipulation::MoveUnsyncJoints,this,_1,_2),
                         "Moves the active joints to a position where the inactive (hand) joints can\n"
                         "fully move to their goal. This is necessary because synchronization with arm\n"
@@ -578,7 +579,7 @@ protected:
         return true;
     }
 
-    bool MoveToHandPosition(ostream& sout, istream& sinput)
+    bool _MoveToHandPosition(ostream& sout, istream& sinput)
     {
         RAVELOG_DEBUG("Starting MoveToHandPosition...\n");
         RobotBase::ManipulatorConstPtr pmanip = robot->GetActiveManipulator();        

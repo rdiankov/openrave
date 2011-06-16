@@ -24,6 +24,9 @@ if( CRLIBM_FOUND )
     COMMENT "Checking accuracy between libm and crlibm")
   add_definitions(-DLIBM_ACCURACY_RESULTS_H=\"${libm_accuracy_results_h}\")
 endif()
+if( CLOCK_GETTIME_FOUND )
+  set(openrave_libraries ${openrave_libraries} rt)
+endif()
 
 set(LIBOPENRAVE_COMPILE_FLAGS "${Boost_CFLAGS}")
 

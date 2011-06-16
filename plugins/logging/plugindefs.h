@@ -138,14 +138,14 @@ inline static uint32_t GetMilliTime()
 inline static uint64_t GetNanoPerformanceTime()
 {
 #if defined(CLOCK_GETTIME_FOUND) && (POSIX_TIMERS > 0 || _POSIX_TIMERS > 0) && defined(_POSIX_MONOTONIC_CLOCK)
-  struct timespec start;
-  uint32_t sec, nsec;
-  clock_gettime(CLOCK_MONOTONIC, &start);
-  sec  = start.tv_sec;
-  nsec = start.tv_nsec;
-  return (uint64_t)sec*1000000000 + (uint64_t)nsec;
+    struct timespec start;
+    uint32_t sec, nsec;
+    clock_gettime(CLOCK_MONOTONIC, &start);
+    sec  = start.tv_sec;
+    nsec = start.tv_nsec;
+    return (uint64_t)sec*1000000000 + (uint64_t)nsec;
 #else
-  return GetNanoTime();
+    return GetNanoTime();
 #endif
 }
 

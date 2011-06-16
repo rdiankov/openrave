@@ -3,7 +3,7 @@ if( HAVE_MKSTEMP )
   add_definitions("-DHAVE_MKSTEMP")
 endif()
 
-set(coreLIBS ${openrave_libraries})
+set(OPENRAVE_CORE_LIBRARIES ${openrave_libraries})
 set(openrave_core_SOURCES openrave-core.cpp environment-core.h openrave-core.h ravep.h xmlreaders.cpp)
 
 if( COLLADA_DOM_FOUND )
@@ -11,14 +11,14 @@ if( COLLADA_DOM_FOUND )
   set(LIBOPENRAVE_LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS} ${COLLADA_DOM_LDFLAGS_OTHER}")
   set(OPENRAVE_LINK_DIRS ${OPENRAVE_LINK_DIRS} ${COLLADA_DOM_LIBRARY_DIRS})
   include_directories(${COLLADA_DOM_INCLUDE_DIRS} ${MINIZIP_INCLUDE_DIR})
-  set (coreLIBS ${coreLIBS} ${COLLADA_DOM_LIBRARIES} minizip)
+  set (OPENRAVE_CORE_LIBRARIES ${OPENRAVE_CORE_LIBRARIES} ${COLLADA_DOM_LIBRARIES} minizip)
   set(openrave_core_SOURCES ${openrave_core_SOURCES} colladareader.cpp colladawriter.cpp)
 endif()
 
 if( ASSIMP_FOUND )
   include_directories(${ASSIMP_INCLUDE_DIRS})
   set(OPENRAVE_LINK_DIRS ${OPENRAVE_LINK_DIRS} ${ASSIMP_LIBRARY_DIRS})
-  set(coreLIBS ${coreLIBS} ${ASSIMP_LIBRARIES})
+  set(OPENRAVE_CORE_LIBRARIES ${OPENRAVE_CORE_LIBRARIES} ${ASSIMP_LIBRARIES})
   set(LIBOPENRAVE_COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} -DOPENRAVE_ASSIMP ${ASSIMP_CFLAGS_OTHER}")
   set(LIBOPENRAVE_LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS} ${ASSIMP_LDFLAGS_OTHER}")
   message(STATUS "Geometry Parsing: Using Open Asset Import Library (assimp)")
@@ -28,22 +28,18 @@ if( IVCON_FOUND )
   message(STATUS "Geometry Parsing: Using ivcon")
   include_directories(${IVCON_INCLUDE_DIR})
   set(LIBOPENRAVE_COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} -DOPENRAVE_IVCON")
-  set(coreLIBS ${coreLIBS} ${IVCON_LIBRARY})
+  set(OPENRAVE_CORE_LIBRARIES ${OPENRAVE_CORE_LIBRARIES} ${IVCON_LIBRARY})
 endif()
 
 link_directories(${OPENRAVE_LINK_DIRS})
 
-if( CLOCK_GETTIME_FOUND )
-  set(coreLIBS ${coreLIBS} rt)
-endif()
-
 add_library(libopenrave-core SHARED ${openrave_core_SOURCES})
 
 if( COLLADA_DOM_FOUND )
-  set(coreLIBS ${coreLIBS} ${COLLADA_DOM_LIBRARIES})
+  set(OPENRAVE_CORE_LIBRARIES ${OPENRAVE_CORE_LIBRARIES} ${COLLADA_DOM_LIBRARIES})
 endif()
 if( IVCON_FOUND )
-  set(coreLIBS ${coreLIBS} ${IVCON_LIBRARY})
+  set(OPENRAVE_CORE_LIBRARIES ${OPENRAVE_CORE_LIBRARIES} ${IVCON_LIBRARY})
 endif()
 
 set_target_properties(libopenrave-core PROPERTIES OUTPUT_NAME openrave-core${OPENRAVE_LIBRARY_SUFFIX}
@@ -53,7 +49,7 @@ set_target_properties(libopenrave-core PROPERTIES OUTPUT_NAME openrave-core${OPE
                                   COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} -DOPENRAVE_CORE_DLL_EXPORTS -DOPENRAVE_CORE_DLL"
                                   LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS}")
 
-target_link_libraries (libopenrave-core libopenrave ${coreLIBS})
+target_link_libraries (libopenrave-core libopenrave ${OPENRAVE_CORE_LIBRARIES})
 if( MSVC )
   install(TARGETS libopenrave-core RUNTIME DESTINATION bin COMPONENT ${COMPONENT_PREFIX}base LIBRARY DESTINATION bin COMPONENT ${COMPONENT_PREFIX}base ARCHIVE DESTINATION lib${LIB_SUFFIX} COMPONENT ${COMPONENT_PREFIX}base)
 else()
@@ -79,6 +75,6 @@ if( OPT_STATIC )
                                                 COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} "
                                                 LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS}")
   
-  target_link_libraries (libopenrave-core_static libopenrave_static ${coreLIBS})
+  target_link_libraries (libopenrave-core_static libopenrave_static ${OPENRAVE_CORE_LIBRARIES})
   install(TARGETS libopenrave-core_static DESTINATION lib${LIB_SUFFIX} COMPONENT ${COMPONENT_PREFIX}dev)
 endif()

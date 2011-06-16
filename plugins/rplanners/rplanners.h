@@ -147,9 +147,12 @@ public:
             if( fdist > _fStepLength ) {
                 fdist = _fStepLength / fdist;
             }
-            else if( fdist <= dReal(0.1) * _fStepLength ) {
+            else if( fdist <= dReal(0.01) * _fStepLength ) {
                 // return connect if the distance is very close
                 return ET_Connected;
+            }
+            else {
+                fdist = 1;
             }
         
             _vNewConfig = pnode->q;
