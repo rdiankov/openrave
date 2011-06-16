@@ -38,6 +38,7 @@ def main(env,options):
 
     with env:
         robot = env.GetRobots()[0]
+        robot.GetLinks()[0].SetStatic(True)
         robot.SetController(RaveCreateController(env,'odevelocity'),range(robot.GetDOF()),0)
         env.StopSimulation()
         env.StartSimulation(timestep=0.001)

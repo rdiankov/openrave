@@ -557,7 +557,7 @@ class ColladaReader : public daeErrorHandler
         KinBody::LinkPtr plink(new KinBody::Link(pkinbody));
         plink->_name = name;
         plink->_mass = 1.0;
-        plink->bStatic = false;   
+        plink->_bStatic = false;   
         bool bhasgeometry = ExtractGeometry(pdomnode,plink,listAxisBindings,vprocessednodes);
         if( !bhasgeometry ) {
             return KinBodyPtr();
@@ -773,7 +773,7 @@ class ColladaReader : public daeErrorHandler
             plink.reset(new KinBody::Link(pkinbody));
             plink->_name = linkname;
             plink->_mass = 1.0;
-            plink->bStatic = false;
+            plink->_bStatic = false;
             plink->_index = (int) pkinbody->_veclinks.size();
             pkinbody->_veclinks.push_back(plink);
         }
@@ -935,7 +935,7 @@ class ColladaReader : public daeErrorHandler
                     ss <<"_dummy" << pkinbody->_veclinks.size();
                     pchildlink.reset(new KinBody::Link(pkinbody));
                     pchildlink->_name = ss.str();
-                    pchildlink->bStatic = false;
+                    pchildlink->_bStatic = false;
                     pchildlink->_index = (int)pkinbody->_veclinks.size();
                     pkinbody->_veclinks.push_back(pchildlink);
                 }

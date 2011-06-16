@@ -29,7 +29,9 @@ Core
 
 * **Compatibility Break:** EnvironmentBase AddKinBody/AddRobot/AddSensor return void instead of bool.
 
-* added a Level_VerifyPlans debug level that notifies planners/modules to double check their outputs. Used for testing.
+* added a Level_VerifyPlans debug level that globally notifies planners/modules to double check their outputs. Used for testing.
+
+* added Joint::SetOffset, Link::SetStatic, GEOMPROPERTIES::SetRenderFilename functions
 
 Planning
 --------
@@ -61,6 +63,8 @@ Planning
 * added VerifyTrajectory command in BaseManipulation.
 
 * fixed major bug in WorkspaceTrajectoryTracker (ie MoveHandStraight) due to obstacle checking
+
+* many changes to the RRT extend function to prevent infinite loops
 
 Inverse Kinematics
 ------------------

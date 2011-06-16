@@ -954,7 +954,7 @@ class Environment : public EnvironmentBase
                 ptrimesh = ReadTrimeshFile(ptrimesh,filename,atts);
                 if( robot->InitFromTrimesh(*ptrimesh,true) ) {
                     // have to set the render file
-                    OpenRAVEXMLParser::SetRenderFilename(robot->_veclinks.at(0)->GetGeometry(0), filename);
+                    robot->_veclinks.at(0)->GetGeometry(0).SetRenderFilename(filename);
 #if defined(HAVE_BOOST_FILESYSTEM) && BOOST_VERSION >= 103600 // stem() was introduced in 1.36
                     boost::filesystem::path pfilename(filename, boost::filesystem::native);
 #if defined(BOOST_FILESYSTEM_VERSION) && BOOST_FILESYSTEM_VERSION >= 3
@@ -1054,7 +1054,7 @@ class Environment : public EnvironmentBase
                 ptrimesh = ReadTrimeshFile(ptrimesh,filename,atts);
                 if( body->InitFromTrimesh(*ptrimesh,true) ) {
                     // have to set the render file
-                    OpenRAVEXMLParser::SetRenderFilename(body->_veclinks.at(0)->GetGeometry(0), filename);
+                    body->_veclinks.at(0)->GetGeometry(0).SetRenderFilename(filename);
 #if defined(HAVE_BOOST_FILESYSTEM) && BOOST_VERSION >= 103600 // stem() was introduced in 1.36
                     boost::filesystem::path pfilename(filename, boost::filesystem::native);
 #if defined(BOOST_FILESYSTEM_VERSION) && BOOST_FILESYSTEM_VERSION >= 3

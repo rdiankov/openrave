@@ -24,20 +24,27 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
     if( !s_listRegisteredReaders ) {
         s_listRegisteredReaders = new list< boost::shared_ptr<void> >();
         s_listRegisteredReaders->push_back(RaveRegisterXMLReader(PT_Sensor,"baselaser2d",BaseLaser2DSensor::CreateXMLReader));
+        s_listRegisteredReaders->push_back(RaveRegisterXMLReader(PT_Sensor,"base_laser2d",BaseLaser2DSensor::CreateXMLReader));
         s_listRegisteredReaders->push_back(RaveRegisterXMLReader(PT_Sensor,"basespinninglaser2d",BaseSpinningLaser2DSensor::CreateXMLReader));
         s_listRegisteredReaders->push_back(RaveRegisterXMLReader(PT_Sensor,"baseflashlidar3d",BaseFlashLidar3DSensor::CreateXMLReader));
+        s_listRegisteredReaders->push_back(RaveRegisterXMLReader(PT_Sensor,"base_laser3d",BaseFlashLidar3DSensor::CreateXMLReader));
         s_listRegisteredReaders->push_back(RaveRegisterXMLReader(PT_Sensor,"basecamera",BaseCameraSensor::CreateXMLReader));
+        s_listRegisteredReaders->push_back(RaveRegisterXMLReader(PT_Sensor,"base_pinhole_camera",BaseCameraSensor::CreateXMLReader));
     }
     switch(type) {
     case PT_Sensor:
-        if( interfacename == "baselaser2d" )
+        if( interfacename == "baselaser2d" || interfacename == "base_laser2d" ) {
             return InterfaceBasePtr(new BaseLaser2DSensor(penv));
-        else if( interfacename == "basespinninglaser2d" )
+        }
+        else if( interfacename == "basespinninglaser2d" ) {
             return InterfaceBasePtr(new BaseSpinningLaser2DSensor(penv));
-        else if( interfacename == "baseflashlidar3d" )
+        }
+        else if( interfacename == "baseflashlidar3d" || interfacename == "base_laser3d" ) {
             return InterfaceBasePtr(new BaseFlashLidar3DSensor(penv));
-        else if( interfacename == "basecamera" )
+        }
+        else if( interfacename == "basecamera" || interfacename == "base_pinhole_camera" ) {
             return InterfaceBasePtr(new BaseCameraSensor(penv));
+        }
         break;
     default:
         break;
@@ -48,9 +55,12 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
 void GetPluginAttributesValidated(PLUGININFO& info)
 {
     info.interfacenames[OpenRAVE::PT_Sensor].push_back("BaseLaser2D");
+    info.interfacenames[OpenRAVE::PT_Sensor].push_back("base_laser2d");
     info.interfacenames[OpenRAVE::PT_Sensor].push_back("BaseSpinningLaser2D");
     info.interfacenames[OpenRAVE::PT_Sensor].push_back("BaseFlashLidar3D");
+    info.interfacenames[OpenRAVE::PT_Sensor].push_back("base_laser3d");
     info.interfacenames[OpenRAVE::PT_Sensor].push_back("BaseCamera");
+    info.interfacenames[OpenRAVE::PT_Sensor].push_back("base_pinhole_camera");
 }
 
 OPENRAVE_PLUGIN_API void DestroyPlugin()

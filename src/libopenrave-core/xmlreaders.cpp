@@ -757,17 +757,11 @@ namespace OpenRAVEXMLParser
                 _plink->_name = linkname;
             }
             if( bStaticSet ) {
-                _plink->bStatic = bStatic;
+                _plink->_bStatic = bStatic;
             }
             _itgeomprop = _plink->_listGeomProperties.end();
         }
         virtual ~LinkXMLReader() {}
-
-        // hack
-        static void SetRenderFilename(KinBody::Link::GEOMPROPERTIES& geom, const std::string& renderfile)
-        {
-            geom.renderfile = renderfile;
-        }
 
         virtual ProcessElement startElement(const std::string& xmlname, const AttributesList& atts)
         {
@@ -970,7 +964,7 @@ namespace OpenRAVEXMLParser
                         bool bSuccess = false;
                         if( _collisionfilename.first.size() > 0 ) {
                             _itgeomprop->vRenderScale = _renderfilename.second;
-                            _itgeomprop->renderfile = _renderfilename.first;
+                            _itgeomprop->_renderfilename = _renderfilename.first;
                             if( !CreateTriMeshData(_pparent->GetEnv(),_collisionfilename.first, _collisionfilename.second, _itgeomprop->collisionmesh, _itgeomprop->diffuseColor, _itgeomprop->ambientColor, _itgeomprop->ftransparency) ) {
                                 RAVELOG_WARN(str(boost::format("failed to find %s\n")%_collisionfilename.first));
                             }
@@ -980,7 +974,7 @@ namespace OpenRAVEXMLParser
                         }
                         if( _renderfilename.first.size() > 0 ) {
                             _itgeomprop->vRenderScale = _renderfilename.second;
-                            _itgeomprop->renderfile = _renderfilename.first;
+                            _itgeomprop->_renderfilename = _renderfilename.first;
                             if( !bSuccess ) {
                                 if( !CreateTriMeshData(_pparent->GetEnv(), _renderfilename.first, _renderfilename.second, _itgeomprop->collisionmesh, _itgeomprop->diffuseColor, _itgeomprop->ambientColor, _itgeomprop->ftransparency) ) {
                                     RAVELOG_WARN(str(boost::format("failed to find %s\n")%_renderfilename.first));
@@ -1251,13 +1245,6 @@ namespace OpenRAVEXMLParser
         float _fMassDensity, _fTotalMass;
         Vector _vMassExtents;           ///< used only if mass is a box
     };
-
-    // hack
-    void SetRenderFilename(KinBody::Link::GEOMPROPERTIES& geom, const std::string& renderfile)
-    {
-        LinkXMLReader::SetRenderFilename(geom,renderfile);
-    }
-
 
     // Joint Reader
     class JointXMLReader : public StreamXMLReader

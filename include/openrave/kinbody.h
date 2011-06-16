@@ -34,15 +34,16 @@ public:
     /// \brief A set of properties for the kinbody. These properties are used to describe a set of variables used in KinBody.
     enum KinBodyProperty {
         Prop_Joints=0x1, ///< all properties of all joints
-        Prop_JointLimits=0x2, ///< regular limits
-        Prop_JointOffset=0x4,
-        Prop_JointProperties=0x8, ///< max velocity, max acceleration, resolution, max torque
+        Prop_JointLimits=0x2|Prop_Joints, ///< regular limits
+        Prop_JointOffset=0x4|Prop_Joints,
+        Prop_JointProperties=0x8|Prop_Joints, ///< max velocity, max acceleration, resolution, max torque
         Prop_Links=0x10, ///< all properties of all links
         Prop_Name=0x20, ///< name changed
-        Prop_LinkDraw=0x40, ///< toggle link geometries rendering
-        Prop_LinkGeometry=0x80, ///< the geometry of the link changed
-        Prop_JointMimic=0x100, ///< joint mimic equations
-        Prop_JointVelocityLimits=0x200, ///< velocity limits
+        Prop_LinkDraw=0x40|Prop_Links, ///< toggle link geometries rendering
+        Prop_LinkGeometry=0x80|Prop_Links, ///< the geometry of the link changed
+        Prop_JointMimic=0x100|Prop_Joints, ///< joint mimic equations
+        Prop_JointVelocityLimits=0x200|Prop_Joints, ///< velocity limits
+        Prop_LinkStatic=0x400|Prop_Links, ///< static property of link changed
         // robot only
         Prop_RobotManipulators = 0x00010000, ///< [robot only] all properties of all manipulators
         Prop_Manipulators = 0x00010000,
@@ -102,7 +103,7 @@ public:
             inline const Transform& GetTransform() const { return _t; }
             inline GeomType GetType() const { return _type; }
             inline const Vector& GetRenderScale() const { return vRenderScale; }
-            inline const std::string& GetRenderFilename() const { return renderfile; }
+            inline const std::string& GetRenderFilename() const { return _renderfilename; }
             inline float GetTransparency() const { return ftransparency; }
             inline bool IsDraw() const { return _bDraw; }
             inline bool IsModifiable() const { return _bModifiable; }
@@ -135,11 +136,15 @@ public:
             /// \brief override ambient color of geometry material
             virtual void SetAmbientColor(const RaveVector<float>& color);
 
-            /// validates the contact normal on the surface of the geometry and makes sure the normal faces "outside" of the shape.
+            /// \brief validates the contact normal on the surface of the geometry and makes sure the normal faces "outside" of the shape.
+            ///
             /// \param position the position of the contact point specified in the link's coordinate system
             /// \param normal the unit normal of the contact point specified in the link's coordinate system
             /// \return true if the normal is changed to face outside of the shape
             virtual bool ValidateContactNormal(const Vector& position, Vector& normal) const;
+
+            /// \brief sets a new render filename for the geometry. This does not change the collision
+            virtual void SetRenderFilename(const std::string& renderfilename);
 
         protected:
             /// triangulates the geometry object and initializes collisionmesh. GeomTrimesh types must already be triangulated
@@ -155,7 +160,7 @@ public:
             RaveVector<float> diffuseColor, ambientColor; ///< hints for how to color the meshes
             TRIMESH collisionmesh; ///< see \ref GetCollisionMesh
             GeomType _type;         ///< the type of geometry primitive
-            std::string renderfile;  ///< render resource file, should be transformed by _t before rendering
+            std::string _renderfilename;  ///< render resource file, should be transformed by _t before rendering
             Vector vRenderScale; ///< render scale of the object (x,y,z)
             float ftransparency; ///< value from 0-1 for the transparency of the rendered object, 0 is opaque
 
@@ -183,7 +188,7 @@ public:
         ///
         //// Static should be used when an object has infinite mass and
         ///< shouldn't be affected by physics (including gravity). Collision still works.
-        inline bool IsStatic() const { return bStatic; }
+        inline bool IsStatic() const { return _bStatic; }
 
         /// \brief returns true if the link is enabled. \see Enable
         virtual bool IsEnabled() const;
@@ -222,6 +227,13 @@ public:
         inline const TransformMatrix& GetInertia() const { return _transMass; }
         inline dReal GetMass() const { return _mass; }
 
+        /// \brief sets a link to be static.
+        ///
+        /// Because this can affect the kinematics, it requires the body's internal structures to be recomputed
+        virtual void SetStatic(bool bStatic);
+
+        /// \brief Sets the transform of the link regardless of kinematics
+        ///
         /// \param[in] t the new transformation
         virtual void SetTransform(const Transform& transform);
         
@@ -272,6 +284,7 @@ public:
         virtual void GetRigidlyAttachedLinks(std::vector<boost::shared_ptr<Link> >& vattachedlinks) const;
 
         virtual void serialize(std::ostream& o, int options) const;
+        
     protected:
         /// \brief Updates the cached information due to changes in the collision data.
         virtual void _Update();
@@ -285,7 +298,7 @@ public:
         std::string _name;     ///< optional link name
         std::list<GEOMPROPERTIES> _listGeomProperties; ///< \see GetGeometries
         
-        bool bStatic;       ///< \see IsStatic
+        bool _bStatic;       ///< \see IsStatic
         bool _bIsEnabled; ///< \see IsEnabled
 
     private:
@@ -1171,7 +1184,7 @@ protected:
     UserDataPtr _pPhysicsData; ///< \see SetPhysicsData
     UserDataPtr _pCollisionData; ///< \see SetCollisionData
     ManageDataPtr _pManageData;    
-    uint8_t _nHierarchyComputed; ///< true if the joint heirarchy and other cached information is computed
+    uint32_t _nHierarchyComputed; ///< true if the joint heirarchy and other cached information is computed
     bool _bMakeJoinedLinksAdjacent;
 private:
     std::string __hashkinematics;

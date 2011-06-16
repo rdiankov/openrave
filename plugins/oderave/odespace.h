@@ -173,6 +173,7 @@ public:
             vjoints.resize(0);
 
             _geometrycallback.reset();
+            _staticcallback.reset();
         }
 
         KinBodyPtr pbody; ///< body associated with this structure
@@ -181,7 +182,7 @@ public:
         vector<boost::shared_ptr<LINK> > vlinks; ///< if body is disabled, then geom is static (it can't be connected to a joint!)
         ///< the pointer to this Link is the userdata
         vector<dJointID> vjoints;
-        boost::shared_ptr<void> _geometrycallback;
+        boost::shared_ptr<void> _geometrycallback, _staticcallback;
         boost::weak_ptr<ODESpace> _odespace;
 
         dSpaceID space;                     ///< space that contanis all the collision objects of this chain
@@ -196,7 +197,7 @@ public:
     typedef boost::function<OpenRAVE::UserDataPtr(KinBodyConstPtr)> GetInfoFn;
     typedef boost::function<void(KinBodyInfoPtr)> SynchornizeCallbackFn;
     
- ODESpace(EnvironmentBasePtr penv, const GetInfoFn& infofn, bool bCreateJoints) : _penv(penv), GetInfo(infofn), _bCreateJoints(bCreateJoints)
+ ODESpace(EnvironmentBasePtr penv, const GetInfoFn& infofn, bool bUsingPhysics) : _penv(penv), GetInfo(infofn), _bUsingPhysics(bUsingPhysics)
     {
         static bool s_bIsODEInitialized = false;
         if( !s_bIsODEInitialized ) {
@@ -233,8 +234,9 @@ public:
         EnvironmentMutex::scoped_lock lock(pbody->GetEnv()->GetMutex());
 
         // create all ode bodies and joints
-        if( !pinfo )
+        if( !pinfo ) {
             pinfo.reset(new KinBodyInfo(_ode));
+        }
         pinfo->Reset();
         pinfo->pbody = pbody;
         pinfo->_odespace = weak_space();
@@ -328,7 +330,7 @@ public:
             pinfo->vlinks.push_back(link);
         }
 
-        if( _bCreateJoints ) {
+        if( _bUsingPhysics ) {
             vector<KinBody::JointPtr> vbodyjoints = pbody->GetJoints();
             vbodyjoints.insert(vbodyjoints.end(),pbody->GetPassiveJoints().begin(),pbody->GetPassiveJoints().end());
             FOREACHC(itjoint, vbodyjoints) {
@@ -420,7 +422,10 @@ public:
             }
         }
 
-        pinfo->_geometrycallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkGeometry, boost::bind(&ODESpace::GeometryChangedCallback,boost::bind(&sptr_from<ODESpace>, weak_space()),KinBodyWeakPtr(pbody)));
+        pinfo->_geometrycallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkGeometry, boost::bind(&ODESpace::_ResetKinBodyCallback,boost::bind(&sptr_from<ODESpace>, weak_space()),KinBodyWeakPtr(pbody)));
+        if( _bUsingPhysics ) {
+            pinfo->_staticcallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkStatic, boost::bind(&ODESpace::_ResetKinBodyCallback,boost::bind(&sptr_from<ODESpace>, weak_space()),KinBodyWeakPtr(pbody)));
+        }
 
         Synchronize(pinfo);
         return pinfo;
@@ -529,7 +534,7 @@ private:
         }
     }
 
-    void GeometryChangedCallback(KinBodyWeakPtr _pbody)
+    void _ResetKinBodyCallback(KinBodyWeakPtr _pbody)
     {
         EnvironmentMutex::scoped_lock lock(_penv->GetMutex());
         KinBodyPtr pbody(_pbody);
@@ -547,7 +552,7 @@ private:
     GetInfoFn GetInfo;
 
     SynchornizeCallbackFn _synccallback;
-    bool _bCreateJoints;
+    bool _bUsingPhysics;
 };
 
 #ifdef RAVE_REGISTER_BOOST

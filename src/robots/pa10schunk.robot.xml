@@ -5,13 +5,13 @@
         <extents>0.001 0.001 0.001</extents>
       </geom>
     </body>
-    <joint type="hinge" enable="false">
+    <joint name="dummy0" type="hinge" enable="false">
       <body>staticbase</body>
       <body>link0</body>
       <limitsdeg>0 0</limitsdeg>
     </joint>
     <KinBody file="schunk_manip.kinbody.xml"></KinBody>
-    <Joint name="dummy" type="hinge" enable="false">
+    <Joint name="dummy1" type="hinge" enable="false">
       <body>link7</body>
       <body>gripper_base</body>
       <axis>0 0 1</axis>
@@ -23,7 +23,7 @@
     <link>gripper_base</link>
     <translation>-0.06514 -0.00494 0.12267</translation>
     <rotationmat>0.93581   0.02765   0.35142  -0.03113   0.99951   0.00426  -0.35113  -0.01493   0.93621</rotationmat>
-    <sensor type="BaseCamera" args="">
+    <sensor type="BaseCamera">
       <KK>600 600 320 240</KK>
       <width>640</width>
       <height>480</height>

@@ -23,13 +23,13 @@
 // used for functions that are also used internally
 #define CHECK_INTERNAL_COMPUTATION0 { \
     if( _nHierarchyComputed == 0 ) { \
-        throw OPENRAVE_EXCEPTION_FORMAT("joint hierarchy needs to be computed, current value is %d", _nHierarchyComputed, ORE_Failed); \
+        throw OPENRAVE_EXCEPTION_FORMAT("body %s internal structures need to be computed, current value is %d", GetName()%_nHierarchyComputed, ORE_Failed); \
     } \
 } \
 
 #define CHECK_INTERNAL_COMPUTATION { \
     if( _nHierarchyComputed != 2 ) { \
-        throw OPENRAVE_EXCEPTION_FORMAT("joint hierarchy needs to be computed, current value is %d", _nHierarchyComputed, ORE_Failed); \
+        throw OPENRAVE_EXCEPTION_FORMAT("body %s internal structures need to be computed, current value is %d", GetName()%_nHierarchyComputed, ORE_Failed); \
     } \
 } \
 
@@ -576,10 +576,17 @@ bool KinBody::Link::GEOMPROPERTIES::ValidateContactNormal(const Vector& _positio
     return false;
 }
 
+void KinBody::Link::GEOMPROPERTIES::SetRenderFilename(const std::string& renderfilename)
+{
+    LinkPtr parent(_parent);
+    _renderfilename = renderfilename;
+    parent->GetParent()->_ParametersChanged(Prop_LinkGeometry);
+}
+
 KinBody::Link::Link(KinBodyPtr parent)
 {
     _parent = parent;
-    bStatic = false;
+    _bStatic = false;
     _index = -1;
     _bIsEnabled = true;
 }
@@ -687,6 +694,14 @@ void KinBody::Link::serialize(std::ostream& o, int options) const
     if( options & SO_Dynamics ) {
         SerializeRound(o,_transMass);
         SerializeRound(o,_mass);
+    }
+}
+
+void KinBody::Link::SetStatic(bool bStatic)
+{
+    if( _bStatic != bStatic ) {
+        _bStatic = bStatic;
+        GetParent()->_ParametersChanged(Prop_LinkStatic);
     }
 }
 
@@ -883,14 +898,8 @@ void KinBody::Joint::GetValues(vector<dReal>& pValues, bool bAppend) const
         pValues.push_back(GetValue(0));
         return;
     }
-    Transform tjoint;
     dReal f;
-    if ( !!_attachedbodies[1] ) {
-        tjoint = _tinvLeft * _attachedbodies[0]->GetTransform().inverse() * _attachedbodies[1]->GetTransform() * _tinvRight;
-    }
-    else {
-        tjoint = _tinvLeft * GetParent()->GetTransform().inverse() * _attachedbodies[0]->GetTransform() * _tinvRight;
-    }
+    Transform tjoint = _tinvLeft * _attachedbodies[0]->GetTransform().inverse() * _attachedbodies[1]->GetTransform() * _tinvRight;
     if( _type & JointSpecialBit ) {
         switch(_type) {
         case JointHinge2: {
@@ -980,14 +989,8 @@ void KinBody::Joint::GetValues(vector<dReal>& pValues, bool bAppend) const
 dReal KinBody::Joint::GetValue(int iaxis) const
 {
     BOOST_ASSERT(_bInitialized);
-    Transform tjoint;
     dReal f;
-    if ( !!_attachedbodies[1] ) {
-        tjoint = _tinvLeft * _attachedbodies[0]->GetTransform().inverse() * _attachedbodies[1]->GetTransform() * _tinvRight;
-    }
-    else {
-        tjoint = _tinvLeft * GetParent()->GetTransform().inverse() * _attachedbodies[0]->GetTransform() * _tinvRight;
-    }
+    Transform tjoint = _tinvLeft * _attachedbodies[0]->GetTransform().inverse() * _attachedbodies[1]->GetTransform() * _tinvRight;
     if( _type & JointSpecialBit ) {
         switch(_type) {
         case JointHinge2: {
@@ -1109,16 +1112,10 @@ void KinBody::Joint::GetVelocities(std::vector<dReal>& pVelocities, bool bAppend
     BOOST_ASSERT(_bInitialized);
     boost::array<Transform,2> transforms;
     boost::array<Vector,2> linearvel, angularvel;
-    if ( !!_attachedbodies[1] ) {
-        _attachedbodies[0]->GetVelocity(linearvel[0],angularvel[0]);
-        _attachedbodies[1]->GetVelocity(linearvel[1],angularvel[1]);
-        transforms[0] = _attachedbodies[0]->GetTransform();
-        transforms[1] = _attachedbodies[1]->GetTransform();
-    }
-    else {
-        _attachedbodies[0]->GetVelocity(linearvel[1],angularvel[1]);
-        transforms[1] = _attachedbodies[0]->GetTransform();
-    }
+    _attachedbodies[0]->GetVelocity(linearvel[0],angularvel[0]);
+    _attachedbodies[1]->GetVelocity(linearvel[1],angularvel[1]);
+    transforms[0] = _attachedbodies[0]->GetTransform();
+    transforms[1] = _attachedbodies[1]->GetTransform();
     if( !bAppend ) {
         pVelocities.resize(0);
     }
@@ -1184,17 +1181,18 @@ void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1,
     Vector vanchor=vanchorraw;
 
     // make sure first body is always closer to the root, unless the second body is static
-    if( !_attachedbodies[1]->IsStatic() ) {
-        if( _attachedbodies[0]->IsStatic() ) {
-            Transform tswap = tbody1.inverse() * tbody0;
+    if( _attachedbodies[1]->IsStatic() ) {
+        if( !_attachedbodies[0]->IsStatic() ) {
+            Transform tswap = plink1->GetTransform().inverse() * plink0->GetTransform();
             for(int i = 0; i < GetDOF(); ++i) {
                 vAxes[i] = -tswap.rotate(vAxes[i]);
             }
             vanchor = tswap*vanchor;
-            swap(_attachedbodies[0], _attachedbodies[1]);
+            swap(_attachedbodies[0],_attachedbodies[1]);
         }
     }
-    if( _attachedbodies[0]->IsStatic() ) {
+
+    if( _attachedbodies[1]->IsStatic() ) {
         RAVELOG_WARN(str(boost::format("joint %s: all attached links are static!\n")%GetName()));
     }
 
@@ -1253,10 +1251,10 @@ void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1,
         if( GetDOF() > 1 ) {
             // right multiply by the offset of the last axis, might be buggy?
             if( IsRevolute(GetDOF()-1) ) {
-                _tRight = matrixFromAxisAngle(vAxes[0], _voffsets[GetDOF()-1]) * _tRight;
+                _tRight = matrixFromAxisAngle(vAxes[GetDOF()-1], _voffsets[GetDOF()-1]) * _tRight;
             }
             else {
-                _tRight.trans += vAxes[0]*_voffsets[GetDOF()-1];
+                _tRight.trans += vAxes[GetDOF()-1]*_voffsets[GetDOF()-1];
             }
         }
     }
@@ -1267,12 +1265,12 @@ void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1,
 
 KinBody::LinkPtr KinBody::Joint::GetHierarchyParentLink() const
 {
-    return !_attachedbodies[1] ? LinkPtr() : _attachedbodies[0];
+    return _attachedbodies[0];
 }
 
 KinBody::LinkPtr KinBody::Joint::GetHierarchyChildLink() const
 {
-    return !_attachedbodies[1] ? _attachedbodies[0] : _attachedbodies[1];
+    return _attachedbodies[1];
 }
 
 Vector KinBody::Joint::GetInternalHierarchyAnchor() const
@@ -1346,6 +1344,28 @@ dReal KinBody::Joint::GetWeight(int iaxis) const
 void KinBody::Joint::SetOffset(dReal newoffset, int iaxis)
 {
     _voffsets.at(iaxis) = newoffset;
+    if( iaxis == 0 ) {
+        Transform toffset;
+        if( IsRevolute(0) ) {
+            toffset.rot = quatFromAxisAngle(vAxes[0], newoffset);
+        }
+        else {
+            toffset.trans = vAxes[0]*newoffset;
+        }
+        _tLeft = _tLeftNoOffset * toffset;
+        _tinvLeft = _tLeft.inverse();
+    }
+    if( GetDOF() > 1 && iaxis==GetDOF()-1 ) {
+        _tRight = _tRightNoOffset;
+        // right multiply by the offset of the last axis, might be buggy?
+        if( IsRevolute(GetDOF()-1) ) {
+            _tRight = matrixFromAxisAngle(vAxes[GetDOF()-1], newoffset) * _tRight;
+        }
+        else {
+            _tRight.trans += vAxes[GetDOF()-1]*newoffset;
+        }
+        _tinvRight = _tRight.inverse();
+    }
     GetParent()->_ParametersChanged(Prop_JointOffset);
 }
 
@@ -1696,11 +1716,8 @@ void KinBody::Joint::serialize(std::ostream& o, int options) const
 {
     if( options & SO_Kinematics ) {
         o << dofindex << " " << jointindex << " " << _type << " ";
-        SerializeRound(o,_tRight);
-        SerializeRound(o,_tLeft);
-        for(int i = 0; i < GetDOF(); ++i) {
-            SerializeRound(o,_voffsets[i]);
-        }
+        SerializeRound(o,_tRightNoOffset);
+        SerializeRound(o,_tLeftNoOffset);
         for(int i = 0; i < GetDOF(); ++i) {
             SerializeRound3(o,vAxes[i]);
             if( !!_vmimic.at(i) ) {
@@ -1709,7 +1726,7 @@ void KinBody::Joint::serialize(std::ostream& o, int options) const
                 }
             }
         }
-        o << (!_attachedbodies[0]?-1:_attachedbodies[0]->GetIndex()) << " " << (!_attachedbodies[1]?-1:_attachedbodies[1]->GetIndex()) << " ";
+        o << (!_attachedbodies[0]?-1:_attachedbodies[0]->GetIndex()) << " " << (_attachedbodies[1]->GetIndex()) << " ";
     }
     if( options & SO_Dynamics ) {
         for(int i = 0; i < GetDOF(); ++i) {
@@ -1839,7 +1856,7 @@ bool KinBody::InitFromBoxes(const std::vector<AABB>& vaabbs, bool bDraw)
     LinkPtr plink(new Link(shared_kinbody()));
     plink->_index = 0;
     plink->_name = "base";
-    plink->bStatic = true;
+    plink->_bStatic = true;
     Link::TRIMESH trimesh;
     FOREACHC(itab, vaabbs) {
         plink->_listGeomProperties.push_back(Link::GEOMPROPERTIES(plink));
@@ -1869,7 +1886,7 @@ bool KinBody::InitFromBoxes(const std::vector<OBB>& vobbs, bool bDraw)
     LinkPtr plink(new Link(shared_kinbody()));
     plink->_index = 0;
     plink->_name = "base";
-    plink->bStatic = true;
+    plink->_bStatic = true;
     Link::TRIMESH trimesh;
     FOREACHC(itobb, vobbs) {
         plink->_listGeomProperties.push_back(Link::GEOMPROPERTIES(plink));
@@ -1904,7 +1921,7 @@ bool KinBody::InitFromSpheres(const std::vector<Vector>& vspheres, bool bDraw)
     LinkPtr plink(new Link(shared_kinbody()));
     plink->_index = 0;
     plink->_name = "base";
-    plink->bStatic = true;
+    plink->_bStatic = true;
     Link::TRIMESH trimesh;
     FOREACHC(itv, vspheres) {
         plink->_listGeomProperties.push_back(Link::GEOMPROPERTIES(plink));
@@ -1934,7 +1951,7 @@ bool KinBody::InitFromTrimesh(const KinBody::Link::TRIMESH& trimesh, bool draw)
     LinkPtr plink(new Link(shared_kinbody()));
     plink->_index = 0;
     plink->_name = "base";
-    plink->bStatic = true;
+    plink->_bStatic = true;
     plink->collision = trimesh;
 
     plink->_listGeomProperties.push_back(Link::GEOMPROPERTIES(plink));
@@ -3301,23 +3318,21 @@ void KinBody::_ComputeInternalInformation()
     // SIMOES, Ricardo. APAC: An exact algorithm for retrieving cycles and paths in all kinds of graphs. Tékhne, Dec. 2009, no.12, p.39-55. ISSN 1654-9911.
     if( _veclinks.size() > 0 && _vecjoints.size() > 0 ) {
         std::vector< std::vector<int> > vlinkadjacency(_veclinks.size());
+        // joints with only one attachment are attached to a static link, which is attached to link 0
         FOREACHC(itjoint,_vecjoints) {
-            if( !!(*itjoint)->GetFirstAttached() && !!(*itjoint)->GetSecondAttached() ) {
-                vlinkadjacency.at((*itjoint)->GetFirstAttached()->GetIndex()).push_back((*itjoint)->GetSecondAttached()->GetIndex());
-                vlinkadjacency.at((*itjoint)->GetSecondAttached()->GetIndex()).push_back((*itjoint)->GetFirstAttached()->GetIndex());
-            }
+            vlinkadjacency.at((*itjoint)->GetFirstAttached()->GetIndex()).push_back((*itjoint)->GetSecondAttached()->GetIndex());
+            vlinkadjacency.at((*itjoint)->GetSecondAttached()->GetIndex()).push_back((*itjoint)->GetFirstAttached()->GetIndex());
         }
         FOREACHC(itjoint,_vPassiveJoints) {
-            if( !!(*itjoint)->GetFirstAttached() && !!(*itjoint)->GetSecondAttached() ) {
-                vlinkadjacency.at((*itjoint)->GetFirstAttached()->GetIndex()).push_back((*itjoint)->GetSecondAttached()->GetIndex());
-                vlinkadjacency.at((*itjoint)->GetSecondAttached()->GetIndex()).push_back((*itjoint)->GetFirstAttached()->GetIndex());
-            }
+            vlinkadjacency.at((*itjoint)->GetFirstAttached()->GetIndex()).push_back((*itjoint)->GetSecondAttached()->GetIndex());
+            vlinkadjacency.at((*itjoint)->GetSecondAttached()->GetIndex()).push_back((*itjoint)->GetFirstAttached()->GetIndex());
         }
         FOREACH(it,vlinkadjacency) {
             sort(it->begin(), it->end());
         }
 
-        std::vector< std::list< std::list<int> > > vuniquepaths(_veclinks.size()); // all unique paths starting at the root link
+        // all unique paths starting at the root link or static links
+        std::vector< std::list< std::list<int> > > vuniquepaths(_veclinks.size());
         std::list< std::list<int> > closedloops;
         int s = 0;
         std::list< std::list<int> > S;
@@ -3804,28 +3819,24 @@ void KinBody::_ComputeInternalInformation()
 
         if( _bMakeJoinedLinksAdjacent ) {
             FOREACH(itj, _vecjoints) {
-                if( !!(*itj)->_attachedbodies[0] && !!(*itj)->_attachedbodies[1] ) {
-                    int ind0 = (*itj)->_attachedbodies[0]->GetIndex();
-                    int ind1 = (*itj)->_attachedbodies[1]->GetIndex();
-                    if( ind1 < ind0 ) {
-                        _setAdjacentLinks.insert(ind1|(ind0<<16));
-                    }
-                    else {
-                        _setAdjacentLinks.insert(ind0|(ind1<<16));
-                    }
+                int ind0 = (*itj)->_attachedbodies[0]->GetIndex();
+                int ind1 = (*itj)->_attachedbodies[1]->GetIndex();
+                if( ind1 < ind0 ) {
+                    _setAdjacentLinks.insert(ind1|(ind0<<16));
+                }
+                else {
+                    _setAdjacentLinks.insert(ind0|(ind1<<16));
                 }
             }
         
             FOREACH(itj, _vPassiveJoints) {
-                if( !!(*itj)->_attachedbodies[0] && !!(*itj)->_attachedbodies[1] ) {
-                    int ind0 = (*itj)->_attachedbodies[0]->GetIndex();
-                    int ind1 = (*itj)->_attachedbodies[1]->GetIndex();
-                    if( ind1 < ind0 ) {
-                        _setAdjacentLinks.insert(ind1|(ind0<<16));
-                    }
-                    else {
-                        _setAdjacentLinks.insert(ind0|(ind1<<16));
-                    }
+                int ind0 = (*itj)->_attachedbodies[0]->GetIndex();
+                int ind1 = (*itj)->_attachedbodies[1]->GetIndex();
+                if( ind1 < ind0 ) {
+                    _setAdjacentLinks.insert(ind1|(ind0<<16));
+                }
+                else {
+                    _setAdjacentLinks.insert(ind0|(ind1<<16));
                 }
             }
 
@@ -4074,12 +4085,8 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
         JointPtr pnewjoint(new Joint(shared_kinbody()));
         *pnewjoint = **itjoint; // be careful of copying pointers!
         pnewjoint->_parent = shared_kinbody();
-        if( !!(*itjoint)->_attachedbodies[0] ) {
-            pnewjoint->_attachedbodies[0] = _veclinks.at((*itjoint)->_attachedbodies[0]->GetIndex());
-        }
-        if( !!(*itjoint)->_attachedbodies[1] ) {
-            pnewjoint->_attachedbodies[1] = _veclinks.at((*itjoint)->_attachedbodies[1]->GetIndex());
-        }
+        pnewjoint->_attachedbodies[0] = _veclinks.at((*itjoint)->_attachedbodies[0]->GetIndex());
+        pnewjoint->_attachedbodies[1] = _veclinks.at((*itjoint)->_attachedbodies[1]->GetIndex());
         _vecjoints.push_back(pnewjoint);
     }
 
@@ -4088,12 +4095,8 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
         JointPtr pnewjoint(new Joint(shared_kinbody()));
         *pnewjoint = **itjoint; // be careful of copying pointers!
         pnewjoint->_parent = shared_kinbody();
-        if( !!(*itjoint)->_attachedbodies[0] ) {
-            pnewjoint->_attachedbodies[0] = _veclinks.at((*itjoint)->_attachedbodies[0]->GetIndex());
-        }
-        if( !!(*itjoint)->_attachedbodies[1] ) {
-            pnewjoint->_attachedbodies[1] = _veclinks.at((*itjoint)->_attachedbodies[1]->GetIndex());
-        }
+        pnewjoint->_attachedbodies[0] = _veclinks.at((*itjoint)->_attachedbodies[0]->GetIndex());
+        pnewjoint->_attachedbodies[1] = _veclinks.at((*itjoint)->_attachedbodies[1]->GetIndex());
         _vPassiveJoints.push_back(pnewjoint);
     }
 
@@ -4164,7 +4167,10 @@ void KinBody::_ParametersChanged(int parameters)
         return;
     }
 
-    if( parameters & Prop_JointMimic ) {
+    if( (parameters & Prop_JointMimic) == Prop_JointMimic || (parameters & Prop_LinkStatic) == Prop_LinkStatic ) {
+        KinBodyStateSaver saver(shared_kinbody(),Save_LinkTransformation);
+        vector<dReal> vzeros(GetDOF(),0);
+        SetDOFValues(vzeros,Transform(),true);
         _ComputeInternalInformation();
     }
     // do not change hash if geometry changed!

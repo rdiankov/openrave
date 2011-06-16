@@ -14,13 +14,17 @@
 from openravepy import *
 from numpy import *
 
+from itertools import izip, combinations
+import nose
+from nose.tools import assert_raises
+
 g_epsilon = 1e-7
 g_jacobianstep = 0.01
 g_envfiles = ['data/lab1.env.xml','data/pr2wam_test1.env.xml','data/hanoi_complex.env.xml']
-g_robotfiles = ['robots/pr2-beta-static.zae','robots/barrettsegway.robot.xml','robots/neuronics-katana.zae']
+g_robotfiles = ['robots/pr2-beta-static.zae','robots/barrettsegway.robot.xml','robots/neuronics-katana.zae','robots/pa10schunk.robot.xml']
 
 def setup_module(module):
-    RaveInitialize(load_all_plugins=True)
+    RaveInitialize(load_all_plugins=True, level=DebugLevel.Debug|DebugLevel.VerifyPlans)
     
 def teardown_module(module):
     RaveDestroy()
@@ -66,7 +70,6 @@ class EnvironmentSetup(object):
     def setup(self):
         self.env=Environment()
         self.env.StopSimulation()
-        RaveSetDebugLevel(DebugLevel.Debug|DebugLevel.VerifyPlans)
     def teardown(self):
         self.env.Destroy()
         self.env=None

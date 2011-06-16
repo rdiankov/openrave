@@ -535,7 +535,7 @@ void RobotBase::Manipulator::serialize(std::ostream& o, int options) const
         RobotBasePtr probot(_probot);
         KinBody::KinBodyStateSaver saver(probot,Save_LinkTransformation);
         vector<dReal> vzeros(probot->GetDOF(),0);
-        probot->SetDOFValues(vzeros);
+        probot->SetDOFValues(vzeros,Transform(),true);
         Transform tbaseinv;
         if( !!_pBase ) {
             tbaseinv = _pBase->GetTransform().inverse();

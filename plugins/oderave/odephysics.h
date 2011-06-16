@@ -417,19 +417,24 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
         }
 
         // ignore static, static collisions
-        if( (b1 == NULL || !dBodyIsEnabled(b1)) && (b2 == NULL || !dBodyIsEnabled(b2)) )
+        if( (b1 == NULL || !dBodyIsEnabled(b1)) && (b2 == NULL || !dBodyIsEnabled(b2)) ) {
             return;
+        }
 
         KinBody::LinkPtr pkb1,pkb2;
-        if(!!b1 && dBodyGetData(b1))
+        if(!!b1 && dBodyGetData(b1)) {
             pkb1 = *(KinBody::LinkPtr*)dBodyGetData(b1);
-        if(!!b2 && dBodyGetData(b1))
+        }
+        if(!!b2 && dBodyGetData(b1)) {
             pkb2 = *(KinBody::LinkPtr*)dBodyGetData(b2);
+        }
 
-        if( !!pkb1 && !pkb1->IsEnabled() )
+        if( !!pkb1 && !pkb1->IsEnabled() ) {
             return;
-        if( !!pkb2 && !pkb2->IsEnabled() )
+        }
+        if( !!pkb2 && !pkb2->IsEnabled() ) {
             return;
+        }
 
         if( pkb1->GetParent() == pkb2->GetParent() ) {
             // check if links are adjacent

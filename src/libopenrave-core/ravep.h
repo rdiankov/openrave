@@ -208,7 +208,6 @@ namespace OpenRAVEXMLParser
     BaseXMLReaderPtr CreateInterfaceReader(EnvironmentBasePtr penv, InterfaceType type, InterfaceBasePtr& pinterface, const std::string& xmltag, const AttributesList& atts);
     BaseXMLReaderPtr CreateInterfaceReader(EnvironmentBasePtr penv, const AttributesList& atts);
     bool CreateTriMeshData(EnvironmentBasePtr, const std::string& filename, const Vector& vscale, KinBody::Link::TRIMESH& trimesh, RaveVector<float>& diffuseColor, RaveVector<float>& ambientColor, float& ftransparency);
-    void SetRenderFilename(KinBody::Link::GEOMPROPERTIES& geom, const std::string& renderfile);
 }
 
 #ifdef _WIN32
