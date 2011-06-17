@@ -32,7 +32,7 @@ if __name__ == "__main__":
     (options, args) = parser.parse_args()
 
     multiprocess._instantiate_plugins = [capture.Capture, xunitmultiprocess.Xunitmp,failuredetail.FailureDetail]
-    argv=['nosetests','-v','--with-xunitmp','--xunit-file=results.xml','--processes=%d'%options.numprocesses,'--process-timeout=%f'%options.timeout,'--process-restartworker','-s','-d']
+    argv=['nosetests','-v','--with-xunitmp','--xunit-file=results.xml','--processes=%d'%options.numprocesses,'--process-timeout=%f'%options.timeout,'--process-restartworker','-d']
     if options.os_only:
         argv.append('test_programs.py')
     if options.with_coverage:

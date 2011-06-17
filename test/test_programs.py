@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from common_test_openrave import *
+import os
 _multiprocess_can_split_ = True
 
 def run_example(name):
@@ -20,7 +21,7 @@ def run_example(name):
     example.run(args=['--testmode',"--viewer="])
 
 def test_examples():
-    """test if all the examples run"""
+    print "test if all the examples run"
     yield run_example, 'hanoi'
     yield run_example, 'calibrationviews'
     yield run_example, 'graspplanning'

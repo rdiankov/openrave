@@ -470,7 +470,7 @@ class GrasperProblem : public ModuleBase
         if( bReturnFaces || bReturnTriangles ) {
             vconvexfaces.reset(new vector<int>);
         }
-        if( !_ComputeConvexHull(vpoints,vconvexplanes, vconvexfaces, dim) ) {
+        if( _ComputeConvexHull(vpoints,vconvexplanes, vconvexfaces, dim) == 0 ) {
             return false;
         }
         if( bReturnPlanes ) {
@@ -1008,7 +1008,12 @@ class GrasperProblem : public ModuleBase
             RAVELOG_ERROR("qhull internal warning (main): did not free %d bytes of long memory (%d pieces)\n", totlong, curlong);
         }
         if( exitcode ) {
-            throw openrave_exception(str(boost::format("Qhull failed with error %d")%exitcode));
+            RAVELOG_DEBUG(str(boost::format("Qhull failed with error %d")%exitcode));
+            vconvexplanes.resize(0);
+            if( !!vconvexfaces ) {
+                vconvexfaces->resize(0);
+            }
+            return 0;
         }
 
         vector<double> vmean(dim,0);
