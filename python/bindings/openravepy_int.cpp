@@ -108,6 +108,7 @@ public:
             void SetTransparency(float f) { _plink->GetGeometry(_geomindex).SetTransparency(f); }
             void SetAmbientColor(object ocolor) { _plink->GetGeometry(_geomindex).SetAmbientColor(ExtractVector3(ocolor)); }
             void SetDiffuseColor(object ocolor) { _plink->GetGeometry(_geomindex).SetDiffuseColor(ExtractVector3(ocolor)); }
+            void SetRenderFilename(const string& filename) { _plink->GetGeometry(_geomindex).SetRenderFilename(filename); }
             bool IsDraw() { return _plink->GetGeometry(_geomindex).IsDraw(); }
             bool IsModifiable() { return _plink->GetGeometry(_geomindex).IsModifiable(); }
             KinBody::Link::GEOMPROPERTIES::GeomType GetType() { return _plink->GetGeometry(_geomindex).GetType(); }
@@ -4049,6 +4050,7 @@ In python, the syntax is::\n\n\
                     .def("SetTransparency",&PyKinBody::PyLink::PyGeomProperties::SetTransparency,args("transparency"), DOXY_FN(KinBody::Link::GEOMPROPERTIES,SetTransparency))
                     .def("SetDiffuseColor",&PyKinBody::PyLink::PyGeomProperties::SetDiffuseColor,args("color"), DOXY_FN(KinBody::Link::GEOMPROPERTIES,SetDiffuseColor))
                     .def("SetAmbientColor",&PyKinBody::PyLink::PyGeomProperties::SetAmbientColor,args("color"), DOXY_FN(KinBody::Link::GEOMPROPERTIES,SetAmbientColor))
+                    .def("SetRenderFilename",&PyKinBody::PyLink::PyGeomProperties::SetRenderFilename,args("color"), DOXY_FN(KinBody::Link::GEOMPROPERTIES,SetRenderFilename))
                     .def("IsDraw",&PyKinBody::PyLink::PyGeomProperties::IsDraw, DOXY_FN(KinBody::Link::GEOMPROPERTIES,IsDraw))
                     .def("IsModifiable",&PyKinBody::PyLink::PyGeomProperties::IsModifiable, DOXY_FN(KinBody::Link::GEOMPROPERTIES,IsModifiable))
                     .def("GetType",&PyKinBody::PyLink::PyGeomProperties::GetType, DOXY_FN(KinBody::Link::GEOMPROPERTIES,GetType))
