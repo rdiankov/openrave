@@ -1736,7 +1736,7 @@ protected:
         if( !is )
             return false;
 
-        pbody->SetJointTorques(vvalues, bAdd);
+        pbody->SetDOFTorques(vvalues, bAdd);
         return true;
     }
 

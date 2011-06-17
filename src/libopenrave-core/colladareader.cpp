@@ -940,6 +940,7 @@ class ColladaReader : public daeErrorHandler
                     pkinbody->_veclinks.push_back(pchildlink);
                 }
 
+                std::vector<Vector> vAxes(vdomaxes.getCount());
                 for (size_t ic = 0; ic < vdomaxes.getCount(); ++ic) {
                     domKinematics_axis_infoRef kinematics_axis_info;
                     domMotion_axis_infoRef motion_axis_info;
@@ -955,12 +956,12 @@ class ColladaReader : public daeErrorHandler
                     domAxis_constraintRef pdomaxis = vdomaxes[ic];
 
                     //  Axes and Anchor assignment.
-                    pjoint->vAxes[ic] = Vector(pdomaxis->getAxis()->getValue()[0], pdomaxis->getAxis()->getValue()[1], pdomaxis->getAxis()->getValue()[2]);
-                    if( pjoint->vAxes[ic].lengthsqr3() > 0 ) {
-                        pjoint->vAxes[ic].normalize3();
+                    vAxes[ic] = Vector(pdomaxis->getAxis()->getValue()[0], pdomaxis->getAxis()->getValue()[1], pdomaxis->getAxis()->getValue()[2]);
+                    if( vAxes[ic].lengthsqr3() > 0 ) {
+                        vAxes[ic].normalize3();
                     }
                     else {
-                        pjoint->vAxes[ic] = Vector(0,0,1);
+                        vAxes[ic] = Vector(0,0,1);
                     }
 
                     pjoint->_voffsets[ic] = 0; // to overcome -pi to pi boundary
@@ -1045,10 +1046,10 @@ class ColladaReader : public daeErrorHandler
                     }
 
                     //  Rotate axis from the parent offset
-                    pjoint->vAxes[ic] = tatt.rotate(pjoint->vAxes[ic]);
+                    vAxes[ic] = tatt.rotate(vAxes[ic]);
                 }
                 RAVELOG_DEBUG(str(boost::format("joint dof: %d, link %s\n")%pjoint->dofindex%plink->GetName()));
-                pjoint->_ComputeInternalInformation(plink,pchildlink,tatt.trans);
+                pjoint->_ComputeInternalInformation(plink,pchildlink,tatt.trans,vAxes);
             }
             if( pdomlink->getAttachment_start_array().getCount() > 0 ) {
                 RAVELOG_WARN("openrave collada reader does not support attachment_start\n");

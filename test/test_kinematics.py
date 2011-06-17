@@ -343,12 +343,18 @@ class TestKinematics(EnvironmentSetup):
 
     def test_geometrychange(self):
         """change geometry and test if changes are updated"""
-        with self.env:
-            self.env.Load(g_envfiles[0])
-            body = [body for body in self.env.GetBodies() if not body.IsRobot()][0]
-            link = body.GetLinks()[-1]
-            geom = link.GetGeometries()[0]
-            geom.SetCollisionMesh(TriMesh(*ComputeBoxMesh([1,1,0.1])))
+        env=self.env
+        with env:
+            env.Load(g_envfiles[0])
+            for body in env.GetBodies():
+                for link in body.GetLinks():
+                    geom = link.GetGeometries()[0]
+                    if geom.IsModifiable():
+                        extents = [0.6,0.5,0.1]
+                        geom.SetCollisionMesh(TriMesh(*ComputeBoxMesh(extents)))
+                        vmin = numpy.min(geom.GetCollisionMesh().vertices,0)
+                        vmax = numpy.max(geom.GetCollisionMesh().vertices,0)
+                        assert( transdist(0.5*(vmax-vmin),extents) <= g_epsilon )
 
     def test_hashes(self):
         robot = self.env.ReadRobotXMLFile(g_robotfiles[0])
@@ -381,27 +387,62 @@ class TestKinematics(EnvironmentSetup):
 
     def test_jointoffset(self):
         env=self.env
-        robot=env.ReadRobotXMLFile('robots/barrettwam.robot.xml')
-        env.AddRobot(robot)
         with env:
-            zerovalues = zeros(robot.GetDOF())
-            for i,offset in enumerate(zerovalues):
-                joint=robot.GetJointFromDOFIndex(i)
-                joint.SetOffset(offset,i-joint.GetDOFIndex())
-            robot.SetDOFValues(zerovalues)
-            limits = robot.GetDOFLimits()
-            limits = [numpy.maximum(-3*ones(robot.GetDOF()),limits[0]), numpy.minimum(3*ones(robot.GetDOF()),limits[1])]
-            for iter in range(10):
-                # todo set the first link to static
-                robot.SetDOFValues(zerovalues)
-                Tlinks = robot.GetLinkTransformations()
-                offsets = randlimits(*limits)
-                raveLogDebug(repr(offsets))
-                for i,offset in enumerate(offsets):
-                    joint=robot.GetJointFromDOFIndex(i)
-                    joint.SetOffset(offset,i-joint.GetDOFIndex())
+            for robotfile in g_robotfiles:
+                env.Reset()
+                env.Load(robotfile)
+                body = env.GetBodies()[0]
                 
-                assert( transdist(zerovalues,robot.GetDOFValues()) <= g_epsilon )
-                assert( transdist(Tlinks,robot.GetLinkTransformations()) <= g_epsilon )
-                robot.SetDOFValues(offsets)
-                assert( transdist(offsets,robot.GetDOFValues()) <= g_epsilon )
+                zerovalues = zeros(body.GetDOF())
+                body.SetDOFValues(zerovalues)
+                Tlinks = body.GetLinkTransformations()
+                limits = body.GetDOFLimits()
+                limits = [numpy.maximum(-3*ones(body.GetDOF()),limits[0]), numpy.minimum(3*ones(body.GetDOF()),limits[1])]
+                for myiter in range(10):
+                    # todo set the first link to static
+                    body.SetLinkTransformations(Tlinks)
+                    body.SetZeroConfiguration()
+                    assert( transdist(Tlinks,body.GetLinkTransformations()) <= g_epsilon )
+                    body.GetLinks()[0].SetStatic(myiter%2)
+                    offsets = randlimits(*limits)
+                    raveLogDebug(repr(offsets))
+                    body.SetDOFValues(offsets)
+                    Tlinksnew = body.GetLinkTransformations()
+                    body.SetZeroConfiguration()
+                    assert( transdist(zerovalues,body.GetDOFValues()) <= g_epsilon )
+                    assert( transdist(Tlinksnew,body.GetLinkTransformations()) <= g_epsilon )
+                    #body.SetDOFValues(-offsets,range(body.GetDOF()),checklimits=False)
+                    #assert( transdist(Tlinksnew,body.GetLinkTransformations()) <= g_epsilon )
+                    offsets = randlimits(*limits)
+                    body.SetDOFValues(offsets)
+                    assert( transdist(offsets,body.GetDOFValues()) <= g_epsilon )
+
+    def test_wrapoffset(self):
+        env=self.env
+        with env:
+            for robotfile in g_robotfiles:
+                env.Reset()
+                env.Load(robotfile)
+                body = env.GetBodies()[0]
+                
+                zerovalues = zeros(robot.GetDOF())
+                for i,offset in enumerate(zerovalues):
+                    joint=robot.GetJointFromDOFIndex(i)
+                    joint.SetWrapOffset(offset,i-joint.GetDOFIndex())
+                robot.SetDOFValues(zerovalues)
+                limits = robot.GetDOFLimits()
+                limits = [numpy.maximum(-3*ones(robot.GetDOF()),limits[0]), numpy.minimum(3*ones(robot.GetDOF()),limits[1])]
+                for myiter in range(10):
+                    robot.GetLinks()[0].SetStatic(myiter%2)
+                    robot.SetDOFValues(zerovalues)
+                    Tlinks = robot.GetLinkTransformations()
+                    offsets = randlimits(*limits)
+                    raveLogDebug(repr(offsets))
+                    for i,offset in enumerate(offsets):
+                        joint=robot.GetJointFromDOFIndex(i)
+                        joint.SetWrapOffset(offset,i-joint.GetDOFIndex())
+
+                    assert( transdist(zerovalues,robot.GetDOFValues()) <= g_epsilon )
+                    assert( transdist(Tlinks,robot.GetLinkTransformations()) <= g_epsilon )
+                    robot.SetDOFValues(offsets)
+                    assert( transdist(offsets,robot.GetDOFValues()) <= g_epsilon )

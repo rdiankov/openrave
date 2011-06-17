@@ -233,6 +233,35 @@ Set a custom IK filter to abort computation after 100ms.
           manip.GetIkSolver().SetCustomFilter(timeoutfilter)
           success = manip.FindIKSolution(manip.GetIkParameterization(IkParameterization.Type.Transform6D),IkFilterOptions.CheckEnvCollisions)
           print 'in collision: %d, real success: %d, time passed: %f'%(incollision,success is not None,time.time()-starttime)
+
+Sending Torques to a Physics Engine
+-----------------------------------
+
+Shows how to set a physics engine and send torque commands to the robot
+
+.. code-block:: python
+
+  from openravepy import *
+  import numpy, time
+  env=Environment()
+  env.Load('data/lab1.env.xml')
+  env.SetViewer('qtcoin')
+  with env:
+      # set a physics engine
+      physics = RaveCreatePhysicsEngine(env,'ode')
+      env.SetPhysicsEngine(physics)
+      physics.SetGravity(numpy.array((0,0,-9.8)))
+      
+      robot = env.GetRobots()[0]
+      robot.GetLinks()[0].SetStatic(True)
+      env.StopSimulation()
+      env.StartSimulation(timestep=0.001)
+  
+  while True:
+      torques = 100*(numpy.random.rand(robot.GetDOF())-0.5)
+      for i in range(100):
+          robot.SetJointTorques(torques,True)
+          time.sleep(0.01)
       
 Logging
 -------

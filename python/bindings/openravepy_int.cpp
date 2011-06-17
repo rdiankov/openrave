@@ -303,8 +303,8 @@ public:
             return toPyArray(weights);
         }
 
-        dReal GetOffset(int iaxis=0) { return _pjoint->GetOffset(iaxis); }
-        void SetOffset(dReal offset, int iaxis=0) { _pjoint->SetOffset(offset,iaxis); }
+        dReal GetWrapOffset(int iaxis=0) { return _pjoint->GetWrapOffset(iaxis); }
+        void SetWrapOffset(dReal offset, int iaxis=0) { _pjoint->SetWrapOffset(offset,iaxis); }
         void SetLimits(object olower, object oupper) {
             vector<dReal> vlower = ExtractArray<dReal>(olower);
             vector<dReal> vupper = ExtractArray<dReal>(oupper);
@@ -505,10 +505,24 @@ public:
 
     object GetDOFMaxVel() const
     {
+        RAVELOG_WARN("KinBody.GetDOFMaxVel() is deprecated, use GetDOFVelocityLimits\n");
         vector<dReal> values, dummy;
         _pbody->GetDOFVelocityLimits(dummy,values);
         return toPyArray(values);
     }
+    object GetDOFMaxTorque() const
+    {
+        vector<dReal> values;
+        _pbody->GetDOFMaxTorque(values);
+        return toPyArray(values);
+    }
+    object GetDOFMaxAccel() const
+    {
+        vector<dReal> values;
+        _pbody->GetDOFMaxAccel(values);
+        return toPyArray(values);
+    }
+
     object GetDOFWeights() const
     {
         vector<dReal> values;
@@ -895,11 +909,11 @@ public:
         return toPyArray(values0);
     }
 
-    void SetJointTorques(object otorques, bool bAdd)
+    void SetDOFTorques(object otorques, bool bAdd)
     {
         vector<dReal> vtorques = ExtractArray<dReal>(otorques);
         BOOST_ASSERT((int)vtorques.size() == GetDOF() );
-        _pbody->SetJointTorques(vtorques,bAdd);
+        _pbody->SetDOFTorques(vtorques,bAdd);
     }
 
     boost::multi_array<dReal,2> CalculateJacobian(int index, object offset)
@@ -938,6 +952,8 @@ public:
             attached.append(PyKinBodyPtr(new PyKinBody(*it,_pyenv)));
         return attached;
     }
+
+    void SetZeroConfiguration() { _pbody->SetZeroConfiguration(); }
 
     bool IsRobot() const { return _pbody->IsRobot(); }
     int GetEnvironmentId() const { return _pbody->GetEnvironmentId(); }
@@ -3777,8 +3793,8 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMimicEquation_overloads, GetMimicEquat
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMimicDOFIndices_overloads, GetMimicDOFIndices, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetChain_overloads, GetChain, 2, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetAxis_overloads, GetAxis, 0, 1)
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetOffset_overloads, GetOffset, 0, 1)
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetOffset_overloads, SetOffset, 1, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetWrapOffset_overloads, GetWrapOffset, 0, 1)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetWrapOffset_overloads, SetWrapOffset, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMaxVel_overloads, GetMaxVel, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMaxAccel_overloads, GetMaxAccel, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMaxTorque_overloads, GetMaxTorque, 0, 1)
@@ -3903,6 +3919,8 @@ In python, the syntax is::\n\n\
             .def("GetDOFVelocityLimits",getdofvelocitylimits1, DOXY_FN(KinBody,GetDOFVelocityLimits))
             .def("GetDOFVelocityLimits",getdofvelocitylimits2, args("indices"),DOXY_FN(KinBody,GetDOFVelocityLimits))
             .def("GetDOFMaxVel",&PyKinBody::GetDOFMaxVel, DOXY_FN(KinBody,GetDOFMaxVel))
+            .def("GetDOFMaxTorque",&PyKinBody::GetDOFMaxTorque, DOXY_FN(KinBody,GetDOFMaxTorque))
+            .def("GetDOFMaxAccel",&PyKinBody::GetDOFMaxAccel, DOXY_FN(KinBody,GetDOFMaxAccel))
             .def("GetDOFWeights",getdofweights1, DOXY_FN(KinBody,GetDOFWeights))
             .def("GetDOFWeights",getdofweights2, DOXY_FN(KinBody,GetDOFWeights))
             .def("GetDOFResolutions",getdofresolutions1, DOXY_FN(KinBody,GetDOFResolutions))
@@ -3948,7 +3966,8 @@ In python, the syntax is::\n\n\
             .def("SetDOFValues",psetdofvalues2,args("values","dofindices"), DOXY_FN(KinBody,SetDOFValues "const std::vector; bool"))
             .def("SetDOFValues",psetdofvalues3,args("values","dofindices","checklimits"), DOXY_FN(KinBody,SetDOFValues "const std::vector; bool"))
             .def("SubtractDOFValues",&PyKinBody::SubtractDOFValues,args("values0","values1"), DOXY_FN(KinBody,SubtractDOFValues))
-            .def("SetJointTorques",&PyKinBody::SetJointTorques,args("torques","add"), DOXY_FN(KinBody,SetJointTorques))
+            .def("SetDOFTorques",&PyKinBody::SetDOFTorques,args("torques","add"), DOXY_FN(KinBody,SetDOFTorques))
+            .def("SetJointTorques",&PyKinBody::SetDOFTorques,args("torques","add"), DOXY_FN(KinBody,SetDOFTorques))
             .def("SetTransformWithJointValues",&PyKinBody::SetTransformWithDOFValues,args("transform","values"), DOXY_FN(KinBody,SetDOFValues "const std::vector; const Transform; bool"))
             .def("SetTransformWithDOFValues",&PyKinBody::SetTransformWithDOFValues,args("transform","values"), DOXY_FN(KinBody,SetDOFValues "const std::vector; const Transform; bool"))
             .def("CalculateJacobian",&PyKinBody::CalculateJacobian,args("linkindex","offset"), DOXY_FN(KinBody,CalculateJacobian "int; const Vector; boost::multi_array"))
@@ -3958,6 +3977,7 @@ In python, the syntax is::\n\n\
             .def("CheckSelfCollision",pkinbodyselfr,args("report"), DOXY_FN(KinBody,CheckSelfCollision))
             .def("IsAttached",&PyKinBody::IsAttached,args("body"), DOXY_FN(KinBody,IsAttached))
             .def("GetAttached",&PyKinBody::GetAttached, DOXY_FN(KinBody,GetAttached))
+            .def("SetZeroConfiguration",&PyKinBody::SetZeroConfiguration, DOXY_FN(KinBody,SetZeroConfiguration))
             .def("IsRobot",&PyKinBody::IsRobot, DOXY_FN(KinBody,IsRobot))
             .def("GetEnvironmentId",&PyKinBody::GetEnvironmentId, DOXY_FN(KinBody,GetEnvironmentId))
             .def("DoesAffect",&PyKinBody::DoesAffect,args("jointindex","linkindex"), DOXY_FN(KinBody,DoesAffect))
@@ -4086,8 +4106,8 @@ In python, the syntax is::\n\n\
                 .def("GetLimits", &PyKinBody::PyJoint::GetLimits, DOXY_FN(KinBody::Joint,GetLimits))
                 .def("GetVelocityLimits", &PyKinBody::PyJoint::GetVelocityLimits, DOXY_FN(KinBody::Joint,GetVelocityLimits))
                 .def("GetWeights", &PyKinBody::PyJoint::GetWeights, DOXY_FN(KinBody::Joint,GetWeight))
-                .def("SetOffset",&PyKinBody::PyJoint::SetOffset,SetOffset_overloads(args("offset","axis"), DOXY_FN(KinBody::Joint,SetOffset)))
-                .def("GetOffset",&PyKinBody::PyJoint::GetOffset,GetOffset_overloads(args("axis"), DOXY_FN(KinBody::Joint,GetOffset)))
+                .def("SetWrapOffset",&PyKinBody::PyJoint::SetWrapOffset,SetWrapOffset_overloads(args("offset","axis"), DOXY_FN(KinBody::Joint,SetWrapOffset)))
+                .def("GetWrapOffset",&PyKinBody::PyJoint::GetWrapOffset,GetWrapOffset_overloads(args("axis"), DOXY_FN(KinBody::Joint,GetWrapOffset)))
                 .def("SetLimits",&PyKinBody::PyJoint::SetLimits,args("lower","upper"), DOXY_FN(KinBody::Joint,SetLimits))
                 .def("SetJointLimits",&PyKinBody::PyJoint::SetLimits,args("lower","upper"), DOXY_FN(KinBody::Joint,SetLimits))
                 .def("SetResolution",&PyKinBody::PyJoint::SetResolution,args("resolution"), DOXY_FN(KinBody::Joint,SetResolution))

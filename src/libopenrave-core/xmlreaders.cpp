@@ -1261,19 +1261,20 @@ namespace OpenRAVEXMLParser
                     _pjoint->_name = itatt->second;
                 }
                 else if( itatt->first == "type" ) {
-                    if( stricmp(itatt->second.c_str(), "hinge") == 0 )
+                    if( stricmp(itatt->second.c_str(), "hinge") == 0 ) {
                         _pjoint->_type = KinBody::Joint::JointHinge;
-                    else if( stricmp(itatt->second.c_str(), "slider") == 0 )
+                    }
+                    else if( stricmp(itatt->second.c_str(), "slider") == 0 ) {
                         _pjoint->_type = KinBody::Joint::JointSlider;
-                    else if( stricmp(itatt->second.c_str(), "universal") == 0 )
+                    }
+                    else if( stricmp(itatt->second.c_str(), "universal") == 0 ) {
                         _pjoint->_type = KinBody::Joint::JointUniversal;
-                    else if( stricmp(itatt->second.c_str(), "hinge2") == 0 )
+                    }
+                    else if( stricmp(itatt->second.c_str(), "hinge2") == 0 ) {
                         _pjoint->_type = KinBody::Joint::JointHinge2;
+                    }
                     else if( stricmp(itatt->second.c_str(), "spherical") == 0 ) {
                         _pjoint->_type = KinBody::Joint::JointSpherical;
-                        _pjoint->vAxes[0] = Vector(1,0,0);
-                        _pjoint->vAxes[1] = Vector(0,1,0);
-                        _pjoint->vAxes[2] = Vector(0,0,1);
                     }
                     else {
                         RAVELOG_WARN(str(boost::format("unrecognized joint type: %s, setting to hinge\n")%itatt->second));
@@ -1322,6 +1323,7 @@ namespace OpenRAVEXMLParser
                 }
             }
 
+            _vAxes.resize(_pjoint->GetDOF());
             if( _pjoint->GetType() == KinBody::Joint::JointSlider ) {
                 for(int i = 0; i < _pjoint->GetDOF(); ++i) {
                     _pjoint->_vlowerlimit.at(i) = -100000;
@@ -1329,6 +1331,9 @@ namespace OpenRAVEXMLParser
                 }
             }
             else if( _pjoint->GetType() == KinBody::Joint::JointSpherical ) {
+                _vAxes.at(0) = Vector(1,0,0);
+                _vAxes.at(1) = Vector(0,1,0);
+                _vAxes.at(2) = Vector(0,0,1);
                 for(int i = 0; i < _pjoint->GetDOF(); ++i) {
                     _pjoint->_vlowerlimit.at(i) = -1000;
                     _pjoint->_vupperlimit.at(i) = 1000;
@@ -1376,8 +1381,8 @@ namespace OpenRAVEXMLParser
                 }
 
                 if( _bNegateJoint ) {
-                    for(int i = 0; i < _pjoint->GetDOF(); ++i) {
-                        _pjoint->vAxes[i] = -_pjoint->vAxes[i];
+                    FOREACH(itaxis,_vAxes) {
+                        *itaxis = -*itaxis;
                     }
                 }
 
@@ -1407,10 +1412,10 @@ namespace OpenRAVEXMLParser
                 }
 
                 toffsetfrom = attachedbodies[0]->GetTransform().inverse() * toffsetfrom;
-                for(int i = 0; i < _pjoint->GetDOF(); ++i) {
-                    _pjoint->vAxes[i] = toffsetfrom.rotate(_pjoint->vAxes[i]);
+                FOREACH(itaxis,_vAxes) {
+                    *itaxis = toffsetfrom.rotate(*itaxis);
                 }
-                _pjoint->_ComputeInternalInformation(attachedbodies[0],attachedbodies[1],toffsetfrom*_vanchor);
+                _pjoint->_ComputeInternalInformation(attachedbodies[0],attachedbodies[1],toffsetfrom*_vanchor,_vAxes);
                 return true;
             }
             else if( xmlname == "weight" ) {
@@ -1512,14 +1517,14 @@ namespace OpenRAVEXMLParser
                         _ss >> _vanchor.x >> _vanchor.y >> _vanchor.z;
                     }
                     else if( xmlname == "axis" ) {
-                        _ss >> _pjoint->vAxes[0].x >> _pjoint->vAxes[0].y >> _pjoint->vAxes[0].z;
-                        _pjoint->vAxes[0].normalize3();
+                        _ss >> _vAxes.at(0).x >> _vAxes.at(0).y >> _vAxes.at(0).z;
+                        _vAxes.at(0).normalize3();
                     }
                     break;
                 case KinBody::Joint::JointSlider:
                     if( xmlname == "axis" ) {
-                        _ss >> _pjoint->vAxes[0].x >> _pjoint->vAxes[0].y >> _pjoint->vAxes[0].z;
-                        _pjoint->vAxes[0].normalize3();
+                        _ss >> _vAxes.at(0).x >> _vAxes.at(0).y >> _vAxes.at(0).z;
+                        _vAxes.at(0).normalize3();
                     }
                     break;
                 case KinBody::Joint::JointUniversal:
@@ -1527,12 +1532,12 @@ namespace OpenRAVEXMLParser
                         _ss >> _vanchor.x >> _vanchor.y >> _vanchor.z;
                     }
                     else if( xmlname == "axis1" ) {
-                        _ss >> _pjoint->vAxes[0].x >> _pjoint->vAxes[0].y >> _pjoint->vAxes[0].z;
-                        _pjoint->vAxes[0].normalize3();
+                        _ss >> _vAxes.at(0).x >> _vAxes.at(0).y >> _vAxes.at(0).z;
+                        _vAxes.at(0).normalize3();
                     }
                     else if( xmlname == "axis2" ) {
-                        _ss >> _pjoint->vAxes[1].x >> _pjoint->vAxes[1].y >> _pjoint->vAxes[1].z;
-                        _pjoint->vAxes[0].normalize3();
+                        _ss >> _vAxes.at(1).x >> _vAxes.at(1).y >> _vAxes.at(1).z;
+                        _vAxes.at(0).normalize3();
                     }
                     break;
                 case KinBody::Joint::JointHinge2:
@@ -1540,12 +1545,12 @@ namespace OpenRAVEXMLParser
                         _ss >> _vanchor.x >> _vanchor.y >> _vanchor.z;
                     }
                     else if( xmlname == "axis1" ) {
-                        _ss >> _pjoint->vAxes[0].x >> _pjoint->vAxes[0].y >> _pjoint->vAxes[0].z;
-                        _pjoint->vAxes[0].normalize3();
+                        _ss >> _vAxes.at(0).x >> _vAxes.at(0).y >> _vAxes.at(0).z;
+                        _vAxes.at(0).normalize3();
                     }
                     else if( xmlname == "axis2" ) {
-                        _ss >> _pjoint->vAxes[1].x >> _pjoint->vAxes[1].y >> _pjoint->vAxes[1].z;
-                        _pjoint->vAxes[0].normalize3();
+                        _ss >> _vAxes.at(1).x >> _vAxes.at(1).y >> _vAxes.at(1).z;
+                        _vAxes.at(0).normalize3();
                     }
                     break;
                 case KinBody::Joint::JointSpherical:
@@ -1581,6 +1586,7 @@ namespace OpenRAVEXMLParser
         KinBody::LinkPtr _offsetfrom; ///< all transforms are relative to this body
         KinBodyPtr _pparent;
         KinBody::JointPtr& _pjoint;
+        std::vector<Vector> _vAxes;
         Vector _vanchor;
         bool _bNegateJoint;
         string _processingtag;

@@ -396,6 +396,7 @@ class Environment : public EnvironmentBase
             KinBodyPtr pbody = ReadKinBodyXMLFile(filename);
             if( !!pbody ) {
                 AddKinBody(pbody,true);
+                bSuccess = true;
             }
         }
         else {

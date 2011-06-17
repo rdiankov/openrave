@@ -468,16 +468,19 @@ public:
         /// \brief \see GetWeight
         virtual void SetWeights(const std::vector<dReal>& weights);
 
-        /// \brief Return internal offset parameter that determines the zero of the joint offset.
+        /// \brief Return internal offset parameter that determines the branch the angle centers on
         ///
-        /// Offsets are needed for rotation joints since the range is limited to 2*pi.
-        /// This allows the offset to be set so the joint can function in [-pi+offset,pi+offset]..
+        /// Wrap offsets are needed for rotation joints since the range is limited to 2*pi.
+        /// This allows the wrap offset to be set so the joint can function in [-pi+offset,pi+offset]..
         /// \param iaxis the axis to get the offset from
-        inline dReal GetOffset(int iaxis=0) const { return _voffsets.at(iaxis); }
-        /// \brief \see GetOffset
-        virtual void SetOffset(dReal offset, int iaxis=0);
+        inline dReal GetWrapOffset(int iaxis=0) const { return _voffsets.at(iaxis); }
+
+        inline dReal GetOffset(int iaxis=0) const RAVE_DEPRECATED { return GetWrapOffset(iaxis); }
+
+        /// \brief \see GetWrapOffset
+        virtual void SetWrapOffset(dReal offset, int iaxis=0);
         /// \deprecated (11/1/16)
-        virtual void SetJointOffset(dReal offset, int iaxis=0) RAVE_DEPRECATED { SetOffset(offset,iaxis); }
+        virtual void SetOffset(dReal offset, int iaxis=0) RAVE_DEPRECATED { SetWrapOffset(offset,iaxis); }
 
         virtual void serialize(std::ostream& o, int options) const;
 
@@ -555,7 +558,7 @@ public:
         //@}
 
     protected:
-        boost::array<Vector,3> vAxes;        ///< axes in body[0]'s or environment coordinate system used to define joint movement
+        boost::array<Vector,3> _vaxes;        ///< axes in body[0]'s or environment coordinate system used to define joint movement
         Vector vanchor;         ///< anchor of the joint, this is only used to construct the internal left/right matrices
         dReal fResolution;      ///< interpolation resolution
         boost::array<dReal,3> _vmaxvel;          ///< the soft maximum velocity (rad/s) to move the joint when planning
@@ -610,9 +613,10 @@ public:
             After function completes, the following parameters are initialized: _tRight, _tLeft, _tinvRight, _tinvLeft, _attachedbodies. _attachedbodies does not necessarily contain the links in the same order as they were input.
             \param plink0 the first attaching link, all axes and anchors are defined in its coordinate system
             \param plink1 the second attaching link
-            \param the anchor of the rotation axes
+            \param vanchor the anchor of the rotation axes
+            \param vaxes the axes in plink0's coordinate system of the joints
         */
-        virtual void _ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1, const Vector& vanchor);
+        virtual void _ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1, const Vector& vanchor, const std::vector<Vector>& vaxes);
 
         std::string _name; ///< \see GetName
         boost::array<bool,3> _bIsCircular;    ///< \see IsCircular
@@ -889,7 +893,10 @@ public:
     /// \brief Adds a torque to every joint.
     ///
     /// \param bAdd if true, adds to previous torques, otherwise resets the torques on all bodies and starts from 0
-    virtual void SetJointTorques(const std::vector<dReal>& torques, bool add);
+    virtual void SetDOFTorques(const std::vector<dReal>& torques, bool add);
+
+    /// \deprecated (11/06/17)
+    virtual void SetJointTorques(const std::vector<dReal>& torques, bool add) RAVE_DEPRECATED { SetDOFTorques(torques,add); }
 
     /// \brief Returns all the rigid links of the body.
     virtual const std::vector<LinkPtr>& GetLinks() const { return _veclinks; }
@@ -1110,6 +1117,13 @@ public:
 
     /// \deprecated (10/11/18)
     virtual void GetVelocity(Vector& linearvel, Vector& angularvel) const RAVE_DEPRECATED;
+
+    /// \brief Sets the joint offsets so that the current configuration becomes the new zero state of the robot.
+    ///
+    /// When this function returns, the returned DOF values should be all zero for controllable joints.
+    /// Mimic equations will use the new offsetted values when computing their joints.
+    /// This is primarily used for calibrating a robot's zero position
+    virtual void SetZeroConfiguration();
 
 protected:
     /// \brief constructors declared protected so that user always goes through environment to create bodies

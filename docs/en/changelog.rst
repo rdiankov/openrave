@@ -31,7 +31,9 @@ Core
 
 * added a Level_VerifyPlans debug level that globally notifies planners/modules to double check their outputs. Used for testing.
 
-* added Joint::SetOffset, Link::SetStatic, GEOMPROPERTIES::SetRenderFilename functions
+* added KinBody::Joint::SetWrapOffset, Link::SetStatic, KinBody::Link::GEOMPROPERTIES::SetRenderFilename functions
+
+* added KinBody::SetZeroConfiguration() for calibration
 
 Planning
 --------

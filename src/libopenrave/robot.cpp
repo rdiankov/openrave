@@ -2225,7 +2225,7 @@ bool RobotBase::CheckLinkCollision(int ilinkindex, const Transform& tlinktrans, 
 {
     LinkPtr plink = _veclinks.at(ilinkindex);
     if( plink->IsEnabled() ) {
-        boost::shared_ptr<TransformSaver<RobotBase::LinkPtr> > linksaver(new TransformSaver<RobotBase::LinkPtr>(plink)); // gcc optimization bug when linksaver is on stack?
+        boost::shared_ptr<TransformSaver<LinkPtr> > linksaver(new TransformSaver<LinkPtr>(plink)); // gcc optimization bug when linksaver is on stack?
         plink->SetTransform(tlinktrans);
         if( GetEnv()->CheckCollision(LinkConstPtr(plink),report) ) {
             return true;
