@@ -13,6 +13,7 @@
 # limitations under the License.
 from common_test_openrave import *
 import os
+import shutil
 _multiprocess_can_split_ = True
 
 def run_example(name):
@@ -41,7 +42,12 @@ def test_examples():
 def test_createplugin():
     curdir = os.getcwd()
     try:
-        assert(os.system('openrave-createplugin.py myplugin --problem=MyTestProblem') == 0)
+        shutil.rmtree('myplugin')
+    except:
+        pass
+
+    try:
+        assert(os.system('openrave-createplugin.py myplugin --module=MyTestModule') == 0)
         os.chdir('myplugin')
         os.mkdir('build')
         os.chdir('build')
@@ -56,6 +62,10 @@ def test_createplugin():
         except:
             pass
         
+    try:
+        shutil.rmtree('myprogram')
+    except:
+        pass
     try:
         assert(os.system('openrave-createplugin.py myprogram --usecore') == 0)
         os.chdir('myprogram')

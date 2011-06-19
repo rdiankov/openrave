@@ -90,7 +90,7 @@ public:
             \param q0 is the configuration the robot is coming from (currently set).
             \param q1 is the configuration the robot should move to.
             \param interval Specifies whether to check the end points of the interval for constraints
-            \param configurations Optional argument that will hold the path between the two configurations if requested. The configurations are appended after the objects already stored on the list.
+            \param configurations Optional argument that will hold the intermediate configuraitons checked between q0 and q1 configurations. The appended configurations will be all valid and in free space. They are appended after the items already stored on the list.
         */
         typedef boost::function<bool(const std::vector<dReal>&, const std::vector<dReal>&, IntervalType, PlannerBase::ConfigurationListPtr)> CheckPathConstraintFn;
         CheckPathConstraintFn _checkpathconstraintsfn;

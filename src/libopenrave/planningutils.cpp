@@ -192,9 +192,6 @@ namespace planningutils {
         if (bCheckEnd) {
             params->_setstatefn(pQ1);
             if (robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot)) || (robot->CheckSelfCollision()) ) {
-                if( !!pvCheckedConfigurations ) {
-                    pvCheckedConfigurations->push_back(pQ1);
-                }
                 return false;
             }
         }
@@ -240,14 +237,14 @@ namespace planningutils {
         }
         for (int f = start; f < numSteps; f++) {
             params->_setstatefn(_vtempconfig);
-            if( !!pvCheckedConfigurations ) {
-                if( !!params->_getstatefn ) {
-                    params->_getstatefn(_vtempconfig); // query again in order to get normalizations/joint limits
-                }
-                pvCheckedConfigurations->push_back(_vtempconfig);
-            }
             if( robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot)) || (robot->CheckSelfCollision()) ) {
                 return false;
+            }
+            if( !!params->_getstatefn ) {
+                params->_getstatefn(_vtempconfig); // query again in order to get normalizations/joint limits
+            }
+            if( !!pvCheckedConfigurations ) {
+                pvCheckedConfigurations->push_back(_vtempconfig);
             }
             if( !params->_neighstatefn(_vtempconfig,dQ,0) ) {
                 return false;
