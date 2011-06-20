@@ -6,7 +6,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -36,14 +36,14 @@ EnvVarUpdate = """
  *    ${EnvVarUpdate} "ResultVar" "EnvVarName" "Action" "RegLoc" "PathString"
  *
  *  Credits:
- *  Version 1.0 
+ *  Version 1.0
  *  * Cal Turney (turnec2)
  *  * Amir Szekely (KiCHiK) and e-circ for developing the forerunners of this
  *    function: AddToPath, un.RemoveFromPath, AddToEnvVar, un.RemoveFromEnvVar,
  *    WriteEnvStr, and un.DeleteEnvStr
  *  * Diego Pedroso (deguix) for StrTok
  *  * Kevin English (kenglish_hi) for StrContains
- *  * Hendri Adriaens (Smile2Me), Diego Pedroso (deguix), and Dan Fuhry  
+ *  * Hendri Adriaens (Smile2Me), Diego Pedroso (deguix), and Dan Fuhry
  *    (dandaman32) for StrReplace
  *
  *  Version 1.1 (compatibility with StrFunc.nsh)
@@ -87,7 +87,7 @@ EnvVarUpdate = """
   Pop "${ResultVar}"
 !macroend
 !define EnvVarUpdate '!insertmacro "_EnvVarUpdateConstructor"'
- 
+
 !macro _unEnvVarUpdateConstructor ResultVar EnvVarName Action Regloc PathString
   Push "${EnvVarName}"
   Push "${Action}"
@@ -98,15 +98,15 @@ EnvVarUpdate = """
 !macroend
 !define un.EnvVarUpdate '!insertmacro "_unEnvVarUpdateConstructor"'
 ; ---------------------------------- Macro Definitions end-------------------------------------
- 
+
 ;----------------------------------- EnvVarUpdate start----------------------------------------
 !define hklm_all_users     'HKLM "SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment"'
 !define hkcu_current_user  'HKCU "Environment"'
- 
+
 !macro EnvVarUpdate UN
- 
+
 Function ${UN}EnvVarUpdate
- 
+
   Push $0
   Exch 4
   Exch $1
@@ -122,7 +122,7 @@ Function ${UN}EnvVarUpdate
   Push $8
   Push $9
   Push $R0
- 
+
   /* After this point:
   -------------------------
      $0 = ResultVar     (returned)
@@ -136,7 +136,7 @@ Function ${UN}EnvVarUpdate
      $8 = Entry counter (temp)
      $9 = tempstr2      (temp)
      $R0 = tempChar     (temp)  */
- 
+
   ; Step 1:  Read contents of EnvVarName from RegLoc
   ;
   ; Check for empty EnvVarName
@@ -145,7 +145,7 @@ Function ${UN}EnvVarUpdate
     DetailPrint "ERROR: EnvVarName is blank"
     Goto EnvVarUpdate_Restore_Vars
   ${EndIf}
- 
+
   ; Check for valid Action
   ${If}    $2 != "A"
   ${AndIf} $2 != "P"
@@ -154,7 +154,7 @@ Function ${UN}EnvVarUpdate
     DetailPrint "ERROR: Invalid Action - must be A, P, or R"
     Goto EnvVarUpdate_Restore_Vars
   ${EndIf}
- 
+
   ${If} $3 == HKLM
     ReadRegStr $5 ${hklm_all_users} $1     ; Get EnvVarName from all users into $5
   ${ElseIf} $3 == HKCU
@@ -164,14 +164,14 @@ Function ${UN}EnvVarUpdate
     DetailPrint 'ERROR: Action is [$3] but must be "HKLM" or HKCU"'
     Goto EnvVarUpdate_Restore_Vars
   ${EndIf}
- 
+
   ; Check for empty PathString
   ${If} $4 == ""
     SetErrors
     DetailPrint "ERROR: PathString is blank"
     Goto EnvVarUpdate_Restore_Vars
   ${EndIf}
- 
+
   ; Make sure we've got some work to do
   ${If} $5 == ""
   ${AndIf} $2 == "R"
@@ -179,7 +179,7 @@ Function ${UN}EnvVarUpdate
     DetailPrint "$1 is empty - Nothing to remove"
     Goto EnvVarUpdate_Restore_Vars
   ${EndIf}
- 
+
   ; Step 2: Scrub EnvVar
   ;
   StrCpy $0 $5                             ; Copy the contents to $0
@@ -201,13 +201,13 @@ Function ${UN}EnvVarUpdate
       ${${UN}StrRep} $0  $0 "; " ";"         ; Remove ';<space>'
     ${Loop}
     ${Do}
-      ${${UN}StrStr} $7 $0 ";;" 
+      ${${UN}StrStr} $7 $0 ";;"
       ${If} $7 == ""
         ${ExitDo}
       ${EndIf}
       ${${UN}StrRep} $0  $0 ";;" ";"
     ${Loop}
- 
+
     ; Remove a leading or trailing semicolon from EnvVar
     StrCpy  $7  $0 1 0
     ${If} $7 == ";"
@@ -221,27 +221,27 @@ Function ${UN}EnvVarUpdate
     ${EndIf}
     ; DetailPrint "Scrubbed $1: [$0]"      ; Uncomment to debug
   ${EndIf}
- 
+
   /* Step 3. Remove all instances of the target path/string (even if "A" or "P")
      $6 = bool flag (1 = found and removed PathString)
      $7 = a string (e.g. path) delimited by semicolon(s)
      $8 = entry counter starting at 0
      $9 = copy of $0
      $R0 = tempChar      */
- 
+
   ${If} $5 != ""                           ; If EnvVar is not empty ...
     StrCpy $9 $0
     StrCpy $0 ""
     StrCpy $8 0
     StrCpy $6 0
- 
+
     ${Do}
       ${${UN}StrTok} $7 $9 ";" $8 "0"      ; $7 = next entry, $8 = entry counter
- 
+
       ${If} $7 == ""                       ; If we've run out of entries,
         ${ExitDo}                          ;    were done
       ${EndIf}                             ;
- 
+
       ; Remove leading and trailing spaces from this entry (critical step for Action=Remove)
       ${Do}
         StrCpy $R0  $7 1
@@ -266,11 +266,11 @@ Function ${UN}EnvVarUpdate
       ${AndIf}  $0 != ""                   ;    and this is NOT the 1st string to be added to $0,
         StrCpy $0 $0;$7                    ;    append path to $0 with a prepended semicolon
       ${EndIf}                             ;
- 
+
       IntOp $8 $8 + 1                      ; Bump counter
     ${Loop}                                ; Check for duplicates until we run out of paths
   ${EndIf}
- 
+
   ; Step 4:  Perform the requested Action
   ;
   ${If} $2 != "R"                          ; If Append or Prepend
@@ -308,7 +308,7 @@ Function ${UN}EnvVarUpdate
       DetailPrint "$1 is now empty"
     ${EndIf}
   ${EndIf}
- 
+
   ; Step 5:  Update the registry at RegLoc with the updated EnvVar and announce the change
   ;
   ClearErrors
@@ -317,15 +317,15 @@ Function ${UN}EnvVarUpdate
   ${ElseIf} $3 == HKCU
     WriteRegExpandStr ${hkcu_current_user} $1 $0  ; Write it to current user section
   ${EndIf}
- 
+
   IfErrors 0 +4
     MessageBox MB_OK|MB_ICONEXCLAMATION "Could not write updated $1 to $3"
     DetailPrint "Could not write updated $1 to $3"
     Goto EnvVarUpdate_Restore_Vars
- 
+
   ; "Export" our change
   SendMessage ${HWND_BROADCAST} ${WM_WININICHANGE} 0 "STR:Environment" /TIMEOUT=5000
- 
+
   EnvVarUpdate_Restore_Vars:
   ;
   ; Restore the user's variables and return ResultVar
@@ -342,14 +342,14 @@ Function ${UN}EnvVarUpdate
   Push $0  ; Push my $0 (ResultVar)
   Exch
   Pop $0   ; Restore his $0
- 
+
 FunctionEnd
- 
+
 !macroend   ; EnvVarUpdate UN
 !insertmacro EnvVarUpdate ""
 !insertmacro EnvVarUpdate "un."
 ;----------------------------------- EnvVarUpdate end----------------------------------------
- 
+
 !verbose pop
 !endif
 """
@@ -392,8 +392,8 @@ RequestExecutionLevel admin
 !insertmacro MUI_PAGE_DIRECTORY
 ;Start Menu Folder Page Configuration
 Var StartMenuFolder
-!define MUI_STARTMENUPAGE_REGISTRY_ROOT "HKCU" 
-!define MUI_STARTMENUPAGE_REGISTRY_KEY "Software\\OpenRAVE\\%(openrave_version)s" 
+!define MUI_STARTMENUPAGE_REGISTRY_ROOT "HKCU"
+!define MUI_STARTMENUPAGE_REGISTRY_KEY "Software\\OpenRAVE\\%(openrave_version)s"
 !define MUI_STARTMENUPAGE_REGISTRY_VALUENAME "Start Menu Folder"
 !insertmacro MUI_PAGE_STARTMENU Application $StartMenuFolder
 !insertmacro MUI_PAGE_INSTFILES
@@ -491,10 +491,10 @@ Section
   CreateDirectory $INSTDIR\\bin # for copying DLLs
   CreateDirectory $INSTDIR\\share
   CreateDirectory $INSTDIR\\share\\openrave-%(openrave_soversion)s
-  Call DetectVCRedist  
+  Call DetectVCRedist
   Call DetectBoost
   Call DetectQt4
-  
+
   # start menu
   !insertmacro MUI_STARTMENU_WRITE_BEGIN Application
   CreateDirectory "$SMPROGRAMS\\$StartMenuFolder"
@@ -504,7 +504,7 @@ SectionEnd
 
 Function GetPython
   MessageBox MB_YESNO "Need to install Python %(python_version)s. Continue with auto-download and install?"  IDNO done
-  StrCpy $2 "$TEMP\\python-%(python_version_full)s.msi"      
+  StrCpy $2 "$TEMP\\python-%(python_version_full)s.msi"
   nsisdl::download /TIMEOUT=30000 %(python_url)s $2
   Pop $R0 ;Get the return value
   StrCmp $R0 "success" install
@@ -514,7 +514,7 @@ install:
   ExecWait '"msiexec" /i $2'
   Delete $2
 done:
-FunctionEnd 
+FunctionEnd
 
 Function DetectPython
   ClearErrors
@@ -563,7 +563,7 @@ install:
   ExecWait "$TEMP\\$2"
   Delete "$TEMP\\$2"
 done:
-FunctionEnd 
+FunctionEnd
 
 Function DetectSymPy
   ClearErrors
@@ -577,7 +577,7 @@ start:
     Call GetSymPy
 done:
 FunctionEnd
-    
+
 SectionGroup /e "Python Bindings" secpython
 Section
   SetOutPath $INSTDIR
@@ -589,7 +589,7 @@ Section
   SetOutPath $INSTDIR\\share\\openrave-%(openrave_soversion)s
   CreateDirectory $INSTDIR\\%(openravepy_reldir)s\\openravepy
   File /r /x *.pyd %(installdir)s\\%(openravepy_reldir)s\\openravepy
-  
+
 %(install_python_dll)s
 
   !insertmacro MUI_STARTMENU_WRITE_BEGIN Application
@@ -622,20 +622,21 @@ Section
   WriteRegStr HKLM "SOFTWARE\\OpenRAVE\\%(openrave_version)s" "InstallRoot" "$INSTDIR"
   # register with cmake installer
   WriteRegStr HKLM "SOFTWARE\\Kitware\\CMake\\Packages\\OpenRAVE" "%(openrave_version)s" "$INSTDIR\\lib\\cmake\\openrave-%(openrave_soversion)s"
-  
-  File /r /x *.dll /x *.py %(installdir)s\\bin 
+
+  File /r /x *.dll /x *.py %(installdir)s\\bin
   File /r %(installdir)s\\include
   File /r %(installdir)s\\lib
   SetOutPath $INSTDIR\\share\\openrave-%(openrave_soversion)s
   File /r %(installdir)s\\share\\openrave-%(openrave_soversion)s\\cppexamples
   File /r %(installdir)s\\share\\openrave-%(openrave_soversion)s\\data
+  File /r %(installdir)s\\share\\openrave-%(openrave_soversion)s\\matlab
   File /r %(installdir)s\\share\\openrave-%(openrave_soversion)s\\models
   File /r %(installdir)s\\share\\openrave-%(openrave_soversion)s\\plugins
   File /r %(installdir)s\\share\\openrave-%(openrave_soversion)s\\robots
   File /r %(installdir)s\\share\\openrave-%(openrave_soversion)s\\LICENSE*
   File /r %(installdir)s\\share\\openrave-%(openrave_soversion)s\\COPYING
   SetOutPath $INSTDIR
-  
+
 %(install_dll)s
 
   FileOpen $0 $INSTDIR\\include\\openrave-%(openrave_soversion)s\\openrave\\config.h w
@@ -643,9 +644,9 @@ Section
   ${StrRep} $1 "%(openrave_config)s" "__INSTDIR__" $2
   FileWrite $0 $1
   FileClose $0
-  
+
   WriteUninstaller $INSTDIR\\uninstall.exe
-  
+
   !insertmacro MUI_STARTMENU_WRITE_BEGIN Application
   CreateShortCut "$SMPROGRAMS\\$StartMenuFolder\\openrave.lnk" "$INSTDIR\\bin\\openrave.exe" "" "$INSTDIR\\bin\\openrave.exe" 0
   CreateShortCut "$SMPROGRAMS\\$StartMenuFolder\\C++ Examples.lnk" "$INSTDIR\\share\\openrave-%(openrave_soversion)s\\cppexamples" "" "$INSTDIR\\share\\openrave-%(openrave_soversion)s\\cppexamples" 0
@@ -717,12 +718,12 @@ noremove:
 
   # have to store install dir since it gets wiped out somewhere
   StrCpy $1 "$INSTDIR"
-  
+
   # Always delete uninstaller first?
   Delete "$INSTDIR\\uninstall.exe"
 
 %(uninstall_dll)s
-  
+
   RMDir /r "$SMPROGRAMS\\$StartMenuFolder"
   # have to set current path outside of installation dir
   SetOutPath "$1\\.."
@@ -737,10 +738,10 @@ SectionEnd
 
 vcredist_urls = {'100':'http://www.microsoft.com/downloads/info.aspx?na=41&SrcFamilyId=A7B7A05E-6DE6-4D3A-A423-37BF0912DB84&SrcDisplayLang=en&u=http%3a%2f%2fdownload.microsoft.com%2fdownload%2f5%2fB%2fC%2f5BC5DBB3-652D-4DCE-B14A-475AB85EEF6E%2fvcredist_x86.exe',
                  '90':'http://www.microsoft.com/downloads/info.aspx?na=41&SrcFamilyId=A5C84275-3B97-4AB7-A40D-3802B2AF5FC2&SrcDisplayLang=en&u=http%3a%2f%2fdownload.microsoft.com%2fdownload%2fd%2fd%2f9%2fdd9a82d0-52ef-40db-8dab-795376989c03%2fvcredist_x86.exe'}
-                 
+
 qt_urls = {'100':'http://qt-msvc-installer.googlecode.com/files/qt-win32-opensource-%s-vs2008.exe',
            '90':'http://qt-msvc-installer.googlecode.com/files/qt-win32-opensource-%s-vs2008.exe'}
-           
+
 if __name__ == "__main__":
     parser = OptionParser(description='Creates a NSI installer for windows')
     parser.add_option('--lang',action="store",type='string',dest='lang',default='en',
@@ -793,7 +794,7 @@ if __name__ == "__main__":
         if os.path.splitext(dllname)[1] == '.pyd':
             args['install_python_dll'] += '!insertmacro InstallLib DLL NOTSHARED NOREBOOT_PROTECTED %s\\openravepy\\%s $INSTDIR\\%s\\openravepy\\%s $INSTDIR\n'%(openravepy_dir,dllname,openravepy_reldir,dllname)
             args['uninstall_dll'] += '!insertmacro UninstallLib DLL NOTSHARED NOREBOOT_PROTECTED $INSTDIR\\%s\\openravepy\\%s\n'%(openravepy_reldir,dllname)
-    # add the runable examples 
+    # add the runable examples
     for name in dir(openravepy.examples):
         if not name.startswith('__'):
             try:
@@ -820,7 +821,7 @@ if __name__ == "__main__":
     pattern=re.compile(args['installdir'].replace('\\','/'),re.IGNORECASE)
     args['openrave_config'] = pattern.sub('__INSTDIR__',config).replace('\n','$\\n').replace('"','$\\"').replace('\r','$\\r')
     open(os.path.join(options.installdir,'include','openrave-'+soversion,'openrave','config.h'),'w').write(config)
-    
+
     # boost installation
     boostversion = Popen(['openrave-config','--boost-version'],stdout=PIPE).communicate()[0].strip()
     boostversionsep = boostversion.split('.')
@@ -841,7 +842,7 @@ if __name__ == "__main__":
                     pass
 
                 shutil.copyfile(localfile,os.path.join('installers',boost_installer))
-                
+
             except IOError:
                 continue # website down?
         args['boost_installer'] = boost_installer
@@ -849,7 +850,7 @@ if __name__ == "__main__":
         break
     if not 'boost_version' in args:
         raise ValueError('failed to find boost installer for version %s'%boostversionsep)
-    
+
     # python installation
     args['python_version'] = '%s.%s'%(sys.version_info[0:2])
     args['python_version_full'] = '%s.%s.%s'%(sys.version_info[0:3])
@@ -866,7 +867,7 @@ if __name__ == "__main__":
 
     open(args['output_name']+'.nsi','w').write(nsiscript%args)
     os.system('"C:\\Program Files\\NSIS\\makensis.exe" %s.nsi'%args['output_name'])
-  
+
 def test():
     class empty: pass
     options = empty()
