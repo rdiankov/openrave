@@ -118,15 +118,15 @@ inline static uint64_t GetNanoTime()
 inline static void getWallTime(uint32_t& sec, uint32_t& nsec)
 {
 #if defined(CLOCK_GETTIME_FOUND) && (POSIX_TIMERS > 0 || _POSIX_TIMERS > 0)
-  struct timespec start;
-  clock_gettime(CLOCK_REALTIME, &start);
-  sec  = start.tv_sec;
-  nsec = start.tv_nsec;
+    struct timespec start;
+    clock_gettime(CLOCK_REALTIME, &start);
+    sec  = start.tv_sec;
+    nsec = start.tv_nsec;
 #else
-  struct timeval timeofday;
-  gettimeofday(&timeofday,NULL);
-  sec  = timeofday.tv_sec;
-  nsec = timeofday.tv_usec * 1000;
+    struct timeval timeofday;
+    gettimeofday(&timeofday,NULL);
+    sec  = timeofday.tv_sec;
+    nsec = timeofday.tv_usec * 1000;
 #endif
 }
 
@@ -174,9 +174,9 @@ inline string getfilename_withseparator(istream& sinput, char separator)
     size_t endpos = filename.find_last_not_of(" \t");
 
     // if all spaces or empty return an empty string  
-    if(( string::npos == startpos ) || ( string::npos == endpos))
+    if(( string::npos == startpos ) || ( string::npos == endpos)) {
         return "";
-
+    }
     filename = filename.substr( startpos, endpos-startpos+1 );
     return filename;
 }

@@ -17,30 +17,30 @@ import openravepy
 from copy import copy as shallowcopy
 
 class VisualFeedback:
-    """Interface wrapper for :ref:`probleminstance-visualfeedback`
+    """Interface wrapper for :ref:`module-visualfeedback`
     """
     def __init__(self,robot,maxvelmult=None):
         env = robot.GetEnv()
-        self.prob = openravepy.RaveCreateProblem(env,'VisualFeedback')
+        self.prob = openravepy.RaveCreateModule(env,'VisualFeedback')
         self.robot = robot
         self.args = self.robot.GetName()
         if maxvelmult is not None:
             self.args += ' maxvelmult %f '%maxvelmult
-        if env.LoadProblem(self.prob,self.args) != 0:
-            raise ValueError('problem failed to initialize')
+        if env.AddModule(self.prob,self.args) != 0:
+            raise ValueError('module failed to initialize')
     def  __del__(self):
         self.prob.GetEnv().Remove(self.prob)
     def clone(self,envother):
         """Clones the interface into another environment
         """
         clone = shallowcopy(self)
-        clone.prob = openravepy.RaveCreateProblem(envother,'VisualFeedback')
+        clone.prob = openravepy.RaveCreateModule(envother,'VisualFeedback')
         clone.robot = envother.GetRobot(self.robot.GetName())
-        if envother.LoadProblem(clone.prob,clone.args) != 0:
-            raise ValueError('problem failed to initialize')
+        if envother.AddModule(clone.prob,clone.args) != 0:
+            raise ValueError('module failed to initialize')
         return clone
     def SetCameraAndTarget(self,sensorindex=None,sensorname=None,manipname=None,convexdata=None,sensorrobot=None,target=None,raydensity=None):
-        """See :ref:`probleminstance-visualfeedback-setcameraandtarget`
+        """See :ref:`module-visualfeedback-setcameraandtarget`
         """
         cmd = 'SetCameraAndTarget '
         if target is not None:
@@ -64,7 +64,7 @@ class VisualFeedback:
             raise openravepy.planning_error()
         return res
     def ProcessVisibilityExtents(self,localtargetcenter=None,numrolls=None,transforms=None,extents=None,sphere=None,conedirangles=None):
-        """See :ref:`probleminstance-visualfeedback-processvisibilityextents`
+        """See :ref:`module-visualfeedback-processvisibilityextents`
         """
         cmd = 'ProcessVisibilityExtents '
         if localtargetcenter is not None:
@@ -92,7 +92,7 @@ class VisualFeedback:
         visibilitytransforms = numpy.array([numpy.float(s) for s in res.split()],numpy.float)
         return numpy.reshape(visibilitytransforms,(len(visibilitytransforms)/7,7))
     def SetCameraTransforms(self,transforms,mindist=None):
-        """See :ref:`probleminstance-visualfeedback-setcameratransforms`
+        """See :ref:`module-visualfeedback-setcameratransforms`
         """
         cmd = 'SetCameraTransforms transforms %d '%len(transforms)
         for f in numpy.reshape(transforms,len(transforms)*7):
@@ -104,7 +104,7 @@ class VisualFeedback:
             raise openravepy.planning_error()
         return res
     def ComputeVisibility(self):
-        """See :ref:`probleminstance-visualfeedback-computevisibility`
+        """See :ref:`module-visualfeedback-computevisibility`
         """
         cmd = 'ComputeVisibility '
         res = self.prob.SendCommand(cmd)
@@ -112,7 +112,7 @@ class VisualFeedback:
             raise openravepy.planning_error()
         return int(res)
     def ComputeVisibleConfiguration(self,pose):
-        """See :ref:`probleminstance-visualfeedback-computevisibleconfiguration`
+        """See :ref:`module-visualfeedback-computevisibleconfiguration`
         """
         cmd = 'ComputeVisibleConfiguration '
         cmd += 'pose '
@@ -123,7 +123,7 @@ class VisualFeedback:
             raise openravepy.planning_error()
         return numpy.array([float(s) for s in res.split()])
     def SampleVisibilityGoal(self,numsamples=None):
-        """See :ref:`probleminstance-visualfeedback-samplevisibilitygoal`
+        """See :ref:`module-visualfeedback-samplevisibilitygoal`
         """
         cmd = 'SampleVisibilityGoal '
         if numsamples is not None:
@@ -135,7 +135,7 @@ class VisualFeedback:
         returnedsamples = int(samples[0])
         return numpy.reshape(numpy.array(samples[1:],float),(returnedsamples,(len(samples)-1)/returnedsamples))
     def MoveToObserveTarget(self,affinedofs=None,smoothpath=None,planner=None,sampleprob=None,maxiter=None,execute=None,outputtraj=None):
-        """See :ref:`probleminstance-visualfeedback-movetoobservetarget`
+        """See :ref:`module-visualfeedback-movetoobservetarget`
         """
         cmd = 'MoveToObserveTarget '
         if affinedofs is not None:
@@ -157,7 +157,7 @@ class VisualFeedback:
             raise openravepy.planning_error()
         return res
     def VisualFeedbackGrasping(self,graspset,usevisibility=None,planner=None,graspdistthresh=None,visgraspthresh=None,numgradientsamples=None,maxiter=None,execute=None,outputtraj=None):
-        """See :ref:`probleminstance-visualfeedback-visualfeedbackgrasping`
+        """See :ref:`module-visualfeedback-visualfeedbackgrasping`
         """
         cmd = 'VisualFeedbackGrasping '
         if graspset is not None:
@@ -185,7 +185,7 @@ class VisualFeedback:
             raise openravepy.planning_error()
         return res
     def SetParameter(self,raydensity=None,raymindist=None,allowableocclusion=None):
-        """See :ref:`probleminstance-visualfeedback-setparameter`
+        """See :ref:`module-visualfeedback-setparameter`
         """
         cmd = 'SetParameter '
         if raydensity is not None:

@@ -29,7 +29,7 @@ class OPENRAVE_API PlannerBase : public InterfaceBase
 {
 public:
     typedef std::list< std::vector<dReal> > ConfigurationList;
-    typedef boost::shared_ptr< ConfigurationList > ConfigurationListPtr;
+    typedef boost::shared_ptr< PlannerBase::ConfigurationList > ConfigurationListPtr;
 
     /** \brief Describes a common and serializable interface for planning parameters.
 
@@ -90,7 +90,7 @@ public:
             \param q0 is the configuration the robot is coming from (currently set).
             \param q1 is the configuration the robot should move to.
             \param interval Specifies whether to check the end points of the interval for constraints
-            \param configurations Optional argument that will hold the path between the two configurations if requested
+            \param configurations Optional argument that will hold the intermediate configuraitons checked between q0 and q1 configurations. The appended configurations will be all valid and in free space. They are appended after the items already stored on the list.
         */
         typedef boost::function<bool(const std::vector<dReal>&, const std::vector<dReal>&, IntervalType, PlannerBase::ConfigurationListPtr)> CheckPathConstraintFn;
         CheckPathConstraintFn _checkpathconstraintsfn;
@@ -172,7 +172,12 @@ public:
         /// \brief the discretization resolution of each dimension of the configuration space
         std::vector<dReal> _vConfigResolution;
         
-        /// \brief a minimum distance between neighbors when searching. If 0 or less, planner chooses best step length
+        /** \brief a discretization between the path that connects two configurations
+            
+            This length represents how dense the samples get distributed across the configuration space.
+            It represents the maximum distance between neighbors when adding new configuraitons.
+            If 0 or less, planner chooses best step length.
+        */
         dReal _fStepLength;
 
         /// \brief maximum number of iterations before the planner gives up. If 0 or less, planner chooses best iterations.

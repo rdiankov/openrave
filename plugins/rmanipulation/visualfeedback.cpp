@@ -131,7 +131,7 @@ bool SampleProjectedOBBWithTest(const OBB& obb, dReal delta, const boost::functi
     return true;
 }
 
-class VisualFeedback : public ProblemInstance
+class VisualFeedback : public ModuleBase
 {
 public:
     inline boost::shared_ptr<VisualFeedback> shared_problem() { return boost::static_pointer_cast<VisualFeedback>(shared_from_this()); }
@@ -396,7 +396,7 @@ public:
         vector<Transform> _vcameras; ///< camera transformations in local coord systems
     };
 
-    VisualFeedback(EnvironmentBasePtr penv) : ProblemInstance(penv)
+    VisualFeedback(EnvironmentBasePtr penv) : ModuleBase(penv)
     {
         __description = ":Interface Author: Rosen Diankov\n\n\
 .. image:: ../../../images/interface_visualfeedback.jpg\n\
@@ -441,7 +441,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
 
     void Destroy()
     {
-        ProblemInstance::Destroy();
+        ModuleBase::Destroy();
     }
 
     int main(const string& args)
@@ -459,6 +459,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
             if( cmd == "maxvelmult" ) {
                 ss >> _fMaxVelMult;
             }
+
             if( ss.fail() || !ss ) {
                 break;
             }
@@ -470,7 +471,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
     virtual bool SendCommand(std::ostream& sout, std::istream& sinput)
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
-        return ProblemInstance::SendCommand(sout,sinput);
+        return ModuleBase::SendCommand(sout,sinput);
     }
 
     bool SetCameraAndTarget(ostream& sout, istream& sinput)
@@ -1127,13 +1128,18 @@ Visibility computation checks occlusion with other objects using ray sampling in
                 RAVELOG_INFOA("finished planning\n");
                 break;
             }
-            else RAVELOG_WARN("PlanPath failed\n");
+            else {
+                RAVELOG_WARN("PlanPath failed\n");
+            }
         }
 
         float felapsed = (GetMicroTime()-starttime)*0.000001f;
         RAVELOG_INFOA("total planning time: %fs\n", felapsed);
         if( !bSuccess ) {
             return false;
+        }
+        if( RaveGetDebugLevel() & Level_VerifyPlans ) {
+            planningutils::VerifyTrajectory(params,ptraj);
         }
         CM::SetActiveTrajectory(_robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream,_fMaxVelMult);
         return true;
@@ -1238,12 +1244,17 @@ Visibility computation checks occlusion with other objects using ray sampling in
         if( planner->PlanPath(ptraj) ) {
             bSuccess = true;
         }
-        else RAVELOG_WARN("PlanPath failed\n");
+        else {
+            RAVELOG_WARN("PlanPath failed\n");
+        }
             
         float felapsed = (GetMicroTime()-starttime)*0.000001f;
         RAVELOG_INFOA("total planning time: %fs\n", felapsed);
         if( !bSuccess ) {
             return false;
+        }
+        if( RaveGetDebugLevel() & Level_VerifyPlans ) {
+            planningutils::VerifyTrajectory(params,ptraj);
         }
         CM::SetActiveTrajectory(_robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream,_fMaxVelMult);
         return true;
@@ -1269,7 +1280,6 @@ protected:
 
     vector<Vector> _vconvexplanes; ///< the planes defining the bounding visibility region (posive is inside)
     Vector _vcenterconvex; ///< center point on the z=1 plane of the convex region
-
 };
 
-ProblemInstancePtr CreateVisualFeedback(EnvironmentBasePtr penv) { return ProblemInstancePtr(new VisualFeedback(penv)); }
+ModuleBasePtr CreateVisualFeedback(EnvironmentBasePtr penv) { return ModuleBasePtr(new VisualFeedback(penv)); }

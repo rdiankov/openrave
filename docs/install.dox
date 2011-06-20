@@ -1,19 +1,19 @@
 // -*- coding: utf-8 -*-
 
-/** 
-\en 
+/**
+\en
 
 \page installation Building and Installing
 
 %OpenRAVE uses <a href="http://www.cmake.org/">CMake</a>, which can create the correct build systems files for a variety of system configurations. Refer to the pages below for specific systems:
 
-\ja 
+\ja
 
 \page installation インストール方法
 
 %OpenRAVEは様々なユーザーのPCの構成にあった正しいビルドシステムを生成するために<a href="http://www.cmake.org/">CMake</a>を使っています．それぞれのユーザー仕様に合った以下のページを参照してください．:
 
-\~ 
+\~
 - \subpage installation_linux
 - \subpage installation_win
 - \subpage installation_macosx
@@ -152,7 +152,7 @@ cmake -DOPT_PLUGINS=OFF ..
 
 */
 
-/** 
+/**
 \en  \page installation_linux Building and Installing on Linux
 
 Download the sources from \sourcesdownload{sourceforge}.
@@ -164,7 +164,7 @@ svn co https://openrave.svn.sourceforge.net/svnroot/openrave/tags/latest_stable 
 %OpenRAVE works only with qt4! Before compiling SoQt or %OpenRAVE make sure to remove any qt3 related dev packages like \c qt3-dev-tools or \c libqt3-headers.
 
 If there are compilation errors with templates, might have to use gcc version 4.1 or greater. You can check your version of gcc by <tt>gcc --version</tt>
- 
+
 \ja \page installation_linux Linuxユーザーのためのインストール方法
 
 最新のソースコードは\sourcesdownload{sourceforge}から入手できます．まずは以下のコマンドを入力しソースコードをダウンロードしてください．
@@ -290,7 +290,7 @@ Octave users:
 
 Matlab users:
 - make sure \c mex is in the system path
-- Add \c $OPENRAVE_INSTALL/share/openrave/matlab to the Matlab path (default is \c /usr/local/share/openrave/matlab).
+- Compile the *.cpp files inside \c $OPENRAVE_INSTALL/share/openrave-*/matlab and addit to the MATLAB Path.
 
 \ja \section ilinux_octavematlab Octave/Matlab
 
@@ -379,7 +379,7 @@ source `openrave-config --prefix`/share/openrave/openravebash
 
 */
 
-/** 
+/**
 \en
 \page installation_win Building and Installing on Windows
 
@@ -427,16 +427,16 @@ Both <a href="http://www.gnu.org/software/octave/">Octave</a> and Matlab are sup
 
 Octave users:
 - Make sure \c mkoctfile is in your system path.
-- If you having problems with the JVM, try installing octave using gnuplot (rather than jhandles). 
+- If you having problems with the JVM, try installing octave using gnuplot (rather than jhandles).
 - Compiling mex files should use the same compiler as was used to build the Octave package. As of October 2008, the official Octave binaries are compiled with Visual Studio 2005 (freely available).
 - Add \c $OPENRAVE_INSTALL\\share\\openrave\\octave to the Octave path (default is <tt>C:\\Program Files\\openrave\\share\\openrave\\octave</tt>).
 
 Matlab users:
 - make sure \c mex is in your path and actually points to the Matlab \c mex program.
-- Add \c $OPENRAVE_INSTALL\\share\\openrave\\matlab to the Matlab path (default is <tt>C:\\Program Files\\openrave\\share\\openrave\\matlab</tt>).
+- Compile the *.cpp files inside \c $OPENRAVE_INSTALL\\share\\openrave-*\\matlab and addit to the MATLAB Path. Can use runmex.bat for that.
 
 \section iwin_building Building OpenRAVE
- 
+
 Run \c runcmake_win.bat, which will auto-detect your compiler system. This will extract \c
 msvc_files.tgz and create a \c build directory to full the compiled objects. Open the Microsoft
 Visual Studio solution file from \c build\\openrave.sln and select the \b Release or \b
@@ -552,7 +552,7 @@ sudo port install cmake boost libxml2 glew py26-numpy py26-pyplusplus
 \verbatim
 port install qt4-mac
 \endverbatim
-- <a href="http://www.coin3d.org/lib/coin">Coin3D</a> - インストーラーをダウンロードしてください． 
+- <a href="http://www.coin3d.org/lib/coin">Coin3D</a> - インストーラーをダウンロードしてください．
 - <a href="http://www.coin3d.org/lib/soqt">SoQt</a> - <a href="http://ftp.coin3d.org/coin/src/snapshots/SoQt-latest.tar.gz">ここ</a>から最新版のソースファイルをダウンロードしてください．QTDIRを正しいディレクトリに設定するように言われるかもしれません．
 - ffmpeg と 他のビデオ録画用のコーデック
 

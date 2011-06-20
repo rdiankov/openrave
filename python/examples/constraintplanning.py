@@ -60,7 +60,7 @@ if not __build_doc__:
     from numpy import *
 
 class ConstraintPlanning:
-    def __init__(self,robot,randomize=False,dests=None,switchpatterns=None):
+    def __init__(self,robot,randomize=False,dests=None,switchpatterns=None,plannername=None):
         self.envreal = robot.GetEnv()
         self.robot = robot
         self.manip = self.robot.GetActiveManipulator()
@@ -70,8 +70,8 @@ class ConstraintPlanning:
         self.gmodel = databases.grasping.GraspingModel(robot=self.robot,target=self.envreal.GetKinBody('mug1'))
         if not self.gmodel.load():
             self.gmodel.autogenerate()
-        self.basemanip = interfaces.BaseManipulation(self.robot)
-        self.taskmanip = interfaces.TaskManipulation(self.robot,graspername=self.gmodel.grasper.plannername)
+        self.basemanip = interfaces.BaseManipulation(self.robot,plannername=plannername)
+        self.taskmanip = interfaces.TaskManipulation(self.robot,graspername=self.gmodel.grasper.plannername,plannername=plannername)
 
     def graspAndMove(self,showgoalcup=True):
         target = self.gmodel.target
@@ -116,7 +116,7 @@ class ConstraintPlanning:
 
                 constraintmatrix = eye(4)
                 constrainterrorthresh = 0.005
-                for iter in range(5):
+                for iter in range(3):
                     with self.robot:
                         vcur = self.robot.GetDOFValues()
                         Tee = self.manip.GetEndEffectorTransform()
@@ -129,7 +129,7 @@ class ConstraintPlanning:
                         showtarget.SetTransform(dot(T,dot(linalg.inv(self.manip.GetEndEffectorTransform()),target.GetTransform())))
                         self.envreal.UpdatePublishedBodies()
                     try:
-                        self.basemanip.MoveToHandPosition(matrices=[T],maxiter=10000,maxtries=1,seedik=8,constraintfreedoms=constraintfreedoms,constraintmatrix=constraintmatrix,constrainterrorthresh=constrainterrorthresh)
+                        self.basemanip.MoveToHandPosition(matrices=[T],maxiter=5000,maxtries=1,seedik=30,constraintfreedoms=constraintfreedoms,constraintmatrix=constraintmatrix,constrainterrorthresh=constrainterrorthresh,steplength=0.002)
                     except planning_error,e:
                         print e
                     self.robot.WaitForController(0)

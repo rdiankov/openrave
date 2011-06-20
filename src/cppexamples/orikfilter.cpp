@@ -26,17 +26,10 @@ inline static uint32_t GetMilliTime()
 
 inline static void getWallTime(uint32_t& sec, uint32_t& nsec)
 {
-#if defined(CLOCK_GETTIME_FOUND) && (POSIX_TIMERS > 0 || _POSIX_TIMERS > 0)
-  struct timespec start;
-  clock_gettime(CLOCK_REALTIME, &start);
-  sec  = start.tv_sec;
-  nsec = start.tv_nsec;
-#else
-  struct timeval timeofday;
-  gettimeofday(&timeofday,NULL);
-  sec  = timeofday.tv_sec;
-  nsec = timeofday.tv_usec * 1000;
-#endif
+    struct timeval timeofday;
+    gettimeofday(&timeofday,NULL);
+    sec  = timeofday.tv_sec;
+    nsec = timeofday.tv_usec * 1000;
 }
 
 inline static uint32_t GetMilliTime()
@@ -72,8 +65,8 @@ int main(int argc, char ** argv)
     RobotBase::ManipulatorPtr pmanip = probot->GetActiveManipulator();
 
     // load inverse kinematics using ikfast
-    ProblemInstancePtr pikfast = RaveCreateProblem(penv,"ikfast");
-    penv->LoadProblem(pikfast,"");
+    ModuleBasePtr pikfast = RaveCreateModule(penv,"ikfast");
+    penv->AddModule(pikfast,"");
     stringstream ssin,ssout;
     vector<dReal> vsolution;
     ssin << "LoadIKFastSolver " << probot->GetName() << " " << (int)IkParameterization::Type_Transform6D;

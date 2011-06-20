@@ -199,7 +199,7 @@ class RaveGlobal : private boost::noncopyable, public boost::enable_shared_from_
         _mapinterfacenames[PT_Robot] = "robot";
         _mapinterfacenames[PT_SensorSystem] = "sensorsystem";
         _mapinterfacenames[PT_Controller] = "controller";
-        _mapinterfacenames[PT_ProblemInstance] = "probleminstance";
+        _mapinterfacenames[PT_Module] = "module";
         _mapinterfacenames[PT_IkSolver] = "iksolver";
         _mapinterfacenames[PT_KinBody] = "kinbody";
         _mapinterfacenames[PT_PhysicsEngine] = "physicsengine";
@@ -233,7 +233,7 @@ public:
         return _state;
     }
     
-    int Initialize(bool bLoadAllPlugins, DebugLevel level)
+    int Initialize(bool bLoadAllPlugins, uint32_t level)
     {
         if( _IsInitialized() ) {
             return 0; // already initialized
@@ -332,12 +332,12 @@ public:
         return "";
     }
 
-    void SetDebugLevel(DebugLevel level)
+    void SetDebugLevel(uint32_t level)
     {
         _nDebugLevel = level;
     }
 
-    DebugLevel GetDebugLevel()
+    int GetDebugLevel()
     {
         return _nDebugLevel;
     }
@@ -461,7 +461,7 @@ private:
 
     // state that is initialized/destroyed
     boost::shared_ptr<RaveDatabase> _pdatabase;
-    DebugLevel _nDebugLevel;
+    uint32_t _nDebugLevel;
     boost::mutex _mutexXML;
     std::map<InterfaceType, READERSMAP > _mapreaders;
     std::map<InterfaceType,string> _mapinterfacenames;
@@ -481,12 +481,12 @@ private:
 
 boost::shared_ptr<RaveGlobal> RaveGlobal::_state;
 
-void RaveSetDebugLevel(DebugLevel level)
+void RaveSetDebugLevel(uint32_t level)
 {
     RaveGlobal::instance()->SetDebugLevel(level);
 }
 
-DebugLevel RaveGetDebugLevel()
+int RaveGetDebugLevel()
 {
     return RaveGlobal::instance()->GetDebugLevel();
 }
@@ -516,7 +516,7 @@ std::string RaveFindDatabaseFile(const std::string& filename, bool bRead)
     return RaveGlobal::instance()->FindDatabaseFile(filename,bRead);
 }
 
-int RaveInitialize(bool bLoadAllPlugins, DebugLevel level)
+int RaveInitialize(bool bLoadAllPlugins, uint32_t level)
 {
     return RaveGlobal::instance()->Initialize(bLoadAllPlugins,level);
 }
@@ -606,14 +606,19 @@ ControllerBasePtr RaveCreateController(EnvironmentBasePtr penv, const std::strin
     return RaveGlobal::instance()->GetDatabase()->CreateController(penv, name);
 }
 
-ProblemInstancePtr RaveCreateProblem(EnvironmentBasePtr penv, const std::string& name)
+ModuleBasePtr RaveCreateModule(EnvironmentBasePtr penv, const std::string& name)
 {
-    return RaveGlobal::instance()->GetDatabase()->CreateProblemInstance(penv, name);
+    return RaveGlobal::instance()->GetDatabase()->CreateModule(penv, name);
 }
 
-ProblemInstancePtr RaveCreateProblemInstance(EnvironmentBasePtr penv, const std::string& name)
+ModuleBasePtr RaveCreateProblem(EnvironmentBasePtr penv, const std::string& name)
 {
-    return RaveGlobal::instance()->GetDatabase()->CreateProblemInstance(penv, name);
+    return RaveGlobal::instance()->GetDatabase()->CreateModule(penv, name);
+}
+
+ModuleBasePtr RaveCreateProblemInstance(EnvironmentBasePtr penv, const std::string& name)
+{
+    return RaveGlobal::instance()->GetDatabase()->CreateModule(penv, name);
 }
 
 IkSolverBasePtr RaveCreateIkSolver(EnvironmentBasePtr penv, const std::string& name)
@@ -935,8 +940,9 @@ bool PlannerBase::PlannerParameters::endElement(const std::string& name)
             __pcurreader.reset();
         }
     }
-    else if( name == "plannerparameters" )
+    else if( name == "plannerparameters" ) {
         return --_plannerparametersdepth < 0;
+    }
     else if( __processingtag.size() > 0 ) {
         if( name == "_vinitialconfig") {
             vinitialconfig = vector<dReal>((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
@@ -1046,15 +1052,16 @@ const char *strcasestr(const char *s, const char *find)
     register size_t len;
 
     if ((c = *find++) != 0) {
-	c = tolower((unsigned char)c);
-	len = strlen(find);
-	do {
-	    do {
-		if ((sc = *s++) == 0)
-		    return (NULL);
-	    } while ((char)tolower((unsigned char)sc) != c);
-	} while (strnicmp(s, find, len) != 0);
-	s--;
+        c = tolower((unsigned char)c);
+        len = strlen(find);
+        do {
+            do {
+                if ((sc = *s++) == 0) {
+                    return (NULL);
+                }
+            } while ((char)tolower((unsigned char)sc) != c);
+        } while (strnicmp(s, find, len) != 0);
+        s--;
     }
     return ((char *) s);
 }
@@ -1306,7 +1313,7 @@ bool InterfaceBase::SendCommand(ostream& sout, istream& sinput)
         interfacecmd = it->second;
     }
     if( !interfacecmd->fn(sout,sinput) ) {
-        RAVELOG_VERBOSE(str(boost::format("command failed in problem %s: %s\n")%GetXMLId()%cmd));
+        RAVELOG_VERBOSE(str(boost::format("command failed in interface %s: %s\n")%GetXMLId()%cmd));
         return false;
     }
     return true;
@@ -1507,8 +1514,9 @@ void SimpleSensorSystem::AddRegisteredBodies(const std::vector<KinBodyPtr>& vbod
         boost::shared_ptr<XMLData> pmocapdata = boost::dynamic_pointer_cast<XMLData>((*itbody)->GetReadableInterface(_xmlid));
         if( !!pmocapdata ) {
             KinBody::ManageDataPtr p = AddKinBody(*itbody, pmocapdata);
-            if( !!p )
+            if( !!p ) {
                 p->Lock(true);
+            }
         }
     }
 }

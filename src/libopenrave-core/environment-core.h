@@ -67,7 +67,8 @@ class Environment : public EnvironmentBase
                     RegQueryValueEx(hkey, TEXT("InstallRoot"), NULL, &dwType, (PBYTE)szInstallRoot, &dwSize);
                     RegCloseKey(hkey);
                     installdir.assign(szInstallRoot);
-                    installdir += str(boost::format("%cshare%copenrave%d-%d")%s_filesep%s_filesep%OPENRAVE_VERSION_MAJOR%OPENRAVE_VERSION_MINOR);
+                    installdir += str(boost::format("%cshare%copenrave-%d.%d")%s_filesep%s_filesep%OPENRAVE_VERSION_MAJOR%OPENRAVE_VERSION_MINOR);
+                    RAVELOG_VERBOSE(str(boost::format("window registry data dir '%s'")%installdir));
                 }
                 else
 #endif
@@ -93,6 +94,9 @@ class Environment : public EnvironmentBase
 #endif
             if( !bExists ) {
                 _vdatadirs.push_back(installdir);
+            }
+            FOREACHC(itdir,_vdatadirs) {
+                RAVELOG_VERBOSE(str(boost::format("data dir: %s")%*itdir));
             }
        }
     }
@@ -120,9 +124,6 @@ class Environment : public EnvironmentBase
 
         if( !_pCurrentChecker ) {
             _pCurrentChecker.reset(new DummyCollisionChecker(shared_from_this()));
-        }
-        if( !_pCurrentViewer ) {
-            _pCurrentViewer.reset(new DummyViewer(shared_from_this()));
         }
         if( !_pPhysicsEngine ) {
             _pPhysicsEngine.reset(new DummyPhysicsEngine(shared_from_this()));
@@ -186,24 +187,27 @@ class Environment : public EnvironmentBase
         }
         _threadSimulation.reset();
 
-        // destroy the problems (their destructors could attempt to lock environment, so have to do it before global lock)
-        // however, do not clear the _listProblems yet
-        RAVELOG_DEBUG("destroy problems\n");
-        list<ProblemInstancePtr> listProblems;
+        // destroy the modules (their destructors could attempt to lock environment, so have to do it before global lock)
+        // however, do not clear the _listModules yet
+        RAVELOG_DEBUG("destroy module\n");
+        list<ModuleBasePtr> listModules;
+        list<ViewerBasePtr> listViewers = _listViewers;
         {
             boost::mutex::scoped_lock lock(_mutexInterfaces);
-            listProblems = _listProblems;
+            listModules = _listModules;
+            listViewers = _listViewers;
         }
-        FOREACH(itprob,listProblems) {
-            (*itprob)->Destroy();
+        FOREACH(itmodule,listModules) {
+            (*itmodule)->Destroy();
         }
-        listProblems.clear();
+        listModules.clear();
 
         RAVELOG_DEBUG("resetting raveviewer\n");
-        if( !!_pCurrentViewer ) {
-            _pCurrentViewer->Reset();
-            _pCurrentViewer->quitmainloop();
+        FOREACH(itviewer, listViewers) {
+            (*itviewer)->Reset();
+            (*itviewer)->quitmainloop();
         }
+        listViewers.clear();
 
         // lock the environment
         {
@@ -238,7 +242,8 @@ class Environment : public EnvironmentBase
                     (*itsensor)->Configure(SensorBase::CC_RenderGeometryOff);
                 }
                 _listSensors.clear();
-                _listProblems.clear();
+                _listModules.clear();
+                _listViewers.clear();
                 _listOwnedInterfaces.clear();
             }
         }
@@ -246,7 +251,6 @@ class Environment : public EnvironmentBase
         // release all other interfaces, not necessary to hold a mutex?
         _pCurrentChecker.reset();
         _pPhysicsEngine.reset();
-        _pCurrentViewer.reset();
         RAVELOG_VERBOSE("Environment destroyed\n");
     }
 
@@ -254,8 +258,10 @@ class Environment : public EnvironmentBase
     {
         // destruction order is *very* important, don't touch it without consultation
         RAVELOG_DEBUG("resetting raveviewer\n");
-        if( !!_pCurrentViewer ) {
-            _pCurrentViewer->Reset();
+        list<ViewerBasePtr> listViewers;
+        GetViewers(listViewers);
+        FOREACH(itviewer, listViewers) {
+            (*itviewer)->Reset();
         }
     
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
@@ -292,16 +298,16 @@ class Environment : public EnvironmentBase
             _listSensors.clear();
         }
 
-        list<ProblemInstancePtr> listProblems;
+        list<ModuleBasePtr> listModules;
         {
             boost::mutex::scoped_lock lock(_mutexInterfaces);
-            listProblems = _listProblems;
+            listModules = _listModules;
         }
 
-        FOREACH(itproblem,listProblems) {
-            (*itproblem)->Reset();
+        FOREACH(itmodule,listModules) {
+            (*itmodule)->Reset();
         }
-        listProblems.clear();
+        listModules.clear();
         _listOwnedInterfaces.clear();
 
         if( !!_pCurrentChecker ) {
@@ -327,7 +333,7 @@ class Environment : public EnvironmentBase
     virtual PlannerBasePtr CreatePlanner(const std::string& pname) { return RaveCreatePlanner(shared_from_this(),pname); }
     virtual SensorSystemBasePtr CreateSensorSystem(const std::string& pname) { return RaveCreateSensorSystem(shared_from_this(),pname); }
     virtual ControllerBasePtr CreateController(const std::string& pname) { return RaveCreateController(shared_from_this(),pname); }
-    virtual ProblemInstancePtr CreateProblem(const std::string& pname) { return RaveCreateProblem(shared_from_this(),pname); }
+    virtual ModuleBasePtr CreateProblem(const std::string& pname) { return RaveCreateModule(shared_from_this(),pname); }
     virtual IkSolverBasePtr CreateIkSolver(const std::string& pname) { return RaveCreateIkSolver(shared_from_this(),pname); }
     virtual PhysicsEngineBasePtr CreatePhysicsEngine(const std::string& pname) { return RaveCreatePhysicsEngine(shared_from_this(),pname); }
     virtual SensorBasePtr CreateSensor(const std::string& pname) { return RaveCreateSensor(shared_from_this(),pname); }
@@ -355,30 +361,30 @@ class Environment : public EnvironmentBase
         return penv;
     }
     
-    virtual int LoadProblem(ProblemInstancePtr prob, const std::string& cmdargs)
+    virtual int AddModule(ModuleBasePtr module, const std::string& cmdargs)
     {
-        CHECK_INTERFACE(prob);
-        int ret = prob->main(cmdargs);
+        CHECK_INTERFACE(module);
+        int ret = module->main(cmdargs);
         if( ret != 0 ) {
-            RAVELOG_WARN(str(boost::format("Error %d with executing problem %s\n")%ret%prob->GetXMLId()));
+            RAVELOG_WARN(str(boost::format("Error %d with executing module %s\n")%ret%module->GetXMLId()));
         }
         else {
             boost::mutex::scoped_lock lock(_mutexInterfaces);
-            _listProblems.push_back(prob);
+            _listModules.push_back(module);
         }
 
         return ret;
     }
 
-    bool RemoveProblem(ProblemInstancePtr prob)
+    bool RemoveProblem(ModuleBasePtr prob)
     {
         return Remove(InterfaceBasePtr(prob));
     }
 
-    boost::shared_ptr<void> GetLoadedProblems(std::list<ProblemInstancePtr>& listProblems) const
+    boost::shared_ptr<void> GetModules(std::list<ModuleBasePtr>& listModules) const
     {
         boost::shared_ptr<boost::mutex::scoped_lock> plock(new boost::mutex::scoped_lock(_mutexInterfaces));
-        listProblems = _listProblems;
+        listModules = _listModules;
         return plock;
     }
 
@@ -393,7 +399,8 @@ class Environment : public EnvironmentBase
         else if( !_IsOpenRAVEFile(filename) && _IsRigidModelFile(filename) ) {
             KinBodyPtr pbody = ReadKinBodyXMLFile(filename);
             if( !!pbody ) {
-                bSuccess = AddKinBody(pbody,true);
+                AddKinBody(pbody,true);
+                bSuccess = true;
             }
         }
         else {
@@ -430,7 +437,7 @@ class Environment : public EnvironmentBase
         return false;
     }
 
-    virtual bool AddKinBody(KinBodyPtr pbody, bool bAnonymous)
+    virtual void AddKinBody(KinBodyPtr pbody, bool bAnonymous)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         CHECK_INTERFACE(pbody);
@@ -457,10 +464,9 @@ class Environment : public EnvironmentBase
         pbody->_ComputeInternalInformation();
         _pCurrentChecker->InitKinBody(pbody);
         _pPhysicsEngine->InitKinBody(pbody);
-        return true;
     }
 
-    virtual bool AddRobot(RobotBasePtr robot, bool bAnonymous)
+    virtual void AddRobot(RobotBasePtr robot, bool bAnonymous)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         CHECK_INTERFACE(robot);
@@ -491,10 +497,9 @@ class Environment : public EnvironmentBase
         robot->_ComputeInternalInformation();
         _pCurrentChecker->InitKinBody(robot);
         _pPhysicsEngine->InitKinBody(robot);
-        return true;
     }
 
-    virtual bool AddSensor(SensorBasePtr psensor, bool bAnonymous)
+    virtual void AddSensor(SensorBasePtr psensor, bool bAnonymous)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         CHECK_INTERFACE(psensor);
@@ -517,7 +522,6 @@ class Environment : public EnvironmentBase
             _listSensors.push_back(psensor);
         }
         psensor->Configure(SensorBase::CC_PowerOn);
-        return true;
     }
 
     virtual bool RemoveKinBody(KinBodyPtr pbody)
@@ -569,12 +573,22 @@ class Environment : public EnvironmentBase
             }
             break;
         }
-        case PT_ProblemInstance: {
-            ProblemInstancePtr prob = RaveInterfaceCast<ProblemInstance>(interface);
-            list<ProblemInstancePtr>::iterator itprob = find(_listProblems.begin(), _listProblems.end(), prob);
-            if( itprob != _listProblems.end() ) {
-                (*itprob)->Destroy();
-                _listProblems.erase(itprob);
+        case PT_Module: {
+            ModuleBasePtr prob = RaveInterfaceCast<ModuleBase>(interface);
+            list<ModuleBasePtr>::iterator itmodule = find(_listModules.begin(), _listModules.end(), prob);
+            if( itmodule != _listModules.end() ) {
+                (*itmodule)->Destroy();
+                _listModules.erase(itmodule);
+                return true;
+            }
+            break;
+        }
+        case PT_Viewer: {
+            ViewerBasePtr pviewer = RaveInterfaceCast<ViewerBase>(interface);
+            list<ViewerBasePtr>::iterator itviewer = find(_listViewers.begin(), _listViewers.end(), pviewer);
+            if( itviewer != _listViewers.end() ) {
+                (*itviewer)->quitmainloop();
+                _listViewers.erase(itviewer);
                 return true;
             }
             break;
@@ -790,13 +804,13 @@ class Environment : public EnvironmentBase
         vector<KinBodyPtr> vecbodies;
         vector<RobotBasePtr> vecrobots;
         list<SensorBasePtr> listSensors;
-        list<ProblemInstancePtr> listProblems;
+        list<ModuleBasePtr> listModules;
         {
             boost::mutex::scoped_lock lock(_mutexInterfaces);
             vecbodies = _vecbodies;
             vecrobots = _vecrobots;
             listSensors = _listSensors;
-            listProblems = _listProblems;
+            listModules = _listModules;
         }
         
         FOREACH(it, vecbodies) {
@@ -804,8 +818,8 @@ class Environment : public EnvironmentBase
                 (*it)->SimulationStep(fTimeStep);
             }
         }
-        FOREACH(itprob, listProblems) {
-            (*itprob)->SimulationStep(fTimeStep);
+        FOREACH(itmodule, listModules) {
+            (*itmodule)->SimulationStep(fTimeStep);
         }
 
         // simulate the sensors last (ie, they always reflect the most recent bodies
@@ -945,7 +959,7 @@ class Environment : public EnvironmentBase
                 ptrimesh = ReadTrimeshFile(ptrimesh,filename,atts);
                 if( robot->InitFromTrimesh(*ptrimesh,true) ) {
                     // have to set the render file
-                    OpenRAVEXMLParser::SetRenderFilename(robot->_veclinks.at(0)->GetGeometry(0), filename);
+                    robot->_veclinks.at(0)->GetGeometry(0).SetRenderFilename(filename);
 #if defined(HAVE_BOOST_FILESYSTEM) && BOOST_VERSION >= 103600 // stem() was introduced in 1.36
                     boost::filesystem::path pfilename(filename, boost::filesystem::native);
 #if defined(BOOST_FILESYSTEM_VERSION) && BOOST_FILESYSTEM_VERSION >= 3
@@ -1045,7 +1059,7 @@ class Environment : public EnvironmentBase
                 ptrimesh = ReadTrimeshFile(ptrimesh,filename,atts);
                 if( body->InitFromTrimesh(*ptrimesh,true) ) {
                     // have to set the render file
-                    OpenRAVEXMLParser::SetRenderFilename(body->_veclinks.at(0)->GetGeometry(0), filename);
+                    body->_veclinks.at(0)->GetGeometry(0).SetRenderFilename(filename);
 #if defined(HAVE_BOOST_FILESYSTEM) && BOOST_VERSION >= 103600 // stem() was introduced in 1.36
                     boost::filesystem::path pfilename(filename, boost::filesystem::native);
 #if defined(BOOST_FILESYSTEM_VERSION) && BOOST_FILESYSTEM_VERSION >= 3
@@ -1241,75 +1255,163 @@ class Environment : public EnvironmentBase
         return OpenRAVEXMLParser::ParseXMLData(preader, pdata);
     }
 
-    virtual bool AttachViewer(ViewerBasePtr pnewviewer)
+    virtual void AddViewer(ViewerBasePtr pnewviewer)
     {
-        if( _pCurrentViewer == pnewviewer ) {
-            return true;
-        }
-        if( !!_pCurrentViewer ) {
-            _pCurrentViewer->quitmainloop();
-        }
-        EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        
-        _pCurrentViewer = pnewviewer;
-        if( !_pCurrentViewer ) {
-            _pCurrentViewer.reset(new DummyViewer(shared_from_this()));
-        }
-        if( _pCurrentViewer->GetEnv() != shared_from_this() ) {
-            throw openrave_exception("Viewer needs to be created by the current environment");
-        }
-        return true;
+        CHECK_INTERFACE(pnewviewer);
+        boost::mutex::scoped_lock lock(_mutexInterfaces);
+        BOOST_ASSERT(find(_listViewers.begin(),_listViewers.end(),pnewviewer) == _listViewers.end() );
+        _CheckUniqueName(ViewerBaseConstPtr(pnewviewer),true);
+        _listViewers.push_back(pnewviewer);
     }
 
-    virtual ViewerBasePtr GetViewer() const
+    virtual ViewerBasePtr GetViewer(const std::string& name) const
     {
-        EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        return _pCurrentViewer;
+        boost::mutex::scoped_lock lock(_mutexInterfaces);
+        if( name.size() == 0 ) {
+            return _listViewers.size() > 0 ? _listViewers.front() : ViewerBasePtr();
+        }
+        FOREACHC(itviewer, _listViewers) {
+            if( (*itviewer)->GetName() == name ) {
+                return *itviewer;
+            }
+        }
+        return ViewerBasePtr();
     }
+
+    boost::shared_ptr<boost::mutex::scoped_lock>  GetViewers(std::list<ViewerBasePtr>& listViewers) const
+    {
+        boost::shared_ptr<boost::mutex::scoped_lock> plock(new boost::mutex::scoped_lock(_mutexInterfaces));
+        listViewers = _listViewers;
+        return plock;
+    }
+
+    class GraphHandleMulti : public GraphHandle
+    {
+    public:
+        GraphHandleMulti() {}
+        virtual ~GraphHandleMulti() {}
+        void SetTransform(const RaveTransform<float>& t)
+        {
+            FOREACH(it,listhandles) {
+                (*it)->SetTransform(t);
+            }
+        }
+
+        void SetShow(bool bshow)
+        {
+            FOREACH(it,listhandles) {
+                (*it)->SetShow(bshow);
+            }
+        }
+
+        void Add(OpenRAVE::GraphHandlePtr phandle) {
+            if( !!phandle) {
+                listhandles.push_back(phandle);
+            }
+        }
+
+        list<OpenRAVE::GraphHandlePtr> listhandles;
+    };
+    typedef boost::shared_ptr<GraphHandleMulti> GraphHandleMultiPtr;
 
     virtual OpenRAVE::GraphHandlePtr plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const RaveVector<float>& color, int drawstyle)
     {
-        return _pCurrentViewer->plot3(ppoints, numPoints, stride, fPointSize, color, drawstyle);
+        boost::mutex::scoped_lock lock(_mutexInterfaces);
+        GraphHandleMultiPtr handles(new GraphHandleMulti());
+        FOREACHC(itviewer, _listViewers) {
+            handles->Add((*itviewer)->plot3(ppoints, numPoints, stride, fPointSize, color, drawstyle));
+        }
+        return handles;
     }
     virtual OpenRAVE::GraphHandlePtr plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const float* colors, int drawstyle, bool bhasalpha)
     {
-        return _pCurrentViewer->plot3(ppoints, numPoints, stride, fPointSize, colors, drawstyle, bhasalpha);
+        boost::mutex::scoped_lock lock(_mutexInterfaces);
+        GraphHandleMultiPtr handles(new GraphHandleMulti());
+        FOREACHC(itviewer, _listViewers) {
+            handles->Add((*itviewer)->plot3(ppoints, numPoints, stride, fPointSize, colors, drawstyle, bhasalpha));
+        }
+        return handles;
     }
     virtual OpenRAVE::GraphHandlePtr drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color)
     {
-        return _pCurrentViewer->drawlinestrip(ppoints, numPoints, stride, fwidth,color);
+        boost::mutex::scoped_lock lock(_mutexInterfaces);
+        GraphHandleMultiPtr handles(new GraphHandleMulti());
+        FOREACHC(itviewer, _listViewers) {
+            handles->Add((*itviewer)->drawlinestrip(ppoints, numPoints, stride, fwidth,color));
+        }
+        return handles;
     }
     virtual OpenRAVE::GraphHandlePtr drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors)
     {
-        return _pCurrentViewer->drawlinestrip(ppoints, numPoints, stride, fwidth,colors);
+        boost::mutex::scoped_lock lock(_mutexInterfaces);
+        GraphHandleMultiPtr handles(new GraphHandleMulti());
+        FOREACHC(itviewer, _listViewers) {
+            handles->Add((*itviewer)->drawlinestrip(ppoints, numPoints, stride, fwidth,colors));
+        }
+        return handles;
     }
     virtual OpenRAVE::GraphHandlePtr drawlinelist(const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color)
     {
-        return _pCurrentViewer->drawlinelist(ppoints, numPoints, stride, fwidth,color);
+        boost::mutex::scoped_lock lock(_mutexInterfaces);
+        GraphHandleMultiPtr handles(new GraphHandleMulti());
+        FOREACHC(itviewer, _listViewers) {
+            handles->Add((*itviewer)->drawlinelist(ppoints, numPoints, stride, fwidth,color));
+        }
+        return handles;
     }
     virtual OpenRAVE::GraphHandlePtr drawlinelist(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors)
     {
-        return _pCurrentViewer->drawlinelist(ppoints, numPoints, stride, fwidth,colors);
+        boost::mutex::scoped_lock lock(_mutexInterfaces);
+        GraphHandleMultiPtr handles(new GraphHandleMulti());
+        FOREACHC(itviewer, _listViewers) {
+            handles->Add((*itviewer)->drawlinelist(ppoints, numPoints, stride, fwidth,colors));
+        }
+        return handles;
     }
     virtual OpenRAVE::GraphHandlePtr drawarrow(const RaveVector<float>& p1, const RaveVector<float>& p2, float fwidth, const RaveVector<float>& color)
     {
-        return _pCurrentViewer->drawarrow(p1,p2,fwidth,color);
+        boost::mutex::scoped_lock lock(_mutexInterfaces);
+        GraphHandleMultiPtr handles(new GraphHandleMulti());
+        FOREACHC(itviewer, _listViewers) {
+            handles->Add((*itviewer)->drawarrow(p1,p2,fwidth,color));
+        }
+        return handles;
     }
     virtual OpenRAVE::GraphHandlePtr drawbox(const RaveVector<float>& vpos, const RaveVector<float>& vextents)
     {
-        return _pCurrentViewer->drawbox(vpos, vextents);
+        boost::mutex::scoped_lock lock(_mutexInterfaces);
+        GraphHandleMultiPtr handles(new GraphHandleMulti());
+        FOREACHC(itviewer, _listViewers) {
+            handles->Add((*itviewer)->drawbox(vpos, vextents));
+        }
+        return handles;
     }
     virtual OpenRAVE::GraphHandlePtr drawplane(const RaveTransform<float>& tplane, const RaveVector<float>& vextents, const boost::multi_array<float,3>& vtexture)
     {
-        return _pCurrentViewer->drawplane(tplane, vextents, vtexture);
+        boost::mutex::scoped_lock lock(_mutexInterfaces);
+        GraphHandleMultiPtr handles(new GraphHandleMulti());
+        FOREACHC(itviewer, _listViewers) {
+            handles->Add((*itviewer)->drawplane(tplane, vextents, vtexture));
+        }
+        return handles;
     }
     virtual OpenRAVE::GraphHandlePtr drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const RaveVector<float>& color)
     {
-        return _pCurrentViewer->drawtrimesh(ppoints, stride, pIndices, numTriangles, color);
+        boost::mutex::scoped_lock lock(_mutexInterfaces);
+        GraphHandleMultiPtr handles(new GraphHandleMulti());
+        FOREACHC(itviewer, _listViewers) {
+            handles->Add((*itviewer)->drawtrimesh(ppoints, stride, pIndices, numTriangles, color));
+        }
+        return handles;
     }
     virtual OpenRAVE::GraphHandlePtr drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const boost::multi_array<float,2>& colors)
     {
-        return _pCurrentViewer->drawtrimesh(ppoints, stride, pIndices, numTriangles, colors);
+        boost::mutex::scoped_lock lock(_mutexInterfaces);
+        GraphHandleMultiPtr handles(new GraphHandleMulti());
+        FOREACHC(itviewer, _listViewers) {
+            handles->Add((*itviewer)->drawtrimesh(ppoints, stride, pIndices, numTriangles, colors));
+        }
+        return handles;
     }
 
     virtual KinBodyPtr GetBodyFromEnvironmentId(int id)
@@ -1329,7 +1431,7 @@ class Environment : public EnvironmentBase
         _bEnableSimulation = true;
         _fDeltaSimTime = fDeltaTime;
         _bRealTime = bRealTime;
-        _nCurSimTime = 0;
+        //_nCurSimTime = 0; // don't reset since it is important to keep time monotonic
         _nSimStartTime = GetMicroTime();
     }
 
@@ -1343,8 +1445,8 @@ class Environment : public EnvironmentBase
     }
     virtual uint64_t GetSimulationTime() { return _nCurSimTime; }
 
-    virtual void SetDebugLevel(DebugLevel level) { RaveSetDebugLevel(level); }
-    virtual DebugLevel GetDebugLevel() const { return RaveGetDebugLevel(); }
+    virtual void SetDebugLevel(uint32_t level) { RaveSetDebugLevel(level); }
+    virtual uint32_t GetDebugLevel() const { return RaveGetDebugLevel(); }
 
     virtual void GetPublishedBodies(std::vector<KinBody::BodyState>& vbodies)
     {
@@ -1381,13 +1483,11 @@ protected:
         Destroy();
 
         boost::mutex::scoped_lock(_mutexInit);
-        AttachViewer(ViewerBasePtr());
         SetCollisionChecker(CollisionCheckerBasePtr());
         SetPhysicsEngine(PhysicsEngineBasePtr());
 
         _nBodiesModifiedStamp = r->_nBodiesModifiedStamp;
         _homedirectory = r->_homedirectory;
-        _pCurrentViewer.reset(new DummyViewer(shared_from_this()));
         _fDeltaSimTime = r->_fDeltaSimTime;
         _nCurSimTime = 0;
         _nSimStartTime = GetMicroTime();
@@ -1516,8 +1616,15 @@ protected:
         }
 
         if( options & Clone_Viewer ) {
-            if( !!r->GetViewer() ) {
-                AttachViewer(CreateViewer(r->GetViewer()->GetXMLId()));
+            list<ViewerBasePtr> listViewers;
+            r->GetViewers(listViewers);
+            FOREACH(itviewer, listViewers) {
+                try {
+                    AddViewer(CreateViewer((*itviewer)->GetXMLId()));
+                }
+                catch(const openrave_exception& ex) {
+                    RAVELOG_ERROR(str(boost::format("failed to lone viewer %s: %s")%(*itviewer)->GetName()%ex.what()));
+                }
             }
         }
     
@@ -1554,6 +1661,18 @@ protected:
             if( *itsensor != psensor && (*itsensor)->GetName() == psensor->GetName() ) {
                 if( bDoThrow ) {
                     throw openrave_exception(str(boost::format("sensor %s does not have unique name")%psensor->GetName()));
+                }
+                return false;
+            }
+        }
+        return true;
+    }
+    virtual bool _CheckUniqueName(ViewerBaseConstPtr pviewer, bool bDoThrow=false) const
+    {
+        FOREACHC(itviewer,_listViewers) {
+            if( *itviewer != pviewer && (*itviewer)->GetName() == pviewer->GetName() ) {
+                if( bDoThrow ) {
+                    throw openrave_exception(str(boost::format("viewer '%s' does not have unique name")%pviewer->GetName()));
                 }
                 return false;
             }
@@ -1674,56 +1793,6 @@ protected:
         virtual bool CheckSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr) { return false; }
 
         virtual void SetTolerance(dReal tolerance) {}
-    };
-
-    /// Base class for the graphics and gui engine. Derive a class called
-    /// Viewer for anything more specific
-    class DummyViewer : public ViewerBase
-    {
-    public:
-        DummyViewer(EnvironmentBasePtr penv) : ViewerBase(penv) {
-            _bQuitMainLoop = true;
-        }
-        virtual ~DummyViewer() {}
-
-        // dummy loop
-        virtual int main(bool bShow) {
-            boost::mutex::scoped_lock lock(_mutex);
-            if(!_bQuitMainLoop) {
-                return -1;
-            }
-            _bQuitMainLoop = false;
-            _cond.wait(lock);
-            return 0;
-        }
-        
-        virtual void quitmainloop() {
-            boost::mutex::scoped_lock lock(_mutex);
-            _bQuitMainLoop = true;
-            _cond.notify_all();
-        }
-
-        virtual void Reset() {}
-        virtual void SetBkgndColor(const RaveVector<float>& color) {}
-        
-        virtual OpenRAVE::GraphHandlePtr plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const RaveVector<float>& color, int drawstyle = 0) { return OpenRAVE::GraphHandlePtr(); }
-        virtual OpenRAVE::GraphHandlePtr plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const float* colors, int drawstyle = 0, bool bhasalpha=false) { return OpenRAVE::GraphHandlePtr(); }
-        virtual OpenRAVE::GraphHandlePtr drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color) { return OpenRAVE::GraphHandlePtr(); }
-        virtual OpenRAVE::GraphHandlePtr drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors) { return OpenRAVE::GraphHandlePtr(); }
-        virtual OpenRAVE::GraphHandlePtr drawlinelist(const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color) { return OpenRAVE::GraphHandlePtr(); }
-        virtual OpenRAVE::GraphHandlePtr drawlinelist(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors) { return OpenRAVE::GraphHandlePtr(); }
-        virtual OpenRAVE::GraphHandlePtr drawarrow(const RaveVector<float>& p1, const RaveVector<float>& p2, float fwidth, const RaveVector<float>& color) { return OpenRAVE::GraphHandlePtr(); }
-        virtual OpenRAVE::GraphHandlePtr drawbox(const RaveVector<float>& vpos, const RaveVector<float>& vextents) { return OpenRAVE::GraphHandlePtr(); }
-        virtual OpenRAVE::GraphHandlePtr drawplane(const RaveTransform<float>& tplane, const RaveVector<float>& vextents, const boost::multi_array<float,3>& vtexture) { return OpenRAVE::GraphHandlePtr(); }
-        virtual OpenRAVE::GraphHandlePtr drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const RaveVector<float>& color) { return OpenRAVE::GraphHandlePtr(); }
-        virtual OpenRAVE::GraphHandlePtr drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const boost::multi_array<float,2>& colors) { return OpenRAVE::GraphHandlePtr(); }
-
-        virtual void SetCamera(const RaveTransform<float>& trans, float focalDistance=0) {}
-        virtual bool GetCameraImage(std::vector<uint8_t>& memory, int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK) { return false; }
-    protected:
-        boost::mutex _mutex;
-        boost::condition _cond;
-        bool _bQuitMainLoop;
     };
 
     virtual void SetEnvironmentId(KinBodyPtr pbody)
@@ -1854,8 +1923,9 @@ protected:
     std::vector<RobotBasePtr> _vecrobots;  ///< robots (possibly controlled)
     std::vector<KinBodyPtr> _vecbodies; ///< all objects that are collidable (includes robots)
 
-    list<ProblemInstancePtr> _listProblems; ///< problems loaded in the environment
+    list<ModuleBasePtr> _listModules; ///< modules loaded in the environment
     list<SensorBasePtr> _listSensors; ///< sensors loaded in the environment
+    list<ViewerBasePtr> _listViewers; ///< viewers loaded in the environment
 
     dReal _fDeltaSimTime;                ///< delta time for simulate step
     uint64_t _nCurSimTime;                    ///< simulation time since the start of the environment
@@ -1865,7 +1935,6 @@ protected:
 
     CollisionCheckerBasePtr _pCurrentChecker;
     PhysicsEngineBasePtr _pPhysicsEngine;
-    ViewerBasePtr _pCurrentViewer;
     
     int _nEnvironmentIndex;               ///< next network index
     std::map<int, KinBodyWeakPtr> _mapBodies; ///< a map of all the bodies in the environment. Controlled through the KinBody constructor and destructors
@@ -1874,7 +1943,7 @@ protected:
 
     mutable EnvironmentMutex _mutexEnvironment;      ///< protects internal data from multithreading issues
     mutable boost::mutex _mutexEnvironmentIds;  ///< protects _vecbodies/_vecrobots from multithreading issues
-    mutable boost::mutex _mutexInterfaces; ///< lock when managing interfaces like _listOwnedInterfaces, _listProblems, _mapBodies
+    mutable boost::mutex _mutexInterfaces; ///< lock when managing interfaces like _listOwnedInterfaces, _listModules, _mapBodies
     mutable boost::mutex _mutexInit; ///< lock for destroying the environment
 
     vector<KinBody::BodyState> _vPublishedBodies;

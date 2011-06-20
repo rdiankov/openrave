@@ -16,44 +16,44 @@ import openravepy
 import numpy
 from copy import copy as shallowcopy
 class BaseManipulation:
-    """Interface wrapper for :ref:`probleminstance-basemanipulation`
+    """Interface wrapper for :ref:`module-basemanipulation`
     """
     def __init__(self,robot,plannername=None,maxvelmult=None):
         env = robot.GetEnv()
-        self.prob = openravepy.RaveCreateProblem(env,'BaseManipulation')
+        self.prob = openravepy.RaveCreateModule(env,'BaseManipulation')
         self.robot = robot
         self.args = self.robot.GetName()
         if plannername is not None:
             self.args += ' planner ' + plannername
         if maxvelmult is not None:
             self.args += ' maxvelmult %f '%maxvelmult
-        if env.LoadProblem(self.prob,self.args) != 0:
-            raise ValueError('problem failed to initialize')
+        if env.AddModule(self.prob,self.args) != 0:
+            raise ValueError('module failed to initialize')
     def  __del__(self):
         self.prob.GetEnv().Remove(self.prob)
     def clone(self,envother):
         """Clones the interface into another environment
         """
         clone = shallowcopy(self)
-        clone.prob = openravepy.RaveCreateProblem(envother,'BaseManipulation')
+        clone.prob = openravepy.RaveCreateModule(envother,'BaseManipulation')
         clone.robot = envother.GetRobot(self.robot.GetName())
-        if envother.LoadProblem(clone.prob,clone.args) != 0:
-            raise ValueError('problem failed to initialize')
+        if envother.AddModule(clone.prob,clone.args) != 0:
+            raise ValueError('module failed to initialize')
         return clone
     def TrajFromData(self,data,resettrans=False,resettiming=False):
-        """See :ref:`probleminstance-basemanipulation-traj`
+        """See :ref:`module-basemanipulation-traj`
         """
         return self.prob.SendCommand('traj stream ' + data + ' %d %d '%(resettrans,resettiming))
-    def ValidateTrajectory(self,data,resettrans=False,resettiming=False,samplingstep=None):
-        """See :ref:`probleminstance-basemanipulation-validatetrajectory`
+    def VerifyTrajectory(self,data,resettrans=False,resettiming=False,samplingstep=None):
+        """See :ref:`module-basemanipulation-verifytrajectory`
         """
-        cmd = 'ValidateTrajectory stream ' + data + ' resettiming %d resettiming %d '%(resettrans,resettiming)
+        cmd = 'VerifyTrajectory stream ' + data + ' resettiming %d resettiming %d '%(resettrans,resettiming)
         if samplingstep is not None:
             cmd += 'samplingstep %f '%samplingstep
         return self.prob.SendCommand(cmd)
     
-    def MoveHandStraight(self,direction,minsteps=None,maxsteps=None,stepsize=None,ignorefirstcollision=None,starteematrix=None,greedysearch=True,execute=None,outputtraj=None,maxdeviationangle=None):
-        """See :ref:`probleminstance-basemanipulation-movehandstraight`
+    def MoveHandStraight(self,direction,minsteps=None,maxsteps=None,stepsize=None,ignorefirstcollision=None,starteematrix=None,greedysearch=True,execute=None,outputtraj=None,maxdeviationangle=None,steplength=None):
+        """See :ref:`module-basemanipulation-movehandstraight`
         """
         cmd = 'MoveHandStraight direction %f %f %f '%(direction[0],direction[1],direction[2])
         if minsteps is not None:
@@ -61,7 +61,9 @@ class BaseManipulation:
         if maxsteps is not None:
             cmd += 'maxsteps %d '%maxsteps
         if stepsize is not None:
-            cmd += 'stepsize %f '%stepsize
+            cmd += 'steplength %f '%stepsize
+        if steplength is not None:
+            cmd += 'steplength %f '%steplength
         if execute is not None:
             cmd += 'execute %d '%execute
         if starteematrix is not None:
@@ -79,7 +81,7 @@ class BaseManipulation:
             raise openravepy.planning_error('MoveHandStraight')
         return res
     def MoveManipulator(self,goal,maxiter=None,execute=None,outputtraj=None,maxtries=None):
-        """See :ref:`probleminstance-basemanipulation-movemanipulator`
+        """See :ref:`module-basemanipulation-movemanipulator`
         """
         assert(len(goal) == len(self.robot.GetActiveManipulator().GetArmIndices()) and len(goal) > 0)
         cmd = 'MoveManipulator goal ' + ' '.join(str(f) for f in goal) + ' '
@@ -96,7 +98,7 @@ class BaseManipulation:
             raise openravepy.planning_error('MoveManipulator')
         return res
     def MoveActiveJoints(self,goal,steplength=None,maxiter=None,maxtries=None,execute=None,outputtraj=None):
-        """See :ref:`probleminstance-basemanipulation-moveactivejoints`
+        """See :ref:`module-basemanipulation-moveactivejoints`
         """
         assert(len(goal) == self.robot.GetActiveDOF() and len(goal) > 0)
         cmd = 'MoveActiveJoints goal ' + ' '.join(str(f) for f in goal)+' '
@@ -114,8 +116,8 @@ class BaseManipulation:
         if res is None:
             raise openravepy.planning_error('MoveActiveJoints')
         return res
-    def MoveToHandPosition(self,matrices=None,affinedofs=None,maxiter=None,maxtries=None,translation=None,rotation=None,seedik=None,constraintfreedoms=None,constraintmatrix=None,constrainterrorthresh=None,execute=None,outputtraj=None):
-        """See :ref:`probleminstance-basemanipulation-movetohandposition`
+    def MoveToHandPosition(self,matrices=None,affinedofs=None,maxiter=None,maxtries=None,translation=None,rotation=None,seedik=None,constraintfreedoms=None,constraintmatrix=None,constrainterrorthresh=None,execute=None,outputtraj=None,steplength=None):
+        """See :ref:`module-basemanipulation-movetohandposition`
         """
         cmd = 'MoveToHandPosition '
         if matrices is not None:
@@ -138,6 +140,8 @@ class BaseManipulation:
             cmd += 'constraintmatrix %s '%openravepy.matrixSerialization(constraintmatrix)
         if constrainterrorthresh is not None:
             cmd += 'constrainterrorthresh %s '%constrainterrorthresh
+        if steplength is not None:
+            cmd += 'steplength %f '%steplength
         if execute is not None:
             cmd += 'execute %d '%execute
         if outputtraj is not None and outputtraj:
@@ -147,7 +151,7 @@ class BaseManipulation:
             raise openravepy.planning_error('MoveToHandPosition')
         return res
     def MoveUnsyncJoints(self,jointvalues,jointinds,maxtries=None,planner=None,maxdivision=None,execute=None,outputtraj=None):
-        """See :ref:`probleminstance-basemanipulation-moveunsyncjoints`
+        """See :ref:`module-basemanipulation-moveunsyncjoints`
         """
         assert(len(jointinds)==len(jointvalues) and len(jointinds)>0)
         cmd = 'MoveUnsyncJoints handjoints %d %s %s '%(len(jointinds),' '.join(str(f) for f in jointvalues), ' '.join(str(f) for f in jointinds))
@@ -166,7 +170,7 @@ class BaseManipulation:
             raise openravepy.planning_error('MoveUnsyncJoints')
         return res
     def JitterActive(self,maxiter=None,jitter=None,execute=None,outputtraj=None,outputfinal=None):
-        """See :ref:`probleminstance-basemanipulation-jitteractive`
+        """See :ref:`module-basemanipulation-jitteractive`
         """
         cmd = 'JitterActive '
         if maxiter is not None:
@@ -194,7 +198,7 @@ class BaseManipulation:
             traj = None
         return final,traj
     def FindIKWithFilters(self,ikparam,cone=None,solveall=None,filteroptions=None):
-        """See :ref:`probleminstance-basemanipulation-findikwithfilters`
+        """See :ref:`module-basemanipulation-findikwithfilters`
         """
         cmd = 'FindIKWithFilters ikparam %s '%str(ikparam)
         if cone is not None:            

@@ -234,6 +234,8 @@ bool TrajectoryBase::SampleTrajectory(dReal time, TPOINT &sample) const
 
 bool TrajectoryBase::IsValid() const
 {
+    return true;
+
     RAVELOG_VERBOSE("Checking validity of trajectory points...\n");
     bool bResult = true;
 

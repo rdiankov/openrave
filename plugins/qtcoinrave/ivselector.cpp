@@ -276,7 +276,7 @@ void IvObjectDragger::UpdateSkeleton()
         CheckCollision(_checkCollision);
     }
     // other motion handler calls
-    _viewer->UpdateCameraTransform();
+    _viewer->_UpdateCameraTransform();
 }
 
 void IvObjectDragger::GetMessage(ostream& sout)
@@ -308,12 +308,15 @@ IvJointDragger::IvJointDragger(QtCoinViewerPtr viewer, ItemPtr pItem, int iSelec
     _trackball = NULL;
     _draggerRoot = NULL;
 
-    if( !pbody || !pbody->GetBody() )
+    if( !pbody || !pbody->GetBody() ) {
         return;
-    if( iSelectedLink < 0 || iSelectedLink >= (int)pbody->GetBody()->GetLinks().size() )
+    }
+    if( iSelectedLink < 0 || iSelectedLink >= (int)pbody->GetBody()->GetLinks().size() ) {
         return;
-    if( iJointIndex < 0 || iJointIndex >= (int)pbody->GetBody()->GetJoints().size() )
+    }
+    if( iJointIndex < 0 || iJointIndex >= (int)pbody->GetBody()->GetJoints().size() ) {
         return;
+    }
 
     _iSelectedLink = iSelectedLink;
     _iJointIndex = iJointIndex;
@@ -322,7 +325,7 @@ IvJointDragger::IvJointDragger(QtCoinViewerPtr viewer, ItemPtr pItem, int iSelec
     _jointtype = pjoint->GetType();
     _dofindex = pjoint->GetDOFIndex();
     _jointname = pjoint->GetName();
-    _jointoffset = pjoint->GetOffset();
+    _jointoffset = 0;//pjoint->GetOffset();
     pjoint->GetLimits(_vlower,_vupper);
 
     _pLinkNode = pbody->GetIvLink(iSelectedLink);
@@ -348,14 +351,16 @@ IvJointDragger::IvJointDragger(QtCoinViewerPtr viewer, ItemPtr pItem, int iSelec
     }
 
     Vector vaxes[3];
-    for(int i = 0; i < pjoint->GetDOF(); ++i)
+    for(int i = 0; i < pjoint->GetDOF(); ++i) {
         vaxes[i] = tlink.inverse().rotate(pjoint->GetAxis(i));
+    }
 
     // need to make sure the rotation is pointed towards the joint axis
     Vector vnorm = Vector(1,0,0).cross(vaxes[0]);
     dReal fsinang = RaveSqrt(vnorm.lengthsqr3());
-    if( fsinang > 0.0001f )
+    if( fsinang > 0.0001f ) {
         vnorm /= fsinang;   
+    }
     else vnorm = Vector(1,0,0);
     
     Vector vtrans = tlink.inverse()*pjoint->GetAnchor();
@@ -467,9 +472,10 @@ void IvJointDragger::UpdateSkeleton()
             vector<dReal> vlower,vupper;
             pjoint->GetLimits(vlower, vupper);
 
-            if( pjoint->GetType() == KinBody::Joint::JointSlider )
+            if( pjoint->GetType() == KinBody::Joint::JointSlider ) {
                 fang = fang*(vupper.at(0)-vlower.at(0))+vlower.at(0);
-
+            }
+            
             // update the joint's transform
             vector<dReal> vjoints;
             pbody->GetBody()->GetDOFValues(vjoints);
@@ -481,8 +487,9 @@ void IvJointDragger::UpdateSkeleton()
                 vjoints.at(d+1) = axis[1]*angle;
                 vjoints.at(d+2) = axis[2]*angle;
             }
-            else
+            else {
                 vjoints.at(d+0) = fang+_jointoffset;
+            }
 
             if( !!probotitem && !!probotitem->GetRobot()->GetController() ) {
                 probotitem->GetRobot()->GetController()->SetDesired(vjoints);
@@ -493,7 +500,7 @@ void IvJointDragger::UpdateSkeleton()
         }
     }
 
-    _viewer->UpdateCameraTransform();
+    _viewer->_UpdateCameraTransform();
 
     UpdateDragger();
 
@@ -508,9 +515,10 @@ void IvJointDragger::UpdateSkeleton()
 void IvJointDragger::UpdateDragger()
 {
     KinBodyItemPtr pbody = boost::dynamic_pointer_cast<KinBodyItem>(_selectedItem);
-    if( !pbody )
+    if( !pbody ) {
         return;
-    
+    }
+
     vector<dReal> vjoints;
     pbody->GetDOFValues(vjoints);
 
@@ -522,10 +530,12 @@ void IvJointDragger::UpdateDragger()
     else {
         float fang = vjoints[_dofindex]-_jointoffset;
         if( _jointtype == KinBody::Joint::JointSlider ) {
-            if( _vupper[0] > _vlower[0] )
+            if( _vupper[0] > _vlower[0] ) {
                 fang = (fang-_vlower[0])/(_vupper[0]-_vlower[0]);
-            else
+            }
+            else {
                 fang = 0;
+            }
         }
         _trackball->rotation = SbRotation(SbVec3f(1,0,0), fang);
     }
@@ -534,8 +544,9 @@ void IvJointDragger::UpdateDragger()
 void IvJointDragger::GetMessage(ostream& sout)
 {
     KinBodyItemPtr pbody = boost::dynamic_pointer_cast<KinBodyItem>(_selectedItem);
-    if( !pbody )
+    if( !pbody ) {
         return;
+    }
 
     vector<dReal> vjoints;
     pbody->GetDOFValues(vjoints);
@@ -544,6 +555,7 @@ void IvJointDragger::GetMessage(ostream& sout)
          << std::fixed << std::setprecision(3)
          << "  joint " << _jointname << " (" << _iJointIndex << ") "  << " = " << vjoints[_iJointIndex];
 
-    if( pbody->GetBody()->GetJoints()[_iJointIndex]->GetType() != KinBody::Joint::JointSlider )
+    if( pbody->GetBody()->GetJoints()[_iJointIndex]->GetType() != KinBody::Joint::JointSlider ) {
         sout << " rad (" << (vjoints[_iJointIndex]/PI*180.0f) << " deg)" << endl;
+    }
 }

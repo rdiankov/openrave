@@ -15,24 +15,24 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "commonmanipulation.h"
 
-class BaseManipulation : public ProblemInstance
+class BaseManipulation : public ModuleBase
 {
 public:
-    BaseManipulation(EnvironmentBasePtr penv) : ProblemInstance(penv) {
+    BaseManipulation(EnvironmentBasePtr penv) : ModuleBase(penv) {
         __description = ":Interface Author: Rosen Diankov\n\nVery useful routines for manipulation planning and planning in general. The planners use analytical inverse kinematics and search based techniques.";
         RegisterCommand("SetActiveManip",boost::bind(&BaseManipulation::SetActiveManip,this,_1,_2),
                         "Set the active manipulator");
         RegisterCommand("Traj",boost::bind(&BaseManipulation::Traj,this,_1,_2),
                         "Execute a trajectory from a file on the local filesystem");
-        RegisterCommand("ValidateTrajectory",boost::bind(&BaseManipulation::_ValidateTrajectory,this,_1,_2),
-                        "Validates the robot trajectory by checking collisions with the environment and other user-specified constraints.");
+        RegisterCommand("VerifyTrajectory",boost::bind(&BaseManipulation::_VerifyTrajectoryCommand,this,_1,_2),
+                        "Verifies the robot trajectory by checking collisions with the environment and other user-specified constraints.");
         RegisterCommand("GrabBody",boost::bind(&BaseManipulation::GrabBody,this,_1,_2),
                         "Robot calls ::Grab on a body with its current manipulator");
         RegisterCommand("ReleaseAll",boost::bind(&BaseManipulation::ReleaseAll,this,_1,_2),
                         "Releases all grabbed bodies (RobotBase::ReleaseAllGrabbed).");
         RegisterCommand("MoveHandStraight",boost::bind(&BaseManipulation::MoveHandStraight,this,_1,_2),
                         "Move the active end-effector in a straight line until collision or IK fails. Parameters:\n\n\
-- stepsize - the increments in workspace in which the robot tests for the next configuration.\n\n\
+- steplength - the increments in workspace in which the robot tests for the next configuration.\n\n\
 - minsteps - The minimum number of steps that need to be taken in order for success to declared. If robot doesn't reach this number of steps, it fails.\n\n\
 - maxsteps - The maximum number of steps the robot should take.\n\n\
 - direction - The workspace direction to move end effector in.\n\n\
@@ -40,9 +40,13 @@ Method wraps the WorkspaceTrajectoryTracker planner. For more details on paramet
         RegisterCommand("MoveManipulator",boost::bind(&BaseManipulation::MoveManipulator,this,_1,_2),
                         "Moves arm joints of active manipulator to a given set of joint values");
         RegisterCommand("MoveActiveJoints",boost::bind(&BaseManipulation::MoveActiveJoints,this,_1,_2),
-                        "Moves the current active joints to a specified goal destination\n");
-        RegisterCommand("MoveToHandPosition",boost::bind(&BaseManipulation::MoveToHandPosition,this,_1,_2),
-                        "Move the manipulator's end effector to some 6D pose.");
+                        "Moves the current active joints to a specified goal destination:\n\n\
+- maxiter - The maximum number of iterations on the internal planner.\n\
+- maxtries - The maximum number of times to restart the planner.\n\
+- steplength - See PlannerParameters::_fStepLength\n\n");
+        RegisterCommand("MoveToHandPosition",boost::bind(&BaseManipulation::_MoveToHandPosition,this,_1,_2),
+                        "Move the manipulator's end effector to reach a set of 6D poses. Parameters:\n\n\
+- ");
         RegisterCommand("MoveUnsyncJoints",boost::bind(&BaseManipulation::MoveUnsyncJoints,this,_1,_2),
                         "Moves the active joints to a position where the inactive (hand) joints can\n"
                         "fully move to their goal. This is necessary because synchronization with arm\n"
@@ -57,7 +61,6 @@ Method wraps the WorkspaceTrajectoryTracker planner. For more details on paramet
 - ikparam - The serialized ik parameterization to use for FindIKSolution(s).\n\
 - filteroptions\n\
 ");
-        _fMaxVelMult=1;
     }
 
     virtual ~BaseManipulation() {}
@@ -65,22 +68,23 @@ Method wraps the WorkspaceTrajectoryTracker planner. For more details on paramet
     virtual void Destroy()
     {
         robot.reset();
-        ProblemInstance::Destroy();
+        ModuleBase::Destroy();
     }
     
     virtual void Reset()
     {
-        ProblemInstance::Reset();
+        ModuleBase::Reset();
     }
 
     virtual int main(const std::string& args)
     {
+        _fMaxVelMult=1;
+
         string strRobotName;
         stringstream ss(args);
         ss >> strRobotName;
         robot = GetEnv()->GetRobot(strRobotName);
 
-        _fMaxVelMult=1;
         string cmd;
         while(!ss.eof()) {
             ss >> cmd;
@@ -123,7 +127,7 @@ Method wraps the WorkspaceTrajectoryTracker planner. For more details on paramet
     virtual bool SendCommand(std::ostream& sout, std::istream& sinput)
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
-        return ProblemInstance::SendCommand(sout,sinput);
+        return ModuleBase::SendCommand(sout,sinput);
     }
 protected:
 
@@ -247,7 +251,7 @@ protected:
             else if( cmd == "maxsteps") {
                 sinput >> maxsteps;
             }
-            else if( cmd == "stepsize") {
+            else if( cmd == "steplength" || cmd == "stepsize") {
                 sinput >> params->_fStepLength;
             }
             else if( cmd == "execute" ) {
@@ -338,6 +342,9 @@ protected:
         if( !planner->PlanPath(poutputtraj) ) {
             return false;
         }
+        if( RaveGetDebugLevel() & Level_VerifyPlans ) {
+            planningutils::VerifyTrajectory(params,poutputtraj);
+        }
         CM::SetActiveTrajectory(robot, poutputtraj, bExecute, strtrajfilename, pOutputTrajStream,_fMaxVelMult);
         return true;
     }
@@ -403,7 +410,6 @@ protected:
 
         robot->SetActiveDOFs(pmanip->GetArmIndices());
         params->SetRobotActiveJoints(robot);
-        planningutils::JitterActiveDOF(robot);
     
         TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF());
 
@@ -416,9 +422,10 @@ protected:
             RAVELOG_WARN("jitter failed\n");
             return false;
         }
+
         robot->GetActiveDOFValues(params->vgoalconfig);
         robot->SetActiveDOFValues(values);
-    
+
         // jitter again for initial collision
         if( planningutils::JitterActiveDOF(robot) == 0 ) {
             RAVELOG_WARN("jitter failed\n");
@@ -446,11 +453,16 @@ protected:
                 RAVELOG_INFO("finished planning\n");
                 break;
             }
-            else RAVELOG_WARN("PlanPath failed\n");
+            else {
+                RAVELOG_WARN("PlanPath failed\n");
+            }
         }
 
         if( !bSuccess ) {
             return false;
+        }
+        if( RaveGetDebugLevel() & Level_VerifyPlans ) {
+            planningutils::VerifyTrajectory(params, ptraj);
         }
         CM::SetActiveTrajectory(robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream,_fMaxVelMult);
         sout << "1";
@@ -560,11 +572,14 @@ protected:
         if( !bSuccess ) {
             return false;
         }
+        if( RaveGetDebugLevel() & Level_VerifyPlans ) {
+            planningutils::VerifyTrajectory(params, ptraj);
+        }
         CM::SetActiveTrajectory(robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream,_fMaxVelMult);
         return true;
     }
 
-    bool MoveToHandPosition(ostream& sout, istream& sinput)
+    bool _MoveToHandPosition(ostream& sout, istream& sinput)
     {
         RAVELOG_DEBUG("Starting MoveToHandPosition...\n");
         RobotBase::ManipulatorConstPtr pmanip = robot->GetActiveManipulator();        
@@ -656,6 +671,9 @@ protected:
             else if( cmd == "seedik" ) {
                 sinput >> nSeedIkSolutions;
             }
+            else if( cmd == "steplength" ) {
+                sinput >> params->_fStepLength;
+            }
             else if( cmd == "constraintfreedoms" ) {
                 FOREACH(it,vconstraintfreedoms) {
                     sinput >> *it;
@@ -702,7 +720,7 @@ protected:
         params->vgoalconfig.reserve(nSeedIkSolutions*robot->GetActiveDOF());
         while(nSeedIkSolutions > 0) {
             if( goalsampler.Sample(vgoal) ) {
-                if( constrainterrorthresh > 0 && !planningutils::JitterActiveDOF(robot,5000,0.03,params->_neighstatefn) ) {
+                if( constrainterrorthresh > 0 && planningutils::JitterActiveDOF(robot,5000,0.03,params->_neighstatefn) == 0 ) {
                     RAVELOG_DEBUG("constraint function failed\n");
                     continue;
                 }
@@ -755,14 +773,18 @@ protected:
                 RAVELOG_INFO("finished planning\n");
                 break;
             }
-            else
+            else {
                 RAVELOG_WARN("PlanPath failed\n");
+            }
         }
 
         rrtplanner.reset(); // have to destroy before environment
     
         if( !bSuccess ) {
             return false;
+        }
+        if( RaveGetDebugLevel() & Level_VerifyPlans ) {
+            planningutils::VerifyTrajectory(params, ptraj);
         }
         CM::SetActiveTrajectory(robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream,_fMaxVelMult);
         sout << "1";
@@ -1010,7 +1032,7 @@ protected:
         return true;
     }
 
-    bool _ValidateTrajectory(ostream& sout, istream& sinput)
+    bool _VerifyTrajectoryCommand(ostream& sout, istream& sinput)
     {
         TrajectoryBasePtr ptraj;
         dReal samplingstep = 0.001;
@@ -1063,23 +1085,16 @@ protected:
         }
 
         RobotBase::RobotStateSaver saver(robot);
-        CollisionReportPtr preport(new CollisionReport());
-
-        for(dReal t = 0; t <= ptraj->GetTotalDuration(); t += samplingstep) {
-            TrajectoryBase::TPOINT tp;
-            ptraj->SampleTrajectory(t,tp);
-            robot->SetDOFValues(tp.q, tp.trans,true);
-            if( GetEnv()->CheckCollision(robot,preport) ) {
-                RAVELOG_WARN(str(boost::format("CheckCollision failed at time %f")%t));
-                return false;
-            }
-            if( robot->CheckSelfCollision(preport) ) {
-                RAVELOG_WARN(str(boost::format("CheckSelfCollision failed at time %f")%t));
-                return false;
-            }
+        PlannerBase::PlannerParametersPtr params(new PlannerBase::PlannerParameters());
+        params->SetRobotActiveJoints(robot);
+        try{
+            planningutils::VerifyTrajectory(params,ptraj,samplingstep);
+            return true;
         }
-
-        return true;
+        catch(const openrave_exception& ex) {
+            RAVELOG_WARN("%s\n",ex.what());
+        }
+        return false;
     }
 
     bool GrabBody(ostream& sout, istream& sinput)
@@ -1144,4 +1159,4 @@ protected:
     dReal _fMaxVelMult;
 };
 
-ProblemInstancePtr CreateBaseManipulation(EnvironmentBasePtr penv) { return ProblemInstancePtr(new BaseManipulation(penv)); }
+ModuleBasePtr CreateBaseManipulation(EnvironmentBasePtr penv) { return ModuleBasePtr(new BaseManipulation(penv)); }

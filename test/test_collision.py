@@ -11,12 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from openravepy import *
-from numpy import *
-from itertools import izip, combinations
-import nose
 from common_test_openrave import *
-
 _multiprocess_can_split_ = True
 
 class TestCollision(EnvironmentSetup):

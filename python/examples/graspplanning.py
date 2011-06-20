@@ -50,9 +50,10 @@ if not __build_doc__:
     from numpy import *
 
 class GraspPlanning:
-    def __init__(self,robot,randomize=False,dests=None,nodestinations=False,switchpatterns=None):
+    def __init__(self,robot,randomize=False,dests=None,nodestinations=False,switchpatterns=None,plannername=None):
         self.envreal = robot.GetEnv()
         self.robot = robot
+        self.plannername=plannername
         self.nodestinations = nodestinations
         self.ikmodel = databases.inversekinematics.InverseKinematicsModel(robot=robot,iktype=IkParameterization.Type.Transform6D)
         if not self.ikmodel.load():
@@ -63,7 +64,7 @@ class GraspPlanning:
 #             self.cdmodel.autogenerate()
         self.switchpatterns = switchpatterns
         with self.envreal:
-            self.basemanip = interfaces.BaseManipulation(self.robot)
+            self.basemanip = interfaces.BaseManipulation(self.robot,plannername=plannername)
             self.taskmanip = None
             self.updir = array((0,0,1))
             
@@ -204,7 +205,7 @@ class GraspPlanning:
         env = self.envreal#.CloneSelf(CloningOptions.Bodies)
         robot = self.robot
         with env:
-            self.taskmanip = interfaces.TaskManipulation(self.robot,graspername=gmodel.grasper.plannername)
+            self.taskmanip = interfaces.TaskManipulation(self.robot,graspername=gmodel.grasper.plannername,plannername=self.plannername)
             if self.switchpatterns is not None:
                 self.taskmanip.SwitchModels(switchpatterns=self.switchpatterns)
             robot.SetActiveManipulator(gmodel.manip)
@@ -333,7 +334,7 @@ def main(env,options):
     robot = env.GetRobots()[0]
     env.UpdatePublishedBodies()
     time.sleep(0.1) # give time for environment to update
-    self = GraspPlanning(robot,randomize=options.randomize,nodestinations=options.nodestinations)
+    self = GraspPlanning(robot,randomize=options.randomize,nodestinations=options.nodestinations,plannername=options.planner)
     self.performGraspPlanning(withreplacement=not options.testmode)
 
 from optparse import OptionParser
@@ -354,6 +355,8 @@ def run(args=None):
                       help='If set, will plan without destinations.')
     parser.add_option('--norandomize', action='store_false',dest='randomize',default=True,
                       help='If set, will not randomize the bodies and robot position in the scene.')
+    parser.add_option('--planner',action="store",type='string',dest='planner',default=None,
+                      help='the planner to use')
     (options, leftargs) = parser.parse_args(args=args)
     env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
     main(env,options)

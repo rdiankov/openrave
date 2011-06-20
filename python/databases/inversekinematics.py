@@ -202,9 +202,9 @@ class InverseKinematicsModel(DatabaseGenerator):
         :param forceikfast: if set will always force the ikfast solver
         """
         DatabaseGenerator.__init__(self,robot=robot)
-        self.ikfastproblem = RaveCreateProblem(self.env,'ikfast')
+        self.ikfastproblem = RaveCreateModule(self.env,'ikfast')
         if self.ikfastproblem is not None:
-            self.env.LoadProblem(self.ikfastproblem,'')
+            self.env.AddModule(self.ikfastproblem,'')
         self.iktype = iktype
         self.iksolver = None
         self.freeinc = None
@@ -233,9 +233,9 @@ class InverseKinematicsModel(DatabaseGenerator):
                 log.debug('__del__ %s',e)
     def clone(self,envother):
         clone = DatabaseGenerator.clone(self,envother)
-        clone.ikfastproblem = RaveCreateProblem(envother,'ikfast')
+        clone.ikfastproblem = RaveCreateModule(envother,'ikfast')
         if clone.ikfastproblem is not None:
-            envother.LoadProblem(clone.ikfastproblem,'')
+            envother.AddModule(clone.ikfastproblem,'')
         if self.has():
             clone.setrobot(self.freeinc)
         return clone

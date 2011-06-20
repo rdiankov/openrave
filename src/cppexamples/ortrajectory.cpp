@@ -53,7 +53,7 @@ using namespace std;
 void SetViewer(EnvironmentBasePtr penv, const string& viewername)
 {
     ViewerBasePtr viewer = RaveCreateViewer(penv,viewername);
-    penv->AttachViewer(viewer);
+    penv->AddViewer(viewer);
     viewer->main(true);
 }
 

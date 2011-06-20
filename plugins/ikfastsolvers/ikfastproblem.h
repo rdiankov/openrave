@@ -39,7 +39,7 @@
 
 #define DECLFNPTR(name, paramlist) (*name) paramlist
 
-class IKFastProblem : public ProblemInstance
+class IKFastProblem : public ModuleBase
 {
     typedef int DECLFNPTR(getNumFreeParametersFn, ());
     typedef int* DECLFNPTR(getFreeParametersFn, ());
@@ -187,7 +187,7 @@ class IKFastProblem : public ProblemInstance
     inline boost::shared_ptr<IKFastProblem const> shared_problem_const() const { return boost::static_pointer_cast<IKFastProblem const>(shared_from_this()); }
 
 public:
-    IKFastProblem(EnvironmentBasePtr penv) : ProblemInstance(penv)
+    IKFastProblem(EnvironmentBasePtr penv) : ModuleBase(penv)
     {
         __description = ":Interface Author: Rosen Diankov\n\nAllows dynamic loading and registering of ikfast shared objects to openrave plugins.\nAlso contains several test routines for inverse kinematics.";
         RegisterCommand("AddIkLibrary",boost::bind(&IKFastProblem::AddIkLibrary,this,_1,_2),

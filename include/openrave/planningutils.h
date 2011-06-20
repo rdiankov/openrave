@@ -35,6 +35,16 @@ namespace planningutils {
     /// \brief Jitters the transform of a body until it escapes collision.
     OPENRAVE_API bool JitterTransform(KinBodyPtr pbody, float fJitter, int nMaxIterations=1000);
 
+    /** \brief validates a trajectory with respect to the planning constraints.
+    
+        checks internal data structures and verifies that all trajectory via points do not violate joint position, velocity, and acceleration limits.
+        \param trajectory trajectory of points to be checked
+        \param parameters the planner parameters passed to the planner that returned the trajectory
+        \param samplingstep If == 0, then will only test the supports points in trajectory->GetPoints(). If > 0, then will sample the trajectory at this time interval.
+        \throw openrave_exception If the trajectory is invalid, will throw ORE_InconsistentConstraints.
+    */
+    OPENRAVE_API void VerifyTrajectory(PlannerBase::PlannerParametersConstPtr parameters, TrajectoryBaseConstPtr trajectory, dReal samplingstep=0);
+
     /// \brief Line collision
     class OPENRAVE_API LineCollisionConstraint
     {
@@ -47,6 +57,7 @@ namespace planningutils {
         CollisionReportPtr _report;
     };
 
+    /// \brief simple distance metric based on joint weights
     class OPENRAVE_API SimpleDistanceMetric
     {
     public:
@@ -99,6 +110,7 @@ namespace planningutils {
         std::vector<dReal> _vfreestart;
     };
 
+    
 } // planningutils
 } // OpenRAVE
 

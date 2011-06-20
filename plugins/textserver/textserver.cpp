@@ -20,7 +20,7 @@
 InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
 {
     switch(type) {
-    case OpenRAVE::PT_ProblemInstance:
+    case OpenRAVE::PT_Module:
         if( interfacename == "textserver")
             return InterfaceBasePtr(new SimpleTextServer(penv));
         break;
@@ -32,7 +32,7 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
 
 void GetPluginAttributesValidated(PLUGININFO& info)
 {
-    info.interfacenames[OpenRAVE::PT_ProblemInstance].push_back("textserver");
+    info.interfacenames[OpenRAVE::PT_Module].push_back("textserver");
 }
 
 OPENRAVE_PLUGIN_API void DestroyPlugin()

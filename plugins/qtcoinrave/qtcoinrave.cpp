@@ -16,7 +16,7 @@
 #include "qtcameraviewer.h"
 #include <openrave/plugin.h>
 
-ProblemInstancePtr CreateIvModelLoader(EnvironmentBasePtr penv);
+ModuleBasePtr CreateIvModelLoader(EnvironmentBasePtr penv);
 
 InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
 {
@@ -25,16 +25,16 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
     case PT_Viewer:
         if( interfacename == "qtcoin" ) {
             if( QtCoinViewer::s_InitRefCount == 0 ) {
-                SoQt::init(s_SoQtArgc, NULL, NULL);
                 ++QtCoinViewer::s_InitRefCount;
+                SoQt::init(s_SoQtArgc, NULL, NULL);
             }
             return InterfaceBasePtr(new QtCoinViewer(penv));
         }
-        if( interfacename == "qtcameraviewer" ) {
+        else if( interfacename == "qtcameraviewer" ) {
             return InterfaceBasePtr(new QtCameraViewer(penv,sinput));
         }
         break;
-    case PT_ProblemInstance:
+    case PT_Module:
         if( interfacename == "ivmodelloader" ) {
             return CreateIvModelLoader(penv);
         }
@@ -49,7 +49,7 @@ void GetPluginAttributesValidated(PLUGININFO& info)
 {
     info.interfacenames[PT_Viewer].push_back("QtCoin");
     info.interfacenames[PT_Viewer].push_back("QtCameraViewer");
-    info.interfacenames[PT_ProblemInstance].push_back("IvModelLoader");
+    info.interfacenames[PT_Module].push_back("IvModelLoader");
 }
 
 OPENRAVE_PLUGIN_API void DestroyPlugin()

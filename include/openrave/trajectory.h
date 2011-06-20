@@ -125,14 +125,14 @@ public:
     /// getting information about the trajectory
     inline dReal GetTotalDuration() const      { return _vecpoints.size() > 0 ? _vecpoints.back().time : 0; }
     InterpEnum GetInterpMethod() const         { return _interpMethod; }
-    const std::vector<TPOINT>& GetPoints() const { return _vecpoints; }
-    std::vector<TPOINT>& GetPoints() { return _vecpoints; }
-    const std::vector<TSEGMENT>& GetSegments() const { return _vecsegments; }
+    const std::vector<TrajectoryBase::TPOINT>& GetPoints() const { return _vecpoints; }
+    std::vector<TrajectoryBase::TPOINT>& GetPoints() { return _vecpoints; }
+    const std::vector<TrajectoryBase::TSEGMENT>& GetSegments() const { return _vecsegments; }
 
     virtual void Clear();
 
     /// add a point to the trajectory
-    virtual void AddPoint(const TPOINT& p) { assert( _nDOF == (int)p.q.size()); _vecpoints.push_back(p); }
+    virtual void AddPoint(const TrajectoryBase::TPOINT& p) { assert( _nDOF == (int)p.q.size()); _vecpoints.push_back(p); }
 
     /** \brief Preprocesses the trajectory for later sampling and set its interpolation method.
         
@@ -147,17 +147,14 @@ public:
     */
     virtual bool CalcTrajTiming(RobotBaseConstPtr robot, InterpEnum interpolationMethod, bool bAutoCalcTiming, bool bActiveDOFs, dReal fMaxVelMult=1);
 
-    /// perform basic error checking on the trajectory internal data.
-    ///
-    /// checks internal data structures and verifies that all trajectory
-    /// via points do not violate joint position, velocity, and
-    /// acceleration limits.
-    virtual bool IsValid() const;
+    /// \deprecated (11/06/14) see planningutils::ValidateTrajectory
+    virtual bool IsValid() const RAVE_DEPRECATED;
+
     /// tests if a point violates any position, velocity or accel constraints
     //virtual bool  IsValidPoint(const TPOINT& tp) const;
 
     /// \brief Sample the trajectory at the given time using the current interpolation method.
-    virtual bool SampleTrajectory(dReal  time, TPOINT &sample) const;
+    virtual bool SampleTrajectory(dReal  time, TrajectoryBase::TPOINT &sample) const;
 
     /// Write to a stream, see TrajectoryOptions for file format
     /// \param sinput stream to read the data from
@@ -191,7 +188,7 @@ private:
 
     /// calculate the coefficients of a smooth cubic spline with
     ///  continuous endpoint positions and velocities for via points.
-    virtual void _CalculateCubicCoefficients(TSEGMENT& , const TPOINT& tp0, const TPOINT& tp1);
+    virtual void _CalculateCubicCoefficients(TrajectoryBase::TSEGMENT& , const TrajectoryBase::TPOINT& tp0, const TrajectoryBase::TPOINT& tp1);
 
     //bool _SetQuintic(bool bAutoCalcTiming, bool bActiveDOFs);
 
@@ -205,22 +202,22 @@ private:
 
     /// computes minimum time interval for linear interpolation between
     ///  path points that does not exceed the maximum joint velocities 
-    virtual dReal _MinimumTimeLinear(const TPOINT& p0, const TPOINT& p1, bool bActiveDOFs);
+    virtual dReal _MinimumTimeLinear(const TrajectoryBase::TPOINT& p0, const TrajectoryBase::TPOINT& p1, bool bActiveDOFs);
 
     /// computes minimum time interval for cubic interpolation between
     ///  path points that does not exceed the maximum joint velocities 
     ///  or accelerations
-    virtual dReal _MinimumTimeCubic(const TPOINT& p0, const TPOINT& p1, bool bActiveDOFs);
+    virtual dReal _MinimumTimeCubic(const TrajectoryBase::TPOINT& p0, const TrajectoryBase::TPOINT& p1, bool bActiveDOFs);
 
     /// computes minimum time interval for cubic interpolation between
     ///  path points that does not exceed the maximum joint velocities 
     ///  or accelerations assuming zero velocities at endpoints
-    virtual dReal _MinimumTimeCubicZero(const TPOINT& p0, const TPOINT& p1, bool bActiveDOFs);
+    virtual dReal _MinimumTimeCubicZero(const TrajectoryBase::TPOINT& p0, const TrajectoryBase::TPOINT& p1, bool bActiveDOFs);
 
     /// computes minimum time interval for quintic interpolation between
     ///  path points that does not exceed the maximum joint velocities 
     ///  or accelerations
-    virtual dReal _MinimumTimeQuintic(const TPOINT& p0, const TPOINT& p1, bool bActiveDOFs);
+    virtual dReal _MinimumTimeQuintic(const TrajectoryBase::TPOINT& p0, const TrajectoryBase::TPOINT& p1, bool bActiveDOFs);
     virtual dReal _MinimumTimeTransform(const Transform& t0, const Transform& t1);
 
     /// find the active trajectory interval covering the given time
@@ -228,18 +225,18 @@ private:
     virtual int _FindActiveInterval(dReal time) const;
 
     /// \brief Sample the trajectory using linear interpolation.
-    virtual bool _SampleLinear(const TPOINT& p0, const TPOINT& p1, const TSEGMENT& seg, dReal time, TPOINT& sample) const;
+    virtual bool _SampleLinear(const TrajectoryBase::TPOINT& p0, const TrajectoryBase::TPOINT& p1, const TrajectoryBase::TSEGMENT& seg, dReal time, TrajectoryBase::TPOINT& sample) const;
 
     /// \brief Sample using linear interpolation with parabolic blends.
-    virtual bool _SampleLinearBlend(const TPOINT& p0, const TPOINT& p1, const TSEGMENT& seg, dReal time, TPOINT& sample) const;
+    virtual bool _SampleLinearBlend(const TrajectoryBase::TPOINT& p0, const TrajectoryBase::TPOINT& p1, const TrajectoryBase::TSEGMENT& seg, dReal time, TrajectoryBase::TPOINT& sample) const;
 
     /// \brief Sample the trajectory using cubic interpolation.
-    virtual bool _SampleCubic(const TPOINT& p0, const TPOINT& p1, const TSEGMENT& seg, dReal time, TPOINT& sample) const;
+    virtual bool _SampleCubic(const TrajectoryBase::TPOINT& p0, const TrajectoryBase::TPOINT& p1, const TrajectoryBase::TSEGMENT& seg, dReal time, TrajectoryBase::TPOINT& sample) const;
 
     /// \brief Sample the trajectory using quintic interpolation with minimum jerk.
-    virtual bool _SampleQuintic(const TPOINT& p0, const TPOINT& p1, const TSEGMENT& seg, dReal time, TPOINT& sample) const;
+    virtual bool _SampleQuintic(const TrajectoryBase::TPOINT& p0, const TrajectoryBase::TPOINT& p1, const TrajectoryBase::TSEGMENT& seg, dReal time, TrajectoryBase::TPOINT& sample) const;
 
-    std::vector<TPOINT> _vecpoints;
+    std::vector<TrajectoryBase::TPOINT> _vecpoints;
     std::vector<TSEGMENT> _vecsegments;
     std::vector<dReal> _lowerJointLimit, _upperJointLimit, _maxJointVel, _maxJointAccel;
     Vector _maxAffineTranslationVel;

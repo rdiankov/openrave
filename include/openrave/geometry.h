@@ -520,6 +520,39 @@ public:
     T fcosfovx,fsinfovx,fcosfovy,fsinfovy;
 };
 
+/// \brief intrinsic parameters for a camera.
+template <typename T>
+class RaveCameraIntrinsics
+{
+public:
+    RaveCameraIntrinsics() : fx(0),fy(0),cx(0),cy(0), focal_length(0.01) {}
+    RaveCameraIntrinsics(T fx, T fy, T cx, T cy) : fx(fx), fy(fy), cx(cx), cy(cy), focal_length(0.01) {}
+
+    template <typename U>
+    RaveCameraIntrinsics<T>& operator=(const RaveCameraIntrinsics<U>& r)
+    {
+        distortion_model = r.distortion_model;
+        distortion_coeffs.resize(r.distortion_coeffs.size());
+        std::copy(r.distortion_coeffs.begin(),r.distortion_coeffs.end(),distortion_coeffs.begin());
+        focal_length = r.focal_length;
+        fx = r.fx;
+        fy = r.fy;
+        cx = r.cx;
+        cy = r.cy;
+    }
+
+    T fx,fy, cx,cy;
+
+    /** \brief distortion model of the camera. if left empty, no distortion model is used.
+
+        Possible values are:
+        - "plumb_bob" - Brown. "Decentering Distortion of Lenses", Photometric Engineering, pages 444-462, Vol. 32, No. 3, 1966
+    */
+    std::string distortion_model;
+    std::vector<T> distortion_coeffs; ///< coefficients of the distortion model
+    T focal_length; ///< physical focal length distance since focal length cannot be recovered from the intrinsic matrix, but is necessary for determining the lens plane.
+};
+
 /// Don't add new lines to the output << operators. Some applications use it to serialize the data
 /// to send across the network.
 /// \name Primitive Serialization functions.

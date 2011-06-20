@@ -187,7 +187,7 @@ public:
         case IkParameterization::Type_TranslationXY2D: SetTranslationXY2D(o); break;
         case IkParameterization::Type_TranslationXYOrientation3D: SetTranslationXYOrientation3D(o); break;
         case IkParameterization::Type_TranslationLocalGlobal6D: SetTranslationLocalGlobal6D(o[0],o[1]); break;
-        default: throw openrave_exception(boost::str(boost::format("incorrect ik parameterization type %d")%type));
+        default: throw OPENRAVE_EXCEPTION_FORMAT("incorrect ik parameterization type 0x%x", type, ORE_InvalidArguments);
         }
     }
     PyIkParameterization(const IkParameterization& ikparam) : _param(ikparam) {}
@@ -271,7 +271,7 @@ std::string openravepyCompilerVersion()
     return ss.str();
 }
 
-void raveLog(const string& s, DebugLevel level)
+void raveLog(const string& s, int level)
 {
     if( s.size() > 0 ) {
         RavePrintfA(s,level);
@@ -542,6 +542,7 @@ void init_openravepy_global()
         .value("Info",Level_Info)
         .value("Debug",Level_Debug)
         .value("Verbose",Level_Verbose)
+        .value("VerifyPlans",Level_VerifyPlans)
         ;
     enum_<SerializationOptions>("SerializationOptions" DOXY_ENUM(SerializationOptions))
         .value("Kinematics",SO_Kinematics)
@@ -557,7 +558,8 @@ void init_openravepy_global()
         .value(RaveGetInterfaceName(PT_Robot).c_str(),PT_Robot)
         .value(RaveGetInterfaceName(PT_SensorSystem).c_str(),PT_SensorSystem)
         .value(RaveGetInterfaceName(PT_Controller).c_str(),PT_Controller)
-        .value(RaveGetInterfaceName(PT_ProblemInstance).c_str(),PT_ProblemInstance)
+        .value("probleminstance",PT_Module)
+        .value(RaveGetInterfaceName(PT_Module).c_str(),PT_Module)
         .value(RaveGetInterfaceName(PT_IkSolver).c_str(),PT_IkSolver)
         .value(RaveGetInterfaceName(PT_KinBody).c_str(),PT_KinBody)
         .value(RaveGetInterfaceName(PT_PhysicsEngine).c_str(),PT_PhysicsEngine)

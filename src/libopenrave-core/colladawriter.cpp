@@ -917,9 +917,9 @@ class ColladaWriter : public daeErrorHandler
                 kmout->vaxissids.push_back(axissid);
                 domAxisRef paxis = daeSafeCast<domAxis>(vaxes.at(ia)->add(COLLADA_ELEMENT_AXIS));
                 paxis->getValue().setCount(3);
-                paxis->getValue()[0] = pjoint->vAxes.at(ia).x;
-                paxis->getValue()[1] = pjoint->vAxes.at(ia).y;
-                paxis->getValue()[2] = pjoint->vAxes.at(ia).z;
+                paxis->getValue()[0] = pjoint->GetInternalHierarchyAxis(ia).x;
+                paxis->getValue()[1] = pjoint->GetInternalHierarchyAxis(ia).y;
+                paxis->getValue()[2] = pjoint->GetInternalHierarchyAxis(ia).z;
                 if( !pjoint->IsCircular(ia) ) {
                     domJoint_limitsRef plimits = daeSafeCast<domJoint_limits>(vaxes[ia]->add(COLLADA_TYPE_LIMITS));
                     daeSafeCast<domMinmax>(plimits->add(COLLADA_ELEMENT_MIN))->getValue() = lmin.at(ia)*fmult;
@@ -1290,9 +1290,9 @@ class ColladaWriter : public daeErrorHandler
                     domRotateRef protate = daeSafeCast<domRotate>(childinfo.pnode->add(COLLADA_ELEMENT_ROTATE,0));
                     protate->setSid(jointnodesid.c_str());
                     protate->getValue().setCount(4);
-                    protate->getValue()[0] = pjoint->vAxes[0].x;
-                    protate->getValue()[1] = pjoint->vAxes[0].y;
-                    protate->getValue()[2] = pjoint->vAxes[0].z;
+                    protate->getValue()[0] = pjoint->GetInternalHierarchyAxis(0).x;
+                    protate->getValue()[1] = pjoint->GetInternalHierarchyAxis(0).y;
+                    protate->getValue()[2] = pjoint->GetInternalHierarchyAxis(0).z;
                     protate->getValue()[3] = 0;
                 }
                 else if( pjoint->IsPrismatic(iaxis) ) {

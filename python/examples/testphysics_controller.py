@@ -29,7 +29,7 @@ if not __build_doc__:
 
 def main(env,options):
     "Main example code."
-    env.Load('data/hanoi.env.xml')
+    env.Load(options.scene)
     if options._physics is None:
         # no physics engine set, so set one
         physics = RaveCreatePhysicsEngine(env,'ode')
@@ -38,6 +38,7 @@ def main(env,options):
 
     with env:
         robot = env.GetRobots()[0]
+        robot.GetLinks()[0].SetStatic(True)
         robot.SetController(RaveCreateController(env,'odevelocity'),range(robot.GetDOF()),0)
         env.StopSimulation()
         env.StartSimulation(timestep=0.001)
@@ -59,6 +60,8 @@ def run(args=None):
     """
     parser = OptionParser(description="test physics")
     OpenRAVEGlobalArguments.addOptions(parser)
+    parser.add_option('--scene',action="store",type='string',dest='scene',default='data/hanoi.env.xml',
+                      help='Scene file to load (default=%default)')
     (options, leftargs) = parser.parse_args(args=args)
     env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
     main(env,options)

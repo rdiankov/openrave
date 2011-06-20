@@ -1,7 +1,7 @@
 /** \example orplanning_planner.cpp
     \author Rosen Diankov
 
-    Shows how to use a planner by directly creating the planner and setting the problem parameters.
+    Shows how to use a planner by directly creating the planner and setting the module parameters.
     The default values plan for the arm joints of a particular manipulator.
 
     <b>Full Example Code:</b>
@@ -25,7 +25,7 @@ using namespace std;
 void SetViewer(EnvironmentBasePtr penv, const string& viewername)
 {
     ViewerBasePtr viewer = RaveCreateViewer(penv,viewername);
-    penv->AttachViewer(viewer);
+    penv->AddViewer(viewer);
     viewer->main(true);
 }
 

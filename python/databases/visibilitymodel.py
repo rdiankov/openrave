@@ -52,7 +52,7 @@ As long as a sensor is attached to a robot arm, can be applied to any robot to g
 .. image:: ../../images/databases/visibilitymodel_extents.jpg
   :height: 250
 
-The visibility database generator uses the :ref:`probleminstance-visualfeedback` for the underlying visibility
+The visibility database generator uses the :ref:`module-visualfeedback` for the underlying visibility
 computation. The higher level functions it provides are sampling configurations, computing all valid
 configurations with the manipulator, and display.
 

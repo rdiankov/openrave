@@ -90,7 +90,7 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
         }
         break;
     }        
-    case PT_ProblemInstance:
+    case PT_Module:
         if( interfacename == "ikfast")
             return InterfaceBasePtr(new IKFastProblem(penv));
         break;
@@ -103,7 +103,7 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
 
 void GetPluginAttributesValidated(PLUGININFO& info)
 {
-    info.interfacenames[PT_ProblemInstance].push_back("ikfast");
+    info.interfacenames[PT_Module].push_back("ikfast");
     info.interfacenames[PT_IkSolver].push_back("ikfast");
     info.interfacenames[PT_IkSolver].push_back("wam7ikfast");
     info.interfacenames[PT_IkSolver].push_back("pa10ikfast");

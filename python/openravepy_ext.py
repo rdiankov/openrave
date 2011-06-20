@@ -575,9 +575,9 @@ class OpenRAVEGlobalArguments:
             print e
         try:
             if options._server:
-                sr = openravepy.RaveCreateProblem(env,options._server)
+                sr = openravepy.RaveCreateModule(env,options._server)
                 if sr is not None:
-                    env.LoadProblem(sr,'%d'%options._serverport)
+                    env.AddModule(sr,'%d'%options._serverport)
         except openrave_exception, e:
             print e
         try:
@@ -677,3 +677,6 @@ class planning_error(Exception):
         self.parameter = parameter
     def __str__(self):
         return 'openrave planning_error: '+repr(self.parameter)
+
+# deprecated
+openravepy.Problem = openravepy.Module

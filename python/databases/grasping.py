@@ -132,8 +132,6 @@ else:
     from openravepy.databases import DatabaseGenerator
     from numpy import inf, array
 
-from openravepy.interfaces import Grasper, BaseManipulation, TaskManipulation
-from openravepy.databases import convexdecomposition
 from optparse import OptionParser
 
 try:
@@ -201,8 +199,8 @@ class GraspingModel(DatabaseGenerator):
     def getversion(self):
         return 4
     def init(self,friction,avoidlinks,plannername=None):
-        self.basemanip = BaseManipulation(self.robot,maxvelmult=self.maxvelmult)
-        self.grasper = Grasper(self.robot,friction=friction,avoidlinks=avoidlinks,plannername=plannername)
+        self.basemanip = interfaces.BaseManipulation(self.robot,maxvelmult=self.maxvelmult)
+        self.grasper = interfaces.Grasper(self.robot,friction=friction,avoidlinks=avoidlinks,plannername=plannername)
         self.grasps = []
     def load(self):
         try:
@@ -210,8 +208,8 @@ class GraspingModel(DatabaseGenerator):
             if params is None:
                 return False;
             self.grasps,self.graspindices,friction,linknames,plannername = params
-            self.basemanip = BaseManipulation(self.robot,maxvelmult=self.maxvelmult)
-            self.grasper = Grasper(self.robot,friction,avoidlinks = [self.robot.GetLink(name) for name in linknames],plannername=plannername)
+            self.basemanip = interfaces.BaseManipulation(self.robot,maxvelmult=self.maxvelmult)
+            self.grasper = interfaces.Grasper(self.robot,friction,avoidlinks = [self.robot.GetLink(name) for name in linknames],plannername=plannername)
             return self.has()
         except:
             return False
@@ -315,7 +313,7 @@ class GraspingModel(DatabaseGenerator):
             with self.target:
                 self.target.Enable(False)
                 # do not fill with plannername
-                taskmanip = TaskManipulation(self.robot)
+                taskmanip = interfaces.TaskManipulation(self.robot)
                 final,traj = taskmanip.ReleaseFingers(execute=False,outputfinal=True)
             preshapes = array([final])
         if rolls is None:

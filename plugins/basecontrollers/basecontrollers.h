@@ -43,11 +43,17 @@ public:
         if( !!_probot ) {
             string filename = RaveGetHomeDirectory() + string("/") + _probot->GetName() + string(".traj");
             flog.open(filename.c_str());
-            if( !flog )
+            if( !flog ) {
                 RAVELOG_WARN(str(boost::format("failed to open %s\n")%filename));
+            }
             flog << GetXMLId() << " " << _probot->GetName() << endl << endl;
             _dofindices = dofindices;
             _nControlTransformation = nControlTransformation;
+            _dofchecklimits.resize(0);
+            FOREACH(it,_dofindices) {
+                KinBody::JointPtr pjoint = _probot->GetJointFromDOFIndex(*it);
+                _dofchecklimits.push_back(!pjoint->IsCircular(*it-pjoint->GetDOFIndex()));
+            }
             _cblimits = _probot->RegisterChangeCallback(KinBody::Prop_JointLimits,boost::bind(&IdealController::_SetJointLimits,boost::bind(&sptr_from<IdealController>, weak_controller())));
             _SetJointLimits();
         }
@@ -234,11 +240,13 @@ private:
     void _CheckLimits(std::vector<dReal>& curvalues)
     {
         for(size_t i = 0; i < _vlower.size(); ++i) {
-            if( curvalues.at(i) < _vlower[i]-5e-5f ) {
-                _ReportError(str(boost::format("robot %s dof %d is violating lower limit %s < %s")%_probot->GetName()%i%_vlower[i]%curvalues[i]));
-            }
-            if( curvalues.at(i) > _vupper[i]+5e-5f ) {
-                _ReportError(str(boost::format("robot %s dof %d is violating upper limit %s > %s")%_probot->GetName()%i%_vupper[i]%curvalues[i]));
+            if( _dofchecklimits[i] ) {
+                if( curvalues.at(i) < _vlower[i]-5e-5f ) {
+                    _ReportError(str(boost::format("robot %s dof %d is violating lower limit %s < %s")%_probot->GetName()%i%_vlower[i]%curvalues[i]));
+                }
+                if( curvalues.at(i) > _vupper[i]+5e-5f ) {
+                    _ReportError(str(boost::format("robot %s dof %d is violating upper limit %s > %s")%_probot->GetName()%i%_vupper[i]%curvalues[i]));
+                }
             }
         }
     }
@@ -275,6 +283,7 @@ private:
     Transform _tdesired;
 
     std::vector<int> _dofindices;
+    std::vector<uint8_t> _dofchecklimits;
     std::vector<dReal> _vlower, _vupper;
     int _nControlTransformation;
     ofstream flog;

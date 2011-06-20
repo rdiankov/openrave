@@ -108,6 +108,7 @@ public:
             void SetTransparency(float f) { _plink->GetGeometry(_geomindex).SetTransparency(f); }
             void SetAmbientColor(object ocolor) { _plink->GetGeometry(_geomindex).SetAmbientColor(ExtractVector3(ocolor)); }
             void SetDiffuseColor(object ocolor) { _plink->GetGeometry(_geomindex).SetDiffuseColor(ExtractVector3(ocolor)); }
+            void SetRenderFilename(const string& filename) { _plink->GetGeometry(_geomindex).SetRenderFilename(filename); }
             bool IsDraw() { return _plink->GetGeometry(_geomindex).IsDraw(); }
             bool IsModifiable() { return _plink->GetGeometry(_geomindex).IsModifiable(); }
             KinBody::Link::GEOMPROPERTIES::GeomType GetType() { return _plink->GetGeometry(_geomindex).GetType(); }
@@ -171,6 +172,7 @@ public:
         }
         dReal GetMass() const { return _plink->GetMass(); }
 
+        void SetStatic(bool bStatic) { _plink->SetStatic(bStatic); }
         void SetTransform(object otrans) { _plink->SetTransform(ExtractTransform(otrans)); }
         void SetForce(object oforce, object opos, bool bAdd) { return _plink->SetForce(ExtractVector3(oforce),ExtractVector3(opos),bAdd); }
         void SetTorque(object otorque, bool bAdd) { return _plink->SetTorque(ExtractVector3(otorque),bAdd); }
@@ -302,8 +304,8 @@ public:
             return toPyArray(weights);
         }
 
-        dReal GetOffset(int iaxis=0) { return _pjoint->GetOffset(iaxis); }
-        void SetOffset(dReal offset, int iaxis=0) { _pjoint->SetOffset(offset,iaxis); }
+        dReal GetWrapOffset(int iaxis=0) { return _pjoint->GetWrapOffset(iaxis); }
+        void SetWrapOffset(dReal offset, int iaxis=0) { _pjoint->SetWrapOffset(offset,iaxis); }
         void SetLimits(object olower, object oupper) {
             vector<dReal> vlower = ExtractArray<dReal>(olower);
             vector<dReal> vupper = ExtractArray<dReal>(oupper);
@@ -311,6 +313,13 @@ public:
                 throw openrave_exception("limits are wrong dimensions");
             }
             _pjoint->SetLimits(vlower,vupper);
+        }
+        void SetVelocityLimits(object omaxlimits) {
+            vector<dReal> vmaxlimits = ExtractArray<dReal>(omaxlimits);
+            if( (int)vmaxlimits.size() != _pjoint->GetDOF() ) {
+                throw openrave_exception("limits are wrong dimensions");
+            }
+            _pjoint->SetVelocityLimits(vmaxlimits);
         }
         void SetResolution(dReal resolution) { _pjoint->SetResolution(resolution); }
         void SetWeights(object o) { _pjoint->SetWeights(ExtractArray<dReal>(o)); }
@@ -504,10 +513,24 @@ public:
 
     object GetDOFMaxVel() const
     {
+        RAVELOG_WARN("KinBody.GetDOFMaxVel() is deprecated, use GetDOFVelocityLimits\n");
         vector<dReal> values, dummy;
         _pbody->GetDOFVelocityLimits(dummy,values);
         return toPyArray(values);
     }
+    object GetDOFMaxTorque() const
+    {
+        vector<dReal> values;
+        _pbody->GetDOFMaxTorque(values);
+        return toPyArray(values);
+    }
+    object GetDOFMaxAccel() const
+    {
+        vector<dReal> values;
+        _pbody->GetDOFMaxAccel(values);
+        return toPyArray(values);
+    }
+
     object GetDOFWeights() const
     {
         vector<dReal> values;
@@ -894,11 +917,11 @@ public:
         return toPyArray(values0);
     }
 
-    void SetJointTorques(object otorques, bool bAdd)
+    void SetDOFTorques(object otorques, bool bAdd)
     {
         vector<dReal> vtorques = ExtractArray<dReal>(otorques);
         BOOST_ASSERT((int)vtorques.size() == GetDOF() );
-        _pbody->SetJointTorques(vtorques,bAdd);
+        _pbody->SetDOFTorques(vtorques,bAdd);
     }
 
     boost::multi_array<dReal,2> CalculateJacobian(int index, object offset)
@@ -937,6 +960,8 @@ public:
             attached.append(PyKinBodyPtr(new PyKinBody(*it,_pyenv)));
         return attached;
     }
+
+    void SetZeroConfiguration() { _pbody->SetZeroConfiguration(); }
 
     bool IsRobot() const { return _pbody->IsRobot(); }
     int GetEnvironmentId() const { return _pbody->GetEnvironmentId(); }
@@ -2270,16 +2295,16 @@ bool PyControllerBase::SetPath(PyTrajectoryBasePtr ptraj)
     return _pcontroller->SetPath(!ptraj ? TrajectoryBasePtr() : ptraj->GetTrajectory());
 }
 
-class PyProblemInstance : public PyInterfaceBase
+class PyModuleBase : public PyInterfaceBase
 {
 protected:
-    ProblemInstancePtr _pproblem;
+    ModuleBasePtr _pmodule;
 public:
-    PyProblemInstance(ProblemInstancePtr pproblem, PyEnvironmentBasePtr pyenv) : PyInterfaceBase(pproblem, pyenv), _pproblem(pproblem) {}
-    virtual ~PyProblemInstance() {}
-    ProblemInstancePtr GetProblem() { return _pproblem; }
+    PyModuleBase(ModuleBasePtr pmodule, PyEnvironmentBasePtr pyenv) : PyInterfaceBase(pmodule, pyenv), _pmodule(pmodule) {}
+    virtual ~PyModuleBase() {}
+    ModuleBasePtr GetModule() { return _pmodule; }
 
-    bool SimulationStep(dReal fElapsedTime) { return _pproblem->SimulationStep(fElapsedTime); }
+    bool SimulationStep(dReal fElapsedTime) { return _pmodule->SimulationStep(fElapsedTime); }
 };
 
 class PyPhysicsEngineBase : public PyInterfaceBase
@@ -2444,17 +2469,28 @@ public:
     int main(bool bShow) { return _pviewer->main(bShow); }
     void quitmainloop() { return _pviewer->quitmainloop(); }
 
-    void ViewerSetSize(int w, int h) { _pviewer->ViewerSetSize(w,h); }
-    void ViewerMove(int x, int y) { _pviewer->ViewerMove(x,y); }
-    void ViewerSetTitle(const string& title) { _pviewer->ViewerSetTitle(title.c_str()); }
-    bool LoadModel(const string& filename) { return _pviewer->LoadModel(filename.c_str()); }
+    void SetSize(int w, int h) { _pviewer->SetSize(w,h); }
+    void Move(int x, int y) { _pviewer->Move(x,y); }
+    void SetName(const string& title) { _pviewer->SetName(title); }
 
-    PyVoidHandle RegisterCallback(ViewerBase::ViewerEvents properties, object fncallback)
+    PyVoidHandle RegisterCallback(object properties, object fncallback)
     {
         if( !fncallback ) {
             throw openrave_exception("callback not specified");
         }
-        boost::shared_ptr<void> p = _pviewer->RegisterCallback(properties,boost::bind(&PyViewerBase::_ViewerCallback,fncallback,_pyenv,_1,_2,_3));
+        boost::shared_ptr<void> p = _pviewer->RegisterItemSelectionCallback(boost::bind(&PyViewerBase::_ViewerCallback,fncallback,_pyenv,_1,_2,_3));
+        if( !p ) {
+            throw openrave_exception("no registration callback returned");
+        }
+        return PyVoidHandle(p);
+    }
+
+    PyVoidHandle RegisterItemSelectionCallback(object fncallback)
+    {
+        if( !fncallback ) {
+            throw openrave_exception("callback not specified");
+        }
+        boost::shared_ptr<void> p = _pviewer->RegisterItemSelectionCallback(boost::bind(&PyViewerBase::_ViewerCallback,fncallback,_pyenv,_1,_2,_3));
         if( !p ) {
             throw openrave_exception("no registration callback returned");
         }
@@ -2604,6 +2640,7 @@ class PyEnvironmentBase : public boost::enable_shared_from_this<PyEnvironmentBas
     boost::mutex _envmutex;
     std::list<boost::shared_ptr<EnvironmentMutex::scoped_lock> > _listenvlocks, _listfreelocks;
 #endif
+    ViewerBasePtr _pviewer;
 protected:
     EnvironmentBasePtr _penv;
     boost::shared_ptr<boost::thread> _threadviewer;
@@ -2620,7 +2657,7 @@ protected:
         case PT_Robot: return PyRobotBasePtr(new PyRobotBase(boost::static_pointer_cast<RobotBase>(pinterface),shared_from_this()));
         case PT_SensorSystem: return PySensorSystemBasePtr(new PySensorSystemBase(boost::static_pointer_cast<SensorSystemBase>(pinterface),shared_from_this()));
         case PT_Controller: return PyControllerBasePtr(new PyControllerBase(boost::static_pointer_cast<ControllerBase>(pinterface),shared_from_this()));
-        case PT_ProblemInstance: return PyProblemInstancePtr(new PyProblemInstance(boost::static_pointer_cast<ProblemInstance>(pinterface),shared_from_this()));
+        case PT_Module: return PyModuleBasePtr(new PyModuleBase(boost::static_pointer_cast<ModuleBase>(pinterface),shared_from_this()));
         case PT_IkSolver: return PyIkSolverBasePtr(new PyIkSolverBase(boost::static_pointer_cast<IkSolverBase>(pinterface),shared_from_this()));
         case PT_KinBody: return PyKinBodyPtr(new PyKinBody(boost::static_pointer_cast<KinBody>(pinterface),shared_from_this()));
         case PT_PhysicsEngine: return PyPhysicsEngineBasePtr(new PyPhysicsEngineBase(boost::static_pointer_cast<PhysicsEngineBase>(pinterface),shared_from_this()));
@@ -2636,22 +2673,22 @@ protected:
 
     void _ViewerThread(const string& strviewer, bool bShowViewer)
     {
-        ViewerBasePtr pviewer;
+        _pviewer.reset();
         {
             boost::mutex::scoped_lock lock(_mutexViewer);
-            pviewer = RaveCreateViewer(_penv, strviewer.c_str());
-            if( !!pviewer ) {
-                _penv->AttachViewer(pviewer);
+            _pviewer = RaveCreateViewer(_penv, strviewer.c_str());
+            if( !!_pviewer ) {
+                _penv->AddViewer(_pviewer);
             }
             _conditionViewer.notify_all();
         }
 
-        if( !pviewer ) {
+        if( !_pviewer ) {
             return;
         }
-        pviewer->main(bShowViewer); // spin until quitfrommainloop is called
-        _penv->AttachViewer(ViewerBasePtr());
-        pviewer.reset();
+        _pviewer->main(bShowViewer); // spin until quitfrommainloop is called
+        _penv->Remove(_pviewer);
+        _pviewer.reset();
     }
 
     CollisionAction _CollisionCallback(object fncallback, CollisionReportPtr preport, bool bFromPhysics)
@@ -2700,15 +2737,11 @@ public:
 
     virtual ~PyEnvironmentBase()
     {
-        {
-            boost::mutex::scoped_lock lockcreate(_mutexViewer);
-            _penv->AttachViewer(ViewerBasePtr());
-        }
-
         if( !!_threadviewer ) {
             _threadviewer->join();
         }
         _threadviewer.reset();
+        _pviewer.reset();
     }
 
     void Reset() { _penv->Reset(); }
@@ -2747,10 +2780,10 @@ public:
         RAVELOG_WARN("Environment.CreateController deprecated, use RaveCreateController\n");
         return openravepy::RaveCreateController(shared_from_this(),name);
     }
-    PyProblemInstancePtr CreateProblem(const string& name)
+    PyModuleBasePtr CreateProblem(const string& name)
     {
         RAVELOG_WARN("Environment.CreateProblem deprecated, use RaveCreateProblem\n");
-        return openravepy::RaveCreateProblemInstance(shared_from_this(),name);
+        return openravepy::RaveCreateModule(shared_from_this(),name);
     }
     PyIkSolverBasePtr CreateIkSolver(const string& name)
     {
@@ -3151,12 +3184,14 @@ public:
         return toPyTriMesh(*ptrimesh);
     }
 
-    bool AddKinBody(PyKinBodyPtr pbody) { CHECK_POINTER(pbody); return _penv->AddKinBody(pbody->GetBody()); }
-    bool AddKinBody(PyKinBodyPtr pbody, bool bAnonymous) { CHECK_POINTER(pbody); return _penv->AddKinBody(pbody->GetBody(),bAnonymous); }
-    bool AddRobot(PyRobotBasePtr robot) { CHECK_POINTER(robot); return _penv->AddRobot(robot->GetRobot()); }
-    bool AddRobot(PyRobotBasePtr robot, bool bAnonymous) { CHECK_POINTER(robot); return _penv->AddRobot(robot->GetRobot(),bAnonymous); }
-    bool AddSensor(PySensorBasePtr sensor) { CHECK_POINTER(sensor); return _penv->AddSensor(sensor->GetSensor()); }
-    bool AddSensor(PySensorBasePtr sensor, bool bAnonymous) { CHECK_POINTER(sensor); return _penv->AddSensor(sensor->GetSensor(),bAnonymous); }
+    void AddKinBody(PyKinBodyPtr pbody) { CHECK_POINTER(pbody); _penv->AddKinBody(pbody->GetBody()); }
+    void AddKinBody(PyKinBodyPtr pbody, bool bAnonymous) { CHECK_POINTER(pbody); _penv->AddKinBody(pbody->GetBody(),bAnonymous); }
+    void AddRobot(PyRobotBasePtr robot) { CHECK_POINTER(robot); _penv->AddRobot(robot->GetRobot()); }
+    void AddRobot(PyRobotBasePtr robot, bool bAnonymous) { CHECK_POINTER(robot); _penv->AddRobot(robot->GetRobot(),bAnonymous); }
+    void AddSensor(PySensorBasePtr sensor) { CHECK_POINTER(sensor); _penv->AddSensor(sensor->GetSensor()); }
+    void AddSensor(PySensorBasePtr sensor, bool bAnonymous) { CHECK_POINTER(sensor); _penv->AddSensor(sensor->GetSensor(),bAnonymous); }
+    void AddViewer(PyViewerBasePtr viewer) { CHECK_POINTER(viewer); _penv->AddViewer(viewer->GetViewer()); }
+
     bool RemoveKinBody(PyKinBodyPtr pbody) { CHECK_POINTER(pbody); RAVELOG_WARN("openravepy RemoveKinBody deprecated, use Remove\n"); return _penv->Remove(pbody->GetBody()); }
     
     PyKinBodyPtr GetKinBody(const string& name)
@@ -3188,19 +3223,19 @@ public:
 
     PyTrajectoryBasePtr CreateTrajectory(int nDOF) { return PyTrajectoryBasePtr(new PyTrajectoryBase(RaveCreateTrajectory(_penv,nDOF),shared_from_this())); }
 
-    int LoadProblem(PyProblemInstancePtr prob, const string& args) { CHECK_POINTER(prob); return _penv->LoadProblem(prob->GetProblem(),args); }
-    bool RemoveProblem(PyProblemInstancePtr prob) { CHECK_POINTER(prob); RAVELOG_WARN("openravepy RemoveProblem deprecated, use Remove\n");return _penv->Remove(prob->GetProblem()); }
+    int AddModule(PyModuleBasePtr prob, const string& args) { CHECK_POINTER(prob); return _penv->AddModule(prob->GetModule(),args); }
+    bool RemoveProblem(PyModuleBasePtr prob) { CHECK_POINTER(prob); RAVELOG_WARN("openravepy RemoveProblem deprecated, use Remove\n");return _penv->Remove(prob->GetModule()); }
     bool Remove(PyInterfaceBasePtr obj) { CHECK_POINTER(obj); return _penv->Remove(obj->GetInterfaceBase()); }
     
-    object GetLoadedProblems()
+    object GetModules()
     {
-        std::list<ProblemInstancePtr> listProblems;
-        boost::shared_ptr<void> lock = _penv->GetLoadedProblems(listProblems);
-        boost::python::list problems;
-        FOREACHC(itprob, listProblems) {
-            problems.append(PyProblemInstancePtr(new PyProblemInstance(*itprob,shared_from_this())));
+        std::list<ModuleBasePtr> listModules;
+        boost::shared_ptr<void> lock = _penv->GetModules(listModules);
+        boost::python::list modules;
+        FOREACHC(itprob, listModules) {
+            modules.append(PyModuleBasePtr(new PyModuleBase(*itprob,shared_from_this())));
         }
-        return problems;
+        return modules;
     }
 
     bool SetPhysicsEngine(PyPhysicsEngineBasePtr pengine)
@@ -3280,23 +3315,20 @@ public:
             _threadviewer->join();
         }
         _threadviewer.reset();
-        
-        _penv->AttachViewer(ViewerBasePtr());
 
         if( viewername.size() > 0 ) {
             boost::mutex::scoped_lock lock(_mutexViewer);
             _threadviewer.reset(new boost::thread(boost::bind(&PyEnvironmentBase::_ViewerThread, shared_from_this(), viewername, showviewer)));
             _conditionViewer.wait(lock);
-            
-            if( !_penv->GetViewer() || _penv->GetViewer()->GetXMLId() != viewername ) {
-                RAVELOG_WARN("failed to create viewer %s\n", viewername.c_str());
-                _threadviewer->join();
-                _threadviewer.reset();
-                return false;
-            }
-            else {
-                RAVELOG_INFOA("viewer %s successfully attached\n", viewername.c_str());
-            }
+//            if( !_penv->GetViewer() || _penv->GetViewer()->GetXMLId() != viewername ) {
+//                RAVELOG_WARN("failed to create viewer %s\n", viewername.c_str());
+//                _threadviewer->join();
+//                _threadviewer.reset();
+//                return false;
+//            }
+//            else {
+//                RAVELOG_INFOA("viewer %s successfully attached\n", viewername.c_str());
+//            }
         }
         return true;
     }
@@ -3312,7 +3344,7 @@ public:
             case 1:
                 vpoints = ExtractArray<float>(opoints);
                 if( vpoints.size()%3 ) {
-                    throw openrave_exception(boost::str(boost::format("points have bad size %d")%vpoints.size()),ORE_InvalidArguments);
+                    throw OPENRAVE_EXCEPTION_FORMAT("points have bad size %d", vpoints.size(),ORE_InvalidArguments);
                 }
                 return vpoints.size()/3;
             case 2: {
@@ -3320,7 +3352,7 @@ public:
                 int dim = extract<int>(pointshape[1]);
                 vpoints = ExtractArray<float>(opoints.attr("flat"));
                 if(dim % 3) {
-                    throw openrave_exception(boost::str(boost::format("points have bad size %dx%d")%num%dim),ORE_InvalidArguments);
+                    throw OPENRAVE_EXCEPTION_FORMAT("points have bad size %dx%d", num%dim,ORE_InvalidArguments);
                 }
                 return num*(dim/3);
             }
@@ -3331,7 +3363,7 @@ public:
         // assume it is a regular 1D list
         vpoints = ExtractArray<float>(opoints);
         if( vpoints.size()% 3 ) {
-            throw openrave_exception(boost::str(boost::format("points have bad size %d")%vpoints.size()),ORE_InvalidArguments);
+            throw OPENRAVE_EXCEPTION_FORMAT("points have bad size %d", vpoints.size(),ORE_InvalidArguments);
         }
         return vpoints.size()/3;
     }
@@ -3349,13 +3381,13 @@ public:
                     int numcolors = extract<int>(colorshape[0]);
                     int colordim = extract<int>(colorshape[1]);
                     if( colordim != 3 && colordim != 4 ) {
-                        throw openrave_exception("colors dim needs to be 3 or 4");
+                        throw OPENRAVE_EXCEPTION_FORMAT("colors dim %d needs to be 3 or 4",colordim, ORE_InvalidArguments);
                     }
                     vcolors = ExtractArray<float>(ocolors.attr("flat"));
                     return numcolors;
                 }
                 default:
-                    throw openrave_exception("colors has wrong number of dimensions",ORE_InvalidArguments);
+                    throw OPENRAVE_EXCEPTION_FORMAT("colors has %d dimensions",len(colorshape), ORE_InvalidArguments);
                 }
             }
             vcolors = ExtractArray<float>(ocolors);
@@ -3363,7 +3395,7 @@ public:
                 vcolors.push_back(1.0f);
             }
             else if( vcolors.size() != 4 ) {
-                throw openrave_exception("colors has incorrect number of values",ORE_InvalidArguments);
+                throw OPENRAVE_EXCEPTION_FORMAT("colors has incorrect number of values %d",vcolors.size(), ORE_InvalidArguments);
             }
             return 1;
         }
@@ -3550,8 +3582,8 @@ public:
         return toPyTriMesh(mesh);
     }
 
-    void SetDebugLevel(DebugLevel level) { _penv->SetDebugLevel(level); }
-    DebugLevel GetDebugLevel() const { return _penv->GetDebugLevel(); }
+    void SetDebugLevel(int level) { _penv->SetDebugLevel(level); }
+    int GetDebugLevel() const { return _penv->GetDebugLevel(); }
 
     string GetHomeDirectory() { RAVELOG_WARN("Environment.GetHomeDirectory is deprecated, use RaveGetHomeDirectory\n"); return RaveGetHomeDirectory(); }
 
@@ -3672,13 +3704,13 @@ namespace openravepy
         return PyControllerBasePtr(new PyControllerBase(p,pyenv));
     }
 
-    PyProblemInstancePtr RaveCreateProblemInstance(PyEnvironmentBasePtr pyenv, const std::string& name)
+    PyModuleBasePtr RaveCreateModule(PyEnvironmentBasePtr pyenv, const std::string& name)
     {
-        ProblemInstancePtr p = OpenRAVE::RaveCreateProblemInstance(pyenv->GetEnv(), name);
+        ModuleBasePtr p = OpenRAVE::RaveCreateModule(pyenv->GetEnv(), name);
         if( !p ) {
-            return PyProblemInstancePtr();
+            return PyModuleBasePtr();
         }
-        return PyProblemInstancePtr(new PyProblemInstance(p,pyenv));
+        return PyModuleBasePtr(new PyModuleBase(p,pyenv));
     }
 
     PyIkSolverBasePtr RaveCreateIkSolver(PyEnvironmentBasePtr pyenv, const std::string& name)
@@ -3769,8 +3801,8 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMimicEquation_overloads, GetMimicEquat
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMimicDOFIndices_overloads, GetMimicDOFIndices, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetChain_overloads, GetChain, 2, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetAxis_overloads, GetAxis, 0, 1)
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetOffset_overloads, GetOffset, 0, 1)
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetOffset_overloads, SetOffset, 1, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetWrapOffset_overloads, GetWrapOffset, 0, 1)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetWrapOffset_overloads, SetWrapOffset, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMaxVel_overloads, GetMaxVel, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMaxAccel_overloads, GetMaxAccel, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMaxTorque_overloads, GetMaxTorque, 0, 1)
@@ -3895,6 +3927,8 @@ In python, the syntax is::\n\n\
             .def("GetDOFVelocityLimits",getdofvelocitylimits1, DOXY_FN(KinBody,GetDOFVelocityLimits))
             .def("GetDOFVelocityLimits",getdofvelocitylimits2, args("indices"),DOXY_FN(KinBody,GetDOFVelocityLimits))
             .def("GetDOFMaxVel",&PyKinBody::GetDOFMaxVel, DOXY_FN(KinBody,GetDOFMaxVel))
+            .def("GetDOFMaxTorque",&PyKinBody::GetDOFMaxTorque, DOXY_FN(KinBody,GetDOFMaxTorque))
+            .def("GetDOFMaxAccel",&PyKinBody::GetDOFMaxAccel, DOXY_FN(KinBody,GetDOFMaxAccel))
             .def("GetDOFWeights",getdofweights1, DOXY_FN(KinBody,GetDOFWeights))
             .def("GetDOFWeights",getdofweights2, DOXY_FN(KinBody,GetDOFWeights))
             .def("GetDOFResolutions",getdofresolutions1, DOXY_FN(KinBody,GetDOFResolutions))
@@ -3940,7 +3974,8 @@ In python, the syntax is::\n\n\
             .def("SetDOFValues",psetdofvalues2,args("values","dofindices"), DOXY_FN(KinBody,SetDOFValues "const std::vector; bool"))
             .def("SetDOFValues",psetdofvalues3,args("values","dofindices","checklimits"), DOXY_FN(KinBody,SetDOFValues "const std::vector; bool"))
             .def("SubtractDOFValues",&PyKinBody::SubtractDOFValues,args("values0","values1"), DOXY_FN(KinBody,SubtractDOFValues))
-            .def("SetJointTorques",&PyKinBody::SetJointTorques,args("torques","add"), DOXY_FN(KinBody,SetJointTorques))
+            .def("SetDOFTorques",&PyKinBody::SetDOFTorques,args("torques","add"), DOXY_FN(KinBody,SetDOFTorques))
+            .def("SetJointTorques",&PyKinBody::SetDOFTorques,args("torques","add"), DOXY_FN(KinBody,SetDOFTorques))
             .def("SetTransformWithJointValues",&PyKinBody::SetTransformWithDOFValues,args("transform","values"), DOXY_FN(KinBody,SetDOFValues "const std::vector; const Transform; bool"))
             .def("SetTransformWithDOFValues",&PyKinBody::SetTransformWithDOFValues,args("transform","values"), DOXY_FN(KinBody,SetDOFValues "const std::vector; const Transform; bool"))
             .def("CalculateJacobian",&PyKinBody::CalculateJacobian,args("linkindex","offset"), DOXY_FN(KinBody,CalculateJacobian "int; const Vector; boost::multi_array"))
@@ -3950,6 +3985,7 @@ In python, the syntax is::\n\n\
             .def("CheckSelfCollision",pkinbodyselfr,args("report"), DOXY_FN(KinBody,CheckSelfCollision))
             .def("IsAttached",&PyKinBody::IsAttached,args("body"), DOXY_FN(KinBody,IsAttached))
             .def("GetAttached",&PyKinBody::GetAttached, DOXY_FN(KinBody,GetAttached))
+            .def("SetZeroConfiguration",&PyKinBody::SetZeroConfiguration, DOXY_FN(KinBody,SetZeroConfiguration))
             .def("IsRobot",&PyKinBody::IsRobot, DOXY_FN(KinBody,IsRobot))
             .def("GetEnvironmentId",&PyKinBody::GetEnvironmentId, DOXY_FN(KinBody,GetEnvironmentId))
             .def("DoesAffect",&PyKinBody::DoesAffect,args("jointindex","linkindex"), DOXY_FN(KinBody,DoesAffect))
@@ -3999,6 +4035,7 @@ In python, the syntax is::\n\n\
                 .def("GetCOMOffset",&PyKinBody::PyLink::GetCOMOffset, DOXY_FN(KinBody::Link,GetCOMOffset))
                 .def("GetInertia",&PyKinBody::PyLink::GetInertia, DOXY_FN(KinBody::Link,GetInertia))
                 .def("GetMass",&PyKinBody::PyLink::GetMass, DOXY_FN(KinBody::Link,GetMass))
+                .def("SetStatic",&PyKinBody::PyLink::SetStatic,args("static"), DOXY_FN(KinBody::Link,SetStatic))
                 .def("SetTransform",&PyKinBody::PyLink::SetTransform,args("transform"), DOXY_FN(KinBody::Link,SetTransform))
                 .def("SetForce",&PyKinBody::PyLink::SetForce,args("force","pos","add"), DOXY_FN(KinBody::Link,SetForce))
                 .def("SetTorque",&PyKinBody::PyLink::SetTorque,args("torque","add"), DOXY_FN(KinBody::Link,SetTorque))
@@ -4020,6 +4057,7 @@ In python, the syntax is::\n\n\
                     .def("SetTransparency",&PyKinBody::PyLink::PyGeomProperties::SetTransparency,args("transparency"), DOXY_FN(KinBody::Link::GEOMPROPERTIES,SetTransparency))
                     .def("SetDiffuseColor",&PyKinBody::PyLink::PyGeomProperties::SetDiffuseColor,args("color"), DOXY_FN(KinBody::Link::GEOMPROPERTIES,SetDiffuseColor))
                     .def("SetAmbientColor",&PyKinBody::PyLink::PyGeomProperties::SetAmbientColor,args("color"), DOXY_FN(KinBody::Link::GEOMPROPERTIES,SetAmbientColor))
+                    .def("SetRenderFilename",&PyKinBody::PyLink::PyGeomProperties::SetRenderFilename,args("color"), DOXY_FN(KinBody::Link::GEOMPROPERTIES,SetRenderFilename))
                     .def("IsDraw",&PyKinBody::PyLink::PyGeomProperties::IsDraw, DOXY_FN(KinBody::Link::GEOMPROPERTIES,IsDraw))
                     .def("IsModifiable",&PyKinBody::PyLink::PyGeomProperties::IsModifiable, DOXY_FN(KinBody::Link::GEOMPROPERTIES,IsModifiable))
                     .def("GetType",&PyKinBody::PyLink::PyGeomProperties::GetType, DOXY_FN(KinBody::Link::GEOMPROPERTIES,GetType))
@@ -4077,9 +4115,10 @@ In python, the syntax is::\n\n\
                 .def("GetLimits", &PyKinBody::PyJoint::GetLimits, DOXY_FN(KinBody::Joint,GetLimits))
                 .def("GetVelocityLimits", &PyKinBody::PyJoint::GetVelocityLimits, DOXY_FN(KinBody::Joint,GetVelocityLimits))
                 .def("GetWeights", &PyKinBody::PyJoint::GetWeights, DOXY_FN(KinBody::Joint,GetWeight))
-                .def("SetOffset",&PyKinBody::PyJoint::SetOffset,SetOffset_overloads(args("offset","axis"), DOXY_FN(KinBody::Joint,SetOffset)))
-                .def("GetOffset",&PyKinBody::PyJoint::GetOffset,GetOffset_overloads(args("axis"), DOXY_FN(KinBody::Joint,GetOffset)))
+                .def("SetWrapOffset",&PyKinBody::PyJoint::SetWrapOffset,SetWrapOffset_overloads(args("offset","axis"), DOXY_FN(KinBody::Joint,SetWrapOffset)))
+                .def("GetWrapOffset",&PyKinBody::PyJoint::GetWrapOffset,GetWrapOffset_overloads(args("axis"), DOXY_FN(KinBody::Joint,GetWrapOffset)))
                 .def("SetLimits",&PyKinBody::PyJoint::SetLimits,args("lower","upper"), DOXY_FN(KinBody::Joint,SetLimits))
+                .def("SetVelocityLimits",&PyKinBody::PyJoint::SetVelocityLimits,args("lower","upper"), DOXY_FN(KinBody::Joint,SetVelocityLimits))
                 .def("SetJointLimits",&PyKinBody::PyJoint::SetLimits,args("lower","upper"), DOXY_FN(KinBody::Joint,SetLimits))
                 .def("SetResolution",&PyKinBody::PyJoint::SetResolution,args("resolution"), DOXY_FN(KinBody::Joint,SetResolution))
                 .def("SetWeights",&PyKinBody::PyJoint::SetWeights,args("weights"), DOXY_FN(KinBody::Joint,SetWeights))
@@ -4364,9 +4403,10 @@ In python, the syntax is::\n\n\
             .def("GetTorque",&PyControllerBase::GetTorque, DOXY_FN(ControllerBase,GetTorque))
             ;
     }
-    class_<PyProblemInstance, boost::shared_ptr<PyProblemInstance>, bases<PyInterfaceBase> >("Problem", DOXY_CLASS(ProblemInstance), no_init)
-        .def("SimulationStep",&PyProblemInstance::SimulationStep, DOXY_FN(ProblemInstance,"SimulationStep"))
+    class_<PyModuleBase, boost::shared_ptr<PyModuleBase>, bases<PyInterfaceBase> >("Module", DOXY_CLASS(ModuleBase), no_init)
+        .def("SimulationStep",&PyModuleBase::SimulationStep, DOXY_FN(ModuleBase,"SimulationStep"))
         ;
+
     class_<PyIkSolverBase, boost::shared_ptr<PyIkSolverBase>, bases<PyInterfaceBase> >("IkSolver", DOXY_CLASS(IkSolverBase), no_init)
         .def("GetNumFreeParameters",&PyIkSolverBase::GetNumFreeParameters, DOXY_FN(IkSolverBase,GetNumFreeParameters))
         .def("GetFreeParameters",&PyIkSolverBase::GetFreeParameters, DOXY_FN(IkSolverBase,GetFreeParameters))
@@ -4518,11 +4558,12 @@ In python, the syntax is::\n\n\
         scope viewer = class_<PyViewerBase, boost::shared_ptr<PyViewerBase>, bases<PyInterfaceBase> >("Viewer", DOXY_CLASS(ViewerBase), no_init)
             .def("main",&PyViewerBase::main, DOXY_FN(ViewerBase,main))
             .def("quitmainloop",&PyViewerBase::quitmainloop, DOXY_FN(ViewerBase,quitmainloop))
-            .def("SetSize",&PyViewerBase::ViewerSetSize, DOXY_FN(ViewerBase,ViewerSetSize))
-            .def("Move",&PyViewerBase::ViewerMove, DOXY_FN(ViewerBase,ViewerMove))
-            .def("SetTitle",&PyViewerBase::ViewerSetTitle, DOXY_FN(ViewerBase,ViewerSetTitle))
-            .def("LoadModel",&PyViewerBase::LoadModel, DOXY_FN(ViewerBase,LoadModel))
-            .def("RegisterCallback",&PyViewerBase::RegisterCallback, args("callback"), DOXY_FN(ViewerBase,RegisterCallback))
+            .def("SetSize",&PyViewerBase::SetSize, DOXY_FN(ViewerBase,SetSize))
+            .def("Move",&PyViewerBase::Move, DOXY_FN(ViewerBase,Move))
+            .def("SetTitle",&PyViewerBase::SetName, DOXY_FN(ViewerBase,SetName))
+            .def("SetName",&PyViewerBase::SetName, DOXY_FN(ViewerBase,SetName))
+            .def("RegisterCallback",&PyViewerBase::RegisterCallback, args("callback"), DOXY_FN(ViewerBase,RegisterItemSelectionCallback))
+            .def("RegisterItemSelectionCallback",&PyViewerBase::RegisterItemSelectionCallback, args("callback"), DOXY_FN(ViewerBase,RegisterCallback))
             .def("EnvironmentSync",&PyViewerBase::EnvironmentSync, DOXY_FN(ViewerBase,EnvironmentSync))
             .def("SetCamera",setcamera1,args("transform"), DOXY_FN(ViewerBase,SetCamera))
             .def("SetCamera",setcamera2,args("transform","focalDistance"), DOXY_FN(ViewerBase,SetCamera))
@@ -4581,12 +4622,12 @@ In python, the syntax is::\n\n\
         object (PyEnvironmentBase::*drawplane1)(object, object, const boost::multi_array<float,2>&) = &PyEnvironmentBase::drawplane;
         object (PyEnvironmentBase::*drawplane2)(object, object, const boost::multi_array<float,3>&) = &PyEnvironmentBase::drawplane;
 
-        bool (PyEnvironmentBase::*addkinbody1)(PyKinBodyPtr) = &PyEnvironmentBase::AddKinBody;
-        bool (PyEnvironmentBase::*addkinbody2)(PyKinBodyPtr,bool) = &PyEnvironmentBase::AddKinBody;
-        bool (PyEnvironmentBase::*addrobot1)(PyRobotBasePtr) = &PyEnvironmentBase::AddRobot;
-        bool (PyEnvironmentBase::*addrobot2)(PyRobotBasePtr,bool) = &PyEnvironmentBase::AddRobot;
-        bool (PyEnvironmentBase::*addsensor1)(PySensorBasePtr) = &PyEnvironmentBase::AddSensor;
-        bool (PyEnvironmentBase::*addsensor2)(PySensorBasePtr,bool) = &PyEnvironmentBase::AddSensor;
+        void (PyEnvironmentBase::*addkinbody1)(PyKinBodyPtr) = &PyEnvironmentBase::AddKinBody;
+        void (PyEnvironmentBase::*addkinbody2)(PyKinBodyPtr,bool) = &PyEnvironmentBase::AddKinBody;
+        void (PyEnvironmentBase::*addrobot1)(PyRobotBasePtr) = &PyEnvironmentBase::AddRobot;
+        void (PyEnvironmentBase::*addrobot2)(PyRobotBasePtr,bool) = &PyEnvironmentBase::AddRobot;
+        void (PyEnvironmentBase::*addsensor1)(PySensorBasePtr) = &PyEnvironmentBase::AddSensor;
+        void (PyEnvironmentBase::*addsensor2)(PySensorBasePtr,bool) = &PyEnvironmentBase::AddSensor;
         void (PyEnvironmentBase::*setuserdata1)(PyUserData) = &PyEnvironmentBase::SetUserData;
         void (PyEnvironmentBase::*setuserdata2)(object) = &PyEnvironmentBase::SetUserData;
         PyRobotBasePtr (PyEnvironmentBase::*readrobotxmlfile1)(const string&) = &PyEnvironmentBase::ReadRobotXMLFile;
@@ -4664,6 +4705,7 @@ In python, the syntax is::\n\n\
             .def("AddRobot",addrobot2,args("robot","anonymous"), DOXY_FN(EnvironmentBase,AddRobot))
             .def("AddSensor",addsensor1,args("sensor"), DOXY_FN(EnvironmentBase,AddSensor))
             .def("AddSensor",addsensor2,args("sensor","anonymous"), DOXY_FN(EnvironmentBase,AddSensor))
+            .def("AddViewer",addsensor2,args("sensor","anonymous"), DOXY_FN(EnvironmentBase,AddViewer))
             .def("RemoveKinBody",&PyEnvironmentBase::RemoveKinBody,args("body"), DOXY_FN(EnvironmentBase,RemoveKinBody))
             .def("Remove",&PyEnvironmentBase::Remove,args("interface"), DOXY_FN(EnvironmentBase,Remove))
             .def("GetKinBody",&PyEnvironmentBase::GetKinBody,args("name"), DOXY_FN(EnvironmentBase,GetKinBody))
@@ -4672,9 +4714,11 @@ In python, the syntax is::\n\n\
             .def("GetBodyFromEnvironmentId",&PyEnvironmentBase::GetBodyFromEnvironmentId , DOXY_FN(EnvironmentBase,GetBodyFromEnvironmentId))
             .def("CreateKinBody",&PyEnvironmentBase::CreateKinBody, DOXY_FN(EnvironmentBase,CreateKinBody))
             .def("CreateTrajectory",&PyEnvironmentBase::CreateTrajectory,args("dof"), DOXY_FN(EnvironmentBase,CreateTrajectory))
-            .def("LoadProblem",&PyEnvironmentBase::LoadProblem,args("problem","args"), DOXY_FN(EnvironmentBase,LoadProblem))
+            .def("AddModule",&PyEnvironmentBase::AddModule,args("module","args"), DOXY_FN(EnvironmentBase,AddModule))
+            .def("LoadProblem",&PyEnvironmentBase::AddModule,args("module","args"), DOXY_FN(EnvironmentBase,AddModule))
             .def("RemoveProblem",&PyEnvironmentBase::RemoveProblem,args("prob"), DOXY_FN(EnvironmentBase,RemoveProblem))
-            .def("GetLoadedProblems",&PyEnvironmentBase::GetLoadedProblems, DOXY_FN(EnvironmentBase,GetLoadedProblems))
+            .def("GetModules",&PyEnvironmentBase::GetModules, DOXY_FN(EnvironmentBase,GetModules))
+            .def("GetLoadedProblems",&PyEnvironmentBase::GetModules, DOXY_FN(EnvironmentBase,GetModules))
             .def("SetPhysicsEngine",&PyEnvironmentBase::SetPhysicsEngine,args("physics"), DOXY_FN(EnvironmentBase,SetPhysicsEngine))
             .def("GetPhysicsEngine",&PyEnvironmentBase::GetPhysicsEngine, DOXY_FN(EnvironmentBase,GetPhysicsEngine))
             .def("RegisterCollisionCallback",&PyEnvironmentBase::RegisterCollisionCallback,args("callback"), DOXY_FN(EnvironmentBase,RegisterCollisionCallback))
@@ -4747,8 +4791,9 @@ In python, the syntax is::\n\n\
     def("RaveCreatePlanner",openravepy::RaveCreatePlanner,args("env","name"),DOXY_FN1(RaveCreatePlanner));
     def("RaveCreateSensorSystem",openravepy::RaveCreateSensorSystem,args("env","name"),DOXY_FN1(RaveCreateSensorSystem));
     def("RaveCreateController",openravepy::RaveCreateController,args("env","name"),DOXY_FN1(RaveCreateController));
-    def("RaveCreateProblem",openravepy::RaveCreateProblemInstance,args("env","name"),DOXY_FN1(RaveCreateProblemInstance));
-    def("RaveCreateProblemInstance",openravepy::RaveCreateProblemInstance,args("env","name"),DOXY_FN1(RaveCreateProblemInstance));
+    def("RaveCreateProblem",openravepy::RaveCreateModule,args("env","name"),DOXY_FN1(RaveCreateModule));
+    def("RaveCreateProblemInstance",openravepy::RaveCreateModule,args("env","name"),DOXY_FN1(RaveCreateModule));
+    def("RaveCreateModule",openravepy::RaveCreateModule,args("env","name"),DOXY_FN1(RaveCreateModule));
     def("RaveCreateIkSolver",openravepy::RaveCreateIkSolver,args("env","name"),DOXY_FN1(RaveCreateIkSolver));
     def("RaveCreatePhysicsEngine",openravepy::RaveCreatePhysicsEngine,args("env","name"),DOXY_FN1(RaveCreatePhysicsEngine));
     def("RaveCreateSensor",openravepy::RaveCreateSensor,args("env","name"),DOXY_FN1(RaveCreateSensor));

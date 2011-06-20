@@ -195,7 +195,7 @@ namespace OpenRAVEXMLParser
         }
 #endif
 
-        ProblemInstancePtr ivmodelloader = RaveCreateProblem(penv,"ivmodelloader");
+        ModuleBasePtr ivmodelloader = RaveCreateModule(penv,"ivmodelloader");
         if( !!ivmodelloader ) {
             stringstream sout, sin;
             sin << "LoadModel " << filename; 
@@ -757,17 +757,11 @@ namespace OpenRAVEXMLParser
                 _plink->_name = linkname;
             }
             if( bStaticSet ) {
-                _plink->bStatic = bStatic;
+                _plink->_bStatic = bStatic;
             }
             _itgeomprop = _plink->_listGeomProperties.end();
         }
         virtual ~LinkXMLReader() {}
-
-        // hack
-        static void SetRenderFilename(KinBody::Link::GEOMPROPERTIES& geom, const std::string& renderfile)
-        {
-            geom.renderfile = renderfile;
-        }
 
         virtual ProcessElement startElement(const std::string& xmlname, const AttributesList& atts)
         {
@@ -970,7 +964,7 @@ namespace OpenRAVEXMLParser
                         bool bSuccess = false;
                         if( _collisionfilename.first.size() > 0 ) {
                             _itgeomprop->vRenderScale = _renderfilename.second;
-                            _itgeomprop->renderfile = _renderfilename.first;
+                            _itgeomprop->_renderfilename = _renderfilename.first;
                             if( !CreateTriMeshData(_pparent->GetEnv(),_collisionfilename.first, _collisionfilename.second, _itgeomprop->collisionmesh, _itgeomprop->diffuseColor, _itgeomprop->ambientColor, _itgeomprop->ftransparency) ) {
                                 RAVELOG_WARN(str(boost::format("failed to find %s\n")%_collisionfilename.first));
                             }
@@ -980,7 +974,7 @@ namespace OpenRAVEXMLParser
                         }
                         if( _renderfilename.first.size() > 0 ) {
                             _itgeomprop->vRenderScale = _renderfilename.second;
-                            _itgeomprop->renderfile = _renderfilename.first;
+                            _itgeomprop->_renderfilename = _renderfilename.first;
                             if( !bSuccess ) {
                                 if( !CreateTriMeshData(_pparent->GetEnv(), _renderfilename.first, _renderfilename.second, _itgeomprop->collisionmesh, _itgeomprop->diffuseColor, _itgeomprop->ambientColor, _itgeomprop->ftransparency) ) {
                                     RAVELOG_WARN(str(boost::format("failed to find %s\n")%_renderfilename.first));
@@ -1252,13 +1246,6 @@ namespace OpenRAVEXMLParser
         Vector _vMassExtents;           ///< used only if mass is a box
     };
 
-    // hack
-    void SetRenderFilename(KinBody::Link::GEOMPROPERTIES& geom, const std::string& renderfile)
-    {
-        LinkXMLReader::SetRenderFilename(geom,renderfile);
-    }
-
-
     // Joint Reader
     class JointXMLReader : public StreamXMLReader
     {
@@ -1274,19 +1261,20 @@ namespace OpenRAVEXMLParser
                     _pjoint->_name = itatt->second;
                 }
                 else if( itatt->first == "type" ) {
-                    if( stricmp(itatt->second.c_str(), "hinge") == 0 )
+                    if( stricmp(itatt->second.c_str(), "hinge") == 0 ) {
                         _pjoint->_type = KinBody::Joint::JointHinge;
-                    else if( stricmp(itatt->second.c_str(), "slider") == 0 )
+                    }
+                    else if( stricmp(itatt->second.c_str(), "slider") == 0 ) {
                         _pjoint->_type = KinBody::Joint::JointSlider;
-                    else if( stricmp(itatt->second.c_str(), "universal") == 0 )
+                    }
+                    else if( stricmp(itatt->second.c_str(), "universal") == 0 ) {
                         _pjoint->_type = KinBody::Joint::JointUniversal;
-                    else if( stricmp(itatt->second.c_str(), "hinge2") == 0 )
+                    }
+                    else if( stricmp(itatt->second.c_str(), "hinge2") == 0 ) {
                         _pjoint->_type = KinBody::Joint::JointHinge2;
+                    }
                     else if( stricmp(itatt->second.c_str(), "spherical") == 0 ) {
                         _pjoint->_type = KinBody::Joint::JointSpherical;
-                        _pjoint->vAxes[0] = Vector(1,0,0);
-                        _pjoint->vAxes[1] = Vector(0,1,0);
-                        _pjoint->vAxes[2] = Vector(0,0,1);
                     }
                     else {
                         RAVELOG_WARN(str(boost::format("unrecognized joint type: %s, setting to hinge\n")%itatt->second));
@@ -1335,6 +1323,7 @@ namespace OpenRAVEXMLParser
                 }
             }
 
+            _vAxes.resize(_pjoint->GetDOF());
             if( _pjoint->GetType() == KinBody::Joint::JointSlider ) {
                 for(int i = 0; i < _pjoint->GetDOF(); ++i) {
                     _pjoint->_vlowerlimit.at(i) = -100000;
@@ -1342,6 +1331,9 @@ namespace OpenRAVEXMLParser
                 }
             }
             else if( _pjoint->GetType() == KinBody::Joint::JointSpherical ) {
+                _vAxes.at(0) = Vector(1,0,0);
+                _vAxes.at(1) = Vector(0,1,0);
+                _vAxes.at(2) = Vector(0,0,1);
                 for(int i = 0; i < _pjoint->GetDOF(); ++i) {
                     _pjoint->_vlowerlimit.at(i) = -1000;
                     _pjoint->_vupperlimit.at(i) = 1000;
@@ -1389,8 +1381,8 @@ namespace OpenRAVEXMLParser
                 }
 
                 if( _bNegateJoint ) {
-                    for(int i = 0; i < _pjoint->GetDOF(); ++i) {
-                        _pjoint->vAxes[i] = -_pjoint->vAxes[i];
+                    FOREACH(itaxis,_vAxes) {
+                        *itaxis = -*itaxis;
                     }
                 }
 
@@ -1420,10 +1412,10 @@ namespace OpenRAVEXMLParser
                 }
 
                 toffsetfrom = attachedbodies[0]->GetTransform().inverse() * toffsetfrom;
-                for(int i = 0; i < _pjoint->GetDOF(); ++i) {
-                    _pjoint->vAxes[i] = toffsetfrom.rotate(_pjoint->vAxes[i]);
+                FOREACH(itaxis,_vAxes) {
+                    *itaxis = toffsetfrom.rotate(*itaxis);
                 }
-                _pjoint->_ComputeInternalInformation(attachedbodies[0],attachedbodies[1],toffsetfrom*_vanchor);
+                _pjoint->_ComputeInternalInformation(attachedbodies[0],attachedbodies[1],toffsetfrom*_vanchor,_vAxes);
                 return true;
             }
             else if( xmlname == "weight" ) {
@@ -1525,14 +1517,14 @@ namespace OpenRAVEXMLParser
                         _ss >> _vanchor.x >> _vanchor.y >> _vanchor.z;
                     }
                     else if( xmlname == "axis" ) {
-                        _ss >> _pjoint->vAxes[0].x >> _pjoint->vAxes[0].y >> _pjoint->vAxes[0].z;
-                        _pjoint->vAxes[0].normalize3();
+                        _ss >> _vAxes.at(0).x >> _vAxes.at(0).y >> _vAxes.at(0).z;
+                        _vAxes.at(0).normalize3();
                     }
                     break;
                 case KinBody::Joint::JointSlider:
                     if( xmlname == "axis" ) {
-                        _ss >> _pjoint->vAxes[0].x >> _pjoint->vAxes[0].y >> _pjoint->vAxes[0].z;
-                        _pjoint->vAxes[0].normalize3();
+                        _ss >> _vAxes.at(0).x >> _vAxes.at(0).y >> _vAxes.at(0).z;
+                        _vAxes.at(0).normalize3();
                     }
                     break;
                 case KinBody::Joint::JointUniversal:
@@ -1540,12 +1532,12 @@ namespace OpenRAVEXMLParser
                         _ss >> _vanchor.x >> _vanchor.y >> _vanchor.z;
                     }
                     else if( xmlname == "axis1" ) {
-                        _ss >> _pjoint->vAxes[0].x >> _pjoint->vAxes[0].y >> _pjoint->vAxes[0].z;
-                        _pjoint->vAxes[0].normalize3();
+                        _ss >> _vAxes.at(0).x >> _vAxes.at(0).y >> _vAxes.at(0).z;
+                        _vAxes.at(0).normalize3();
                     }
                     else if( xmlname == "axis2" ) {
-                        _ss >> _pjoint->vAxes[1].x >> _pjoint->vAxes[1].y >> _pjoint->vAxes[1].z;
-                        _pjoint->vAxes[0].normalize3();
+                        _ss >> _vAxes.at(1).x >> _vAxes.at(1).y >> _vAxes.at(1).z;
+                        _vAxes.at(0).normalize3();
                     }
                     break;
                 case KinBody::Joint::JointHinge2:
@@ -1553,12 +1545,12 @@ namespace OpenRAVEXMLParser
                         _ss >> _vanchor.x >> _vanchor.y >> _vanchor.z;
                     }
                     else if( xmlname == "axis1" ) {
-                        _ss >> _pjoint->vAxes[0].x >> _pjoint->vAxes[0].y >> _pjoint->vAxes[0].z;
-                        _pjoint->vAxes[0].normalize3();
+                        _ss >> _vAxes.at(0).x >> _vAxes.at(0).y >> _vAxes.at(0).z;
+                        _vAxes.at(0).normalize3();
                     }
                     else if( xmlname == "axis2" ) {
-                        _ss >> _pjoint->vAxes[1].x >> _pjoint->vAxes[1].y >> _pjoint->vAxes[1].z;
-                        _pjoint->vAxes[0].normalize3();
+                        _ss >> _vAxes.at(1).x >> _vAxes.at(1).y >> _vAxes.at(1).z;
+                        _vAxes.at(0).normalize3();
                     }
                     break;
                 case KinBody::Joint::JointSpherical:
@@ -1594,6 +1586,7 @@ namespace OpenRAVEXMLParser
         KinBody::LinkPtr _offsetfrom; ///< all transforms are relative to this body
         KinBodyPtr _pparent;
         KinBody::JointPtr& _pjoint;
+        std::vector<Vector> _vAxes;
         Vector _vanchor;
         bool _bNegateJoint;
         string _processingtag;
@@ -2366,11 +2359,11 @@ namespace OpenRAVEXMLParser
 
                     if( !piksolver ) {
                         // try loading the shared object
-                        ProblemInstancePtr pIKFastLoader;
+                        ModuleBasePtr pIKFastLoader;
                         {
-                            list<ProblemInstancePtr> listProblems;
-                            boost::shared_ptr<void> pmutex = _probot->GetEnv()->GetLoadedProblems(listProblems);
-                            FOREACHC(itprob, listProblems) {
+                            list<ModuleBasePtr> listModules;
+                            boost::shared_ptr<void> pmutex = _probot->GetEnv()->GetModules(listModules);
+                            FOREACHC(itprob, listModules) {
                                 if( stricmp((*itprob)->GetXMLId().c_str(),"ikfast") == 0 ) {
                                     pIKFastLoader = *itprob;
                                     break;
@@ -2379,9 +2372,9 @@ namespace OpenRAVEXMLParser
                         }
 
                         if( !pIKFastLoader ) {
-                            pIKFastLoader = RaveCreateProblem(_probot->GetEnv(), "ikfast");
+                            pIKFastLoader = RaveCreateModule(_probot->GetEnv(), "ikfast");
                             if( !!pIKFastLoader )
-                                _probot->GetEnv()->LoadProblem(pIKFastLoader,"");
+                                _probot->GetEnv()->AddModule(pIKFastLoader,"");
                         }
 
                         if( !!pIKFastLoader ) {
@@ -2407,7 +2400,7 @@ namespace OpenRAVEXMLParser
                             }
                         }
                         else {
-                            RAVELOG_WARN("Failed to load IKFast problem\n");
+                            RAVELOG_WARN("Failed to load IKFast module\n");
                         }
                     }
                 }
@@ -2882,10 +2875,10 @@ namespace OpenRAVEXMLParser
         virtual ~DummyInterfaceXMLReader() {}
     };
 
-    class ProblemXMLReader : public InterfaceXMLReader
+    class ModuleXMLReader : public InterfaceXMLReader
     {
     public:
-        ProblemXMLReader(EnvironmentBasePtr penv, InterfaceBasePtr& pinterface, const AttributesList& atts) : InterfaceXMLReader(penv,pinterface,PT_ProblemInstance,RaveGetInterfaceName(PT_ProblemInstance),atts) {
+        ModuleXMLReader(EnvironmentBasePtr penv, InterfaceBasePtr& pinterface, const AttributesList& atts) : InterfaceXMLReader(penv,pinterface,PT_Module,RaveGetInterfaceName(PT_Module),atts) {
             FOREACHC(itatt,atts) {
                 if( itatt->first == "args" ) {
                     _args = itatt->second;
@@ -2893,12 +2886,12 @@ namespace OpenRAVEXMLParser
             }
 
             if( !!_pinterface ) {
-                ProblemInstancePtr problem = RaveInterfaceCast<ProblemInstance>(_pinterface);
-                if( !!problem ) {
-                    int ret = _penv->LoadProblem(problem,_args);
+                ModuleBasePtr module = RaveInterfaceCast<ModuleBase>(_pinterface);
+                if( !!module ) {
+                    int ret = _penv->AddModule(module,_args);
                     if( ret ) {
-                        RAVELOG_WARN(str(boost::format("problem %s returned %d\n")%problem->GetXMLId()%ret));
-                        problem.reset();
+                        RAVELOG_WARN(str(boost::format("module %s returned %d\n")%module->GetXMLId()%ret));
+                        module.reset();
                         _pinterface.reset();
                     }
                 }
@@ -3207,7 +3200,7 @@ namespace OpenRAVEXMLParser
         }
         case PT_SensorSystem: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_SensorSystem>(penv,pinterface,xmltag,atts));
         case PT_Controller: return InterfaceXMLReaderPtr(new ControllerXMLReader(penv,pinterface,atts));
-        case PT_ProblemInstance: return InterfaceXMLReaderPtr(new ProblemXMLReader(penv,pinterface,atts));
+        case PT_Module: return InterfaceXMLReaderPtr(new ModuleXMLReader(penv,pinterface,atts));
         case PT_IkSolver: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_IkSolver>(penv,pinterface,xmltag,atts));
         case PT_KinBody: {
             KinBodyPtr pbody = RaveInterfaceCast<KinBody>(pinterface); 

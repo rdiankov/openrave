@@ -16,6 +16,9 @@
 #ifndef  GRASPER_PROBLEM_H
 #define  GRASPER_PROBLEM_H
 
+#include <boost/thread/condition.hpp>
+#include <boost/thread/mutex.hpp>
+
 #ifdef QHULL_FOUND
 
 extern "C"
@@ -32,39 +35,45 @@ extern "C"
 
 #endif
 
-#define GTS_M_ICOSAHEDRON_X /* sqrt(sqrt(5)+1)/sqrt(2*sqrt(5)) */ \
-  (dReal)0.850650808352039932181540497063011072240401406
-#define GTS_M_ICOSAHEDRON_Y /* sqrt(2)/sqrt(5+sqrt(5))         */ \
-  (dReal)0.525731112119133606025669084847876607285497935
+#include <boost/thread/once.hpp>
+
+static boost::mutex s_QhullMutex;
+
+#define GTS_M_ICOSAHEDRON_X /* sqrt(sqrt(5)+1)/sqrt(2*sqrt(5)) */   \
+    (dReal)0.850650808352039932181540497063011072240401406
+#define GTS_M_ICOSAHEDRON_Y /* sqrt(2)/sqrt(5+sqrt(5))         */   \
+    (dReal)0.525731112119133606025669084847876607285497935
 #define GTS_M_ICOSAHEDRON_Z (dReal)0.0
 
 template<class T1, class T2>
-    struct sort_pair_first {
-        bool operator()(const std::pair<T1,T2>&left, const std::pair<T1,T2>&right) {
-            return left.first < right.first;
-        }
-    };
+struct sort_pair_first {
+    bool operator()(const std::pair<T1,T2>&left, const std::pair<T1,T2>&right) {
+        return left.first < right.first;
+    }
+};
 
 // very simple interface to use the GrasperPlanner
-class GrasperProblem : public ProblemInstance
+class GrasperProblem : public ModuleBase
 {
     struct GRASPANALYSIS
     {
-    GRASPANALYSIS() : mindist(0), volume(0) {}
+        GRASPANALYSIS() : mindist(0), volume(0) {}
         dReal mindist;
         dReal volume;
     };
 
- public:
- GrasperProblem(EnvironmentBasePtr penv)  : ProblemInstance(penv), errfile(NULL) {
+public:
+    GrasperProblem(EnvironmentBasePtr penv)  : ModuleBase(penv), errfile(NULL) {
         __description = ":Interface Author: Rosen Diankov\n\nUsed to simulate a hand grasping an object by closing its fingers until collision with all links. ";
-        RegisterCommand("Grasp",boost::bind(&GrasperProblem::Grasp,this,_1,_2),
+        RegisterCommand("Grasp",boost::bind(&GrasperProblem::_GraspCommand,this,_1,_2),
                         "Performs a grasp and returns contact points");
-        RegisterCommand("ComputeDistanceMap",boost::bind(&GrasperProblem::ComputeDistanceMap,this,_1,_2),
+        RegisterCommand("GraspThreaded",boost::bind(&GrasperProblem::_GraspThreadedCommand,this,_1,_2),
+                        "Parllelizes the computation of the grasp planning and force closure. Number of threads can be specified with 'numthreads'.");
+        RegisterCommand("ComputeDistanceMap",boost::bind(&GrasperProblem::_ComputeDistanceMapCommand,this,_1,_2),
                         "Computes a distance map around a particular point in space");
-        RegisterCommand("GetStableContacts",boost::bind(&GrasperProblem::GetStableContacts,this,_1,_2),
+        RegisterCommand("GetStableContacts",boost::bind(&GrasperProblem::_GetStableContactsCommand,this,_1,_2),
                         "Returns the stable contacts as defined by the closing direction");
-        RegisterCommand("ConvexHull",boost::bind(&GrasperProblem::ConvexHull,this,_1,_2),
+        RegisterCommand("ConvexHull",boost::bind(&GrasperProblem::_ConvexHullCommand,this,_1,_2),
                         "Given a point cloud, returns information about its convex hull like normal planes, vertex indices, and triangle indices. Computed planes point outside the mesh, face indices are not ordered, triangles point outside the mesh (counter-clockwise)");
     }
     virtual ~GrasperProblem() {
@@ -113,14 +122,10 @@ class GrasperProblem : public ProblemInstance
         return 0;
     }
 
-    virtual bool SendCommand(std::ostream& sout, std::istream& sinput)
+    virtual bool _GraspCommand(std::ostream& sout, std::istream& sinput)
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
-        return ProblemInstance::SendCommand(sout,sinput);
-    }
 
-    virtual bool Grasp(std::ostream& sout, std::istream& sinput)
-    {
         string strsavetraj;
         bool bGetLinkCollisions = false;
         bool bExecute = true;
@@ -144,6 +149,7 @@ class GrasperProblem : public ProblemInstance
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
 
             if( cmd == "body" || cmd == "target" ) {
+                // initialization
                 string name; sinput >> name;
                 params->targetbody = GetEnv()->GetKinBody(name);
                 if( !params->targetbody ) {
@@ -151,68 +157,88 @@ class GrasperProblem : public ProblemInstance
                 }
             }
             else if( cmd == "bodyid" ) {
+                // initialization
                 int id = 0; sinput >> id;
                 params->targetbody = GetEnv()->GetBodyFromEnvironmentId(id);
             }
             else if( cmd == "direction" ) {
+                // grasp
                 sinput >> params->vtargetdirection.x >> params->vtargetdirection.y >> params->vtargetdirection.z;
                 params->vtargetdirection.normalize3();
             }
             else if( cmd == "avoidlink" ) {
+                // initialization
                 string linkname;
                 sinput >> linkname;
                 params->vavoidlinkgeometry.push_back(linkname);
             }
             else if( cmd == "notrans" ) {
+                // initialization
                 params->btransformrobot = false;
             }
             else if( cmd == "transformrobot" ) {
+                // initialization
                 sinput >> params->btransformrobot;
             }
             else if( cmd == "onlycontacttarget" ) {
+                // initialization
                 sinput >> params->bonlycontacttarget;
             }
             else if( cmd == "tightgrasp" ) {
+                // initialization
                 sinput >> params->btightgrasp;
             }
             else if( cmd == "execute" ) {
+                // ignore
                 sinput >> bExecute;
             }
             else if( cmd == "writetraj" ) {
+                // ignore
                 sinput >> strsavetraj;
             }
             else if( cmd == "outputfinal" ) {
+                // ignore 
                 sinput >> bOutputFinal;
             }
             else if( cmd == "graspingnoise" ) {
+                // initialization
                 sinput >> params->fgraspingnoise;
             }
             else if( cmd == "roll" ) {
+                // grasp
                 sinput >> params->ftargetroll;
             }
             else if( cmd == "centeroffset" || cmd == "position" ) {
+                // initialization
                 sinput >> params->vtargetposition.x >> params->vtargetposition.y >> params->vtargetposition.z;
             }
             else if( cmd == "standoff" ) {
+                // grasp
                 sinput >> params->fstandoff;
             }
             else if( cmd == "friction" ) {
+                // initialization
                 sinput >> friction;
             }
             else if( cmd == "getlinkcollisions" ) {
+                // ignore
                 bGetLinkCollisions = true;
             }
             else if( cmd == "stablecontacts" ) {
+                // ignore
                 sinput >> bComputeStableContacts;
             }
             else if( cmd == "forceclosure" ) {
+                // initialization
                 sinput >> bComputeForceClosure;
             }
             else if( cmd == "collision" ) {
+                // initialiation
                 string name; sinput >> name;
                 pcheckermngr.reset(new CollisionCheckerMngr(GetEnv(), name));
             }
             else if( cmd == "translationstepmult" ) {
+                // initialization
                 sinput >> params->ftranslationstepmult;
             }
             else {
@@ -322,8 +348,10 @@ class GrasperProblem : public ProblemInstance
         return true;
     }
 
-    virtual bool ComputeDistanceMap(std::ostream& sout, std::istream& sinput)
+    virtual bool _ComputeDistanceMapCommand(std::ostream& sout, std::istream& sinput)
     {
+        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+
         dReal conewidth = 0.25f*PI;
         int nDistMapSamples = 60000;
         string cmd;
@@ -378,8 +406,10 @@ class GrasperProblem : public ProblemInstance
         return true;
     }
 
-    virtual bool GetStableContacts(std::ostream& sout, std::istream& sinput)
+    virtual bool _GetStableContactsCommand(std::ostream& sout, std::istream& sinput)
     {
+        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+
         string cmd;
         dReal mu=0;
         Vector direction;
@@ -424,7 +454,7 @@ class GrasperProblem : public ProblemInstance
         return true;
     }
 
-    virtual bool ConvexHull(std::ostream& sout, std::istream& sinput)
+    virtual bool _ConvexHullCommand(std::ostream& sout, std::istream& sinput)
     {
         string cmd;
         bool bReturnFaces = true, bReturnPlanes = true, bReturnTriangles = true;
@@ -470,7 +500,7 @@ class GrasperProblem : public ProblemInstance
         if( bReturnFaces || bReturnTriangles ) {
             vconvexfaces.reset(new vector<int>);
         }
-        if( !_ComputeConvexHull(vpoints,vconvexplanes, vconvexfaces, dim) ) {
+        if( _ComputeConvexHull(vpoints,vconvexplanes, vconvexfaces, dim) == 0 ) {
             return false;
         }
         if( bReturnPlanes ) {
@@ -546,7 +576,365 @@ class GrasperProblem : public ProblemInstance
         return true;
     }
 
- protected:
+    // initialization parameters
+    struct WorkerParameters
+    {
+        WorkerParameters() {
+            bonlycontacttarget = true;
+            btightgrasp = false;
+            fgraspingnoise = 0;
+            bComputeForceClosure = false;
+            friction = 0.4;
+            ftranslationstepmult = 0.1;
+            nGraspingNoiseRetries = 0;
+            forceclosurethreshold = 0;
+        }
+        
+        string targetname;
+        vector<string> vavoidlinkgeometry;
+        bool bonlycontacttarget;
+        bool btightgrasp;
+        int nGraspingNoiseRetries;
+        dReal fgraspingnoise;
+        bool bComputeForceClosure;
+        dReal forceclosurethreshold;
+        dReal friction;
+        string collisionchecker;
+        dReal ftranslationstepmult;
+
+        string manipname;
+        vector<int> vactiveindices;
+        int affinedofs;
+        Vector affineaxis;
+    };
+    
+    struct GraspParametersThread
+    {
+        int id;
+        Vector vtargetdirection;
+        Vector vtargetposition;
+        dReal ftargetroll;
+        vector<dReal> preshape;
+        dReal fstandoff;
+        
+        // results
+        // contact points
+        vector< pair<CollisionReport::CONTACT,int> > contacts;
+        dReal mindist, volume;
+        Transform transfinal;
+        vector<dReal> finalshape;
+    };
+    typedef boost::shared_ptr<GraspParametersThread> GraspParametersThreadPtr;
+    typedef boost::shared_ptr<WorkerParameters> WorkerParametersPtr;
+    
+  
+    virtual bool _GraspThreadedCommand(std::ostream& sout, std::istream& sinput)
+    {
+        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+
+        WorkerParametersPtr worker_params(new WorkerParameters());
+        int numthreads = 2;
+        string cmd;
+        vector< pair<Vector, Vector> > approachrays;
+        vector<dReal> rolls;
+        vector< vector<dReal> > preshapes;
+        vector<dReal> standoffs;
+        
+        while(!sinput.eof()) {
+            sinput >> cmd;
+            if( !sinput ) {
+                break;
+            }
+            std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
+
+            if( cmd == "target" ) {
+                sinput >> worker_params->targetname;
+            }
+            else if( cmd == "avoidlink" ) {
+                string linkname;
+                sinput >> linkname;
+                worker_params->vavoidlinkgeometry.push_back(linkname);
+            }
+            else if( cmd == "onlycontacttarget" ) {
+                sinput >> worker_params->bonlycontacttarget;
+            }
+            else if( cmd == "tightgrasp" ) {
+                sinput >> worker_params->btightgrasp;
+            }
+            else if( cmd == "graspingnoise" ) {
+                sinput >> worker_params->fgraspingnoise >> worker_params->nGraspingNoiseRetries;
+            }
+            else if( cmd == "friction" ) {
+                sinput >> worker_params->friction;
+            }
+            else if( cmd == "forceclosure" ) {
+                sinput >> worker_params->bComputeForceClosure >> worker_params->forceclosurethreshold;
+            }
+            else if( cmd == "collisionchecker" ) {
+                sinput >> worker_params->collisionchecker;
+            }
+            else if( cmd == "translationstepmult" ) {
+                sinput >> worker_params->ftranslationstepmult;
+            }
+            else if( cmd == "numthreads" ) {
+                sinput >> numthreads;
+            }
+            // grasp specific
+            else if( cmd == "approachrays" ) {
+                int numapproachrays = 0;
+                sinput >> numapproachrays;
+                approachrays.resize(numapproachrays);
+                FOREACH(it,approachrays) {
+                    sinput >> it->first.x >> it->first.y >> it->first.z;
+                    sinput >> it->second.x >> it->second.y >> it->second.z;
+                }
+            }
+            else if( cmd == "rolls" ) {
+                int numrolls=0;
+                sinput >> numrolls;
+                rolls.resize(numrolls);
+                FOREACH(it,rolls) {
+                    sinput >> *it;
+                }
+            }
+            else if( cmd == "standoffs" ) {
+                int numstandoffs = 0;
+                sinput >> numstandoffs;
+                standoffs.resize(numstandoffs);
+                FOREACH(it,standoffs) {
+                    sinput >> *it;
+                }
+            }
+            else if( cmd == "preshapes" ) {
+                int numpreshapes = 0;
+                sinput >> numpreshapes;
+                preshapes.resize(numpreshapes);
+                FOREACH(itpreshape,preshapes) {
+                    itpreshape->resize(_robot->GetActiveManipulator()->GetGripperIndices().size());
+                    FOREACH(it,*itpreshape) {
+                        sinput >> *it;
+                    }
+                }
+            }
+            else {
+                RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
+                break;
+            }
+
+            if( !sinput ) {
+                RAVELOG_ERROR(str(boost::format("failed processing command %s\n")%cmd));
+                return false;
+            }
+        }
+
+        worker_params->manipname = _robot->GetActiveManipulator()->GetName();
+        worker_params->vactiveindices = _robot->GetActiveDOFIndices();
+        worker_params->affinedofs = _robot->GetAffineDOF();
+        worker_params->affineaxis = _robot->GetAffineRotationAxis();
+
+        EnvironmentBasePtr pcloneenv = GetEnv()->CloneSelf(Clone_Bodies|Clone_Simulation);        
+
+        _bContinueWorker = true;
+        // start worker threads
+        vector<boost::shared_ptr<boost::thread> > listthreads(numthreads);
+        FOREACH(itthread,listthreads) {
+            itthread->reset(new boost::thread(boost::bind(&GrasperProblem::_WorkerThread,this,worker_params,pcloneenv)));
+        }
+
+        int id=0;
+        RAVELOG_INFO(str(boost::format("number of grasps to test: %d\n")%(approachrays.size()*rolls.size()*preshapes.size()*standoffs.size())));
+        FOREACH(itapproachray, approachrays){
+            FOREACH(itroll, rolls) {
+                FOREACH(itpreshape, preshapes) {
+                    FOREACH(itstandoff, standoffs) {
+                        boost::mutex::scoped_lock lock(_mutexGrasp);
+                        // initialize _graspParamsWork
+                        _graspParamsWork.reset(new GraspParametersThread());
+                        _graspParamsWork->id = id;
+                        _graspParamsWork->vtargetposition = itapproachray->first;
+                        _graspParamsWork->vtargetdirection = itapproachray->second;
+                        _graspParamsWork->ftargetroll = *itroll;
+                        _graspParamsWork->fstandoff = *itstandoff;
+                        _graspParamsWork->preshape = *itpreshape;
+                        _condGraspHasWork.notify_one(); // notify there is work
+                        _condGraspReceivedWork.wait(lock); // wait for more work
+                        ++id;
+                    }
+                }
+            }
+        }
+
+        // wait for workers
+        _bContinueWorker = false;
+        FOREACH(itthread,listthreads) {
+            _condGraspHasWork.notify_all(); // signal
+            (*itthread)->join();
+        }
+        listthreads.clear();
+
+        // parse results to output
+        sout << _listGraspResults.size() << " ";
+        FOREACH(itresult, _listGraspResults) {
+            sout << (*itresult)->vtargetposition.x << " " << (*itresult)->vtargetposition.y << " " << (*itresult)->vtargetposition.z << " ";
+            sout << (*itresult)->vtargetdirection.x << " " << (*itresult)->vtargetdirection.y << " " << (*itresult)->vtargetdirection.z << " ";
+            sout << (*itresult)->ftargetroll << " " << (*itresult)->fstandoff << " ";
+            FOREACH(itangle, (*itresult)->preshape) {
+                sout << (*itangle) << " ";
+            }
+            sout << (*itresult)->mindist << " " << (*itresult)->volume << " ";
+            sout << (*itresult)->transfinal << " ";
+            FOREACH(itangle, (*itresult)->finalshape) {
+                sout << *itangle << " ";
+            }
+            sout << (*itresult)->contacts.size() << " ";
+            FOREACH(itc, (*itresult)->contacts) {
+                const CollisionReport::CONTACT& c = itc->first;
+                sout << c.pos.x << " " << c.pos.y << " " << c.pos.z << " " << c.norm.x << " " << c.norm.y << " " << c.norm.z << " ";
+            }
+            
+        }
+        
+        return true;
+    }
+
+    void _WorkerThread(const WorkerParametersPtr worker_params, EnvironmentBasePtr penv)
+    {
+        // clone environment
+        EnvironmentBasePtr pcloneenv = penv->CloneSelf(Clone_Bodies|Clone_Simulation);
+        EnvironmentMutex::scoped_lock lock(pcloneenv->GetMutex());
+        boost::shared_ptr<CollisionCheckerMngr> pcheckermngr(new CollisionCheckerMngr(pcloneenv, worker_params->collisionchecker));
+        PlannerBasePtr planner = RaveCreatePlanner(pcloneenv,"Grasper");
+        RobotBasePtr probot = pcloneenv->GetRobot(_robot->GetName());
+        string strsavetraj;
+
+        probot->SetActiveManipulator(worker_params->manipname);
+
+        // setup parameters
+        boost::shared_ptr<GraspParameters> params(new GraspParameters(GetEnv()));
+        
+        params->targetbody = pcloneenv->GetKinBody(worker_params->targetname);
+        params->vavoidlinkgeometry = worker_params->vavoidlinkgeometry;
+        params->btransformrobot = true;
+        params->bonlycontacttarget = worker_params->bonlycontacttarget;
+        params->btightgrasp = worker_params->btightgrasp;
+        params->fgraspingnoise = worker_params->fgraspingnoise;
+        params->ftranslationstepmult = worker_params->ftranslationstepmult;
+
+        CollisionReportPtr report(new CollisionReport());
+        TrajectoryBasePtr ptraj = RaveCreateTrajectory(pcloneenv,probot->GetActiveDOF());
+        TrajectoryBasePtr pfulltraj = RaveCreateTrajectory(pcloneenv,probot->GetDOF());
+        GraspParametersThreadPtr grasp_params;
+
+        // calculate the contact normals
+        pcloneenv->GetCollisionChecker()->SetCollisionOptions(CO_Contacts);
+        std::vector<KinBody::LinkPtr> vlinks;
+        probot->GetActiveManipulator()->GetChildLinks(vlinks);
+
+ 
+        while(_bContinueWorker) {
+            {
+                // wait for work
+                boost::mutex::scoped_lock lock(_mutexGrasp);
+                if( !_graspParamsWork ) {
+                    _condGraspHasWork.wait(lock);
+                    // after signal
+                    if( !_graspParamsWork ) {
+                        continue;
+                    }
+                }
+                grasp_params = _graspParamsWork;
+                _graspParamsWork.reset();
+                _condGraspReceivedWork.notify_all();
+            }
+
+            RAVELOG_DEBUG(str(boost::format("start grasp %d")%grasp_params->id));
+            
+            // fill params
+            params->vtargetdirection = grasp_params->vtargetdirection;
+            params->ftargetroll = grasp_params->ftargetroll;
+            params->vtargetposition = grasp_params->vtargetposition;
+            params->fstandoff = grasp_params->fstandoff;
+            probot->SetActiveDOFs(worker_params->vactiveindices);
+            probot->SetActiveDOFValues(grasp_params->preshape);
+            probot->SetActiveDOFs(worker_params->vactiveindices,worker_params->affinedofs,worker_params->affineaxis);
+
+            params->SetRobotActiveJoints(probot);
+            probot->GetActiveDOFValues(params->vinitialconfig);
+
+
+            boost::shared_ptr<KinBody::KinBodyStateSaver> bodysaver;
+            if( !!params->targetbody ) {
+                bodysaver.reset(new KinBody::KinBodyStateSaver(params->targetbody));
+            }
+           
+            RobotBase::RobotStateSaver saver(probot);
+            probot->Enable(true);
+            
+                                    
+            // InitPlan/PlanPath
+            if( planner->InitPlan(probot, params) ) {
+                ptraj->Clear();
+                if( planner->PlanPath(ptraj) ) {
+                    BOOST_ASSERT(ptraj->GetPoints().size() > 0);
+                    // fill results
+                    ptraj->CalcTrajTiming(probot, ptraj->GetInterpMethod(), true, true);
+                    probot->GetFullTrajectoryFromActive(pfulltraj,ptraj,false);
+
+                    bodysaver.reset(); // restore target
+                    BOOST_ASSERT(pfulltraj->GetPoints().size()>0);
+
+                    probot->SetTransform(ptraj->GetPoints().back().trans);
+                    probot->SetActiveDOFValues(ptraj->GetPoints().back().q);
+
+                    grasp_params->transfinal = probot->GetTransform();
+                    probot->GetDOFValues(grasp_params->finalshape);
+
+                    FOREACHC(itlink, vlinks) {
+                        if( pcloneenv->CheckCollision(KinBody::LinkConstPtr(*itlink), KinBodyConstPtr(params->targetbody), report) ) {
+                            RAVELOG_VERBOSE(str(boost::format("contact %s\n")%report->__str__()));
+                            FOREACH(itcontact,report->contacts) {
+                                if( report->plink1 != *itlink ) {
+                                    itcontact->norm = -itcontact->norm;
+                                    itcontact->depth = -itcontact->depth;
+                                }
+                                grasp_params->contacts.push_back(make_pair(*itcontact,(*itlink)->GetIndex()));
+                            }
+                        }
+                    }
+                    
+                    GRASPANALYSIS analysis;
+                    if( worker_params->bComputeForceClosure ) {
+                        try {
+                            vector<CollisionReport::CONTACT> c(grasp_params->contacts.size());
+                            for(size_t i = 0; i < c.size(); ++i)
+                                c[i] = grasp_params->contacts[i].first;
+                            analysis = _AnalyzeContacts3D(c,worker_params->friction,8);
+                            if( analysis.mindist < worker_params->forceclosurethreshold ) {
+                                continue;
+                            }
+                            grasp_params->mindist = analysis.mindist;
+                            grasp_params->volume = analysis.volume;
+                        }
+                        catch(const openrave_exception& ex) {
+                            continue; // failed
+                        }
+                    }
+                    RAVELOG_DEBUG(str(boost::format("grasp %d success")%grasp_params->id));
+
+                    boost::mutex::scoped_lock lock(_mutexGrasp);
+                    _listGraspResults.push_back(grasp_params);
+                }
+            }
+        }
+    }
+
+    bool _bContinueWorker;
+    boost::mutex _mutexGrasp;
+    GraspParametersThreadPtr _graspParamsWork;
+    list<GraspParametersThreadPtr> _listGraspResults;
+    boost::condition _condGraspHasWork, _condGraspReceivedWork;
+
+protected:
     void SampleObject(KinBodyPtr pbody, vector<CollisionReport::CONTACT>& vpoints, int N, Vector graspcenter)
     {
         RAY r;
@@ -892,9 +1280,9 @@ class GrasperProblem : public ProblemInstance
 
     virtual GRASPANALYSIS _AnalyzeContacts3D(const vector<CollisionReport::CONTACT>& contacts, dReal mu, int Nconepoints)
     {
-        if( mu == 0 )
+        if( mu == 0 ) {
             return _AnalyzeContacts3D(contacts);
-
+        }
         dReal fdeltaang = 2*PI/(dReal)Nconepoints;
         dReal fang = 0;
         vector<pair<dReal,dReal> > vsincos(Nconepoints);
@@ -911,8 +1299,9 @@ class GrasperProblem : public ProblemInstance
             TransformMatrix torient = matrixFromQuat(quatRotateDirection(Vector(0,0,1),itcontact->norm));
             Vector right(torient.m[0],torient.m[4],torient.m[8]);
             Vector up(torient.m[1],torient.m[5],torient.m[9]);
-            FOREACH(it,vsincos)
+            FOREACH(it,vsincos) {
                 newcontacts.push_back(CollisionReport::CONTACT(itcontact->pos, (itcontact->norm + mu*it->first*right + mu*it->second*up).normalize3(),0));
+            }
         }
 
         return _AnalyzeContacts3D(newcontacts);
@@ -920,9 +1309,9 @@ class GrasperProblem : public ProblemInstance
 
     virtual GRASPANALYSIS _AnalyzeContacts3D(const vector<CollisionReport::CONTACT>& contacts)
     {
-        if( contacts.size() < 7 )
+        if( contacts.size() < 7 ) {
             throw openrave_exception("need at least 7 contact wrenches to have force closure in 3D");
-
+        }
         GRASPANALYSIS analysis;
         vector<double> vpoints(6*contacts.size()), vconvexplanes;
         vector<double>::iterator itpoint = vpoints.begin();
@@ -941,8 +1330,9 @@ class GrasperProblem : public ProblemInstance
         // go through each of the faces and check if center is inside, and compute its distance
         double mindist = 1e30;
         for(size_t i = 0; i < vconvexplanes.size(); i += 7) {
-            if( vconvexplanes.at(i+6) > 0 || RaveFabs(vconvexplanes.at(i+6)) < 1e-15 )
+            if( vconvexplanes.at(i+6) > 0 || RaveFabs(vconvexplanes.at(i+6)) < 1e-15 ) {
                 return analysis;
+            }
             mindist = min(mindist,-vconvexplanes.at(i+6));
         }
         analysis.mindist = mindist;
@@ -954,6 +1344,7 @@ class GrasperProblem : public ProblemInstance
     /// \param vconvexplaces the places of the convex hull, dimension is dim+1
     virtual double _ComputeConvexHull(const vector<double>& vpoints, vector<double>& vconvexplanes, boost::shared_ptr< vector<int> > vconvexfaces, int dim)
     {
+        boost::mutex::scoped_lock lock(s_QhullMutex);
         vconvexplanes.resize(0);
 #ifdef QHULL_FOUND
         vector<coordT> qpoints(vpoints.size());
@@ -976,10 +1367,10 @@ class GrasperProblem : public ProblemInstance
             facetT *facet;	          // set by FORALLfacets 
             vertexT *vertex, **vertexp; // set by FOREACHvdertex_
             FORALLfacets { // 'qh facet_list' contains the convex hull
-//                if( facet->isarea && facet->f.area < 1e-15 ) {
-//                    RAVELOG_VERBOSE(str(boost::format("skipping area: %e\n")%facet->f.area));
-//                    continue;
-//                }
+                //                if( facet->isarea && facet->f.area < 1e-15 ) {
+                //                    RAVELOG_VERBOSE(str(boost::format("skipping area: %e\n")%facet->f.area));
+                //                    continue;
+                //                }
                 if( !!vconvexfaces && !!facet->vertices ) {
                     size_t startindex = vconvexfaces->size();
                     vconvexfaces->push_back(0);
@@ -1008,7 +1399,12 @@ class GrasperProblem : public ProblemInstance
             RAVELOG_ERROR("qhull internal warning (main): did not free %d bytes of long memory (%d pieces)\n", totlong, curlong);
         }
         if( exitcode ) {
-            throw openrave_exception(str(boost::format("Qhull failed with error %d")%exitcode));
+            RAVELOG_DEBUG(str(boost::format("Qhull failed with error %d")%exitcode));
+            vconvexplanes.resize(0);
+            if( !!vconvexfaces ) {
+                vconvexfaces->resize(0);
+            }
+            return 0;
         }
 
         vector<double> vmean(dim,0);

@@ -157,7 +157,7 @@ public:
         }
 
         vector<dReal> vgoal(_parameters->GetDOF());
-        for(size_t igoal = 0; igoal < (int)_parameters->vgoalconfig.size(); igoal += _parameters->GetDOF()) {
+        for(size_t igoal = 0; igoal < _parameters->vgoalconfig.size(); igoal += _parameters->GetDOF()) {
             std::copy(_parameters->vgoalconfig.begin()+igoal,_parameters->vgoalconfig.begin()+igoal+_parameters->GetDOF(),vgoal.begin());
             if( _parameters->_checkpathconstraintsfn(vgoal,vgoal,IT_OpenStart,ConfigurationListPtr()) ) {
                 _treeBackward.AddNode(-_numgoals-1, vgoal);

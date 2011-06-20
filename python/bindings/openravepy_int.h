@@ -75,7 +75,7 @@ class PySensorBase;
 class PySensorSystemBase;
 class PyControllerBase;
 class PyTrajectoryBase;
-class PyProblemInstance;
+class PyModuleBase;
 class PyViewerBase;
 class PySpaceSamplerBase;
 
@@ -105,8 +105,8 @@ typedef boost::shared_ptr<PySensorSystemBase> PySensorSystemBasePtr;
 typedef boost::shared_ptr<PySensorSystemBase const> PySensorSystemBaseConstPtr;
 typedef boost::shared_ptr<PyControllerBase> PyControllerBasePtr;
 typedef boost::shared_ptr<PyControllerBase const> PyControllerBaseConstPtr;
-typedef boost::shared_ptr<PyProblemInstance> PyProblemInstancePtr;
-typedef boost::shared_ptr<PyProblemInstance const> PyProblemInstanceConstPtr;
+typedef boost::shared_ptr<PyModuleBase> PyModuleBasePtr;
+typedef boost::shared_ptr<PyModuleBase const> PyModuleBaseConstPtr;
 typedef boost::shared_ptr<PyViewerBase> PyViewerBasePtr;
 typedef boost::shared_ptr<PyViewerBase const> PyViewerBaseConstPtr;
 typedef boost::shared_ptr<PySpaceSamplerBase> PySpaceSamplerBasePtr;
@@ -408,7 +408,7 @@ namespace openravepy
     PyPlannerBasePtr RaveCreatePlanner(PyEnvironmentBasePtr pyenv, const std::string& name);
     PySensorSystemBasePtr RaveCreateSensorSystem(PyEnvironmentBasePtr pyenv, const std::string& name);
     PyControllerBasePtr RaveCreateController(PyEnvironmentBasePtr pyenv, const std::string& name);
-    PyProblemInstancePtr RaveCreateProblemInstance(PyEnvironmentBasePtr pyenv, const std::string& name);
+    PyModuleBasePtr RaveCreateModule(PyEnvironmentBasePtr pyenv, const std::string& name);
     PyIkSolverBasePtr RaveCreateIkSolver(PyEnvironmentBasePtr pyenv, const std::string& name);
     PyPhysicsEngineBasePtr RaveCreatePhysicsEngine(PyEnvironmentBasePtr pyenv, const std::string& name);
     PySensorBasePtr RaveCreateSensor(PyEnvironmentBasePtr pyenv, const std::string& name);

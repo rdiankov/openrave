@@ -1,7 +1,7 @@
-/** \example orplanning_problem.cpp
+/** \example orplanning_module.cpp
     \author Rosen Diankov
 
-    Shows how to use a planner from a problem instance to move the arm withut colliding into anything.
+    Shows how to use a planner from a module to move the arm withut colliding into anything.
     The default values plan for all the joints of the robot.
 
     <b>Full Example Code:</b>
@@ -53,8 +53,8 @@ int main(int argc, char ** argv)
     }
     probot->SetActiveDOFs(vindices);
 
-    ProblemInstancePtr pbasemanip = RaveCreateProblem(penv,"basemanipulation"); // create the problem
-    penv->LoadProblem(pbasemanip,probot->GetName()); // load the problem
+    ModuleBasePtr pbasemanip = RaveCreateModule(penv,"basemanipulation"); // create the module
+    penv->AddModule(pbasemanip,probot->GetName()); // load the module
 
     while(1) {
         {

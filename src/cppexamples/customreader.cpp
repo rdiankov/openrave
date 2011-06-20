@@ -76,6 +76,7 @@ public:
     CustomController(EnvironmentBasePtr penv) : ControllerBase(penv)
     {
     }
+    virtual ~CustomController() {}
 
     virtual bool Init(RobotBasePtr robot, const std::vector<int>& dofindices, int nControlTransformation)
     {

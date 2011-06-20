@@ -51,10 +51,8 @@ class OPENRAVE_API ViewerBase : public InterfaceBase
 public:
     enum ViewerEvents
     {
-        /// mouse button is clicked. If the function
-        /// returns true, then the object will be selected. Otherwise, the object remains unselected.
         VE_ItemSelection = 1,
-    };
+    } RAVE_DEPRECATED;
 
     ViewerBase(EnvironmentBasePtr penv) : InterfaceBase(PT_Viewer, penv) {}
     virtual ~ViewerBase() {}
@@ -63,9 +61,11 @@ public:
     static inline InterfaceType GetInterfaceTypeStatic() { return PT_Viewer; }
     
     /// \brief goes into the main loop
+    ///
     /// \param bShow if true will show the window
     virtual int main(bool bShow = true) = 0;
-    /// destroys the main loop
+
+    /// \brief destroys the main loop
     virtual void quitmainloop() = 0;
 
     //@{ GUI interaction methods
@@ -77,52 +77,87 @@ public:
     virtual void SetCamera(const RaveTransform<float>& trans, float focalDistance=0) OPENRAVE_DUMMY_IMPLEMENTATION;
 
     /// \brief Return the current camera transform that the viewer is rendering the environment at.
-    virtual RaveTransform<float> GetCameraTransform() OPENRAVE_DUMMY_IMPLEMENTATION;
+    virtual RaveTransform<float> GetCameraTransform() const OPENRAVE_DUMMY_IMPLEMENTATION;
 
-    /// \brief reset the camera depending on its mode
-    virtual void UpdateCameraTransform() OPENRAVE_DUMMY_IMPLEMENTATION;
+    /// \brief Return the closest camera intrinsics that the viewer is rendering the environment at.
+    virtual geometry::RaveCameraIntrinsics<float> GetCameraIntrinsics() const OPENRAVE_DUMMY_IMPLEMENTATION;
 
     /** \brief Renders a 24bit RGB image of dimensions width and height from the current scene.
 
         The camera is meant to show the underlying OpenRAVE world as a robot would see it, so all graphs
         rendered with the plotX and drawX functions are hidden by default. Some viewers support the SetFiguresInCamera command to allow graphs to be also displayed.
         \param memory the memory where the image will be stored at, has to store 3*width*height
-        \param width width of the image
-        \param height height of the image
+        \param width width of the image, if 0 the width of the viewer is used
+        \param height height of the image, if 0 the width of the viewer is used
         \param t the rotation and translation of the camera. Note that +z is treated as the camera direction axis! So all points in front of the camera have a positive dot product with its +z direction.
         \param intrinsics the intrinsic parameters of the camera defining FOV, distortion, principal point, and focal length. The focal length is used to define the near plane for culling.
     */
     virtual bool GetCameraImage(std::vector<uint8_t>& memory, int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& intrinsics) OPENRAVE_DUMMY_IMPLEMENTATION;
-
+    
     //@}
 
     virtual void Reset() OPENRAVE_DUMMY_IMPLEMENTATION;
     virtual void SetBkgndColor(const RaveVector<float>& color) OPENRAVE_DUMMY_IMPLEMENTATION;
 
-    /// callback viewer function when for viewer events
-    /// first parameter - target openrave link
-    /// second parameter - offset
-    /// third parameter - direction
-    typedef boost::function<bool(KinBody::LinkPtr plink,RaveVector<float>,RaveVector<float>)> ViewerCallbackFn;
+    /// \brief callback function for item selection
+    ///
+    /// If the function returns true, then the object will be selected. Otherwise, the object remains unselected.
+    /// callback(target link,offset,direction)
+    typedef boost::function<bool(KinBody::LinkPtr plink,RaveVector<float>,RaveVector<float>)> ItemSelectionCallbackFn;
 
-    /// \brief registers a function with the viewer that gets called everytime a specified event occurs (part of ViewerEvents enum)
-    /// \return a handle to the callback. If this handle is deleted, the callback will be unregistered
-    virtual boost::shared_ptr<void> RegisterCallback(int properties, const ViewerCallbackFn& fncallback) OPENRAVE_DUMMY_IMPLEMENTATION;
+    /// \brief registers a function with the viewer that gets called everytime mouse button is clicked
+    ///
+    /// \return a handle to the callback. If this handle is deleted, the callback will be unregistered.
+    virtual boost::shared_ptr<void> RegisterItemSelectionCallback(const ItemSelectionCallbackFn& fncallback) OPENRAVE_DUMMY_IMPLEMENTATION;
 
-    /// \brief controls whether the viewer synchronizes with the newest environment
+    /// \brief callback function for item selection
+    /// callback(imagememory,width,height,pixeldepth)
+    ///
+    /// \param imagememory width x height x pixeldepth RGB image
+    typedef boost::function<void(const uint8_t*,int,int,int)> ViewerImageCallbackFn;
+
+    /// \brief registers a function with the viewer that gets called for every new image rendered.
+    ///
+    /// \return a handle to the callback. If this handle is deleted, the callback will be unregistered.
+    virtual boost::shared_ptr<void> RegisterViewerImageCallback(const ViewerImageCallbackFn& fncallback) OPENRAVE_DUMMY_IMPLEMENTATION;
+    
+    /// \brief controls whether the viewer synchronizes with the newest environment automatically
     virtual void SetEnvironmentSync(bool bUpdate) OPENRAVE_DUMMY_IMPLEMENTATION;
-
+    
     /// \brief forces synchronization with the environment, returns when the environment is fully synchronized.
     ///
     /// Note that this method might not work if environment is locked in current thread
     virtual void EnvironmentSync() OPENRAVE_DUMMY_IMPLEMENTATION;
 
-    virtual void ViewerSetSize(int w, int h) OPENRAVE_DUMMY_IMPLEMENTATION;
-    virtual void ViewerMove(int x, int y) OPENRAVE_DUMMY_IMPLEMENTATION;
-    virtual void ViewerSetTitle(const std::string& ptitle) OPENRAVE_DUMMY_IMPLEMENTATION;
+    virtual void SetSize(int w, int h) OPENRAVE_DUMMY_IMPLEMENTATION;
+
+    /// \deprecated (11/06/13)
+    virtual void ViewerSetSize(int w, int h) RAVE_DEPRECATED { SetSize(w,h); }
+
+    virtual void Move(int x, int y) OPENRAVE_DUMMY_IMPLEMENTATION;
+
+    /// \deprecated (11/06/13)
+    virtual void ViewerMove(int x, int y) RAVE_DEPRECATED { Move(x,y); };
+
+    virtual void SetName(const std::string& name) OPENRAVE_DUMMY_IMPLEMENTATION;
+
+    /// \deprecated (11/06/13)
+    virtual void ViewerSetTitle(const std::string& ptitle) RAVE_DEPRECATED { SetName(ptitle); }
+
+    virtual const std::string& GetName() const OPENRAVE_DUMMY_IMPLEMENTATION;
+
+    /// \deprecated (11/06/10)
+    virtual void UpdateCameraTransform() RAVE_DEPRECATED OPENRAVE_DUMMY_IMPLEMENTATION;
+    /// \deprecated (11/06/10)
+    typedef ItemSelectionCallbackFn ViewerCallbackFn RAVE_DEPRECATED;
+    /// \deprecated (11/06/10)
+    virtual boost::shared_ptr<void> RegisterCallback(int properties, const ViewerCallbackFn& fncallback) RAVE_DEPRECATED
+    {
+        return RegisterItemSelectionCallback(fncallback);
+    }
 
     /// \deprecated (11/03/02) Any type of model should be added through the openrave environment instead of viewer directly.
-    virtual bool LoadModel(const std::string& pfilename) OPENRAVE_DUMMY_IMPLEMENTATION;
+    virtual bool LoadModel(const std::string& pfilename) RAVE_DEPRECATED OPENRAVE_DUMMY_IMPLEMENTATION;
 
 protected:
     virtual GraphHandlePtr plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const RaveVector<float>& color, int drawstyle = 0) OPENRAVE_DUMMY_IMPLEMENTATION;
@@ -141,6 +176,9 @@ protected:
     
     virtual GraphHandlePtr drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const RaveVector<float>& color) OPENRAVE_DUMMY_IMPLEMENTATION;
     virtual GraphHandlePtr drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const boost::multi_array<float,2>& colors) OPENRAVE_DUMMY_IMPLEMENTATION;
+
+    inline ViewerBasePtr shared_viewer() { return boost::static_pointer_cast<ViewerBase>(shared_from_this()); }
+    inline ViewerBaseConstPtr shared_viewer_const() const { return boost::static_pointer_cast<ViewerBase const>(shared_from_this()); }
 
 private:
     virtual const char* GetHash() const { return OPENRAVE_VIEWER_HASH; }

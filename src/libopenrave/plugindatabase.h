@@ -57,7 +57,7 @@ const char s_filesep = '/';
 
 namespace OpenRAVE {
 
-/// database of planners, obstacles, sensors, and problem from plugins
+/// \brief database of interfaces from plugins
 class RaveDatabase : public boost::enable_shared_from_this<RaveDatabase>
 {
     struct RegisteredInterface
@@ -286,7 +286,7 @@ public:
     PlannerBasePtr CreatePlanner(EnvironmentBasePtr penv, const std::string& name) { return RaveInterfaceCast<PlannerBase>(Create(penv, PT_Planner, name)); }
     SensorSystemBasePtr CreateSensorSystem(EnvironmentBasePtr penv, const std::string& name) { return RaveInterfaceCast<SensorSystemBase>(Create(penv, PT_SensorSystem, name)); }
     ControllerBasePtr CreateController(EnvironmentBasePtr penv, const std::string& name) { return RaveInterfaceCast<ControllerBase>(Create(penv, PT_Controller, name)); }
-    ProblemInstancePtr CreateProblemInstance(EnvironmentBasePtr penv, const std::string& name) { return RaveInterfaceCast<ProblemInstance>(Create(penv, PT_ProblemInstance, name)); }
+    ModuleBasePtr CreateModule(EnvironmentBasePtr penv, const std::string& name) { return RaveInterfaceCast<ModuleBase>(Create(penv, PT_Module, name)); }
     IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr penv, const std::string& name) { return RaveInterfaceCast<IkSolverBase>(Create(penv, PT_IkSolver, name)); }
     PhysicsEngineBasePtr CreatePhysicsEngine(EnvironmentBasePtr penv, const std::string& name) { return RaveInterfaceCast<PhysicsEngineBase>(Create(penv, PT_PhysicsEngine, name)); }
     SensorBasePtr CreateSensor(EnvironmentBasePtr penv, const std::string& name) { return RaveInterfaceCast<SensorBase>(Create(penv, PT_Sensor, name)); }
@@ -314,6 +314,7 @@ public:
                 RegCloseKey(hkey);
                 installdir.assign(szInstallRoot);
                 installdir += str(boost::format("%cshare%copenrave-%d.%d%cplugins")%s_filesep%s_filesep%OPENRAVE_VERSION_MAJOR%OPENRAVE_VERSION_MINOR%s_filesep);
+                RAVELOG_VERBOSE(str(boost::format("window registry plugin dir '%s'")%installdir));
             }
             else
 #endif
@@ -343,6 +344,7 @@ public:
         FOREACH(it, vplugindirs) {
             if( it->size() > 0 ) {
                 _listplugindirs.push_back(*it);
+                RAVELOG_VERBOSE(str(boost::format("plugin dir: %s")%*it));
             }
         }
         if( bLoadAllPlugins ) {

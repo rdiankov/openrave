@@ -1,6 +1,6 @@
-// Copyright (C) 2006-2010 Rosen Diankov (rdiankov@cs.cmu.edu)
+// -*- coding: utf-8 -*-
+// Copyright (C) 2006-2011 Rosen Diankov <rosen.diankov@gmail.com>
 //
-// This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
@@ -16,7 +16,6 @@
 #include "qtcoin.h"
 
 #include <Inventor/elements/SoGLCacheContextElement.h>
-
 #include <Inventor/actions/SoWriteAction.h>
 #include <Inventor/nodes/SoComplexity.h>
 #include <Inventor/nodes/SoCoordinate3.h>
@@ -40,9 +39,7 @@
 #endif
 
 #include <locale>
-#include <boost/format.hpp>
 
-//const QMetaObject Viewer::staticMetaObject;
 const float TIMER_SENSOR_INTERVAL = (1.0f/60.0f);
 
 #define VIDEO_WIDTH 640
@@ -81,17 +78,15 @@ QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
 #endif
       ViewerBase(penv), _ivOffscreen(SbViewportRegion(VIDEO_WIDTH, VIDEO_HEIGHT))
 {
+    _name = str(boost::format("OpenRAVE %s")%OPENRAVE_VERSION_STRING);
 #if QT_VERSION >= 0x040000 // check for qt4
-    setWindowTitle(str(boost::format("OpenRAVE %s")%OPENRAVE_VERSION_STRING).c_str());
+    setWindowTitle(_name.c_str());
     statusBar()->showMessage(tr("Status Bar"));
 #endif
     __description = ":Interface Author: Rosen Diankov\n\nProvides a GUI using the Qt4, Coin3D, and SoQt libraries. Depending on the version, Coin3D and SoQt might be licensed under GPL.";
     RegisterCommand("SetFiguresInCamera",boost::bind(&QtCoinViewer::_SetFiguresInCamera,this,_1,_2),
                     "Accepts 0/1 value that decides whether to render the figure plots in the camera image through GetCameraImage");
-    RegisterCommand("SetWatermark",boost::bind(&QtCoinViewer::_SetWatermark,this,_1,_2),
-                    "Set a WxHx4 image as a watermark. Each color is an unsigned integer ordered as A|B|G|R. The origin should be the top left corner");
     _bLockEnvironment = true;
-    _bAVIInit = false;
     _pToggleDebug = NULL;
     _pSelectedCollisionChecker = NULL;
     _pSelectedPhysicsEngine = NULL;
@@ -205,9 +200,6 @@ QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
 
     _altDown[0] = _altDown[1]  = false;
     _ctrlDown[0] = _ctrlDown[1] = false;
-    _bAVIInit = false;
-    _bSaveVideo = false;
-    _bRealtimeVideo = false;
     _bUpdateEnvironment = true;
     
     // toggle switches
@@ -238,13 +230,13 @@ QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
     _timerSensor->setInterval(SbTime(TIMER_SENSOR_INTERVAL));
 
     _timerVideo = new SoTimerSensor(GlobVideoFrame, this);
-    _timerVideo->setInterval(SbTime(1/(float)VIDEO_FRAMERATE));
-
-    
+    _timerVideo->setInterval(SbTime(0.7/VIDEO_FRAMERATE)); // better to produce more frames than get slow video
     if (!_timerVideo->isScheduled()) {
         _timerVideo->schedule();
     }
-
+    
+    SoDB::setRealTimeInterval(SbTime(0.7/VIDEO_FRAMERATE));  // better to produce more frames than get slow video
+    
     // set to the classic locale so that number serialization/hashing works correctly
     // for some reason qt4 resets the locale to the default locale at some point, and openrave stops working
     std::locale::global(std::locale::classic());
@@ -264,11 +256,6 @@ QtCoinViewer::~QtCoinViewer()
         _listMessages.clear();
     }
 
-    if( _bAVIInit ) {
-        RAVELOG_INFOA("stopping avi\n");
-        STOP_AVI();
-    }
-
     _ivRoot->deselectAll();
 
     if (_timerSensor->isScheduled()) {
@@ -285,6 +272,7 @@ QtCoinViewer::~QtCoinViewer()
 
     _condUpdateModels.notify_all();
 
+    _pvideorecorder.reset();
     // don't dereference
 //    if( --s_InitRefCount <= 0 )
 //        SoQt::done();
@@ -391,7 +379,7 @@ public:
         : EnvMessage(pviewer, ppreturn, false), _width(width), _height(height) {}
     
     virtual void viewerexecute() {
-        _pviewer->_ViewerSetSize(_width, _height);
+        _pviewer->_SetSize(_width, _height);
         EnvMessage::viewerexecute();
     }
 
@@ -399,13 +387,13 @@ private:
     int _width, _height;
 };
 
-void QtCoinViewer::ViewerSetSize(int w, int h)
+void QtCoinViewer::SetSize(int w, int h)
 {
     EnvMessagePtr pmsg(new ViewerSetSizeMessage(shared_viewer(), (void**)NULL, w, h));
     pmsg->callerexecute();
 }
 
-void QtCoinViewer::_ViewerSetSize(int w, int h)
+void QtCoinViewer::_SetSize(int w, int h)
 {
     resize(w,h);
 }
@@ -417,7 +405,7 @@ public:
         : EnvMessage(pviewer, ppreturn, false), _x(x), _y(y) {}
     
     virtual void viewerexecute() {
-        _pviewer->_ViewerMove(_x, _y);
+        _pviewer->_Move(_x, _y);
         EnvMessage::viewerexecute();
     }
 
@@ -425,25 +413,25 @@ private:
     int _x, _y;
 };
 
-void QtCoinViewer::ViewerMove(int x, int y)
+void QtCoinViewer::Move(int x, int y)
 {
     EnvMessagePtr pmsg(new ViewerMoveMessage(shared_viewer(), (void**)NULL, x, y));
     pmsg->callerexecute();
 }
 
-void QtCoinViewer::_ViewerMove(int x, int y)
+void QtCoinViewer::_Move(int x, int y)
 {
     move(x,y);
 }
 
-class ViewerSetTitleMessage : public QtCoinViewer::EnvMessage
+class ViewerSetNameMessage : public QtCoinViewer::EnvMessage
 {
 public:
-    ViewerSetTitleMessage(QtCoinViewerPtr pviewer, void** ppreturn, const string& ptitle)
+    ViewerSetNameMessage(QtCoinViewerPtr pviewer, void** ppreturn, const string& ptitle)
         : EnvMessage(pviewer, ppreturn, false), _title(ptitle) {}
     
     virtual void viewerexecute() {
-        _pviewer->_ViewerSetTitle(_title.c_str());
+        _pviewer->_SetName(_title.c_str());
         EnvMessage::viewerexecute();
     }
 
@@ -451,13 +439,14 @@ private:
     string _title;
 };
 
-void QtCoinViewer::ViewerSetTitle(const string& ptitle)
+void QtCoinViewer::SetName(const string& ptitle)
 {
-    EnvMessagePtr pmsg(new ViewerSetTitleMessage(shared_viewer(), (void**)NULL, ptitle));
+    _name = ptitle;
+    EnvMessagePtr pmsg(new ViewerSetNameMessage(shared_viewer(), (void**)NULL, ptitle));
     pmsg->callerexecute();
 }
 
-void QtCoinViewer::_ViewerSetTitle(const string& ptitle)
+void QtCoinViewer::_SetName(const string& ptitle)
 {
     setWindowTitle(ptitle.c_str());
 }
@@ -475,14 +464,16 @@ bool QtCoinViewer::LoadModel(const string& pfilename)
 
 void QtCoinViewer::_StartPlaybackTimer()
 {
-    if (!_timerSensor->isScheduled())
+    if (!_timerSensor->isScheduled()) {
         _timerSensor->schedule();
+    }
 }
 
 void QtCoinViewer::_StopPlaybackTimer()
 {
-    if (_timerSensor->isScheduled())
+    if (_timerSensor->isScheduled()) {
         _timerSensor->unschedule(); 
+    }
     boost::mutex::scoped_lock lock(_mutexUpdateModels);
     _condUpdateModels.notify_all();
 }
@@ -520,9 +511,9 @@ bool QtCoinViewer::GetCameraImage(std::vector<uint8_t>& memory, int width, int h
         EnvMessagePtr pmsg(new GetCameraImageMessage(shared_viewer(), &ret, memory, width, height, t, KK));
         pmsg->callerexecute();
     }
-    else
+    else {
         RAVELOG_VERBOSE("failed to GetCameraImage: viewer is not updating\n");
-    
+    }
     return *(bool*)&ret;
 }
 
@@ -559,9 +550,9 @@ bool QtCoinViewer::WriteCameraImage(int width, int height, const RaveTransform<f
         EnvMessagePtr pmsg(new WriteCameraImageMessage(shared_viewer(), &ret, width, height, t, KK, fileName, extension));
         pmsg->callerexecute();
     }
-    else
+    else {
         RAVELOG_WARN("failed to WriteCameraImage: viewer is not updating\n");
-    
+    }
     return *(bool*)&ret;
 }
 
@@ -1015,8 +1006,9 @@ void QtCoinViewer::Reset()
 boost::shared_ptr<void> QtCoinViewer::LockGUI()
 {
     boost::shared_ptr<boost::mutex::scoped_lock> lock(new boost::mutex::scoped_lock(_mutexGUI));
-    while(!_bInIdleThread)
+    while(!_bInIdleThread) {
         Sleep(1);
+    }
     return lock;
 }
     
@@ -1134,11 +1126,16 @@ void QtCoinViewer::PrintCamera()
                   GetCamera()->focalDistance.getValue());
 }
 
-RaveTransform<float> QtCoinViewer::GetCameraTransform()
+RaveTransform<float> QtCoinViewer::GetCameraTransform() const
 {
     boost::mutex::scoped_lock lock(_mutexMessages);
-    RaveTransform<float> t = Tcam;
-    return t;
+    return Tcam;
+}
+
+geometry::RaveCameraIntrinsics<float> QtCoinViewer::GetCameraIntrinsics() const
+{
+    boost::mutex::scoped_lock lock(_mutexMessages);
+    return _camintrinsics;
 }
 
 void* QtCoinViewer::_plot3(SoSwitch* handle, const float* ppoints, int numPoints, int stride, float fPointSize, const RaveVector<float>& color)
@@ -1870,7 +1867,7 @@ void QtCoinViewer::SetupMenus()
     {
         pact = new QAction(tr("Fatal"), this);
         pact->setCheckable(true);
-        pact->setChecked(GetEnv()->GetDebugLevel()==Level_Fatal);
+        pact->setChecked((RaveGetDebugLevel()&Level_OutputMask)==Level_Fatal);
         pact->setData(Level_Fatal);
         psubmenu->addAction(pact);
         _pToggleDebug->addAction(pact);
@@ -1878,7 +1875,7 @@ void QtCoinViewer::SetupMenus()
     {
         pact = new QAction(tr("Error"), this);
         pact->setCheckable(true);
-        pact->setChecked(GetEnv()->GetDebugLevel()==Level_Error);
+        pact->setChecked((RaveGetDebugLevel()&Level_OutputMask)==Level_Error);
         pact->setData(Level_Error);
         psubmenu->addAction(pact);
         _pToggleDebug->addAction(pact);
@@ -1886,7 +1883,7 @@ void QtCoinViewer::SetupMenus()
     {
         pact = new QAction(tr("Warn"), this);
         pact->setCheckable(true);
-        pact->setChecked(GetEnv()->GetDebugLevel()==Level_Warn);
+        pact->setChecked((RaveGetDebugLevel()&Level_OutputMask)==Level_Warn);
         pact->setData(Level_Warn);
         psubmenu->addAction(pact);
         _pToggleDebug->addAction(pact);
@@ -1894,7 +1891,7 @@ void QtCoinViewer::SetupMenus()
     {
         pact = new QAction(tr("Info"), this);
         pact->setCheckable(true);
-        pact->setChecked(GetEnv()->GetDebugLevel()==Level_Info);
+        pact->setChecked((RaveGetDebugLevel()&Level_OutputMask)==Level_Info);
         pact->setData(Level_Info);
         psubmenu->addAction(pact);
         _pToggleDebug->addAction(pact);
@@ -1902,7 +1899,7 @@ void QtCoinViewer::SetupMenus()
     {
         pact = new QAction(tr("Debug"), this);
         pact->setCheckable(true);
-        pact->setChecked(GetEnv()->GetDebugLevel()==Level_Debug);
+        pact->setChecked((RaveGetDebugLevel()&Level_OutputMask)==Level_Debug);
         pact->setData(Level_Debug);
         psubmenu->addAction(pact);
         _pToggleDebug->addAction(pact);
@@ -1910,7 +1907,7 @@ void QtCoinViewer::SetupMenus()
     {
         pact = new QAction(tr("Verbose"), this);
         pact->setCheckable(true);
-        pact->setChecked(GetEnv()->GetDebugLevel()==Level_Verbose);
+        pact->setChecked((RaveGetDebugLevel()&Level_OutputMask)==Level_Verbose);
         pact->setData(Level_Verbose);
         psubmenu->addAction(pact);
         _pToggleDebug->addAction(pact);
@@ -1928,24 +1925,34 @@ void QtCoinViewer::SetupMenus()
     {
         psubmenu = pcurmenu->addMenu(tr("Video &Codecs"));
         QActionGroup* pVideoCodecs = new QActionGroup(this);
-        std::list<std::pair<int,string> > lcodecs = GET_CODECS();
+        ModuleBasePtr pvideocodecs = RaveCreateModule(GetEnv(),"viewerrecorder");
+        stringstream scodecs, sin;
+        if( !!pvideocodecs ) {
+            sin << "GetCodecs";
+            if (pvideocodecs->SendCommand(scodecs,sin) ) {
+                pact = new QAction(tr("Default (mpeg4)"), this);
+                pact->setCheckable(true);
+                pact->setChecked(true);
+                pact->setData((int)-1);
+                psubmenu->addAction(pact);
+                pVideoCodecs->addAction(pact);
 
-        pact = new QAction(tr("Default (mpeg4)"), this);
-        pact->setCheckable(true);
-        pact->setChecked(true);
-        pact->setData((int)-1);
-        psubmenu->addAction(pact);
-        pVideoCodecs->addAction(pact);
-
-        FOREACH(itcodec,lcodecs) {
-            pact = new QAction(tr(itcodec->second.c_str()), this);
-            pact->setCheckable(true);
-            pact->setChecked(false);
-            pact->setData(itcodec->first);
-            psubmenu->addAction(pact);
-            pVideoCodecs->addAction(pact);
+                int N = 0; scodecs >> N;
+                while(N-- > 0 ) {
+                    int index = -1; string name;
+                    scodecs >> index;
+                    getline(scodecs,name);
+                    boost::trim(name);
+                    pact = new QAction(tr(name.c_str()), this);
+                    pact->setCheckable(true);
+                    pact->setChecked(false);
+                    pact->setData(index);
+                    psubmenu->addAction(pact);
+                    pVideoCodecs->addAction(pact);
+                }
+                connect(pVideoCodecs, SIGNAL(triggered(QAction*)), this, SLOT(VideoCodecChanged(QAction*)) );
+            }
         }
-        connect(pVideoCodecs, SIGNAL(triggered(QAction*)), this, SLOT(VideoCodecChanged(QAction*)) );
     }
 
     ADD_MENU("&Simulation", true, NULL, "Control environment simulation loop", ToggleSimulation);
@@ -2126,24 +2133,24 @@ bool QtCoinViewer::_HandleSelection(SoPath *path)
 
     KinBodyItemPtr pKinBody = boost::dynamic_pointer_cast<KinBodyItem>(pItem);
     KinBody::LinkPtr pSelectedLink;
-    if( !!pKinBody )
+    if( !!pKinBody ) {
         pSelectedLink = pKinBody->GetLinkFromIv(node);
+    }
 
     bool bProceedSelection = true;
 
     // check the callbacks
     if( !!pSelectedLink ) {
         boost::mutex::scoped_lock lock(_mutexCallbacks);
-        FOREACH(itcallback,_listRegisteredCallbacks) {
-            if( itcallback->first & VE_ItemSelection ) {
-                bool bSame;
-                {
-                    boost::mutex::scoped_lock lock(_mutexMessages);
-                    bSame = !_pMouseOverLink.expired() && KinBody::LinkPtr(_pMouseOverLink) == pSelectedLink;
-                }
-                if( bSame ) {
-                    if( !itcallback->second(pSelectedLink,_vMouseSurfacePosition,_vMouseRayDirection) )
-                        bProceedSelection = false;
+        FOREACH(itcallback,_listItemSelectionCallbacks) {
+            bool bSame;
+            {
+                boost::mutex::scoped_lock lock(_mutexMessages);
+                bSame = !_pMouseOverLink.expired() && KinBody::LinkPtr(_pMouseOverLink) == pSelectedLink;
+            }
+            if( bSame ) {
+                if( !(*itcallback)(pSelectedLink,_vMouseSurfacePosition,_vMouseRayDirection) ) {
+                    bProceedSelection = false;
                 }
             }
         }
@@ -2237,8 +2244,9 @@ bool QtCoinViewer::_HandleSelection(SoPath *path)
                 }
             }
 
-            if( !pjoint )
+            if( !pjoint ) {
                 return false;
+            }
         }
     }
     
@@ -2418,7 +2426,7 @@ void QtCoinViewer::AdvanceFrame(bool bForward)
     }
 
     if( !!_pToggleDebug )
-        _pToggleDebug->actions().at(GetEnv()->GetDebugLevel())->setChecked(true);
+        _pToggleDebug->actions().at(RaveGetDebugLevel()&Level_OutputMask)->setChecked(true);
     _UpdateToggleSimulation();
     _UpdateCollisionChecker();
     _UpdatePhysicsEngine();
@@ -2449,7 +2457,7 @@ void QtCoinViewer::_UpdateEnvironment()
 
         // have to update model after messages since it can lock the environment
         UpdateFromModel();
-        UpdateCameraTransform();
+        _UpdateCameraTransform();
 
         // this causes the GUI links to jitter when moving the joints, perhaps there is fighting somewhere?
 //        if( !!_pdragger ) {
@@ -2480,32 +2488,48 @@ bool QtCoinViewer::ForceUpdatePublishedBodies()
 void QtCoinViewer::GlobVideoFrame(void* p, SoSensor*)
 {
     BOOST_ASSERT( p != NULL );
-    ((QtCoinViewer*)p)->VideoFrame();
+    ((QtCoinViewer*)p)->_VideoFrame();
 }
 
-void QtCoinViewer::VideoFrame()
+void QtCoinViewer::_VideoFrame()
 {
-    if( _bSaveVideo )
-        _RecordVideo();
+    std::list<ViewerImageCallbackFn> listViewerImageCallbacks;
+    {
+        boost::mutex::scoped_lock lock(_mutexCallbacks);
+        if( _listViewerImageCallbacks.size() == 0 ) {
+            return;
+        }
+        listViewerImageCallbacks = _listViewerImageCallbacks;
+    }
+
+    const uint8_t* memory;
+    memory = _GetVideoFrame();
+    if( !memory ) {
+        RAVELOG_WARN("cannot record video\n");
+        return;
+    }
+    FOREACH(itcallback,listViewerImageCallbacks) {
+        (*itcallback)(memory,VIDEO_WIDTH,VIDEO_HEIGHT,3);
+    }
 }
 
 void QtCoinViewer::UpdateFromModel()
 {
     {
         boost::mutex::scoped_lock lock(_mutexItems);
-        FOREACH(it,_listRemoveItems)
+        FOREACH(it,_listRemoveItems) {
             delete *it;
+        }
         _listRemoveItems.clear();
     }
 
     boost::mutex::scoped_lock lock(_mutexUpdateModels);
-
     vector<KinBody::BodyState> vecbodies;
 
     GetEnv()->GetPublishedBodies(vecbodies);
-
-    FOREACH(it, _mapbodies)
+    FOREACH(it, _mapbodies) {
         it->second->SetUserData(0);
+    }
 
 #if BOOST_VERSION >= 103500
     EnvironmentMutex::scoped_try_lock lockenv(GetEnv()->GetMutex(),boost::defer_lock_t());
@@ -2623,12 +2647,11 @@ void QtCoinViewer::_Reset()
     }
     _mapbodies.clear();
 
-    std::list<std::pair<int,ViewerCallbackFn > > listRegisteredCallbacks;
-    {
-        boost::mutex::scoped_lock lock(_mutexCallbacks);
-        listRegisteredCallbacks.swap(_listRegisteredCallbacks);
+    if( !!_pvideorecorder ) {
+        SoDB::enableRealTimeSensor(true);
+        SoSceneManager::enableRealTimeUpdate(true);
+        _pvideorecorder.reset();
     }
-    listRegisteredCallbacks.clear();
 
     {
         boost::mutex::scoped_lock lock(_mutexItems);
@@ -2637,15 +2660,10 @@ void QtCoinViewer::_Reset()
         }
         _listRemoveItems.clear();
     }
-
-    _vwatermarkimage.resize(boost::extents[0][0]);
 }
 
-void QtCoinViewer::UpdateCameraTransform()
+void QtCoinViewer::_UpdateCameraTransform()
 {
-    // set the camera depending on its mode
-
-    // get the camera
     boost::mutex::scoped_lock lock(_mutexMessages);
     SbVec3f pos = GetCamera()->position.getValue();
 
@@ -2655,6 +2673,17 @@ void QtCoinViewer::UpdateCameraTransform()
     float fangle;
     GetCamera()->orientation.getValue(axis, fangle);
     Tcam.rot = quatFromAxisAngle(RaveVector<float>(axis[0],axis[1],axis[2]),fangle);
+
+    int width = centralWidget()->size().width();
+    int height = centralWidget()->size().height();
+    _ivCamera->aspectRatio = (float)view1->size().width() / (float)view1->size().height();
+    
+    _camintrinsics.fy = 0.5*height/RaveTan(0.5f*GetCamera()->heightAngle.getValue());
+    _camintrinsics.fx = (float)width*_camintrinsics.fy/((float)height*GetCamera()->aspectRatio.getValue());
+    _camintrinsics.cx = (float)width/2;
+    _camintrinsics.cy = (float)height/2;
+    _camintrinsics.focal_length = GetCamera()->nearDistance.getValue();
+    _camintrinsics.distortion_model = "";
 }
 
 // menu items
@@ -2797,53 +2826,56 @@ void QtCoinViewer::ToggleSimulation(bool on)
 
 void QtCoinViewer::_UpdateToggleSimulation()
 {
-    if( !!_pToggleSimulation )
+    if( !!_pToggleSimulation ) {
         _pToggleSimulation->setChecked(GetEnv()->IsSimulationRunning());
+    }
     if( !!_pToggleSelfCollision ) {
         PhysicsEngineBasePtr p = GetEnv()->GetPhysicsEngine();
-        if( !!p )
+        if( !!p ) {
             _pToggleSelfCollision->setChecked(!!(p->GetPhysicsOptions()&PEO_SelfCollisions));
+        }
     }
 }
 
 void QtCoinViewer::_RecordSetup(bool bOn, bool bRealtimeVideo)
 {
-    if( bOn == _bSaveVideo ) {
-        RAVELOG_INFO("QtCoinViewer::_RecordSetup ignoring\n");
+    if( !bOn ) {
+        if( !!_pvideorecorder ) {
+            SoDB::enableRealTimeSensor(true);
+            SoSceneManager::enableRealTimeUpdate(true);
+            _pvideorecorder.reset();
+        }
         return;
     }
 
-    _bRealtimeVideo = bRealtimeVideo;
 #if QT_VERSION >= 0x040000 // check for qt4
     if( bOn ) {
-        // start
-        if( !_bAVIInit ) {
+        _pvideorecorder = RaveCreateModule(GetEnv(),"viewerrecorder");
+        if( !!_pvideorecorder ) {
             QString s = QFileDialog::getSaveFileName( this, "Choose video filename", NULL, "Video Files (*.*)");
-            if( s.length() == 0 )
+            if( s.length() == 0 ) {
                 return;
-            //if( !s.endsWith(".avi", Qt::CaseInsensitive) ) s += ".avi";
+            }
+
+            stringstream sout, sin;
+            sin << "Start " << VIDEO_WIDTH << " " << VIDEO_HEIGHT << " " << VIDEO_FRAMERATE << " codec " << _videocodec << " ";
+            if( bRealtimeVideo ) {
+                sin << "timing realtime ";
+            }
+            else {
+                sin << "timing simtime ";
+            }
+            sin << " viewer " << GetName() << endl << " filename " << s.toAscii().data() << endl;
+            if( !_pvideorecorder->SendCommand(sout,sin) ) {
+                _pvideorecorder.reset();
+                RAVELOG_DEBUG("video recording failed");
+                return;
+            }
             
-		    if( !START_AVI((char*)s.toAscii().data(), VIDEO_FRAMERATE, VIDEO_WIDTH, VIDEO_HEIGHT, 24,_videocodec) ) {
-                RAVELOG_ERROR("Failed to capture %s\n", s.toAscii().data());
-                return;
-		    }
-		    RAVELOG_DEBUG("Starting to capture %s\n", s.toAscii().data());
-		    _bAVIInit = true;
+            SoDB::enableRealTimeSensor(false);
+            SoSceneManager::enableRealTimeUpdate(false);
 	    }
-        else {
-            RAVELOG_DEBUG("Resuming previous video file\n");
-        }
     }
-
-    _bSaveVideo = bOn;
-    SoDB::enableRealTimeSensor(!_bSaveVideo);
-    SoSceneManager::enableRealTimeUpdate(!_bSaveVideo);
-
-    _nVideoTimeOffset = 0;
-    if( _bRealtimeVideo )
-        _nLastVideoFrame = GetMicroTime();
-    else
-        _nLastVideoFrame = GetEnv()->GetSimulationTime();
 #endif
 }
 
@@ -2874,8 +2906,8 @@ bool QtCoinViewer::_GetCameraImage(std::vector<uint8_t>& memory, int width, int 
     GetCamera()->orientation.setValue(t.rot.y, t.rot.z, t.rot.w, t.rot.x);
     GetCamera()->aspectRatio = (intrinsics.fy/(float)height) / (intrinsics.fx/(float)width);
     GetCamera()->heightAngle = 2.0f*atanf(0.5f*height/intrinsics.fy);
-    GetCamera()->nearDistance = intrinsics.focal_length*1.2;
-    GetCamera()->farDistance = intrinsics.focal_length*12000; // control the precision
+    GetCamera()->nearDistance = intrinsics.focal_length;
+    GetCamera()->farDistance = intrinsics.focal_length*10000; // control the precision
     GetCamera()->viewportMapping = SoCamera::LEAVE_ALONE;
     
     _pFigureRoot->ref();
@@ -2890,7 +2922,6 @@ bool QtCoinViewer::_GetCameraImage(std::vector<uint8_t>& memory, int width, int 
     _pFigureRoot->unref();
 
     if( bSuccess ) {
-        _AddWatermarkToImage(_ivOffscreen.getBuffer(), VIDEO_WIDTH, VIDEO_HEIGHT);
         // vertically flip since we want upper left corner to correspond to (0,0)
         memory.resize(width*height*3);
         for(int i = 0; i < height; ++i) {
@@ -2936,8 +2967,8 @@ bool QtCoinViewer::_WriteCameraImage(int width, int height, const RaveTransform<
     GetCamera()->orientation.setValue(t.rot.y, t.rot.z, t.rot.w, t.rot.x);
     GetCamera()->aspectRatio = (intrinsics.fy/(float)height) / (intrinsics.fx/(float)width);
     GetCamera()->heightAngle = 2.0f*atanf(0.5f*height/intrinsics.fy);
-    GetCamera()->nearDistance = intrinsics.focal_length*1.2;
-    GetCamera()->farDistance = intrinsics.focal_length*12000; // control the precision
+    GetCamera()->nearDistance = intrinsics.focal_length;
+    GetCamera()->farDistance = intrinsics.focal_length*10000; // control the precision
     GetCamera()->viewportMapping = SoCamera::LEAVE_ALONE;
     
     _pFigureRoot->ref();
@@ -2969,7 +3000,6 @@ bool QtCoinViewer::_WriteCameraImage(int width, int height, const RaveTransform<
             bSuccess = false;
         }
         else {
-            _AddWatermarkToImage(_ivOffscreen.getBuffer(), width, height);
             bSuccess = _ivOffscreen.writeToFile(SbString(filename.c_str()), SbString(extension.c_str()));
         }
     }
@@ -2987,18 +3017,18 @@ bool QtCoinViewer::_WriteCameraImage(int width, int height, const RaveTransform<
     return bSuccess;
 }
 
-bool QtCoinViewer::_RecordVideo()
+uint8_t* QtCoinViewer::_GetVideoFrame()
 {
-    if( !_bAVIInit || !_bCanRenderOffscreen )
-        return false;
-
+    if( !_bCanRenderOffscreen ) {
+        return NULL;
+    }
     _ivOffscreen.setViewportRegion(SbViewportRegion(VIDEO_WIDTH, VIDEO_HEIGHT));
     _ivOffscreen.render(_pviewer->getSceneManager()->getSceneGraph());
     
     if( _ivOffscreen.getBuffer() == NULL ) {
         RAVELOG_WARN("offset buffer null, disabling\n");
         _bCanRenderOffscreen = false;
-        return false;
+        return NULL;
     }
 
     // flip R and B
@@ -3008,31 +3038,15 @@ bool QtCoinViewer::_RecordVideo()
             swap(ptr[0], ptr[2]);
         }
     }
-    _AddWatermarkToImage(_ivOffscreen.getBuffer(), VIDEO_WIDTH, VIDEO_HEIGHT);
     
-    uint64_t curtime = _bRealtimeVideo ? GetMicroTime() : GetEnv()->GetSimulationTime();
-    _nVideoTimeOffset += (curtime-_nLastVideoFrame);
-    
-    while(_nVideoTimeOffset >= (1000000.0/VIDEO_FRAMERATE) ) {
-        if( !ADD_FRAME_FROM_DIB_TO_AVI(_ivOffscreen.getBuffer()) ) {
-            RAVELOG_WARN("Failed adding frames, stopping avi recording\n");
-            _bSaveVideo = false;
-            SoDB::enableRealTimeSensor(!_bSaveVideo);
-            SoSceneManager::enableRealTimeUpdate(!_bSaveVideo);
-            return true;
-        }
-        
-        _nVideoTimeOffset -= (1000000.0/VIDEO_FRAMERATE);
-    }
-    
-    _nLastVideoFrame = curtime;
-    return true;
+    return (uint8_t*)_ivOffscreen.getBuffer();
 }
 
 void QtCoinViewer::CollisionCheckerChanged(QAction* pact)
 {
-    if( pact->data().toString().size() == 0 )
+    if( pact->data().toString().size() == 0 ) {
         GetEnv()->SetCollisionChecker(CollisionCheckerBasePtr());
+    }
     else {
         CollisionCheckerBasePtr p = RaveCreateCollisionChecker(GetEnv(),pact->data().toString().toStdString());
         if( !!p ) {
@@ -3065,8 +3079,9 @@ void QtCoinViewer::_UpdateCollisionChecker()
 
 void QtCoinViewer::PhysicsEngineChanged(QAction* pact)
 {
-    if( pact->data().toString().size() == 0 )
+    if( pact->data().toString().size() == 0 ) {
         GetEnv()->SetPhysicsEngine(PhysicsEngineBasePtr());
+    }
     else {
         PhysicsEngineBasePtr p = RaveCreatePhysicsEngine(GetEnv(),pact->data().toString().toStdString());
         if( !!p ) {
@@ -3101,7 +3116,7 @@ void QtCoinViewer::_UpdatePhysicsEngine()
 
 void QtCoinViewer::UpdateInterfaces()
 {
-    list<ProblemInstancePtr> listProblems;
+    list<ModuleBasePtr> listProblems;
     vector<KinBodyPtr> vbodies;
     GetEnv()->GetLoadedProblems(listProblems);
     GetEnv()->GetBodies(vbodies);
@@ -3189,35 +3204,38 @@ bool QtCoinViewer::_SetFiguresInCamera(ostream& sout, istream& sinput)
     return !!sinput;
 }
 
-bool QtCoinViewer::_SetWatermark(ostream& sout, istream& sinput)
+void QtCoinViewer::_UnregisterItemSelectionCallback(ViewerBaseWeakPtr pweakviewer, std::list<ItemSelectionCallbackFn>::iterator* pit)
 {
-    int W, H;
-    sinput >> W >> H;
-    _vwatermarkimage.resize(boost::extents[H][W]);
-    for(int i = 0; i < H; ++i) {
-        for(int j = 0; j < W; ++j) {
-            sinput >> _vwatermarkimage[i][j];
+    if( !!pit ) {
+        boost::shared_ptr<QtCoinViewer> pviewer = boost::dynamic_pointer_cast<QtCoinViewer>(pweakviewer.lock());
+        if( !!pviewer ) {
+            boost::mutex::scoped_lock lock(pviewer->_mutexCallbacks);
+            pviewer->_listItemSelectionCallbacks.erase(*pit);
         }
-    }
-    return !!sinput;
+        delete pit;
+    }   
 }
 
-void QtCoinViewer::_AddWatermarkToImage(unsigned char* image, int width, int height)
+boost::shared_ptr<void> QtCoinViewer::RegisterItemSelectionCallback(const ItemSelectionCallbackFn& fncallback)
 {
-    if( _vwatermarkimage.size() == 0 ) {
-        return;
-    }
-    // the origin of the image is the bottom left corner
-    for(int i = 0; i < height; ++i) {
-        for(int j = 0; j < width; ++j) {
-            int iwater = _vwatermarkimage.shape()[0]-(i%_vwatermarkimage.shape()[0])-1;
-            int jwater = j%_vwatermarkimage.shape()[1];
-            uint32_t color = _vwatermarkimage[iwater][jwater];
-            uint32_t A = color>>24;
-            for(int k = 0; k < 3; ++k) {
-                image[k] = ((uint32_t)image[k]*(255-A)+((color>>(8*k))&0xff)*A)>>8;
-            }
-            image += 3;
+    boost::mutex::scoped_lock lock(_mutexCallbacks);
+    return boost::shared_ptr<void>(new std::list<ItemSelectionCallbackFn>::iterator(_listItemSelectionCallbacks.insert(_listItemSelectionCallbacks.end(),fncallback)), boost::bind(QtCoinViewer::_UnregisterItemSelectionCallback,ViewerBaseWeakPtr(shared_viewer()), _1));
+}
+
+void QtCoinViewer::_UnregisterViewerImageCallback(ViewerBaseWeakPtr pweakviewer, std::list<ViewerImageCallbackFn>::iterator* pit)
+{
+    if( !!pit ) {
+        boost::shared_ptr<QtCoinViewer> pviewer = boost::dynamic_pointer_cast<QtCoinViewer>(pweakviewer.lock());
+        if( !!pviewer ) {
+            boost::mutex::scoped_lock lock(pviewer->_mutexCallbacks);
+            pviewer->_listViewerImageCallbacks.erase(*pit);
         }
+        delete pit;
     }
+}
+
+boost::shared_ptr<void> QtCoinViewer::RegisterViewerImageCallback(const ViewerImageCallbackFn& fncallback)
+{
+    boost::mutex::scoped_lock lock(_mutexCallbacks);
+    return boost::shared_ptr<void>(new std::list<ViewerImageCallbackFn>::iterator(_listViewerImageCallbacks.insert(_listViewerImageCallbacks.end(),fncallback)), boost::bind(QtCoinViewer::_UnregisterViewerImageCallback,ViewerBaseWeakPtr(shared_viewer()), _1));
 }

@@ -35,7 +35,7 @@ void SetViewer(EnvironmentBasePtr penv, const string& viewername)
     BOOST_ASSERT(!!viewer);
 
     // attach it to the environment:
-    penv->AttachViewer(viewer);
+    penv->AddViewer(viewer);
 
     // finally you call the viewer's infinite loop (this is why you need a separate thread):
     bool showgui = true;
