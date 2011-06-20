@@ -426,24 +426,24 @@ class TestKinematics(EnvironmentSetup):
                 env.Load(robotfile)
                 body = env.GetBodies()[0]
 
-                zerovalues = zeros(robot.GetDOF())
+                zerovalues = zeros(body.GetDOF())
                 for i,offset in enumerate(zerovalues):
-                    joint=robot.GetJointFromDOFIndex(i)
+                    joint=body.GetJointFromDOFIndex(i)
                     joint.SetWrapOffset(offset,i-joint.GetDOFIndex())
-                robot.SetDOFValues(zerovalues)
-                limits = robot.GetDOFLimits()
-                limits = [numpy.maximum(-3*ones(robot.GetDOF()),limits[0]), numpy.minimum(3*ones(robot.GetDOF()),limits[1])]
+                body.SetDOFValues(zerovalues)
+                limits = body.GetDOFLimits()
+                limits = [numpy.maximum(-3*ones(body.GetDOF()),limits[0]), numpy.minimum(3*ones(body.GetDOF()),limits[1])]
                 for myiter in range(10):
-                    robot.GetLinks()[0].SetStatic(myiter%2)
-                    robot.SetDOFValues(zerovalues)
-                    Tlinks = robot.GetLinkTransformations()
+                    body.GetLinks()[0].SetStatic(myiter%2)
+                    body.SetDOFValues(zerovalues)
+                    Tlinks = body.GetLinkTransformations()
                     offsets = randlimits(*limits)
                     raveLogDebug(repr(offsets))
                     for i,offset in enumerate(offsets):
-                        joint=robot.GetJointFromDOFIndex(i)
+                        joint=body.GetJointFromDOFIndex(i)
                         joint.SetWrapOffset(offset,i-joint.GetDOFIndex())
 
-                    assert( transdist(zerovalues,robot.GetDOFValues()) <= g_epsilon )
-                    assert( transdist(Tlinks,robot.GetLinkTransformations()) <= g_epsilon )
-                    robot.SetDOFValues(offsets)
-                    assert( transdist(offsets,robot.GetDOFValues()) <= g_epsilon )
+                    assert( transdist(zerovalues,body.GetDOFValues()) <= g_epsilon )
+                    assert( transdist(Tlinks,body.GetLinkTransformations()) <= g_epsilon )
+                    body.SetDOFValues(offsets)
+                    assert( transdist(offsets,body.GetDOFValues()) <= g_epsilon )
