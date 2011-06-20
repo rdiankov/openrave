@@ -68,6 +68,7 @@ class Environment : public EnvironmentBase
                     RegCloseKey(hkey);
                     installdir.assign(szInstallRoot);
                     installdir += str(boost::format("%cshare%copenrave%d-%d")%s_filesep%s_filesep%OPENRAVE_VERSION_MAJOR%OPENRAVE_VERSION_MINOR);
+                    RAVELOG_VERBOSE(str(boost::format("window registry data dir '%s'")%installdir));
                 }
                 else
 #endif
@@ -93,6 +94,9 @@ class Environment : public EnvironmentBase
 #endif
             if( !bExists ) {
                 _vdatadirs.push_back(installdir);
+            }
+            FOREACHC(itdir,_vdatadirs) {
+                RAVELOG_VERBOSE(str(boost::format("data dir: %s")%*itdir));
             }
        }
     }

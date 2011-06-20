@@ -314,6 +314,7 @@ public:
                 RegCloseKey(hkey);
                 installdir.assign(szInstallRoot);
                 installdir += str(boost::format("%cshare%copenrave-%d.%d%cplugins")%s_filesep%s_filesep%OPENRAVE_VERSION_MAJOR%OPENRAVE_VERSION_MINOR%s_filesep);
+                RAVELOG_VERBOSE(str(boost::format("window registry plugin dir '%s'")%installdir));
             }
             else
 #endif
@@ -343,6 +344,7 @@ public:
         FOREACH(it, vplugindirs) {
             if( it->size() > 0 ) {
                 _listplugindirs.push_back(*it);
+                RAVELOG_VERBOSE(str(boost::format("plugin dir: %s")%*it));
             }
         }
         if( bLoadAllPlugins ) {
