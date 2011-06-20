@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 # Copyright (C) 2011 Rosen Diankov <rosen.diankov@gmail.com>
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -54,7 +54,7 @@ def test_transformations():
         qarray2 = quatMultArrayT(quat0,qarray0)
         assert( sum(abs(quatRotateArrayT(quat0,quatArrayTRotate(qarray0,X[0]))-quatArrayTRotate(qarray2,X[0]))) <= g_epsilon )
         dists = quatArrayTDist(qarray0[0],qarray0)
-        assert( all(dists>=0) and sum(dists)>0 and dists[0] <= g_epsilon )                    
+        assert( all(dists>=0) and sum(dists)>0 and dists[0] <= g_epsilon )
         posearray0 = randpose(5)
         posearray1 = poseMultArrayT(pose0,posearray0)
         assert( sum(abs(poseMult(pose0,posearray0[0])-posearray1[0])) <= g_epsilon )
@@ -67,7 +67,7 @@ def test_transformations():
         posearrayinv0 = invertPoses(posearray0)
         for j in range(len(posearray0)):
             assert( sum(abs(transformInversePoints(matrices[j],X) - poseTransformPoints(posearrayinv0[j],X))) <= g_epsilon )
-        
+
 def test_fitcircle():
     print "fits 2d and 3d circles to a set of points"
     perturbation = 0.001
@@ -144,7 +144,7 @@ class TestKinematics(EnvironmentSetup):
                             for ilink,link in enumerate(body.GetLinks()):
                                 jointchain = body.GetChain(0,link.GetIndex())
                                 if len(jointchain) == 0:
-                                    continue                            
+                                    continue
                                 body.SetDOFValues(dofvaluesnew)
                                 Tlink = dot(link.GetTransform(),localtrans)
                                 worldtrans = Tlink[0:3,3]
@@ -261,16 +261,16 @@ class TestKinematics(EnvironmentSetup):
                         assert( linkchain[ilink].IsParentLink(linkchain[ilink+1]) or linkchain[ilink+1].IsParentLink(linkchain[ilink]) )
                         assert( linkchain[ilink] == j.GetHierarchyChildLink() or linkchain[ilink] == j.GetHierarchyParentLink())
                         assert( linkchain[ilink+1] == j.GetHierarchyChildLink() or linkchain[ilink+1] == j.GetHierarchyParentLink())
-                        
+
                 #loops = body.GetClosedLoops()
                 #for loop in loops:
                 #    lknotindex = [i for i,(link,joint) in enumerate(loop) if link.GetIndex() == knot]
                 #    lknownindex = [i for i,(link,joint) in enumerate(loop) if link == knownlink]
-                    
+
     def test_collada(self):
         print "test that collada import/export works"
         epsilon = 400*g_epsilon # because exporting, expect to lose precision, should fix this
-        for robotfile in g_robotfiles[3:4]:
+        for robotfile in g_robotfiles[0:3]:
             self.env.Reset()
             robot0=self.env.ReadRobotXMLFile(robotfile)
             self.env.AddRobot(robot0,True)
@@ -365,7 +365,7 @@ class TestKinematics(EnvironmentSetup):
         robot.SetLinkTransformations([randtrans() for link in robot.GetLinks()])
         hash1 = robot.GetKinematicsGeometryHash()
         assert( hash0 == hash1 )
-        
+
     def test_staticlinks(self):
         env=self.env
         robot=env.ReadRobotXMLFile('robots/barrettwam.robot.xml')
@@ -393,7 +393,7 @@ class TestKinematics(EnvironmentSetup):
                 env.Reset()
                 env.Load(robotfile)
                 body = env.GetBodies()[0]
-                
+
                 zerovalues = zeros(body.GetDOF())
                 body.SetDOFValues(zerovalues)
                 Tlinks = body.GetLinkTransformations()
@@ -425,7 +425,7 @@ class TestKinematics(EnvironmentSetup):
                 env.Reset()
                 env.Load(robotfile)
                 body = env.GetBodies()[0]
-                
+
                 zerovalues = zeros(robot.GetDOF())
                 for i,offset in enumerate(zerovalues):
                     joint=robot.GetJointFromDOFIndex(i)
