@@ -314,6 +314,13 @@ public:
             }
             _pjoint->SetLimits(vlower,vupper);
         }
+        void SetVelocityLimits(object omaxlimits) {
+            vector<dReal> vmaxlimits = ExtractArray<dReal>(omaxlimits);
+            if( (int)vmaxlimits.size() != _pjoint->GetDOF() ) {
+                throw openrave_exception("limits are wrong dimensions");
+            }
+            _pjoint->SetVelocityLimits(vmaxlimits);
+        }
         void SetResolution(dReal resolution) { _pjoint->SetResolution(resolution); }
         void SetWeights(object o) { _pjoint->SetWeights(ExtractArray<dReal>(o)); }
 
@@ -4111,6 +4118,7 @@ In python, the syntax is::\n\n\
                 .def("SetWrapOffset",&PyKinBody::PyJoint::SetWrapOffset,SetWrapOffset_overloads(args("offset","axis"), DOXY_FN(KinBody::Joint,SetWrapOffset)))
                 .def("GetWrapOffset",&PyKinBody::PyJoint::GetWrapOffset,GetWrapOffset_overloads(args("axis"), DOXY_FN(KinBody::Joint,GetWrapOffset)))
                 .def("SetLimits",&PyKinBody::PyJoint::SetLimits,args("lower","upper"), DOXY_FN(KinBody::Joint,SetLimits))
+                .def("SetVelocityLimits",&PyKinBody::PyJoint::SetVelocityLimits,args("lower","upper"), DOXY_FN(KinBody::Joint,SetVelocityLimits))
                 .def("SetJointLimits",&PyKinBody::PyJoint::SetLimits,args("lower","upper"), DOXY_FN(KinBody::Joint,SetLimits))
                 .def("SetResolution",&PyKinBody::PyJoint::SetResolution,args("resolution"), DOXY_FN(KinBody::Joint,SetResolution))
                 .def("SetWeights",&PyKinBody::PyJoint::SetWeights,args("weights"), DOXY_FN(KinBody::Joint,SetWeights))
