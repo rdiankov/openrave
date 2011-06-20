@@ -25,12 +25,12 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
     case PT_Viewer:
         if( interfacename == "qtcoin" ) {
             if( QtCoinViewer::s_InitRefCount == 0 ) {
-                SoQt::init(s_SoQtArgc, NULL, NULL);
                 ++QtCoinViewer::s_InitRefCount;
+                SoQt::init(s_SoQtArgc, NULL, NULL);
             }
             return InterfaceBasePtr(new QtCoinViewer(penv));
         }
-        if( interfacename == "qtcameraviewer" ) {
+        else if( interfacename == "qtcameraviewer" ) {
             return InterfaceBasePtr(new QtCameraViewer(penv,sinput));
         }
         break;

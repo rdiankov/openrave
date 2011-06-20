@@ -121,6 +121,7 @@ public:
         _pfile = NULL; 
         _ps = NULL;
         _psCompressed = NULL; 
+        _psText = NULL;
         _biSizeImage = 0;
 #else
         _bWroteURL = false;

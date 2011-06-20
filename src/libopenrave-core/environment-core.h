@@ -67,7 +67,7 @@ class Environment : public EnvironmentBase
                     RegQueryValueEx(hkey, TEXT("InstallRoot"), NULL, &dwType, (PBYTE)szInstallRoot, &dwSize);
                     RegCloseKey(hkey);
                     installdir.assign(szInstallRoot);
-                    installdir += str(boost::format("%cshare%copenrave%d-%d")%s_filesep%s_filesep%OPENRAVE_VERSION_MAJOR%OPENRAVE_VERSION_MINOR);
+                    installdir += str(boost::format("%cshare%copenrave-%d.%d")%s_filesep%s_filesep%OPENRAVE_VERSION_MAJOR%OPENRAVE_VERSION_MINOR);
                     RAVELOG_VERBOSE(str(boost::format("window registry data dir '%s'")%installdir));
                 }
                 else

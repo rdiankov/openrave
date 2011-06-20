@@ -444,9 +444,13 @@ FunctionEnd
 Function DetectBoost
   ClearErrors
   ReadRegStr $0 HKLM "SOFTWARE\\boostpro.com\\%(boost_version)s" InstallRoot
-  IfErrors 0 done
+  IfErrors 0 done0
     Call GetBoost
-done:
+    Goto done1
+done0:
+  IfFileExists $0\\lib\\*.dll done1
+    Call GetBoost
+done1:
   DetailPrint "boost installation at: $0, copying necessary DLLs"
   CopyFiles $0\\lib\\boost*vc%(vcversion)s*.dll $INSTDIR\\bin
 FunctionEnd
