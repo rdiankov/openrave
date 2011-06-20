@@ -88,7 +88,7 @@ public:
                     ambientColor.x = pmtrl->ambientColor.getValues(0)->getValue()[0];
                     ambientColor.y = pmtrl->ambientColor.getValues(0)->getValue()[1];
                     ambientColor.z = pmtrl->ambientColor.getValues(0)->getValue()[2];
-                                                
+
                 }
                 if( !!pmtrl->transparency.getValues(0) ) {
                     ftransparency = pmtrl->transparency.getValues(0)[0];
@@ -98,7 +98,7 @@ public:
             psep->unref();
             bSuccess = true;
         }
-                        
+
         mySceneInput.closeFile();
         sout << trimesh << diffuseColor << ambientColor << ftransparency;
         return bSuccess;
@@ -142,19 +142,9 @@ public:
         pnode->ref();
         triAction.apply(pnode);
         //pnode->unref();
-
-        Vector scale;
-        SbMatrix s_ModelMatrix = GetModelMatrix();
-        scale.x = sqrtf(s_ModelMatrix[0][0]*s_ModelMatrix[0][0]+s_ModelMatrix[1][0]*s_ModelMatrix[1][0]+s_ModelMatrix[2][0]*s_ModelMatrix[2][0]);
-        scale.y = sqrtf(s_ModelMatrix[0][1]*s_ModelMatrix[0][1]+s_ModelMatrix[1][1]*s_ModelMatrix[1][1]+s_ModelMatrix[2][1]*s_ModelMatrix[2][1]);
-        scale.z = sqrtf(s_ModelMatrix[0][2]*s_ModelMatrix[0][2]+s_ModelMatrix[1][2]*s_ModelMatrix[1][2]+s_ModelMatrix[2][2]*s_ModelMatrix[2][2]);
-
         tri.indices.resize(tri.vertices.size());
         for(size_t i = 0; i < tri.vertices.size(); ++i) {
             tri.indices[i] = i;
-            tri.vertices[i].x *= scale.x;
-            tri.vertices[i].y *= scale.y;
-            tri.vertices[i].z *= scale.z;
         }
     }
 };
