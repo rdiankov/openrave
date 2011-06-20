@@ -40,6 +40,8 @@ void GetPluginAttributesValidated(PLUGININFO& info)
 {
     info.interfacenames[OpenRAVE::PT_Planner].push_back("Grasper");
     info.interfacenames[OpenRAVE::PT_Module].push_back("Grasper");
+    info.interfacenames[OpenRAVE::PT_Planner].push_back("GrasperThreaded");
+    info.interfacenames[OpenRAVE::PT_Module].push_back("GrasperThreaded");
 }
 
 OPENRAVE_PLUGIN_API void DestroyPlugin()

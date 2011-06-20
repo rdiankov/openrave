@@ -113,6 +113,9 @@ Misc
 * removed links without any geometry attached to them from the non-adjacent lists
 
 * added simplemanipulation python example (thanks to Alan Tan)
+
+* added GraspThreaded command to grasper plugin to allow for multithreaded computation of grasps
+
 Version 0.3.2
 =============
 

@@ -12,5 +12,6 @@ Contributors
 * Gustavo Puche Rodríguez - collada help
 * Masaru Ryumae - initial japanese documentation
 * Alan Tan - simplemanipulation python example
+* Atsushi Tsuda - multithreading of grasper plugin
 
 .. _`Rosen Diankov`: http://www.programmingvision.com
