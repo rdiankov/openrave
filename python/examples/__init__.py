@@ -41,6 +41,7 @@ import graspplanning
 import movehandstraight
 import movehandstraight2
 import showsensors
+import simplemanipulation
 import simplenavigation
 import testphysics
 import testphysics_controller

@@ -266,6 +266,11 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
         }
 
         odespace->Synchronize();
+        return _CheckCollision(plink1,plink2,report);
+    }
+
+    bool _CheckCollision(KinBody::LinkConstPtr plink1, KinBody::LinkConstPtr plink2, CollisionReportPtr report)
+    {
         bool bHasCallbacks = GetEnv()->HasRegisteredCollisionCallbacks();
         std::list<EnvironmentBase::CollisionCallbackFn> listcallbacks;
 
@@ -310,14 +315,16 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
                             }
                         }
 
-                        if( listcallbacks.size() == 0 ) {
-                            GetEnv()->GetRegisteredCollisionCallbacks(listcallbacks);
-                        }
-                        FOREACHC(itfn, listcallbacks) {
-                            OpenRAVE::CollisionAction action = (*itfn)(report,false);
-                            if( action != OpenRAVE::CA_DefaultAction ) {
-                                report->Reset();
-                                return false;
+                        if( bHasCallbacks ) {
+                            if( listcallbacks.size() == 0 ) {
+                                GetEnv()->GetRegisteredCollisionCallbacks(listcallbacks);
+                            }
+                            FOREACHC(itfn, listcallbacks) {
+                                OpenRAVE::CollisionAction action = (*itfn)(report,false);
+                                if( action != OpenRAVE::CA_DefaultAction ) {
+                                    report->Reset();
+                                    return false;
+                                }
                             }
                         }
                     }
@@ -338,6 +345,9 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
 
     virtual bool CheckCollision(KinBody::LinkConstPtr plink, KinBodyConstPtr pbody, CollisionReportPtr report)
     {
+        if( !!report ) {
+            report->Reset(_options);
+        }
         if( pbody->GetLinks().size() == 0 || !pbody->IsEnabled()  ) {
             return false;
         }
@@ -361,7 +371,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
         FOREACH(itbody,setattached) {
             FOREACHC(itlink, (*itbody)->GetLinks()) {
                 if( cb.IsActiveLink(*itbody,(*itlink)->GetIndex()) ) {
-                    if( CheckCollision(plink, KinBody::LinkConstPtr(*itlink), report) ) {
+                    if( _CheckCollision(plink, KinBody::LinkConstPtr(*itlink), report) ) {
                         return true;
                     }
                 }
@@ -564,9 +574,18 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
 
     virtual bool CheckSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report)
     {
+        if( _options & OpenRAVE::CO_Distance ) {
+            RAVELOG_WARN("ode doesn't support CO_Distance\n");
+            return false;
+        }
+        if( !!report ) {
+            report->Reset(_options);
+        }
         if( pbody->GetLinks().size() <= 1 ) {
             return false;
         }
+
+        odespace->Synchronize();
 
         int adjacentoptions = KinBody::AO_Enabled;
         if( (_options&OpenRAVE::CO_ActiveDOFs) && pbody->IsRobot() ) {
@@ -576,7 +595,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
         const std::set<int>& nonadjacent = pbody->GetNonAdjacentLinks(adjacentoptions);
         FOREACHC(itset, nonadjacent) {
             KinBody::LinkConstPtr plink1(pbody->GetLinks().at(*itset&0xffff)), plink2(pbody->GetLinks().at(*itset>>16));
-            if( CheckCollision(plink1,plink2, report) ) {
+            if( _CheckCollision(plink1,plink2, report) ) {
                 RAVELOG_VERBOSE(str(boost::format("selfcol %s, Links %s %s are colliding\n")%pbody->GetName()%plink1->GetName()%plink2->GetName()));
                 return true;
             }

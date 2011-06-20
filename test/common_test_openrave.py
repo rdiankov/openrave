@@ -30,6 +30,7 @@ def teardown_module(module):
     RaveDestroy()
 
 def transdist(list0,list1):
+    assert(len(list0)==len(list1))
     return sum([sum(abs(item0-item1)) for item0, item1 in izip(list0,list1)])
 
 def axisangledist(axis0,axis1):

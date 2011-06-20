@@ -1867,7 +1867,7 @@ void QtCoinViewer::SetupMenus()
     {
         pact = new QAction(tr("Fatal"), this);
         pact->setCheckable(true);
-        pact->setChecked(GetEnv()->GetDebugLevel()==Level_Fatal);
+        pact->setChecked((RaveGetDebugLevel()&Level_OutputMask)==Level_Fatal);
         pact->setData(Level_Fatal);
         psubmenu->addAction(pact);
         _pToggleDebug->addAction(pact);
@@ -1875,7 +1875,7 @@ void QtCoinViewer::SetupMenus()
     {
         pact = new QAction(tr("Error"), this);
         pact->setCheckable(true);
-        pact->setChecked(GetEnv()->GetDebugLevel()==Level_Error);
+        pact->setChecked((RaveGetDebugLevel()&Level_OutputMask)==Level_Error);
         pact->setData(Level_Error);
         psubmenu->addAction(pact);
         _pToggleDebug->addAction(pact);
@@ -1883,7 +1883,7 @@ void QtCoinViewer::SetupMenus()
     {
         pact = new QAction(tr("Warn"), this);
         pact->setCheckable(true);
-        pact->setChecked(GetEnv()->GetDebugLevel()==Level_Warn);
+        pact->setChecked((RaveGetDebugLevel()&Level_OutputMask)==Level_Warn);
         pact->setData(Level_Warn);
         psubmenu->addAction(pact);
         _pToggleDebug->addAction(pact);
@@ -1891,7 +1891,7 @@ void QtCoinViewer::SetupMenus()
     {
         pact = new QAction(tr("Info"), this);
         pact->setCheckable(true);
-        pact->setChecked(GetEnv()->GetDebugLevel()==Level_Info);
+        pact->setChecked((RaveGetDebugLevel()&Level_OutputMask)==Level_Info);
         pact->setData(Level_Info);
         psubmenu->addAction(pact);
         _pToggleDebug->addAction(pact);
@@ -1899,7 +1899,7 @@ void QtCoinViewer::SetupMenus()
     {
         pact = new QAction(tr("Debug"), this);
         pact->setCheckable(true);
-        pact->setChecked(GetEnv()->GetDebugLevel()==Level_Debug);
+        pact->setChecked((RaveGetDebugLevel()&Level_OutputMask)==Level_Debug);
         pact->setData(Level_Debug);
         psubmenu->addAction(pact);
         _pToggleDebug->addAction(pact);
@@ -1907,7 +1907,7 @@ void QtCoinViewer::SetupMenus()
     {
         pact = new QAction(tr("Verbose"), this);
         pact->setCheckable(true);
-        pact->setChecked(GetEnv()->GetDebugLevel()==Level_Verbose);
+        pact->setChecked((RaveGetDebugLevel()&Level_OutputMask)==Level_Verbose);
         pact->setData(Level_Verbose);
         psubmenu->addAction(pact);
         _pToggleDebug->addAction(pact);
@@ -2426,7 +2426,7 @@ void QtCoinViewer::AdvanceFrame(bool bForward)
     }
 
     if( !!_pToggleDebug )
-        _pToggleDebug->actions().at(GetEnv()->GetDebugLevel())->setChecked(true);
+        _pToggleDebug->actions().at(RaveGetDebugLevel()&Level_OutputMask)->setChecked(true);
     _UpdateToggleSimulation();
     _UpdateCollisionChecker();
     _UpdatePhysicsEngine();

@@ -24,63 +24,84 @@ namespace planningutils {
     int JitterActiveDOF(RobotBasePtr robot,int nMaxIterations,dReal fRand,const PlannerBase::PlannerParameters::NeighStateFn& neighstatefn)
     {
         RAVELOG_VERBOSE("starting jitter active dof...\n");
-        vector<dReal> curdof, newdof;
+        vector<dReal> curdof, newdof, deltadof, deltadof2;
         robot->GetActiveDOFValues(curdof);
-        int iter = 0;
+        newdof.resize(curdof.size());
+        deltadof.resize(curdof.size(),0);
         CollisionReport report;
         CollisionReportPtr preport(&report,null_deleter());
         bool bCollision = false;
         bool bConstraint = !!neighstatefn;
-        vector<dReal> deltadof(curdof.size(),0);
-        if( !bConstraint || neighstatefn(curdof,deltadof,0) ) {
+
+        // have to test with perturbations since very small changes in angles can produce collision inconsistencies
+        boost::array<dReal,3> perturbations = {{0,1e-5f,-1e-5f}};
+        FOREACH(itperturbation,perturbations) {
             if( bConstraint ) {
-                // curdof might have changed from constraint function
-                robot->SetActiveDOFValues(curdof);
-                //robot->GetActiveDOFValues(curdof); // necessary?
+                FOREACH(it,deltadof) {
+                    *it = *itperturbation;
+                }
+                newdof = curdof;
+                if( !neighstatefn(newdof,deltadof,0) ) {
+                    return -1;
+                }
             }
+            else {
+                for(size_t i = 0; i < newdof.size(); ++i) {
+                    newdof[i] = curdof[i]+*itperturbation;
+                }
+            }
+            robot->SetActiveDOFValues(newdof,true);
+
             if(robot->CheckSelfCollision(preport)) {
                 bCollision = true;
-                RAVELOG_DEBUG(str(boost::format("JitterActiveDOFs: initial config in self collision: %s!\n")%report.__str__()));
+                RAVELOG_DEBUG(str(boost::format("JitterActiveDOFs: self collision: %s!\n")%report.__str__()));
+                break;
             }
             if( robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot),preport) ) {
                 bCollision = true;
-                RAVELOG_DEBUG(str(boost::format("JitterActiveDOFs: initial config in collision: %s!\n")%report.__str__()));
-            }
-            if( !bCollision ) {
-                return -1;
+                RAVELOG_DEBUG(str(boost::format("JitterActiveDOFs: collision: %s!\n")%report.__str__()));
+                break;
             }
         }
-        else {
-            RAVELOG_DEBUG("constraint function failed\n");
+        
+        if( !bCollision ) {
+            return -1;
         }
 
-        newdof.resize(curdof.size());
-        do {
-            if( iter++ > nMaxIterations ) {
-                robot->SetActiveDOFValues(curdof,true);
-                robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot),preport) || robot->CheckSelfCollision(preport);
-                RAVELOG_WARN(str(boost::format("Failed to find noncolliding position for robot: %s\n")%report.__str__()));
-                return 0;
+        deltadof2.resize(curdof.size(),0);
+        for(int iter = 0; iter < nMaxIterations; ++iter) {
+            for(size_t j = 0; j < newdof.size(); ++j) {
+                deltadof[j] = fRand * (RaveRandomFloat()-0.5f);
             }
-            if( bCollision ) {
-                newdof = curdof;
-                for(size_t j = 0; j < newdof.size(); ++j) {
-                    deltadof[j] = fRand * (RaveRandomFloat()-0.5f);
+            bCollision = false;
+            FOREACH(itperturbation,perturbations) {
+                for(size_t j = 0; j < deltadof.size(); ++j) {
+                    deltadof2[j] = deltadof[j] + *itperturbation;
                 }
-                if( bConstraint && !neighstatefn(newdof,deltadof,0) ) {
-                    continue;
+                if( bConstraint ) {
+                    newdof = curdof;
+                    if( !neighstatefn(newdof,deltadof2,0) ) {
+                        RAVELOG_DEBUG("constraint function failed\n");
+                        continue;
+                    }
+                }
+                else {
+                    for(size_t j = 0; j < deltadof.size(); ++j) {
+                        newdof[j] = curdof[j] + deltadof2[j];
+                    }
                 }
                 robot->SetActiveDOFValues(newdof,true);
-            }
-            else {
-                for(int j = 0; j < robot->GetActiveDOF(); j++) {
-                    newdof[j] = curdof[j] + fRand * (RaveRandomFloat()-0.5f);
+                if(robot->CheckSelfCollision() || robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot)) ) {
+                    bConstraint = true;
+                    break;
                 }
-                robot->SetActiveDOFValues(newdof,true);
             }
-        } while(robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot)) || robot->CheckSelfCollision() );
+            if( !bCollision ) {
+                return 1;
+            }
+        }
     
-        return 1;
+        return 0;
     }
 
     bool JitterTransform(KinBodyPtr pbody, float fJitter, int nMaxIterations)

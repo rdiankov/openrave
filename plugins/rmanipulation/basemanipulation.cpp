@@ -410,7 +410,6 @@ protected:
 
         robot->SetActiveDOFs(pmanip->GetArmIndices());
         params->SetRobotActiveJoints(robot);
-        planningutils::JitterActiveDOF(robot);
     
         TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF());
 
@@ -423,9 +422,10 @@ protected:
             RAVELOG_WARN("jitter failed\n");
             return false;
         }
+
         robot->GetActiveDOFValues(params->vgoalconfig);
         robot->SetActiveDOFValues(values);
-    
+
         // jitter again for initial collision
         if( planningutils::JitterActiveDOF(robot) == 0 ) {
             RAVELOG_WARN("jitter failed\n");
@@ -720,7 +720,7 @@ protected:
         params->vgoalconfig.reserve(nSeedIkSolutions*robot->GetActiveDOF());
         while(nSeedIkSolutions > 0) {
             if( goalsampler.Sample(vgoal) ) {
-                if( constrainterrorthresh > 0 && !planningutils::JitterActiveDOF(robot,5000,0.03,params->_neighstatefn) ) {
+                if( constrainterrorthresh > 0 && planningutils::JitterActiveDOF(robot,5000,0.03,params->_neighstatefn) == 0 ) {
                     RAVELOG_DEBUG("constraint function failed\n");
                     continue;
                 }

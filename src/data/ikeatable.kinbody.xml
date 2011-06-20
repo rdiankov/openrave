@@ -1,0 +1,51 @@
+<!-- IKEA table, white table top with 4x Red legs -->
+<!-- Overall Size(m): 1.2(Length) x 0.6(Width) x 0.74(Height) -->
+<!-- Overall Mass(kg): 10.6 -->
+
+<!-- Important Note -->
+<!-- x Axis = Width , y Axis = Length , Z Axis = Height -->
+
+<KinBody name="IkeaTable">
+    <Body type="dynamic">
+        <!-- Mass(kg)=10.6 -->
+        <Mass type="mimicgeom">
+            <total>10.6</total>
+        </Mass>
+        <!-- Reference point take from table's top surface -->
+        <!-- Table top size(m): 1.2x0.6x0.03-->
+        <Geom type="box">
+            <Extents>0.3 0.6 0.015</Extents>
+	    <Translation>0 0 -0.015</Translation>
+	    <diffuseColor>1.0 1.0 1.0</diffuseColor>
+        </Geom>
+	<!-- 4x legs size(m): Radius=0.027 Height=0.71 -->
+	<Geom type="cylinder">
+	    <rotationaxis>1 0 0 90</rotationaxis>
+            <Radius>0.027</Radius>
+            <Height>0.71</Height>
+            <diffuseColor>1.0 0.0 0.0</diffuseColor>
+            <Translation>0.22 -0.52 -0.385</Translation>
+	</Geom>
+        <Geom type="cylinder">
+	    <rotationaxis>1 0 0 90</rotationaxis>
+            <Radius>0.027</Radius>
+            <Height>0.71</Height>
+            <diffuseColor>1.0 0.0 0.0</diffuseColor>
+            <Translation>-0.22 -0.52 -0.385</Translation>
+	</Geom>
+	<Geom type="cylinder">
+	    <rotationaxis>1 0 0 90</rotationaxis>
+            <Radius>0.027</Radius>
+            <Height>0.71</Height>
+            <diffuseColor>1.0 0.0 0.0</diffuseColor>
+            <Translation>-0.22 0.52 -0.385</Translation>
+	</Geom>
+	<Geom type="cylinder">
+	    <rotationaxis>1 0 0 90</rotationaxis>
+            <Radius>0.027</Radius>
+            <Height>0.71</Height>
+            <diffuseColor>1.0 0.0 0.0</diffuseColor>
+            <Translation>0.22 0.52 -0.385</Translation>
+	</Geom>
+    </Body>
+</KinBody>

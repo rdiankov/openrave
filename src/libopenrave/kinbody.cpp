@@ -3828,6 +3828,24 @@ void KinBody::_ComputeInternalInformation()
             }
         }
 
+        // make no-geometry links adjacent to all other links
+        FOREACH(itlink0, _veclinks) {
+            if( (*itlink0)->GetGeometries().size() == 0 ) {
+                int ind0 = (*itlink0)->GetIndex();
+                FOREACH(itlink1,_veclinks) {
+                    if( *itlink0 != *itlink1 ) {
+                        int ind1 = (*itlink1)->GetIndex();
+                        if( ind1 < ind0 ) {
+                            _setAdjacentLinks.insert(ind1|(ind0<<16));
+                        }
+                        else {
+                            _setAdjacentLinks.insert(ind0|(ind1<<16));
+                        }
+                    }
+                }
+            }
+        }
+
         if( _bMakeJoinedLinksAdjacent ) {
             FOREACH(itj, _vecjoints) {
                 int ind0 = (*itj)->_attachedbodies[0]->GetIndex();
