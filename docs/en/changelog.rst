@@ -35,6 +35,12 @@ Core
 
 * added KinBody::SetZeroConfiguration() for calibration
 
+* caching computation of hashes for faster kinbody/robot loading
+
+* the Environment Load methods takes an attributes list, and Save method allows for selection of what gets saved.
+
+ * renamed EnvironmentBase::TriangulateOptions to EnvironmentBase::SelectionOptions
+
 Planning
 --------
 
@@ -112,9 +118,9 @@ Misc
 
 * removed links without any geometry attached to them from the non-adjacent lists
 
-* added simplemanipulation python example (thanks to Alan Tan)
+* added simplemanipulation python example (thanks to Alan Tan), added simplegrasping example
 
-* added GraspThreaded command to grasper plugin to allow for multithreaded computation of grasps
+* added GraspThreaded command to grasper plugin to allow for multithreaded computation of grasps. Added the corresponding bindings to the openravepy grasping module.
 
 Version 0.3.2
 =============

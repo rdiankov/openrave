@@ -1,6 +1,7 @@
 Adding a Python Example
 =======================
 
+This document is for developers that want to add an official openravepy example to the subversion repository.
 Adding an **example0** to the openravepy.examples module requires:
 
 * Add example0.py to ``python/examples/`` directory
@@ -11,13 +12,13 @@ Adding an **example0** to the openravepy.examples module requires:
 
 .. code-block:: bash
 
-  svn add tutorial0.py
+  svn add example0.py
 
 * Once installed, make sure it is executable through
 
 .. code-block:: bash
 
-  openrave.py --example tutorial0
+  openrave.py --example example0
 
 Documentation
 -------------
@@ -25,7 +26,7 @@ Documentation
 Every example must follow this format when documenting it::
 
   """One sentence introduction.
-  
+
   .. examplepre-block:: example0
 
   [user-specific text]

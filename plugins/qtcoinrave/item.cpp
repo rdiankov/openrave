@@ -30,7 +30,7 @@ Item::Item(QtCoinViewerPtr viewer) : _viewer(viewer)
     _ivXform = new SoTransform;
     _ivRoot = new SoSeparator;
     _ivGeom = new SoSwitch(2);
-    _ivGeom->whichChild.setValue(SO_SWITCH_ALL); 
+    _ivGeom->whichChild.setValue(SO_SWITCH_ALL);
 
     _ivRoot->addChild(_ivXform);
     _ivRoot->addChild(_ivGeom);
@@ -49,7 +49,7 @@ Item::~Item()
         _viewer->GetBodiesRoot()->removeChild(_ivRoot);
         _ivRoot->unref();
     }
-    
+
 }
 
 bool Item::ContainsIvNode(SoNode *pNode)
@@ -66,13 +66,13 @@ bool Item::ContainsIvNode(SoNode *pNode)
 
 bool Item::ContainsIvNode(SoPath *pNodePath)
 {
-  //return (pNodePath->containsNode(_ivGeom));    
+  //return (pNodePath->containsNode(_ivGeom));
   return (ContainsIvNode(pNodePath->getTail()));
 }
 
 void Item::SetGeomVisibility(bool bFlag)
 {
-  _ivGeom->whichChild.setValue(bFlag ? SO_SWITCH_ALL : SO_SWITCH_NONE); 
+  _ivGeom->whichChild.setValue(bFlag ? SO_SWITCH_ALL : SO_SWITCH_NONE);
 }
 
 void Item::SetUnpickable()
@@ -112,9 +112,9 @@ void KinBodyItem::Load()
         RaveTransform<float> tbody = (*it)->GetTransform();
         lnk.ptrans->rotation.setValue(tbody.rot.y, tbody.rot.z, tbody.rot.w, tbody.rot.x);
         lnk.ptrans->translation.setValue(tbody.trans.x, tbody.trans.y, tbody.trans.z);
-                    
+
         lnk.psep->addChild(lnk.ptrans);
-        _ivGeom->addChild(lnk.psep);        
+        _ivGeom->addChild(lnk.psep);
         _veclinks.push_back(lnk);
 
         FOREACHC(itgeom, (*it)->GetGeometries()) {
@@ -126,7 +126,7 @@ void KinBodyItem::Load()
             Transform tgeom = itgeom->GetTransform();
             ptrans->rotation.setValue(tgeom.rot.y, tgeom.rot.z, tgeom.rot.w, tgeom.rot.x);
             ptrans->translation.setValue(tgeom.trans.x, tgeom.trans.y, tgeom.trans.z);
-            
+
             // open
             bool bSucceeded = false;
             if( _viewmode == VG_RenderOnly || _viewmode == VG_RenderCollision ) {
@@ -182,7 +182,7 @@ void KinBodyItem::Load()
                 }
                 psep->addChild(mtrl);
 
-                // by default render only one side of objects 
+                // by default render only one side of objects
                 // don't change since sensors like cameras are usually inside objects, but they
                 // need to see outside of the world
                 SoShapeHints* phints = new SoShapeHints();
@@ -223,7 +223,7 @@ void KinBodyItem::Load()
                 case KinBody::Link::GEOMPROPERTIES::GeomTrimesh: {
                     // set to render for both faces
                     phints->shapeType = SoShapeHints::UNKNOWN_SHAPE_TYPE;
-                    
+
                     SoMaterialBinding* pbinding = new SoMaterialBinding();
                     pbinding->value = SoMaterialBinding::OVERALL;
                     psep->addChild(pbinding);
@@ -234,7 +234,7 @@ void KinBodyItem::Load()
                         psep->addChild(ptype);
                     }
 
-                    const KinBody::Link::TRIMESH& mesh = itgeom->GetCollisionMesh();                    
+                    const KinBody::Link::TRIMESH& mesh = itgeom->GetCollisionMesh();
                     SoCoordinate3* vprop = new SoCoordinate3();
                     // this makes it crash!
                     //vprop->point.set1Value(mesh.indices.size()-1,SbVec3f(0,0,0)); // resize
@@ -279,7 +279,7 @@ bool KinBodyItem::UpdateFromIv()
     }
     vector<Transform> vtrans(_veclinks.size());
     Transform tglob = GetRaveTransform(_ivXform);
-    
+
     vector<Transform>::iterator ittrans = vtrans.begin();
     FOREACH(it, _veclinks) {
         // propagate the rotations down and reset the centroid
@@ -287,7 +287,7 @@ bool KinBodyItem::UpdateFromIv()
         *ittrans = tglob * *ittrans;
         ++ittrans;
     }
-    
+
     boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = _viewer->LockEnvironment(50000,false);
     if( !!lockenv ) {
         _pchain->SetLinkTransformations(vtrans);
@@ -365,7 +365,7 @@ bool KinBodyItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vecto
     boost::mutex::scoped_lock lock(_mutexjoints);
     _vjointvalues = vjointvalues;
     _vtrans = vtrans;
-    
+
     if( _vtrans.size() == 0 || _veclinks.size() != _vtrans.size() ) {
         // something's wrong, so just return
         return false;
@@ -408,10 +408,10 @@ void KinBodyItem::SetGrab(bool bGrab, bool bUpdate)
 KinBody::LinkPtr KinBodyItem::GetLinkFromIv(SoNode* plinknode) const
 {
     vector<LINK>::const_iterator it;
-    SoSearchAction search;    
+    SoSearchAction search;
     FORIT(it, _veclinks) {
-        search.setNode(plinknode);   
-        search.apply(it->psep);   
+        search.setNode(plinknode);
+        search.apply(it->psep);
         if (search.getPath()) {
             return KinBody::LinkPtr(it->plink);
         }
@@ -480,7 +480,7 @@ void RobotItem::CreateAxis(RobotItem::EE& ee, const string& name, const Vector* 
         c->radius = 0.004f;
         peesep->addChild(c);
     }
-            
+
     // add some axes
     SoSeparator* paxes = new SoSeparator();
 
@@ -496,7 +496,7 @@ void RobotItem::CreateAxis(RobotItem::EE& ee, const string& name, const Vector* 
         mtrl->diffuseColor = SbColor(colors[i].x, colors[i].y, colors[i].z);
         mtrl->ambientColor = SbColor(colors[i].x, colors[i].y, colors[i].z);
         mtrl->setOverride(true);
-            
+
         SoTransform* protation = new SoTransform();
         protation->rotation.setValue(SbVec3f(rotations[i].x, rotations[i].y, rotations[i].z), rotations[i].w);
 
@@ -506,11 +506,11 @@ void RobotItem::CreateAxis(RobotItem::EE& ee, const string& name, const Vector* 
         SoCylinder* c = new SoCylinder();
         c->radius = 0.002f;
         c->height = 0.04f;
-            
+
         SoCone* cn = new SoCone();
         cn->bottomRadius = 0.004f;
         cn->height = 0.02f;
-            
+
         SoTransform* pconetrans = new SoTransform();
         pconetrans->translation.setValue(0,0.02f,0);
 
@@ -529,7 +529,7 @@ void RobotItem::CreateAxis(RobotItem::EE& ee, const string& name, const Vector* 
         mtrl->diffuseColor = SbColor(0,0,0);
         mtrl->ambientColor = SbColor(0,0,0);
         mtrl->setOverride(true);
-        
+
         SoTransform* protation = new SoTransform();
         RaveVector<float> axisangle = axisAngleFromQuat(quatRotateDirection(Vector(0,1,0),*pdirection));
         float angle = RaveSqrt(axisangle.lengthsqr3());
@@ -541,11 +541,11 @@ void RobotItem::CreateAxis(RobotItem::EE& ee, const string& name, const Vector* 
         SoCylinder* c = new SoCylinder();
         c->radius = 0.001f;
         c->height = 0.06f;
-            
+
         SoCone* cn = new SoCone();
         cn->bottomRadius = 0.002f;
         cn->height = 0.01f;
-            
+
         SoTransform* pconetrans = new SoTransform();
         pconetrans->translation.setValue(0,0.03f,0);
 
@@ -564,13 +564,13 @@ void RobotItem::CreateAxis(RobotItem::EE& ee, const string& name, const Vector* 
     {
         SoSeparator* ptextsep = new SoSeparator();
         peesep->addChild(ptextsep);
-        
+
         //Transform t = GetRaveTransform(_selectedItem->GetIvTransform());
-                
+
         SoTranslation* ptrans = new SoTranslation();
         ptrans->translation.setValue(SbVec3f(0.02f,0.02f,0.02f));
         ptextsep->addChild(ptrans);
-        
+
         SoTransparencyType* ptype = new SoTransparencyType();
         ptype->value = SoGLRenderAction::NONE;
         ptextsep->addChild(ptype);
@@ -629,7 +629,7 @@ bool RobotItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vector<
     if( bGrabbed ) {
         // only updated when grabbing!
         RaveTransform<float> transInvRoot = GetRaveTransform(_ivXform).inverse();
-        
+
         FOREACH(itee, _vEndEffectors) {
             if( itee->_index >= 0 && itee->_index < (int)_probot->GetManipulators().size()) {
                 RobotBase::ManipulatorConstPtr manip = _probot->GetManipulators().at(itee->_index);

@@ -51,7 +51,7 @@ class Environment : public EnvironmentBase
         _bRealTime = true;
         _bInit = false;
         _bEnableSimulation = true; // need to start by default
-    
+
         {
             bool bExists=false;
             RaveParseDirectories(getenv("OPENRAVE_DATA"), _vdatadirs);
@@ -212,14 +212,14 @@ class Environment : public EnvironmentBase
         // lock the environment
         {
             EnvironmentMutex::scoped_lock lockenv(GetMutex());
-            _bEnableSimulation = false;    
+            _bEnableSimulation = false;
             if( !!_pPhysicsEngine ) {
                 _pPhysicsEngine->DestroyEnvironment();
             }
             if( !!_pCurrentChecker ) {
                 _pCurrentChecker->DestroyEnvironment();
             }
-            
+
             // clear internal interface lists
             {
                 boost::mutex::scoped_lock lock(_mutexInterfaces);
@@ -263,9 +263,9 @@ class Environment : public EnvironmentBase
         FOREACH(itviewer, listViewers) {
             (*itviewer)->Reset();
         }
-    
+
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        
+
         if( !!_pPhysicsEngine ) {
             _pPhysicsEngine->DestroyEnvironment();
         }
@@ -288,7 +288,7 @@ class Environment : public EnvironmentBase
             _vecrobots.clear();
             _vPublishedBodies.clear();
             _nBodiesModifiedStamp++;
-            
+
             _mapBodies.clear();
 
             FOREACH(itsensor,_listSensors) {
@@ -360,7 +360,7 @@ class Environment : public EnvironmentBase
         penv->Clone(boost::static_pointer_cast<Environment const>(shared_from_this()),options);
         return penv;
     }
-    
+
     virtual int AddModule(ModuleBasePtr module, const std::string& cmdargs)
     {
         CHECK_INTERFACE(module);
@@ -388,53 +388,101 @@ class Environment : public EnvironmentBase
         return plock;
     }
 
-    virtual bool Load(const std::string& filename)
+    virtual bool Load(const std::string& filename, const AttributesList& atts)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         bool bSuccess = false;
         if( _IsColladaFile(filename) ) {
             OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
-            bSuccess = RaveParseColladaFile(shared_from_this(), filename, AttributesList());
+            bSuccess = RaveParseColladaFile(shared_from_this(), filename, atts);
         }
         else if( !_IsOpenRAVEFile(filename) && _IsRigidModelFile(filename) ) {
-            KinBodyPtr pbody = ReadKinBodyXMLFile(filename);
+            KinBodyPtr pbody = ReadKinBodyXMLFile(KinBodyPtr(),filename,atts);
             if( !!pbody ) {
                 AddKinBody(pbody,true);
                 bSuccess = true;
             }
         }
         else {
-            bSuccess = ParseXMLFile(OpenRAVEXMLParser::CreateEnvironmentReader(shared_from_this(),AttributesList()), filename);
+            bSuccess = ParseXMLFile(OpenRAVEXMLParser::CreateEnvironmentReader(shared_from_this(),atts), filename);
         }
 
         if( !bSuccess ) {
             RAVELOG_WARN("load failed on file %s\n", filename.c_str());
         }
-    
+
         return bSuccess;
     }
 
-    virtual bool LoadXMLData(const std::string& data)
+    virtual bool LoadXMLData(const std::string& data, const AttributesList& atts)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        if( !ParseXMLData(OpenRAVEXMLParser::CreateEnvironmentReader(shared_from_this(),AttributesList()),data) ) {
-            RAVELOG_WARN("load failed environment data\n");
-            return false;
-        }
-        return true;
+        return ParseXMLData(OpenRAVEXMLParser::CreateEnvironmentReader(shared_from_this(),atts),data);
     }
-    
-    virtual bool Save(const std::string& filename)
+
+    virtual void Save(const std::string& filename, SelectionOptions options, const std::string& selectname)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        try {
+        std::list<KinBodyPtr> listbodies;
+        std::list<RobotBasePtr> listrobots;
+        switch(options) {
+        case SO_Everything:
             RaveWriteColladaFile(shared_from_this(),filename);
-            return true;
+            break;
+        case SO_Body: {
+            RobotBasePtr probot = GetRobot(selectname);
+            if( !!probot ) {
+                RaveWriteColladaFile(probot,filename);
+            }
+            else {
+                RaveWriteColladaFile(GetKinBody(selectname),filename);
+            }
+            break;
         }
-        catch(const openrave_exception& ex) {
-            RAVELOG_ERROR("save filed: %s\n",ex.what());
+        case SO_NoRobots:
+            FOREACH(itbody,_vecbodies) {
+                if( !(*itbody)->IsRobot() ) {
+                    listbodies.push_back(*itbody);
+                }
+            }
+            break;
+        case SO_Robots:
+            FOREACH(itrobot,_vecrobots) {
+                listrobots.push_back(*itrobot);
+            }
+            break;
+        case SO_AllExceptBody:
+            FOREACH(itbody,_vecbodies) {
+                if( (*itbody)->GetName() != selectname ) {
+                    if( (*itbody)->IsRobot() ) {
+                        listrobots.push_back(RaveInterfaceCast<RobotBase>(*itbody));
+                    }
+                    else {
+                        listbodies.push_back(*itbody);
+                    }
+                }
+            }
+            break;
+        case SO_BodyList:
+            stringstream ss(selectname);
+            while(!ss.eof()) {
+                string name;
+                ss >> name;
+                if( !ss ) {
+                    break;
+                }
+                KinBodyPtr pbody = GetKinBody(name);
+                if( !!pbody ) {
+                    if( pbody->IsRobot() ) {
+                        listrobots.push_back(RaveInterfaceCast<RobotBase>(pbody));
+                    }
+                    else {
+                        listbodies.push_back(pbody);
+                    }
+                }
+            }
+            break;
         }
-        return false;
     }
 
     virtual void AddKinBody(KinBodyPtr pbody, bool bAnonymous)
@@ -549,13 +597,13 @@ class Environment : public EnvironmentBase
                     (*itrobot)->Release(pbody);
                 }
             }
-            
+
             if( (*it)->IsRobot() ) {
                 vector<RobotBasePtr>::iterator itrobot = std::find(_vecrobots.begin(), _vecrobots.end(), RaveInterfaceCast<RobotBase>(pbody));
                 if( itrobot != _vecrobots.end() ) {
                     _vecrobots.erase(itrobot);
                 }
-            }            
+            }
             (*it)->SetPhysicsData(UserDataPtr());
             (*it)->SetCollisionData(UserDataPtr());
             RemoveEnvironmentId(pbody);
@@ -694,7 +742,7 @@ class Environment : public EnvironmentBase
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         if( _pCurrentChecker == pchecker ) {
             return true;
-        }        
+        }
         if( !!_pCurrentChecker ) {
             _pCurrentChecker->DestroyEnvironment(); // delete all resources
         }
@@ -751,7 +799,7 @@ class Environment : public EnvironmentBase
         CHECK_COLLISION_BODY(pbody);
         return _pCurrentChecker->CheckCollision(plink,pbody,report);
     }
-    
+
     virtual bool CheckCollision(KinBody::LinkConstPtr plink, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
@@ -765,7 +813,7 @@ class Environment : public EnvironmentBase
         CHECK_COLLISION_BODY(pbody);
         return _pCurrentChecker->CheckCollision(pbody,vbodyexcluded,vlinkexcluded,report);
     }
-    
+
     virtual bool CheckCollision(const RAY& ray, KinBody::LinkConstPtr plink, CollisionReportPtr report)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
@@ -812,7 +860,7 @@ class Environment : public EnvironmentBase
             listSensors = _listSensors;
             listModules = _listModules;
         }
-        
+
         FOREACH(it, vecbodies) {
             if( (*it)->GetEnvironmentId() ) { // have to check if valid
                 (*it)->SimulationStep(fTimeStep);
@@ -864,62 +912,72 @@ class Environment : public EnvironmentBase
         }
         vsensors.insert(vsensors.end(),_listSensors.begin(),_listSensors.end());
     }
-    
-    /// triangulation of the body including its current transformation. trimesh will be appended the new data.
-    virtual bool Triangulate(KinBody::Link::TRIMESH& trimesh, KinBodyConstPtr pbody)
+
+    virtual void Triangulate(KinBody::Link::TRIMESH& trimesh, KinBodyConstPtr pbody)
     {
-        if( !pbody ) {
-            return false;
-        }
         EnvironmentMutex::scoped_lock lockenv(GetMutex()); // reading collision data, so don't want anyone modifying it
         FOREACHC(it, pbody->GetLinks()) {
             trimesh.Append((*it)->GetCollisionData(), (*it)->GetTransform());
         }
-        return true;
     }
 
-    /// general triangulation of the whole scene. trimesh will be appended the new data.
-    virtual bool TriangulateScene(KinBody::Link::TRIMESH& trimesh, TriangulateOptions opts,const std::string& name)
+    virtual bool TriangulateScene(KinBody::Link::TRIMESH& trimesh, SelectionOptions options,const std::string& selectname)
     {
-        boost::mutex::scoped_lock lock(_mutexInterfaces);
+        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        std::list<string> listnames;
+        if( options == SO_BodyList ) {
+            stringstream ss(selectname);
+            while(!ss.eof()) {
+                string name;
+                ss >> name;
+                if( !ss ) {
+                    break;
+                }
+                listnames.push_back(name);
+            }
+        }
         FOREACH(itbody, _vecbodies) {
             RobotBasePtr robot;
             if( (*itbody)->IsRobot() ) {
                 robot = RaveInterfaceCast<RobotBase>(*itbody);
             }
-            switch(opts) {
-            case TO_Obstacles:
+            switch(options) {
+            case SO_NoRobots:
                 if( !robot ) {
-                    Triangulate(trimesh, (*itbody));
+                    Triangulate(trimesh, *itbody);
                 }
                 break;
 
-            case TO_Robots:
+            case SO_Robots:
                 if( !!robot ) {
-                    Triangulate(trimesh, (*itbody));
+                    Triangulate(trimesh, *itbody);
                 }
                 break;
-            case TO_Everything:
-                Triangulate(trimesh, (*itbody));
+            case SO_Everything:
+                Triangulate(trimesh, *itbody);
                 break;
-            case TO_Body:
-                if( (*itbody)->GetName() == name ) {
-                    Triangulate(trimesh, (*itbody));
+            case SO_Body:
+                if( (*itbody)->GetName() == selectname ) {
+                    Triangulate(trimesh, *itbody);
                 }
                 break;
-            case TO_AllExceptBody:
-                if( (*itbody)->GetName() == name ) {
-                    Triangulate(trimesh, (*itbody));
+            case SO_AllExceptBody:
+                if( (*itbody)->GetName() != selectname ) {
+                    Triangulate(trimesh, *itbody);
                 }
                 break;
+            case SO_BodyList:
+                if( find(listnames.begin(),listnames.end(),(*itbody)->GetName()) != listnames.end() ) {
+                    Triangulate(trimesh,*itbody);
+                }
             }
         }
-
         return true;
     }
-    virtual bool TriangulateScene(KinBody::Link::TRIMESH& trimesh, TriangulateOptions opts)
+
+    virtual bool TriangulateScene(KinBody::Link::TRIMESH& trimesh, TriangulateOptions options)
     {
-        return TriangulateScene(trimesh,opts,"");
+        return TriangulateScene(trimesh,options,"");
     }
 
     virtual const std::string& GetHomeDirectory() const { return _homedirectory; }
@@ -989,7 +1047,7 @@ class Environment : public EnvironmentBase
             }
             robot->__strxmlfilename = filename;
         }
-    
+
         return robot;
     }
 
@@ -1240,7 +1298,7 @@ class Environment : public EnvironmentBase
     {
         return RaveRegisterXMLReader(type,xmltag,fn);
     }
-    
+
     virtual bool ParseXMLFile(BaseXMLReaderPtr preader, const std::string& filename)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
@@ -1461,7 +1519,7 @@ class Environment : public EnvironmentBase
 
         // updated the published bodies
         _vPublishedBodies.resize(_vecbodies.size());
-            
+
         vector<KinBody::BodyState>::iterator itstate = _vPublishedBodies.begin();
         FOREACH(itbody, _vecbodies) {
             itstate->pbody = *itbody;
@@ -1547,10 +1605,10 @@ protected:
                     KinBodyPtr pnewbody(new KinBody(PT_KinBody,shared_from_this()));
                     pnewbody->Clone(*itbody,options);
                     pnewbody->_environmentid = (*itbody)->GetEnvironmentId();
-                    
+
                     // note that pointers will not be correct
                     pnewbody->_listAttachedBodies = (*itbody)->_listAttachedBodies;
-                    
+
                     // note that pointers will not be correct
                     _mapBodies[pnewbody->GetEnvironmentId()] = pnewbody;
                     _vecbodies.push_back(pnewbody);
@@ -1627,7 +1685,7 @@ protected:
                 }
             }
         }
-    
+
         if( options & Clone_Simulation ) {
             if( !!r->GetPhysicsEngine() ) {
                 SetPhysicsEngine(CreatePhysicsEngine(r->GetPhysicsEngine()->GetXMLId()));
@@ -1698,7 +1756,7 @@ protected:
         DummyPhysicsEngine(EnvironmentBasePtr penv) : PhysicsEngineBase(penv) {}
         virtual bool SetPhysicsOptions(int physicsoptions) { return true; }
         virtual int GetPhysicsOptions() const { return 0; }
-        
+
         virtual bool SetPhysicsOptions(std::ostream& sout, std::istream& sinput) { return true; }
 
         virtual bool InitEnvironment() {
@@ -1717,8 +1775,8 @@ protected:
                 DestroyKinBody(*itbody);
             }
         }
-        
-        virtual bool InitKinBody(KinBodyPtr pbody) { SetPhysicsData(pbody, UserDataPtr(new PhysicsData(pbody))); return true; } 
+
+        virtual bool InitKinBody(KinBodyPtr pbody) { SetPhysicsData(pbody, UserDataPtr(new PhysicsData(pbody))); return true; }
         virtual bool DestroyKinBody(KinBodyPtr pbody) { SetPhysicsData(pbody, UserDataPtr()); return true; }
 
         virtual bool GetLinkVelocity(KinBody::LinkConstPtr plink, Vector& linearvel, Vector& angularvel) {
@@ -1783,10 +1841,10 @@ protected:
         virtual bool CheckCollision(KinBody::LinkConstPtr plink, CollisionReportPtr) { return false; }
         virtual bool CheckCollision(KinBody::LinkConstPtr plink1, KinBody::LinkConstPtr plink2, CollisionReportPtr) { return false; }
         virtual bool CheckCollision(KinBody::LinkConstPtr plink, KinBodyConstPtr pbody, CollisionReportPtr) { return false; }
-    
+
         virtual bool CheckCollision(KinBody::LinkConstPtr plink, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr) { return false; }
         virtual bool CheckCollision(KinBodyConstPtr pbody, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr) { return false; }
-    
+
         virtual bool CheckCollision(const RAY& ray, KinBody::LinkConstPtr plink, CollisionReportPtr) { return false; }
         virtual bool CheckCollision(const RAY& ray, KinBodyConstPtr pbody, CollisionReportPtr) { return false; }
         virtual bool CheckCollision(const RAY& ray, CollisionReportPtr) { return false; }
@@ -1847,7 +1905,7 @@ protected:
                 else {
                     nLastSleptTime = GetMicroTime();
                 }
-                
+
                 //RAVELOG_INFOA("sim: %f, real: %f\n",_nCurSimTime*1e-6f,(GetMicroTime()-_nSimStartTime)*1e-6f);
             }
 
@@ -1935,10 +1993,10 @@ protected:
 
     CollisionCheckerBasePtr _pCurrentChecker;
     PhysicsEngineBasePtr _pPhysicsEngine;
-    
+
     int _nEnvironmentIndex;               ///< next network index
     std::map<int, KinBodyWeakPtr> _mapBodies; ///< a map of all the bodies in the environment. Controlled through the KinBody constructor and destructors
-    
+
     boost::shared_ptr<boost::thread> _threadSimulation;                  ///< main loop for environment simulation
 
     mutable EnvironmentMutex _mutexEnvironment;      ///< protects internal data from multithreading issues

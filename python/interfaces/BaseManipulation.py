@@ -2,7 +2,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -26,7 +26,7 @@ class BaseManipulation:
         if plannername is not None:
             self.args += ' planner ' + plannername
         if maxvelmult is not None:
-            self.args += ' maxvelmult %f '%maxvelmult
+            self.args += ' maxvelmult %.15e '%maxvelmult
         if env.AddModule(self.prob,self.args) != 0:
             raise ValueError('module failed to initialize')
     def  __del__(self):
@@ -49,21 +49,21 @@ class BaseManipulation:
         """
         cmd = 'VerifyTrajectory stream ' + data + ' resettiming %d resettiming %d '%(resettrans,resettiming)
         if samplingstep is not None:
-            cmd += 'samplingstep %f '%samplingstep
+            cmd += 'samplingstep %.15e '%samplingstep
         return self.prob.SendCommand(cmd)
-    
+
     def MoveHandStraight(self,direction,minsteps=None,maxsteps=None,stepsize=None,ignorefirstcollision=None,starteematrix=None,greedysearch=True,execute=None,outputtraj=None,maxdeviationangle=None,steplength=None):
         """See :ref:`module-basemanipulation-movehandstraight`
         """
-        cmd = 'MoveHandStraight direction %f %f %f '%(direction[0],direction[1],direction[2])
+        cmd = 'MoveHandStraight direction %.15e %.15e %.15e '%(direction[0],direction[1],direction[2])
         if minsteps is not None:
             cmd += 'minsteps %d '%minsteps
         if maxsteps is not None:
             cmd += 'maxsteps %d '%maxsteps
         if stepsize is not None:
-            cmd += 'steplength %f '%stepsize
+            cmd += 'steplength %.15e '%stepsize
         if steplength is not None:
-            cmd += 'steplength %f '%steplength
+            cmd += 'steplength %.15e '%steplength
         if execute is not None:
             cmd += 'execute %d '%execute
         if starteematrix is not None:
@@ -73,9 +73,9 @@ class BaseManipulation:
         if outputtraj is not None and outputtraj:
             cmd += 'outputtraj '
         if ignorefirstcollision is not None:
-            cmd += 'ignorefirstcollision %f '%ignorefirstcollision
+            cmd += 'ignorefirstcollision %.15e '%ignorefirstcollision
         if maxdeviationangle is not None:
-            cmd += 'maxdeviationangle %f '%maxdeviationangle
+            cmd += 'maxdeviationangle %.15e '%maxdeviationangle
         res = self.prob.SendCommand(cmd)
         if res is None:
             raise openravepy.planning_error('MoveHandStraight')
@@ -103,7 +103,7 @@ class BaseManipulation:
         assert(len(goal) == self.robot.GetActiveDOF() and len(goal) > 0)
         cmd = 'MoveActiveJoints goal ' + ' '.join(str(f) for f in goal)+' '
         if steplength is not None:
-            cmd += 'steplength %f '%steplength
+            cmd += 'steplength %.15e '%steplength
         if execute is not None:
             cmd += 'execute %d '%execute
         if outputtraj is not None and outputtraj:
@@ -116,7 +116,7 @@ class BaseManipulation:
         if res is None:
             raise openravepy.planning_error('MoveActiveJoints')
         return res
-    def MoveToHandPosition(self,matrices=None,affinedofs=None,maxiter=None,maxtries=None,translation=None,rotation=None,seedik=None,constraintfreedoms=None,constraintmatrix=None,constrainterrorthresh=None,execute=None,outputtraj=None,steplength=None):
+    def MoveToHandPosition(self,matrices=None,affinedofs=None,maxiter=None,maxtries=None,translation=None,rotation=None,seedik=None,constraintfreedoms=None,constraintmatrix=None,constrainterrorthresh=None,execute=None,outputtraj=None,steplength=None,goalsamples=None):
         """See :ref:`module-basemanipulation-movetohandposition`
         """
         cmd = 'MoveToHandPosition '
@@ -129,11 +129,13 @@ class BaseManipulation:
         if maxtries is not None:
             cmd += 'maxtries %d '%maxtries
         if translation is not None:
-            cmd += 'translation %f %f %f '%(translation[0],translation[1],translation[2])
+            cmd += 'translation %.15e %.15e %.15e '%(translation[0],translation[1],translation[2])
         if rotation is not None:
-            cmd += 'rotation %f %f %f %f '%(rotation[0],rotation[1],rotation[2],rotation[3])
+            cmd += 'rotation %.15e %.15e %.15e %.15e '%(rotation[0],rotation[1],rotation[2],rotation[3])
         if seedik is not None:
             cmd += 'seedik %d '%seedik
+        if goalsamples is not None:
+            cmd += 'goalsamples %d '%goalsamples
         if constraintfreedoms is not None:
             cmd += 'constraintfreedoms %s '%(' '.join(str(constraintfreedoms[i]) for i in range(6)))
         if constraintmatrix is not None:
@@ -141,7 +143,7 @@ class BaseManipulation:
         if constrainterrorthresh is not None:
             cmd += 'constrainterrorthresh %s '%constrainterrorthresh
         if steplength is not None:
-            cmd += 'steplength %f '%steplength
+            cmd += 'steplength %.15e '%steplength
         if execute is not None:
             cmd += 'execute %d '%execute
         if outputtraj is not None and outputtraj:
@@ -176,7 +178,7 @@ class BaseManipulation:
         if maxiter is not None:
             cmd += 'maxiter %d '%maxiter
         if jitter is not None:
-            cmd += 'jitter %f '%jitter
+            cmd += 'jitter %.15e '%jitter
         if execute is not None:
             cmd += 'execute %d '%execute
         if outputtraj is not None and outputtraj:
@@ -201,12 +203,12 @@ class BaseManipulation:
         """See :ref:`module-basemanipulation-findikwithfilters`
         """
         cmd = 'FindIKWithFilters ikparam %s '%str(ikparam)
-        if cone is not None:            
+        if cone is not None:
             cmd += 'cone %s '%(' '.join(str(f) for f in cone))
         if solveall is not None and solveall:
             cmd += 'solveall '
         if filteroptions is not None:
-            cmd += 'filteroptions %d '%filteroptions        
+            cmd += 'filteroptions %d '%filteroptions
         res = self.prob.SendCommand(cmd)
         if res is None:
             raise openravepy.planning_error('FindIKWithFilters')

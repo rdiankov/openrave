@@ -39,9 +39,9 @@ public:
     string GetPluginName() const { return _pbase->GetPluginName(); }
     string GetDescription() const { return _pbase->GetDescription(); }
     PyEnvironmentBasePtr GetEnv() const { return _pyenv; }
-    
+
     void Clone(PyInterfaceBasePtr preference, int cloningoptions) {
-        CHECK_POINTER(preference); 
+        CHECK_POINTER(preference);
         _pbase->Clone(preference->GetInterfaceBase(),cloningoptions);
     }
 
@@ -153,11 +153,11 @@ public:
         {
             return _plink->IsParentLink(pylink->GetLink());
         }
-        
+
         object GetCollisionData() { return toPyTriMesh(_plink->GetCollisionData()); }
         object ComputeAABB() const { return toPyAABB(_plink->ComputeAABB()); }
         object GetTransform() const { return ReturnTransform(_plink->GetTransform()); }
-        
+
         object GetCOMOffset() const { return toPyVector3(_plink->GetCOMOffset()); }
         object GetInertia() const
         {
@@ -253,7 +253,7 @@ public:
 
         int GetDOFIndex() const { return _pjoint->GetDOFIndex(); }
         int GetJointIndex() const { return _pjoint->GetJointIndex(); }
-        
+
         PyKinBodyPtr GetParent() const { return PyKinBodyPtr(new PyKinBody(_pjoint->GetParent(),_pyenv)); }
 
         PyLinkPtr GetFirstAttached() const { return !_pjoint->GetFirstAttached() ? PyLinkPtr() : PyLinkPtr(new PyLink(_pjoint->GetFirstAttached(), _pyenv)); }
@@ -328,7 +328,7 @@ public:
             vector<dReal> vtorques = ExtractArray<dReal>(otorques);
             return _pjoint->AddTorque(vtorques);
         }
-        
+
         string __repr__() { return boost::str(boost::format("<RaveGetEnvironment(%d).GetKinBody('%s').GetJoint('%s')>")%RaveGetEnvironmentId(_pjoint->GetParent()->GetEnv())%_pjoint->GetParent()->GetName()%_pjoint->GetName()); }
         string __str__() { return boost::str(boost::format("<joint:%s (%d), dof=%d, parent=%s>")%_pjoint->GetName()%_pjoint->GetJointIndex()%_pjoint->GetDOFIndex()%_pjoint->GetParent()->GetName()); }
         bool __eq__(boost::shared_ptr<PyJoint> p) { return !!p && _pjoint==p->_pjoint; }
@@ -346,7 +346,7 @@ public:
         virtual ~PyManageData() {}
 
         KinBody::ManageDataPtr GetManageData() { return _pdata; }
-        
+
         PySensorSystemBasePtr GetSystem();
         PyVoidHandleConst GetData() const { return PyVoidHandleConst(_pdata->GetData()); }
         PyLinkPtr GetOffsetLink() const {
@@ -618,7 +618,7 @@ public:
         _pbody->GetDOFWeights(values);
         return toPyArray(values);
     }
-    
+
     object GetLinks() const
     {
         boost::python::list links;
@@ -755,7 +755,7 @@ public:
     }
 
     object GetTransform() const { return ReturnTransform(_pbody->GetTransform()); }
-    
+
     object GetLinkTransformations() const
     {
         boost::python::list transforms;
@@ -996,7 +996,7 @@ public:
             adjacent.append(boost::python::make_tuple((int)(*it)&0xffff,(int)(*it)>>16));
         return adjacent;
     }
-    
+
     PyUserData GetPhysicsData() const { return PyUserData(_pbody->GetPhysicsData()); }
     PyUserData GetCollisionData() const { return PyUserData(_pbody->GetCollisionData()); }
     PyManageDataPtr GetManageData() const {
@@ -1132,7 +1132,7 @@ public:
 
     bool SetDesired(object o, object otransform)
     {
-        if( otransform == object() ) { 
+        if( otransform == object() ) {
             return SetDesired(o);
         }
         return _pcontroller->SetDesired(ExtractArray<dReal>(o),TransformConstPtr(new Transform(ExtractTransform(otransform))));
@@ -1177,7 +1177,7 @@ public:
             transform = ReturnTransform(pdata->__trans);
         }
         virtual ~PySensorData() {}
-        
+
         SensorBase::SensorType type;
         uint64_t stamp;
         object transform;
@@ -1348,7 +1348,7 @@ public:
             forces = toPyArray3(pdata->forces);
             numeric::array arr = toPyArrayN(&pdata->force_covariance[0],pdata->force_covariance.size());
             arr.resize(3,3);
-            force_covariance = arr;            
+            force_covariance = arr;
         }
         PyTactileSensorData(boost::shared_ptr<SensorBase::TactileGeomData> pgeom) : PySensorData(SensorBase::ST_Tactile)
         {
@@ -1422,7 +1422,7 @@ public:
         }
         switch(psensordata->GetType()) {
         case SensorBase::ST_Laser:
-            return boost::shared_ptr<PySensorData>(new PyLaserSensorData(boost::static_pointer_cast<SensorBase::LaserGeomData>(_psensor->GetSensorGeometry()), boost::static_pointer_cast<SensorBase::LaserSensorData>(psensordata)));            
+            return boost::shared_ptr<PySensorData>(new PyLaserSensorData(boost::static_pointer_cast<SensorBase::LaserGeomData>(_psensor->GetSensorGeometry()), boost::static_pointer_cast<SensorBase::LaserSensorData>(psensordata)));
         case SensorBase::ST_Camera:
             return boost::shared_ptr<PySensorData>(new PyCameraSensorData(boost::static_pointer_cast<SensorBase::CameraGeomData>(_psensor->GetSensorGeometry()), boost::static_pointer_cast<SensorBase::CameraSensorData>(psensordata)));
         case SensorBase::ST_JointEncoder:
@@ -1466,14 +1466,14 @@ public:
         }
        throw openrave_exception(boost::str(boost::format("unknown sensor data type %d\n")%type));
     }
-    
+
     bool Supports(SensorBase::SensorType type) { return _psensor->Supports(type); }
 
     void SetTransform(object transform) { _psensor->SetTransform(ExtractTransform(transform)); }
     object GetTransform() { return ReturnTransform(_psensor->GetTransform()); }
 
     string GetName() { return _psensor->GetName(); }
-    
+
     virtual string __repr__() { return boost::str(boost::format("<RaveGetEnvironment(%d).GetSensor('%s')>")%RaveGetEnvironmentId(_psensor->GetEnv())%_psensor->GetName()); }
     virtual string __str__() { return boost::str(boost::format("<%s:%s - %s>")%RaveGetInterfaceName(_psensor->GetInterfaceType())%_psensor->GetXMLId()%_psensor->GetName()); }
 };
@@ -1557,7 +1557,7 @@ public:
         int GetNumFreeParameters() const { RAVELOG_WARN("Manipulator::GetNumFreeParameters() is deprecated\n"); return _pmanip->GetIkSolver()->GetNumFreeParameters(); }
 
         object GetFreeParameters() const {
-            RAVELOG_WARN("Manipulator::GetFreeParameters() is deprecated\n"); 
+            RAVELOG_WARN("Manipulator::GetFreeParameters() is deprecated\n");
             if( _pmanip->GetIkSolver()->GetNumFreeParameters() == 0 ) {
                 return numeric::array(boost::python::list());
             }
@@ -1638,7 +1638,7 @@ public:
             }
             return solutions;
         }
-        
+
         object GetIkParameterization(IkParameterization::Type iktype)
         {
             return toPyIkParameterization(_pmanip->GetIkParameterization(iktype));
@@ -1672,7 +1672,7 @@ public:
             }
             return links;
         }
-        
+
         bool IsChildLink(PyLinkPtr plink)
         {
             CHECK_POINTER(plink);
@@ -1746,7 +1746,7 @@ public:
     public:
         PyAttachedSensor(RobotBase::AttachedSensorPtr pattached, PyEnvironmentBasePtr pyenv) : _pattached(pattached),_pyenv(pyenv) {}
         virtual ~PyAttachedSensor() {}
-        
+
         PySensorBasePtr GetSensor() { return !_pattached->GetSensor() ? PySensorBasePtr() : PySensorBasePtr(new PySensorBase(_pattached->GetSensor(),_pyenv)); }
         PyLinkPtr GetAttachingLink() const { return !_pattached->GetAttachingLink() ? PyLinkPtr() : PyLinkPtr(new PyLink(_pattached->GetAttachingLink(), _pyenv)); }
         object GetRelativeTransform() const { return ReturnTransform(_pattached->GetRelativeTransform()); }
@@ -1859,7 +1859,7 @@ public:
         }
         return boost::shared_ptr<PyAttachedSensor>();
     }
-    
+
     PyControllerBasePtr GetController() const { return !_probot->GetController() ? PyControllerBasePtr() : PyControllerBasePtr(new PyControllerBase(_probot->GetController(),_pyenv)); }
 
     bool SetController(PyControllerBasePtr pController, const string& args) {
@@ -2016,7 +2016,7 @@ public:
 //    void GetActiveDOFMaxVel(std::vector<dReal>& v) const;
 //    void GetActiveDOFMaxAccel(dReal* pMaxAccel) const;
 //    void GetActiveDOFMaxAccel(std::vector<dReal>& v) const;
-    
+
 //    void GetFullTrajectoryFromActive(PyTrajectory* pFullTraj, PyTrajectory* pActiveTraj, bool bOverwriteTransforms);
 //    void SetActiveMotion(PyTrajectory* ptraj);
 
@@ -2110,7 +2110,7 @@ public:
             uint64_t starttime = GetMicroTime();
             uint64_t deltatime = (uint64_t)(ftimeout*1000000.0);
             while( !pcontroller->IsDone() ) {
-                Sleep(1);            
+                Sleep(1);
                 if( deltatime > 0 && (GetMicroTime()-starttime)>deltatime  ) {
                     bSuccess = false;
                     break;
@@ -2122,7 +2122,7 @@ public:
             PyErr_Print();
             bSuccess = false;
         }
-        
+
         Py_END_ALLOW_THREADS;
         return bSuccess;
     }
@@ -2193,7 +2193,7 @@ public:
         virtual ~PyPlannerParameters() {}
 
         PlannerBase::PlannerParametersConstPtr GetParameters() const { return _paramsread; }
-        
+
         string __repr__() { return boost::str(boost::format("<PlannerParameters(dof=%d)>")%_paramsread->GetDOF()); }
         string __str__() {
             stringstream ss;
@@ -2204,7 +2204,7 @@ public:
         bool __eq__(boost::shared_ptr<PyPlannerParameters> p) { return !!p && _paramsread == p->_paramsread; }
         bool __ne__(boost::shared_ptr<PyPlannerParameters> p) { return !p || _paramsread != p->_paramsread; }
     };
-        
+
     PyPlannerBase(PlannerBasePtr pplanner, PyEnvironmentBasePtr pyenv) : PyInterfaceBase(pplanner, pyenv), _pplanner(pplanner) {}
     virtual ~PyPlannerBase() {}
 
@@ -2212,15 +2212,15 @@ public:
     {
         return _pplanner->InitPlan(pbase->GetRobot(),pparams->GetParameters());
     }
-    
+
     bool InitPlan(PyRobotBasePtr pbase, const string& params)
     {
         stringstream ss(params);
         return _pplanner->InitPlan(pbase->GetRobot(),ss);
     }
-    
+
     bool PlanPath(PyTrajectoryBasePtr ptraj, boost::python::list output);
-    
+
     boost::shared_ptr<PyPlannerParameters> GetParameters() const
     {
         PlannerBase::PlannerParametersConstPtr params = _pplanner->GetParameters();
@@ -2322,7 +2322,7 @@ public:
     bool InitEnvironment() { return _pPhysicsEngine->InitEnvironment(); }
     void DestroyEnvironment() { _pPhysicsEngine->DestroyEnvironment(); }
     bool InitKinBody(PyKinBodyPtr pbody) { CHECK_POINTER(pbody); return _pPhysicsEngine->InitKinBody(pbody->GetBody()); }
-    
+
     bool SetLinkVelocity(PyKinBody::PyLinkPtr plink, object linearvel, object angularvel)
     {
         CHECK_POINTER(plink);
@@ -2355,7 +2355,7 @@ public:
         }
         return boost::python::make_tuple(toPyVector3(linearvel),toPyVector3(angularvel));
     }
-    
+
     object GetLinkVelocities(PyKinBodyPtr pbody)
     {
         CHECK_POINTER(pbody);
@@ -2538,7 +2538,7 @@ public:
     int GetNumberOfValues() { return _pspacesampler->GetNumberOfValues(); }
 
     bool Supports(SampleDataType type) { return _pspacesampler->Supports(type); }
-    
+
     object GetLimits(SampleDataType type)
     {
         if( type == SDT_Real ) {
@@ -2854,7 +2854,7 @@ public:
         pReport->init(shared_from_this());
         return bSuccess;
     }
-    
+
     bool CheckCollision(PyKinBodyPtr pbody1, PyKinBodyPtr pbody2)
     {
         CHECK_POINTER(pbody1);
@@ -2908,7 +2908,7 @@ public:
         pReport->init(shared_from_this());
         return bSuccess;
     }
-    
+
     bool CheckCollision(PyKinBody::PyLinkPtr plink, PyKinBodyPtr pbody)
     {
         CHECK_POINTER(plink);
@@ -2927,7 +2927,7 @@ public:
         pReport->init(shared_from_this());
         return bSuccess;
     }
-    
+
     bool CheckCollision(PyKinBody::PyLinkPtr plink, object bodyexcluded, object linkexcluded)
     {
         std::vector<KinBodyConstPtr> vbodyexcluded;
@@ -3108,16 +3108,19 @@ public:
     {
         return _penv->CheckCollision(pyray->r);
     }
-    
+
     bool CheckCollision(boost::shared_ptr<PyRay> pyray, PyCollisionReportPtr pReport)
     {
         bool bSuccess = _penv->CheckCollision(pyray->r, pReport->report);
         pReport->init(shared_from_this());
         return bSuccess;
     }
-	
-    bool Load(const string& filename) { return _penv->Load(filename); }
-    bool Save(const string& filename) { return _penv->Save(filename.c_str()); }
+
+    void Load(const string& filename) { _penv->Load(filename); }
+    void Load(const string& filename, dict odictatts) { _penv->Load(filename, toAttributesList(odictatts)); }
+
+    void Save(const string& filename) { _penv->Save(filename); }
+    void Save(const string& filename, EnvironmentBase::SelectionOptions options, const string& name) { _penv->Save(filename,options,name); }
 
     PyRobotBasePtr ReadRobotXMLFile(const string& filename)
     {
@@ -3193,7 +3196,7 @@ public:
     void AddViewer(PyViewerBasePtr viewer) { CHECK_POINTER(viewer); _penv->AddViewer(viewer->GetViewer()); }
 
     bool RemoveKinBody(PyKinBodyPtr pbody) { CHECK_POINTER(pbody); RAVELOG_WARN("openravepy RemoveKinBody deprecated, use Remove\n"); return _penv->Remove(pbody->GetBody()); }
-    
+
     PyKinBodyPtr GetKinBody(const string& name)
     {
         KinBodyPtr pbody = _penv->GetKinBody(name);
@@ -3226,7 +3229,7 @@ public:
     int AddModule(PyModuleBasePtr prob, const string& args) { CHECK_POINTER(prob); return _penv->AddModule(prob->GetModule(),args); }
     bool RemoveProblem(PyModuleBasePtr prob) { CHECK_POINTER(prob); RAVELOG_WARN("openravepy RemoveProblem deprecated, use Remove\n");return _penv->Remove(prob->GetModule()); }
     bool Remove(PyInterfaceBasePtr obj) { CHECK_POINTER(obj); return _penv->Remove(obj->GetInterfaceBase()); }
-    
+
     object GetModules()
     {
         std::list<ModuleBasePtr> listModules;
@@ -3466,7 +3469,7 @@ public:
         }
         return object(PyGraphHandle(_penv->drawlinelist(&vpoints[0],sizes.first,sizeof(float)*3,linewidth,vcolor)));
     }
-    
+
     object drawarrow(object op1, object op2, float linewidth=0.002, object ocolor=object())
     {
         RaveVector<float> vcolor(1,0.5,0.5,1);
@@ -3568,17 +3571,14 @@ public:
     {
         CHECK_POINTER(pbody);
         KinBody::Link::TRIMESH mesh;
-        if( !_penv->Triangulate(mesh,pbody->GetBody()) ) {
-            throw openrave_exception(boost::str(boost::format("failed to triangulate body %s")%pbody->GetBody()->GetName()));
-        }
+        _penv->Triangulate(mesh,pbody->GetBody());
         return toPyTriMesh(mesh);
     }
-    object TriangulateScene(EnvironmentBase::TriangulateOptions opts, const string& name)
+
+    object TriangulateScene(EnvironmentBase::SelectionOptions options, const string& name)
     {
         KinBody::Link::TRIMESH mesh;
-        if( !_penv->TriangulateScene(mesh,opts,name) ) {
-            throw openrave_exception(boost::str(boost::format("failed to triangulate scene: %d, %s")%opts%name));
-        }
+        _penv->TriangulateScene(mesh,options,name);
         return toPyTriMesh(mesh);
     }
 
@@ -3667,7 +3667,7 @@ namespace openravepy
         }
         return PyInterfaceBasePtr(new PyInterfaceBase(p,pyenv));
     }
-    
+
     PyRobotBasePtr RaveCreateRobot(PyEnvironmentBasePtr pyenv, const std::string& name)
     {
         RobotBasePtr p = OpenRAVE::RaveCreateRobot(pyenv->GetEnv(), name);
@@ -3880,7 +3880,7 @@ In python, the syntax is::\n\n\
             ;
     }
 
-    {    
+    {
         bool (PyKinBody::*pkinbodyself)() = &PyKinBody::CheckSelfCollision;
         bool (PyKinBody::*pkinbodyselfr)(PyCollisionReportPtr) = &PyKinBody::CheckSelfCollision;
         void (PyKinBody::*psetdofvalues1)(object) = &PyKinBody::SetDOFValues;
@@ -4128,7 +4128,7 @@ In python, the syntax is::\n\n\
                 .def("__eq__",&PyKinBody::PyJoint::__eq__)
                 .def("__ne__",&PyKinBody::PyJoint::__ne__)
                 ;
-            
+
             enum_<KinBody::Joint::JointType>("Type" DOXY_ENUM(JointType))
                 .value("None",KinBody::Joint::JointNone)
                 .value("Hinge",KinBody::Joint::JointHinge)
@@ -4150,7 +4150,7 @@ In python, the syntax is::\n\n\
                 .def("GetSystem", &PyKinBody::PyManageData::GetSystem, DOXY_FN(KinBody::ManageData,GetSystem))
                 .def("GetData", &PyKinBody::PyManageData::GetData, DOXY_FN(KinBody::ManageData,GetData))
                 .def("GetOffsetLink", &PyKinBody::PyManageData::GetOffsetLink, DOXY_FN(KinBody::ManageData,GetOffsetLink))
-                .def("IsPresent", &PyKinBody::PyManageData::IsPresent, DOXY_FN(KinBody::ManageData,IsPresent)) 
+                .def("IsPresent", &PyKinBody::PyManageData::IsPresent, DOXY_FN(KinBody::ManageData,IsPresent))
                 .def("IsEnabled", &PyKinBody::PyManageData::IsEnabled, DOXY_FN(KinBody::ManageData,IsEnabled))
                 .def("IsLocked", &PyKinBody::PyManageData::IsLocked, DOXY_FN(KinBody::ManageData,IsLocked))
                 .def("Lock", &PyKinBody::PyManageData::Lock,args("dolock"), DOXY_FN(KinBody::ManageData,Lock))
@@ -4268,7 +4268,7 @@ In python, the syntax is::\n\n\
             .def("__repr__", &PyRobotBase::__repr__)
             .def("__str__", &PyRobotBase::__str__)
             ;
-        
+
         object (PyRobotBase::PyManipulator::*pmanipik)(object, int) const = &PyRobotBase::PyManipulator::FindIKSolution;
         object (PyRobotBase::PyManipulator::*pmanipikf)(object, object, int) const = &PyRobotBase::PyManipulator::FindIKSolution;
         object (PyRobotBase::PyManipulator::*pmanipiks)(object, int) const = &PyRobotBase::PyManipulator::FindIKSolutions;
@@ -4368,7 +4368,7 @@ In python, the syntax is::\n\n\
                 .def("PlanPath",&PyPlannerBase::PlanPath,args("traj","output"), DOXY_FN(PlannerBase,PlanPath))
                 .def("GetParameters",&PyPlannerBase::GetParameters, DOXY_FN(PlannerBase,GetParameters))
                 ;
-        
+
         class_<PyPlannerBase::PyPlannerParameters, boost::shared_ptr<PyPlannerBase::PyPlannerParameters> >("PlannerParameters", DOXY_CLASS(PlannerBase::PlannerParameters),no_init)
                 .def("__str__",&PyPlannerBase::PyPlannerParameters::__str__)
                 .def("__repr__",&PyPlannerBase::PyPlannerParameters::__repr__)
@@ -4630,6 +4630,10 @@ In python, the syntax is::\n\n\
         void (PyEnvironmentBase::*addsensor2)(PySensorBasePtr,bool) = &PyEnvironmentBase::AddSensor;
         void (PyEnvironmentBase::*setuserdata1)(PyUserData) = &PyEnvironmentBase::SetUserData;
         void (PyEnvironmentBase::*setuserdata2)(object) = &PyEnvironmentBase::SetUserData;
+        void (PyEnvironmentBase::*load1)(const string&) = &PyEnvironmentBase::Load;
+        void (PyEnvironmentBase::*load2)(const string&, dict) = &PyEnvironmentBase::Load;
+        void (PyEnvironmentBase::*save1)(const string&) = &PyEnvironmentBase::Save;
+        void (PyEnvironmentBase::*save2)(const string&, EnvironmentBase::SelectionOptions, const string&) = &PyEnvironmentBase::Save;
         PyRobotBasePtr (PyEnvironmentBase::*readrobotxmlfile1)(const string&) = &PyEnvironmentBase::ReadRobotXMLFile;
         PyRobotBasePtr (PyEnvironmentBase::*readrobotxmlfile2)(const string&,dict) = &PyEnvironmentBase::ReadRobotXMLFile;
         PyRobotBasePtr (PyEnvironmentBase::*readrobotxmldata1)(const string&) = &PyEnvironmentBase::ReadRobotXMLData;
@@ -4659,7 +4663,7 @@ In python, the syntax is::\n\n\
             .def("CreateSensor", &PyEnvironmentBase::CreateSensor,args("name"), DOXY_FN(EnvironmentBase,CreateIkSolver))
             .def("CreateCollisionChecker", &PyEnvironmentBase::CreateCollisionChecker,args("name"), DOXY_FN(EnvironmentBase,CreateIkSolver))
             .def("CreateViewer", &PyEnvironmentBase::CreateViewer,args("name"), DOXY_FN(EnvironmentBase,CreateViewer))
-            
+
             .def("CloneSelf",&PyEnvironmentBase::CloneSelf,args("options"), DOXY_FN(EnvironmentBase,CloneSelf))
             .def("SetCollisionChecker",&PyEnvironmentBase::SetCollisionChecker,args("collisionchecker"), DOXY_FN(EnvironmentBase,SetCollisionChecker))
             .def("GetCollisionChecker",&PyEnvironmentBase::GetCollisionChecker, DOXY_FN(EnvironmentBase,GetCollisionChecker))
@@ -4683,10 +4687,12 @@ In python, the syntax is::\n\n\
             .def("CheckCollision",pcoly,args("ray"), DOXY_FN(EnvironmentBase,CheckCollision "const RAY; CollisionReportPtr"))
             .def("CheckCollision",pcolyr,args("ray"), DOXY_FN(EnvironmentBase,CheckCollision "const RAY; CollisionReportPtr"))
             .def("CheckCollisionRays",&PyEnvironmentBase::CheckCollisionRays,
-                 CheckCollisionRays_overloads(args("rays","body","front_facing_only"), 
+                 CheckCollisionRays_overloads(args("rays","body","front_facing_only"),
                                               "Check if any rays hit the body and returns their contact points along with a vector specifying if a collision occured or not. Rays is a Nx6 array, first 3 columsn are position, last 3 are direction+range."))
-            .def("Load",&PyEnvironmentBase::Load,args("filename"), DOXY_FN(EnvironmentBase,Load))
-            .def("Save",&PyEnvironmentBase::Save,args("filename"), DOXY_FN(EnvironmentBase,Save))
+            .def("Load",load1,args("filename"), DOXY_FN(EnvironmentBase,Load))
+            .def("Load",load2,args("filename","atts"), DOXY_FN(EnvironmentBase,Load))
+            .def("Save",save1,args("filename"), DOXY_FN(EnvironmentBase,Save))
+            .def("Save",save2,args("filename","options","selectname"), DOXY_FN(EnvironmentBase,Save))
             .def("ReadRobotXMLFile",readrobotxmlfile1,args("filename"), DOXY_FN(EnvironmentBase,ReadRobotXMLFile "const std::string"))
             .def("ReadRobotXMLFile",readrobotxmlfile2,args("filename","atts"), DOXY_FN(EnvironmentBase,ReadRobotXMLFile "RobotBasePtr; const std::string; const AttributesList"))
             .def("ReadRobotXMLData",readrobotxmldata1,args("data"), DOXY_FN(EnvironmentBase,ReadRobotXMLData "RobotBasePtr; const std::string; const AttributesList"))
@@ -4761,15 +4767,17 @@ In python, the syntax is::\n\n\
             .def("__str__",&PyEnvironmentBase::__str__)
             ;
 
-        enum_<EnvironmentBase::TriangulateOptions>("TriangulateOptions" DOXY_ENUM(TriangulateOptions))
-            .value("Obstacles",EnvironmentBase::TO_Obstacles)
-            .value("Robots",EnvironmentBase::TO_Robots)
-            .value("Everything",EnvironmentBase::TO_Everything)
-            .value("Body",EnvironmentBase::TO_Body)
-            .value("AllExceptBody",EnvironmentBase::TO_AllExceptBody)
+        object selectionoptions = enum_<EnvironmentBase::SelectionOptions>("SelectionOptions" DOXY_ENUM(SelectionOptions))
+            .value("NoRobots",EnvironmentBase::SO_NoRobots)
+            .value("Robots",EnvironmentBase::SO_Robots)
+            .value("Everything",EnvironmentBase::SO_Everything)
+            .value("Body",EnvironmentBase::SO_Body)
+            .value("AllExceptBody",EnvironmentBase::SO_AllExceptBody)
+            .value("BodyList",EnvironmentBase::SO_BodyList)
             ;
+        env.attr("TriangulateOptions") = selectionoptions;
     }
-    
+
     {
         scope options = class_<DummyStruct>("options")
             .add_property("ReturnTransformQuaternions",GetReturnTransformQuaternions,SetReturnTransformQuaternions);

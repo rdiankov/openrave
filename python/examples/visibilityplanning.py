@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # Copyright (C) 2009-2011 Rosen Diankov (rosen.diankov@gmail.com)
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -53,7 +53,7 @@ Visibility detection extents.jpg
 
 # gather data
 # create a probability distribution
-# resample 
+# resample
 
 Adding Robot Kinematics
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -70,7 +70,7 @@ The final planner just involves an RRT that uses this goal sampler. The next fig
 
 For comparison reasons the one-stage planning is shown above. Interestingly, visibility acts like a key-hole configuration that allows the two-stage planner to finish both paths in a very fast time. The times are comparible to the first stage.
 
-.. [1] Rosen Diankov, Takeo Kanade, James Kuffner. Integrating Grasp Planning and Visual Feedback for Reliable Manipulation, IEEE-RAS Intl. Conf. on Humanoid Robots, December 2009. 
+.. [1] Rosen Diankov, Takeo Kanade, James Kuffner. Integrating Grasp Planning and Visual Feedback for Reliable Manipulation, IEEE-RAS Intl. Conf. on Humanoid Robots, December 2009.
 
 .. examplepost-block:: visibilityplanning
 """
@@ -95,8 +95,7 @@ class VisibilityGrasping:
         self.robot = None
         self.robotreal = None
         self.orenvreal.Reset()
-        if not self.orenvreal.Load(scenefilename):
-            raise ValueError('failed to open %s openrave file'%scenefilename)
+        self.orenvreal.Load(scenefilename)
         if robotname is None:
             self.robotreal = self.orenvreal.GetRobots()[0]
         else:
@@ -139,7 +138,7 @@ class VisibilityGrasping:
         self.robotreal.SetActiveManipulator(self.manip)
         trajdata = self.basemanip.MoveManipulator(goal=homevalues[self.manip.GetArmIndices()],execute=False,outputtraj=True)
         self.starttrajectory(trajdata)
-        
+
         print 'moving hand'
         values = self.robotreal.GetDOFValues()
         values[self.manip.GetGripperIndices()] = homevalues[self.manip.GetGripperIndices()]
@@ -147,7 +146,7 @@ class VisibilityGrasping:
         self.waitrobot()
         if not self.robot is None:
             self.robot.GetController().SetDesired(self.robotreal.GetDOFValues())
-    
+
     def movegripper(self,grippervalues,robot=None):
         if robot is None:
             robot = self.robotreal
@@ -202,7 +201,7 @@ class VisibilityGrasping:
         self.robotgohome()
         self.robotreal.GetController().SetDesired(self.homevalues)
         self.waitrobot()
-        
+
         while True:
             self.robotreal.ReleaseAllGrabbed()
             self.orenv = self.orenvreal.CloneSelf(CloningOptions.Bodies+CloningOptions.Sensors)
@@ -210,7 +209,7 @@ class VisibilityGrasping:
             for sensor in self.robot.GetAttachedSensors():
                 if sensor.GetSensor() is not None:
                     sensor.GetSensor().Configure(Sensor.ConfigureCommand.PowerOff)
-            
+
             if self.orenv.CheckCollision(self.robot):
                 print 'robot in collision, trying again...'
                 time.sleep(0.5)
@@ -278,7 +277,7 @@ class VisibilityGrasping:
                 self.starttrajectory(trajdata)
             except planning_error:
                 raise ValueError('failed to find visual feedback grasp')
-            
+
             self.robot.Grab(self.target)
             self.robotreal.Grab(self.orenvreal.GetKinBody(self.target.GetName()))
             Trelative = dot(linalg.inv(self.target.GetTransform()),self.manip.GetEndEffectorTransform())
@@ -313,7 +312,7 @@ class VisibilityGrasping:
 
 class PA10GraspExample(VisibilityGrasping):
     """Specific class to setup an PA10 scene for visibility grasping"""
-        
+
     def loadscene(self,randomize=True,**kwargs):
         VisibilityGrasping.loadscene(self,**kwargs)
         self.Tgoals = []
@@ -336,16 +335,16 @@ class PA10GraspExample(VisibilityGrasping):
 
         with self.orenvreal:
             self.target = self.gettarget(self.orenvreal)
-            
+
             table = [b for b in self.orenvreal.GetBodies() if b.GetName() == 'table'][0]
             avoidbodies = [self.robotreal, self.target]
-            
+
             Tidentity = eye(4)
             Ttable = table.GetTransform()
             table.SetTransform(eye(4))
             ab = table.ComputeAABB()
             table.SetTransform(Ttable)
-            
+
             # table up is assumed to be +z, sample the +y axis of the table
             Nx = int(2*ab.extents()[0]/0.1)
             Ny = int(2*ab.extents()[1]/0.1)
@@ -357,7 +356,7 @@ class PA10GraspExample(VisibilityGrasping):
 
             offset = ab.pos() + array([-1,-1,1])*ab.extents()
             trans = c_[offset[0]+2*ab.extents()[0]*X, offset[1]+2*ab.extents()[1]*Y, tile(offset[2],len(X))]
-            
+
             # for every destination try inserting a box
             if maxcreate > 0:
                 numcreated = 0
@@ -368,10 +367,10 @@ class PA10GraspExample(VisibilityGrasping):
                         if body is None:
                             print 'invalid body %s'%obstacles[iobs]
                             continue
-                        
+
                         body.SetName('obstacle%d'%numcreated)
                         self.orenvreal.AddKinBody(body)
-                        
+
                         angs = arange(0,pi,pi/3)
                         angs = angs[random.permutation(len(angs))]
                         success = False
