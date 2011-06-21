@@ -26,7 +26,7 @@ class TaskManipulation:
         if plannername is not None and len(plannername) > 0:
             self.args += ' planner ' + plannername
         if maxvelmult is not None:
-            self.args += ' maxvelmult %f '%maxvelmult
+            self.args += ' maxvelmult %.15e '%maxvelmult
         if graspername is not None and len(graspername)>0:
             self.args += ' graspername %s '%graspername
         if env.AddModule(self.prob,self.args) != 0:
@@ -43,7 +43,7 @@ class TaskManipulation:
             raise ValueError('module failed to initialize')
         return clone
     def GraspPlanning(self,graspindices,grasps,target,approachoffset=0,destposes=None,seedgrasps=None,seeddests=None,seedik=None,maxiter=None,randomgrasps=None,randomdests=None, execute=None,outputtraj=None):
-        cmd = 'graspplanning target %s approachoffset %f grasps %d %d '%(target.GetName(),approachoffset, grasps.shape[0],grasps.shape[1])
+        cmd = 'graspplanning target %s approachoffset %.15e grasps %d %d '%(target.GetName(),approachoffset, grasps.shape[0],grasps.shape[1])
         """See :ref:`module-taskmanipulation-graspplanning`
         """
         for f in grasps.flat:
@@ -103,7 +103,7 @@ class TaskManipulation:
         if targetframepose is not None:
             cmd += 'pose %s '%poseSerialization(targetframepose)
         if errorthresh is not None:
-            cmd += 'constrainterrorthresh %f '%errorthresh
+            cmd += 'constrainterrorthresh %.15e '%errorthresh
         for config in configs:
             cmd += 'config %s '%(' '.join(str(f) for f in config))
         res = self.prob.SendCommand(cmd)
@@ -125,7 +125,7 @@ class TaskManipulation:
         if execute is not None:
             cmd += 'execute %d '%execute
         if coarsestep is not None:
-            cmd += 'coarsestep %f '%coarsestep
+            cmd += 'coarsestep %.15e '%coarsestep
         if outputtraj is not None and outputtraj:
             cmd += 'outputtraj '
         if outputfinal:
@@ -161,7 +161,7 @@ class TaskManipulation:
         if outputfinal:
             cmd += 'outputfinal'
         if coarsestep is not None:
-            cmd += 'coarsestep %f '%coarsestep
+            cmd += 'coarsestep %.15e '%coarsestep
         res = self.prob.SendCommand(cmd)
         if res is None:
             raise openravepy.planning_error('ReleaseFingers')

@@ -26,7 +26,7 @@ class BaseManipulation:
         if plannername is not None:
             self.args += ' planner ' + plannername
         if maxvelmult is not None:
-            self.args += ' maxvelmult %f '%maxvelmult
+            self.args += ' maxvelmult %.15e '%maxvelmult
         if env.AddModule(self.prob,self.args) != 0:
             raise ValueError('module failed to initialize')
     def  __del__(self):
@@ -49,21 +49,21 @@ class BaseManipulation:
         """
         cmd = 'VerifyTrajectory stream ' + data + ' resettiming %d resettiming %d '%(resettrans,resettiming)
         if samplingstep is not None:
-            cmd += 'samplingstep %f '%samplingstep
+            cmd += 'samplingstep %.15e '%samplingstep
         return self.prob.SendCommand(cmd)
     
     def MoveHandStraight(self,direction,minsteps=None,maxsteps=None,stepsize=None,ignorefirstcollision=None,starteematrix=None,greedysearch=True,execute=None,outputtraj=None,maxdeviationangle=None,steplength=None):
         """See :ref:`module-basemanipulation-movehandstraight`
         """
-        cmd = 'MoveHandStraight direction %f %f %f '%(direction[0],direction[1],direction[2])
+        cmd = 'MoveHandStraight direction %.15e %.15e %.15e '%(direction[0],direction[1],direction[2])
         if minsteps is not None:
             cmd += 'minsteps %d '%minsteps
         if maxsteps is not None:
             cmd += 'maxsteps %d '%maxsteps
         if stepsize is not None:
-            cmd += 'steplength %f '%stepsize
+            cmd += 'steplength %.15e '%stepsize
         if steplength is not None:
-            cmd += 'steplength %f '%steplength
+            cmd += 'steplength %.15e '%steplength
         if execute is not None:
             cmd += 'execute %d '%execute
         if starteematrix is not None:
@@ -73,9 +73,9 @@ class BaseManipulation:
         if outputtraj is not None and outputtraj:
             cmd += 'outputtraj '
         if ignorefirstcollision is not None:
-            cmd += 'ignorefirstcollision %f '%ignorefirstcollision
+            cmd += 'ignorefirstcollision %.15e '%ignorefirstcollision
         if maxdeviationangle is not None:
-            cmd += 'maxdeviationangle %f '%maxdeviationangle
+            cmd += 'maxdeviationangle %.15e '%maxdeviationangle
         res = self.prob.SendCommand(cmd)
         if res is None:
             raise openravepy.planning_error('MoveHandStraight')
@@ -103,7 +103,7 @@ class BaseManipulation:
         assert(len(goal) == self.robot.GetActiveDOF() and len(goal) > 0)
         cmd = 'MoveActiveJoints goal ' + ' '.join(str(f) for f in goal)+' '
         if steplength is not None:
-            cmd += 'steplength %f '%steplength
+            cmd += 'steplength %.15e '%steplength
         if execute is not None:
             cmd += 'execute %d '%execute
         if outputtraj is not None and outputtraj:
@@ -129,9 +129,9 @@ class BaseManipulation:
         if maxtries is not None:
             cmd += 'maxtries %d '%maxtries
         if translation is not None:
-            cmd += 'translation %f %f %f '%(translation[0],translation[1],translation[2])
+            cmd += 'translation %.15e %.15e %.15e '%(translation[0],translation[1],translation[2])
         if rotation is not None:
-            cmd += 'rotation %f %f %f %f '%(rotation[0],rotation[1],rotation[2],rotation[3])
+            cmd += 'rotation %.15e %.15e %.15e %.15e '%(rotation[0],rotation[1],rotation[2],rotation[3])
         if seedik is not None:
             cmd += 'seedik %d '%seedik
         if constraintfreedoms is not None:
@@ -141,7 +141,7 @@ class BaseManipulation:
         if constrainterrorthresh is not None:
             cmd += 'constrainterrorthresh %s '%constrainterrorthresh
         if steplength is not None:
-            cmd += 'steplength %f '%steplength
+            cmd += 'steplength %.15e '%steplength
         if execute is not None:
             cmd += 'execute %d '%execute
         if outputtraj is not None and outputtraj:
@@ -176,7 +176,7 @@ class BaseManipulation:
         if maxiter is not None:
             cmd += 'maxiter %d '%maxiter
         if jitter is not None:
-            cmd += 'jitter %f '%jitter
+            cmd += 'jitter %.15e '%jitter
         if execute is not None:
             cmd += 'execute %d '%execute
         if outputtraj is not None and outputtraj:

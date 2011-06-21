@@ -610,7 +610,7 @@ public:
     
     struct GraspParametersThread
     {
-        int id;
+        size_t id;
         Vector vtargetdirection;
         Vector vtargetposition;
         dReal ftargetroll;
@@ -627,7 +627,6 @@ public:
     typedef boost::shared_ptr<GraspParametersThread> GraspParametersThreadPtr;
     typedef boost::shared_ptr<WorkerParameters> WorkerParametersPtr;
     
-  
     virtual bool _GraspThreadedCommand(std::ostream& sout, std::istream& sinput)
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
@@ -639,7 +638,9 @@ public:
         vector<dReal> rolls;
         vector< vector<dReal> > preshapes;
         vector<dReal> standoffs;
-        
+        size_t startindex = 0;
+        size_t maxgrasps = 0;
+
         while(!sinput.eof()) {
             sinput >> cmd;
             if( !sinput ) {
@@ -654,6 +655,12 @@ public:
                 string linkname;
                 sinput >> linkname;
                 worker_params->vavoidlinkgeometry.push_back(linkname);
+            }
+            else if( cmd == "startindex" ) {
+                sinput >> startindex;
+            }
+            else if( cmd == "maxgrasps" ) {
+                sinput >> maxgrasps;
             }
             else if( cmd == "onlycontacttarget" ) {
                 sinput >> worker_params->bonlycontacttarget;
@@ -741,27 +748,36 @@ public:
             itthread->reset(new boost::thread(boost::bind(&GrasperProblem::_WorkerThread,this,worker_params,pcloneenv)));
         }
 
-        int id=0;
-        RAVELOG_INFO(str(boost::format("number of grasps to test: %d\n")%(approachrays.size()*rolls.size()*preshapes.size()*standoffs.size())));
-        FOREACH(itapproachray, approachrays){
-            FOREACH(itroll, rolls) {
-                FOREACH(itpreshape, preshapes) {
-                    FOREACH(itstandoff, standoffs) {
-                        boost::mutex::scoped_lock lock(_mutexGrasp);
-                        // initialize _graspParamsWork
-                        _graspParamsWork.reset(new GraspParametersThread());
-                        _graspParamsWork->id = id;
-                        _graspParamsWork->vtargetposition = itapproachray->first;
-                        _graspParamsWork->vtargetdirection = itapproachray->second;
-                        _graspParamsWork->ftargetroll = *itroll;
-                        _graspParamsWork->fstandoff = *itstandoff;
-                        _graspParamsWork->preshape = *itpreshape;
-                        _condGraspHasWork.notify_one(); // notify there is work
-                        _condGraspReceivedWork.wait(lock); // wait for more work
-                        ++id;
-                    }
-                }
+        _listGraspResults.clear();
+        size_t numgrasps = approachrays.size()*rolls.size()*preshapes.size()*standoffs.size();
+        if( maxgrasps == 0 ) {
+            maxgrasps = numgrasps;
+        }
+        RAVELOG_INFO(str(boost::format("number of grasps to test: %d\n")%numgrasps));
+        size_t id = startindex;
+        for(id=startindex; id < numgrasps; ++id) {
+            // id = ((iapproachray * rolls.size()  + iroll) * preshapes.size() + ipreshape) * standoffs.size() + istandoff;
+            size_t istandoff = id % standoffs.size();
+            size_t ipreshape = (id / standoffs.size()) % preshapes.size();
+            size_t iroll = (id / (preshapes.size() * standoffs.size())) % rolls.size();
+            size_t iapproachray = (id / (rolls.size() * preshapes.size() * standoffs.size()));
+
+            boost::mutex::scoped_lock lock(_mutexGrasp);
+            if( _listGraspResults.size() >= maxgrasps ) {
+                break;
             }
+            
+            // initialize _graspParamsWork
+            BOOST_ASSERT(!_graspParamsWork);
+            _graspParamsWork.reset(new GraspParametersThread());
+            _graspParamsWork->id = id;
+            _graspParamsWork->vtargetposition = approachrays[iapproachray].first;
+            _graspParamsWork->vtargetdirection = approachrays[iapproachray].second;
+            _graspParamsWork->ftargetroll = rolls[iroll];
+            _graspParamsWork->fstandoff = standoffs[istandoff];
+            _graspParamsWork->preshape = preshapes[ipreshape];
+            _condGraspHasWork.notify_one(); // notify there is work
+            _condGraspReceivedWork.wait(lock); // wait for more work
         }
 
         // wait for workers
@@ -773,16 +789,16 @@ public:
         listthreads.clear();
 
         // parse results to output
-        sout << _listGraspResults.size() << " ";
-        FOREACH(itresult, _listGraspResults) {
+        sout << id << " " << _listGraspResults.size() << " ";
+        FOREACH(itresult, _listGraspResults) {            
             sout << (*itresult)->vtargetposition.x << " " << (*itresult)->vtargetposition.y << " " << (*itresult)->vtargetposition.z << " ";
             sout << (*itresult)->vtargetdirection.x << " " << (*itresult)->vtargetdirection.y << " " << (*itresult)->vtargetdirection.z << " ";
             sout << (*itresult)->ftargetroll << " " << (*itresult)->fstandoff << " ";
+            sout << (*itresult)->mindist << " " << (*itresult)->volume << " ";
             FOREACH(itangle, (*itresult)->preshape) {
                 sout << (*itangle) << " ";
             }
-            sout << (*itresult)->mindist << " " << (*itresult)->volume << " ";
-            sout << (*itresult)->transfinal << " ";
+            sout << (*itresult)->transfinal.rot.x << " " << (*itresult)->transfinal.rot.y << " " << (*itresult)->transfinal.rot.z << " " << (*itresult)->transfinal.rot.w << " " << (*itresult)->transfinal.trans.x << " " << (*itresult)->transfinal.trans.y << " " << (*itresult)->transfinal.trans.z << " ";
             FOREACH(itangle, (*itresult)->finalshape) {
                 sout << *itangle << " ";
             }
@@ -790,10 +806,8 @@ public:
             FOREACH(itc, (*itresult)->contacts) {
                 const CollisionReport::CONTACT& c = itc->first;
                 sout << c.pos.x << " " << c.pos.y << " " << c.pos.z << " " << c.norm.x << " " << c.norm.y << " " << c.norm.z << " ";
-            }
-            
+            }           
         }
-        
         return true;
     }
 
@@ -810,7 +824,7 @@ public:
         probot->SetActiveManipulator(worker_params->manipname);
 
         // setup parameters
-        boost::shared_ptr<GraspParameters> params(new GraspParameters(GetEnv()));
+        boost::shared_ptr<GraspParameters> params(new GraspParameters(pcloneenv));
         
         params->targetbody = pcloneenv->GetKinBody(worker_params->targetname);
         params->vavoidlinkgeometry = worker_params->vavoidlinkgeometry;
@@ -906,8 +920,9 @@ public:
                     if( worker_params->bComputeForceClosure ) {
                         try {
                             vector<CollisionReport::CONTACT> c(grasp_params->contacts.size());
-                            for(size_t i = 0; i < c.size(); ++i)
+                            for(size_t i = 0; i < c.size(); ++i) {
                                 c[i] = grasp_params->contacts[i].first;
+                            }
                             analysis = _AnalyzeContacts3D(c,worker_params->friction,8);
                             if( analysis.mindist < worker_params->forceclosurethreshold ) {
                                 continue;

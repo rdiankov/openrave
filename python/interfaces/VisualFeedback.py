@@ -25,7 +25,7 @@ class VisualFeedback:
         self.robot = robot
         self.args = self.robot.GetName()
         if maxvelmult is not None:
-            self.args += ' maxvelmult %f '%maxvelmult
+            self.args += ' maxvelmult %.15e '%maxvelmult
         if env.AddModule(self.prob,self.args) != 0:
             raise ValueError('module failed to initialize')
     def  __del__(self):
@@ -54,7 +54,7 @@ class VisualFeedback:
         if manipname is not None:
             cmd += 'manipname %s '%manipname
         if raydensity is not None:
-            cmd += 'raydensity %f '%raydensity
+            cmd += 'raydensity %.15e '%raydensity
         if convexdata is not None:
             cmd += 'convexdata %d '%len(convexdata)
             for f in numpy.reshape(convexdata,len(convexdata)*2):
@@ -68,7 +68,7 @@ class VisualFeedback:
         """
         cmd = 'ProcessVisibilityExtents '
         if localtargetcenter is not None:
-            cmd += 'localtargetcenter %f %f %f '%(localtargetcenter[0],localtargetcenter[1],localtargetcenter[2])
+            cmd += 'localtargetcenter %.15e %.15e %.15e '%(localtargetcenter[0],localtargetcenter[1],localtargetcenter[2])
         if numrolls is not None:
             cmd += 'numrolls %d '%numrolls
         if transforms is not None:
@@ -82,10 +82,10 @@ class VisualFeedback:
         if sphere is not None:
             cmd += 'sphere %d %d '%(sphere[0],len(sphere)-1)
             for s in sphere[1:]:
-                cmd += '%f '%s
+                cmd += '%.15e '%s
         if conedirangles is not None:
             for conedirangle in conedirangles:
-                cmd += 'conedirangle %f %f %f '%(conedirangle[0],conedirangle[1],conedirangle[2])
+                cmd += 'conedirangle %.15e %.15e %.15e '%(conedirangle[0],conedirangle[1],conedirangle[2])
         res = self.prob.SendCommand(cmd)
         if res is None:
             raise openravepy.planning_error()
@@ -98,7 +98,7 @@ class VisualFeedback:
         for f in numpy.reshape(transforms,len(transforms)*7):
             cmd += str(f) + ' '
         if mindist is not None:
-            cmd += 'mindist %f '%(mindist)
+            cmd += 'mindist %.15e '%(mindist)
         res = self.prob.SendCommand(cmd)
         if res is None:
             raise openravepy.planning_error()
@@ -145,7 +145,7 @@ class VisualFeedback:
         if planner is not None:
             cmd += 'planner %s '%planner
         if sampleprob is not None:
-            cmd += 'sampleprob %f '%sampleprob
+            cmd += 'sampleprob %.15e '%sampleprob
         if execute is not None:
             cmd += 'execute %d '%execute
         if outputtraj is not None and outputtraj:
@@ -169,9 +169,9 @@ class VisualFeedback:
         if planner is not None:
             cmd += 'planner %s '%planner
         if graspdistthresh is not None:
-            cmd += 'graspdistthresh %f '%graspdistthresh
+            cmd += 'graspdistthresh %.15e '%graspdistthresh
         if visgraspthresh is not None:
-            cmd += 'visgraspthresh %f '%visgraspthresh
+            cmd += 'visgraspthresh %.15e '%visgraspthresh
         if numgradientsamples is not None:
             cmd += 'numgradientsamples %d '%numgradientsamples
         if execute is not None:
@@ -189,9 +189,9 @@ class VisualFeedback:
         """
         cmd = 'SetParameter '
         if raydensity is not None:
-            cmd += 'raydensity %f '%raydensity
+            cmd += 'raydensity %.15e '%raydensity
         if raymindist is not None:
-            cmd += 'raymindist %f '%raymindist
+            cmd += 'raymindist %.15e '%raymindist
         if allowableocclusion is not None:
-            cmd += 'allowableocclusion %f '%allowableocclusion
+            cmd += 'allowableocclusion %.15e '%allowableocclusion
         return self.prob.SendCommand(cmd)
