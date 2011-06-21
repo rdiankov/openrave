@@ -41,7 +41,7 @@ def main(env,options):
         robot.SetActiveManipulator(options.manipname)
 
     bodies = [b for b in env.GetBodies() if not b.IsRobot() and linalg.norm(b.ComputeAABB().extents()) < 0.2]
-    target = bodies[3]#random.randint(len(bodies))]
+    target = bodies[random.randint(len(bodies))]
     print 'choosing target %s'%target
 
     ikmodel = databases.inversekinematics.InverseKinematicsModel(robot=robot,iktype=IkParameterization.Type.Transform6D)
