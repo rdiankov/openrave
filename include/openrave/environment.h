@@ -87,7 +87,7 @@ public:
     /// \deprecated (10/09/23) see \ref RaveHasInterface
     virtual bool HasInterface(InterfaceType type, const std::string& interfacename) const RAVE_DEPRECATED = 0;
 
-    /// \brief Environment will own the interface until EnvironmentBase::Destroy is called. 
+    /// \brief Environment will own the interface until EnvironmentBase::Destroy is called.
     virtual void OwnInterface(InterfaceBasePtr pinterface) = 0;
 
     /// \brief Remove ownership of the interface.
@@ -127,7 +127,7 @@ public:
 
     /// \see CollisionCheckerBase::CheckCollision(KinBody::LinkConstPtr,KinBodyConstPtr,CollisionReportPtr)
     virtual bool CheckCollision(KinBody::LinkConstPtr plink, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr())=0;
-    
+
     /// \see CollisionCheckerBase::CheckCollision(KinBody::LinkConstPtr,const std::vector<KinBodyConstPtr>&,const std::vector<KinBody::LinkConstPtr>&,CollisionReportPtr)
     virtual bool CheckCollision(KinBody::LinkConstPtr plink, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report = CollisionReportPtr())=0;
 
@@ -147,7 +147,7 @@ public:
     virtual bool CheckSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr()) = 0;
 
     typedef boost::function<CollisionAction(CollisionReportPtr,bool)> CollisionCallbackFn;
-        
+
     /// Register a collision callback.
     ///
     /// Whenever a collision is detected between between bodies during a CheckCollision call or physics simulation, the callback is called.
@@ -174,7 +174,7 @@ public:
     /** \brief Start the internal simulation thread. <b>[multi-thread safe]</b>
 
         Resets simulation time to 0. See \ref arch_simulation for more about the simulation thread.
-        
+
         \param fDeltaTime the delta step to take in simulation
         \param bRealTime if false will call SimulateStep as fast as possible, otherwise will time the simulate step calls so that simulation progresses with real system time.
     */
@@ -189,7 +189,7 @@ public:
     ///
     /// See \ref arch_simulation for more about the simulation thread.
     virtual bool IsSimulationRunning() const = 0;
-    
+
     /// \brief Return simulation time since the start of the environment (in microseconds). <b>[multi-thread safe]</b>
     ///
     /// See \ref arch_simulation for more about the simulation thread.
@@ -198,16 +198,39 @@ public:
 
     /// \name XML Parsing, File Loading
     /// \anchor env_loading
-    //@{ 
+    //@{
+
+    /// \brief A set of options used to select particular parts of the scene
+    enum SelectionOptions
+    {
+        SO_Obstacles = 1,   ///< everything but robots
+        TO_Obstacles = 1,   ///< everything but robots
+        SO_Robots = 2,      ///< all robots
+        TO_Robots = 2,      ///< all robots
+        SO_Everything = 3,  ///< all bodies and robots everything
+        TO_Everything = 3,  ///< all bodies and robots everything
+        SO_Body = 4,        ///< only triangulate kinbody
+        TO_Body = 4,        ///< only triangulate kinbody
+        SO_AllExceptBody = 5, ///< triangulate everything but kinbody
+        TO_AllExceptBody = 5 ///< triangulate everything but kinbody
+    };
+    typedef SelectionOptions TriangulateOptions;
+
     /// \brief Loads a scene from an OpenRAVE XML file. <b>[multi-thread safe]</b>
-    virtual bool Load(const std::string& filename) = 0;
-    /// Loads a scene from XML-formatted data, environment is locked automatically making this method thread-safe
-    virtual bool LoadXMLData(const std::string& data) = 0;
-    /// Saves a scene depending on the filename extension. Default is in COLLADA format
-    virtual bool Save(const std::string& filename) = 0;
+    virtual bool Load(const std::string& filename)=0;//, const AttributesList& atts = AttributesList()) = 0;
+
+    /// \brief Loads a scene from XML-formatted data, environment is locked automatically making this method thread-safe
+    virtual bool LoadXMLData(const std::string& data)=0;//, const AttributesList& atts = AttributesList()) = 0;
+
+    /// \brief Saves a scene depending on the filename extension. Default is in COLLADA format
+    ///
+    /// \param filename the filename to save the results at
+    /// \param options controls what to save
+    /// \param selectname
+    virtual bool Save(const std::string& filename)=0;//, SelectionOptions options=SO_Everything, const std::string& selectname="") = 0;
 
     /** \brief Initializes a robot from a resource file. The robot is not added to the environment when calling this function. <b>[multi-thread safe]</b>
-        
+
         \param robot If a null pointer is passed, a new robot will be created, otherwise an existing robot will be filled
         \param filename the name of the resource file, its extension determines the format of the file. See \ref supported_formats.
         \param atts The attribute/value pair specifying loading options. Defined in \ref arch_robot.
@@ -217,7 +240,7 @@ public:
     virtual RobotBasePtr ReadRobotXMLFile(const std::string& filename) = 0;
 
     /** \brief Initialize a robot from an XML formatted string. <b>[multi-thread safe]</b>
-    
+
         The robot should not be added the environment when calling this function.
         \param robot If a null pointer is passed, a new robot will be created, otherwise an existing robot will be filled
         \param atts The attribute/value pair specifying loading options. Defined in \ref arch_robot.
@@ -225,7 +248,7 @@ public:
     virtual RobotBasePtr ReadRobotXMLData(RobotBasePtr robot, const std::string& data, const AttributesList& atts = AttributesList()) = 0;
 
     /** \brief Initializes a kinematic body from a resource file. The body is not added to the environment when calling this function. <b>[multi-thread safe]</b>
-        
+
         \param filename the name of the resource file, its extension determines the format of the file. See \ref supported_formats.
         \param body If a null pointer is passed, a new body will be created, otherwise an existing robot will be filled
         \param atts The attribute/value pair specifying loading options. Defined in \ref arch_kinbody.
@@ -235,7 +258,7 @@ public:
     virtual KinBodyPtr ReadKinBodyXMLFile(const std::string& filename) = 0;
 
     /** \brief Initializes a kinematic body from an XML formatted string. <b>[multi-thread safe]</b>
-        
+
         The body should not be added to the environment when calling this function.
         \param body If a null pointer is passed, a new body will be created, otherwise an existing robot will be filled
         \param atts The attribute/value pair specifying loading options. Defined in \ref arch_kinbody.
@@ -243,7 +266,7 @@ public:
     virtual KinBodyPtr ReadKinBodyXMLData(KinBodyPtr body, const std::string& data, const AttributesList& atts = AttributesList()) = 0;
 
     /** \brief Initializes an interface from a resource file. <b>[multi-thread safe]</b>
-        
+
         \param pinterface If a null pointer is passed, a new interface will be created, otherwise an existing interface will be filled
         \param filename the name of the resource file, its extension determines the format of the file. See \ref supported_formats.
         \param atts The attribute/value pair specifying loading options. See the individual interface descriptions at \ref interface_concepts.
@@ -252,15 +275,15 @@ public:
     virtual InterfaceBasePtr ReadInterfaceXMLFile(const std::string& filename, const AttributesList& atts = AttributesList()) = 0;
 
     /** \brief Initializes an interface from an XML formatted string. <b>[multi-thread safe]</b>
-    
+
         \param pinterface If a null pointer is passed, a new interface will be created, otherwise an existing interface will be filled
         \param data string containing XML data
         \param atts The attribute/value pair specifying loading options. See the individual interface descriptions at \ref interface_concepts.
     */
     virtual InterfaceBasePtr ReadInterfaceXMLData(InterfaceBasePtr pinterface, InterfaceType type, const std::string& data, const AttributesList& atts = AttributesList()) = 0;
-    
+
     /** \brief reads in the rigid geometry of a resource file into a TRIMESH structure
-        
+
         \param filename the name of the resource file, its extension determines the format of the file. Complex meshes and articulated meshes are all triangulated appropriately. See \ref supported_formats.
         \param options Options to control the parsing process.
     */
@@ -268,12 +291,12 @@ public:
 
     /// \deprecated (10/09/30) see \ref RaveRegisterXMLReader
     virtual boost::shared_ptr<void> RegisterXMLReader(InterfaceType type, const std::string& xmltag, const CreateXMLReaderFn& fn) RAVE_DEPRECATED = 0;
-    
+
     /// \brief Parses a file for OpenRAVE XML formatted data.
     virtual bool ParseXMLFile(BaseXMLReaderPtr preader, const std::string& filename) = 0;
 
     /** \brief Parses a data file for XML data.
-        
+
         \param pdata The data of the buffer
         \param len the number of bytes valid in pdata
     */
@@ -283,7 +306,7 @@ public:
     /// \name Object Setting and Querying
     /// \anchor env_objects
     //@{
-    
+
     /// \brief Add a body to the environment
     ///
     /// \param[in] body the pointer to an initialized body
@@ -316,7 +339,7 @@ public:
     /// \brief Removes a currently loaded interface from the environment. <b>[multi-thread safe]</b>
     ///
     /// The function removes currently loaded bodies, robots, sensors, problems from the actively used
-    /// interfaces of the environment. This does not destroy the interface, but it does remove all 
+    /// interfaces of the environment. This does not destroy the interface, but it does remove all
     /// references managed. Some interfaces like problems have destroy methods that are called to signal
     /// unloading. Note that the active interfaces are different from the owned interfaces.
     /// \param[in] obj interface to remove
@@ -353,7 +376,7 @@ public:
     /// \brief Return a viewer with a particular name.
     ///
     /// When no name is specified, the first loaded viewer is returned.
-    virtual ViewerBasePtr GetViewer(const std::string& name="") const = 0;    
+    virtual ViewerBasePtr GetViewer(const std::string& name="") const = 0;
 
     /// \brief Returns a list of loaded viewers with a pointer to a lock preventing the list from being modified.
     ///
@@ -361,7 +384,7 @@ public:
     /// \return returns a pointer to a Lock. Destroying the shared_ptr will release the lock
     virtual boost::shared_ptr<boost::mutex::scoped_lock> GetViewers(std::list<ViewerBasePtr>& listViewers) const = 0;
 
-    
+
     /// \brief Retrieve published bodies, completes even if environment is locked. <b>[multi-thread safe]</b>
     ///
     /// Note that the pbody pointer might become invalid as soon as GetPublishedBodies returns.
@@ -370,22 +393,12 @@ public:
     /// updates the published bodies that viewers and other programs listening in on the environment see.
     /// For example, calling this function inside a planning loop allows the viewer to update the environment
     /// reflecting the status of the planner.
-    /// Assumes that the physics are locked. 
+    /// Assumes that the physics are locked.
     virtual void UpdatePublishedBodies() = 0;
 
     /// Get the corresponding body from its unique network id
     virtual KinBodyPtr GetBodyFromEnvironmentId(int id) = 0;
 
-    /// A set of options specifying what to triangulate
-    enum TriangulateOptions
-    {
-        TO_Obstacles = 1,   ///< everything but robots
-        TO_Robots = 2,      ///< all robots
-        TO_Everything = 3,  ///< all bodies and robots everything
-        TO_Body = 4,        ///< only triangulate kinbody
-        TO_AllExceptBody = 5 ///< triangulate everything but kinbody
-    };
-    
     /// \brief Triangulation of the body including its current transformation. trimesh will be appended the new data.  <b>[multi-thread safe]</b>
     ///
     /// \param[out] trimesh - The output triangle mesh
@@ -395,9 +408,9 @@ public:
     /// \brief General triangulation of the whole scene. trimesh will be appended the new data. <b>[multi-thread safe]</b>
     ///
     /// \param[out] trimesh - The output triangle mesh
-    /// \param[in] options - Controlls what to triangulate
-    /// \param[in] name - name of the body used in options
-    virtual bool TriangulateScene(KinBody::Link::TRIMESH& trimesh, TriangulateOptions options, const std::string& name) = 0;
+    /// \param[in] options - Controlls what to triangulate.
+    /// \param[in] selectname - name of the body used in options
+    virtual bool TriangulateScene(KinBody::Link::TRIMESH& trimesh, SelectionOptions options, const std::string& selectname) = 0;
     //@}
 
     /// \brief Load a new module, need to Lock if calling outside simulation thread
@@ -451,7 +464,7 @@ public:
     /// \param bhasalpha if true, then each color consists of 4 values with the last value being the alpha of the point (1 means opaque). If false, then colors is 3 values.
     /// \return handle to plotted points, graph is removed when handle is destroyed (goes out of scope). This requires the user to always store the handle in a persistent variable if the plotted graphics are to remain on the viewer.
     virtual OpenRAVE::GraphHandlePtr plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const float* colors, int drawstyle = 0, bool bhasalpha = false) = 0;
-    
+
     /// \brief Draws a series of connected lines with one color. <b>[multi-thread safe]</b>
     ///
     /// \param stride stride in bytes to next point, ie: nextpoint = (float*)((char*)ppoints+stride)
@@ -483,7 +496,7 @@ public:
     /// \param color the rgb color of the point. The last component of the color is used for alpha blending.
     /// \return handle to plotted points, graph is removed when handle is destroyed (goes out of scope). This requires the user to always store the handle in a persistent variable if the plotted graphics are to remain on the viewer.
     virtual OpenRAVE::GraphHandlePtr drawarrow(const RaveVector<float>& p1, const RaveVector<float>& p2, float fwidth, const RaveVector<float>& color = RaveVector<float>(1,0.5,0.5,1)) = 0;
-    
+
     /// \brief Draws a box. <b>[multi-thread safe]</b>
     ///
     /// extents are half the width, height, and depth of the box
@@ -516,7 +529,7 @@ public:
     virtual const std::string& GetHomeDirectory() const RAVE_DEPRECATED = 0;
 
     //@{ debug/global commands
-    
+
     /// sets the debug level
     /// \param level 0 for no debug, 1 - to print all debug messeges. Default
     ///             value for release builds is 0, for debug builds it is 1
