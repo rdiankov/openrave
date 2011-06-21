@@ -70,7 +70,7 @@ Method wraps the WorkspaceTrajectoryTracker planner. For more details on paramet
         robot.reset();
         ModuleBase::Destroy();
     }
-    
+
     virtual void Reset()
     {
         ModuleBase::Reset();
@@ -195,7 +195,7 @@ protected:
                 return false;
             }
         }
-        
+
         bool bResetTrans = false; sinput >> bResetTrans;
         bool bResetTiming = false; sinput >> bResetTiming;
 
@@ -241,7 +241,7 @@ protected:
                 break;
             }
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
-        
+
             if( cmd == "minsteps" ) {
                 sinput >> minsteps;
             }
@@ -332,7 +332,7 @@ protected:
             RAVELOG_WARN("failed to create planner\n");
             return false;
         }
-    
+
         if( !planner->InitPlan(robot, params) ) {
             RAVELOG_ERROR("InitPlan failed\n");
             return false;
@@ -401,7 +401,7 @@ protected:
                 return false;
             }
         }
-    
+
         if( goals.size() != pmanip->GetArmIndices().size() ) {
             return false;
         }
@@ -410,7 +410,7 @@ protected:
 
         robot->SetActiveDOFs(pmanip->GetArmIndices());
         params->SetRobotActiveJoints(robot);
-    
+
         TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF());
 
         std::vector<dReal> values;
@@ -438,16 +438,16 @@ protected:
             RAVELOG_WARN("failed to create planner\n");
             return false;
         }
-    
+
         bool bSuccess = false;
         RAVELOG_INFO("starting planning\n");
-    
+
         for(int iter = 0; iter < nMaxTries; ++iter) {
             if( !rrtplanner->InitPlan(robot, params) ) {
                 RAVELOG_ERROR("InitPlan failed\n");
                 break;
             }
-        
+
             if( rrtplanner->PlanPath(ptraj) ) {
                 bSuccess = true;
                 RAVELOG_INFO("finished planning\n");
@@ -475,7 +475,7 @@ protected:
         bool bExecute = true;
         int nMaxTries = 1; // max tries for the planner
         boost::shared_ptr<ostream> pOutputTrajStream;
-    
+
         PlannerBase::PlannerParametersPtr params(new PlannerBase::PlannerParameters());
         params->_nMaxIterations = 4000; // max iterations before failure
 
@@ -486,7 +486,7 @@ protected:
                 break;
             }
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
-        
+
             if( cmd == "goal" ) {
                 params->vgoalconfig.resize(robot->GetActiveDOF());
                 FOREACH(it, params->vgoalconfig) {
@@ -536,7 +536,7 @@ protected:
         params->SetRobotActiveJoints(robot);
         robot->GetActiveDOFValues(params->vinitialconfig);
         robot->SetActiveDOFValues(params->vgoalconfig);
-    
+
         // jitter again for goal
         if( planningutils::JitterActiveDOF(robot) == 0 ) {
             RAVELOG_WARN("failed\n");
@@ -548,9 +548,9 @@ protected:
             RAVELOG_ERROR("failed to create BiRRTs\n");
             return false;
         }
-    
+
         TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF());
-    
+
         RAVELOG_DEBUG("starting planning\n");
         bool bSuccess = false;
         for(int itry = 0; itry < nMaxTries; ++itry) {
@@ -558,7 +558,7 @@ protected:
                 RAVELOG_ERROR("InitPlan failed\n");
                 return false;
             }
-            
+
             if( !rrtplanner->PlanPath(ptraj) ) {
                 RAVELOG_WARN("PlanPath failed\n");
             }
@@ -582,9 +582,9 @@ protected:
     bool _MoveToHandPosition(ostream& sout, istream& sinput)
     {
         RAVELOG_DEBUG("Starting MoveToHandPosition...\n");
-        RobotBase::ManipulatorConstPtr pmanip = robot->GetActiveManipulator();        
+        RobotBase::ManipulatorConstPtr pmanip = robot->GetActiveManipulator();
         std::list<IkParameterization> listgoals;
-    
+
         string strtrajfilename;
         bool bExecute = true;
         boost::shared_ptr<ostream> pOutputTrajStream;
@@ -601,7 +601,7 @@ protected:
         boost::array<double,6> vconstraintfreedoms = {{0,0,0,0,0,0}};
         Transform tConstraintTargetWorldFrame;
         double constrainterrorthresh=0;
-
+        int goalsamples = 40;
         string cmd;
         while(!sinput.eof()) {
             sinput >> cmd;
@@ -609,7 +609,7 @@ protected:
                 break;
             }
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
-        
+
             if( cmd == "translation" ) {
                 Vector trans;
                 sinput >> trans.x >> trans.y >> trans.z;
@@ -629,6 +629,9 @@ protected:
                 TransformMatrix m;
                 sinput >> m;
                 listgoals.push_back(IkParameterization(Transform(m)));
+            }
+            else if( cmd == "goalsamples" ) {
+                sinput >> goalsamples;
             }
             else if( cmd == "matrices" ) {
                 TransformMatrix m;
@@ -701,7 +704,7 @@ protected:
 
         robot->RegrabAll();
         RobotBase::RobotStateSaver saver(robot);
-    
+
         robot->SetActiveDOFs(pmanip->GetArmIndices(), affinedofs);
         params->SetRobotActiveJoints(robot);
         robot->GetActiveDOFValues(params->vinitialconfig);
@@ -716,7 +719,7 @@ protected:
         robot->SetActiveDOFs(pmanip->GetArmIndices(), 0);
 
         vector<dReal> vgoal;
-        planningutils::ManipulatorIKGoalSampler goalsampler(pmanip, listgoals);
+        planningutils::ManipulatorIKGoalSampler goalsampler(pmanip, listgoals,goalsamples);
         params->vgoalconfig.reserve(nSeedIkSolutions*robot->GetActiveDOF());
         while(nSeedIkSolutions > 0) {
             if( goalsampler.Sample(vgoal) ) {
@@ -745,7 +748,7 @@ protected:
         Trajectory::TPOINT pt;
         pt.q = params->vinitialconfig;
         ptraj->AddPoint(pt);
-    
+
         // jitter again for initial collision
         if( planningutils::JitterActiveDOF(robot,5000,0.03,params->_neighstatefn) == 0 ) {
             RAVELOG_WARN("jitter failed for initial\n");
@@ -758,16 +761,16 @@ protected:
             RAVELOG_ERROR("failed to create BiRRTs\n");
             return false;
         }
-    
+
         bool bSuccess = false;
         RAVELOG_INFO("starting planning\n");
-        
+
         for(int iter = 0; iter < nMaxTries; ++iter) {
             if( !rrtplanner->InitPlan(robot, params) ) {
                 RAVELOG_ERROR("InitPlan failed\n");
                 return false;
             }
-        
+
             if( rrtplanner->PlanPath(ptraj) ) {
                 bSuccess = true;
                 RAVELOG_INFO("finished planning\n");
@@ -779,7 +782,7 @@ protected:
         }
 
         rrtplanner.reset(); // have to destroy before environment
-    
+
         if( !bSuccess ) {
             return false;
         }
@@ -860,7 +863,7 @@ protected:
         }
 
         TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF());
-    
+
         bool bSuccess = false;
         for(int itry = 0; itry < nMaxTries; ++itry) {
             if( CM::MoveUnsync::_MoveUnsyncJoints(GetEnv(), robot, ptraj, vhandjoints, vhandgoal, strplanner,maxdivision) ) {
@@ -1075,7 +1078,7 @@ protected:
                 return false;
             }
         }
-        
+
         if( !ptraj ) {
             return false;
         }
@@ -1109,7 +1112,7 @@ protected:
                 break;
             }
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
-        
+
             if( cmd == "name" ) {
                 string name;
                 sinput >> name;

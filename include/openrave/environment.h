@@ -203,31 +203,32 @@ public:
     /// \brief A set of options used to select particular parts of the scene
     enum SelectionOptions
     {
-        SO_Obstacles = 1,   ///< everything but robots
+        SO_NoRobots = 1,   ///< everything but robots
         TO_Obstacles = 1,   ///< everything but robots
         SO_Robots = 2,      ///< all robots
         TO_Robots = 2,      ///< all robots
         SO_Everything = 3,  ///< all bodies and robots everything
         TO_Everything = 3,  ///< all bodies and robots everything
-        SO_Body = 4,        ///< only triangulate kinbody
-        TO_Body = 4,        ///< only triangulate kinbody
-        SO_AllExceptBody = 5, ///< triangulate everything but kinbody
-        TO_AllExceptBody = 5 ///< triangulate everything but kinbody
+        SO_Body = 4,        ///< only triangulate robot/kinbody
+        TO_Body = 4,        ///< only triangulate robot/kinbody
+        SO_AllExceptBody = 5, ///< select everything but the robot/kinbody
+        TO_AllExceptBody = 5, ///< select everything but the robot/kinbody
+        SO_BodyList = 6,     ///< provide a list of body names
     };
     typedef SelectionOptions TriangulateOptions;
 
     /// \brief Loads a scene from an OpenRAVE XML file. <b>[multi-thread safe]</b>
-    virtual bool Load(const std::string& filename)=0;//, const AttributesList& atts = AttributesList()) = 0;
+    virtual bool Load(const std::string& filename, const AttributesList& atts = AttributesList()) = 0;
 
     /// \brief Loads a scene from XML-formatted data, environment is locked automatically making this method thread-safe
-    virtual bool LoadXMLData(const std::string& data)=0;//, const AttributesList& atts = AttributesList()) = 0;
+    virtual bool LoadXMLData(const std::string& data, const AttributesList& atts = AttributesList()) = 0;
 
     /// \brief Saves a scene depending on the filename extension. Default is in COLLADA format
     ///
     /// \param filename the filename to save the results at
     /// \param options controls what to save
     /// \param selectname
-    virtual bool Save(const std::string& filename)=0;//, SelectionOptions options=SO_Everything, const std::string& selectname="") = 0;
+    virtual void Save(const std::string& filename, SelectionOptions options=SO_Everything, const std::string& selectname="") = 0;
 
     /** \brief Initializes a robot from a resource file. The robot is not added to the environment when calling this function. <b>[multi-thread safe]</b>
 
@@ -403,7 +404,7 @@ public:
     ///
     /// \param[out] trimesh - The output triangle mesh
     /// \param[in] body body the triangulate
-    virtual bool Triangulate(KinBody::Link::TRIMESH& trimesh, KinBodyConstPtr pbody) = 0;
+    virtual void Triangulate(KinBody::Link::TRIMESH& trimesh, KinBodyConstPtr pbody) = 0;
 
     /// \brief General triangulation of the whole scene. trimesh will be appended the new data. <b>[multi-thread safe]</b>
     ///

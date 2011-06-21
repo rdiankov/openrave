@@ -39,7 +39,7 @@ public:
         Prop_JointProperties=0x8|Prop_Joints, ///< max velocity, max acceleration, resolution, max torque
         Prop_Links=0x10, ///< all properties of all links
         Prop_Name=0x20, ///< name changed
-        Prop_LinkDraw=0x40|Prop_Links, ///< toggle link geometries rendering
+        Prop_LinkDraw=0x40, ///< toggle link geometries rendering
         Prop_LinkGeometry=0x80|Prop_Links, ///< the geometry of the link changed
         Prop_JointMimic=0x100|Prop_Joints, ///< joint mimic equations
         Prop_JointVelocityLimits=0x200|Prop_Joints, ///< velocity limits
@@ -60,7 +60,7 @@ public:
     public:
         Link(KinBodyPtr parent); ///< pass in a ODE world
         virtual ~Link();
-        
+
         /// \brief User data for trimesh geometries. Vertices are defined in counter-clockwise order for outward pointing faces.
         class OPENRAVE_API TRIMESH
         {
@@ -95,7 +95,7 @@ public:
                 GeomCylinder = 3,
                 GeomTrimesh = 4,
             };
-            
+
             GEOMPROPERTIES(boost::shared_ptr<Link> parent);
             virtual ~GEOMPROPERTIES() {}
 
@@ -107,7 +107,7 @@ public:
             inline float GetTransparency() const { return ftransparency; }
             inline bool IsDraw() const { return _bDraw; }
             inline bool IsModifiable() const { return _bModifiable; }
-            
+
             inline dReal GetSphereRadius() const { return vGeomData.x; }
             inline dReal GetCylinderRadius() const { return vGeomData.x; }
             inline dReal GetCylinderHeight() const { return vGeomData.y; }
@@ -118,7 +118,7 @@ public:
             /// \brief collision data of the specific object in its local coordinate system.
             ///
             /// Should be transformed by \ref GEOMPROPERTIES::GetTransform() before rendering.
-            /// For spheres and cylinders, an appropriate discretization value is chosen. 
+            /// For spheres and cylinders, an appropriate discretization value is chosen.
             inline const TRIMESH& GetCollisionMesh() const { return collisionmesh; }
 
             /// \brief returns an axis aligned bounding box given that the geometry is transformed by trans
@@ -206,7 +206,7 @@ public:
         /// \brief Compute the aabb of all the geometries of the link in the world coordinate system
         virtual AABB ComputeAABB() const;
 
-        /// \brief Return the current transformation of the link in the world coordinate system. 
+        /// \brief Return the current transformation of the link in the world coordinate system.
         inline Transform GetTransform() const { return _t; }
 
         /// \brief Return all the direct parent links in the kinematics hierarchy of this link.
@@ -236,7 +236,7 @@ public:
         ///
         /// \param[in] t the new transformation
         virtual void SetTransform(const Transform& transform);
-        
+
         /// adds an external force at pos (absolute coords)
         /// \param[in] force the direction and magnitude of the force
         /// \param[in] pos in the world where the force is getting applied
@@ -256,7 +256,7 @@ public:
         /// \param[out] linearvel the translational velocity
         /// \param[out] angularvel is the rotation axis * angular speed
         virtual void GetVelocity(Vector& linearvel, Vector& angularvel) const;
-    
+
         //typedef std::list<GEOMPROPERTIES>::iterator GeomPtr;
         //typedef std::list<GEOMPROPERTIES>::const_iterator GeomConstPtr;
 
@@ -268,7 +268,7 @@ public:
         ///
         /// This gives a user control for dynamically changing the object geometry. Note that the kinbody/robot hash could change.
         virtual void SwapGeometries(std::list<GEOMPROPERTIES>& listNewGeometries);
-        
+
         /// validates the contact normal on link and makes sure the normal faces "outside" of the geometry shape it lies on. An exception can be thrown if position is not on a geometry surface
         /// \param position the position of the contact point specified in the link's coordinate system, assumes it is on a particular geometry
         /// \param normal the unit normal of the contact point specified in the link's coordinate system
@@ -284,7 +284,7 @@ public:
         virtual void GetRigidlyAttachedLinks(std::vector<boost::shared_ptr<Link> >& vattachedlinks) const;
 
         virtual void serialize(std::ostream& o, int options) const;
-        
+
     protected:
         /// \brief Updates the cached information due to changes in the collision data.
         virtual void _Update();
@@ -297,7 +297,7 @@ public:
 
         std::string _name;     ///< optional link name
         std::list<GEOMPROPERTIES> _listGeomProperties; ///< \see GetGeometries
-        
+
         bool _bStatic;       ///< \see IsStatic
         bool _bIsEnabled; ///< \see IsEnabled
 
@@ -334,8 +334,8 @@ public:
     {
     public:
         /** \brief The type of joint movement.
-        
-            Non-special joints that are combinations of revolution and prismatic joints. 
+
+            Non-special joints that are combinations of revolution and prismatic joints.
             The first 4 bits specify the joint DOF, the next bits specify whether the joint is revolute (0) or prismatic (1).
             There can be also special joint types that are valid if the JointSpecialBit is set.
 
@@ -374,7 +374,7 @@ public:
 
         /// \brief Get the joint index into KinBody::GetJoints.
         inline int GetJointIndex() const { return jointindex; }
-        
+
         inline KinBodyPtr GetParent() const { return KinBodyPtr(_parent); }
 
         inline LinkPtr GetFirstAttached() const { return _attachedbodies[0]; }
@@ -439,7 +439,7 @@ public:
         virtual Vector GetAxis(int axis = 0) const;
 
         /** \brief Returns the limits of the joint
-        
+
             \param[out] vLowerLimit the lower limits
             \param[out] vUpperLimit the upper limits
             \param[in] bAppend if true will append to the end of the vector instead of erasing it
@@ -453,7 +453,7 @@ public:
         virtual void SetJointLimits(const std::vector<dReal>& lower, const std::vector<dReal>& upper) RAVE_DEPRECATED { SetLimits(lower,upper); }
 
         /** \brief Returns the max velocities of the joint
-        
+
             \param[out] vlower the lower velocity limits
             \param[out] vupper the lower velocity limits
             \param[in] bAppend if true will append to the end of the vector instead of erasing it
@@ -516,11 +516,11 @@ public:
         bool IsMimic(int axis=-1) const;
 
         /** \brief If the joint is mimic, returns the equation to compute its value
-            
+
             \param[in] axis the axis index
             \param[in] type 0 for position, 1 for velocity, 2 for acceleration.
             \param[in] format the format the equations are returned in. If empty or "fparser", equation in fparser format. Also supports: "mathml".
-            
+
             MathML:
 
             Set 'format' to "mathml". The joint variables are specified with <csymbol>. If a targetted joint has more than one degree of freedom, then axis is suffixed with _\%d. If 'type' is 1 or 2, the partial derivatives are outputted as consecutive <math></math> tags in the same order as \ref MIMIC::_vdofformat
@@ -528,7 +528,7 @@ public:
         std::string GetMimicEquation(int axis=0, int type=0, const std::string& format="") const;
 
         /** \brief Returns the set of DOF indices that the computation of a joint axis depends on. Order is arbitrary.
-        
+
             If the mimic joint uses the values of other mimic joints, then the dependent DOFs of that joint are also
             copied over. Therefore, the dof indices returned can be more than the actual variables used in the equation.
             \throw openrave_exception Throws an exception if the axis is not mimic.
@@ -536,10 +536,10 @@ public:
         void GetMimicDOFIndices(std::vector<int>& vmimicdofs, int axis=0) const;
 
         /** \brief Sets the mimic properties of the joint.
-        
+
             The equations can use the joint names directly in the equation, which represent the position of the joint. Any non-mimic joint part of KinBody::GetJoints() can be used in the computation of the values.
-            If a joint has more than one degree of freedom, then suffix it '_' and the axis index. For example universaljoint_0 * 10 + sin(universaljoint_1). 
-            
+            If a joint has more than one degree of freedom, then suffix it '_' and the axis index. For example universaljoint_0 * 10 + sin(universaljoint_1).
+
             See http://warp.povusers.org/FunctionParser/fparser.html for a full description of the equation formats.
 
             The velocity and acceleration equations are specified in terms of partial derivatives, which means one expression needs to be specified per degree of freedom of used. In order to separate the expressions use "|name ...". The name should immediately follow  '|'.  For example:
@@ -598,7 +598,7 @@ public:
         boost::array< boost::shared_ptr<MIMIC> ,3> _vmimic; ///< the mimic properties of each of the joint axes. It is theoretically possible for a multi-dof joint to have one axes mimiced and the others free. When cloning, is it ok to copy this and assume it is constant?
 
         /** \brief computes the partial velocities with respect to all dependent DOFs specified by MIMIC::_vmimicdofs.
-        
+
             If the joint is not mimic, then just returns its own index
             \param[out] vpartials A list of dofindex/velocity_partial pairs. The final velocity is computed by taking the dot product. The dofindices do not repeat.
             \param[in] iaxis the axis
@@ -606,8 +606,8 @@ public:
         */
         virtual void _ComputePartialVelocities(std::vector<std::pair<int,dReal> >& vpartials, int iaxis, std::map< std::pair<MIMIC::DOFFormat, int>, dReal >& mapcachedpartials) const;
 
-        /** \brief Compute internal transformations and specify the attached links of the joint. 
-            
+        /** \brief Compute internal transformations and specify the attached links of the joint.
+
             Called after the joint protected parameters {vAxes, vanchor, and _voffsets}  have been initialized. vAxes and vanchor should be in the frame of plink0.
             Compute the left and right multiplications of the joint transformation and cleans up the attached bodies.
             After function completes, the following parameters are initialized: _tRight, _tLeft, _tinvRight, _tinvLeft, _attachedbodies. _attachedbodies does not necessarily contain the links in the same order as they were input.
@@ -743,7 +743,7 @@ public:
 
     /// return the static interface type this class points to (used for safe casting)
     static inline InterfaceType GetInterfaceTypeStatic() { return PT_KinBody; }
-    
+
     virtual void Destroy();
 
     /// \deprecated (11/02/18) \see EnvironmentBase::ReadKinBodyXMLFile
@@ -803,7 +803,7 @@ public:
     virtual void GetDOFMaxTorque(std::vector<dReal>& v) const;
     virtual void GetDOFResolutions(std::vector<dReal>& v) const;
     virtual void GetDOFWeights(std::vector<dReal>& v) const;
-    
+
     /// \deprecated Returns all the joint values in the order of GetJoints() (use GetDOFValues instead) (10/07/10)
     virtual void GetJointValues(std::vector<dReal>& v) const RAVE_DEPRECATED { GetDOFValues(v); }
     virtual void GetJointVelocities(std::vector<dReal>& v) const RAVE_DEPRECATED { GetDOFVelocities(v); }
@@ -833,15 +833,15 @@ public:
     virtual const std::vector<JointPtr>& GetDependencyOrderedJoints() const;
 
     /** \brief Return the set of unique closed loops of the kinematics hierarchy.
-        
+
         Each loop is a set of link indices and joint indices. For example, a loop of link indices:
-        [l_0,l_1,l_2] will consist of three joints connecting l_0 to l_1, l_1 to l_2, and l_2 to l_0. 
+        [l_0,l_1,l_2] will consist of three joints connecting l_0 to l_1, l_1 to l_2, and l_2 to l_0.
         The first element in the pair is the link l_X, the second element in the joint connecting l_X to l_(X+1).
     */
     virtual const std::vector< std::vector< std::pair<LinkPtr, JointPtr> > >& GetClosedLoops() const;
 
     /** \en \brief Computes the minimal chain of joints that are between two links in the order of linkindex1 to linkindex2
-    
+
         Passive joints are also used in the computation of the chain and can be returned.
         Note that a passive joint has a joint index and dof index of -1.
         \param[in] linkindex1 the link index to start the search
@@ -850,7 +850,7 @@ public:
         \return true if the two links are connected (vjoints will be filled), false if the links are separate
 
         \ja \brief 2つのリンクを繋ぐ関節の最短経路を計算する．
-        
+
         受動的な関節は，位置関係が固定されているリンクを見つけるために調べられている
         受動的な関節も返される可能があるから，注意する必要があります．
         \param[in] linkindex1 始点リンクインデックス
@@ -862,7 +862,7 @@ public:
 
     /// \brief similar to \ref GetChain(int,int,std::vector<JointPtr>&) except returns the links along the path.
     virtual bool GetChain(int linkindex1, int linkindex2, std::vector<LinkPtr>& vlinks) const;
-    
+
     /// \brief Returns true if the dof index affects the relative transformation between the two links.
     ///
     /// The internal implementation uses \ref KinBody::DoesAffect, therefore mimic indices are correctly handled.
@@ -924,8 +924,8 @@ public:
     virtual bool SetVelocity(const Vector& linearvel, const Vector& angularvel);
 
     /** \brief Sets the velocity of the base link and each of the joints.
-        
-        Computes internally what the correponding velocities of each of the links should be in order to 
+
+        Computes internally what the correponding velocities of each of the links should be in order to
         achieve consistent results with the joint velocities. Sends the velocities to the physics engine.
         Velocities correspond to the link's coordinate system origin.
         \param[in] linearvel linear velocity of base link
@@ -938,7 +938,7 @@ public:
     /// \brief Sets the velocity of the joints.
     ///
     /// Copies the current velocity of the base link and calls SetDOFVelocities(linearvel,angularvel,vDOFVelocities)
-    /// \param[in] vDOFVelocity - velocities of each of the degrees of freeom    
+    /// \param[in] vDOFVelocity - velocities of each of the degrees of freeom
     /// \praam checklimits if true, will excplicitly check the joint velocity limits before setting the values.
     virtual void SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, bool checklimits = false);
 
@@ -946,9 +946,9 @@ public:
     virtual void GetLinkVelocities(std::vector<std::pair<Vector,Vector> >& velocities) const;
 
     /** \en \brief set the transform of the first link (the rest of the links are computed based on the joint values).
-        
+
         \param transform affine transformation
-        
+
         \ja \brief 胴体の絶対姿勢を設定、残りのリンクは運動学の構造に従って変換される．
 
         \param transform 変換行列
@@ -970,7 +970,7 @@ public:
     /// \return true if any link of the KinBody is enabled
     virtual bool IsEnabled() const;
 
-    /// \brief Sets the joint values of the robot. 
+    /// \brief Sets the joint values of the robot.
     ///
     /// \param values the values to set the joint angles (ordered by the dof indices)
     /// \praam checklimits if true, will excplicitly check the joint limits before setting the values.
@@ -1002,7 +1002,7 @@ public:
     virtual void SetLinkVelocities(const std::vector<std::pair<Vector,Vector> >& velocities);
 
     /// \brief Computes the translation jacobian with respect to a world position.
-    /// 
+    ///
     /// Gets the jacobian with respect to a link by computing the partial differentials for all joints that in the path from the root node to GetLinks()[index]
     /// (doesn't touch the rest of the values)
     /// \param linkindex of the link that the rotation is attached to
@@ -1012,7 +1012,7 @@ public:
     virtual void CalculateJacobian(int linkindex, const Vector& offset, std::vector<dReal>& pfJacobian) const;
 
     /// \brief Computes the rotational jacobian as a quaternion with respect to an initial rotation.
-    /// 
+    ///
     /// \param linkindex of the link that the rotation is attached to
     /// \param qInitialRot the rotation in world space whose derivative to take from.
     /// \param vjacobian 4xDOF matrix
@@ -1020,7 +1020,7 @@ public:
     virtual void CalculateRotationJacobian(int linkindex, const Vector& quat, std::vector<dReal>& pfJacobian) const;
 
     /// \brief Computes the angular velocity jacobian of a specified link about the axes of world coordinates.
-    /// 
+    ///
     /// \param linkindex of the link that the rotation is attached to
     /// \param vjacobian 3xDOF matrix
     virtual void CalculateAngularVelocityJacobian(int linkindex, boost::multi_array<dReal,2>& vjacobian) const;
@@ -1041,16 +1041,16 @@ public:
     virtual bool IsRobot() const { return false; }
 
     /// \brief return a unique id of the body used in the environment.
-    /// 
+    ///
     /// If object is not added to the environment, this will return 0. So checking if GetEnvironmentId() is 0 is a good way to check if object is present in the environment.
     /// This id will not be copied when cloning in order to respect another environment's ids.
     virtual int GetEnvironmentId() const;
-    
+
     /** \brief Returns a nonzero value if the joint effects the link transformation.
-    
+
         In closed loops, all joints on all paths to the root link are counted as affecting the link.
         If a mimic joint affects the link, then all the joints used in the mimic joint's computation affect the link.
-        If negative, the partial derivative of the Jacobian should be negated. 
+        If negative, the partial derivative of the Jacobian should be negated.
         \param jointindex index of the joint
         \param linkindex index of the link
     */
@@ -1075,7 +1075,7 @@ public:
 
     /// \brief return all possible link pairs whose collisions are ignored.
     virtual const std::set<int>& GetAdjacentLinks() const;
-    
+
     /// \see SetPhysicsData
     virtual UserDataPtr GetPhysicsData() const { return _pPhysicsData; }
     /// \brief SetCollisionData
@@ -1096,7 +1096,7 @@ public:
     /// Everytime a static property of the interface changes, all
     /// registered callbacks are called to update the users of the changes. Note that the callbacks will
     /// block the thread that made the parameter change.
-    /// \param callback 
+    /// \param callback
     /// \param properties a mask of the \ref KinBodyProperty values that the callback should be called for when they change
     virtual boost::shared_ptr<void> RegisterChangeCallback(int properties, const boost::function<void()>& callback);
 
@@ -1130,7 +1130,7 @@ protected:
     KinBody(InterfaceType type, EnvironmentBasePtr penv);
     inline KinBodyPtr shared_kinbody() { return boost::static_pointer_cast<KinBody>(shared_from_this()); }
     inline KinBodyConstPtr shared_kinbody_const() const { return boost::static_pointer_cast<KinBody const>(shared_from_this()); }
-    
+
     /// \brief custom data managed by the current active physics engine, should be set only by PhysicsEngineBase
     virtual void SetPhysicsData(UserDataPtr pdata) { _pPhysicsData = pdata; }
     /// \brief custom data managed by the current active collision checker, should be set only by CollisionCheckerBase
@@ -1138,9 +1138,9 @@ protected:
     virtual void SetManageData(ManageDataPtr pdata) { _pManageData = pdata; }
 
     /** \brief Final post-processing stage before a kinematics body can be used.
-    
+
         This method is called after the body is finished being initialized with data and before being added to the environment. Also builds the hashes. Builds the internal hierarchy and kinematic body hash.
-        
+
         Avoids making specific calls on the collision checker (like CheckCollision) or physics engine (like simulating velocities/torques) since this information can change depending on the attached plugin.
     */
     virtual void _ComputeInternalInformation();
@@ -1177,7 +1177,7 @@ protected:
     std::vector<LinkPtr> _veclinks;       ///< \see GetLinks
     std::vector<int> _vDOFIndices; ///< cached start joint indices, indexed by dof indices
     std::vector<std::pair<int16_t,int16_t> > _vAllPairsShortestPaths; ///< all-pairs shortest paths through the link hierarchy. The first value describes the parent link index, and the second value is an index into _vecjoints or _vPassiveJoints. If the second value is greater or equal to  _vecjoints.size() then it indexes into _vPassiveJoints.
-    std::vector<int8_t> _vJointsAffectingLinks;   ///< joint x link: (jointindex*_veclinks.size()+linkindex). entry is non-zero if the joint affects the link in the forward kinematics. If negative, the partial derivative of ds/dtheta should be negated. 
+    std::vector<int8_t> _vJointsAffectingLinks;   ///< joint x link: (jointindex*_veclinks.size()+linkindex). entry is non-zero if the joint affects the link in the forward kinematics. If negative, the partial derivative of ds/dtheta should be negated.
     std::vector< std::vector< std::pair<LinkPtr,JointPtr> > > _vClosedLoops; ///< \see GetClosedLoops
     std::vector< std::vector< std::pair<int16_t,int16_t> > > _vClosedLoopIndices; ///< \see GetClosedLoops
     std::vector<JointPtr> _vPassiveJoints; ///< \see GetPassiveJoints()
@@ -1197,11 +1197,11 @@ protected:
     UserDataPtr _pGuiData; ///< \see SetGuiData
     UserDataPtr _pPhysicsData; ///< \see SetPhysicsData
     UserDataPtr _pCollisionData; ///< \see SetCollisionData
-    ManageDataPtr _pManageData;    
+    ManageDataPtr _pManageData;
     uint32_t _nHierarchyComputed; ///< true if the joint heirarchy and other cached information is computed
     bool _bMakeJoinedLinksAdjacent;
 private:
-    std::string __hashkinematics;
+    mutable std::string __hashkinematics;
     mutable std::vector<dReal> _vTempJoints;
     virtual const char* GetHash() const { return OPENRAVE_KINBODY_HASH; }
 

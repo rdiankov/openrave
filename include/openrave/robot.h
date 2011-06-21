@@ -40,7 +40,7 @@ public:
         virtual ~Manipulator();
 
         /// \brief Return the transformation of the end effector (manipulator frame).
-        /// 
+        ///
         /// All inverse kinematics and grasping queries are specifying this frame.
         virtual Transform GetTransform() const;
 
@@ -48,7 +48,7 @@ public:
 
         virtual const std::string& GetName() const { return _name; }
         virtual RobotBasePtr GetRobot() const { return RobotBasePtr(_probot); }
-        
+
         /// \brief Sets the ik solver and initializes it with the current manipulator.
         ///
         /// Due to complications with translation,rotation,direction,and ray ik,
@@ -108,7 +108,7 @@ public:
         virtual bool FindIKSolutions(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, std::vector<std::vector<dReal> >& solutions, int filteroptions) const;
 
         /** \brief returns the parameterization of a given IK type for the current manipulator position.
-            
+
             Ideally pluging the returned ik parameterization into FindIkSolution should return the a manipulator configuration
             such that a new call to GetIkParameterization returns the same values. In other words:
             \code
@@ -126,7 +126,7 @@ public:
         virtual IkParameterization GetIkParameterization(IkParameterization::Type iktype) const;
 
         /** \brief returns a full parameterization of a given IK type for the current manipulator position using an existing IkParameterization as the seed.
-            
+
             Ideally pluging the returned ik parameterization into FindIkSolution should return the a manipulator configuration
             such that a new call to GetIkParameterization returns the same values.
             \param ikparam Some IK types like Lookat3D and TranslationLocalGlobal6D set constraints in the global coordinate system of the manipulator. Because these values are not stored in manipulator itself, they have to be passed in through an existing IkParameterization.
@@ -149,14 +149,14 @@ public:
         /// The child links do not include the arm links.
         virtual void GetChildLinks(std::vector<LinkPtr>& vlinks) const;
 
-        /// \brief Get all links that are independent of the arm and gripper joints 
+        /// \brief Get all links that are independent of the arm and gripper joints
         ///
         /// conditioned that the base and end effector links are static.
         /// In other words, returns all links not on the path from the base to the end effector and not children of the end effector.
         virtual void GetIndependentLinks(std::vector<LinkPtr>& vlinks) const;
 
         /** \brief Checks collision with only the gripper given its end-effector transform. Ignores disabled links.
-        
+
             \param tEE the end effector transform
             \param[out] report [optional] collision report
             \return true if a collision occurred
@@ -164,7 +164,7 @@ public:
         virtual bool CheckEndEffectorCollision(const Transform& tEE, CollisionReportPtr report = CollisionReportPtr()) const;
 
         /** \brief Checks collision with the environment with all the independent links of the robot. Ignores disabled links.
-        
+
             \param[out] report [optional] collision report
             \return true if a collision occurred
         */
@@ -183,12 +183,12 @@ public:
         virtual void CalculateAngularVelocityJacobian(boost::multi_array<dReal,2>& mjacobian) const;
 
         virtual void serialize(std::ostream& o, int options) const;
-        
+
         /// \brief Return hash of just the manipulator definition.
         virtual const std::string& GetStructureHash() const;
 
         /// \brief Return hash of all kinematics information that involves solving the inverse kinematics equations.
-        /// 
+        ///
         /// This includes joint axes, joint positions, and final grasp transform. Hash is used to cache the solvers.
         virtual const std::string& GetKinematicsStructureHash() const;
     protected:
@@ -204,7 +204,7 @@ public:
     private:
         RobotBaseWeakPtr _probot;
         std::vector<int> __vgripperdofindices, __varmdofindices;
-        std::string __hashstructure, __hashkinematicsstructure;
+        mutable std::string __hashstructure, __hashkinematicsstructure;
 
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
@@ -230,7 +230,7 @@ public:
         AttachedSensor(RobotBasePtr probot);
         AttachedSensor(RobotBasePtr probot, const AttachedSensor& sensor, int cloningoptions);
         virtual ~AttachedSensor();
-        
+
         virtual SensorBasePtr GetSensor() const { return psensor; }
         virtual LinkPtr GetAttachingLink() const { return LinkPtr(pattachedlink); }
         virtual Transform GetRelativeTransform() const { return trelative; }
@@ -254,7 +254,7 @@ public:
         Transform trelative; ///< relative transform of the sensor with respect to the attached link
         SensorBase::SensorDataPtr pdata; ///< pointer to a preallocated data using psensor->CreateSensorData()
         std::string _name; ///< name of the attached sensor
-        std::string __hashstructure;
+        mutable std::string __hashstructure;
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
         friend class ColladaReader;
@@ -280,7 +280,7 @@ public:
         std::vector<LinkConstPtr> vCollidingLinks, vNonCollidingLinks; ///< robot links that already collide with the body
         Transform troot; ///< root transform (of first link of body) relative to plinkrobot's transform. In other words, pbody->GetTransform() == plinkrobot->GetTransform()*troot
     };
-    
+
     /// \brief Helper class derived from KinBodyStateSaver to additionaly save robot information.
     class OPENRAVE_API RobotStateSaver : public KinBodyStateSaver
     {
@@ -300,7 +300,7 @@ public:
 
     /// \brief Return the static interface type this class points to (used for safe casting).
     static inline InterfaceType GetInterfaceTypeStatic() { return PT_Robot; }
-    
+
     virtual void Destroy();
 
     /// \deprecated (11/02/18) \see EnvironmentBase::ReadRobotXMLFile
@@ -321,7 +321,7 @@ public:
 
     /// Transforms the robot and updates the attached sensors and grabbed bodies.
     virtual void SetTransform(const Transform& trans);
-    
+
     /** Methods using the active degrees of freedoms of the robot. Active DOFs are a way for the
         user to specify degrees of freedom of interest for a current execution block. All planners
         by default use the robot's active DOF and active manipultor. For every Get* method, there is
@@ -347,16 +347,16 @@ public:
                              ///< theta * v, where v is the rotation axis and theta is the angle about that axis
         DOF_RotationQuat = 32, ///< robot can rotate freely (4 dof), parameterization is a quaternion. In order for limits to work correctly, the quaternion is in the space of _vRotationQuatLimitStart. _vRotationQuatLimitStart is always left-multiplied before setting the transform!
     };
-    
+
     /** \brief Set the joint indices and affine transformation dofs that the planner should use. If \ref DOF_RotationAxis is specified, the previously set axis is used.
-        
+
         \param dofindices the indices of the original degrees of freedom to use.
         \param affine A bitmask of \ref DOFAffine values
     */
     virtual void SetActiveDOFs(const std::vector<int>& dofindices, int affine = DOF_NoTransform);
 
     /** \brief Set the joint indices and affine transformation dofs that the planner should use. If \ref DOF_RotationAxis is specified, then rotationaxis is set as the new axis.
-        
+
         \param dofindices the indices of the original degrees of freedom to use.
         \param affine A bitmask of \ref DOFAffine values
         \param rotationaxis if \ref DOF_RotationAxis is specified, pRotationAxis is used as the new axis
@@ -377,7 +377,7 @@ public:
     virtual void SetAffineRotation3DLimits(const Vector& lower, const Vector& upper);
 
     /// \brief sets the quaternion limits using a starting rotation and the max angle deviation from it.
-    /// 
+    ///
     /// \param quatangle quaternion_start * max_angle. acos(q dot quaternion_start) <= max_angle.
     /// If max_angle is 0, then will take the current transform of the robot
     virtual void SetAffineRotationQuatLimits(const Vector& quatangle);
@@ -451,7 +451,7 @@ public:
     virtual bool SetActiveMotion(TrajectoryBaseConstPtr ptraj, dReal fSpeed) { return SetActiveMotion(ptraj); }
 
     /** \brief Calculates the translation jacobian with respect to a link.
-    
+
         Calculates the partial differentials for the active degrees of freedom that in the path from the root node to _veclinks[index]
         (doesn't touch the rest of the values).
         \param mjacobian a 3 x ActiveDOF matrix
@@ -461,9 +461,9 @@ public:
 
     virtual void CalculateActiveRotationJacobian(int index, const Vector& qInitialRot, boost::multi_array<dReal,2>& vjacobian) const;
     virtual void CalculateActiveRotationJacobian(int index, const Vector& qInitialRot, std::vector<dReal>& pfJacobian) const;
-    
+
     /** Calculates the angular velocity jacobian of a specified link about the axes of world coordinates.
-    
+
         \param index of the link that the rotation is attached to
         \param mjacobian 3x(num ACTIVE DOF) matrix
     */
@@ -473,7 +473,7 @@ public:
     virtual const std::set<int>& GetNonAdjacentLinks(int adjacentoptions=0) const;
 
     //@}
-    
+
     /** A grabbed body becomes part of the robot and its relative pose with respect to a robot's
         link will be fixed. KinBody::_AttachBody is called for every grabbed body in order to make
         the grabbed body a part of the robot. Once grabbed, the inter-collisions between the robot
@@ -509,16 +509,16 @@ public:
         \return true if successful and body is grabbed
     */
     virtual bool Grab(KinBodyPtr body, const std::set<int>& setRobotLinksToIgnore);
-    
+
     /** \brief Grabs the body with the active manipulator's end effector.
-        
+
         \param[in] body the body to be grabbed
         \return true if successful and body is grabbed
     */
     virtual bool Grab(KinBodyPtr body);
 
     /** \brief Release the body if grabbed.
-        
+
         \param body body to release
     */
     virtual void Release(KinBodyPtr body);
@@ -527,44 +527,44 @@ public:
     virtual void ReleaseAllGrabbed(); ///< release all bodies
 
     /** Releases and grabs all bodies, has the effect of recalculating all the initial collision with the bodies.
-        
+
         This has the effect of resetting the current collisions any grabbed body makes with the robot into an ignore list.
     */
     virtual void RegrabAll();
 
     /** \brief return the robot link that is currently grabbing the body. If the body is not grabbed, will return an  empty pointer.
-        
+
         \param[in] body the body to check
     */
     virtual LinkPtr IsGrabbing(KinBodyConstPtr body) const;
 
     /** \brief gets all grabbed bodies of the robot
-        
+
         \param[out] vbodies filled with the grabbed bodies
     */
     virtual void GetGrabbed(std::vector<KinBodyPtr>& vbodies) const;
     //@}
 
     /** \brief Simulate the robot and update the grabbed bodies and attached sensors
-        
+
         Do not call SimulationStep for the attached sensors in this function.
     */
     virtual void SimulationStep(dReal fElapsedTime);
 
     /** \brief Check if body is self colliding. Links that are joined together are ignored.
-        
+
         \param report [optional] collision report
     */
     virtual bool CheckSelfCollision(CollisionReportPtr report = CollisionReportPtr()) const;
 
     /** \brief checks collision of a robot link with the surrounding environment. Attached/Grabbed bodies to this link are also checked for collision.
-        
+
         \param[in] ilinkindex the index of the link to check
         \param[in] tlinktrans The transform of the link to check
         \param[out] report [optional] collision report
     */
     virtual bool CheckLinkCollision(int ilinkindex, const Transform& tlinktrans, CollisionReportPtr report = CollisionReportPtr());
-    
+
     /// does not clone the grabbed bodies since it requires pointers from other bodies (that might not be initialized yet)
     virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions);
 
@@ -579,7 +579,7 @@ public:
 
     /// \brief gets the robot controller
     virtual ControllerBasePtr GetController() const { return ControllerBasePtr(); }
-    
+
     /// \brief set a controller for a robot
     /// \param pController - if NULL, sets the controller of this robot to NULL. otherwise attemps to set the controller to this robot.
     /// \param args - the argument list to pass when initializing the controller
@@ -607,7 +607,7 @@ protected:
     ///
     /// This function in calls every registers calledback that is tracking the changes.
     virtual void _ParametersChanged(int parameters);
-    
+
     std::vector<Grabbed> _vGrabbedBodies;   ///vector of grabbed bodies
     virtual void _UpdateGrabbedBodies();
     virtual void _UpdateAttachedSensors();
@@ -631,7 +631,7 @@ protected:
 private:
     virtual const char* GetHash() const { return OPENRAVE_ROBOT_HASH; }
     virtual const char* GetKinBodyHash() const { return OPENRAVE_KINBODY_HASH; }
-    std::string __hashrobotstructure;
+    mutable std::string __hashrobotstructure;
     mutable std::vector<dReal> _vTempRobotJoints;
 
 #ifdef RAVE_PRIVATE

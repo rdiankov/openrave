@@ -274,8 +274,8 @@ void GenerateSphereTriangulation(KinBody::Link::TRIMESH& tri, int levels)
     };
 
     Vector v[3];
-    
-    // make sure oriented CCW 
+
+    // make sure oriented CCW
     for(int i = 0; i < nindices; i += 3 ) {
         v[0] = temp.vertices[indices[i]];
         v[1] = temp.vertices[indices[i+1]];
@@ -486,7 +486,7 @@ void KinBody::Link::GEOMPROPERTIES::SetAmbientColor(const RaveVector<float>& col
 //    tmax = (parameters[1-r.sign[0]].x() - r.origin.x()) * r.inv_direction.x();
 //    tymin = (parameters[r.sign[1]].y() - r.origin.y()) * r.inv_direction.y();
 //    tymax = (parameters[1-r.sign[1]].y() - r.origin.y()) * r.inv_direction.y();
-//    if ( (tmin > tymax) || (tymin > tmax) ) 
+//    if ( (tmin > tymax) || (tymin > tmax) )
 //        return false;
 //    if (tymin > tmin)
 //        tmin = tymin;
@@ -494,7 +494,7 @@ void KinBody::Link::GEOMPROPERTIES::SetAmbientColor(const RaveVector<float>& col
 //        tmax = tymax;
 //    tzmin = (parameters[r.sign[2]].z() - r.origin.z()) * r.inv_direction.z();
 //    tzmax = (parameters[1-r.sign[2]].z() - r.origin.z()) * r.inv_direction.z();
-//    if ( (tmin > tzmax) || (tzmin > tmax) ) 
+//    if ( (tmin > tzmax) || (tzmin > tmax) )
 //        return false;
 //    if (tzmin > tmin)
 //        tmin = tzmin;
@@ -1242,7 +1242,7 @@ void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1,
             _tRightNoOffset = trot*_tRightNoOffset;
             _vaxes[0] = Vector(0,0,1);
         }
-            
+
         Transform toffset;
         if( IsRevolute(0) ) {
             toffset.rot = quatFromAxisAngle(_vaxes[0], _voffsets[0]);
@@ -1594,7 +1594,7 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
             if( itnameindex == resultVars.end() ) {
                 throw OPENRAVE_EXCEPTION_FORMAT("variable %s from velocity equation is not referenced in the position, skipping...", mapinvnames[varname],ORE_InvalidArguments);
             }
-            
+
             boost::shared_ptr<FunctionParserBase<dReal> > fn(parent->_CreateFunctionParser());
             ret = fn->Parse(sequation,sVars.str());
             if( ret >= 0 ) {
@@ -1876,7 +1876,7 @@ bool KinBody::InitFromBoxes(const std::vector<AABB>& vaabbs, bool bDraw)
         trimesh.ApplyTransform(geom._t);
         plink->collision.Append(trimesh);
     }
-    
+
     _veclinks.push_back(plink);
     return true;
 }
@@ -1911,7 +1911,7 @@ bool KinBody::InitFromBoxes(const std::vector<OBB>& vobbs, bool bDraw)
         trimesh.ApplyTransform(geom._t);
         plink->collision.Append(trimesh);
     }
-    
+
     _veclinks.push_back(plink);
     return true;
 }
@@ -1941,7 +1941,7 @@ bool KinBody::InitFromSpheres(const std::vector<Vector>& vspheres, bool bDraw)
         trimesh.ApplyTransform(geom._t);
         plink->collision.Append(trimesh);
     }
-    
+
     _veclinks.push_back(plink);
     return true;
 }
@@ -2163,7 +2163,7 @@ void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocity, const Vec
     std::vector<std::pair<Vector,Vector> > velocities(_veclinks.size());
     velocities.at(0).first = linearvel;
     velocities.at(0).second = angularvel;
-    
+
     vector<dReal> vlower,vupper,vtempvalues;
     if( checklimits ) {
         GetDOFVelocityLimits(vlower,vupper);
@@ -2292,8 +2292,8 @@ void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocity, const Vec
                 }
             }
         }
-        
-        Vector vparent, wparent; 
+
+        Vector vparent, wparent;
         Transform tparent;
         if( !pjoint->GetHierarchyParentLink() ) {
             tparent = _veclinks.at(0)->GetTransform();
@@ -2396,9 +2396,9 @@ AABB KinBody::ComputeAABB() const
 Vector KinBody::GetCenterOfMass() const
 {
     // find center of mass and set the outer transform to it
-    Vector center;  
+    Vector center;
     dReal fTotalMass = 0;
-    
+
     FOREACHC(itlink, _veclinks) {
         center += ((*itlink)->GetTransform() * (*itlink)->GetCOMOffset() * (*itlink)->GetMass());
         fTotalMass += (*itlink)->GetMass();
@@ -2598,7 +2598,7 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, bool bCheckLi
                             ++iteval;
                         }
                     }
-                    
+
                     if( veval.empty() ) {
                         FORIT(iteval,vevalcopy) {
                             if( pjoint->GetType() == Joint::JointSpherical || pjoint->IsCircular(i) ) {
@@ -3225,7 +3225,7 @@ void KinBody::_ComputeInternalInformation()
             bchanged = false;
             FOREACH(itmimic,mapmimic) {
                 boost::shared_ptr<Joint::MIMIC> mimic = itmimic->second;
-                Joint::MIMIC::DOFHierarchy h; 
+                Joint::MIMIC::DOFHierarchy h;
                 h.dofformatindex = 0;
                 FOREACH(itdofformat,mimic->_vdofformat) {
                     if( mapmimic.find(*itdofformat) == mapmimic.end() ) {
@@ -3543,7 +3543,7 @@ void KinBody::_ComputeInternalInformation()
                     }
                 }
             }
-                
+
             // go backwards so we prioritize moving joints towards the end rather than the beginning (not a formal heurstic)
             int imaxadjind = vjointadjacency[numjoints*numjoints-1];
             for(int ijoint = numjoints*numjoints-1; ijoint >= 0; --ijoint) {
@@ -3801,13 +3801,7 @@ void KinBody::_ComputeInternalInformation()
         }
     }
 
-    {
-        // force all joints to 0 when computing hashes?
-        ostringstream ss;
-        ss << std::fixed << std::setprecision(SERIALIZATION_PRECISION);
-        serialize(ss,SO_Kinematics|SO_Geometry);
-        __hashkinematics = GetMD5HashString(ss.str());
-    }
+    __hashkinematics.resize(0);
 
     // create the adjacency list
     {
@@ -3857,7 +3851,7 @@ void KinBody::_ComputeInternalInformation()
                     _setAdjacentLinks.insert(ind0|(ind1<<16));
                 }
             }
-        
+
             FOREACH(itj, _vPassiveJoints) {
                 int ind0 = (*itj)->_attachedbodies[0]->GetIndex();
                 int ind1 = (*itj)->_attachedbodies[1]->GetIndex();
@@ -3899,7 +3893,7 @@ void KinBody::_ComputeInternalInformation()
         vector<dReal> vcurrentvalues;
         GetDOFValues(vcurrentvalues);
         SetDOFValues(vcurrentvalues);
-        GetLinkTransformations(vnewtrans);        
+        GetLinkTransformations(vnewtrans);
         for(size_t i = 0; i < vprevtrans.size(); ++i) {
             if( TransformDistanceFast(vprevtrans[i],vnewtrans[i]) > 1e-5 ) {
                 RAVELOG_VERBOSE(str(boost::format("link %d has different transformation after SetDOFValues (error=%f), this could be due to mimic joint equations kicking into effect.")%_veclinks.at(i)->GetName()%TransformDistanceFast(vprevtrans[i],vnewtrans[i])));
@@ -4100,7 +4094,7 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     _bMakeJoinedLinksAdjacent = r->_bMakeJoinedLinksAdjacent;
     __hashkinematics = r->__hashkinematics;
     _vTempJoints = r->_vTempJoints;
-    
+
     _veclinks.resize(0); _veclinks.reserve(r->_veclinks.size());
     FOREACHC(itlink, r->_veclinks) {
         LinkPtr pnewlink(new Link(shared_kinbody()));
@@ -4152,7 +4146,7 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     _vDOFOrderedJoints = r->_vDOFOrderedJoints;
     _vJointsAffectingLinks = r->_vJointsAffectingLinks;
     _vDOFIndices = r->_vDOFIndices;
-    
+
     _setAdjacentLinks = r->_setAdjacentLinks;
     _vInitialLinkTransformations = r->_vInitialLinkTransformations;
     _vForcedAdjacentLinks = r->_vForcedAdjacentLinks;
@@ -4179,7 +4173,7 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
             }
         }
     }
-    
+
     _listAttachedBodies.clear(); // will be set in the environment
     _listRegisteredCallbacks.clear(); // reset the callbacks
 
@@ -4205,10 +4199,7 @@ void KinBody::_ParametersChanged(int parameters)
     // do not change hash if geometry changed!
     //if( parameters&Prop_LinkGeometry )
     if( parameters & (Prop_Joints|Prop_Links) ) {
-        ostringstream ss;
-        ss << std::fixed << std::setprecision(SERIALIZATION_PRECISION);
-        serialize(ss,SO_Kinematics|SO_Geometry);
-        __hashkinematics = GetMD5HashString(ss.str());
+        __hashkinematics.resize(0);
     }
 
     std::list<std::pair<int,boost::function<void()> > > listRegisteredCallbacks = _listRegisteredCallbacks; // copy since it can be changed
@@ -4250,6 +4241,12 @@ void KinBody::SetZeroConfiguration()
 const std::string& KinBody::GetKinematicsGeometryHash() const
 {
     CHECK_INTERNAL_COMPUTATION;
+    if( __hashkinematics.size() == 0 ) {
+        ostringstream ss;
+        ss << std::fixed << std::setprecision(SERIALIZATION_PRECISION);
+        serialize(ss,SO_Kinematics|SO_Geometry);
+        __hashkinematics = GetMD5HashString(ss.str());
+    }
     return __hashkinematics;
 }
 

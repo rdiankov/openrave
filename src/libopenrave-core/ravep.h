@@ -144,7 +144,7 @@ inline static uint32_t GetMilliTime()
 
 #endif
 
-// returns a lower case version of the string 
+// returns a lower case version of the string
 inline std::string tolowerstring(const std::string & s)
 {
     std::string d = s;
@@ -255,7 +255,7 @@ smart_pointer_deleter(P const & p, const boost::function<void(void const*)>& del
         _deleterfn(x);
         p_.reset();
     }
-    
+
     P const & get() const
     {
         return p_;
@@ -296,5 +296,6 @@ bool RaveParseColladaData(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const 
 void RaveWriteColladaFile(EnvironmentBasePtr penv, const std::string& filename);
 void RaveWriteColladaFile(KinBodyPtr pbody, const std::string& filename);
 void RaveWriteColladaFile(RobotBasePtr probot, const std::string& filename);
+void RaveWriteColladaFile(const std::list<KinBodyPtr>& listbodies, const std::list<RobotBasePtr>& listrobots, const std::string& filename);
 
 #endif

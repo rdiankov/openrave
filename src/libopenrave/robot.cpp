@@ -43,7 +43,7 @@ RobotBase::Manipulator::Manipulator(RobotBasePtr probot, const RobotBase::Manipu
         _pBase = probot->GetLinks().at(r.GetBase()->GetIndex());
     if( !!r.GetEndEffector() )
         _pEndEffector = probot->GetLinks().at(r.GetEndEffector()->GetIndex());
-    
+
     _pIkSolver.reset();
     if( _strIkSolver.size() > 0 )
         _pIkSolver = RaveCreateIkSolver(probot->GetEnv(), _strIkSolver);
@@ -103,7 +103,7 @@ bool RobotBase::Manipulator::FindIKSolution(const IkParameterization& goal, cons
     boost::shared_ptr< vector<dReal> > psolution(&solution, null_deleter());
     return vFreeParameters.size() == 0 ? _pIkSolver->Solve(localgoal, solution, filteroptions, psolution) : _pIkSolver->Solve(localgoal, solution, vFreeParameters, filteroptions, psolution);
 }
-   
+
 bool RobotBase::Manipulator::FindIKSolutions(const IkParameterization& goal, std::vector<std::vector<dReal> >& solutions, int filteroptions) const
 {
     return FindIKSolutions(goal, vector<dReal>(), solutions, filteroptions);
@@ -579,11 +579,23 @@ void RobotBase::Manipulator::serialize(std::ostream& o, int options) const
 
 const std::string& RobotBase::Manipulator::GetStructureHash() const
 {
+    if( __hashstructure.size() == 0 ) {
+        ostringstream ss;
+        ss << std::fixed << std::setprecision(SERIALIZATION_PRECISION);
+        serialize(ss,SO_RobotManipulators);
+        __hashstructure = GetMD5HashString(ss.str());
+    }
     return __hashstructure;
 }
 
 const std::string& RobotBase::Manipulator::GetKinematicsStructureHash() const
 {
+    if( __hashkinematicsstructure.size() == 0 ) {
+        ostringstream ss;
+        ss << std::fixed << std::setprecision(SERIALIZATION_PRECISION);
+        serialize(ss,SO_Kinematics);
+        __hashkinematicsstructure = GetMD5HashString(ss.str());
+    }
     return __hashkinematicsstructure;
 }
 
@@ -619,8 +631,9 @@ RobotBase::AttachedSensor::~AttachedSensor()
 
 SensorBase::SensorDataPtr RobotBase::AttachedSensor::GetData() const
 {
-    if( psensor->GetSensorData(pdata) )
+    if( psensor->GetSensorData(pdata) ) {
         return pdata;
+    }
     return SensorBase::SensorDataPtr();
 }
 
@@ -660,6 +673,12 @@ void RobotBase::AttachedSensor::serialize(std::ostream& o, int options) const
 
 const std::string& RobotBase::AttachedSensor::GetStructureHash() const
 {
+    if( __hashstructure.size() == 0 ) {
+        ostringstream ss;
+        ss << std::fixed << std::setprecision(SERIALIZATION_PRECISION);
+        serialize(ss,SO_RobotSensors);
+        __hashstructure = GetMD5HashString(ss.str());
+    }
     return __hashstructure;
 }
 
@@ -746,7 +765,7 @@ void RobotBase::Destroy()
     _vecManipulators.clear();
     _vecSensors.clear();
     SetController(ControllerBasePtr(),std::vector<int>(),0);
-    
+
     KinBody::Destroy();
 }
 
@@ -998,7 +1017,7 @@ void RobotBase::SetActiveDOFs(const std::vector<int>& vJointIndices, int nAffine
         _nActiveDOF++;
     }
     if( _nAffineDOFs & DOF_RotationAxis ) {
-        _nActiveDOF++; 
+        _nActiveDOF++;
     }
     else if( _nAffineDOFs & DOF_Rotation3D ) {
         _nActiveDOF += 3;
@@ -1026,7 +1045,7 @@ void RobotBase::SetActiveDOFValues(const std::vector<dReal>& values, bool bCheck
         const dReal* pAffineValues = &values.at(_vActiveDOFIndices.size());
 
         t = GetTransform();
-        
+
         if( _nAffineDOFs & DOF_X ) t.trans.x = *pAffineValues++;
         if( _nAffineDOFs & DOF_Y ) t.trans.y = *pAffineValues++;
         if( _nAffineDOFs & DOF_Z ) t.trans.z = *pAffineValues++;
@@ -1146,7 +1165,7 @@ void RobotBase::SetActiveDOFVelocities(const std::vector<dReal>& velocities, boo
         const dReal* pAffineValues = &velocities[_vActiveDOFIndices.size()];
 
         _veclinks.at(0)->GetVelocity(linearvel, angularvel);
-        
+
         if( _nAffineDOFs & DOF_X ) linearvel.x = *pAffineValues++;
         if( _nAffineDOFs & DOF_Y ) linearvel.y = *pAffineValues++;
         if( _nAffineDOFs & DOF_Z ) linearvel.z = *pAffineValues++;
@@ -1302,7 +1321,7 @@ void RobotBase::GetActiveDOFResolutions(std::vector<dReal>& resolution) const
         GetDOFResolutions(resolution);
         return;
     }
-    
+
     resolution.resize(GetActiveDOF());
     if( resolution.size() == 0 ) {
         return;
@@ -1313,7 +1332,7 @@ void RobotBase::GetActiveDOFResolutions(std::vector<dReal>& resolution) const
     FOREACHC(it, _vActiveDOFIndices) {
         *pResolution++ = _vTempRobotJoints[*it];
     }
-    // set some default limits 
+    // set some default limits
     if( _nAffineDOFs & DOF_X ) {
         *pResolution++ = _vTranslationResolutions.x;
     }
@@ -1345,7 +1364,7 @@ void RobotBase::GetActiveDOFWeights(std::vector<dReal>& weights) const
         GetDOFWeights(weights);
         return;
     }
-    
+
     weights.resize(GetActiveDOF());
     if( weights.size() == 0 ) {
         return;
@@ -1356,7 +1375,7 @@ void RobotBase::GetActiveDOFWeights(std::vector<dReal>& weights) const
     FOREACHC(it, _vActiveDOFIndices) {
         *pweight++ = _vTempRobotJoints[*it];
     }
-    // set some default limits 
+    // set some default limits
     if( _nAffineDOFs & DOF_X ) { *pweight++ = _vTranslationWeights.x;}
     if( _nAffineDOFs & DOF_Y ) { *pweight++ = _vTranslationWeights.y;}
     if( _nAffineDOFs & DOF_Z ) { *pweight++ = _vTranslationWeights.z;}
@@ -2214,7 +2233,7 @@ bool RobotBase::CheckSelfCollision(CollisionReportPtr report) const
             }
         }
     }
-    
+
     if( bCollision && !!report ) {
         RAVELOG_VERBOSE(str(boost::format("Self collision: %s\n")%report->__str__()));
     }
@@ -2382,23 +2401,13 @@ void RobotBase::_ComputeInternalInformation()
     }
 
     {
-        ostringstream ss;
-        ss << std::fixed << std::setprecision(SERIALIZATION_PRECISION);
-        serialize(ss,SO_Kinematics|SO_Geometry|SO_RobotManipulators|SO_RobotSensors);
-        __hashrobotstructure = GetMD5HashString(ss.str());
-
+        __hashrobotstructure.resize(0);
         FOREACH(itmanip,_vecManipulators) {
-            ss.str("");
-            (*itmanip)->serialize(ss,SO_RobotManipulators);
-            (*itmanip)->__hashstructure = GetMD5HashString(ss.str());
-            ss.str("");
-            (*itmanip)->serialize(ss,SO_Kinematics);
-            (*itmanip)->__hashkinematicsstructure = GetMD5HashString(ss.str());
+            (*itmanip)->__hashstructure.resize(0);
+            (*itmanip)->__hashkinematicsstructure.resize(0);
         }
         FOREACH(itsensor,_vecSensors) {
-            ss.str("");
-            (*itsensor)->serialize(ss,SO_RobotSensors);
-            (*itsensor)->__hashstructure = GetMD5HashString(ss.str());
+            (*itsensor)->__hashstructure.resize(0);
         }
     }
     // finally initialize the ik solvers (might depend on the hashes)
@@ -2439,22 +2448,15 @@ void RobotBase::_ComputeInternalInformation()
 void RobotBase::_ParametersChanged(int parameters)
 {
     KinBody::_ParametersChanged(parameters);
-    stringstream ss;
     if( parameters & (Prop_Sensors|Prop_SensorPlacement) ) {
         FOREACH(itsensor,_vecSensors) {
-            ss.str("");
-            (*itsensor)->serialize(ss,SO_RobotSensors);
-            (*itsensor)->__hashstructure = GetMD5HashString(ss.str());
+            (*itsensor)->__hashstructure.resize(0);
         }
     }
     if( parameters & Prop_Manipulators ) {
         FOREACH(itmanip,_vecManipulators) {
-            ss.str("");
-            (*itmanip)->serialize(ss,SO_RobotManipulators);
-            (*itmanip)->__hashstructure = GetMD5HashString(ss.str());
-            ss.str("");
-            (*itmanip)->serialize(ss,SO_Kinematics);
-            (*itmanip)->__hashkinematicsstructure = GetMD5HashString(ss.str());
+            (*itmanip)->__hashstructure.resize(0);
+            (*itmanip)->__hashkinematicsstructure.resize(0);
         }
     }
 }
@@ -2464,7 +2466,7 @@ void RobotBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     // note that grabbed bodies are not cloned (check out Environment::Clone)
     KinBody::Clone(preference,cloningoptions);
     RobotBaseConstPtr r = RaveInterfaceConstCast<RobotBase>(preference);
-    __hashrobotstructure = r->__hashrobotstructure;    
+    __hashrobotstructure = r->__hashrobotstructure;
     _vecManipulators.clear();
     FOREACHC(itmanip, r->_vecManipulators) {
         _vecManipulators.push_back(ManipulatorPtr(new Manipulator(shared_robot(),**itmanip)));
@@ -2482,7 +2484,7 @@ void RobotBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     _nActiveManip = r->_nActiveManip;
     _nActiveDOF = r->_nActiveDOF;
     _nAffineDOFs = r->_nAffineDOFs;
-    
+
     _vTranslationLowerLimits = r->_vTranslationLowerLimits;
     _vTranslationUpperLimits = r->_vTranslationUpperLimits;
     _vTranslationMaxVels = r->_vTranslationMaxVels;
@@ -2537,6 +2539,12 @@ void RobotBase::serialize(std::ostream& o, int options) const
 const std::string& RobotBase::GetRobotStructureHash() const
 {
     CHECK_INTERNAL_COMPUTATION;
+    if( __hashrobotstructure.size() == 0 ) {
+        ostringstream ss;
+        ss << std::fixed << std::setprecision(SERIALIZATION_PRECISION);
+        serialize(ss,SO_Kinematics|SO_Geometry|SO_RobotManipulators|SO_RobotSensors);
+        __hashrobotstructure = GetMD5HashString(ss.str());
+    }
     return __hashrobotstructure;
 }
 

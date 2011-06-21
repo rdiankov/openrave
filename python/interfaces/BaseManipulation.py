@@ -2,7 +2,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -51,7 +51,7 @@ class BaseManipulation:
         if samplingstep is not None:
             cmd += 'samplingstep %.15e '%samplingstep
         return self.prob.SendCommand(cmd)
-    
+
     def MoveHandStraight(self,direction,minsteps=None,maxsteps=None,stepsize=None,ignorefirstcollision=None,starteematrix=None,greedysearch=True,execute=None,outputtraj=None,maxdeviationangle=None,steplength=None):
         """See :ref:`module-basemanipulation-movehandstraight`
         """
@@ -116,7 +116,7 @@ class BaseManipulation:
         if res is None:
             raise openravepy.planning_error('MoveActiveJoints')
         return res
-    def MoveToHandPosition(self,matrices=None,affinedofs=None,maxiter=None,maxtries=None,translation=None,rotation=None,seedik=None,constraintfreedoms=None,constraintmatrix=None,constrainterrorthresh=None,execute=None,outputtraj=None,steplength=None):
+    def MoveToHandPosition(self,matrices=None,affinedofs=None,maxiter=None,maxtries=None,translation=None,rotation=None,seedik=None,constraintfreedoms=None,constraintmatrix=None,constrainterrorthresh=None,execute=None,outputtraj=None,steplength=None,goalsamples=None):
         """See :ref:`module-basemanipulation-movetohandposition`
         """
         cmd = 'MoveToHandPosition '
@@ -134,6 +134,8 @@ class BaseManipulation:
             cmd += 'rotation %.15e %.15e %.15e %.15e '%(rotation[0],rotation[1],rotation[2],rotation[3])
         if seedik is not None:
             cmd += 'seedik %d '%seedik
+        if goalsamples is not None:
+            cmd += 'goalsamples %d '%goalsamples
         if constraintfreedoms is not None:
             cmd += 'constraintfreedoms %s '%(' '.join(str(constraintfreedoms[i]) for i in range(6)))
         if constraintmatrix is not None:
@@ -201,12 +203,12 @@ class BaseManipulation:
         """See :ref:`module-basemanipulation-findikwithfilters`
         """
         cmd = 'FindIKWithFilters ikparam %s '%str(ikparam)
-        if cone is not None:            
+        if cone is not None:
             cmd += 'cone %s '%(' '.join(str(f) for f in cone))
         if solveall is not None and solveall:
             cmd += 'solveall '
         if filteroptions is not None:
-            cmd += 'filteroptions %d '%filteroptions        
+            cmd += 'filteroptions %d '%filteroptions
         res = self.prob.SendCommand(cmd)
         if res is None:
             raise openravepy.planning_error('FindIKWithFilters')

@@ -16,7 +16,7 @@ Loads up an environment, attaches a viewer, loads a scene, and requests informat
   env.SetViewer('qtcoin') # attach viewer (optional)
   env.Load('data/lab1.env.xml') # load a simple scene
   robot = env.GetRobots()[0] # get the first robot
-  
+
   with env: # lock the environment since robot will be used
       print "Robot ",robot.GetName()," has ",robot.GetDOF()," joints with values:\\n",robot.GetJointValues()
       robot.SetDOFValues([0.5],[0]) # set joint 0 to value 0.5
@@ -35,7 +35,7 @@ Rotates all bodies along world z-direction by 45 degrees:
   env = Environment() # create openrave environment
   env.SetViewer('qtcoin') # attach viewer (optional)
   env.Load('data/lab1.env.xml') # load a simple scene
-  
+
   Tz = matrixFromAxisAngle([0,0,numpy.pi/4])
   with env:
       for body in env.GetBodies():
@@ -77,7 +77,7 @@ Use a planner to get a collision free path to a configuration space goal.
   env.SetViewer('qtcoin') # start the viewer
   env.Load('data/lab1.env.xml') # load a scene
   robot = env.GetRobots()[0] # get the first robot
-  
+
   manipprob = interfaces.BaseManipulation(robot) # create the interface for basic manipulation programs
   res = manipprob.MoveManipulator(goal=[-0.75,1.24,-0.064,2.33,-1.16,-1.548,1.19]) # call motion planner with goal joint angles
   robot.WaitForController(0) # wait
@@ -95,12 +95,12 @@ Shows how to get all 6D IK solutions
   env.SetViewer('qtcoin') # start the viewer
   env.Load('data/pr2test1.env.xml') # load a scene
   robot = env.GetRobots()[0] # get the first robot
-  
+
   manip = robot.SetActiveManipulator('leftarm_torso') # set the manipulator to leftarm
   ikmodel = databases.inversekinematics.InverseKinematicsModel(robot,iktype=IkParameterization.Type.Transform6D)
   if not ikmodel.load():
       ikmodel.autogenerate()
-  
+
   with env: # lock environment
       Tgoal = numpy.array([[0,-1,0,-0.21],[-1,0,0,0.04],[0,0,-1,0.92],[0,0,0,1]])
       sol = manip.FindIKSolution(Tgoal, IkFilterOptions.CheckEnvCollisions) # get collision-free solution
@@ -109,7 +109,7 @@ Shows how to get all 6D IK solutions
           Tee = manip.GetEndEffectorTransform()
           env.UpdatePublishedBodies() # allow viewer to update new robot
           raw_input('press any key')
-      
+
       print Tee
 
 Inverse Kinematics: Translation3D
@@ -124,12 +124,12 @@ Moves a robot in a random position, gets the end effector transform, and calls I
   env.SetViewer('qtcoin') # start the viewer
   env.Load('data/katanatable.env.xml') # load a scene
   robot = env.GetRobots()[0] # get the first robot
-  
+
   manip = robot.GetActiveManipulator()
   ikmodel = databases.inversekinematics.InverseKinematicsModel(robot,iktype=IkParameterization.Type.Translation3D)
   if not ikmodel.load():
       ikmodel.autogenerate()
-  
+
   with robot: # lock environment and save robot state
       robot.SetDOFValues([2.58, 0.547, 1.5, -0.7],[0,1,2,3]) # set the first 4 dof values
       Tee = manip.GetEndEffectorTransform() # get end effector
@@ -144,7 +144,7 @@ Moves a robot in a random position, gets the end effector transform, and calls I
           raw_input('press any key')
 
   print robot.GetDOFValues() # robot state is restored to original
-    
+
 
 Plan to End Effector Position
 -----------------------------
@@ -159,12 +159,12 @@ Use a planner to get a collision free path to a workspace goal of the end effect
   env.SetViewer('qtcoin') # start the viewer
   env.Load('data/pr2test1.env.xml') # load a scene
   robot = env.GetRobots()[0] # get the first robot
-  
+
   robot.SetActiveManipulator('leftarm_torso') # set the manipulator to leftarm + torso
   ikmodel = databases.inversekinematics.InverseKinematicsModel(robot,iktype=IkParameterization.Type.Transform6D)
   if not ikmodel.load():
       ikmodel.autogenerate()
-  
+
   manipprob = interfaces.BaseManipulation(robot) # create the interface for basic manipulation programs
   Tgoal = numpy.array([[0,-1,0,-0.21],[-1,0,0,0.04],[0,0,-1,0.92],[0,0,0,1]])
   res = manipprob.MoveToHandPosition(matrices=[Tgoal],seedik=10) # call motion planner with goal joint angles
@@ -182,7 +182,7 @@ Shows how to use a planner to close and open a gripper using planning.
   env = Environment() # create openrave environment
   env.SetViewer('qtcoin') # attach viewer (optional)
   env.Load('data/lab1.env.xml') # load a simple scene
-  
+
   robot=env.GetRobots()[0]
   manip = robot.GetActiveManipulator()
   ikmodel = databases.inversekinematics.InverseKinematicsModel(robot,iktype=IkParameterization.Type.Transform6D)
@@ -229,7 +229,7 @@ Set a custom IK filter to abort computation after 100ms.
           starttime = time.time()
           def timeoutfilter(values, manip, ikparam):
               return IkFilterReturn.Quit if time.time()-starttime > maxtime else IkFilterReturn.Success
-          
+
           manip.GetIkSolver().SetCustomFilter(timeoutfilter)
           success = manip.FindIKSolution(manip.GetIkParameterization(IkParameterization.Type.Transform6D),IkFilterOptions.CheckEnvCollisions)
           print 'in collision: %d, real success: %d, time passed: %f'%(incollision,success is not None,time.time()-starttime)
@@ -251,18 +251,18 @@ Shows how to set a physics engine and send torque commands to the robot
       physics = RaveCreatePhysicsEngine(env,'ode')
       env.SetPhysicsEngine(physics)
       physics.SetGravity(numpy.array((0,0,-9.8)))
-      
+
       robot = env.GetRobots()[0]
       robot.GetLinks()[0].SetStatic(True)
       env.StopSimulation()
       env.StartSimulation(timestep=0.001)
-  
+
   while True:
       torques = 100*(numpy.random.rand(robot.GetDOF())-0.5)
       for i in range(100):
           robot.SetJointTorques(torques,True)
           time.sleep(0.01)
-      
+
 Logging
 -------
 
@@ -273,6 +273,6 @@ Save the current scene using the :ref:`probleminstance-logging` plugin:
   from openravepy import *
   env = Environment() # create openrave environment
   env.Load('data/lab1.env.xml') # load a simple scene
-  
+
   logger = env.CreateProblem('logging')
   logger.SendCommand('savescene filename myscene.env.xml')

@@ -63,7 +63,7 @@ namespace planningutils {
                 break;
             }
         }
-        
+
         if( !bCollision ) {
             return -1;
         }
@@ -100,7 +100,7 @@ namespace planningutils {
                 return 1;
             }
         }
-    
+
         return 0;
     }
 
@@ -161,7 +161,7 @@ namespace planningutils {
                 }
             }
         }
-        
+
         for(size_t i = 1; i < trajectory->GetPoints().size(); ++i) {
             if( !!parameters->_checkpathconstraintsfn ) {
                 configs->clear();
@@ -171,7 +171,7 @@ namespace planningutils {
                 FOREACH(itconfig, *configs) {
                     if( !parameters->_neighstatefn(*itconfig,deltaq,0) ) {
                         throw OPENRAVE_EXCEPTION_FORMAT("neighstatefn is rejecting configurations from checkpathconstraintsfn %d-%d",(i-1)%i,ORE_InconsistentConstraints);
-                    }   
+                    }
                 }
             }
         }
@@ -207,7 +207,7 @@ namespace planningutils {
         default:
             BOOST_ASSERT(0);
         }
-        
+
         // first make sure the end is free
         _vtempconfig.resize(params->GetDOF());
         if (bCheckEnd) {
@@ -285,7 +285,7 @@ namespace planningutils {
             *it *= *it;
         }
     }
-        
+
     dReal SimpleDistanceMetric::Eval(const std::vector<dReal>& c0, const std::vector<dReal>& c1)
     {
         std::vector<dReal> c = c0;
@@ -296,7 +296,7 @@ namespace planningutils {
         }
         return RaveSqrt(dist);
     }
-    
+
     SimpleNeighborhoodSampler::SimpleNeighborhoodSampler(SpaceSamplerBasePtr psampler, const boost::function<dReal(const std::vector<dReal>&, const std::vector<dReal>&)>& distmetricfn) : _psampler(psampler), _distmetricfn(distmetricfn)
     {
     }
@@ -387,13 +387,13 @@ namespace planningutils {
             if( _listsamples.size() == 0 ) {
                 return false;
             }
-            _pindexsampler->SampleSequence(vindex,1,IT_OpenEnd);            
+            _pindexsampler->SampleSequence(vindex,1,IT_OpenEnd);
             int isampleindex = (int)(vindex.at(0)*_listsamples.size());
             std::list<SampleInfo>::iterator itsample = _listsamples.begin();
             advance(itsample,isampleindex);
-            
-            // quickly prune grasp is end effector is in collision
-            if( itsample->_ikparam.GetType() == IkParameterization::Type_Transform6D ) {
+
+            // if first grasp, quickly prune grasp is end effector is in collision
+            if( itsample->_numleft == _nummaxsamples && itsample->_ikparam.GetType() == IkParameterization::Type_Transform6D ) {
                 if( _pmanip->CheckEndEffectorCollision(itsample->_ikparam.GetTransform6D(),_report) ) {
                     RAVELOG_VERBOSE(str(boost::format("sampleiksolutions gripper in collision: %s.\n")%_report->__str__()));
                     _listsamples.erase(itsample);
@@ -423,7 +423,7 @@ namespace planningutils {
             if( --itsample->_numleft <= 0 ) {
                 _listsamples.erase(itsample);
             }
-            
+
             if( bsuccess ) {
                 for(size_t j = 0; j < _viksolutions.size(); ++j) {
                     _listreturnedsamples.push_back(orgindex);
