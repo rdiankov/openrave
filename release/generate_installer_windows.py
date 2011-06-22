@@ -586,8 +586,8 @@ Section
   Call DetectSymPy
   SetOutPath $INSTDIR\\bin
   File /r %(installdir)s\\bin\\*.py
-  SetOutPath $INSTDIR\\share\\openrave-%(openrave_soversion)s
   CreateDirectory $INSTDIR\\%(openravepy_reldir)s\\openravepy
+  SetOutPath $INSTDIR\\%(openravepy_reldir)s
   File /r /x *.pyd %(installdir)s\\%(openravepy_reldir)s\\openravepy
 
 %(install_python_dll)s
@@ -625,7 +625,9 @@ Section
 
   File /r /x *.dll /x *.py %(installdir)s\\bin
   File /r %(installdir)s\\include
-  File /r %(installdir)s\\lib
+  SetOutPath $INSTDIR\\lib
+  File /r %(installdir)s\\lib\\*.lib
+  File /r %(installdir)s\\lib\\cmake
   SetOutPath $INSTDIR\\share\\openrave-%(openrave_soversion)s
   File /r %(installdir)s\\share\\openrave-%(openrave_soversion)s\\cppexamples
   File /r %(installdir)s\\share\\openrave-%(openrave_soversion)s\\data
@@ -802,7 +804,7 @@ if __name__ == "__main__":
                 if type(m) is ModuleType:
                     path = '$INSTDIR\\%s\\openravepy\\examples\\%s.py'%(openravepy_reldir,name)
                     args['openrave_python_shortcuts'] += 'CreateShortCut "$SMPROGRAMS\\$StartMenuFolder\\Python Examples\\%s.lnk" "%s" "" "%s" 0\n'%(name,path,path)
-                    args['openrave_python_shortcuts'] += 'CreateShortCut "$SMPROGRAMS\\$StartMenuFolder\\Python Examples\\%s Documentation.lnk" "http://openrave.programmingvision.com/en/main/openravepy/examples.%s.html" "" "C:\WINDOWS\system32\shell32.dll" 979\n'%(name,name)
+                    args['openrave_python_shortcuts'] += 'CreateShortCut "$SMPROGRAMS\\$StartMenuFolder\\Python Examples\\%s Documentation.lnk" "http://openrave.org/en/main/openravepy/examples.%s.html" "" "C:\WINDOWS\system32\shell32.dll" 979\n'%(name,name)
             except ImportError:
                 pass
     # not sure how useful this would be, perhaps a database generator GUI would help?

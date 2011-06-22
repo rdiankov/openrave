@@ -289,7 +289,7 @@ protected:
         if( _starttime == 0 ) {
             _starttime = timestamp;
         }
-        RAVELOG_INFO(str(boost::format("new frame %d\n")%(timestamp-_starttime)));
+        RAVELOG_VERBOSE(str(boost::format("new frame %d\n")%(timestamp-_starttime)));
         _condnewframe.notify_one();
     }
 
@@ -454,20 +454,7 @@ protected:
             return NULL;
         }
     }
-
-    DWORD getFOURCC(const char* value)
-    {
-	    if(stricmp(value, "DIB") == 0) {
-		    return mmioFOURCC(value[0],value[1],value[2],' ');
-	    }
-	    else if((stricmp(value, "CVID") == 0) || (stricmp(value, "IV32") == 0) || (stricmp(value, "MSVC") == 0) || (stricmp(value, "IV50") == 0)) {
-		    return mmioFOURCC(value[0],value[1],value[2],value[3]);
-	    }
-	    else {
-		    return NULL;
-	    }
-    }
-
+    
     // Fill in the header for the video stream....
     // The video stream will run in rate ths of a second....
     void _CreateStream(int rate, unsigned long buffersize, int rectwidth, int rectheight, const char* _compressor)
@@ -511,10 +498,10 @@ protected:
 
         memset(&opts, 0, sizeof(opts));
         opts.fccType = streamtypeVIDEO;
-        opts.fccHandler = getFOURCC(_compressor);
+        opts.fccHandler = _getFOURCC(_compressor);
 
         /* display the compression options dialog box if specified compressor is unknown */
-        if(getFOURCC(_compressor) == NULL) {
+        if(_getFOURCC(_compressor) == NULL) {
             if (!AVISaveOptions(NULL, 0, 1, &_ps, (LPAVICOMPRESSOPTIONS FAR *) &aopts)) {
                 throw OPENRAVE_EXCEPTION_FORMAT0("failed to set options",ORE_Assert);
             }

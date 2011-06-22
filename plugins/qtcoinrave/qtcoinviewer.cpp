@@ -2852,7 +2852,11 @@ void QtCoinViewer::_RecordSetup(bool bOn, bool bRealtimeVideo)
     if( bOn ) {
         _pvideorecorder = RaveCreateModule(GetEnv(),"viewerrecorder");
         if( !!_pvideorecorder ) {
+#ifdef _WIN32
+            QString s = QFileDialog::getSaveFileName( this, "Choose video filename", NULL, "AVI Files (*.avi)");
+#else
             QString s = QFileDialog::getSaveFileName( this, "Choose video filename", NULL, "Video Files (*.*)");
+#endif
             if( s.length() == 0 ) {
                 return;
             }
