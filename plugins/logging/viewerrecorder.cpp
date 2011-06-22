@@ -289,7 +289,7 @@ protected:
         if( _starttime == 0 ) {
             _starttime = timestamp;
         }
-        RAVELOG_INFO(str(boost::format("new frame %d\n")%(timestamp-_starttime)));
+        RAVELOG_VERBOSE(str(boost::format("new frame %d\n")%(timestamp-_starttime)));
         _condnewframe.notify_one();
     }
 
