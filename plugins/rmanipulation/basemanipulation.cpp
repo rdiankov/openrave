@@ -656,6 +656,11 @@ protected:
                     listgoals.push_back(IkParameterization(t));
                 }
             }
+            else if( cmd == "ikparam" ) {
+                IkParameterization ikparam;
+                sinput >> ikparam;
+                listgoals.push_back(ikparam);
+            }
             else if( cmd == "affinedofs" ) {
                 sinput >> affinedofs;
             }

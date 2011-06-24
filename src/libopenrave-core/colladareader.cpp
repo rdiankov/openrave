@@ -44,12 +44,12 @@ class ColladaReader : public daeErrorHandler
                 }
                 pae = pae->getParentElement();
             }
-        
+
             if (!visualnode) {
                 RAVELOG_WARN(str(boost::format("couldn't find parent node of element id %s, sid %s\n")%pkinematicaxis->getID()%pkinematicaxis->getSid()));
             }
         }
-        
+
         daeElementRef pvisualtrans;
         domAxis_constraintRef   pkinematicaxis;
         domCommon_float_or_paramRef jointvalue;
@@ -557,7 +557,7 @@ class ColladaReader : public daeErrorHandler
         KinBody::LinkPtr plink(new KinBody::Link(pkinbody));
         plink->_name = name;
         plink->_mass = 1.0;
-        plink->_bStatic = false;   
+        plink->_bStatic = false;
         bool bhasgeometry = ExtractGeometry(pdomnode,plink,listAxisBindings,vprocessednodes);
         if( !bhasgeometry ) {
             return KinBodyPtr();
@@ -791,17 +791,17 @@ class ColladaReader : public daeErrorHandler
         else {
             RAVELOG_DEBUG(str(boost::format("Attachment link elements: %d\n")%pdomlink->getAttachment_full_array().getCount()));
             plink->_t = tParentLink * _ExtractFullTransform(pdomlink); // use the kinematics coordinate system for each link
-          
+
             {
                 stringstream ss; ss << plink->GetName() << ": " << plink->_t << endl;
                 RAVELOG_DEBUG(ss.str());
             }
-          
+
             // Get the geometry
             ExtractGeometry(pdomnode,plink,listAxisBindings,std::vector<std::string>());
-            
+
             RAVELOG_DEBUG(str(boost::format("After ExtractGeometry Attachment link elements: %d\n")%pdomlink->getAttachment_full_array().getCount()));
-          
+
             //  Process all atached links
             for (size_t iatt = 0; iatt < pdomlink->getAttachment_full_array().getCount(); ++iatt) {
                 domLink::domAttachment_fullRef pattfull = pdomlink->getAttachment_full_array()[iatt];
@@ -822,7 +822,7 @@ class ColladaReader : public daeErrorHandler
                 else {
                     jointid = pattfull->getJoint();
                 }
-                    
+
                 domJointRef pdomjoint = daeSafeCast<domJoint> (peltjoint);
                 if (!pdomjoint) {
                     domInstance_jointRef pdomijoint = daeSafeCast<domInstance_joint> (peltjoint);
@@ -857,7 +857,7 @@ class ColladaReader : public daeErrorHandler
                     if( !!pchildnode ) {
                         break;
                     }
-                }              
+                }
                 if (!pchildnode) {
                     RAVELOG_DEBUG(str(boost::format("joint %s has no visual binding\n")%jointid));
                 }
@@ -982,13 +982,13 @@ class ColladaReader : public daeErrorHandler
                     }
 
                     bool joint_locked = false; // if locked, joint angle is static
-                    bool kinematics_limits = false; 
+                    bool kinematics_limits = false;
 
                     if (!!kinematics_axis_info) {
                         if (!!kinematics_axis_info->getLocked()) {
                             joint_locked = resolveBool(kinematics_axis_info->getLocked(),kinematics_axis_info);
                         }
-                        
+
                         if (joint_locked) { // If joint is locked set limits to the static value.
                             RAVELOG_WARN("lock joint!!\n");
                             pjoint->_vlowerlimit.at(ic) = 0;
@@ -1011,7 +1011,7 @@ class ColladaReader : public daeErrorHandler
                             }
                         }
                     }
-                  
+
                     //  Search limits in the joints section
                     if (!kinematics_axis_info || (!joint_locked && !kinematics_limits)) {
                         //  If there are NO LIMITS
@@ -1049,7 +1049,7 @@ class ColladaReader : public daeErrorHandler
                     vAxes[ic] = tatt.rotate(vAxes[ic]);
                 }
                 RAVELOG_DEBUG(str(boost::format("joint dof: %d, link %s\n")%pjoint->dofindex%plink->GetName()));
-                pjoint->_ComputeInternalInformation(plink,pchildlink,tatt.trans,vAxes);
+                pjoint->_ComputeInternalInformation(plink,pchildlink,tatt.trans,vAxes,std::vector<dReal>());
             }
             if( pdomlink->getAttachment_start_array().getCount() > 0 ) {
                 RAVELOG_WARN("openrave collada reader does not support attachment_start\n");
@@ -1075,7 +1075,7 @@ class ColladaReader : public daeErrorHandler
         if( !!pdomnode->getID() && find(vprocessednodes.begin(),vprocessednodes.end(),pdomnode->getID()) != vprocessednodes.end() ) {
             return false;
         }
-        
+
         RAVELOG_VERBOSE(str(boost::format("ExtractGeometry(node,link) of %s\n")%pdomnode->getName()));
 
         bool bhasgeometry = false;
@@ -1342,7 +1342,7 @@ class ColladaReader : public daeErrorHandler
                         }
                         if( trimesh.vertices.capacity() < trimesh.vertices.size()+indexArray.getCount() ) {
                             trimesh.vertices.reserve(trimesh.vertices.size()+indexArray.getCount());
-                        }                        
+                        }
                         size_t startoffset = (int)trimesh.vertices.size();
                         while(k < (int)indexArray.getCount() ) {
                             int index0 = indexArray.get(k)*vertexStride;
@@ -1502,7 +1502,7 @@ class ColladaReader : public daeErrorHandler
             }
         }
         triangleIndexStride++;
-        const domList_of_uints& indexArray =triRef->getP()->getValue();        
+        const domList_of_uints& indexArray =triRef->getP()->getValue();
         for (size_t i=0;i<vertsRef->getInput_array().getCount();++i) {
             domInput_localRef localRef = vertsRef->getInput_array()[i];
             daeString str = localRef->getSemantic();
@@ -1533,7 +1533,7 @@ class ColladaReader : public daeErrorHandler
                                 trimesh.indices.push_back(startoffset);
                                 trimesh.indices.push_back(ivert-1);
                                 trimesh.indices.push_back(ivert);
-                            }   
+                            }
                         }
                     }
                 }
@@ -1960,7 +1960,7 @@ class ColladaReader : public daeErrorHandler
         if( !!pbindarray && !!pbindelt ) {
             for (size_t ibind = 0; ibind < pbindarray->getCount(); ++ibind) {
                 domKinematics_bindRef pbind = (*pbindarray)[ibind];
-                if( !!pbind->getSymbol() && strcmp(pbind->getSymbol(), ref) == 0 ) { 
+                if( !!pbind->getSymbol() && strcmp(pbind->getSymbol(), ref) == 0 ) {
                     // found a match
                     if( !!pbind->getParam() ) {
                         //return searchBinding(pbind->getParam()->getRef(), pbindelt);
@@ -2176,7 +2176,7 @@ class ColladaReader : public daeErrorHandler
     template <typename T> Vector getVector3(const T& t) {
         return Vector(t[0],t[1],t[2],0);
     }
-    
+
     template <typename T> Vector getVector4(const T& t) {
         return Vector(t[0],t[1],t[2],t[3]);
     }
@@ -2223,7 +2223,7 @@ class ColladaReader : public daeErrorHandler
                 RAVELOG_WARN("do not support kinematics models without references to nodes\n");
                 continue;
             }
-       
+
             // visual information
             domNodeRef node = daeSafeCast<domNode>(daeSidRef(kbindmodel->getNode(), viscene->getUrl().getElement()).resolve().elt);
             if (!node) {
@@ -2822,7 +2822,7 @@ class ColladaReader : public daeErrorHandler
         }
         return startscale;
     }
-        
+
     boost::shared_ptr<DAE> _dae;
     domCOLLADA* _dom;
     EnvironmentBasePtr _penv;

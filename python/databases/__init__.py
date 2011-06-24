@@ -21,7 +21,7 @@ import openravepy
 from .. import metaclass
 from .. import mkdir_recursive
 from .. import OpenRAVEGlobalArguments
- 
+
 class DatabaseGenerator(metaclass.AutoReloader):
     """The base class defining the structure of the openrave database generators.
     """
@@ -53,6 +53,8 @@ class DatabaseGenerator(metaclass.AutoReloader):
                 return params
             else:
                 print 'version is wrong ',modelversion,'!=',self.getversion()
+        except MemoryError,e:
+            print '%s failed: '%filename,e
         except:
             pass
         return None

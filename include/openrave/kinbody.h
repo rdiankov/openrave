@@ -615,8 +615,9 @@ public:
             \param plink1 the second attaching link
             \param vanchor the anchor of the rotation axes
             \param vaxes the axes in plink0's coordinate system of the joints
+            \param vinitialvalues the current values of the robot used to set the 0 offset of the robot
         */
-        virtual void _ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1, const Vector& vanchor, const std::vector<Vector>& vaxes);
+        virtual void _ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1, const Vector& vanchor, const std::vector<Vector>& vaxes, const std::vector<dReal>& vcurrentvalues);
 
         std::string _name; ///< \see GetName
         boost::array<bool,3> _bIsCircular;    ///< \see IsCircular

@@ -2472,6 +2472,7 @@ public:
     void SetSize(int w, int h) { _pviewer->SetSize(w,h); }
     void Move(int x, int y) { _pviewer->Move(x,y); }
     void SetName(const string& title) { _pviewer->SetName(title); }
+    string GetName() { return _pviewer->GetName(); }
 
     PyVoidHandle RegisterCallback(object properties, object fncallback)
     {
@@ -4562,6 +4563,7 @@ In python, the syntax is::\n\n\
             .def("Move",&PyViewerBase::Move, DOXY_FN(ViewerBase,Move))
             .def("SetTitle",&PyViewerBase::SetName, DOXY_FN(ViewerBase,SetName))
             .def("SetName",&PyViewerBase::SetName, DOXY_FN(ViewerBase,SetName))
+            .def("GetName",&PyViewerBase::GetName, DOXY_FN(ViewerBase,GetName))
             .def("RegisterCallback",&PyViewerBase::RegisterCallback, args("callback"), DOXY_FN(ViewerBase,RegisterItemSelectionCallback))
             .def("RegisterItemSelectionCallback",&PyViewerBase::RegisterItemSelectionCallback, args("callback"), DOXY_FN(ViewerBase,RegisterCallback))
             .def("EnvironmentSync",&PyViewerBase::EnvironmentSync, DOXY_FN(ViewerBase,EnvironmentSync))

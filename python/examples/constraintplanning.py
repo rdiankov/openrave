@@ -129,7 +129,7 @@ class ConstraintPlanning:
                         showtarget.SetTransform(dot(T,dot(linalg.inv(self.manip.GetEndEffectorTransform()),target.GetTransform())))
                         self.envreal.UpdatePublishedBodies()
                     try:
-                        self.basemanip.MoveToHandPosition(matrices=[T],maxiter=5000,maxtries=1,seedik=30,constraintfreedoms=constraintfreedoms,constraintmatrix=constraintmatrix,constrainterrorthresh=constrainterrorthresh,steplength=0.002)
+                        self.basemanip.MoveToHandPosition(matrices=[T],maxiter=3000,maxtries=1,seedik=40,constraintfreedoms=constraintfreedoms,constraintmatrix=constraintmatrix,constrainterrorthresh=constrainterrorthresh,steplength=0.002)
                     except planning_error,e:
                         print e
                     self.robot.WaitForController(0)
