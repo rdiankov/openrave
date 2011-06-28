@@ -40,6 +40,26 @@ class TestRobot(EnvironmentSetup):
                 self.env.AddRobot(robot)
                 assert(robot.GetDOF() == robot.GetActiveDOF())
 
+    def test_collisionmaprobot(self):
+        env=self.env
+        xml = """<environment>
+<robot file="robots/collisionmap.robot.xml">
+</robot>
+</environment>
+"""
+        env.LoadData(xml)
+        with env:
+            robot=env.GetRobots()[0]
+            assert(robot.GetXMLId().lower()=='collisionmaprobot')
+            robot.SetDOFValues([9/180.0*pi,1/180.0*pi],[1,2])
+            assert(robot.CheckSelfCollision())
+            robot.SetDOFValues([0/180.0*pi,1/180.0*pi],[1,2])
+            assert(not robot.CheckSelfCollision())
+            env.Reset()
+            robot=env.ReadRobotFile('robots/collisionmap.robot.xml')
+            env.AddRobot(robot)
+            assert(robot.GetXMLId().lower()=='collisionmaprobot')
+        
 # def test_ikgeneration():
 #     import inversekinematics
 #     env = Environment()

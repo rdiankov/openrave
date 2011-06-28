@@ -176,7 +176,7 @@ class IKFastProblem : public ModuleBase
             dlclose(lib);
 #endif
         }
-    
+
         void* plib;
         string _libraryname;
         vector<string> _viknames;
@@ -320,13 +320,13 @@ public:
 
         {
             string hasik;
-            string cmdhas = str(boost::format("openrave.py --database inversekinematics --gethas --robot=\"%s\" --manipname=%s --iktype=%s")%probot->GetXMLFilename()%pmanip->GetName()%striktype);
+            string cmdhas = str(boost::format("openrave.py --database inversekinematics --gethas --robot=\"%s\" --manipname=%s --iktype=%s")%probot->GetURI()%pmanip->GetName()%striktype);
             FILE* pipe = MYPOPEN(cmdhas.c_str(), "r");
             {
                 boost::iostreams::stream_buffer<boost::iostreams::file_descriptor_source> fpstream(fileno(pipe),FILE_DESCRIPTOR_FLAG);
                 std::istream in(&fpstream);
                 std::getline(in, hasik);
-            }            
+            }
             int generateexit = MYPCLOSE(pipe);
             if( generateexit != 0 ) {
                 Sleep(100);
@@ -335,8 +335,8 @@ public:
             boost::trim(hasik);
             if( hasik != "1" ) {
                 RAVELOG_INFO(str(boost::format("Generating inverse kinematics for manip %s:%s, will take several minutes...\n")%probot->GetName()%pmanip->GetName()));
-                string cmdgen = str(boost::format("openrave.py --database inversekinematics --usecached --robot=\"%s\" --manipname=%s --iktype=%s")%probot->GetXMLFilename()%pmanip->GetName()%striktype);
-                // use raw system call, popen causes weird crash in the inversekinematics compiler 
+                string cmdgen = str(boost::format("openrave.py --database inversekinematics --usecached --robot=\"%s\" --manipname=%s --iktype=%s")%probot->GetURI()%pmanip->GetName()%striktype);
+                // use raw system call, popen causes weird crash in the inversekinematics compiler
                 int generateexit = system(cmdgen.c_str());
                 //FILE* pipe = MYPOPEN(cmdgen.c_str(), "r");
                 //int generateexit = MYPCLOSE(pipe);
@@ -346,8 +346,8 @@ public:
                 }
             }
         }
-        
-        string cmdfilename = str(boost::format("openrave.py --database inversekinematics --getfilename --robot=\"%s\" --manipname=%s --iktype=%s")%probot->GetXMLFilename()%pmanip->GetName()%striktype);
+
+        string cmdfilename = str(boost::format("openrave.py --database inversekinematics --getfilename --robot=\"%s\" --manipname=%s --iktype=%s")%probot->GetURI()%pmanip->GetName()%striktype);
         RAVELOG_INFO("executing shell command:\n%s\n",cmdfilename.c_str());
         string ikfilename;
         FILE* pipe = MYPOPEN(cmdfilename.c_str(), "r");
@@ -366,7 +366,7 @@ public:
             Sleep(100);
             RAVELOG_DEBUG("failed to close pipe\n");
         }
-        
+
         boost::trim(ikfilename);
         string ikfastname = str(boost::format("ikfast.%s.%s")%probot->GetRobotStructureHash()%pmanip->GetName());
         boost::shared_ptr<IKLibrary> lib = _AddIkLibrary(ikfastname,ikfilename);
@@ -395,7 +395,7 @@ public:
         return !!pmanip->GetIkSolver() && pmanip->GetIkSolver()->Supports(niktype);
     }
 #endif
-    
+
     bool PerfTiming(ostream& sout, istream& sinput)
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
@@ -553,12 +553,12 @@ public:
         }
         robot->SetDOFValues(values);
 
-        vector<dReal> q1;    
+        vector<dReal> q1;
         if( !pmanip->FindIKSolution(ikparam, q1, bCheckCollision) ) {
             RAVELOG_WARN("No IK solution found\n");
             return false;
         }
-    
+
         stringstream s2;
         s2 << std::setprecision(std::numeric_limits<dReal>::digits10+1); /// have to do this or otherwise precision gets lost
         s2 << "ik sol: ";
@@ -590,7 +590,7 @@ public:
 
         return false;
     }
-        
+
     void DebugIKFindSolutions(RobotBase::ManipulatorPtr pmanip, const IkParameterization& twrist, vector< vector<dReal> >& viksolutions, int filteroptions, std::vector<dReal>& parameters, int paramindex)
     {
         // ignore boundary cases since next to limits and can fail due to limit errosr
@@ -674,7 +674,7 @@ public:
         vector<dReal> vrealsolution(pmanip->GetArmIndices().size(),0), vrand(pmanip->GetArmIndices().size(),0);
         vector<dReal> vlowerlimit, vupperlimit, viksolution;
         vector< vector<dReal> > viksolutions, viksolutions2;
-    
+
         robot->SetActiveDOFs(pmanip->GetArmIndices());
         robot->GetActiveDOFLimits(vlowerlimit, vupperlimit);
         // shrink the limits to prevent solutions close to limits from returning errors
@@ -755,7 +755,7 @@ public:
                 else {
                     twrist = pmanip->GetIkParameterization(itiktype->first);
                 }
-                
+
                 if( !pmanip->GetIkSolver()->GetFreeParameters(vfreeparameters_real) ) {
                     RAVELOG_WARN("failed to get freeparameters");
                 }

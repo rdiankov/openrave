@@ -176,7 +176,7 @@ namespace XMLtoDAE
             ctxt->myDoc = NULL;
         }
         xmlFreeParserCtxt(ctxt);
-    
+
         return ret==0 ? reader._offset : 0;
     }
 };
@@ -254,7 +254,7 @@ class ColladaWriter : public daeErrorHandler
 
     struct kinbody_models
     {
-        std::string xmlfilename, kinematicsgeometryhash;
+        std::string uri, kinematicsgeometryhash;
         boost::shared_ptr<kinematics_model_output> kmout;
         boost::shared_ptr<physics_model_output> pmout;
     };
@@ -495,7 +495,7 @@ class ColladaWriter : public daeErrorHandler
         if (err<0) {
             RAVELOG_WARN(str(boost::format("error in writing %s in the zipfile")%rawfilename));
         }
-        
+
         // add the manifest
         string smanifest = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<dae_root>./";
         smanifest += savefilenameinzip;
@@ -514,7 +514,7 @@ class ColladaWriter : public daeErrorHandler
             throw openrave_exception(str(boost::format("error in closing %s")%filename));
         }
     }
-    
+
     /// \brief Write down environment
     virtual bool Write(EnvironmentBasePtr penv)
     {
@@ -641,7 +641,7 @@ class ColladaWriter : public daeErrorHandler
                 daeSafeCast<domCommon_float_or_param::domFloat>(plimits->add(COLLADA_ELEMENT_MIN)->add(COLLADA_ELEMENT_FLOAT))->setValue(vlower.at(iaxis)*fmult);
                 daeSafeCast<domCommon_float_or_param::domFloat>(plimits->add(COLLADA_ELEMENT_MAX)->add(COLLADA_ELEMENT_FLOAT))->setValue(vupper.at(iaxis)*fmult);
             }
-        
+
             //  Motion axis info
             domMotion_axis_infoRef mai = daeSafeCast<domMotion_axis_info>(mt->add(COLLADA_ELEMENT_AXIS_INFO));
             mai->setAxis(str(boost::format("%s/%s")%askid%axis_infosid).c_str());
@@ -765,7 +765,7 @@ class ColladaWriter : public daeErrorHandler
 //                        RAVELOG_VERBOSE("Plugin Name: %s\n",asensor->GetSensor()->GetXMLId().c_str());
 //                    }
 //            }
-        
+
         return iasout;
     }
 
@@ -953,7 +953,7 @@ class ColladaWriter : public daeErrorHandler
             ptec->setProfile("OpenRAVE");
             ptec->add("interface")->setCharData(pbody->GetXMLId());
         }
-        
+
         // collision data
         {
             domExtraRef pextra = daeSafeCast<domExtra>(kmout->kmodel->add(COLLADA_ELEMENT_EXTRA));
@@ -1225,7 +1225,7 @@ class ColladaWriter : public daeErrorHandler
     }
 
     /** \brief Write link of a kinematic body
-        
+
         \param link Link to write
         \param pkinparent Kinbody parent
         \param pnodeparent Node parent
@@ -1401,14 +1401,14 @@ class ColladaWriter : public daeErrorHandler
 
     virtual void _AddKinematics_model(KinBodyPtr pbody, boost::shared_ptr<kinematics_model_output> kmout) {
         FOREACH(it, _listkinbodies) {
-            if( it->xmlfilename == pbody->GetXMLFilename() && it->kinematicsgeometryhash == pbody->GetKinematicsGeometryHash() ) {
+            if( it->uri == pbody->GetURI() && it->kinematicsgeometryhash == pbody->GetKinematicsGeometryHash() ) {
                 BOOST_ASSERT(!it->kmout);
                 it->kmout = kmout;
                 return;
             }
         }
         kinbody_models cache;
-        cache.xmlfilename = pbody->GetXMLFilename();
+        cache.uri = pbody->GetURI();
         cache.kinematicsgeometryhash = pbody->GetKinematicsGeometryHash();
         cache.kmout = kmout;
         _listkinbodies.push_back(cache);
@@ -1416,7 +1416,7 @@ class ColladaWriter : public daeErrorHandler
 
     virtual boost::shared_ptr<kinematics_model_output> _GetKinematics_model(KinBodyPtr pbody) {
         FOREACH(it, _listkinbodies) {
-            if( it->xmlfilename == pbody->GetXMLFilename() && it->kinematicsgeometryhash == pbody->GetKinematicsGeometryHash() ) {
+            if( it->uri == pbody->GetURI() && it->kinematicsgeometryhash == pbody->GetKinematicsGeometryHash() ) {
                 return it->kmout;
             }
         }
@@ -1425,14 +1425,14 @@ class ColladaWriter : public daeErrorHandler
 
     virtual void _AddPhysics_model(KinBodyPtr pbody, boost::shared_ptr<physics_model_output> pmout) {
         FOREACH(it, _listkinbodies) {
-            if( it->xmlfilename == pbody->GetXMLFilename() && it->kinematicsgeometryhash == pbody->GetKinematicsGeometryHash() ) {
+            if( it->uri == pbody->GetURI() && it->kinematicsgeometryhash == pbody->GetKinematicsGeometryHash() ) {
                 BOOST_ASSERT(!it->pmout);
                 it->pmout = pmout;
                 return;
             }
         }
         kinbody_models cache;
-        cache.xmlfilename = pbody->GetXMLFilename();
+        cache.uri = pbody->GetURI();
         cache.kinematicsgeometryhash = pbody->GetKinematicsGeometryHash();
         cache.pmout = pmout;
         _listkinbodies.push_back(cache);
@@ -1440,7 +1440,7 @@ class ColladaWriter : public daeErrorHandler
 
     virtual boost::shared_ptr<physics_model_output> _GetPhysics_model(KinBodyPtr pbody) {
         FOREACH(it, _listkinbodies) {
-            if( it->xmlfilename == pbody->GetXMLFilename() && it->kinematicsgeometryhash == pbody->GetKinematicsGeometryHash() ) {
+            if( it->uri == pbody->GetURI() && it->kinematicsgeometryhash == pbody->GetKinematicsGeometryHash() ) {
                 return it->pmout;
             }
         }

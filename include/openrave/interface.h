@@ -75,9 +75,10 @@ public:
     virtual void SetUserData(boost::shared_ptr<void> data) RAVE_DEPRECATED { __pUserData = boost::static_pointer_cast<UserData>(data); }
     /// \brief return the user custom data
     virtual UserDataPtr GetUserData() const { return __pUserData; }
-    
-    /// \return the XML filename used to load the interface (sometimes this is not possible if the definition lies inside an environment file).
-    virtual const std::string& GetXMLFilename() const { return __strxmlfilename; }
+
+    /// \brief the URI used to load the interface (sometimes this is not possible if the definition lies inside an environment file).
+    virtual const std::string& GetURI() const { return __struri; }
+    virtual const std::string& GetXMLFilename() const { return __struri; }
 
     /// \brief Clone the contents of an interface to the current interface.
     ///
@@ -127,7 +128,7 @@ protected:
     /// \param strhelp - help string in reStructuredText, see \ref writing_plugins_doc.
     /// \exception openrave_exception Throw if there exists a registered command already.
     virtual void RegisterCommand(const std::string& cmdname, InterfaceCommandFn fncmd, const std::string& strhelp);
-    
+
     /// \brief Unregisters the command.
     virtual void UnregisterCommand(const std::string& cmdname);
 
@@ -141,12 +142,12 @@ private:
     mutable boost::mutex _mutexInterface; ///< internal mutex for protecting data from methods that might be access from any thread (those methods should be commented).
     InterfaceType __type; ///< \see GetInterfaceType
     boost::shared_ptr<void> __plugin; ///< handle to plugin that controls the executable code. As long as this plugin pointer is present, module will not be unloaded.
-    std::string __strxmlfilename;             ///< \see GetXMLFilename    
+    std::string __struri;             ///< \see GetURI
     std::string __strpluginname; ///< the name of the plugin, necessary?
     std::string __strxmlid; ///< \see GetXMLId
     EnvironmentBasePtr __penv; ///< \see GetEnv
     UserDataPtr __pUserData; ///< \see GetUserData
-    
+
     READERSMAP __mapReadableInterfaces; ///< pointers to extra interfaces that are included with this object
     typedef std::map<std::string, boost::shared_ptr<InterfaceCommand>, CaseInsensitiveCompare> CMDMAP;
     CMDMAP __mapCommands; ///< all registered commands

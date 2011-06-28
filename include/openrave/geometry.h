@@ -75,7 +75,7 @@ inline double MATH_ATAN2(double fy, double fx) { return atan2(fy,fx); }
 #endif
 
 /** \brief Vector class containing 4 dimensions.
-    
+
     \ingroup affine_math
      It is better to use this for a 3 dim vector because it is 16byte aligned and SIMD instructions can be used
 */
@@ -84,26 +84,26 @@ class RaveVector
 {
 public:
     T x, y, z, w;
-    
+
     RaveVector() : x(0), y(0), z(0), w(0) {}
-        
+
     RaveVector(T x, T y, T z) : x(x), y(y), z(z), w(0) {}
     RaveVector(T x, T y, T z, T w) : x(x), y(y), z(z), w(w) {}
     template<typename U> RaveVector(const RaveVector<U> &vec) : x((T)vec.x), y((T)vec.y), z((T)vec.z), w((T)vec.w) {}
 
     /// note, it only copes 3 values!
     template<typename U> RaveVector(const U* pf) { MATH_ASSERT(pf != NULL); x = (T)pf[0]; y = (T)pf[1]; z = (T)pf[2]; w = 0; }
-    
+
     T  operator[](int i) const       { return (&x)[i]; }
     T& operator[](int i)             { return (&x)[i]; }
-    
+
     // casting operators
     operator T* () { return &x; }
     operator const T* () const { return (const T*)&x; }
 
     template <typename U>
     RaveVector<T>& operator=(const RaveVector<U>& r) { x = (T)r.x; y = (T)r.y; z = (T)r.z; w = (T)r.w; return *this; }
-    
+
     // SCALAR FUNCTIONS
     template <typename U> inline T dot(const RaveVector<U> &v) const { return x*v.x + y*v.y + z*v.z + w*v.w; }
     template <typename U> inline T dot3(const RaveVector<U> &v) const { return x*v.x + y*v.y + z*v.z; }
@@ -165,18 +165,18 @@ public:
     template <typename U> inline RaveVector<T>& operator += (const RaveVector<U>& r) { x += r.x; y += r.y; z += r.z; w += r.w; return *this; }
     template <typename U> inline RaveVector<T>& operator -= (const RaveVector<U>& r) { x -= r.x; y -= r.y; z -= r.z; w -= r.w; return *this; }
     template <typename U> inline RaveVector<T>& operator *= (const RaveVector<U>& r) { x *= r.x; y *= r.y; z *= r.z; w *= r.w; return *this; }
-    
+
     inline RaveVector<T>& operator *= (const T k) { x *= k; y *= k; z *= k; w *= k; return *this; }
     inline RaveVector<T>& operator /= (const T _k) { T k=1/_k; x *= k; y *= k; z *= k; w *= k; return *this; }
 
     template <typename U> friend RaveVector<U> operator* (float f, const RaveVector<U>& v);
     template <typename U> friend RaveVector<U> operator* (double f, const RaveVector<U>& v);
-    
+
     template <typename U> friend std::ostream& operator<<(std::ostream& O, const RaveVector<U>& v);
     template <typename U> friend std::istream& operator>>(std::istream& I, RaveVector<U>& v);
 
     /// cross product operator
-    template <typename U> inline RaveVector<T> operator^(const RaveVector<U> &v) const { 
+    template <typename U> inline RaveVector<T> operator^(const RaveVector<U> &v) const {
         RaveVector<T> ucrossv;
         ucrossv[0] = y * v[2] - z * v[1];
         ucrossv[1] = z * v[0] - x * v[2];
@@ -208,7 +208,7 @@ inline RaveVector<T> operator* (double f, const RaveVector<T>& left)
 }
 
 /** \brief Affine transformation parameterized with quaterions.
-    
+
     \ingroup affine_math
 */
 template <typename T>
@@ -286,7 +286,7 @@ public:
         t.rot.normalize4();
         return t;
     }
-    
+
     inline RaveTransform<T>& operator*= (const RaveTransform<T>& right) {
         *this = operator*(right);
         return *this;
@@ -298,7 +298,7 @@ public:
         inv.rot.y = -rot.y;
         inv.rot.z = -rot.z;
         inv.rot.w = -rot.w;
-        
+
         inv.trans = -inv.rotate(trans);
         return inv;
     }
@@ -318,7 +318,7 @@ public:
 };
 
 /** \brief Affine transformation parameterized with rotation matrices. Scales and shears are not supported.
-        
+
     \ingroup affine_math
 */
 template <typename T>
@@ -356,7 +356,7 @@ public:
         MATH_ASSERT( i >= 0 && i < 3 && j >= 0 && j < 3);
         return m[4*i+j];
     }
-    
+
     template <typename U>
     inline RaveVector<T> operator* (const RaveVector<U>& r) const {
         RaveVector<T> v;
@@ -397,7 +397,7 @@ public:
         v.z = r.x * m[8] + r.y * m[9] + r.z * m[10];
         return v;
     }
-    
+
     inline RaveTransformMatrix<T> rotate(const RaveTransformMatrix<T>& r) const {
         RaveTransformMatrix<T> t;
         t.m[0*4+0] = m[0*4+0]*r.m[0*4+0]+m[0*4+1]*r.m[1*4+0]+m[0*4+2]*r.m[2*4+0];
@@ -502,7 +502,7 @@ public:
     const RaveVector<T>& operator[](int i) const { return (&v1)[i]; }
     RaveVector<T>& operator[](int i)       { return (&v1)[i]; }
 
-    /// assumes CCW ordering of vertices 
+    /// assumes CCW ordering of vertices
     inline RaveVector<T> normal() {
         return (v2-v1).cross(v3-v1);
     }
@@ -715,7 +715,7 @@ template <typename T> inline RaveTransformMatrix<T> matrixFromQuat(const RaveVec
 /// \brief Converts a quaternion to a 3x3 matrix
 ///
 /// \ingroup affine_math
-/// \param[out] rotation 
+/// \param[out] rotation
 /// \param[in] quat quaternion, (s,vx,vy,vz)
 template <typename T> void matrixFromQuat(RaveTransformMatrix<T>& rotation, const RaveVector<T>& quat)
 {
@@ -820,7 +820,7 @@ inline RaveVector<T> quatSlerp(const RaveVector<T>& quat0, const RaveVector<T>& 
         return qm;
     }
     T ratioA = MATH_SIN((1 - t) * halfTheta) / sinHalfTheta;
-    T ratioB = MATH_SIN(t * halfTheta) / sinHalfTheta; 
+    T ratioB = MATH_SIN(t * halfTheta) / sinHalfTheta;
     //calculate Quaternion.
     qm.w = (quat0.w * ratioA + qb.w * ratioB);
     qm.x = (quat0.x * ratioA + qb.x * ratioB);
@@ -1025,7 +1025,7 @@ inline int insideQuadrilateral(const RaveVector<T>& v, const RaveVector<T>& vert
 template <typename T>
 inline int insideTriangle(const RaveVector<T> v, const triangle<T>& tri)
 {
-    RaveVector<T> v4,v5;  
+    RaveVector<T> v4,v5;
     T m1,m2;
     T anglesum=0.0;
     T costheta;
@@ -1118,7 +1118,7 @@ inline bool RayOBBTest(const ray<T>& r, const obb<T>& o)
 //	e00 = D3DXVec3LengthSq(&(f.v2 - f.v1));
 //	e01 = D3DXVec3Dot(&(f.v2 - f.v1), &(f.v3 - f.v1));
 //	e11 = D3DXVec3LengthSq(&(f.v3 - f.v1));
-//	
+//
 //	q0 = D3DXVec3Dot(&v, &(f.v2 - f.v1));
 //	q1 = D3DXVec3Dot(&v, &(f.v3 - f.v1));
 //
@@ -1163,7 +1163,7 @@ inline bool RayOBBTest(const ray<T>& r, const obb<T>& o)
 //	fd = sqrtf(fd);
 //
 //	//　最小の数が0より小さいの場合、最大の数を選ぶことにする
-//	
+//
 //	if( -2.0f * f - fd > 0.0f ) {
 //		fd = 0.5f * (-2.0f * f - fd) / D3DXVec3LengthSq(&r.vDir);
 //		v = r.vPos + fd * r.vDir;
@@ -1186,14 +1186,14 @@ inline bool RayOBBTest(const ray<T>& r, const obb<T>& o)
 //		(fabsf(v.z - a.vPos.z) <= a.vExtents.z);
 //}
 //
-//bool VertexOBBTest(const DXVEC3& v, const OBB& o) 
+//bool VertexOBBTest(const DXVEC3& v, const OBB& o)
 //{
-//	DXVEC3 nv;	
+//	DXVEC3 nv;
 //	nv = v - o.vPos;
 //
 //	return (fabsf(D3DXVec3Dot(&nv, &o.vRight)) <= o.vExtents.x) &&
 //		(fabsf(D3DXVec3Dot(&nv, &o.vUp)) <= o.vExtents.y) &&
-//		(fabsf(D3DXVec3Dot(&nv, &o.vDir)) <= o.vExtents.z);	
+//		(fabsf(D3DXVec3Dot(&nv, &o.vDir)) <= o.vExtents.z);
 //}
 //
 //bool VertexSphereTest(const DXVEC3& v, const SPHERE& s)
@@ -1205,8 +1205,8 @@ inline bool RayOBBTest(const ray<T>& r, const obb<T>& o)
 //{
 //	const DXVEC3& vDir = v - c.vVertex;
 //	float fDot = D3DXVec3Dot(&vDir, &c.vDir);
-//	
-//	return (fDot > 0.0f) && (fDot <= c.fLength) && 
+//
+//	return (fDot > 0.0f) && (fDot <= c.fLength) &&
 //		(fDot * fDot >= c.fCosAng * c.fCosAng * D3DXVec3LengthSq(&vDir));
 //}
 //
@@ -1233,33 +1233,33 @@ inline bool RayOBBTest(const ray<T>& r, const obb<T>& o)
 //	DXVEC3 v = o.vPos - fr.vPos;
 //
 //	// if v lies on the left or bottom sides of the frustrum
-//	// then freflect about the planes to get it on the right and 
+//	// then freflect about the planes to get it on the right and
 //	// top sides
 //
 //	// side planes
 //	DXVEC3 vNorm = fr.fCosFOVX * fr.vRight - fr.fSinFOVX * fr.vDir;
-//	if(D3DXVec3Dot(&v, &vNorm) > o.vExtents.x * fabsf(D3DXVec3Dot(&vNorm, &o.vRight)) + 
-//				o.vExtents.y * fabsf(D3DXVec3Dot(&vNorm, &o.vUp)) + 
+//	if(D3DXVec3Dot(&v, &vNorm) > o.vExtents.x * fabsf(D3DXVec3Dot(&vNorm, &o.vRight)) +
+//				o.vExtents.y * fabsf(D3DXVec3Dot(&vNorm, &o.vUp)) +
 //				o.vExtents.z * fabsf(D3DXVec3Dot(&vNorm, &o.vDir))) return false;
 //
 //	vNorm = -fr.fCosFOVX * fr.vRight - fr.fSinFOVX * fr.vDir;
-//	if(D3DXVec3Dot(&v, &vNorm) > o.vExtents.x * fabsf(D3DXVec3Dot(&vNorm, &o.vRight)) + 
-//				o.vExtents.y * fabsf(D3DXVec3Dot(&vNorm, &o.vUp)) + 
+//	if(D3DXVec3Dot(&v, &vNorm) > o.vExtents.x * fabsf(D3DXVec3Dot(&vNorm, &o.vRight)) +
+//				o.vExtents.y * fabsf(D3DXVec3Dot(&vNorm, &o.vUp)) +
 //				o.vExtents.z * fabsf(D3DXVec3Dot(&vNorm, &o.vDir))) return false;
 //
 //	vNorm = fr.fCosFOVY * fr.vUp - fr.fSinFOVY * fr.vDir;
-//	if(D3DXVec3Dot(&v, &vNorm) > o.vExtents.x * fabsf(D3DXVec3Dot(&vNorm, &o.vRight)) + 
-//				o.vExtents.y * fabsf(D3DXVec3Dot(&vNorm, &o.vUp)) + 
+//	if(D3DXVec3Dot(&v, &vNorm) > o.vExtents.x * fabsf(D3DXVec3Dot(&vNorm, &o.vRight)) +
+//				o.vExtents.y * fabsf(D3DXVec3Dot(&vNorm, &o.vUp)) +
 //				o.vExtents.z * fabsf(D3DXVec3Dot(&vNorm, &o.vDir))) return false;
 //
 //	vNorm = -fr.fCosFOVY * fr.vUp - fr.fSinFOVY * fr.vDir;
-//	if(D3DXVec3Dot(&v, &vNorm) > o.vExtents.x * fabsf(D3DXVec3Dot(&vNorm, &o.vRight)) + 
-//				o.vExtents.y * fabsf(D3DXVec3Dot(&vNorm, &o.vUp)) + 
+//	if(D3DXVec3Dot(&v, &vNorm) > o.vExtents.x * fabsf(D3DXVec3Dot(&vNorm, &o.vRight)) +
+//				o.vExtents.y * fabsf(D3DXVec3Dot(&vNorm, &o.vUp)) +
 //				o.vExtents.z * fabsf(D3DXVec3Dot(&vNorm, &o.vDir))) return false;
 //
 //	vNorm.x = D3DXVec3Dot(&v, &fr.vDir);
-//	vNorm.y = o.vExtents.x * fabsf(D3DXVec3Dot(&fr.vDir, &o.vRight)) + 
-//					o.vExtents.y * fabsf(D3DXVec3Dot(&fr.vDir, &o.vUp)) + 
+//	vNorm.y = o.vExtents.x * fabsf(D3DXVec3Dot(&fr.vDir, &o.vRight)) +
+//					o.vExtents.y * fabsf(D3DXVec3Dot(&fr.vDir, &o.vUp)) +
 //					o.vExtents.z * fabsf(D3DXVec3Dot(&fr.vDir, &o.vDir));
 //
 //	if( (vNorm.x < fr.fNear - vNorm.y) || (vNorm.x > fr.fFar + vNorm.y) ) return false;
@@ -1275,7 +1275,7 @@ inline bool IsOBBinFrustum(const obb<T>& o, const frustum<T>& fr)
     // check OBB against all 6 planes
     RaveVector<T> v = o.pos - fr.pos;
     // if v lies on the left or bottom sides of the frustrum
-    // then freflect about the planes to get it on the right and 
+    // then freflect about the planes to get it on the right and
     // top sides
     // side planes
     RaveVector<T> vNorm = fr.fcosfovx * fr.right - fr.fsinfovx * fr.dir;
@@ -1308,28 +1308,28 @@ inline bool IsOBBinFrustum(const obb<T>& o, const frustum<T>& fr)
 //	DXVEC3 v = a.vPos - fr.vPos;
 //
 //	// if v lies on the left or bottom sides of the frustrum
-//	// then freflect about the planes to get it on the right and 
+//	// then freflect about the planes to get it on the right and
 //	// top sides
 //
 //	// side planes
 //	DXVEC3 vNorm = fr.fCosFOVX * fr.vRight - fr.fSinFOVX * fr.vDir;
-//	if(D3DXVec3Dot(&v, &vNorm) > a.vExtents.x * fabsf(vNorm.x) + 
+//	if(D3DXVec3Dot(&v, &vNorm) > a.vExtents.x * fabsf(vNorm.x) +
 //		a.vExtents.y * fabsf(vNorm.y) + a.vExtents.z * fabsf(vNorm.z)) return false;
 //
 //	vNorm = -fr.fCosFOVX * fr.vRight - fr.fSinFOVX * fr.vDir;
-//	if(D3DXVec3Dot(&v, &vNorm) > a.vExtents.x * fabsf(vNorm.x) + 
+//	if(D3DXVec3Dot(&v, &vNorm) > a.vExtents.x * fabsf(vNorm.x) +
 //		a.vExtents.y * fabsf(vNorm.y) + a.vExtents.z * fabsf(vNorm.z)) return false;
 //
 //	vNorm = fr.fCosFOVY * fr.vUp - fr.fSinFOVY * fr.vDir;
-//	if(D3DXVec3Dot(&v, &vNorm) > a.vExtents.x * fabsf(vNorm.x) + 
+//	if(D3DXVec3Dot(&v, &vNorm) > a.vExtents.x * fabsf(vNorm.x) +
 //		a.vExtents.y * fabsf(vNorm.y) + a.vExtents.z * fabsf(vNorm.z)) return false;
 //
 //	vNorm = -fr.fCosFOVY * fr.vUp - fr.fSinFOVY * fr.vDir;
-//	if(D3DXVec3Dot(&v, &vNorm) > a.vExtents.x * fabsf(vNorm.x) + 
+//	if(D3DXVec3Dot(&v, &vNorm) > a.vExtents.x * fabsf(vNorm.x) +
 //		a.vExtents.y * fabsf(vNorm.y) + a.vExtents.z * fabsf(vNorm.z)) return false;
 //
 //	vNorm.x = D3DXVec3Dot(&v, &fr.vDir);
-//	vNorm.y = a.vExtents.x * fabsf(fr.vDir.x) + a.vExtents.y * fabsf(fr.vDir.y) + 
+//	vNorm.y = a.vExtents.x * fabsf(fr.vDir.x) + a.vExtents.y * fabsf(fr.vDir.y) +
 //				a.vExtents.z * fabsf(fr.vDir.z);
 //
 //	if( (vNorm.x < fr.fNear - vNorm.y) || (vNorm.x > fr.fFar + vNorm.y) ) return false;
@@ -1354,7 +1354,7 @@ inline bool IsOBBinConvexHull(const obb<T>& o, const U& vplanes)
 }
 
 //bool SphereSphereTest(const SPHERE& s1, const SPHERE& s2)
-//{ 
+//{
 //	return ( (s1.fRadius + s2.fRadius) * (s1.fRadius + s2.fRadius) >
 //		D3DXVec3LengthSq(&DXVEC3(s1.vPos - s2.vPos)) );
 //}
@@ -1426,7 +1426,7 @@ inline bool TriTriCollision(const RaveVector<T>& u1, const RaveVector<T>& u2, co
     // first see if the faces intersect the planes
     // for the face to be intersecting the plane, one of its
     // vertices must be on the opposite side of the plane
-    char b = 0;    
+    char b = 0;
     RaveVector<T> u12 = u2 - u1, u23 = u3 - u2, u31 = u1 - u3;
     RaveVector<T> v12 = v2 - v1, v23 = v3 - v2, v31 = v1 - v3;
     RaveVector<T> vedges[3] = {v12, v23, v31};
@@ -1473,7 +1473,7 @@ inline bool TriTriCollision(const RaveVector<T>& u1, const RaveVector<T>& u2, co
         p2 = u2 - u3;
         break;
     }
-    
+
     T t = vnorm.dot3(*pu)+vnorm.w;
     p1 = *pu - p1 * (t / vnorm.dot3(p1));
     p2 = *pu - p2 * (t / vnorm.dot3(p2));
@@ -1596,30 +1596,30 @@ inline bool AABBCollision(const aabb<T>& ab1, const aabb<T>& ab2)
 //	float r01, r;
 //
 //	// test the 3 axes of the AABB
-//	
+//
 //	// A0
-//	if(a.vExtents.x + o.vExtents.x * fabsf(o.vRight.x) + o.vExtents.y * fabsf(o.vUp.x) + 
+//	if(a.vExtents.x + o.vExtents.x * fabsf(o.vRight.x) + o.vExtents.y * fabsf(o.vUp.x) +
 //		o.vExtents.z * fabsf(o.vDir.x) < fabsf(vd.x)) return false;
 //	// A1
-//	if(a.vExtents.y + o.vExtents.x * fabsf(o.vRight.y) + o.vExtents.y * fabsf(o.vUp.y) + 
+//	if(a.vExtents.y + o.vExtents.x * fabsf(o.vRight.y) + o.vExtents.y * fabsf(o.vUp.y) +
 //		o.vExtents.z * fabsf(o.vDir.y) < fabsf(vd.y)) return false;
 //	// A2
-//	if(a.vExtents.z + o.vExtents.x * fabsf(o.vRight.z) + o.vExtents.y * fabsf(o.vUp.z) + 
+//	if(a.vExtents.z + o.vExtents.x * fabsf(o.vRight.z) + o.vExtents.y * fabsf(o.vUp.z) +
 //		o.vExtents.z * fabsf(o.vDir.z) < fabsf(vd.z)) return false;
 //
 //	// test the 3 axes of the OBB
-//	
+//
 //	// B0
-//	if(a.vExtents.x * fabsf(o.vRight.x) + a.vExtents.y * fabsf(o.vRight.y) + 
+//	if(a.vExtents.x * fabsf(o.vRight.x) + a.vExtents.y * fabsf(o.vRight.y) +
 //		a.vExtents.z * fabsf(o.vRight.z) + o.vExtents.x <
 //		fabsf(D3DXVec3Dot(&o.vRight, &vd)) ) return false;
 //	// B1
-//	if(a.vExtents.x * fabsf(o.vUp.x) + a.vExtents.y * fabsf(o.vUp.y) + 
-//		a.vExtents.z * fabsf(o.vUp.z) + o.vExtents.y < 
+//	if(a.vExtents.x * fabsf(o.vUp.x) + a.vExtents.y * fabsf(o.vUp.y) +
+//		a.vExtents.z * fabsf(o.vUp.z) + o.vExtents.y <
 //		fabsf(D3DXVec3Dot(&o.vUp, &vd)) ) return false;
 //	// B2
-//	if(a.vExtents.x * fabsf(o.vDir.x) + a.vExtents.y * fabsf(o.vDir.y) + 
-//		a.vExtents.z * fabsf(o.vDir.z) + o.vExtents.z < 
+//	if(a.vExtents.x * fabsf(o.vDir.x) + a.vExtents.y * fabsf(o.vDir.y) +
+//		a.vExtents.z * fabsf(o.vDir.z) + o.vExtents.z <
 //		fabsf(D3DXVec3Dot(&o.vDir, &vd)) ) return false;
 //
 //	// test the 9 different cross products (from different combinations of the axes)
@@ -1712,7 +1712,7 @@ inline bool AABBCollision(const aabb<T>& ab1, const aabb<T>& ab2)
 
 //AABB AABBUnion(const AABB& ab1, AABB& ab2)
 //{
-//	return AABB( 0.5f * (ab1.vPos + ab2.vPos), 0.5f * (ab1.vExtents + ab2.vExtents + 
+//	return AABB( 0.5f * (ab1.vPos + ab2.vPos), 0.5f * (ab1.vExtents + ab2.vExtents +
 //		DXVEC3(fabsf(ab2.vPos.x-ab1.vPos.x), fabsf(ab2.vPos.y-ab1.vPos.y), fabsf(ab2.vPos.z-ab1.vPos.z))) );
 //}
 
@@ -1794,7 +1794,7 @@ inline bool AABBCollision(const aabb<T>& ab1, const aabb<T>& ab2)
 //	float t = D3DXVec3Dot(&f2.plane.vNorm, &(f2.v1 - *v) );
 //	p1 = *v + p1 * t / D3DXVec3Dot(&f2.plane.vNorm, &p1);
 //	p2 = *v + p2 * t / D3DXVec3Dot(&f2.plane.vNorm, &p2);
-//	
+//
 //	// now p1 and p2 are on the plane
 //	// let p1 be the midpoint and p2 be the extents
 //	// then test the line segment with the triangle against
@@ -1803,7 +1803,7 @@ inline bool AABBCollision(const aabb<T>& ab1, const aabb<T>& ab2)
 //	p2 -= p1;
 //
 //	DXVEC3 vCross;
-//	
+//
 //	// N x U
 //	D3DXVec3Cross(&vCross, &f2.plane.vNorm, &p2);
 //	t = D3DXVec3Dot(&vCross, &p1);
@@ -1869,7 +1869,7 @@ inline bool AABBCollision(const aabb<T>& ab1, const aabb<T>& ab2)
 //
 //	// N
 //	vD = f.v1 - a.vPos;
-//	if( fabsf(D3DXVec3Dot(&vD, &f.plane.vNorm)) > 
+//	if( fabsf(D3DXVec3Dot(&vD, &f.plane.vNorm)) >
 //		a.vExtents.x * fabsf(f.plane.vNorm.x) + a.vExtents.y * fabsf(f.plane.vNorm.y) +
 //		a.vExtents.z * fabsf(f.plane.vNorm.z) ) return false;
 //
@@ -1953,7 +1953,7 @@ inline bool AABBCollision(const aabb<T>& ab1, const aabb<T>& ab2)
 //	if( (p0 > r && p1 > r) || (p0 < -r && p1 < -r) ) return false;
 //
 //	// A1 x ve2
-//	
+//
 //	r = a.vExtents.x * fabsf(ve2.z) + a.vExtents.z * fabsf(ve2.x);
 //	p0 = ve2.z * vD.x - ve2.x * vD.z;
 //	p1 = p0 - vNorm.y;
@@ -2039,25 +2039,25 @@ inline bool AABBCollision(const aabb<T>& ab1, const aabb<T>& ab2)
 //	fLengthSq = D3DXVec3LengthSq(&ve);
 //	fDot = D3DXVec3Dot(&(s.vPos - f.v1), &ve);
 //
-//	if(fDot > 0.0f && fDot < fLengthSq && 
+//	if(fDot > 0.0f && fDot < fLengthSq &&
 //		D3DXVec3LengthSq(&(s.vPos - f.v1)) * fLengthSq - fDot * fDot < fLengthSq * s.fRadius * s.fRadius ) return true;
-//		
+//
 //
 //	ve = f.v3 - f.v1;
 //	fLengthSq = D3DXVec3LengthSq(&ve);
 //	fDot = D3DXVec3Dot(&(s.vPos - f.v1), &ve);
 //
-//	if(fDot > 0.0f && fDot < fLengthSq && 
+//	if(fDot > 0.0f && fDot < fLengthSq &&
 //		D3DXVec3LengthSq(&(s.vPos - f.v1)) * fLengthSq - fDot * fDot < fLengthSq * s.fRadius * s.fRadius ) return true;
-//	
+//
 //
 //	ve = f.v3 - f.v2;
 //	fLengthSq = D3DXVec3LengthSq(&ve);
 //	fDot = D3DXVec3Dot(&(s.vPos - f.v2), &ve);
 //
-//	if(fDot > 0.0f && fDot < fLengthSq && 
+//	if(fDot > 0.0f && fDot < fLengthSq &&
 //		D3DXVec3LengthSq(&(s.vPos - f.v2)) * fLengthSq - fDot * fDot < fLengthSq * s.fRadius * s.fRadius ) return true;
-//	
+//
 //
 //	// sphere might still be inside the face but not touching any of the edges
 //	ve = s.vPos - f.plane.vNorm * (D3DXVec3Dot(&f.plane.vNorm, &s.vPos) + f.plane.fD) - f.v1;
@@ -2066,7 +2066,7 @@ inline bool AABBCollision(const aabb<T>& ab1, const aabb<T>& ab2)
 //	e00 = D3DXVec3LengthSq(&(f.v2 - f.v1));
 //	e01 = D3DXVec3Dot(&(f.v2 - f.v1), &(f.v3 - f.v1));
 //	e11 = D3DXVec3LengthSq(&(f.v3 - f.v1));
-//	
+//
 //	q0 = D3DXVec3Dot(&ve, &(f.v2 - f.v1));
 //	q1 = D3DXVec3Dot(&ve, &(f.v3 - f.v1));
 //
@@ -2082,7 +2082,7 @@ inline bool AABBCollision(const aabb<T>& ab1, const aabb<T>& ab2)
 //
 //bool AABBSphereTest(const AABB& a, const SPHERE& s)
 //{
-//	// algorithm can be found in A Simple Method for Box-Sphere Intersection Testing, 
+//	// algorithm can be found in A Simple Method for Box-Sphere Intersection Testing,
 //	// Graphics Gems, pp. 247-250 by Jim Arvo
 //	float side, d = 0.0f;
 //
@@ -2107,7 +2107,7 @@ inline bool AABBCollision(const aabb<T>& ab1, const aabb<T>& ab2)
 
 //bool OBBSphereTest(const OBB& o, const SPHERE& s)
 //{
-//	// algorithm can be found in A Simple Method for Box-Sphere Intersection Testing, 
+//	// algorithm can be found in A Simple Method for Box-Sphere Intersection Testing,
 //	// Graphics Gems, pp. 247-250 by Jim Arvo
 //	float side, d = 0.0f;
 //	DXVEC3 v = s.vPos - o.vPos;
@@ -2179,7 +2179,7 @@ T DistVertexOBBSq(const RaveVector<T>& v, const obb<T>& o)
 //
 //	// get the 3 distances from the sphere to the line segments of the face
 //	// also take the closest distance to the face's plane, and make sure
-//	// that the point in the plane that is closest is in the face	
+//	// that the point in the plane that is closest is in the face
 //
 //	fDot = D3DXVec3Dot(&f.plane.vNorm, &v) + f.plane.fD;
 //
@@ -2196,7 +2196,7 @@ T DistVertexOBBSq(const RaveVector<T>& v, const obb<T>& o)
 //	q1 = D3DXVec3Dot(&ve, &vd);
 //
 //	e01 = D3DXVec3Dot(&(f.v2 - f.v1), &vd);
-//	
+//
 //	s0 = e11 * q0 - e01 * q1;
 //	s1 = e00 * q1 - e01 * q0;
 //
@@ -2208,7 +2208,7 @@ T DistVertexOBBSq(const RaveVector<T>& v, const obb<T>& o)
 //
 //	ve = v - f.v1;
 //	D3DXVec3Cross(&vd, &(f.v2-f.v1), &f.plane.vNorm);
-//	
+//
 //	if( D3DXVec3Dot(&vd, &ve) > 0.0f ) {
 //		vd = f.v2-f.v1;
 //		fDot = D3DXVec3Dot(&ve, &vd);
@@ -2222,7 +2222,7 @@ T DistVertexOBBSq(const RaveVector<T>& v, const obb<T>& o)
 //	}
 //
 //	D3DXVec3Cross(&vd, &(f.v1-f.v3), &f.plane.vNorm);
-//	
+//
 //	if( D3DXVec3Dot(&vd, &ve) > 0.0f ) {
 //		vd = f.v3-f.v1;
 //		fDot = D3DXVec3Dot(&ve, &vd);
@@ -2238,7 +2238,7 @@ T DistVertexOBBSq(const RaveVector<T>& v, const obb<T>& o)
 //	ve = v - f.v2;
 //	vd = f.v3 - f.v2;
 //
-//	// we know that fDot cannot be < 0 or > lengthsq(vd)	
+//	// we know that fDot cannot be < 0 or > lengthsq(vd)
 //	return D3DXVec3LengthSq(&ve) - Sqr(D3DXVec3Dot(&ve, &vd)) / D3DXVec3LengthSq(&vd);
 //}
 
@@ -2250,7 +2250,7 @@ T DistVertexOBBSq(const RaveVector<T>& v, const obb<T>& o)
 //
 //	// the closest point might be the vertex
 //	float fDotSq = fDot * fDot;
-//	if( fDot <= 0.0f && fDotSq > c.fSinAng * c.fSinAng * fLengthSq ) 
+//	if( fDot <= 0.0f && fDotSq > c.fSinAng * c.fSinAng * fLengthSq )
 //		return -D3DXVec3Length(&v);
 //
 //	// if beyond cone base, then shortest distance can either
@@ -2282,7 +2282,7 @@ T DistVertexOBBSq(const RaveVector<T>& v, const obb<T>& o)
 //	// the vertex is inside the cone, but shortest distance can either be
 //	// from base of cone or surface of cone, so compute both and compare
 //	fLengthSq -= fTest*fTest;
-//	
+//
 //	fTest = c.fLength - fDot;
 //
 //	if( fTest*fTest < fLengthSq ) return fTest;
@@ -2300,29 +2300,29 @@ T DistVertexOBBSq(const RaveVector<T>& v, const obb<T>& o)
 //
 //	// v.x - dot product along the right face
 //	// v.y - dot product along the up face
-//	
+//
 //	fx = vproj.x * fr.fCosFOVX - vproj.z * fr.fSinFOVX;
 //	fy = vproj.y * fr.fCosFOVY - vproj.z * fr.fSinFOVY;
-//	
+//
 //	if( fx > 0.0f ) {
 //		if( fy > 0.0f ) {
 //			// vector along upper right edge is: sinx, siny, cosx*cosy
-//			
+//
 //			// projected length along this vector
 //			float fdot = fr.fSinFOVX * vproj.x + fr.fSinFOVY * vproj.y + fr.fCosFOVX * fr.fCosFOVY * vproj.z;
 //			f = 1.0f + Sqr(fr.fSinFOVX * fr.fSinFOVY);
-//			fplane = fr.fSinFOVX * fr.fSinFOVX / fr.fCosFOVX + fr.fSinFOVY * fr.fSinFOVY / fr.fCosFOVY + 
+//			fplane = fr.fSinFOVX * fr.fSinFOVX / fr.fCosFOVX + fr.fSinFOVY * fr.fSinFOVY / fr.fCosFOVY +
 //				fr.fCosFOVX * fr.fCosFOVY;
 //
 //			if( fdot < f * fplane * fr.fNear ) {
-//				return -sqrtf( Sqr(vproj.x - fr.fNear*fr.fSinFOVX/fr.fCosFOVX) + 
+//				return -sqrtf( Sqr(vproj.x - fr.fNear*fr.fSinFOVX/fr.fCosFOVX) +
 //								Sqr(vproj.y - fr.fNear*fr.fSinFOVY/fr.fCosFOVY) +
 //								Sqr(vproj.z - fr.fNear) );
 //			}
 //			else if( fdot < f * fplane * fr.fFar )
 //				return -sqrtf(D3DXVec3LengthSq(&v) - Sqr(fdot / f));
 //			else
-//				return -sqrtf( Sqr(vproj.x - fr.fFar*fr.fSinFOVX/fr.fCosFOVX) + 
+//				return -sqrtf( Sqr(vproj.x - fr.fFar*fr.fSinFOVX/fr.fCosFOVX) +
 //								Sqr(vproj.y - fr.fFar*fr.fSinFOVY/fr.fCosFOVY) +
 //								Sqr(vproj.z - fr.fFar) );
 //		}
@@ -2375,15 +2375,15 @@ T DistVertexOBBSq(const RaveVector<T>& v, const obb<T>& o)
 //{
 //	DXVEC3 vPt = obb.vPos;
 //
-//	if( D3DXVec3Dot(&p.vNorm, &obb.vRight) < 0.0f) 
+//	if( D3DXVec3Dot(&p.vNorm, &obb.vRight) < 0.0f)
 //		vPt += obb.vRight * obb.vExtents.x;
 //	else vPt -= obb.vRight * obb.vExtents.x;
 //
-//	if( D3DXVec3Dot(&p.vNorm, &obb.vUp) < 0.0f) 
+//	if( D3DXVec3Dot(&p.vNorm, &obb.vUp) < 0.0f)
 //		vPt += obb.vUp * obb.vExtents.y;
 //	else vPt -= obb.vUp * obb.vExtents.y;
 //
-//	if( D3DXVec3Dot(&p.vNorm, &obb.vDir) < 0.0f) 
+//	if( D3DXVec3Dot(&p.vNorm, &obb.vDir) < 0.0f)
 //		vPt += obb.vDir * obb.vExtents.z;
 //	else vPt -= obb.vDir * obb.vExtents.z;
 //
@@ -2395,7 +2395,7 @@ T DistVertexOBBSq(const RaveVector<T>& v, const obb<T>& o)
 //	// it can be one of 3 points
 //	float fDist1 = D3DXVec3Dot(&f.v1, &p.vNorm);
 //	float fDist2 = D3DXVec3Dot(&f.v2, &p.vNorm);
-//	
+//
 //	float fDist3 = D3DXVec3Dot(&f.v3, &p.vNorm);
 //
 //	if( fDist1 < fDist2 ) {
@@ -2417,7 +2417,7 @@ T DistVertexOBBSq(const RaveVector<T>& v, const obb<T>& o)
 //
 //	// get the 3 distances from the sphere to the line segments of the face
 //	// also take the closest distance to the face's plane, and make sure
-//	// that the point in the plane that is closest is in the face	
+//	// that the point in the plane that is closest is in the face
 //
 //	fDot = D3DXVec3Dot(&f.plane.vNorm, &v) + f.plane.fD;
 //
@@ -2434,7 +2434,7 @@ T DistVertexOBBSq(const RaveVector<T>& v, const obb<T>& o)
 //	q1 = D3DXVec3Dot(&ve, &vd);
 //
 //	e01 = D3DXVec3Dot(&(f.v2 - f.v1), &vd);
-//	
+//
 //	s0 = e11 * q0 - e01 * q1;
 //	s1 = e00 * q1 - e01 * q0;
 //
@@ -2447,7 +2447,7 @@ T DistVertexOBBSq(const RaveVector<T>& v, const obb<T>& o)
 //
 //	ve = v - f.v1;
 //	D3DXVec3Cross(&vd, &(f.v2-f.v1), &f.plane.vNorm);
-//	
+//
 //	if( D3DXVec3Dot(&vd, &ve) > 0.0f ) {
 //		vd = f.v2-f.v1;
 //		fDot = D3DXVec3Dot(&ve, &vd);
@@ -2461,7 +2461,7 @@ T DistVertexOBBSq(const RaveVector<T>& v, const obb<T>& o)
 //	}
 //
 //	D3DXVec3Cross(&vd, &(f.v1-f.v3), &f.plane.vNorm);
-//	
+//
 //	if( D3DXVec3Dot(&vd, &ve) > 0.0f ) {
 //		vd = f.v3-f.v1;
 //		fDot = D3DXVec3Dot(&ve, &vd);
@@ -2476,7 +2476,7 @@ T DistVertexOBBSq(const RaveVector<T>& v, const obb<T>& o)
 //
 //	vd = f.v3 - f.v2;
 //
-//	// we know that fDot cannot be < 0 or > lengthsq(vd)	
+//	// we know that fDot cannot be < 0 or > lengthsq(vd)
 //	return f.v2 + D3DXVec3Dot(&(v - f.v2), &vd) * vd / D3DXVec3LengthSq(&vd);
 //}
 //
@@ -2487,7 +2487,7 @@ T DistVertexOBBSq(const RaveVector<T>& v, const obb<T>& o)
 //PLANE ClosestPlaneFromVertexOBB(const DXVEC3& v, const OBB& o)
 //{
 //	DXVEC3 vn = v - o.vPos;
-//	DXVEC3 vsign = DXVEC3(1.0f, 1.0f, 1.0f);	
+//	DXVEC3 vsign = DXVEC3(1.0f, 1.0f, 1.0f);
 //	vn = DXVEC3( D3DXVec3Dot(&vn, &o.vRight),
 //					D3DXVec3Dot(&vn, &o.vUp),
 //					D3DXVec3Dot(&vn, &o.vDir));

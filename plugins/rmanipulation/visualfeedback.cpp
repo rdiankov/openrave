@@ -82,7 +82,7 @@ bool SampleProjectedOBBWithTest(const OBB& obb, dReal delta, const boost::functi
         Vector v3norm = v3 * (1.0f/f3length);
         Vector v3perp(-v3norm.y,v3norm.x,0,0);
         dReal f1proj = RaveFabs(v3perp.x*v1.x+v3perp.y*v1.y), f2proj = RaveFabs(v3perp.x*v2.x+v3perp.y*v2.y);
-        
+
         int n1 = (int)(f1proj/delta);
         dReal n1scale = 1.0f/n1;
         Vector vdelta1 = v1*n1scale;
@@ -100,7 +100,7 @@ bool SampleProjectedOBBWithTest(const OBB& obb, dReal delta, const boost::functi
                 }
             }
         }
-        
+
 //        Vector vtripoints[6] = {vpoints3d[faceindices[i][0]], vpoints3d[faceindices[i][3]], vpoints3d[faceindices[i][1]],
 //                                vpoints3d[faceindices[i][0]], vpoints3d[faceindices[i][1]], vpoints3d[faceindices[i][3]]};
 //        penv->drawtrimesh(vtripoints[0], 16, NULL, 2);
@@ -145,7 +145,7 @@ public:
 //        ffovy = atanf(0.5f*height/KK.fy);
 //        fcosfovy = cosf(ffovy); fsinfovy = sinf(ffovy);
 //    }
-    
+
     class VisibilityConstraintFunction
     {
     public:
@@ -231,7 +231,7 @@ public:
                     pNewSample.at((int)(itactive-_vf->_robot->GetActiveDOFIndices().begin())) = _vsolution.at((int)(itarm-_vf->_pmanip->GetArmIndices().begin()));
             }
             _vf->_robot->SetActiveDOFValues(pNewSample);
-            
+
             return !IsOccluded(tcamera);
         }
 
@@ -388,7 +388,7 @@ public:
     private:
         boost::shared_ptr<VisualFeedback> _vf;
         const vector<Transform>& _visibilitytransforms;
-        
+
 
         Transform _ttarget; ///< transform of target
         Vector _vTargetLocalCenter;
@@ -419,8 +419,8 @@ Visibility computation checks occlusion with other objects using ray sampling in
         RegisterCommand("ProcessVisibilityExtents",boost::bind(&VisualFeedback::ProcessVisibilityExtents,this,_1,_2),
                         "Processes the visibility extents of the target and initializes the camera transforms.\n\
 \n\
-:type sphere: Sets the transforms along a sphere density and the distances\n\
-:type conedirangle: Prunes the currently set transforms along a cone centered at the local target center and directed towards conedirangle with a half-angle of ``|conedirangle|``. Can specify multiple cones for an OR effect.");
+:param sphere: Sets the transforms along a sphere density and the distances\n\
+:param conedirangle: Prunes the currently set transforms along a cone centered at the local target center and directed towards conedirangle with a half-angle of ``|conedirangle|``. Can specify multiple cones for an OR effect.");
         RegisterCommand("SetCameraTransforms",boost::bind(&VisualFeedback::SetCameraTransforms,this,_1,_2),
                         "Sets new camera transformations. Can optionally choose a minimum distance from all planes of the camera convex hull (includes gripper mask)");
         RegisterCommand("ComputeVisibility",boost::bind(&VisualFeedback::ComputeVisibility,this,_1,_2),
@@ -540,7 +540,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
                 BOOST_ASSERT(vconvexdata.size() > 2 );
                 vector<Vector> vpoints;
                 Vector vprev,vprev2,v,vdir,vnorm,vcenter;
-                for(size_t i = 0; i < vconvexdata.size(); i += 2 ){ 
+                for(size_t i = 0; i < vconvexdata.size(); i += 2 ){
                     vpoints.push_back(Vector((vconvexdata[i]-_pcamerageom->KK.cx)/_pcamerageom->KK.fx,(vconvexdata[i+1]-_pcamerageom->KK.cy)/_pcamerageom->KK.fy,0,0));
                     vcenter += vpoints.back();
                 }
@@ -679,7 +679,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
             vup = Vector(0,0,1) - vdir * vdir.z;
             uplen = vup.lengthsqr3();
         }
-            
+
         vup *= (dReal)1.0/RaveSqrt(uplen);
         vright = vup.cross(vdir);
         TransformMatrix tcamera;
@@ -879,7 +879,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
                 }
             }
         }
-        
+
         return true;
     }
 
@@ -951,7 +951,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
                 return false;
             }
         }
-        
+
         vector<dReal> vsample;
         RobotBase::RobotStateSaver saver(_robot);
         _robot->SetActiveManipulator(_nManipIndex); BOOST_ASSERT(_robot->GetActiveManipulator()==_pmanip);
@@ -968,7 +968,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
         }
         return true;
     }
-    
+
     bool SampleVisibilityGoal(ostream& sout, istream& sinput)
     {
         string cmd;
@@ -980,7 +980,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
                 break;
             }
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
-        
+
             if( cmd == "numsamples" ) {
                 sinput >> numsamples;
             }
@@ -1006,7 +1006,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
         }
 
         boost::shared_ptr<GoalSampleFunction> pgoalsampler(new GoalSampleFunction(shared_problem(),_visibilitytransforms));
-     
+
         uint64_t starttime = GetMicroTime();
         vector<dReal> vsample;
         vector<dReal> vsamples(_robot->GetActiveDOF()*numsamples);
@@ -1101,7 +1101,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
         Trajectory::TPOINT pt;
         pt.q = params->vinitialconfig;
         ptraj->AddPoint(pt);
-    
+
         // jitter for initial collision
         if( !planningutils::JitterActiveDOF(_robot) ) {
             RAVELOG_WARN("jitter failed for initial\n");
@@ -1114,7 +1114,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
             RAVELOG_ERROR("failed to create BiRRTs\n");
             return false;
         }
-    
+
         bool bSuccess = false;
         RAVELOG_INFOA("starting planning\n");
         uint64_t starttime = GetMicroTime();
@@ -1162,7 +1162,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
                 break;
             }
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
-        
+
             if( cmd == "outputtraj" ) {
                 pOutputTrajStream = boost::shared_ptr<ostream>(&sout,null_deleter());
             }
@@ -1232,7 +1232,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
             RAVELOG_ERROR("failed to create BiRRTs\n");
             return false;
         }
-    
+
         bool bSuccess = false;
         RAVELOG_INFOA("starting planning\n");
         uint64_t starttime = GetMicroTime();
@@ -1240,14 +1240,14 @@ Visibility computation checks occlusion with other objects using ray sampling in
             RAVELOG_ERROR("InitPlan failed\n");
             return false;
         }
-        
+
         if( planner->PlanPath(ptraj) ) {
             bSuccess = true;
         }
         else {
             RAVELOG_WARN("PlanPath failed\n");
         }
-            
+
         float felapsed = (GetMicroTime()-starttime)*0.000001f;
         RAVELOG_INFOA("total planning time: %fs\n", felapsed);
         if( !bSuccess ) {
@@ -1264,7 +1264,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
     {
         return false;
     }
-    
+
 protected:
     RobotBasePtr _robot, _sensorrobot;
     KinBodyPtr _target;

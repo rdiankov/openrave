@@ -1858,7 +1858,7 @@ void KinBody::Destroy()
 
 bool KinBody::InitFromFile(const std::string& filename, const AttributesList& atts)
 {
-    bool bSuccess = GetEnv()->ReadKinBodyXMLFile(shared_kinbody(), filename, atts)==shared_kinbody();
+    bool bSuccess = GetEnv()->ReadKinBodyURI(shared_kinbody(), filename, atts)==shared_kinbody();
     if( !bSuccess ) {
         Destroy();
         return false;
@@ -1868,7 +1868,7 @@ bool KinBody::InitFromFile(const std::string& filename, const AttributesList& at
 
 bool KinBody::InitFromData(const std::string& data, const AttributesList& atts)
 {
-    bool bSuccess = GetEnv()->ReadKinBodyXMLData(shared_kinbody(), data, atts)==shared_kinbody();
+    bool bSuccess = GetEnv()->ReadKinBodyData(shared_kinbody(), data, atts)==shared_kinbody();
     if( !bSuccess ) {
         Destroy();
         return false;

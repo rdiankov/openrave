@@ -1891,7 +1891,7 @@ void RobotBase::CalculateActiveAngularVelocityJacobian(int index, std::vector<dR
 
 bool RobotBase::InitFromFile(const std::string& filename, const AttributesList& atts)
 {
-    bool bSuccess = GetEnv()->ReadRobotXMLFile(shared_robot(), filename, atts)==shared_robot();
+    bool bSuccess = GetEnv()->ReadRobotURI(shared_robot(), filename, atts)==shared_robot();
     if( !bSuccess ) {
         Destroy();
         return false;
@@ -1901,7 +1901,7 @@ bool RobotBase::InitFromFile(const std::string& filename, const AttributesList& 
 
 bool RobotBase::InitFromData(const std::string& data, const AttributesList& atts)
 {
-    bool bSuccess = GetEnv()->ReadRobotXMLData(shared_robot(), data, atts)==shared_robot();
+    bool bSuccess = GetEnv()->ReadRobotData(shared_robot(), data, atts)==shared_robot();
     if( !bSuccess ) {
         Destroy();
         return false;

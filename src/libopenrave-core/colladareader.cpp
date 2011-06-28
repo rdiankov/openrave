@@ -407,8 +407,8 @@ class ColladaReader : public daeErrorHandler
             _mapJointUnits.clear();
             _mapJointIds.clear();
         }
-        if( probot->__strxmlfilename.size() == 0 ) {
-            probot->__strxmlfilename = _filename;
+        if( probot->__struri.size() == 0 ) {
+            probot->__struri = _filename;
         }
 
         // set the name
@@ -510,8 +510,8 @@ class ColladaReader : public daeErrorHandler
             _mapJointUnits.clear();
             _mapJointIds.clear();
         }
-        if( pkinbody->__strxmlfilename.size() == 0 ) {
-            pkinbody->__strxmlfilename = _filename;
+        if( pkinbody->__struri.size() == 0 ) {
+            pkinbody->__struri = _filename;
         }
 
         // find matching visual node

@@ -1718,7 +1718,7 @@ namespace OpenRAVEXMLParser
             SetXMLFilename(_filename);
         }
 
-        void SetXMLFilename(const string& filename) { if( !!_pinterface && _pinterface->__strxmlfilename.size() == 0 ) _pinterface->__strxmlfilename = filename; }
+        void SetXMLFilename(const string& filename) { if( !!_pinterface && _pinterface->__struri.size() == 0 ) _pinterface->__struri = filename; }
 
         virtual ProcessElement startElement(const std::string& xmlname, const AttributesList& atts)
         {

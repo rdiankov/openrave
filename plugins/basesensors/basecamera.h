@@ -1,4 +1,5 @@
-// Copyright (C) 2006-2011 Rosen Diankov (rdiankov@cs.cmu.edu), Carnegie Mellon University
+// -*- coding: utf-8 -*-
+// Copyright (C) 2006-2011 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
@@ -22,7 +23,7 @@ class BaseCameraSensor : public SensorBase
     {
     public:
     BaseCameraXMLReader(boost::shared_ptr<BaseCameraSensor> psensor) : _psensor(psensor) {}
-        
+
         virtual ProcessElement startElement(const std::string& name, const AttributesList& atts)
         {
             if( !!_pcurreader ) {
@@ -82,7 +83,7 @@ class BaseCameraSensor : public SensorBase
             }
             return false;
         }
-        
+
         virtual void characters(const std::string& ch)
         {
             if( !!_pcurreader )
@@ -103,7 +104,7 @@ class BaseCameraSensor : public SensorBase
     {
         return BaseXMLReaderPtr(new BaseCameraXMLReader(boost::dynamic_pointer_cast<BaseCameraSensor>(ptr)));
     }
-    
+
  BaseCameraSensor(EnvironmentBasePtr penv) : SensorBase(penv) {
         __description = ":Interface Author: Rosen Diankov\n\nProvides a simulated camera using the standard pinhole projection.";
         RegisterCommand("power",boost::bind(&BaseCameraSensor::_Power,this,_1,_2), "deprecated");
@@ -123,7 +124,7 @@ class BaseCameraSensor : public SensorBase
         _bRenderData = false;
         _Reset();
     }
-    
+
     virtual int Configure(ConfigureCommand command, bool blocking)
     {
         switch(command) {
@@ -141,7 +142,7 @@ class BaseCameraSensor : public SensorBase
             try {
                 if( !_bRenderData ) {
                     stringstream ss;
-                    ss << "qtcameraviewer " << GetName(); 
+                    ss << "qtcameraviewer " << GetName();
                     _dataviewer = RaveCreateViewer(GetEnv(),ss.str());
                     _bRenderData = !!_dataviewer;
                     if( _bRenderData ) {
@@ -187,7 +188,7 @@ class BaseCameraSensor : public SensorBase
         _graphgeometry.reset();
         _dataviewer.reset();
     }
-    
+
     virtual bool SimulationStep(dReal fTimeElapsed)
     {
         boost::shared_ptr<CameraSensorData> pdata = _pdata;

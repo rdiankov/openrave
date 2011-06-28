@@ -29,15 +29,15 @@ namespace OpenRAVE {
 class OPENRAVE_API TrajectoryBase : public InterfaceBase
 {
 public:
-    /// \brief trajectory interpolation and sampling methods 
+    /// \brief trajectory interpolation and sampling methods
     enum InterpEnum {
         NONE=0, ///< unspecified timing info
-        LINEAR=1, ///< linear interpolation 
+        LINEAR=1, ///< linear interpolation
         LINEAR_BLEND=2, ///< linear with quadratic blends
         CUBIC=3, ///< cubic spline interpolation
-        QUINTIC=4, ///< quintic min-jerk interpolation 
+        QUINTIC=4, ///< quintic min-jerk interpolation
         NUM_METHODS=5, ///< number of interpolation methods
-    };     
+    };
 
     /// \brief options for serializing trajectories
     enum TrajectoryOptions {
@@ -51,7 +51,7 @@ public:
         TO_IncludeTorques = 0x20, ///< include torques
         TO_InterpolationMask = 0x1c0, ///< bits to store the interpolation information
     };
-    
+
     /// Via point along the trajectory (joint configuration with a timestamp)
     class TPOINT
     {
@@ -68,7 +68,7 @@ public:
         friend std::ostream& operator<<(std::ostream& O, const TPOINT& tp);
         void Setq(std::vector<dReal>* values)
         {
-            assert(values->size() == q.size()); 
+            assert(values->size() == q.size());
             for(int i = 0; i < (int)values->size(); i++)
                 q[i] = values->at(i);
 	    // reset the blend_radius
@@ -82,7 +82,7 @@ public:
         std::vector<dReal> q;       ///< joint configuration
         std::vector<dReal> qdot;    ///< instantaneous joint velocities
         std::vector<dReal> qtorque; ///< feedforward torque [optional]
-        dReal  time;                ///< time stamp of trajectory point   
+        dReal  time;                ///< time stamp of trajectory point
         dReal  blend_radius;
     };
 
@@ -118,7 +118,7 @@ public:
 
     /// return the static interface type this class points to (used for safe casting)
     static inline InterfaceType GetInterfaceTypeStatic() { return PT_Trajectory; }
-    
+
     /// clears all points and resets the dof of the trajectory
     virtual void Reset(int nDOF);
 
@@ -135,7 +135,7 @@ public:
     virtual void AddPoint(const TrajectoryBase::TPOINT& p) { assert( _nDOF == (int)p.q.size()); _vecpoints.push_back(p); }
 
     /** \brief Preprocesses the trajectory for later sampling and set its interpolation method.
-        
+
         \param[in] robot [optional] robot to do the timing for
         \param[in] interpolationMethod method to use for interpolation
         \param bAutoCalcTiming If true, will retime the trajectory using maximum joint velocities and accelerations, otherwise it expects the time stamps of each point to be set.
@@ -160,7 +160,7 @@ public:
     /// \param sinput stream to read the data from
     /// \param options a combination of enums in TrajectoryOptions
     virtual bool Write(std::ostream& sinput, int options) const;
-        
+
     /// Reads the trajectory, expects the filename to have a header.
     /// \param sout stream to output the trajectory data
     /// \param robot The robot to attach the trajrectory to, if specified, will
@@ -201,21 +201,21 @@ private:
     virtual void _RecalculateViaPointDerivatives();
 
     /// computes minimum time interval for linear interpolation between
-    ///  path points that does not exceed the maximum joint velocities 
+    ///  path points that does not exceed the maximum joint velocities
     virtual dReal _MinimumTimeLinear(const TrajectoryBase::TPOINT& p0, const TrajectoryBase::TPOINT& p1, bool bActiveDOFs);
 
     /// computes minimum time interval for cubic interpolation between
-    ///  path points that does not exceed the maximum joint velocities 
+    ///  path points that does not exceed the maximum joint velocities
     ///  or accelerations
     virtual dReal _MinimumTimeCubic(const TrajectoryBase::TPOINT& p0, const TrajectoryBase::TPOINT& p1, bool bActiveDOFs);
 
     /// computes minimum time interval for cubic interpolation between
-    ///  path points that does not exceed the maximum joint velocities 
+    ///  path points that does not exceed the maximum joint velocities
     ///  or accelerations assuming zero velocities at endpoints
     virtual dReal _MinimumTimeCubicZero(const TrajectoryBase::TPOINT& p0, const TrajectoryBase::TPOINT& p1, bool bActiveDOFs);
 
     /// computes minimum time interval for quintic interpolation between
-    ///  path points that does not exceed the maximum joint velocities 
+    ///  path points that does not exceed the maximum joint velocities
     ///  or accelerations
     virtual dReal _MinimumTimeQuintic(const TrajectoryBase::TPOINT& p0, const TrajectoryBase::TPOINT& p1, bool bActiveDOFs);
     virtual dReal _MinimumTimeTransform(const Transform& t0, const Transform& t1);

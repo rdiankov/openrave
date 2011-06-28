@@ -39,7 +39,7 @@ class SimpleTextServer : public ModuleBase
     // socket just accepts connections
     class Socket
     {
-    public: 
+    public:
         struct PACKET
         {
             string cmd, arg;
@@ -57,10 +57,10 @@ class SimpleTextServer : public ModuleBase
         {
             if( bInit )
                 Close();
-    
+
             bool success = true;
 
-            //signal(SIGCHLD, SIG_IGN); 
+            //signal(SIGCHLD, SIG_IGN);
             //RAVELOG(L"server waiting for connection, %d\n", server_sockfd);
 
             //	char str[sizeof(server_address)+1];
@@ -105,14 +105,14 @@ class SimpleTextServer : public ModuleBase
 
             tv.tv_sec = 0;
             tv.tv_usec = 0;
-	
+
             FD_ZERO(&exfds);
             FD_ZERO(&writefds);
             FD_SET(client_sockfd, &exfds);
-    
+
             // don't care about writefds and exceptfds:
             int num = select(client_sockfd+1, NULL, NULL, &exfds, &tv);
-    
+
             if ( num > 0 && FD_ISSET(client_sockfd, &exfds) ) {
                 RAVELOG_ERROR("socket exception detected\n");
                 Close();
@@ -120,10 +120,10 @@ class SimpleTextServer : public ModuleBase
             }
 
             FD_SET(client_sockfd, &writefds);
-    
+
             // don't care about writefds and exceptfds:
             num = select(client_sockfd+1, NULL, &writefds, NULL, &tv);
-    
+
             if ( num == 0 || !FD_ISSET(client_sockfd, &writefds) ) {
                 RAVELOG_WARN("no writable socket\n");
                 return;
@@ -136,7 +136,7 @@ class SimpleTextServer : public ModuleBase
               return;
               }*/
 #endif
-        
+
             char* pbuf = (char*)pdata;
 
             if( (nBytesReceived = send(client_sockfd, (char*)&size_to_write, 4, 0)) != 4 ) {
@@ -169,13 +169,13 @@ class SimpleTextServer : public ModuleBase
             tv.tv_sec = 0;
             tv.tv_usec = 0;
 
-    	
+
             FD_ZERO(&exfds);
             FD_SET(client_sockfd, &exfds);
-    
+
             // don't care about writefds and exceptfds:
             int num = select(client_sockfd+1, NULL, NULL, &exfds, &tv);
-    
+
             if ( num > 0 && FD_ISSET(client_sockfd, &exfds) ) {
                 RAVELOG_ERROR("socket exception detected\n");
                 Close();
@@ -184,23 +184,24 @@ class SimpleTextServer : public ModuleBase
 
             FD_ZERO(&readfds);
             FD_SET(client_sockfd, &readfds);
-    
+
             // don't care about writefds and exceptfds:
             num = select(client_sockfd+1, &readfds, NULL, NULL, &tv);
-    
+
             if ( num == 0 || !FD_ISSET(client_sockfd, &readfds) ) {
                 return false;
             }
-	
+
             // protocol: size1 size2 "size1 bytes" "size2 bytes"
-            long nBytesReceived; 
+            long nBytesReceived;
             char c;
             int failed = 0;
 
             while(1) {
                 if( (nBytesReceived = recv(client_sockfd, &c, sizeof(char), 0)) > 0 ) {
-                    if( c == '\n' || c == '\r')
+                    if( c == '\n' || c == '\r') {
                         break;
+                    }
                     s.push_back(c);
                 }
                 else if( nBytesReceived == 0 ) {
@@ -209,7 +210,7 @@ class SimpleTextServer : public ModuleBase
                     return false;
                 }
                 else {
-                    if( failed < 10 ) {    
+                    if( failed < 10 ) {
                         failed++;
                         Sleep(1);
                         continue;
@@ -224,7 +225,7 @@ class SimpleTextServer : public ModuleBase
         }
 
     private:
-        int client_sockfd;	
+        int client_sockfd;
         int client_len;
 
         struct sockaddr_in client_address;
@@ -282,7 +283,7 @@ class SimpleTextServer : public ModuleBase
         mapNetworkFns["env_stepsimulation"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orEnvStepSimulation,this,_1,_2,_3), boost::bind(&SimpleTextServer::worEnvStepSimulation,this,_1,_2), false);
         mapNetworkFns["env_triangulate"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orEnvTriangulate,this,_1,_2,_3), OpenRaveWorkerFn(), true);
         mapNetworkFns["loadscene"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orEnvLoadScene,this,_1,_2,_3), OpenRaveWorkerFn(), true);
-        mapNetworkFns["plot"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orEnvPlot,this,_1,_2,_3), OpenRaveWorkerFn(), true); 
+        mapNetworkFns["plot"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orEnvPlot,this,_1,_2,_3), OpenRaveWorkerFn(), true);
         mapNetworkFns["problem_sendcmd"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orProblemSendCommand,this,_1,_2,_3), OpenRaveWorkerFn(), true);
         mapNetworkFns["robot_checkselfcollision"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orRobotCheckSelfCollision,this,_1,_2,_3), OpenRaveWorkerFn(), true);
         mapNetworkFns["robot_controllersend"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orRobotControllerSend,this,_1,_2,_3), OpenRaveWorkerFn(), true);
@@ -319,7 +320,7 @@ class SimpleTextServer : public ModuleBase
         ss >> _nPort;
 
         Destroy();
-  
+
 #ifdef _WIN32
         WORD      wVersionRequested;
         WSADATA   wsaData;
@@ -370,15 +371,18 @@ class SimpleTextServer : public ModuleBase
         // If they have O_NONBLOCK, use the Posix way to do it
 #if defined(O_NONBLOCK)
         // Fixme: O_NONBLOCK is defined but broken on SunOS 4.1.x and AIX 3.2.5.
-        if (-1 == (flags = fcntl(server_sockfd, F_GETFL, 0)))
+        if (-1 == (flags = fcntl(server_sockfd, F_GETFL, 0))) {
             flags = 0;
-        if( fcntl(server_sockfd, F_SETFL, flags | O_NONBLOCK) < 0 )
+        }
+        if( fcntl(server_sockfd, F_SETFL, flags | O_NONBLOCK) < 0 ) {
             return -1;
+        }
 #else
         // Otherwise, use the old way of doing it
         flags = 1;
-        if( ioctl(server_sockfd, FIOBIO, &flags) < 0 )
+        if( ioctl(server_sockfd, FIOBIO, &flags) < 0 ) {
             return -1;
+        }
 #endif
 #endif
 
@@ -395,8 +399,9 @@ class SimpleTextServer : public ModuleBase
 
         {
             boost::mutex::scoped_lock lock(_mutexWorker); // need lock to keep multiple threads out of Destroy
-            if( bDestroying )
+            if( bDestroying ) {
                 return;
+            }
             bDestroying = true;
             _mapFigureIds.clear();
             _mapProblems.clear();
@@ -405,8 +410,9 @@ class SimpleTextServer : public ModuleBase
         if( bInitThread ) {
             bCloseThread = true;
             _condWorker.notify_all();
-            if( !!_servthread )
+            if( !!_servthread ) {
                 _servthread->join();
+            }
             _servthread.reset();
 
             FOREACH(it, _listReadThreads) {
@@ -415,16 +421,17 @@ class SimpleTextServer : public ModuleBase
             }
             _listReadThreads.clear();
             _condHasWork.notify_all();
-            if( !!_workerthread )
+            if( !!_workerthread ) {
                 _workerthread->join();
+            }
             _workerthread.reset();
 
             bCloseThread = false;
             bInitThread = false;
-    
+
             CLOSESOCKET(server_sockfd); server_sockfd = 0;
         }
-    
+
         bDestroying = false;
     }
 
@@ -453,7 +460,7 @@ class SimpleTextServer : public ModuleBase
     inline boost::shared_ptr<SimpleTextServer> shared_server() { return boost::static_pointer_cast<SimpleTextServer>(shared_from_this()); }
     inline boost::shared_ptr<SimpleTextServer const> shared_server_const() const { return boost::static_pointer_cast<SimpleTextServer const>(shared_from_this()); }
 
-    // called from threads other than the main worker to wait until 
+    // called from threads other than the main worker to wait until
     void SyncWithWorkerThread()
     {
         boost::mutex::scoped_lock lock(_mutexWorker);
@@ -477,19 +484,19 @@ class SimpleTextServer : public ModuleBase
             {
                 boost::mutex::scoped_lock lock(_mutexWorker);
                 _condHasWork.wait(lock);
-                if( bCloseThread )
+                if( bCloseThread ) {
                     break;
-
+                }
                 if( listWorkers.size() == 0 ) {
                     _condWorker.notify_all();
                     continue;
                 }
-            
+
                 *(volatile bool*)&_bWorking = true;
                 listlocalworkers.swap(listWorkers);
             }
 
-            // transfer the current workers to a temporary list so 
+            // transfer the current workers to a temporary list so
             FOREACH(it, listlocalworkers) {
                 try {
                     (*it)();
@@ -505,7 +512,7 @@ class SimpleTextServer : public ModuleBase
                 }
             }
             listlocalworkers.clear();
-    
+
             *(volatile bool*)&_bWorking = false;
             _condWorker.notify_all();
         }
@@ -539,7 +546,7 @@ class SimpleTextServer : public ModuleBase
         while(!bCloseThread) {
             //Sleep(100);
             if( psocket->ReadLine(line) && line.length() ) {
-            
+
                 if( !!flog && GetEnv()->GetDebugLevel()>0) {
                     static int index=0;
                     flog << index++ << ": " << line << endl;
@@ -578,27 +585,30 @@ class SimpleTextServer : public ModuleBase
                         }
 
                         if( bSuccess ) {
-                            if( itfn->second.bReturnResult )
+                            if( itfn->second.bReturnResult ) {
                                 psocket->SendData(sout.str().c_str(), sout.str().size());
-                
-                            if( !itfn->second.fnWorker )
+                            }
+                            if( !itfn->second.fnWorker ) {
                                 bCallWorker = false;
+                            }
                         }
                         else {
                             bCallWorker = false;
                             if( !!flog  ) {
                                 flog << " error" << endl;
                             }
-                            if( itfn->second.bReturnResult )
+                            if( itfn->second.bReturnResult ) {
                                 psocket->SendData("error\n", 6);
+                            }
                         }
                     }
                     else {
-                        if( itfn->second.bReturnResult )
+                        if( itfn->second.bReturnResult ) {
                             psocket->SendData(sout.str().c_str(), sout.str().size()); // return dummy
+                        }
                         bCallWorker = !!itfn->second.fnWorker;
                     }
-                
+
                     if( bCallWorker ) {
                         BOOST_ASSERT(!!itfn->second.fnWorker);
                         is->clear();
@@ -611,9 +621,9 @@ class SimpleTextServer : public ModuleBase
                     psocket->SendData("error\n",1);
                 }
             }
-            else if( !psocket->IsInit() )
+            else if( !psocket->IsInit() ) {
                 break;
-
+            }
             Sleep(1);
         }
 
@@ -654,8 +664,9 @@ protected:
     {
         int index=0;
         is >> index;
-        if( !is )
+        if( !is ) {
             return KinBodyPtr();
+        }
         return GetEnv()->GetBodyFromEnvironmentId(index);
     }
 
@@ -663,12 +674,13 @@ protected:
     {
         int index=0;
         is >> index;
-        if( !is )
+        if( !is ) {
             return RobotBasePtr();
-
+        }
         KinBodyPtr pbody = GetEnv()->GetBodyFromEnvironmentId(index);
-        if( !pbody || !pbody->IsRobot() )
+        if( !pbody || !pbody->IsRobot() ) {
             return RobotBasePtr();
+        }
         return boost::static_pointer_cast<RobotBase>(pbody);
     }
 
@@ -678,8 +690,9 @@ protected:
         string cmd;
         while(1) {
             *is >> cmd;
-            if( !*is )
+            if( !*is ) {
                 break;
+            }
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
 
             if( cmd == "start" ) {
@@ -692,8 +705,9 @@ protected:
                 RAVELOG_WARN("unknown render command: %s\n", cmd.c_str());
             }
 
-            if( is->fail() || !*is )
+            if( is->fail() || !*is ) {
                 break;
+            }
         }
 
         return true;
@@ -705,7 +719,7 @@ protected:
         string cmd;
         is >> cmd;
         std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
-        
+
         if( cmd == "quit" ) {
             GetEnv()->Reset();
             // call exit in a different thread
@@ -719,8 +733,9 @@ protected:
         string cmd;
         while(1) {
             *is >> cmd;
-            if( !*is )
+            if( !*is ) {
                 break;
+            }
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
 
             if( cmd == "physics" ) {
@@ -732,7 +747,7 @@ protected:
                 }
                 else {
                     PhysicsEngineBasePtr pnewengine = RaveCreatePhysicsEngine(GetEnv(),name);
-                    
+
                     if( !!pnewengine ) {
                         RAVELOG_DEBUG("setting physics engine to %s\n",name.c_str());
                         GetEnv()->SetPhysicsEngine(pnewengine);
@@ -748,7 +763,7 @@ protected:
                 }
                 else {
                     CollisionCheckerBasePtr p = RaveCreateCollisionChecker(GetEnv(),name);
-                    
+
                     if( !!p ) {
                         RAVELOG_DEBUG("setting collision checker to %s\n",name.c_str());
                         GetEnv()->SetCollisionChecker(p);
@@ -762,7 +777,7 @@ protected:
 
                 if( simcmd == "start" || simcmd == "on" ) {
                     dReal fdeltatime = 0.01f;
-                    *is >> fdeltatime;                    
+                    *is >> fdeltatime;
                     RAVELOG_DEBUG("starting simulation loop, timestep=%f\n", (float)fdeltatime);
                     GetEnv()->StartSimulation(fdeltatime);
                 }
@@ -803,8 +818,9 @@ protected:
                 }
             }
 
-            if( is->eof() || !*is )
+            if( is->eof() || !*is ) {
                 break;
+            }
         }
 
         return true;
@@ -842,15 +858,15 @@ protected:
     {
         string robotname, xmlfile, robottype;
         is >> robotname >> xmlfile >> robottype;
-        if( !is )
+        if( !is ) {
             return false;
-
+        }
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         RobotBasePtr robot = RaveCreateRobot(GetEnv(),robottype);
         if( !robot ) {
             return false;
         }
-        robot = GetEnv()->ReadRobotXMLFile(robot,xmlfile,AttributesList());
+        robot = GetEnv()->ReadRobotURI(robot,xmlfile,AttributesList());
         if( !robot ) {
             return false;
         }
@@ -865,32 +881,33 @@ protected:
         string problemname;
         bool bDestroyDuplicates = true;
         is >> bDestroyDuplicates >> problemname;
-        if( !is )
+        if( !is ) {
             return false;
-        
+        }
         std::string strargs((std::istreambuf_iterator<char>(is)), std::istreambuf_iterator<char>());
         SyncWithWorkerThread();
-    
+
         if( bDestroyDuplicates ) {
             // if there's a duplicate problem instance, delete it
             map<int, ModuleBasePtr >::iterator itprob = _mapProblems.begin();
             while(itprob != _mapProblems.end()) {
                 if( itprob->second->GetXMLId() == problemname ) {
                     RAVELOG_DEBUG("deleting duplicate problem %s\n", problemname.c_str());
-                    if( !GetEnv()->Remove(itprob->second) )
+                    if( !GetEnv()->Remove(itprob->second) ) {
                         RAVELOG_WARN("environment failed to remove duplicate problem %s\n", problemname.c_str());
+                    }
                     _mapProblems.erase(itprob++);
                 }
                 else ++itprob;
             }
         }
-    
+
         ModuleBasePtr prob = RaveCreateProblem(GetEnv(),problemname);
         if( !prob ) {
             RAVELOG_ERROR("Cannot find module: %s\n", problemname.c_str());
             return false;
         }
-    
+
         pdata.reset(new pair<ModuleBasePtr,string>(prob,strargs));
         _mapProblems[_nIdIndex] = prob;
         os << _nIdIndex++;
@@ -910,17 +927,19 @@ protected:
     {
         int index = 0;
         *is >> index;
-        if( !*is )
+        if( !*is ) {
             return false;
+        }
         map<int, ModuleBasePtr >::iterator it = _mapProblems.find(index);
         if( it != _mapProblems.end() ) {
-            if( !GetEnv()->Remove(it->second) )
+            if( !GetEnv()->Remove(it->second) ) {
                 RAVELOG_WARN("orEnvDestroyProblem: failed to remove problem from environment\n");
+            }
             _mapProblems.erase(it);
         }
-        else
+        else {
             RAVELOG_WARN("orEnvDestroyProblem: cannot find problem with id %d\n", index);
-
+        }
         return true;
     }
 
@@ -935,7 +954,7 @@ protected:
 
         SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
-        KinBodyPtr body = GetEnv()->ReadKinBodyXMLFile(KinBodyPtr(),xmlfile,list<pair<string,string> >());
+        KinBodyPtr body = GetEnv()->ReadKinBodyURI(KinBodyPtr(),xmlfile,list<pair<string,string> >());
 
         if( !body ) {
             return false;
@@ -953,17 +972,19 @@ protected:
     {
         string bodyname;
         is >> bodyname;
-        if( !is )
+        if( !is ) {
             return false;
-
+        }
         SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
 
         KinBodyPtr pbody = GetEnv()->GetKinBody(bodyname);
-        if( !pbody )
+        if( !pbody ) {
             os << "0";
-        else
+        }
+        else {
             os << pbody->GetEnvironmentId();
+        }
         return true;
     }
 
@@ -976,9 +997,9 @@ protected:
         GetEnv()->GetRobots(vrobots);
 
         os << vrobots.size() << " ";
-        FOREACHC(it, vrobots)
-            os << (*it)->GetEnvironmentId() << " " << (*it)->GetName() << " " << (*it)->GetXMLId() << " " << (*it)->GetXMLFilename() << "\n ";
-
+        FOREACHC(it, vrobots) {
+            os << (*it)->GetEnvironmentId() << " " << (*it)->GetName() << " " << (*it)->GetXMLId() << " " << (*it)->GetURI() << "\n ";
+        }
         return true;
     }
 
@@ -991,7 +1012,7 @@ protected:
         GetEnv()->GetBodies(vbodies);
         os << vbodies.size() << " ";
         FOREACHC(it, vbodies) {
-            os << (*it)->GetEnvironmentId() << " " << (*it)->GetName() << " " << (*it)->GetXMLId() << " " << (*it)->GetXMLFilename() << "\n ";
+            os << (*it)->GetEnvironmentId() << " " << (*it)->GetName() << " " << (*it)->GetXMLId() << " " << (*it)->GetURI() << "\n ";
         }
 
         return true;
@@ -1039,7 +1060,7 @@ protected:
         t.rot.normalize4();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         pbody->SetTransform(t);
-        
+
         if( pbody->IsRobot() ) {
             RobotBasePtr probot = boost::static_pointer_cast<RobotBase>(pbody);
             ControllerBasePtr pcontroller = probot->GetController();
@@ -1056,8 +1077,9 @@ protected:
     {
         SyncWithWorkerThread();
         KinBodyPtr pbody = orMacroGetBody(is);
-        if( !pbody )
+        if( !pbody ) {
             return false;
+        }
         return GetEnv()->Remove(pbody);
     }
 
@@ -1065,14 +1087,14 @@ protected:
     {
         SyncWithWorkerThread();
         KinBodyPtr pbody = orMacroGetBody(is);
-        if( !pbody )
+        if( !pbody ) {
             return false;
-
+        }
         bool bEnable = true;
         is >> bEnable;
-        if( !is )
+        if( !is ) {
             return false;
-
+        }
         pbody->Enable(bEnable);
         return true;
     }
@@ -1083,13 +1105,14 @@ protected:
         SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         KinBodyPtr body = orMacroGetBody(is);
-        if( !body )
+        if( !body ) {
             return false;
-
+        }
         vector<Transform> trans;
         body->GetLinkTransformations(trans);
-        FOREACHC(it, trans)
+        FOREACHC(it, trans) {
             os << TransformMatrix(*it) << " ";
+        }
         return true;
     }
 
@@ -1098,12 +1121,13 @@ protected:
         SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         RobotBasePtr probot = orMacroGetRobot(is);
-        if( !probot || !probot->GetController() )
+        if( !probot || !probot->GetController() ) {
             return false;
-
+        }
         // the next word should be the command
-        if( probot->GetController()->SendCommand(os,is) )
+        if( probot->GetController()->SendCommand(os,is) ) {
             return true;
+        }
         return false;
     }
 
@@ -1112,16 +1136,17 @@ protected:
         SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         RobotBasePtr probot = orMacroGetRobot(is);
-        if( !probot )
+        if( !probot ) {
             return false;
-
+        }
         int sensorindex = 0;
         is >> sensorindex;
-        if( !is )
+        if( !is ) {
             return false;
-        
-        if( sensorindex < 0 || sensorindex >= (int)probot->GetAttachedSensors().size() )
+        }
+        if( sensorindex < 0 || sensorindex >= (int)probot->GetAttachedSensors().size() ) {
             return false;
+        }
         return probot->GetAttachedSensors().at(sensorindex)->GetSensor()->SendCommand(os,is);
     };
 
@@ -1130,16 +1155,17 @@ protected:
         SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         RobotBasePtr probot = orMacroGetRobot(is);
-        if( !probot )
+        if( !probot ) {
             return false;
-
+        }
         int sensorindex = 0, options = 0;
         is >> sensorindex >> options;
-        if( !is )
+        if( !is ) {
             return false;
-        if( sensorindex < 0 || sensorindex >= (int)probot->GetAttachedSensors().size() )
+        }
+        if( sensorindex < 0 || sensorindex >= (int)probot->GetAttachedSensors().size() ) {
             return false;
-
+        }
         SensorBasePtr psensor = probot->GetAttachedSensors().at(sensorindex)->GetSensor();
         boost::shared_ptr<SensorBase::SensorData> psensordata = psensor->CreateSensorData();
 
@@ -1166,7 +1192,7 @@ protected:
             else {
                 os << plaserdata->positions.size() << " ";
             }
-        
+
             if( options & 1 ) {
                 os << plaserdata->intensity.size() << " ";
             }
@@ -1185,7 +1211,7 @@ protected:
                     os << " 0 0 0 ";
                 }
             }
-        
+
             if( options & 1 ) {
                 FOREACH(it, plaserdata->intensity)
                     os << *it << " ";
@@ -1226,11 +1252,13 @@ protected:
             values.push_back(curvalue);
 
             os << values.size() << " ";
-            FOREACH(it, values)
+            FOREACH(it, values) {
                 os << *it << " ";
+            }
             os << difs.size() << " ";
-            FOREACH(it, difs)
+            FOREACH(it, difs) {
                 os << *it << " ";
+            }
             break;
         }
         case SensorBase::ST_JointEncoder:
@@ -1239,7 +1267,7 @@ protected:
             RAVELOG_WARN("sensor type %d not supported\n", psensordata->GetType());
             break;
         }
-    
+
         return true;
     }
 
@@ -1275,8 +1303,9 @@ protected:
             _mapFigureIds.clear();
         }
         else {
-            FOREACH(itid,ids)
+            FOREACH(itid,ids) {
                 _mapFigureIds.erase(*itid);
+            }
         }
         return true;
     }
@@ -1305,9 +1334,9 @@ protected:
         is >> numcolors;
         vcolors.resize(3*numcolors);
 
-        for(int i = 0; i < numcolors*3; ++i)
+        for(int i = 0; i < numcolors*3; ++i) {
             is >> vcolors[i];
-    
+        }
         if( vcolors.size() == 0 ) {
             vcolors.push_back(1);
             vcolors.push_back(0.5f);
@@ -1330,46 +1359,48 @@ protected:
         GraphHandlePtr figure;
         switch(drawstyle) {
         case 0: // regular points
-            if( numcolors != numpoints ) 
+            if( numcolors != numpoints )
                 figure = GetEnv()->plot3(&vpoints[0].x,vpoints.size(),sizeof(vpoints[0]),fsize,
                                          RaveVector<float>(vcolors[0], vcolors[1], vcolors[2], falpha),0);
             else
                 figure = GetEnv()->plot3(&vpoints[0].x,vpoints.size(),sizeof(vpoints[0]),fsize,&vcolors[0],0);
             break;
         case 1: // line strip
-            if( numcolors != numpoints ) 
+            if( numcolors != numpoints )
                 figure = GetEnv()->drawlinestrip(&vpoints[0].x,vpoints.size(),sizeof(vpoints[0]),fsize,
                                                  RaveVector<float>(vcolors[0], vcolors[1], vcolors[2], falpha));
             else
                 figure = GetEnv()->drawlinestrip(&vpoints[0].x,vpoints.size(),sizeof(vpoints[0]),fsize,&vcolors[0]);
             break;
         case 2: // list lists
-            if( numcolors != numpoints ) 
+            if( numcolors != numpoints )
                 figure = GetEnv()->drawlinelist(&vpoints[0].x,vpoints.size(),sizeof(vpoints[0]),fsize,
                                                 RaveVector<float>(vcolors[0], vcolors[1], vcolors[2], falpha));
             else
                 figure = GetEnv()->drawlinelist(&vpoints[0].x,vpoints.size(),sizeof(vpoints[0]),fsize,&vcolors[0]);
             break;
         case 3: // spheres
-            if( numcolors != numpoints ) 
+            if( numcolors != numpoints )
                 figure = GetEnv()->plot3(&vpoints[0].x,vpoints.size(),sizeof(vpoints[0]),fsize,
                                          RaveVector<float>(vcolors[0], vcolors[1], vcolors[2], falpha),1);
             else
                 figure = GetEnv()->plot3(&vpoints[0].x,vpoints.size(),sizeof(vpoints[0]),fsize,&vcolors[0],1);
             break;
         case 4: // triangle list
-            //if( numcolors != numpoints ) 
+            //if( numcolors != numpoints )
             figure = GetEnv()->drawtrimesh(&vpoints[0].x,sizeof(vpoints[0]),NULL, vpoints.size()/3,
                                            RaveVector<float>(vcolors[0], vcolors[1], vcolors[2], falpha));
             //else
             //figure = GetEnv()->drawtrimesh(&vpoints[0].x,sizeof(vpoints[0]),vpoints.size(),&vcolors[0]);
-            break;  
+            break;
         }
 
-        if( !!figure )
+        if( !!figure ) {
             _mapFigureIds[id] = figure;
-        else
+        }
+        else {
             id = 0;
+        }
         os << id;
         return true;
     }
@@ -1385,14 +1416,16 @@ protected:
 
         int numindices=0;
         is >> numindices;
-        if( numindices < 0 )
+        if( numindices < 0 ) {
             return false;
+        }
         vector<int> vindices; vindices.reserve(numindices);
         for(int i = 0; i < numindices; ++i) {
             int tempindex=-1;
             is >> tempindex;
-            if( !is )
+            if( !is ) {
                 return false;
+            }
             if( tempindex < 0 || tempindex >= probot->GetDOF() ) {
                 RAVELOG_WARN("bad degree of freedom\n");
                 return false;
@@ -1402,14 +1435,15 @@ protected:
 
         int affinedofs=0;
         is >> affinedofs;
-        if( !is )
+        if( !is ) {
             return false;
-
+        }
         Vector axis;
         if( affinedofs & RobotBase::DOF_RotationAxis ) {
             is >> axis.x >> axis.y >> axis.z;
-            if( !is )
+            if( !is ) {
                 return false;
+            }
         }
 
         probot->SetActiveDOFs(vindices, affinedofs, axis);
@@ -1421,9 +1455,9 @@ protected:
         SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         KinBodyPtr probot = orMacroGetBody(is);
-        if( !probot )
+        if( !probot ) {
             return false;
-
+        }
         CollisionReportPtr preport(new CollisionReport());
         os << probot->CheckSelfCollision(preport);
         return true;
@@ -1435,22 +1469,22 @@ protected:
         SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         RobotBasePtr probot = orMacroGetRobot(is);
-        if( !probot )
+        if( !probot ) {
             return false;
-
+        }
         os << probot->GetActiveDOF();
         return true;
     }
 
-    /// dofs = orBodyGetAABB(body) - returns the number of active joints of the body 
+    /// dofs = orBodyGetAABB(body) - returns the number of active joints of the body
     bool orBodyGetAABB(istream& is, ostream& os, boost::shared_ptr<void>& pdata)
     {
         SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         KinBodyPtr pbody = orMacroGetBody(is);
-        if( !pbody )
+        if( !pbody ) {
             return false;
-
+        }
         AABB ab = pbody->ComputeAABB();
         os << ab.pos.x << " " << ab.pos.y << " " << ab.pos.z << " " << ab.extents.x << " " << ab.extents.y << " " << ab.extents.z;
         return true;
@@ -1462,9 +1496,9 @@ protected:
         SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         KinBodyPtr pbody = orMacroGetBody(is);
-        if( !pbody )
+        if( !pbody ) {
             return false;
-
+        }
         FOREACHC(itlink, pbody->GetLinks()) {
             AABB ab = (*itlink)->ComputeAABB();
             os << ab.pos.x << " " << ab.pos.y << " " << ab.pos.z << " " << ab.extents.x << " " << ab.extents.y << " " << ab.extents.z << " ";
@@ -1473,15 +1507,15 @@ protected:
         return true;
     }
 
-    /// dofs = orBodyGetDOF(body) - returns the number of active joints of the body 
+    /// dofs = orBodyGetDOF(body) - returns the number of active joints of the body
     bool orBodyGetDOF(istream& is, ostream& os, boost::shared_ptr<void>& pdata)
     {
         SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         KinBodyPtr pbody = orMacroGetBody(is);
-        if( !pbody )
+        if( !pbody ) {
             return false;
-
+        }
         os << pbody->GetDOF();
         return true;
     }
@@ -1492,16 +1526,17 @@ protected:
         SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         KinBodyPtr pbody = orMacroGetBody(is);
-        if( !pbody )
+        if( !pbody ) {
             return false;
-
+        }
         vector<dReal> values;
         vector<int> ids = vector<int>((istream_iterator<int>(is)), istream_iterator<int>());
 
         if( ids.size() == 0 ) {
             pbody->GetDOFValues(values);
-            FOREACH(it,values)
+            FOREACH(it,values) {
                 os << *it << " ";
+            }
         }
         else {
             pbody->GetDOFValues(values);
@@ -1524,9 +1559,9 @@ protected:
         SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         RobotBasePtr probot = orMacroGetRobot(is);
-        if( !probot )
+        if( !probot ) {
             return false;
-
+        }
         vector<dReal> values;
         vector<int> ids = vector<int>((istream_iterator<int>(is)), istream_iterator<int>());
 
@@ -1556,18 +1591,19 @@ protected:
         SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         RobotBasePtr probot = orMacroGetRobot(is);
-        if( !probot )
+        if( !probot ) {
             return false;
-
+        }
         vector<dReal> lower,upper;
         probot->GetActiveDOFLimits(lower,upper);
 
         os << lower.size() << " ";
-        FOREACH(it, lower)
+        FOREACH(it, lower) {
             os << *it << " ";
-        FOREACH(it, upper)
+        }
+        FOREACH(it, upper) {
             os << *it << " ";
-
+        }
         return true;
     }
 
@@ -1576,29 +1612,36 @@ protected:
         SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         RobotBasePtr probot = orMacroGetRobot(is);
-        if( !probot )
+        if( !probot ) {
             return false;
-    
+        }
         os << probot->GetManipulators().size() << " ";
         FOREACHC(itmanip, probot->GetManipulators()) {
-            if( !(*itmanip)->GetBase() )
+            if( !(*itmanip)->GetBase() ) {
                 os << "-1 ";
-            else
+            }
+            else {
                 os << (*itmanip)->GetBase()->GetIndex() << " ";
-            if( !(*itmanip)->GetEndEffector() )
+            }
+            if( !(*itmanip)->GetEndEffector() ) {
                 os << "-1 ";
-            else
+            }
+            else {
                 os << (*itmanip)->GetEndEffector()->GetIndex() << " ";
+            }
             os << TransformMatrix((*itmanip)->GetGraspTransform()) << " ";
             os << (*itmanip)->GetGripperIndices().size() << " ";
-            FOREACHC(it, (*itmanip)->GetGripperIndices())
+            FOREACHC(it, (*itmanip)->GetGripperIndices()) {
                 os << *it << " ";
+            }
             os << (*itmanip)->GetArmIndices().size() << " ";
-            FOREACHC(it, (*itmanip)->GetArmIndices())
+            FOREACHC(it, (*itmanip)->GetArmIndices()) {
                 os << *it << " ";
+            }
             os << (*itmanip)->GetClosingDirection().size() << " ";
-            FOREACHC(it, (*itmanip)->GetClosingDirection())
+            FOREACHC(it, (*itmanip)->GetClosingDirection()) {
                 os << *it << " ";
+            }
             os << (*itmanip)->GetDirection().x << " " << (*itmanip)->GetDirection().y << " " << (*itmanip)->GetDirection().z << " ";
             os << (*itmanip)->GetName().size() << " " << (*itmanip)->GetName() << " ";
             if( !!(*itmanip)->GetIkSolver() ) {
@@ -1618,26 +1661,27 @@ protected:
         SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         RobotBasePtr probot = orMacroGetRobot(is);
-        if( !probot )
+        if( !probot ) {
             return false;
-
+        }
         os << probot->GetAttachedSensors().size() << " ";
         FOREACHC(itsensor, probot->GetAttachedSensors()) {
             os << (*itsensor)->GetName().size() << " " << (*itsensor)->GetName() << " ";
-        
-            if( !(*itsensor)->GetAttachingLink() )
-                os << "-1 ";
-            else
-                os << (*itsensor)->GetAttachingLink()->GetIndex() << " ";
 
+            if( !(*itsensor)->GetAttachingLink() ) {
+                os << "-1 ";
+            }
+            else {
+                os << (*itsensor)->GetAttachingLink()->GetIndex() << " ";
+            }
             os << TransformMatrix((*itsensor)->GetRelativeTransform()) << " ";
 
-            if( !(*itsensor)->GetSensor() )
+            if( !(*itsensor)->GetSensor() ) {
                 os << "0 " << TransformMatrix() << " ";
-            else
-                os << (*itsensor)->GetSensor()->GetXMLId().size() << " "
-                   << (*itsensor)->GetSensor()->GetXMLId() << " " 
-                   << TransformMatrix((*itsensor)->GetSensor()->GetTransform()) << " ";
+            }
+            else {
+                os << (*itsensor)->GetSensor()->GetXMLId().size() << " " << (*itsensor)->GetSensor()->GetXMLId() << " " << TransformMatrix((*itsensor)->GetSensor()->GetTransform()) << " ";
+            }
         }
 
         return true;
@@ -1649,28 +1693,30 @@ protected:
         SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         KinBodyPtr pbody = orMacroGetBody(is);
-        if( !pbody )
+        if( !pbody ) {
             return false;
-
+        }
         int dof = 0;
         is >> dof;
-        if( !is || dof <= 0 )
+        if( !is || dof <= 0 ) {
             return false;
-
+        }
         vector<dReal> vvalues(dof);
         vector<int> vindices(dof);
 
-        for(int i = 0; i < dof; ++i)
+        for(int i = 0; i < dof; ++i) {
             is >> vvalues[i];
-        if( !is )
+        }
+        if( !is ) {
             return false;
-
+        }
         bool bUseIndices = false;
         for(int i = 0; i < dof; ++i) {
             is >> vindices[i];
             if( !is ) {
-                if( i == 0 )
+                if( i == 0 ) {
                     break;
+                }
                 else {
                     RAVELOG_WARN("incorrect number of indices, ignoring\n");
                     return false;
@@ -1695,8 +1741,9 @@ protected:
         }
         else {
             // do not use indices
-            if( (int)vvalues.size() != pbody->GetDOF() )
+            if( (int)vvalues.size() != pbody->GetDOF() ) {
                 return false;
+            }
             pbody->SetDOFValues(vvalues, true);
         }
 
@@ -1719,23 +1766,26 @@ protected:
         SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         KinBodyPtr pbody = orMacroGetBody(is);
-        if( !pbody )
+        if( !pbody ) {
             return false;
-
+        }
         int dof = 0;
         bool bAdd=false;
         is >> bAdd >> dof;
-        if( !is || dof <= 0 )
+        if( !is || dof <= 0 ) {
             return false;
-        if( dof != pbody->GetDOF() )
+        }
+        if( dof != pbody->GetDOF() ) {
             return false;
+        }
 
         vector<dReal> vvalues(dof);
-        for(int i = 0; i < dof; ++i)
+        for(int i = 0; i < dof; ++i) {
             is >> vvalues[i];
-        if( !is )
+        }
+        if( !is ) {
             return false;
-
+        }
         pbody->SetDOFTorques(vvalues, bAdd);
         return true;
     }
@@ -1746,28 +1796,30 @@ protected:
         SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         RobotBasePtr probot = orMacroGetRobot(is);
-        if( !probot )
+        if( !probot ) {
             return false;
-
+        }
         int dof = 0;
         is >> dof;
-        if( !is || dof <= 0 )
+        if( !is || dof <= 0 ) {
             return false;
-
+        }
         vector<dReal> vvalues(dof);
         vector<int> vindices(dof);
 
-        for(int i = 0; i < dof; ++i)
+        for(int i = 0; i < dof; ++i) {
             is >> vvalues[i];
-        if( !is )
+        }
+        if( !is ) {
             return false;
-
+        }
         bool bUseIndices = false;
         for(int i = 0; i < dof; ++i) {
             is >> vindices[i];
             if( !is ) {
-                if( i == 0 )
+                if( i == 0 ) {
                     break;
+                }
                 else {
                     RAVELOG_WARN("incorrect number of indices, ignoring\n");
                     return false;
@@ -1802,7 +1854,7 @@ protected:
             probot->GetDOFValues(vvalues);
             probot->GetController()->SetDesired(vvalues);
         }
-    
+
         return true;
     }
 
@@ -1812,27 +1864,30 @@ protected:
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         RobotBasePtr probot = orMacroGetRobot(*is);
-        if( !probot )
+        if( !probot ) {
             return false;
-
+        }
         int numpoints, havetime, havetrans;
         *is >> numpoints >> havetime >> havetrans;
-        if( !*is )
+        if( !*is ) {
             return false;
-    
+        }
         Transform trans = probot->GetTransform();
         vector<Trajectory::TPOINT> vpoints(numpoints);
         FOREACH(it, vpoints) {
             it->q.resize(probot->GetActiveDOF());
             it->trans = trans;
-            FOREACH(itval, it->q)
+            FOREACH(itval, it->q) {
                 *is >> *itval;
-            if( !*is )
+            }
+            if( !*is ) {
                 return false;
+            }
         }
         if( havetime ) {
-            FOREACH(it, vpoints)
+            FOREACH(it, vpoints) {
                 *is >> it->time;
+            }
         }
 
         if( havetrans ) {
@@ -1844,8 +1899,9 @@ protected:
                 }
             }
             else { // quaternion and translation
-                FOREACH(it, vpoints)
+                FOREACH(it, vpoints) {
                     *is >> it->trans;
+                }
             }
         }
 
@@ -1854,8 +1910,9 @@ protected:
 
         if( probot->GetActiveDOF() > 0 ) {
             TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),probot->GetActiveDOF());
-            FOREACH(it, vpoints)
+            FOREACH(it, vpoints) {
                 ptraj->AddPoint(*it);
+            }
             probot->GetFullTrajectoryFromActive(pfulltraj, ptraj, false);
         }
         else {
@@ -1868,9 +1925,9 @@ protected:
             }
         }
 
-        if( !*is )
+        if( !*is ) {
             return false;
-
+        }
         pfulltraj->CalcTrajTiming(probot, pfulltraj->GetInterpMethod(), !havetime, false);
         probot->SetMotion(pfulltraj);
         return true;
@@ -1962,17 +2019,18 @@ protected:
         RAY r;
         bool bcollision;
         vector<float> info;
-        
+
         while(!is.eof()) {
             is >> r.pos.x >> r.pos.y >> r.pos.z >> r.dir.x >> r.dir.y >> r.dir.z;
-            if( !is || is.fail() )
+            if( !is || is.fail() ) {
                 break;
-
-            if(!pbody)
+            }
+            if(!pbody) {
                 bcollision = GetEnv()->CheckCollision(r, preport);
-            else
+            }
+            else {
                 bcollision = GetEnv()->CheckCollision(r, KinBodyConstPtr(pbody), preport);
-
+            }
             if(bcollision) {
                 BOOST_ASSERT(preport->contacts.size()>0);
                 CollisionReport::CONTACT& c = preport->contacts.front();
@@ -1982,14 +2040,16 @@ protected:
             }
             else {
                 os << "0 ";
-                for(int i = 0; i < 6; ++i)
+                for(int i = 0; i < 6; ++i) {
                     info.push_back(0);
+                }
             }
         }
 
         GetEnv()->GetCollisionChecker()->SetCollisionOptions(oldoptions);
-        FOREACH(it, info)
+        FOREACH(it, info) {
             os << *it << " ";
+        }
         return true;
     }
 

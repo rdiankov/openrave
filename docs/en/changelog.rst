@@ -41,6 +41,8 @@ Core
 
  * renamed EnvironmentBase::TriangulateOptions to EnvironmentBase::SelectionOptions
 
+* renamed EnvironmentBase *XMLFile and *XMLData methods to *URI and *Data.
+
 Planning
 --------
 
@@ -121,6 +123,8 @@ Misc
 * added simplemanipulation python example (thanks to Alan Tan), added simplegrasping example
 
 * added GraspThreaded command to grasper plugin to allow for multithreaded computation of grasps. Added the corresponding bindings to the openravepy grasping module.
+
+* fixed assert in ODE when collision checking with contact points.
 
 Version 0.3.2
 =============

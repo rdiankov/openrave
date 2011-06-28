@@ -174,7 +174,6 @@ protected:
                         return false;
                     }
                     boost::trim(_filename);
-                    break;
                 }
                 else if( cmd == "timing" ) {
                     string type;
