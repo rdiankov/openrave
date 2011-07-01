@@ -392,6 +392,7 @@ class Environment : public EnvironmentBase
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         bool bSuccess = false;
+        OpenRAVEXMLParser::GetXMLErrorCount() = 0;
         if( _IsColladaFile(filename) ) {
             OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
             bSuccess = RaveParseColladaFile(shared_from_this(), filename, atts);
@@ -411,7 +412,7 @@ class Environment : public EnvironmentBase
             RAVELOG_WARN("load failed on file %s\n", filename.c_str());
         }
 
-        return bSuccess;
+        return bSuccess && OpenRAVEXMLParser::GetXMLErrorCount() == 0;
     }
 
     virtual bool LoadData(const std::string& data, const AttributesList& atts)
@@ -921,7 +922,7 @@ class Environment : public EnvironmentBase
         }
     }
 
-    virtual bool TriangulateScene(KinBody::Link::TRIMESH& trimesh, SelectionOptions options,const std::string& selectname)
+    virtual void TriangulateScene(KinBody::Link::TRIMESH& trimesh, SelectionOptions options,const std::string& selectname)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         std::list<string> listnames;
@@ -972,12 +973,11 @@ class Environment : public EnvironmentBase
                 }
             }
         }
-        return true;
     }
 
-    virtual bool TriangulateScene(KinBody::Link::TRIMESH& trimesh, TriangulateOptions options)
+    virtual void TriangulateScene(KinBody::Link::TRIMESH& trimesh, TriangulateOptions options)
     {
-        return TriangulateScene(trimesh,options,"");
+        TriangulateScene(trimesh,options,"");
     }
 
     virtual const std::string& GetHomeDirectory() const { return _homedirectory; }

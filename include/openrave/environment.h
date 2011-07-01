@@ -230,6 +230,7 @@ public:
     /// \param filename the filename to save the results at
     /// \param options controls what to save
     /// \param selectname
+    /// \throw openrave_exception Throw if failed to save anything
     virtual void Save(const std::string& filename, SelectionOptions options=SO_Everything, const std::string& selectname="") = 0;
 
     /** \brief Initializes a robot from a resource file. The robot is not added to the environment when calling this function. <b>[multi-thread safe]</b>
@@ -419,14 +420,16 @@ public:
     ///
     /// \param[out] trimesh - The output triangle mesh
     /// \param[in] body body the triangulate
+    /// \throw openrave_exception Throw if failed to add anything
     virtual void Triangulate(KinBody::Link::TRIMESH& trimesh, KinBodyConstPtr pbody) = 0;
 
-    /// \brief General triangulation of the whole scene. trimesh will be appended the new data. <b>[multi-thread safe]</b>
+    /// \brief General triangulation of the whole scene. <b>[multi-thread safe]</b>
     ///
-    /// \param[out] trimesh - The output triangle mesh
+    /// \param[out] trimesh - The output triangle mesh. The new triangles are appended to the existing triangles!
     /// \param[in] options - Controlls what to triangulate.
     /// \param[in] selectname - name of the body used in options
-    virtual bool TriangulateScene(KinBody::Link::TRIMESH& trimesh, SelectionOptions options, const std::string& selectname) = 0;
+    /// \throw openrave_exception Throw if failed to add anything
+    virtual void TriangulateScene(KinBody::Link::TRIMESH& trimesh, SelectionOptions options, const std::string& selectname) = 0;
     //@}
 
     /// \brief Load a new module, need to Lock if calling outside simulation thread

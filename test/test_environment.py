@@ -18,8 +18,16 @@ class TestEnvironment(EnvironmentSetup):
     def test_load(self):
         env=self.env
         env.Load('../src/models/WAM/wam0.iv')
-
+        
         for fullfilename in locate('*.xml','../src/data'):
+            print 'loading: ',fullfilename
             env.Reset()
-            env.Load(fullfilename)
+            assert(env.Load(fullfilename))
             
+    def test_loadnogeom(self):
+        env=self.env
+        assert(env.Load('robots/pr2-beta-static.zae',{'skipgeometry':'1'}))
+        robot=env.GetRobots()[0]
+        trimesh=env.Triangulate(robot)
+        assert(len(trimesh.vertices)==0)
+        

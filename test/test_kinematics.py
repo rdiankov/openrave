@@ -21,7 +21,7 @@ class TestKinematics(EnvironmentSetup):
         with self.env:
             for envfile in g_envfiles:
                 self.env.Reset()
-                self.env.Load(envfile)
+                self.env.Load(envfile,{'skipgeometry':'1'})
                 for i in range(20):
                     T = eye(4)
                     for body in self.env.GetBodies():
@@ -98,7 +98,7 @@ class TestKinematics(EnvironmentSetup):
         with self.env:
             for envfile in g_envfiles:
                 self.env.Reset()
-                self.env.Load(envfile)
+                self.env.Load(envfile,{'skipgeometry':'1'})
                 # try all loadable physics engines
                 #self.env.SetPhysicsEngine()
                 for i in range(10):
@@ -138,7 +138,7 @@ class TestKinematics(EnvironmentSetup):
         with self.env:
             for robotfile in g_robotfiles:
                 self.env.Reset()
-                self.env.Load(robotfile)
+                self.env.Load(robotfile,{'skipgeometry':'1'})
                 body = self.env.GetBodies()[0]
                 lowerlimit,upperlimit = body.GetDOFLimits()
                 for i in range(len(lowerlimit)):
@@ -312,7 +312,7 @@ class TestKinematics(EnvironmentSetup):
         with env:
             for robotfile in g_robotfiles:
                 env.Reset()
-                env.Load(robotfile)
+                env.Load(robotfile,{'skipgeometry':'1'})
                 body = env.GetBodies()[0]
 
                 zerovalues = zeros(body.GetDOF())
@@ -344,7 +344,7 @@ class TestKinematics(EnvironmentSetup):
         with env:
             for robotfile in g_robotfiles:
                 env.Reset()
-                env.Load(robotfile)
+                env.Load(robotfile,{'skipgeometry':'1'})
                 body = env.GetBodies()[0]
 
                 zerovalues = zeros(body.GetDOF())

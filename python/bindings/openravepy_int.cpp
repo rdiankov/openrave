@@ -3117,10 +3117,10 @@ public:
         return bSuccess;
     }
 
-    void Load(const string& filename) { _penv->Load(filename); }
-    void Load(const string& filename, dict odictatts) { _penv->Load(filename, toAttributesList(odictatts)); }
-    void LoadData(const string& data) { _penv->LoadData(data); }
-    void LoadData(const string& data, dict odictatts) { _penv->LoadData(data, toAttributesList(odictatts)); }
+    bool Load(const string& filename) { return _penv->Load(filename); }
+    bool Load(const string& filename, dict odictatts) { return _penv->Load(filename, toAttributesList(odictatts)); }
+    bool LoadData(const string& data) { return _penv->LoadData(data); }
+    bool LoadData(const string& data, dict odictatts) { return _penv->LoadData(data, toAttributesList(odictatts)); }
 
     void Save(const string& filename) { _penv->Save(filename); }
     void Save(const string& filename, EnvironmentBase::SelectionOptions options, const string& name) { _penv->Save(filename,options,name); }
@@ -4635,10 +4635,10 @@ In python, the syntax is::\n\n\
         void (PyEnvironmentBase::*addsensor2)(PySensorBasePtr,bool) = &PyEnvironmentBase::AddSensor;
         void (PyEnvironmentBase::*setuserdata1)(PyUserData) = &PyEnvironmentBase::SetUserData;
         void (PyEnvironmentBase::*setuserdata2)(object) = &PyEnvironmentBase::SetUserData;
-        void (PyEnvironmentBase::*load1)(const string&) = &PyEnvironmentBase::Load;
-        void (PyEnvironmentBase::*load2)(const string&, dict) = &PyEnvironmentBase::Load;
-        void (PyEnvironmentBase::*loaddata1)(const string&) = &PyEnvironmentBase::LoadData;
-        void (PyEnvironmentBase::*loaddata2)(const string&, dict) = &PyEnvironmentBase::LoadData;
+        bool (PyEnvironmentBase::*load1)(const string&) = &PyEnvironmentBase::Load;
+        bool (PyEnvironmentBase::*load2)(const string&, dict) = &PyEnvironmentBase::Load;
+        bool (PyEnvironmentBase::*loaddata1)(const string&) = &PyEnvironmentBase::LoadData;
+        bool (PyEnvironmentBase::*loaddata2)(const string&, dict) = &PyEnvironmentBase::LoadData;
         void (PyEnvironmentBase::*save1)(const string&) = &PyEnvironmentBase::Save;
         void (PyEnvironmentBase::*save2)(const string&, EnvironmentBase::SelectionOptions, const string&) = &PyEnvironmentBase::Save;
         PyRobotBasePtr (PyEnvironmentBase::*readrobotxmlfile1)(const string&) = &PyEnvironmentBase::ReadRobotURI;

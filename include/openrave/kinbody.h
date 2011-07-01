@@ -818,10 +818,12 @@ public:
     /// \brief Returns the joints making up the controllable degrees of freedom of the body.
     const std::vector<JointPtr>& GetJoints() const { return _vecjoints; }
 
-    /// \brief Returns the passive joints, order does not matter.
-    ///
-    /// A passive joint is not directly controlled by the body's degrees of freedom so it has no
-    /// joint index and no dof index. Passive joints allows mimic joints to be hidden from the users.
+    /** \brief Returns the passive joints, order does not matter.
+
+        A passive joint is not directly controlled by the body's degrees of freedom so it has no
+        joint index and no dof index. Passive joints allows mimic joints to be hidden from the users.
+        However, there are cases when passive joints are not mimic; for example, suspension mechanism on vehicles.
+    */
     const std::vector<JointPtr>& GetPassiveJoints() const { return _vPassiveJoints; }
 
     /// \deprecated \see Link::GetRigidlyAttachedLinks (10/12/12)
