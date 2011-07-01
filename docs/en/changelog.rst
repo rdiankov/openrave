@@ -83,6 +83,8 @@ Inverse Kinematics
 
 * implemented '--show' command for inversekinematics
 
+* ikfast fix in solvePairVariablesHalfAngle, lookat3d works for simple mechanisms.
+
 Sensors
 -------
 

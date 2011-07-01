@@ -77,7 +77,7 @@ The main file ikfast.py can be used both as a library and as an executable progr
 
 It is also possible to use run ikfast.py as a stand-alone program, which makes it mostly independent of the OpenRAVE run-time. 
 
-**However, the recommended way of using IKFast** is through the OpenRAVE `databases.inversekinematics` database generator which directly loads the IK into OpenRAVE as an interface. 
+**However, the recommended way of using IKFast** is through the OpenRAVE :ref:`databases.inversekinematics` database generator which directly loads the IK into OpenRAVE as an interface. 
 
 Stand-alone Executable
 ======================
@@ -204,7 +204,7 @@ from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2011 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Lesser GPL, Version 3'
-__version__ = '41'
+__version__ = '42'
 
 import sys, copy, time, math, datetime
 import __builtin__
@@ -2851,7 +2851,7 @@ class IKFastSolver(AutoReloader):
                     curvarsubs=self.Variable(curvar).subs
                     treefirst = self.solveAllEquations(AllEquations,curvars=[curvar],othersolvedvars=self.freejointvars,solsubs=self.freevarsubs[:],endbranchtree=[AST.SolverSequence([jointtrees2])],unknownvars=unknownvars+[tvar])
                     # solvable, which means we now have len(AllEquations)-1 with two variables, solve with half angles
-                    halfanglesolution=self.solvePairVariablesHalfAngle(raweqns=[eq.subs(curvarsubs) for eq in AllEquations],var0=unknownvars[0],var1=unknownvars[1],othersolvedvars=self.freejointvars+[curvar])
+                    halfanglesolution=self.solvePairVariablesHalfAngle(raweqns=[eq.subs(curvarsubs) for eq in AllEquations],var0=unknownvars[0],var1=unknownvars[1],othersolvedvars=self.freejointvars+[curvar])[0]
                     halfanglesolution.AddHalfTanValue = True
                     jointtrees2.append(halfanglesolution)
                     halfanglevar = unknownvars[0] if halfanglesolution.jointname==unknownvars[0].name else unknownvars[1]
@@ -2905,7 +2905,7 @@ class IKFastSolver(AutoReloader):
                 #solution = self.solvePairVariables(AllEquations,usedvars[0],usedvars[1],self.freejointvars,maxcomplexity=50)
                 jointtrees=[]
                 raweqns=[eq for eq in AllEquations if not eq.has_any_symbols(tvar)]
-                halfanglesolution = self.solvePairVariablesHalfAngle(raweqns=raweqns,var0=usedvars[0],var1=usedvars[1],othersolvedvars=self.freejointvars)
+                halfanglesolution = self.solvePairVariablesHalfAngle(raweqns=raweqns,var0=usedvars[0],var1=usedvars[1],othersolvedvars=self.freejointvars)[0]
                 halfanglevar = usedvars[0] if halfanglesolution.jointname==usedvars[0].name else usedvars[1]
                 unknownvar = usedvars[1] if halfanglesolution.jointname==usedvars[0].name else usedvars[0]
                 nexttree = self.solveAllEquations(raweqns,curvars=[unknownvar],othersolvedvars=self.freejointvars+[halfanglevar],solsubs=self.freevarsubs+self.Variable(halfanglevar).subs,endbranchtree=[AST.SolverSequence([jointtrees])])
@@ -3752,14 +3752,46 @@ class IKFastSolver(AutoReloader):
                     denom = fraction(halftansubs[i][1])[1]
                     term *= denom**(maxdenom[i/2]-monoms[i]-monoms[i+1])
                 eqnew += simplify(term)
-            polyeqs.append(Poly(eqnew,varsym0.htvar,varsym1.htvar))
+            polyeq = Poly(eqnew,varsym0.htvar,varsym1.htvar)
+            if polyeq.coeff() == S.Zero:
+                # might be able to divide out variables?
+                minmonoms = None
+                for monom in polyeq.monoms:
+                    if minmonoms is None:
+                        minmonoms = list(monom)
+                    else:
+                        for i in range(len(minmonoms)):
+                            minmonoms[i] = min(minmonoms[i],monom[i])
+                newpolyeq = Poly(S.Zero,*polyeq.symbols)
+                for c,m in polyeq.iter_terms():
+                    newm = list(m)
+                    for i in range(len(minmonoms)):
+                        newm[i] -= minmonoms[i]
+                    newpolyeq = newpolyeq.add_term(c,tuple(newm))
+                log.warn('converting polyeq "%s" to "%s"'%(polyeq,newpolyeq))
+                # check if any equations are only in one variable
+                polyeq = newpolyeq
+            
+            polyeqs.append(polyeq)
+
+        try:
+            return self.solveSingleVariable([e.as_basic() for e in polyeqs if not e.has_any_symbols(varsym1.htvar)],varsym0.var,othersolvedvars)
+        except self.CannotSolveError:
+            pass
+        try:
+            return self.solveSingleVariable([e.as_basic() for e in polyeqs if not e.has_any_symbols(varsym0.htvar)],varsym1.var,othersolvedvars)
+        except self.CannotSolveError:
+            pass
 
         complexity = [(self.codeComplexity(peq.as_basic()),peq) for peq in polyeqs]
         complexity.sort()
         polyeqs = [peq[1] for peq in complexity]
 
         solutions = [None,None]
+        linearsolution = None
         for ileftvar in range(2):
+            if linearsolution is not None:
+                break
             leftvar = varsyms[ileftvar].htvar
             newpolyeqs = [Poly(eq,varsyms[1-ileftvar].htvar) for eq in polyeqs]
             mindegree = __builtin__.min([peq.degree for peq in newpolyeqs])
@@ -3771,7 +3803,7 @@ class IKFastSolver(AutoReloader):
                         solutions[ileftvar] = [possiblefinaleq]
                         break
             for degree in range(mindegree,maxdegree+1):
-                if solutions[ileftvar] is not None:
+                if solutions[ileftvar] is not None or linearsolution is not None:
                     break
                 newpolyeqs2 = [peq for peq in newpolyeqs if peq.degree <= degree]
                 if degree+1 <= len(newpolyeqs2):
@@ -3813,7 +3845,8 @@ class IKFastSolver(AutoReloader):
                                     solversolution = AST.SolverSolution(varsyms[ileftvar].name,jointeval=[2*atan(linearsolution[0]/divisorsymbol)],isHinge=self.isHinge(varsyms[ileftvar].name))
                                     prevsolution = AST.SolverCheckZeros(varsyms[ileftvar].name,[divisorsymbol],zerobranch=[prevsolution],nonzerobranch=[solversolution],thresh=1e-6)
                                     prevsolution.dictequations = [(divisorsymbol,divisor)]
-                                return prevsolution
+                                linearsolution = prevsolution
+                                break
                             
                             except self.CannotSolveError:
                                 pass
@@ -3824,6 +3857,8 @@ class IKFastSolver(AutoReloader):
                         solutions[ileftvar] = [peq[1] for peq in equationdegrees]
                         break
 
+        if linearsolution is not None:
+            return [linearsolution]
 
         # take the solution with the smallest degree
         pfinals = None
@@ -3916,7 +3951,7 @@ class IKFastSolver(AutoReloader):
         solution.postcheckfornonzeros = [peq.as_basic() for peq in pfinals[1:]]
         solution.postcheckforrange = []
         solution.dictequations = dictequations
-        return solution
+        return [solution]
 
     def _createSimplifyFn(self,vars,varsubs,varsubsinv):
         return lambda eq: self.trigsimp(eq.subs(varsubsinv),vars).subs(varsubs)
@@ -4001,14 +4036,16 @@ class IKFastSolver(AutoReloader):
         
         return solutions
 
-    def solveSingleVariableLinearly(self,raweqs,solvevar,othervars,maxnumeqs=2,douniquecheck=True):
-        """tries to linearly solve for one variable treating everything else as constant
+    def solveSingleVariableLinearly(self,raweqns,solvevar,othervars,maxnumeqs=2,douniquecheck=True):
+        """tries to linearly solve for one variable treating everything else as constant.
+
+        need at least 3 equations
         """
         cvar = Symbol('c%s'%solvevar.name)
         svar = Symbol('s%s'%solvevar.name)
         varsubs = [(cos(solvevar),cvar),(sin(solvevar),svar)]
         othervarsubs = [(sin(v)**2,1-cos(v)**2) for v in othervars]
-        eqpolys = [Poly(eq.subs(varsubs),cvar,svar) for eq in raweqs]
+        eqpolys = [Poly(eq.subs(varsubs),cvar,svar) for eq in raweqns]
         eqpolys = [eq for eq in eqpolys if eq.degree == 1 and not eq.coeff(0,0).has_any_symbols(solvevar)]
         #eqpolys.sort(lambda x,y: iksolver.codeComplexity(x) - iksolver.codeComplexity(y))
         partialsolutions = []
@@ -4593,7 +4630,7 @@ class IKFastSolver(AutoReloader):
             useconic=True
             if len(goodgroup) == 0:
                 try:
-                    return [self.solvePairVariablesHalfAngle(raweqns,var0,var1,othersolvedvars)]
+                    return self.solvePairVariablesHalfAngle(raweqns,var0,var1,othersolvedvars)
                 except self.CannotSolveError,e:
                     log.warn('%s',e)
 
@@ -4706,21 +4743,21 @@ class IKFastSolver(AutoReloader):
                     finaleq = expand(p0.as_basic().subs(allsymbols))
         if finaleq is None:
             log.warn('solvePairVariables: did not compute a final variable. This is a weird condition...')
-            return [self.solvePairVariablesHalfAngle(raweqns,var0,var1,othersolvedvars)]
+            return self.solvePairVariablesHalfAngle(raweqns,var0,var1,othersolvedvars)
         
         if not self.isValidSolution(finaleq):
             log.warn('failed to solve pairwise equation: %s'%str(finaleq))
-            return [self.solvePairVariablesHalfAngle(raweqns,var0,var1,othersolvedvars)]
+            return self.solvePairVariablesHalfAngle(raweqns,var0,var1,othersolvedvars)
 
         newunknownvars = unknownvars[:]
         newunknownvars.remove(unknownvar)
         if finaleq.has_any_symbols(*newunknownvars):
             log.warn('equation relies on unsolved variables(%s): %s',newunknownvars,finaleq)
-            return [self.solvePairVariablesHalfAngle(raweqns,var0,var1,othersolvedvars)]
+            return self.solvePairVariablesHalfAngle(raweqns,var0,var1,othersolvedvars)
 
         if not finaleq.has_any_symbols(unknownvar):
             # somehow removed all variables, so try the general method
-            return [self.solvePairVariablesHalfAngle(raweqns,var0,var1,othersolvedvars)]
+            return self.solvePairVariablesHalfAngle(raweqns,var0,var1,othersolvedvars)
 
         if useconic:
             # conic roots solver not as robust as half-angle transform!
