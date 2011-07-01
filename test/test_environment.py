@@ -12,10 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from common_test_openrave import *
-
 _multiprocess_can_split_ = True
 
 class TestEnvironment(EnvironmentSetup):
     def test_load(self):
         env=self.env
         env.Load('../src/models/WAM/wam0.iv')
+
+        for fullfilename in locate('*.xml','../src/data'):
+            env.Reset()
+            env.Load(fullfilename)
+            
