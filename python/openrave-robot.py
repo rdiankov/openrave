@@ -75,15 +75,15 @@ if __name__ == "__main__":
                 for sensor in robot.GetAttachedSensors():
                     print sensor.GetName()
             elif options.dolist.startswith('link'):
-                env.Load(args[0])
+                env.Load(args[0],{'skipgeometry':'1'})
                 body=env.GetBodies()[0]
                 for link in body.GetLinks():
                     print link.GetName()
             elif options.dolist.startswith('joint'):
-                env.Load(args[0])
+                env.Load(args[0],{'skipgeometry':'1'})
                 body=env.GetBodies()[0]
                 for joint in body.GetJoints():
-                    print joint.GetName()                    
+                    print joint.GetName()
             else:
                 sys.exit(1)            
         elif options.doinfo is not None:
@@ -106,6 +106,28 @@ if __name__ == "__main__":
                 rows = [['name','type','link']]
                 for s in robot.GetAttachedSensors():
                     rows.append([s.GetName(),str(s.GetSensor()),s.GetAttachingLink().GetName()])
+                colwidths = [max([len(row[i]) for row in rows]) for i in range(len(rows[0]))]
+                for i,row in enumerate(rows):
+                    print ' '.join([row[j].ljust(colwidths[j]) for j in range(len(colwidths))])
+                    if i == 0:
+                        print '-'*(sum(colwidths)+len(colwidths)-1)
+            elif options.doinfo.startswith('link'):
+                env.Load(args[0],{'skipgeometry':'1'})
+                body=env.GetBodies()[0]
+                rows = [['name','index','parents']]
+                for link in body.GetLinks():
+                    rows.append([link.GetName(),str(link.GetIndex()),','.join(l.GetName() for l in link.GetParentLinks())])
+                colwidths = [max([len(row[i]) for row in rows]) for i in range(len(rows[0]))]
+                for i,row in enumerate(rows):
+                    print ' '.join([row[j].ljust(colwidths[j]) for j in range(len(colwidths))])
+                    if i == 0:
+                        print '-'*(sum(colwidths)+len(colwidths)-1)
+            elif options.doinfo.startswith('joint'):
+                env.Load(args[0],{'skipgeometry':'1'})
+                body=env.GetBodies()[0]
+                rows = [['name','joint_index','dof_index','parent_link','child_link']]
+                for joint in body.GetJoints():
+                    rows.append([joint.GetName(),str(joint.GetJointIndex()),str(joint.GetDOFIndex()),joint.GetHierarchyParentLink().GetName(),joint.GetHierarchyChildLink().GetName()])
                 colwidths = [max([len(row[i]) for row in rows]) for i in range(len(rows[0]))]
                 for i,row in enumerate(rows):
                     print ' '.join([row[j].ljust(colwidths[j]) for j in range(len(colwidths))])
