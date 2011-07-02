@@ -3,8 +3,8 @@
 ChangeLog
 #########
 
-Version 0.4.0 Unstable
-======================
+Version 0.4.0
+=============
 
 Subversion Revision: 2556
 
