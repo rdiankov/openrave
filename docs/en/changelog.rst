@@ -6,9 +6,9 @@ ChangeLog
 Version 0.4.0 Unstable
 ======================
 
-Subversion Revision: **Unreleased**
+Subversion Revision: 2556
 
-Initial Release: **Unreleased**
+Initial Release: 2011/07/02
 
 Core
 ----
