@@ -78,7 +78,7 @@ class TestKinematics(EnvironmentSetup):
                                 deltavalues = body.GetDOFValues()-dofvaluesnew
                                 armlength = bodymaxjointdist(link,localtrans[0:3,3])
                                 thresh = armlength*sum(abs(deltavalues))*1.1
-                                if armlength < 0.0001:
+                                if armlength < 0.0001 or thresh < 1e-12:
                                     continue
                                 Tlinknew=dot(link.GetTransform(),localtrans)
                                 newaxisangle = axisAngleFromRotationMatrix(Tlinknew[0:3,0:3])

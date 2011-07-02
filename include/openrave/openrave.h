@@ -866,23 +866,27 @@ public:
         switch(_type) {
         case IkParameterization::Type_Transform6D: {
             Transform t0 = GetTransform6D(), t1 = ikparam.GetTransform6D();
-            dReal facos = RaveAcos(std::min(dReal(1),RaveFabs(t0.rot.dot(t1.rot))));
+            dReal fcos = RaveFabs(t0.rot.dot(t1.rot));
+            dReal facos = fcos >= 1 ? 0 : RaveAcos(fcos);
             return (t0.trans-t1.trans).lengthsqr3() + anglemult*facos*facos;
         }
         case IkParameterization::Type_Rotation3D: {
-            dReal facos = RaveAcos(std::min(dReal(1),RaveFabs(GetRotation3D().dot(ikparam.GetRotation3D()))));
+            dReal fcos = RaveFabs(GetRotation3D().dot(ikparam.GetRotation3D()));
+            dReal facos = fcos >= 1 ? 0 : RaveAcos(fcos);
             return facos*facos;
         }
         case IkParameterization::Type_Translation3D:
             return (GetTranslation3D()-ikparam.GetTranslation3D()).lengthsqr3();
         case IkParameterization::Type_Direction3D: {
-            dReal facos = RaveAcos(std::min(dReal(1),GetDirection3D().dot(ikparam.GetDirection3D())));
+            dReal fcos = GetDirection3D().dot(ikparam.GetDirection3D());
+            dReal facos = fcos >= 1 ? 0 : RaveAcos(fcos);
             return facos*facos;
         }
         case IkParameterization::Type_Ray4D: {
             Vector pos0 = GetRay4D().pos - GetRay4D().dir*GetRay4D().dir.dot(GetRay4D().pos);
             Vector pos1 = ikparam.GetRay4D().pos - ikparam.GetRay4D().dir*ikparam.GetRay4D().dir.dot(ikparam.GetRay4D().pos);
-            dReal facos = RaveAcos(std::min(dReal(1),GetRay4D().dir.dot(ikparam.GetRay4D().dir)));
+            dReal fcos = GetRay4D().dir.dot(ikparam.GetRay4D().dir);
+            dReal facos = fcos >= 1 ? 0 : RaveAcos(fcos);
             return (pos0-pos1).lengthsqr3() + anglemult*facos*facos;
         }
         case IkParameterization::Type_Lookat3D: {
@@ -894,7 +898,8 @@ public:
             return v.lengthsqr3();
         }
         case IkParameterization::Type_TranslationDirection5D: {
-            dReal facos = RaveAcos(std::min(dReal(1),GetTranslationDirection5D().dir.dot(ikparam.GetTranslationDirection5D().dir)));
+            dReal fcos = GetTranslationDirection5D().dir.dot(ikparam.GetTranslationDirection5D().dir);
+            dReal facos = fcos >= 1 ? 0 : RaveAcos(fcos);
             return (GetTranslationDirection5D().pos-ikparam.GetTranslationDirection5D().pos).lengthsqr3() + anglemult*facos*facos;
         }
         case IkParameterization::Type_TranslationXY2D: {

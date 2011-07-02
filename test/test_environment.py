@@ -32,4 +32,4 @@ class TestEnvironment(EnvironmentSetup):
         assert(len(trimesh.vertices)==0)
         
     def test_misc(self):
-        assert(env.plot3([0,0,0],10)==None) # no viewer attached
+        assert(self.env.plot3([0,0,0],10)==None) # no viewer attached

@@ -56,7 +56,7 @@ class TestRobot(EnvironmentSetup):
             robot.SetDOFValues([0/180.0*pi,1/180.0*pi],[1,2])
             assert(not robot.CheckSelfCollision())
             env.Reset()
-            robot=env.ReadRobotFile('robots/collisionmap.robot.xml')
+            robot=env.ReadRobotURI('robots/collisionmap.robot.xml')
             env.AddRobot(robot)
             assert(robot.GetXMLId().lower()=='collisionmaprobot')
         
