@@ -38,7 +38,7 @@
 #include <boost/thread/condition.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/format.hpp>
-#include <boost/enable_shared_from_this.hpp> 
+#include <boost/enable_shared_from_this.hpp>
 #include <boost/version.hpp>
 
 #define PY_ARRAY_UNIQUE_SYMBOL PyArrayHandle
@@ -392,6 +392,7 @@ public:
     RAY r;
 };
 
+object toPyGraphHandle(const GraphHandlePtr p);
 bool ExtractIkParameterization(object o, IkParameterization& ikparam);
 object toPyIkParameterization(const IkParameterization& ikparam);
 object toPyAABB(const AABB& ab);

@@ -31,3 +31,5 @@ class TestEnvironment(EnvironmentSetup):
         trimesh=env.Triangulate(robot)
         assert(len(trimesh.vertices)==0)
         
+    def test_misc(self):
+        assert(env.plot3([0,0,0],10)==None) # no viewer attached

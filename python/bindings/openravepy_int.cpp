@@ -3431,14 +3431,14 @@ public:
         pair<size_t,size_t> sizes = _getGraphPointsColors(opoints,ocolors,vpoints,vcolors);
         bool bhasalpha = vcolors.size() == 4*sizes.second;
         if( sizes.first == sizes.second ) {
-            return object(PyGraphHandle(_penv->plot3(&vpoints[0],sizes.first,sizeof(float)*3,pointsize,&vcolors[0],drawstyle,bhasalpha)));
+            return toPyGraphHandle(_penv->plot3(&vpoints[0],sizes.first,sizeof(float)*3,pointsize,&vcolors[0],drawstyle,bhasalpha));
         }
         BOOST_ASSERT(vcolors.size()<=4);
         RaveVector<float> vcolor;
         for(int i = 0; i < (int)vcolors.size(); ++i) {
             vcolor[i] = vcolors[i];
         }
-        return object(PyGraphHandle(_penv->plot3(&vpoints[0],sizes.first,sizeof(float)*3,pointsize,vcolor,drawstyle)));
+        return toPyGraphHandle(_penv->plot3(&vpoints[0],sizes.first,sizeof(float)*3,pointsize,vcolor,drawstyle));
     }
 
     object drawlinestrip(object opoints,float linewidth,object ocolors=object(),int drawstyle=0)
@@ -3447,14 +3447,14 @@ public:
         pair<size_t,size_t> sizes = _getGraphPointsColors(opoints,ocolors,vpoints,vcolors);
         //bool bhasalpha = vcolors.size() == 4*sizes.second;
         if( sizes.first == sizes.second ) {
-            return object(PyGraphHandle(_penv->drawlinestrip(&vpoints[0],sizes.first,sizeof(float)*3,linewidth,&vcolors[0])));
+            return toPyGraphHandle(_penv->drawlinestrip(&vpoints[0],sizes.first,sizeof(float)*3,linewidth,&vcolors[0]));
         }
         BOOST_ASSERT(vcolors.size()<=4);
         RaveVector<float> vcolor;
         for(int i = 0; i < (int)vcolors.size(); ++i) {
             vcolor[i] = vcolors[i];
         }
-        return object(PyGraphHandle(_penv->drawlinestrip(&vpoints[0],sizes.first,sizeof(float)*3,linewidth,vcolor)));
+        return toPyGraphHandle(_penv->drawlinestrip(&vpoints[0],sizes.first,sizeof(float)*3,linewidth,vcolor));
     }
 
     object drawlinelist(object opoints,float linewidth,object ocolors=object(),int drawstyle=0)
@@ -3463,14 +3463,14 @@ public:
         pair<size_t,size_t> sizes = _getGraphPointsColors(opoints,ocolors,vpoints,vcolors);
         //bool bhasalpha = vcolors.size() == 4*sizes.second;
         if( sizes.first == sizes.second ) {
-            return object(PyGraphHandle(_penv->drawlinelist(&vpoints[0],sizes.first,sizeof(float)*3,linewidth,&vcolors[0])));
+            return toPyGraphHandle(_penv->drawlinelist(&vpoints[0],sizes.first,sizeof(float)*3,linewidth,&vcolors[0]));
         }
         BOOST_ASSERT(vcolors.size()<=4);
         RaveVector<float> vcolor;
         for(int i = 0; i < (int)vcolors.size(); ++i) {
             vcolor[i] = vcolors[i];
         }
-        return object(PyGraphHandle(_penv->drawlinelist(&vpoints[0],sizes.first,sizeof(float)*3,linewidth,vcolor)));
+        return toPyGraphHandle(_penv->drawlinelist(&vpoints[0],sizes.first,sizeof(float)*3,linewidth,vcolor));
     }
 
     object drawarrow(object op1, object op2, float linewidth=0.002, object ocolor=object())
@@ -3479,7 +3479,7 @@ public:
         if( ocolor != object() ) {
             vcolor = ExtractVector34(ocolor,1.0f);
         }
-        return object(PyGraphHandle(_penv->drawarrow(ExtractVector3(op1),ExtractVector3(op2),linewidth,vcolor)));
+        return toPyGraphHandle(_penv->drawarrow(ExtractVector3(op1),ExtractVector3(op2),linewidth,vcolor));
     }
 
     object drawbox(object opos, object oextents, object ocolor=object())
@@ -3488,7 +3488,7 @@ public:
         if( ocolor != object() ) {
             vcolor = ExtractVector34(ocolor,1.0f);
         }
-        return object(PyGraphHandle(_penv->drawbox(ExtractVector3(opos),ExtractVector3(oextents))));
+        return toPyGraphHandle(_penv->drawbox(ExtractVector3(opos),ExtractVector3(oextents)));
     }
 
     object drawplane(object otransform, object oextents, const boost::multi_array<float,2>& _vtexture)
@@ -3497,11 +3497,11 @@ public:
         vtexture[0] = _vtexture;
         boost::array<size_t,3> dims = {{_vtexture.shape()[0],_vtexture.shape()[1],1}};
         vtexture.reshape(dims);
-        return object(PyGraphHandle(_penv->drawplane(RaveTransform<float>(ExtractTransform(otransform)), RaveVector<float>(extract<float>(oextents[0]),extract<float>(oextents[1]),0), vtexture)));
+        return toPyGraphHandle(_penv->drawplane(RaveTransform<float>(ExtractTransform(otransform)), RaveVector<float>(extract<float>(oextents[0]),extract<float>(oextents[1]),0), vtexture));
     }
     object drawplane(object otransform, object oextents, const boost::multi_array<float,3>& vtexture)
     {
-        return object(PyGraphHandle(_penv->drawplane(RaveTransform<float>(ExtractTransform(otransform)), RaveVector<float>(extract<float>(oextents[0]),extract<float>(oextents[1]),0), vtexture)));
+        return toPyGraphHandle(_penv->drawplane(RaveTransform<float>(ExtractTransform(otransform)), RaveVector<float>(extract<float>(oextents[0]),extract<float>(oextents[1]),0), vtexture));
     }
 
     object drawtrimesh(object opoints, object oindices=object(), object ocolors=object())
@@ -3522,14 +3522,14 @@ public:
         if( ocolors != object() ) {
             object shape = ocolors.attr("shape");
             if( len(shape) == 1 ) {
-                return object(PyGraphHandle(_penv->drawtrimesh(&vpoints[0],sizeof(float)*3,pindices,numTriangles,ExtractVector34(ocolors,1.0f))));
+                return toPyGraphHandle(_penv->drawtrimesh(&vpoints[0],sizeof(float)*3,pindices,numTriangles,ExtractVector34(ocolors,1.0f)));
             }
             else {
                 BOOST_ASSERT(extract<size_t>(shape[0])==vpoints.size()/3);
-                return object(PyGraphHandle(_penv->drawtrimesh(&vpoints[0],sizeof(float)*3,pindices,numTriangles,extract<boost::multi_array<float,2> >(ocolors))));
+                return toPyGraphHandle(_penv->drawtrimesh(&vpoints[0],sizeof(float)*3,pindices,numTriangles,extract<boost::multi_array<float,2> >(ocolors)));
             }
         }
-        return object(PyGraphHandle(_penv->drawtrimesh(&vpoints[0],sizeof(float)*3,pindices,numTriangles,RaveVector<float>(1,0.5,0.5,1))));
+        return toPyGraphHandle(_penv->drawtrimesh(&vpoints[0],sizeof(float)*3,pindices,numTriangles,RaveVector<float>(1,0.5,0.5,1)));
     }
 
     object GetBodies()

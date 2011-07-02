@@ -1,4 +1,4 @@
-% testrosik(robotfile,manipid,ikfastlib)
+% testik(robotfile,manipid,ikfastlib)
 %
 % tests the inverse kinematics solver of a robot
 % Arguments:
@@ -15,8 +15,11 @@ if( ~exist('robotfile','var') )
     robotfile = 'robots/barrettwam.robot.xml';
 end
 
-orEnvLoadScene('',1);
-robotid = orEnvCreateRobot('robot',robotfile);
+if( length(robotfile) > 0)
+    orEnvLoadScene('',1);
+    robotid = orEnvCreateRobot('robot',robotfile);
+end
+
 probid = orEnvCreateProblem('ikfast');
 manips = orRobotGetManipulators(robotid);
 

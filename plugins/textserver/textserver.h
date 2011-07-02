@@ -296,6 +296,7 @@ class SimpleTextServer : public ModuleBase
         mapNetworkFns["robot_sensorsend"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orRobotSensorSend,this,_1,_2,_3), OpenRaveWorkerFn(), true);
         mapNetworkFns["robot_sensordata"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orRobotSensorData,this,_1,_2,_3), OpenRaveWorkerFn(), true);
         mapNetworkFns["robot_setactivedofs"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orRobotSetActiveDOFs,this,_1,_2,_3), OpenRaveWorkerFn(), false);
+        mapNetworkFns["robot_setactivemanipulator"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orRobotSetActiveManipulator,this,_1,_2,_3), OpenRaveWorkerFn(), false);
         mapNetworkFns["robot_setdof"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orRobotSetDOFValues,this,_1,_2,_3), OpenRaveWorkerFn(), false);
         mapNetworkFns["robot_traj"] = RAVENETWORKFN(OpenRaveNetworkFn(), boost::bind(&SimpleTextServer::worRobotStartActiveTrajectory,this,_1,_2), false);
         mapNetworkFns["render"] = RAVENETWORKFN(OpenRaveNetworkFn(), boost::bind(&SimpleTextServer::worRender,this,_1,_2), false);
@@ -1072,7 +1073,7 @@ protected:
         return true;
     }
 
-    /// orRobotSetActiveDOFs(robot, indices, affinedofs, axis) - returns the dof values of a kinbody
+    /// orBodyDestroy(robot, indices, affinedofs, axis) - returns the dof values of a kinbody
     bool orBodyDestroy(istream& is, ostream& os, boost::shared_ptr<void>& pdata)
     {
         SyncWithWorkerThread();
@@ -1411,9 +1412,9 @@ protected:
         SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         RobotBasePtr probot = orMacroGetRobot(is);
-        if( !probot )
+        if( !probot ) {
             return false;
-
+        }
         int numindices=0;
         is >> numindices;
         if( numindices < 0 ) {
@@ -1447,6 +1448,24 @@ protected:
         }
 
         probot->SetActiveDOFs(vindices, affinedofs, axis);
+        return true;
+    }
+
+    /// orRobotSetActiveManipulator(robot, manip) - returns the dof values of a kinbody
+    bool orRobotSetActiveManipulator(istream& is, ostream& os, boost::shared_ptr<void>& pdata)
+    {
+        SyncWithWorkerThread();
+        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        RobotBasePtr probot = orMacroGetRobot(is);
+        if( !probot ) {
+            return false;
+        }
+        string manipname;
+        is >> manipname;
+        if( !is ) {
+            return false;
+        }
+        probot->SetActiveManipulator(manipname);
         return true;
     }
 

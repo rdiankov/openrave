@@ -203,10 +203,6 @@ protected:
                     break;
                 }
             }
-            if( !sinput ) {
-                RAVELOG_WARN("invalid format\n");
-                return false;
-            }
             if( !pviewer ) {
                 RAVELOG_WARN("invalid viewer\n");
             }

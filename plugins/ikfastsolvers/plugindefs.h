@@ -242,6 +242,63 @@ typedef IKSolutionTemplate<double> IKSolutionDouble;
 #define IKFAST_REAL double
 #define IKFAST_NO_MAIN
 
+/// \brief ik0 is the original ikparams input into ik solver, ik1 is the resulting ik params
+inline dReal DistIkParameterization2(const IkParameterization& ik0, const IkParameterization& ik1)
+{
+    BOOST_ASSERT(ik0.GetType()==ik1.GetType());
+    switch(ik0.GetType()) {
+    case IkParameterization::Type_Transform6D: {
+        Transform t0 = ik0.GetTransform6D(), t1 = ik1.GetTransform6D();
+        dReal facos = RaveAcos(min(dReal(1),RaveFabs(t0.rot.dot(t1.rot))));
+        return (t0.trans-t1.trans).lengthsqr3() + 0.4f*facos*facos;
+    }
+    case IkParameterization::Type_Rotation3D: {
+        dReal facos = RaveAcos(min(dReal(1),RaveFabs(ik0.GetRotation3D().dot(ik1.GetRotation3D()))));
+        return facos*facos;
+    }
+    case IkParameterization::Type_Translation3D:
+        return (ik0.GetTranslation3D()-ik1.GetTranslation3D()).lengthsqr3();
+    case IkParameterization::Type_Direction3D: {
+        dReal facos = RaveAcos(min(dReal(1),ik0.GetDirection3D().dot(ik1.GetDirection3D())));
+        return facos*facos;
+    }
+    case IkParameterization::Type_Ray4D: {
+        Vector pos0 = ik0.GetRay4D().pos - ik0.GetRay4D().dir*ik0.GetRay4D().dir.dot(ik0.GetRay4D().pos);
+        Vector pos1 = ik1.GetRay4D().pos - ik1.GetRay4D().dir*ik1.GetRay4D().dir.dot(ik1.GetRay4D().pos);
+        dReal facos = RaveAcos(min(dReal(1),ik0.GetRay4D().dir.dot(ik1.GetRay4D().dir)));
+        return (pos0-pos1).lengthsqr3() * 0.4*facos*facos;
+    }
+    case IkParameterization::Type_Lookat3D: {
+        Vector v = ik0.GetLookat3D()-ik1.GetLookat3D();
+        dReal s = v.dot3(ik1.GetLookat3DDirection());
+        if( s >= -1 ) { // ik1's lookat is always 1 beyond the origin, this is just the convention for testing...
+            v -= s*ik1.GetLookat3DDirection();
+        }
+        return v.lengthsqr3();
+    }
+    case IkParameterization::Type_TranslationDirection5D: {
+        dReal facos = RaveAcos(min(dReal(1),ik0.GetTranslationDirection5D().dir.dot(ik1.GetTranslationDirection5D().dir)));
+        return (ik0.GetTranslationDirection5D().pos-ik1.GetTranslationDirection5D().pos).lengthsqr3() + 0.4*facos*facos;
+    }
+    case IkParameterization::Type_TranslationXY2D: {
+        return (ik0.GetTranslationXY2D()-ik1.GetTranslationXY2D()).lengthsqr2();
+    }
+    case IkParameterization::Type_TranslationXYOrientation3D: {
+        Vector v0 = ik0.GetTranslationXYOrientation3D();
+        Vector v1 = ik1.GetTranslationXYOrientation3D();
+        dReal anglediff = ANGLE_DIFF(v0.z,v1.z);
+        return (v0-v1).lengthsqr2() + anglediff*anglediff;
+    }
+    case IkParameterization::Type_TranslationLocalGlobal6D: {
+        std::pair<Vector,Vector> p0 = ik0.GetTranslationLocalGlobal6D(), p1 = ik1.GetTranslationLocalGlobal6D();
+        return (p0.first-p1.first).lengthsqr3() + (p0.second-p1.second).lengthsqr3();
+    }
+    default:
+        BOOST_ASSERT(0);
+    }
+    return 1e30;
+}
+
 #ifdef RAVE_REGISTER_BOOST
 #include BOOST_TYPEOF_INCREMENT_REGISTRATION_GROUP()
 BOOST_TYPEOF_REGISTER_TEMPLATE(IKSolutionTemplate, 1)

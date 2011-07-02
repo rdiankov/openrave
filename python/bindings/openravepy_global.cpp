@@ -29,6 +29,14 @@ object PyRay::pos() { return toPyVector3(r.pos); }
 string PyRay::__repr__() { return boost::str(boost::format("<Ray([%f,%f,%f],[%f,%f,%f])>")%r.pos.x%r.pos.y%r.pos.z%r.dir.x%r.dir.y%r.dir.z); }
 string PyRay::__str__() { return boost::str(boost::format("<%f %f %f %f %f %f>")%r.pos.x%r.pos.y%r.pos.z%r.dir.x%r.dir.y%r.dir.z); }
 
+object toPyGraphHandle(const GraphHandlePtr p)
+{
+    if( !p ) {
+        return object();
+    }
+    return object(PyGraphHandle(p));
+}
+
 object toPyRay(const RAY& r)
 {
     return object(boost::shared_ptr<PyRay>(new PyRay(r)));
@@ -138,7 +146,7 @@ public:
     }
 
     string __str__() { return boost::str(boost::format("<trimesh: verts %d, tris=%d>")%len(vertices)%len(indices)); }
-            
+
     object vertices,indices;
 };
 

@@ -1362,6 +1362,9 @@ class Environment : public EnvironmentBase
     virtual OpenRAVE::GraphHandlePtr plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const RaveVector<float>& color, int drawstyle)
     {
         boost::mutex::scoped_lock lock(_mutexInterfaces);
+        if( _listViewers.size() == 0 ) {
+            return OpenRAVE::GraphHandlePtr();
+        }
         GraphHandleMultiPtr handles(new GraphHandleMulti());
         FOREACHC(itviewer, _listViewers) {
             handles->Add((*itviewer)->plot3(ppoints, numPoints, stride, fPointSize, color, drawstyle));
@@ -1371,6 +1374,9 @@ class Environment : public EnvironmentBase
     virtual OpenRAVE::GraphHandlePtr plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const float* colors, int drawstyle, bool bhasalpha)
     {
         boost::mutex::scoped_lock lock(_mutexInterfaces);
+        if( _listViewers.size() == 0 ) {
+            return OpenRAVE::GraphHandlePtr();
+        }
         GraphHandleMultiPtr handles(new GraphHandleMulti());
         FOREACHC(itviewer, _listViewers) {
             handles->Add((*itviewer)->plot3(ppoints, numPoints, stride, fPointSize, colors, drawstyle, bhasalpha));
@@ -1380,6 +1386,9 @@ class Environment : public EnvironmentBase
     virtual OpenRAVE::GraphHandlePtr drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color)
     {
         boost::mutex::scoped_lock lock(_mutexInterfaces);
+        if( _listViewers.size() == 0 ) {
+            return OpenRAVE::GraphHandlePtr();
+        }
         GraphHandleMultiPtr handles(new GraphHandleMulti());
         FOREACHC(itviewer, _listViewers) {
             handles->Add((*itviewer)->drawlinestrip(ppoints, numPoints, stride, fwidth,color));
@@ -1389,6 +1398,9 @@ class Environment : public EnvironmentBase
     virtual OpenRAVE::GraphHandlePtr drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors)
     {
         boost::mutex::scoped_lock lock(_mutexInterfaces);
+        if( _listViewers.size() == 0 ) {
+            return OpenRAVE::GraphHandlePtr();
+        }
         GraphHandleMultiPtr handles(new GraphHandleMulti());
         FOREACHC(itviewer, _listViewers) {
             handles->Add((*itviewer)->drawlinestrip(ppoints, numPoints, stride, fwidth,colors));
@@ -1398,6 +1410,9 @@ class Environment : public EnvironmentBase
     virtual OpenRAVE::GraphHandlePtr drawlinelist(const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color)
     {
         boost::mutex::scoped_lock lock(_mutexInterfaces);
+        if( _listViewers.size() == 0 ) {
+            return OpenRAVE::GraphHandlePtr();
+        }
         GraphHandleMultiPtr handles(new GraphHandleMulti());
         FOREACHC(itviewer, _listViewers) {
             handles->Add((*itviewer)->drawlinelist(ppoints, numPoints, stride, fwidth,color));
@@ -1407,6 +1422,9 @@ class Environment : public EnvironmentBase
     virtual OpenRAVE::GraphHandlePtr drawlinelist(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors)
     {
         boost::mutex::scoped_lock lock(_mutexInterfaces);
+        if( _listViewers.size() == 0 ) {
+            return OpenRAVE::GraphHandlePtr();
+        }
         GraphHandleMultiPtr handles(new GraphHandleMulti());
         FOREACHC(itviewer, _listViewers) {
             handles->Add((*itviewer)->drawlinelist(ppoints, numPoints, stride, fwidth,colors));
@@ -1416,6 +1434,9 @@ class Environment : public EnvironmentBase
     virtual OpenRAVE::GraphHandlePtr drawarrow(const RaveVector<float>& p1, const RaveVector<float>& p2, float fwidth, const RaveVector<float>& color)
     {
         boost::mutex::scoped_lock lock(_mutexInterfaces);
+        if( _listViewers.size() == 0 ) {
+            return OpenRAVE::GraphHandlePtr();
+        }
         GraphHandleMultiPtr handles(new GraphHandleMulti());
         FOREACHC(itviewer, _listViewers) {
             handles->Add((*itviewer)->drawarrow(p1,p2,fwidth,color));
@@ -1425,6 +1446,9 @@ class Environment : public EnvironmentBase
     virtual OpenRAVE::GraphHandlePtr drawbox(const RaveVector<float>& vpos, const RaveVector<float>& vextents)
     {
         boost::mutex::scoped_lock lock(_mutexInterfaces);
+        if( _listViewers.size() == 0 ) {
+            return OpenRAVE::GraphHandlePtr();
+        }
         GraphHandleMultiPtr handles(new GraphHandleMulti());
         FOREACHC(itviewer, _listViewers) {
             handles->Add((*itviewer)->drawbox(vpos, vextents));
@@ -1434,6 +1458,9 @@ class Environment : public EnvironmentBase
     virtual OpenRAVE::GraphHandlePtr drawplane(const RaveTransform<float>& tplane, const RaveVector<float>& vextents, const boost::multi_array<float,3>& vtexture)
     {
         boost::mutex::scoped_lock lock(_mutexInterfaces);
+        if( _listViewers.size() == 0 ) {
+            return OpenRAVE::GraphHandlePtr();
+        }
         GraphHandleMultiPtr handles(new GraphHandleMulti());
         FOREACHC(itviewer, _listViewers) {
             handles->Add((*itviewer)->drawplane(tplane, vextents, vtexture));
@@ -1443,6 +1470,9 @@ class Environment : public EnvironmentBase
     virtual OpenRAVE::GraphHandlePtr drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const RaveVector<float>& color)
     {
         boost::mutex::scoped_lock lock(_mutexInterfaces);
+        if( _listViewers.size() == 0 ) {
+            return OpenRAVE::GraphHandlePtr();
+        }
         GraphHandleMultiPtr handles(new GraphHandleMulti());
         FOREACHC(itviewer, _listViewers) {
             handles->Add((*itviewer)->drawtrimesh(ppoints, stride, pIndices, numTriangles, color));
@@ -1452,6 +1482,9 @@ class Environment : public EnvironmentBase
     virtual OpenRAVE::GraphHandlePtr drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const boost::multi_array<float,2>& colors)
     {
         boost::mutex::scoped_lock lock(_mutexInterfaces);
+        if( _listViewers.size() == 0 ) {
+            return OpenRAVE::GraphHandlePtr();
+        }
         GraphHandleMultiPtr handles(new GraphHandleMulti());
         FOREACHC(itviewer, _listViewers) {
             handles->Add((*itviewer)->drawtrimesh(ppoints, stride, pIndices, numTriangles, colors));
