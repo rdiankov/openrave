@@ -22,7 +22,7 @@
 
 namespace OpenRAVE {
 
-/** \brief <b>[interface]</b> A sensor measures physical properties from the environment. See \ref arch_sensor.     
+/** \brief <b>[interface]</b> A sensor measures physical properties from the environment. See \ref arch_sensor.
   \ingroup interfaces
 */
 class OPENRAVE_API SensorBase : public InterfaceBase
@@ -88,7 +88,7 @@ public:
         std::vector<dReal> encoderValues; ///< measured joint angles in radians
         std::vector<dReal> encoderVelocity; ///< measured joint velocity in radians
     };
-    
+
     /// \brief Stores force data
     class OPENRAVE_API Force6DSensorData : public SensorData
     {
@@ -143,10 +143,10 @@ public:
             AS_Stalled=3, ///< the actuator is stalled, needs to be unstalled by sending a ready signal
             AS_Braked=4, ///< the actuator is braked
         };
-        
+
         ActuatorSensorData() : state(AS_Undefined), measuredcurrent(0), measuredtemperature(0), appliedcurrent(0) {}
         virtual SensorType GetType() { return ST_Actuator; }
-        
+
         ActuatorState state;
         dReal measuredcurrent; ///< measured current from the actuator
         dReal measuredtemperature; ///< measured temperature from the actuator
@@ -236,7 +236,7 @@ public:
         dReal nominalcurrent;  ///< Rated current of the actuator.
         dReal maxvelocity; ///< Maximum permissible velocity of the system (on output side).
         dReal maxacceleration; ///< Maximum permissible acceleration of the system (on output side).
-        dReal maxjerk; ///< Maximum permissible jerking of the system (on output side). The jerk results from a sudden change in acceleration. 
+        dReal maxjerk; ///< Maximum permissible jerking of the system (on output side). The jerk results from a sudden change in acceleration.
         dReal staticfriction; ///< minimum torque that must be applied for actuator to overcome static friction
         dReal viscousfriction; ///< friction depending on the velocity of the actuator
     };
@@ -306,7 +306,7 @@ public:
     /// \param type the sensor type to register for
     /// \param callback the user function to call, note that this might block the thread generating/receiving sensor data
     virtual boost::shared_ptr<void> RegisterDataCallback(SensorType type, const boost::function<void(SensorDataConstPtr)>& callback) OPENRAVE_DUMMY_IMPLEMENTATION;
-	
+
     /// \return the name of the sensor
     virtual const std::string& GetName() const { return _name; }
     virtual void SetName(const std::string& newname) { _name = newname; }

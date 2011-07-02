@@ -1,0 +1,21 @@
+<!-- shows how to use the CollisionMapRobot -->
+<Robot type="CollisionMapRobot" name="Complex3DOFRobot">
+  <robot file="tridof.robot.xml">
+  </robot>
+  <collisionmap>
+    <pair dims="11 11" min="0 0" max=".174532 .174532" joints="Arm1 Arm2">
+      <!-- 11x11 values of 0s and 1s -->
+      1 1 1 1 1 1 1 1 1 1 1 <!-- J1 is 0 deg-->
+      1 1 1 1 1 1 1 1 1 1 1 <!-- J1 is 1 deg-->
+      1 1 1 1 1 1 1 1 1 1 1 <!-- J1 is 2 deg-->
+      1 1 1 1 1 1 1 1 1 1 1 <!-- J1 is 3 deg-->
+      1 1 1 1 1 1 1 1 1 1 1 <!-- J1 is 4 deg-->
+      1 1 1 1 1 1 1 1 1 1 1 <!-- J1 is 5 deg-->
+      0 0 0 0 0 1 1 1 1 1 1 <!-- J1 is 6 deg only 5-10 degs allowed for J2-->
+      0 0 0 0 0 1 1 1 1 1 1 <!-- J1 is 7 deg only 5-10 degs allowed for J2-->
+      0 0 0 0 0 1 1 1 1 1 1 <!-- J1 is 8 deg only 5-10 degs allowed for J2-->
+      0 0 0 0 0 1 1 1 1 1 1 <!-- J1 is 9 deg only 5-10 degs allowed for J2-->
+      0 0 0 0 0 1 1 1 1 1 1 <!-- J1 is 10 deg only 5-10 degs allowed for J2-->
+    </pair>
+  </collisionmap>
+</Robot> 

@@ -251,6 +251,20 @@ def fitSphere(points,geometric_refinement=True):
     x,error = numpy.linalg.lstsq(numpy.c_[points,numpy.ones(len(points))],-numpy.sum(points**2,1))[0:2]
     return numpy.array([-0.5*x[0],-0.5*x[1], -0.5*x[2]]), numpy.sqrt((x[0]**2+x[1]**2+x[2]**2)/4-x[3]),error
 
+def intersectSegments(L0,L1):
+    """Computes the intersection point of two line segments
+    """
+    dL0 = L0[1]-L0[0]
+    dL1 = L1[1]-L1[0]
+    normal = numpy.cross(dL1,dL0)
+    normal /= numpy.linalg.norm(normal)
+    binormal = numpy.cross(normal,dL1)
+    denom = numpy.dot(dL0,binormal)
+    tL0 = numpy.dot(binormal,L1[0]-L0[0])/denom
+    intersection0 = L0[0]*(1-tL0)+L0[1]*tL0
+    dist = numpy.dot(intersection0-L1[0],normal)
+    return intersection0-0.5*dist*normal,dist
+
 def sequence_cross_product(*sequences):
     """iterates through the cross product of all items in the sequences"""
     # visualize an odometer, with "wheels" displaying "digits"...:

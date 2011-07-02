@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)
+# Copyright (C) 2009-2011 Rosen Diankov <rosen.diankov@gmail.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -79,7 +79,7 @@ if __name__ == "__main__":
                 try:
                     m=__import__('openravepy.databases.'+name)
                     if type(m) is ModuleType:
-                        print ' ' + name
+                        print name
                 except ImportError:
                     pass
         sys.exit(0)
@@ -89,7 +89,7 @@ if __name__ == "__main__":
                 try:
                     m=__import__('openravepy.examples.'+name)
                     if type(m) is ModuleType:
-                        print ' ' + name
+                        print name
                 except ImportError:
                     pass
         sys.exit(0)

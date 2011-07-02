@@ -85,7 +85,7 @@ public:
         /// \brief return the normal direction to move joints to 'close' the hand
         virtual const std::vector<dReal>& GetClosingDirection() const { return _vClosingDirection; }
 
-        /// \brief direction of palm/head/manipulator used for approaching inside the grasp coordinate system
+        /// \brief direction of palm/head/manipulator used for approaching. defined inside the manipulator/grasp coordinate system
         virtual Vector GetDirection() const { return _vdirection; }
 
         /// \brief Find a close solution to the current robot's joint values.

@@ -176,7 +176,7 @@ class IKFastProblem : public ModuleBase
             dlclose(lib);
 #endif
         }
-    
+
         void* plib;
         string _libraryname;
         vector<string> _viknames;
@@ -320,13 +320,13 @@ public:
 
         {
             string hasik;
-            string cmdhas = str(boost::format("openrave.py --database inversekinematics --gethas --robot=\"%s\" --manipname=%s --iktype=%s")%probot->GetXMLFilename()%pmanip->GetName()%striktype);
+            string cmdhas = str(boost::format("openrave.py --database inversekinematics --gethas --robot=\"%s\" --manipname=%s --iktype=%s")%probot->GetURI()%pmanip->GetName()%striktype);
             FILE* pipe = MYPOPEN(cmdhas.c_str(), "r");
             {
                 boost::iostreams::stream_buffer<boost::iostreams::file_descriptor_source> fpstream(fileno(pipe),FILE_DESCRIPTOR_FLAG);
                 std::istream in(&fpstream);
                 std::getline(in, hasik);
-            }            
+            }
             int generateexit = MYPCLOSE(pipe);
             if( generateexit != 0 ) {
                 Sleep(100);
@@ -335,8 +335,8 @@ public:
             boost::trim(hasik);
             if( hasik != "1" ) {
                 RAVELOG_INFO(str(boost::format("Generating inverse kinematics for manip %s:%s, will take several minutes...\n")%probot->GetName()%pmanip->GetName()));
-                string cmdgen = str(boost::format("openrave.py --database inversekinematics --usecached --robot=\"%s\" --manipname=%s --iktype=%s")%probot->GetXMLFilename()%pmanip->GetName()%striktype);
-                // use raw system call, popen causes weird crash in the inversekinematics compiler 
+                string cmdgen = str(boost::format("openrave.py --database inversekinematics --usecached --robot=\"%s\" --manipname=%s --iktype=%s")%probot->GetURI()%pmanip->GetName()%striktype);
+                // use raw system call, popen causes weird crash in the inversekinematics compiler
                 int generateexit = system(cmdgen.c_str());
                 //FILE* pipe = MYPOPEN(cmdgen.c_str(), "r");
                 //int generateexit = MYPCLOSE(pipe);
@@ -346,8 +346,8 @@ public:
                 }
             }
         }
-        
-        string cmdfilename = str(boost::format("openrave.py --database inversekinematics --getfilename --robot=\"%s\" --manipname=%s --iktype=%s")%probot->GetXMLFilename()%pmanip->GetName()%striktype);
+
+        string cmdfilename = str(boost::format("openrave.py --database inversekinematics --getfilename --robot=\"%s\" --manipname=%s --iktype=%s")%probot->GetURI()%pmanip->GetName()%striktype);
         RAVELOG_INFO("executing shell command:\n%s\n",cmdfilename.c_str());
         string ikfilename;
         FILE* pipe = MYPOPEN(cmdfilename.c_str(), "r");
@@ -366,7 +366,7 @@ public:
             Sleep(100);
             RAVELOG_DEBUG("failed to close pipe\n");
         }
-        
+
         boost::trim(ikfilename);
         string ikfastname = str(boost::format("ikfast.%s.%s")%probot->GetRobotStructureHash()%pmanip->GetName());
         boost::shared_ptr<IKLibrary> lib = _AddIkLibrary(ikfastname,ikfilename);
@@ -395,7 +395,7 @@ public:
         return !!pmanip->GetIkSolver() && pmanip->GetIkSolver()->Supports(niktype);
     }
 #endif
-    
+
     bool PerfTiming(ostream& sout, istream& sinput)
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
@@ -553,12 +553,12 @@ public:
         }
         robot->SetDOFValues(values);
 
-        vector<dReal> q1;    
+        vector<dReal> q1;
         if( !pmanip->FindIKSolution(ikparam, q1, bCheckCollision) ) {
             RAVELOG_WARN("No IK solution found\n");
             return false;
         }
-    
+
         stringstream s2;
         s2 << std::setprecision(std::numeric_limits<dReal>::digits10+1); /// have to do this or otherwise precision gets lost
         s2 << "ik sol: ";
@@ -590,7 +590,7 @@ public:
 
         return false;
     }
-        
+
     void DebugIKFindSolutions(RobotBase::ManipulatorPtr pmanip, const IkParameterization& twrist, vector< vector<dReal> >& viksolutions, int filteroptions, std::vector<dReal>& parameters, int paramindex)
     {
         // ignore boundary cases since next to limits and can fail due to limit errosr
@@ -674,7 +674,7 @@ public:
         vector<dReal> vrealsolution(pmanip->GetArmIndices().size(),0), vrand(pmanip->GetArmIndices().size(),0);
         vector<dReal> vlowerlimit, vupperlimit, viksolution;
         vector< vector<dReal> > viksolutions, viksolutions2;
-    
+
         robot->SetActiveDOFs(pmanip->GetArmIndices());
         robot->GetActiveDOFLimits(vlowerlimit, vupperlimit);
         // shrink the limits to prevent solutions close to limits from returning errors
@@ -755,7 +755,7 @@ public:
                 else {
                     twrist = pmanip->GetIkParameterization(itiktype->first);
                 }
-                
+
                 if( !pmanip->GetIkSolver()->GetFreeParameters(vfreeparameters_real) ) {
                     RAVELOG_WARN("failed to get freeparameters");
                 }
@@ -808,11 +808,11 @@ public:
                     if( !pmanip->GetIkSolver()->GetFreeParameters(vfreeparameters_out) ) {
                         RAVELOG_WARN("failed to get freeparameters");
                     }
-                    if( DistIkParameterization2(twrist, twrist_out) > fthreshold) {
+                    if( twrist.ComputeDistanceSqr(twrist_out) > fthreshold) {
                         vwrongsolutions.push_back(make_pair(twrist,vfreeparameters_out));
                         bsuccess = false;
                         s.str("");
-                        s << "FindIKSolution: Incorrect IK, i = " << i <<" error: " << RaveSqrt(DistIkParameterization2(twrist, twrist_out)) << endl
+                        s << "FindIKSolution: Incorrect IK, i = " << i <<" error: " << RaveSqrt(twrist.ComputeDistanceSqr(twrist_out)) << endl
                           << "Original Joint Val: ";
                         FOREACH(it, vrealsolution)
                             s << *it << " ";
@@ -866,10 +866,10 @@ public:
                         if( !pmanip->GetIkSolver()->GetFreeParameters(vfreeparameters_out) ) {
                             RAVELOG_WARN("failed to get freeparameters");
                         }
-                        if(DistIkParameterization2(twrist, twrist_out) > fthreshold ) {
+                        if(twrist.ComputeDistanceSqr(twrist_out) > fthreshold ) {
                             vwrongsolutions.push_back(make_pair(twrist,vfreeparameters_out));
                             s.str("");
-                            s << "FindIKSolutions: Incorrect IK, i = " << i << " error: " << RaveSqrt(DistIkParameterization2(twrist, twrist_out)) << endl
+                            s << "FindIKSolutions: Incorrect IK, i = " << i << " error: " << RaveSqrt(twrist.ComputeDistanceSqr(twrist_out)) << endl
                               << "Original Joint Val: ";
                             FOREACH(it, vrealsolution)
                                 s << *it << " ";
@@ -920,11 +920,11 @@ public:
                 if( DebugIKFindSolution(pmanip, twrist, viksolution, 0, vfreeparameters, vfreeparameters_out.size()-1) ) {
                     robot->SetActiveDOFValues(viksolution, true);
                     twrist_out = pmanip->GetIkParameterization(twrist);
-                    if(DistIkParameterization2(twrist, twrist_out) > fthreshold ) {
+                    if(twrist.ComputeDistanceSqr(twrist_out) > fthreshold ) {
                         vwrongsolutions.push_back(make_pair(twrist,vfreeparameters));
                         bsuccess = false;
                         s.str("");
-                        s << "FindIKSolution (freeparams): Incorrect IK, i = " << i << " error: " << RaveSqrt(DistIkParameterization2(twrist, twrist_out)) << endl
+                        s << "FindIKSolution (freeparams): Incorrect IK, i = " << i << " error: " << RaveSqrt(twrist.ComputeDistanceSqr(twrist_out)) << endl
                           << "freeparams: ";
                         FOREACH(it, vfreeparameters) {
                             s << *it << " ";
@@ -970,10 +970,10 @@ public:
                 FOREACH(itsol, viksolutions) {
                     robot->SetActiveDOFValues(*itsol, true);
                     twrist_out = pmanip->GetIkParameterization(twrist);
-                    if(DistIkParameterization2(twrist, twrist_out) > fthreshold ) {
+                    if(twrist.ComputeDistanceSqr(twrist_out) > fthreshold ) {
                         vwrongsolutions.push_back(make_pair(twrist,vfreeparameters_out));
                         s.str("");
-                        s << "FindIKSolutions (freeparams): Incorrect IK, i = " << i <<" error: " << RaveSqrt(DistIkParameterization2(twrist, twrist_out)) << endl
+                        s << "FindIKSolutions (freeparams): Incorrect IK, i = " << i <<" error: " << RaveSqrt(twrist.ComputeDistanceSqr(twrist_out)) << endl
                           << "Original Joint Val: ";
                         FOREACH(it, vrealsolution) {
                             s << *it << " ";
@@ -1020,63 +1020,6 @@ public:
             }
         }
         return true;
-    }
-
-    /// \brief ik0 is the original ikparams input into ik solver, ik1 is the resulting ik params
-    static dReal DistIkParameterization2(const IkParameterization& ik0, const IkParameterization& ik1)
-    {
-        BOOST_ASSERT(ik0.GetType()==ik1.GetType());
-        switch(ik0.GetType()) {
-        case IkParameterization::Type_Transform6D: {
-            Transform t0 = ik0.GetTransform6D(), t1 = ik1.GetTransform6D();
-            dReal facos = RaveAcos(min(dReal(1),RaveFabs(t0.rot.dot(t1.rot))));
-            return (t0.trans-t1.trans).lengthsqr3() + 0.4f*facos*facos;
-        }
-        case IkParameterization::Type_Rotation3D: {
-            dReal facos = RaveAcos(min(dReal(1),RaveFabs(ik0.GetRotation3D().dot(ik1.GetRotation3D()))));
-            return facos*facos;
-        }
-        case IkParameterization::Type_Translation3D:
-            return (ik0.GetTranslation3D()-ik1.GetTranslation3D()).lengthsqr3();
-        case IkParameterization::Type_Direction3D: {
-            dReal facos = RaveAcos(min(dReal(1),ik0.GetDirection3D().dot(ik1.GetDirection3D())));
-            return facos*facos;
-        }
-        case IkParameterization::Type_Ray4D: {
-            Vector pos0 = ik0.GetRay4D().pos - ik0.GetRay4D().dir*ik0.GetRay4D().dir.dot(ik0.GetRay4D().pos);
-            Vector pos1 = ik1.GetRay4D().pos - ik1.GetRay4D().dir*ik1.GetRay4D().dir.dot(ik1.GetRay4D().pos);
-            dReal facos = RaveAcos(min(dReal(1),ik0.GetRay4D().dir.dot(ik1.GetRay4D().dir)));
-            return (pos0-pos1).lengthsqr3() * 0.4*facos*facos;
-        }
-        case IkParameterization::Type_Lookat3D: {
-            Vector v = ik0.GetLookat3D()-ik1.GetLookat3D();
-            dReal s = v.dot3(ik1.GetLookat3DDirection());
-            if( s >= -1 ) { // ik1's lookat is always 1 beyond the origin, this is just the convention for testing...
-                v -= s*ik1.GetLookat3DDirection();
-            }
-            return v.lengthsqr3();
-        }
-        case IkParameterization::Type_TranslationDirection5D: {
-            dReal facos = RaveAcos(min(dReal(1),ik0.GetTranslationDirection5D().dir.dot(ik1.GetTranslationDirection5D().dir)));
-            return (ik0.GetTranslationDirection5D().pos-ik1.GetTranslationDirection5D().pos).lengthsqr3() + 0.4*facos*facos;
-        }
-        case IkParameterization::Type_TranslationXY2D: {
-            return (ik0.GetTranslationXY2D()-ik1.GetTranslationXY2D()).lengthsqr2();
-        }
-        case IkParameterization::Type_TranslationXYOrientation3D: {
-            Vector v0 = ik0.GetTranslationXYOrientation3D();
-            Vector v1 = ik1.GetTranslationXYOrientation3D();
-            dReal anglediff = ANGLE_DIFF(v0.z,v1.z);
-            return (v0-v1).lengthsqr2() + anglediff*anglediff;
-        }
-        case IkParameterization::Type_TranslationLocalGlobal6D: {
-            std::pair<Vector,Vector> p0 = ik0.GetTranslationLocalGlobal6D(), p1 = ik1.GetTranslationLocalGlobal6D();
-            return (p0.first-p1.first).lengthsqr3() + (p0.second-p1.second).lengthsqr3();
-        }
-        default:
-            BOOST_ASSERT(0);
-        }
-        return 1e30;
     }
 
     static void GetIKFastCommand(std::ostream& o, const IkParameterization& param) {

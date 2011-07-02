@@ -12,10 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from common_test_openrave import *
-
 _multiprocess_can_split_ = True
 
 class TestEnvironment(EnvironmentSetup):
     def test_load(self):
         env=self.env
         env.Load('../src/models/WAM/wam0.iv')
+        
+        for fullfilename in locate('*.xml','../src/data'):
+            print 'loading: ',fullfilename
+            env.Reset()
+            assert(env.Load(fullfilename))
+            
+    def test_loadnogeom(self):
+        env=self.env
+        assert(env.Load('robots/pr2-beta-static.zae',{'skipgeometry':'1'}))
+        robot=env.GetRobots()[0]
+        trimesh=env.Triangulate(robot)
+        assert(len(trimesh.vertices)==0)
+        
+    def test_misc(self):
+        assert(self.env.plot3([0,0,0],10)==None) # no viewer attached

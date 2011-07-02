@@ -17,6 +17,7 @@ from numpy import *
 from itertools import izip, combinations
 import nose
 from nose.tools import assert_raises
+import fnmatch
 
 g_epsilon = 1e-7
 g_jacobianstep = 0.01
@@ -66,6 +67,13 @@ def bodymaxjointdist(link,localtrans):
         armlength += sqrt(sum((eetrans-j.GetAnchor())**2))
         eetrans = j.GetAnchor()    
     return armlength
+
+def locate(pattern, root=os.curdir):
+    """Locate all files matching supplied filename pattern in and below supplied root directory.
+    """
+    for path, dirs, files in os.walk(os.path.abspath(root)):
+        for filename in fnmatch.filter(files, pattern):
+            yield os.path.join(path, filename)
 
 class EnvironmentSetup(object):
     def setup(self):

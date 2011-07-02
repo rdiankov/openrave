@@ -93,12 +93,21 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
         _options = 0;
         geomray = NULL;
         _nMaxStartContacts = 32;
+        _nMaxContacts = 255; // this is a weird ODE threshold for the new tri-tri collision checker
         __description = ":Interface Author: Rosen Diankov\n\nOpen Dynamics Engine collision checker (fast, but inaccurate for triangle meshes)";
+        RegisterCommand("SetMaxContacts",boost::bind(&ODECollisionChecker::_SetMaxContactsCommand, this,_1,_2),
+                        str(boost::format("sets the maximum contacts that can be returned by the checker (limit is %d)")%_nMaxContacts));
     }
     ~ODECollisionChecker() {
         if( geomray != NULL ) {
             dGeomDestroy(geomray);
         }
+    }
+
+    bool _SetMaxContactsCommand(ostream& sout, istream& sinput)
+    {
+        sinput >> _nMaxContacts;
+        return !!sinput;
     }
 
     virtual void SetTolerance(OpenRAVE::dReal tolerance) {}
@@ -230,21 +239,30 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
         return cb._bCollision;
     }
 
-    int _GeomCollide(dGeomID geom1, dGeomID geom2, vector<dContact>& vcontacts)
+    int _GeomCollide(dGeomID geom1, dGeomID geom2, vector<dContact>& vcontacts, bool bComputeAllContacts)
     {
-        vcontacts.resize(_nMaxStartContacts);
+        vcontacts.resize(bComputeAllContacts ? _nMaxStartContacts : 1);
         int log2limit = (int)ceil(OpenRAVE::RaveLog(vcontacts.size())/OpenRAVE::RaveLog(2));
-        while(1) {
+        while( 1 ) {
             int N = dCollide (geom1, geom2,vcontacts.size(),&vcontacts[0].geom,sizeof(vcontacts[0]));
+            if( N > 0 && !bComputeAllContacts ) {
+                // not requesting contacts, so return
+                return N;
+            }
+
             // this is weird, but it seems that ode returns approx log2(vcontacts.size()) less than the limit...
             if( N+log2limit < (int)vcontacts.size() ) {
                 vcontacts.resize(N);
                 return N;
             }
-            vcontacts.resize(vcontacts.size()*2);
+            if( vcontacts.size() >= _nMaxContacts ) {
+                break;
+            }
+            vcontacts.resize(min(_nMaxContacts,vcontacts.size()*2));
             log2limit += 1;
         }
-        return 0;
+        RAVELOG_WARN(str(boost::format("max contacts %d reached, but still more contacts left! Try increasing the limit with the SetMaxContracts command")%_nMaxContacts));
+        return vcontacts.size();
     }
 
     virtual bool CheckCollision(KinBody::LinkConstPtr plink1, KinBody::LinkConstPtr plink2, CollisionReportPtr report)
@@ -284,7 +302,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
             while(geom2 != NULL) {
                 BOOST_ASSERT(dGeomIsEnabled(geom2));
 
-                int N = _GeomCollide(geom1, geom2,vcontacts);
+                int N = _GeomCollide(geom1, geom2,vcontacts, !!report && !!(report->options & OpenRAVE::CO_Contacts));
                 if (N) {
                     if( !report && bHasCallbacks ) {
                         report.reset(new CollisionReport());
@@ -446,7 +464,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
         while(geom1 != NULL) {
             BOOST_ASSERT(dGeomIsEnabled(geom1));
 
-            int N = _GeomCollide(geom1, geomray,vcontacts);
+            int N = _GeomCollide(geom1, geomray,vcontacts, !!report && !!(report->options & OpenRAVE::CO_Contacts));
             if (N > 0) {
 
                 if( !report && bHasCallbacks ) {
@@ -690,7 +708,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
         }
 
         vector<dContact> vcontacts;
-        int N = _GeomCollide(o1,o2,vcontacts);
+        int N = _GeomCollide(o1,o2,vcontacts, !!pcb->_report && !!(pcb->_report->options & OpenRAVE::CO_Contacts));
         if ( N ) {
             if( N > 0 && !!pcb->_report ) {
                 pcb->_report->numCols = N;
@@ -775,7 +793,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
 
         // only care if one of the bodies is the link
         vector<dContact> vcontacts;
-        int N = _GeomCollide(o1,o2,vcontacts);
+        int N = _GeomCollide(o1,o2,vcontacts, !!pcb->_report && !!(pcb->_report->options & OpenRAVE::CO_Contacts));
         if ( N ) {
             if( N > 0 && !!pcb->_report ) {
                 pcb->_report->numCols = N;
@@ -880,7 +898,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
         // only care if one of the bodies is the link
         if( pkb1 == pcb->_plink || pkb2 == pcb->_plink ) {
             vector<dContact> vcontacts;
-            int N = _GeomCollide(o1,o2,vcontacts);
+            int N = _GeomCollide(o1,o2,vcontacts, !!pcb->_report && !!(pcb->_report->options & OpenRAVE::CO_Contacts));
             if (N) {
                 if( N > 0 && !!pcb->_report ) {
                     pcb->_report->numCols = N;
@@ -1035,7 +1053,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
     int _options;
     dGeomID geomray; // used for all ray tests
     boost::shared_ptr<ODESpace> odespace;
-    int _nMaxStartContacts;
+    size_t _nMaxStartContacts, _nMaxContacts;
 };
 
 #endif

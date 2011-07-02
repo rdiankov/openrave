@@ -68,7 +68,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/weak_ptr.hpp>
 #include <boost/tuple/tuple.hpp>
-#include <boost/enable_shared_from_this.hpp> 
+#include <boost/enable_shared_from_this.hpp>
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/thread.hpp>
 #include <boost/thread/recursive_mutex.hpp>
@@ -86,7 +86,7 @@
 
 /// The entire %OpenRAVE library
 namespace OpenRAVE {
-    
+
 #include <openrave/config.h>
 #include <openrave/interfacehashes.h>
 
@@ -169,7 +169,7 @@ public:
             break;
         }
         _s += "): ";
-        _s += s; 
+        _s += s;
     }
     virtual ~openrave_exception() throw() {}
     char const* what() const throw() { return _s.c_str(); }
@@ -187,9 +187,9 @@ public:
     {
         std::string::const_iterator it1=s1.begin();
         std::string::const_iterator it2=s2.begin();
-        
+
         //has the end of at least one of the strings been reached?
-        while ( (it1!=s1.end()) && (it2!=s2.end()) )  { 
+        while ( (it1!=s1.end()) && (it2!=s2.end()) )  {
             if(::toupper(*it1) != ::toupper(*it2)) { //letters differ?
                 // return -1 to indicate 'smaller than', 1 otherwise
                 return ::toupper(*it1) < ::toupper(*it2);
@@ -211,7 +211,7 @@ public:
 class OPENRAVE_API UserData
 {
  public:
-    virtual ~UserData() {} 
+    virtual ~UserData() {}
 };
 typedef boost::shared_ptr<UserData> UserDataPtr;
 
@@ -415,7 +415,7 @@ DefineRavePrintfA(_INFOLEVEL)
         }
         return s.size();
     }
-    
+
     inline int RavePrintfA_INFOLEVEL(const char *fmt, ...)
     {
         va_list list;
@@ -464,7 +464,7 @@ inline int RavePrintfA(const std::string& s, uint32_t level)
             else {
                 printf ("%s",s.c_str());
             }
-            return s.size(); 
+            return s.size();
         case Level_Debug: color = OPENRAVECOLOR_DEBUGLEVEL; break;
         case Level_Verbose: color = OPENRAVECOLOR_VERBOSELEVEL; break;
         }
@@ -857,6 +857,80 @@ public:
     inline const RAY GetTranslationDirection() const RAVE_DEPRECATED { return RAY(_transform.trans,_transform.rot); }
     //@}
 
+
+    /// \brief Computes the distance squared between two IK parmaeterizations.
+    inline dReal ComputeDistanceSqr(const IkParameterization& ikparam) const
+    {
+        const dReal anglemult = 0.4; // this is a hack that should be removed....
+        BOOST_ASSERT(_type==ikparam.GetType());
+        switch(_type) {
+        case IkParameterization::Type_Transform6D: {
+            Transform t0 = GetTransform6D(), t1 = ikparam.GetTransform6D();
+            dReal fcos = RaveFabs(t0.rot.dot(t1.rot));
+            dReal facos = fcos >= 1 ? 0 : RaveAcos(fcos);
+            return (t0.trans-t1.trans).lengthsqr3() + anglemult*facos*facos;
+        }
+        case IkParameterization::Type_Rotation3D: {
+            dReal fcos = RaveFabs(GetRotation3D().dot(ikparam.GetRotation3D()));
+            dReal facos = fcos >= 1 ? 0 : RaveAcos(fcos);
+            return facos*facos;
+        }
+        case IkParameterization::Type_Translation3D:
+            return (GetTranslation3D()-ikparam.GetTranslation3D()).lengthsqr3();
+        case IkParameterization::Type_Direction3D: {
+            dReal fcos = GetDirection3D().dot(ikparam.GetDirection3D());
+            dReal facos = fcos >= 1 ? 0 : RaveAcos(fcos);
+            return facos*facos;
+        }
+        case IkParameterization::Type_Ray4D: {
+            Vector pos0 = GetRay4D().pos - GetRay4D().dir*GetRay4D().dir.dot(GetRay4D().pos);
+            Vector pos1 = ikparam.GetRay4D().pos - ikparam.GetRay4D().dir*ikparam.GetRay4D().dir.dot(ikparam.GetRay4D().pos);
+            dReal fcos = GetRay4D().dir.dot(ikparam.GetRay4D().dir);
+            dReal facos = fcos >= 1 ? 0 : RaveAcos(fcos);
+            return (pos0-pos1).lengthsqr3() + anglemult*facos*facos;
+        }
+        case IkParameterization::Type_Lookat3D: {
+            Vector v = GetLookat3D()-ikparam.GetLookat3D();
+            dReal s = v.dot3(ikparam.GetLookat3DDirection());
+            if( s >= -1 ) { // ikparam's lookat is always 1 beyond the origin, this is just the convention for testing...
+                v -= s*ikparam.GetLookat3DDirection();
+            }
+            return v.lengthsqr3();
+        }
+        case IkParameterization::Type_TranslationDirection5D: {
+            dReal fcos = GetTranslationDirection5D().dir.dot(ikparam.GetTranslationDirection5D().dir);
+            dReal facos = fcos >= 1 ? 0 : RaveAcos(fcos);
+            return (GetTranslationDirection5D().pos-ikparam.GetTranslationDirection5D().pos).lengthsqr3() + anglemult*facos*facos;
+        }
+        case IkParameterization::Type_TranslationXY2D: {
+            return (GetTranslationXY2D()-ikparam.GetTranslationXY2D()).lengthsqr2();
+        }
+        case IkParameterization::Type_TranslationXYOrientation3D: {
+            Vector v0 = GetTranslationXYOrientation3D();
+            Vector v1 = ikparam.GetTranslationXYOrientation3D();
+            dReal anglediff = v0.z-v1.z;
+            if (anglediff < dReal(-PI)) {
+                anglediff += dReal(2*PI);
+                while (anglediff < dReal(-PI))
+                    anglediff += dReal(2*PI);
+            }
+            else if (anglediff > dReal(PI)) {
+                anglediff -= dReal(2*PI);
+                while (anglediff > dReal(PI))
+                    anglediff -= dReal(2*PI);
+            }
+            return (v0-v1).lengthsqr2() + anglemult*anglediff*anglediff;
+        }
+        case IkParameterization::Type_TranslationLocalGlobal6D: {
+            std::pair<Vector,Vector> p0 = GetTranslationLocalGlobal6D(), p1 = ikparam.GetTranslationLocalGlobal6D();
+            return (p0.first-p1.first).lengthsqr3() + (p0.second-p1.second).lengthsqr3();
+        }
+        default:
+            BOOST_ASSERT(0);
+        }
+        return 1e30;
+    }
+
 protected:
     Transform _transform;
     Type _type;
@@ -881,7 +955,7 @@ inline IkParameterization operator* (const Transform& t, const IkParameterizatio
         break;
     case IkParameterization::Type_Direction3D:
         local.SetDirection3D(t.rotate(ikparam.GetDirection3D()));
-        break; 
+        break;
     case IkParameterization::Type_Ray4D:
         local.SetRay4D(RAY(t*ikparam.GetRay4D().pos,t.rotate(ikparam.GetRay4D().dir)));
         break;
@@ -910,7 +984,7 @@ inline IkParameterization operator* (const Transform& t, const IkParameterizatio
     }
     return local;
 }
- 
+
 inline std::ostream& operator<<(std::ostream& O, const IkParameterization& ikparam)
 {
     O << ikparam._type << " ";
@@ -1100,14 +1174,14 @@ OPENRAVE_API int RaveInitialize(bool bLoadAllPlugins=true, uint32_t level = Leve
 /// Because of shared object boundaries, it is necessary to pass the global state pointer
 /// around. If using plugin.h, this function is automatically called by \ref CreateInterfaceValidated.
 /// It is also called by and every InterfaceBase constructor.
-/// \param[in] globalstate 
+/// \param[in] globalstate
 OPENRAVE_API void RaveInitializeFromState(UserDataPtr globalstate);
 
 /// \brief A pointer to the global openrave state
 /// \return a managed pointer to the state.
 OPENRAVE_API UserDataPtr RaveGlobalState();
 
-/// \brief Destroys the entire OpenRAVE state and all loaded environments. 
+/// \brief Destroys the entire OpenRAVE state and all loaded environments.
 ///
 /// This functions should be always called before program shutdown in order to assure all
 /// resources are relased appropriately.
@@ -1168,7 +1242,7 @@ OPENRAVE_API TrajectoryBasePtr RaveCreateTrajectory(EnvironmentBasePtr penv, con
 OPENRAVE_API boost::shared_ptr<void> RaveRegisterInterface(InterfaceType type, const std::string& name, const char* interfacehash, const char* envhash, const boost::function<InterfaceBasePtr(EnvironmentBasePtr, std::istream&)>& createfn);
 
 /** \brief Registers a custom xml reader for a particular interface.
-    
+
     Once registered, anytime an interface is created through XML and
     the xmltag is seen, the function CreateXMLReaderFn will be called to get a reader for that tag
     \param xmltag the tag specified in xmltag is seen in the interface, the the custom reader will be created.
@@ -1237,7 +1311,7 @@ typedef InterfaceBasePtr (*PluginExportFn_OpenRAVECreateInterface)(InterfaceType
 /// \ingroup plugin_exports
 typedef bool (*PluginExportFn_OpenRAVEGetPluginAttributes)(PLUGININFO* pinfo, int size, const char* infohash);
 
-/// \brief Called before plugin is unloaded from openrave. See \ref DestroyPlugin. 
+/// \brief Called before plugin is unloaded from openrave. See \ref DestroyPlugin.
 /// \ingroup plugin_exports
 typedef void (*PluginExportFn_DestroyPlugin)();
 

@@ -15,7 +15,7 @@
 /// See the License for the specific language governing permissions and
 /// limitations under the License.
 ///
-/// ikfast version 41 generated on 2011-03-23 13:49:04.288991
+/// ikfast version 42 generated on 2011-07-01 15:41:20.569135
 /// To compile with gcc:
 ///     gcc -lstdc++ ik.cpp
 /// To compile without any main function as a shared object:
@@ -54,9 +54,9 @@
 #define IKFAST_ALIGNED16(x) x __attribute((aligned(16)))
 #endif
 
-#define IK2PI  6.28318530717959
-#define IKPI  3.14159265358979
-#define IKPI_2  1.57079632679490
+#define IK2PI  ((IKReal)6.28318530717959)
+#define IKPI  ((IKReal)3.14159265358979)
+#define IKPI_2  ((IKReal)1.57079632679490)
 
 #ifdef _MSC_VER
 #ifndef isnan
@@ -85,6 +85,8 @@ extern "C" {
   void dgeev_(const char *jobvl, const char *jobvr, const int *n, double *a, const int *lda, double *wr, double *wi,double *vl, const int *ldvl, double *vr, const int *ldvr, double *work, const int *lwork, int *info);
 }
 
+using namespace std; // necessary to get std math routines
+
 #ifdef IKFAST_NAMESPACE
 namespace IKFAST_NAMESPACE {
 #endif
@@ -101,7 +103,7 @@ public:
     /// Gets a solution given its free parameters
     /// \param pfree The free parameters required, range is in [-pi,pi]
     void GetSolution(IKReal* psolution, const IKReal* pfree) const {
-        for(size_t i = 0; i < basesol.size(); ++i) {
+        for(std::size_t i = 0; i < basesol.size(); ++i) {
             if( basesol[i].freeind < 0 )
                 psolution[i] = basesol[i].foffset;
             else {
@@ -180,14 +182,14 @@ inline float IKacos(float f)
 {
 IKFAST_ASSERT( f > -1-IKFAST_SINCOS_THRESH && f < 1+IKFAST_SINCOS_THRESH ); // any more error implies something is wrong with the solver
 if( f <= -1 ) return IKPI;
-else if( f >= 1 ) return 0.0f;
+else if( f >= 1 ) return 0;
 return acosf(f);
 }
 inline double IKacos(double f)
 {
 IKFAST_ASSERT( f > -1-IKFAST_SINCOS_THRESH && f < 1+IKFAST_SINCOS_THRESH ); // any more error implies something is wrong with the solver
 if( f <= -1 ) return IKPI;
-else if( f >= 1 ) return 0.0;
+else if( f >= 1 ) return 0;
 return acos(f);
 }
 inline float IKsin(float f) { return sinf(f); }
@@ -203,8 +205,9 @@ inline float IKatan2(float fy, float fx) {
         IKFAST_ASSERT(!isnan(fx)); // if both are nan, probably wrong value will be returned
         return IKPI_2;
     }
-    else if( isnan(fx) )
+    else if( isnan(fx) ) {
         return 0;
+    }
     return atan2f(fy,fx);
 }
 inline double IKatan2(double fy, double fx) {
@@ -212,8 +215,9 @@ inline double IKatan2(double fy, double fx) {
         IKFAST_ASSERT(!isnan(fx)); // if both are nan, probably wrong value will be returned
         return IKPI_2;
     }
-    else if( isnan(fx) )
+    else if( isnan(fx) ) {
         return 0;
+    }
     return atan2(fy,fx);
 }
 
@@ -224,7 +228,7 @@ inline float IKsign(float f) {
     else if( f < 0 ) {
         return -1.0f;
     }
-    return 0.0f;
+    return 0;
 }
 
 inline double IKsign(double f) {
@@ -234,7 +238,7 @@ inline double IKsign(double f) {
     else if( f < 0 ) {
         return -1.0;
     }
-    return 0.0;
+    return 0;
 }
 
 /// solves the forward kinematics equations.
@@ -1514,7 +1518,7 @@ int main(int argc, char** argv)
     eerot[0] = atof(argv[1]); eerot[1] = atof(argv[2]); eerot[2] = atof(argv[3]); eetrans[0] = atof(argv[4]);
     eerot[3] = atof(argv[5]); eerot[4] = atof(argv[6]); eerot[5] = atof(argv[7]); eetrans[1] = atof(argv[8]);
     eerot[6] = atof(argv[9]); eerot[7] = atof(argv[10]); eerot[8] = atof(argv[11]); eetrans[2] = atof(argv[12]);
-    for(size_t i = 0; i < vfree.size(); ++i)
+    for(std::size_t i = 0; i < vfree.size(); ++i)
         vfree[i] = atof(argv[13+i]);
     bool bSuccess = ik(eetrans, eerot, vfree.size() > 0 ? &vfree[0] : NULL, vsolutions);
 
@@ -1525,11 +1529,11 @@ int main(int argc, char** argv)
 
     printf("Found %d ik solutions:\n", (int)vsolutions.size());
     std::vector<IKReal> sol(getNumJoints());
-    for(size_t i = 0; i < vsolutions.size(); ++i) {
+    for(std::size_t i = 0; i < vsolutions.size(); ++i) {
         printf("sol%d (free=%d): ", (int)i, (int)vsolutions[i].GetFree().size());
         std::vector<IKReal> vsolfree(vsolutions[i].GetFree().size());
         vsolutions[i].GetSolution(&sol[0],vsolfree.size()>0?&vsolfree[0]:NULL);
-        for( size_t j = 0; j < sol.size(); ++j)
+        for( std::size_t j = 0; j < sol.size(); ++j)
             printf("%.15f, ", sol[j]);
         printf("\n");
     }

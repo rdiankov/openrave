@@ -357,7 +357,7 @@ class Environment : public EnvironmentBase
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         boost::shared_ptr<Environment> penv(new Environment());
-        penv->Clone(boost::static_pointer_cast<Environment const>(shared_from_this()),options);
+        penv->_Clone(boost::static_pointer_cast<Environment const>(shared_from_this()),options);
         return penv;
     }
 
@@ -392,32 +392,33 @@ class Environment : public EnvironmentBase
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         bool bSuccess = false;
+        OpenRAVEXMLParser::GetXMLErrorCount() = 0;
         if( _IsColladaFile(filename) ) {
             OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
             bSuccess = RaveParseColladaFile(shared_from_this(), filename, atts);
         }
         else if( !_IsOpenRAVEFile(filename) && _IsRigidModelFile(filename) ) {
-            KinBodyPtr pbody = ReadKinBodyXMLFile(KinBodyPtr(),filename,atts);
+            KinBodyPtr pbody = ReadKinBodyURI(KinBodyPtr(),filename,atts);
             if( !!pbody ) {
                 AddKinBody(pbody,true);
                 bSuccess = true;
             }
         }
         else {
-            bSuccess = ParseXMLFile(OpenRAVEXMLParser::CreateEnvironmentReader(shared_from_this(),atts), filename);
+            bSuccess = _ParseXMLFile(OpenRAVEXMLParser::CreateEnvironmentReader(shared_from_this(),atts), filename);
         }
 
         if( !bSuccess ) {
             RAVELOG_WARN("load failed on file %s\n", filename.c_str());
         }
 
-        return bSuccess;
+        return bSuccess && OpenRAVEXMLParser::GetXMLErrorCount() == 0;
     }
 
-    virtual bool LoadXMLData(const std::string& data, const AttributesList& atts)
+    virtual bool LoadData(const std::string& data, const AttributesList& atts)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        return ParseXMLData(OpenRAVEXMLParser::CreateEnvironmentReader(shared_from_this(),atts),data);
+        return _ParseXMLData(OpenRAVEXMLParser::CreateEnvironmentReader(shared_from_this(),atts),data);
     }
 
     virtual void Save(const std::string& filename, SelectionOptions options, const std::string& selectname)
@@ -921,7 +922,7 @@ class Environment : public EnvironmentBase
         }
     }
 
-    virtual bool TriangulateScene(KinBody::Link::TRIMESH& trimesh, SelectionOptions options,const std::string& selectname)
+    virtual void TriangulateScene(KinBody::Link::TRIMESH& trimesh, SelectionOptions options,const std::string& selectname)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         std::list<string> listnames;
@@ -972,22 +973,16 @@ class Environment : public EnvironmentBase
                 }
             }
         }
-        return true;
     }
 
-    virtual bool TriangulateScene(KinBody::Link::TRIMESH& trimesh, TriangulateOptions options)
+    virtual void TriangulateScene(KinBody::Link::TRIMESH& trimesh, TriangulateOptions options)
     {
-        return TriangulateScene(trimesh,options,"");
+        TriangulateScene(trimesh,options,"");
     }
 
     virtual const std::string& GetHomeDirectory() const { return _homedirectory; }
 
-    virtual RobotBasePtr ReadRobotXMLFile(const std::string& filename)
-    {
-        return ReadRobotXMLFile(RobotBasePtr(),filename,AttributesList());
-    }
-
-    virtual RobotBasePtr ReadRobotXMLFile(RobotBasePtr robot, const std::string& filename, const AttributesList& atts)
+    virtual RobotBasePtr ReadRobotURI(RobotBasePtr robot, const std::string& filename, const AttributesList& atts)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
 
@@ -1039,19 +1034,19 @@ class Environment : public EnvironmentBase
             if( !preader ) {
                 return RobotBasePtr();
             }
-            bool bSuccess = ParseXMLFile(preader, filename);
+            bool bSuccess = _ParseXMLFile(preader, filename);
             preader->endElement("robot"); // have to end the tag!
             robot = RaveInterfaceCast<RobotBase>(pinterface);
             if( !bSuccess || !robot ) {
                 return RobotBasePtr();
             }
-            robot->__strxmlfilename = filename;
+            robot->__struri = filename;
         }
 
         return robot;
     }
 
-    virtual RobotBasePtr ReadRobotXMLData(RobotBasePtr robot, const std::string& data, const AttributesList& atts)
+    virtual RobotBasePtr ReadRobotData(RobotBasePtr robot, const std::string& data, const AttributesList& atts)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
 
@@ -1074,23 +1069,18 @@ class Environment : public EnvironmentBase
             if( !preader ) {
                 return RobotBasePtr();
             }
-            bool bSuccess = ParseXMLData(preader, data);
+            bool bSuccess = _ParseXMLData(preader, data);
             preader->endElement("robot"); // have to end the tag!
             robot = RaveInterfaceCast<RobotBase>(pinterface);
             if( !bSuccess || !robot ) {
                 return RobotBasePtr();
             }
-            robot->__strxmlfilename = preader->_filename;
+            robot->__struri = preader->_filename;
         }
         return robot;
     }
 
-    virtual KinBodyPtr ReadKinBodyXMLFile(const std::string& filename)
-    {
-        return ReadKinBodyXMLFile(KinBodyPtr(),filename,AttributesList());
-    }
-
-    virtual KinBodyPtr ReadKinBodyXMLFile(KinBodyPtr body, const std::string& filename, const AttributesList& atts)
+    virtual KinBodyPtr ReadKinBodyURI(KinBodyPtr body, const std::string& filename, const AttributesList& atts)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
 
@@ -1114,7 +1104,7 @@ class Environment : public EnvironmentBase
             }
             if( !!body ) {
                 boost::shared_ptr<KinBody::Link::TRIMESH> ptrimesh;
-                ptrimesh = ReadTrimeshFile(ptrimesh,filename,atts);
+                ptrimesh = ReadTrimeshURI(ptrimesh,filename,atts);
                 if( body->InitFromTrimesh(*ptrimesh,true) ) {
                     // have to set the render file
                     body->_veclinks.at(0)->GetGeometry(0).SetRenderFilename(filename);
@@ -1139,19 +1129,19 @@ class Environment : public EnvironmentBase
             if( !preader ) {
                 return KinBodyPtr();
             }
-            bool bSuccess = ParseXMLFile(preader, filename);
+            bool bSuccess = _ParseXMLFile(preader, filename);
             preader->endElement("kinbody"); // have to end the tag!
             body = RaveInterfaceCast<KinBody>(pinterface);
             if( !bSuccess || !body ) {
                 return KinBodyPtr();
             }
-            body->__strxmlfilename = filename;
+            body->__struri = filename;
         }
 
         return body;
     }
 
-    virtual KinBodyPtr ReadKinBodyXMLData(KinBodyPtr body, const std::string& data, const AttributesList& atts)
+    virtual KinBodyPtr ReadKinBodyData(KinBodyPtr body, const std::string& data, const AttributesList& atts)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
 
@@ -1174,18 +1164,18 @@ class Environment : public EnvironmentBase
             if( !preader ) {
                 return KinBodyPtr();
             }
-            bool bSuccess = ParseXMLData(preader, data);
+            bool bSuccess = _ParseXMLData(preader, data);
             preader->endElement("kinbody"); // have to end the tag!
             body = RaveInterfaceCast<KinBody>(pinterface);
             if( !bSuccess || !body ) {
                 return KinBodyPtr();
             }
-            body->__strxmlfilename = preader->_filename;
+            body->__struri = preader->_filename;
         }
         return body;
     }
 
-    virtual InterfaceBasePtr ReadInterfaceXMLFile(const std::string& filename, const AttributesList& atts)
+    virtual InterfaceBasePtr ReadInterfaceURI(const std::string& filename, const AttributesList& atts)
     {
         try {
             EnvironmentMutex::scoped_lock lockenv(GetMutex());
@@ -1194,13 +1184,13 @@ class Environment : public EnvironmentBase
             if( !preader ) {
                 return InterfaceBasePtr();
             }
-            bool bSuccess = ParseXMLFile(preader, filename);
+            bool bSuccess = _ParseXMLFile(preader, filename);
             boost::shared_ptr<OpenRAVEXMLParser::InterfaceXMLReadable> preadable = boost::dynamic_pointer_cast<OpenRAVEXMLParser::InterfaceXMLReadable>(preader->GetReadable());
             if( !bSuccess || !preadable || !preadable->_pinterface) {
                 return InterfaceBasePtr();
             }
             preader->endElement(RaveGetInterfaceName(preadable->_pinterface->GetInterfaceType())); // have to end the tag!
-            preadable->_pinterface->__strxmlfilename = filename;
+            preadable->_pinterface->__struri = filename;
             return preadable->_pinterface;
         }
         catch(const openrave_exception& ex) {
@@ -1209,7 +1199,7 @@ class Environment : public EnvironmentBase
         return InterfaceBasePtr();
     }
 
-    virtual InterfaceBasePtr ReadInterfaceXMLFile(InterfaceBasePtr pinterface, InterfaceType type, const std::string& filename, const AttributesList& atts)
+    virtual InterfaceBasePtr ReadInterfaceURI(InterfaceBasePtr pinterface, InterfaceType type, const std::string& filename, const AttributesList& atts)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         if( (type == PT_KinBody || type == PT_Robot) && _IsColladaFile(filename) ) {
@@ -1234,30 +1224,30 @@ class Environment : public EnvironmentBase
             else {
                 return InterfaceBasePtr();
             }
-            pinterface->__strxmlfilename = filename;
+            pinterface->__struri = filename;
         }
         else {
             BaseXMLReaderPtr preader = OpenRAVEXMLParser::CreateInterfaceReader(shared_from_this(), type, pinterface, RaveGetInterfaceName(type), atts);
             boost::shared_ptr<OpenRAVEXMLParser::InterfaceXMLReadable> preadable = boost::dynamic_pointer_cast<OpenRAVEXMLParser::InterfaceXMLReadable>(preader->GetReadable());
             if( !!preadable ) {
-                if( !ParseXMLFile(preader, filename) ) {
+                if( !_ParseXMLFile(preader, filename) ) {
                     return InterfaceBasePtr();
                 }
                 preader->endElement(RaveGetInterfaceName(pinterface->GetInterfaceType())); // have to end the tag!
                 pinterface = preadable->_pinterface;
             }
             else {
-                pinterface = ReadInterfaceXMLFile(filename,AttributesList());
+                pinterface = ReadInterfaceURI(filename,AttributesList());
                 if( !!pinterface && pinterface->GetInterfaceType() != type ) {
                     return InterfaceBasePtr();
                 }
             }
-            pinterface->__strxmlfilename = filename;
+            pinterface->__struri = filename;
         }
         return pinterface;
     }
 
-    virtual InterfaceBasePtr ReadInterfaceXMLData(InterfaceBasePtr pinterface, InterfaceType type, const std::string& data, const AttributesList& atts)
+    virtual InterfaceBasePtr ReadInterfaceData(InterfaceBasePtr pinterface, InterfaceType type, const std::string& data, const AttributesList& atts)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
 
@@ -1266,16 +1256,16 @@ class Environment : public EnvironmentBase
         if( !preader ) {
             return InterfaceBasePtr();
         }
-        bool bSuccess = ParseXMLData(preader, data);
+        bool bSuccess = _ParseXMLData(preader, data);
         preader->endElement(RaveGetInterfaceName(pinterface->GetInterfaceType())); // have to end the tag!
         if( !bSuccess ) {
             return InterfaceBasePtr();
         }
-        pinterface->__strxmlfilename = preader->_filename;
+        pinterface->__struri = preader->_filename;
         return pinterface;
     }
 
-    virtual boost::shared_ptr<KinBody::Link::TRIMESH> ReadTrimeshFile(boost::shared_ptr<KinBody::Link::TRIMESH> ptrimesh, const std::string& filename, const AttributesList& atts) {
+    virtual boost::shared_ptr<KinBody::Link::TRIMESH> ReadTrimeshURI(boost::shared_ptr<KinBody::Link::TRIMESH> ptrimesh, const std::string& filename, const AttributesList& atts) {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
         boost::shared_ptr<pair<string,string> > filedata = OpenRAVEXMLParser::FindFile(filename);
@@ -1301,17 +1291,14 @@ class Environment : public EnvironmentBase
 
     virtual bool ParseXMLFile(BaseXMLReaderPtr preader, const std::string& filename)
     {
-        EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
-        return OpenRAVEXMLParser::ParseXMLFile(preader, filename);
+        return _ParseXMLFile(preader,filename);
     }
 
     virtual bool ParseXMLData(BaseXMLReaderPtr preader, const std::string& pdata)
     {
-        EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
-        return OpenRAVEXMLParser::ParseXMLData(preader, pdata);
+        return _ParseXMLData(preader,pdata);
     }
+
 
     virtual void AddViewer(ViewerBasePtr pnewviewer)
     {
@@ -1375,6 +1362,9 @@ class Environment : public EnvironmentBase
     virtual OpenRAVE::GraphHandlePtr plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const RaveVector<float>& color, int drawstyle)
     {
         boost::mutex::scoped_lock lock(_mutexInterfaces);
+        if( _listViewers.size() == 0 ) {
+            return OpenRAVE::GraphHandlePtr();
+        }
         GraphHandleMultiPtr handles(new GraphHandleMulti());
         FOREACHC(itviewer, _listViewers) {
             handles->Add((*itviewer)->plot3(ppoints, numPoints, stride, fPointSize, color, drawstyle));
@@ -1384,6 +1374,9 @@ class Environment : public EnvironmentBase
     virtual OpenRAVE::GraphHandlePtr plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const float* colors, int drawstyle, bool bhasalpha)
     {
         boost::mutex::scoped_lock lock(_mutexInterfaces);
+        if( _listViewers.size() == 0 ) {
+            return OpenRAVE::GraphHandlePtr();
+        }
         GraphHandleMultiPtr handles(new GraphHandleMulti());
         FOREACHC(itviewer, _listViewers) {
             handles->Add((*itviewer)->plot3(ppoints, numPoints, stride, fPointSize, colors, drawstyle, bhasalpha));
@@ -1393,6 +1386,9 @@ class Environment : public EnvironmentBase
     virtual OpenRAVE::GraphHandlePtr drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color)
     {
         boost::mutex::scoped_lock lock(_mutexInterfaces);
+        if( _listViewers.size() == 0 ) {
+            return OpenRAVE::GraphHandlePtr();
+        }
         GraphHandleMultiPtr handles(new GraphHandleMulti());
         FOREACHC(itviewer, _listViewers) {
             handles->Add((*itviewer)->drawlinestrip(ppoints, numPoints, stride, fwidth,color));
@@ -1402,6 +1398,9 @@ class Environment : public EnvironmentBase
     virtual OpenRAVE::GraphHandlePtr drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors)
     {
         boost::mutex::scoped_lock lock(_mutexInterfaces);
+        if( _listViewers.size() == 0 ) {
+            return OpenRAVE::GraphHandlePtr();
+        }
         GraphHandleMultiPtr handles(new GraphHandleMulti());
         FOREACHC(itviewer, _listViewers) {
             handles->Add((*itviewer)->drawlinestrip(ppoints, numPoints, stride, fwidth,colors));
@@ -1411,6 +1410,9 @@ class Environment : public EnvironmentBase
     virtual OpenRAVE::GraphHandlePtr drawlinelist(const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color)
     {
         boost::mutex::scoped_lock lock(_mutexInterfaces);
+        if( _listViewers.size() == 0 ) {
+            return OpenRAVE::GraphHandlePtr();
+        }
         GraphHandleMultiPtr handles(new GraphHandleMulti());
         FOREACHC(itviewer, _listViewers) {
             handles->Add((*itviewer)->drawlinelist(ppoints, numPoints, stride, fwidth,color));
@@ -1420,6 +1422,9 @@ class Environment : public EnvironmentBase
     virtual OpenRAVE::GraphHandlePtr drawlinelist(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors)
     {
         boost::mutex::scoped_lock lock(_mutexInterfaces);
+        if( _listViewers.size() == 0 ) {
+            return OpenRAVE::GraphHandlePtr();
+        }
         GraphHandleMultiPtr handles(new GraphHandleMulti());
         FOREACHC(itviewer, _listViewers) {
             handles->Add((*itviewer)->drawlinelist(ppoints, numPoints, stride, fwidth,colors));
@@ -1429,6 +1434,9 @@ class Environment : public EnvironmentBase
     virtual OpenRAVE::GraphHandlePtr drawarrow(const RaveVector<float>& p1, const RaveVector<float>& p2, float fwidth, const RaveVector<float>& color)
     {
         boost::mutex::scoped_lock lock(_mutexInterfaces);
+        if( _listViewers.size() == 0 ) {
+            return OpenRAVE::GraphHandlePtr();
+        }
         GraphHandleMultiPtr handles(new GraphHandleMulti());
         FOREACHC(itviewer, _listViewers) {
             handles->Add((*itviewer)->drawarrow(p1,p2,fwidth,color));
@@ -1438,6 +1446,9 @@ class Environment : public EnvironmentBase
     virtual OpenRAVE::GraphHandlePtr drawbox(const RaveVector<float>& vpos, const RaveVector<float>& vextents)
     {
         boost::mutex::scoped_lock lock(_mutexInterfaces);
+        if( _listViewers.size() == 0 ) {
+            return OpenRAVE::GraphHandlePtr();
+        }
         GraphHandleMultiPtr handles(new GraphHandleMulti());
         FOREACHC(itviewer, _listViewers) {
             handles->Add((*itviewer)->drawbox(vpos, vextents));
@@ -1447,6 +1458,9 @@ class Environment : public EnvironmentBase
     virtual OpenRAVE::GraphHandlePtr drawplane(const RaveTransform<float>& tplane, const RaveVector<float>& vextents, const boost::multi_array<float,3>& vtexture)
     {
         boost::mutex::scoped_lock lock(_mutexInterfaces);
+        if( _listViewers.size() == 0 ) {
+            return OpenRAVE::GraphHandlePtr();
+        }
         GraphHandleMultiPtr handles(new GraphHandleMulti());
         FOREACHC(itviewer, _listViewers) {
             handles->Add((*itviewer)->drawplane(tplane, vextents, vtexture));
@@ -1456,6 +1470,9 @@ class Environment : public EnvironmentBase
     virtual OpenRAVE::GraphHandlePtr drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const RaveVector<float>& color)
     {
         boost::mutex::scoped_lock lock(_mutexInterfaces);
+        if( _listViewers.size() == 0 ) {
+            return OpenRAVE::GraphHandlePtr();
+        }
         GraphHandleMultiPtr handles(new GraphHandleMulti());
         FOREACHC(itviewer, _listViewers) {
             handles->Add((*itviewer)->drawtrimesh(ppoints, stride, pIndices, numTriangles, color));
@@ -1465,6 +1482,9 @@ class Environment : public EnvironmentBase
     virtual OpenRAVE::GraphHandlePtr drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const boost::multi_array<float,2>& colors)
     {
         boost::mutex::scoped_lock lock(_mutexInterfaces);
+        if( _listViewers.size() == 0 ) {
+            return OpenRAVE::GraphHandlePtr();
+        }
         GraphHandleMultiPtr handles(new GraphHandleMulti());
         FOREACHC(itviewer, _listViewers) {
             handles->Add((*itviewer)->drawtrimesh(ppoints, stride, pIndices, numTriangles, colors));
@@ -1536,7 +1556,21 @@ class Environment : public EnvironmentBase
 
 protected:
 
-    virtual void Clone(boost::shared_ptr<Environment const> r, int options)
+    virtual bool _ParseXMLFile(BaseXMLReaderPtr preader, const std::string& filename)
+    {
+        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
+        return OpenRAVEXMLParser::ParseXMLFile(preader, filename);
+    }
+
+    virtual bool _ParseXMLData(BaseXMLReaderPtr preader, const std::string& pdata)
+    {
+        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
+        return OpenRAVEXMLParser::ParseXMLData(preader, pdata);
+    }
+
+    virtual void _Clone(boost::shared_ptr<Environment const> r, int options)
     {
         Destroy();
 

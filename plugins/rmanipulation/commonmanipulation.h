@@ -38,28 +38,28 @@ public:
 
         virtual void SetRobot(RobotBasePtr robot) { _robot = robot; thresh = 0; }
         virtual float GetGoalThresh() { return thresh; }
-        
+
         virtual float Eval(const std::vector<dReal>& pConfiguration)
-        {    
+        {
             // check if there's a collision when hand moves to final config
             RobotBase::RobotStateSaver saver(_robot);
             _robot->SetActiveDOFValues(pConfiguration);
-            
+
             _robot->SetActiveDOFs(vhandjoints);
             _robot->GetActiveDOFValues(vhandvalues);
-            
+
             int numiter = _maxdivision;
             vhanddelta.resize(vhandjoints.size());
             for(size_t i = 0; i < vhandjoints.size(); ++i)
                 vhanddelta[i] = (vhandgoal[i]-vhandvalues[i])/(dReal)numiter;
-            
+
             while(numiter-- > 0) {
-                
+
                 for(size_t i = 0; i < vhandjoints.size(); ++i)
                     vhandvalues[i] += vhanddelta[i];
-                
+
                 _robot->SetActiveDOFValues(vhandvalues);
-                
+
                 if( _robot->GetEnv()->CheckCollision(KinBodyConstPtr(_robot))) {
                     return 1000;
                 }
@@ -93,7 +93,7 @@ public:
             // not in collision so returnt true
             return 0;
         }
-    
+
         vector<dReal> vhandgoal;
         vector<int> vhandjoints;
         float thresh;
@@ -102,14 +102,14 @@ public:
         {
             if( vhandjoints.size() == 0 || vhandjoints.size() != vhandgoal.size() || !ptraj )
                 return false;
-    
+
             boost::shared_ptr<MoveUnsync> pgoalfn(new MoveUnsync());
             pgoalfn->thresh = 0;
             pgoalfn->vhandjoints = vhandjoints;
             pgoalfn->vhandgoal = vhandgoal;
             pgoalfn->_maxdivision=maxdivision;
             pgoalfn->SetRobot(robot);
-            
+
             PlannerBase::PlannerParametersPtr params(new PlannerBase::PlannerParameters());
             params->SetRobotActiveJoints(robot);
             params->_goalfn = boost::bind(&MoveUnsync::Eval,pgoalfn,_1);
@@ -129,7 +129,7 @@ public:
                 RAVELOG_WARN(str(boost::format("failed to find planner %s\n")%pplannername));
                 return false;
             }
-    
+
             if( !planner->InitPlan(robot, params) ) {
                 return false;
             }
@@ -161,7 +161,7 @@ public:
             _error.resize(6,1);
             _nMaxIterations = 40;
             _pmanip->GetRobot()->GetActiveDOFLimits(_vlower,_vupper);
-            
+
         }
         virtual ~GripperJacobianConstrains() {}
 
@@ -246,7 +246,7 @@ public:
                 fdistcur = _distmetricfn(vprev,vnew);
                 _probot->SetActiveDOFValues(vnew); // for next iteration
             }
-            
+
             _iter = -1;
             RAVELOG_DEBUG("constraint function exceeded iterations\n");
             return false;
@@ -286,9 +286,9 @@ public:
 
     static bool SetActiveTrajectory(RobotBasePtr robot, TrajectoryBasePtr pActiveTraj, bool bExecute, const string& strsavetraj, boost::shared_ptr<ostream> pout,dReal fMaxVelMult=1)
     {
-        if( pActiveTraj->GetPoints().size() == 0 )
+        if( pActiveTraj->GetPoints().size() == 0 ) {
             return false;
-
+        }
         pActiveTraj->CalcTrajTiming(robot, pActiveTraj->GetInterpMethod(), true, true,fMaxVelMult);
 
         bool bExecuted = false;
@@ -302,8 +302,9 @@ public:
                 TrajectoryBasePtr pfulltraj = RaveCreateTrajectory(robot->GetEnv(),robot->GetDOF());
                 robot->GetFullTrajectoryFromActive(pfulltraj, pActiveTraj);
 
-                if( robot->GetController()->SetDesired(pfulltraj->GetPoints()[0].q))
+                if( robot->GetController()->SetDesired(pfulltraj->GetPoints()[0].q)) {
                     bExecuted = true;
+                }
             }
         }
 
@@ -315,10 +316,11 @@ public:
                 ofstream f(strsavetraj.c_str());
                 pfulltraj->Write(f, Trajectory::TO_IncludeTimestamps|Trajectory::TO_IncludeBaseTransformation);
             }
-            if( !!pout )
+            if( !!pout ) {
                 pfulltraj->Write(*pout, Trajectory::TO_IncludeTimestamps|Trajectory::TO_IncludeBaseTransformation|Trajectory::TO_OneLine);
+            }
         }
-    
+
         return bExecuted;
     }
 
@@ -348,10 +350,10 @@ public:
             if( !!pout )
                 pfulltraj->Write(*pout, Trajectory::TO_IncludeTimestamps|Trajectory::TO_IncludeBaseTransformation|Trajectory::TO_OneLine);
         }
-    
+
         return bExecuted;
     }
-    
+
     inline static dReal TransformDistance2(const Transform& t1, const Transform& t2, dReal frotweight=1, dReal ftransweight=1)
     {
         dReal facos = RaveAcos(min(dReal(1),RaveFabs(t1.rot.dot(t2.rot))));
@@ -425,8 +427,8 @@ public:
         };
 
         Vector v[3];
-    
-        // make sure oriented CCW 
+
+        // make sure oriented CCW
         for(int i = 0; i < nindices; i += 3 ) {
             v[0] = temp.vertices[indices[i]];
             v[1] = temp.vertices[indices[i+1]];
@@ -529,7 +531,7 @@ public:
                 return vpermutation[i];
             }
         }
-        
+
         nextindex = -1;
         return -1;
     }

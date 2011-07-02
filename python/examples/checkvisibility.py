@@ -35,68 +35,52 @@ if not __build_doc__:
     from openravepy import *
     from numpy import *
 
-class CheckVisibility:
-    def __init__(self,robot):
-        self.robot = robot
-        self.vmodels = []
-        self.handles = None
-        self.env = self.robot.GetEnv()
-        # through all sensors
-        self.sensors = []
-        for sensor in self.robot.GetAttachedSensors():
-            # if sensor is a camera
-            if sensor.GetSensor() is not None and sensor.GetSensor().Supports(Sensor.Type.Camera):
-                sensor.GetSensor().Configure(Sensor.ConfigureCommand.PowerOn)
-                sensor.GetSensor().Configure(Sensor.ConfigureCommand.RenderDataOn)
-                # go through all objects
-                for target in self.env.GetBodies():
-                    # load the visibility model
-                    vmodel = databases.visibilitymodel.VisibilityModel(robot,target=target,sensorname=sensor.GetName())
-                    if not vmodel.load():
-                        vmodel.autogenerate()
-                    # set internal discretization parameters 
-                    vmodel.visualprob.SetParameter(raydensity=0.002,allowableocclusion=0.0)
-                    self.vmodels.append(vmodel)
-                self.sensors.append(sensor.GetSensor())
-
-    def computeVisibleObjects(self):
-        print '-----'
-        with self.env:
-            handles = []
-            for vmodel in self.vmodels:
-                if vmodel.visualprob.ComputeVisibility():
-                    # draw points around the object
-                    ab = vmodel.target.ComputeAABB()
-                    corners = array([[1,1,1],[1,1,-1],[1,-1,1],[1,-1,-1],[-1,1,1],[-1,1,-1],[-1,-1,1],[-1,-1,-1]],float64)
-                    handles.append(self.env.plot3(tile(ab.pos(),(8,1))+corners*tile(ab.extents(),(8,1)),10,[0,1,0]))
-                    print '%s is visible in sensor %s'%(vmodel.target.GetName(),vmodel.sensorname)
-            self.handles = handles # replace
-
-    def viewSensors(self):
-        pilutil=__import__('scipy.misc',fromlist=['pilutil'])
-        shownsensors = []
-        for vmodel in self.vmodels:
-            if not vmodel.sensorname in shownsensors:
-                print vmodel.sensorname
-                pilutil.imshow(vmodel.getCameraImage())
-                shownsensors.append(vmodel.sensorname)
-
 def main(env,options):
     "Main example code."
     env.Load(options.scene)
-    robot = env.GetRobots()[0]
+    # initialiation
     with env:
+        robot = env.GetRobots()[0]
         # move a cup in front of another to show power of visibility
         body = env.GetKinBody('mug6')
         if body is not None:
             T = body.GetTransform()
             T[0:3,3] = [-0.14,0.146,0.938]
             body.SetTransform(T)
-    self = CheckVisibility(robot)
+
+        vmodels = []
+        print 'creating visibility structures, please wait...'
+        sensors = []
+        for sensor in robot.GetAttachedSensors():
+            # if sensor is a camera
+            if sensor.GetSensor() is not None and sensor.GetSensor().Supports(Sensor.Type.Camera):
+                sensor.GetSensor().Configure(Sensor.ConfigureCommand.PowerOn)
+                sensor.GetSensor().Configure(Sensor.ConfigureCommand.RenderDataOn)
+                # go through all objects
+                for target in env.GetBodies():
+                    # load the visibility model
+                    vmodel = databases.visibilitymodel.VisibilityModel(robot,target=target,sensorname=sensor.GetName())
+                    if not vmodel.load():
+                        vmodel.autogenerate()
+                    # set internal discretization parameters 
+                    vmodel.visualprob.SetParameter(raydensity=0.002,allowableocclusion=0.0)
+                    vmodels.append(vmodel)
+                sensors.append(sensor.GetSensor())
+
     print 'try moving objects in and out of the sensor view. green is inside'
     while True:
-        self.computeVisibleObjects()
-        time.sleep(0.01)
+        print '-----'
+        with env:
+            handles = []
+            for vmodel in vmodels:
+                if vmodel.visualprob.ComputeVisibility():
+                    # draw points around the object
+                    ab = vmodel.target.ComputeAABB()
+                    corners = array([[1,1,1],[1,1,-1],[1,-1,1],[1,-1,-1],[-1,1,1],[-1,1,-1],[-1,-1,1],[-1,-1,-1]],float64)
+                    handles.append(env.plot3(tile(ab.pos(),(8,1))+corners*tile(ab.extents(),(8,1)),10,[0,1,0]))
+                    print '%s is visible in sensor %s'%(vmodel.target.GetName(),vmodel.sensorname)
+            oldhandles = handles # replace
+        time.sleep(0.2)
 
 from optparse import OptionParser
 from openravepy import OpenRAVEGlobalArguments, with_destroy

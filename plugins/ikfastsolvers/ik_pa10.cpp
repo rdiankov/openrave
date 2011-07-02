@@ -15,7 +15,7 @@
 /// See the License for the specific language governing permissions and
 /// limitations under the License.
 ///
-/// ikfast version 41 generated on 2011-04-20 02:28:26.258820
+/// ikfast version 42 generated on 2011-07-01 15:40:02.924519
 /// To compile with gcc:
 ///     gcc -lstdc++ ik.cpp
 /// To compile without any main function as a shared object:
@@ -85,6 +85,8 @@ extern "C" {
   void dgeev_(const char *jobvl, const char *jobvr, const int *n, double *a, const int *lda, double *wr, double *wi,double *vl, const int *ldvl, double *vr, const int *ldvr, double *work, const int *lwork, int *info);
 }
 
+using namespace std; // necessary to get std math routines
+
 #ifdef IKFAST_NAMESPACE
 namespace IKFAST_NAMESPACE {
 #endif
@@ -101,7 +103,7 @@ public:
     /// Gets a solution given its free parameters
     /// \param pfree The free parameters required, range is in [-pi,pi]
     void GetSolution(IKReal* psolution, const IKReal* pfree) const {
-        for(size_t i = 0; i < basesol.size(); ++i) {
+        for(std::size_t i = 0; i < basesol.size(); ++i) {
             if( basesol[i].freeind < 0 )
                 psolution[i] = basesol[i].foffset;
             else {
@@ -1863,7 +1865,7 @@ int main(int argc, char** argv)
     eerot[0] = atof(argv[1]); eerot[1] = atof(argv[2]); eerot[2] = atof(argv[3]); eetrans[0] = atof(argv[4]);
     eerot[3] = atof(argv[5]); eerot[4] = atof(argv[6]); eerot[5] = atof(argv[7]); eetrans[1] = atof(argv[8]);
     eerot[6] = atof(argv[9]); eerot[7] = atof(argv[10]); eerot[8] = atof(argv[11]); eetrans[2] = atof(argv[12]);
-    for(size_t i = 0; i < vfree.size(); ++i)
+    for(std::size_t i = 0; i < vfree.size(); ++i)
         vfree[i] = atof(argv[13+i]);
     bool bSuccess = ik(eetrans, eerot, vfree.size() > 0 ? &vfree[0] : NULL, vsolutions);
 
@@ -1874,11 +1876,11 @@ int main(int argc, char** argv)
 
     printf("Found %d ik solutions:\n", (int)vsolutions.size());
     std::vector<IKReal> sol(getNumJoints());
-    for(size_t i = 0; i < vsolutions.size(); ++i) {
+    for(std::size_t i = 0; i < vsolutions.size(); ++i) {
         printf("sol%d (free=%d): ", (int)i, (int)vsolutions[i].GetFree().size());
         std::vector<IKReal> vsolfree(vsolutions[i].GetFree().size());
         vsolutions[i].GetSolution(&sol[0],vsolfree.size()>0?&vsolfree[0]:NULL);
-        for( size_t j = 0; j < sol.size(); ++j)
+        for( std::size_t j = 0; j < sol.size(); ++j)
             printf("%.15f, ", sol[j]);
         printf("\n");
     }

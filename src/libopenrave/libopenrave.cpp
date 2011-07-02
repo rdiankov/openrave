@@ -98,7 +98,7 @@ dReal RaveAtan2(dReal y, dReal x) { return atan2(y,x); }
 #else
 dReal RaveAtan2(dReal y, dReal x) // unfortunately no atan2 in crlibm...
 {
-    dReal absx, absy, val; 
+    dReal absx, absy, val;
     if (x == 0 && y == 0) {
         return 0;
     }
@@ -226,13 +226,13 @@ public:
     virtual ~RaveGlobal() {
         Destroy();
     }
-    
+
     static boost::shared_ptr<RaveGlobal>& instance()
     {
         boost::call_once(_create,_onceRaveInitialize);
         return _state;
     }
-    
+
     int Initialize(bool bLoadAllPlugins, uint32_t level)
     {
         if( _IsInitialized() ) {
@@ -427,7 +427,7 @@ public:
     }
 
     SpaceSamplerBasePtr GetDefaultSampler()
-    { 
+    {
         if( !_pdefaultsampler ) {
             boost::mutex::scoped_lock lock(_mutexXML);
             BOOST_ASSERT( _mapenvironments.size() > 0 );
@@ -535,7 +535,7 @@ UserDataPtr RaveGlobalState()
     }
     return UserDataPtr();
 }
-   
+
 void RaveDestroy()
 {
     RaveGlobal::instance()->Destroy();
@@ -730,12 +730,12 @@ BaseXMLReader::ProcessElement DummyXMLReader::startElement(const std::string& na
             *_osrecord << itatt->first << "=\"" << itatt->second << "\" ";
         *_osrecord << ">" << endl;
     }
-    
+
     // create a new parser
     _pcurreader.reset(new DummyXMLReader(name, _parentname,_osrecord));
     return PE_Support;
 }
-    
+
 bool DummyXMLReader::endElement(const std::string& name)
 {
     if( !!_pcurreader ) {
@@ -823,7 +823,7 @@ PlannerBase::PlannerParameters& PlannerBase::PlannerParameters::operator=(const 
     _nMaxIterations = 0;
     _fStepLength = 0.04f;
     _plannerparametersdepth = 0;
-    
+
     // transfer data
     std::stringstream ss;
     ss << std::setprecision(std::numeric_limits<dReal>::digits10+1); /// have to do this or otherwise precision gets lost and planners' initial conditions can vioalte constraints
@@ -864,7 +864,7 @@ bool PlannerBase::PlannerParameters::serialize(std::ostream& O) const
         O << *it << " ";
     }
     O << "</_vconfigresolution>" << endl;
-    
+
     O << "<_nmaxiterations>" << _nMaxIterations << "</_nmaxiterations>" << endl;
     O << "<_fsteplength>" << _fStepLength << "</_fsteplength>" << endl;
     O << "<_pathoptimization planner=\"" << _sPathOptimizationPlanner << "\">" << _sPathOptimizationParameters << "</_pathoptimization>" << endl;
@@ -920,7 +920,7 @@ BaseXMLReader::ProcessElement PlannerBase::PlannerParameters::startElement(const
     }
     return PE_Pass;
 }
-        
+
 bool PlannerBase::PlannerParameters::endElement(const std::string& name)
 {
     if( !!__pcurreader ) {
@@ -1203,9 +1203,9 @@ bool ParseXMLData(BaseXMLReaderPtr preader, const char* buffer, int size)
 
     XMLREADERDATA reader(preader, ctxt);
     ctxt->userData = &reader;
-    
+
     xmlParseDocument(ctxt);
-    
+
     if (ctxt->wellFormed) {
         ret = 0;
     }
@@ -1225,7 +1225,7 @@ bool ParseXMLData(BaseXMLReaderPtr preader, const char* buffer, int size)
         ctxt->myDoc = NULL;
     }
     xmlFreeParserCtxt(ctxt);
-    
+
     return ret==0;
 }
 
@@ -1292,7 +1292,7 @@ void InterfaceBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
         throw openrave_exception("invalid cloning reference",ORE_InvalidArguments);
     }
     __pUserData = preference->__pUserData;
-    __strxmlfilename = preference->__strxmlfilename;
+    __struri = preference->__struri;
     __mapReadableInterfaces = preference->__mapReadableInterfaces;
 }
 
@@ -1351,7 +1351,7 @@ bool InterfaceBase::_GetCommandHelp(std::ostream& o, std::istream& sinput) const
             break;
         }
         std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
-        
+
         if( cmd == "commands" ) {
             for(it = __mapCommands.begin(); it != __mapCommands.end(); ++it) {
                 o << it->first << " ";
@@ -1466,7 +1466,7 @@ bool SimpleSensorSystem::SimpleXMLReader::endElement(const std::string& name)
         ss >> _pdata->transPreOffset.rot;
     else if( name == tolowerstring(_pdata->GetXMLId()) )
         return true;
-        
+
     if( !ss )
         RAVELOG_WARN(str(boost::format("error parsing %s\n")%name));
     return false;
@@ -1504,7 +1504,7 @@ SimpleSensorSystem::~SimpleSensorSystem()
 void SimpleSensorSystem::Reset()
 {
     boost::mutex::scoped_lock lock(_mutex);
-    _mapbodies.clear();        
+    _mapbodies.clear();
 }
 
 void SimpleSensorSystem::AddRegisteredBodies(const std::vector<KinBodyPtr>& vbodies)
@@ -1538,11 +1538,11 @@ KinBody::ManageDataPtr SimpleSensorSystem::AddKinBody(KinBodyPtr pbody, XMLReada
         RAVELOG_WARN(str(boost::format("body %s already added\n")%pbody->GetName()));
         return KinBody::ManageDataPtr();
     }
-    
+
     boost::shared_ptr<BodyData> b = CreateBodyData(pbody, pdata);
     b->lastupdated = GetMicroTime();
     _mapbodies[pbody->GetEnvironmentId()] = b;
-    RAVELOG_VERBOSE(str(boost::format("system adding body %s (%s), total: %d\n")%pbody->GetName()%pbody->GetXMLFilename()%_mapbodies.size()));
+    RAVELOG_VERBOSE(str(boost::format("system adding body %s (%s), total: %d\n")%pbody->GetName()%pbody->GetURI()%_mapbodies.size()));
     SetManageData(pbody,b);
     return b;
 }
@@ -1623,13 +1623,13 @@ void SimpleSensorSystem::_UpdateBodies(list<SimpleSensorSystem::SNAPSHOT>& listb
             TransformMatrix tbase = plink->GetParent()->GetTransform();
             TransformMatrix toffset = tbase * tlink.inverse() * it->first->_initdata->transOffset;
             TransformMatrix tfinal = toffset * it->second*it->first->_initdata->transPreOffset;
-            
+
             plink->GetParent()->SetTransform(tfinal);
             it->first->lastupdated = curtime;
             it->first->tnew = it->second;
-            
+
             //RAVELOG_DEBUG("%f %f %f\n", tfinal.trans.x, tfinal.trans.y, tfinal.trans.z);
-            
+
             if( !it->first->IsPresent() )
                 RAVELOG_VERBOSE(str(boost::format("updating body %s\n")%plink->GetParent()->GetName()));
             it->first->bPresent = true;
@@ -1653,7 +1653,7 @@ void SimpleSensorSystem::_UpdateBodies(list<SimpleSensorSystem::SNAPSHOT>& listb
                 _mapbodies.erase(itbody++);
                 continue;
             }
-                
+
             if( itbody->second->IsPresent() && !!plink ) {
                 RAVELOG_VERBOSE(str(boost::format("body %s not present\n")%plink->GetParent()->GetName()));
             }
@@ -1981,7 +1981,7 @@ std::string GetMD5HashString(const std::string& s)
 
     md5_state_t state;
 	md5_byte_t digest[16];
-	
+
 	md5_init(&state);
 	md5_append(&state, (const md5_byte_t *)s.c_str(), s.size());
 	md5_finish(&state, digest);
@@ -2003,7 +2003,7 @@ std::string GetMD5HashString(const std::vector<uint8_t>& v)
 
     md5_state_t state;
 	md5_byte_t digest[16];
-	
+
 	md5_init(&state);
 	md5_append(&state, (const md5_byte_t *)&v[0], v.size());
 	md5_finish(&state, digest);

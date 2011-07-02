@@ -615,8 +615,9 @@ public:
             \param plink1 the second attaching link
             \param vanchor the anchor of the rotation axes
             \param vaxes the axes in plink0's coordinate system of the joints
+            \param vinitialvalues the current values of the robot used to set the 0 offset of the robot
         */
-        virtual void _ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1, const Vector& vanchor, const std::vector<Vector>& vaxes);
+        virtual void _ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1, const Vector& vanchor, const std::vector<Vector>& vaxes, const std::vector<dReal>& vcurrentvalues);
 
         std::string _name; ///< \see GetName
         boost::array<bool,3> _bIsCircular;    ///< \see IsCircular
@@ -817,10 +818,12 @@ public:
     /// \brief Returns the joints making up the controllable degrees of freedom of the body.
     const std::vector<JointPtr>& GetJoints() const { return _vecjoints; }
 
-    /// \brief Returns the passive joints, order does not matter.
-    ///
-    /// A passive joint is not directly controlled by the body's degrees of freedom so it has no
-    /// joint index and no dof index. Passive joints allows mimic joints to be hidden from the users.
+    /** \brief Returns the passive joints, order does not matter.
+
+        A passive joint is not directly controlled by the body's degrees of freedom so it has no
+        joint index and no dof index. Passive joints allows mimic joints to be hidden from the users.
+        However, there are cases when passive joints are not mimic; for example, suspension mechanism on vehicles.
+    */
     const std::vector<JointPtr>& GetPassiveJoints() const { return _vPassiveJoints; }
 
     /// \deprecated \see Link::GetRigidlyAttachedLinks (10/12/12)

@@ -196,7 +196,7 @@ public:
     virtual uint64_t GetSimulationTime() = 0;
     //@}
 
-    /// \name XML Parsing, File Loading
+    /// \name File Loading and Parsing
     /// \anchor env_loading
     //@{
 
@@ -217,17 +217,20 @@ public:
     };
     typedef SelectionOptions TriangulateOptions;
 
-    /// \brief Loads a scene from an OpenRAVE XML file. <b>[multi-thread safe]</b>
+    /// \brief Loads a scene from a file and adds all objects in the environment. <b>[multi-thread safe]</b>
     virtual bool Load(const std::string& filename, const AttributesList& atts = AttributesList()) = 0;
 
-    /// \brief Loads a scene from XML-formatted data, environment is locked automatically making this method thread-safe
-    virtual bool LoadXMLData(const std::string& data, const AttributesList& atts = AttributesList()) = 0;
+    /// \brief Loads a scene from in-memory data and adds all objects in the environment. <b>[multi-thread safe]</b>
+    virtual bool LoadData(const std::string& data, const AttributesList& atts = AttributesList()) = 0;
+
+    virtual bool LoadXMLData(const std::string& data, const AttributesList& atts = AttributesList()) { return LoadData(data,atts); }
 
     /// \brief Saves a scene depending on the filename extension. Default is in COLLADA format
     ///
     /// \param filename the filename to save the results at
     /// \param options controls what to save
     /// \param selectname
+    /// \throw openrave_exception Throw if failed to save anything
     virtual void Save(const std::string& filename, SelectionOptions options=SO_Everything, const std::string& selectname="") = 0;
 
     /** \brief Initializes a robot from a resource file. The robot is not added to the environment when calling this function. <b>[multi-thread safe]</b>
@@ -236,17 +239,21 @@ public:
         \param filename the name of the resource file, its extension determines the format of the file. See \ref supported_formats.
         \param atts The attribute/value pair specifying loading options. Defined in \ref arch_robot.
     */
-    virtual RobotBasePtr ReadRobotXMLFile(RobotBasePtr robot, const std::string& filename, const AttributesList& atts = AttributesList()) = 0;
-    /// \brief Creates a new robot from an XML file with no extra load options specified. <b>[multi-thread safe]</b>
-    virtual RobotBasePtr ReadRobotXMLFile(const std::string& filename) = 0;
+    virtual RobotBasePtr ReadRobotURI(RobotBasePtr robot, const std::string& filename, const AttributesList& atts = AttributesList()) = 0;
+    virtual RobotBasePtr ReadRobotXMLFile(RobotBasePtr robot, const std::string& filename, const AttributesList& atts = AttributesList()) { return ReadRobotURI(robot,filename,atts); }
 
-    /** \brief Initialize a robot from an XML formatted string. <b>[multi-thread safe]</b>
+    /// \brief Creates a new robot from a file with no extra load options specified. <b>[multi-thread safe]</b>
+    virtual RobotBasePtr ReadRobotURI(const std::string& filename) { return ReadRobotURI(RobotBasePtr(),filename,AttributesList()); }
+    virtual RobotBasePtr ReadRobotXMLFile(const std::string& filename) { return ReadRobotURI(filename); }
+
+    /** \brief Initialize a robot from in-memory data. <b>[multi-thread safe]</b>
 
         The robot should not be added the environment when calling this function.
         \param robot If a null pointer is passed, a new robot will be created, otherwise an existing robot will be filled
         \param atts The attribute/value pair specifying loading options. Defined in \ref arch_robot.
     */
-    virtual RobotBasePtr ReadRobotXMLData(RobotBasePtr robot, const std::string& data, const AttributesList& atts = AttributesList()) = 0;
+    virtual RobotBasePtr ReadRobotData(RobotBasePtr robot, const std::string& data, const AttributesList& atts = AttributesList()) = 0;
+    virtual RobotBasePtr ReadRobotXMLData(RobotBasePtr robot, const std::string& data, const AttributesList& atts = AttributesList()) { return ReadRobotData(robot,data,atts); }
 
     /** \brief Initializes a kinematic body from a resource file. The body is not added to the environment when calling this function. <b>[multi-thread safe]</b>
 
@@ -254,17 +261,21 @@ public:
         \param body If a null pointer is passed, a new body will be created, otherwise an existing robot will be filled
         \param atts The attribute/value pair specifying loading options. Defined in \ref arch_kinbody.
     */
-    virtual KinBodyPtr ReadKinBodyXMLFile(KinBodyPtr body, const std::string& filename, const AttributesList& atts = AttributesList()) = 0;
-    /// \brief Creates a new kinbody from an XML file with no extra load options specified. <b>[multi-thread safe]</b>
-    virtual KinBodyPtr ReadKinBodyXMLFile(const std::string& filename) = 0;
+    virtual KinBodyPtr ReadKinBodyURI(KinBodyPtr body, const std::string& filename, const AttributesList& atts = AttributesList()) = 0;
+    virtual KinBodyPtr ReadKinBodyXMLFile(KinBodyPtr body, const std::string& filename, const AttributesList& atts = AttributesList()) { return ReadKinBodyURI(body,filename,atts); }
 
-    /** \brief Initializes a kinematic body from an XML formatted string. <b>[multi-thread safe]</b>
+    /// \brief Creates a new kinbody from an XML file with no extra load options specified. <b>[multi-thread safe]</b>
+    virtual KinBodyPtr ReadKinBodyURI(const std::string& filename) { return ReadKinBodyURI(KinBodyPtr(),filename,AttributesList()); }
+    virtual KinBodyPtr ReadKinBodyXMLFile(const std::string& filename) { return ReadKinBodyURI(filename); }
+
+    /** \brief Initializes a kinematic body from in-memory data. <b>[multi-thread safe]</b>
 
         The body should not be added to the environment when calling this function.
         \param body If a null pointer is passed, a new body will be created, otherwise an existing robot will be filled
         \param atts The attribute/value pair specifying loading options. Defined in \ref arch_kinbody.
     */
-    virtual KinBodyPtr ReadKinBodyXMLData(KinBodyPtr body, const std::string& data, const AttributesList& atts = AttributesList()) = 0;
+    virtual KinBodyPtr ReadKinBodyData(KinBodyPtr body, const std::string& data, const AttributesList& atts = AttributesList()) = 0;
+    virtual KinBodyPtr ReadKinBodyXMLData(KinBodyPtr body, const std::string& data, const AttributesList& atts = AttributesList()) { return ReadKinBodyData(body,data,atts); }
 
     /** \brief Initializes an interface from a resource file. <b>[multi-thread safe]</b>
 
@@ -272,36 +283,41 @@ public:
         \param filename the name of the resource file, its extension determines the format of the file. See \ref supported_formats.
         \param atts The attribute/value pair specifying loading options. See the individual interface descriptions at \ref interface_concepts.
     */
-    virtual InterfaceBasePtr ReadInterfaceXMLFile(InterfaceBasePtr pinterface, InterfaceType type, const std::string& filename, const AttributesList& atts = AttributesList()) = 0;
-    virtual InterfaceBasePtr ReadInterfaceXMLFile(const std::string& filename, const AttributesList& atts = AttributesList()) = 0;
+    virtual InterfaceBasePtr ReadInterfaceURI(InterfaceBasePtr pinterface, InterfaceType type, const std::string& filename, const AttributesList& atts = AttributesList()) = 0;
+    virtual InterfaceBasePtr ReadInterfaceXMLFile(InterfaceBasePtr pinterface, InterfaceType type, const std::string& filename, const AttributesList& atts = AttributesList()) { return ReadInterfaceURI(pinterface,type,filename,atts); }
 
-    /** \brief Initializes an interface from an XML formatted string. <b>[multi-thread safe]</b>
+    virtual InterfaceBasePtr ReadInterfaceURI(const std::string& filename, const AttributesList& atts = AttributesList()) = 0;
+    virtual InterfaceBasePtr ReadInterfaceXMLFile(const std::string& filename, const AttributesList& atts = AttributesList()) { return ReadInterfaceURI(filename,atts); }
+
+    /** \brief Initializes an interface from in-memory data. <b>[multi-thread safe]</b>
 
         \param pinterface If a null pointer is passed, a new interface will be created, otherwise an existing interface will be filled
-        \param data string containing XML data
+        \param data string containing data
         \param atts The attribute/value pair specifying loading options. See the individual interface descriptions at \ref interface_concepts.
     */
-    virtual InterfaceBasePtr ReadInterfaceXMLData(InterfaceBasePtr pinterface, InterfaceType type, const std::string& data, const AttributesList& atts = AttributesList()) = 0;
+    virtual InterfaceBasePtr ReadInterfaceData(InterfaceBasePtr pinterface, InterfaceType type, const std::string& data, const AttributesList& atts = AttributesList()) = 0;
+    virtual InterfaceBasePtr ReadInterfaceXMLData(InterfaceBasePtr pinterface, InterfaceType type, const std::string& data, const AttributesList& atts = AttributesList()) { return ReadInterfaceData(pinterface,type,data,atts); }
 
     /** \brief reads in the rigid geometry of a resource file into a TRIMESH structure
 
         \param filename the name of the resource file, its extension determines the format of the file. Complex meshes and articulated meshes are all triangulated appropriately. See \ref supported_formats.
         \param options Options to control the parsing process.
     */
-    virtual boost::shared_ptr<KinBody::Link::TRIMESH> ReadTrimeshFile(boost::shared_ptr<KinBody::Link::TRIMESH> ptrimesh, const std::string& filename, const AttributesList& atts = AttributesList()) = 0;
+    virtual boost::shared_ptr<KinBody::Link::TRIMESH> ReadTrimeshURI(boost::shared_ptr<KinBody::Link::TRIMESH> ptrimesh, const std::string& filename, const AttributesList& atts = AttributesList()) = 0;
+    virtual boost::shared_ptr<KinBody::Link::TRIMESH> ReadTrimeshFile(boost::shared_ptr<KinBody::Link::TRIMESH> ptrimesh, const std::string& filename, const AttributesList& atts = AttributesList()) { return ReadTrimeshURI(ptrimesh,filename,atts); }
 
     /// \deprecated (10/09/30) see \ref RaveRegisterXMLReader
     virtual boost::shared_ptr<void> RegisterXMLReader(InterfaceType type, const std::string& xmltag, const CreateXMLReaderFn& fn) RAVE_DEPRECATED = 0;
 
     /// \brief Parses a file for OpenRAVE XML formatted data.
-    virtual bool ParseXMLFile(BaseXMLReaderPtr preader, const std::string& filename) = 0;
+    virtual bool ParseXMLFile(BaseXMLReaderPtr preader, const std::string& filename) RAVE_DEPRECATED = 0;
 
     /** \brief Parses a data file for XML data.
 
         \param pdata The data of the buffer
         \param len the number of bytes valid in pdata
     */
-    virtual bool ParseXMLData(BaseXMLReaderPtr preader, const std::string& data) = 0;
+    virtual bool ParseXMLData(BaseXMLReaderPtr preader, const std::string& data) RAVE_DEPRECATED = 0;
     //@}
 
     /// \name Object Setting and Querying
@@ -404,14 +420,16 @@ public:
     ///
     /// \param[out] trimesh - The output triangle mesh
     /// \param[in] body body the triangulate
+    /// \throw openrave_exception Throw if failed to add anything
     virtual void Triangulate(KinBody::Link::TRIMESH& trimesh, KinBodyConstPtr pbody) = 0;
 
-    /// \brief General triangulation of the whole scene. trimesh will be appended the new data. <b>[multi-thread safe]</b>
+    /// \brief General triangulation of the whole scene. <b>[multi-thread safe]</b>
     ///
-    /// \param[out] trimesh - The output triangle mesh
+    /// \param[out] trimesh - The output triangle mesh. The new triangles are appended to the existing triangles!
     /// \param[in] options - Controlls what to triangulate.
     /// \param[in] selectname - name of the body used in options
-    virtual bool TriangulateScene(KinBody::Link::TRIMESH& trimesh, SelectionOptions options, const std::string& selectname) = 0;
+    /// \throw openrave_exception Throw if failed to add anything
+    virtual void TriangulateScene(KinBody::Link::TRIMESH& trimesh, SelectionOptions options, const std::string& selectname) = 0;
     //@}
 
     /// \brief Load a new module, need to Lock if calling outside simulation thread

@@ -99,7 +99,7 @@ class ViewerRecorder : public ModuleBase
     bool _bUseSimulationTime;
     list<boost::shared_ptr<VideoFrame> > _listAddFrames, _listFinishedFrames;
     boost::shared_ptr<VideoFrame> _frameLastAdded;
-    
+
 public:
     ViewerRecorder(EnvironmentBasePtr penv, std::istream& sinput) : ModuleBase(penv)
     {
@@ -118,9 +118,9 @@ public:
         _starttime = 0;
         _bContinueThread = true;
 #ifdef _WIN32
-        _pfile = NULL; 
+        _pfile = NULL;
         _ps = NULL;
-        _psCompressed = NULL; 
+        _psCompressed = NULL;
         _psText = NULL;
         _biSizeImage = 0;
 #else
@@ -130,7 +130,7 @@ public:
         _stream = NULL;
         _picture = NULL;
         _yuv420p = NULL;
-        _picture_buf = NULL; 
+        _picture_buf = NULL;
         _outbuf = NULL;
         _picture_size = 0;
         _outbuf_size = 0;
@@ -174,7 +174,6 @@ protected:
                         return false;
                     }
                     boost::trim(_filename);
-                    break;
                 }
                 else if( cmd == "timing" ) {
                     string type;
@@ -204,12 +203,8 @@ protected:
                     break;
                 }
             }
-            if( !sinput ) {
-                RAVELOG_WARN("invalid format");
-                return false;
-            }
             if( !pviewer ) {
-                RAVELOG_WARN("invalid viewer");
+                RAVELOG_WARN("invalid viewer\n");
             }
             _StartVideo(_filename,_framerate,_nVideoWidth,_nVideoHeight,24,codecid);
             _starttime = 0;
@@ -224,13 +219,13 @@ protected:
         }
         return false;
     }
-    
+
     bool _StopCommand(ostream& sout, istream& sinput)
     {
         _Reset();
         return true;
     }
-    
+
     bool _GetCodecsCommand(ostream& sout, istream& sinput)
     {
         std::list<std::pair<int,string> > listcodecs;
@@ -306,7 +301,7 @@ protected:
                         continue;
                     }
                 }
-                
+
                 if( _listAddFrames.front()->_timestamp-_starttime > _frametime && !!_frameLastAdded ) {
                     frame = _frameLastAdded;
                     numstores = (_listAddFrames.front()->_timestamp-_starttime-1)/_frametime;
@@ -345,7 +340,7 @@ protected:
                 _AddWatermarkToImage(&frame->_vimagememory.at(0), frame->_width, frame->_height, frame->_pixeldepth);
                 frame->_bProcessed = true;
             }
-            
+
             try {
                 _starttime += _frametime*numstores;
                 for(uint64_t i = 0; i < numstores; ++i) {
@@ -401,7 +396,7 @@ protected:
     int _biSizeImage;
 
     void _GetCodecs(std::list<std::pair<int,std::string> >& lcodecs) { lcodecs.clear(); }
-    
+
     void _StartVideo(const std::string& filename, double frameRate, int width, int height, int bits, int codecid=-1)
     {
         _nFrameCount = 0;
@@ -454,7 +449,7 @@ protected:
             return NULL;
         }
     }
-    
+
     // Fill in the header for the video stream....
     // The video stream will run in rate ths of a second....
     void _CreateStream(int rate, unsigned long buffersize, int rectwidth, int rectheight, const char* _compressor)
@@ -470,19 +465,19 @@ protected:
         //strhdr.fccHandler             = mmioFOURCC('M','S','V','C'); // Microsoft video 1
         //strhdr.fccHandler             = mmioFOURCC('I','V','5','0'); // Intel video 5.0
         //strhdr.dwFlags                = AVISTREAMINFO_DISABLED;
-        //strhdr.dwCaps                 = 
-        //strhdr.wPriority              = 
-        //strhdr.wLanguage              = 
+        //strhdr.dwCaps                 =
+        //strhdr.wPriority              =
+        //strhdr.wLanguage              =
         strhdr.dwScale                = 1;
         strhdr.dwRate                 = rate;               // rate fps
-        //strhdr.dwStart                =  
-        //strhdr.dwLength               = 
-        //strhdr.dwInitialFrames        = 
+        //strhdr.dwStart                =
+        //strhdr.dwLength               =
+        //strhdr.dwInitialFrames        =
         strhdr.dwSuggestedBufferSize  = buffersize;
         strhdr.dwQuality              = -1; // use the default
-        //strhdr.dwSampleSize           = 
+        //strhdr.dwSampleSize           =
         SetRect(&strhdr.rcFrame, 0, 0, (int) rectwidth, (int) rectheight);
-        //strhdr.dwEditCount            = 
+        //strhdr.dwEditCount            =
         //strhdr.dwFormatChangeCount    =
         //strcpy(strhdr.szName, "Full Frames (Uncompressed)");
 
@@ -509,7 +504,7 @@ protected:
 
         HRESULT hr = AVIMakeCompressedStream(&_psCompressed, _ps, &opts, NULL);
         BOOST_ASSERT(hr == AVIERR_OK);
-    
+
         hr = AVIStreamSetFormat(_psCompressed, 0, lpbi/*stream format*/, lpbi->biSize + lpbi->biClrUsed * sizeof(RGBQUAD)/*format size*/);
         BOOST_ASSERT(hr == AVIERR_OK);
     }
@@ -613,7 +608,7 @@ protected:
         if( bits != 24 ) {
             throw OPENRAVE_EXCEPTION_FORMAT0("START_AVI only supports 24bits",ORE_InvalidArguments);
         }
-    
+
         AVCodecContext *codec_ctx;
         AVCodec *codec;
 
@@ -700,7 +695,7 @@ protected:
         for(int i = 0; i < _stream->codec->height; ++i) {
             memcpy(&newdata[i*_stream->codec->width*3], (char*)penddata - (i+1)*_stream->codec->width*3, _stream->codec->width*3);
         }
-    
+
         _picture->data[0] = (uint8_t*)&newdata[0];
         _picture->linesize[0] = _stream->codec->width * 3;
 
@@ -711,14 +706,14 @@ protected:
             sws_freeContext(img_convert_ctx);
             throw OPENRAVE_EXCEPTION_FORMAT0("ADD_FRAME sws_scale failed",ORE_Assert);
         }
- 
+
         sws_freeContext(img_convert_ctx);
 #else
         if( img_convert((AVPicture*)_yuv420p, PIX_FMT_YUV420P, (AVPicture*)_picture, PIX_FMT_BGR24, _stream->codec->width, _stream->codec->height) ) {
             throw OPENRAVE_EXCEPTION_FORMAT0("ADD_FRAME img_convert failed",ORE_Assert);
         }
 #endif
-    
+
         size = avcodec_encode_video(_stream->codec, (uint8_t*)_outbuf, _outbuf_size, _yuv420p);
         if (size == -1) {
             throw OPENRAVE_EXCEPTION_FORMAT0("error encoding frame",ORE_Assert);

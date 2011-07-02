@@ -25,7 +25,7 @@ class LoggingModule : public ModuleBase
  public:
  LoggingModule(EnvironmentBasePtr penv) : ModuleBase(penv)
     {
-        __description = ":Interface Author: Rosen Diankov\n\nCan save the entire scene to an XML file";
+        __description = ":Interface Author: Rosen Diankov\n\nCan save the entire scene to an OpenRAVE XML file";
         RegisterCommand("savescene",boost::bind(&LoggingModule::SaveScene,this,_1,_2),
                         "Saves the entire scene in an xml file. If paths are relative,\n"
                         "should only be opened from the dirctory openrave was launched in\n"
@@ -65,13 +65,13 @@ class LoggingModule : public ModuleBase
         _threadlog.reset(new boost::thread(boost::bind(&LoggingModule::_log_thread,shared_module())));
         return 0;
     }
-    
+
     /// returns true when problem is solved
     virtual bool SimulationStep(dReal fElapsedTime)
     {
         return false;
     }
-    
+
  private:
     virtual bool SaveScene(ostream& sout, istream& sinput)
     {
@@ -129,10 +129,10 @@ class LoggingModule : public ModuleBase
         FOREACHC(itbody, vecbodies) {
             KinBodyPtr pbody = *itbody;
 
-            if( pbody->GetXMLFilename().size() > 0 ) {
+            if( pbody->GetURI().size() > 0 ) {
                 fout << setw(tabwidth) << " "
                      << (pbody->IsRobot()?"<Robot":"<KinBody") << " name=\"" << pbody->GetName() << "\"";
-                fout << " file=\"" << pbody->GetXMLFilename() << "\">" << endl;
+                fout << " file=\"" << pbody->GetURI() << "\">" << endl;
             }
             else {
                 // have to process each link/geometry file
@@ -140,7 +140,7 @@ class LoggingModule : public ModuleBase
                 continue;
                 //fout << ">" << endl;
             }
-        
+
             t = pbody->GetTransform();
             fout << setw(tabwidth*2) << " "
                  << "<Translation>" << t.trans.x << " " << t.trans.y << " " << t.trans.z << "</Translation>" << endl;
@@ -159,7 +159,7 @@ class LoggingModule : public ModuleBase
             fout << setw(tabwidth) << " ";
             fout << (pbody->IsRobot()?"</Robot>":"</KinBody>") << endl;
         }
-    
+
         fout << "</Environment>" << endl;
         sout << "1" << endl;
 
@@ -189,15 +189,15 @@ class LoggingModule : public ModuleBase
             //        if( pfLog == NULL ) {
             //            pfLog = fopen("motion.txt", "wb");
             //        }
-            //        
+            //
             //        fTotalTime += fElapsedTime;
             //        if( pfLog != NULL && (fTotalTime-fLogTime) > 0.05f ) {
-            //            
+            //
             //            fwrite(&fTotalTime, sizeof(float), 1, pfLog);
-            //            
+            //
             //            int numobjs = (int)GetEnv()->GetBodies().size();
             //            fwrite(&numobjs, 4, 1, pfLog);
-            //            
+            //
             //            Transform t;
             //            vector<dReal> vjoints;
             //            std::vector<KinBody*>::const_iterator itbody;
@@ -205,18 +205,18 @@ class LoggingModule : public ModuleBase
             //                size_t len = wcslen((*itbody)->GetName());
             //                fwrite(&len, 4, 1, pfLog);
             //                fwrite((*itbody)->GetName(), len*sizeof((*itbody)->GetName()[0]), 1, pfLog);
-            //                
+            //
             //                t = (*itbody)->GetTransform();
             //                fwrite(&t, sizeof(t), 1, pfLog);
-            //                
+            //
             //                (*itbody)->GetDOFValues(vjoints);
-            //                
+            //
             //                len = vjoints.size();
             //                fwrite(&len, 4, 1, pfLog);
             //                if( len > 0 )
             //                    fwrite(&vjoints[0], sizeof(vjoints[0]) * vjoints.size(), 1, pfLog);
             //            }
-            //            
+            //
             //            fLogTime = fTotalTime;
             //        }
             //Sleep(1);

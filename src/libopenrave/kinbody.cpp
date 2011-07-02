@@ -1168,7 +1168,7 @@ Vector KinBody::Joint::GetAxis(int iaxis) const
     return _attachedbodies[0]->GetTransform().rotate(_tLeft.rotate(_vaxes.at(iaxis)));
 }
 
-void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1, const Vector& vanchorraw, const std::vector<Vector>& vaxes)
+void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1, const Vector& vanchorraw, const std::vector<Vector>& vaxes, const std::vector<dReal>& vcurrentvalues)
 {
     if( !plink0 || !plink1 ) {
         throw OPENRAVE_EXCEPTION_FORMAT("one or more attached _attachedbodies are invalid for joint %s", GetName(),ORE_InvalidArguments);
@@ -1210,17 +1210,17 @@ void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1,
 
     if( _type & JointSpecialBit ) {
         switch(_type) {
-        case KinBody::Joint::JointUniversal:
+        case JointUniversal:
             _tLeft.trans = vanchor;
             _tRight.trans = -vanchor;
             _tRight = _tRight * trel;
             break;
-        case KinBody::Joint::JointHinge2:
+        case JointHinge2:
             _tLeft.trans = vanchor;
             _tRight.trans = -vanchor;
             _tRight = _tRight * trel;
             break;
-        case KinBody::Joint::JointSpherical:
+        case JointSpherical:
             _tLeft.trans = vanchor;
             _tRight.trans = -vanchor;
             _tRight = _tRight * trel;
@@ -1259,6 +1259,31 @@ void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1,
             }
             else {
                 _tRight.trans += _vaxes[GetDOF()-1]*_voffsets[GetDOF()-1];
+            }
+        }
+    }
+
+    if( vcurrentvalues.size() > 0 ) {
+        // see if any joints have offsets
+        if( !(_type&JointSpecialBit) || _type != JointSpherical ) {
+            Transform toffset;
+            if( IsRevolute(0) ) {
+                toffset.rot = quatFromAxisAngle(_vaxes[0], -vcurrentvalues[0]);
+            }
+            else {
+                toffset.trans = -_vaxes[0]*vcurrentvalues[0];
+            }
+            _tLeftNoOffset *= toffset;
+            _tLeft *= toffset;
+            if( vcurrentvalues.size() > 1 ) {
+                if( IsRevolute(GetDOF()-1) ) {
+                    toffset.rot = quatFromAxisAngle(_vaxes[GetDOF()-1], -vcurrentvalues.at(GetDOF()-1));
+                }
+                else {
+                    toffset.trans = -_vaxes[GetDOF()-1]*vcurrentvalues.at(GetDOF()-1);
+                }
+                _tRightNoOffset = toffset * _tRightNoOffset;
+                _tRight = toffset * _tRight;
             }
         }
     }
@@ -1833,7 +1858,7 @@ void KinBody::Destroy()
 
 bool KinBody::InitFromFile(const std::string& filename, const AttributesList& atts)
 {
-    bool bSuccess = GetEnv()->ReadKinBodyXMLFile(shared_kinbody(), filename, atts)==shared_kinbody();
+    bool bSuccess = GetEnv()->ReadKinBodyURI(shared_kinbody(), filename, atts)==shared_kinbody();
     if( !bSuccess ) {
         Destroy();
         return false;
@@ -1843,7 +1868,7 @@ bool KinBody::InitFromFile(const std::string& filename, const AttributesList& at
 
 bool KinBody::InitFromData(const std::string& data, const AttributesList& atts)
 {
-    bool bSuccess = GetEnv()->ReadKinBodyXMLData(shared_kinbody(), data, atts)==shared_kinbody();
+    bool bSuccess = GetEnv()->ReadKinBodyData(shared_kinbody(), data, atts)==shared_kinbody();
     if( !bSuccess ) {
         Destroy();
         return false;
@@ -3637,6 +3662,8 @@ void KinBody::_ComputeInternalInformation()
                 // have to swap order
                 Transform tswap = (*itjoint)->GetInternalHierarchyRightTransform().inverse();
                 std::vector<Vector> vaxes((*itjoint)->GetDOF());
+                std::vector<dReal> vcurrentvalues;
+                (*itjoint)->GetValues(vcurrentvalues);
                 for(size_t i = 0; i < vaxes.size(); ++i) {
                     vaxes[i] = -tswap.rotate((*itjoint)->GetInternalHierarchyAxis(i));
                 }
@@ -3645,7 +3672,7 @@ void KinBody::_ComputeInternalInformation()
                 TransformSaver<LinkPtr> linksaver1((*itjoint)->GetSecondAttached());
                 (*itjoint)->GetFirstAttached()->SetTransform(Transform());
                 (*itjoint)->GetSecondAttached()->SetTransform((*itjoint)->GetInternalHierarchyLeftTransform()*(*itjoint)->GetInternalHierarchyRightTransform());
-                (*itjoint)->_ComputeInternalInformation((*itjoint)->GetSecondAttached(),(*itjoint)->GetFirstAttached(),tswap.trans,vaxes);
+                (*itjoint)->_ComputeInternalInformation((*itjoint)->GetSecondAttached(),(*itjoint)->GetFirstAttached(),tswap.trans,vaxes,vcurrentvalues);
             }
         }
         // find out what links are affected by what joints.
@@ -4234,7 +4261,7 @@ void KinBody::SetZeroConfiguration()
         for(size_t i = 0; i < vaxes.size(); ++i) {
             vaxes[i] = (*itjoint)->GetInternalHierarchyLeftTransform().rotate((*itjoint)->GetInternalHierarchyAxis(i));
         }
-        (*itjoint)->_ComputeInternalInformation((*itjoint)->GetFirstAttached(), (*itjoint)->GetSecondAttached(),(*itjoint)->GetInternalHierarchyLeftTransform().trans,vaxes);
+        (*itjoint)->_ComputeInternalInformation((*itjoint)->GetFirstAttached(), (*itjoint)->GetSecondAttached(),(*itjoint)->GetInternalHierarchyLeftTransform().trans,vaxes,std::vector<dReal>());
     }
 }
 

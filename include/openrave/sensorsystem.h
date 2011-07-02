@@ -33,7 +33,7 @@ public:
 
     /// return the static interface type this class points to (used for safe casting)
     static inline InterfaceType GetInterfaceTypeStatic() { return PT_SensorSystem; }
-    
+
     /// resets the system and stops managing all objects. Any objects that are not locked, are deleted
     virtual void Reset() = 0;
 
@@ -73,7 +73,7 @@ public:
     XMLData(const std::string& xmlid) : XMLReadable(xmlid), id(0) {}
         virtual void copy(boost::shared_ptr<XMLData const> pdata) { *this = *pdata; }
 
-        std::string sid; ///< global id for the system id 
+        std::string sid; ///< global id for the system id
         int id;
         std::string strOffsetLink; ///< the link where the markers are attached (if any)
         Transform transOffset,transPreOffset; // final offset = transOffset * transReturnedFromVision * transPreOffset
@@ -115,8 +115,8 @@ public:
         uint64_t lastupdated;
         Transform tnew; ///< most recent transform that is was set
 
-        bool bPresent; 
-        bool bEnabled; 
+        bool bPresent;
+        bool bEnabled;
         bool bLock;
 
         KinBody::LinkWeakPtr _plink;
@@ -144,7 +144,7 @@ public:
     virtual ~SimpleSensorSystem();
 
     virtual void Reset();
-    
+
     virtual void AddRegisteredBodies(const std::vector<KinBodyPtr>& vbodies);
     virtual KinBody::ManageDataPtr AddKinBody(KinBodyPtr pbody, XMLReadableConstPtr pdata);
 

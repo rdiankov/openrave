@@ -29,6 +29,14 @@ object PyRay::pos() { return toPyVector3(r.pos); }
 string PyRay::__repr__() { return boost::str(boost::format("<Ray([%f,%f,%f],[%f,%f,%f])>")%r.pos.x%r.pos.y%r.pos.z%r.dir.x%r.dir.y%r.dir.z); }
 string PyRay::__str__() { return boost::str(boost::format("<%f %f %f %f %f %f>")%r.pos.x%r.pos.y%r.pos.z%r.dir.x%r.dir.y%r.dir.z); }
 
+object toPyGraphHandle(const GraphHandlePtr p)
+{
+    if( !p ) {
+        return object();
+    }
+    return object(PyGraphHandle(p));
+}
+
 object toPyRay(const RAY& r)
 {
     return object(boost::shared_ptr<PyRay>(new PyRay(r)));
@@ -138,7 +146,7 @@ public:
     }
 
     string __str__() { return boost::str(boost::format("<trimesh: verts %d, tris=%d>")%len(vertices)%len(indices)); }
-            
+
     object vertices,indices;
 };
 
@@ -215,6 +223,11 @@ public:
     object GetTranslationXY2D() { return toPyVector2(_param.GetTranslationXY2D()); }
     object GetTranslationXYOrientation3D() { return toPyVector3(_param.GetTranslationXYOrientation3D()); }
     object GetTranslationLocalGlobal6D() { return boost::python::make_tuple(toPyVector3(_param.GetTranslationLocalGlobal6D().first),toPyVector3(_param.GetTranslationLocalGlobal6D().second)); }
+
+    dReal ComputeDistanceSqr(boost::shared_ptr<PyIkParameterization> pyikparam)
+    {
+        return _param.ComputeDistanceSqr(pyikparam->_param);
+    }
 
     IkParameterization _param;
 
@@ -697,6 +710,7 @@ void init_openravepy_global()
             .staticmethod("GetNumberOfValues")
             .def_pickle(IkParameterization_pickle_suite())
 
+            .def("ComputeDistanceSqr",&PyIkParameterization::ComputeDistanceSqr,DOXY_FN(IkParameterization,ComputeDistanceSqr))
             // deprecated
             .def("SetTransform",&PyIkParameterization::SetTransform6D,args("transform"), DOXY_FN(IkParameterization,SetTransform6D))
             .def("SetRotation",&PyIkParameterization::SetRotation3D,args("quat"), DOXY_FN(IkParameterization,SetRotation3D))

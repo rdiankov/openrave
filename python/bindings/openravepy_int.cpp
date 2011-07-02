@@ -377,12 +377,12 @@ public:
     KinBodyPtr GetBody() { return _pbody; }
 
     bool InitFromFile(const string& filename) {
-        RAVELOG_WARN("KinBody.InitFromFile is deprecated, use EnvironmentBase::ReadKinBodyXMLFile\n");
-        return _pbody->GetEnv()->ReadKinBodyXMLFile(_pbody,filename);
+        RAVELOG_WARN("KinBody.InitFromFile is deprecated, use EnvironmentBase::ReadKinBodyURI\n");
+        return _pbody->GetEnv()->ReadKinBodyURI(_pbody,filename);
     }
     bool InitFromData(const string& data) {
-        RAVELOG_WARN("KinBody.InitFromData is deprecated, use EnvironmentBase::ReadKinBodyXMLData\n");
-        return _pbody->GetEnv()->ReadKinBodyXMLData(_pbody,data);
+        RAVELOG_WARN("KinBody.InitFromData is deprecated, use EnvironmentBase::ReadKinBodyData\n");
+        return _pbody->GetEnv()->ReadKinBodyData(_pbody,data);
     }
     bool InitFromBoxes(const boost::multi_array<dReal,2>& vboxes, bool bDraw)
     {
@@ -971,7 +971,7 @@ public:
     void SetGuiData(PyUserData pdata) { _pbody->SetGuiData(pdata._handle); }
     PyUserData GetGuiData() const { return PyUserData(_pbody->GetGuiData()); }
 
-    std::string GetXMLFilename() const { return _pbody->GetXMLFilename(); }
+    std::string GetURI() const { return _pbody->GetURI(); }
 
     object GetNonAdjacentLinks() const {
         boost::python::list ononadjacent;
@@ -2472,6 +2472,7 @@ public:
     void SetSize(int w, int h) { _pviewer->SetSize(w,h); }
     void Move(int x, int y) { _pviewer->Move(x,y); }
     void SetName(const string& title) { _pviewer->SetName(title); }
+    string GetName() { return _pviewer->GetName(); }
 
     PyVoidHandle RegisterCallback(object properties, object fncallback)
     {
@@ -3116,71 +3117,73 @@ public:
         return bSuccess;
     }
 
-    void Load(const string& filename) { _penv->Load(filename); }
-    void Load(const string& filename, dict odictatts) { _penv->Load(filename, toAttributesList(odictatts)); }
+    bool Load(const string& filename) { return _penv->Load(filename); }
+    bool Load(const string& filename, dict odictatts) { return _penv->Load(filename, toAttributesList(odictatts)); }
+    bool LoadData(const string& data) { return _penv->LoadData(data); }
+    bool LoadData(const string& data, dict odictatts) { return _penv->LoadData(data, toAttributesList(odictatts)); }
 
     void Save(const string& filename) { _penv->Save(filename); }
     void Save(const string& filename, EnvironmentBase::SelectionOptions options, const string& name) { _penv->Save(filename,options,name); }
 
-    PyRobotBasePtr ReadRobotXMLFile(const string& filename)
+    PyRobotBasePtr ReadRobotURI(const string& filename)
     {
-        RobotBasePtr probot = _penv->ReadRobotXMLFile(filename);
+        RobotBasePtr probot = _penv->ReadRobotURI(filename);
         return !probot ? PyRobotBasePtr() : PyRobotBasePtr(new PyRobotBase(probot,shared_from_this()));
     }
-    PyRobotBasePtr ReadRobotXMLFile(const string& filename, dict odictatts)
+    PyRobotBasePtr ReadRobotURI(const string& filename, dict odictatts)
     {
-        RobotBasePtr probot = _penv->ReadRobotXMLFile(RobotBasePtr(), filename,toAttributesList(odictatts));
+        RobotBasePtr probot = _penv->ReadRobotURI(RobotBasePtr(), filename,toAttributesList(odictatts));
         return !probot ? PyRobotBasePtr() : PyRobotBasePtr(new PyRobotBase(probot,shared_from_this()));
     }
-    PyRobotBasePtr ReadRobotXMLData(const string& data)
+    PyRobotBasePtr ReadRobotData(const string& data)
     {
-        RobotBasePtr probot = _penv->ReadRobotXMLData(RobotBasePtr(), data, AttributesList());
+        RobotBasePtr probot = _penv->ReadRobotData(RobotBasePtr(), data, AttributesList());
         return !probot ? PyRobotBasePtr() : PyRobotBasePtr(new PyRobotBase(probot,shared_from_this()));
     }
-    PyRobotBasePtr ReadRobotXMLData(const string& data, dict odictatts)
+    PyRobotBasePtr ReadRobotData(const string& data, dict odictatts)
     {
-        RobotBasePtr probot = _penv->ReadRobotXMLData(RobotBasePtr(), data, toAttributesList(odictatts));
+        RobotBasePtr probot = _penv->ReadRobotData(RobotBasePtr(), data, toAttributesList(odictatts));
         return !probot ? PyRobotBasePtr() : PyRobotBasePtr(new PyRobotBase(probot,shared_from_this()));
     }
-    PyKinBodyPtr ReadKinBodyXMLFile(const string& filename)
+    PyKinBodyPtr ReadKinBodyURI(const string& filename)
     {
-        KinBodyPtr pbody = _penv->ReadKinBodyXMLFile(filename);
+        KinBodyPtr pbody = _penv->ReadKinBodyURI(filename);
         return !pbody ? PyKinBodyPtr() : PyKinBodyPtr(new PyKinBody(pbody,shared_from_this()));
     }
-    PyKinBodyPtr ReadKinBodyXMLFile(const string& filename, dict odictatts)
+    PyKinBodyPtr ReadKinBodyURI(const string& filename, dict odictatts)
     {
-        KinBodyPtr pbody = _penv->ReadKinBodyXMLFile(KinBodyPtr(), filename, toAttributesList(odictatts));
+        KinBodyPtr pbody = _penv->ReadKinBodyURI(KinBodyPtr(), filename, toAttributesList(odictatts));
         return !pbody ? PyKinBodyPtr() : PyKinBodyPtr(new PyKinBody(pbody,shared_from_this()));
     }
-    PyKinBodyPtr ReadKinBodyXMLData(const string& data)
+    PyKinBodyPtr ReadKinBodyData(const string& data)
     {
-        KinBodyPtr pbody = _penv->ReadKinBodyXMLData(KinBodyPtr(), data, AttributesList());
+        KinBodyPtr pbody = _penv->ReadKinBodyData(KinBodyPtr(), data, AttributesList());
         return !pbody ? PyKinBodyPtr() : PyKinBodyPtr(new PyKinBody(pbody,shared_from_this()));
     }
-    PyKinBodyPtr ReadKinBodyXMLData(const string& data, dict odictatts)
+    PyKinBodyPtr ReadKinBodyData(const string& data, dict odictatts)
     {
-        KinBodyPtr pbody = _penv->ReadKinBodyXMLData(KinBodyPtr(), data, toAttributesList(odictatts));
+        KinBodyPtr pbody = _penv->ReadKinBodyData(KinBodyPtr(), data, toAttributesList(odictatts));
         return !pbody ? PyKinBodyPtr() : PyKinBodyPtr(new PyKinBody(pbody,shared_from_this()));
     }
-    PyInterfaceBasePtr ReadInterfaceXMLFile(const std::string& filename)
+    PyInterfaceBasePtr ReadInterfaceURI(const std::string& filename)
     {
-        return _toPyInterface(_penv->ReadInterfaceXMLFile(filename));
+        return _toPyInterface(_penv->ReadInterfaceURI(filename));
     }
-    PyInterfaceBasePtr ReadInterfaceXMLFile(const std::string& filename, dict odictatts)
+    PyInterfaceBasePtr ReadInterfaceURI(const std::string& filename, dict odictatts)
     {
-        return _toPyInterface(_penv->ReadInterfaceXMLFile(filename, toAttributesList(odictatts)));
+        return _toPyInterface(_penv->ReadInterfaceURI(filename, toAttributesList(odictatts)));
     }
-    object ReadTrimeshFile(const std::string& filename)
+    object ReadTrimeshURI(const std::string& filename)
     {
-        boost::shared_ptr<KinBody::Link::TRIMESH> ptrimesh = _penv->ReadTrimeshFile(boost::shared_ptr<KinBody::Link::TRIMESH>(),filename);
+        boost::shared_ptr<KinBody::Link::TRIMESH> ptrimesh = _penv->ReadTrimeshURI(boost::shared_ptr<KinBody::Link::TRIMESH>(),filename);
         if( !ptrimesh ) {
             return object();
         }
         return toPyTriMesh(*ptrimesh);
     }
-    object ReadTrimeshFile(const std::string& filename, dict odictatts)
+    object ReadTrimeshURI(const std::string& filename, dict odictatts)
     {
-        boost::shared_ptr<KinBody::Link::TRIMESH> ptrimesh = _penv->ReadTrimeshFile(boost::shared_ptr<KinBody::Link::TRIMESH>(),filename,toAttributesList(odictatts));
+        boost::shared_ptr<KinBody::Link::TRIMESH> ptrimesh = _penv->ReadTrimeshURI(boost::shared_ptr<KinBody::Link::TRIMESH>(),filename,toAttributesList(odictatts));
         if( !ptrimesh ) {
             return object();
         }
@@ -3428,14 +3431,14 @@ public:
         pair<size_t,size_t> sizes = _getGraphPointsColors(opoints,ocolors,vpoints,vcolors);
         bool bhasalpha = vcolors.size() == 4*sizes.second;
         if( sizes.first == sizes.second ) {
-            return object(PyGraphHandle(_penv->plot3(&vpoints[0],sizes.first,sizeof(float)*3,pointsize,&vcolors[0],drawstyle,bhasalpha)));
+            return toPyGraphHandle(_penv->plot3(&vpoints[0],sizes.first,sizeof(float)*3,pointsize,&vcolors[0],drawstyle,bhasalpha));
         }
         BOOST_ASSERT(vcolors.size()<=4);
         RaveVector<float> vcolor;
         for(int i = 0; i < (int)vcolors.size(); ++i) {
             vcolor[i] = vcolors[i];
         }
-        return object(PyGraphHandle(_penv->plot3(&vpoints[0],sizes.first,sizeof(float)*3,pointsize,vcolor,drawstyle)));
+        return toPyGraphHandle(_penv->plot3(&vpoints[0],sizes.first,sizeof(float)*3,pointsize,vcolor,drawstyle));
     }
 
     object drawlinestrip(object opoints,float linewidth,object ocolors=object(),int drawstyle=0)
@@ -3444,14 +3447,14 @@ public:
         pair<size_t,size_t> sizes = _getGraphPointsColors(opoints,ocolors,vpoints,vcolors);
         //bool bhasalpha = vcolors.size() == 4*sizes.second;
         if( sizes.first == sizes.second ) {
-            return object(PyGraphHandle(_penv->drawlinestrip(&vpoints[0],sizes.first,sizeof(float)*3,linewidth,&vcolors[0])));
+            return toPyGraphHandle(_penv->drawlinestrip(&vpoints[0],sizes.first,sizeof(float)*3,linewidth,&vcolors[0]));
         }
         BOOST_ASSERT(vcolors.size()<=4);
         RaveVector<float> vcolor;
         for(int i = 0; i < (int)vcolors.size(); ++i) {
             vcolor[i] = vcolors[i];
         }
-        return object(PyGraphHandle(_penv->drawlinestrip(&vpoints[0],sizes.first,sizeof(float)*3,linewidth,vcolor)));
+        return toPyGraphHandle(_penv->drawlinestrip(&vpoints[0],sizes.first,sizeof(float)*3,linewidth,vcolor));
     }
 
     object drawlinelist(object opoints,float linewidth,object ocolors=object(),int drawstyle=0)
@@ -3460,14 +3463,14 @@ public:
         pair<size_t,size_t> sizes = _getGraphPointsColors(opoints,ocolors,vpoints,vcolors);
         //bool bhasalpha = vcolors.size() == 4*sizes.second;
         if( sizes.first == sizes.second ) {
-            return object(PyGraphHandle(_penv->drawlinelist(&vpoints[0],sizes.first,sizeof(float)*3,linewidth,&vcolors[0])));
+            return toPyGraphHandle(_penv->drawlinelist(&vpoints[0],sizes.first,sizeof(float)*3,linewidth,&vcolors[0]));
         }
         BOOST_ASSERT(vcolors.size()<=4);
         RaveVector<float> vcolor;
         for(int i = 0; i < (int)vcolors.size(); ++i) {
             vcolor[i] = vcolors[i];
         }
-        return object(PyGraphHandle(_penv->drawlinelist(&vpoints[0],sizes.first,sizeof(float)*3,linewidth,vcolor)));
+        return toPyGraphHandle(_penv->drawlinelist(&vpoints[0],sizes.first,sizeof(float)*3,linewidth,vcolor));
     }
 
     object drawarrow(object op1, object op2, float linewidth=0.002, object ocolor=object())
@@ -3476,7 +3479,7 @@ public:
         if( ocolor != object() ) {
             vcolor = ExtractVector34(ocolor,1.0f);
         }
-        return object(PyGraphHandle(_penv->drawarrow(ExtractVector3(op1),ExtractVector3(op2),linewidth,vcolor)));
+        return toPyGraphHandle(_penv->drawarrow(ExtractVector3(op1),ExtractVector3(op2),linewidth,vcolor));
     }
 
     object drawbox(object opos, object oextents, object ocolor=object())
@@ -3485,7 +3488,7 @@ public:
         if( ocolor != object() ) {
             vcolor = ExtractVector34(ocolor,1.0f);
         }
-        return object(PyGraphHandle(_penv->drawbox(ExtractVector3(opos),ExtractVector3(oextents))));
+        return toPyGraphHandle(_penv->drawbox(ExtractVector3(opos),ExtractVector3(oextents)));
     }
 
     object drawplane(object otransform, object oextents, const boost::multi_array<float,2>& _vtexture)
@@ -3494,11 +3497,11 @@ public:
         vtexture[0] = _vtexture;
         boost::array<size_t,3> dims = {{_vtexture.shape()[0],_vtexture.shape()[1],1}};
         vtexture.reshape(dims);
-        return object(PyGraphHandle(_penv->drawplane(RaveTransform<float>(ExtractTransform(otransform)), RaveVector<float>(extract<float>(oextents[0]),extract<float>(oextents[1]),0), vtexture)));
+        return toPyGraphHandle(_penv->drawplane(RaveTransform<float>(ExtractTransform(otransform)), RaveVector<float>(extract<float>(oextents[0]),extract<float>(oextents[1]),0), vtexture));
     }
     object drawplane(object otransform, object oextents, const boost::multi_array<float,3>& vtexture)
     {
-        return object(PyGraphHandle(_penv->drawplane(RaveTransform<float>(ExtractTransform(otransform)), RaveVector<float>(extract<float>(oextents[0]),extract<float>(oextents[1]),0), vtexture)));
+        return toPyGraphHandle(_penv->drawplane(RaveTransform<float>(ExtractTransform(otransform)), RaveVector<float>(extract<float>(oextents[0]),extract<float>(oextents[1]),0), vtexture));
     }
 
     object drawtrimesh(object opoints, object oindices=object(), object ocolors=object())
@@ -3519,14 +3522,14 @@ public:
         if( ocolors != object() ) {
             object shape = ocolors.attr("shape");
             if( len(shape) == 1 ) {
-                return object(PyGraphHandle(_penv->drawtrimesh(&vpoints[0],sizeof(float)*3,pindices,numTriangles,ExtractVector34(ocolors,1.0f))));
+                return toPyGraphHandle(_penv->drawtrimesh(&vpoints[0],sizeof(float)*3,pindices,numTriangles,ExtractVector34(ocolors,1.0f)));
             }
             else {
                 BOOST_ASSERT(extract<size_t>(shape[0])==vpoints.size()/3);
-                return object(PyGraphHandle(_penv->drawtrimesh(&vpoints[0],sizeof(float)*3,pindices,numTriangles,extract<boost::multi_array<float,2> >(ocolors))));
+                return toPyGraphHandle(_penv->drawtrimesh(&vpoints[0],sizeof(float)*3,pindices,numTriangles,extract<boost::multi_array<float,2> >(ocolors)));
             }
         }
-        return object(PyGraphHandle(_penv->drawtrimesh(&vpoints[0],sizeof(float)*3,pindices,numTriangles,RaveVector<float>(1,0.5,0.5,1))));
+        return toPyGraphHandle(_penv->drawtrimesh(&vpoints[0],sizeof(float)*3,pindices,numTriangles,RaveVector<float>(1,0.5,0.5,1)));
     }
 
     object GetBodies()
@@ -3991,7 +3994,8 @@ In python, the syntax is::\n\n\
             .def("DoesAffect",&PyKinBody::DoesAffect,args("jointindex","linkindex"), DOXY_FN(KinBody,DoesAffect))
             .def("SetGuiData",&PyKinBody::SetGuiData,args("data"), DOXY_FN(KinBody,SetGuiData))
             .def("GetGuiData",&PyKinBody::GetGuiData, DOXY_FN(KinBody,GetGuiData))
-            .def("GetXMLFilename",&PyKinBody::GetXMLFilename, DOXY_FN(InterfaceBase,GetXMLFilename))
+            .def("GetURI",&PyKinBody::GetURI, DOXY_FN(InterfaceBase,GetURI))
+            .def("GetXMLFilename",&PyKinBody::GetURI, DOXY_FN(InterfaceBase,GetURI))
             .def("GetNonAdjacentLinks",GetNonAdjacentLinks1, DOXY_FN(KinBody,GetNonAdjacentLinks))
             .def("GetNonAdjacentLinks",GetNonAdjacentLinks2, args("adjacentoptions"), DOXY_FN(KinBody,GetNonAdjacentLinks))
             .def("GetAdjacentLinks",&PyKinBody::GetAdjacentLinks, DOXY_FN(KinBody,GetAdjacentLinks))
@@ -4562,6 +4566,7 @@ In python, the syntax is::\n\n\
             .def("Move",&PyViewerBase::Move, DOXY_FN(ViewerBase,Move))
             .def("SetTitle",&PyViewerBase::SetName, DOXY_FN(ViewerBase,SetName))
             .def("SetName",&PyViewerBase::SetName, DOXY_FN(ViewerBase,SetName))
+            .def("GetName",&PyViewerBase::GetName, DOXY_FN(ViewerBase,GetName))
             .def("RegisterCallback",&PyViewerBase::RegisterCallback, args("callback"), DOXY_FN(ViewerBase,RegisterItemSelectionCallback))
             .def("RegisterItemSelectionCallback",&PyViewerBase::RegisterItemSelectionCallback, args("callback"), DOXY_FN(ViewerBase,RegisterCallback))
             .def("EnvironmentSync",&PyViewerBase::EnvironmentSync, DOXY_FN(ViewerBase,EnvironmentSync))
@@ -4630,22 +4635,24 @@ In python, the syntax is::\n\n\
         void (PyEnvironmentBase::*addsensor2)(PySensorBasePtr,bool) = &PyEnvironmentBase::AddSensor;
         void (PyEnvironmentBase::*setuserdata1)(PyUserData) = &PyEnvironmentBase::SetUserData;
         void (PyEnvironmentBase::*setuserdata2)(object) = &PyEnvironmentBase::SetUserData;
-        void (PyEnvironmentBase::*load1)(const string&) = &PyEnvironmentBase::Load;
-        void (PyEnvironmentBase::*load2)(const string&, dict) = &PyEnvironmentBase::Load;
+        bool (PyEnvironmentBase::*load1)(const string&) = &PyEnvironmentBase::Load;
+        bool (PyEnvironmentBase::*load2)(const string&, dict) = &PyEnvironmentBase::Load;
+        bool (PyEnvironmentBase::*loaddata1)(const string&) = &PyEnvironmentBase::LoadData;
+        bool (PyEnvironmentBase::*loaddata2)(const string&, dict) = &PyEnvironmentBase::LoadData;
         void (PyEnvironmentBase::*save1)(const string&) = &PyEnvironmentBase::Save;
         void (PyEnvironmentBase::*save2)(const string&, EnvironmentBase::SelectionOptions, const string&) = &PyEnvironmentBase::Save;
-        PyRobotBasePtr (PyEnvironmentBase::*readrobotxmlfile1)(const string&) = &PyEnvironmentBase::ReadRobotXMLFile;
-        PyRobotBasePtr (PyEnvironmentBase::*readrobotxmlfile2)(const string&,dict) = &PyEnvironmentBase::ReadRobotXMLFile;
-        PyRobotBasePtr (PyEnvironmentBase::*readrobotxmldata1)(const string&) = &PyEnvironmentBase::ReadRobotXMLData;
-        PyRobotBasePtr (PyEnvironmentBase::*readrobotxmldata2)(const string&,dict) = &PyEnvironmentBase::ReadRobotXMLData;
-        PyKinBodyPtr (PyEnvironmentBase::*readkinbodyxmlfile1)(const string&) = &PyEnvironmentBase::ReadKinBodyXMLFile;
-        PyKinBodyPtr (PyEnvironmentBase::*readkinbodyxmlfile2)(const string&,dict) = &PyEnvironmentBase::ReadKinBodyXMLFile;
-        PyKinBodyPtr (PyEnvironmentBase::*readkinbodyxmldata1)(const string&) = &PyEnvironmentBase::ReadKinBodyXMLData;
-        PyKinBodyPtr (PyEnvironmentBase::*readkinbodyxmldata2)(const string&,dict) = &PyEnvironmentBase::ReadKinBodyXMLData;
-        PyInterfaceBasePtr (PyEnvironmentBase::*readinterfacexmlfile1)(const string&) = &PyEnvironmentBase::ReadInterfaceXMLFile;
-        PyInterfaceBasePtr (PyEnvironmentBase::*readinterfacexmlfile2)(const string&,dict) = &PyEnvironmentBase::ReadInterfaceXMLFile;
-        object (PyEnvironmentBase::*readtrimeshfile1)(const std::string&) = &PyEnvironmentBase::ReadTrimeshFile;
-        object (PyEnvironmentBase::*readtrimeshfile2)(const std::string&,dict) = &PyEnvironmentBase::ReadTrimeshFile;
+        PyRobotBasePtr (PyEnvironmentBase::*readrobotxmlfile1)(const string&) = &PyEnvironmentBase::ReadRobotURI;
+        PyRobotBasePtr (PyEnvironmentBase::*readrobotxmlfile2)(const string&,dict) = &PyEnvironmentBase::ReadRobotURI;
+        PyRobotBasePtr (PyEnvironmentBase::*readrobotxmldata1)(const string&) = &PyEnvironmentBase::ReadRobotData;
+        PyRobotBasePtr (PyEnvironmentBase::*readrobotxmldata2)(const string&,dict) = &PyEnvironmentBase::ReadRobotData;
+        PyKinBodyPtr (PyEnvironmentBase::*readkinbodyxmlfile1)(const string&) = &PyEnvironmentBase::ReadKinBodyURI;
+        PyKinBodyPtr (PyEnvironmentBase::*readkinbodyxmlfile2)(const string&,dict) = &PyEnvironmentBase::ReadKinBodyURI;
+        PyKinBodyPtr (PyEnvironmentBase::*readkinbodyxmldata1)(const string&) = &PyEnvironmentBase::ReadKinBodyData;
+        PyKinBodyPtr (PyEnvironmentBase::*readkinbodyxmldata2)(const string&,dict) = &PyEnvironmentBase::ReadKinBodyData;
+        PyInterfaceBasePtr (PyEnvironmentBase::*readinterfacexmlfile1)(const string&) = &PyEnvironmentBase::ReadInterfaceURI;
+        PyInterfaceBasePtr (PyEnvironmentBase::*readinterfacexmlfile2)(const string&,dict) = &PyEnvironmentBase::ReadInterfaceURI;
+        object (PyEnvironmentBase::*readtrimeshfile1)(const std::string&) = &PyEnvironmentBase::ReadTrimeshURI;
+        object (PyEnvironmentBase::*readtrimeshfile2)(const std::string&,dict) = &PyEnvironmentBase::ReadTrimeshURI;
         scope env = classenv
             .def(init<>())
             .def("Reset",&PyEnvironmentBase::Reset, DOXY_FN(EnvironmentBase,Reset))
@@ -4691,20 +4698,34 @@ In python, the syntax is::\n\n\
                                               "Check if any rays hit the body and returns their contact points along with a vector specifying if a collision occured or not. Rays is a Nx6 array, first 3 columsn are position, last 3 are direction+range."))
             .def("Load",load1,args("filename"), DOXY_FN(EnvironmentBase,Load))
             .def("Load",load2,args("filename","atts"), DOXY_FN(EnvironmentBase,Load))
+            .def("LoadData",loaddata1,args("data"), DOXY_FN(EnvironmentBase,LoadData))
+            .def("LoadData",loaddata2,args("data","atts"), DOXY_FN(EnvironmentBase,LoadData))
             .def("Save",save1,args("filename"), DOXY_FN(EnvironmentBase,Save))
             .def("Save",save2,args("filename","options","selectname"), DOXY_FN(EnvironmentBase,Save))
-            .def("ReadRobotXMLFile",readrobotxmlfile1,args("filename"), DOXY_FN(EnvironmentBase,ReadRobotXMLFile "const std::string"))
-            .def("ReadRobotXMLFile",readrobotxmlfile2,args("filename","atts"), DOXY_FN(EnvironmentBase,ReadRobotXMLFile "RobotBasePtr; const std::string; const AttributesList"))
-            .def("ReadRobotXMLData",readrobotxmldata1,args("data"), DOXY_FN(EnvironmentBase,ReadRobotXMLData "RobotBasePtr; const std::string; const AttributesList"))
-            .def("ReadRobotXMLData",readrobotxmldata2,args("data","atts"), DOXY_FN(EnvironmentBase,ReadRobotXMLData "RobotBasePtr; const std::string; const AttributesList"))
-            .def("ReadKinBodyXMLFile",readkinbodyxmlfile1,args("filename"), DOXY_FN(EnvironmentBase,ReadKinBodyXMLFile "const std::string"))
-            .def("ReadKinBodyXMLFile",readkinbodyxmlfile2,args("filename","atts"), DOXY_FN(EnvironmentBase,ReadKinBodyXMLFile "KinBody; const std::string; const AttributesList"))
-            .def("ReadKinBodyXMLData",readkinbodyxmldata1,args("data"), DOXY_FN(EnvironmentBase,ReadKinBodyXMLData "KinBodyPtr; const std::string; const AttributesList"))
-            .def("ReadKinBodyXMLData",readkinbodyxmldata2,args("data","atts"), DOXY_FN(EnvironmentBase,ReadKinBodyXMLData "KinBodyPtr; const std::string; const AttributesList"))
-            .def("ReadInterfaceXMLFile",readinterfacexmlfile1,args("filename"), DOXY_FN(EnvironmentBase,ReadInterfaceXMLFile "InterfaceBasePtr; InterfaceType; const std::string; const AttributesList"))
-            .def("ReadInterfaceXMLFile",readinterfacexmlfile2,args("filename","atts"), DOXY_FN(EnvironmentBase,ReadInterfaceXMLFile "InterfaceBasePtr; InterfaceType; const std::string; const AttributesList"))
-            .def("ReadTrimeshFile",readtrimeshfile1,args("filename"), DOXY_FN(EnvironmentBase,ReadTrimeshFile))
-            .def("ReadTrimeshFile",readtrimeshfile2,args("filename","atts"), DOXY_FN(EnvironmentBase,ReadTrimeshFile))
+            .def("ReadRobotURI",readrobotxmlfile1,args("filename"), DOXY_FN(EnvironmentBase,ReadRobotURI "const std::string"))
+            .def("ReadRobotXMLFile",readrobotxmlfile1,args("filename"), DOXY_FN(EnvironmentBase,ReadRobotURI "const std::string"))
+            .def("ReadRobotURI",readrobotxmlfile2,args("filename","atts"), DOXY_FN(EnvironmentBase,ReadRobotURI "RobotBasePtr; const std::string; const AttributesList"))
+            .def("ReadRobotXMLFile",readrobotxmlfile2,args("filename","atts"), DOXY_FN(EnvironmentBase,ReadRobotURI "RobotBasePtr; const std::string; const AttributesList"))
+            .def("ReadRobotData",readrobotxmldata1,args("data"), DOXY_FN(EnvironmentBase,ReadRobotData "RobotBasePtr; const std::string; const AttributesList"))
+            .def("ReadRobotXMLData",readrobotxmldata1,args("data"), DOXY_FN(EnvironmentBase,ReadRobotData "RobotBasePtr; const std::string; const AttributesList"))
+            .def("ReadRobotData",readrobotxmldata2,args("data","atts"), DOXY_FN(EnvironmentBase,ReadRobotData "RobotBasePtr; const std::string; const AttributesList"))
+            .def("ReadRobotXMLData",readrobotxmldata2,args("data","atts"), DOXY_FN(EnvironmentBase,ReadRobotData "RobotBasePtr; const std::string; const AttributesList"))
+            .def("ReadKinBodyURI",readkinbodyxmlfile1,args("filename"), DOXY_FN(EnvironmentBase,ReadKinBodyURI "const std::string"))
+            .def("ReadKinBodyXMLFile",readkinbodyxmlfile1,args("filename"), DOXY_FN(EnvironmentBase,ReadKinBodyURI "const std::string"))
+            .def("ReadKinBodyURI",readkinbodyxmlfile2,args("filename","atts"), DOXY_FN(EnvironmentBase,ReadKinBodyURI "KinBody; const std::string; const AttributesList"))
+            .def("ReadKinBodyXMLFile",readkinbodyxmlfile2,args("filename","atts"), DOXY_FN(EnvironmentBase,ReadKinBodyURI "KinBody; const std::string; const AttributesList"))
+            .def("ReadKinBodyData",readkinbodyxmldata1,args("data"), DOXY_FN(EnvironmentBase,ReadKinBodyData "KinBodyPtr; const std::string; const AttributesList"))
+            .def("ReadKinBodyXMLData",readkinbodyxmldata1,args("data"), DOXY_FN(EnvironmentBase,ReadKinBodyData "KinBodyPtr; const std::string; const AttributesList"))
+            .def("ReadKinBodyData",readkinbodyxmldata2,args("data","atts"), DOXY_FN(EnvironmentBase,ReadKinBodyData "KinBodyPtr; const std::string; const AttributesList"))
+            .def("ReadKinBodyXMLData",readkinbodyxmldata2,args("data","atts"), DOXY_FN(EnvironmentBase,ReadKinBodyData "KinBodyPtr; const std::string; const AttributesList"))
+            .def("ReadInterfaceURI",readinterfacexmlfile1,args("filename"), DOXY_FN(EnvironmentBase,ReadInterfaceURI "InterfaceBasePtr; InterfaceType; const std::string; const AttributesList"))
+            .def("ReadInterfaceXMLFile",readinterfacexmlfile1,args("filename"), DOXY_FN(EnvironmentBase,ReadInterfaceURI "InterfaceBasePtr; InterfaceType; const std::string; const AttributesList"))
+            .def("ReadInterfaceURI",readinterfacexmlfile2,args("filename","atts"), DOXY_FN(EnvironmentBase,ReadInterfaceURI "InterfaceBasePtr; InterfaceType; const std::string; const AttributesList"))
+            .def("ReadInterfaceXMLFile",readinterfacexmlfile2,args("filename","atts"), DOXY_FN(EnvironmentBase,ReadInterfaceURI "InterfaceBasePtr; InterfaceType; const std::string; const AttributesList"))
+            .def("ReadTrimeshURI",readtrimeshfile1,args("filename"), DOXY_FN(EnvironmentBase,ReadTrimeshURI))
+            .def("ReadTrimeshURI",readtrimeshfile2,args("filename","atts"), DOXY_FN(EnvironmentBase,ReadTrimeshURI))
+            .def("ReadTrimeshFile",readtrimeshfile1,args("filename"), DOXY_FN(EnvironmentBase,ReadTrimeshURI))
+            .def("ReadTrimeshFile",readtrimeshfile2,args("filename","atts"), DOXY_FN(EnvironmentBase,ReadTrimeshURI))
             .def("AddKinBody",addkinbody1,args("body"), DOXY_FN(EnvironmentBase,AddKinBody))
             .def("AddKinBody",addkinbody2,args("body","anonymous"), DOXY_FN(EnvironmentBase,AddKinBody))
             .def("AddRobot",addrobot1,args("robot"), DOXY_FN(EnvironmentBase,AddRobot))

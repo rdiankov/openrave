@@ -174,7 +174,7 @@ namespace OpenRAVEXMLParser
         return true;
     }
 #endif
-    
+
     bool CreateTriMeshData(EnvironmentBasePtr penv, const std::string& filename, const Vector& vscale, KinBody::Link::TRIMESH& trimesh, RaveVector<float>& diffuseColor, RaveVector<float>& ambientColor, float& ftransparency)
     {
         string extension;
@@ -182,7 +182,7 @@ namespace OpenRAVEXMLParser
             extension = filename.substr(filename.find_last_of('.')+1);
             std::transform(extension.begin(), extension.end(), extension.begin(), ::tolower);
         }
-        
+
 #ifdef OPENRAVE_ASSIMP
         // assimp doesn't support vrml/iv, so don't waste time
         if( extension != "iv" && extension != "wrl" && extension != "vrml" ) {
@@ -198,7 +198,7 @@ namespace OpenRAVEXMLParser
         ModuleBasePtr ivmodelloader = RaveCreateModule(penv,"ivmodelloader");
         if( !!ivmodelloader ) {
             stringstream sout, sin;
-            sin << "LoadModel " << filename; 
+            sin << "LoadModel " << filename;
             sout << std::setprecision(std::numeric_limits<dReal>::digits10+1);
             if( ivmodelloader->SendCommand(sout,sin) ) {
                 sout >> trimesh >> diffuseColor >> ambientColor >> ftransparency;
@@ -351,7 +351,7 @@ namespace OpenRAVEXMLParser
         ctxt->userData = &reader;
 
         xmlParseDocument(ctxt);
-    
+
         if (ctxt->wellFormed) {
             ret = 0;
         }
@@ -378,7 +378,7 @@ namespace OpenRAVEXMLParser
     {
         int ret = 0;
         xmlParserCtxtPtr ctxt;
-    
+
         ctxt = xmlCreateMemoryParserCtxt(buffer, size);
         if (ctxt == NULL) {
             return -1;
@@ -537,7 +537,7 @@ namespace OpenRAVEXMLParser
 
         return ret == 0;
     }
-    
+
     bool ParseXMLData(BaseXMLReaderPtr preader, const std::string& pdata)
     {
         if( pdata.size() == 0 ) {
@@ -645,14 +645,14 @@ namespace OpenRAVEXMLParser
             return *this;
         }
 
-        TransformMatrix t; 
+        TransformMatrix t;
         dReal fTotalMass;
     };
 
     class KinBodyXMLReader;
     typedef boost::shared_ptr<KinBodyXMLReader> KinBodyXMLReaderPtr;
     typedef boost::shared_ptr<KinBodyXMLReader const> KinBodyXMLReaderConstPtr;
- 
+
     class StreamXMLReader : public BaseXMLReader
     {
     public:
@@ -675,7 +675,7 @@ namespace OpenRAVEXMLParser
             }
             return false;
         }
-        
+
         virtual void characters(const std::string& ch)
         {
             if( !!_pcurreader ) {
@@ -704,7 +704,7 @@ namespace OpenRAVEXMLParser
             MT_SphereMass,
             MT_Custom, // manually specify center of mass and inertia matrix
         };
-        
+
         LinkXMLReader(KinBody::LinkPtr& plink, KinBodyPtr pparent, const AttributesList& atts) : _plink(plink) {
             _pparent = pparent;
             _masstype = MT_None;
@@ -749,7 +749,7 @@ namespace OpenRAVEXMLParser
             if( linkfilename.size() > 0 ) {
                 ParseXMLFile(BaseXMLReaderPtr(new LinkXMLReader(_plink, _pparent, AttributesList())), linkfilename);
             }
-    
+
             if( !_plink ) {
                 _plink.reset(new KinBody::Link(pparent));
             }
@@ -803,7 +803,21 @@ namespace OpenRAVEXMLParser
                             }
                         }
                     }
-                    return (xmlname == "translation" || xmlname=="rotationmat" || xmlname=="rotationaxis" || xmlname=="quat" || xmlname=="diffusecolor" || xmlname == "ambientcolor" || xmlname == "transparency" || xmlname=="render" || xmlname == "extents" || xmlname == "radius" || xmlname == "height" || (_itgeomprop->GetType() == KinBody::Link::GEOMPROPERTIES::GeomTrimesh && (xmlname=="collision"||xmlname=="data"||xmlname=="vertices"))) ? PE_Support : PE_Ignore;
+
+                    static boost::array<string,11> tags = {{"translation", "rotationmat", "rotationaxis", "quat", "diffusecolor", "ambientcolor", "transparency", "render", "extents", "radius", "height"}};
+                    if( find(tags.begin(),tags.end(),xmlname) != tags.end() ) {
+                        return PE_Support;
+                    }
+                    switch(_itgeomprop->GetType()) {
+                    case KinBody::Link::GEOMPROPERTIES::GeomTrimesh:
+                        if( xmlname=="collision" || xmlname=="data" || xmlname=="vertices") {
+                            return PE_Support;
+                        }
+                        break;
+                    default:
+                        break;
+                    }
+                    return PE_Ignore;
                 }
                 else if( _processingtag == "mass" ) {
                     return (xmlname == "density" || xmlname == "total" || xmlname == "radius" || !(_masstype == MT_Box && xmlname == "extents") || (_masstype == MT_Custom && xmlname == "com") || (_masstype == MT_Custom && xmlname == "inertia")) ? PE_Support : PE_Ignore;
@@ -1125,7 +1139,7 @@ namespace OpenRAVEXMLParser
                         default:
                             break;
                         }
-                    
+
                         totalmass += mass.transform(itgeom->GetTransform());
                     }
                 }
@@ -1199,7 +1213,7 @@ namespace OpenRAVEXMLParser
                     GetXMLErrorCount()++;
                 }
             }
-            
+
             if( xmlname !=_processingtag )
                 RAVELOG_WARN(str(boost::format("invalid tag %s!=%s\n")%xmlname%_processingtag));
             _processingtag = "";
@@ -1357,8 +1371,8 @@ namespace OpenRAVEXMLParser
                 case PE_Support: return PE_Support;
                 case PE_Ignore: return PE_Ignore;
             }
-            
-            if (xmlname == "body" || xmlname == "offsetfrom" || xmlname == "weight" || xmlname == "lostop" || xmlname == "histop" || xmlname == "limits" || xmlname == "limitsrad" || xmlname == "limitsdeg" || xmlname == "maxvel" || xmlname == "hardmaxvel" || xmlname == "maxaccel" || xmlname == "maxtorque" || xmlname == "maxforce" || xmlname == "resolution" || xmlname == "anchor" || xmlname == "axis" || xmlname == "axis1" || xmlname == "axis2" || xmlname=="axis3" || xmlname == "mode") {
+
+            if (xmlname == "body" || xmlname == "offsetfrom" || xmlname == "weight" || xmlname == "lostop" || xmlname == "histop" || xmlname == "limits" || xmlname == "limitsrad" || xmlname == "limitsdeg" || xmlname == "maxvel" || xmlname == "hardmaxvel" || xmlname == "maxaccel" || xmlname == "maxtorque" || xmlname == "maxforce" || xmlname == "resolution" || xmlname == "anchor" || xmlname == "axis" || xmlname == "axis1" || xmlname == "axis2" || xmlname=="axis3" || xmlname == "mode" || xmlname == "initial") {
                 _processingtag = xmlname;
                 return PE_Support;
             }
@@ -1369,10 +1383,11 @@ namespace OpenRAVEXMLParser
         {
             int numindices = _pjoint->GetDOF();
             dReal fRatio = _pjoint->_type == KinBody::Joint::JointSlider ? (dReal)1 : (dReal)PI / 180.0f; // most, but not all, joint take degrees
-        
+
             if( !!_pcurreader ) {
-                if( _pcurreader->endElement(xmlname) )
+                if( _pcurreader->endElement(xmlname) ) {
                     _pcurreader.reset();
+                }
             }
             else if( xmlname == "joint" ) {
                 if( _pparent->GetLinks().size() == 0 ) {
@@ -1415,13 +1430,16 @@ namespace OpenRAVEXMLParser
                 FOREACH(itaxis,_vAxes) {
                     *itaxis = toffsetfrom.rotate(*itaxis);
                 }
-                _pjoint->_ComputeInternalInformation(attachedbodies[0],attachedbodies[1],toffsetfrom*_vanchor,_vAxes);
+                _pjoint->_ComputeInternalInformation(attachedbodies[0],attachedbodies[1],toffsetfrom*_vanchor,_vAxes,_vinitialvalues);
                 return true;
             }
             else if( xmlname == "weight" ) {
                 for(int i = 0; i < numindices; ++i) {
                     _ss >> _pjoint->_vweights.at(i);
                 }
+            }
+            else if( xmlname == "initial" ) {
+                _vinitialvalues = std::vector<dReal>((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
             }
             else if( xmlname == "body" ) {
                 // figure out which body
@@ -1437,7 +1455,7 @@ namespace OpenRAVEXMLParser
                         break;
                     }
                 }
-            
+
                 if( !attachedbodies[index] && bQuery ) {
                     RAVELOG_WARN(str(boost::format("Failed to find body %s for joint %s\n")%linkname%_pjoint->_name));
                     GetXMLErrorCount()++;
@@ -1503,7 +1521,7 @@ namespace OpenRAVEXMLParser
                 // figure out which body
                 string linkname; _ss >> linkname;
                 _offsetfrom = _pparent->GetLink(linkname);
-        
+
                 if( !_offsetfrom ) {
                     RAVELOG_WARN(str(boost::format("Failed to find body %s\n")%linkname));
                     GetXMLErrorCount()++;
@@ -1591,6 +1609,7 @@ namespace OpenRAVEXMLParser
         bool _bNegateJoint;
         string _processingtag;
         boost::array<KinBody::LinkPtr,2> attachedbodies;
+        std::vector<dReal> _vinitialvalues;
     };
 
     class InterfaceXMLReader;
@@ -1602,6 +1621,7 @@ namespace OpenRAVEXMLParser
     public:
         InterfaceXMLReader(EnvironmentBasePtr penv, InterfaceBasePtr& pinterface, InterfaceType type, const string& xmltag, const AttributesList& atts) : _penv(penv), _type(type), _pinterface(pinterface), _xmltag(xmltag) {
             _bProcessedLastTag = false;
+            _atts = atts;
             string strtype;
             FOREACHC(itatt,atts) {
                 if( itatt->first == "type" ) {
@@ -1627,104 +1647,117 @@ namespace OpenRAVEXMLParser
                     try {
                         GetParseDirectory() = filedata->first;
                         GetFullFilename() = filedata->second;
-                        if( !pinterface ) {
+                        if( !_pinterface ) {
                             // reason to bring all the other attributes since interface is not created yet? (there might be a problem with this?)
                             switch(_type) {
                             case PT_KinBody:
-                                pinterface = _penv->ReadKinBodyXMLFile(KinBodyPtr(), filedata->second, listnewatts);
+                                _pinterface = _penv->ReadKinBodyURI(KinBodyPtr(), filedata->second, listnewatts);
                                 break;
                             case PT_Robot:
-                                pinterface = _penv->ReadRobotXMLFile(RobotBasePtr(), filedata->second, listnewatts);
+                                _pinterface = _penv->ReadRobotURI(RobotBasePtr(), filedata->second, listnewatts);
                                 break;
                             default:
-                                pinterface = _penv->ReadInterfaceXMLFile(filedata->second, listnewatts);
+                                _pinterface = _penv->ReadInterfaceURI(filedata->second, listnewatts);
                             }
-                            if( !!pinterface && pinterface->GetInterfaceType() != _type ) {
-                                RAVELOG_ERROR(str(boost::format("unexpected interface created %s\n")%RaveGetInterfaceName(pinterface->GetInterfaceType())));
-                                pinterface.reset();
+                            if( !!_pinterface && _pinterface->GetInterfaceType() != _type ) {
+                                RAVELOG_ERROR(str(boost::format("unexpected interface created %s\n")%RaveGetInterfaceName(_pinterface->GetInterfaceType())));
+                                _pinterface.reset();
                             }
                         }
                         else {
                             switch(_type) {
                             case PT_KinBody:
-                                pinterface = _penv->ReadKinBodyXMLFile(RaveInterfaceCast<KinBody>(pinterface),filedata->second,listnewatts);
+                                _pinterface = _penv->ReadKinBodyURI(RaveInterfaceCast<KinBody>(_pinterface),filedata->second,listnewatts);
                                 break;
                             case PT_Robot:
-                                pinterface = _penv->ReadRobotXMLFile(RaveInterfaceCast<RobotBase>(pinterface),filedata->second,listnewatts);
+                                _pinterface = _penv->ReadRobotURI(RaveInterfaceCast<RobotBase>(_pinterface),filedata->second,listnewatts);
                                 break;
                             default:
-                                pinterface = _penv->ReadInterfaceXMLFile(pinterface,_type,filedata->second,listnewatts);
+                                _pinterface = _penv->ReadInterfaceURI(_pinterface,_type,filedata->second,listnewatts);
                             }
-                            
+
                         }
                     }
                     catch(...) {
                         RAVELOG_ERROR(str(boost::format("failed to process %s\n")%itatt->second));
-                        pinterface.reset();
+                        _pinterface.reset();
                     }
                     GetParseDirectory() = olddir;
                     GetFullFilename() = oldfile;
-                    
-                    if( !pinterface ) {
+
+                    if( !_pinterface ) {
                         RAVELOG_DEBUG(str(boost::format("Failed to load filename %s\n")%itatt->second));
                         GetXMLErrorCount()++;
                         break;
                     }
-                    _filename = pinterface->GetXMLFilename();
+                    _filename = _pinterface->GetURI();
                 }
-            }
-
-            if( !_pinterface ) {
-                if( strtype.size() > 0 ) {
-                    _pinterface = RaveCreateInterface(_penv, type,strtype);
-                    if( !_pinterface )
-                        GetXMLErrorCount()++;
-                }
-        
-                if( !_pinterface ) {
-                    switch(type) {
-                    case PT_KinBody:
-                        _pinterface = RaveCreateKinBody(_penv);
-                        break;
-                    case PT_Robot:
-                        _pinterface = RaveCreateInterface(_penv, PT_Robot, "GenericRobot");
-                        if( !_pinterface )
-                            _pinterface = RaveCreateInterface(_penv, PT_Robot, "");
-                        break;
-                    case PT_Controller:
-                        _pinterface = RaveCreateInterface(_penv, PT_Controller, "IdealController");
-                        break;
-                    default:
-                        _pinterface = RaveCreateInterface(_penv, type, "");
-                        break;
-                    }
-                }
-            }
-
-            if( !_pinterface ) {
-                RAVELOG_ERROR(str(boost::format("xml readers failed to create instance of type %s:%s\n")%RaveGetInterfaceName(type)%strtype));
-            }
-            else {
-                _pcustomreader = RaveCallXMLReader(_pinterface->GetInterfaceType(),_pinterface->GetXMLId(),_pinterface,atts);
             }
 
             if( _xmltag.size() == 0 ) {
                 _xmltag = RaveGetInterfaceName(_type);
             }
-            SetXMLFilename(_filename);
+
+            if( strtype.size() > 0 ) {
+                _pinterface = RaveCreateInterface(_penv, _type,strtype);
+                if( !_pinterface ) {
+                    RAVELOG_ERROR(str(boost::format("xml readers failed to create instance of type %s:%s\n")%RaveGetInterfaceName(_type)%strtype));
+                    GetXMLErrorCount()++;
+                }
+                else {
+                    _pcustomreader = RaveCallXMLReader(_pinterface->GetInterfaceType(),_pinterface->GetXMLId(),_pinterface,_atts);
+                    SetFilename(_filename);
+                }
+            }
         }
 
-        void SetXMLFilename(const string& filename) { if( !!_pinterface && _pinterface->__strxmlfilename.size() == 0 ) _pinterface->__strxmlfilename = filename; }
+        virtual void _CheckInterface()
+        {
+            if( !_pinterface ) {
+                if( !_pinterface ) {
+                    switch(_type) {
+                    case PT_KinBody:
+                        _pinterface = RaveCreateKinBody(_penv);
+                        break;
+                    case PT_Robot:
+                        _pinterface = RaveCreateInterface(_penv, PT_Robot, "GenericRobot");
+                        if( !_pinterface ) {
+                            _pinterface = RaveCreateInterface(_penv, PT_Robot, "");
+                        }
+                        break;
+                    case PT_Controller:
+                        _pinterface = RaveCreateInterface(_penv, PT_Controller, "IdealController");
+                        break;
+                    default:
+                        _pinterface = RaveCreateInterface(_penv, _type, "");
+                        break;
+                    }
+                }
+
+                if( !_pinterface ) {
+                    RAVELOG_ERROR(str(boost::format("xml readers failed to create instance of type %ss\n")%RaveGetInterfaceName(_type)));
+                }
+                else {
+                    _pcustomreader = RaveCallXMLReader(_pinterface->GetInterfaceType(),_pinterface->GetXMLId(),_pinterface,_atts);
+                }
+
+                SetFilename(_filename);
+            }
+        }
+
+        void SetFilename(const string& filename)
+        {
+            if( !!_pinterface && _pinterface->__struri.size() == 0 ) {
+                _pinterface->__struri = filename;
+            }
+        }
 
         virtual ProcessElement startElement(const std::string& xmlname, const AttributesList& atts)
         {
-            if( !_pinterface )
-                return PE_Ignore;
-
             if( !!_pcustomreader ) {
                 return _pcustomreader->startElement(xmlname, atts);
             }
-            
+
             switch( StreamXMLReader::startElement(xmlname,atts) ) {
                 case PE_Pass: break;
                 case PE_Support: return PE_Support;
@@ -1732,11 +1765,13 @@ namespace OpenRAVEXMLParser
             }
 
             // check for registers readers
-            _pcustomreader = RaveCallXMLReader(_type,xmlname,_pinterface,atts);
-            if( !!_pcustomreader ) {
-                _readername = xmlname;
+            if( !!_pinterface ) {
+                _pcustomreader = RaveCallXMLReader(_type,xmlname,_pinterface,atts);
                 if( !!_pcustomreader ) {
-                    return PE_Support;
+                    _readername = xmlname;
+                    if( !!_pcustomreader ) {
+                        return PE_Support;
+                    }
                 }
             }
 
@@ -1744,18 +1779,20 @@ namespace OpenRAVEXMLParser
                 _interfaceprocessingtag = xmlname;
                 return PE_Support;
             }
-            
+
             return PE_Pass;
         }
 
         virtual bool endElement(const std::string& xmlname)
         {
             if( !!_pcurreader ) {
-                if( _pcurreader->endElement(xmlname) )
+                if( _pcurreader->endElement(xmlname) ) {
                     _pcurreader.reset();
+                }
             }
             else if( !!_pcustomreader ) {
                 if( _pcustomreader->endElement(xmlname) ) {
+                    _CheckInterface();
                     if( _readername.size() > 0 ) {
                         _pinterface->__mapReadableInterfaces[_readername] = _pcustomreader->GetReadable();
                     }
@@ -1767,6 +1804,7 @@ namespace OpenRAVEXMLParser
             }
             else if( _interfaceprocessingtag.size() > 0 ) {
                 if( xmlname == "sendcommand" ) {
+                    _CheckInterface();
                     if( !!_pinterface ) {
                         stringstream sout;
                         if( !_pinterface->SendCommand(sout,_ss) ) {
@@ -1780,6 +1818,7 @@ namespace OpenRAVEXMLParser
                 _interfaceprocessingtag.resize(0);
             }
             else if( xmlname == _xmltag ) {
+                _CheckInterface();
                 if( _bProcessedLastTag ) {
                     RAVELOG_WARN(str(boost::format("already processed last tag for %s!\n")%xmlname));
                 }
@@ -1804,7 +1843,7 @@ namespace OpenRAVEXMLParser
         }
 
         virtual XMLReadablePtr GetReadable() { return XMLReadablePtr(new InterfaceXMLReadable(_pinterface)); }
-    protected:        
+    protected:
         EnvironmentBasePtr _penv;
         InterfaceType _type;
         InterfaceBasePtr& _pinterface;
@@ -1812,6 +1851,7 @@ namespace OpenRAVEXMLParser
         string _xmltag, _interfaceprocessingtag;
         string _interfacename, _readername;
         bool _bProcessedLastTag;
+        AttributesList _atts;
     };
     /// KinBody reader
     /// reads kinematic chain specific entries, can instantiate this reader from another reader
@@ -1820,14 +1860,14 @@ namespace OpenRAVEXMLParser
     public:
         KinBodyXMLReader(EnvironmentBasePtr penv, InterfaceBasePtr& pchain, InterfaceType type, const AttributesList& atts, int roottransoffset) : InterfaceXMLReader(penv,pchain,type,"kinbody",atts), roottransoffset(roottransoffset) {
             _bSkipGeometry = false;
-            _pchain = RaveInterfaceCast<KinBody>(_pinterface);
             _masstype = LinkXMLReader::MT_None;
             _fMassValue = 1;
             _vMassExtents = Vector(1,1,1);
             _bOverwriteDiffuse = false;
             _bOverwriteAmbient = false;
             _bOverwriteTransparency = false;
-
+            _bMakeJoinedLinksAdjacent = true;
+            rootoffset = rootjoffset = rootjpoffset = -1;
             FOREACHC(itatt,atts) {
                 if( itatt->first == "prefix" ) {
                     _prefix = itatt->second;
@@ -1836,7 +1876,7 @@ namespace OpenRAVEXMLParser
                     _bodyname = itatt->second;
                 }
                 else if( itatt->first == "makejoinedlinksadjacent") {
-                    _pchain->_bMakeJoinedLinksAdjacent = atoi(itatt->second.c_str())!=0;
+                    _bMakeJoinedLinksAdjacent = atoi(itatt->second.c_str())!=0;
                 }
                 else if( itatt->first == "skipgeometry" ) {
                     _bSkipGeometry = stricmp(itatt->second.c_str(), "true") == 0 || itatt->second=="1";
@@ -1845,32 +1885,46 @@ namespace OpenRAVEXMLParser
                     RAVELOG_WARN(str(boost::format("unknown kinbody attribute %s\n")%itatt->first));
                 }
             }
-            rootoffset = (int)_pchain->GetLinks().size();
-            rootjoffset = (int)_pchain->GetJoints().size();
-            rootjpoffset = (int)_pchain->GetPassiveJoints().size();
-            //RAVELOG_INFO(str(boost::format("links: %d, prefix: %s: %x\n")%_pchain->GetLinks().size()%_prefix%this));
-            // reisze _vTransforms to be the same size as the initial number of links
-            _pchain->GetLinkTransformations(_vTransforms);
-            _pchain->SetGuiData(UserDataPtr());
+            _CheckInterface();
+        }
+
+        virtual void _CheckInterface()
+        {
+            InterfaceXMLReader::_CheckInterface();
+            _pchain = RaveInterfaceCast<KinBody>(_pinterface);
+            if( !!_pchain && rootoffset < 0 ) {
+                _pchain->_bMakeJoinedLinksAdjacent = _bMakeJoinedLinksAdjacent;
+                rootoffset = (int)_pchain->GetLinks().size();
+                rootjoffset = (int)_pchain->GetJoints().size();
+                rootjpoffset = (int)_pchain->GetPassiveJoints().size();
+                //RAVELOG_INFO(str(boost::format("links: %d, prefix: %s: %x\n")%_pchain->GetLinks().size()%_prefix%this));
+                // reisze _vTransforms to be the same size as the initial number of links
+                _pchain->GetLinkTransformations(_vTransforms);
+                _pchain->SetGuiData(UserDataPtr());
+            }
         }
 
         Transform GetOffsetFrom(KinBody::LinkPtr plink)
         {
-            if( plink->GetIndex() < 0 || plink->GetIndex() >= (int)_vTransforms.size() )
+            if( plink->GetIndex() < 0 || plink->GetIndex() >= (int)_vTransforms.size() ) {
                 return plink->GetTransform();
+            }
             return _vTransforms[plink->GetIndex()];
         }
-        
+
         string GetModelsDir(const std::string& filename) const
         {
-            if( filename.size() == 0 )
+            if( filename.size() == 0 ) {
                 return filename;
+            }
 #ifdef _WIN32
-            if( filename.find_first_of(':') != string::npos )
+            if( filename.find_first_of(':') != string::npos ) {
                 return filename;
+            }
 #else
-            if( filename[0] == '/' || filename[0] == '~' )
+            if( filename[0] == '/' || filename[0] == '~' ) {
                 return filename;
+            }
 #endif
 
             list<string> listmodelsdir;
@@ -1885,21 +1939,22 @@ namespace OpenRAVEXMLParser
             FOREACH(itmodelsdir, listmodelsdir) {
                 temp = *itmodelsdir; temp += filename;
                 //RAVELOG_INFOA("modelsdir: %s, modelname: %s\n", itmodelsdir->c_str(), temp.c_str());
-                if( !!ifstream(temp.c_str()) )
+                if( !!ifstream(temp.c_str()) ) {
                     return temp;
-
+                }
                 FOREACHC(itdir, RaveGetDataDirs()) {
                     temp = *itdir; temp.push_back(s_filesep);
                     temp += *itmodelsdir;
                     temp += filename;
-                    if( !!ifstream(temp.c_str()) )
+                    if( !!ifstream(temp.c_str()) ) {
                         return temp;
+                    }
                 }
             }
 
             return ""; // bad filename
         }
-    
+
         virtual ProcessElement startElement(const std::string& xmlname, const AttributesList& atts)
         {
             if( _processingtag.size() > 0 ) {
@@ -1908,7 +1963,7 @@ namespace OpenRAVEXMLParser
                     case PE_Support: return PE_Support;
                     case PE_Ignore: return PE_Ignore;
                 }
-            
+
                 if( _processingtag == "mass" ) {
                     return (xmlname == "density" || xmlname == "total" || xmlname == "radius" || (_masstype == LinkXMLReader::MT_Box && xmlname == "extents") || (_masstype == LinkXMLReader::MT_Custom && (xmlname == "com"||xmlname == "inertia"))) ? PE_Support : PE_Ignore;
                 }
@@ -1927,7 +1982,9 @@ namespace OpenRAVEXMLParser
                 _pcurreader = CreateInterfaceReader(_penv,PT_KinBody,_pinterface, xmlname, newatts);
                 return PE_Support;
             }
-            else if( xmlname == "body" ) {
+
+            _CheckInterface();
+            if( xmlname == "body" ) {
                 _plink.reset();
                 AttributesList newatts = atts;
                 newatts.push_back(make_pair("skipgeometry",_bSkipGeometry?"1":"0"));
@@ -1961,7 +2018,7 @@ namespace OpenRAVEXMLParser
                         else if( stricmp(itatt->second.c_str(), "sphere") == 0 ) {
                             _masstype = LinkXMLReader::MT_Sphere;
                         }
-                
+
                         break;
                     }
                 }
@@ -1970,13 +2027,14 @@ namespace OpenRAVEXMLParser
                 return PE_Support;
             }
 
-            if (xmlname == "translation" || xmlname == "rotationmat" || xmlname == "rotationaxis" || xmlname == "quat" || xmlname == "jointvalues" || xmlname == "adjacent" || xmlname == "modelsdir" || xmlname == "diffusecolor" || xmlname == "transparency" || xmlname == "ambientcolor" ) {
+            static boost::array<string, 10> tags = {{"translation", "rotationmat", "rotationaxis", "quat", "jointvalues", "adjacent", "modelsdir", "diffusecolor", "transparency", "ambientcolor"}};
+            if( find(tags.begin(),tags.end(),xmlname) != tags.end() ) {
                 _processingtag = xmlname;
                 return PE_Support;
             }
             return PE_Pass;
         }
-        
+
         virtual bool endElement(const std::string& xmlname)
         {
             if( !!_pcurreader ) {
@@ -2013,7 +2071,7 @@ namespace OpenRAVEXMLParser
                     }
                     else if( xmlname == "kinbody" ) {
                         // most likely new transforms were added, so update
-                        _pchain = RaveInterfaceCast<KinBody>(_pinterface);
+                        _CheckInterface();
                         _pchain->GetLinkTransformations(_vTransforms);
                     }
                     else
@@ -2106,18 +2164,21 @@ namespace OpenRAVEXMLParser
                 if( _bodyname.size() > 0 )
                     _pchain->SetName(_bodyname);
                 if( _filename.size() > 0 ) {
-                    SetXMLFilename(_filename);
+                    SetFilename(_filename);
                 }
 
                 // add prefix
                 if( _prefix.size() > 0 ) {
                     //RAVELOG_INFO("write prefix: links: %d-%d, 0x%x\n",rootoffset,(int)_pchain->_veclinks.size(),this);
+                    BOOST_ASSERT(rootoffset >= 0 && rootoffset<=(int)_pchain->_veclinks.size());
                     for(vector<KinBody::LinkPtr>::iterator itlink = _pchain->_veclinks.begin()+rootoffset; itlink != _pchain->_veclinks.end(); ++itlink) {
                         (*itlink)->_name = _prefix + (*itlink)->_name;
                     }
+                    BOOST_ASSERT(rootjoffset >= 0 && rootjoffset<=(int)_pchain->_vecjoints.size());
                     for(vector<KinBody::JointPtr>::iterator itjoint = _pchain->_vecjoints.begin()+rootjoffset; itjoint != _pchain->_vecjoints.end(); ++itjoint) {
                         (*itjoint)->_name = _prefix +(*itjoint)->_name;
                     }
+                    BOOST_ASSERT(rootjpoffset >= 0 && rootjpoffset<=(int)_pchain->_vPassiveJoints.size());
                     for(vector<KinBody::JointPtr>::iterator itjoint = _pchain->_vPassiveJoints.begin()+rootjpoffset; itjoint != _pchain->_vPassiveJoints.end(); ++itjoint) {
                         (*itjoint)->_name = _prefix +(*itjoint)->_name;
                     }
@@ -2126,28 +2187,31 @@ namespace OpenRAVEXMLParser
                 if( _bOverwriteDiffuse ) {
                     // overwrite the color
                     FOREACH(itlink, _pchain->_veclinks) {
-                        FOREACH(itprop, (*itlink)->_listGeomProperties)
+                        FOREACH(itprop, (*itlink)->_listGeomProperties) {
                             itprop->diffuseColor = _diffusecol;
+                        }
                     }
                 }
                 if( _bOverwriteAmbient ) {
                     // overwrite the color
                     FOREACH(itlink, _pchain->_veclinks) {
-                        FOREACH(itprop, (*itlink)->_listGeomProperties)
+                        FOREACH(itprop, (*itlink)->_listGeomProperties) {
                             itprop->ambientColor = _ambientcol;
+                        }
                     }
                 }
                 if( _bOverwriteTransparency ) {
                     // overwrite the color
                     FOREACH(itlink, _pchain->_veclinks) {
-                        FOREACH(itprop, (*itlink)->_listGeomProperties)
+                        FOREACH(itprop, (*itlink)->_listGeomProperties) {
                             itprop->ftransparency = _transparency;
+                        }
                     }
                 }
 
                 // transform all the bodies with trans
                 Transform cur;
-
+                BOOST_ASSERT(roottransoffset>=0 && roottransoffset<=(int)_pchain->_veclinks.size());
                 for(vector<KinBody::LinkPtr>::iterator itlink = _pchain->_veclinks.begin()+roottransoffset; itlink != _pchain->_veclinks.end(); ++itlink) {
                     (*itlink)->SetTransform(_trans * (*itlink)->GetTransform());
                 }
@@ -2190,6 +2254,7 @@ namespace OpenRAVEXMLParser
         RaveVector<float> _diffusecol, _ambientcol;
         float _transparency;
         bool _bSkipGeometry;
+        bool _bMakeJoinedLinksAdjacent;
         boost::shared_ptr< std::vector<dReal> > _vjointvalues;
 
         string _processingtag; /// if not empty, currently processing
@@ -2228,7 +2293,7 @@ namespace OpenRAVEXMLParser
                             _probot = RaveInterfaceCast<RobotBase>(pbody);
                     }
                 }
-                
+
                 if( !!_probot ) {
                     std::vector<int> dofindices;
                     if( !_vjoints ) {
@@ -2249,6 +2314,7 @@ namespace OpenRAVEXMLParser
                             }
                         }
                     }
+                    _CheckInterface();
                     _probot->SetController(RaveInterfaceCast<ControllerBase>(_pinterface),dofindices,nControlTransformation);
                 }
                 else {
@@ -2311,7 +2377,7 @@ namespace OpenRAVEXMLParser
                 // look up the correct link
                 string linkname; _ss >> linkname;
                 _pmanip->_pEndEffector = _probot->GetLink(linkname);
-        
+
                 if( !_pmanip->_pEndEffector ) {
                     RAVELOG_WARN("Failed to find manipulator end effector %s\n", linkname.c_str());
                     GetXMLErrorCount()++;
@@ -2404,7 +2470,7 @@ namespace OpenRAVEXMLParser
                         }
                     }
                 }
-                
+
                 if( !piksolver )
                     RAVELOG_WARN("failed to create iksolver %s\n", iklibraryname.c_str());
                 else {
@@ -2466,7 +2532,7 @@ namespace OpenRAVEXMLParser
                 StreamXMLReader::characters(ch);
             }
         }
-    
+
     protected:
         RobotBasePtr _probot;
         RobotBase::ManipulatorPtr& _pmanip;
@@ -2484,7 +2550,7 @@ namespace OpenRAVEXMLParser
                     name = itatt->second;
                 }
             }
-            
+
             if( !_psensor ) {
                 // check for current sensors
                 FOREACH(itsensor,probot->GetAttachedSensors()) {
@@ -2503,7 +2569,7 @@ namespace OpenRAVEXMLParser
             _psensor->_name = name;
             _probot = _psensor->GetRobot();
         }
-        
+
         virtual ProcessElement startElement(const std::string& xmlname, const AttributesList& atts)
         {
             switch( StreamXMLReader::startElement(xmlname,atts) ) {
@@ -2521,7 +2587,7 @@ namespace OpenRAVEXMLParser
                 _pcurreader = CreateInterfaceReader(_probot->GetEnv(),PT_Sensor,_psensorinterface, xmlname, atts);
                 return PE_Support;
             }
-            
+
             if (xmlname == "link" || xmlname == "translation" || xmlname == "quat" || xmlname == "rotationaxis" || xmlname == "rotationmat" ) {
                 _processingtag = xmlname;
                 return PE_Support;
@@ -2560,7 +2626,7 @@ namespace OpenRAVEXMLParser
                 string linkname;
                 _ss >> linkname;
                 _psensor->pattachedlink = _probot->GetLink(linkname);
-        
+
                 if( _psensor->pattachedlink.expired() ) {
                     RAVELOG_WARN("Failed to find attached sensor link %s\n", linkname.c_str());
                     GetXMLErrorCount()++;
@@ -2605,7 +2671,7 @@ namespace OpenRAVEXMLParser
                 StreamXMLReader::characters(ch);
             }
         }
-        
+
     protected:
         RobotBasePtr _probot;
         RobotBase::AttachedSensorPtr& _psensor;
@@ -2618,8 +2684,8 @@ namespace OpenRAVEXMLParser
     {
     public:
         RobotXMLReader(EnvironmentBasePtr penv, InterfaceBasePtr& probot, const AttributesList& atts, int roottransoffset) : InterfaceXMLReader(penv,probot,PT_Robot,"robot",atts), roottransoffset(roottransoffset) {
-            _probot = RaveInterfaceCast<RobotBase>(_pinterface);
             _bSkipGeometry = false;
+            rootoffset = rootjoffset = rootjpoffset = -1;
             FOREACHC(itatt, atts) {
                 if( itatt->first == "name" ) {
                     _robotname = itatt->second;
@@ -2631,14 +2697,25 @@ namespace OpenRAVEXMLParser
                     _bSkipGeometry = stricmp(itatt->second.c_str(), "true") == 0 || itatt->second=="1";
                 }
             }
-            rootoffset = (int)_probot->GetLinks().size();
-            rootjoffset = (int)_probot->GetJoints().size();
-            rootjpoffset = (int)_probot->GetPassiveJoints().size();
-            FOREACH(itmanip,_probot->GetManipulators()) {
-                _setInitialManipulators.insert(*itmanip);
-            }
-            FOREACH(itsensor,_probot->GetAttachedSensors()) {
-                _setInitialSensors.insert(*itsensor);
+            _CheckInterface();
+        }
+
+        virtual void _CheckInterface()
+        {
+            InterfaceXMLReader::_CheckInterface();
+            _probot = RaveInterfaceCast<RobotBase>(_pinterface);
+            if( !!_probot ) {
+                if( rootoffset < 0 ) {
+                    rootoffset = (int)_probot->GetLinks().size();
+                    rootjoffset = (int)_probot->GetJoints().size();
+                    rootjpoffset = (int)_probot->GetPassiveJoints().size();
+                    FOREACH(itmanip,_probot->GetManipulators()) {
+                        _setInitialManipulators.insert(*itmanip);
+                    }
+                    FOREACH(itsensor,_probot->GetAttachedSensors()) {
+                        _setInitialSensors.insert(*itsensor);
+                    }
+                }
             }
         }
 
@@ -2652,7 +2729,7 @@ namespace OpenRAVEXMLParser
                 }
                 return PE_Ignore;
             }
-            
+
             switch( InterfaceXMLReader::startElement(xmlname,atts) ) {
             case PE_Pass: break;
             case PE_Support: return PE_Support;
@@ -2663,8 +2740,11 @@ namespace OpenRAVEXMLParser
                 AttributesList newatts = atts;
                 newatts.push_back(make_pair("skipgeometry",_bSkipGeometry?"1":"0"));
                 _pcurreader = CreateInterfaceReader(_penv, PT_Robot, _pinterface, xmlname, newatts);
+                return PE_Support;
             }
-            else if( xmlname == "kinbody" ) {
+
+            _CheckInterface();
+            if( xmlname == "kinbody" ) {
                 AttributesList newatts = atts;
                 newatts.push_back(make_pair("skipgeometry",_bSkipGeometry?"1":"0"));
                 _pcurreader = CreateInterfaceReader(_penv,PT_KinBody,_pinterface, xmlname, newatts);
@@ -2684,10 +2764,12 @@ namespace OpenRAVEXMLParser
             else if( xmlname == "translation" || xmlname == "rotationmat" || xmlname == "rotationaxis" || xmlname == "quat" || xmlname == "jointvalues") {
                 _processingtag = xmlname;
             }
-            else
+            else {
                 return PE_Pass;
+            }
             return PE_Support;
         }
+
         virtual bool endElement(const std::string& xmlname)
         {
             if( !!_pcurreader ) {
@@ -2742,7 +2824,7 @@ namespace OpenRAVEXMLParser
                     _probot->SetName(_robotname);
                 }
                 if( _filename.size() > 0 ) {
-                    SetXMLFilename(_filename);
+                    SetFilename(_filename);
                 }
 
                 // put the sensors and manipulators in front of what was declared. this is necessary so that user-based manipulator definitions come before the pre-defined ones.
@@ -2773,6 +2855,7 @@ namespace OpenRAVEXMLParser
 
                 // add prefix
                 if( _prefix.size() > 0 ) {
+                    BOOST_ASSERT(rootoffset >= 0 && rootoffset<=(int)_probot->_veclinks.size());
                     vector<KinBody::LinkPtr>::iterator itlink = _probot->_veclinks.begin()+rootoffset;
                     while(itlink != _probot->_veclinks.end()) {
                         (*itlink)->_name = _prefix + (*itlink)->_name;
@@ -2780,6 +2863,7 @@ namespace OpenRAVEXMLParser
                     }
                     std::vector< std::pair<std::string, std::string> > jointnamepairs;
                     jointnamepairs.reserve(_probot->_vecjoints.size());
+                    BOOST_ASSERT(rootjoffset >= 0 && rootjoffset<=(int)_probot->_vecjoints.size());
                     vector<KinBody::JointPtr>::iterator itjoint = _probot->_vecjoints.begin()+rootjoffset;
                     list<KinBody::JointPtr> listjoints;
                     while(itjoint != _probot->_vecjoints.end()) {
@@ -2788,6 +2872,7 @@ namespace OpenRAVEXMLParser
                         listjoints.push_back(*itjoint);
                         ++itjoint;
                     }
+                    BOOST_ASSERT(rootjpoffset >= 0 && rootjpoffset<=(int)_probot->_vPassiveJoints.size());
                     itjoint = _probot->_vPassiveJoints.begin()+rootjpoffset;
                     while(itjoint != _probot->_vPassiveJoints.end()) {
                         jointnamepairs.push_back(make_pair((*itjoint)->_name, _prefix +(*itjoint)->_name));
@@ -2818,17 +2903,18 @@ namespace OpenRAVEXMLParser
                             FOREACH(itgrippername,(*itmanip)->_vgripperjointnames) {
                                 *itgrippername = _prefix + *itgrippername;
                             }
-                        }                
+                        }
                     }
                 }
-        
+
                 // transform all "new" bodies with trans
+                BOOST_ASSERT(roottransoffset>=0&&roottransoffset<=(int)_probot->_veclinks.size());
                 vector<KinBody::LinkPtr>::iterator itlink = _probot->_veclinks.begin()+roottransoffset;
                 while(itlink != _probot->_veclinks.end()) {
                     (*itlink)->SetTransform(_trans * (*itlink)->GetTransform());
                     ++itlink;
                 }
-        
+
                 // forces robot to reupdate its internal objects
                 _probot->SetTransform(_probot->GetTransform());
                 return true;
@@ -2885,6 +2971,7 @@ namespace OpenRAVEXMLParser
                 }
             }
 
+            _CheckInterface();
             if( !!_pinterface ) {
                 ModuleBasePtr module = RaveInterfaceCast<ModuleBase>(_pinterface);
                 if( !!module ) {
@@ -2905,21 +2992,23 @@ namespace OpenRAVEXMLParser
     {
     public:
         SensorXMLReader(EnvironmentBasePtr penv, InterfaceBasePtr& pinterface, const AttributesList& atts) : InterfaceXMLReader(penv,pinterface,PT_Sensor,RaveGetInterfaceName(PT_Sensor),atts) {
-            string strname, args;
+            string args;
             FOREACHC(itatt,atts) {
                 if( itatt->first == "name" ) {
-                    strname = itatt->second;
+                    _strname = itatt->second;
                 }
                 else if( itatt->first == "args" ) {
                     RAVELOG_WARN("sensor args has been deprecated.\n");
                 }
             }
+        }
 
-            if( !!_pinterface ) {
-                _psensor = RaveInterfaceCast<SensorBase>(_pinterface);
-                if( !!_psensor ) {
-                    _psensor->SetName(strname);
-                }
+        virtual void _CheckInterface()
+        {
+            InterfaceXMLReader::_CheckInterface();
+            _psensor = RaveInterfaceCast<SensorBase>(_pinterface);
+            if( !!_psensor ) {
+                _psensor->SetName(_strname);
             }
         }
 
@@ -2939,6 +3028,7 @@ namespace OpenRAVEXMLParser
             case PE_Ignore: return PE_Ignore;
             }
 
+            _CheckInterface();
             if( !_psensor || _processingtag.size() > 0 ) {
                 return PE_Ignore;
             }
@@ -3010,7 +3100,7 @@ namespace OpenRAVEXMLParser
     protected:
         SensorBasePtr _psensor;
         Transform _tsensor;
-        string _args, _processingtag;;
+        string _args, _processingtag, _strname;
     };
 
     class EnvironmentXMLReader : public StreamXMLReader
@@ -3056,10 +3146,11 @@ namespace OpenRAVEXMLParser
             // check for any plugins
             FOREACHC(itname,RaveGetInterfaceNamesMap()) {
                 if( xmlname == itname->second ) {
-                    if( !!_pinterface )
+                    if( !!_pinterface ) {
                         throw openrave_exception("interface should not be initialized");
+                    }
                     _pcurreader = CreateInterfaceReader(_penv,itname->first,_pinterface,"",atts);
-                    if( !_pinterface ) {
+                    if( !_pcurreader ) {
                         RAVELOG_WARN("failed to create interface %s in <environment>\n", itname->second.c_str());
                         _pcurreader.reset(new DummyXMLReader(xmlname,"environment"));
                     }
@@ -3072,7 +3163,8 @@ namespace OpenRAVEXMLParser
                 return PE_Support;
             }
 
-            if (xmlname == "bkgndcolor" || xmlname == "camrotaxis" || xmlname == "camrotationaxis" || xmlname == "camrotmat" || xmlname == "camtrans" || xmlname == "bkgndcolor" || xmlname == "plugin") {
+            static boost::array<string, 7> tags = {{"bkgndcolor", "camrotaxis", "camrotationaxis", "camrotmat", "camtrans", "bkgndcolor", "plugin"}};
+            if( find(tags.begin(),tags.end(),xmlname) != tags.end() ) {
                 _processingtag = xmlname;
                 return PE_Support;
             }
@@ -3085,8 +3177,9 @@ namespace OpenRAVEXMLParser
                 if( _pcurreader->endElement(xmlname) ) {
                     if( !_bInEnvironment ) {
                         InterfaceXMLReaderPtr pinterfacereader = boost::dynamic_pointer_cast<InterfaceXMLReader>(_pcurreader);
-                        if( !!pinterfacereader )
-                            pinterfacereader->SetXMLFilename(_filename);
+                        if( !!pinterfacereader ) {
+                            pinterfacereader->SetFilename(_filename);
+                        }
                     }
 
                     if( !!boost::dynamic_pointer_cast<RobotXMLReader>(_pcurreader) ) {
@@ -3138,7 +3231,7 @@ namespace OpenRAVEXMLParser
                 }
                 return true;
             }
-            
+
             if( xmlname == "bkgndcolor" ) {
                 _ss >> vBkgndColor.x >> vBkgndColor.y >> vBkgndColor.z;
             }
@@ -3191,7 +3284,7 @@ namespace OpenRAVEXMLParser
         switch(type) {
         case PT_Planner: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_Planner>(penv,pinterface,xmltag,atts));
         case PT_Robot: {
-            KinBodyPtr pbody = RaveInterfaceCast<KinBody>(pinterface); 
+            KinBodyPtr pbody = RaveInterfaceCast<KinBody>(pinterface);
             int rootoffset = 0;
             if( !!pbody ) {
                 rootoffset = (int)pbody->GetLinks().size();
@@ -3203,7 +3296,7 @@ namespace OpenRAVEXMLParser
         case PT_Module: return InterfaceXMLReaderPtr(new ModuleXMLReader(penv,pinterface,atts));
         case PT_IkSolver: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_IkSolver>(penv,pinterface,xmltag,atts));
         case PT_KinBody: {
-            KinBodyPtr pbody = RaveInterfaceCast<KinBody>(pinterface); 
+            KinBodyPtr pbody = RaveInterfaceCast<KinBody>(pinterface);
             int rootoffset = 0;
             if( !!pbody ) {
                 rootoffset = (int)pbody->GetLinks().size();
