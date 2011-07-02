@@ -85,6 +85,8 @@ Inverse Kinematics
 
 * ikfast fix in solvePairVariablesHalfAngle, lookat3d works for simple mechanisms.
 
+* added a validation step to the ikfast openrave iksolver so wrong solutions are **never** returned.
+
 Sensors
 -------
 

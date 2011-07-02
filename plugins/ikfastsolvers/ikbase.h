@@ -34,6 +34,9 @@ class IkFastSolver : public IkSolverBase
 
     IkFastSolver(IkFn pfnik, const std::vector<int>& vfreeparams, const vector<dReal>& vFreeInc, int nTotalDOF, IkParameterization::Type iktype, boost::shared_ptr<void> resource, const std::string kinematicshash, EnvironmentBasePtr penv) : IkSolverBase(penv), _vfreeparams(vfreeparams), _pfnik(pfnik), _vFreeInc(vFreeInc), _nTotalDOF(nTotalDOF), _iktype(iktype), _resource(resource), _kinematicshash(kinematicshash) {
         __description = ":Interface Author: Rosen Diankov\n\nAn OpenRAVE wrapper for the ikfast generated files.\nIf 6D IK is used, will check if the end effector and other independent links are in collision before manipulator link collisions. If they are, the IK will terminate with failure immediately.\nBecause checking collisions is the slowest part of the IK, the custom filter function run before collision checking.";
+        _ikthreshold = 1e-6;
+        RegisterCommand("SetIkThreshold",boost::bind(&IkFastSolver<IKReal,Solution>::_SetIkThresholdCommand,this,_1,_2),
+                        "sets the ik threshold for validating returned ik solutions");
     }
     virtual ~IkFastSolver() {}
 
@@ -42,6 +45,12 @@ class IkFastSolver : public IkSolverBase
     inline boost::weak_ptr<IkFastSolver<IKReal,Solution> > weak_solver() { return shared_solver(); }
 
     virtual void SetCustomFilter(const IkFilterCallbackFn& filterfn) { _filterfn = filterfn; }
+
+    bool _SetIkThresholdCommand(ostream& sout, istream& sinput)
+    {
+        sinput >> _ikthreshold;
+        return !!sinput;
+    }
 
     virtual void SetJointLimits()
     {
@@ -544,8 +553,8 @@ private:
 
         // check that end effector moved in the correct direction
         IkParameterization ikparamnew = pmanip->GetBase()->GetTransform().inverse()*pmanip->GetIkParameterization(param.GetType());
-        dReal ikworkspacedist = DistIkParameterization2(param,ikparamnew);
-        if( ikworkspacedist > 1e-8 ) {
+        dReal ikworkspacedist = param.ComputeDistanceSqr(ikparamnew);
+        if( ikworkspacedist > _ikthreshold ) {
             stringstream ss; ss << "ignoring bad ik for " << pmanip->GetName() << ":" << probot->GetName() << " dist=" << ikworkspacedist << ": " << param << endl;;
             RAVELOG_ERROR(ss.str());
             return SR_Continue;
@@ -701,6 +710,7 @@ private:
     IkParameterization::Type _iktype;
     boost::shared_ptr<void> _resource;
     std::string _kinematicshash;
+    dReal _ikthreshold;
 };
 
 #endif

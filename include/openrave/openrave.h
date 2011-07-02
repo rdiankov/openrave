@@ -857,6 +857,75 @@ public:
     inline const RAY GetTranslationDirection() const RAVE_DEPRECATED { return RAY(_transform.trans,_transform.rot); }
     //@}
 
+
+    /// \brief Computes the distance squared between two IK parmaeterizations.
+    inline dReal ComputeDistanceSqr(const IkParameterization& ikparam) const
+    {
+        const dReal anglemult = 0.4; // this is a hack that should be removed....
+        BOOST_ASSERT(_type==ikparam.GetType());
+        switch(_type) {
+        case IkParameterization::Type_Transform6D: {
+            Transform t0 = GetTransform6D(), t1 = ikparam.GetTransform6D();
+            dReal facos = RaveAcos(std::min(dReal(1),RaveFabs(t0.rot.dot(t1.rot))));
+            return (t0.trans-t1.trans).lengthsqr3() + anglemult*facos*facos;
+        }
+        case IkParameterization::Type_Rotation3D: {
+            dReal facos = RaveAcos(std::min(dReal(1),RaveFabs(GetRotation3D().dot(ikparam.GetRotation3D()))));
+            return facos*facos;
+        }
+        case IkParameterization::Type_Translation3D:
+            return (GetTranslation3D()-ikparam.GetTranslation3D()).lengthsqr3();
+        case IkParameterization::Type_Direction3D: {
+            dReal facos = RaveAcos(std::min(dReal(1),GetDirection3D().dot(ikparam.GetDirection3D())));
+            return facos*facos;
+        }
+        case IkParameterization::Type_Ray4D: {
+            Vector pos0 = GetRay4D().pos - GetRay4D().dir*GetRay4D().dir.dot(GetRay4D().pos);
+            Vector pos1 = ikparam.GetRay4D().pos - ikparam.GetRay4D().dir*ikparam.GetRay4D().dir.dot(ikparam.GetRay4D().pos);
+            dReal facos = RaveAcos(std::min(dReal(1),GetRay4D().dir.dot(ikparam.GetRay4D().dir)));
+            return (pos0-pos1).lengthsqr3() + anglemult*facos*facos;
+        }
+        case IkParameterization::Type_Lookat3D: {
+            Vector v = GetLookat3D()-ikparam.GetLookat3D();
+            dReal s = v.dot3(ikparam.GetLookat3DDirection());
+            if( s >= -1 ) { // ikparam's lookat is always 1 beyond the origin, this is just the convention for testing...
+                v -= s*ikparam.GetLookat3DDirection();
+            }
+            return v.lengthsqr3();
+        }
+        case IkParameterization::Type_TranslationDirection5D: {
+            dReal facos = RaveAcos(std::min(dReal(1),GetTranslationDirection5D().dir.dot(ikparam.GetTranslationDirection5D().dir)));
+            return (GetTranslationDirection5D().pos-ikparam.GetTranslationDirection5D().pos).lengthsqr3() + anglemult*facos*facos;
+        }
+        case IkParameterization::Type_TranslationXY2D: {
+            return (GetTranslationXY2D()-ikparam.GetTranslationXY2D()).lengthsqr2();
+        }
+        case IkParameterization::Type_TranslationXYOrientation3D: {
+            Vector v0 = GetTranslationXYOrientation3D();
+            Vector v1 = ikparam.GetTranslationXYOrientation3D();
+            dReal anglediff = v0.z-v1.z;
+            if (anglediff < dReal(-PI)) {
+                anglediff += dReal(2*PI);
+                while (anglediff < dReal(-PI))
+                    anglediff += dReal(2*PI);
+            }
+            else if (anglediff > dReal(PI)) {
+                anglediff -= dReal(2*PI);
+                while (anglediff > dReal(PI))
+                    anglediff -= dReal(2*PI);
+            }
+            return (v0-v1).lengthsqr2() + anglemult*anglediff*anglediff;
+        }
+        case IkParameterization::Type_TranslationLocalGlobal6D: {
+            std::pair<Vector,Vector> p0 = GetTranslationLocalGlobal6D(), p1 = ikparam.GetTranslationLocalGlobal6D();
+            return (p0.first-p1.first).lengthsqr3() + (p0.second-p1.second).lengthsqr3();
+        }
+        default:
+            BOOST_ASSERT(0);
+        }
+        return 1e30;
+    }
+
 protected:
     Transform _transform;
     Type _type;

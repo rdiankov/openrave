@@ -808,11 +808,11 @@ public:
                     if( !pmanip->GetIkSolver()->GetFreeParameters(vfreeparameters_out) ) {
                         RAVELOG_WARN("failed to get freeparameters");
                     }
-                    if( DistIkParameterization2(twrist, twrist_out) > fthreshold) {
+                    if( twrist.ComputeDistanceSqr(twrist_out) > fthreshold) {
                         vwrongsolutions.push_back(make_pair(twrist,vfreeparameters_out));
                         bsuccess = false;
                         s.str("");
-                        s << "FindIKSolution: Incorrect IK, i = " << i <<" error: " << RaveSqrt(DistIkParameterization2(twrist, twrist_out)) << endl
+                        s << "FindIKSolution: Incorrect IK, i = " << i <<" error: " << RaveSqrt(twrist.ComputeDistanceSqr(twrist_out)) << endl
                           << "Original Joint Val: ";
                         FOREACH(it, vrealsolution)
                             s << *it << " ";
@@ -866,10 +866,10 @@ public:
                         if( !pmanip->GetIkSolver()->GetFreeParameters(vfreeparameters_out) ) {
                             RAVELOG_WARN("failed to get freeparameters");
                         }
-                        if(DistIkParameterization2(twrist, twrist_out) > fthreshold ) {
+                        if(twrist.ComputeDistanceSqr(twrist_out) > fthreshold ) {
                             vwrongsolutions.push_back(make_pair(twrist,vfreeparameters_out));
                             s.str("");
-                            s << "FindIKSolutions: Incorrect IK, i = " << i << " error: " << RaveSqrt(DistIkParameterization2(twrist, twrist_out)) << endl
+                            s << "FindIKSolutions: Incorrect IK, i = " << i << " error: " << RaveSqrt(twrist.ComputeDistanceSqr(twrist_out)) << endl
                               << "Original Joint Val: ";
                             FOREACH(it, vrealsolution)
                                 s << *it << " ";
@@ -920,11 +920,11 @@ public:
                 if( DebugIKFindSolution(pmanip, twrist, viksolution, 0, vfreeparameters, vfreeparameters_out.size()-1) ) {
                     robot->SetActiveDOFValues(viksolution, true);
                     twrist_out = pmanip->GetIkParameterization(twrist);
-                    if(DistIkParameterization2(twrist, twrist_out) > fthreshold ) {
+                    if(twrist.ComputeDistanceSqr(twrist_out) > fthreshold ) {
                         vwrongsolutions.push_back(make_pair(twrist,vfreeparameters));
                         bsuccess = false;
                         s.str("");
-                        s << "FindIKSolution (freeparams): Incorrect IK, i = " << i << " error: " << RaveSqrt(DistIkParameterization2(twrist, twrist_out)) << endl
+                        s << "FindIKSolution (freeparams): Incorrect IK, i = " << i << " error: " << RaveSqrt(twrist.ComputeDistanceSqr(twrist_out)) << endl
                           << "freeparams: ";
                         FOREACH(it, vfreeparameters) {
                             s << *it << " ";
@@ -970,10 +970,10 @@ public:
                 FOREACH(itsol, viksolutions) {
                     robot->SetActiveDOFValues(*itsol, true);
                     twrist_out = pmanip->GetIkParameterization(twrist);
-                    if(DistIkParameterization2(twrist, twrist_out) > fthreshold ) {
+                    if(twrist.ComputeDistanceSqr(twrist_out) > fthreshold ) {
                         vwrongsolutions.push_back(make_pair(twrist,vfreeparameters_out));
                         s.str("");
-                        s << "FindIKSolutions (freeparams): Incorrect IK, i = " << i <<" error: " << RaveSqrt(DistIkParameterization2(twrist, twrist_out)) << endl
+                        s << "FindIKSolutions (freeparams): Incorrect IK, i = " << i <<" error: " << RaveSqrt(twrist.ComputeDistanceSqr(twrist_out)) << endl
                           << "Original Joint Val: ";
                         FOREACH(it, vrealsolution) {
                             s << *it << " ";

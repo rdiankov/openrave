@@ -1,18 +1,21 @@
-% testik(robotfile,manipid,ikfastlib)
+% testik(robotfile,manipname,ikfastlib)
 %
 % tests the inverse kinematics solver of a robot
 % Arguments:
 %  robotfile - openrave robot
-%  manipid [optional] - if specified, only tests ik for those manipulators (zero-indexed)
+%  manipname [optional] - if specified, only tests ik for that manipulator
 %  rotonly [optional] - if specified and true, only test rotation component of ik solution
 %  ikfastlib [optional] - the ikfast shared object to dynamically load as an openrave iksolver
-function testik(robotfile,manipid)
+function testik(robotfile,manipname)
 
 more off; % turn off output paging
 addopenravepaths()
 
 if( ~exist('robotfile','var') )
     robotfile = 'robots/barrettwam.robot.xml';
+end
+if( ~exist('manipname','var') )
+    manipname = '';
 end
 
 if( length(robotfile) > 0)
@@ -21,25 +24,19 @@ if( length(robotfile) > 0)
 end
 
 probid = orEnvCreateProblem('ikfast');
+
+orRobotSetActiveManipulator(robotid,manipname);
 manips = orRobotGetManipulators(robotid);
 
-%% SetActiveManip command not supported
-%orProblemSendCommand(sprintf('SetActiveManip %d',i-1),probid);
-
-% if( ~exist('manipid','var') )
-%     for i = 1:length(manips)
-%         orProblemSendCommand(sprintf('SetActiveManip %d',i-1),probid);
-%         tic;
-%         orProblemSendCommand(cmd,probid);
-%         toc
-%     end
-% else
-%     orProblemSendCommand(sprintf('SetActiveManip %d',manipid),probid);
-%     tic;
-%     orProblemSendCommand(cmd,probid);
-%     toc
-% end
-
+manipid = 1;
+if( length(manipname) > 0)
+    for i = 1:length(manips)
+        if( strcmp(manips{i}.name, manipname) )
+            manipid = i;
+            break;
+        end
+    end
+end
 
 %% test any specific ik configuration
 orBodySetJointValues(robotid,[ 0.919065 -1.4331 1.45619 1.31858 0.696941 1.52955 -0.314613],manips{1}.armjoints);

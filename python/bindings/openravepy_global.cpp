@@ -224,6 +224,11 @@ public:
     object GetTranslationXYOrientation3D() { return toPyVector3(_param.GetTranslationXYOrientation3D()); }
     object GetTranslationLocalGlobal6D() { return boost::python::make_tuple(toPyVector3(_param.GetTranslationLocalGlobal6D().first),toPyVector3(_param.GetTranslationLocalGlobal6D().second)); }
 
+    dReal ComputeDistanceSqr(boost::shared_ptr<PyIkParameterization> pyikparam)
+    {
+        return _param.ComputeDistanceSqr(pyikparam->_param);
+    }
+
     IkParameterization _param;
 
     string __repr__() {
@@ -705,6 +710,7 @@ void init_openravepy_global()
             .staticmethod("GetNumberOfValues")
             .def_pickle(IkParameterization_pickle_suite())
 
+            .def("ComputeDistanceSqr",&PyIkParameterization::ComputeDistanceSqr,DOXY_FN(IkParameterization,ComputeDistanceSqr))
             // deprecated
             .def("SetTransform",&PyIkParameterization::SetTransform6D,args("transform"), DOXY_FN(IkParameterization,SetTransform6D))
             .def("SetRotation",&PyIkParameterization::SetRotation3D,args("quat"), DOXY_FN(IkParameterization,SetRotation3D))
