@@ -31,7 +31,7 @@ class BaseCameraSensor : public SensorBase
                     return PE_Support;
                 return PE_Ignore;
             }
-            static boost::array<string, 8> tags = {{"sensor", "kk", "width", "height", "framerate", "power", "color", "focal_length"}};
+            static boost::array<string, 11> tags = {{"sensor", "kk", "width", "height", "framerate", "power", "color", "focal_length","image_dimensions","intrinsic","measurement_time"}};
             if( find(tags.begin(),tags.end(),name) == tags.end() ) {
                 return PE_Pass;
             }
@@ -50,17 +50,29 @@ class BaseCameraSensor : public SensorBase
             else if( name == "sensor" ) {
                 return true;
             }
-            else if( name == "kk" || name == "K" ) {
+            else if( name == "kk" || name == "KK" ) {
                 ss >> _psensor->_pgeom->KK.fx >> _psensor->_pgeom->KK.fy >> _psensor->_pgeom->KK.cx >> _psensor->_pgeom->KK.cy;
+            }
+            else if( name == "intrinsic" ) {
+                dReal dummy0, dummy1;
+                ss >> _psensor->_pgeom->KK.fx >> dummy0 >> _psensor->_pgeom->KK.cx >> dummy1 >> _psensor->_pgeom->KK.fy >> _psensor->_pgeom->KK.cy;
             }
             else if( name == "focal_length" ) {
                 ss >> _psensor->_pgeom->KK.focal_length;
+            }
+            else if( name == "image_dimensions" ) {
+                ss >> _psensor->_pgeom->width >> _psensor->_pgeom->height >> _psensor->_numchannels;
             }
             else if( name == "width" ) {
                 ss >> _psensor->_pgeom->width;
             }
             else if( name == "height" ) {
                 ss >> _psensor->_pgeom->height;
+            }
+            else if( name == "measurement_time" ) {
+                dReal measurement_time=1;
+                ss >> measurement_time;
+                _psensor->framerate = 1/measurement_time;
             }
             else if( name == "framerate" ) {
                 ss >> _psensor->framerate;
@@ -120,6 +132,7 @@ class BaseCameraSensor : public SensorBase
         _bPower = false;
         _vColor = RaveVector<float>(0.5f,0.5f,1,1);
         framerate = 5;
+        _numchannels = 3;
         _bRenderGeometry = true;
         _bRenderData = false;
         _Reset();
@@ -358,6 +371,7 @@ class BaseCameraSensor : public SensorBase
     Transform _trans;
     dReal _fTimeToImage;
     int framerate;
+    int _numchannels;
     GraphHandlePtr _graphgeometry;
     ViewerBasePtr _dataviewer;
 

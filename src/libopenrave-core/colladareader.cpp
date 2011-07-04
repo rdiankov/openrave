@@ -64,7 +64,7 @@ class ColladaReader : public daeErrorHandler
     public:
         std::list< std::pair<domNodeRef,domInstance_kinematics_modelRef> > listKinematicsVisualBindings;
         std::list<JointAxisBinding> listAxisBindings;
-
+        
         bool AddAxisInfo(const domInstance_kinematics_model_Array& arr, domKinematics_axis_infoRef kinematics_axis_info, domMotion_axis_infoRef motion_axis_info)
         {
             if( !kinematics_axis_info ) {
@@ -97,8 +97,9 @@ class ColladaReader : public daeErrorHandler
         }
     };
 
- public:
- ColladaReader(EnvironmentBasePtr penv) : _dom(NULL), _penv(penv), _nGlobalSensorId(0), _nGlobalManipulatorId(0), _nGlobalIndex(0) {
+public:
+    ColladaReader(EnvironmentBasePtr penv) : _dom(NULL), _penv(penv), _nGlobalSensorId(0), _nGlobalManipulatorId(0), _nGlobalIndex(0)
+    {
         daeErrorHandler::setErrorHandler(this);
         _bOpeningZAE = false;
         _bSkipGeometry = false;
