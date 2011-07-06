@@ -63,7 +63,7 @@ static bool s_bSetWindowPosition = false;
 int g_argc;
 char** g_argv;
 static bool s_bThreadDestroyed = false;
-static const char* s_geometryextentsions[] = {"iv","vrml","wrl","stl","blend","3ds","ase","obj","ply","dxf","lwo","lxo","ac","ms3d","x","mesh.xml","irrmesh","irr","nff","off","raw"};
+static const char* s_geometryextentsions[] = { "iv","vrml","wrl","stl","blend","3ds","ase","obj","ply","dxf","lwo","lxo","ac","ms3d","x","mesh.xml","irrmesh","irr","nff","off","raw"};
 #ifndef _WIN32
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -75,8 +75,8 @@ int main(int argc, char ** argv)
     g_argv = argv;
 
     int nServPort = 4765;
-    
-    DebugLevel debuglevel = Level_Info;    
+
+    DebugLevel debuglevel = Level_Info;
     list<string> listLoadPlugins;
     string collisionchecker, physicsengine, servername="textserver";
     bool bListPlugins = false;
@@ -89,7 +89,7 @@ int main(int argc, char ** argv)
     // parse command line arguments
     int i = 1;
     while(i < argc) {
-        if( stricmp(argv[i], "-h") == 0 || stricmp(argv[i], "-?") == 0 || stricmp(argv[i], "/?") == 0 || stricmp(argv[i], "--help") == 0 || stricmp(argv[i], "-help") == 0 ) {
+        if((stricmp(argv[i], "-h") == 0)||(stricmp(argv[i], "-?") == 0)||(stricmp(argv[i], "/?") == 0)||(stricmp(argv[i], "--help") == 0)||(stricmp(argv[i], "-help") == 0)) {
             RAVELOG_INFO("OpenRAVE Usage\n"
                          "--nogui             Run without a GUI (does not initialize the graphics engine nor communicate with any window manager)\n"
                          "--hidegui           Run with a hidden GUI, this allows 3D rendering and images to be captured\n"
@@ -149,7 +149,7 @@ int main(int argc, char ** argv)
             s_listModules.push_back(pair<string, string>(argv[i+1], ""));
             i += 2;
 
-            if( i < argc && argv[i][0] != '-' ) {
+            if((i < argc)&&(argv[i][0] != '-')) {
                 // set the args
                 s_listModules.back().second = argv[i];
                 i++;
@@ -191,7 +191,7 @@ int main(int argc, char ** argv)
 
     RaveInitialize(true);
 
-    // create environment and start a command-line controlled simulation 
+    // create environment and start a command-line controlled simulation
     RaveSetDebugLevel(debuglevel);
     s_penv = RaveCreateEnvironment();
     RaveSetDebugLevel(debuglevel);
@@ -209,11 +209,11 @@ int main(int argc, char ** argv)
         RaveGetPluginInfo(plugins);
 
         // output all the plugins and exit
-        vector<string>::const_iterator itnames;     
+        vector<string>::const_iterator itnames;
 
         vector<string>::iterator itname;
         stringstream ss;
-            
+
         ss << endl << "Number of plugins: " << plugins.size() << endl;
 
         stringstream buf;
@@ -237,15 +237,16 @@ int main(int argc, char ** argv)
 #else
             ss << ChangeTextColor(0,OPENRAVECOLOR_WARNLEVEL) << ittype->second << ": " << ResetTextColor() << names.size() << endl;
 #endif
-            FORIT(itname, names)
+            FORIT(itname, names) {
                 ss << itname->c_str() << endl;
+            }
         }
         printf("%s",ss.str().c_str());
         s_penv->Destroy();
         return 0;
     }
 
-    if( servername.size() > 0 && nServPort > 0 ) {
+    if((servername.size() > 0)&&(nServPort > 0)) {
         ModuleBasePtr pserver = RaveCreateModule(s_penv, servername);
         if( !!pserver ) {
             stringstream ss;
@@ -281,13 +282,13 @@ void MainOpenRAVEThread()
 {
     EnvironmentBasePtr penv = s_penv; // need to do this since s_penv can be reset at any time
     ViewerBasePtr pviewer;
-    if( bDisplayGUI && (!s_viewerName || s_viewerName->size()>0) ) {
+    if( bDisplayGUI && (!s_viewerName ||(s_viewerName->size()>0)) ) {
         // find a viewer
-        if( !!s_viewerName && s_viewerName->size() > 0 ) {
+        if( !!s_viewerName &&(s_viewerName->size() > 0)) {
             pviewer = RaveCreateViewer(penv, *s_viewerName);
         }
         if( !pviewer ) {
-            boost::array<string,1> viewer_prefs = {{"qtcoin"}};
+            boost::array<string,1> viewer_prefs = { { "qtcoin"}};
             for(size_t i = 0; i < viewer_prefs.size(); ++i) {
                 pviewer = RaveCreateViewer(penv, viewer_prefs[i]);
                 if( !!pviewer ) {
@@ -307,7 +308,7 @@ void MainOpenRAVEThread()
                 }
             }
         }
-        
+
         if( !pviewer ) {
             RAVELOG_WARN("failed to find an OpenRAVE viewer.\n");
         }
@@ -375,7 +376,7 @@ void sigint_handler(int sig)
     s_penv.reset();
 #ifndef _WIN32
     // have to let the default sigint properly shutdown the program
-	signal(SIGINT, SIG_DFL);
-	kill(getpid(), SIGINT);
+    signal(SIGINT, SIG_DFL);
+    kill(getpid(), SIGINT);
 #endif
 }

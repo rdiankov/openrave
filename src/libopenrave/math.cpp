@@ -154,7 +154,7 @@ bool _QLAlgorithm3 (T* m_aafEntry, T* afDiag, T* afSubDiag)
             for (i1 = i0; i1 <= 1; i1++)
             {
                 T fSum = RaveFabs(afDiag[i1]) +
-                    RaveFabs(afDiag[i1+1]);
+                         RaveFabs(afDiag[i1+1]);
                 if ( RaveFabs(afSubDiag[i1]) + fSum == fSum )
                     break;
             }
@@ -172,7 +172,7 @@ bool _QLAlgorithm3 (T* m_aafEntry, T* afDiag, T* afSubDiag)
             T fTmp2 = 0.0f;
             for (int i2 = i1-1; i2 >= i0; i2--)
             {
-                 T fTmp3 = fSin*afSubDiag[i2];
+                T fTmp3 = fSin*afSubDiag[i2];
                 T fTmp4 = fCos*afSubDiag[i2];
                 if ( RaveFabs(fTmp3) >= RaveFabs(fTmp0) )
                 {
@@ -200,9 +200,9 @@ bool _QLAlgorithm3 (T* m_aafEntry, T* afDiag, T* afSubDiag)
                 {
                     fTmp3 = m_aafEntry[iRow*3+i2+1];
                     m_aafEntry[iRow*3+i2+1] = fSin*m_aafEntry[iRow*3+i2] +
-                        fCos*fTmp3;
+                                              fCos*fTmp3;
                     m_aafEntry[iRow*3+i2] = fCos*m_aafEntry[iRow*3+i2] -
-                        fSin*fTmp3;
+                                            fSin*fTmp3;
                 }
             }
             afDiag[i0] -= fTmp2;
@@ -240,13 +240,13 @@ void EigenSymmetric3(const double* fmat, double* afEigenvalue, double* fevecs)
 
     // make eigenvectors form a right--handed system
     double fDet = fevecs[0*3+0] * (fevecs[1*3+1] * fevecs[2*3+2] - fevecs[1*3+2] * fevecs[2*3+1]) +
-            fevecs[0*3+1] * (fevecs[1*3+2] * fevecs[2*3+0] - fevecs[1*3+0] * fevecs[2*3+2]) +
-            fevecs[0*3+2] * (fevecs[1*3+0] * fevecs[2*3+1] - fevecs[1*3+1] * fevecs[2*3+0]);
+                  fevecs[0*3+1] * (fevecs[1*3+2] * fevecs[2*3+0] - fevecs[1*3+0] * fevecs[2*3+2]) +
+                  fevecs[0*3+2] * (fevecs[1*3+0] * fevecs[2*3+1] - fevecs[1*3+1] * fevecs[2*3+0]);
     if ( fDet < 0.0f )
     {
-        fevecs[0*3+2] = - fevecs[0*3+2];
-        fevecs[1*3+2] = - fevecs[1*3+2];
-        fevecs[2*3+2] = - fevecs[2*3+2];
+        fevecs[0*3+2] = -fevecs[0*3+2];
+        fevecs[1*3+2] = -fevecs[1*3+2];
+        fevecs[2*3+2] = -fevecs[2*3+2];
     }
 }
 /* end of MAGIC code */

@@ -17,15 +17,17 @@
 #include "libopenrave.h"
 
 #define CHECK_INTERNAL_COMPUTATION { \
-    if( _nHierarchyComputed != 2 ) { \
-        throw OPENRAVE_EXCEPTION_FORMAT0("joint hierarchy needs to be computed (is body added to environment?)", ORE_Failed); \
-    } \
+        if( _nHierarchyComputed != 2 ) { \
+            throw OPENRAVE_EXCEPTION_FORMAT0("joint hierarchy needs to be computed (is body added to environment?)", ORE_Failed); \
+        } \
 } \
 
 namespace OpenRAVE {
 
-RobotBase::Manipulator::Manipulator(RobotBasePtr probot) : _vdirection(0,0,1), _probot(probot) {}
-RobotBase::Manipulator::~Manipulator() {}
+RobotBase::Manipulator::Manipulator(RobotBasePtr probot) : _vdirection(0,0,1), _probot(probot) {
+}
+RobotBase::Manipulator::~Manipulator() {
+}
 
 RobotBase::Manipulator::Manipulator(const RobotBase::Manipulator& r)
 {
@@ -229,7 +231,7 @@ void RobotBase::Manipulator::GetChildJoints(std::vector<JointPtr>& vjoints) cons
         int ilink = (*itlink)->GetIndex();
         if( ilink == iattlink )
             continue;
-        if( __varmdofindices.size() > 0 && !probot->DoesAffect(__varmdofindices[0],ilink) )
+        if((__varmdofindices.size() > 0)&& !probot->DoesAffect(__varmdofindices[0],ilink) )
             continue;
         for(int idof = 0; idof < probot->GetDOF(); ++idof) {
             KinBody::JointPtr pjoint = probot->GetJointFromDOFIndex(idof);
@@ -262,7 +264,7 @@ void RobotBase::Manipulator::GetChildDOFIndices(std::vector<int>& vdofindices) c
         int ilink = (*itlink)->GetIndex();
         if( ilink == iattlink )
             continue;
-        if( __varmdofindices.size() > 0 && !probot->DoesAffect(__varmdofindices[0],ilink) )
+        if((__varmdofindices.size() > 0)&& !probot->DoesAffect(__varmdofindices[0],ilink) )
             continue;
         for(int idof = 0; idof < probot->GetDOF(); ++idof) {
             KinBody::JointPtr pjoint = probot->GetJointFromDOFIndex(idof);
@@ -390,7 +392,7 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(const Transform& tEE, Col
     }
     FOREACHC(itlink, probot->GetLinks()) {
         int ilink = (*itlink)->GetIndex();
-        if( ilink == iattlink || !(*itlink)->IsEnabled() ) {
+        if((ilink == iattlink)|| !(*itlink)->IsEnabled() ) {
             continue;
         }
         // gripper needs to be affected by all joints
@@ -469,7 +471,7 @@ bool RobotBase::Manipulator::IsGrabbing(KinBodyConstPtr pbody) const
     RobotBasePtr probot(_probot);
     KinBody::LinkPtr plink = probot->IsGrabbing(pbody);
     if( !!plink ) {
-        if( plink == _pEndEffector || plink == _pBase ) {
+        if((plink == _pEndEffector)||(plink == _pBase)) {
             return true;
         }
         int iattlink = _pEndEffector->GetIndex();
@@ -485,7 +487,7 @@ bool RobotBase::Manipulator::IsGrabbing(KinBodyConstPtr pbody) const
                     break;
                 }
             }
-            if( bGripperLink && plink == *itlink ) {
+            if( bGripperLink &&(plink == *itlink)) {
                 return true;
             }
         }
@@ -620,7 +622,7 @@ RobotBase::AttachedSensor::AttachedSensor(RobotBasePtr probot, const AttachedSen
         }
     }
     int index = LinkPtr(sensor.pattachedlink)->GetIndex();
-    if( index >= 0 && index < (int)probot->GetLinks().size()) {
+    if((index >= 0)&&(index < (int)probot->GetLinks().size())) {
         pattachedlink = probot->GetLinks().at(index);
     }
 }
@@ -653,19 +655,19 @@ void RobotBase::AttachedSensor::serialize(std::ostream& o, int options) const
         SensorBase::SensorGeometryPtr prawgeom = psensor->GetSensorGeometry();
         if( !!prawgeom ) {
             switch(prawgeom->GetType()) {
-                case SensorBase::ST_Laser: {
-                    boost::shared_ptr<SensorBase::LaserGeomData> pgeom = boost::static_pointer_cast<SensorBase::LaserGeomData>(prawgeom);
-                    o << pgeom->min_angle[0] << " " << pgeom->max_angle[0] << " " << pgeom->resolution[0] << " " << pgeom->max_range << " ";
-                    break;
-                }
-                case SensorBase::ST_Camera: {
-                    boost::shared_ptr<SensorBase::CameraGeomData> pgeom = boost::static_pointer_cast<SensorBase::CameraGeomData>(prawgeom);
-                    o << pgeom->KK.fx << " " << pgeom->KK.fy << " " << pgeom->KK.cx << " " << pgeom->KK.cy << " " << pgeom->width << " " << pgeom->height << " ";
-                    break;
-                }
-                default:
-                    // don't support yet
-                    break;
+            case SensorBase::ST_Laser: {
+                boost::shared_ptr<SensorBase::LaserGeomData> pgeom = boost::static_pointer_cast<SensorBase::LaserGeomData>(prawgeom);
+                o << pgeom->min_angle[0] << " " << pgeom->max_angle[0] << " " << pgeom->resolution[0] << " " << pgeom->max_range << " ";
+                break;
+            }
+            case SensorBase::ST_Camera: {
+                boost::shared_ptr<SensorBase::CameraGeomData> pgeom = boost::static_pointer_cast<SensorBase::CameraGeomData>(prawgeom);
+                o << pgeom->KK.fx << " " << pgeom->KK.fy << " " << pgeom->KK.cx << " " << pgeom->KK.cy << " " << pgeom->width << " " << pgeom->height << " ";
+                break;
+            }
+            default:
+                // don't support yet
+                break;
             }
         }
     }
@@ -977,7 +979,7 @@ void RobotBase::SetActiveDOFs(const std::vector<int>& vJointIndices, int nAffine
 void RobotBase::SetActiveDOFs(const std::vector<int>& vJointIndices, int nAffineDOFBitmask)
 {
     FOREACHC(itj, vJointIndices) {
-        if( *itj < 0 || *itj >= (int)GetDOF() ) {
+        if((*itj < 0)||(*itj >= (int)GetDOF())) {
             throw OPENRAVE_EXCEPTION_FORMAT("bad indices %d",*itj,ORE_InvalidArguments);
         }
     }
@@ -1126,7 +1128,7 @@ void RobotBase::GetActiveDOFValues(std::vector<dReal>& values) const
         dReal fsin = RaveSqrt(t.rot.y * t.rot.y + t.rot.z * t.rot.z + t.rot.w * t.rot.w);
 
         // figure out correct sign
-        if( (t.rot.y > 0) != (vActvAffineRotationAxis.x>0) || (t.rot.z > 0) != (vActvAffineRotationAxis.y>0) || (t.rot.w > 0) != (vActvAffineRotationAxis.z>0) )
+        if(((t.rot.y > 0) != (vActvAffineRotationAxis.x>0))||((t.rot.z > 0) != (vActvAffineRotationAxis.y>0))||((t.rot.w > 0) != (vActvAffineRotationAxis.z>0)))
             fsin = -fsin;
 
         *pValues++ = 2 * RaveAtan2(fsin, t.rot.x);
@@ -1339,8 +1341,7 @@ void RobotBase::GetActiveDOFResolutions(std::vector<dReal>& resolution) const
     if( _nAffineDOFs & DOF_Y ) {
         *pResolution++ = _vTranslationResolutions.y;
     }
-    if( _nAffineDOFs & DOF_Z ) { *pResolution++ = _vTranslationResolutions.z;
-    }
+    if( _nAffineDOFs & DOF_Z ) { *pResolution++ = _vTranslationResolutions.z;}
 
     if( _nAffineDOFs & DOF_RotationAxis ) {
         *pResolution++ = _vRotationAxisResolutions.x;
@@ -1915,7 +1916,7 @@ const std::set<int>& RobotBase::GetNonAdjacentLinks(int adjacentoptions) const
     if( (_nNonAdjacentLinkCache&adjacentoptions) != adjacentoptions ) {
         int requestedoptions = (~_nNonAdjacentLinkCache)&adjacentoptions;
         // find out what needs to computed
-        boost::array<uint8_t,4> compute={{0,0,0,0}};
+        boost::array<uint8_t,4> compute={ { 0,0,0,0}};
         if( requestedoptions & AO_Enabled ) {
             for(size_t i = 0; i < compute.size(); ++i) {
                 if( i & AO_Enabled ) {
@@ -1989,7 +1990,7 @@ bool RobotBase::Grab(KinBodyPtr pbody, const std::set<int>& setRobotLinksToIgnor
 
 bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr plink)
 {
-    if( !pbody || !plink || plink->GetParent() != shared_kinbody() ) {
+    if( !pbody || !plink ||(plink->GetParent() != shared_kinbody())) {
         throw OPENRAVE_EXCEPTION_FORMAT0("invalid grab arguments",ORE_InvalidArguments);
     }
     if( pbody == shared_kinbody() ) {
@@ -2025,7 +2026,7 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr plink)
 
 bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr pRobotLinkToGrabWith, const std::set<int>& setRobotLinksToIgnore)
 {
-    if( !pbody || !pRobotLinkToGrabWith || pRobotLinkToGrabWith->GetParent() != shared_kinbody() ) {
+    if( !pbody || !pRobotLinkToGrabWith ||(pRobotLinkToGrabWith->GetParent() != shared_kinbody())) {
         throw OPENRAVE_EXCEPTION_FORMAT0("invalid grab arguments",ORE_InvalidArguments);
     }
     if( pbody == shared_kinbody() ) {
@@ -2157,7 +2158,7 @@ void RobotBase::SetActiveManipulator(const std::string& manipname)
 
 RobotBase::ManipulatorPtr RobotBase::GetActiveManipulator()
 {
-    if(_nActiveManip < 0 && _nActiveManip >= (int)_vecManipulators.size() ) {
+    if((_nActiveManip < 0)&&(_nActiveManip >= (int)_vecManipulators.size())) {
         throw RobotBase::ManipulatorPtr();
     }
     return _vecManipulators.at(_nActiveManip);
@@ -2165,7 +2166,7 @@ RobotBase::ManipulatorPtr RobotBase::GetActiveManipulator()
 
 RobotBase::ManipulatorConstPtr RobotBase::GetActiveManipulator() const
 {
-    if(_nActiveManip < 0 && _nActiveManip >= (int)_vecManipulators.size() ) {
+    if((_nActiveManip < 0)&&(_nActiveManip >= (int)_vecManipulators.size())) {
         return RobotBase::ManipulatorPtr();
     }
     return _vecManipulators.at(_nActiveManip);
@@ -2374,7 +2375,7 @@ void RobotBase::_ComputeInternalInformation()
         }
         (*itmanip)->_vClosingDirection.swap(vClosingDirection);
         vector<ManipulatorPtr>::iterator itmanip2 = itmanip; ++itmanip2;
-        for(;itmanip2 != _vecManipulators.end(); ++itmanip2) {
+        for(; itmanip2 != _vecManipulators.end(); ++itmanip2) {
             if( (*itmanip)->GetName() == (*itmanip2)->GetName() ) {
                 RAVELOG_WARN(str(boost::format("robot %s has two manipulators with the same name: %s!\n")%GetName()%(*itmanip)->GetName()));
             }

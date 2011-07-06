@@ -49,57 +49,95 @@ const char s_filesep = '/';
 
 // use round-nearest versions since it is the default
 #ifdef LIBM_EXP_ACCURATE
-dReal RaveExp(dReal f) { return exp(f); }
+dReal RaveExp(dReal f) {
+    return exp(f);
+}
 #else
-dReal RaveExp(dReal f) { return exp_rn(f); }
+dReal RaveExp(dReal f) {
+    return exp_rn(f);
+}
 #endif
 #ifdef LIBM_LOG_ACCURATE
-dReal RaveLog(dReal f) { return log(f); }
+dReal RaveLog(dReal f) {
+    return log(f);
+}
 #else
-dReal RaveLog(dReal f) { return log_rn(f); }
+dReal RaveLog(dReal f) {
+    return log_rn(f);
+}
 #endif
 #ifdef LIBM_COS_ACCURATE
-dReal RaveCos(dReal f) { return cos(f); }
+dReal RaveCos(dReal f) {
+    return cos(f);
+}
 #else
-dReal RaveCos(dReal f) { return cos_rn(f); }
+dReal RaveCos(dReal f) {
+    return cos_rn(f);
+}
 #endif
 #ifdef LIBM_SIN_ACCURATE
-dReal RaveSin(dReal f) { return sin(f); }
+dReal RaveSin(dReal f) {
+    return sin(f);
+}
 #else
-dReal RaveSin(dReal f) { return sin_rn(f); }
+dReal RaveSin(dReal f) {
+    return sin_rn(f);
+}
 #endif
 #ifdef LIBM_TAN_ACCURATE
-dReal RaveTan(dReal f) { return tan(f); }
+dReal RaveTan(dReal f) {
+    return tan(f);
+}
 #else
-dReal RaveTan(dReal f) { return tan_rn(f); }
+dReal RaveTan(dReal f) {
+    return tan_rn(f);
+}
 #endif
 #ifdef LIBM_LOG2_ACCURATE
-dReal RaveLog2(dReal f) { return log2(f); }
+dReal RaveLog2(dReal f) {
+    return log2(f);
+}
 #else
-dReal RaveLog2(dReal f) { return log2_rn(f); }
+dReal RaveLog2(dReal f) {
+    return log2_rn(f);
+}
 #endif
 #ifdef LIBM_LOG10_ACCURATE
-dReal RaveLog10(dReal f) { return log10(f); }
+dReal RaveLog10(dReal f) {
+    return log10(f);
+}
 #else
-dReal RaveLog10(dReal f) { return log10_rn(f); }
+dReal RaveLog10(dReal f) {
+    return log10_rn(f);
+}
 #endif
 #ifdef LIBM_ACOS_ACCURATE
-dReal RaveAcos(dReal f) { return acos(f); }
+dReal RaveAcos(dReal f) {
+    return acos(f);
+}
 #else
-dReal RaveAcos(dReal f) { return acos_rn(f); }
+dReal RaveAcos(dReal f) {
+    return acos_rn(f);
+}
 #endif
 #ifdef LIBM_ASIN_ACCURATE
-dReal RaveAsin(dReal f) { return asin(f); }
+dReal RaveAsin(dReal f) {
+    return asin(f);
+}
 #else
-dReal RaveAsin(dReal f) { return asin_rn(f); }
+dReal RaveAsin(dReal f) {
+    return asin_rn(f);
+}
 #endif
 #ifdef LIBM_ATAN2_ACCURATE
-dReal RaveAtan2(dReal y, dReal x) { return atan2(y,x); }
+dReal RaveAtan2(dReal y, dReal x) {
+    return atan2(y,x);
+}
 #else
 dReal RaveAtan2(dReal y, dReal x) // unfortunately no atan2 in crlibm...
 {
     dReal absx, absy, val;
-    if (x == 0 && y == 0) {
+    if ((x == 0)&&(y == 0)) {
         return 0;
     }
     absy = y < 0 ? -y : y;
@@ -112,7 +150,7 @@ dReal RaveAtan2(dReal y, dReal x) // unfortunately no atan2 in crlibm...
         // y negligible compared to x
         val = 0.0;
     }
-    else    val = atan_rn(y/x);
+    else val = atan_rn(y/x);
     if (x > 0) {
         // first or fourth quadrant; already correct
         return val;
@@ -125,56 +163,122 @@ dReal RaveAtan2(dReal y, dReal x) // unfortunately no atan2 in crlibm...
 }
 #endif
 #ifdef LIBM_POW_ACCURATE
-dReal RavePow(dReal x, dReal y) { return pow(x,y); }
+dReal RavePow(dReal x, dReal y) {
+    return pow(x,y);
+}
 #else
-dReal RavePow(dReal x, dReal y) { return pow_rn(x,y); }
+dReal RavePow(dReal x, dReal y) {
+    return pow_rn(x,y);
+}
 #endif
 #ifdef LIBM_SQRT_ACCURATE
-dReal RaveSqrt(dReal f) { return sqrt(f); }
+dReal RaveSqrt(dReal f) {
+    return sqrt(f);
+}
 #else
-dReal RaveSqrt(dReal f) { return sqrt(f); }
-    //dReal RaveSqrt(dReal f) { return pow_rn(f,0.5); } // NOTE: this is really slow, is it really worth the precision?
+dReal RaveSqrt(dReal f) {
+    return sqrt(f);
+}
+//dReal RaveSqrt(dReal f) { return pow_rn(f,0.5); } // NOTE: this is really slow, is it really worth the precision?
 #endif
-dReal RaveFabs(dReal f) { return fabs(f); }
+dReal RaveFabs(dReal f) {
+    return fabs(f);
+}
 
 #else // use all standard libm
 
 #if OPENRAVE_PRECISION == 0 // floating-point
-dReal RaveExp(dReal f) { return expf(f); }
-dReal RaveLog(dReal f) { return logf(f); }
-dReal RaveCos(dReal f) { return cosf(f); }
-dReal RaveSin(dReal f) { return sinf(f); }
-dReal RaveTan(dReal f) { return tanf(f); }
+dReal RaveExp(dReal f) {
+    return expf(f);
+}
+dReal RaveLog(dReal f) {
+    return logf(f);
+}
+dReal RaveCos(dReal f) {
+    return cosf(f);
+}
+dReal RaveSin(dReal f) {
+    return sinf(f);
+}
+dReal RaveTan(dReal f) {
+    return tanf(f);
+}
 #ifdef HAS_LOG2
-dReal RaveLog2(dReal f) { return log2f(f); }
+dReal RaveLog2(dReal f) {
+    return log2f(f);
+}
 #else
-dReal RaveLog2(dReal f) { return logf(f)/logf(2.0f); }
+dReal RaveLog2(dReal f) {
+    return logf(f)/logf(2.0f);
+}
 #endif
-dReal RaveLog10(dReal f) { return log10f(f); }
-dReal RaveAcos(dReal f) { return acosf(f); }
-dReal RaveAsin(dReal f) { return asinf(f); }
-dReal RaveAtan2(dReal fy, dReal fx) { return atan2f(fy,fx); }
-dReal RavePow(dReal fx, dReal fy) { return powf(fx,fy); }
-dReal RaveSqrt(dReal f) { return sqrtf(f); }
-dReal RaveFabs(dReal f) { return fabsf(f); }
+dReal RaveLog10(dReal f) {
+    return log10f(f);
+}
+dReal RaveAcos(dReal f) {
+    return acosf(f);
+}
+dReal RaveAsin(dReal f) {
+    return asinf(f);
+}
+dReal RaveAtan2(dReal fy, dReal fx) {
+    return atan2f(fy,fx);
+}
+dReal RavePow(dReal fx, dReal fy) {
+    return powf(fx,fy);
+}
+dReal RaveSqrt(dReal f) {
+    return sqrtf(f);
+}
+dReal RaveFabs(dReal f) {
+    return fabsf(f);
+}
 #else
-dReal RaveExp(dReal f) { return exp(f); }
-dReal RaveLog(dReal f) { return log(f); }
-dReal RaveCos(dReal f) { return cos(f); }
-dReal RaveSin(dReal f) { return sin(f); }
-dReal RaveTan(dReal f) { return tan(f); }
+dReal RaveExp(dReal f) {
+    return exp(f);
+}
+dReal RaveLog(dReal f) {
+    return log(f);
+}
+dReal RaveCos(dReal f) {
+    return cos(f);
+}
+dReal RaveSin(dReal f) {
+    return sin(f);
+}
+dReal RaveTan(dReal f) {
+    return tan(f);
+}
 #ifdef HAS_LOG2
-dReal RaveLog2(dReal f) { return log2(f); }
+dReal RaveLog2(dReal f) {
+    return log2(f);
+}
 #else
-dReal RaveLog2(dReal f) { return log(f)/log(2.0f); }
+dReal RaveLog2(dReal f) {
+    return log(f)/log(2.0f);
+}
 #endif
-dReal RaveLog10(dReal f) { return log10(f); }
-dReal RaveAcos(dReal f) { return acos(f); }
-dReal RaveAsin(dReal f) { return asin(f); }
-dReal RaveAtan2(dReal fy, dReal fx) { return atan2(fy,fx); }
-dReal RavePow(dReal fx, dReal fy) { return pow(fx,fy); }
-dReal RaveSqrt(dReal f) { return sqrt(f); }
-dReal RaveFabs(dReal f) { return fabs(f); }
+dReal RaveLog10(dReal f) {
+    return log10(f);
+}
+dReal RaveAcos(dReal f) {
+    return acos(f);
+}
+dReal RaveAsin(dReal f) {
+    return asin(f);
+}
+dReal RaveAtan2(dReal fy, dReal fx) {
+    return atan2(fy,fx);
+}
+dReal RavePow(dReal fx, dReal fy) {
+    return pow(fx,fy);
+}
+dReal RaveSqrt(dReal f) {
+    return sqrt(f);
+}
+dReal RaveFabs(dReal f) {
+    return fabs(f);
+}
 #endif
 
 #endif
@@ -236,7 +340,7 @@ public:
     int Initialize(bool bLoadAllPlugins, uint32_t level)
     {
         if( _IsInitialized() ) {
-            return 0; // already initialized
+            return 0;     // already initialized
         }
 
 #ifdef USE_CRLIBM
@@ -360,9 +464,15 @@ public:
         return it->second(pinterface,atts);
     }
 
-    boost::shared_ptr<RaveDatabase> GetDatabase() const { return _pdatabase; }
-    const std::map<InterfaceType,std::string>& GetInterfaceNamesMap() const { return _mapinterfacenames; }
-    const std::map<IkParameterization::Type,std::string>& GetIkParameterizationMap() { return _mapikparameterization; }
+    boost::shared_ptr<RaveDatabase> GetDatabase() const {
+        return _pdatabase;
+    }
+    const std::map<InterfaceType,std::string>& GetInterfaceNamesMap() const {
+        return _mapinterfacenames;
+    }
+    const std::map<IkParameterization::Type,std::string>& GetIkParameterizationMap() {
+        return _mapikparameterization;
+    }
 
     const std::string& GetInterfaceName(InterfaceType type)
     {
@@ -453,7 +563,9 @@ protected:
         }
     }
 
-    bool _IsInitialized() const { return !!_pdatabase; }
+    bool _IsInitialized() const {
+        return !!_pdatabase;
+    }
 
 private:
     static boost::shared_ptr<RaveGlobal> _state;
@@ -727,7 +839,7 @@ BaseXMLReader::ProcessElement DummyXMLReader::startElement(const std::string& na
     if( !!_osrecord ) {
         *_osrecord << "<" << name << " ";
         FOREACHC(itatt, atts)
-            *_osrecord << itatt->first << "=\"" << itatt->second << "\" ";
+        *_osrecord << itatt->first << "=\"" << itatt->second << "\" ";
         *_osrecord << ">" << endl;
     }
 
@@ -914,7 +1026,7 @@ BaseXMLReader::ProcessElement PlannerBase::PlannerParameters::startElement(const
         return PE_Support;
     }
 
-    if( name=="_vinitialconfig"||name=="_vgoalconfig"||name=="_vconfiglowerlimit"||name=="_vconfigupperlimit"||name=="_vconfigresolution"||name=="_nmaxiterations"||name=="_fsteplength"||name=="_pathoptimization" ) {
+    if((name=="_vinitialconfig")||(name=="_vgoalconfig")||(name=="_vconfiglowerlimit")||(name=="_vconfigupperlimit")||(name=="_vconfigresolution")||(name=="_nmaxiterations")||(name=="_fsteplength")||(name=="_pathoptimization")) {
         __processingtag = name;
         return PE_Support;
     }
@@ -1091,7 +1203,8 @@ void RaveXMLErrorFunc(void *ctx, const char *msg, ...)
 
 struct XMLREADERDATA
 {
-    XMLREADERDATA(BaseXMLReaderPtr preader, xmlParserCtxtPtr ctxt) : _preader(preader), _ctxt(ctxt) {}
+    XMLREADERDATA(BaseXMLReaderPtr preader, xmlParserCtxtPtr ctxt) : _preader(preader), _ctxt(ctxt) {
+    }
     BaseXMLReaderPtr _preader, _pdummy;
     xmlParserCtxtPtr _ctxt;
 };
@@ -1100,7 +1213,7 @@ void DefaultStartElementSAXFunc(void *ctx, const xmlChar *name, const xmlChar **
 {
     AttributesList listatts;
     if( atts != NULL ) {
-        for (int i = 0;(atts[i] != NULL);i+=2) {
+        for (int i = 0; (atts[i] != NULL); i+=2) {
             listatts.push_back(make_pair(string((const char*)atts[i]),string((const char*)atts[i+1])));
             std::transform(listatts.back().first.begin(), listatts.back().first.end(), listatts.back().first.begin(), ::tolower);
         }
@@ -1174,7 +1287,7 @@ bool xmlDetectSAX2(xmlParserCtxtPtr ctxt)
 
 bool ParseXMLData(BaseXMLReaderPtr preader, const char* buffer, int size)
 {
-    static xmlSAXHandler s_DefaultSAXHandler = {0};
+    static xmlSAXHandler s_DefaultSAXHandler = { 0};
     if( size <= 0 ) {
         size = strlen(buffer);
     }
@@ -1322,7 +1435,7 @@ bool InterfaceBase::SendCommand(ostream& sout, istream& sinput)
 void InterfaceBase::RegisterCommand(const std::string& cmdname, InterfaceBase::InterfaceCommandFn fncmd, const std::string& strhelp)
 {
     boost::mutex::scoped_lock lock(_mutexInterface);
-    if( cmdname.size() == 0 || !IsValidName(cmdname) || stricmp(cmdname.c_str(),"commands") == 0 ) {
+    if((cmdname.size() == 0)|| !IsValidName(cmdname) ||(stricmp(cmdname.c_str(),"commands") == 0)) {
         throw openrave_exception(str(boost::format("command '%s' invalid")%cmdname),ORE_InvalidArguments);
     }
     if( __mapCommands.find(cmdname) != __mapCommands.end() ) {
@@ -1422,7 +1535,7 @@ SimpleSensorSystem::SimpleXMLReader::SimpleXMLReader(boost::shared_ptr<XMLData> 
 BaseXMLReader::ProcessElement SimpleSensorSystem::SimpleXMLReader::startElement(const std::string& name, const AttributesList& atts)
 {
     ss.str("");
-    if( name != _pdata->GetXMLId() && name != "offsetlink" && name != "id" && name != "sid" && name != "translation" && name != "rotationmat" && name != "rotationaxis" && name != "quat" && name != "pretranslation" && name != "prerotation" && name != "prerotationaxis" && name != "prequat" ) {
+    if((name != _pdata->GetXMLId())&&(name != "offsetlink")&&(name != "id")&&(name != "sid")&&(name != "translation")&&(name != "rotationmat")&&(name != "rotationaxis")&&(name != "quat")&&(name != "pretranslation")&&(name != "prerotation")&&(name != "prerotationaxis")&&(name != "prequat")) {
         return PE_Pass;
     }
     return PE_Support;
@@ -1551,7 +1664,7 @@ bool SimpleSensorSystem::RemoveKinBody(KinBodyPtr pbody)
 {
     boost::mutex::scoped_lock lock(_mutex);
     bool bSuccess = _mapbodies.erase(pbody->GetEnvironmentId())>0;
-    RAVELOG_VERBOSE(str(boost::format("system removing body %s %s\n")%pbody->GetName()%(bSuccess?"succeeded":"failed")));
+    RAVELOG_VERBOSE(str(boost::format("system removing body %s %s\n")%pbody->GetName()%(bSuccess ? "succeeded" : "failed")));
     return bSuccess;
 }
 
@@ -1566,7 +1679,7 @@ bool SimpleSensorSystem::EnableBody(KinBodyPtr pbody, bool bEnable)
     boost::mutex::scoped_lock lock(_mutex);
     BODIES::iterator it = _mapbodies.find(pbody->GetEnvironmentId());
     if( it == _mapbodies.end() ) {
-        RAVELOG_WARN("trying to %s body %s that is not in system\n", bEnable?"enable":"disable", pbody->GetName().c_str());
+        RAVELOG_WARN("trying to %s body %s that is not in system\n", bEnable ? "enable" : "disable", pbody->GetName().c_str());
         return false;
     }
 
@@ -1640,7 +1753,7 @@ void SimpleSensorSystem::_UpdateBodies(list<SimpleSensorSystem::SNAPSHOT>& listb
     BODIES::iterator itbody = _mapbodies.begin();
     while(itbody != _mapbodies.end()) {
         KinBody::LinkPtr plink = itbody->second->GetOffsetLink();
-        if( !!plink && plink->GetParent()->GetEnvironmentId()==0 ) {
+        if( !!plink &&(plink->GetParent()->GetEnvironmentId()==0)) {
             _mapbodies.erase(itbody++);
             continue;
         }
@@ -1708,9 +1821,15 @@ bool MultiController::Init(RobotBasePtr robot, const std::vector<int>& dofindice
     return true;
 }
 
-const std::vector<int>& MultiController::GetControlDOFIndices() const { return _dofindices; }
-int MultiController::IsControlTransformation() const { return _nControlTransformation; }
-RobotBasePtr MultiController::GetRobot() const { return _probot; }
+const std::vector<int>& MultiController::GetControlDOFIndices() const {
+    return _dofindices;
+}
+int MultiController::IsControlTransformation() const {
+    return _nControlTransformation;
+}
+RobotBasePtr MultiController::GetRobot() const {
+    return _probot;
+}
 
 bool MultiController::AttachController(ControllerBasePtr controller, const std::vector<int>& dofindices, int nControlTransformation)
 {
@@ -1799,7 +1918,7 @@ bool MultiController::SetPath(TrajectoryBaseConstPtr ptraj)
         }
     }
     else {
-        if( !_ptraj || _ptraj->GetXMLId() != ptraj->GetXMLId() ) {
+        if( !_ptraj ||(_ptraj->GetXMLId() != ptraj->GetXMLId())) {
             _ptraj = RaveCreateTrajectory(ptraj->GetEnv(),ptraj->GetXMLId());
         }
     }
@@ -1980,11 +2099,11 @@ std::string GetMD5HashString(const std::string& s)
         return "";
 
     md5_state_t state;
-	md5_byte_t digest[16];
+    md5_byte_t digest[16];
 
-	md5_init(&state);
-	md5_append(&state, (const md5_byte_t *)s.c_str(), s.size());
-	md5_finish(&state, digest);
+    md5_init(&state);
+    md5_append(&state, (const md5_byte_t *)s.c_str(), s.size());
+    md5_finish(&state, digest);
     string hex_output;
     hex_output.resize(32);
     for (int di = 0; di < 16; ++di) {
@@ -2002,11 +2121,11 @@ std::string GetMD5HashString(const std::vector<uint8_t>& v)
         return "";
 
     md5_state_t state;
-	md5_byte_t digest[16];
+    md5_byte_t digest[16];
 
-	md5_init(&state);
-	md5_append(&state, (const md5_byte_t *)&v[0], v.size());
-	md5_finish(&state, digest);
+    md5_init(&state);
+    md5_append(&state, (const md5_byte_t *)&v[0], v.size());
+    md5_finish(&state, digest);
     string hex_output;
     hex_output.resize(32);
     for (int di = 0; di < 16; ++di) {
@@ -2031,7 +2150,7 @@ std::string& SearchAndReplace(std::string& out, const std::string& in, const std
         std::vector< std::pair<std::string, std::string> >::const_iterator itbestp;
         FOREACHC(itp,pairs) {
             size_t index = in.find(itp->first,startindex);
-            if( nextindex == std::string::npos || (index != std::string::npos && index < nextindex) ) {
+            if((nextindex == std::string::npos)|| ((index != std::string::npos)&&(index < nextindex)) ) {
                 nextindex = index;
                 itbestp = itp;
             }

@@ -21,3 +21,4 @@ Internal logistics, management, and quality control:
    adding_examples
    releases
    testing
+   news

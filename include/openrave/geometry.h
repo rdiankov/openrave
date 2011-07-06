@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2011 Rosen Diankov (rosen.diankov@gmail.com)
+// Copyright (C) 2006-2011 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -46,71 +46,119 @@ template <typename T> class RaveTransform;
 template <typename T> class RaveTransformMatrix;
 
 #ifndef MATH_SQRT
-inline float MATH_SQRT(float f) { return sqrtf(f); }
-inline double MATH_SQRT(double f) { return sqrt(f); }
+inline float MATH_SQRT(float f) {
+    return sqrtf(f);
+}
+inline double MATH_SQRT(double f) {
+    return sqrt(f);
+}
 #endif
 #ifndef MATH_SIN
-inline float MATH_SIN(float f) { return sinf(f); }
-inline double MATH_SIN(double f) { return sin(f); }
+inline float MATH_SIN(float f) {
+    return sinf(f);
+}
+inline double MATH_SIN(double f) {
+    return sin(f);
+}
 #endif
 #ifndef MATH_COS
-inline float MATH_COS(float f) { return cosf(f); }
-inline double MATH_COS(double f) { return cos(f); }
+inline float MATH_COS(float f) {
+    return cosf(f);
+}
+inline double MATH_COS(double f) {
+    return cos(f);
+}
 #endif
 #ifndef MATH_FABS
-inline float MATH_FABS(float f) { return fabsf(f); }
-inline double MATH_FABS(double f) { return fabs(f); }
+inline float MATH_FABS(float f) {
+    return fabsf(f);
+}
+inline double MATH_FABS(double f) {
+    return fabs(f);
+}
 #endif
 #ifndef MATH_ACOS
-inline float MATH_ACOS(float f) { return acosf(f); }
-inline double MATH_ACOS(double f) { return acos(f); }
+inline float MATH_ACOS(float f) {
+    return acosf(f);
+}
+inline double MATH_ACOS(double f) {
+    return acos(f);
+}
 #endif
 #ifndef MATH_ASIN
-inline float MATH_ASIN(float f) { return asinf(f); }
-inline double MATH_ASIN(double f) { return asin(f); }
+inline float MATH_ASIN(float f) {
+    return asinf(f);
+}
+inline double MATH_ASIN(double f) {
+    return asin(f);
+}
 #endif
 #ifndef MATH_ATAN2
-inline float MATH_ATAN2(float fy, float fx) { return atan2f(fy,fx); }
-inline double MATH_ATAN2(double fy, double fx) { return atan2(fy,fx); }
+inline float MATH_ATAN2(float fy, float fx) {
+    return atan2f(fy,fx);
+}
+inline double MATH_ATAN2(double fy, double fx) {
+    return atan2(fy,fx);
+}
 #endif
 
 /** \brief Vector class containing 4 dimensions.
 
     \ingroup affine_math
      It is better to use this for a 3 dim vector because it is 16byte aligned and SIMD instructions can be used
-*/
+ */
 template <typename T>
 class RaveVector
 {
 public:
     T x, y, z, w;
 
-    RaveVector() : x(0), y(0), z(0), w(0) {}
+    RaveVector() : x(0), y(0), z(0), w(0) {
+    }
 
-    RaveVector(T x, T y, T z) : x(x), y(y), z(z), w(0) {}
-    RaveVector(T x, T y, T z, T w) : x(x), y(y), z(z), w(w) {}
-    template<typename U> RaveVector(const RaveVector<U> &vec) : x((T)vec.x), y((T)vec.y), z((T)vec.z), w((T)vec.w) {}
+    RaveVector(T x, T y, T z) : x(x), y(y), z(z), w(0) {
+    }
+    RaveVector(T x, T y, T z, T w) : x(x), y(y), z(z), w(w) {
+    }
+    template<typename U> RaveVector(const RaveVector<U> &vec) : x((T)vec.x), y((T)vec.y), z((T)vec.z), w((T)vec.w) {
+    }
 
     /// note, it only copes 3 values!
-    template<typename U> RaveVector(const U* pf) { MATH_ASSERT(pf != NULL); x = (T)pf[0]; y = (T)pf[1]; z = (T)pf[2]; w = 0; }
+    template<typename U> RaveVector(const U* pf) {
+        MATH_ASSERT(pf != NULL); x = (T)pf[0]; y = (T)pf[1]; z = (T)pf[2]; w = 0;
+    }
 
-    T  operator[](int i) const       { return (&x)[i]; }
-    T& operator[](int i)             { return (&x)[i]; }
+    T operator[] (int i) const {
+        return (&x)[i];
+    }
+    T& operator[] (int i)             {
+        return (&x)[i];
+    }
 
     // casting operators
-    operator T* () { return &x; }
+    operator T* () {
+        return &x;
+    }
     operator const T* () const { return (const T*)&x; }
 
     template <typename U>
-    RaveVector<T>& operator=(const RaveVector<U>& r) { x = (T)r.x; y = (T)r.y; z = (T)r.z; w = (T)r.w; return *this; }
+    RaveVector<T>& operator=(const RaveVector<U>&r) {
+        x = (T)r.x; y = (T)r.y; z = (T)r.z; w = (T)r.w; return *this;
+    }
 
     // SCALAR FUNCTIONS
-    template <typename U> inline T dot(const RaveVector<U> &v) const { return x*v.x + y*v.y + z*v.z + w*v.w; }
-    template <typename U> inline T dot3(const RaveVector<U> &v) const { return x*v.x + y*v.y + z*v.z; }
-    inline RaveVector<T>& normalize() { return normalize4(); }
+    template <typename U> inline T dot(const RaveVector<U> &v) const {
+        return x*v.x + y*v.y + z*v.z + w*v.w;
+    }
+    template <typename U> inline T dot3(const RaveVector<U> &v) const {
+        return x*v.x + y*v.y + z*v.z;
+    }
+    inline RaveVector<T>& normalize() {
+        return normalize4();
+    }
     inline RaveVector<T>& normalize4() {
         T f = x*x+y*y+z*z+w*w;
-        if( f < T(1)-std::numeric_limits<dReal>::epsilon() || f > T(1)+std::numeric_limits<dReal>::epsilon() ) {
+        if(( f < T(1)-std::numeric_limits<dReal>::epsilon()) ||( f > T(1)+std::numeric_limits<dReal>::epsilon()) ) {
             MATH_ASSERT( f > 0 );
             // yes it is faster to multiply by (1/f), but with 4 divides we gain precision (which is more important in robotics)
             f = MATH_SQRT(f);
@@ -120,7 +168,7 @@ public:
     }
     inline RaveVector<T>& normalize3() {
         T f = x*x+y*y+z*z;
-        if( f < T(1)-std::numeric_limits<dReal>::epsilon() || f > T(1)+std::numeric_limits<dReal>::epsilon() ) {
+        if(( f < T(1)-std::numeric_limits<dReal>::epsilon()) ||( f > T(1)+std::numeric_limits<dReal>::epsilon()) ) {
             MATH_ASSERT( f > 0 );
             f = MATH_SQRT(f);
             x /= f; y /= f; z /= f;
@@ -128,14 +176,28 @@ public:
         return *this;
     }
 
-    inline T lengthsqr2() const { return x*x + y*y; }
-    inline T lengthsqr3() const { return x*x + y*y + z*z; }
-    inline T lengthsqr4() const { return x*x + y*y + z*z + w*w; }
+    inline T lengthsqr2() const {
+        return x*x + y*y;
+    }
+    inline T lengthsqr3() const {
+        return x*x + y*y + z*z;
+    }
+    inline T lengthsqr4() const {
+        return x*x + y*y + z*z + w*w;
+    }
 
-    inline void Set3(const T* pvals) { x = pvals[0]; y = pvals[1]; z = pvals[2]; }
-    inline void Set3(T val1, T val2, T val3) { x = val1; y = val2; z = val3; }
-    inline void Set4(const T* pvals) { x = pvals[0]; y = pvals[1]; z = pvals[2]; w = pvals[3]; }
-    inline void Set4(T val1, T val2, T val3, T val4) { x = val1; y = val2; z = val3; w = val4;}
+    inline void Set3(const T* pvals) {
+        x = pvals[0]; y = pvals[1]; z = pvals[2];
+    }
+    inline void Set3(T val1, T val2, T val3) {
+        x = val1; y = val2; z = val3;
+    }
+    inline void Set4(const T* pvals) {
+        x = pvals[0]; y = pvals[1]; z = pvals[2]; w = pvals[3];
+    }
+    inline void Set4(T val1, T val2, T val3, T val4) {
+        x = val1; y = val2; z = val3; w = val4;
+    }
     /// 3 dim cross product, w is not touched
     inline RaveVector<T> cross(const RaveVector<T> &v) const {
         RaveVector<T> ucrossv;
@@ -145,7 +207,9 @@ public:
         return ucrossv;
     }
 
-    inline RaveVector<T>& Cross(const RaveVector<T> &v) RAVE_DEPRECATED { Cross(*this, v); return *this; }
+    inline RaveVector<T>& Cross(const RaveVector<T> &v) RAVE_DEPRECATED {
+        Cross(*this, v); return *this;
+    }
     inline RaveVector<T>& Cross(const RaveVector<T> &u, const RaveVector<T> &v) RAVE_DEPRECATED
     {
         RaveVector<T> ucrossv;
@@ -156,24 +220,44 @@ public:
         return *this;
     }
 
-    inline RaveVector<T> operator-() const { RaveVector<T> v; v.x = -x; v.y = -y; v.z = -z; v.w = -w; return v; }
-    template <typename U> inline RaveVector<T> operator+(const RaveVector<U> &r) const { RaveVector<T> v; v.x = x+r.x; v.y = y+r.y; v.z = z+r.z; v.w = w+r.w; return v; }
-    template <typename U> inline RaveVector<T> operator-(const RaveVector<U> &r) const { RaveVector<T> v; v.x = x-r.x; v.y = y-r.y; v.z = z-r.z; v.w = w-r.w; return v; }
-    template <typename U> inline RaveVector<T> operator*(const RaveVector<U> &r) const { RaveVector<T> v; v.x = r.x*x; v.y = r.y*y; v.z = r.z*z; v.w = r.w*w; return v; }
-    inline RaveVector<T> operator*(T k) const { RaveVector<T> v; v.x = k*x; v.y = k*y; v.z = k*z; v.w = k*w; return v; }
+    inline RaveVector<T> operator-() const {
+        RaveVector<T> v; v.x = -x; v.y = -y; v.z = -z; v.w = -w; return v;
+    }
+    template <typename U> inline RaveVector<T> operator+(const RaveVector<U> &r) const {
+        RaveVector<T> v; v.x = x+r.x; v.y = y+r.y; v.z = z+r.z; v.w = w+r.w; return v;
+    }
+    template <typename U> inline RaveVector<T> operator-(const RaveVector<U> &r) const {
+        RaveVector<T> v; v.x = x-r.x; v.y = y-r.y; v.z = z-r.z; v.w = w-r.w; return v;
+    }
+    template <typename U> inline RaveVector<T> operator*(const RaveVector<U> &r) const {
+        RaveVector<T> v; v.x = r.x*x; v.y = r.y*y; v.z = r.z*z; v.w = r.w*w; return v;
+    }
+    inline RaveVector<T> operator*(T k) const {
+        RaveVector<T> v; v.x = k*x; v.y = k*y; v.z = k*z; v.w = k*w; return v;
+    }
 
-    template <typename U> inline RaveVector<T>& operator += (const RaveVector<U>& r) { x += r.x; y += r.y; z += r.z; w += r.w; return *this; }
-    template <typename U> inline RaveVector<T>& operator -= (const RaveVector<U>& r) { x -= r.x; y -= r.y; z -= r.z; w -= r.w; return *this; }
-    template <typename U> inline RaveVector<T>& operator *= (const RaveVector<U>& r) { x *= r.x; y *= r.y; z *= r.z; w *= r.w; return *this; }
+    template <typename U> inline RaveVector<T>& operator += (const RaveVector<U>&r) {
+        x += r.x; y += r.y; z += r.z; w += r.w; return *this;
+    }
+    template <typename U> inline RaveVector<T>& operator -= (const RaveVector<U>&r) {
+        x -= r.x; y -= r.y; z -= r.z; w -= r.w; return *this;
+    }
+    template <typename U> inline RaveVector<T>& operator *= (const RaveVector<U>&r) {
+        x *= r.x; y *= r.y; z *= r.z; w *= r.w; return *this;
+    }
 
-    inline RaveVector<T>& operator *= (const T k) { x *= k; y *= k; z *= k; w *= k; return *this; }
-    inline RaveVector<T>& operator /= (const T _k) { T k=1/_k; x *= k; y *= k; z *= k; w *= k; return *this; }
+    inline RaveVector<T>& operator *= (const T k) {
+        x *= k; y *= k; z *= k; w *= k; return *this;
+    }
+    inline RaveVector<T>& operator /= (const T _k) {
+        T k=1/_k; x *= k; y *= k; z *= k; w *= k; return *this;
+    }
 
-    template <typename U> friend RaveVector<U> operator* (float f, const RaveVector<U>& v);
-    template <typename U> friend RaveVector<U> operator* (double f, const RaveVector<U>& v);
+    template <typename U> friend RaveVector<U> operator* (float f, const RaveVector<U>&v);
+    template <typename U> friend RaveVector<U> operator* (double f, const RaveVector<U>&v);
 
-    template <typename U> friend std::ostream& operator<<(std::ostream& O, const RaveVector<U>& v);
-    template <typename U> friend std::istream& operator>>(std::istream& I, RaveVector<U>& v);
+    template <typename U> friend std::ostream& operator<<(std::ostream& O, const RaveVector<U>&v);
+    template <typename U> friend std::istream& operator>>(std::istream& I, RaveVector<U>&v);
 
     /// cross product operator
     template <typename U> inline RaveVector<T> operator^(const RaveVector<U> &v) const {
@@ -186,7 +270,7 @@ public:
 };
 
 template <typename T>
-inline RaveVector<T> operator* (float f, const RaveVector<T>& left)
+inline RaveVector<T> operator* (float f, const RaveVector<T>&left)
 {
     RaveVector<T> v;
     v.x = (T)f * left.x;
@@ -197,7 +281,7 @@ inline RaveVector<T> operator* (float f, const RaveVector<T>& left)
 }
 
 template <typename T>
-inline RaveVector<T> operator* (double f, const RaveVector<T>& left)
+inline RaveVector<T> operator* (double f, const RaveVector<T>&left)
 {
     RaveVector<T> v;
     v.x = (T)f * left.x;
@@ -210,12 +294,14 @@ inline RaveVector<T> operator* (double f, const RaveVector<T>& left)
 /** \brief Affine transformation parameterized with quaterions.
 
     \ingroup affine_math
-*/
+ */
 template <typename T>
 class RaveTransform
 {
 public:
-    RaveTransform() { rot.x = 1; }
+    RaveTransform() {
+        rot.x = 1;
+    }
     template <typename U> RaveTransform(const RaveTransform<U>& t) {
         rot = t.rot;
         trans = t.trans;
@@ -226,7 +312,7 @@ public:
         T fnorm = rot.lengthsqr4();
         MATH_ASSERT( fnorm > 0.99f && fnorm < 1.01f );
     }
-    inline RaveTransform(const RaveTransformMatrix<T>& t);
+    inline RaveTransform(const RaveTransformMatrix<T>&t);
 
     void identity() {
         rot.x = 1; rot.y = rot.z = rot.w = 0;
@@ -234,7 +320,7 @@ public:
     }
 
     /// transform a 3 dim vector
-    inline RaveVector<T> operator* (const RaveVector<T>& r) const {
+    inline RaveVector<T> operator* (const RaveVector<T>&r) const {
         return trans + rotate(r);
     }
 
@@ -273,7 +359,7 @@ public:
     }
 
     /// t = this * r
-    inline RaveTransform<T> operator* (const RaveTransform<T>& r) const {
+    inline RaveTransform<T> operator* (const RaveTransform<T>&r) const {
         RaveTransform<T> t;
         t.trans = operator*(r.trans);
         t.rot.x = rot.x*r.rot.x - rot.y*r.rot.y - rot.z*r.rot.z - rot.w*r.rot.w;
@@ -287,7 +373,7 @@ public:
         return t;
     }
 
-    inline RaveTransform<T>& operator*= (const RaveTransform<T>& right) {
+    inline RaveTransform<T>& operator*= (const RaveTransform<T>&right) {
         *this = operator*(right);
         return *this;
     }
@@ -303,7 +389,7 @@ public:
         return inv;
     }
 
-    template <typename U> inline RaveTransform<T>& operator= (const RaveTransform<U>& r) {
+    template <typename U> inline RaveTransform<T>& operator= (const RaveTransform<U>&r) {
         trans = r.trans;
         rot = r.rot;
         T fnorm = rot.lengthsqr4();
@@ -311,21 +397,23 @@ public:
         return *this;
     }
 
-    template <typename U> friend std::ostream& operator<<(std::ostream& O, const RaveTransform<U>& v);
-    template <typename U> friend std::istream& operator>>(std::istream& I, RaveTransform<U>& v);
+    template <typename U> friend std::ostream& operator<<(std::ostream& O, const RaveTransform<U>&v);
+    template <typename U> friend std::istream& operator>>(std::istream& I, RaveTransform<U>&v);
 
-    RaveVector<T> rot, trans; ///< rot is a quaternion=(cos(ang/2),axisx*sin(ang/2),axisy*sin(ang/2),axisz*sin(ang/2))
+    RaveVector<T> rot, trans;     ///< rot is a quaternion=(cos(ang/2),axisx*sin(ang/2),axisy*sin(ang/2),axisz*sin(ang/2))
 };
 
 /** \brief Affine transformation parameterized with rotation matrices. Scales and shears are not supported.
 
     \ingroup affine_math
-*/
+ */
 template <typename T>
 class RaveTransformMatrix
 {
 public:
-    inline RaveTransformMatrix() { identity(); m[3] = m[7] = m[11] = 0; }
+    inline RaveTransformMatrix() {
+        identity(); m[3] = m[7] = m[11] = 0;
+    }
     template <typename U> RaveTransformMatrix(const RaveTransformMatrix<U>& t) {
         // don't memcpy!
         m[0] = t.m[0]; m[1] = t.m[1]; m[2] = t.m[2]; m[3] = t.m[3];
@@ -333,7 +421,7 @@ public:
         m[8] = t.m[8]; m[9] = t.m[9]; m[10] = t.m[10]; m[11] = t.m[11];
         trans = t.trans;
     }
-    inline RaveTransformMatrix(const RaveTransform<T>& t);
+    inline RaveTransformMatrix(const RaveTransform<T>&t);
 
     inline void identity() {
         m[0] = 1; m[1] = 0; m[2] = 0;
@@ -358,7 +446,7 @@ public:
     }
 
     template <typename U>
-    inline RaveVector<T> operator* (const RaveVector<U>& r) const {
+    inline RaveVector<T> operator* (const RaveVector<U>&r) const {
         RaveVector<T> v;
         v[0] = r[0] * m[0] + r[1] * m[1] + r[2] * m[2] + trans.x;
         v[1] = r[0] * m[4] + r[1] * m[5] + r[2] * m[6] + trans.y;
@@ -367,7 +455,7 @@ public:
     }
 
     /// t = this * r
-    inline RaveTransformMatrix<T> operator* (const RaveTransformMatrix<T>& r) const {
+    inline RaveTransformMatrix<T> operator* (const RaveTransformMatrix<T>&r) const {
         RaveTransformMatrix<T> t;
         t.m[0*4+0] = m[0*4+0]*r.m[0*4+0]+m[0*4+1]*r.m[1*4+0]+m[0*4+2]*r.m[2*4+0];
         t.m[0*4+1] = m[0*4+0]*r.m[0*4+1]+m[0*4+1]*r.m[1*4+1]+m[0*4+2]*r.m[2*4+1];
@@ -384,7 +472,7 @@ public:
         return t;
     }
 
-    inline RaveTransformMatrix<T> operator*= (const RaveTransformMatrix<T>& r) const {
+    inline RaveTransformMatrix<T> operator*= (const RaveTransformMatrix<T>&r) const {
         *this = *this * r;
         return *this;
     }
@@ -432,9 +520,9 @@ public:
         T fdet = m[0*4 + 2] * inv.m[2*4+0] + m[1*4 + 2] * inv.m[2*4+1] + m[2*4 + 2] * inv.m[2*4+2];
         MATH_ASSERT(fdet>=0);
         fdet = 1 / fdet;
-		inv.m[0*4+0] *= fdet;		inv.m[0*4+1] *= fdet;		inv.m[0*4+2] *= fdet;
-		inv.m[1*4+0] *= fdet;		inv.m[1*4+1] *= fdet;		inv.m[1*4+2] *= fdet;
-		inv.m[2*4+0] *= fdet;		inv.m[2*4+1] *= fdet;		inv.m[2*4+2] *= fdet;
+        inv.m[0*4+0] *= fdet;           inv.m[0*4+1] *= fdet;           inv.m[0*4+2] *= fdet;
+        inv.m[1*4+0] *= fdet;           inv.m[1*4+1] *= fdet;           inv.m[1*4+2] *= fdet;
+        inv.m[2*4+0] *= fdet;           inv.m[2*4+1] *= fdet;           inv.m[2*4+2] *= fdet;
         inv.trans = -inv.rotate(trans);
         return inv;
     }
@@ -447,13 +535,13 @@ public:
         right.z = m[8]; up.z = m[9]; dir.z = m[10];
     }
 
-    template <typename U> friend std::ostream& operator<<(std::ostream& O, const RaveTransformMatrix<U>& v);
-    template <typename U> friend std::istream& operator>>(std::istream& I, RaveTransformMatrix<U>& v);
+    template <typename U> friend std::ostream& operator<<(std::ostream& O, const RaveTransformMatrix<U>&v);
+    template <typename U> friend std::istream& operator>>(std::istream& I, RaveTransformMatrix<U>&v);
 
     /// 3x3 rotation matrix. Note that each row is 4 elements long! So row 1 starts at m[4], row 2 at m[8]
     /// The reason is to maintain 16 byte alignment when sizeof(T) is 4 bytes
     T m[12];
-    RaveVector<T> trans; ///< translation component
+    RaveVector<T> trans;     ///< translation component
 };
 
 /// \brief A ray defined by an origin and a direction.
@@ -462,8 +550,10 @@ template <typename T>
 class ray
 {
 public:
-    ray() {}
-    ray(const RaveVector<T>& _pos, const RaveVector<T>& _dir) : pos(_pos), dir(_dir) {}
+    ray() {
+    }
+    ray(const RaveVector<T>&_pos, const RaveVector<T>&_dir) : pos(_pos), dir(_dir) {
+    }
     RaveVector<T> pos, dir;
 };
 
@@ -473,8 +563,10 @@ template <typename T>
 class aabb
 {
 public:
-    aabb() {}
-    aabb(const RaveVector<T>& vpos, const RaveVector<T>& vextents) : pos(vpos), extents(vextents) {}
+    aabb() {
+    }
+    aabb(const RaveVector<T>&vpos, const RaveVector<T>&vextents) : pos(vpos), extents(vextents) {
+    }
     RaveVector<T> pos, extents;
 };
 
@@ -493,14 +585,21 @@ template <typename T>
 class triangle
 {
 public:
-    triangle() {}
-    triangle(const RaveVector<T>& v1, const RaveVector<T>& v2, const RaveVector<T>& v3) : v1(v1), v2(v2), v3(v3) {}
-    ~triangle() {}
+    triangle() {
+    }
+    triangle(const RaveVector<T>&v1, const RaveVector<T>&v2, const RaveVector<T>&v3) : v1(v1), v2(v2), v3(v3) {
+    }
+    ~triangle() {
+    }
 
-    RaveVector<T> v1, v2, v3;      //!< the vertices of the triangle
+    RaveVector<T> v1, v2, v3;          //!< the vertices of the triangle
 
-    const RaveVector<T>& operator[](int i) const { return (&v1)[i]; }
-    RaveVector<T>& operator[](int i)       { return (&v1)[i]; }
+    const RaveVector<T>& operator[] (int i) const {
+        return (&v1)[i];
+    }
+    RaveVector<T>& operator[] (int i)       {
+        return (&v1)[i];
+    }
 
     /// assumes CCW ordering of vertices
     inline RaveVector<T> normal() {
@@ -525,11 +624,13 @@ template <typename T>
 class RaveCameraIntrinsics
 {
 public:
-    RaveCameraIntrinsics() : fx(0),fy(0),cx(0),cy(0), focal_length(0.01) {}
-    RaveCameraIntrinsics(T fx, T fy, T cx, T cy) : fx(fx), fy(fy), cx(cx), cy(cy), focal_length(0.01) {}
+    RaveCameraIntrinsics() : fx(0),fy(0),cx(0),cy(0), focal_length(0.01) {
+    }
+    RaveCameraIntrinsics(T fx, T fy, T cx, T cy) : fx(fx), fy(fy), cx(cx), cy(cy), focal_length(0.01) {
+    }
 
     template <typename U>
-    RaveCameraIntrinsics<T>& operator=(const RaveCameraIntrinsics<U>& r)
+    RaveCameraIntrinsics<T>& operator=(const RaveCameraIntrinsics<U>&r)
     {
         distortion_model = r.distortion_model;
         distortion_coeffs.resize(r.distortion_coeffs.size());
@@ -547,10 +648,10 @@ public:
 
         Possible values are:
         - "plumb_bob" - Brown. "Decentering Distortion of Lenses", Photometric Engineering, pages 444-462, Vol. 32, No. 3, 1966
-    */
+     */
     std::string distortion_model;
-    std::vector<T> distortion_coeffs; ///< coefficients of the distortion model
-    T focal_length; ///< physical focal length distance since focal length cannot be recovered from the intrinsic matrix, but is necessary for determining the lens plane.
+    std::vector<T> distortion_coeffs;     ///< coefficients of the distortion model
+    T focal_length;     ///< physical focal length distance since focal length cannot be recovered from the intrinsic matrix, but is necessary for determining the lens plane.
 };
 
 /// Don't add new lines to the output << operators. Some applications use it to serialize the data
@@ -558,37 +659,37 @@ public:
 /// \name Primitive Serialization functions.
 //@{
 template <typename U>
-std::ostream& operator<<(std::ostream& O, const RaveVector<U>& v)
+std::ostream& operator<<(std::ostream& O, const RaveVector<U>&v)
 {
     return O << v.x << " " << v.y << " " << v.z << " " << v.w << " ";
 }
 
 template <typename U>
-std::istream& operator>>(std::istream& I, RaveVector<U>& v)
+std::istream& operator>>(std::istream& I, RaveVector<U>&v)
 {
     return I >> v.x >> v.y >> v.z >> v.w;
 }
 
 template <typename U>
-std::ostream& operator<<(std::ostream& O, const RaveTransform<U>& v)
+std::ostream& operator<<(std::ostream& O, const RaveTransform<U>&v)
 {
     return O << v.rot.x << " " << v.rot.y << " " << v.rot.z << " " << v.rot.w << " " << v.trans.x << " " << v.trans.y << " " << v.trans.z << " ";
 }
 
 template <typename U>
-std::istream& operator>>(std::istream& I, RaveTransform<U>& v)
+std::istream& operator>>(std::istream& I, RaveTransform<U>&v)
 {
     return I >> v.rot.x >> v.rot.y >> v.rot.z >> v.rot.w >> v.trans.x >> v.trans.y >> v.trans.z;
 }
 
 template <typename U>
-std::ostream& operator<<(std::ostream& O, const ray<U>& r)
+std::ostream& operator<<(std::ostream& O, const ray<U>&r)
 {
     return O << r.pos.x << " " << r.pos.y << " " << r.pos.z << " " << r.dir.x << " " << r.dir.y << " " << r.dir.z << " ";
 }
 
 template <typename U>
-std::istream& operator>>(std::istream& I, ray<U>& r)
+std::istream& operator>>(std::istream& I, ray<U>&r)
 {
     return I >> r.pos.x >> r.pos.y >> r.pos.z >> r.dir.x >> r.dir.y >> r.dir.z;
 }
@@ -596,14 +697,14 @@ std::istream& operator>>(std::istream& I, ray<U>& r)
 
 /// \brief serialize in column order! This is the format transformations are passed across the network
 template <typename U>
-std::ostream& operator<<(std::ostream& O, const RaveTransformMatrix<U>& v)
+std::ostream& operator<<(std::ostream& O, const RaveTransformMatrix<U>&v)
 {
     return O << v.m[0] << " " << v.m[4] << " " << v.m[8] << " " << v.m[1] << " " << v.m[5] << " " << v.m[9] << " " << v.m[2] << " " << v.m[6] << " " << v.m[10] << " " << v.trans.x << " " << v.trans.y << " " << v.trans.z << " ";
 }
 
 /// \brief de-serialize in column order! This is the format transformations are passed across the network
 template <typename U>
-std::istream& operator>>(std::istream& I, RaveTransformMatrix<U>& v)
+std::istream& operator>>(std::istream& I, RaveTransformMatrix<U>&v)
 {
     return I >> v.m[0] >> v.m[4] >> v.m[8] >> v.m[1] >> v.m[5] >> v.m[9] >> v.m[2] >> v.m[6] >> v.m[10] >> v.trans.x >> v.trans.y >> v.trans.z;
 }
@@ -803,8 +904,8 @@ inline RaveVector<T> quatSlerp(const RaveVector<T>& quat0, const RaveVector<T>& 
     // Calculate angle between them.
     T cosHalfTheta = quat0.w * qb.w + quat0.x * qb.x + quat0.y * qb.y + quat0.z * qb.z;
     // if quat0=qb or quat0=-qb then theta = 0 and we can return quat0
-    if (MATH_FABS(cosHalfTheta) >= 1.0){
-        qm.w = quat0.w;qm.x = quat0.x;qm.y = quat0.y;qm.z = quat0.z;
+    if (MATH_FABS(cosHalfTheta) >= 1.0) {
+        qm.w = quat0.w; qm.x = quat0.x; qm.y = quat0.y; qm.z = quat0.z;
         return qm;
     }
     // Calculate temporary values.
@@ -812,7 +913,7 @@ inline RaveVector<T> quatSlerp(const RaveVector<T>& quat0, const RaveVector<T>& 
     T sinHalfTheta = MATH_SQRT(1 - cosHalfTheta*cosHalfTheta);
     // if theta = 180 degrees then result is not fully defined
     // we could rotate around any axis normal to quat0 or qb
-    if (MATH_FABS(sinHalfTheta) < 1e-7f){ // fabs is floating point absolute
+    if (MATH_FABS(sinHalfTheta) < 1e-7f) { // fabs is floating point absolute
         qm.w = (quat0.w * 0.5f + qb.w * 0.5f);
         qm.x = (quat0.x * 0.5f + qb.x * 0.5f);
         qm.y = (quat0.y * 0.5f + qb.y * 0.5f);
@@ -999,7 +1100,7 @@ inline int insideQuadrilateral(const RaveVector<T>& v, const RaveVector<T>& vert
     RaveVector<T> v4,v5;
     T m1,m2;
     T anglesum=0,costheta;
-    for (int i=0;i<4;i++) {
+    for (int i=0; i<4; i++) {
         v4.x = verts[i].x - v->x;
         v4.y = verts[i].y - v->y;
         v4.z = verts[i].z - v->z;
@@ -1029,7 +1130,7 @@ inline int insideTriangle(const RaveVector<T> v, const triangle<T>& tri)
     T m1,m2;
     T anglesum=0.0;
     T costheta;
-    for (int i=0;i<3;i++) {
+    for (int i=0; i<3; i++) {
         v4.x = tri[i].x - v->x;
         v4.y = tri[i].y - v->y;
         v4.z = tri[i].z - v->z;
@@ -1039,10 +1140,10 @@ inline int insideTriangle(const RaveVector<T> v, const triangle<T>& tri)
         m1 = v4.lengthsqr3();
         m2 = v5.lengthsqr3();
         if (m1*m2 <= std::numeric_limits<T>::epsilon()*std::numeric_limits<T>::epsilon()) {
-    	    return(1); // on a vertex, consider this inside
+            return(1); // on a vertex, consider this inside
         }
         else {
-    	    costheta = v4.dot3(v5)/MATH_SQRT(m1*m2);
+            costheta = v4.dot3(v5)/MATH_SQRT(m1*m2);
         }
         anglesum += acos(costheta);
     }
@@ -1056,11 +1157,11 @@ template <typename T>
 inline bool RayAABBTest(const ray<T>& r, const aabb<T>& ab)
 {
     RaveVector<T> vd, vpos = r.pos - ab.pos;
-    if( MATH_FABS(vpos.x) > ab.extents.x && r.dir.x* vpos.x > 0.0f)
+    if((MATH_FABS(vpos.x) > ab.extents.x)&&(r.dir.x* vpos.x > 0.0f))
         return false;
-    if( MATH_FABS(vpos.y) > ab.extents.y && r.dir.y * vpos.y > 0.0f)
+    if((MATH_FABS(vpos.y) > ab.extents.y)&&(r.dir.y * vpos.y > 0.0f))
         return false;
-    if( MATH_FABS(vpos.z) > ab.extents.z && r.dir.z * vpos.z > 0.0f)
+    if((MATH_FABS(vpos.z) > ab.extents.z)&&(r.dir.z * vpos.z > 0.0f))
         return false;
     vd = r.dir.cross(vpos);
     if( MATH_FABS(vd.x) > ab.extents.y * MATH_FABS(r.dir.z) + ab.extents.z * MATH_FABS(r.dir.y) )
@@ -1081,23 +1182,23 @@ inline bool RayOBBTest(const ray<T>& r, const obb<T>& o)
     vd = r.pos - o.pos;
     vpos.x = vd.dot3(o.right);
     vdir.x = r.dir.dot3(o.right);
-    if( MATH_FABS(vpos.x) > o.extents.x && vdir.x* vpos.x > 0.0f) {
+    if((MATH_FABS(vpos.x) > o.extents.x)&&(vdir.x* vpos.x > 0.0f)) {
         return false;
     }
     vpos.y = vd.dot3(o.up);
     vdir.y = r.dir.dot3(o.up);
-    if( MATH_FABS(vpos.y) > o.extents.y && vdir.y * vpos.y > 0.0f) {
+    if((MATH_FABS(vpos.y) > o.extents.y)&&(vdir.y * vpos.y > 0.0f)) {
         return false;
     }
     vpos.z = vd.dot3(o.dir);
     vdir.z = r.dir.dot3(o.dir);
-    if( MATH_FABS(vpos.z) > o.extents.z && vdir.z * vpos.z > 0.0f) {
+    if((MATH_FABS(vpos.z) > o.extents.z)&&(vdir.z * vpos.z > 0.0f)) {
         return false;
     }
     cross3(vd, vdir, vpos);
-    if( MATH_FABS(vd.x) > o.extents.y * MATH_FABS(vdir.z) + o.extents.z * MATH_FABS(vdir.y) ||
-        MATH_FABS(vd.y) > o.extents.x * MATH_FABS(vdir.z) + o.extents.z * MATH_FABS(vdir.x) ||
-        MATH_FABS(vd.z) > o.extents.x * MATH_FABS(vdir.y) + o.extents.y * MATH_FABS(vdir.x) ) {
+    if((MATH_FABS(vd.x) > o.extents.y * MATH_FABS(vdir.z) + o.extents.z * MATH_FABS(vdir.y))||
+       ( MATH_FABS(vd.y) > o.extents.x * MATH_FABS(vdir.z) + o.extents.z * MATH_FABS(vdir.x)) ||
+       ( MATH_FABS(vd.z) > o.extents.x * MATH_FABS(vdir.y) + o.extents.y * MATH_FABS(vdir.x)) ) {
         return false;
     }
     return true;
@@ -1429,7 +1530,7 @@ inline bool TriTriCollision(const RaveVector<T>& u1, const RaveVector<T>& u2, co
     char b = 0;
     RaveVector<T> u12 = u2 - u1, u23 = u3 - u2, u31 = u1 - u3;
     RaveVector<T> v12 = v2 - v1, v23 = v3 - v2, v31 = v1 - v3;
-    RaveVector<T> vedges[3] = {v12, v23, v31};
+    RaveVector<T> vedges[3] = { v12, v23, v31};
     RaveVector<T> unorm, vnorm;
     unorm = u31.cross(u12);
     unorm.w = -unorm.dot3(u1);
@@ -1444,7 +1545,7 @@ inline bool TriTriCollision(const RaveVector<T>& u1, const RaveVector<T>& u2, co
     if( vnorm.dot3(u3) + vnorm.w > 0 ) {
         b |= 4;
     }
-    if(b == 7 || b == 0) {
+    if((b == 7)||(b == 0)) {
         return false;
     }
     // now get segment from f1 when it crosses f2's plane
@@ -1480,7 +1581,7 @@ inline bool TriTriCollision(const RaveVector<T>& u1, const RaveVector<T>& u2, co
 
     // go through each of the segments in v2 and clip
     RaveVector<T> vcross;
-    const RaveVector<T>* pv[] = {&v1, &v2, &v3, &v1};
+    const RaveVector<T>* pv[] = { &v1, &v2, &v3, &v1};
 
     for(int i = 0; i < 3; ++i) {
         const RaveVector<T>* pprev = pv[i];
@@ -1491,10 +1592,10 @@ inline bool TriTriCollision(const RaveVector<T>& u1, const RaveVector<T>& u2, co
         T t2 = q2.dot3(vcross);
 
         // line segment is out of face
-        if( t1 >= 0 && t2 >= 0 ) {
+        if((t1 >= 0)&&(t2 >= 0)) {
             return false;
         }
-        if( t1 > 0 && t2 < 0 ) {
+        if((t1 > 0)&&(t2 < 0)) {
             // keep second point, clip first
             RaveVector<T> dq = q2-q1;
             p1 -= dq*(t1/dq.dot3(vcross));

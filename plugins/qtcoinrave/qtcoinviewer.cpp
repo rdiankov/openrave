@@ -55,16 +55,16 @@ void CustomCoinHandlerCB(const class SoError * error, void * data)
 {
     if( error != NULL ) {
         // extremely annoying errors
-        if( strstr(error->getDebugString().getString(),"Coin warning in SbLine::setValue()") != NULL ||
-            strstr(error->getDebugString().getString(),"Coin warning in SbDPLine::setValue()") != NULL ||
-            strstr(error->getDebugString().getString(),"Coin warning in SbVec3f::setValue()") != NULL ||
-            strstr(error->getDebugString().getString(),"Coin warning in SoNormalGenerator::calcFaceNormal()") != NULL ||
-            strstr(error->getDebugString().getString(),"Coin error in SoGroup::removeChild(): tried to remove non-existent child") != NULL ||
-            strstr(error->getDebugString().getString(),"Coin error in SoSwitch::doAction(): whichChild 0 out of range -- switch node has no children!") != NULL ) {
+        if((strstr(error->getDebugString().getString(),"Coin warning in SbLine::setValue()") != NULL)||
+           ( strstr(error->getDebugString().getString(),"Coin warning in SbDPLine::setValue()") != NULL) ||
+           ( strstr(error->getDebugString().getString(),"Coin warning in SbVec3f::setValue()") != NULL) ||
+           ( strstr(error->getDebugString().getString(),"Coin warning in SoNormalGenerator::calcFaceNormal()") != NULL) ||
+           ( strstr(error->getDebugString().getString(),"Coin error in SoGroup::removeChild(): tried to remove non-existent child") != NULL) ||
+           ( strstr(error->getDebugString().getString(),"Coin error in SoSwitch::doAction(): whichChild 0 out of range -- switch node has no children!") != NULL) ) {
             return;
         }
     }
-    
+
     if( s_DefaultHandlerCB != NULL ) {
         s_DefaultHandlerCB(error,data);
     }
@@ -74,16 +74,23 @@ QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
 #if QT_VERSION >= 0x040000 // check for qt4
     : QMainWindow(NULL, Qt::Window),
 #else
-      : QMainWindow(NULL, "OpenRAVE", Qt::WType_TopLevel),
+    : QMainWindow(NULL, "OpenRAVE", Qt::WType_TopLevel),
 #endif
-      ViewerBase(penv), _ivOffscreen(SbViewportRegion(VIDEO_WIDTH, VIDEO_HEIGHT))
+    ViewerBase(penv), _ivOffscreen(SbViewportRegion(VIDEO_WIDTH, VIDEO_HEIGHT))
 {
     _name = str(boost::format("OpenRAVE %s")%OPENRAVE_VERSION_STRING);
 #if QT_VERSION >= 0x040000 // check for qt4
     setWindowTitle(_name.c_str());
     statusBar()->showMessage(tr("Status Bar"));
 #endif
-    __description = ":Interface Author: Rosen Diankov\n\nProvides a GUI using the Qt4, Coin3D, and SoQt libraries. Depending on the version, Coin3D and SoQt might be licensed under GPL.";
+    __description = ":Interface Author: Rosen Diankov\n\nProvides a GUI using the Qt4, Coin3D, and SoQt libraries. Depending on the version, Coin3D and SoQt might be licensed under GPL.\n\nIf the current directory contains a filename **environment.iv** when the qtcoin viewer is loaded, then this file will define the scene file all other elements are loaded under. This allows users to define their own lighting model. For example, the following **environment.iv** file will force every object to be draw as wirefire:\n\n\
+.. code-block:: c\n\
+\n\
+  #Inventor V2.1 ascii\n\
+\n\
+  Separator {\n\
+  DrawStyle { style LINES  lineWidth 2 }\n\
+  }\n\n";
     RegisterCommand("SetFiguresInCamera",boost::bind(&QtCoinViewer::_SetFiguresInCamera,this,_1,_2),
                     "Accepts 0/1 value that decides whether to render the figure plots in the camera image through GetCameraImage");
     _bLockEnvironment = true;
@@ -113,7 +120,7 @@ QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
     _ivRoot = new SoSelection();
     _ivRoot->ref();
     _ivRoot->policy.setValue(SoSelection::SHIFT);
-    
+
     _ivCamera = new SoPerspectiveCamera();
     _ivStyle = new SoDrawStyle();
     _ivCamera->position.setValue(-0.5f, 1.5f, 0.8f);
@@ -201,7 +208,7 @@ QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
     _altDown[0] = _altDown[1]  = false;
     _ctrlDown[0] = _ctrlDown[1] = false;
     _bUpdateEnvironment = true;
-    
+
     // toggle switches
     _nFrameNum = 0;
     _bDisplayGrid = false;
@@ -225,7 +232,7 @@ QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
     SetupMenus();
 
     InitOffscreenRenderer();
-    
+
     _timerSensor = new SoTimerSensor(GlobAdvanceFrame, this);
     _timerSensor->setInterval(SbTime(TIMER_SENSOR_INTERVAL));
 
@@ -234,9 +241,9 @@ QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
     if (!_timerVideo->isScheduled()) {
         _timerVideo->schedule();
     }
-    
+
     SoDB::setRealTimeInterval(SbTime(0.7/VIDEO_FRAMERATE));  // better to produce more frames than get slow video
-    
+
     // set to the classic locale so that number serialization/hashing works correctly
     // for some reason qt4 resets the locale to the default locale at some point, and openrave stops working
     std::locale::global(std::locale::classic());
@@ -251,7 +258,7 @@ QtCoinViewer::~QtCoinViewer()
 
         list<EnvMessagePtr>::iterator itmsg;
         FORIT(itmsg, _listMessages)
-            (*itmsg)->viewerexecute(); // have to execute instead of deleteing since there can be threads waiting
+                                (*itmsg)->viewerexecute(); // have to execute instead of deleteing since there can be threads waiting
 
         _listMessages.clear();
     }
@@ -274,8 +281,8 @@ QtCoinViewer::~QtCoinViewer()
 
     _pvideorecorder.reset();
     // don't dereference
-//    if( --s_InitRefCount <= 0 )
-//        SoQt::done();
+    //    if( --s_InitRefCount <= 0 )
+    //        SoQt::done();
 }
 
 void QtCoinViewer::resize ( int w, int h)
@@ -318,10 +325,10 @@ void QtCoinViewer::_mousemove_cb(SoEventCallback * node)
             if( !!pItem )
                 break;
         }
-        
+
         if (!!pItem) {
             boost::mutex::scoped_lock lock(_mutexMessages);
-            
+
             KinBodyItemPtr pKinBody = boost::dynamic_pointer_cast<KinBodyItem>(pItem);
             KinBody::LinkPtr pSelectedLink;
             if( !!pKinBody ) {
@@ -341,7 +348,7 @@ void QtCoinViewer::_mousemove_cb(SoEventCallback * node)
                 _vMouseRayDirection.normalize3();
             else
                 _vMouseRayDirection = Vector(0,0,0);
-            
+
             stringstream ss;
             ss << "mouse on " << pKinBody->GetBody()->GetName() << ":";
             if( !!pSelectedLink ) {
@@ -376,8 +383,9 @@ class ViewerSetSizeMessage : public QtCoinViewer::EnvMessage
 {
 public:
     ViewerSetSizeMessage(QtCoinViewerPtr pviewer, void** ppreturn, int width, int height)
-        : EnvMessage(pviewer, ppreturn, false), _width(width), _height(height) {}
-    
+        : EnvMessage(pviewer, ppreturn, false), _width(width), _height(height) {
+    }
+
     virtual void viewerexecute() {
         _pviewer->_SetSize(_width, _height);
         EnvMessage::viewerexecute();
@@ -402,8 +410,9 @@ class ViewerMoveMessage : public QtCoinViewer::EnvMessage
 {
 public:
     ViewerMoveMessage(QtCoinViewerPtr pviewer, void** ppreturn, int x, int y)
-        : EnvMessage(pviewer, ppreturn, false), _x(x), _y(y) {}
-    
+        : EnvMessage(pviewer, ppreturn, false), _x(x), _y(y) {
+    }
+
     virtual void viewerexecute() {
         _pviewer->_Move(_x, _y);
         EnvMessage::viewerexecute();
@@ -428,8 +437,9 @@ class ViewerSetNameMessage : public QtCoinViewer::EnvMessage
 {
 public:
     ViewerSetNameMessage(QtCoinViewerPtr pviewer, void** ppreturn, const string& ptitle)
-        : EnvMessage(pviewer, ppreturn, false), _title(ptitle) {}
-    
+        : EnvMessage(pviewer, ppreturn, false), _title(ptitle) {
+    }
+
     virtual void viewerexecute() {
         _pviewer->_SetName(_title.c_str());
         EnvMessage::viewerexecute();
@@ -472,7 +482,7 @@ void QtCoinViewer::_StartPlaybackTimer()
 void QtCoinViewer::_StopPlaybackTimer()
 {
     if (_timerSensor->isScheduled()) {
-        _timerSensor->unschedule(); 
+        _timerSensor->unschedule();
     }
     boost::mutex::scoped_lock lock(_mutexUpdateModels);
     _condUpdateModels.notify_all();
@@ -483,9 +493,9 @@ class GetCameraImageMessage : public QtCoinViewer::EnvMessage
 public:
     GetCameraImageMessage(QtCoinViewerPtr pviewer, void** ppreturn,
                           std::vector<uint8_t>& memory, int width, int height, const RaveTransform<float>& extrinsic, const SensorBase::CameraIntrinsics& KK)
-            : EnvMessage(pviewer, ppreturn, true), _memory(memory), _width(width), _height(height), _extrinsic(extrinsic), _KK(KK) {
+        : EnvMessage(pviewer, ppreturn, true), _memory(memory), _width(width), _height(height), _extrinsic(extrinsic), _KK(KK) {
     }
-    
+
     virtual void viewerexecute() {
         void* ret = (void*)_pviewer->_GetCameraImage(_memory, _width, _height, _extrinsic, _KK);
         if( _ppreturn != NULL )
@@ -522,9 +532,10 @@ class WriteCameraImageMessage : public QtCoinViewer::EnvMessage
 public:
     WriteCameraImageMessage(QtCoinViewerPtr pviewer, void** ppreturn,
                             int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK, const std::string& fileName, const std::string& extension)
-            : EnvMessage(pviewer, ppreturn, true), _width(width), _height(height), _t(t),
-              _KK(KK), _fileName(fileName), _extension(extension) {}
-    
+        : EnvMessage(pviewer, ppreturn, true), _width(width), _height(height), _t(t),
+        _KK(KK), _fileName(fileName), _extension(extension) {
+    }
+
     virtual void viewerexecute() {
         void* ret = (void*)_pviewer->_WriteCameraImage(_width, _height, _t, _KK, _fileName, _extension);
         if( _ppreturn != NULL )
@@ -560,8 +571,9 @@ class SetCameraMessage : public QtCoinViewer::EnvMessage
 {
 public:
     SetCameraMessage(QtCoinViewerPtr pviewer, void** ppreturn, const RaveTransform<float>& trans, float focalDistance)
-        : EnvMessage(pviewer, ppreturn, false), _trans(trans),_focalDistance(focalDistance) {}
-    
+        : EnvMessage(pviewer, ppreturn, false), _trans(trans),_focalDistance(focalDistance) {
+    }
+
     virtual void viewerexecute() {
         _pviewer->_SetCamera(_trans,_focalDistance);
         EnvMessage::viewerexecute();
@@ -592,7 +604,7 @@ public:
     DrawMessage(QtCoinViewerPtr pviewer, SoSwitch* handle, const float* ppoints, int numPoints,
                 int stride, float fwidth, const float* colors, DrawType type, bool bhasalpha)
         : EnvMessage(pviewer, NULL, false), _numPoints(numPoints),
-          _fwidth(fwidth), _handle(handle), _type(type), _bhasalpha(bhasalpha)
+        _fwidth(fwidth), _handle(handle), _type(type), _bhasalpha(bhasalpha)
     {
         _vpoints.resize(3*numPoints);
         for(int i = 0; i < numPoints; ++i) {
@@ -603,16 +615,16 @@ public:
         }
         _stride = 3*sizeof(float);
 
-        _vcolors.resize((_bhasalpha?4:3)*numPoints);
+        _vcolors.resize((_bhasalpha ? 4 : 3)*numPoints);
         if( colors != NULL )
             memcpy(&_vcolors[0], colors, sizeof(float)*_vcolors.size());
 
         _bManyColors = true;
     }
     DrawMessage(QtCoinViewerPtr pviewer, SoSwitch* handle, const float* ppoints, int numPoints,
-                        int stride, float fwidth, const RaveVector<float>& color, DrawType type)
+                int stride, float fwidth, const RaveVector<float>& color, DrawType type)
         : EnvMessage(pviewer, NULL, false), _numPoints(numPoints),
-          _fwidth(fwidth), _color(color), _handle(handle), _type(type)
+        _fwidth(fwidth), _color(color), _handle(handle), _type(type)
     {
         _vpoints.resize(3*numPoints);
         for(int i = 0; i < numPoints; ++i) {
@@ -625,7 +637,7 @@ public:
 
         _bManyColors = false;
     }
-    
+
     virtual void viewerexecute() {
         void* ret=NULL;
         switch(_type) {
@@ -656,11 +668,11 @@ public:
                 ret = _pviewer->_drawlinelist(_handle, &_vpoints[0], _numPoints, _stride, _fwidth, _color);
             break;
         }
-        
+
         BOOST_ASSERT( _handle == ret);
         EnvMessage::viewerexecute();
     }
-    
+
 private:
     vector<float> _vpoints;
     int _numPoints, _stride;
@@ -733,8 +745,9 @@ class DrawArrowMessage : public QtCoinViewer::EnvMessage
 public:
     DrawArrowMessage(QtCoinViewerPtr pviewer, SoSwitch* handle, const RaveVector<float>& p1,
                      const RaveVector<float>& p2, float fwidth, const RaveVector<float>& color)
-        : EnvMessage(pviewer, NULL, false), _p1(p1), _p2(p2), _color(color), _handle(handle), _fwidth(fwidth) {}
-    
+        : EnvMessage(pviewer, NULL, false), _p1(p1), _p2(p2), _color(color), _handle(handle), _fwidth(fwidth) {
+    }
+
     virtual void viewerexecute() {
         void* ret = _pviewer->_drawarrow(_handle, _p1, _p2, _fwidth, _color);
         BOOST_ASSERT( _handle == ret );
@@ -760,14 +773,15 @@ class DrawBoxMessage : public QtCoinViewer::EnvMessage
 public:
     DrawBoxMessage(QtCoinViewerPtr pviewer, SoSwitch* handle,
                    const RaveVector<float>& vpos, const RaveVector<float>& vextents)
-        : EnvMessage(pviewer, NULL, false), _vpos(vpos), _vextents(vextents), _handle(handle) {}
-    
+        : EnvMessage(pviewer, NULL, false), _vpos(vpos), _vextents(vextents), _handle(handle) {
+    }
+
     virtual void viewerexecute() {
         void* ret = _pviewer->_drawbox(_handle, _vpos, _vextents);
         BOOST_ASSERT( _handle == ret);
         EnvMessage::viewerexecute();
     }
-    
+
 private:
     RaveVector<float> _vpos, _vextents;
     SoSwitch* _handle;
@@ -786,14 +800,15 @@ class DrawPlaneMessage : public QtCoinViewer::EnvMessage
 public:
     DrawPlaneMessage(QtCoinViewerPtr pviewer, SoSwitch* handle,
                      const Transform& tplane, const RaveVector<float>& vextents, const boost::multi_array<float,3>& vtexture)
-        : EnvMessage(pviewer, NULL, false), _tplane(tplane), _vextents(vextents),_vtexture(vtexture), _handle(handle) {}
-    
+        : EnvMessage(pviewer, NULL, false), _tplane(tplane), _vextents(vextents),_vtexture(vtexture), _handle(handle) {
+    }
+
     virtual void viewerexecute() {
         void* ret = _pviewer->_drawplane(_handle, _tplane,_vextents,_vtexture);
         BOOST_ASSERT( _handle == ret);
         EnvMessage::viewerexecute();
     }
-    
+
 private:
     RaveTransform<float> _tplane;
     RaveVector<float> _vextents;
@@ -833,13 +848,13 @@ public:
             }
         }
     }
-    
+
     virtual void viewerexecute() {
         void* ret = _pviewer->_drawtrimesh(_handle, &_vpoints[0], 3*sizeof(float), NULL, _vpoints.size()/9,_color);
         BOOST_ASSERT( _handle == ret);
         EnvMessage::viewerexecute();
     }
-    
+
 private:
     vector<float> _vpoints;
     RaveVector<float> _color;
@@ -870,13 +885,13 @@ public:
             }
         }
     }
-    
+
     virtual void viewerexecute() {
         void* ret = _pviewer->_drawtrimesh(_handle, &_vpoints[0], 3*sizeof(float), NULL, _vpoints.size()/9,_colors);
         BOOST_ASSERT( _handle == ret);
         EnvMessage::viewerexecute();
     }
-    
+
 private:
     vector<float> _vpoints;
     boost::multi_array<float,2> _colors;
@@ -904,13 +919,14 @@ class CloseGraphMessage : public QtCoinViewer::EnvMessage
 {
 public:
     CloseGraphMessage(QtCoinViewerPtr pviewer, void** ppreturn, SoSwitch* handle)
-        : EnvMessage(pviewer, ppreturn, false), _handle(handle) {}
-    
+        : EnvMessage(pviewer, ppreturn, false), _handle(handle) {
+    }
+
     virtual void viewerexecute() {
         _pviewer->_closegraph(_handle);
         EnvMessage::viewerexecute();
     }
-    
+
 private:
     SoSwitch* _handle;
 };
@@ -925,13 +941,14 @@ class SetGraphTransformMessage : public QtCoinViewer::EnvMessage
 {
 public:
     SetGraphTransformMessage(QtCoinViewerPtr pviewer, void** ppreturn, SoSwitch* handle, const RaveTransform<float>& t)
-        : EnvMessage(pviewer, ppreturn, false), _handle(handle), _t(t) {}
-    
+        : EnvMessage(pviewer, ppreturn, false), _handle(handle), _t(t) {
+    }
+
     virtual void viewerexecute() {
         _pviewer->_SetGraphTransform(_handle,_t);
         EnvMessage::viewerexecute();
     }
-    
+
 private:
     SoSwitch* _handle;
     RaveTransform<float> _t;
@@ -947,13 +964,14 @@ class SetGraphShowMessage : public QtCoinViewer::EnvMessage
 {
 public:
     SetGraphShowMessage(QtCoinViewerPtr pviewer, void** ppreturn, SoSwitch* handle, bool bshow)
-        : EnvMessage(pviewer, ppreturn, false), _handle(handle), _bshow(bshow) {}
-    
+        : EnvMessage(pviewer, ppreturn, false), _handle(handle), _bshow(bshow) {
+    }
+
     virtual void viewerexecute() {
         _pviewer->_SetGraphShow(_handle,_bshow);
         EnvMessage::viewerexecute();
     }
-    
+
 private:
     SoSwitch* _handle;
     bool _bshow;
@@ -969,8 +987,9 @@ class DeselectMessage : public QtCoinViewer::EnvMessage
 {
 public:
     DeselectMessage(QtCoinViewerPtr pviewer, void** ppreturn)
-        : EnvMessage(pviewer, ppreturn, false) {}
-    
+        : EnvMessage(pviewer, ppreturn, false) {
+    }
+
     virtual void viewerexecute() {
         _pviewer->_deselect();
         EnvMessage::viewerexecute();
@@ -987,8 +1006,9 @@ class ResetMessage : public QtCoinViewer::EnvMessage
 {
 public:
     ResetMessage(QtCoinViewerPtr pviewer, void** ppreturn)
-        : EnvMessage(pviewer, ppreturn, true) {}
-    
+        : EnvMessage(pviewer, ppreturn, true) {
+    }
+
     virtual void viewerexecute() {
         _pviewer->_Reset();
         EnvMessage::viewerexecute();
@@ -1011,18 +1031,19 @@ boost::shared_ptr<void> QtCoinViewer::LockGUI()
     }
     return lock;
 }
-    
+
 class SetBkgndColorMessage : public QtCoinViewer::EnvMessage
 {
 public:
     SetBkgndColorMessage(QtCoinViewerPtr pviewer, void** ppreturn, const RaveVector<float>& color)
-        : EnvMessage(pviewer, ppreturn, false), _color(color) {}
-    
+        : EnvMessage(pviewer, ppreturn, false), _color(color) {
+    }
+
     virtual void viewerexecute() {
         _pviewer->_SetBkgndColor(_color);
         EnvMessage::viewerexecute();
     }
-    
+
 private:
     RaveVector<float> _color;
 };
@@ -1041,12 +1062,12 @@ void QtCoinViewer::SetEnvironmentSync(bool bUpdate)
     boost::mutex::scoped_lock lock(_mutexUpdateModels);
     _bUpdateEnvironment = bUpdate;
     _condUpdateModels.notify_all();
- 
+
     if( !bUpdate ) {
         // remove all messages in order to release the locks
         boost::mutex::scoped_lock lockmsg(_mutexMessages);
         FOREACH(it,_listMessages)
-            (*it)->releasemutex();
+                                (*it)->releasemutex();
         _listMessages.clear();
     }
 }
@@ -1095,9 +1116,9 @@ void QtCoinViewer::_SetGraphTransform(SoSwitch* handle, const RaveTransform<floa
 {
     if( handle != NULL ) {
         SoNode* pparent = handle->getChild(0);
-        if( pparent != NULL && pparent->getTypeId() == SoSeparator::getClassTypeId() ) {
+        if((pparent != NULL)&&(pparent->getTypeId() == SoSeparator::getClassTypeId())) {
             SoNode* ptrans = ((SoSeparator*)pparent)->getChild(0);
-            if( ptrans != NULL && ptrans->getTypeId() == SoTransform::getClassTypeId() ) {
+            if((ptrans != NULL)&&(ptrans->getTypeId() == SoTransform::getClassTypeId())) {
                 SetSoTransform((SoTransform*)ptrans, t);
             }
         }
@@ -1140,7 +1161,7 @@ geometry::RaveCameraIntrinsics<float> QtCoinViewer::GetCameraIntrinsics() const
 
 void* QtCoinViewer::_plot3(SoSwitch* handle, const float* ppoints, int numPoints, int stride, float fPointSize, const RaveVector<float>& color)
 {
-    if( handle == NULL || numPoints <= 0 ) {
+    if((handle == NULL)||(numPoints <= 0)) {
         return handle;
     }
     SoSeparator* pparent = new SoSeparator(); handle->addChild(pparent);
@@ -1151,7 +1172,7 @@ void* QtCoinViewer::_plot3(SoSwitch* handle, const float* ppoints, int numPoints
     mtrl->transparency = max(0.0f,1.0f-color.w);
     mtrl->setOverride(true);
     pparent->addChild(mtrl);
-    
+
     if( color.w < 1.0f ) {
         SoTransparencyType* ptype = new SoTransparencyType();
         ptype->value = SoGLRenderAction::SORTED_OBJECT_SORTED_TRIANGLE_BLEND;
@@ -1159,7 +1180,7 @@ void* QtCoinViewer::_plot3(SoSwitch* handle, const float* ppoints, int numPoints
     }
 
     SoCoordinate3* vprop = new SoCoordinate3();
-    
+
     if( stride != sizeof(float)*3 ) {
         vector<float> mypoints(numPoints*3);
         for(int i = 0; i < numPoints; ++i) {
@@ -1168,30 +1189,30 @@ void* QtCoinViewer::_plot3(SoSwitch* handle, const float* ppoints, int numPoints
             mypoints[3*i+2] = ppoints[2];
             ppoints = (float*)((char*)ppoints + stride);
         }
-        
+
         vprop->point.setValues(0,numPoints,(float(*)[3])&mypoints[0]);
     }
     else {
         vprop->point.setValues(0,numPoints,(float(*)[3])ppoints);
     }
     pparent->addChild(vprop);
-    
+
     SoDrawStyle* style = new SoDrawStyle();
     style->style = SoDrawStyle::POINTS;
     style->pointSize = fPointSize;
     pparent->addChild(style);
-    
+
     SoPointSet* pointset = new SoPointSet();
-    pointset->numPoints.setValue(-1);    
+    pointset->numPoints.setValue(-1);
     pparent->addChild(pointset);
-    
+
     _pFigureRoot->addChild(handle);
     return handle;
 }
 
 void* QtCoinViewer::_plot3(SoSwitch* handle, const float* ppoints, int numPoints, int stride, float fPointSize, const float* colors, bool bhasalpha)
 {
-    if( handle == NULL || numPoints <= 0 ) {
+    if((handle == NULL)||(numPoints <= 0)) {
         return handle;
     }
     SoSeparator* pparent = new SoSeparator(); handle->addChild(pparent);
@@ -1219,13 +1240,13 @@ void* QtCoinViewer::_plot3(SoSwitch* handle, const float* ppoints, int numPoints
         ptype->value = SoGLRenderAction::SORTED_OBJECT_BLEND;
         pparent->addChild(ptype);
     }
-    
+
     SoMaterialBinding* pbinding = new SoMaterialBinding();
     pbinding->value = SoMaterialBinding::PER_VERTEX;
     pparent->addChild(pbinding);
-    
+
     SoCoordinate3* vprop = new SoCoordinate3();
-    
+
     if( stride != sizeof(float)*3 ) {
         vector<float> mypoints(numPoints*3);
         for(int i = 0; i < numPoints; ++i) {
@@ -1234,22 +1255,22 @@ void* QtCoinViewer::_plot3(SoSwitch* handle, const float* ppoints, int numPoints
             mypoints[3*i+2] = ppoints[2];
             ppoints = (float*)((char*)ppoints + stride);
         }
-        
+
         vprop->point.setValues(0,numPoints,(float(*)[3])&mypoints[0]);
     }
     else
         vprop->point.setValues(0,numPoints,(float(*)[3])ppoints);
-    
+
     pparent->addChild(vprop);
-    
+
     SoDrawStyle* style = new SoDrawStyle();
     style->style = SoDrawStyle::POINTS;
     style->pointSize = fPointSize;
     pparent->addChild(style);
-    
+
     SoPointSet* pointset = new SoPointSet();
     pointset->numPoints.setValue(-1);
-    
+
     pparent->addChild(pointset);
 
     _pFigureRoot->addChild(handle);
@@ -1258,7 +1279,7 @@ void* QtCoinViewer::_plot3(SoSwitch* handle, const float* ppoints, int numPoints
 
 void* QtCoinViewer::_drawspheres(SoSwitch* handle, const float* ppoints, int numPoints, int stride, float fPointSize, const RaveVector<float>& color)
 {
-    if( handle == NULL || ppoints == NULL || numPoints <= 0 ) {
+    if((handle == NULL)||(ppoints == NULL)||(numPoints <= 0)) {
         return handle;
     }
     SoSeparator* pparent = new SoSeparator(); handle->addChild(pparent);
@@ -1266,9 +1287,9 @@ void* QtCoinViewer::_drawspheres(SoSwitch* handle, const float* ppoints, int num
     for(int i = 0; i < numPoints; ++i) {
         SoSeparator* psep = new SoSeparator();
         SoTransform* ptrans = new SoTransform();
-        
+
         ptrans->translation.setValue(ppoints[0], ppoints[1], ppoints[2]);
-        
+
         psep->addChild(ptrans);
         pparent->addChild(psep);
         _SetMaterial(psep,color);
@@ -1276,31 +1297,31 @@ void* QtCoinViewer::_drawspheres(SoSwitch* handle, const float* ppoints, int num
         SoSphere* c = new SoSphere();
         c->radius = fPointSize;
         psep->addChild(c);
-        
+
         ppoints = (float*)((char*)ppoints + stride);
     }
-    
+
     _pFigureRoot->addChild(handle);
     return handle;
 }
 
 void* QtCoinViewer::_drawspheres(SoSwitch* handle, const float* ppoints, int numPoints, int stride, float fPointSize, const float* colors, bool bhasalpha)
 {
-    if( handle == NULL || ppoints == NULL || numPoints <= 0 ) {
+    if((handle == NULL)||(ppoints == NULL)||(numPoints <= 0)) {
         return handle;
     }
     SoSeparator* pparent = new SoSeparator(); handle->addChild(pparent);
     pparent->addChild(new SoTransform());
-    int colorstride = bhasalpha?4:3;
+    int colorstride = bhasalpha ? 4 : 3;
     for(int i = 0; i < numPoints; ++i) {
         SoSeparator* psep = new SoSeparator();
         SoTransform* ptrans = new SoTransform();
-        
+
         ptrans->translation.setValue(ppoints[0], ppoints[1], ppoints[2]);
-        
+
         psep->addChild(ptrans);
         pparent->addChild(psep);
-        
+
         // set a diffuse color
         SoMaterial* mtrl = new SoMaterial;
         mtrl->diffuseColor = SbColor(colors[colorstride*i +0], colors[colorstride*i +1], colors[colorstride*i +2]);
@@ -1310,16 +1331,16 @@ void* QtCoinViewer::_drawspheres(SoSwitch* handle, const float* ppoints, int num
         mtrl->setOverride(true);
         psep->addChild(mtrl);
 
-        if( bhasalpha && colors[colorstride*i+3] < 1 ) {
+        if( bhasalpha &&(colors[colorstride*i+3] < 1)) {
             SoTransparencyType* ptype = new SoTransparencyType();
             ptype->value = SoGLRenderAction::SORTED_OBJECT_SORTED_TRIANGLE_BLEND;
             pparent->addChild(ptype);
         }
-        
+
         SoSphere* c = new SoSphere();
         c->radius = fPointSize;
         psep->addChild(c);
-        
+
         ppoints = (float*)((char*)ppoints + stride);
     }
 
@@ -1329,13 +1350,13 @@ void* QtCoinViewer::_drawspheres(SoSwitch* handle, const float* ppoints, int num
 
 void* QtCoinViewer::_drawlinestrip(SoSwitch* handle, const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color)
 {
-    if( handle == NULL || numPoints < 2 || ppoints == NULL ) {
+    if((handle == NULL)||(numPoints < 2)||(ppoints == NULL)) {
         return handle;
     }
     SoSeparator* pparent = new SoSeparator(); handle->addChild(pparent);
     pparent->addChild(new SoTransform());
     _SetMaterial(pparent,color);
-    
+
     vector<float> mypoints((numPoints-1)*6);
     float* next;
     for(int i = 0; i < numPoints-1; ++i) {
@@ -1354,7 +1375,7 @@ void* QtCoinViewer::_drawlinestrip(SoSwitch* handle, const float* ppoints, int n
     SoCoordinate3* vprop = new SoCoordinate3();
     vprop->point.setValues(0,2*(numPoints-1),(float(*)[3])&mypoints[0]);
     pparent->addChild(vprop);
-    
+
     SoDrawStyle* style = new SoDrawStyle();
     style->style = SoDrawStyle::LINES;
     style->lineWidth = fwidth;
@@ -1365,14 +1386,14 @@ void* QtCoinViewer::_drawlinestrip(SoSwitch* handle, const float* ppoints, int n
     pointset->numVertices.setValues(0,vinds.size(), &vinds[0]);
 
     pparent->addChild(pointset);
-    
+
     _pFigureRoot->addChild(handle);
     return handle;
 }
 
 void* QtCoinViewer::_drawlinestrip(SoSwitch* handle, const float* ppoints, int numPoints, int stride, float fwidth, const float* colors)
 {
-    if( handle == NULL || numPoints < 2) {
+    if((handle == NULL)||(numPoints < 2)) {
         return handle;
     }
     SoSeparator* pparent = new SoSeparator(); handle->addChild(pparent);
@@ -1412,7 +1433,7 @@ void* QtCoinViewer::_drawlinestrip(SoSwitch* handle, const float* ppoints, int n
     SoCoordinate3* vprop = new SoCoordinate3();
     vprop->point.setValues(0,2*(numPoints-1),(float(*)[3])&mypoints[0]);
     pparent->addChild(vprop);
-    
+
     SoDrawStyle* style = new SoDrawStyle();
     style->style = SoDrawStyle::LINES;
     style->lineWidth = fwidth;
@@ -1423,20 +1444,20 @@ void* QtCoinViewer::_drawlinestrip(SoSwitch* handle, const float* ppoints, int n
     pointset->numVertices.setValues(0,vinds.size(), &vinds[0]);
 
     pparent->addChild(pointset);
-    
+
     _pFigureRoot->addChild(handle);
     return handle;
 }
 
 void* QtCoinViewer::_drawlinelist(SoSwitch* handle, const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color)
-{    
-    if( handle == NULL || numPoints < 2 || ppoints == NULL ) {
+{
+    if((handle == NULL)||(numPoints < 2)||(ppoints == NULL)) {
         return handle;
     }
     SoSeparator* pparent = new SoSeparator(); handle->addChild(pparent);
     pparent->addChild(new SoTransform());
     _SetMaterial(pparent,color);
-    
+
     vector<float> mypoints(numPoints*3);
     for(int i = 0; i < numPoints; ++i) {
         mypoints[3*i+0] = ppoints[0];
@@ -1448,7 +1469,7 @@ void* QtCoinViewer::_drawlinelist(SoSwitch* handle, const float* ppoints, int nu
     SoCoordinate3* vprop = new SoCoordinate3();
     vprop->point.setValues(0,numPoints,(float(*)[3])&mypoints[0]);
     pparent->addChild(vprop);
-    
+
     SoDrawStyle* style = new SoDrawStyle();
     style->style = SoDrawStyle::LINES;
     style->lineWidth = fwidth;
@@ -1459,14 +1480,14 @@ void* QtCoinViewer::_drawlinelist(SoSwitch* handle, const float* ppoints, int nu
     pointset->numVertices.setValues(0,vinds.size(), &vinds[0]);
 
     pparent->addChild(pointset);
-    
+
     _pFigureRoot->addChild(handle);
     return handle;
 }
 
 void* QtCoinViewer::_drawlinelist(SoSwitch* handle, const float* ppoints, int numPoints, int stride, float fwidth, const float* colors)
 {
-    if( handle == NULL || numPoints < 2 || ppoints == NULL ) {
+    if((handle == NULL)||(numPoints < 2)||(ppoints == NULL)) {
         return handle;
     }
     SoSeparator* pparent = new SoSeparator(); handle->addChild(pparent);
@@ -1491,7 +1512,7 @@ void* QtCoinViewer::_drawlinelist(SoSwitch* handle, const float* ppoints, int nu
     SoCoordinate3* vprop = new SoCoordinate3();
     vprop->point.setValues(0,numPoints,(float(*)[3])&mypoints[0]);
     pparent->addChild(vprop);
-    
+
     SoDrawStyle* style = new SoDrawStyle();
     style->style = SoDrawStyle::LINES;
     style->lineWidth = fwidth;
@@ -1502,7 +1523,7 @@ void* QtCoinViewer::_drawlinelist(SoSwitch* handle, const float* ppoints, int nu
     pointset->numVertices.setValues(0,vinds.size(), &vinds[0]);
 
     pparent->addChild(pointset);
-    
+
     _pFigureRoot->addChild(handle);
     return handle;
 }
@@ -1519,7 +1540,7 @@ void* QtCoinViewer::_drawarrow(SoSwitch* handle, const RaveVector<float>& p1, co
 
     SoDrawStyle* _style = new SoDrawStyle();
     _style->style = SoDrawStyle::FILLED;
-    pparent->addChild(_style);  
+    pparent->addChild(_style);
 
     RaveVector<float> direction = p2-p1;
     float fheight = RaveSqrt(direction.lengthsqr3());
@@ -1544,8 +1565,8 @@ void* QtCoinViewer::_drawarrow(SoSwitch* handle, const RaveVector<float>& p1, co
     else {
         vaxis = RaveVector<float>(1,0,0);
     }
-    ptrans->rotation.setValue(SbVec3f(vaxis.x, vaxis.y, vaxis.z), angle); 
-    
+    ptrans->rotation.setValue(SbVec3f(vaxis.x, vaxis.y, vaxis.z), angle);
+
     //reusing direction vector for efficieny
     RaveVector<float> linetranslation = p1 + (fheight/2.0f-coneheight/2.0f)*direction;
     ptrans->translation.setValue(linetranslation.x, linetranslation.y, linetranslation.z);
@@ -1605,7 +1626,7 @@ void* QtCoinViewer::_drawplane(SoSwitch* handle, const RaveTransform<float>& tpl
     pparent->addChild(new SoTransform());
     RaveTransformMatrix<float> m(tplane);
     Vector vright(m.m[0],m.m[4],m.m[8]),vup(m.m[1],m.m[5],m.m[9]),vdir(m.m[2],m.m[6],m.m[10]);
-    
+
     SoTextureCombine* pcombine = new SoTextureCombine();
     pcombine->rgbSource = SoTextureCombine::TEXTURE;
     pcombine->rgbOperation = SoTextureCombine::REPLACE;
@@ -1619,7 +1640,7 @@ void* QtCoinViewer::_drawplane(SoSwitch* handle, const RaveTransform<float>& tpl
     }
 
     pparent->addChild(pcombine);
-    
+
     // the texture image
     SoTexture2 *tex = new SoTexture2;
     vector<unsigned char> vimagedata(vtexture.shape()[0]*vtexture.shape()[1]*vtexture.shape()[2]);
@@ -1639,12 +1660,12 @@ void* QtCoinViewer::_drawplane(SoSwitch* handle, const RaveTransform<float>& tpl
     tex->wrapT = SoTexture2::CLAMP;
     pparent->addChild(tex);
 
-    boost::array<RaveVector<float>, 4> vplanepoints = {{m.trans-vextents[0]*vright-vextents[1]*vup,
-                                                        m.trans-vextents[0]*vright+vextents[1]*vup,
-                                                        m.trans+vextents[0]*vright-vextents[1]*vup,
-                                                        m.trans+vextents[0]*vright+vextents[1]*vup}};
-    boost::array<float,8> texpoints = {{0,0,0,1,1,0,1,1}};
-    boost::array<int,6> indices = {{0,1,2,1,2,3}};
+    boost::array<RaveVector<float>, 4> vplanepoints = { { m.trans-vextents[0]*vright-vextents[1]*vup,
+                                                          m.trans-vextents[0]*vright+vextents[1]*vup,
+                                                          m.trans+vextents[0]*vright-vextents[1]*vup,
+                                                          m.trans+vextents[0]*vright+vextents[1]*vup}};
+    boost::array<float,8> texpoints = { { 0,0,0,1,1,0,1,1}};
+    boost::array<int,6> indices = { { 0,1,2,1,2,3}};
     boost::array<float,18> vtripoints;
     boost::array<float,12> vtexpoints; /// points of plane
     for(int i = 0; i < 6; ++i) {
@@ -1738,7 +1759,7 @@ void QtCoinViewer::_SetMaterial(SoGroup* pparent, const boost::multi_array<float
 void QtCoinViewer::_SetTriangleMesh(SoSeparator* pparent, const float* ppoints, int stride, const int* pIndices, int numTriangles)
 {
     SoCoordinate3* vprop = new SoCoordinate3();
-    
+
     if( pIndices != NULL ) {
         // this makes it crash!
         //vprop->point.set1Value(3*numTriangles-1,SbVec3f(0,0,0)); // resize
@@ -1776,7 +1797,7 @@ void QtCoinViewer::_SetTriangleMesh(SoSeparator* pparent, const float* ppoints, 
 
 void* QtCoinViewer::_drawtrimesh(SoSwitch* handle, const float* ppoints, int stride, const int* pIndices, int numTriangles, const RaveVector<float>& color)
 {
-    if( handle == NULL || ppoints == NULL || numTriangles <= 0 ) {
+    if((handle == NULL)||(ppoints == NULL)||(numTriangles <= 0)) {
         return handle;
     }
     SoSeparator* pparent = new SoSeparator(); handle->addChild(pparent);
@@ -1789,7 +1810,7 @@ void* QtCoinViewer::_drawtrimesh(SoSwitch* handle, const float* ppoints, int str
 
 void* QtCoinViewer::_drawtrimesh(SoSwitch* handle, const float* ppoints, int stride, const int* pIndices, int numTriangles, const boost::multi_array<float,2>& colors)
 {
-    if( handle == NULL || ppoints == NULL || numTriangles <= 0 ) {
+    if((handle == NULL)||(ppoints == NULL)||(numTriangles <= 0)) {
         return handle;
     }
     SoSeparator* pparent = new SoSeparator(); handle->addChild(pparent);
@@ -1801,16 +1822,16 @@ void* QtCoinViewer::_drawtrimesh(SoSwitch* handle, const float* ppoints, int str
 }
 
 #define ADD_MENU(name, checkable, shortcut, tip, fn) { \
-    pact = new QAction(tr(name), this); \
-    if( checkable ) pact->setCheckable(checkable); \
-    if( shortcut != NULL ) pact->setShortcut(tr(shortcut)); \
-    if( tip != NULL ) pact->setStatusTip(tr(tip)); \
-    if( checkable )                                                   \
-        connect(pact, SIGNAL(triggered(bool)), this, SLOT(fn(bool))); \
-    else \
-        connect(pact, SIGNAL(triggered()), this, SLOT(fn())); \
-    pcurmenu->addAction(pact); \
-    if( pgroup != NULL ) pgroup->addAction(pact); \
+        pact = new QAction(tr(name), this); \
+        if( checkable ) pact->setCheckable(checkable);\
+        if( shortcut != NULL ) pact->setShortcut(tr(shortcut));\
+        if( tip != NULL ) pact->setStatusTip(tr(tip));\
+        if( checkable ) \
+            connect(pact, SIGNAL(triggered(bool)), this, SLOT(fn(bool)));\
+        else \
+            connect(pact, SIGNAL(triggered()), this, SLOT(fn()));\
+        pcurmenu->addAction(pact); \
+        if( pgroup != NULL ) pgroup->addAction(pact);\
 }
 
 void QtCoinViewer::SetupMenus()
@@ -2004,7 +2025,7 @@ void QtCoinViewer::SetupMenus()
         psubmenu->addAction(pact);
         _pSelectedPhysicsEngine->addAction(pact);
     }
-    
+
     connect( _pSelectedPhysicsEngine, SIGNAL(triggered(QAction*)), this, SLOT(PhysicsEngineChanged(QAction*)) );
 
     pcurmenu = menuBar()->addMenu(tr("&Interfaces"));
@@ -2125,7 +2146,7 @@ bool QtCoinViewer::_HandleSelection(SoPath *path)
         if( !!pItem )
             break;
     }
-        
+
     if (!pItem) {
         _ivRoot->deselectAll();
         return false;
@@ -2172,7 +2193,7 @@ bool QtCoinViewer::_HandleSelection(SoPath *path)
         if( !!pSelectedLink ) {
             // search the joint nodes
             FOREACHC(itjoint, pKinBody->GetBody()->GetJoints()) {
-                if( ((*itjoint)->GetFirstAttached()==pSelectedLink || (*itjoint)->GetSecondAttached()==pSelectedLink) ) {
+                if( (((*itjoint)->GetFirstAttached()==pSelectedLink)||((*itjoint)->GetSecondAttached()==pSelectedLink)) ) {
                     if( !(*itjoint)->IsStatic() ) {
                         // joint has a range, so consider it for selection
                         if( pKinBody->GetBody()->DoesAffect((*itjoint)->GetJointIndex(), pSelectedLink->GetIndex()) )
@@ -2186,14 +2207,14 @@ bool QtCoinViewer::_HandleSelection(SoPath *path)
                             pother = (*itjoint)->GetFirstAttached();
                         if( !!pother ) {
                             FOREACHC(itjoint2, pKinBody->GetBody()->GetJoints()) {
-                                if( !(*itjoint2)->IsStatic() && pKinBody->GetBody()->DoesAffect((*itjoint2)->GetJointIndex(), pother->GetIndex()) && ((*itjoint2)->GetFirstAttached()==pother || (*itjoint2)->GetSecondAttached()==pother) ) {
+                                if( !(*itjoint2)->IsStatic() && pKinBody->GetBody()->DoesAffect((*itjoint2)->GetJointIndex(), pother->GetIndex()) && (((*itjoint2)->GetFirstAttached()==pother)||((*itjoint2)->GetSecondAttached()==pother)) ) {
                                     pjoint = *itjoint2;
                                     break;
                                 }
                             }
                         }
                     }
-                        
+
                     if( !!pjoint )
                         break;
                 }
@@ -2208,8 +2229,8 @@ bool QtCoinViewer::_HandleSelection(SoPath *path)
                                 (*itjoint)->GetMimicDOFIndices(vmimicdofs,idof);
                                 FOREACHC(itmimicdof, vmimicdofs) {
                                     KinBody::JointPtr ptempjoint = pKinBody->GetBody()->GetJointFromDOFIndex(*itmimicdof);
-                                    if( !ptempjoint->IsStatic() && pKinBody->GetBody()->DoesAffect(ptempjoint->GetJointIndex(), pSelectedLink->GetIndex()) && 
-                                        ((*itjoint)->GetFirstAttached()==pSelectedLink || (*itjoint)->GetSecondAttached()==pSelectedLink) ) {
+                                    if( !ptempjoint->IsStatic() && pKinBody->GetBody()->DoesAffect(ptempjoint->GetJointIndex(), pSelectedLink->GetIndex()) &&
+                                        (((*itjoint)->GetFirstAttached()==pSelectedLink)||((*itjoint)->GetSecondAttached()==pSelectedLink)) ) {
                                         pjoint = ptempjoint;
                                         break;
                                     }
@@ -2230,7 +2251,7 @@ bool QtCoinViewer::_HandleSelection(SoPath *path)
                         }
                         if( !!pother ) {
                             FOREACHC(itjoint2, pKinBody->GetBody()->GetJoints()) {
-                                if( !(*itjoint2)->IsStatic() && pKinBody->GetBody()->DoesAffect((*itjoint2)->GetJointIndex(), pother->GetIndex()) && ((*itjoint2)->GetFirstAttached()==pother || (*itjoint2)->GetSecondAttached()==pother) ) {
+                                if( !(*itjoint2)->IsStatic() && pKinBody->GetBody()->DoesAffect((*itjoint2)->GetJointIndex(), pother->GetIndex()) && (((*itjoint2)->GetFirstAttached()==pother)||((*itjoint2)->GetSecondAttached()==pother)) ) {
                                     pjoint = *itjoint2;
                                     break;
                                 }
@@ -2249,7 +2270,7 @@ bool QtCoinViewer::_HandleSelection(SoPath *path)
             }
         }
     }
-    
+
     // construct an appropriate _pdragger
     if (!!pjoint) {
         _pdragger.reset(new IvJointDragger(shared_viewer(), pItem, pSelectedLink->GetIndex(), scale, pjoint->GetJointIndex(), _bJointHilit));
@@ -2363,12 +2384,12 @@ void QtCoinViewer::AdvanceFrame(bool bForward)
     static uint32_t nFrame = 0;
     static float fFPS = 0;
 
-    
-//    {
-//        _bInIdleThread = true;
-//        boost::mutex::scoped_lock lock(_mutexGUI);
-//        _bInIdleThread = false;
-//    }
+
+    //    {
+    //        _bInIdleThread = true;
+    //        boost::mutex::scoped_lock lock(_mutexGUI);
+    //        _bInIdleThread = false;
+    //    }
 
     if( --nToNextFPSUpdate <= 0 ) {
         uint32_t newtime = GetMilliTime();
@@ -2376,12 +2397,12 @@ void QtCoinViewer::AdvanceFrame(bool bForward)
         basetime = newtime;
 
         if( fFPS < 16 ) UPDATE_FRAMES = 4;
-		else if( fFPS < 32 ) UPDATE_FRAMES = 8;
-		else UPDATE_FRAMES = 16;
+        else if( fFPS < 32 ) UPDATE_FRAMES = 8;
+        else UPDATE_FRAMES = 16;
 
         nToNextFPSUpdate = UPDATE_FRAMES;
     }
-    
+
     if( (nFrame++%16) == 0 ) {
         stringstream ss;
 
@@ -2401,7 +2422,7 @@ void QtCoinViewer::AdvanceFrame(bool bForward)
         SbViewportRegion v = _pviewer->getViewportRegion();
         float fwratio = 964.0f/v.getWindowSize()[0], fhratio = 688.0f/v.getWindowSize()[1];
         _messageShadowTranslation->translation.setValue(SbVec3f(-0.002f*fwratio,0.032f*fhratio,0));
-        
+
         // search for all new lines
         string msg = ss.str();
         for(size_t i = 0; i < _messageNodes.size(); ++i) {
@@ -2411,7 +2432,7 @@ void QtCoinViewer::AdvanceFrame(bool bForward)
         std::string::size_type pos = 0, newpos=0;
         while( pos < msg.size() ) {
             newpos = msg.find('\n', pos);
-            
+
             std::string::size_type n = newpos == std::string::npos ? msg.size()-pos : (newpos-pos);
 
             for(size_t i = 0; i < _messageNodes.size(); ++i) {
@@ -2420,7 +2441,7 @@ void QtCoinViewer::AdvanceFrame(bool bForward)
 
             if( newpos == std::string::npos )
                 break;
-            
+
             pos = newpos+1;
         }
     }
@@ -2434,7 +2455,7 @@ void QtCoinViewer::AdvanceFrame(bool bForward)
     _UpdateEnvironment();
 
     if( ControlDown() ) {
-        
+
     }
 }
 
@@ -2450,7 +2471,7 @@ void QtCoinViewer::_UpdateEnvironment()
             listmessages.swap(_listMessages);
             BOOST_ASSERT( _listMessages.size() == 0 );
         }
-        
+
         FOREACH(itmsg, listmessages) {
             (*itmsg)->viewerexecute();
         }
@@ -2460,9 +2481,9 @@ void QtCoinViewer::_UpdateEnvironment()
         _UpdateCameraTransform();
 
         // this causes the GUI links to jitter when moving the joints, perhaps there is fighting somewhere?
-//        if( !!_pdragger ) {
-//            _pdragger->UpdateSkeleton();
-//        }
+        //        if( !!_pdragger ) {
+        //            _pdragger->UpdateSkeleton();
+        //        }
     }
 }
 
@@ -2545,7 +2566,7 @@ void QtCoinViewer::UpdateFromModel()
         if( !pitem ) {
             // make sure pbody is actually present
             if( GetEnv()->GetBodyFromEnvironmentId(itbody->environmentid) == pbody ) {
-            
+
                 // check to make sure the real GUI data is also NULL
                 if( !pbody->GetGuiData() ) {
                     if( _mapbodies.find(pbody) != _mapbodies.end() ) {
@@ -2554,14 +2575,14 @@ void QtCoinViewer::UpdateFromModel()
                     }
 
                     if( _bLockEnvironment && !lockenv ) {
-//                        boosboost::system_time xt;
-//                        boost::xtime_get(&xt,boost::TIME_UTC);
-//                        xt.nsec += 100000; // wait 100us
-//                        if( xt.nsec >= 1000000000 ) {
-//                            xt.nsec -= 1000000000;
-//                            xt.sec += 1;
-//                        }
-//                        lockenv.timed_lock(xt);
+                        //                        boosboost::system_time xt;
+                        //                        boost::xtime_get(&xt,boost::TIME_UTC);
+                        //                        xt.nsec += 100000; // wait 100us
+                        //                        if( xt.nsec >= 1000000000 ) {
+                        //                            xt.nsec -= 1000000000;
+                        //                            xt.sec += 1;
+                        //                        }
+                        //                        lockenv.timed_lock(xt);
                         uint64_t basetime = GetMicroTime();
                         while(GetMicroTime()-basetime<1000 ) {
                             lockenv.try_lock();
@@ -2578,7 +2599,7 @@ void QtCoinViewer::UpdateFromModel()
                         pitem = boost::shared_ptr<RobotItem>(new RobotItem(shared_viewer(), boost::static_pointer_cast<RobotBase>(pbody), _viewGeometryMode),ITEM_DELETER);
                     else
                         pitem = boost::shared_ptr<KinBodyItem>(new KinBodyItem(shared_viewer(), pbody, _viewGeometryMode),ITEM_DELETER);
-                        
+
                     pitem->Load();
                     pbody->SetGuiData(pitem);
                     _mapbodies[pbody] = pitem;
@@ -2593,7 +2614,7 @@ void QtCoinViewer::UpdateFromModel()
                 continue;
             }
         }
-        
+
         map<KinBodyPtr, KinBodyItemPtr>::iterator itmap = _mapbodies.find(pbody);
 
         if( itmap == _mapbodies.end() ) {
@@ -2628,7 +2649,7 @@ void QtCoinViewer::UpdateFromModel()
     _bModelsUpdated = true;
     _condUpdateModels.notify_all();
 
-    if( _bAutoSetCamera && _mapbodies.size() > 0 ) {
+    if( _bAutoSetCamera &&(_mapbodies.size() > 0)) {
         RAVELOG_DEBUG("auto-setting camera location\n");
         _bAutoSetCamera = false;
         _pviewer->viewAll();
@@ -2677,7 +2698,7 @@ void QtCoinViewer::_UpdateCameraTransform()
     int width = centralWidget()->size().width();
     int height = centralWidget()->size().height();
     _ivCamera->aspectRatio = (float)view1->size().width() / (float)view1->size().height();
-    
+
     _camintrinsics.fy = 0.5*height/RaveTan(0.5f*GetCamera()->heightAngle.getValue());
     _camintrinsics.fx = (float)width*_camintrinsics.fy/((float)height*GetCamera()->aspectRatio.getValue());
     _camintrinsics.cx = (float)width/2;
@@ -2696,7 +2717,7 @@ void QtCoinViewer::LoadEnvironment()
 
     bool bReschedule = false;
     if (_timerSensor->isScheduled()) {
-        _timerSensor->unschedule(); 
+        _timerSensor->unschedule();
         bReschedule = true;
     }
 
@@ -2747,7 +2768,7 @@ void QtCoinViewer::ViewCameraParams()
 void QtCoinViewer::ViewGeometryChanged(QAction* pact)
 {
     _viewGeometryMode = (ViewGeometry)pact->data().toInt();
-    
+
     // destroy all bodies
     _deselect();
 
@@ -2761,7 +2782,7 @@ void QtCoinViewer::ViewGeometryChanged(QAction* pact)
     {
         boost::mutex::scoped_lock lock(_mutexItems);
         FOREACH(it,_listRemoveItems)
-            delete *it;
+        delete *it;
         _listRemoveItems.clear();
     }
 }
@@ -2780,7 +2801,7 @@ void QtCoinViewer::ViewToggleFPS(bool on)
 {
     _bDisplayFPS = on;
     if( !_bDisplayFPS ) {
-        for(size_t i = 0; i < _messageNodes.size();++i) {
+        for(size_t i = 0; i < _messageNodes.size(); ++i) {
             _messageNodes[i]->string.setValue("");
         }
     }
@@ -2791,7 +2812,7 @@ void QtCoinViewer::ViewToggleFeedBack(bool on)
     _bDisplayFeedBack = on;
     _pviewer->setFeedbackVisibility(on);
     if( !_bDisplayFeedBack ) {
-        for(size_t i = 0; i < _messageNodes.size();++i) {
+        for(size_t i = 0; i < _messageNodes.size(); ++i) {
             _messageNodes[i]->string.setValue("Feedback Visibility OFF");
         }
     }
@@ -2875,10 +2896,10 @@ void QtCoinViewer::_RecordSetup(bool bOn, bool bRealtimeVideo)
                 RAVELOG_DEBUG("video recording failed");
                 return;
             }
-            
+
             SoDB::enableRealTimeSensor(false);
             SoSceneManager::enableRealTimeUpdate(false);
-	    }
+        }
     }
 #endif
 }
@@ -2913,7 +2934,7 @@ bool QtCoinViewer::_GetCameraImage(std::vector<uint8_t>& memory, int width, int 
     GetCamera()->nearDistance = intrinsics.focal_length;
     GetCamera()->farDistance = intrinsics.focal_length*10000; // control the precision
     GetCamera()->viewportMapping = SoCamera::LEAVE_ALONE;
-    
+
     _pFigureRoot->ref();
     bool bRenderFiguresInCamera = *(bool*)&_bRenderFiguresInCamera; // will this be optimized by compiler?
     if( !bRenderFiguresInCamera ) {
@@ -2962,7 +2983,7 @@ bool QtCoinViewer::_WriteCameraImage(int width, int height, const RaveTransform<
     SoSFFloat heightAngle = GetCamera()->heightAngle;
     SoSFFloat nearDistance = GetCamera()->nearDistance;
     SoSFFloat farDistance = GetCamera()->farDistance;
-    
+
     SbViewportRegion vpr(width, height);
     vpr.setViewport(SbVec2f(intrinsics.cx/(float)(width)-0.5f, 0.5f-intrinsics.cy/(float)(height)), SbVec2f(1,1));
     _ivOffscreen.setViewportRegion(vpr);
@@ -2974,7 +2995,7 @@ bool QtCoinViewer::_WriteCameraImage(int width, int height, const RaveTransform<
     GetCamera()->nearDistance = intrinsics.focal_length;
     GetCamera()->farDistance = intrinsics.focal_length*10000; // control the precision
     GetCamera()->viewportMapping = SoCamera::LEAVE_ALONE;
-    
+
     _pFigureRoot->ref();
     _ivRoot->removeChild(_pFigureRoot);
 
@@ -2988,7 +3009,7 @@ bool QtCoinViewer::_WriteCameraImage(int width, int height, const RaveTransform<
         if( !_ivOffscreen.isWriteSupported(extension.c_str()) ) {
             RAVELOG_WARN("file type %s not supported, supported filetypes are\n", extension.c_str());
             stringstream ss;
-            
+
             for(int i = 0; i < _ivOffscreen.getNumWriteFiletypes(); ++i) {
                 SbPList extlist;
                 SbString fullname, description;
@@ -2999,7 +3020,7 @@ bool QtCoinViewer::_WriteCameraImage(int width, int height, const RaveTransform<
                 }
                 ss << ")" << endl;
             }
-            
+
             RAVELOG_INFO(ss.str().c_str());
             bSuccess = false;
         }
@@ -3028,7 +3049,7 @@ uint8_t* QtCoinViewer::_GetVideoFrame()
     }
     _ivOffscreen.setViewportRegion(SbViewportRegion(VIDEO_WIDTH, VIDEO_HEIGHT));
     _ivOffscreen.render(_pviewer->getSceneManager()->getSceneGraph());
-    
+
     if( _ivOffscreen.getBuffer() == NULL ) {
         RAVELOG_WARN("offset buffer null, disabling\n");
         _bCanRenderOffscreen = false;
@@ -3042,7 +3063,7 @@ uint8_t* QtCoinViewer::_GetVideoFrame()
             swap(ptr[0], ptr[2]);
         }
     }
-    
+
     return (uint8_t*)_ivOffscreen.getBuffer();
 }
 
@@ -3109,7 +3130,7 @@ void QtCoinViewer::_UpdatePhysicsEngine()
                     return;
                 }
             }
-            
+
             RAVELOG_WARN(str(boost::format("cannot find physics engine menu item %s\n")%p->GetXMLId()));
         }
 
@@ -3125,13 +3146,13 @@ void QtCoinViewer::UpdateInterfaces()
     GetEnv()->GetLoadedProblems(listProblems);
     GetEnv()->GetBodies(vbodies);
 
-//    FOREACH(it,listInterfaces) {
-//        pact = new QAction(tr((*it)->GetXMLId().c_str()), this);
-//        pact->setCheckable(true);
-//        pact->setChecked(_bSelfCollision);
-//        connect(pact, SIGNAL(triggered(bool)), this, SLOT(DynamicSelfCollision(bool)));
-//        psubmenu->addAction(pact);
-//    }
+    //    FOREACH(it,listInterfaces) {
+    //        pact = new QAction(tr((*it)->GetXMLId().c_str()), this);
+    //        pact->setCheckable(true);
+    //        pact->setChecked(_bSelfCollision);
+    //        connect(pact, SIGNAL(triggered(bool)), this, SLOT(DynamicSelfCollision(bool)));
+    //        psubmenu->addAction(pact);
+    //    }
 }
 
 void QtCoinViewer::InterfaceSendCommand(QAction* pact)
@@ -3164,7 +3185,7 @@ void QtCoinViewer::About()
                              "OpenRAVE is a open-source robotics planning and simulation environment\n"
                              "Lead Developer: Rosen Diankov\n"
                              "License: Lesser General Public License v3.0 (LGPLv3)\n");
-                             
+
 }
 
 QtCoinViewer::EnvMessage::EnvMessage(QtCoinViewerPtr pviewer, void** ppreturn, bool bWaitForMutex)
@@ -3185,12 +3206,12 @@ QtCoinViewer::EnvMessage::~EnvMessage()
 void QtCoinViewer::EnvMessage::callerexecute()
 {
     bool bWaitForMutex = !!_plock;
-    
+
     {
         boost::mutex::scoped_lock lock(_pviewer->_mutexMessages);
         _pviewer->_listMessages.push_back(shared_from_this());
     }
-    
+
     if( bWaitForMutex ) {
         boost::mutex::scoped_lock lock(_mutex);
     }
@@ -3217,7 +3238,7 @@ void QtCoinViewer::_UnregisterItemSelectionCallback(ViewerBaseWeakPtr pweakviewe
             pviewer->_listItemSelectionCallbacks.erase(*pit);
         }
         delete pit;
-    }   
+    }
 }
 
 boost::shared_ptr<void> QtCoinViewer::RegisterItemSelectionCallback(const ItemSelectionCallbackFn& fncallback)

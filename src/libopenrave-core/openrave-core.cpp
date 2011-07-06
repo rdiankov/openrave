@@ -17,13 +17,15 @@
 #include "environment-core.h"
 
 namespace OpenRAVE {
-    EnvironmentBasePtr RaveCreateEnvironment() {
-        boost::shared_ptr<Environment> p(new Environment());
-        p->Init();
-        return p;
-    }
+EnvironmentBasePtr RaveCreateEnvironment() {
+    boost::shared_ptr<Environment> p(new Environment());
+    p->Init();
+    return p;
+}
 
-    EnvironmentBasePtr CreateEnvironment(bool bLoadAllPlugins) { return RaveCreateEnvironment(); }
+EnvironmentBasePtr CreateEnvironment(bool bLoadAllPlugins) {
+    return RaveCreateEnvironment();
+}
 }
 
 #ifndef OPENRAVE_COLLADA_SUPPORT

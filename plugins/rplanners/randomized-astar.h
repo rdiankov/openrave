@@ -16,7 +16,7 @@
 
 // A continuous version of A*. See:
 // Rosen Diankov, James Kuffner.
-// Randomized Statistical Path Planning. Intl. Conf. on Intelligent Robots and Systems, October 2007. 
+// Randomized Statistical Path Planning. Intl. Conf. on Intelligent Robots and Systems, October 2007.
 #ifndef RAVE_RANDOMIZED_ASTAR
 #define RAVE_RANDOMIZED_ASTAR
 
@@ -27,59 +27,61 @@ class RandomizedAStarPlanner : public PlannerBase
     // sorted by increasing getvalue
     template <class T, class S> class BinarySearchTree
     {
-    public:
-        BinarySearchTree() { Reset(); }
+public:
+        BinarySearchTree() {
+            Reset();
+        }
 
         // other global definitions
         void Add(T& pex)
         {
             BOOST_ASSERT( pex != NULL );
-        
+
             switch(blocks.size()) {
-		    case 0:
+            case 0:
                 blocks.push_back(pex);
                 return;
-		    case 1:
+            case 1:
                 if( blocks.front()->getvalue() < pex->getvalue() ) {
                     blocks.push_back(pex);
                 }
                 else blocks.insert(blocks.begin(), pex);
-                
+
                 return;
-                
-		    default: {
+
+            default: {
                 int imin = 0, imax = (int)blocks.size(), imid;
-                
+
                 while(imin < imax) {
                     imid = (imin+imax)>>1;
-                    
+
                     if( blocks[imid]->getvalue() > pex->getvalue() ) imax = imid;
                     else imin = imid+1;
                 }
-                
+
                 blocks.insert(blocks.begin()+imin, pex);
                 return;
             }
             }
         }
-    
+
         ///< returns the index into blocks
         int Get(S& s)
         {
             switch(blocks.size()) {
-		    case 1: return 0;
-		    case 2: return blocks.front()->getvalue() < s;    
-		    default: {
+            case 1: return 0;
+            case 2: return blocks.front()->getvalue() < s;
+            default: {
                 int imin = 0, imax = blocks.size()-1, imid;
-                
+
                 while(imin < imax) {
                     imid = (imin+imax)>>1;
-                    
+
                     if( blocks[imid]->getvalue() > s ) imax = imid;
                     else if( blocks[imid]->getvalue() == s ) return imid;
                     else imin = imid+1;
                 }
-                
+
                 return imin;
             }
             }
@@ -90,27 +92,27 @@ class RandomizedAStarPlanner : public PlannerBase
             blocks.clear();
             blocks.reserve(1<<16);
         }
-    
+
         vector<T> blocks;
     };
 
 public:
     class RAStarParameters : public PlannerBase::PlannerParameters {
-    public:
-    RAStarParameters() : fRadius(0.1f), fDistThresh(0.03f), fGoalCoeff(1), nMaxChildren(5), nMaxSampleTries(10), _bProcessingRA(false) {
+public:
+        RAStarParameters() : fRadius(0.1f), fDistThresh(0.03f), fGoalCoeff(1), nMaxChildren(5), nMaxSampleTries(10), _bProcessingRA(false) {
             _vXMLParameters.push_back("radius");
             _vXMLParameters.push_back("distthresh");
             _vXMLParameters.push_back("goalcoeff");
             _vXMLParameters.push_back("maxchildren");
             _vXMLParameters.push_back("maxsampletries");
         }
-            
-        dReal fRadius;      ///< _pDistMetric thresh is the radius that children must be within parents
-        dReal fDistThresh;  ///< gamma * _pDistMetric->thresh is the sampling radius
-        dReal fGoalCoeff;   ///< balancees exploratino vs cost
-        int nMaxChildren;   ///< limit on number of children
-        int nMaxSampleTries; ///< max sample tries before giving up on creating a child
-    protected:
+
+        dReal fRadius;              ///< _pDistMetric thresh is the radius that children must be within parents
+        dReal fDistThresh;          ///< gamma * _pDistMetric->thresh is the sampling radius
+        dReal fGoalCoeff;           ///< balancees exploratino vs cost
+        int nMaxChildren;           ///< limit on number of children
+        int nMaxSampleTries;         ///< max sample tries before giving up on creating a child
+protected:
         bool _bProcessingRA;
         virtual bool serialize(std::ostream& O) const
         {
@@ -122,7 +124,7 @@ public:
             O << "<goalcoeff>" << fGoalCoeff << "</goalcoeff>" << endl;
             O << "<maxchildren>" << nMaxChildren << "</maxchildren>" << endl;
             O << "<maxsampletries>" << nMaxSampleTries << "</maxsampletries>" << endl;
-    
+
             return !!O;
         }
 
@@ -163,43 +165,55 @@ public:
 
     struct Node
     {
-        Node() { parent = NULL; level = 0; numchildren = 0; }
+        Node() {
+            parent = NULL; level = 0; numchildren = 0;
+        }
 
         // negative because those are most likely to be popped first
-        dReal getvalue() { return -ftotal; }
+        dReal getvalue() {
+            return -ftotal;
+        }
 
-        bool compare(const Node* r) { BOOST_ASSERT(r != NULL); return ftotal < r->ftotal; }
-        
+        bool compare(const Node* r) {
+            BOOST_ASSERT(r != NULL); return ftotal < r->ftotal;
+        }
+
         dReal fcost, ftotal;
         int level;
         Node* parent;
         int numchildren;
-        vector<dReal> q; // the configuration immediately follows the struct
+        vector<dReal> q;     // the configuration immediately follows the struct
     };
 
     static bool SortChildGoal(const RandomizedAStarPlanner::Node* p1, const RandomizedAStarPlanner::Node* p2)
     {
-        return p1->ftotal < p2->ftotal;//p1->ftotal-p1->fcost < p2->ftotal-p2->fcost;
+        return p1->ftotal < p2->ftotal;    //p1->ftotal-p1->fcost < p2->ftotal-p2->fcost;
     }
 
     // implement kd-tree or approx-nn in the future, deallocates memory from Node
     class SpatialTree
     {
-    public:
-        SpatialTree() {_fBestDist = 0; }
-        ~SpatialTree() { Destroy(); }
+public:
+        SpatialTree() {
+            _fBestDist = 0;
+        }
+        ~SpatialTree() {
+            Destroy();
+        }
 
         void Destroy()
         {
             list<Node*>::iterator it;
             FORIT(it, _nodes)
-                delete *it;
+            delete *it;
             FORIT(it, _dead)
-                delete *it;
+            delete *it;
             _nodes.clear();
         }
 
-        inline void AddNode(Node* pnode) { _nodes.push_back(pnode); }
+        inline void AddNode(Node* pnode) {
+            _nodes.push_back(pnode);
+        }
         Node* GetNN(const vector<dReal>& q)
         {
             if( _nodes.size() == 0 )
@@ -221,12 +235,14 @@ public:
             _fBestDist = fbest;
             return *itbest;
         }
-        inline void RemoveNode(Node* pnode) { _nodes.remove(pnode); }
+        inline void RemoveNode(Node* pnode) {
+            _nodes.remove(pnode);
+        }
 
         list<Node*> _nodes;
         list<Node*> _dead;
         boost::function<dReal(const std::vector<dReal>&, const std::vector<dReal>&)> _pDistMetric;
-        dReal _fBestDist; ///< valid after a call to GetNN
+        dReal _fBestDist;         ///< valid after a call to GetNN
     };
 
     enum IntervalType {
@@ -236,17 +252,20 @@ public:
         CLOSED
     };
 
-RandomizedAStarPlanner(EnvironmentBasePtr penv) : PlannerBase(penv)
+    RandomizedAStarPlanner(EnvironmentBasePtr penv) : PlannerBase(penv)
     {
         __description = ":Interface Author: Rosen Diankov\n\nRandomized A*";
         bUseGauss = false;
         nIndex = 0;
     }
-    
-    virtual ~RandomizedAStarPlanner() {}
 
-    virtual PlannerParametersConstPtr GetParameters() const { return _parameters; }
-    
+    virtual ~RandomizedAStarPlanner() {
+    }
+
+    virtual PlannerParametersConstPtr GetParameters() const {
+        return _parameters;
+    }
+
     void Destroy()
     {
         _spatialtree.Destroy();
@@ -314,7 +333,7 @@ RandomizedAStarPlanner(EnvironmentBasePtr penv) : PlannerBase(penv)
 
         _parameters->_setstatefn(_parameters->vinitialconfig);
         pcurrent = CreateNode(0, NULL, _parameters->vinitialconfig);
-    
+
         vector<dReal> tempconfig(GetDOF());
         int nMaxIter = _parameters->_nMaxIterations > 0 ? _parameters->_nMaxIterations : 8000;
 
@@ -338,7 +357,7 @@ RandomizedAStarPlanner(EnvironmentBasePtr penv) : PlannerBase(penv)
 
             list<Node*> children;
             int i;
-        
+
             for(i = 0; i < _parameters->nMaxChildren && pcurrent->numchildren < _parameters->nMaxChildren; ++i) {
 
                 // keep on sampling until a valid config
@@ -358,7 +377,7 @@ RandomizedAStarPlanner(EnvironmentBasePtr penv) : PlannerBase(penv)
                 if( sample >= _parameters->nMaxSampleTries ) {
                     continue;
                 }
-                        
+
                 //while (getchar() != '\n') usleep(1000);
 
                 Node* nearestnode = _spatialtree.GetNN(_vSampleConfig);
@@ -387,7 +406,7 @@ RandomizedAStarPlanner(EnvironmentBasePtr penv) : PlannerBase(penv)
         if( !_parameters->_checkpathconstraintsfn(pbest->q,pbest->q,IT_OpenStart,ConfigurationListPtr()) ) {
             RAVELOG_WARN("RA* bad initial config\n");
         }
-    
+
         stringstream ss;
         ss << endl << "Path found, final node: cost: " << pbest->fcost << ", goal: " << (pbest->ftotal-pbest->fcost)/_parameters->fGoalCoeff << endl;
         for(int i = 0; i < GetDOF(); ++i) {
@@ -422,10 +441,12 @@ RandomizedAStarPlanner(EnvironmentBasePtr penv) : PlannerBase(penv)
         return true;
     }
 
-    int GetTotalNodes() { return (int)_sortedtree.blocks.size(); }
-    
+    int GetTotalNodes() {
+        return (int)_sortedtree.blocks.size();
+    }
+
     bool bUseGauss;
-    
+
 private:
 
     Node* CreateNode(dReal fcost, Node* parent, const vector<dReal>& pfConfig, bool add = true)
@@ -477,13 +498,13 @@ private:
             return;
 
         list<Node*>::iterator startNode, endNode;
-    
+
         for(int i =10; i > 0; --i) {
             // pick a random node on the path, and a random jump ahead
             int startIndex = RaveRandomInt()%((int)path.size() - 2);
             int endIndex   = startIndex + ((RaveRandomInt()%5) + 2);
             if (endIndex >= (int)path.size()) endIndex = (int)path.size() - 1;
-        
+
             startNode = path.begin();
             advance(startNode, startIndex);
             endNode = startNode;
@@ -518,7 +539,7 @@ private:
         fprintf(f, "allnodes = [");
 
         for(int n = 0; n < 2; ++n) {
-    
+
             FORIT(it, *allnodes[n]) {
                 for(int i = 0; i < GetDOF(); ++i) {
                     fprintf(f, "%f ", (*it)->q[i]);
@@ -542,26 +563,28 @@ private:
             }
         }
 
-        fprintf(f ,"];\r\n\r\n");
+        fprintf(f,"];\r\n\r\n");
         fprintf(f, "%s", str(boost::format("startindex = %d")%(_vdeadnodes.size()+1)).c_str());
-    
+
         fclose(f);
     }
 
-    inline int GetDOF() const { return _parameters->GetDOF(); }
-    
+    inline int GetDOF() const {
+        return _parameters->GetDOF();
+    }
+
     boost::shared_ptr<RAStarParameters> _parameters;
     SpatialTree _spatialtree;
-    BinarySearchTree<Node*, dReal> _sortedtree;   // sorted by decreasing value
+    BinarySearchTree<Node*, dReal> _sortedtree;       // sorted by decreasing value
 
     RobotBasePtr _robot;
 
-    vector<Node*> _vdeadnodes; ///< dead nodes
+    vector<Node*> _vdeadnodes;     ///< dead nodes
     vector<dReal> _vSampleConfig;
     vector<dReal> _jointIncrement, _jointResolutionInv;
     vector<dReal> _vzero;
 
-    vector<Transform> _vectrans; ///< cache
+    vector<Transform> _vectrans;     ///< cache
     int nIndex;
 };
 

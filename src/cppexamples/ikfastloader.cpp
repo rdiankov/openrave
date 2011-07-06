@@ -5,12 +5,12 @@
     \verbatim
     ikloader [robot filename] [iktype]
     \endverbatim
-    
+
     Example:
     \verbatim
     ikloader robots/barrettwam.robot.xml Transform6D
     \endverbatim
-    
+
     Show how to load an ikfast solver from C++ by specifying the robot and iktype.
 
     <b>Full Example Code:</b>
@@ -34,7 +34,7 @@ int main(int argc, char ** argv)
         RAVELOG_INFO("ikloader robot iktype\n");
         return 1;
     }
-    
+
     string robotname = argv[1];
     string iktype = argv[2];
     RaveInitialize(true); // start openrave core
@@ -80,7 +80,7 @@ int main(int argc, char ** argv)
             RAVELOG_INFO(ss.str());
         }
     }
-    
+
     penv->Destroy(); // destroy
     return 0;
 }

@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2010 Rosen Diankov (rosen.diankov@gmail.com)
+// Copyright (C) 2006-2011 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -25,7 +25,7 @@ namespace OpenRAVE {
 typedef boost::recursive_try_mutex EnvironmentMutex;
 
 /** \brief Maintains a world state, which serves as the gateway to all functions offered through %OpenRAVE. See \ref arch_environment.
-*/
+ */
 class OPENRAVE_API EnvironmentBase : public boost::enable_shared_from_this<EnvironmentBase>
 {
 public:
@@ -43,9 +43,13 @@ public:
     virtual void Reset()=0;
 
     /// \brief set user data
-    virtual void SetUserData(UserDataPtr data) { __pUserData = data; }
+    virtual void SetUserData(UserDataPtr data) {
+        __pUserData = data;
+    }
     /// \brief return the user custom data
-    virtual UserDataPtr GetUserData() const { return __pUserData; }
+    virtual UserDataPtr GetUserData() const {
+        return __pUserData;
+    }
 
     /// \brief Returns the OpenRAVE global state, used for initializing plugins
     virtual UserDataPtr GlobalState() = 0;
@@ -177,7 +181,7 @@ public:
 
         \param fDeltaTime the delta step to take in simulation
         \param bRealTime if false will call SimulateStep as fast as possible, otherwise will time the simulate step calls so that simulation progresses with real system time.
-    */
+     */
     virtual void StartSimulation(dReal fDeltaTime, bool bRealTime=true) = 0;
 
     /// \brief Stops the internal physics loop, stops calling SimulateStep for all modules. <b>[multi-thread safe]</b>
@@ -203,17 +207,17 @@ public:
     /// \brief A set of options used to select particular parts of the scene
     enum SelectionOptions
     {
-        SO_NoRobots = 1,   ///< everything but robots
-        TO_Obstacles = 1,   ///< everything but robots
-        SO_Robots = 2,      ///< all robots
-        TO_Robots = 2,      ///< all robots
-        SO_Everything = 3,  ///< all bodies and robots everything
-        TO_Everything = 3,  ///< all bodies and robots everything
-        SO_Body = 4,        ///< only triangulate robot/kinbody
-        TO_Body = 4,        ///< only triangulate robot/kinbody
-        SO_AllExceptBody = 5, ///< select everything but the robot/kinbody
-        TO_AllExceptBody = 5, ///< select everything but the robot/kinbody
-        SO_BodyList = 6,     ///< provide a list of body names
+        SO_NoRobots = 1,               ///< everything but robots
+        TO_Obstacles = 1,               ///< everything but robots
+        SO_Robots = 2,                  ///< all robots
+        TO_Robots = 2,                  ///< all robots
+        SO_Everything = 3,              ///< all bodies and robots everything
+        TO_Everything = 3,              ///< all bodies and robots everything
+        SO_Body = 4,                    ///< only triangulate robot/kinbody
+        TO_Body = 4,                    ///< only triangulate robot/kinbody
+        SO_AllExceptBody = 5,             ///< select everything but the robot/kinbody
+        TO_AllExceptBody = 5,             ///< select everything but the robot/kinbody
+        SO_BodyList = 6,                 ///< provide a list of body names
     };
     typedef SelectionOptions TriangulateOptions;
 
@@ -223,7 +227,9 @@ public:
     /// \brief Loads a scene from in-memory data and adds all objects in the environment. <b>[multi-thread safe]</b>
     virtual bool LoadData(const std::string& data, const AttributesList& atts = AttributesList()) = 0;
 
-    virtual bool LoadXMLData(const std::string& data, const AttributesList& atts = AttributesList()) { return LoadData(data,atts); }
+    virtual bool LoadXMLData(const std::string& data, const AttributesList& atts = AttributesList()) {
+        return LoadData(data,atts);
+    }
 
     /// \brief Saves a scene depending on the filename extension. Default is in COLLADA format
     ///
@@ -238,73 +244,97 @@ public:
         \param robot If a null pointer is passed, a new robot will be created, otherwise an existing robot will be filled
         \param filename the name of the resource file, its extension determines the format of the file. See \ref supported_formats.
         \param atts The attribute/value pair specifying loading options. Defined in \ref arch_robot.
-    */
+     */
     virtual RobotBasePtr ReadRobotURI(RobotBasePtr robot, const std::string& filename, const AttributesList& atts = AttributesList()) = 0;
-    virtual RobotBasePtr ReadRobotXMLFile(RobotBasePtr robot, const std::string& filename, const AttributesList& atts = AttributesList()) { return ReadRobotURI(robot,filename,atts); }
+    virtual RobotBasePtr ReadRobotXMLFile(RobotBasePtr robot, const std::string& filename, const AttributesList& atts = AttributesList()) {
+        return ReadRobotURI(robot,filename,atts);
+    }
 
     /// \brief Creates a new robot from a file with no extra load options specified. <b>[multi-thread safe]</b>
-    virtual RobotBasePtr ReadRobotURI(const std::string& filename) { return ReadRobotURI(RobotBasePtr(),filename,AttributesList()); }
-    virtual RobotBasePtr ReadRobotXMLFile(const std::string& filename) { return ReadRobotURI(filename); }
+    virtual RobotBasePtr ReadRobotURI(const std::string& filename) {
+        return ReadRobotURI(RobotBasePtr(),filename,AttributesList());
+    }
+    virtual RobotBasePtr ReadRobotXMLFile(const std::string& filename) {
+        return ReadRobotURI(filename);
+    }
 
     /** \brief Initialize a robot from in-memory data. <b>[multi-thread safe]</b>
 
         The robot should not be added the environment when calling this function.
         \param robot If a null pointer is passed, a new robot will be created, otherwise an existing robot will be filled
         \param atts The attribute/value pair specifying loading options. Defined in \ref arch_robot.
-    */
+     */
     virtual RobotBasePtr ReadRobotData(RobotBasePtr robot, const std::string& data, const AttributesList& atts = AttributesList()) = 0;
-    virtual RobotBasePtr ReadRobotXMLData(RobotBasePtr robot, const std::string& data, const AttributesList& atts = AttributesList()) { return ReadRobotData(robot,data,atts); }
+    virtual RobotBasePtr ReadRobotXMLData(RobotBasePtr robot, const std::string& data, const AttributesList& atts = AttributesList()) {
+        return ReadRobotData(robot,data,atts);
+    }
 
     /** \brief Initializes a kinematic body from a resource file. The body is not added to the environment when calling this function. <b>[multi-thread safe]</b>
 
         \param filename the name of the resource file, its extension determines the format of the file. See \ref supported_formats.
         \param body If a null pointer is passed, a new body will be created, otherwise an existing robot will be filled
         \param atts The attribute/value pair specifying loading options. Defined in \ref arch_kinbody.
-    */
+     */
     virtual KinBodyPtr ReadKinBodyURI(KinBodyPtr body, const std::string& filename, const AttributesList& atts = AttributesList()) = 0;
-    virtual KinBodyPtr ReadKinBodyXMLFile(KinBodyPtr body, const std::string& filename, const AttributesList& atts = AttributesList()) { return ReadKinBodyURI(body,filename,atts); }
+    virtual KinBodyPtr ReadKinBodyXMLFile(KinBodyPtr body, const std::string& filename, const AttributesList& atts = AttributesList()) {
+        return ReadKinBodyURI(body,filename,atts);
+    }
 
     /// \brief Creates a new kinbody from an XML file with no extra load options specified. <b>[multi-thread safe]</b>
-    virtual KinBodyPtr ReadKinBodyURI(const std::string& filename) { return ReadKinBodyURI(KinBodyPtr(),filename,AttributesList()); }
-    virtual KinBodyPtr ReadKinBodyXMLFile(const std::string& filename) { return ReadKinBodyURI(filename); }
+    virtual KinBodyPtr ReadKinBodyURI(const std::string& filename) {
+        return ReadKinBodyURI(KinBodyPtr(),filename,AttributesList());
+    }
+    virtual KinBodyPtr ReadKinBodyXMLFile(const std::string& filename) {
+        return ReadKinBodyURI(filename);
+    }
 
     /** \brief Initializes a kinematic body from in-memory data. <b>[multi-thread safe]</b>
 
         The body should not be added to the environment when calling this function.
         \param body If a null pointer is passed, a new body will be created, otherwise an existing robot will be filled
         \param atts The attribute/value pair specifying loading options. Defined in \ref arch_kinbody.
-    */
+     */
     virtual KinBodyPtr ReadKinBodyData(KinBodyPtr body, const std::string& data, const AttributesList& atts = AttributesList()) = 0;
-    virtual KinBodyPtr ReadKinBodyXMLData(KinBodyPtr body, const std::string& data, const AttributesList& atts = AttributesList()) { return ReadKinBodyData(body,data,atts); }
+    virtual KinBodyPtr ReadKinBodyXMLData(KinBodyPtr body, const std::string& data, const AttributesList& atts = AttributesList()) {
+        return ReadKinBodyData(body,data,atts);
+    }
 
     /** \brief Initializes an interface from a resource file. <b>[multi-thread safe]</b>
 
         \param pinterface If a null pointer is passed, a new interface will be created, otherwise an existing interface will be filled
         \param filename the name of the resource file, its extension determines the format of the file. See \ref supported_formats.
         \param atts The attribute/value pair specifying loading options. See the individual interface descriptions at \ref interface_concepts.
-    */
+     */
     virtual InterfaceBasePtr ReadInterfaceURI(InterfaceBasePtr pinterface, InterfaceType type, const std::string& filename, const AttributesList& atts = AttributesList()) = 0;
-    virtual InterfaceBasePtr ReadInterfaceXMLFile(InterfaceBasePtr pinterface, InterfaceType type, const std::string& filename, const AttributesList& atts = AttributesList()) { return ReadInterfaceURI(pinterface,type,filename,atts); }
+    virtual InterfaceBasePtr ReadInterfaceXMLFile(InterfaceBasePtr pinterface, InterfaceType type, const std::string& filename, const AttributesList& atts = AttributesList()) {
+        return ReadInterfaceURI(pinterface,type,filename,atts);
+    }
 
     virtual InterfaceBasePtr ReadInterfaceURI(const std::string& filename, const AttributesList& atts = AttributesList()) = 0;
-    virtual InterfaceBasePtr ReadInterfaceXMLFile(const std::string& filename, const AttributesList& atts = AttributesList()) { return ReadInterfaceURI(filename,atts); }
+    virtual InterfaceBasePtr ReadInterfaceXMLFile(const std::string& filename, const AttributesList& atts = AttributesList()) {
+        return ReadInterfaceURI(filename,atts);
+    }
 
     /** \brief Initializes an interface from in-memory data. <b>[multi-thread safe]</b>
 
         \param pinterface If a null pointer is passed, a new interface will be created, otherwise an existing interface will be filled
         \param data string containing data
         \param atts The attribute/value pair specifying loading options. See the individual interface descriptions at \ref interface_concepts.
-    */
+     */
     virtual InterfaceBasePtr ReadInterfaceData(InterfaceBasePtr pinterface, InterfaceType type, const std::string& data, const AttributesList& atts = AttributesList()) = 0;
-    virtual InterfaceBasePtr ReadInterfaceXMLData(InterfaceBasePtr pinterface, InterfaceType type, const std::string& data, const AttributesList& atts = AttributesList()) { return ReadInterfaceData(pinterface,type,data,atts); }
+    virtual InterfaceBasePtr ReadInterfaceXMLData(InterfaceBasePtr pinterface, InterfaceType type, const std::string& data, const AttributesList& atts = AttributesList()) {
+        return ReadInterfaceData(pinterface,type,data,atts);
+    }
 
     /** \brief reads in the rigid geometry of a resource file into a TRIMESH structure
 
         \param filename the name of the resource file, its extension determines the format of the file. Complex meshes and articulated meshes are all triangulated appropriately. See \ref supported_formats.
         \param options Options to control the parsing process.
-    */
+     */
     virtual boost::shared_ptr<KinBody::Link::TRIMESH> ReadTrimeshURI(boost::shared_ptr<KinBody::Link::TRIMESH> ptrimesh, const std::string& filename, const AttributesList& atts = AttributesList()) = 0;
-    virtual boost::shared_ptr<KinBody::Link::TRIMESH> ReadTrimeshFile(boost::shared_ptr<KinBody::Link::TRIMESH> ptrimesh, const std::string& filename, const AttributesList& atts = AttributesList()) { return ReadTrimeshURI(ptrimesh,filename,atts); }
+    virtual boost::shared_ptr<KinBody::Link::TRIMESH> ReadTrimeshFile(boost::shared_ptr<KinBody::Link::TRIMESH> ptrimesh, const std::string& filename, const AttributesList& atts = AttributesList()) {
+        return ReadTrimeshURI(ptrimesh,filename,atts);
+    }
 
     /// \deprecated (10/09/30) see \ref RaveRegisterXMLReader
     virtual boost::shared_ptr<void> RegisterXMLReader(InterfaceType type, const std::string& xmltag, const CreateXMLReaderFn& fn) RAVE_DEPRECATED = 0;
@@ -316,7 +346,7 @@ public:
 
         \param pdata The data of the buffer
         \param len the number of bytes valid in pdata
-    */
+     */
     virtual bool ParseXMLData(BaseXMLReaderPtr preader, const std::string& data) RAVE_DEPRECATED = 0;
     //@}
 
@@ -388,7 +418,9 @@ public:
     virtual void AddViewer(ViewerBasePtr pviewer) = 0;
 
     /// \deprecated (11/06/13) see AddViewer
-    virtual bool AttachViewer(ViewerBasePtr pnewviewer) RAVE_DEPRECATED { AddViewer(pnewviewer); return true; }
+    virtual bool AttachViewer(ViewerBasePtr pnewviewer) RAVE_DEPRECATED {
+        AddViewer(pnewviewer); return true;
+    }
 
     /// \brief Return a viewer with a particular name.
     ///
@@ -435,7 +467,9 @@ public:
     /// \brief Load a new module, need to Lock if calling outside simulation thread
     virtual int AddModule(ModuleBasePtr module, const std::string& cmdargs) = 0;
 
-    virtual int LoadProblem(ModuleBasePtr module, const std::string& cmdargs) { return AddModule(module,cmdargs); }
+    virtual int LoadProblem(ModuleBasePtr module, const std::string& cmdargs) {
+        return AddModule(module,cmdargs);
+    }
 
     /// \deprecated (10/09/15) see \ref EnvironmentBase::Remove
     virtual bool RemoveProblem(ModuleBasePtr prob) RAVE_DEPRECATED = 0;
@@ -446,7 +480,9 @@ public:
     /// \return returns a pointer to a Lock. Destroying the shared_ptr will release the lock
     virtual boost::shared_ptr<void> GetModules(std::list<ModuleBasePtr>& listModules) const = 0;
 
-    virtual boost::shared_ptr<void> GetLoadedProblems(std::list<ModuleBasePtr>& listModules) const { return GetModules(listModules); }
+    virtual boost::shared_ptr<void> GetLoadedProblems(std::list<ModuleBasePtr>& listModules) const {
+        return GetModules(listModules);
+    }
 
     /// \brief Return the global environment mutex used to protect environment information access in multi-threaded environments.
     ///
@@ -558,10 +594,12 @@ public:
     //@}
 
 protected:
-    virtual const char* GetHash() const { return OPENRAVE_ENVIRONMENT_HASH; }
+    virtual const char* GetHash() const {
+        return OPENRAVE_ENVIRONMENT_HASH;
+    }
 private:
-    UserDataPtr __pUserData; ///< \see GetUserData
-    int __nUniqueId; ///< \see GetId
+    UserDataPtr __pUserData;         ///< \see GetUserData
+    int __nUniqueId;         ///< \see GetId
 };
 
 } // end namespace OpenRAVE

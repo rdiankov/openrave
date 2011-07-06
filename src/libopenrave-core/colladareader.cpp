@@ -33,7 +33,7 @@ class ColladaReader : public daeErrorHandler
 {
     class JointAxisBinding
     {
-    public:
+public:
         JointAxisBinding(daeElementRef pvisualtrans, domAxis_constraintRef pkinematicaxis, domCommon_float_or_paramRef jointvalue, domKinematics_axis_infoRef kinematics_axis_info, domMotion_axis_infoRef motion_axis_info) : pvisualtrans(pvisualtrans), pkinematicaxis(pkinematicaxis), jointvalue(jointvalue), kinematics_axis_info(kinematics_axis_info), motion_axis_info(motion_axis_info) {
             BOOST_ASSERT( !!pkinematicaxis );
             daeElement* pae = pvisualtrans->getParentElement();
@@ -51,7 +51,7 @@ class ColladaReader : public daeErrorHandler
         }
 
         daeElementRef pvisualtrans;
-        domAxis_constraintRef   pkinematicaxis;
+        domAxis_constraintRef pkinematicaxis;
         domCommon_float_or_paramRef jointvalue;
         domNodeRef visualnode;
         domKinematics_axis_infoRef kinematics_axis_info;
@@ -61,10 +61,10 @@ class ColladaReader : public daeErrorHandler
     /// \brief inter-collada bindings for a kinematics scene
     class KinematicsSceneBindings
     {
-    public:
+public:
         std::list< std::pair<domNodeRef,domInstance_kinematics_modelRef> > listKinematicsVisualBindings;
         std::list<JointAxisBinding> listAxisBindings;
-        
+
         bool AddAxisInfo(const domInstance_kinematics_model_Array& arr, domKinematics_axis_infoRef kinematics_axis_info, domMotion_axis_infoRef motion_axis_info)
         {
             if( !kinematics_axis_info ) {
@@ -413,16 +413,16 @@ public:
         }
 
         // set the name
-        if( probot->GetName().size() == 0 && !!ias->getName() ) {
+        if(( probot->GetName().size() == 0) && !!ias->getName() ) {
             probot->SetName(ias->getName());
         }
-        if( probot->GetName().size() == 0 && !!ias->getSid()) {
+        if(( probot->GetName().size() == 0) && !!ias->getSid()) {
             probot->SetName(ias->getSid());
         }
-        if( probot->GetName().size() == 0 && !!articulated_system->getName() ) {
+        if(( probot->GetName().size() == 0) && !!articulated_system->getName() ) {
             probot->SetName(articulated_system->getName());
         }
-        if( probot->GetName().size() == 0 && !!articulated_system->getId()) {
+        if(( probot->GetName().size() == 0) && !!articulated_system->getId()) {
             probot->SetName(articulated_system->getId());
         }
 
@@ -528,10 +528,10 @@ public:
             return false;
         }
 
-        if( pkinbody->GetName().size() == 0 && !!ikm->getName() ) {
+        if(( pkinbody->GetName().size() == 0) && !!ikm->getName() ) {
             pkinbody->SetName(ikm->getName());
         }
-        if( pkinbody->GetName().size() == 0 && !!ikm->getID() ) {
+        if(( pkinbody->GetName().size() == 0) && !!ikm->getID() ) {
             pkinbody->SetName(ikm->getID());
         }
 
@@ -545,7 +545,7 @@ public:
     /// \brief extract one rigid link composed of the node hierarchy
     KinBodyPtr ExtractKinematicsModel(domNodeRef pdomnode, domPhysics_modelRef pmodel, const std::list<JointAxisBinding>& listAxisBindings, const std::vector<std::string>& vprocessednodes)
     {
-        if( !!pdomnode->getID() && find(vprocessednodes.begin(),vprocessednodes.end(),pdomnode->getID()) != vprocessednodes.end() ) {
+        if( !!pdomnode->getID() &&( find(vprocessednodes.begin(),vprocessednodes.end(),pdomnode->getID()) != vprocessednodes.end()) ) {
             return KinBodyPtr();
         }
         _mapJointUnits.clear();
@@ -580,10 +580,10 @@ public:
             _mapJointUnits.clear();
             _mapJointIds.clear();
         }
-        if( pkinbody->GetName().size() == 0 && !!kmodel->getName() ) {
+        if(( pkinbody->GetName().size() == 0) && !!kmodel->getName() ) {
             pkinbody->SetName(kmodel->getName());
         }
-        if( pkinbody->GetName().size() == 0 && !!kmodel->getID() ) {
+        if(( pkinbody->GetName().size() == 0) && !!kmodel->getID() ) {
             pkinbody->SetName(kmodel->getID());
         }
         RAVELOG_DEBUG(str(boost::format("kinematics model: %s\n")%pkinbody->GetName()));
@@ -689,7 +689,7 @@ public:
                                 RAVELOG_WARN(str(boost::format("unknown equation type %s")%equationtype));
                             }
                         }
-                        catch(const openrave_exception& ex) {
+                        catch(const openrave_exception &ex) {
                             RAVELOG_WARN(str(boost::format("failed to parse formula %s for target %s")%equationtype%pjoint->GetName()));
                         }
                     }
@@ -709,7 +709,7 @@ public:
                         }
                     }
                 }
-                catch(const openrave_exception& ex) {
+                catch(const openrave_exception &ex) {
                     RAVELOG_WARN(str(boost::format("failed to parse formula for target %s: %s")%pjoint->GetName()%ex.what()));
                 }
             }
@@ -763,7 +763,7 @@ public:
                 if (!!pdomnode->getName()) {
                     linkname = _ConvertToOpenRAVEName(pdomnode->getName());
                 }
-                if( linkname.size() == 0 && !!pdomnode->getID()) {
+                if(( linkname.size() == 0) && !!pdomnode->getID()) {
                     linkname = _ConvertToOpenRAVEName(pdomnode->getID());
                 }
             }
@@ -791,7 +791,7 @@ public:
         }
         else {
             RAVELOG_DEBUG(str(boost::format("Attachment link elements: %d\n")%pdomlink->getAttachment_full_array().getCount()));
-            plink->_t = tParentLink * _ExtractFullTransform(pdomlink); // use the kinematics coordinate system for each link
+            plink->_t = tParentLink * _ExtractFullTransform(pdomlink);     // use the kinematics coordinate system for each link
 
             {
                 stringstream ss; ss << plink->GetName() << ": " << plink->_t << endl;
@@ -866,7 +866,7 @@ public:
                 // create the joints before creating the child links
                 KinBody::JointPtr pjoint(new KinBody::Joint(pkinbody));
                 int jointtype = vdomaxes.getCount();
-                pjoint->_bActive = true; // if not active, put into the passive list
+                pjoint->_bActive = true;     // if not active, put into the passive list
                 FOREACH(it,pjoint->_vweights) {
                     *it = 1;
                 }
@@ -965,7 +965,7 @@ public:
                         vAxes[ic] = Vector(0,0,1);
                     }
 
-                    pjoint->_voffsets[ic] = 0; // to overcome -pi to pi boundary
+                    pjoint->_voffsets[ic] = 0;     // to overcome -pi to pi boundary
                     if (pkinbody->IsRobot() && !motion_axis_info) {
                         RAVELOG_WARN(str(boost::format("No motion axis info for joint %s\n")%pjoint->GetName()));
                     }
@@ -982,7 +982,7 @@ public:
                         }
                     }
 
-                    bool joint_locked = false; // if locked, joint angle is static
+                    bool joint_locked = false;     // if locked, joint angle is static
                     bool kinematics_limits = false;
 
                     if (!!kinematics_axis_info) {
@@ -990,18 +990,18 @@ public:
                             joint_locked = resolveBool(kinematics_axis_info->getLocked(),kinematics_axis_info);
                         }
 
-                        if (joint_locked) { // If joint is locked set limits to the static value.
+                        if (joint_locked) {     // If joint is locked set limits to the static value.
                             RAVELOG_WARN("lock joint!!\n");
                             pjoint->_vlowerlimit.at(ic) = 0;
                             pjoint->_vupperlimit.at(ic) = 0;
                         }
-                        else if (kinematics_axis_info->getLimits()) { // If there are articulated system kinematics limits
+                        else if (kinematics_axis_info->getLimits()) {     // If there are articulated system kinematics limits
                             kinematics_limits   = true;
-                            dReal fscale = pjoint->IsRevolute(ic)?(PI/180.0f):_GetUnitScale(kinematics_axis_info,_fGlobalScale);
+                            dReal fscale = pjoint->IsRevolute(ic) ? (PI/180.0f) : _GetUnitScale(kinematics_axis_info,_fGlobalScale);
                             pjoint->_vlowerlimit.at(ic) = fscale*(dReal)(resolveFloat(kinematics_axis_info->getLimits()->getMin(),kinematics_axis_info));
                             pjoint->_vupperlimit.at(ic) = fscale*(dReal)(resolveFloat(kinematics_axis_info->getLimits()->getMax(),kinematics_axis_info));
                             if( pjoint->IsRevolute(ic) ) {
-                                if( pjoint->_vlowerlimit.at(ic) < -PI || pjoint->_vupperlimit[ic] > PI ) {
+                                if(( pjoint->_vlowerlimit.at(ic) < -PI) ||( pjoint->_vupperlimit[ic] > PI) ) {
                                     pjoint->_voffsets[ic] = 0.5f * (pjoint->_vlowerlimit.at(ic) + pjoint->_vupperlimit[ic]);
                                     if( pjoint->_vupperlimit[ic] - pjoint->_voffsets[ic] > PI ) {
                                         RAVELOG_WARN(str(boost::format("joint %s, cannot allow joint range [%f,%f] of more than 2*pi radians\n")%pjoint->GetName()%pjoint->_vlowerlimit.at(ic)%pjoint->_vupperlimit[ic]));
@@ -1030,11 +1030,11 @@ public:
                         }
                         else {
                             RAVELOG_VERBOSE(str(boost::format("There are LIMITS in joint %s ...\n")%pjoint->GetName()));
-                            dReal fscale = pjoint->IsRevolute(ic)?(PI/180.0f):_GetUnitScale(pdomaxis,_fGlobalScale);
+                            dReal fscale = pjoint->IsRevolute(ic) ? (PI/180.0f) : _GetUnitScale(pdomaxis,_fGlobalScale);
                             pjoint->_vlowerlimit[ic] = (dReal)pdomaxis->getLimits()->getMin()->getValue()*fscale;
                             pjoint->_vupperlimit[ic] = (dReal)pdomaxis->getLimits()->getMax()->getValue()*fscale;
                             if( pjoint->IsRevolute(ic) ) {
-                                if( pjoint->_vlowerlimit[ic] < -PI || pjoint->_vupperlimit[ic] > PI ) {
+                                if(( pjoint->_vlowerlimit[ic] < -PI) ||( pjoint->_vupperlimit[ic] > PI) ) {
                                     pjoint->_voffsets[ic] = 0.5f * (pjoint->_vlowerlimit[ic] + pjoint->_vupperlimit[ic]);
                                     if( pjoint->_vupperlimit[ic] - pjoint->_voffsets[ic] > PI ) {
                                         RAVELOG_WARN(str(boost::format("joint %s, cannot allow joint range [%f,%f] of more than 2*pi radians\n")%pjoint->GetName()%pjoint->_vlowerlimit[ic]%pjoint->_vupperlimit[ic]));
@@ -1073,7 +1073,7 @@ public:
         if( !pdomnode ) {
             return false;
         }
-        if( !!pdomnode->getID() && find(vprocessednodes.begin(),vprocessednodes.end(),pdomnode->getID()) != vprocessednodes.end() ) {
+        if( !!pdomnode->getID() &&( find(vprocessednodes.begin(),vprocessednodes.end(),pdomnode->getID()) != vprocessednodes.end()) ) {
             return false;
         }
 
@@ -1086,7 +1086,7 @@ public:
             bool contains=false;
             FOREACHC(it,listAxisBindings) {
                 // don't check ID's check if the reference is the same!
-                if ( (pdomnode->getNode_array()[i])  == (it->visualnode)){
+                if ( (pdomnode->getNode_array()[i])  == (it->visualnode)) {
                     contains=true;
                     break;
                 }
@@ -1102,7 +1102,7 @@ public:
             // put everything in a subroutine in order to process pdomnode too!
         }
 
-        unsigned int nGeomBefore =  plink->_listGeomProperties.size(); // #of Meshes already associated to this link
+        unsigned int nGeomBefore =  plink->_listGeomProperties.size();     // #of Meshes already associated to this link
 
         // get the geometry
         for (size_t igeom = 0; igeom < pdomnode->getInstance_geometry_array().getCount(); ++igeom) {
@@ -1140,7 +1140,7 @@ public:
 
         list<KinBody::Link::GEOMPROPERTIES>::iterator itgeom= plink->_listGeomProperties.begin();
         for (unsigned int i=0; i< nGeomBefore; i++) {
-            itgeom++; // change only the transformations of the newly found geometries.
+            itgeom++;     // change only the transformations of the newly found geometries.
         }
 
         //  Switch between different type of geometry PRIMITIVES
@@ -1159,7 +1159,7 @@ public:
                 break;
             case KinBody::Link::GEOMPROPERTIES::GeomTrimesh:
                 itgeom->collisionmesh.ApplyTransform(tmnodegeom);
-                itgeom->_t = Transform(); // reset back to identity
+                itgeom->_t = Transform();     // reset back to identity
                 break;
             default:
                 RAVELOG_WARN("unknown geometry type: %d\n", itgeom->GetType());
@@ -1221,7 +1221,7 @@ public:
         size_t triangleIndexStride = 0, vertexoffset = -1;
         domInput_local_offsetRef indexOffsetRef;
 
-        for (unsigned int w=0;w<triRef->getInput_array().getCount();w++) {
+        for (unsigned int w=0; w<triRef->getInput_array().getCount(); w++) {
             size_t offset = triRef->getInput_array()[w]->getOffset();
             daeString str = triRef->getInput_array()[w]->getSemantic();
             if (!strcmp(str,"VERTEX")) {
@@ -1237,7 +1237,7 @@ public:
         const domList_of_uints& indexArray =triRef->getP()->getValue();
         trimesh.indices.reserve(triRef->getCount()*3);
         trimesh.vertices.reserve(triRef->getCount()*3);
-        for (size_t i=0;i<vertsRef->getInput_array().getCount();++i) {
+        for (size_t i=0; i<vertsRef->getInput_array().getCount(); ++i) {
             domInput_localRef localRef = vertsRef->getInput_array()[i];
             daeString str = localRef->getSemantic();
             if ( strcmp(str,"POSITION") == 0 ) {
@@ -1250,10 +1250,10 @@ public:
                 if (!!flArray) {
                     const domList_of_floats& listFloats = flArray->getValue();
                     int k=vertexoffset;
-                    int vertexStride = 3;//instead of hardcoded stride, should use the 'accessor'
+                    int vertexStride = 3;     //instead of hardcoded stride, should use the 'accessor'
                     for(size_t itri = 0; itri < triRef->getCount(); ++itri) {
                         if(k+2*triangleIndexStride < indexArray.getCount() ) {
-                            for (int j=0;j<3;j++) {
+                            for (int j=0; j<3; j++) {
                                 int index0 = indexArray.get(k)*vertexStride;
                                 domFloat fl0 = listFloats.get(index0);
                                 domFloat fl1 = listFloats.get(index0+1);
@@ -1304,7 +1304,7 @@ public:
         size_t triangleIndexStride = 0, vertexoffset = -1;
         domInput_local_offsetRef indexOffsetRef;
 
-        for (unsigned int w=0;w<triRef->getInput_array().getCount();w++) {
+        for (unsigned int w=0; w<triRef->getInput_array().getCount(); w++) {
             size_t offset = triRef->getInput_array()[w]->getOffset();
             daeString str = triRef->getInput_array()[w]->getSemantic();
             if (!strcmp(str,"VERTEX")) {
@@ -1323,7 +1323,7 @@ public:
         }
         for(size_t ip = 0; ip < primitivecount; ++ip) {
             domList_of_uints indexArray =triRef->getP_array()[ip]->getValue();
-            for (size_t i=0;i<vertsRef->getInput_array().getCount();++i) {
+            for (size_t i=0; i<vertsRef->getInput_array().getCount(); ++i) {
                 domInput_localRef localRef = vertsRef->getInput_array()[i];
                 daeString str = localRef->getSemantic();
                 if ( strcmp(str,"POSITION") == 0 ) {
@@ -1336,7 +1336,7 @@ public:
                     if (!!flArray) {
                         const domList_of_floats& listFloats = flArray->getValue();
                         int k=vertexoffset;
-                        int vertexStride = 3;//instead of hardcoded stride, should use the 'accessor'
+                        int vertexStride = 3;     //instead of hardcoded stride, should use the 'accessor'
                         size_t usedindices = 3*(indexArray.getCount()-2);
                         if( trimesh.indices.capacity() < trimesh.indices.size()+usedindices ) {
                             trimesh.indices.reserve(trimesh.indices.size()+usedindices);
@@ -1396,7 +1396,7 @@ public:
         size_t triangleIndexStride = 0, vertexoffset = -1;
         domInput_local_offsetRef indexOffsetRef;
 
-        for (unsigned int w=0;w<triRef->getInput_array().getCount();w++) {
+        for (unsigned int w=0; w<triRef->getInput_array().getCount(); w++) {
             size_t offset = triRef->getInput_array()[w]->getOffset();
             daeString str = triRef->getInput_array()[w]->getSemantic();
             if (!strcmp(str,"VERTEX")) {
@@ -1415,7 +1415,7 @@ public:
         }
         for(size_t ip = 0; ip < primitivecount; ++ip) {
             domList_of_uints indexArray = triRef->getP_array()[ip]->getValue();
-            for (size_t i=0;i<vertsRef->getInput_array().getCount();++i) {
+            for (size_t i=0; i<vertsRef->getInput_array().getCount(); ++i) {
                 domInput_localRef localRef = vertsRef->getInput_array()[i];
                 daeString str = localRef->getSemantic();
                 if ( strcmp(str,"POSITION") == 0 ) {
@@ -1428,7 +1428,7 @@ public:
                     if (!!flArray) {
                         const domList_of_floats& listFloats = flArray->getValue();
                         int k=vertexoffset;
-                        int vertexStride = 3;//instead of hardcoded stride, should use the 'accessor'
+                        int vertexStride = 3;     //instead of hardcoded stride, should use the 'accessor'
                         size_t usedindices = 3*(indexArray.getCount()-2);
                         if( trimesh.indices.capacity() < trimesh.indices.size()+usedindices ) {
                             trimesh.indices.reserve(trimesh.indices.size()+usedindices);
@@ -1491,7 +1491,7 @@ public:
 
         size_t triangleIndexStride = 0,vertexoffset = -1;
         domInput_local_offsetRef indexOffsetRef;
-        for (unsigned int w=0;w<triRef->getInput_array().getCount();w++) {
+        for (unsigned int w=0; w<triRef->getInput_array().getCount(); w++) {
             size_t offset = triRef->getInput_array()[w]->getOffset();
             daeString str = triRef->getInput_array()[w]->getSemantic();
             if (!strcmp(str,"VERTEX")) {
@@ -1504,7 +1504,7 @@ public:
         }
         triangleIndexStride++;
         const domList_of_uints& indexArray =triRef->getP()->getValue();
-        for (size_t i=0;i<vertsRef->getInput_array().getCount();++i) {
+        for (size_t i=0; i<vertsRef->getInput_array().getCount(); ++i) {
             domInput_localRef localRef = vertsRef->getInput_array()[i];
             daeString str = localRef->getSemantic();
             if ( strcmp(str,"POSITION") == 0 ) {
@@ -1517,12 +1517,12 @@ public:
                 if (!!flArray) {
                     const domList_of_floats& listFloats = flArray->getValue();
                     size_t k=vertexoffset;
-                    int vertexStride = 3;//instead of hardcoded stride, should use the 'accessor'
+                    int vertexStride = 3;     //instead of hardcoded stride, should use the 'accessor'
                     for(size_t ipoly = 0; ipoly < triRef->getVcount()->getValue().getCount(); ++ipoly) {
                         size_t numverts = triRef->getVcount()->getValue()[ipoly];
-                        if(numverts > 0 && k+(numverts-1)*triangleIndexStride < indexArray.getCount() ) {
+                        if(( numverts > 0) &&( k+(numverts-1)*triangleIndexStride < indexArray.getCount()) ) {
                             size_t startoffset = trimesh.vertices.size();
-                            for (size_t j=0;j<numverts;j++) {
+                            for (size_t j=0; j<numverts; j++) {
                                 int index0 = indexArray.get(k)*vertexStride;
                                 domFloat fl0 = listFloats.get(index0);
                                 domFloat fl1 = listFloats.get(index0+1);
@@ -1560,16 +1560,16 @@ public:
         vector<Vector> vconvexhull;
         if (geom->getMesh()) {
             const domMeshRef meshRef = geom->getMesh();
-            for (size_t tg = 0;tg<meshRef->getTriangles_array().getCount();tg++) {
+            for (size_t tg = 0; tg<meshRef->getTriangles_array().getCount(); tg++) {
                 _ExtractGeometry(meshRef->getTriangles_array()[tg], meshRef->getVertices(), mapmaterials, plink);
             }
-            for (size_t tg = 0;tg<meshRef->getTrifans_array().getCount();tg++) {
+            for (size_t tg = 0; tg<meshRef->getTrifans_array().getCount(); tg++) {
                 _ExtractGeometry(meshRef->getTrifans_array()[tg], meshRef->getVertices(), mapmaterials, plink);
             }
-            for (size_t tg = 0;tg<meshRef->getTristrips_array().getCount();tg++) {
+            for (size_t tg = 0; tg<meshRef->getTristrips_array().getCount(); tg++) {
                 _ExtractGeometry(meshRef->getTristrips_array()[tg], meshRef->getVertices(), mapmaterials, plink);
             }
-            for (size_t tg = 0;tg<meshRef->getPolylist_array().getCount();tg++) {
+            for (size_t tg = 0; tg<meshRef->getPolylist_array().getCount(); tg++) {
                 _ExtractGeometry(meshRef->getPolylist_array()[tg], meshRef->getVertices(), mapmaterials, plink);
             }
             if( meshRef->getPolygons_array().getCount()> 0 ) {
@@ -1632,12 +1632,12 @@ public:
                     domLibrary_geometriesRef libgeom = _dom->getLibrary_geometries_array()[i];
                     for (size_t i = 0; i < libgeom->getGeometry_array().getCount(); i++) {
                         domGeometryRef lib = libgeom->getGeometry_array()[i];
-                        if (!strcmp(lib->getId(),urlref2+1)) { // skip the # at the front of urlref2
+                        if (!strcmp(lib->getId(),urlref2+1)) {     // skip the # at the front of urlref2
                             //found convex_hull geometry
-                            domMesh *meshElement = lib->getMesh();//linkedGeom->getMesh();
+                            domMesh *meshElement = lib->getMesh();     //linkedGeom->getMesh();
                             if (meshElement) {
                                 const domVerticesRef vertsRef = meshElement->getVertices();
-                                for (size_t i=0;i<vertsRef->getInput_array().getCount();i++) {
+                                for (size_t i=0; i<vertsRef->getInput_array().getCount(); i++) {
                                     domInput_localRef localRef = vertsRef->getInput_array()[i];
                                     daeString str = localRef->getSemantic();
                                     if ( strcmp(str,"POSITION") == 0) {
@@ -1650,7 +1650,7 @@ public:
                                         if (!!flArray) {
                                             vconvexhull.reserve(vconvexhull.size()+flArray->getCount());
                                             const domList_of_floats& listFloats = flArray->getValue();
-                                            for (size_t k=0;k+2<flArray->getCount();k+=3) {
+                                            for (size_t k=0; k+2<flArray->getCount(); k+=3) {
                                                 domFloat fl0 = listFloats.get(k);
                                                 domFloat fl1 = listFloats.get(k+1);
                                                 domFloat fl2 = listFloats.get(k+2);
@@ -1667,7 +1667,7 @@ public:
             else {
                 //no getConvex_hull_of but direct vertices
                 const domVerticesRef vertsRef = convexRef->getVertices();
-                for (size_t i=0;i<vertsRef->getInput_array().getCount();i++) {
+                for (size_t i=0; i<vertsRef->getInput_array().getCount(); i++) {
                     domInput_localRef localRef = vertsRef->getInput_array()[i];
                     daeString str = localRef->getSemantic();
                     if ( strcmp(str,"POSITION") == 0 ) {
@@ -1680,7 +1680,7 @@ public:
                         if (!!flArray) {
                             const domList_of_floats& listFloats = flArray->getValue();
                             vconvexhull.reserve(vconvexhull.size()+flArray->getCount());
-                            for (size_t k=0;k+2<flArray->getCount();k+=3) {
+                            for (size_t k=0; k+2<flArray->getCount(); k+=3) {
                                 domFloat fl0 = listFloats.get(k);
                                 domFloat fl1 = listFloats.get(k+1);
                                 domFloat fl2 = listFloats.get(k+2);
@@ -1961,7 +1961,7 @@ public:
         if( !!pbindarray && !!pbindelt ) {
             for (size_t ibind = 0; ibind < pbindarray->getCount(); ++ibind) {
                 domKinematics_bindRef pbind = (*pbindarray)[ibind];
-                if( !!pbind->getSymbol() && strcmp(pbind->getSymbol(), ref) == 0 ) {
+                if( !!pbind->getSymbol() &&( strcmp(pbind->getSymbol(), ref) == 0) ) {
                     // found a match
                     if( !!pbind->getParam() ) {
                         //return searchBinding(pbind->getParam()->getRef(), pbindelt);
@@ -1974,8 +1974,8 @@ public:
             }
             for(size_t inewparam = 0; inewparam < pnewparamarray->getCount(); ++inewparam) {
                 domKinematics_newparamRef newparam = (*pnewparamarray)[inewparam];
-                if( !!newparam->getSid() && strcmp(newparam->getSid(), ref) == 0 ) {
-                    if( !!newparam->getSIDREF() ) { // can only bind with SIDREF
+                if( !!newparam->getSid() &&( strcmp(newparam->getSid(), ref) == 0) ) {
+                    if( !!newparam->getSIDREF() ) {     // can only bind with SIDREF
                         return daeSidRef(newparam->getSIDREF()->getValue(),pbindelt).resolve().elt;
                     }
                     RAVELOG_WARN(str(boost::format("newparam sid=%s does not have SIDREF\n")%newparam->getSid()));
@@ -2018,7 +2018,7 @@ public:
         }
         for(size_t iparam = 0; iparam < parent->getNewparam_array().getCount(); ++iparam) {
             domKinematics_newparamRef pnewparam = parent->getNewparam_array()[iparam];
-            if( !!pnewparam->getSid() && strcmp(pnewparam->getSid(), paddr->getParam()->getValue()) == 0 ) {
+            if( !!pnewparam->getSid() &&( strcmp(pnewparam->getSid(), paddr->getParam()->getValue()) == 0) ) {
                 if( !!pnewparam->getBool() ) {
                     return pnewparam->getBool()->getValue();
                 }
@@ -2045,7 +2045,7 @@ public:
         }
         for(size_t iparam = 0; iparam < parent->getNewparam_array().getCount(); ++iparam) {
             domKinematics_newparamRef pnewparam = parent->getNewparam_array()[iparam];
-            if( !!pnewparam->getSid() && strcmp(pnewparam->getSid(), paddr->getParam()->getValue()) == 0 ) {
+            if( !!pnewparam->getSid() &&( strcmp(pnewparam->getSid(), paddr->getParam()->getValue()) == 0) ) {
                 if( !!pnewparam->getFloat() ) {
                     return pnewparam->getFloat()->getValue();
                 }
@@ -2185,7 +2185,7 @@ public:
     // decompose a matrix into a scale and rigid transform (necessary for model scales)
     void decompose(const TransformMatrix& tm, Transform& tout, Vector& vscale)
     {
-        tout = tm; // quaternion removes the scale?
+        tout = tm;     // quaternion removes the scale?
         TransformMatrix tnormalized = tout;
         for(int i = 0; i < 3; ++i) {
             vscale[i] = (RaveFabs(tm.m[0+i])+RaveFabs(tm.m[4+i])+RaveFabs(tm.m[8+i]))/(RaveFabs(tnormalized.m[0+i])+RaveFabs(tnormalized.m[4+i])+RaveFabs(tnormalized.m[8+i]));
@@ -2194,8 +2194,8 @@ public:
 
     virtual void handleError( daeString msg )
     {
-        if( _bOpeningZAE && (msg == string("Document is empty\n") || msg == string("Error parsing XML in daeLIBXMLPlugin::read\n")) ) {
-            return; // collada-dom prints these messages even if no error
+        if( _bOpeningZAE && (( msg == string("Document is empty\n")) ||( msg == string("Error parsing XML in daeLIBXMLPlugin::read\n")) ) ) {
+            return;     // collada-dom prints these messages even if no error
         }
         RAVELOG_ERROR(str(boost::format("COLLADA error: %s")%msg));
     }
@@ -2205,7 +2205,7 @@ public:
         RAVELOG_WARN(str(boost::format("COLLADA warning: %s")%msg));
     }
 
- private:
+private:
 
     /// \brief go through all kinematics binds to get a kinematics/visual pair
     ///
@@ -2218,7 +2218,7 @@ public:
             return;
         }
         for (size_t imodel = 0; imodel < kiscene->getBind_kinematics_model_array().getCount(); imodel++) {
-            domArticulated_systemRef articulated_system; // if filled, contains robot-specific information, so create a robot
+            domArticulated_systemRef articulated_system;     // if filled, contains robot-specific information, so create a robot
             domBind_kinematics_modelRef kbindmodel = kiscene->getBind_kinematics_model_array()[imodel];
             if (!kbindmodel->getNode()) {
                 RAVELOG_WARN("do not support kinematics models without references to nodes\n");
@@ -2279,7 +2279,7 @@ public:
         daeTArray<daeElementRef> children;
         pelt->getChildren(children);
         for(size_t i = 0; i < children.getCount(); ++i) {
-            if( children[i]->getElementName() == string("technique") && children[i]->hasAttribute("profile") && children[i]->getAttribute("profile") == string("OpenRAVE") ) {
+            if(( children[i]->getElementName() == string("technique")) && children[i]->hasAttribute("profile") &&( children[i]->getAttribute("profile") == string("OpenRAVE")) ) {
                 return children[i];
             }
         }
@@ -2326,7 +2326,7 @@ public:
             if( !!pdomlink->getName() ) {
                 linkname = pdomlink->getName();
             }
-            if( linkname.size() == 0 && !!pdomlink->getID() ) {
+            if(( linkname.size() == 0) && !!pdomlink->getID() ) {
                 linkname = pdomlink->getID();
             }
         }
@@ -2407,7 +2407,7 @@ public:
         if( name == "math" ) {
             for(std::size_t ic = 0; ic < children.getCount(); ++ic) {
                 std::string childname = _getElementName(children[ic]);
-                if( childname == "apply" || childname == "csymbol" || childname == "cn" || childname == "ci" ) {
+                if(( childname == "apply") ||( childname == "csymbol") ||( childname == "cn") ||( childname == "ci") ) {
                     eq = _ExtractMathML(proot, pkinbody, children[ic]);
                 }
                 else {
@@ -2451,21 +2451,21 @@ public:
                 BOOST_ASSERT(children.getCount()==3);
                 std::string sbase = _ExtractMathML(proot,pkinbody,children[1]);
                 std::string sexp = _ExtractMathML(proot,pkinbody,children[2]);
-//                try {
-//                    int degree = boost::lexical_cast<int>(sexp);
-//                    if( degree == 1 ) {
-//                        eq += str(boost::format("(%s)")%sbase);
-//                    }
-//                    else if( degree == 2 ) {
-//                        eq += str(boost::format("sqr(%s)")%sbase);
-//                    }
-//                    else {
-//                        eq += str(boost::format("pow(%s,%s)")%sbase%sexp);
-//                    }
-//                }
-//                catch(const boost::bad_lexical_cast&) {
-                    eq += str(boost::format("pow(%s,%s)")%sbase%sexp);
-                    //}
+                //                try {
+                //                    int degree = boost::lexical_cast<int>(sexp);
+                //                    if( degree == 1 ) {
+                //                        eq += str(boost::format("(%s)")%sbase);
+                //                    }
+                //                    else if( degree == 2 ) {
+                //                        eq += str(boost::format("sqr(%s)")%sbase);
+                //                    }
+                //                    else {
+                //                        eq += str(boost::format("pow(%s,%s)")%sbase%sexp);
+                //                    }
+                //                }
+                //                catch(const boost::bad_lexical_cast&) {
+                eq += str(boost::format("pow(%s,%s)")%sbase%sexp);
+                //}
             }
             else if( childname == "rem" ) {
                 BOOST_ASSERT(children.getCount()==3);
@@ -2737,7 +2737,7 @@ public:
                 RAVELOG_WARN(str(boost::format("formulas do not support using joints with > 1 DOF yet (%s)")%pjoint->GetName()));
             }
             else {
-                if( _mapJointUnits.find(pjoint) != _mapJointUnits.end() && _mapJointUnits[pjoint].at(0) != 1 ) {
+                if(( _mapJointUnits.find(pjoint) != _mapJointUnits.end()) &&( _mapJointUnits[pjoint].at(0) != 1) ) {
                     eq = str(boost::format("(%f*%s)")%(1/_mapJointUnits[pjoint].at(0))%pjoint->GetName());
                 }
                 else {

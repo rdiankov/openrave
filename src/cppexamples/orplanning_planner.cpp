@@ -5,7 +5,7 @@
     The default values plan for the arm joints of a particular manipulator.
 
     <b>Full Example Code:</b>
-*/
+ */
 #include <openrave-core.h>
 #include <vector>
 #include <sstream>
@@ -119,7 +119,7 @@ int main(int argc, char ** argv)
 
         // send the trajectory to the robot
         probot->SetActiveMotion(ptraj);
-        
+
         // wait for the robot to finish
         while(!probot->GetController()->IsDone()) {
             usleep(1000);

@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2010 Rosen Diankov (rosen.diankov@gmail.com)
+// Copyright (C) 2006-2011 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -36,30 +36,40 @@ enum SerializationOptions
 
 /** \brief <b>[interface]</b> Base class for all interfaces that OpenRAVE provides. See \ref interface_concepts.
     \ingroup interfaces
-*/
+ */
 class OPENRAVE_API InterfaceBase : public boost::enable_shared_from_this<InterfaceBase>
 {
 public:
     typedef std::map<std::string, XMLReadablePtr, CaseInsensitiveCompare> READERSMAP;
 
     InterfaceBase(InterfaceType type, EnvironmentBasePtr penv);
-	virtual ~InterfaceBase();
+    virtual ~InterfaceBase();
 
-    inline InterfaceType GetInterfaceType() const { return __type; }
+    inline InterfaceType GetInterfaceType() const {
+        return __type;
+    }
 
     /// set internally by RaveDatabase
     /// \return the unique identifier that describes this class type, case is ignored
     /// should be the same id used to create the object
-    inline const std::string& GetXMLId() const { return __strxmlid; }
+    inline const std::string& GetXMLId() const {
+        return __strxmlid;
+    }
 
     /// set internally by RaveDatabase
     /// \return the pluginname this interface was loaded from
-    inline const std::string& GetPluginName() const { return __strpluginname; }
+    inline const std::string& GetPluginName() const {
+        return __strpluginname;
+    }
 
     /// \return the environment that this interface is attached to
-    inline EnvironmentBasePtr GetEnv() const { return __penv; }
+    inline EnvironmentBasePtr GetEnv() const {
+        return __penv;
+    }
 
-    inline const READERSMAP& GetReadableInterfaces() const { return __mapReadableInterfaces; }
+    inline const READERSMAP& GetReadableInterfaces() const {
+        return __mapReadableInterfaces;
+    }
     inline XMLReadablePtr GetReadableInterface(const std::string& xmltag) const
     {
         READERSMAP::const_iterator it = __mapReadableInterfaces.find(xmltag);
@@ -67,18 +77,30 @@ public:
     }
 
     /// \brief Documentation of the interface in reStructuredText format. See \ref writing_plugins_doc.
-    virtual const std::string& GetDescription() const { return __description; };
+    virtual const std::string& GetDescription() const {
+        return __description;
+    }
 
     /// \brief set user data
-    virtual void SetUserData(UserDataPtr data) { __pUserData = data; }
+    virtual void SetUserData(UserDataPtr data) {
+        __pUserData = data;
+    }
     /// \deprecated
-    virtual void SetUserData(boost::shared_ptr<void> data) RAVE_DEPRECATED { __pUserData = boost::static_pointer_cast<UserData>(data); }
+    virtual void SetUserData(boost::shared_ptr<void> data) RAVE_DEPRECATED {
+        __pUserData = boost::static_pointer_cast<UserData>(data);
+    }
     /// \brief return the user custom data
-    virtual UserDataPtr GetUserData() const { return __pUserData; }
+    virtual UserDataPtr GetUserData() const {
+        return __pUserData;
+    }
 
     /// \brief the URI used to load the interface (sometimes this is not possible if the definition lies inside an environment file).
-    virtual const std::string& GetURI() const { return __struri; }
-    virtual const std::string& GetXMLFilename() const { return __struri; }
+    virtual const std::string& GetURI() const {
+        return __struri;
+    }
+    virtual const std::string& GetXMLFilename() const {
+        return __struri;
+    }
 
     /// \brief Clone the contents of an interface to the current interface.
     ///
@@ -99,7 +121,7 @@ public:
         \param os the output stream containing the output
         \exception openrave_exception Throw if the command is not supported.
         \return true if the command is successfully processed, otherwise false.
-    */
+     */
     virtual bool SendCommand(std::ostream& os, std::istream& is);
 
     // serializes the interface, use an official serialization library?
@@ -111,12 +133,14 @@ protected:
     /// \param sinput - input of the command
     /// \param sout - output of the command
     /// \return If false, there was an error with the command, true if successful
-    typedef boost::function<bool(std::ostream&, std::istream&)> InterfaceCommandFn;
+    typedef boost::function<bool (std::ostream&, std::istream&)> InterfaceCommandFn;
     class OPENRAVE_API InterfaceCommand
     {
-    public:
-        InterfaceCommand() {}
-        InterfaceCommand(InterfaceCommandFn newfn, const std::string& newhelp) : fn(newfn), help(newhelp) {}
+public:
+        InterfaceCommand() {
+        }
+        InterfaceCommand(InterfaceCommandFn newfn, const std::string& newhelp) : fn(newfn), help(newhelp) {
+        }
         InterfaceCommandFn fn; ///< command function to run
         std::string help; ///< help string explaining command arguments
     };
@@ -133,7 +157,7 @@ protected:
     virtual void UnregisterCommand(const std::string& cmdname);
 
     virtual const char* GetHash() const = 0;
-    std::string __description; /// \see GetDescription()
+    std::string __description;     /// \see GetDescription()
 
 private:
     /// Write the help commands to an output stream
@@ -142,7 +166,7 @@ private:
     mutable boost::mutex _mutexInterface; ///< internal mutex for protecting data from methods that might be access from any thread (those methods should be commented).
     InterfaceType __type; ///< \see GetInterfaceType
     boost::shared_ptr<void> __plugin; ///< handle to plugin that controls the executable code. As long as this plugin pointer is present, module will not be unloaded.
-    std::string __struri;             ///< \see GetURI
+    std::string __struri; ///< \see GetURI
     std::string __strpluginname; ///< the name of the plugin, necessary?
     std::string __strxmlid; ///< \see GetXMLId
     EnvironmentBasePtr __penv; ///< \see GetEnv

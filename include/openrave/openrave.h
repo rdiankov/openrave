@@ -16,7 +16,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /** \file openrave.h
     \brief  Defines the public headers that every plugin must include in order to use openrave properly.
-*/
+ */
 #ifndef OPENRAVE_H
 #define OPENRAVE_H
 
@@ -151,7 +151,8 @@ enum OpenRAVEErrorCode {
 class OPENRAVE_API openrave_exception : public std::exception
 {
 public:
-    openrave_exception() : std::exception(), _s("unknown exception"), _error(ORE_Failed) {}
+    openrave_exception() : std::exception(), _s("unknown exception"), _error(ORE_Failed) {
+    }
     openrave_exception(const std::string& s, OpenRAVEErrorCode error=ORE_Failed) : std::exception() {
         _error = error;
         _s = "openrave (";
@@ -171,10 +172,17 @@ public:
         _s += "): ";
         _s += s;
     }
-    virtual ~openrave_exception() throw() {}
-    char const* what() const throw() { return _s.c_str(); }
-    const std::string& message() const { return _s; }
-    OpenRAVEErrorCode GetCode() const { return _error; }
+    virtual ~openrave_exception() throw() {
+    }
+    char const* what() const throw() {
+        return _s.c_str();
+    }
+    const std::string& message() const {
+        return _s;
+    }
+    OpenRAVEErrorCode GetCode() const {
+        return _error;
+    }
 private:
     std::string _s;
     OpenRAVEErrorCode _error;
@@ -183,14 +191,14 @@ private:
 class OPENRAVE_LOCAL CaseInsensitiveCompare
 {
 public:
-    bool operator()(const std::string & s1, const std::string& s2) const
+    bool operator() (const std::string & s1, const std::string& s2) const
     {
         std::string::const_iterator it1=s1.begin();
         std::string::const_iterator it2=s2.begin();
 
         //has the end of at least one of the strings been reached?
         while ( (it1!=s1.end()) && (it2!=s2.end()) )  {
-            if(::toupper(*it1) != ::toupper(*it2)) { //letters differ?
+            if(::toupper(*it1) != ::toupper(*it2)) {     //letters differ?
                 // return -1 to indicate 'smaller than', 1 otherwise
                 return ::toupper(*it1) < ::toupper(*it2);
             }
@@ -198,7 +206,7 @@ public:
             ++it1;
             ++it2;
         }
-        std::size_t size1=s1.size(), size2=s2.size();// cache lengths
+        std::size_t size1=s1.size(), size2=s2.size();     // cache lengths
         //return -1,0 or 1 according to strings' lengths
         if (size1==size2) {
             return 0;
@@ -210,7 +218,7 @@ public:
 /// \brief base class for all user data
 class OPENRAVE_API UserData
 {
- public:
+public:
     virtual ~UserData() {}
 };
 typedef boost::shared_ptr<UserData> UserDataPtr;
@@ -334,11 +342,11 @@ inline const char* RaveGetSourceFilename(const char* pfilename)
 #ifdef _WIN32
 
 #define DefineRavePrintfW(LEVEL) \
-    inline int RavePrintfW##LEVEL(const wchar_t *fmt, ...) \
+    inline int RavePrintfW ## LEVEL(const wchar_t *fmt, ...) \
     { \
         /*ChangeTextColor (stdout, 0, OPENRAVECOLOR##LEVEL);*/ \
         va_list list; \
-	    va_start(list,fmt); \
+        va_start(list,fmt); \
         int r = vwprintf(OpenRAVE::RavePrintTransformString(fmt).c_str(), list); \
         va_end(list); \
         /*ResetTextColor (stdout);*/ \
@@ -346,9 +354,9 @@ inline const char* RaveGetSourceFilename(const char* pfilename)
     }
 
 #define DefineRavePrintfA(LEVEL) \
-    inline int RavePrintfA##LEVEL(const std::string& s) \
+    inline int RavePrintfA ## LEVEL(const std::string& s) \
     { \
-        if( s.size() == 0 || s[s.size()-1] != '\n' ) {  \
+        if((s.size() == 0)||(s[s.size()-1] != '\n')) {  \
             printf("%s\n", s.c_str()); \
         } \
         else { \
@@ -357,7 +365,7 @@ inline const char* RaveGetSourceFilename(const char* pfilename)
         return s.size(); \
     } \
     \
-    inline int RavePrintfA##LEVEL(const char *fmt, ...) \
+    inline int RavePrintfA ## LEVEL(const char *fmt, ...) \
     { \
         /*ChangeTextColor (stdout, 0, OPENRAVECOLOR##LEVEL);*/ \
         va_list list; \
@@ -371,7 +379,7 @@ inline const char* RaveGetSourceFilename(const char* pfilename)
 
 inline int RavePrintfA(const std::string& s, uint32_t level)
 {
-    if( s.size() == 0 || s[s.size()-1] != '\n' ) { // automatically add a new line
+    if((s.size() == 0)||(s[s.size()-1] != '\n')) { // automatically add a new line
         printf("%s\n", s.c_str());
     }
     else {
@@ -386,14 +394,14 @@ DefineRavePrintfA(_INFOLEVEL)
 #else
 
 #define DefineRavePrintfW(LEVEL) \
-    inline int RavePrintfW##LEVEL(const wchar_t *wfmt, ...) \
+    inline int RavePrintfW ## LEVEL(const wchar_t *wfmt, ...) \
     { \
         va_list list; \
         va_start(list,wfmt); \
         /* Allocate memory on the stack to avoid heap fragmentation */ \
         size_t allocsize = wcstombs(NULL, wfmt, 0)+32; \
         char* fmt = (char*)alloca(allocsize); \
-        strcpy(fmt, ChangeTextColor(0, OPENRAVECOLOR##LEVEL,8).c_str()); \
+        strcpy(fmt, ChangeTextColor(0, OPENRAVECOLOR ## LEVEL,8).c_str()); \
         snprintf(fmt+strlen(fmt),allocsize-16,"%S",wfmt); \
         strcat(fmt, ResetTextColor().c_str()); \
         int r = vprintf(fmt, list);        \
@@ -405,44 +413,44 @@ DefineRavePrintfA(_INFOLEVEL)
 // for programmers who want to use regular format strings without
 // the L in front, we will take their regular string and widen it
 // for them.
-    inline int RavePrintfA_INFOLEVEL(const std::string& s)
-    {
-        if( s.size() == 0 || s[s.size()-1] != '\n' ) { // automatically add a new line
-            printf("%s\n", s.c_str());
-        }
-        else {
-            printf ("%s", s.c_str());
-        }
-        return s.size();
+inline int RavePrintfA_INFOLEVEL(const std::string& s)
+{
+    if((s.size() == 0)||(s[s.size()-1] != '\n')) {     // automatically add a new line
+        printf("%s\n", s.c_str());
     }
+    else {
+        printf ("%s", s.c_str());
+    }
+    return s.size();
+}
 
-    inline int RavePrintfA_INFOLEVEL(const char *fmt, ...)
-    {
-        va_list list;
-	    va_start(list,fmt);
-        int r = vprintf(fmt, list);
-        va_end(list);
-        //if( fmt[0] != '\n' ) { printf("\n"); }
-        return r;
-    }
+inline int RavePrintfA_INFOLEVEL(const char *fmt, ...)
+{
+    va_list list;
+    va_start(list,fmt);
+    int r = vprintf(fmt, list);
+    va_end(list);
+    //if( fmt[0] != '\n' ) { printf("\n"); }
+    return r;
+}
 
 #define DefineRavePrintfA(LEVEL) \
-    inline int RavePrintfA##LEVEL(const std::string& s) \
+    inline int RavePrintfA ## LEVEL(const std::string& s) \
     { \
-        if( s.size() == 0 || s[s.size()-1] != '\n' ) { \
-            printf ("%c[0;%d;%dm%s%c[m\n", 0x1B, OPENRAVECOLOR##LEVEL + 30,8+40,s.c_str(),0x1B); \
+        if((s.size() == 0)||(s[s.size()-1] != '\n')) { \
+            printf ("%c[0;%d;%dm%s%c[m\n", 0x1B, OPENRAVECOLOR ## LEVEL + 30,8+40,s.c_str(),0x1B); \
         } \
         else { \
-            printf ("%c[0;%d;%dm%s%c[m", 0x1B, OPENRAVECOLOR##LEVEL + 30,8+40,s.c_str(),0x1B); \
+            printf ("%c[0;%d;%dm%s%c[m", 0x1B, OPENRAVECOLOR ## LEVEL + 30,8+40,s.c_str(),0x1B); \
         } \
         return s.size(); \
     } \
     \
-    inline int RavePrintfA##LEVEL(const char *fmt, ...) \
+    inline int RavePrintfA ## LEVEL(const char *fmt, ...) \
     { \
         va_list list; \
-	    va_start(list,fmt); \
-        int r = vprintf((ChangeTextColor(0, OPENRAVECOLOR##LEVEL,8) + std::string(fmt) + ResetTextColor()).c_str(), list); \
+        va_start(list,fmt); \
+        int r = vprintf((ChangeTextColor(0, OPENRAVECOLOR ## LEVEL,8) + std::string(fmt) + ResetTextColor()).c_str(), list); \
         va_end(list); \
         /*if( fmt[0] != '\n' ) { printf("\n"); } */ \
         return r; \
@@ -458,7 +466,7 @@ inline int RavePrintfA(const std::string& s, uint32_t level)
         case Level_Error: color = OPENRAVECOLOR_ERRORLEVEL; break;
         case Level_Warn: color = OPENRAVECOLOR_WARNLEVEL; break;
         case Level_Info: // print regular
-            if( s.size() == 0 || s[s.size()-1] != '\n' ) { // automatically add a new line
+            if((s.size() == 0)||(s[s.size()-1] != '\n')) { // automatically add a new line
                 printf ("%s\n",s.c_str());
             }
             else {
@@ -468,7 +476,7 @@ inline int RavePrintfA(const std::string& s, uint32_t level)
         case Level_Debug: color = OPENRAVECOLOR_DEBUGLEVEL; break;
         case Level_Verbose: color = OPENRAVECOLOR_VERBOSELEVEL; break;
         }
-        if( s.size() == 0 || s[s.size()-1] != '\n' ) { // automatically add a new line
+        if((s.size() == 0)||(s[s.size()-1] != '\n')) { // automatically add a new line
             printf ("%c[0;%d;%dm%s%c[0;38;48m\n", 0x1B, color + 30,8+40,s.c_str(),0x1B);
         }
         else {
@@ -495,12 +503,12 @@ DefineRavePrintfA(_WARNLEVEL)
 DefineRavePrintfA(_DEBUGLEVEL)
 DefineRavePrintfA(_VERBOSELEVEL)
 
-#define RAVEPRINTHEADER(LEVEL) OpenRAVE::RavePrintfA##LEVEL("[%s:%d] ", OpenRAVE::RaveGetSourceFilename(__FILE__), __LINE__)
+#define RAVEPRINTHEADER(LEVEL) OpenRAVE::RavePrintfA ## LEVEL("[%s:%d] ", OpenRAVE::RaveGetSourceFilename(__FILE__), __LINE__)
 
 // different logging levels. The higher the suffix number, the less important the information is.
 // 0 log level logs all the time. OpenRAVE starts up with a log level of 0.
-#define RAVELOG_LEVELW(LEVEL,level) (OpenRAVE::RaveGetDebugLevel()&OpenRAVE::Level_OutputMask)>=(level)&&(RAVEPRINTHEADER(LEVEL)>0)&&OpenRAVE::RavePrintfW##LEVEL
-#define RAVELOG_LEVELA(LEVEL,level) (OpenRAVE::RaveGetDebugLevel()&OpenRAVE::Level_OutputMask)>=(level)&&(RAVEPRINTHEADER(LEVEL)>0)&&OpenRAVE::RavePrintfA##LEVEL
+#define RAVELOG_LEVELW(LEVEL,level) (OpenRAVE::RaveGetDebugLevel()&OpenRAVE::Level_OutputMask)>=(level)&&(RAVEPRINTHEADER(LEVEL)>0)&&OpenRAVE::RavePrintfW ## LEVEL
+#define RAVELOG_LEVELA(LEVEL,level) (OpenRAVE::RaveGetDebugLevel()&OpenRAVE::Level_OutputMask)>=(level)&&(RAVEPRINTHEADER(LEVEL)>0)&&OpenRAVE::RavePrintfA ## LEVEL
 
 // define log4cxx equivalents (eventually OpenRAVE will move to log4cxx logging)
 #define RAVELOG_FATALW RAVELOG_LEVELW(_FATALLEVEL,OpenRAVE::Level_Fatal)
@@ -524,10 +532,10 @@ DefineRavePrintfA(_VERBOSELEVEL)
 
 #define IS_DEBUGLEVEL(level) ((OpenRAVE::RaveGetDebugLevel()&OpenRAVE::Level_OutputMask)>=(level))
 
-#define OPENRAVE_EXCEPTION_FORMAT0(s, errorcode) OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] "s)%(__PRETTY_FUNCTION__)%(__LINE__)),errorcode)
+#define OPENRAVE_EXCEPTION_FORMAT0(s, errorcode) OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] " s)%(__PRETTY_FUNCTION__)%(__LINE__)),errorcode)
 
 /// adds the function name and line number to an openrave exception
-#define OPENRAVE_EXCEPTION_FORMAT(s, args,errorcode) OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] "s)%(__PRETTY_FUNCTION__)%(__LINE__)%args),errorcode)
+#define OPENRAVE_EXCEPTION_FORMAT(s, args,errorcode) OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] " s)%(__PRETTY_FUNCTION__)%(__LINE__)%args),errorcode)
 
 #define OPENRAVE_DUMMY_IMPLEMENTATION { throw OPENRAVE_EXCEPTION_FORMAT0("not implemented",ORE_NotImplemented); }
 
@@ -547,7 +555,7 @@ enum InterfaceType
     PT_Sensor=9, ///< describes \ref SensorBase
     PT_CollisionChecker=10, ///< describes \ref CollisionCheckerBase
     PT_Trajectory=11, ///< describes \ref TrajectoryBase
-    PT_Viewer=12,///< describes \ref ViewerBase
+    PT_Viewer=12, ///< describes \ref ViewerBase
     PT_SpaceSampler=13, ///< describes \ref SamplerBase
     PT_NumberOfInterfaces=13 ///< number of interfaces, do not forget to update
 };
@@ -631,9 +639,12 @@ enum CloningOptions {
 class OPENRAVE_API XMLReadable
 {
 public:
-    XMLReadable(const std::string& xmlid) : __xmlid(xmlid) {}
-	virtual ~XMLReadable() {}
-    virtual const std::string& GetXMLId() const { return __xmlid; }
+    XMLReadable(const std::string& xmlid) : __xmlid(xmlid) {
+    }
+    virtual ~XMLReadable() {}
+    virtual const std::string& GetXMLId() const {
+        return __xmlid;
+    }
 private:
     std::string __xmlid;
 };
@@ -652,16 +663,19 @@ class OPENRAVE_API BaseXMLReader : public boost::enable_shared_from_this<BaseXML
 public:
     enum ProcessElement
     {
-        PE_Pass=0, ///< current tag was not supported, so pass onto another class
-        PE_Support=1, ///< current tag will be processed by this class
-        PE_Ignore=2, ///< current tag and all its children should be ignored
+        PE_Pass=0,     ///< current tag was not supported, so pass onto another class
+        PE_Support=1,     ///< current tag will be processed by this class
+        PE_Ignore=2,     ///< current tag and all its children should be ignored
     };
-    BaseXMLReader() {}
+    BaseXMLReader() {
+    }
     virtual ~BaseXMLReader() {}
 
     /// a readable interface that stores the information processsed for the current tag
     /// This pointer is used to the InterfaceBase class registered readers
-    virtual XMLReadablePtr GetReadable() { return XMLReadablePtr(); }
+    virtual XMLReadablePtr GetReadable() {
+        return XMLReadablePtr();
+    }
 
     /// Gets called in the beginning of each "<type>" expression. In this case, name is "type"
     /// \param name of the tag, will be always lower case
@@ -695,11 +709,13 @@ public:
     virtual ProcessElement startElement(const std::string& name, const AttributesList& atts);
     virtual bool endElement(const std::string& name);
     virtual void characters(const std::string& ch);
-    const std::string& GetFieldName() const { return _fieldname; }
+    const std::string& GetFieldName() const {
+        return _fieldname;
+    }
 private:
-    std::string _parentname; /// XML filename
+    std::string _parentname;     /// XML filename
     std::string _fieldname;
-    boost::shared_ptr<std::ostream> _osrecord; ///< used to store the xml data
+    boost::shared_ptr<std::ostream> _osrecord;     ///< used to store the xml data
     boost::shared_ptr<BaseXMLReader> _pcurreader;
 };
 
@@ -724,42 +740,42 @@ private:
 #include <openrave/mathextra.h>
 
 namespace OpenRAVE {
-    using geometry::RaveVector;
-    using geometry::RaveTransform;
-    using geometry::RaveTransformMatrix;
-    typedef RaveVector<dReal> Vector;
-    typedef RaveTransform<dReal> Transform;
-    typedef boost::shared_ptr< RaveTransform<dReal> > TransformPtr;
-    typedef boost::shared_ptr< RaveTransform<dReal> const > TransformConstPtr;
-    typedef RaveTransformMatrix<dReal> TransformMatrix;
-    typedef boost::shared_ptr< RaveTransformMatrix<dReal> > TransformMatrixPtr;
-    typedef boost::shared_ptr< RaveTransformMatrix<dReal> const > TransformMatrixConstPtr;
-    typedef geometry::obb<dReal> OBB;
-    typedef geometry::aabb<dReal> AABB;
-    typedef geometry::ray<dReal> RAY;
+using geometry::RaveVector;
+using geometry::RaveTransform;
+using geometry::RaveTransformMatrix;
+typedef RaveVector<dReal> Vector;
+typedef RaveTransform<dReal> Transform;
+typedef boost::shared_ptr< RaveTransform<dReal> > TransformPtr;
+typedef boost::shared_ptr< RaveTransform<dReal> const > TransformConstPtr;
+typedef RaveTransformMatrix<dReal> TransformMatrix;
+typedef boost::shared_ptr< RaveTransformMatrix<dReal> > TransformMatrixPtr;
+typedef boost::shared_ptr< RaveTransformMatrix<dReal> const > TransformMatrixConstPtr;
+typedef geometry::obb<dReal> OBB;
+typedef geometry::aabb<dReal> AABB;
+typedef geometry::ray<dReal> RAY;
 
-    // for compatibility
-    //@{
-    using mathextra::dot2;
-    using mathextra::dot3;
-    using mathextra::dot4;
-    using mathextra::normalize2;
-    using mathextra::normalize3;
-    using mathextra::normalize4;
-    using mathextra::cross3;
-    using mathextra::inv3;
-    using mathextra::inv4;
-    using mathextra::lengthsqr2;
-    using mathextra::lengthsqr3;
-    using mathextra::lengthsqr4;
-    using mathextra::mult4;
-    //@}
+// for compatibility
+//@{
+using mathextra::dot2;
+using mathextra::dot3;
+using mathextra::dot4;
+using mathextra::normalize2;
+using mathextra::normalize3;
+using mathextra::normalize4;
+using mathextra::cross3;
+using mathextra::inv3;
+using mathextra::inv4;
+using mathextra::lengthsqr2;
+using mathextra::lengthsqr3;
+using mathextra::lengthsqr4;
+using mathextra::mult4;
+//@}
 
 /** \brief Parameterization of basic primitives for querying inverse-kinematics solutions.
 
     Holds the parameterization of a geometric primitive useful for autonomous manipulation scenarios like:
     6D pose, 3D translation, 3D rotation, 3D look at direction, and ray look at direction.
-*/
+ */
 class OPENRAVE_API IkParameterization
 {
 public:
@@ -770,26 +786,31 @@ public:
     /// The lower bits contain a unique id of the type.
     enum Type {
         Type_None=0,
-        Type_Transform6D=0x67000001, ///< end effector reaches desired 6D transformation
-        Type_Rotation3D=0x34000002, ///< end effector reaches desired 3D rotation
-        Type_Translation3D=0x33000003, ///< end effector origin reaches desired 3D translation
-        Type_Direction3D=0x23000004, ///< direction on end effector coordinate system reaches desired direction
-        Type_Ray4D=0x46000005, ///< ray on end effector coordinate system reaches desired global ray
-        Type_Lookat3D=0x23000006, ///< direction on end effector coordinate system points to desired 3D position
-        Type_TranslationDirection5D=0x56000007, ///< end effector origin and direction reaches desired 3D translation and direction. Can be thought of as Ray IK where the origin of the ray must coincide.
-        Type_TranslationXY2D=0x22000008, ///< 2D translation along XY plane
-        Type_TranslationXYOrientation3D=0x33000009, ///< 2D translation along XY plane and 1D rotation around Z axis. The offset of the rotation is measured starting at +X, so at +X is it 0, at +Y it is pi/2.
-        Type_TranslationLocalGlobal6D=0x3600000a, ///< local point on end effector origin reaches desired 3D global point
-        Type_NumberOfParameterizations=10, ///< number of parameterizations (does not count Type_None)
+        Type_Transform6D=0x67000001,     ///< end effector reaches desired 6D transformation
+        Type_Rotation3D=0x34000002,     ///< end effector reaches desired 3D rotation
+        Type_Translation3D=0x33000003,     ///< end effector origin reaches desired 3D translation
+        Type_Direction3D=0x23000004,     ///< direction on end effector coordinate system reaches desired direction
+        Type_Ray4D=0x46000005,     ///< ray on end effector coordinate system reaches desired global ray
+        Type_Lookat3D=0x23000006,     ///< direction on end effector coordinate system points to desired 3D position
+        Type_TranslationDirection5D=0x56000007,     ///< end effector origin and direction reaches desired 3D translation and direction. Can be thought of as Ray IK where the origin of the ray must coincide.
+        Type_TranslationXY2D=0x22000008,     ///< 2D translation along XY plane
+        Type_TranslationXYOrientation3D=0x33000009,     ///< 2D translation along XY plane and 1D rotation around Z axis. The offset of the rotation is measured starting at +X, so at +X is it 0, at +Y it is pi/2.
+        Type_TranslationLocalGlobal6D=0x3600000a,     ///< local point on end effector origin reaches desired 3D global point
+        Type_NumberOfParameterizations=10,     ///< number of parameterizations (does not count Type_None)
     };
 
-    IkParameterization() : _type(Type_None) {}
+    IkParameterization() : _type(Type_None) {
+    }
     /// \brief sets a 6D transform parameterization
-    IkParameterization(const Transform& t) { SetTransform6D(t); }
+    IkParameterization(const Transform &t) {
+        SetTransform6D(t);
+    }
     /// \brief sets a ray parameterization
-    IkParameterization(const RAY& r) { SetRay4D(r); }
+    IkParameterization(const RAY &r) {
+        SetRay4D(r);
+    }
     /// \brief set a custom parameterization using a transform as the source of the data. Not all types are supported with this method.
-    IkParameterization(const Transform& t, Type type) {
+    IkParameterization(const Transform &t, Type type) {
         _type=type;
         switch(_type) {
         case Type_Transform6D: SetTransform6D(t); break;
@@ -801,67 +822,149 @@ public:
         }
     }
 
-    inline Type GetType() const { return _type; }
+    inline Type GetType() const {
+        return _type;
+    }
     inline const std::string& GetName() const;
 
     /// \brief Returns the minimum degree of freedoms required for the IK type.
-    static int GetDOF(Type type) { return (type>>28)&0xf; }
+    static int GetDOF(Type type) {
+        return (type>>28)&0xf;
+    }
     /// \brief Returns the minimum degree of freedoms required for the IK type.
-    inline int GetDOF() const { return (_type>>28)&0xf; }
+    inline int GetDOF() const {
+        return (_type>>28)&0xf;
+    }
 
     /// \brief Returns the number of values used to represent the parameterization ( >= dof ). The number of values serialized is this number plus 1 for the iktype.
-    static int GetNumberOfValues(Type type) { return (type>>24)&0xf; }
+    static int GetNumberOfValues(Type type) {
+        return (type>>24)&0xf;
+    }
     /// \brief Returns the number of values used to represent the parameterization ( >= dof ). The number of values serialized is this number plus 1 for the iktype.
-    inline int GetNumberOfValues() const { return (_type>>24)&0xf; }
+    inline int GetNumberOfValues() const {
+        return (_type>>24)&0xf;
+    }
 
-    inline void SetTransform6D(const Transform& t) { _type = Type_Transform6D; _transform = t; }
-    inline void SetRotation3D(const Vector& quaternion) { _type = Type_Rotation3D; _transform.rot = quaternion; }
-    inline void SetTranslation3D(const Vector& trans) { _type = Type_Translation3D; _transform.trans = trans; }
-    inline void SetDirection3D(const Vector& dir) { _type = Type_Direction3D; _transform.rot = dir; }
-    inline void SetRay4D(const RAY& ray) { _type = Type_Ray4D; _transform.trans = ray.pos; _transform.rot = ray.dir; }
-    inline void SetLookat3D(const Vector& trans) { _type = Type_Lookat3D; _transform.trans = trans; }
+    inline void SetTransform6D(const Transform& t) {
+        _type = Type_Transform6D; _transform = t;
+    }
+    inline void SetRotation3D(const Vector& quaternion) {
+        _type = Type_Rotation3D; _transform.rot = quaternion;
+    }
+    inline void SetTranslation3D(const Vector& trans) {
+        _type = Type_Translation3D; _transform.trans = trans;
+    }
+    inline void SetDirection3D(const Vector& dir) {
+        _type = Type_Direction3D; _transform.rot = dir;
+    }
+    inline void SetRay4D(const RAY& ray) {
+        _type = Type_Ray4D; _transform.trans = ray.pos; _transform.rot = ray.dir;
+    }
+    inline void SetLookat3D(const Vector& trans) {
+        _type = Type_Lookat3D; _transform.trans = trans;
+    }
     /// \brief the ray direction is not used for IK, however it is needed in order to compute the error
-    inline void SetLookat3D(const RAY& ray) { _type = Type_Lookat3D; _transform.trans = ray.pos; _transform.rot = ray.dir; }
-    inline void SetTranslationDirection5D(const RAY& ray) { _type = Type_TranslationDirection5D; _transform.trans = ray.pos; _transform.rot = ray.dir; }
-    inline void SetTranslationXY2D(const Vector& trans) { _type = Type_TranslationXY2D; _transform.trans.x = trans.x; _transform.trans.y = trans.y; _transform.trans.z = 0; _transform.trans.w = 0; }
-    inline void SetTranslationXYOrientation3D(const Vector& trans) { _type = Type_TranslationXYOrientation3D; _transform.trans.x = trans.x; _transform.trans.y = trans.y; _transform.trans.z = trans.z; _transform.trans.w = 0; }
-    inline void SetTranslationLocalGlobal6D(const Vector& localtrans, const Vector& trans) { _type = Type_TranslationLocalGlobal6D; _transform.rot.x = localtrans.x; _transform.rot.y = localtrans.y; _transform.rot.z = localtrans.z; _transform.rot.w = 0; _transform.trans.x = trans.x; _transform.trans.y = trans.y; _transform.trans.z = trans.z; _transform.trans.w = 0; }
+    inline void SetLookat3D(const RAY& ray) {
+        _type = Type_Lookat3D; _transform.trans = ray.pos; _transform.rot = ray.dir;
+    }
+    inline void SetTranslationDirection5D(const RAY& ray) {
+        _type = Type_TranslationDirection5D; _transform.trans = ray.pos; _transform.rot = ray.dir;
+    }
+    inline void SetTranslationXY2D(const Vector& trans) {
+        _type = Type_TranslationXY2D; _transform.trans.x = trans.x; _transform.trans.y = trans.y; _transform.trans.z = 0; _transform.trans.w = 0;
+    }
+    inline void SetTranslationXYOrientation3D(const Vector& trans) {
+        _type = Type_TranslationXYOrientation3D; _transform.trans.x = trans.x; _transform.trans.y = trans.y; _transform.trans.z = trans.z; _transform.trans.w = 0;
+    }
+    inline void SetTranslationLocalGlobal6D(const Vector& localtrans, const Vector& trans) {
+        _type = Type_TranslationLocalGlobal6D; _transform.rot.x = localtrans.x; _transform.rot.y = localtrans.y; _transform.rot.z = localtrans.z; _transform.rot.w = 0; _transform.trans.x = trans.x; _transform.trans.y = trans.y; _transform.trans.z = trans.z; _transform.trans.w = 0;
+    }
 
-    inline const Transform& GetTransform6D() const { return _transform; }
-    inline const Vector& GetRotation3D() const { return _transform.rot; }
-    inline const Vector& GetTranslation3D() const { return _transform.trans; }
-    inline const Vector& GetDirection3D() const { return _transform.rot; }
-    inline const RAY GetRay4D() const { return RAY(_transform.trans,_transform.rot); }
-    inline const Vector& GetLookat3D() const { return _transform.trans; }
-    inline const Vector& GetLookat3DDirection() const { return _transform.rot; }
-    inline const RAY GetTranslationDirection5D() const { return RAY(_transform.trans,_transform.rot); }
-    inline const Vector& GetTranslationXY2D() const { return _transform.trans; }
-    inline const Vector& GetTranslationXYOrientation3D() const { return _transform.trans; }
-    inline std::pair<Vector,Vector> GetTranslationLocalGlobal6D() const { return std::make_pair(_transform.rot,_transform.trans); }
+    inline const Transform& GetTransform6D() const {
+        return _transform;
+    }
+    inline const Vector& GetRotation3D() const {
+        return _transform.rot;
+    }
+    inline const Vector& GetTranslation3D() const {
+        return _transform.trans;
+    }
+    inline const Vector& GetDirection3D() const {
+        return _transform.rot;
+    }
+    inline const RAY GetRay4D() const {
+        return RAY(_transform.trans,_transform.rot);
+    }
+    inline const Vector& GetLookat3D() const {
+        return _transform.trans;
+    }
+    inline const Vector& GetLookat3DDirection() const {
+        return _transform.rot;
+    }
+    inline const RAY GetTranslationDirection5D() const {
+        return RAY(_transform.trans,_transform.rot);
+    }
+    inline const Vector& GetTranslationXY2D() const {
+        return _transform.trans;
+    }
+    inline const Vector& GetTranslationXYOrientation3D() const {
+        return _transform.trans;
+    }
+    inline std::pair<Vector,Vector> GetTranslationLocalGlobal6D() const {
+        return std::make_pair(_transform.rot,_transform.trans);
+    }
 
     /// \deprecated (11/02/15)
     //@{
-    inline void SetTransform(const Transform& t) RAVE_DEPRECATED { SetTransform6D(t); }
-    inline void SetRotation(const Vector& quaternion) RAVE_DEPRECATED { SetRotation3D(quaternion); }
-    inline void SetTranslation(const Vector& trans) RAVE_DEPRECATED { SetTranslation3D(trans); }
-    inline void SetDirection(const Vector& dir) RAVE_DEPRECATED { SetDirection3D(dir); }
-    inline void SetRay(const RAY& ray) RAVE_DEPRECATED { SetRay4D(ray); }
-    inline void SetLookat(const Vector& trans) RAVE_DEPRECATED { SetLookat3D(trans); }
-    inline void SetTranslationDirection(const RAY& ray) RAVE_DEPRECATED { SetTranslationDirection5D(ray); }
-    inline const Transform& GetTransform() const RAVE_DEPRECATED { return _transform; }
-    inline const Vector& GetRotation() const RAVE_DEPRECATED { return _transform.rot; }
-    inline const Vector& GetTranslation() const RAVE_DEPRECATED { return _transform.trans; }
-    inline const Vector& GetDirection() const RAVE_DEPRECATED { return _transform.rot; }
-    inline const Vector& GetLookat() const RAVE_DEPRECATED { return _transform.trans; }
-    inline const RAY GetRay() const RAVE_DEPRECATED { return RAY(_transform.trans,_transform.rot); }
-    inline const RAY GetTranslationDirection() const RAVE_DEPRECATED { return RAY(_transform.trans,_transform.rot); }
+    inline void SetTransform(const Transform& t) RAVE_DEPRECATED {
+        SetTransform6D(t);
+    }
+    inline void SetRotation(const Vector& quaternion) RAVE_DEPRECATED {
+        SetRotation3D(quaternion);
+    }
+    inline void SetTranslation(const Vector& trans) RAVE_DEPRECATED {
+        SetTranslation3D(trans);
+    }
+    inline void SetDirection(const Vector& dir) RAVE_DEPRECATED {
+        SetDirection3D(dir);
+    }
+    inline void SetRay(const RAY& ray) RAVE_DEPRECATED {
+        SetRay4D(ray);
+    }
+    inline void SetLookat(const Vector& trans) RAVE_DEPRECATED {
+        SetLookat3D(trans);
+    }
+    inline void SetTranslationDirection(const RAY& ray) RAVE_DEPRECATED {
+        SetTranslationDirection5D(ray);
+    }
+    inline const Transform& GetTransform() const RAVE_DEPRECATED {
+        return _transform;
+    }
+    inline const Vector& GetRotation() const RAVE_DEPRECATED {
+        return _transform.rot;
+    }
+    inline const Vector& GetTranslation() const RAVE_DEPRECATED {
+        return _transform.trans;
+    }
+    inline const Vector& GetDirection() const RAVE_DEPRECATED {
+        return _transform.rot;
+    }
+    inline const Vector& GetLookat() const RAVE_DEPRECATED {
+        return _transform.trans;
+    }
+    inline const RAY GetRay() const RAVE_DEPRECATED {
+        return RAY(_transform.trans,_transform.rot);
+    }
+    inline const RAY GetTranslationDirection() const RAVE_DEPRECATED {
+        return RAY(_transform.trans,_transform.rot);
+    }
     //@}
 
 
     /// \brief Computes the distance squared between two IK parmaeterizations.
     inline dReal ComputeDistanceSqr(const IkParameterization& ikparam) const
     {
-        const dReal anglemult = 0.4; // this is a hack that should be removed....
+        const dReal anglemult = 0.4;     // this is a hack that should be removed....
         BOOST_ASSERT(_type==ikparam.GetType());
         switch(_type) {
         case IkParameterization::Type_Transform6D: {
@@ -892,7 +995,7 @@ public:
         case IkParameterization::Type_Lookat3D: {
             Vector v = GetLookat3D()-ikparam.GetLookat3D();
             dReal s = v.dot3(ikparam.GetLookat3DDirection());
-            if( s >= -1 ) { // ikparam's lookat is always 1 beyond the origin, this is just the convention for testing...
+            if( s >= -1 ) {     // ikparam's lookat is always 1 beyond the origin, this is just the convention for testing...
                 v -= s*ikparam.GetLookat3DDirection();
             }
             return v.lengthsqr3();
@@ -935,12 +1038,12 @@ protected:
     Transform _transform;
     Type _type;
 
-    friend IkParameterization operator* (const Transform& t, const IkParameterization& ikparam);
-    friend std::ostream& operator<<(std::ostream& O, const IkParameterization& ikparam);
+    friend IkParameterization operator* (const Transform &t, const IkParameterization &ikparam);
+    friend std::ostream& operator<<(std::ostream& O, const IkParameterization &ikparam);
     friend std::istream& operator>>(std::istream& I, IkParameterization& ikparam);
 };
 
-inline IkParameterization operator* (const Transform& t, const IkParameterization& ikparam)
+inline IkParameterization operator* (const Transform &t, const IkParameterization &ikparam)
 {
     IkParameterization local;
     switch(ikparam.GetType()) {
@@ -985,7 +1088,7 @@ inline IkParameterization operator* (const Transform& t, const IkParameterizatio
     return local;
 }
 
-inline std::ostream& operator<<(std::ostream& O, const IkParameterization& ikparam)
+inline std::ostream& operator<<(std::ostream& O, const IkParameterization &ikparam)
 {
     O << ikparam._type << " ";
     switch(ikparam._type) {
@@ -1052,7 +1155,7 @@ inline std::istream& operator>>(std::istream& I, IkParameterization& ikparam)
     case IkParameterization::Type_Lookat3D: { Vector v; I >> v.x >> v.y >> v.z; ikparam.SetLookat3D(v); break; }
     case IkParameterization::Type_TranslationDirection5D: { RAY r; I >> r; ikparam.SetTranslationDirection5D(r); break; }
     case IkParameterization::Type_TranslationXY2D: { Vector v; I >> v.y >> v.y; ikparam.SetTranslationXY2D(v); break; }
-      case IkParameterization::Type_TranslationXYOrientation3D: { Vector v; I >> v.y >> v.y >> v.z; ikparam.SetTranslationXYOrientation3D(v); break; }
+    case IkParameterization::Type_TranslationXYOrientation3D: { Vector v; I >> v.y >> v.y >> v.z; ikparam.SetTranslationXYOrientation3D(v); break; }
     case IkParameterization::Type_TranslationLocalGlobal6D: { Vector localtrans, trans; I >> localtrans.x >> localtrans.y >> localtrans.z >> trans.x >> trans.y >> trans.z; ikparam.SetTranslationLocalGlobal6D(localtrans,trans); break; }
     default: throw openrave_exception(str(boost::format("does not support parameterization %d")%ikparam.GetType()));
     }
@@ -1117,7 +1220,7 @@ inline boost::shared_ptr<T> RaveInterfaceCast(InterfaceBasePtr pinterface)
             return boost::static_pointer_cast<T>(pinterface);
         }
         // encode special cases
-        if( pinterface->GetInterfaceType() == PT_Robot && T::GetInterfaceTypeStatic() == PT_KinBody ) {
+        if((pinterface->GetInterfaceType() == PT_Robot)&&(T::GetInterfaceTypeStatic() == PT_KinBody)) {
             return boost::static_pointer_cast<T>(pinterface);
         }
     }
@@ -1134,7 +1237,7 @@ inline boost::shared_ptr<T const> RaveInterfaceConstCast(InterfaceBaseConstPtr p
             return boost::static_pointer_cast<T const>(pinterface);
         }
         // encode special cases
-        if( pinterface->GetInterfaceType() == PT_Robot && T::GetInterfaceTypeStatic() == PT_KinBody ) {
+        if((pinterface->GetInterfaceType() == PT_Robot)&&(T::GetInterfaceTypeStatic() == PT_KinBody)) {
             return boost::static_pointer_cast<T const>(pinterface);
         }
     }
@@ -1223,7 +1326,7 @@ OPENRAVE_API SensorBasePtr RaveCreateSensor(EnvironmentBasePtr penv, const std::
 OPENRAVE_API CollisionCheckerBasePtr RaveCreateCollisionChecker(EnvironmentBasePtr penv, const std::string& name);
 OPENRAVE_API ViewerBasePtr RaveCreateViewer(EnvironmentBasePtr penv, const std::string& name);
 OPENRAVE_API SpaceSamplerBasePtr RaveCreateSpaceSampler(EnvironmentBasePtr penv, const std::string& name);
-OPENRAVE_API  KinBodyPtr RaveCreateKinBody(EnvironmentBasePtr penv, const std::string& name="");
+OPENRAVE_API KinBodyPtr RaveCreateKinBody(EnvironmentBasePtr penv, const std::string& name="");
 /// \brief Return an empty trajectory instance initialized to nDOF degrees of freedom. Will be deprecated soon
 OPENRAVE_API TrajectoryBasePtr RaveCreateTrajectory(EnvironmentBasePtr penv, int nDOF);
 /// \brief Return an empty trajectory instance.
@@ -1248,7 +1351,7 @@ OPENRAVE_API boost::shared_ptr<void> RaveRegisterInterface(InterfaceType type, c
     \param xmltag the tag specified in xmltag is seen in the interface, the the custom reader will be created.
     \param fn CreateXMLReaderFn(pinterface,atts) - passed in the pointer to the interface where the tag was seen along with the list of attributes
     \return a pointer holding the registration, releasing the pointer will unregister the XML reader
-*/
+ */
 OPENRAVE_API boost::shared_ptr<void> RaveRegisterXMLReader(InterfaceType type, const std::string& xmltag, const CreateXMLReaderFn& fn);
 
 /// \brief return the environment's unique id, returns 0 if environment could not be found or not registered
@@ -1291,7 +1394,7 @@ inline bool RaveParseDirectories(const char* pdirs, std::vector<std::string>& vd
 #ifdef _WIN32
         newpos = tmp.find(';', pos);
 #else
-		newpos = tmp.find(':', pos);
+        newpos = tmp.find(':', pos);
 #endif
         std::string::size_type n = newpos == std::string::npos ? tmp.size()-pos : (newpos-pos);
         vdirs.push_back(tmp.substr(pos, n));

@@ -14,10 +14,10 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /*! --------------------------------------------------------------------
-\file   ravep.h
-\brief  Defines the private headers that every source file used to
-build openrave must include (used in place of rave.h). Precompiled header.
--------------------------------------------------------------------- */
+   \file   ravep.h
+   \brief  Defines the private headers that every source file used to
+   build openrave must include (used in place of rave.h). Precompiled header.
+   -------------------------------------------------------------------- */
 
 #ifndef RAVE_LIBOPENRAVE_H
 #define RAVE_LIBOPENRAVE_H
@@ -33,11 +33,11 @@ build openrave must include (used in place of rave.h). Precompiled header.
 #include <boost/typeof/std/set.hpp>
 #include <boost/typeof/std/string.hpp>
 
-#define FOREACH(it, v) for(BOOST_TYPEOF(v)::iterator it = (v).begin(); it != (v).end(); ++(it))
-#define FOREACH_NOINC(it, v) for(BOOST_TYPEOF(v)::iterator it = (v).begin(); it != (v).end(); )
+#define FOREACH(it, v) for(BOOST_TYPEOF(v) ::iterator it = (v).begin(); it != (v).end(); ++(it))
+#define FOREACH_NOINC(it, v) for(BOOST_TYPEOF(v) ::iterator it = (v).begin(); it != (v).end(); )
 
-#define FOREACHC(it, v) for(BOOST_TYPEOF(v)::const_iterator it = (v).begin(); it != (v).end(); ++(it))
-#define FOREACHC_NOINC(it, v) for(BOOST_TYPEOF(v)::const_iterator it = (v).begin(); it != (v).end(); )
+#define FOREACHC(it, v) for(BOOST_TYPEOF(v) ::const_iterator it = (v).begin(); it != (v).end(); ++(it))
+#define FOREACHC_NOINC(it, v) for(BOOST_TYPEOF(v) ::const_iterator it = (v).begin(); it != (v).end(); )
 #define RAVE_REGISTER_BOOST
 
 #else
@@ -49,8 +49,8 @@ build openrave must include (used in place of rave.h). Precompiled header.
 #include <string>
 #include <algorithm>
 
-#define FOREACH(it, v) for(typeof((v).begin()) it = (v).begin(); it != (v).end(); (it)++)
-#define FOREACH_NOINC(it, v) for(typeof((v).begin()) it = (v).begin(); it != (v).end(); )
+#define FOREACH(it, v) for(typeof((v).begin())it = (v).begin(); it != (v).end(); (it)++)
+#define FOREACH_NOINC(it, v) for(typeof((v).begin())it = (v).begin(); it != (v).end(); )
 
 #define FOREACHC FOREACH
 #define FOREACHC_NOINC FOREACH_NOINC
@@ -171,9 +171,15 @@ template <typename T>
 class TransformSaver
 {
 public:
-    TransformSaver(T plink) : _plink(plink) { _t = _plink->GetTransform(); }
-    ~TransformSaver() { _plink->SetTransform(_t); }
-    const Transform& GetTransform() { return _t; }
+    TransformSaver(T plink) : _plink(plink) {
+        _t = _plink->GetTransform();
+    }
+    ~TransformSaver() {
+        _plink->SetTransform(_t);
+    }
+    const Transform& GetTransform() {
+        return _t;
+    }
 private:
     T _plink;
     Transform _t;
@@ -181,7 +187,8 @@ private:
 
 struct null_deleter
 {
-    void operator()(void const *) const {}
+    void operator()(void const *) const {
+    }
 };
 
 template <class T> boost::shared_ptr<T> sptr_from(boost::weak_ptr<T> const& wpt)
@@ -190,7 +197,7 @@ template <class T> boost::shared_ptr<T> sptr_from(boost::weak_ptr<T> const& wpt)
 }
 
 
-// returns a lower case version of the string 
+// returns a lower case version of the string
 inline std::string tolowerstring(const std::string & s)
 {
     std::string d = s;
@@ -290,7 +297,9 @@ inline static dReal TransformDistanceFast(const Transform& t1, const Transform& 
 void subtractstates(std::vector<dReal>& q1, const std::vector<dReal>& q2);
 
 // if modifying check modify ravep.h too!
-inline bool IsValidCharInName(char c) { return isalnum(c) || c == '_' || c == '-' || c == '.' || c == '/'; }
+inline bool IsValidCharInName(char c) {
+    return isalnum(c) || c == '_' || c == '-' || c == '.' || c == '/';
+}
 inline bool IsValidName(const std::string& s) {
     if( s.size() == 0 )
         return false;
@@ -300,7 +309,8 @@ inline bool IsValidName(const std::string& s) {
 template<typename T>
 struct index_cmp
 {
-    index_cmp(const T arr) : arr(arr) {}
+    index_cmp(const T arr) : arr(arr) {
+    }
     bool operator()(const size_t a, const size_t b) const
     {
         return arr[a] < arr[b];
@@ -315,7 +325,7 @@ private:
     P p_;
     boost::function<void(void const*)> _deleterfn;
 public:
-smart_pointer_deleter(P const & p, const boost::function<void(void const*)>& deleterfn): p_(p), _deleterfn(deleterfn)
+    smart_pointer_deleter(P const & p, const boost::function<void(void const*)>& deleterfn) : p_(p), _deleterfn(deleterfn)
     {
     }
 
@@ -324,7 +334,7 @@ smart_pointer_deleter(P const & p, const boost::function<void(void const*)>& del
         _deleterfn(x);
         p_.reset();
     }
-    
+
     P const & get() const
     {
         return p_;
@@ -345,7 +355,7 @@ inline void polyroots2(const IKReal* rawcoeffs, IKReal* rawroots, int& numroots)
     else {
         det = RaveSqrt(det);
         rawroots[0] = (-rawcoeffs[1]+det)/(2*rawcoeffs[0]);
-        rawroots[1] = (-rawcoeffs[1]-det)/(2*rawcoeffs[0]);//rawcoeffs[2]/(rawcoeffs[0]*rawroots[0]);
+        rawroots[1] = (-rawcoeffs[1]-det)/(2*rawcoeffs[0]); //rawcoeffs[2]/(rawcoeffs[0]*rawroots[0]);
         numroots = 2;
     }
 }
@@ -410,14 +420,14 @@ inline void polyroots(const IKReal* rawcoeffs, IKReal* rawroots, int& numroots)
 // need the prototypes in order to keep them free of the OpenRAVE namespace
 namespace OpenRAVEXMLParser
 {
-    class InterfaceXMLReader;
-    class KinBodyXMLReader;
-    class LinkXMLReader;
-    class JointXMLReader;
-    class ManipulatorXMLReader;
-    class AttachedSensorXMLReader;
-    class RobotXMLReader;
-    class EnvironmentXMLReader;
+class InterfaceXMLReader;
+class KinBodyXMLReader;
+class LinkXMLReader;
+class JointXMLReader;
+class ManipulatorXMLReader;
+class AttachedSensorXMLReader;
+class RobotXMLReader;
+class EnvironmentXMLReader;
 }
 class Environment;
 

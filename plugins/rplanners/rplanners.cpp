@@ -28,7 +28,7 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
 {
     switch(type) {
     case OpenRAVE::PT_Planner:
-        if( interfacename == "rastar" || interfacename == "ra*")
+        if((interfacename == "rastar")||(interfacename == "ra*"))
             return InterfaceBasePtr(new RandomizedAStarPlanner(penv));
         else if( interfacename == "birrt") {
             return InterfaceBasePtr(new BirrtPlanner(penv));
@@ -55,7 +55,7 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
         break;
     default:
         break;
-    }    
+    }
     return InterfaceBasePtr();
 }
 

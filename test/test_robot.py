@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from common_test_openrave import *
-_multiprocess_can_split_ = True
 
 class TestRobot(EnvironmentSetup):
     def test_dualarm_grabbing(self):

@@ -21,18 +21,19 @@
 
 class CM
 {
- public:
+public:
     //Constraint function for maintaining relative orientations of the EEFs of both manipulators
     template <typename T>
     class DualArmManipulation {
-    public:
-    DualArmManipulation(RobotBasePtr probot, RobotBase::ManipulatorPtr pmanipA, RobotBase::ManipulatorPtr pmanipI) : _probot(probot), _pmanipA(pmanipA), _pmanipI(pmanipI) {
+public:
+        DualArmManipulation(RobotBasePtr probot, RobotBase::ManipulatorPtr pmanipA, RobotBase::ManipulatorPtr pmanipI) : _probot(probot), _pmanipA(pmanipA), _pmanipI(pmanipI) {
             _tOriginalEEI = _pmanipI->GetTransform();
             _tOriginalEEA = _pmanipA->GetTransform();
             _diff = _tOriginalEEA.inverse()*_tOriginalEEI;
-                           
+
         }
-        virtual ~DualArmManipulation() {}
+        virtual ~DualArmManipulation() {
+        }
 
         bool DualArmConstrained(std::vector<dReal>& vprev, const std::vector<dReal>& vdelta)
         {
@@ -45,18 +46,18 @@ class CM
             double errorRot=0.1;
             double errorTrans=.010;
             vector<int> JointIndicesI;
-        
+
             std::vector<dReal> vold, vsolution;
-            _probot->GetDOFValues(vold);  //gets the current robot config
+            _probot->GetDOFValues(vold);          //gets the current robot config
             Transform tA = _pmanipA->GetTransform();
-        
-            Transform tInew= tA*_diff;  //this is (wTRANSl)*(lTRANSr)
+
+            Transform tInew= tA*_diff;          //this is (wTRANSl)*(lTRANSr)
             bool a= _pmanipI->FindIKSolution(tInew,vsolution, false);
 
-            if(a){
+            if(a) {
                 vector<int> JointIndicesI = _pmanipI->GetArmIndices();
 
-                for (size_t i=0;i<JointIndicesI.size();i++) {//this check is important to make sure the IK solution does not fly too far away since there are multiple Ik solutions possible
+                for (size_t i=0; i<JointIndicesI.size(); i++) {      //this check is important to make sure the IK solution does not fly too far away since there are multiple Ik solutions possible
                     if(fabs(vsolution.at(i)-vprev[JointIndicesI.at(i)])<errorRot*2) {
                         vprev[JointIndicesI.at(i)]=vsolution[i];
                     }
@@ -75,10 +76,10 @@ class CM
             Transform tI = _pmanipI->GetTransform();
             tA = _pmanipA->GetTransform();
             Transform tnew = tA.inverse()*tI;
-       
+
             for(int i = 0; i < 4; ++i) {
                 if (!(RaveFabs(tnew.rot[i]-_diff.rot[i])<errorRot)) {
-                    pstatus=false;          
+                    pstatus=false;
                     return false;
                 }
             }
@@ -88,13 +89,13 @@ class CM
                     return false;
                 }
             }
-      
+
             return pstatus;
         }
-        
+
         boost::function<dReal(const std::vector<dReal>&, const std::vector<dReal>&)> _distmetricfn;
 
-    protected:
+protected:
         RobotBasePtr _probot;
         RobotBase::ManipulatorPtr _pmanipA;
         RobotBase::ManipulatorPtr _pmanipI;
@@ -138,7 +139,7 @@ class CM
             if( !!pout )
                 pfulltraj->Write(*pout, Trajectory::TO_IncludeTimestamps|Trajectory::TO_IncludeBaseTransformation|Trajectory::TO_OneLine);
         }
-    
+
         return bExecuted;
     }
 };

@@ -12,9 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from common_test_openrave import *
-import time
-
-_multiprocess_can_split_ = True
 
 class TestPhysics(EnvironmentSetup):
     def test_static(self):

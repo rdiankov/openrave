@@ -16,28 +16,28 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /** \file planner.h
     \brief Planning related defintions.
-*/
+ */
 #ifndef OPENRAVE_PLANNER_PARAMETERS_H
 #define OPENRAVE_PLANNER_PARAMETERS_H
 
 class GraspSetParameters : public PlannerBase::PlannerParameters
 {
 public:
-GraspSetParameters(EnvironmentBasePtr penv) : _nGradientSamples(5), _fVisibiltyGraspThresh(0), _fGraspDistThresh(1.4f), _penv(penv),_bProcessingGS(false) {
+    GraspSetParameters(EnvironmentBasePtr penv) : _nGradientSamples(5), _fVisibiltyGraspThresh(0), _fGraspDistThresh(1.4f), _penv(penv),_bProcessingGS(false) {
         _vXMLParameters.push_back("grasps");
         _vXMLParameters.push_back("target");
         _vXMLParameters.push_back("numgradsamples");
         _vXMLParameters.push_back("visgraspthresh");
         _vXMLParameters.push_back("graspdistthresh");
     }
-    
-    vector<Transform> _vgrasps; ///< grasps with respect to the target object
+
+    vector<Transform> _vgrasps;     ///< grasps with respect to the target object
     KinBodyPtr _ptarget;
     int _nGradientSamples;
-    dReal _fVisibiltyGraspThresh; ///< if current grasp is less than this threshold, then visibilty is not checked
-    dReal _fGraspDistThresh; ///< target grasps beyond this distance are ignored
+    dReal _fVisibiltyGraspThresh;     ///< if current grasp is less than this threshold, then visibilty is not checked
+    dReal _fGraspDistThresh;     ///< target grasps beyond this distance are ignored
 
- protected:
+protected:
     EnvironmentBasePtr _penv;
     bool _bProcessingGS;
     virtual bool serialize(std::ostream& O) const
@@ -46,9 +46,9 @@ GraspSetParameters(EnvironmentBasePtr penv) : _nGradientSamples(5), _fVisibiltyG
             return false;
         O << "<grasps>" << _vgrasps.size() << " ";
         FOREACHC(it, _vgrasps)
-            O << *it << " ";
+        O << *it << " ";
         O << "</grasps>" << endl;
-        O << "<target>" << (!!_ptarget?_ptarget->GetEnvironmentId():0) << "</target>" << endl;
+        O << "<target>" << (!!_ptarget ? _ptarget->GetEnvironmentId() : 0) << "</target>" << endl;
         O << "<numgradsamples>" << _nGradientSamples << "</numgradsamples>" << endl;
         O << "<visgraspthresh>" << _fVisibiltyGraspThresh << "</visgraspthresh>" << endl;
         O << "<graspdistthresh>" << _fGraspDistThresh << "</graspdistthresh>" << endl;
@@ -60,15 +60,15 @@ GraspSetParameters(EnvironmentBasePtr penv) : _nGradientSamples(5), _fVisibiltyG
         if( _bProcessingGS )
             return PE_Ignore;
         switch( PlannerBase::PlannerParameters::startElement(name,atts) ) {
-            case PE_Pass: break;
-            case PE_Support: return PE_Support;
-            case PE_Ignore: return PE_Ignore;
+        case PE_Pass: break;
+        case PE_Support: return PE_Support;
+        case PE_Ignore: return PE_Ignore;
         }
-        
+
         _bProcessingGS = name=="grasps"||name=="target"||name=="numgradsamples"||name=="visgraspthresh"||name=="graspdistthresh";
         return _bProcessingGS ? PE_Support : PE_Pass;
     }
-    
+
     virtual bool endElement(const string& name)
     {
         if( _bProcessingGS ) {
@@ -105,13 +105,13 @@ GraspSetParameters(EnvironmentBasePtr penv) : _nGradientSamples(5), _fVisibiltyG
 class BasicRRTParameters : public PlannerBase::PlannerParameters
 {
 public:
-BasicRRTParameters() : _fGoalBiasProb(0.05f), _bProcessing(false) {
+    BasicRRTParameters() : _fGoalBiasProb(0.05f), _bProcessing(false) {
         _vXMLParameters.push_back("goalbias");
     }
-    
-    dReal _fGoalBiasProb; 
 
- protected:
+    dReal _fGoalBiasProb;
+
+protected:
     bool _bProcessing;
     virtual bool serialize(std::ostream& O) const
     {
@@ -128,15 +128,15 @@ BasicRRTParameters() : _fGoalBiasProb(0.05f), _bProcessing(false) {
             return PE_Ignore;
         }
         switch( PlannerBase::PlannerParameters::startElement(name,atts) ) {
-            case PE_Pass: break;
-            case PE_Support: return PE_Support;
-            case PE_Ignore: return PE_Ignore;
+        case PE_Pass: break;
+        case PE_Support: return PE_Support;
+        case PE_Ignore: return PE_Ignore;
         }
-        
+
         _bProcessing = name=="goalbias";
         return _bProcessing ? PE_Support : PE_Pass;
     }
-    
+
     virtual bool endElement(const string& name)
     {
         if( _bProcessing ) {
@@ -158,7 +158,7 @@ BasicRRTParameters() : _fGoalBiasProb(0.05f), _bProcessing(false) {
 class WorkspaceTrajectoryParameters : public PlannerBase::PlannerParameters
 {
 public:
- WorkspaceTrajectoryParameters(EnvironmentBasePtr penv) : maxdeviationangle(0.15*PI), maintaintiming(false), greedysearch(true), ignorefirstcollision(0), minimumcompletetime(1e30f), _penv(penv), _bProcessing(false) {
+    WorkspaceTrajectoryParameters(EnvironmentBasePtr penv) : maxdeviationangle(0.15*PI), maintaintiming(false), greedysearch(true), ignorefirstcollision(0), minimumcompletetime(1e30f), _penv(penv), _bProcessing(false) {
         _vXMLParameters.push_back("maxdeviationangle");
         _vXMLParameters.push_back("maintaintiming");
         _vXMLParameters.push_back("greedysearch");
@@ -166,14 +166,14 @@ public:
         _vXMLParameters.push_back("minimumcompletetime");
         _vXMLParameters.push_back("workspacetraj");
     }
-    
-    dReal maxdeviationangle; ///< the maximum angle the next iksolution can deviate from the expected direction computed by the jacobian 
-    bool maintaintiming; ///< maintain timing with input trajectory
-    bool greedysearch; ///< if true, will greeidly choose solutions (can possibly fail even a solution exists)
-    dReal ignorefirstcollision; ///< if > 0, will allow the robot to be in environment collision for the initial 'ignorefirstcollision' seconds of the trajectory. Once the robot gets out of collision, it will execute its normal following phase until it gets into collision again. This option is used when lifting objects from a surface, where the object is already in collision with the surface.
-    dReal minimumcompletetime; ///< specifies the minimum trajectory that must be followed for planner to declare success. If 0, then the entire trajectory has to be followed.
-    TrajectoryBasePtr workspacetraj; ///< workspace trajectory
- protected:
+
+    dReal maxdeviationangle;     ///< the maximum angle the next iksolution can deviate from the expected direction computed by the jacobian
+    bool maintaintiming;     ///< maintain timing with input trajectory
+    bool greedysearch;     ///< if true, will greeidly choose solutions (can possibly fail even a solution exists)
+    dReal ignorefirstcollision;     ///< if > 0, will allow the robot to be in environment collision for the initial 'ignorefirstcollision' seconds of the trajectory. Once the robot gets out of collision, it will execute its normal following phase until it gets into collision again. This option is used when lifting objects from a surface, where the object is already in collision with the surface.
+    dReal minimumcompletetime;     ///< specifies the minimum trajectory that must be followed for planner to declare success. If 0, then the entire trajectory has to be followed.
+    TrajectoryBasePtr workspacetraj;     ///< workspace trajectory
+protected:
     EnvironmentBasePtr _penv;
     bool _bProcessing;
     // save the extra data to XML
@@ -204,12 +204,12 @@ public:
         case PE_Pass: break;
         case PE_Support: return PE_Support;
         case PE_Ignore: return PE_Ignore;
-        }    
+        }
         _bProcessing = name=="maxdeviationangle" || name=="maintaintiming" || name=="greedysearch" || name=="ignorefirstcollision" || name=="minimumcompletetime" || name=="workspacetraj";
         return _bProcessing ? PE_Support : PE_Pass;
     }
-        
-    // called at the end of every XML tag, _ss contains the data 
+
+    // called at the end of every XML tag, _ss contains the data
     virtual bool endElement(const std::string& name)
     {
         // _ss is an internal stringstream that holds the data of the tag

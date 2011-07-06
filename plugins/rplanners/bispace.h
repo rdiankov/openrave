@@ -21,7 +21,7 @@
 #define RAVE_BISPACE_PLANNER
 
 #include <algorithm>
-// planning constants 
+// planning constants
 #define JACOBIAN_TRANS_MAXSTEP 0.01f
 #define JACOBIAN_TRANS_THRESH 0.002f
 #define GOAL_THRESH (0.07)
@@ -31,11 +31,12 @@
 
 class BiSpaceParameters : public PlannerParameters
 {
- public:
- BiSpaceParameters() : puserdata(NULL), EvalExtendDistance(NULL), EvalFollowProbability(NULL), pWorkspaceSampler(NULL) {}
-        
+public:
+    BiSpaceParameters() : puserdata(NULL), EvalExtendDistance(NULL), EvalFollowProbability(NULL), pWorkspaceSampler(NULL) {
+    }
+
     void* puserdata;
-        
+
     /// distance metric from current robot config for the RRT extension step
     /// (weights all joints with respect to how close robot is to the goal)
     /// fCost - cost computed from cost metric
@@ -43,7 +44,7 @@ class BiSpaceParameters : public PlannerParameters
     dReal (*EvalFollowProbability)(void* puserdata, const dReal* q, dReal fcost);
     PlannerBase::SampleFunction* pWorkspaceSampler;
 
- protected:
+protected:
     virtual bool serialize(std::ostream& O) const
     {
         if( !PlannerParameters::serialize(O) )
@@ -53,7 +54,7 @@ class BiSpaceParameters : public PlannerParameters
         O << "<EvalFollowProbability>" << (void*)EvalFollowProbability << "</EvalFollowProbability>" << endl;
         O << "<WorkspaceSampler>" << (void*)pWorkspaceSampler << "</WorkspaceSampler>" << endl;
         O << "<userdata>" << puserdata << "</userdata>" << endl;
-    
+
         return !!O;
     }
     virtual bool endElement(void *ctx, const char *name)
@@ -81,21 +82,23 @@ class BiSpaceParameters : public PlannerParameters
 
 class BiSpacePlanner : public PlannerBase
 {
-    static dReal DummyEvalFollowProbability(void* puserdata, const dReal* q, dReal fcost) { return 1; }
- public:
+    static dReal DummyEvalFollowProbability(void* puserdata, const dReal* q, dReal fcost) {
+        return 1;
+    }
+public:
     // the bispace planner has several modes to emulate other planning algorithms
     enum SearchType
     {
-        ST_bispace=0,     ///< regular bispace algorithm (assumes backspace tree is in the workspace)
-        ST_rrtjt,         ///< RRTjt implementation
-        ST_rrtwork,       ///< RRT workspace goal bias
-        ST_birrt,         ///< BiRRT implementation, backwpace is assumed to be configuration space (goals specified in config space)
+        ST_bispace=0,         ///< regular bispace algorithm (assumes backspace tree is in the workspace)
+        ST_rrtjt,             ///< RRTjt implementation
+        ST_rrtwork,           ///< RRT workspace goal bias
+        ST_birrt,             ///< BiRRT implementation, backwpace is assumed to be configuration space (goals specified in config space)
     };
 
     enum SearchSpaceType
     {
-        SST_3D=0, ///< just translation
-        SST_6D,   ///< translation with quaternion (7 values!)
+        SST_3D=0,     ///< just translation
+        SST_6D,       ///< translation with quaternion (7 values!)
         SST_Active,
     };
 
@@ -112,22 +115,28 @@ class BiSpacePlanner : public PlannerBase
 
     struct Node
     {
-        Node() { parent = -1; info = 0; numext = 0; }
+        Node() {
+            parent = -1; info = 0; numext = 0;
+        }
 
         //dReal fgoal;
         dReal fcost;
         int parent;
-        short info; // if 1, node is dead, 2 if workspace node is dead
+        short info;     // if 1, node is dead, 2 if workspace node is dead
         short numext;
-        dReal q[0]; // the configuration immediately follows the struct
+        dReal q[0];     // the configuration immediately follows the struct
     };
 
     // implement kd-tree or approx-nn in the future, deallocates memory from Node
     class SpatialTree
     {
-    public:
-        SpatialTree() { _planner = NULL; _fStepLength = 0.04f; _dof = 0; info = 0; _fBestDist = 0; _pDistMetric = NULL; _pSampleFn = NULL; _nodes.reserve(5000); }
-        ~SpatialTree() { Reset(NULL, 0); }
+public:
+        SpatialTree() {
+            _planner = NULL; _fStepLength = 0.04f; _dof = 0; info = 0; _fBestDist = 0; _pDistMetric = NULL; _pSampleFn = NULL; _nodes.reserve(5000);
+        }
+        ~SpatialTree() {
+            Reset(NULL, 0);
+        }
 
         void Reset(BiSpacePlanner* planner, int dof=0)
         {
@@ -146,7 +155,7 @@ class BiSpacePlanner : public PlannerBase
                 _vUpperLimit.resize(_dof);
                 _vDOFRange.resize(_dof);
                 _vzero.resize(_dof);
-            }   
+            }
         }
 
         int AddNode(dReal fcost, int parent, const dReal* pfConfig)
@@ -154,7 +163,7 @@ class BiSpacePlanner : public PlannerBase
             BOOST_ASSERT( pfConfig != NULL );
 
             void* pmem = malloc(sizeof(Node)+sizeof(dReal)*_dof);
-            Node* p = ::new(pmem) Node(); // call constructor explicitly
+            Node* p = ::new (pmem) Node();        // call constructor explicitly
             p->parent = parent;
             memcpy(p->q, pfConfig, sizeof(dReal)*_dof);
             p->fcost = fcost;
@@ -175,7 +184,7 @@ class BiSpacePlanner : public PlannerBase
             int ibest = -1;
             dReal fbest = 0;
 
-            if( _planner->_searchtype == ST_bispace && !(info & TS_BackwardSearch) && _planner->_parameters.EvalExtendDistance != NULL) {
+            if(( _planner->_searchtype == ST_bispace) && !(info & TS_BackwardSearch) &&( _planner->_parameters.EvalExtendDistance != NULL) ) {
                 // use the special distance metric
                 while(itnode != _nodes.end()) {
 
@@ -184,7 +193,7 @@ class BiSpacePlanner : public PlannerBase
                     //if( (*itnode)->numext < 3 )
                     {
                         dReal f = _planner->_parameters.EvalExtendDistance(_planner->_parameters.puserdata, q, (*itnode)->q, (*itnode)->fcost);
-                        if( ibest < 0 || f < fbest ) {
+                        if(( ibest < 0) ||( f < fbest) ) {
                             ibest = (int)(itnode-_nodes.begin());
                             fbest = f;
                         }
@@ -209,7 +218,7 @@ class BiSpacePlanner : public PlannerBase
                 //        }
             }
             else {
-                if( _planner->_searchtype == ST_rrtwork && RANDOM_FLOAT() < _planner->fConfigFollowProb ) {
+                if(( _planner->_searchtype == ST_rrtwork) &&( RANDOM_FLOAT() < _planner->fConfigFollowProb) ) {
                     BOOST_ASSERT(!(info & TS_BackwardSearch));
                     BOOST_ASSERT(_worknodes.size() == _nodes.size() );
 
@@ -221,7 +230,7 @@ class BiSpacePlanner : public PlannerBase
                     while(itworknode != _worknodes.end()) {
 
                         dReal f = _planner->_workspacetree._pDistMetric->Eval(pworkconfig, &(*itworknode)[0]);
-                        if( ibest < 0 || f < fbest ) {
+                        if(( ibest < 0) ||( f < fbest) ) {
                             ibest = (int)(itworknode-_worknodes.begin());
                             fbest = f;
                         }
@@ -233,7 +242,7 @@ class BiSpacePlanner : public PlannerBase
 
                         //if( !((*itnode)->info & NS_Dead) ) {
                         dReal f = _pDistMetric->Eval(q, (*itnode)->q);
-                        if( ibest < 0 || f < fbest ) {
+                        if(( ibest < 0) ||( f < fbest) ) {
                             ibest = (int)(itnode-_nodes.begin());
                             fbest = f;
                         }
@@ -263,7 +272,7 @@ class BiSpacePlanner : public PlannerBase
 
             // extend
             dReal fdist;
-            if( _planner->_searchtype == ST_bispace && !(info & TS_BackwardSearch) && _planner->_parameters.EvalExtendDistance != NULL) {
+            if(( _planner->_searchtype == ST_bispace) && !(info & TS_BackwardSearch) &&( _planner->_parameters.EvalExtendDistance != NULL) ) {
                 fdist = _planner->_parameters.EvalExtendDistance(_planner->_parameters.puserdata, pnode->q, pNewConfig, pnode->fcost);
             }
             else {
@@ -292,23 +301,25 @@ class BiSpacePlanner : public PlannerBase
             return inode;
         }
 
-        inline int GetDOF() { return _dof; }
+        inline int GetDOF() {
+            return _dof;
+        }
 
         vector<Node*> _nodes;
-        vector< vector<dReal> > _worknodes; // workspace goals of the nodes, valid for forward tree only
+        vector< vector<dReal> > _worknodes;         // workspace goals of the nodes, valid for forward tree only
 
         DistanceMetric* _pDistMetric;
         SampleFunction* _pSampleFn;
 
-        dReal _fBestDist; ///< valid after a call to GetNN
+        dReal _fBestDist;         ///< valid after a call to GetNN
 
         dReal _fStepLength;
         SearchSpaceType _spacetype;
-        vector<dReal> _vzero, _vLowerLimit, _vUpperLimit, _vDOFRange; ///< joint limitations
+        vector<dReal> _vzero, _vLowerLimit, _vUpperLimit, _vDOFRange;         ///< joint limitations
         vector<dReal> _jointResolution, _jointResolutionInv;
-        int info; // TreeStatus mask
-    
-    private:
+        int info;         // TreeStatus mask
+
+private:
         int _dof;
         BiSpacePlanner* _planner;
     };
@@ -320,7 +331,7 @@ class BiSpacePlanner : public PlannerBase
         CLOSED
     };
 
- BiSpacePlanner(EnvironmentBasePtr penv) : PlannerBase(penv)
+    BiSpacePlanner(EnvironmentBasePtr penv) : PlannerBase(penv)
     {
         _workspacetree.info = TS_BackwardSearch;
         nDumpIndex = 0;
@@ -343,7 +354,9 @@ class BiSpacePlanner : public PlannerBase
         _workspacetree.Reset(this, -1);
     }
 
-    virtual RobotBasePtr GetRobot() { return _robot; }
+    virtual RobotBasePtr GetRobot() {
+        return _robot;
+    }
 
     /// InitPlan
     /// parameters format
@@ -358,7 +371,7 @@ class BiSpacePlanner : public PlannerBase
     ///                 *Stochastic Follow Neighborhood Radius
     /// vinitialconfig: active dof values
     /// vgoalconfig:    goal values (depends on backward search type), size = N*dimension where N is the number of goals
-    /// pdistmetric - distance between 
+    /// pdistmetric - distance between
     /// pExtraParameters - BisapceParametersStruct*
     virtual bool InitPlan(RobotBase* pbase, const PlannerParameters* pparams)
     {
@@ -400,7 +413,7 @@ class BiSpacePlanner : public PlannerBase
             nExpansionMultiplier = _parameters.vnParameters[2];
         if( _parameters.vnParameters.size() > 3 )
             nStochasticGradSamples = _parameters.vnParameters[3];
-    
+
         if( _parameters.vParameters.size() > 0 )
             _configtree._fStepLength = _parameters.vParameters[0];
         if( _parameters.vParameters.size() > 1 )
@@ -415,10 +428,10 @@ class BiSpacePlanner : public PlannerBase
         if( _parameters.EvalFollowProbability == NULL )
             _parameters.EvalFollowProbability = DummyEvalFollowProbability;
 
-        _costmetric.fconst = 1;//fConfigFollowProb;
+        _costmetric.fconst = 1;    //fConfigFollowProb;
         _work6ddistmetric.frotweight = 0.2f;
 
-        if( _workspacetree._spacetype == SST_3D || _workspacetree._spacetype == SST_6D ) {
+        if(( _workspacetree._spacetype == SST_3D) ||( _workspacetree._spacetype == SST_6D) ) {
             if( _robot->GetActiveManipulator() == NULL ) {
                 RAVEPRINT(L"no active manip\n");
                 return false;
@@ -428,7 +441,7 @@ class BiSpacePlanner : public PlannerBase
         _parameters.pdistmetric->SetRobot(pbase);
 
         _configtree.Reset(this, _robot->GetActiveDOF());
-    
+
         _vSampleConfig.resize(max(7,_robot->GetActiveDOF()));
         _jointIncrement.resize(_robot->GetActiveDOF());
         _vzero.resize(_robot->GetActiveDOF());
@@ -461,7 +474,7 @@ class BiSpacePlanner : public PlannerBase
         // forward search limits
         _robot->GetActiveDOFLimits(_configtree._vLowerLimit, _configtree._vUpperLimit);
         // replace with better affine limits
-        RobotBase::DOFAffine affinedofs[3] = {RobotBase::DOF_X, RobotBase::DOF_Y, RobotBase::DOF_Z};
+        RobotBase::DOFAffine affinedofs[3] = { RobotBase::DOF_X, RobotBase::DOF_Y, RobotBase::DOF_Z};
         for(int i = 0; i < 3; ++i) {
             if( _robot->GetAffineDOF() & affinedofs[i] ) {
                 _configtree._vLowerLimit[_robot->GetAffineDOFIndex(affinedofs[i])] = venvmin[i];
@@ -487,28 +500,28 @@ class BiSpacePlanner : public PlannerBase
         // set backsearch metrics and limits
         switch(_workspacetree._spacetype) {
         case SST_3D:
-            {
-                _workspacetree._pDistMetric = &_work3ddistmetric;
-                _workspacetree.Reset(this ,3);
-                *(Vector*)&_workspacetree._vLowerLimit[0] = venvmin;
-                *(Vector*)&_workspacetree._vUpperLimit[0] = venvmax;
-                *(Vector*)&_workspacetree._vDOFRange[0] = venvmax-venvmin;
-                break;
-            }
+        {
+            _workspacetree._pDistMetric = &_work3ddistmetric;
+            _workspacetree.Reset(this,3);
+            *(Vector*)&_workspacetree._vLowerLimit[0] = venvmin;
+            *(Vector*)&_workspacetree._vUpperLimit[0] = venvmax;
+            *(Vector*)&_workspacetree._vDOFRange[0] = venvmax-venvmin;
+            break;
+        }
         case SST_6D:
-            {
-                _workspacetree._pDistMetric = &_work6ddistmetric;
-                _workspacetree.Reset(this, 7);
-                for(int i = 0; i < 7; ++i) {
-                    _workspacetree._vLowerLimit[i] = -1;
-                    _workspacetree._vUpperLimit[i] = 1;
-                    _workspacetree._vDOFRange[i] = 2;
-                }
-                *(Vector*)&_workspacetree._vLowerLimit[0] = venvmin;
-                *(Vector*)&_workspacetree._vUpperLimit[0] = venvmax;
-                *(Vector*)&_workspacetree._vDOFRange[0] = venvmax-venvmin;
-                break;
+        {
+            _workspacetree._pDistMetric = &_work6ddistmetric;
+            _workspacetree.Reset(this, 7);
+            for(int i = 0; i < 7; ++i) {
+                _workspacetree._vLowerLimit[i] = -1;
+                _workspacetree._vUpperLimit[i] = 1;
+                _workspacetree._vDOFRange[i] = 2;
             }
+            *(Vector*)&_workspacetree._vLowerLimit[0] = venvmin;
+            *(Vector*)&_workspacetree._vUpperLimit[0] = venvmax;
+            *(Vector*)&_workspacetree._vDOFRange[0] = venvmax-venvmin;
+            break;
+        }
         case SST_Active:
             _workspacetree._pDistMetric = _configtree._pDistMetric;
             _workspacetree.Reset(this, _robot->GetActiveDOF());
@@ -569,8 +582,8 @@ class BiSpacePlanner : public PlannerBase
                 FORIT(itjoint, _robot->GetActiveJointIndices()) {
                     if( !_robot->DoesAffect(*itjoint, (*itlink)->GetIndex()) )
                         break;
-                }            
-            
+                }
+
                 if( itjoint == _robot->GetActiveJointIndices().end() )
                     // part of hand
                     _vHandLinks.push_back( pair<KinBody::Link*, Transform>(*itlink, tEEinv * (*itlink)->GetTransform()) );
@@ -592,7 +605,7 @@ class BiSpacePlanner : public PlannerBase
         }
 
         _vIKtoConfigMap.clear();
-        if( _pmanip != NULL && _pmanip->HasIKSolver() ) {
+        if(( _pmanip != NULL) && _pmanip->HasIKSolver() ) {
             FOREACHC(itactive, _robot->GetActiveJointIndices()) {
                 vector<int>::const_iterator itik = find(_pmanip->_vecarmjoints.begin(), _pmanip->_vecarmjoints.end(), *itactive);
                 if( itik != _pmanip->_vecarmjoints.end() )
@@ -609,7 +622,7 @@ class BiSpacePlanner : public PlannerBase
         //pcurrent->fgoal = 0;
 
         _vtransWorkGoals.resize(0);
-    
+
         // backward
         for(int i = 0; i < (int)_parameters.vgoalconfig.size(); ) {
             pcurrent = _workspacetree._nodes[_workspacetree.AddNode(0, -1, &_parameters.vgoalconfig[i])];
@@ -659,8 +672,8 @@ class BiSpacePlanner : public PlannerBase
         _parameters.pdistmetric->SetRobot(_robot);
 
         _pmanip = _robot->GetActiveManipulator();
-    
-        if( _pmanip == NULL && (_workspacetree._spacetype == SST_3D || _workspacetree._spacetype == SST_6D) ) {
+
+        if(( _pmanip == NULL) && (( _workspacetree._spacetype == SST_3D) ||( _workspacetree._spacetype == SST_6D) ) ) {
             RAVEPRINT(L"no manipulator specified\n");
             return false;
         }
@@ -669,8 +682,8 @@ class BiSpacePlanner : public PlannerBase
         CollisionReport report;
         if( GetEnv()->CheckCollision(_robot, &report) ) {
             RAVEPRINT(L"BiSpace: robot initially in collision %S:%S!\n",
-                      report.plink1!=NULL?report.plink1->GetName():L"(NULL)",
-                      report.plink2!=NULL?report.plink2->GetName():L"(NULL)");
+                      report.plink1!=NULL ? report.plink1->GetName() : L"(NULL)",
+                      report.plink2!=NULL ? report.plink2->GetName() : L"(NULL)");
             _RestoreRobot();
             return false;
         }
@@ -694,7 +707,7 @@ class BiSpacePlanner : public PlannerBase
             _RestoreRobot();
             return false;
         }
-    
+
         _bWorkspaceCollision = false;
 
         int nMaxIter = _parameters.nMaxIterations > 0 ? _parameters.nMaxIterations : 8000;
@@ -705,8 +718,8 @@ class BiSpacePlanner : public PlannerBase
         dReal* ptargworkconfig;
 
         DVProfClear();
-        dReal fbest = 10000; // for stats
-    
+        dReal fbest = 10000;     // for stats
+
         while(iter < nMaxIter && pbestconfig == NULL ) {
 
             int iwork = -1;
@@ -717,7 +730,7 @@ class BiSpacePlanner : public PlannerBase
 
                 int inode = _configtree.Extend(&_vSampleConfig[0]);
 
-                if( inode >= 0 && !_CheckCollision(_configtree._nodes[inode]->q, &_vSampleConfig[0], OPEN_START, false) ) {
+                if(( inode >= 0) && !_CheckCollision(_configtree._nodes[inode]->q, &_vSampleConfig[0], OPEN_START, false) ) {
                     inode = _AddFwdNode(inode, &_vSampleConfig[0]);
 
                     switch(_searchtype) {
@@ -744,37 +757,37 @@ class BiSpacePlanner : public PlannerBase
                         }
                         break;
 
-                        //                        case ST_rrtjt:
-                        //                            if( RANDOM_FLOAT() < fConfigFollowProb ) {
-                        //                                int jiter = 0;
-                        //                                while(jiter++ < 100) {
-                        //                                    _GetJacboianTransposeStep(&vnewconfig[0], _configtree._nodes[inode]->q, _workspacetree._nodes[index]->q, 0.2f*_configtree._fStepLength);
-                        //                                    if( _CheckCollision(qprev, &vnewconfig[0], OPEN_START, false) )
-                        //                                        break;
-                        //
-                        //                                    inode = _AddFwdNode(inode, &vnewconfig[0]);
-                        //                                    qprev = _configtree._nodes[inode]->q;
-                        //                                    _configtree._nodes[inode]->info = 1; // make sure never to sample from it again
-                        //                                }
-                        //                            }
+                    //                        case ST_rrtjt:
+                    //                            if( RANDOM_FLOAT() < fConfigFollowProb ) {
+                    //                                int jiter = 0;
+                    //                                while(jiter++ < 100) {
+                    //                                    _GetJacboianTransposeStep(&vnewconfig[0], _configtree._nodes[inode]->q, _workspacetree._nodes[index]->q, 0.2f*_configtree._fStepLength);
+                    //                                    if( _CheckCollision(qprev, &vnewconfig[0], OPEN_START, false) )
+                    //                                        break;
+                    //
+                    //                                    inode = _AddFwdNode(inode, &vnewconfig[0]);
+                    //                                    qprev = _configtree._nodes[inode]->q;
+                    //                                    _configtree._nodes[inode]->info = 1; // make sure never to sample from it again
+                    //                                }
+                    //                            }
                     case ST_rrtwork:
-                        {
-                            // check for end of goal
-                            for(size_t i = 0; i < _vtransWorkGoals.size(); ++i) {
-                                dReal fdist = _workspacetree._pDistMetric->Eval(&_configtree._worknodes[inode][0], _workspacetree._nodes[i]->q);
-                                if( fdist < GOAL_THRESH ) {
-                                    // good enough, perhaps use Jacobian to merge even further
-                                    dReal* q = _workspacetree._nodes[i]->q;
-                                    _ApproachTarget(Transform(Vector(q[3],q[4],q[5],q[6]),Vector(q[0],q[1],q[2])), inode);
-                                    pbestconfig = _configtree._nodes[inode];
-                                    break;
-                                }
-
-                                if( fbest > fdist )
-                                    fbest = fdist;
+                    {
+                        // check for end of goal
+                        for(size_t i = 0; i < _vtransWorkGoals.size(); ++i) {
+                            dReal fdist = _workspacetree._pDistMetric->Eval(&_configtree._worknodes[inode][0], _workspacetree._nodes[i]->q);
+                            if( fdist < GOAL_THRESH ) {
+                                // good enough, perhaps use Jacobian to merge even further
+                                dReal* q = _workspacetree._nodes[i]->q;
+                                _ApproachTarget(Transform(Vector(q[3],q[4],q[5],q[6]),Vector(q[0],q[1],q[2])), inode);
+                                pbestconfig = _configtree._nodes[inode];
+                                break;
                             }
+
+                            if( fbest > fdist )
+                                fbest = fdist;
                         }
-                        break;
+                    }
+                    break;
                     default:
                         break;
                     }
@@ -788,15 +801,15 @@ class BiSpacePlanner : public PlannerBase
                 for(int i = 0; i < nExpansionMultiplier; ++i) {
                     int inode = _workspacetree.Extend(&_vSampleConfig[0]);
 
-                    if( inode >= 0 && !_CheckCollision(_workspacetree._nodes[inode]->q, &_vSampleConfig[0], OPEN_START, true) ) {
+                    if(( inode >= 0) && !_CheckCollision(_workspacetree._nodes[inode]->q, &_vSampleConfig[0], OPEN_START, true) ) {
                         _workspacetree.AddNode(0, inode, &_vSampleConfig[0]);
                     }
                 }
 
-                bSampleForward = true; // revert
+                bSampleForward = true;     // revert
             }
 
-            if( (iwork >= 0 && iconfignode >= 0) ) {
+            if( (( iwork >= 0) &&( iconfignode >= 0) ) ) {
                 // use the workspace path to bias
                 if( _FollowPath(iconfignode, _workspacetree._nodes[iwork]) ) {
                     // done
@@ -810,7 +823,7 @@ class BiSpacePlanner : public PlannerBase
             else if( 0&&_searchtype == ST_bispace && RANDOM_FLOAT() < fConfigFollowProb ) {
                 // choose a random goal
                 int index = RANDOM_INT((int)_vtransWorkGoals.size());
-            
+
                 // pick the nearest node in configuration space
                 int inode = -1;
                 dReal fbestdist = 10000;
@@ -825,7 +838,7 @@ class BiSpacePlanner : public PlannerBase
                     }
                 }
 
-                if( inode >= 0 && RANDOM_FLOAT() < _configtree._nodes[inode]->fcost ) {
+                if(( inode >= 0) &&( RANDOM_FLOAT() < _configtree._nodes[inode]->fcost) ) {
                     // use the workspace path to bias
                     if( _FollowPath(inode, _workspacetree._nodes[index]) ) {
                         // done
@@ -835,10 +848,10 @@ class BiSpacePlanner : public PlannerBase
                 }
             }
             // check if should follow the Jt
-            else if( (/*_searchtype == ST_bispace || */_searchtype == ST_rrtjt) && RANDOM_FLOAT() < fConfigFollowProb ) {
+            else if( (/*_searchtype == ST_bispace || */ _searchtype == ST_rrtjt) && RANDOM_FLOAT() < fConfigFollowProb ) {
                 // choose a random goal
                 int index = RANDOM_INT((int)_vtransWorkGoals.size());
-            
+
                 // pick the nearest node in configuration space
                 int inode = 0;
                 dReal fbestdist = 10000;
@@ -857,7 +870,7 @@ class BiSpacePlanner : public PlannerBase
                 static vector<dReal> vnewconfig; vnewconfig.resize(_configtree.GetDOF());
                 dReal* qprev = _configtree._nodes[inode]->q;
 
-                _configtree._nodes[inode]->info |= NS_FollowDead; // make sure never to sample from it again
+                _configtree._nodes[inode]->info |= NS_FollowDead;     // make sure never to sample from it again
 
                 int jiter = _searchtype == ST_rrtjt ? 100 : 10;
                 while(jiter-- > 0) {
@@ -867,7 +880,7 @@ class BiSpacePlanner : public PlannerBase
 
                     inode = _AddFwdNode(inode, &vnewconfig[0]);
                     qprev = _configtree._nodes[inode]->q;
-                    _configtree._nodes[inode]->info |= NS_FollowDead; // make sure never to sample from it again
+                    _configtree._nodes[inode]->info |= NS_FollowDead;     // make sure never to sample from it again
                 }
 
                 // check for end of goal
@@ -955,8 +968,8 @@ class BiSpacePlanner : public PlannerBase
 
         return true;
     }
-    
- private:
+
+private:
 
     bool _CheckCollision(const dReal* pQ0, const dReal* pQ1, IntervalType interval, bool bWorkspace, vector< vector<dReal> >* pvCheckedConfigurations=NULL)
     {
@@ -1013,7 +1026,7 @@ class BiSpacePlanner : public PlannerBase
         // NOTE: this does not check the end config, and may or may
         // not check the start based on the value of 'start'
 
-        if( bWorkspace && _workspacetree._spacetype == SST_6D ) {
+        if( bWorkspace &&( _workspacetree._spacetype == SST_6D) ) {
             DVProfileFunc _pf("colback", numSteps);
 
             // interpolating quaternions
@@ -1072,7 +1085,7 @@ class BiSpacePlanner : public PlannerBase
 
         if( bWorkspace ) {
             FOREACH(itlink, _vHandLinks) {
-                if( GetEnv()->CheckCollision(itlink->first, bReport?&report:NULL) ) {
+                if( GetEnv()->CheckCollision(itlink->first, bReport ? &report : NULL) ) {
                     if( bReport ) {
                         RAVEPRINT(L"bispace: wcollision %S:%S with %S:%S\n", report.plink1->GetParent()->GetName(), report.plink1->GetName(), report.plink2->GetParent()->GetName(), report.plink2->GetName());
                     }
@@ -1081,8 +1094,8 @@ class BiSpacePlanner : public PlannerBase
             }
             return false;
         }
-    
-        bool bCol = GetEnv()->CheckCollision(_robot, bReport?&report:NULL) || _robot->CheckSelfCollision(bReport?&report:NULL);
+
+        bool bCol = GetEnv()->CheckCollision(_robot, bReport ? &report : NULL) || _robot->CheckSelfCollision(bReport ? &report : NULL);
         if( bCol && bReport ) {
             RAVEPRINT(L"bispace: fcollision %S:%S with %S:%S\n", report.plink1->GetParent()->GetName(), report.plink1->GetName(), report.plink2->GetParent()->GetName(), report.plink2->GetName());
         }
@@ -1100,7 +1113,7 @@ class BiSpacePlanner : public PlannerBase
         vector< vector<dReal> > vconfigs;
         if( nTries <= 0 )
             nTries = 2 * (int)path.size();
-    
+
         int nrejected = 0;
         int i = nTries;
         while(i > 0 && nrejected < (int)path.size() ) {
@@ -1111,7 +1124,7 @@ class BiSpacePlanner : public PlannerBase
             int startIndex = RANDOM_INT((int)path.size() - 2);
             int endIndex   = startIndex + (RANDOM_INT(5) + 2);
             if (endIndex >= (int)path.size()) endIndex = (int)path.size() - 1;
-        
+
             startNode = path.begin();
             advance(startNode, startIndex);
             endNode = startNode;
@@ -1126,7 +1139,7 @@ class BiSpacePlanner : public PlannerBase
 
             ++startNode;
             FOREACHC(itc, vconfigs)
-                path.insert(startNode, _configtree._nodes[_AddFwdNode(-1,&(*itc)[0])]);
+            path.insert(startNode, _configtree._nodes[_AddFwdNode(-1,&(*itc)[0])]);
 
             // splice out in-between nodes in path
             path.erase(++startNode, endNode);
@@ -1148,11 +1161,11 @@ class BiSpacePlanner : public PlannerBase
         const dReal fIncProb = 2.0f;
         const dReal fDecProb = 0.8f;
 
-        vector<dReal> vweights; 
+        vector<dReal> vweights;
         list<Node*>::iterator startNode, endNode;
         if( nTries <= 0 )
             nTries = 2 * (int)path.size();
-    
+
         int nrejected = 0;
         int i = nTries;
         while(i-- > 0 && nrejected < 2*(int)path.size() ) {
@@ -1161,7 +1174,7 @@ class BiSpacePlanner : public PlannerBase
             int startIndex = RANDOM_INT((int)path.size() - 2);
             int endIndex   = startIndex + (RANDOM_INT(5) + 2);
             if (endIndex >= (int)path.size()) endIndex = (int)path.size() - 1;
-        
+
             startNode = path.begin();
             advance(startNode, startIndex);
             endNode = startNode;
@@ -1170,7 +1183,7 @@ class BiSpacePlanner : public PlannerBase
 
             if( RANDOM_FLOAT() <= fSingleDimProb ) {
                 int irand;
-            
+
                 fSingleDimProb *= fDecProb;
 
                 for(int iter = 0; iter < 4; ++iter) {
@@ -1181,7 +1194,7 @@ class BiSpacePlanner : public PlannerBase
 
                 // only smooth a single dimension
                 dReal fdist = (*endNode)->q[irand] - (*startNode)->q[irand];
-            
+
                 // gather the distances
                 list<Node*>::iterator it = startNode;
                 dReal* prevq = (*it)->q;
@@ -1299,7 +1312,7 @@ class BiSpacePlanner : public PlannerBase
             }
             fprintf(f, "];\n\n");
         }
-    
+
         fprintf(f, "fwdnodes = [");
 
         FOREACH(it, _configtree._nodes) {
@@ -1336,7 +1349,7 @@ class BiSpacePlanner : public PlannerBase
             }
             else if( _workspacetree._spacetype == SST_6D ) {
                 t = TransformMatrix(Transform(Vector(&(*it)->q[3]), Vector(&(*it)->q[0])));
-            
+
                 for(int i = 0; i < 3; ++i)
                     fprintf(f, "%f %f %f ", t.m[4*i+0], t.m[4*i+1], t.m[4*i+2]);
                 fprintf(f, "%f %f %f ", t.trans.x, t.trans.y, t.trans.z);
@@ -1349,24 +1362,24 @@ class BiSpacePlanner : public PlannerBase
 
             fprintf(f, "%f %d\n", (*it)->fcost, (*it)->parent+1);
         }
-    
+
         fprintf(f, "];\n");
         fclose(f);
 
-        RAVELOG_DEBUG("dump %s: fwd=%"PRIdS" work=%"PRIdS", time=%f\n", filename, _configtree._nodes.size(), _workspacetree._nodes.size(), _GetTime());
+        RAVELOG_DEBUG("dump %s: fwd=%" PRIdS " work=%" PRIdS ", time=%f\n", filename, _configtree._nodes.size(), _workspacetree._nodes.size(), _GetTime());
     }
 
     void _SetRobotConfig(const dReal* pconfig, bool bWorkspace)
     {
-        if( bWorkspace && _workspacetree._spacetype != SST_Active ) {
+        if( bWorkspace &&( _workspacetree._spacetype != SST_Active) ) {
 
             Transform t;
             t.trans = Vector(pconfig[0], pconfig[1], pconfig[2]);
-        
+
             if( _workspacetree._spacetype == SST_6D ) {
                 t.rot = *(Vector*)&pconfig[3];
             }
-        
+
             FOREACH(itlink, _vHandLinks) {
                 itlink->first->SetTransform(t*itlink->second);
             }
@@ -1374,7 +1387,7 @@ class BiSpacePlanner : public PlannerBase
         else _robot->SetActiveDOFValues(NULL, &pconfig[0]);
     }
 
-    /// if success, returns true and sets pforwardnode with the final configuration space node 
+    /// if success, returns true and sets pforwardnode with the final configuration space node
     bool _FollowPath(int& ifwdnode, Node* pworknode)
     {
         DVSTARTPROFILE();
@@ -1391,11 +1404,11 @@ class BiSpacePlanner : public PlannerBase
         //RAVEPRINT(L"optimizing path %d\n", vecnodes.size());
         _OptimizePath(vecnodes, (int)vecnodes.size()/2, true);
         bool bSuccess = false;
-        RAVELOG_DEBUG("path follow: fwd: %"PRIdS"\n", _configtree._nodes.size());
+        RAVELOG_DEBUG("path follow: fwd: %" PRIdS "\n", _configtree._nodes.size());
 
         // * bias the sampling around the path
-        // * have to know when to stop expanding, 
-        // * need to have a way to invalidate bad nodes    
+        // * have to know when to stop expanding,
+        // * need to have a way to invalidate bad nodes
         vector<dReal> vworkconfig, vbestconfig;
         Node* porgfwdnode = _configtree._nodes[ifwdnode];
         Node* pfwdnode = porgfwdnode;
@@ -1409,20 +1422,20 @@ class BiSpacePlanner : public PlannerBase
             _SetWorkspaceFromFwdConfig(vworkconfig, pfwdnode->q);
             dReal fOrgBestDist = _workspacetree._pDistMetric->Eval(&vworkconfig[0], (*itnode)->q);
             dReal fCurBestDist = 1.5f * fOrgBestDist;
-        
+
             bool bSimplerMethod = true;
             if( bSimplerMethod ) {
                 for(int nodeiter = 0; nodeiter < _configtree.GetDOF()+1; ++nodeiter) {
                     if( nodeiter < _configtree.GetDOF() ) {
                         memcpy(&_vSampleConfig[0], pfwdnode->q, sizeof(pfwdnode->q[0])*_configtree.GetDOF());
-                        int irand = nodeiter;//RANDOM_INT(_configtree.GetDOF());
+                        int irand = nodeiter;    //RANDOM_INT(_configtree.GetDOF());
                         _vSampleConfig[irand] += 0.4f*_configtree._fStepLength * (RANDOM_FLOAT()-0.5f) / _distmetric.weights[nodeiter];
                         if( _vSampleConfig[irand] < _configtree._vLowerLimit[irand] )
                             _vSampleConfig[irand] = _configtree._vLowerLimit[irand];
                         else if( _vSampleConfig[irand] > _configtree._vUpperLimit[irand] )
                             _vSampleConfig[irand] = _configtree._vUpperLimit[irand];
                     }
-                    else {//if( nodeiter == _configtree.GetDOF() ) {
+                    else {    //if( nodeiter == _configtree.GetDOF() ) {
                         _GetJacboianTransposeStep(&_vSampleConfig[0], pfwdnode->q, (*itnode)->q, 0.4f*_configtree._fStepLength);
                     }
                     //                else {
@@ -1448,7 +1461,7 @@ class BiSpacePlanner : public PlannerBase
 
                     if( nodeiter < _configtree.GetDOF() ) {
                         memcpy(&_vSampleConfig[0], pfwdnode->q, sizeof(pfwdnode->q[0])*_configtree.GetDOF());
-                        int irand = nodeiter;//RANDOM_INT(_configtree.GetDOF());
+                        int irand = nodeiter;    //RANDOM_INT(_configtree.GetDOF());
                         _vSampleConfig[irand] += _configtree._jointResolution[irand] * fRatio * (RANDOM_FLOAT()-0.5f);
                         if( _vSampleConfig[irand] < _configtree._vLowerLimit[irand] )
                             _vSampleConfig[irand] = _configtree._vLowerLimit[irand];
@@ -1504,21 +1517,21 @@ class BiSpacePlanner : public PlannerBase
 
         _SetWorkspaceFromFwdConfig(vworkconfig, pfwdnode->q);
         dReal fdist = _workspacetree._pDistMetric->Eval(&vworkconfig[0], vecnodes.back()->q);
-        RAVELOG_DEBUG("final %f, fwd: %"PRIdS"\n", fdist, _configtree._nodes.size());
+        RAVELOG_DEBUG("final %f, fwd: %" PRIdS "\n", fdist, _configtree._nodes.size());
 
         // test out IK to see if close to goal
-        if( _pmanip != NULL && _pmanip->HasIKSolver() ) {
+        if(( _pmanip != NULL) && _pmanip->HasIKSolver() ) {
             _SetRobotConfig(pfwdnode->q, false);
             vector<dReal> viksolution, vikconfig;
             _robot->GetActiveDOFValues(vikconfig);
             PlannerBase::PlannerParameters params;
-        
+
             vector<int> vprevactive = _robot->GetActiveJointIndices();
             int affinedof = _robot->GetAffineDOF();
             Vector affaxis = _robot->GetAffineRotationAxis();
 
             FOREACH(ittrans, _vtransWorkGoals) {
-        
+
                 if( _pmanip->FindIKSolution(*ittrans, viksolution, true) ) {
                     // found, set the joints of the robot that correspond to the IK nodes, and return success
                     //cout << "hand trans: " << endl << *ittrans << endl;
@@ -1533,7 +1546,7 @@ class BiSpacePlanner : public PlannerBase
                     }
                     else {
                         FOREACH(itmap, _vIKtoConfigMap)
-                            vikconfig[itmap->first] = viksolution[itmap->second];
+                        vikconfig[itmap->first] = viksolution[itmap->second];
 
                         int inode = ifwdnode;
                         for(int icount = 0; icount < 200; ++icount) {
@@ -1556,14 +1569,14 @@ class BiSpacePlanner : public PlannerBase
                 }
             }
 
-            if( _pbirrt != NULL && params.vgoalconfig.size() > 0 ) {
+            if(( _pbirrt != NULL) &&( params.vgoalconfig.size() > 0) ) {
                 _robot->SetActiveDOFs(_pmanip->_vecarmjoints);
                 _robot->GetActiveDOFValues(params.vinitialconfig);
-            
+
                 params.nMaxIterations = 200;
 
                 boost::shared_ptr<Trajectory> ptraj(GetEnv()->CreateTrajectory(_robot->GetActiveDOF()));
-            
+
                 do {
                     if( !_pbirrt->InitPlan(_robot, &params) ) {
                         RAVEPRINT(L"InitPlan failed\n");
@@ -1581,7 +1594,7 @@ class BiSpacePlanner : public PlannerBase
                     bSuccess = true;
                     FOREACHC(itpt, ptraj->GetPoints()) {
                         FOREACH(itmap, _vIKtoConfigMap)
-                            vikconfig[itmap->first] = itpt->q[itmap->second];
+                        vikconfig[itmap->first] = itpt->q[itmap->second];
                         ifwdnode = _AddFwdNode(ifwdnode, &vikconfig[0]);
                     }
 
@@ -1591,7 +1604,7 @@ class BiSpacePlanner : public PlannerBase
                     RAVEPRINT(L"IK path success\n");
                 }
             }
-        
+
             _robot->SetActiveDOFs(vprevactive, affinedof, &affaxis);
         }
 
@@ -1655,7 +1668,7 @@ class BiSpacePlanner : public PlannerBase
             if( _CheckCollision(pfwdnode->q, &_vSampleConfig[0], OPEN_START, false) ) {
                 if( pworknode->parent < 0 )
                     break;
-            
+
                 jiter = 0;
                 pworknode = _workspacetree._nodes[pworknode->parent];
 
@@ -1667,7 +1680,7 @@ class BiSpacePlanner : public PlannerBase
                     ifwdnode = pfwdnode->parent;
                     pfwdnode = _configtree._nodes[ifwdnode];
                 }
-                
+
                 continue;
             }
 
@@ -1677,7 +1690,7 @@ class BiSpacePlanner : public PlannerBase
             if( jiter++ > 32 ) {
                 if( pworknode->parent < 0 )
                     break;
-            
+
                 jiter = 0;
                 pworknode = _workspacetree._nodes[pworknode->parent];
             }
@@ -1703,7 +1716,7 @@ class BiSpacePlanner : public PlannerBase
         }
 
         RAVEPRINT(L"follow: %f\n", fbest);
-    
+
         return false;
     }
 
@@ -1725,7 +1738,7 @@ class BiSpacePlanner : public PlannerBase
         vector<dReal> vcurvalues(_robot->GetActiveDOF());
         Node* pcurnode = _configtree._nodes[ifwdnode];
         _SetRobotConfig(pcurnode->q, false);
-    
+
         // descend on the jacobian
         while(1) {
             // get the translation jacobian
@@ -1736,7 +1749,7 @@ class BiSpacePlanner : public PlannerBase
                 break;
 
             _robot->CalculateActiveJacobian(_pmanip->pEndEffector->GetIndex(), tEE.trans, &J[0]);
-        
+
             multtrans_to2<dReal, dReal, dReal>(&J[0], &J[0], 3, _robot->GetActiveDOF(), 3, JJt, false);
             JJt[0] += flambda*flambda;
             JJt[4] += flambda*flambda;
@@ -1756,7 +1769,7 @@ class BiSpacePlanner : public PlannerBase
                 dReal fdir = J[0*_robot->GetActiveDOF()+i] * v.x + J[1*_robot->GetActiveDOF()+i] * v.y + J[2*_robot->GetActiveDOF()+i] * v.z;
                 vcurvalues[i] = pcurnode->q[i] + fdir;
 
-                if( vcurvalues[i] < _configtree._vLowerLimit[i] || vcurvalues[i] > _configtree._vUpperLimit[i]) {
+                if(( vcurvalues[i] < _configtree._vLowerLimit[i]) ||( vcurvalues[i] > _configtree._vUpperLimit[i]) ) {
                     bsuccess = false;
                     break;
                 }
@@ -1793,7 +1806,7 @@ class BiSpacePlanner : public PlannerBase
         //            break;
         //
         //        _robot->CalculateActiveJacobian(_pmanip->pEndEffector->GetIndex(), tEE.trans, &J[0]);
-        //        
+        //
         //        multtrans_to2<dReal, dReal, dReal>(&J[0], &J[0], 4, _robot->GetActiveDOF(), 4, JJt, false);
         //        JJt[0] += flambda*flambda;
         //        JJt[5] += flambda*flambda;
@@ -1809,7 +1822,7 @@ class BiSpacePlanner : public PlannerBase
         //
         //        for(int i = 0; i < 4; ++i)
         //            v[i] = invJJt[4*i+0]*e[0]+invJJt[4*i+1]*e[1]+invJJt[4*i+2]*e[2]+invJJt[4*i+3]*e[3];
-        //        
+        //
         //        dReal f = 0;
         //        bool bsuccess = true;
         //        for(int i = 0; i < _robot->GetActiveDOF(); ++i) {
@@ -1851,7 +1864,7 @@ class BiSpacePlanner : public PlannerBase
 
         _SetRobotConfig(pcurconfig, false);
         Transform tEE = _pmanip->GetTransform();
-    
+
         // get the translation jacobian
         Transform tTarget;
         if( _workspacetree._spacetype == SST_6D )
@@ -1927,28 +1940,28 @@ class BiSpacePlanner : public PlannerBase
         _nBaseStartTime = GetMicroTime();
     }
 
-    dReal _GetTime() // get elapsed time
+    dReal _GetTime()     // get elapsed time
     {
         return (dReal)(GetMicroTime()-_nBaseStartTime) * 1e-6f;
     }
 
     BiSpaceParameters _parameters;
 
-    SpatialTree _configtree; ///< forward search tree
-    SpatialTree _workspacetree; ///< backward search tree
+    SpatialTree _configtree;     ///< forward search tree
+    SpatialTree _workspacetree;     ///< backward search tree
     SearchType _searchtype;
 
     RobotBase* _robot;
     PlannerBase* _pbirrt;
     DistanceMetric* _pConfigDistMetric;
-    uint64_t _nBaseStartTime; ///< start 
+    uint64_t _nBaseStartTime;     ///< start
 
     vector<dReal> _vSampleConfig;
     vector<dReal> _jointIncrement;
     vector<dReal> _vzero;
-    vector< pair<KinBody::Link*, Transform> > _vHandLinks; ///< links of the hand involved in workspace collision, each transformation is the offset from the workspace transformation
+    vector< pair<KinBody::Link*, Transform> > _vHandLinks;     ///< links of the hand involved in workspace collision, each transformation is the offset from the workspace transformation
 
-    vector< pair<int, int> > _vIKtoConfigMap; ///< used to transfer ik configuration solution to the active robot config
+    vector< pair<int, int> > _vIKtoConfigMap;     ///< used to transfer ik configuration solution to the active robot config
 
     vector<Transform> _vtransRobotStored, _vtransWorkGoals;
     int nNumBackGoals;
@@ -1956,158 +1969,174 @@ class BiSpacePlanner : public PlannerBase
     dReal fConfigFollowProb, fStochasticFollowRadius, fGoalVariance;
     int nExpansionMultiplier, nStochasticGradSamples;
 
-    vector<Transform> _vectrans; ///< cache
+    vector<Transform> _vectrans;     ///< cache
 
     int nDumpIndex;
     const RobotBase::Manipulator* _pmanip;
-    bool _bInit; ///< true if the planner has been initialized
+    bool _bInit;     ///< true if the planner has been initialized
     bool _bWorkspaceCollision;
 
     // default metrics
     class SimpleCostMetric : public PlannerBase::CostFunction
-        {
-        public:
-            void Init(RobotBase* probot);
-            virtual float Eval(const void* pConfiguration) { return fconst; }
-            dReal fconst;
-        };
+    {
+public:
+        void Init(RobotBase* probot);
+        virtual float Eval(const void* pConfiguration) {
+            return fconst;
+        }
+        dReal fconst;
+    };
 
     class SimpleGoalMetric : public PlannerBase::GoalFunction
+    {
+public:
+
+        SimpleGoalMetric() : PlannerBase::GoalFunction() {
+            thresh = 0.01f; _robot = NULL;
+        }
+
+        //checks if pConf is within this cone (note: only works in 3D)
+        float Eval(const void* c1)
         {
-        public:
-        
-        SimpleGoalMetric() : PlannerBase::GoalFunction() { thresh = 0.01f; _robot = NULL; }
+            BOOST_ASSERT( _robot != NULL && _robot->GetActiveManipulator() != NULL && _robot->GetActiveManipulator()->pEndEffector != NULL );
 
-            //checks if pConf is within this cone (note: only works in 3D)
-            float Eval(const void* c1)
-            {
-                BOOST_ASSERT( _robot != NULL && _robot->GetActiveManipulator() != NULL && _robot->GetActiveManipulator()->pEndEffector != NULL );
-            
-                _robot->SetActiveDOFValues(NULL,(const dReal *) c1);
-                Transform cur = _robot->GetActiveManipulator()->GetTransform();
+            _robot->SetActiveDOFValues(NULL,(const dReal *) c1);
+            Transform cur = _robot->GetActiveManipulator()->GetTransform();
 
-                return sqrtf(lengthsqr3(tgoal.trans - cur.trans));
-            }
+            return sqrtf(lengthsqr3(tgoal.trans - cur.trans));
+        }
 
-            virtual float GetGoalThresh() { return thresh; }
-            virtual void SetRobot(RobotBase* robot) { _robot = robot; }
+        virtual float GetGoalThresh() {
+            return thresh;
+        }
+        virtual void SetRobot(RobotBase* robot) {
+            _robot = robot;
+        }
 
-            Transform tgoal; // workspace goal
+        Transform tgoal;             // workspace goal
 
-        private:
-            float thresh;
-            RobotBase* _robot;
-        };
+private:
+        float thresh;
+        RobotBase* _robot;
+    };
 
     class SimpleDistMetric : public PlannerBase::DistanceMetric
+    {
+public:
+        SimpleDistMetric() : PlannerBase::DistanceMetric() {
+            thresh = 0.01f; _robot = NULL;
+        }
+
+        virtual void SetRobot(RobotBase* robot)
         {
-        public:
-        SimpleDistMetric() : PlannerBase::DistanceMetric() { thresh = 0.01f; _robot = NULL; }
+            _robot = robot;
+            if( _robot == NULL )
+                return;
 
-            virtual void SetRobot(RobotBase* robot)
-            {
-                _robot = robot;
-                if( _robot == NULL )
-                    return;
+            dReal ftransweight = 2;
+            weights.resize(0);
+            vector<int>::const_iterator it;
+            FORIT(it, _robot->GetActiveJointIndices()) weights.push_back(_robot->GetJointWeight(*it));
+            if( _robot->GetAffineDOF() & RobotBase::DOF_X ) weights.push_back(ftransweight);
+            if( _robot->GetAffineDOF() & RobotBase::DOF_Y ) weights.push_back(ftransweight);
+            if( _robot->GetAffineDOF() & RobotBase::DOF_Z ) weights.push_back(ftransweight);
+            if( _robot->GetAffineDOF() & RobotBase::DOF_RotationAxis ) weights.push_back(ftransweight);
+        }
 
-                dReal ftransweight = 2;
-                weights.resize(0);
-                vector<int>::const_iterator it;
-                FORIT(it, _robot->GetActiveJointIndices()) weights.push_back(_robot->GetJointWeight(*it));
-                if( _robot->GetAffineDOF() & RobotBase::DOF_X ) weights.push_back(ftransweight);
-                if( _robot->GetAffineDOF() & RobotBase::DOF_Y ) weights.push_back(ftransweight);
-                if( _robot->GetAffineDOF() & RobotBase::DOF_Z ) weights.push_back(ftransweight);
-                if( _robot->GetAffineDOF() & RobotBase::DOF_RotationAxis ) weights.push_back(ftransweight);
-            }
+        virtual float Eval(const void* c0, const void* c1)
+        {
+            BOOST_ASSERT( _robot->GetActiveDOF() == (int)weights.size() );
 
-            virtual float Eval(const void* c0, const void* c1)
-            {
-                BOOST_ASSERT( _robot->GetActiveDOF() == (int)weights.size() );
+            dReal out = 0;
+            for(int i=0; i < _robot->GetActiveDOF(); i++)
+                out += weights[i] * (((dReal *)c0)[i]-((dReal *)c1)[i])*(((dReal *)c0)[i]-((dReal *)c1)[i]);
 
-                dReal out = 0;
-                for(int i=0; i < _robot->GetActiveDOF(); i++)
-                    out += weights[i] * (((dReal *)c0)[i]-((dReal *)c1)[i])*(((dReal *)c0)[i]-((dReal *)c1)[i]);
-            
-                return sqrtf(out);
-            }
+            return sqrtf(out);
+        }
 
-            vector<dReal> weights;
-        };
+        vector<dReal> weights;
+    };
 
     class ExtendDistMetric : public PlannerBase::DistanceMetric
-        {
-        public:
-        ExtendDistMetric() : PlannerBase::DistanceMetric() { thresh = 0.01f; _robot = NULL; }
-        };
+    {
+public:
+        ExtendDistMetric() : PlannerBase::DistanceMetric() {
+            thresh = 0.01f; _robot = NULL;
+        }
+    };
 
     class Workspace6DDistMetric : public PlannerBase::DistanceMetric
+    {
+public:
+        Workspace6DDistMetric() : PlannerBase::DistanceMetric() {
+            frotweight = 1;
+        }
+
+        virtual float Eval(const void* c0, const void* c1)
         {
-        public:
-        Workspace6DDistMetric() : PlannerBase::DistanceMetric() { frotweight = 1; }
+            const dReal* pf0 = (const dReal*)c0;
+            const dReal* pf1 = (const dReal*)c1;
+            dReal frotdist1 = (*(Vector*)&pf0[3] - *(Vector*)&pf1[3]).lengthsqr4();
+            dReal frotdist2 = (*(Vector*)&pf0[3] + *(Vector*)&pf1[3]).lengthsqr4();
+            return sqrtf( (*(Vector*)pf0 - *(Vector*)pf1).lengthsqr3() + frotweight * min(frotdist1,frotdist2) );
+        }
 
-            virtual float Eval(const void* c0, const void* c1)
-            {
-                const dReal* pf0 = (const dReal*)c0;
-                const dReal* pf1 = (const dReal*)c1;
-                dReal frotdist1 = (*(Vector*)&pf0[3] - *(Vector*)&pf1[3]).lengthsqr4();
-                dReal frotdist2 = (*(Vector*)&pf0[3] + *(Vector*)&pf1[3]).lengthsqr4();
-                return sqrtf( (*(Vector*)pf0 - *(Vector*)pf1).lengthsqr3() + frotweight * min(frotdist1,frotdist2) );
-            }
-
-            dReal frotweight;
-        };
+        dReal frotweight;
+    };
 
     class Workspace3DDistMetric : public PlannerBase::DistanceMetric
-        {
-        public:
-        Workspace3DDistMetric() : PlannerBase::DistanceMetric() {}
+    {
+public:
+        Workspace3DDistMetric() : PlannerBase::DistanceMetric() {
+        }
 
-            virtual float Eval(const void* c0, const void* c1)
-            {
-                return sqrtf( (*(Vector*)c0 - *(Vector*)c1).lengthsqr3() );
-            }
-        };
+        virtual float Eval(const void* c0, const void* c1)
+        {
+            return sqrtf( (*(Vector*)c0 - *(Vector*)c1).lengthsqr3() );
+        }
+    };
 
     class ForwardSampleFunction : public PlannerBase::SampleFunction
-        {
-        public:
-        ForwardSampleFunction() : _ptree(NULL), plower(NULL), pupper(NULL), prange(NULL) {}
+    {
+public:
+        ForwardSampleFunction() : _ptree(NULL), plower(NULL), pupper(NULL), prange(NULL) {
+        }
 
-            void Init(SpatialTree* ptree) {
-                _ptree = ptree;
-                dof = _ptree->GetDOF();
-                plower = &ptree->_vLowerLimit;
-                pupper = &ptree->_vUpperLimit;
-                prange = &ptree->_vDOFRange;
+        void Init(SpatialTree* ptree) {
+            _ptree = ptree;
+            dof = _ptree->GetDOF();
+            plower = &ptree->_vLowerLimit;
+            pupper = &ptree->_vUpperLimit;
+            prange = &ptree->_vDOFRange;
+        }
+        virtual void Sample(dReal* pNewSample) {
+            for (int i = 0; i < dof; i++) {
+                pNewSample[i] = (*plower)[i] + RANDOM_FLOAT()*(*prange)[i];
             }
-            virtual void Sample(dReal* pNewSample) {
-                for (int i = 0; i < dof; i++) {
-                    pNewSample[i] = (*plower)[i] + RANDOM_FLOAT()*(*prange)[i];
-                }
-            }
+        }
 
-            virtual bool Sample(dReal* pNewSample, const dReal* pCurSample, dReal fRadius) {
+        virtual bool Sample(dReal* pNewSample, const dReal* pCurSample, dReal fRadius) {
 
-                if( pCurSample == NULL ) {
-                    Sample(pNewSample);
-                    return true;
-                }
-
-                for (int i = 0; i < dof; i++) {
-                    pNewSample[i] = pCurSample[i] + (RANDOM_FLOAT()-0.5f)*fRadius*_ptree->_jointResolution[i];
-                    if( pNewSample[i] < (*plower)[i] )
-                        pNewSample[i] = (*plower)[i];
-                    else if( pNewSample[i] > (*pupper)[i] )
-                        pNewSample[i] = (*pupper)[i];
-                }
+            if( pCurSample == NULL ) {
+                Sample(pNewSample);
                 return true;
             }
 
-        private:
-            int dof;
-            SpatialTree* _ptree;
-            vector<dReal>* plower, *pupper, *prange;
-        };
+            for (int i = 0; i < dof; i++) {
+                pNewSample[i] = pCurSample[i] + (RANDOM_FLOAT()-0.5f)*fRadius*_ptree->_jointResolution[i];
+                if( pNewSample[i] < (*plower)[i] )
+                    pNewSample[i] = (*plower)[i];
+                else if( pNewSample[i] > (*pupper)[i] )
+                    pNewSample[i] = (*pupper)[i];
+            }
+            return true;
+        }
+
+private:
+        int dof;
+        SpatialTree* _ptree;
+        vector<dReal>* plower, *pupper, *prange;
+    };
 
     SimpleCostMetric _costmetric;
     SimpleGoalMetric _goalmetric;

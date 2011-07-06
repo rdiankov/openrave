@@ -4,7 +4,7 @@
     Creates a simple OpenRAVE::ControllerBase and shows how to add a custom XML reader to it.
 
     <b>Full Example Code:</b>
-*/
+ */
 #include <openrave/openrave.h>
 #include <openrave/plugin.h>
 
@@ -16,14 +16,15 @@ class CustomController : public ControllerBase
 public:
     class XMLData : public XMLReadable
     {
-    public:
-        XMLData() : XMLReadable("piddata") {}
+public:
+        XMLData() : XMLReadable("piddata") {
+        }
         vector<dReal> pgains,igains;
     };
 
     class PIDXMLReader : public BaseXMLReader
     {
-    public:
+public:
         PIDXMLReader(boost::shared_ptr<XMLData> piddata, const AttributesList& atts) {
             _piddata = piddata;
             if( !_piddata )
@@ -33,7 +34,9 @@ public:
                 RAVELOG_INFO("%s=%s\n",itatt->first.c_str(),itatt->second.c_str());
         }
 
-        virtual XMLReadablePtr GetReadable() { return _piddata; }
+        virtual XMLReadablePtr GetReadable() {
+            return _piddata;
+        }
 
         virtual ProcessElement startElement(const std::string& name, const AttributesList& atts) {
             _ss.str("");
@@ -62,7 +65,7 @@ public:
             _ss << ch;
         }
 
-    protected:
+protected:
         boost::shared_ptr<XMLData> _piddata;
         stringstream _ss;
     };
@@ -76,7 +79,8 @@ public:
     CustomController(EnvironmentBasePtr penv) : ControllerBase(penv)
     {
     }
-    virtual ~CustomController() {}
+    virtual ~CustomController() {
+    }
 
     virtual bool Init(RobotBasePtr robot, const std::vector<int>& dofindices, int nControlTransformation)
     {
@@ -102,16 +106,32 @@ public:
         return true;
     }
 
-    virtual const std::vector<int>& GetControlDOFIndices() const { return _dofindices; }
-    virtual int IsControlTransformation() const { return _nControlTransformation; }
+    virtual const std::vector<int>& GetControlDOFIndices() const {
+        return _dofindices;
+    }
+    virtual int IsControlTransformation() const {
+        return _nControlTransformation;
+    }
 
-    virtual void Reset(int options) {}
-    virtual bool SetDesired(const std::vector<dReal>& values, TransformConstPtr trans) { return false; }
-    virtual bool SetPath(TrajectoryBaseConstPtr ptraj) { return false; }
-    virtual void SimulationStep(dReal fTimeElapsed) {}
-    virtual bool IsDone() { return false; }
-    virtual dReal GetTime() const { return 0; }
-    virtual RobotBasePtr GetRobot() const { return _probot; }
+    virtual void Reset(int options) {
+    }
+    virtual bool SetDesired(const std::vector<dReal>& values, TransformConstPtr trans) {
+        return false;
+    }
+    virtual bool SetPath(TrajectoryBaseConstPtr ptraj) {
+        return false;
+    }
+    virtual void SimulationStep(dReal fTimeElapsed) {
+    }
+    virtual bool IsDone() {
+        return false;
+    }
+    virtual dReal GetTime() const {
+        return 0;
+    }
+    virtual RobotBasePtr GetRobot() const {
+        return _probot;
+    }
 
 protected:
     RobotBasePtr _probot;

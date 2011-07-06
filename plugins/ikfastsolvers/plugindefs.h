@@ -28,11 +28,11 @@
 #include <boost/typeof/std/map.hpp>
 #include <boost/typeof/std/string.hpp>
 
-#define FOREACH(it, v) for(BOOST_TYPEOF(v)::iterator it = (v).begin(); it != (v).end(); (it)++)
-#define FOREACH_NOINC(it, v) for(BOOST_TYPEOF(v)::iterator it = (v).begin(); it != (v).end(); )
+#define FOREACH(it, v) for(BOOST_TYPEOF(v) ::iterator it = (v).begin(); it != (v).end(); (it)++)
+#define FOREACH_NOINC(it, v) for(BOOST_TYPEOF(v) ::iterator it = (v).begin(); it != (v).end(); )
 
-#define FOREACHC(it, v) for(BOOST_TYPEOF(v)::const_iterator it = (v).begin(); it != (v).end(); (it)++)
-#define FOREACHC_NOINC(it, v) for(BOOST_TYPEOF(v)::const_iterator it = (v).begin(); it != (v).end(); )
+#define FOREACHC(it, v) for(BOOST_TYPEOF(v) ::const_iterator it = (v).begin(); it != (v).end(); (it)++)
+#define FOREACHC_NOINC(it, v) for(BOOST_TYPEOF(v) ::const_iterator it = (v).begin(); it != (v).end(); )
 #define RAVE_REGISTER_BOOST
 #else
 
@@ -42,8 +42,8 @@
 #include <map>
 #include <string>
 
-#define FOREACH(it, v) for(typeof((v).begin()) it = (v).begin(); it != (v).end(); (it)++)
-#define FOREACH_NOINC(it, v) for(typeof((v).begin()) it = (v).begin(); it != (v).end(); )
+#define FOREACH(it, v) for(typeof((v).begin())it = (v).begin(); it != (v).end(); (it)++)
+#define FOREACH_NOINC(it, v) for(typeof((v).begin())it = (v).begin(); it != (v).end(); )
 
 #define FOREACHC FOREACH
 #define FOREACHC_NOINC FOREACH_NOINC
@@ -102,7 +102,9 @@ inline static uint64_t GetNanoTime()
     return (count.QuadPart * 1000000000) / freq.QuadPart;
 }
 
-inline static uint64_t GetNanoPerformanceTime() { return GetNanoTime(); }
+inline static uint64_t GetNanoPerformanceTime() {
+    return GetNanoTime();
+}
 
 #else
 
@@ -150,14 +152,14 @@ inline static uint32_t GetMilliTime()
 inline static uint64_t GetNanoPerformanceTime()
 {
 #if defined(CLOCK_GETTIME_FOUND) && (POSIX_TIMERS > 0 || _POSIX_TIMERS > 0) && defined(_POSIX_MONOTONIC_CLOCK)
-  struct timespec start;
-  uint32_t sec, nsec;
-  clock_gettime(CLOCK_MONOTONIC, &start);
-  sec  = start.tv_sec;
-  nsec = start.tv_nsec;
-  return (uint64_t)sec*1000000000 + (uint64_t)nsec;
+    struct timespec start;
+    uint32_t sec, nsec;
+    clock_gettime(CLOCK_MONOTONIC, &start);
+    sec  = start.tv_sec;
+    nsec = start.tv_nsec;
+    return (uint64_t)sec*1000000000 + (uint64_t)nsec;
 #else
-  return GetNanoTime();
+    return GetNanoTime();
 #endif
 }
 
@@ -165,7 +167,8 @@ inline static uint64_t GetNanoPerformanceTime()
 
 struct null_deleter
 {
-    void operator()(void const *) const {}
+    void operator()(void const *) const {
+    }
 };
 
 template <class T> boost::shared_ptr<T> sptr_from(boost::weak_ptr<T> const& wpt)
@@ -200,7 +203,7 @@ inline T ANGLE_DIFF(T f0, T f1)
 template <typename Real>
 class IKSolutionTemplate
 {
- public:
+public:
     typedef Real IKReal;
     /// Gets a solution given its free parameters
     /// \param pfree The free parameters required, range is in [-pi,pi]
@@ -221,17 +224,21 @@ class IKSolutionTemplate
 
     /// Gets the free parameters the solution requires to be set before a full solution can be returned
     /// \return vector of indices indicating the free parameters
-    const std::vector<int>& GetFree() const { return vfree; }
+    const std::vector<int>& GetFree() const {
+        return vfree;
+    }
 
     struct VARIABLE
     {
-    VARIABLE() : freeind(-1), fmul(0), foffset(0) {}
-    VARIABLE(int freeind, Real fmul, Real foffset) : freeind(freeind), fmul(fmul), foffset(foffset) {}
+        VARIABLE() : freeind(-1), fmul(0), foffset(0) {
+        }
+        VARIABLE(int freeind, Real fmul, Real foffset) : freeind(freeind), fmul(fmul), foffset(foffset) {
+        }
         int freeind;
-        Real fmul, foffset; ///< joint value is fmul*sol[freeind]+foffset
+        Real fmul, foffset;     ///< joint value is fmul*sol[freeind]+foffset
     };
 
-    std::vector<VARIABLE> basesol;       ///< solution and their offsets if joints are mimiced
+    std::vector<VARIABLE> basesol;           ///< solution and their offsets if joints are mimiced
     std::vector<int> vfree;
 };
 

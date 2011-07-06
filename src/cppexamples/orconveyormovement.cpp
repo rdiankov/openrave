@@ -7,7 +7,7 @@
     Shows how to setup a simulation loop to move objects around a conveyor belt.
 
     <b>Full Example Code:</b>
-*/
+ */
 #include <openrave-core.h>
 #include <vector>
 #include <sstream>
@@ -29,7 +29,7 @@ class ConveyorBeltModule : public ModuleBase
     struct RegisteredBody
     {
         string filename;
-        dReal appearanceprobability; // probably of appearance in 1 second
+        dReal appearanceprobability;     // probably of appearance in 1 second
     };
 
     struct InstancedBody
@@ -86,7 +86,7 @@ public:
                         break;
                     }
                 }
-                
+
                 if( !b.pbody ) {
                     GetEnv()->Remove(pbody);
                 }

@@ -3,10 +3,17 @@
 ChangeLog
 #########
 
-Version 0.4.0 Unstable
+Version 0.4.1 Unstable
 ======================
 
-Subversion Revision: 2556
+Subversion Revision: **Unreleased**
+
+Initial Release: **Unreleased**
+
+Version 0.4.0
+=============
+
+Subversion Revision: 2557
 
 Initial Release: 2011/07/02
 

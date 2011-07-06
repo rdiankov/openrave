@@ -13,8 +13,6 @@
 # limitations under the License.
 from common_test_openrave import *
 
-_multiprocess_can_split_ = True
-
 class TestKinematics(EnvironmentSetup):
     def test_bodybasic(self):
         print "check if the joint-link set-get functions are consistent along with jacobians"

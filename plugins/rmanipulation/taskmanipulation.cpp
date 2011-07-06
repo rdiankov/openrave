@@ -37,20 +37,21 @@ BOOST_TYPEOF_REGISTER_TYPE(GRASPGOAL)
 
 class GraspVectorCompare : public RealVectorCompare
 {
- public:
- GraspVectorCompare() : RealVectorCompare(GRASPTHRESH2) {}
+public:
+    GraspVectorCompare() : RealVectorCompare(GRASPTHRESH2) {
+    }
 };
 
 class TaskManipulation : public ModuleBase
 {
- public:
+public:
     typedef std::map<vector<dReal>, TrajectoryBasePtr, GraspVectorCompare > PRESHAPETRAJMAP;
 
- TaskManipulation(EnvironmentBasePtr penv) : ModuleBase(penv) {
+    TaskManipulation(EnvironmentBasePtr penv) : ModuleBase(penv) {
         __description = ":Interface Author: Rosen Diankov\n\n\
 Task-based manipulation planning involving target objects. A lot of the algorithms and theory are covered in:\n\
 \n\
-- Rosen Diankov. \"Automated Construction of Robotic Manipulation Programs\". PhD Thesis, CMU-RI-TR-10-29, Carnegie Mellon University, Robotics Institute, August 2010.\n";
+- Rosen Diankov. \"Automated Construction of Robotic Manipulation Programs\". PhD Thesis, CMU-RI-TR-10-29, Carnegie Mellon University, Robotics Institute, August 2010.\n"                                                                                                                                                                                                                                                                                                                                                                    ;
         RegisterCommand("GraspPlanning",boost::bind(&TaskManipulation::GraspPlanning,this,_1,_2),
                         "Grasp planning is the ultimate function that puts together many planners achieving a robust and general pick and place motiotions with grasp sets. It first chooses grasps from a grasp set and use it for manipulation. In order for the arm to reach the grasps, it must have a Transform6D IK solver, anything with less DOF will not work.\nParameters:\n\n\
 * grasps\n\
@@ -75,7 +76,7 @@ Task-based manipulation planning involving target objects. A lot of the algorith
 * seeddests\n\
 * seedik\n\
 * savepreshapetraj\n\
-");
+"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        );
         RegisterCommand("GraspPlanningAsCylinders",boost::bind(&TaskManipulation::GraspPlanningAsCylinders,this,_1,_2),
                         "Performs grasp planning treating the targets as cylinders (axis is along the target local z), this allows TranslationDirection5D IK to be used for arms with >= 5 joints");
         RegisterCommand("CloseFingers",boost::bind(&TaskManipulation::CloseFingers,this,_1,_2),
@@ -201,14 +202,14 @@ Task-based manipulation planning involving target objects. A lot of the algorith
         listsystems.push_back(psystem);
 
         RAVELOG_DEBUG(str(boost::format("added %s system\n")%systemname));
-        sout << 1; // signal success
+        sout << 1;     // signal success
         return true;
     }
 
     class ActiveDistMetric
     {
-    public:
-    ActiveDistMetric(RobotBasePtr robot) : _robot(robot) {
+public:
+        ActiveDistMetric(RobotBasePtr robot) : _robot(robot) {
             _robot->GetActiveDOFWeights(weights);
             FOREACH(it,weights) {
                 *it *= *it;
@@ -223,7 +224,7 @@ Task-based manipulation planning involving target objects. A lot of the algorith
             return RaveSqrt(out);
         }
 
-    protected:
+protected:
         RobotBasePtr _robot;
         vector<dReal> weights;
     };
@@ -231,7 +232,7 @@ Task-based manipulation planning involving target objects. A lot of the algorith
     bool EvaluateConstraints(ostream& sout, istream& sinput)
     {
         Transform tTargetWorldFrame;
-        boost::array<double,6> vfreedoms = {{1,1,1,1,1,1}};
+        boost::array<double,6> vfreedoms = { { 1,1,1,1,1,1}};
         string cmd;
         list< vector<dReal> > listconfigs;
         double errorthresh=1e-3;
@@ -308,14 +309,14 @@ Task-based manipulation planning involving target objects. A lot of the algorith
 
         KinBodyPtr ptarget;
         int nNumGrasps=0, nGraspDim=0;
-        dReal fApproachOffset=0.0f; // offset before approaching to the target
+        dReal fApproachOffset=0.0f;     // offset before approaching to the target
         string targetname;
         vector<Transform> vObjDestinations;
-        string strpreshapetraj; // save the preshape trajectory
+        string strpreshapetraj;     // save the preshape trajectory
         bool bCombinePreShapeTraj = true;
         bool bExecute = true;
         string strtrajfilename;
-        bool bRandomDests = true, bRandomGrasps = true; // if true, permute the grasps and destinations when iterating through them
+        bool bRandomDests = true, bRandomGrasps = true;     // if true, permute the grasps and destinations when iterating through them
         boost::shared_ptr<ostream> pOutputTrajStream;
         int nMaxSeedGrasps = 20, nMaxSeedDests = 5, nMaxSeedIkSolutions = 0;
         int nMaxIterations = 4000;
@@ -323,7 +324,7 @@ Task-based manipulation planning involving target objects. A lot of the algorith
 
         // indices into the grasp table
         int iGraspDir = -1, iGraspPos = -1, iGraspRoll = -1, iGraspPreshape = -1, iGraspStandoff = -1;
-        int iGraspTransform = -1; // if >= 0, use the grasp transform to check for collisions
+        int iGraspTransform = -1;     // if >= 0, use the grasp transform to check for collisions
 
         string cmd;
         CollisionReportPtr report(new CollisionReport);
@@ -442,7 +443,7 @@ Task-based manipulation planning involving target objects. A lot of the algorith
         }
         RobotBase::RobotStateSaver saver(_robot);
 
-        bool bMobileBase = _robot->GetAffineDOF()!=0; // if mobile base, cannot rely on IK
+        bool bMobileBase = _robot->GetAffineDOF()!=0;     // if mobile base, cannot rely on IK
         if( bMobileBase ) {
             RAVELOG_INFO("planning with mobile base!\n");
         }
@@ -506,7 +507,7 @@ Task-based manipulation planning involving target objects. A lot of the algorith
                 RAVELOG_ERROR("grasper problem not valid\n");
                 return false;
             }
-            if( iGraspDir < 0 || iGraspPos < 0 || iGraspRoll < 0 || iGraspStandoff < 0 ) {
+            if(( iGraspDir < 0) ||( iGraspPos < 0) ||( iGraspRoll < 0) ||( iGraspStandoff < 0) ) {
                 RAVELOG_ERROR("grasp indices not all initialized\n");
                 return false;
             }
@@ -518,7 +519,7 @@ Task-based manipulation planning involving target objects. A lot of the algorith
             int igrasp = vgrasppermuation[igraspperm];
             dReal* pgrasp = &vgrasps[igrasp*nGraspDim];
 
-            if( listGraspGoals.size() > 0 && iCountdown-- <= 0 ) {
+            if(( listGraspGoals.size() > 0) &&( iCountdown-- <= 0) ) {
                 // start planning
                 _UpdateSwitchModels(true,false);
 
@@ -545,7 +546,7 @@ Task-based manipulation planning involving target objects. A lot of the algorith
             }
 
             PRESHAPETRAJMAP::iterator itpreshapetraj = mapPreshapeTrajectories.find(vgoalpreshape);
-            if( itpreshapetraj != mapPreshapeTrajectories.end() && !itpreshapetraj->second ) {
+            if(( itpreshapetraj != mapPreshapeTrajectories.end()) && !itpreshapetraj->second ) {
                 // has failed to find a trajectory to open a hand on a previous attempt, so skip
                 RAVELOG_DEBUG("grasp %d: skipping failed preshape\n", igrasp);
                 continue;
@@ -581,12 +582,12 @@ Task-based manipulation planning involving target objects. A lot of the algorith
 
                 if( !_pGrasperPlanner->InitPlan(_robot,graspparams) ) {
                     RAVELOG_DEBUG("grasper planner failed: %d\n", igrasp);
-                    continue; // failed
+                    continue;     // failed
                 }
 
                 if( !_pGrasperPlanner->PlanPath(phandtraj) ) {
                     RAVELOG_DEBUG("grasper planner failed: %d\n", igrasp);
-                    continue; // failed
+                    continue;     // failed
                 }
 
                 BOOST_ASSERT(phandtraj->GetPoints().size()>0);
@@ -610,7 +611,7 @@ Task-based manipulation planning involving target objects. A lot of the algorith
                     }
                 }
 
-                tGoalEndEffector = t * _robot->GetTransform().inverse() * pmanip->GetTransform(); // find the end effector transform
+                tGoalEndEffector = t * _robot->GetTransform().inverse() * pmanip->GetTransform();     // find the end effector transform
                 vFinalGripperValues.resize(pmanip->GetGripperIndices().size());
                 std::copy(phandtraj->GetPoints().back().q.begin(),phandtraj->GetPoints().back().q.begin()+vFinalGripperValues.size(),vFinalGripperValues.begin());
             }
@@ -666,7 +667,7 @@ Task-based manipulation planning involving target objects. A lot of the algorith
                     continue;
                 }
 
-                _UpdateSwitchModels(true,true); // switch to fat models
+                _UpdateSwitchModels(true,true);     // switch to fat models
                 if( fApproachOffset != 0 ) {
                     // now test at the approach point (with offset)
                     tApproachEndEffector.trans -= (fApproachOffset-fSmallOffset) * vglobalpalmdir;
@@ -675,7 +676,7 @@ Task-based manipulation planning involving target objects. A lot of the algorith
                     _robot->SetActiveDOFs(pmanip->GetArmIndices());
                     _robot->SetActiveDOFValues(viksolution);
                     if( !pmanip->FindIKSolution(tApproachEndEffector, viksolution, true) ) {
-                        _robot->SetDOFValues(vCurRobotValues); // reset robot to original position
+                        _robot->SetDOFValues(vCurRobotValues);     // reset robot to original position
                         RAVELOG_DEBUG("grasp %d: No IK solution found (approach)\n", igrasp);
                         continue;
                     }
@@ -701,7 +702,7 @@ Task-based manipulation planning involving target objects. A lot of the algorith
                 _robot->SetActiveDOFValues(vFinalGripperValues, true);
 
             //while (getchar() != '\n') usleep(1000);
-            _UpdateSwitchModels(false,false); // should test destination with thin models
+            _UpdateSwitchModels(false,false);     // should test destination with thin models
 
             list< TransformMatrix > listDests;
             if( bRandomDests ) {
@@ -715,7 +716,7 @@ Task-based manipulation planning involving target objects. A lot of the algorith
                 bool bTargetCollision;
                 {
                     RobotBase::RobotStateSaver linksaver(_robot,KinBody::Save_LinkEnable);
-                    _robot->Enable(false); // remove robot from target collisions
+                    _robot->Enable(false);     // remove robot from target collisions
                     bTargetCollision = GetEnv()->CheckCollision(KinBodyConstPtr(ptarget));
                 }
 
@@ -737,9 +738,9 @@ Task-based manipulation planning involving target objects. A lot of the algorith
                     break;
             }
 
-            _robot->SetDOFValues(vCurRobotValues); // reset robot to original position
+            _robot->SetDOFValues(vCurRobotValues);     // reset robot to original position
 
-            if( vObjDestinations.size() > 0 && listDests.size() == 0 ) {
+            if(( vObjDestinations.size() > 0) &&( listDests.size() == 0) ) {
                 RAVELOG_WARN("grasp %d: could not find destination\n", igrasp);
                 continue;
             }
@@ -758,7 +759,7 @@ Task-based manipulation planning involving target objects. A lot of the algorith
                 bool bSuccess = CM::MoveUnsync::_MoveUnsyncJoints(GetEnv(), _robot, ptrajToPreshape, pmanip->GetGripperIndices(), vgoalpreshape);
 
                 if( !bSuccess ) {
-                    mapPreshapeTrajectories[vgoalpreshape].reset(); // set to empty
+                    mapPreshapeTrajectories[vgoalpreshape].reset();     // set to empty
                     RAVELOG_DEBUG("grasp %d: failed to find preshape\n", igrasp);
                     continue;
                 }
@@ -841,24 +842,24 @@ Task-based manipulation planning involving target objects. A lot of the algorith
             if( bInitialRobotChanged )
                 ptrajfinal->AddPoint(Trajectory::TPOINT(vOrgRobotValues,_robot->GetTransform(), 0));
 
-            if( strpreshapetraj.size() > 0 ) { // write the preshape
+            if( strpreshapetraj.size() > 0 ) {     // write the preshape
                 ofstream f(strpreshapetraj.c_str());
                 itpreshapetraj->second->Write(f, Trajectory::TO_IncludeTimestamps|Trajectory::TO_IncludeBaseTransformation);
             }
-            if( bCombinePreShapeTraj) { // add the preshape
+            if( bCombinePreShapeTraj) {     // add the preshape
                 FOREACHC(itpoint, itpreshapetraj->second->GetPoints())
-                    ptrajfinal->AddPoint(*itpoint);
+                ptrajfinal->AddPoint(*itpoint);
             }
 
             FOREACHC(itpoint, ptraj->GetPoints())
-                ptrajfinal->AddPoint(*itpoint);
+            ptrajfinal->AddPoint(*itpoint);
 
             ptrajfinal->CalcTrajTiming(_robot, ptrajfinal->GetInterpMethod(), true, false,_fMaxVelMult);
 
             RAVELOG_DEBUG("grasp index %d\n",goalFound.index);
             sout << goalFound.listDests.size() << " ";
             FOREACH(itdest, goalFound.listDests)
-                sout << *itdest << " ";
+            sout << *itdest << " ";
             sout << goalFound.index << " " << (float)nSearchTime/1000000.0f << " ";
 
             // set the trajectory
@@ -866,7 +867,7 @@ Task-based manipulation planning involving target objects. A lot of the algorith
             return true;
         }
 
-        return false; // couldn't not find for this cup
+        return false;     // couldn't not find for this cup
     }
 
     bool GraspPlanningAsCylinders(ostream& sout, istream& sinput)
@@ -875,14 +876,14 @@ Task-based manipulation planning involving target objects. A lot of the algorith
         RobotBase::ManipulatorConstPtr pmanip = _robot->GetActiveManipulator();
         boost::shared_ptr<GraspParameters> graspparams(new GraspParameters(GetEnv()));
         KinBodyPtr ptarget;
-        dReal fApproachOffset=0.0f; // offset before approaching to the target
+        dReal fApproachOffset=0.0f;     // offset before approaching to the target
         string targetname;
         vector<Transform> vObjDestinations;
-        string strpreshapetraj; // save the preshape trajectory
+        string strpreshapetraj;     // save the preshape trajectory
         //bool bCombinePreShapeTraj = true;
         bool bExecute = true;
         string strtrajfilename;
-        bool bRandomDests = true; // if true, permute the destinations when iterating through them
+        bool bRandomDests = true;     // if true, permute the destinations when iterating through them
         boost::shared_ptr<ostream> pOutputTrajStream;
         int nMaxSeedDests = 5, nMaxSeedIkSolutions = 0;
         int nMaxIterations = 4000;
@@ -935,7 +936,7 @@ Task-based manipulation planning involving target objects. A lot of the algorith
                 int numdests = 0; sinput >> numdests;
                 vObjDestinations.resize(numdests);
                 FOREACH(ittrans, vObjDestinations)
-                    sinput >> *ittrans;
+                sinput >> *ittrans;
             }
             else if( cmd == "seeddests" ) {
                 sinput >> nMaxSeedDests;
@@ -970,7 +971,7 @@ Task-based manipulation planning involving target objects. A lot of the algorith
         }
         RobotBase::RobotStateSaver saver(_robot);
 
-        bool bMobileBase = _robot->GetAffineDOF()!=0; // if mobile base, cannot rely on IK
+        bool bMobileBase = _robot->GetAffineDOF()!=0;     // if mobile base, cannot rely on IK
         if( bMobileBase ) {
             RAVELOG_INFO("planning with mobile base!\n");
         }
@@ -1039,7 +1040,7 @@ Task-based manipulation planning involving target objects. A lot of the algorith
             else if( cmd == "offset" ) {
                 voffset.resize(pmanip->GetGripperIndices().size());
                 FOREACH(it, voffset)
-                    sinput >> *it;
+                sinput >> *it;
             }
             else if( cmd == "movingdir" ) {
                 FOREACH(it,graspparams->vgoalconfig) {
@@ -1048,7 +1049,7 @@ Task-based manipulation planning involving target objects. A lot of the algorith
             }
             else if( cmd == "coarsestep" ) {
                 sinput >> graspparams->fcoarsestep;
-                graspparams->ffinestep = graspparams->fcoarsestep * 0.01; // always make it 100x more accurate
+                graspparams->ffinestep = graspparams->fcoarsestep * 0.01;     // always make it 100x more accurate
             }
             else {
                 RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
@@ -1098,7 +1099,7 @@ Task-based manipulation planning involving target objects. A lot of the algorith
 
         if( bOutputFinal ) {
             FOREACH(itq,ptraj->GetPoints().back().q)
-                sout << *itq << " ";
+            sout << *itq << " ";
         }
 
         Trajectory::TPOINT p = ptraj->GetPoints().back();
@@ -1159,7 +1160,7 @@ Task-based manipulation planning involving target objects. A lot of the algorith
             }
             else if( cmd == "coarsestep" ) {
                 sinput >> graspparams->fcoarsestep;
-                graspparams->ffinestep = graspparams->fcoarsestep * 0.01; // always make it 100x more accurate
+                graspparams->ffinestep = graspparams->fcoarsestep * 0.01;     // always make it 100x more accurate
             }
             else {
                 RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
@@ -1217,7 +1218,7 @@ Task-based manipulation planning involving target objects. A lot of the algorith
 
         if( bOutputFinal ) {
             FOREACH(itq,ptraj->GetPoints().back().q)
-                sout << *itq << " ";
+            sout << *itq << " ";
         }
 
         {
@@ -1285,7 +1286,7 @@ Task-based manipulation planning involving target objects. A lot of the algorith
             else if( cmd == "movingdir" ) {
                 // moving direction, has to be of size activedof
                 FOREACH(it, graspparams->vgoalconfig)
-                    sinput >> *it;
+                sinput >> *it;
             }
             else {
                 RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
@@ -1321,7 +1322,7 @@ Task-based manipulation planning involving target objects. A lot of the algorith
             return false;
         }
 
-        _robot->SetActiveManipulator(-1); // reset the manipulator
+        _robot->SetActiveManipulator(-1);     // reset the manipulator
         graspparams->SetRobotActiveJoints(_robot);
         _robot->GetActiveDOFValues(graspparams->vinitialconfig);
         graspparams->btransformrobot = false;
@@ -1345,7 +1346,7 @@ Task-based manipulation planning involving target objects. A lot of the algorith
 
         if( bOutputFinal ) {
             FOREACH(itq,ptraj->GetPoints().back().q)
-                sout << *itq << " ";
+            sout << *itq << " ";
         }
 
         {
@@ -1366,8 +1367,8 @@ Task-based manipulation planning involving target objects. A lot of the algorith
 
     class SwitchModelContainer
     {
-    public:
-    SwitchModelContainer(KinBodyPtr pbody, const string& fatfilename) : _pbody(pbody) {
+public:
+        SwitchModelContainer(KinBodyPtr pbody, const string& fatfilename) : _pbody(pbody) {
             RAVELOG_VERBOSE(str(boost::format("register %s body with %s fatfile\n")%pbody->GetName()%fatfilename));
             _pbodyfat = pbody->GetEnv()->ReadKinBodyURI(fatfilename);
             // validate the fat body
@@ -1393,17 +1394,21 @@ Task-based manipulation planning involving target objects. A lot of the algorith
             }
         }
 
-        KinBodyPtr GetBody() const { return _pbody; }
-        bool IsFat() const { return _bFat; }
-    private:
+        KinBodyPtr GetBody() const {
+            return _pbody;
+        }
+        bool IsFat() const {
+            return _bFat;
+        }
+private:
         KinBodyPtr _pbody, _pbodyfat;
         bool _bFat;
     };
 
     class SwitchModelState
     {
-    public:
-    SwitchModelState(boost::shared_ptr<TaskManipulation> ptask) : _ptask(ptask) {
+public:
+        SwitchModelState(boost::shared_ptr<TaskManipulation> ptask) : _ptask(ptask) {
             _bFat = false;
             FOREACH(it, _ptask->_listSwitchModels) {
                 if( (*it)->IsFat() ) {
@@ -1412,8 +1417,10 @@ Task-based manipulation planning involving target objects. A lot of the algorith
                 }
             }
         }
-        virtual ~SwitchModelState() { _ptask->_UpdateSwitchModels(_bFat); }
-    private:
+        virtual ~SwitchModelState() {
+            _ptask->_UpdateSwitchModels(_bFat);
+        }
+private:
         boost::shared_ptr<TaskManipulation> _ptask;
         bool _bFat;
     };
@@ -1474,8 +1481,12 @@ Task-based manipulation planning involving target objects. A lot of the algorith
     }
 
 protected:
-    inline boost::shared_ptr<TaskManipulation> shared_problem() { return boost::static_pointer_cast<TaskManipulation>(shared_from_this()); }
-    inline boost::shared_ptr<TaskManipulation const> shared_problem_const() const { return boost::static_pointer_cast<TaskManipulation const>(shared_from_this()); }
+    inline boost::shared_ptr<TaskManipulation> shared_problem() {
+        return boost::static_pointer_cast<TaskManipulation>(shared_from_this());
+    }
+    inline boost::shared_ptr<TaskManipulation const> shared_problem_const() const {
+        return boost::static_pointer_cast<TaskManipulation const>(shared_from_this());
+    }
 
     TrajectoryBasePtr _MoveArm(const vector<int>& activejoints, const PlannerBase::PlannerParameters::SampleGoalFn& samplegoalfn, int& nGoalIndex, int nMaxIterations)
     {
@@ -1531,7 +1542,7 @@ protected:
         _robot->GetActiveDOFValues(params->vinitialconfig);
         ptraj = RaveCreateTrajectory(GetEnv(),_robot->GetActiveDOF());
 
-        params->_nMaxIterations = nMaxIterations; // max iterations before failure
+        params->_nMaxIterations = nMaxIterations;     // max iterations before failure
 
         bool bSuccess = false;
         RAVELOG_VERBOSE("starting planning\n");
@@ -1548,7 +1559,7 @@ protected:
 
             if( _pRRTPlanner->PlanPath(ptraj, boost::shared_ptr<ostream>(&ss,null_deleter())) ) {
                 ptraj->CalcTrajTiming(_robot, ptraj->GetInterpMethod(), true, true,_fMaxVelMult);
-                ss >> nGoalIndex; // extract the goal index
+                ss >> nGoalIndex;     // extract the goal index
                 if( !ss ) {
                     RAVELOG_WARN("failed to extract goal index\n");
                 }
@@ -1692,10 +1703,10 @@ protected:
         }
 
         FOREACH(it,_listSwitchModels)
-            (*it)->Switch(bSwitchToFat);
+                                (*it)->Switch(bSwitchToFat);
     }
 
-    string _strRobotName; ///< name of the active robot
+    string _strRobotName;     ///< name of the active robot
     RobotBasePtr _robot;
     dReal _fMaxVelMult;
     list<SensorSystemBasePtr > listsystems;
@@ -1706,4 +1717,6 @@ protected:
     friend class SwitchModelState;
 };
 
-ModuleBasePtr CreateTaskManipulation(EnvironmentBasePtr penv) { return ModuleBasePtr(new TaskManipulation(penv)); }
+ModuleBasePtr CreateTaskManipulation(EnvironmentBasePtr penv) {
+    return ModuleBasePtr(new TaskManipulation(penv));
+}

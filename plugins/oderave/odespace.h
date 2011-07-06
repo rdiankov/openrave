@@ -26,22 +26,24 @@ class ODESpace : public boost::enable_shared_from_this<ODESpace>
         RAVELOG_WARN(str(boost::format("failed to set param to dummy %d\n")%dJointGetType(id)));
     }
 
-//    static void AllocateODEResources()
-//    {
-//#ifdef ODE_HAVE_ALLOCATE_DATA_THREAD
-//        static boost::thread_specific_ptr<bool> isalloc;
-//        if( !isalloc.get() ) {
-//            RAVELOG_INFO("allocating ode resources\n");
-//            isalloc.reset(new bool(true));
-//            dAllocateODEDataForThread(dAllocateMaskAll);
-//        }
-//#endif
-//    }
-    inline boost::weak_ptr<ODESpace> weak_space() { return shared_from_this(); }
+    //    static void AllocateODEResources()
+    //    {
+    //#ifdef ODE_HAVE_ALLOCATE_DATA_THREAD
+    //        static boost::thread_specific_ptr<bool> isalloc;
+    //        if( !isalloc.get() ) {
+    //            RAVELOG_INFO("allocating ode resources\n");
+    //            isalloc.reset(new bool(true));
+    //            dAllocateODEDataForThread(dAllocateMaskAll);
+    //        }
+    //#endif
+    //    }
+    inline boost::weak_ptr<ODESpace> weak_space() {
+        return shared_from_this();
+    }
 
     class ODEResources
     {
-    public:
+public:
         ODEResources() {
 #ifdef ODE_HAVE_ALLOCATE_DATA_THREAD
             dAllocateODEDataForThread(dAllocateMaskAll);
@@ -64,8 +66,8 @@ class ODESpace : public boost::enable_shared_from_this<ODESpace>
             dCleanupODEAllDataForThread();
 #endif
         }
-        dWorldID world;  ///< the dynamics world
-        dSpaceID space;  ///< the collision world
+        dWorldID world;          ///< the dynamics world
+        dSpaceID space;          ///< the collision world
         dJointGroupID contactgroup;
     };
 
@@ -73,10 +75,11 @@ public:
     // information about the kinematics of the body
     class KinBodyInfo : public boost::enable_shared_from_this<KinBodyInfo>, public OpenRAVE::UserData
     {
-    public:
+public:
         struct LINK
         {
-        LINK() : body(NULL), geom(NULL) {}
+            LINK() : body(NULL), geom(NULL) {
+            }
             virtual ~LINK() {
                 BOOST_ASSERT(listtrimeshinds.size()==0&&listvertices.size()==0&&body==NULL&&geom==NULL);
             }
@@ -90,13 +93,13 @@ public:
                     if( bEnable) dBodyEnable(body);
                     else dBodyDisable(body);
                 }
-    
+
                 dGeomID curgeom = geom;
                 while(curgeom != NULL ) {
-        
+
                     if( bEnable ) dGeomEnable(curgeom);
                     else dGeomDisable(curgeom);
-        
+
                     if( dGeomGetClass(curgeom) == dGeomTransformClass ) {
                         if( bEnable ) dGeomEnable(dGeomTransformGetGeom(curgeom));
                         else dGeomDisable(dGeomTransformGetGeom(curgeom));
@@ -112,7 +115,7 @@ public:
             KinBody::LinkPtr plink;
         };
 
-    KinBodyInfo(boost::shared_ptr<ODEResources> ode) : _ode(ode)
+        KinBodyInfo(boost::shared_ptr<ODEResources> ode) : _ode(ode)
         {
             jointgroup = dJointGroupCreate(0);
             space = dHashSpaceCreate(_ode->space);
@@ -120,11 +123,11 @@ public:
         }
 
         virtual ~KinBodyInfo() {
-            EnvironmentMutex::scoped_lock lock(pbody->GetEnv()->GetMutex()); // protected ode calls
+            EnvironmentMutex::scoped_lock lock(pbody->GetEnv()->GetMutex());         // protected ode calls
             Reset();
             dSpaceClean(space);
             dJointGroupEmpty(jointgroup);
-            
+
             dSpaceDestroy(space);
             dJointGroupDestroy(jointgroup);
         }
@@ -137,7 +140,7 @@ public:
                     dGeomID pnextgeom = dBodyGetNextGeom(curgeom);
                     if( dGeomGetClass(curgeom) == dGeomTransformClass ) {
                         dGeomID childgeom = dGeomTransformGetGeom(curgeom);
-                        if( childgeom != NULL && dGeomGetClass(childgeom) == dTriMeshClass ) {
+                        if(( childgeom != NULL) &&( dGeomGetClass(childgeom) == dTriMeshClass) ) {
                             if( dGeomTriMeshGetData(childgeom) != 0 ) {
                                 dGeomTriMeshDataDestroy(dGeomTriMeshGetData(childgeom));
                             }
@@ -176,28 +179,28 @@ public:
             _staticcallback.reset();
         }
 
-        KinBodyPtr pbody; ///< body associated with this structure
+        KinBodyPtr pbody;         ///< body associated with this structure
         int nLastStamp;
-        
-        vector<boost::shared_ptr<LINK> > vlinks; ///< if body is disabled, then geom is static (it can't be connected to a joint!)
+
+        vector<boost::shared_ptr<LINK> > vlinks;         ///< if body is disabled, then geom is static (it can't be connected to a joint!)
         ///< the pointer to this Link is the userdata
         vector<dJointID> vjoints;
         boost::shared_ptr<void> _geometrycallback, _staticcallback;
         boost::weak_ptr<ODESpace> _odespace;
 
-        dSpaceID space;                     ///< space that contanis all the collision objects of this chain
+        dSpaceID space;                             ///< space that contanis all the collision objects of this chain
         dJointGroupID jointgroup;
 
-    private:
+private:
         boost::shared_ptr<ODEResources> _ode;
     };
 
     typedef boost::shared_ptr<KinBodyInfo> KinBodyInfoPtr;
     typedef boost::shared_ptr<KinBodyInfo const> KinBodyInfoConstPtr;
     typedef boost::function<OpenRAVE::UserDataPtr(KinBodyConstPtr)> GetInfoFn;
-    typedef boost::function<void(KinBodyInfoPtr)> SynchornizeCallbackFn;
-    
- ODESpace(EnvironmentBasePtr penv, const GetInfoFn& infofn, bool bUsingPhysics) : _penv(penv), GetInfo(infofn), _bUsingPhysics(bUsingPhysics)
+    typedef boost::function<void (KinBodyInfoPtr)> SynchornizeCallbackFn;
+
+    ODESpace(EnvironmentBasePtr penv, const GetInfoFn& infofn, bool bUsingPhysics) : _penv(penv), GetInfo(infofn), _bUsingPhysics(bUsingPhysics)
     {
         static bool s_bIsODEInitialized = false;
         if( !s_bIsODEInitialized ) {
@@ -213,7 +216,8 @@ public:
         _jointset[dJointTypeHinge2] = dJointSetHinge2Param;
     }
 
-    virtual ~ODESpace() {}
+    virtual ~ODESpace() {
+    }
 
     bool InitEnvironment()
     {
@@ -227,8 +231,10 @@ public:
         RAVELOG_VERBOSE("destroying ode collision environment\n");
         _ode.reset();
     }
-    
-    bool IsInitialized() { return !!_ode; }
+
+    bool IsInitialized() {
+        return !!_ode;
+    }
 
     OpenRAVE::UserDataPtr InitKinBody(KinBodyPtr pbody, KinBodyInfoPtr pinfo = KinBodyInfoPtr()) {
         EnvironmentMutex::scoped_lock lock(pbody->GetEnv()->GetMutex());
@@ -242,8 +248,8 @@ public:
         pinfo->_odespace = weak_space();
         pinfo->vlinks.reserve(pbody->GetLinks().size());
         pinfo->vjoints.reserve(pbody->GetJoints().size()+pbody->GetPassiveJoints().size());
-        dGeomSetData((dGeomID)pinfo->space, &pinfo->pbody); // so that the kinbody can be retreived from the space
-        
+        dGeomSetData((dGeomID)pinfo->space, &pinfo->pbody);     // so that the kinbody can be retreived from the space
+
         pinfo->vlinks.reserve(pbody->GetLinks().size());
         FOREACHC(itlink, pbody->GetLinks()) {
             boost::shared_ptr<KinBodyInfo::LINK> link(new KinBodyInfo::LINK());
@@ -300,12 +306,12 @@ public:
                 RaveTransform<dReal> t = itgeom->GetTransform();
                 dGeomSetQuaternion(geom,t.rot);
                 dGeomSetPosition(geom,t.trans.x, t.trans.y, t.trans.z);
-            
+
                 // finally set the geom to the ode body
                 dGeomSetBody(geomtrans, link->body);
                 link->geom = geomtrans;
             }
-        
+
             if( !(*itlink)->IsStatic() ) {
                 // set the mass
                 RaveTransformMatrix<dReal> I = (*itlink)->GetInertia();
@@ -319,13 +325,13 @@ public:
                 //mass.c = I.trans;
                 dBodySetMass(link->body, &mass);
             }
-        
+
             link->plink = *itlink;
             // set the transformation
             RaveTransform<dReal> t = (*itlink)->GetTransform();
             dBodySetPosition(link->body,t.trans.x, t.trans.y, t.trans.z);
             dBodySetQuaternion(link->body,t.rot);
-            dBodySetData(link->body, &link->plink); // so that the link can be retreived from the body
+            dBodySetData(link->body, &link->plink);     // so that the link can be retreived from the body
 
             pinfo->vlinks.push_back(link);
         }
@@ -368,10 +374,10 @@ public:
                 }
 
                 dJointAttach(joint, body0, body1);
-				if( (*itjoint)->GetSecondAttached()->IsStatic() ) {
-					axis0 = -axis0;
-					axis1 = -axis1;
-				}
+                if( (*itjoint)->GetSecondAttached()->IsStatic() ) {
+                    axis0 = -axis0;
+                    axis1 = -axis1;
+                }
 
                 switch((*itjoint)->GetType()) {
                 case KinBody::Joint::JointHinge:
@@ -402,9 +408,9 @@ public:
                 vector<OpenRAVE::dReal> vlower, vupper;
                 (*itjoint)->GetLimits(vlower,vupper);
                 for(int i = 0; i < (*itjoint)->GetDOF(); ++i) {
-//                    if( (*itjoint)->GetMimicJointIndex() < 0 && !bPassive )
-//                        // setting this makes every joint add like a motor, which is not desired
-//                        _jointset[dJointGetType(joint)](joint,dParamFMax+dParamGroup*i,(*itjoint)->GetMaxTorque());
+                    //                    if( (*itjoint)->GetMimicJointIndex() < 0 && !bPassive )
+                    //                        // setting this makes every joint add like a motor, which is not desired
+                    //                        _jointset[dJointGetType(joint)](joint,dParamFMax+dParamGroup*i,(*itjoint)->GetMaxTorque());
                     if( (*itjoint)->GetType() == KinBody::Joint::JointSpherical ) {
                         continue;
                     }
@@ -417,7 +423,7 @@ public:
                         _jointset[dJointGetType(joint)](joint,dParamHiStop+dParamGroup*i,vupper[i]);
                     }
                 }
-            
+
                 pinfo->vjoints.push_back(joint);
             }
         }
@@ -508,11 +514,19 @@ public:
         return pinfo->vjoints.at(pjoint->GetJointIndex());
     }
 
-    dWorldID GetWorld() const { return _ode->world; }
-    dSpaceID GetSpace() const { return _ode->space; }
-    dJointGroupID GetContactGroup() const { return _ode->contactgroup; }
+    dWorldID GetWorld() const {
+        return _ode->world;
+    }
+    dSpaceID GetSpace() const {
+        return _ode->space;
+    }
+    dJointGroupID GetContactGroup() const {
+        return _ode->contactgroup;
+    }
 
-    void SetSynchornizationCallback(const SynchornizeCallbackFn& synccallback) { _synccallback = synccallback; }
+    void SetSynchornizationCallback(const SynchornizeCallbackFn& synccallback) {
+        _synccallback = synccallback;
+    }
 
     typedef void (*JointSetFn)(dJointID, int param, dReal val);
     JointSetFn _jointset[12];

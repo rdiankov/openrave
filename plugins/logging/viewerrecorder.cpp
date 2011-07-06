@@ -37,7 +37,7 @@ public:
     VideoGlobalState() {
         /* first let's make sure we are running on 1.1 */
         WORD wVer = HIWORD(VideoForWindowsVersion());
-        if (wVer < 0x010a){
+        if (wVer < 0x010a) {
             throw openrave_exception("can't init avi library");
         }
         AVIFileInit();
@@ -67,7 +67,8 @@ public:
     {
         av_register_all();
     }
-    virtual ~VideoGlobalState() {}
+    virtual ~VideoGlobalState() {
+    }
 };
 
 #endif
@@ -78,7 +79,8 @@ class ViewerRecorder : public ModuleBase
 {
     struct VideoFrame
     {
-        VideoFrame() : _timestamp(0), _bProcessed(false) {}
+        VideoFrame() : _timestamp(0), _bProcessed(false) {
+        }
         vector<uint8_t> _vimagememory;
         int _width, _height, _pixeldepth;
         uint64_t _timestamp;
@@ -302,7 +304,7 @@ protected:
                     }
                 }
 
-                if( _listAddFrames.front()->_timestamp-_starttime > _frametime && !!_frameLastAdded ) {
+                if(( _listAddFrames.front()->_timestamp-_starttime > _frametime) && !!_frameLastAdded ) {
                     frame = _frameLastAdded;
                     numstores = (_listAddFrames.front()->_timestamp-_starttime-1)/_frametime;
                     RAVELOG_DEBUG(str(boost::format("previous frame repeated %d times\n")%numstores));
@@ -318,7 +320,7 @@ protected:
                     while(itframe != _listAddFrames.end()) {
                         uint64_t offset = (*itframe)->_timestamp - _starttime;
                         uint64_t dist = offset >= _frametime ? (offset-_frametime) : (_frametime-offset);
-                        if( itbest == _listAddFrames.end() || bestdist > dist ) {
+                        if(( itbest == _listAddFrames.end()) ||( bestdist > dist) ) {
                             itbest = itframe;
                             bestdist = dist;
                         }
@@ -395,7 +397,9 @@ protected:
     PAVISTREAM _ps, _psCompressed, _psText;
     int _biSizeImage;
 
-    void _GetCodecs(std::list<std::pair<int,std::string> >& lcodecs) { lcodecs.clear(); }
+    void _GetCodecs(std::list<std::pair<int,std::string> >& lcodecs) {
+        lcodecs.clear();
+    }
 
     void _StartVideo(const std::string& filename, double frameRate, int width, int height, int bits, int codecid=-1)
     {
@@ -456,7 +460,7 @@ protected:
     {
         AVISTREAMINFO strhdr;
         memset(&strhdr, 0, sizeof(strhdr));
-        strhdr.fccType                = streamtypeVIDEO;// stream type
+        strhdr.fccType                = streamtypeVIDEO;    // stream type
         strhdr.fccHandler             = _getFOURCC(_compressor);
         //strhdr.fccHandler             = 0; // no compression!
         //strhdr.fccHandler             = mmioFOURCC('D','I','B',' '); // Uncompressed
@@ -469,12 +473,12 @@ protected:
         //strhdr.wPriority              =
         //strhdr.wLanguage              =
         strhdr.dwScale                = 1;
-        strhdr.dwRate                 = rate;               // rate fps
+        strhdr.dwRate                 = rate;                   // rate fps
         //strhdr.dwStart                =
         //strhdr.dwLength               =
         //strhdr.dwInitialFrames        =
         strhdr.dwSuggestedBufferSize  = buffersize;
-        strhdr.dwQuality              = -1; // use the default
+        strhdr.dwQuality              = -1;     // use the default
         //strhdr.dwSampleSize           =
         SetRect(&strhdr.rcFrame, 0, 0, (int) rectwidth, (int) rectheight);
         //strhdr.dwEditCount            =
@@ -489,7 +493,7 @@ protected:
     void _SetOptions(LPBITMAPINFOHEADER lpbi, const char* _compressor)
     {
         AVICOMPRESSOPTIONS opts;
-        AVICOMPRESSOPTIONS FAR * aopts[1] = {&opts};
+        AVICOMPRESSOPTIONS FAR * aopts[1] = { &opts};
 
         memset(&opts, 0, sizeof(opts));
         opts.fccType = streamtypeVIDEO;
@@ -505,7 +509,7 @@ protected:
         HRESULT hr = AVIMakeCompressedStream(&_psCompressed, _ps, &opts, NULL);
         BOOST_ASSERT(hr == AVIERR_OK);
 
-        hr = AVIStreamSetFormat(_psCompressed, 0, lpbi/*stream format*/, lpbi->biSize + lpbi->biClrUsed * sizeof(RGBQUAD)/*format size*/);
+        hr = AVIStreamSetFormat(_psCompressed, 0, lpbi /*stream format*/, lpbi->biSize + lpbi->biClrUsed * sizeof(RGBQUAD) /*format size*/);
         BOOST_ASSERT(hr == AVIERR_OK);
     }
 
@@ -522,7 +526,7 @@ protected:
         strhdr.dwScale                = 1;
         strhdr.dwRate                 = 60;
         strhdr.dwSuggestedBufferSize  = sizeof(szText);
-        SetRect(&strhdr.rcFrame, 0, (int) height, (int) width, (int) height + TextHeight); // #define TEXT_HEIGHT 20
+        SetRect(&strhdr.rcFrame, 0, (int) height, (int) width, (int) height + TextHeight);     // #define TEXT_HEIGHT 20
 
         // ....and create the stream.
         HRESULT hr = AVIFileCreateStream(_pfile, &_psText, &strhdr);
@@ -535,7 +539,7 @@ protected:
 
     void _AddFrame(void* pdata)
     {
-        HRESULT hr = AVIStreamWrite(_psCompressed/*stream pointer*/, _nFrameCount/*time of this frame*/, 1/*number to write*/, pdata, _biSizeImage/*size of this frame*/, AVIIF_KEYFRAME/*flags....*/, NULL, NULL);
+        HRESULT hr = AVIStreamWrite(_psCompressed /*stream pointer*/, _nFrameCount /*time of this frame*/, 1 /*number to write*/, pdata, _biSizeImage /*size of this frame*/, AVIIF_KEYFRAME /*flags....*/, NULL, NULL);
         BOOST_ASSERT(hr == AVIERR_OK);
         _nFrameCount++;
     }
@@ -638,10 +642,10 @@ protected:
         codec_ctx->width = width;
         codec_ctx->height = height;
         if( RaveFabs(frameRate-29.97)<0.01 ) {
-            codec_ctx->time_base= (AVRational){1001,30000};
+            codec_ctx->time_base= (AVRational){ 1001,30000};
         }
         else {
-            codec_ctx->time_base= (AVRational){1,(int)frameRate};
+            codec_ctx->time_base= (AVRational){ 1,(int)frameRate};
         }
         codec_ctx->gop_size = 10;
         codec_ctx->max_b_frames = 1;
@@ -732,7 +736,9 @@ protected:
 #endif
 };
 
-ModuleBasePtr CreateViewerRecorder(EnvironmentBasePtr penv, std::istream& sinput) { return ModuleBasePtr(new ViewerRecorder(penv,sinput)); }
+ModuleBasePtr CreateViewerRecorder(EnvironmentBasePtr penv, std::istream& sinput) {
+    return ModuleBasePtr(new ViewerRecorder(penv,sinput));
+}
 void DestroyViewerRecordingStaticResources()
 {
 #ifdef _WIN32

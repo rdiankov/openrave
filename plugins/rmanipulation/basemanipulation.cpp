@@ -36,17 +36,17 @@ public:
 - minsteps - The minimum number of steps that need to be taken in order for success to declared. If robot doesn't reach this number of steps, it fails.\n\n\
 - maxsteps - The maximum number of steps the robot should take.\n\n\
 - direction - The workspace direction to move end effector in.\n\n\
-Method wraps the WorkspaceTrajectoryTracker planner. For more details on parameters, check out its documentation.");
+Method wraps the WorkspaceTrajectoryTracker planner. For more details on parameters, check out its documentation."                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                );
         RegisterCommand("MoveManipulator",boost::bind(&BaseManipulation::MoveManipulator,this,_1,_2),
                         "Moves arm joints of active manipulator to a given set of joint values");
         RegisterCommand("MoveActiveJoints",boost::bind(&BaseManipulation::MoveActiveJoints,this,_1,_2),
                         "Moves the current active joints to a specified goal destination:\n\n\
 - maxiter - The maximum number of iterations on the internal planner.\n\
 - maxtries - The maximum number of times to restart the planner.\n\
-- steplength - See PlannerParameters::_fStepLength\n\n");
+- steplength - See PlannerParameters::_fStepLength\n\n"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    );
         RegisterCommand("MoveToHandPosition",boost::bind(&BaseManipulation::_MoveToHandPosition,this,_1,_2),
                         "Move the manipulator's end effector to reach a set of 6D poses. Parameters:\n\n\
-- ");
+- "                                                                                                                                                                                                                );
         RegisterCommand("MoveUnsyncJoints",boost::bind(&BaseManipulation::MoveUnsyncJoints,this,_1,_2),
                         "Moves the active joints to a position where the inactive (hand) joints can\n"
                         "fully move to their goal. This is necessary because synchronization with arm\n"
@@ -56,14 +56,15 @@ Method wraps the WorkspaceTrajectoryTracker planner. For more details on paramet
                         "Jitters the active DOF for a collision-free position.");
         RegisterCommand("FindIKWithFilters",boost::bind(&BaseManipulation::FindIKWithFilters,this,_1,_2),
                         "Samples IK solutions using custom filters that constrain the end effector in the world. Parameters:\n\n\
-- cone - Constraint the direction of a local axis with respect to a cone in the world. Takes in: worldaxis(3), localaxis(3), anglelimit. \n \
+- cone - Constraint the direction of a local axis with respect to a cone in the world. Takes in: worldaxis(3), localaxis(3), anglelimit. \n\
 - solveall - When specified, will return all possible solutions.\n\
 - ikparam - The serialized ik parameterization to use for FindIKSolution(s).\n\
 - filteroptions\n\
-");
+"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        );
     }
 
-    virtual ~BaseManipulation() {}
+    virtual ~BaseManipulation() {
+    }
 
     virtual void Destroy()
     {
@@ -131,8 +132,12 @@ Method wraps the WorkspaceTrajectoryTracker planner. For more details on paramet
     }
 protected:
 
-    inline boost::shared_ptr<BaseManipulation> shared_problem() { return boost::static_pointer_cast<BaseManipulation>(shared_from_this()); }
-    inline boost::shared_ptr<BaseManipulation const> shared_problem_const() const { return boost::static_pointer_cast<BaseManipulation const>(shared_from_this()); }
+    inline boost::shared_ptr<BaseManipulation> shared_problem() {
+        return boost::static_pointer_cast<BaseManipulation>(shared_from_this());
+    }
+    inline boost::shared_ptr<BaseManipulation const> shared_problem_const() const {
+        return boost::static_pointer_cast<BaseManipulation const>(shared_from_this());
+    }
 
     bool SetActiveManip(ostream& sout, istream& sinput)
     {
@@ -158,7 +163,7 @@ protected:
             }
         }
 
-        if( index >= 0 && index < (int)robot->GetManipulators().size() ) {
+        if(( index >= 0) &&( index < (int)robot->GetManipulators().size()) ) {
             robot->SetActiveManipulator(index);
             return true;
         }
@@ -208,7 +213,7 @@ protected:
             }
         }
 
-        if( ptraj->GetTotalDuration() == 0 || bResetTiming ) {
+        if(( ptraj->GetTotalDuration() == 0) || bResetTiming ) {
             RAVELOG_VERBOSE(str(boost::format("retiming trajectory: %f\n")%_fMaxVelMult));
             ptraj->CalcTrajTiming(robot,TrajectoryBase::CUBIC,true,false,_fMaxVelMult);
         }
@@ -232,7 +237,7 @@ protected:
 
         boost::shared_ptr<WorkspaceTrajectoryParameters> params(new WorkspaceTrajectoryParameters(GetEnv()));
         boost::shared_ptr<ostream> pOutputTrajStream;
-        params->ignorefirstcollision = 0.04; // 0.04m?
+        params->ignorefirstcollision = 0.04;     // 0.04m?
         string cmd;
         params->_fStepLength = 0.01;
         while(!sinput.eof()) {
@@ -303,12 +308,12 @@ protected:
         params->SetRobotActiveJoints(robot);
 
         if( !starteematrix ) {
-            planningutils::JitterActiveDOF(robot,100); // try to jitter out, don't worry if it fails
+            planningutils::JitterActiveDOF(robot,100);     // try to jitter out, don't worry if it fails
             robot->GetActiveDOFValues(params->vinitialconfig);
             Tee = pmanip->GetTransform();
         }
         else {
-            params->vinitialconfig.resize(0); // set by SetRobotActiveJoints
+            params->vinitialconfig.resize(0);     // set by SetRobotActiveJoints
         }
 
         // compute a workspace trajectory (important to do this after jittering!)
@@ -359,10 +364,10 @@ protected:
         boost::shared_ptr<ostream> pOutputTrajStream;
         std::vector<dReal> goals;
         PlannerBase::PlannerParametersPtr params(new PlannerBase::PlannerParameters());
-        params->_nMaxIterations = 4000; // max iterations before failure
+        params->_nMaxIterations = 4000;     // max iterations before failure
 
         string cmd;
-        int nMaxTries = 3; // max tries for the planner
+        int nMaxTries = 3;     // max tries for the planner
         while(!sinput.eof()) {
             sinput >> cmd;
             if( !sinput ) {
@@ -370,7 +375,7 @@ protected:
             }
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
 
-            if( cmd == "armvals" || cmd == "goal" ) {
+            if(( cmd == "armvals") ||( cmd == "goal") ) {
                 goals.resize(pmanip->GetArmIndices().size());
                 FOREACH(it, goals) {
                     sinput >> *it;
@@ -473,11 +478,11 @@ protected:
     {
         string strtrajfilename;
         bool bExecute = true;
-        int nMaxTries = 1; // max tries for the planner
+        int nMaxTries = 1;     // max tries for the planner
         boost::shared_ptr<ostream> pOutputTrajStream;
 
         PlannerBase::PlannerParametersPtr params(new PlannerBase::PlannerParameters());
-        params->_nMaxIterations = 4000; // max iterations before failure
+        params->_nMaxIterations = 4000;     // max iterations before failure
 
         string cmd;
         while(!sinput.eof()) {
@@ -591,14 +596,14 @@ protected:
 
         Vector vconstraintaxis, vconstraintpos;
         int affinedofs = 0;
-        int nSeedIkSolutions = 8; // no extra solutions
-        int nMaxTries = 3; // max tries for the planner
+        int nSeedIkSolutions = 8;     // no extra solutions
+        int nMaxTries = 3;     // max tries for the planner
 
         PlannerBase::PlannerParametersPtr params(new PlannerBase::PlannerParameters());
         params->_nMaxIterations = 4000;
 
         // constraint stuff
-        boost::array<double,6> vconstraintfreedoms = {{0,0,0,0,0,0}};
+        boost::array<double,6> vconstraintfreedoms = { { 0,0,0,0,0,0}};
         Transform tConstraintTargetWorldFrame;
         double constrainterrorthresh=0;
         int goalsamples = 40;
@@ -728,7 +733,7 @@ protected:
         params->vgoalconfig.reserve(nSeedIkSolutions*robot->GetActiveDOF());
         while(nSeedIkSolutions > 0) {
             if( goalsampler.Sample(vgoal) ) {
-                if( constrainterrorthresh > 0 && planningutils::JitterActiveDOF(robot,5000,0.03,params->_neighstatefn) == 0 ) {
+                if(( constrainterrorthresh > 0) &&( planningutils::JitterActiveDOF(robot,5000,0.03,params->_neighstatefn) == 0) ) {
                     RAVELOG_DEBUG("constraint function failed\n");
                     continue;
                 }
@@ -786,7 +791,7 @@ protected:
             }
         }
 
-        rrtplanner.reset(); // have to destroy before environment
+        rrtplanner.reset();     // have to destroy before environment
 
         if( !bSuccess ) {
             return false;
@@ -826,7 +831,7 @@ protected:
             else if( cmd == "handjoints" ) {
                 int dof = 0;
                 sinput >> dof;
-                if( !sinput || dof == 0 ) {
+                if( !sinput ||( dof == 0) ) {
                     return false;
                 }
                 vhandjoints.resize(dof);
@@ -964,9 +969,12 @@ protected:
 
     class IkResetFilter
     {
-    public:
-        IkResetFilter(IkSolverBasePtr iksolver) : _iksolver(iksolver) {}
-        virtual ~IkResetFilter() { _iksolver->SetCustomFilter(IkSolverBase::IkFilterCallbackFn()); }
+public:
+        IkResetFilter(IkSolverBasePtr iksolver) : _iksolver(iksolver) {
+        }
+        virtual ~IkResetFilter() {
+            _iksolver->SetCustomFilter(IkSolverBase::IkFilterCallbackFn());
+        }
         IkSolverBasePtr _iksolver;
     };
 
@@ -1088,7 +1096,7 @@ protected:
             return false;
         }
 
-        if( bRecomputeTiming || ptraj->GetTotalDuration() == 0 ) {
+        if( bRecomputeTiming ||( ptraj->GetTotalDuration() == 0) ) {
             ptraj->CalcTrajTiming(robot,ptraj->GetInterpMethod(),true,false);
         }
 
@@ -1153,7 +1161,7 @@ protected:
         return true;
     }
 
- protected:
+protected:
     IkFilterReturn _FilterWorldAxisIK(std::vector<dReal>& values, RobotBase::ManipulatorPtr pmanip, const IkParameterization& ikparam, const Vector& vlocalaxis, const Vector& vworldaxis, dReal coslimit)
     {
         if( RaveFabs(vworldaxis.dot3(pmanip->GetTransform().rotate(vlocalaxis))) < coslimit ) {
@@ -1167,4 +1175,6 @@ protected:
     dReal _fMaxVelMult;
 };
 
-ModuleBasePtr CreateBaseManipulation(EnvironmentBasePtr penv) { return ModuleBasePtr(new BaseManipulation(penv)); }
+ModuleBasePtr CreateBaseManipulation(EnvironmentBasePtr penv) {
+    return ModuleBasePtr(new BaseManipulation(penv));
+}

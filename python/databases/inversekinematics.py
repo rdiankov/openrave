@@ -684,23 +684,35 @@ class InverseKinematicsModel(DatabaseGenerator):
             log.info('success rate: %f, wrong solutions: %f, no solutions: %f, missing solution: %f',float(res[1])/numtested,wrongrate,len(solutionresults[1])/numtested,len(solutionresults[2])/numtested)
         return successrate, wrongrate
 
-    def show(self,delay=0.1,options=None,forceclosure=True):
+    def show(self,options=None):
         self.env.SetViewer('qtcoin')
-        with self.ArmVisibility(self.manip,0.9):
-            time.sleep(3) # let viewer load
-            while True:
-                with self.env:
-                    lower,upper = self.robot.GetDOFLimits(self.manip.GetArmIndices())
-                    self.robot.SetDOFValues(lower+random.rand(len(lower))*(upper-lower),self.manip.GetArmIndices())
-                    ikparam = self.manip.GetIkParameterization(self.iktype)
-                    sols = self.manip.FindIKSolutions(ikparam,IkFilterOptions.CheckEnvCollisions)
-                    weights = self.robot.GetDOFWeights(self.manip.GetArmIndices())
-                    sols = TSP(sols,lambda x,y: sum(weights*(x-y)**2))
-                    # find shortest route
-                    for sol in sols:
-                        self.robot.SetDOFValues(sol,self.manip.GetArmIndices())
-                        self.env.UpdatePublishedBodies()
-                        time.sleep(delay)
+        try:
+            with self.env:
+                robot2 = self.env.ReadRobotXMLFile(self.robot.GetURI())
+                self.env.AddRobot(robot2,True)
+            manip2 = robot2.GetManipulators()[0]#(self.manip.GetName())
+            with self.ArmVisibility(manip2,0.9):
+                raw_input('press any key')
+        finally:
+            self.env.Remove(robot2)
+
+#     def show(self,delay=0.1,options=None,forceclosure=True):
+#         self.env.SetViewer('qtcoin')
+#         with self.ArmVisibility(self.manip,0.9):
+#             time.sleep(3) # let viewer load
+#             while True:
+#                 with self.env:
+#                     lower,upper = self.robot.GetDOFLimits(self.manip.GetArmIndices())
+#                     self.robot.SetDOFValues(lower+random.rand(len(lower))*(upper-lower),self.manip.GetArmIndices())
+#                     ikparam = self.manip.GetIkParameterization(self.iktype)
+#                     sols = self.manip.FindIKSolutions(ikparam,IkFilterOptions.CheckEnvCollisions)
+#                     weights = self.robot.GetDOFWeights(self.manip.GetArmIndices())
+#                     sols = TSP(sols,lambda x,y: sum(weights*(x-y)**2))
+#                     # find shortest route
+#                     for sol in sols:
+#                         self.robot.SetDOFValues(sol,self.manip.GetArmIndices())
+#                         self.env.UpdatePublishedBodies()
+#                         time.sleep(delay)
 
     @staticmethod
     def getcompiler():

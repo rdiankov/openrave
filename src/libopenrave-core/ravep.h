@@ -1,4 +1,4 @@
-// Copyright (C) 2006-2009 Rosen Diankov (rdiankov@cs.cmu.edu)
+// Copyright (C) 2006-2011 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -14,10 +14,10 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /*! --------------------------------------------------------------------
-\file   ravep.h
-\brief  Defines the private headers that every source file used to
-build openrave must include (used in place of rave.h). Precompiled header.
--------------------------------------------------------------------- */
+   \file   ravep.h
+   \brief  Defines the private headers that every source file used to
+   build openrave must include (used in place of rave.h). Precompiled header.
+   -------------------------------------------------------------------- */
 
 #ifndef RAVE_RAVEP_H
 #define RAVE_RAVEP_H
@@ -37,11 +37,11 @@ build openrave must include (used in place of rave.h). Precompiled header.
 #include <boost/typeof/std/set.hpp>
 #include <boost/typeof/std/string.hpp>
 
-#define FOREACH(it, v) for(BOOST_TYPEOF(v)::iterator it = (v).begin(); it != (v).end(); ++(it))
-#define FOREACH_NOINC(it, v) for(BOOST_TYPEOF(v)::iterator it = (v).begin(); it != (v).end(); )
+#define FOREACH(it, v) for(BOOST_TYPEOF(v) ::iterator it = (v).begin(); it != (v).end(); ++(it))
+#define FOREACH_NOINC(it, v) for(BOOST_TYPEOF(v) ::iterator it = (v).begin(); it != (v).end(); )
 
-#define FOREACHC(it, v) for(BOOST_TYPEOF(v)::const_iterator it = (v).begin(); it != (v).end(); ++(it))
-#define FOREACHC_NOINC(it, v) for(BOOST_TYPEOF(v)::const_iterator it = (v).begin(); it != (v).end(); )
+#define FOREACHC(it, v) for(BOOST_TYPEOF(v) ::const_iterator it = (v).begin(); it != (v).end(); ++(it))
+#define FOREACHC_NOINC(it, v) for(BOOST_TYPEOF(v) ::const_iterator it = (v).begin(); it != (v).end(); )
 #define RAVE_REGISTER_BOOST
 
 #else
@@ -52,8 +52,8 @@ build openrave must include (used in place of rave.h). Precompiled header.
 #include <set>
 #include <string>
 
-#define FOREACH(it, v) for(typeof((v).begin()) it = (v).begin(); it != (v).end(); (it)++)
-#define FOREACH_NOINC(it, v) for(typeof((v).begin()) it = (v).begin(); it != (v).end(); )
+#define FOREACH(it, v) for(typeof((v).begin())it = (v).begin(); it != (v).end(); (it)++)
+#define FOREACH_NOINC(it, v) for(typeof((v).begin())it = (v).begin(); it != (v).end(); )
 
 #define FOREACHC FOREACH
 #define FOREACHC_NOINC FOREACH_NOINC
@@ -161,14 +161,14 @@ static const char s_filesep = '/';
 // need the prototypes in order to keep them free of the OpenRAVE namespace
 namespace OpenRAVEXMLParser
 {
-    class InterfaceXMLReader;
-    class KinBodyXMLReader;
-    class LinkXMLReader;
-    class JointXMLReader;
-    class ManipulatorXMLReader;
-    class AttachedSensorXMLReader;
-    class RobotXMLReader;
-    class EnvironmentXMLReader;
+class InterfaceXMLReader;
+class KinBodyXMLReader;
+class LinkXMLReader;
+class JointXMLReader;
+class ManipulatorXMLReader;
+class AttachedSensorXMLReader;
+class RobotXMLReader;
+class EnvironmentXMLReader;
 }
 
 class Environment;
@@ -181,9 +181,9 @@ class ColladaWriter;
 // exports from libopenrave.h
 namespace OpenRAVE
 {
-    OPENRAVE_API std::string GetMD5HashString(const std::string& s);
-    OPENRAVE_API std::string GetMD5HashString(const std::vector<uint8_t>& v);
-    OPENRAVE_API std::string& SearchAndReplace(std::string& out, const std::string& in, const std::vector< std::pair<std::string, std::string> >& pairs);
+OPENRAVE_API std::string GetMD5HashString(const std::string& s);
+OPENRAVE_API std::string GetMD5HashString(const std::vector<uint8_t>& v);
+OPENRAVE_API std::string& SearchAndReplace(std::string& out, const std::string& in, const std::vector< std::pair<std::string, std::string> >& pairs);
 }
 
 using namespace OpenRAVE;
@@ -191,23 +191,25 @@ using namespace std;
 
 namespace OpenRAVEXMLParser
 {
-    class InterfaceXMLReadable : public XMLReadable
-    {
-    public:
-        InterfaceXMLReadable(InterfaceBasePtr pinterface) : XMLReadable(pinterface->GetXMLId()), _pinterface(pinterface) {}
-        virtual ~InterfaceXMLReadable() {}
-        InterfaceBasePtr _pinterface;
-    };
+class InterfaceXMLReadable : public XMLReadable
+{
+public:
+    InterfaceXMLReadable(InterfaceBasePtr pinterface) : XMLReadable(pinterface->GetXMLId()), _pinterface(pinterface) {
+    }
+    virtual ~InterfaceXMLReadable() {
+    }
+    InterfaceBasePtr _pinterface;
+};
 
-    int& GetXMLErrorCount();
-    void SetDataDirs(const std::vector<std::string>& vdatadirs);
-    bool ParseXMLFile(BaseXMLReaderPtr preader, const std::string& filename);
-    bool ParseXMLData(BaseXMLReaderPtr preader, const std::string& pdata);
-    BaseXMLReaderPtr CreateEnvironmentReader(EnvironmentBasePtr penv, const AttributesList& atts);
-    boost::shared_ptr<std::pair<std::string,std::string> > FindFile(const std::string& filename);
-    BaseXMLReaderPtr CreateInterfaceReader(EnvironmentBasePtr penv, InterfaceType type, InterfaceBasePtr& pinterface, const std::string& xmltag, const AttributesList& atts);
-    BaseXMLReaderPtr CreateInterfaceReader(EnvironmentBasePtr penv, const AttributesList& atts);
-    bool CreateTriMeshData(EnvironmentBasePtr, const std::string& filename, const Vector& vscale, KinBody::Link::TRIMESH& trimesh, RaveVector<float>& diffuseColor, RaveVector<float>& ambientColor, float& ftransparency);
+int& GetXMLErrorCount();
+void SetDataDirs(const std::vector<std::string>& vdatadirs);
+bool ParseXMLFile(BaseXMLReaderPtr preader, const std::string& filename);
+bool ParseXMLData(BaseXMLReaderPtr preader, const std::string& pdata);
+BaseXMLReaderPtr CreateEnvironmentReader(EnvironmentBasePtr penv, const AttributesList& atts);
+boost::shared_ptr<std::pair<std::string,std::string> > FindFile(const std::string& filename);
+BaseXMLReaderPtr CreateInterfaceReader(EnvironmentBasePtr penv, InterfaceType type, InterfaceBasePtr& pinterface, const std::string& xmltag, const AttributesList& atts);
+BaseXMLReaderPtr CreateInterfaceReader(EnvironmentBasePtr penv, const AttributesList& atts);
+bool CreateTriMeshData(EnvironmentBasePtr, const std::string& filename, const Vector &vscale, KinBody::Link::TRIMESH& trimesh, RaveVector<float>&diffuseColor, RaveVector<float>&ambientColor, float& ftransparency);
 }
 
 #ifdef _WIN32
@@ -246,11 +248,11 @@ private:
     P p_;
     boost::function<void(void const*)> _deleterfn;
 public:
-smart_pointer_deleter(P const & p, const boost::function<void(void const*)>& deleterfn): p_(p), _deleterfn(deleterfn)
+    smart_pointer_deleter(P const & p, const boost::function<void(void const*)>& deleterfn) : p_(p), _deleterfn(deleterfn)
     {
     }
 
-    void operator()(void const * x)
+    void operator() (void const * x)
     {
         _deleterfn(x);
         p_.reset();
@@ -263,7 +265,9 @@ smart_pointer_deleter(P const & p, const boost::function<void(void const*)>& del
 };
 
 // if modifying check modify libopenrave.h too!
-inline bool IsValidCharInName(char c) { return isalnum(c) || c == '_' || c == '-' || c == '.' || c == '/'; }
+inline bool IsValidCharInName(char c) {
+    return isalnum(c) || c == '_' || c == '-' || c == '.' || c == '/';
+}
 inline bool IsValidName(const std::string& s) {
     if( s.size() == 0 ) {
         return false;

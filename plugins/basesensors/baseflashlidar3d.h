@@ -22,8 +22,9 @@ class BaseFlashLidar3DSensor : public SensorBase
 protected:
     class BaseFlashLidar3DXMLReader : public BaseXMLReader
     {
-    public:
-        BaseFlashLidar3DXMLReader(boost::shared_ptr<BaseFlashLidar3DSensor> psensor) : _psensor(psensor) {}
+public:
+        BaseFlashLidar3DXMLReader(boost::shared_ptr<BaseFlashLidar3DSensor> psensor) : _psensor(psensor) {
+        }
 
         virtual ProcessElement startElement(const std::string& name, const AttributesList& atts)
         {
@@ -33,7 +34,7 @@ protected:
                 }
                 return PE_Ignore;
             }
-            static boost::array<string, 18> tags = {{"sensor", "minangle", "min_angle", "maxangle", "max_angle", "maxrange", "max_range", "minrange", "min_range", "scantime", "color", "time_scan", "time_increment", "power", "kk", "width", "height"}};
+            static boost::array<string, 18> tags = { { "sensor", "minangle", "min_angle", "maxangle", "max_angle", "maxrange", "max_range", "minrange", "min_range", "scantime", "color", "time_scan", "time_increment", "power", "kk", "width", "height"}};
             if( find(tags.begin(),tags.end(),name) == tags.end() ) {
                 return PE_Pass;
             }
@@ -58,12 +59,12 @@ protected:
             else if( name == "minangle" || name == "min_angle" ) {
                 ss >> _psensor->_pgeom->min_angle[0];
                 if( !!ss )
-                    _psensor->_pgeom->min_angle[0] *= PI/180.0f; // convert to radians
+                    _psensor->_pgeom->min_angle[0] *= PI/180.0f;                                                                  // convert to radians
             }
             else if( name == "maxangle" || name == "max_angle" ) {
                 ss >> _psensor->_pgeom->max_angle[0];
                 if( !!ss )
-                    _psensor->_pgeom->max_angle[0] *= PI/180.0f; // convert to radians
+                    _psensor->_pgeom->max_angle[0] *= PI/180.0f;                                                                  // convert to radians
             }
             else if( name == "maxrange" || name == "max_range" ) {
                 ss >> _psensor->_pgeom->max_range;
@@ -106,7 +107,7 @@ protected:
             }
         }
 
-    protected:
+protected:
         BaseXMLReaderPtr _pcurreader;
         boost::shared_ptr<BaseFlashLidar3DSensor> _psensor;
         stringstream ss;
@@ -114,9 +115,9 @@ protected:
 
     class BaseFlashLidar3DGeom : public LaserGeomData
     {
-    public:
-        CameraIntrinsics KK; // intrinsic matrix expanding to [ KK[0] 0 KK[2]; 0 KK[1] KK[3] ]
-        int width, height; // dimensions in number of lasers
+public:
+        CameraIntrinsics KK;         // intrinsic matrix expanding to [ KK[0] 0 KK[2]; 0 KK[1] KK[3] ]
+        int width, height;         // dimensions in number of lasers
     };
 
 public:
@@ -125,7 +126,7 @@ public:
         return BaseXMLReaderPtr(new BaseFlashLidar3DXMLReader(boost::dynamic_pointer_cast<BaseFlashLidar3DSensor>(ptr)));
     }
 
- BaseFlashLidar3DSensor(EnvironmentBasePtr penv) : SensorBase(penv)
+    BaseFlashLidar3DSensor(EnvironmentBasePtr penv) : SensorBase(penv)
     {
         __description = ":Interface Author: Rosen Diankov\n\nProvides a simulated 3D flash lidar sensor. A flash LIDAR instantaneously returns the depth measurements in the form of an image. It has the same projection parameters as a camera except each pixel is an active element that measures distance. The XML parameters are the same as :ref:`sensor-baselaser2d` along with:\n\
 * KK - 4 element vector that constructs the intrinsic matrix of the flash lidar (KK[0] 0 KK[2]; 0 KK[1] KK[3]; 0 0 1]. \n\
@@ -134,7 +135,7 @@ public:
 \n\
 .. image:: ../../../images/interface_baseflashlidar.jpg\n\
   :width: 400\n\
-";
+"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                ;
         RegisterCommand("render",boost::bind(&BaseFlashLidar3DSensor::_Render,this,_1,_2),
                         "Set rendering of the plots (1 or 0).");
         RegisterCommand("collidingbodies",boost::bind(&BaseFlashLidar3DSensor::_CollidingBodies,this,_1,_2),
@@ -196,16 +197,16 @@ public:
         }
         throw openrave_exception(str(boost::format("SensorBase::Configure: unknown command 0x%x")%command));
     }
-    
+
     virtual bool SimulationStep(dReal fTimeElapsed)
     {
         _RenderGeometry();
         _fTimeToScan -= fTimeElapsed;
-        if( _fTimeToScan <= 0 && _bPower ) {
+        if(( _fTimeToScan <= 0) && _bPower ) {
             _fTimeToScan = _pgeom->time_scan;
 
             RAY r;
-    
+
             GetEnv()->GetCollisionChecker()->SetCollisionOptions(CO_Distance);
             Transform t;
 
@@ -215,7 +216,7 @@ public:
                 t = GetTransform();
                 _pdata->__trans = t;
                 _pdata->__stamp = GetEnv()->GetSimulationTime();
-        
+
                 r.pos = t.trans;
                 _pdata->positions.at(0) = t.trans;
 
@@ -251,7 +252,7 @@ public:
             }
 
             GetEnv()->GetCollisionChecker()->SetCollisionOptions(0);
-    
+
             if( _bRenderData ) {
                 // If can render, check if some time passed before last update
                 list<GraphHandlePtr> listhandles;
@@ -268,7 +269,7 @@ public:
                         vpoints[i] = _pdata->ranges[i] + t.trans;
                     vpoints[N] = t.trans;
                 }
-            
+
                 // render the transparent fan for every column
                 vindices.resize(3*(_pgeom->height-1)*_pgeom->width);
                 int index = 0;
@@ -283,10 +284,10 @@ public:
                 _vColor.w = 1;
                 // Render points at each measurement, and a triangle fan for the entire free surface of the laser
                 listhandles.push_back(GetEnv()->plot3(&vpoints[0].x, N, sizeof(vpoints[0]), 5.0f, _vColor));
-            
+
                 _vColor.w = 0.01f;
                 listhandles.push_back(GetEnv()->drawtrimesh(vpoints[0], sizeof(vpoints[0]), &vindices[0], vindices.size()/3, _vColor));
-            
+
                 _listGraphicsHandles.swap(listhandles);
 
             }
@@ -301,7 +302,7 @@ public:
 
     virtual SensorGeometryPtr GetSensorGeometry(SensorType type)
     {
-        if( type == ST_Invalid || type == ST_Laser ) {
+        if(( type == ST_Invalid) ||( type == ST_Laser) ) {
             BaseFlashLidar3DGeom* pgeom = new BaseFlashLidar3DGeom();
             *pgeom = *_pgeom;
             return SensorGeometryPtr(pgeom);
@@ -311,7 +312,7 @@ public:
 
     virtual SensorDataPtr CreateSensorData(SensorType type)
     {
-        if( type == ST_Invalid || type == ST_Laser ) {
+        if(( type == ST_Invalid) ||( type == ST_Laser) ) {
             return SensorDataPtr(new LaserSensorData());
         }
         return SensorDataPtr();
@@ -327,7 +328,9 @@ public:
         return false;
     }
 
-    virtual bool Supports(SensorType type) { return type == ST_Laser; }
+    virtual bool Supports(SensorType type) {
+        return type == ST_Laser;
+    }
 
     bool _Render(ostream& sout, istream& sinput)
     {
@@ -348,7 +351,9 @@ public:
         _trans = trans;
     }
 
-    virtual Transform GetTransform() { return _trans; }
+    virtual Transform GetTransform() {
+        return _trans;
+    }
 
     virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     {
@@ -419,11 +424,11 @@ protected:
 
     boost::shared_ptr<BaseFlashLidar3DGeom> _pgeom;
     boost::shared_ptr<LaserSensorData> _pdata;
-    vector<int> _databodyids; ///< if non 0, for each point in _data, specifies the body that was hit
+    vector<int> _databodyids;     ///< if non 0, for each point in _data, specifies the body that was hit
     CollisionReportPtr _report;
     // more geom stuff
     RaveVector<float> _vColor;
-    dReal _iKK[4]; // inverse of KK
+    dReal _iKK[4];     // inverse of KK
 
     Transform _trans;
     list<GraphHandlePtr> _listGraphicsHandles;

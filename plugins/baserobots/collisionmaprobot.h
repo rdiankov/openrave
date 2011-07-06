@@ -19,43 +19,46 @@
 
 class CollisionMapRobot : public RobotBase
 {
- public:
+public:
     class XMLData : public XMLReadable
     {
-    public:
+public:
         /// specifies the free space of two joints
         template <int N>
         struct COLLISIONMAP
         {
-            boost::multi_array<uint8_t,N> vfreespace; // 1 for free space, 0 for collision
+            boost::multi_array<uint8_t,N> vfreespace;         // 1 for free space, 0 for collision
             boost::array<dReal,N> fmin, fmax, fidelta;
             boost::array<string,N> jointnames;
             boost::array<int,N> jointindices;
         };
         typedef COLLISIONMAP<2> COLLISIONPAIR;
-    XMLData() : XMLReadable("collisionmap") {}
+        XMLData() : XMLReadable("collisionmap") {
+        }
         list<COLLISIONPAIR> listmaps;
     };
 
     class CollisionMapXMLReader : public BaseXMLReader
     {
-    public:
+public:
         CollisionMapXMLReader(boost::shared_ptr<XMLData> cmdata, const AttributesList& atts) {
             _cmdata = cmdata;
             if( !_cmdata )
                 _cmdata.reset(new XMLData());
         }
 
-        virtual XMLReadablePtr GetReadable() { return _cmdata; }
-        
+        virtual XMLReadablePtr GetReadable() {
+            return _cmdata;
+        }
+
         virtual ProcessElement startElement(const std::string& name, const AttributesList& atts) {
-            _ss.str(""); // have to clear the string
+            _ss.str("");         // have to clear the string
             if( name == "pair" ) {
                 _cmdata->listmaps.push_back(XMLData::COLLISIONPAIR());
                 XMLData::COLLISIONPAIR& pair = _cmdata->listmaps.back();
                 for(AttributesList::const_iterator itatt = atts.begin(); itatt != atts.end(); ++itatt) {
                     if( itatt->first == "dims" ) {
-                        boost::array<size_t,2> dims={{0,0}};
+                        boost::array<size_t,2> dims={ { 0,0}};
                         stringstream ss(itatt->second);
                         ss >> dims[0] >> dims[1];
                         pair.vfreespace.resize(dims);
@@ -109,7 +112,7 @@ class CollisionMapRobot : public RobotBase
             _ss << ch;
         }
 
-    protected:
+protected:
         boost::shared_ptr<XMLData> _cmdata;
         stringstream _ss;
     };
@@ -139,9 +142,10 @@ The first pair specifies a map where both joints J0 and J1 have range [-1.5708,1
   pair_J0xJ1[ 180*(J0+1.57)/(1.57+1.57) ][ 180*(J1+1.57)/(1.57+1.57) ]\n\n\
 For joints J2xJ3, the index operation is::\n\n\
   pair_J2xJ3[ 90*(J2+1)/(1+1) ][ 130*(J3+2)/(2+2) ]\n\n\
-";
+"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    ;
     }
-    virtual ~CollisionMapRobot() {}
+    virtual ~CollisionMapRobot() {
+    }
 
     virtual bool SetController(ControllerBasePtr controller, const std::vector<int>& jointindices, int nControlTransformation)
     {
@@ -163,7 +167,7 @@ For joints J2xJ3, the index operation is::\n\n\
         _trajcur = ptraj;
         return _pController->SetPath(_trajcur);
     }
- 
+
     virtual bool SetActiveMotion(TrajectoryBaseConstPtr ptraj)
     {
         BOOST_ASSERT(ptraj->GetPoints().size() > 0 || !"trajectory has no points\n");
@@ -174,7 +178,9 @@ For joints J2xJ3, the index operation is::\n\n\
         return _pController->SetPath(_trajcur);
     }
 
-    virtual ControllerBasePtr GetController() const { return _pController; }
+    virtual ControllerBasePtr GetController() const {
+        return _pController;
+    }
     virtual void SimulationStep(dReal fElapsedTime)
     {
         RobotBase::SimulationStep(fElapsedTime);
@@ -213,17 +219,17 @@ For joints J2xJ3, the index operation is::\n\n\
         boost::shared_ptr<XMLData> cmdata = boost::dynamic_pointer_cast<XMLData>(GetReadableInterface("collisionmap"));
         if( !!cmdata ) {
             vector<dReal> values;
-            boost::array<int,2> indices={{0,0}};
+            boost::array<int,2> indices={ { 0,0}};
             FOREACHC(itmap,cmdata->listmaps) {
                 size_t i=0;
-                const XMLData::COLLISIONPAIR& curmap = *itmap; // for debugging
+                const XMLData::COLLISIONPAIR& curmap = *itmap;     // for debugging
                 FOREACHC(itjindex,curmap.jointindices) {
                     if( *itjindex < 0 )
                         break;
                     GetJoints().at(*itjindex)->GetValues(values);
                     if( curmap.fmin[i] < curmap.fmax[i] ) {
                         int index = (int)((values.at(0)-curmap.fmin[i])*curmap.fidelta[i]);
-                        if( index < 0 || index >= (int)curmap.vfreespace.shape()[i] )
+                        if(( index < 0) ||( index >= (int)curmap.vfreespace.shape()[i]) )
                             break;
                         indices.at(i) = index;
                     }
@@ -236,9 +242,9 @@ For joints J2xJ3, the index operation is::\n\n\
                     vector<LinkConstPtr> vLinkColliding;
                     FOREACHC(itjindex,curmap.jointindices) {
                         JointPtr pjoint = GetJoints().at(*itjindex);
-                        if( !!pjoint->GetFirstAttached() && find(vLinkColliding.begin(),vLinkColliding.end(),pjoint->GetFirstAttached())== vLinkColliding.end() )
+                        if( !!pjoint->GetFirstAttached() &&( find(vLinkColliding.begin(),vLinkColliding.end(),pjoint->GetFirstAttached())== vLinkColliding.end()) )
                             vLinkColliding.push_back(KinBody::LinkConstPtr(pjoint->GetFirstAttached()));
-                        if( !!pjoint->GetSecondAttached() && find(vLinkColliding.begin(),vLinkColliding.end(),pjoint->GetSecondAttached())== vLinkColliding.end() )
+                        if( !!pjoint->GetSecondAttached() &&( find(vLinkColliding.begin(),vLinkColliding.end(),pjoint->GetSecondAttached())== vLinkColliding.end()) )
                             vLinkColliding.push_back(KinBody::LinkConstPtr(pjoint->GetSecondAttached()));
                     }
                     int numenabled = 0;
@@ -263,8 +269,8 @@ For joints J2xJ3, the index operation is::\n\n\
         }
         return false;
     }
-    
- protected:
+
+protected:
     TrajectoryBaseConstPtr _trajcur;
     ControllerBasePtr _pController;
 };

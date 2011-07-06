@@ -53,7 +53,7 @@
 #include "docstrings.h"
 
 #define CHECK_POINTER(p) { \
-        if( !(p) ) throw openrave_exception(boost::str(boost::format("[%s:%d]: invalid pointer")%__PRETTY_FUNCTION__%__LINE__)); \
+        if( !(p) ) throw openrave_exception(boost::str(boost::format("[%s:%d]: invalid pointer")%__PRETTY_FUNCTION__%__LINE__));\
 }
 
 using namespace boost::python;
@@ -126,7 +126,9 @@ inline uint64_t GetMicroTime()
 #endif
 }
 
-struct null_deleter { void operator()(void const *) const {} };
+struct null_deleter { void operator()(void const *) const {
+                      }
+};
 
 inline RaveVector<float> ExtractFloat3(const object& o)
 {
@@ -227,8 +229,8 @@ inline TransformMatrix ExtractTransformMatrix(const object& oraw)
 
 inline object toPyArray(const TransformMatrix& t)
 {
-    npy_intp dims[] = {4,4};
-    PyObject *pyvalues = PyArray_SimpleNew(2,dims, sizeof(dReal)==8?PyArray_DOUBLE:PyArray_FLOAT);
+    npy_intp dims[] = { 4,4};
+    PyObject *pyvalues = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
     dReal* pdata = (dReal*)PyArray_DATA(pyvalues);
     pdata[0] = t.m[0]; pdata[1] = t.m[1]; pdata[2] = t.m[2]; pdata[3] = t.trans.x;
     pdata[4] = t.m[4]; pdata[5] = t.m[5]; pdata[6] = t.m[6]; pdata[7] = t.trans.y;
@@ -239,8 +241,8 @@ inline object toPyArray(const TransformMatrix& t)
 
 inline object toPyArrayRotation(const TransformMatrix& t)
 {
-    npy_intp dims[] = {3,3};
-    PyObject *pyvalues = PyArray_SimpleNew(2,dims, sizeof(dReal)==8?PyArray_DOUBLE:PyArray_FLOAT);
+    npy_intp dims[] = { 3,3};
+    PyObject *pyvalues = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
     dReal* pdata = (dReal*)PyArray_DATA(pyvalues);
     pdata[0] = t.m[0]; pdata[1] = t.m[1]; pdata[2] = t.m[2];
     pdata[3] = t.m[4]; pdata[4] = t.m[5]; pdata[5] = t.m[6];
@@ -250,8 +252,8 @@ inline object toPyArrayRotation(const TransformMatrix& t)
 
 inline object toPyArray(const Transform& t)
 {
-    npy_intp dims[] = {7};
-    PyObject *pyvalues = PyArray_SimpleNew(1,dims, sizeof(dReal)==8?PyArray_DOUBLE:PyArray_FLOAT);
+    npy_intp dims[] = { 7};
+    PyObject *pyvalues = PyArray_SimpleNew(1,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
     dReal* pdata = (dReal*)PyArray_DATA(pyvalues);
     pdata[0] = t.rot.x; pdata[1] = t.rot.y; pdata[2] = t.rot.z; pdata[3] = t.rot.w;
     pdata[4] = t.trans.x; pdata[5] = t.trans.y; pdata[6] = t.trans.z;
@@ -260,7 +262,7 @@ inline object toPyArray(const Transform& t)
 
 inline object toPyArray3(const std::vector<RaveVector<float> >& v)
 {
-    npy_intp dims[] = {v.size(),3};
+    npy_intp dims[] = { v.size(),3};
     PyObject *pyvalues = PyArray_SimpleNew(2,dims, PyArray_FLOAT);
     if( v.size() > 0 ) {
         float* pf = (float*)PyArray_DATA(pyvalues);
@@ -275,7 +277,7 @@ inline object toPyArray3(const std::vector<RaveVector<float> >& v)
 
 inline object toPyArray3(const std::vector<RaveVector<double> >& v)
 {
-    npy_intp dims[] = {v.size(),3};
+    npy_intp dims[] = { v.size(),3};
     PyObject *pyvalues = PyArray_SimpleNew(2,dims, PyArray_DOUBLE);
     if( v.size() > 0 ) {
         double* pf = (double*)PyArray_DATA(pyvalues);
@@ -339,7 +341,7 @@ public:
         FOREACHC(it, info.interfacenames) {
             boost::python::list names;
             FOREACHC(itname,it->second)
-                names.append(*itname);
+            names.append(*itname);
             interfacenames.append(boost::python::make_tuple(it->first,names));
         }
         version = OPENRAVE_VERSION_STRING_FORMAT(info.version);
@@ -352,12 +354,19 @@ public:
 class PyGraphHandle
 {
 public:
-    PyGraphHandle() {}
-    PyGraphHandle(GraphHandlePtr handle) : _handle(handle) {}
-    virtual ~PyGraphHandle() {}
+    PyGraphHandle() {
+    }
+    PyGraphHandle(GraphHandlePtr handle) : _handle(handle) {
+    }
+    virtual ~PyGraphHandle() {
+    }
 
-    void SetTransform(object otrans) { _handle->SetTransform(RaveTransform<float>(ExtractTransformMatrixType<float>(otrans))); }
-    void SetShow(bool bshow) { _handle->SetShow(bshow); }
+    void SetTransform(object otrans) {
+        _handle->SetTransform(RaveTransform<float>(ExtractTransformMatrixType<float>(otrans)));
+    }
+    void SetShow(bool bshow) {
+        _handle->SetShow(bshow);
+    }
 private:
     GraphHandlePtr _handle;
 };
@@ -366,25 +375,32 @@ private:
 class PyUserData
 {
 public:
-    PyUserData() {}
-    PyUserData(UserDataPtr handle) : _handle(handle) {}
-    void close() { _handle.reset(); }
+    PyUserData() {
+    }
+    PyUserData(UserDataPtr handle) : _handle(handle) {
+    }
+    void close() {
+        _handle.reset();
+    }
     UserDataPtr _handle;
 };
 
 class PyUserObject : public UserData
 {
 public:
-    PyUserObject(object o) : _o(o) {}
+    PyUserObject(object o) : _o(o) {
+    }
     object _o;
 };
 
 class PyRay
 {
 public:
-    PyRay() {}
+    PyRay() {
+    }
     PyRay(object newpos, object newdir);
-    PyRay(const RAY& newr) : r(newr) {}
+    PyRay(const RAY& newr) : r(newr) {
+    }
     object dir();
     object pos();
     virtual string __repr__();
@@ -404,21 +420,21 @@ bool ExtractTriMesh(object o, KinBody::Link::TRIMESH& mesh);
 
 namespace openravepy
 {
-    PyInterfaceBasePtr RaveCreateInterface(PyEnvironmentBasePtr pyenv, InterfaceType type, const std::string& name);
-    PyRobotBasePtr RaveCreateRobot(PyEnvironmentBasePtr pyenv, const std::string& name);
-    PyPlannerBasePtr RaveCreatePlanner(PyEnvironmentBasePtr pyenv, const std::string& name);
-    PySensorSystemBasePtr RaveCreateSensorSystem(PyEnvironmentBasePtr pyenv, const std::string& name);
-    PyControllerBasePtr RaveCreateController(PyEnvironmentBasePtr pyenv, const std::string& name);
-    PyModuleBasePtr RaveCreateModule(PyEnvironmentBasePtr pyenv, const std::string& name);
-    PyIkSolverBasePtr RaveCreateIkSolver(PyEnvironmentBasePtr pyenv, const std::string& name);
-    PyPhysicsEngineBasePtr RaveCreatePhysicsEngine(PyEnvironmentBasePtr pyenv, const std::string& name);
-    PySensorBasePtr RaveCreateSensor(PyEnvironmentBasePtr pyenv, const std::string& name);
-    PyCollisionCheckerBasePtr RaveCreateCollisionChecker(PyEnvironmentBasePtr pyenv, const std::string& name);
-    PyViewerBasePtr RaveCreateViewer(PyEnvironmentBasePtr pyenv, const std::string& name);
-    PySpaceSamplerBasePtr RaveCreateSpaceSampler(PyEnvironmentBasePtr pyenv, const std::string& name);
-    PyKinBodyPtr RaveCreateKinBody(PyEnvironmentBasePtr pyenv, const std::string& name);
-    PyTrajectoryBasePtr RaveCreateTrajectory(PyEnvironmentBasePtr pyenv, const std::string& name);
-    void init_openravepy_global();
+PyInterfaceBasePtr RaveCreateInterface(PyEnvironmentBasePtr pyenv, InterfaceType type, const std::string& name);
+PyRobotBasePtr RaveCreateRobot(PyEnvironmentBasePtr pyenv, const std::string& name);
+PyPlannerBasePtr RaveCreatePlanner(PyEnvironmentBasePtr pyenv, const std::string& name);
+PySensorSystemBasePtr RaveCreateSensorSystem(PyEnvironmentBasePtr pyenv, const std::string& name);
+PyControllerBasePtr RaveCreateController(PyEnvironmentBasePtr pyenv, const std::string& name);
+PyModuleBasePtr RaveCreateModule(PyEnvironmentBasePtr pyenv, const std::string& name);
+PyIkSolverBasePtr RaveCreateIkSolver(PyEnvironmentBasePtr pyenv, const std::string& name);
+PyPhysicsEngineBasePtr RaveCreatePhysicsEngine(PyEnvironmentBasePtr pyenv, const std::string& name);
+PySensorBasePtr RaveCreateSensor(PyEnvironmentBasePtr pyenv, const std::string& name);
+PyCollisionCheckerBasePtr RaveCreateCollisionChecker(PyEnvironmentBasePtr pyenv, const std::string& name);
+PyViewerBasePtr RaveCreateViewer(PyEnvironmentBasePtr pyenv, const std::string& name);
+PySpaceSamplerBasePtr RaveCreateSpaceSampler(PyEnvironmentBasePtr pyenv, const std::string& name);
+PyKinBodyPtr RaveCreateKinBody(PyEnvironmentBasePtr pyenv, const std::string& name);
+PyTrajectoryBasePtr RaveCreateTrajectory(PyEnvironmentBasePtr pyenv, const std::string& name);
+void init_openravepy_global();
 }
 
 #endif

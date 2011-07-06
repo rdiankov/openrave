@@ -15,9 +15,9 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /**
-\file   IvSelector.cpp
-\brief  OpenInventor selection class
-*/
+   \file   IvSelector.cpp
+   \brief  OpenInventor selection class
+ */
 #include "qtcoin.h"
 
 const SbColor IvDragger::CHECK_COLOR(0.2f, 0.8f, 0.3f);
@@ -34,8 +34,8 @@ IvDragger::IvDragger(QtCoinViewerPtr viewer, ItemPtr pItem, float draggerScale)
     _checkCollision = false;
     _prevtransparency = pItem->GetIvTransparency()->value;
     pItem->GetIvTransparency()->value = SoGLRenderAction::SCREEN_DOOR;
-    
-    if( !!_selectedItem && _selectedItem->GetIvRoot() != NULL ) {
+
+    if( !!_selectedItem &&(_selectedItem->GetIvRoot() != NULL)) {
         _GetBounds(_selectedItem->GetIvRoot(), _ab);
 
         // make the item transparent
@@ -49,7 +49,7 @@ IvDragger::IvDragger(QtCoinViewerPtr viewer, ItemPtr pItem, float draggerScale)
             vtransparency.push_back(pmtrl->transparency[0]);
             pmtrl->transparency = 0.25f;
         }
-        
+
         _vlinkaxes.resize(_selectedItem->GetNumIvLinks());
         for(size_t i = 0; i < _vlinkaxes.size(); ++i) {
             _vlinkaxes[i] = _CreateAxes(0.5f,0.5f);
@@ -61,8 +61,8 @@ IvDragger::IvDragger(QtCoinViewerPtr viewer, ItemPtr pItem, float draggerScale)
 SoSeparator* IvDragger::_CreateAxes(float fSize,float fColor)
 {
     SoSeparator* axes = new SoSeparator();
-    Vector colors[] = {Vector(0,0,fColor),Vector(0,fColor,0),Vector(fColor,0,0)};
-    Vector rotations[] = {Vector(1,0,0,PI/2), Vector(1,0,0,0), Vector(0,0,1,-PI/2)};
+    Vector colors[] = { Vector(0,0,fColor),Vector(0,fColor,0),Vector(fColor,0,0)};
+    Vector rotations[] = { Vector(1,0,0,PI/2), Vector(1,0,0,0), Vector(0,0,1,-PI/2)};
 
     // add 3 cylinder+cone axes
     for(int i = 0; i < 3; ++i) {
@@ -73,7 +73,7 @@ SoSeparator* IvDragger::_CreateAxes(float fSize,float fColor)
         mtrl->diffuseColor = SbColor(colors[i].x, colors[i].y, colors[i].z);
         mtrl->ambientColor = SbColor(colors[i].x, colors[i].y, colors[i].z);
         mtrl->setOverride(true);
-            
+
         SoTransform* protation = new SoTransform();
         protation->rotation.setValue(SbVec3f(rotations[i].x, rotations[i].y, rotations[i].z), rotations[i].w);
 
@@ -83,11 +83,11 @@ SoSeparator* IvDragger::_CreateAxes(float fSize,float fColor)
         SoCylinder* c = new SoCylinder();
         c->radius = 0.002f*fSize;
         c->height = 0.04f*fSize;
-            
+
         SoCone* cn = new SoCone();
         cn->bottomRadius = 0.004f*fSize;
         cn->height = 0.02f*fSize;
-            
+
         SoTransform* pconetrans = new SoTransform();
         pconetrans->translation.setValue(0,0.02f*fSize,0);
 
@@ -104,7 +104,7 @@ SoSeparator* IvDragger::_CreateAxes(float fSize,float fColor)
 
 IvDragger::~IvDragger()
 {
-    if( !!_selectedItem && _selectedItem->GetIvRoot() != NULL ) {
+    if( !!_selectedItem &&(_selectedItem->GetIvRoot() != NULL)) {
         for(size_t i = 0; i < _vlinkaxes.size(); ++i) {
             _selectedItem->GetIvLink(i)->removeChild(_vlinkaxes[i]);
         }
@@ -160,13 +160,13 @@ void IvDragger::_MotionHandler(void *userData, SoDragger *)
 }
 
 IvObjectDragger::IvObjectDragger(QtCoinViewerPtr viewer, ItemPtr pItem, float draggerScale, bool bAllowRotation)
-: IvDragger(viewer, pItem, draggerScale)
+    : IvDragger(viewer, pItem, draggerScale)
 {
     //if( _ptext != NULL ) {
-//        char str[256];
-//        sprintf(str,"%s", _selectedItem->GetName().c_str());
-//        _ptext->string.setValue(str);
-//    }
+    //        char str[256];
+    //        sprintf(str,"%s", _selectedItem->GetName().c_str());
+    //        _ptext->string.setValue(str);
+    //    }
 
     // create a root node for the dragger nodes
     _draggerRoot = new SoSeparator;
@@ -266,7 +266,7 @@ void IvObjectDragger::UpdateSkeleton()
     tbox.trans = Vector(v[0], v[1], v[2]);
 
     Transform told; told.trans = -_ab.pos;
-    
+
     RaveTransform<float> tnew = tbox*told*_toffset;
     SetSoTransform(_selectedItem->GetIvTransform(), tnew);
 
@@ -288,17 +288,17 @@ void IvObjectDragger::GetMessage(ostream& sout)
     Transform t = pbody->GetTransform();
     sout << "Selected " << _selectedItem->GetName() << " (id=" << pbody->GetNetworkId() << ")" << endl
          << "  translation = ("
-         << std::fixed << std::setprecision(5) 
+         << std::fixed << std::setprecision(5)
          << std::setw(8) << std::left << t.trans.x << ", "
          << std::setw(8) << std::left << t.trans.y << ", "
          << std::setw(8) << std::left << t.trans.z << ")" << endl
          << "  quaternion = ("
-         << std::fixed << std::setprecision(5) 
+         << std::fixed << std::setprecision(5)
          << std::setw(8) << std::left << t.rot.x << ", "
          << std::setw(8) << std::left << t.rot.y << ", "
          << std::setw(8) << std::left << t.rot.z << ", "
          << std::setw(8) << std::left << t.rot.w << ")" << endl;
-} 
+}
 
 IvJointDragger::IvJointDragger(QtCoinViewerPtr viewer, ItemPtr pItem, int iSelectedLink, float draggerScale, int iJointIndex, bool bHilitJoint) : IvDragger(viewer, pItem, draggerScale)
 {
@@ -311,10 +311,10 @@ IvJointDragger::IvJointDragger(QtCoinViewerPtr viewer, ItemPtr pItem, int iSelec
     if( !pbody || !pbody->GetBody() ) {
         return;
     }
-    if( iSelectedLink < 0 || iSelectedLink >= (int)pbody->GetBody()->GetLinks().size() ) {
+    if((iSelectedLink < 0)||(iSelectedLink >= (int)pbody->GetBody()->GetLinks().size())) {
         return;
     }
-    if( iJointIndex < 0 || iJointIndex >= (int)pbody->GetBody()->GetJoints().size() ) {
+    if((iJointIndex < 0)||(iJointIndex >= (int)pbody->GetBody()->GetJoints().size())) {
         return;
     }
 
@@ -325,7 +325,7 @@ IvJointDragger::IvJointDragger(QtCoinViewerPtr viewer, ItemPtr pItem, int iSelec
     _jointtype = pjoint->GetType();
     _dofindex = pjoint->GetDOFIndex();
     _jointname = pjoint->GetName();
-    _jointoffset = 0;//pjoint->GetOffset();
+    _jointoffset = 0; //pjoint->GetOffset();
     pjoint->GetLimits(_vlower,_vupper);
 
     _pLinkNode = pbody->GetIvLink(iSelectedLink);
@@ -359,10 +359,10 @@ IvJointDragger::IvJointDragger(QtCoinViewerPtr viewer, ItemPtr pItem, int iSelec
     Vector vnorm = Vector(1,0,0).cross(vaxes[0]);
     dReal fsinang = RaveSqrt(vnorm.lengthsqr3());
     if( fsinang > 0.0001f ) {
-        vnorm /= fsinang;   
+        vnorm /= fsinang;
     }
     else vnorm = Vector(1,0,0);
-    
+
     Vector vtrans = tlink.inverse()*pjoint->GetAnchor();
     draggertrans->translation.setValue(vtrans.x, vtrans.y, vtrans.z);
     draggertrans->rotation = SbRotation(SbVec3f(vnorm.x, vnorm.y, vnorm.z), atan2f(fsinang,vaxes[0].x));
@@ -432,7 +432,7 @@ void IvJointDragger::CheckCollision(bool flag)
 
     if (_checkCollision) {
         KinBodyItemPtr pbody = boost::dynamic_pointer_cast<KinBodyItem>(_selectedItem);
-        
+
         if( !!pbody ) {
             EnvironmentMutex::scoped_try_lock lock(_viewer->GetEnv()->GetMutex());
             if( !!lock ) {
@@ -475,7 +475,7 @@ void IvJointDragger::UpdateSkeleton()
             if( pjoint->GetType() == KinBody::Joint::JointSlider ) {
                 fang = fang*(vupper.at(0)-vlower.at(0))+vlower.at(0);
             }
-            
+
             // update the joint's transform
             vector<dReal> vjoints;
             pbody->GetBody()->GetDOFValues(vjoints);
@@ -550,7 +550,7 @@ void IvJointDragger::GetMessage(ostream& sout)
 
     vector<dReal> vjoints;
     pbody->GetDOFValues(vjoints);
-    
+
     sout << "Selected " << _selectedItem->GetName() << " (id=" << pbody->GetNetworkId() << ")" << endl
          << std::fixed << std::setprecision(3)
          << "  joint " << _jointname << " (" << _iJointIndex << ") "  << " = " << vjoints[_iJointIndex];

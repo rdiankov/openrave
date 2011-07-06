@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2010 Rosen Diankov (rosen.diankov@gmail.com)
+// Copyright (C) 2006-2011 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -16,7 +16,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /** \file iksolver.h
     \brief Inverse kinematics related definitions.
-*/
+ */
 #ifndef OPENRAVE_IKSOLVER_H
 #define OPENRAVE_IKSOLVER_H
 
@@ -39,9 +39,9 @@ enum IkFilterOptions
     IKFO_IgnoreCustomFilter=8, ///< will not use the custom filter, even if one is set
 };
 
-/** \brief <b>[interface]</b> Base class for all Inverse Kinematic solvers. See \ref arch_iksolver.   
+/** \brief <b>[interface]</b> Base class for all Inverse Kinematic solvers. See \ref arch_iksolver.
    \ingroup interfaces
-*/
+ */
 class OPENRAVE_API IkSolverBase : public InterfaceBase
 {
 public:
@@ -55,15 +55,18 @@ public:
         \param manipulator The current manipulator that the ik is being solved for.
         \param param The paramterization that IK was called with. This is in the manipulator base link's coordinate system (which is not necessarily the world coordinate system).
         \return \ref IkFilterReturn controlling the behavior of the ik search process.
-    */
+     */
     typedef boost::function<IkFilterReturn(std::vector<dReal>&, RobotBase::ManipulatorPtr, const IkParameterization&)> IkFilterCallbackFn;
 
-    IkSolverBase(EnvironmentBasePtr penv) : InterfaceBase(PT_InverseKinematicsSolver, penv) {}
+    IkSolverBase(EnvironmentBasePtr penv) : InterfaceBase(PT_InverseKinematicsSolver, penv) {
+    }
     virtual ~IkSolverBase() {}
 
     /// return the static interface type this class points to (used for safe casting)
-    static inline InterfaceType GetInterfaceTypeStatic() { return PT_InverseKinematicsSolver; }
-    
+    static inline InterfaceType GetInterfaceTypeStatic() {
+        return PT_InverseKinematicsSolver;
+    }
+
     /// sets the IkSolverBase attached to a specific robot and sets IkSolverBase specific options
     /// For example, some ik solvers might have different ways of computing optimal solutions.
     /// \param pmanip The manipulator the IK solver is attached to
@@ -87,9 +90,9 @@ public:
     /// \param[out] vFreeParameters is filled with GetNumFreeParameters() parameters in [0,1] range
     /// \return true if succeeded
     virtual bool GetFreeParameters(std::vector<dReal>& vFreeParameters) const = 0;
-    
+
     /// Return a joint configuration for the given end effector transform. Robot is checked for self-collisions.
-    /// \param[in] param the pose the end effector has to achieve. Note that the end effector pose 
+    /// \param[in] param the pose the end effector has to achieve. Note that the end effector pose
     ///                        takes into account the grasp coordinate frame for the RobotBase::Manipulator
     /// \param[in] q0 Return a solution nearest to the given configuration q0 in terms of the joint distance.
     ///           If q0 is NULL, returns the first solution found
@@ -99,7 +102,7 @@ public:
     virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, int filteroptions, boost::shared_ptr< std::vector<dReal> > solution) = 0;
 
     /// Return all joint configurations for the given end effector transform. Robot is checked for self-collisions.
-    /// \param[in] param the pose the end effector has to achieve. Note that the end effector pose 
+    /// \param[in] param the pose the end effector has to achieve. Note that the end effector pose
     ///                        takes into account the grasp coordinate frame for the RobotBase::Manipulator
     /// \param[in] filteroptions A bitmask of \ref IkFilterOptions values controlling what is checked for each ik solution.
     /// \param[out] solutions All solutions within a reasonable discretization level of the free parameters.
@@ -108,7 +111,7 @@ public:
 
     /// Return a joint configuration for the given end effector transform. Robot is checked for self-collisions.
     /// Can specify the free parameters in [0,1] range. If NULL, the regular equivalent Solve is called
-    /// \param[in] param the pose the end effector has to achieve. Note that the end effector pose 
+    /// \param[in] param the pose the end effector has to achieve. Note that the end effector pose
     ///                        takes into account the grasp coordinate frame for the RobotBase::Manipulator
     /// \param[in] q0 Return a solution nearest to the given configuration q0 in terms of the joint distance.
     ///           If q0 is empty, returns the first solution found
@@ -120,7 +123,7 @@ public:
 
     /// Return all joint configurations for the given end effector transform. Robot is checked for self-collisions.
     /// Can specify the free parameters in [0,1] range. If NULL, the regular equivalent Solve is called
-    /// \param[in] param the pose the end effector has to achieve. Note that the end effector pose 
+    /// \param[in] param the pose the end effector has to achieve. Note that the end effector pose
     ///                        takes into account the grasp coordinate frame for the RobotBase::Manipulator
     /// \param[in] vFreeParameters The free parameters of the null space of the IK solutions. Always in range of [0,1]
     /// \param[in] filteroptions A bitmask of \ref IkFilterOptions values controlling what is checked for each ik solution.
@@ -132,7 +135,9 @@ public:
     virtual bool Supports(IkParameterization::Type iktype) const OPENRAVE_DUMMY_IMPLEMENTATION;
 
 private:
-    virtual const char* GetHash() const { return OPENRAVE_IKSOLVER_HASH; }
+    virtual const char* GetHash() const {
+        return OPENRAVE_IKSOLVER_HASH;
+    }
 };
 
 } // end namespace OpenRAVE

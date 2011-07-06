@@ -37,8 +37,8 @@ Command-line
 
 .. shell-block:: openrave.py --example %s --help
 
-Main Code
----------
+Main Python Code
+----------------
 
 .. literalinclude:: ../../../python/examples/%s.py
   :pyobject: main

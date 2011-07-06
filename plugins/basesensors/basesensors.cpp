@@ -33,7 +33,7 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
     }
     switch(type) {
     case PT_Sensor:
-        if( interfacename == "baselaser2d" || interfacename == "base_laser2d" ) {
+        if((interfacename == "baselaser2d")||(interfacename == "base_laser2d")) {
             return InterfaceBasePtr(new BaseLaser2DSensor(penv));
         }
         else if( interfacename == "basespinninglaser2d" ) {

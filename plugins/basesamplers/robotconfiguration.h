@@ -24,7 +24,7 @@ public:
 Samples the robot active configuration space, treats revolute and circular joints appropriately. When creating pass the following parameters::\n\n\
   RobotConfiguration [robot name] [sampler name]\n\n\
 The sampler needs to return values in the range [0,1]. Default sampler is 'mt19937'.\n\
-";
+"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              ;
         string robotname;
         sinput >> robotname;
         _probot = GetEnv()->GetRobot(robotname);
@@ -54,11 +54,19 @@ The sampler needs to return values in the range [0,1]. Default sampler is 'mt199
         _psampler->SetSeed(seed);
     }
 
-    void SetSpaceDOF(int dof) { BOOST_ASSERT(dof==(int)_lower.size()); }
-    int GetDOF() const { return (int)_lower.size(); }
-    int GetNumberOfValues() const { return (int)_lower.size(); }
-    bool Supports(SampleDataType type) const { return !!_probot && !!_psampler && type==SDT_Real; }
-    
+    void SetSpaceDOF(int dof) {
+        BOOST_ASSERT(dof==(int)_lower.size());
+    }
+    int GetDOF() const {
+        return (int)_lower.size();
+    }
+    int GetNumberOfValues() const {
+        return (int)_lower.size();
+    }
+    bool Supports(SampleDataType type) const {
+        return !!_probot && !!_psampler && type==SDT_Real;
+    }
+
     void GetLimits(std::vector<dReal>& vLowerLimit, std::vector<dReal>& vUpperLimit) const
     {
         vLowerLimit = _lower;
@@ -75,7 +83,7 @@ The sampler needs to return values in the range [0,1]. Default sampler is 'mt199
         }
     }
 
- protected:
+protected:
     void _UpdateDOFs()
     {
         _probot->GetActiveDOFLimits(_lower, _upper);

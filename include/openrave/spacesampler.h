@@ -16,7 +16,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /** \file spacesampler.h
     \brief Sampling definitions.
-*/
+ */
 #ifndef OPENRAVE_SPACESAMPLER_H
 #define OPENRAVE_SPACESAMPLER_H
 
@@ -37,16 +37,19 @@ enum SampleDataType {
 
 /** \brief <b>[interface]</b> Contains space samplers commonly used in planners. <b>Methods not multi-thread safe.</b> See \ref arch_spacesampler.
     \ingroup interfaces
-*/
+ */
 class OPENRAVE_API SpaceSamplerBase :  public InterfaceBase
 {
 public:
-    SpaceSamplerBase(EnvironmentBasePtr penv) : InterfaceBase(PT_SpaceSampler, penv) {}
+    SpaceSamplerBase(EnvironmentBasePtr penv) : InterfaceBase(PT_SpaceSampler, penv) {
+    }
     virtual ~SpaceSamplerBase() {}
 
     /// \brief return the static interface type this class points to (used for safe casting)
-    static inline InterfaceType GetInterfaceTypeStatic() { return PT_SpaceSampler; }
-    
+    static inline InterfaceType GetInterfaceTypeStatic() {
+        return PT_SpaceSampler;
+    }
+
     /// \brief sets a new seed. For sequence samplers, the seed describes the n^th sample to begin at.
     virtual void SetSeed(uint32_t seed) OPENRAVE_DUMMY_IMPLEMENTATION;
 
@@ -57,10 +60,10 @@ public:
     virtual int GetDOF() const = 0;
 
     /** \brief Dimension of the return samples.
-        
+
         Number of values used to represent the parameterization of the space (>= dof).
         For example, let a quaternion describe a 3D rotation. The DOF of the space is 3, while the dimension of the returned samples is 4.
-    */
+     */
     virtual int GetNumberOfValues() const = 0;
 
     virtual bool Supports(SampleDataType type) const = 0;
@@ -76,7 +79,7 @@ public:
     virtual void GetLimits(std::vector<uint32_t>& vLowerLimit, std::vector<uint32_t>& vUpperLimit) const OPENRAVE_DUMMY_IMPLEMENTATION;
 
     /** \brief sequentially sampling returning the next 'num' samples
-        
+
         The sampler can fail by returning an array of size 0.
         \param sample the values of the samples. This is a num*GetNumberOfValues() array.
         \param num number of samples to return
@@ -85,11 +88,11 @@ public:
     virtual void SampleSequence(std::vector<dReal>& samples, size_t num=1,IntervalType interval=IT_Closed) OPENRAVE_DUMMY_IMPLEMENTATION;
 
     /** \brief sequentially sampling returning the next 'num' samples
-        
+
         The sampler can fail by returning an array of size 0.
         \param sample the values of the samples. This is a num*GetNumberOfValues() array.
         \param num number of samples to return
-    */
+     */
     virtual void SampleSequence(std::vector<uint32_t>& sample, size_t num=1) OPENRAVE_DUMMY_IMPLEMENTATION;
 
     /// \brief returns N samples that best approximate the entire sampling space.
@@ -105,9 +108,11 @@ public:
     /// \brief Sets a distance metric for measuring samples. Used when computing neighborhood sampling
     //virtual void SetDistanceMetric(const boost::function<dReal(const std::vector<dReal>&, const std::vector<dReal>&)>& distmetricfn) OPENRAVE_DUMMY_IMPLEMENTATION;
 
-    
+
 private:
-    virtual const char* GetHash() const { return OPENRAVE_SPACESAMPLER_HASH; }
+    virtual const char* GetHash() const {
+        return OPENRAVE_SPACESAMPLER_HASH;
+    }
 };
 
 } // end namespace OpenRAVE

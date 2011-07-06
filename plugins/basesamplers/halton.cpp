@@ -59,14 +59,14 @@ char HaltonSampler::digit_to_ch ( int i )
 {
     char c;
 
-    if ( 0 <= i && i <= 9 )
-        {
-            c = '0' + i;
-        }
+    if ((0 <= i)&&(i <= 9))
+    {
+        c = '0' + i;
+    }
     else
-        {
-            c = '*';
-        }
+    {
+        c = '*';
+    }
 
     return c;
 }
@@ -117,9 +117,9 @@ int HaltonSampler::get_seed ( )
     ihour = lt->tm_hour;
 
     if ( 12 < ihour )
-        {
-            ihour = ihour - 12;
-        }
+    {
+        ihour = ihour - 12;
+    }
     //
     //  Move Hours to 0, 1, ..., 11
     //
@@ -138,15 +138,15 @@ int HaltonSampler::get_seed ( )
     //  Remap ISEED from [1,43200] to [1,IMAX].
     //
     seed = ( int )
-        ( ( ( dReal ) seed )
-          * ( ( dReal ) I4_MAX ) / ( 60.0 * 60.0 * 12.0 ) );
+                                ( ( ( dReal ) seed )
+                                * ( ( dReal ) I4_MAX ) / ( 60.0 * 60.0 * 12.0 ) );
     //
     //  Never use a seed of 0.
     //
     if ( seed == 0 )
-        {
-            seed = 1;
-        }
+    {
+        seed = 1;
+    }
 
     return seed;
 # undef I4_MAX
@@ -184,17 +184,17 @@ bool HaltonSampler::halham_dim_num_check ( int dim_num )
     bool value;
 
     if ( dim_num < 1 )
-        {
-            cout << "\n";
-            cout << "HALHAM_DIM_NUM_CHECK - Fatal error!\n";
-            cout << "  DIM_NUM < 0.";
-            cout << "  DIM_NUM = " << dim_num << "\n";
-            value = false;
-        }
+    {
+        cout << "\n";
+        cout << "HALHAM_DIM_NUM_CHECK - Fatal error!\n";
+        cout << "  DIM_NUM < 0.";
+        cout << "  DIM_NUM = " << dim_num << "\n";
+        value = false;
+    }
     else
-        {
-            value = true;
-        }
+    {
+        value = true;
+    }
 
     return value;
 }
@@ -236,17 +236,17 @@ bool HaltonSampler::halham_leap_check ( int dim_num, int leap[] )
     value = true;
 
     for ( i = 0; i < dim_num; i++ )
+    {
+        if ( leap[i] < 1 )
         {
-            if ( leap[i] < 1 )
-                {
-                    cout << "\n";
-                    cout << "HALHAM_LEAP_CHECK - Fatal error!\n";
-                    cout << "  Leap entries must be greater than 0.\n";
-                    cout << "  leap[" << i << "] = " << leap[i] << "\n";
-                    value = false;
-                    break;
-                }
+            cout << "\n";
+            cout << "HALHAM_LEAP_CHECK - Fatal error!\n";
+            cout << "  Leap entries must be greater than 0.\n";
+            cout << "  leap[" << i << "] = " << leap[i] << "\n";
+            value = false;
+            break;
         }
+    }
 
     return value;
 }
@@ -283,17 +283,17 @@ bool HaltonSampler::halham_n_check ( int n )
     bool value;
 
     if ( n < 1 )
-        {
-            cout << "\n";
-            cout << "HALHAM_N_CHECK - Fatal error!\n";
-            cout << "  N < 0.";
-            cout << "  N = " << n << "\n";
-            value = false;
-        }
+    {
+        cout << "\n";
+        cout << "HALHAM_N_CHECK - Fatal error!\n";
+        cout << "  N < 0.";
+        cout << "  N = " << n << "\n";
+        value = false;
+    }
     else
-        {
-            value = true;
-        }
+    {
+        value = true;
+    }
 
     return value;
 }
@@ -335,17 +335,17 @@ bool HaltonSampler::halham_seed_check ( int dim_num, int seed[] )
     value = true;
 
     for ( i = 0; i < dim_num; i++ )
+    {
+        if ( seed[i] < 0 )
         {
-            if ( seed[i] < 0 )
-                {
-                    cout << "\n";
-                    cout << "HALHAM_SEED_CHECK - Fatal error!\n";
-                    cout << "  SEED entries must be nonnegative.\n";
-                    cout << "  seed[" << i << "] = " << seed[i] << "\n";
-                    value = false;
-                    break;
-                }
+            cout << "\n";
+            cout << "HALHAM_SEED_CHECK - Fatal error!\n";
+            cout << "  SEED entries must be nonnegative.\n";
+            cout << "  seed[" << i << "] = " << seed[i] << "\n";
+            value = false;
+            break;
         }
+    }
 
     return value;
 }
@@ -383,17 +383,17 @@ bool HaltonSampler::halham_step_check ( int step )
     bool value;
 
     if ( step < 0 )
-        {
-            cout << "\n";
-            cout << "HALHAM_STEP_CHECK - Fatal error!\n";
-            cout << "  STEP < 0.";
-            cout << "  STEP = " << step << "\n";
-            value = false;
-        }
+    {
+        cout << "\n";
+        cout << "HALHAM_STEP_CHECK - Fatal error!\n";
+        cout << "  STEP < 0.";
+        cout << "  STEP = " << step << "\n";
+        value = false;
+    }
     else
-        {
-            value = true;
-        }
+    {
+        value = true;
+    }
 
     return value;
 }
@@ -498,41 +498,41 @@ void HaltonSampler::halton ( dReal r[] )
     int step;
 
     if ( halton_DIM_NUM < 1 )
-        {
-            halton_DIM_NUM = 1;
-        }
+    {
+        halton_DIM_NUM = 1;
+    }
 
     if ( halton_STEP < 0 )
-        {
-            halton_STEP = 0;
-        }
+    {
+        halton_STEP = 0;
+    }
 
     if ( !halton_SEED )
+    {
+        halton_SEED = new int[halton_DIM_NUM];
+        for ( i = 0; i < halton_DIM_NUM; i++ )
         {
-            halton_SEED = new int[halton_DIM_NUM];
-            for ( i = 0; i < halton_DIM_NUM; i++ )
-                {
-                    halton_SEED[i] = 0;
-                }
+            halton_SEED[i] = 0;
         }
+    }
 
     if ( !halton_LEAP )
+    {
+        halton_LEAP = new int[halton_DIM_NUM];
+        for ( i = 0; i < halton_DIM_NUM; i++ )
         {
-            halton_LEAP = new int[halton_DIM_NUM];
-            for ( i = 0; i < halton_DIM_NUM; i++ )
-                {
-                    halton_LEAP[i] = 1;
-                }
+            halton_LEAP[i] = 1;
         }
+    }
 
     if ( !halton_BASE )
+    {
+        halton_BASE = new int[halton_DIM_NUM];
+        for ( i = 0; i < halton_DIM_NUM; i++ )
         {
-            halton_BASE = new int[halton_DIM_NUM];
-            for ( i = 0; i < halton_DIM_NUM; i++ )
-                {
-                    halton_BASE[i] = prime ( i + 1 );
-                }
+            halton_BASE[i] = prime ( i + 1 );
         }
+    }
 
     dim_num = halton_DIM_NUM;
     step = halton_STEP;
@@ -583,17 +583,17 @@ bool HaltonSampler::halton_base_check ( int dim_num, int base[] )
     value = true;
 
     for ( i = 0; i < dim_num; i++ )
+    {
+        if ( base[i] <= 1 )
         {
-            if ( base[i] <= 1 )
-                {
-                    cout << "\n";
-                    cout << "HALTON_BASE_CHECK - Fatal error!\n";
-                    cout << "  Bases must be greater than 1.\n";
-                    cout << "  base[" << i << "] = " << base[i] << "\n";
-                    value = false;
-                    break;
-                }
+            cout << "\n";
+            cout << "HALTON_BASE_CHECK - Fatal error!\n";
+            cout << "  Bases must be greater than 1.\n";
+            cout << "  base[" << i << "] = " << base[i] << "\n";
+            value = false;
+            break;
         }
+    }
 
     return value;
 }
@@ -657,14 +657,14 @@ void HaltonSampler::halton_base_set ( int base[] )
     int i;
 
     if ( !halton_base_check ( halton_DIM_NUM, base ) )
-        {
-            exit ( 1 );
-        }
+    {
+        exit ( 1 );
+    }
 
     for ( i = 0; i < halton_DIM_NUM; i++ )
-        {
-            halton_BASE[i] = base[i];
-        }
+    {
+        halton_BASE[i] = base[i];
+    }
 
     return;
 }
@@ -729,14 +729,14 @@ void HaltonSampler::halton_leap_set ( int leap[] )
     int i;
 
     if ( !halham_leap_check ( halton_DIM_NUM, leap ) )
-        {
-            exit ( 1 );
-        }
+    {
+        exit ( 1 );
+    }
 
     for ( i = 0; i < halton_DIM_NUM; i++ )
-        {
-            halton_LEAP[i] = leap[i];
-        }
+    {
+        halton_LEAP[i] = leap[i];
+    }
 
     return;
 }
@@ -800,37 +800,37 @@ void HaltonSampler::halton_dim_num_set ( int dim_num )
     int i;
 
     if ( !halham_dim_num_check ( dim_num ) )
-        {
-            exit ( 1 );
-        }
+    {
+        exit ( 1 );
+    }
 
-    if ( halton_DIM_NUM != dim_num && 0 < halton_DIM_NUM )
-        {
-            delete [] halton_BASE;
-            delete [] halton_LEAP;
-            delete [] halton_SEED;
-        }
+    if ((halton_DIM_NUM != dim_num)&&(0 < halton_DIM_NUM))
+    {
+        delete [] halton_BASE;
+        delete [] halton_LEAP;
+        delete [] halton_SEED;
+    }
 
     if ( halton_DIM_NUM != dim_num )
+    {
+        halton_DIM_NUM = dim_num;
+        halton_SEED = new int[halton_DIM_NUM];
+        for ( i = 0; i < halton_DIM_NUM; i++ )
         {
-            halton_DIM_NUM = dim_num;
-            halton_SEED = new int[halton_DIM_NUM];
-            for ( i = 0; i < halton_DIM_NUM; i++ )
-                {
-                    halton_SEED[i] = 0;
-                }
-            halton_LEAP = new int[halton_DIM_NUM];
-            for ( i = 0; i < halton_DIM_NUM; i++ )
-                {
-                    halton_LEAP[i] = 1;
-                }
-            halton_BASE = new int[halton_DIM_NUM];
-            for ( i = 0; i < halton_DIM_NUM; i++ )
-                {
-                    halton_BASE[i] = prime ( i + 1 );
-                }
-            halton_STEP = 0;
+            halton_SEED[i] = 0;
         }
+        halton_LEAP = new int[halton_DIM_NUM];
+        for ( i = 0; i < halton_DIM_NUM; i++ )
+        {
+            halton_LEAP[i] = 1;
+        }
+        halton_BASE = new int[halton_DIM_NUM];
+        for ( i = 0; i < halton_DIM_NUM; i++ )
+        {
+            halton_BASE[i] = prime ( i + 1 );
+        }
+        halton_STEP = 0;
+    }
 
     return;
 }
@@ -895,14 +895,14 @@ void HaltonSampler::halton_seed_set ( int seed[] )
     int i;
 
     if ( !halham_seed_check ( halton_DIM_NUM, seed ) )
-        {
-            exit ( 1 );
-        }
+    {
+        exit ( 1 );
+    }
 
     for ( i = 0; i < halton_DIM_NUM; i++ )
-        {
-            halton_SEED[i] = seed[i];
-        }
+    {
+        halton_SEED[i] = seed[i];
+    }
 
     return;
 }
@@ -1017,41 +1017,41 @@ void HaltonSampler::halton_sequence ( int n, dReal r[] )
     int step;
 
     if ( halton_DIM_NUM < 1 )
-        {
-            halton_DIM_NUM = 1;
-        }
+    {
+        halton_DIM_NUM = 1;
+    }
 
     if ( halton_STEP < 0 )
-        {
-            halton_STEP = 0;
-        }
+    {
+        halton_STEP = 0;
+    }
 
     if ( !halton_SEED )
+    {
+        halton_SEED = new int[halton_DIM_NUM];
+        for ( i = 0; i < halton_DIM_NUM; i++ )
         {
-            halton_SEED = new int[halton_DIM_NUM];
-            for ( i = 0; i < halton_DIM_NUM; i++ )
-                {
-                    halton_SEED[i] = 0;
-                }
+            halton_SEED[i] = 0;
         }
+    }
 
     if ( !halton_LEAP )
+    {
+        halton_LEAP = new int[halton_DIM_NUM];
+        for ( i = 0; i < halton_DIM_NUM; i++ )
         {
-            halton_LEAP = new int[halton_DIM_NUM];
-            for ( i = 0; i < halton_DIM_NUM; i++ )
-                {
-                    halton_LEAP[i] = 1;
-                }
+            halton_LEAP[i] = 1;
         }
+    }
 
     if ( !halton_BASE )
+    {
+        halton_BASE = new int[halton_DIM_NUM];
+        for ( i = 0; i < halton_DIM_NUM; i++ )
         {
-            halton_BASE = new int[halton_DIM_NUM];
-            for ( i = 0; i < halton_DIM_NUM; i++ )
-                {
-                    halton_BASE[i] = prime ( i + 1 );
-                }
+            halton_BASE[i] = prime ( i + 1 );
         }
+    }
 
     dim_num = halton_DIM_NUM;
     step = halton_STEP;
@@ -1125,9 +1125,9 @@ void HaltonSampler::halton_step_set ( int step )
     //int i;
 
     if ( !halham_step_check ( step ) )
-        {
-            exit ( 1 );
-        }
+    {
+        exit ( 1 );
+    }
 
     halton_STEP = step;
 
@@ -1202,10 +1202,10 @@ int HaltonSampler::i4_log_10 ( int i )
     value = 0;
 
     while ( ten_pow <= i )
-        {
-            ten_pow = ten_pow * 10;
-            value = value + 1;
-        }
+    {
+        ten_pow = ten_pow * 10;
+        value = value + 1;
+    }
 
     return value;
 }
@@ -1240,19 +1240,19 @@ int HaltonSampler::i4_min ( int i1, int i2 )
 //
 {
     if ( i1 < i2 )
-        {
-            return i1;
-        }
+    {
+        return i1;
+    }
     else
-        {
-            return i2;
-        }
+    {
+        return i2;
+    }
 
 }
 //****************************************************************************80
 
 void HaltonSampler::i4_to_halton ( int dim_num, int step, int seed[], int leap[], int base[],
-                    dReal r[] )
+                                   dReal r[] )
 
 //****************************************************************************80
 //
@@ -1320,55 +1320,55 @@ void HaltonSampler::i4_to_halton ( int dim_num, int step, int seed[], int leap[]
     //  Check the input.
     //
     if ( !halham_dim_num_check ( dim_num ) )
-        {
-            exit ( 1 );
-        }
+    {
+        exit ( 1 );
+    }
 
     if ( !halham_step_check ( step ) )
-        {
-            exit ( 1 );
-        }
+    {
+        exit ( 1 );
+    }
 
     if ( !halham_seed_check ( dim_num, seed ) )
-        {
-            exit ( 1 );
-        }
+    {
+        exit ( 1 );
+    }
 
     if ( !halham_leap_check ( dim_num, leap ) )
-        {
-            exit ( 1 );
-        }
+    {
+        exit ( 1 );
+    }
 
     if ( !halton_base_check ( dim_num, base ) )
-        {
-            exit ( 1 );
-        }
+    {
+        exit ( 1 );
+    }
     //
     //  Calculate the data.
     //
     for ( i = 0; i < dim_num; i++ )
+    {
+        seed2 = seed[i] + step * leap[i];
+
+        r[i] = 0.0;
+
+        base_inv = 1.0 / ( ( dReal ) base[i] );
+
+        while ( seed2 != 0 )
         {
-            seed2 = seed[i] + step * leap[i];
-
-            r[i] = 0.0;
-
-            base_inv = 1.0 / ( ( dReal ) base[i] );
-
-            while ( seed2 != 0 )
-                {
-                    digit = seed2 % base[i];
-                    r[i] = r[i] + ( ( dReal ) digit ) * base_inv;
-                    base_inv = base_inv / ( ( dReal ) base[i] );
-                    seed2 = seed2 / base[i];
-                }
+            digit = seed2 % base[i];
+            r[i] = r[i] + ( ( dReal ) digit ) * base_inv;
+            base_inv = base_inv / ( ( dReal ) base[i] );
+            seed2 = seed2 / base[i];
         }
+    }
 
     return;
 }
 //****************************************************************************80
 
 void HaltonSampler::i4_to_halton_sequence ( int dim_num, int n, int step, int seed[],
-                             int leap[], int base[], dReal r[] )
+                                            int leap[], int base[], dReal r[] )
 
 //****************************************************************************80
 //
@@ -1462,64 +1462,64 @@ void HaltonSampler::i4_to_halton_sequence ( int dim_num, int n, int step, int se
     //  Check the input.
     //
     if ( !halham_dim_num_check ( dim_num ) )
-        {
-            exit ( 1 );
-        }
+    {
+        exit ( 1 );
+    }
 
     if ( !halham_n_check ( n ) )
-        {
-            exit ( 1 );
-        }
+    {
+        exit ( 1 );
+    }
 
     if ( !halham_step_check ( step ) )
-        {
-            exit ( 1 );
-        }
+    {
+        exit ( 1 );
+    }
 
     if ( !halham_seed_check ( dim_num, seed ) )
-        {
-            exit ( 1 );
-        }
+    {
+        exit ( 1 );
+    }
 
     if ( !halham_leap_check ( dim_num, leap ) )
-        {
-            exit ( 1 );
-        }
+    {
+        exit ( 1 );
+    }
 
     if ( !halton_base_check ( dim_num, base ) )
-        {
-            exit ( 1 );
-        }
+    {
+        exit ( 1 );
+    }
     //
     //  Calculate the data.
     //
     seed2 = new int[n];
 
     for ( i = 0; i < dim_num; i++ )
+    {
+        for ( j = 0; j < n; j++ )
         {
-            for ( j = 0; j < n; j++ )
-                {
-                    seed2[j] = seed[i] + ( step + j ) * leap[i];
-                }
-
-            for ( j = 0; j < n; j++ )
-                {
-                    r[i+j*dim_num] = 0.0;
-                }
-
-            for ( j = 0; j < n; j++ )
-                {
-                    base_inv = 1.0 / ( ( dReal ) base[i] );
-
-                    while ( seed2[j] != 0 )
-                        {
-                            digit = seed2[j] % base[i];
-                            r[i+j*dim_num] = r[i+j*dim_num] + ( ( dReal ) digit ) * base_inv;
-                            base_inv = base_inv / ( ( dReal ) base[i] );
-                            seed2[j] = seed2[j] / base[i];
-                        }
-                }
+            seed2[j] = seed[i] + ( step + j ) * leap[i];
         }
+
+        for ( j = 0; j < n; j++ )
+        {
+            r[i+j*dim_num] = 0.0;
+        }
+
+        for ( j = 0; j < n; j++ )
+        {
+            base_inv = 1.0 / ( ( dReal ) base[i] );
+
+            while ( seed2[j] != 0 )
+            {
+                digit = seed2[j] % base[i];
+                r[i+j*dim_num] = r[i+j*dim_num] + ( ( dReal ) digit ) * base_inv;
+                base_inv = base_inv / ( ( dReal ) base[i] );
+                seed2[j] = seed2[j] / base[i];
+            }
+        }
+    }
 
     delete [] seed2;
 
@@ -1576,9 +1576,9 @@ char *HaltonSampler::i4_to_s ( int i )
     ten_power = ( int ) pow ( ( dReal ) 10, ( dReal ) length );
 
     if ( i < 0 )
-        {
-            length = length + 1;
-        }
+    {
+        length = length + 1;
+    }
     //
     //  Add one position for the trailing null.
     //
@@ -1587,32 +1587,32 @@ char *HaltonSampler::i4_to_s ( int i )
     s = new char[length];
 
     if ( i == 0 )
-        {
-            s[0] = '0';
-            s[1] = '\0';
-            return s;
-        }
+    {
+        s[0] = '0';
+        s[1] = '\0';
+        return s;
+    }
     //
     //  Now take care of the sign.
     //
     j = 0;
     if ( i < 0 )
-        {
-            s[j] = '-';
-            j = j + 1;
-            i = abs ( i );
-        }
+    {
+        s[j] = '-';
+        j = j + 1;
+        i = abs ( i );
+    }
     //
     //  Find the leading digit of I, strip it off, and stick it into the string.
     //
     while ( 0 < ten_power )
-        {
-            digit = i / ten_power;
-            s[j] = digit_to_ch ( digit );
-            j = j + 1;
-            i = i - digit * ten_power;
-            ten_power = ten_power / 10;
-        }
+    {
+        digit = i / ten_power;
+        s[j] = digit_to_ch ( digit );
+        j = j + 1;
+        i = i - digit * ten_power;
+        ten_power = ten_power / 10;
+    }
     //
     //  Tack on the trailing NULL.
     //
@@ -1668,42 +1668,42 @@ void HaltonSampler::i4vec_transpose_print ( int n, int a[], char *title )
     int title_len;
 
     if ( 0 < s_len_trim ( title ) )
-        {
-            title_len = strlen ( title );
+    {
+        title_len = strlen ( title );
 
-            for ( ilo = 1; ilo <= n; ilo = ilo + 5 )
-                {
-                    ihi = i4_min ( ilo + 5 - 1, n );
-                    if ( ilo == 1 )
-                        {
-                            cout << title;
-                        }
-                    else
-                        {
-                            for ( i = 1; i <= title_len; i++ )
-                                {
-                                    cout << " ";
-                                }
-                        }
-                    for ( i = ilo; i <= ihi; i++ )
-                        {
-                            cout << setw(12) << a[i-1];
-                        }
-                    cout << "\n";
-                }
-        }
-    else
+        for ( ilo = 1; ilo <= n; ilo = ilo + 5 )
         {
-            for ( ilo = 1; ilo <= n; ilo = ilo + 5 )
+            ihi = i4_min ( ilo + 5 - 1, n );
+            if ( ilo == 1 )
+            {
+                cout << title;
+            }
+            else
+            {
+                for ( i = 1; i <= title_len; i++ )
                 {
-                    ihi = i4_min ( ilo + 5 - 1, n );
-                    for ( i = ilo; i <= ihi; i++ )
-                        {
-                            cout << setw(12) << a[i-1];
-                        }
-                    cout << "\n";
+                    cout << " ";
                 }
+            }
+            for ( i = ilo; i <= ihi; i++ )
+            {
+                cout << setw(12) << a[i-1];
+            }
+            cout << "\n";
         }
+    }
+    else
+    {
+        for ( ilo = 1; ilo <= n; ilo = ilo + 5 )
+        {
+            ihi = i4_min ( ilo + 5 - 1, n );
+            for ( i = ilo; i <= ihi; i++ )
+            {
+                cout << setw(12) << a[i-1];
+            }
+            cout << "\n";
+        }
+    }
 
     return;
 }
@@ -1919,27 +1919,28 @@ int HaltonSampler::prime ( int n )
         13121,13127,13147,13151,13159,13163,13171,13177,13183,13187,
         13217,13219,13229,13241,13249,13259,13267,13291,13297,13309,
         13313,13327,13331,13337,13339,13367,13381,13397,13399,13411,
-        13417,13421,13441,13451,13457,13463,13469,13477,13487,13499 };
+        13417,13421,13441,13451,13457,13463,13469,13477,13487,13499
+    };
 
     if ( n == -1 )
-        {
-            return PRIME_MAX;
-        }
+    {
+        return PRIME_MAX;
+    }
     else if ( n == 0 )
-        {
-            return 1;
-        }
+    {
+        return 1;
+    }
     else if ( n <= PRIME_MAX )
-        {
-            return npvec[n-1];
-        }
+    {
+        return npvec[n-1];
+    }
     else
-        {
-            cout << "\n";
-            cout << "PRIME - Fatal error!\n";
-            cout << "  Unexpected input value of n = " << n << "\n";
-            exit ( 1 );
-        }
+    {
+        cout << "\n";
+        cout << "PRIME - Fatal error!\n";
+        cout << "  Unexpected input value of n = " << n << "\n";
+        exit ( 1 );
+    }
 
     return 0;
 # undef PRIME_MAX
@@ -1983,10 +1984,10 @@ dReal HaltonSampler::r8_epsilon ( )
 
     r = 1.0;
 
-    while ( 1.0 < ( dReal ) ( 1.0 + r )  )
-        {
-            r = r / 2.0;
-        }
+    while ( 1.0 < ( dReal )( 1.0 + r )  )
+    {
+        r = r / 2.0;
+    }
 
     return ( 2.0 * r );
 }
@@ -2027,11 +2028,11 @@ dReal HaltonSampler::r8vec_dot_product ( int n, dReal *r1, dReal *r2 )
     dot = 0.0;
 
     for ( i = 0; i < n; i++ )
-        {
-            dot = dot + (*r1) * (*r2);
-            r1 = r1 + 1;
-            r2 = r2 + 1;
-        }
+    {
+        dot = dot + (*r1) * (*r2);
+        r1 = r1 + 1;
+        r2 = r2 + 1;
+    }
 
     return dot;
 
@@ -2079,9 +2080,9 @@ dReal HaltonSampler::r8vec_norm_l2 ( int n, dReal a[] )
     v = 0.0;
 
     for ( i = 0; i < n; i++ )
-        {
-            v = v + a[i] * a[i];
-        }
+    {
+        v = v + a[i] * a[i];
+    }
     v = sqrt ( v );
 
     return v;
@@ -2123,14 +2124,14 @@ int HaltonSampler::s_len_trim ( char *s )
     t = s + strlen ( s ) - 1;
 
     while ( 0 < n )
+    {
+        if ( *t != ' ' )
         {
-            if ( *t != ' ' )
-                {
-                    return n;
-                }
-            t--;
-            n--;
+            return n;
         }
+        t--;
+        n--;
+    }
 
     return n;
 }

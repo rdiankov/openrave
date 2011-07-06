@@ -28,13 +28,13 @@
 #include <boost/typeof/std/string.hpp>
 #include <boost/typeof/std/queue.hpp>
 
-#define FOREACH(it, v) for(BOOST_TYPEOF(v)::iterator it = (v).begin(); it != (v).end(); (it)++)
-#define FOREACHR(it, v) for(BOOST_TYPEOF(v)::reverse_iterator it = (v).rbegin(); it != (v).rend(); (it)++)
-#define FOREACH_NOINC(it, v) for(BOOST_TYPEOF(v)::iterator it = (v).begin(); it != (v).end(); )
+#define FOREACH(it, v) for(BOOST_TYPEOF(v) ::iterator it = (v).begin(); it != (v).end(); (it)++)
+#define FOREACHR(it, v) for(BOOST_TYPEOF(v) ::reverse_iterator it = (v).rbegin(); it != (v).rend(); (it)++)
+#define FOREACH_NOINC(it, v) for(BOOST_TYPEOF(v) ::iterator it = (v).begin(); it != (v).end(); )
 
-#define FOREACHC(it, v) for(BOOST_TYPEOF(v)::const_iterator it = (v).begin(); it != (v).end(); (it)++)
-#define FOREACHRC(it, v) for(BOOST_TYPEOF(v)::const_reverse_iterator it = (v).rbegin(); it != (v).rend(); (it)++)
-#define FOREACHC_NOINC(it, v) for(BOOST_TYPEOF(v)::const_iterator it = (v).begin(); it != (v).end(); )
+#define FOREACHC(it, v) for(BOOST_TYPEOF(v) ::const_iterator it = (v).begin(); it != (v).end(); (it)++)
+#define FOREACHRC(it, v) for(BOOST_TYPEOF(v) ::const_reverse_iterator it = (v).rbegin(); it != (v).rend(); (it)++)
+#define FOREACHC_NOINC(it, v) for(BOOST_TYPEOF(v) ::const_iterator it = (v).begin(); it != (v).end(); )
 #define RAVE_REGISTER_BOOST
 #else
 
@@ -45,9 +45,9 @@
 #include <string>
 #include <queue>
 
-#define FOREACH(it, v) for(typeof((v).begin()) it = (v).begin(); it != (v).end(); (it)++)
-#define FOREACHR(it, v) for(typeof((v).rbegin()) it = (v).rbegin(); it != (v).rend(); (it)++)
-#define FOREACH_NOINC(it, v) for(typeof((v).begin()) it = (v).begin(); it != (v).end(); )
+#define FOREACH(it, v) for(typeof((v).begin())it = (v).begin(); it != (v).end(); (it)++)
+#define FOREACHR(it, v) for(typeof((v).rbegin())it = (v).rbegin(); it != (v).rend(); (it)++)
+#define FOREACH_NOINC(it, v) for(typeof((v).begin())it = (v).begin(); it != (v).end(); )
 
 #define FOREACHC FOREACH
 #define FOREACHRC FOREACHR
