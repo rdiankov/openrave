@@ -528,8 +528,9 @@ protected:
                 ptraj = _PlanGrasp(listGraspGoals, nMaxSeedIkSolutions, goalFound, nMaxIterations,mapPreshapeTrajectories);
                 nSearchTime += GetMicroTime() - basestart;
 
-                if( !!ptraj || bQuitAfterFirstRun )
+                if( !!ptraj || bQuitAfterFirstRun ) {
                     break;
+                }
             }
 
             vector<dReal> vgoalpreshape(vCurHandValues.size());
@@ -698,8 +699,9 @@ protected:
 
             // set the joints that the grasper plugin calculated
             _robot->SetActiveDOFs(pmanip->GetGripperIndices());
-            if( vFinalGripperValues.size() > 0 )
+            if( vFinalGripperValues.size() > 0 ) {
                 _robot->SetActiveDOFValues(vFinalGripperValues, true);
+            }
 
             //while (getchar() != '\n') usleep(1000);
             _UpdateSwitchModels(false,false);     // should test destination with thin models
@@ -731,11 +733,13 @@ protected:
                         listDests.push_back(tDestEndEffector);
                     }
                 }
-                else
+                else {
                     listDests.push_back(tDestEndEffector);
+                }
 
-                if( (int)listDests.size() >= nMaxSeedDests )
+                if( (int)listDests.size() >= nMaxSeedDests ) {
                     break;
+                }
             }
 
             _robot->SetDOFValues(vCurRobotValues);     // reset robot to original position
@@ -795,8 +799,9 @@ protected:
             goal.listDests.swap(listDests);
             goal.vpreshape.resize(pmanip->GetGripperIndices().size());
             if( iGraspPreshape >= 0 ) {
-                for(int j = 0; j < (int)goal.vpreshape.size(); ++j)
+                for(int j = 0; j < (int)goal.vpreshape.size(); ++j) {
                     goal.vpreshape[j] = pgrasp[iGraspPreshape+j];
+                }
             }
 
             RAVELOG_DEBUG("grasp %d: adding to goals\n", igrasp);
@@ -812,8 +817,9 @@ protected:
                     break;
             }
 
-            if( !!ptraj )
+            if( !!ptraj ) {
                 break;
+            }
         }
 
         // if there's left over goal positions, start planning
@@ -858,8 +864,9 @@ protected:
 
             RAVELOG_DEBUG("grasp index %d\n",goalFound.index);
             sout << goalFound.listDests.size() << " ";
-            FOREACH(itdest, goalFound.listDests)
-            sout << *itdest << " ";
+            FOREACH(itdest, goalFound.listDests) {
+                sout << *itdest << " ";
+            }
             sout << goalFound.index << " " << (float)nSearchTime/1000000.0f << " ";
 
             // set the trajectory
