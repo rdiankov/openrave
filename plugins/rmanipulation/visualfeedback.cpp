@@ -412,7 +412,7 @@ Adds grasp planning taking into account camera visibility constraints. The relev
 Visibility computation checks occlusion with other objects using ray sampling in the image space:\n\n\
 .. image:: ../../../images/interface_visualfeedback_occlusions.jpg\n\
   :height: 200\n\
-"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        ;
+";
         _nManipIndex = -1;
         _fMaxVelMult=1;
         _bCameraOnManip = false;

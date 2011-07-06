@@ -30,7 +30,8 @@ class OPENRAVE_API SensorSystemBase : public InterfaceBase
 public:
     SensorSystemBase(EnvironmentBasePtr penv) : InterfaceBase(PT_SensorSystem, penv) {
     }
-    virtual ~SensorSystemBase() {}
+    virtual ~SensorSystemBase() {
+    }
 
     /// return the static interface type this class points to (used for safe casting)
     static inline InterfaceType GetInterfaceTypeStatic() {

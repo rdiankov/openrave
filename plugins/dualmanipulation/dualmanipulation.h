@@ -427,7 +427,7 @@ protected:
         ptraj->AddPoint(point);
 
         int i;
-        for (i = 0; i < maxsteps;  i++) {
+        for (i = 0; i < maxsteps; i++) {
             if (!reached0) {
                 handTr0.trans += stepsize*direction0;
                 if( !pmanip0->FindIKSolution(handTr0,v0Joints,false)) {

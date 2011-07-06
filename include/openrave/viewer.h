@@ -29,7 +29,8 @@ namespace OpenRAVE {
 class OPENRAVE_API GraphHandle
 {
 public:
-    virtual ~GraphHandle() {}
+    virtual ~GraphHandle() {
+    }
 
     /// \brief Changes the underlying transformation of the plot. <b>[multi-thread safe]</b>
     ///
@@ -56,7 +57,8 @@ public:
 
     ViewerBase(EnvironmentBasePtr penv) : InterfaceBase(PT_Viewer, penv) {
     }
-    virtual ~ViewerBase() {}
+    virtual ~ViewerBase() {
+    }
 
     /// \brief return the static interface type this class points to (used for safe casting)
     static inline InterfaceType GetInterfaceTypeStatic() {

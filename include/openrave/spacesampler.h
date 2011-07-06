@@ -43,7 +43,8 @@ class OPENRAVE_API SpaceSamplerBase :  public InterfaceBase
 public:
     SpaceSamplerBase(EnvironmentBasePtr penv) : InterfaceBase(PT_SpaceSampler, penv) {
     }
-    virtual ~SpaceSamplerBase() {}
+    virtual ~SpaceSamplerBase() {
+    }
 
     /// \brief return the static interface type this class points to (used for safe casting)
     static inline InterfaceType GetInterfaceTypeStatic() {

@@ -55,7 +55,7 @@ public:
     MT19937Sampler(EnvironmentBasePtr penv,std::istream& sinput) : SpaceSamplerBase(penv), _dof(1)
     {
         __description = ":Interface Author: Takuji Nishimura and Makoto Matsumoto\n\n\
-Mersenne twister sampling algorithm that is based on matrix linear recurrence over finite binary field F2. It has a period of 2^19937-1 and passes many tests for statistical uniform randomness."                                                                                       ;
+Mersenne twister sampling algorithm that is based on matrix linear recurrence over finite binary field F2. It has a period of 2^19937-1 and passes many tests for statistical uniform randomness.";
         mti=N+1;
     }
 
@@ -176,8 +176,8 @@ private:
         if (mti >= N) {     /* generate N words at one time */
             int kk;
 
-            if (mti == N+1)                               /* if init_genrand() has not been called, */
-                init_genrand(5489UL);                                       /* a default initial seed is used */
+            if (mti == N+1)                                                           /* if init_genrand() has not been called, */
+                init_genrand(5489UL);                                                                              /* a default initial seed is used */
 
             for (kk=0; kk<N-M; kk++) {
                 y = (mt[kk]&UPPER_MASK)|(mt[kk+1]&LOWER_MASK);

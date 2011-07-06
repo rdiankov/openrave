@@ -51,7 +51,7 @@ public:
         __description = ":Interface Author: Rosen Diankov\n\n\
 Task-based manipulation planning involving target objects. A lot of the algorithms and theory are covered in:\n\
 \n\
-- Rosen Diankov. \"Automated Construction of Robotic Manipulation Programs\". PhD Thesis, CMU-RI-TR-10-29, Carnegie Mellon University, Robotics Institute, August 2010.\n"                                                                                                                                                                                                                                                                                                                                                                    ;
+- Rosen Diankov. \"Automated Construction of Robotic Manipulation Programs\". PhD Thesis, CMU-RI-TR-10-29, Carnegie Mellon University, Robotics Institute, August 2010.\n";
         RegisterCommand("GraspPlanning",boost::bind(&TaskManipulation::GraspPlanning,this,_1,_2),
                         "Grasp planning is the ultimate function that puts together many planners achieving a robust and general pick and place motiotions with grasp sets. It first chooses grasps from a grasp set and use it for manipulation. In order for the arm to reach the grasps, it must have a Transform6D IK solver, anything with less DOF will not work.\nParameters:\n\n\
 * grasps\n\
@@ -76,7 +76,7 @@ Task-based manipulation planning involving target objects. A lot of the algorith
 * seeddests\n\
 * seedik\n\
 * savepreshapetraj\n\
-"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        );
+");
         RegisterCommand("GraspPlanningAsCylinders",boost::bind(&TaskManipulation::GraspPlanningAsCylinders,this,_1,_2),
                         "Performs grasp planning treating the targets as cylinders (axis is along the target local z), this allows TranslationDirection5D IK to be used for arms with >= 5 joints");
         RegisterCommand("CloseFingers",boost::bind(&TaskManipulation::CloseFingers,this,_1,_2),
@@ -1703,7 +1703,7 @@ protected:
         }
 
         FOREACH(it,_listSwitchModels)
-                                (*it)->Switch(bSwitchToFat);
+            (*it)->Switch(bSwitchToFat);
     }
 
     string _strRobotName;     ///< name of the active robot

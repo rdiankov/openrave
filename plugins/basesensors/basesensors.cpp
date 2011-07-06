@@ -39,10 +39,10 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
         else if( interfacename == "basespinninglaser2d" ) {
             return InterfaceBasePtr(new BaseSpinningLaser2DSensor(penv));
         }
-        else if( interfacename == "baseflashlidar3d" || interfacename == "base_laser3d" ) {
+        else if((interfacename == "baseflashlidar3d")||(interfacename == "base_laser3d")) {
             return InterfaceBasePtr(new BaseFlashLidar3DSensor(penv));
         }
-        else if( interfacename == "basecamera" || interfacename == "base_pinhole_camera" ) {
+        else if((interfacename == "basecamera")||(interfacename == "base_pinhole_camera")) {
             return InterfaceBasePtr(new BaseCameraSensor(penv));
         }
         break;

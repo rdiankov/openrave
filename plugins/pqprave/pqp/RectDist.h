@@ -264,7 +264,7 @@ RectDist(PQP_REAL Rab[3][3], PQP_REAL Tab[3],
             SegCoords(t,u,a[1],b[1],A1_dot_B1,Tab[1] + bA1_dot_B0,
                       Tba[1] - aA0_dot_B1);
 
-            S[0] = Tab[0] + Rab[0][0]*b[0] + Rab[0][1]*u - a[0] ;
+            S[0] = Tab[0] + Rab[0][0]*b[0] + Rab[0][1]*u - a[0];
             S[1] = Tab[1] + Rab[1][0]*b[0] + Rab[1][1]*u - t;
             S[2] = Tab[2] + Rab[2][0]*b[0] + Rab[2][1]*u;
             return sqrt(VdotV(S,S));
@@ -394,7 +394,7 @@ RectDist(PQP_REAL Rab[3][3], PQP_REAL Tab[3],
             SegCoords(t,u,a[1],b[0],A1_dot_B0,Tab[1] + bA1_dot_B1,
                       Tba[0] - aA0_dot_B0);
 
-            S[0] = Tab[0] + Rab[0][1]*b[1] + Rab[0][0]*u - a[0] ;
+            S[0] = Tab[0] + Rab[0][1]*b[1] + Rab[0][0]*u - a[0];
             S[1] = Tab[1] + Rab[1][1]*b[1] + Rab[1][0]*u - t;
             S[2] = Tab[2] + Rab[2][1]*b[1] + Rab[2][0]*u;
             return sqrt(VdotV(S,S));

@@ -55,13 +55,13 @@ public:
             else if( name == "power" ) {
                 ss >> _psensor->_bPower;
             }
-            else if( name == "minangle" || name == "min_angle" ) {
+            else if((name == "minangle")||(name == "min_angle")) {
                 ss >> _psensor->_pgeom->min_angle[0];
                 if( !!ss ) {
                     _psensor->_pgeom->min_angle[0] *= PI/180.0f;         // convert to radians
                 }
             }
-            else if( name == "maxangle" || name == "max_angle" ) {
+            else if((name == "maxangle")||(name == "max_angle")) {
                 ss >> _psensor->_pgeom->max_angle[0];
                 if( !!ss ) {
                     _psensor->_pgeom->max_angle[0] *= PI/180.0f;         // convert to radians
@@ -73,13 +73,13 @@ public:
                     _psensor->_pgeom->resolution[0] *= PI/180.0f;         // convert to radians
                 }
             }
-            else if( name == "maxrange" || name == "max_range" ) {
+            else if((name == "maxrange")||(name == "max_range")) {
                 ss >> _psensor->_pgeom->max_range;
             }
-            else if( name == "minrange" || name == "min_range" ) {
+            else if((name == "minrange")||(name == "min_range")) {
                 ss >> _psensor->_pgeom->min_range;
             }
-            else if( name == "scantime" || name == "time_scan" ) {
+            else if((name == "scantime")||(name == "time_scan")) {
                 ss >> _psensor->_pgeom->time_scan;
             }
             else if( name == "time_increment" ) {
@@ -128,7 +128,7 @@ public:
 \n\
 .. image:: ../../../images/interface_baselaser.jpg\n\
   :width: 400\n\
-"                                                                                                                                                                                                                                                                                                                                                                          ;
+";
         RegisterCommand("render",boost::bind(&BaseLaser2DSensor::_Render,this,_1,_2),
                         "Set rendering of the plots (1 or 0).");
         RegisterCommand("collidingbodies",boost::bind(&BaseLaser2DSensor::_CollidingBodies,this,_1,_2),
@@ -510,7 +510,7 @@ public:
 \n\
 .. image:: ../../../images/interface_basespinninglaser.jpg\n\
   :width: 400\n\
-"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          ;
+";
         _fGeomSpinSpeed = 0;
         _vGeomSpinAxis = Vector(1,0,0);
         _fCurAngle = 0;

@@ -97,7 +97,8 @@ public:
             };
 
             GEOMPROPERTIES(boost::shared_ptr<Link> parent);
-            virtual ~GEOMPROPERTIES() {}
+            virtual ~GEOMPROPERTIES() {
+            }
 
             /// \brief Local transformation of the geom primitive with respect to the link's coordinate system.
             inline const Transform& GetTransform() const {
@@ -624,7 +625,7 @@ public:
 
             The velocity and acceleration equations are specified in terms of partial derivatives, which means one expression needs to be specified per degree of freedom of used. In order to separate the expressions use "|name ...". The name should immediately follow  '|'.  For example:
 
-         |universaljoint_0 10 |universaljoint_1 10*cos(universaljoint_1)
+           |universaljoint_0 10 |universaljoint_1 10*cos(universaljoint_1)
 
             If there is only one variable used in the position equation, then the equation can be specified directly without using "{}".
 
@@ -764,7 +765,8 @@ public:
 public:
         ManageData(SensorSystemBasePtr psensorsystem) : _psensorsystem(psensorsystem) {
         }
-        virtual ~ManageData() {}
+        virtual ~ManageData() {
+        }
 
         virtual SensorSystemBasePtr GetSystem() {
             return SensorSystemBasePtr(_psensorsystem);

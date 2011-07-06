@@ -219,7 +219,8 @@ public:
 class OPENRAVE_API UserData
 {
 public:
-    virtual ~UserData() {}
+    virtual ~UserData() {
+    }
 };
 typedef boost::shared_ptr<UserData> UserDataPtr;
 
@@ -641,7 +642,8 @@ class OPENRAVE_API XMLReadable
 public:
     XMLReadable(const std::string& xmlid) : __xmlid(xmlid) {
     }
-    virtual ~XMLReadable() {}
+    virtual ~XMLReadable() {
+    }
     virtual const std::string& GetXMLId() const {
         return __xmlid;
     }
@@ -669,7 +671,8 @@ public:
     };
     BaseXMLReader() {
     }
-    virtual ~BaseXMLReader() {}
+    virtual ~BaseXMLReader() {
+    }
 
     /// a readable interface that stores the information processsed for the current tag
     /// This pointer is used to the InterfaceBase class registered readers

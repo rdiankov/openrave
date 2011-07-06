@@ -223,10 +223,10 @@ inline double IKtan(double f) {
     return tan(f);
 }
 inline float IKsqrt(float f) {
-    if( f <= 0.0f ) return 0.0f;return sqrtf(f);
+    if( f <= 0.0f ) return 0.0f; return sqrtf(f);
 }
 inline double IKsqrt(double f) {
-    if( f <= 0.0 ) return 0.0;return sqrt(f);
+    if( f <= 0.0 ) return 0.0; return sqrt(f);
 }
 inline float IKatan2(float fy, float fx) {
     if( isnan(fy) ) {
@@ -582,14 +582,14 @@ public:
                                                 j26array[0]-=IK2PI;
                                             }
                                             else if( j26array[0] < -IKPI )
-                                            {    j26array[0]+=IK2PI;}
+                                            {    j26array[0]+=IK2PI; }
                                             j26valid[0] = true;
                                             if( j26array[1] > IKPI )
                                             {
                                                 j26array[1]-=IK2PI;
                                             }
                                             else if( j26array[1] < -IKPI )
-                                            {    j26array[1]+=IK2PI;}
+                                            {    j26array[1]+=IK2PI; }
                                             j26valid[1] = true;
                                             if( j26valid[0] && j26valid[1] &&( IKabs(cj26array[0]-cj26array[1]) < 0.0001) &&( IKabs(sj26array[0]-sj26array[1]) < 0.0001) )
                                             {
@@ -646,7 +646,7 @@ public:
                                                                                         j25array[0]-=IK2PI;
                                                                                     }
                                                                                     else if( j25array[0] < -IKPI )
-                                                                                    {    j25array[0]+=IK2PI;}
+                                                                                    {    j25array[0]+=IK2PI; }
                                                                                     j25valid[0] = true;
                                                                                     for(int ij25 = 0; ij25 < 1; ++ij25)
                                                                                     {
@@ -694,7 +694,7 @@ public:
                                                                                             j25array[0]-=IK2PI;
                                                                                         }
                                                                                         else if( j25array[0] < -IKPI )
-                                                                                        {    j25array[0]+=IK2PI;}
+                                                                                        {    j25array[0]+=IK2PI; }
                                                                                         j25valid[0] = true;
                                                                                         for(int ij25 = 0; ij25 < 1; ++ij25)
                                                                                         {
@@ -743,7 +743,7 @@ public:
                                                                         j25array[0]-=IK2PI;
                                                                     }
                                                                     else if( j25array[0] < -IKPI )
-                                                                    {    j25array[0]+=IK2PI;}
+                                                                    {    j25array[0]+=IK2PI; }
                                                                     j25valid[0] = true;
                                                                     for(int ij25 = 0; ij25 < 1; ++ij25)
                                                                     {
@@ -774,7 +774,7 @@ public:
                                                                 j25array[0]-=IK2PI;
                                                             }
                                                             else if( j25array[0] < -IKPI )
-                                                            {    j25array[0]+=IK2PI;}
+                                                            {    j25array[0]+=IK2PI; }
                                                             j25valid[0] = true;
                                                             for(int ij25 = 0; ij25 < 1; ++ij25)
                                                             {
@@ -816,7 +816,7 @@ public:
                                         j25array[0]-=IK2PI;
                                     }
                                     else if( j25array[0] < -IKPI )
-                                    {    j25array[0]+=IK2PI;}
+                                    {    j25array[0]+=IK2PI; }
                                     j25valid[0] = true;
                                     for(int ij25 = 0; ij25 < 1; ++ij25)
                                     {
@@ -848,7 +848,7 @@ public:
                                                         j26array[0]-=IK2PI;
                                                     }
                                                     else if( j26array[0] < -IKPI )
-                                                    {    j26array[0]+=IK2PI;}
+                                                    {    j26array[0]+=IK2PI; }
                                                     j26valid[0] = true;
                                                     for(int ij26 = 0; ij26 < 1; ++ij26)
                                                     {
@@ -994,14 +994,14 @@ public:
                                                     j29array[0]-=IK2PI;
                                                 }
                                                 else if( j29array[0] < -IKPI )
-                                                {    j29array[0]+=IK2PI;}
+                                                {    j29array[0]+=IK2PI; }
                                                 j29valid[0] = true;
                                                 if( j29array[1] > IKPI )
                                                 {
                                                     j29array[1]-=IK2PI;
                                                 }
                                                 else if( j29array[1] < -IKPI )
-                                                {    j29array[1]+=IK2PI;}
+                                                {    j29array[1]+=IK2PI; }
                                                 j29valid[1] = true;
                                                 if( j29valid[0] && j29valid[1] &&( IKabs(cj29array[0]-cj29array[1]) < 0.0001) &&( IKabs(sj29array[0]-sj29array[1]) < 0.0001) )
                                                 {
@@ -1026,7 +1026,7 @@ public:
                                                             j31array[0]-=IK2PI;
                                                         }
                                                         else if( j31array[0] < -IKPI )
-                                                        {    j31array[0]+=IK2PI;}
+                                                        {    j31array[0]+=IK2PI; }
                                                         j31valid[0] = true;
                                                         for(int ij31 = 0; ij31 < 1; ++ij31)
                                                         {
@@ -1080,14 +1080,14 @@ public:
                                                         j29array[0]-=IK2PI;
                                                     }
                                                     else if( j29array[0] < -IKPI )
-                                                    {    j29array[0]+=IK2PI;}
+                                                    {    j29array[0]+=IK2PI; }
                                                     j29valid[0] = true;
                                                     if( j29array[1] > IKPI )
                                                     {
                                                         j29array[1]-=IK2PI;
                                                     }
                                                     else if( j29array[1] < -IKPI )
-                                                    {    j29array[1]+=IK2PI;}
+                                                    {    j29array[1]+=IK2PI; }
                                                     j29valid[1] = true;
                                                     if( j29valid[0] && j29valid[1] &&( IKabs(cj29array[0]-cj29array[1]) < 0.0001) &&( IKabs(sj29array[0]-sj29array[1]) < 0.0001) )
                                                     {
@@ -1112,7 +1112,7 @@ public:
                                                                 j31array[0]-=IK2PI;
                                                             }
                                                             else if( j31array[0] < -IKPI )
-                                                            {    j31array[0]+=IK2PI;}
+                                                            {    j31array[0]+=IK2PI; }
                                                             j31valid[0] = true;
                                                             for(int ij31 = 0; ij31 < 1; ++ij31)
                                                             {
@@ -1166,7 +1166,7 @@ public:
                                             j29array[0]-=IK2PI;
                                         }
                                         else if( j29array[0] < -IKPI )
-                                        {    j29array[0]+=IK2PI;}
+                                        {    j29array[0]+=IK2PI; }
                                         j29valid[0] = true;
                                         for(int ij29 = 0; ij29 < 1; ++ij29)
                                         {
@@ -1216,7 +1216,7 @@ public:
                                                                     j31array[0]-=IK2PI;
                                                                 }
                                                                 else if( j31array[0] < -IKPI )
-                                                                {    j31array[0]+=IK2PI;}
+                                                                {    j31array[0]+=IK2PI; }
                                                                 j31valid[0] = true;
                                                                 for(int ij31 = 0; ij31 < 1; ++ij31)
                                                                 {
@@ -1274,7 +1274,7 @@ public:
                                                                         j31array[0]-=IK2PI;
                                                                     }
                                                                     else if( j31array[0] < -IKPI )
-                                                                    {    j31array[0]+=IK2PI;}
+                                                                    {    j31array[0]+=IK2PI; }
                                                                     j31valid[0] = true;
                                                                     for(int ij31 = 0; ij31 < 1; ++ij31)
                                                                     {
@@ -1326,7 +1326,7 @@ public:
                                                             j31array[0]-=IK2PI;
                                                         }
                                                         else if( j31array[0] < -IKPI )
-                                                        {    j31array[0]+=IK2PI;}
+                                                        {    j31array[0]+=IK2PI; }
                                                         j31valid[0] = true;
                                                         for(int ij31 = 0; ij31 < 1; ++ij31)
                                                         {
@@ -1375,7 +1375,7 @@ public:
                                     j31array[0]-=IK2PI;
                                 }
                                 else if( j31array[0] < -IKPI )
-                                {    j31array[0]+=IK2PI;}
+                                {    j31array[0]+=IK2PI; }
                                 j31valid[0] = true;
                                 for(int ij31 = 0; ij31 < 1; ++ij31)
                                 {
@@ -1407,7 +1407,7 @@ public:
                                                     j29array[0]-=IK2PI;
                                                 }
                                                 else if( j29array[0] < -IKPI )
-                                                {    j29array[0]+=IK2PI;}
+                                                {    j29array[0]+=IK2PI; }
                                                 j29valid[0] = true;
                                                 for(int ij29 = 0; ij29 < 1; ++ij29)
                                                 {

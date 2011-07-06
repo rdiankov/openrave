@@ -45,16 +45,9 @@ To get auto-completion for the OpenRAVE C++ API using `Collection of Emacs Devel
 Indenting C++ Files
 -------------------
 
-**Do not use Hard TABS!!**. And have indents by 4 spaces. OpenRAVE C++ code should automatically be run with **uncrustify** before being comment.
-
-.. code-block:: bash
-
-  sudo apt-get install uncrustify
-
-Put the following configuration in **~/.uncrustify.cfg**:
+**Do not use Hard TABS!!**. And have indents by 4 spaces. OpenRAVE C++ code should automatically be run with **uncrustify** before being committed. Currently OpenRAVE requires uncrustify version >=0.58. Put the following configuration in **~/.uncrustify.cfg**:
 
 .. literalinclude:: ../../../sandbox/uncrustify.cfg
-
 
 It is possible to setup emacs to automatically perform the uncrustify operation when saving a file by downloading the `emacs-uncrustify <https://github.com/glima/Emacs-uncrustify>`_  pakcage and putting the following in your **.emacs** file:
 

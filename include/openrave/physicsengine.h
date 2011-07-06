@@ -36,7 +36,8 @@ class OPENRAVE_API PhysicsEngineBase : public InterfaceBase
 public:
     PhysicsEngineBase(EnvironmentBasePtr penv) : InterfaceBase(PT_PhysicsEngine, penv) {
     }
-    virtual ~PhysicsEngineBase() {}
+    virtual ~PhysicsEngineBase() {
+    }
 
     /// return the static interface type this class points to (used for safe casting)
     static inline InterfaceType GetInterfaceTypeStatic() {

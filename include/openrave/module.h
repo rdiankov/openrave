@@ -30,7 +30,8 @@ class OPENRAVE_API ModuleBase : public InterfaceBase
 public:
     ModuleBase(EnvironmentBasePtr penv) : InterfaceBase(PT_Module, penv) {
     }
-    virtual ~ModuleBase() {}
+    virtual ~ModuleBase() {
+    }
 
     /// return the static interface type this class points to (used for safe casting)
     static inline InterfaceType GetInterfaceTypeStatic() {

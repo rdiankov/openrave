@@ -109,11 +109,11 @@ int main(int argc, char ** argv)
                          "-f [scene]         Load a openrave environment file\n\n");
             return 0;
         }
-        else if( stricmp(argv[i], "--loadplugin") == 0 || stricmp(argv[i], "-loadplugin") == 0 ) {
+        else if((stricmp(argv[i], "--loadplugin") == 0)||(stricmp(argv[i], "-loadplugin") == 0)) {
             listLoadPlugins.push_back(argv[i+1]);
             i += 2;
         }
-        else if( stricmp(argv[i], "--listplugins") == 0 || stricmp(argv[i], "-listplugins") == 0 ) {
+        else if((stricmp(argv[i], "--listplugins") == 0)||(stricmp(argv[i], "-listplugins") == 0)) {
             bListPlugins = true;
             i++;
         }
@@ -129,23 +129,23 @@ int main(int argc, char ** argv)
             s_saveScene = argv[i+1];
             i += 2;
         }
-        else if( stricmp(argv[i], "--collision") == 0 || stricmp(argv[i], "-collision") == 0 ) {
+        else if((stricmp(argv[i], "--collision") == 0)||(stricmp(argv[i], "-collision") == 0)) {
             collisionchecker = argv[i+1];
             i += 2;
         }
-        else if( stricmp(argv[i], "--viewer") == 0 || stricmp(argv[i], "-viewer") == 0 ) {
+        else if((stricmp(argv[i], "--viewer") == 0)||(stricmp(argv[i], "-viewer") == 0)) {
             s_viewerName.reset(new string(argv[i+1]));
             i += 2;
         }
-        else if( stricmp(argv[i], "--physics") == 0 || stricmp(argv[i], "-physics") == 0 ) {
+        else if((stricmp(argv[i], "--physics") == 0)||(stricmp(argv[i], "-physics") == 0)) {
             physicsengine = argv[i+1];
             i += 2;
         }
-        else if( stricmp(argv[i],"--server") == 0 || stricmp(argv[i],"-server") == 0 ) {
+        else if((stricmp(argv[i],"--server") == 0)||(stricmp(argv[i],"-server") == 0)) {
             servername = argv[i+1];
             i += 2;
         }
-        else if( stricmp(argv[i], "--module") == 0 || stricmp(argv[i], "-problem") == 0 ) {
+        else if((stricmp(argv[i], "--module") == 0)||(stricmp(argv[i], "-problem") == 0)) {
             s_listModules.push_back(pair<string, string>(argv[i+1], ""));
             i += 2;
 
@@ -155,11 +155,11 @@ int main(int argc, char ** argv)
                 i++;
             }
         }
-        else if( stricmp(argv[i], "--nogui") == 0 || stricmp(argv[i], "-nogui") == 0 ) {
+        else if((stricmp(argv[i], "--nogui") == 0)||(stricmp(argv[i], "-nogui") == 0)) {
             bDisplayGUI = false;
             i++;
         }
-        else if( stricmp(argv[i], "--hidegui") == 0 || stricmp(argv[i], "-hidegui") == 0 ) {
+        else if((stricmp(argv[i], "--hidegui") == 0)||(stricmp(argv[i], "-hidegui") == 0)) {
             bShowGUI = false;
             i++;
         }
@@ -178,7 +178,7 @@ int main(int argc, char ** argv)
             s_bSetWindowPosition = true;
             i += 3;
         }
-        else if( stricmp(argv[i], "--serverport") == 0 || stricmp(argv[i], "-serverport") == 0 ) {
+        else if((stricmp(argv[i], "--serverport") == 0)||(stricmp(argv[i], "-serverport") == 0)) {
             nServPort = atoi(argv[i+1]);
             i += 2;
         }

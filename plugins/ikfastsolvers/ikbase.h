@@ -357,7 +357,7 @@ private:
                 IKReal eetrans[3] = { r.pos.x,r.pos.y,r.pos.z};
                 IKReal eerot[9] = { r.dir.x, r.dir.y, r.dir.z,0,0,0,0,0,0};
                 //RAVELOG_INFO("ray: %f %f %f %f %f %f\n",eerot[0],eerot[1],eerot[2],eetrans[0],eetrans[1],eetrans[2]);
-                if( !_pfnik(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, vsolutions) ) {
+                if( !_pfnik((eetrans, eerot, vfree.size()>0) ? &vfree[0] : NULL, vsolutions) ) {
                     return false;
                 }
                 return true;
@@ -371,7 +371,7 @@ private:
                 RAY r = param.GetTranslationDirection5D();
                 IKReal eetrans[3] = { r.pos.x,r.pos.y,r.pos.z};
                 IKReal eerot[9] = { r.dir.x, r.dir.y, r.dir.z,0,0,0,0,0,0};
-                if( !_pfnik(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, vsolutions) ) {
+                if( !_pfnik((eetrans, eerot, vfree.size()>0) ? &vfree[0] : NULL, vsolutions) ) {
                     return false;
                 }
                 return true;

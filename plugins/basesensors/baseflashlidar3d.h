@@ -56,20 +56,20 @@ public:
             else if( name == "power" ) {
                 ss >> _psensor->_bPower;
             }
-            else if( name == "minangle" || name == "min_angle" ) {
+            else if((name == "minangle")||(name == "min_angle")) {
                 ss >> _psensor->_pgeom->min_angle[0];
                 if( !!ss )
-                    _psensor->_pgeom->min_angle[0] *= PI/180.0f;                                                                  // convert to radians
+                    _psensor->_pgeom->min_angle[0] *= PI/180.0f;                                                                                                                                    // convert to radians
             }
-            else if( name == "maxangle" || name == "max_angle" ) {
+            else if((name == "maxangle")||(name == "max_angle")) {
                 ss >> _psensor->_pgeom->max_angle[0];
                 if( !!ss )
-                    _psensor->_pgeom->max_angle[0] *= PI/180.0f;                                                                  // convert to radians
+                    _psensor->_pgeom->max_angle[0] *= PI/180.0f;                                                                                                                                    // convert to radians
             }
-            else if( name == "maxrange" || name == "max_range" ) {
+            else if((name == "maxrange")||(name == "max_range")) {
                 ss >> _psensor->_pgeom->max_range;
             }
-            else if( name == "scantime" || name == "time_scan" ) {
+            else if((name == "scantime")||(name == "time_scan")) {
                 ss >> _psensor->_pgeom->time_scan;
             }
             else if( name == "color" ) {
@@ -135,7 +135,7 @@ public:
 \n\
 .. image:: ../../../images/interface_baseflashlidar.jpg\n\
   :width: 400\n\
-"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                ;
+";
         RegisterCommand("render",boost::bind(&BaseFlashLidar3DSensor::_Render,this,_1,_2),
                         "Set rendering of the plots (1 or 0).");
         RegisterCommand("collidingbodies",boost::bind(&BaseFlashLidar3DSensor::_CollidingBodies,this,_1,_2),

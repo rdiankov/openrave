@@ -48,7 +48,8 @@ public:
     class OPENRAVE_API SensorData
     {
 public:
-        virtual ~SensorData() {}
+        virtual ~SensorData() {
+        }
         virtual SensorType GetType() = 0;
 
         /// Serialize the sensor data to stream in XML format
@@ -174,7 +175,8 @@ public:
     class OPENRAVE_API SensorGeometry
     {
 public:
-        virtual ~SensorGeometry() {}
+        virtual ~SensorGeometry() {
+        }
         virtual SensorType GetType() = 0;
     };
     typedef boost::shared_ptr<SensorBase::SensorGeometry> SensorGeometryPtr;
@@ -280,7 +282,8 @@ public:
 
     SensorBase(EnvironmentBasePtr penv) : InterfaceBase(PT_Sensor, penv) {
     }
-    virtual ~SensorBase() {}
+    virtual ~SensorBase() {
+    }
 
     /// return the static interface type this class points to (used for safe casting)
     static inline InterfaceType GetInterfaceTypeStatic() {

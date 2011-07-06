@@ -45,7 +45,8 @@ public:
     {
 public:
         PlannerParameters();
-        virtual ~PlannerParameters() {}
+        virtual ~PlannerParameters() {
+        }
 
         /// tries to copy data from one set of parameters to another in the safest manner.
         /// First serializes the data of the right hand into a string, then initializes the current parameters via >>
@@ -243,7 +244,8 @@ private:
 
     PlannerBase(EnvironmentBasePtr penv) : InterfaceBase(PT_Planner, penv) {
     }
-    virtual ~PlannerBase() {}
+    virtual ~PlannerBase() {
+    }
 
     /// \return the static interface type this class points to (used for safe casting)
     static inline InterfaceType GetInterfaceTypeStatic() {

@@ -258,7 +258,7 @@ QtCoinViewer::~QtCoinViewer()
 
         list<EnvMessagePtr>::iterator itmsg;
         FORIT(itmsg, _listMessages)
-                                (*itmsg)->viewerexecute(); // have to execute instead of deleteing since there can be threads waiting
+            (*itmsg)->viewerexecute(); // have to execute instead of deleteing since there can be threads waiting
 
         _listMessages.clear();
     }
@@ -1067,7 +1067,7 @@ void QtCoinViewer::SetEnvironmentSync(bool bUpdate)
         // remove all messages in order to release the locks
         boost::mutex::scoped_lock lockmsg(_mutexMessages);
         FOREACH(it,_listMessages)
-                                (*it)->releasemutex();
+            (*it)->releasemutex();
         _listMessages.clear();
     }
 }
@@ -1823,15 +1823,15 @@ void* QtCoinViewer::_drawtrimesh(SoSwitch* handle, const float* ppoints, int str
 
 #define ADD_MENU(name, checkable, shortcut, tip, fn) { \
         pact = new QAction(tr(name), this); \
-        if( checkable ) pact->setCheckable(checkable);\
-        if( shortcut != NULL ) pact->setShortcut(tr(shortcut));\
-        if( tip != NULL ) pact->setStatusTip(tr(tip));\
+        if( checkable ) pact->setCheckable(checkable); \
+        if( shortcut != NULL ) pact->setShortcut(tr(shortcut)); \
+        if( tip != NULL ) pact->setStatusTip(tr(tip)); \
         if( checkable ) \
-            connect(pact, SIGNAL(triggered(bool)), this, SLOT(fn(bool)));\
+            connect(pact, SIGNAL(triggered(bool)), this, SLOT(fn(bool))); \
         else \
-            connect(pact, SIGNAL(triggered()), this, SLOT(fn()));\
+            connect(pact, SIGNAL(triggered()), this, SLOT(fn())); \
         pcurmenu->addAction(pact); \
-        if( pgroup != NULL ) pgroup->addAction(pact);\
+        if( pgroup != NULL ) pgroup->addAction(pact); \
 }
 
 void QtCoinViewer::SetupMenus()

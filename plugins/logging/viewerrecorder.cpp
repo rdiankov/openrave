@@ -642,10 +642,10 @@ protected:
         codec_ctx->width = width;
         codec_ctx->height = height;
         if( RaveFabs(frameRate-29.97)<0.01 ) {
-            codec_ctx->time_base= (AVRational){ 1001,30000};
+            codec_ctx->time_base= (AVRational){ 1001,30000}
         }
         else {
-            codec_ctx->time_base= (AVRational){ 1,(int)frameRate};
+            codec_ctx->time_base= (AVRational){ 1,(int)frameRate}
         }
         codec_ctx->gop_size = 10;
         codec_ctx->max_b_frames = 1;

@@ -223,10 +223,10 @@ inline double IKtan(double f) {
     return tan(f);
 }
 inline float IKsqrt(float f) {
-    if( f <= 0.0f ) return 0.0f;return sqrtf(f);
+    if( f <= 0.0f ) return 0.0f; return sqrtf(f);
 }
 inline double IKsqrt(double f) {
-    if( f <= 0.0 ) return 0.0;return sqrt(f);
+    if( f <= 0.0 ) return 0.0; return sqrt(f);
 }
 inline float IKatan2(float fy, float fx) {
     if( isnan(fy) ) {
@@ -354,14 +354,14 @@ public:
                             j13array[0]-=IK2PI;
                         }
                         else if( j13array[0] < -IKPI )
-                        {    j13array[0]+=IK2PI;}
+                        {    j13array[0]+=IK2PI; }
                         j13valid[0] = true;
                         if( j13array[1] > IKPI )
                         {
                             j13array[1]-=IK2PI;
                         }
                         else if( j13array[1] < -IKPI )
-                        {    j13array[1]+=IK2PI;}
+                        {    j13array[1]+=IK2PI; }
                         j13valid[1] = true;
                         if( j13valid[0] && j13valid[1] &&( IKabs(cj13array[0]-cj13array[1]) < 0.0001) &&( IKabs(sj13array[0]-sj13array[1]) < 0.0001) )
                         {
@@ -828,14 +828,14 @@ public:
                                             j14array[0]-=IK2PI;
                                         }
                                         else if( j14array[0] < -IKPI )
-                                        {    j14array[0]+=IK2PI;}
+                                        {    j14array[0]+=IK2PI; }
                                         j14valid[0] = true;
                                         if( j14array[1] > IKPI )
                                         {
                                             j14array[1]-=IK2PI;
                                         }
                                         else if( j14array[1] < -IKPI )
-                                        {    j14array[1]+=IK2PI;}
+                                        {    j14array[1]+=IK2PI; }
                                         j14valid[1] = true;
                                         if( j14valid[0] && j14valid[1] &&( IKabs(cj14array[0]-cj14array[1]) < 0.0001) &&( IKabs(sj14array[0]-sj14array[1]) < 0.0001) )
                                         {

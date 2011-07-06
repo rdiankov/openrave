@@ -30,7 +30,8 @@ class OPENRAVE_API ControllerBase : public InterfaceBase
 public:
     ControllerBase(EnvironmentBasePtr penv) : InterfaceBase(PT_Controller, penv) {
     }
-    virtual ~ControllerBase() {}
+    virtual ~ControllerBase() {
+    }
 
     /// \brief return the static interface type this class points to (used for safe casting)
     static inline InterfaceType GetInterfaceTypeStatic() {

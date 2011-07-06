@@ -892,7 +892,7 @@ public:
             _itgeomprop->_bModifiable = bModifiable;
             return PE_Support;
         }
-        else if( xmlname == "translation" || xmlname == "rotationmat" || xmlname == "rotationaxis" || xmlname == "quat" || xmlname == "offsetfrom" ) {
+        else if((xmlname == "translation")||(xmlname == "rotationmat")||(xmlname == "rotationaxis")||(xmlname == "quat")||(xmlname == "offsetfrom")) {
             return PE_Support;
         }
         else if( xmlname == "mass" ) {
@@ -1107,7 +1107,7 @@ public:
             else if( xmlname == "radius" ) {
                 _ss >> _vMassExtents.x;
             }
-            else if( _masstype == MT_Box && xmlname == "extents" ) {
+            else if((_masstype == MT_Box)&&(xmlname == "extents")) {
                 _ss >> _vMassExtents.x >> _vMassExtents.y >> _vMassExtents.z;
             }
             else if( xmlname == _processingtag ) {
@@ -1321,19 +1321,19 @@ public:
                 _pjoint->_vmimic[0]->_equations[0] = str(boost::format("%s*%f+%f")%strmimicjoint%a%b);
                 _pjoint->_vmimic[0]->_equations[1] = str(boost::format("|%s %f")%strmimicjoint%a);
             }
-            else if( itatt->first.size() >= 9 && itatt->first.substr(0,9) == "mimic_pos" ) {
+            else if((itatt->first.size() >= 9)&&(itatt->first.substr(0,9) == "mimic_pos")) {
                 if( !_pjoint->_vmimic[0] ) {
                     _pjoint->_vmimic[0].reset(new KinBody::Joint::MIMIC());
                 }
                 _pjoint->_vmimic[0]->_equations[0] = itatt->second;
             }
-            else if( itatt->first.size() >= 9 && itatt->first.substr(0,9) == "mimic_vel" ) {
+            else if((itatt->first.size() >= 9)&&(itatt->first.substr(0,9) == "mimic_vel")) {
                 if( !_pjoint->_vmimic[0] ) {
                     _pjoint->_vmimic[0].reset(new KinBody::Joint::MIMIC());
                 }
                 _pjoint->_vmimic[0]->_equations[1] = itatt->second;
             }
-            else if( itatt->first.size() >= 11 && itatt->first.substr(0,11) == "mimic_accel" ) {
+            else if((itatt->first.size() >= 11)&&(itatt->first.substr(0,11) == "mimic_accel")) {
                 if( !_pjoint->_vmimic[0] ) {
                     _pjoint->_vmimic[0].reset(new KinBody::Joint::MIMIC());
                 }
@@ -1471,7 +1471,7 @@ public:
                 GetXMLErrorCount()++;
             }
         }
-        else if( xmlname == "limits" || xmlname == "limitsrad" || xmlname == "limitsdeg" ) {
+        else if((xmlname == "limits")||(xmlname == "limitsrad")||(xmlname == "limitsdeg")) {
             if( _bNegateJoint ) {
                 throw openrave_exception("cannot specify <limits> with <lostop> and <histop>, choose one");
             }
@@ -1893,7 +1893,7 @@ public:
             else if( itatt->first == "skipgeometry" ) {
                 _bSkipGeometry = stricmp(itatt->second.c_str(), "true") == 0 || itatt->second=="1";
             }
-            else if( itatt->first != "file" && itatt->first != "type" ) {
+            else if((itatt->first != "file")&&(itatt->first != "type")) {
                 RAVELOG_WARN(str(boost::format("unknown kinbody attribute %s\n")%itatt->first));
             }
         }
@@ -2113,7 +2113,7 @@ public:
             else if( xmlname == "radius" ) {
                 _ss >> _vMassExtents.x;
             }
-            else if( _masstype == LinkXMLReader::MT_Box && xmlname == "extents" ) {
+            else if((_masstype == LinkXMLReader::MT_Box)&&(xmlname == "extents")) {
                 _ss >> _vMassExtents.x >> _vMassExtents.y >> _vMassExtents.z;
             }
         }
@@ -2406,13 +2406,13 @@ public:
                 GetXMLErrorCount()++;
             }
         }
-        else if( xmlname == "joints" || xmlname == "gripperjoints" ) {
+        else if((xmlname == "joints")||(xmlname == "gripperjoints")) {
             _pmanip->_vgripperjointnames = vector<string>((istream_iterator<string>(_ss)), istream_iterator<string>());
         }
         else if( xmlname == "armjoints" ) {
             RAVELOG_WARN("<armjoints> for <manipulator> tag is not used anymore\n");
         }
-        else if( xmlname == "direction" || xmlname == "palmdirection" ) {
+        else if((xmlname == "direction")||(xmlname == "palmdirection")) {
             if( xmlname == "palmdirection" )
                 RAVELOG_WARN("<palmdirection> tag in Manipulator changed to <direction>\n");
             _ss >> _pmanip->_vdirection.x >> _pmanip->_vdirection.y >> _pmanip->_vdirection.z;
@@ -2497,7 +2497,7 @@ public:
                 _pmanip->_strIkSolver = piksolver->GetXMLId();
             }
         }
-        else if( xmlname == "closingdirection" || xmlname == "closingdir" ) {
+        else if((xmlname == "closingdirection")||(xmlname == "closingdir")) {
             _pmanip->_vClosingDirection = vector<dReal>((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
             FOREACH(it, _pmanip->_vClosingDirection) {
                 if( *it > 0 ) {
@@ -2776,7 +2776,7 @@ public:
             _pcontroller.reset();
             _pcurreader.reset(new ControllerXMLReader(_probot->GetEnv(),_pcontroller,atts,_probot));
         }
-        else if( xmlname == "translation" || xmlname == "rotationmat" || xmlname == "rotationaxis" || xmlname == "quat" || xmlname == "jointvalues") {
+        else if((xmlname == "translation")||(xmlname == "rotationmat")||(xmlname == "rotationaxis")||(xmlname == "quat")||(xmlname == "jointvalues")) {
             _processingtag = xmlname;
         }
         else {
@@ -3255,7 +3255,7 @@ public:
         if( xmlname == "bkgndcolor" ) {
             _ss >> vBkgndColor.x >> vBkgndColor.y >> vBkgndColor.z;
         }
-        else if( xmlname == "camrotaxis" || xmlname == "camrotationaxis" ) {
+        else if((xmlname == "camrotaxis")||(xmlname == "camrotationaxis")) {
             Vector vaxis; dReal fangle=0;
             _ss >> vaxis.x >> vaxis.y >> vaxis.z >> fangle;
             tCamera.rot = quatFromAxisAngle(vaxis, fangle * PI / 180.0f);

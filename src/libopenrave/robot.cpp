@@ -1341,7 +1341,7 @@ void RobotBase::GetActiveDOFResolutions(std::vector<dReal>& resolution) const
     if( _nAffineDOFs & DOF_Y ) {
         *pResolution++ = _vTranslationResolutions.y;
     }
-    if( _nAffineDOFs & DOF_Z ) { *pResolution++ = _vTranslationResolutions.z;}
+    if( _nAffineDOFs & DOF_Z ) { *pResolution++ = _vTranslationResolutions.z; }
 
     if( _nAffineDOFs & DOF_RotationAxis ) {
         *pResolution++ = _vRotationAxisResolutions.x;
@@ -1377,9 +1377,9 @@ void RobotBase::GetActiveDOFWeights(std::vector<dReal>& weights) const
         *pweight++ = _vTempRobotJoints[*it];
     }
     // set some default limits
-    if( _nAffineDOFs & DOF_X ) { *pweight++ = _vTranslationWeights.x;}
-    if( _nAffineDOFs & DOF_Y ) { *pweight++ = _vTranslationWeights.y;}
-    if( _nAffineDOFs & DOF_Z ) { *pweight++ = _vTranslationWeights.z;}
+    if( _nAffineDOFs & DOF_X ) { *pweight++ = _vTranslationWeights.x; }
+    if( _nAffineDOFs & DOF_Y ) { *pweight++ = _vTranslationWeights.y; }
+    if( _nAffineDOFs & DOF_Z ) { *pweight++ = _vTranslationWeights.z; }
 
     if( _nAffineDOFs & DOF_RotationAxis ) { *pweight++ = _vRotationAxisWeights.x; }
     else if( _nAffineDOFs & DOF_Rotation3D ) {
@@ -1412,9 +1412,9 @@ void RobotBase::GetActiveDOFMaxVel(std::vector<dReal>& maxvel) const
     FOREACHC(it, _vActiveDOFIndices) {
         *pMaxVel++ = _vTempRobotJoints[*it];
     }
-    if( _nAffineDOFs & DOF_X ) { *pMaxVel++ = _vTranslationMaxVels.x;}
-    if( _nAffineDOFs & DOF_Y ) { *pMaxVel++ = _vTranslationMaxVels.y;}
-    if( _nAffineDOFs & DOF_Z ) { *pMaxVel++ = _vTranslationMaxVels.z;}
+    if( _nAffineDOFs & DOF_X ) { *pMaxVel++ = _vTranslationMaxVels.x; }
+    if( _nAffineDOFs & DOF_Y ) { *pMaxVel++ = _vTranslationMaxVels.y; }
+    if( _nAffineDOFs & DOF_Z ) { *pMaxVel++ = _vTranslationMaxVels.z; }
 
     if( _nAffineDOFs & DOF_RotationAxis ) { *pMaxVel++ = _vRotationAxisMaxVels.x; }
     else if( _nAffineDOFs & DOF_Rotation3D ) {
@@ -1446,9 +1446,9 @@ void RobotBase::GetActiveDOFMaxAccel(std::vector<dReal>& maxaccel) const
     FOREACHC(it, _vActiveDOFIndices) {
         *pMaxAccel++ = _vTempRobotJoints[*it];
     }
-    if( _nAffineDOFs & DOF_X ) { *pMaxAccel++ = _vTranslationMaxVels.x;} // wrong
-    if( _nAffineDOFs & DOF_Y ) { *pMaxAccel++ = _vTranslationMaxVels.y;} // wrong
-    if( _nAffineDOFs & DOF_Z ) { *pMaxAccel++ = _vTranslationMaxVels.z;} // wrong
+    if( _nAffineDOFs & DOF_X ) { *pMaxAccel++ = _vTranslationMaxVels.x; } // wrong
+    if( _nAffineDOFs & DOF_Y ) { *pMaxAccel++ = _vTranslationMaxVels.y; } // wrong
+    if( _nAffineDOFs & DOF_Z ) { *pMaxAccel++ = _vTranslationMaxVels.z; } // wrong
 
     if( _nAffineDOFs & DOF_RotationAxis ) { *pMaxAccel++ = _vRotationAxisMaxVels.x; } // wrong
     else if( _nAffineDOFs & DOF_Rotation3D ) {

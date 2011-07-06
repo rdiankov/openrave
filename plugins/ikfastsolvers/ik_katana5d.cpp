@@ -223,10 +223,10 @@ inline double IKtan(double f) {
     return tan(f);
 }
 inline float IKsqrt(float f) {
-    if( f <= 0.0f ) return 0.0f;return sqrtf(f);
+    if( f <= 0.0f ) return 0.0f; return sqrtf(f);
 }
 inline double IKsqrt(double f) {
-    if( f <= 0.0 ) return 0.0;return sqrt(f);
+    if( f <= 0.0 ) return 0.0; return sqrt(f);
 }
 inline float IKatan2(float fy, float fx) {
     if( isnan(fy) ) {
@@ -347,14 +347,14 @@ public:
                     j0array[0]-=IK2PI;
                 }
                 else if( j0array[0] < -IKPI )
-                {    j0array[0]+=IK2PI;}
+                {    j0array[0]+=IK2PI; }
                 j0valid[0] = true;
                 if( j0array[1] > IKPI )
                 {
                     j0array[1]-=IK2PI;
                 }
                 else if( j0array[1] < -IKPI )
-                {    j0array[1]+=IK2PI;}
+                {    j0array[1]+=IK2PI; }
                 j0valid[1] = true;
                 if( j0valid[0] && j0valid[1] &&( IKabs(cj0array[0]-cj0array[1]) < 0.0001) &&( IKabs(sj0array[0]-sj0array[1]) < 0.0001) )
                 {
@@ -641,7 +641,7 @@ public:
                                         j2array[0]-=IK2PI;
                                     }
                                     else if( j2array[0] < -IKPI )
-                                    {    j2array[0]+=IK2PI;}
+                                    {    j2array[0]+=IK2PI; }
                                     j2valid[0] = true;
                                     for(int ij2 = 0; ij2 < 1; ++ij2)
                                     {
@@ -663,7 +663,7 @@ public:
                                                 j3array[0]-=IK2PI;
                                             }
                                             else if( j3array[0] < -IKPI )
-                                            {    j3array[0]+=IK2PI;}
+                                            {    j3array[0]+=IK2PI; }
                                             j3valid[0] = true;
                                             for(int ij3 = 0; ij3 < 1; ++ij3)
                                             {
@@ -684,7 +684,7 @@ public:
                                                         j4array[0]-=IK2PI;
                                                     }
                                                     else if( j4array[0] < -IKPI )
-                                                    {    j4array[0]+=IK2PI;}
+                                                    {    j4array[0]+=IK2PI; }
                                                     j4valid[0] = true;
                                                     for(int ij4 = 0; ij4 < 1; ++ij4)
                                                     {

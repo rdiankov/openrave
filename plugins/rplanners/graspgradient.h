@@ -174,7 +174,7 @@ public:
                         listbestpath.swap(listpath);
                     }
                 }
-                else if( itgrasp->bChecked && itgrasp->fgoaldist >= 0 )
+                else if( itgrasp->bChecked &&(itgrasp->fgoaldist >= 0))
                     bContinue = true;
             }
 

@@ -699,7 +699,7 @@ Meigen(PQP_REAL vout[3][3], PQP_REAL dout[3], PQP_REAL a[3][3])
         sm=0.0; sm+=fabs(a[0][1]); sm+=fabs(a[0][2]); sm+=fabs(a[1][2]);
         if (sm == 0.0) { McM(vout,v); VcV(dout,d); return i; }
 
-        if (i < 3) tresh=0.2*sm/(3*3);else tresh=0.0;
+        if (i < 3) tresh=0.2*sm/(3*3); else tresh=0.0;
 
         {
             g = 100.0*rfabs(a[0][1]);

@@ -1600,7 +1600,7 @@ inline bool TriTriCollision(const RaveVector<T>& u1, const RaveVector<T>& u2, co
             RaveVector<T> dq = q2-q1;
             p1 -= dq*(t1/dq.dot3(vcross));
         }
-        else if( t1 < 0 && t2 > 0 ) {
+        else if((t1 < 0)&&(t2 > 0)) {
             // keep first point, clip second
             RaveVector<T> dq = q1-q2;
             p2 -= dq*(t2/dq.dot3(vcross));

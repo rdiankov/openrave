@@ -169,7 +169,7 @@ BVTQ::ExtractMinTest()
             {
                 // p has both children, promote the minimum
 
-                if (bvtp[c1]->d < bvtp[c2]->d) c = c1;else c = c2;
+                if (bvtp[c1]->d < bvtp[c2]->d) c = c1; else c = c2;
 
                 if (bvtp[c]->d < bvtp[p]->d)
                 {

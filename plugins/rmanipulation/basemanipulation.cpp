@@ -256,7 +256,7 @@ protected:
             else if( cmd == "maxsteps") {
                 sinput >> maxsteps;
             }
-            else if( cmd == "steplength" || cmd == "stepsize") {
+            else if((cmd == "steplength")||(cmd == "stepsize")) {
                 sinput >> params->_fStepLength;
             }
             else if( cmd == "execute" ) {

@@ -209,7 +209,7 @@ public:
                 // grasp
                 sinput >> params->ftargetroll;
             }
-            else if( cmd == "centeroffset" || cmd == "position" ) {
+            else if((cmd == "centeroffset")||(cmd == "position")) {
                 // initialization
                 sinput >> params->vtargetposition.x >> params->vtargetposition.y >> params->vtargetposition.z;
             }

@@ -138,8 +138,8 @@ int HaltonSampler::get_seed ( )
     //  Remap ISEED from [1,43200] to [1,IMAX].
     //
     seed = ( int )
-                                ( ( ( dReal ) seed )
-                                * ( ( dReal ) I4_MAX ) / ( 60.0 * 60.0 * 12.0 ) );
+           ( ( ( dReal ) seed )
+             * ( ( dReal ) I4_MAX ) / ( 60.0 * 60.0 * 12.0 ) );
     //
     //  Never use a seed of 0.
     //

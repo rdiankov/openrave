@@ -60,7 +60,8 @@ public:
 
     IkSolverBase(EnvironmentBasePtr penv) : InterfaceBase(PT_InverseKinematicsSolver, penv) {
     }
-    virtual ~IkSolverBase() {}
+    virtual ~IkSolverBase() {
+    }
 
     /// return the static interface type this class points to (used for safe casting)
     static inline InterfaceType GetInterfaceTypeStatic() {

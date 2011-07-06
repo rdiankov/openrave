@@ -125,7 +125,8 @@ private:
     };
 
     TrajectoryBase(EnvironmentBasePtr penv, int nDOF);
-    virtual ~TrajectoryBase() {}
+    virtual ~TrajectoryBase() {
+    }
 
     /// return the static interface type this class points to (used for safe casting)
     static inline InterfaceType GetInterfaceTypeStatic() {

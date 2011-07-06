@@ -51,7 +51,7 @@ public:
             else if( name == "sensor" ) {
                 return true;
             }
-            else if( name == "kk" || name == "KK" ) {
+            else if((name == "kk")||(name == "KK")) {
                 ss >> _psensor->_pgeom->KK.fx >> _psensor->_pgeom->KK.fy >> _psensor->_pgeom->KK.cx >> _psensor->_pgeom->KK.cy;
             }
             else if( name == "intrinsic" ) {

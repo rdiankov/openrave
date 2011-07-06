@@ -24,7 +24,7 @@ public:
 Samples the robot active configuration space, treats revolute and circular joints appropriately. When creating pass the following parameters::\n\n\
   RobotConfiguration [robot name] [sampler name]\n\n\
 The sampler needs to return values in the range [0,1]. Default sampler is 'mt19937'.\n\
-"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              ;
+";
         string robotname;
         sinput >> robotname;
         _probot = GetEnv()->GetRobot(robotname);

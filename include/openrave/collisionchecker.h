@@ -88,7 +88,8 @@ class OPENRAVE_API CollisionCheckerBase : public InterfaceBase
 public:
     CollisionCheckerBase(EnvironmentBasePtr penv) : InterfaceBase(PT_CollisionChecker, penv) {
     }
-    virtual ~CollisionCheckerBase() {}
+    virtual ~CollisionCheckerBase() {
+    }
 
     /// \brief return the static interface type this class points to (used for safe casting)
     static inline InterfaceType GetInterfaceTypeStatic() {

@@ -58,7 +58,7 @@ public:
             bool operator()( const pair<T,dReal>& a, const pair<T,dReal>& b ) const {
                 // always put the grasps with computed iksolutions first
                 if( (a.first->iksolutions.size() > 0) == (b.first->iksolutions.size() > 0) )
-                    return a.second > b.second;                                                  // minimum on top of stack
+                    return a.second > b.second;                                                                                                   // minimum on top of stack
                 else
                     return a.first->iksolutions.size() == 0;
             }
@@ -750,7 +750,7 @@ Implements various algorithms to open and close \
 doors by having the hand cage the handles instead of tightly grip. \
 This greatly relaxes the constraints on the robot (see the door manipluation example). The relevant paper is:\n\n\
 \
-- Rosen Diankov, Siddhartha Srinivasa, Dave Ferguson, James Kuffner. Manipulation Planning with Caging Grasps. IEEE-RAS Intl. Conf. on Humanoid Robots, December 2008."                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      ;
+- Rosen Diankov, Siddhartha Srinivasa, Dave Ferguson, James Kuffner. Manipulation Planning with Caging Grasps. IEEE-RAS Intl. Conf. on Humanoid Robots, December 2008.";
         RegisterCommand("graspset",boost::bind(&TaskCaging::GraspSet, this, _1, _2),
                         "Creates a grasp set given a robot end-effector floating in space.\n"
                         "Options: step exploreprob size target targetjoint contactconfigdelta cagedconfig");

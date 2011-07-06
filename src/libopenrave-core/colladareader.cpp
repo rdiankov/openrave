@@ -1780,7 +1780,7 @@ public:
                                 pmanip->_pIkSolver = RaveCreateIkSolver(_penv,pmanip->_strIkSolver);
                             }
                         }
-                        else if( pmanipchild->getElementName() != string("frame_origin") && pmanipchild->getElementName() != string("frame_tip")) {
+                        else if((pmanipchild->getElementName() != string("frame_origin"))&&(pmanipchild->getElementName() != string("frame_tip"))) {
                             RAVELOG_WARN(str(boost::format("unrecognized tag <%s> in manipulator '%s'")%pmanipchild->getElementName()%pmanip->GetName()));
                         }
                     }
@@ -2646,7 +2646,7 @@ private:
                 BOOST_ASSERT(children.getCount()==2);
                 eq += str(boost::format("atanh(%s)")%_ExtractMathML(proot,pkinbody,children[1]));
             }
-            else if( childname == "implies" || childname == "forall" || childname == "exists" || childname == "conjugate" || childname == "arg" || childname == "real" || childname == "imaginary" || childname == "lcm" || childname == "factorial" || childname == "xor") {
+            else if((childname == "implies")||(childname == "forall")||(childname == "exists")||(childname == "conjugate")||(childname == "arg")||(childname == "real")||(childname == "imaginary")||(childname == "lcm")||(childname == "factorial")||(childname == "xor")) {
                 throw openrave_exception(str(boost::format("_ExtractMathML: %s function in <apply> tag not supported")%childname),ORE_CommandNotSupported);
             }
             else if( childname == "csymbol" ) {
@@ -2688,7 +2688,7 @@ private:
                         string a = _ExtractMathML(proot,pkinbody,children[1]), b = _ExtractMathML(proot,pkinbody,children[2]), c = _ExtractMathML(proot,pkinbody,children[3]);
                         eq += str(boost::format("((%s>=%s)&(%s<=%s))")%a%b%a%c);
                     }
-                    else if( functionname == "SSSA" || functionname == "SASA" || functionname == "SASS" ) {
+                    else if((functionname == "SSSA")||(functionname == "SASA")||(functionname == "SASS")) {
                         BOOST_ASSERT(children.getCount()==4);
                         eq += str(boost::format("%s(%s,%s,%s)")%functionname%_ExtractMathML(proot,pkinbody,children[1])%_ExtractMathML(proot,pkinbody,children[2])%_ExtractMathML(proot,pkinbody,children[3]));
                     }

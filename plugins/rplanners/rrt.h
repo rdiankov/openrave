@@ -28,7 +28,7 @@ public:
         __description = "\
 :Interface Author:  Rosen Diankov\n\n\
 Uses the Rapidly-Exploring Random Trees Algorithm.\n\
-"                                                                                                                                                                                                                                            ;
+";
     }
     virtual ~RrtPlanner() {
     }
@@ -135,7 +135,7 @@ public:
     BirrtPlanner(EnvironmentBasePtr penv) : RrtPlanner<SimpleNode>(penv), _treeBackward(1)
     {
         __description += "Bi-directional RRTs. See\n\n\
-- J.J. Kuffner and S.M. LaValle. RRT-Connect: An efficient approach to single-query path planning. In Proc. IEEE Int'l Conf. on Robotics and Automation (ICRA'2000), pages 995-1001, San Francisco, CA, April 2000."                                                                                                            ;
+- J.J. Kuffner and S.M. LaValle. RRT-Connect: An efficient approach to single-query path planning. In Proc. IEEE Int'l Conf. on Robotics and Automation (ICRA'2000), pages 995-1001, San Francisco, CA, April 2000.";
     }
     virtual ~BirrtPlanner() {
     }
@@ -355,7 +355,7 @@ public:
         _vecGoals.resize(0);
 
         while(_parameters->vgoalconfig.size() > 0) {
-            for(int i = 0 ; i < _parameters->GetDOF(); i++) {
+            for(int i = 0; i < _parameters->GetDOF(); i++) {
                 if(goal_index < (int)_parameters->vgoalconfig.size())
                     vgoal[i] = _parameters->vgoalconfig[goal_index];
                 else {

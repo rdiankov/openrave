@@ -820,7 +820,7 @@ private:
                 // break the connection
                 _DumpNodes();
             }
-            else if( 0&&_searchtype == ST_bispace && RANDOM_FLOAT() < fConfigFollowProb ) {
+            else if( 0&&(_searchtype == ST_bispace)&&(RANDOM_FLOAT() < fConfigFollowProb)) {
                 // choose a random goal
                 int index = RANDOM_INT((int)_vtransWorkGoals.size());
 
@@ -848,7 +848,7 @@ private:
                 }
             }
             // check if should follow the Jt
-            else if( (/*_searchtype == ST_bispace || */ _searchtype == ST_rrtjt) && RANDOM_FLOAT() < fConfigFollowProb ) {
+            else if( (/*_searchtype == ST_bispace || */ _searchtype == ST_rrtjt) &&(RANDOM_FLOAT() < fConfigFollowProb)) {
                 // choose a random goal
                 int index = RANDOM_INT((int)_vtransWorkGoals.size());
 

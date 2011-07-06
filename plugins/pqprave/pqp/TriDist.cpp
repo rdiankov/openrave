@@ -93,7 +93,7 @@ SegPoints(PQP_REAL VEC[3],
 
     // clamp result so t is on the segment P,A
 
-    if ((t < 0) || isnan(t)) t = 0;else if (t > 1) t = 1;
+    if ((t < 0) || isnan(t)) t = 0; else if (t > 1) t = 1;
 
     // find u for point on ray Q,B closest to point at t
 
@@ -296,12 +296,12 @@ TriDist(PQP_REAL P[3], PQP_REAL Q[3],
         int point = -1;
         if ((Tp[0] > 0) && (Tp[1] > 0) && (Tp[2] > 0))
         {
-            if (Tp[0] < Tp[1]) point = 0;else point = 1;
+            if (Tp[0] < Tp[1]) point = 0; else point = 1;
             if (Tp[2] < Tp[point]) point = 2;
         }
         else if ((Tp[0] < 0) && (Tp[1] < 0) && (Tp[2] < 0))
         {
-            if (Tp[0] > Tp[1]) point = 0;else point = 1;
+            if (Tp[0] > Tp[1]) point = 0; else point = 1;
             if (Tp[2] > Tp[point]) point = 2;
         }
 
@@ -358,12 +358,12 @@ TriDist(PQP_REAL P[3], PQP_REAL Q[3],
         int point = -1;
         if ((Sp[0] > 0) && (Sp[1] > 0) && (Sp[2] > 0))
         {
-            if (Sp[0] < Sp[1]) point = 0;else point = 1;
+            if (Sp[0] < Sp[1]) point = 0; else point = 1;
             if (Sp[2] < Sp[point]) point = 2;
         }
         else if ((Sp[0] < 0) && (Sp[1] < 0) && (Sp[2] < 0))
         {
-            if (Sp[0] > Sp[1]) point = 0;else point = 1;
+            if (Sp[0] > Sp[1]) point = 0; else point = 1;
             if (Sp[2] > Sp[point]) point = 2;
         }
 
