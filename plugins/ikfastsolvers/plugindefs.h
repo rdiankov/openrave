@@ -209,15 +209,18 @@ public:
     /// \param pfree The free parameters required, range is in [-pi,pi]
     void GetSolution(Real* psolution, const Real* pfree) const {
         for(size_t i = 0; i < basesol.size(); ++i) {
-            if( basesol[i].freeind < 0 )
+            if( basesol[i].freeind < 0 ) {
                 psolution[i] = basesol[i].foffset;
+            }
             else {
                 BOOST_ASSERT(pfree != NULL);
                 psolution[i] = pfree[basesol[i].freeind]*basesol[i].fmul + basesol[i].foffset;
-                if( psolution[i] > PI )
+                if( psolution[i] > PI ) {
                     psolution[i] -= 2*PI;
-                else if( psolution[i] < -PI )
+                }
+                else if( psolution[i] < -PI ) {
                     psolution[i] += 2*PI;
+                }
             }
         }
     }

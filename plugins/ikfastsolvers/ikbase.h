@@ -23,9 +23,9 @@ template <typename IKReal, typename Solution>
 class IkFastSolver : public IkSolverBase
 {
     enum SolutionResults {
-        SR_Continue = 0,     ///< go onto next set of parameters
-        SR_Success = 1,     ///< found solution
-        SR_Quit = 2,      ///< failed due to collisions or other reasons that requires immediate failure
+        SR_Continue = 0, ///< go onto next set of parameters
+        SR_Success = 1, ///< found solution
+        SR_Quit = 2,  ///< failed due to collisions or other reasons that requires immediate failure
     };
 
 public:
@@ -70,7 +70,7 @@ public:
         probot->GetActiveDOFLimits(_qlower,_qupper);
         _vfreeparamscales.resize(0);
         FOREACH(itfree, _vfreeparams) {
-            if(( *itfree < 0) ||( *itfree >= (int)_qlower.size()) ) {
+            if( *itfree < 0 || *itfree >= (int)_qlower.size() ) {
                 throw openrave_exception(str(boost::format("free parameter idx %d out of bounds\n")%*itfree));
             }
             if( _qupper[*itfree] > _qlower[*itfree] ) {
@@ -84,7 +84,7 @@ public:
 
     virtual bool Init(RobotBase::ManipulatorPtr pmanip)
     {
-        if(( _kinematicshash.size() > 0) &&( pmanip->GetKinematicsStructureHash() != _kinematicshash) ) {
+        if( _kinematicshash.size() > 0 && pmanip->GetKinematicsStructureHash() != _kinematicshash ) {
             RAVELOG_ERROR(str(boost::format("inverse kinematics hashes do not match for manip %s:%s. IK will not work! %s!=%s\n")%pmanip->GetRobot()->GetName()%pmanip->GetName()%pmanip->GetKinematicsStructureHash()%_kinematicshash));
         }
         _pmanip = pmanip;
@@ -268,28 +268,28 @@ private:
         dReal fFreeInc = _vFreeInc.at(freeindex);
         while(1) {
             dReal curphi = startphi;
-            if( iter & 1 ) {     // increment
+            if( iter & 1 ) { // increment
                 curphi += deltaphi;
                 if( curphi > upperphi ) {
                     if( startphi-deltaphi < lowerphi) {
-                        break;     // reached limit
+                        break; // reached limit
                     }
                     ++iter;
                     continue;
                 }
             }
-            else {     // decrement
+            else { // decrement
                 curphi -= deltaphi;
                 if( curphi < lowerphi ) {
                     if( startphi+deltaphi > upperphi ) {
-                        break;     // reached limit
+                        break; // reached limit
                     }
-                    deltaphi += fFreeInc;     // increment
+                    deltaphi += fFreeInc; // increment
                     ++iter;
                     continue;
                 }
 
-                deltaphi += fFreeInc;     // increment
+                deltaphi += fFreeInc; // increment
             }
 
             iter++;
@@ -302,7 +302,7 @@ private:
         }
 
         // explicitly test 0 since many edge cases involve 0s
-        if(( _qlower[vfreeparams[freeindex]] <= 0) &&( _qupper[vfreeparams[freeindex]] >= 0) ) {
+        if( _qlower[vfreeparams[freeindex]] <= 0 && _qupper[vfreeparams[freeindex]] >= 0 ) {
             vfree.at(freeindex) = 0;
             SolutionResults res = ComposeSolution(vfreeparams, vfree, freeindex+1,q0, fn);
             if( res != SR_Continue ) {
@@ -319,8 +319,8 @@ private:
             switch(param.GetType()) {
             case IkParameterization::Type_Transform6D: {
                 TransformMatrix t = param.GetTransform6D();
-                IKReal eetrans[3] = { t.trans.x, t.trans.y, t.trans.z};
-                IKReal eerot[9] = { t.m[0],t.m[1],t.m[2],t.m[4],t.m[5],t.m[6],t.m[8],t.m[9],t.m[10]};
+                IKReal eetrans[3] = {t.trans.x, t.trans.y, t.trans.z};
+                IKReal eerot[9] = {t.m[0],t.m[1],t.m[2],t.m[4],t.m[5],t.m[6],t.m[8],t.m[9],t.m[10]};
                 //                stringstream ss; ss << "./ik " << std::setprecision(16);
                 //                ss << eerot[0]  << " " << eerot[1]  << " " << eerot[2]  << " " << eetrans[0]  << " " << eerot[3]  << " " << eerot[4]  << " " << eerot[5]  << " " << eetrans[1]  << " " << eerot[6]  << " " << eerot[7]  << " " << eerot[8]  << " " << eetrans[2] << " ";
                 //                FOREACH(itfree,vfree) {
@@ -332,12 +332,12 @@ private:
             }
             case IkParameterization::Type_Rotation3D: {
                 TransformMatrix t(Transform(param.GetRotation3D(),Vector()));
-                IKReal eerot[9] = { t.m[0],t.m[1],t.m[2],t.m[4],t.m[5],t.m[6],t.m[8],t.m[9],t.m[10]};
+                IKReal eerot[9] = {t.m[0],t.m[1],t.m[2],t.m[4],t.m[5],t.m[6],t.m[8],t.m[9],t.m[10]};
                 return _pfnik(NULL, eerot, vfree.size()>0 ? &vfree[0] : NULL, vsolutions);
             }
             case IkParameterization::Type_Translation3D: {
                 Vector v = param.GetTranslation3D();
-                IKReal eetrans[3] = { v.x, v.y, v.z};
+                IKReal eetrans[3] = {v.x, v.y, v.z};
                 //                stringstream ss; ss << "./ik " << std::setprecision(16);
                 //                ss << eetrans[0]  << " " << eetrans[1]  << " " << eetrans[2] << " ";
                 //                FOREACH(itfree,vfree) {
@@ -349,47 +349,47 @@ private:
             }
             case IkParameterization::Type_Direction3D: {
                 Vector v = param.GetDirection3D();
-                IKReal eerot[9] = { v.x, v.y, v.z,0,0,0,0,0,0};
+                IKReal eerot[9] = {v.x, v.y, v.z,0,0,0,0,0,0};
                 return _pfnik(NULL, eerot, vfree.size()>0 ? &vfree[0] : NULL, vsolutions);
             }
             case IkParameterization::Type_Ray4D: {
                 RAY r = param.GetRay4D();
-                IKReal eetrans[3] = { r.pos.x,r.pos.y,r.pos.z};
-                IKReal eerot[9] = { r.dir.x, r.dir.y, r.dir.z,0,0,0,0,0,0};
+                IKReal eetrans[3] = {r.pos.x,r.pos.y,r.pos.z};
+                IKReal eerot[9] = {r.dir.x, r.dir.y, r.dir.z,0,0,0,0,0,0};
                 //RAVELOG_INFO("ray: %f %f %f %f %f %f\n",eerot[0],eerot[1],eerot[2],eetrans[0],eetrans[1],eetrans[2]);
-                if( !_pfnik((eetrans, eerot, vfree.size()>0) ? &vfree[0] : NULL, vsolutions) ) {
+                if( !_pfnik(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, vsolutions) ) {
                     return false;
                 }
                 return true;
             }
             case IkParameterization::Type_Lookat3D: {
                 Vector v = param.GetLookat3D();
-                IKReal eetrans[3] = { v.x, v.y, v.z};
+                IKReal eetrans[3] = {v.x, v.y, v.z};
                 return _pfnik(eetrans, NULL, vfree.size()>0 ? &vfree[0] : NULL, vsolutions);
             }
             case IkParameterization::Type_TranslationDirection5D: {
                 RAY r = param.GetTranslationDirection5D();
-                IKReal eetrans[3] = { r.pos.x,r.pos.y,r.pos.z};
-                IKReal eerot[9] = { r.dir.x, r.dir.y, r.dir.z,0,0,0,0,0,0};
-                if( !_pfnik((eetrans, eerot, vfree.size()>0) ? &vfree[0] : NULL, vsolutions) ) {
+                IKReal eetrans[3] = {r.pos.x,r.pos.y,r.pos.z};
+                IKReal eerot[9] = {r.dir.x, r.dir.y, r.dir.z,0,0,0,0,0,0};
+                if( !_pfnik(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, vsolutions) ) {
                     return false;
                 }
                 return true;
             }
             case IkParameterization::Type_TranslationXY2D: {
                 Vector v = param.GetTranslationXY2D();
-                IKReal eetrans[3] = { v.x, v.y,0};
+                IKReal eetrans[3] = {v.x, v.y,0};
                 return _pfnik(eetrans, NULL, vfree.size()>0 ? &vfree[0] : NULL, vsolutions);
             }
             case IkParameterization::Type_TranslationXYOrientation3D: {
                 Vector v = param.GetTranslationXYOrientation3D();
-                IKReal eetrans[3] = { v.x, v.y,v.z};
+                IKReal eetrans[3] = {v.x, v.y,v.z};
                 return _pfnik(eetrans, NULL, vfree.size()>0 ? &vfree[0] : NULL, vsolutions);
             }
             case IkParameterization::Type_TranslationLocalGlobal6D: {
                 std::pair<Vector,Vector> p = param.GetTranslationLocalGlobal6D();
-                IKReal eetrans[3] = { p.second.x, p.second.y, p.second.z};
-                IKReal eerot[9] = { p.first.x, 0, 0, 0, p.first.y, 0, 0, 0, p.first.z};
+                IKReal eetrans[3] = {p.second.x, p.second.y, p.second.z};
+                IKReal eerot[9] = {p.first.x, 0, 0, 0, p.first.y, 0, 0, 0, p.first.z};
                 return _pfnik(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, vsolutions);
             }
             default:
@@ -470,7 +470,7 @@ private:
                 return SR_Quit;
             }
             // stop if there is no solution we are attempting to get close to
-            if(( res == SR_Success) &&( q0.size() != pmanip->GetArmIndices().size()) ) {
+            if( res == SR_Success && q0.size() != pmanip->GetArmIndices().size() ) {
                 break;
             }
         }
@@ -554,8 +554,8 @@ private:
             }
 
             // if gripper is colliding, solutions will always fail, so completely stop solution process
-            if( bCheckEndEffector &&( param.GetType() == IkParameterization::Type_Transform6D) && pmanip->CheckEndEffectorCollision(pmanip->GetBase()->GetTransform()*param.GetTransform6D()) ) {
-                return SR_Quit;     // stop the search
+            if( bCheckEndEffector && param.GetType() == IkParameterization::Type_Transform6D && pmanip->CheckEndEffectorCollision(pmanip->GetBase()->GetTransform()*param.GetTransform6D()) ) {
+                return SR_Quit; // stop the search
             }
 
             bCheckEndEffector = false;
@@ -566,7 +566,7 @@ private:
         IkParameterization ikparamnew = pmanip->GetBase()->GetTransform().inverse()*pmanip->GetIkParameterization(param.GetType());
         dReal ikworkspacedist = param.ComputeDistanceSqr(ikparamnew);
         if( ikworkspacedist > _ikthreshold ) {
-            stringstream ss; ss << "ignoring bad ik for " << pmanip->GetName() << ":" << probot->GetName() << " dist=" << ikworkspacedist << ": " << param << endl;
+            stringstream ss; ss << "ignoring bad ik for " << pmanip->GetName() << ":" << probot->GetName() << " dist=" << ikworkspacedist << ": " << param << endl;;
             RAVELOG_ERROR(ss.str());
             return SR_Continue;
         }
@@ -645,9 +645,9 @@ private:
             }
         }
         if( (filteroptions&IKFO_CheckEnvCollisions) ) {
-            if( bCheckEndEffector &&( param.GetType() == IkParameterization::Type_Transform6D) ) {
+            if( bCheckEndEffector && param.GetType() == IkParameterization::Type_Transform6D ) {
                 if( pmanip->CheckEndEffectorCollision(pmanip->GetBase()->GetTransform()*param.GetTransform6D()) ) {
-                    return SR_Quit;     // stop the search
+                    return SR_Quit; // stop the search
                 }
                 bCheckEndEffector = false;
             }
@@ -664,15 +664,15 @@ private:
     {
         for(int j = 0; j < (int)_qlower.size(); ++j) {
             if( _vjointrevolute.at(j) ) {
-                if(( _qlower[j] < -PI) &&( vravesol[j] > _qupper[j]) ) {
+                if( _qlower[j] < -PI && vravesol[j] > _qupper[j] ) {
                     vravesol[j] -= 2*PI;
                 }
-                if(( _qupper[j] > PI) &&( vravesol[j] < _qlower[j]) ) {
+                if( _qupper[j] > PI && vravesol[j] < _qlower[j] ) {
                     vravesol[j] += 2*PI;
                 }
             }
             // due to error propagation, give error bounds for lower and upper limits
-            if(( vravesol[j] < _qlower[j]-10*g_fEpsilon) ||( vravesol[j] > _qupper[j]+10*g_fEpsilon) ) {
+            if( vravesol[j] < _qlower[j]-10*g_fEpsilon || vravesol[j] > _qupper[j]+10*g_fEpsilon ) {
                 return false;
             }
         }

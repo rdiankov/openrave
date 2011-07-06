@@ -366,3 +366,42 @@ class TestKinematics(EnvironmentSetup):
                     assert( transdist(Tlinks,body.GetLinkTransformations()) <= g_epsilon )
                     body.SetDOFValues(offsets)
                     assert( transdist(offsets,body.GetDOFValues()) <= g_epsilon )
+
+    def test_joints(self):
+        env=self.env
+        xml = """
+<kinbody name="universal">
+  <body name="L0">
+    <geom type="box">
+      <extents>0.05 0.05 0.1</extents>
+    </geom>
+  </body>
+  <body name="L1">
+    <translation>0 0 0.3</translation>
+    <geom type="box">
+      <extents>0.05 0.05 0.1</extents>
+    </geom>
+  </body>
+  <joint type="%s" name="J0">
+    <body>L0</body>
+    <body>L1</body>
+    <axis>1 0 0</axis>
+    <axis>0 1 0</axis>
+    <anchor>0 0 0.2</anchor>
+  </joint>
+</kinbody>
+"""
+        with env:
+            body = env.ReadKinBodyData(xml%'universal')
+            env.AddKinBody(body)
+            assert(body.GetDOF()==2)
+            assert(len(body.GetJoints())==1)
+            assert(env.GetJoints()[0].GetType()==Joint.Type.Universal)
+        
+            env.Reset()
+            body = env.ReadKinBodyData(xml%'hinge2')
+            env.AddKinBody(body)
+            assert(body.GetDOF()==2)
+            assert(len(body.GetJoints())==1)
+            assert(env.GetJoints()[0].GetType()==Joint.Type.Universal)
+

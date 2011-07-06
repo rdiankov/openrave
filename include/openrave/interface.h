@@ -79,7 +79,7 @@ public:
     /// \brief Documentation of the interface in reStructuredText format. See \ref writing_plugins_doc.
     virtual const std::string& GetDescription() const {
         return __description;
-    }
+    };
 
     /// \brief set user data
     virtual void SetUserData(UserDataPtr data) {
