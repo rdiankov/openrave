@@ -1326,7 +1326,8 @@ protected:
     virtual GRASPANALYSIS _AnalyzeContacts3D(const vector<CollisionReport::CONTACT>& contacts)
     {
         if( contacts.size() < 7 ) {
-            throw openrave_exception("need at least 7 contact wrenches to have force closure in 3D");
+            RAVELOG_DEBUG("need at least 7 contact wrenches to have force closure in 3D");
+            return GRASPANALYSIS();
         }
         GRASPANALYSIS analysis;
         vector<double> vpoints(6*contacts.size()), vconvexplanes;
@@ -1342,7 +1343,9 @@ protected:
         }
 
         analysis.volume = _ComputeConvexHull(vpoints,vconvexplanes,boost::shared_ptr< vector<int> >(),6);
-
+        if( vconvexplanes.size() == 0 ) {
+            return analysis;
+        }
         // go through each of the faces and check if center is inside, and compute its distance
         double mindist = 1e30;
         for(size_t i = 0; i < vconvexplanes.size(); i += 7) {
