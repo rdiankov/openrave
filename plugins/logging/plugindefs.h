@@ -27,11 +27,11 @@
 #include <boost/typeof/std/map.hpp>
 #include <boost/typeof/std/string.hpp>
 
-#define FOREACH(it, v) for(BOOST_TYPEOF(v)::iterator it = (v).begin(); it != (v).end(); (it)++)
-#define FOREACH_NOINC(it, v) for(BOOST_TYPEOF(v)::iterator it = (v).begin(); it != (v).end(); )
+#define FOREACH(it, v) for(BOOST_TYPEOF(v) ::iterator it = (v).begin(); it != (v).end(); (it)++)
+#define FOREACH_NOINC(it, v) for(BOOST_TYPEOF(v) ::iterator it = (v).begin(); it != (v).end(); )
 
-#define FOREACHC(it, v) for(BOOST_TYPEOF(v)::const_iterator it = (v).begin(); it != (v).end(); (it)++)
-#define FOREACHC_NOINC(it, v) for(BOOST_TYPEOF(v)::const_iterator it = (v).begin(); it != (v).end(); )
+#define FOREACHC(it, v) for(BOOST_TYPEOF(v) ::const_iterator it = (v).begin(); it != (v).end(); (it)++)
+#define FOREACHC_NOINC(it, v) for(BOOST_TYPEOF(v) ::const_iterator it = (v).begin(); it != (v).end(); )
 #define RAVE_REGISTER_BOOST
 #else
 
@@ -41,8 +41,8 @@
 #include <map>
 #include <string>
 
-#define FOREACH(it, v) for(typeof((v).begin()) it = (v).begin(); it != (v).end(); (it)++)
-#define FOREACH_NOINC(it, v) for(typeof((v).begin()) it = (v).begin(); it != (v).end(); )
+#define FOREACH(it, v) for(typeof((v).begin())it = (v).begin(); it != (v).end(); (it)++)
+#define FOREACH_NOINC(it, v) for(typeof((v).begin())it = (v).begin(); it != (v).end(); )
 
 #define FOREACHC FOREACH
 #define FOREACHC_NOINC FOREACH_NOINC
@@ -90,7 +90,9 @@ inline static uint64_t GetNanoTime()
     return (count.QuadPart * 1000000000) / freq.QuadPart;
 }
 
-inline static uint64_t GetNanoPerformanceTime() { return GetNanoTime(); }
+inline static uint64_t GetNanoPerformanceTime() {
+    return GetNanoTime();
+}
 
 #else
 
@@ -102,15 +104,15 @@ inline static uint64_t GetNanoPerformanceTime() { return GetNanoTime(); }
 inline static void getWallTime(uint32_t& sec, uint32_t& nsec)
 {
 #if defined(CLOCK_GETTIME_FOUND) && (POSIX_TIMERS > 0 || _POSIX_TIMERS > 0)
-  struct timespec start;
-  clock_gettime(CLOCK_REALTIME, &start);
-  sec  = start.tv_sec;
-  nsec = start.tv_nsec;
+    struct timespec start;
+    clock_gettime(CLOCK_REALTIME, &start);
+    sec  = start.tv_sec;
+    nsec = start.tv_nsec;
 #else
-  struct timeval timeofday;
-  gettimeofday(&timeofday,NULL);
-  sec  = timeofday.tv_sec;
-  nsec = timeofday.tv_usec * 1000;
+    struct timeval timeofday;
+    gettimeofday(&timeofday,NULL);
+    sec  = timeofday.tv_sec;
+    nsec = timeofday.tv_usec * 1000;
 #endif
 }
 
@@ -153,7 +155,8 @@ inline static uint64_t GetNanoPerformanceTime()
 
 struct null_deleter
 {
-    void operator()(void const *) const {}
+    void operator()(void const *) const {
+    }
 };
 
 using namespace OpenRAVE;

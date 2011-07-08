@@ -7,7 +7,7 @@
     Shows how to set two controllers for a robot using the MultiController class. The differential base moves with velocity control while the arm moves with position control.
 
     <b>Full Example Code:</b>
-*/
+ */
 #include <openrave-core.h>
 #include <vector>
 #include <cstring>
@@ -97,7 +97,7 @@ int main(int argc, char ** argv)
     while(1) {
         {
             EnvironmentMutex::scoped_lock lock(penv->GetMutex()); // lock environment
-            
+
             if( !!armcontroller ) {
                 // set a trajectory on the arm and velocity on the wheels
                 TrajectoryBasePtr traj = RaveCreateTrajectory(penv,restindices.size());
@@ -120,7 +120,7 @@ int main(int argc, char ** argv)
                 traj->CalcTrajTiming(probot,TrajectoryBase::CUBIC,false,true); // initialize the trajectory structures
                 armcontroller->SetPath(traj);
             }
-        
+
             if( !!wheelcontroller ) {
                 stringstream sout,ss; ss << "setvelocity ";
                 for(size_t i = 0; i < wheelindices.size(); ++i) {
@@ -141,7 +141,7 @@ int main(int argc, char ** argv)
                 usleep(1000);
             }
         }
-    }       
+    }
 
     thviewer.join(); // wait for the viewer thread to exit
     penv->Destroy(); // destroy

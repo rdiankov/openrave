@@ -32,7 +32,8 @@ public:
         _fSpeed = 1;
         _nControlTransformation = 0;
     }
-    virtual ~IdealController() {}
+    virtual ~IdealController() {
+    }
 
     virtual bool Init(RobotBasePtr robot, const std::vector<int>& dofindices, int nControlTransformation)
     {
@@ -70,8 +71,12 @@ public:
         }
     }
 
-    virtual const std::vector<int>& GetControlDOFIndices() const { return _dofindices; }
-    virtual int IsControlTransformation() const { return _nControlTransformation; }
+    virtual const std::vector<int>& GetControlDOFIndices() const {
+        return _dofindices;
+    }
+    virtual int IsControlTransformation() const {
+        return _nControlTransformation;
+    }
 
     virtual bool SetDesired(const std::vector<dReal>& values, TransformConstPtr trans)
     {
@@ -84,7 +89,7 @@ public:
         // this will also let it have consistent mechanics as SetPath
         // (there's a race condition we're avoiding where a user calls SetDesired and then state savers revert the robot)
         if( !_bPause ) {
-            EnvironmentMutex::scoped_lock lockenv(_probot->GetEnv()->GetMutex());            
+            EnvironmentMutex::scoped_lock lockenv(_probot->GetEnv()->GetMutex());
             _vecdesired = values;
             if( _nControlTransformation ) {
                 if( !!trans ) {
@@ -98,7 +103,7 @@ public:
             else {
                 _SetDOFValues(_vecdesired);
             }
-            _bIsDone = false; // set after _vecdesired has changed
+            _bIsDone = false;     // set after _vecdesired has changed
         }
         return true;
     }
@@ -111,7 +116,7 @@ public:
             _bIsDone = true;
             return false;
         }
-        if( !!ptraj && ptraj->GetDOF() != (int)_dofindices.size() ) {
+        if( !!ptraj &&( ptraj->GetDOF() != (int)_dofindices.size()) ) {
             throw openrave_exception(str(boost::format("wrong path dimensions %d!=%d")%ptraj->GetDOF()%_dofindices.size()),ORE_InvalidArguments);
         }
         _ptraj = ptraj;
@@ -168,9 +173,15 @@ public:
         }
     }
 
-    virtual bool IsDone() { return _bIsDone; }
-    virtual dReal GetTime() const { return fTime; }
-    virtual RobotBasePtr GetRobot() const { return _probot; }
+    virtual bool IsDone() {
+        return _bIsDone;
+    }
+    virtual dReal GetTime() const {
+        return fTime;
+    }
+    virtual RobotBasePtr GetRobot() const {
+        return _probot;
+    }
 
 private:
     virtual bool _Pause(std::ostream& os, std::istream& is)
@@ -192,9 +203,15 @@ private:
         return !!is;
     }
 
-    inline boost::shared_ptr<IdealController> shared_controller() { return boost::static_pointer_cast<IdealController>(shared_from_this()); }
-    inline boost::shared_ptr<IdealController const> shared_controller_const() const { return boost::static_pointer_cast<IdealController const>(shared_from_this()); }
-    inline boost::weak_ptr<IdealController> weak_controller() { return shared_controller(); }
+    inline boost::shared_ptr<IdealController> shared_controller() {
+        return boost::static_pointer_cast<IdealController>(shared_from_this());
+    }
+    inline boost::shared_ptr<IdealController const> shared_controller_const() const {
+        return boost::static_pointer_cast<IdealController const>(shared_from_this());
+    }
+    inline boost::weak_ptr<IdealController> weak_controller() {
+        return shared_controller();
+    }
 
     virtual void _SetJointLimits()
     {
@@ -236,7 +253,7 @@ private:
         _probot->SetDOFVelocities(curvel,Vector(),Vector());
         _CheckConfiguration();
     }
-    
+
     void _CheckLimits(std::vector<dReal>& curvalues)
     {
         for(size_t i = 0; i < _vlower.size(); ++i) {
@@ -250,7 +267,7 @@ private:
             }
         }
     }
-    
+
     void _CheckConfiguration()
     {
         if( _bCheckCollision ) {
@@ -262,7 +279,7 @@ private:
             }
         }
     }
-    
+
     void _ReportError(const std::string& s)
     {
         if( _bThrowExceptions ) {
@@ -273,13 +290,13 @@ private:
         }
     }
 
-    RobotBasePtr _probot;           ///< controlled body
-    dReal _fSpeed;                ///< how fast the robot should go
-    TrajectoryBaseConstPtr _ptraj;     ///< computed trajectory robot needs to follow in chunks of _pbody->GetDOF()
+    RobotBasePtr _probot;               ///< controlled body
+    dReal _fSpeed;                    ///< how fast the robot should go
+    TrajectoryBaseConstPtr _ptraj;         ///< computed trajectory robot needs to follow in chunks of _pbody->GetDOF()
 
     dReal fTime;
 
-    std::vector<dReal> _vecdesired;     ///< desired values of the joints    
+    std::vector<dReal> _vecdesired;         ///< desired values of the joints
     Transform _tdesired;
 
     std::vector<int> _dofindices;
@@ -295,12 +312,13 @@ private:
 
 class RedirectController : public ControllerBase
 {
- public:
- RedirectController(EnvironmentBasePtr penv) : ControllerBase(penv), _bAutoSync(true) {
+public:
+    RedirectController(EnvironmentBasePtr penv) : ControllerBase(penv), _bAutoSync(true) {
         __description = ":Interface Author: Rosen Diankov\n\nRedirects all input and output to another controller (this avoides cloning the other controller while still allowing it to be used from cloned environments)";
     }
-    virtual ~RedirectController() {}
-    
+    virtual ~RedirectController() {
+    }
+
     virtual bool Init(RobotBasePtr robot, const std::vector<int>& dofindices, int nControlTransformation)
     {
         _dofindices.clear();
@@ -319,7 +337,8 @@ class RedirectController : public ControllerBase
     }
 
     // don't touch the referenced controller, since could be just destroying clones
-    virtual void Reset(int options) {}
+    virtual void Reset(int options) {
+    }
 
     virtual bool SetDesired(const std::vector<dReal>& values, TransformConstPtr trans)
     {
@@ -351,21 +370,35 @@ class RedirectController : public ControllerBase
         }
     }
 
-    virtual const std::vector<int>& GetControlDOFIndices() const { return _dofindices; }
-    virtual int IsControlTransformation() const { return !_pcontroller ? 0 : _pcontroller->IsControlTransformation(); }
-    virtual bool IsDone() { return _bAutoSync ? _bSyncDone&&_pcontroller->IsDone() : _pcontroller->IsDone(); }
+    virtual const std::vector<int>& GetControlDOFIndices() const {
+        return _dofindices;
+    }
+    virtual int IsControlTransformation() const {
+        return !_pcontroller ? 0 : _pcontroller->IsControlTransformation();
+    }
+    virtual bool IsDone() {
+        return _bAutoSync ? _bSyncDone&&_pcontroller->IsDone() : _pcontroller->IsDone();
+    }
 
-    virtual dReal GetTime() const { return _pcontroller->GetTime(); }
-    virtual void GetVelocity(std::vector<dReal>& vel) const { return _pcontroller->GetVelocity(vel); }
-    virtual void GetTorque(std::vector<dReal>& torque) const { return _pcontroller->GetTorque(torque); }
-    virtual RobotBasePtr GetRobot() const { return _probot; }
+    virtual dReal GetTime() const {
+        return _pcontroller->GetTime();
+    }
+    virtual void GetVelocity(std::vector<dReal>& vel) const {
+        return _pcontroller->GetVelocity(vel);
+    }
+    virtual void GetTorque(std::vector<dReal>& torque) const {
+        return _pcontroller->GetTorque(torque);
+    }
+    virtual RobotBasePtr GetRobot() const {
+        return _probot;
+    }
 
     virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     {
         ControllerBase::Clone(preference,cloningoptions);
         boost::shared_ptr<RedirectController const> r = boost::dynamic_pointer_cast<RedirectController const>(preference);
         _probot = GetEnv()->GetRobot(r->_probot->GetName());
-        _pcontroller = r->_pcontroller; // hmm......... this requires some thought
+        _pcontroller = r->_pcontroller;     // hmm......... this requires some thought
     }
 
     virtual bool SendCommand(std::ostream& os, std::istream& is)
@@ -398,7 +431,7 @@ class RedirectController : public ControllerBase
         }
         return _pcontroller->SendCommand(os,is);
     }
-    
+
 private:
     virtual void _sync()
     {
@@ -412,7 +445,7 @@ private:
 
     std::vector<int> _dofindices;
     bool _bAutoSync, _bSyncDone;
-    RobotBasePtr _probot;           ///< controlled body
+    RobotBasePtr _probot;               ///< controlled body
     ControllerBasePtr _pcontroller;
 };
 

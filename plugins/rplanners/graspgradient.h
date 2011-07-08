@@ -18,25 +18,29 @@
 
 class GraspGradientPlanner : public PlannerBase
 {
- public:
+public:
     struct GRASP
     {
-    GRASP() : fgoaldist(-1),bChecked(false), bProcessed(false) {}
+        GRASP() : fgoaldist(-1),bChecked(false), bProcessed(false) {
+        }
 
-        bool operator <(const GRASP& r) const { return fgraspdist < r.fgraspdist; }
+        bool operator <(const GRASP& r) const {
+            return fgraspdist < r.fgraspdist;
+        }
         dReal fgraspdist, fgoaldist;
         Transform tgrasp;
-        vector<dReal> qgoal; ///< ik solution that achieves tgrasp
-        bool bChecked; ///< set to true if grasp is checked for ik solution
-        bool bProcessed; ///< set to true if grasp has already been used in gradient descend
+        vector<dReal> qgoal;     ///< ik solution that achieves tgrasp
+        bool bChecked;     ///< set to true if grasp is checked for ik solution
+        bool bProcessed;     ///< set to true if grasp has already been used in gradient descend
     };
 
-GraspGradientPlanner(EnvironmentBasePtr penv) : PlannerBase(penv) {
+    GraspGradientPlanner(EnvironmentBasePtr penv) : PlannerBase(penv) {
         __description = ":Interface Author: Rosen Diankov\n\nGrasp Planning with Stochastic Gradient Descent";
         _report.reset(new CollisionReport());
     }
-    virtual ~GraspGradientPlanner() {}
-    
+    virtual ~GraspGradientPlanner() {
+    }
+
     virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams)
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
@@ -78,7 +82,7 @@ GraspGradientPlanner(EnvironmentBasePtr penv) : PlannerBase(penv) {
             return false;
         }
 
-        if( _robot->GetActiveDOF() != (int)_pmanip->GetArmIndices().size() || _robot->GetActiveDOFIndices().size() != _pmanip->GetArmIndices().size() ) {
+        if(( _robot->GetActiveDOF() != (int)_pmanip->GetArmIndices().size()) ||( _robot->GetActiveDOFIndices().size() != _pmanip->GetArmIndices().size()) ) {
             RAVELOG_ERROR("active dof not equal to arm joints\n");
             return false;
         }
@@ -88,7 +92,7 @@ GraspGradientPlanner(EnvironmentBasePtr penv) : PlannerBase(penv) {
                 return false;
             }
         }
-            
+
         // set up the initial state
         if( !parameters->_checkpathconstraintsfn(parameters->vinitialconfig, parameters->vinitialconfig,IT_OpenStart,ConfigurationListPtr()) ) {
             // failed
@@ -111,14 +115,14 @@ GraspGradientPlanner(EnvironmentBasePtr penv) : PlannerBase(penv) {
             return false;
         }
 
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());    
-        uint32_t basetime = GetMilliTime();    
+        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        uint32_t basetime = GetMilliTime();
         RobotBase::RobotStateSaver savestate(_robot);
         CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
 
         list<vector<dReal> > listbestpath, listpath;
         dReal bestgraspdist = 1e37f;
-    
+
         bool bSuccess = false;
 
         // prioritize the grasps and go through each one
@@ -137,24 +141,24 @@ GraspGradientPlanner(EnvironmentBasePtr penv) : PlannerBase(penv) {
                 vgrasps.back().fgraspdist = fgraspdist;
             }
         }
-    
+
         if( vgrasps.size() == 0 )
             return false;
 
         sort(vgrasps.begin(),vgrasps.end());
-    
-        dReal fConfigThresh = 2.5f; // first search for all grasps whose ik solutions pass this thresh
+
+        dReal fConfigThresh = 2.5f;     // first search for all grasps whose ik solutions pass this thresh
         bool bContinue = true;
         while(bContinue) {
             bContinue = false;
             FOREACH(itgrasp, vgrasps) {
-                if( itgrasp->bProcessed || (itgrasp->bChecked && itgrasp->fgoaldist < 0) )
+                if( itgrasp->bProcessed || (itgrasp->bChecked &&( itgrasp->fgoaldist < 0) ) )
                     continue;
 
                 RAVELOG_DEBUG("attempting grasp %d, %f\n", (int)(itgrasp-vgrasps.begin()), itgrasp->fgraspdist);
                 RAVELOG_DEBUG("trans: %f, %f, %f, %f, %f, %f, %f\n",
-                               itgrasp->tgrasp.rot.x,itgrasp->tgrasp.rot.y,itgrasp->tgrasp.rot.z,itgrasp->tgrasp.rot.w,itgrasp->tgrasp.trans.x,itgrasp->tgrasp.trans.y,itgrasp->tgrasp.trans.z);
-                
+                              itgrasp->tgrasp.rot.x,itgrasp->tgrasp.rot.y,itgrasp->tgrasp.rot.z,itgrasp->tgrasp.rot.w,itgrasp->tgrasp.trans.x,itgrasp->tgrasp.trans.y,itgrasp->tgrasp.trans.z);
+
                 if( StochasticGradientDescent(*itgrasp, fConfigThresh, listpath) ) {
                     listbestpath.swap(listpath);
                     bSuccess = true;
@@ -170,7 +174,7 @@ GraspGradientPlanner(EnvironmentBasePtr penv) : PlannerBase(penv) {
                         listbestpath.swap(listpath);
                     }
                 }
-                else if( itgrasp->bChecked && itgrasp->fgoaldist >= 0 )
+                else if( itgrasp->bChecked &&(itgrasp->fgoaldist >= 0))
                     bContinue = true;
             }
 
@@ -181,21 +185,23 @@ GraspGradientPlanner(EnvironmentBasePtr penv) : PlannerBase(penv) {
         }
 
         FOREACH(it, listbestpath)
-            ptraj->AddPoint(Trajectory::TPOINT(*it,0));
+        ptraj->AddPoint(Trajectory::TPOINT(*it,0));
 
-        RAVELOG_DEBUG(str(boost::format("plan %s, path=%d points in %fs\n")%(bSuccess?"success":"failure")%ptraj->GetPoints().size()%(0.001f*(float)(GetMilliTime()-basetime))));
-    
+        RAVELOG_DEBUG(str(boost::format("plan %s, path=%d points in %fs\n")%(bSuccess ? "success" : "failure")%ptraj->GetPoints().size()%(0.001f*(float)(GetMilliTime()-basetime))));
+
         return bSuccess;
     }
 
-    virtual PlannerParametersConstPtr GetParameters() const { return _parameters; }
-    
+    virtual PlannerParametersConstPtr GetParameters() const {
+        return _parameters;
+    }
+
 private:
     bool StochasticGradientDescent(GraspGradientPlanner::GRASP& g, dReal fGoalThresh, list<vector<dReal> >& listpath)
     {
         vector<dReal> qbest, q(_robot->GetActiveDOF()),qgoaldir;
         listpath.clear();
-        
+
         _parameters->_setstatefn(_parameters->vinitialconfig);
 
         if( g.bChecked ) {
@@ -207,12 +213,12 @@ private:
 
             if( _pmanip->CheckEndEffectorCollision(g.tgrasp, _report) ) {
                 RAVELOG_DEBUG("gripper collision: (%s:%s)x(%s:%s).\n",
-                               !!_report->plink1?_report->plink1->GetParent()->GetName().c_str():"",
-                               !!_report->plink1?_report->plink1->GetName().c_str():"",
-                               !!_report->plink2?_report->plink2->GetParent()->GetName().c_str():"",
-                               !!_report->plink2?_report->plink2->GetName().c_str():"");
-                if( !(!!_report->plink1 && _report->plink1->GetParent() == _parameters->_ptarget) &&
-                    !(!!_report->plink2 && _report->plink2->GetParent() == _parameters->_ptarget) )
+                              !!_report->plink1 ? _report->plink1->GetParent()->GetName().c_str() : "",
+                              !!_report->plink1 ? _report->plink1->GetName().c_str() : "",
+                              !!_report->plink2 ? _report->plink2->GetParent()->GetName().c_str() : "",
+                              !!_report->plink2 ? _report->plink2->GetName().c_str() : "");
+                if( !(!!_report->plink1 &&( _report->plink1->GetParent() == _parameters->_ptarget) ) &&
+                    !(!!_report->plink2 &&( _report->plink2->GetParent() == _parameters->_ptarget) ) )
                     return false;
             }
 
@@ -265,7 +271,7 @@ private:
         qgoaldir.resize(g.qgoal.size());
         for(size_t i = 0; i < g.qgoal.size(); ++i)
             qgoaldir[i] = (g.qgoal[i] - _parameters->vinitialconfig[i])*fdistmult;
-    
+
 
         for(int iter = 0; iter < _parameters->_nMaxIterations; ++iter) {
             dReal fRadius = 0.2f;
@@ -286,11 +292,11 @@ private:
                 if( _parameters->_checkpathconstraintsfn(listpath.back(),q,IT_OpenStart,ConfigurationListPtr()) ) {
                     // if new sample is closer than the best, accept it
                     dReal dist = _parameters->_distmetricfn(q,g.qgoal);
-                    if( qbest.size() == 0 || dist < bestdist ) {
+                    if(( qbest.size() == 0) ||( dist < bestdist) ) {
                         RAVELOG_DEBUG("dist: %f\n",dist);
                         qbest = q;
                         bestdist = dist;
-                        if( giter == 0 ) { // goal reached
+                        if( giter == 0 ) {     // goal reached
                             break;
                         }
                     }
@@ -300,7 +306,7 @@ private:
                 break;
             }
             listpath.push_back(qbest);
-            if( bestdist < 0.0001f ) {// we're done
+            if( bestdist < 0.0001f ) {    // we're done
                 RAVELOG_INFOA("done after %d iters\n", iter);
                 return true;
             }

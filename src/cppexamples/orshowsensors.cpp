@@ -10,7 +10,7 @@
     \image latex showsensors_laser.jpg "Laser Sensor." width=20cm
 
     <b>Full Example Code:</b>
-*/    
+ */
 #include <openrave-core.h>
 #include <vector>
 

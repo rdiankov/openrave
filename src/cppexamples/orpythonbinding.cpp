@@ -4,29 +4,29 @@
     Shows how to creating python bindings with an OpenRAVE C++ plugin. The demo registers a python function to be called inside the environment simulation thread using a Module interface.
 
     The compilation procedure will produce a orpythonbinding shared object or DLL, which can then be directly included into python.
-    
+
     The following python example will register 'mysimfunction' with the enviornment thread, and run it until it returns true.
     \verbatim
-from openravepy import *
-env=openravepy.Environment()
-RaveSetDebugLevel(DebugLevel.Debug)
-import orpythonbinding
-orpythonbinding.Init(RaveGlobalState())
-totaltime = 0
-def mysimfunction(elapsedtime):
+   from openravepy import *
+   env=openravepy.Environment()
+   RaveSetDebugLevel(DebugLevel.Debug)
+   import orpythonbinding
+   orpythonbinding.Init(RaveGlobalState())
+   totaltime = 0
+   def mysimfunction(elapsedtime):
     global totaltime
     totaltime += elapsedtime
     print 'this is the time',totaltime
-    # return True to end the thread
+ # return True to end the thread
     return totaltime > 5
 
-module = orpythonbinding.RegisterSimulationFunction(RaveGetEnvironmentId(env),mysimfunction)
-while True:
+   module = orpythonbinding.RegisterSimulationFunction(RaveGetEnvironmentId(env),mysimfunction)
+   while True:
     sleep(1)
     \endverbatim
 
     <b>Full Example Code:</b>
-*/
+ */
 #include <openrave/openrave.h>
 
 #include <boost/python.hpp>
@@ -49,7 +49,8 @@ using namespace std;
 class FunctionUserData : public UserData
 {
 public:
-    virtual ~FunctionUserData() {}
+    virtual ~FunctionUserData() {
+    }
     boost::python::object simulationfn;
 };
 

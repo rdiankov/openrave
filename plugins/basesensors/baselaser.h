@@ -22,9 +22,10 @@ class BaseLaser2DSensor : public SensorBase
 protected:
     class BaseLaser2DXMLReader : public BaseXMLReader
     {
-    public:
-    BaseLaser2DXMLReader(boost::shared_ptr<BaseLaser2DSensor> psensor) : _psensor(psensor) {}
-        
+public:
+        BaseLaser2DXMLReader(boost::shared_ptr<BaseLaser2DSensor> psensor) : _psensor(psensor) {
+        }
+
         virtual ProcessElement startElement(const std::string& name, const AttributesList& atts)
         {
             if( !!_pcurreader ) {
@@ -32,7 +33,7 @@ protected:
                     return PE_Support;
                 return PE_Ignore;
             }
-            static boost::array<string, 15> tags = {{"sensor", "minangle", "min_angle", "maxangle", "max_angle", "maxrange", "max_range", "minrange", "min_range", "scantime", "color", "time_scan", "time_increment", "power"}};
+            static boost::array<string, 15> tags = { { "sensor", "minangle", "min_angle", "maxangle", "max_angle", "maxrange", "max_range", "minrange", "min_range", "scantime", "color", "time_scan", "time_increment", "power"}};
             if( find(tags.begin(),tags.end(),name) == tags.end() ) {
                 return PE_Pass;
             }
@@ -54,31 +55,31 @@ protected:
             else if( name == "power" ) {
                 ss >> _psensor->_bPower;
             }
-            else if( name == "minangle" || name == "min_angle" ) {
+            else if((name == "minangle")||(name == "min_angle")) {
                 ss >> _psensor->_pgeom->min_angle[0];
                 if( !!ss ) {
-                    _psensor->_pgeom->min_angle[0] *= PI/180.0f; // convert to radians
+                    _psensor->_pgeom->min_angle[0] *= PI/180.0f;         // convert to radians
                 }
             }
-            else if( name == "maxangle" || name == "max_angle" ) {
+            else if((name == "maxangle")||(name == "max_angle")) {
                 ss >> _psensor->_pgeom->max_angle[0];
                 if( !!ss ) {
-                    _psensor->_pgeom->max_angle[0] *= PI/180.0f; // convert to radians
+                    _psensor->_pgeom->max_angle[0] *= PI/180.0f;         // convert to radians
                 }
             }
             else if( name == "resolution" ) {
                 ss >> _psensor->_pgeom->resolution[0];
                 if( !!ss ) {
-                    _psensor->_pgeom->resolution[0] *= PI/180.0f; // convert to radians
+                    _psensor->_pgeom->resolution[0] *= PI/180.0f;         // convert to radians
                 }
             }
-            else if( name == "maxrange" || name == "max_range" ) {
+            else if((name == "maxrange")||(name == "max_range")) {
                 ss >> _psensor->_pgeom->max_range;
             }
-            else if( name == "minrange" || name == "min_range" ) {
+            else if((name == "minrange")||(name == "min_range")) {
                 ss >> _psensor->_pgeom->min_range;
             }
-            else if( name == "scantime" || name == "time_scan" ) {
+            else if((name == "scantime")||(name == "time_scan")) {
                 ss >> _psensor->_pgeom->time_scan;
             }
             else if( name == "time_increment" ) {
@@ -110,7 +111,7 @@ protected:
             }
         }
 
-    protected:
+protected:
         BaseXMLReaderPtr _pcurreader;
         boost::shared_ptr<BaseLaser2DSensor> _psensor;
         stringstream ss;
@@ -122,7 +123,7 @@ public:
         return BaseXMLReaderPtr(new BaseLaser2DXMLReader(boost::dynamic_pointer_cast<BaseLaser2DSensor>(ptr)));
     }
 
- BaseLaser2DSensor(EnvironmentBasePtr penv) : SensorBase(penv) {
+    BaseLaser2DSensor(EnvironmentBasePtr penv) : SensorBase(penv) {
         __description = ":Interface Author: Rosen Diankov\n\nProvides a simulated 2D laser range finder.\n\
 \n\
 .. image:: ../../../images/interface_baselaser.jpg\n\
@@ -132,8 +133,8 @@ public:
                         "Set rendering of the plots (1 or 0).");
         RegisterCommand("collidingbodies",boost::bind(&BaseLaser2DSensor::_CollidingBodies,this,_1,_2),
                         "Returns the ids of the bodies that the laser beams have hit.");
-//        RegisterCommand("GatherData",boost::bind(&BaseLaser2DSensor::_CollidingBodies,this,_1,_2),
-//                        "Controls whether to gather all laser data, or delete the old one after every new scan.");
+        //        RegisterCommand("GatherData",boost::bind(&BaseLaser2DSensor::_CollidingBodies,this,_1,_2),
+        //                        "Controls whether to gather all laser data, or delete the old one after every new scan.");
         _pgeom.reset(new LaserGeomData());
         _pdata.reset(new LaserSensorData());
         _pgeom->min_angle[0] = -PI/2; _pgeom->min_angle[1] = 0;
@@ -149,7 +150,7 @@ public:
         _bRenderGeometry = true;
         _Reset();
     }
-    
+
     virtual int Configure(ConfigureCommand command, bool blocking)
     {
         switch(command) {
@@ -194,11 +195,11 @@ public:
     {
         _RenderGeometry();
         _fTimeToScan -= fTimeElapsed;
-        if( _bPower && _fTimeToScan <= 0 ) {
+        if( _bPower &&( _fTimeToScan <= 0) ) {
             _fTimeToScan = _pgeom->time_scan;
             Vector rotaxis(0,0,1);
             RAY r;
-    
+
             GetEnv()->GetCollisionChecker()->SetCollisionOptions(CO_Distance);
             Transform t;
 
@@ -217,7 +218,7 @@ public:
                     Vector vdir(t.rotate(quatRotate(quatFromAxisAngle(rotaxis, (dReal)frotangle),Vector(1,0,0))));
                     r.pos = t.trans+_pgeom->min_range*vdir;
                     r.dir = (_pgeom->max_range-_pgeom->min_range)*vdir;
-                    
+
                     if( GetEnv()->CheckCollision(r, _report)) {
                         _pdata->ranges[index] = vdir*(_report->minDistance+_pgeom->min_range);
                         _pdata->intensity[index] = 1;
@@ -236,7 +237,7 @@ public:
             }
 
             GetEnv()->GetCollisionChecker()->SetCollisionOptions(0);
-    
+
             if( _bRenderData ) {
                 // If can render, check if some time passed before last update
                 list<GraphHandlePtr> listhandles;
@@ -257,7 +258,7 @@ public:
 
                 // render the transparent fan
                 vindices.resize(3*(N-1));
-            
+
                 for(int i = 0; i < N-1; ++i) {
                     vindices[3*i+0] = i;
                     vindices[3*i+1] = i+1;
@@ -267,10 +268,10 @@ public:
                 _vColor.w = 1;
                 // Render points at each measurement, and a triangle fan for the entire free surface of the laser
                 listhandles.push_back(GetEnv()->plot3(&vpoints[0].x, N, sizeof(vpoints[0]), 5.0f, _vColor));
-            
+
                 _vColor.w = 0.2f;
                 listhandles.push_back(GetEnv()->drawtrimesh(vpoints[0], sizeof(vpoints[0]), &vindices[0], N-1, _vColor));
-            
+
                 // close the old graphs last to avoid flickering
                 _listGraphicsHandles.swap(listhandles);
 
@@ -287,7 +288,7 @@ public:
 
     virtual SensorGeometryPtr GetSensorGeometry(SensorType type)
     {
-        if( type == ST_Invalid || type == ST_Laser ) {
+        if(( type == ST_Invalid) ||( type == ST_Laser) ) {
             LaserGeomData* pgeom = new LaserGeomData();
             *pgeom = *_pgeom;
             return SensorGeometryPtr(pgeom);
@@ -297,7 +298,7 @@ public:
 
     virtual SensorDataPtr CreateSensorData(SensorType type)
     {
-        if( type == ST_Invalid || type == ST_Laser ) {
+        if(( type == ST_Invalid) ||( type == ST_Laser) ) {
             return SensorDataPtr(new LaserSensorData());
         }
         return SensorDataPtr();
@@ -313,7 +314,9 @@ public:
         return false;
     }
 
-    virtual bool Supports(SensorType type) { return type == ST_Laser; }
+    virtual bool Supports(SensorType type) {
+        return type == ST_Laser;
+    }
 
     bool _Render(ostream& sout, istream& sinput)
     {
@@ -334,7 +337,9 @@ public:
         _trans = trans;
     }
 
-    virtual Transform GetTransform() { return _trans; }
+    virtual Transform GetTransform() {
+        return _trans;
+    }
 
     virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     {
@@ -352,7 +357,9 @@ public:
 
 protected:
 
-    virtual Transform GetLaserPlaneTransform() { return _trans; }
+    virtual Transform GetLaserPlaneTransform() {
+        return _trans;
+    }
 
     virtual void _Reset()
     {
@@ -411,7 +418,7 @@ protected:
 
     boost::shared_ptr<LaserGeomData> _pgeom;
     boost::shared_ptr<LaserSensorData> _pdata;
-    vector<int> _databodyids; ///< if non 0, for each point in _data, specifies the body that was hit
+    vector<int> _databodyids;     ///< if non 0, for each point in _data, specifies the body that was hit
     CollisionReportPtr _report;
 
     // more geom stuff
@@ -433,8 +440,9 @@ class BaseSpinningLaser2DSensor : public BaseLaser2DSensor
 protected:
     class BaseSpinningLaser2DXMLReader : public BaseLaser2DXMLReader
     {
-    public:
-  BaseSpinningLaser2DXMLReader(boost::shared_ptr<BaseSpinningLaser2DSensor> psensor) : BaseLaser2DXMLReader(psensor), _bProcessing(false) {}
+public:
+        BaseSpinningLaser2DXMLReader(boost::shared_ptr<BaseSpinningLaser2DSensor> psensor) : BaseLaser2DXMLReader(psensor), _bProcessing(false) {
+        }
 
         virtual ProcessElement startElement(const std::string& name, const AttributesList& atts)
         {
@@ -442,9 +450,9 @@ protected:
                 return PE_Ignore;
             }
             switch( BaseLaser2DXMLReader::startElement(name,atts) ) {
-                case PE_Pass: break;
-                case PE_Support: return PE_Support;
-                case PE_Ignore: return PE_Ignore;
+            case PE_Pass: break;
+            case PE_Support: return PE_Support;
+            case PE_Ignore: return PE_Ignore;
             }
 
             _bProcessing = name == "spinaxis" || name == "spinpos" || name == "spinspeed";
@@ -455,7 +463,7 @@ protected:
         {
             if( _bProcessing ) {
                 boost::shared_ptr<BaseSpinningLaser2DSensor> psensor = boost::dynamic_pointer_cast<BaseSpinningLaser2DSensor>(_psensor);
-            
+
                 if( name == "spinaxis" ) {
                     ss >> psensor->_vGeomSpinAxis.x >> psensor->_vGeomSpinAxis.y >> psensor->_vGeomSpinAxis.z;
                 }
@@ -477,24 +485,24 @@ protected:
             return BaseLaser2DXMLReader::endElement(name);
         }
 
-  private:
+private:
         bool _bProcessing;
     };
-        
+
     class SpinningLaserGeomData : public LaserGeomData
     {
-    public:
+public:
         dReal fSpinSpeed;
         Vector vSpinAxis, vSpinPos;
     };
-    
+
 public:
     static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const AttributesList& atts)
     {
         return BaseXMLReaderPtr(new BaseSpinningLaser2DXMLReader(boost::dynamic_pointer_cast<BaseSpinningLaser2DSensor>(ptr)));
     }
 
- BaseSpinningLaser2DSensor(EnvironmentBasePtr penv) : BaseLaser2DSensor(penv) {
+    BaseSpinningLaser2DSensor(EnvironmentBasePtr penv) : BaseLaser2DSensor(penv) {
         __description = ":Interface Author: Rosen Diankov\n\nProvides a simulated spinning 2D laser range finder. Includes all the XML parameters from :ref:`sensor-baselaser2d` along with:\n\
 * spinaxis - the second axis to spin on\n\
 * spinpos - center of rotation of second spin axis\n\
@@ -507,7 +515,7 @@ public:
         _vGeomSpinAxis = Vector(1,0,0);
         _fCurAngle = 0;
     }
-    
+
     virtual bool SimulationStep(dReal fTimeElapsed)
     {
         if( _bPower ) {

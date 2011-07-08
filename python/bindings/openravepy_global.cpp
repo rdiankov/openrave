@@ -23,11 +23,19 @@ PyRay::PyRay(object newpos, object newdir)
     r.dir = ExtractVector3(newdir);
 }
 
-object PyRay::dir() { return toPyVector3(r.dir); }
-object PyRay::pos() { return toPyVector3(r.pos); }
+object PyRay::dir() {
+    return toPyVector3(r.dir);
+}
+object PyRay::pos() {
+    return toPyVector3(r.pos);
+}
 
-string PyRay::__repr__() { return boost::str(boost::format("<Ray([%f,%f,%f],[%f,%f,%f])>")%r.pos.x%r.pos.y%r.pos.z%r.dir.x%r.dir.y%r.dir.z); }
-string PyRay::__str__() { return boost::str(boost::format("<%f %f %f %f %f %f>")%r.pos.x%r.pos.y%r.pos.z%r.dir.x%r.dir.y%r.dir.z); }
+string PyRay::__repr__() {
+    return boost::str(boost::format("<Ray([%f,%f,%f],[%f,%f,%f])>")%r.pos.x%r.pos.y%r.pos.z%r.dir.x%r.dir.y%r.dir.z);
+}
+string PyRay::__str__() {
+    return boost::str(boost::format("<%f %f %f %f %f %f>")%r.pos.x%r.pos.y%r.pos.z%r.dir.x%r.dir.y%r.dir.z);
+}
 
 object toPyGraphHandle(const GraphHandlePtr p)
 {
@@ -70,18 +78,28 @@ public:
 class PyAABB
 {
 public:
-    PyAABB() {}
+    PyAABB() {
+    }
     PyAABB(object newpos, object newextents) {
         ab.pos = ExtractVector3(newpos);
         ab.extents = ExtractVector3(newextents);
     }
-    PyAABB(const AABB& newab) : ab(newab) {}
+    PyAABB(const AABB& newab) : ab(newab) {
+    }
 
-    object extents() { return toPyVector3(ab.extents); }
-    object pos() { return toPyVector3(ab.pos); }
+    object extents() {
+        return toPyVector3(ab.extents);
+    }
+    object pos() {
+        return toPyVector3(ab.pos);
+    }
 
-    virtual string __repr__() { return boost::str(boost::format("<AABB([%f,%f,%f],[%f,%f,%f])>")%ab.pos.x%ab.pos.y%ab.pos.z%ab.extents.x%ab.extents.y%ab.extents.z); }
-    virtual string __str__() { return boost::str(boost::format("<%f %f %f %f %f %f>")%ab.pos.x%ab.pos.y%ab.pos.z%ab.extents.x%ab.extents.y%ab.extents.z); }
+    virtual string __repr__() {
+        return boost::str(boost::format("<AABB([%f,%f,%f],[%f,%f,%f])>")%ab.pos.x%ab.pos.y%ab.pos.z%ab.extents.x%ab.extents.y%ab.extents.z);
+    }
+    virtual string __str__() {
+        return boost::str(boost::format("<%f %f %f %f %f %f>")%ab.pos.x%ab.pos.y%ab.pos.z%ab.extents.x%ab.extents.y%ab.extents.z);
+    }
 
     AABB ab;
 };
@@ -103,11 +121,13 @@ public:
 class PyTriMesh
 {
 public:
-    PyTriMesh() {}
-    PyTriMesh(object vertices, object indices) : vertices(vertices), indices(indices) {}
+    PyTriMesh() {
+    }
+    PyTriMesh(object vertices, object indices) : vertices(vertices), indices(indices) {
+    }
     PyTriMesh(const KinBody::Link::TRIMESH& mesh) {
-        npy_intp dims[] = {mesh.vertices.size(),3};
-        PyObject *pyvertices = PyArray_SimpleNew(2,dims, sizeof(dReal)==8?PyArray_DOUBLE:PyArray_FLOAT);
+        npy_intp dims[] = { mesh.vertices.size(),3};
+        PyObject *pyvertices = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
         dReal* pvdata = (dReal*)PyArray_DATA(pyvertices);
         FOREACHC(itv, mesh.vertices) {
             *pvdata++ = itv->x;
@@ -121,7 +141,7 @@ public:
         PyObject *pyindices = PyArray_SimpleNew(2,dims, PyArray_INT);
         int* pidata = (int*)PyArray_DATA(pyindices);
         FOREACHC(it, mesh.indices)
-            *pidata++ = *it;
+        *pidata++ = *it;
         indices = static_cast<numeric::array>(handle<>(pyindices));
     }
 
@@ -145,7 +165,9 @@ public:
         }
     }
 
-    string __str__() { return boost::str(boost::format("<trimesh: verts %d, tris=%d>")%len(vertices)%len(indices)); }
+    string __str__() {
+        return boost::str(boost::format("<trimesh: verts %d, tris=%d>")%len(vertices)%len(indices));
+    }
 
     object vertices,indices;
 };
@@ -177,7 +199,8 @@ public:
 class PyIkParameterization
 {
 public:
-    PyIkParameterization() {}
+    PyIkParameterization() {
+    }
     PyIkParameterization(const string& s) {
         stringstream ss(s);
         ss >> _param;
@@ -198,31 +221,74 @@ public:
         default: throw OPENRAVE_EXCEPTION_FORMAT("incorrect ik parameterization type 0x%x", type, ORE_InvalidArguments);
         }
     }
-    PyIkParameterization(const IkParameterization& ikparam) : _param(ikparam) {}
+    PyIkParameterization(const IkParameterization& ikparam) : _param(ikparam) {
+    }
 
-    IkParameterization::Type GetType() { return _param.GetType(); }
+    IkParameterization::Type GetType() {
+        return _param.GetType();
+    }
 
-    void SetTransform6D(object o) { _param.SetTransform6D(ExtractTransform(o)); }
-    void SetRotation3D(object o) { _param.SetRotation3D(ExtractVector4(o)); }
-    void SetTranslation3D(object o) { _param.SetTranslation3D(ExtractVector3(o)); }
-    void SetDirection3D(object o) { _param.SetDirection3D(ExtractVector3(o)); }
-    void SetRay4D(boost::shared_ptr<PyRay> ray) { _param.SetRay4D(ray->r); }
-    void SetLookat3D(object o) { _param.SetLookat3D(ExtractVector3(o)); }
-    void SetTranslationDirection5D(boost::shared_ptr<PyRay> ray) { _param.SetTranslationDirection5D(ray->r); }
-    void SetTranslationXY2D(object o) { _param.SetTranslationXY2D(ExtractVector2(o)); }
-    void SetTranslationXYOrientation3D(object o) { _param.SetTranslationXYOrientation3D(ExtractVector3(o)); }
-    void SetTranslationLocalGlobal6D(object olocaltrans, object otrans) { _param.SetTranslationLocalGlobal6D(ExtractVector3(olocaltrans),ExtractVector3(otrans)); }
+    void SetTransform6D(object o) {
+        _param.SetTransform6D(ExtractTransform(o));
+    }
+    void SetRotation3D(object o) {
+        _param.SetRotation3D(ExtractVector4(o));
+    }
+    void SetTranslation3D(object o) {
+        _param.SetTranslation3D(ExtractVector3(o));
+    }
+    void SetDirection3D(object o) {
+        _param.SetDirection3D(ExtractVector3(o));
+    }
+    void SetRay4D(boost::shared_ptr<PyRay> ray) {
+        _param.SetRay4D(ray->r);
+    }
+    void SetLookat3D(object o) {
+        _param.SetLookat3D(ExtractVector3(o));
+    }
+    void SetTranslationDirection5D(boost::shared_ptr<PyRay> ray) {
+        _param.SetTranslationDirection5D(ray->r);
+    }
+    void SetTranslationXY2D(object o) {
+        _param.SetTranslationXY2D(ExtractVector2(o));
+    }
+    void SetTranslationXYOrientation3D(object o) {
+        _param.SetTranslationXYOrientation3D(ExtractVector3(o));
+    }
+    void SetTranslationLocalGlobal6D(object olocaltrans, object otrans) {
+        _param.SetTranslationLocalGlobal6D(ExtractVector3(olocaltrans),ExtractVector3(otrans));
+    }
 
-    object GetTransform6D() { return ReturnTransform(_param.GetTransform6D()); }
-    object GetRotation3D() { return toPyVector4(_param.GetRotation3D()); }
-    object GetTranslation3D() { return toPyVector3(_param.GetTranslation3D()); }
-    object GetDirection3D() { return toPyVector3(_param.GetDirection3D()); }
-    PyRay GetRay4D() { return PyRay(_param.GetRay4D()); }
-    object GetLookat3D() { return toPyVector3(_param.GetLookat3D()); }
-    PyRay GetTranslationDirection5D() { return PyRay(_param.GetTranslationDirection5D()); }
-    object GetTranslationXY2D() { return toPyVector2(_param.GetTranslationXY2D()); }
-    object GetTranslationXYOrientation3D() { return toPyVector3(_param.GetTranslationXYOrientation3D()); }
-    object GetTranslationLocalGlobal6D() { return boost::python::make_tuple(toPyVector3(_param.GetTranslationLocalGlobal6D().first),toPyVector3(_param.GetTranslationLocalGlobal6D().second)); }
+    object GetTransform6D() {
+        return ReturnTransform(_param.GetTransform6D());
+    }
+    object GetRotation3D() {
+        return toPyVector4(_param.GetRotation3D());
+    }
+    object GetTranslation3D() {
+        return toPyVector3(_param.GetTranslation3D());
+    }
+    object GetDirection3D() {
+        return toPyVector3(_param.GetDirection3D());
+    }
+    PyRay GetRay4D() {
+        return PyRay(_param.GetRay4D());
+    }
+    object GetLookat3D() {
+        return toPyVector3(_param.GetLookat3D());
+    }
+    PyRay GetTranslationDirection5D() {
+        return PyRay(_param.GetTranslationDirection5D());
+    }
+    object GetTranslationXY2D() {
+        return toPyVector2(_param.GetTranslationXY2D());
+    }
+    object GetTranslationXYOrientation3D() {
+        return toPyVector3(_param.GetTranslationXYOrientation3D());
+    }
+    object GetTranslationLocalGlobal6D() {
+        return boost::python::make_tuple(toPyVector3(_param.GetTranslationLocalGlobal6D().first),toPyVector3(_param.GetTranslationLocalGlobal6D().second));
+    }
 
     dReal ComputeDistanceSqr(boost::shared_ptr<PyIkParameterization> pyikparam)
     {
@@ -233,13 +299,13 @@ public:
 
     string __repr__() {
         stringstream ss;
-        ss << std::setprecision(std::numeric_limits<dReal>::digits10+1); /// have to do this or otherwise precision gets lost
+        ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
         ss << _param;
         return boost::str(boost::format("<IkParameterization('%s')>")%ss.str());
     }
     string __str__() {
         stringstream ss;
-        ss << std::setprecision(std::numeric_limits<dReal>::digits10+1); /// have to do this or otherwise precision gets lost
+        ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
         ss << _param;
         return ss.str();
     }
@@ -265,7 +331,22 @@ class IkParameterization_pickle_suite : public pickle_suite
 public:
     static tuple getinitargs(const PyIkParameterization& r)
     {
-        return boost::python::make_tuple(r._param.GetTransform6D(),r._param.GetType());
+        object o;
+        switch(r._param.GetType()) {
+        case IkParameterization::Type_Transform6D: o = toPyArray(r._param.GetTransform6D()); break;
+        case IkParameterization::Type_Rotation3D: o = toPyVector4(r._param.GetRotation3D()); break;
+        case IkParameterization::Type_Translation3D: o = toPyVector3(r._param.GetTranslation3D()); break;
+        case IkParameterization::Type_Direction3D: o = toPyVector4(r._param.GetDirection3D()); break;
+        case IkParameterization::Type_Ray4D: return boost::python::make_tuple(r._param.GetRay4D(),r._param.GetType());
+        case IkParameterization::Type_Lookat3D: o = toPyVector3(r._param.GetLookat3D()); break;
+        case IkParameterization::Type_TranslationDirection5D: return boost::python::make_tuple(r._param.GetTranslationDirection5D(),r._param.GetType());
+        case IkParameterization::Type_TranslationXY2D: o = toPyVector3(r._param.GetTranslationXY2D()); break;
+        case IkParameterization::Type_TranslationXYOrientation3D: o = toPyVector3(r._param.GetTranslationXYOrientation3D()); break;
+        case IkParameterization::Type_TranslationLocalGlobal6D: o = boost::python::make_tuple(toPyVector3(r._param.GetTranslationLocalGlobal6D().first), toPyVector3(r._param.GetTranslationLocalGlobal6D().second)); break;
+        default: throw OPENRAVE_EXCEPTION_FORMAT("incorrect ik parameterization type 0x%x", r._param.GetType(), ORE_InvalidArguments);
+        }
+
+        return boost::python::make_tuple(o,r._param.GetType());
     }
 };
 
@@ -453,8 +534,8 @@ object poseFromMatrices(object otransforms)
     if( N == 0 ) {
         return static_cast<numeric::array>(handle<>());
     }
-    npy_intp dims[] = {N,7};
-    PyObject *pyvalues = PyArray_SimpleNew(2,dims, sizeof(dReal)==8?PyArray_DOUBLE:PyArray_FLOAT);
+    npy_intp dims[] = { N,7};
+    PyObject *pyvalues = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
     dReal* pvalues = (dReal*)PyArray_DATA(pyvalues);
     TransformMatrix tm;
     for(int j = 0; j < N; ++j) {
@@ -479,8 +560,8 @@ object invertPoses(object o)
     if( N == 0 ) {
         return numeric::array(boost::python::list());
     }
-    npy_intp dims[] = {N,7};
-    PyObject *pytrans = PyArray_SimpleNew(2,dims, sizeof(dReal)==8?PyArray_DOUBLE:PyArray_FLOAT);
+    npy_intp dims[] = { N,7};
+    PyObject *pytrans = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
     dReal* ptrans = (dReal*)PyArray_DATA(pytrans);
     for(int i = 0; i < N; ++i, ptrans += 7) {
         object oinputtrans = o[i];
@@ -517,8 +598,8 @@ object poseTransformPoints(object opose, object opoints)
 {
     Transform t = ExtractTransformType<dReal>(opose);
     int N = len(opoints);
-    npy_intp dims[] = {N,3};
-    PyObject *pytrans = PyArray_SimpleNew(2,dims, sizeof(dReal)==8?PyArray_DOUBLE:PyArray_FLOAT);
+    npy_intp dims[] = { N,3};
+    PyObject *pytrans = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
     dReal* ptrans = (dReal*)PyArray_DATA(pytrans);
     for(int i = 0; i < N; ++i, ptrans += 3) {
         Vector newpoint = t*ExtractVector3(opoints[i]);
@@ -549,186 +630,185 @@ BOOST_PYTHON_FUNCTION_OVERLOADS(RaveInitialize_overloads, RaveInitialize, 0, 2)
 void init_openravepy_global()
 {
     enum_<DebugLevel>("DebugLevel" DOXY_ENUM(DebugLevel))
-        .value("Fatal",Level_Fatal)
-        .value("Error",Level_Error)
-        .value("Warn",Level_Warn)
-        .value("Info",Level_Info)
-        .value("Debug",Level_Debug)
-        .value("Verbose",Level_Verbose)
-        .value("VerifyPlans",Level_VerifyPlans)
-        ;
+    .value("Fatal",Level_Fatal)
+    .value("Error",Level_Error)
+    .value("Warn",Level_Warn)
+    .value("Info",Level_Info)
+    .value("Debug",Level_Debug)
+    .value("Verbose",Level_Verbose)
+    .value("VerifyPlans",Level_VerifyPlans)
+    ;
     enum_<SerializationOptions>("SerializationOptions" DOXY_ENUM(SerializationOptions))
-        .value("Kinematics",SO_Kinematics)
-        .value("Dynamics",SO_Dynamics)
-        .value("BodyState",SO_BodyState)
-        .value("NamesAndFiles",SO_NamesAndFiles)
-        .value("RobotManipulators",SO_RobotManipulators)
-        .value("RobotSensors",SO_RobotSensors)
-        .value("Geometry",SO_Geometry)
-        ;
+    .value("Kinematics",SO_Kinematics)
+    .value("Dynamics",SO_Dynamics)
+    .value("BodyState",SO_BodyState)
+    .value("NamesAndFiles",SO_NamesAndFiles)
+    .value("RobotManipulators",SO_RobotManipulators)
+    .value("RobotSensors",SO_RobotSensors)
+    .value("Geometry",SO_Geometry)
+    ;
     enum_<InterfaceType>("InterfaceType" DOXY_ENUM(InterfaceType))
-        .value(RaveGetInterfaceName(PT_Planner).c_str(),PT_Planner)
-        .value(RaveGetInterfaceName(PT_Robot).c_str(),PT_Robot)
-        .value(RaveGetInterfaceName(PT_SensorSystem).c_str(),PT_SensorSystem)
-        .value(RaveGetInterfaceName(PT_Controller).c_str(),PT_Controller)
-        .value("probleminstance",PT_Module)
-        .value(RaveGetInterfaceName(PT_Module).c_str(),PT_Module)
-        .value(RaveGetInterfaceName(PT_IkSolver).c_str(),PT_IkSolver)
-        .value(RaveGetInterfaceName(PT_KinBody).c_str(),PT_KinBody)
-        .value(RaveGetInterfaceName(PT_PhysicsEngine).c_str(),PT_PhysicsEngine)
-        .value(RaveGetInterfaceName(PT_Sensor).c_str(),PT_Sensor)
-        .value(RaveGetInterfaceName(PT_CollisionChecker).c_str(),PT_CollisionChecker)
-        .value(RaveGetInterfaceName(PT_Trajectory).c_str(),PT_Trajectory)
-        .value(RaveGetInterfaceName(PT_Viewer).c_str(),PT_Viewer)
-        .value(RaveGetInterfaceName(PT_SpaceSampler).c_str(),PT_SpaceSampler)
-        ;
+    .value(RaveGetInterfaceName(PT_Planner).c_str(),PT_Planner)
+    .value(RaveGetInterfaceName(PT_Robot).c_str(),PT_Robot)
+    .value(RaveGetInterfaceName(PT_SensorSystem).c_str(),PT_SensorSystem)
+    .value(RaveGetInterfaceName(PT_Controller).c_str(),PT_Controller)
+    .value("probleminstance",PT_Module)
+    .value(RaveGetInterfaceName(PT_Module).c_str(),PT_Module)
+    .value(RaveGetInterfaceName(PT_IkSolver).c_str(),PT_IkSolver)
+    .value(RaveGetInterfaceName(PT_KinBody).c_str(),PT_KinBody)
+    .value(RaveGetInterfaceName(PT_PhysicsEngine).c_str(),PT_PhysicsEngine)
+    .value(RaveGetInterfaceName(PT_Sensor).c_str(),PT_Sensor)
+    .value(RaveGetInterfaceName(PT_CollisionChecker).c_str(),PT_CollisionChecker)
+    .value(RaveGetInterfaceName(PT_Trajectory).c_str(),PT_Trajectory)
+    .value(RaveGetInterfaceName(PT_Viewer).c_str(),PT_Viewer)
+    .value(RaveGetInterfaceName(PT_SpaceSampler).c_str(),PT_SpaceSampler)
+    ;
     enum_<CollisionOptions>("CollisionOptions" DOXY_ENUM(CollisionOptions))
-        .value("Distance",CO_Distance)
-        .value("UseTolerance",CO_UseTolerance)
-        .value("Contacts",CO_Contacts)
-        .value("RayAnyHit",CO_RayAnyHit)
-        .value("ActiveDOFs",CO_ActiveDOFs);
-        ;
+    .value("Distance",CO_Distance)
+    .value("UseTolerance",CO_UseTolerance)
+    .value("Contacts",CO_Contacts)
+    .value("RayAnyHit",CO_RayAnyHit)
+    .value("ActiveDOFs",CO_ActiveDOFs);
     enum_<CollisionAction>("CollisionAction" DOXY_ENUM(CollisionAction))
-        .value("DefaultAction",CA_DefaultAction)
-        .value("Ignore",CA_Ignore)
-        ;
+    .value("DefaultAction",CA_DefaultAction)
+    .value("Ignore",CA_Ignore)
+    ;
     enum_<CloningOptions>("CloningOptions" DOXY_ENUM(CloningOptions))
-        .value("Bodies",Clone_Bodies)
-        .value("Viewer",Clone_Viewer)
-        .value("Simulation",Clone_Simulation)
-        .value("RealControllers",Clone_RealControllers)
-        .value("Sensors",Clone_Sensors)
-        ;
+    .value("Bodies",Clone_Bodies)
+    .value("Viewer",Clone_Viewer)
+    .value("Simulation",Clone_Simulation)
+    .value("RealControllers",Clone_RealControllers)
+    .value("Sensors",Clone_Sensors)
+    ;
     enum_<PhysicsEngineOptions>("PhysicsEngineOptions" DOXY_ENUM(PhysicsEngineOptions))
-        .value("SelfCollisions",PEO_SelfCollisions)
-        ;
+    .value("SelfCollisions",PEO_SelfCollisions)
+    ;
     enum_<IkFilterOptions>("IkFilterOptions" DOXY_ENUM(IkFilterOptions))
-        .value("CheckEnvCollisions",IKFO_CheckEnvCollisions)
-        .value("IgnoreSelfCollisions",IKFO_IgnoreSelfCollisions)
-        .value("IgnoreJointLimits",IKFO_IgnoreJointLimits)
-        .value("IgnoreCustomFilter",IKFO_IgnoreCustomFilter)
-        ;
+    .value("CheckEnvCollisions",IKFO_CheckEnvCollisions)
+    .value("IgnoreSelfCollisions",IKFO_IgnoreSelfCollisions)
+    .value("IgnoreJointLimits",IKFO_IgnoreJointLimits)
+    .value("IgnoreCustomFilter",IKFO_IgnoreCustomFilter)
+    ;
     enum_<IkFilterReturn>("IkFilterReturn" DOXY_ENUM(IkFilterReturn))
-        .value("Success",IKFR_Success)
-        .value("Reject",IKFR_Reject)
-        .value("Quit",IKFR_Quit)
-        ;
+    .value("Success",IKFR_Success)
+    .value("Reject",IKFR_Reject)
+    .value("Quit",IKFR_Quit)
+    ;
     enum_<IntervalType>("Interval" DOXY_ENUM(IntervalType))
-        .value("Open",IT_Open)
-        .value("OpenStart",IT_OpenStart)
-        .value("OpenEnd",IT_OpenEnd)
-        .value("Closed",IT_Closed)
-        ;
+    .value("Open",IT_Open)
+    .value("OpenStart",IT_OpenStart)
+    .value("OpenEnd",IT_OpenEnd)
+    .value("Closed",IT_Closed)
+    ;
     enum_<SampleDataType>("SampleDataType" DOXY_ENUM(SampleDataType))
-        .value("Real",SDT_Real)
-        .value("Uint32",SDT_Uint32)
-        ;
+    .value("Real",SDT_Real)
+    .value("Uint32",SDT_Uint32)
+    ;
     object iktype = enum_<IkParameterization::Type>("IkParameterizationType" DOXY_ENUM(IkParameterization::Type))
-        .value("Transform6D",IkParameterization::Type_Transform6D)
-        .value("Rotation3D",IkParameterization::Type_Rotation3D)
-        .value("Translation3D",IkParameterization::Type_Translation3D)
-        .value("Direction3D",IkParameterization::Type_Direction3D)
-        .value("Ray4D",IkParameterization::Type_Ray4D)
-        .value("Lookat3D",IkParameterization::Type_Lookat3D)
-        .value("TranslationDirection5D",IkParameterization::Type_TranslationDirection5D)
-        .value("TranslationXY2D",IkParameterization::Type_TranslationXY2D)
-        .value("TranslationXYOrientation3D",IkParameterization::Type_TranslationXYOrientation3D)
-        .value("TranslationLocalGlobal6D",IkParameterization::Type_TranslationLocalGlobal6D)
-        ;
+                    .value("Transform6D",IkParameterization::Type_Transform6D)
+                    .value("Rotation3D",IkParameterization::Type_Rotation3D)
+                    .value("Translation3D",IkParameterization::Type_Translation3D)
+                    .value("Direction3D",IkParameterization::Type_Direction3D)
+                    .value("Ray4D",IkParameterization::Type_Ray4D)
+                    .value("Lookat3D",IkParameterization::Type_Lookat3D)
+                    .value("TranslationDirection5D",IkParameterization::Type_TranslationDirection5D)
+                    .value("TranslationXY2D",IkParameterization::Type_TranslationXY2D)
+                    .value("TranslationXYOrientation3D",IkParameterization::Type_TranslationXYOrientation3D)
+                    .value("TranslationLocalGlobal6D",IkParameterization::Type_TranslationLocalGlobal6D)
+    ;
 
     class_<UserData, UserDataPtr >("UserData", DOXY_CLASS(UserData))
-        ;
+    ;
 
     class_< boost::shared_ptr< void > >("VoidPointer", "Holds auto-managed resources, deleting it releases its shared data.");
 
     class_<PyGraphHandle, boost::shared_ptr<PyGraphHandle> >("GraphHandle", DOXY_CLASS(GraphHandle), no_init)
-        .def("SetTransform",&PyGraphHandle::SetTransform,DOXY_FN(GraphHandle,SetTransform))
-        .def("SetShow",&PyGraphHandle::SetShow,DOXY_FN(GraphHandle,SetShow))
-        ;
+    .def("SetTransform",&PyGraphHandle::SetTransform,DOXY_FN(GraphHandle,SetTransform))
+    .def("SetShow",&PyGraphHandle::SetShow,DOXY_FN(GraphHandle,SetShow))
+    ;
     class_<PyRay, boost::shared_ptr<PyRay> >("Ray", DOXY_CLASS(geometry::ray))
-        .def(init<object,object>(args("pos","dir")))
-        .def("dir",&PyRay::dir)
-        .def("pos",&PyRay::pos)
-        .def("__str__",&PyRay::__str__)
-        .def("__repr__",&PyRay::__repr__)
-        .def_pickle(Ray_pickle_suite())
-        ;
+    .def(init<object,object>(args("pos","dir")))
+    .def("dir",&PyRay::dir)
+    .def("pos",&PyRay::pos)
+    .def("__str__",&PyRay::__str__)
+    .def("__repr__",&PyRay::__repr__)
+    .def_pickle(Ray_pickle_suite())
+    ;
     class_<PyAABB, boost::shared_ptr<PyAABB> >("AABB", DOXY_CLASS(geometry::aabb))
-        .def(init<object,object>(args("pos","extents")))
-        .def("extents",&PyAABB::extents)
-        .def("pos",&PyAABB::pos)
-        .def("__str__",&PyAABB::__str__)
-        .def("__repr__",&PyAABB::__repr__)
-        .def_pickle(AABB_pickle_suite())
-        ;
+    .def(init<object,object>(args("pos","extents")))
+    .def("extents",&PyAABB::extents)
+    .def("pos",&PyAABB::pos)
+    .def("__str__",&PyAABB::__str__)
+    .def("__repr__",&PyAABB::__repr__)
+    .def_pickle(AABB_pickle_suite())
+    ;
     class_<PyTriMesh, boost::shared_ptr<PyTriMesh> >("TriMesh", DOXY_CLASS(KinBody::Link::TRIMESH))
-        .def(init<object,object>(args("vertices","indices")))
-        .def_readwrite("vertices",&PyTriMesh::vertices)
-        .def_readwrite("indices",&PyTriMesh::indices)
-        .def("__str__",&PyTriMesh::__str__)
-        .def_pickle(TriMesh_pickle_suite())
-        ;
+    .def(init<object,object>(args("vertices","indices")))
+    .def_readwrite("vertices",&PyTriMesh::vertices)
+    .def_readwrite("indices",&PyTriMesh::indices)
+    .def("__str__",&PyTriMesh::__str__)
+    .def_pickle(TriMesh_pickle_suite())
+    ;
     class_<InterfaceBase, InterfaceBasePtr, boost::noncopyable >("InterfaceBase", DOXY_CLASS(InterfaceBase), no_init)
-        ;
+    ;
 
     class_<PyPluginInfo, boost::shared_ptr<PyPluginInfo> >("PluginInfo", DOXY_CLASS(PLUGININFO),no_init)
-        .def_readonly("interfacenames",&PyPluginInfo::interfacenames)
-        .def_readonly("version",&PyPluginInfo::version)
-        ;
+    .def_readonly("interfacenames",&PyPluginInfo::interfacenames)
+    .def_readonly("version",&PyPluginInfo::version)
+    ;
 
     {
         int (*getdof1)(IkParameterization::Type) = &IkParameterization::GetDOF;
         int (*getnumberofvalues1)(IkParameterization::Type) = &IkParameterization::GetNumberOfValues;
         scope ikparameterization = class_<PyIkParameterization, boost::shared_ptr<PyIkParameterization> >("IkParameterization", DOXY_CLASS(IkParameterization))
-            .def(init<object,IkParameterization::Type>(args("primitive","type")))
-            .def(init<string>(args("str")))
-            .def("GetType",&PyIkParameterization::GetType, DOXY_FN(IkParameterization,GetType))
-            .def("SetTransform6D",&PyIkParameterization::SetTransform6D,args("transform"), DOXY_FN(IkParameterization,SetTransform6D))
-            .def("SetRotation3D",&PyIkParameterization::SetRotation3D,args("quat"), DOXY_FN(IkParameterization,SetRotation3D))
-            .def("SetTranslation3D",&PyIkParameterization::SetTranslation3D,args("pos"), DOXY_FN(IkParameterization,SetTranslation3D))
-            .def("SetDirection3D",&PyIkParameterization::SetDirection3D,args("dir"), DOXY_FN(IkParameterization,SetDirection3D))
-            .def("SetRay4D",&PyIkParameterization::SetRay4D,args("quat"), DOXY_FN(IkParameterization,SetRay4D))
-            .def("SetLookat3D",&PyIkParameterization::SetLookat3D,args("pos"), DOXY_FN(IkParameterization,SetLookat3D))
-            .def("SetTranslationDirection5D",&PyIkParameterization::SetTranslationDirection5D,args("quat"), DOXY_FN(IkParameterization,SetTranslationDirection5D))
-            .def("SetTranslationXY2D",&PyIkParameterization::SetTranslationXY2D,args("pos"), DOXY_FN(IkParameterization,SetTranslationXY2D))
-            .def("SetTranslationXYOrientation3D",&PyIkParameterization::SetTranslationXYOrientation3D,args("posangle"), DOXY_FN(IkParameterization,SetTranslationXYOrientation3D))
-            .def("SetTranslationLocalGlobal6D",&PyIkParameterization::SetTranslationLocalGlobal6D,args("localpos","pos"), DOXY_FN(IkParameterization,SetTranslationLocalGlobal6D))
-            .def("GetTransform6D",&PyIkParameterization::GetTransform6D, DOXY_FN(IkParameterization,GetTransform6D))
-            .def("GetRotation3D",&PyIkParameterization::GetRotation3D, DOXY_FN(IkParameterization,GetRotation3D))
-            .def("GetTranslation3D",&PyIkParameterization::GetTranslation3D, DOXY_FN(IkParameterization,GetTranslation3D))
-            .def("GetDirection3D",&PyIkParameterization::GetDirection3D, DOXY_FN(IkParameterization,GetDirection3D))
-            .def("GetRay4D",&PyIkParameterization::GetRay4D, DOXY_FN(IkParameterization,GetRay4D))
-            .def("GetLookat3D",&PyIkParameterization::GetLookat3D, DOXY_FN(IkParameterization,GetLookat3D))
-            .def("GetTranslationDirection5D",&PyIkParameterization::GetTranslationDirection5D, DOXY_FN(IkParameterization,GetTranslationDirection5D))
-            .def("GetTranslationXY2D",&PyIkParameterization::GetTranslationXY2D, DOXY_FN(IkParameterization,GetTranslationXY2D))
-            .def("GetTranslationXYOrientation3D",&PyIkParameterization::GetTranslationXYOrientation3D, DOXY_FN(IkParameterization,GetTranslationXYOrientation3D))
-            .def("GetTranslationLocalGlobal6D",&PyIkParameterization::GetTranslationLocalGlobal6D, DOXY_FN(IkParameterization,GetTranslationLocalGlobal6D))
-            .def("GetDOF", getdof1,args("type"), DOXY_FN(IkParameterization,GetDOF))
-            .staticmethod("GetDOF")
-            .def("GetNumberOfValues",getnumberofvalues1,args("type"), DOXY_FN(IkParameterization,GetNumberOfValues))
-            .staticmethod("GetNumberOfValues")
-            .def_pickle(IkParameterization_pickle_suite())
+                                   .def(init<object,IkParameterization::Type>(args("primitive","type")))
+                                   .def(init<string>(args("str")))
+                                   .def("GetType",&PyIkParameterization::GetType, DOXY_FN(IkParameterization,GetType))
+                                   .def("SetTransform6D",&PyIkParameterization::SetTransform6D,args("transform"), DOXY_FN(IkParameterization,SetTransform6D))
+                                   .def("SetRotation3D",&PyIkParameterization::SetRotation3D,args("quat"), DOXY_FN(IkParameterization,SetRotation3D))
+                                   .def("SetTranslation3D",&PyIkParameterization::SetTranslation3D,args("pos"), DOXY_FN(IkParameterization,SetTranslation3D))
+                                   .def("SetDirection3D",&PyIkParameterization::SetDirection3D,args("dir"), DOXY_FN(IkParameterization,SetDirection3D))
+                                   .def("SetRay4D",&PyIkParameterization::SetRay4D,args("quat"), DOXY_FN(IkParameterization,SetRay4D))
+                                   .def("SetLookat3D",&PyIkParameterization::SetLookat3D,args("pos"), DOXY_FN(IkParameterization,SetLookat3D))
+                                   .def("SetTranslationDirection5D",&PyIkParameterization::SetTranslationDirection5D,args("quat"), DOXY_FN(IkParameterization,SetTranslationDirection5D))
+                                   .def("SetTranslationXY2D",&PyIkParameterization::SetTranslationXY2D,args("pos"), DOXY_FN(IkParameterization,SetTranslationXY2D))
+                                   .def("SetTranslationXYOrientation3D",&PyIkParameterization::SetTranslationXYOrientation3D,args("posangle"), DOXY_FN(IkParameterization,SetTranslationXYOrientation3D))
+                                   .def("SetTranslationLocalGlobal6D",&PyIkParameterization::SetTranslationLocalGlobal6D,args("localpos","pos"), DOXY_FN(IkParameterization,SetTranslationLocalGlobal6D))
+                                   .def("GetTransform6D",&PyIkParameterization::GetTransform6D, DOXY_FN(IkParameterization,GetTransform6D))
+                                   .def("GetRotation3D",&PyIkParameterization::GetRotation3D, DOXY_FN(IkParameterization,GetRotation3D))
+                                   .def("GetTranslation3D",&PyIkParameterization::GetTranslation3D, DOXY_FN(IkParameterization,GetTranslation3D))
+                                   .def("GetDirection3D",&PyIkParameterization::GetDirection3D, DOXY_FN(IkParameterization,GetDirection3D))
+                                   .def("GetRay4D",&PyIkParameterization::GetRay4D, DOXY_FN(IkParameterization,GetRay4D))
+                                   .def("GetLookat3D",&PyIkParameterization::GetLookat3D, DOXY_FN(IkParameterization,GetLookat3D))
+                                   .def("GetTranslationDirection5D",&PyIkParameterization::GetTranslationDirection5D, DOXY_FN(IkParameterization,GetTranslationDirection5D))
+                                   .def("GetTranslationXY2D",&PyIkParameterization::GetTranslationXY2D, DOXY_FN(IkParameterization,GetTranslationXY2D))
+                                   .def("GetTranslationXYOrientation3D",&PyIkParameterization::GetTranslationXYOrientation3D, DOXY_FN(IkParameterization,GetTranslationXYOrientation3D))
+                                   .def("GetTranslationLocalGlobal6D",&PyIkParameterization::GetTranslationLocalGlobal6D, DOXY_FN(IkParameterization,GetTranslationLocalGlobal6D))
+                                   .def("GetDOF", getdof1,args("type"), DOXY_FN(IkParameterization,GetDOF))
+                                   .staticmethod("GetDOF")
+                                   .def("GetNumberOfValues",getnumberofvalues1,args("type"), DOXY_FN(IkParameterization,GetNumberOfValues))
+                                   .staticmethod("GetNumberOfValues")
+                                   .def_pickle(IkParameterization_pickle_suite())
 
-            .def("ComputeDistanceSqr",&PyIkParameterization::ComputeDistanceSqr,DOXY_FN(IkParameterization,ComputeDistanceSqr))
-            // deprecated
-            .def("SetTransform",&PyIkParameterization::SetTransform6D,args("transform"), DOXY_FN(IkParameterization,SetTransform6D))
-            .def("SetRotation",&PyIkParameterization::SetRotation3D,args("quat"), DOXY_FN(IkParameterization,SetRotation3D))
-            .def("SetTranslation",&PyIkParameterization::SetTranslation3D,args("pos"), DOXY_FN(IkParameterization,SetTranslation3D))
-            .def("SetDirection",&PyIkParameterization::SetDirection3D,args("dir"), DOXY_FN(IkParameterization,SetDirection3D))
-            .def("SetRay",&PyIkParameterization::SetRay4D,args("quat"), DOXY_FN(IkParameterization,SetRay4D))
-            .def("SetLookat",&PyIkParameterization::SetLookat3D,args("pos"), DOXY_FN(IkParameterization,SetLookat3D))
-            .def("SetTranslationDirection",&PyIkParameterization::SetTranslationDirection5D,args("quat"), DOXY_FN(IkParameterization,SetTranslationDirection5D))
-            .def("GetTransform",&PyIkParameterization::GetTransform6D, DOXY_FN(IkParameterization,GetTransform6D))
-            .def("GetRotation",&PyIkParameterization::GetRotation3D, DOXY_FN(IkParameterization,GetRotation3D))
-            .def("GetTranslation",&PyIkParameterization::GetTranslation3D, DOXY_FN(IkParameterization,GetTranslation3D))
-            .def("GetDirection",&PyIkParameterization::GetDirection3D, DOXY_FN(IkParameterization,GetDirection3D))
-            .def("GetRay",&PyIkParameterization::GetRay4D, DOXY_FN(IkParameterization,GetRay4D))
-            .def("GetLookat",&PyIkParameterization::GetLookat3D, DOXY_FN(IkParameterization,GetLookat3D))
-            .def("GetTranslationDirection",&PyIkParameterization::GetTranslationDirection5D, DOXY_FN(IkParameterization,GetTranslationDirection5D))
-            .def("__str__",&PyIkParameterization::__str__)
-            .def("__repr__",&PyIkParameterization::__repr__)
-            ;
+                                   .def("ComputeDistanceSqr",&PyIkParameterization::ComputeDistanceSqr,DOXY_FN(IkParameterization,ComputeDistanceSqr))
+                                   // deprecated
+                                   .def("SetTransform",&PyIkParameterization::SetTransform6D,args("transform"), DOXY_FN(IkParameterization,SetTransform6D))
+                                   .def("SetRotation",&PyIkParameterization::SetRotation3D,args("quat"), DOXY_FN(IkParameterization,SetRotation3D))
+                                   .def("SetTranslation",&PyIkParameterization::SetTranslation3D,args("pos"), DOXY_FN(IkParameterization,SetTranslation3D))
+                                   .def("SetDirection",&PyIkParameterization::SetDirection3D,args("dir"), DOXY_FN(IkParameterization,SetDirection3D))
+                                   .def("SetRay",&PyIkParameterization::SetRay4D,args("quat"), DOXY_FN(IkParameterization,SetRay4D))
+                                   .def("SetLookat",&PyIkParameterization::SetLookat3D,args("pos"), DOXY_FN(IkParameterization,SetLookat3D))
+                                   .def("SetTranslationDirection",&PyIkParameterization::SetTranslationDirection5D,args("quat"), DOXY_FN(IkParameterization,SetTranslationDirection5D))
+                                   .def("GetTransform",&PyIkParameterization::GetTransform6D, DOXY_FN(IkParameterization,GetTransform6D))
+                                   .def("GetRotation",&PyIkParameterization::GetRotation3D, DOXY_FN(IkParameterization,GetRotation3D))
+                                   .def("GetTranslation",&PyIkParameterization::GetTranslation3D, DOXY_FN(IkParameterization,GetTranslation3D))
+                                   .def("GetDirection",&PyIkParameterization::GetDirection3D, DOXY_FN(IkParameterization,GetDirection3D))
+                                   .def("GetRay",&PyIkParameterization::GetRay4D, DOXY_FN(IkParameterization,GetRay4D))
+                                   .def("GetLookat",&PyIkParameterization::GetLookat3D, DOXY_FN(IkParameterization,GetLookat3D))
+                                   .def("GetTranslationDirection",&PyIkParameterization::GetTranslationDirection5D, DOXY_FN(IkParameterization,GetTranslationDirection5D))
+                                   .def("__str__",&PyIkParameterization::__str__)
+                                   .def("__repr__",&PyIkParameterization::__repr__)
+        ;
         ikparameterization.attr("Type") = iktype;
     }
 

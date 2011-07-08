@@ -39,7 +39,7 @@ int main(int argc, char ** argv)
         }
     }
     of << "#define LIBM_LOG_ACCURATE " << is_accurate << endl;
-    
+
     for(i = 0, d = -0.1, is_accurate = 1; i < numtests; ++i, d += 100.0/(double)numtests) {
         if( log2(d+1) != log2_rn(d+1) ) {
             cout << "bad accuracy log2(" << d+1 << "): " << log2(d+1) << " != " << log2_rn(d+1) << endl;
@@ -75,7 +75,7 @@ int main(int argc, char ** argv)
         }
     }
     of << "#define LIBM_SIN_ACCURATE " << is_accurate << endl;
- 
+
     for(i = 0, d = -3.14, is_accurate = 1; i < numtests; ++i, d += 6.28/(double)numtests) {
         if( tan(d) != tan_rn(d) ) {
             cout << "bad accuracy tan(" << d << "): " << tan(d) << " != " << tan_rn(d) << endl;
@@ -84,7 +84,7 @@ int main(int argc, char ** argv)
         }
     }
     of << "#define LIBM_TAN_ACCURATE " << is_accurate << endl;
-    
+
     for(i = 0, d = -0.99999999999, is_accurate = 1; i < numtests; ++i, d += 2.0/(double)numtests) {
         if( acos(d) != acos_rn(d) ) {
             cout << "bad accuracy acos(" << d << "): " << acos(d) << " != " << acos_rn(d) << endl;

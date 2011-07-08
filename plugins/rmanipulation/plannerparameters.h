@@ -16,22 +16,22 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /** \file planner.h
     \brief Planning related defintions.
-*/
+ */
 #ifndef OPENRAVE_PLANNER_PARAMETERS_H
 #define OPENRAVE_PLANNER_PARAMETERS_H
 
 class ExplorationParameters : public PlannerBase::PlannerParameters
 {
- public:
-ExplorationParameters() : _fExploreProb(0), _nExpectedDataSize(100), _bProcessingExploration(false) {
+public:
+    ExplorationParameters() : _fExploreProb(0), _nExpectedDataSize(100), _bProcessingExploration(false) {
         _vXMLParameters.push_back("exploreprob");
         _vXMLParameters.push_back("expectedsize");
     }
-        
+
     dReal _fExploreProb;
     int _nExpectedDataSize;
-        
- protected:
+
+protected:
     bool _bProcessingExploration;
     // save the extra data to XML
     virtual bool serialize(std::ostream& O) const
@@ -50,16 +50,16 @@ ExplorationParameters() : _fExploreProb(0), _nExpectedDataSize(100), _bProcessin
             return PE_Ignore;
         }
         switch( PlannerBase::PlannerParameters::startElement(name,atts) ) {
-            case PE_Pass: break;
-            case PE_Support: return PE_Support;
-            case PE_Ignore: return PE_Ignore;
+        case PE_Pass: break;
+        case PE_Support: return PE_Support;
+        case PE_Ignore: return PE_Ignore;
         }
-        
+
         _bProcessingExploration = name=="exploreprob"||name=="expectedsize";
         return _bProcessingExploration ? PE_Support : PE_Pass;
     }
-        
-    // called at the end of every XML tag, _ss contains the data 
+
+    // called at the end of every XML tag, _ss contains the data
     virtual bool endElement(const std::string& name)
     {
         // _ss is an internal stringstream that holds the data of the tag
@@ -76,7 +76,7 @@ ExplorationParameters() : _fExploreProb(0), _nExpectedDataSize(100), _bProcessin
             _bProcessingExploration = false;
             return false;
         }
-        
+
         // give a chance for the default parameters to get processed
         return PlannerParameters::endElement(name);
     }
@@ -84,21 +84,21 @@ ExplorationParameters() : _fExploreProb(0), _nExpectedDataSize(100), _bProcessin
 
 class RAStarParameters : public PlannerBase::PlannerParameters
 {
- public:
-RAStarParameters() : fRadius(0.1f), fDistThresh(0.03f), fGoalCoeff(1), nMaxChildren(5), nMaxSampleTries(10), _bProcessingRA(false) {
+public:
+    RAStarParameters() : fRadius(0.1f), fDistThresh(0.03f), fGoalCoeff(1), nMaxChildren(5), nMaxSampleTries(10), _bProcessingRA(false) {
         _vXMLParameters.push_back("radius");
         _vXMLParameters.push_back("distthresh");
         _vXMLParameters.push_back("goalcoeff");
         _vXMLParameters.push_back("maxchildren");
         _vXMLParameters.push_back("maxsampletries");
     }
-        
-    dReal fRadius;      ///< _pDistMetric thresh is the radius that children must be within parents
-    dReal fDistThresh;  ///< gamma * _pDistMetric->thresh is the sampling radius
-    dReal fGoalCoeff;   ///< balancees exploratino vs cost
-    int nMaxChildren;   ///< limit on number of children
-    int nMaxSampleTries; ///< max sample tries before giving up on creating a child
- protected:
+
+    dReal fRadius;          ///< _pDistMetric thresh is the radius that children must be within parents
+    dReal fDistThresh;      ///< gamma * _pDistMetric->thresh is the sampling radius
+    dReal fGoalCoeff;       ///< balancees exploratino vs cost
+    int nMaxChildren;       ///< limit on number of children
+    int nMaxSampleTries;     ///< max sample tries before giving up on creating a child
+protected:
     bool _bProcessingRA;
     virtual bool serialize(std::ostream& O) const
     {
@@ -110,7 +110,7 @@ RAStarParameters() : fRadius(0.1f), fDistThresh(0.03f), fGoalCoeff(1), nMaxChild
         O << "<goalcoeff>" << fGoalCoeff << "</goalcoeff>" << endl;
         O << "<maxchildren>" << nMaxChildren << "</maxchildren>" << endl;
         O << "<maxsampletries>" << nMaxSampleTries << "</maxsampletries>" << endl;
-    
+
         return !!O;
     }
 
@@ -120,9 +120,9 @@ RAStarParameters() : fRadius(0.1f), fDistThresh(0.03f), fGoalCoeff(1), nMaxChild
             return PE_Ignore;
         }
         switch( PlannerBase::PlannerParameters::startElement(name,atts) ) {
-            case PE_Pass: break;
-            case PE_Support: return PE_Support;
-            case PE_Ignore: return PE_Ignore;
+        case PE_Pass: break;
+        case PE_Support: return PE_Support;
+        case PE_Ignore: return PE_Ignore;
         }
         _bProcessingRA = name=="radius"||name=="distthresh"||name=="goalcoeff"||name=="maxchildren"||name=="maxsampletries";
         return _bProcessingRA ? PE_Support : PE_Pass;
@@ -159,21 +159,21 @@ RAStarParameters() : fRadius(0.1f), fDistThresh(0.03f), fGoalCoeff(1), nMaxChild
 class GraspSetParameters : public PlannerBase::PlannerParameters
 {
 public:
-GraspSetParameters(EnvironmentBasePtr penv) : _nGradientSamples(5), _fVisibiltyGraspThresh(0), _fGraspDistThresh(1.4f), _penv(penv),_bProcessingGS(false) {
+    GraspSetParameters(EnvironmentBasePtr penv) : _nGradientSamples(5), _fVisibiltyGraspThresh(0), _fGraspDistThresh(1.4f), _penv(penv),_bProcessingGS(false) {
         _vXMLParameters.push_back("grasps");
         _vXMLParameters.push_back("target");
         _vXMLParameters.push_back("numgradsamples");
         _vXMLParameters.push_back("visgraspthresh");
         _vXMLParameters.push_back("graspdistthresh");
     }
-    
-    vector<Transform> _vgrasps; ///< grasps with respect to the target object
+
+    vector<Transform> _vgrasps;     ///< grasps with respect to the target object
     KinBodyPtr _ptarget;
     int _nGradientSamples;
-    dReal _fVisibiltyGraspThresh; ///< if current grasp is less than this threshold, then visibilty is not checked
-    dReal _fGraspDistThresh; ///< target grasps beyond this distance are ignored
+    dReal _fVisibiltyGraspThresh;     ///< if current grasp is less than this threshold, then visibilty is not checked
+    dReal _fGraspDistThresh;     ///< target grasps beyond this distance are ignored
 
- protected:
+protected:
     EnvironmentBasePtr _penv;
     bool _bProcessingGS;
     virtual bool serialize(std::ostream& O) const
@@ -186,7 +186,7 @@ GraspSetParameters(EnvironmentBasePtr penv) : _nGradientSamples(5), _fVisibiltyG
             O << *it << " ";
         }
         O << "</grasps>" << endl;
-        O << "<target>" << (!!_ptarget?_ptarget->GetEnvironmentId():0) << "</target>" << endl;
+        O << "<target>" << (!!_ptarget ? _ptarget->GetEnvironmentId() : 0) << "</target>" << endl;
         O << "<numgradsamples>" << _nGradientSamples << "</numgradsamples>" << endl;
         O << "<visgraspthresh>" << _fVisibiltyGraspThresh << "</visgraspthresh>" << endl;
         O << "<graspdistthresh>" << _fGraspDistThresh << "</graspdistthresh>" << endl;
@@ -199,15 +199,15 @@ GraspSetParameters(EnvironmentBasePtr penv) : _nGradientSamples(5), _fVisibiltyG
             return PE_Ignore;
         }
         switch( PlannerBase::PlannerParameters::startElement(name,atts) ) {
-            case PE_Pass: break;
-            case PE_Support: return PE_Support;
-            case PE_Ignore: return PE_Ignore;
+        case PE_Pass: break;
+        case PE_Support: return PE_Support;
+        case PE_Ignore: return PE_Ignore;
         }
-        
+
         _bProcessingGS = name=="grasps"||name=="target"||name=="numgradsamples"||name=="visgraspthresh"||name=="graspdistthresh";
         return _bProcessingGS ? PE_Support : PE_Pass;
     }
-    
+
     virtual bool endElement(const string& name)
     {
         if( _bProcessingGS ) {
@@ -216,7 +216,7 @@ GraspSetParameters(EnvironmentBasePtr penv) : _nGradientSamples(5), _fVisibiltyG
                 _ss >> ngrasps;
                 _vgrasps.resize(ngrasps);
                 FOREACH(it, _vgrasps) {
-                        _ss >> *it;
+                    _ss >> *it;
                 }
             }
             else if( name == "target" ) {
@@ -248,12 +248,13 @@ GraspSetParameters(EnvironmentBasePtr penv) : _nGradientSamples(5), _fVisibiltyG
 class GraspParameters : public PlannerBase::PlannerParameters
 {
 public:
-GraspParameters(EnvironmentBasePtr penv) : PlannerBase::PlannerParameters(), fstandoff(0), ftargetroll(0), vtargetdirection(0,0,1), btransformrobot(false), breturntrajectory(false), bonlycontacttarget(true), btightgrasp(false), bavoidcontact(false), fcoarsestep(0.1f), ffinestep(0.001f), ftranslationstepmult(0.1f), fgraspingnoise(0), _penv(penv) {
+    GraspParameters(EnvironmentBasePtr penv) : PlannerBase::PlannerParameters(), fstandoff(0), ftargetroll(0), vtargetdirection(0,0,1), btransformrobot(false), breturntrajectory(false), bonlycontacttarget(true), btightgrasp(false), bavoidcontact(false), fcoarsestep(0.1f), ffinestep(0.001f), ftranslationstepmult(0.1f), fgraspingnoise(0), _penv(penv) {
         _vXMLParameters.push_back("fstandoff");
         _vXMLParameters.push_back("targetbody");
         _vXMLParameters.push_back("ftargetroll");
         _vXMLParameters.push_back("vtargetdirection");
         _vXMLParameters.push_back("vtargetposition");
+        _vXMLParameters.push_back("vmanipulatordirection");
         _vXMLParameters.push_back("btransformrobot");
         _vXMLParameters.push_back("breturntrajectory");
         _vXMLParameters.push_back("bonlycontacttarget");
@@ -267,25 +268,26 @@ GraspParameters(EnvironmentBasePtr penv) : PlannerBase::PlannerParameters(), fst
         _bProcessingGrasp = false;
     }
 
-    dReal fstandoff; ///< start closing fingers when at this distance
-    KinBodyPtr targetbody; ///< the target that will be grasped, all parameters will be in this coordinate system. if not present, then below transformations are in absolute coordinate system.
-    dReal ftargetroll; ///< rotate the hand about the palm normal (if one exists) by this many radians
-    Vector vtargetdirection; ///< direction in target space to approach object from
-    Vector vtargetposition; ///< position in target space to start approaching (if in collision with target, gets backed up)
-    bool btransformrobot; ///< if true sets the base link of the robot given the above transformation parameters. If there is an active manipulator
-    bool breturntrajectory; ///< if true, returns how the individual fingers moved instead of just the final grasp
-    bool bonlycontacttarget; ///< if true, then grasp is successful only if contact is made with the target
-    bool btightgrasp; ///< This is tricky, but basically if true will also move the basic link along the negative axes of some of the joints to get a tighter fit.
-    bool bavoidcontact; ///< if true, will return a final robot configuration right before contact is made.
-    vector<string> vavoidlinkgeometry; ///< list of links on the robot to avoid collisions with (for exmaple, sensors)
+    dReal fstandoff;     ///< start closing fingers when at this distance
+    KinBodyPtr targetbody;     ///< the target that will be grasped, all parameters will be in this coordinate system. if not present, then below transformations are in absolute coordinate system.
+    dReal ftargetroll;     ///< rotate the hand about the palm normal (if one exists) by this many radians
+    Vector vtargetdirection;     ///< direction in target space to approach object from
+    Vector vtargetposition;     ///< position in target space to start approaching (if in collision with target, gets backed up)
+    Vector vmanipulatordirection; ///< a direction for the gripper to face at when approaching (in the manipulator coordinate system)
+    bool btransformrobot;     ///< if true sets the base link of the robot given the above transformation parameters. If there is an active manipulator
+    bool breturntrajectory;     ///< if true, returns how the individual fingers moved instead of just the final grasp
+    bool bonlycontacttarget;     ///< if true, then grasp is successful only if contact is made with the target
+    bool btightgrasp;     ///< This is tricky, but basically if true will also move the basic link along the negative axes of some of the joints to get a tighter fit.
+    bool bavoidcontact;     ///< if true, will return a final robot configuration right before contact is made.
+    vector<string> vavoidlinkgeometry;     ///< list of links on the robot to avoid collisions with (for exmaple, sensors)
 
-    dReal fcoarsestep;  ///< step for coarse planning (in radians)
-    dReal ffinestep; ///< step for fine planning (in radians), THIS STEP MUST BE VERY SMALL OR THE COLLISION CHECKER GIVES WILDLY BOGUS RESULTS
-    dReal ftranslationstepmult; ///< multiplication factor for translational movements of the hand or joints
+    dReal fcoarsestep;      ///< step for coarse planning (in radians)
+    dReal ffinestep;     ///< step for fine planning (in radians), THIS STEP MUST BE VERY SMALL OR THE COLLISION CHECKER GIVES WILDLY BOGUS RESULTS
+    dReal ftranslationstepmult;     ///< multiplication factor for translational movements of the hand or joints
 
-    dReal fgraspingnoise; ///< random undeterministic noise to add to the target object, represents the max possible displacement of any point on the object (noise added after global direction and start have been determined)
- protected:
-    EnvironmentBasePtr _penv; ///< environment target belongs to
+    dReal fgraspingnoise;     ///< random undeterministic noise to add to the target object, represents the max possible displacement of any point on the object (noise added after global direction and start have been determined)
+protected:
+    EnvironmentBasePtr _penv;     ///< environment target belongs to
     bool _bProcessingGrasp;
     // save the extra data to XML
     virtual bool serialize(std::ostream& O) const
@@ -298,6 +300,7 @@ GraspParameters(EnvironmentBasePtr penv) : PlannerBase::PlannerParameters(), fst
         O << "<ftargetroll>" << ftargetroll << "</ftargetroll>" << endl;
         O << "<vtargetdirection>" << vtargetdirection << "</vtargetdirection>" << endl;
         O << "<vtargetposition>" << vtargetposition << "</vtargetposition>" << endl;
+        O << "<vmanipulatordirection>" << vmanipulatordirection << "</vmanipulatordirection>" << endl;
         O << "<btransformrobot>" << btransformrobot << "</btransformrobot>" << endl;
         O << "<breturntrajectory>" << breturntrajectory << "</breturntrajectory>" << endl;
         O << "<bonlycontacttarget>" << bonlycontacttarget << "</bonlycontacttarget>" << endl;
@@ -321,20 +324,20 @@ GraspParameters(EnvironmentBasePtr penv) : PlannerBase::PlannerParameters(), fst
             return PE_Ignore;
         }
         switch( PlannerBase::PlannerParameters::startElement(name,atts) ) {
-            case PE_Pass: break;
-            case PE_Support: return PE_Support;
-            case PE_Ignore: return PE_Ignore;
+        case PE_Pass: break;
+        case PE_Support: return PE_Support;
+        case PE_Ignore: return PE_Ignore;
         }
         if( name == "vavoidlinkgeometry" ) {
             vavoidlinkgeometry.resize(0);
             return PE_Support;
         }
-        
-        _bProcessingGrasp = name=="fstandoff"||name=="targetbody"||name=="ftargetroll"||name=="vtargetdirection"||name=="vtargetposition"||name=="btransformrobot"||name=="breturntrajectory"||name=="bonlycontacttarget"||name=="btightgrasp"||name=="bavoidcontact"||name=="vavoidlinkgeometry"||name=="fcoarsestep"||name=="ffinestep"||name=="ftranslationstepmult"||name=="fgraspingnoise";
-        return _bProcessingGrasp ? PE_Support : PE_Pass;
+
+        boost::array<string,16> tags = {{"fstandoff","targetbody","ftargetroll","vtargetdirection","vtargetposition","vmanipulatordirection", "btransformrobot","breturntrajectory","bonlycontacttarget","btightgrasp","bavoidcontact","vavoidlinkgeometry","fcoarsestep","ffinestep","ftranslationstepmult","fgraspingnoise"}};
+        return find(tags.begin(),tags.end(),name) == tags.end() ? PE_Pass : PE_Support;
     }
- 
-    // called at the end of every XML tag, _ss contains the data 
+
+    // called at the end of every XML tag, _ss contains the data
     virtual bool endElement(const std::string& name)
     {
         // _ss is an internal stringstream that holds the data of the tag
@@ -359,6 +362,9 @@ GraspParameters(EnvironmentBasePtr penv) : PlannerBase::PlannerParameters(), fst
             }
             else if( name == "vtargetposition") {
                 _ss >> vtargetposition;
+            }
+            else if( name == "vmanipulatordirection") {
+                _ss >> vmanipulatordirection;
             }
             else if( name == "btransformrobot") {
                 _ss >> btransformrobot;
@@ -402,7 +408,7 @@ GraspParameters(EnvironmentBasePtr penv) : PlannerBase::PlannerParameters(), fst
 class WorkspaceTrajectoryParameters : public PlannerBase::PlannerParameters
 {
 public:
- WorkspaceTrajectoryParameters(EnvironmentBasePtr penv) : maxdeviationangle(0.15*PI), maintaintiming(false), greedysearch(true), ignorefirstcollision(0), minimumcompletetime(1e30f), _penv(penv), _bProcessing(false) {
+    WorkspaceTrajectoryParameters(EnvironmentBasePtr penv) : maxdeviationangle(0.15*PI), maintaintiming(false), greedysearch(true), ignorefirstcollision(0), minimumcompletetime(1e30f), _penv(penv), _bProcessing(false) {
         _vXMLParameters.push_back("maxdeviationangle");
         _vXMLParameters.push_back("maintaintiming");
         _vXMLParameters.push_back("greedysearch");
@@ -410,14 +416,14 @@ public:
         _vXMLParameters.push_back("minimumcompletetime");
         _vXMLParameters.push_back("workspacetraj");
     }
-    
-    dReal maxdeviationangle; ///< the maximum angle the next iksolution can deviate from the expected direction computed by the jacobian 
-    bool maintaintiming; ///< maintain timing with input trajectory
-    bool greedysearch; ///< if true, will greeidly choose solutions (can possibly fail even a solution exists)
-    dReal ignorefirstcollision; ///< if > 0, will allow the robot to be in environment collision for the initial 'ignorefirstcollision' seconds of the trajectory. Once the robot gets out of collision, it will execute its normal following phase until it gets into collision again. This option is used when lifting objects from a surface, where the object is already in collision with the surface.
-    dReal minimumcompletetime; ///< specifies the minimum trajectory that must be followed for planner to declare success. If 0, then the entire trajectory has to be followed.
-    TrajectoryBasePtr workspacetraj; ///< workspace trajectory
- protected:
+
+    dReal maxdeviationangle;     ///< the maximum angle the next iksolution can deviate from the expected direction computed by the jacobian
+    bool maintaintiming;     ///< maintain timing with input trajectory
+    bool greedysearch;     ///< if true, will greeidly choose solutions (can possibly fail even a solution exists)
+    dReal ignorefirstcollision;     ///< if > 0, will allow the robot to be in environment collision for the initial 'ignorefirstcollision' seconds of the trajectory. Once the robot gets out of collision, it will execute its normal following phase until it gets into collision again. This option is used when lifting objects from a surface, where the object is already in collision with the surface.
+    dReal minimumcompletetime;     ///< specifies the minimum trajectory that must be followed for planner to declare success. If 0, then the entire trajectory has to be followed.
+    TrajectoryBasePtr workspacetraj;     ///< workspace trajectory
+protected:
     EnvironmentBasePtr _penv;
     bool _bProcessing;
     // save the extra data to XML
@@ -448,12 +454,12 @@ public:
         case PE_Pass: break;
         case PE_Support: return PE_Support;
         case PE_Ignore: return PE_Ignore;
-        }    
+        }
         _bProcessing = name=="maxdeviationangle" || name=="maintaintiming" || name=="greedysearch" || name=="ignorefirstcollision" || name=="minimumcompletetime" || name=="workspacetraj";
         return _bProcessing ? PE_Support : PE_Pass;
     }
-        
-    // called at the end of every XML tag, _ss contains the data 
+
+    // called at the end of every XML tag, _ss contains the data
     virtual bool endElement(const std::string& name)
     {
         // _ss is an internal stringstream that holds the data of the tag

@@ -14,9 +14,9 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /*! --------------------------------------------------------------------
-  \file   IvSelector.h
-  \brief  OpenInventor selection class
- -------------------------------------------------------------------- */
+   \file   IvSelector.h
+   \brief  OpenInventor selection class
+   -------------------------------------------------------------------- */
 
 #ifndef IV_SELECTOR_H
 #define IV_SELECTOR_H
@@ -29,14 +29,18 @@ public:
     virtual ~IvDragger();
 
     virtual void CheckCollision(bool flag) = 0;
-    virtual void AddAnchor(Item *) {}
+    virtual void AddAnchor(Item *) {
+    }
 
     virtual void UpdateSkeleton() = 0;
     virtual void UpdateDragger() = 0;
 
-    virtual void GetMessage(ostream& sout) { } // text message about the dragger
+    virtual void GetMessage(ostream& sout) {
+    }                                              // text message about the dragger
 
-    virtual ItemPtr GetSelectedItem() { return _selectedItem; }
+    virtual ItemPtr GetSelectedItem() {
+        return _selectedItem;
+    }
 
 protected:
     static const SbColor CHECK_COLOR, COLLISION_COLOR;
@@ -52,13 +56,13 @@ protected:
     /// Get the Inventor transformation matrix that describes the given node relative to the given root.
     void        _GetMatrix(SbMatrix &, SoNode *, SoNode *);
 
-    bool        _checkCollision;
-    SbColor     _normalColor;
-    ItemPtr       _selectedItem;
-    QtCoinViewerPtr    _viewer;
-    vector<SoSeparator*> _vlinkaxes; // axes of the object's origin
+    bool _checkCollision;
+    SbColor _normalColor;
+    ItemPtr _selectedItem;
+    QtCoinViewerPtr _viewer;
+    vector<SoSeparator*> _vlinkaxes;     // axes of the object's origin
     vector<float> vtransparency;
-    float       _scale;
+    float _scale;
     SoSFEnum _prevtransparency;
     //SoText2* _ptext; // text to display next to selected item
     AABB _ab;
@@ -75,7 +79,8 @@ public:
 
     void CheckCollision(bool flag);
     void UpdateSkeleton();
-    void UpdateDragger() {}
+    void UpdateDragger() {
+    }
 
     virtual void GetMessage(ostream& sout);
 
@@ -113,13 +118,13 @@ protected:
     string _jointname;
     dReal _jointoffset;
 
-    SoSeparator* _pLinkNode; // node of the link of the target body
+    SoSeparator* _pLinkNode;     // node of the link of the target body
     SoSeparator*         _draggerRoot;
     SoMaterial*          _material;
     SoTrackballDragger*  _trackball;
     SoMaterial*          _draggerMaterial[3];
     int _iJointIndex, _iSelectedLink;
-    bool                _bHilitJoint;
+    bool _bHilitJoint;
 };
 
 #endif // IV_SELECTOR_H

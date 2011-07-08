@@ -28,16 +28,20 @@ enum ExtendType {
 
 class SimpleCostMetric
 {
- public:
-    SimpleCostMetric(RobotBasePtr robot) {}
-    virtual float Eval(const vector<dReal>& pConfiguration) { return 1; }
+public:
+    SimpleCostMetric(RobotBasePtr robot) {
+    }
+    virtual float Eval(const vector<dReal>& pConfiguration) {
+        return 1;
+    }
 };
 
 class SimpleGoalMetric
 {
-public:       
- SimpleGoalMetric(RobotBasePtr robot, dReal thresh=0.01f) : _robot(robot), _thresh(thresh) {}
-    
+public:
+    SimpleGoalMetric(RobotBasePtr robot, dReal thresh=0.01f) : _robot(robot), _thresh(thresh) {
+    }
+
     //checks if pConf is within this cone (note: only works in 3D)
     dReal Eval(const vector<dReal>& c1)
     {
@@ -47,16 +51,17 @@ public:
         return f < _thresh ? 0 : f;
     }
 
-    Transform tgoal; // workspace goal
+    Transform tgoal;     // workspace goal
 
- private:
+private:
     RobotBasePtr _robot;
     dReal _thresh;
 };
 
 struct SimpleNode
 {
-SimpleNode(int parent, const vector<dReal>& q) : parent(parent), q(q) {}
+    SimpleNode(int parent, const vector<dReal>& q) : parent(parent), q(q) {
+    }
     int parent;
     vector<dReal> q; // the configuration immediately follows the struct
 };
@@ -83,8 +88,9 @@ public:
         _nodes.reserve(5000);
     }
 
-    ~SpatialTree(){}
-    
+    ~SpatialTree(){
+    }
+
     virtual void Reset(boost::weak_ptr<Planner> planner, int dof=0)
     {
         _planner = planner;
@@ -98,7 +104,7 @@ public:
             _vNewConfig.resize(dof);
             _vDeltaConfig.resize(dof);
             _dof = dof;
-        }   
+        }
     }
 
     virtual int AddNode(int parent, const vector<dReal>& config)
@@ -117,7 +123,7 @@ public:
         dReal fbest = 0;
         FOREACH(itnode, _nodes) {
             dReal f = _distmetricfn(q, (*itnode)->q);
-            if( ibest < 0 || f < fbest ) {
+            if(( ibest < 0) ||( f < fbest) ) {
                 ibest = (int)(itnode-_nodes.begin());
                 fbest = f;
             }
@@ -141,7 +147,7 @@ public:
         boost::shared_ptr<Planner> planner(_planner);
         PlannerBase::PlannerParametersConstPtr params = planner->GetParameters();
         // extend
-        for(int iter = 0; iter < 100; ++iter) { // to avoid infinite loops
+        for(int iter = 0; iter < 100; ++iter) {     // to avoid infinite loops
 
             dReal fdist = _distmetricfn(pTargetConfig,pnode->q);
             if( fdist > _fStepLength ) {
@@ -154,7 +160,7 @@ public:
             else {
                 fdist = 1;
             }
-        
+
             _vNewConfig = pnode->q;
             _vDeltaConfig = pTargetConfig;
             params->_diffstatefn(_vDeltaConfig,pnode->q);
@@ -167,7 +173,7 @@ public:
                 }
                 return ET_Failed;
             }
-        
+
             // it could be the case that the node didn't move anywhere, in which case we would go into an infinite loop
             if( _distmetricfn(pnode->q, _vNewConfig) <= dReal(0.01)*_fStepLength ) {
                 if(bHasAdded) {
@@ -187,20 +193,24 @@ public:
                 return ET_Connected;
             }
         }
-    
+
         return bHasAdded ? ET_Sucess : ET_Failed;
     }
 
-    virtual const vector<dReal>& GetConfig(int inode) { return _nodes.at(inode)->q; }
-    virtual int GetDOF() { return _dof; }
+    virtual const vector<dReal>& GetConfig(int inode) {
+        return _nodes.at(inode)->q;
+    }
+    virtual int GetDOF() {
+        return _dof;
+    }
 
     vector<Node*> _nodes;
     boost::function<dReal(const std::vector<dReal>&, const std::vector<dReal>&)> _distmetricfn;
 
-    dReal _fBestDist; ///< valid after a call to GetNN
+    dReal _fBestDist;     ///< valid after a call to GetNN
     dReal _fStepLength;
 
- private:
+private:
     vector<dReal> _vNewConfig, _vDeltaConfig;
     boost::weak_ptr<Planner> _planner;
     int _dof, _fromgoal;
@@ -210,7 +220,7 @@ inline dReal TransformDistance2(const Transform& t1, const Transform& t2, dReal 
 {
     //dReal facos = RaveAcos(min(dReal(1),RaveFabs(dot4(t1.rot,t2.rot))));
     dReal facos = min((t1.rot-t2.rot).lengthsqr4(),(t1.rot+t2.rot).lengthsqr4());
-    return (t1.trans-t2.trans).lengthsqr3() + frotweight*facos;//*facos;
+    return (t1.trans-t2.trans).lengthsqr3() + frotweight*facos; //*facos;
 }
 
 #ifdef RAVE_REGISTER_BOOST

@@ -53,137 +53,140 @@ using namespace std;
 /// \brief converts raw XML data to DAE using libxml2
 namespace XMLtoDAE
 {
-    struct XMLREADERDATA
-    {
-    XMLREADERDATA(daeElementRef pelt, xmlParserCtxtPtr ctxt) : _ctxt(ctxt), _offset(0) { _elts.push_back(pelt); }
-        xmlParserCtxtPtr _ctxt;
-        list<daeElementRef> _elts;
-        size_t _offset;
-    };
-
-    static void XMLErrorFunc(void *ctx, const char *msg, ...)
-    {
-        va_list args;
-
-        va_start(args, msg);
-        RAVELOG_ERROR("XML Parse error: ");
-        vprintf(msg,args);
-        va_end(args);
+struct XMLREADERDATA
+{
+    XMLREADERDATA(daeElementRef pelt, xmlParserCtxtPtr ctxt) : _ctxt(ctxt), _offset(0) {
+        _elts.push_back(pelt);
     }
+    xmlParserCtxtPtr _ctxt;
+    list<daeElementRef> _elts;
+    size_t _offset;
+};
 
-    static void DefaultStartElementSAXFunc(void *ctx, const xmlChar *name, const xmlChar **atts)
-    {
-        XMLREADERDATA* pdata = (XMLREADERDATA*)ctx;
-        daeElementRef pelt = pdata->_elts.back()->add((const char*)name);
-        if( atts != NULL ) {
-            for (int i = 0;(atts[i] != NULL);i+=2) {
-                pelt->setAttribute((const char*)atts[i],(const char*)atts[i+1]);
-            }
-        }
-        pdata->_elts.push_back(pelt);
-    }
+static void XMLErrorFunc(void *ctx, const char *msg, ...)
+{
+    va_list args;
 
-    static void DefaultEndElementSAXFunc(void *ctx, const xmlChar *name)
-    {
-        XMLREADERDATA* pdata = (XMLREADERDATA*)ctx;
-        pdata->_elts.pop_back();
-        if( pdata->_elts.size() == 1 ) {
-            BOOST_ASSERT(!!pdata->_ctxt->input);
-            pdata->_offset = pdata->_ctxt->input->cur-pdata->_ctxt->input->base;
-            xmlStopParser(pdata->_ctxt);
+    va_start(args, msg);
+    RAVELOG_ERROR("XML Parse error: ");
+    vprintf(msg,args);
+    va_end(args);
+}
+
+static void DefaultStartElementSAXFunc(void *ctx, const xmlChar *name, const xmlChar **atts)
+{
+    XMLREADERDATA* pdata = (XMLREADERDATA*)ctx;
+    daeElementRef pelt = pdata->_elts.back()->add((const char*)name);
+    if( atts != NULL ) {
+        for (int i = 0; (atts[i] != NULL); i+=2) {
+            pelt->setAttribute((const char*)atts[i],(const char*)atts[i+1]);
         }
     }
+    pdata->_elts.push_back(pelt);
+}
 
-    static void DefaultCharactersSAXFunc(void *ctx, const xmlChar *ch, int len)
-    {
-        XMLREADERDATA* pdata = (XMLREADERDATA*)ctx;
-        pdata->_elts.back()->setCharData(string((const char*)ch, len));
+static void DefaultEndElementSAXFunc(void *ctx, const xmlChar *name)
+{
+    XMLREADERDATA* pdata = (XMLREADERDATA*)ctx;
+    pdata->_elts.pop_back();
+    if( pdata->_elts.size() == 1 ) {
+        BOOST_ASSERT(!!pdata->_ctxt->input);
+        pdata->_offset = pdata->_ctxt->input->cur-pdata->_ctxt->input->base;
+        xmlStopParser(pdata->_ctxt);
     }
+}
 
-    static bool xmlDetectSAX2(xmlParserCtxtPtr ctxt)
-    {
-        if (ctxt == NULL)
-            return false;
+static void DefaultCharactersSAXFunc(void *ctx, const xmlChar *ch, int len)
+{
+    XMLREADERDATA* pdata = (XMLREADERDATA*)ctx;
+    pdata->_elts.back()->setCharData(string((const char*)ch, len));
+}
+
+static bool xmlDetectSAX2(xmlParserCtxtPtr ctxt)
+{
+    if (ctxt == NULL) {
+        return false;
+    }
 #ifdef LIBXML_SAX1_ENABLED
-        if ((ctxt->sax) &&  (ctxt->sax->initialized == XML_SAX2_MAGIC) && ((ctxt->sax->startElementNs != NULL) || (ctxt->sax->endElementNs != NULL))) {
-            ctxt->sax2 = 1;
-        }
-#else
+    if ((ctxt->sax) &&  (ctxt->sax->initialized == XML_SAX2_MAGIC) && ((ctxt->sax->startElementNs != NULL) || (ctxt->sax->endElementNs != NULL))) {
         ctxt->sax2 = 1;
+    }
+#else
+    ctxt->sax2 = 1;
 #endif
 
-        ctxt->str_xml = xmlDictLookup(ctxt->dict, BAD_CAST "xml", 3);
-        ctxt->str_xmlns = xmlDictLookup(ctxt->dict, BAD_CAST "xmlns", 5);
-        ctxt->str_xml_ns = xmlDictLookup(ctxt->dict, XML_XML_NAMESPACE, 36);
-        if ((ctxt->str_xml==NULL) || (ctxt->str_xmlns==NULL) || (ctxt->str_xml_ns == NULL)) {
-            return false;
-        }
-        return true;
+    ctxt->str_xml = xmlDictLookup(ctxt->dict, BAD_CAST "xml", 3);
+    ctxt->str_xmlns = xmlDictLookup(ctxt->dict, BAD_CAST "xmlns", 5);
+    ctxt->str_xml_ns = xmlDictLookup(ctxt->dict, XML_XML_NAMESPACE, 36);
+    if ((ctxt->str_xml==NULL) || (ctxt->str_xmlns==NULL) || (ctxt->str_xml_ns == NULL)) {
+        return false;
     }
+    return true;
+}
 
-    static size_t Parse(daeElementRef pelt, const char* buffer, int size)
-    {
-        static xmlSAXHandler s_DefaultSAXHandler = {0};
-        if( size <= 0 ) {
-            size = strlen(buffer);
-            if( size == 0 ) {
-                return 0;
-            }
-        }
-        if( !s_DefaultSAXHandler.initialized ) {
-            // first time, so init
-            s_DefaultSAXHandler.startElement = DefaultStartElementSAXFunc;
-            s_DefaultSAXHandler.endElement = DefaultEndElementSAXFunc;
-            s_DefaultSAXHandler.characters = DefaultCharactersSAXFunc;
-            s_DefaultSAXHandler.error = XMLErrorFunc;
-            s_DefaultSAXHandler.initialized = 1;
-        }
-
-        xmlSAXHandlerPtr sax = &s_DefaultSAXHandler;
-        int ret = 0;
-        xmlParserCtxtPtr ctxt;
-
-        ctxt = xmlCreateMemoryParserCtxt(buffer, size);
-        if (!ctxt ) {
+static size_t Parse(daeElementRef pelt, const char* buffer, int size)
+{
+    static xmlSAXHandler s_DefaultSAXHandler = { 0};
+    if( size <= 0 ) {
+        size = strlen(buffer);
+        if( size == 0 ) {
             return 0;
         }
-        if (ctxt->sax != (xmlSAXHandlerPtr) &xmlDefaultSAXHandler) {
-            xmlFree(ctxt->sax);
-        }
-        ctxt->sax = sax;
-        xmlDetectSAX2(ctxt);
+    }
+    if( !s_DefaultSAXHandler.initialized ) {
+        // first time, so init
+        s_DefaultSAXHandler.startElement = DefaultStartElementSAXFunc;
+        s_DefaultSAXHandler.endElement = DefaultEndElementSAXFunc;
+        s_DefaultSAXHandler.characters = DefaultCharactersSAXFunc;
+        s_DefaultSAXHandler.error = XMLErrorFunc;
+        s_DefaultSAXHandler.initialized = 1;
+    }
 
-        XMLREADERDATA reader(pelt, ctxt);
-        ctxt->userData = &reader;
-        xmlParseDocument(ctxt);
+    xmlSAXHandlerPtr sax = &s_DefaultSAXHandler;
+    int ret = 0;
+    xmlParserCtxtPtr ctxt;
 
-        if (ctxt->wellFormed) {
-            ret = 0;
+    ctxt = xmlCreateMemoryParserCtxt(buffer, size);
+    if (!ctxt ) {
+        return 0;
+    }
+    if (ctxt->sax != (xmlSAXHandlerPtr) &xmlDefaultSAXHandler) {
+        xmlFree(ctxt->sax);
+    }
+    ctxt->sax = sax;
+    xmlDetectSAX2(ctxt);
+
+    XMLREADERDATA reader(pelt, ctxt);
+    ctxt->userData = &reader;
+    xmlParseDocument(ctxt);
+
+    if (ctxt->wellFormed) {
+        ret = 0;
+    }
+    else {
+        if (ctxt->errNo != 0) {
+            ret = ctxt->errNo;
         }
         else {
-            if (ctxt->errNo != 0) {
-                ret = ctxt->errNo;
-            }
-            else {
-                ret = -1;
-            }
+            ret = -1;
         }
-        if (sax != NULL) {
-            ctxt->sax = NULL;
-        }
-        if (ctxt->myDoc != NULL) {
-            xmlFreeDoc(ctxt->myDoc);
-            ctxt->myDoc = NULL;
-        }
-        xmlFreeParserCtxt(ctxt);
-
-        return ret==0 ? reader._offset : 0;
     }
+    if (sax != NULL) {
+        ctxt->sax = NULL;
+    }
+    if (ctxt->myDoc != NULL) {
+        xmlFreeDoc(ctxt->myDoc);
+        ctxt->myDoc = NULL;
+    }
+    xmlFreeParserCtxt(ctxt);
+
+    return ret==0 ? reader._offset : 0;
+}
 };
 
 class ColladaWriter : public daeErrorHandler
 {
- public:
+public:
     struct SCENE
     {
         domVisual_sceneRef vscene;
@@ -204,7 +207,7 @@ class ColladaWriter : public daeErrorHandler
     struct physics_model_output
     {
         domPhysics_modelRef pmodel;
-        std::vector<std::string > vrigidbodysids; ///< same ordering as the physics indices
+        std::vector<std::string > vrigidbodysids;     ///< same ordering as the physics indices
     };
 
     struct kinematics_model_output
@@ -212,21 +215,23 @@ class ColladaWriter : public daeErrorHandler
         struct axis_output
         {
             //axis_output(const string& sid, KinBody::JointConstPtr pjoint, int iaxis) : sid(sid), pjoint(pjoint), iaxis(iaxis) {}
-        axis_output() : iaxis(0) {}
-            string sid; // joint/axis
+            axis_output() : iaxis(0) {
+            }
+            string sid;     // joint/axis
             string nodesid;
             KinBody::JointConstPtr pjoint;
             int iaxis;
             string jointnodesid;
         };
         domKinematics_modelRef kmodel;
-        std::vector<axis_output> vaxissids; ///< no ordering
-        std::vector<std::string > vlinksids; ///< same ordering as the link indices
+        std::vector<axis_output> vaxissids;     ///< no ordering
+        std::vector<std::string > vlinksids;     ///< same ordering as the link indices
     };
 
     struct axis_sids
     {
-    axis_sids(const string& axissid, const string& valuesid, const string& jointnodesid) : axissid(axissid), valuesid(valuesid), jointnodesid(jointnodesid) {}
+        axis_sids(const string& axissid, const string& valuesid, const string& jointnodesid) : axissid(axissid), valuesid(valuesid), jointnodesid(jointnodesid) {
+        }
         string axissid, valuesid, jointnodesid;
     };
 
@@ -235,7 +240,7 @@ class ColladaWriter : public daeErrorHandler
         domInstance_kinematics_modelRef ikm;
         std::vector<axis_sids> vaxissids;
         boost::shared_ptr<kinematics_model_output> kmout;
-        std::vector<std::pair<std::string,std::string> > vkinematicsbindings; // node and kinematics model bindings
+        std::vector<std::pair<std::string,std::string> > vkinematicsbindings;     // node and kinematics model bindings
     };
 
     struct instance_articulated_system_output
@@ -270,7 +275,7 @@ class ColladaWriter : public daeErrorHandler
         _collada->setDatabase( NULL );
 
         const char* documentName = "openrave_snapshot";
-        daeInt error = _collada->getDatabase()->insertDocument(documentName, &_doc ); // also creates a collada root
+        daeInt error = _collada->getDatabase()->insertDocument(documentName, &_doc );     // also creates a collada root
         BOOST_ASSERT( error == DAE_OK && !!_doc );
         _dom = daeSafeCast<domCOLLADA>(_doc->getDomRoot());
 
@@ -344,7 +349,7 @@ class ColladaWriter : public daeErrorHandler
             }
             return;
         }
-        vector<uint8_t> buf(16384); // write in 16K chunks
+        vector<uint8_t> buf(16384);     // write in 16K chunks
         std::string savefilenameinzip;
         size_t namestart = filename.find_last_of(s_filesep);
         if( namestart == string::npos ) {
@@ -360,8 +365,8 @@ class ColladaWriter : public daeErrorHandler
         savefilenameinzip += ".dae";
 
 #ifdef _WIN32
-        char lpPathBuffer[MAX_PATH]={0};
-        char szTempName[MAX_PATH]={0};
+        char lpPathBuffer[MAX_PATH]={ 0};
+        char szTempName[MAX_PATH]={ 0};
         if( GetTempPath(MAX_PATH, lpPathBuffer) == 0 ) {
             throw openrave_exception("GetTempPath failed");
         }
@@ -373,9 +378,12 @@ class ColladaWriter : public daeErrorHandler
         // unix environment
         class UnlinkFilename
         {
-        public:
-        UnlinkFilename(const std::string& filename) : _filename(filename) {}
-            virtual ~UnlinkFilename() { unlink(_filename.c_str()); }
+public:
+            UnlinkFilename(const std::string& filename) : _filename(filename) {
+            }
+            virtual ~UnlinkFilename() {
+                unlink(_filename.c_str());
+            }
             std::string _filename;
         };
 
@@ -728,43 +736,43 @@ class ColladaWriter : public daeErrorHandler
                 closing_direction->setAttribute("axis",str(boost::format("./axis%d")%(*itindex-pjoint->GetDOFIndex())).c_str());
                 closing_direction->add("float")->setCharData(str(boost::format("%f")%(*itmanip)->GetClosingDirection().at(i)));
                 ++i;
-           }
-//            <iksolver interface="WAM7ikfast" type="Transform6D">
-//              <free_axis axis="jointname3"/>
-//            </iksolver>
-//            <iksolver type="Translation3D">
-//              <free_axis axis="jointname4"/>
-//            </iksolver>
+            }
+            //            <iksolver interface="WAM7ikfast" type="Transform6D">
+            //              <free_axis axis="jointname3"/>
+            //            </iksolver>
+            //            <iksolver type="Translation3D">
+            //              <free_axis axis="jointname4"/>
+            //            </iksolver>
         }
 
-//            if (probot->GetAttachedSensors().size() > 0)
-//            {
-//                domExtraRef extra   =   daeSafeCast<domExtra>(askinematics->add(COLLADA_ELEMENT_EXTRA));
-//                extra->setType("sensors");
-//                domTechniqueRef tech    =   daeSafeCast<domTechnique>(extra->add(COLLADA_ELEMENT_TECHNIQUE));
-//                tech->setProfile("OpenRAVE");
-//
-//                    for (size_t i = 0; i < probot->GetAttachedSensors().size();i++)
-//                    {
-//                        string  strsensor   =   string("sensor")+toString(i)+string("_")+probot->GetName();
-//                        string  strurl      =   string("#") + strsensor;
-//                        RobotBase::AttachedSensorPtr  asensor = probot->GetAttachedSensors().at(i);
-//
-//                        //  Instance of sensor into 'articulated_system'
-//                        domInstance_sensorRef   isensor =   daeSafeCast<domInstance_sensor>(tech->add(COLLADA_ELEMENT_INSTANCE_SENSOR));
-//                        isensor->setId(asensor->GetName().c_str());
-//                        isensor->setLink(asensor->GetAttachingLink()->GetName().c_str());
-//                        isensor->setUrl(strurl.c_str());
-//
-//                        //  Sensor definition into 'library_sensors'
-//                        domSensorRef    sensor  =   daeSafeCast<domSensor>(_sensorsLib->add(COLLADA_ELEMENT_SENSOR));
-//                        sensor->setType(asensor->GetSensor()->GetXMLId().c_str());
-//                        sensor->setId(strsensor.c_str());
-//                        sensor->setName(strsensor.c_str());
-//
-//                        RAVELOG_VERBOSE("Plugin Name: %s\n",asensor->GetSensor()->GetXMLId().c_str());
-//                    }
-//            }
+        //            if (probot->GetAttachedSensors().size() > 0)
+        //            {
+        //                domExtraRef extra   =   daeSafeCast<domExtra>(askinematics->add(COLLADA_ELEMENT_EXTRA));
+        //                extra->setType("sensors");
+        //                domTechniqueRef tech    =   daeSafeCast<domTechnique>(extra->add(COLLADA_ELEMENT_TECHNIQUE));
+        //                tech->setProfile("OpenRAVE");
+        //
+        //                    for (size_t i = 0; i < probot->GetAttachedSensors().size();i++)
+        //                    {
+        //                        string  strsensor   =   string("sensor")+toString(i)+string("_")+probot->GetName();
+        //                        string  strurl      =   string("#") + strsensor;
+        //                        RobotBase::AttachedSensorPtr  asensor = probot->GetAttachedSensors().at(i);
+        //
+        //                        //  Instance of sensor into 'articulated_system'
+        //                        domInstance_sensorRef   isensor =   daeSafeCast<domInstance_sensor>(tech->add(COLLADA_ELEMENT_INSTANCE_SENSOR));
+        //                        isensor->setId(asensor->GetName().c_str());
+        //                        isensor->setLink(asensor->GetAttachingLink()->GetName().c_str());
+        //                        isensor->setUrl(strurl.c_str());
+        //
+        //                        //  Sensor definition into 'library_sensors'
+        //                        domSensorRef    sensor  =   daeSafeCast<domSensor>(_sensorsLib->add(COLLADA_ELEMENT_SENSOR));
+        //                        sensor->setType(asensor->GetSensor()->GetXMLId().c_str());
+        //                        sensor->setId(strsensor.c_str());
+        //                        sensor->setName(strsensor.c_str());
+        //
+        //                        RAVELOG_VERBOSE("Plugin Name: %s\n",asensor->GetSensor()->GetXMLId().c_str());
+        //                    }
+        //            }
 
         return iasout;
     }
@@ -887,7 +895,7 @@ class ColladaWriter : public daeErrorHandler
 
         FOREACHC(itjoint, vjoints) {
             KinBody::JointConstPtr pjoint = itjoint->second;
-            if( pjoint->GetType() == KinBody::Joint::JointUniversal || pjoint->GetType() == KinBody::Joint::JointHinge2 || pjoint->GetType() == KinBody::Joint::JointSpherical ) {
+            if(( pjoint->GetType() == KinBody::Joint::JointUniversal) ||( pjoint->GetType() == KinBody::Joint::JointHinge2) ||( pjoint->GetType() == KinBody::Joint::JointSpherical) ) {
                 RAVELOG_WARN(str(boost::format("unsupported joint type specified 0x%x\n")%pjoint->GetType()));
                 continue;
             }
@@ -1000,7 +1008,7 @@ class ColladaWriter : public daeErrorHandler
                     boost::algorithm::replace_all(sequations[itype],itmapping->first,itmapping->second);
                 }
             }
-            boost::array<const char*,3> sequationids = {{"position","first_partial","second_partial"}};
+            boost::array<const char*,3> sequationids = { { "position","first_partial","second_partial"}};
 
             domTechniqueRef pftec = daeSafeCast<domTechnique>(pf->add(COLLADA_ELEMENT_TECHNIQUE));
             pftec->setProfile("OpenRAVE");
@@ -1059,7 +1067,7 @@ class ColladaWriter : public daeErrorHandler
             domTargetable_floatRef mass = daeSafeCast<domTargetable_float>(ptec->add(COLLADA_ELEMENT_MASS));
             mass->setValue((*itlink)->GetMass());
             TransformMatrix inertiatensor = (*itlink)->GetInertia();
-            double fCovariance[9] = {inertiatensor.m[0],inertiatensor.m[1],inertiatensor.m[2],inertiatensor.m[4],inertiatensor.m[5],inertiatensor.m[6],inertiatensor.m[8],inertiatensor.m[9],inertiatensor.m[10]};
+            double fCovariance[9] = { inertiatensor.m[0],inertiatensor.m[1],inertiatensor.m[2],inertiatensor.m[4],inertiatensor.m[5],inertiatensor.m[6],inertiatensor.m[8],inertiatensor.m[9],inertiatensor.m[10]};
             double eigenvalues[3], eigenvectors[9];
             mathextra::EigenSymmetric3(fCovariance,eigenvalues,eigenvectors);
             TransformMatrix tinertiaframe;
@@ -1116,7 +1124,7 @@ class ColladaWriter : public daeErrorHandler
                     domFloat_arrayRef parray = daeSafeCast<domFloat_array>(pvertsource->add(COLLADA_ELEMENT_FLOAT_ARRAY));
                     parray->setId((parentid+string("_positions-array")).c_str());
                     parray->setCount(mesh.vertices.size());
-                    parray->setDigits(6); // 6 decimal places
+                    parray->setDigits(6);     // 6 decimal places
                     parray->getValue().setCount(3*mesh.vertices.size());
 
                     for(size_t ind = 0; ind < mesh.vertices.size(); ++ind) {
@@ -1191,7 +1199,7 @@ class ColladaWriter : public daeErrorHandler
         return pdomeff;
     }
 
- private:
+private:
 
     /// \brief save all the loaded scene models and their current state.
     virtual void _CreateScene()
@@ -1231,7 +1239,7 @@ class ColladaWriter : public daeErrorHandler
         \param pnodeparent Node parent
         \param strModelUri
         \param vjoints Vector of joints
-    */
+     */
     virtual LINKOUTPUT _WriteLink(KinBody::LinkConstPtr plink, daeElementRef pkinparent, domNodeRef pnodeparent, const string& strModelUri, const vector<pair<int, KinBody::JointConstPtr> >& vjoints)
     {
         LINKOUTPUT out;
@@ -1265,11 +1273,11 @@ class ColladaWriter : public daeErrorHandler
         // look for all the child links
         FOREACHC(itjoint, vjoints) {
             KinBody::JointConstPtr pjoint = itjoint->second;
-            if( pjoint->GetFirstAttached() != plink && pjoint->GetSecondAttached() != plink ) {
+            if(( pjoint->GetFirstAttached() != plink) &&( pjoint->GetSecondAttached() != plink) ) {
                 continue;
             }
             KinBody::LinkPtr pchild = GetChildLink(pjoint);
-            if( !pchild || plink == pchild ) {
+            if( !pchild ||( plink == pchild) ) {
                 continue;
             }
 
@@ -1314,7 +1322,7 @@ class ColladaWriter : public daeErrorHandler
         out.listusedlinks.push_back(make_pair(plink->GetIndex(),linksid));
         out.plink = pdomlink;
         out.pnode = pnode;
-        return  out;
+        return out;
     }
 
     void _SetRotate(domTargetable_float4Ref prot, const Vector& rot)
@@ -1401,7 +1409,7 @@ class ColladaWriter : public daeErrorHandler
 
     virtual void _AddKinematics_model(KinBodyPtr pbody, boost::shared_ptr<kinematics_model_output> kmout) {
         FOREACH(it, _listkinbodies) {
-            if( it->uri == pbody->GetURI() && it->kinematicsgeometryhash == pbody->GetKinematicsGeometryHash() ) {
+            if(( it->uri == pbody->GetURI()) &&( it->kinematicsgeometryhash == pbody->GetKinematicsGeometryHash()) ) {
                 BOOST_ASSERT(!it->kmout);
                 it->kmout = kmout;
                 return;
@@ -1416,7 +1424,7 @@ class ColladaWriter : public daeErrorHandler
 
     virtual boost::shared_ptr<kinematics_model_output> _GetKinematics_model(KinBodyPtr pbody) {
         FOREACH(it, _listkinbodies) {
-            if( it->uri == pbody->GetURI() && it->kinematicsgeometryhash == pbody->GetKinematicsGeometryHash() ) {
+            if(( it->uri == pbody->GetURI()) &&( it->kinematicsgeometryhash == pbody->GetKinematicsGeometryHash()) ) {
                 return it->kmout;
             }
         }
@@ -1425,7 +1433,7 @@ class ColladaWriter : public daeErrorHandler
 
     virtual void _AddPhysics_model(KinBodyPtr pbody, boost::shared_ptr<physics_model_output> pmout) {
         FOREACH(it, _listkinbodies) {
-            if( it->uri == pbody->GetURI() && it->kinematicsgeometryhash == pbody->GetKinematicsGeometryHash() ) {
+            if(( it->uri == pbody->GetURI()) &&( it->kinematicsgeometryhash == pbody->GetKinematicsGeometryHash()) ) {
                 BOOST_ASSERT(!it->pmout);
                 it->pmout = pmout;
                 return;
@@ -1440,7 +1448,7 @@ class ColladaWriter : public daeErrorHandler
 
     virtual boost::shared_ptr<physics_model_output> _GetPhysics_model(KinBodyPtr pbody) {
         FOREACH(it, _listkinbodies) {
-            if( it->uri == pbody->GetURI() && it->kinematicsgeometryhash == pbody->GetKinematicsGeometryHash() ) {
+            if(( it->uri == pbody->GetURI()) &&( it->kinematicsgeometryhash == pbody->GetKinematicsGeometryHash()) ) {
                 return it->pmout;
             }
         }
@@ -1463,7 +1471,7 @@ class ColladaWriter : public daeErrorHandler
     }
     virtual std::string _GetJointNodeSid(KinBody::JointConstPtr pjoint, int iaxis) {
         int index = pjoint->GetJointIndex();
-        if( index < 0 ) { // must be passive
+        if( index < 0 ) {     // must be passive
             index = (int)pjoint->GetParent()->GetJoints().size();
             FOREACHC(itpjoint,pjoint->GetParent()->GetPassiveJoints()) {
                 if( pjoint == *itpjoint ) {
@@ -1498,7 +1506,7 @@ class ColladaWriter : public daeErrorHandler
     domLibrary_materialsRef _materialsLib;
     domLibrary_effectsRef _effectsLib;
     domLibrary_geometriesRef _geometriesLib;
-    domTechniqueRef _sensorsLib;///< custom sensors library
+    domTechniqueRef _sensorsLib;     ///< custom sensors library
     SCENE _scene;
     EnvironmentBaseConstPtr _penv;
     std::list<kinbody_models> _listkinbodies;

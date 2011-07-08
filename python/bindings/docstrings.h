@@ -24,17 +24,17 @@
 
 #if BOOST_VERSION >= 103500
 //#define DOXY_ENUM(name) ,".. doxygenenum:: "#name"\n"
-#define DOXY_ENUM(name) ,openravepy::GetDoxygenComment("enum",#name)
+#define DOXY_ENUM(name) ,openravepy::GetDoxygenComment("enum",# name)
 #else
-#define DOXY_ENUM(name) 
+#define DOXY_ENUM(name)
 #endif
 
 //#define DOXY_FN(class,name) ".. doxygenfunction:: "#name"\n\n"
-#define DOXY_FN(class,name) openravepy::GetDoxygenComment("function",#name,#class)
-#define DOXY_FN1(name) openravepy::GetDoxygenComment("function",#name)
+#define DOXY_FN(class,name) openravepy::GetDoxygenComment("function",# name,# class )
+#define DOXY_FN1(name) openravepy::GetDoxygenComment("function",# name)
 
 // brief+detailed descriptions only
-#define DOXY_CLASS(name) openravepy::GetDoxygenComment("class",#name)
+#define DOXY_CLASS(name) openravepy::GetDoxygenComment("class",# name)
 
 namespace openravepy {
 

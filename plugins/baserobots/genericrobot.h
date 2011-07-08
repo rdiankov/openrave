@@ -26,7 +26,8 @@ public:
     {
         __description = ":Interface Author: Rosen Diankov\n\nSimplest robot possible that just passes the trajectories to the controller";
     }
-    virtual ~GenericRobot() {}
+    virtual ~GenericRobot() {
+    }
 
     virtual bool SetController(ControllerBasePtr controller, const std::vector<int>& jointindices, int nControlTransformation)
     {
@@ -52,7 +53,7 @@ public:
         _state = ST_PATH_FOLLOW;
         return _pController->SetPath(_trajcur);
     }
- 
+
     virtual bool SetActiveMotion(TrajectoryBaseConstPtr ptraj)
     {
         BOOST_ASSERT(ptraj->GetPoints().size() > 0 || !"trajectory has no points\n");
@@ -64,9 +65,13 @@ public:
         return _pController->SetPath(_trajcur);
     }
 
-    RobotState GetState() { return _state; }
+    RobotState GetState() {
+        return _state;
+    }
 
-    virtual ControllerBasePtr GetController() const { return _pController; }
+    virtual ControllerBasePtr GetController() const {
+        return _pController;
+    }
 
     virtual void SimulationStep(dReal fElapsedTime)
     {
@@ -79,7 +84,7 @@ public:
         }
     }
 
- protected:
+protected:
     TrajectoryBaseConstPtr _trajcur;
     ControllerBasePtr _pController;
     RobotState _state;

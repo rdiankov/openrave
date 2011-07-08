@@ -19,8 +19,8 @@
 
 class DualManipulation : public ModuleBase
 {
- public:
- DualManipulation(EnvironmentBasePtr penv) : ModuleBase(penv) {
+public:
+    DualManipulation(EnvironmentBasePtr penv) : ModuleBase(penv) {
         __description = ":Interface Author: Achint Aggarwal\n\nInterface for planners using more than one manipulator simultaneously.";
         RegisterCommand("SetActiveManip",boost::bind(&DualManipulation::SetActiveManip,this,_1,_2),
                         "Set the active manipulator");
@@ -34,7 +34,8 @@ class DualManipulation : public ModuleBase
                         "Move both the end-effectors in straight lines until collision or IK fails.");
     }
 
-    virtual ~DualManipulation() {}
+    virtual ~DualManipulation() {
+    }
 
     virtual void Destroy()
     {
@@ -90,10 +91,14 @@ class DualManipulation : public ModuleBase
         robot = GetEnv()->GetRobot(_strRobotName);
         return ModuleBase::SendCommand(sout,sinput);
     }
- protected:
+protected:
 
-    inline boost::shared_ptr<DualManipulation> shared_problem() { return boost::static_pointer_cast<DualManipulation>(shared_from_this()); }
-    inline boost::shared_ptr<DualManipulation const> shared_problem_const() const { return boost::static_pointer_cast<DualManipulation const>(shared_from_this()); }
+    inline boost::shared_ptr<DualManipulation> shared_problem() {
+        return boost::static_pointer_cast<DualManipulation>(shared_from_this());
+    }
+    inline boost::shared_ptr<DualManipulation const> shared_problem_const() const {
+        return boost::static_pointer_cast<DualManipulation const>(shared_from_this());
+    }
 
     bool SetActiveManip(ostream& sout, istream& sinput)
     {
@@ -104,7 +109,7 @@ class DualManipulation : public ModuleBase
             sinput >> manipname;
             if( !sinput )
                 return false;
-        
+
             // find the manipulator with the right name
             index = 0;
             FOREACHC(itmanip, robot->GetManipulators()) {
@@ -118,7 +123,7 @@ class DualManipulation : public ModuleBase
             }
         }
 
-        if( index >= 0 && index < (int)robot->GetManipulators().size() ) {
+        if(( index >= 0) &&( index < (int)robot->GetManipulators().size()) ) {
             robot->SetActiveManipulator(index);
             sout << "1";
         }
@@ -140,7 +145,7 @@ class DualManipulation : public ModuleBase
             if( !sinput )
                 break;
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
-        
+
             if( cmd == "name" ) {
                 string name;
                 sinput >> name;
@@ -180,17 +185,17 @@ class DualManipulation : public ModuleBase
         boost::shared_ptr<ostream> pOutputTrajStream;
         int nMaxTries = 3;
         bool bSuccess=true;
-    
+
         PlannerBase::PlannerParametersPtr params(new PlannerBase::PlannerParameters());
-        params->_nMaxIterations = 4000; // max iterations before failure
+        params->_nMaxIterations = 4000;     // max iterations before failure
 
         // constraint stuff
         double constrainterrorthresh=0;
         RobotBase::ManipulatorPtr pmanipI, pmanipA;
         int activeManipIndex=robot->GetActiveManipulatorIndex();
-        if (activeManipIndex==0){
-            pmanipA=robot->GetManipulators().at(0);//Active Manipulator
-            pmanipI=robot->GetManipulators().at(1); //Inactive Manipulator
+        if (activeManipIndex==0) {
+            pmanipA=robot->GetManipulators().at(0);    //Active Manipulator
+            pmanipI=robot->GetManipulators().at(1);     //Inactive Manipulator
         }
         else{
             pmanipI =robot->GetManipulators().at(0);
@@ -203,11 +208,11 @@ class DualManipulation : public ModuleBase
             if( !sinput )
                 break;
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
-        
+
             if( cmd == "goal" ) {
                 params->vgoalconfig.resize(robot->GetActiveDOF());
                 FOREACH(it, params->vgoalconfig)
-                    sinput >> *it;
+                sinput >> *it;
             }
             else if( cmd == "outputtraj" )
                 pOutputTrajStream = boost::shared_ptr<ostream>(&sout,null_deleter());
@@ -252,7 +257,7 @@ class DualManipulation : public ModuleBase
 
         if( (int)params->vgoalconfig.size() != robot->GetActiveDOF() )
             return false;
-    
+
         RobotBase::RobotStateSaver saver(robot);
 
         if( !planningutils::JitterActiveDOF(robot) ) {
@@ -264,7 +269,7 @@ class DualManipulation : public ModuleBase
         params->SetRobotActiveJoints(robot);
         robot->GetActiveDOFValues(params->vinitialconfig);
         robot->SetActiveDOFValues(params->vgoalconfig);
-    
+
         // jitter again for goal
         if( !planningutils::JitterActiveDOF(robot) ) {
             RAVELOG_WARN("failed\n");
@@ -290,19 +295,19 @@ class DualManipulation : public ModuleBase
         ptraj->AddPoint(pt);
 
         boost::shared_ptr<PlannerBase> rrtplanner = RaveCreatePlanner(GetEnv(),_strRRTPlannerName);
-        
+
         if( !rrtplanner ) {
             RAVELOG_ERROR("failed to create BiRRTs\n");
             return false;
-        }    
+        }
         RAVELOG_DEBUG("starting planning\n");
-    
+
         for(int iter = 0; iter < nMaxTries; ++iter) {
             if( !rrtplanner->InitPlan(robot, params) ) {
                 RAVELOG_INFOA("InitPlan failed\n");
                 return false;
             }
-    
+
             if(rrtplanner->PlanPath(ptraj) ) {
                 bSuccess = true;
                 RAVELOG_INFOA("finished planning\n");
@@ -312,11 +317,11 @@ class DualManipulation : public ModuleBase
                 RAVELOG_WARN("PlanPath failed\n");
         }
 
-        rrtplanner.reset(); // have to destroy before environment
-    
+        rrtplanner.reset();     // have to destroy before environment
+
         if( !bSuccess )
             return false;
-    
+
         RAVELOG_DEBUG("finished planning\n");
         CM::SetActiveTrajectory(robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream);
         return true;
@@ -346,7 +351,7 @@ class DualManipulation : public ModuleBase
             if( !sinput )
                 break;
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
-        
+
             if( cmd == "minsteps" )
                 sinput >> minsteps;
             else if( cmd == "outputtraj")
@@ -395,14 +400,14 @@ class DualManipulation : public ModuleBase
                 return false;
             }
         }
-    
+
         RAVELOG_DEBUG("Starting MoveBothHandsStraight dir0=(%f,%f,%f)...dir1=(%f,%f,%f)...\n",(float)direction0.x, (float)direction0.y, (float)direction0.z, (float)direction1.x, (float)direction1.y, (float)direction1.z);
         robot->RegrabAll();
 
         RobotBase::RobotStateSaver saver(robot);
 
         //robot->SetActiveDOFs(pmanip->GetArmIndices());
-        planningutils::JitterActiveDOF(robot,100); // try to jitter out, don't worry if it fails
+        planningutils::JitterActiveDOF(robot,100);     // try to jitter out, don't worry if it fails
 
         boost::shared_ptr<Trajectory> ptraj(RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF()));
         Trajectory::TPOINT point;
@@ -422,8 +427,8 @@ class DualManipulation : public ModuleBase
         ptraj->AddPoint(point);
 
         int i;
-        for (i = 0; i < maxsteps;  i++) {
-            if (!reached0){
+        for (i = 0; i < maxsteps; i++) {
+            if (!reached0) {
                 handTr0.trans += stepsize*direction0;
                 if( !pmanip0->FindIKSolution(handTr0,v0Joints,false)) {
                     RAVELOG_DEBUG("Arm 0 Lifting: broke due to ik\n");
@@ -432,11 +437,11 @@ class DualManipulation : public ModuleBase
                 else {
                     int index = 0;
                     FOREACHC(it, pmanip0->GetArmIndices())
-                        point.q.at(*it) = v0Joints.at(index++);
+                    point.q.at(*it) = v0Joints.at(index++);
                 }
             }
-    
-            if (!reached1){
+
+            if (!reached1) {
                 handTr1.trans += stepsize*direction1;
                 if( !pmanip1->FindIKSolution(handTr1,v1Joints,false)) {
                     RAVELOG_DEBUG("Arm 1 Lifting: broke due to ik\n");
@@ -445,14 +450,14 @@ class DualManipulation : public ModuleBase
                 else  {
                     int index = 0;
                     FOREACHC(it, pmanip1->GetArmIndices())
-                        point.q.at(*it) = v1Joints.at(index++);
+                    point.q.at(*it) = v1Joints.at(index++);
                 }
             }
-        
+
             size_t j = 0;
             for(; j < point.q.size(); j++) {
-                if(fabsf(point.q[j] - vPrevValues[j]) > 0.2){
-                    RAVELOG_DEBUG("Breaking here %d\n",j);                 
+                if(fabsf(point.q[j] - vPrevValues[j]) > 0.2) {
+                    RAVELOG_DEBUG("Breaking here %d\n",j);
                     break;
                 }
             }
@@ -461,21 +466,21 @@ class DualManipulation : public ModuleBase
                 RAVELOG_DEBUG("Arm Lifting: broke due to discontinuity\n");
                 break;
             }
-        
+
             robot->SetActiveDOFValues(point.q);
-        
+
             bool bInCollision = GetEnv()->CheckCollision(KinBodyConstPtr(robot))||robot->CheckSelfCollision();
-            if(bInCollision && !bPrevInCollision && i >= minsteps) {
+            if(bInCollision && !bPrevInCollision &&( i >= minsteps) ) {
                 RAVELOG_DEBUG("Arm Lifting: broke due to collision\n");
                 break;
             }
 
-        
+
             ptraj->AddPoint(point);
             vPrevValues = point.q;
             bPrevInCollision = bInCollision;
         }
-    
+
         if( i > 0 ) {
             if( bPrevInCollision ) {
                 RAVELOG_DEBUG("hand failed to move out of collision\n");
@@ -493,7 +498,7 @@ class DualManipulation : public ModuleBase
 
     RobotBasePtr robot;
     string _strRRTPlannerName;
-    string _strRobotName; ///< name of the active robot
+    string _strRobotName;     ///< name of the active robot
 };
 
 #endif

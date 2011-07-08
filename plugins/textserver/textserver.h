@@ -39,7 +39,7 @@ class SimpleTextServer : public ModuleBase
     // socket just accepts connections
     class Socket
     {
-    public:
+public:
         struct PACKET
         {
             string cmd, arg;
@@ -89,7 +89,9 @@ class SimpleTextServer : public ModuleBase
         }
 
         /// returns true if connection is valid, otherwise false
-        bool IsInit() { return bInit; }
+        bool IsInit() {
+            return bInit;
+        }
 
         void SendData(const void* pdata, int size_to_write)
         {
@@ -113,7 +115,7 @@ class SimpleTextServer : public ModuleBase
             // don't care about writefds and exceptfds:
             int num = select(client_sockfd+1, NULL, NULL, &exfds, &tv);
 
-            if ( num > 0 && FD_ISSET(client_sockfd, &exfds) ) {
+            if (( num > 0) && FD_ISSET(client_sockfd, &exfds) ) {
                 RAVELOG_ERROR("socket exception detected\n");
                 Close();
                 return;
@@ -124,17 +126,17 @@ class SimpleTextServer : public ModuleBase
             // don't care about writefds and exceptfds:
             num = select(client_sockfd+1, NULL, &writefds, NULL, &tv);
 
-            if ( num == 0 || !FD_ISSET(client_sockfd, &writefds) ) {
+            if (( num == 0) || !FD_ISSET(client_sockfd, &writefds) ) {
                 RAVELOG_WARN("no writable socket\n");
                 return;
             }
 
             /*int ret = recv(client_sockfd, NULL, 0, MSG_PEEK|MSG_DONTWAIT);
-              if( ret == 0 ) {
-              RAVEPRINT(L"socket close detected\n");
-              Close();
-              return;
-              }*/
+               if( ret == 0 ) {
+               RAVEPRINT(L"socket close detected\n");
+               Close();
+               return;
+               }*/
 #endif
 
             char* pbuf = (char*)pdata;
@@ -176,7 +178,7 @@ class SimpleTextServer : public ModuleBase
             // don't care about writefds and exceptfds:
             int num = select(client_sockfd+1, NULL, NULL, &exfds, &tv);
 
-            if ( num > 0 && FD_ISSET(client_sockfd, &exfds) ) {
+            if (( num > 0) && FD_ISSET(client_sockfd, &exfds) ) {
                 RAVELOG_ERROR("socket exception detected\n");
                 Close();
                 return false;
@@ -188,7 +190,7 @@ class SimpleTextServer : public ModuleBase
             // don't care about writefds and exceptfds:
             num = select(client_sockfd+1, &readfds, NULL, NULL, &tv);
 
-            if ( num == 0 || !FD_ISSET(client_sockfd, &readfds) ) {
+            if (( num == 0) || !FD_ISSET(client_sockfd, &readfds) ) {
                 return false;
             }
 
@@ -199,7 +201,7 @@ class SimpleTextServer : public ModuleBase
 
             while(1) {
                 if( (nBytesReceived = recv(client_sockfd, &c, sizeof(char), 0)) > 0 ) {
-                    if( c == '\n' || c == '\r') {
+                    if(( c == '\n') ||( c == '\r') ) {
                         break;
                     }
                     s.push_back(c);
@@ -224,7 +226,7 @@ class SimpleTextServer : public ModuleBase
             return true;
         }
 
-    private:
+private:
         int client_sockfd;
         int client_len;
 
@@ -237,23 +239,25 @@ class SimpleTextServer : public ModuleBase
     /// \param in is the data passed from the network
     /// \param out is the return data that will be passed to the client
     /// \param boost::shared_ptr<void> is a pointer to a void that willl be passed to the worker thread function
-    typedef boost::function<bool(istream&, ostream&, boost::shared_ptr<void>&)> OpenRaveNetworkFn;
-    typedef boost::function<bool(boost::shared_ptr<istream>, boost::shared_ptr<void>)> OpenRaveWorkerFn;
+    typedef boost::function<bool (istream&, ostream&, boost::shared_ptr<void>&)> OpenRaveNetworkFn;
+    typedef boost::function<bool (boost::shared_ptr<istream>, boost::shared_ptr<void>)> OpenRaveWorkerFn;
 
     /// each network function has a function to intially processes the data on the socket function
     /// and one that is executed on the main worker thread to avoid multithreading data synchronization issues
     struct RAVENETWORKFN
     {
-    RAVENETWORKFN() : bReturnResult(false) {}
-    RAVENETWORKFN(const OpenRaveNetworkFn& socket, const OpenRaveWorkerFn& worker, bool bReturnResult) : fnSocketThread(socket), fnWorker(worker), bReturnResult(bReturnResult) {}
+        RAVENETWORKFN() : bReturnResult(false) {
+        }
+        RAVENETWORKFN(const OpenRaveNetworkFn& socket, const OpenRaveWorkerFn& worker, bool bReturnResult) : fnSocketThread(socket), fnWorker(worker), bReturnResult(bReturnResult) {
+        }
 
         OpenRaveNetworkFn fnSocketThread;
         OpenRaveWorkerFn fnWorker;
-        bool bReturnResult; // if true, function is expected to return a result
+        bool bReturnResult;     // if true, function is expected to return a result
     };
 
- public:
- SimpleTextServer(EnvironmentBasePtr penv) : ModuleBase(penv) {
+public:
+    SimpleTextServer(EnvironmentBasePtr penv) : ModuleBase(penv) {
         _nIdIndex = 1;
         _nNextFigureId = 1;
         _bWorking = false;
@@ -323,8 +327,8 @@ class SimpleTextServer : public ModuleBase
         Destroy();
 
 #ifdef _WIN32
-        WORD      wVersionRequested;
-        WSADATA   wsaData;
+        WORD wVersionRequested;
+        WSADATA wsaData;
 
         wVersionRequested = MAKEWORD(1,1);
         if (WSAStartup(wVersionRequested, &wsaData) != 0) {
@@ -399,7 +403,7 @@ class SimpleTextServer : public ModuleBase
         Reset();
 
         {
-            boost::mutex::scoped_lock lock(_mutexWorker); // need lock to keep multiple threads out of Destroy
+            boost::mutex::scoped_lock lock(_mutexWorker);     // need lock to keep multiple threads out of Destroy
             if( bDestroying ) {
                 return;
             }
@@ -456,10 +460,14 @@ class SimpleTextServer : public ModuleBase
         return false;
     }
 
- private:
+private:
 
-    inline boost::shared_ptr<SimpleTextServer> shared_server() { return boost::static_pointer_cast<SimpleTextServer>(shared_from_this()); }
-    inline boost::shared_ptr<SimpleTextServer const> shared_server_const() const { return boost::static_pointer_cast<SimpleTextServer const>(shared_from_this()); }
+    inline boost::shared_ptr<SimpleTextServer> shared_server() {
+        return boost::static_pointer_cast<SimpleTextServer>(shared_from_this());
+    }
+    inline boost::shared_ptr<SimpleTextServer const> shared_server_const() const {
+        return boost::static_pointer_cast<SimpleTextServer const>(shared_from_this());
+    }
 
     // called from threads other than the main worker to wait until
     void SyncWithWorkerThread()
@@ -548,7 +556,7 @@ class SimpleTextServer : public ModuleBase
             //Sleep(100);
             if( psocket->ReadLine(line) && line.length() ) {
 
-                if( !!flog && GetEnv()->GetDebugLevel()>0) {
+                if( !!flog &&( GetEnv()->GetDebugLevel()>0) ) {
                     static int index=0;
                     flog << index++ << ": " << line << endl;
                 }
@@ -605,7 +613,7 @@ class SimpleTextServer : public ModuleBase
                     }
                     else {
                         if( itfn->second.bReturnResult ) {
-                            psocket->SendData(sout.str().c_str(), sout.str().size()); // return dummy
+                            psocket->SendData(sout.str().c_str(), sout.str().size());     // return dummy
                         }
                         bCallWorker = !!itfn->second.fnWorker;
                     }
@@ -631,7 +639,7 @@ class SimpleTextServer : public ModuleBase
         RAVELOG_VERBOSE("Closing socket connection\n");
     }
 
-    int _nPort; ///< port used for listening to incoming connections
+    int _nPort;     ///< port used for listening to incoming connections
 
     boost::shared_ptr<boost::thread> _servthread, _workerthread;
     list<boost::shared_ptr<boost::thread> > _listReadThreads;
@@ -645,7 +653,7 @@ class SimpleTextServer : public ModuleBase
     bool bDestroying;
 
     struct sockaddr_in server_address;
-	int server_sockfd, server_len;
+    int server_sockfd, server_len;
 
     ofstream flog;
 
@@ -657,7 +665,7 @@ class SimpleTextServer : public ModuleBase
     map<int, GraphHandlePtr> _mapFigureIds;
     int _nNextFigureId;
 
-    bool _bWorking; ///< worker thread processing current work items
+    bool _bWorking;     ///< worker thread processing current work items
 
 protected:
     // all the server functions
@@ -742,7 +750,7 @@ protected:
             if( cmd == "physics" ) {
                 string name;
                 *is >> name;
-                if( !*is  || name.size() == 0 ) {
+                if( !*is  ||(name.size() == 0) ) {
                     RAVELOG_DEBUG("resetting physics engine\n");
                     GetEnv()->SetPhysicsEngine(PhysicsEngineBasePtr());
                 }
@@ -758,7 +766,7 @@ protected:
             else if( cmd == "collision" ) {
                 string name;
                 *is >> name;
-                if( !*is  || name.size() == 0 ) {
+                if( !*is  ||(name.size() == 0) ) {
                     RAVELOG_DEBUG("resetting collision checker\n");
                     GetEnv()->SetCollisionChecker(CollisionCheckerBasePtr());
                 }
@@ -776,7 +784,7 @@ protected:
                 *is >> simcmd;
                 std::transform(simcmd.begin(), simcmd.end(), simcmd.begin(), ::tolower);
 
-                if( simcmd == "start" || simcmd == "on" ) {
+                if(( simcmd == "start") ||( simcmd == "on") ) {
                     dReal fdeltatime = 0.01f;
                     *is >> fdeltatime;
                     RAVELOG_DEBUG("starting simulation loop, timestep=%f\n", (float)fdeltatime);
@@ -833,7 +841,7 @@ protected:
         bool bClearScene=false;
         string filename;
         is >> filename >> bClearScene;
-        if( !is || filename.size() == 0 ) {
+        if( !is ||( filename.size() == 0) ) {
             RAVELOG_DEBUG("resetting scene\n");
             _mapProblems.clear();
             GetEnv()->Reset();
@@ -1145,11 +1153,11 @@ protected:
         if( !is ) {
             return false;
         }
-        if( sensorindex < 0 || sensorindex >= (int)probot->GetAttachedSensors().size() ) {
+        if(( sensorindex < 0) ||( sensorindex >= (int)probot->GetAttachedSensors().size()) ) {
             return false;
         }
         return probot->GetAttachedSensors().at(sensorindex)->GetSensor()->SendCommand(os,is);
-    };
+    }
 
     bool orRobotSensorData(istream& is, ostream& os, boost::shared_ptr<void>& pdata)
     {
@@ -1164,7 +1172,7 @@ protected:
         if( !is ) {
             return false;
         }
-        if( sensorindex < 0 || sensorindex >= (int)probot->GetAttachedSensors().size() ) {
+        if(( sensorindex < 0) ||( sensorindex >= (int)probot->GetAttachedSensors().size()) ) {
             return false;
         }
         SensorBasePtr psensor = probot->GetAttachedSensors().at(sensorindex)->GetSensor();
@@ -1198,7 +1206,7 @@ protected:
                 os << plaserdata->intensity.size() << " ";
             }
             else {
-                os << "0 "; // don't send any intensity data
+                os << "0 ";     // don't send any intensity data
             }
 
             FOREACH(it, plaserdata->ranges) {
@@ -1215,7 +1223,7 @@ protected:
 
             if( options & 1 ) {
                 FOREACH(it, plaserdata->intensity)
-                    os << *it << " ";
+                os << *it << " ";
             }
 
             break;
@@ -1352,42 +1360,42 @@ protected:
             return false;
         }
 
-        if( numcolors > 1 && numcolors != numpoints) {
+        if(( numcolors > 1) &&( numcolors != numpoints) ) {
             RAVELOG_WARN(str(boost::format("number of colors (%d) != number of points (%d)\n")%vcolors.size()%numpoints));
             numcolors = 1;
         }
 
         GraphHandlePtr figure;
         switch(drawstyle) {
-        case 0: // regular points
+        case 0:     // regular points
             if( numcolors != numpoints )
                 figure = GetEnv()->plot3(&vpoints[0].x,vpoints.size(),sizeof(vpoints[0]),fsize,
                                          RaveVector<float>(vcolors[0], vcolors[1], vcolors[2], falpha),0);
             else
                 figure = GetEnv()->plot3(&vpoints[0].x,vpoints.size(),sizeof(vpoints[0]),fsize,&vcolors[0],0);
             break;
-        case 1: // line strip
+        case 1:     // line strip
             if( numcolors != numpoints )
                 figure = GetEnv()->drawlinestrip(&vpoints[0].x,vpoints.size(),sizeof(vpoints[0]),fsize,
                                                  RaveVector<float>(vcolors[0], vcolors[1], vcolors[2], falpha));
             else
                 figure = GetEnv()->drawlinestrip(&vpoints[0].x,vpoints.size(),sizeof(vpoints[0]),fsize,&vcolors[0]);
             break;
-        case 2: // list lists
+        case 2:     // list lists
             if( numcolors != numpoints )
                 figure = GetEnv()->drawlinelist(&vpoints[0].x,vpoints.size(),sizeof(vpoints[0]),fsize,
                                                 RaveVector<float>(vcolors[0], vcolors[1], vcolors[2], falpha));
             else
                 figure = GetEnv()->drawlinelist(&vpoints[0].x,vpoints.size(),sizeof(vpoints[0]),fsize,&vcolors[0]);
             break;
-        case 3: // spheres
+        case 3:     // spheres
             if( numcolors != numpoints )
                 figure = GetEnv()->plot3(&vpoints[0].x,vpoints.size(),sizeof(vpoints[0]),fsize,
                                          RaveVector<float>(vcolors[0], vcolors[1], vcolors[2], falpha),1);
             else
                 figure = GetEnv()->plot3(&vpoints[0].x,vpoints.size(),sizeof(vpoints[0]),fsize,&vcolors[0],1);
             break;
-        case 4: // triangle list
+        case 4:     // triangle list
             //if( numcolors != numpoints )
             figure = GetEnv()->drawtrimesh(&vpoints[0].x,sizeof(vpoints[0]),NULL, vpoints.size()/3,
                                            RaveVector<float>(vcolors[0], vcolors[1], vcolors[2], falpha));
@@ -1427,7 +1435,7 @@ protected:
             if( !is ) {
                 return false;
             }
-            if( tempindex < 0 || tempindex >= probot->GetDOF() ) {
+            if(( tempindex < 0) ||( tempindex >= probot->GetDOF()) ) {
                 RAVELOG_WARN("bad degree of freedom\n");
                 return false;
             }
@@ -1561,7 +1569,7 @@ protected:
             pbody->GetDOFValues(values);
             values.reserve(ids.size());
             FOREACH(it,ids) {
-                if( *it < 0 || *it >= pbody->GetDOF() ) {
+                if(( *it < 0) ||( *it >= pbody->GetDOF()) ) {
                     RAVELOG_ERROR("orBodyGetJointValues bad index\n");
                     return false;
                 }
@@ -1587,13 +1595,13 @@ protected:
         if( ids.size() == 0 ) {
             probot->GetActiveDOFValues(values);
             FOREACH(it,values)
-                os << *it << " ";
+            os << *it << " ";
         }
         else {
             probot->GetDOFValues(values);
             values.reserve(ids.size());
             FOREACH(it,ids) {
-                if( *it < 0 || *it >= probot->GetDOF() ) {
+                if(( *it < 0) ||( *it >= probot->GetDOF()) ) {
                     RAVELOG_ERROR("orBodyGetJointValues bad index\n");
                     return false;
                 }
@@ -1717,7 +1725,7 @@ protected:
         }
         int dof = 0;
         is >> dof;
-        if( !is || dof <= 0 ) {
+        if( !is ||( dof <= 0) ) {
             return false;
         }
         vector<dReal> vvalues(dof);
@@ -1750,7 +1758,7 @@ protected:
             pbody->GetDOFValues(v);
             vector<dReal>::iterator itvalue = vvalues.begin();
             FOREACH(it,vindices) {
-                if( *it < 0 || *it >= pbody->GetDOF() ) {
+                if(( *it < 0) ||( *it >= pbody->GetDOF()) ) {
                     RAVELOG_ERROR("bad index: %d\n", *it);
                     return false;
                 }
@@ -1791,7 +1799,7 @@ protected:
         int dof = 0;
         bool bAdd=false;
         is >> bAdd >> dof;
-        if( !is || dof <= 0 ) {
+        if( !is ||( dof <= 0) ) {
             return false;
         }
         if( dof != pbody->GetDOF() ) {
@@ -1820,7 +1828,7 @@ protected:
         }
         int dof = 0;
         is >> dof;
-        if( !is || dof <= 0 ) {
+        if( !is ||( dof <= 0) ) {
             return false;
         }
         vector<dReal> vvalues(dof);
@@ -1853,7 +1861,7 @@ protected:
             probot->GetDOFValues(v);
             vector<dReal>::iterator itvalue = vvalues.begin();
             FOREACH(it,vindices) {
-                if( *it < 0 || *it >= probot->GetDOF() ) {
+                if(( *it < 0) ||( *it >= probot->GetDOF()) ) {
                     RAVELOG_ERROR("bad index: %d\n", *it);
                     return false;
                 }
@@ -1910,14 +1918,14 @@ protected:
         }
 
         if( havetrans ) {
-            if( havetrans == 1 ) { // 3x4 matrix
+            if( havetrans == 1 ) {     // 3x4 matrix
                 TransformMatrix m;
                 FOREACH(it, vpoints) {
                     *is >> m;
                     it->trans = m;
                 }
             }
-            else { // quaternion and translation
+            else {     // quaternion and translation
                 FOREACH(it, vpoints) {
                     *is >> it->trans;
                 }
@@ -2004,10 +2012,10 @@ protected:
             }
         }
         int bodyindex = 0;
-        if( !!preport->plink1 && preport->plink1->GetParent() != pbody ) {
+        if( !!preport->plink1 &&( preport->plink1->GetParent() != pbody) ) {
             bodyindex = preport->plink1->GetParent()->GetEnvironmentId();
         }
-        if( !!preport->plink2 && preport->plink2->GetParent() != pbody ) {
+        if( !!preport->plink2 &&( preport->plink2->GetParent() != pbody) ) {
             bodyindex = preport->plink2->GetParent()->GetEnvironmentId();
         }
         os << bodyindex << " ";
@@ -2165,7 +2173,7 @@ protected:
                 }
             }
 
-            if( timeout != 0 ) { // only ret success
+            if( timeout != 0 ) {     // only ret success
                 os << "1";
             }
             else {

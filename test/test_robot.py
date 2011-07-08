@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from common_test_openrave import *
-_multiprocess_can_split_ = True
 
 class TestRobot(EnvironmentSetup):
     def test_dualarm_grabbing(self):
@@ -59,7 +58,56 @@ class TestRobot(EnvironmentSetup):
             robot=env.ReadRobotURI('robots/collisionmap.robot.xml')
             env.AddRobot(robot)
             assert(robot.GetXMLId().lower()=='collisionmaprobot')
-        
+
+    def test_grabcollision(self):
+        env=self.env
+        env.Load('robots/man1.zae') # load a simple scene
+        with env:
+            robot = env.GetRobots()[0] # get the first robot
+            leftarm = robot.GetManipulator('leftarm')
+            rightarm = robot.GetManipulator('rightarm')
+
+            env.Load('data/mug1.kinbody.xml'); 
+            leftmug = env.GetKinBody('mug')
+            env.Load('data/mug2.kinbody.xml')
+            rightmug = env.GetKinBody('mug2')
+
+            env.StopSimulation()
+            leftMugGrabPose = array([[ 0.99516672, -0.0976999 ,  0.00989374,  0.14321238],
+                                     [ 0.09786028,  0.99505007, -0.01728364,  0.94120538],
+                                     [-0.00815616,  0.01816831,  0.9998017 ,  0.38686624],
+                                     [ 0.        ,  0.        ,  0.        ,  1.        ]])
+            leftmug.SetTransform(leftMugGrabPose)
+            rightMugGrabPose = array([[  9.99964535e-01,  -1.53668225e-08,   8.41848925e-03, -1.92047462e-01],
+                                      [ -8.40134174e-03,  -6.37951940e-02,   9.97927606e-01, 9.22815084e-01],
+                                      [  5.37044369e-04,  -9.97963011e-01,  -6.37929291e-02, 4.16847348e-01],
+                                      [  0.00000000e+00,   0.00000000e+00,   0.00000000e+00, 1.00000000e+00]])
+            rightmug.SetTransform(rightMugGrabPose);
+            assert(not env.CheckCollision(leftmug,rightmug))
+            
+            grabJointAngles = array([ -3.57627869e-07,   0.00000000e+00,  -1.46997878e-15, -1.65528119e+00,  -1.23030146e-08,  -8.41909389e-11, 0.00000000e+00], dtype=float32)
+
+            robot.SetDOFValues(grabJointAngles,rightarm.GetArmIndices())
+            robot.SetDOFValues(grabJointAngles,leftarm.GetArmIndices())
+            
+            robot.SetActiveManipulator(rightarm)
+            robot.Grab(rightmug)
+            robot.SetActiveManipulator(leftarm)
+            robot.Grab(leftmug)
+
+            assert(not robot.CheckSelfCollision())
+            assert(not env.CheckCollision(robot))
+
+            print 'Now changing arm joint angles so that the two mugs collide. The checkSelfCollision returns:'
+            collisionJointAngles = array([ -2.38418579e-07,   0.00000000e+00,  -2.96873480e-01, -1.65527940e+00,  -3.82479293e-08,  -1.23165381e-10, 1.35525272e-20]);
+            robot.SetDOFValues(collisionJointAngles,rightarm.GetArmIndices())
+            robot.SetDOFValues(collisionJointAngles,leftarm.GetArmIndices())
+            assert(robot.CheckSelfCollision())
+            assert(not env.CheckCollision(robot))
+
+            robot.ReleaseAllGrabbed()
+            assert(env.CheckCollision(leftmug,rightmug))
+            
 # def test_ikgeneration():
 #     import inversekinematics
 #     env = Environment()

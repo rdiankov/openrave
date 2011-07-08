@@ -18,18 +18,18 @@
 
 #include "ikfastproblem.h"
 
-namespace ik_barrettwam { IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr, const std::vector<dReal>& vfreeinc); }
-namespace ik_pa10 { IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr, const std::vector<dReal>& vfreeinc); }
-namespace ik_puma { IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr, const std::vector<dReal>& vfreeinc); }
-namespace ik_pr2_head { IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr, const std::vector<dReal>& vfreeinc); }
-namespace ik_pr2_head_torso { IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr, const std::vector<dReal>& vfreeinc); }
-namespace ik_pr2_leftarm { IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr, const std::vector<dReal>& vfreeinc); }
-namespace ik_pr2_leftarm_torso { IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr, const std::vector<dReal>& vfreeinc); }
-namespace ik_pr2_rightarm { IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr, const std::vector<dReal>& vfreeinc); }
-namespace ik_pr2_rightarm_torso { IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr, const std::vector<dReal>& vfreeinc); }
-namespace ik_schunk_lwa3 { IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr, const std::vector<dReal>& vfreeinc); }
-namespace ik_katana5d { IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr, const std::vector<dReal>& vfreeinc); }
-namespace ik_katana5d_trans { IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr, const std::vector<dReal>& vfreeinc); }
+namespace ik_barrettwam { IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr, const std::vector<dReal>&vfreeinc); }
+namespace ik_pa10 { IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr, const std::vector<dReal>&vfreeinc); }
+namespace ik_puma { IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr, const std::vector<dReal>&vfreeinc); }
+namespace ik_pr2_head { IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr, const std::vector<dReal>&vfreeinc); }
+namespace ik_pr2_head_torso { IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr, const std::vector<dReal>&vfreeinc); }
+namespace ik_pr2_leftarm { IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr, const std::vector<dReal>&vfreeinc); }
+namespace ik_pr2_leftarm_torso { IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr, const std::vector<dReal>&vfreeinc); }
+namespace ik_pr2_rightarm { IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr, const std::vector<dReal>&vfreeinc); }
+namespace ik_pr2_rightarm_torso { IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr, const std::vector<dReal>&vfreeinc); }
+namespace ik_schunk_lwa3 { IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr, const std::vector<dReal>&vfreeinc); }
+namespace ik_katana5d { IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr, const std::vector<dReal>&vfreeinc); }
+namespace ik_katana5d_trans { IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr, const std::vector<dReal>&vfreeinc); }
 
 #include "ikfastproblem.h"
 
@@ -89,7 +89,7 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
             }
         }
         break;
-    }        
+    }
     case PT_Module:
         if( interfacename == "ikfast")
             return InterfaceBasePtr(new IKFastProblem(penv));

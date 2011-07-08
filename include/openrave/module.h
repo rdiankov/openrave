@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2010 Rosen Diankov (rosen.diankov@gmail.com)
+// Copyright (C) 2006-2011 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -16,7 +16,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /** \file module.h
     \brief Modules containing useful routines and algorithms.
-*/
+ */
 #ifndef OPENRAVE_COMMAND_PROBLEM_INSTANCE_H
 #define OPENRAVE_COMMAND_PROBLEM_INSTANCE_H
 
@@ -24,30 +24,42 @@ namespace OpenRAVE {
 
 /** \brief <b>[interface]</b> A loadable module of user code meant to solve a specific domain. See \ref arch_module.
     \ingroup interfaces
-*/
+ */
 class OPENRAVE_API ModuleBase : public InterfaceBase
 {
 public:
-    ModuleBase(EnvironmentBasePtr penv) : InterfaceBase(PT_Module, penv) {}
-    virtual ~ModuleBase() {}
+    ModuleBase(EnvironmentBasePtr penv) : InterfaceBase(PT_Module, penv) {
+    }
+    virtual ~ModuleBase() {
+    }
 
     /// return the static interface type this class points to (used for safe casting)
-    static inline InterfaceType GetInterfaceTypeStatic() { return PT_ProblemInstance; }
+    static inline InterfaceType GetInterfaceTypeStatic() {
+        return PT_ProblemInstance;
+    }
 
     /// gets called every time a problem instance is loaded to initialize the problem.
     /// Robots might not necessarily be set before this function call
     /// returns 0 on success
-    virtual int main(const std::string& cmd) { return 0; }
+    virtual int main(const std::string& cmd) {
+        return 0;
+    }
 
     /// called when problem gets unloaded from environment
-    virtual void Destroy() {}
+    virtual void Destroy() {
+    }
 
     /// called when environment is reset
-    virtual void Reset() {}
+    virtual void Reset() {
+    }
 
-    virtual bool SimulationStep(dReal fElapsedTime) {return false;}
+    virtual bool SimulationStep(dReal fElapsedTime) {
+        return false;
+    }
 private:
-    virtual const char* GetHash() const { return OPENRAVE_MODULE_HASH; }
+    virtual const char* GetHash() const {
+        return OPENRAVE_MODULE_HASH;
+    }
 };
 
 typedef ModuleBase ProblemInstance;

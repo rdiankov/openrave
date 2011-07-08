@@ -230,7 +230,7 @@ class ReachabilityModel(DatabaseGenerator):
                     maxradius = armlength+xyzdelta*sqrt(3.0)
 
                 allpoints,insideinds,shape,self.pointscale = self.UniformlySampleSpace(maxradius,delta=xyzdelta)
-                qarray = SpaceSampler().sampleSO3(quatdelta=quatdelta)
+                qarray = SpaceSamplerExtra().sampleSO3(quatdelta=quatdelta)
                 rotations = [eye(3)] if translationonly else rotationMatrixFromQArray(qarray)
                 self.xyzdelta = xyzdelta
                 self.quatdelta = 0

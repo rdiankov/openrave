@@ -132,7 +132,7 @@ class CalibrationViews:
 
         """
         with self.env:
-            localpositions = SpaceSampler().sampleR3(averagedist=averagedist,boxdims=[2*maxconedist,2*maxconedist,maxconedist])
+            localpositions = SpaceSamplerExtra().sampleR3(averagedist=averagedist,boxdims=[2*maxconedist,2*maxconedist,maxconedist])
             localpositions -= maxconedist
             angles = arctan2(sqrt(localpositions[:,0]**2+localpositions[:,1]**2),-localpositions[:,2])
             localpositions = localpositions[angles<maxconeangle]

@@ -13,7 +13,7 @@ Getting Started
 
 * :ref:`install`
 
- * :ref:`changelog`
+ * :ref:`changelog`, `Roadmap <https://sourceforge.net/apps/trac/openrave/roadmap>`_
 
 * :ref:`getting_started`
 

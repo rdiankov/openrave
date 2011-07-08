@@ -64,8 +64,8 @@ Description
 
 OpenRAVE can simulate grasps for any type of robotic hand, evaluate the quality of the grasps, and
 use those grasps in a more complex grasp planning framework. This tutorial is meant to introduce you
-to the ``grasper`` plugin and the scripts provided to manage the testing and simulation. At the
-end, you should be able to create grasp tables and use them effectively in OpenRAVE.
+to the ``grasper`` plugin and the scripts provided to manage the testing and simulation. At the end,
+you should be able to create grasp tables and use them effectively in OpenRAVE.
 
 A grasp is simulated by giving the end-effector an initial pose and initial joint angles
 (preshape). Then the end effector moves along a direction (usually along the normal of the palm)
@@ -119,15 +119,25 @@ Features
 
 Here's a short list of features of the grasper planner and problem interfaces:
 
-- the grasper planner takes care of initializing the robot transform given the grasp parameters. the parameters structure for the now contains: stand off, target body, roll, direction, center, and several flags for controlling internal behavior (definition in in grasper/plugindefs.h)
+- the grasper planner takes care of initializing the robot transform given the grasp parameters. the
+  parameters structure for the now contains: stand off, target body, roll, direction, center, and
+  several flags for controlling internal behavior (definition in in grasper/plugindefs.h)
 
-- the grasper problem has two functions: grasp and computedistancemap. grasp just takes care of filling the parameters structure for the planner and returning contact points.
+- the grasper problem has two functions: grasp and computedistancemap. grasp just takes care of
+  filling the parameters structure for the planner and returning contact points.
 
-- All grasp parameters like roll, direction, and center offset now specified in target body space. The user *never* has to transform them correspondingly anymore (this was causing many headaches before).
+- All grasp parameters like roll, direction, and center offset now specified in target body
+  space. The user *never* has to transform them correspondingly anymore (this was causing many
+  headaches before).
 
-- The grasp coordinate system is defined to be the manipulator's grasp coordinate system (ie, it isn't a link). This allows grasps to define a center of approach. The manipulator definition itself also supports specifying a 'palm direction', which the grasper planner now uses.
+- The grasp coordinate system is defined to be the manipulator's grasp coordinate system (ie, it
+  isn't a link). This allows grasps to define a center of approach. The manipulator definition
+  itself also supports specifying a 'palm direction', which the grasper planner now uses.
 
-- Because the grasper planner reads the gripper links from the manipulator definition, it can now function correctly just by being passed the full robot. Inside the loop, the gripper is separated momentarily to complete the grasping process, the rest of the body is ignored. This allows users to test grasps on a real scene without having to introduce a floating hand into the scene.
+- Because the grasper planner reads the gripper links from the manipulator definition, it can now
+  function correctly just by being passed the full robot. Inside the loop, the gripper is separated
+  momentarily to complete the grasping process, the rest of the body is ignored. This allows users
+  to test grasps on a real scene without having to introduce a floating hand into the scene.
 
 Command-line
 ------------
@@ -194,6 +204,7 @@ class GraspingModel(DatabaseGenerator):
 
     def __init__(self,robot,target,maxvelmult=None):
         DatabaseGenerator.__init__(self,robot=robot)
+        assert(target is not None)
         self.target = target
         self.grasps = []
         self.graspindices = dict()
@@ -203,7 +214,7 @@ class GraspingModel(DatabaseGenerator):
         self.collision_escape_offset = 0.00009 # used for escaping collision/alignment errors during grasp generation
         self.preprocess()
         # only the indices used by the TaskManipulation plugin should start with an 'i'
-        graspdof = {'igraspdir':3,'igrasppos':3,'igrasproll':1,'igraspstandoff':1,'igrasppreshape':len(self.manip.GetGripperIndices()),'igrasptrans':12,'forceclosure':1,'grasptrans_nocol':12}
+        graspdof = {'igraspdir':3,'igrasppos':3,'igrasproll':1,'igraspstandoff':1,'igrasppreshape':len(self.manip.GetGripperIndices()),'igrasptrans':12,'imanipulatordirection':3,'forceclosure':1,'grasptrans_nocol':12}
         self.graspindices = dict()
         self.totaldof = 0
         for name,dof in graspdof.iteritems():
@@ -218,7 +229,7 @@ class GraspingModel(DatabaseGenerator):
     def has(self):
         return len(self.grasps) > 0 and len(self.graspindices) > 0 and self.grasper is not None
     def getversion(self):
-        return 4
+        return 5
     def init(self,friction,avoidlinks,plannername=None):
         self.basemanip = interfaces.BaseManipulation(self.robot,maxvelmult=self.maxvelmult)
         self.grasper = interfaces.Grasper(self.robot,friction=friction,avoidlinks=avoidlinks,plannername=plannername)
@@ -267,6 +278,7 @@ class GraspingModel(DatabaseGenerator):
         # disable every body but the target and robot
         friction = None
         preshapes = None
+        manipulatordirections = None
         approachrays = None
         standoffs = None
         rolls = None
@@ -278,9 +290,9 @@ class GraspingModel(DatabaseGenerator):
         directiondelta=0
         if options is not None:
             if options.preshapes is not None:
-                preshapes = zeros((0,len(self.manip.GetGripperIndices())))
-                for preshape in options.preshapes:
-                    preshapes = r_[preshapes,[array([float(s) for s in preshape.split()])]]
+                preshapes = array([array([float(s) for s in preshape.split()]) for preshape in options.manipulatordirections])
+            if options.manipulatordirections is not None:
+                manipulatordirections = array([array([float(s) for s in md.split()]) for md in options.manipulatordirections])
             if options.boxdelta is not None:
                 approachrays = self.computeBoxApproachRays(delta=options.boxdelta,normalanglerange=options.normalanglerange,directiondelta=options.directiondelta)
             elif options.spheredelta is not None:
@@ -303,14 +315,17 @@ class GraspingModel(DatabaseGenerator):
                 directiondelta = options.directiondelta
             updateenv = True#options.useviewer
         # check for specific robots
-        if self.robot.GetRobotStructureHash() == 'dc6974d07d6adf9db8b790f49e304ffa' or self.robot.GetRobotStructureHash() == 'd51f2af3be3f82ae9a9393af36e72bcd': # wam+barretthand
+        if self.robot.GetRobotStructureHash() == '2b0b07cce5d2f9c321010e74273a77f2' or self.robot.GetRobotStructureHash() == 'ca823aed89e08c7020b2cd7d2e5ff145': # wam+barretthand
             if preshapes is None:
                 preshapes=array(((0.5,0.5,0.5,pi/3),(0.5,0.5,0.5,0),(0,0,0,pi/2)))
+#             if graspingnoise is None:
+#                 graspingnoise = 0.01 # 0.01m of noise
+        elif self.robot.GetRobotStructureHash() == '3a4439dde9465971e2f90ea6466b2fa6': # pa10
             if graspingnoise is None:
                 graspingnoise = 0.01 # 0.01m of noise
-        elif self.robot.GetRobotStructureHash() == 'a43d21a7b6d60d7443922d012bd3b43e': # pa10
-            if graspingnoise is None:
-                graspingnoise = 0.01 # 0.01m of noise
+        elif self.robot.GetRobotStructureHash() == '44fe20dd5451716433975043eb7fdea9':
+            if manipulatordirections is None:
+                manipulatordirections = array([[0,1.0,0]])
         if avoidlinks is None:
             avoidlinks = []
         if friction is None:
@@ -318,10 +333,10 @@ class GraspingModel(DatabaseGenerator):
         if approachrays is None:
             approachrays = self.computeBoxApproachRays(delta=0.02,normalanglerange=normalanglerange,directiondelta=directiondelta)
         self.init(friction=friction,avoidlinks=avoidlinks,plannername=plannername)
-        self.generate(preshapes=preshapes,rolls=rolls,graspingnoise=graspingnoise,standoffs=standoffs,approachrays=approachrays,updateenv=updateenv)
+        self.generate(preshapes=preshapes,manipulatordirections=manipulatordirections,rolls=rolls,graspingnoise=graspingnoise,standoffs=standoffs,approachrays=approachrays,updateenv=updateenv)
         self.save()
 
-    def generate(self,preshapes=None,standoffs=None,rolls=None,approachrays=None, graspingnoise=None,updateenv=True,forceclosure=True,forceclosurethreshold=1e-9,checkgraspfn=None,disableallbodies=True):
+    def generate(self,preshapes=None,standoffs=None,rolls=None,approachrays=None, graspingnoise=None,updateenv=True,forceclosure=True,forceclosurethreshold=1e-9,checkgraspfn=None,disableallbodies=True,manipulatordirections=None):
         """Generates a grasp set by searching space and evaluating contact points.
 
         All grasp parameters have to be in the bodies's coordinate system (ie: approachrays).
@@ -343,6 +358,8 @@ class GraspingModel(DatabaseGenerator):
             standoffs = array([0,0.025])
         if graspingnoise is None:
             graspingnoise = 0.0
+        if manipulatordirections is None:
+            manipulatordirections = array([self.manip.GetDirection()])
         time.sleep(0.1) # sleep or otherwise viewer might not load well
         N = approachrays.shape[0]
         with self.env:
@@ -366,7 +383,7 @@ class GraspingModel(DatabaseGenerator):
                 if updateenv:
                     self.env.UpdatePublishedBodies()
                 for approachray in approachrays:
-                    for roll,preshape,standoff in iterproduct(rolls,preshapes,standoffs):
+                    for roll,preshape,standoff,manipulatordirection in iterproduct(rolls,preshapes,standoffs,manipulatordirections):
                         print 'grasp %d/%d'%(counter,totalgrasps),'preshape:',preshape
                         counter += 1
                         grasp = zeros(self.totaldof)
@@ -375,6 +392,7 @@ class GraspingModel(DatabaseGenerator):
                         grasp[self.graspindices.get('igrasproll')] = roll
                         grasp[self.graspindices.get('igraspstandoff')] = standoff
                         grasp[self.graspindices.get('igrasppreshape')] = preshape
+                        grasp[self.graspindices.get('imanipulatordirection')] = manipulatordirection
                         try:
                             contacts,finalconfig,mindist,volume = self.testGrasp(grasp=grasp,graspingnoise=graspingnoise,translate=True,forceclosure=forceclosure,forceclosurethreshold=forceclosurethreshold)
                         except planning_error, e:
@@ -436,6 +454,8 @@ class GraspingModel(DatabaseGenerator):
             rolls = arange(0,2*pi,pi/2)
         if standoffs is None:
             standoffs = array([0,0.025])
+        if manipulatordirections is None:
+            manipulatordirections = array([self.manip.GetDirection()])
         if numthreads is None:
             numthreads = 2
 
@@ -452,7 +472,7 @@ class GraspingModel(DatabaseGenerator):
                 self.robot.SetTransform(eye(4)) # have to reset transform in order to remove randomness
                 self.robot.SetActiveDOFs(self.manip.GetGripperIndices(),Robot.DOFAffine.X+Robot.DOFAffine.Y+Robot.DOFAffine.Z if translate else 0)
                 approachrays[:,3:6] = -approachrays[:,3:6]
-                self.nextid, self.resultgrasps = self.grasper.GraspThreaded(approachrays=approachrays, rolls=rolls, standoffs=standoffs, preshapes=preshapes, target=self.target, graspingnoise=graspingnoise, forceclosurethreshold=forceclosurethreshold,numthreads=numthreads)
+                self.nextid, self.resultgrasps = self.grasper.GraspThreaded(approachrays=approachrays, rolls=rolls, standoffs=standoffs, preshapes=preshapes, manipulatordirections=manipulatordirections, target=self.target, graspingnoise=graspingnoise, forceclosurethreshold=forceclosurethreshold,numthreads=numthreads)
                 print 'graspthreaded done, processing grasps'
 
                 for resultgrasp in self.resultgrasps:
@@ -461,12 +481,13 @@ class GraspingModel(DatabaseGenerator):
                     grasp[self.graspindices.get('igraspdir')] = resultgrasp[1]
                     grasp[self.graspindices.get('igrasproll')] = resultgrasp[2]
                     grasp[self.graspindices.get('igraspstandoff')] = resultgrasp[3]
-                    mindist = resultgrasp[4]
-                    volume = resultgrasp[5]
-                    grasp[self.graspindices.get('igrasppreshape')] = resultgrasp[6]
-                    Tfinal = resultgrasp[7]
-                    finalshape = resultgrasp[8]
-                    contacts = resultgrasp[9]
+                    grasp[self.graspindices.get('imanipulatordirection')] = resultgrasp[4]
+                    mindist = resultgrasp[5]
+                    volume = resultgrasp[6]
+                    grasp[self.graspindices.get('igrasppreshape')] = resultgrasp[7]
+                    Tfinal = resultgrasp[8]
+                    finalshape = resultgrasp[9]
+                    contacts = resultgrasp[10]
 
                     with self.robot:
                         Tlocalgrasp = eye(4)
@@ -532,6 +553,7 @@ class GraspingModel(DatabaseGenerator):
                             time.sleep(delay)
                     except planning_error,e:
                         print 'bad grasp!',e
+
     def showgrasp(self,grasp,collisionfree=False,useik=False,delay=None):
         with RobotStateSaver(self.robot):
             with self.GripperVisibility(self.manip):
@@ -590,6 +612,7 @@ class GraspingModel(DatabaseGenerator):
                                       roll=grasp[self.graspindices.get('igrasproll')],
                                       position=grasp[self.graspindices.get('igrasppos')],
                                       standoff=grasp[self.graspindices.get('igraspstandoff')],
+                                      manipulatordirection=grasp[self.graspindices.get('imanipulatordirection')],
                                       target=self.target,graspingnoise = graspingnoise,
                                       forceclosure=forceclosure, execute=False, outputfinal=True)
     def runGraspFromTrans(self,grasp):
@@ -774,7 +797,7 @@ class GraspingModel(DatabaseGenerator):
                     newinfo[sum(rays[collision,3:6]*newinfo[:,3:6],1)>0,3:6] *= -1
                     approachrays = r_[approachrays,newinfo]
                 if normalanglerange > 0:
-                    theta,pfi = SpaceSampler().sampleS2(angledelta=directiondelta)
+                    theta,pfi = SpaceSamplerExtra().sampleS2(angledelta=directiondelta)
                     dirs = c_[cos(theta),sin(theta)*cos(pfi),sin(theta)*sin(pfi)]
                     dirs = array([dir for dir in dirs if arccos(dir[2])<=normalanglerange]) # find all dirs within normalanglerange
                     if len(dirs) == 0:
@@ -828,7 +851,7 @@ class GraspingModel(DatabaseGenerator):
                         newinfo[sum(rays[collision,3:6]*newinfo[:,3:6],1)>0,3:6] *= -1
                         approachrays = r_[approachrays,newinfo]
                 if normalanglerange > 0:
-                    theta,pfi = SpaceSampler().sampleS2(angledelta=directiondelta)
+                    theta,pfi = SpaceSamplerExtra().sampleS2(angledelta=directiondelta)
                     dirs = c_[cos(theta),sin(theta)*cos(pfi),sin(theta)*sin(pfi)]
                     dirs = array([dir for dir in dirs if arccos(dir[2])<=normalanglerange]) # find all dirs within normalanglerange
                     if len(dirs) == 0:
@@ -886,6 +909,8 @@ class GraspingModel(DatabaseGenerator):
                           help='Add a roll angle')
         parser.add_option('--preshape', action='append', type='string',dest='preshapes',default=None,
                           help='Add a preshape for the manipulator gripper joints')
+        parser.add_option('--manipulatordirection', action='append', type='string',dest='manipulatordirections',default=None,
+                          help='Add a direction for the gripper to face at when approaching (in the manipulator coordinate system)')
         parser.add_option('--avoidlink', action='append', type='string',dest='avoidlinks',default=None,
                           help='Add a link name to avoid at all costs (like sensor links)')
         parser.add_option('--friction', action='store', type='float',dest='friction',default=None,

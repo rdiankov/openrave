@@ -16,7 +16,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /** \file   plugin.h
     \brief  Provides helper functions for creating plugins. Defines all the necessary functions to export.
-*/
+ */
 #ifndef OPENRAVE_PLUGIN_H
 #define OPENRAVE_PLUGIN_H
 
@@ -49,7 +49,7 @@ OpenRAVE::InterfaceBasePtr CreateInterfaceValidated(OpenRAVE::InterfaceType type
     the safest funcdtion and should not create any static resources for the plugin.
     Only use when \ref rave/plugin.h is included.
     \param[out] info Holds information on what services this plugin provides.
-*/
+ */
 void GetPluginAttributesValidated(OpenRAVE::PLUGININFO& info);
 
 /// \brief <b>[export]</b> Definition of a plugin export. Requires \ref CreateInterfaceValidated to be defined.
@@ -57,7 +57,7 @@ void GetPluginAttributesValidated(OpenRAVE::PLUGININFO& info);
 OPENRAVE_PLUGIN_API OpenRAVE::InterfaceBasePtr OpenRAVECreateInterface(OpenRAVE::InterfaceType type, const std::string& name, const char* interfacehash, const char* envhash, OpenRAVE::EnvironmentBasePtr penv)
 {
     if( strcmp(interfacehash,OpenRAVE::RaveGetInterfaceHash(type)) ) {
-        throw OPENRAVE_EXCEPTION_FORMAT("bad interface %s hash: %s!=%s",RaveGetInterfaceName(type)%interfacehash%OpenRAVE::RaveGetInterfaceHash(type),OpenRAVE::ORE_InvalidInterfaceHash);
+    throw OPENRAVE_EXCEPTION_FORMAT("bad interface %s hash: %s!=%s",RaveGetInterfaceName(type)%interfacehash%OpenRAVE::RaveGetInterfaceHash(type),OpenRAVE::ORE_InvalidInterfaceHash);
     }
     if( !penv ) {
         throw OPENRAVE_EXCEPTION_FORMAT0("need to set environment",OpenRAVE::ORE_InvalidArguments);
@@ -69,7 +69,7 @@ OPENRAVE_PLUGIN_API OpenRAVE::InterfaceBasePtr OpenRAVECreateInterface(OpenRAVE:
     std::stringstream sinput(name);
     std::string interfacename;
     sinput >> interfacename;
-    std::transform(interfacename.begin(), interfacename.end(), interfacename.begin(), ::tolower);    
+    std::transform(interfacename.begin(), interfacename.end(), interfacename.begin(), ::tolower);
     return CreateInterfaceValidated(type,interfacename,sinput,penv);
 }
 

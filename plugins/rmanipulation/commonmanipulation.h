@@ -32,12 +32,18 @@ class CM
 public:
     class MoveUnsync
     {
-    public:
-    MoveUnsync() : _maxdivision(10) {}
-        virtual ~MoveUnsync() {}
+public:
+        MoveUnsync() : _maxdivision(10) {
+        }
+        virtual ~MoveUnsync() {
+        }
 
-        virtual void SetRobot(RobotBasePtr robot) { _robot = robot; thresh = 0; }
-        virtual float GetGoalThresh() { return thresh; }
+        virtual void SetRobot(RobotBasePtr robot) {
+            _robot = robot; thresh = 0;
+        }
+        virtual float GetGoalThresh() {
+            return thresh;
+        }
 
         virtual float Eval(const std::vector<dReal>& pConfiguration)
         {
@@ -64,7 +70,7 @@ public:
                     return 1000;
                 }
                 // don't check self collisions for multiple DOF since don't know how dof will actually get to the final config!!!!
-                if( vhandvalues.size() == 1 && _robot->CheckSelfCollision()) {
+                if(( vhandvalues.size() == 1) && _robot->CheckSelfCollision()) {
                     return 1000;
                 }
             }
@@ -100,7 +106,7 @@ public:
 
         static bool _MoveUnsyncJoints(EnvironmentBasePtr penv, RobotBasePtr robot, TrajectoryBasePtr ptraj, const vector<int>& vhandjoints, const vector<dReal>& vhandgoal, const std::string& pplannername="BasicRRT",int maxdivision=10)
         {
-            if( vhandjoints.size() == 0 || vhandjoints.size() != vhandgoal.size() || !ptraj )
+            if(( vhandjoints.size() == 0) ||( vhandjoints.size() != vhandgoal.size()) || !ptraj )
                 return false;
 
             boost::shared_ptr<MoveUnsync> pgoalfn(new MoveUnsync());
@@ -141,7 +147,7 @@ public:
             return true;
         }
 
-    protected:
+protected:
         vector<dReal> vhandvalues, vhanddelta, values, newvalues;
         RobotBasePtr _robot;
         int _maxdivision;
@@ -149,8 +155,8 @@ public:
 
     template <typename T>
     class GripperJacobianConstrains {
-    public:
-    GripperJacobianConstrains(RobotBase::ManipulatorPtr pmanip, const Transform& tTargetWorldFrame, const boost::array<T,6>& vfreedoms, T errorthresh=1e-3) : _pmanip(pmanip), _vfreedoms(vfreedoms) {
+public:
+        GripperJacobianConstrains(RobotBase::ManipulatorPtr pmanip, const Transform& tTargetWorldFrame, const boost::array<T,6>& vfreedoms, T errorthresh=1e-3) : _pmanip(pmanip), _vfreedoms(vfreedoms) {
             _errorthresh2 = errorthresh*errorthresh;
             _probot = _pmanip->GetRobot();
             _tOriginalEE = _pmanip->GetTransform();
@@ -163,11 +169,12 @@ public:
             _pmanip->GetRobot()->GetActiveDOFLimits(_vlower,_vupper);
 
         }
-        virtual ~GripperJacobianConstrains() {}
+        virtual ~GripperJacobianConstrains() {
+        }
 
         bool RetractionConstraint(std::vector<dReal>& vprev, const std::vector<dReal>& vdelta)
         {
-            const T lambda2 = 1e-8; // normalization constant
+            const T lambda2 = 1e-8;         // normalization constant
             using namespace boost::numeric::ublas;
             std::vector<dReal> vnew = vprev;
             for(size_t i = 0; i < vnew.size(); ++i) {
@@ -204,7 +211,7 @@ public:
                     return true;
                 }
                 // 4.0 is an arbitrary number...
-                if( totalerror > 4.0*_lasterror && fdistcur > 4.0*fdistprev ) {
+                if(( totalerror > 4.0*_lasterror) &&( fdistcur > 4.0*fdistprev) ) {
                     // last adjustment was greater than total distance (jacobian was close to being singular)
                     _iter = -1;
                     //RAVELOG_INFO(str(boost::format("%f > %f && %f > %f\n")%totalerror%_lasterror%fdistcur%fdistprev));
@@ -244,7 +251,7 @@ public:
                     vnew.at(i) += _qdelta(i,0);
                 }
                 fdistcur = _distmetricfn(vprev,vnew);
-                _probot->SetActiveDOFValues(vnew); // for next iteration
+                _probot->SetActiveDOFValues(vnew);         // for next iteration
             }
 
             _iter = -1;
@@ -255,14 +262,14 @@ public:
         // Matrix inversion routine. Uses lu_factorize and lu_substitute in uBLAS to invert a matrix */
         static bool InvertMatrix(const boost::numeric::ublas::matrix<T>& input, boost::numeric::ublas::matrix<T>& inverse) {
             using namespace boost::numeric::ublas;
-            matrix<T> A(input); // create a working copy of the input
-            permutation_matrix<std::size_t> pm(A.size1()); // create a permutation matrix for the LU-factorization
-            int res = lu_factorize(A,pm); // perform LU-factorization
+            matrix<T> A(input);         // create a working copy of the input
+            permutation_matrix<std::size_t> pm(A.size1());         // create a permutation matrix for the LU-factorization
+            int res = lu_factorize(A,pm);         // perform LU-factorization
             if( res != 0 )
                 return false;
 
-            inverse.assign(identity_matrix<T>(A.size1())); // create identity matrix of "inverse"
-            lu_substitute(A, pm, inverse); // backsubstitute to get the inverse
+            inverse.assign(identity_matrix<T>(A.size1()));         // create identity matrix of "inverse"
+            lu_substitute(A, pm, inverse);         // backsubstitute to get the inverse
             return true;
         }
 
@@ -273,7 +280,7 @@ public:
         double _lasterror;
         int _nMaxIterations;
 
-    protected:
+protected:
         RobotBasePtr _probot;
         RobotBase::ManipulatorPtr _pmanip;
         Transform _tTargetFrameLeft, _tTargetFrameRight,_tOriginalEE;
@@ -378,9 +385,9 @@ public:
     }
 
 #define GTS_M_ICOSAHEDRON_X /* sqrt(sqrt(5)+1)/sqrt(2*sqrt(5)) */   \
-        (dReal)0.850650808352039932181540497063011072240401406
+    (dReal)0.850650808352039932181540497063011072240401406
 #define GTS_M_ICOSAHEDRON_Y /* sqrt(2)/sqrt(5+sqrt(5))         */   \
-        (dReal)0.525731112119133606025669084847876607285497935
+    (dReal)0.525731112119133606025669084847876607285497935
 #define GTS_M_ICOSAHEDRON_Z (dReal)0.0
 
     // generate a sphere triangulation starting with an icosahedron
@@ -505,8 +512,10 @@ template <class T> void PermutateRandomly(vector<T>& vpermutation)
 class RandomPermutationExecutor
 {
 public:
- RandomPermutationExecutor() : nextindex(-1) {}
- RandomPermutationExecutor(const boost::function<bool(int)>& fn) : _fn(fn), nextindex(-1) {}
+    RandomPermutationExecutor() : nextindex(-1) {
+    }
+    RandomPermutationExecutor(const boost::function<bool(int)>& fn) : _fn(fn), nextindex(-1) {
+    }
 
     /// returns the index of the permutation that the function returned true in
     /// or -1 if function never returned true
@@ -521,7 +530,7 @@ public:
 
     /// continue from last time
     int PermuteContinue() {
-        if( nextindex < 0 || nextindex >= vpermutation.size() ) {
+        if(( nextindex < 0) ||( nextindex >= vpermutation.size()) ) {
             return -1;
         }
         for(unsigned int i = nextindex; i < vpermutation.size(); ++i) {
@@ -545,8 +554,9 @@ private:
 
 class RealVectorCompare
 {
- public:
- RealVectorCompare(dReal thresh) : _thresh(thresh) {}
+public:
+    RealVectorCompare(dReal thresh) : _thresh(thresh) {
+    }
     bool operator()(const vector<dReal> & v1, const vector<dReal>& v2) const
     {
         if( v1.size() != v2.size() )

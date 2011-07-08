@@ -19,11 +19,15 @@
 /// used to log scene elements
 class LoggingModule : public ModuleBase
 {
-    inline boost::shared_ptr<LoggingModule> shared_module() { return boost::static_pointer_cast<LoggingModule>(shared_from_this()); }
-    inline boost::shared_ptr<LoggingModule const> shared_module_const() const { return boost::static_pointer_cast<LoggingModule const>(shared_from_this()); }
+    inline boost::shared_ptr<LoggingModule> shared_module() {
+        return boost::static_pointer_cast<LoggingModule>(shared_from_this());
+    }
+    inline boost::shared_ptr<LoggingModule const> shared_module_const() const {
+        return boost::static_pointer_cast<LoggingModule const>(shared_from_this());
+    }
 
- public:
- LoggingModule(EnvironmentBasePtr penv) : ModuleBase(penv)
+public:
+    LoggingModule(EnvironmentBasePtr penv) : ModuleBase(penv)
     {
         __description = ":Interface Author: Rosen Diankov\n\nCan save the entire scene to an OpenRAVE XML file";
         RegisterCommand("savescene",boost::bind(&LoggingModule::SaveScene,this,_1,_2),
@@ -46,7 +50,8 @@ class LoggingModule : public ModuleBase
         bDoLog = false;
     }
 
-    virtual ~LoggingModule() {}
+    virtual ~LoggingModule() {
+    }
     virtual void Destroy()
     {
         bDestroyThread = true;
@@ -72,7 +77,7 @@ class LoggingModule : public ModuleBase
         return false;
     }
 
- private:
+private:
     virtual bool SaveScene(ostream& sout, istream& sinput)
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
@@ -131,7 +136,7 @@ class LoggingModule : public ModuleBase
 
             if( pbody->GetURI().size() > 0 ) {
                 fout << setw(tabwidth) << " "
-                     << (pbody->IsRobot()?"<Robot":"<KinBody") << " name=\"" << pbody->GetName() << "\"";
+                     << (pbody->IsRobot() ? "<Robot" : "<KinBody") << " name=\"" << pbody->GetName() << "\"";
                 fout << " file=\"" << pbody->GetURI() << "\">" << endl;
             }
             else {
@@ -154,10 +159,10 @@ class LoggingModule : public ModuleBase
             vector<dReal> values;
             pbody->GetDOFValues(values);
             FOREACH(it, values)
-                fout << *it << " ";
+            fout << *it << " ";
             fout << "</jointvalues>" << endl;
             fout << setw(tabwidth) << " ";
-            fout << (pbody->IsRobot()?"</Robot>":"</KinBody>") << endl;
+            fout << (pbody->IsRobot() ? "</Robot>" : "</KinBody>") << endl;
         }
 
         fout << "</Environment>" << endl;
@@ -185,42 +190,42 @@ class LoggingModule : public ModuleBase
     void _log_thread()
     {
         //while(!bDestroyThread) {
-            // record
-            //        if( pfLog == NULL ) {
-            //            pfLog = fopen("motion.txt", "wb");
-            //        }
-            //
-            //        fTotalTime += fElapsedTime;
-            //        if( pfLog != NULL && (fTotalTime-fLogTime) > 0.05f ) {
-            //
-            //            fwrite(&fTotalTime, sizeof(float), 1, pfLog);
-            //
-            //            int numobjs = (int)GetEnv()->GetBodies().size();
-            //            fwrite(&numobjs, 4, 1, pfLog);
-            //
-            //            Transform t;
-            //            vector<dReal> vjoints;
-            //            std::vector<KinBody*>::const_iterator itbody;
-            //            FORIT(itbody, GetEnv()->GetBodies()) {
-            //                size_t len = wcslen((*itbody)->GetName());
-            //                fwrite(&len, 4, 1, pfLog);
-            //                fwrite((*itbody)->GetName(), len*sizeof((*itbody)->GetName()[0]), 1, pfLog);
-            //
-            //                t = (*itbody)->GetTransform();
-            //                fwrite(&t, sizeof(t), 1, pfLog);
-            //
-            //                (*itbody)->GetDOFValues(vjoints);
-            //
-            //                len = vjoints.size();
-            //                fwrite(&len, 4, 1, pfLog);
-            //                if( len > 0 )
-            //                    fwrite(&vjoints[0], sizeof(vjoints[0]) * vjoints.size(), 1, pfLog);
-            //            }
-            //
-            //            fLogTime = fTotalTime;
-            //        }
-            //Sleep(1);
-            //}
+        // record
+        //        if( pfLog == NULL ) {
+        //            pfLog = fopen("motion.txt", "wb");
+        //        }
+        //
+        //        fTotalTime += fElapsedTime;
+        //        if( pfLog != NULL && (fTotalTime-fLogTime) > 0.05f ) {
+        //
+        //            fwrite(&fTotalTime, sizeof(float), 1, pfLog);
+        //
+        //            int numobjs = (int)GetEnv()->GetBodies().size();
+        //            fwrite(&numobjs, 4, 1, pfLog);
+        //
+        //            Transform t;
+        //            vector<dReal> vjoints;
+        //            std::vector<KinBody*>::const_iterator itbody;
+        //            FORIT(itbody, GetEnv()->GetBodies()) {
+        //                size_t len = wcslen((*itbody)->GetName());
+        //                fwrite(&len, 4, 1, pfLog);
+        //                fwrite((*itbody)->GetName(), len*sizeof((*itbody)->GetName()[0]), 1, pfLog);
+        //
+        //                t = (*itbody)->GetTransform();
+        //                fwrite(&t, sizeof(t), 1, pfLog);
+        //
+        //                (*itbody)->GetDOFValues(vjoints);
+        //
+        //                len = vjoints.size();
+        //                fwrite(&len, 4, 1, pfLog);
+        //                if( len > 0 )
+        //                    fwrite(&vjoints[0], sizeof(vjoints[0]) * vjoints.size(), 1, pfLog);
+        //            }
+        //
+        //            fLogTime = fTotalTime;
+        //        }
+        //Sleep(1);
+        //}
     }
 
     boost::shared_ptr<boost::thread> _threadlog;

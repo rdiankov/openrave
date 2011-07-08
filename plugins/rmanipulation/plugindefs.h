@@ -29,13 +29,13 @@
 #include <boost/typeof/std/string.hpp>
 #include <boost/typeof/std/queue.hpp>
 
-#define FOREACH(it, v) for(BOOST_TYPEOF(v)::iterator it = (v).begin(); it != (v).end(); (it)++)
-#define FOREACHR(it, v) for(BOOST_TYPEOF(v)::reverse_iterator it = (v).rbegin(); it != (v).rend(); (it)++)
-#define FOREACH_NOINC(it, v) for(BOOST_TYPEOF(v)::iterator it = (v).begin(); it != (v).end(); )
+#define FOREACH(it, v) for(BOOST_TYPEOF(v) ::iterator it = (v).begin(); it != (v).end(); (it)++)
+#define FOREACHR(it, v) for(BOOST_TYPEOF(v) ::reverse_iterator it = (v).rbegin(); it != (v).rend(); (it)++)
+#define FOREACH_NOINC(it, v) for(BOOST_TYPEOF(v) ::iterator it = (v).begin(); it != (v).end(); )
 
-#define FOREACHC(it, v) for(BOOST_TYPEOF(v)::const_iterator it = (v).begin(); it != (v).end(); (it)++)
-#define FOREACHRC(it, v) for(BOOST_TYPEOF(v)::const_reverse_iterator it = (v).rbegin(); it != (v).rend(); (it)++)
-#define FOREACHC_NOINC(it, v) for(BOOST_TYPEOF(v)::const_iterator it = (v).begin(); it != (v).end(); )
+#define FOREACHC(it, v) for(BOOST_TYPEOF(v) ::const_iterator it = (v).begin(); it != (v).end(); (it)++)
+#define FOREACHRC(it, v) for(BOOST_TYPEOF(v) ::const_reverse_iterator it = (v).rbegin(); it != (v).rend(); (it)++)
+#define FOREACHC_NOINC(it, v) for(BOOST_TYPEOF(v) ::const_iterator it = (v).begin(); it != (v).end(); )
 #define RAVE_REGISTER_BOOST
 #else
 
@@ -46,9 +46,9 @@
 #include <string>
 #include <queue>
 
-#define FOREACH(it, v) for(typeof((v).begin()) it = (v).begin(); it != (v).end(); (it)++)
-#define FOREACHR(it, v) for(typeof((v).rbegin()) it = (v).rbegin(); it != (v).rend(); (it)++)
-#define FOREACH_NOINC(it, v) for(typeof((v).begin()) it = (v).begin(); it != (v).end(); )
+#define FOREACH(it, v) for(typeof((v).begin())it = (v).begin(); it != (v).end(); (it)++)
+#define FOREACHR(it, v) for(typeof((v).rbegin())it = (v).rbegin(); it != (v).rend(); (it)++)
+#define FOREACH_NOINC(it, v) for(typeof((v).begin())it = (v).begin(); it != (v).end(); )
 
 #define FOREACHC FOREACH
 #define FOREACHRC FOREACHR
@@ -157,7 +157,8 @@ using namespace OpenRAVE;
 
 struct null_deleter
 {
-    void operator()(void const *) const {}
+    void operator()(void const *) const {
+    }
 };
 
 inline string getfilename_withseparator(istream& sinput, char separator)
@@ -173,7 +174,7 @@ inline string getfilename_withseparator(istream& sinput, char separator)
     size_t startpos = filename.find_first_not_of(" \t");
     size_t endpos = filename.find_last_not_of(" \t");
 
-    // if all spaces or empty return an empty string  
+    // if all spaces or empty return an empty string
     if(( string::npos == startpos ) || ( string::npos == endpos)) {
         return "";
     }

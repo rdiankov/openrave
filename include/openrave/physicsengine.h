@@ -16,7 +16,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /** \file physicsengine.h
     \brief Physics engine related definitions.
-*/
+ */
 #ifndef OPENRAVE_PHYSICSENGINE_H
 #define OPENRAVE_PHYSICSENGINE_H
 
@@ -28,18 +28,22 @@ enum PhysicsEngineOptions
     PEO_SelfCollisions = 1, ///< if set, physics engine will use contact forces from self-collisions
 };
 
-/** \brief <b>[interface]</b> The physics engine interfaces supporting simulations and dynamics. See \ref arch_physicsengine.    
+/** \brief <b>[interface]</b> The physics engine interfaces supporting simulations and dynamics. See \ref arch_physicsengine.
     \ingroup interfaces
-*/
+ */
 class OPENRAVE_API PhysicsEngineBase : public InterfaceBase
 {
 public:
-    PhysicsEngineBase(EnvironmentBasePtr penv) : InterfaceBase(PT_PhysicsEngine, penv) {}
-    virtual ~PhysicsEngineBase() {}
+    PhysicsEngineBase(EnvironmentBasePtr penv) : InterfaceBase(PT_PhysicsEngine, penv) {
+    }
+    virtual ~PhysicsEngineBase() {
+    }
 
     /// return the static interface type this class points to (used for safe casting)
-    static inline InterfaceType GetInterfaceTypeStatic() { return PT_PhysicsEngine; }
-    
+    static inline InterfaceType GetInterfaceTypeStatic() {
+        return PT_PhysicsEngine;
+    }
+
     /// Set basic physics engine using the PhysicsEngineOptions enum
     virtual bool SetPhysicsOptions(int physicsoptions) = 0;
     virtual int GetPhysicsOptions() const = 0;
@@ -100,7 +104,7 @@ public:
     /// \param[out] force current accumulated force on the COM of the link
     /// \param[out] torque current accumulated torque on the COM of the link
     virtual bool GetLinkForceTorque(KinBody::LinkConstPtr link, Vector& force, Vector& torque) OPENRAVE_DUMMY_IMPLEMENTATION;
-    
+
     /// set the gravity direction
     virtual void SetGravity(const Vector& gravity) OPENRAVE_DUMMY_IMPLEMENTATION;
     virtual Vector GetGravity() OPENRAVE_DUMMY_IMPLEMENTATION;
@@ -108,7 +112,7 @@ public:
     /// dynamically simulate system for fTimeElapsed seconds
     /// add torques to the joints of the body. Torques disappear after one timestep of simulation
     virtual void SimulateStep(dReal fTimeElapsed)=0;
-    
+
     /// \deprecated (10/11/18)
     virtual bool GetBodyVelocity(KinBodyConstPtr body, std::vector<Vector>& vLinearVelocities, std::vector<Vector>& vAngularVelocities) RAVE_DEPRECATED {
         std::vector<std::pair<Vector,Vector> > velocities;
@@ -135,10 +139,14 @@ public:
     }
 
 protected:
-	virtual void SetPhysicsData(KinBodyPtr body, UserDataPtr data) { body->SetPhysicsData(data); }
+    virtual void SetPhysicsData(KinBodyPtr body, UserDataPtr data) {
+        body->SetPhysicsData(data);
+    }
 
 private:
-    virtual const char* GetHash() const { return OPENRAVE_PHYSICSENGINE_HASH; }
+    virtual const char* GetHash() const {
+        return OPENRAVE_PHYSICSENGINE_HASH;
+    }
 };
 
 } // end namespace OpenRAVE

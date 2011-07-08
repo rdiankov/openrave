@@ -15,9 +15,9 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /*! --------------------------------------------------------------------
-  \file   Item.cpp
-  \brief  Abstract base class for an Item
- -------------------------------------------------------------------- */
+   \file   Item.cpp
+   \brief  Abstract base class for an Item
+   -------------------------------------------------------------------- */
 #include "qtcoin.h"
 
 #include <Inventor/nodes/SoCoordinate3.h>
@@ -54,33 +54,33 @@ Item::~Item()
 
 bool Item::ContainsIvNode(SoNode *pNode)
 {
-  SoSearchAction search;
-  search.setNode(pNode);
-  search.apply(_ivGeom);
+    SoSearchAction search;
+    search.setNode(pNode);
+    search.apply(_ivGeom);
 
-  if (search.getPath())
-    return true;
+    if (search.getPath())
+        return true;
 
-  return false;
+    return false;
 }
 
 bool Item::ContainsIvNode(SoPath *pNodePath)
 {
-  //return (pNodePath->containsNode(_ivGeom));
-  return (ContainsIvNode(pNodePath->getTail()));
+    //return (pNodePath->containsNode(_ivGeom));
+    return (ContainsIvNode(pNodePath->getTail()));
 }
 
 void Item::SetGeomVisibility(bool bFlag)
 {
-  _ivGeom->whichChild.setValue(bFlag ? SO_SWITCH_ALL : SO_SWITCH_NONE);
+    _ivGeom->whichChild.setValue(bFlag ? SO_SWITCH_ALL : SO_SWITCH_NONE);
 }
 
 void Item::SetUnpickable()
 {
-  SoPickStyle* pickStyle = new SoPickStyle();
-  pickStyle->style = SoPickStyle::UNPICKABLE;
+    SoPickStyle* pickStyle = new SoPickStyle();
+    pickStyle->style = SoPickStyle::UNPICKABLE;
 
-  _ivGeom->insertChild(pickStyle, 0);
+    _ivGeom->insertChild(pickStyle, 0);
 }
 
 KinBodyItem::KinBodyItem(QtCoinViewerPtr viewer, KinBodyPtr pchain, ViewGeometry viewmode) : Item(viewer), _viewmode(viewmode)
@@ -118,7 +118,7 @@ void KinBodyItem::Load()
         _veclinks.push_back(lnk);
 
         FOREACHC(itgeom, (*it)->GetGeometries()) {
-            if( !itgeom->IsDraw() && _viewmode == VG_RenderOnly ) {
+            if( !itgeom->IsDraw() &&(_viewmode == VG_RenderOnly)) {
                 continue;
             }
             SoSeparator* psep = NULL;
@@ -129,9 +129,9 @@ void KinBodyItem::Load()
 
             // open
             bool bSucceeded = false;
-            if( _viewmode == VG_RenderOnly || _viewmode == VG_RenderCollision ) {
+            if((_viewmode == VG_RenderOnly)||(_viewmode == VG_RenderCollision)) {
                 SoInput mySceneInput;
-                if( itgeom->GetRenderFilename().size() > 0 && mySceneInput.openFile(itgeom->GetRenderFilename().c_str())) {
+                if((itgeom->GetRenderFilename().size() > 0)&& mySceneInput.openFile(itgeom->GetRenderFilename().c_str())) {
                     psep = SoDB::readAll(&mySceneInput);
                     if( !!psep ) {
                         SoScale* s = new SoScale();
@@ -158,7 +158,7 @@ void KinBodyItem::Load()
                 }
             }
 
-            if( !bSucceeded || _viewmode == VG_RenderCollision ) {
+            if( !bSucceeded ||(_viewmode == VG_RenderCollision)) {
                 // create custom
                 if( psep == NULL ) {
                     psep = new SoSeparator();
@@ -175,7 +175,7 @@ void KinBodyItem::Load()
                 mtrl->ambientColor = SbColor(itgeom->GetAmbientColor());
                 mtrl->setOverride(true);
                 mtrl->transparency = itgeom->GetTransparency();
-                if( _viewmode == VG_RenderCollision && (bSucceeded || !itgeom->IsDraw()) ) {
+                if((_viewmode == VG_RenderCollision)&& (bSucceeded || !itgeom->IsDraw()) ) {
                     mtrl->transparency = 0.5f;
                     mtrl->diffuseColor = SbColor(0.6f,0.6f,1.0f);
                     mtrl->ambientColor = SbColor(0.4f,0.4f,1.0f);
@@ -366,11 +366,11 @@ bool KinBodyItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vecto
     _vjointvalues = vjointvalues;
     _vtrans = vtrans;
 
-    if( _vtrans.size() == 0 || _veclinks.size() != _vtrans.size() ) {
+    if((_vtrans.size() == 0)||(_veclinks.size() != _vtrans.size())) {
         // something's wrong, so just return
         return false;
     }
-    Transform tglob = _vtrans.at(0);//_pchain->GetCenterOfMass();
+    Transform tglob = _vtrans.at(0); //_pchain->GetCenterOfMass();
     SbMatrix m; m.makeIdentity();
     _ivXform->setMatrix(m);
     _ivXform->translation.setValue(tglob.trans.x, tglob.trans.y, tglob.trans.z);
@@ -420,7 +420,8 @@ KinBody::LinkPtr KinBodyItem::GetLinkFromIv(SoNode* plinknode) const
 }
 
 RobotItem::RobotItem(QtCoinViewerPtr viewer, RobotBasePtr robot, ViewGeometry viewgeom) : KinBodyItem(viewer, robot, viewgeom), _probot(robot)
-{}
+{
+}
 
 void RobotItem::Load()
 {
@@ -484,8 +485,8 @@ void RobotItem::CreateAxis(RobotItem::EE& ee, const string& name, const Vector* 
     // add some axes
     SoSeparator* paxes = new SoSeparator();
 
-    Vector colors[] = {Vector(0,0,1),Vector(0,1,0),Vector(1,0,0)};
-    Vector rotations[] = {Vector(1,0,0,PI/2), Vector(1,0,0,0), Vector(0,0,1,-PI/2)};
+    Vector colors[] = { Vector(0,0,1),Vector(0,1,0),Vector(1,0,0)};
+    Vector rotations[] = { Vector(1,0,0,PI/2), Vector(1,0,0,0), Vector(0,0,1,-PI/2)};
 
     // add 3 cylinder+cone axes
     for(int i = 0; i < 3; ++i) {
@@ -631,7 +632,7 @@ bool RobotItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vector<
         RaveTransform<float> transInvRoot = GetRaveTransform(_ivXform).inverse();
 
         FOREACH(itee, _vEndEffectors) {
-            if( itee->_index >= 0 && itee->_index < (int)_probot->GetManipulators().size()) {
+            if((itee->_index >= 0)&&(itee->_index < (int)_probot->GetManipulators().size())) {
                 RobotBase::ManipulatorConstPtr manip = _probot->GetManipulators().at(itee->_index);
                 if( !!manip->GetEndEffector() ) {
                     RaveTransform<float> tgrasp = vtrans.at(manip->GetEndEffector()->GetIndex())*manip->GetGraspTransform();
@@ -641,7 +642,7 @@ bool RobotItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vector<
         }
 
         FOREACH(itee, _vAttachedSensors) {
-            if( itee->_index >= 0 && itee->_index < (int)_probot->GetAttachedSensors().size()) {
+            if((itee->_index >= 0)&&(itee->_index < (int)_probot->GetAttachedSensors().size())) {
                 RobotBase::AttachedSensorConstPtr sensor = _probot->GetAttachedSensors().at(itee->_index);
                 if( !!sensor->GetAttachingLink() ) {
                     RaveTransform<float> tgrasp = vtrans.at(sensor->GetAttachingLink()->GetIndex())*sensor->GetRelativeTransform();

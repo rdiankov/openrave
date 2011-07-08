@@ -149,4 +149,6 @@ public:
     }
 };
 
-ModuleBasePtr CreateIvModelLoader(EnvironmentBasePtr penv) { return ModuleBasePtr(new IvModelLoader(penv)); }
+ModuleBasePtr CreateIvModelLoader(EnvironmentBasePtr penv) {
+    return ModuleBasePtr(new IvModelLoader(penv));
+}
