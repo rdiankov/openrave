@@ -6,9 +6,14 @@ ChangeLog
 Version 0.4.1
 =============
 
-Subversion Revision: 2572
+Subversion Revision: 2573
 
 Initial Release: 2011/07/08
+
+Core
+----
+
+* Fixed self-collision problem when grasping two objects (#31).
 
 Grasping
 --------
