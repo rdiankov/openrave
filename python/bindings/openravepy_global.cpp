@@ -331,7 +331,22 @@ class IkParameterization_pickle_suite : public pickle_suite
 public:
     static tuple getinitargs(const PyIkParameterization& r)
     {
-        return boost::python::make_tuple(r._param.GetTransform6D(),r._param.GetType());
+        object o;
+        switch(r._param.GetType()) {
+        case IkParameterization::Type_Transform6D: o = toPyArray(r._param.GetTransform6D()); break;
+        case IkParameterization::Type_Rotation3D: o = toPyVector4(r._param.GetRotation3D()); break;
+        case IkParameterization::Type_Translation3D: o = toPyVector3(r._param.GetTranslation3D()); break;
+        case IkParameterization::Type_Direction3D: o = toPyVector4(r._param.GetDirection3D()); break;
+        case IkParameterization::Type_Ray4D: return boost::python::make_tuple(r._param.GetRay4D(),r._param.GetType());
+        case IkParameterization::Type_Lookat3D: o = toPyVector3(r._param.GetLookat3D()); break;
+        case IkParameterization::Type_TranslationDirection5D: return boost::python::make_tuple(r._param.GetTranslationDirection5D(),r._param.GetType());
+        case IkParameterization::Type_TranslationXY2D: o = toPyVector3(r._param.GetTranslationXY2D()); break;
+        case IkParameterization::Type_TranslationXYOrientation3D: o = toPyVector3(r._param.GetTranslationXYOrientation3D()); break;
+        case IkParameterization::Type_TranslationLocalGlobal6D: o = boost::python::make_tuple(toPyVector3(r._param.GetTranslationLocalGlobal6D().first), toPyVector3(r._param.GetTranslationLocalGlobal6D().second)); break;
+        default: throw OPENRAVE_EXCEPTION_FORMAT("incorrect ik parameterization type 0x%x", r._param.GetType(), ORE_InvalidArguments);
+        }
+
+        return boost::python::make_tuple(o,r._param.GetType());
     }
 };
 

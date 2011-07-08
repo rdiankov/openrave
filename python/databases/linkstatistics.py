@@ -358,7 +358,7 @@ class LinkStatisticsModel(DatabaseGenerator):
         minpoint = numpy.min([numpy.min(hull[0],axis=0) for hull in hulls],axis=0)
         maxpoint = numpy.max([numpy.max(hull[0],axis=0) for hull in hulls],axis=0)
         X,Y,Z = mgrid[minpoint[0]:maxpoint[0]:self.samplingdelta,minpoint[1]:maxpoint[1]:self.samplingdelta,minpoint[2]:maxpoint[2]:self.samplingdelta]
-        volumepoints = SpaceSampler().sampleR3(self.samplingdelta,boxdims=maxpoint-minpoint)
+        volumepoints = SpaceSamplerExtra().sampleR3(self.samplingdelta,boxdims=maxpoint-minpoint)
         volumepoints[:,0] += minpoint[0]
         volumepoints[:,1] += minpoint[1]
         volumepoints[:,2] += minpoint[2]

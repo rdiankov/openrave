@@ -254,6 +254,7 @@ public:
         _vXMLParameters.push_back("ftargetroll");
         _vXMLParameters.push_back("vtargetdirection");
         _vXMLParameters.push_back("vtargetposition");
+        _vXMLParameters.push_back("vmanipulatordirection");
         _vXMLParameters.push_back("btransformrobot");
         _vXMLParameters.push_back("breturntrajectory");
         _vXMLParameters.push_back("bonlycontacttarget");
@@ -272,6 +273,7 @@ public:
     dReal ftargetroll;     ///< rotate the hand about the palm normal (if one exists) by this many radians
     Vector vtargetdirection;     ///< direction in target space to approach object from
     Vector vtargetposition;     ///< position in target space to start approaching (if in collision with target, gets backed up)
+    Vector vmanipulatordirection; ///< a direction for the gripper to face at when approaching (in the manipulator coordinate system)
     bool btransformrobot;     ///< if true sets the base link of the robot given the above transformation parameters. If there is an active manipulator
     bool breturntrajectory;     ///< if true, returns how the individual fingers moved instead of just the final grasp
     bool bonlycontacttarget;     ///< if true, then grasp is successful only if contact is made with the target
@@ -298,6 +300,7 @@ protected:
         O << "<ftargetroll>" << ftargetroll << "</ftargetroll>" << endl;
         O << "<vtargetdirection>" << vtargetdirection << "</vtargetdirection>" << endl;
         O << "<vtargetposition>" << vtargetposition << "</vtargetposition>" << endl;
+        O << "<vmanipulatordirection>" << vmanipulatordirection << "</vmanipulatordirection>" << endl;
         O << "<btransformrobot>" << btransformrobot << "</btransformrobot>" << endl;
         O << "<breturntrajectory>" << breturntrajectory << "</breturntrajectory>" << endl;
         O << "<bonlycontacttarget>" << bonlycontacttarget << "</bonlycontacttarget>" << endl;
@@ -330,8 +333,8 @@ protected:
             return PE_Support;
         }
 
-        _bProcessingGrasp = name=="fstandoff"||name=="targetbody"||name=="ftargetroll"||name=="vtargetdirection"||name=="vtargetposition"||name=="btransformrobot"||name=="breturntrajectory"||name=="bonlycontacttarget"||name=="btightgrasp"||name=="bavoidcontact"||name=="vavoidlinkgeometry"||name=="fcoarsestep"||name=="ffinestep"||name=="ftranslationstepmult"||name=="fgraspingnoise";
-        return _bProcessingGrasp ? PE_Support : PE_Pass;
+        boost::array<string,16> tags = {{"fstandoff","targetbody","ftargetroll","vtargetdirection","vtargetposition","vmanipulatordirection", "btransformrobot","breturntrajectory","bonlycontacttarget","btightgrasp","bavoidcontact","vavoidlinkgeometry","fcoarsestep","ffinestep","ftranslationstepmult","fgraspingnoise"}};
+        return find(tags.begin(),tags.end(),name) == tags.end() ? PE_Pass : PE_Support;
     }
 
     // called at the end of every XML tag, _ss contains the data
@@ -359,6 +362,9 @@ protected:
             }
             else if( name == "vtargetposition") {
                 _ss >> vtargetposition;
+            }
+            else if( name == "vmanipulatordirection") {
+                _ss >> vmanipulatordirection;
             }
             else if( name == "btransformrobot") {
                 _ss >> btransformrobot;

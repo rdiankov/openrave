@@ -43,14 +43,14 @@ class Grasper:
         if envother.AddModule(clone.prob,clone.args) != 0:
             raise ValueError('module failed to initialize')
         return clone
-    def Grasp(self,direction=None,roll=None,position=None,standoff=None,target=None,stablecontacts=False,forceclosure=False,transformrobot=True,onlycontacttarget=True,tightgrasp=False,graspingnoise=None,execute=None,translationstepmult=None,outputfinal=False):
+    def Grasp(self,direction=None,roll=None,position=None,standoff=None,target=None,stablecontacts=False,forceclosure=False,transformrobot=True,onlycontacttarget=True,tightgrasp=False,graspingnoise=None,execute=None,translationstepmult=None,outputfinal=False,manipulatordirection=None):
         """See :ref:`module-grasper-grasp`
         """
         cmd = 'Grasp '
         if direction is not None:
             cmd += 'direction %.15e %.15e %.15e '%(direction[0],direction[1],direction[2])
         if transformrobot:
-            cmd += 'roll %.15e position %.15e %.15e %.15e standoff %.15e '%(roll,position[0],position[1],position[2],standoff)
+            cmd += 'roll %.15e position %.15e %.15e %.15e standoff %.15e manipulatordirection %.15e %.15e %.15e '%(roll,position[0],position[1],position[2],standoff,manipulatordirection[0],manipulatordirection[1],manipulatordirection[2])
         if target is not None:
             cmd += 'target %s '%target.GetName()
         cmd += 'stablecontacts %d forceclosure %d transformrobot %d onlycontacttarget %d tightgrasp %d outputfinal %d '%(stablecontacts,forceclosure,transformrobot,onlycontacttarget,tightgrasp,outputfinal)
@@ -87,7 +87,7 @@ class Grasper:
         contacts = reshape(array([float64(s) for s in resvalues],float64),(len(resvalues)/6,6))
         return contacts,finalconfig,mindist,volume
 
-    def GraspThreaded(self,approachrays,standoffs,preshapes,rolls,target=None,transformrobot=True,onlycontacttarget=True,tightgrasp=False,graspingnoise=None,forceclosurethreshold=None,collisionchecker=None,translationstepmult=None,numthreads=None,startindex=None,maxgrasps=None):
+    def GraspThreaded(self,approachrays,standoffs,preshapes,rolls,manipulatordirections=None,target=None,transformrobot=True,onlycontacttarget=True,tightgrasp=False,graspingnoise=None,forceclosurethreshold=None,collisionchecker=None,translationstepmult=None,numthreads=None,startindex=None,maxgrasps=None):
         """See :ref:`module-grasper-graspthreaded`
         """
         cmd = 'GraspThreaded '
@@ -121,6 +121,9 @@ class Grasper:
         cmd += 'preshapes %d '%len(preshapes)
         for f in preshapes.flat:
             cmd += str(f) + ' '
+        cmd += 'manipulatordirections %d '%len(manipulatordirections)
+        for f in manipulatordirections.flat:
+            cmd += str(f) + ' '
         res = self.prob.SendCommand(cmd)
         if res is None:
             raise planning_error('Grasp failed')
@@ -133,6 +136,7 @@ class Grasper:
             direction = array([float64(resultgrasps.pop(0)) for i in range(3)])
             roll = float64(resultgrasps.pop(0))
             standoff = float64(resultgrasps.pop(0))
+            manipulatordirection = array([float64(resultgrasps.pop(0)) for i in range(3)])
             mindist = float64(resultgrasps.pop(0))
             volume = float64(resultgrasps.pop(0))
             preshape = [float64(resultgrasps.pop(0)) for i in range(preshapelen)]
@@ -141,7 +145,7 @@ class Grasper:
             contacts_num=int(resultgrasps.pop(0))
             contacts=[float64(resultgrasps.pop(0)) for i in range(contacts_num*6)]
             contacts = reshape(contacts,(contacts_num,6))
-            resvalues.append([position, direction, roll, standoff, mindist, volume, preshape,Tfinal,finalshape,contacts])
+            resvalues.append([position, direction, roll, standoff, manipulatordirection, mindist, volume, preshape,Tfinal,finalshape,contacts])
         return nextid, resvalues
 
     def ConvexHull(self,points,returnplanes=True,returnfaces=True,returntriangles=True):

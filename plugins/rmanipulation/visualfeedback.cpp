@@ -425,7 +425,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
                         "Processes the visibility extents of the target and initializes the camera transforms.\n\
 \n\
 :param sphere: Sets the transforms along a sphere density and the distances\n\
-:param conedirangle: Prunes the currently set transforms along a cone centered at the local target center and directed towards conedirangle with a half-angle of ``|conedirangle|``. Can specify multiple cones for an OR effect."                                                                                                                                                                                                                                                                                                                                                                                                      );
+:param conedirangle: Prunes the currently set transforms along a cone centered at the local target center and directed towards conedirangle with a half-angle of ``|conedirangle|``. Can specify multiple cones for an OR effect.");
         RegisterCommand("SetCameraTransforms",boost::bind(&VisualFeedback::SetCameraTransforms,this,_1,_2),
                         "Sets new camera transformations. Can optionally choose a minimum distance from all planes of the camera convex hull (includes gripper mask)");
         RegisterCommand("ComputeVisibility",boost::bind(&VisualFeedback::ComputeVisibility,this,_1,_2),

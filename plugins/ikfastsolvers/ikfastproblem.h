@@ -227,7 +227,7 @@ public:
 * int numtests - if file not specified, number of random tests to perform (defualt is 1000).\n\n\
 * float sampledegeneratecases - probability in [0,1] specifies the probability of sampling joint values on [-pi/2,0,pi/2] (default is 0.2).\n\n\
 * int selfcollision - if true, will check IK only for non-self colliding positions of the robot (default is 0).\n\n\
-* string robot - name of the robot to test. the active manipulator of the roobt is used.\n\n"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            );
+* string robot - name of the robot to test. the active manipulator of the roobt is used.\n\n");
     }
 
     virtual ~IKFastProblem() {

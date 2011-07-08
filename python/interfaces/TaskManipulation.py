@@ -80,14 +80,14 @@ class TaskManipulation:
         if res is None:
             raise openravepy.planning_error()
         resvalues = res.split()
+        print resvalues
         numgoals = int(resvalues.pop(0))
         goals = []
         for i in range(numgoals):
-            T = eye(4)
-            for j in range(4):
-                for k in range(3):
-                    T[k][j] = float64(resvalues.pop(0))
-            goals.append(T)
+            # get the number of values
+            numvalues = 1+IkParameterization.GetNumberOfValues(IkParameterization.Type(int(resvalues[0])))
+            goals.append(IkParameterization(' '.join(resvalues[0:numvalues])))
+            resvalues = resvalues[numvalues:]
         graspindex = int(resvalues.pop(0))
         searchtime = double(resvalues.pop(0))
         trajdata = None

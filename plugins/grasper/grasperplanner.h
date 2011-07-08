@@ -121,11 +121,11 @@ public:
             _robot->SetTransform(Transform());     // this is necessary to reset any 'randomness' introduced from the current state
 
             if( !!pmanip ) {
-                tbase.rot = quatFromAxisAngle(pmanip->GetDirection(),_parameters->ftargetroll);
+                tbase.rot = quatFromAxisAngle(_parameters->vmanipulatordirection,_parameters->ftargetroll);
                 tbase.trans = Vector(0,0,0);
 
                 // set the robot so that its palm is facing the approach direction find the closest rotation
-                Transform torient; torient.rot = quatRotateDirection(pmanip->GetDirection(), _parameters->vtargetdirection);
+                Transform torient; torient.rot = quatRotateDirection(_parameters->vmanipulatordirection, _parameters->vtargetdirection);
                 tbase = torient * tbase;
                 // make sure origin of pbase is on target position
                 tbase.trans = _parameters->vtargetposition;

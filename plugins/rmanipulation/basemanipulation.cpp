@@ -36,17 +36,17 @@ public:
 - minsteps - The minimum number of steps that need to be taken in order for success to declared. If robot doesn't reach this number of steps, it fails.\n\n\
 - maxsteps - The maximum number of steps the robot should take.\n\n\
 - direction - The workspace direction to move end effector in.\n\n\
-Method wraps the WorkspaceTrajectoryTracker planner. For more details on parameters, check out its documentation."                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                );
+Method wraps the WorkspaceTrajectoryTracker planner. For more details on parameters, check out its documentation.");
         RegisterCommand("MoveManipulator",boost::bind(&BaseManipulation::MoveManipulator,this,_1,_2),
                         "Moves arm joints of active manipulator to a given set of joint values");
         RegisterCommand("MoveActiveJoints",boost::bind(&BaseManipulation::MoveActiveJoints,this,_1,_2),
                         "Moves the current active joints to a specified goal destination:\n\n\
 - maxiter - The maximum number of iterations on the internal planner.\n\
 - maxtries - The maximum number of times to restart the planner.\n\
-- steplength - See PlannerParameters::_fStepLength\n\n"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    );
+- steplength - See PlannerParameters::_fStepLength\n\n");
         RegisterCommand("MoveToHandPosition",boost::bind(&BaseManipulation::_MoveToHandPosition,this,_1,_2),
                         "Move the manipulator's end effector to reach a set of 6D poses. Parameters:\n\n\
-- "                                                                                                                                                                                                                );
+- ");
         RegisterCommand("MoveUnsyncJoints",boost::bind(&BaseManipulation::MoveUnsyncJoints,this,_1,_2),
                         "Moves the active joints to a position where the inactive (hand) joints can\n"
                         "fully move to their goal. This is necessary because synchronization with arm\n"
@@ -60,7 +60,7 @@ Method wraps the WorkspaceTrajectoryTracker planner. For more details on paramet
 - solveall - When specified, will return all possible solutions.\n\
 - ikparam - The serialized ik parameterization to use for FindIKSolution(s).\n\
 - filteroptions\n\
-"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        );
+");
     }
 
     virtual ~BaseManipulation() {
@@ -659,6 +659,15 @@ protected:
                     Transform t;
                     sinput >> t;
                     listgoals.push_back(IkParameterization(t));
+                }
+            }
+            else if( cmd == "ikparams" ) {
+                int num = 0;
+                sinput >> num;
+                while(num-->0) {
+                    IkParameterization ikparam;
+                    sinput >> ikparam;
+                    listgoals.push_back(ikparam);
                 }
             }
             else if( cmd == "ikparam" ) {

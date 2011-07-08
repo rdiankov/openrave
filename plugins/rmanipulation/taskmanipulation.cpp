@@ -24,10 +24,11 @@
 struct GRASPGOAL
 {
     vector<dReal> vpreshape;
-    Transform tgrasp; ///< transform of the grasp
+    IkParameterization tgrasp; ///< transform of the grasp
     vector<dReal> viksolution; ///< optional joint values for robot arm that achive the grasp goal
-    list<TransformMatrix> listDests; ///< transform of the grasps at the destination
-    int index; ///< index into global grasp table
+    list<IkParameterization> listDests; ///< transform of the grasps at the destination
+    int graspindex;
+    vector<dReal> vgoalconfiguration; ///< contains the configuration if this grasp was picked
 };
 
 #ifdef RAVE_REGISTER_BOOST
@@ -42,6 +43,19 @@ public:
     }
 };
 
+class SetCustomFilterScope
+{
+public:
+    SetCustomFilterScope(IkSolverBasePtr pik, const IkSolverBase::IkFilterCallbackFn& filterfn) : _pik(pik){
+        _pik->SetCustomFilter(filterfn);
+    }
+    virtual ~SetCustomFilterScope() {
+        _pik->SetCustomFilter(IkSolverBase::IkFilterCallbackFn());
+    }
+private:
+    IkSolverBasePtr _pik;
+};
+
 class TaskManipulation : public ModuleBase
 {
 public:
@@ -53,7 +67,7 @@ Task-based manipulation planning involving target objects. A lot of the algorith
 \n\
 - Rosen Diankov. \"Automated Construction of Robotic Manipulation Programs\". PhD Thesis, CMU-RI-TR-10-29, Carnegie Mellon University, Robotics Institute, August 2010.\n";
         RegisterCommand("GraspPlanning",boost::bind(&TaskManipulation::GraspPlanning,this,_1,_2),
-                        "Grasp planning is the ultimate function that puts together many planners achieving a robust and general pick and place motiotions with grasp sets. It first chooses grasps from a grasp set and use it for manipulation. In order for the arm to reach the grasps, it must have a Transform6D IK solver, anything with less DOF will not work.\nParameters:\n\n\
+                        "Grasp planning is the ultimate function that puts together many planners achieving a robust and general pick and place motiotions with grasp sets. It first chooses grasps from a grasp set and use it for manipulation. In order for the arm to reach the grasps, it must have a Transform6D or TranslationDirection5D IK solver, anything with less DOF will not work.\nParameters:\n\n\
 * grasps\n\
 * outputtraj\n\
 * execute\n\
@@ -77,8 +91,8 @@ Task-based manipulation planning involving target objects. A lot of the algorith
 * seedik\n\
 * savepreshapetraj\n\
 ");
-        RegisterCommand("GraspPlanningAsCylinders",boost::bind(&TaskManipulation::GraspPlanningAsCylinders,this,_1,_2),
-                        "Performs grasp planning treating the targets as cylinders (axis is along the target local z), this allows TranslationDirection5D IK to be used for arms with >= 5 joints");
+        //        RegisterCommand("GraspPlanningAsCylinders",boost::bind(&TaskManipulation::GraspPlanningAsCylinders,this,_1,_2),
+        //                        "Performs grasp planning treating the targets as cylinders (axis is along the target local z), this allows TranslationDirection5D IK to be used for arms with >= 5 joints");
         RegisterCommand("CloseFingers",boost::bind(&TaskManipulation::CloseFingers,this,_1,_2),
                         "Closes the active manipulator fingers using the grasp planner.");
         RegisterCommand("ReleaseFingers",boost::bind(&TaskManipulation::ReleaseFingers,this,_1,_2),
@@ -323,7 +337,7 @@ protected:
         bool bQuitAfterFirstRun = false;
 
         // indices into the grasp table
-        int iGraspDir = -1, iGraspPos = -1, iGraspRoll = -1, iGraspPreshape = -1, iGraspStandoff = -1;
+        int iGraspDir = -1, iGraspPos = -1, iGraspRoll = -1, iGraspPreshape = -1, iGraspStandoff = -1, imanipulatordirection = -1;
         int iGraspTransform = -1;     // if >= 0, use the grasp transform to check for collisions
 
         string cmd;
@@ -361,14 +375,14 @@ protected:
             else if( cmd == "maxiter" ) {
                 sinput >> nMaxIterations;
             }
-            else if( cmd == "graspindices" ) {
-                sinput >> iGraspDir >> iGraspPos >> iGraspRoll >> iGraspStandoff >> iGraspPreshape;
-            }
             else if( cmd == "igraspdir" ) {
                 sinput >> iGraspDir;
             }
             else if( cmd == "igrasppos" ) {
                 sinput >> iGraspPos;
+            }
+            else if( cmd == "imanipulatordirection" ) {
+                sinput >> imanipulatordirection;
             }
             else if( cmd == "igrasproll" ) {
                 sinput >> iGraspRoll;
@@ -436,10 +450,7 @@ protected:
         }
 
         if( pmanip->IsGrabbing(ptarget) ) {
-            throw openrave_exception(str(boost::format("TaskManipulaiton::GraspPlanning: manipulator %s is already grasping %s")%pmanip->GetName()%ptarget->GetName()));
-        }
-        if(!pmanip->GetIkSolver()->Supports(IkParameterization::Type_Transform6D)) {
-            throw openrave_exception(str(boost::format("TaskManipulaiton::GraspPlanning: manipulator %s does not support Transform6D IK type")%pmanip->GetName()));
+            throw OPENRAVE_EXCEPTION_FORMAT("manipulator %s is already grasping %s", pmanip->GetName()%ptarget->GetName(),ORE_InvalidArguments);
         }
         RobotBase::RobotStateSaver saver(_robot);
 
@@ -507,13 +518,20 @@ protected:
                 RAVELOG_ERROR("grasper problem not valid\n");
                 return false;
             }
-            if(( iGraspDir < 0) ||( iGraspPos < 0) ||( iGraspRoll < 0) ||( iGraspStandoff < 0) ) {
+            if(( iGraspDir < 0) ||( iGraspPos < 0) ||( iGraspRoll < 0) ||( iGraspStandoff < 0) || (imanipulatordirection<0) ) {
                 RAVELOG_ERROR("grasp indices not all initialized\n");
                 return false;
             }
         }
 
-        TrajectoryBasePtr phandtraj;
+        _phandtraj.reset();
+
+        boost::shared_ptr<SetCustomFilterScope> ikfilter;
+        if( pmanip->GetIkSolver()->Supports(IkParameterization::Type_TranslationDirection5D) ) {
+            // if 5D, have to set a filter
+            ikfilter.reset(new SetCustomFilterScope(pmanip->GetIkSolver(),boost::bind(&TaskManipulation::_FilterIkForGrasping,shared_problem(),_1,_2,_3,ptarget)));
+            fApproachOffset = 0; // cannot approach
+        }
 
         for(int igraspperm = 0; igraspperm < (int)vgrasppermuation.size(); ++igraspperm) {
             int igrasp = vgrasppermuation[igraspperm];
@@ -555,25 +573,26 @@ protected:
 
             _UpdateSwitchModels(false,false);
 
-            Transform tGoalEndEffector;
+            IkParameterization tGoalEndEffector;
             // set the goal preshape
             _robot->SetActiveDOFs(pmanip->GetGripperIndices(), RobotBase::DOF_NoTransform);
             _robot->SetActiveDOFValues(vgoalpreshape,true);
 
-            if( !!_pGrasperPlanner ) {
+            if( !!_pGrasperPlanner && pmanip->GetIkSolver()->Supports(IkParameterization::Type_Transform6D) ) {
                 // set the preshape
                 _robot->SetActiveDOFs(pmanip->GetGripperIndices(), RobotBase::DOF_X|RobotBase::DOF_Y|RobotBase::DOF_Z);
-                if( !phandtraj ) {
-                    phandtraj = RaveCreateTrajectory(GetEnv(),_robot->GetActiveDOF());
+                if( !_phandtraj ) {
+                    _phandtraj = RaveCreateTrajectory(GetEnv(),_robot->GetActiveDOF());
                 }
                 else {
-                    phandtraj->Reset(_robot->GetActiveDOF());
+                    _phandtraj->Reset(_robot->GetActiveDOF());
                 }
                 graspparams->fstandoff = pgrasp[iGraspStandoff];
                 graspparams->targetbody = ptarget;
                 graspparams->ftargetroll = pgrasp[iGraspRoll];
                 graspparams->vtargetdirection = Vector(pgrasp[iGraspDir], pgrasp[iGraspDir+1], pgrasp[iGraspDir+2]);
                 graspparams->vtargetposition = Vector(pgrasp[iGraspPos], pgrasp[iGraspPos+1], pgrasp[iGraspPos+2]);
+                graspparams->vmanipulatordirection = Vector(pgrasp[imanipulatordirection], pgrasp[imanipulatordirection+1], pgrasp[imanipulatordirection+2]);
                 graspparams->btransformrobot = true;
                 graspparams->breturntrajectory = false;
                 graspparams->bonlycontacttarget = true;
@@ -586,13 +605,13 @@ protected:
                     continue;     // failed
                 }
 
-                if( !_pGrasperPlanner->PlanPath(phandtraj) ) {
+                if( !_pGrasperPlanner->PlanPath(_phandtraj) ) {
                     RAVELOG_DEBUG("grasper planner failed: %d\n", igrasp);
                     continue;     // failed
                 }
 
-                BOOST_ASSERT(phandtraj->GetPoints().size()>0);
-                Transform t = phandtraj->GetPoints().back().trans;
+                BOOST_ASSERT(_phandtraj->GetPoints().size()>0);
+                Transform t = _phandtraj->GetPoints().back().trans;
 
                 // move back a little if robot/target in collision
                 if( !!ptarget ) {
@@ -612,30 +631,47 @@ protected:
                     }
                 }
 
-                tGoalEndEffector = t * _robot->GetTransform().inverse() * pmanip->GetTransform();     // find the end effector transform
+                // find the end effector transform
+                tGoalEndEffector.SetTransform6D(t * _robot->GetTransform().inverse() * pmanip->GetTransform());
                 vFinalGripperValues.resize(pmanip->GetGripperIndices().size());
-                std::copy(phandtraj->GetPoints().back().q.begin(),phandtraj->GetPoints().back().q.begin()+vFinalGripperValues.size(),vFinalGripperValues.begin());
+                std::copy(_phandtraj->GetPoints().back().q.begin(),_phandtraj->GetPoints().back().q.begin()+vFinalGripperValues.size(),vFinalGripperValues.begin());
             }
             else if( iGraspTransform >= 0 ) {
+                vFinalGripperValues.resize(0);
+
                 // use the grasp transform
                 dReal* pm = pgrasp+iGraspTransform;
-                TransformMatrix tm;
+                TransformMatrix tm, tgoal;
                 tm.m[0] = pm[0]; tm.m[1] = pm[3]; tm.m[2] = pm[6]; tm.trans.x = pm[9];
                 tm.m[4] = pm[1]; tm.m[5] = pm[4]; tm.m[6] = pm[7]; tm.trans.y = pm[10];
                 tm.m[8] = pm[2]; tm.m[9] = pm[5]; tm.m[10] = pm[8]; tm.trans.z = pm[11];
                 if( !ptarget ) {
-                    tGoalEndEffector = tm;
+                    tgoal = tm;
                 }
                 else {
-                    tGoalEndEffector = ptarget->GetTransform() * Transform(tm);
+                    tgoal = ptarget->GetTransform() * Transform(tm);
                 }
 
-                if( pmanip->CheckEndEffectorCollision(tGoalEndEffector,report) ) {
-                    RAVELOG_DEBUG(str(boost::format("grasp %d: in collision (%s)\n")%igrasp%report->__str__()));
-                    continue;
+                if( pmanip->GetIkSolver()->Supports(IkParameterization::Type_TranslationDirection5D) ) {
+                    // get a valid transformation
+                    tGoalEndEffector.SetTranslationDirection5D(RAY(tgoal.trans,tgoal.rotate(pmanip->GetDirection())));
+                    vector<dReal> vsolution;
+                    if( !pmanip->FindIKSolution(tGoalEndEffector,vsolution,IKFO_CheckEnvCollisions) ) {
+                        RAVELOG_DEBUG("ik 5d failed: %d\n", igrasp);
+                        continue;     // failed
+                    }
+                    vFinalGripperValues = _vFinalGripperValues;
                 }
-
-                vFinalGripperValues.resize(0);
+                else if( pmanip->GetIkSolver()->Supports(IkParameterization::Type_Transform6D) ) {
+                    tGoalEndEffector.SetTransform6D(tgoal);
+                    if( pmanip->CheckEndEffectorCollision(tgoal,report) ) {
+                        RAVELOG_DEBUG(str(boost::format("grasp %d: in collision (%s)\n")%igrasp%report->__str__()));
+                        continue;
+                    }
+                }
+                else {
+                    throw OPENRAVE_EXCEPTION_FORMAT("manipulator %s does not support ik types transform6d or translationdirection5d necessing for grasp planning\n", pmanip->GetName(), ORE_InvalidArguments);
+                }
             }
             else {
                 RAVELOG_ERROR("grasper problem not valid\n");
@@ -648,7 +684,7 @@ protected:
                 _robot->SetActiveDOFValues(vector<dReal>(pgrasp+iGraspPreshape,pgrasp+iGraspPreshape+_robot->GetActiveDOF()),true);
             }
 
-            Transform tApproachEndEffector = tGoalEndEffector;
+            IkParameterization tApproachEndEffector = tGoalEndEffector;
             if( !bMobileBase ) {
                 // check ik
                 Vector vglobalpalmdir;
@@ -656,27 +692,37 @@ protected:
                     vglobalpalmdir = transTarg.rotate(Vector(pgrasp[iGraspDir], pgrasp[iGraspDir+1], pgrasp[iGraspDir+2]));
                 }
                 else {
-                    vglobalpalmdir = tApproachEndEffector.rotate(pmanip->GetDirection());
+                    if( tApproachEndEffector.GetType() == IkParameterization::Type_Transform6D ) {
+                        vglobalpalmdir = tApproachEndEffector.GetTransform6D().rotate(pmanip->GetDirection());
+                    }
+                    else {
+                        vglobalpalmdir = tApproachEndEffector.GetTranslationDirection5D().dir;
+                    }
                 }
 
                 dReal fSmallOffset = 0.0001f;
-                tApproachEndEffector.trans -= fSmallOffset * vglobalpalmdir;
+                if( fApproachOffset != 0 ) {
+                    Transform tsmalloffset; tsmalloffset.trans = -fSmallOffset * vglobalpalmdir;
+                    tApproachEndEffector = tsmalloffset*tApproachEndEffector;
+                }
 
                 // first test the IK solution at the destination tGoalEndEffector
-                if( !pmanip->FindIKSolution(tApproachEndEffector, viksolution, true) ) {
+                if( !pmanip->FindIKSolution(tApproachEndEffector, viksolution, IKFO_CheckEnvCollisions) ) {
                     RAVELOG_DEBUG("grasp %d: No IK solution found (final)\n", igrasp);
                     continue;
                 }
 
                 _UpdateSwitchModels(true,true);     // switch to fat models
                 if( fApproachOffset != 0 ) {
+                    Transform tsmalloffset;
                     // now test at the approach point (with offset)
-                    tApproachEndEffector.trans -= (fApproachOffset-fSmallOffset) * vglobalpalmdir;
+                    tsmalloffset.trans = -(fApproachOffset-fSmallOffset) * vglobalpalmdir;
+                    tApproachEndEffector = tsmalloffset*tApproachEndEffector;
 
                     // set the previous robot ik configuration to get the closest configuration!!
                     _robot->SetActiveDOFs(pmanip->GetArmIndices());
                     _robot->SetActiveDOFValues(viksolution);
-                    if( !pmanip->FindIKSolution(tApproachEndEffector, viksolution, true) ) {
+                    if( !pmanip->FindIKSolution(tApproachEndEffector, viksolution, IKFO_CheckEnvCollisions) ) {
                         _robot->SetDOFValues(vCurRobotValues);     // reset robot to original position
                         RAVELOG_DEBUG("grasp %d: No IK solution found (approach)\n", igrasp);
                         continue;
@@ -706,14 +752,14 @@ protected:
             //while (getchar() != '\n') usleep(1000);
             _UpdateSwitchModels(false,false);     // should test destination with thin models
 
-            list< TransformMatrix > listDests;
+            list< IkParameterization > listDests;
             if( bRandomDests ) {
                 PermutateRandomly(vdestpermuation);
             }
 
             for(int idestperm = 0; idestperm < (int)vdestpermuation.size(); ++idestperm) {
                 Transform& transDestTarget = vObjDestinations[vdestpermuation[idestperm]];
-                Transform tDestEndEffector = transDestTarget * transInvTarget * tGoalEndEffector;
+                IkParameterization tDestEndEffector = (transDestTarget * transInvTarget) * tGoalEndEffector;
                 ptarget->SetTransform(transDestTarget);
                 bool bTargetCollision;
                 {
@@ -729,7 +775,7 @@ protected:
                 }
 
                 if( !bMobileBase ) {
-                    if( pmanip->FindIKSolution(tDestEndEffector, vikgoal, true) ) {
+                    if( pmanip->FindIKSolution(tDestEndEffector, vikgoal, IKFO_CheckEnvCollisions) ) {
                         listDests.push_back(tDestEndEffector);
                     }
                 }
@@ -793,7 +839,7 @@ protected:
             }
             listGraspGoals.push_back(GRASPGOAL());
             GRASPGOAL& goal = listGraspGoals.back();
-            goal.index = igrasp;
+            goal.graspindex = igrasp;
             goal.tgrasp = tApproachEndEffector;
             goal.viksolution = viksolution;
             goal.listDests.swap(listDests);
@@ -862,12 +908,12 @@ protected:
 
             ptrajfinal->CalcTrajTiming(_robot, ptrajfinal->GetInterpMethod(), true, false,_fMaxVelMult);
 
-            RAVELOG_DEBUG("grasp index %d\n",goalFound.index);
+            RAVELOG_DEBUG("grasp index %d\n",goalFound.graspindex);
             sout << goalFound.listDests.size() << " ";
             FOREACH(itdest, goalFound.listDests) {
                 sout << *itdest << " ";
             }
-            sout << goalFound.index << " " << (float)nSearchTime/1000000.0f << " ";
+            sout << goalFound.graspindex << " " << (float)nSearchTime/1000000.0f << " ";
 
             // set the trajectory
             CM::SetFullTrajectory(_robot,ptrajfinal, bExecute, strtrajfilename, pOutputTrajStream);
@@ -1597,9 +1643,9 @@ protected:
         TrajectoryBasePtr ptraj;
 
         // set all teh goals, be careful! not all goals have the same preshape!!!
-        if( listGraspGoals.size() == 0 )
+        if( listGraspGoals.size() == 0 ) {
             return ptraj;
-
+        }
         RobotBase::RobotStateSaver _saver(_robot);
 
         // set back to the initial hand joints
@@ -1617,23 +1663,27 @@ protected:
         while(itgoals != listGraspGoals.end()) {
             size_t ipreshape=0;
             for(ipreshape = 0; ipreshape < vpreshape.size(); ++ipreshape) {
-                if( fabsf(vpreshape[ipreshape] - itgoals->vpreshape[ipreshape]) > 2.0*GRASPTHRESH2 )
+                if( RaveFabs(vpreshape[ipreshape] - itgoals->vpreshape[ipreshape]) > 2.0*GRASPTHRESH2 ) {
                     break;
+                }
             }
 
             if( ipreshape == vpreshape.size() ) {
                 // accept
                 listgraspsused.splice(listgraspsused.end(), listGraspGoals, itgoals++);
             }
-            else ++itgoals;
+            else {
+                ++itgoals;
+            }
         }
 
         uint64_t tbase = GetMicroTime();
 
         PRESHAPETRAJMAP::iterator itpreshapetraj = mapPreshapeTrajectories.find(vpreshape);
         if( itpreshapetraj != mapPreshapeTrajectories.end() ) {
-            if( itpreshapetraj->second->GetPoints().size() > 0 )
+            if( itpreshapetraj->second->GetPoints().size() > 0 ) {
                 _robot->SetDOFValues(itpreshapetraj->second->GetPoints().back().q);
+            }
         }
         else {
             RAVELOG_WARN("no preshape trajectory!");
@@ -1641,7 +1691,7 @@ protected:
 
         std::list<IkParameterization> listgoals;
         FOREACH(itgoal, listgraspsused) {
-            listgoals.push_back(IkParameterization(itgoal->tgrasp, IkParameterization::Type_Transform6D));
+            listgoals.push_back(itgoal->tgrasp);
         }
         planningutils::ManipulatorIKGoalSampler goalsampler(pmanip, listgoals);
 
@@ -1665,6 +1715,41 @@ protected:
         return pfulltraj;
     }
 
+    IkFilterReturn _FilterIkForGrasping(std::vector<dReal>& vsolution, RobotBase::ManipulatorPtr pmanip, const IkParameterization& ikaram, KinBodyPtr ptarget)
+    {
+        if( _robot->IsGrabbing(ptarget) ) {
+            return IKFR_Success;
+        }
+        RobotBase::RobotStateSaver saver(_robot);
+        _robot->SetActiveDOFs(pmanip->GetGripperIndices());
+        if( !_phandtraj ) {
+            _phandtraj = RaveCreateTrajectory(GetEnv(),_robot->GetActiveDOF());
+        }
+        else {
+            _phandtraj->Reset(_robot->GetActiveDOF());
+        }
+
+        boost::shared_ptr<GraspParameters> graspparams(new GraspParameters(GetEnv()));
+        graspparams->targetbody = ptarget;
+        graspparams->btransformrobot = false;
+        graspparams->breturntrajectory = false;
+        graspparams->bonlycontacttarget = true;
+        graspparams->btightgrasp = false;
+        graspparams->bavoidcontact = true;
+        // TODO: in order to reproduce the same exact conditions as the original grasp, have to also transfer the step sizes
+        if( !_pGrasperPlanner->InitPlan(_robot,graspparams) ) {
+            return IKFR_Reject;
+        }
+
+        if( !_pGrasperPlanner->PlanPath(_phandtraj) ) {
+            return IKFR_Reject;
+        }
+
+        _vFinalGripperValues.resize(pmanip->GetGripperIndices().size());
+        std::copy(_phandtraj->GetPoints().back().q.begin(),_phandtraj->GetPoints().back().q.begin()+_vFinalGripperValues.size(),_vFinalGripperValues.begin());
+        return IKFR_Success;
+    }
+
     void _UpdateSwitchModels(bool bSwitchToFat, bool bUpdateBodies=true)
     {
         if( bSwitchToFat && bUpdateBodies ) {
@@ -1680,11 +1765,13 @@ protected:
             GetEnv()->GetBodies(vbodies);
             FORIT(itbody, vbodies) {
                 FORIT(itmodel,_listSwitchModels) {
-                    if( (*itmodel)->GetBody() == *itbody )
+                    if( (*itmodel)->GetBody() == *itbody ) {
                         break;
+                    }
                 }
-                if( itmodel != _listSwitchModels.end() )
+                if( itmodel != _listSwitchModels.end() ) {
                     continue;
+                }
                 FOREACH(itpattern, _listSwitchModelPatterns) {
                     bool bMatches=false;
 #ifdef HAVE_BOOST_REGEX
@@ -1709,8 +1796,9 @@ protected:
             }
         }
 
-        FOREACH(it,_listSwitchModels)
+        FOREACH(it,_listSwitchModels) {
             (*it)->Switch(bSwitchToFat);
+        }
     }
 
     string _strRobotName;     ///< name of the active robot
@@ -1720,6 +1808,8 @@ protected:
     PlannerBasePtr _pRRTPlanner, _pGrasperPlanner;
     list<pair<string,string> > _listSwitchModelPatterns;
     list<SwitchModelContainerPtr> _listSwitchModels;
+    TrajectoryBasePtr _phandtraj;
+    vector<dReal> _vFinalGripperValues;
 
     friend class SwitchModelState;
 };

@@ -116,7 +116,7 @@ class BaseManipulation:
         if res is None:
             raise openravepy.planning_error('MoveActiveJoints')
         return res
-    def MoveToHandPosition(self,matrices=None,affinedofs=None,maxiter=None,maxtries=None,translation=None,rotation=None,seedik=None,constraintfreedoms=None,constraintmatrix=None,constrainterrorthresh=None,execute=None,outputtraj=None,steplength=None,goalsamples=None,ikparam=None):
+    def MoveToHandPosition(self,matrices=None,affinedofs=None,maxiter=None,maxtries=None,translation=None,rotation=None,seedik=None,constraintfreedoms=None,constraintmatrix=None,constrainterrorthresh=None,execute=None,outputtraj=None,steplength=None,goalsamples=None,ikparam=None,ikparams=None):
         """See :ref:`module-basemanipulation-movetohandposition`
         """
         cmd = 'MoveToHandPosition '
@@ -146,6 +146,10 @@ class BaseManipulation:
             cmd += 'steplength %.15e '%steplength
         if ikparam is not None:
             cmd += 'ikparam ' + str(ikparam) + ' '
+        if ikparams is not None:
+            cmd += 'ikparams %d '%len(ikparams)
+            for ikp in ikparams:
+                cmd += str(ikp) + ' '
         if execute is not None:
             cmd += 'execute %d '%execute
         if outputtraj is not None and outputtraj:

@@ -33,8 +33,20 @@ The scene is randomized every run in order to show the powerful of the planners.
 
 .. figure:: ../../images/examples/graspplanning_gallery.jpg
   :width: 640
-
+  
   Gallery of runs.
+
+5D IK Grasp Planning
+====================
+
+It is possible to perform grasp planning with 5D IK. Try executing:
+
+.. code-block:: bash
+
+  openrave.py --example graspplanning --scene=data/katanatable.env.xml
+
+.. figure:: ../../images/examples/graspplanning_katana.jpg
+  :width: 400
 
 .. examplepost-block:: graspplanning
 
@@ -55,9 +67,16 @@ class GraspPlanning:
         self.robot = robot
         self.plannername=plannername
         self.nodestinations = nodestinations
-        self.ikmodel = databases.inversekinematics.InverseKinematicsModel(robot=robot,iktype=IkParameterization.Type.Transform6D)
-        if not self.ikmodel.load():
-            self.ikmodel.autogenerate()
+        try:
+            self.ikmodel = databases.inversekinematics.InverseKinematicsModel(robot=robot,iktype=IkParameterization.Type.Transform6D)
+            if not self.ikmodel.load():
+                self.ikmodel.autogenerate()
+        except ValueError:
+            print '6D IK failed, trying 5D IK'
+            self.ikmodel = databases.inversekinematics.InverseKinematicsModel(robot=robot,iktype=IkParameterization.Type.TranslationDirection5D)
+            if not self.ikmodel.load():
+                self.ikmodel.autogenerate()
+
         # could possibly affect generated grasp sets?
 #         self.cdmodel = databases.convexdecomposition.ConvexDecompositionModel(self.robot)
 #         if not self.cdmodel.load():
@@ -72,7 +91,8 @@ class GraspPlanning:
             self.graspables = self.getGraspables(dests=dests)
             if len(self.graspables) == 0:
                 print 'attempting to auto-generate a grasp table'
-                gmodel = databases.grasping.GraspingModel(robot=self.robot,target=self.envreal.GetKinBody('mug1'))
+                target=[t for t in self.envreal.GetBodies() if t.GetName().find('mug')>=0][0]
+                gmodel = databases.grasping.GraspingModel(robot=self.robot,target=target)
                 if not gmodel.load():
                     gmodel.autogenerate()
                     self.graspables = self.getGraspables(dests=dests)
@@ -211,7 +231,7 @@ class GraspPlanning:
             robot.SetActiveManipulator(gmodel.manip)
             robot.SetActiveDOFs(gmodel.manip.GetArmIndices())
         istartgrasp = 0
-        approachoffset = 0.02
+        approachoffset = 0.02 if self.ikmodel.iktype == IkParameterization.Type.Transform6D else 0.0
         target = gmodel.target
         stepsize = 0.001
         while istartgrasp < len(gmodel.grasps):
@@ -225,24 +245,25 @@ class GraspPlanning:
             print 'grasp %d initial planning time: %f'%(graspindex,searchtime)
             self.waitrobot(robot)
 
-            print 'moving hand'
-            expectedsteps = floor(approachoffset/stepsize)
-            try:
-                # should not allow any error since destination goal depends on accurate relative placement
-                # of the gripper with respect to the object
-                print repr(robot.GetDOFValues())
-                print repr(dot(gmodel.manip.GetEndEffectorTransform()[0:3,0:3],gmodel.manip.GetDirection()))
-                print stepsize,expectedsteps-1,expectedsteps
-                res = self.basemanip.MoveHandStraight(direction=dot(gmodel.manip.GetEndEffectorTransform()[0:3,0:3],gmodel.manip.GetDirection()),
-                                                      ignorefirstcollision=False,stepsize=stepsize,minsteps=expectedsteps-1,maxsteps=expectedsteps)
-            except planning_error:
-                print 'use a planner to move the rest of the way'
+            if approachoffset != 0:
+                print 'moving hand'
+                expectedsteps = floor(approachoffset/stepsize)
                 try:
-                    self.basemanip.MoveToHandPosition(matrices=[Tglobalgrasp],maxiter=1000,maxtries=1,seedik=4)
-                except planning_error,e:
-                    print 'failed to reach grasp',e
-                    continue
-            self.waitrobot(robot)
+                    # should not allow any error since destination goal depends on accurate relative placement
+                    # of the gripper with respect to the object
+                    print repr(robot.GetDOFValues())
+                    print repr(dot(gmodel.manip.GetEndEffectorTransform()[0:3,0:3],gmodel.manip.GetDirection()))
+                    print stepsize,expectedsteps-1,expectedsteps
+                    res = self.basemanip.MoveHandStraight(direction=dot(gmodel.manip.GetEndEffectorTransform()[0:3,0:3],gmodel.manip.GetDirection()),
+                                                          ignorefirstcollision=False,stepsize=stepsize,minsteps=expectedsteps-1,maxsteps=expectedsteps)
+                except planning_error:
+                    print 'use a planner to move the rest of the way'
+                    try:
+                        self.basemanip.MoveToHandPosition(matrices=[Tglobalgrasp],maxiter=1000,maxtries=1,seedik=4)
+                    except planning_error,e:
+                        print 'failed to reach grasp',e
+                        continue
+                self.waitrobot(robot)
 
             self.taskmanip.CloseFingers()
             self.waitrobot(robot)
@@ -259,7 +280,7 @@ class GraspPlanning:
             if len(goals) > 0:
                 print 'planning to destination'
                 try:
-                    self.basemanip.MoveToHandPosition(matrices=goals,maxiter=1000,maxtries=1,seedik=4)
+                    self.basemanip.MoveToHandPosition(ikparams=goals,maxiter=1000,maxtries=1,seedik=4)
                     self.waitrobot(robot)
                 except planning_error,e:
                     print 'failed to reach a goal',e
@@ -363,3 +384,8 @@ def run(args=None):
 
 if __name__ == "__main__":
     run()
+
+def test():
+    import graspplanning
+    self=graspplanning.GraspPlanning(robot,randomize=False,nodestinations=False)
+    success = self.graspAndPlaceObject(self.graspables[2][0],self.graspables[2][1])

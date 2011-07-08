@@ -113,6 +113,7 @@ public:
         _vXMLParameters.push_back("ftargetroll");
         _vXMLParameters.push_back("vtargetdirection");
         _vXMLParameters.push_back("vtargetposition");
+        _vXMLParameters.push_back("vmanipulatordirection");
         _vXMLParameters.push_back("btransformrobot");
         _vXMLParameters.push_back("breturntrajectory");
         _vXMLParameters.push_back("bonlycontacttarget");
@@ -131,6 +132,7 @@ public:
     dReal ftargetroll;     ///< rotate the hand about the palm normal (if one exists) by this many radians
     Vector vtargetdirection;     ///< direction in target space to approach object from
     Vector vtargetposition;     ///< position in target space to start approaching (if in collision with target, gets backed up)
+    Vector vmanipulatordirection; ///< a direction for the gripper to face at when approaching (in the manipulator coordinate system)
     bool btransformrobot;     ///< if true sets the base link of the robot given the above transformation parameters. If there is an active manipulator
     bool breturntrajectory;     ///< if true, returns how the individual fingers moved instead of just the final grasp
     bool bonlycontacttarget;     ///< if true, then grasp is successful only if contact is made with the target
@@ -149,21 +151,24 @@ protected:
     // save the extra data to XML
     virtual bool serialize(std::ostream& O) const
     {
-        if( !PlannerParameters::serialize(O) )
+        if( !PlannerParameters::serialize(O) ) {
             return false;
+        }
         O << "<fstandoff>" << fstandoff << "</fstandoff>" << endl;
         O << "<targetbody>" << (int)(!targetbody ? 0 : targetbody->GetEnvironmentId()) << "</targetbody>" << endl;
         O << "<ftargetroll>" << ftargetroll << "</ftargetroll>" << endl;
         O << "<vtargetdirection>" << vtargetdirection << "</vtargetdirection>" << endl;
         O << "<vtargetposition>" << vtargetposition << "</vtargetposition>" << endl;
+        O << "<vmanipulatordirection>" << vmanipulatordirection << "</vmanipulatordirection>" << endl;
         O << "<btransformrobot>" << btransformrobot << "</btransformrobot>" << endl;
         O << "<breturntrajectory>" << breturntrajectory << "</breturntrajectory>" << endl;
         O << "<bonlycontacttarget>" << bonlycontacttarget << "</bonlycontacttarget>" << endl;
         O << "<btightgrasp>" << btightgrasp << "</btightgrasp>" << endl;
         O << "<bavoidcontact>" << bavoidcontact << "</bavoidcontact>" << endl;
         O << "<vavoidlinkgeometry>" << endl;
-        FOREACHC(it,vavoidlinkgeometry)
-        O << *it << " ";
+        FOREACHC(it,vavoidlinkgeometry) {
+            O << *it << " ";
+        }
         O << "</vavoidlinkgeometry>" << endl;
         O << "<fcoarsestep>" << fcoarsestep << "</fcoarsestep>" << endl;
         O << "<ffinestep>" << ffinestep << "</ffinestep>" << endl;
@@ -174,8 +179,9 @@ protected:
 
     ProcessElement startElement(const std::string& name, const AttributesList& atts)
     {
-        if( _bProcessingGrasp )
+        if( _bProcessingGrasp ) {
             return PE_Ignore;
+        }
         switch( PlannerBase::PlannerParameters::startElement(name,atts) ) {
         case PE_Pass: break;
         case PE_Support: return PE_Support;
@@ -186,7 +192,8 @@ protected:
             return PE_Support;
         }
 
-        _bProcessingGrasp = name=="fstandoff"||name=="targetbody"||name=="ftargetroll"||name=="vtargetdirection"||name=="vtargetposition"||name=="btransformrobot"||name=="breturntrajectory"||name=="bonlycontacttarget"||name=="btightgrasp"||name=="bavoidcontact"||name=="vavoidlinkgeometry"||name=="fcoarsestep"||name=="ffinestep"||name=="ftranslationstepmult"||name=="fgraspingnoise";
+        boost::array<string,16> tags = {{"fstandoff","targetbody","ftargetroll","vtargetdirection","vtargetposition","vmanipulatordirection", "btransformrobot","breturntrajectory","bonlycontacttarget","btightgrasp","bavoidcontact","vavoidlinkgeometry","fcoarsestep","ffinestep","ftranslationstepmult","fgraspingnoise"}};
+        _bProcessingGrasp = find(tags.begin(),tags.end(),name) != tags.end();
         return _bProcessingGrasp ? PE_Support : PE_Pass;
     }
 
@@ -195,43 +202,60 @@ protected:
     {
         // _ss is an internal stringstream that holds the data of the tag
         if( _bProcessingGrasp ) {
-            if( name == "vavoidlinkgeometry" )
+            if( name == "vavoidlinkgeometry" ) {
                 vavoidlinkgeometry = vector<string>((istream_iterator<string>(_ss)), istream_iterator<string>());
-            else if( name == "fstandoff")
+            }
+            else if( name == "fstandoff") {
                 _ss >> fstandoff;
+            }
             else if( name == "targetbody") {
                 int id = 0;
                 _ss >> id;
                 targetbody = _penv->GetBodyFromEnvironmentId(id);
             }
-            else if( name == "ftargetroll")
+            else if( name == "ftargetroll") {
                 _ss >> ftargetroll;
+            }
             else if( name == "vtargetdirection") {
                 _ss >> vtargetdirection;
                 vtargetdirection.normalize3();
             }
-            else if( name == "vtargetposition")
+            else if( name == "vtargetposition") {
                 _ss >> vtargetposition;
-            else if( name == "btransformrobot")
+            }
+            else if( name == "vmanipulatordirection") {
+                _ss >> vmanipulatordirection;
+            }
+            else if( name == "btransformrobot") {
                 _ss >> btransformrobot;
-            else if( name == "breturntrajectory")
+            }
+            else if( name == "breturntrajectory") {
                 _ss >> breturntrajectory;
-            else if( name == "bonlycontacttarget")
+            }
+            else if( name == "bonlycontacttarget") {
                 _ss >> bonlycontacttarget;
-            else if( name == "btightgrasp" )
+            }
+            else if( name == "btightgrasp" ) {
                 _ss >> btightgrasp;
-            else if( name == "bavoidcontact" )
+            }
+            else if( name == "bavoidcontact" ) {
                 _ss >> bavoidcontact;
-            else if( name == "fcoarsestep" )
+            }
+            else if( name == "fcoarsestep" ) {
                 _ss >> fcoarsestep;
-            else if( name == "ffinestep" )
+            }
+            else if( name == "ffinestep" ) {
                 _ss >> ffinestep;
-            else if( name == "fgraspingnoise" )
+            }
+            else if( name == "fgraspingnoise" ) {
                 _ss >> fgraspingnoise;
-            else if( name == "ftranslationstepmult" )
+            }
+            else if( name == "ftranslationstepmult" ) {
                 _ss >> ftranslationstepmult;
-            else
+            }
+            else {
                 RAVELOG_WARN(str(boost::format("unknown tag %s\n")%name));
+            }
             _bProcessingGrasp = false;
             return false;
         }

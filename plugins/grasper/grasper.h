@@ -209,9 +209,13 @@ public:
                 // grasp
                 sinput >> params->ftargetroll;
             }
-            else if((cmd == "centeroffset")||(cmd == "position")) {
+            else if( cmd == "centeroffset" || cmd == "position" ) {
                 // initialization
                 sinput >> params->vtargetposition.x >> params->vtargetposition.y >> params->vtargetposition.z;
+            }
+            else if(cmd == "manipulatordirection") {
+                // initialization
+                sinput >> params->vmanipulatordirection.x >> params->vmanipulatordirection.y >> params->vmanipulatordirection.z;
             }
             else if( cmd == "standoff" ) {
                 // grasp
@@ -614,6 +618,7 @@ public:
         size_t id;
         Vector vtargetdirection;
         Vector vtargetposition;
+        Vector vmanipulatordirection;
         dReal ftargetroll;
         vector<dReal> preshape;
         dReal fstandoff;
@@ -638,6 +643,7 @@ public:
         vector< pair<Vector, Vector> > approachrays;
         vector<dReal> rolls;
         vector< vector<dReal> > preshapes;
+        vector<Vector> manipulatordirections;
         vector<dReal> standoffs;
         size_t startindex = 0;
         size_t maxgrasps = 0;
@@ -724,6 +730,14 @@ public:
                     }
                 }
             }
+            else if( cmd == "manipulatordirections" ) {
+                int nummanipulatordirections = 0;
+                sinput >> nummanipulatordirections;
+                manipulatordirections.resize(nummanipulatordirections);
+                FOREACH(it,manipulatordirections) {
+                    sinput >> it->x >> it->y >> it->z;
+                }
+            }
             else {
                 RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
@@ -750,18 +764,18 @@ public:
         }
 
         _listGraspResults.clear();
-        size_t numgrasps = approachrays.size()*rolls.size()*preshapes.size()*standoffs.size();
+        size_t numgrasps = approachrays.size()*rolls.size()*preshapes.size()*standoffs.size()*manipulatordirections.size();
         if( maxgrasps == 0 ) {
             maxgrasps = numgrasps;
         }
         RAVELOG_INFO(str(boost::format("number of grasps to test: %d\n")%numgrasps));
         size_t id = startindex;
         for(id=startindex; id < numgrasps; ++id) {
-            // id = ((iapproachray * rolls.size()  + iroll) * preshapes.size() + ipreshape) * standoffs.size() + istandoff;
             size_t istandoff = id % standoffs.size();
             size_t ipreshape = (id / standoffs.size()) % preshapes.size();
             size_t iroll = (id / (preshapes.size() * standoffs.size())) % rolls.size();
             size_t iapproachray = (id / (rolls.size() * preshapes.size() * standoffs.size()));
+            size_t imanipulatordirection = (id / (rolls.size() * preshapes.size() * standoffs.size()*approachrays.size()));
 
             boost::mutex::scoped_lock lock(_mutexGrasp);
             if( _listGraspResults.size() >= maxgrasps ) {
@@ -774,6 +788,7 @@ public:
             _graspParamsWork->id = id;
             _graspParamsWork->vtargetposition = approachrays[iapproachray].first;
             _graspParamsWork->vtargetdirection = approachrays[iapproachray].second;
+            _graspParamsWork->vmanipulatordirection = manipulatordirections[imanipulatordirection];
             _graspParamsWork->ftargetroll = rolls[iroll];
             _graspParamsWork->fstandoff = standoffs[istandoff];
             _graspParamsWork->preshape = preshapes[ipreshape];
@@ -795,6 +810,7 @@ public:
             sout << (*itresult)->vtargetposition.x << " " << (*itresult)->vtargetposition.y << " " << (*itresult)->vtargetposition.z << " ";
             sout << (*itresult)->vtargetdirection.x << " " << (*itresult)->vtargetdirection.y << " " << (*itresult)->vtargetdirection.z << " ";
             sout << (*itresult)->ftargetroll << " " << (*itresult)->fstandoff << " ";
+            sout << (*itresult)->vmanipulatordirection.x << " " << (*itresult)->vmanipulatordirection.y << " " << (*itresult)->vmanipulatordirection.z << " ";
             sout << (*itresult)->mindist << " " << (*itresult)->volume << " ";
             FOREACH(itangle, (*itresult)->preshape) {
                 sout << (*itangle) << " ";
@@ -868,6 +884,7 @@ public:
             params->vtargetdirection = grasp_params->vtargetdirection;
             params->ftargetroll = grasp_params->ftargetroll;
             params->vtargetposition = grasp_params->vtargetposition;
+            params->vmanipulatordirection = grasp_params->vmanipulatordirection;
             params->fstandoff = grasp_params->fstandoff;
             probot->SetActiveDOFs(worker_params->vactiveindices);
             probot->SetActiveDOFValues(grasp_params->preshape);

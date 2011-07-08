@@ -349,7 +349,7 @@ class MultiManipIKSolver:
             return None
 
 
-class SpaceSampler:
+class SpaceSamplerExtra:
     def __init__(self):
          self.faceindices = self.facenumr = self.facenump = None
     @staticmethod

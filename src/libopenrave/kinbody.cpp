@@ -2548,13 +2548,13 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, bool bCheckLi
             for(size_t j = 0; j < vPassiveJointValues[i].size(); ++j) {
                 if( !_vPassiveJoints[i]->IsCircular(j) ) {
                     if( vPassiveJointValues[i][j] < _vPassiveJoints[i]->_vlowerlimit.at(j) ) {
-                        if( vPassiveJointValues[i][j] < _vPassiveJoints[i]->_vlowerlimit.at(j)-5e-5f ) {
+                        if( vPassiveJointValues[i][j] < _vPassiveJoints[i]->_vlowerlimit.at(j)-5e-4f ) {
                             RAVELOG_WARN(str(boost::format("dummy joint out of lower limit! %e < %e\n")%_vPassiveJoints[i]->_vlowerlimit.at(j)%vPassiveJointValues[i][j]));
                         }
                         vPassiveJointValues[i][j] = _vPassiveJoints[i]->_vlowerlimit.at(j);
                     }
                     else if( vPassiveJointValues[i][j] > _vPassiveJoints[i]->_vupperlimit.at(j) ) {
-                        if( vPassiveJointValues[i][j] > _vPassiveJoints[i]->_vupperlimit.at(j)+5e-5f ) {
+                        if( vPassiveJointValues[i][j] > _vPassiveJoints[i]->_vupperlimit.at(j)+5e-4f ) {
                             RAVELOG_WARN(str(boost::format("dummy joint out of upper limit! %e > %e\n")%_vPassiveJoints[i]->_vupperlimit.at(j)%vPassiveJointValues[i][j]));
                         }
                         vPassiveJointValues[i][j] = _vPassiveJoints[i]->_vupperlimit.at(j);
