@@ -6,7 +6,7 @@ ChangeLog
 Version 0.4.1
 =============
 
-Subversion Revision: 2570
+Subversion Revision: 2572
 
 Initial Release: 2011/07/08
 
