@@ -80,7 +80,6 @@ class TaskManipulation:
         if res is None:
             raise openravepy.planning_error()
         resvalues = res.split()
-        print resvalues
         numgoals = int(resvalues.pop(0))
         goals = []
         for i in range(numgoals):

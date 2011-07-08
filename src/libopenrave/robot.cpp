@@ -2211,7 +2211,7 @@ bool RobotBase::CheckSelfCollision(CollisionReportPtr report) const
         if( _vGrabbedBodies.size() > 1 ) {
             FOREACHC(itbody2, _vGrabbedBodies) {
                 KinBodyPtr pbody2(itbody2->pbody);
-                if( pbody != pbody2 ) {
+                if( pbody == pbody2 ) {
                     continue;
                 }
                 FOREACHC(itlink, pbody->GetLinks()) {

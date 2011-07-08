@@ -46,7 +46,7 @@ It is possible to perform grasp planning with 5D IK. Try executing:
   openrave.py --example graspplanning --scene=data/katanatable.env.xml
 
 .. figure:: ../../images/examples/graspplanning_katana.jpg
-  :width: 400
+  :width: 640
 
 .. examplepost-block:: graspplanning
 
