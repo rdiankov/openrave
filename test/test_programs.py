@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from common_test_openrave import *
-import os
+import os, sys, platform
 import shutil
 
 def run_example(name):
@@ -45,15 +45,29 @@ def test_createplugin():
     except:
         pass
 
+    cmakeoptions = ''
+    makecommand = 'make %s'
+    pythoncommand = 'python '
+    runcommand = './'
+    programdir = 'build'
+    if openravepyCompilerVersion().startswith('msvc'):
+        cmakeoptions += '-G "Visual Studio 10" '
+        makecommand = '"C:\\Program Files\\Microsoft Visual Studio 10.0\\VC\\vcvarsall.bat" x86 && msbuild %s.sln /p:Configuration=RelWithDebInfo /maxcpucount:1'
+    if sys.platform.startswith('win') or platform.system().lower() == 'windows':
+        pythoncommand = ''
+        runcommand = ''
+        programdir = 'build\\RelWithDebInfo'
     try:
         assert(os.system('openrave-createplugin.py myplugin --module=MyTestModule') == 0)
         os.chdir('myplugin')
         os.mkdir('build')
         os.chdir('build')
-        assert(os.system('cmake ..') == 0)
-        assert(os.system('make') == 0)
+        assert(os.system('cmake %s ..'%cmakeoptions) == 0)
+        assert(os.system(makecommand%'myplugin') == 0)
         os.chdir('..')
-        assert(os.system('python testplugin.py') == 0)
+        if programdir != 'build':
+            shutil.copyfile(os.path.join(programdir,'myplugin.dll'),'build/myplugin.dll')
+        assert(os.system('%stestplugin.py'%pythoncommand) == 0)
     finally:
         os.chdir(curdir)
         try:
@@ -70,10 +84,10 @@ def test_createplugin():
         os.chdir('myprogram')
         os.mkdir('build')
         os.chdir('build')
-        assert(os.system('cmake ..') == 0)
-        assert(os.system('make') == 0)
+        assert(os.system('cmake %s ..'%cmakeoptions) == 0)
+        assert(os.system(makecommand%'myprogram') == 0)
         os.chdir('..')
-        assert(os.system('./build/myprogram') == 0)
+        assert(os.system(runcommand+os.path.join(programdir,'myprogram')) == 0)
     finally:
         os.chdir(curdir)
         shutil.rmtree('myprogram')
