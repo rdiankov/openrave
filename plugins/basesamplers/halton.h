@@ -38,19 +38,25 @@ References:\n\n\
         SetSeed(0);
         halton_step_set (1);
     }
-    
+
     void SetSeed(uint32_t seed) {
         vector<int> vseed(halton_dim_num_get(),0);
         halton_seed_set ( &vseed[0] );
     }
-    
+
     void SetSpaceDOF(int dof) {
         BOOST_ASSERT(dof > 0);
         halton_dim_num_set ( dof );
     }
-    int GetDOF() const { return halton_dim_num_get(); }
-    int GetNumberOfValues() const { return halton_dim_num_get(); }
-    bool Supports(SampleDataType type) const { return type==SDT_Real; }
+    int GetDOF() const {
+        return halton_dim_num_get();
+    }
+    int GetNumberOfValues() const {
+        return halton_dim_num_get();
+    }
+    bool Supports(SampleDataType type) const {
+        return type==SDT_Real;
+    }
 
     void GetLimits(std::vector<dReal>& vLowerLimit, std::vector<dReal>& vUpperLimit) const
     {
@@ -61,7 +67,7 @@ References:\n\n\
             vUpperLimit[i] = 1;
         }
     }
-    
+
     void SampleSequence(std::vector<dReal>& samples, size_t num=1,IntervalType interval=IT_Closed)
     {
         samples.resize(halton_dim_num_get()*num);
@@ -78,7 +84,7 @@ protected:
     bool halham_dim_num_check ( int dim_num );
     bool halham_seed_check ( int dim_num, int seed[] );
     bool halham_step_check ( int step );
-    void halham_write ( int dim_num, int n, int step, int seed[], int leap[], int base[], 
+    void halham_write ( int dim_num, int n, int step, int seed[], int leap[], int base[],
                         dReal r[], char *file_out_name );
     void halton ( dReal r[] );
     bool halton_base_check ( int dim_num, int base[] );
@@ -95,7 +101,7 @@ protected:
     void halton_step_set ( int step );
     int i4_log_10 ( int i );
     int i4_min ( int i1, int i2 );
-    void i4_to_halton ( int dim_num, int step, int seed[], int leap[], int base[], 
+    void i4_to_halton ( int dim_num, int step, int seed[], int leap[], int base[],
                         dReal r[] );
     void i4_to_halton_sequence ( int dim_num, int n, int step, int seed[], int leap[],
                                  int base[], dReal r[] );
@@ -112,9 +118,9 @@ protected:
     //
     int *halton_BASE;
     int *halton_LEAP;
-    int  halton_DIM_NUM;
+    int halton_DIM_NUM;
     int *halton_SEED;
-    int  halton_STEP;
+    int halton_STEP;
 };
 
 #endif

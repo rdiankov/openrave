@@ -14,9 +14,9 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /*! --------------------------------------------------------------------
-  \file   Item.h
-  \brief  Abstract base class for a render item
- -------------------------------------------------------------------- */
+   \file   Item.h
+   \brief  Abstract base class for a render item
+   -------------------------------------------------------------------- */
 
 #ifndef  RAVE_ITEM_H
 #define  RAVE_ITEM_H
@@ -35,27 +35,50 @@ public:
     virtual ~Item();
 
     // general methods
-    virtual const string& GetName() const        { return _name; }
-    virtual void SetName(const string& newname) { _name = newname; }
+    virtual const string& GetName() const {
+        return _name;
+    }
+    virtual void SetName(const string& newname) {
+        _name = newname;
+    }
 
     /// update underlying model from Inventor's transformation
-    virtual bool UpdateFromIv() { return true; }
-    virtual bool UpdateFromModel() { return true; }
+    virtual bool UpdateFromIv() {
+        return true;
+    }
+    virtual bool UpdateFromModel() {
+        return true;
+    }
 
     /// update Inventor nodes from model
-    virtual bool UpdateFromModel(const vector<dReal>& vjointvalues, const vector<Transform>& vtrans) { return true; }
+    virtual bool UpdateFromModel(const vector<dReal>& vjointvalues, const vector<Transform>& vtrans) {
+        return true;
+    }
 
-    inline RaveTransform<float> GetTransform() { return GetRaveTransform(_ivXform); }
+    inline RaveTransform<float> GetTransform() {
+        return GetRaveTransform(_ivXform);
+    }
 
     // if false, then item isn't rendered through the sensors
-    virtual bool InWorld() { return true; }
-    virtual void SetGrab(bool bGrab, bool bUpdate=true) {} ///< call when manipulating with the mouse, etc
+    virtual bool InWorld() {
+        return true;
+    }
+    virtual void SetGrab(bool bGrab, bool bUpdate=true) {
+    }                                                          ///< call when manipulating with the mouse, etc
 
     // Inventor related
-    SoSeparator* GetIvRoot() const   { return _ivRoot; }
-    SoTransform* GetIvTransform()    { return _ivXform; }
-    SoSwitch*    GetIvGeom() const   { return _ivGeom; }
-    SoTransparencyType* GetIvTransparency() const { return _ivTransparency; }
+    SoSeparator* GetIvRoot() const {
+        return _ivRoot;
+    }
+    SoTransform* GetIvTransform()    {
+        return _ivXform;
+    }
+    SoSwitch*    GetIvGeom() const {
+        return _ivGeom;
+    }
+    SoTransparencyType* GetIvTransparency() const {
+        return _ivTransparency;
+    }
 
     /// \brief returns true if the given node is in the inventor hierarchy
     bool ContainsIvNode(SoNode *pNode);
@@ -66,18 +89,22 @@ public:
     /// \brief Set the pick style of the node to be unpickable
     void SetUnpickable();
 
-    virtual SoSeparator* GetIvLink(int index) const { return _ivRoot; }
-    virtual int GetNumIvLinks() const { return 1; }
- 
+    virtual SoSeparator* GetIvLink(int index) const {
+        return _ivRoot;
+    }
+    virtual int GetNumIvLinks() const {
+        return 1;
+    }
+
 protected:
 
     // Instance Data
     QtCoinViewerPtr _viewer;
     string _name;
 
-    SoSeparator*   _ivRoot;           //!< root of Inventor data hierarchy
-    SoTransform*   _ivXform;          //!< item Inventor transform
-    SoSwitch*      _ivGeom;           //!< item geometry hierarchy
+    SoSeparator*   _ivRoot;               //!< root of Inventor data hierarchy
+    SoTransform*   _ivXform;              //!< item Inventor transform
+    SoSwitch*      _ivGeom;               //!< item geometry hierarchy
     SoTransparencyType* _ivTransparency;
 };
 typedef boost::shared_ptr<Item> ItemPtr;
@@ -85,7 +112,7 @@ typedef boost::shared_ptr<Item const> ItemConstPtr;
 
 class KinBodyItem : public Item
 {
- protected:
+protected:
     struct LINK
     {
         SoSeparator* psep;
@@ -93,15 +120,24 @@ class KinBodyItem : public Item
         KinBody::LinkWeakPtr plink;
     };
 
-    inline boost::shared_ptr<KinBodyItem> shared_kinbody() { return boost::static_pointer_cast<KinBodyItem>(shared_from_this()); }
-    inline boost::weak_ptr<KinBodyItem> weak_kinbody() { return shared_kinbody(); }
+    inline boost::shared_ptr<KinBodyItem> shared_kinbody() {
+        return boost::static_pointer_cast<KinBodyItem>(shared_from_this());
+    }
+    inline boost::weak_ptr<KinBodyItem> weak_kinbody() {
+        return shared_kinbody();
+    }
 
 public:
     KinBodyItem(QtCoinViewerPtr viewer, KinBodyPtr, ViewGeometry viewmode);
-    virtual ~KinBodyItem() {}
+    virtual ~KinBodyItem() {
+    }
 
-    const string& GetName() const        { return _pchain->GetName(); }
-    void SetName(const string& pNewName) { _pchain->SetName(pNewName); }
+    const string& GetName() const {
+        return _pchain->GetName();
+    }
+    void SetName(const string& pNewName) {
+        _pchain->SetName(pNewName);
+    }
 
     virtual bool UpdateFromIv();
     virtual bool UpdateFromModel();
@@ -109,19 +145,31 @@ public:
 
     virtual void SetGrab(bool bGrab, bool bUpdate=true);
 
-    inline KinBodyPtr GetBody() const { return _pchain; }
+    inline KinBodyPtr GetBody() const {
+        return _pchain;
+    }
 
     /// gets the link from IV
     virtual KinBody::LinkPtr GetLinkFromIv(SoNode* plinknode) const;
-    
-    /// gets the link from the index
-    virtual SoSeparator* GetIvLink(int index) const { return _veclinks.at(index).psep; }
-    virtual int GetNumIvLinks() const { return _veclinks.size(); }
 
-    virtual void SetUserData(int userdata) { _userdata = userdata; }
-    virtual int GetUserData() { return _userdata; }
-    
-    virtual int GetNetworkId() { return networkid; }
+    /// gets the link from the index
+    virtual SoSeparator* GetIvLink(int index) const {
+        return _veclinks.at(index).psep;
+    }
+    virtual int GetNumIvLinks() const {
+        return _veclinks.size();
+    }
+
+    virtual void SetUserData(int userdata) {
+        _userdata = userdata;
+    }
+    virtual int GetUserData() {
+        return _userdata;
+    }
+
+    virtual int GetNetworkId() {
+        return networkid;
+    }
 
     virtual void GetDOFValues(vector<dReal>& vjoint) const;
     virtual void GetLinkTransformations(vector<Transform>& vtrans) const;
@@ -131,8 +179,8 @@ protected:
     virtual void DrawChangedCallback();
 
     KinBodyPtr _pchain;
-    int networkid;        ///< _pchain->GetNetworkId()
-    std::vector< LINK > _veclinks; ///< render items for each link, indexed same as links
+    int networkid;            ///< _pchain->GetNetworkId()
+    std::vector< LINK > _veclinks;     ///< render items for each link, indexed same as links
     bool bGrabbed, _bReload, _bDrawStateChanged;
     ViewGeometry _viewmode;
     int _userdata;
@@ -153,8 +201,10 @@ public:
     /// first is the index link index
     struct EE
     {
-        EE() {}
-        EE(int index, SoTransform* ptrans, SoSwitch* pswitch) : _index(index), _ptrans(ptrans), _pswitch(pswitch) {}
+        EE() {
+        }
+        EE(int index, SoTransform* ptrans, SoSwitch* pswitch) : _index(index), _ptrans(ptrans), _pswitch(pswitch) {
+        }
         int _index;
         SoTransform* _ptrans;
         SoSwitch* _pswitch;
@@ -164,8 +214,10 @@ public:
 
     virtual bool UpdateFromIv();
     virtual bool UpdateFromModel(const vector<dReal>& vjointvalues, const vector<Transform>& vtrans);
-    
-    virtual RobotBasePtr GetRobot() const { return _probot; }
+
+    virtual RobotBasePtr GetRobot() const {
+        return _probot;
+    }
     virtual void SetGrab(bool bGrab, bool bUpdate=true);
     virtual void Load();
 private:

@@ -47,28 +47,30 @@ public:
 
     //! the kinds of toggle switches
     enum ToggleEnum { TOGGLE_GRID = 0,   TOGGLE_PATH,     TOGGLE_COLLISION,
-	        TOGGLE_RECORD,     TOGGLE_REPLAN,   TOGGLE_DYNAMICS,
-                    TOGGLE_TIME_ELPSD, TOGGLE_SENSING,  TOGGLE_MEMORY, 
-                    TOGGLE_HW_PLAN,    TOGGLE_BM_SHARE, TOGGLE_MANIP_TRACK,
-	        TOGGLE_TRACKING,   TOGGLE_FRUSTUM,  TOGGLE_IK_HANDLE,
-	        TOGGLE_GRAVITY,    TOGGLE_CONTROL,  TOGGLE_CENTROID,
-	        TOGGLE_AA,         TOGGLE_GOAL,     TOGGLE_VEL_PRED,
-	        TOGGLE_VISION,     TOGGLE_HILIT,    TOGGLE_REC_MOT,
-	        TOGGLE_VISDATA,    TOGGLE_SKELETON, TOGGLE_PSERVER,
-	        NUM_TOGGLES };
+                      TOGGLE_RECORD,     TOGGLE_REPLAN,   TOGGLE_DYNAMICS,
+                      TOGGLE_TIME_ELPSD, TOGGLE_SENSING,  TOGGLE_MEMORY,
+                      TOGGLE_HW_PLAN,    TOGGLE_BM_SHARE, TOGGLE_MANIP_TRACK,
+                      TOGGLE_TRACKING,   TOGGLE_FRUSTUM,  TOGGLE_IK_HANDLE,
+                      TOGGLE_GRAVITY,    TOGGLE_CONTROL,  TOGGLE_CENTROID,
+                      TOGGLE_AA,         TOGGLE_GOAL,     TOGGLE_VEL_PRED,
+                      TOGGLE_VISION,     TOGGLE_HILIT,    TOGGLE_REC_MOT,
+                      TOGGLE_VISDATA,    TOGGLE_SKELETON, TOGGLE_PSERVER,
+                      NUM_TOGGLES };
 
     //! the different views
-    enum ViewEnum   { PLAN_VIEW = 0, MAIN_VIEW,   CAMERA_VIEW,  VIS_VIEW,
-	        FOLLOW_VIEW,   ORTHO_VIEW,  STEREO_VIEW, NUM_VIEWS };
+    enum ViewEnum { PLAN_VIEW = 0, MAIN_VIEW,   CAMERA_VIEW,  VIS_VIEW,
+                    FOLLOW_VIEW,   ORTHO_VIEW,  STEREO_VIEW, NUM_VIEWS };
 
     // other methods relating to the user-interface
-    virtual SoQtExaminerViewer* GetViewer() const { return _pviewer; }
+    virtual SoQtExaminerViewer* GetViewer() const {
+        return _pviewer;
+    }
 
     virtual int main(bool bShow);
     virtual void quitmainloop();
 
     virtual void DumpIvRoot(const char* filename, bool bBinaryFile);
-    
+
     // methods relating to playback
     static void GlobAdvanceFrame(void*, SoSensor*);
     virtual void AdvanceFrame(bool bForward);
@@ -76,28 +78,42 @@ public:
     static void GlobVideoFrame(void*, SoSensor*);
     virtual void _VideoFrame();
 
-    virtual void Select(SoNode *pNode) { _ivRoot->select(pNode); }
-    
-    virtual bool AltDown()     { return _altDown[0] || _altDown[1]; }
-    virtual bool ControlDown() { return _ctrlDown[0] || _ctrlDown[1]; }
+    virtual void Select(SoNode *pNode) {
+        _ivRoot->select(pNode);
+    }
+
+    virtual bool AltDown()     {
+        return _altDown[0] || _altDown[1];
+    }
+    virtual bool ControlDown() {
+        return _ctrlDown[0] || _ctrlDown[1];
+    }
 
     virtual void deselect();
 
-    virtual SoPerspectiveCamera* GetCamera() { return _ivCamera; }
-    virtual SoSelection* GetRoot() { return _ivRoot; }
-    virtual SoSeparator* GetBodiesRoot() { return _ivBodies; }
+    virtual SoPerspectiveCamera* GetCamera() {
+        return _ivCamera;
+    }
+    virtual SoSelection* GetRoot() {
+        return _ivRoot;
+    }
+    virtual SoSeparator* GetBodiesRoot() {
+        return _ivBodies;
+    }
 
     virtual void _UpdateCameraTransform();
     static void _PlayCB(void *userData, SoSensor *);
-    
+
     virtual void resize ( int w, int h);
     virtual void resize ( const QSize & qs);
 
     virtual void SetSize(int w, int h);
     virtual void Move(int x, int y);
     virtual void SetName(const string& name);
-    virtual const std::string& GetName() const { return _name; }
-    
+    virtual const std::string& GetName() const {
+        return _name;
+    }
+
     virtual bool LoadModel(const string& filename);
 
     virtual bool ForceUpdatePublishedBodies();
@@ -183,7 +199,7 @@ public slots:
 public:
     class EnvMessage : public boost::enable_shared_from_this<EnvMessage>
     {
-    public:
+public:
         EnvMessage(QtCoinViewerPtr pviewer, void** ppreturn, bool bWaitForMutex);
         virtual ~EnvMessage();
 
@@ -197,7 +213,7 @@ public:
             _plock.reset();
         }
 
-    protected:
+protected:
         QtCoinViewerPtr _pviewer;
         void** _ppreturn;
         boost::mutex _mutex;
@@ -211,8 +227,8 @@ public:
 protected:
     class PrivateGraphHandle : public GraphHandle
     {
-    public:
-    PrivateGraphHandle(boost::weak_ptr<QtCoinViewer> wviewer, SoSwitch* handle) : _handle(handle), _wviewer(wviewer) {
+public:
+        PrivateGraphHandle(boost::weak_ptr<QtCoinViewer> wviewer, SoSwitch* handle) : _handle(handle), _wviewer(wviewer) {
             BOOST_ASSERT(_handle!=NULL);
         }
         virtual ~PrivateGraphHandle() {
@@ -221,7 +237,7 @@ protected:
                 viewer->closegraph(_handle);
             }
         }
-        
+
         virtual void SetTransform(const RaveTransform<float>& t)
         {
             boost::shared_ptr<QtCoinViewer> viewer = _wviewer.lock();
@@ -242,8 +258,12 @@ protected:
         boost::weak_ptr<QtCoinViewer> _wviewer;
     };
 
-    inline QtCoinViewerPtr shared_viewer() { return boost::static_pointer_cast<QtCoinViewer>(shared_from_this()); }
-    inline QtCoinViewerConstPtr shared_viewer_const() const { return boost::static_pointer_cast<QtCoinViewer const>(shared_from_this()); }
+    inline QtCoinViewerPtr shared_viewer() {
+        return boost::static_pointer_cast<QtCoinViewer>(shared_from_this());
+    }
+    inline QtCoinViewerConstPtr shared_viewer_const() const {
+        return boost::static_pointer_cast<QtCoinViewer const>(shared_from_this());
+    }
 
     static void mousemove_cb(void * userdata, SoEventCallback * node);
     void _mousemove_cb(SoEventCallback * node);
@@ -263,7 +283,7 @@ protected:
     virtual SoSwitch* _createhandle();
     virtual void* _plot3(SoSwitch* handle, const float* ppoints, int numPoints, int stride, float fPointSize, const RaveVector<float>& color);
     virtual void* _plot3(SoSwitch* handle, const float* ppoints, int numPoints, int stride, float fPointSize, const float* colors, bool bhasalpha);
-    
+
     virtual void* _drawspheres(SoSwitch* handle, const float* ppoints, int numPoints, int stride, float fPointSize, const RaveVector<float>& color);
     virtual void* _drawspheres(SoSwitch* handle, const float* ppoints, int numPoints, int stride, float fPointSize, const float* colors, bool bhasalpha);
 
@@ -310,32 +330,32 @@ protected:
     bool _SetFiguresInCamera(ostream& sout, istream& sinput);
 
     // selection and deselection handling
-    static void _SelectHandler(void *, class SoPath *); 
+    static void _SelectHandler(void *, class SoPath *);
     static void _DeselectHandler(void *, class SoPath *);
     virtual bool _HandleSelection(SoPath *path);
     virtual bool _HandleDeselection(SoNode *node);
 
     static void _KeyHandler(void *, class SoEventCallback *);
 
-    int _nFrameNum; ///< frame number for recording
-    string _strMouseMove; ///< mouse move message
+    int _nFrameNum;     ///< frame number for recording
+    string _strMouseMove;     ///< mouse move message
     // Message Queue
     list<EnvMessagePtr> _listMessages;
     list<Item*> _listRemoveItems;
-    boost::mutex _mutexItems, _mutexUpdating, _mutexMouseMove; ///< mutex protected messages
+    boost::mutex _mutexItems, _mutexUpdating, _mutexMouseMove;     ///< mutex protected messages
     mutable boost::mutex _mutexMessages;
 
     QVBoxLayout * vlayout;
     QGroupBox * view1;
 
     // Rendering
-    SoSelection*        _ivRoot;        ///< root node of the inventor scene
-    SoSeparator*        _ivBodies;      ///< all the environment bodies are stored in this node
-    SoPerspectiveCamera* _ivCamera;       ///< the camera itself
+    SoSelection*        _ivRoot;            ///< root node of the inventor scene
+    SoSeparator*        _ivBodies;          ///< all the environment bodies are stored in this node
+    SoPerspectiveCamera* _ivCamera;           ///< the camera itself
     SoDrawStyle*         _ivStyle;
-    SoTimerSensor*      _timerSensor;   ///< used for animation callback
+    SoTimerSensor*      _timerSensor;       ///< used for animation callback
 
-    SoTimerSensor*      _timerVideo;    ///< used for video recording
+    SoTimerSensor*      _timerVideo;        ///< used for video recording
 
     // the GUI
     SoQtExaminerViewer* _pviewer;
@@ -345,7 +365,7 @@ protected:
 
     SoNode*       _selectedNode;
     boost::shared_ptr<IvDragger>    _pdragger;
-    std::list< boost::shared_ptr<IvDragger> > _plistdraggers; /// draggers drawn
+    std::list< boost::shared_ptr<IvDragger> > _plistdraggers;     /// draggers drawn
     SoEventCallback* _eventKeyboardCB;
 
     boost::array<SoText2*,2> _messageNodes;
@@ -353,12 +373,12 @@ protected:
 
     bool _altDown[2];
     bool _ctrlDown[2];
-    int  _VideoFrameRate;
+    int _VideoFrameRate;
 
     std::string _name;
-    std::map<KinBodyPtr, KinBodyItemPtr> _mapbodies;    ///< all the bodies created
-    
-    ItemPtr          _pSelectedItem;      ///< the currently selected item
+    std::map<KinBodyPtr, KinBodyItemPtr> _mapbodies;        ///< all the bodies created
+
+    ItemPtr _pSelectedItem;                   ///< the currently selected item
     KinBody::LinkWeakPtr _pMouseOverLink;
     RaveVector<float> _vMouseSurfacePosition,_vMouseRayDirection, _vMouseSurfaceNormal;
 
@@ -368,7 +388,7 @@ protected:
     bool _bCanRenderOffscreen;
     int _videocodec;
 
-    RaveTransform<float>     _initSelectionTrans;       ///< initial tarnsformation of selected item    
+    RaveTransform<float>     _initSelectionTrans;           ///< initial tarnsformation of selected item
     RaveTransform<float> Tcam;
     geometry::RaveCameraIntrinsics<float> _camintrinsics;
 
@@ -383,37 +403,37 @@ protected:
 
     bool _bLockEnvironment;
     boost::mutex _mutexUpdateModels, _mutexCallbacks;
-    boost::condition _condUpdateModels; ///< signaled everytime environment models are updated
+    boost::condition _condUpdateModels;     ///< signaled everytime environment models are updated
     boost::mutex _mutexGUI;
     bool _bInIdleThread;
 
     // toggle switches
     bool _bModelsUpdated;
-    bool         _bDisplayGrid;
-    bool         _bDisplayIK;
-    bool         _bDisplayFPS;
-    bool 	 _bDisplayFeedBack;
-    bool         _bJointHilit;
-    bool         _bDynamicReplan;
-    bool         _bVelPredict;
-    bool         _bDynSim;
-    bool         _bGravity;
-    bool         _bControl;
+    bool _bDisplayGrid;
+    bool _bDisplayIK;
+    bool _bDisplayFPS;
+    bool _bDisplayFeedBack;
+    bool _bJointHilit;
+    bool _bDynamicReplan;
+    bool _bVelPredict;
+    bool _bDynSim;
+    bool _bGravity;
+    bool _bControl;
 
-    bool         _bSensing;
-    bool         _bMemory;
-    bool         _bHardwarePlan;
-    bool         _bShareBitmap;
-    bool         _bManipTracking;
-    bool         _bAntialiasing;
+    bool _bSensing;
+    bool _bMemory;
+    bool _bHardwarePlan;
+    bool _bShareBitmap;
+    bool _bManipTracking;
+    bool _bAntialiasing;
 
     // data relating to playback
-    bool         _bStopped;
-    bool         _bTimeInitialized;
-    int          _fileFrame;
-    int          _recordInterval;
-    time_t       _prevSec;
-    long         _prevMicSec;
+    bool _bStopped;
+    bool _bTimeInitialized;
+    int _fileFrame;
+    int _recordInterval;
+    time_t _prevSec;
+    long _prevMicSec;
 
     bool _bTimeElapsed;
     //bool _bRecordMotion;

@@ -14,7 +14,6 @@
 from common_test_openrave import *
 import os
 import shutil
-_multiprocess_can_split_ = True
 
 def run_example(name):
     __doc__='testing example '+name

@@ -3,12 +3,33 @@
 ChangeLog
 #########
 
-Version 0.4.0 Unstable
-======================
+Version 0.4.1
+=============
 
-Subversion Revision: **Unreleased**
+Subversion Revision: 2573
 
-Initial Release: **Unreleased**
+Initial Release: 2011/07/08
+
+Core
+----
+
+* Fixed self-collision problem when grasping two objects (#31).
+
+Grasping
+--------
+
+* Fixed major bug in force closure computation.
+
+* The direction on the gripper is now a parameter of the grasp set.
+
+* Added 5D IK support for grasp planning. Check out the :mod:`.examples.graspplanning` example. This required handling and passing goals as :class:`.IkParameterization` structures.
+
+Version 0.4.0
+=============
+
+Subversion Revision: 2557
+
+Initial Release: 2011/07/02
 
 Core
 ----
@@ -17,7 +38,7 @@ Core
 
 * fixed caching issue with ik files in ikfastsolvers
 
-* added a new SpaceSampler interface for sophisticated discrete/deterministic/randomized samplers.
+* added a new :class:`.SpaceSampler` interface for sophisticated discrete/deterministic/randomized samplers.
 
 * deprecated the RaveRandomX functions in favor of the new samplers
 
@@ -31,9 +52,9 @@ Core
 
 * added a Level_VerifyPlans debug level that globally notifies planners/modules to double check their outputs. Used for testing.
 
-* added KinBody::Joint::SetWrapOffset, Link::SetStatic, KinBody::Link::GEOMPROPERTIES::SetRenderFilename functions
+* added :meth:`.KinBody.Joint.SetWrapOffset`, :meth:`.KinBody.Link.SetStatic`, :meth:`.KinBody.Link.GeomProperties.SetRenderFilename` functions
 
-* added KinBody::SetZeroConfiguration() for calibration
+* added :meth:`.KinBody.SetZeroConfiguration` for calibration
 
 * caching computation of hashes for faster kinbody/robot loading
 
@@ -72,7 +93,7 @@ Planning
 
 * added VerifyTrajectory command in BaseManipulation.
 
-* fixed major bug in WorkspaceTrajectoryTracker (ie MoveHandStraight) due to obstacle checking
+* fixed major bug in :ref:`WorkspaceTrajectoryTracker <planner-workspacetrajectorytracker>` (ie MoveHandStraight) due to obstacle checking
 
 * many changes to the RRT extend function to prevent infinite loops
 
@@ -114,7 +135,7 @@ Misc
 
 * added more tests: openrave global runtime, API Sanity Autotest XML
 
-* added IkSolver.SetCustomFilter in openravepy
+* added :meth:`.IkSolver.SetCustomFilter` in openravepy
 
 * fixed bug in velocity controller mimic joints
 
@@ -124,7 +145,7 @@ Misc
 
 * removed links without any geometry attached to them from the non-adjacent lists
 
-* added simplemanipulation python example (thanks to Alan Tan), added simplegrasping example
+* added examples :mod:`.examples.simplemanipulation` (thanks to Alan Tan), added :mod:`.examples.simplegrasping`
 
 * added GraspThreaded command to grasper plugin to allow for multithreaded computation of grasps. Added the corresponding bindings to the openravepy grasping module.
 
@@ -682,4 +703,4 @@ ikfast
 
 * IKFast has been greatly improved, the ray inverse kinematics is also working nicely
 
-* It is now possible to use the inversekinematics.py database generator through the ikfast problem instance using :ref:`probleminstance-ikfast-loadikfastsolver` command.
+* It is now possible to use the inversekinematics.py database generator through the ikfast problem instance using :ref:`module-ikfast-loadikfastsolver` command.

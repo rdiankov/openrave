@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //     http://www.apache.org/licenses/LICENSE-2.0
-// 
+//
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,7 +18,7 @@
 class ODEVelocityController : public ControllerBase
 {
 public:
- ODEVelocityController(EnvironmentBasePtr penv) : ControllerBase(penv)
+    ODEVelocityController(EnvironmentBasePtr penv) : ControllerBase(penv)
     {
         __description = ":Interface Authors: Juan Gonzalez and Rosen Diankov\n\nODE Velocity controller.";
     }
@@ -53,8 +53,12 @@ public:
         _bVelocityMode = false;
     }
 
-    virtual const std::vector<int>& GetControlDOFIndices() const { return _dofindices; }
-    virtual int IsControlTransformation() const { return 0; }
+    virtual const std::vector<int>& GetControlDOFIndices() const {
+        return _dofindices;
+    }
+    virtual int IsControlTransformation() const {
+        return 0;
+    }
 
     virtual bool SetDesired(const std::vector<OpenRAVE::dReal>& values, TransformConstPtr trans) {
         Reset(0);
@@ -64,10 +68,17 @@ public:
         Reset(0);
         return false;
     }
-    virtual void SimulationStep(OpenRAVE::dReal fTimeElapsed) {}
-    virtual bool IsDone() { return !_bVelocityMode; }
-    virtual OpenRAVE::dReal GetTime() const { return 0; }
-    virtual RobotBasePtr GetRobot() const { return _probot; }
+    virtual void SimulationStep(OpenRAVE::dReal fTimeElapsed) {
+    }
+    virtual bool IsDone() {
+        return !_bVelocityMode;
+    }
+    virtual OpenRAVE::dReal GetTime() const {
+        return 0;
+    }
+    virtual RobotBasePtr GetRobot() const {
+        return _probot;
+    }
 
     virtual ODESpace::KinBodyInfoPtr GetODESpace() {
         return boost::dynamic_pointer_cast<ODESpace::KinBodyInfo>(_probot->GetPhysicsData());
@@ -145,7 +156,7 @@ public:
         throw openrave_exception(str(boost::format("command %s supported")%cmd),OpenRAVE::ORE_CommandNotSupported);
         return false;
     }
-    
+
 protected:
     RobotBasePtr _probot;
     std::vector<int> _dofindices;

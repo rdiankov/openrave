@@ -116,16 +116,16 @@ class DatabaseGenerator(metaclass.AutoReloader):
             viewername=OpenRAVEGlobalArguments.parseEnvironment(options,env,defaultviewer=defaultviewer,returnviewer=True)
             with env:
                 if robotatts is not None:
-                    robot = env.ReadRobotXMLFile(options.robot,robotatts)
+                    robot = env.ReadRobotURI(options.robot,robotatts)
                 else:
-                    robot = env.ReadRobotXMLFile(options.robot)
+                    robot = env.ReadRobotURI(options.robot)
                 if robot is not None:
                     env.AddRobot(robot)
                 elif allowkinbody:
                     if robotatts is not None:
-                        robot = env.ReadKinBodyXMLFile(options.robot,robotatts)
+                        robot = env.ReadKinBodyURI(options.robot,robotatts)
                     else:
-                        robot = env.ReadKinBodyXMLFile(options.robot)
+                        robot = env.ReadKinBodyURI(options.robot)
                     env.AddKinBody(robot)
                 robot.SetTransform(numpy.eye(4))
                 if hasattr(options,'manipname') and robot.IsRobot():

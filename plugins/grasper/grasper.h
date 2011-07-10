@@ -57,7 +57,8 @@ class GrasperProblem : public ModuleBase
 {
     struct GRASPANALYSIS
     {
-        GRASPANALYSIS() : mindist(0), volume(0) {}
+        GRASPANALYSIS() : mindist(0), volume(0) {
+        }
         dReal mindist;
         dReal volume;
     };
@@ -80,7 +81,7 @@ public:
         if( !!errfile )
             fclose(errfile);
     }
-    
+
     virtual void Destroy()
     {
         _planner.reset();
@@ -148,7 +149,7 @@ public:
                 break;
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
 
-            if( cmd == "body" || cmd == "target" ) {
+            if(( cmd == "body") ||( cmd == "target") ) {
                 // initialization
                 string name; sinput >> name;
                 params->targetbody = GetEnv()->GetKinBody(name);
@@ -197,7 +198,7 @@ public:
                 sinput >> strsavetraj;
             }
             else if( cmd == "outputfinal" ) {
-                // ignore 
+                // ignore
                 sinput >> bOutputFinal;
             }
             else if( cmd == "graspingnoise" ) {
@@ -211,6 +212,10 @@ public:
             else if( cmd == "centeroffset" || cmd == "position" ) {
                 // initialization
                 sinput >> params->vtargetposition.x >> params->vtargetposition.y >> params->vtargetposition.z;
+            }
+            else if(cmd == "manipulatordirection") {
+                // initialization
+                sinput >> params->vmanipulatordirection.x >> params->vmanipulatordirection.y >> params->vmanipulatordirection.z;
             }
             else if( cmd == "standoff" ) {
                 // grasp
@@ -262,14 +267,14 @@ public:
 
         params->SetRobotActiveJoints(_robot);
         _robot->GetActiveDOFValues(params->vinitialconfig);
-    
+
         if( !_planner->InitPlan(_robot, params) ) {
             RAVELOG_WARN("InitPlan failed\n");
             return false;
         }
 
         TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),_robot->GetActiveDOF());
-        if( !_planner->PlanPath(ptraj) || ptraj->GetPoints().size() == 0 )
+        if( !_planner->PlanPath(ptraj) ||( ptraj->GetPoints().size() == 0) )
             return false;
 
         ptraj->CalcTrajTiming(_robot, ptraj->GetInterpMethod(), true, true);
@@ -281,7 +286,7 @@ public:
             pfulltraj->Write(f, 0);
         }
 
-        bodysaver.reset(); // restore target
+        bodysaver.reset();     // restore target
         BOOST_ASSERT(ptraj->GetPoints().size()>0);
         _robot->SetTransform(ptraj->GetPoints().back().trans);
         _robot->SetActiveDOFValues(ptraj->GetPoints().back().q);
@@ -314,7 +319,7 @@ public:
         RAVELOG_VERBOSE(str(boost::format("number of contacts: %d\n")%contacts.size()));
         FOREACH(itcontact,contacts) {
             Vector norm = itcontact->first.norm;
-            Vector pos = itcontact->first.pos;//-norm*itcontact->first.depth; //?
+            Vector pos = itcontact->first.pos;    //-norm*itcontact->first.depth; //?
             sout << pos.x <<" " << pos.y <<" " << pos.z <<" " << norm.x <<" " << norm.y <<" " << norm.z <<" ";
             if(bGetLinkCollisions)
                 sout << itcontact->second << " ";
@@ -325,7 +330,7 @@ public:
             BOOST_ASSERT(pfulltraj->GetPoints().size()>0);
             sout << pfulltraj->GetPoints().back().trans << " ";
             FOREACHC(it,pfulltraj->GetPoints().back().q)
-                sout << *it << " ";
+            sout << *it << " ";
         }
 
         GRASPANALYSIS analysis;
@@ -344,7 +349,7 @@ public:
 
         if( bExecute )
             _robot->SetMotion(pfulltraj);
-        
+
         return true;
     }
 
@@ -392,7 +397,7 @@ public:
         _robot->Enable(false);
         targetbody->Enable(true);
 
-        vector<CollisionReport::CONTACT> vpoints;        
+        vector<CollisionReport::CONTACT> vpoints;
         BoxSample(targetbody,vpoints,nDistMapSamples,vmapcenter);
         //DeterministicallySample(targetbody, vpoints, 4, vmapcenter);
 
@@ -589,7 +594,7 @@ public:
             nGraspingNoiseRetries = 0;
             forceclosurethreshold = 0;
         }
-        
+
         string targetname;
         vector<string> vavoidlinkgeometry;
         bool bonlycontacttarget;
@@ -607,16 +612,17 @@ public:
         int affinedofs;
         Vector affineaxis;
     };
-    
+
     struct GraspParametersThread
     {
         size_t id;
         Vector vtargetdirection;
         Vector vtargetposition;
+        Vector vmanipulatordirection;
         dReal ftargetroll;
         vector<dReal> preshape;
         dReal fstandoff;
-        
+
         // results
         // contact points
         vector< pair<CollisionReport::CONTACT,int> > contacts;
@@ -626,7 +632,7 @@ public:
     };
     typedef boost::shared_ptr<GraspParametersThread> GraspParametersThreadPtr;
     typedef boost::shared_ptr<WorkerParameters> WorkerParametersPtr;
-    
+
     virtual bool _GraspThreadedCommand(std::ostream& sout, std::istream& sinput)
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
@@ -637,6 +643,7 @@ public:
         vector< pair<Vector, Vector> > approachrays;
         vector<dReal> rolls;
         vector< vector<dReal> > preshapes;
+        vector<Vector> manipulatordirections;
         vector<dReal> standoffs;
         size_t startindex = 0;
         size_t maxgrasps = 0;
@@ -723,6 +730,14 @@ public:
                     }
                 }
             }
+            else if( cmd == "manipulatordirections" ) {
+                int nummanipulatordirections = 0;
+                sinput >> nummanipulatordirections;
+                manipulatordirections.resize(nummanipulatordirections);
+                FOREACH(it,manipulatordirections) {
+                    sinput >> it->x >> it->y >> it->z;
+                }
+            }
             else {
                 RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
@@ -739,7 +754,7 @@ public:
         worker_params->affinedofs = _robot->GetAffineDOF();
         worker_params->affineaxis = _robot->GetAffineRotationAxis();
 
-        EnvironmentBasePtr pcloneenv = GetEnv()->CloneSelf(Clone_Bodies|Clone_Simulation);        
+        EnvironmentBasePtr pcloneenv = GetEnv()->CloneSelf(Clone_Bodies|Clone_Simulation);
 
         _bContinueWorker = true;
         // start worker threads
@@ -749,51 +764,53 @@ public:
         }
 
         _listGraspResults.clear();
-        size_t numgrasps = approachrays.size()*rolls.size()*preshapes.size()*standoffs.size();
+        size_t numgrasps = approachrays.size()*rolls.size()*preshapes.size()*standoffs.size()*manipulatordirections.size();
         if( maxgrasps == 0 ) {
             maxgrasps = numgrasps;
         }
         RAVELOG_INFO(str(boost::format("number of grasps to test: %d\n")%numgrasps));
         size_t id = startindex;
         for(id=startindex; id < numgrasps; ++id) {
-            // id = ((iapproachray * rolls.size()  + iroll) * preshapes.size() + ipreshape) * standoffs.size() + istandoff;
             size_t istandoff = id % standoffs.size();
             size_t ipreshape = (id / standoffs.size()) % preshapes.size();
             size_t iroll = (id / (preshapes.size() * standoffs.size())) % rolls.size();
             size_t iapproachray = (id / (rolls.size() * preshapes.size() * standoffs.size()));
+            size_t imanipulatordirection = (id / (rolls.size() * preshapes.size() * standoffs.size()*approachrays.size()));
 
             boost::mutex::scoped_lock lock(_mutexGrasp);
             if( _listGraspResults.size() >= maxgrasps ) {
                 break;
             }
-            
+
             // initialize _graspParamsWork
             BOOST_ASSERT(!_graspParamsWork);
             _graspParamsWork.reset(new GraspParametersThread());
             _graspParamsWork->id = id;
             _graspParamsWork->vtargetposition = approachrays[iapproachray].first;
             _graspParamsWork->vtargetdirection = approachrays[iapproachray].second;
+            _graspParamsWork->vmanipulatordirection = manipulatordirections[imanipulatordirection];
             _graspParamsWork->ftargetroll = rolls[iroll];
             _graspParamsWork->fstandoff = standoffs[istandoff];
             _graspParamsWork->preshape = preshapes[ipreshape];
-            _condGraspHasWork.notify_one(); // notify there is work
-            _condGraspReceivedWork.wait(lock); // wait for more work
+            _condGraspHasWork.notify_one();     // notify there is work
+            _condGraspReceivedWork.wait(lock);     // wait for more work
         }
 
         // wait for workers
         _bContinueWorker = false;
         FOREACH(itthread,listthreads) {
-            _condGraspHasWork.notify_all(); // signal
+            _condGraspHasWork.notify_all();     // signal
             (*itthread)->join();
         }
         listthreads.clear();
 
         // parse results to output
         sout << id << " " << _listGraspResults.size() << " ";
-        FOREACH(itresult, _listGraspResults) {            
+        FOREACH(itresult, _listGraspResults) {
             sout << (*itresult)->vtargetposition.x << " " << (*itresult)->vtargetposition.y << " " << (*itresult)->vtargetposition.z << " ";
             sout << (*itresult)->vtargetdirection.x << " " << (*itresult)->vtargetdirection.y << " " << (*itresult)->vtargetdirection.z << " ";
             sout << (*itresult)->ftargetroll << " " << (*itresult)->fstandoff << " ";
+            sout << (*itresult)->vmanipulatordirection.x << " " << (*itresult)->vmanipulatordirection.y << " " << (*itresult)->vmanipulatordirection.z << " ";
             sout << (*itresult)->mindist << " " << (*itresult)->volume << " ";
             FOREACH(itangle, (*itresult)->preshape) {
                 sout << (*itangle) << " ";
@@ -806,7 +823,7 @@ public:
             FOREACH(itc, (*itresult)->contacts) {
                 const CollisionReport::CONTACT& c = itc->first;
                 sout << c.pos.x << " " << c.pos.y << " " << c.pos.z << " " << c.norm.x << " " << c.norm.y << " " << c.norm.z << " ";
-            }           
+            }
         }
         return true;
     }
@@ -825,7 +842,7 @@ public:
 
         // setup parameters
         boost::shared_ptr<GraspParameters> params(new GraspParameters(pcloneenv));
-        
+
         params->targetbody = pcloneenv->GetKinBody(worker_params->targetname);
         params->vavoidlinkgeometry = worker_params->vavoidlinkgeometry;
         params->btransformrobot = true;
@@ -844,7 +861,7 @@ public:
         std::vector<KinBody::LinkPtr> vlinks;
         probot->GetActiveManipulator()->GetChildLinks(vlinks);
 
- 
+
         while(_bContinueWorker) {
             {
                 // wait for work
@@ -862,11 +879,12 @@ public:
             }
 
             RAVELOG_DEBUG(str(boost::format("start grasp %d")%grasp_params->id));
-            
+
             // fill params
             params->vtargetdirection = grasp_params->vtargetdirection;
             params->ftargetroll = grasp_params->ftargetroll;
             params->vtargetposition = grasp_params->vtargetposition;
+            params->vmanipulatordirection = grasp_params->vmanipulatordirection;
             params->fstandoff = grasp_params->fstandoff;
             probot->SetActiveDOFs(worker_params->vactiveindices);
             probot->SetActiveDOFValues(grasp_params->preshape);
@@ -880,11 +898,11 @@ public:
             if( !!params->targetbody ) {
                 bodysaver.reset(new KinBody::KinBodyStateSaver(params->targetbody));
             }
-           
+
             RobotBase::RobotStateSaver saver(probot);
             probot->Enable(true);
-            
-                                    
+
+
             // InitPlan/PlanPath
             if( planner->InitPlan(probot, params) ) {
                 ptraj->Clear();
@@ -894,7 +912,7 @@ public:
                     ptraj->CalcTrajTiming(probot, ptraj->GetInterpMethod(), true, true);
                     probot->GetFullTrajectoryFromActive(pfulltraj,ptraj,false);
 
-                    bodysaver.reset(); // restore target
+                    bodysaver.reset();     // restore target
                     BOOST_ASSERT(pfulltraj->GetPoints().size()>0);
 
                     probot->SetTransform(ptraj->GetPoints().back().trans);
@@ -915,7 +933,7 @@ public:
                             }
                         }
                     }
-                    
+
                     GRASPANALYSIS analysis;
                     if( worker_params->bComputeForceClosure ) {
                         try {
@@ -931,7 +949,7 @@ public:
                             grasp_params->volume = analysis.volume;
                         }
                         catch(const openrave_exception& ex) {
-                            continue; // failed
+                            continue;     // failed
                         }
                     }
                     RAVELOG_DEBUG(str(boost::format("grasp %d success")%grasp_params->id));
@@ -955,7 +973,7 @@ protected:
         RAY r;
         Vector com = graspcenter;
         GetEnv()->GetCollisionChecker()->SetCollisionOptions(CO_Contacts|CO_Distance);
-        
+
         vpoints.resize(N);
         int i = 0;
 
@@ -971,7 +989,7 @@ protected:
 
             if( GetEnv()->CheckCollision(r, KinBodyConstPtr(pbody), _report) ) {
                 vpoints[i].norm = _report->contacts.at(0).norm;
-                vpoints[i].pos = _report->contacts.at(0).pos + 0.001f * vpoints[i].norm; // extrude a little
+                vpoints[i].pos = _report->contacts.at(0).pos + 0.001f * vpoints[i].norm;     // extrude a little
                 vpoints[i].depth = 0;
                 i++;
             }
@@ -996,12 +1014,12 @@ protected:
             r.dir = 0.33333f * (tri.vertices[tri.indices[i]] + tri.vertices[tri.indices[i+1]] + tri.vertices[tri.indices[i+2]]);
             r.dir.normalize3();
             r.dir *= 1000;
-        
+
             r.pos = com - 10.0f*r.dir;
             CollisionReport::CONTACT p;
             if( GetEnv()->CheckCollision(r, KinBodyConstPtr(pbody), _report) ) {
-                p.norm = -_report->contacts.at(0).norm;//-r.dir//_report->contacts.at(0).norm1;
-                p.pos = _report->contacts.at(0).pos + 0.001f * p.norm; // extrude a little
+                p.norm = -_report->contacts.at(0).norm;    //-r.dir//_report->contacts.at(0).norm1;
+                p.pos = _report->contacts.at(0).pos + 0.001f * p.norm;     // extrude a little
                 p.depth = 0;
                 vpoints.push_back(p);
             }
@@ -1054,8 +1072,8 @@ protected:
         };
 
         Vector v[3];
-    
-        // make sure oriented CCW 
+
+        // make sure oriented CCW
         for(int i = 0; i < nindices; i += 3 ) {
             v[0] = temp.vertices[indices[i]];
             v[1] = temp.vertices[indices[i+1]];
@@ -1126,7 +1144,7 @@ protected:
         for(int k = 0; k < 6; k++) {
             for(dReal i = -ffar/2.0f; i < ffar/2.0f; i+=counter) {
                 for(dReal j = -ffar/2.0f; j < ffar/2.0f; j+=counter) {
-                    switch(k){
+                    switch(k) {
                     case 0:
                         r.pos = Vector(center.x-ffar,center.y+i,center.z+j);
                         r.dir = Vector(1000,0,0);
@@ -1152,10 +1170,10 @@ protected:
                         r.dir = Vector(0,0,-1000);
                         break;
                     }
-                
+
                     if( GetEnv()->CheckCollision(r, KinBodyConstPtr(pbody), _report) ) {
-                        p.norm = -_report->contacts.at(0).norm;//-r.dir//_report->contacts.at(0).norm1;
-                        p.pos = _report->contacts.at(0).pos;// + 0.001f * p.norm; // extrude a little
+                        p.norm = -_report->contacts.at(0).norm;    //-r.dir//_report->contacts.at(0).norm1;
+                        p.pos = _report->contacts.at(0).pos;    // + 0.001f * p.norm; // extrude a little
                         p.depth = 0;
                         vpoints.push_back(p);
                     }
@@ -1185,7 +1203,7 @@ protected:
             N = 1;
         }
         else {
-            N = (int)ceil(fTheta * (64.0f/(PI/12.0f))); // sample 64 points when at pi/12
+            N = (int)ceil(fTheta * (64.0f/(PI/12.0f)));     // sample 64 points when at pi/12
         }
         for(int i = 0; i < (int)vpoints.size(); ++i) {
             Vector vright = Vector(1,0,0);
@@ -1217,7 +1235,7 @@ protected:
 
         GetEnv()->GetCollisionChecker()->SetCollisionOptions(0);
     }
-    
+
     void _GetStableContacts(vector< pair<CollisionReport::CONTACT,int> >& contacts, const Vector& direction, dReal mu)
     {
         BOOST_ASSERT(mu>0);
@@ -1238,17 +1256,17 @@ protected:
         }
 
         // calculate the contact normals using the Jacobian
-        std::vector<dReal> J;    
+        std::vector<dReal> J;
         FOREACHC(itlink,_robot->GetLinks()) {
             if( GetEnv()->CheckCollision(KinBody::LinkConstPtr(*itlink), _report) )  {
                 RAVELOG_DEBUG(str(boost::format("contact %s:%s with %s:%s\n")%_report->plink1->GetParent()->GetName()%_report->plink1->GetName()%_report->plink2->GetParent()->GetName()%_report->plink2->GetName()));
-                FOREACH(itcontact, _report->contacts) {  
+                FOREACH(itcontact, _report->contacts) {
                     if( _report->plink1 != *itlink )
                         itcontact->norm = -itcontact->norm;
 
                     Vector deltaxyz;
                     //check if this link is the base link, if so there will be no Jacobian
-                    if( *itlink == _robot->GetLinks().at(0) || (!!_robot->GetActiveManipulator() && *itlink == _robot->GetActiveManipulator()->GetBase()) )  {
+                    if(( *itlink == _robot->GetLinks().at(0)) || (!!_robot->GetActiveManipulator() &&( *itlink == _robot->GetActiveManipulator()->GetBase()) ) ) {
                         deltaxyz = direction;
                     }
                     else {
@@ -1263,18 +1281,18 @@ protected:
                                 deltaxyz[j] += J.at(j*_robot->GetDOF() + k)*closingdir[k];
                         }
                     }
-                
+
                     //if ilink is degenerate to base link (no joint between them), deltaxyz will be 0 0 0
                     //so treat it as if it were part of the base link
                     if(deltaxyz.lengthsqr3() < 1e-7f) {
                         RAVELOG_WARN(str(boost::format("degenerate link at %s")%(*itlink)->GetName()));
                         deltaxyz = direction;
                     }
-                
+
                     deltaxyz.normalize3();
 
                     if( IS_DEBUGLEVEL(Level_Debug) ) {
-                        stringstream ss; 
+                        stringstream ss;
                         ss << "link " << (*itlink)->GetIndex() << " delta XYZ: ";
                         for(int q = 0; q < 3; q++)
                             ss << deltaxyz[q] << " ";
@@ -1306,7 +1324,7 @@ protected:
             it->second = RaveCos(fang);
             fang += fdeltaang;
         }
-        
+
         vector<CollisionReport::CONTACT> newcontacts;
         newcontacts.reserve(contacts.size()*Nconepoints);
         FOREACHC(itcontact,contacts) {
@@ -1325,7 +1343,8 @@ protected:
     virtual GRASPANALYSIS _AnalyzeContacts3D(const vector<CollisionReport::CONTACT>& contacts)
     {
         if( contacts.size() < 7 ) {
-            throw openrave_exception("need at least 7 contact wrenches to have force closure in 3D");
+            RAVELOG_DEBUG("need at least 7 contact wrenches to have force closure in 3D");
+            return GRASPANALYSIS();
         }
         GRASPANALYSIS analysis;
         vector<double> vpoints(6*contacts.size()), vconvexplanes;
@@ -1341,11 +1360,13 @@ protected:
         }
 
         analysis.volume = _ComputeConvexHull(vpoints,vconvexplanes,boost::shared_ptr< vector<int> >(),6);
-
+        if( vconvexplanes.size() == 0 ) {
+            return analysis;
+        }
         // go through each of the faces and check if center is inside, and compute its distance
         double mindist = 1e30;
         for(size_t i = 0; i < vconvexplanes.size(); i += 7) {
-            if( vconvexplanes.at(i+6) > 0 || RaveFabs(vconvexplanes.at(i+6)) < 1e-15 ) {
+            if(( vconvexplanes.at(i+6) > 0) ||( RaveFabs(vconvexplanes.at(i+6)) < 1e-15) ) {
                 return analysis;
             }
             mindist = min(mindist,-vconvexplanes.at(i+6));
@@ -1364,12 +1385,12 @@ protected:
 #ifdef QHULL_FOUND
         vector<coordT> qpoints(vpoints.size());
         std::copy(vpoints.begin(),vpoints.end(),qpoints.begin());
-        
-        boolT ismalloc = 0;           // True if qhull should free points in qh_freeqhull() or reallocation
-        char flags[]= "qhull Tv FA"; // option flags for qhull, see qh_opt.htm, output volume (FA)
+
+        boolT ismalloc = 0;               // True if qhull should free points in qh_freeqhull() or reallocation
+        char flags[]= "qhull Tv FA";     // option flags for qhull, see qh_opt.htm, output volume (FA)
 
         if( !errfile ) {
-            errfile = tmpfile();    // stderr, error messages from qhull code  
+            errfile = tmpfile();        // stderr, error messages from qhull code
         }
         int exitcode= qh_new_qhull (dim, qpoints.size()/dim, &qpoints[0], ismalloc, flags, errfile, errfile);
         if (!exitcode) {
@@ -1379,9 +1400,9 @@ protected:
                 vconvexfaces->resize(0);
                 vconvexfaces->push_back(0);
             }
-            facetT *facet;	          // set by FORALLfacets 
-            vertexT *vertex, **vertexp; // set by FOREACHvdertex_
-            FORALLfacets { // 'qh facet_list' contains the convex hull
+            facetT *facet;                    // set by FORALLfacets
+            vertexT *vertex, **vertexp;     // set by FOREACHvdertex_
+            FORALLfacets {     // 'qh facet_list' contains the convex hull
                 //                if( facet->isarea && facet->f.area < 1e-15 ) {
                 //                    RAVELOG_VERBOSE(str(boost::format("skipping area: %e\n")%facet->f.area));
                 //                    continue;
@@ -1405,10 +1426,10 @@ protected:
                 }
             }
         }
-        
+
         double totvol = qh totvol;
         qh_freeqhull(!qh_ALL);
-        int curlong, totlong;	  // memory remaining after qh_memfreeshort 
+        int curlong, totlong;         // memory remaining after qh_memfreeshort
         qh_memfreeshort (&curlong, &totlong);
         if (curlong || totlong) {
             RAVELOG_ERROR("qhull internal warning (main): did not free %d bytes of long memory (%d pieces)\n", totlong, curlong);
@@ -1430,7 +1451,7 @@ protected:
         double fipoints = 1/(double)(vpoints.size()/dim);
         for(int j = 0; j < dim; ++j) {
             vmean[j] *= fipoints;
-        }        
+        }
         for(size_t i = 0; i < vconvexplanes.size(); i += dim+1) {
             double meandist = 0;
             for(int j = 0; j < dim; ++j) {
@@ -1444,7 +1465,7 @@ protected:
             }
         }
 
-        return totvol; // return volume
+        return totvol;     // return volume
 #else
         throw openrave_exception(str(boost::format("QHull library not found, cannot compute convex hull of contact points")));
         return 0;

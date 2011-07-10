@@ -5,7 +5,9 @@ Installing OpenRAVE
 
 :ref:`changelog`
 
-:ref:`release_organization` - detailed information about releases, versioning, and updates.
+`Roadmap <https://sourceforge.net/apps/trac/openrave/roadmap>`_ - timeline on new features and major changes.
+
+:ref:`release_organization` - infrastructure on releases, versioning, and updates.
 
 Platforms
 ---------

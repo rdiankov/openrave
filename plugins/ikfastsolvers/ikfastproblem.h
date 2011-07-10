@@ -37,22 +37,25 @@
 #include <boost/filesystem/operations.hpp>
 #endif
 
-#define DECLFNPTR(name, paramlist) (*name) paramlist
+#define DECLFNPTR(name, paramlist) (*name)paramlist
 
 class IKFastProblem : public ModuleBase
 {
-    typedef int DECLFNPTR(getNumFreeParametersFn, ());
-    typedef int* DECLFNPTR(getFreeParametersFn, ());
-    typedef int DECLFNPTR(getNumJointsFn, ());
-    typedef const char* DECLFNPTR(getKinematicsHashFn, ());
-    typedef int DECLFNPTR(getIKRealSizeFn, ());
-    typedef int DECLFNPTR(getIKTypeFn, ());
-    static int getDefaultIKType() { return IkParameterization::Type_Transform6D; }
+    typedef int DECLFNPTR (getNumFreeParametersFn, ());
+    typedef int* DECLFNPTR (getFreeParametersFn, ());
+    typedef int DECLFNPTR (getNumJointsFn, ());
+    typedef const char* DECLFNPTR (getKinematicsHashFn, ());
+    typedef int DECLFNPTR (getIKRealSizeFn, ());
+    typedef int DECLFNPTR (getIKTypeFn, ());
+    static int getDefaultIKType() {
+        return IkParameterization::Type_Transform6D;
+    }
 
     class IKLibrary : public boost::enable_shared_from_this<IKLibrary>
     {
-    public:
-    IKLibrary() : getKinematicsHash(NULL), plib(NULL) {}
+public:
+        IKLibrary() : getKinematicsHash(NULL), plib(NULL) {
+        }
         ~IKLibrary() {
             if( plib != NULL ) {
                 SysCloseLibrary(plib);
@@ -129,10 +132,18 @@ class IKFastProblem : public ModuleBase
             throw openrave_exception("bad real size");
         }
 
-        const vector<string>& GetIKNames() const { return _viknames; }
-        void AddIKName(const string& ikname) { _viknames.push_back(ikname); }
-        const string& GetLibraryName() const { return _libraryname; }
-        int GetIKType() { return getIKType(); }
+        const vector<string>& GetIKNames() const {
+            return _viknames;
+        }
+        void AddIKName(const string& ikname) {
+            _viknames.push_back(ikname);
+        }
+        const string& GetLibraryName() const {
+            return _libraryname;
+        }
+        int GetIKType() {
+            return getIKType();
+        }
 
         getNumFreeParametersFn getNumFreeParameters;
         getFreeParametersFn getFreeParameters;
@@ -142,7 +153,7 @@ class IKFastProblem : public ModuleBase
         getIKTypeFn getIKType;
         void* ikfn, *fkfn;
 
-    private:
+private:
         void* SysLoadLibrary(const char* lib)
         {
 #ifdef _WIN32
@@ -183,8 +194,12 @@ class IKFastProblem : public ModuleBase
         vector<int> vfree;
     };
 
-    inline boost::shared_ptr<IKFastProblem> shared_problem() { return boost::static_pointer_cast<IKFastProblem>(shared_from_this()); }
-    inline boost::shared_ptr<IKFastProblem const> shared_problem_const() const { return boost::static_pointer_cast<IKFastProblem const>(shared_from_this()); }
+    inline boost::shared_ptr<IKFastProblem> shared_problem() {
+        return boost::static_pointer_cast<IKFastProblem>(shared_from_this());
+    }
+    inline boost::shared_ptr<IKFastProblem const> shared_problem_const() const {
+        return boost::static_pointer_cast<IKFastProblem const>(shared_from_this());
+    }
 
 public:
     IKFastProblem(EnvironmentBasePtr penv) : ModuleBase(penv)
@@ -215,7 +230,8 @@ public:
 * string robot - name of the robot to test. the active manipulator of the roobt is used.\n\n");
     }
 
-    virtual ~IKFastProblem() {}
+    virtual ~IKFastProblem() {
+    }
 
     int main(const string& cmd)
     {
@@ -238,7 +254,7 @@ public:
             return false;
         }
         boost::trim(libraryname);
-        if( !sinput || libraryname.size() == 0 || ikname.size() == 0 ) {
+        if( !sinput ||( libraryname.size() == 0) ||( ikname.size() == 0) ) {
             RAVELOG_DEBUG("bad input\n");
             return false;
         }
@@ -291,7 +307,7 @@ public:
         if( !sinput ) {
             return false;
         }
-        sinput >> bForceIK; // optional
+        sinput >> bForceIK;     // optional
         RobotBasePtr probot = GetEnv()->GetRobot(robotname);
         if( !probot || !probot->GetActiveManipulator() ) {
             return false;
@@ -417,7 +433,7 @@ public:
                 sinput >> maxtime;
             }
             else {
-                sinput.clear(); // have to clear eof bit
+                sinput.clear();     // have to clear eof bit
                 sinput.seekg(pos);
                 getline(sinput, libraryname);
                 break;
@@ -463,7 +479,7 @@ public:
         size_t i = 0;
         for(i = 0; i < vtimes.size(); ++i) {
             // don't want to slow down the tests too much with polling
-            if( (i%100) == 0 && (GetMilliTime() - runstarttimems) > runmaxtimems ) {
+            if(( (i%100) == 0) &&( (GetMilliTime() - runstarttimems) > runmaxtimems) ) {
                 break;
             }
             for(size_t j = 0; j < vjoints.size(); ++j) {
@@ -560,7 +576,7 @@ public:
         }
 
         stringstream s2;
-        s2 << std::setprecision(std::numeric_limits<dReal>::digits10+1); /// have to do this or otherwise precision gets lost
+        s2 << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
         s2 << "ik sol: ";
         FOREACH(it, q1) {
             s2 << *it << " ";
@@ -614,7 +630,7 @@ public:
 
         int num_itrs = 1000;
         stringstream s;
-        s << std::setprecision(std::numeric_limits<dReal>::digits10+1); /// have to do this or otherwise precision gets lost
+        s << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
         fstream fsfile;
         string readfilename;
         bool bReadFile = false, bTestSelfCollision = false;
@@ -694,14 +710,14 @@ public:
             fsfile >> num_itrs;
         }
 
-        RaveInitRandomGeneration(GetMilliTime()); // have to seed a new number
+        RaveInitRandomGeneration(GetMilliTime());     // have to seed a new number
 
         IkParameterization twrist, twrist_out;
         vector<dReal> vfreeparameters_real, vfreeparameters, vfreeparameters_out;
         boost::array<vector<pair<IkParameterization, vector<dReal> > >, 3> vsolutionresults;
-        vector<pair<IkParameterization, vector<dReal> > >& vwrongsolutions = vsolutionresults[0]; // wrong solution is returned
-        vector<pair<IkParameterization, vector<dReal> > >& vnosolutions = vsolutionresults[1]; // no solution found
-        vector<pair<IkParameterization, vector<dReal> > >& vnofullsolutions = vsolutionresults[2]; // solution returned, but not all of them
+        vector<pair<IkParameterization, vector<dReal> > >& vwrongsolutions = vsolutionresults[0];     // wrong solution is returned
+        vector<pair<IkParameterization, vector<dReal> > >& vnosolutions = vsolutionresults[1];     // no solution found
+        vector<pair<IkParameterization, vector<dReal> > >& vnofullsolutions = vsolutionresults[2];     // solution returned, but not all of them
         int success=0;
         int nTotalIterations = 0;
 
@@ -815,10 +831,10 @@ public:
                         s << "FindIKSolution: Incorrect IK, i = " << i <<" error: " << RaveSqrt(twrist.ComputeDistanceSqr(twrist_out)) << endl
                           << "Original Joint Val: ";
                         FOREACH(it, vrealsolution)
-                            s << *it << " ";
+                        s << *it << " ";
                         s << endl << "Returned Joint Val: ";
                         FOREACH(it, viksolution)
-                            s << *it << " ";
+                        s << *it << " ";
                         s << endl << "in: " << twrist << endl;
                         s << "out: " << twrist_out << endl;
                         s << "raw ik command: ";
@@ -872,10 +888,10 @@ public:
                             s << "FindIKSolutions: Incorrect IK, i = " << i << " error: " << RaveSqrt(twrist.ComputeDistanceSqr(twrist_out)) << endl
                               << "Original Joint Val: ";
                             FOREACH(it, vrealsolution)
-                                s << *it << " ";
+                            s << *it << " ";
                             s << endl << "Returned Joint Val: ";
                             FOREACH(it, *itsol)
-                                s << *it << " ";
+                            s << *it << " ";
                             s << endl << "in: " << twrist << endl;
                             s << "out: " << twrist_out << endl;
                             s << "raw ik command: ";

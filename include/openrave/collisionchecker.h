@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2010 Rosen Diankov (rosen.diankov@gmail.com)
+// Copyright (C) 2006-2011 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -27,12 +27,12 @@ enum CollisionOptions
 {
     CO_Distance = 1, ///< compute distance measurements, this is usually slow
     CO_UseTolerance = 2,
-    CO_Contacts = 4,    ///< Collision returns contact points
+    CO_Contacts = 4, ///< Collision returns contact points
     CO_RayAnyHit = 8, ///< when performing collision with rays, if this is set, algorithm just returns any hit instead of the closest (can be faster)
     CO_ActiveDOFs = 16, ///< if set and the target object is a robot, then only the links controlled by the currently set active DOFs will be checked for collisions. This allows planners to reduce redundant collision checks.
 };
 
-/// action to perform whenever a collision is detected between objects
+/// \brief action to perform whenever a collision is detected between objects
 enum CollisionAction
 {
     CA_DefaultAction = 0, ///< let the physics/collision engine resolve the action
@@ -43,29 +43,34 @@ enum CollisionAction
 class OPENRAVE_API CollisionReport
 {
 public:
-    CollisionReport() { Reset(); }
+    CollisionReport() {
+        Reset();
+    }
 
     class OPENRAVE_API CONTACT
     {
-    public:
-        CONTACT() : depth(0) {}
-        CONTACT(const Vector& p, const Vector& n, dReal d) : pos(p), norm(n) {depth = d;}
+public:
+        CONTACT() : depth(0) {
+        }
+        CONTACT(const Vector &p, const Vector &n, dReal d) : pos(p), norm(n) {
+            depth = d;
+        }
 
-        Vector pos;             ///< where the contact occured
-        Vector norm;    ///< the normals of the faces
-        dReal depth;    ///< the penetration depth, positive means the surfaces are penetrating, negative means the surfaces are not colliding (used for distance queries)
+        Vector pos;  ///< where the contact occured
+        Vector norm; ///< the normals of the faces
+        dReal depth; ///< the penetration depth, positive means the surfaces are penetrating, negative means the surfaces are not colliding (used for distance queries)
     };
 
-    int options;        ///< the options that the CollisionReport was called with
+    int options; ///< the options that the CollisionReport was called with
 
     KinBody::LinkConstPtr plink1, plink2; ///< the colliding links if a collision involves a bodies. Collisions do not always occur with 2 bodies like ray collisions, so these fields can be empty.
 
     //KinBody::Link::GeomConstPtr pgeom1, pgeom2; ///< the specified geometries hit for the given links
-    int numCols;            ///< this is the number of objects that collide with the object of interest
+    int numCols; ///< this is the number of objects that collide with the object of interest
     std::vector<KinBody::LinkConstPtr> vLinkColliding; ///< objects colliding with this object
 
-    dReal minDistance;      ///< minimum distance from last query, filled if CO_Distance option is set
-    int numWithinTol;       ///< number of objects within tolerance of this object, filled if CO_UseTolerance option is set
+    dReal minDistance; ///< minimum distance from last query, filled if CO_Distance option is set
+    int numWithinTol; ///< number of objects within tolerance of this object, filled if CO_UseTolerance option is set
 
     std::vector<CONTACT> contacts; ///< the convention is that the normal will be "out" of plink1's surface. Filled if CO_UseContacts option is set.
 
@@ -75,18 +80,22 @@ public:
 
 typedef CollisionReport COLLISIONREPORT RAVE_DEPRECATED;
 
-/** \brief <b>[interface]</b> Responsible for all collision checking queries of the environment. See \ref arch_collisionchecker.    
+/** \brief <b>[interface]</b> Responsible for all collision checking queries of the environment. See \ref arch_collisionchecker.
     \ingroup interfaces
-*/
+ */
 class OPENRAVE_API CollisionCheckerBase : public InterfaceBase
 {
 public:
-    CollisionCheckerBase(EnvironmentBasePtr penv) : InterfaceBase(PT_CollisionChecker, penv) {}
-    virtual ~CollisionCheckerBase() {}
+    CollisionCheckerBase(EnvironmentBasePtr penv) : InterfaceBase(PT_CollisionChecker, penv) {
+    }
+    virtual ~CollisionCheckerBase() {
+    }
 
     /// \brief return the static interface type this class points to (used for safe casting)
-    static inline InterfaceType GetInterfaceTypeStatic() { return PT_CollisionChecker; }
-    
+    static inline InterfaceType GetInterfaceTypeStatic() {
+        return PT_CollisionChecker;
+    }
+
     /// \brief Set basic collision options using the CollisionOptions enum
     virtual bool SetCollisionOptions(int collisionoptions) = 0;
 
@@ -100,7 +109,7 @@ public:
 
     /// \deprecated (10/12/03) use \see EnableLink
     virtual bool Enable(KinBodyConstPtr pbody, bool bEnable) RAVE_DEPRECATED = 0;
-    
+
     /// enables or disables a link from being considered in collisions
     /// \return true if operation succeeded
     virtual bool EnableLink(KinBody::LinkConstPtr pbody, bool bEnable) = 0;
@@ -124,7 +133,7 @@ public:
 
     /// \brief checks collision of a link and a body. Attached bodies for pbody are respected. CO_ActiveDOFs option is ignored.
     virtual bool CheckCollision(KinBody::LinkConstPtr plink, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr())=0;
-    
+
     /// \brief checks collision of a link and a scene. Attached bodies are ignored. CO_ActiveDOFs option is ignored.
     virtual bool CheckCollision(KinBody::LinkConstPtr plink, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report = CollisionReportPtr())=0;
 
@@ -137,7 +146,7 @@ public:
     /// \param plink the link to collide with
     /// \param[out] report [optional] collision report to be filled with data about the collision. If a body was hit, CollisionReport::plink1 contains the hit link pointer.
     virtual bool CheckCollision(const RAY& ray, KinBody::LinkConstPtr plink, CollisionReportPtr report = CollisionReportPtr()) = 0;
-    
+
     /// \brief Check collision with a link and a ray with a specified length.
     ///
     /// \param ray holds the origin and direction. The length of the ray is the length of the direction.
@@ -166,10 +175,14 @@ protected:
     /// Links that are joined together are ignored.
     virtual bool CheckSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr()) = 0;
 
-	virtual void SetCollisionData(KinBodyPtr pbody, UserDataPtr data) { pbody->SetCollisionData(data); }
+    virtual void SetCollisionData(KinBodyPtr pbody, UserDataPtr data) {
+        pbody->SetCollisionData(data);
+    }
 
 private:
-    virtual const char* GetHash() const { return OPENRAVE_COLLISIONCHECKER_HASH; }
+    virtual const char* GetHash() const {
+        return OPENRAVE_COLLISIONCHECKER_HASH;
+    }
 
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
@@ -184,11 +197,11 @@ private:
 /// \brief Helper class to save and restore the collision options. If options are not supported and required is true, throws an exception.
 class OPENRAVE_API CollisionOptionsStateSaver
 {
- public:
+public:
     CollisionOptionsStateSaver(CollisionCheckerBasePtr p, int newoptions, bool required=true);
     virtual ~CollisionOptionsStateSaver();
- private:
-    int _oldoptions; ///< saved options
+private:
+    int _oldoptions;     ///< saved options
     CollisionCheckerBasePtr _p;
 };
 

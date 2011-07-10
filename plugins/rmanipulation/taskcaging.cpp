@@ -24,7 +24,8 @@ class TaskCaging : public ModuleBase
 public:
     struct BODYTRAJ
     {
-        BODYTRAJ() : time(0) {}
+        BODYTRAJ() : time(0) {
+        }
         dReal time;
         KinBodyPtr ptarget;
         boost::shared_ptr<Trajectory> ptraj;
@@ -32,17 +33,18 @@ public:
 
     // discrete algorithm
     class ConstrainedTaskData : public boost::enable_shared_from_this<ConstrainedTaskData> {
-    public:
+public:
         struct FEATURES
         {
-        FEATURES() : ftotal(0),bSuccess(false) {}
+            FEATURES() : ftotal(0),bSuccess(false) {
+            }
             boost::array<dReal,3> features;
-            dReal ftotal; // final weighted result
+            dReal ftotal;         // final weighted result
             bool bSuccess;
         };
 
         typedef pair< vector<dReal>, FEATURES > IKSOL;
-        
+
         struct IkSolutionCompare
         {
             bool operator()( const IKSOL& a, const IKSOL& b ) const {
@@ -56,27 +58,30 @@ public:
             bool operator()( const pair<T,dReal>& a, const pair<T,dReal>& b ) const {
                 // always put the grasps with computed iksolutions first
                 if( (a.first->iksolutions.size() > 0) == (b.first->iksolutions.size() > 0) )
-                    return  a.second > b.second; // minimum on top of stack
+                    return a.second > b.second;                                                                                                   // minimum on top of stack
                 else
                     return a.first->iksolutions.size() == 0;
-            }  
+            }
         };
 
         struct GRASP
         {
-            GRASP(Transform t) { tgrasp = t; }
-            
+            GRASP(Transform t) {
+                tgrasp = t;
+            }
+
             Transform tgrasp;
-            list<IKSOL> iksolutions; // first is the iksolution, second is its goal heuristic
+            list<IKSOL> iksolutions;         // first is the iksolution, second is its goal heuristic
         };
-        
-    ConstrainedTaskData() : fGraspThresh(0.1f), fConfigThresh(0.2f), nMaxIkIterations(8), nMaxSamples(1), fGoalThresh(0.04f) {
+
+        ConstrainedTaskData() : fGraspThresh(0.1f), fConfigThresh(0.2f), nMaxIkIterations(8), nMaxSamples(1), fGoalThresh(0.04f) {
             fWeights[0] = fWeights[1] = fWeights[2] = 0;
             bSortSolutions = false;
             bGenerateFeatures = false;
             bCheckFullCollision = false;
         }
-        virtual ~ConstrainedTaskData() {}
+        virtual ~ConstrainedTaskData() {
+        }
 
         virtual void SetRobot(RobotBasePtr robot)
         {
@@ -92,12 +97,12 @@ public:
                 for(size_t i = 0; i < _vtargetjoints.size(); ++i) {
                     _lower.push_back(vl[_vtargetjoints[i]]);
                     _upper.push_back(vu[_vtargetjoints[i]]);
-                    _resolution.push_back(0.02f); //?
+                    _resolution.push_back(0.02f);         //?
                 }
 
                 ptarget->GetDOFValues(vtargvalues);
             }
-    
+
             _vsample.resize(GetDOF());
             _robot->GetDOFWeights(_vRobotWeights);
         }
@@ -121,7 +126,9 @@ public:
                 *ittarget++ = vtargvalues[_vtargetjoints[i]];
         }
 
-        virtual int GetDOF() const { return _robot->GetActiveDOF()+_vtargetjoints.size(); }
+        virtual int GetDOF() const {
+            return _robot->GetActiveDOF()+_vtargetjoints.size();
+        }
 
         bool CheckCollisionInterval(const vector<dReal>& pQ0, const vector<dReal>& pQ1, IntervalType interval)
         {
@@ -203,9 +210,9 @@ public:
             Transform tEE = _robot->GetActiveManipulator()->GetTransform();
             _robot->CalculateActiveJacobian(linkindex, tEE.trans, _J);
             //_robot->CalculateActiveRotationalJacobian(linkindex, tEE.trans, &_J[3*robot->GetActiveDOF()]);
-        
+
             mathextra::multtrans_to2<dReal, dReal, dReal>(&_J[0], &_J[0], 3, _robot->GetActiveDOF(), 3, &_JJt[0], false);
-        
+
             // find the determinant
             pfeatures[1] = RaveSqrt(RaveFabs(mathextra::matrixdet3(&_JJt[0], 3)));
 
@@ -219,14 +226,16 @@ public:
         {
             ptarget->GetDOFValues(vtargvalues);
             _robot->SetActiveDOFValues(pConfiguration);
-    
+
             FEATURES f;
             GenerateFeatures(pConfiguration, f.features);
             f.ftotal = expf(fWeights[0] *f.features[0]) + expf(fWeights[1] * f.features[1]) + expf(fWeights[2] * f.features[2]);
             return f;
         }
 
-        virtual float GetGoalThresh() { return fGoalThresh; }
+        virtual float GetGoalThresh() {
+            return fGoalThresh;
+        }
 
         dReal Eval(const vector<dReal>& pConfiguration)
         {
@@ -236,8 +245,8 @@ public:
                 dReal diff = *ittarget++-vtargettraj.at(0)[_vtargetjoints[i]];
                 f += diff*diff;
             }
-            
-            return RaveSqrt(f);//expf(fWeights[0]*sqrtf(f));
+
+            return RaveSqrt(f);        //expf(fWeights[0]*sqrtf(f));
         }
 
         virtual float DistMetric(const vector<dReal>& c0, const vector<dReal>& c1)
@@ -248,7 +257,7 @@ public:
                 out += _vRobotWeights[i] * (c0[i]-c1[i])*(c0[i]-c1[i]);
             return RaveSqrt(out);
         }
-        
+
         virtual dReal GraspDist(const Transform& tprev, const vector<dReal>& preshapeprev, const Transform& tnew)
         {
             dReal frotweight = 0.4f;
@@ -273,9 +282,9 @@ public:
                     pNewSample[i] = _lower[i] + (_upper[i]-_lower[i])*RaveRandomFloat();
                     vtargvalues[_vtargetjoints[i]] = pNewSample[i];
                 }
-        
+
                 ptarget->SetDOFValues(vtargvalues);
-        
+
                 // sample the grasp and execute in random permutation order (for now just select one grasp)
                 boost::shared_ptr<vector<Transform> > vgrasps = Eval(pNewSample) < fGoalThresh ? pvGraspContactSet : pvGraspSet;
                 if( SampleIkSolution(vgrasps->at(RaveRandomInt()%vgrasps->size()), vector<dReal>(), pNewSample))
@@ -286,19 +295,19 @@ public:
 
         static inline int GetTargetValue(int val)
         {
-            return (val>1)?(val-1):(val-2);
+            return (val>1) ? (val-1) : (val-2);
         }
 
         virtual bool SampleNeigh(vector<dReal>& pNewSample, const vector<dReal>& pCurSample, dReal fRadius)
         {
             map<int, boost::shared_ptr<FINDGRASPDATA> >::iterator itgrasp;
             FORIT(itgrasp, mapgrasps)
-                itgrasp->second->status = 0;
+            itgrasp->second->status = 0;
 
             // sample the neighborhood
             int failures = 0;
             while(1) {
-        
+
                 // sample the target object values
                 dReal fbest = 10000;
                 uint32_t bestid = 0;
@@ -322,9 +331,9 @@ public:
                     _vsample[i] = pCurSample[i] + fRadius*(float)GetTargetValue((bestid>>(2*(i-_robot->GetActiveDOF())))&3);
                     vtargvalues[_vtargetjoints[i-_robot->GetActiveDOF()]] = _vsample[i];
                 }
-        
+
                 ptarget->SetDOFValues(vtargvalues);
-        
+
                 // choose a grasp
                 boost::shared_ptr<FINDGRASPDATA> pdata;
                 itgrasp = mapgrasps.find(bestid);
@@ -337,7 +346,7 @@ public:
                 }
                 else
                     pdata = itgrasp->second;
-        
+
                 if( pdata->status == 2 )
                     continue;
 
@@ -346,17 +355,17 @@ public:
                     pdata->fThresh2 = fGraspThresh*fGraspThresh;
                     pdata->tlink = ptargetlink->GetTransform();
 
-                    if( 0 && Eval(pNewSample) < fGoalThresh )
+                    if( 0 &&( Eval(pNewSample) < fGoalThresh) )
                         pdata->pgrasps = pvGraspContactSet;
                     else
                         pdata->pgrasps = pvGraspSet;
-            
+
                     pdata->status = 1;
                     pdata->pexecutor->PermuteStart(pdata->pgrasps->size());
                 }
 
                 BOOST_ASSERT( pdata->status == 1 );
-        
+
                 int index = pdata->pexecutor->PermuteContinue();
                 if( index < 0 ) {
                     // couldn't find a grasp, check if we've run out of possible grasps
@@ -365,13 +374,13 @@ public:
                         return false;
 
                     pdata->status = 2;
-                    continue; // sample again
+                    continue;         // sample again
                 }
-        
+
                 _robot->SetActiveDOFValues(vector<dReal>(pCurSample.begin(),pCurSample.begin()+_robot->GetActiveDOF()));
                 if( !SampleIkSolution(pdata->tlink * pdata->pgrasps->at(index), pCurSample, _vsample) )
                     continue;
-        
+
                 pNewSample = _vsample;
                 break;
             }
@@ -383,7 +392,7 @@ public:
         {
             vector< dReal> solution;
             RobotBase::ManipulatorConstPtr pmanip = _robot->GetActiveManipulator();
-            if( nMaxIkIterations == 0 || pmanip->GetIkSolver()->GetNumFreeParameters() == 0 ) {
+            if(( nMaxIkIterations == 0) ||( pmanip->GetIkSolver()->GetNumFreeParameters() == 0) ) {
                 if( pmanip->FindIKSolution(tgrasp, solution, true) ) {
                     if( pCurSolution.size() == solution.size() ) {
                         // make sure solution is close to current solution
@@ -413,35 +422,35 @@ public:
             while(iter < nMaxIkIterations) {
 
                 dReal curphi = startphi;
-                if( iter & 1 ) { // increment
+                if( iter & 1 ) {         // increment
                     curphi += deltaphi;
                     if( curphi > upperphi ) {
 
                         if( startphi-deltaphi < lowerphi) {
-                            break; // reached limit
+                            break;         // reached limit
                         }
                         ++iter;
                         continue;
                     }
                 }
-                else { // decrement
+                else {         // decrement
                     curphi -= deltaphi;
                     if( curphi < lowerphi ) {
 
                         if( startphi+deltaphi > upperphi ) {
-                            break; // reached limit
+                            break;         // reached limit
                         }
                         ++iter;
-                        deltaphi += incphi; // increment
+                        deltaphi += incphi;         // increment
                         continue;
                     }
 
-                    deltaphi += incphi; // increment
+                    deltaphi += incphi;         // increment
                 }
 
                 iter++;
                 _vfreeparams[0] = curphi;
-        
+
                 if( pmanip->FindIKSolution(tgrasp, _vfreeparams, solution, true) ) {
                     if( solution.size() == pCurSolution.size() ) {
                         // make sure solution is close to current solution
@@ -460,7 +469,7 @@ public:
             //        // randomly sample params
             //        for(int j = 0; j < pmanip->GetIkSolver()->GetNumFreeParameters(); ++j)
             //            _vfreeparams[j] = CLAMP_ON_RANGE(_vcurfreeparams[j] + 0.5f*fConfigThresh*(RaveRandomFloat()-0.5f),(dReal)0,(dReal)1);
-            //        
+            //
             //        if( pmanip->FindIKSolution(tgrasp, _vfreeparams, solution, true) ) {
             //
             //            if( pCurSolution.size() == solution.size() ) {
@@ -478,11 +487,11 @@ public:
 
             return false;
         }
-        
+
         void FillIkSolutions(GRASP& g, const vector<vector<dReal> >& solutions)
         {
             g.iksolutions.clear();
-    
+
             if( bSortSolutions ) {
                 // fill the list
                 FOREACHC(itsol, solutions) {
@@ -517,7 +526,9 @@ public:
             flog << endl;
         }
 
-        inline bool IsGenerateFeatures() { return bGenerateFeatures; }
+        inline bool IsGenerateFeatures() {
+            return bGenerateFeatures;
+        }
 
         // grasping
         boost::shared_ptr< vector< Transform > > pvGraspSet, pvGraspContactSet, pvGraspStartSet;
@@ -529,21 +540,27 @@ public:
         KinBodyPtr ptarget;
         KinBody::LinkPtr ptargetlink;
         vector<vector<dReal> > vtargettraj;
-        vector<int> _vtargetjoints; ///< active joints of the target
-        int nMaxIkIterations; ///< for sampling free parameters
-        int nMaxSamples; ///< for trying out heuristics
+        vector<int> _vtargetjoints;         ///< active joints of the target
+        int nMaxIkIterations;         ///< for sampling free parameters
+        int nMaxSamples;         ///< for trying out heuristics
         float fGoalThresh;
 
         // heuristics
-        boost::array<dReal,3> fWeights; // joint limit, manipulability, goal config
+        boost::array<dReal,3> fWeights;         // joint limit, manipulability, goal config
         bool bSortSolutions;
         bool bCheckFullCollision;
-        
-        const vector<dReal>& GetLower() const { return _lower; }
-        const vector<dReal>& GetUpper() const { return _upper; }
-        const vector<dReal>& GetResolution() const { return _resolution; }
 
-    protected:
+        const vector<dReal>& GetLower() const {
+            return _lower;
+        }
+        const vector<dReal>& GetUpper() const {
+            return _upper;
+        }
+        const vector<dReal>& GetResolution() const {
+            return _resolution;
+        }
+
+protected:
         struct FINDGRASPDATA
         {
             boost::shared_ptr<RandomPermutationExecutor> pexecutor;
@@ -551,7 +568,7 @@ public:
             Transform tcurgrasp;
             Transform tlink;
             dReal fThresh2;
-            int status; // 0 not init, 1 init, 2 dead
+            int status;         // 0 not init, 1 init, 2 dead
         };
 
         bool FindGraspPermutation(unsigned int index, boost::shared_ptr<FINDGRASPDATA> pdata)
@@ -560,10 +577,10 @@ public:
         }
 
         bool bGenerateFeatures;
-        ofstream flog; ///< logs features
+        ofstream flog;         ///< logs features
 
         vector<dReal> _lower, _upper, _vsample, _vbestsample, _resolution;
-        vector<dReal> _J, _JJt;// _J is 3xdof
+        vector<dReal> _J, _JJt;        // _J is 3xdof
         vector<dReal> vtargvalues, _vfreeparams, _vcurfreeparams;
         vector<dReal> _vfeatures;
         vector<dReal> _vRobotWeights;
@@ -573,18 +590,18 @@ public:
     // used to prune grasps that are not caging a target object
     class GraspConstraint
     {
-    public:
-    GraspConstraint() {
+public:
+        GraspConstraint() {
             Nrandconfigs = 10;
             fRandPerturb.resize(7);
             // 0.01 for translation and 0.07 for quaterions (~8-10 degrees)
             fRandPerturb[0] = fRandPerturb[1] = fRandPerturb[2] = 0.01f;
             fRandPerturb[3] = fRandPerturb[4] = fRandPerturb[5] = fRandPerturb[6] = 0.07f;
         }
-    
+
         virtual bool Constraint(const vector<dReal>& pSrcConf, const vector<dReal>& pDestConf, IntervalType interval, PlannerBase::ConfigurationListPtr configurations)
         {
-            if( !plink || vtargetjoints.size() == 0) {
+            if( !plink ||( vtargetjoints.size() == 0) ) {
                 return true;
             }
             _robot->SetActiveDOFValues(pDestConf);
@@ -598,7 +615,7 @@ public:
 
             // find N noncolliding grasps and check if they still cage the object
             for(int iter = 0; iter < Nrandconfigs; ++iter) {
-                if( iter > 0 ) {                
+                if( iter > 0 ) {
                     plink->GetParent()->SetLinkTransformations(_vTargetTransforms);
 
                     int niter=0;
@@ -627,7 +644,7 @@ public:
                             break;
                         }
                     }
-                
+
                     if( !bCaged ) {
                         break;
                     }
@@ -662,7 +679,7 @@ public:
         {
             static vector<dReal> values;
             values = vtargetvalues;
-        
+
             _vvvCachedTransforms.resize(vtargetjoints.size()*2);
             vector< vector< vector<Transform> > >::iterator itvv = _vvvCachedTransforms.begin();
 
@@ -676,13 +693,13 @@ public:
                     for(dReal finc = fIncrement; finc < fCagedConfig; finc += fIncrement) {
                         values[*itjoint] = vtargetvalues[*itjoint] - finc;
                         plink->GetParent()->SetDOFValues(values);
-                    
+
                         itvv->push_back(vector<Transform>());
                         plink->GetParent()->GetLinkTransformations(itvv->back());
                     }
                     ++itvv;
                 }
-            
+
                 if( *itside >= 0 ) {
                     itvv->resize(0);
                     for(dReal finc = fIncrement; finc < fCagedConfig; finc += fIncrement) {
@@ -691,12 +708,12 @@ public:
 
                         itvv->push_back(vector<Transform>());
                         plink->GetParent()->GetLinkTransformations(itvv->back());
-                                
+
                     }
                     ++itvv;
                 }
-            
-                values[*itjoint] = vtargetvalues[*itjoint]; // revert
+
+                values[*itjoint] = vtargetvalues[*itjoint];         // revert
                 ++itside;
             }
 
@@ -712,16 +729,20 @@ public:
         int Nrandconfigs;
         vector<dReal> fRandPerturb;
 
-    private:
+private:
         vector< vector< vector<Transform> > > _vvvCachedTransforms;
         vector<Transform> _vTargetTransforms;
     };
 
-    inline boost::shared_ptr<TaskCaging> shared_problem() { return boost::static_pointer_cast<TaskCaging>(shared_from_this()); }
-    inline boost::shared_ptr<TaskCaging const> shared_problem_const() const { return boost::static_pointer_cast<TaskCaging const>(shared_from_this()); }
+    inline boost::shared_ptr<TaskCaging> shared_problem() {
+        return boost::static_pointer_cast<TaskCaging>(shared_from_this());
+    }
+    inline boost::shared_ptr<TaskCaging const> shared_problem_const() const {
+        return boost::static_pointer_cast<TaskCaging const>(shared_from_this());
+    }
 
 public:
- TaskCaging(EnvironmentBasePtr penv) : ModuleBase(penv) {
+    TaskCaging(EnvironmentBasePtr penv) : ModuleBase(penv) {
         __description = ":Interface Author: Rosen Diankov\n\n\
 .. image:: ../../../images/interface_taskcaging.jpg\n\
   :width: 500\n\n\
@@ -741,7 +762,8 @@ This greatly relaxes the constraints on the robot (see the door manipluation exa
                         "Starts a body to follow a trajectory. The trajrectory must contain timestamps\n"
                         "Options: target targettraj");
     }
-    virtual ~TaskCaging() {}
+    virtual ~TaskCaging() {
+    }
     virtual void Destroy()
     {
         _robot.reset();
@@ -801,19 +823,19 @@ private:
         dReal fStep = 0.01f;
         dReal fExploreProb = 0.02f;
 
-        dReal fContactConfigDelta = 0.01f; // how much to move in order to find the contact grasp set
+        dReal fContactConfigDelta = 0.01f;     // how much to move in order to find the contact grasp set
         boost::shared_ptr<GraspConstraint> graspfn(new GraspConstraint());
 
         KinBodyPtr ptarget;
         graspfn->fCagedConfig = 0.05f;
         graspfn->fIncrement = 0.005f;
         graspfn->_robot = _robot;
-    
+
         boost::shared_ptr<ExplorationParameters> params(new ExplorationParameters());
         params->_nExpectedDataSize = 1000;
 
         vector<int> vTargetSides;
-    
+
         string cmd;
         while(!sinput.eof()) {
             sinput >> cmd;
@@ -848,7 +870,7 @@ private:
             else if( cmd == "cagesides" ) {
                 vTargetSides.resize(graspfn->vtargetjoints.size());
                 FOREACH(it, vTargetSides)
-                    sinput >> *it;
+                sinput >> *it;
             }
             else {
                 RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
@@ -897,7 +919,7 @@ private:
 
         // move the robot according to the way the target object moved
         _robot->SetTransform(tlinknew*tlinkorig.inverse()*_robot->GetTransform());
-    
+
         if( !planningutils::JitterTransform(_robot, 0.004f) ) {
             RAVELOG_WARN("failed to jitter\n");
             return false;
@@ -910,7 +932,7 @@ private:
         params->SetRobotActiveJoints(_robot);
         params->_checkpathconstraintsfn = boost::bind(&GraspConstraint::Constraint,graspfn,_1,_2,_3,_4);
         params->_distmetricfn = boost::bind(&GraspConstraint::Dist6D,graspfn,_1,_2);
-   
+
         params->_fStepLength = fStep;
         params->_fExploreProb = fExploreProb;
         params->_nMaxIterations = params->_nExpectedDataSize*5;
@@ -927,20 +949,20 @@ private:
             RAVELOG_WARN("failed to plan\n");
             return false;
         }
-    
+
 
         RAVELOG_INFO(str(boost::format("finished computing grasp set: pts=%d in %dms\n")%ptraj->GetPoints().size()%(GetMilliTime()-basetime)));
-    
+
         vtargetvalues = graspfn->vtargetvalues;
         RobotBase::ManipulatorPtr pmanip = _robot->GetActiveManipulator();
         if( !pmanip ) {
             RAVELOG_WARN("robot doesn't have manipulator defined, storing robot transformation directly\n");
         }
-    
+
         FOREACHC(itp, ptraj->GetPoints()) {
-        
+
             int nContact = 0;
-        
+
             if( graspfn->vtargetjoints.size() > 0 ) {
                 _robot->SetActiveDOFValues(itp->q, false);
 
@@ -1051,7 +1073,7 @@ private:
                 sinput >> num;
                 taskdata->_vtargetjoints.resize(num);
                 FOREACH(it, taskdata->_vtargetjoints)
-                    sinput >> *it;
+                sinput >> *it;
             }
             else if(cmd == "graspset") {
                 taskdata->pvGraspSet.reset(new vector<Transform>());
@@ -1107,11 +1129,11 @@ private:
 
                 int nPoints; sinput >> nPoints;
                 taskdata->vtargettraj.resize(nPoints);
-            
+
                 FOREACH(itp, taskdata->vtargettraj) {
                     itp->resize(taskdata->ptarget->GetDOF());
                     FOREACH(it, *itp)
-                        sinput >> *it;
+                    sinput >> *it;
                 }
             }
             else if( cmd == "usegoal" ) {
@@ -1141,16 +1163,16 @@ private:
             return false;
         }
 
-        if(nLinkIndex < 0 || nLinkIndex >= (int)taskdata->ptarget->GetLinks().size() ) {
+        if(( nLinkIndex < 0) ||( nLinkIndex >= (int)taskdata->ptarget->GetLinks().size()) ) {
             RAVELOG_WARN("need target link name\n");
             return false;
         }
 
-        if( !taskdata->pvGraspSet || taskdata->pvGraspSet->size() == 0 ) {
+        if( !taskdata->pvGraspSet ||( taskdata->pvGraspSet->size() == 0) ) {
             RAVELOG_WARN("error, graspset size 0\n");
             return false;
         }
-        if( !taskdata->pvGraspContactSet || taskdata->pvGraspContactSet->size() == 0 ) {
+        if( !taskdata->pvGraspContactSet ||( taskdata->pvGraspContactSet->size() == 0) ) {
             RAVELOG_WARN("error, graspset size 0\n");
             return false;
         }
@@ -1167,9 +1189,9 @@ private:
         KinBody::KinBodyStateSaver targetsaver(taskdata->ptarget);
 
         _robot->SetActiveDOFs(pmanip->GetArmIndices());
-    
+
         boost::shared_ptr<Trajectory> ptraj(RaveCreateTrajectory(GetEnv(),_robot->GetActiveDOF()));
-    
+
         uint32_t basetime = GetMilliTime(), finaltime;
         taskdata->SetRobot(_robot);
 
@@ -1196,13 +1218,13 @@ private:
             params->_vConfigLowerLimit = taskdata->GetLower();
             params->_vConfigUpperLimit = taskdata->GetUpper();
             params->_vConfigResolution = taskdata->GetResolution();
- 
+
             vector<dReal> vtargetinit;
             taskdata->ptarget->GetDOFValues(vtargetinit);
 
             taskdata->ptarget->SetDOFValues(taskdata->vtargettraj.back());
             Transform tlink  = taskdata->ptargetlink->GetTransform();
-        
+
             bool bSucceed = false;
             FOREACH(it, *taskdata->pvGraspContactSet) {
                 if( pmanip->FindIKSolution(tlink * *it, params->vinitialconfig, true) ) {
@@ -1216,9 +1238,9 @@ private:
                 RAVELOG_WARN("failed to find goal configuration = %dms\n", GetMilliTime()-basetime);
                 return false;
             }
-        
+
             FOREACH(it, taskdata->_vtargetjoints)
-                params->vinitialconfig.push_back(taskdata->vtargettraj.back()[*it]);
+            params->vinitialconfig.push_back(taskdata->vtargettraj.back()[*it]);
 
             //// pick any solution at the initial config of the target object
             //        bool bSucceed = false;
@@ -1238,29 +1260,29 @@ private:
             //        }
 
 
-            // try to find an IK solution for every point on the trajectory (Optional!!) 
+            // try to find an IK solution for every point on the trajectory (Optional!!)
             bool bHasIK = false;
             vector<dReal> solution;
-        
+
             for(int ivgrasp = 0; ivgrasp < (int)taskdata->vtargettraj.size()-1; ++ivgrasp) {
                 taskdata->ptarget->SetDOFValues(taskdata->vtargettraj[ivgrasp]);
                 tlink = taskdata->ptargetlink->GetTransform();
                 bHasIK = false;
-            
+
                 FOREACH(it, *taskdata->pvGraspSet) {
                     if( pmanip->FindIKSolution(tlink * *it, solution, true) ) {
                         bHasIK = true;
                         break;
                     }
                 }
-            
+
                 if( !bHasIK ) {
                     // no ik solution found for this grasp, so quit
                     RAVELOG_ERROR(str(boost::format("failure, due to ik time=%dms, %d/%d\n")%(GetMilliTime()-basetime)%ivgrasp%taskdata->vtargettraj.size()));
                     break;
                 }
             }
-        
+
             if( !bHasIK )
                 return false;
 
@@ -1274,7 +1296,7 @@ private:
 
             if( !pra->InitPlan(_robot,params) )
                 return false;
-        
+
             RAVELOG_WARN("planning a caging grasp...\n");
             if( !pra->PlanPath(ptrajtemp) ) {
                 RAVELOG_WARN("planner failure, time = %dms\n", GetMilliTime()-basetime);
@@ -1291,12 +1313,12 @@ private:
 
             // Discretized Search
             vector<vector<dReal> > solutions;
-        
+
             // initialize the grasp sets
             taskdata->vlistGraspSet.resize(taskdata->vtargettraj.size());
-        
+
             bool bHasIK = false;
-        
+
             for(int ivgrasp = 0; ivgrasp < (int)taskdata->vlistGraspSet.size(); ++ivgrasp) {
                 int realindex = (ivgrasp+taskdata->vlistGraspSet.size()-1)%taskdata->vlistGraspSet.size();
 
@@ -1306,14 +1328,14 @@ private:
                 bool bIndependentCollision = pmanip->CheckIndependentCollision(report);
                 // check if non-manipulator links are in collision
                 if( !bIndependentCollision ) {
-                    boost::shared_ptr< vector< Transform > > pvGraspSet = (realindex == 0 && !!taskdata->pvGraspStartSet && taskdata->pvGraspStartSet->size()>0)?taskdata->pvGraspStartSet:taskdata->pvGraspSet;
+                    boost::shared_ptr< vector< Transform > > pvGraspSet = (realindex == 0 && !!taskdata->pvGraspStartSet && taskdata->pvGraspStartSet->size()>0) ? taskdata->pvGraspStartSet : taskdata->pvGraspSet;
                     FOREACH(it, *pvGraspSet) {
                         Transform tgrasp = Ttarget * *it;
-                
+
                         // make sure that there exists at least 1 IK solution for every
                         // trajectory point of the target configruation space
                         if( !bHasIK ) {
-                            
+
                             if( pmanip->FindIKSolutions(tgrasp, solutions, true) ) {
                                 bHasIK = true;
                                 taskdata->vlistGraspSet[realindex].push_back(ConstrainedTaskData::GRASP(tgrasp));
@@ -1321,10 +1343,10 @@ private:
                                 if( taskdata->bCheckFullCollision ) {
                                     FOREACH(itsol, taskdata->vlistGraspSet[realindex].back().iksolutions) {
                                         FOREACH(itindex, taskdata->_vtargetjoints)
-                                            itsol->first.push_back(taskdata->vtargettraj[realindex][*itindex]);
+                                        itsol->first.push_back(taskdata->vtargettraj[realindex][*itindex]);
                                     }
                                 }
-                        
+
                             }
                         }
                         else {
@@ -1333,7 +1355,7 @@ private:
                         }
                     }
                 }
-            
+
                 if( !bHasIK ) {
                     // no ik solution found for this grasp, so quit
                     RAVELOG_ERROR(str(boost::format("failure, due to ik time=%dms, %d/%d, col=%d\n")%(GetMilliTime()-basetime)%realindex%taskdata->vtargettraj.size()%bIndependentCollision));
@@ -1342,30 +1364,30 @@ private:
                     break;
                 }
             }
-        
+
             if( !bHasIK ) {
                 return false;
             }
-        
+
             BOOST_ASSERT(taskdata->vtargettraj.size()>0);
             taskdata->ptarget->SetDOFValues(taskdata->vtargettraj.back());
             Transform Ttarget = taskdata->ptargetlink->GetTransform();
-    
-            // start planning backwards    
+
+            // start planning backwards
             bool bSuccess = false;
             FOREACHC(itgrasp, *taskdata->pvGraspContactSet) {
                 if( pmanip->FindIKSolutions(Ttarget * *itgrasp, solutions, true) ) {
                     FOREACH(itsol, solutions) {
                         FOREACH(itindex, taskdata->_vtargetjoints)
-                            itsol->push_back(taskdata->vtargettraj.back()[*itindex]);
-                    
+                        itsol->push_back(taskdata->vtargettraj.back()[*itindex]);
+
                         if( FindAllRelaxedForward(*itsol, taskdata->vtargettraj.size()-2, ptrajtemp.get(), taskdata) ) {
                             ptrajtemp->AddPoint(Trajectory::TPOINT(*itsol, 0));
                             bSuccess = true;
                             break;
                         }
                     }
-                
+
                     if( bSuccess )
                         break;
                 }
@@ -1394,13 +1416,13 @@ private:
                 ptraj->AddPoint(tp);
             }
         }
-    
+
         ptraj->CalcTrajTiming(_robot, ptraj->GetInterpMethod(), true, true);
-    
+
         if( strbodytraj.size() > 0 ) {
-        
+
             boost::shared_ptr<Trajectory> pbodytraj(RaveCreateTrajectory(GetEnv(),taskdata->ptarget->GetDOF()));
-        
+
             vector<Trajectory::TPOINT>::const_iterator itrobottraj = ptraj->GetPoints().begin();
             taskdata->ptarget->GetDOFValues(tp.q);
             Transform ttarget = taskdata->ptarget->GetTransform();
@@ -1436,12 +1458,12 @@ private:
         _robot->SetActiveDOFValues(ptraj->GetPoints().at(0).q);
         _robot->GetDOFValues(values);
         FOREACH(it, values)
-            sout << *it << " ";
+        sout << *it << " ";
         _robot->SetActiveDOFValues(ptraj->GetPoints().back().q);
         _robot->GetDOFValues(values);
         FOREACH(it, values)
-            sout << *it << " ";
-    
+        sout << *it << " ";
+
         if( strsavetraj.size() ) {
             boost::shared_ptr<Trajectory> pfulltraj(RaveCreateTrajectory(GetEnv(),_robot->GetDOF()));
             _robot->GetFullTrajectoryFromActive(pfulltraj, ptraj);
@@ -1455,7 +1477,7 @@ private:
     bool SimpleConstrainedPlanner(ostream& sout, istream& sinput)
     {
         RAVELOG_DEBUG("SimpleConstrainedPlanner\n");
-    
+
         vector<vector<dReal> > vtargettraj;
         dReal fConfigThresh2 = 0.1f*0.1f;
 
@@ -1516,7 +1538,7 @@ private:
                 FOREACH(itp, vtargettraj) {
                     itp->resize(taskdata->ptarget->GetDOF());
                     FOREACH(it, *itp)
-                        sinput >> *it;
+                    sinput >> *it;
                 }
             }
             else if( cmd == "fullcol" )
@@ -1537,7 +1559,7 @@ private:
             return false;
         }
 
-        if(nLinkIndex < 0 || nLinkIndex >= (int)taskdata->ptarget->GetLinks().size() ) {
+        if(( nLinkIndex < 0) ||( nLinkIndex >= (int)taskdata->ptarget->GetLinks().size()) ) {
             RAVELOG_WARN("need target link name\n");
             return false;
         }
@@ -1579,14 +1601,14 @@ private:
                 vsolutions[realindex].clear();
                 taskdata->ptarget->SetDOFValues(vtargettraj[realindex]);
                 Transform Ttarget = taskdata->ptargetlink->GetTransform();
-            
+
                 pmanip->FindIKSolutions(Ttarget * *itgrasp, solutions, true);
 
                 if( solutions.size() == 0 ) {
                     bNoIK = true;
                     break;
                 }
-            
+
                 FOREACH(itsol, solutions) {
                     if( taskdata->bCheckFullCollision )
                         itsol->insert(itsol->end(), vtargettraj[realindex].begin(), vtargettraj[realindex].end());
@@ -1604,7 +1626,7 @@ private:
                     break;
                 }
             }
-            
+
             if( bSuccess )
                 break;
         }
@@ -1626,11 +1648,11 @@ private:
         _robot->SetActiveDOFValues(vtrajectory.front());
         _robot->GetDOFValues(values);
         FOREACH(it, values)
-            sout << *it << " ";
+        sout << *it << " ";
         _robot->SetActiveDOFValues(vtrajectory.back());
         _robot->GetDOFValues(values);
         FOREACH(it, values)
-            sout << *it << " ";
+        sout << *it << " ";
 
         boost::shared_ptr<Trajectory> ptraj(RaveCreateTrajectory(GetEnv(),_robot->GetActiveDOF()));
         Trajectory::TPOINT tp;
@@ -1648,7 +1670,7 @@ private:
 
             boost::shared_ptr<Trajectory> pbodytraj(RaveCreateTrajectory(GetEnv(),taskdata->ptarget->GetDOF()));
             vector<Trajectory::TPOINT>::const_iterator itrobottraj = ptraj->GetPoints().begin();
-        
+
             taskdata->ptarget->GetDOFValues(tp.q);
             Transform ttarget = taskdata->ptarget->GetTransform();
 
@@ -1670,7 +1692,7 @@ private:
             ofstream f(strsavetraj.c_str());
             pfulltraj->Write(f, Trajectory::TO_IncludeTimestamps|Trajectory::TO_IncludeBaseTransformation);
         }
-   
+
         return true;
     }
 
@@ -1724,18 +1746,18 @@ private:
         //RAVELOG_WARN("%d\n", j);
         RobotBase::ManipulatorPtr pmanip = _robot->GetActiveManipulator();
         BOOST_ASSERT( !!pmanip->GetIkSolver() );
-    
+
         taskdata->ptarget->SetDOFValues(taskdata->vtargettraj[j]);
-    
+
         vector<dReal> qprevrobot(qprev.begin(),qprev.begin()+_robot->GetActiveDOF());
         _robot->SetActiveDOFValues(qprevrobot);
         Transform tprevgrasp = pmanip->GetTransform();
-    
+
         vector<dReal> preshape;
         bool bFoundAtLeastOne = false;
 
         typedef pair<list<ConstrainedTaskData::GRASP>::iterator, dReal> GRASPPAIR;
-        priority_queue<GRASPPAIR , deque<GRASPPAIR>, ConstrainedTaskData::GraspCompare> pqAcceptedGrasps;
+        priority_queue<GRASPPAIR, deque<GRASPPAIR>, ConstrainedTaskData::GraspCompare> pqAcceptedGrasps;
 
         FOREACH(itgrasp, taskdata->vlistGraspSet[j]) {
 
@@ -1758,13 +1780,13 @@ private:
                     pqAcceptedGrasps.pop();
                     continue;
                 }
-            
+
                 //RAVELOG_WARN("iksol\n", j);
                 taskdata->FillIkSolutions(grasp, solutions);
                 if( taskdata->bCheckFullCollision ) {
                     FOREACH(itsol, grasp.iksolutions) {
                         FOREACH(itindex, taskdata->_vtargetjoints)
-                            itsol->first.push_back(taskdata->vtargettraj[j][*itindex]);
+                        itsol->first.push_back(taskdata->vtargettraj[j][*itindex]);
                     }
                 }
 
@@ -1781,7 +1803,7 @@ private:
                             continue;
                         }
                     }
-                
+
                     // go to next
                     if( itsol->second.bSuccess ) {
                         // already know it will succeed, no need to recurse
@@ -1792,8 +1814,8 @@ private:
 
                     if( taskdata->bCheckFullCollision )
                         taskdata->ptarget->SetDOFValues(taskdata->vtargettraj[j]);
-                    if( j == 0 || FindAllRelaxedForward(itsol->first, j-1, ptraj, taskdata)) {
-                    
+                    if(( j == 0) || FindAllRelaxedForward(itsol->first, j-1, ptraj, taskdata)) {
+
                         bFoundAtLeastOne = true;
                         itsol->second.bSuccess = true;
 
@@ -1801,7 +1823,7 @@ private:
 
                             if( !taskdata->bCheckFullCollision ) {
                                 FOREACH(itindex, taskdata->_vtargetjoints)
-                                    itsol->first.push_back(taskdata->vtargettraj[j][*itindex]);
+                                itsol->first.push_back(taskdata->vtargettraj[j][*itindex]);
                             }
                             ptraj->AddPoint(Trajectory::TPOINT(itsol->first, 0));
                             return true;
@@ -1815,13 +1837,13 @@ private:
 
                         if( taskdata->IsGenerateFeatures() )
                             taskdata->Log(*itsol);
-                    
+
                         if( taskdata->vlistGraspSet[j-1].size() == 0 ) {
                             // no more grasps at next level, so fail
                             taskdata->vlistGraspSet[j].clear();
                             return false;
                         }
-                    
+
                         // remove itsol from consideration in the future
                         itsol = grasp.iksolutions.erase(itsol);
                         continue;
@@ -1834,14 +1856,14 @@ private:
                 taskdata->ptarget->SetDOFValues(taskdata->vtargettraj[j]);
             }
             if( grasp.iksolutions.size() == 0 ) {
-                taskdata->vlistGraspSet[j].erase(pqAcceptedGrasps.top().first); // remove
+                taskdata->vlistGraspSet[j].erase(pqAcceptedGrasps.top().first);     // remove
             }
             pqAcceptedGrasps.pop();
         }
 
         return bFoundAtLeastOne;
     }
-    
+
     // simple task constraints
     bool FindAllSimple(const vector<dReal>& qprev, int j, list<vector<dReal> >& vtrajectory, dReal fConfigThresh2, vector<list<vector<dReal> > >& vsolutions, boost::shared_ptr<ConstrainedTaskData> taskdata)
     {
@@ -1863,18 +1885,18 @@ private:
                 }
             }
 
-            if( j+1 >= (int)vsolutions.size() ||
-                FindAllSimple(*itsol, j+1, vtrajectory, fConfigThresh2, vsolutions, taskdata) ) {
+            if(( j+1 >= (int)vsolutions.size()) ||
+               FindAllSimple(*itsol, j+1, vtrajectory, fConfigThresh2, vsolutions, taskdata) ) {
                 vtrajectory.push_back(*itsol);
                 return true;
             }
-     
+
             // no point in continuing
             if( vsolutions[j+1].size() == 0 ) {
                 vsolutions[j].clear();
                 return false;
             }
-        
+
             itsol = vsolutions[j].erase(itsol);
         }
 
@@ -1882,7 +1904,7 @@ private:
     }
 
     list<BODYTRAJ> _listBodyTrajs;
-    string _strRobotName; // name to init robot with
+    string _strRobotName;     // name to init robot with
     RobotBasePtr _robot;
 };
 
@@ -1897,4 +1919,6 @@ BOOST_TYPEOF_REGISTER_TYPE(TaskCaging::ConstrainedTaskData::FINDGRASPDATA)
 
 #endif
 
-ModuleBasePtr CreateTaskCaging(EnvironmentBasePtr penv) { return ModuleBasePtr(new TaskCaging(penv)); }
+ModuleBasePtr CreateTaskCaging(EnvironmentBasePtr penv) {
+    return ModuleBasePtr(new TaskCaging(penv));
+}

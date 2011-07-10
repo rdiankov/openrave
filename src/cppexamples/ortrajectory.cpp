@@ -32,7 +32,7 @@
     In order for the path itself to be collision free, we would have to use planners.
 
     <b>Full Example Code:</b>
-*/
+ */
 #include <openrave-core.h>
 #include <vector>
 #include <cstring>
@@ -77,7 +77,7 @@ int main(int argc, char ** argv)
     while(1) {
         {
             EnvironmentMutex::scoped_lock lock(penv->GetMutex()); // lock environment
-        
+
             TrajectoryBasePtr traj = RaveCreateTrajectory(penv,probot->GetDOF());
             probot->GetDOFValues(q); // get current values
             traj->AddPoint(TrajectoryBase::TPOINT(q,probot->GetTransform(),0.0f));
@@ -101,7 +101,7 @@ int main(int argc, char ** argv)
         while(!probot->GetController()->IsDone()) {
             usleep(1000);
         }
-    }       
+    }
 
     thviewer.join(); // wait for the viewer thread to exit
     penv->Destroy(); // destroy

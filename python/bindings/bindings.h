@@ -34,11 +34,11 @@
 #include <boost/typeof/std/set.hpp>
 #include <boost/typeof/std/string.hpp>
 
-#define FOREACH(it, v) for(BOOST_TYPEOF(v)::iterator it = (v).begin(); it != (v).end(); (it)++)
-#define FOREACH_NOINC(it, v) for(BOOST_TYPEOF(v)::iterator it = (v).begin(); it != (v).end(); )
+#define FOREACH(it, v) for(BOOST_TYPEOF(v) ::iterator it = (v).begin(); it != (v).end(); (it)++)
+#define FOREACH_NOINC(it, v) for(BOOST_TYPEOF(v) ::iterator it = (v).begin(); it != (v).end(); )
 
-#define FOREACHC(it, v) for(BOOST_TYPEOF(v)::const_iterator it = (v).begin(); it != (v).end(); (it)++)
-#define FOREACHC_NOINC(it, v) for(BOOST_TYPEOF(v)::const_iterator it = (v).begin(); it != (v).end(); )
+#define FOREACHC(it, v) for(BOOST_TYPEOF(v) ::const_iterator it = (v).begin(); it != (v).end(); (it)++)
+#define FOREACHC_NOINC(it, v) for(BOOST_TYPEOF(v) ::const_iterator it = (v).begin(); it != (v).end(); )
 #define RAVE_REGISTER_BOOST
 
 #else
@@ -50,8 +50,8 @@
 #include <string>
 #include <stdexcept>
 
-#define FOREACH(it, v) for(typeof((v).begin()) it = (v).begin(); it != (v).end(); (it)++)
-#define FOREACH_NOINC(it, v) for(typeof((v).begin()) it = (v).begin(); it != (v).end(); )
+#define FOREACH(it, v) for(typeof((v).begin())it = (v).begin(); it != (v).end(); (it)++)
+#define FOREACH_NOINC(it, v) for(typeof((v).begin())it = (v).begin(); it != (v).end(); )
 
 #define FOREACHC FOREACH
 #define FOREACHC_NOINC FOREACH_NOINC
@@ -66,18 +66,26 @@ using namespace boost::python;
 class PyVoidHandle
 {
 public:
-    PyVoidHandle() {}
-    PyVoidHandle(boost::shared_ptr<void> handle) : _handle(handle) {}
-    void close() { _handle.reset(); }
+    PyVoidHandle() {
+    }
+    PyVoidHandle(boost::shared_ptr<void> handle) : _handle(handle) {
+    }
+    void close() {
+        _handle.reset();
+    }
     boost::shared_ptr<void> _handle;
 };
 
 class PyVoidHandleConst
 {
 public:
-    PyVoidHandleConst() {}
-    PyVoidHandleConst(boost::shared_ptr<void const> handle) : _handle(handle) {}
-    void close() { _handle.reset(); }
+    PyVoidHandleConst() {
+    }
+    PyVoidHandleConst(boost::shared_ptr<void const> handle) : _handle(handle) {
+    }
+    void close() {
+        _handle.reset();
+    }
     boost::shared_ptr<void const> _handle;
 };
 
@@ -137,11 +145,11 @@ struct exception_translator
         register_exception_translator<T>(&exception_translator::translate);
 
         //Register custom r-value converter
-        //There are situations, where we have to pass the exception back to 
+        //There are situations, where we have to pass the exception back to
         //C++ library. This will do the trick
         converter::registry::push_back( &exception_translator::convertible, &exception_translator::construct, type_id<T>() );
     }
-    
+
     static void translate( const T& err )
     {
         object pimpl_err( err );
@@ -152,18 +160,18 @@ struct exception_translator
 
     //Sometimes, exceptions should be passed back to the library.
     static void* convertible(PyObject* py_obj){
-        if( 1 != PyObject_IsInstance( py_obj, PyExc_Exception ) ){
+        if( 1 != PyObject_IsInstance( py_obj, PyExc_Exception ) ) {
             return 0;
         }
-        
-        if( !PyObject_HasAttrString( py_obj, "_pimpl" ) ){
+
+        if( !PyObject_HasAttrString( py_obj, "_pimpl" ) ) {
             return 0;
         }
-        
-        object pyerr( handle<>( borrowed( py_obj ) ) );        
+
+        object pyerr( handle<>( borrowed( py_obj ) ) );
         object pimpl = getattr( pyerr, "_pimpl" );
         extract<T> type_checker( pimpl );
-        if( !type_checker.check() ){
+        if( !type_checker.check() ) {
             return 0;
         }
         return py_obj;
@@ -172,10 +180,10 @@ struct exception_translator
     static void construct( PyObject* py_obj, converter::rvalue_from_python_stage1_data* data)
     {
         typedef converter::rvalue_from_python_storage<T> storage_t;
-        
-        object pyerr( handle<>( borrowed( py_obj ) ) );        
+
+        object pyerr( handle<>( borrowed( py_obj ) ) );
         object pimpl = getattr( pyerr, "_pimpl" );
-        
+
         storage_t* the_storage = reinterpret_cast<storage_t*>( data );
         void* memory_chunk = the_storage->storage.bytes;
         T* cpp_err = NULL;
@@ -185,7 +193,7 @@ struct exception_translator
 };
 
 // register const versions of the classes
-//template <class T> inline T* get_pointer( boost::shared_ptr<const T> 
+//template <class T> inline T* get_pointer( boost::shared_ptr<const T>
 //const& p){
 //     return const_cast<T*>(p.get());
 //}
@@ -273,7 +281,7 @@ inline numeric::array toPyArrayN(const float* pvalues, size_t N)
     if( N == 0 ) {
         return static_cast<numeric::array>(numeric::array(boost::python::list()).astype("f4"));
     }
-    npy_intp dims[] = {N};
+    npy_intp dims[] = { N};
     PyObject *pyvalues = PyArray_SimpleNew(1,dims, PyArray_FLOAT);
     if( pvalues != NULL ) {
         memcpy(PyArray_DATA(pyvalues),pvalues,N*sizeof(float));
@@ -305,7 +313,7 @@ inline numeric::array toPyArrayN(const double* pvalues, size_t N)
     if( N == 0 ) {
         return static_cast<numeric::array>(numeric::array(boost::python::list()).astype("f8"));
     }
-    npy_intp dims[] = {N};
+    npy_intp dims[] = { N};
     PyObject *pyvalues = PyArray_SimpleNew(1,dims, PyArray_DOUBLE);
     if( pvalues != NULL ) {
         memcpy(PyArray_DATA(pyvalues),pvalues,N*sizeof(double));
@@ -356,7 +364,7 @@ inline numeric::array toPyArrayN(const uint8_t* pvalues, size_t N)
     if( N == 0 ) {
         return static_cast<numeric::array>(numeric::array(boost::python::list()).astype("u1"));
     }
-    npy_intp dims[] = {N};
+    npy_intp dims[] = { N};
     PyObject *pyvalues = PyArray_SimpleNew(1,&dims[0], PyArray_UINT8);
     if( pvalues != NULL ) {
         memcpy(PyArray_DATA(pyvalues),pvalues,N*sizeof(uint8_t));
@@ -369,7 +377,7 @@ inline numeric::array toPyArrayN(const int* pvalues, size_t N)
     if( N == 0 ) {
         return static_cast<numeric::array>(numeric::array(boost::python::list()).astype("i4"));
     }
-    npy_intp dims[] = {N};
+    npy_intp dims[] = { N};
     PyObject *pyvalues = PyArray_SimpleNew(1,&dims[0], PyArray_INT32);
     if( pvalues != NULL ) {
         memcpy(PyArray_DATA(pyvalues),pvalues,N*sizeof(int));
@@ -382,7 +390,7 @@ inline numeric::array toPyArrayN(const uint32_t* pvalues, size_t N)
     if( N == 0 ) {
         return static_cast<numeric::array>(numeric::array(boost::python::list()).astype("u4"));
     }
-    npy_intp dims[] = {N};
+    npy_intp dims[] = { N};
     PyObject *pyvalues = PyArray_SimpleNew(1,&dims[0], PyArray_UINT32);
     if( pvalues != NULL ) {
         memcpy(PyArray_DATA(pyvalues),pvalues,N*sizeof(uint32_t));
@@ -395,7 +403,7 @@ inline object toPyList(const std::vector<T>& v)
 {
     boost::python::list lvalues;
     FOREACHC(it,v)
-        lvalues.append(object(*it));
+    lvalues.append(object(*it));
     return lvalues;
 }
 
@@ -415,7 +423,7 @@ inline numeric::array toPyArray(const std::vector<T>& v, std::vector<npy_intp>& 
         return toPyArrayN((T*)NULL,0);
     uint64_t totalsize = 1;
     FOREACH(it,dims)
-        totalsize *= *it;
+    totalsize *= *it;
     BOOST_ASSERT(totalsize == v.size());
     return toPyArrayN(&v[0],dims);
 }

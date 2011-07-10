@@ -27,7 +27,7 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
         /// as long as this pointer is valid, the reader will remain registered
         s_RegisteredReader = RaveRegisterXMLReader(PT_Robot,"collisionmap",CollisionMapRobot::CreateXMLReader);
     }
-    
+
     switch(type) {
     case PT_Robot:
         if( interfacename == "genericrobot") {

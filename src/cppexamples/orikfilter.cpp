@@ -4,7 +4,7 @@
     Shows how to use set a custom inverse kinematics filter to add extra constraints.
 
     <b>Full Example Code:</b>
-*/
+ */
 #include <openrave-core.h>
 #include <vector>
 #include <sstream>
@@ -47,7 +47,7 @@ IkFilterReturn MyTimeoutFilter(std::vector<dReal>&, RobotBase::ManipulatorPtr, c
     if( GetMilliTime()-starttime > 100 ) {
         RAVELOG_INFO("quitting\n");
         return IKFR_Quit;
-    }   
+    }
     return IKFR_Success;
 }
 
@@ -93,7 +93,7 @@ int main(int argc, char ** argv)
             }
             probot->SetActiveDOFValues(v);
             bool bincollision = !penv->CheckCollision(probot) && !probot->CheckSelfCollision();
-            
+
             uint32_t starttime = GetMilliTime();
             pmanip->GetIkSolver()->SetCustomFilter(boost::bind(MyTimeoutFilter,_1,_2,_3,starttime));
             bool bsuccess = pmanip->FindIKSolution(pmanip->GetIkParameterization(IkParameterization::Type_Transform6D),v,IKFO_CheckEnvCollisions);

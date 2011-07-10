@@ -5,7 +5,7 @@
     The default manipulator is used for the robot.
 
     <b>Full Example Code:</b>
-*/
+ */
 #include <openrave-core.h>
 #include <vector>
 #include <sstream>

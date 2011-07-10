@@ -5,7 +5,7 @@ set( CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS TRUE )
 # Define here the needed parameters
 set (OPENRAVE_VERSION_MAJOR 0)
 set (OPENRAVE_VERSION_MINOR 4)
-set (OPENRAVE_VERSION_PATCH 0)
+set (OPENRAVE_VERSION_PATCH 1)
 set (OPENRAVE_VERSION ${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}.${OPENRAVE_VERSION_PATCH})
 set (OPENRAVE_SOVERSION ${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR})
 message(STATUS "Compiling OpenRAVE Version ${OPENRAVE_VERSION}, soversion=${OPENRAVE_SOVERSION}")
@@ -372,6 +372,7 @@ add_custom_command(
        "${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/plugininfo.h" OPENRAVE_PLUGININFO_HASH
        > "${interfacehashes_h}"
   DEPENDS cpp-gen-md5
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/interface.h
   ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/collisionchecker.h
   ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/robot.h
   ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/planner.h
@@ -385,7 +386,8 @@ add_custom_command(
   ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/trajectory.h
   ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/viewer.h
   ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/spacesampler.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/environment.h)
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/environment.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/plugininfo.h)
 
 add_custom_target(interfacehashes_target ALL DEPENDS ${interfacehashes_h} ${EXTRA_MSVC_DEPEND})
 

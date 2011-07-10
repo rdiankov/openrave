@@ -1,7 +1,7 @@
 Working With the Source Code
 ============================
 
-Most of these guidelines are for Linux users.
+These guidelines are for OpenRAVE Developers using Linux.
 
 Building
 --------
@@ -21,10 +21,22 @@ Can setup `colorgcc <https://github.com/johannes/colorgcc>`_ and `ccache <http:/
 
 Note that this will create symlinks to the compilers inside **/usr/local/bin**.
 
+Indenting C++ Files
+-------------------
+
+OpenRAVE C++ code should automatically be run with **uncrustify** before being committed. Currently OpenRAVE requires uncrustify version >=0.57. First put :download:`.uncrustify.cfg <../../../sandbox/.uncrustify.cfg>` in your $HOME directory. The run a file before committing using:
+
+.. code-block:: bash
+
+  uncrustify --no-backup myfile.cpp
+
 Emacs
 -----
 
-When using `Collection of Emacs Development Environment Tools (CEDEC) <http://cedet.sourceforge.net/>`_, make sure to put the following Lisp code in your .emacs file in order to get auto-completion for the OpenRAVE C++ API.
+Auto-Completion
+###############
+
+To get auto-completion for the OpenRAVE C++ API using `Collection of Emacs Development Environment Tools (CEDEC) <http://cedet.sourceforge.net/>`_, make sure to put the following Lisp code in your **.emacs** file:
 
 .. code-block:: common-lisp
 
@@ -41,3 +53,33 @@ When using `Collection of Emacs Development Environment Tools (CEDEC) <http://ce
   (semantic-add-system-include openrave-base-dir 'c-mode)
   (add-to-list 'auto-mode-alist (cons openrave-base-dir 'c++-mode))
   (add-to-list 'semantic-lex-c-preprocessor-symbol-file (concat openrave-base-dir "/openrave/config.h"))
+
+Automatic Indention
+###################
+
+It is possible to setup emacs to automatically perform call **uncrustify** when saving a file by downloading the `emacs-uncrustify <https://github.com/glima/Emacs-uncrustify>`_  pakcage and putting the following in your **.emacs** file:
+
+.. code-block:: common-lisp
+
+  (require 'uncrustify)
+  (setq uncrustify-uncrustify-on-save t)
+  (setq uncrustify-args "-l CPP")
+
+Bookmarks
+#########
+
+Using the `bm.el <http://www.nongnu.org/bm/>`_ library for getting bookmarks. If using bookmarks with uncrustify, have to add the following code to your **.emacs** file:
+
+.. code-block:: common-lisp
+
+  (setq uncrustify-uncrustify-on-save nil)
+  (add-hook 'c-mode-common-hook
+           '(lambda()
+              (make-local-variable 'write-contents-hooks)
+              (add-hook 'write-contents-hooks
+                        '(lambda()
+                           (bm-buffer-save)
+                           (uncrustify-buffer)
+                           (bm-buffer-restore)
+                           (not-modified)
+                           ))))

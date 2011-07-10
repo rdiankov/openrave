@@ -13,8 +13,6 @@
 # limitations under the License.
 from common_test_openrave import *
 
-_multiprocess_can_split_ = True
-
 def test_transformations():
     print 'tests basic math transformations'
     for i in range(20):

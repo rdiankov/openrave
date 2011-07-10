@@ -22,17 +22,19 @@ class WorkspaceTrajectoryTracker : public PlannerBase
 {
     class SetCustomFilterScope
     {
-    public:
-    SetCustomFilterScope(IkSolverBasePtr pik, const IkSolverBase::IkFilterCallbackFn& filterfn) : _pik(pik){
+public:
+        SetCustomFilterScope(IkSolverBasePtr pik, const IkSolverBase::IkFilterCallbackFn& filterfn) : _pik(pik){
             _pik->SetCustomFilter(filterfn);
         }
-        virtual ~SetCustomFilterScope() { _pik->SetCustomFilter(IkSolverBase::IkFilterCallbackFn()); }
-    private:
+        virtual ~SetCustomFilterScope() {
+            _pik->SetCustomFilter(IkSolverBase::IkFilterCallbackFn());
+        }
+private:
         IkSolverBasePtr _pik;
     };
 
-public:    
- WorkspaceTrajectoryTracker(EnvironmentBasePtr penv) : PlannerBase(penv)
+public:
+    WorkspaceTrajectoryTracker(EnvironmentBasePtr penv) : PlannerBase(penv)
     {
         __description = "\
 :Interface Author:  Rosen Diankov\n\n\
@@ -58,7 +60,8 @@ Planner Parameters\n\
         _report.reset(new CollisionReport());
         _filteroptions = 0;
     }
-    virtual ~WorkspaceTrajectoryTracker() {}
+    virtual ~WorkspaceTrajectoryTracker() {
+    }
 
     virtual bool InitPlan(RobotBasePtr probot, PlannerParametersConstPtr params)
     {
@@ -74,14 +77,14 @@ Planner Parameters\n\
             return false;
         }
 
-        if( !parameters->workspacetraj || parameters->workspacetraj->GetTotalDuration() == 0 || parameters->workspacetraj->GetPoints().size() == 0 ) {
+        if( !parameters->workspacetraj ||( parameters->workspacetraj->GetTotalDuration() == 0) ||( parameters->workspacetraj->GetPoints().size() == 0) ) {
             RAVELOG_ERROR("input trajectory needs to be initialized with interpolation information\n");
         }
 
         // check if the parameters configuration space actually reflects the active manipulator, move to the upper and lower limits
         {
             RobotBase::RobotStateSaver saver(_robot);
-            boost::array<std::vector<dReal>*,2> testvalues = {{&parameters->_vConfigLowerLimit,&parameters->_vConfigUpperLimit}};
+            boost::array<std::vector<dReal>*,2> testvalues = { { &parameters->_vConfigLowerLimit,&parameters->_vConfigUpperLimit}};
             vector<dReal> dummyvalues;
             for(size_t i = 0; i < testvalues.size(); ++i) {
                 parameters->_setstatefn(*testvalues[i]);
@@ -116,7 +119,7 @@ Planner Parameters\n\
         RobotBase::RobotStateSaver savestate(_robot);
         // should check collisio only for independent links that do not move during the planning process. This might require a CO_IndependentFromActiveDOFs option.
         //if(CollisionFunctions::CheckCollision(parameters,_robot,parameters->vinitialconfig, _report)) {
-    
+
         // validate the initial state if one exists
         if( parameters->vinitialconfig.size() > 0 ) {
             if( (int)parameters->vinitialconfig.size() != parameters->GetDOF() ) {
@@ -124,17 +127,17 @@ Planner Parameters\n\
                 return false;
             }
             parameters->_setstatefn(parameters->vinitialconfig);
-//            if( !parameters->_checkpathconstraintsfn(parameters->vinitialconfig, parameters->vinitialconfig,IT_OpenStart,ConfigurationListPtr()) ) {
-//                RAVELOG_WARN("initial state rejected by constraint fn\n");
-//                return false;
-//            }
+            //            if( !parameters->_checkpathconstraintsfn(parameters->vinitialconfig, parameters->vinitialconfig,IT_OpenStart,ConfigurationListPtr()) ) {
+            //                RAVELOG_WARN("initial state rejected by constraint fn\n");
+            //                return false;
+            //            }
         }
 
         if( !_manip->GetIkSolver() ) {
             RAVELOG_ERROR(str(boost::format("manipulator %s does not have ik solver set\n")%_manip->GetName()));
             return false;
         }
-        boost::array<IkParameterization::Type, 3> order = {{IkParameterization::Type_Transform6D, IkParameterization::Type_Rotation3D, IkParameterization::Type_Translation3D}};
+        boost::array<IkParameterization::Type, 3> order = { { IkParameterization::Type_Transform6D, IkParameterization::Type_Rotation3D, IkParameterization::Type_Translation3D}};
         _iktype = IkParameterization::Type_None;
         for(size_t i = 0; i < order.size(); ++i) {
             if( _manip->GetIkSolver()->Supports(order[i]) ) {
@@ -146,7 +149,7 @@ Planner Parameters\n\
             RAVELOG_ERROR(str(boost::format("WorkspaceTrajectoryTracker: unsupported iktype for manipulator %s")%_manip->GetName()));
             return false;
         }
-        
+
         _parameters = parameters;
         return true;
     }
@@ -157,13 +160,13 @@ Planner Parameters\n\
             RAVELOG_ERROR("WorkspaceTrajectoryTracker::PlanPath - Error, planner not initialized\n");
             return false;
         }
-        
+
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         uint32_t basetime = GetMilliTime();
         RobotBase::RobotStateSaver savestate(_robot);
-        _robot->SetActiveDOFs(_manip->GetArmIndices()); // should be set by user anyway, but this is an extra precaution
+        _robot->SetActiveDOFs(_manip->GetArmIndices());     // should be set by user anyway, but this is an extra precaution
         CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
-        
+
         // first check if the end effectors are in collision
         TrajectoryBaseConstPtr workspacetraj = _parameters->workspacetraj;
         TrajectoryBase::TPOINT pt;
@@ -175,7 +178,7 @@ Planner Parameters\n\
                 return false;
             }
         }
-        
+
         dReal fstarttime = 0, fendtime = workspacetraj->GetTotalDuration();
         bool bPrevInCollision = true;
         list<Transform> listtransforms;
@@ -186,7 +189,7 @@ Planner Parameters\n\
             if( _iktype == IkParameterization::Type_Transform6D ) {
                 // end effector is only fully known given the entire 6D transform!
                 if( _manip->CheckEndEffectorCollision(pt.trans,_report) ) {
-                    if( ftime < _parameters->ignorefirstcollision && bPrevInCollision ) {
+                    if(( ftime < _parameters->ignorefirstcollision) && bPrevInCollision ) {
                         continue;
                     }
                     if( !bPrevInCollision ) {
@@ -205,10 +208,10 @@ Planner Parameters\n\
                 }
             }
             else {
-                bPrevInCollision = false; // not sure what else to do
+                bPrevInCollision = false;     // not sure what else to do
             }
         }
-        
+
         if( bPrevInCollision ) {
             // only the last point is valid
             fstarttime = workspacetraj->GetTotalDuration();
@@ -219,7 +222,7 @@ Planner Parameters\n\
         }
 
         listtransforms.push_back(tlasttrans);
-        
+
         _vchildlinks.resize(0);
         if( _iktype == IkParameterization::Type_Transform6D ) {
             // disable all child links since we've already checked their collision
@@ -232,7 +235,7 @@ Planner Parameters\n\
         if( !poutputtraj ) {
             poutputtraj = RaveCreateTrajectory(GetEnv(),"");
         }
-        
+
         _mjacobian.resize(boost::extents[0][0]);
         _vprevsolution.resize(0);
         poutputtraj->Reset(_parameters->GetDOF());
@@ -260,7 +263,7 @@ Planner Parameters\n\
                     // haven't even checked with environment collisions, so a solution really doesn't exist
                     return false;
                 }
-                if( ftime < _parameters->ignorefirstcollision && bPrevInCollision ) {
+                if(( ftime < _parameters->ignorefirstcollision) && bPrevInCollision ) {
                     _filteroptions = 0;
                     if( !_manip->FindIKSolution(ikparam,vsolution,_filteroptions) ) {
                         return false;
@@ -294,7 +297,9 @@ Planner Parameters\n\
         return true;
     }
 
-    virtual PlannerParametersConstPtr GetParameters() const { return _parameters; }
+    virtual PlannerParametersConstPtr GetParameters() const {
+        return _parameters;
+    }
 
 protected:
     void _SetPreviousSolution(const std::vector<dReal>& vsolution, bool bsetjacobian=true)
@@ -328,7 +333,7 @@ protected:
     }
 
     IkFilterReturn _ValidateSolution(std::vector<dReal>& vsolution, RobotBase::ManipulatorPtr pmanip, const IkParameterization& ikp)
-    {        
+    {
         // check if continuous with previous solution using the jacobian
         if( _mjacobian.num_elements() > 0 ) {
             Vector expecteddeltatrans;
@@ -357,8 +362,8 @@ protected:
                 dReal transangle = expecteddeltatrans.dot3(jdeltatrans);
                 dReal expecteddeltatrans_len = expecteddeltatrans.lengthsqr3();
                 dReal jdeltatrans_len = jdeltatrans.lengthsqr3();
-                if( jdeltatrans_len > 1e-7 * solutiondiff ) { // first see if there is a direction
-                    if( transangle < 0 || transangle*transangle  < _fMaxCosDeviationAngle*_fMaxCosDeviationAngle*expecteddeltatrans_len*jdeltatrans_len ) {
+                if( jdeltatrans_len > 1e-7 * solutiondiff ) {     // first see if there is a direction
+                    if(( transangle < 0) ||( transangle*transangle < _fMaxCosDeviationAngle*_fMaxCosDeviationAngle*expecteddeltatrans_len*jdeltatrans_len) ) {
                         //RAVELOG_INFO("rejected translation: %e < %e\n",transangle,RaveSqrt(_fMaxCosDeviationAngle*_fMaxCosDeviationAngle*expecteddeltatrans_len*jdeltatrans_len));
                         return IKFR_Reject;
                     }
@@ -392,8 +397,8 @@ protected:
                 dReal quatangle = expecteddeltaquat.dot(jdeltaquat);
                 dReal expecteddeltaquat_len = expecteddeltaquat.lengthsqr4();
                 dReal jdeltaquat_len = jdeltaquat.lengthsqr4();
-                if( jdeltaquat_len > 1e-4 * solutiondiff ) { // first see if there is a direction
-                    if( quatangle < 0 || quatangle*quatangle  < 0.95f*0.95f*expecteddeltaquat_len*jdeltaquat_len ) {
+                if( jdeltaquat_len > 1e-4 * solutiondiff ) {     // first see if there is a direction
+                    if(( quatangle < 0) ||( quatangle*quatangle < 0.95f*0.95f*expecteddeltaquat_len*jdeltaquat_len) ) {
                         //RAVELOG_INFO("rejected rotation: %e < %e\n",quatangle,RaveSqrt(_fMaxCosDeviationAngle*_fMaxCosDeviationAngle*expecteddeltaquat.lengthsqr3()*jdeltaquat.lengthsqr3()));
                         return IKFR_Reject;
                     }
@@ -414,7 +419,7 @@ protected:
             FOREACH(it,_vchildlinks) {
                 (*it)->Enable(true);
             }
-            if( !_parameters->_checkpathconstraintsfn(_vprevsolution.size() > 0 ? _vprevsolution : vsolution, vsolution,IT_Open,ConfigurationListPtr()) ) {
+            if( !_parameters->_checkpathconstraintsfn((_vprevsolution.size() > 0) ? _vprevsolution : vsolution, vsolution,IT_Open,ConfigurationListPtr()) ) {
                 return IKFR_Reject;
             }
             FOREACH(it,_vchildlinks) {
@@ -440,49 +445,49 @@ protected:
     vector<dReal> _vprevsolution;
 
     // moving straight using jacobian (doesn't work as well)
-//            if( !pconstraints ) {
-//                boost::array<double,6> vconstraintfreedoms = {{1,1,0,1,1,0}}; // only rotate and translate across z
-//                Transform tframe; tframe.rot = quatRotateDirection(direction,Vector(0,0,1));
-//                pconstraints.reset(new CM::GripperJacobianConstrains<double>(robot->GetActiveManipulator(),tframe,vconstraintfreedoms,fjacobianerror));
-//                pconstraints->_distmetricfn = boost::bind(&CM::SimpleDistMetric::Eval,distmetricfn,_1,_2);
-//                eeindex = robot->GetActiveManipulator()->GetEndEffector()->GetIndex();
-//                J.resize(3,robot->GetActiveDOF());
-//                invJJt.resize(3,3);
-//                Jerror.resize(3,1);
-//                Jerror(0,0) = direction.x*stepsize; Jerror(1,0) = direction.y*stepsize; Jerror(2,0) = direction.z*stepsize;
-//            }
-//
-//            robot->CalculateActiveJacobian(eeindex,robot->GetActiveManipulator()->GetTransform().trans,vjacobian);
-//            const double lambda2 = 1e-8; // normalization constant
-//            for(size_t j = 0; j < 3; ++j) {
-//                std::copy(vjacobian[j].begin(),vjacobian[j].end(),J.find2(0,j,0));
-//            }
-//            Jt = trans(J);
-//            invJJt = prod(J,Jt);
-//            for(int j = 0; j < 3; ++j) {
-//                invJJt(j,j) += lambda2;
-//            }
-//            try {
-//                if( !pconstraints->InvertMatrix(invJJt,invJJt) ) {
-//                    RAVELOG_WARN("failed to invert matrix\n");
-//                    break;
-//                }
-//            }
-//            catch(...) {
-//                RAVELOG_WARN("failed to invert matrix!!\n");
-//                break;
-//            }
-//            invJ = prod(Jt,invJJt);
-//            qdelta = prod(invJ,Jerror);
-//            for(size_t j = 0; j < point.q.size(); ++j) {
-//                point.q[j] = vPrevValues[j] + qdelta(j,0);
-//            }
-//            if( !pconstraints->RetractionConstraint(vPrevValues,point.q,0) ) {
-//                break;
-//            }
-//            robot->SetActiveDOFValues(point.q);
-//            bool bInCollision = robot->CheckSelfCollision();
-//            Transform tdelta = handTr.inverse()*robot->GetActiveManipulator()->GetTransform();
+    //            if( !pconstraints ) {
+    //                boost::array<double,6> vconstraintfreedoms = {{1,1,0,1,1,0}}; // only rotate and translate across z
+    //                Transform tframe; tframe.rot = quatRotateDirection(direction,Vector(0,0,1));
+    //                pconstraints.reset(new CM::GripperJacobianConstrains<double>(robot->GetActiveManipulator(),tframe,vconstraintfreedoms,fjacobianerror));
+    //                pconstraints->_distmetricfn = boost::bind(&CM::SimpleDistMetric::Eval,distmetricfn,_1,_2);
+    //                eeindex = robot->GetActiveManipulator()->GetEndEffector()->GetIndex();
+    //                J.resize(3,robot->GetActiveDOF());
+    //                invJJt.resize(3,3);
+    //                Jerror.resize(3,1);
+    //                Jerror(0,0) = direction.x*stepsize; Jerror(1,0) = direction.y*stepsize; Jerror(2,0) = direction.z*stepsize;
+    //            }
+    //
+    //            robot->CalculateActiveJacobian(eeindex,robot->GetActiveManipulator()->GetTransform().trans,vjacobian);
+    //            const double lambda2 = 1e-8; // normalization constant
+    //            for(size_t j = 0; j < 3; ++j) {
+    //                std::copy(vjacobian[j].begin(),vjacobian[j].end(),J.find2(0,j,0));
+    //            }
+    //            Jt = trans(J);
+    //            invJJt = prod(J,Jt);
+    //            for(int j = 0; j < 3; ++j) {
+    //                invJJt(j,j) += lambda2;
+    //            }
+    //            try {
+    //                if( !pconstraints->InvertMatrix(invJJt,invJJt) ) {
+    //                    RAVELOG_WARN("failed to invert matrix\n");
+    //                    break;
+    //                }
+    //            }
+    //            catch(...) {
+    //                RAVELOG_WARN("failed to invert matrix!!\n");
+    //                break;
+    //            }
+    //            invJ = prod(Jt,invJJt);
+    //            qdelta = prod(invJ,Jerror);
+    //            for(size_t j = 0; j < point.q.size(); ++j) {
+    //                point.q[j] = vPrevValues[j] + qdelta(j,0);
+    //            }
+    //            if( !pconstraints->RetractionConstraint(vPrevValues,point.q,0) ) {
+    //                break;
+    //            }
+    //            robot->SetActiveDOFValues(point.q);
+    //            bool bInCollision = robot->CheckSelfCollision();
+    //            Transform tdelta = handTr.inverse()*robot->GetActiveManipulator()->GetTransform();
 };
 
 #endif

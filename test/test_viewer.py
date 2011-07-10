@@ -13,22 +13,11 @@
 # limitations under the License.
 from common_test_openrave import *
 
-class TestEnvironment(EnvironmentSetup):
-    def test_load(self):
+class TestViewer(EnvironmentSetup):
+    def tes_colladaload(self):
         env=self.env
-        env.Load('../src/models/WAM/wam0.iv')
-        
-        for fullfilename in locate('*.xml','../src/data'):
-            print 'loading: ',fullfilename
-            env.Reset()
-            assert(env.Load(fullfilename))
-            
-    def test_loadnogeom(self):
-        env=self.env
-        assert(env.Load('robots/pr2-beta-static.zae',{'skipgeometry':'1'}))
-        robot=env.GetRobots()[0]
-        trimesh=env.Triangulate(robot)
-        assert(len(trimesh.vertices)==0)
-        
-    def test_misc(self):
-        assert(self.env.plot3([0,0,0],10)==None) # no viewer attached
+        robot = env.ReadRobotURI('robots/pr2-beta-static.zae')
+        env.AddRobot(robot)
+        env.SetViewer('qtcoin')
+        robot2 = env.ReadRobotURI(robot.GetURI())
+        env.AddRobot(robot2,True)

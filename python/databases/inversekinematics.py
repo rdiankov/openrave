@@ -684,6 +684,7 @@ class InverseKinematicsModel(DatabaseGenerator):
             log.info('success rate: %f, wrong solutions: %f, no solutions: %f, missing solution: %f',float(res[1])/numtested,wrongrate,len(solutionresults[1])/numtested,len(solutionresults[2])/numtested)
         return successrate, wrongrate
 
+
     def show(self,delay=0.1,options=None,forceclosure=True):
         self.env.SetViewer('qtcoin')
         with self.ArmVisibility(self.manip,0.9):

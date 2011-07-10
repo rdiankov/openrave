@@ -31,24 +31,44 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
         cerr << "failed to add force to dummy " << dJointGetType(id) << endl;
     }
 
-    static void dJointAddHingeTorque_(dJointID id, const dReal* vals) { dJointAddHingeTorque(id, vals[0]); }
-    static void dJointAddSliderForce_(dJointID id, const dReal* vals) { dJointAddSliderForce(id, vals[0]); }
-    static void dJointAddUniversalTorques_(dJointID id, const dReal* vals) { dJointAddUniversalTorques(id, vals[0], vals[1]); }
-    static void dJointAddHinge2Torques_(dJointID id, const dReal* vals) { dJointAddHinge2Torques(id, vals[0], vals[1]); }
+    static void dJointAddHingeTorque_(dJointID id, const dReal* vals) {
+        dJointAddHingeTorque(id, vals[0]);
+    }
+    static void dJointAddSliderForce_(dJointID id, const dReal* vals) {
+        dJointAddSliderForce(id, vals[0]);
+    }
+    static void dJointAddUniversalTorques_(dJointID id, const dReal* vals) {
+        dJointAddUniversalTorques(id, vals[0], vals[1]);
+    }
+    static void dJointAddHinge2Torques_(dJointID id, const dReal* vals) {
+        dJointAddHinge2Torques(id, vals[0], vals[1]);
+    }
 
-    static dReal dJointGetHinge2Angle2_(dJointID id) { return 0; }
+    static dReal dJointGetHinge2Angle2_(dJointID id) {
+        return 0;
+    }
 
-    static dReal JointGetBallVelocityX(dJointID) { return 0; }
-    static dReal JointGetBallVelocityY(dJointID) { return 0; }
-    static dReal JointGetBallVelocityZ(dJointID) { return 0; }
+    static dReal JointGetBallVelocityX(dJointID) {
+        return 0;
+    }
+    static dReal JointGetBallVelocityY(dJointID) {
+        return 0;
+    }
+    static dReal JointGetBallVelocityZ(dJointID) {
+        return 0;
+    }
 
-    inline boost::shared_ptr<ODEPhysicsEngine> shared_physics() { return boost::static_pointer_cast<ODEPhysicsEngine>(shared_from_this()); }
-    inline boost::shared_ptr<ODEPhysicsEngine const> shared_physics_const() const { return boost::static_pointer_cast<ODEPhysicsEngine const>(shared_from_this()); }
+    inline boost::shared_ptr<ODEPhysicsEngine> shared_physics() {
+        return boost::static_pointer_cast<ODEPhysicsEngine>(shared_from_this());
+    }
+    inline boost::shared_ptr<ODEPhysicsEngine const> shared_physics_const() const {
+        return boost::static_pointer_cast<ODEPhysicsEngine const>(shared_from_this());
+    }
 
     class PhysicsPropertiesXMLReader : public BaseXMLReader
     {
-    public:
-    PhysicsPropertiesXMLReader(boost::shared_ptr<ODEPhysicsEngine> physics, const AttributesList& atts) : _physics(physics) {
+public:
+        PhysicsPropertiesXMLReader(boost::shared_ptr<ODEPhysicsEngine> physics, const AttributesList& atts) : _physics(physics) {
         }
 
         virtual ProcessElement startElement(const std::string& name, const AttributesList& atts) {
@@ -57,8 +77,8 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
                     return PE_Support;
                 return PE_Ignore;
             }
-            
-            if( name != "friction" && name != "selfcollision" && name != "gravity" && name != "contact" ) {
+
+            if(( name != "friction") &&( name != "selfcollision") &&( name != "gravity") &&( name != "contact") ) {
                 return PE_Pass;
             }
             _ss.str("");
@@ -84,8 +104,8 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
                 if( !!_ss )
                     _physics->SetGravity(v);
             }
-            else if( name == "contact" ) { // check out http://www.ode.org/ode-latest-userguide.html#sec_7_3_7
-                
+            else if( name == "contact" ) {         // check out http://www.ode.org/ode-latest-userguide.html#sec_7_3_7
+
             }
             else
                 RAVELOG_ERROR("unknown field %s\n", name.c_str());
@@ -106,19 +126,19 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
             }
         }
 
-    protected:
+protected:
         BaseXMLReaderPtr _pcurreader;
         boost::shared_ptr<ODEPhysicsEngine> _physics;
         stringstream _ss;
     };
 
- public:
+public:
     static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const AttributesList& atts)
     {
         return BaseXMLReaderPtr(new PhysicsPropertiesXMLReader(boost::dynamic_pointer_cast<ODEPhysicsEngine>(ptr),atts));
     }
 
- ODEPhysicsEngine(OpenRAVE::EnvironmentBasePtr penv) : OpenRAVE::PhysicsEngineBase(penv), odespace(new ODESpace(penv, GetPhysicsInfo, true)) {
+    ODEPhysicsEngine(OpenRAVE::EnvironmentBasePtr penv) : OpenRAVE::PhysicsEngineBase(penv), odespace(new ODESpace(penv, GetPhysicsInfo, true)) {
         __description = ":Interface Author: Rosen Diankov\n\nODE physics engine";
         _globalfriction = 1.0f;
         _options = OpenRAVE::PEO_SelfCollisions;
@@ -129,7 +149,7 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
         _jointadd[dJointTypeSlider] = dJointAddSliderForce_;
         _jointadd[dJointTypeUniversal] = dJointAddUniversalTorques_;
         _jointadd[dJointTypeHinge2] = dJointAddHinge2Torques_;
-    
+
         _jointgetvel[dJointTypeBall].push_back(JointGetBallVelocityX);
         _jointgetvel[dJointTypeBall].push_back(JointGetBallVelocityY);
         _jointgetvel[dJointTypeBall].push_back(JointGetBallVelocityZ);
@@ -165,7 +185,7 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
         _report.reset();
         odespace->DestroyEnvironment();
     }
-    
+
     virtual bool InitKinBody(KinBodyPtr pbody)
     {
         OpenRAVE::UserDataPtr pinfo = odespace->InitKinBody(pbody);
@@ -342,7 +362,7 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
     {
         return _gravity;
     }
-    
+
     virtual void SimulateStep(OpenRAVE::dReal fTimeElapsed)
     {
         odespace->Synchronize();
@@ -356,7 +376,7 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
         }
 
         dSpaceCollide (odespace->GetSpace(),this,nearCallback);
-    
+
         vector<KinBodyPtr> vbodies;
         GetEnv()->GetBodies(vbodies);
 
@@ -389,10 +409,12 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
         _listcallbacks.clear();
     }
 
-    
- private:
-    static OpenRAVE::UserDataPtr GetPhysicsInfo(KinBodyConstPtr pbody) { return pbody->GetPhysicsData(); }
-    
+
+private:
+    static OpenRAVE::UserDataPtr GetPhysicsInfo(KinBodyConstPtr pbody) {
+        return pbody->GetPhysicsData();
+    }
+
     static void nearCallback(void *data, dGeomID o1, dGeomID o2)
     {
         ((ODEPhysicsEngine*)data)->_nearCallback(o1,o2);
@@ -417,7 +439,7 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
         }
 
         // ignore static, static collisions
-        if( (b1 == NULL || !dBodyIsEnabled(b1)) && (b2 == NULL || !dBodyIsEnabled(b2)) ) {
+        if( (( b1 == NULL) || !dBodyIsEnabled(b1)) && (( b2 == NULL) || !dBodyIsEnabled(b2)) ) {
             return;
         }
 
@@ -484,8 +506,8 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
             dJointID c = dJointCreateContact (odespace->GetWorld(),odespace->GetContactGroup(),contact+i);
 
             // make sure that static objects are not enabled by adding a joint attaching them
-            if( b1 ) b1 = dBodyIsEnabled(b1)?b1:0;
-            if( b2 ) b2 = dBodyIsEnabled(b2)?b2:0;
+            if( b1 ) b1 = dBodyIsEnabled(b1) ? b1 : 0;
+            if( b2 ) b2 = dBodyIsEnabled(b2) ? b2 : 0;
             dJointAttach (c, b1, b2);
 
             //wprintf(L"intersection %s %s\n", ((KinBody::Link*)dBodyGetData(b1))->GetName(), ((KinBody::Link*)dBodyGetData(b2))->GetName());
@@ -524,7 +546,7 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
     Vector _gravity;
     int _options;
     dReal _globalfriction;
-    
+
     typedef void (*JointSetFn)(dJointID, int param, dReal val);
     typedef dReal (*JointGetFn)(dJointID);
     typedef void (*JointAddForceFn)(dJointID, const dReal* vals);

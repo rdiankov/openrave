@@ -73,8 +73,8 @@ public:
 protected:
     class QtImageWindow : public QWidget
     {
-    public:
-    QtImageWindow(SensorBasePtr psensor) : QWidget(NULL), _psensor(psensor) {
+public:
+        QtImageWindow(SensorBasePtr psensor) : QWidget(NULL), _psensor(psensor) {
             _pdata = boost::static_pointer_cast<SensorBase::CameraSensorData>(_psensor->CreateSensorData(SensorBase::ST_Camera));
             _pdatanew = boost::static_pointer_cast<SensorBase::CameraSensorData>(_psensor->CreateSensorData(SensorBase::ST_Camera));
             _pgeom = boost::static_pointer_cast<SensorBase::CameraGeomData>(_psensor->GetSensorGeometry(SensorBase::ST_Camera));
@@ -91,7 +91,7 @@ protected:
 
         void timerEvent(QTimerEvent* event)
         {
-            if( _psensor->GetSensorData(_pdatanew) && _pdatanew->__stamp != _pdata->__stamp ) {
+            if( _psensor->GetSensorData(_pdatanew) &&( _pdatanew->__stamp != _pdata->__stamp) ) {
                 if( _pgeom->width*_pgeom->height*3 != (int)_pdatanew->vimagedata.size() ) {
                     RAVELOG_WARN(str(boost::format("QtImageWindow: sensor %s image wrong dims")%_psensor->GetName()));
                 }
@@ -113,7 +113,7 @@ protected:
             }
         }
 
-    private:
+private:
         QLabel *_label;
         SensorBasePtr _psensor;
         boost::shared_ptr<SensorBase::CameraSensorData> _pdatanew, _pdata;

@@ -18,6 +18,9 @@ from itertools import izip, combinations
 import nose
 from nose.tools import assert_raises
 import fnmatch
+import time
+
+_multiprocess_can_split_ = True
 
 g_epsilon = 1e-7
 g_jacobianstep = 0.01

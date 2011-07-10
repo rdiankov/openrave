@@ -22,8 +22,9 @@ public:
     {
         __description = ":Interface Author: Rosen Diankov\n\npath optimizer using linear shortcuts.";
     }
-    virtual ~ShortcutLinearPlanner() {}
-    
+    virtual ~ShortcutLinearPlanner() {
+    }
+
     virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr params)
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
@@ -54,11 +55,13 @@ public:
         return true;
     }
 
-    virtual PlannerParametersConstPtr GetParameters() const { return _parameters; }
-    
+    virtual PlannerParametersConstPtr GetParameters() const {
+        return _parameters;
+    }
+
     virtual bool PlanPath(TrajectoryBasePtr ptraj, boost::shared_ptr<std::ostream> pOutStream)
     {
-        if( !_parameters || !ptraj || ptraj->GetPoints().size() < 2 ) {
+        if( !_parameters || !ptraj ||( ptraj->GetPoints().size() < 2) ) {
             return false;
         }
         uint32_t basetime = GetMilliTime();
@@ -67,7 +70,7 @@ public:
         // subsample trajectory and add to list
         list< vector<dReal> > path;
         _SubsampleTrajectory(ptraj,path);
-        
+
         list< vector<dReal> >::iterator startNode, endNode;
         ConfigurationListPtr vconfigs(new ConfigurationList());
 
@@ -79,7 +82,7 @@ public:
             // pick a random node on the path, and a random jump ahead
             int endIndex = 2+(RaveRandomInt()%((int)path.size()-2));
             int startIndex = RaveRandomInt()%(endIndex-1);
-        
+
             startNode = path.begin();
             advance(startNode, startIndex);
             endNode = startNode;
@@ -181,7 +184,7 @@ protected:
     RobotBasePtr _robot;
     PlannerParametersPtr _parameters;
 };
-    
+
 //    virtual void _OptimizePathSingle(list<Node*>& path, int numiterations)
 //    {
 //        if( path.size() <= 2 )
@@ -198,17 +201,17 @@ protected:
 //        int i = numiterations;
 //        while(i > 0 && nrejected < (int)path.size()+4 ) {
 //            --i;
-//            
+//
 //            // pick a random node on the path, and a random jump ahead
 //            int endIndex = 2+(RaveRandomInt()%((int)path.size()-2));
 //            int startIndex = RaveRandomInt()%(endIndex-1);
 //            int dim = RaveRandomInt()%params->GetDOF();
-//            
+//
 //            nrejected++;
 //            startNode = path.begin(); advance(startNode, startIndex);
 //            endNode = startNode;
 //            advance(endNode, endIndex-startIndex);
-//            
+//
 //            prevNode = startNode;
 //            nextNode = prevNode; ++nextNode;
 //            vdists.resize(0);

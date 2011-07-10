@@ -21,16 +21,16 @@
 bool SampleProjectedOBBWithTest(const OBB& obb, dReal delta, const boost::function<bool(const Vector&)>& testfn,dReal allowableocclusion=0)
 {
     dReal fscalefactor = 0.95f; // have to make box smaller or else rays might miss
-    Vector vpoints[8] = {obb.pos + fscalefactor*(obb.right*obb.extents.x + obb.up*obb.extents.y + obb.dir*obb.extents.z),
-                         obb.pos + fscalefactor*(obb.right*obb.extents.x + obb.up*obb.extents.y - obb.dir*obb.extents.z),
-                         obb.pos + fscalefactor*(obb.right*obb.extents.x - obb.up*obb.extents.y + obb.dir*obb.extents.z),
-                         obb.pos + fscalefactor*(obb.right*obb.extents.x - obb.up*obb.extents.y - obb.dir*obb.extents.z),
-                         obb.pos + fscalefactor*(-obb.right*obb.extents.x + obb.up*obb.extents.y + obb.dir*obb.extents.z),
-                         obb.pos + fscalefactor*(-obb.right*obb.extents.x + obb.up*obb.extents.y - obb.dir*obb.extents.z),
-                         obb.pos + fscalefactor*(-obb.right*obb.extents.x - obb.up*obb.extents.y + obb.dir*obb.extents.z),
-                         obb.pos + fscalefactor*(-obb.right*obb.extents.x - obb.up*obb.extents.y - obb.dir*obb.extents.z)};
-//    Vector vpoints3d[8];
-//    for(int j = 0; j < 8; ++j) vpoints3d[j] = tcamera*vpoints[j];
+    Vector vpoints[8] = { obb.pos + fscalefactor*(obb.right*obb.extents.x + obb.up*obb.extents.y + obb.dir*obb.extents.z),
+                          obb.pos + fscalefactor*(obb.right*obb.extents.x + obb.up*obb.extents.y - obb.dir*obb.extents.z),
+                          obb.pos + fscalefactor*(obb.right*obb.extents.x - obb.up*obb.extents.y + obb.dir*obb.extents.z),
+                          obb.pos + fscalefactor*(obb.right*obb.extents.x - obb.up*obb.extents.y - obb.dir*obb.extents.z),
+                          obb.pos + fscalefactor*(-obb.right*obb.extents.x + obb.up*obb.extents.y + obb.dir*obb.extents.z),
+                          obb.pos + fscalefactor*(-obb.right*obb.extents.x + obb.up*obb.extents.y - obb.dir*obb.extents.z),
+                          obb.pos + fscalefactor*(-obb.right*obb.extents.x - obb.up*obb.extents.y + obb.dir*obb.extents.z),
+                          obb.pos + fscalefactor*(-obb.right*obb.extents.x - obb.up*obb.extents.y - obb.dir*obb.extents.z)};
+    //    Vector vpoints3d[8];
+    //    for(int j = 0; j < 8; ++j) vpoints3d[j] = tcamera*vpoints[j];
 
     for(int i =0; i < 8; ++i) {
         dReal fz = 1.0f/vpoints[i].z;
@@ -101,9 +101,9 @@ bool SampleProjectedOBBWithTest(const OBB& obb, dReal delta, const boost::functi
             }
         }
 
-//        Vector vtripoints[6] = {vpoints3d[faceindices[i][0]], vpoints3d[faceindices[i][3]], vpoints3d[faceindices[i][1]],
-//                                vpoints3d[faceindices[i][0]], vpoints3d[faceindices[i][1]], vpoints3d[faceindices[i][3]]};
-//        penv->drawtrimesh(vtripoints[0], 16, NULL, 2);
+        //        Vector vtripoints[6] = {vpoints3d[faceindices[i][0]], vpoints3d[faceindices[i][3]], vpoints3d[faceindices[i][1]],
+        //                                vpoints3d[faceindices[i][0]], vpoints3d[faceindices[i][1]], vpoints3d[faceindices[i][3]]};
+        //        penv->drawtrimesh(vtripoints[0], 16, NULL, 2);
 
         int n2 = (int)(f2proj/delta);
         if( n2 == 0 )
@@ -134,22 +134,26 @@ bool SampleProjectedOBBWithTest(const OBB& obb, dReal delta, const boost::functi
 class VisualFeedback : public ModuleBase
 {
 public:
-    inline boost::shared_ptr<VisualFeedback> shared_problem() { return boost::static_pointer_cast<VisualFeedback>(shared_from_this()); }
-    inline boost::shared_ptr<VisualFeedback const> shared_problem_const() const { return boost::static_pointer_cast<VisualFeedback const>(shared_from_this()); }
+    inline boost::shared_ptr<VisualFeedback> shared_problem() {
+        return boost::static_pointer_cast<VisualFeedback>(shared_from_this());
+    }
+    inline boost::shared_ptr<VisualFeedback const> shared_problem_const() const {
+        return boost::static_pointer_cast<VisualFeedback const>(shared_from_this());
+    }
     friend class VisibilityConstraintFunction;
 
-//        void Init(const SensorBase::CameraIntrinsics& KK,int width, int height)
-//    {
-//        ffovx = atanf(0.5f*width/KK.fx);
-//        fcosfovx = cosf(ffovx); fsinfovx = sinf(ffovx);
-//        ffovy = atanf(0.5f*height/KK.fy);
-//        fcosfovy = cosf(ffovy); fsinfovy = sinf(ffovy);
-//    }
+    //        void Init(const SensorBase::CameraIntrinsics& KK,int width, int height)
+    //    {
+    //        ffovx = atanf(0.5f*width/KK.fx);
+    //        fcosfovx = cosf(ffovx); fsinfovx = sinf(ffovx);
+    //        ffovy = atanf(0.5f*height/KK.fy);
+    //        fcosfovy = cosf(ffovy); fsinfovy = sinf(ffovy);
+    //    }
 
     class VisibilityConstraintFunction
     {
-    public:
-    VisibilityConstraintFunction(boost::shared_ptr<VisualFeedback> vf) : _vf(vf) {
+public:
+        VisibilityConstraintFunction(boost::shared_ptr<VisualFeedback> vf) : _vf(vf) {
             _report.reset(new CollisionReport());
 
             // create the dummy box
@@ -159,7 +163,7 @@ public:
 
                 _vTargetOBBs.reserve(_vf->_target->GetLinks().size());
                 FOREACHC(itlink, _vf->_target->GetLinks())
-                        _vTargetOBBs.push_back(geometry::OBBFromAABB((*itlink)->GetCollisionData().ComputeAABB(),(*itlink)->GetTransform()));
+                _vTargetOBBs.push_back(geometry::OBBFromAABB((*itlink)->GetCollisionData().ComputeAABB(),(*itlink)->GetTransform()));
                 _abTarget = _vf->_target->ComputeAABB();
                 vector<AABB> vboxes; vboxes.push_back(_vf->_target->ComputeAABB());
 
@@ -279,16 +283,16 @@ public:
             RAY r;
             dReal filen = 1/RaveSqrt(v.lengthsqr3());
             r.dir = tcamera.rotate((2.0f*filen)*v);
-            r.pos = tcamera.trans + 0.5f*_vf->_fRayMinDist*r.dir; // move the rays a little forward
+            r.pos = tcamera.trans + 0.5f*_vf->_fRayMinDist*r.dir;         // move the rays a little forward
             if( !_vf->_robot->GetEnv()->CheckCollision(r,_report) ) {
-                return true; // not supposed to happen, but it is OK
+                return true;         // not supposed to happen, but it is OK
             }
 
-//            RaveVector<float> vpoints[2];
-//            vpoints[0] = r.pos;
-//            vpoints[1] = _report.contacts[0].pos;
-//            _vf->_robot->GetEnv()->drawlinestrip(vpoints[0],2,16,1.0f,Vector(0,0,1));
-            if( !(!!_report->plink1 && _report->plink1->GetParent() == _ptargetbox) ) {
+            //            RaveVector<float> vpoints[2];
+            //            vpoints[0] = r.pos;
+            //            vpoints[1] = _report.contacts[0].pos;
+            //            _vf->_robot->GetEnv()->drawlinestrip(vpoints[0],2,16,1.0f,Vector(0,0,1));
+            if( !(!!_report->plink1 &&( _report->plink1->GetParent() == _ptargetbox) ) ) {
                 Vector v = _report->contacts.at(0).pos;
                 RAVELOG_VERBOSE(str(boost::format("bad collision: %s: %f %f %f\n")%_report->__str__()%v.x%v.y%v.z));
             }
@@ -337,27 +341,28 @@ public:
             return true;
         }
 
-    private:
+private:
         boost::shared_ptr<VisualFeedback> _vf;
-        KinBodyPtr _ptargetbox; ///< box to represent the target for simulating ray collisions
+        KinBodyPtr _ptargetbox;         ///< box to represent the target for simulating ray collisions
 
-        vector<OBB> _vTargetOBBs; // object links local AABBs
+        vector<OBB> _vTargetOBBs;         // object links local AABBs
         vector<dReal> _vsolution;
         CollisionReportPtr _report;
-        AABB _abTarget; // target aabb
+        AABB _abTarget;         // target aabb
         vector<Vector> _vconvexplanes3d;
     };
 
     class GoalSampleFunction
     {
-    public:
-    GoalSampleFunction(boost::shared_ptr<VisualFeedback> vf, const vector<Transform>& visibilitytransforms) : _vconstraint(vf), _fSampleGoalProb(1.0f), _vf(vf), _visibilitytransforms(visibilitytransforms)
+public:
+        GoalSampleFunction(boost::shared_ptr<VisualFeedback> vf, const vector<Transform>& visibilitytransforms) : _vconstraint(vf), _fSampleGoalProb(1.0f), _vf(vf), _visibilitytransforms(visibilitytransforms)
         {
             RAVELOG_DEBUG(str(boost::format("have %d detection extents hypotheses\n")%_visibilitytransforms.size()));
             _ttarget = _vf->_target->GetTransform();
             _sphereperms.PermuteStart(_visibilitytransforms.size());
         }
-        virtual ~GoalSampleFunction() {}
+        virtual ~GoalSampleFunction() {
+        }
 
         virtual bool Sample(vector<dReal>& pNewSample)
         {
@@ -369,10 +374,10 @@ public:
             if( _sphereperms.PermuteContinue() >= 0 ) {
                 return true;
             }
-//            // start from the beginning, if nothing, throw
-//            _sphereperms.PermuteStart(_visibilitytransforms.size());
-//            if( _sphereperms.PermuteContinue() >= 0 )
-//                return true;
+            //            // start from the beginning, if nothing, throw
+            //            _sphereperms.PermuteStart(_visibilitytransforms.size());
+            //            if( _sphereperms.PermuteContinue() >= 0 )
+            //                return true;
 
             return false;
         }
@@ -385,15 +390,15 @@ public:
 
         VisibilityConstraintFunction _vconstraint;
         dReal _fSampleGoalProb;
-    private:
+private:
         boost::shared_ptr<VisualFeedback> _vf;
         const vector<Transform>& _visibilitytransforms;
 
 
-        Transform _ttarget; ///< transform of target
+        Transform _ttarget;         ///< transform of target
         Vector _vTargetLocalCenter;
         RandomPermutationExecutor _sphereperms;
-        vector<Transform> _vcameras; ///< camera transformations in local coord systems
+        vector<Transform> _vcameras;         ///< camera transformations in local coord systems
     };
 
     VisualFeedback(EnvironmentBasePtr penv) : ModuleBase(penv)
@@ -437,7 +442,8 @@ Visibility computation checks occlusion with other objects using ray sampling in
                         "Sets internal parameters of visibility computation");
     }
 
-    virtual ~VisualFeedback() {}
+    virtual ~VisualFeedback() {
+    }
 
     void Destroy()
     {
@@ -536,11 +542,11 @@ Visibility computation checks occlusion with other objects using ray sampling in
                 sinput >> numpoints;
                 vector<dReal> vconvexdata(2*numpoints);
                 FOREACH(it, vconvexdata)
-                    sinput >> *it;
+                sinput >> *it;
                 BOOST_ASSERT(vconvexdata.size() > 2 );
                 vector<Vector> vpoints;
                 Vector vprev,vprev2,v,vdir,vnorm,vcenter;
-                for(size_t i = 0; i < vconvexdata.size(); i += 2 ){
+                for(size_t i = 0; i < vconvexdata.size(); i += 2 ) {
                     vpoints.push_back(Vector((vconvexdata[i]-_pcamerageom->KK.cx)/_pcamerageom->KK.fx,(vconvexdata[i+1]-_pcamerageom->KK.cy)/_pcamerageom->KK.fy,0,0));
                     vcenter += vpoints.back();
                 }
@@ -615,7 +621,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
             std::vector<KinBody::LinkPtr> vattachedlinks;
             psensor->GetAttachingLink()->GetRigidlyAttachedLinks(vattachedlinks);
             if( !!pmanip ) {
-                if( pmanip->GetEndEffector() != psensor->GetAttachingLink() && find(vattachedlinks.begin(),vattachedlinks.end(),pmanip->GetEndEffector()) == vattachedlinks.end() ) {
+                if(( pmanip->GetEndEffector() != psensor->GetAttachingLink()) &&( find(vattachedlinks.begin(),vattachedlinks.end(),pmanip->GetEndEffector()) == vattachedlinks.end()) ) {
                     RAVELOG_DEBUG(str(boost::format("specified manipulator %s end effector not attached to specified sensor %s\n")%pmanip->GetName()%psensor->GetName()));
                 }
                 else {
@@ -625,7 +631,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
             else {
                 _nManipIndex = 0;
                 FOREACHC(itmanip,_robot->GetManipulators()) {
-                    if( (*itmanip)->GetEndEffector() == psensor->GetAttachingLink() || find(vattachedlinks.begin(),vattachedlinks.end(),(*itmanip)->GetEndEffector()) != vattachedlinks.end() ) {
+                    if(( (*itmanip)->GetEndEffector() == psensor->GetAttachingLink()) ||( find(vattachedlinks.begin(),vattachedlinks.end(),(*itmanip)->GetEndEffector()) != vattachedlinks.end()) ) {
                         pmanip = *itmanip;
                         _bCameraOnManip = true;
                         break;
@@ -658,10 +664,10 @@ Visibility computation checks occlusion with other objects using ray sampling in
 
         if( _vconvexplanes.size() == 0 ) {
             // pick the camera boundaries
-            _vconvexplanes.push_back(Vector(_pcamerageom->KK.fx,0,_pcamerageom->KK.cx,0).normalize3()); // -x
-            _vconvexplanes.push_back(Vector(-_pcamerageom->KK.fx,0,_pcamerageom->width-_pcamerageom->KK.cx,0).normalize3()); // +x
-            _vconvexplanes.push_back(Vector(0,_pcamerageom->KK.fy,_pcamerageom->KK.cy,0).normalize3()); // -y
-            _vconvexplanes.push_back(Vector(0,-_pcamerageom->KK.fy,_pcamerageom->height-_pcamerageom->KK.cy,0).normalize3()); // +y
+            _vconvexplanes.push_back(Vector(_pcamerageom->KK.fx,0,_pcamerageom->KK.cx,0).normalize3());     // -x
+            _vconvexplanes.push_back(Vector(-_pcamerageom->KK.fx,0,_pcamerageom->width-_pcamerageom->KK.cx,0).normalize3());     // +x
+            _vconvexplanes.push_back(Vector(0,_pcamerageom->KK.fy,_pcamerageom->KK.cy,0).normalize3());     // -y
+            _vconvexplanes.push_back(Vector(0,-_pcamerageom->KK.fy,_pcamerageom->height-_pcamerageom->KK.cy,0).normalize3());     // +y
             _vcenterconvex = Vector(0,0,1);
         }
 
@@ -689,7 +695,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
         tcamera.m[0] = vright.x*fcosroll+vup.x*fsinroll; tcamera.m[1] = -vright.x*fsinroll+vup.x*fcosroll;
         tcamera.m[4] = vright.y*fcosroll+vup.y*fsinroll; tcamera.m[5] = -vright.y*fsinroll+vup.y*fcosroll;
         tcamera.m[8] = vright.z*fcosroll+vup.z*fsinroll; tcamera.m[9] = -vright.z*fsinroll+vup.z*fcosroll;
-        tcamera.trans = - fdist * tcamera.rotate(_vcenterconvex);
+        tcamera.trans = -fdist * tcamera.rotate(_vcenterconvex);
         return tcamera;
     }
 
@@ -717,7 +723,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
                 sinput >> numtrans;
                 vtransforms.resize(numtrans);
                 FOREACH(it,vtransforms)
-                    sinput >> *it;
+                sinput >> *it;
             }
             else if( cmd == "numrolls" )
                 sinput >> numrolls;
@@ -756,7 +762,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
                 CM::GenerateSphereTriangulation(spheremesh,spherelevel);
                 vector<dReal> vdists(numdists);
                 FOREACH(it,vdists)
-                    sinput >> *it;
+                sinput >> *it;
                 dReal deltaroll = PI*2.0f/(dReal)numrolls;
                 vtransforms.resize(spheremesh.vertices.size()*numdists*numrolls);
                 vector<Transform>::iterator itcamera = vtransforms.begin();
@@ -1272,14 +1278,16 @@ protected:
     RobotBase::AttachedSensorPtr _psensor;
     RobotBase::ManipulatorPtr _pmanip;
     int _nManipIndex;
-    bool _bCameraOnManip; ///< true if camera is attached to manipulator
+    bool _bCameraOnManip;     ///< true if camera is attached to manipulator
     boost::shared_ptr<SensorBase::CameraGeomData> _pcamerageom;
-    Transform _ttogripper; ///< transforms a coord system to the gripper coordsystem
+    Transform _ttogripper;     ///< transforms a coord system to the gripper coordsystem
     vector<Transform> _visibilitytransforms;
     dReal _fRayMinDist, _fAllowableOcclusion, _fSampleRayDensity;
 
-    vector<Vector> _vconvexplanes; ///< the planes defining the bounding visibility region (posive is inside)
-    Vector _vcenterconvex; ///< center point on the z=1 plane of the convex region
+    vector<Vector> _vconvexplanes;     ///< the planes defining the bounding visibility region (posive is inside)
+    Vector _vcenterconvex;     ///< center point on the z=1 plane of the convex region
 };
 
-ModuleBasePtr CreateVisualFeedback(EnvironmentBasePtr penv) { return ModuleBasePtr(new VisualFeedback(penv)); }
+ModuleBasePtr CreateVisualFeedback(EnvironmentBasePtr penv) {
+    return ModuleBasePtr(new VisualFeedback(penv));
+}

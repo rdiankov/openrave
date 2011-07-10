@@ -18,11 +18,12 @@
 
 class BaseCameraSensor : public SensorBase
 {
- protected:
+protected:
     class BaseCameraXMLReader : public BaseXMLReader
     {
-    public:
-    BaseCameraXMLReader(boost::shared_ptr<BaseCameraSensor> psensor) : _psensor(psensor) {}
+public:
+        BaseCameraXMLReader(boost::shared_ptr<BaseCameraSensor> psensor) : _psensor(psensor) {
+        }
 
         virtual ProcessElement startElement(const std::string& name, const AttributesList& atts)
         {
@@ -31,7 +32,7 @@ class BaseCameraSensor : public SensorBase
                     return PE_Support;
                 return PE_Ignore;
             }
-            static boost::array<string, 8> tags = {{"sensor", "kk", "width", "height", "framerate", "power", "color", "focal_length"}};
+            static boost::array<string, 11> tags = { { "sensor", "kk", "width", "height", "framerate", "power", "color", "focal_length","image_dimensions","intrinsic","measurement_time"}};
             if( find(tags.begin(),tags.end(),name) == tags.end() ) {
                 return PE_Pass;
             }
@@ -50,17 +51,29 @@ class BaseCameraSensor : public SensorBase
             else if( name == "sensor" ) {
                 return true;
             }
-            else if( name == "kk" || name == "K" ) {
+            else if((name == "kk")||(name == "KK")) {
                 ss >> _psensor->_pgeom->KK.fx >> _psensor->_pgeom->KK.fy >> _psensor->_pgeom->KK.cx >> _psensor->_pgeom->KK.cy;
+            }
+            else if( name == "intrinsic" ) {
+                dReal dummy0, dummy1;
+                ss >> _psensor->_pgeom->KK.fx >> dummy0 >> _psensor->_pgeom->KK.cx >> dummy1 >> _psensor->_pgeom->KK.fy >> _psensor->_pgeom->KK.cy;
             }
             else if( name == "focal_length" ) {
                 ss >> _psensor->_pgeom->KK.focal_length;
+            }
+            else if( name == "image_dimensions" ) {
+                ss >> _psensor->_pgeom->width >> _psensor->_pgeom->height >> _psensor->_numchannels;
             }
             else if( name == "width" ) {
                 ss >> _psensor->_pgeom->width;
             }
             else if( name == "height" ) {
                 ss >> _psensor->_pgeom->height;
+            }
+            else if( name == "measurement_time" ) {
+                dReal measurement_time=1;
+                ss >> measurement_time;
+                _psensor->framerate = 1/measurement_time;
             }
             else if( name == "framerate" ) {
                 ss >> _psensor->framerate;
@@ -94,25 +107,25 @@ class BaseCameraSensor : public SensorBase
             }
         }
 
-    protected:
+protected:
         BaseXMLReaderPtr _pcurreader;
         boost::shared_ptr<BaseCameraSensor> _psensor;
         stringstream ss;
     };
- public:
+public:
     static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const AttributesList& atts)
     {
         return BaseXMLReaderPtr(new BaseCameraXMLReader(boost::dynamic_pointer_cast<BaseCameraSensor>(ptr)));
     }
 
- BaseCameraSensor(EnvironmentBasePtr penv) : SensorBase(penv) {
+    BaseCameraSensor(EnvironmentBasePtr penv) : SensorBase(penv) {
         __description = ":Interface Author: Rosen Diankov\n\nProvides a simulated camera using the standard pinhole projection.";
         RegisterCommand("power",boost::bind(&BaseCameraSensor::_Power,this,_1,_2), "deprecated");
         RegisterCommand("render",boost::bind(&BaseCameraSensor::_Render,this,_1,_2),"deprecated");
         RegisterCommand("setintrinsic",boost::bind(&BaseCameraSensor::_SetIntrinsic,this,_1,_2),
                         "Set the intrinsic parameters of the camera (fx,fy,cx,cy).");
         RegisterCommand("setdims",boost::bind(&BaseCameraSensor::_SetDims,this,_1,_2),
-                    "Set the dimensions of the image (width,height)");
+                        "Set the dimensions of the image (width,height)");
         RegisterCommand("SaveImage",boost::bind(&BaseCameraSensor::_SaveImage,this,_1,_2),
                         "Saves the next camera image to the given filename");
         _pgeom.reset(new CameraGeomData());
@@ -120,6 +133,7 @@ class BaseCameraSensor : public SensorBase
         _bPower = false;
         _vColor = RaveVector<float>(0.5f,0.5f,1,1);
         framerate = 5;
+        _numchannels = 3;
         _bRenderGeometry = true;
         _bRenderData = false;
         _Reset();
@@ -194,7 +208,7 @@ class BaseCameraSensor : public SensorBase
         boost::shared_ptr<CameraSensorData> pdata = _pdata;
 
         _RenderGeometry();
-        if( _pgeom->width > 0 && _pgeom->height > 0 && _bPower) {
+        if(( _pgeom->width > 0) &&( _pgeom->height > 0) && _bPower) {
             _fTimeToImage -= fTimeElapsed;
             if( _fTimeToImage <= 0 ) {
                 _fTimeToImage = 1 / (float)framerate;
@@ -215,7 +229,7 @@ class BaseCameraSensor : public SensorBase
 
     virtual SensorGeometryPtr GetSensorGeometry(SensorType type)
     {
-        if( type == ST_Invalid || type == ST_Camera ) {
+        if(( type == ST_Invalid) ||( type == ST_Camera) ) {
             CameraGeomData* pgeom = new CameraGeomData();
             *pgeom = *_pgeom;
             return SensorGeometryPtr(pgeom);
@@ -225,7 +239,7 @@ class BaseCameraSensor : public SensorBase
 
     virtual SensorDataPtr CreateSensorData(SensorType type)
     {
-        if( type == ST_Invalid || type == ST_Camera ) {
+        if(( type == ST_Invalid) ||( type == ST_Camera) ) {
             return SensorDataPtr(new CameraSensorData());
         }
         return SensorDataPtr();
@@ -233,7 +247,7 @@ class BaseCameraSensor : public SensorBase
 
     virtual bool GetSensorData(SensorDataPtr psensordata)
     {
-        if( _bPower && psensordata->GetType() == ST_Camera ) {
+        if( _bPower &&( psensordata->GetType() == ST_Camera) ) {
             boost::mutex::scoped_lock lock(_mutexdata);
             if( _pdata->vimagedata.size() > 0 ) {
                 *boost::dynamic_pointer_cast<CameraSensorData>(psensordata) = *_pdata;
@@ -243,7 +257,9 @@ class BaseCameraSensor : public SensorBase
         return false;
     }
 
-    virtual bool Supports(SensorType type) { return type == ST_Camera; }
+    virtual bool Supports(SensorType type) {
+        return type == ST_Camera;
+    }
 
     bool _Power(ostream& sout, istream& sinput)
     {
@@ -287,7 +303,9 @@ class BaseCameraSensor : public SensorBase
         _trans = trans;
     }
 
-    virtual Transform GetTransform() { return _trans; }
+    virtual Transform GetTransform() {
+        return _trans;
+    }
 
     virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     {
@@ -304,7 +322,7 @@ class BaseCameraSensor : public SensorBase
         _Reset();
     }
 
- protected:
+protected:
     void _RenderGeometry()
     {
         if( !_bRenderGeometry ) {
@@ -323,7 +341,7 @@ class BaseCameraSensor : public SensorBase
             points[5] = Vector(0.5f,0,0);
             points[6] = Vector(0,0.5f,0);
 
-            boost::array<int,16> inds = {{0,1,2,3,4,1,4,0,2,3,0,0,5,0,0,6}};
+            boost::array<int,16> inds = { { 0,1,2,3,4,1,4,0,2,3,0,0,5,0,0,6}};
             vector<RaveVector<float> > viconpoints(inds.size());
             vector<float> vcolors(inds.size()*3);
 
@@ -334,8 +352,8 @@ class BaseCameraSensor : public SensorBase
                 vcolors[3*i+2] = _vColor.z;
             }
 
-            float xaxis[3] = {1,0,0};
-            float yaxis[3] = {0,1,0};
+            float xaxis[3] = { 1,0,0};
+            float yaxis[3] = { 0,1,0};
             float* pstart = &vcolors[vcolors.size()-3*5];
             for(int i = 0; i < 3; ++i) {
                 pstart[i] = pstart[3+i] = pstart[6+i] = xaxis[i];
@@ -358,13 +376,14 @@ class BaseCameraSensor : public SensorBase
     Transform _trans;
     dReal _fTimeToImage;
     int framerate;
+    int _numchannels;
     GraphHandlePtr _graphgeometry;
     ViewerBasePtr _dataviewer;
 
     mutable boost::mutex _mutexdata;
 
     bool _bRenderGeometry, _bRenderData;
-    bool _bPower; ///< if true, gather data, otherwise don't
+    bool _bPower;     ///< if true, gather data, otherwise don't
 
     friend class BaseCameraXMLReader;
 };

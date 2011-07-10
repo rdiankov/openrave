@@ -36,11 +36,19 @@ using namespace std;
 
 struct pyann_exception : std::exception
 {
-    pyann_exception() : std::exception(), _s("unknown exception") {}
-    pyann_exception(const std::string& s) : std::exception() { _s = "pyANN: " + s; }
-    virtual ~pyann_exception() throw() {}
-    char const* what() const throw() { return _s.c_str(); }
-    const std::string& message() const { return _s; }
+    pyann_exception() : std::exception(), _s("unknown exception") {
+    }
+    pyann_exception(const std::string& s) : std::exception() {
+        _s = "pyANN: " + s;
+    }
+    virtual ~pyann_exception() throw() {
+    }
+    char const* what() const throw() {
+        return _s.c_str();
+    }
+    const std::string& message() const {
+        return _s;
+    }
 private:
     std::string _s;
 };
@@ -55,21 +63,25 @@ inline void assertion_failed(char const * expr, char const * function, char cons
 
 class ANNpointManaged
 {
-public: 
-    ANNpointManaged(int n) {pt = annAllocPt(n); }
-    virtual ~ANNpointManaged() { annDeallocPt(pt); }
+public:
+    ANNpointManaged(int n) {
+        pt = annAllocPt(n);
+    }
+    virtual ~ANNpointManaged() {
+        annDeallocPt(pt);
+    }
     ANNpoint pt;
 };
 
 // Constructor from list        TODO: change to iterator
 boost::shared_ptr<ANNkd_tree>       init_from_list(object lst)
-{ 
+{
     BOOST_ASSERT(sizeof(ANNdist)==8 || sizeof(ANNdist)==4);
     BOOST_ASSERT(sizeof(ANNidx)==4);
 
-    int             dimension   = len(lst[0]);
-    int             npts        = len(lst);
-    ANNpointArray   dataPts     = annAllocPts(npts, dimension);
+    int dimension   = len(lst[0]);
+    int npts        = len(lst);
+    ANNpointArray dataPts     = annAllocPts(npts, dimension);
 
     // Convert points from Python list to ANNpointArray
     for (int p = 0; p < len(lst); ++p) {
@@ -77,14 +89,14 @@ boost::shared_ptr<ANNkd_tree>       init_from_list(object lst)
         for (int c = 0; c < dimension; ++c)
             pt[c] = extract<ANNcoord>(lst[p][c]);
     }
-    
+
     boost::shared_ptr<ANNkd_tree>   p(new ANNkd_tree(dataPts, npts, dimension));
     return p;
 }
 
 void destroy_points(ANNkd_tree& kdtree)
 {
-    ANNpointArray   dataPts     = kdtree.thePoints();
+    ANNpointArray dataPts     = kdtree.thePoints();
     annDeallocPts(dataPts);
 }
 
@@ -95,8 +107,8 @@ object search(ANNkd_tree& kdtree, object q, int k, double eps, bool priority = f
     for (int c = 0; c < kdtree.theDim(); ++c)
         annq.pt[c] = extract<ANNcoord>(q[c]);
 
-    npy_intp dims[] = {k};
-    PyObject *pydists = PyArray_SimpleNew(1,dims, sizeof(ANNdist)==8?PyArray_DOUBLE:PyArray_FLOAT);
+    npy_intp dims[] = { k};
+    PyObject *pydists = PyArray_SimpleNew(1,dims, sizeof(ANNdist)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
     BOOST_ASSERT(!!pydists);
     PyObject *pyidx = PyArray_SimpleNew(1,dims, PyArray_INT);
     if( !pyidx )
@@ -124,8 +136,8 @@ object search_array(ANNkd_tree& kdtree, object qarray, int k, double eps, bool p
 
     BOOST_ASSERT(len(qarray[0])==kdtree.theDim());
     ANNpointManaged annq(kdtree.theDim());
-    npy_intp dims[] = {N,k};
-    PyObject *pydists = PyArray_SimpleNew(2,dims, sizeof(ANNdist)==8?PyArray_DOUBLE:PyArray_FLOAT);
+    npy_intp dims[] = { N,k};
+    PyObject *pydists = PyArray_SimpleNew(2,dims, sizeof(ANNdist)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
     BOOST_ASSERT(!!pydists);
     PyObject *pyidx = PyArray_SimpleNew(2,dims, PyArray_INT);
     if( !pyidx ) {
@@ -171,8 +183,8 @@ object k_fixed_radius_search(ANNkd_tree& kdtree, object q, double sqRad, int k, 
     if( kball <= 0 )
         return boost::python::make_tuple(numeric::array(boost::python::list()).astype("i4"),numeric::array(boost::python::list()),kball);
 
-    npy_intp dims[] = {min(k,kball)};
-    PyObject *pydists = PyArray_SimpleNew(1,dims, sizeof(ANNdist)==8?PyArray_DOUBLE:PyArray_FLOAT);
+    npy_intp dims[] = { min(k,kball)};
+    PyObject *pydists = PyArray_SimpleNew(1,dims, sizeof(ANNdist)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
     BOOST_ASSERT(!!pydists);
     PyObject *pyidx = PyArray_SimpleNew(1,dims, PyArray_INT);
     if( !pyidx )
@@ -202,11 +214,11 @@ object k_fixed_radius_search_array(ANNkd_tree& kdtree, object qarray, double sqR
 
     BOOST_ASSERT(len(qarray[0])==kdtree.theDim());
     ANNpointManaged annq(kdtree.theDim());
-    npy_intp dimsball[] = {N};
+    npy_intp dimsball[] = { N};
     PyObject *pykball = PyArray_SimpleNew(1,dimsball, PyArray_INT);
     BOOST_ASSERT(!!pykball);
     int* pkball = (int*)PyArray_DATA(pykball);
-    
+
     if( k <= 0 ) {
         for(int i = 0; i < N; ++i) {
             object q = qarray[i];
@@ -217,8 +229,8 @@ object k_fixed_radius_search_array(ANNkd_tree& kdtree, object qarray, double sqR
         return boost::python::make_tuple(numeric::array(boost::python::list()).astype("i4"),numeric::array(boost::python::list()),static_cast<numeric::array>(handle<>(pykball)));
     }
 
-    npy_intp dims[] = {N,k};
-    PyObject *pydists = PyArray_SimpleNew(2,dims, sizeof(ANNdist)==8?PyArray_DOUBLE:PyArray_FLOAT);
+    npy_intp dims[] = { N,k};
+    PyObject *pydists = PyArray_SimpleNew(2,dims, sizeof(ANNdist)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
     if( !pydists )
         Py_DECREF(pykball);
     BOOST_ASSERT(!!pydists);
@@ -276,26 +288,26 @@ BOOST_PYTHON_MODULE(pyANN)
 
     typedef return_value_policy< copy_const_reference > return_copy_const_ref;
     class_< pyann_exception >( "_pyann_exception_" )
-        .def( init<const std::string&>() )
-        .def( init<const pyann_exception&>() )
-        .def( "message", &pyann_exception::message, return_copy_const_ref() )
-        .def( "__str__", &pyann_exception::message, return_copy_const_ref() )
-        ;
+    .def( init<const std::string&>() )
+    .def( init<const pyann_exception&>() )
+    .def( "message", &pyann_exception::message, return_copy_const_ref() )
+    .def( "__str__", &pyann_exception::message, return_copy_const_ref() )
+    ;
     exception_translator<pyann_exception>();
 
     class_<ANNkd_tree, boost::shared_ptr<ANNkd_tree> >("KDTree")
-        .def("__init__", make_constructor(&init_from_list))
-        .def("__del__", &destroy_points)
+    .def("__init__", make_constructor(&init_from_list))
+    .def("__del__", &destroy_points)
 
-        .def("kSearch", &ksearch,args("q","k","eps"))
-        .def("kSearchArray", &ksearch_array,args("q","k","eps"))
-        .def("kPriSearch", &k_priority_search,args("q","k","eps"))
-        .def("kPriSearchArray", &k_priority_search_array,args("q","k","eps"))
-        .def("kFRSearch", &k_fixed_radius_search,args("q","sqrad","k","eps"))
-        .def("kFRSearchArray", &k_fixed_radius_search_array,args("qarray","sqrad","k","eps"))
+    .def("kSearch", &ksearch,args("q","k","eps"))
+    .def("kSearchArray", &ksearch_array,args("q","k","eps"))
+    .def("kPriSearch", &k_priority_search,args("q","k","eps"))
+    .def("kPriSearchArray", &k_priority_search_array,args("q","k","eps"))
+    .def("kFRSearch", &k_fixed_radius_search,args("q","sqrad","k","eps"))
+    .def("kFRSearchArray", &k_fixed_radius_search_array,args("qarray","sqrad","k","eps"))
 
-        .def("__len__",             &ANNkd_tree::nPoints)
-        .def("dim",                 &ANNkd_tree::theDim)
+    .def("__len__",             &ANNkd_tree::nPoints)
+    .def("dim",                 &ANNkd_tree::theDim)
     ;
 
     def("max_pts_visit",        &annMaxPtsVisit);

@@ -5,7 +5,7 @@
     The default values plan for all the joints of the robot.
 
     <b>Full Example Code:</b>
-*/
+ */
 #include <openrave-core.h>
 #include <vector>
 #include <sstream>
