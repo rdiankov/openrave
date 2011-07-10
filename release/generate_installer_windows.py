@@ -763,6 +763,8 @@ if __name__ == "__main__":
     openravepy_reldir = os.path.relpath(openravepy_dir,os.path.abspath(options.installdir))
     sys.path.insert(0,openravepy_dir)
     openravepy = __import__('openravepy')
+    openravepy.examples = __import__('openravepy')
+    openravepy_examples = __import__('openravepy.examples')
     assert(openravepy.__version__==version)
     args = dict()
     args['openrave_version'] = openravepy.__version__
