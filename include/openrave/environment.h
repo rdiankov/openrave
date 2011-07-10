@@ -589,8 +589,8 @@ public:
     /// \param level 0 for no debug, 1 - to print all debug messeges. Default
     ///             value for release builds is 0, for debug builds it is 1
     /// declaring variables with stdcall can be a little complex
-    virtual void SetDebugLevel(int level) = 0;
-    virtual int GetDebugLevel() const = 0;
+    virtual void SetDebugLevel(uint32_t level) = 0;
+    virtual uint32_t GetDebugLevel() const = 0;
     //@}
 
 protected:

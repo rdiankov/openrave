@@ -1576,11 +1576,11 @@ public:
         return _nCurSimTime;
     }
 
-    virtual void SetDebugLevel(int level) {
-        RaveSetDebugLevel(level);
+    virtual void SetDebugLevel(uint32_t level) {
+        RaveSetDebugLevel((int)level);
     }
-    virtual int GetDebugLevel() const {
-        return RaveGetDebugLevel();
+    virtual uint32_t GetDebugLevel() const {
+        return (uint32_t)RaveGetDebugLevel();
     }
 
     virtual void GetPublishedBodies(std::vector<KinBody::BodyState>& vbodies)
