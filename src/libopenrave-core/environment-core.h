@@ -1576,10 +1576,10 @@ public:
         return _nCurSimTime;
     }
 
-    virtual void SetDebugLevel(uint32_t level) {
+    virtual void SetDebugLevel(int level) {
         RaveSetDebugLevel(level);
     }
-    virtual uint32_t GetDebugLevel() const {
+    virtual int GetDebugLevel() const {
         return RaveGetDebugLevel();
     }
 
