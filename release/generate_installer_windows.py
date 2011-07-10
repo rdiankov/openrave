@@ -754,7 +754,7 @@ if __name__ == "__main__":
                       help='Subversion revision to append to the output filename.')
     (options,args) = parser.parse_args()
 
-    python_installdir = 'Lib\\site-packages\\'
+    python_installdir = 'lib\\site-packages\\'
     os.environ['Path'] = os.path.join(os.path.abspath(options.installdir),'bin')+';'+os.environ['PATH']
     qt_version = Popen(['openrave-config','--qt-version'],stdout=PIPE).communicate()[0].strip()
     version = Popen(['openrave-config','--version'],stdout=PIPE).communicate()[0].strip()

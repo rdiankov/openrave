@@ -150,12 +150,15 @@ In addition, the OpenRAVE runtime managing plugin resources and environments has
 Loading Different Versions
 --------------------------
 
-If multiple openrave versions are installed, then it is possible to select which version of openravepy to load using **openravepy.loadstable**. For example, in order to load version 0.4 import openravepy in the following way:
+If multiple openrave versions are installed, then it is possible to select which version of
+openravepy to load using **openravepy.loadstable**. For example, in order to load version 0.4 import
+openravepy in the following way:
 
 .. code-block::
 
   __builtins__.__openravepy_noautoload__ = True
-  import openravepy
-  openravepy=openravepy.loadstable('0.4')
+  import openravepy; openravepy=openravepy.loadstable('0.4')
 
-The **line 1** tells openravepy not to load the latest version when imported on **line 2**. **line 3** replaces the openravepy module with the desired version. All the import commands including openravepy will refer to the desired version afterwards.
+The **line 1** tells openravepy not to load the latest version when imported on **line 2**. **line
+3** replaces the openravepy module with the desired version. All the import commands including
+openravepy will refer to the desired version afterwards.
