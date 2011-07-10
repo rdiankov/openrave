@@ -19,7 +19,7 @@ def loadstable(ver):
     return _loadversion(ver, prefix="_openravepy_")
 
 def loadlatest():
-    return _loadversion('', prefix="_openravepy_@OPENRAVE_VERSION_MAJOR@_@OPENRAVE_VERSION_MINOR@")
+    return _loadversion('@OPENRAVE_VERSION_MAJOR@.@OPENRAVE_VERSION_MINOR@', prefix="_openravepy_")
 
 def _loadversion(ver, prefix):
     targetname = prefix + ver.replace('.', '_')

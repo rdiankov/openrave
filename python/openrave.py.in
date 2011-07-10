@@ -48,7 +48,7 @@ except ImportError:
                 sys.path.append(get_python_lib(1,prefix=possibledirs[0]))
     import openravepy
 
-openravepy=openravepy.loadstable('@OPENRAVE_BIN_SUFFIX@')
+openravepy=openravepy.loadstable('@OPENRAVE_SOVERSION@')
 from openravepy import *
 from openravepy.misc import OpenRAVEGlobalArguments
 
