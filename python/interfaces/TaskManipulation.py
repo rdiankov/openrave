@@ -10,9 +10,10 @@
 # limitations under the License.
 from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
-__copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
+__copyright__ = 'Copyright (C) 2009-2011 Rosen Diankov <rosen.diankov@gmail.com>'
 __license__ = 'Apache License, Version 2.0'
-from openravepy import *
+from ..openravepy_ext import *
+from ..openravepy_int import *
 from numpy import *
 from copy import copy as shallowcopy
 class TaskManipulation:
@@ -78,7 +79,7 @@ class TaskManipulation:
             cmd += 'outputtraj '
         res = self.prob.SendCommand(cmd)
         if res is None:
-            raise openravepy.planning_error()
+            raise planning_error()
         resvalues = res.split()
         numgoals = int(resvalues.pop(0))
         goals = []
@@ -131,7 +132,7 @@ class TaskManipulation:
             cmd += 'outputfinal'
         res = self.prob.SendCommand(cmd)
         if res is None:
-            raise openravepy.planning_error('CloseFingers')
+            raise planning_error('CloseFingers')
         resvalues = res.split()
         if outputfinal:
             final = array([float64(resvalues[i]) for i in range(dof)])
@@ -163,7 +164,7 @@ class TaskManipulation:
             cmd += 'coarsestep %.15e '%coarsestep
         res = self.prob.SendCommand(cmd)
         if res is None:
-            raise openravepy.planning_error('ReleaseFingers')
+            raise planning_error('ReleaseFingers')
         resvalues = res.split()
         if outputfinal:
             final = array([float64(resvalues[i]) for i in range(dof)])
@@ -190,7 +191,7 @@ class TaskManipulation:
             cmd += 'outputfinal'
         res = self.prob.SendCommand(cmd)
         if res is None:
-            raise openravepy.planning_error('ReleaseActive')
+            raise planning_error('ReleaseActive')
         resvalues = res.split()
         if outputfinal:
             final = array([float64(resvalues[i]) for i in range(self.robot.GetActiveDOF())])

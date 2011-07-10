@@ -278,7 +278,7 @@ object k_priority_search_array(ANNkd_tree& kdtree, object q, int k, double eps)
     return search_array(kdtree, q, k, eps, true);
 }
 
-BOOST_PYTHON_MODULE(pyANN)
+BOOST_PYTHON_MODULE(pyANN_int)
 {
     import_array();
     numeric::array::set_module_and_type("numpy", "ndarray");

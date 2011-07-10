@@ -39,6 +39,8 @@ except ImportError:
                 sys.path.append(get_python_lib(1,prefix=possibledirs[0]))
     from openravepy import *
 
+from openravepy.misc import mkdir_recursive
+
 if __name__ == "__main__":
     parser = OptionParser(usage='usage: %prog pluginname [options] ', description='Sets up a project directory and initial files for creating OpenRAVE plugins and executables.')
     parser.add_option('--usecore', action='store_true',dest='usecore',default=False, help='If set, will create an executable that links to the core instead of creating a plugin.')

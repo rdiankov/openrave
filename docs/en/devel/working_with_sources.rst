@@ -57,7 +57,7 @@ To get auto-completion for the OpenRAVE C++ API using `Collection of Emacs Devel
 Automatic Indention
 ###################
 
-It is possible to setup emacs to automatically perform call **uncrustify** when saving a file by downloading the `emacs-uncrustify <https://github.com/glima/Emacs-uncrustify>`_  pakcage and putting the following in your **.emacs** file:
+It is possible to setup emacs to automatically call **uncrustify** when saving a file by downloading the `emacs-uncrustify <https://github.com/glima/Emacs-uncrustify>`_  pakcage and putting the following in your **.emacs** file:
 
 .. code-block:: common-lisp
 

@@ -28,6 +28,7 @@ Uses :meth:`.ConvexDecompositionModel.testPointsInside` from :mod:`.convexdecomp
 from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
 
+import openravepy
 from openravepy import databases
 import numpy
 
@@ -56,8 +57,9 @@ def main(env,options):
         raw_input('press any key to exit')
 
 from optparse import OptionParser
-from openravepy import OpenRAVEGlobalArguments, with_destroy
-@with_destroy
+from openravepy.misc import OpenRAVEGlobalArguments
+
+@openravepy.with_destroy
 def run(args=None):
     """Command-line execution of the example.
 

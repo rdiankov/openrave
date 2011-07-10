@@ -46,19 +46,19 @@ __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Apache License, Version 2.0'
 
-from openravepy import __build_doc__
-if not __build_doc__:
-    from openravepy import *
-    from openravepy.databases import DatabaseGenerator
+if not __openravepy_build_doc__:
+    from ..openravepy_int import *
+    from ..openravepy_ext import *
     from numpy import *
 else:
-    from openravepy.databases import DatabaseGenerator
     from numpy import array
 
-from openravepy import pyANN
-from openravepy import convexdecompositionpy
-from openravepy.databases import convexdecomposition
+from . import DatabaseGenerator
+from .. import pyANN
+import convexdecomposition
+from ..misc import ComputeGeodesicSphereMesh, ComputeBoxMesh, ComputeCylinderYMesh, SpaceSamplerExtra
 import time
+import os.path
 from optparse import OptionParser
 from itertools import izip
 

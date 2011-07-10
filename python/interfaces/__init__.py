@@ -1,4 +1,5 @@
-#!/usr/bin/env python
+"""Interface bindings
+"""
 from BaseManipulation import BaseManipulation
 from Grasper import Grasper
 from TaskManipulation import TaskManipulation

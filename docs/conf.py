@@ -45,8 +45,7 @@ copyright = u'2006-2011, Rosen Diankov'
 # built documents.
 #
 # The short X.Y version.
-import __builtin__
-__builtin__.__openravepy_build_doc__ = True
+__builtins__['__openravepy_build_doc__'] = True
 import openravepy
 version = unicode(openravepy.__version__)
 # The full version, including alpha/beta/rc tags.

@@ -9,18 +9,17 @@ objects the generator relies on are used to produce a unique ID to index the dat
 $OPENRAVE_DATABASE. For example, the grasping database will combine the robot manipulator hash and
 the target object hash.
 """
-import os, sys, copy
-import numpy
-import optparse
 try:
     import cPickle as pickle
 except:
     import pickle
 
-import openravepy
+from .. import openravepy_int
 from .. import metaclass
-from .. import mkdir_recursive
-from .. import OpenRAVEGlobalArguments
+from ..misc import mkdir_recursive
+from ..misc import OpenRAVEGlobalArguments
+import os.path
+from os import getenv
 
 class DatabaseGenerator(metaclass.AutoReloader):
     """The base class defining the structure of the openrave database generators.
@@ -34,6 +33,7 @@ class DatabaseGenerator(metaclass.AutoReloader):
             self.manip = None
     def clone(self,envother):
         """clones a database onto a different environment"""
+        import copy
         clone = copy.copy(self)
         clone.env = envother
         clone.robot = clone.env.GetRobot(self.robot.GetName())
@@ -76,16 +76,17 @@ class DatabaseGenerator(metaclass.AutoReloader):
     def CreateOptionParser(useManipulator=True):
         """set basic option parsing options for using databasers through the command line
         """
-        parser = optparse.OptionParser(description='OpenRAVE Database Generator.')
+        from optparse import OptionParser, OptionGroup
+        parser = OptionParser(description='OpenRAVE Database Generator.')
         OpenRAVEGlobalArguments.addOptions(parser)
-        dbgroup = optparse.OptionGroup(parser,"OpenRAVE Database Generator General Options")
+        dbgroup = OptionGroup(parser,"OpenRAVE Database Generator General Options")
         dbgroup.add_option('--show',action='store_true',dest='show',default=False,
                            help='Graphically shows the built model')
         dbgroup.add_option('--getfilename',action="store_true",dest='getfilename',default=False,
                            help='If set, will return the final database filename where all data is stored')
         dbgroup.add_option('--gethas',action="store_true",dest='gethas',default=False,
                            help='If set, will exit with 0 if datafile is generated and up to date, otherwise will return a 1. This will require loading the model and checking versions, so might be a little slow.')
-        dbgroup.add_option('--robot',action='store',type='string',dest='robot',default=os.getenv('OPENRAVE_ROBOT',default='robots/barrettsegway.robot.xml'),
+        dbgroup.add_option('--robot',action='store',type='string',dest='robot',default=getenv('OPENRAVE_ROBOT',default='robots/barrettsegway.robot.xml'),
                            help='OpenRAVE robot to load (default=%default)')
         if useManipulator:
             dbgroup.add_option('--manipname',action='store',type='string',dest='manipname',default=None,
@@ -96,21 +97,23 @@ class DatabaseGenerator(metaclass.AutoReloader):
     def RunFromParser(Model,env=None,parser=None,args=None,robotatts=None,defaultviewer=False,allowkinbody=False,**kwargs):
         """run the database generator from the command line using
         """
+        from numpy import eye
+        import sys
         if parser is None:
             parser = DatabaseGenerator.CreateOptionParser()
         (options, args) = parser.parse_args(args=args)
         destroyenv = False
         loadplugins=True
-        level=openravepy.DebugLevel.Info
+        level=openravepy_int.DebugLevel.Info
         if options.getfilename:
             loadplugins = False
-            level = openravepy.DebugLevel.Fatal
+            level = openravepy_int.DebugLevel.Fatal
         if options.gethas:
-            level = openravepy.DebugLevel.Fatal
-        openravepy.RaveInitialize(loadplugins,level)
+            level = openravepy_int.DebugLevel.Fatal
+        openravepy_int.RaveInitialize(loadplugins,level)
         OpenRAVEGlobalArguments.parseGlobal(options)
         if env is None:
-            env = openravepy.Environment()
+            env = openravepy_int.Environment()
             destroyenv = True
         try:
             viewername=OpenRAVEGlobalArguments.parseEnvironment(options,env,defaultviewer=defaultviewer,returnviewer=True)
@@ -127,7 +130,7 @@ class DatabaseGenerator(metaclass.AutoReloader):
                     else:
                         robot = env.ReadKinBodyURI(options.robot)
                     env.AddKinBody(robot)
-                robot.SetTransform(numpy.eye(4))
+                robot.SetTransform(eye(4))
                 if hasattr(options,'manipname') and robot.IsRobot():
                     if options.manipname is None:
                         # prioritize manipulators with ik solvers
@@ -143,12 +146,12 @@ class DatabaseGenerator(metaclass.AutoReloader):
                 if len(filename) == 0:
                     filename=model.getfilename(False)
                 print filename
-                openravepy.RaveDestroy()
+                openravepy_int.RaveDestroy()
                 sys.exit(0)
             if options.gethas:
                 hasmodel=model.load()
                 print int(hasmodel)
-                openravepy.RaveDestroy()
+                openravepy_int.RaveDestroy()
                 sys.exit(not hasmodel)
             if viewername is not None:
                 env.SetViewer(viewername)

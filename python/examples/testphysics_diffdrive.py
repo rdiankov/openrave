@@ -23,8 +23,8 @@ from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
 
 import time
-from openravepy import __build_doc__
-if not __build_doc__:
+import openravepy
+if not __openravepy_build_doc__:
     from openravepy import *
     from numpy import *
 
@@ -51,9 +51,9 @@ def main(env,options):
         time.sleep(2.0)
 
 from optparse import OptionParser
-from openravepy import OpenRAVEGlobalArguments, with_destroy
+from openravepy.misc import OpenRAVEGlobalArguments
 
-@with_destroy
+@openravepy.with_destroy
 def run(args=None):
     """Command-line execution of the example.
 

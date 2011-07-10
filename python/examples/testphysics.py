@@ -76,8 +76,8 @@ from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
 
 import time
-from openravepy import __build_doc__
-if not __build_doc__:
+import openravepy
+if not __openravepy_build_doc__:
     from openravepy import *
     from numpy import* 
 
@@ -104,7 +104,6 @@ def main(env,options):
                 T = eye(4)
                 T[0:3,3] = array((-0.5,-0.5,2))+0.4*random.rand(3)
                 body.SetTransform(T)
-                #env.GetRobots()[0].GetLinks()[6].GetGeometries()[0].SetCollisionMesh(TriMesh(*ComputeBoxMesh([1,0.2,0.3])))
                         
         time.sleep(0.4)
         simtime = env.GetSimulationTime()*1e-6
@@ -112,9 +111,9 @@ def main(env,options):
         print 'sim time: %fs, real time: %fs, diff = %fs'%(simtime,realtime,simtime-realtime)
 
 from optparse import OptionParser
-from openravepy import OpenRAVEGlobalArguments, with_destroy
+from openravepy.misc import OpenRAVEGlobalArguments
 
-@with_destroy
+@openravepy.with_destroy
 def run(args=None):
     """Command-line execution of the example.
 

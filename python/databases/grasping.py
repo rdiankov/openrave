@@ -153,16 +153,19 @@ __author__ = 'Rosen Diankov, Atsushi Tsuda'
 __copyright__ = 'Copyright (C) 2009-2011 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Apache License, Version 2.0'
 
-import os,sys,itertools,traceback,time
-from openravepy import __build_doc__
-if not __build_doc__:
-    from openravepy import *
-    from openravepy.databases import DatabaseGenerator
+from traceback import print_exc
+import time
+import os.path
+if not __openravepy_build_doc__:
+    from ..openravepy_int import *
+    from ..openravepy_ext import *
     from numpy import *
 else:
-    from openravepy.databases import DatabaseGenerator
     from numpy import inf, array
 
+from . import DatabaseGenerator
+from ..misc import SpaceSamplerExtra
+from .. import interfaces
 from optparse import OptionParser
 
 try:
@@ -397,7 +400,7 @@ class GraspingModel(DatabaseGenerator):
                             contacts,finalconfig,mindist,volume = self.testGrasp(grasp=grasp,graspingnoise=graspingnoise,translate=True,forceclosure=forceclosure,forceclosurethreshold=forceclosurethreshold)
                         except planning_error, e:
                             print 'Grasp Failed: '
-                            traceback.print_exc(e)
+                            print_exc(e)
                             continue
                         Tlocalgrasp = eye(4)
                         with self.robot:

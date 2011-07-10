@@ -24,14 +24,11 @@ __author__ = 'Rosen Diankov'
 __copyright__ = '2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Apache License, Version 2.0'
 
-from optparse import OptionParser
 import time
-from openravepy import __build_doc__
-if not __build_doc__:
+import openravepy
+if not __openravepy_build_doc__:
     from numpy import *
     from openravepy import *
-else:
-    from openravepy import with_destroy
 
 def collisioncallback(report,fromphysics):
     """Whenever a collision or physics detects a collision, this function is called"""
@@ -116,7 +113,10 @@ def main(env,options):
         handles = [env.drawlinestrip(points=array((c.pos,c.pos-c.depth*c.norm)), linewidth=3.0, colors=array((1,0,0,1))) for c in contacts]
         time.sleep(0.1)
 
-@with_destroy
+from optparse import OptionParser
+from openravepy.misc import OpenRAVEGlobalArguments
+
+@openravepy.with_destroy
 def run(args=None):
     """Command-line execution of the example.
 

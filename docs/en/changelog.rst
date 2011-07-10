@@ -3,10 +3,37 @@
 ChangeLog
 #########
 
+Version 0.4.2 Unstable
+======================
+
+Subversion Revision: **Unreleased**
+
+Initial Release: **Unreleased**
+
+Core
+----
+
+* CMake OpenRAVE_CORE_LIBRARIES now returns both openrave and openrave-core.
+
+Release
+-------
+
+* Debian packages of different openrave versions will now install without conflicting with each other since they will share no common files. symlinks pointing to non-versioned programs are written in a version-independent 'openrave' package.
+
+Python
+------
+
+* Redesigned the openravepy structure so that loading is faster and multiple openravepy versions can be selected at load time.
+
+Tests
+-----
+
+* test_programs is now runnable by windows
+
 Version 0.4.1
 =============
 
-Subversion Revision: 2573
+Subversion Revision: 2574
 
 Initial Release: 2011/07/08
 

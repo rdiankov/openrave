@@ -14,7 +14,7 @@
 from common_test_openrave import *
 
 class TestViewer(EnvironmentSetup):
-    def tes_colladaload(self):
+    def test_colladaload(self):
         env=self.env
         robot = env.ReadRobotURI('robots/pr2-beta-static.zae')
         env.AddRobot(robot)

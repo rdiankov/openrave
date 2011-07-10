@@ -70,18 +70,19 @@ __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Apache License, Version 2.0'
 
-import time, os
-from openravepy import __build_doc__
-if not __build_doc__:
-    from openravepy import *
-    from openravepy.databases import DatabaseGenerator
+import time
+import os.path
+
+if not __openravepy_build_doc__:
+    from ..openravepy_int import *
+    from ..openravepy_ext import *
     from numpy import *
 else:
-    from openravepy.databases import DatabaseGenerator
     from numpy import array
 
-from openravepy.databases import inversekinematics, kinematicreachability
-from openravepy.interfaces import BaseManipulation, TaskManipulation, VisualFeedback
+from . import DatabaseGenerator
+import inversekinematics, kinematicreachability
+from .. import interfaces
 
 class VisibilityModel(DatabaseGenerator):
     class GripperVisibility:
@@ -90,6 +91,7 @@ class VisibilityModel(DatabaseGenerator):
         When 'entered' will hide all the non-gripper links in order to facilitate visiblity of the gripper
         """
         def __init__(self,manip):
+
             self.manip = manip
             self.robot = self.manip.GetRobot()
             self.hiddengeoms = []
@@ -118,8 +120,8 @@ class VisibilityModel(DatabaseGenerator):
         DatabaseGenerator.__init__(self,robot=robot)
         self.sensorrobot = sensorrobot if sensorrobot is not None else robot
         self.target = target
-        self.visualprob = VisualFeedback(self.robot,maxvelmult=maxvelmult)
-        self.basemanip = BaseManipulation(self.robot,maxvelmult=maxvelmult)
+        self.visualprob = interfaces.VisualFeedback(self.robot,maxvelmult=maxvelmult)
+        self.basemanip = interfaces.BaseManipulation(self.robot,maxvelmult=maxvelmult)
         self.convexhull = None
         self.sensorname = sensorname
         if self.sensorname is None:
@@ -192,7 +194,7 @@ class VisibilityModel(DatabaseGenerator):
         if preshapes is None:
             with self.target:
                 self.target.Enable(False)
-                taskmanip = TaskManipulation(self.robot)
+                taskmanip = interfaces.TaskManipulation(self.robot)
                 final,traj = taskmanip.ReleaseFingers(execute=False,outputfinal=True)
             preshapes = array([final])
         self.generate(preshapes=preshapes,sphere=sphere,conedirangles=conedirangles)

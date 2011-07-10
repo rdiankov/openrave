@@ -15,7 +15,7 @@ if( ~exist('destroyduplicates', 'var') )
     destroyduplicates = 1;
 end
 
-out = orCommunicator(['createproblem ' num2str(destroyduplicates) ' ' problemname ' ' args], 1);
+out = orCommunicator(['createmodule ' num2str(destroyduplicates) ' ' problemname ' ' args], 1);
 
 %if(strcmp('error',sscanf(out,'%s',1)))
 %    error('Error creating problem');

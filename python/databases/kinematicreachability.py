@@ -53,20 +53,20 @@ __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Apache License, Version 2.0'
 
-from openravepy import __build_doc__
-if not __build_doc__:
-    from openravepy import *
-    from openravepy.databases import DatabaseGenerator
+if not __openravepy_build_doc__:
+    from ..openravepy_int import *
+    from ..openravepy_ext import *
     from numpy import *
 else:
-    from openravepy import metaclass
-    from openravepy.databases import DatabaseGenerator
     from numpy import array
 
-from openravepy import pyANN
-from openravepy.databases import convexdecomposition,inversekinematics
+from .. import metaclass, pyANN
+from ..misc import SpaceSamplerExtra
+from . import DatabaseGenerator
+import convexdecomposition,inversekinematics
 import time
-import heapq # for nth smallest element
+import os.path
+from heapq import nsmallest # for nth smallest element
 from optparse import OptionParser
 
 class ReachabilityModel(DatabaseGenerator):
@@ -238,7 +238,7 @@ class ReachabilityModel(DatabaseGenerator):
                     # for rotations, get the average distance to the nearest rotation
                     neighdists = []
                     for q in qarray:
-                        neighdists.append(heapq.nsmallest(2,quatArrayTDist(q,qarray))[1])
+                        neighdists.append(nsmallest(2,quatArrayTDist(q,qarray))[1])
                     self.quatdelta = mean(neighdists)
                 print 'radius: %f, xyzsamples: %d, quatdelta: %f, rot samples: %d, freespace: %d'%(maxradius,len(insideinds),self.quatdelta,len(rotations),usefreespace)
 

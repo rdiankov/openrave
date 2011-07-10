@@ -367,7 +367,7 @@ class TestKinematics(EnvironmentSetup):
                     body.SetDOFValues(offsets)
                     assert( transdist(offsets,body.GetDOFValues()) <= g_epsilon )
 
-    def tes_joints(self):
+    def test_joints(self):
         env=self.env
         xml = """
 <kinbody name="universal">

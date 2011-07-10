@@ -19,6 +19,7 @@ import nose
 from nose.tools import assert_raises
 import fnmatch
 import time
+import os
 
 _multiprocess_can_split_ = True
 
@@ -28,7 +29,8 @@ g_envfiles = ['data/lab1.env.xml','data/pr2wam_test1.env.xml','data/hanoi_comple
 g_robotfiles = ['robots/pr2-beta-static.zae','robots/barrettsegway.robot.xml','robots/neuronics-katana.zae','robots/pa10schunk.robot.xml']
 
 def setup_module(module):
-    RaveInitialize(load_all_plugins=True, level=DebugLevel.Info|DebugLevel.VerifyPlans)
+    os.environ['OPENRAVE_DATABASE'] = os.path.join(os.getcwd(),'.openravetest') # don't mess with the default OPENRAVE_DATABASE
+    RaveInitialize(load_all_plugins=True, level=int32(DebugLevel.Info)|int32(DebugLevel.VerifyPlans))
     
 def teardown_module(module):
     RaveDestroy()

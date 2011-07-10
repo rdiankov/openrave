@@ -138,16 +138,18 @@ __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Apache License, Version 2.0'
 
-from openravepy import __build_doc__
-if not __build_doc__:
-    from openravepy import *
-    from openravepy.databases import DatabaseGenerator
+if not __openravepy_build_doc__:
+    from ..openravepy_int import *
+    from ..openravepy_ext import *
     from numpy import *
 else:
-    from openravepy.databases import DatabaseGenerator
     from numpy import array
 
-import time,platform,shutil,os,sys
+from . import DatabaseGenerator
+from ..misc import mkdir_recursive, myrelpath, TSP
+import time,platform,shutil,sys
+import os.path
+from os import getcwd, remove
 import distutils
 import logging
 from distutils import ccompiler
@@ -161,7 +163,7 @@ log.addHandler(handler)
 log.setLevel(logging.INFO)
 
 try:
-    from openravepy import ikfast
+    from .. import ikfast
     ikfast.log.addHandler(handler)
     ikfast.log.setLevel(logging.INFO)
 except ImportError, e:
@@ -617,9 +619,9 @@ class InverseKinematicsModel(DatabaseGenerator):
                 # compile the code and create the shared object
                 compiler,compile_flags = self.getcompiler()
                 try:
-                   output_dir = os.path.relpath('/',os.getcwd())
+                   output_dir = os.path.relpath('/',getcwd())
                 except AttributeError: # python 2.5 does not have os.path.relpath
-                   output_dir = self.myrelpath('/',os.getcwd())
+                   output_dir = myrelpath('/',getcwd())
 
                 platformsourcefilename = os.path.splitext(output_filename)[0]+'.cpp' # needed in order to prevent interference with machines with different architectures 
                 shutil.copyfile(sourcefilename, platformsourcefilename)
@@ -641,10 +643,10 @@ class InverseKinematicsModel(DatabaseGenerator):
                 finally:
                     # cleanup intermediate files
                     if os.path.isfile(platformsourcefilename):
-                        os.remove(platformsourcefilename)
+                        remove(platformsourcefilename)
                     for objectfile in objectfiles:
                         try:
-                            os.remove(objectfile)
+                            remove(objectfile)
                         except:
                             pass
             else:
@@ -683,7 +685,6 @@ class InverseKinematicsModel(DatabaseGenerator):
             wrongrate = len(solutionresults[0])/numtested
             log.info('success rate: %f, wrong solutions: %f, no solutions: %f, missing solution: %f',float(res[1])/numtested,wrongrate,len(solutionresults[1])/numtested,len(solutionresults[2])/numtested)
         return successrate, wrongrate
-
 
     def show(self,delay=0.1,options=None,forceclosure=True):
         self.env.SetViewer('qtcoin')
@@ -729,23 +730,6 @@ class InverseKinematicsModel(DatabaseGenerator):
                 compile_flags.append('-O3')
                 compile_flags.append('-fPIC')
         return compiler,compile_flags
-
-    @staticmethod
-    def myrelpath(path, start=os.path.curdir):
-        """Return a relative version of a path"""
-        if not path:
-            raise ValueError("no path specified")
-
-        start_list = os.path.abspath(start).split(os.path.sep)
-        path_list = os.path.abspath(path).split(os.path.sep)
-
-        # Work out how much of the filepath is shared by start and path.
-        i = len(os.path.commonprefix([start_list, path_list]))
-
-        rel_list = [os.path.pardir] * (len(start_list)-i) + path_list[i:]
-        if not rel_list:
-            return os.path.curdir
-        return os.path.join(*rel_list)
 
     @staticmethod
     def CreateOptionParser():
