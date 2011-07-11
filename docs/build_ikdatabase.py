@@ -18,6 +18,7 @@ import os, operator
 import scipy
 import shutil
 import pysvn
+from openravepy.misc import mkdir_recursive
 
 imagedir = 'images/robots'
 imagelinkdir = '../images/robots'

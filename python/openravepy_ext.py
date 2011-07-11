@@ -66,7 +66,7 @@ def with_destroy(fn):
 
 # this is necessary due to broken boost python pickle support for enums
 def _tuple2enum(enum, value):
-    enum = getattr(openravepy, enum)
+    enum = getattr(openravepy_int, enum)
     e = enum.values.get(value,None)
     if e is None:
         e = enum(value)

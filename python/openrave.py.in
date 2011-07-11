@@ -22,7 +22,7 @@ from types import ModuleType
 from numpy import *
 from optparse import OptionParser
 
-__builtins__.__openravepy_noautoload__ = True
+__builtins__.__openravepy_version__ = '@OPENRAVE_SOVERSION@'
 
 try:
     import openravepy
@@ -48,7 +48,6 @@ except ImportError:
                 sys.path.append(get_python_lib(1,prefix=possibledirs[0]))
     import openravepy
 
-openravepy=openravepy.loadstable('@OPENRAVE_SOVERSION@')
 from openravepy import *
 from openravepy.misc import OpenRAVEGlobalArguments
 

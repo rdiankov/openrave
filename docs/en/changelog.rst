@@ -13,7 +13,7 @@ Initial Release: **Unreleased**
 Core
 ----
 
-* CMake OpenRAVE_CORE_LIBRARIES now returns both openrave and openrave-core.
+* CMake OpenRAVE_CORE_LIBRARIES variable now returns both openrave and openrave-core.
 
 Release
 -------
@@ -24,6 +24,8 @@ Python
 ------
 
 * Redesigned the openravepy structure so that loading is faster and multiple openravepy versions can be selected at load time.
+
+* Started a new :mod:`openravepy.misc` library that is not loaded by default. The OpenRAVEGlobalArguments and MultiManipIKSolver helper classes are now part of it.
 
 Tests
 -----

@@ -61,10 +61,7 @@ def myimport(name, theglobals=None, thelocals=None, fromlist=None, level=-1):
 __builtins__['__import__'] = myimport
 
 try:
-    if __openravepy_noautoload__:
-        openravepy_currentversion = None
-    else:
-        openravepy_currentversion = loadlatest()
+    openravepy_currentversion = loadstable(__openravepy_version__)
 except NameError:
     openravepy_currentversion = loadlatest()
 

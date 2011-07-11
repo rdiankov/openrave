@@ -49,9 +49,9 @@ The docstrings for each function and class are automatically compiled from the C
 
 .. code-block:: python
 
-  help env.CloneSelf
-  help KinBoby.GetChain
-  help Robot.Manipulator.FindIKSolution
+  help env.CloneSelf # env is an instance of Environment()
+  help KinBoby.GetChain # KinBody is a class
+  help Robot.Manipulator.FindIKSolution # Robot.Manipulator is a sub-class
 
 Exceptions
 ----------
@@ -154,10 +154,10 @@ If multiple openrave versions are installed, then it is possible to select which
 openravepy to load using **openravepy.loadstable**. For example, in order to load version 0.4 import
 openravepy in the following way:
 
-.. code-block::
+.. code-block:: python
 
-  __builtins__.__openravepy_noautoload__ = True
-  import openravepy; openravepy=openravepy.loadstable('0.4')
+  __builtins__.__openravepy_version__ = '0.4'
+  import openravepy
 
 The **line 1** tells openravepy not to load the latest version when imported on **line 2**. **line
 3** replaces the openravepy module with the desired version. All the import commands including
