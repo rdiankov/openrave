@@ -196,7 +196,7 @@ class InverseKinematicsModel(DatabaseGenerator):
         """
         :param forceikfast: if set will always force the ikfast solver
         """
-        self.ikfast = __import__('ikfast',fromlist=['..'])
+        self.ikfast = __import__('openravepy.ikfast',fromlist=['openravepy'])
         self.ikfast.log.addHandler(handler)
         self.ikfast.log.setLevel(logging.INFO)
 
