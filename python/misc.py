@@ -16,7 +16,7 @@
 from __future__ import with_statement # for python 2.5
 import openravepy_int
 import os.path
-
+import numpy
 def mkdir_recursive(newdir):
     """works the way a good mkdir should :)
         - already exists, silently complete
