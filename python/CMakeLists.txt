@@ -1,4 +1,10 @@
-set(OPENRAVEPY_VER_INSTALL_DIR "${OPENRAVEPY_INSTALL_DIR}/_openravepy_${OPENRAVE_VERSION_MAJOR}_${OPENRAVE_VERSION_MINOR}")
+if( NOT WIN32 AND OPENRAVE_BIN_SUFFIX )
+  set(OPENRAVEPY_VER_NAME "_openravepy_${OPENRAVE_VERSION_MAJOR}_${OPENRAVE_VERSION_MINOR}")
+else()
+  set(OPENRAVEPY_VER_NAME "_openravepy_")
+endif()
+
+set(OPENRAVEPY_VER_INSTALL_DIR "${OPENRAVEPY_INSTALL_DIR}/${OPENRAVEPY_VER_NAME}")
 add_subdirectory(bindings)
 
 set(OPENRAVEPY_EGG "${CMAKE_CURRENT_BINARY_DIR}/openravepy.egg-info")
@@ -29,6 +35,7 @@ if( OPT_BUILD_PACKAGE_DEFAULT AND OPENRAVE_BIN_SUFFIX )
   install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink openrave${OPENRAVE_BIN_SUFFIX}.py openrave.py WORKING_DIRECTORY \${CMAKE_INSTALL_PREFIX}/bin)" COMPONENT openrave-python-minimal)
   install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink openrave${OPENRAVE_BIN_SUFFIX}-robot.py openrave-robot.py WORKING_DIRECTORY \${CMAKE_INSTALL_PREFIX}/bin)" COMPONENT openrave-python-minimal)
   install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink openrave${OPENRAVE_BIN_SUFFIX}-createplugin.py openrave-createplugin.py WORKING_DIRECTORY \${CMAKE_INSTALL_PREFIX}/bin)" COMPONENT openrave-python-minimal)
+  install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink ${OPENRAVEPY_VER_NAME} _openravepy_ WORKING_DIRECTORY \${CMAKE_INSTALL_PREFIX}/${OPENRAVEPY_INSTALL_DIR})" COMPONENT openrave-python-minimal)
 endif()
 
 set(CPACK_COMPONENT_OPENRAVE-PYTHON-MINIMAL_DISPLAY_NAME "Python ${PYTHON_MAJORMINOR_VERSION} bindings minimal subset" PARENT_SCOPE)

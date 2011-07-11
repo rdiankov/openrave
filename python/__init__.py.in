@@ -16,13 +16,12 @@ if '_original__import__' not in locals():
     _original__import__ = __import__
 
 def loadstable(ver):
-    return _loadversion(ver, prefix="_openravepy_")
+    return _loadversion('_openravepy_'+ver.replace('.', '_'))
 
 def loadlatest():
-    return _loadversion('@OPENRAVE_VERSION_MAJOR@.@OPENRAVE_VERSION_MINOR@', prefix="_openravepy_")
+    return _loadversion('_openravepy_')
 
-def _loadversion(ver, prefix):
-    targetname = prefix + ver.replace('.', '_')
+def _loadversion(targetname):
     mainpackage = _original__import__("openravepy", globals(), locals(), [targetname])
     global openravepy_currentversion
     openravepy_currentversion = getattr(mainpackage, targetname)
@@ -32,6 +31,7 @@ def _loadversion(ver, prefix):
     return openravepy_currentversion
 
 def myimport(name, theglobals=None, thelocals=None, fromlist=None, level=-1):
+    __doc__=_original__import__.__doc__
     if name.split('.')[0] != "openravepy":
         return _original__import__(name, theglobals, thelocals, fromlist, level)
 
@@ -65,6 +65,5 @@ try:
 except NameError:
     openravepy_currentversion = loadlatest()
 
-if openravepy_currentversion is not None:
-    from _openravepy_@OPENRAVE_VERSION_MAJOR@_@OPENRAVE_VERSION_MINOR@ import *
-    from _openravepy_@OPENRAVE_VERSION_MAJOR@_@OPENRAVE_VERSION_MINOR@ import __version__, __author__, __copyright__
+from sys import modules
+modules['openravepy'] = openravepy_currentversion
