@@ -147,7 +147,7 @@ set(OPENRAVE_MATLAB_INSTALL_DIR "${OPENRAVE_SHARE_DIR}/matlab" CACHE PATH "OpenR
 
 if( UNIX OR CYGWIN)
   # cache has to be STRING instead of PATH for path to remain relative
-  set(BASH_COMPLETION_DIR ${OPENRAVE_SHARE_DIR} CACHE STRING "Directory where bash completion files will be installed in, on linux it is /etc/bash_completion.d")# Additional CMake modules for 3rd party library checks reside here
+  set(BASH_COMPLETION_DIR CACHE STRING "Directory where bash completion files will be installed in, on linux it is /etc/bash_completion.d")# Additional CMake modules for 3rd party library checks reside here
 endif()
 
 message(STATUS "installing to ${CMAKE_INSTALL_PREFIX}, python subdir is ${OPENRAVE_PYTHON_INSTALL_DIR}, program suffix is '${OPENRAVE_BIN_SUFFIX}'")
@@ -712,13 +712,19 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/openrave-config-version.cmake.in" "$
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/openrave-config.cmake" "${CMAKE_CURRENT_BINARY_DIR}/openrave-config-version.cmake" DESTINATION "lib${LIB_SUFFIX}/cmake/openrave-${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}" COMPONENT ${COMPONENT_PREFIX}dev)
 
 if( UNIX OR CYGWIN)
-  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/openrave_completion.bash.in" "${CMAKE_CURRENT_BINARY_DIR}/openrave${OPENRAVE_BIN_SUFFIX}_completion.bash" @ONLY IMMEDIATE)
-  install(FILES "${CMAKE_CURRENT_BINARY_DIR}/openrave${OPENRAVE_BIN_SUFFIX}_completion.bash" DESTINATION ${BASH_COMPLETION_DIR} COMPONENT ${COMPONENT_PREFIX}base )
+  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/openrave_completion.bash.in" "${CMAKE_CURRENT_BINARY_DIR}/openrave_completion.bash" @ONLY IMMEDIATE)
+  install(FILES "${CMAKE_CURRENT_BINARY_DIR}/openrave_completion.bash" DESTINATION ${OPENRAVE_SHARE_DIR} COMPONENT ${COMPONENT_PREFIX}base )
   configure_file("${CMAKE_CURRENT_SOURCE_DIR}/openrave.pc.in" "${CMAKE_CURRENT_BINARY_DIR}/openrave${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}.pc" @ONLY IMMEDIATE)
-  install(FILES "${CMAKE_CURRENT_BINARY_DIR}/openrave${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}.pc" DESTINATION lib${LIB_SUFFIX}/pkgconfig COMPONENT ${COMPONENT_PREFIX}dev)
   install(FILES "${CMAKE_CURRENT_BINARY_DIR}/openrave${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}.pc" DESTINATION lib${LIB_SUFFIX}/pkgconfig COMPONENT ${COMPONENT_PREFIX}dev)
   if( OPT_BUILD_PACKAGE_DEFAULT AND OPENRAVE_BIN_SUFFIX )
     install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink openrave${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}.pc openrave.pc WORKING_DIRECTORY \${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX}/pkgconfig)")
+    if( BASH_COMPLETION_DIR )
+      execute_process(
+        COMMAND ${PYTHON_EXECUTABLE} -c "from os.path import relpath; print relpath('${OPENRAVE_SHARE_DIR}','${BASH_COMPLETION_DIR}')"
+        OUTPUT_VARIABLE BASH_COMPLETION_REL_DIR OUTPUT_STRIP_TRAILING_WHITESPACE
+        RESULT_VARIABLE _python_failed3)
+      install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink ${BASH_COMPLETION_REL_DIR}/openrave_completion.bash openrave_completion.bash WORKING_DIRECTORY \${CMAKE_INSTALL_PREFIX}/${BASH_COMPLETION_DIR})")
+    endif()
   endif()
 endif()
 
