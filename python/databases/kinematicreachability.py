@@ -141,13 +141,12 @@ class ReachabilityModel(DatabaseGenerator):
     def getfilename(self,read=False):
         return RaveFindDatabaseFile(os.path.join('robot.'+self.robot.GetKinematicsGeometryHash(), 'reachability.' + self.manip.GetStructureHash() + '.pp'),read)
 
-    def autogenerate(self,options=None):
+    def autogenerateparams(self,options=None):
         maxradius=None
         translationonly=False
         xyzdelta=None
         quatdelta=None
-        usefreespace=True
-        useconvex=False
+        usefreespace=False
         if options is not None:
             if options.maxradius is not None:
                 maxradius = options.maxradius
@@ -156,7 +155,6 @@ class ReachabilityModel(DatabaseGenerator):
             if options.quatdelta is not None:
                 quatdelta=options.quatdelta
             usefreespace=options.usefreespace
-            useconvex=options.useconvex
         if self.robot.GetKinematicsGeometryHash() == 'e829feb384e6417bbf5bd015f1c6b49a' or self.robot.GetKinematicsGeometryHash() == '22548f4f2ecf83e88ae7e2f3b2a0bd08': # wam 7dof
             if maxradius is None:
                 maxradius = 1.1
@@ -165,7 +163,10 @@ class ReachabilityModel(DatabaseGenerator):
                 xyzdelta = 0.03
             if quatdelta is None:
                 quatdelta = 0.2
-        self.generate(maxradius=maxradius,translationonly=translationonly,xyzdelta=xyzdelta,quatdelta=quatdelta,usefreespace=usefreespace,useconvex=useconvex)
+        return maxradius,translationonly,xyzdelta,quatdelta,usefreespace
+
+    def autogenerate(self,options=None):
+        self.generate(*self.autogenerateparams(options))
         self.save()
 
     def getOrderedArmJoints(self):
@@ -191,91 +192,102 @@ class ReachabilityModel(DatabaseGenerator):
                 if not newlink in links:
                     links.append(newlink)
         return links
-    def generate(self,maxradius=None,translationonly=False,xyzdelta=None,quatdelta=None,usefreespace=True,useconvex=False):
+
+    def generatepcg(self,maxradius=None,translationonly=False,xyzdelta=None,quatdelta=None,usefreespace=False):
+        """Generate producer, consumer, and gatherer functions allowing parallelization
+        """
         if not self.ikmodel.load():
             self.ikmodel.autogenerate()
         # disable every body but the target and robot\
+        if xyzdelta is None:
+            xyzdelta=0.04
+        if quatdelta is None:
+            quatdelta=0.5
         self.kdtree3d = self.kdtree6d = None
-        bodies = [(b,b.IsEnabled()) for b in self.env.GetBodies() if b != self.robot]
-        for b in bodies:
-            b[0].Enable(False)
-        try:
-            if xyzdelta is None:
-                xyzdelta=0.04
-            if quatdelta is None:
-                quatdelta=0.5
-            starttime = time.time()
-            with self.robot:
-                self.robot.SetTransform(eye(4))
-                if useconvex:
-                    raveLogWarn('for now, convex decomposition disabled for self-collisions')
-                    #self.cdmodel = convexdecomposition.ConvexDecompositionModel(self.robot)
-                    #if not self.cdmodel.load():
-                    #    self.cdmodel.autogenerate()
-                Tbase = self.manip.GetBase().GetTransform()
-                Tbaseinv = linalg.inv(Tbase)
-                maniplinks = self.getManipulatorLinks(self.manip)
-                for link in self.robot.GetLinks():
-                    link.Enable(link in maniplinks)
-                # the axes' anchors are the best way to find the max radius
-                # the best estimate of arm length is to sum up the distances of the anchors of all the points in between the chain
-                armjoints = self.getOrderedArmJoints()
-                baseanchor = transformPoints(Tbaseinv,[armjoints[0].GetAnchor()])
-                eetrans = self.manip.GetEndEffectorTransform()[0:3,3]
-                armlength = 0
-                for j in armjoints[::-1]:
-                    armlength += sqrt(sum((eetrans-j.GetAnchor())**2))
-                    eetrans = j.GetAnchor()    
-                if maxradius is None:
-                    maxradius = armlength+xyzdelta*sqrt(3.0)
+        starttime = time.time()
+        with self.robot:
+            self.robot.SetTransform(eye(4))
+            Tbase = self.manip.GetBase().GetTransform()
+            Tbaseinv = linalg.inv(Tbase)
+            maniplinks = self.getManipulatorLinks(self.manip)
+            for link in self.robot.GetLinks():
+                link.Enable(link in maniplinks)
+            # the axes' anchors are the best way to find the max radius
+            # the best estimate of arm length is to sum up the distances of the anchors of all the points in between the chain
+            armjoints = self.getOrderedArmJoints()
+            baseanchor = transformPoints(Tbaseinv,[armjoints[0].GetAnchor()])
+            eetrans = self.manip.GetEndEffectorTransform()[0:3,3]
+            armlength = 0
+            for j in armjoints[::-1]:
+                armlength += sqrt(sum((eetrans-j.GetAnchor())**2))
+                eetrans = j.GetAnchor()    
+            if maxradius is None:
+                maxradius = armlength+xyzdelta*sqrt(3.0)
 
-                allpoints,insideinds,shape,self.pointscale = self.UniformlySampleSpace(maxradius,delta=xyzdelta)
-                qarray = SpaceSamplerExtra().sampleSO3(quatdelta=quatdelta)
-                rotations = [eye(3)] if translationonly else rotationMatrixFromQArray(qarray)
-                self.xyzdelta = xyzdelta
-                self.quatdelta = 0
-                if not translationonly:
-                    # for rotations, get the average distance to the nearest rotation
-                    neighdists = []
-                    for q in qarray:
-                        neighdists.append(nsmallest(2,quatArrayTDist(q,qarray))[1])
-                    self.quatdelta = mean(neighdists)
-                print 'radius: %f, xyzsamples: %d, quatdelta: %f, rot samples: %d, freespace: %d'%(maxradius,len(insideinds),self.quatdelta,len(rotations),usefreespace)
+            allpoints,insideinds,shape,self.pointscale = self.UniformlySampleSpace(maxradius,delta=xyzdelta)
+            qarray = SpaceSamplerExtra().sampleSO3(quatdelta=quatdelta)
+            rotations = [eye(3)] if translationonly else rotationMatrixFromQArray(qarray)
+            self.xyzdelta = xyzdelta
+            self.quatdelta = 0
+            if not translationonly:
+                # for rotations, get the average distance to the nearest rotation
+                neighdists = []
+                for q in qarray:
+                    neighdists.append(nsmallest(2,quatArrayTDist(q,qarray))[1])
+                self.quatdelta = mean(neighdists)
+            print 'radius: %f, xyzsamples: %d, quatdelta: %f, rot samples: %d, freespace: %d'%(maxradius,len(insideinds),self.quatdelta,len(rotations),usefreespace)
+            
+        self.reachabilitydensity3d = zeros(prod(shape))
+        self.reachability3d = zeros(prod(shape))
+        self.reachabilitystats = []
 
-                T = eye(4)
-                reachabilitydensity3d = zeros(prod(shape))
-                reachability3d = zeros(prod(shape))
-                self.reachabilitystats = []
-                with self.env:
-                    for i,ind in enumerate(insideinds):
-                        numvalid = 0
-                        numrotvalid = 0
-                        T[0:3,3] = allpoints[ind]+baseanchor
-                        for rotation in rotations:
-                            T[0:3,0:3] = rotation
-                            if usefreespace:
-                                solutions = self.manip.FindIKSolutions(dot(Tbase,T),0) # do not want to include the environment
-                                if solutions is not None:
-                                    self.reachabilitystats.append(r_[poseFromMatrix(T),len(solutions)])
-                                    numvalid += len(solutions)
-                                    numrotvalid += 1
-                            else:
-                                solution = self.manip.FindIKSolution(dot(Tbase,T),0)
-                                if solution is not None:
-                                    self.reachabilitystats.append(r_[poseFromMatrix(T),1])
-                                    numvalid += 1
-                                    numrotvalid += 1
-                        if mod(i,1000)==0:
-                            print '%d/%d'%(i,len(insideinds))
-                        reachabilitydensity3d[ind] = numvalid/float(len(rotations))
-                        reachability3d[ind] = numrotvalid/float(len(rotations))
-                self.reachability3d = reshape(reachability3d,shape)
-                self.reachabilitydensity3d = reshape(reachabilitydensity3d,shape)
+        def producer():
+            T = eye(4)
+            for ind in insideinds:
+                T[0:3,3] = allpoints[ind]+baseanchor
+                yield ind,T
+        def consumer(ind,T):
+            if mod(ind,1000)==0:
+                raveLogInfo('%s/%d'%(ind,len(insideinds)))
+            with self.env:
+                reachabilitystats = []
+                numvalid = 0
+                numrotvalid = 0
+                T = array(T)
+                for rotation in rotations:
+                    T[0:3,0:3] = rotation
+                    if usefreespace:
+                        solutions = self.manip.FindIKSolutions(dot(Tbase,T),0)
+                        if solutions is not None:
+                            reachabilitystats.append(r_[poseFromMatrix(T),len(solutions)])
+                            numvalid += len(solutions)
+                            numrotvalid += 1
+                    else:
+                        solution = self.manip.FindIKSolution(dot(Tbase,T),0)
+                        if solution is not None:
+                            reachabilitystats.append(r_[poseFromMatrix(T),1])
+                            numvalid += 1
+                            numrotvalid += 1
+                return ind,reachabilitystats, numvalid, numrotvalid
+
+        def gatherer(ind=None,reachabilitystats=None,numvalid=None,numrotvalid=None):
+            if ind is not None:
+                self.reachabilitystats += reachabilitystats
+                self.reachabilitydensity3d[ind] = numvalid/float(len(rotations))
+                self.reachability3d[ind] = numrotvalid/float(len(rotations))
+            else:
+                self.reachability3d = reshape(self.reachability3d,shape)
+                self.reachabilitydensity3d = reshape(self.reachabilitydensity3d,shape)
                 self.reachabilitystats = array(self.reachabilitystats)
-                print 'reachability finished in %fs'%(time.time()-starttime)
-        finally:
-            for b,enable in bodies:
-                b.Enable(enable)
+
+        return producer, consumer, gatherer
+
+    def generate(self,*args,**kwargs):
+        producer,consumer,gatherer = self.generatepcg(*args,**kwargs)
+        for work in producer():
+            gatherer(*consumer(*work))
+        gatherer() # gather results
+        print 'reachability finished in %fs'%(time.time()-starttime)
 
     def show(self,showrobot=True,contours=[0.01,0.1,0.2,0.5,0.8,0.9,0.99],opacity=None,figureid=1, xrange=None,options=None):
         mlab = __import__('enthought.mayavi.mlab',fromlist=['mlab'])
@@ -335,31 +347,23 @@ class ReachabilityModel(DatabaseGenerator):
                           help='The max radius of the arm to perform the computation (default=0.04)')
         parser.add_option('--quatdelta',action='store',type='float',dest='quatdelta',default=None,
                           help='The max radius of the arm to perform the computation (default=0.5)')
-        parser.add_option('--ignorefreespace',action='store_false',dest='usefreespace',default=True,
-                          help='If set, will only check if at least one IK solutions exists for every transform rather that computing a density')
-        parser.add_option('--useconvex',action='store_true',dest='useconvex',default=False,
-                          help='If set, will use the convex decomposition of the robot for kinematic reachability (this might cause self-collisions undesired places)')
+        parser.add_option('--usefreespace',action='store_true',dest='usefreespace',default=False,
+                          help='If set, will record the number of IK solutions that exist for every transform rather than just finding one. More useful map, but much slower to produce')
         parser.add_option('--showscale',action='store',type='float',dest='showscale',default=1.0,
                           help='Scales the reachability by this much in order to show colors better (default=%default)')
         return parser
     @staticmethod
-    def RunFromParser(Model=None,parser=None,args=None,**kwargs):
+    def InitializeFromParser(Model=None,parser=None,*args,**kwargs):
+        if Model is None:
+            Model = lambda robot: ReachabilityModel(robot=robot)
         if parser is None:
             parser = ReachabilityModel.CreateOptionParser()
-        (options, leftargs) = parser.parse_args(args=args)
-        env = Environment()
-        try:
-            if Model is None:
-                Model = lambda robot: ReachabilityModel(robot=robot)
-            DatabaseGenerator.RunFromParser(env=env,Model=Model,parser=parser,args=args,**kwargs)
-        finally:
-            env.Destroy()
-            RaveDestroy()
+        return DatabaseGenerator.InitializeFromParser(Model,parser,*args,**kwargs)
 
 def run(*args,**kwargs):
     """Command-line execution of the example. ``args`` specifies a list of the arguments to the script.
     """
-    ReachabilityModel.RunFromParser(*args,**kwargs)
+    ReachabilityModel.RunFromParser(Model = lambda robot: ReachabilityModel(robot=robot), parser = ReachabilityModel.CreateOptionParser(), *args,**kwargs)
 
 if __name__=='__main__':
     run()

@@ -93,8 +93,9 @@ class DatabaseGenerator(metaclass.AutoReloader):
                                help='The name of the manipulator on the robot to use')
         parser.add_option_group(dbgroup)
         return parser
+
     @staticmethod
-    def RunFromParser(Model,env=None,parser=None,args=None,robotatts=None,defaultviewer=False,allowkinbody=False,**kwargs):
+    def InitializeFromParser(Model,parser=None,env=None,args=None,robotatts=dict(),defaultviewer=False,allowkinbody=False):
         """run the database generator from the command line using
         """
         from numpy import eye
@@ -102,7 +103,6 @@ class DatabaseGenerator(metaclass.AutoReloader):
         if parser is None:
             parser = DatabaseGenerator.CreateOptionParser()
         (options, args) = parser.parse_args(args=args)
-        destroyenv = False
         loadplugins=True
         level=openravepy_int.DebugLevel.Info
         if options.getfilename:
@@ -114,32 +114,37 @@ class DatabaseGenerator(metaclass.AutoReloader):
         OpenRAVEGlobalArguments.parseGlobal(options)
         if env is None:
             env = openravepy_int.Environment()
-            destroyenv = True
-        try:
-            viewername=OpenRAVEGlobalArguments.parseEnvironment(options,env,defaultviewer=defaultviewer,returnviewer=True)
-            with env:
-                if robotatts is not None:
-                    robot = env.ReadRobotURI(options.robot,robotatts)
+        options.viewername=OpenRAVEGlobalArguments.parseEnvironment(options,env,defaultviewer=defaultviewer,returnviewer=True)
+        with env:
+            env.Load(options.robot,robotatts)
+            if len(env.GetRobots()) > 0:
+                robot = env.GetRobots()[0]
+            elif allowkinbody:
+                robot = env.GetBodies()[0]
+            assert(robot is not None)
+            robot.SetTransform(eye(4))
+            if hasattr(options,'manipname') and robot.IsRobot():
+                if options.manipname is None:
+                    # prioritize manipulators with ik solvers
+                    indices = [i for i,m in enumerate(robot.GetManipulators()) if m.GetIkSolver() is not None]
+                    if len(indices) > 0:
+                        robot.SetActiveManipulator(indices[0])
                 else:
-                    robot = env.ReadRobotURI(options.robot)
-                if robot is not None:
-                    env.AddRobot(robot)
-                elif allowkinbody:
-                    if robotatts is not None:
-                        robot = env.ReadKinBodyURI(options.robot,robotatts)
-                    else:
-                        robot = env.ReadKinBodyURI(options.robot)
-                    env.AddKinBody(robot)
-                robot.SetTransform(eye(4))
-                if hasattr(options,'manipname') and robot.IsRobot():
-                    if options.manipname is None:
-                        # prioritize manipulators with ik solvers
-                        indices = [i for i,m in enumerate(robot.GetManipulators()) if m.GetIkSolver() is not None]
-                        if len(indices) > 0:
-                            robot.SetActiveManipulator(indices[0])
-                    else:
-                        robot.SetActiveManipulator([i for i,m in enumerate(robot.GetManipulators()) if m.GetName()==options.manipname][0])
-            model = Model(robot=robot)
+                    robot.SetActiveManipulator([i for i,m in enumerate(robot.GetManipulators()) if m.GetName()==options.manipname][0])
+        model = Model(robot=robot)
+        return options,model
+
+    @staticmethod
+    def RunFromParser(Model,env=None,parser=None,args=None,robotatts=dict(),defaultviewer=False,allowkinbody=False,**kwargs):
+        """run the database generator from the command line using
+        """
+        import sys
+        orgenv=env
+        destroyenv = orgenv is None
+        env = None
+        try:
+            options,model = DatabaseGenerator.InitializeFromParser(Model,parser,orgenv,args,robotatts,defaultviewer,allowkinbody)
+            env=model.env
             if options.getfilename:
                 # prioritize first available
                 filename=model.getfilename(True)
@@ -153,8 +158,8 @@ class DatabaseGenerator(metaclass.AutoReloader):
                 print int(hasmodel)
                 openravepy_int.RaveDestroy()
                 sys.exit(not hasmodel)
-            if viewername is not None:
-                env.SetViewer(viewername)
+            if options.viewername is not None:
+                env.SetViewer(options.viewername)
             if options.show:
                 if not model.load():
                     raise ValueError('failed to find cached model %s:%s'%(model.getfilename(True),model.getfilename(False)))
@@ -163,7 +168,7 @@ class DatabaseGenerator(metaclass.AutoReloader):
             model.autogenerate(options=options)
             return model
         finally:
-            if destroyenv:
+            if destroyenv and env is not None:
                 env.Destroy()
 
 import convexdecomposition

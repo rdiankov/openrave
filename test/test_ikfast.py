@@ -19,6 +19,7 @@ ikfast testing is being synchronized with the ikfast version, so don't try to re
 """
 import openravepy
 from openravepy import databases, ikfast, IkParameterization, RaveInitialize, RaveDestroy, RaveCreateProblem, Environment, RaveLoadPlugin, RaveSetDebugLevel, RaveGetDebugLevel, DebugLevel, RaveFindDatabaseFile
+from openravepy import ikfast
 import numpy
 from itertools import izip, combinations
 from optparse import OptionParser
