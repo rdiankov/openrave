@@ -88,7 +88,7 @@ class TestKinematics(EnvironmentSetup):
                                 assert( transdist(dot(Jquat,deltavalues)+worldquat,newquat) <= 2*thresh )
                                 raveLogDebug(repr(dofvaluesnew))
                                 raveLogDebug(repr(deltavalues))
-                                print 'angle dist: ',axisangledist(dot(Jangvel,deltavalues)+worldaxisangle,newaxisangle)
+                                print 'angle dist: ',axisangledist(dot(Jangvel,deltavalues)+worldaxisangle,newaxisangle), 2*thresh, armlength
                                 assert( axisangledist(dot(Jangvel,deltavalues)+worldaxisangle,newaxisangle) <= 2*thresh )
 
     def test_bodyvelocities(self):
@@ -256,7 +256,7 @@ class TestKinematics(EnvironmentSetup):
             assert( k.GetLinks()[0].GetGeometries()[0].GetType() == KinBody.Link.GeomProperties.Type.Box )
             assert( k.GetLinks()[0].GetGeometries()[1].GetType() == KinBody.Link.GeomProperties.Type.Box )
             k2 = self.env.CreateKinBody()
-            k2.InitFromTrimesh(TriMesh(*ComputeBoxMesh([0.1,0.2,0.3])),True)
+            k2.InitFromTrimesh(TriMesh(*misc.ComputeBoxMesh([0.1,0.2,0.3])),True)
             k2.SetName('temp')
             self.env.AddKinBody(k2,True)
             assert( transdist(k2.ComputeAABB().extents(),[0.1,0.2,0.3]) <= g_epsilon )
@@ -271,7 +271,7 @@ class TestKinematics(EnvironmentSetup):
                     geom = link.GetGeometries()[0]
                     if geom.IsModifiable():
                         extents = [0.6,0.5,0.1]
-                        geom.SetCollisionMesh(TriMesh(*ComputeBoxMesh(extents)))
+                        geom.SetCollisionMesh(TriMesh(*misc.ComputeBoxMesh(extents)))
                         vmin = numpy.min(geom.GetCollisionMesh().vertices,0)
                         vmax = numpy.max(geom.GetCollisionMesh().vertices,0)
                         assert( transdist(0.5*(vmax-vmin),extents) <= g_epsilon )

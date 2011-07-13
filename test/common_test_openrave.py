@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from openravepy import *
+from openravepy import misc
 from numpy import *
 
 from itertools import izip, combinations
