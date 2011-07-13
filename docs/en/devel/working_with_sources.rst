@@ -72,14 +72,5 @@ Using the `bm.el <http://www.nongnu.org/bm/>`_ library for getting bookmarks. If
 
 .. code-block:: common-lisp
 
-  (setq uncrustify-uncrustify-on-save nil)
-  (add-hook 'c-mode-common-hook
-           '(lambda()
-              (make-local-variable 'write-contents-hooks)
-              (add-hook 'write-contents-hooks
-                        '(lambda()
-                           (bm-buffer-save)
-                           (uncrustify-buffer)
-                           (bm-buffer-restore)
-                           (not-modified)
-                           ))))
+  (add-hook 'uncrustify-init-hooks 'bm-buffer-save)
+  (add-hook 'uncrustify-finish-hooks 'bm-buffer-restore)

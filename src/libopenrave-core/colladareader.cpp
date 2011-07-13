@@ -31,6 +31,17 @@ using namespace std;
 
 class ColladaReader : public daeErrorHandler
 {
+    /// \brief bindings for instance models
+    class ModelBinding
+    {
+public:
+        ModelBinding(domNodeRef node, domInstance_kinematics_modelRef ikmodel) : _node(node), _ikmodel(ikmodel) {
+        }
+        domNodeRef _node;
+        domInstance_kinematics_modelRef _ikmodel;
+    };
+
+    /// \brief bindings for joints between different specs
     class JointAxisBinding
     {
 public:
@@ -58,12 +69,24 @@ public:
         domMotion_axis_infoRef motion_axis_info;
     };
 
+    /// \brief bindings for links between different specs
+    class LinkBinding
+    {
+public:
+        domNodeRef _node;
+        domLinkRef _link;
+        domInstance_rigid_bodyRef _irigidbody;
+        domRigid_bodyRef _rigidbody;
+        domNodeRef _nodephysicsoffset; // the physics rigid body is in this coordinate system
+    };
+
     /// \brief inter-collada bindings for a kinematics scene
     class KinematicsSceneBindings
     {
 public:
-        std::list< std::pair<domNodeRef,domInstance_kinematics_modelRef> > listKinematicsVisualBindings;
+        std::list<ModelBinding> listModelBindings;
         std::list<JointAxisBinding> listAxisBindings;
+        std::list<LinkBinding> listLinkBindings;
 
         bool AddAxisInfo(const domInstance_kinematics_model_Array& arr, domKinematics_axis_infoRef kinematics_axis_info, domMotion_axis_infoRef motion_axis_info)
         {
@@ -168,7 +191,6 @@ public:
             return false;
         }
 
-        std::list<JointAxisBinding> listAxisBindingsAll;
         //  parse each instance kinematics scene
         vector<std::string>  vprocessednodes;
         for (size_t iscene = 0; iscene < allscene->getInstance_kinematics_scene_array().getCount(); iscene++) {
@@ -181,13 +203,12 @@ public:
             daeElementRef kscenelib = _dom->getLibrary_kinematics_scenes_array()[0]->getKinematics_scene_array()[0];
             KinematicsSceneBindings bindings;
             _ExtractKinematicsVisualBindings(allscene->getInstance_visual_scene(),kiscene,bindings);
-            listAxisBindingsAll.insert(listAxisBindingsAll.end(),bindings.listAxisBindings.begin(),bindings.listAxisBindings.end());
-            FOREACH(itbinding,bindings.listKinematicsVisualBindings) {
-                if( !!itbinding->first->getId() ) {
-                    vprocessednodes.push_back(itbinding->first->getId());
+            _ExtractPhysicsBindings(allscene,bindings);
+            FOREACH(itbinding,bindings.listModelBindings) {
+                if( !!itbinding->_node->getId() ) {
+                    vprocessednodes.push_back(itbinding->_node->getId());
                 }
             }
-
             for(size_t ias = 0; ias < kscene->getInstance_articulated_system_array().getCount(); ++ias) {
                 RobotBasePtr probot;
                 if( ExtractArticulatedSystem(probot, kscene->getInstance_articulated_system_array()[ias], bindings) && !!probot ) {
@@ -208,7 +229,7 @@ public:
         if (!!allscene->getInstance_visual_scene()) {
             domVisual_sceneRef visual_scene = daeSafeCast<domVisual_scene>(allscene->getInstance_visual_scene()->getUrl().getElement().cast());
             for (size_t node = 0; node < visual_scene->getNode_array().getCount(); node++) {
-                KinBodyPtr pbody = ExtractKinematicsModel(visual_scene->getNode_array()[node], domPhysics_modelRef(),listAxisBindingsAll,vprocessednodes);
+                KinBodyPtr pbody = _ExtractKinematicsModel(visual_scene->getNode_array()[node], KinematicsSceneBindings(),vprocessednodes);
                 if( !!pbody ) {
                     _penv->AddKinBody(pbody, true);
                 }
@@ -256,6 +277,7 @@ public:
             }
             boost::shared_ptr<KinematicsSceneBindings> bindings(new KinematicsSceneBindings());
             _ExtractKinematicsVisualBindings(allscene->getInstance_visual_scene(),kiscene,*bindings);
+            _ExtractPhysicsBindings(allscene,*bindings);
             for(size_t ias = 0; ias < kscene->getInstance_articulated_system_array().getCount(); ++ias) {
                 if( ExtractArticulatedSystem(probot, kscene->getInstance_articulated_system_array()[ias], *bindings) && !!probot ) {
                     bSuccess = true;
@@ -336,6 +358,7 @@ public:
             }
             KinematicsSceneBindings bindings;
             _ExtractKinematicsVisualBindings(allscene->getInstance_visual_scene(),kiscene,bindings);
+            _ExtractPhysicsBindings(allscene,bindings);
             for(size_t ikmodel = 0; ikmodel < kscene->getInstance_kinematics_model_array().getCount(); ++ikmodel) {
                 if( ExtractKinematicsModel(pbody, kscene->getInstance_kinematics_model_array()[ikmodel], bindings) && !!pbody ) {
                     bSuccess = true;
@@ -348,12 +371,11 @@ public:
         }
 
         // search for anything left over
-        std::list<JointAxisBinding> listAxisBindingsAll;
         std::vector<std::string> vprocessednodes;
         if (!!allscene->getInstance_visual_scene()) {
             domVisual_sceneRef visual_scene = daeSafeCast<domVisual_scene>(allscene->getInstance_visual_scene()->getUrl().getElement().cast());
             for (size_t node = 0; node < visual_scene->getNode_array().getCount(); node++) {
-                pbody = ExtractKinematicsModel(visual_scene->getNode_array()[node], domPhysics_modelRef(),listAxisBindingsAll,vprocessednodes);
+                pbody = _ExtractKinematicsModel(visual_scene->getNode_array()[node], KinematicsSceneBindings(),vprocessednodes);
                 if( !!pbody ) {
                     bSuccess = true;
                     break;
@@ -496,7 +518,7 @@ public:
             RAVELOG_WARN(str(boost::format("%s does not reference valid kinematics\n")%ikm->getSid()));
             return false;
         }
-        domPhysics_modelRef pmodel;
+
         if( !pkinbody ) {
             boost::shared_ptr<std::string> pinterface_type = _ExtractInterfaceType(ikm->getExtra_array());
             if( !pinterface_type ) {
@@ -517,9 +539,9 @@ public:
 
         // find matching visual node
         domNodeRef pvisualnode;
-        FOREACH(it, bindings.listKinematicsVisualBindings) {
-            if( it->second == ikm ) {
-                pvisualnode = it->first;
+        FOREACH(it, bindings.listModelBindings) {
+            if( it->_ikmodel == ikm ) {
+                pvisualnode = it->_node;
                 break;
             }
         }
@@ -535,7 +557,7 @@ public:
             pkinbody->SetName(ikm->getID());
         }
 
-        if (!ExtractKinematicsModel(pkinbody, kmodel, pvisualnode, pmodel, bindings.listAxisBindings)) {
+        if (!_ExtractKinematicsModel(pkinbody, kmodel, pvisualnode, bindings)) {
             RAVELOG_WARN(str(boost::format("failed to load kinbody from kinematics model %s\n")%kmodel->getID()));
             return false;
         }
@@ -543,7 +565,7 @@ public:
     }
 
     /// \brief extract one rigid link composed of the node hierarchy
-    KinBodyPtr ExtractKinematicsModel(domNodeRef pdomnode, domPhysics_modelRef pmodel, const std::list<JointAxisBinding>& listAxisBindings, const std::vector<std::string>& vprocessednodes)
+    KinBodyPtr _ExtractKinematicsModel(domNodeRef pdomnode, const KinematicsSceneBindings& bindings, const std::vector<std::string>& vprocessednodes)
     {
         if( !!pdomnode->getID() &&( find(vprocessednodes.begin(),vprocessednodes.end(),pdomnode->getID()) != vprocessednodes.end()) ) {
             return KinBodyPtr();
@@ -559,7 +581,7 @@ public:
         plink->_name = name;
         plink->_mass = 1.0;
         plink->_bStatic = false;
-        bool bhasgeometry = ExtractGeometry(pdomnode,plink,listAxisBindings,vprocessednodes);
+        bool bhasgeometry = ExtractGeometry(pdomnode,plink,bindings,vprocessednodes);
         if( !bhasgeometry ) {
             return KinBodyPtr();
         }
@@ -572,7 +594,7 @@ public:
     }
 
     /// \brief append the kinematics model to the openrave kinbody
-    bool ExtractKinematicsModel(KinBodyPtr& pkinbody, domKinematics_modelRef kmodel, domNodeRef pnode, domPhysics_modelRef pmodel, const std::list<JointAxisBinding>& listAxisBindings)
+    bool _ExtractKinematicsModel(KinBodyPtr& pkinbody, domKinematics_modelRef kmodel, domNodeRef pnode, KinematicsSceneBindings& bindings)
     {
         vector<domJointRef> vdomjoints;
         if (!pkinbody) {
@@ -615,7 +637,7 @@ public:
 
         RAVELOG_VERBOSE(str(boost::format("Number of root links in the kmodel %d\n")%ktec->getLink_array().getCount()));
         for (size_t ilink = 0; ilink < ktec->getLink_array().getCount(); ++ilink) {
-            ExtractLink(pkinbody, ktec->getLink_array()[ilink], ilink == 0 ? pnode : domNodeRef(), Transform(), vdomjoints, listAxisBindings);
+            ExtractLink(pkinbody, ktec->getLink_array()[ilink], ilink == 0 ? pnode : domNodeRef(), Transform(), vdomjoints, bindings);
         }
 
         for (size_t iform = 0; iform < ktec->getFormula_array().getCount(); ++iform) {
@@ -749,7 +771,8 @@ public:
     }
 
     ///  \brief Extract Link info and add it to an existing body
-    KinBody::LinkPtr ExtractLink(KinBodyPtr pkinbody, const domLinkRef pdomlink,const domNodeRef pdomnode, const Transform& tParentLink, const std::vector<domJointRef>& vdomjoints, const std::list<JointAxisBinding>& listAxisBindings) {
+    KinBody::LinkPtr ExtractLink(KinBodyPtr pkinbody, const domLinkRef pdomlink,const domNodeRef pdomnode, const Transform& tParentLink, const std::vector<domJointRef>& vdomjoints, KinematicsSceneBindings& bindings)
+    {
         //  Set link name with the name of the COLLADA's Link
         std::string linkname;
         if( !!pdomlink ) {
@@ -782,16 +805,59 @@ public:
             RAVELOG_DEBUG(str(boost::format("found previously defined link '%s")%linkname));
         }
 
+        plink->_t = tParentLink;
+        // use the kinematics coordinate system for each link
+        if( !!pdomlink ) {
+            plink->_t = plink->_t * _ExtractFullTransform(pdomlink);
+        }
+
+        domInstance_rigid_bodyRef irigidbody;
+        domRigid_bodyRef rigidbody;
+        Transform trigidoffset = pkinbody->GetLinks().at(0)->GetTransform();
         if( !!pdomnode ) {
             RAVELOG_VERBOSE(str(boost::format("Node Id %s and Name %s\n")%pdomnode->getId()%pdomnode->getName()));
+
+            FOREACH(itlinkbinding, bindings.listLinkBindings) {
+                if( !!pdomnode->getID() && !!itlinkbinding->_node->getID() && strcmp(pdomnode->getID(),itlinkbinding->_node->getID()) == 0 ) {
+                    irigidbody = itlinkbinding->_irigidbody;
+                    rigidbody = itlinkbinding->_rigidbody;
+                    itlinkbinding->_link = pdomlink;
+                    if( !!itlinkbinding->_nodephysicsoffset ) {
+                        // set the rigid offset to the transform of the link that the node points to
+                        //trigidoffset =
+                    }
+                }
+            }
+        }
+
+        if( !!rigidbody && !!rigidbody->getTechnique_common() ) {
+            domRigid_body::domTechnique_commonRef rigiddata = rigidbody->getTechnique_common();
+            if( !!rigiddata->getMass() ) {
+                plink->_mass = rigiddata->getMass()->getValue();
+            }
+            Transform tmassframe = trigidoffset;
+            if( !!rigiddata->getMass_frame() ) {
+                tmassframe *= _ExtractFullTransform(rigiddata->getMass_frame());
+            }
+            TransformMatrix minertia;
+            if( !!rigiddata->getInertia() ) {
+                minertia.m[0] = rigiddata->getInertia()->getValue()[0];
+                minertia.m[5] = rigiddata->getInertia()->getValue()[1];
+                minertia.m[10] = rigiddata->getInertia()->getValue()[2];
+            }
+            TransformMatrix transMass = plink->_t.inverse() * tmassframe;
+            plink->_transMass = transMass*minertia*transMass.inverse();
+            plink->_transMass.trans = transMass.trans;
+            if( !!rigiddata->getDynamic() ) {
+                plink->_bStatic = !rigiddata->getDynamic()->getValue();
+            }
         }
 
         if (!pdomlink) {
-            ExtractGeometry(pdomnode,plink,listAxisBindings,std::vector<std::string>());
+            ExtractGeometry(pdomnode,plink,bindings,std::vector<std::string>());
         }
         else {
             RAVELOG_DEBUG(str(boost::format("Attachment link elements: %d\n")%pdomlink->getAttachment_full_array().getCount()));
-            plink->_t = tParentLink * _ExtractFullTransform(pdomlink);     // use the kinematics coordinate system for each link
 
             {
                 stringstream ss; ss << plink->GetName() << ": " << plink->_t << endl;
@@ -799,7 +865,7 @@ public:
             }
 
             // Get the geometry
-            ExtractGeometry(pdomnode,plink,listAxisBindings,std::vector<std::string>());
+            ExtractGeometry(pdomnode,plink,bindings,std::vector<std::string>());
 
             RAVELOG_DEBUG(str(boost::format("After ExtractGeometry Attachment link elements: %d\n")%pdomlink->getAttachment_full_array().getCount()));
 
@@ -847,7 +913,7 @@ public:
                 domNodeRef pchildnode;
 
                 // see if joint has a binding to a visual node
-                FOREACHC(itaxisbinding,listAxisBindings) {
+                FOREACHC(itaxisbinding,bindings.listAxisBindings) {
                     for (size_t ic = 0; ic < vdomaxes.getCount(); ++ic) {
                         //  If the binding for the joint axis is found, retrieve the info
                         if (vdomaxes[ic] == itaxisbinding->pkinematicaxis) {
@@ -872,7 +938,7 @@ public:
                 }
                 std::vector<dReal> vaxisunits(vdomaxes.getCount(),dReal(1));
                 for (size_t ic = 0; ic < vdomaxes.getCount(); ++ic) {
-                    FOREACHC(itaxisbinding,listAxisBindings) {
+                    FOREACHC(itaxisbinding,bindings.listAxisBindings) {
                         if (vdomaxes[ic] == itaxisbinding->pkinematicaxis) {
                             if( !!itaxisbinding->kinematics_axis_info ) {
                                 if( !!itaxisbinding->kinematics_axis_info->getActive() ) {
@@ -926,7 +992,7 @@ public:
                 _mapJointIds[jointid] = pjoint;
                 RAVELOG_DEBUG(str(boost::format("joint %s (%d:%d)")%pjoint->_name%pjoint->jointindex%pjoint->dofindex));
 
-                KinBody::LinkPtr pchildlink = ExtractLink(pkinbody, pattfull->getLink(), pchildnode, plink->_t * tatt, vdomjoints, listAxisBindings);
+                KinBody::LinkPtr pchildlink = ExtractLink(pkinbody, pattfull->getLink(), pchildnode, plink->_t * tatt, vdomjoints, bindings);
 
                 if (!pchildlink) {
                     RAVELOG_WARN(str(boost::format("Link '%s' has no child link, creating dummy link\n")%plink->GetName()));
@@ -945,7 +1011,7 @@ public:
                 for (size_t ic = 0; ic < vdomaxes.getCount(); ++ic) {
                     domKinematics_axis_infoRef kinematics_axis_info;
                     domMotion_axis_infoRef motion_axis_info;
-                    FOREACHC(itaxisbinding,listAxisBindings) {
+                    FOREACHC(itaxisbinding,bindings.listAxisBindings) {
                         bool bfound = false;
                         if (vdomaxes[ic] == itaxisbinding->pkinematicaxis) {
                             kinematics_axis_info = itaxisbinding->kinematics_axis_info;
@@ -1065,7 +1131,7 @@ public:
     /// Extract Geometry and apply the transformations of the node
     /// \param pdomnode Node to extract the goemetry
     /// \param plink    Link of the kinematics model
-    bool ExtractGeometry(const domNodeRef pdomnode,KinBody::LinkPtr plink, const std::list<JointAxisBinding>& listAxisBindings,const std::vector<std::string>& vprocessednodes)
+    bool ExtractGeometry(const domNodeRef pdomnode,KinBody::LinkPtr plink, const KinematicsSceneBindings& bindings, const std::vector<std::string>& vprocessednodes)
     {
         if( _bSkipGeometry ) {
             return true;
@@ -1084,7 +1150,7 @@ public:
         for (size_t i = 0; i < pdomnode->getNode_array().getCount(); i++) {
             // check if contains a joint
             bool contains=false;
-            FOREACHC(it,listAxisBindings) {
+            FOREACHC(it,bindings.listAxisBindings) {
                 // don't check ID's check if the reference is the same!
                 if ( (pdomnode->getNode_array()[i])  == (it->visualnode)) {
                     contains=true;
@@ -1095,7 +1161,7 @@ public:
                 continue;
             }
 
-            bhasgeometry |= ExtractGeometry(pdomnode->getNode_array()[i],plink, listAxisBindings,vprocessednodes);
+            bhasgeometry |= ExtractGeometry(pdomnode->getNode_array()[i],plink, bindings, vprocessednodes);
             // Plink stayes the same for all children
             // replace pdomnode by child = pdomnode->getNode_array()[i]
             // hope for the best!
@@ -2234,8 +2300,8 @@ private:
 
             //  kinematics information
             daeElement* pelt = searchBinding(kbindmodel,kscene);
-            domInstance_kinematics_modelRef kimodel = daeSafeCast<domInstance_kinematics_model>(pelt);
-            if (!kimodel) {
+            domInstance_kinematics_modelRef ikmodel = daeSafeCast<domInstance_kinematics_model>(pelt);
+            if (!ikmodel) {
                 if( !pelt ) {
                     RAVELOG_WARN("bind_kinematics_model does not reference element\n");
                 }
@@ -2244,7 +2310,7 @@ private:
                 }
                 continue;
             }
-            bindings.listKinematicsVisualBindings.push_back(make_pair(node,kimodel));
+            bindings.listModelBindings.push_back(ModelBinding(node,ikmodel));
         }
         // axis info
         for (size_t ijoint = 0; ijoint < kiscene->getBind_joint_axis_array().getCount(); ++ijoint) {
@@ -2261,6 +2327,28 @@ private:
                 continue;
             }
             bindings.listAxisBindings.push_back(JointAxisBinding(pjtarget, pjointaxis, bindjoint->getValue(), NULL, NULL));
+        }
+    }
+
+    static void _ExtractPhysicsBindings(domCOLLADA::domSceneRef allscene, KinematicsSceneBindings& bindings)
+    {
+        for(size_t iphysics = 0; iphysics < allscene->getInstance_physics_scene_array().getCount(); ++iphysics) {
+            domPhysics_sceneRef pscene = daeSafeCast<domPhysics_scene>(allscene->getInstance_physics_scene_array()[iphysics]->getUrl().getElement().cast());
+            for(size_t imodel = 0; imodel < pscene->getInstance_physics_model_array().getCount(); ++imodel) {
+                domInstance_physics_modelRef ipmodel = pscene->getInstance_physics_model_array()[imodel];
+                domPhysics_modelRef pmodel = daeSafeCast<domPhysics_model> (ipmodel->getUrl().getElement().cast());
+                domNodeRef nodephysicsoffset = daeSafeCast<domNode>(ipmodel->getParent().getElement().cast());
+                for(size_t ibody = 0; ibody < ipmodel->getInstance_rigid_body_array().getCount(); ++ibody) {
+                    LinkBinding lb;
+                    lb._irigidbody = ipmodel->getInstance_rigid_body_array()[ibody];
+                    lb._node = daeSafeCast<domNode>(lb._irigidbody->getTarget().getElement().cast());
+                    lb._rigidbody = daeSafeCast<domRigid_body>(daeSidRef(lb._irigidbody->getBody(),pmodel).resolve().elt);
+                    lb._nodephysicsoffset = nodephysicsoffset;
+                    if( !!lb._rigidbody && !!lb._node ) {
+                        bindings.listLinkBindings.push_back(lb);
+                    }
+                }
+            }
         }
     }
 
@@ -2284,6 +2372,24 @@ private:
             }
         }
         return daeElementRef();
+    }
+
+    domInstance_physics_modelRef _GetPhysicsModelNodeOffset(domCOLLADA::domSceneRef allscene, domNodeRef parentnode)
+    {
+        BOOST_ASSERT( !!parentnode && !!parentnode->getID() );
+        for(size_t iphysics = 0; iphysics < allscene->getInstance_physics_scene_array().getCount(); ++iphysics) {
+            domPhysics_sceneRef pscene = daeSafeCast<domPhysics_scene>(allscene->getInstance_physics_scene_array()[iphysics]->getUrl().getElement().cast());
+            for(size_t imodel = 0; imodel < pscene->getInstance_physics_model_array().getCount(); ++imodel) {
+                domInstance_physics_modelRef ipmodel = pscene->getInstance_physics_model_array()[imodel];
+                domNodeRef prefnode = daeSafeCast<domNode>(ipmodel->getParent().getElement().cast());
+                if( !!prefnode && !!prefnode->getID() ) {
+                    if( strcmp(prefnode->getID(),parentnode->getID())==0 ) {
+                        return ipmodel;
+                    }
+                }
+            }
+        }
+        return domInstance_physics_modelRef();
     }
 
     /// \brief returns an openrave interface type from the extra array

@@ -15,8 +15,10 @@
 """
 from __future__ import with_statement # for python 2.5
 import openravepy_int
+import openravepy_ext
 import os.path
 import numpy
+from itertools import izip
 def mkdir_recursive(newdir):
     """works the way a good mkdir should :)
         - already exists, silently complete
@@ -262,7 +264,7 @@ class MultiManipIKSolver:
             grabbed = self.robot.GetGrabbed()
             statesavers = [body.CreateKinBodyStateSaver() for body in grabbed]
             try:
-                with RobotStateSaver(self.robot): # for storing enabled state
+                with openravepy_ext.RobotStateSaver(self.robot): # for storing enabled state
                     for i,manip in enumerate(self.manips):
                         # invalidate all links that are controlled by the other manipulators
                         for link in self.robot.GetLinks():

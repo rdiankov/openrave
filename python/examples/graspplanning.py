@@ -36,6 +36,17 @@ The scene is randomized every run in order to show the powerful of the planners.
   
   Gallery of runs.
 
+Destinations
+============
+
+By default, the grasp planner will choose a grasp that is also valid at a destination point. If
+running on custom environments, sometimes it is interesting to see if the robot can just grasp the
+object, without moving it to the destination. To test planning without destinations use:
+
+.. code-block:: bash
+
+  openrave.py --example graspplanning --nodestinations
+
 5D IK Grasp Planning
 ====================
 
@@ -49,6 +60,7 @@ It is possible to perform grasp planning with 5D IK. Try executing:
   :width: 640
 
 .. examplepost-block:: graspplanning
+
 
 """
 from __future__ import with_statement # for python 2.5

@@ -189,7 +189,7 @@ class TestKinematics(EnvironmentSetup):
     def test_collada(self):
         print "test that collada import/export works"
         epsilon = 400*g_epsilon # because exporting, expect to lose precision, should fix this
-        for robotfile in g_robotfiles[0:3]:
+        for robotfile in g_robotfiles:
             self.env.Reset()
             robot0=self.env.ReadRobotXMLFile(robotfile)
             self.env.AddRobot(robot0,True)

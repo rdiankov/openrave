@@ -15,6 +15,8 @@ Core
 
 * CMake OpenRAVE_CORE_LIBRARIES variable now returns both openrave and openrave-core.
 
+* Now reading physics data from COLLADA files.
+
 Release
 -------
 

@@ -49,6 +49,7 @@
 using namespace OpenRAVE;
 using namespace std;
 
+// eventually replace with http://www.math.sci.hiroshima-u.ac.jp/~m-mat/MT/SFMT/index-jp.html
 class MT19937Sampler : public SpaceSamplerBase
 {
 public:
@@ -124,6 +125,8 @@ private:
     /* initializes mt[N] with a seed */
     void init_genrand(uint32_t s)
     {
+        mag01[0] = 0x0UL;
+        mag01[1] = MATRIX_A;
         mt[0]= s & 0xffffffffUL;
         for (mti=1; mti<N; mti++) {
             mt[mti] =
@@ -170,14 +173,13 @@ private:
     uint32_t genrand_int32(void)
     {
         uint32_t y;
-        static uint32_t mag01[2]={ 0x0UL, MATRIX_A};
         /* mag01[x] = x * MATRIX_A  for x=0,1 */
 
         if (mti >= N) {     /* generate N words at one time */
             int kk;
 
-            if (mti == N+1)                                                           /* if init_genrand() has not been called, */
-                init_genrand(5489UL);                                                                              /* a default initial seed is used */
+            if (mti == N+1)                                                                                                                                                                           /* if init_genrand() has not been called, */
+                init_genrand(5489UL);                                                                                                                                                                                                                                          /* a default initial seed is used */
 
             for (kk=0; kk<N-M; kk++) {
                 y = (mt[kk]&UPPER_MASK)|(mt[kk+1]&LOWER_MASK);
@@ -246,7 +248,7 @@ private:
 
     uint32_t mt[N];     /* the array for the state vector  */
     int mti;     /* mti==N+1 means mt[N] is not initialized */
-
+    uint32_t mag01[2];
     int _dof;
 };
 
