@@ -254,6 +254,7 @@ public:
             int N = dCollide (geom1, geom2,vcontacts.size(),&vcontacts[0].geom,sizeof(vcontacts[0]));
             if(( N > 0) && !bComputeAllContacts ) {
                 // not requesting contacts, so return
+                vcontacts.resize(N);
                 return N;
             }
 
@@ -263,6 +264,7 @@ public:
                 return N;
             }
             if( vcontacts.size() >= _nMaxContacts ) {
+                vcontacts.resize(N);
                 break;
             }
             vcontacts.resize(min(_nMaxContacts,vcontacts.size()*2));
