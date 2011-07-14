@@ -224,6 +224,12 @@ public:
                     _penv->AddKinBody(pbody,true);
                 }
             }
+
+            FOREACH(itlinkbinding,bindings.listLinkBindings) {
+                if( !!itlinkbinding->_link && !!itlinkbinding->_node && !!itlinkbinding->_node->getID()) {
+                    vprocessednodes.push_back(itlinkbinding->_node->getID());
+                }
+            }
         }
 
         // add left-over visual objects
@@ -818,8 +824,10 @@ public:
         if( !!pdomnode ) {
             RAVELOG_VERBOSE(str(boost::format("Node Id %s and Name %s\n")%pdomnode->getId()%pdomnode->getName()));
 
+            bool bFoundBinding = false;
             FOREACH(itlinkbinding, bindings.listLinkBindings) {
                 if( !!pdomnode->getID() && !!itlinkbinding->_node->getID() && strcmp(pdomnode->getID(),itlinkbinding->_node->getID()) == 0 ) {
+                    bFoundBinding = true;
                     irigidbody = itlinkbinding->_irigidbody;
                     rigidbody = itlinkbinding->_rigidbody;
                     itlinkbinding->_domlink = pdomlink;
@@ -837,6 +845,12 @@ public:
                     }
                     break;
                 }
+            }
+            if( !bFoundBinding ) {
+                LinkBinding lb;
+                lb._node = pdomnode;
+                lb._link = plink;
+                bindings.listLinkBindings.push_back(lb);
             }
         }
 

@@ -364,6 +364,3 @@ def run(*args,**kwargs):
     """Command-line execution of the example. ``args`` specifies a list of the arguments to the script.
     """
     ReachabilityModel.RunFromParser(Model = lambda robot: ReachabilityModel(robot=robot), parser = ReachabilityModel.CreateOptionParser(), *args,**kwargs)
-
-if __name__=='__main__':
-    run()

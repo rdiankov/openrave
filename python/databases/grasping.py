@@ -949,6 +949,3 @@ def run(*args,**kwargs):
     """Command-line execution of the example. ``args`` specifies a list of the arguments to the script.
     """
     GraspingModel.RunFromParser(*args,**kwargs)
-
-if __name__ == "__main__":
-    run()

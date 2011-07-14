@@ -15,7 +15,7 @@ Core
 
 * CMake OpenRAVE_CORE_LIBRARIES variable now returns both openrave and openrave-core.
 
-* Now reading physics data from COLLADA files.
+* Now reading physics data from COLLADA files, also fixed bugs in collada readers/writers.
 
 Release
 -------
@@ -33,6 +33,11 @@ Tests
 -----
 
 * test_programs is now runnable by windows
+
+Misc
+----
+
+* fixed bug in ODE when contacts overflow
 
 Version 0.4.1
 =============

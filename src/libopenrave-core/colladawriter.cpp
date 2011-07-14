@@ -856,7 +856,8 @@ public:
         return ipmout;
     }
 
-    virtual boost::shared_ptr<kinematics_model_output> WriteKinematics_model(KinBodyPtr pbody) {
+    virtual boost::shared_ptr<kinematics_model_output> WriteKinematics_model(KinBodyPtr pbody)
+    {
         EnvironmentMutex::scoped_lock lockenv(_penv->GetMutex());
         boost::shared_ptr<kinematics_model_output> kmout = _GetKinematics_model(pbody);
         if( !!kmout ) {
@@ -1051,8 +1052,8 @@ public:
         return kmout;
     }
 
-    virtual boost::shared_ptr<physics_model_output> WritePhysics_model(KinBodyPtr pbody) {
-        EnvironmentMutex::scoped_lock lockenv(_penv->GetMutex());
+    virtual boost::shared_ptr<physics_model_output> WritePhysics_model(KinBodyPtr pbody)
+    {
         boost::shared_ptr<physics_model_output> pmout = _GetPhysics_model(pbody);
         if( !!pmout ) {
             return pmout;
