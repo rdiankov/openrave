@@ -73,8 +73,9 @@ public:
     class LinkBinding
     {
 public:
+        KinBody::LinkPtr _link;
         domNodeRef _node;
-        domLinkRef _link;
+        domLinkRef _domlink;
         domInstance_rigid_bodyRef _irigidbody;
         domRigid_bodyRef _rigidbody;
         domNodeRef _nodephysicsoffset; // the physics rigid body is in this coordinate system
@@ -821,11 +822,20 @@ public:
                 if( !!pdomnode->getID() && !!itlinkbinding->_node->getID() && strcmp(pdomnode->getID(),itlinkbinding->_node->getID()) == 0 ) {
                     irigidbody = itlinkbinding->_irigidbody;
                     rigidbody = itlinkbinding->_rigidbody;
-                    itlinkbinding->_link = pdomlink;
+                    itlinkbinding->_domlink = pdomlink;
+                    itlinkbinding->_link = plink;
                     if( !!itlinkbinding->_nodephysicsoffset ) {
                         // set the rigid offset to the transform of the link that the node points to
-                        //trigidoffset =
+                        FOREACH(itlinkbinding2, bindings.listLinkBindings) {
+                            if( !!itlinkbinding2->_node->getID() && strcmp(itlinkbinding2->_node->getID(),itlinkbinding->_nodephysicsoffset->getID()) ) {
+                                if( !!itlinkbinding2->_link ) {
+                                    trigidoffset = itlinkbinding2->_link->_t;
+                                }
+                                break;
+                            }
+                        }
                     }
+                    break;
                 }
             }
         }

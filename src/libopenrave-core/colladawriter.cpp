@@ -827,12 +827,18 @@ public:
 
     virtual boost::shared_ptr<instance_physics_model_output> _WriteInstance_physics_model(KinBodyPtr pbody, daeElementRef parent, const string& sidscope)
     {
-        EnvironmentMutex::scoped_lock lockenv(_penv->GetMutex());
         boost::shared_ptr<physics_model_output> pmout = WritePhysics_model(pbody);
         boost::shared_ptr<instance_physics_model_output> ipmout(new instance_physics_model_output());
         ipmout->pmout = pmout;
         ipmout->ipm = daeSafeCast<domInstance_physics_model>(parent->add(COLLADA_ELEMENT_INSTANCE_PHYSICS_MODEL));
-        ipmout->ipm->setParent(xsAnyURI(*ipmout->ipm,string("#")+_GetNodeId(pbody)));
+        string nodeid;
+        if( pbody->GetLinks().size() > 0 ) {
+            nodeid = _GetNodeId(KinBody::LinkConstPtr(pbody->GetLinks().at(0)));
+        }
+        else {
+            nodeid = _GetNodeId(pbody);
+        }
+        ipmout->ipm->setParent(xsAnyURI(*ipmout->ipm,string("#")+nodeid));
         string symscope, refscope;
         if( sidscope.size() > 0 ) {
             symscope = sidscope+string("_");
