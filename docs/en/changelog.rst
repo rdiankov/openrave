@@ -17,6 +17,11 @@ Core
 
 * Now reading physics data from COLLADA files, also fixed bugs in collada readers/writers.
 
+Planning
+--------
+
+* MoveToHandPosition, MoveManipulator, and Manipulator::CheckIndependentCollision now only check the **active** links if the CO_ActiveDOFs option is set on the collision checker.
+
 Release
 -------
 

@@ -416,6 +416,8 @@ protected:
         robot->SetActiveDOFs(pmanip->GetArmIndices());
         params->SetRobotActiveJoints(robot);
 
+        CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
+
         TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF());
 
         std::vector<dReal> values;
@@ -727,6 +729,8 @@ protected:
         robot->SetActiveDOFs(pmanip->GetArmIndices(), affinedofs);
         params->SetRobotActiveJoints(robot);
         robot->GetActiveDOFValues(params->vinitialconfig);
+
+        CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
 
         if( constrainterrorthresh > 0 ) {
             RAVELOG_DEBUG("setting jacobian constraint function in planner parameters\n");

@@ -40,6 +40,8 @@ Uses the Rapidly-Exploring Random Trees Algorithm.\n\
         _robot = pbase;
 
         RobotBase::RobotStateSaver savestate(_robot);
+        CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
+
         if( (int)params->vinitialconfig.size() % params->GetDOF() ) {
             RAVELOG_ERROR(str(boost::format("initial config wrong dim: %d\n")%params->vinitialconfig.size()));
             return false;
@@ -151,6 +153,7 @@ public:
         }
 
         RobotBase::RobotStateSaver savestate(_robot);
+        CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
 
         _treeBackward.Reset(shared_planner(), _parameters->GetDOF());
         _treeBackward._fStepLength = _parameters->_fStepLength;
@@ -348,6 +351,8 @@ public:
             _parameters.reset();
             return false;
         }
+
+        CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
 
         //read in all goals
         int goal_index = 0;

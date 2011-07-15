@@ -97,3 +97,25 @@ class TestMoving(EnvironmentSetup):
             assert( not targetcollision or env.CheckCollision(robot) )
             basemanip.MoveManipulator(goal=[0, 0, 1.29023451, 0, -2.32099996, 0, -0.69800004, 0])
         robot.WaitForController(100)
+
+    def test_planwithcollision(self):
+        env=self.env
+        env.Load('data/pr2test1.env.xml')
+        robot=env.GetRobots()[0]
+        with env:
+            defaultvalues = robot.GetDOFValues()
+            robot.SetDOFValues([0.187],[robot.GetJoint('l_shoulder_lift_joint').GetDOFIndex()])
+
+            manip = robot.SetActiveManipulator('rightarm')
+            ikmodel = databases.inversekinematics.InverseKinematicsModel(robot,iktype=IkParameterization.Type.Transform6D)
+            if not ikmodel.load():
+                ikmodel.autogenerate()
+
+            Tdelta = eye(4)
+            Tdelta[0,3] = -0.2
+            Tdelta[2,3] = -0.2
+            Tnew = dot(manip.GetEndEffectorTransform(),Tdelta)
+
+            basemanip = interfaces.BaseManipulation(robot)
+            ret = basemanip.MoveToHandPosition([Tnew])
+            assert(ret is not None)

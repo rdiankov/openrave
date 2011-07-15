@@ -345,8 +345,9 @@ class GraspPlanning:
         while True:
             if len(graspables) == 0:
                 if withreplacement:
+                    time.sleep(4)
                     self.randomizeObjects()
-                    graspables = self.graspables
+                    graspables = self.graspables[:]
                 else:
                     break
             i = random.randint(len(graspables))
