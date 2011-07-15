@@ -117,7 +117,7 @@ class BaseManipulation:
         if res is None:
             raise planning_error('MoveActiveJoints')
         return res
-    def MoveToHandPosition(self,matrices=None,affinedofs=None,maxiter=None,maxtries=None,translation=None,rotation=None,seedik=None,constraintfreedoms=None,constraintmatrix=None,constrainterrorthresh=None,execute=None,outputtraj=None,steplength=None,goalsamples=None,ikparam=None,ikparams=None):
+    def MoveToHandPosition(self,matrices=None,affinedofs=None,maxiter=None,maxtries=None,translation=None,rotation=None,seedik=None,constraintfreedoms=None,constraintmatrix=None,constrainterrorthresh=None,execute=None,outputtraj=None,steplength=None,goalsamples=None,ikparam=None,ikparams=None,jitter=None):
         """See :ref:`module-basemanipulation-movetohandposition`
         """
         cmd = 'MoveToHandPosition '
@@ -143,6 +143,8 @@ class BaseManipulation:
             cmd += 'constraintmatrix %s '%matrixSerialization(constraintmatrix)
         if constrainterrorthresh is not None:
             cmd += 'constrainterrorthresh %s '%constrainterrorthresh
+        if jitter is not None:
+            cmd += 'jitter %.15e '%jitter
         if steplength is not None:
             cmd += 'steplength %.15e '%steplength
         if ikparam is not None:

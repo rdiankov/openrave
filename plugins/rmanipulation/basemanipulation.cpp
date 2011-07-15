@@ -610,6 +610,7 @@ protected:
         double constrainterrorthresh=0;
         int goalsamples = 40;
         string cmd;
+        dReal jitter = 0.03;
         while(!sinput.eof()) {
             sinput >> cmd;
             if( !sinput ) {
@@ -712,6 +713,9 @@ protected:
             else if( cmd == "constrainterrorthresh" ) {
                 sinput >> constrainterrorthresh;
             }
+            else if( cmd == "jitter" ) {
+                sinput >> jitter;
+            }
             else {
                 RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
@@ -746,7 +750,7 @@ protected:
         params->vgoalconfig.reserve(nSeedIkSolutions*robot->GetActiveDOF());
         while(nSeedIkSolutions > 0) {
             if( goalsampler.Sample(vgoal) ) {
-                if(( constrainterrorthresh > 0) &&( planningutils::JitterActiveDOF(robot,5000,0.03,params->_neighstatefn) == 0) ) {
+                if(( constrainterrorthresh > 0) &&( planningutils::JitterActiveDOF(robot,5000,jitter,params->_neighstatefn) == 0) ) {
                     RAVELOG_DEBUG("constraint function failed\n");
                     continue;
                 }
@@ -773,7 +777,7 @@ protected:
         ptraj->AddPoint(pt);
 
         // jitter again for initial collision
-        if( planningutils::JitterActiveDOF(robot,5000,0.03,params->_neighstatefn) == 0 ) {
+        if( planningutils::JitterActiveDOF(robot,5000,jitter,params->_neighstatefn) == 0 ) {
             RAVELOG_WARN("jitter failed for initial\n");
             return false;
         }

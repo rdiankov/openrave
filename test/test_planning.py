@@ -105,7 +105,8 @@ class TestMoving(EnvironmentSetup):
         with env:
             defaultvalues = robot.GetDOFValues()
             robot.SetDOFValues([0.187],[robot.GetJoint('l_shoulder_lift_joint').GetDOFIndex()])
-
+            
+            print 'case: environment collision'
             manip = robot.SetActiveManipulator('rightarm')
             ikmodel = databases.inversekinematics.InverseKinematicsModel(robot,iktype=IkParameterization.Type.Transform6D)
             if not ikmodel.load():
@@ -116,6 +117,14 @@ class TestMoving(EnvironmentSetup):
             Tdelta[2,3] = -0.2
             Tnew = dot(manip.GetEndEffectorTransform(),Tdelta)
 
-            basemanip = interfaces.BaseManipulation(robot)
+            basemanip = interfaces.BaseManipulation(robot,execute=False)
             ret = basemanip.MoveToHandPosition([Tnew])
             assert(ret is not None)
+
+            print 'case: self collision'
+#             robot.SetDOFValues(defaultvalues)
+#             ikmodel = databases.inversekinematics.InverseKinematicsModel(robot,iktype=IkParameterization.Type.Transform6D)
+#             if not ikmodel.load():
+#                 ikmodel.autogenerate()
+
+            #array([ 1.34046301,  0.94535038,  3.03934583, -1.30743665,  0.        , 0.        ,  0.        ])
