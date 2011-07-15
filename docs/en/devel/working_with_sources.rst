@@ -24,7 +24,7 @@ Note that this will create symlinks to the compilers inside **/usr/local/bin**.
 Indenting C++ Files
 -------------------
 
-OpenRAVE C++ code should automatically be run with **uncrustify** before being committed. Currently OpenRAVE requires uncrustify version >=0.57. First put :download:`.uncrustify.cfg <../../../sandbox/.uncrustify.cfg>` in your $HOME directory. The run a file before committing using:
+OpenRAVE C++ code should automatically be run with `uncrustify <http://uncrustify.sourceforge.net/>`_ before being committed. Currently OpenRAVE requires uncrustify version >=0.57. First put :download:`.uncrustify.cfg <../../../sandbox/.uncrustify.cfg>` in your $HOME directory. The run a file before committing using:
 
 .. code-block:: bash
 
