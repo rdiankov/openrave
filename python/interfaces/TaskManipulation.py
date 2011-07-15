@@ -50,7 +50,7 @@ class TaskManipulation:
         for f in grasps.flat:
             cmd += str(f) + ' '
         for name,valuerange in graspindices.iteritems():
-            if name[0] == 'i' and len(valuerange) > 0:
+            if name[0] == 'i' and len(valuerange) > 0 or name == 'grasptrans_nocol':
                 cmd += name + ' ' + str(valuerange[0]) + ' '
         if destposes is not None and len(destposes) > 0:
             if len(destposes[0]) == 7: # pose

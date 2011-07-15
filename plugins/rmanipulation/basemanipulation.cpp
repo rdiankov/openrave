@@ -533,6 +533,7 @@ protected:
             return false;
         }
         RobotBase::RobotStateSaver saver(robot);
+        CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
 
         if( planningutils::JitterActiveDOF(robot) == 0 ) {
             RAVELOG_WARN("failed\n");

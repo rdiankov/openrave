@@ -599,7 +599,7 @@ class GraspingModel(DatabaseGenerator):
                 allfinaltrans.append(finalconfig2[1])
                 allfinaljoints.append(finalconfig2[0])
             if mindist > 0:
-                # deinty grasps will usually change the configuration greatly, so detect such changes
+                # fragile grasps will usually change the configuration greatly, so detect such changes
                 # get the std deviation of all transformations and joints and make sure it is small
                 translationstd = mean(std([T[0:3,3] for T in allfinaltrans],0))
                 jointvaluesstd = self.jointmaxlengths*std(array(allfinaljoints),0)
@@ -607,7 +607,7 @@ class GraspingModel(DatabaseGenerator):
                 maxjointvaluestd = max([sum([jointvaluesstd[i] for i in range(self.robot.GetDOF()) if self.robot.DoesAffect(i,link.GetIndex())]) for link in self.robot.GetLinks()])
                 print 'grasp:',translationstd,maxjointvaluestd
                 if translationstd+maxjointvaluestd > 0.7*graspingnoise:
-                    print 'deinty grasp:',translationstd,maxjointvaluestd
+                    print 'fragile grasp:',translationstd,maxjointvaluestd
                     mindist = 0
         return contacts,finalconfig,mindist,volume
     def runGrasp(self,grasp,graspingnoise=None,translate=True,forceclosure=False,translationstepmult=None,finestep=None):
@@ -693,8 +693,21 @@ class GraspingModel(DatabaseGenerator):
                 self.setPreshape(grasp)
                 Tglobalgrasp = self.getGlobalGraspTransform(grasp,collisionfree=True)
                 if checkik:
-                    if self.manip.FindIKSolution(Tglobalgrasp,checkcollision) is None:
-                        continue
+                    if self.manip.GetIkSolver().Supports(IkParameterization.Type.Transform6D):
+                        if self.manip.FindIKSolution(Tglobalgrasp,checkcollision) is None:
+                            continue
+                    elif self.manip.GetIkSolver().Supports(IkParameterization.Type.TranslationDirection5D):
+                        ikparam = IkParameterization(Ray(Tglobalgrasp[0:3,3],dot(Tglobalgrasp[0:3,0:3],self.manip.GetDirection())),IkParameterization.Type.TranslationDirection5D)
+                        solution = self.manip.FindIKSolution(ikparam,checkcollision)
+                        if solution is None:
+                            continue
+                        with RobotStateSaver(self.robot):
+                            self.robot.SetDOFValues(solution, self.manip.GetArmIndices())
+                            Tglobalgrasp = self.manip.GetEndEffectorTransform()
+                            grasp = array(grasp)
+                            grasp[self.graspindices['grasptrans_nocol']] = Tglobalgrasp[0:3,0:4].flatten()
+                    else:
+                        return ValueError('manipulator iktype not correct')
                 elif checkcollision:
                     if self.manip.CheckEndEffectorCollision(Tglobalgrasp):
                         continue

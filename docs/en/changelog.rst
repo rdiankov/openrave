@@ -20,7 +20,7 @@ Core
 Planning
 --------
 
-* MoveToHandPosition, MoveManipulator, and Manipulator::CheckIndependentCollision now only check the **active** links if the CO_ActiveDOFs option is set on the collision checker.
+* MoveToHandPosition, MoveManipulator, MoveActiveJoints, and Manipulator::CheckIndependentCollision now only check the **active** links if the CO_ActiveDOFs option is set on the collision checker.
 
 Release
 -------
