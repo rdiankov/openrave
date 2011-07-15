@@ -1,8 +1,9 @@
 """updates the cached ikfast files in the plugins/ikfastsolvers directory
 """
 from openravepy import *
-import time,platform,os
+import time,platform,os,sys
 import logging
+from openravepy import ikfast
 
 def updateik(robotfilename,manipname,iktype,destfilename,freeindices=None):
     print robotfilename, manipname, iktype, destfilename
@@ -50,11 +51,6 @@ IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr penv, const std::vector<dReal>
 if __name__ == "__main__":
     RaveInitialize()
     try:
-        format = logging.Formatter('%(name)s: %(message)s')
-        handler = logging.StreamHandler(sys.stderr)
-        handler.setFormatter(format)
-        ikfast.log.addHandler(handler)
-        ikfast.log.setLevel(logging.ERROR)
         destdir = '../plugins/ikfastsolvers'
         updateik('robots/puma.robot.xml',None,IkParameterization.Type.Transform6D,os.path.join(destdir,'ik_puma.cpp'))
         updateik('robots/barrettwam.robot.xml',None,IkParameterization.Type.Transform6D,os.path.join(destdir,'ik_barrettwam.cpp'))

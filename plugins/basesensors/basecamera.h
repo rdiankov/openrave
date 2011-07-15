@@ -28,11 +28,12 @@ public:
         virtual ProcessElement startElement(const std::string& name, const AttributesList& atts)
         {
             if( !!_pcurreader ) {
-                if( _pcurreader->startElement(name,atts) == PE_Support )
+                if( _pcurreader->startElement(name,atts) == PE_Support ) {
                     return PE_Support;
+                }
                 return PE_Ignore;
             }
-            static boost::array<string, 11> tags = { { "sensor", "kk", "width", "height", "framerate", "power", "color", "focal_length","image_dimensions","intrinsic","measurement_time"}};
+            static boost::array<string, 13> tags = { { "sensor", "kk", "width", "height", "framerate", "power", "color", "focal_length","image_dimensions","intrinsic","measurement_time", "format", "distortion_model"}};
             if( find(tags.begin(),tags.end(),name) == tags.end() ) {
                 return PE_Pass;
             }
@@ -61,6 +62,9 @@ public:
             else if( name == "focal_length" ) {
                 ss >> _psensor->_pgeom->KK.focal_length;
             }
+            else if( name == "distortion_model" ) {
+                ss >> _psensor->_pgeom->KK.distortion_model;
+            }
             else if( name == "image_dimensions" ) {
                 ss >> _psensor->_pgeom->width >> _psensor->_pgeom->height >> _psensor->_numchannels;
             }
@@ -80,6 +84,9 @@ public:
             }
             else if( name == "power" ) {
                 ss >> _psensor->_bPower;
+            }
+            else if( name == "format" ) {
+                ss >> _psensor->_channelformat;
             }
             else if( name == "color" ) {
                 ss >> _psensor->_vColor.x >> _psensor->_vColor.y >> _psensor->_vColor.z;
@@ -379,6 +386,7 @@ protected:
     int _numchannels;
     GraphHandlePtr _graphgeometry;
     ViewerBasePtr _dataviewer;
+    string _channelformat;
 
     mutable boost::mutex _mutexdata;
 

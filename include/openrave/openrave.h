@@ -1213,7 +1213,8 @@ inline const char* RaveGetInterfaceHash(InterfaceType type)
     }
 }
 
-/// safely casts from the base interface class to an openrave interface using static_pointer_cast.
+/// \brief Safely casts from the base interface class to an openrave interface using static_pointer_cast.
+///
 /// The reason why dynamic_pointer_cast cannot be used is because interfaces might be created by different plugins, and the runtime type information will be different.
 template <typename T>
 inline boost::shared_ptr<T> RaveInterfaceCast(InterfaceBasePtr pinterface)
@@ -1230,7 +1231,8 @@ inline boost::shared_ptr<T> RaveInterfaceCast(InterfaceBasePtr pinterface)
     return boost::shared_ptr<T>();
 }
 
-/// safely casts from the base interface class to an openrave interface using static_pointer_cast.
+/// \brief Safely casts from the base interface class to an openrave interface using static_pointer_cast.
+///
 /// The reason why dynamic_pointer_cast cannot be used is because interfaces might be created by different plugins, and the runtime type information will be different.
 template <typename T>
 inline boost::shared_ptr<T const> RaveInterfaceConstCast(InterfaceBaseConstPtr pinterface)

@@ -398,9 +398,14 @@ public:
             ODESpace::KinBodyInfoPtr pinfo = boost::dynamic_pointer_cast<ODESpace::KinBodyInfo>((*itbody)->GetPhysicsData());
             BOOST_ASSERT( pinfo->vlinks.size() == (*itbody)->GetLinks().size());
             for(size_t i = 0; i < pinfo->vlinks.size(); ++i) {
-                t.rot = *(RaveVector<dReal>*)dBodyGetQuaternion(pinfo->vlinks[i]->body);
-                t.trans = *(RaveVector<dReal>*)dBodyGetPosition(pinfo->vlinks[i]->body);
-                (*itbody)->GetLinks()[i]->SetTransform(t);
+                const dReal* prot = dBodyGetQuaternion(pinfo->vlinks[i]->body);
+                Vector vrot(prot[0],prot[1],prot[2],prot[3]);
+                if( vrot.lengthsqr4() == 0 ) {
+                    RAVELOG_ERROR(str(boost::format("odephysics in body %s is returning invalid rotation!")%(*itbody)->GetName()));
+                    continue;
+                }
+                const dReal* ptrans = dBodyGetPosition(pinfo->vlinks[i]->body);
+                (*itbody)->GetLinks()[i]->SetTransform(Transform(vrot,Vector(ptrans[0],ptrans[1],ptrans[2])));
             }
 
             pinfo->nLastStamp = (*itbody)->GetUpdateStamp();

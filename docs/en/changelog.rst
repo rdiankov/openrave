@@ -37,7 +37,7 @@ Tests
 Misc
 ----
 
-* fixed bug in ODE when contacts overflow
+* fixed bug in ODE physics when contacts overflow and added check for 0 quaternions.
 
 Version 0.4.1
 =============

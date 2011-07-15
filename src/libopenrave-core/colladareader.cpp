@@ -818,6 +818,10 @@ public:
             plink->_t = plink->_t * _ExtractFullTransform(pdomlink);
         }
 
+        if( linkname == "r_gripper_palm_link" ) {
+            RAVELOG_INFO("yo\n");
+        }
+
         domInstance_rigid_bodyRef irigidbody;
         domRigid_bodyRef rigidbody;
         Transform trigidoffset = pkinbody->GetLinks().at(0)->GetTransform();
@@ -1073,9 +1077,11 @@ public:
                     }
 
                     bool joint_locked = false;     // if locked, joint angle is static
-                    bool kinematics_limits = false;
+                    bool has_soft_limits = false;
+                    bool has_hard_limits = false;
 
                     if (!!kinematics_axis_info) {
+                        // contains the soft controller limits
                         if (!!kinematics_axis_info->getLocked()) {
                             joint_locked = resolveBool(kinematics_axis_info->getLocked(),kinematics_axis_info);
                         }
@@ -1085,8 +1091,8 @@ public:
                             pjoint->_vlowerlimit.at(ic) = 0;
                             pjoint->_vupperlimit.at(ic) = 0;
                         }
-                        else if (kinematics_axis_info->getLimits()) {     // If there are articulated system kinematics limits
-                            kinematics_limits   = true;
+                        else if (!!kinematics_axis_info->getLimits()) {     // If there are articulated system kinematics limits
+                            has_soft_limits = true;
                             dReal fscale = pjoint->IsRevolute(ic) ? (PI/180.0f) : _GetUnitScale(kinematics_axis_info,_fGlobalScale);
                             pjoint->_vlowerlimit.at(ic) = fscale*(dReal)(resolveFloat(kinematics_axis_info->getLimits()->getMin(),kinematics_axis_info));
                             pjoint->_vupperlimit.at(ic) = fscale*(dReal)(resolveFloat(kinematics_axis_info->getLimits()->getMax(),kinematics_axis_info));
@@ -1103,36 +1109,35 @@ public:
                         }
                     }
 
-                    //  Search limits in the joints section
-                    if (!kinematics_axis_info || (!joint_locked && !kinematics_limits)) {
-                        //  If there are NO LIMITS
-                        if( !pdomaxis->getLimits() ) {
-                            RAVELOG_VERBOSE(str(boost::format("There are NO LIMITS in joint %s:%d ...\n")%pjoint->GetName()%kinematics_limits));
-                            if( pjoint->IsRevolute(ic) ) {
-                                pjoint->_bIsCircular[ic] = true;
-                                pjoint->_vlowerlimit[ic] = -PI;
-                                pjoint->_vupperlimit[ic] = PI;
-                            }
-                            else {
-                                pjoint->_vlowerlimit[ic] =-1000000;
-                                pjoint->_vupperlimit[ic] = 1000000;
-                            }
-                        }
-                        else {
-                            RAVELOG_VERBOSE(str(boost::format("There are LIMITS in joint %s ...\n")%pjoint->GetName()));
-                            dReal fscale = pjoint->IsRevolute(ic) ? (PI/180.0f) : _GetUnitScale(pdomaxis,_fGlobalScale);
-                            pjoint->_vlowerlimit[ic] = (dReal)pdomaxis->getLimits()->getMin()->getValue()*fscale;
-                            pjoint->_vupperlimit[ic] = (dReal)pdomaxis->getLimits()->getMax()->getValue()*fscale;
-                            if( pjoint->IsRevolute(ic) ) {
-                                if(( pjoint->_vlowerlimit[ic] < -PI) ||( pjoint->_vupperlimit[ic] > PI) ) {
-                                    pjoint->_voffsets[ic] = 0.5f * (pjoint->_vlowerlimit[ic] + pjoint->_vupperlimit[ic]);
-                                    if( pjoint->_vupperlimit[ic] - pjoint->_voffsets[ic] > PI ) {
-                                        RAVELOG_WARN(str(boost::format("joint %s, cannot allow joint range [%f,%f] of more than 2*pi radians\n")%pjoint->GetName()%pjoint->_vlowerlimit[ic]%pjoint->_vupperlimit[ic]));
-                                        pjoint->_vupperlimit[ic] = pjoint->_voffsets[ic] + PI - 1e-5;
-                                        pjoint->_vlowerlimit[ic] = pjoint->_voffsets[ic] - PI + 1e-5;
-                                    }
+                    if (!joint_locked && !!pdomaxis->getLimits() ) {
+                        has_hard_limits = true;
+                        // contains the hard limits (prioritize over soft limits)
+                        RAVELOG_VERBOSE(str(boost::format("There are LIMITS in joint %s ...\n")%pjoint->GetName()));
+                        dReal fscale = pjoint->IsRevolute(ic) ? (PI/180.0f) : _GetUnitScale(pdomaxis,_fGlobalScale);
+                        pjoint->_vlowerlimit.at(ic) = (dReal)pdomaxis->getLimits()->getMin()->getValue()*fscale;
+                        pjoint->_vupperlimit.at(ic) = (dReal)pdomaxis->getLimits()->getMax()->getValue()*fscale;
+                        if( pjoint->IsRevolute(ic) ) {
+                            if(( pjoint->_vlowerlimit[ic] < -PI) ||( pjoint->_vupperlimit[ic] > PI) ) {
+                                pjoint->_voffsets[ic] = 0.5f * (pjoint->_vlowerlimit[ic] + pjoint->_vupperlimit[ic]);
+                                if( pjoint->_vupperlimit[ic] - pjoint->_voffsets[ic] > PI ) {
+                                    RAVELOG_WARN(str(boost::format("joint %s, cannot allow joint range [%f,%f] of more than 2*pi radians\n")%pjoint->GetName()%pjoint->_vlowerlimit[ic]%pjoint->_vupperlimit[ic]));
+                                    pjoint->_vupperlimit[ic] = pjoint->_voffsets[ic] + PI - 1e-5;
+                                    pjoint->_vlowerlimit[ic] = pjoint->_voffsets[ic] - PI + 1e-5;
                                 }
                             }
+                        }
+                    }
+
+                    if( !has_soft_limits && !has_hard_limits && !joint_locked ) {
+                        RAVELOG_VERBOSE(str(boost::format("There are NO LIMITS in joint %s ...\n")%pjoint->GetName()));
+                        if( pjoint->IsRevolute(ic) ) {
+                            pjoint->_bIsCircular.at(ic) = true;
+                            pjoint->_vlowerlimit.at(ic) = -PI;
+                            pjoint->_vupperlimit.at(ic) = PI;
+                        }
+                        else {
+                            pjoint->_vlowerlimit.at(ic) =-1000000;
+                            pjoint->_vupperlimit.at(ic) = 1000000;
                         }
                     }
 
@@ -1977,10 +1982,11 @@ public:
             for(size_t j = 0; j < domatts.getCount(); ++j) {
                 atts.push_back(make_pair(domatts[j].name,domatts[j].value));
             }
-            preader->startElement(xmltag,atts);
-            _ProcessXMLReader(preader,children[i]);
-            preader->characters(children[i]->getCharData());
-            preader->endElement(xmltag);
+            if( preader->startElement(xmltag,atts) == BaseXMLReader::PE_Support ) {
+                _ProcessXMLReader(preader,children[i]);
+                preader->characters(children[i]->getCharData());
+                preader->endElement(xmltag);
+            }
         }
     }
 

@@ -26,6 +26,7 @@ class TestEnvironment(EnvironmentSetup):
     def test_loadnogeom(self):
         env=self.env
         assert(env.Load('robots/pr2-beta-static.zae',{'skipgeometry':'1'}))
+        assert(len(env.GetBodies())==1)
         robot=env.GetRobots()[0]
         trimesh=env.Triangulate(robot)
         assert(len(trimesh.vertices)==0)

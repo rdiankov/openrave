@@ -330,6 +330,7 @@ private:
             // set the transformation
             RaveTransform<dReal> t = (*itlink)->GetTransform();
             dBodySetPosition(link->body,t.trans.x, t.trans.y, t.trans.z);
+            BOOST_ASSERT( RaveFabs(t.rot.lengthsqr4()-1) < 0.0001f );
             dBodySetQuaternion(link->body,t.rot);
             dBodySetData(link->body, &link->plink);     // so that the link can be retreived from the body
 
@@ -540,6 +541,7 @@ private:
         BOOST_ASSERT( vtrans.size() == pinfo->vlinks.size() );
         for(size_t i = 0; i < vtrans.size(); ++i) {
             RaveTransform<dReal> t = vtrans[i];
+            BOOST_ASSERT( RaveFabs(t.rot.lengthsqr4()-1) < 0.0001f );
             dBodySetQuaternion(pinfo->vlinks[i]->body, t.rot);
             dBodySetPosition(pinfo->vlinks[i]->body, t.trans.x, t.trans.y, t.trans.z);
         }
