@@ -239,11 +239,11 @@ class LinkStatisticsModel(DatabaseGenerator):
             for joint,jointvolume in izip(self.robot.GetJoints(),jointvolumes_points):
                 if jointvolume is not None:
                     points = self.transformJointPoints(joint,jointvolume)
-                    kdtree = pyANN.KDTree(robotvolume)
-                    neighs,dists,kball = kdtree.kFRSearchArray(points,self.samplingdelta**2,0,self.samplingdelta*0.01)
-                    print kball
-                    robotvolume = r_[robotvolume, points[kball==0]]
-                    del kdtree
+                    if len(points) > 1:
+                        kdtree = pyANN.KDTree(robotvolume)
+                        neighs,dists,kball = kdtree.kFRSearchArray(points,self.samplingdelta**2,0,self.samplingdelta*0.01)
+                        robotvolume = r_[robotvolume, points[kball==0]]
+                        del kdtree
             del jointvolumes_points # not used anymore, so free memory
             self.affinevolumes = [None]*6
             # compute for rotation around axes

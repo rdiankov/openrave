@@ -818,10 +818,6 @@ public:
             plink->_t = plink->_t * _ExtractFullTransform(pdomlink);
         }
 
-        if( linkname == "r_gripper_palm_link" ) {
-            RAVELOG_INFO("yo\n");
-        }
-
         domInstance_rigid_bodyRef irigidbody;
         domRigid_bodyRef rigidbody;
         Transform trigidoffset = pkinbody->GetLinks().at(0)->GetTransform();
