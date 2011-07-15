@@ -30,10 +30,10 @@ def _loadversion(targetname):
     openravepy_currentversion.loadlatest = loadlatest
     return openravepy_currentversion
 
-def myimport(name, theglobals=None, thelocals=None, fromlist=None, level=-1):
+def myimport(name, globals=None, locals=None, fromlist=None, level=-1):
     __doc__=_original__import__.__doc__
     if name.split('.')[0] != "openravepy":
-        return _original__import__(name, theglobals, thelocals, fromlist, level)
+        return _original__import__(name, globals, locals, fromlist, level)
 
     if not openravepy_currentversion:
         raise Exception("After importing openravepy, you must load a specific version by typing something like 'openravepy = openravepy.loadstable(\"0.1\")' .")
@@ -49,14 +49,14 @@ def myimport(name, theglobals=None, thelocals=None, fromlist=None, level=-1):
     # "import openravepy[.whatever.whatever]"
     if not fromlist:
         # use <versionname> instead of "openravepy", but otherwise execute the  import as expected
-        _original__import__(withversion(name), theglobals, thelocals, fromlist, level)
+        _original__import__(withversion(name), globals, locals, fromlist, level)
         # but return <openravepy_currentversion> as the top-level package instead of returning openravepy as expected
         return openravepy_currentversion
 
     # "from openravepy[.whatever.whatever] import thing": instead,
     # "from <versionname>[.whatever.whatever] import thing", and 
     # return thing as expected
-    return _original__import__(withversion(name), theglobals, thelocals, fromlist, level)
+    return _original__import__(withversion(name), globals, locals, fromlist, level)
 
 __builtins__['__import__'] = myimport
 

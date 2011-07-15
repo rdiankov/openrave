@@ -92,7 +92,7 @@ def main(env,options):
     bodynames = ['data/lego2.kinbody.xml', 'data/lego4.kinbody.xml', 'data/mug1.kinbody.xml']
     numbodies = 0
     env.StopSimulation()
-    env.StartSimulation(timestep=0.01)
+    env.StartSimulation(timestep=options.timestep)
     starttime = time.time()
     while True:
         if numbodies < 40:
@@ -123,6 +123,8 @@ def run(args=None):
     OpenRAVEGlobalArguments.addOptions(parser)
     parser.add_option('--scene',action="store",type='string',dest='scene',default='data/hanoi.env.xml',
                       help='Scene file to load (default=%default)')
+    parser.add_option('--timestep',action="store",type='float',dest='timestep',default=0.01,
+                      help='The physics simulation time step size  (default=%default)')
     (options, leftargs) = parser.parse_args(args=args)
     env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
     main(env,options)
