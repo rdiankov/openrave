@@ -39,6 +39,8 @@ Misc
 
 * fixed bug in ODE physics when contacts overflow and added check for 0 quaternions.
 
+* fixed bug grasperplanner that exits at coarse step without going to fine step phase
+
 Version 0.4.1
 =============
 

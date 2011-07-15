@@ -44,7 +44,7 @@ class Grasper:
         if envother.AddModule(clone.prob,clone.args) != 0:
             raise ValueError('module failed to initialize')
         return clone
-    def Grasp(self,direction=None,roll=None,position=None,standoff=None,target=None,stablecontacts=False,forceclosure=False,transformrobot=True,onlycontacttarget=True,tightgrasp=False,graspingnoise=None,execute=None,translationstepmult=None,outputfinal=False,manipulatordirection=None):
+    def Grasp(self,direction=None,roll=None,position=None,standoff=None,target=None,stablecontacts=False,forceclosure=False,transformrobot=True,onlycontacttarget=True,tightgrasp=False,graspingnoise=None,execute=None,translationstepmult=None,outputfinal=False,manipulatordirection=None,finestep=None):
         """See :ref:`module-grasper-grasp`
         """
         cmd = 'Grasp '
@@ -64,6 +64,8 @@ class Grasper:
             cmd += 'graspingnoise %.15e '%graspingnoise
         if translationstepmult is not None:
             cmd += 'translationstepmult %.15e '%translationstepmult
+        if finestep is not None:
+            cmd += 'finestep %.15e '%finestep
         if execute is not None:
             cmd += 'execute %d '%execute
         res = self.prob.SendCommand(cmd)

@@ -246,6 +246,9 @@ public:
                 // initialization
                 sinput >> params->ftranslationstepmult;
             }
+            else if( cmd == "finestep" ) {
+                sinput >> params->ffinestep;
+            }
             else {
                 RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
@@ -593,6 +596,7 @@ public:
             ftranslationstepmult = 0.1;
             nGraspingNoiseRetries = 0;
             forceclosurethreshold = 0;
+            ffinestep = 0.001f;
         }
 
         string targetname;
@@ -606,6 +610,7 @@ public:
         dReal friction;
         string collisionchecker;
         dReal ftranslationstepmult;
+        dReal ffinestep;
 
         string manipname;
         vector<int> vactiveindices;
@@ -689,6 +694,9 @@ public:
             }
             else if( cmd == "translationstepmult" ) {
                 sinput >> worker_params->ftranslationstepmult;
+            }
+            else if( cmd == "finestep" ) {
+                sinput >> worker_params->ffinestep;
             }
             else if( cmd == "numthreads" ) {
                 sinput >> numthreads;
@@ -1294,8 +1302,9 @@ protected:
                     if( IS_DEBUGLEVEL(Level_Debug) ) {
                         stringstream ss;
                         ss << "link " << (*itlink)->GetIndex() << " delta XYZ: ";
-                        for(int q = 0; q < 3; q++)
+                        for(int q = 0; q < 3; q++) {
                             ss << deltaxyz[q] << " ";
+                        }
                         ss << endl;
                         RAVELOG_DEBUG(ss.str());
                     }
@@ -1304,8 +1313,9 @@ protected:
                     dReal fsin2 = itcontact->norm.cross(deltaxyz).lengthsqr3();
                     dReal fcos = itcontact->norm.dot3(deltaxyz);
                     bool bstable = fcos > 0 && fsin2 <= fcos*fcos*mu*mu;
-                    if(bstable)
+                    if(bstable) {
                         contacts.push_back(make_pair(*itcontact,(*itlink)->GetIndex()));
+                    }
                 }
             }
         }
@@ -1316,6 +1326,20 @@ protected:
         if( mu == 0 ) {
             return _AnalyzeContacts3D(contacts);
         }
+
+        if( contacts.size() > 16 ) {
+            // try reduce time by computing a subset of the points
+            vector<CollisionReport::CONTACT> reducedcontacts;
+            reducedcontacts.reserve(16);
+            for(size_t i = 0; i < reducedcontacts.capacity(); ++i) {
+                reducedcontacts.push_back( contacts.at((i*contacts.size())/reducedcontacts.capacity()) );
+            }
+            GRASPANALYSIS analysis = _AnalyzeContacts3D(reducedcontacts, mu, Nconepoints);
+            if( analysis.mindist > 1e-9 ) {
+                return analysis;
+            }
+        }
+
         dReal fdeltaang = 2*PI/(dReal)Nconepoints;
         dReal fang = 0;
         vector<pair<dReal,dReal> > vsincos(Nconepoints);
@@ -1336,16 +1360,16 @@ protected:
                 newcontacts.push_back(CollisionReport::CONTACT(itcontact->pos, (itcontact->norm + mu*it->first*right + mu*it->second*up).normalize3(),0));
             }
         }
-
         return _AnalyzeContacts3D(newcontacts);
     }
 
     virtual GRASPANALYSIS _AnalyzeContacts3D(const vector<CollisionReport::CONTACT>& contacts)
     {
         if( contacts.size() < 7 ) {
-            RAVELOG_DEBUG("need at least 7 contact wrenches to have force closure in 3D");
+            RAVELOG_DEBUG("need at least 7 contact wrenches to have force closure in 3D\n");
             return GRASPANALYSIS();
         }
+        RAVELOG_DEBUG(str(boost::format("analyzing %d contacts for force closure\n")%contacts.size()));
         GRASPANALYSIS analysis;
         vector<double> vpoints(6*contacts.size()), vconvexplanes;
         vector<double>::iterator itpoint = vpoints.begin();
