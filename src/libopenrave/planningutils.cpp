@@ -64,7 +64,7 @@ int JitterActiveDOF(RobotBasePtr robot,int nMaxIterations,dReal fRand,const Plan
         }
     }
 
-    if( !bCollision ) {
+    if( !bCollision || fRand <= 0 ) {
         return -1;
     }
 
@@ -114,6 +114,9 @@ bool JitterTransform(KinBodyPtr pbody, float fJitter, int nMaxIterations)
     int iter = 0;
     while(pbody->GetEnv()->CheckCollision(KinBodyConstPtr(pbody)) ) {
         if( iter > nMaxIterations ) {
+            return false;
+        }
+        if( iter > 0 && fJitter <= 0 ) {
             return false;
         }
         transnew.trans = transorig.trans + fJitter * Vector(RaveRandomFloat()-0.5f, RaveRandomFloat()-0.5f, RaveRandomFloat()-0.5f);
@@ -446,4 +449,3 @@ int ManipulatorIKGoalSampler::GetIkParameterizationIndex(int index)
 
 } // planningutils
 } // OpenRAVE
-

@@ -803,7 +803,7 @@ public:
         if( !plink ) {
             plink.reset(new KinBody::Link(pkinbody));
             plink->_name = linkname;
-            plink->_mass = 1.0;
+            plink->_mass = 1e-10;
             plink->_bStatic = false;
             plink->_index = (int) pkinbody->_veclinks.size();
             pkinbody->_veclinks.push_back(plink);
