@@ -764,10 +764,15 @@ if(CMAKE_CPACK_COMMAND AND UNIX AND OPT_BUILD_PACKAGES)
   set(CPACK_COMPONENT_${COMPONENT_PREFIX_UPPER}BASE_REQUIRED 1)
   set(CPACK_COMPONENT_${COMPONENT_PREFIX_UPPER}BASE_DISPLAY_NAME "core libraries and tools")
   set(CPACK_COMPONENT_${COMPONENT_PREFIX_UPPER}DATA_DISPLAY_NAME "basic robots, models, and scene files used in the examples")
-  set(CPACK_COMPONENT_${COMPONENT_PREFIX_UPPER}DATA_DEPENDS ${COMPONENT_PREFIX}base)
   set(CPACK_COMPONENT_${COMPONENT_PREFIX_UPPER}DEV_DISPLAY_NAME "development files and examples")
   set(CPACK_COMPONENT_${COMPONENT_PREFIX_UPPER}DEV_DEPENDS ${COMPONENT_PREFIX}base libboost-thread-dev libboost-date-time-dev)
-  
+
+  # add a circular dependency to ${CPACK_DEBIAN_PACKAGE_NAME}
+  foreach(OPENRAVE_COMPONENT ${CPACK_COMPONENTS_ALL})
+    string(TOUPPER ${OPENRAVE_COMPONENT} UPPER_COMPONENT)
+    set( CPACK_COMPONENT_${UPPER_COMPONENT}_DEPENDS ${CPACK_COMPONENT_${UPPER_COMPONENT}_DEPENDS} ${CPACK_DEBIAN_PACKAGE_NAME} openrave-minimal)
+  endforeach()
+
   # base
   set(CPACK_DEBIAN_BUILD_DEPENDS_UBUNTU debhelper cmake python-dev libxml2-dev libboost-dev ffmpeg zlib1g-dev python-numpy "python-sympy (>=0.6.3)" desktop-file-utils libboost-filesystem-dev libboost-system-dev libboost-python-dev libboost-thread-dev libboost-date-time-dev octave3.2-headers "libcollada15dom-dev (>=2.3.1)" pkg-config)
   # developer tools for devs
@@ -780,7 +785,7 @@ if(CMAKE_CPACK_COMMAND AND UNIX AND OPT_BUILD_PACKAGES)
   # debian
   set(CPACK_DEBIAN_PACKAGE_PRIORITY optional)
   set(CPACK_DEBIAN_PACKAGE_SECTION devel)
-  set(CPACK_DEBIAN_PACKAGE_DEPENDS ${CPACK_COMPONENTS_ALL})
+  set(CPACK_DEBIAN_PACKAGE_DEPENDS ${CPACK_COMPONENTS_ALL} openrave-minimal)
   set(CPACK_DEBIAN_CMAKE_OPTIONS "-DBASH_COMPLETION_DIR=../etc/bash_completion.d -DOPT_DOUBLE_PRECISION=${OPT_DOUBLE_PRECISION} -DOPT_BUILD_PACKAGE_DEFAULT=${OPT_BUILD_PACKAGE_DEFAULT}")
   set(CPACK_DEBIAN_PACKAGE_SUGGESTS "ipython")
   set(CPACK_DEBIAN_PACKAGE_REMOVE_SOURCE_FILES docs release sandbox test sympy msvc_boost.tgz msvc_collada.tgz msvc_libxml2.tgz msvc_ode.tgz msvc_soqt.tgz msvc_include sympy_0.6.7.tgz sympy_0.6.7_patches.diff 3rdparty/pcre-8.02 3rdparty/qhull 3rdparty/zlib 3rdparty/flann-1.6.6 3rdparty/collada)
@@ -797,7 +802,9 @@ if(CMAKE_CPACK_COMMAND AND UNIX AND OPT_BUILD_PACKAGES)
   if( OPT_BUILD_PACKAGE_DEFAULT )
     set(CPACK_COMPONENT_OPENRAVE_DEPENDS ${CPACK_DEBIAN_PACKAGE_NAME})
     set(CPACK_COMPONENT_OPENRAVE_DISPLAY_NAME "${CPACK_PACKAGE_DESCRIPTION_SUMMARY}")
-    set(CPACK_COMPONENTS_ALL ${CPACK_COMPONENTS_ALL} openrave)
+    set(CPACK_COMPONENT_OPENRAVE-MINIMAL_DISPLAY_NAME "minimal shared files for all versions")
+    set(CPACK_COMPONENT_OPENRAVE-MINIMAL_DESCRIPTION "Uninstall this package to remove all OpenRAVE installations")
+    set(CPACK_COMPONENTS_ALL ${CPACK_COMPONENTS_ALL} openrave openrave-minimal openrave-python-minimal)
   endif()
   
   #TODO: extra robot CAD model files from: https://openrave.svn.sourceforge.net/svnroot/openrave/data/robots
