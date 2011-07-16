@@ -13,20 +13,41 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+// Contributors: 2010 Nick Hillier, Katrina Monkley CSIRO Autonomous Systems Lab, 2010-2011 Max Argus
 #ifndef OPENRAVE_BULLET_SPACE
 #define OPENRAVE_BULLET_SPACE
 
 #include "plugindefs.h"
 
-#include "btBulletCollisionCommon.h"
-#include "btBulletDynamicsCommon.h"
+#include <btBulletCollisionCommon.h>
+#include <btBulletDynamicsCommon.h>
 #include <BulletCollision/Gimpact/btGImpactShape.h>
 #include <BulletCollision/Gimpact/btGImpactCollisionAlgorithm.h>
+#include <BulletCollision/CollisionShapes/btShapeHull.h>
 //#include <BulletCollision/Gimpact/btConcaveConcaveCollisionAlgorithm.h>
 
 // groups bits for bullet
 #define ENABLED_GROUP 1 // mask ENABLED_GROUP
 #define DISABLED_GROUP 256 // mask 0
+
+class OpenRAVEFilterCallback : public btOverlapFilterCallback
+{
+public:
+    virtual bool CheckLinks(KinBody::LinkPtr plink0, KinBody::LinkPtr plink1) const = 0;
+    virtual bool needBroadphaseCollision(btBroadphaseProxy* proxy0,btBroadphaseProxy* proxy1) const
+    {
+        BOOST_ASSERT( static_cast<btCollisionObject*>(proxy0->m_clientObject) != NULL );
+        BOOST_ASSERT( static_cast<btCollisionObject*>(proxy1->m_clientObject) != NULL );
+
+        KinBody::LinkPtr plink0 = *(KinBody::LinkPtr*)static_cast<btCollisionObject*>(proxy0->m_clientObject)->getUserPointer();
+        KinBody::LinkPtr plink1 = *(KinBody::LinkPtr*)static_cast<btCollisionObject*>(proxy1->m_clientObject)->getUserPointer();
+        if( !plink0->IsEnabled() || !plink1->IsEnabled() ) {
+            return false;
+        }
+        return CheckLinks(plink0,plink1);
+    }
+};
 
 // manages a space of bullet objects
 class BulletSpace : public boost::enable_shared_from_this<BulletSpace>
@@ -36,22 +57,31 @@ class BulletSpace : public boost::enable_shared_from_this<BulletSpace>
     }
 
 public:
+
     // information about the kinematics of the body
-    struct KinBodyInfo : public OpenRAVE::UserData
+    class KinBodyInfo : public UserData
     {
-        struct LINK
+public:
+        class LINK : public btMotionState
         {
-            virtual ~LINK()
-            {
-                motionstate.reset();
-                obj.reset();
-                shape.reset();
-                listchildren.clear();
-                listmeshes.clear();
+public:
+            virtual ~LINK() {
             }
 
-            boost::shared_ptr<btDefaultMotionState> motionstate;
+            virtual void getWorldTransform(btTransform& centerOfMassWorldTrans ) const
+            {
+                centerOfMassWorldTrans = GetBtTransform(plink->GetTransform());
+            }
+
+            virtual void setWorldTransform(const btTransform& centerOfMassWorldTrans)
+            {
+                Vector quat(centerOfMassWorldTrans.getRotation().w(), centerOfMassWorldTrans.getRotation().x(), centerOfMassWorldTrans.getRotation().y(), centerOfMassWorldTrans.getRotation().z());
+                Vector trans(centerOfMassWorldTrans.getOrigin().x(),centerOfMassWorldTrans.getOrigin().y(),centerOfMassWorldTrans.getOrigin().z());
+                plink->SetTransform(Transform(quat,trans));
+            }
+
             boost::shared_ptr<btCollisionObject> obj;
+            boost::shared_ptr<btRigidBody> _rigidbody;
             boost::shared_ptr<btCollisionShape> shape;
             list<boost::shared_ptr<btCollisionShape> > listchildren;
             list<boost::shared_ptr<btStridingMeshInterface> > listmeshes;
@@ -62,6 +92,7 @@ public:
 
         KinBodyInfo(boost::shared_ptr<btCollisionWorld> world, bool bPhysics) : _world(world), _bPhysics(bPhysics) {
             nLastStamp = 0;
+            _worlddynamics = boost::dynamic_pointer_cast<btDynamicsWorld>(_world);
         }
         virtual ~KinBodyInfo() {
             Reset();
@@ -70,33 +101,37 @@ public:
         void Reset()
         {
             FOREACH(itlink, vlinks) {
-                if( _bPhysics )
-                    ((btDynamicsWorld*)_world.get())->removeRigidBody((btRigidBody*)(*itlink)->obj.get());
-                else
+                if( _bPhysics ) {
+                    _worlddynamics->removeRigidBody((*itlink)->_rigidbody.get());
+                }
+                else {
                     _world->removeCollisionObject((*itlink)->obj.get());
+                }
             }
             vlinks.resize(0);
-            vjoints.resize(0);
+            _mapjoints.clear();
             _geometrycallback.reset();
         }
 
         KinBodyPtr pbody;     ///< body associated with this structure
         int nLastStamp;
 
-        vector<boost::shared_ptr<LINK> > vlinks;     ///< if body is disabled, then geom is static (it can't be connected to a joint!)
+        std::vector<boost::shared_ptr<LINK> > vlinks;     ///< if body is disabled, then geom is static (it can't be connected to a joint!)
         ///< the pointer to this Link is the userdata
-        vector< boost::shared_ptr<btTypedConstraint> > vjoints;
+        typedef std::map< KinBody::JointConstPtr, boost::shared_ptr<btTypedConstraint> > MAPJOINTS;
+        MAPJOINTS _mapjoints;
         boost::shared_ptr<void> _geometrycallback;
         boost::weak_ptr<BulletSpace> _bulletspace;
 
 private:
         boost::shared_ptr<btCollisionWorld> _world;
+        boost::shared_ptr<btDynamicsWorld> _worlddynamics;
         bool _bPhysics;
     };
 
     typedef boost::shared_ptr<KinBodyInfo> KinBodyInfoPtr;
     typedef boost::shared_ptr<KinBodyInfo const> KinBodyInfoConstPtr;
-    typedef boost::function<UserDataPtr(KinBodyConstPtr)> GetInfoFn;
+    typedef boost::function<KinBodyInfoPtr(KinBodyConstPtr)> GetInfoFn;
     typedef boost::function<void (KinBodyInfoPtr)> SynchornizeCallbackFn;
 
     BulletSpace(EnvironmentBasePtr penv, const GetInfoFn& infofn, bool bPhysics) : _penv(penv), GetInfo(infofn), _bPhysics(bPhysics) {
@@ -104,11 +139,10 @@ private:
     virtual ~BulletSpace() {
     }
 
-    bool InitEnvironment(boost::shared_ptr<btCollisionWorld>& world)
+    bool InitEnvironment(boost::shared_ptr<btCollisionWorld> world)
     {
-        RAVELOG_VERBOSE("init bullet collision environment\n");
-
         _world = world;
+        _worlddynamics = boost::dynamic_pointer_cast<btDynamicsWorld>(_world);
         btGImpactCollisionAlgorithm::registerAlgorithm((btCollisionDispatcher*)_world->getDispatcher());
         //btConcaveConcaveCollisionAlgorithm::registerAlgorithm(_world->getDispatcher());
 
@@ -117,21 +151,20 @@ private:
 
     void DestroyEnvironment()
     {
-        RAVELOG_VERBOSE("destroying bullet collision environment\n");
         _world.reset();
     }
 
-    UserDataPtr InitKinBody(KinBodyPtr pbody, KinBodyInfoPtr pinfo = KinBodyInfoPtr()) {
+    KinBodyInfoPtr InitKinBody(KinBodyPtr pbody, KinBodyInfoPtr pinfo = KinBodyInfoPtr(), btScalar fmargin=0.0005)
+    {
         // create all ode bodies and joints
-        if( !pinfo )
+        if( !pinfo ) {
             pinfo.reset(new KinBodyInfo(_world,_bPhysics));
+        }
         pinfo->Reset();
         pinfo->pbody = pbody;
         pinfo->_bulletspace = weak_space();
         pinfo->vlinks.reserve(pbody->GetLinks().size());
-        pinfo->vjoints.reserve(pbody->GetJoints().size());
 
-        float fmargin=0.0004f;
         FOREACHC(itlink, pbody->GetLinks()) {
             boost::shared_ptr<KinBodyInfo::LINK> link(new KinBodyInfo::LINK());
 
@@ -158,16 +191,33 @@ private:
                         btTriangleMesh* ptrimesh = new btTriangleMesh();
 
                         // for some reason adding indices makes everything crash
-                        for(size_t i = 0; i < itgeom->GetCollisionMesh().indices.size(); i += 3)
-                            ptrimesh->addTriangle(GetBtVector(itgeom->GetCollisionMesh().vertices[i]),
-                                                  GetBtVector(itgeom->GetCollisionMesh().vertices[i+1]),
-                                                  GetBtVector(itgeom->GetCollisionMesh().vertices[i+2]));
-
+                        for(size_t i = 0; i < itgeom->GetCollisionMesh().indices.size(); i += 3) {
+                            ptrimesh->addTriangle(GetBtVector(itgeom->GetCollisionMesh().vertices[i]), GetBtVector(itgeom->GetCollisionMesh().vertices[i+1]), GetBtVector(itgeom->GetCollisionMesh().vertices[i+2]));
+                        }
                         //child.reset(new btBvhTriangleMeshShape(ptrimesh, true, true)); // doesn't do tri-tri collisions!
-                        btGImpactMeshShape* pgimpact = new btGImpactMeshShape(ptrimesh);
-                        pgimpact->setMargin(fmargin);     // need to set margin very small (we're not simulating anyway)
-                        pgimpact->updateBound();
-                        child.reset(pgimpact);
+
+                        if( _bPhysics ) {
+                            RAVELOG_DEBUG("converting triangle mesh to convex hull\n");
+                            boost::shared_ptr<btConvexShape> pconvexbuilder(new btConvexTriangleMeshShape(ptrimesh));
+                            pconvexbuilder->setMargin(fmargin);
+
+                            //Create a hull shape to approximate Trimesh
+                            boost::shared_ptr<btShapeHull> hull(new btShapeHull(pconvexbuilder.get()));
+                            hull->buildHull(fmargin);
+
+                            btConvexHullShape* convexShape = new btConvexHullShape();
+                            for (int i=0; i< (hull->numVertices()); i++) {
+                                convexShape->addPoint(hull->getVertexPointer()[i]);
+                            }
+                            //convexShape->updateBound();
+                            child.reset(convexShape);
+                        }
+                        else {
+                            btGImpactMeshShape* pgimpact = new btGImpactMeshShape(ptrimesh);
+                            pgimpact->setMargin(fmargin);     // need to set margin very small (we're not simulating anyway)
+                            pgimpact->updateBound();
+                            child.reset(pgimpact);
+                        }
                         link->listmeshes.push_back(boost::shared_ptr<btStridingMeshInterface>(ptrimesh));
                     }
                     break;
@@ -187,19 +237,24 @@ private:
             }
 
             if( _bPhysics ) {
-
                 // set the mass and inertia and extract the eigenvectors of the tensor
-                btTransform startTransform;
-                startTransform.setOrigin(GetBtVector((*itlink)->GetInertia().trans));
-                btVector3 localInertia;
-                link->tlocal = Transform();
-                BOOST_ASSERT(0);     // need more work with setting inertia transform
-
-                link->motionstate.reset(new btDefaultMotionState(startTransform));
-                btRigidBody::btRigidBodyConstructionInfo rbInfo((*itlink)->GetMass(),link->motionstate.get(),pshapeparent,localInertia);
-
-                link->obj.reset(new btRigidBody(rbInfo));
-                // setCenterOfMassTransform - updates inertia
+                TransformMatrix inertiatensor = (*itlink)->GetInertia();
+                double fCovariance[9] = { inertiatensor.m[0],inertiatensor.m[1],inertiatensor.m[2],inertiatensor.m[4],inertiatensor.m[5],inertiatensor.m[6],inertiatensor.m[8],inertiatensor.m[9],inertiatensor.m[10]};
+                double eigenvalues[3], eigenvectors[9];
+                mathextra::EigenSymmetric3(fCovariance,eigenvalues,eigenvectors);
+                TransformMatrix tinertiaframe;
+                tinertiaframe.trans = inertiatensor.trans;
+                for(int j = 0; j < 3; ++j) {
+                    tinertiaframe.m[4*0+j] = eigenvectors[3*j];
+                    tinertiaframe.m[4*1+j] = eigenvectors[3*j+1];
+                    tinertiaframe.m[4*2+j] = eigenvectors[3*j+2];
+                }
+                btVector3 localInertia(eigenvalues[0],eigenvalues[1],eigenvalues[2]);
+                btRigidBody::btRigidBodyConstructionInfo rbInfo((*itlink)->GetMass(),/*link.get()*/ NULL,pshapeparent,localInertia);
+                link->tlocal = tinertiaframe;
+                rbInfo.m_startWorldTransform = GetBtTransform((*itlink)->GetTransform()*link->tlocal);
+                link->_rigidbody.reset(new btRigidBody(rbInfo));
+                link->obj = link->_rigidbody;
             }
             else {
                 link->obj.reset(new btCollisionObject());
@@ -211,32 +266,33 @@ private:
             link->obj->setUserPointer(&link->plink);
             link->obj->setCollisionFlags((*itlink)->IsStatic() ? btCollisionObject::CF_KINEMATIC_OBJECT : 0);
 
-            if( _bPhysics && !(*itlink)->IsStatic() )
-                ((btDynamicsWorld*)_world.get())->addRigidBody((btRigidBody*)link->obj.get());
-            else
+            if( _bPhysics && !(*itlink)->IsStatic() ) {
+                _worlddynamics->addRigidBody(link->_rigidbody.get());
+            }
+            else {
                 _world->addCollisionObject(link->obj.get());
+            }
+
+            //Activates all kinematic objects added to btDynamicsWorld
+            //link->body->setActivationState(DISABLE_DEACTIVATION);
 
             link->obj->activate(true);
             pinfo->vlinks.push_back(link);
         }
 
         if( _bPhysics ) {
-            pinfo->vjoints.reserve(pbody->GetJoints().size());
-
-            FOREACHC(itjoint, pbody->GetJoints()) {
-                RaveVector<dReal> anchor = (*itjoint)->GetAnchor();
-                RaveVector<dReal> axis0 = (*itjoint)->GetAxis(0);
-                RaveVector<dReal> axis1 = (*itjoint)->GetAxis(1);
-
-                btRigidBody* body0 = NULL;
-                if( (( (*itjoint)->GetFirstAttached() != NULL) && !(*itjoint)->GetFirstAttached()->IsStatic()) )
+            vector<KinBody::JointPtr> vbodyjoints; vbodyjoints.reserve(pbody->GetJoints().size()+pbody->GetPassiveJoints().size());
+            vbodyjoints.insert(vbodyjoints.end(),pbody->GetJoints().begin(),pbody->GetJoints().end());
+            vbodyjoints.insert(vbodyjoints.end(),pbody->GetPassiveJoints().begin(),pbody->GetPassiveJoints().end());
+            FOREACH(itjoint, vbodyjoints) {
+                btRigidBody* body0 = NULL, *body1 = NULL;
+                if( !!(*itjoint)->GetFirstAttached() && !(*itjoint)->GetFirstAttached()->IsStatic() ) {
                     body0 = (btRigidBody*)pinfo->vlinks[(*itjoint)->GetFirstAttached()->GetIndex()]->obj.get();
-
-                btRigidBody* body1 = NULL;
-                if( (( (*itjoint)->GetSecondAttached() != NULL) && !(*itjoint)->GetSecondAttached()->IsStatic()) )
+                }
+                if( !!(*itjoint)->GetSecondAttached() && !(*itjoint)->GetSecondAttached()->IsStatic()) {
                     body1 = (btRigidBody*)pinfo->vlinks[(*itjoint)->GetSecondAttached()->GetIndex()]->obj.get();
-
-                if(( body0 == NULL) ||( body1 == NULL) ) {
+                }
+                if( !body0 || !body1 ) {
                     RAVELOG_ERROR(str(boost::format("joint %s needs to be attached to two bodies!\n")%(*itjoint)->GetName()));
                     continue;
                 }
@@ -247,30 +303,29 @@ private:
 
                 switch((*itjoint)->GetType()) {
                 case KinBody::Joint::JointHinge: {
-                    btVector3 pivotInA = GetBtVector(t0inv * anchor);
-                    btVector3 pivotInB = GetBtVector(t1inv * anchor);
-                    btVector3 axisInA = GetBtVector(t0inv.rotate(axis0));
-                    btVector3 axisInB = GetBtVector(t1inv.rotate(axis1));
-                    joint.reset(new btHingeConstraint(*body0, *body1, pivotInA, pivotInB, axisInA, axisInB));
+                    btVector3 pivotInA = GetBtVector(t0inv * (*itjoint)->GetAnchor());
+                    btVector3 pivotInB = GetBtVector(t1inv * (*itjoint)->GetAnchor());
+                    btVector3 axisInA = GetBtVector(t0inv.rotate((*itjoint)->GetAxis(0)));
+                    btVector3 axisInB = GetBtVector(t1inv.rotate((*itjoint)->GetAxis(0)));
+                    boost::shared_ptr<btHingeConstraint> hinge(new btHingeConstraint(*body0, *body1, pivotInA, pivotInB, axisInA, axisInB));
+                    if( !(*itjoint)->IsCircular(0) ) {
+                        vector<dReal> vlower, vupper;
+                        (*itjoint)->GetLimits(vlower,vupper);
+                        btScalar orInitialAngle = (*itjoint)->GetValue(0);
+                        btScalar btInitialAngle = hinge->getHingeAngle();
+                        btScalar lower_adj, upper_adj;
+                        btScalar diff = (btInitialAngle + orInitialAngle);
+                        lower_adj = diff - vupper.at(0);
+                        upper_adj = diff - vlower.at(0);
+                        hinge->setLimit(lower_adj,upper_adj);
+                    }
+                    joint = hinge;
                     break;
                 }
                 case KinBody::Joint::JointSlider: {
-                    TransformMatrix tslider;
-                    Vector vup(1,1,1);
-                    vup -= axis0*dot3(axis0,vup);
-                    if( vup.lengthsqr3() < 0.05 ) {
-                        vup = Vector(0,1,0);
-                        vup -= axis0*dot3(axis0,vup);
-                    }
-                    vup.normalize3();
-                    Vector vdir = axis0.cross(vup);
-
-                    tslider.m[0] = axis0.x; tslider.m[1] = vup.x; tslider.m[2] = vdir.x;
-                    tslider.m[4] = axis0.y; tslider.m[5] = vup.y; tslider.m[6] = vdir.y;
-                    tslider.m[8] = axis0.z; tslider.m[9] = vup.z; tslider.m[10] = vdir.z;
-
-                    btTransform frameInA = GetBtTransform(tslider*t0inv);
-                    btTransform frameInB = GetBtTransform(tslider*t1inv);
+                    Transform tslider; tslider.rot = quatRotateDirection(Vector(1,0,0),(*itjoint)->GetAxis(0));
+                    btTransform frameInA = GetBtTransform(t0inv*tslider);
+                    btTransform frameInB = GetBtTransform(t1inv*tslider);
                     joint.reset(new btSliderConstraint(*body0, *body1, frameInA, frameInB, true));
                     break;
                 }
@@ -286,15 +341,19 @@ private:
                 }
 
                 if( !!joint ) {
-                    ((btDynamicsWorld*)_world.get())->addConstraint(joint.get(), true);
-                    pinfo->vjoints.push_back(joint);
+                    KinBody::LinkPtr plink0 = (*itjoint)->GetFirstAttached(), plink1 = (*itjoint)->GetSecondAttached();
+                    int minindex = min(plink0->GetIndex(), plink1->GetIndex());
+                    int maxindex = max(plink0->GetIndex(), plink1->GetIndex());
+
+                    bool bIgnoreCollision = pbody->GetAdjacentLinks().find(minindex|(maxindex<<16)) != pbody->GetAdjacentLinks().end() || plink0->IsRigidlyAttached(plink0);
+                    _worlddynamics->addConstraint(joint.get(), bIgnoreCollision);
+                    pinfo->_mapjoints[*itjoint] = joint;
                 }
             }
         }
 
         pinfo->_geometrycallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkGeometry, boost::bind(&BulletSpace::GeometryChangedCallback,boost::bind(&sptr_from<BulletSpace>, weak_space()),KinBodyWeakPtr(pbody)));
-
-        Synchronize(pinfo);
+        _Synchronize(pinfo);
         return pinfo;
     }
 
@@ -310,36 +369,38 @@ private:
         vector<KinBodyPtr> vbodies;
         _penv->GetBodies(vbodies);
         FOREACHC(itbody, vbodies) {
-            KinBodyInfoPtr pinfo = boost::dynamic_pointer_cast<KinBodyInfo>(GetInfo(*itbody));
+            KinBodyInfoPtr pinfo = GetInfo(*itbody);
             BOOST_ASSERT( pinfo->pbody == *itbody );
-            if( pinfo->nLastStamp != (*itbody)->GetUpdateStamp() )
-                Synchronize(pinfo);
+            if( pinfo->nLastStamp != (*itbody)->GetUpdateStamp() ) {
+                _Synchronize(pinfo);
+            }
         }
     }
 
     void Synchronize(KinBodyConstPtr pbody)
     {
-        KinBodyInfoPtr pinfo = boost::dynamic_pointer_cast<KinBodyInfo>(GetInfo(pbody));
+        KinBodyInfoPtr pinfo = GetInfo(pbody);
         BOOST_ASSERT( pinfo->pbody == pbody );
-        if( pinfo->nLastStamp != pbody->GetUpdateStamp() )
-            Synchronize(pinfo);
+        if( pinfo->nLastStamp != pbody->GetUpdateStamp() ) {
+            _Synchronize(pinfo);
+        }
     }
 
-    boost::shared_ptr<btCollisionObject> GetLinkObj(KinBody::LinkConstPtr plink)
+    boost::shared_ptr<btCollisionObject> GetLinkBody(KinBody::LinkConstPtr plink)
     {
-        KinBodyInfoPtr pinfo = boost::dynamic_pointer_cast<KinBodyInfo>(GetInfo(plink->GetParent()));
+        KinBodyInfoPtr pinfo = GetInfo(plink->GetParent());
         BOOST_ASSERT(pinfo->pbody == plink->GetParent() );
-        BOOST_ASSERT( plink->GetIndex() >= 0 && plink->GetIndex() < (int)pinfo->vlinks.size());
-        return pinfo->vlinks[plink->GetIndex()]->obj;
+        return pinfo->vlinks.at(plink->GetIndex())->obj;
     }
 
     boost::shared_ptr<btTypedConstraint> GetJoint(KinBody::JointConstPtr pjoint)
     {
-        KinBodyInfoPtr pinfo = boost::dynamic_pointer_cast<KinBodyInfo>(GetInfo(pjoint->GetParent()));
+        KinBodyInfoPtr pinfo = GetInfo(pjoint->GetParent());
         BOOST_ASSERT(pinfo->pbody == pjoint->GetParent() );
-        BOOST_ASSERT( pjoint->GetParent()->GetJointFromDOFIndex(pjoint->GetDOFIndex()) == pjoint );
-        BOOST_ASSERT( pjoint->GetJointIndex() >= 0 && pjoint->GetJointIndex() < (int)pinfo->vjoints.size());
-        return pinfo->vjoints[pjoint->GetJointIndex()];
+        KinBodyInfo::MAPJOINTS::const_iterator it;
+        pinfo->_mapjoints.find(pjoint);
+        BOOST_ASSERT(it != pinfo->_mapjoints.end());
+        return it->second;
     }
 
     void SetSynchornizationCallback(const SynchornizeCallbackFn& synccallback) {
@@ -356,26 +417,29 @@ private:
         return btVector3(v.x,v.y,v.z);
     }
 
+
+
 private:
 
-    void Synchronize(KinBodyInfoPtr pinfo)
+    void _Synchronize(KinBodyInfoPtr pinfo)
     {
         vector<Transform> vtrans;
         pinfo->pbody->GetLinkTransformations(vtrans);
         pinfo->nLastStamp = pinfo->pbody->GetUpdateStamp();
         BOOST_ASSERT( vtrans.size() == pinfo->vlinks.size() );
-        for(size_t i = 0; i < vtrans.size(); ++i)
+        for(size_t i = 0; i < vtrans.size(); ++i) {
             pinfo->vlinks[i]->obj->getWorldTransform() = GetBtTransform(vtrans[i]*pinfo->vlinks[i]->tlocal);
-
-        if( !!_synccallback )
+        }
+        if( !!_synccallback ) {
             _synccallback(pinfo);
+        }
     }
 
     virtual void GeometryChangedCallback(KinBodyWeakPtr _pbody)
     {
         EnvironmentMutex::scoped_lock lock(_penv->GetMutex());
         KinBodyPtr pbody(_pbody);
-        KinBodyInfoPtr pinfo = boost::dynamic_pointer_cast<KinBodyInfo>(GetInfo(pbody));
+        KinBodyInfoPtr pinfo = GetInfo(pbody);
         if( !pinfo ) {
             return;
         }
@@ -387,6 +451,7 @@ private:
     EnvironmentBasePtr _penv;
     GetInfoFn GetInfo;
     boost::shared_ptr<btCollisionWorld> _world;
+    boost::shared_ptr<btDynamicsWorld> _worlddynamics;
     SynchornizeCallbackFn _synccallback;
     bool _bPhysics;
 };

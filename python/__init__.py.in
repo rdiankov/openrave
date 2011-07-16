@@ -31,7 +31,6 @@ def _loadversion(targetname):
     return openravepy_currentversion
 
 def myimport(name, globals=None, locals=None, fromlist=None, level=-1):
-    __doc__=_original__import__.__doc__
     if name.split('.')[0] != "openravepy":
         return _original__import__(name, globals, locals, fromlist, level)
 
@@ -59,6 +58,7 @@ def myimport(name, globals=None, locals=None, fromlist=None, level=-1):
     return _original__import__(withversion(name), globals, locals, fromlist, level)
 
 __builtins__['__import__'] = myimport
+myimport.__doc__=_original__import__.__doc__
 
 try:
     openravepy_currentversion = loadstable(__openravepy_version__)
@@ -68,3 +68,4 @@ except NameError:
 if openravepy_currentversion is not None:
     from sys import modules
     modules['openravepy'] = openravepy_currentversion
+
