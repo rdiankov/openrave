@@ -14,31 +14,32 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "bulletspace.h"
 
-class PhysicsFilterCallback : public OpenRAVEFilterCallback
-{
-public:
-    PhysicsFilterCallback() : OpenRAVEFilterCallback() {
-    }
-    virtual bool CheckLinks(KinBody::LinkPtr plink0, KinBody::LinkPtr plink1) const
-    {
-        KinBodyPtr pbody0 = plink0->GetParent();
-        KinBodyPtr pbody1 = plink1->GetParent();
-        if( pbody0->IsAttached(pbody1) ) {
-            return false;
-        }
-        if( pbody0 != pbody1 ) {
-            return true;
-        }
-
-        // check if links are in adjacency list
-        int index0 = min(plink0->GetIndex(), plink1->GetIndex());
-        int index1 = max(plink0->GetIndex(), plink1->GetIndex());
-        return pbody0->GetNonAdjacentLinks(KinBody::AO_Enabled).count(index0|(index1<<16))>0;
-    }
-};
-
 class BulletPhysicsEngine : public PhysicsEngineBase
 {
+    class PhysicsFilterCallback : public OpenRAVEFilterCallback
+    {
+public:
+        PhysicsFilterCallback() : OpenRAVEFilterCallback() {
+        }
+        virtual bool CheckLinks(KinBody::LinkPtr plink0, KinBody::LinkPtr plink1) const
+        {
+            KinBodyPtr pbody0 = plink0->GetParent();
+            KinBodyPtr pbody1 = plink1->GetParent();
+            if( pbody0->IsAttached(pbody1) ) {
+                return false;
+            }
+            if( pbody0 != pbody1 ) {
+                return true;
+            }
+
+            // check if links are in adjacency list
+            int index0 = min(plink0->GetIndex(), plink1->GetIndex());
+            int index1 = max(plink0->GetIndex(), plink1->GetIndex());
+            return pbody0->GetNonAdjacentLinks(KinBody::AO_Enabled).count(index0|(index1<<16))>0;
+        }
+    };
+
+
     inline boost::shared_ptr<BulletPhysicsEngine> shared_physics() {
         return boost::static_pointer_cast<BulletPhysicsEngine>(shared_from_this());
     }
@@ -50,7 +51,7 @@ public:
 
     BulletPhysicsEngine(EnvironmentBasePtr penv, std::istream& sinput) : PhysicsEngineBase(penv), _space(new BulletSpace(penv, GetPhysicsInfo, true))
     {
-        __description = ":Interface Authors: Max Argus, Nick Hillier, Katrina Monkley, Rosen Diankov\n\Interface to `Bullet Physics Engine <http://bulletphysics.org/>`_\n";
+        __description = ":Interface Authors: Max Argus, Nick Hillier, Katrina Monkley, Rosen Diankov\n\nInterface to `Bullet Physics Engine <http://bulletphysics.org/>`_\n";
         _solver_iterations = 10;
         _margin_depth = 0.001;
         _linear_damping = 0.2;
@@ -114,6 +115,9 @@ public:
 
     virtual bool InitKinBody(KinBodyPtr pbody)
     {
+        if( !_dynamicsWorld ) {
+            return false;
+        }
         BulletSpace::KinBodyInfoPtr pinfo = _space->InitKinBody(pbody);
         SetPhysicsData(pbody, pinfo);
         if( !!pinfo ) {

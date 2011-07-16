@@ -15,6 +15,9 @@ if( OPT_BUILD_PACKAGE_DEFAULT )
   set(OPENRAVEPY_INIT "${CMAKE_CURRENT_BINARY_DIR}/__init__.py")
   configure_file("${CMAKE_CURRENT_SOURCE_DIR}/__init__.py.in" "${OPENRAVEPY_INIT}" IMMEDIATE @ONLY)
   install(FILES ${OPENRAVEPY_INIT} DESTINATION ${OPENRAVEPY_INSTALL_DIR}  COMPONENT openrave-python-minimal)
+  set(CPACK_COMPONENT_OPENRAVE-PYTHON-MINIMAL_DISPLAY_NAME "Python ${PYTHON_MAJORMINOR_VERSION} bindings minimal subset" PARENT_SCOPE)
+  set(CPACK_COMPONENT_OPENRAVE-PYTHON-MINIMAL_DESCRIPTION "Uninstall this package to remove all python bindings of all installations" PARENT_SCOPE)
+  set(CPACK_COMPONENT_OPENRAVE-PYTHON-MINIMAL_DEPENDS openrave-minimal PARENT_SCOPE)
 endif()
 
 file(READ "${CMAKE_CURRENT_SOURCE_DIR}/../src/cppexamples/FindOpenRAVE.cmake" FindOpenRAVE)
@@ -37,15 +40,10 @@ set(CPACK_COMPONENT_${COMPONENT_PREFIX_UPPER}PYTHON_DISPLAY_NAME "Python ${PYTHO
 set(CPACK_COMPONENT_${COMPONENT_PREFIX_UPPER}PYTHON_DEPENDS ${COMPONENT_PREFIX}base python-numpy openrave-python-minimal PARENT_SCOPE)
 
 if( OPT_BUILD_PACKAGE_DEFAULT AND OPENRAVE_BIN_SUFFIX )
-  # create all the directories ahead of time, or otherwise WORKING_DIRECTORY will not work
-  install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory \${CMAKE_INSTALL_PREFIX}/bin)" COMPONENT openrave-python-minimal)
-  install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink openrave${OPENRAVE_BIN_SUFFIX}.py openrave.py WORKING_DIRECTORY \${CMAKE_INSTALL_PREFIX}/bin)" COMPONENT openrave-python-minimal)
-  install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink openrave${OPENRAVE_BIN_SUFFIX}-robot.py openrave-robot.py WORKING_DIRECTORY \${CMAKE_INSTALL_PREFIX}/bin)" COMPONENT openrave-python-minimal)
-  install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink openrave${OPENRAVE_BIN_SUFFIX}-createplugin.py openrave-createplugin.py WORKING_DIRECTORY \${CMAKE_INSTALL_PREFIX}/bin)" COMPONENT openrave-python-minimal)
-  install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink ${OPENRAVEPY_VER_NAME} _openravepy_ WORKING_DIRECTORY \${CMAKE_INSTALL_PREFIX}/${OPENRAVEPY_INSTALL_DIR})" COMPONENT openrave-python-minimal)
-  set(CPACK_COMPONENT_OPENRAVE-PYTHON-MINIMAL_DISPLAY_NAME "Python ${PYTHON_MAJORMINOR_VERSION} bindings minimal subset" PARENT_SCOPE)
-  set(CPACK_COMPONENT_OPENRAVE-PYTHON-MINIMAL_DESCRIPTION "Uninstall this package to remove all python bindings of all installations")
-  set(CPACK_COMPONENT_OPENRAVE-PYTHON-MINIMAL_DEPENDS openrave-minimal PARENT_SCOPE)
+  install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink openrave${OPENRAVE_BIN_SUFFIX}.py openrave.py WORKING_DIRECTORY \${CMAKE_INSTALL_PREFIX}/bin)" COMPONENT openrave)
+  install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink openrave${OPENRAVE_BIN_SUFFIX}-robot.py openrave-robot.py WORKING_DIRECTORY \${CMAKE_INSTALL_PREFIX}/bin)" COMPONENT openrave)
+  install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink openrave${OPENRAVE_BIN_SUFFIX}-createplugin.py openrave-createplugin.py WORKING_DIRECTORY \${CMAKE_INSTALL_PREFIX}/bin)" COMPONENT openrave)
+  install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink ${OPENRAVEPY_VER_NAME} _openravepy_ WORKING_DIRECTORY \${CMAKE_INSTALL_PREFIX}/${OPENRAVEPY_INSTALL_DIR})" COMPONENT openrave)
 endif()
 
 # ikfast component

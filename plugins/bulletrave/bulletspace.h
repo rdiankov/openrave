@@ -92,7 +92,7 @@ public:
 
         KinBodyInfo(boost::shared_ptr<btCollisionWorld> world, bool bPhysics) : _world(world), _bPhysics(bPhysics) {
             nLastStamp = 0;
-            _worlddynamics = boost::dynamic_pointer_cast<btDynamicsWorld>(_world);
+            _worlddynamics = boost::dynamic_pointer_cast<btDiscreteDynamicsWorld>(_world);
         }
         virtual ~KinBodyInfo() {
             Reset();
@@ -125,7 +125,7 @@ public:
 
 private:
         boost::shared_ptr<btCollisionWorld> _world;
-        boost::shared_ptr<btDynamicsWorld> _worlddynamics;
+        boost::shared_ptr<btDiscreteDynamicsWorld> _worlddynamics;
         bool _bPhysics;
     };
 
@@ -142,7 +142,8 @@ private:
     bool InitEnvironment(boost::shared_ptr<btCollisionWorld> world)
     {
         _world = world;
-        _worlddynamics = boost::dynamic_pointer_cast<btDynamicsWorld>(_world);
+        _worlddynamics.reset();
+        _worlddynamics = boost::dynamic_pointer_cast<btDiscreteDynamicsWorld>(_world);
         btGImpactCollisionAlgorithm::registerAlgorithm((btCollisionDispatcher*)_world->getDispatcher());
         //btConcaveConcaveCollisionAlgorithm::registerAlgorithm(_world->getDispatcher());
 
@@ -273,7 +274,7 @@ private:
                 _world->addCollisionObject(link->obj.get());
             }
 
-            //Activates all kinematic objects added to btDynamicsWorld
+            //Activates all kinematic objects added to btDiscreteDynamicsWorld
             //link->body->setActivationState(DISABLE_DEACTIVATION);
 
             link->obj->activate(true);
@@ -451,7 +452,7 @@ private:
     EnvironmentBasePtr _penv;
     GetInfoFn GetInfo;
     boost::shared_ptr<btCollisionWorld> _world;
-    boost::shared_ptr<btDynamicsWorld> _worlddynamics;
+    boost::shared_ptr<btDiscreteDynamicsWorld> _worlddynamics;
     SynchornizeCallbackFn _synccallback;
     bool _bPhysics;
 };

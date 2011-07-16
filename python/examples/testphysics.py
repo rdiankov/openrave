@@ -20,12 +20,12 @@
 Description
 -----------
 
-When simulations are turned on, an internal timer starts and the SimulationStep functions of all classes are called. Note that simulations extend beyond physics. That's why there's the distinction between simulation and physics and both are set separately. To start the internal simulation with a timestep of 0.01 seconds do
+When simulations are turned on, an internal timer starts and the SimulationStep functions of all classes are called. Note that simulations extend beyond physics. That's why there's the distinction between simulation and physics and both are set separately. To start the internal simulation with a timestep of 0.001 seconds do
 
 .. code-block:: python
 
   env = Environment()
-  env.StartSimulation(timestep=0.01)
+  env.StartSimulation(timestep=0.001)
 
 To stop it do
 
@@ -123,7 +123,7 @@ def run(args=None):
     OpenRAVEGlobalArguments.addOptions(parser)
     parser.add_option('--scene',action="store",type='string',dest='scene',default='data/hanoi.env.xml',
                       help='Scene file to load (default=%default)')
-    parser.add_option('--timestep',action="store",type='float',dest='timestep',default=0.01,
+    parser.add_option('--timestep',action="store",type='float',dest='timestep',default=0.001,
                       help='The physics simulation time step size  (default=%default)')
     (options, leftargs) = parser.parse_args(args=args)
     env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)

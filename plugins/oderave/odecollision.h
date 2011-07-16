@@ -150,7 +150,7 @@ public:
 
     virtual bool InitKinBody(KinBodyPtr pbody)
     {
-        OpenRAVE::UserDataPtr pinfo = odespace->InitKinBody(pbody);
+        ODESpace::KinBodyInfoPtr pinfo = odespace->InitKinBody(pbody);
         SetCollisionData(pbody, pinfo);
         return !!pinfo;
     }
@@ -631,8 +631,8 @@ public:
     }
 
 private:
-    static OpenRAVE::UserDataPtr GetCollisionInfo(KinBodyConstPtr pbody) {
-        return pbody->GetCollisionData();
+    static ODESpace::KinBodyInfoPtr GetCollisionInfo(KinBodyConstPtr pbody) {
+        return boost::dynamic_pointer_cast<ODESpace::KinBodyInfo>(pbody->GetCollisionData());
     }
 
     static void KinBodyCollisionCallback (void *data, dGeomID o1, dGeomID o2)
