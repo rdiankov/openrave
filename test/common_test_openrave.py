@@ -27,7 +27,7 @@ _multiprocess_can_split_ = True
 g_epsilon = 1e-7
 g_jacobianstep = 0.01
 g_envfiles = ['data/lab1.env.xml','data/pr2wam_test1.env.xml','data/hanoi_complex.env.xml']
-g_robotfiles = ['robots/pr2-beta-static.zae','robots/barrettsegway.robot.xml','robots/neuronics-katana.zae','robots/pa10schunk.robot.xml']
+g_robotfiles = ['robots/pr2-beta-static.zae','robots/barrettsegway.robot.xml','robots/neuronics-katana.zae','robots/pa10schunk.robot.xml','robots/barrettwam-dual.robot.xml']
 
 def setup_module(module):
     os.environ['OPENRAVE_DATABASE'] = os.path.join(os.getcwd(),'.openravetest') # don't mess with the default OPENRAVE_DATABASE
