@@ -32,6 +32,8 @@ install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/interfaces" DESTINATION ${OPENRAV
 install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/databases" DESTINATION ${OPENRAVEPY_VER_INSTALL_DIR}  FILE_PERMISSIONS OWNER_WRITE OWNER_READ GROUP_READ WORLD_READ COMPONENT ${COMPONENT_PREFIX}python PATTERN ".svn" EXCLUDE PATTERN ".pyc" EXCLUDE)
 
 if( OPT_BUILD_PACKAGE_DEFAULT AND OPENRAVE_BIN_SUFFIX )
+  # create all the directories ahead of time, or otherwise WORKING_DIRECTORY will not work
+  install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory \${CMAKE_INSTALL_PREFIX}/bin)" COMPONENT openrave-python-minimal)
   install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink openrave${OPENRAVE_BIN_SUFFIX}.py openrave.py WORKING_DIRECTORY \${CMAKE_INSTALL_PREFIX}/bin)" COMPONENT openrave-python-minimal)
   install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink openrave${OPENRAVE_BIN_SUFFIX}-robot.py openrave-robot.py WORKING_DIRECTORY \${CMAKE_INSTALL_PREFIX}/bin)" COMPONENT openrave-python-minimal)
   install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink openrave${OPENRAVE_BIN_SUFFIX}-createplugin.py openrave-createplugin.py WORKING_DIRECTORY \${CMAKE_INSTALL_PREFIX}/bin)" COMPONENT openrave-python-minimal)
