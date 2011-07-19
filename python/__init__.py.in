@@ -10,12 +10,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License. 
-
 def loadstable(ver):
     return _loadversion('_openravepy_'+ver.replace('.', '_'))
 def loadlatest():
     return _loadversion('_openravepy_')
-
 
 def _loadversion(targetname):
     mainpackage = __import__("openravepy", globals(), locals(), [targetname])
@@ -34,52 +32,3 @@ except NameError:
 if openravepy_currentversion is not None:
     from sys import modules
     modules['openravepy'] = openravepy_currentversion
-
-#from sys import modules, meta_path
-#import os.path
-#import imp
-
-
-# http://www.doughellmann.com/PyMOTW/sys/imports.html
-# class OpenRAVEMetaImportFinder(object):
-#     def __init__(self, prefix):
-#         print 'Creating OpenRAVEMetaImportFinder for %s' % prefix
-#         self.prefix = prefix
-#         return
-#     
-#     def find_module(self, fullname, path_entry=None):
-#         print 'OpenRAVEMetaImportFinder looking for "%s" with path "%s"' % (fullname, path_entry)
-#         name_parts = fullname.split('.')
-#         if name_parts and name_parts[0] == self.prefix:
-#             print ' ... found prefix, returning loader'
-#             openravepyname = '_openravepy_'
-#             if '__openravepy_version__' in __builtins__:
-#                 openravepyname += __openravepy_version__.replace('.', '_')
-#             return OpenRAVEMetaImportLoader(path_entry,openravepyname)
-#         return None
-# 
-# class OpenRAVEMetaImportLoader(object):    
-#     def __init__(self, path_entry, openravepyname):
-#         self.path_entry = path_entry
-#         self.openravepyname = openravepyname
-#         return
-#         
-#     def load_module(self, fullname):
-#         print 'loading %s' % fullname
-#         if fullname in modules:
-#             mod = modules[fullname]
-#         else:
-#             mod = modules.setdefault(fullname, imp.new_module(fullname))
-# 
-#         # Set a few properties required by PEP 302
-#         mod.__file__ = fullname
-#         mod.__name__ = fullname
-#         # always looks like a package
-#         mod.__path__ = [ 'path-entry-goes-here' ]
-#         mod.__loader__ = self
-#         mod.__package__ = '.'.join(fullname.split('.')[:-1])
-#         
-#         return mod
-
-#meta_path.append(OpenRAVEMetaImportFinder('openravepy'))
-#import openravepy

@@ -91,7 +91,7 @@ allowing users to ignore the complexities of multi-threaded resource management.
 All of %OpenRAVE's services are offered through the environment. For example, requesting a
 planner interface called 'BiRRT' is done through \ref RaveCreatePlanner(). The environment supports:
 
-- \ref env_plugin_functionality "managing and communicating with plugins"
+- \ref global_functionality "managing and communicating with plugins"
 - \ref env_collision_checking "collision checking"
 - \ref env_loading "loading scenes and objects"
 - \ref env_objects "managing objects and triangulation"

@@ -196,6 +196,9 @@ bool CreateTriMeshData(EnvironmentBasePtr penv, const std::string& filename, con
                 return true;
             }
         }
+        if( extension == "stl" ) {
+            return false;
+        }
     }
 #endif
 

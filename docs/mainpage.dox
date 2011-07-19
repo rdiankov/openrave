@@ -95,11 +95,11 @@ openraveと似たコマンドに\openrave_py{openrave.py}というコマンド�
 \page writing_plugins Writing Plugins and Interfaces
 
 \section writing_plugins_contents Contents
-- \ref writing_plugins_hash
 - \ref writing_plugins_example
 - \ref writing_plugins_build
 - \ref writing_plugins_usage
 - \ref writing_plugins_doc
+- \ref writing_plugins_loading
 
 Every plugin needs to export several functions as defined in \ref plugin_exports to notify %OpenRAVE
 what interfaces it has. When a plugin is first loaded, it is validated by the environment and its
@@ -259,7 +259,7 @@ because the \ref interfaces are the only binding between plugins. Even if the he
 provided functions of a particular plugin were provided, other plugins would not be able to use them
 if not offered through the %OpenRAVE's channels.
 
-\section writing_plugins_hash Loading Plugins
+\section writing_plugins_loading Loading Plugins
 
 Many mechanisms have been put in place to prevent mismatching/old plugins to be loaded by the
 core. Using interfaces from stale plugins can lead to unexpected crashes that are very difficult to
