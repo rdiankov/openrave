@@ -319,7 +319,7 @@ Function ${UN}EnvVarUpdate
   ${EndIf}
 
   IfErrors 0 +4
-    MessageBox MB_OK|MB_ICONEXCLAMATION "Could not write updated $1 to $3"
+    MessageBox MB_OK|MB_ICONEXCLAMATION "Could not write updated $1 to $3"  /SD IDOK
     DetailPrint "Could not write updated $1 to $3"
     Goto EnvVarUpdate_Restore_Vars
 
@@ -406,11 +406,11 @@ ${StrTrimNewLines}
 
 Function GetVCRedist
   # check for the visual studio runtime
-  MessageBox MB_YESNO "Need to install Microsoft Visual Studio Runtime Redistributable (x86) for vc%(vcversion)s. Continue with auto-download and install?" IDNO done
+  MessageBox MB_YESNO "Need to install Microsoft Visual Studio Runtime Redistributable (x86) for vc%(vcversion)s. Continue with auto-download and install?" /SD IDYES IDNO done 
   nsisdl::download /TIMEOUT=30000 "%(vcredist_url)s" $TEMP\\vcredist.exe
   Pop $R0 ;Get the return value
   StrCmp $R0 "success" install
-    MessageBox MB_OK "Download failed: $R0"
+    MessageBox MB_OK "Download failed: $R0"  /SD IDOK
     Quit
 install:
     ExecWait "$TEMP\\vcredist.exe"
@@ -427,7 +427,7 @@ FunctionEnd
 
 # check for boost installation
 Function GetBoost
-  MessageBox MB_YESNO "Need to install boost %(boost_version)s. Select 'Multithreaded, DLL' and make sure the installed DLLs are added to 'Path'. Continue with auto-download and install?" IDNO done
+  MessageBox MB_YESNO "Need to install boost %(boost_version)s. Select 'Multithreaded, DLL' and make sure the installed DLLs are added to 'Path'. Continue with auto-download and install?" /SD IDYES IDNO done 
   File "installers\\%(boost_installer)s"
   ExecWait '"$INSTDIR\\%(boost_installer)s"' $1
   Delete "$INSTDIR\\%(boost_installer)s"
@@ -435,7 +435,7 @@ Function GetBoost
   ClearErrors
   ReadRegStr $0 HKLM "SOFTWARE\\boostpro.com\\%(boost_version)s" InstallRoot
   IfErrors 0 done
-    MessageBox MB_OK "Failed to find boost %(boost_version)s"
+    MessageBox MB_OK "Failed to find boost %(boost_version)s"  /SD IDOK
     Abort "Cannot install"
     Quit
 done:
@@ -456,11 +456,11 @@ done1:
 FunctionEnd
 
 Function GetQt4
-  MessageBox MB_YESNO "Need to install Qt %(qt_version)s in 'C:\\Qt\\%(qt_version)s'. Continue with auto-download and install?" IDNO done
+  MessageBox MB_YESNO "Need to install Qt %(qt_version)s in 'C:\\Qt\\%(qt_version)s'. Continue with auto-download and install?" /SD IDYES IDNO done 
   nsisdl::download /TIMEOUT=30000 "%(qt_url)s" $TEMP\\qt-installer.exe
   Pop $R0 ;Get the return value
   StrCmp $R0 "success" install
-    MessageBox MB_OK "Download failed: $R0"
+    MessageBox MB_OK "Download failed: $R0"  /SD IDOK
     Quit
 install:
     ExecWait "$TEMP\\qt-installer.exe"
@@ -503,12 +503,12 @@ Section
 SectionEnd
 
 Function GetPython
-  MessageBox MB_YESNO "Need to install Python %(python_version)s. Continue with auto-download and install?"  IDNO done
+  MessageBox MB_YESNO "Need to install Python %(python_version)s. Continue with auto-download and install?"  /SD IDYES IDNO done 
   StrCpy $2 "$TEMP\\python-%(python_version_full)s.msi"
   nsisdl::download /TIMEOUT=30000 %(python_url)s $2
   Pop $R0 ;Get the return value
   StrCmp $R0 "success" install
-    MessageBox MB_OK "Download failed: $R0"
+    MessageBox MB_OK "Download failed: $R0"  /SD IDOK
     Quit
 install:
   ExecWait '"msiexec" /i $2'
@@ -525,12 +525,12 @@ done:
 FunctionEnd
 
 Function GetNumPy
-  MessageBox MB_YESNO "Need to install Python NumPy Library. Continue with auto-download and install?" IDNO  done
+  MessageBox MB_YESNO "Need to install Python NumPy Library. Continue with auto-download and install?" /SD IDYES IDNO done 
   StrCpy $2 "numpy-%(numpy_version)s-win32-superpack-python%(python_version)s.exe"
   nsisdl::download /TIMEOUT=30000 %(python_numpy_url)s $TEMP\\$2
   Pop $R0 ;Get the return value
   StrCmp $R0 "success" install
-    MessageBox MB_OK "Download failed: $R0"
+    MessageBox MB_OK "Download failed: $R0"  /SD IDOK
     Quit
 install:
   ExecWait "$TEMP\\$2"
@@ -542,7 +542,7 @@ Function DetectNumPy
   ClearErrors
   ReadRegStr $1 HKLM "SOFTWARE\\Python\\PythonCore\\%(python_version)s\\InstallPath" ""
   IfErrors 0 start
-    MessageBox MB_OK "Failed to find python installation"
+    MessageBox MB_OK "Failed to find python installation"  /SD IDOK
     Quit
 start:
   ExecWait '"$1\\python.exe" -c "import numpy"' $0
@@ -552,12 +552,12 @@ done:
 FunctionEnd
 
 Function GetSymPy
-  MessageBox MB_YESNO "Need to install Python SymPy Library. Continue with auto-download and install?" IDNO done
+  MessageBox MB_YESNO "Need to install Python SymPy Library. Continue with auto-download and install?" /SD IDYES IDNO done 
   StrCpy $2 "sympy-%(sympy_version)s.win32.exe"
   nsisdl::download /TIMEOUT=30000 %(python_sympy_url)s $TEMP\\$2
   Pop $R0 ;Get the return value
   StrCmp $R0 "success" install
-    MessageBox MB_OK "Download failed: $R0"
+    MessageBox MB_OK "Download failed: $R0"  /SD IDOK
     Quit
 install:
   ExecWait "$TEMP\\$2"
@@ -569,7 +569,7 @@ Function DetectSymPy
   ClearErrors
   ReadRegStr $1 HKLM "SOFTWARE\\Python\\PythonCore\\%(python_version)s\\InstallPath" ""
   IfErrors 0 start
-    MessageBox MB_OK "Failed to find python installation"
+    MessageBox MB_OK "Failed to find python installation"  /SD IDOK
     Quit
 start:
   ExecWait '"$1\\python.exe" -c "import sympy"' $0
@@ -663,7 +663,7 @@ Section /o "Extra Robots" secrobots
   nsisdl::download /TIMEOUT=30000 https://openrave.svn.sourceforge.net/svnroot/openrave/data/robots/manipulatorlist $TEMP\\manipulatorlist
   Pop $R0 ;Get the return value
   StrCmp $R0 "success" getrobots
-    MessageBox MB_OK "Robot List download failed: $R0"
+    MessageBox MB_OK "Robot List download failed: $R0"  /SD IDOK
     Goto done
 getrobots:
   ClearErrors
