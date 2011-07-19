@@ -21,7 +21,12 @@ class IdealController : public ControllerBase
 public:
     IdealController(EnvironmentBasePtr penv) : ControllerBase(penv), cmdid(0), _bPause(false), _bIsDone(true), _bCheckCollision(false), _bThrowExceptions(false)
     {
-        __description = ":Interface Author: Rosen Diankov\n\nIdeal controller used for planning and non-physics simulations. Forces exact robot positions.";
+        __description = ":Interface Author: Rosen Diankov\n\nIdeal controller used for planning and non-physics simulations. Forces exact robot positions.\n\n\
+If \ref ControllerBase::SetPath is called and the trajectory finishes, then the controller will continue to set the trajectory's final joint values and transformation until one of three things happens:\n\n\
+1. ControllerBase::SetPath is called.\n\n\
+2. ControllerBase::SetDesired is called.\n\n\
+3. ControllerBase::Reset is called resetting everything\n\n\
+If SetDesired is called, only joint values will be set at every timestep leaving the transformation alone.\n";
         RegisterCommand("Pause",boost::bind(&IdealController::_Pause,this,_1,_2),
                         "pauses the controller from reacting to commands ");
         RegisterCommand("SetCheckCollisions",boost::bind(&IdealController::_SetCheckCollisions,this,_1,_2),

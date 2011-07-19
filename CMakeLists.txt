@@ -721,11 +721,7 @@ if( UNIX OR CYGWIN)
   if( OPT_BUILD_PACKAGE_DEFAULT AND OPENRAVE_BIN_SUFFIX )
     install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink openrave${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}.pc openrave.pc WORKING_DIRECTORY \${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX}/pkgconfig)" COMPONENT openrave)
     if( BASH_COMPLETION_DIR )
-      execute_process(
-        COMMAND ${PYTHON_EXECUTABLE} -c "from os.path import relpath; print relpath('${OPENRAVE_SHARE_DIR}','${BASH_COMPLETION_DIR}')"
-        OUTPUT_VARIABLE BASH_COMPLETION_REL_DIR OUTPUT_STRIP_TRAILING_WHITESPACE
-        RESULT_VARIABLE _python_failed3)
-      install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink ${BASH_COMPLETION_REL_DIR}/openrave_completion.bash openrave_completion.bash WORKING_DIRECTORY \${CMAKE_INSTALL_PREFIX}/${BASH_COMPLETION_DIR})" COMPONENT openrave)
+      install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink \${CMAKE_INSTALL_PREFIX}/${OPENRAVE_SHARE_DIR}/openrave_completion.bash openrave_completion.bash WORKING_DIRECTORY \${CMAKE_INSTALL_PREFIX}/${BASH_COMPLETION_DIR})" COMPONENT openrave)
     endif()
   endif()
 endif()

@@ -10,55 +10,21 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License. 
-#
-# example code from: http://code.activestate.com/recipes/576508-version-specific-import/
-if '_original__import__' not in locals():
-    _original__import__ = __import__
 
 def loadstable(ver):
     return _loadversion('_openravepy_'+ver.replace('.', '_'))
-
 def loadlatest():
     return _loadversion('_openravepy_')
 
+
 def _loadversion(targetname):
-    mainpackage = _original__import__("openravepy", globals(), locals(), [targetname])
+    mainpackage = __import__("openravepy", globals(), locals(), [targetname])
     global openravepy_currentversion
     openravepy_currentversion = getattr(mainpackage, targetname)
     # Let users change versions after choosing this one
     openravepy_currentversion.loadstable = loadstable
     openravepy_currentversion.loadlatest = loadlatest
     return openravepy_currentversion
-
-def myimport(name, globals=None, locals=None, fromlist=None, level=-1):
-    if name.split('.')[0] != "openravepy":
-        return _original__import__(name, globals, locals, fromlist, level)
-
-    if not openravepy_currentversion:
-        raise Exception("After importing openravepy, you must load a specific version by typing something like 'openravepy = openravepy.loadstable(\"0.1\")' .")
-
-    def withversion(name):
-        """
-        Turn "openravepy[.anything]" into "<versionname>[.anything]" , where <versionname> is something like 'openravepy._openravepy_0_1'
-        """
-        parts = name.split('.')
-        parts[0] = openravepy_currentversion.__name__ # eg 'openravepy._openravepy_0_1'
-        return '.'.join(parts)
-
-    # "import openravepy[.whatever.whatever]"
-    if not fromlist:
-        # use <versionname> instead of "openravepy", but otherwise execute the  import as expected
-        _original__import__(withversion(name), globals, locals, fromlist, level)
-        # but return <openravepy_currentversion> as the top-level package instead of returning openravepy as expected
-        return openravepy_currentversion
-
-    # "from openravepy[.whatever.whatever] import thing": instead,
-    # "from <versionname>[.whatever.whatever] import thing", and 
-    # return thing as expected
-    return _original__import__(withversion(name), globals, locals, fromlist, level)
-
-__builtins__['__import__'] = myimport
-myimport.__doc__=_original__import__.__doc__
 
 try:
     openravepy_currentversion = loadstable(__openravepy_version__)
@@ -69,3 +35,51 @@ if openravepy_currentversion is not None:
     from sys import modules
     modules['openravepy'] = openravepy_currentversion
 
+#from sys import modules, meta_path
+#import os.path
+#import imp
+
+
+# http://www.doughellmann.com/PyMOTW/sys/imports.html
+# class OpenRAVEMetaImportFinder(object):
+#     def __init__(self, prefix):
+#         print 'Creating OpenRAVEMetaImportFinder for %s' % prefix
+#         self.prefix = prefix
+#         return
+#     
+#     def find_module(self, fullname, path_entry=None):
+#         print 'OpenRAVEMetaImportFinder looking for "%s" with path "%s"' % (fullname, path_entry)
+#         name_parts = fullname.split('.')
+#         if name_parts and name_parts[0] == self.prefix:
+#             print ' ... found prefix, returning loader'
+#             openravepyname = '_openravepy_'
+#             if '__openravepy_version__' in __builtins__:
+#                 openravepyname += __openravepy_version__.replace('.', '_')
+#             return OpenRAVEMetaImportLoader(path_entry,openravepyname)
+#         return None
+# 
+# class OpenRAVEMetaImportLoader(object):    
+#     def __init__(self, path_entry, openravepyname):
+#         self.path_entry = path_entry
+#         self.openravepyname = openravepyname
+#         return
+#         
+#     def load_module(self, fullname):
+#         print 'loading %s' % fullname
+#         if fullname in modules:
+#             mod = modules[fullname]
+#         else:
+#             mod = modules.setdefault(fullname, imp.new_module(fullname))
+# 
+#         # Set a few properties required by PEP 302
+#         mod.__file__ = fullname
+#         mod.__name__ = fullname
+#         # always looks like a package
+#         mod.__path__ = [ 'path-entry-goes-here' ]
+#         mod.__loader__ = self
+#         mod.__package__ = '.'.join(fullname.split('.')[:-1])
+#         
+#         return mod
+
+#meta_path.append(OpenRAVEMetaImportFinder('openravepy'))
+#import openravepy

@@ -1152,6 +1152,9 @@ public:
             if( !!body ) {
                 boost::shared_ptr<KinBody::Link::TRIMESH> ptrimesh;
                 ptrimesh = ReadTrimeshURI(ptrimesh,filename,atts);
+                if( !ptrimesh ) {
+                    return KinBodyPtr();
+                }
                 if( body->InitFromTrimesh(*ptrimesh,true) ) {
                     // have to set the render file
                     body->_veclinks.at(0)->GetGeometry(0).SetRenderFilename(filename);

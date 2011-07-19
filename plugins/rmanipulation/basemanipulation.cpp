@@ -19,7 +19,7 @@ class BaseManipulation : public ModuleBase
 {
 public:
     BaseManipulation(EnvironmentBasePtr penv) : ModuleBase(penv) {
-        __description = ":Interface Author: Rosen Diankov\n\nVery useful routines for manipulation planning and planning in general. The planners use analytical inverse kinematics and search based techniques.";
+        __description = ":Interface Author: Rosen Diankov\n\nVery useful routines for manipulation planning and planning in general. The planners use analytical inverse kinematics and search based techniques. Most of the MoveX commands by default execute the plan on the current robot by calling :meth:`.RobotBase.SetActiveMotion`. This can be disabled by adding 'execute 0' to the command line";
         RegisterCommand("SetActiveManip",boost::bind(&BaseManipulation::SetActiveManip,this,_1,_2),
                         "Set the active manipulator");
         RegisterCommand("Traj",boost::bind(&BaseManipulation::Traj,this,_1,_2),
