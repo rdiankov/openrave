@@ -52,7 +52,7 @@ IvDragger::IvDragger(QtCoinViewerPtr viewer, ItemPtr pItem, float draggerScale)
 
         _vlinkaxes.resize(_selectedItem->GetNumIvLinks());
         for(size_t i = 0; i < _vlinkaxes.size(); ++i) {
-            _vlinkaxes[i] = _CreateAxes(0.5f,0.5f);
+            _vlinkaxes[i] = _CreateAxes(i == 0 ? 1.0f : 0.25f,0.5f);
             _selectedItem->GetIvLink(i)->addChild(_vlinkaxes[i]);
         }
     }
