@@ -280,10 +280,13 @@ class GraspPlanning:
             self.taskmanip.CloseFingers()
             self.waitrobot(robot)
             
-            robot.Grab(target)
+
+            with env:
+                robot.Grab(target)
             if waitforkey:
                 raw_input('press any key to continue grasp')
             try:
+                print 'move hand up'
                 self.basemanip.MoveHandStraight(direction=self.updir,stepsize=0.003,minsteps=1,maxsteps=60)
             except:
                 print 'failed to move hand up'
