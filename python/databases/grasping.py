@@ -295,7 +295,7 @@ class GraspingModel(DatabaseGenerator):
         finestep=None
         if options is not None:
             if options.preshapes is not None:
-                preshapes = array([array([float(s) for s in preshape.split()]) for preshape in options.manipulatordirections])
+                preshapes = array([array([float(s) for s in preshape.split()]) for preshape in options.preshapes])
             if options.manipulatordirections is not None:
                 manipulatordirections = array([array([float(s) for s in md.split()]) for md in options.manipulatordirections])
             if options.boxdelta is not None:
