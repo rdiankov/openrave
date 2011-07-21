@@ -322,8 +322,9 @@ void QtCoinViewer::_mousemove_cb(SoEventCallback * node)
                 }
             }
 
-            if( !!pItem )
+            if( !!pItem ) {
                 break;
+            }
         }
 
         if (!!pItem) {
@@ -344,10 +345,12 @@ void QtCoinViewer::_mousemove_cb(SoEventCallback * node)
             SbVec3f cp = GetCamera()->position.getValue();
             RaveVector<float> camerapos (cp[0],cp[1],cp[2]);
             _vMouseRayDirection = _vMouseSurfacePosition-camerapos;
-            if( _vMouseRayDirection.lengthsqr3() > 0 )
+            if( _vMouseRayDirection.lengthsqr3() > 0 ) {
                 _vMouseRayDirection.normalize3();
-            else
+            }
+            else {
                 _vMouseRayDirection = Vector(0,0,0);
+            }
 
             stringstream ss;
             ss << "mouse on " << pKinBody->GetBody()->GetName() << ":";
@@ -2316,10 +2319,12 @@ boost::shared_ptr<EnvironmentMutex::scoped_try_lock> QtCoinViewer::LockEnvironme
     uint64_t basetime = GetMicroTime();
     while(GetMicroTime()-basetime<timeout ) {
         lockenv->try_lock();
-        if( !!*lockenv )
+        if( !!*lockenv ) {
             break;
-        if( bUpdateEnvironment )
+        }
+        if( bUpdateEnvironment ) {
             _UpdateEnvironment();
+        }
     }
 
     if( !*lockenv )
@@ -2374,7 +2379,6 @@ void QtCoinViewer::GlobAdvanceFrame(void* p, SoSensor*)
     ((QtCoinViewer*)p)->AdvanceFrame(true);
 }
 
-//! increment the frame
 void QtCoinViewer::AdvanceFrame(bool bForward)
 {
     // frame counting
@@ -2383,7 +2387,6 @@ void QtCoinViewer::AdvanceFrame(bool bForward)
     static uint32_t basetime = GetMilliTime();
     static uint32_t nFrame = 0;
     static float fFPS = 0;
-
 
     //    {
     //        _bInIdleThread = true;
@@ -2395,11 +2398,15 @@ void QtCoinViewer::AdvanceFrame(bool bForward)
         uint32_t newtime = GetMilliTime();
         fFPS = UPDATE_FRAMES * 1000.0f / (float)max((int)(newtime-basetime),1);
         basetime = newtime;
-
-        if( fFPS < 16 ) UPDATE_FRAMES = 4;
-        else if( fFPS < 32 ) UPDATE_FRAMES = 8;
-        else UPDATE_FRAMES = 16;
-
+        if( fFPS < 16 ) {
+            UPDATE_FRAMES = 4;
+        }
+        else if( fFPS < 32 ) {
+            UPDATE_FRAMES = 8;
+        }
+        else {
+            UPDATE_FRAMES = 16;
+        }
         nToNextFPSUpdate = UPDATE_FRAMES;
     }
 
@@ -2415,8 +2422,9 @@ void QtCoinViewer::AdvanceFrame(bool bForward)
             ss << _strMouseMove;
         }
 
-        if( !!_pdragger )
+        if( !!_pdragger ) {
             _pdragger->GetMessage(ss);
+        }
 
         // adjust the shadow text
         SbViewportRegion v = _pviewer->getViewportRegion();
@@ -2432,26 +2440,25 @@ void QtCoinViewer::AdvanceFrame(bool bForward)
         std::string::size_type pos = 0, newpos=0;
         while( pos < msg.size() ) {
             newpos = msg.find('\n', pos);
-
             std::string::size_type n = newpos == std::string::npos ? msg.size()-pos : (newpos-pos);
 
             for(size_t i = 0; i < _messageNodes.size(); ++i) {
                 _messageNodes[i]->string.set1Value(index++, msg.substr(pos, n).c_str());
             }
 
-            if( newpos == std::string::npos )
+            if( newpos == std::string::npos ) {
                 break;
-
+            }
             pos = newpos+1;
         }
     }
 
-    if( !!_pToggleDebug )
+    if( !!_pToggleDebug ) {
         _pToggleDebug->actions().at(RaveGetDebugLevel()&Level_OutputMask)->setChecked(true);
+    }
     _UpdateToggleSimulation();
     _UpdateCollisionChecker();
     _UpdatePhysicsEngine();
-
     _UpdateEnvironment();
 
     if( ControlDown() ) {
@@ -2595,10 +2602,12 @@ void QtCoinViewer::UpdateFromModel()
                         }
                     }
 
-                    if( pbody->IsRobot() )
+                    if( pbody->IsRobot() ) {
                         pitem = boost::shared_ptr<RobotItem>(new RobotItem(shared_viewer(), boost::static_pointer_cast<RobotBase>(pbody), _viewGeometryMode),ITEM_DELETER);
-                    else
+                    }
+                    else {
                         pitem = boost::shared_ptr<KinBodyItem>(new KinBodyItem(shared_viewer(), pbody, _viewGeometryMode),ITEM_DELETER);
+                    }
 
                     pitem->Load();
                     pbody->SetGuiData(pitem);
@@ -2642,8 +2651,9 @@ void QtCoinViewer::UpdateFromModel()
 
             _mapbodies.erase(it++);
         }
-        else
+        else {
             ++it;
+        }
     }
 
     _bModelsUpdated = true;

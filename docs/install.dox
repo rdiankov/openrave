@@ -446,7 +446,7 @@ directory can be changed by configuring \c CMake's CMAKE_INSTALL_PREFIX variable
 
 Before running anything, have to modify the following environment variables:
 - \c PYTHONPATH - add <tt>"C:\\Program Files\\openrave\\share\\openrave"</tt>
-- \c Path - add <tt>"C:\\Program Files\\openrave\\bin"</tt> to the front. Be very careful when putting it in the back since several user have had problems with different Qt libraries conflicting!
+- \c Path - add <tt>"C:\\Program Files\\openrave\\bin"</tt> to the front. Furthermore, if Qt and Boost are installed in separate directories, have to add the location of their DLLs to Path (for example \c C:\\Qt\\4.7.1\\bin and <tt>C:\\Program Files\\boost\\boost_1_44\\lib</tt>). Be very careful when putting it in the back since several user have had problems with different Qt libraries conflicting!
 
 \section iwin_updating Updating Subversion
 

@@ -1396,7 +1396,6 @@ private:
     virtual KinBody::LinkPtr GetChildLink(KinBody::JointConstPtr pjoint) {
         if( !!pjoint->GetFirstAttached() && !!pjoint->GetSecondAttached() ) {
             if( pjoint->GetFirstAttached()->IsParentLink(pjoint->GetSecondAttached()) ) {
-                RAVELOG_WARN("returning first link\n");
                 return pjoint->GetFirstAttached();
             }
             else if( pjoint->GetSecondAttached()->IsParentLink(pjoint->GetFirstAttached()) ) {
@@ -1404,7 +1403,6 @@ private:
             }
         }
         else if( !!pjoint->GetFirstAttached() ) {
-            RAVELOG_WARN("returning first link\n");
             return pjoint->GetFirstAttached();
         }
         else if( !!pjoint->GetSecondAttached() ) {

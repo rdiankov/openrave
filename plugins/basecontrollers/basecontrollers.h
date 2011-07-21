@@ -74,6 +74,7 @@ If SetDesired is called, only joint values will be set at every timestep leaving
         if( flog.is_open() ) {
             flog.close();
         }
+        _bIsDone = true;
     }
 
     virtual const std::vector<int>& GetControlDOFIndices() const {
