@@ -238,7 +238,7 @@ Although %OpenRAVE is not tied to any particular collision checker, it requires 
  - If not using enable-new-trimesh, disabling asserts (via \c --disable-asserts) is necessary due to some weird bug in normalization bug.
  - For 0.10+. If installing on x86-64 distro, configure ODE with \c --enable-shared.
 
-- <a href="http://www.bulletphysics.com">Bullet Collision</a> (use v2.74 or greater) - Need to install to a system directory so %OpenRAVE can find it using \c pkg-config. If using autotools \c configure, need to remove \c install-sh before running \c autogen.sh. Bullet is detected using \c pkg-config, so \c bullet.pc is needed.
+- <a href="http://www.bulletphysics.com">Bullet Collision</a> - Need to install to a system directory so %OpenRAVE can find it using \c pkg-config. If using autotools \c configure, need to remove \c install-sh before running \c autogen.sh. Bullet is detected using \c pkg-config, so \c bullet.pc is needed.
 
 - <a href="http://www.cs.unc.edu/~geom/SSV/">PQP Collision</a> - source code separate inside \b pqprave plugin.
 

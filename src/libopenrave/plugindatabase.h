@@ -357,9 +357,9 @@ protected:
                 RAVELOG_WARN(str(boost::format("%s doesn't exist")%installdir));
             }
         }
-        boost::filesystem::path pluginsfilename = boost::filesystem::system_complete(boost::filesystem::path(installdir, boost::filesystem::native));
+        boost::filesystem::path pluginsfilename = boost::filesystem::system_complete(boost::filesystem::path(installdir));
         FOREACH(itname, vplugindirs) {
-            if( pluginsfilename == boost::filesystem::system_complete(boost::filesystem::path(*itname, boost::filesystem::native)) ) {
+            if( pluginsfilename == boost::filesystem::system_complete(boost::filesystem::path(*itname)) ) {
                 bExists = true;
                 break;
             }
@@ -733,14 +733,14 @@ protected:
         }
 #if defined(HAVE_BOOST_FILESYSTEM) && BOOST_VERSION >= 103600 // stem() was introduced in 1.36
         // try matching partial base names without path and extension
-        boost::filesystem::path pluginpath(pluginname, boost::filesystem::native);
+        boost::filesystem::path pluginpath(pluginname);
 #if defined(BOOST_FILESYSTEM_VERSION) && BOOST_FILESYSTEM_VERSION >= 3
         string stem = pluginpath.stem().string();
 #else
         string stem = pluginpath.stem();
 #endif
         FOREACH(it, _listplugins) {
-            if( stem == boost::filesystem::path((*it)->ppluginname, boost::filesystem::native).stem() ) {
+            if( stem == boost::filesystem::path((*it)->ppluginname).stem() ) {
                 return it;
             }
         }
@@ -763,7 +763,7 @@ protected:
         if( plibrary == NULL ) {
             // unix libraries are prefixed with 'lib', first have to split
 #if defined(HAVE_BOOST_FILESYSTEM) && BOOST_VERSION >= 103600 // stem() was introduced in 1.36
-            boost::filesystem::path _librarypath(libraryname, boost::filesystem::native);
+            boost::filesystem::path _librarypath(libraryname);
             string librarypath = _librarypath.parent_path().string();
 #if defined(BOOST_FILESYSTEM_VERSION) && BOOST_FILESYSTEM_VERSION >= 3
             string libraryfilename = _librarypath.filename().string();

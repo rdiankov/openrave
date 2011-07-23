@@ -76,9 +76,9 @@ public:
                     RAVELOG_WARN(str(boost::format("%s doesn't exist")%installdir));
                 }
             }
-            boost::filesystem::path datafilename = boost::filesystem::system_complete(boost::filesystem::path(installdir, boost::filesystem::native));
+            boost::filesystem::path datafilename = boost::filesystem::system_complete(boost::filesystem::path(installdir));
             FOREACH(itname, _vdatadirs) {
-                if( datafilename == boost::filesystem::system_complete(boost::filesystem::path(*itname, boost::filesystem::native)) ) {
+                if( datafilename == boost::filesystem::system_complete(boost::filesystem::path(*itname)) ) {
                     bExists = true;
                     break;
                 }
@@ -1061,7 +1061,7 @@ public:
                     // have to set the render file
                     robot->_veclinks.at(0)->GetGeometry(0).SetRenderFilename(filename);
 #if defined(HAVE_BOOST_FILESYSTEM) && BOOST_VERSION >= 103600 // stem() was introduced in 1.36
-                    boost::filesystem::path pfilename(filename, boost::filesystem::native);
+                    boost::filesystem::path pfilename(filename);
 #if defined(BOOST_FILESYSTEM_VERSION) && BOOST_FILESYSTEM_VERSION >= 3
                     robot->SetName(ConvertToOpenRAVEName(pfilename.stem().string()));
 #else
@@ -1159,7 +1159,7 @@ public:
                     // have to set the render file
                     body->_veclinks.at(0)->GetGeometry(0).SetRenderFilename(filename);
 #if defined(HAVE_BOOST_FILESYSTEM) && BOOST_VERSION >= 103600 // stem() was introduced in 1.36
-                    boost::filesystem::path pfilename(filename, boost::filesystem::native);
+                    boost::filesystem::path pfilename(filename);
 #if defined(BOOST_FILESYSTEM_VERSION) && BOOST_FILESYSTEM_VERSION >= 3
                     body->SetName(ConvertToOpenRAVEName(pfilename.stem().string()));
 #else

@@ -418,7 +418,7 @@ public:
     {
         FOREACH(itdirectory,_vdbdirectories) {
 #ifdef HAVE_BOOST_FILESYSTEM
-            std::string fullfilename = boost::filesystem::system_complete(boost::filesystem::path(*itdirectory, boost::filesystem::native)/filename).string();
+            std::string fullfilename = boost::filesystem::system_complete(boost::filesystem::path(*itdirectory)/filename).string();
 #else
             std::string fullfilename = *itdirectory;
             fullfilename += s_filesep;
