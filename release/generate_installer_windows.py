@@ -794,17 +794,18 @@ if __name__ == "__main__":
             args['install_dll'] += '!insertmacro InstallLib DLL NOTSHARED NOREBOOT_PROTECTED %s\\bin\\%s $INSTDIR\\bin\\%s $INSTDIR\n'%(args['installdir'],dllname,dllname)
             args['uninstall_dll'] += '!insertmacro UninstallLib DLL NOTSHARED NOREBOOT_PROTECTED $INSTDIR\\bin\\%s\n'%(dllname)
     # python dlls
-    for dllname in os.listdir(os.path.join(openravepy_dir,'openravepy','_openravepy_'+_soversion)):
+    _soversionpy = ''
+    for dllname in os.listdir(os.path.join(openravepy_dir,'openravepy','_openravepy_'+_soversionpy)):
         if os.path.splitext(dllname)[1] == '.pyd':
-            args['install_python_dll'] += '!insertmacro InstallLib DLL NOTSHARED NOREBOOT_PROTECTED %s\\openravepy\\_openravepy_%s\\%s $INSTDIR\\%s\\openravepy\\_openravepy_%s\\%s $INSTDIR\n'%(openravepy_dir,_soversion,dllname,openravepy_reldir,_soversion,dllname)
-            args['uninstall_dll'] += '!insertmacro UninstallLib DLL NOTSHARED NOREBOOT_PROTECTED $INSTDIR\\%s\\openravepy\\_openravepy_%s\\%s\n'%(openravepy_reldir,_soversion,dllname)
+            args['install_python_dll'] += '!insertmacro InstallLib DLL NOTSHARED NOREBOOT_PROTECTED %s\\openravepy\\_openravepy_%s\\%s $INSTDIR\\%s\\openravepy\\_openravepy_%s\\%s $INSTDIR\n'%(openravepy_dir,_soversionpy,dllname,openravepy_reldir,_soversion,dllname)
+            args['uninstall_dll'] += '!insertmacro UninstallLib DLL NOTSHARED NOREBOOT_PROTECTED $INSTDIR\\%s\\openravepy\\_openravepy_%s\\%s\n'%(openravepy_reldir,_soversionpy,dllname)
     # add the runable examples
     for name in dir(openravepy.examples):
         if not name.startswith('__'):
             try:
                 m=__import__('openravepy.examples.'+name)
                 if type(m) is ModuleType:
-                    path = '$INSTDIR\\%s\\openravepy\\_openravepy_%s\\examples\\%s.py'%(openravepy_reldir,_soversion,name)
+                    path = '$INSTDIR\\%s\\openravepy\\_openravepy_%s\\examples\\%s.py'%(openravepy_reldir,_soversionpy,name)
                     args['openrave_python_shortcuts'] += 'CreateShortCut "$SMPROGRAMS\\$StartMenuFolder\\Python Examples\\%s.lnk" "%s" "" "%s" 0\n'%(name,path,path)
                     args['openrave_python_shortcuts'] += 'CreateShortCut "$SMPROGRAMS\\$StartMenuFolder\\Python Examples\\%s Documentation.lnk" "http://openrave.org/en/main/openravepy/examples.%s.html" "" "C:\WINDOWS\system32\shell32.dll" 979\n'%(name,name)
             except ImportError:
@@ -815,7 +816,7 @@ if __name__ == "__main__":
             try:
                 m=__import__('openravepy.databases.'+name)
                 if type(m) is ModuleType:
-                    path = '$INSTDIR\\%s\\openravepy\\_openravepy_%s\\databases\\%s.py'%(openravepy_reldir,_soversion,name)
+                    path = '$INSTDIR\\%s\\openravepy\\_openravepy_%s\\databases\\%s.py'%(openravepy_reldir,_soversionpy,name)
                     args['openrave_python_shortcuts'] += 'CreateShortCut "$SMPROGRAMS\\$StartMenuFolder\\Databases\\%s.lnk" "%s" "" "%s" 0\n'%(name,path,path)
             except ImportError:
                 pass
