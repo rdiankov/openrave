@@ -204,7 +204,6 @@ class ReachabilityModel(DatabaseGenerator):
         if quatdelta is None:
             quatdelta=0.5
         self.kdtree3d = self.kdtree6d = None
-        starttime = time.time()
         with self.robot:
             self.robot.SetTransform(eye(4))
             Tbase = self.manip.GetBase().GetTransform()
@@ -243,12 +242,12 @@ class ReachabilityModel(DatabaseGenerator):
 
         def producer():
             T = eye(4)
-            for ind in insideinds:
+            for i,ind in enumerate(insideinds):
                 T[0:3,3] = allpoints[ind]+baseanchor
+                if mod(i,1000)==0:
+                    raveLogInfo('%s/%d'%(i,len(insideinds)))
                 yield ind,T
         def consumer(ind,T):
-            if mod(ind,1000)==0:
-                raveLogInfo('%s/%d'%(ind,len(insideinds)))
             with self.env:
                 reachabilitystats = []
                 numvalid = 0
@@ -283,6 +282,7 @@ class ReachabilityModel(DatabaseGenerator):
         return producer, consumer, gatherer
 
     def generate(self,*args,**kwargs):
+        starttime = time.time()
         producer,consumer,gatherer = self.generatepcg(*args,**kwargs)
         for work in producer():
             gatherer(*consumer(*work))
