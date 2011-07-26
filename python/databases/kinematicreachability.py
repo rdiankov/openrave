@@ -165,10 +165,6 @@ class ReachabilityModel(DatabaseGenerator):
                 quatdelta = 0.2
         return maxradius,translationonly,xyzdelta,quatdelta,usefreespace
 
-    def autogenerate(self,options=None):
-        self.generate(*self.autogenerateparams(options))
-        self.save()
-
     def getOrderedArmJoints(self):
         return [j for j in self.robot.GetDependencyOrderedJoints() if j.GetJointIndex() in self.manip.GetArmIndices()]
     @staticmethod
@@ -279,15 +275,8 @@ class ReachabilityModel(DatabaseGenerator):
                 self.reachabilitydensity3d = reshape(self.reachabilitydensity3d,shape)
                 self.reachabilitystats = array(self.reachabilitystats)
 
-        return producer, consumer, gatherer
+        return producer, consumer, gatherer, len(insideinds)
 
-    def generate(self,*args,**kwargs):
-        starttime = time.time()
-        producer,consumer,gatherer = self.generatepcg(*args,**kwargs)
-        for work in producer():
-            gatherer(*consumer(*work))
-        gatherer() # gather results
-        print 'reachability finished in %fs'%(time.time()-starttime)
 
     def show(self,showrobot=True,contours=[0.01,0.1,0.2,0.5,0.8,0.9,0.99],opacity=None,figureid=1, xrange=None,options=None):
         mlab = __import__('enthought.mayavi.mlab',fromlist=['mlab'])

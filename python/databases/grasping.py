@@ -216,8 +216,12 @@ class GraspingModel(DatabaseGenerator):
         self.maxvelmult=maxvelmult
         self.collision_escape_offset = 0.00009 # used for escaping collision/alignment errors during grasp generation
         self.preprocess()
+        self.approachgraphs = None
+        self.contactgraph = None
+        self.numthreads=None
+        self.disableallbodies=True
         # only the indices used by the TaskManipulation plugin should start with an 'i'
-        graspdof = {'igraspdir':3,'igrasppos':3,'igrasproll':1,'igraspstandoff':1,'igrasppreshape':len(self.manip.GetGripperIndices()),'igrasptrans':12,'imanipulatordirection':3,'forceclosure':1,'grasptrans_nocol':12}
+        graspdof = {'igraspdir':3,'igrasppos':3,'igrasproll':1,'igraspstandoff':1,'igrasppreshape':len(self.manip.GetGripperIndices()),'igrasptrans':12,'imanipulatordirection':3,'forceclosure':1,'grasptrans_nocol':12,'performance':1}
         self.graspindices = dict()
         self.totaldof = 0
         for name,dof in graspdof.iteritems():
@@ -232,7 +236,7 @@ class GraspingModel(DatabaseGenerator):
     def has(self):
         return len(self.grasps) > 0 and len(self.graspindices) > 0 and self.grasper is not None
     def getversion(self):
-        return 5
+        return 6
     def init(self,friction,avoidlinks,plannername=None):
         self.basemanip = interfaces.BaseManipulation(self.robot,maxvelmult=self.maxvelmult)
         self.grasper = interfaces.Grasper(self.robot,friction=friction,avoidlinks=avoidlinks,plannername=plannername)
@@ -277,8 +281,7 @@ class GraspingModel(DatabaseGenerator):
                                 if (childjoint.GetFirstAttached() and childjoint.GetFirstAttached().GetIndex() == childlink.GetIndex()) or (childjoint.GetSecondAttached() and childjoint.GetSecondAttached().GetIndex() == childlink.GetIndex()):
                                     vertices = r_[vertices,[childjoint.GetAnchor()-joint.GetAnchor()]]
                         self.jointmaxlengths[i] = sqrt(numpy.max(sum(vertices**2,1)-dot(vertices,joint.GetAxis(0))**2)) if len(vertices) > 0 else 0
-    def autogenerate(self,options=None):
-        # disable every body but the target and robot
+    def autogenerateparams(self,options=None):
         friction = None
         preshapes = None
         manipulatordirections = None
@@ -288,7 +291,6 @@ class GraspingModel(DatabaseGenerator):
         avoidlinks = None
         graspingnoise = None
         plannername = None
-        updateenv=False
         normalanglerange = 0
         directiondelta=0
         translationstepmult=None
@@ -322,7 +324,6 @@ class GraspingModel(DatabaseGenerator):
                 translationstepmult = options.translationstepmult
             if options.finestep is not None:
                 finestep = options.finestep
-            updateenv = True#options.useviewer
         # check for specific robots
         if self.robot.GetRobotStructureHash() == '2b0b07cce5d2f9c321010e74273a77f2' or self.robot.GetRobotStructureHash() == 'ca823aed89e08c7020b2cd7d2e5ff145': # wam+barretthand
             if preshapes is None:
@@ -341,16 +342,47 @@ class GraspingModel(DatabaseGenerator):
             friction = 0.4
         if approachrays is None:
             approachrays = self.computeBoxApproachRays(delta=0.02,normalanglerange=normalanglerange,directiondelta=directiondelta)
-        self.init(friction=friction,avoidlinks=avoidlinks,plannername=plannername)
-        self.generate(preshapes=preshapes,manipulatordirections=manipulatordirections,rolls=rolls,graspingnoise=graspingnoise,standoffs=standoffs,approachrays=approachrays,updateenv=updateenv,translationstepmult=translationstepmult,finestep=finestep)
-        self.save()
+        forceclosure = True
+        forceclosurethreshold=1e-9
+        return preshapes,standoffs,rolls,approachrays, graspingnoise,forceclosure,forceclosurethreshold,None,manipulatordirections,translationstepmult,finestep,friction,avoidlinks,plannername
 
-    def generate(self,preshapes=None,standoffs=None,rolls=None,approachrays=None, graspingnoise=None,updateenv=True,forceclosure=True,forceclosurethreshold=1e-9,checkgraspfn=None,disableallbodies=True,manipulatordirections=None,translationstepmult=None,finestep=None):
+    def generate(self,*args,**kwargs):
+        starttime = time.time()
+        statesaver = self.robot.CreateRobotStateSaver()
+        bodies = [(b,b.IsEnabled()) for b in self.env.GetBodies() if b != self.robot and b != self.target]
+        if self.disableallbodies:
+            for b in bodies:
+                b[0].Enable(False)
+        try:
+            if self.numthreads is not None:
+                self._generateThreaded(*args,**kwargs)
+            else:
+                with self.GripperVisibility(self.manip):
+                    if self.env.GetViewer() is not None:
+                        self.env.UpdatePublishedBodies()
+                    producer,consumer,gatherer,numjobs = self.generatepcg(*args,**kwargs)
+                    counter = 0
+                    for work in producer():
+                        print 'grasp %d/%d'%(counter,numjobs)
+                        counter += 1
+                        results = consumer(*work)
+                        if len(results) > 0:
+                            gatherer(*results)
+                    gatherer() # gather results
+        finally:
+            for b,enable in bodies:
+                b.Enable(enable)
+            statesaver = None
+        print 'grasping finished in %fs'%(time.time()-starttime)
+
+
+    def generatepcg(self,preshapes=None,standoffs=None,rolls=None,approachrays=None, graspingnoise=None,forceclosure=True,forceclosurethreshold=1e-9,checkgraspfn=None,manipulatordirections=None,translationstepmult=None,finestep=None,friction=None,avoidlinks=None,plannername=None):
         """Generates a grasp set by searching space and evaluating contact points.
 
         All grasp parameters have to be in the bodies's coordinate system (ie: approachrays).
         @param checkgraspfn: If set, then will be used to validate the grasp. If its evaluation returns false, then grasp will not be added to set. Called by checkgraspfn(contacts,finalconfig,grasp,info)"""
         print 'Generating Grasp Set for %s:%s:%s'%(self.robot.GetName(),self.manip.GetName(),self.target.GetName())
+        self.init(friction=friction,avoidlinks=avoidlinks,plannername=plannername)
         if approachrays is None:
             approachrays = self.computeBoxApproachRays(delta=0.02,normalanglerange=0)
         if preshapes is None:
@@ -376,79 +408,83 @@ class GraspingModel(DatabaseGenerator):
             Trobotorig = self.robot.GetTransform()
         # transform each ray into the global coordinate system in order to plot it
         gapproachrays = c_[dot(approachrays[:,0:3],transpose(Ttarget[0:3,0:3]))+tile(Ttarget[0:3,3],(N,1)),dot(approachrays[:,3:6],transpose(Ttarget[0:3,0:3]))]
-        approachgraphs = [self.env.plot3(points=gapproachrays[:,0:3],pointsize=5,colors=array((1,0,0))),
+        self.approachgraphs = [self.env.plot3(points=gapproachrays[:,0:3],pointsize=5,colors=array((1,0,0))),
                           self.env.drawlinelist(points=reshape(c_[gapproachrays[:,0:3],gapproachrays[:,0:3]+0.005*gapproachrays[:,3:6]],(2*N,3)),linewidth=4,colors=array((1,0,0,1)))]
-        contactgraph = None
+        self.contactgraph = None
         totalgrasps = N*len(preshapes)*len(rolls)*len(standoffs)
-        counter = 0
         self.grasps = []
-        statesaver = self.robot.CreateRobotStateSaver()
-        bodies = [(b,b.IsEnabled()) for b in self.env.GetBodies() if b != self.robot and b != self.target]
-        if disableallbodies:
-            for b in bodies:
-                b[0].Enable(False)
-        try:
-            with self.GripperVisibility(self.manip):
-                if updateenv:
-                    self.env.UpdatePublishedBodies()
-                for approachray in approachrays:
-                    for roll,preshape,standoff,manipulatordirection in iterproduct(rolls,preshapes,standoffs,manipulatordirections):
-                        print 'grasp %d/%d'%(counter,totalgrasps),'preshape:',preshape
-                        counter += 1
-                        grasp = zeros(self.totaldof)
-                        grasp[self.graspindices.get('igrasppos')] = approachray[0:3]
-                        grasp[self.graspindices.get('igraspdir')] = -approachray[3:6]
-                        grasp[self.graspindices.get('igrasproll')] = roll
-                        grasp[self.graspindices.get('igraspstandoff')] = standoff
-                        grasp[self.graspindices.get('igrasppreshape')] = preshape
-                        grasp[self.graspindices.get('imanipulatordirection')] = manipulatordirection
-                        try:
-                            contacts,finalconfig,mindist,volume = self.testGrasp(grasp=grasp,graspingnoise=graspingnoise,translate=True,forceclosure=forceclosure,forceclosurethreshold=forceclosurethreshold,translationstepmult=translationstepmult,finestep=finestep)
-                        except planning_error, e:
-                            print 'Grasp Failed: '
-                            print_exc(e)
-                            continue
-                        Tlocalgrasp = eye(4)
-                        with self.robot:
-                            self.robot.SetTransform(finalconfig[1])
-                            Tgrasp = self.manip.GetEndEffectorTransform()
-                            Tlocalgrasp = dot(linalg.inv(self.target.GetTransform()),Tgrasp)
-                            # find a non-colliding transform
-                            self.setPreshape(grasp)
-                            direction = self.getGlobalApproachDir(grasp)
-                            Tgrasp_nocol = array(Tgrasp)
-                            while self.manip.CheckEndEffectorCollision(Tgrasp_nocol):
-                                Tgrasp_nocol[0:3,3] -= direction*self.collision_escape_offset
-                            Tlocalgrasp_nocol = dot(linalg.inv(self.target.GetTransform()),Tgrasp_nocol)
-                            self.robot.SetDOFValues(finalconfig[0])
-                            if updateenv:
-                                contactgraph = self.drawContacts(contacts) if len(contacts) > 0 else None
-                                self.env.UpdatePublishedBodies()
-                            grasp[self.graspindices.get('igrasptrans')] = reshape(transpose(Tlocalgrasp[0:3,0:4]),12)
-                            grasp[self.graspindices.get('grasptrans_nocol')] = reshape(transpose(Tlocalgrasp_nocol[0:3,0:4]),12)
-                            grasp[self.graspindices.get('forceclosure')] = mindist if mindist is not None else 0
-                            self.robot.SetTransform(Trobotorig) # transform back to original position for checkgraspfn
-                            if not forceclosure or mindist >= forceclosurethreshold:
-                                if checkgraspfn is None or checkgraspfn(contacts,finalconfig,grasp,{'mindist':mindist,'volume':volume}):
-                                    print 'found good grasp',len(self.grasps),'config: ',array(finalconfig[0])[self.manip.GetGripperIndices()]
-                                    self.grasps.append(grasp)
-                self.grasps = array(self.grasps)
-                print 'ordering grasps'
-                self.orderGrasps()
-        finally:
-            for b,enable in bodies:
-                b.Enable(enable)
-            # force closing the handles (if an exception is thrown, python 2.6 does not close them without a finally)
-            approachgraphs = None
-            contactgraph = None
-            statesaver = None
 
-    def generateThreaded(self,preshapes=None,standoffs=None,rolls=None,approachrays=None,graspingnoise=None,forceclosurethreshold=1e-9,numthreads=None,checkgraspfn=None,disableallbodies=True,translate=True,translationstepmult=None,finestep=None):
+        def producer():
+            for approachray in approachrays:
+                for roll in rolls:
+                    for preshape in preshapes:
+                        for standoff in standoffs:
+                            for manipulatordirection in manipulatordirections:
+                                yield approachray, roll, preshape, standoff, manipulatordirection
+
+        def consumer(approachray, roll, preshape, standoff, manipulatordirection):
+            grasp = zeros(self.totaldof)
+            grasp[self.graspindices.get('igrasppos')] = approachray[0:3]
+            grasp[self.graspindices.get('igraspdir')] = -approachray[3:6]
+            grasp[self.graspindices.get('igrasproll')] = roll
+            grasp[self.graspindices.get('igraspstandoff')] = standoff
+            grasp[self.graspindices.get('igrasppreshape')] = preshape
+            grasp[self.graspindices.get('imanipulatordirection')] = manipulatordirection
+            try:
+                contacts,finalconfig,mindist,volume = self.testGrasp(grasp=grasp,graspingnoise=graspingnoise,translate=True,forceclosure=forceclosure,forceclosurethreshold=forceclosurethreshold,translationstepmult=translationstepmult,finestep=finestep)
+            except planning_error, e:
+                print 'Grasp Failed: '
+                print_exc(e)
+                return ()
+            
+            Tlocalgrasp = eye(4)
+            with self.robot:
+                self.robot.SetTransform(finalconfig[1])
+                Tgrasp = self.manip.GetEndEffectorTransform()
+                Tlocalgrasp = dot(linalg.inv(self.target.GetTransform()),Tgrasp)
+                # find a non-colliding transform
+                self.setPreshape(grasp)
+                direction = self.getGlobalApproachDir(grasp)
+                Tgrasp_nocol = array(Tgrasp)
+                while self.manip.CheckEndEffectorCollision(Tgrasp_nocol):
+                    Tgrasp_nocol[0:3,3] -= direction*self.collision_escape_offset
+                Tlocalgrasp_nocol = dot(linalg.inv(self.target.GetTransform()),Tgrasp_nocol)
+                self.robot.SetDOFValues(finalconfig[0])
+                if self.env.GetViewer() is not None:
+                    self.contactgraph = self.drawContacts(contacts) if len(contacts) > 0 else None
+                    self.env.UpdatePublishedBodies()
+                grasp[self.graspindices.get('igrasptrans')] = reshape(transpose(Tlocalgrasp[0:3,0:4]),12)
+                grasp[self.graspindices.get('grasptrans_nocol')] = reshape(transpose(Tlocalgrasp_nocol[0:3,0:4]),12)
+                grasp[self.graspindices.get('forceclosure')] = mindist if mindist is not None else 0
+                self.robot.SetTransform(Trobotorig) # transform back to original position for checkgraspfn
+                if not forceclosure or mindist >= forceclosurethreshold:
+                    grasp[self.graspindices.get('performance')] = self._ComputeGraspPerformance(grasp)
+                    if checkgraspfn is None or checkgraspfn(contacts,finalconfig,grasp,{'mindist':mindist,'volume':volume}):
+                        print 'found good grasp'
+                        return grasp,
+                    
+                return ()
+
+        def gatherer(grasp=None):
+            if grasp is not None:
+                self.grasps.append(grasp)
+            else:
+                self.grasps = array(self.grasps)
+                order = argsort(self.grasps[:,self.graspindices.get('performance')[0]])
+                self.grasps = self.grasps[order]
+                # force closing the handles
+                self.approachgraphs = None
+                self.contactgraph = None
+        
+        return producer, consumer, gatherer, totalgrasps
+
+    def _generateThreaded(self,preshapes=None,standoffs=None,rolls=None,approachrays=None, graspingnoise=None,forceclosure=True,forceclosurethreshold=1e-9,checkgraspfn=None,manipulatordirections=None,translationstepmult=None,finestep=None,friction=None,avoidlinks=None,plannername=None):
         """Generates a grasp set by searching space and evaluating contact points.
 
         All grasp parameters have to be in the bodies's coordinate system (ie: approachrays).
         @param checkgraspfn: If set, then will be used to validate the grasp. If its evaluation returns false, then grasp will not be added to set. Called by checkgraspfn(contacts,finalconfig,grasp,info)"""
         print 'Generating Grasp Set for %s:%s:%s'%(self.robot.GetName(),self.manip.GetName(),self.target.GetName())
+        translate = True
         if approachrays is None:
             approachrays = self.computeBoxApproachRays(delta=0.02,normalanglerange=0)
         if preshapes is None:
@@ -467,62 +503,55 @@ class GraspingModel(DatabaseGenerator):
             manipulatordirections = array([self.manip.GetDirection()])
         if numthreads is None:
             numthreads = 2
-        try:
-            with self.robot: # lock the environment and save the robot state
-                bodies = [(b,b.IsEnabled()) for b in self.env.GetBodies() if b != self.robot and b != self.target]
-                if disableallbodies:
-                    for b in bodies:
-                        b[0].Enable(False)
 
-                Ttarget = self.target.GetTransform()
-                Trobotorig = self.robot.GetTransform()
-                self.robot.SetActiveManipulator(self.manip)
-                self.robot.SetTransform(eye(4)) # have to reset transform in order to remove randomness
-                self.robot.SetActiveDOFs(self.manip.GetGripperIndices(),Robot.DOFAffine.X+Robot.DOFAffine.Y+Robot.DOFAffine.Z if translate else 0)
-                approachrays[:,3:6] = -approachrays[:,3:6]
-                self.nextid, self.resultgrasps = self.grasper.GraspThreaded(approachrays=approachrays, rolls=rolls, standoffs=standoffs, preshapes=preshapes, manipulatordirections=manipulatordirections, target=self.target, graspingnoise=graspingnoise, forceclosurethreshold=forceclosurethreshold,numthreads=numthreads)
-                print 'graspthreaded done, processing grasps'
+        with self.robot: # lock the environment and save the robot state
+            Ttarget = self.target.GetTransform()
+            Trobotorig = self.robot.GetTransform()
+            self.robot.SetActiveManipulator(self.manip)
+            self.robot.SetTransform(eye(4)) # have to reset transform in order to remove randomness
+            self.robot.SetActiveDOFs(self.manip.GetGripperIndices(),Robot.DOFAffine.X+Robot.DOFAffine.Y+Robot.DOFAffine.Z if translate else 0)
+            approachrays[:,3:6] = -approachrays[:,3:6]
+            self.nextid, self.resultgrasps = self.grasper.GraspThreaded(approachrays=approachrays, rolls=rolls, standoffs=standoffs, preshapes=preshapes, manipulatordirections=manipulatordirections, target=self.target, graspingnoise=graspingnoise, forceclosurethreshold=forceclosurethreshold,numthreads=numthreads)
+            print 'graspthreaded done, processing grasps'
 
-                for resultgrasp in self.resultgrasps:
-                    grasp = zeros(self.totaldof)
-                    grasp[self.graspindices.get('igrasppos')] = resultgrasp[0]
-                    grasp[self.graspindices.get('igraspdir')] = resultgrasp[1]
-                    grasp[self.graspindices.get('igrasproll')] = resultgrasp[2]
-                    grasp[self.graspindices.get('igraspstandoff')] = resultgrasp[3]
-                    grasp[self.graspindices.get('imanipulatordirection')] = resultgrasp[4]
-                    mindist = resultgrasp[5]
-                    volume = resultgrasp[6]
-                    grasp[self.graspindices.get('igrasppreshape')] = resultgrasp[7]
-                    Tfinal = resultgrasp[8]
-                    finalshape = resultgrasp[9]
-                    contacts = resultgrasp[10]
+            for resultgrasp in self.resultgrasps:
+                grasp = zeros(self.totaldof)
+                grasp[self.graspindices.get('igrasppos')] = resultgrasp[0]
+                grasp[self.graspindices.get('igraspdir')] = resultgrasp[1]
+                grasp[self.graspindices.get('igrasproll')] = resultgrasp[2]
+                grasp[self.graspindices.get('igraspstandoff')] = resultgrasp[3]
+                grasp[self.graspindices.get('imanipulatordirection')] = resultgrasp[4]
+                mindist = resultgrasp[5]
+                volume = resultgrasp[6]
+                grasp[self.graspindices.get('igrasppreshape')] = resultgrasp[7]
+                Tfinal = resultgrasp[8]
+                finalshape = resultgrasp[9]
+                contacts = resultgrasp[10]
 
-                    with self.robot:
-                        Tlocalgrasp = eye(4)
-                        self.robot.SetTransform(Tfinal)
-                        Tgrasp = self.manip.GetEndEffectorTransform()
-                        Tlocalgrasp = dot(linalg.inv(self.target.GetTransform()),Tgrasp)
-                        # find a non-colliding transform
-                        direction = self.getGlobalApproachDir(grasp)
-                        Tgrasp_nocol = array(Tgrasp)
-                        while self.manip.CheckEndEffectorCollision(Tgrasp_nocol):
-                            Tgrasp_nocol[0:3,3] -= direction*self.collision_escape_offset
-                        Tlocalgrasp_nocol = dot(linalg.inv(self.target.GetTransform()),Tgrasp_nocol)
-                        self.robot.SetDOFValues(finalshape)
+                with self.robot:
+                    Tlocalgrasp = eye(4)
+                    self.robot.SetTransform(Tfinal)
+                    Tgrasp = self.manip.GetEndEffectorTransform()
+                    Tlocalgrasp = dot(linalg.inv(self.target.GetTransform()),Tgrasp)
+                    # find a non-colliding transform
+                    direction = self.getGlobalApproachDir(grasp)
+                    Tgrasp_nocol = array(Tgrasp)
+                    while self.manip.CheckEndEffectorCollision(Tgrasp_nocol):
+                        Tgrasp_nocol[0:3,3] -= direction*self.collision_escape_offset
+                    Tlocalgrasp_nocol = dot(linalg.inv(self.target.GetTransform()),Tgrasp_nocol)
+                    self.robot.SetDOFValues(finalshape)
 
-                        grasp[self.graspindices.get('igrasptrans')] = reshape(transpose(Tlocalgrasp[0:3,0:4]),12)
-                        grasp[self.graspindices.get('grasptrans_nocol')] = reshape(transpose(Tlocalgrasp_nocol[0:3,0:4]),12)
-                        grasp[self.graspindices.get('forceclosure')] = mindist if mindist is not None else 0
-                        if not forceclosurethreshold or mindist >= forceclosurethreshold:
-                            if checkgraspfn is None or checkgraspfn(contacts,[Tfinal,finalshape],grasp,{'mindist':mindist,'volume':volume}):
-                                self.grasps.append(grasp)
+                    grasp[self.graspindices.get('igrasptrans')] = reshape(transpose(Tlocalgrasp[0:3,0:4]),12)
+                    grasp[self.graspindices.get('grasptrans_nocol')] = reshape(transpose(Tlocalgrasp_nocol[0:3,0:4]),12)
+                    grasp[self.graspindices.get('forceclosure')] = mindist if mindist is not None else 0
+                    if not forceclosurethreshold or mindist >= forceclosurethreshold:
+                        grasp[self.graspindices.get('performance')] = self._ComputeGraspPerformance(grasp)
+                        if checkgraspfn is None or checkgraspfn(contacts,[Tfinal,finalshape],grasp,{'mindist':mindist,'volume':volume}):
+                            self.grasps.append(grasp)
 
-                self.grasps = array(self.grasps)
-                print 'ordering grasps'
-                self.orderGrasps()
-        finally:
-            for b,enable in bodies:
-                b.Enable(enable)
+            self.grasps = array(self.grasps)
+            order = argsort(self.grasps[:,self.graspindices.get('performance')])
+            self.grasps = self.grasps[order]
 
     def show(self,delay=0.1,options=None,forceclosure=True):
         with RobotStateSaver(self.robot):
@@ -766,25 +795,22 @@ class GraspingModel(DatabaseGenerator):
                     except planning_error, e:
                         continue
             yield grasp,i
-    def orderGrasps(self):
-        """order the grasps by the closest contact to the center of object."""
+    def _ComputeGraspPerformance(self,grasp):
+        """compute a performance metric based on closest contact to the center of object."""
         with self.target:
-            contactdists = []
             self.target.SetTransform(eye(4))
-            ab=self.target.ComputeAABB()
-            for grasp in self.grasps:
-                try:
-                    contacts,finalconfig,mindist,volume = self.runGrasp(grasp=grasp,translate=True,forceclosure=False)
-                except planning_error, e:
-                    print 'grasp failed: ',e
-                    contacts = []
-                # find closest contact to center of object
-                if len(contacts) > 0: # sometimes we get no contacts?!
-                    contactdists.append(numpy.min(sum((contacts[:,0:3]-tile(ab.pos(),(len(contacts),1)))**2,1)))
-                else:
-                    contactdists.append(inf)
-            order = argsort(array(contactdists))
-            self.grasps = self.grasps[order]
+            try:
+                contacts,finalconfig,mindist,volume = self.runGrasp(grasp=grasp,translate=True,forceclosure=False)
+            except planning_error, e:
+                print 'grasp failed: ',e
+                return inf
+            
+            # find closest contact to center of object
+            if len(contacts) > 0: # sometimes we get no contacts?!
+                ab=self.target.ComputeAABB()
+                return -numpy.min(sum((contacts[:,0:3]-tile(ab.pos(),(len(contacts),1)))**2,1))
+            else:
+                return -inf
 
     def computePlaneApproachRays(self,center,sidex,sidey,delta=0.02,normalanglerange=0,directiondelta=0.4):
         # ode gives the most accurate rays
@@ -908,8 +934,6 @@ class GraspingModel(DatabaseGenerator):
                           help='The grasper planner to use for this model (default=%default)')
         parser.add_option('--target',action="store",type='string',dest='target',default='data/mug1.kinbody.xml',
                           help='The filename of the target body whose grasp set to be generated (default=%default)')
-#         parser.add_option('--noviewer', action='store_false', dest='useviewer',default=True,
-#                           help='If specified, will generate the tables without launching a viewer')
         parser.add_option('--boxdelta', action='store', type='float',dest='boxdelta',default=None,
                           help='Step size of of box surface sampling')
         parser.add_option('--spheredelta', action='store', type='float',dest='spheredelta',default=None,
@@ -940,28 +964,31 @@ class GraspingModel(DatabaseGenerator):
                           help='If set, then will only show this grasp index')
         return parser
     @staticmethod
-    def RunFromParser(Model=None,parser=None,args=None,**kwargs):
+    def InitializeFromParser(Model=None,parser=None,defaultviewer=True,args=[],*margs,**kwargs):
         if parser is None:
             parser = GraspingModel.CreateOptionParser()
-        (options, leftargs) = parser.parse_args(args=args)
-        env = Environment()
-        try:
-            target = None
-            with env:
-                target = env.ReadKinBodyXMLFile(options.target)
-                target.SetTransform(eye(4))
-                env.AddKinBody(target)
-            if Model is None:
-                Model = lambda robot: GraspingModel(robot=robot,target=target)
-#             if options.useviewer:
-#                 env.SetViewer('qtcoin')
-#                 env.UpdatePublishedBodies()
-            DatabaseGenerator.RunFromParser(env=env,Model=Model,parser=parser,args=args,defaultviewer=True,**kwargs)
-        finally:
-            env.Destroy()
-            RaveDestroy()
+        if Model is None:
+            (options, leftargs) = parser.parse_args(args=args)
+            def CreateModel(robot):
+                with robot.GetEnv():
+                    target = robot.GetEnv().ReadKinBodyXMLFile(options.target)
+                    target.SetTransform(eye(4))
+                    robot.GetEnv().AddKinBody(target)
+                return GraspingModel(robot=robot,target=target)
+            
+            Model = CreateModel
+        return DatabaseGenerator.InitializeFromParser(Model,parser,*margs,args=args,defaultviewer=True,**kwargs)
 
-def run(*args,**kwargs):
+def run(args,*margs,**kwargs):
     """Command-line execution of the example. ``args`` specifies a list of the arguments to the script.
     """
-    GraspingModel.RunFromParser(*args,**kwargs)
+    parser = GraspingModel.CreateOptionParser()
+    (options, leftargs) = parser.parse_args(args=args)
+    def CreateModel(robot):
+        with robot.GetEnv():
+            target = robot.GetEnv().ReadKinBodyXMLFile(options.target)
+            target.SetTransform(eye(4))
+            robot.GetEnv().AddKinBody(target)
+        return GraspingModel(robot=robot,target=target)
+
+    GraspingModel.RunFromParser(Model=CreateModel, parser=parser,args=args,defaultviewer=True,*margs,**kwargs)

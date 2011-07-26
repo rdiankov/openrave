@@ -69,9 +69,30 @@ class DatabaseGenerator(metaclass.AutoReloader):
         raise NotImplementedError()
     def show(self,options=None):
         raise NotImplementedError()
-    def autogenerate(self,options=None):
+
+    def autogenerateparams(self,options=None):
         """Caches parameters for most commonly used robots/objects and starts the generation process for them"""
         raise NotImplementedError()
+
+    def autogenerate(self,options=None):
+        self.generate(*self.autogenerateparams(options))
+        self.save()
+
+    def generatepcg(self):
+        """Generate producer, consumer, and gatherer functions allowing parallelization
+        """
+        return NotImplementedError()
+    def generate(self,*args,**kwargs):
+        starttime = time.time()
+        producer,consumer,gatherer,numjobs = self.generatepcg(*args,**kwargs)
+        print 'database %s has %d items'%(__name__,num)
+        for work in producer():
+            results = consumer(*work)
+            if len(results) > 0:
+                gatherer(*results)
+        gatherer() # gather results
+        print 'database %s finished in %fs'%(__name__,time.time()-starttime)
+
     @staticmethod
     def CreateOptionParser(useManipulator=True):
         """set basic option parsing options for using databasers through the command line
@@ -135,7 +156,7 @@ class DatabaseGenerator(metaclass.AutoReloader):
         return options,model
 
     @staticmethod
-    def RunFromParser(Model,env=None,parser=None,args=None,robotatts=dict(),defaultviewer=False,allowkinbody=False,**kwargs):
+    def RunFromParser(Model=None,env=None,parser=None,args=None,robotatts=dict(),defaultviewer=False,allowkinbody=False,**kwargs):
         """run the database generator from the command line using
         """
         import sys
