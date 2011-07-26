@@ -471,7 +471,7 @@ if( WIN32 )
   endif()
 endif()
 
-find_package(Qt4 COMPONENTS QtCore QtGui REQUIRED)
+find_package(Qt4 COMPONENTS QtCore QtGui)
 if (NOT QT_FOUND)
   message(STATUS "WARNING: Qt4 not found, is your QTDIR enviornment variable set? Disabling QtCoin GUI plugin")
 endif ()
