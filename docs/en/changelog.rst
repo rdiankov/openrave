@@ -50,6 +50,8 @@ Misc
 
 * grasping and kinematicreachability now use the producer, consumer, gatherer model
 
+* fixed bug with non-adjacent link computation
+
 Version 0.4.1
 =============
 

@@ -3832,7 +3832,6 @@ void KinBody::_ComputeInternalInformation()
 
     // create the adjacency list
     {
-        GetLinkTransformations(_vInitialLinkTransformations);
         _setAdjacentLinks.clear();
         FOREACH(itadj, _vForcedAdjacentLinks) {
             LinkPtr pl0 = GetLink(itadj->first);
@@ -3926,6 +3925,7 @@ void KinBody::_ComputeInternalInformation()
                 RAVELOG_VERBOSE(str(boost::format("link %d has different transformation after SetDOFValues (error=%f), this could be due to mimic joint equations kicking into effect.")%_veclinks.at(i)->GetName()%TransformDistanceFast(vprevtrans[i],vnewtrans[i])));
             }
         }
+        _vInitialLinkTransformations = vnewtrans;
     }
     // notify any callbacks of the changes
     if( _nParametersChanged ) {
