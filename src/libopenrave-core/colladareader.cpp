@@ -1158,13 +1158,13 @@ public:
     /// \param plink    Link of the kinematics model
     bool ExtractGeometry(const domNodeRef pdomnode,KinBody::LinkPtr plink, const KinematicsSceneBindings& bindings, const std::vector<std::string>& vprocessednodes)
     {
-        if( _bSkipGeometry ) {
-            return true;
-        }
         if( !pdomnode ) {
             return false;
         }
         if( !!pdomnode->getID() &&( find(vprocessednodes.begin(),vprocessednodes.end(),pdomnode->getID()) != vprocessednodes.end()) ) {
+            return false;
+        }
+        if( _bSkipGeometry ) {
             return false;
         }
 
