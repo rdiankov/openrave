@@ -50,6 +50,9 @@ class TestKinematics(EnvironmentSetup):
                         body.SetTransformWithDOFValues(body.GetTransform(),dofvaluesnew)
                         assert( transdist(Tallnew,body.GetLinkTransformations()) <= g_epsilon )
                         assert( transdist(dofvaluesnew,body.GetDOFValues()) <= g_epsilon )
+                        # do it again
+                        body.SetDOFValues(dofvaluesnew)
+                        assert( transdist(Tallnew,body.GetLinkTransformations()) <= g_epsilon )
                         for joint in body.GetJoints():
                             assert( transdist(joint.GetValues(), dofvaluesnew[joint.GetDOFIndex():(joint.GetDOFIndex()+joint.GetDOF())]) <= g_epsilon )
                         Tallnew2 = [randtrans() for link in body.GetLinks()]

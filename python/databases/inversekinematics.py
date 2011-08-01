@@ -684,9 +684,12 @@ class InverseKinematicsModel(DatabaseGenerator):
         return successrate, wrongrate
 
     def show(self,delay=0.1,options=None,forceclosure=True):
-        self.env.SetViewer('qtcoin')
-        with self.ArmVisibility(self.manip,0.9):
+        if self.env.GetViewer() is None:
+            self.env.SetViewer('qtcoin')
+        with RobotStateSaver(self.robot):
+            #with self.ArmVisibility(self.manip,0.9):
             time.sleep(3) # let viewer load
+            self.setrobot(0.05)
             while True:
                 with self.env:
                     lower,upper = self.robot.GetDOFLimits(self.manip.GetArmIndices())

@@ -19,6 +19,8 @@ Core
 
 * Can compile without qt4 being present.
 
+* Fixed collision caching bug with ODE/Bullet CheckSelfCollision.
+
 Planning
 --------
 
@@ -41,6 +43,11 @@ Tests
 
 * test_programs is now runnable by windows
 
+Grasping
+--------
+
+* grasping database now uses the producer, consumer, gatherer model, removed updateenv and disableallbodies from the generate method
+
 Misc
 ----
 
@@ -48,9 +55,11 @@ Misc
 
 * fixed bug grasperplanner that exits at coarse step without going to fine step phase
 
-* grasping and kinematicreachability now use the producer, consumer, gatherer model
-
 * fixed bug with non-adjacent link computation
+
+* Octave stripping symbols
+
+* added multiple goals to MoveManipulator and MoveActiveJoints
 
 Version 0.4.1
 =============

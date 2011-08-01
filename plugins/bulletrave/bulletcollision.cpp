@@ -712,6 +712,7 @@ public:
             adjacentoptions |= KinBody::AO_ActiveDOFs;
         }
         LinkAdjacentFilterCallback linkadjacent(pbody, pbody->GetNonAdjacentLinks(adjacentoptions));
+        bulletspace->Synchronize(); // this is weird, but necessary since GetNonAdjacentLinks can modify the body, even though it is const!
         bool bCollision = CheckCollisionP(&linkadjacent, report);
         // things get cached and very messy if not released
         _world->getPairCache()->setOverlapFilterCallback(NULL);

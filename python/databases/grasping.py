@@ -992,3 +992,7 @@ def run(args,*margs,**kwargs):
         return GraspingModel(robot=robot,target=target)
 
     GraspingModel.RunFromParser(Model=CreateModel, parser=parser,args=args,defaultviewer=True,*margs,**kwargs)
+
+
+#InitializeFromParser = GraspingModel.InitializeFromParser
+#from server_functions import *

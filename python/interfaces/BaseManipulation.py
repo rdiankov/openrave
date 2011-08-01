@@ -81,28 +81,31 @@ class BaseManipulation:
         if res is None:
             raise planning_error('MoveHandStraight')
         return res
-    def MoveManipulator(self,goal,maxiter=None,execute=None,outputtraj=None,maxtries=None):
+    def MoveManipulator(self,goal=None,maxiter=None,execute=None,outputtraj=None,maxtries=None,goals=None,steplength=None):
         """See :ref:`module-basemanipulation-movemanipulator`
         """
-        assert(len(goal) == len(self.robot.GetActiveManipulator().GetArmIndices()) and len(goal) > 0)
-        cmd = 'MoveManipulator goal ' + ' '.join(str(f) for f in goal) + ' '
-        if execute is not None:
-            cmd += 'execute %d '%execute
-        if outputtraj is not None and outputtraj:
-            cmd += 'outputtraj '
-        if maxiter is not None:
-            cmd += 'maxiter %d '%maxiter
-        if maxtries is not None:
-            cmd += 'maxtries %d '%maxtries
-        res = self.prob.SendCommand(cmd)
-        if res is None:
-            raise planning_error('MoveManipulator')
-        return res
-    def MoveActiveJoints(self,goal,steplength=None,maxiter=None,maxtries=None,execute=None,outputtraj=None):
+        if goal is not None:
+            assert(len(goal) == len(self.robot.GetActiveManipulator().GetArmIndices()))
+        return self._MoveJoints('MoveManipulator',goal=goal,steplength=steplength,maxiter=maxiter,maxtries=maxtries,execute=execute,outputtraj=outputtraj,goals=goals)
+    
+    def MoveActiveJoints(self,goal=None,steplength=None,maxiter=None,maxtries=None,execute=None,outputtraj=None,goals=None):
         """See :ref:`module-basemanipulation-moveactivejoints`
         """
-        assert(len(goal) == self.robot.GetActiveDOF() and len(goal) > 0)
-        cmd = 'MoveActiveJoints goal ' + ' '.join(str(f) for f in goal)+' '
+        if goal is not None:
+            assert(len(goal) == self.robot.GetActiveDOF() and len(goal) > 0)
+        return self._MoveJoints('MoveActiveJoints',goal=goal,steplength=steplength,maxiter=maxiter,maxtries=maxtries,execute=execute,outputtraj=outputtraj,goals=goals)
+
+    def _MoveJoints(self,cmd,goal=None,steplength=None,maxiter=None,maxtries=None,execute=None,outputtraj=None,goals=None):
+        """See :ref:`module-basemanipulation-moveactivejoints`
+        """
+        cmd += ' '
+        if goal is not None:
+            cmd += 'goal ' + ' '.join(str(f) for f in goal) + ' '
+        if goals is not None:
+            cmd += 'goals %d '%len(goals)
+            for g in goals:
+                for f in g:
+                    cmd += str(f) + ' '
         if steplength is not None:
             cmd += 'steplength %.15e '%steplength
         if execute is not None:
@@ -117,6 +120,7 @@ class BaseManipulation:
         if res is None:
             raise planning_error('MoveActiveJoints')
         return res
+
     def MoveToHandPosition(self,matrices=None,affinedofs=None,maxiter=None,maxtries=None,translation=None,rotation=None,seedik=None,constraintfreedoms=None,constraintmatrix=None,constrainterrorthresh=None,execute=None,outputtraj=None,steplength=None,goalsamples=None,ikparam=None,ikparams=None,jitter=None):
         """See :ref:`module-basemanipulation-movetohandposition`
         """

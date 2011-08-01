@@ -14,6 +14,22 @@
 from common_test_openrave import *
 
 class TestMoving(EnvironmentSetup):
+    def test_ikplanning(self):
+        env = self.env
+        env.Load('data/lab1.env.xml')
+        robot = env.GetRobots()[0]
+        ikmodel = databases.inversekinematics.InverseKinematicsModel(robot, iktype=IkParameterization.Type.Transform6D)
+        if not ikmodel.load():
+            ikmodel.autogenerate()
+
+        with env:
+            Tee = ikmodel.manip.GetEndEffectorTransform()
+            Tee[0:3,3] -= 0.4
+            solutions = ikmodel.manip.FindIKSolutions(IkFilterOptions.CheckEnvCollisions)
+            assert(len(solutions)>0)
+            basemanip = interfaces.BaseManipulation(robot)
+            res=basemanip.MoveManipulator(goals=solutions,execute=False,outputtraj=True)
+            
     def test_constraintpr2(self):
         env = self.env
         robot = env.ReadRobotXMLFile('robots/pr2-beta-static.zae')

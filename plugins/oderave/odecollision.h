@@ -620,6 +620,7 @@ public:
         }
 
         const std::set<int>& nonadjacent = pbody->GetNonAdjacentLinks(adjacentoptions);
+        odespace->Synchronize(); // this is weird, but necessary since GetNonAdjacentLinks can modify the body, even though it is const!
         FOREACHC(itset, nonadjacent) {
             KinBody::LinkConstPtr plink1(pbody->GetLinks().at(*itset&0xffff)), plink2(pbody->GetLinks().at(*itset>>16));
             if( _CheckCollision(plink1,plink2, report) ) {

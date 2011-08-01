@@ -1,0 +1,203 @@
+<Robot name="testrobot"> 
+  <KinBody> 
+      <Body name="Base" type="dynamic"> 
+           <Translation>0.0  0.0  0.0</Translation> 
+               <Geom type="cylinder"> 
+                    <rotationaxis>1 0 0 90</rotationaxis> 
+                    <radius> 0.060000 </radius> 
+                    <height> 1.200000 </height> 
+                    <diffuseColor>0.05 0.05 0.05</diffuseColor> 
+               </Geom> 
+    </Body> 
+     
+     
+     <Body name="Arm0" type="dynamic"> 
+           <offsetfrom>Base</offsetfrom> 
+               <Translation>0 0 0.600000</Translation> 
+               <rotationaxis>1 0 0 -90.000000</rotationaxis> 
+               <rotationaxis>0 0 1 0.000000</rotationaxis> 
+           <Geom type="box"> 
+               <Translation>0.100000 0 0</Translation>
+               <extents>0.100000 0.001 .001</extents> 
+               <diffuseColor>0.05 0.05 0.05</diffuseColor> 
+           </Geom> 
+           <Geom type="box"> 
+               <Translation>0.200000 0 0.050000</Translation>
+               <extents>.001 0.001 0.050000</extents> 
+               <diffuseColor>0.05 0.05 0.05</diffuseColor> 
+           </Geom> 
+     </Body> 
+     <Joint circular="true" name="Arm0" type="hinge"> 
+ 	    <Body>Base</Body> 
+       <Body>Arm0</Body> 
+           <offsetfrom>Base</offsetfrom> 
+           <weight>4</weight> 
+           <limitsdeg>-180 180</limitsdeg> 
+           <axis>0 0 1</axis> 
+           <maxvel>3</maxvel> 
+           <resolution>1</resolution> 
+     </Joint>
+     
+     
+     
+     
+     <Body name="Arm1" type="dynamic"> 
+           <offsetfrom>Arm0</offsetfrom> 
+               <Translation>0.200000 0 0.100000</Translation> 
+               <rotationaxis>1 0 0 60.000000</rotationaxis> 
+               <rotationaxis>0 0 1 0.000000</rotationaxis> 
+           <Geom type="box"> 
+               <Translation>0.300000 0 0</Translation>
+               <extents>0.300000 0.001 .001</extents> 
+               <diffuseColor>0.05 0.05 0.05</diffuseColor> 
+           </Geom> 
+           <Geom type="box"> 
+               <Translation>0.600000 0 0.050000</Translation>
+               <extents>.001 0.001 0.050000</extents> 
+               <diffuseColor>0.05 0.05 0.05</diffuseColor> 
+           </Geom> 
+     </Body> 
+     <Joint circular="true" name="Arm1" type="hinge"> 
+ 	    <Body>Arm0</Body> 
+       <Body>Arm1</Body> 
+           <offsetfrom>Arm1</offsetfrom> 
+           <weight>4</weight> 
+           <limitsdeg>-180 180</limitsdeg> 
+           <axis>0 0 1</axis> 
+           <maxvel>3</maxvel> 
+           <resolution>1</resolution> 
+     </Joint>
+     
+     
+     
+     
+     <Body name="Arm2" type="dynamic"> 
+           <offsetfrom>Arm1</offsetfrom> 
+               <Translation>0.600000 0 0.100000</Translation> 
+               <rotationaxis>1 0 0 -90.000000</rotationaxis> 
+               <rotationaxis>0 0 1 0.000000</rotationaxis> 
+           <Geom type="box"> 
+               <Translation>0.000000 0 0</Translation>
+               <extents>0.000000 0.001 .001</extents> 
+               <diffuseColor>0.05 0.05 0.05</diffuseColor> 
+           </Geom> 
+           <Geom type="box"> 
+               <Translation>0.000000 0 0.300000</Translation>
+               <extents>.001 0.001 0.300000</extents> 
+               <diffuseColor>0.05 0.05 0.05</diffuseColor> 
+           </Geom> 
+     </Body> 
+     <Joint circular="true" name="Arm2" type="hinge"> 
+ 	    <Body>Arm1</Body> 
+       <Body>Arm2</Body> 
+           <offsetfrom>Arm2</offsetfrom> 
+           <weight>4</weight> 
+           <limitsdeg>-180 180</limitsdeg> 
+           <axis>0 0 1</axis> 
+           <maxvel>3</maxvel> 
+           <resolution>1</resolution> 
+     </Joint>
+     
+     
+     
+     
+     <Body name="Arm3" type="dynamic"> 
+           <offsetfrom>Arm2</offsetfrom> 
+               <Translation>0.000000 0 0.600000</Translation> 
+               <rotationaxis>1 0 0 90.000000</rotationaxis> 
+               <rotationaxis>0 0 1 0.000000</rotationaxis> 
+           <Geom type="box"> 
+               <Translation>0 0 0</Translation>
+               <extents>0.001 0.001 .001</extents> 
+               <diffuseColor>0.05 0.05 0.05</diffuseColor> 
+           </Geom> 
+           <Geom type="box"> 
+               <Translation>0 0 0</Translation>
+               <extents>.001 0.001 .001</extents> 
+               <diffuseColor>0.05 0.05 0.05</diffuseColor> 
+           </Geom> 
+     </Body> 
+     <Joint circular="true" name="Arm3" type="hinge"> 
+ 	    <Body>Arm2</Body> 
+       <Body>Arm3</Body> 
+           <offsetfrom>Arm3</offsetfrom> 
+           <weight>4</weight> 
+           <limitsdeg>-180 180</limitsdeg> 
+           <axis>0 0 1</axis> 
+           <maxvel>3</maxvel> 
+           <resolution>1</resolution> 
+     </Joint>
+     
+     
+     
+     
+     <Body name="Arm4" type="dynamic"> 
+           <offsetfrom>Arm3</offsetfrom> 
+               <Translation>0.000000 0 0.000000</Translation> 
+               <rotationaxis>1 0 0 -90.000000</rotationaxis> 
+               <rotationaxis>0 0 1 0.000000</rotationaxis> 
+           <Geom type="box"> 
+               <Translation>0.000000 0 0</Translation>
+               <extents>0.000000 0.001 .001</extents> 
+               <diffuseColor>0.05 0.05 0.05</diffuseColor> 
+           </Geom> 
+           <Geom type="box"> 
+               <Translation>0.000000 0 0.100000</Translation>
+               <extents>.001 0.001 0.100000</extents> 
+               <diffuseColor>0.05 0.05 0.05</diffuseColor> 
+           </Geom> 
+     </Body> 
+     <Joint circular="true" name="Arm4" type="hinge"> 
+ 	    <Body>Arm3</Body> 
+       <Body>Arm4</Body> 
+           <offsetfrom>Arm4</offsetfrom> 
+           <weight>4</weight> 
+           <limitsdeg>-180 180</limitsdeg> 
+           <axis>0 0 1</axis> 
+           <maxvel>3</maxvel> 
+           <resolution>1</resolution> 
+     </Joint>
+     
+     
+     
+     
+     <Body name="Arm5" type="dynamic"> 
+           <offsetfrom>Arm4</offsetfrom> 
+               <Translation>0.000000 0 0.200000</Translation> 
+               <rotationaxis>1 0 0 90.000000</rotationaxis> 
+               <rotationaxis>0 0 1 90.000000</rotationaxis> 
+           <Geom type="box"> 
+               <Translation>0 0 0</Translation>
+               <extents>0.001 0.001 .001</extents> 
+               <diffuseColor>0.05 0.05 0.05</diffuseColor> 
+           </Geom> 
+           <Geom type="box"> 
+               <Translation>0 0 0</Translation>
+               <extents>.001 0.001 .001</extents> 
+               <diffuseColor>0.05 0.05 0.05</diffuseColor> 
+           </Geom> 
+     </Body> 
+     <Joint circular="true" name="Arm5" type="hinge"> 
+ 	    <Body>Arm4</Body> 
+       <Body>Arm5</Body> 
+           <offsetfrom>Arm5</offsetfrom> 
+           <weight>4</weight> 
+           <limitsdeg>-180 180</limitsdeg> 
+           <axis>0 0 1</axis> 
+           <maxvel>3</maxvel> 
+           <resolution>1</resolution> 
+     </Joint>
+     
+     
+     
+     
+    </KinBody> 
+  <Manipulator name="arm"> 
+    <effector>Arm5</effector> 
+   <base>Base</base> 
+    <closingdirection>1 1</closingdirection> 
+    <direction>1 0 0</direction> 
+    <Translation>0 0 0</Translation> 
+    <rotationaxis>1 0 0 -90.000000</rotationaxis> 
+  </Manipulator> 
+</Robot> 

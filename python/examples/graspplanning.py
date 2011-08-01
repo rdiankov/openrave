@@ -103,11 +103,12 @@ class GraspPlanning:
             self.graspables = self.getGraspables(dests=dests)
             if len(self.graspables) == 0:
                 print 'attempting to auto-generate a grasp table'
-                target=[t for t in self.envreal.GetBodies() if t.GetName().find('mug')>=0][0]
-                gmodel = databases.grasping.GraspingModel(robot=self.robot,target=target)
-                if not gmodel.load():
-                    gmodel.autogenerate()
-                    self.graspables = self.getGraspables(dests=dests)
+                targets=[t for t in self.envreal.GetBodies() if t.GetName().find('mug')>=0]
+                if len(targets) > 0:
+                    gmodel = databases.grasping.GraspingModel(robot=self.robot,target=targets[0])
+                    if not gmodel.load():
+                        gmodel.autogenerate()
+                        self.graspables = self.getGraspables(dests=dests)
 
             if randomize:
                 self.randomizeObjects()

@@ -44,9 +44,9 @@ class TaskManipulation:
             raise ValueError('module failed to initialize')
         return clone
     def GraspPlanning(self,graspindices,grasps,target,approachoffset=0,destposes=None,seedgrasps=None,seeddests=None,seedik=None,maxiter=None,randomgrasps=None,randomdests=None, execute=None,outputtraj=None):
-        cmd = 'graspplanning target %s approachoffset %.15e grasps %d %d '%(target.GetName(),approachoffset, grasps.shape[0],grasps.shape[1])
         """See :ref:`module-taskmanipulation-graspplanning`
         """
+        cmd = 'graspplanning target %s approachoffset %.15e grasps %d %d '%(target.GetName(),approachoffset, grasps.shape[0],grasps.shape[1])
         for f in grasps.flat:
             cmd += str(f) + ' '
         for name,valuerange in graspindices.iteritems():

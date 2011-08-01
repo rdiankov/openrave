@@ -57,7 +57,7 @@ class FastGrasping:
             raise self.GraspingException([grasp,jointvalues])
         return True
 
-    def computeGrasp(self,updateenv=True):
+    def computeGrasp(self):
         approachrays = self.gmodel.computeBoxApproachRays(delta=0.02,normalanglerange=0.5) # rays to approach object
         standoffs = [0]
         # roll discretization
@@ -69,7 +69,8 @@ class FastGrasping:
             final,traj = taskmanip.ReleaseFingers(execute=False,outputfinal=True)
             preshapes = array([final])
         try:
-            self.gmodel.generate(preshapes=preshapes,standoffs=standoffs,rolls=rolls,approachrays=approachrays,checkgraspfn=self.checkgraspfn,disableallbodies=False,updateenv=updateenv)
+            self.gmodel.disableallbodies=False
+            self.gmodel.generate(preshapes=preshapes,standoffs=standoffs,rolls=rolls,approachrays=approachrays,checkgraspfn=self.checkgraspfn)
             return None,None # did not find anything
         except self.GraspingException, e:
             return e.args

@@ -311,9 +311,13 @@ make
 - \ref ormulticontrol.cpp
 - \ref orplanning_ik.cpp
 - \ref orplanning_planner.cpp
-- \ref orplanning_problem.cpp
+- \ref orplanning_module.cpp
 - \ref orpythonbinding.cpp
 - \ref ortrajectory.cpp
+
+\section cpp_examples_otherlib Linking with Other Libraries
+
+- \ref opencvsaving.cpp
 
 */
 
