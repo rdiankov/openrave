@@ -60,6 +60,7 @@ except ImportError:
                 for cc in combinations(items[i+1:],n-1):
                     yield [items[i]]+cc
 
+from sympy.core import function # for sympy 0.7.1+
 class fmod(core.function.Function):
     nargs = 2
     is_real = True

@@ -1157,7 +1157,7 @@ protected:
         if( !!ptarget ) {
             _robot->Release(ptarget);
             _robot->SetActiveDOFValues(ptraj->GetPoints().back().q);
-            if( GetEnv()->CheckCollision(KinBodyConstPtr(_robot),ptarget) ) {
+            if( GetEnv()->CheckCollision(KinBodyConstPtr(_robot),KinBodyConstPtr(ptarget)) ) {
                 RAVELOG_WARN(str(boost::format("even after releasing, in collision with target %s")%_robot->GetName()));
             }
         }

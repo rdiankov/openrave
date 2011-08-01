@@ -9,6 +9,8 @@ objects the generator relies on are used to produce a unique ID to index the dat
 $OPENRAVE_DATABASE. For example, the grasping database will combine the robot manipulator hash and
 the target object hash.
 """
+from __future__ import with_statement # for python 2.5
+
 try:
     import cPickle as pickle
 except:

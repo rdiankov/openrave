@@ -16,6 +16,8 @@
 #ifndef RAVE_CONTROLLERS_H
 #define RAVE_CONTROLLERS_H
 
+#include <boost/bind.hpp>
+
 class IdealController : public ControllerBase
 {
 public:
@@ -277,7 +279,7 @@ private:
     void _CheckConfiguration()
     {
         if( _bCheckCollision ) {
-            if( GetEnv()->CheckCollision(_probot,_report) ) {
+            if( GetEnv()->CheckCollision(KinBodyConstPtr(_probot),_report) ) {
                 _ReportError(str(boost::format("collsion in trajectory: %s\n")%_report->__str__()));
             }
             if( _probot->CheckSelfCollision(_report) ) {

@@ -217,7 +217,7 @@ public:
 
     virtual bool SetLinkVelocity(KinBody::LinkPtr plink, const Vector& _linearvel, const Vector& angularvel)
     {
-        _odespace->Synchronize(plink->GetParent());
+        _odespace->Synchronize(KinBodyConstPtr(plink->GetParent()));
         dBodyID body = _odespace->GetLinkBody(plink);
         if( !body ) {
             return false;
@@ -231,7 +231,7 @@ public:
     virtual bool SetLinkVelocities(KinBodyPtr pbody, const std::vector<std::pair<Vector,Vector> >& velocities)
     {
         bool bsuccess = true;
-        _odespace->Synchronize(pbody);
+        _odespace->Synchronize(KinBodyConstPtr(pbody));
         FOREACHC(itlink, pbody->GetLinks()) {
             dBodyID body = _odespace->GetLinkBody(*itlink);
             if( body ) {

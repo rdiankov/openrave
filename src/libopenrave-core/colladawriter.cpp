@@ -878,7 +878,7 @@ public:
 
         //  Create root node for the visual scene
         domNodeRef pnoderoot = daeSafeCast<domNode>(_scene.vscene->add(COLLADA_ELEMENT_NODE));
-        string bodyid = _GetNodeId(pbody);
+        string bodyid = _GetNodeId(KinBodyConstPtr(pbody));
         pnoderoot->setId(bodyid.c_str());
         pnoderoot->setSid(bodyid.c_str());
         pnoderoot->setName(pbody->GetName().c_str());

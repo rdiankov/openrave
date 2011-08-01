@@ -895,7 +895,8 @@ class AST:
             self.Dfk = Tleft[0:3,0:3]*self.Dfk
             self.Pee = Tleftinv[0:3,0:3]*self.Pee+Tleftinv[0:3,3]
 
-class fmod(core.function.Function):
+from sympy.core import function # for sympy 0.7.1+
+class fmod(function.Function):
     """defines floating-point mod"""
     nargs = 2
     is_real = True

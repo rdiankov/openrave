@@ -108,7 +108,7 @@ public:
 
     virtual void Init()
     {
-        boost::mutex::scoped_lock(_mutexInit);
+        boost::mutex::scoped_lock lockinit(_mutexInit);
         if( _bInit ) {
             RAVELOG_WARN("environment is already initialized, ignoring\n");
             return;
@@ -1636,7 +1636,7 @@ protected:
     {
         Destroy();
 
-        boost::mutex::scoped_lock(_mutexInit);
+        boost::mutex::scoped_lock lockinit(_mutexInit);
         SetCollisionChecker(CollisionCheckerBasePtr());
         SetPhysicsEngine(PhysicsEngineBasePtr());
 

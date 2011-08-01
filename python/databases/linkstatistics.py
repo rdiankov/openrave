@@ -40,7 +40,6 @@ Class Definitions
 -----------------
 
 """
-
 from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
