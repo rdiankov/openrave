@@ -181,6 +181,9 @@ public:
             InitKinBody(*itbody);
         }
         SetGravity(_gravity);
+        RAVELOG_INFO(str(boost::format("default params: erp=%e, cfm=%e")%dWorldGetERP(_odespace->GetWorld())%dWorldGetCFM(_odespace->GetWorld())));
+        dWorldSetERP(_odespace->GetWorld(),0.01);
+        dWorldSetCFM(_odespace->GetWorld(),1e-5);
         return true;
     }
 
