@@ -706,13 +706,13 @@ public:
             return false;
         }
 
-        bulletspace->Synchronize();
+
         int adjacentoptions = KinBody::AO_Enabled;
         if( (_options&OpenRAVE::CO_ActiveDOFs) && pbody->IsRobot() ) {
             adjacentoptions |= KinBody::AO_ActiveDOFs;
         }
         LinkAdjacentFilterCallback linkadjacent(pbody, pbody->GetNonAdjacentLinks(adjacentoptions));
-        bulletspace->Synchronize(); // this is weird, but necessary since GetNonAdjacentLinks can modify the body, even though it is const!
+        bulletspace->Synchronize(); // call after GetNonAdjacentLinks since it can modify the body, even though it is const!
         bool bCollision = CheckCollisionP(&linkadjacent, report);
         // things get cached and very messy if not released
         _world->getPairCache()->setOverlapFilterCallback(NULL);

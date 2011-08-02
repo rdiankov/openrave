@@ -376,6 +376,9 @@ public:
                 break;
             }
         }
+        if( bSuccess ) {
+            return true;
+        }
 
         // search for anything left over
         std::vector<std::string> vprocessednodes;
@@ -580,6 +583,9 @@ public:
         _mapJointUnits.clear();
         _mapJointIds.clear();
         KinBodyPtr pkinbody = RaveCreateKinBody(_penv);
+        if( pkinbody->__struri.size() == 0 ) {
+            pkinbody->__struri = _filename;
+        }
         string name = !pdomnode->getName() ? "" : _ConvertToOpenRAVEName(pdomnode->getName());
         if( name.size() == 0 ) {
             name = _ConvertToOpenRAVEName(pdomnode->getID());

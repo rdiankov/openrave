@@ -612,15 +612,13 @@ public:
             return false;
         }
 
-        odespace->Synchronize();
-
         int adjacentoptions = KinBody::AO_Enabled;
         if( (_options&OpenRAVE::CO_ActiveDOFs) && pbody->IsRobot() ) {
             adjacentoptions |= KinBody::AO_ActiveDOFs;
         }
 
         const std::set<int>& nonadjacent = pbody->GetNonAdjacentLinks(adjacentoptions);
-        odespace->Synchronize(); // this is weird, but necessary since GetNonAdjacentLinks can modify the body, even though it is const!
+        odespace->Synchronize(); // call after GetNonAdjacentLinks since it can modify the body, even though it is const!
         FOREACHC(itset, nonadjacent) {
             KinBody::LinkConstPtr plink1(pbody->GetLinks().at(*itset&0xffff)), plink2(pbody->GetLinks().at(*itset>>16));
             if( _CheckCollision(plink1,plink2, report) ) {

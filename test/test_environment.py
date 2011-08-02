@@ -33,3 +33,11 @@ class TestEnvironment(EnvironmentSetup):
         
     def test_misc(self):
         assert(self.env.plot3([0,0,0],10)==None) # no viewer attached
+
+    def test_uri(self):
+        env=self.env
+        xml="""<environment>
+  <kinbody file="data/jsk-plate.zae"/>
+</environment>"""
+        env.LoadData(xml)
+        assert(env.GetBodies()[0].GetURI().find('data/jsk-plate.zae') >= 0)

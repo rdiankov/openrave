@@ -25,10 +25,14 @@ class TestMoving(EnvironmentSetup):
         with env:
             Tee = ikmodel.manip.GetEndEffectorTransform()
             Tee[0:3,3] -= 0.4
-            solutions = ikmodel.manip.FindIKSolutions(IkFilterOptions.CheckEnvCollisions)
-            assert(len(solutions)>0)
+            solutions = ikmodel.manip.FindIKSolutions(Tee,IkFilterOptions.CheckEnvCollisions)
+            assert(len(solutions)>1)
             basemanip = interfaces.BaseManipulation(robot)
-            res=basemanip.MoveManipulator(goals=solutions,execute=False,outputtraj=True)
+            trajdata=basemanip.MoveManipulator(goals=solutions,execute=True)
+        env.StartSimulation(0.01,False)
+        robot.WaitForController(0)
+        with env:
+            assert(transdist(Tee,ikmodel.manip.GetEndEffectorTransform()))
             
     def test_constraintpr2(self):
         env = self.env

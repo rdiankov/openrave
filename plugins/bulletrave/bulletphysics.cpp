@@ -146,12 +146,12 @@ public:
 
     virtual bool SetLinkVelocity(KinBody::LinkPtr plink, const Vector& linearvel, const Vector& angularvel)
     {
-        RAVELOG_WARN("SetLinkVelocity not supported\n");
+        RAVELOG_DEBUG("SetLinkVelocity not supported\n");
         return false;
     }
     virtual bool SetLinkVelocities(KinBodyPtr pbody, const std::vector<std::pair<Vector,Vector> >& velocities)
     {
-        RAVELOG_WARN("SetLinkVelocities not supported\n");
+        RAVELOG_DEBUG("SetLinkVelocities not supported\n");
         return false;
     }
 

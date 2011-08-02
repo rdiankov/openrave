@@ -339,7 +339,6 @@ public:
         DAE::cleanup();
     }
 
-    /// Write down a COLLADA file
     virtual void Save(const string& filename)
     {
         bool bcompress = filename.size() >= 4 && filename[filename.size()-4] == '.' && ::tolower(filename[filename.size()-3]) == 'z' && ::tolower(filename[filename.size()-2]) == 'a' && ::tolower(filename[filename.size()-1]) == 'e';
