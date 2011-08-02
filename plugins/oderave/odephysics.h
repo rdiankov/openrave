@@ -79,7 +79,7 @@ public:
                 return PE_Ignore;
             }
 
-            if(( name != "friction") &&( name != "selfcollision") &&( name != "gravity") &&( name != "contact") ) {
+            if(( name != "friction") &&( name != "selfcollision") &&( name != "gravity") &&( name != "contact")  && name != "erp" && name != "cfm" ) {
                 return PE_Pass;
             }
             _ss.str("");
@@ -90,9 +90,10 @@ public:
         {
             if( name == "odeproperties" )
                 return true;
-            else if( name == "friction" )
+            else if( name == "friction" ) {
                 // read all the float values into a vector
                 _ss >> _physics->_globalfriction;
+            }
             else if( name == "selfcollision" ) {
                 bool bSelfCollision = false;
                 _ss >> bSelfCollision;
@@ -106,6 +107,12 @@ public:
                 if( !!_ss ) {
                     _physics->SetGravity(v);
                 }
+            }
+            else if( name == "erp" ) {
+                _ss >> _physics->_globalerp;
+            }
+            else if( name == "cfm" ) {
+                _ss >> _physics->_globalcfm;
             }
             else if( name == "contact" ) {         // check out http://www.ode.org/ode-latest-userguide.html#sec_7_3_7
 
@@ -146,7 +153,9 @@ public:
 
     ODEPhysicsEngine(OpenRAVE::EnvironmentBasePtr penv) : OpenRAVE::PhysicsEngineBase(penv), _odespace(new ODESpace(penv, GetPhysicsInfo, true)) {
         __description = ":Interface Author: Rosen Diankov\n\nODE physics engine";
-        _globalfriction = 1.0f;
+        _globalfriction = 0.4;
+        _globalerp = 0.01;
+        _globalcfm = 1e-5;
         _options = OpenRAVE::PEO_SelfCollisions;
 
         memset(_jointadd, 0, sizeof(_jointadd));
@@ -181,12 +190,11 @@ public:
             InitKinBody(*itbody);
         }
         SetGravity(_gravity);
-        RAVELOG_INFO(str(boost::format("default params: erp=%e, cfm=%e")%dWorldGetERP(_odespace->GetWorld())%dWorldGetCFM(_odespace->GetWorld())));
-        dWorldSetERP(_odespace->GetWorld(),0.01);
-        dWorldSetCFM(_odespace->GetWorld(),1e-5);
+        RAVELOG_DEBUG(str(boost::format("ode params: erp=%e (%e), cfm=%e (%e)")%_globalerp%dWorldGetERP(_odespace->GetWorld())%_globalcfm%dWorldGetCFM(_odespace->GetWorld())));
+        dWorldSetERP(_odespace->GetWorld(),_globalerp);
+        dWorldSetCFM(_odespace->GetWorld(),_globalcfm);
         return true;
     }
-
 
     virtual void DestroyEnvironment()
     {
@@ -564,7 +572,7 @@ private:
     boost::shared_ptr<ODESpace> _odespace;
     Vector _gravity;
     int _options;
-    dReal _globalfriction;
+    dReal _globalfriction, _globalcfm, _globalerp;
 
     typedef void (*JointSetFn)(dJointID, int param, dReal val);
     typedef dReal (*JointGetFn)(dJointID);
