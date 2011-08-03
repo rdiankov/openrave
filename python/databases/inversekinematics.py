@@ -594,8 +594,8 @@ class InverseKinematicsModel(DatabaseGenerator):
                 IPython = __import__('IPython')
                 ipshell = IPython.Shell.IPShellEmbed(argv='',banner = 'inversekinematics dropping into ipython',exit_msg = 'Leaving Interpreter and continuing solver.')
                 ipshell(local_ns=locals())
-                reload(ikfast) # in case changes occurred
-
+                reload(self.ikfast) # in case changes occurred
+                
             try:
                 generationstart = time.time()
                 chaintree = solver.generateIkSolver(baselink=baselink,eelink=eelink,freeindices=self.freeindices,solvefn=solvefn)

@@ -1,10 +1,13 @@
-<Robot name="PA10" file="mitsubishi-pa10.zae">
+<Robot name="PA10">
   <KinBody>
     <body name="staticbase" type="static">
       <geom type="box">
         <extents>0.001 0.001 0.001</extents>
       </geom>
     </body>
+  </KinBody>
+  <robot  file="mitsubishi-pa10.zae"/>
+  <KinBody>
     <joint name="dummy0" type="hinge" enable="false">
       <body>staticbase</body>
       <body>link0</body>
