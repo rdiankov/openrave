@@ -38,6 +38,11 @@ Python
 
 * Started a new :mod:`openravepy.misc` library that is not loaded by default. The OpenRAVEGlobalArguments and MultiManipIKSolver helper classes are now part of it.
 
+IKFast
+------
+
+* Fixed major IK fast bug when intersecting axes of robot are not at the ends.
+
 Tests
 -----
 

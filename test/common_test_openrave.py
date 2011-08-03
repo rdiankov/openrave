@@ -13,6 +13,7 @@
 # limitations under the License.
 from openravepy import *
 from openravepy import misc
+import numpy
 from numpy import *
 
 from itertools import izip, combinations

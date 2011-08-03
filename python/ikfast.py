@@ -204,7 +204,7 @@ from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2011 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Lesser GPL, Version 3'
-__version__ = '42'
+__version__ = '43'
 
 import sys, copy, time, math, datetime
 import __builtin__
@@ -1979,7 +1979,7 @@ class IKFastSolver(AutoReloader):
                     T1links = Links[endindex:]
                     T1links.append(self.Teeinv)
                     T1links += Links[:startindex]
-                    solveRotationFirst = False
+                    solveRotationFirst = True
             if solveRotationFirst is not None:
                 rotvars = []
                 transvars = []
@@ -2012,6 +2012,11 @@ class IKFastSolver(AutoReloader):
         """Solve 6D equations using fact that 3 axes are intersecting. The 3 intersecting axes are all part of T0links and will be used to compute the rotation of the robot. The other 3 axes are part of T1links and will be used to first compute the position.
         """
         assert(len(transvars)==3 and len(rotvars) == 3)
+        T0 = self.multiplyMatrix(T0links)
+        T0posoffset = eye(4)
+        T0posoffset[0:3,3] = -T0[0:3,3]
+        T0links = [T0posoffset] + T0links
+        T1links = [T0posoffset] + T1links
         T1 = self.multiplyMatrix(T1links)
         othersolvedvars = rotvars+self.freejointvars if solveRotationFirst else self.freejointvars[:]
         T1linksinv = [self.affineInverse(T) for T in T1links]

@@ -15,7 +15,7 @@
 /// See the License for the specific language governing permissions and
 /// limitations under the License.
 ///
-/// ikfast version 42 generated on 2011-07-01 15:39:13.247984
+/// ikfast version 43 generated on 2011-08-03 17:13:46.802746
 /// To compile with gcc:
 ///     gcc -lstdc++ ik.cpp
 /// To compile without any main function as a shared object:
