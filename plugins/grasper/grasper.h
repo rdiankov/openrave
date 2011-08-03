@@ -140,6 +140,7 @@ public:
         params->bonlycontacttarget = true;
         params->btightgrasp = false;
         params->vtargetdirection = Vector(0,0,1);
+        params->vmanipulatordirection =  _robot->GetActiveManipulator()->GetDirection();
         boost::shared_ptr<CollisionCheckerMngr> pcheckermngr;
 
         string cmd;
