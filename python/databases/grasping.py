@@ -382,6 +382,8 @@ class GraspingModel(DatabaseGenerator):
         All grasp parameters have to be in the bodies's coordinate system (ie: approachrays).
         @param checkgraspfn: If set, then will be used to validate the grasp. If its evaluation returns false, then grasp will not be added to set. Called by checkgraspfn(contacts,finalconfig,grasp,info)"""
         print 'Generating Grasp Set for %s:%s:%s'%(self.robot.GetName(),self.manip.GetName(),self.target.GetName())
+        if friction is None:
+            friction = 0.4
         self.init(friction=friction,avoidlinks=avoidlinks,plannername=plannername)
         if approachrays is None:
             approachrays = self.computeBoxApproachRays(delta=0.02,normalanglerange=0)
@@ -487,6 +489,8 @@ class GraspingModel(DatabaseGenerator):
         translate = True
         if approachrays is None:
             approachrays = self.computeBoxApproachRays(delta=0.02,normalanglerange=0)
+        if friction is None:
+            friction = 0.4
         if preshapes is None:
             # should disable everything but the robot
             with self.target:
@@ -503,6 +507,7 @@ class GraspingModel(DatabaseGenerator):
             manipulatordirections = array([self.manip.GetDirection()])
         if numthreads is None:
             numthreads = 2
+        self.init(friction=friction,avoidlinks=avoidlinks,plannername=plannername)
 
         with self.robot: # lock the environment and save the robot state
             Ttarget = self.target.GetTransform()
