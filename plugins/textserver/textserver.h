@@ -298,6 +298,7 @@ public:
         mapNetworkFns["robot_getmanipulators"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orRobotGetManipulators,this,_1,_2,_3), OpenRaveWorkerFn(), true);
         mapNetworkFns["robot_getsensors"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orRobotGetAttachedSensors,this,_1,_2,_3), OpenRaveWorkerFn(), true);
         mapNetworkFns["robot_sensorsend"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orRobotSensorSend,this,_1,_2,_3), OpenRaveWorkerFn(), true);
+        mapNetworkFns["robot_sensorconfigure"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orRobotSensorConfigure,this,_1,_2,_3), OpenRaveWorkerFn(), true);
         mapNetworkFns["robot_sensordata"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orRobotSensorData,this,_1,_2,_3), OpenRaveWorkerFn(), true);
         mapNetworkFns["robot_setactivedofs"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orRobotSetActiveDOFs,this,_1,_2,_3), OpenRaveWorkerFn(), false);
         mapNetworkFns["robot_setactivemanipulator"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orRobotSetActiveManipulator,this,_1,_2,_3), OpenRaveWorkerFn(), false);
@@ -1157,6 +1158,49 @@ protected:
             return false;
         }
         return probot->GetAttachedSensors().at(sensorindex)->GetSensor()->SendCommand(os,is);
+    }
+
+    bool orRobotSensorConfigure(istream& is, ostream& os, boost::shared_ptr<void>& pdata)
+    {
+        SyncWithWorkerThread();
+        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        RobotBasePtr probot = orMacroGetRobot(is);
+        string strcmd;
+        int sensorindex = 0;
+        is >> sensorindex >> strcmd;
+        if( !is ) {
+            return false;
+        }
+        std::transform(strcmd.begin(), strcmd.end(), strcmd.begin(), ::tolower);
+        SensorBase::ConfigureCommand cmd;
+        if( strcmd == "poweron" ) {
+            cmd = SensorBase::CC_PowerOn;
+        }
+        else if( strcmd == "poweroff" ) {
+            cmd = SensorBase::CC_PowerOff;
+        }
+        else if( strcmd == "powercheck" ) {
+            cmd = SensorBase::CC_PowerCheck;
+        }
+        else if( strcmd == "renderdataon" ) {
+            cmd = SensorBase::CC_RenderDataOn;
+        }
+        else if( strcmd == "renderdataoff" ) {
+            cmd = SensorBase::CC_RenderDataOff;
+        }
+        else if( strcmd == "renderdatacheck" ) {
+            cmd = SensorBase::CC_RenderDataCheck;
+        }
+        else if( strcmd == "rendergeometryon" ) {
+            cmd = SensorBase::CC_RenderGeometryOn;
+        }
+        else if( strcmd == "rendergeometryoff" ) {
+            cmd = SensorBase::CC_RenderGeometryOff;
+        }
+        else if( strcmd == "rendergeometrycheck" ) {
+            cmd = SensorBase::CC_RenderGeometryCheck;
+        }
+        os << probot->GetAttachedSensors().at(sensorindex)->GetSensor()->Configure(cmd);
     }
 
     bool orRobotSensorData(istream& is, ostream& os, boost::shared_ptr<void>& pdata)

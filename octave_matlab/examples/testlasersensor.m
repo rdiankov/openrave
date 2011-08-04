@@ -6,20 +6,24 @@ more off; % turn off output paging
 addopenravepaths()
 
 if( ~exist('render','var') )
-    render = [0];
+    render = [0,1,2];
 end
 
-orEnvLoadScene('data/testwamlaser.env.xml',1); % reset the scene
+orEnvLoadScene('data/testwamcamera.env.xml',1); % reset the scene
 robots = orEnvGetRobots();
 robotid = robots{1}.id;
 
 % to turn on the rendering, send a command to the sensor
 for i = 1:length(render)
-    orRobotSensorSend(robotid, render(i), 'power','1');
-    orRobotSensorSend(robotid, render(i), 'show','1');
+    data = orRobotSensorGetData(robotid, render(i));
+    if( ~struct_contains (data,'laserrange') )
+        continue;
+    end
+    orRobotSensorConfigure(robotid, render(i), 'PowerOn')
+    orRobotSensorConfigure(robotid, render(i), 'RenderDataOn')
+    sensorindex = render(i);
+    break;
 end
-
-sensorindex = 0;
 
 while(1)
 % get the laser data
