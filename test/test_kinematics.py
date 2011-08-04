@@ -388,23 +388,21 @@ class TestKinematics(EnvironmentSetup):
   <joint type="%s" name="J0">
     <body>L0</body>
     <body>L1</body>
-    <axis>1 0 0</axis>
-    <axis>0 1 0</axis>
+    <axis1>1 0 0</axis1>
+    <axis2>0 1 0</axis2>
     <anchor>0 0 0.2</anchor>
   </joint>
 </kinbody>
 """
         with env:
-            body = env.ReadKinBodyData(xml%'universal')
-            env.AddKinBody(body)
-            assert(body.GetDOF()==2)
-            assert(len(body.GetJoints())==1)
-            assert(env.GetJoints()[0].GetType()==Joint.Type.Universal)
-        
+#             body = env.ReadKinBodyData(xml%'universal')
+#             env.AddKinBody(body)
+#             assert(body.GetDOF()==2)
+#             assert(len(body.GetJoints())==1)
+#             assert(env.GetJoints()[0].GetType()==Joint.Type.Universal)
             env.Reset()
             body = env.ReadKinBodyData(xml%'hinge2')
             env.AddKinBody(body)
             assert(body.GetDOF()==2)
             assert(len(body.GetJoints())==1)
-            assert(env.GetJoints()[0].GetType()==Joint.Type.Universal)
-
+            assert(body.GetJoints()[0].GetType()==KinBody.Joint.Type.Hinge2)

@@ -12,7 +12,7 @@ class CallableClass(Plugin):
     score = 2000
     def makeTest(self, obj, parent=None):
         if inspect.isclass(obj) and callable(obj):
-            if parent and not isinstance(parent, types.ModuleType):
+            if parent is not None and not isinstance(parent, types.ModuleType):
                 # treat class as a function call
                 obj = unbound_method(parent, obj)
             if parent and obj.__module__ != parent.__name__:
@@ -20,5 +20,7 @@ class CallableClass(Plugin):
             if inspect.isgenerator(obj):
                 return self.loadTestsFromGenerator(obj, parent)
             else:
-                return [nose.case.FunctionTestCase(obj())]
+                obj_inst = obj()
+                if callable(obj_inst):
+                    return [nose.case.FunctionTestCase(obj_inst)]
         return None

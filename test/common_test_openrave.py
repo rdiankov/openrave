@@ -83,6 +83,7 @@ def locate(pattern, root=os.curdir):
             yield os.path.join(path, filename)
 
 class EnvironmentSetup(object):
+    __name__='openrave_common_test'
     def setup(self):
         self.env=Environment()
         self.env.StopSimulation()

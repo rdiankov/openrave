@@ -28,6 +28,8 @@ from noseplugins import multiprocess,xunitmultiprocess, capture, callableclass
 
 import cPickle as pickle
 
+_multiprocess_can_split_ = True
+
 #global variables
 globalmanager = multiprocessing.Manager()
 globalstats = globalmanager.list() # used for gathering statistics
@@ -65,12 +67,6 @@ def teardown_robotstats():
 
 def measurement(name,value):
     return '<measurement><name>%s</name><value>%s</value></measurement>'%(name,value)
-
-class TimedOutException(Exception):
-    def __init__(self, value = "Timed Out"):
-        self.value = value
-    def __str__(self):
-        return repr(self.value)
 
 @nose.with_setup(setup_robotstats, teardown_robotstats)
 def robotstats(description,robotfilename,manipname, iktypestr,freeindices):
@@ -257,7 +253,7 @@ def parseoptions(args=None):
     options.numiktests = [int(s) for s in options.numiktests.split(',')]
     return options
 
-def test_robots():
+def test_robot_ikfast():
     global options
     if options is None:
         options = parseoptions([])

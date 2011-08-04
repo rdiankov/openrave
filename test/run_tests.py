@@ -16,7 +16,7 @@ import sys
 from optparse import OptionParser
 import nose
 from nose.plugins import failuredetail
-from noseplugins import multiprocess, xunitmultiprocess, capture
+from noseplugins import multiprocess, xunitmultiprocess, capture, callableclass
 
 if __name__ == "__main__":
     import test_kinematics
@@ -31,11 +31,11 @@ if __name__ == "__main__":
                       help='set to run only tests that test program execution to make sure things run on the current OS')
     (options, args) = parser.parse_args()
 
-    multiprocess._instantiate_plugins = [capture.Capture, xunitmultiprocess.Xunitmp,failuredetail.FailureDetail]
-    argv=['nosetests','-v','--with-xunitmp','--xunit-file=results.xml','--processes=%d'%options.numprocesses,'--process-timeout=%f'%options.timeout,'--process-restartworker','-d']
+    multiprocess._instantiate_plugins = [capture.Capture, xunitmultiprocess.Xunitmp,failuredetail.FailureDetail,callableclass.CallableClass]
+    argv=['nosetests','-v','--with-xunitmp','--xunit-file=results.xml','--processes=%d'%options.numprocesses,'--process-timeout=%f'%options.timeout,'--process-restartworker','-d','--with-callableclass','-s']
     if options.os_only:
         argv.append('test_programs.py')
     if options.with_coverage:
         argv += ['--with-coverage', '--cover-package=openravepy','--cover-html']
-    plugins=[capture.Capture(),multiprocess.MultiProcess(),xunitmultiprocess.Xunitmp(),failuredetail.FailureDetail()]
+    plugins=[capture.Capture(),multiprocess.MultiProcess(),xunitmultiprocess.Xunitmp(),failuredetail.FailureDetail(),callableclass.CallableClass()]
     prog=nose.core.TestProgram(argv=argv,plugins=plugins,exit=False)

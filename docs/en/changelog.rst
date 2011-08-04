@@ -48,6 +48,8 @@ Tests
 
 * test_programs is now runnable by windows
 
+* test_ikfast is now also included in the regular tests to determine release. The full IK tests are run separately, and those can fail.
+
 Grasping
 --------
 
