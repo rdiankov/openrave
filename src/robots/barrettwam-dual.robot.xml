@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- combines two barrett wam arms -->
-<Robot name="schunk-lwa3-dual">
+<Robot name="barrettwam-dual">
   <KinBody>
     <body name="chest">
       <geom type="box">

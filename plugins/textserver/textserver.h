@@ -277,7 +277,7 @@ public:
         mapNetworkFns["close"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orEnvClose,this,_1,_2,_3), OpenRaveWorkerFn(),false);
         mapNetworkFns["createrobot"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orEnvCreateRobot,this,_1,_2,_3), OpenRaveWorkerFn(), true);
         mapNetworkFns["createbody"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orEnvCreateKinBody,this,_1,_2,_3), OpenRaveWorkerFn(), true);
-        mapNetworkFns["createproblem"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orEnvCreateProblem,this,_1,_2,_3), boost::bind(&SimpleTextServer::worEnvCreateProblem,this,_1,_2), true);
+        mapNetworkFns["createmodule"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orEnvCreateModule,this,_1,_2,_3), boost::bind(&SimpleTextServer::worEnvCreateModule,this,_1,_2), true);
         mapNetworkFns["env_dstrprob"] = RAVENETWORKFN(OpenRaveNetworkFn(), boost::bind(&SimpleTextServer::worEnvDestroyProblem,this,_1,_2), false);
         mapNetworkFns["env_getbodies"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orEnvGetBodies,this,_1,_2,_3), OpenRaveWorkerFn(), true);
         mapNetworkFns["env_getrobots"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orEnvGetRobots,this,_1,_2,_3), OpenRaveWorkerFn(), true);
@@ -885,7 +885,7 @@ protected:
         return true;
     }
 
-    bool orEnvCreateProblem(istream& is, ostream& os, boost::shared_ptr<void>& pdata)
+    bool orEnvCreateModule(istream& is, ostream& os, boost::shared_ptr<void>& pdata)
     {
         string problemname;
         bool bDestroyDuplicates = true;
@@ -911,7 +911,7 @@ protected:
             }
         }
 
-        ModuleBasePtr prob = RaveCreateProblem(GetEnv(),problemname);
+        ModuleBasePtr prob = RaveCreateModule(GetEnv(),problemname);
         if( !prob ) {
             RAVELOG_ERROR("Cannot find module: %s\n", problemname.c_str());
             return false;
@@ -923,7 +923,7 @@ protected:
         return true;
     }
 
-    bool worEnvCreateProblem(boost::shared_ptr<istream> is, boost::shared_ptr<void> pdata)
+    bool worEnvCreateModule(boost::shared_ptr<istream> is, boost::shared_ptr<void> pdata)
     {
         if( GetEnv()->LoadProblem(boost::static_pointer_cast< pair<ModuleBasePtr,string> >(pdata)->first, boost::static_pointer_cast< pair<ModuleBasePtr,string> >(pdata)->second) != 0 ) {
             RAVELOG_WARN("failed to load problem");

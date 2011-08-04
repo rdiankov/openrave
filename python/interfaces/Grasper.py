@@ -10,9 +10,10 @@
 # limitations under the License.
 from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
-__copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
+__copyright__ = 'Copyright (C) 2009-2011 Rosen Diankov <rosen.diankov@gmail.com>'
 __license__ = 'Apache License, Version 2.0'
-from openravepy import *
+from ..openravepy_ext import *
+from ..openravepy_int import *
 from numpy import *
 from copy import copy as shallowcopy
 
@@ -43,7 +44,7 @@ class Grasper:
         if envother.AddModule(clone.prob,clone.args) != 0:
             raise ValueError('module failed to initialize')
         return clone
-    def Grasp(self,direction=None,roll=None,position=None,standoff=None,target=None,stablecontacts=False,forceclosure=False,transformrobot=True,onlycontacttarget=True,tightgrasp=False,graspingnoise=None,execute=None,translationstepmult=None,outputfinal=False,manipulatordirection=None):
+    def Grasp(self,direction=None,roll=None,position=None,standoff=None,target=None,stablecontacts=False,forceclosure=False,transformrobot=True,onlycontacttarget=True,tightgrasp=False,graspingnoise=None,execute=None,translationstepmult=None,outputfinal=False,manipulatordirection=None,finestep=None):
         """See :ref:`module-grasper-grasp`
         """
         cmd = 'Grasp '
@@ -63,6 +64,8 @@ class Grasper:
             cmd += 'graspingnoise %.15e '%graspingnoise
         if translationstepmult is not None:
             cmd += 'translationstepmult %.15e '%translationstepmult
+        if finestep is not None:
+            cmd += 'finestep %.15e '%finestep
         if execute is not None:
             cmd += 'execute %d '%execute
         res = self.prob.SendCommand(cmd)

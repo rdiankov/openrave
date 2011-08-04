@@ -53,7 +53,7 @@
 #include "docstrings.h"
 
 #define CHECK_POINTER(p) { \
-        if( !(p) ) throw openrave_exception(boost::str(boost::format("[%s:%d]: invalid pointer")%__PRETTY_FUNCTION__%__LINE__)); \
+        if( !(p) ) { throw openrave_exception(boost::str(boost::format("[%s:%d]: invalid pointer")%__PRETTY_FUNCTION__%__LINE__)); } \
 }
 
 using namespace boost::python;

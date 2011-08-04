@@ -204,7 +204,7 @@ from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2011 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Lesser GPL, Version 3'
-__version__ = '42'
+__version__ = '43'
 
 import sys, copy, time, math, datetime
 import __builtin__
@@ -895,7 +895,8 @@ class AST:
             self.Dfk = Tleft[0:3,0:3]*self.Dfk
             self.Pee = Tleftinv[0:3,0:3]*self.Pee+Tleftinv[0:3,3]
 
-class fmod(core.function.Function):
+from sympy.core import function # for sympy 0.7.1+
+class fmod(function.Function):
     """defines floating-point mod"""
     nargs = 2
     is_real = True
@@ -1934,7 +1935,7 @@ class IKFastSolver(AutoReloader):
         tree = None
         for T0links,T1links,transvars,rotvars,solveRotationFirst in self.iterateThreeIntersectingAxes(solvejointvars,Links, LinksInv):
             try:
-                log.info('found 3 consecutive intersecting axes: %s, translation=%s',transvars,rotvars)
+                log.info('found 3 consecutive intersecting axes: %s, translation=%s',rotvars,transvars)
                 tree = self.solve6DIntersectingAxes(T0links,T1links,transvars,rotvars,solveRotationFirst=solveRotationFirst, endbranchtree=endbranchtree)
                 break
             except (self.CannotSolveError,self.IKFeasibilityError), e:
@@ -2011,6 +2012,11 @@ class IKFastSolver(AutoReloader):
         """Solve 6D equations using fact that 3 axes are intersecting. The 3 intersecting axes are all part of T0links and will be used to compute the rotation of the robot. The other 3 axes are part of T1links and will be used to first compute the position.
         """
         assert(len(transvars)==3 and len(rotvars) == 3)
+        T0 = self.multiplyMatrix(T0links)
+        T0posoffset = eye(4)
+        T0posoffset[0:3,3] = -T0[0:3,3]
+        T0links = [T0posoffset] + T0links
+        T1links = [T0posoffset] + T1links
         T1 = self.multiplyMatrix(T1links)
         othersolvedvars = rotvars+self.freejointvars if solveRotationFirst else self.freejointvars[:]
         T1linksinv = [self.affineInverse(T) for T in T1links]

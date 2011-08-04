@@ -67,17 +67,18 @@ __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Apache License, Version 2.0'
 
-from openravepy import __build_doc__
-if not __build_doc__:
-    from openravepy import *
-    from openravepy.databases import DatabaseGenerator
+if not __openravepy_build_doc__:
+    from ..openravepy_int import *
+    from ..openravepy_ext import *
     from numpy import *
 else:
-    from openravepy.databases import DatabaseGenerator
     from numpy import array
 
-from openravepy import convexdecompositionpy
-import time, os
+from . import DatabaseGenerator
+from .. import convexdecompositionpy
+from ..misc import ComputeGeodesicSphereMesh, ComputeBoxMesh, ComputeCylinderYMesh
+import time
+import os.path
 from optparse import OptionParser
 from itertools import izip
 
@@ -343,6 +344,3 @@ def run(*args,**kwargs):
     """Command-line execution of the example. ``args`` specifies a list of the arguments to the script.
     """
     ConvexDecompositionModel.RunFromParser(*args,**kwargs)
-
-if __name__=='__main__':
-    run()

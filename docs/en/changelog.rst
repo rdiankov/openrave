@@ -3,10 +3,75 @@
 ChangeLog
 #########
 
+Version 0.4.2 Unstable
+======================
+
+Subversion Revision: **Unreleased**
+
+Initial Release: **Unreleased**
+
+Core
+----
+
+* CMake OpenRAVE_CORE_LIBRARIES variable now returns both openrave and openrave-core.
+
+* Now reading physics data from COLLADA files, also fixed bugs in collada readers/writers.
+
+* Can compile without qt4 being present.
+
+* Fixed collision caching bug with ODE/Bullet CheckSelfCollision.
+
+Planning
+--------
+
+* MoveToHandPosition, MoveManipulator, MoveActiveJoints, and Manipulator::CheckIndependentCollision now only check the **active** links if the CO_ActiveDOFs option is set on the collision checker.
+
+Release
+-------
+
+* Debian packages of different openrave versions will now install without conflicting with each other since they will share no common files. symlinks pointing to non-versioned programs are written in a version-independent 'openrave' package.
+
+Python
+------
+
+* Redesigned the openravepy structure so that loading is faster and multiple openravepy versions can be selected at load time.
+
+* Started a new :mod:`openravepy.misc` library that is not loaded by default. The OpenRAVEGlobalArguments and MultiManipIKSolver helper classes are now part of it.
+
+IKFast
+------
+
+* Fixed major IK fast bug when intersecting axes of robot are not at the ends.
+
+Tests
+-----
+
+* test_programs is now runnable by windows
+
+* test_ikfast is now also included in the regular tests to determine release. The full IK tests are run separately, and those can fail.
+
+Grasping
+--------
+
+* grasping database now uses the producer, consumer, gatherer model, removed updateenv and disableallbodies from the generate method
+
+Misc
+----
+
+* fixed bug in ODE physics when contacts overflow and added check for 0 quaternions.
+
+* fixed bug grasperplanner that exits at coarse step without going to fine step phase
+
+* fixed bug with non-adjacent link computation
+
+* Octave stripping symbols
+
+* added multiple goals to MoveManipulator and MoveActiveJoints
+
 Version 0.4.1
 =============
 
-Subversion Revision: 2573
+Subversion Revision: 2574
 
 Initial Release: 2011/07/08
 

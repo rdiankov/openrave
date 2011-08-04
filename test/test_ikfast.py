@@ -13,25 +13,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-ikfast testing is being synchronized with the ikfast version, so don't try to regenerate if ikfast version hasn't changed. However, the module will use the cached IK data if possible.
+See :ref:`ikfast-testing`_
 
+test_ikfast.py is being synchronized with the ikfast version, so don't try to regenerate if ikfast version hasn't changed. However, the module will use the cached IK data if possible.
 
 """
-import openravepy
-from openravepy import databases, ikfast, IkParameterization, RaveInitialize, RaveDestroy, RaveCreateProblem, Environment, RaveLoadPlugin, RaveSetDebugLevel, RaveGetDebugLevel, DebugLevel, RaveFindDatabaseFile
-import numpy
-from itertools import izip, combinations
+from common_test_openrave import *
+from openravepy import ikfast
 from optparse import OptionParser
 
-import time, os, sys, logging, multiprocessing
-import nose
+import time, sys, logging, multiprocessing
 #from nose.plugins import multiprocess
 from noseplugins import multiprocess,xunitmultiprocess, capture, callableclass
 
 import cPickle as pickle
 
-#global variables
 _multiprocess_can_split_ = True
+
+#global variables
 globalmanager = multiprocessing.Manager()
 globalstats = globalmanager.list() # used for gathering statistics
 options = None
@@ -69,12 +68,6 @@ def teardown_robotstats():
 def measurement(name,value):
     return '<measurement><name>%s</name><value>%s</value></measurement>'%(name,value)
 
-class TimedOutException(Exception):
-    def __init__(self, value = "Timed Out"):
-        self.value = value
-    def __str__(self):
-        return repr(self.value)
-
 @nose.with_setup(setup_robotstats, teardown_robotstats)
 def robotstats(description,robotfilename,manipname, iktypestr,freeindices):
     global env, ikfastproblem, globalstats
@@ -84,7 +77,7 @@ def robotstats(description,robotfilename,manipname, iktypestr,freeindices):
             iktype = type
             break
     with env:
-        robot = env.ReadRobotXMLFile(robotfilename,{'skipgeometry':'1'})
+        robot = env.ReadRobotURI(robotfilename,{'skipgeometry':'1'})
         env.AddRobot(robot)
         manip = robot.SetActiveManipulator(manipname)
         # set base to identity to avoid complications when reporting errors, testing that IK works under transformations is a different test
@@ -199,34 +192,7 @@ class RunRobotStats:
                 self.description = description[0]
             teardown_robotstats()
 
-def test_robots():
-    if options is None:
-        return
-    RaveInitialize(load_all_plugins=False)
-    RaveSetDebugLevel(DebugLevel.Error) # set to error in order to avoid expected plugin loading errosr
-    envlocal=Environment()
-    envlocal.StopSimulation()
-    try:
-        index = 0
-        for robotfilename in options.robotfilenames:
-            envlocal.Reset()
-            robot = envlocal.ReadRobotXMLFile(robotfilename,{'skipgeometry':'1'})
-            envlocal.AddRobot(robot)
-            for iktype in options.iktypes:
-                expecteddof = IkParameterization.GetDOF(iktype)
-                for manip in robot.GetManipulators():
-                    armdof = len(manip.GetArmIndices())
-                    if armdof >= expecteddof and armdof <= expecteddof+options.maxfreejoints:
-                        for freeindices in combinations(manip.GetArmIndices(),armdof-expecteddof):
-                            yield RunRobotStats(),robotfilename, manip.GetName(), str(iktype),freeindices
-    finally:
-        envlocal.Destroy()
-        # for some reason the plugindatabase _threadPluginLoader thread is on a different process
-        # than the main threading waiting for it to finish, so it is necessary to call RaveDestroy
-        RaveDestroy()
-    
-if __name__ == "__main__":
-    import test_ikfast
+def parseoptions(args=None):
     parser = OptionParser(description='ikfast unit tests')
     parser.add_option('--robots', action='store', type='string', dest='robots',default='basic',
                       help='Robot groups to test, these are predetermined. type * for all default robots. The list can be comma separated to specify multiple groups/filenames. (default=%default)')
@@ -236,7 +202,7 @@ if __name__ == "__main__":
                       help='Timeout for each ikfast run, this includes time for generation and performance measurement. (default=%default)')
     parser.add_option('--perftime', action='store', type='float', dest='perftime',default='20',
                       help='Time (s) to run performance tests of generated IK. Performance is only computed if there are no wrong solutions. (default=%default)')
-    parser.add_option('--numiktests', action='store', type='string', dest='numiktests',default='10000,7000,200',
+    parser.add_option('--numiktests', action='store', type='string', dest='numiktests',default='1000,1000,100',
                       help='Number of tests for testing the generated IK for correctness. Because test times increase exponentially with number of free joints, the iktests is an array of values indexec by the number of free joints. (default=%default)')
     parser.add_option('--debug','-d', action='store', type='int',dest='debug',default=logging.INFO,
                       help='Debug level for python nose (smaller values allow more text).')
@@ -258,7 +224,7 @@ if __name__ == "__main__":
                       help='Directory to output the RST files used to show off the ikfast results. The root file in this directory is index.rst. (default=%default)')
     parser.add_option('--jenkinsbuild',action='store',type='string',dest='jenkinsbuild_url',default='http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/',
                       help='URL for the test results published by jenkins. This URL will be used to create links from the robot pages to the test page. (default=%default)')
-    (options, args) = parser.parse_args()
+    (options, parseargs) = parser.parse_args(args=args)
     
     if options.iktypes == '*':
         options.iktypes = [iktype for value,iktype in IkParameterization.Type.values.iteritems()]
@@ -274,17 +240,53 @@ if __name__ == "__main__":
     options.robotfilenames = []
     for robot in robots:
         if robot == 'basic':
-            options.robotfilenames += ['robots/unimation-pumaarm.zae','robots/barrett-wam.zae','robots/kawada-hironx.zae']
+            # only robots that are in defualt openrave repository
+            options.robotfilenames += ['robots/pumaarm.zae','robots/barrettwam.robot.xml','robots/kawada-hironx.zae','ikfastrobots/fail1.robot.xml','robots/pr2-beta-static.zae']
         elif robot == 'pr2':
             options.robotfilenames += ['robots/pr2-beta-static.zae']
         elif robot == '*':
-            options.robotfilenames += ['robots/unimation-pumaarm.zae','robots/barrett-wam.zae','robots/pr2-beta-static.zae','robots/neuronics-katana.zae','robots/mitsubishi-pa10.zae','robots/schunk-lwa3.zae','robots/darpa-arm.zae','robots/exactdynamics-manusarmleft.zae','robots/kuka-kr5-r650.zae','robots/kuka-kr5-r850.zae','robots/kuka-kr30l16.zae','robots/tridof.robot.xml','robots/barrett-wam4.zae','robots/kawada-hironx.zae']
+            options.robotfilenames += ['robots/unimation-pumaarm.zae','robots/barrett-wam.zae','robots/pr2-beta-static.zae','robots/neuronics-katana.zae','robots/mitsubishi-pa10.zae','robots/schunk-lwa3.zae','robots/darpa-arm.zae','robots/exactdynamics-manusarmleft.zae','robots/kuka-kr5-r650.zae','robots/kuka-kr5-r850.zae','robots/kuka-kr30l16.zae','robots/tridof.robot.xml','robots/barrett-wam4.zae','robots/kawada-hironx.zae','ikfastrobots/fail1.robot.xml']
         elif options.robots == 'random':
             options.robotfilenames.append('random')
         else:
             options.robotfilenames.append(robot)
     options.numiktests = [int(s) for s in options.numiktests.split(',')]
-    test_ikfast.options = options
+    return options
+
+def test_robot_ikfast():
+    global options
+    if options is None:
+        options = parseoptions([])
+    RaveInitialize(load_all_plugins=False)
+    RaveSetDebugLevel(DebugLevel.Error) # set to error in order to avoid expected plugin loading errosr
+    envlocal=Environment()
+    envlocal.StopSimulation()
+    try:
+        workitems = []
+        index = 0
+        for robotfilename in options.robotfilenames:
+            envlocal.Reset()
+            robot = envlocal.ReadRobotURI(robotfilename,{'skipgeometry':'1'})
+            envlocal.AddRobot(robot)
+            for iktype in options.iktypes:
+                expecteddof = IkParameterization.GetDOF(iktype)
+                for manip in robot.GetManipulators():
+                    armdof = len(manip.GetArmIndices())
+                    if armdof >= expecteddof and armdof <= expecteddof+options.maxfreejoints:
+                        for freeindices in combinations(manip.GetArmIndices(),armdof-expecteddof):
+                            workitems.append((RunRobotStats(), robotfilename, manip.GetName(), str(iktype),freeindices))
+    finally:
+        envlocal.Destroy()
+        # for some reason the plugindatabase _threadPluginLoader thread is on a different process
+        # than the main threading waiting for it to finish, so it is necessary to call RaveDestroy
+        RaveDestroy()
+
+    for work in workitems:
+        yield work
+    
+if __name__ == "__main__":
+    import test_ikfast
+    test_ikfast.options = parseoptions()
     
     format = logging.Formatter('%(name)s: %(levelname)s %(message)s')
     handler = logging.StreamHandler(sys.stderr)

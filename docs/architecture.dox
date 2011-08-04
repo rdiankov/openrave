@@ -91,7 +91,7 @@ allowing users to ignore the complexities of multi-threaded resource management.
 All of %OpenRAVE's services are offered through the environment. For example, requesting a
 planner interface called 'BiRRT' is done through \ref RaveCreatePlanner(). The environment supports:
 
-- \ref env_plugin_functionality "managing and communicating with plugins"
+- \ref global_functionality "managing and communicating with plugins"
 - \ref env_collision_checking "collision checking"
 - \ref env_loading "loading scenes and objects"
 - \ref env_objects "managing objects and triangulation"
@@ -582,6 +582,13 @@ orRobotControllerSet(robotid,'MyController','controller arguments here')
 \endverbatim
 
 */
+
+\section arch_controller_working Working with Controllers
+
+Because any module can be setting a trajectory on the controller, it is good practice to assume the
+robot is always being actively servoed to some position. Once the environment is unlocked, the
+controller will overwrite the robot values with the real values. Therefore, it is not recommend to
+assume that the robot values stay the same once the environment is re-locked.
 
 /**
 \page arch_iksolver Inverse Kinematics Solver Concepts

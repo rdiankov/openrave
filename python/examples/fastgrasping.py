@@ -27,8 +27,8 @@ from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
 
 from itertools import izip
-from openravepy import __build_doc__
-if not __build_doc__:
+import openravepy
+if not __openravepy_build_doc__:
     from openravepy import *
     from numpy import *
 
@@ -57,7 +57,7 @@ class FastGrasping:
             raise self.GraspingException([grasp,jointvalues])
         return True
 
-    def computeGrasp(self,updateenv=True):
+    def computeGrasp(self):
         approachrays = self.gmodel.computeBoxApproachRays(delta=0.02,normalanglerange=0.5) # rays to approach object
         standoffs = [0]
         # roll discretization
@@ -69,7 +69,8 @@ class FastGrasping:
             final,traj = taskmanip.ReleaseFingers(execute=False,outputfinal=True)
             preshapes = array([final])
         try:
-            self.gmodel.generate(preshapes=preshapes,standoffs=standoffs,rolls=rolls,approachrays=approachrays,checkgraspfn=self.checkgraspfn,disableallbodies=False,updateenv=updateenv)
+            self.gmodel.disableallbodies=False
+            self.gmodel.generate(preshapes=preshapes,standoffs=standoffs,rolls=rolls,approachrays=approachrays,checkgraspfn=self.checkgraspfn)
             return None,None # did not find anything
         except self.GraspingException, e:
             return e.args
@@ -91,9 +92,9 @@ def main(env,options):
         raw_input('press any key to exit')
 
 from optparse import OptionParser
-from openravepy import OpenRAVEGlobalArguments, with_destroy
+from openravepy.misc import OpenRAVEGlobalArguments
 
-@with_destroy
+@openravepy.with_destroy
 def run(args=None):
     """Command-line execution of the example.
 

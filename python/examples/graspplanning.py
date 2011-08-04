@@ -36,6 +36,17 @@ The scene is randomized every run in order to show the powerful of the planners.
   
   Gallery of runs.
 
+Destinations
+============
+
+By default, the grasp planner will choose a grasp that is also valid at a destination point. If
+running on custom environments, sometimes it is interesting to see if the robot can just grasp the
+object, without moving it to the destination. To test planning without destinations use:
+
+.. code-block:: bash
+
+  openrave.py --example graspplanning --nodestinations
+
 5D IK Grasp Planning
 ====================
 
@@ -50,14 +61,15 @@ It is possible to perform grasp planning with 5D IK. Try executing:
 
 .. examplepost-block:: graspplanning
 
+
 """
 from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
 
 import time
 from itertools import izip
-from openravepy import __build_doc__
-if not __build_doc__:
+import openravepy
+if not __openravepy_build_doc__:
     from openravepy import *
     from numpy import *
 
@@ -91,11 +103,12 @@ class GraspPlanning:
             self.graspables = self.getGraspables(dests=dests)
             if len(self.graspables) == 0:
                 print 'attempting to auto-generate a grasp table'
-                target=[t for t in self.envreal.GetBodies() if t.GetName().find('mug')>=0][0]
-                gmodel = databases.grasping.GraspingModel(robot=self.robot,target=target)
-                if not gmodel.load():
-                    gmodel.autogenerate()
-                    self.graspables = self.getGraspables(dests=dests)
+                targets=[t for t in self.envreal.GetBodies() if t.GetName().find('mug')>=0]
+                if len(targets) > 0:
+                    gmodel = databases.grasping.GraspingModel(robot=self.robot,target=targets[0])
+                    if not gmodel.load():
+                        gmodel.autogenerate()
+                        self.graspables = self.getGraspables(dests=dests)
 
             if randomize:
                 self.randomizeObjects()
@@ -268,10 +281,13 @@ class GraspPlanning:
             self.taskmanip.CloseFingers()
             self.waitrobot(robot)
             
-            robot.Grab(target)
+
+            with env:
+                robot.Grab(target)
             if waitforkey:
                 raw_input('press any key to continue grasp')
             try:
+                print 'move hand up'
                 self.basemanip.MoveHandStraight(direction=self.updir,stepsize=0.003,minsteps=1,maxsteps=60)
             except:
                 print 'failed to move hand up'
@@ -333,8 +349,9 @@ class GraspPlanning:
         while True:
             if len(graspables) == 0:
                 if withreplacement:
+                    time.sleep(4)
                     self.randomizeObjects()
-                    graspables = self.graspables
+                    graspables = self.graspables[:]
                 else:
                     break
             i = random.randint(len(graspables))
@@ -359,9 +376,9 @@ def main(env,options):
     self.performGraspPlanning(withreplacement=not options.testmode)
 
 from optparse import OptionParser
-from openravepy import OpenRAVEGlobalArguments, with_destroy
+from openravepy.misc import OpenRAVEGlobalArguments
 
-@with_destroy
+@openravepy.with_destroy
 def run(args=None):
     """Command-line execution of the example.
 

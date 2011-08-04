@@ -24,14 +24,18 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
 {
     switch(type) {
     case PT_Module:
-        if( interfacename == "basemanipulation")
+        if( interfacename == "basemanipulation") {
             return CreateBaseManipulation(penv);
-        else if( interfacename == "taskmanipulation" )
+        }
+        else if( interfacename == "taskmanipulation" ) {
             return CreateTaskManipulation(penv);
-        else if( interfacename == "taskcaging")
+        }
+        else if( interfacename == "taskcaging") {
             return CreateTaskCaging(penv);
-        else if( interfacename == "visualfeedback")
+        }
+        else if( interfacename == "visualfeedback") {
             return CreateVisualFeedback(penv);
+        }
         break;
     default:
         break;

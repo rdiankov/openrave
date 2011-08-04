@@ -445,6 +445,21 @@ bool RobotBase::Manipulator::CheckIndependentCollision(CollisionReportPtr report
         }
 
         if( !bAffected ) {
+            if( probot->GetEnv()->GetCollisionChecker()->GetCollisionOptions() & CO_ActiveDOFs ) {
+                // collision checker has the CO_ActiveDOFs option set, so check if link is active
+                if( !probot->GetAffineDOF() ) {
+                    bool bActive = false;
+                    FOREACHC(itdofindex, probot->GetActiveDOFIndices()) {
+                        if( probot->DoesAffect(probot->GetJointFromDOFIndex(*itdofindex)->GetJointIndex(),(*itlink)->GetIndex()) ) {
+                            bActive = true;
+                            break;
+                        }
+                    }
+                    if( !bActive ) {
+                        continue;
+                    }
+                }
+            }
             if( probot->GetEnv()->CheckCollision(KinBody::LinkConstPtr(*itlink),report) ) {
                 return true;
             }

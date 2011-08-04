@@ -19,7 +19,7 @@ class BaseManipulation : public ModuleBase
 {
 public:
     BaseManipulation(EnvironmentBasePtr penv) : ModuleBase(penv) {
-        __description = ":Interface Author: Rosen Diankov\n\nVery useful routines for manipulation planning and planning in general. The planners use analytical inverse kinematics and search based techniques.";
+        __description = ":Interface Author: Rosen Diankov\n\nVery useful routines for manipulation planning and planning in general. The planners use analytical inverse kinematics and search based techniques. Most of the MoveX commands by default execute the plan on the current robot by calling :meth:`.RobotBase.SetActiveMotion`. This can be disabled by adding 'execute 0' to the command line";
         RegisterCommand("SetActiveManip",boost::bind(&BaseManipulation::SetActiveManip,this,_1,_2),
                         "Set the active manipulator");
         RegisterCommand("Traj",boost::bind(&BaseManipulation::Traj,this,_1,_2),
@@ -357,128 +357,17 @@ protected:
     bool MoveManipulator(ostream& sout, istream& sinput)
     {
         RAVELOG_DEBUG("Starting MoveManipulator...\n");
-        RobotBase::ManipulatorPtr pmanip = robot->GetActiveManipulator();
-
-        string strtrajfilename;
-        bool bExecute = true;
-        boost::shared_ptr<ostream> pOutputTrajStream;
-        std::vector<dReal> goals;
-        PlannerBase::PlannerParametersPtr params(new PlannerBase::PlannerParameters());
-        params->_nMaxIterations = 4000;     // max iterations before failure
-
-        string cmd;
-        int nMaxTries = 3;     // max tries for the planner
-        while(!sinput.eof()) {
-            sinput >> cmd;
-            if( !sinput ) {
-                break;
-            }
-            std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
-
-            if(( cmd == "armvals") ||( cmd == "goal") ) {
-                goals.resize(pmanip->GetArmIndices().size());
-                FOREACH(it, goals) {
-                    sinput >> *it;
-                }
-            }
-            else if( cmd == "outputtraj" ) {
-                pOutputTrajStream = boost::shared_ptr<ostream>(&sout,null_deleter());
-            }
-            else if( cmd == "maxiter" ) {
-                sinput >> params->_nMaxIterations;
-            }
-            else if( cmd == "execute" ) {
-                sinput >> bExecute;
-            }
-            else if( cmd == "writetraj" ) {
-                sinput >> strtrajfilename;
-            }
-            else if( cmd == "maxtries" ) {
-                sinput >> nMaxTries;
-            }
-            else {
-                RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
-                break;
-            }
-
-            if( !sinput ) {
-                RAVELOG_ERROR(str(boost::format("failed processing command %s\n")%cmd));
-                return false;
-            }
-        }
-
-        if( goals.size() != pmanip->GetArmIndices().size() ) {
-            return false;
-        }
-
-        RobotBase::RobotStateSaver saver(robot);
-
-        robot->SetActiveDOFs(pmanip->GetArmIndices());
-        params->SetRobotActiveJoints(robot);
-
-        TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF());
-
-        std::vector<dReal> values;
-        robot->GetActiveDOFValues(values);
-
-        // make sure the initial and goal configs are not in collision
-        robot->SetActiveDOFValues(goals, true);
-        if( planningutils::JitterActiveDOF(robot) == 0 ) {
-            RAVELOG_WARN("jitter failed\n");
-            return false;
-        }
-
-        robot->GetActiveDOFValues(params->vgoalconfig);
-        robot->SetActiveDOFValues(values);
-
-        // jitter again for initial collision
-        if( planningutils::JitterActiveDOF(robot) == 0 ) {
-            RAVELOG_WARN("jitter failed\n");
-            return false;
-        }
-        robot->GetActiveDOFValues(params->vinitialconfig);
-
-        PlannerBasePtr rrtplanner = RaveCreatePlanner(GetEnv(),_strRRTPlannerName);
-        if( !rrtplanner ) {
-            RAVELOG_WARN("failed to create planner\n");
-            return false;
-        }
-
-        bool bSuccess = false;
-        RAVELOG_INFO("starting planning\n");
-
-        for(int iter = 0; iter < nMaxTries; ++iter) {
-            if( !rrtplanner->InitPlan(robot, params) ) {
-                RAVELOG_ERROR("InitPlan failed\n");
-                break;
-            }
-
-            if( rrtplanner->PlanPath(ptraj) ) {
-                bSuccess = true;
-                RAVELOG_INFO("finished planning\n");
-                break;
-            }
-            else {
-                RAVELOG_WARN("PlanPath failed\n");
-            }
-        }
-
-        if( !bSuccess ) {
-            return false;
-        }
-        if( RaveGetDebugLevel() & Level_VerifyPlans ) {
-            planningutils::VerifyTrajectory(params, ptraj);
-        }
-        CM::SetActiveTrajectory(robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream,_fMaxVelMult);
-        sout << "1";
-        return true;
+        RobotBase::RobotStateSaver saver(robot,KinBody::Save_ActiveDOF);
+        robot->SetActiveDOFs(robot->GetActiveManipulator()->GetArmIndices());
+        BOOST_ASSERT(robot->GetActiveDOF()>0);
+        return MoveActiveJoints(sout,sinput);
     }
 
     bool MoveActiveJoints(ostream& sout, istream& sinput)
     {
         string strtrajfilename;
         bool bExecute = true;
-        int nMaxTries = 1;     // max tries for the planner
+        int nMaxTries = 2;     // max tries for the planner
         boost::shared_ptr<ostream> pOutputTrajStream;
 
         PlannerBase::PlannerParametersPtr params(new PlannerBase::PlannerParameters());
@@ -493,9 +382,21 @@ protected:
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
 
             if( cmd == "goal" ) {
-                params->vgoalconfig.resize(robot->GetActiveDOF());
-                FOREACH(it, params->vgoalconfig) {
-                    sinput >> *it;
+                params->vgoalconfig.reserve(params->vgoalconfig.size()+robot->GetActiveDOF());
+                for(int i = 0; i < robot->GetActiveDOF(); ++i) {
+                    dReal f=0;
+                    sinput >> f;
+                    params->vgoalconfig.push_back(f);
+                }
+            }
+            else if( cmd == "goals" ) {
+                size_t numgoals = 0;
+                sinput >> numgoals;
+                params->vgoalconfig.reserve(params->vgoalconfig.size()+numgoals*robot->GetActiveDOF());
+                for(size_t i = 0; i < numgoals*robot->GetActiveDOF(); ++i) {
+                    dReal f=0;
+                    sinput >> f;
+                    params->vgoalconfig.push_back(f);
                 }
             }
             else if( cmd == "outputtraj" ) {
@@ -527,26 +428,45 @@ protected:
             }
         }
 
-        if( (int)params->vgoalconfig.size() != robot->GetActiveDOF() ) {
+        if( params->vgoalconfig.size() == 0 ) {
             return false;
         }
         RobotBase::RobotStateSaver saver(robot);
-
-        if( planningutils::JitterActiveDOF(robot) == 0 ) {
-            RAVELOG_WARN("failed\n");
-            return false;
-        }
-
-        // restore
         params->SetRobotActiveJoints(robot);
-        robot->GetActiveDOFValues(params->vinitialconfig);
-        robot->SetActiveDOFValues(params->vgoalconfig);
 
-        // jitter again for goal
-        if( planningutils::JitterActiveDOF(robot) == 0 ) {
-            RAVELOG_WARN("failed\n");
+        CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
+
+        // make sure the initial and goal configs are not in collision
+        std::vector<dReal> originalvalues;
+        robot->GetActiveDOFValues(originalvalues);
+        vector<dReal> vonegoal(robot->GetActiveDOF());
+
+        size_t writeindex=0;
+        for(size_t i = 0; i < params->vgoalconfig.size(); i += robot->GetActiveDOF()) {
+            std::copy(params->vgoalconfig.begin()+i,params->vgoalconfig.begin()+i+robot->GetActiveDOF(),vonegoal.begin());
+            robot->SetActiveDOFValues(vonegoal, true);
+            if( planningutils::JitterActiveDOF(robot) == 0 ) {
+                RAVELOG_WARN(str(boost::format("jitter failed %d\n")%i));
+            }
+            else {
+                robot->GetActiveDOFValues(vonegoal);
+                std::copy(vonegoal.begin(),vonegoal.end(),params->vgoalconfig.begin()+writeindex);
+                writeindex += robot->GetActiveDOF();
+            }
+        }
+        if( writeindex == 0 ) {
             return false;
         }
+        params->vgoalconfig.resize(writeindex);
+
+        robot->SetActiveDOFValues(originalvalues);
+
+        // jitter again for initial collision
+        if( planningutils::JitterActiveDOF(robot) == 0 ) {
+            RAVELOG_WARN("jitter failed\n");
+            return false;
+        }
+        robot->GetActiveDOFValues(params->vinitialconfig);
 
         PlannerBasePtr rrtplanner = RaveCreatePlanner(GetEnv(),_strRRTPlannerName);
         if( !rrtplanner ) {
@@ -608,6 +528,7 @@ protected:
         double constrainterrorthresh=0;
         int goalsamples = 40;
         string cmd;
+        dReal jitter = 0.03;
         while(!sinput.eof()) {
             sinput >> cmd;
             if( !sinput ) {
@@ -710,6 +631,9 @@ protected:
             else if( cmd == "constrainterrorthresh" ) {
                 sinput >> constrainterrorthresh;
             }
+            else if( cmd == "jitter" ) {
+                sinput >> jitter;
+            }
             else {
                 RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
@@ -728,6 +652,8 @@ protected:
         params->SetRobotActiveJoints(robot);
         robot->GetActiveDOFValues(params->vinitialconfig);
 
+        CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
+
         if( constrainterrorthresh > 0 ) {
             RAVELOG_DEBUG("setting jacobian constraint function in planner parameters\n");
             boost::shared_ptr<CM::GripperJacobianConstrains<double> > pconstraints(new CM::GripperJacobianConstrains<double>(robot->GetActiveManipulator(),tConstraintTargetWorldFrame,vconstraintfreedoms,constrainterrorthresh));
@@ -742,7 +668,7 @@ protected:
         params->vgoalconfig.reserve(nSeedIkSolutions*robot->GetActiveDOF());
         while(nSeedIkSolutions > 0) {
             if( goalsampler.Sample(vgoal) ) {
-                if(( constrainterrorthresh > 0) &&( planningutils::JitterActiveDOF(robot,5000,0.03,params->_neighstatefn) == 0) ) {
+                if(( constrainterrorthresh > 0) &&( planningutils::JitterActiveDOF(robot,5000,jitter,params->_neighstatefn) == 0) ) {
                     RAVELOG_DEBUG("constraint function failed\n");
                     continue;
                 }
@@ -769,7 +695,7 @@ protected:
         ptraj->AddPoint(pt);
 
         // jitter again for initial collision
-        if( planningutils::JitterActiveDOF(robot,5000,0.03,params->_neighstatefn) == 0 ) {
+        if( planningutils::JitterActiveDOF(robot,5000,jitter,params->_neighstatefn) == 0 ) {
             RAVELOG_WARN("jitter failed for initial\n");
             return false;
         }

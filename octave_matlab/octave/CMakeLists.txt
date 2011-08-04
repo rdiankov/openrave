@@ -2,6 +2,7 @@ set(OCTAVE OCTAVE-NOTFOUND)
 find_program(OCTAVE NAME "mkoctfile" PATHS)
 
 if(OCTAVE)
+  set(MEX_CXXFLAGS "--strip")
   execute_process(COMMAND ${OCTAVE} -p OCTAVE_VERSION OUTPUT_VARIABLE _octave_version OUTPUT_STRIP_TRAILING_WHITESPACE RESULT_VARIABLE _octave_failed)
 
   set(OCTAVE_ORCREATE_MEX ${CMAKE_CURRENT_BINARY_DIR}/orcreate.mex)

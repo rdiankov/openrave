@@ -16,8 +16,10 @@ from optparse import OptionParser
 import os, sys, platform
 from subprocess import Popen, PIPE
 
+__builtins__.__openravepy_version__ = '@OPENRAVE_SOVERSION@'
+
 try:
-    from openravepy import *
+    import openravepy
 except ImportError:
     print "openravepy is not set into PYTHONPATH env variable, attempting to add"
     # use openrave-config to get the correct install path
@@ -37,7 +39,10 @@ except ImportError:
             possibledirs = [os.path.join('C:\\Program Files',name) for name in allnames if name.startswith('openrave')]
             if len(possibledirs) > 0:
                 sys.path.append(get_python_lib(1,prefix=possibledirs[0]))
-    from openravepy import *
+    import openravepy
+
+from openravepy import *
+from openravepy.misc import mkdir_recursive
 
 if __name__ == "__main__":
     parser = OptionParser(usage='usage: %prog pluginname [options] ', description='Sets up a project directory and initial files for creating OpenRAVE plugins and executables.')

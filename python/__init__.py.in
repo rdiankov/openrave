@@ -1,0 +1,34 @@
+# -*- coding: utf-8 -*-
+# 
+# OpenRAVE Python bindings are licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#     http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License. 
+def loadstable(ver):
+    return _loadversion('_openravepy_'+ver.replace('.', '_'))
+def loadlatest():
+    return _loadversion('_openravepy_')
+
+def _loadversion(targetname):
+    mainpackage = __import__("openravepy", globals(), locals(), [targetname])
+    global openravepy_currentversion
+    openravepy_currentversion = getattr(mainpackage, targetname)
+    # Let users change versions after choosing this one
+    openravepy_currentversion.loadstable = loadstable
+    openravepy_currentversion.loadlatest = loadlatest
+    return openravepy_currentversion
+
+try:
+    openravepy_currentversion = loadstable(__openravepy_version__)
+except NameError:
+    openravepy_currentversion = loadlatest()
+
+if openravepy_currentversion is not None:
+    from sys import modules
+    modules['openravepy'] = openravepy_currentversion

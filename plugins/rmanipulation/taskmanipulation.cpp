@@ -337,6 +337,7 @@ protected:
         // indices into the grasp table
         int iGraspDir = -1, iGraspPos = -1, iGraspRoll = -1, iGraspPreshape = -1, iGraspStandoff = -1, imanipulatordirection = -1;
         int iGraspTransform = -1;     // if >= 0, use the grasp transform to check for collisions
+        int iGraspTransformNoCol = -1;
 
         string cmd;
         CollisionReportPtr report(new CollisionReport);
@@ -393,6 +394,9 @@ protected:
             }
             else if( cmd == "igrasptrans" ) {
                 sinput >> iGraspTransform;
+            }
+            else if( cmd == "grasptrans_nocol" ) {
+                sinput >> iGraspTransformNoCol;
             }
             else if( cmd == "target" ) {
                 sinput >> targetname;
@@ -511,7 +515,7 @@ protected:
         if( bRandomGrasps ) {
             PermutateRandomly(vgrasppermuation);
         }
-        if( iGraspTransform < 0 ) {
+        if( iGraspTransformNoCol < 0 ) {
             if( !_pGrasperPlanner ) {
                 RAVELOG_ERROR("grasper problem not valid\n");
                 return false;
@@ -577,7 +581,6 @@ protected:
             _robot->SetActiveDOFValues(vgoalpreshape,true);
 
             if( !!_pGrasperPlanner && pmanip->GetIkSolver()->Supports(IkParameterization::Type_Transform6D) ) {
-                // set the preshape
                 _robot->SetActiveDOFs(pmanip->GetGripperIndices(), RobotBase::DOF_X|RobotBase::DOF_Y|RobotBase::DOF_Z);
                 if( !_phandtraj ) {
                     _phandtraj = RaveCreateTrajectory(GetEnv(),_robot->GetActiveDOF());
@@ -634,11 +637,11 @@ protected:
                 vFinalGripperValues.resize(pmanip->GetGripperIndices().size());
                 std::copy(_phandtraj->GetPoints().back().q.begin(),_phandtraj->GetPoints().back().q.begin()+vFinalGripperValues.size(),vFinalGripperValues.begin());
             }
-            else if( iGraspTransform >= 0 ) {
+            else if( iGraspTransformNoCol >= 0 ) {
                 vFinalGripperValues.resize(0);
 
                 // use the grasp transform
-                dReal* pm = pgrasp+iGraspTransform;
+                dReal* pm = pgrasp+iGraspTransformNoCol;
                 TransformMatrix tm, tgoal;
                 tm.m[0] = pm[0]; tm.m[1] = pm[3]; tm.m[2] = pm[6]; tm.trans.x = pm[9];
                 tm.m[4] = pm[1]; tm.m[5] = pm[4]; tm.m[6] = pm[7]; tm.trans.y = pm[10];
@@ -656,12 +659,14 @@ protected:
                     vector<dReal> vsolution;
                     if( !pmanip->FindIKSolution(tGoalEndEffector,vsolution,IKFO_CheckEnvCollisions) ) {
                         RAVELOG_DEBUG("ik 5d failed: %d\n", igrasp);
-                        continue;     // failed
+                        continue; // failed
                     }
                     vFinalGripperValues = _vFinalGripperValues;
                 }
                 else if( pmanip->GetIkSolver()->Supports(IkParameterization::Type_Transform6D) ) {
                     tGoalEndEffector.SetTransform6D(tgoal);
+                    KinBody::KinBodyStateSaver saver(ptarget,KinBody::Save_LinkEnable);
+                    ptarget->Enable(false);
                     if( pmanip->CheckEndEffectorCollision(tgoal,report) ) {
                         RAVELOG_DEBUG(str(boost::format("grasp %d: in collision (%s)\n")%igrasp%report->__str__()));
                         continue;
@@ -1152,7 +1157,7 @@ protected:
         if( !!ptarget ) {
             _robot->Release(ptarget);
             _robot->SetActiveDOFValues(ptraj->GetPoints().back().q);
-            if( GetEnv()->CheckCollision(KinBodyConstPtr(_robot),ptarget) ) {
+            if( GetEnv()->CheckCollision(KinBodyConstPtr(_robot),KinBodyConstPtr(ptarget)) ) {
                 RAVELOG_WARN(str(boost::format("even after releasing, in collision with target %s")%_robot->GetName()));
             }
         }
@@ -1582,6 +1587,9 @@ protected:
     {
         if( _robot->IsGrabbing(ptarget) ) {
             return IKFR_Success;
+        }
+        if( pmanip->CheckEndEffectorCollision(pmanip->GetEndEffectorTransform()) ) {
+            return IKFR_Reject;
         }
         RobotBase::RobotStateSaver saver(_robot);
         _robot->SetActiveDOFs(pmanip->GetGripperIndices());

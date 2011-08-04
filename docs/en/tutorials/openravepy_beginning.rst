@@ -49,9 +49,9 @@ The docstrings for each function and class are automatically compiled from the C
 
 .. code-block:: python
 
-  help env.CloneSelf
-  help KinBoby.GetChain
-  help Robot.Manipulator.FindIKSolution
+  help env.CloneSelf # env is an instance of Environment()
+  help KinBoby.GetChain # KinBody is a class
+  help Robot.Manipulator.FindIKSolution # Robot.Manipulator is a sub-class
 
 Exceptions
 ----------
@@ -146,3 +146,15 @@ In addition, the OpenRAVE runtime managing plugin resources and environments has
       # do work
   finally:
       RaveDestroy() # destroys all environments and loaded plugins
+
+Loading Different Versions
+--------------------------
+
+If multiple openrave versions are installed, then it is possible to select which version of
+openravepy by setting the **__openravepy_version__** variable to the desired version before
+importing anything. For example:
+
+.. code-block:: python
+
+  __builtins__.__openravepy_version__ = '0.4'
+  import openravepy

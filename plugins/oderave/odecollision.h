@@ -150,7 +150,7 @@ public:
 
     virtual bool InitKinBody(KinBodyPtr pbody)
     {
-        OpenRAVE::UserDataPtr pinfo = odespace->InitKinBody(pbody);
+        ODESpace::KinBodyInfoPtr pinfo = odespace->InitKinBody(pbody);
         SetCollisionData(pbody, pinfo);
         return !!pinfo;
     }
@@ -254,6 +254,7 @@ public:
             int N = dCollide (geom1, geom2,vcontacts.size(),&vcontacts[0].geom,sizeof(vcontacts[0]));
             if(( N > 0) && !bComputeAllContacts ) {
                 // not requesting contacts, so return
+                vcontacts.resize(N);
                 return N;
             }
 
@@ -263,6 +264,7 @@ public:
                 return N;
             }
             if( vcontacts.size() >= _nMaxContacts ) {
+                vcontacts.resize(N);
                 break;
             }
             vcontacts.resize(min(_nMaxContacts,vcontacts.size()*2));
@@ -610,14 +612,13 @@ public:
             return false;
         }
 
-        odespace->Synchronize();
-
         int adjacentoptions = KinBody::AO_Enabled;
         if( (_options&OpenRAVE::CO_ActiveDOFs) && pbody->IsRobot() ) {
             adjacentoptions |= KinBody::AO_ActiveDOFs;
         }
 
         const std::set<int>& nonadjacent = pbody->GetNonAdjacentLinks(adjacentoptions);
+        odespace->Synchronize(); // call after GetNonAdjacentLinks since it can modify the body, even though it is const!
         FOREACHC(itset, nonadjacent) {
             KinBody::LinkConstPtr plink1(pbody->GetLinks().at(*itset&0xffff)), plink2(pbody->GetLinks().at(*itset>>16));
             if( _CheckCollision(plink1,plink2, report) ) {
@@ -629,8 +630,8 @@ public:
     }
 
 private:
-    static OpenRAVE::UserDataPtr GetCollisionInfo(KinBodyConstPtr pbody) {
-        return pbody->GetCollisionData();
+    static ODESpace::KinBodyInfoPtr GetCollisionInfo(KinBodyConstPtr pbody) {
+        return boost::dynamic_pointer_cast<ODESpace::KinBodyInfo>(pbody->GetCollisionData());
     }
 
     static void KinBodyCollisionCallback (void *data, dGeomID o1, dGeomID o2)

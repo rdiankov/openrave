@@ -1071,7 +1071,7 @@ def test_ik():
     ikmodel=self
     self = solver
     freeindices = ikmodel.freeindices
-    log = ikfast.log
+    log = ikmodel.ikfast.log
     log.setLevel(logging.DEBUG)
     
     chaintree = solver.generateIkSolver(baselink=baselink,eelink=eelink,freeindices=freeindices,solvefn=solvefn)

@@ -28,7 +28,7 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
 
     static void DummyAddForce(dJointID id, const dReal* vals)
     {
-        cerr << "failed to add force to dummy " << dJointGetType(id) << endl;
+        RAVELOG_ERROR(str(boost::format("failed to add force to dummy %d")%dJointGetType(id)));
     }
 
     static void dJointAddHingeTorque_(dJointID id, const dReal* vals) {
@@ -73,12 +73,13 @@ public:
 
         virtual ProcessElement startElement(const std::string& name, const AttributesList& atts) {
             if( !!_pcurreader ) {
-                if( _pcurreader->startElement(name,atts) == PE_Support )
+                if( _pcurreader->startElement(name,atts) == PE_Support ) {
                     return PE_Support;
+                }
                 return PE_Ignore;
             }
 
-            if(( name != "friction") &&( name != "selfcollision") &&( name != "gravity") &&( name != "contact") ) {
+            if(( name != "friction") &&( name != "selfcollision") &&( name != "gravity") &&( name != "contact")  && name != "erp" && name != "cfm" ) {
                 return PE_Pass;
             }
             _ss.str("");
@@ -89,37 +90,49 @@ public:
         {
             if( name == "odeproperties" )
                 return true;
-            else if( name == "friction" )
+            else if( name == "friction" ) {
                 // read all the float values into a vector
                 _ss >> _physics->_globalfriction;
+            }
             else if( name == "selfcollision" ) {
                 bool bSelfCollision = false;
                 _ss >> bSelfCollision;
-                if( !!_ss )
+                if( !!_ss ) {
                     _physics->SetPhysicsOptions(_physics->GetPhysicsOptions()|OpenRAVE::PEO_SelfCollisions);
+                }
             }
             else if( name == "gravity" ) {
                 Vector v;
                 _ss >> v.x >> v.y >> v.z;
-                if( !!_ss )
+                if( !!_ss ) {
                     _physics->SetGravity(v);
+                }
+            }
+            else if( name == "erp" ) {
+                _ss >> _physics->_globalerp;
+            }
+            else if( name == "cfm" ) {
+                _ss >> _physics->_globalcfm;
             }
             else if( name == "contact" ) {         // check out http://www.ode.org/ode-latest-userguide.html#sec_7_3_7
 
             }
-            else
+            else {
                 RAVELOG_ERROR("unknown field %s\n", name.c_str());
+            }
 
-            if( !_ss )
+            if( !_ss ) {
                 RAVELOG_WARN(str(boost::format("error parsing %s\n")%name));
+            }
 
             return false;
         }
 
         virtual void characters(const std::string& ch)
         {
-            if( !!_pcurreader )
+            if( !!_pcurreader ) {
                 _pcurreader->characters(ch);
+            }
             else {
                 _ss.clear();
                 _ss << ch;
@@ -138,9 +151,11 @@ public:
         return BaseXMLReaderPtr(new PhysicsPropertiesXMLReader(boost::dynamic_pointer_cast<ODEPhysicsEngine>(ptr),atts));
     }
 
-    ODEPhysicsEngine(OpenRAVE::EnvironmentBasePtr penv) : OpenRAVE::PhysicsEngineBase(penv), odespace(new ODESpace(penv, GetPhysicsInfo, true)) {
+    ODEPhysicsEngine(OpenRAVE::EnvironmentBasePtr penv) : OpenRAVE::PhysicsEngineBase(penv), _odespace(new ODESpace(penv, GetPhysicsInfo, true)) {
         __description = ":Interface Author: Rosen Diankov\n\nODE physics engine";
-        _globalfriction = 1.0f;
+        _globalfriction = 0.4;
+        _globalerp = 0.01;
+        _globalcfm = 1e-5;
         _options = OpenRAVE::PEO_SelfCollisions;
 
         memset(_jointadd, 0, sizeof(_jointadd));
@@ -165,8 +180,8 @@ public:
     {
         _report.reset(new CollisionReport());
 
-        odespace->SetSynchornizationCallback(boost::bind(&ODEPhysicsEngine::_SyncCallback, shared_physics(),_1));
-        if( !odespace->InitEnvironment() ) {
+        _odespace->SetSynchornizationCallback(boost::bind(&ODEPhysicsEngine::_SyncCallback, shared_physics(),_1));
+        if( !_odespace->InitEnvironment() ) {
             return false;
         }
         vector<KinBodyPtr> vbodies;
@@ -175,20 +190,22 @@ public:
             InitKinBody(*itbody);
         }
         SetGravity(_gravity);
+        RAVELOG_DEBUG(str(boost::format("ode params: erp=%e (%e), cfm=%e (%e)")%_globalerp%dWorldGetERP(_odespace->GetWorld())%_globalcfm%dWorldGetCFM(_odespace->GetWorld())));
+        dWorldSetERP(_odespace->GetWorld(),_globalerp);
+        dWorldSetCFM(_odespace->GetWorld(),_globalcfm);
         return true;
     }
-
 
     virtual void DestroyEnvironment()
     {
         _listcallbacks.clear();
         _report.reset();
-        odespace->DestroyEnvironment();
+        _odespace->DestroyEnvironment();
     }
 
     virtual bool InitKinBody(KinBodyPtr pbody)
     {
-        OpenRAVE::UserDataPtr pinfo = odespace->InitKinBody(pbody);
+        ODESpace::KinBodyInfoPtr pinfo = _odespace->InitKinBody(pbody);
         SetPhysicsData(pbody, pinfo);
         return !!pinfo;
     }
@@ -211,8 +228,8 @@ public:
 
     virtual bool SetLinkVelocity(KinBody::LinkPtr plink, const Vector& _linearvel, const Vector& angularvel)
     {
-        odespace->Synchronize(plink->GetParent());
-        dBodyID body = odespace->GetLinkBody(plink);
+        _odespace->Synchronize(KinBodyConstPtr(plink->GetParent()));
+        dBodyID body = _odespace->GetLinkBody(plink);
         if( !body ) {
             return false;
         }
@@ -225,9 +242,9 @@ public:
     virtual bool SetLinkVelocities(KinBodyPtr pbody, const std::vector<std::pair<Vector,Vector> >& velocities)
     {
         bool bsuccess = true;
-        odespace->Synchronize(pbody);
+        _odespace->Synchronize(KinBodyConstPtr(pbody));
         FOREACHC(itlink, pbody->GetLinks()) {
-            dBodyID body = odespace->GetLinkBody(*itlink);
+            dBodyID body = _odespace->GetLinkBody(*itlink);
             if( body ) {
                 Vector angularvel = velocities.at((*itlink)->GetIndex()).second;
                 dBodySetAngularVel(body, angularvel.x,angularvel.y,angularvel.z);
@@ -244,8 +261,8 @@ public:
 
     virtual bool GetLinkVelocity(KinBody::LinkConstPtr plink, Vector& linearvel, Vector& angularvel)
     {
-        odespace->Synchronize(KinBodyConstPtr(plink->GetParent()));
-        dBodyID body = odespace->GetLinkBody(plink);
+        _odespace->Synchronize(KinBodyConstPtr(plink->GetParent()));
+        dBodyID body = _odespace->GetLinkBody(plink);
         if( body ) {
             const dReal* p = dBodyGetAngularVel(body);
             angularvel = Vector(p[0], p[1], p[2]);
@@ -261,11 +278,11 @@ public:
 
     virtual bool GetLinkVelocities(KinBodyConstPtr pbody, std::vector<std::pair<Vector,Vector> >& velocities)
     {
-        odespace->Synchronize(pbody);
+        _odespace->Synchronize(pbody);
         velocities.resize(0);
         velocities.resize(pbody->GetLinks().size());
         FOREACHC(itlink, pbody->GetLinks()) {
-            dBodyID body = odespace->GetLinkBody(*itlink);
+            dBodyID body = _odespace->GetLinkBody(*itlink);
             if( body ) {
                 const dReal* pf = dBodyGetAngularVel(body);
                 Vector angularvel(pf[0], pf[1], pf[2]);
@@ -278,8 +295,8 @@ public:
     }
 
     virtual bool GetLinkForceTorque(KinBody::LinkConstPtr plink, Vector& force, Vector& torque) {
-        odespace->Synchronize(KinBodyConstPtr(plink->GetParent()));
-        dBodyID body = odespace->GetLinkBody(plink);
+        _odespace->Synchronize(KinBodyConstPtr(plink->GetParent()));
+        dBodyID body = _odespace->GetLinkBody(plink);
         if( body ) {
             const dReal* pf = dBodyGetForce(body);
             force = Vector(pf[0],pf[1],pf[2]);
@@ -295,10 +312,9 @@ public:
 
     virtual bool GetJointVelocity(KinBody::JointConstPtr pjoint, std::vector<OpenRAVE::dReal>& vJointVelocity)
     {
-        dJointID joint = odespace->GetJoint(pjoint);
+        dJointID joint = _odespace->GetJoint(pjoint);
         BOOST_ASSERT( joint != NULL );
-
-        odespace->Synchronize(KinBodyConstPtr(pjoint->GetParent()));
+        _odespace->Synchronize(KinBodyConstPtr(pjoint->GetParent()));
         vector<JointGetFn>::iterator itfn;
         vJointVelocity.resize(pjoint->GetDOF());
         vector<OpenRAVE::dReal>::iterator itvel = vJointVelocity.begin();
@@ -310,11 +326,11 @@ public:
 
     virtual bool SetBodyForce(KinBody::LinkPtr plink, const Vector& force, const Vector& position, bool bAdd)
     {
-        dBodyID body = odespace->GetLinkBody(plink);
-        if( body == NULL )
+        dBodyID body = _odespace->GetLinkBody(plink);
+        if( body == NULL ) {
             return false;
-
-        odespace->Synchronize(KinBodyConstPtr(plink->GetParent()));
+        }
+        _odespace->Synchronize(KinBodyConstPtr(plink->GetParent()));
         if( !bAdd ) {
             dBodySetForce(body, 0, 0, 0);
         }
@@ -324,11 +340,11 @@ public:
 
     virtual bool SetBodyTorque(KinBody::LinkPtr plink, const Vector& torque, bool bAdd)
     {
-        dBodyID body = odespace->GetLinkBody(plink);
+        dBodyID body = _odespace->GetLinkBody(plink);
         if( body == NULL ) {
             return false;
         }
-        odespace->Synchronize(KinBodyConstPtr(plink->GetParent()));
+        _odespace->Synchronize(KinBodyConstPtr(plink->GetParent()));
 
         if( !bAdd ) {
             dBodySetTorque(body, torque.x, torque.y, torque.z);
@@ -341,10 +357,9 @@ public:
 
     virtual bool AddJointTorque(KinBody::JointPtr pjoint, const std::vector<OpenRAVE::dReal>& pTorques)
     {
-        dJointID joint = odespace->GetJoint(pjoint);
+        dJointID joint = _odespace->GetJoint(pjoint);
         BOOST_ASSERT( joint != NULL );
-
-        odespace->Synchronize(KinBodyConstPtr(pjoint->GetParent()));
+        _odespace->Synchronize(KinBodyConstPtr(pjoint->GetParent()));
         std::vector<dReal> vtorques(pTorques.size());
         std::copy(pTorques.begin(),pTorques.end(),vtorques.begin());
         _jointadd[dJointGetType(joint)](joint, &vtorques[0]);
@@ -354,8 +369,9 @@ public:
     virtual void SetGravity(const Vector& gravity)
     {
         _gravity = gravity;
-        if( odespace->IsInitialized() )
-            dWorldSetGravity(odespace->GetWorld(),_gravity.x, _gravity.y, _gravity.z);
+        if( _odespace->IsInitialized() ) {
+            dWorldSetGravity(_odespace->GetWorld(),_gravity.x, _gravity.y, _gravity.z);
+        }
     }
 
     virtual Vector GetGravity()
@@ -365,7 +381,7 @@ public:
 
     virtual void SimulateStep(OpenRAVE::dReal fTimeElapsed)
     {
-        odespace->Synchronize();
+        _odespace->Synchronize();
 
         bool bHasCallbacks = GetEnv()->HasRegisteredCollisionCallbacks();
         if( bHasCallbacks ) {
@@ -375,7 +391,7 @@ public:
             _listcallbacks.clear();
         }
 
-        dSpaceCollide (odespace->GetSpace(),this,nearCallback);
+        dSpaceCollide (_odespace->GetSpace(),this,nearCallback);
 
         vector<KinBodyPtr> vbodies;
         GetEnv()->GetBodies(vbodies);
@@ -384,23 +400,28 @@ public:
             FOREACHC(itbody, vbodies) {
                 if( (*itbody)->GetLinks().size() > 1 ) {
                     // more than one link, check collision
-                    dSpaceCollide(odespace->GetBodySpace(*itbody), this, nearCallback);
+                    dSpaceCollide(_odespace->GetBodySpace(*itbody), this, nearCallback);
                 }
             }
         }
 
-        dWorldQuickStep(odespace->GetWorld(), fTimeElapsed);
-        dJointGroupEmpty (odespace->GetContactGroup());
+        dWorldQuickStep(_odespace->GetWorld(), fTimeElapsed);
+        dJointGroupEmpty (_odespace->GetContactGroup());
 
         // synchronize all the objects from the ODE world to the OpenRAVE world
         Transform t;
         FOREACHC(itbody, vbodies) {
-            ODESpace::KinBodyInfoPtr pinfo = boost::dynamic_pointer_cast<ODESpace::KinBodyInfo>((*itbody)->GetPhysicsData());
+            ODESpace::KinBodyInfoPtr pinfo = GetPhysicsInfo(*itbody);
             BOOST_ASSERT( pinfo->vlinks.size() == (*itbody)->GetLinks().size());
             for(size_t i = 0; i < pinfo->vlinks.size(); ++i) {
-                t.rot = *(RaveVector<dReal>*)dBodyGetQuaternion(pinfo->vlinks[i]->body);
-                t.trans = *(RaveVector<dReal>*)dBodyGetPosition(pinfo->vlinks[i]->body);
-                (*itbody)->GetLinks()[i]->SetTransform(t);
+                const dReal* prot = dBodyGetQuaternion(pinfo->vlinks[i]->body);
+                Vector vrot(prot[0],prot[1],prot[2],prot[3]);
+                if( vrot.lengthsqr4() == 0 ) {
+                    RAVELOG_ERROR(str(boost::format("odephysics in body %s is returning invalid rotation!")%(*itbody)->GetName()));
+                    continue;
+                }
+                const dReal* ptrans = dBodyGetPosition(pinfo->vlinks[i]->body);
+                (*itbody)->GetLinks()[i]->SetTransform(Transform(vrot,Vector(ptrans[0],ptrans[1],ptrans[2])));
             }
 
             pinfo->nLastStamp = (*itbody)->GetUpdateStamp();
@@ -411,8 +432,8 @@ public:
 
 
 private:
-    static OpenRAVE::UserDataPtr GetPhysicsInfo(KinBodyConstPtr pbody) {
-        return pbody->GetPhysicsData();
+    static ODESpace::KinBodyInfoPtr GetPhysicsInfo(KinBodyConstPtr pbody) {
+        return boost::dynamic_pointer_cast<ODESpace::KinBodyInfo>(pbody->GetPhysicsData());
     }
 
     static void nearCallback(void *data, dGeomID o1, dGeomID o2)
@@ -422,9 +443,9 @@ private:
 
     void _nearCallback(dGeomID o1, dGeomID o2)
     {
-        if( !dGeomIsEnabled(o1) || !dGeomIsEnabled(o2) )
+        if( !dGeomIsEnabled(o1) || !dGeomIsEnabled(o2) ) {
             return;
-
+        }
         if (dGeomIsSpace(o1) || dGeomIsSpace(o2)) {
             // colliding a space with something
             dSpaceCollide2(o1,o2,this, nearCallback);
@@ -470,8 +491,9 @@ private:
         const int N = 16;
         dContact contact[N];
         int n = dCollide (o1,o2,N,&contact[0].geom,sizeof(dContact));
-        if( n <= 0 )
+        if( n <= 0 ) {
             return;
+        }
 
         if( _listcallbacks.size() > 0 ) {
             // fill the collision report
@@ -481,14 +503,15 @@ private:
             _report->plink2 = pkb2;
 
             dGeomID checkgeom1 = dGeomGetClass(o1) == dGeomTransformClass ? dGeomTransformGetGeom(o1) : o1;
-            for(int i = 0; i < n; ++i)
+            for(int i = 0; i < n; ++i) {
                 _report->contacts.push_back(CollisionReport::CONTACT(contact[i].geom.pos, checkgeom1 != contact[i].geom.g1 ? -Vector(contact[i].geom.normal) : Vector(contact[i].geom.normal), contact[i].geom.depth));
-
+            }
 
             FOREACH(itfn, _listcallbacks) {
                 OpenRAVE::CollisionAction action = (*itfn)(_report,true);
-                if( action != OpenRAVE::CA_DefaultAction )
+                if( action != OpenRAVE::CA_DefaultAction ) {
                     return;
+                }
             }
         }
 
@@ -503,11 +526,15 @@ private:
             //        contact[i].surface.mu = 50.0; // was: dInfinity
             //        contact[i].surface.soft_erp = 0.96;
             //        contact[i].surface.soft_cfm = 0.04;
-            dJointID c = dJointCreateContact (odespace->GetWorld(),odespace->GetContactGroup(),contact+i);
+            dJointID c = dJointCreateContact (_odespace->GetWorld(),_odespace->GetContactGroup(),contact+i);
 
             // make sure that static objects are not enabled by adding a joint attaching them
-            if( b1 ) b1 = dBodyIsEnabled(b1) ? b1 : 0;
-            if( b2 ) b2 = dBodyIsEnabled(b2) ? b2 : 0;
+            if( b1 ) {
+                b1 = dBodyIsEnabled(b1) ? b1 : 0;
+            }
+            if( b2 ) {
+                b2 = dBodyIsEnabled(b2) ? b2 : 0;
+            }
             dJointAttach (c, b1, b2);
 
             //wprintf(L"intersection %s %s\n", ((KinBody::Link*)dBodyGetData(b1))->GetName(), ((KinBody::Link*)dBodyGetData(b2))->GetName());
@@ -542,10 +569,10 @@ private:
         }
     }
 
-    boost::shared_ptr<ODESpace> odespace;
+    boost::shared_ptr<ODESpace> _odespace;
     Vector _gravity;
     int _options;
-    dReal _globalfriction;
+    dReal _globalfriction, _globalcfm, _globalerp;
 
     typedef void (*JointSetFn)(dJointID, int param, dReal val);
     typedef dReal (*JointGetFn)(dJointID);

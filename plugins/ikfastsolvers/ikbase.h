@@ -553,12 +553,13 @@ private:
                 RAVELOG_VERBOSE("ik collision, no link\n");
             }
 
-            // if gripper is colliding, solutions will always fail, so completely stop solution process
-            if( bCheckEndEffector && param.GetType() == IkParameterization::Type_Transform6D && pmanip->CheckEndEffectorCollision(pmanip->GetBase()->GetTransform()*param.GetTransform6D()) ) {
-                return SR_Quit; // stop the search
+            if( param.GetType() == IkParameterization::Type_Transform6D ) {
+                // if gripper is colliding, solutions will always fail, so completely stop solution process
+                if( bCheckEndEffector && pmanip->CheckEndEffectorCollision(pmanip->GetBase()->GetTransform()*param.GetTransform6D()) ) {
+                    return SR_Quit; // stop the search
+                }
+                bCheckEndEffector = false;
             }
-
-            bCheckEndEffector = false;
             return SR_Continue;
         }
 

@@ -339,7 +339,6 @@ public:
         DAE::cleanup();
     }
 
-    /// Write down a COLLADA file
     virtual void Save(const string& filename)
     {
         bool bcompress = filename.size() >= 4 && filename[filename.size()-4] == '.' && ::tolower(filename[filename.size()-3]) == 'z' && ::tolower(filename[filename.size()-2]) == 'a' && ::tolower(filename[filename.size()-1]) == 'e';
@@ -827,12 +826,18 @@ public:
 
     virtual boost::shared_ptr<instance_physics_model_output> _WriteInstance_physics_model(KinBodyPtr pbody, daeElementRef parent, const string& sidscope)
     {
-        EnvironmentMutex::scoped_lock lockenv(_penv->GetMutex());
         boost::shared_ptr<physics_model_output> pmout = WritePhysics_model(pbody);
         boost::shared_ptr<instance_physics_model_output> ipmout(new instance_physics_model_output());
         ipmout->pmout = pmout;
         ipmout->ipm = daeSafeCast<domInstance_physics_model>(parent->add(COLLADA_ELEMENT_INSTANCE_PHYSICS_MODEL));
-        ipmout->ipm->setParent(xsAnyURI(*ipmout->ipm,string("#")+_GetNodeId(pbody)));
+        string nodeid;
+        if( pbody->GetLinks().size() > 0 ) {
+            nodeid = _GetNodeId(KinBody::LinkConstPtr(pbody->GetLinks().at(0)));
+        }
+        else {
+            nodeid = _GetNodeId(pbody);
+        }
+        ipmout->ipm->setParent(xsAnyURI(*ipmout->ipm,string("#")+nodeid));
         string symscope, refscope;
         if( sidscope.size() > 0 ) {
             symscope = sidscope+string("_");
@@ -850,7 +855,8 @@ public:
         return ipmout;
     }
 
-    virtual boost::shared_ptr<kinematics_model_output> WriteKinematics_model(KinBodyPtr pbody) {
+    virtual boost::shared_ptr<kinematics_model_output> WriteKinematics_model(KinBodyPtr pbody)
+    {
         EnvironmentMutex::scoped_lock lockenv(_penv->GetMutex());
         boost::shared_ptr<kinematics_model_output> kmout = _GetKinematics_model(pbody);
         if( !!kmout ) {
@@ -871,7 +877,7 @@ public:
 
         //  Create root node for the visual scene
         domNodeRef pnoderoot = daeSafeCast<domNode>(_scene.vscene->add(COLLADA_ELEMENT_NODE));
-        string bodyid = _GetNodeId(pbody);
+        string bodyid = _GetNodeId(KinBodyConstPtr(pbody));
         pnoderoot->setId(bodyid.c_str());
         pnoderoot->setSid(bodyid.c_str());
         pnoderoot->setName(pbody->GetName().c_str());
@@ -1045,8 +1051,8 @@ public:
         return kmout;
     }
 
-    virtual boost::shared_ptr<physics_model_output> WritePhysics_model(KinBodyPtr pbody) {
-        EnvironmentMutex::scoped_lock lockenv(_penv->GetMutex());
+    virtual boost::shared_ptr<physics_model_output> WritePhysics_model(KinBodyPtr pbody)
+    {
         boost::shared_ptr<physics_model_output> pmout = _GetPhysics_model(pbody);
         if( !!pmout ) {
             return pmout;
@@ -1389,7 +1395,6 @@ private:
     virtual KinBody::LinkPtr GetChildLink(KinBody::JointConstPtr pjoint) {
         if( !!pjoint->GetFirstAttached() && !!pjoint->GetSecondAttached() ) {
             if( pjoint->GetFirstAttached()->IsParentLink(pjoint->GetSecondAttached()) ) {
-                RAVELOG_WARN("returning first link\n");
                 return pjoint->GetFirstAttached();
             }
             else if( pjoint->GetSecondAttached()->IsParentLink(pjoint->GetFirstAttached()) ) {
@@ -1397,7 +1402,6 @@ private:
             }
         }
         else if( !!pjoint->GetFirstAttached() ) {
-            RAVELOG_WARN("returning first link\n");
             return pjoint->GetFirstAttached();
         }
         else if( !!pjoint->GetSecondAttached() ) {

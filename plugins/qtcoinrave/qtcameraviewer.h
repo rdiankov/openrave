@@ -96,7 +96,7 @@ public:
                     RAVELOG_WARN(str(boost::format("QtImageWindow: sensor %s image wrong dims")%_psensor->GetName()));
                 }
                 else {
-#if QT_VERSION >= 0x040200 // qt4.2+
+#if QT_VERSION >= 0x040400 // qt4.4+
                     _label->setPixmap(QPixmap::fromImage(QImage(&_pdatanew->vimagedata[0], _pgeom->width,_pgeom->height,QImage::Format_RGB888)));
 #else
                     vimagedata.resize(4*_pgeom->width*_pgeom->height);
@@ -118,7 +118,7 @@ private:
         SensorBasePtr _psensor;
         boost::shared_ptr<SensorBase::CameraSensorData> _pdatanew, _pdata;
         boost::shared_ptr<SensorBase::CameraGeomData> _pgeom;
-#if QT_VERSION < 0x040200 // qt4.2+
+#if QT_VERSION < 0x040400 // qt4.4+
         vector<uint8_t> vimagedata;
 #endif
     };

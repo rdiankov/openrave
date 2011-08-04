@@ -196,6 +196,9 @@ bool CreateTriMeshData(EnvironmentBasePtr penv, const std::string& filename, con
                 return true;
             }
         }
+        if( extension == "stl" ) {
+            return false;
+        }
     }
 #endif
 
@@ -497,7 +500,7 @@ boost::shared_ptr<std::pair<std::string,std::string> > FindFile(const std::strin
     }
 
 #ifdef HAVE_BOOST_FILESYSTEM
-    fullfilename = boost::filesystem::system_complete(boost::filesystem::path(fullfilename, boost::filesystem::native)).string();
+    fullfilename = boost::filesystem::system_complete(boost::filesystem::path(fullfilename)).string();
 #endif
     return boost::shared_ptr<pair<string,string> >(new pair<string,string>(parsedirectory,fullfilename));
 }

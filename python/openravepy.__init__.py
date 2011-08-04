@@ -1,6 +1,5 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)
+# Copyright (C) 2009-2011 Rosen Diankov <rosen.diankov@gmail.com>
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,11 +21,10 @@ Internals
 There is a __build_doc__ external variable that is set to True only when building docs. This allows package to clean their symbols and documentation.
 """
 try:
-    __build_doc__ = __openravepy_build_doc__
-    if __build_doc__:
+    if __openravepy_build_doc__:
         print 'openravepy imported in documentation mode'
 except NameError:
-    __build_doc__ = None
+    __builtins__['__openravepy_build_doc__'] = False
 
 from openravepy_int import *
 from openravepy_int import _openrave_exception_
@@ -37,22 +35,16 @@ __license__ = 'core: Lesser GPL, examples: Apache License, Version 2.0'
 __docformat__ = 'restructuredtext'
 
 from openravepy_ext import *
-
 import metaclass
-try:
-    import ikfast
-except ImportError, e:
-    pass
-import pyANN
-import convexdecompositionpy
 import interfaces
 import databases
-import examples
+#import examples
 
 OpenRAVEModel = databases.DatabaseGenerator # for backwards compatibility
-
-pyANN._pyann_exception_.py_err_class = pyann_exception
 _openrave_exception_.py_err_class = openrave_exception
 
+# deprecated
+Problem = Module
+
 # would "from openravepy import *" be slower if this is enabled?
-#__all__ = ["examples", "ikfast", "interfaces", "metaclass", "pyANN"]
+#__all__ = ["interfaces", "databases", "metaclass", "openravepy_int"]

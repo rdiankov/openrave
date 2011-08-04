@@ -18,6 +18,7 @@ from optparse import OptionParser
 import os
 import subprocess
 import shutil
+from openravepy.misc import mkdir_recursive
 
 def getsvnurl(dirname):
     outinfo=subprocess.Popen(['svn','info',dirname],stdout=subprocess.PIPE).communicate()[0]

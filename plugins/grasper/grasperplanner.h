@@ -394,16 +394,20 @@ public:
                 // not a real joint, so skip
                 continue;
             }
-            int nJointIndex = _robot->GetActiveDOFIndices()[ifing];
+            int nDOFIndex = _robot->GetActiveDOFIndices()[ifing];
             dReal fmult = 1;
-            if(_robot->GetJoints().at(nJointIndex)->GetType() == KinBody::Joint::JointSlider ) {
+            KinBody::JointPtr pjoint = _robot->GetJointFromDOFIndex(nDOFIndex);
+            if( pjoint->IsPrismatic(nDOFIndex-pjoint->GetDOFIndex()) ) {
                 fmult = _parameters->ftranslationstepmult;
             }
             dReal step_size = _parameters->fcoarsestep*fmult;
 
             bool collision = false;
             bool coarse_pass = true;     ///this parameter controls the coarseness of the step
-            int num_iters = (int)((vupperlim[ifing] - vlowerlim[ifing])/step_size)+1;
+            int num_iters = (int)((vupperlim[ifing] - vlowerlim[ifing])/step_size+0.5)+1;
+            if( num_iters <= 1 ) {
+                num_iters = 2; // need at least 2 iterations because of coarse/fine step tuning
+            }
             bool bMoved = false;
             while(num_iters-- > 0) {
                 // set manip joints that haven't been covered so far
@@ -415,7 +419,7 @@ public:
 
                 for(int q = 0; q < (int)vlinks.size(); q++) {
                     int ct;
-                    if(_robot->DoesAffect(nJointIndex,vlinks[q]->GetIndex())  &&((ct = CheckCollision(vlinks[q])) != CT_None) ) {
+                    if(_robot->DoesAffect(pjoint->GetJointIndex(),vlinks[q]->GetIndex())  &&((ct = CheckCollision(vlinks[q])) != CT_None) ) {
                         if( !coarse_pass && (ct & CT_AvoidLinkHit) ) {
                             RAVELOG_VERBOSE(str(boost::format("hit link that needed to be avoided: %s\n")%_report->__str__()));
                             return false;
@@ -432,7 +436,7 @@ public:
                             }
                             else {
                                 if( IS_DEBUGLEVEL(Level_Verbose) ) {
-                                    RAVELOG_VERBOSE(str(boost::format("Collision (%d) of link %s using joint %d [%s]\n")%ct%vlinks.at(q)->GetName()%nJointIndex%_report->__str__()));
+                                    RAVELOG_VERBOSE(str(boost::format("Collision (%d) of link %s using joint %s(%d) [%s]\n")%ct%vlinks.at(q)->GetName()%pjoint->GetName()%nDOFIndex%_report->__str__()));
                                     stringstream ss; ss << "Transform: " << vlinks.at(q)->GetTransform() << ", Joint Vals: ";
                                     for(int vi = 0; vi < _robot->GetActiveDOF(); vi++) {
                                         ss << dofvals[vi] << " ";
@@ -450,7 +454,7 @@ public:
                         }
                         else {
                             if( IS_DEBUGLEVEL(Level_Verbose) ) {
-                                RAVELOG_VERBOSE(str(boost::format("Collision (%d) of link %s using joint %d, value=%f [%s]\n")%ct%vlinks.at(q)->GetName()%nJointIndex%dofvals[ifing]%_report->__str__()));
+                                RAVELOG_VERBOSE(str(boost::format("Collision (%d) of link %s using joint %s(%d), value=%f [%s]\n")%ct%vlinks.at(q)->GetName()%pjoint->GetName()%nDOFIndex%dofvals[ifing]%_report->__str__()));
                                 stringstream ss; ss << "Transform: " << vlinks.at(q)->GetTransform() << "Joint Vals: ";
                                 for(int vi = 0; vi < _robot->GetActiveDOF(); vi++) {
                                     ss << dofvals[vi] << " ";

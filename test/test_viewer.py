@@ -14,10 +14,13 @@
 from common_test_openrave import *
 
 class TestViewer(EnvironmentSetup):
-    def tes_colladaload(self):
-        env=self.env
-        robot = env.ReadRobotURI('robots/pr2-beta-static.zae')
-        env.AddRobot(robot)
-        env.SetViewer('qtcoin')
-        robot2 = env.ReadRobotURI(robot.GetURI())
-        env.AddRobot(robot2,True)
+    pass
+
+        # this is a really test. Whenever collada is used before Qt is loaded, then the next usage of collada puts Qt in an infinite loop. This only happens with the collada-dom library. Perhaps there's common shared libraries with different versions
+#     def test_colladaload(self):
+#         env=self.env
+#         robot = env.ReadRobotURI('robots/pr2-beta-static.zae')
+#         env.AddRobot(robot)
+#         env.SetViewer('qtcoin')
+#         robot2 = env.ReadRobotURI(robot.GetURI())
+#         env.AddRobot(robot2,True)

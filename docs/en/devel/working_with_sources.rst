@@ -24,7 +24,7 @@ Note that this will create symlinks to the compilers inside **/usr/local/bin**.
 Indenting C++ Files
 -------------------
 
-OpenRAVE C++ code should automatically be run with **uncrustify** before being committed. Currently OpenRAVE requires uncrustify version >=0.57. First put :download:`.uncrustify.cfg <../../../sandbox/.uncrustify.cfg>` in your $HOME directory. The run a file before committing using:
+OpenRAVE C++ code should automatically be run with `uncrustify <http://uncrustify.sourceforge.net/>`_ before being committed. Currently OpenRAVE requires uncrustify version >=0.57. First put :download:`.uncrustify.cfg <../../../sandbox/.uncrustify.cfg>` in your $HOME directory. The run a file before committing using:
 
 .. code-block:: bash
 
@@ -57,7 +57,7 @@ To get auto-completion for the OpenRAVE C++ API using `Collection of Emacs Devel
 Automatic Indention
 ###################
 
-It is possible to setup emacs to automatically perform call **uncrustify** when saving a file by downloading the `emacs-uncrustify <https://github.com/glima/Emacs-uncrustify>`_  pakcage and putting the following in your **.emacs** file:
+It is possible to setup emacs to automatically call **uncrustify** when saving a file by downloading the `emacs-uncrustify <https://github.com/glima/Emacs-uncrustify>`_  pakcage and putting the following in your **.emacs** file:
 
 .. code-block:: common-lisp
 
@@ -72,14 +72,5 @@ Using the `bm.el <http://www.nongnu.org/bm/>`_ library for getting bookmarks. If
 
 .. code-block:: common-lisp
 
-  (setq uncrustify-uncrustify-on-save nil)
-  (add-hook 'c-mode-common-hook
-           '(lambda()
-              (make-local-variable 'write-contents-hooks)
-              (add-hook 'write-contents-hooks
-                        '(lambda()
-                           (bm-buffer-save)
-                           (uncrustify-buffer)
-                           (bm-buffer-restore)
-                           (not-modified)
-                           ))))
+  (add-hook 'uncrustify-init-hooks 'bm-buffer-save)
+  (add-hook 'uncrustify-finish-hooks 'bm-buffer-restore)

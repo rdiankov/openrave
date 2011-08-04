@@ -320,7 +320,7 @@ enum DebugLevel {
 #define OPENRAVECOLOR_VERBOSELEVEL 4 // blue
 
 /// \brief Sets the global openrave debug level. A combination of \ref DebugLevel
-OPENRAVE_API void RaveSetDebugLevel(uint32_t level);
+OPENRAVE_API void RaveSetDebugLevel(int level);
 
 /// Returns the openrave debug level
 OPENRAVE_API int RaveGetDebugLevel();
@@ -1213,7 +1213,8 @@ inline const char* RaveGetInterfaceHash(InterfaceType type)
     }
 }
 
-/// safely casts from the base interface class to an openrave interface using static_pointer_cast.
+/// \brief Safely casts from the base interface class to an openrave interface using static_pointer_cast.
+///
 /// The reason why dynamic_pointer_cast cannot be used is because interfaces might be created by different plugins, and the runtime type information will be different.
 template <typename T>
 inline boost::shared_ptr<T> RaveInterfaceCast(InterfaceBasePtr pinterface)
@@ -1230,7 +1231,8 @@ inline boost::shared_ptr<T> RaveInterfaceCast(InterfaceBasePtr pinterface)
     return boost::shared_ptr<T>();
 }
 
-/// safely casts from the base interface class to an openrave interface using static_pointer_cast.
+/// \brief Safely casts from the base interface class to an openrave interface using static_pointer_cast.
+///
 /// The reason why dynamic_pointer_cast cannot be used is because interfaces might be created by different plugins, and the runtime type information will be different.
 template <typename T>
 inline boost::shared_ptr<T const> RaveInterfaceConstCast(InterfaceBaseConstPtr pinterface)
@@ -1273,7 +1275,7 @@ OPENRAVE_API std::string RaveFindDatabaseFile(const std::string& filename, bool 
 /// explicit control of when this happens.
 /// \param bLoadAllPlugins If true will load all the openrave plugins automatically that can be found in the OPENRAVE_PLUGINS environment path
 /// \return 0 if successful, otherwise an error code
-OPENRAVE_API int RaveInitialize(bool bLoadAllPlugins=true, uint32_t level = Level_Info);
+OPENRAVE_API int RaveInitialize(bool bLoadAllPlugins=true, int level = Level_Info);
 
 /// \brief Initializes the global state from an already loaded OpenRAVE environment.
 ///

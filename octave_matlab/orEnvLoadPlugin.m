@@ -3,7 +3,7 @@
 % Loads a plugin.
 % filename - the relative path of the plugin to load. (*.so for linux, *.dll for windows)
 
-function success = orEnvLoadScene(filename, ClearScene)
+function success = orEnvLoadPlugin(filename, ClearScene)
 
 out = orCommunicator(['env_loadplugin ' filename], 1);
 

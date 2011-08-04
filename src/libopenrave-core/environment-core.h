@@ -76,9 +76,9 @@ public:
                     RAVELOG_WARN(str(boost::format("%s doesn't exist")%installdir));
                 }
             }
-            boost::filesystem::path datafilename = boost::filesystem::system_complete(boost::filesystem::path(installdir, boost::filesystem::native));
+            boost::filesystem::path datafilename = boost::filesystem::system_complete(boost::filesystem::path(installdir));
             FOREACH(itname, _vdatadirs) {
-                if( datafilename == boost::filesystem::system_complete(boost::filesystem::path(*itname, boost::filesystem::native)) ) {
+                if( datafilename == boost::filesystem::system_complete(boost::filesystem::path(*itname)) ) {
                     bExists = true;
                     break;
                 }
@@ -108,7 +108,7 @@ public:
 
     virtual void Init()
     {
-        boost::mutex::scoped_lock(_mutexInit);
+        boost::mutex::scoped_lock lockinit(_mutexInit);
         if( _bInit ) {
             RAVELOG_WARN("environment is already initialized, ignoring\n");
             return;
@@ -1061,7 +1061,7 @@ public:
                     // have to set the render file
                     robot->_veclinks.at(0)->GetGeometry(0).SetRenderFilename(filename);
 #if defined(HAVE_BOOST_FILESYSTEM) && BOOST_VERSION >= 103600 // stem() was introduced in 1.36
-                    boost::filesystem::path pfilename(filename, boost::filesystem::native);
+                    boost::filesystem::path pfilename(filename);
 #if defined(BOOST_FILESYSTEM_VERSION) && BOOST_FILESYSTEM_VERSION >= 3
                     robot->SetName(ConvertToOpenRAVEName(pfilename.stem().string()));
 #else
@@ -1152,11 +1152,14 @@ public:
             if( !!body ) {
                 boost::shared_ptr<KinBody::Link::TRIMESH> ptrimesh;
                 ptrimesh = ReadTrimeshURI(ptrimesh,filename,atts);
+                if( !ptrimesh ) {
+                    return KinBodyPtr();
+                }
                 if( body->InitFromTrimesh(*ptrimesh,true) ) {
                     // have to set the render file
                     body->_veclinks.at(0)->GetGeometry(0).SetRenderFilename(filename);
 #if defined(HAVE_BOOST_FILESYSTEM) && BOOST_VERSION >= 103600 // stem() was introduced in 1.36
-                    boost::filesystem::path pfilename(filename, boost::filesystem::native);
+                    boost::filesystem::path pfilename(filename);
 #if defined(BOOST_FILESYSTEM_VERSION) && BOOST_FILESYSTEM_VERSION >= 3
                     body->SetName(ConvertToOpenRAVEName(pfilename.stem().string()));
 #else
@@ -1577,10 +1580,10 @@ public:
     }
 
     virtual void SetDebugLevel(uint32_t level) {
-        RaveSetDebugLevel(level);
+        RaveSetDebugLevel((int)level);
     }
     virtual uint32_t GetDebugLevel() const {
-        return RaveGetDebugLevel();
+        return (uint32_t)RaveGetDebugLevel();
     }
 
     virtual void GetPublishedBodies(std::vector<KinBody::BodyState>& vbodies)
@@ -1633,7 +1636,7 @@ protected:
     {
         Destroy();
 
-        boost::mutex::scoped_lock(_mutexInit);
+        boost::mutex::scoped_lock lockinit(_mutexInit);
         SetCollisionChecker(CollisionCheckerBasePtr());
         SetPhysicsEngine(PhysicsEngineBasePtr());
 

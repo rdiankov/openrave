@@ -687,6 +687,10 @@ public:
             return false;
         }
 
+        // set the ik threshold to something big so wrong solutions can be returned
+        stringstream soutik, sinputik; sinputik << "SetIkThreshold 1000";
+        pmanip->GetIkSolver()->SendCommand(soutik,sinputik);
+
         vector<dReal> vrealsolution(pmanip->GetArmIndices().size(),0), vrand(pmanip->GetArmIndices().size(),0);
         vector<dReal> vlowerlimit, vupperlimit, viksolution;
         vector< vector<dReal> > viksolutions, viksolutions2;
@@ -1035,6 +1039,12 @@ public:
                 }
             }
         }
+
+        // restore the ik threshold
+        sinputik.str(""); sinputik.clear();
+        sinputik << "SetIkThreshold 1e-6";
+        pmanip->GetIkSolver()->SendCommand(soutik,sinputik);
+
         return true;
     }
 

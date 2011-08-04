@@ -319,7 +319,7 @@ Function ${UN}EnvVarUpdate
   ${EndIf}
 
   IfErrors 0 +4
-    MessageBox MB_OK|MB_ICONEXCLAMATION "Could not write updated $1 to $3"
+    MessageBox MB_OK|MB_ICONEXCLAMATION "Could not write updated $1 to $3"  /SD IDOK
     DetailPrint "Could not write updated $1 to $3"
     Goto EnvVarUpdate_Restore_Vars
 
@@ -406,11 +406,11 @@ ${StrTrimNewLines}
 
 Function GetVCRedist
   # check for the visual studio runtime
-  MessageBox MB_YESNO "Need to install Microsoft Visual Studio Runtime Redistributable (x86) for vc%(vcversion)s. Continue with auto-download and install?" IDNO done
+  MessageBox MB_YESNO "Need to install Microsoft Visual Studio Runtime Redistributable (x86) for vc%(vcversion)s. Continue with auto-download and install?" /SD IDYES IDNO done 
   nsisdl::download /TIMEOUT=30000 "%(vcredist_url)s" $TEMP\\vcredist.exe
   Pop $R0 ;Get the return value
   StrCmp $R0 "success" install
-    MessageBox MB_OK "Download failed: $R0"
+    MessageBox MB_OK "Download failed: $R0"  /SD IDOK
     Quit
 install:
     ExecWait "$TEMP\\vcredist.exe"
@@ -427,7 +427,7 @@ FunctionEnd
 
 # check for boost installation
 Function GetBoost
-  MessageBox MB_YESNO "Need to install boost %(boost_version)s. Select 'Multithreaded, DLL' and make sure the installed DLLs are added to 'Path'. Continue with auto-download and install?" IDNO done
+  MessageBox MB_YESNO "Need to install boost %(boost_version)s. Select 'Multithreaded, DLL' and make sure the installed DLLs are added to 'Path'. Continue with auto-download and install?" /SD IDYES IDNO done 
   File "installers\\%(boost_installer)s"
   ExecWait '"$INSTDIR\\%(boost_installer)s"' $1
   Delete "$INSTDIR\\%(boost_installer)s"
@@ -435,7 +435,7 @@ Function GetBoost
   ClearErrors
   ReadRegStr $0 HKLM "SOFTWARE\\boostpro.com\\%(boost_version)s" InstallRoot
   IfErrors 0 done
-    MessageBox MB_OK "Failed to find boost %(boost_version)s"
+    MessageBox MB_OK "Failed to find boost %(boost_version)s"  /SD IDOK
     Abort "Cannot install"
     Quit
 done:
@@ -456,11 +456,11 @@ done1:
 FunctionEnd
 
 Function GetQt4
-  MessageBox MB_YESNO "Need to install Qt %(qt_version)s in 'C:\\Qt\\%(qt_version)s'. Continue with auto-download and install?" IDNO done
+  MessageBox MB_YESNO "Need to install Qt %(qt_version)s in 'C:\\Qt\\%(qt_version)s'. Continue with auto-download and install?" /SD IDYES IDNO done 
   nsisdl::download /TIMEOUT=30000 "%(qt_url)s" $TEMP\\qt-installer.exe
   Pop $R0 ;Get the return value
   StrCmp $R0 "success" install
-    MessageBox MB_OK "Download failed: $R0"
+    MessageBox MB_OK "Download failed: $R0"  /SD IDOK
     Quit
 install:
     ExecWait "$TEMP\\qt-installer.exe"
@@ -503,12 +503,12 @@ Section
 SectionEnd
 
 Function GetPython
-  MessageBox MB_YESNO "Need to install Python %(python_version)s. Continue with auto-download and install?"  IDNO done
+  MessageBox MB_YESNO "Need to install Python %(python_version)s. Continue with auto-download and install?"  /SD IDYES IDNO done 
   StrCpy $2 "$TEMP\\python-%(python_version_full)s.msi"
   nsisdl::download /TIMEOUT=30000 %(python_url)s $2
   Pop $R0 ;Get the return value
   StrCmp $R0 "success" install
-    MessageBox MB_OK "Download failed: $R0"
+    MessageBox MB_OK "Download failed: $R0"  /SD IDOK
     Quit
 install:
   ExecWait '"msiexec" /i $2'
@@ -525,12 +525,12 @@ done:
 FunctionEnd
 
 Function GetNumPy
-  MessageBox MB_YESNO "Need to install Python NumPy Library. Continue with auto-download and install?" IDNO  done
+  MessageBox MB_YESNO "Need to install Python NumPy Library. Continue with auto-download and install?" /SD IDYES IDNO done 
   StrCpy $2 "numpy-%(numpy_version)s-win32-superpack-python%(python_version)s.exe"
   nsisdl::download /TIMEOUT=30000 %(python_numpy_url)s $TEMP\\$2
   Pop $R0 ;Get the return value
   StrCmp $R0 "success" install
-    MessageBox MB_OK "Download failed: $R0"
+    MessageBox MB_OK "Download failed: $R0"  /SD IDOK
     Quit
 install:
   ExecWait "$TEMP\\$2"
@@ -542,7 +542,7 @@ Function DetectNumPy
   ClearErrors
   ReadRegStr $1 HKLM "SOFTWARE\\Python\\PythonCore\\%(python_version)s\\InstallPath" ""
   IfErrors 0 start
-    MessageBox MB_OK "Failed to find python installation"
+    MessageBox MB_OK "Failed to find python installation"  /SD IDOK
     Quit
 start:
   ExecWait '"$1\\python.exe" -c "import numpy"' $0
@@ -552,12 +552,12 @@ done:
 FunctionEnd
 
 Function GetSymPy
-  MessageBox MB_YESNO "Need to install Python SymPy Library. Continue with auto-download and install?" IDNO done
+  MessageBox MB_YESNO "Need to install Python SymPy Library. Continue with auto-download and install?" /SD IDYES IDNO done 
   StrCpy $2 "sympy-%(sympy_version)s.win32.exe"
   nsisdl::download /TIMEOUT=30000 %(python_sympy_url)s $TEMP\\$2
   Pop $R0 ;Get the return value
   StrCmp $R0 "success" install
-    MessageBox MB_OK "Download failed: $R0"
+    MessageBox MB_OK "Download failed: $R0"  /SD IDOK
     Quit
 install:
   ExecWait "$TEMP\\$2"
@@ -569,7 +569,7 @@ Function DetectSymPy
   ClearErrors
   ReadRegStr $1 HKLM "SOFTWARE\\Python\\PythonCore\\%(python_version)s\\InstallPath" ""
   IfErrors 0 start
-    MessageBox MB_OK "Failed to find python installation"
+    MessageBox MB_OK "Failed to find python installation"  /SD IDOK
     Quit
 start:
   ExecWait '"$1\\python.exe" -c "import sympy"' $0
@@ -663,7 +663,7 @@ Section /o "Extra Robots" secrobots
   nsisdl::download /TIMEOUT=30000 https://openrave.svn.sourceforge.net/svnroot/openrave/data/robots/manipulatorlist $TEMP\\manipulatorlist
   Pop $R0 ;Get the return value
   StrCmp $R0 "success" getrobots
-    MessageBox MB_OK "Robot List download failed: $R0"
+    MessageBox MB_OK "Robot List download failed: $R0"  /SD IDOK
     Goto done
 getrobots:
   ClearErrors
@@ -754,15 +754,17 @@ if __name__ == "__main__":
                       help='Subversion revision to append to the output filename.')
     (options,args) = parser.parse_args()
 
-    python_installdir = 'Lib\\site-packages\\'
+    python_installdir = 'lib\\site-packages\\'
     os.environ['Path'] = os.path.join(os.path.abspath(options.installdir),'bin')+';'+os.environ['PATH']
     qt_version = Popen(['openrave-config','--qt-version'],stdout=PIPE).communicate()[0].strip()
     version = Popen(['openrave-config','--version'],stdout=PIPE).communicate()[0].strip()
     soversion = '.'.join(version.split('.')[0:2])
+    _soversion = '_'.join(version.split('.')[0:2])
     openravepy_dir = os.path.abspath(get_python_lib(1,prefix=options.installdir))
     openravepy_reldir = os.path.relpath(openravepy_dir,os.path.abspath(options.installdir))
     sys.path.insert(0,openravepy_dir)
     openravepy = __import__('openravepy')
+    openravepy.examples = __import__('openravepy.examples',fromlist=['openravepy'])
     assert(openravepy.__version__==version)
     args = dict()
     args['openrave_version'] = openravepy.__version__
@@ -792,17 +794,18 @@ if __name__ == "__main__":
             args['install_dll'] += '!insertmacro InstallLib DLL NOTSHARED NOREBOOT_PROTECTED %s\\bin\\%s $INSTDIR\\bin\\%s $INSTDIR\n'%(args['installdir'],dllname,dllname)
             args['uninstall_dll'] += '!insertmacro UninstallLib DLL NOTSHARED NOREBOOT_PROTECTED $INSTDIR\\bin\\%s\n'%(dllname)
     # python dlls
-    for dllname in os.listdir(os.path.join(openravepy_dir,'openravepy')):
+    _soversionpy = ''
+    for dllname in os.listdir(os.path.join(openravepy_dir,'openravepy','_openravepy_'+_soversionpy)):
         if os.path.splitext(dllname)[1] == '.pyd':
-            args['install_python_dll'] += '!insertmacro InstallLib DLL NOTSHARED NOREBOOT_PROTECTED %s\\openravepy\\%s $INSTDIR\\%s\\openravepy\\%s $INSTDIR\n'%(openravepy_dir,dllname,openravepy_reldir,dllname)
-            args['uninstall_dll'] += '!insertmacro UninstallLib DLL NOTSHARED NOREBOOT_PROTECTED $INSTDIR\\%s\\openravepy\\%s\n'%(openravepy_reldir,dllname)
+            args['install_python_dll'] += '!insertmacro InstallLib DLL NOTSHARED NOREBOOT_PROTECTED %s\\openravepy\\_openravepy_%s\\%s $INSTDIR\\%s\\openravepy\\_openravepy_%s\\%s $INSTDIR\n'%(openravepy_dir,_soversionpy,dllname,openravepy_reldir,_soversion,dllname)
+            args['uninstall_dll'] += '!insertmacro UninstallLib DLL NOTSHARED NOREBOOT_PROTECTED $INSTDIR\\%s\\openravepy\\_openravepy_%s\\%s\n'%(openravepy_reldir,_soversionpy,dllname)
     # add the runable examples
     for name in dir(openravepy.examples):
         if not name.startswith('__'):
             try:
                 m=__import__('openravepy.examples.'+name)
                 if type(m) is ModuleType:
-                    path = '$INSTDIR\\%s\\openravepy\\examples\\%s.py'%(openravepy_reldir,name)
+                    path = '$INSTDIR\\%s\\openravepy\\_openravepy_%s\\examples\\%s.py'%(openravepy_reldir,_soversionpy,name)
                     args['openrave_python_shortcuts'] += 'CreateShortCut "$SMPROGRAMS\\$StartMenuFolder\\Python Examples\\%s.lnk" "%s" "" "%s" 0\n'%(name,path,path)
                     args['openrave_python_shortcuts'] += 'CreateShortCut "$SMPROGRAMS\\$StartMenuFolder\\Python Examples\\%s Documentation.lnk" "http://openrave.org/en/main/openravepy/examples.%s.html" "" "C:\WINDOWS\system32\shell32.dll" 979\n'%(name,name)
             except ImportError:
@@ -813,7 +816,7 @@ if __name__ == "__main__":
             try:
                 m=__import__('openravepy.databases.'+name)
                 if type(m) is ModuleType:
-                    path = '$INSTDIR\\%s\\openravepy\\databases\\%s.py'%(openravepy_reldir,name)
+                    path = '$INSTDIR\\%s\\openravepy\\_openravepy_%s\\databases\\%s.py'%(openravepy_reldir,_soversionpy,name)
                     args['openrave_python_shortcuts'] += 'CreateShortCut "$SMPROGRAMS\\$StartMenuFolder\\Databases\\%s.lnk" "%s" "" "%s" 0\n'%(name,path,path)
             except ImportError:
                 pass

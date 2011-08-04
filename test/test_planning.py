@@ -14,6 +14,26 @@
 from common_test_openrave import *
 
 class TestMoving(EnvironmentSetup):
+    def test_ikplanning(self):
+        env = self.env
+        env.Load('data/lab1.env.xml')
+        robot = env.GetRobots()[0]
+        ikmodel = databases.inversekinematics.InverseKinematicsModel(robot, iktype=IkParameterization.Type.Transform6D)
+        if not ikmodel.load():
+            ikmodel.autogenerate()
+
+        with env:
+            Tee = ikmodel.manip.GetEndEffectorTransform()
+            Tee[0:3,3] -= 0.4
+            solutions = ikmodel.manip.FindIKSolutions(Tee,IkFilterOptions.CheckEnvCollisions)
+            assert(len(solutions)>1)
+            basemanip = interfaces.BaseManipulation(robot)
+            trajdata=basemanip.MoveManipulator(goals=solutions,execute=True)
+        env.StartSimulation(0.01,False)
+        robot.WaitForController(0)
+        with env:
+            assert(transdist(Tee,ikmodel.manip.GetEndEffectorTransform()))
+            
     def test_constraintpr2(self):
         env = self.env
         robot = env.ReadRobotXMLFile('robots/pr2-beta-static.zae')
@@ -97,3 +117,50 @@ class TestMoving(EnvironmentSetup):
             assert( not targetcollision or env.CheckCollision(robot) )
             basemanip.MoveManipulator(goal=[0, 0, 1.29023451, 0, -2.32099996, 0, -0.69800004, 0])
         robot.WaitForController(100)
+
+    def test_planwithcollision(self):
+        env=self.env
+        env.Load('data/pr2test1.env.xml')
+        robot=env.GetRobots()[0]
+        with env:
+            defaultvalues = robot.GetDOFValues()
+            manip = robot.SetActiveManipulator('rightarm')
+            basemanip = interfaces.BaseManipulation(robot)
+
+            robot.SetDOFValues([0.187],[robot.GetJoint('l_shoulder_lift_joint').GetDOFIndex()])
+            assert(env.CheckCollision(robot))
+
+            print 'case: environment collision'
+            ikmodel = databases.inversekinematics.InverseKinematicsModel(robot,iktype=IkParameterization.Type.Transform6D)
+            if not ikmodel.load():
+                ikmodel.autogenerate()
+
+            Tdelta = eye(4)
+            Tdelta[0,3] = -0.2
+            Tdelta[2,3] = -0.2
+            Tnew = dot(manip.GetEndEffectorTransform(),Tdelta)
+
+            ret = basemanip.MoveToHandPosition([Tnew],execute=False)
+            assert(ret is not None)
+
+            print 'case: self collision'
+            robot.SetDOFValues(defaultvalues)
+            robot.SetDOFValues([ 1.34046301,  0.94535038,  3.03934583, -1.30743665, 0 , 0 ,  0], robot.GetManipulator('leftarm').GetArmIndices())
+            assert(robot.CheckSelfCollision())
+            ret = basemanip.MoveToHandPosition([Tnew],execute=False)
+            assert(ret is not None)
+
+            manip = robot.SetActiveManipulator('rightarm_torso')
+            ikmodel = databases.inversekinematics.InverseKinematicsModel(robot,iktype=IkParameterization.Type.Transform6D)
+            if not ikmodel.load():
+                ikmodel.autogenerate()
+            try:
+                ret = basemanip.MoveToHandPosition([Tnew],execute=False)
+            except planning_error:
+                ret = None
+            assert(ret==None)
+
+            robot.SetDOFValues([ 1.34046301, -0.52360053,  0.03541482, -2.32130534,  0, 0,  0], robot.GetManipulator('leftarm').GetArmIndices())
+            assert(robot.CheckSelfCollision())
+            ret = basemanip.MoveToHandPosition([Tnew],execute=False)
+            assert(ret is not None)

@@ -50,6 +50,9 @@ class TestKinematics(EnvironmentSetup):
                         body.SetTransformWithDOFValues(body.GetTransform(),dofvaluesnew)
                         assert( transdist(Tallnew,body.GetLinkTransformations()) <= g_epsilon )
                         assert( transdist(dofvaluesnew,body.GetDOFValues()) <= g_epsilon )
+                        # do it again
+                        body.SetDOFValues(dofvaluesnew)
+                        assert( transdist(Tallnew,body.GetLinkTransformations()) <= g_epsilon )
                         for joint in body.GetJoints():
                             assert( transdist(joint.GetValues(), dofvaluesnew[joint.GetDOFIndex():(joint.GetDOFIndex()+joint.GetDOF())]) <= g_epsilon )
                         Tallnew2 = [randtrans() for link in body.GetLinks()]
@@ -88,7 +91,7 @@ class TestKinematics(EnvironmentSetup):
                                 assert( transdist(dot(Jquat,deltavalues)+worldquat,newquat) <= 2*thresh )
                                 raveLogDebug(repr(dofvaluesnew))
                                 raveLogDebug(repr(deltavalues))
-                                print 'angle dist: ',axisangledist(dot(Jangvel,deltavalues)+worldaxisangle,newaxisangle)
+                                print 'angle dist: ',axisangledist(dot(Jangvel,deltavalues)+worldaxisangle,newaxisangle), 2*thresh, armlength
                                 assert( axisangledist(dot(Jangvel,deltavalues)+worldaxisangle,newaxisangle) <= 2*thresh )
 
     def test_bodyvelocities(self):
@@ -189,7 +192,7 @@ class TestKinematics(EnvironmentSetup):
     def test_collada(self):
         print "test that collada import/export works"
         epsilon = 400*g_epsilon # because exporting, expect to lose precision, should fix this
-        for robotfile in g_robotfiles[0:3]:
+        for robotfile in g_robotfiles:
             self.env.Reset()
             robot0=self.env.ReadRobotXMLFile(robotfile)
             self.env.AddRobot(robot0,True)
@@ -256,7 +259,7 @@ class TestKinematics(EnvironmentSetup):
             assert( k.GetLinks()[0].GetGeometries()[0].GetType() == KinBody.Link.GeomProperties.Type.Box )
             assert( k.GetLinks()[0].GetGeometries()[1].GetType() == KinBody.Link.GeomProperties.Type.Box )
             k2 = self.env.CreateKinBody()
-            k2.InitFromTrimesh(TriMesh(*ComputeBoxMesh([0.1,0.2,0.3])),True)
+            k2.InitFromTrimesh(TriMesh(*misc.ComputeBoxMesh([0.1,0.2,0.3])),True)
             k2.SetName('temp')
             self.env.AddKinBody(k2,True)
             assert( transdist(k2.ComputeAABB().extents(),[0.1,0.2,0.3]) <= g_epsilon )
@@ -271,7 +274,7 @@ class TestKinematics(EnvironmentSetup):
                     geom = link.GetGeometries()[0]
                     if geom.IsModifiable():
                         extents = [0.6,0.5,0.1]
-                        geom.SetCollisionMesh(TriMesh(*ComputeBoxMesh(extents)))
+                        geom.SetCollisionMesh(TriMesh(*misc.ComputeBoxMesh(extents)))
                         vmin = numpy.min(geom.GetCollisionMesh().vertices,0)
                         vmax = numpy.max(geom.GetCollisionMesh().vertices,0)
                         assert( transdist(0.5*(vmax-vmin),extents) <= g_epsilon )
@@ -367,7 +370,7 @@ class TestKinematics(EnvironmentSetup):
                     body.SetDOFValues(offsets)
                     assert( transdist(offsets,body.GetDOFValues()) <= g_epsilon )
 
-    def tes_joints(self):
+    def test_joints(self):
         env=self.env
         xml = """
 <kinbody name="universal">
@@ -385,23 +388,21 @@ class TestKinematics(EnvironmentSetup):
   <joint type="%s" name="J0">
     <body>L0</body>
     <body>L1</body>
-    <axis>1 0 0</axis>
-    <axis>0 1 0</axis>
+    <axis1>1 0 0</axis1>
+    <axis2>0 1 0</axis2>
     <anchor>0 0 0.2</anchor>
   </joint>
 </kinbody>
 """
         with env:
-            body = env.ReadKinBodyData(xml%'universal')
-            env.AddKinBody(body)
-            assert(body.GetDOF()==2)
-            assert(len(body.GetJoints())==1)
-            assert(env.GetJoints()[0].GetType()==Joint.Type.Universal)
-        
+#             body = env.ReadKinBodyData(xml%'universal')
+#             env.AddKinBody(body)
+#             assert(body.GetDOF()==2)
+#             assert(len(body.GetJoints())==1)
+#             assert(env.GetJoints()[0].GetType()==Joint.Type.Universal)
             env.Reset()
             body = env.ReadKinBodyData(xml%'hinge2')
             env.AddKinBody(body)
             assert(body.GetDOF()==2)
             assert(len(body.GetJoints())==1)
-            assert(env.GetJoints()[0].GetType()==Joint.Type.Universal)
-
+            assert(body.GetJoints()[0].GetType()==KinBody.Joint.Type.Hinge2)

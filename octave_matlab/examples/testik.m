@@ -53,7 +53,7 @@ orBodySetJointValues(robotid,sscanf(s,'%f'),manips{1}.armjoints);
 
 %% can also do this through the ik param type:
 quat = QuatFromRotationMatrix(Tee(1:3,1:3))
-s = orProblemSendCommand(['IKTest robot robot ikparam  ' sprintf('%d ',0x67000001) sprintf('%f ',[quat(:);Tee(1:3,4)])],probid);
+s = orProblemSendCommand(['IKTest robot robot ikparam  1728053249 ' sprintf('%f ',[quat(:);Tee(1:3,4)])],probid);
 
 %% if ik solver supports translation 3d, can also call its ik using 0x33000003
 %s = orProblemSendCommand(['IKTest robot robot ikparam  ' sprintf('%d ',0x33000003) ' 0.1 0.2 0.3'])

@@ -15,7 +15,7 @@
 
 \~
 - \subpage installation_linux
-- \subpage installation_win
+- \subpage installation_windows
 - \subpage installation_macosx
 
 \en  \section installation_cmake CMake Options
@@ -238,7 +238,7 @@ Although %OpenRAVE is not tied to any particular collision checker, it requires 
  - If not using enable-new-trimesh, disabling asserts (via \c --disable-asserts) is necessary due to some weird bug in normalization bug.
  - For 0.10+. If installing on x86-64 distro, configure ODE with \c --enable-shared.
 
-- <a href="http://www.bulletphysics.com">Bullet Collision</a> (use v2.74 or greater) - Need to install to a system directory so %OpenRAVE can find it using \c pkg-config. If using autotools \c configure, need to remove \c install-sh before running \c autogen.sh. Bullet is detected using \c pkg-config, so \c bullet.pc is needed.
+- <a href="http://www.bulletphysics.com">Bullet Collision</a> - Need to install to a system directory so %OpenRAVE can find it using \c pkg-config. If using autotools \c configure, need to remove \c install-sh before running \c autogen.sh. Bullet is detected using \c pkg-config, so \c bullet.pc is needed.
 
 - <a href="http://www.cs.unc.edu/~geom/SSV/">PQP Collision</a> - source code separate inside \b pqprave plugin.
 
@@ -290,7 +290,7 @@ Octave users:
 
 Matlab users:
 - make sure \c mex is in the system path
-- Compile the *.cpp files inside \c $OPENRAVE_INSTALL/share/openrave-*/matlab and addit to the MATLAB Path.
+- Compile the *.cpp files inside \c $OPENRAVE_INSTALL/share/openrave-x.y/matlab and addit to the MATLAB Path.
 
 \ja \section ilinux_octavematlab Octave/Matlab
 
@@ -380,8 +380,8 @@ source `openrave-config --prefix`/share/openrave/openravebash
 */
 
 /**
-\en
-\page installation_win Building and Installing on Windows
+
+\en \page installation_windows Building and Installing on Windows
 
 <b>NOTE:</b> Only Windows XP has been tested. Windows 7 and others have been reported to work, but might need to modify the executable properties to <b>windows95 compatibility mode</b> after the executable has been built.
 
@@ -437,19 +437,16 @@ Matlab users:
 
 \section iwin_building Building OpenRAVE
 
-Run \c runcmake_win.bat, which will auto-detect your compiler system. This will extract \c
-msvc_files.tgz and create a \c build directory to full the compiled objects. Open the Microsoft
-Visual Studio solution file from \c build\\openrave.sln and select the \b Release or \b
-RelWithDebInfo configuration, and build everything. Once done, build the INSTALL project. This
-should install everything in <tt>C:\\Program Files\\openrave</tt>. The installation directory can be
-changed by manually calling \c cmake with <tt>-DCMAKE_INSTALL_PREFIX="my/new/install/dir"</tt>.
+Run the \c CMake GUI and specify a build directory somewhere out of the current source directory. Click
+on the Configure and Generate buttons. For Visual Studio users, this will generate a
+<b>OpenRAVE.sln</b> file. Open the Microsoft Visual Studio solution file and select the \b
+RelWithDebInfo or \b Release configuration, and build everything. Once done, build the INSTALL
+project. This should install everything in <tt>C:\\Program Files\\openrave</tt>. The installation
+directory can be changed by configuring \c CMake's CMAKE_INSTALL_PREFIX variable to a new path. If using the command-line, can specify the install directory with <tt>-DCMAKE_INSTALL_PREFIX="my/new/install/dir"</tt>.
 
 Before running anything, have to modify the following environment variables:
 - \c PYTHONPATH - add <tt>"C:\\Program Files\\openrave\\share\\openrave"</tt>
-- \c Path - add <tt>"C:\\Program Files\\openrave\\bin"</tt> to the front. Be very careful when putting it in the back since several user have had problems with different Qt libraries conflicting!
-
-Currently <b>bullet physics</b> is not setup to compile with %OpenRAVE, so don't try to get it
-working. %OpenRAVE will run just fine without it.
+- \c Path - add <tt>"C:\\Program Files\\openrave\\bin"</tt> to the front. Furthermore, if Qt and Boost are installed in separate directories, have to add the location of their DLLs to Path (for example \c C:\\Qt\\4.7.1\\bin and <tt>C:\\Program Files\\boost\\boost_1_44\\lib</tt>). Be very careful when putting it in the back since several user have had problems with different Qt libraries conflicting!
 
 \section iwin_updating Updating Subversion
 
@@ -459,8 +456,7 @@ an update to libraries or programs happens (for example Octave/MATLAB/python was
 installed/uninstalled), it is recommended to clear the cmake cache by first removing
 \c build\\CMakeCache.txt before running \c runcmake_win.bat.
 
-\ja
-\page installation_win Windowsユーザーのためのインストール方法
+\ja \page installation_windows Windowsユーザーのためのインストール方法
 
 
 <b>注意：</b> 現在はWindows XPのみサポートされていますが、Windows 7でも動けるはずです。
@@ -537,8 +533,7 @@ It is also necessary to install these libraries:
 
 After this, follow the instructions on \ref installation_linux.
 
-\ja
-\page installation_macosx Mac OSXユーザーのためのインストール方法
+\ja \page installation_macosx Mac OSXユーザーのためのインストール方法
 
 はじめに以下のコマンドを実行してください．
 

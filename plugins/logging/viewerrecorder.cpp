@@ -307,7 +307,7 @@ protected:
                 if(( _listAddFrames.front()->_timestamp-_starttime > _frametime) && !!_frameLastAdded ) {
                     frame = _frameLastAdded;
                     numstores = (_listAddFrames.front()->_timestamp-_starttime-1)/_frametime;
-                    RAVELOG_DEBUG(str(boost::format("previous frame repeated %d times\n")%numstores));
+                    RAVELOG_VERBOSE(str(boost::format("previous frame repeated %d times\n")%numstores));
                 }
                 else {
                     uint64_t lastoffset = _listAddFrames.back()->_timestamp - _starttime;
@@ -333,7 +333,7 @@ protected:
                         // the frame is before the next mark, so erase it
                         _listAddFrames.erase(itbest);
                     }
-                    RAVELOG_DEBUG(str(boost::format("frame size: %d -> %d\n")%prevsize%_listAddFrames.size()));
+                    RAVELOG_VERBOSE(str(boost::format("frame size: %d -> %d\n")%prevsize%_listAddFrames.size()));
                     numstores = 1;
                 }
             }

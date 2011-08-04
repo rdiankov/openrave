@@ -8,11 +8,11 @@ Creating OpenRAVE plugins allows others to use your work by just instantiating t
 
 The simplest way to create a plugin is through the :ref:`tool-openrave-createplugin` program:
 
-For example, the following command will create a plugin that offers **MyNewProblem** :class:`.Problem`:
+For example, the following command will create a plugin that offers **MyNewModule** :class:`.Module`:
 
 .. code-block:: bash
 
-  openrave-createplugin.py myplugin --problem MyNewProblem
+  openrave-createplugin.py myplugin --module MyNewModule
 
 This creates a **myplugin** directory where all the files are written in. In order to compile and test it do:
 

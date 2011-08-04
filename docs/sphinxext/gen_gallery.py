@@ -14,6 +14,7 @@ template = """\
 
 import os, glob, re, sys, warnings
 import openravepy
+from openravepy.misc import mkdir_recursive
 from types import ModuleType
 import Image
 
@@ -29,7 +30,7 @@ def gen_gallery_internal(app, doctree,parentname,includedocstring,maxwidth,maxhe
     imageext = 'jpg'
     link_template = """<td><p><b>%s</b></p><a href="%s"><img src="%s" border="0" class="thumbimage" alt="%s"/></a>%s</td>\n"""
 
-    openravepy.mkdir_recursive(os.path.join(imagewritedir,parentname))
+    mkdir_recursive(os.path.join(imagewritedir,parentname))
     parentmodule = __import__('openravepy.'+parentname,fromlist=['openravepy'])
     modulenames = []
     for name in dir(parentmodule):

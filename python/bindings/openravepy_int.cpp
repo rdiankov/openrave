@@ -3795,10 +3795,12 @@ public:
         CHECK_POINTER(pbody); _penv->AddKinBody(pbody->GetBody(),bAnonymous);
     }
     void AddRobot(PyRobotBasePtr robot) {
-        CHECK_POINTER(robot); _penv->AddRobot(robot->GetRobot());
+        CHECK_POINTER(robot);
+        _penv->AddRobot(robot->GetRobot());
     }
     void AddRobot(PyRobotBasePtr robot, bool bAnonymous) {
-        CHECK_POINTER(robot); _penv->AddRobot(robot->GetRobot(),bAnonymous);
+        CHECK_POINTER(robot);
+        _penv->AddRobot(robot->GetRobot(),bAnonymous);
     }
     void AddSensor(PySensorBasePtr sensor) {
         CHECK_POINTER(sensor); _penv->AddSensor(sensor->GetSensor());

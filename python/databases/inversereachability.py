@@ -50,26 +50,25 @@ __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Apache License, Version 2.0'
 
-import time,bisect,itertools
+import time,bisect
 
-from openravepy import __build_doc__
-if not __build_doc__:
-    from openravepy import *
-    from openravepy.databases import DatabaseGenerator
+if not __openravepy_build_doc__:
+    from ..openravepy_int import *
+    from ..openravepy_ext import *
     from numpy import *
 else:
-    from openravepy.databases import DatabaseGenerator
     from numpy import array
 
-from openravepy import pyANN
-from openravepy.databases import kinematicreachability, linkstatistics, inversekinematics
+from . import DatabaseGenerator
+from .. import pyANN
+import kinematicreachability, linkstatistics, inversekinematics
 import numpy
+import os.path
 from optparse import OptionParser
 try:
     from scipy.optimize import leastsq
 except ImportError:
     pass
-#from IPython.Debugger import Tracer; debug_here = Tracer()
 
 class InverseReachabilityModel(DatabaseGenerator):
     """Inverts the reachability and computes probability distributions of the robot's base given an end effector position"""
@@ -728,6 +727,3 @@ def run(*args,**kwargs):
     """Command-line execution of the example. ``args`` specifies a list of the arguments to the script.
     """
     InverseReachabilityModel.RunFromParser(*args,**kwargs)
-            
-if __name__ == "__main__":
-    run()
