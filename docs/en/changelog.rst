@@ -38,6 +38,13 @@ Python
 
 * Started a new :mod:`openravepy.misc` library that is not loaded by default. The OpenRAVEGlobalArguments and MultiManipIKSolver helper classes are now part of it.
 
+Octave/Matlab
+-------------
+
+* fixed the grasping demo
+
+* added orRobotSensorConfigure.m to power and sensors and display their data
+
 IKFast
 ------
 
@@ -63,6 +70,8 @@ Misc
 * fixed bug grasperplanner that exits at coarse step without going to fine step phase
 
 * fixed bug with non-adjacent link computation
+
+* fixed bug with not checking joint limits when resetting robot pose in KinBody::_ComputeInternalInformation
 
 * Octave stripping symbols
 

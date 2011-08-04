@@ -99,10 +99,11 @@ if __name__ == "__main__":
                     armindices = ','.join(str(i) for i in m.GetArmIndices())
                     gripperindices = ','.join(str(i) for i in m.GetGripperIndices())
                     rows.append([m.GetName(),m.GetBase().GetName(),m.GetEndEffector().GetName(),str(len(m.GetArmIndices())),str(len(m.GetGripperIndices())),armindices,gripperindices])
+                rows.append(rows[0])
                 colwidths = [max([len(row[i]) for row in rows]) for i in range(len(rows[0]))]
                 for i,row in enumerate(rows):
                     print ' '.join([row[j].ljust(colwidths[j]) for j in range(len(colwidths))])
-                    if i == 0:
+                    if i == 0 or i == len(rows)-2:
                         print '-'*(sum(colwidths)+len(colwidths)-1)
             elif options.doinfo.startswith('sensor'):
                 robot=env.ReadRobotXMLFile(args[0],atts={'skipgeometry':'1'})
@@ -110,10 +111,11 @@ if __name__ == "__main__":
                 rows = [['name','type','link']]
                 for s in robot.GetAttachedSensors():
                     rows.append([s.GetName(),str(s.GetSensor()),s.GetAttachingLink().GetName()])
+                rows.append(rows[0])
                 colwidths = [max([len(row[i]) for row in rows]) for i in range(len(rows[0]))]
                 for i,row in enumerate(rows):
                     print ' '.join([row[j].ljust(colwidths[j]) for j in range(len(colwidths))])
-                    if i == 0:
+                    if i == 0 or i == len(rows)-2:
                         print '-'*(sum(colwidths)+len(colwidths)-1)
             elif options.doinfo.startswith('link'):
                 env.Load(args[0],{'skipgeometry':'1'})
@@ -121,21 +123,27 @@ if __name__ == "__main__":
                 rows = [['name','index','parents']]
                 for link in body.GetLinks():
                     rows.append([link.GetName(),str(link.GetIndex()),','.join(l.GetName() for l in link.GetParentLinks())])
+                rows.append(rows[0])
                 colwidths = [max([len(row[i]) for row in rows]) for i in range(len(rows[0]))]
                 for i,row in enumerate(rows):
                     print ' '.join([row[j].ljust(colwidths[j]) for j in range(len(colwidths))])
-                    if i == 0:
+                    if i == 0 or i == len(rows)-2:
                         print '-'*(sum(colwidths)+len(colwidths)-1)
             elif options.doinfo.startswith('joint'):
                 env.Load(args[0],{'skipgeometry':'1'})
                 body=env.GetBodies()[0]
-                rows = [['name','joint_index','dof_index','parent_link','child_link']]
-                for joint in body.GetJoints():
-                    rows.append([joint.GetName(),str(joint.GetJointIndex()),str(joint.GetDOFIndex()),joint.GetHierarchyParentLink().GetName(),joint.GetHierarchyChildLink().GetName()])
+                rows = [['name','joint_index','dof_index','parent_link','child_link','mimic']]
+                for joint in body.GetJoints()+body.GetPassiveJoints():
+                    mimicnames=[]
+                    for idof in range(joint.GetDOF()):
+                        if joint.IsMimic(idof):
+                            mimicnames += [body.GetJointFromDOFIndex(idof2).GetName() for idof2 in joint.GetMimicDOFIndices(idof)]
+                    rows.append([joint.GetName(),str(joint.GetJointIndex()),str(joint.GetDOFIndex()),joint.GetHierarchyParentLink().GetName(),joint.GetHierarchyChildLink().GetName(),','.join(mimicnames)])
+                rows.append(rows[0])
                 colwidths = [max([len(row[i]) for row in rows]) for i in range(len(rows[0]))]
                 for i,row in enumerate(rows):
                     print ' '.join([row[j].ljust(colwidths[j]) for j in range(len(colwidths))])
-                    if i == 0:
+                    if i == 0 or i == len(rows)-2:
                         print '-'*(sum(colwidths)+len(colwidths)-1)
             else:
                 sys.exit(1)

@@ -1,12 +1,11 @@
 % out = orRobotSensorConfigure(robotid, sensorindex, sensorcmd)
 %
 % sends a command to a sensor attached to the robot
-% OpenRAVE sends directly to SensorBase::SendCmd,
-% SensorBase::SupportsCmd is used to check for command support.
+% OpenRAVE sends directly to SensorBase::Configure,
 %
 % robotid - unique id of the robot
 % sensorindex - zero-based index of sensor into robot's attached sensor array
-% out - the output of the command
+% sensorcmd - One of the SensorBase::CC_X. specify only the 'X' part of the enum like PowerOn
 function sout = orRobotSensorConfigure(robotid, sensorindex, sensorcmd)
 if( ~exist('args','var') )
     args = [];

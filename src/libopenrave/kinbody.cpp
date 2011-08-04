@@ -3918,7 +3918,7 @@ void KinBody::_ComputeInternalInformation()
         GetLinkTransformations(vprevtrans);
         vector<dReal> vcurrentvalues;
         GetDOFValues(vcurrentvalues);
-        SetDOFValues(vcurrentvalues);
+        SetDOFValues(vcurrentvalues,true);
         GetLinkTransformations(vnewtrans);
         for(size_t i = 0; i < vprevtrans.size(); ++i) {
             if( TransformDistanceFast(vprevtrans[i],vnewtrans[i]) > 1e-5 ) {
