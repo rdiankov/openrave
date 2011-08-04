@@ -286,8 +286,9 @@ def test_robot_ikfast():
     
 if __name__ == "__main__":
     import test_ikfast
-    test_ikfast.options = parseoptions()
-    
+    options = parseoptions()
+    test_ikfast.options = options
+
     format = logging.Formatter('%(name)s: %(levelname)s %(message)s')
     handler = logging.StreamHandler(sys.stderr)
     handler.setFormatter(format)
