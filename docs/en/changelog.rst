@@ -26,6 +26,8 @@ Planning
 
 * MoveToHandPosition, MoveManipulator, MoveActiveJoints, and Manipulator::CheckIndependentCollision now only check the **active** links if the CO_ActiveDOFs option is set on the collision checker.
 
+* added multiple goals to MoveManipulator and MoveActiveJoints commands
+
 Release
 -------
 
@@ -44,6 +46,8 @@ Octave/Matlab
 * fixed the grasping demo
 
 * added orRobotSensorConfigure.m to power and sensors and display their data
+
+* Octave stripping symbols
 
 IKFast
 ------
@@ -67,15 +71,15 @@ Misc
 
 * fixed bug in ODE physics when contacts overflow and added check for 0 quaternions.
 
+* ode physics is more stable, can now modify erp and cfm parameters through xml
+
 * fixed bug grasperplanner that exits at coarse step without going to fine step phase
 
 * fixed bug with non-adjacent link computation
 
 * fixed bug with not checking joint limits when resetting robot pose in KinBody::_ComputeInternalInformation
 
-* Octave stripping symbols
-
-* added multiple goals to MoveManipulator and MoveActiveJoints
+* fixed bug in BaseLaser <resolution> tag
 
 Version 0.4.1
 =============

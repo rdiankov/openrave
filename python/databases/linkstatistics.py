@@ -80,6 +80,7 @@ class LinkStatisticsModel(DatabaseGenerator):
             params = DatabaseGenerator.load(self)
             if params is None:
                 return False
+
             self.linkstats,self.jointvolumes,self.affinevolumes,self.samplingdelta = params
             return self.has()
         except e:
@@ -149,6 +150,7 @@ class LinkStatisticsModel(DatabaseGenerator):
     def generate(self,samplingdelta=None,**kwargs):
         if not self.cdmodel.load():
             self.cdmodel.autogenerate()
+        #self.cdmodel.setrobot()
         self.samplingdelta=samplingdelta if samplingdelta is not None else 0.02
         with self.robot:
             self.robot.SetTransform(eye(4))
