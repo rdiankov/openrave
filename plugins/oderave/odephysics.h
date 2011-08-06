@@ -79,7 +79,7 @@ public:
                 return PE_Ignore;
             }
 
-            if(( name != "friction") &&( name != "selfcollision") &&( name != "gravity") &&( name != "contact")  && name != "erp" && name != "cfm" ) {
+            if( find(GetTags().begin(),GetTags().end(),name) == GetTags().end() ) {
                 return PE_Pass;
             }
             _ss.str("");
@@ -108,10 +108,10 @@ public:
                     _physics->SetGravity(v);
                 }
             }
-            else if( name == "erp" ) {
+            else if( name == "elastic_reduction_parameter" || name == "erp" ) {
                 _ss >> _physics->_globalerp;
             }
-            else if( name == "cfm" ) {
+            else if( name == "constraint_force_mixing" || name == "cfm" ) {
                 _ss >> _physics->_globalcfm;
             }
             else if( name == "contact" ) {         // check out http://www.ode.org/ode-latest-userguide.html#sec_7_3_7
@@ -139,6 +139,11 @@ public:
             }
         }
 
+        static const boost::array<string, 8>& GetTags() {
+            static const boost::array<string, 8> tags = {{"friction","selfcollision", "gravity", "contact", "erp", "cfm", "elastic_reduction_parameter", "constraint_force_mixing" }};
+            return tags;
+        }
+
 protected:
         BaseXMLReaderPtr _pcurreader;
         boost::shared_ptr<ODEPhysicsEngine> _physics;
@@ -152,7 +157,23 @@ public:
     }
 
     ODEPhysicsEngine(OpenRAVE::EnvironmentBasePtr penv) : OpenRAVE::PhysicsEngineBase(penv), _odespace(new ODESpace(penv, GetPhysicsInfo, true)) {
-        __description = ":Interface Author: Rosen Diankov\n\nODE physics engine";
+        stringstream ss;
+        ss << ":Interface Author: Rosen Diankov\n\nODE physics engine\n\n\
+It is possible to set ODE physics engine and its properties inside the <environment> XML tags by typing:\n\n\
+.. code-block:: xml\n\n\
+  <physicsengine type=\"ode\">\n\
+    <odeproperties>\n\
+      <friction>0.5</friction>\n\
+      <gravity>0 0 -9.8</gravity>\n\
+      <selfcollision>1</selfcollision>\n\
+    </odeproperties>\n\
+  </physicsengine>\n\n\
+The possible properties that can be set are: ";
+        FOREACHC(it, PhysicsPropertiesXMLReader::GetTags()) {
+            ss << "**" << *it << "**, ";
+        }
+        ss << "\n\n";
+        __description = ss.str();
         _globalfriction = 0.4;
         _globalerp = 0.01;
         _globalcfm = 1e-5;

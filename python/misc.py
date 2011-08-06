@@ -250,7 +250,7 @@ class MultiManipIKSolver:
         alllinknames = set([l for l in self.robot.GetLinks()])
         self.enablelinknames = [alllinknames.difference(indeplinksets[i]).union(indeplinknames) for i in range(len(self.manips))]
     
-    def findMultiIKSolution(self,Tgrasps,filteroptions=openravepy_int.IkFilterOptions.CheckEnvCollisions):
+    def findMultiIKSolution(self,Tgrasps,filteroptions=openravepy_int.IkFilterOptions.CheckEnvCollisions,dooptimize=False):
         """Return one set collision-free ik solutions for all manipulators.
 
         Method always checks self-collisions.
@@ -280,13 +280,27 @@ class MultiManipIKSolver:
                         
             finally:
                 del statesavers # destroy them
-            
-            for sols in sequence_cross_product(*alljointvalues):
-                for sol,manip in izip(sols,self.manips):
-                    self.robot.SetDOFValues(sol,manip.GetArmIndices()) 
-                if not self.robot.CheckSelfCollision():
-                    if not (filteroptions&openravepy_int.IkFilterOptions.CheckEnvCollisions) or not self.robot.GetEnv().CheckCollision(self.robot):
-                        return sols
+
+            if dooptimize:
+                curvalues = [self.robot.GetDOFValues(manip.GetArmIndices()) for main in self.manips]
+                distancesolutions = []
+                for sols in sequence_cross_product(*alljointvalues):
+                    dist = numpy.sum([numpy.sum(numpy.abs(sol0-sol1)) for sol0,sol1 in izip(sols,curvalues)])
+                    distancesolutions.append([dist, sols])
+                distancesolutions.sort(lambda x,y: int(x[0]-y[0]))
+                for dist,sols in distancesolutions:
+                    for sol,manip in izip(sols,self.manips):
+                        self.robot.SetDOFValues(sol,manip.GetArmIndices()) 
+                    if not self.robot.CheckSelfCollision():
+                        if not (filteroptions&openravepy_int.IkFilterOptions.CheckEnvCollisions) or not self.robot.GetEnv().CheckCollision(self.robot):
+                            return sols
+            else:
+                for sols in sequence_cross_product(*alljointvalues):
+                    for sol,manip in izip(sols,self.manips):
+                        self.robot.SetDOFValues(sol,manip.GetArmIndices()) 
+                    if not self.robot.CheckSelfCollision():
+                        if not (filteroptions&openravepy_int.IkFilterOptions.CheckEnvCollisions) or not self.robot.GetEnv().CheckCollision(self.robot):
+                            return sols
             
             return None
 

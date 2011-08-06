@@ -204,7 +204,7 @@ from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2011 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Lesser GPL, Version 3'
-__version__ = '43'
+__version__ = '44'
 
 import sys, copy, time, math, datetime
 import __builtin__
@@ -2282,24 +2282,39 @@ class IKFastSolver(AutoReloader):
         """Reduces a set of equations in 5 unknowns to a set of equations with 3 unknowns by solving for one side with respect to another.
         The input is usually the output of buildRaghavanRothEquations.
         """
-        reducedeqs = []
-        tree = []
         usedvars = [polyeqs[0][0].symbols, polyeqs[0][1].symbols]
+        reducedelayed = []
         for j in range(2):
             if len(usedvars[j]) <= 4:
                 leftsideeqs = [polyeq[j] for polyeq in polyeqs if polyeq[j].degree > 0]
                 rightsideeqs = [polyeq[1-j] for polyeq in polyeqs if polyeq[j].degree > 0]
                 if all([eq.degree <= 2 for eq in leftsideeqs]):
                     try:
-                        reducedeqs2 = self.reduceBothSidesSymbolically(leftsideeqs,rightsideeqs)
-                        if len(reducedeqs2) == 0:
-                            log.info('forcing matrix inverse (might take some time)')
-                            reducedeqs2,tree = self.reduceBothSidesInverseMatrix(leftsideeqs,rightsideeqs)
-                        if len(reducedeqs2) > 0:
-                            # success, add all the reduced equations
-                            reducedeqs += [[Poly(eq[0],*usedvars[j]),Poly(eq[1],*usedvars[1-j])] for eq in reducedeqs2] + [[Poly(S.Zero,*polyeq[j].symbols),polyeq[1-j]-polyeq[j].as_basic()] for polyeq in polyeqs if polyeq[j].degree == 0]
+                        numsymbolcoeffs, _computereducedequations = self.reduceBothSidesSymbolicallyDelayed(leftsideeqs,rightsideeqs)
+                        reducedelayed.append([j,leftsideeqs,rightsideeqs,__builtin__.sum(numsymbolcoeffs), _computereducedequations])
                     except self.CannotSolveError:
                         continue
+        
+        # sort with respect to least number of symbols
+        reducedelayed.sort(lambda x,y: x[3]-y[3])
+
+        reducedeqs = []
+        tree = []
+        for j,leftsideeqs,rightsideeqs,numsymbolcoeffs, _computereducedequations in reducedelayed:
+            try:
+                reducedeqs2 = _computereducedequations()
+                if len(reducedeqs2) == 0:
+                    log.info('forcing matrix inverse (might take some time)')
+                    reducedeqs2,tree = self.reduceBothSidesInverseMatrix(leftsideeqs,rightsideeqs)
+                if len(reducedeqs2) > 0:
+                    # success, add all the reduced equations
+                    reducedeqs += [[Poly(eq[0],*usedvars[j]),Poly(eq[1],*usedvars[1-j])] for eq in reducedeqs2] + [[Poly(S.Zero,*polyeq[j].symbols),polyeq[1-j]-polyeq[j].as_basic()] for polyeq in polyeqs if polyeq[j].degree == 0]
+                    if len(reducedeqs) > 0:
+                        break;
+            except self.CannotSolveError,e:
+                print e
+                continue
+
         if len(reducedeqs) > 0:
             # check if any substitutions are needed
 #             for eq in reducedeqs:
@@ -2451,7 +2466,11 @@ class IKFastSolver(AutoReloader):
 #                 print 'ignoring num symbols: ',numsymbols
 #                 continue
 
-    def reduceBothSidesSymbolically(self,leftsideeqs,rightsideeqs,maxsymbols=10,usesymbols=True):
+    def reduceBothSidesSymbolically(self,*args,**kwargs):
+        numsymbolcoeffs, _computereducedequations = self.reduceBothSidesSymbolicallyDelayed(*args,**kwargs)
+        return _computereducedequations()
+
+    def reduceBothSidesSymbolicallyDelayed(self,leftsideeqs,rightsideeqs,maxsymbols=10,usesymbols=True):
         """the left and right side of the equations need to have different variables
         """
         assert(len(leftsideeqs)==len(rightsideeqs))
@@ -2536,66 +2555,70 @@ class IKFastSolver(AutoReloader):
                 newleft = newleft + c*polyvar
             numsymbolcoeffs.append(numsymbols)
             newleftsideeqs.append(newleft)
-        reducedeqs = []
-        # order the equations based on the number of terms
-        newleftsideeqs.sort(lambda x,y: len(x.monoms) - len(y.monoms))
-        newunknowns = newleftsideeqs[0].symbols
-        log.info('solving for all pairwise variables in %s, number of symbol coeffs are %s',unknownvars,__builtin__.sum(numsymbolcoeffs))
-        systemcoeffs = []
-        for eq in newleftsideeqs:
-            coeffs = []
-            for i,var in enumerate(newunknowns):
-                monom = [0]*len(newunknowns)
-                monom[i] = 1
-                coeffs.append(eq.coeff(*monom))
-            monom = [0]*len(newunknowns)
-            coeffs.append(-eq.coeff(*monom))
-            systemcoeffs.append(coeffs)
 
-        detvars = [s for s,v in localsymbols] + self.pvars
-        for eqindices in combinations(range(len(newleftsideeqs)),len(newunknowns)):
-            # very quick rejection
-            numsymbols = __builtin__.sum([numsymbolcoeffs[i] for i in eqindices])
-            if numsymbols > maxsymbols:
-                continue
-            M = Matrix([systemcoeffs[i] for i in eqindices])
-            det = self.det_bareis(M[:,:-1], *detvars)
-            if det == S.Zero:
-                continue
-            try:
-                eqused = [newleftsideeqs[i] for i in eqindices]
-                solution=solve(eqused,newunknowns)
-            except IndexError:
-                # not enough equations?
-                continue
-            
-            if solution is not None and all([self.isValidSolution(value.subs(localsymbols)) for key,value in solution.iteritems()]):
-                # substitute 
-                solsubs = []
-                allvalid = True
-                for key,value in solution.iteritems():
-                    valuesub = value.subs(localsymbols)
-                    solsubs.append((key,valuesub))
-                    reducedeqs.append([key.subs(localsymbols),valuesub])
-                othereqindices = set(range(len(newleftsideeqs))).difference(set(eqindices))
-                for i in othereqindices:
-                    reducedeqs.append([S.Zero,(newleftsideeqs[i].subs(solsubs).subs(localsymbols)).as_basic().expand()])
-                break
-        # remove the dividesymbols from reducedeqs
-        for sym,ivalue in dividesymbols:
-            value=1/ivalue
-            for i in range(len(reducedeqs)):
-                eq = reducedeqs[i][1]
-                if eq.has_any_symbols(sym):
-                    neweq = S.Zero
-                    peq = Poly(eq,sym)
-                    for c,m in peq.iter_terms():
-                        neweq += c*value**(peq.degree - m[0])
-                    reducedeqs[i][1] = neweq.expand()
-                    reducedeqs[i][0] = (reducedeqs[i][0]*value**peq.degree).expand()
-        if len(reducedeqs) > 0:
-            log.info('finished with %d equations',len(reducedeqs))
-        return reducedeqs
+        def _computereducedequations():
+            reducedeqs = []
+            # order the equations based on the number of terms
+            newleftsideeqs.sort(lambda x,y: len(x.monoms) - len(y.monoms))
+            newunknowns = newleftsideeqs[0].symbols
+            log.info('solving for all pairwise variables in %s, number of symbol coeffs are %s',unknownvars,__builtin__.sum(numsymbolcoeffs))
+            systemcoeffs = []
+            for eq in newleftsideeqs:
+                coeffs = []
+                for i,var in enumerate(newunknowns):
+                    monom = [0]*len(newunknowns)
+                    monom[i] = 1
+                    coeffs.append(eq.coeff(*monom))
+                monom = [0]*len(newunknowns)
+                coeffs.append(-eq.coeff(*monom))
+                systemcoeffs.append(coeffs)
+
+            detvars = [s for s,v in localsymbols] + self.pvars
+            for eqindices in combinations(range(len(newleftsideeqs)),len(newunknowns)):
+                # very quick rejection
+                numsymbols = __builtin__.sum([numsymbolcoeffs[i] for i in eqindices])
+                if numsymbols > maxsymbols:
+                    continue
+                M = Matrix([systemcoeffs[i] for i in eqindices])
+                det = self.det_bareis(M[:,:-1], *detvars)
+                if det == S.Zero:
+                    continue
+                try:
+                    eqused = [newleftsideeqs[i] for i in eqindices]
+                    solution=solve(eqused,newunknowns)
+                except IndexError:
+                    # not enough equations?
+                    continue
+
+                if solution is not None and all([self.isValidSolution(value.subs(localsymbols)) for key,value in solution.iteritems()]):
+                    # substitute 
+                    solsubs = []
+                    allvalid = True
+                    for key,value in solution.iteritems():
+                        valuesub = value.subs(localsymbols)
+                        solsubs.append((key,valuesub))
+                        reducedeqs.append([key.subs(localsymbols),valuesub])
+                    othereqindices = set(range(len(newleftsideeqs))).difference(set(eqindices))
+                    for i in othereqindices:
+                        reducedeqs.append([S.Zero,(newleftsideeqs[i].subs(solsubs).subs(localsymbols)).as_basic().expand()])
+                    break
+            # remove the dividesymbols from reducedeqs
+            for sym,ivalue in dividesymbols:
+                value=1/ivalue
+                for i in range(len(reducedeqs)):
+                    eq = reducedeqs[i][1]
+                    if eq.has_any_symbols(sym):
+                        neweq = S.Zero
+                        peq = Poly(eq,sym)
+                        for c,m in peq.iter_terms():
+                            neweq += c*value**(peq.degree - m[0])
+                        reducedeqs[i][1] = neweq.expand()
+                        reducedeqs[i][0] = (reducedeqs[i][0]*value**peq.degree).expand()
+            if len(reducedeqs) > 0:
+                log.info('finished with %d equations',len(reducedeqs))
+            return reducedeqs
+        
+        return numsymbolcoeffs, _computereducedequations
 
     def solveManochaCanny(self,rawpolyeqs,solvejointvars,endbranchtree):
         """Solves the IK equations using eigenvalues/eigenvectors of a 12x12 quadratic eigenvalue problem. Method explained in
@@ -2622,7 +2645,7 @@ class IKFastSolver(AutoReloader):
 
         # substitute with dummy=tan(half angle)
         symbols = RightEquations[0].symbols
-        symbolsubs = [(symbols[i].subs(self.invsubs),symbols[i]) for i in range(6)]
+        symbolsubs = [(symbols[i].subs(self.invsubs),symbols[i]) for i in range(len(symbols))]
         log.info('solving simultaneously for symbols: %s',symbols)
 
         dummys = []
@@ -2687,7 +2710,7 @@ class IKFastSolver(AutoReloader):
             raise self.CannotSolveError('Kohli/Osvatic method requires 3 unknown variables')
             
         # choose which leftvar can determine the singularity of the following equations!
-        allowedindices = [i for i in range(0,6,2) if 8 == __builtin__.sum([int(peq[0].has_any_symbols(symbols[i],symbols[i+1])) for peq in rawpolyeqs])]
+        allowedindices = [i for i in range(0,len(symbols),2) if 8 == __builtin__.sum([int(peq[0].has_any_symbols(symbols[i],symbols[i+1])) for peq in rawpolyeqs])]
         if len(allowedindices) == 0:
             raise self.CannotSolveError('need exactly 8 equations of one variable')
 
@@ -2907,7 +2930,7 @@ class IKFastSolver(AutoReloader):
                     log.info(e)
                 
             try:
-                # try to solve first two variables pairwise
+                log.info('try to solve first two variables pairwise')
                 #solution = self.solvePairVariables(AllEquations,usedvars[0],usedvars[1],self.freejointvars,maxcomplexity=50)
                 jointtrees=[]
                 raweqns=[eq for eq in AllEquations if not eq.has_any_symbols(tvar)]
@@ -3887,11 +3910,15 @@ class IKFastSolver(AutoReloader):
                 try:
                     Mall = None
                     for ileftvar in range(2):
+                        # TODO, sometimes this works and sometimes this doesn't
                         try:
                             leftvar=polyeqs[0].symbols[ileftvar]
                             Mall, allmonoms = self.solveDialytically(newreducedeqs,ileftvar,returnmatrix=True)
+                            if Mall is not None:
+                                break
                         except self.CannotSolveError, e:
                             log.debug(e)
+                        
                     if Mall is None:
                         continue
                     

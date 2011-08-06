@@ -104,14 +104,16 @@ class ConvexDecompositionModel(DatabaseGenerator):
             self.linkgeometry,self.convexparams = params
             if not self.has():
                 return False
-            with self.env:
-                for link,linkcd in izip(self.robot.GetLinks(),self.linkgeometry):
-                    for ig,hulls in linkcd:
-                        if link.GetGeometries()[ig].IsModifiable():
-                            link.GetGeometries()[ig].SetCollisionMesh(self.generateTrimeshFromHulls(hulls))
             return True
         except e:
             return False
+
+    def setrobot(self):
+        with self.env:
+            for link,linkcd in izip(self.robot.GetLinks(),self.linkgeometry):
+                for ig,hulls in linkcd:
+                    if link.GetGeometries()[ig].IsModifiable():
+                        link.GetGeometries()[ig].SetCollisionMesh(self.generateTrimeshFromHulls(hulls))
 
     def save(self):
         DatabaseGenerator.save(self,(self.linkgeometry,self.convexparams))
