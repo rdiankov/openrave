@@ -54,7 +54,7 @@ if __name__ == "__main__":
         destdir = '../plugins/ikfastsolvers'
         updateik('robots/puma.robot.xml',None,IkParameterization.Type.Transform6D,os.path.join(destdir,'ik_puma.cpp'))
         updateik('robots/barrettwam.robot.xml',None,IkParameterization.Type.Transform6D,os.path.join(destdir,'ik_barrettwam.cpp'))
-        updateik('robots/pa10schunk.robot.xml',None,IkParameterization.Type.Transform6D,os.path.join(destdir,'ik_pa10.cpp'))
+        updateik('robots/pa10schunk.robot.xml','arm',IkParameterization.Type.Transform6D,os.path.join(destdir,'ik_pa10.cpp'))
         updateik('robots/pr2-beta-static.zae','head',IkParameterization.Type.Lookat3D,os.path.join(destdir,'ik_pr2_head.cpp'))
         updateik('robots/pr2-beta-static.zae','head_torso',IkParameterization.Type.Lookat3D,os.path.join(destdir,'ik_pr2_head_torso.cpp'))
         updateik('robots/pr2-beta-static.zae','leftarm',IkParameterization.Type.Transform6D,os.path.join(destdir,'ik_pr2_leftarm.cpp'))
