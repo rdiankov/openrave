@@ -66,6 +66,8 @@ Grasping
 
 * grasping database now uses the producer, consumer, gatherer model, removed updateenv and disableallbodies from the generate method
 
+* implemented the unfinished :meth:`database.grasping.GraspingModel.computeSphereApproachRays`
+
 Misc
 ----
 
@@ -80,6 +82,10 @@ Misc
 * fixed bug with not checking joint limits when resetting robot pose in KinBody::_ComputeInternalInformation
 
 * fixed bug in BaseLaser <resolution> tag
+
+* Logging module: added exporting geometric primitives of :ref:`savescene <module-logging-savescene>`_ 
+
+* fixed ode bug with ray collisions now returning closest point
 
 Version 0.4.1
 =============

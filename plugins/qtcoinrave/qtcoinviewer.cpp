@@ -2724,7 +2724,7 @@ void QtCoinViewer::_UpdateCameraTransform()
 void QtCoinViewer::LoadEnvironment()
 {
 #if QT_VERSION >= 0x040000 // check for qt4
-    QString s = QFileDialog::getOpenFileName( this, "Load Environment", NULL, "Env Files (*.xml)");
+    QString s = QFileDialog::getOpenFileName( this, "Load Environment", NULL, "Environment Files (*.xml *.dae *.zae)");
     if( s.length() == 0 )
         return;
 
@@ -2748,7 +2748,7 @@ void QtCoinViewer::LoadEnvironment()
 void QtCoinViewer::ImportEnvironment()
 {
 #if QT_VERSION >= 0x040000 // check for qt4
-    QString s = QFileDialog::getOpenFileName( this, "Load Environment", NULL, "Env Files (*.xml)");
+    QString s = QFileDialog::getOpenFileName( this, "Load Environment", NULL, "Environment Files (*.xml *.dae *.zae)");
     if( s.length() == 0 )
         return;
 

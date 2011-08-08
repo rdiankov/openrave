@@ -406,3 +406,45 @@ class TestKinematics(EnvironmentSetup):
             assert(body.GetDOF()==2)
             assert(len(body.GetJoints())==1)
             assert(body.GetJoints()[0].GetType()==KinBody.Joint.Type.Hinge2)
+
+    def test_mimicjoints(self):
+        env=self.env
+        xml="""
+<kinbody name="a">
+  <body name="L0">
+  </body>
+  <body name="L1">
+  </body>
+  <body name="L2">
+  </body>
+  <body name="L3">
+  </body>
+  <joint name="J0" type="hinge">
+    <body>L0</body>
+    <body>L1</body>
+    <axis>1 0 0</axis>
+  </joint>
+  <joint name="J0a" type="hinge" mimic_pos="2*J0" mimic_vel="|J0 2" mimic_accel="|J0 0">
+    <body>L1</body>
+    <body>L2</body>
+    <axis>1 0 0</axis>
+  </joint>
+  <joint name="J0b" type="hinge" mimic_pos="2*J0a+J0" mimic_vel="|J0a 2 |J0 1" mimic_accel="|J0a 0 |J0 0">
+    <body>L2</body>
+    <body>L3</body>
+    <axis>1 0 0</axis>
+  </joint>
+</kinbody>
+"""
+        body = env.ReadKinBodyData(xml)
+        env.AddKinBody(body)
+        assert(len(body.GetJoints())==1)
+        assert(len(body.GetPassiveJoints())==2)
+        value = 0.5
+        body.SetDOFValues([value])
+        J0a = body.GetJoint('J0a')
+        J0b = body.GetJoint('J0b')
+        assert(abs(J0a.GetValues()[0]-2*value) <= g_epsilon )
+        assert(abs(J0b.GetValues()[0]-5*value) <= g_epsilon )
+        assert(J0a.GetMimicDOFIndices() == [0])
+        assert(J0b.GetMimicDOFIndices() == [0])

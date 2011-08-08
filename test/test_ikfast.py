@@ -256,7 +256,8 @@ def parseoptions(args=None):
 def test_robot_ikfast():
     global options
     if options is None:
-        options = parseoptions([])
+        return
+        #options = parseoptions([])
     RaveInitialize(load_all_plugins=False)
     RaveSetDebugLevel(DebugLevel.Error) # set to error in order to avoid expected plugin loading errosr
     envlocal=Environment()

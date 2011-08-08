@@ -208,7 +208,7 @@ inline std::string tolowerstring(const std::string & s)
 OPENRAVE_API std::string GetMD5HashString(const std::string& s);
 OPENRAVE_API std::string GetMD5HashString(const std::vector<uint8_t>& v);
 
-/// \brief search and replace all for all pairs
+/// \brief search and replace strings for all pairs. Internally first checks the longest strings before the shortest
 ///
 /// \return returns a reference to the out string
 OPENRAVE_API std::string& SearchAndReplace(std::string& out, const std::string& in, const std::vector< std::pair<std::string, std::string> >& pairs);

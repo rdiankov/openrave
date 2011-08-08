@@ -34,16 +34,16 @@ public:
                         "Saves the entire scene in an xml file. If paths are relative,\n"
                         "should only be opened from the dirctory openrave was launched in\n"
                         "Usage: [filename %s] [absolute (default is relative)]");
-        RegisterCommand("startreplay",boost::bind(&LoggingModule::StartReplay,this,_1,_2),
-                        "Starts replaying a recording given a speed (can be negative).\n"
-                        "Usage: [speed %f] [filename %s]");
-        RegisterCommand("startrecording",boost::bind(&LoggingModule::StartRecording,this,_1,_2),
-                        "Starts recording the scene given a realtime delta.\n"
-                        "If a current recording is in progress, stop it.\n"
-                        "Usage: [filename %s] [realtime %f]");
-        RegisterCommand("stoprecording",boost::bind(&LoggingModule::StopRecording,this,_1,_2),
-                        "Stop recording.\n"
-                        "Usage: [speed %f] [filename %s]");
+        //        RegisterCommand("startreplay",boost::bind(&LoggingModule::StartReplay,this,_1,_2),
+        //                        "Starts replaying a recording given a speed (can be negative).\n"
+        //                        "Usage: [speed %f] [filename %s]");
+        //        RegisterCommand("startrecording",boost::bind(&LoggingModule::StartRecording,this,_1,_2),
+        //                        "Starts recording the scene given a realtime delta.\n"
+        //                        "If a current recording is in progress, stop it.\n"
+        //                        "Usage: [filename %s] [realtime %f]");
+        //        RegisterCommand("stoprecording",boost::bind(&LoggingModule::StopRecording,this,_1,_2),
+        //                        "Stop recording.\n"
+        //                        "Usage: [speed %f] [filename %s]");
 
         bDestroyThread = false;
         bAbsoluteTiem = false;
@@ -57,8 +57,9 @@ public:
         bDestroyThread = true;
         bDoLog = false;
         bAbsoluteTiem = false;
-        if( !!_threadlog )
+        if( !!_threadlog ) {
             _threadlog->join();
+        }
         _threadlog.reset();
     }
 
@@ -67,7 +68,7 @@ public:
         Destroy();
 
         bDestroyThread = false;
-        _threadlog.reset(new boost::thread(boost::bind(&LoggingModule::_log_thread,shared_module())));
+        //_threadlog.reset(new boost::thread(boost::bind(&LoggingModule::_log_thread,shared_module())));
         return 0;
     }
 
@@ -115,6 +116,7 @@ private:
             return false;
         }
 
+        fout << std::setprecision(std::numeric_limits<dReal>::digits10+1);
         fout << "<Environment>" << endl;
 
         int tabwidth = 2;
@@ -122,45 +124,110 @@ private:
         if( !!GetEnv()->GetViewer() ) {
             t = TransformMatrix(GetEnv()->GetViewer()->GetCameraTransform());
         }
-        fout << setw(tabwidth) << " "
-             << "<camtrans>" << t.trans.x << " " << t.trans.y << " " << t.trans.z << "</camtrans>" << endl;
+        fout << setw(tabwidth) << " " << "<camtrans>" << t.trans.x << " " << t.trans.y << " " << t.trans.z << "</camtrans>" << endl;
         fout << setw(tabwidth) << " " << "<camrotmat>";
-        for(int i = 0; i < 3; ++i)
+        for(int i = 0; i < 3; ++i) {
             fout << t.m[4*i+0] << " " << t.m[4*i+1] << " " << t.m[4*i+2] << " ";
+        }
         fout << "</camrotmat>" << endl << endl;
 
         vector<KinBodyPtr> vecbodies;
+        vector<dReal> values;
         GetEnv()->GetBodies(vecbodies);
         FOREACHC(itbody, vecbodies) {
             KinBodyPtr pbody = *itbody;
 
+            fout << setw(tabwidth) << " " << (pbody->IsRobot() ? "<Robot" : "<KinBody") << " name=\"" << pbody->GetName() << "\"";
+            Transform tbase;
             if( pbody->GetURI().size() > 0 ) {
-                fout << setw(tabwidth) << " "
-                     << (pbody->IsRobot() ? "<Robot" : "<KinBody") << " name=\"" << pbody->GetName() << "\"";
                 fout << " file=\"" << pbody->GetURI() << "\">" << endl;
+                // open up the filename and extract the transformation of first link
+                KinBodyPtr ptestbody;
+                AttributesList atts;
+                atts.push_back(make_pair("skipgeometry","1"));
+                if( pbody->IsRobot() ) {
+                    RobotBasePtr ptestrobot;
+                    ptestbody = GetEnv()->ReadRobotURI(ptestrobot, pbody->GetURI(),atts);
+                }
+                else {
+                    ptestbody = GetEnv()->ReadKinBodyURI(ptestbody, pbody->GetURI(),atts);
+                }
+                if( !!ptestbody ) {
+                    tbase = ptestbody->GetTransform();
+                }
+                else {
+                    RAVELOG_WARN(str(boost::format("failed to load %s")%pbody->GetURI()));
+                }
             }
             else {
+                fout << ">" << endl;
+                RAVELOG_WARN(str(boost::format("object %s does not have a filename, so outputting at least links\n")%pbody->GetName()));
                 // have to process each link/geometry file
-                RAVELOG_ERROR(str(boost::format("cannot process object %s defined inside environment file\n")%pbody->GetName()));
-                continue;
-                //fout << ">" << endl;
+                FOREACHC(itlink, pbody->GetLinks()) {
+                    fout << "<body name=\"" << (*itlink)->GetName() << "\" type=\"" << ((*itlink)->IsStatic() ? "static" : "dynamic") << "\">" << endl;
+                    t = pbody->GetTransform().inverse() * (*itlink)->GetTransform();
+                    fout << setw(tabwidth*2) << " " << "<Translation>" << t.trans.x << " " << t.trans.y << " " << t.trans.z << "</Translation>" << endl;
+                    fout << setw(tabwidth*2) << " " << "<rotationmat>";
+                    for(int i = 0; i < 3; ++i) {
+                        fout << t.m[4*i+0] << " " << t.m[4*i+1] << " " << t.m[4*i+2] << " ";
+                    }
+                    fout << "</rotationmat>" << endl;
+                    FOREACHC(itgeom,(*itlink)->GetGeometries()) {
+                        switch(itgeom->GetType()) {
+                        case KinBody::Link::GEOMPROPERTIES::GeomBox:
+                            fout << "<geom type=\"box\">" << endl;
+                            fout << "<extents>" << itgeom->GetBoxExtents().x << " " << itgeom->GetBoxExtents().y << " "  << itgeom->GetBoxExtents().z << "</extents>";
+                            break;
+                        case KinBody::Link::GEOMPROPERTIES::GeomSphere:
+                            fout << "<geom type=\"sphere\">" << endl;
+                            fout << "<radius>" << itgeom->GetSphereRadius() << "</radius>";
+                            break;
+                        case KinBody::Link::GEOMPROPERTIES::GeomCylinder:
+                            fout << "<geom type=\"cylinder\">" << endl;
+                            fout << "<radius>" << itgeom->GetCylinderRadius() << "</radius>" << endl;
+                            fout << "<height>" << itgeom->GetCylinderHeight() << "</height>" << endl;
+                            break;
+                        case KinBody::Link::GEOMPROPERTIES::GeomTrimesh:
+                            fout << "<geom type=\"trimesh\">" << endl;
+                            break;
+                        case KinBody::Link::GEOMPROPERTIES::GeomNone:
+                            fout << "<geom>" << endl;
+                            break;
+                        }
+                        if( itgeom->GetRenderFilename().size() > 0 ) {
+                            fout << "<render>" << itgeom->GetRenderFilename() << "</render>" << endl;
+                        }
+                        t = itgeom->GetTransform();
+                        fout << setw(tabwidth*2) << " " << "<Translation>" << t.trans.x << " " << t.trans.y << " " << t.trans.z << "</Translation>" << endl;
+                        fout << setw(tabwidth*2) << " " << "<rotationmat>";
+                        for(int i = 0; i < 3; ++i) {
+                            fout << t.m[4*i+0] << " " << t.m[4*i+1] << " " << t.m[4*i+2] << " ";
+                        }
+                        fout << "</rotationmat>" << endl;
+                        fout << "<diffusecolor>" << itgeom->GetDiffuseColor().x << " " << itgeom->GetDiffuseColor().y << " " << itgeom->GetDiffuseColor().z << " " << itgeom->GetDiffuseColor().w << "</diffusecolor>";
+                        fout << "<ambientcolor>" << itgeom->GetAmbientColor().x << " " << itgeom->GetAmbientColor().y << " " << itgeom->GetAmbientColor().z << " " << itgeom->GetAmbientColor().w << "</ambientcolor>";
+                        fout << "</geom>" << endl;
+                    }
+                    fout << "</body>" << endl;
+                }
             }
 
-            t = pbody->GetTransform();
-            fout << setw(tabwidth*2) << " "
-                 << "<Translation>" << t.trans.x << " " << t.trans.y << " " << t.trans.z << "</Translation>" << endl;
+            t = pbody->GetTransform() * tbase.inverse();
+            fout << setw(tabwidth*2) << " " << "<Translation>" << t.trans.x << " " << t.trans.y << " " << t.trans.z << "</Translation>" << endl;
             fout << setw(tabwidth*2) << " " << "<rotationmat>";
-            for(int i = 0; i < 3; ++i)
+            for(int i = 0; i < 3; ++i) {
                 fout << t.m[4*i+0] << " " << t.m[4*i+1] << " " << t.m[4*i+2] << " ";
+            }
             fout << "</rotationmat>" << endl << endl;
 
-            fout << setw(tabwidth*2) << " " << "<jointvalues>";
-
-            vector<dReal> values;
             pbody->GetDOFValues(values);
-            FOREACH(it, values)
-            fout << *it << " ";
-            fout << "</jointvalues>" << endl;
+            if( values.size() > 0 ) {
+                fout << setw(tabwidth*2) << " " << "<jointvalues>";
+                FOREACH(it, values) {
+                    fout << *it << " ";
+                }
+                fout << "</jointvalues>" << endl;
+            }
             fout << setw(tabwidth) << " ";
             fout << (pbody->IsRobot() ? "</Robot>" : "</KinBody>") << endl;
         }
@@ -171,21 +238,21 @@ private:
         return true;
     }
 
-    virtual bool StartReplay(ostream& sout, istream& sinput)
-    {
-        RAVELOG_ERROR("not implemented\n");
-        return false;
-    }
-    virtual bool StartRecording(ostream& sout, istream& sinput)
-    {
-        RAVELOG_ERROR("not implemented\n");
-        return false;
-    }
-    virtual bool StopRecording(ostream& sout, istream& sinput)
-    {
-        RAVELOG_ERROR("not implemented\n");
-        return false;
-    }
+    //    virtual bool StartReplay(ostream& sout, istream& sinput)
+    //    {
+    //        RAVELOG_ERROR("not implemented\n");
+    //        return false;
+    //    }
+    //    virtual bool StartRecording(ostream& sout, istream& sinput)
+    //    {
+    //        RAVELOG_ERROR("not implemented\n");
+    //        return false;
+    //    }
+    //    virtual bool StopRecording(ostream& sout, istream& sinput)
+    //    {
+    //        RAVELOG_ERROR("not implemented\n");
+    //        return false;
+    //    }
 
     void _log_thread()
     {

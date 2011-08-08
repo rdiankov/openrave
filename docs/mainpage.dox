@@ -203,7 +203,7 @@ Once the plugin is loaded, we can create the interface and call its commands to 
 \b C++
 \code
 ProblemInstancePtr prob = RaveCreateProblem(env,"MyProblem");
-env->LoadProblem(prob,"");
+env->AddModule(prob,"");
 stringstream sinput, sout;
 // input the load command
 sinput << "load data/lab1.env.xml";
@@ -223,7 +223,7 @@ else {
 \b Python
 \verbatim
 prob = RaveCreateProblem(env,'MyProblem')
-env.LoadProblem(prob,args='')
+env.AddModule(prob,args='')
 cmdout = prob.SendCommand('load data/lab1.env.xml')
 if cmdout is None:
     raveLogWarn('command failed!')

@@ -274,5 +274,5 @@ Save the current scene using the :ref:`probleminstance-logging` plugin:
   env = Environment() # create openrave environment
   env.Load('data/lab1.env.xml') # load a simple scene
 
-  logger = env.CreateProblem('logging')
+  logger = RaveCreateModule(env,'logging')
   logger.SendCommand('savescene filename myscene.env.xml')
