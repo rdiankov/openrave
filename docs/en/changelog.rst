@@ -66,6 +66,8 @@ Grasping
 
 * grasping database now uses the producer, consumer, gatherer model, removed updateenv and disableallbodies from the generate method
 
+* implemented the unfinished :meth:`database.grasping.GraspingModel.computeSphereApproachRays`
+
 Misc
 ----
 

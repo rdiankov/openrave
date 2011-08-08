@@ -313,7 +313,7 @@ private:
                 link->geom = geomtrans;
             }
 
-            if( !(*itlink)->IsStatic() ) {
+            if( !(*itlink)->IsStatic() && _bUsingPhysics ) {
                 // set the mass
                 RaveTransformMatrix<dReal> I = (*itlink)->GetInertia();
                 dMass mass;
