@@ -40,22 +40,21 @@
   <concurrentBuild>false</concurrentBuild>
   <builders>
     <hudson.tasks.Shell>
-      <command>#!/bin/sh
+      <command>#!/bin/bash
 # this is the main script needed to be executed by jenkins
-# assuming the workspace has &apos;openrave&apos; folder for sources and &apos;data&apos; folder for scenes and robots.
 export PARALLEL_JOBS=-j16
-export OPENRAVE_DATA=`pwd`/data:/var/lib/jenkins/robots
-export OPENRAVE_DATABASE=`pwd`/.openrave
-mkdir -p .openrave
-#rm -rf localinstall openrave/build/CMakeCache.txt
-cd openrave
-make prefix=`pwd`/../localinstall $PARALLEL_JOBS
+#export OPENRAVE_DATABASE=/var/lib/jenkins/.openrave_ikdb
+export OPENRAVE_DATA=`pwd`/data
+rm -rf localinstall
+#rm -rf build
+installdir=`pwd`/localinstall
+mkdir -p build
+cd build
+cmake -DCMAKE_INSTALL_PREFIX=$installdir -DCMAKE_BUILD_TYPE=RelWithDebInfo ../openrave
 make install $PARALLEL_JOBS
-export PATH=`sh build/openrave-config --prefix`/bin:$PATH
-export PYTHONPATH=`openrave-config --python-dir`:$PYTHONPATH
-export LD_LIBRARY_PATH=`openrave-config --prefix`/lib:$LD_LIBRARY_PATH
-cd test
-python test_ikfast.py $PARALLEL_JOBS -d 10 --robots=*
+cd ../openrave/test
+source ../openrave.bash $installdir
+python test_ikfast.py $PARALLEL_JOBS -d 10 --robots=* --iktypes=* --numiktests=10000,10000,200 --timeout=500
 </command>
     </hudson.tasks.Shell>
   </builders>

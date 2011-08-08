@@ -2137,12 +2137,19 @@ std::string GetMD5HashString(const std::vector<uint8_t>& v)
     return hex_output;
 }
 
-std::string& SearchAndReplace(std::string& out, const std::string& in, const std::vector< std::pair<std::string, std::string> >& pairs)
+bool PairStringLengthCompare(const std::pair<std::string, std::string>& p0, const std::pair<std::string, std::string>& p1)
+{
+    return p0.first.size() > p1.first.size();
+}
+
+std::string& SearchAndReplace(std::string& out, const std::string& in, const std::vector< std::pair<std::string, std::string> >& _pairs)
 {
     BOOST_ASSERT(&out != &in);
-    FOREACHC(itp,pairs) {
+    FOREACHC(itp,_pairs) {
         BOOST_ASSERT(itp->first.size()>0);
     }
+    std::vector< std::pair<std::string, std::string> > pairs = _pairs;
+    stable_sort(pairs.begin(),pairs.end(),PairStringLengthCompare);
     out.resize(0);
     size_t startindex = 0;
     while(startindex < in.size()) {
