@@ -204,7 +204,7 @@ from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2011 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Lesser GPL, Version 3'
-__version__ = '44'
+__version__ = '45'
 
 import sys, copy, time, math, datetime
 import __builtin__
@@ -3912,9 +3912,9 @@ class IKFastSolver(AutoReloader):
                     for ileftvar in range(2):
                         # TODO, sometimes this works and sometimes this doesn't
                         try:
-                            leftvar=polyeqs[0].symbols[ileftvar]
                             Mall, allmonoms = self.solveDialytically(newreducedeqs,ileftvar,returnmatrix=True)
                             if Mall is not None:
+                                leftvar=polyeqs[0].symbols[ileftvar]
                                 break
                         except self.CannotSolveError, e:
                             log.debug(e)
