@@ -83,6 +83,8 @@ Misc
 
 * Logging module: added exporting geometric primitives of :ref:`savescene <module-logging-savescene>`_ 
 
+* fixed ode bug with ray collisions now returning closest point
+
 Version 0.4.1
 =============
 

@@ -303,7 +303,7 @@ class GraspingModel(DatabaseGenerator):
             if options.boxdelta is not None:
                 approachrays = self.computeBoxApproachRays(delta=options.boxdelta,normalanglerange=options.normalanglerange,directiondelta=options.directiondelta)
             elif options.spheredelta is not None:
-                approachrays = self.computeBoxApproachRays(delta=options.spheredelta,normalanglerange=options.normalanglerange,directiondelta=options.directiondelta)
+                approachrays = self.computeSphereApproachRays(delta=options.spheredelta,normalanglerange=options.normalanglerange,directiondelta=options.directiondelta)
             if options.standoffs is not None:
                 standoffs = array(options.standoffs)
             if options.rolls is not None:
@@ -913,12 +913,41 @@ class GraspingModel(DatabaseGenerator):
             if cc is not None:
                 self.env.SetCollisionChecker(cc)
     def computeSphereApproachRays(self,delta=0.1,normalanglerange=0,directiondelta=0.4):
-        with self.target:
-            self.target.SetTransform(eye(4))
-            dirs = newinfo[:,0:3]-tile(p,(len(newinfo),1))
-            L=sqrt(sum(dirs**2,1))
-            I=flatnonzero(L>1e-8)
-            approachrays = r_[approachrays,c_[newinfo[I,0:3],dirs[I,:]/transpose(tile(1.0/L[I],(3,1)))]]
+        # ode gives the most accurate rays
+        cc = RaveCreateCollisionChecker(self.env,'ode')
+        if cc is not None:
+            ccold = self.env.GetCollisionChecker()
+            self.env.SetCollisionChecker(cc)
+            cc = ccold
+        try:
+            with self.target:
+                self.target.SetTransform(eye(4))
+                ab = self.target.ComputeAABB()
+                maxlen = 2*sqrt(sum(ab.extents()**2))+0.03
+                theta,pfi = SpaceSamplerExtra().sampleS2(angledelta=delta)
+                dirs = c_[cos(theta),sin(theta)*cos(pfi),sin(theta)*sin(pfi)]
+                rays = c_[tile(ab.pos(),(len(dirs),1))-maxlen*dirs,2*maxlen*dirs]
+                collision, info = self.env.CheckCollisionRays(rays,self.target)
+                # make sure all normals are the correct sign: pointing outward from the object)
+                approachrays = info[collision,:]
+                if len(approachrays) > 0:
+                    approachrays[sum(rays[collision,3:6]*approachrays[:,3:6],1)>0,3:6] *= -1
+                if normalanglerange > 0:
+                    theta,pfi = SpaceSamplerExtra().sampleS2(angledelta=directiondelta)
+                    dirs = c_[cos(theta),sin(theta)*cos(pfi),sin(theta)*sin(pfi)]
+                    dirs = array([dir for dir in dirs if arccos(dir[2])<=normalanglerange]) # find all dirs within normalanglerange
+                    if len(dirs) == 0:
+                        dirs = array([[0,0,1]])
+                    newapproachrays = zeros((0,6))
+                    for approachray in approachrays:
+                        R = rotationMatrixFromQuat(quatRotateDirection(array((0,0,1)),approachray[3:6]))
+                        newapproachrays = r_[newapproachrays,c_[tile(approachray[0:3],(len(dirs),1)),dot(dirs,transpose(R))]]
+                    approachrays = newapproachrays
+                return approachrays
+        finally:
+            # restore the collision checker
+            if cc is not None:
+                self.env.SetCollisionChecker(cc)
 
     def drawContacts(self,contacts,conelength=0.03,transparency=0.5):
         angs = linspace(0,2*pi,10)

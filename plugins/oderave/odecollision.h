@@ -463,6 +463,8 @@ public:
         Vector vnormdir = ray.dir*(1/fmaxdist);
         dGeomRaySet(geomray, ray.pos.x, ray.pos.y, ray.pos.z, vnormdir.x, vnormdir.y, vnormdir.z);
         dGeomRaySetClosestHit(geomray, !(_options&OpenRAVE::CO_RayAnyHit));     // only care about the closest points
+        dGeomRaySetLength(geomray,fmaxdist);
+        dGeomRaySetParams(geomray,0,0);
 
         bool bHasCallbacks = GetEnv()->HasRegisteredCollisionCallbacks();
         std::list<EnvironmentBase::CollisionCallbackFn> listcallbacks;
@@ -565,7 +567,9 @@ public:
         }
         Vector vnormdir = ray.dir*(1/cb.fraymaxdist);
         dGeomRaySet(geomray, ray.pos.x, ray.pos.y, ray.pos.z, vnormdir.x, vnormdir.y, vnormdir.z);
-        dGeomRaySetClosestHit(geomray, 0);    //!(_options&OpenRAVE::CO_RayAnyHit)); // only care about the closest points
+        dGeomRaySetClosestHit(geomray, !(_options&OpenRAVE::CO_RayAnyHit)); // only care about the closest points
+        dGeomRaySetLength(geomray,cb.fraymaxdist);
+        dGeomRaySetParams(geomray,0,0);
         //dSpaceAdd(pbody->GetSpace(), geomray);
         dSpaceCollide2((dGeomID)odespace->GetBodySpace(pbody), geomray, &cb, RayCollisionCallback);
         //dSpaceRemove(pbody->GetSpace(), geomray);
@@ -590,6 +594,7 @@ public:
         dGeomRaySet(geomray, ray.pos.x, ray.pos.y, ray.pos.z, vnormdir.x, vnormdir.y, vnormdir.z);
 
         dGeomRaySetClosestHit(geomray, !(_options&OpenRAVE::CO_RayAnyHit));     // only care about the closest points
+        dGeomRaySetLength(geomray,cb.fraymaxdist);
         dGeomRaySetParams(geomray,0,0);
 
         odespace->Synchronize();
