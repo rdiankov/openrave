@@ -81,6 +81,8 @@ Misc
 
 * fixed bug in BaseLaser <resolution> tag
 
+* Logging module: added exporting geometric primitives of :ref:`savescene <module-logging-savescene>`_ 
+
 Version 0.4.1
 =============
 

@@ -116,11 +116,11 @@ openrave-createplugin.py
 
 Sets up a project directory and initial files for creating OpenRAVE plugins and executables.
 
-This command line will create a plugin that offers a **MyNewProblem** :class:`.ProblemInstance`:
+This command line will create a plugin that offers a **MyNewModule** :class:`.ModuleBase`:
 
 .. code-block:: bash
 
-  openrave-createplugin.py myplugin --problem MyNewProblem
+  openrave-createplugin.py myplugin --module MyNewModule
 
 Command-line
 ~~~~~~~~~~~~
@@ -132,7 +132,7 @@ Command-line
 openrave
 --------
 
-Simple executable written in C++ that can start an OpenRAVE environment and load problems. It provides simple configuration of parameters for easy testing. 
+Simple executable written in C++ that can start an OpenRAVE environment and load modules. It provides simple configuration of parameters for easy testing. 
 
 It is possible to save robots into 
 

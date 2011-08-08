@@ -23,13 +23,13 @@
 // used for functions that are also used internally
 #define CHECK_INTERNAL_COMPUTATION0 { \
         if( _nHierarchyComputed == 0 ) { \
-            throw OPENRAVE_EXCEPTION_FORMAT("body %s internal structures need to be computed, current value is %d", GetName()%_nHierarchyComputed, ORE_Failed); \
+            throw OPENRAVE_EXCEPTION_FORMAT("body %s internal structures need to be computed, current value is %d. Are you sure Environment::AddRobot/AddKinBody was called?", GetName()%_nHierarchyComputed, ORE_Failed); \
         } \
 } \
 
 #define CHECK_INTERNAL_COMPUTATION { \
         if( _nHierarchyComputed != 2 ) { \
-            throw OPENRAVE_EXCEPTION_FORMAT("body %s internal structures need to be computed, current value is %d", GetName()%_nHierarchyComputed, ORE_Failed); \
+            throw OPENRAVE_EXCEPTION_FORMAT("body %s internal structures need to be computed, current value is %d. Are you sure Environment::AddRobot/AddKinBody was called?", GetName()%_nHierarchyComputed, ORE_Failed); \
         } \
 } \
 
