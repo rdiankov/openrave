@@ -1200,7 +1200,11 @@ protected:
         else if( strcmd == "rendergeometrycheck" ) {
             cmd = SensorBase::CC_RenderGeometryCheck;
         }
+        else {
+            return false;
+        }
         os << probot->GetAttachedSensors().at(sensorindex)->GetSensor()->Configure(cmd);
+        return true;
     }
 
     bool orRobotSensorData(istream& is, ostream& os, boost::shared_ptr<void>& pdata)

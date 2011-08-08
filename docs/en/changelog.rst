@@ -3,12 +3,12 @@
 ChangeLog
 #########
 
-Version 0.4.2 Unstable
-======================
+Version 0.4.2
+=============
 
-Subversion Revision: **Unreleased**
+Subversion Revision: 2668
 
-Initial Release: **Unreleased**
+Initial Release: 2011/08/08
 
 Core
 ----
@@ -66,7 +66,7 @@ Grasping
 
 * grasping database now uses the producer, consumer, gatherer model, removed updateenv and disableallbodies from the generate method
 
-* implemented the unfinished :meth:`database.grasping.GraspingModel.computeSphereApproachRays`
+* implemented the unfinished :meth:`.databases.grasping.GraspingModel.computeSphereApproachRays`
 
 Misc
 ----
@@ -83,7 +83,7 @@ Misc
 
 * fixed bug in BaseLaser <resolution> tag
 
-* Logging module: added exporting geometric primitives of :ref:`savescene <module-logging-savescene>`_ 
+* Logging module: added exporting geometric primitives of :ref:`savescene <module-logging-savescene>`
 
 * fixed ode bug with ray collisions now returning closest point
 
