@@ -233,7 +233,7 @@ class GraspPlanning:
         while not robot.GetController().IsDone():
             time.sleep(0.01)
             
-    def graspAndPlaceObject(self,gmodel,dests,waitforkey=False,**kwargs):
+    def graspAndPlaceObject(self,gmodel,dests,waitforkey=False,movehanddown=True,**kwargs):
         """grasps an object and places it in one of the destinations. If no destination is specified, will just grasp it"""
         env = self.envreal#.CloneSelf(CloningOptions.Bodies)
         robot = self.robot
@@ -268,7 +268,7 @@ class GraspPlanning:
                     print repr(dot(gmodel.manip.GetEndEffectorTransform()[0:3,0:3],gmodel.manip.GetDirection()))
                     print stepsize,expectedsteps-1,expectedsteps
                     res = self.basemanip.MoveHandStraight(direction=dot(gmodel.manip.GetEndEffectorTransform()[0:3,0:3],gmodel.manip.GetDirection()),
-                                                          ignorefirstcollision=False,stepsize=stepsize,minsteps=expectedsteps-1,maxsteps=expectedsteps)
+                                                          ignorefirstcollision=False,stepsize=stepsize,minsteps=expectedsteps,maxsteps=expectedsteps)
                 except planning_error:
                     print 'use a planner to move the rest of the way'
                     try:
@@ -286,26 +286,30 @@ class GraspPlanning:
                 robot.Grab(target)
             if waitforkey:
                 raw_input('press any key to continue grasp')
-            try:
-                print 'move hand up'
-                self.basemanip.MoveHandStraight(direction=self.updir,stepsize=0.003,minsteps=1,maxsteps=60)
-            except:
-                print 'failed to move hand up'
-            self.waitrobot(robot)
+
+            if movehanddown:
+                try:
+                    print 'move hand up'
+                    self.basemanip.MoveHandStraight(direction=self.updir,stepsize=0.003,minsteps=1,maxsteps=60)
+                except:
+                    print 'failed to move hand up'
+                self.waitrobot(robot)
 
             if len(goals) > 0:
                 print 'planning to destination'
                 try:
-                    self.basemanip.MoveToHandPosition(ikparams=goals,maxiter=1000,maxtries=1,seedik=4)
+                    self.basemanip.MoveToHandPosition(ikparams=goals,maxiter=2000,maxtries=2,seedik=8)
                     self.waitrobot(robot)
                 except planning_error,e:
                     print 'failed to reach a goal',e
-            print 'moving hand down'
-            try:
-                res = self.basemanip.MoveHandStraight(direction=-self.updir,stepsize=0.003,minsteps=1,maxsteps=100)
-            except:
-                print 'failed to move hand down'
-            self.waitrobot(robot)
+
+            if movehanddown:
+                print 'moving hand down'
+                try:
+                    res = self.basemanip.MoveHandStraight(direction=-self.updir,stepsize=0.003,minsteps=1,maxsteps=100)
+                except:
+                    print 'failed to move hand down'
+                self.waitrobot(robot)
 
             try:
                 res = self.taskmanip.ReleaseFingers(target=target)

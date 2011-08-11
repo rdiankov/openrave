@@ -384,6 +384,8 @@ class GraspingModel(DatabaseGenerator):
         print 'Generating Grasp Set for %s:%s:%s'%(self.robot.GetName(),self.manip.GetName(),self.target.GetName())
         if friction is None:
             friction = 0.4
+        if avoidlinks is None:
+            avoidlinks = []
         self.init(friction=friction,avoidlinks=avoidlinks,plannername=plannername)
         if approachrays is None:
             approachrays = self.computeBoxApproachRays(delta=0.02,normalanglerange=0)

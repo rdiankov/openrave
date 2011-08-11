@@ -697,6 +697,7 @@ class InverseKinematicsModel(DatabaseGenerator):
                     ikparam = self.manip.GetIkParameterization(self.iktype)
                     sols = self.manip.FindIKSolutions(ikparam,IkFilterOptions.CheckEnvCollisions)
                     weights = self.robot.GetDOFWeights(self.manip.GetArmIndices())
+                    print 'found %d solutions'%len(sols)
                     sols = TSP(sols,lambda x,y: sum(weights*(x-y)**2))
                     # find shortest route
                     for sol in sols:

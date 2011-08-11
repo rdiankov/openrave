@@ -24,10 +24,15 @@ def _loadversion(targetname):
     openravepy_currentversion.loadlatest = loadlatest
     return openravepy_currentversion
 
-try:
-    openravepy_currentversion = loadstable(__openravepy_version__)
-except NameError:
+from platform import system
+from sys import platform
+if platform.startswith('win') or system().lower() == 'windows':
     openravepy_currentversion = loadlatest()
+else:
+    try:
+        openravepy_currentversion = loadstable(__openravepy_version__)
+    except NameError:
+        openravepy_currentversion = loadlatest()
 
 if openravepy_currentversion is not None:
     from sys import modules
