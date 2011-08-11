@@ -797,7 +797,7 @@ if __name__ == "__main__":
     _soversionpy = ''
     for dllname in os.listdir(os.path.join(openravepy_dir,'openravepy','_openravepy_'+_soversionpy)):
         if os.path.splitext(dllname)[1] == '.pyd':
-            args['install_python_dll'] += '!insertmacro InstallLib DLL NOTSHARED NOREBOOT_PROTECTED %s\\openravepy\\_openravepy_%s\\%s $INSTDIR\\%s\\openravepy\\_openravepy_%s\\%s $INSTDIR\n'%(openravepy_dir,_soversionpy,dllname,openravepy_reldir,_soversion,dllname)
+            args['install_python_dll'] += '!insertmacro InstallLib DLL NOTSHARED NOREBOOT_PROTECTED %s\\openravepy\\_openravepy_%s\\%s $INSTDIR\\%s\\openravepy\\_openravepy_%s\\%s $INSTDIR\n'%(openravepy_dir,_soversionpy,dllname,openravepy_reldir,_soversionpy,dllname)
             args['uninstall_dll'] += '!insertmacro UninstallLib DLL NOTSHARED NOREBOOT_PROTECTED $INSTDIR\\%s\\openravepy\\_openravepy_%s\\%s\n'%(openravepy_reldir,_soversionpy,dllname)
     # add the runable examples
     for name in dir(openravepy.examples):

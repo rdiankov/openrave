@@ -93,3 +93,34 @@ Once a build is stable and all the release packages have been generated, they ar
 
 .. literalinclude:: ../../../release/sendtosourceforge.sh
   :language: bash
+
+Release Process
+===============
+
+1. Run Jenkins and create the latest_stable tag, windows installers, and documentation
+
+2. Upload the documentation:
+
+.. code-block:: bash
+
+  ./docs/sendtoserver.sh
+
+3. Create svn tag:
+
+.. code-block:: bash
+
+  svn cp tags/latest_stable tags/X.Y.Z
+
+4. sourceforge: Create a X.Y.Z folder inside the files and copy the latest uploaded files from Jenkins into it, remove the revision numbers from the filenames.
+
+5. Create the Debian packages in openrave/testing
+
+.. code-block:: bash
+
+  cmake -DOPT_BUILD_PACKAGES=ON -DPACKAGE_VERSION=W
+  make dput
+  cmake -DOPT_BUILD_PACKAGES=ON -DPACKAGE_VERSION=W -DOPT_BUILD_PACKAGE_DEFAULT=OFF -DOPT_DOUBLE_PRECISION=OFF
+  make dput
+
+6. Copy the debian packages from openrave/testing to openrave/release
+
