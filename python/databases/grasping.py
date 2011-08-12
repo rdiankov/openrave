@@ -474,8 +474,9 @@ class GraspingModel(DatabaseGenerator):
                 self.grasps.append(grasp)
             else:
                 self.grasps = array(self.grasps)
-                order = argsort(self.grasps[:,self.graspindices.get('performance')[0]])
-                self.grasps = self.grasps[order]
+                if len(self.grasps) > 1:
+                    order = argsort(self.grasps[:,self.graspindices.get('performance')[0]])
+                    self.grasps = self.grasps[order]
                 # force closing the handles
                 self.approachgraphs = None
                 self.contactgraph = None
