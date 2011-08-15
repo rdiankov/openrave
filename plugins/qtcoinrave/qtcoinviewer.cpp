@@ -1143,11 +1143,10 @@ void QtCoinViewer::PrintCamera()
     GetCamera()->orientation.getValue(axis, fangle);
 
     RAVELOG_INFOA("Camera Transformation:\n"
-                  "position: %f %f %f\n"
-                  "orientation: axis=(%f %f %f), angle = %f (%f deg)\n"
+                  "<camtrans>%f %f %f</camtrans>\n"
+                  "<camrotationaxis>%f %f %f %f</camrotationaxis>\n"
                   "height angle: %f, focal dist: %f\n", pos[0], pos[1], pos[2],
-                  axis[0], axis[1], axis[2], fangle, fangle*180.0f/PI, GetCamera()->heightAngle.getValue(),
-                  GetCamera()->focalDistance.getValue());
+                  axis[0], axis[1], axis[2], fangle*180.0f/PI, GetCamera()->heightAngle.getValue(), GetCamera()->focalDistance.getValue());
 }
 
 RaveTransform<float> QtCoinViewer::GetCameraTransform() const
