@@ -287,6 +287,7 @@ class GraspPlanning:
             if waitforkey:
                 raw_input('press any key to continue grasp')
 
+            success = graspindex
             if movehanddown:
                 try:
                     print 'move hand up'
@@ -301,8 +302,18 @@ class GraspPlanning:
                     self.basemanip.MoveToHandPosition(ikparams=goals,maxiter=2000,maxtries=2,seedik=8)
                     self.waitrobot(robot)
                 except planning_error,e:
-                    print 'failed to reach a goal',e
-
+                    print 'failed to reach a goal, trying to move goal a little up',e
+                    if goals[0].GetType() == IkParameterizationType.Transform6D:
+                        Tgoal = goals[0].GetTransform6D()
+                        Tgoal[0:3,3] += self.updir*0.015
+                        try:
+                            self.basemanip.MoveToHandPosition(matrices=[Tgoal],maxiter=3000,maxtries=2,seedik=8)
+                            self.waitrobot(robot)
+                            self.basemanip.MoveToHandPosition(ikparams=goals,maxiter=2000,maxtries=2,seedik=8)
+                            self.waitrobot(robot)
+                        except planning_error,e:
+                            print e
+                            success = -1
             if movehanddown:
                 print 'moving hand down'
                 try:
@@ -343,7 +354,7 @@ class GraspPlanning:
                     except planning_error:
                         res = None
                     #raise ValueError('robot still in collision?')
-            return graspindex # return successful grasp index
+            return success # return successful grasp index
         # exhausted all grasps
         return -1
 
