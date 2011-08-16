@@ -60,7 +60,8 @@ void CustomCoinHandlerCB(const class SoError * error, void * data)
            ( strstr(error->getDebugString().getString(),"Coin warning in SbVec3f::setValue()") != NULL) ||
            ( strstr(error->getDebugString().getString(),"Coin warning in SoNormalGenerator::calcFaceNormal()") != NULL) ||
            ( strstr(error->getDebugString().getString(),"Coin error in SoGroup::removeChild(): tried to remove non-existent child") != NULL) ||
-           ( strstr(error->getDebugString().getString(),"Coin error in SoSwitch::doAction(): whichChild 0 out of range -- switch node has no children!") != NULL) ) {
+           ( strstr(error->getDebugString().getString(),"Coin error in SoSwitch::doAction(): whichChild 0 out of range -- switch node has no children!") != NULL) ||
+           (strstr(error->getDebugString().getString(), "Coin warning in SoGLLazyElement::sendDiffuseByIndex(): index -1 out of bounds [0, 3]") != NULL) ) {
             return;
         }
     }
