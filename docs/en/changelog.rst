@@ -3,12 +3,20 @@
 ChangeLog
 #########
 
+Version 0.4.3 Unstable
+======================
+
+Subversion Revision: **Unreleased**
+
+Initial Release: **Unreleased**
+
+
 Version 0.4.2
 =============
 
-Subversion Revision: 2668
+Subversion Revision: 2678
 
-Initial Release: 2011/08/08
+Initial Release: 2011/08/11
 
 Core
 ----
@@ -49,8 +57,8 @@ Octave/Matlab
 
 * Octave stripping symbols
 
-IKFast
-------
+Inverse Kinematics
+------------------
 
 * Fixed major IK fast bug when intersecting axes of robot are not at the ends.
 
@@ -59,7 +67,7 @@ Tests
 
 * test_programs is now runnable by windows
 
-* test_ikfast is now also included in the regular tests to determine release. The full IK tests are run separately, and those can fail.
+* test_ikfast is now also included in the regular tests to determine release. The full IK tests are run separately to gather statistics on ikfast.
 
 Grasping
 --------

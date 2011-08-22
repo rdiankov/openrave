@@ -423,7 +423,7 @@ bool ManipulatorIKGoalSampler::Sample(std::vector<dReal>& vgoal)
             }
         }
         bool bsuccess = _pmanip->FindIKSolutions(itsample->_ikparam, vfree, _viksolutions, IKFO_CheckEnvCollisions);
-        if( --itsample->_numleft <= 0 ) {
+        if( --itsample->_numleft <= 0 || vfree.size() == 0 ) {
             _listsamples.erase(itsample);
         }
 

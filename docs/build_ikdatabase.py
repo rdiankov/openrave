@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import openravepy
 from openravepy import *
 from numpy import *
 from optparse import OptionParser
@@ -235,9 +236,11 @@ def build(allstats,buildoptions,lang,outputdir,env):
     robotxml = ''
     robotnames = []
     for robotfilename, robotstats in robotlist:
-        xml,robotname = buildrobot(lang, outputdir,env,robotfilename, robotstats,buildoptions)
-        robotxml += xml
-        robotnames.append(robotname)
+        # only show robots that don't have fial in their name
+        if os.path.split(robotfilename)[1].find('fail') < 0:
+            xml,robotname = buildrobot(lang, outputdir,env,robotfilename, robotstats,buildoptions)
+            robotxml += xml
+            robotnames.append(robotname)
 
     iktypes = ', '.join(iktype.name for iktype in IkParameterization.Type.values.values())
     text="""
