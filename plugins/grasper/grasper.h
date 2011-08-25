@@ -491,7 +491,7 @@ public:
                 sinput >> bReturnFaces;
             }
             else if( cmd == "returntriangles" ) {
-                sinput >> bReturnFaces;
+                sinput >> bReturnTriangles;
             }
             else {
                 RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
