@@ -1886,7 +1886,7 @@ bool KinBody::InitFromBoxes(const std::vector<AABB>& vaabbs, bool bDraw)
     plink->_index = 0;
     plink->_name = "base";
     plink->_bStatic = true;
-    Link::TRIMESH trimesh;
+    size_t numvertices=0, numindices=0;
     FOREACHC(itab, vaabbs) {
         plink->_listGeomProperties.push_back(Link::GEOMPROPERTIES(plink));
         Link::GEOMPROPERTIES& geom = plink->_listGeomProperties.back();
@@ -1897,11 +1897,18 @@ bool KinBody::InitFromBoxes(const std::vector<AABB>& vaabbs, bool bDraw)
         geom.InitCollisionMesh();
         geom.diffuseColor=Vector(1,0.5f,0.5f,1);
         geom.ambientColor=Vector(0.1,0.0f,0.0f,0);
-        trimesh = geom.GetCollisionMesh();
-        trimesh.ApplyTransform(geom._t);
-        plink->collision.Append(trimesh);
+        numvertices += geom.GetCollisionMesh().vertices.size();
+        numindices += geom.GetCollisionMesh().indices.size();
     }
 
+    plink->collision.vertices.reserve(numvertices);
+    plink->collision.indices.reserve(numindices);
+    Link::TRIMESH trimesh;
+    FOREACH(itgeom,plink->_listGeomProperties) {
+        trimesh = itgeom->GetCollisionMesh();
+        trimesh.ApplyTransform(itgeom->_t);
+        plink->collision.Append(trimesh);
+    }
     _veclinks.push_back(plink);
     return true;
 }
@@ -1916,7 +1923,7 @@ bool KinBody::InitFromBoxes(const std::vector<OBB>& vobbs, bool bDraw)
     plink->_index = 0;
     plink->_name = "base";
     plink->_bStatic = true;
-    Link::TRIMESH trimesh;
+    size_t numvertices=0, numindices=0;
     FOREACHC(itobb, vobbs) {
         plink->_listGeomProperties.push_back(Link::GEOMPROPERTIES(plink));
         Link::GEOMPROPERTIES& geom = plink->_listGeomProperties.back();
@@ -1932,8 +1939,16 @@ bool KinBody::InitFromBoxes(const std::vector<OBB>& vobbs, bool bDraw)
         geom.InitCollisionMesh();
         geom.diffuseColor=Vector(1,0.5f,0.5f,1);
         geom.ambientColor=Vector(0.1,0.0f,0.0f,0);
-        trimesh = geom.GetCollisionMesh();
-        trimesh.ApplyTransform(geom._t);
+        numvertices += geom.GetCollisionMesh().vertices.size();
+        numindices += geom.GetCollisionMesh().indices.size();
+    }
+
+    plink->collision.vertices.reserve(numvertices);
+    plink->collision.indices.reserve(numindices);
+    Link::TRIMESH trimesh;
+    FOREACH(itgeom,plink->_listGeomProperties) {
+        trimesh = itgeom->GetCollisionMesh();
+        trimesh.ApplyTransform(itgeom->_t);
         plink->collision.Append(trimesh);
     }
 
