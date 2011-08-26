@@ -82,6 +82,9 @@ protected:
 };
 
 /// \brief Samples numsamples of solutions and each solution to vsolutions
+///
+/// \param nummaxsamples the max samples to query from a particular workspace goal. This does not necessarily mean every goal will have this many samples.
+/// \param nummaxtries number of attemps to return a goal per Sample call.
 class OPENRAVE_API ManipulatorIKGoalSampler
 {
 public:

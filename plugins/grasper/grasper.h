@@ -146,8 +146,9 @@ public:
         string cmd;
         while(!sinput.eof()) {
             sinput >> cmd;
-            if( !sinput )
+            if( !sinput ) {
                 break;
+            }
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
 
             if(( cmd == "body") ||( cmd == "target") ) {
@@ -278,8 +279,9 @@ public:
         }
 
         TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),_robot->GetActiveDOF());
-        if( !_planner->PlanPath(ptraj) ||( ptraj->GetPoints().size() == 0) )
+        if( !_planner->PlanPath(ptraj) ||( ptraj->GetPoints().size() == 0) ) {
             return false;
+        }
 
         ptraj->CalcTrajTiming(_robot, ptraj->GetInterpMethod(), true, true);
         TrajectoryBasePtr pfulltraj = RaveCreateTrajectory(GetEnv(),_robot->GetDOF());
@@ -325,24 +327,27 @@ public:
             Vector norm = itcontact->first.norm;
             Vector pos = itcontact->first.pos;    //-norm*itcontact->first.depth; //?
             sout << pos.x <<" " << pos.y <<" " << pos.z <<" " << norm.x <<" " << norm.y <<" " << norm.z <<" ";
-            if(bGetLinkCollisions)
+            if(bGetLinkCollisions) {
                 sout << itcontact->second << " ";
+            }
             sout << endl;
         }
 
         if( bOutputFinal ) {
             BOOST_ASSERT(pfulltraj->GetPoints().size()>0);
             sout << pfulltraj->GetPoints().back().trans << " ";
-            FOREACHC(it,pfulltraj->GetPoints().back().q)
-            sout << *it << " ";
+            FOREACHC(it,pfulltraj->GetPoints().back().q) {
+                sout << *it << " ";
+            }
         }
 
         GRASPANALYSIS analysis;
         if( bComputeForceClosure ) {
             try {
                 vector<CollisionReport::CONTACT> c(contacts.size());
-                for(size_t i = 0; i < c.size(); ++i)
+                for(size_t i = 0; i < c.size(); ++i) {
                     c[i] = contacts[i].first;
+                }
                 analysis = _AnalyzeContacts3D(c,friction,8);
             }
             catch(const openrave_exception& ex) {
@@ -351,9 +356,9 @@ public:
             sout << analysis.mindist << " " << analysis.volume << " ";
         }
 
-        if( bExecute )
+        if( bExecute ) {
             _robot->SetMotion(pfulltraj);
-
+        }
         return true;
     }
 

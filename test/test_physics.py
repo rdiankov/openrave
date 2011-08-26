@@ -46,3 +46,55 @@ class TestPhysics(EnvironmentSetup):
             time.sleep(0.4)
         with env:
             assert( transdist(robot.GetTransform(),Trobot) <= g_epsilon )
+
+    def test_simtime(self):
+        env=self.env
+        physics = RaveCreatePhysicsEngine(env,'ode')
+        env.SetPhysicsEngine(physics)
+        env.GetPhysicsEngine().SetGravity([0,0,-9.81])
+
+        with env:
+            body = env.ReadKinBodyXMLFile('data/lego2.kinbody.xml')
+            body.SetName('body')
+            env.AddKinBody(body)
+            Tinit = eye(4)
+            Tinit[2,3] = 3
+            body.SetTransform(Tinit)
+        
+        env.StartSimulation(0.01,realtime=True)
+        starttime = 1e-6*env.GetSimulationTime()
+        time.sleep(1)
+        env.StopSimulation()
+        simtime0 = 1e-6*env.GetSimulationTime()
+        assert( abs(simtime0-starttime-1) < 0.05 )
+        with env:
+            T = body.GetTransform()
+            assert(abs(T[2,3]-Tinit[2,3]) > 0.2)
+        
+        time.sleep(2)
+        with env:
+            T2 = body.GetTransform()
+            assert(abs(T[2,3]-T2[2,3]) < g_epsilon )
+        env.StartSimulation(timestep=0.01,realtime=True)
+        time.sleep(1)
+        env.StopSimulation()
+        assert( abs(1e-6*env.GetSimulationTime()-starttime-2) < 0.05 )
+        with env:
+            T2 = body.GetTransform()
+            assert(abs(T[2,3]-T2[2,3])>0.2)
+            body.SetVelocity([0,0,0],[0,0,0])
+        
+        simtime1 = 1e-6*env.GetSimulationTime()
+        for i in range(int(simtime0*100)):
+            env.StepSimulation(0.01)
+        with env:
+            T3 = body.GetTransform()
+            assert( abs((T[2,3]-Tinit[2,3]) - (T3[2,3]-T2[2,3])) < 0.001)
+        assert(abs(1e-6*env.GetSimulationTime()-simtime1-simtime0) < g_epsilon)
+
+        env.StartSimulation(timestep=0.01,realtime=False)
+        simtime2 = 1e-6*env.GetSimulationTime()
+        while True:
+            if 1e-6*env.GetSimulationTime() > simtime2+1:
+                break
+        env.StopSimulation()

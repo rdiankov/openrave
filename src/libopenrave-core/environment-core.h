@@ -1562,7 +1562,7 @@ public:
         _fDeltaSimTime = fDeltaTime;
         _bRealTime = bRealTime;
         //_nCurSimTime = 0; // don't reset since it is important to keep time monotonic
-        _nSimStartTime = GetMicroTime();
+        _nSimStartTime = GetMicroTime()-_nCurSimTime;
     }
 
     virtual bool IsSimulationRunning() const {
