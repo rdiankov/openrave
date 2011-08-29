@@ -73,7 +73,11 @@ public:
         typedef boost::function<dReal(const std::vector<dReal>&)> GoalFn;
         GoalFn _goalfn;
 
-        /// \brief optional, Distance metric between configuration spaces, two configurations are considered the same when this returns 0: distmetric(config1,config2)
+        /// \brief Distance metric between configuration spaces (optional)
+        ///
+        /// distmetric(config1,config2)
+        ///
+        /// Two configurations are considered the same when function returns 0.
         typedef boost::function<dReal(const std::vector<dReal>&, const std::vector<dReal>&)> DistMetricFn;
         DistMetricFn _distmetricfn;
 

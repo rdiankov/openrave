@@ -71,11 +71,7 @@ The possible solve methods are defined by `ikfast.IKFastSolver.GetSolvers()`
 Usage
 -----
 
-The main file ikfast.py can be used both as a library and as an executable program. It is located in:
-
-``$OPENRAVE_INSTALL/share/openrave/openravepy/ikfast.py``
-
-It is also possible to use run ikfast.py as a stand-alone program, which makes it mostly independent of the OpenRAVE run-time. 
+The main file ikfast.py can be used both as a library and as an executable program. For advanced users, it is also possible to use run ikfast.py as a stand-alone program, which makes it mostly independent of the OpenRAVE run-time. 
 
 **However, the recommended way of using IKFast** is through the OpenRAVE :ref:`databases.inversekinematics` database generator which directly loads the IK into OpenRAVE as an interface. 
 
@@ -86,13 +82,13 @@ To get help and a description of the ikfast arguments type
 
 .. code-block:: bash
 
-  python `openrave-config --python-dir`/openravepy/ikfast.py --help
+  python `openrave-config --python-dir`/openravepy/_openravepy_/ikfast.py --help
 
 A simple example to generate IK for setting the 3rd joint free of the Barrett WAM is
 
 .. code-block:: bash
 
-  python `openrave-config --python-dir`/openravepy/ikfast.py --robot=robots/barrettwam.robot.xml --baselink=0 --eelink=7 --savefile=ik.cpp --freeindex=2
+  python `openrave-config --python-dir`/openravepy/_openravepy_/ikfast.py --robot=robots/barrettwam.robot.xml --baselink=0 --eelink=7 --savefile=ik.cpp --freeindex=2
 
 Through Python
 ==============

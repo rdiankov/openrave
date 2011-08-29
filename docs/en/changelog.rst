@@ -10,6 +10,12 @@ Subversion Revision: **Unreleased**
 
 Initial Release: **Unreleased**
 
+Core
+----
+
+* fixed physics simulation loop freezing, added tests
+
+
 
 Version 0.4.2
 =============
