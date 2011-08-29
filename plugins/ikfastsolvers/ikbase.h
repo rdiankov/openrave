@@ -51,8 +51,10 @@ public:
         return shared_solver();
     }
 
-    virtual void SetCustomFilter(const IkFilterCallbackFn& filterfn) {
+    virtual IkFilterCallbackFn SetCustomFilter(const IkFilterCallbackFn& filterfn) {
+        IkFilterCallbackFn oldfilterfn = _filterfn;
         _filterfn = filterfn;
+        return oldfilterfn;
     }
 
     bool _SetIkThresholdCommand(ostream& sout, istream& sinput)

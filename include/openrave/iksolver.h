@@ -78,8 +78,9 @@ public:
     /// \brief Sets an ik solution filter that is called for every ik solution.
     ///
     /// \param filterfn - an optional filter function to be called, see \ref IkFilterCallbackFn.
+    /// \return the old filter function
     /// \exception openrave_exception Throw if filters are not supported.
-    virtual void SetCustomFilter(const IkFilterCallbackFn& filterfn) OPENRAVE_DUMMY_IMPLEMENTATION;
+    virtual IkFilterCallbackFn SetCustomFilter(const IkFilterCallbackFn& filterfn) OPENRAVE_DUMMY_IMPLEMENTATION;
 
     /// \brief Number of free parameters defining the null solution space.
     ///
