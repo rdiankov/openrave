@@ -377,7 +377,7 @@ bool ManipulatorIKGoalSampler::Sample(std::vector<dReal>& vgoal)
     vgoal.resize(0);
     std::vector<dReal> vindex;
     _pindexsampler->SampleSequence(vindex,1,IT_OpenEnd);
-    if( vindex.at(0) < _fsampleprob ) {
+    if( vindex.at(0) > _fsampleprob ) {
         return false;
     }
     if( _viksolutions.size() > 0 ) {
@@ -445,6 +445,11 @@ int ManipulatorIKGoalSampler::GetIkParameterizationIndex(int index)
     std::list<int>::iterator it = _listreturnedsamples.begin();
     advance(it,index);
     return *it;
+}
+
+void ManipulatorIKGoalSampler::SetSamplingProb(dReal fsampleprob)
+{
+    _fsampleprob = fsampleprob;
 }
 
 } // planningutils

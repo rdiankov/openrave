@@ -679,6 +679,7 @@ protected:
                 --nSeedIkSolutions;
             }
         }
+        goalsampler.SetSamplingProb(0.05);
         params->_samplegoalfn = boost::bind(&planningutils::ManipulatorIKGoalSampler::Sample,&goalsampler,_1);
 
         if( params->vgoalconfig.size() == 0 ) {

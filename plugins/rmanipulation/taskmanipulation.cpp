@@ -1409,7 +1409,7 @@ protected:
         return boost::static_pointer_cast<TaskManipulation const>(shared_from_this());
     }
 
-    TrajectoryBasePtr _MoveArm(const vector<int>& activejoints, const PlannerBase::PlannerParameters::SampleGoalFn& samplegoalfn, int& nGoalIndex, int nMaxIterations)
+    TrajectoryBasePtr _MoveArm(const vector<int>& activejoints, planningutils::ManipulatorIKGoalSampler& goalsampler, int& nGoalIndex, int nMaxIterations)
     {
         RAVELOG_DEBUG("Starting MoveArm...\n");
         BOOST_ASSERT( !!_pRRTPlanner );
@@ -1436,8 +1436,9 @@ protected:
         int nSeedIkSolutions = 8;
         vector<dReal> vgoal;
         params->vgoalconfig.reserve(nSeedIkSolutions*_robot->GetActiveDOF());
+        goalsampler.SetSamplingProb(1);
         while(nSeedIkSolutions > 0) {
-            if( samplegoalfn(vgoal) ) {
+            if( goalsampler.Sample(vgoal) ) {
                 params->vgoalconfig.insert(params->vgoalconfig.end(), vgoal.begin(), vgoal.end());
                 --nSeedIkSolutions;
             }
@@ -1450,7 +1451,8 @@ protected:
             return ptraj;
         }
 
-        params->_samplegoalfn = samplegoalfn;
+        goalsampler.SetSamplingProb(0.05);
+        params->_samplegoalfn = boost::bind(&planningutils::ManipulatorIKGoalSampler::Sample,&goalsampler,_1);
 
         // restore
         _robot->SetActiveDOFValues(pzero);
@@ -1564,7 +1566,7 @@ protected:
         planningutils::ManipulatorIKGoalSampler goalsampler(pmanip, listgoals);
 
         int nGoalIndex = -1;
-        ptraj = _MoveArm(pmanip->GetArmIndices(), boost::bind(&planningutils::ManipulatorIKGoalSampler::Sample,&goalsampler,_1), nGoalIndex, nMaxIterations);
+        ptraj = _MoveArm(pmanip->GetArmIndices(), goalsampler, nGoalIndex, nMaxIterations);
         if (!ptraj ) {
             return ptraj;
         }

@@ -85,13 +85,17 @@ protected:
 ///
 /// \param nummaxsamples the max samples to query from a particular workspace goal. This does not necessarily mean every goal will have this many samples.
 /// \param nummaxtries number of attemps to return a goal per Sample call.
+/// \param fsampleprob The probability to attempt to sample a goal
 class OPENRAVE_API ManipulatorIKGoalSampler
 {
 public:
-    ManipulatorIKGoalSampler(RobotBase::ManipulatorConstPtr pmanip, const std::list<IkParameterization>&listparameterizations, int nummaxsamples=20, int nummaxtries=10, dReal fsampleprob=0.05f);
+    ManipulatorIKGoalSampler(RobotBase::ManipulatorConstPtr pmanip, const std::list<IkParameterization>&listparameterizations, int nummaxsamples=20, int nummaxtries=10, dReal fsampleprob=1);
+    virtual ~ManipulatorIKGoalSampler() {
+    }
     //void SetCheckPathConstraintsFn(const PlannerBase::PlannerParameters::CheckPathConstraintFn& checkfn)
-    bool Sample(std::vector<dReal>& vgoal);
-    int GetIkParameterizationIndex(int index);
+    virtual bool Sample(std::vector<dReal>& vgoal);
+    virtual int GetIkParameterizationIndex(int index);
+    virtual void SetSamplingProb(dReal fsampleprob);
 
 protected:
     struct SampleInfo
@@ -113,6 +117,7 @@ protected:
     std::vector<dReal> _vfreestart;
 };
 
+typedef boost::shared_ptr<ManipulatorIKGoalSampler> ManipulatorIKGoalSamplerPtr;
 
 } // planningutils
 } // OpenRAVE
