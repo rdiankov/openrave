@@ -1010,6 +1010,10 @@ public:
                         }
                     }
                 }
+                else {
+                    _itgeomprop->vRenderScale = _renderfilename.second;
+                    _itgeomprop->_renderfilename = _renderfilename.first;
+                }
 
                 if( _itgeomprop->GetType() == KinBody::Link::GEOMPROPERTIES::GeomCylinder ) {         // axis has to point on y
                     // rotate on x axis by pi/2
