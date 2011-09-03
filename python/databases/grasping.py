@@ -863,16 +863,20 @@ class GraspingModel(DatabaseGenerator):
                 self.env.SetCollisionChecker(cc)
 
     def computeBoxApproachRays(self,delta=0.02,normalanglerange=0,directiondelta=0.4):
+        return self._computeBoxApproachRays(self.env,self.target,delta=delta,normalanglerange=normalanglerange,directiondelta=directiondelta)
+
+    @staticmethod
+    def _computeBoxApproachRays(env,target,delta=0.02,normalanglerange=0,directiondelta=0.4):
         # ode gives the most accurate rays
-        cc = RaveCreateCollisionChecker(self.env,'ode')
+        cc = RaveCreateCollisionChecker(env,'ode')
         if cc is not None:
-            ccold = self.env.GetCollisionChecker()
-            self.env.SetCollisionChecker(cc)
+            ccold = env.GetCollisionChecker()
+            env.SetCollisionChecker(cc)
             cc = ccold
         try:
-            with self.target:
-                self.target.SetTransform(eye(4))
-                ab = self.target.ComputeAABB()
+            with target:
+                target.SetTransform(eye(4))
+                ab = target.ComputeAABB()
                 p = ab.pos()
                 e = ab.extents()+0.01 # increase since origin of ray should be outside of object
                 sides = array(((0,0,e[2],0,0,-1,e[0],0,0,0,e[1],0),
@@ -893,7 +897,7 @@ class GraspingModel(DatabaseGenerator):
                     localpos = outer(XX.flatten(),side[6:9]/ex)+outer(YY.flatten(),side[9:12]/ey)
                     N = localpos.shape[0]
                     rays = c_[tile(p+side[0:3],(N,1))+localpos,maxlen*tile(side[3:6],(N,1))]
-                    collision, info = self.env.CheckCollisionRays(rays,self.target)
+                    collision, info = env.CheckCollisionRays(rays,target)
                     # make sure all normals are the correct sign: pointing outward from the object)
                     newinfo = info[collision,:]
                     if len(newinfo) > 0:
@@ -914,7 +918,8 @@ class GraspingModel(DatabaseGenerator):
         finally:
             # restore the collision checker
             if cc is not None:
-                self.env.SetCollisionChecker(cc)
+                env.SetCollisionChecker(cc)
+
     def computeSphereApproachRays(self,delta=0.1,normalanglerange=0,directiondelta=0.4):
         # ode gives the most accurate rays
         cc = RaveCreateCollisionChecker(self.env,'ode')

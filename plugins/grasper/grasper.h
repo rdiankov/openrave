@@ -603,6 +603,7 @@ public:
             nGraspingNoiseRetries = 0;
             forceclosurethreshold = 0;
             ffinestep = 0.001f;
+            bCheckGraspIK = false;
         }
 
         string targetname;
@@ -622,6 +623,8 @@ public:
         vector<int> vactiveindices;
         int affinedofs;
         Vector affineaxis;
+
+        bool bCheckGraspIK;
     };
 
     struct GraspParametersThread
@@ -752,6 +755,9 @@ public:
                     sinput >> it->x >> it->y >> it->z;
                 }
             }
+            else if( cmd == "checkik" ) {
+                sinput >> worker_params->bCheckGraspIK;
+            }
             else {
                 RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
@@ -874,7 +880,7 @@ public:
         pcloneenv->GetCollisionChecker()->SetCollisionOptions(CO_Contacts);
         std::vector<KinBody::LinkPtr> vlinks;
         probot->GetActiveManipulator()->GetChildLinks(vlinks);
-
+        Transform trobotstart = probot->GetTransform();
 
         while(_bContinueWorker) {
             {
@@ -932,9 +938,6 @@ public:
                     probot->SetTransform(ptraj->GetPoints().back().trans);
                     probot->SetActiveDOFValues(ptraj->GetPoints().back().q);
 
-                    grasp_params->transfinal = probot->GetTransform();
-                    probot->GetDOFValues(grasp_params->finalshape);
-
                     FOREACHC(itlink, vlinks) {
                         if( pcloneenv->CheckCollision(KinBody::LinkConstPtr(*itlink), KinBodyConstPtr(params->targetbody), report) ) {
                             RAVELOG_VERBOSE(str(boost::format("contact %s\n")%report->__str__()));
@@ -947,6 +950,9 @@ public:
                             }
                         }
                     }
+
+                    grasp_params->transfinal = probot->GetTransform();
+                    probot->GetDOFValues(grasp_params->finalshape);
 
                     GRASPANALYSIS analysis;
                     if( worker_params->bComputeForceClosure ) {
@@ -966,6 +972,25 @@ public:
                             continue;     // failed
                         }
                     }
+                    if ( worker_params->bCheckGraspIK ){
+                        Transform Tgoalgrasp = probot->GetActiveManipulator()->GetEndEffectorTransform();
+                        probot->SetTransform(trobotstart);
+                        RobotBase::RobotStateSaver linksaver(probot,KinBody::Save_LinkEnable);
+                        FOREACH(itlink,vlinks) {
+                            (*itlink)->Enable(false);
+                        }
+                        vector<dReal> solution;
+                        if( !probot->GetActiveManipulator()->FindIKSolution(Tgoalgrasp, solution,0) ) {//IKFO_CheckEnvCollisions) ) {
+                            continue;     // ik failed
+                        }
+
+                        grasp_params->transfinal = trobotstart;
+                        size_t index = 0;
+                        FOREACHC(itarmindex,probot->GetActiveManipulator()->GetArmIndices()) {
+                            grasp_params->finalshape.at(*itarmindex) = solution.at(index++);
+                        }
+                    }
+                    
                     RAVELOG_DEBUG(str(boost::format("grasp %d success")%grasp_params->id));
 
                     boost::mutex::scoped_lock lock(_mutexGrasp);
