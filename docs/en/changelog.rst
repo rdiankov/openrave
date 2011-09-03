@@ -15,6 +15,11 @@ Core
 
 * fixed physics simulation loop freezing, added tests
 
+Inverse Kinematics
+------------------
+
+* IkSolver::SetCustomFilter now returns the old filter set. (temporary)
+
 Grasping
 --------
 
@@ -26,6 +31,8 @@ Misc
 * added TrajectoryBase::Clone and CalcTrajTiming calls now respect active DOFs settings
 
 * "skipgeometry" now being acknowledged in Environment::Load, fixes the inversekinematics database --getfilename option.
+
+* <render> tag for non-trimesh objects works now
  
 Version 0.4.2
 =============
