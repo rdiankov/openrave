@@ -444,7 +444,7 @@ public:
             }
         }
         else {
-            bSuccess = _ParseXMLFile(OpenRAVEXMLParser::CreateEnvironmentReader(shared_from_this(),atts), filename);
+            bSuccess = _ParseXMLFile(OpenRAVEXMLParser::CreateInterfaceReader(shared_from_this(),atts,true), filename);
         }
 
         if( !bSuccess ) {
@@ -1230,7 +1230,7 @@ public:
         try {
             EnvironmentMutex::scoped_lock lockenv(GetMutex());
             OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
-            BaseXMLReaderPtr preader = OpenRAVEXMLParser::CreateInterfaceReader(shared_from_this(),atts);
+            BaseXMLReaderPtr preader = OpenRAVEXMLParser::CreateInterfaceReader(shared_from_this(),atts,false);
             if( !preader ) {
                 return InterfaceBasePtr();
             }

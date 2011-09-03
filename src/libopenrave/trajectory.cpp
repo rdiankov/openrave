@@ -123,6 +123,24 @@ void TrajectoryBase::Clear()
     _vecsegments.resize(0);
 }
 
+void TrajectoryBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
+{
+    InterfaceBase::Clone(preference,cloningoptions);
+    TrajectoryBaseConstPtr r = RaveInterfaceConstCast<TrajectoryBase>(preference);
+    _vecpoints = r->_vecpoints;
+    _vecsegments = r->_vecsegments;
+    _lowerJointLimit = r->_lowerJointLimit;
+    _upperJointLimit = r->_upperJointLimit;
+    _maxJointVel = r->_maxJointVel;
+    _maxJointAccel = r->_maxJointAccel;
+    _maxAffineTranslationVel = r->_maxAffineTranslationVel;
+    _maxAffineRotationQuatVel = r->_maxAffineRotationQuatVel;
+    _nQuaternionIndex = r->_nQuaternionIndex;
+    _diffstatefn = r->_diffstatefn;
+    _interpMethod = r->_interpMethod;
+    _nDOF = r->_nDOF;
+}
+
 bool TrajectoryBase::CalcTrajTiming(RobotBaseConstPtr pRobot, InterpEnum interpolationMethod, bool bAutoCalcTiming, bool bActiveDOFs, dReal fMaxVelMult)
 {
     if( _vecpoints.size() == 0 ) {
@@ -1220,7 +1238,10 @@ bool TrajectoryBase::Read(std::istream& f, RobotBasePtr robot)
 
     InterpEnum interp = (InterpEnum)((options&TO_InterpolationMask)>>CountZeroBits(TO_InterpolationMask));
     BOOST_ASSERT(interp<NUM_METHODS);
-    return CalcTrajTiming(robot, interp, false, false);
+    if( dof == robot->GetDOF() ) {
+        return CalcTrajTiming(robot, interp, false, false);
+    }
+    return true;
 }
 
 } // end namespace OpenRAVE

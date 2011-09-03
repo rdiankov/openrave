@@ -3344,7 +3344,7 @@ BaseXMLReaderPtr CreateInterfaceReader(EnvironmentBasePtr penv, InterfaceType ty
 class GlobalInterfaceXMLReader : public StreamXMLReader
 {
 public:
-    GlobalInterfaceXMLReader(EnvironmentBasePtr penv, const AttributesList &atts) : _penv(penv), _atts(atts) {
+    GlobalInterfaceXMLReader(EnvironmentBasePtr penv, const AttributesList &atts, bool bAddToEnvironment=false) : _penv(penv), _atts(atts), _bAddToEnvironment(bAddToEnvironment) {
     }
     virtual ProcessElement startElement(const std::string& xmlname, const AttributesList& atts)
     {
@@ -3355,6 +3355,15 @@ public:
         }
         AttributesList newatts = atts;
         newatts.insert(newatts.end(),_atts.begin(),_atts.end());
+        _pinterface.reset();
+
+        if( xmlname == "environment" ) {
+            _pcurreader = CreateEnvironmentReader(_penv,newatts);
+            if( !!_pcurreader ) {
+                return PE_Support;
+            }
+        }
+
         // check for any plugins
         FOREACHC(itname,RaveGetInterfaceNamesMap()) {
             if( xmlname == itname->second ) {
@@ -3376,9 +3385,29 @@ public:
     {
         if( !!_pcurreader ) {
             if( _pcurreader->endElement(xmlname) ) {
+                if( !!_pinterface ) {
+                    if( _bAddToEnvironment ) {
+                        if( _pinterface->GetInterfaceType() == PT_Robot ) {
+                            _penv->AddRobot(RaveInterfaceCast<RobotBase>(_pinterface));
+                        }
+                        else if( _pinterface->GetInterfaceType() == PT_KinBody ) {
+                            _penv->AddKinBody(RaveInterfaceCast<KinBody>(_pinterface));
+                        }
+                        else if( _pinterface->GetInterfaceType() == PT_Sensor ) {
+                            _penv->AddSensor(RaveInterfaceCast<SensorBase>(_pinterface));
+                        }
+//                        else if( _pinterface->GetInterfaceType() == PT_Module ) {
+//                            _penv->AddModule(RaveInterfaceCast<ModuleBase>(_pinterface),"");
+//                        }
+                        else if( _pinterface->GetInterfaceType() == PT_Viewer ) {
+                            _penv->AddViewer(RaveInterfaceCast<ViewerBase>(_pinterface));
+                        }
+                    }
+                    return true;
+                }
+                bool bisenvironment = !!boost::dynamic_pointer_cast<EnvironmentXMLReader>(_pcurreader);
                 _pcurreader.reset();
-                // end if current reader is an interface
-                return !!boost::dynamic_pointer_cast<InterfaceXMLReader>(_pcurreader);
+                return bisenvironment;
             }
         }
         return false;
@@ -3391,11 +3420,12 @@ protected:
     EnvironmentBasePtr _penv;
     InterfaceBasePtr _pinterface;         // current processed interface
     AttributesList _atts;         ///< attributes to always set on newly created interfaces
+    bool _bAddToEnvironment; ///< if true, will add interface to environment
 };
 
-BaseXMLReaderPtr CreateInterfaceReader(EnvironmentBasePtr penv, const AttributesList& atts)
+BaseXMLReaderPtr CreateInterfaceReader(EnvironmentBasePtr penv, const AttributesList& atts,bool bAddToEnvironment)
 {
-    return BaseXMLReaderPtr(new OpenRAVEXMLParser::GlobalInterfaceXMLReader(penv,atts));
+    return BaseXMLReaderPtr(new OpenRAVEXMLParser::GlobalInterfaceXMLReader(penv,atts,bAddToEnvironment));
 }
 };
 

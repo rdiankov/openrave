@@ -208,8 +208,8 @@ bool ParseXMLData(BaseXMLReaderPtr preader, const std::string& pdata);
 BaseXMLReaderPtr CreateEnvironmentReader(EnvironmentBasePtr penv, const AttributesList& atts);
 boost::shared_ptr<std::pair<std::string,std::string> > FindFile(const std::string& filename);
 BaseXMLReaderPtr CreateInterfaceReader(EnvironmentBasePtr penv, InterfaceType type, InterfaceBasePtr& pinterface, const std::string& xmltag, const AttributesList& atts);
-BaseXMLReaderPtr CreateInterfaceReader(EnvironmentBasePtr penv, const AttributesList& atts);
-bool CreateTriMeshData(EnvironmentBasePtr, const std::string& filename, const Vector &vscale, KinBody::Link::TRIMESH& trimesh, RaveVector<float>&diffuseColor, RaveVector<float>&ambientColor, float& ftransparency);
+BaseXMLReaderPtr CreateInterfaceReader(EnvironmentBasePtr penv, const AttributesList& atts, bool bAddToEnvironment);
+bool CreateTriMeshData(EnvironmentBasePtr, const std::string& filename, const Vector &vscale, KinBody::Link::TRIMESH& trimesh, RaveVector<float>&diffuseColor, RaveVector<float>&ambientColor, float &ftransparency);
 }
 
 #ifdef _WIN32

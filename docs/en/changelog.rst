@@ -15,8 +15,18 @@ Core
 
 * fixed physics simulation loop freezing, added tests
 
+Grasping
+--------
 
+* fixes in grasping with standoff
 
+Misc
+----
+
+* added TrajectoryBase::Clone and CalcTrajTiming calls now respect active DOFs settings
+
+* "skipgeometry" now being acknowledged in Environment::Load, fixes the inversekinematics database --getfilename option.
+ 
 Version 0.4.2
 =============
 

@@ -218,7 +218,15 @@ protected:
             ptraj->CalcTrajTiming(robot,TrajectoryBase::CUBIC,true,false,_fMaxVelMult);
         }
         RAVELOG_VERBOSE(str(boost::format("executing traj with %d points\n")%ptraj->GetPoints().size()));
-        robot->SetMotion(ptraj);
+        if( ptraj->GetDOF() == robot->GetDOF() ) {
+            robot->SetMotion(ptraj);
+        }
+        else if( ptraj->GetDOF() == robot->GetActiveDOF() ) {
+            robot->SetActiveMotion(ptraj);
+        }
+        else {
+            return false;
+        }
         sout << "1";
         return true;
     }
