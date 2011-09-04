@@ -40,7 +40,6 @@ import fastgraspingthreaded
 import hanoi
 import graspplanning
 import movehandstraight
-import movehandstraight2
 import showsensors
 import simplegrasping
 import simplemanipulation
