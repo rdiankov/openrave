@@ -1238,7 +1238,7 @@ bool TrajectoryBase::Read(std::istream& f, RobotBasePtr robot)
 
     InterpEnum interp = (InterpEnum)((options&TO_InterpolationMask)>>CountZeroBits(TO_InterpolationMask));
     BOOST_ASSERT(interp<NUM_METHODS);
-    if( dof == robot->GetDOF() ) {
+    if( !robot || dof == robot->GetDOF() ) {
         return CalcTrajTiming(robot, interp, false, false);
     }
     return true;

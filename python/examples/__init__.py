@@ -36,6 +36,7 @@ import collision2
 import constraintplanning
 import dualarmdemo_schunk
 import fastgrasping
+import fastgraspingthreaded
 import hanoi
 import graspplanning
 import movehandstraight

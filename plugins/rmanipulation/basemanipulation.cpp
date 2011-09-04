@@ -466,7 +466,9 @@ protected:
             return false;
         }
         params->vgoalconfig.resize(writeindex);
-
+        if( RaveHasInterface(PT_Planner,"ParabolicSmoothingPlanner") ) {
+            params->_sPathOptimizationPlanner = "ParabolicSmoothingPlanner";
+        }
         robot->SetActiveDOFValues(originalvalues);
 
         // jitter again for initial collision
