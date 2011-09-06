@@ -141,8 +141,8 @@ void KinBodyItem::Load()
                         if( itgeom->GetTransparency() > 0 ) {
                             // set a diffuse color
                             SoSearchAction search;
-                            search.setType(SoMaterial::getClassTypeId());
                             search.setInterest(SoSearchAction::ALL);
+                            search.setType(SoMaterial::getClassTypeId());
                             psep->ref();
                             search.apply(psep);
                             for(int i = 0; i < search.getPaths().getLength(); ++i) {

@@ -60,7 +60,7 @@ public:
             return false;
         }
 
-        Vector diffuseColor, ambientColor;
+        Vector diffuseColor(1,1,1,1), ambientColor;
         dReal ftransparency=0;
         KinBody::Link::TRIMESH trimesh;
         bool bSuccess = false;
@@ -69,8 +69,8 @@ public:
         if( !!psep ) {
             // try to extract a material
             SoSearchAction search;
-            search.setType(SoMaterial::getClassTypeId());
             search.setInterest(SoSearchAction::ALL);
+            search.setType(SoMaterial::getClassTypeId());
             psep->ref();
             search.apply(psep);
             for(int i = 0; i < search.getPaths().getLength(); ++i) {
