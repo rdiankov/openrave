@@ -803,10 +803,10 @@ KinBody::Joint::Joint(KinBodyPtr parent)
     }
     fResolution = dReal(0.02);
     FOREACH(it,_vmaxvel) {
-        *it = 1e5f;
+        *it = 10;
     }
     FOREACH(it,_vmaxaccel) {
-        *it = 1e5f;
+        *it = 100;
     }
     FOREACH(it,_vmaxtorque) {
         *it = 1e5f;

@@ -20,6 +20,8 @@ Inverse Kinematics
 
 * IkSolver::SetCustomFilter now returns the old filter set. (temporary)
 
+* Fixed TranslationDirection5D IK bug, upgrade ikfast version
+
 Grasping
 --------
 
@@ -33,7 +35,9 @@ Misc
 * "skipgeometry" now being acknowledged in Environment::Load, fixes the inversekinematics database --getfilename option.
 
 * <render> tag for non-trimesh objects works now
- 
+
+* more reasonable default acceleration and velocity limits
+
 Version 0.4.2
 =============
 

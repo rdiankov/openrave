@@ -78,33 +78,8 @@ if __name__ == "__main__":
     parser.add_option('--listexamples',action='store_true',dest='listexamples',default=False,
                       help='Lists the available examples.')
     (options, args) = parser.parse_args()
-    if options.listdatabases:
-        for name in dir(databases):
-            if not name.startswith('__'):
-                try:
-                    m=__import__('openravepy.databases.'+name)
-                    if type(m) is ModuleType:
-                        print name
-                except ImportError:
-                    pass
-        sys.exit(0)
-    if options.listexamples:
-        import openravepy.examples
-        for name in dir(openravepy.examples):
-            if not name.startswith('__'):
-                try:
-                    m=__import__('openravepy.examples.'+name)
-                    if type(m) is ModuleType:
-                        print name
-                except ImportError:
-                    pass
-        sys.exit(0)
-    if options.database is not None:
-        args = options.database[0].split() + options.database[1:] # the first arg might also include the options
-        try:
-            database=getattr(databases,args[0])
-        except (AttributeError,IndexError):
-            print 'bad database generator, current list of executable generators are:'
+    try:
+        if options.listdatabases:
             for name in dir(databases):
                 if not name.startswith('__'):
                     try:
@@ -113,16 +88,9 @@ if __name__ == "__main__":
                             print name
                     except ImportError:
                         pass
-            sys.exit(1)
-        database.run(args=args)
-        sys.exit(0)
-    if options.example is not None:
-        args = options.example[0].split() + options.example[1:] # the first arg might also include the options
-        try:
+            sys.exit(0)
+        if options.listexamples:
             import openravepy.examples
-            example = getattr(openravepy.examples,args[0])
-        except (AttributeError,IndexError):
-            print 'bad example, current list of executable examples are:'
             for name in dir(openravepy.examples):
                 if not name.startswith('__'):
                     try:
@@ -131,56 +99,90 @@ if __name__ == "__main__":
                             print name
                     except ImportError:
                         pass
-            sys.exit(1)
-        example.run(args=args)
-        sys.exit(0)
-
-    level = DebugLevel.Info
-    if options.listinterfaces is not None or options.listplugins:
-        level = DebugLevel.Error
-    RaveInitialize(True,level=level)
-    if options.listinterfaces is not None:
-        interfaces = RaveGetLoadedInterfaces()
-        for type,names in interfaces.iteritems():
-            if options.listinterfaces.lower() == str(type).lower():
-                for name in names:
-                    print name
-                break
-        sys.exit(0)
-    if options.listplugins:
-        plugins = RaveGetPluginInfo()
-        interfacenames = dict()
-        for type in InterfaceType.values.values():
-            interfacenames[type] = []
-        for pluginname,info in plugins:
-            for type,names in info.interfacenames:
-                interfacenames[type] += [(n,pluginname) for n in names]
-        print 'Number of plugins: %d'%len(plugins)
-        for type,names in interfacenames.iteritems():
-            print '%s: %d'%(str(type),len(names))
-            names.sort()
-            for interfacename,pluginname in names:
-                print '  %s - %s'%(interfacename,pluginname)
-        sys.exit(0)
-    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=False)
-    try:
-        # load files after viewer is loaded since they may contain information about where to place the camera
-        for arg in args:
-            env.Load(arg)
-        with env:
-            robots=env.GetRobots()
-            robot=None if len(robots) == 0 else robots[0]
-        if options.pythoncmd is not None:
-            eval(compile(options.pythoncmd,'<string>','exec'))
-        if options._viewer is None:
-            env.SetViewer('qtcoin')
-        if options.ipython:
-            from IPython.Shell import IPShellEmbed
-            ipshell = IPShellEmbed(argv='',banner = 'OpenRAVE Dropping into IPython, variables: env, robot',exit_msg = 'Leaving Interpreter and closing program.')
-            ipshell(local_ns=locals())
             sys.exit(0)
-        while True:
-            time.sleep(1.0)
+        if options.database is not None:
+            args = options.database[0].split() + options.database[1:] # the first arg might also include the options
+            try:
+                database=getattr(databases,args[0])
+            except (AttributeError,IndexError):
+                print 'bad database generator, current list of executable generators are:'
+                for name in dir(databases):
+                    if not name.startswith('__'):
+                        try:
+                            m=__import__('openravepy.databases.'+name)
+                            if type(m) is ModuleType:
+                                print name
+                        except ImportError:
+                            pass
+                sys.exit(1)
+            database.run(args=args)
+            sys.exit(0)
+        if options.example is not None:
+            args = options.example[0].split() + options.example[1:] # the first arg might also include the options
+            try:
+                import openravepy.examples
+                example = getattr(openravepy.examples,args[0])
+            except (AttributeError,IndexError):
+                print 'bad example, current list of executable examples are:'
+                for name in dir(openravepy.examples):
+                    if not name.startswith('__'):
+                        try:
+                            m=__import__('openravepy.examples.'+name)
+                            if type(m) is ModuleType:
+                                print name
+                        except ImportError:
+                            pass
+                sys.exit(1)
+            example.run(args=args)
+            sys.exit(0)
+
+        level = DebugLevel.Info
+        if options.listinterfaces is not None or options.listplugins:
+            level = DebugLevel.Error
+        RaveInitialize(True,level=level)
+        if options.listinterfaces is not None:
+            interfaces = RaveGetLoadedInterfaces()
+            for type,names in interfaces.iteritems():
+                if options.listinterfaces.lower() == str(type).lower():
+                    for name in names:
+                        print name
+                    break
+            sys.exit(0)
+        if options.listplugins:
+            plugins = RaveGetPluginInfo()
+            interfacenames = dict()
+            for type in InterfaceType.values.values():
+                interfacenames[type] = []
+            for pluginname,info in plugins:
+                for type,names in info.interfacenames:
+                    interfacenames[type] += [(n,pluginname) for n in names]
+            print 'Number of plugins: %d'%len(plugins)
+            for type,names in interfacenames.iteritems():
+                print '%s: %d'%(str(type),len(names))
+                names.sort()
+                for interfacename,pluginname in names:
+                    print '  %s - %s'%(interfacename,pluginname)
+            sys.exit(0)
+        env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=False)
+        try:
+            # load files after viewer is loaded since they may contain information about where to place the camera
+            for arg in args:
+                env.Load(arg)
+            with env:
+                robots=env.GetRobots()
+                robot=None if len(robots) == 0 else robots[0]
+            if options.pythoncmd is not None:
+                eval(compile(options.pythoncmd,'<string>','exec'))
+            if options._viewer is None:
+                env.SetViewer('qtcoin')
+            if options.ipython:
+                from IPython.Shell import IPShellEmbed
+                ipshell = IPShellEmbed(argv='',banner = 'OpenRAVE Dropping into IPython, variables: env, robot',exit_msg = 'Leaving Interpreter and closing program.')
+                ipshell(local_ns=locals())
+                sys.exit(0)
+            while True:
+                time.sleep(1.0)
+        finally:
+            env.Destroy()
     finally:
-        env.Destroy()
         RaveDestroy()

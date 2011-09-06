@@ -200,7 +200,7 @@ from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2011 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Lesser GPL, Version 3'
-__version__ = '45'
+__version__ = '46'
 
 import sys, copy, time, math, datetime
 import __builtin__
@@ -1840,6 +1840,7 @@ class IKFastSolver(AutoReloader):
         if tree is None:
             rawpolyeqs2 = [None]*len(solvejointvars)
             coupledsolutions = None
+            endbranchtree2 = []
             for solvemethod in [self.solveLiWoernleHiller, self.solveKohliOsvatic, self.solveManochaCanny]:
                 if coupledsolutions is not None:
                     break
@@ -1855,7 +1856,7 @@ class IKFastSolver(AutoReloader):
                     if rawpolyeqs2[index] is None:
                         rawpolyeqs2[index] = self.buildRaghavanRothEquations(p0,p1,l0,l1,solvejointvars)
                     try:
-                        coupledsolutions,usedvars = solvemethod(rawpolyeqs2[index],solvejointvars,endbranchtree)
+                        coupledsolutions,usedvars = solvemethod(rawpolyeqs2[index],solvejointvars,endbranchtree=[AST.SolverSequence([endbranchtree2])])
                         break
                     except self.CannotSolveError, e:
                         log.warn('%s', e)
@@ -1877,10 +1878,10 @@ class IKFastSolver(AutoReloader):
                     curvars.remove(var)
                     solsubs += self.Variable(var).subs
                 self.checkSolvability(AllEquations,curvars,self.freejointvars+usedvars)
-                tree = self.solveAllEquations(AllEquations,curvars=curvars,othersolvedvars = self.freejointvars+usedvars,solsubs = solsubs,endbranchtree=endbranchtree)
-                tree = self.verifyAllEquations(AllEquations,curvars,solsubs,tree)
-                tree = coupledsolutions+tree
+                endbranchtree2 += self.solveAllEquations(AllEquations,curvars=curvars,othersolvedvars = self.freejointvars+usedvars,solsubs = solsubs,endbranchtree=endbranchtree)
+                tree = self.verifyAllEquations(AllEquations,curvars,solsubs,coupledsolutions)
             else:
+                endbranchtree2 += endbranchtree
                 tree = coupledsolutions
 
         chaintree = AST.SolverIKChainRay([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(v,i) for v,i in izip(self.freejointvars,self.ifreejointvars)], Pee=(self.Tee[0:3,3]-self.Tee[0,0:3].transpose()*offsetdist).subs(self.freevarsubs), Dee=self.Tee[0,0:3].transpose().subs(self.freevarsubs),jointtree=tree,Dfk=Tfinal[0,0:3].transpose(),Pfk=Tfinal[0:3,3],is5dray=True)
@@ -2722,7 +2723,7 @@ class IKFastSolver(AutoReloader):
         symbols.append(tvar)
         othersymbols.append(tvar)        
         polyeqs = [[peq[0].as_basic(),peq[1]] for peq in rawpolyeqs if peq[0].has_any_symbols(cvar,svar)]
-        
+
         neweqs=[]
         for i in range(0,8,2):
             p0 = Poly(polyeqs[i][0],cvar,svar)
@@ -2947,6 +2948,7 @@ class IKFastSolver(AutoReloader):
                 log.debug(e)
 
         newreducedeqs = []
+        hassinglevariable = False
         for eq in reducedeqs:
             peq = Poly(eq,*othersymbols)
             maxdenom = [0,0]
@@ -2965,7 +2967,49 @@ class IKFastSolver(AutoReloader):
                     denom = fraction(htvarsubs[2*i][1])[1]
                     term *= denom**(maxdenom[i]-monoms[2*i]-monoms[2*i+1])
                 eqnew += term
-            newreducedeqs.append(Poly(eqnew,htvars[0],htvars[1],tvar))
+            newpeq = Poly(eqnew,htvars[0],htvars[1],tvar)
+            newreducedeqs.append(newpeq)
+            hassinglevariable |= any([all([__builtin__.sum(monom)==monom[i] for monom in newpeq.monoms]) for i in range(3)])
+        
+        if hassinglevariable:
+            print 'hassinglevariable, trying with raw equations'
+            AllEquations = []
+            for eq in reducedeqs:
+                peq = Poly(eq,tvar)
+                if peq.degree == 0:
+                    AllEquations.append(peq.coeff().subs(self.invsubs).expand())
+                elif peq.degree == 1 and peq.coeff() == S.Zero:
+                    AllEquations.append(peq.coeff(1).subs(self.invsubs).expand())
+                else:
+                    # two substitutions: sin/(1+cos), (1-cos)/sin
+                    neweq0 = S.Zero
+                    neweq1 = S.Zero
+                    for c,monoms in peq.iter_terms():
+                        neweq0 += c*(svar**monoms[0])*((1+cvar)**(peq.degree-monoms[0]))
+                        neweq1 += c*((1-cvar)**monoms[0])*(svar**(peq.degree-monoms[0]))
+                    AllEquations.append(neweq0.subs(self.invsubs).expand())
+                    AllEquations.append(neweq1.subs(self.invsubs).expand())
+            self.sortComplexity(AllEquations)
+            for i in range(3):
+                try:
+                    unknownvars = usedvars[:]
+                    unknownvars.pop(i)
+                    endbranchtree2 = []
+                    solutiontree = self.solveAllEquations(AllEquations,curvars=[usedvars[i]],othersolvedvars=self.freejointvars[:],solsubs=self.freevarsubs[:],endbranchtree=[AST.SolverSequence([endbranchtree2])],unknownvars=unknownvars)
+                    endbranchtree2 += self.solveAllEquations(AllEquations,curvars=unknownvars[0:2],othersolvedvars=self.freejointvars[:]+[usedvars[i]],solsubs=self.freevarsubs[:]+self.Variable(usedvars[i]).subs,endbranchtree=endbranchtree)
+                    return solutiontree, usedvars
+                except self.CannotSolveError:
+                    pass
+
+#         try:
+#             testvars = [Symbol(othersymbols[0].name[1:]),Symbol(othersymbols[2].name[1:]),Symbol(varname)]
+#             AllEquations = [(peq[0].as_basic()-peq[1].as_basic()).expand() for peq in polyeqs if not peq[0].has_any_symbols(*symbols)]
+#             coupledsolutions = self.solveAllEquations(AllEquations,curvars=testvars,othersolvedvars=self.freejointvars[:],solsubs=self.freevarsubs[:],endbranchtree=endbranchtree)
+#             return coupledsolutions,testvars
+#         except self.CannotSolveError:
+#             pass
+#         
+
 
         exportcoeffeqs,exportmonoms = self.solveDialytically(newreducedeqs,0,getsubs)
         coupledsolution = AST.SolverCoeffFunction(jointnames=[v.name for v in usedvars],jointeval=[v[1] for v in htvarsubs2],jointevalcos=[htvarsubs[2*i][1] for i in range(len(htvars))],jointevalsin=[htvarsubs[2*i+1][1] for i in range(len(htvars))],isHinges=[self.isHinge(v.name) for v in usedvars],exportvar=[v.name for v in htvars],exportcoeffeqs=exportcoeffeqs,exportfnname='solvedialyticpoly8qep',rootmaxdim=16)
@@ -3630,7 +3674,7 @@ class IKFastSolver(AutoReloader):
                                                 else:
                                                     evalcond=cond
                                                 eqs.append([cond,evalcond,[(sothervar,-sqrt(1-eq*eq).evalf()),(sin(othervar),-sqrt(1-eq*eq).evalf()),(cothervar,eq),(cos(othervar),eq),(othervar,-acos(eq).evalf())]])
-                
+                                                
             if not var in nextsolutions:
                 newvars=curvars[:]
                 newvars.remove(var)
@@ -4210,13 +4254,17 @@ class IKFastSolver(AutoReloader):
                 break
         return pfinal if found else None
 
-    def solveSingleVariable(self,raweqns,var,othersolvedvars,maxsolutions=4,maxdegree=2):
+    def solveSingleVariable(self,raweqns,var,othersolvedvars,maxsolutions=4,maxdegree=2,subs=None):
         varsym = self.Variable(var)
         vars = [varsym.cvar,varsym.svar,varsym.htvar,var]
         eqns = [eq.expand() for eq in raweqns if eq.has_any_symbols(*vars)]
         if len(eqns) == 0:
             raise self.CannotSolveError('not enough equations')
         
+        othersubs = []
+        for othersolvedvar in othersolvedvars:
+            othersubs += self.Variable(othersolvedvar).subs
+
         # prioritize finding a solution when var is alone
         for eq in eqns:
             symbolgen = cse_main.numbered_symbols('const')
@@ -4315,6 +4363,18 @@ class IKFastSolver(AutoReloader):
                         if self.equal(svarfrac[0],cvarfrac[0]) and self.equal(svarfrac[1],cvarfrac[1]):
                             break
                         if not self.isValidSolution(svarfrac[0]) or not self.isValidSolution(svarfrac[1]) or not self.isValidSolution(cvarfrac[0]) or not self.isValidSolution(cvarfrac[1]):
+                            continue
+                        # check if there exists at least one test solution with non-zero denominators
+                        if subs is None:
+                            testeqs = [svarfrac[1].subs(othersubs),cvarfrac[1].subs(othersubs)]
+                        else:
+                            testeqs = [svarfrac[1].subs(subs).subs(othersubs),cvarfrac[1].subs(subs).subs(othersubs)]
+                        testsuccess = False
+                        for testconsistentvalue in self.testconsistentvalues:
+                            if all([testeq.subs(testconsistentvalue).evalf()!=S.Zero for testeq in testeqs]):
+                                testsuccess = True
+                                break
+                        if not testsuccess:
                             continue
                         scomplexity = self.codeComplexity(svarfrac[0])+self.codeComplexity(svarfrac[1])
                         ccomplexity = self.codeComplexity(cvarfrac[0])+self.codeComplexity(cvarfrac[1])
@@ -4585,12 +4645,12 @@ class IKFastSolver(AutoReloader):
         # try single variable solution, only return if a single solution has been found
         # returning multiple solutions when only one exists can lead to wrong results.
         try:
-            rawsolutions += self.solveSingleVariable([e.as_basic().subs(varsubsinv).expand() for score,e in neweqns if not e.has_any_symbols(cvar1,svar1,var1)],var0,othersolvedvars)
+            rawsolutions += self.solveSingleVariable([e.as_basic().subs(varsubsinv).expand() for score,e in neweqns if not e.has_any_symbols(cvar1,svar1,var1)],var0,othersolvedvars,subs=allsymbols)
         except self.CannotSolveError:
             pass
 
         try:
-            rawsolutions += self.solveSingleVariable([e.as_basic().subs(varsubsinv).expand() for score,e in neweqns if not e.has_any_symbols(cvar0,svar0,var0)],var1,othersolvedvars)                    
+            rawsolutions += self.solveSingleVariable([e.as_basic().subs(varsubsinv).expand() for score,e in neweqns if not e.has_any_symbols(cvar0,svar0,var0)],var1,othersolvedvars,subs=allsymbols)                    
         except self.CannotSolveError:
             pass
 
@@ -4788,6 +4848,13 @@ class IKFastSolver(AutoReloader):
             # somehow removed all variables, so try the general method
             return self.solvePairVariablesHalfAngle(raweqns,var0,var1,othersolvedvars)
 
+        try:
+            if self.codeComplexity(finaleq) > 100000:
+                return self.solvePairVariablesHalfAngle(raweqns,var0,var1,othersolvedvars)
+            
+        except self.CannotSolveError:
+            pass
+
         if useconic:
             # conic roots solver not as robust as half-angle transform!
             #return [SolverConicRoots(var.name,[finaleq],isHinge=self.isHinge(var.name))]
@@ -4808,7 +4875,8 @@ class IKFastSolver(AutoReloader):
                 solversolution.jointevalsin=[self.trigsimp(s.subs(allsymbols+varsubsinv),othersolvedvars).subs(varsubs) for s in solutions]
             return [solversolution]
         
-        raise self.CannotSolveError('cannot solve pair equation')
+        return self.solvePairVariablesHalfAngle(raweqns,var0,var1,othersolvedvars)
+        #raise self.CannotSolveError('cannot solve pair equation')
         
     ## SymPy helper routines
 

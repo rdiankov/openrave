@@ -2475,12 +2475,35 @@ public:
         return boost::python::make_tuple(toPyArray(lower),toPyArray(upper));
     }
 
-    //    void GetActiveDOFResolutions(dReal* pResolution) const;
-    //    void GetActiveDOFResolutions(std::vector<dReal>& v) const;
-    //    void GetActiveDOFMaxVel(dReal* pMaxVel) const;
-    //    void GetActiveDOFMaxVel(std::vector<dReal>& v) const;
-    //    void GetActiveDOFMaxAccel(dReal* pMaxAccel) const;
-    //    void GetActiveDOFMaxAccel(std::vector<dReal>& v) const;
+    object GetActiveDOFMaxVel() const
+    {
+        if( _probot->GetActiveDOF() == 0 ) {
+            return numeric::array(boost::python::list());
+        }
+        vector<dReal> values;
+        _probot->GetActiveDOFMaxVel(values);
+        return toPyArray(values);
+    }
+
+    object GetActiveDOFMaxAccel() const
+    {
+        if( _probot->GetActiveDOF() == 0 ) {
+            return numeric::array(boost::python::list());
+        }
+        vector<dReal> values;
+        _probot->GetActiveDOFMaxAccel(values);
+        return toPyArray(values);
+    }
+
+    object GetActiveDOFResolutions() const
+    {
+        if( _probot->GetActiveDOF() == 0 ) {
+            return numeric::array(boost::python::list());
+        }
+        vector<dReal> values;
+        _probot->GetActiveDOFResolutions(values);
+        return toPyArray(values);
+    }
 
     //    void GetFullTrajectoryFromActive(PyTrajectory* pFullTraj, PyTrajectory* pActiveTraj, bool bOverwriteTransforms);
     //    void SetActiveMotion(PyTrajectory* ptraj);
@@ -4908,6 +4931,9 @@ In python, the syntax is::\n\n\
                       .def("SetActiveDOFVelocities",&PyRobotBase::SetActiveDOFVelocities, DOXY_FN(RobotBase,SetActiveDOFVelocities))
                       .def("GetActiveDOFVelocities",&PyRobotBase::GetActiveDOFVelocities, DOXY_FN(RobotBase,GetActiveDOFVelocities))
                       .def("GetActiveDOFLimits",&PyRobotBase::GetActiveDOFLimits, DOXY_FN(RobotBase,GetActiveDOFLimits))
+                      .def("GetActiveDOFMaxVel",&PyRobotBase::GetActiveDOFMaxVel, DOXY_FN(RobotBase,GetActiveDOFMaxVel))
+                      .def("GetActiveDOFMaxAccel",&PyRobotBase::GetActiveDOFMaxAccel, DOXY_FN(RobotBase,GetActiveDOFMaxAccel))
+                      .def("GetActiveDOFResolutions",&PyRobotBase::GetActiveDOFResolutions, DOXY_FN(RobotBase,GetActiveDOFResolutions))
                       .def("GetActiveJointIndices",&PyRobotBase::GetActiveJointIndices)
                       .def("GetActiveDOFIndices",&PyRobotBase::GetActiveDOFIndices, DOXY_FN(RobotBase,GetActiveDOFIndices))
                       .def("SubtractActiveDOFValues",&PyRobotBase::SubtractActiveDOFValues, args("values0","values1"), DOXY_FN(RobotBase,SubtractActiveDOFValues))

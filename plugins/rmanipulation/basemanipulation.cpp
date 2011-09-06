@@ -324,6 +324,10 @@ protected:
             params->vinitialconfig.resize(0);     // set by SetRobotActiveJoints
         }
 
+        if( RaveHasInterface(PT_Planner,"ParabolicSmoothingPlanner") ) {
+            params->_sPathOptimizationPlanner = "ParabolicSmoothingPlanner";
+        }
+
         // compute a workspace trajectory (important to do this after jittering!)
         {
             Vector voldtrans = robot->GetAffineTranslationMaxVels();
@@ -711,6 +715,10 @@ protected:
             return false;
         }
         robot->GetActiveDOFValues(params->vinitialconfig);
+
+        if( RaveHasInterface(PT_Planner,"ParabolicSmoothingPlanner") ) {
+            params->_sPathOptimizationPlanner = "ParabolicSmoothingPlanner";
+        }
 
         PlannerBasePtr rrtplanner = RaveCreatePlanner(GetEnv(),_strRRTPlannerName);
         if( !rrtplanner ) {
