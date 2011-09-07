@@ -50,7 +50,13 @@ object, without moving it to the destination. To test planning without destinati
 5D IK Grasp Planning
 ====================
 
-It is possible to perform grasp planning with 5D IK. Try executing:
+It is possible to perform grasp planning with 5D IK. First create the grasp set with:
+
+.. code-block:: bash
+
+  openrave.py --database grasping --robot=robots/neuronics-katana.zae --manipname=arm --target=data/box_frootloops.kinbody.xml --manipulatordirection="0 1 0"
+
+Then execute:
 
 .. code-block:: bash
 

@@ -38,6 +38,8 @@ Misc
 
 * more reasonable default acceleration and velocity limits
 
+* fixed octave graspplanning demo
+
 Version 0.4.2
 =============
 

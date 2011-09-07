@@ -64,7 +64,11 @@ while(curgrasp < size(grasps,1))
            ' seedik 1 seedgrasps 3 seeddests 8 randomdests 1 randomgrasps 1 ' ...
            ' target ' curobj.name ...
            ' approachoffset ' sprintf('%f',approachoffset) ...
-           ' graspindices ' sprintf('%d ',[robot.grasp.direction(1),robot.grasp.center(1),robot.grasp.roll(1),robot.grasp.standoff(1),robot.grasp.joints(1)]-1) ...
+           ' igraspdir ' sprintf('%d ',robot.grasp.direction(1)) ...
+           ' igrasppos ' sprintf('%d ',robot.grasp.center(1)) ...
+           ' igrasproll ' sprintf('%d ',robot.grasp.roll(1)) ...
+           ' igraspstandoff ' sprintf('%d ',robot.grasp.standoff(1)) ...
+           ' igrasppreshape ' sprintf('%d ',robot.grasp.joints(1)) ...
            ' matdests ' num2str(size(curobj.dests,2)) ' ' sprintf('%f ', curobj.dests) ...
            ];
                                      
@@ -81,8 +85,9 @@ while(curgrasp < size(grasps,1))
 
     %% parse the response
     [numgoals, rem] = ReadValsFromString(response,1);
-    [destgoals, rem] = ReadValsFromString(rem,12*numgoals);
-    destgoals = reshape(destgoals,[12 numgoals]);
+    [destgoals, rem] = ReadValsFromString(rem,8*numgoals);
+    destgoals = reshape(destgoals,[8 numgoals]);
+    destgoals = destgoals(2:8,:)
 
     [graspindex,rem] = ReadValsFromString(rem,1);
     [searchtime,trajdata] = ReadValsFromString(rem,1);
@@ -188,7 +193,7 @@ while(curgrasp < size(grasps,1))
 
     if( squeezesuccess > 0 )
         disp('planning to destination');
-        trajdata = orProblemSendCommand(['MoveToHandPosition maxiter 1000 maxtries 1 seedik 4 execute 0 outputtraj matrices ' sprintf('%d ', size(destgoals,2)) sprintf('%f ', destgoals)], probs.manip);
+        trajdata = orProblemSendCommand(['MoveToHandPosition maxiter 1000 maxtries 1 seedik 4 execute 0 outputtraj poses ' sprintf('%d ', size(destgoals,2)) sprintf('%f ', destgoals)], probs.manip);
         if( ~isempty(trajdata) )
             success = StartTrajectory(robotid,trajdata);
             if( ~success )

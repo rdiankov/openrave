@@ -74,7 +74,6 @@ Task-based manipulation planning involving target objects. A lot of the algorith
 * randomdests\n\
 * writetraj\n\
 * maxiter\n\
-* graspindices\n\
 * igraspdir\n\
 * igrasppos\n\
 * igrasproll\n\
@@ -461,9 +460,10 @@ protected:
             RAVELOG_INFO("planning with mobile base!\n");
         }
         bool bInitialRobotChanged = false;
-        vector<dReal> vCurHandValues, vCurRobotValues, vOrgRobotValues;
+        vector<dReal> vCurHandValues, vCurRobotValues, vOrgRobotValues, vHandLowerLimits, vHandUpperLimits;
         _robot->SetActiveDOFs(pmanip->GetGripperIndices());
         _robot->GetActiveDOFValues(vCurHandValues);
+        _robot->GetActiveDOFLimits(vHandLowerLimits,vHandUpperLimits);
         _robot->GetDOFValues(vOrgRobotValues);
 
         SwitchModelState switchstate(shared_problem());
@@ -520,7 +520,7 @@ protected:
                 RAVELOG_ERROR("grasper problem not valid\n");
                 return false;
             }
-            if(( iGraspDir < 0) ||( iGraspPos < 0) ||( iGraspRoll < 0) ||( iGraspStandoff < 0) || (imanipulatordirection<0) ) {
+            if(( iGraspDir < 0) ||( iGraspPos < 0) ||( iGraspRoll < 0) ||( iGraspStandoff < 0) ) {
                 RAVELOG_ERROR("grasp indices not all initialized\n");
                 return false;
             }
@@ -555,8 +555,17 @@ protected:
 
             vector<dReal> vgoalpreshape(vCurHandValues.size());
             if( iGraspPreshape >= 0 ) {
+                bool badpreshape = false;
                 for(size_t j = 0; j < vCurHandValues.size(); ++j) {
                     vgoalpreshape[j] = pgrasp[iGraspPreshape+j];
+                    if( vHandLowerLimits.at(j) > vgoalpreshape[j] || vHandUpperLimits.at(j) < vgoalpreshape[j] ) {
+                        RAVELOG_WARN("bad preshape index %d!\n",j);
+                        badpreshape = true;
+                        break;
+                    }
+                }
+                if( badpreshape ) {
+                    continue;
                 }
             }
             else {
@@ -593,7 +602,12 @@ protected:
                 graspparams->ftargetroll = pgrasp[iGraspRoll];
                 graspparams->vtargetdirection = Vector(pgrasp[iGraspDir], pgrasp[iGraspDir+1], pgrasp[iGraspDir+2]);
                 graspparams->vtargetposition = Vector(pgrasp[iGraspPos], pgrasp[iGraspPos+1], pgrasp[iGraspPos+2]);
-                graspparams->vmanipulatordirection = Vector(pgrasp[imanipulatordirection], pgrasp[imanipulatordirection+1], pgrasp[imanipulatordirection+2]);
+                if( imanipulatordirection < 0 ) {
+                    graspparams->vmanipulatordirection = pmanip->GetDirection();
+                }
+                else {
+                    graspparams->vmanipulatordirection = Vector(pgrasp[imanipulatordirection], pgrasp[imanipulatordirection+1], pgrasp[imanipulatordirection+2]);
+                }
                 graspparams->btransformrobot = true;
                 graspparams->breturntrajectory = false;
                 graspparams->bonlycontacttarget = true;

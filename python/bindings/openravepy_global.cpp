@@ -295,6 +295,11 @@ public:
         return _param.ComputeDistanceSqr(pyikparam->_param);
     }
 
+    object Transform(object otrans)
+    {
+        return toPyIkParameterization(ExtractTransform(otrans) * _param);
+    }
+
     IkParameterization _param;
 
     string __repr__() {
@@ -791,6 +796,7 @@ void init_openravepy_global()
                                    .def_pickle(IkParameterization_pickle_suite())
 
                                    .def("ComputeDistanceSqr",&PyIkParameterization::ComputeDistanceSqr,DOXY_FN(IkParameterization,ComputeDistanceSqr))
+                                   .def("Transform",&PyIkParameterization::Transform,"Transforms the IK parameterization by this (T * ik)")
                                    // deprecated
                                    .def("SetTransform",&PyIkParameterization::SetTransform6D,args("transform"), DOXY_FN(IkParameterization,SetTransform6D))
                                    .def("SetRotation",&PyIkParameterization::SetRotation3D,args("quat"), DOXY_FN(IkParameterization,SetRotation3D))

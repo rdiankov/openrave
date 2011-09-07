@@ -46,7 +46,7 @@ To show the manipulator and IK results do:
 
 .. code-block:: bash
 
-  openrave.py --database inversekinematics --show
+  openrave.py --database inversekinematics --robot=robots/pr2-beta-static.zae --manipname=leftarm --show
 
 Description
 -----------
@@ -267,6 +267,9 @@ class InverseKinematicsModel(DatabaseGenerator):
         return self.setrobot(freeinc,*args,**kwargs)
     def getversion(self):
         return int(self.ikfast.__version__)
+    def getikname(self):
+        return 'ikfast ikfast.%s.%s.%s'%(self.manip.GetKinematicsStructureHash(),str(self.iktype),self.manip.GetName())
+
     def setrobot(self,freeinc=None):
         """Sets the ik solver on the robot.
         
@@ -287,8 +290,8 @@ class InverseKinematicsModel(DatabaseGenerator):
 #             self.iksolver = RaveCreateIkSolver(self.env,self.manip.GetIKSolverName()+iksuffix)
         if self.iksolver is None:
             with self.env:
-                ikname = 'ikfast.%s.%s.%s'%(self.manip.GetKinematicsStructureHash(),str(self.iktype),self.manip.GetName())
-                iktype = self.ikfastproblem.SendCommand('AddIkLibrary %s %s'%(ikname,self.getfilename(True)))
+                ikname = self.getikname()
+                iktype = self.ikfastproblem.SendCommand('AddIkLibrary %s %s'%(ikname.split()[1],self.getfilename(True)))
                 if iktype is None:
                     if self.forceikfast:
                         return False
@@ -298,7 +301,6 @@ class InverseKinematicsModel(DatabaseGenerator):
                     if int(self.iktype) != int(iktype):
                         raise ValueError('ik does not match types %s!=%s'%(self.iktype,iktype))
                     
-                    ikname = 'ikfast ' + ikname
                     self.iksolver = RaveCreateIkSolver(self.env,ikname+iksuffix)
         if self.iksolver is not None and self.iksolver.Supports(self.iktype):
             return self.manip.SetIKSolver(self.iksolver)
@@ -687,23 +689,23 @@ class InverseKinematicsModel(DatabaseGenerator):
         if self.env.GetViewer() is None:
             self.env.SetViewer('qtcoin')
         with RobotStateSaver(self.robot):
-            #with self.ArmVisibility(self.manip,0.9):
-            time.sleep(3) # let viewer load
-            self.setrobot(0.05)
-            while True:
-                with self.env:
-                    lower,upper = self.robot.GetDOFLimits(self.manip.GetArmIndices())
-                    self.robot.SetDOFValues(lower+random.rand(len(lower))*(upper-lower),self.manip.GetArmIndices())
-                    ikparam = self.manip.GetIkParameterization(self.iktype)
-                    sols = self.manip.FindIKSolutions(ikparam,IkFilterOptions.CheckEnvCollisions)
-                    weights = self.robot.GetDOFWeights(self.manip.GetArmIndices())
-                    print 'found %d solutions'%len(sols)
-                    sols = TSP(sols,lambda x,y: sum(weights*(x-y)**2))
-                    # find shortest route
-                    for sol in sols:
-                        self.robot.SetDOFValues(sol,self.manip.GetArmIndices())
-                        self.env.UpdatePublishedBodies()
-                        time.sleep(delay)
+            with self.ArmVisibility(self.manip,0.95):
+                time.sleep(3) # let viewer load
+                self.setrobot(0.05)
+                while True:
+                    with self.env:
+                        lower,upper = self.robot.GetDOFLimits(self.manip.GetArmIndices())
+                        self.robot.SetDOFValues(lower+random.rand(len(lower))*(upper-lower),self.manip.GetArmIndices())
+                        ikparam = self.manip.GetIkParameterization(self.iktype)
+                        sols = self.manip.FindIKSolutions(ikparam,IkFilterOptions.CheckEnvCollisions)
+                        weights = self.robot.GetDOFWeights(self.manip.GetArmIndices())
+                        print 'found %d solutions'%len(sols)
+                        sols = TSP(sols,lambda x,y: sum(weights*(x-y)**2))
+                        # find shortest route
+                        for sol in sols:
+                            self.robot.SetDOFValues(sol,self.manip.GetArmIndices())
+                            self.env.UpdatePublishedBodies()
+                            time.sleep(delay)
 
     @staticmethod
     def getcompiler():

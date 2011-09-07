@@ -106,6 +106,12 @@ TrajectoryBase::TrajectoryBase(EnvironmentBasePtr penv, int nDOF) : InterfaceBas
     __description = ":Interface Author: Rosen Diankov, James Kuffner\n\n";
 }
 
+void TrajectoryBase::SetAffineVelocity(const Vector& maxAffineTranslationVel, dReal maxAffineRotationQuatVel)
+{
+    _maxAffineTranslationVel = maxAffineTranslationVel;
+    _maxAffineRotationQuatVel = maxAffineRotationQuatVel;
+}
+
 void TrajectoryBase::Reset(int nDOF)
 {
     Clear();

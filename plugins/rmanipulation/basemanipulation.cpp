@@ -330,18 +330,13 @@ protected:
 
         // compute a workspace trajectory (important to do this after jittering!)
         {
-            Vector voldtrans = robot->GetAffineTranslationMaxVels();
-            dReal foldrot = robot->GetAffineRotationQuatMaxVels();
-            robot->SetAffineTranslationMaxVels(Vector(1,1,1));
-            robot->SetAffineRotationQuatMaxVels(1.0);
             params->workspacetraj = RaveCreateTrajectory(GetEnv(),"");
             params->workspacetraj->Reset(0);
+            params->workspacetraj->SetAffineVelocity(Vector(1,1,1),10);
             params->workspacetraj->AddPoint(TrajectoryBase::TPOINT(vector<dReal>(),Tee,0));
             Tee.trans += direction*maxsteps*params->_fStepLength;
             params->workspacetraj->AddPoint(TrajectoryBase::TPOINT(vector<dReal>(),Tee,0));
             params->workspacetraj->CalcTrajTiming(RobotBasePtr(),TrajectoryBase::LINEAR,true,false);
-            robot->SetAffineTranslationMaxVels(voldtrans);
-            robot->SetAffineRotationQuatMaxVels(foldrot);
         }
 
         PlannerBasePtr planner = RaveCreatePlanner(GetEnv(),"workspacetrajectorytracker");
