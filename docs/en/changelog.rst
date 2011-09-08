@@ -40,6 +40,10 @@ Misc
 
 * fixed octave graspplanning demo
 
+* added two python examples showing how to use PyQt + OpenRAVE together. :mod:`.examples.qtexampleselector` :mod:`.examples.qtserverprocess`
+
+* odephysics now uses dJointFeedbakc to compute forces/torques on links
+
 Version 0.4.2
 =============
 

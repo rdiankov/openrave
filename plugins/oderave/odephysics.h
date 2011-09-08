@@ -318,15 +318,39 @@ The possible properties that can be set are: ";
     virtual bool GetLinkForceTorque(KinBody::LinkConstPtr plink, Vector& force, Vector& torque) {
         _odespace->Synchronize(KinBodyConstPtr(plink->GetParent()));
         dBodyID body = _odespace->GetLinkBody(plink);
+        force = Vector(0,0,0);
+        torque = Vector(0,0,0);
         if( body ) {
-            const dReal* pf = dBodyGetForce(body);
-            force = Vector(pf[0],pf[1],pf[2]);
-            const dReal* pt = dBodyGetTorque(body);
-            torque = Vector(pt[0],pt[1],pt[2]);
-        }
-        else {
-            force = Vector(0,0,0);
-            torque = Vector(0,0,0);
+            FOREACHC(itjoint,plink->GetParent()->GetJoints()) {
+                if( (*itjoint)->GetHierarchyParentLink() == plink || (*itjoint)->GetHierarchyChildLink() == plink ) {
+                    dJointID joint = _odespace->GetJoint(*itjoint);
+                    dJointFeedback* feedback = dJointGetFeedback( joint );
+                    BOOST_ASSERT(feedback != NULL);
+                    if( dJointGetBody( joint,0 ) == body ) {
+                        force[0] += feedback->f1[0]; force[1] += feedback->f1[1]; force[2] += feedback->f1[2];
+                        torque[0] += feedback->t1[0]; torque[1] += feedback->t1[1]; torque[2] += feedback->t1[2];
+                    }
+                    else if( dJointGetBody( joint,1 ) == body ) {
+                        force[0] += feedback->f2[0]; force[1] += feedback->f2[1]; force[2] += feedback->f2[2];
+                        torque[0] += feedback->t2[0]; torque[1] += feedback->t2[1]; torque[2] += feedback->t2[2];
+                    }
+                }
+            }
+            FOREACHC(itjoint,plink->GetParent()->GetPassiveJoints()) {
+                if( (*itjoint)->GetHierarchyParentLink() == plink || (*itjoint)->GetHierarchyChildLink() == plink ) {
+                    dJointID joint = _odespace->GetJoint(*itjoint);
+                    dJointFeedback* feedback = dJointGetFeedback( joint );
+                    BOOST_ASSERT(feedback != NULL);
+                    if( dJointGetBody( joint,0 ) == body ) {
+                        force[0] += feedback->f1[0]; force[1] += feedback->f1[1]; force[2] += feedback->f1[2];
+                        torque[0] += feedback->t1[0]; torque[1] += feedback->t1[1]; torque[2] += feedback->t1[2];
+                    }
+                    else if( dJointGetBody( joint,1 ) == body ) {
+                        force[0] += feedback->f2[0]; force[1] += feedback->f2[1]; force[2] += feedback->f2[2];
+                        torque[0] += feedback->t2[0]; torque[1] += feedback->t2[1]; torque[2] += feedback->t2[2];
+                    }
+                }
+            }
         }
         return true;
     }

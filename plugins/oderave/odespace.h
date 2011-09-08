@@ -185,6 +185,7 @@ public:
         vector<boost::shared_ptr<LINK> > vlinks;         ///< if body is disabled, then geom is static (it can't be connected to a joint!)
         ///< the pointer to this Link is the userdata
         vector<dJointID> vjoints;
+        vector<dJointFeedback> vjointfeedback;
         boost::shared_ptr<void> _geometrycallback, _staticcallback;
         boost::weak_ptr<ODESpace> _odespace;
 
@@ -249,6 +250,7 @@ private:
         pinfo->_odespace = weak_space();
         pinfo->vlinks.reserve(pbody->GetLinks().size());
         pinfo->vjoints.reserve(pbody->GetJoints().size()+pbody->GetPassiveJoints().size());
+        pinfo->vjointfeedback.resize(pinfo->vjoints.capacity());
         dGeomSetData((dGeomID)pinfo->space, &pinfo->pbody);     // so that the kinbody can be retreived from the space
 
         pinfo->vlinks.reserve(pbody->GetLinks().size());
@@ -426,6 +428,7 @@ private:
                     }
                 }
 
+                dJointSetFeedback(joint,&pinfo->vjointfeedback.at(pinfo->vjoints.size()));
                 pinfo->vjoints.push_back(joint);
             }
         }
@@ -511,9 +514,22 @@ private:
     {
         KinBodyInfoPtr pinfo = GetInfo(pjoint->GetParent());
         BOOST_ASSERT( pinfo->pbody == pjoint->GetParent() );
-        BOOST_ASSERT( pjoint->GetParent()->GetJointFromDOFIndex(pjoint->GetDOFIndex()) == pjoint );
-        BOOST_ASSERT( pjoint->GetJointIndex() >= 0);
-        return pinfo->vjoints.at(pjoint->GetJointIndex());
+        if( pjoint->GetJointIndex() >= 0 ) {
+            BOOST_ASSERT( pjoint->GetParent()->GetJointFromDOFIndex(pjoint->GetDOFIndex()) == pjoint );
+            BOOST_ASSERT( pjoint->GetJointIndex() >= 0);
+            return pinfo->vjoints.at(pjoint->GetJointIndex());
+        }
+        else {
+            // passive joint
+            size_t index = pinfo->pbody->GetJoints().size();
+            FOREACHC(itjoint,pinfo->pbody->GetPassiveJoints()) {
+                if( *itjoint == pjoint ) {
+                    return pinfo->vjoints.at(index);
+                }
+                index++;
+            }
+        }
+        return NULL;
     }
 
     dWorldID GetWorld() const {

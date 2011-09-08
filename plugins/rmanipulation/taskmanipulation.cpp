@@ -558,8 +558,8 @@ protected:
                 bool badpreshape = false;
                 for(size_t j = 0; j < vCurHandValues.size(); ++j) {
                     vgoalpreshape[j] = pgrasp[iGraspPreshape+j];
-                    if( vHandLowerLimits.at(j) > vgoalpreshape[j] || vHandUpperLimits.at(j) < vgoalpreshape[j] ) {
-                        RAVELOG_WARN("bad preshape index %d!\n",j);
+                    if( vHandLowerLimits.at(j) > vgoalpreshape[j]+0.001 || vHandUpperLimits.at(j) < vgoalpreshape[j]-0.001 ) {
+                        RAVELOG_WARN(str(boost::format("bad preshape index %d (%f)!")%(j,vgoalpreshape[j])));
                         badpreshape = true;
                         break;
                     }
