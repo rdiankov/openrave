@@ -40,6 +40,8 @@ import fastgraspingthreaded
 import hanoi
 import graspplanning
 import movehandstraight
+import qtexampleselector
+import qtserverprocess
 import showsensors
 import simplegrasping
 import simplemanipulation
