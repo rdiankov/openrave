@@ -131,7 +131,12 @@ void KinBodyItem::Load()
             bool bSucceeded = false;
             if((_viewmode == VG_RenderOnly)||(_viewmode == VG_RenderCollision)) {
                 SoInput mySceneInput;
-                if((itgeom->GetRenderFilename().size() > 0)&& mySceneInput.openFile(itgeom->GetRenderFilename().c_str())) {
+                string extension;
+                if( itgeom->GetRenderFilename().find_last_of('.') != string::npos ) {
+                    extension = itgeom->GetRenderFilename().substr(itgeom->GetRenderFilename().find_last_of('.')+1);
+                    std::transform(extension.begin(), extension.end(), extension.begin(), ::tolower);
+                }
+                if( extension == "wrl" || extension == "iv" || extension == "vrml" ) {
                     psep = SoDB::readAll(&mySceneInput);
                     if( !!psep ) {
                         SoScale* s = new SoScale();
