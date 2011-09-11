@@ -46,12 +46,9 @@ class FastGraspingThreaded:
         self.prob = RaveCreateModule(self.env,'Grasper')
         self.env.AddModule(self.prob,self.robot.GetName())
         self.grasps = []
-        graspdof = {'igraspdir':3,'igrasppos':3,'igrasproll':1,'igraspstandoff':1,'igrasppreshape':len(self.manip.GetGripperIndices()),'igrasptrans':12,'ifinalshape':len(self.robot.GetDOFValues()),'imanipulatordirection':3,'forceclosure':1,'grasptrans_nocol':12,'performance':1}
-        self.graspindices = dict()
-        self.totaldof = 0
-        for name,dof in graspdof.iteritems():
-            self.graspindices[name] = range(self.totaldof,self.totaldof+dof)
-            self.totaldof += dof
+        self.jointvalues = []
+        # used for maintaining compatible grasp structures
+        self.gmodel = databases.grasping.GraspingModel(self.robot,self.target)
 
     def callGraspThreaded(self,approachrays,standoffs,preshapes,rolls,manipulatordirections=None,target=None,transformrobot=True,onlycontacttarget=True,tightgrasp=False,graspingnoise=None,ngraspingnoiseretries=None,forceclosurethreshold=None,avoidlinks=None,collisionchecker=None,translationstepmult=None,numthreads=None,startindex=None,maxgrasps=None,checkik=False,friction=None):
         """See :ref:`module-grasper-graspthreaded`
@@ -135,11 +132,12 @@ class FastGraspingThreaded:
             ngraspingnoiseretries = 10
             forceclosurethreshold=1e-9
             avoidlinks = []
-            friction = 0.4
+            friction = 0.3
             numthreads = multiprocessing.cpu_count()
-            maxgrasps = 10
+            maxgrasps = 1
             checkik = True
-
+            self.grasps = []
+            self.jointvalues = []
             with self.robot:
                 self.robot.SetActiveDOFs(self.manip.GetGripperIndices(),Robot.DOFAffine.X+Robot.DOFAffine.Y+Robot.DOFAffine.Z)
                 approachrays[:,3:6] = -approachrays[:,3:6]
@@ -153,30 +151,32 @@ class FastGraspingThreaded:
 
                 nextid, resultgrasps = self.callGraspThreaded(approachrays,standoffs,preshapes,rolls,manipulatordirections=manipulatordirections,target=target,graspingnoise=graspingnoise,ngraspingnoiseretries=ngraspingnoiseretries,forceclosurethreshold=forceclosurethreshold,avoidlinks=avoidlinks,numthreads=numthreads,maxgrasps=maxgrasps,checkik=checkik,friction=friction)
                 for resultgrasp in resultgrasps:
-                    grasp = zeros(self.totaldof)
-                    grasp[self.graspindices.get('igrasppos')] = resultgrasp[0]
-                    grasp[self.graspindices.get('igraspdir')] = resultgrasp[1]
-                    grasp[self.graspindices.get('igrasproll')] = resultgrasp[2]
-                    grasp[self.graspindices.get('igraspstandoff')] = resultgrasp[3]
-                    grasp[self.graspindices.get('imanipulatordirection')] = resultgrasp[4]
-                    grasp[self.graspindices.get('igrasppreshape')] = resultgrasp[7]
+                    grasp = zeros(self.gmodel.totaldof)
+                    grasp[self.gmodel.graspindices.get('igrasppos')] = resultgrasp[0]
+                    grasp[self.gmodel.graspindices.get('igraspdir')] = resultgrasp[1]
+                    grasp[self.gmodel.graspindices.get('igrasproll')] = resultgrasp[2]
+                    grasp[self.gmodel.graspindices.get('igraspstandoff')] = resultgrasp[3]
+                    grasp[self.gmodel.graspindices.get('imanipulatordirection')] = resultgrasp[4]
+                    grasp[self.gmodel.graspindices.get('igrasppreshape')] = resultgrasp[7]
                     Tfinal = resultgrasp[8]
-                    grasp[self.graspindices.get('ifinalshape')] = resultgrasp[9]
+                    finaljointvalues = resultgrasp[9]
                     with self.robot:
                         Tlocalgrasp = eye(4)
                         self.robot.SetTransform(Tfinal)
                         Tgrasp = self.manip.GetEndEffectorTransform()
                         Tlocalgrasp = dot(linalg.inv(self.target.GetTransform()),Tgrasp)
-                        grasp[self.graspindices.get('igrasptrans')] = reshape(transpose(Tlocalgrasp[0:3,0:4]),12)
+                        grasp[self.gmodel.graspindices.get('igrasptrans')] = reshape(transpose(Tlocalgrasp[0:3,0:4]),12)
                     self.grasps.append(grasp)
+                    self.jointvalues.append(finaljointvalues)
 
                 self.grasps = array(self.grasps)
+                self.jointvalues = array(self.jointvalues)
                 print 'found %d grasps'%len(self.grasps)
 
     def showgrasps(self):
-        for grasp in self.grasps:
+        for i,grasp in enumerate(self.grasps):
             with self.env:
-                self.robot.SetDOFValues(grasp[self.graspindices.get('ifinalshape')])
+                self.robot.SetDOFValues(self.jointvalues[i])
                 self.env.UpdatePublishedBodies()
                 raw_input('press any key')
 
