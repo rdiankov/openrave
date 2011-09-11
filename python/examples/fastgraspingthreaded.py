@@ -33,6 +33,7 @@ if not __openravepy_build_doc__:
     from numpy import *
 
 import multiprocessing
+import time
 
 class FastGraspingThreaded:
     def __init__(self,robot,target):
@@ -45,8 +46,6 @@ class FastGraspingThreaded:
         self.target=target
         self.prob = RaveCreateModule(self.env,'Grasper')
         self.env.AddModule(self.prob,self.robot.GetName())
-        self.grasps = []
-        self.jointvalues = []
         # used for maintaining compatible grasp structures
         self.gmodel = databases.grasping.GraspingModel(self.robot,self.target)
 
@@ -136,8 +135,8 @@ class FastGraspingThreaded:
             numthreads = multiprocessing.cpu_count()
             maxgrasps = 1
             checkik = True
-            self.grasps = []
-            self.jointvalues = []
+            grasps = []
+            jointvalues = []
             with self.robot:
                 self.robot.SetActiveDOFs(self.manip.GetGripperIndices(),Robot.DOFAffine.X+Robot.DOFAffine.Y+Robot.DOFAffine.Z)
                 approachrays[:,3:6] = -approachrays[:,3:6]
@@ -149,7 +148,9 @@ class FastGraspingThreaded:
                     final,traj = taskmanip.ReleaseFingers(execute=False,outputfinal=True)
                     preshapes = array([final])
 
+                starttime = time.time()
                 nextid, resultgrasps = self.callGraspThreaded(approachrays,standoffs,preshapes,rolls,manipulatordirections=manipulatordirections,target=target,graspingnoise=graspingnoise,ngraspingnoiseretries=ngraspingnoiseretries,forceclosurethreshold=forceclosurethreshold,avoidlinks=avoidlinks,numthreads=numthreads,maxgrasps=maxgrasps,checkik=checkik,friction=friction)
+                totaltime = time.time()-starttime
                 for resultgrasp in resultgrasps:
                     grasp = zeros(self.gmodel.totaldof)
                     grasp[self.gmodel.graspindices.get('igrasppos')] = resultgrasp[0]
@@ -166,17 +167,18 @@ class FastGraspingThreaded:
                         Tgrasp = self.manip.GetEndEffectorTransform()
                         Tlocalgrasp = dot(linalg.inv(self.target.GetTransform()),Tgrasp)
                         grasp[self.gmodel.graspindices.get('igrasptrans')] = reshape(transpose(Tlocalgrasp[0:3,0:4]),12)
-                    self.grasps.append(grasp)
-                    self.jointvalues.append(finaljointvalues)
+                    grasps.append(grasp)
+                    jointvalues.append(finaljointvalues)
 
-                self.grasps = array(self.grasps)
-                self.jointvalues = array(self.jointvalues)
-                print 'found %d grasps'%len(self.grasps)
+                grasps = array(grasps)
+                jointvalues = array(jointvalues)
+                print 'found %d grasps in %.3fs'%(len(grasps),totaltime)
+                return grasps, jointvalues
 
-    def showgrasps(self):
-        for i,grasp in enumerate(self.grasps):
+    def showgrasps(self, grasps, jointvalues):
+        for i,grasp in enumerate(grasps):
             with self.env:
-                self.robot.SetDOFValues(self.jointvalues[i])
+                self.robot.SetDOFValues(jointvalues[i])
                 self.env.UpdatePublishedBodies()
                 raw_input('press any key')
 
@@ -189,8 +191,8 @@ def main(env,options):
     # find an appropriate target
     bodies = [b for b in env.GetBodies() if not b.IsRobot() and linalg.norm(b.ComputeAABB().extents()) < 0.2]
     self = FastGraspingThreaded(robot,target=bodies[0])
-    self.computeGrasp()
-    self.showgrasps()
+    grasps, jointvalues = self.computeGrasp()
+    self.showgrasps(grasps, jointvalues)
 
 from optparse import OptionParser
 from openravepy.misc import OpenRAVEGlobalArguments

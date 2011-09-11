@@ -252,7 +252,7 @@ public:
                 }
                 dReal fstandoff = _parameters->fstandoff;
                 if( ct & CT_EnvironmentCollision ) {
-                    dReal oldX, oldY, oldZ;
+                    dReal oldX=0, oldY=0, oldZ=0;
                     if( !!pX ) {
                         oldX = *pX;
                     }

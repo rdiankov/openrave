@@ -339,7 +339,7 @@ class GraspingModel(DatabaseGenerator):
         if avoidlinks is None:
             avoidlinks = []
         if friction is None:
-            friction = 0.4
+            friction = 0.3
         if approachrays is None:
             approachrays = self.computeBoxApproachRays(delta=0.02,normalanglerange=normalanglerange,directiondelta=directiondelta)
         forceclosure = True
@@ -493,7 +493,7 @@ class GraspingModel(DatabaseGenerator):
         if approachrays is None:
             approachrays = self.computeBoxApproachRays(delta=0.02,normalanglerange=0)
         if friction is None:
-            friction = 0.4
+            friction = 0.3
         if preshapes is None:
             # should disable everything but the robot
             with self.target:
@@ -999,7 +999,7 @@ class GraspingModel(DatabaseGenerator):
         parser.add_option('--avoidlink', action='append', type='string',dest='avoidlinks',default=None,
                           help='Add a link name to avoid at all costs (like sensor links)')
         parser.add_option('--friction', action='store', type='float',dest='friction',default=None,
-                          help='Friction between robot and target object (default=0.4)')
+                          help='Friction between robot and target object (default=0.3)')
         parser.add_option('--graspingnoise', action='store', type='float',dest='graspingnoise',default=None,
                           help='Random undeterministic noise to add to the target object, represents the max possible displacement of any point on the object. Noise is added after global direction and start have been determined (default=0)')
         parser.add_option('--graspindex', action='store', type='int',dest='graspindex',default=None,

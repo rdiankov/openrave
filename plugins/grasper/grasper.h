@@ -954,6 +954,25 @@ public:
                     grasp_params->transfinal = probot->GetTransform();
                     probot->GetDOFValues(grasp_params->finalshape);
 
+                    if ( worker_params->bCheckGraspIK ) {
+                        Transform Tgoalgrasp = probot->GetActiveManipulator()->GetEndEffectorTransform();
+                        probot->SetTransform(trobotstart);
+                        RobotBase::RobotStateSaver linksaver(probot,KinBody::Save_LinkEnable);
+                        FOREACH(itlink,vlinks) {
+                            (*itlink)->Enable(false);
+                        }
+                        vector<dReal> solution;
+                        if( !probot->GetActiveManipulator()->FindIKSolution(Tgoalgrasp, solution,0) ) { //IKFO_CheckEnvCollisions) ) {
+                            continue;     // ik failed
+                        }
+
+                        grasp_params->transfinal = trobotstart;
+                        size_t index = 0;
+                        FOREACHC(itarmindex,probot->GetActiveManipulator()->GetArmIndices()) {
+                            grasp_params->finalshape.at(*itarmindex) = solution.at(index++);
+                        }
+                    }
+
                     GRASPANALYSIS analysis;
                     if( worker_params->bComputeForceClosure ) {
                         try {
@@ -972,25 +991,7 @@ public:
                             continue;     // failed
                         }
                     }
-                    if ( worker_params->bCheckGraspIK ){
-                        Transform Tgoalgrasp = probot->GetActiveManipulator()->GetEndEffectorTransform();
-                        probot->SetTransform(trobotstart);
-                        RobotBase::RobotStateSaver linksaver(probot,KinBody::Save_LinkEnable);
-                        FOREACH(itlink,vlinks) {
-                            (*itlink)->Enable(false);
-                        }
-                        vector<dReal> solution;
-                        if( !probot->GetActiveManipulator()->FindIKSolution(Tgoalgrasp, solution,0) ) {//IKFO_CheckEnvCollisions) ) {
-                            continue;     // ik failed
-                        }
 
-                        grasp_params->transfinal = trobotstart;
-                        size_t index = 0;
-                        FOREACHC(itarmindex,probot->GetActiveManipulator()->GetArmIndices()) {
-                            grasp_params->finalshape.at(*itarmindex) = solution.at(index++);
-                        }
-                    }
-                    
                     RAVELOG_DEBUG(str(boost::format("grasp %d success")%grasp_params->id));
 
                     boost::mutex::scoped_lock lock(_mutexGrasp);
