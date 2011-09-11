@@ -190,9 +190,10 @@ def main(env,options):
         robot.SetActiveManipulator(options.manipname)
     # find an appropriate target
     bodies = [b for b in env.GetBodies() if not b.IsRobot() and linalg.norm(b.ComputeAABB().extents()) < 0.2]
-    self = FastGraspingThreaded(robot,target=bodies[0])
-    grasps, jointvalues = self.computeGrasp()
-    self.showgrasps(grasps, jointvalues)
+    for body in bodies:
+        self = FastGraspingThreaded(robot,target=body)
+        grasps, jointvalues = self.computeGrasp()
+        self.showgrasps(grasps, jointvalues)
 
 from optparse import OptionParser
 from openravepy.misc import OpenRAVEGlobalArguments

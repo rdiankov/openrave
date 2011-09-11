@@ -83,13 +83,14 @@ def main(env,options):
         robot.SetActiveManipulator(options.manipname)
     # find an appropriate target
     bodies = [b for b in env.GetBodies() if not b.IsRobot() and linalg.norm(b.ComputeAABB().extents()) < 0.2]
-    self = FastGrasping(robot,target=bodies[0])
-    grasp,jointvalues = self.computeGrasp()
-    if grasp is not None:
-        print 'grasp is found!'
-        self.gmodel.showgrasp(grasp)
-        self.robot.SetDOFValues(jointvalues)
-        raw_input('press any key to exit')
+    for body in bodies:
+        self = FastGrasping(robot,target=body)
+        grasp,jointvalues = self.computeGrasp()
+        if grasp is not None:
+            print 'grasp is found!'
+            self.gmodel.showgrasp(grasp)
+            self.robot.SetDOFValues(jointvalues)
+            raw_input('press any key')
 
 from optparse import OptionParser
 from openravepy.misc import OpenRAVEGlobalArguments
