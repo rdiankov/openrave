@@ -137,28 +137,30 @@ void KinBodyItem::Load()
                     std::transform(extension.begin(), extension.end(), extension.begin(), ::tolower);
                 }
                 if( extension == "wrl" || extension == "iv" || extension == "vrml" ) {
-                    psep = SoDB::readAll(&mySceneInput);
-                    if( !!psep ) {
-                        SoScale* s = new SoScale();
-                        s->scaleFactor.setValue(itgeom->GetRenderScale().x, itgeom->GetRenderScale().y, itgeom->GetRenderScale().z);
-                        psep->insertChild(s, 0);
+                    if( mySceneInput.openFile(itgeom->GetRenderFilename().c_str()) ) {
+                        psep = SoDB::readAll(&mySceneInput);
+                        if( !!psep ) {
+                            SoScale* s = new SoScale();
+                            s->scaleFactor.setValue(itgeom->GetRenderScale().x, itgeom->GetRenderScale().y, itgeom->GetRenderScale().z);
+                            psep->insertChild(s, 0);
 
-                        if( itgeom->GetTransparency() > 0 ) {
-                            // set a diffuse color
-                            SoSearchAction search;
-                            search.setInterest(SoSearchAction::ALL);
-                            search.setType(SoMaterial::getClassTypeId());
-                            psep->ref();
-                            search.apply(psep);
-                            for(int i = 0; i < search.getPaths().getLength(); ++i) {
-                                SoPath* path = search.getPaths()[i];
-                                SoMaterial* pmtrl = (SoMaterial*)path->getTail();
-                                pmtrl->transparency = itgeom->GetTransparency();
+                            if( itgeom->GetTransparency() > 0 ) {
+                                // set a diffuse color
+                                SoSearchAction search;
+                                search.setInterest(SoSearchAction::ALL);
+                                search.setType(SoMaterial::getClassTypeId());
+                                psep->ref();
+                                search.apply(psep);
+                                for(int i = 0; i < search.getPaths().getLength(); ++i) {
+                                    SoPath* path = search.getPaths()[i];
+                                    SoMaterial* pmtrl = (SoMaterial*)path->getTail();
+                                    pmtrl->transparency = itgeom->GetTransparency();
+                                }
                             }
-                        }
 
-                        mySceneInput.closeFile();
-                        bSucceeded = true;
+                            mySceneInput.closeFile();
+                            bSucceeded = true;
+                        }
                     }
                 }
             }
