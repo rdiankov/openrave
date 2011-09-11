@@ -877,10 +877,15 @@ public:
         GraspParametersThreadPtr grasp_params;
 
         // calculate the contact normals
-        pcloneenv->GetCollisionChecker()->SetCollisionOptions(CO_Contacts);
-        std::vector<KinBody::LinkPtr> vlinks;
+        std::vector<KinBody::LinkPtr> vlinks, vindependentlinks;
         probot->GetActiveManipulator()->GetChildLinks(vlinks);
+        probot->GetActiveManipulator()->GetIndependentLinks(vindependentlinks);
         Transform trobotstart = probot->GetTransform();
+
+        // use CO_ActiveDOFs since might be calling FindIKSolution
+        int coloptions = GetEnv()->GetCollisionChecker()->GetCollisionOptions()|(worker_params->bCheckGraspIK ? CO_ActiveDOFs : 0);
+        coloptions &= ~CO_Contacts;
+        pcloneenv->GetCollisionChecker()->SetCollisionOptions(coloptions|CO_Contacts);
 
         while(_bContinueWorker) {
             {
@@ -922,82 +927,89 @@ public:
             RobotBase::RobotStateSaver saver(probot);
             probot->Enable(true);
 
-
             // InitPlan/PlanPath
-            if( planner->InitPlan(probot, params) ) {
-                ptraj->Clear();
-                if( planner->PlanPath(ptraj) ) {
-                    BOOST_ASSERT(ptraj->GetPoints().size() > 0);
-                    // fill results
-                    ptraj->CalcTrajTiming(probot, ptraj->GetInterpMethod(), true, true);
-                    probot->GetFullTrajectoryFromActive(pfulltraj,ptraj,false);
-
-                    bodysaver.reset();     // restore target
-                    BOOST_ASSERT(pfulltraj->GetPoints().size()>0);
-
-                    probot->SetTransform(ptraj->GetPoints().back().trans);
-                    probot->SetActiveDOFValues(ptraj->GetPoints().back().q);
-
-                    FOREACHC(itlink, vlinks) {
-                        if( pcloneenv->CheckCollision(KinBody::LinkConstPtr(*itlink), KinBodyConstPtr(params->targetbody), report) ) {
-                            RAVELOG_VERBOSE(str(boost::format("contact %s\n")%report->__str__()));
-                            FOREACH(itcontact,report->contacts) {
-                                if( report->plink1 != *itlink ) {
-                                    itcontact->norm = -itcontact->norm;
-                                    itcontact->depth = -itcontact->depth;
-                                }
-                                grasp_params->contacts.push_back(make_pair(*itcontact,(*itlink)->GetIndex()));
-                            }
-                        }
-                    }
-
-                    grasp_params->transfinal = probot->GetTransform();
-                    probot->GetDOFValues(grasp_params->finalshape);
-
-                    if ( worker_params->bCheckGraspIK ) {
-                        Transform Tgoalgrasp = probot->GetActiveManipulator()->GetEndEffectorTransform();
-                        probot->SetTransform(trobotstart);
-                        RobotBase::RobotStateSaver linksaver(probot,KinBody::Save_LinkEnable);
-                        FOREACH(itlink,vlinks) {
-                            (*itlink)->Enable(false);
-                        }
-                        vector<dReal> solution;
-                        if( !probot->GetActiveManipulator()->FindIKSolution(Tgoalgrasp, solution,0) ) { //IKFO_CheckEnvCollisions) ) {
-                            continue;     // ik failed
-                        }
-
-                        grasp_params->transfinal = trobotstart;
-                        size_t index = 0;
-                        FOREACHC(itarmindex,probot->GetActiveManipulator()->GetArmIndices()) {
-                            grasp_params->finalshape.at(*itarmindex) = solution.at(index++);
-                        }
-                    }
-
-                    GRASPANALYSIS analysis;
-                    if( worker_params->bComputeForceClosure ) {
-                        try {
-                            vector<CollisionReport::CONTACT> c(grasp_params->contacts.size());
-                            for(size_t i = 0; i < c.size(); ++i) {
-                                c[i] = grasp_params->contacts[i].first;
-                            }
-                            analysis = _AnalyzeContacts3D(c,worker_params->friction,8);
-                            if( analysis.mindist < worker_params->forceclosurethreshold ) {
-                                continue;
-                            }
-                            grasp_params->mindist = analysis.mindist;
-                            grasp_params->volume = analysis.volume;
-                        }
-                        catch(const openrave_exception& ex) {
-                            continue;     // failed
-                        }
-                    }
-
-                    RAVELOG_DEBUG(str(boost::format("grasp %d success")%grasp_params->id));
-
-                    boost::mutex::scoped_lock lock(_mutexGrasp);
-                    _listGraspResults.push_back(grasp_params);
-                }
+            if( !planner->InitPlan(probot, params) ) {
+                RAVELOG_DEBUG(str(boost::format("grasp %d: grasper planner failed")%grasp_params->id));
+                continue;
             }
+            ptraj->Clear();
+            if( planner->PlanPath(ptraj) ) {
+                BOOST_ASSERT(ptraj->GetPoints().size() > 0);
+                // fill results
+                ptraj->CalcTrajTiming(probot, ptraj->GetInterpMethod(), true, true);
+                probot->GetFullTrajectoryFromActive(pfulltraj,ptraj,false);
+
+                bodysaver.reset();     // restore target
+                BOOST_ASSERT(pfulltraj->GetPoints().size()>0);
+
+                probot->SetTransform(ptraj->GetPoints().back().trans);
+                probot->SetActiveDOFValues(ptraj->GetPoints().back().q);
+
+                FOREACHC(itlink, vlinks) {
+                    if( pcloneenv->CheckCollision(KinBody::LinkConstPtr(*itlink), KinBodyConstPtr(params->targetbody), report) ) {
+                        RAVELOG_VERBOSE(str(boost::format("contact %s\n")%report->__str__()));
+                        FOREACH(itcontact,report->contacts) {
+                            if( report->plink1 != *itlink ) {
+                                itcontact->norm = -itcontact->norm;
+                                itcontact->depth = -itcontact->depth;
+                            }
+                            grasp_params->contacts.push_back(make_pair(*itcontact,(*itlink)->GetIndex()));
+                        }
+                    }
+                }
+
+                grasp_params->transfinal = probot->GetTransform();
+                probot->GetDOFValues(grasp_params->finalshape);
+
+                if ( worker_params->bCheckGraspIK ) {
+                    CollisionOptionsStateSaver optionstate(pcloneenv->GetCollisionChecker(),coloptions,false); // remove contacts
+                    Transform Tgoalgrasp = probot->GetActiveManipulator()->GetEndEffectorTransform();
+                    probot->SetTransform(trobotstart);
+                    RobotBase::RobotStateSaver linksaver(probot);
+                    FOREACH(itlink,vlinks) {
+                        (*itlink)->Enable(false);
+                    }
+                    probot->SetActiveDOFs(probot->GetActiveManipulator()->GetArmIndices());
+                    vector<dReal> solution;
+                    if( !probot->GetActiveManipulator()->FindIKSolution(Tgoalgrasp, solution,IKFO_CheckEnvCollisions) ) {
+                        RAVELOG_DEBUG(str(boost::format("grasp %d: ik failed")%grasp_params->id));
+                        continue;     // ik failed
+                    }
+
+                    grasp_params->transfinal = trobotstart;
+                    size_t index = 0;
+                    FOREACHC(itarmindex,probot->GetActiveManipulator()->GetArmIndices()) {
+                        grasp_params->finalshape.at(*itarmindex) = solution.at(index++);
+                    }
+                }
+
+                GRASPANALYSIS analysis;
+                if( worker_params->bComputeForceClosure ) {
+                    try {
+                        vector<CollisionReport::CONTACT> c(grasp_params->contacts.size());
+                        for(size_t i = 0; i < c.size(); ++i) {
+                            c[i] = grasp_params->contacts[i].first;
+                        }
+                        analysis = _AnalyzeContacts3D(c,worker_params->friction,8);
+                        if( analysis.mindist < worker_params->forceclosurethreshold ) {
+                            RAVELOG_DEBUG(str(boost::format("grasp %d: force closure failed")%grasp_params->id));
+                            continue;
+                        }
+                        grasp_params->mindist = analysis.mindist;
+                        grasp_params->volume = analysis.volume;
+                    }
+                    catch(const openrave_exception& ex) {
+                        RAVELOG_DEBUG(str(boost::format("grasp %d: force closure failed")%grasp_params->id));
+                        continue;     // failed
+                    }
+                }
+
+                RAVELOG_DEBUG(str(boost::format("grasp %d success")%grasp_params->id));
+
+                boost::mutex::scoped_lock lock(_mutexGrasp);
+                _listGraspResults.push_back(grasp_params);
+            }
+
         }
     }
 
