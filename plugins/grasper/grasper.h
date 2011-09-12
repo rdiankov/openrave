@@ -262,11 +262,6 @@ public:
             }
         }
 
-        boost::shared_ptr<KinBody::KinBodyStateSaver> bodysaver;
-        if( !!params->targetbody ) {
-            bodysaver.reset(new KinBody::KinBodyStateSaver(params->targetbody));
-        }
-
         RobotBase::RobotStateSaver saver(_robot);
         _robot->Enable(true);
 
@@ -292,7 +287,6 @@ public:
             pfulltraj->Write(f, 0);
         }
 
-        bodysaver.reset();     // restore target
         BOOST_ASSERT(ptraj->GetPoints().size()>0);
         _robot->SetTransform(ptraj->GetPoints().back().trans);
         _robot->SetActiveDOFValues(ptraj->GetPoints().back().q);
@@ -868,7 +862,7 @@ public:
         params->btransformrobot = true;
         params->bonlycontacttarget = worker_params->bonlycontacttarget;
         params->btightgrasp = worker_params->btightgrasp;
-        params->fgraspingnoise = worker_params->fgraspingnoise;
+        params->fgraspingnoise = 0;
         params->ftranslationstepmult = worker_params->ftranslationstepmult;
 
         CollisionReportPtr report(new CollisionReport());
@@ -918,97 +912,140 @@ public:
             params->SetRobotActiveJoints(probot);
             probot->GetActiveDOFValues(params->vinitialconfig);
 
-
-            boost::shared_ptr<KinBody::KinBodyStateSaver> bodysaver;
-            if( !!params->targetbody ) {
-                bodysaver.reset(new KinBody::KinBodyStateSaver(params->targetbody));
-            }
-
             RobotBase::RobotStateSaver saver(probot);
             probot->Enable(true);
+
+            params->fgraspingnoise = 0;
+            ptraj->Clear();
 
             // InitPlan/PlanPath
             if( !planner->InitPlan(probot, params) ) {
                 RAVELOG_DEBUG(str(boost::format("grasp %d: grasper planner failed")%grasp_params->id));
                 continue;
             }
-            ptraj->Clear();
-            if( planner->PlanPath(ptraj) ) {
-                BOOST_ASSERT(ptraj->GetPoints().size() > 0);
-                // fill results
-                ptraj->CalcTrajTiming(probot, ptraj->GetInterpMethod(), true, true);
-                probot->GetFullTrajectoryFromActive(pfulltraj,ptraj,false);
-
-                bodysaver.reset();     // restore target
-                BOOST_ASSERT(pfulltraj->GetPoints().size()>0);
-
-                probot->SetTransform(ptraj->GetPoints().back().trans);
-                probot->SetActiveDOFValues(ptraj->GetPoints().back().q);
-
-                FOREACHC(itlink, vlinks) {
-                    if( pcloneenv->CheckCollision(KinBody::LinkConstPtr(*itlink), KinBodyConstPtr(params->targetbody), report) ) {
-                        RAVELOG_VERBOSE(str(boost::format("contact %s\n")%report->__str__()));
-                        FOREACH(itcontact,report->contacts) {
-                            if( report->plink1 != *itlink ) {
-                                itcontact->norm = -itcontact->norm;
-                                itcontact->depth = -itcontact->depth;
-                            }
-                            grasp_params->contacts.push_back(make_pair(*itcontact,(*itlink)->GetIndex()));
-                        }
-                    }
-                }
-
-                grasp_params->transfinal = probot->GetTransform();
-                probot->GetDOFValues(grasp_params->finalshape);
-
-                if ( worker_params->bCheckGraspIK ) {
-                    CollisionOptionsStateSaver optionstate(pcloneenv->GetCollisionChecker(),coloptions,false); // remove contacts
-                    Transform Tgoalgrasp = probot->GetActiveManipulator()->GetEndEffectorTransform();
-                    probot->SetTransform(trobotstart);
-                    RobotBase::RobotStateSaver linksaver(probot);
-                    FOREACH(itlink,vlinks) {
-                        (*itlink)->Enable(false);
-                    }
-                    probot->SetActiveDOFs(probot->GetActiveManipulator()->GetArmIndices());
-                    vector<dReal> solution;
-                    if( !probot->GetActiveManipulator()->FindIKSolution(Tgoalgrasp, solution,IKFO_CheckEnvCollisions) ) {
-                        RAVELOG_DEBUG(str(boost::format("grasp %d: ik failed")%grasp_params->id));
-                        continue;     // ik failed
-                    }
-
-                    grasp_params->transfinal = trobotstart;
-                    size_t index = 0;
-                    FOREACHC(itarmindex,probot->GetActiveManipulator()->GetArmIndices()) {
-                        grasp_params->finalshape.at(*itarmindex) = solution.at(index++);
-                    }
-                }
-
-                GRASPANALYSIS analysis;
-                if( worker_params->bComputeForceClosure ) {
-                    try {
-                        vector<CollisionReport::CONTACT> c(grasp_params->contacts.size());
-                        for(size_t i = 0; i < c.size(); ++i) {
-                            c[i] = grasp_params->contacts[i].first;
-                        }
-                        analysis = _AnalyzeContacts3D(c,worker_params->friction,8);
-                        if( analysis.mindist < worker_params->forceclosurethreshold ) {
-                            RAVELOG_DEBUG(str(boost::format("grasp %d: force closure failed")%grasp_params->id));
-                            continue;
-                        }
-                        grasp_params->mindist = analysis.mindist;
-                        grasp_params->volume = analysis.volume;
-                    }
-                    catch(const openrave_exception& ex) {
-                        RAVELOG_DEBUG(str(boost::format("grasp %d: force closure failed")%grasp_params->id));
-                        continue;     // failed
-                    }
-                }
-
-                RAVELOG_DEBUG(str(boost::format("grasp %d success")%grasp_params->id));
-
-                boost::mutex::scoped_lock lock(_mutexGrasp);
-                _listGraspResults.push_back(grasp_params);
+            if( !planner->PlanPath(ptraj) ) {
+                RAVELOG_DEBUG(str(boost::format("grasp %d: grasper planner failed")%grasp_params->id));
+                continue;
             }
+
+            BOOST_ASSERT(ptraj->GetPoints().size() > 0);
+            // fill results
+            ptraj->CalcTrajTiming(probot, ptraj->GetInterpMethod(), true, true);
+            probot->GetFullTrajectoryFromActive(pfulltraj,ptraj,false);
+
+            BOOST_ASSERT(pfulltraj->GetPoints().size()>0);
+
+            probot->SetTransform(ptraj->GetPoints().back().trans);
+            probot->SetActiveDOFValues(ptraj->GetPoints().back().q);
+
+            FOREACHC(itlink, vlinks) {
+                if( pcloneenv->CheckCollision(KinBody::LinkConstPtr(*itlink), KinBodyConstPtr(params->targetbody), report) ) {
+                    RAVELOG_VERBOSE(str(boost::format("contact %s\n")%report->__str__()));
+                    FOREACH(itcontact,report->contacts) {
+                        if( report->plink1 != *itlink ) {
+                            itcontact->norm = -itcontact->norm;
+                            itcontact->depth = -itcontact->depth;
+                        }
+                        grasp_params->contacts.push_back(make_pair(*itcontact,(*itlink)->GetIndex()));
+                    }
+                }
+            }
+
+            grasp_params->transfinal = probot->GetTransform();
+            probot->GetDOFValues(grasp_params->finalshape);
+
+            if ( worker_params->bCheckGraspIK ) {
+                CollisionOptionsStateSaver optionstate(pcloneenv->GetCollisionChecker(),coloptions,false); // remove contacts
+                Transform Tgoalgrasp = probot->GetActiveManipulator()->GetEndEffectorTransform();
+                probot->SetTransform(trobotstart);
+                RobotBase::RobotStateSaver linksaver(probot);
+                FOREACH(itlink,vlinks) {
+                    (*itlink)->Enable(false);
+                }
+                probot->SetActiveDOFs(probot->GetActiveManipulator()->GetArmIndices());
+                vector<dReal> solution;
+                if( !probot->GetActiveManipulator()->FindIKSolution(Tgoalgrasp, solution,IKFO_CheckEnvCollisions) ) {
+                    RAVELOG_DEBUG(str(boost::format("grasp %d: ik failed")%grasp_params->id));
+                    continue;     // ik failed
+                }
+
+                grasp_params->transfinal = trobotstart;
+                size_t index = 0;
+                FOREACHC(itarmindex,probot->GetActiveManipulator()->GetArmIndices()) {
+                    grasp_params->finalshape.at(*itarmindex) = solution.at(index++);
+                }
+            }
+
+            GRASPANALYSIS analysis;
+            if( worker_params->bComputeForceClosure ) {
+                try {
+                    vector<CollisionReport::CONTACT> c(grasp_params->contacts.size());
+                    for(size_t i = 0; i < c.size(); ++i) {
+                        c[i] = grasp_params->contacts[i].first;
+                    }
+                    analysis = _AnalyzeContacts3D(c,worker_params->friction,8);
+                    if( analysis.mindist < worker_params->forceclosurethreshold ) {
+                        RAVELOG_DEBUG(str(boost::format("grasp %d: force closure failed")%grasp_params->id));
+                        continue;
+                    }
+                    grasp_params->mindist = analysis.mindist;
+                    grasp_params->volume = analysis.volume;
+                }
+                catch(const openrave_exception& ex) {
+                    RAVELOG_DEBUG(str(boost::format("grasp %d: force closure failed")%grasp_params->id));
+                    continue;     // failed
+                }
+            }
+
+            if( worker_params->fgraspingnoise > 0 ) {
+                params->fgraspingnoise = worker_params->fgraspingnoise;
+                for(int igrasp = 0; igrasp < worker_params->nGraspingNoiseRetries; ++igrasp) {
+                    probot->SetActiveDOFs(worker_params->vactiveindices);
+                    probot->SetActiveDOFValues(grasp_params->preshape);
+                    probot->SetActiveDOFs(worker_params->vactiveindices,worker_params->affinedofs,worker_params->affineaxis);
+
+                    params->SetRobotActiveJoints(probot);
+                    probot->GetActiveDOFValues(params->vinitialconfig);
+
+                    ptraj->Clear();
+
+                    // InitPlan/PlanPath
+                    if( !planner->InitPlan(probot, params) ) {
+                        RAVELOG_DEBUG(str(boost::format("grasp %d: grasper planner failed")%grasp_params->id));
+                        continue;
+                    }
+                    if( !planner->PlanPath(ptraj) ) {
+                        RAVELOG_DEBUG(str(boost::format("grasp %d: grasper planner failed")%grasp_params->id));
+                        continue;
+                    }
+
+                    BOOST_ASSERT(ptraj->GetPoints().size() > 0);
+                    // fill results
+                    ptraj->CalcTrajTiming(probot, ptraj->GetInterpMethod(), true, true);
+                    probot->GetFullTrajectoryFromActive(pfulltraj,ptraj,false);
+
+                    if ( worker_params->bCheckGraspIK ) {
+                        CollisionOptionsStateSaver optionstate(pcloneenv->GetCollisionChecker(),coloptions,false); // remove contacts
+                        Transform Tgoalgrasp = probot->GetActiveManipulator()->GetEndEffectorTransform();
+                        probot->SetTransform(trobotstart);
+                        RobotBase::RobotStateSaver linksaver(probot);
+                        FOREACH(itlink,vlinks) {
+                            (*itlink)->Enable(false);
+                        }
+                        probot->SetActiveDOFs(probot->GetActiveManipulator()->GetArmIndices());
+                        vector<dReal> solution;
+                        if( !probot->GetActiveManipulator()->FindIKSolution(Tgoalgrasp, solution,IKFO_CheckEnvCollisions) ) {
+                            RAVELOG_DEBUG(str(boost::format("grasp %d: ik failed")%grasp_params->id));
+                            continue;     // ik failed
+                        }
+                    }
+                }
+            }
+
+            RAVELOG_DEBUG(str(boost::format("grasp %d success")%grasp_params->id));
+
+            boost::mutex::scoped_lock lock(_mutexGrasp);
+            _listGraspResults.push_back(grasp_params);
 
         }
     }
