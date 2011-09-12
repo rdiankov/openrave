@@ -120,6 +120,7 @@ public:
             return -1;
         }
 
+        _ComputeJointMaxLengths(_vjointmaxlengths);
         return 0;
     }
 
@@ -867,7 +868,7 @@ public:
 
         CollisionReportPtr report(new CollisionReport());
         TrajectoryBasePtr ptraj = RaveCreateTrajectory(pcloneenv,probot->GetActiveDOF());
-        TrajectoryBasePtr pfulltraj = RaveCreateTrajectory(pcloneenv,probot->GetDOF());
+        //TrajectoryBasePtr pfulltraj = RaveCreateTrajectory(pcloneenv,probot->GetDOF());
         GraspParametersThreadPtr grasp_params;
 
         // calculate the contact normals
@@ -929,14 +930,10 @@ public:
             }
 
             BOOST_ASSERT(ptraj->GetPoints().size() > 0);
-            // fill results
-            ptraj->CalcTrajTiming(probot, ptraj->GetInterpMethod(), true, true);
-            probot->GetFullTrajectoryFromActive(pfulltraj,ptraj,false);
-
-            BOOST_ASSERT(pfulltraj->GetPoints().size()>0);
-
             probot->SetTransform(ptraj->GetPoints().back().trans);
-            probot->SetActiveDOFValues(ptraj->GetPoints().back().q);
+            probot->SetActiveDOFValues(ptraj->GetPoints().back().q,true);
+            grasp_params->transfinal = probot->GetTransform();
+            probot->GetDOFValues(grasp_params->finalshape);
 
             FOREACHC(itlink, vlinks) {
                 if( pcloneenv->CheckCollision(KinBody::LinkConstPtr(*itlink), KinBodyConstPtr(params->targetbody), report) ) {
@@ -951,9 +948,6 @@ public:
                 }
             }
 
-            grasp_params->transfinal = probot->GetTransform();
-            probot->GetDOFValues(grasp_params->finalshape);
-
             if ( worker_params->bCheckGraspIK ) {
                 CollisionOptionsStateSaver optionstate(pcloneenv->GetCollisionChecker(),coloptions,false); // remove contacts
                 Transform Tgoalgrasp = probot->GetActiveManipulator()->GetEndEffectorTransform();
@@ -962,6 +956,8 @@ public:
                 FOREACH(itlink,vlinks) {
                     (*itlink)->Enable(false);
                 }
+                probot->SetActiveDOFs(worker_params->vactiveindices);
+                probot->SetActiveDOFValues(grasp_params->preshape);
                 probot->SetActiveDOFs(probot->GetActiveManipulator()->GetArmIndices());
                 vector<dReal> solution;
                 if( !probot->GetActiveManipulator()->FindIKSolution(Tgoalgrasp, solution,IKFO_CheckEnvCollisions) ) {
@@ -997,32 +993,25 @@ public:
                 }
             }
 
-            if( worker_params->fgraspingnoise > 0 ) {
+            if( worker_params->fgraspingnoise > 0 && worker_params->nGraspingNoiseRetries > 0 ) {
                 params->fgraspingnoise = worker_params->fgraspingnoise;
+                vector<Transform> vfinaltransformations; vfinaltransformations.reserve(worker_params->nGraspingNoiseRetries);
+                vector< vector<dReal> > vfinalvalues; vfinalvalues.reserve(worker_params->nGraspingNoiseRetries);
                 for(int igrasp = 0; igrasp < worker_params->nGraspingNoiseRetries; ++igrasp) {
                     probot->SetActiveDOFs(worker_params->vactiveindices);
                     probot->SetActiveDOFValues(grasp_params->preshape);
                     probot->SetActiveDOFs(worker_params->vactiveindices,worker_params->affinedofs,worker_params->affineaxis);
-
-                    params->SetRobotActiveJoints(probot);
-                    probot->GetActiveDOFValues(params->vinitialconfig);
-
+                    params->vinitialconfig.resize(0);
                     ptraj->Clear();
-
-                    // InitPlan/PlanPath
                     if( !planner->InitPlan(probot, params) ) {
-                        RAVELOG_DEBUG(str(boost::format("grasp %d: grasper planner failed")%grasp_params->id));
-                        continue;
+                        RAVELOG_VERBOSE(str(boost::format("grasp %d: grasping noise planner failed")%grasp_params->id));
+                        break;
                     }
                     if( !planner->PlanPath(ptraj) ) {
-                        RAVELOG_DEBUG(str(boost::format("grasp %d: grasper planner failed")%grasp_params->id));
-                        continue;
+                        RAVELOG_VERBOSE(str(boost::format("grasp %d: grasping noise planner failed")%grasp_params->id));
+                        break;
                     }
-
                     BOOST_ASSERT(ptraj->GetPoints().size() > 0);
-                    // fill results
-                    ptraj->CalcTrajTiming(probot, ptraj->GetInterpMethod(), true, true);
-                    probot->GetFullTrajectoryFromActive(pfulltraj,ptraj,false);
 
                     if ( worker_params->bCheckGraspIK ) {
                         CollisionOptionsStateSaver optionstate(pcloneenv->GetCollisionChecker(),coloptions,false); // remove contacts
@@ -1032,17 +1021,70 @@ public:
                         FOREACH(itlink,vlinks) {
                             (*itlink)->Enable(false);
                         }
+                        probot->SetActiveDOFs(worker_params->vactiveindices);
+                        probot->SetActiveDOFValues(grasp_params->preshape);
                         probot->SetActiveDOFs(probot->GetActiveManipulator()->GetArmIndices());
                         vector<dReal> solution;
                         if( !probot->GetActiveManipulator()->FindIKSolution(Tgoalgrasp, solution,IKFO_CheckEnvCollisions) ) {
-                            RAVELOG_DEBUG(str(boost::format("grasp %d: ik failed")%grasp_params->id));
-                            continue;     // ik failed
+                            RAVELOG_VERBOSE(str(boost::format("grasp %d: grasping noise ik failed")%grasp_params->id));
+                            break;
                         }
                     }
+
+                    vfinaltransformations.push_back(ptraj->GetPoints().back().trans);
+                    probot->SetActiveDOFValues(ptraj->GetPoints().back().q,true);
+                    vfinalvalues.push_back(vector<dReal>());
+                    probot->GetDOFValues(vfinalvalues.back());
+                }
+
+                if( (int)vfinaltransformations.size() != worker_params->nGraspingNoiseRetries ) {
+                    RAVELOG_DEBUG(str(boost::format("grasp %d: grasping noise failed")%grasp_params->id));
+                    continue;
+                }
+
+                // take statistics
+                Vector translationmean;
+                FOREACHC(ittrans,vfinaltransformations) {
+                    translationmean += ittrans->trans;
+                }
+                translationmean *= (1.0/vfinaltransformations.size());
+                Vector translationstd;
+                FOREACHC(ittrans,vfinaltransformations) {
+                    Vector v = ittrans->trans - translationmean;
+                    translationstd += v*v;
+                }
+                translationstd *= (1.0/vfinaltransformations.size());
+                dReal ftranslationdisplacement = (RaveSqrt(translationstd.x)+RaveSqrt(translationstd.y)+RaveSqrt(translationstd.z))/3;
+                vector<dReal> jointvaluesstd(vfinalvalues.at(0).size());
+                for(size_t i = 0; i < jointvaluesstd.size(); ++i) {
+                    dReal jointmean = 0;
+                    FOREACHC(it, vfinalvalues) {
+                        jointmean += it->at(i);
+                    }
+                    jointmean /= dReal(vfinalvalues.size());
+                    dReal jointstd = 0;
+                    FOREACHC(it, vfinalvalues) {
+                        jointstd += (it->at(i)-jointmean)*(it->at(i)-jointmean);
+                    }
+                    jointvaluesstd[i] *= _vjointmaxlengths.at(i) * (jointstd / dReal(vfinalvalues.size()));
+                }
+                dReal fmaxjointdisplacement = 0;
+                FOREACHC(itlink, _robot->GetLinks()) {
+                    dReal f = 0;
+                    for(size_t ijoint = 0; ijoint < _robot->GetJoints().size(); ++ijoint) {
+                        if( _robot->DoesAffect(ijoint, (*itlink)->GetIndex()) ) {
+                            f += _vjointmaxlengths.at(ijoint);
+                        }
+                    }
+                    fmaxjointdisplacement = max(fmaxjointdisplacement,f);
+                }
+                if( ftranslationdisplacement+fmaxjointdisplacement > 0.7 * worker_params->fgraspingnoise ) {
+                    RAVELOG_DEBUG(str(boost::format("grasp %d: fragile grasp %f>%f\n")%(ftranslationdisplacement+fmaxjointdisplacement)%(0.7 * worker_params->fgraspingnoise)));
+                    continue;
                 }
             }
 
-            RAVELOG_DEBUG(str(boost::format("grasp %d success")%grasp_params->id));
+            RAVELOG_DEBUG(str(boost::format("grasp %d: success")%grasp_params->id));
 
             boost::mutex::scoped_lock lock(_mutexGrasp);
             _listGraspResults.push_back(grasp_params);
@@ -1057,6 +1099,42 @@ public:
     boost::condition _condGraspHasWork, _condGraspReceivedWork;
 
 protected:
+    void _ComputeJointMaxLengths(vector<dReal>& vjointlengths)
+    {
+        KinBody::Link::TRIMESH collisiondata;
+        vector<Vector> vworldvertices; vworldvertices.reserve(10000);
+        vjointlengths.resize(_robot->GetJoints().size(),0);
+        FOREACHC(itjoint, _robot->GetJoints()) {
+            if( !(*itjoint)->GetHierarchyChildLink() ) {
+                // todo: support multi-dof joints
+                if( (*itjoint)->IsPrismatic(0) ) {
+                    vjointlengths.at((*itjoint)->GetJointIndex()) = 1;
+                }
+                else if( (*itjoint)->IsRevolute(0) ) {
+                    Transform t = (*itjoint)->GetHierarchyChildLink()->GetTransform();
+                    t.trans -= (*itjoint)->GetAnchor();
+                    vworldvertices.resize(0);
+                    FOREACHC(itvertex, (*itjoint)->GetHierarchyChildLink()->GetCollisionData().vertices) {
+                        vworldvertices.push_back(t * *itvertex);
+                    }
+                    FOREACHC(itchildjoint, _robot->GetJoints()) {
+                        if( *itchildjoint != *itjoint ) {
+                            if( (*itchildjoint)->GetFirstAttached() == (*itjoint)->GetHierarchyChildLink() || (*itchildjoint)->GetSecondAttached() == (*itjoint)->GetHierarchyChildLink() ) {
+                                vworldvertices.push_back((*itchildjoint)->GetAnchor() - (*itjoint)->GetAnchor());
+                            }
+                        }
+                    }
+                    dReal maxlength = 0;
+                    FOREACHC(itv,vworldvertices) {
+                        dReal faxisdist = itv->dot3((*itjoint)->GetAxis(0));
+                        maxlength = max(maxlength,itv->lengthsqr3() - faxisdist*faxisdist);
+                    }
+                    vjointlengths.at((*itjoint)->GetJointIndex()) = RaveSqrt(maxlength);
+                }
+            }
+        }
+    }
+
     void SampleObject(KinBodyPtr pbody, vector<CollisionReport::CONTACT>& vpoints, int N, Vector graspcenter)
     {
         RAY r;
@@ -1582,6 +1660,7 @@ protected:
     CollisionReportPtr _report;
     boost::mutex _mutex;
     FILE *errfile;
+    std::vector<dReal> _vjointmaxlengths;
 };
 
 #endif

@@ -128,7 +128,7 @@ class FastGraspingThreaded:
             manipulatordirections = array([self.manip.GetDirection()])
             target = self.target
             graspingnoise = 0
-            ngraspingnoiseretries = 10
+            ngraspingnoiseretries = 20
             forceclosurethreshold=1e-9
             avoidlinks = []
             friction = 0.3

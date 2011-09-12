@@ -27,6 +27,8 @@ Grasping
 
 * fixes in grasping with standoff
 
+* added IK checking option to :ref:`module-grasper-graspthreaded`, showing usage in :mod:`.examples.fastgraspingthreaded` example.
+
 Misc
 ----
 

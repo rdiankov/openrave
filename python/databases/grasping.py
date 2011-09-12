@@ -262,23 +262,19 @@ class GraspingModel(DatabaseGenerator):
         with self.env:
             self.jointmaxlengths = zeros(len(self.robot.GetJoints()))
             for i,joint in enumerate(self.robot.GetJoints()):
-                childlink = None
-                if joint.GetFirstAttached() and self.robot.DoesAffect(joint.GetJointIndex(),joint.GetFirstAttached().GetIndex()):
-                    childlink = joint.GetFirstAttached()
-                elif joint.GetSecondAttached() and self.robot.DoesAffect(joint.GetJointIndex(),joint.GetSecondAttached().GetIndex()):
-                    childlink = joint.GetSecondAttached()
+                childlink = joint.GetHierarchyChildLink()
                 if childlink is not None:
                     # find how much an axis displaces the link
-                    if joint.GetType() == KinBody.Joint.Type.Slider or joint.GetType() == KinBody.Joint.Type.Prismatic:
+                    if joint.IsPrismatic(0):
                         self.jointmaxlengths[i] = 1.0
-                    else: # revolute
+                    elif joint.IsRevolute(0): # revolute
                         T = childlink.GetTransform()
                         T[0:3,3] -= joint.GetAnchor()
                         vertices = transformPoints(T,childlink.GetCollisionData().vertices)
                         # find all child joints and add their anchor to vertices
                         for childjoint in self.robot.GetJoints():
-                            if childjoint.GetJointIndex() != joint.GetJointIndex():
-                                if (childjoint.GetFirstAttached() and childjoint.GetFirstAttached().GetIndex() == childlink.GetIndex()) or (childjoint.GetSecondAttached() and childjoint.GetSecondAttached().GetIndex() == childlink.GetIndex()):
+                            if childjoint != joint:
+                                if childjoint.GetFirstAttached() == childlink or childjoint.GetSecondAttached() == childlink:
                                     vertices = r_[vertices,[childjoint.GetAnchor()-joint.GetAnchor()]]
                         self.jointmaxlengths[i] = sqrt(numpy.max(sum(vertices**2,1)-dot(vertices,joint.GetAxis(0))**2)) if len(vertices) > 0 else 0
     def autogenerateparams(self,options=None):

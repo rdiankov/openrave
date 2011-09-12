@@ -70,7 +70,7 @@ class FastGrasping:
             preshapes = array([final])
         try:
             self.gmodel.disableallbodies=False
-            self.gmodel.generate(preshapes=preshapes,standoffs=standoffs,rolls=rolls,approachrays=approachrays,checkgraspfn=self.checkgraspfn)
+            self.gmodel.generate(preshapes=preshapes,standoffs=standoffs,rolls=rolls,approachrays=approachrays,checkgraspfn=self.checkgraspfn,graspingnoise=0.01)
             return None,None # did not find anything
         except self.GraspingException, e:
             return e.args
