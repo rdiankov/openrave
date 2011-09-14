@@ -43,12 +43,7 @@ from multiprocessing import Process,Pipe
 from threading import Thread
 from PyQt4 import QtGui, QtCore
 
-logger = logging.getLogger('PyqtControl')
-lhandler =logging.StreamHandler(sys.stdout)
-lhandler.setFormatter(logging.Formatter("%(levelname)-10s:: %(filename)-20s - %(lineno)4d :: %(message)s"))
-logger.setLevel(logging.INFO)
-logger.addHandler(lhandler)
-signal.signal(signal.SIGINT, signal.SIG_DFL)
+logger = None
 
 #Change to main Gui Server which just inits a Qt or OpenRAVE Gui
 class Example(Thread):
@@ -347,13 +342,14 @@ class MainWindow(QtGui.QMainWindow,Ui_MainWindow):
             return
         logger.error("ERROR in request format")
 
-
-
-
 def run(args=None):
-    #argv = sys.argv
-    #sys.argv = []
-    #sys.argv.append(argv[0])
+    global logger
+    logger = logging.getLogger('PyqtControl')
+    lhandler =logging.StreamHandler(sys.stdout)
+    lhandler.setFormatter(logging.Formatter("%(levelname)-10s:: %(filename)-20s - %(lineno)4d :: %(message)s"))
+    logger.setLevel(logging.INFO)
+    logger.addHandler(lhandler)
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
     server = Server()
 
 

@@ -45,12 +45,7 @@ from threading import Thread
 from PyQt4 import QtGui, QtCore
 from openravepy import *
 
-signal.signal(signal.SIGINT, signal.SIG_DFL)
-logger = logging.getLogger('PyqtControl')
-lhandler =logging.StreamHandler(sys.stdout)
-lhandler.setFormatter(logging.Formatter("%(levelname)-10s:: %(filename)-20s - %(lineno)4d :: %(message)s"))
-logger.setLevel(logging.INFO)
-logger.addHandler(lhandler)
+logger = None
 
 class CallbackHandler(QtCore.QThread):
     def __init__(self,pipe,callback=None):
@@ -496,10 +491,14 @@ class MainWindow(QtGui.QMainWindow,Ui_MainWindow):
 
 
 def run(args=None):
+    global logger
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
+    logger = logging.getLogger('PyqtControl')
+    lhandler =logging.StreamHandler(sys.stdout)
+    lhandler.setFormatter(logging.Formatter("%(levelname)-10s:: %(filename)-20s - %(lineno)4d :: %(message)s"))
+    logger.setLevel(logging.INFO)
+    logger.addHandler(lhandler)
     server = Server()
-
 
 if __name__ == "__main__":
     run()
-
-
