@@ -224,13 +224,14 @@ class GraspPlanning:
                 for target in targets:
                     target.Enable(True)
 
-    def viewDestinations(self,graspable,delay=0.5):
-        with graspable[0].target:
-            for i,T in enumerate(graspable[1]):
-                print 'target %s dest %d/%d'%(graspable[0].target.GetName(),i,len(graspable[1]))
-                graspable[0].target.SetTransform(T)
-                graspable[0].target.GetEnv().UpdatePublishedBodies()
-                time.sleep(delay)
+    def viewDestinations(self,gmodel,Tdests,delay=0.5):
+        with gmodel.target:
+            for i,T in enumerate(Tdests):
+                print 'target %s dest %d/%d'%(gmodel.target.GetName(),i,len(Tdests))
+                gmodel.target.SetTransform(T)
+                validgrasps, indices = gmodel.computeValidGrasps(returnnum=1)
+                gmodel.target.GetEnv().UpdatePublishedBodies()
+                gmodel.showgrasp(validgrasps[0],useik=True,collisionfree=True,delay=delay)
 
     def waitrobot(self,robot=None):
         """busy wait for robot completion"""
