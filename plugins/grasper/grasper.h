@@ -909,9 +909,7 @@ public:
             probot->SetActiveDOFs(worker_params->vactiveindices);
             probot->SetActiveDOFValues(grasp_params->preshape);
             probot->SetActiveDOFs(worker_params->vactiveindices,worker_params->affinedofs,worker_params->affineaxis);
-
             params->SetRobotActiveJoints(probot);
-            probot->GetActiveDOFValues(params->vinitialconfig);
 
             RobotBase::RobotStateSaver saver(probot);
             probot->Enable(true);
@@ -951,8 +949,8 @@ public:
             if ( worker_params->bCheckGraspIK ) {
                 CollisionOptionsStateSaver optionstate(pcloneenv->GetCollisionChecker(),coloptions,false); // remove contacts
                 Transform Tgoalgrasp = probot->GetActiveManipulator()->GetEndEffectorTransform();
-                probot->SetTransform(trobotstart);
                 RobotBase::RobotStateSaver linksaver(probot);
+                probot->SetTransform(trobotstart);
                 FOREACH(itlink,vlinks) {
                     (*itlink)->Enable(false);
                 }
@@ -1015,9 +1013,10 @@ public:
 
                     if ( worker_params->bCheckGraspIK ) {
                         CollisionOptionsStateSaver optionstate(pcloneenv->GetCollisionChecker(),coloptions,false); // remove contacts
+                        RobotBase::RobotStateSaver linksaver(probot);
+                        probot->SetTransform(ptraj->GetPoints().back().trans);
                         Transform Tgoalgrasp = probot->GetActiveManipulator()->GetEndEffectorTransform();
                         probot->SetTransform(trobotstart);
-                        RobotBase::RobotStateSaver linksaver(probot);
                         FOREACH(itlink,vlinks) {
                             (*itlink)->Enable(false);
                         }
@@ -1031,10 +1030,11 @@ public:
                         }
                     }
 
-                    vfinaltransformations.push_back(ptraj->GetPoints().back().trans);
                     probot->SetActiveDOFValues(ptraj->GetPoints().back().q,true);
                     vfinalvalues.push_back(vector<dReal>());
                     probot->GetDOFValues(vfinalvalues.back());
+                    probot->SetTransform(ptraj->GetPoints().back().trans);
+                    vfinaltransformations.push_back(probot->GetActiveManipulator()->GetTransform());
                 }
 
                 if( (int)vfinaltransformations.size() != worker_params->nGraspingNoiseRetries ) {
@@ -1066,20 +1066,20 @@ public:
                     FOREACHC(it, vfinalvalues) {
                         jointstd += (it->at(i)-jointmean)*(it->at(i)-jointmean);
                     }
-                    jointvaluesstd[i] *= _vjointmaxlengths.at(i) * (jointstd / dReal(vfinalvalues.size()));
+                    jointvaluesstd[i] = _vjointmaxlengths.at(i) * RaveSqrt(jointstd / dReal(vfinalvalues.size()));
                 }
                 dReal fmaxjointdisplacement = 0;
                 FOREACHC(itlink, _robot->GetLinks()) {
                     dReal f = 0;
                     for(size_t ijoint = 0; ijoint < _robot->GetJoints().size(); ++ijoint) {
                         if( _robot->DoesAffect(ijoint, (*itlink)->GetIndex()) ) {
-                            f += _vjointmaxlengths.at(ijoint);
+                            f += jointvaluesstd.at(ijoint);
                         }
                     }
                     fmaxjointdisplacement = max(fmaxjointdisplacement,f);
                 }
                 if( ftranslationdisplacement+fmaxjointdisplacement > 0.7 * worker_params->fgraspingnoise ) {
-                    RAVELOG_DEBUG(str(boost::format("grasp %d: fragile grasp %f>%f\n")%(ftranslationdisplacement+fmaxjointdisplacement)%(0.7 * worker_params->fgraspingnoise)));
+                    RAVELOG_DEBUG(str(boost::format("grasp %d: fragile grasp %f>%f\n")%grasp_params->id%(ftranslationdisplacement+fmaxjointdisplacement)%(0.7 * worker_params->fgraspingnoise)));
                     continue;
                 }
             }
@@ -1105,7 +1105,7 @@ protected:
         vector<Vector> vworldvertices; vworldvertices.reserve(10000);
         vjointlengths.resize(_robot->GetJoints().size(),0);
         FOREACHC(itjoint, _robot->GetJoints()) {
-            if( !(*itjoint)->GetHierarchyChildLink() ) {
+            if( !!(*itjoint)->GetHierarchyChildLink() ) {
                 // todo: support multi-dof joints
                 if( (*itjoint)->IsPrismatic(0) ) {
                     vjointlengths.at((*itjoint)->GetJointIndex()) = 1;

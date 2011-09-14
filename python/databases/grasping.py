@@ -637,7 +637,7 @@ class GraspingModel(DatabaseGenerator):
                 translationstd = mean(std([T[0:3,3] for T in allfinaltrans],0))
                 jointvaluesstd = self.jointmaxlengths*std(array(allfinaljoints),0)
                 # compute the max distance of each link
-                maxjointvaluestd = max([sum([jointvaluesstd[i] for i in range(self.robot.GetDOF()) if self.robot.DoesAffect(i,link.GetIndex())]) for link in self.robot.GetLinks()])
+                maxjointvaluestd = max([sum([jointvaluesstd[i] for i in range(self.robot.GetJoints()) if self.robot.DoesAffect(i,link.GetIndex())]) for link in self.robot.GetLinks()])
                 print 'grasp:',translationstd,maxjointvaluestd
                 if translationstd+maxjointvaluestd > 0.7*graspingnoise:
                     print 'fragile grasp:',translationstd,maxjointvaluestd

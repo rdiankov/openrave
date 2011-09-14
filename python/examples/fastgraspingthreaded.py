@@ -127,11 +127,11 @@ class FastGraspingThreaded:
             rolls = arange(0,2*pi,0.5*pi)
             manipulatordirections = array([self.manip.GetDirection()])
             target = self.target
-            graspingnoise = 0
+            graspingnoise = 0.01
             ngraspingnoiseretries = 20
             forceclosurethreshold=1e-9
             avoidlinks = []
-            friction = 0.3
+            friction = 0.4
             numthreads = multiprocessing.cpu_count()
             maxgrasps = 1
             checkik = True
