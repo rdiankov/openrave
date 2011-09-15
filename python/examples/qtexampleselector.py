@@ -342,7 +342,8 @@ class MainWindow(QtGui.QMainWindow,Ui_MainWindow):
             return
         logger.error("ERROR in request format")
 
-def run(args=None):
+def main(env,options):
+    "Main example code."
     global logger
     logger = logging.getLogger('PyqtControl')
     lhandler =logging.StreamHandler(sys.stdout)
@@ -351,6 +352,17 @@ def run(args=None):
     logger.addHandler(lhandler)
     signal.signal(signal.SIGINT, signal.SIG_DFL)
     server = Server()
+
+from optparse import OptionParser
+
+def run(args=None):
+    """Command-line execution of the example.
+
+    :param args: arguments for script to parse, if not specified will use sys.argv
+    """
+    parser = OptionParser(description='Control and run the openrave python examples with a pyqt gui.', usage='openrave.py --example qtexampleselector [options]')
+    (options, leftargs) = parser.parse_args(args=args)
+    main(None,options)
 
 
 if __name__ == "__main__":
