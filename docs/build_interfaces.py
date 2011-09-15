@@ -136,3 +136,4 @@ Plugins
         open(os.path.join(options.outdir,'plugins.rst'),'w').write(text)
     finally:
         env.Destroy()
+        RaveDestroy()
