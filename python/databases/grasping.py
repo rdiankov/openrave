@@ -350,7 +350,7 @@ class GraspingModel(DatabaseGenerator):
             for b in bodies:
                 b[0].Enable(False)
         try:
-            if self.numthreads is not None:
+            if self.numthreads is not None and self.numthreads > 1:
                 self._generateThreaded(*args,**kwargs)
             else:
                 with self.GripperVisibility(self.manip):
@@ -479,7 +479,7 @@ class GraspingModel(DatabaseGenerator):
         
         return producer, consumer, gatherer, totalgrasps
 
-    def _generateThreaded(self,preshapes=None,standoffs=None,rolls=None,approachrays=None, graspingnoise=None,forceclosure=True,forceclosurethreshold=1e-9,checkgraspfn=None,manipulatordirections=None,translationstepmult=None,finestep=None,friction=None,avoidlinks=None,plannername=None,numthreads=None):
+    def _generateThreaded(self,preshapes=None,standoffs=None,rolls=None,approachrays=None, graspingnoise=None,forceclosure=True,forceclosurethreshold=1e-9,checkgraspfn=None,manipulatordirections=None,translationstepmult=None,finestep=None,friction=None,avoidlinks=None,plannername=None):
         """Generates a grasp set by searching space and evaluating contact points.
 
         All grasp parameters have to be in the bodies's coordinate system (ie: approachrays).
@@ -504,8 +504,10 @@ class GraspingModel(DatabaseGenerator):
             standoffs = array([0,0.025])
         if manipulatordirections is None:
             manipulatordirections = array([self.manip.GetDirection()])
-        if numthreads is None:
-            numthreads = 2
+        if self.numthreads is None:
+            numthreads = 1
+        else:
+            numthreads = self.numthreads
         self.init(friction=friction,avoidlinks=avoidlinks,plannername=plannername)
 
         with self.robot: # lock the environment and save the robot state
@@ -554,7 +556,7 @@ class GraspingModel(DatabaseGenerator):
                             self.grasps.append(grasp)
 
             self.grasps = array(self.grasps)
-            order = argsort(self.grasps[:,self.graspindices.get('performance')])
+            order = argsort(self.grasps[:,self.graspindices.get('performance')[0]])
             self.grasps = self.grasps[order]
 
     def show(self,delay=0.1,options=None,forceclosure=True):

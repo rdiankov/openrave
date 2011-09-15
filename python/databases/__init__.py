@@ -111,6 +111,8 @@ class DatabaseGenerator(metaclass.AutoReloader):
                            help='If set, will exit with 0 if datafile is generated and up to date, otherwise will return a 1. This will require loading the model and checking versions, so might be a little slow.')
         dbgroup.add_option('--robot',action='store',type='string',dest='robot',default=getenv('OPENRAVE_ROBOT',default='robots/barrettsegway.robot.xml'),
                            help='OpenRAVE robot to load (default=%default)')
+        dbgroup.add_option('--numthreads',action='store',type='int',dest='numthreads',default=1,
+                           help='number of threads to compute the database with (default=%default)')
         if useManipulator:
             dbgroup.add_option('--manipname',action='store',type='string',dest='manipname',default=None,
                                help='The name of the manipulator on the robot to use')

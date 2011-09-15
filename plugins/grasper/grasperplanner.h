@@ -398,7 +398,7 @@ public:
                                     RAVELOG_VERBOSE(ss.str());
                                 }
                                 if( ct & CT_SelfCollision ) {
-                                    RAVELOG_WARN("robot in self collision even though nothing moved!\n");
+                                    RAVELOG_WARN(str(boost::format("robot in self collision even though nothing moved: %s!")%_report->__str__()));
                                 }
                                 ncollided++;
                                 collision = true;
@@ -506,7 +506,7 @@ public:
             return ct;
         }
 
-        if(_robot->CheckSelfCollision()) {
+        if(_robot->CheckSelfCollision(_report)) {
             ct |= CT_SelfCollision;
         }
         return ct;

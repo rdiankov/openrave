@@ -18,7 +18,7 @@ Core
 Inverse Kinematics
 ------------------
 
-* IkSolver::SetCustomFilter now returns the old filter set. (temporary)
+* :ref:`.IkSolver::SetCustomFilter` now returns the old filter set. (temporary)
 
 * Fixed TranslationDirection5D IK bug, upgrade ikfast version
 
@@ -29,12 +29,16 @@ Grasping
 
 * added IK checking option to :ref:`module-grasper-graspthreaded`, showing usage in :mod:`.examples.fastgraspingthreaded` example.
 
+* added new :mod:`.examples.fastgraspingthreaded` example to show how to use multithreaded functions to compute good grasps in real-time.
+
+* added **--numthreads** option to **openrave.py --database grasping** to allow users to set number of threads.
+
 Misc
 ----
 
 * added TrajectoryBase::Clone and CalcTrajTiming calls now respect active DOFs settings
 
-* "skipgeometry" now being acknowledged in Environment::Load, fixes the inversekinematics database --getfilename option.
+* "skipgeometry" now being acknowledged in Environment::Load, fixes the **openrave.py inversekinematics database --getfilename** option.
 
 * <render> tag for non-trimesh objects works now
 
@@ -664,7 +668,7 @@ Misc
 
 * Added convex hull computation command inside grasper plugin so that openrave can convert point clouds into meshes for grasping.
 
-* Added several new python examples: checkconvexdecomposition.py, checkvisibility.py, fastgrasping.py,
+* Added several new python examples: :mod:`.examples.checkconvexdecomposition`, :mod:`.examples.checkvisibility`, :mod:`.examples.fastgrasping`,
 
 Version 0.2.15
 ==============

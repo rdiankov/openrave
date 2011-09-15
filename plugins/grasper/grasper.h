@@ -898,7 +898,7 @@ public:
                 _condGraspReceivedWork.notify_all();
             }
 
-            RAVELOG_DEBUG(str(boost::format("start grasp %d")%grasp_params->id));
+            RAVELOG_DEBUG(str(boost::format("grasp %d: start")%grasp_params->id));
 
             // fill params
             params->vtargetdirection = grasp_params->vtargetdirection;
@@ -1088,8 +1088,9 @@ public:
 
             boost::mutex::scoped_lock lock(_mutexGrasp);
             _listGraspResults.push_back(grasp_params);
-
         }
+
+        pcloneenv->Destroy();
     }
 
     bool _bContinueWorker;
