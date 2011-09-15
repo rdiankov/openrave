@@ -88,6 +88,8 @@ if __name__ == "__main__":
                             print name
                     except ImportError:
                         pass
+            
+            RaveDestroy()        
             sys.exit(0)
         if options.listexamples:
             import openravepy.examples
@@ -99,7 +101,10 @@ if __name__ == "__main__":
                             print name
                     except ImportError:
                         pass
+            
+            RaveDestroy()        
             sys.exit(0)
+            
         if options.database is not None:
             args = options.database[0].split() + options.database[1:] # the first arg might also include the options
             try:
@@ -114,9 +119,14 @@ if __name__ == "__main__":
                                 print name
                         except ImportError:
                             pass
+
+                RaveDestroy()
                 sys.exit(1)
+                
             database.run(args=args)
+            RaveDestroy()
             sys.exit(0)
+
         if options.example is not None:
             args = options.example[0].split() + options.example[1:] # the first arg might also include the options
             try:
@@ -132,8 +142,12 @@ if __name__ == "__main__":
                                 print name
                         except ImportError:
                             pass
+
+                RaveDestroy()
                 sys.exit(1)
+                
             example.run(args=args)
+            RaveDestroy()
             sys.exit(0)
 
         level = DebugLevel.Info
@@ -147,6 +161,8 @@ if __name__ == "__main__":
                     for name in names:
                         print name
                     break
+
+            RaveDestroy()
             sys.exit(0)
         if options.listplugins:
             plugins = RaveGetPluginInfo()
@@ -162,6 +178,7 @@ if __name__ == "__main__":
                 names.sort()
                 for interfacename,pluginname in names:
                     print '  %s - %s'%(interfacename,pluginname)
+            RaveDestroy()
             sys.exit(0)
         env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=False)
         try:
@@ -179,6 +196,7 @@ if __name__ == "__main__":
                 from IPython.Shell import IPShellEmbed
                 ipshell = IPShellEmbed(argv='',banner = 'OpenRAVE Dropping into IPython, variables: env, robot',exit_msg = 'Leaving Interpreter and closing program.')
                 ipshell(local_ns=locals())
+                RaveDestroy()
                 sys.exit(0)
             while True:
                 time.sleep(1.0)

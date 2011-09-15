@@ -196,11 +196,16 @@ class InverseKinematicsModel(DatabaseGenerator):
         """
         :param forceikfast: if set will always force the ikfast solver
         """
+        self.ikfastproblem = None
+        DatabaseGenerator.__init__(self,robot=robot)
+        # check if robot manipulator has no static links (except the base)
+        for link in self.robot.GetChain(self.manip.GetBase().GetIndex(),self.manip.GetEndEffector().GetIndex(),returnjoints=False)[1:]:
+            for rigidlyattached in link.GetRigidlyAttachedLinks():
+                if rigidlyattached.IsStatic():
+                    raise ValueError('link %s part of IK chain cannot be declared static'%str(link))
         self.ikfast = __import__('openravepy.ikfast',fromlist=['openravepy'])
         self.ikfast.log.addHandler(handler)
         self.ikfast.log.setLevel(logging.INFO)
-
-        DatabaseGenerator.__init__(self,robot=robot)
         self.ikfastproblem = RaveCreateModule(self.env,'ikfast')
         if self.ikfastproblem is not None:
             self.env.AddModule(self.ikfastproblem,'')

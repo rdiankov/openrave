@@ -508,7 +508,8 @@ public:
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         RAVELOG_DEBUG("Starting IKtest...\n");
         vector<dReal> varmjointvals, values;
-        bool bCheckCollision = true, bInitialized=false;
+        bool bInitialized=false;
+        int filteroptions = IKFO_CheckEnvCollisions;
         RobotBasePtr robot;
         RobotBase::ManipulatorConstPtr pmanip;
         IkParameterization ikparam;
@@ -535,7 +536,7 @@ public:
                 }
             }
             else if( cmd == "nocol" ) {
-                bCheckCollision = false;
+                filteroptions = 0;
             }
             else if( cmd == "robot" ) {
                 string name;
@@ -570,7 +571,7 @@ public:
         robot->SetDOFValues(values);
 
         vector<dReal> q1;
-        if( !pmanip->FindIKSolution(ikparam, q1, bCheckCollision) ) {
+        if( !pmanip->FindIKSolution(ikparam, q1, filteroptions) ) {
             RAVELOG_WARN("No IK solution found\n");
             return false;
         }
@@ -636,6 +637,7 @@ public:
         bool bReadFile = false, bTestSelfCollision = false;
         dReal sampledegeneratecases = 0.2f, fthreshold = 0.000001f;
 
+        int filteroptions = IKFO_IgnoreJointLimits|IKFO_IgnoreSelfCollisions|IKFO_IgnoreCustomFilter;
         RobotBasePtr robot;
         string cmd;
         while(!sinput.eof()) {
@@ -763,7 +765,7 @@ public:
                     }
                 }
 
-                robot->SetActiveDOFValues(vrealsolution,true);
+                robot->SetActiveDOFValues(vrealsolution,false);
                 if( itiktype->first == IkParameterization::Type_Lookat3D) {
                     twrist.SetLookat3D(Vector(RaveRandomFloat()-0.5,RaveRandomFloat()-0.5,RaveRandomFloat()-0.5)*10);
                     twrist = pmanip->GetIkParameterization(twrist);
@@ -789,7 +791,7 @@ public:
                     for(int j = 0; j < (int)vrand.size(); j++) {
                         vrand[j] = vlowerlimit[j] + (vupperlimit[j]-vlowerlimit[j])*RaveRandomFloat();
                     }
-                    robot->SetActiveDOFValues(vrand, true);
+                    robot->SetActiveDOFValues(vrand, false);
                     if(!bTestSelfCollision || !robot->CheckSelfCollision()) {
                         break;
                     }
@@ -802,7 +804,7 @@ public:
 
                 bool bsuccess = true;
                 bool bnoiksolution = false;
-                if( !pmanip->FindIKSolution(twrist, viksolution, 0) ) {
+                if( !pmanip->FindIKSolution(twrist, viksolution, filteroptions) ) {
                     if( !bnoiksolution ) {
                         vnosolutions.push_back(make_pair(twrist,vfreeparameters));
                         bnoiksolution = true;
@@ -823,7 +825,7 @@ public:
                     RAVELOG_WARN(s.str());
                 }
                 else {
-                    robot->SetActiveDOFValues(viksolution);
+                    robot->SetActiveDOFValues(viksolution,false);
                     twrist_out = pmanip->GetIkParameterization(twrist);
                     if( !pmanip->GetIkSolver()->GetFreeParameters(vfreeparameters_out) ) {
                         RAVELOG_WARN("failed to get freeparameters");
@@ -854,10 +856,10 @@ public:
                 }
 
                 // test all possible solutions
-                robot->SetActiveDOFValues(vrand, true);
-                pmanip->FindIKSolutions(twrist, viksolutions, 0);
+                robot->SetActiveDOFValues(vrand, false);
+                pmanip->FindIKSolutions(twrist, viksolutions, filteroptions);
                 if( vfreeparameters_real.size() > 0 ) {
-                    pmanip->FindIKSolutions(twrist, vfreeparameters_real, viksolutions2, 0);
+                    pmanip->FindIKSolutions(twrist, vfreeparameters_real, viksolutions2, filteroptions);
                     viksolutions.insert(viksolutions.end(),viksolutions2.begin(),viksolutions2.end());
                 }
                 if( viksolutions.size() == 0 ) {
@@ -881,7 +883,7 @@ public:
                     bool bfail = false;
                     bool bfoundinput = false;
                     FOREACH(itsol, viksolutions) {
-                        robot->SetActiveDOFValues(*itsol, true);
+                        robot->SetActiveDOFValues(*itsol, false);
                         twrist_out = pmanip->GetIkParameterization(twrist);
                         if( !pmanip->GetIkSolver()->GetFreeParameters(vfreeparameters_out) ) {
                             RAVELOG_WARN("failed to get freeparameters");
@@ -936,9 +938,9 @@ public:
                 }
 
                 // test with the free parameters
-                robot->SetActiveDOFValues(vrand, true);
-                if( DebugIKFindSolution(pmanip, twrist, viksolution, 0, vfreeparameters, vfreeparameters_out.size()-1) ) {
-                    robot->SetActiveDOFValues(viksolution, true);
+                robot->SetActiveDOFValues(vrand, false);
+                if( DebugIKFindSolution(pmanip, twrist, viksolution, filteroptions, vfreeparameters, vfreeparameters_out.size()-1) ) {
+                    robot->SetActiveDOFValues(viksolution, false);
                     twrist_out = pmanip->GetIkParameterization(twrist);
                     if(twrist.ComputeDistanceSqr(twrist_out) > fthreshold ) {
                         vwrongsolutions.push_back(make_pair(twrist,vfreeparameters));
@@ -982,13 +984,13 @@ public:
                 }
 
                 // test the multiple solution function
-                robot->SetActiveDOFValues(vrand, true);
+                robot->SetActiveDOFValues(vrand, false);
                 viksolutions.resize(0);
-                DebugIKFindSolutions(pmanip, twrist, viksolutions, 0, vfreeparameters_out, vfreeparameters_out.size()-1);
+                DebugIKFindSolutions(pmanip, twrist, viksolutions, filteroptions, vfreeparameters_out, vfreeparameters_out.size()-1);
                 // not sure if should record failure if no solutions found... the free parameters increment are different than the IK one
                 bool bfail = false;
                 FOREACH(itsol, viksolutions) {
-                    robot->SetActiveDOFValues(*itsol, true);
+                    robot->SetActiveDOFValues(*itsol, false);
                     twrist_out = pmanip->GetIkParameterization(twrist);
                     if(twrist.ComputeDistanceSqr(twrist_out) > fthreshold ) {
                         vwrongsolutions.push_back(make_pair(twrist,vfreeparameters_out));

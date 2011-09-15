@@ -1143,7 +1143,10 @@ bool PlannerBase::_OptimizePath(RobotBasePtr probot, TrajectoryBasePtr ptraj)
     }
     PlannerBasePtr planner = RaveCreatePlanner(GetEnv(), GetParameters()->_sPathOptimizationPlanner);
     if( !planner ) {
-        return false;
+        planner = RaveCreatePlanner(GetEnv(), "shortcut_linear");
+        if( !planner ) {
+            return false;
+        }
     }
     PlannerParametersPtr params(new PlannerParameters());
     params->copy(GetParameters());
@@ -1151,10 +1154,16 @@ bool PlannerBase::_OptimizePath(RobotBasePtr probot, TrajectoryBasePtr ptraj)
     params->_sPathOptimizationPlanner = "";
     params->_sPathOptimizationParameters = "";
     params->_nMaxIterations = 0; // have to reset since path optimizers also use it and new parameters could be in extra parameters
-    if( !planner->InitPlan(probot, params) ) {
-        return false;
+    bool bSuccess = planner->InitPlan(probot, params) && planner->PlanPath(ptraj);
+
+    if( !bSuccess && planner->GetXMLId() != "shortcut_linear") {
+        RAVELOG_DEBUG("trying shortcut_linear\n");
+        planner = RaveCreatePlanner(GetEnv(), "shortcut_linear");
+        if( !!planner ) {
+            bSuccess = planner->InitPlan(probot, params) && planner->PlanPath(ptraj);
+        }
     }
-    return planner->PlanPath(ptraj);
+    return bSuccess;
 }
 
 #ifdef _WIN32
