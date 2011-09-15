@@ -895,7 +895,9 @@ public:
             }
 
             // Get the geometry
-            ExtractGeometry(pdomnode,plink,bindings,std::vector<std::string>());
+            if( !ExtractGeometry(pdomnode,plink,bindings,std::vector<std::string>()) ) {
+                RAVELOG_DEBUG(str(boost::format("link %s has no geometry\n")%plink->GetName()));
+            }
 
             RAVELOG_DEBUG(str(boost::format("After ExtractGeometry Attachment link elements: %d\n")%pdomlink->getAttachment_full_array().getCount()));
 
@@ -1199,7 +1201,7 @@ public:
             // put everything in a subroutine in order to process pdomnode too!
         }
 
-        unsigned int nGeomBefore =  plink->_listGeomProperties.size();     // #of Meshes already associated to this link
+        size_t nGeomBefore =  plink->_listGeomProperties.size();     // #of Meshes already associated to this link
 
         // get the geometry
         for (size_t igeom = 0; igeom < pdomnode->getInstance_geometry_array().getCount(); ++igeom) {
@@ -1227,6 +1229,7 @@ public:
         }
 
         if( !bhasgeometry ) {
+            RAVELOG_DEBUG(str(boost::format("node %s has no geometry\n")%pdomnode->getName()));
             return false;
         }
 
@@ -1268,7 +1271,7 @@ public:
             plink->collision.Append(trimesh);
         }
 
-        return true;
+        return bhasgeometry || plink->_listGeomProperties.size() > nGeomBefore;
     }
 
     /// Paint the Geometry with the color material
