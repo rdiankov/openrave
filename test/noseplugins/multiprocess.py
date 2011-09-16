@@ -423,7 +423,7 @@ class MultiProcessTestRunner(TextTestRunner):
                                       'but is not exiting? do we wait for it?',
                                       iworker)
                             if timeprocessing > self.config.multiprocess_timeout+30:
-                            log.error('worker %d force kill', iworker)
+                                log.error('worker %d force kill', iworker)
                                 os.kill(w.pid, signal.SIGINT)
                                 time.sleep(0.1)
                         else:
