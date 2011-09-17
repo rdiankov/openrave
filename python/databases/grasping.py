@@ -558,8 +558,9 @@ class GraspingModel(DatabaseGenerator):
                             self.grasps.append(grasp)
 
             self.grasps = array(self.grasps)
-            order = argsort(self.grasps[:,self.graspindices.get('performance')[0]])
-            self.grasps = self.grasps[order]
+            if len(self.grasps) > 0:
+                order = argsort(self.grasps[:,self.graspindices.get('performance')[0]])
+                self.grasps = self.grasps[order]
 
     def show(self,delay=0.1,options=None,forceclosure=True):
         with RobotStateSaver(self.robot):
