@@ -1630,13 +1630,18 @@ public:
             numeric::array arr = toPyArrayN(&pdata->force_covariance[0],pdata->force_covariance.size());
             arr.resize(3,3);
             force_covariance = arr;
+            positions = toPyArray3(pgeom->positions);
+            thickness = pgeom->thickness;
         }
         PyTactileSensorData(boost::shared_ptr<SensorBase::TactileGeomData> pgeom) : PySensorData(SensorBase::ST_Tactile)
         {
+            positions = toPyArray3(pgeom->positions);
+            thickness = pgeom->thickness;
         }
         virtual ~PyTactileSensorData() {
         }
-        object forces, force_covariance;
+        object forces, force_covariance, positions;
+        dReal thickness;
     };
 
     class PyActuatorSensorData : public PySensorData
@@ -5185,6 +5190,8 @@ In python, the syntax is::\n\n\
         class_<PySensorBase::PyTactileSensorData, boost::shared_ptr<PySensorBase::PyTactileSensorData>, bases<PySensorBase::PySensorData> >("TactileSensorData", DOXY_CLASS(SensorBase::TactileSensorData),no_init)
         .def_readonly("forces",&PySensorBase::PyTactileSensorData::forces)
         .def_readonly("force_covariance",&PySensorBase::PyTactileSensorData::force_covariance)
+        .def_readonly("positions",&PySensorBase::PyTactileSensorData::positions)
+        .def_readonly("thickness",&PySensorBase::PyTactileSensorData::thickness)
         ;
         {
             class_<PySensorBase::PyActuatorSensorData, boost::shared_ptr<PySensorBase::PyActuatorSensorData>, bases<PySensorBase::PySensorData> >("ActuatorSensorData", DOXY_CLASS(SensorBase::ActuatorSensorData),no_init)

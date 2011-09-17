@@ -50,7 +50,12 @@ object, without moving it to the destination. To test planning without destinati
 5D IK Grasp Planning
 ====================
 
-It is possible to perform grasp planning with 5D IK. First create the grasp set with:
+It is possible to perform grasp planning with 5D IK.
+
+Neuronics Katana
+~~~~~~~~~~~~~~~~
+
+First create the grasp set with:
 
 .. code-block:: bash
 
@@ -67,6 +72,21 @@ Then execute:
 
 .. examplepost-block:: graspplanning
 
+
+Kuka Youbot
+~~~~~~~~~~~
+
+Grasp set generation:
+
+.. code-block:: bash
+
+  openrave.py --database grasping --robot=robots/kuka-youbot.zae --manipulatordirection="0 1 0" --target=thinbox.kinbody.xml
+
+Then execute:
+
+.. code-block:: bash
+
+  openrave.py --example graspplanning --scene=data/youbot1.env.xml
 
 """
 from __future__ import with_statement # for python 2.5
@@ -109,7 +129,7 @@ class GraspPlanning:
             self.graspables = self.getGraspables(dests=dests)
             if len(self.graspables) == 0:
                 print 'attempting to auto-generate a grasp table'
-                targets=[t for t in self.envreal.GetBodies() if t.GetName().find('mug')>=0]
+                targets=[t for t in self.envreal.GetBodies() if t.GetName().find('mug')>=0 or t.GetName().find('target')>=0]
                 if len(targets) > 0:
                     gmodel = databases.grasping.GraspingModel(robot=self.robot,target=targets[0])
                     if not gmodel.load():

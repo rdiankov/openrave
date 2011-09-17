@@ -1,0 +1,15 @@
+<KinBody name="thinkbox">
+  <Translation>2.79 -1 0.57645</Translation>
+  <RotationAxis>0 0 1 90</RotationAxis>
+  <Body type="dynamic">
+    <Mass type="mimicgeom">
+      <total>0.285</total>
+	</Mass>
+    <!-- Reference point will be at the base of the box -->
+	<Geom type="box">
+	  <Extents>0.003 0.0735 0.066</Extents>
+	  <Translation>0 0 0.066</Translation>
+	  <diffuseColor>0.0 1.0 0.0</diffuseColor>
+	</Geom>
+  </Body>
+</KinBody>

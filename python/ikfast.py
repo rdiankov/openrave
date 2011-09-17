@@ -2689,7 +2689,7 @@ class IKFastSolver(AutoReloader):
         exportcoeffeqs,exportmonoms = self.solveDialytically(newreducedeqs,ileftvar,getsubs)
         coupledsolution = AST.SolverCoeffFunction(jointnames=[v.name for v in usedvars],jointeval=[v[1] for v in dummysubs2],jointevalcos=[dummysubs[2*i][1] for i in range(len(usedvars))],jointevalsin=[dummysubs[2*i+1][1] for i in range(len(usedvars))],isHinges=[self.isHinge(v.name) for v in usedvars],exportvar=[v.name for v in dummys],exportcoeffeqs=exportcoeffeqs,exportfnname='solvedialyticpoly12qep',rootmaxdim=16)
         self.usinglapack = True
-        return raghavansolutiontree+[coupledsolution],usedvars
+        return raghavansolutiontree+[coupledsolution]+endbranchtree,usedvars
 
     def solveLiWoernleHiller(self,rawpolyeqs,solvejointvars,endbranchtree):
         """Li-Woernle-Hiller procedure covered in 
@@ -3016,9 +3016,9 @@ class IKFastSolver(AutoReloader):
         coupledsolution.presetcheckforzeros = checkforzeros
         solutiontree.append(coupledsolution)
         self.usinglapack = True
-        return solutiontree,usedvars
+        return solutiontree+endbranchtree,usedvars
 
-    def solveKohliOsvatic(self,rawpolyeqs,solvejointvars,endbranchtree2):
+    def solveKohliOsvatic(self,rawpolyeqs,solvejointvars,endbranchtree):
         """Find a 16x16 matrix where the entries are linear with respect to the tan half-angle of one of the variables [Kohli1993]_. Takes in the 14 raghavan/roth equations.
         
         .. [Kohli1993] Dilip Kohli and M. Osvatic, "Inverse Kinematics of General 6R and 5R,P Serial Manipulators", Journal of Mechanical Design, Volume 115, Issue 4, Dec 1993.
@@ -3190,7 +3190,7 @@ class IKFastSolver(AutoReloader):
         exportcoeffeqs,exportmonoms = self.solveDialytically(newreducedeqs,ileftvar)
         coupledsolution = AST.SolverCoeffFunction(jointnames=[v.name for v in usedvars],jointeval=[v[1] for v in dummysubs2],jointevalcos=[dummysubs[2*i][1] for i in range(len(usedvars))],jointevalsin=[dummysubs[2*i+1][1] for i in range(len(usedvars))],isHinges=[self.isHinge(v.name) for v in usedvars],exportvar=dummys[0:3]+[dummyjk],exportcoeffeqs=exportcoeffeqs,exportfnname='solvedialyticpoly16lep',rootmaxdim=16)
         self.usinglapack = True
-        return [coupledsolution],usedvars
+        return [coupledsolution]+endbranchtree,usedvars
 
     def solveDialytically(self,newreducedeqs,ileftvar,returnmatrix=False,getsubs=None):
         """ Return the coefficients to solve equations dialytically (Salmon 1885) leaving out variable index ileftvar.

@@ -292,34 +292,36 @@ class GraspingModel(DatabaseGenerator):
         translationstepmult=None
         finestep=None
         if options is not None:
-            if options.preshapes is not None:
+            if hasattr(options,'preshapes') and options.preshapes is not None:
                 preshapes = array([array([float(s) for s in preshape.split()]) for preshape in options.preshapes])
-            if options.manipulatordirections is not None:
+            if hasattr(options,'manipulatordirections') and options.manipulatordirections is not None:
                 manipulatordirections = array([array([float(s) for s in md.split()]) for md in options.manipulatordirections])
-            if options.boxdelta is not None:
+            if hasattr(options,'boxdelta') and options.boxdelta is not None:
                 approachrays = self.computeBoxApproachRays(delta=options.boxdelta,normalanglerange=options.normalanglerange,directiondelta=options.directiondelta)
-            elif options.spheredelta is not None:
+            elif hasattr(options,'spheredelta') and options.spheredelta is not None:
                 approachrays = self.computeSphereApproachRays(delta=options.spheredelta,normalanglerange=options.normalanglerange,directiondelta=options.directiondelta)
-            if options.standoffs is not None:
+            if hasattr(options,'standoffs') and options.standoffs is not None:
                 standoffs = array(options.standoffs)
-            if options.rolls is not None:
+            if hasattr(options,'rolls') and options.rolls is not None:
                 rolls = array(options.rolls)
-            if options.friction is not None:
+            if hasattr(options,'friction') and options.friction is not None:
                 friction = options.friction
-            if options.avoidlinks is not None:
+            if hasattr(options,'avoidlinks') and options.avoidlinks is not None:
                 avoidlinks = [self.robot.GetLink(avoidlink) for avoidlink in options.avoidlinks]
-            if options.graspingnoise is not None:
+            if hasattr(options,'graspingnoise') and options.graspingnoise is not None:
                 graspingnoise = options.graspingnoise
-            if options.plannername is not None:
+            if hasattr(options,'plannername') and options.plannername is not None:
                 plannername = options.plannername
-            if options.normalanglerange is not None:
+            if hasattr(options,'normalanglerange') and options.normalanglerange is not None:
                 normalanglerange = options.normalanglerange
-            if options.directiondelta is not None:
+            if hasattr(options,'directiondelta') and options.directiondelta is not None:
                 directiondelta = options.directiondelta
-            if options.translationstepmult is not None:
+            if hasattr(options,'translationstepmult') and options.translationstepmult is not None:
                 translationstepmult = options.translationstepmult
-            if options.finestep is not None:
+            if hasattr(options,'finestep') and options.finestep is not None:
                 finestep = options.finestep
+            if hasattr(options,'numthreads') and options.numthreads is not None:
+                self.numthreads = options.numthreads
         # check for specific robots
         if self.robot.GetRobotStructureHash() == '2b0b07cce5d2f9c321010e74273a77f2' or self.robot.GetRobotStructureHash() == 'ca823aed89e08c7020b2cd7d2e5ff145': # wam+barretthand
             if preshapes is None:
@@ -518,7 +520,7 @@ class GraspingModel(DatabaseGenerator):
             self.robot.SetActiveDOFs(self.manip.GetGripperIndices(),Robot.DOFAffine.X+Robot.DOFAffine.Y+Robot.DOFAffine.Z if translate else 0)
             approachrays[:,3:6] = -approachrays[:,3:6]
             self.nextid, self.resultgrasps = self.grasper.GraspThreaded(approachrays=approachrays, rolls=rolls, standoffs=standoffs, preshapes=preshapes, manipulatordirections=manipulatordirections, target=self.target, graspingnoise=graspingnoise, forceclosurethreshold=forceclosurethreshold,numthreads=numthreads)
-            print 'graspthreaded done, processing grasps'
+            print 'graspthreaded done, processing grasps %d'%len(self.resultgrasps)
 
             for resultgrasp in self.resultgrasps:
                 grasp = zeros(self.totaldof)
