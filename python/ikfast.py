@@ -2082,7 +2082,7 @@ class IKFastSolver(AutoReloader):
                         T0 = self.affineSimplify(self.multiplyMatrix(T0links))
                         T1 = self.affineSimplify(self.multiplyMatrix(T1links))
                     rawpolyeqs,numminvars = self.buildRaghavanRothEquationsFromMatrix(T0,T1,solvejointvars)
-                    if numminvars <= 5 or len(PolyEquations[0][1].symbols) <= 6:
+                    if numminvars <= 5 or len(rawpolyeqs[0][1].symbols) <= 6:
                         rawpolyeqs2[j] = rawpolyeqs
                 try:
                     if rawpolyeqs2[j] is not None:
