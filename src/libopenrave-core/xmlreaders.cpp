@@ -723,7 +723,7 @@ public:
         _fTotalMass = 1;
         _massCustom = MASS::GetSphericalMass(1,Vector(0,0,0),1);
         _bSkipGeometry = false;
-
+        _fScaleGeometry = 1;
         bool bStaticSet = false;
         bool bStatic = false;
         string linkname, linkfilename;
@@ -749,6 +749,10 @@ public:
             }
             else if( itatt->first == "skipgeometry" ) {
                 _bSkipGeometry = stricmp(itatt->second.c_str(), "true") == 0 || itatt->second=="1";
+            }
+            else if( itatt->first == "scalegeometry" ) {
+                stringstream ss(itatt->second);
+                ss >> _fScaleGeometry;
             }
         }
 
@@ -795,7 +799,7 @@ public:
                             stringstream sslocal(itatt->second);
                             sslocal >> vscale.x; vscale.y = vscale.z = vscale.x;
                             sslocal >> vscale.y >> vscale.z;
-                            _renderfilename.second = vscale;
+                            _renderfilename.second = vscale*_fScaleGeometry;
                         }
                     }
                 }
@@ -810,7 +814,7 @@ public:
                             stringstream sslocal(itatt->second);
                             sslocal >> vscale.x; vscale.y = vscale.z = vscale.x;
                             sslocal >> vscale.y >> vscale.z;
-                            _collisionfilename.second = vscale;
+                            _collisionfilename.second = vscale*_fScaleGeometry;
                         }
                     }
                 }
@@ -842,6 +846,7 @@ public:
             _processingtag = "";
             AttributesList newatts = atts;
             newatts.push_back(make_pair("skipgeometry",_bSkipGeometry ? "1" : "0"));
+            newatts.push_back(make_pair("scalegeometry",str(boost::format("%f")%_fScaleGeometry)));
             _pcurreader.reset(new LinkXMLReader(_plink, _pparent, newatts));
             return PE_Support;
         }
@@ -945,7 +950,7 @@ public:
             if( xmlname == "translation" ) {
                 Vector v;
                 _ss >>v.x >> v.y >> v.z;
-                _itgeomprop->_t.trans += v;
+                _itgeomprop->_t.trans += v*_fScaleGeometry;
             }
             else if( xmlname == "rotationmat" ) {
                 TransformMatrix tnew;
@@ -972,7 +977,7 @@ public:
                     _ss >> vscale.x; vscale.y = vscale.z = vscale.x;
                     _ss >> vscale.y >> vscale.z;
                     _renderfilename.first = !_fnGetModelsDir ? orgfilename : _fnGetModelsDir(orgfilename);
-                    _renderfilename.second = vscale;
+                    _renderfilename.second = vscale*_fScaleGeometry;
                 }
             }
             else if( xmlname == "diffusecolor" ) {
@@ -1037,19 +1042,23 @@ public:
                 case KinBody::Link::GEOMPROPERTIES::GeomSphere:
                     if( xmlname == "radius" ) {
                         _ss >> _itgeomprop->vGeomData.x;
+                        _itgeomprop->vGeomData.x *= _fScaleGeometry;
                     }
                     break;
                 case KinBody::Link::GEOMPROPERTIES::GeomBox:
                     if( xmlname == "extents" ) {
                         _ss >> _itgeomprop->vGeomData.x >> _itgeomprop->vGeomData.y >> _itgeomprop->vGeomData.z;
+                        _itgeomprop->vGeomData *= _fScaleGeometry;
                     }
                     break;
                 case KinBody::Link::GEOMPROPERTIES::GeomCylinder:
                     if( xmlname == "radius") {
                         _ss >> _itgeomprop->vGeomData.x;
+                        _itgeomprop->vGeomData.x *= _fScaleGeometry;
                     }
                     else if( xmlname == "height" ) {
                         _ss >> _itgeomprop->vGeomData.y;
+                        _itgeomprop->vGeomData.y *= _fScaleGeometry;
                     }
                     break;
                 case KinBody::Link::GEOMPROPERTIES::GeomTrimesh:
@@ -1062,7 +1071,7 @@ public:
                             _ss >> vscale.x; vscale.y = vscale.z = vscale.x;
                             _ss >> vscale.y >> vscale.z;
                             _collisionfilename.first = !_fnGetModelsDir ? orgfilename : _fnGetModelsDir(orgfilename);
-                            _collisionfilename.second = vscale;
+                            _collisionfilename.second = vscale*_fScaleGeometry;
                         }
                     }
                     else if( xmlname == "vertices" ) {
@@ -1079,6 +1088,7 @@ public:
                                 itv->x = *itvalue++;
                                 itv->y = *itvalue++;
                                 itv->z = *itvalue++;
+                                *itv *= _fScaleGeometry;
                                 _itgeomprop->collisionmesh.indices[i] = i;
                                 ++i;
                             }
@@ -1199,7 +1209,7 @@ public:
         if( xmlname == "translation" ) {
             Vector v;
             _ss >> v.x >> v.y >> v.z;
-            _plink->_t.trans += v;
+            _plink->_t.trans += v*_fScaleGeometry;
         }
         else if( xmlname == "rotationmat" ) {
             TransformMatrix tnew;
@@ -1268,6 +1278,7 @@ private:
     list<KinBody::Link::GEOMPROPERTIES>::iterator _itgeomprop;
     std::pair< string, Vector > _renderfilename, _collisionfilename;
     bool _bSkipGeometry;
+    dReal _fScaleGeometry;
     Transform tOrigTrans;
     // Mass
     MassType _masstype;                   ///< if true, mass is craeted so that it mimics the geometry
@@ -1879,6 +1890,7 @@ class KinBodyXMLReader : public InterfaceXMLReader
 public:
     KinBodyXMLReader(EnvironmentBasePtr penv, InterfaceBasePtr& pchain, InterfaceType type, const AttributesList &atts, int roottransoffset) : InterfaceXMLReader(penv,pchain,type,"kinbody",atts), roottransoffset(roottransoffset) {
         _bSkipGeometry = false;
+        _fScaleGeometry = 1;
         _masstype = LinkXMLReader::MT_None;
         _fMassValue = 1;
         _vMassExtents = Vector(1,1,1);
@@ -1899,6 +1911,10 @@ public:
             }
             else if( itatt->first == "skipgeometry" ) {
                 _bSkipGeometry = stricmp(itatt->second.c_str(), "true") == 0 || itatt->second=="1";
+            }
+            else if( itatt->first == "scalegeometry" ) {
+                stringstream ss(itatt->second);
+                ss >> _fScaleGeometry;
             }
             else if((itatt->first != "file")&&(itatt->first != "type")) {
                 RAVELOG_WARN(str(boost::format("unknown kinbody attribute %s\n")%itatt->first));
@@ -1998,6 +2014,7 @@ public:
         if( xmlname == "kinbody" ) {
             AttributesList newatts = atts;
             newatts.push_back(make_pair("skipgeometry",_bSkipGeometry ? "1" : "0"));
+            newatts.push_back(make_pair("scalegeometry",str(boost::format("%f")%_fScaleGeometry)));
             _pcurreader = CreateInterfaceReader(_penv,PT_KinBody,_pinterface, xmlname, newatts);
             return PE_Support;
         }
@@ -2007,6 +2024,7 @@ public:
             _plink.reset();
             AttributesList newatts = atts;
             newatts.push_back(make_pair("skipgeometry",_bSkipGeometry ? "1" : "0"));
+            newatts.push_back(make_pair("scalegeometry",str(boost::format("%f")%_fScaleGeometry)));
             boost::shared_ptr<LinkXMLReader> plinkreader(new LinkXMLReader(_plink, _pchain, newatts));
             plinkreader->SetMassType(_masstype, _fMassValue, _vMassExtents);
             plinkreader->_fnGetModelsDir = boost::bind(&KinBodyXMLReader::GetModelsDir,this,_1);
@@ -2128,7 +2146,7 @@ public:
             if( xmlname == "translation" ) {
                 Vector v;
                 _ss >> v.x >> v.y >> v.z;
-                _trans.trans += v;
+                _trans.trans += v*_fScaleGeometry;
             }
             else if( xmlname == "rotationaxis" ) {
                 Vector vaxis; dReal fangle=0;
@@ -2275,6 +2293,7 @@ protected:
     RaveVector<float> _diffusecol, _ambientcol;
     float _transparency;
     bool _bSkipGeometry;
+    dReal _fScaleGeometry;
     bool _bMakeJoinedLinksAdjacent;
     boost::shared_ptr< std::vector<dReal> > _vjointvalues;
 
@@ -2357,9 +2376,10 @@ class ManipulatorXMLReader : public StreamXMLReader
 {
 public:
     ManipulatorXMLReader(RobotBase::ManipulatorPtr& pmanip, RobotBasePtr probot, const AttributesList &atts) : _pmanip(pmanip) {
-        if( !_pmanip )
+        _fScaleGeometry = 1;
+        if( !_pmanip ) {
             _pmanip.reset(new RobotBase::Manipulator(probot));
-
+        }
         FOREACHC(itatt,atts) {
             if( itatt->first == "name" ) {
                 _pmanip->_name = itatt->second;
@@ -2518,7 +2538,7 @@ public:
         else if( xmlname == "translation" ) {
             Vector v;
             _ss >> v.x >> v.y >> v.z;
-            _pmanip->_tGrasp.trans += v;
+            _pmanip->_tGrasp.trans += v*_fScaleGeometry;
         }
         else if( xmlname == "quat" ) {
             Transform tnew;
@@ -2559,6 +2579,7 @@ protected:
     RobotBasePtr _probot;
     RobotBase::ManipulatorPtr& _pmanip;
     string _processingtag;
+    dReal _fScaleGeometry;
 };
 
 /// sensors specifically attached to a robot
@@ -2567,6 +2588,7 @@ class AttachedSensorXMLReader : public StreamXMLReader
 public:
     AttachedSensorXMLReader(RobotBase::AttachedSensorPtr& psensor, RobotBasePtr probot, const AttributesList &atts) : _psensor(psensor) {
         string name;
+        _fScaleGeometry = 1;
         FOREACHC(itatt, atts) {
             if( itatt->first == "name" ) {
                 name = itatt->second;
@@ -2657,7 +2679,7 @@ public:
         else if( xmlname == "translation" ) {
             Vector v;
             _ss >> v.x >> v.y >> v.z;
-            _psensor->trelative.trans += v;
+            _psensor->trelative.trans += v*_fScaleGeometry;
         }
         else if( xmlname == "quat" ) {
             Transform tnew;
@@ -2700,6 +2722,7 @@ protected:
     InterfaceBasePtr _psensorinterface;
     string _processingtag;
     string args;         ///< arguments to pass to sensor when initializing
+    dReal _fScaleGeometry;
 };
 
 class RobotXMLReader : public InterfaceXMLReader
@@ -2707,6 +2730,7 @@ class RobotXMLReader : public InterfaceXMLReader
 public:
     RobotXMLReader(EnvironmentBasePtr penv, InterfaceBasePtr& probot, const AttributesList &atts, int roottransoffset) : InterfaceXMLReader(penv,probot,PT_Robot,"robot",atts), roottransoffset(roottransoffset) {
         _bSkipGeometry = false;
+        _fScaleGeometry = 1;
         rootoffset = rootjoffset = rootjpoffset = -1;
         FOREACHC(itatt, atts) {
             if( itatt->first == "name" ) {
@@ -2717,6 +2741,10 @@ public:
             }
             else if( itatt->first == "skipgeometry" ) {
                 _bSkipGeometry = stricmp(itatt->second.c_str(), "true") == 0 || itatt->second=="1";
+            }
+            else if( itatt->first == "scalegeometry" ) {
+                stringstream ss(itatt->second);
+                ss >> _fScaleGeometry;
             }
         }
         _CheckInterface();
@@ -2761,6 +2789,7 @@ public:
         if( xmlname == "robot" ) {
             AttributesList newatts = atts;
             newatts.push_back(make_pair("skipgeometry",_bSkipGeometry ? "1" : "0"));
+            newatts.push_back(make_pair("scalegeometry",str(boost::format("%f")%_fScaleGeometry)));
             _pcurreader = CreateInterfaceReader(_penv, PT_Robot, _pinterface, xmlname, newatts);
             return PE_Support;
         }
@@ -2769,6 +2798,7 @@ public:
         if( xmlname == "kinbody" ) {
             AttributesList newatts = atts;
             newatts.push_back(make_pair("skipgeometry",_bSkipGeometry ? "1" : "0"));
+            newatts.push_back(make_pair("scalegeometry",str(boost::format("%f")%_fScaleGeometry)));
             _pcurreader = CreateInterfaceReader(_penv,PT_KinBody,_pinterface, xmlname, newatts);
         }
         else if( xmlname == "manipulator" ) {
@@ -2811,7 +2841,7 @@ public:
             if( xmlname == "translation" ) {
                 Vector v;
                 _ss >> v.x >> v.y >> v.z;
-                _trans.trans += v;
+                _trans.trans += v*_fScaleGeometry;
             }
             else if( xmlname == "rotationaxis" ) {
                 Vector vaxis; dReal fangle=0;
@@ -2971,6 +3001,7 @@ protected:
 
     Transform _trans;
     bool _bSkipGeometry;
+    dReal _fScaleGeometry;
     int rootoffset, roottransoffset;                         ///< the initial number of links when Robot is created (so that global translations and rotations only affect the new links)
     int rootjoffset, rootjpoffset;         ///< the initial number of joints when Robot is created
     std::set<RobotBase::ManipulatorPtr> _setInitialManipulators;
@@ -3018,6 +3049,7 @@ class SensorXMLReader : public InterfaceXMLReader
 public:
     SensorXMLReader(EnvironmentBasePtr penv, InterfaceBasePtr& pinterface, const AttributesList &atts) : InterfaceXMLReader(penv,pinterface,PT_Sensor,RaveGetInterfaceName(PT_Sensor),atts) {
         string args;
+        _fScaleGeometry = 1;
         FOREACHC(itatt,atts) {
             if( itatt->first == "name" ) {
                 _strname = itatt->second;
@@ -3075,7 +3107,7 @@ public:
             if( xmlname == "translation" ) {
                 Vector v;
                 _ss >> v.x >> v.y >> v.z;
-                _tsensor.trans += v;
+                _tsensor.trans += v*_fScaleGeometry;
             }
             else if( xmlname == "quat" ) {
                 Transform tnew;
@@ -3128,6 +3160,7 @@ protected:
     SensorBasePtr _psensor;
     Transform _tsensor;
     string _args, _processingtag, _strname;
+    dReal _fScaleGeometry;
 };
 
 class EnvironmentXMLReader : public StreamXMLReader

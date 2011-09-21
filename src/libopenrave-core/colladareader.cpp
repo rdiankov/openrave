@@ -127,6 +127,7 @@ public:
         daeErrorHandler::setErrorHandler(this);
         _bOpeningZAE = false;
         _bSkipGeometry = false;
+        _fGlobalScale = 1;
     }
     virtual ~ColladaReader() {
         _dae.reset();
@@ -170,6 +171,14 @@ public:
         FOREACHC(itatt,atts) {
             if( itatt->first == "skipgeometry" ) {
                 _bSkipGeometry = stricmp(itatt->second.c_str(), "true") == 0 || itatt->second=="1";
+            }
+            else if( itatt->first == "scalegeometry" ) {
+                stringstream ss(itatt->second);
+                dReal fScaleGeometry=1;
+                ss >> fScaleGeometry;
+                if( !!ss ) {
+                    _fGlobalScale *= fScaleGeometry;
+                }
             }
             else if( itatt->first == "prefix" ) {
                 _prefix = itatt->second;
@@ -266,6 +275,9 @@ public:
             FOREACH(itjoint,probot->_vecjoints) {
                 _setInitialJoints.insert(*itjoint);
             }
+            FOREACH(itjoint,probot->_vPassiveJoints) {
+                _setInitialJoints.insert(*itjoint);
+            }
             FOREACH(itmanip,probot->_vecManipulators) {
                 _setInitialManipulators.insert(*itmanip);
             }
@@ -309,16 +321,7 @@ public:
 
         if( bSuccess ) {
             if( _prefix.size() > 0 ) {
-                FOREACH(itlink,probot->_veclinks) {
-                    if( _setInitialLinks.find(*itlink) == _setInitialLinks.end()) {
-                        (*itlink)->_name = _prefix + (*itlink)->_name;
-                    }
-                }
-                FOREACH(itjoint,probot->_vecjoints) {
-                    if( _setInitialJoints.find(*itjoint) == _setInitialJoints.end()) {
-                        (*itjoint)->_name = _prefix + (*itjoint)->_name;
-                    }
-                }
+                _AddPrefixForKinBody(probot,_prefix);
                 FOREACH(itmanip,probot->_vecManipulators) {
                     if( _setInitialManipulators.find(*itmanip) == _setInitialManipulators.end()) {
                         (*itmanip)->_name = _prefix + (*itmanip)->_name;
@@ -393,21 +396,47 @@ public:
             }
         }
 
-        if( bSuccess ) {
-            if( _prefix.size() > 0 ) {
-                FOREACH(itlink,pbody->_veclinks) {
-                    if( _setInitialLinks.find(*itlink) == _setInitialLinks.end()) {
-                        (*itlink)->_name = _prefix + (*itlink)->_name;
-                    }
-                }
-                FOREACH(itjoint,pbody->_vecjoints) {
-                    if( _setInitialJoints.find(*itjoint) == _setInitialJoints.end()) {
-                        (*itjoint)->_name = _prefix + (*itjoint)->_name;
+        if( bSuccess && _prefix.size() > 0 ) {
+            _AddPrefixForKinBody(pbody,_prefix);
+        }
+        return bSuccess;
+    }
+
+    void _AddPrefixForKinBody(KinBodyPtr pbody, const std::string& prefix)
+    {
+        FOREACH(itlink,pbody->_veclinks) {
+            if( _setInitialLinks.find(*itlink) == _setInitialLinks.end()) {
+                (*itlink)->_name = prefix + (*itlink)->_name;
+            }
+        }
+        std::list<KinBody::JointPtr> listprocessjoints;
+        std::vector< std::pair<std::string, std::string> > jointnamepairs; jointnamepairs.reserve(listprocessjoints.size());
+        FOREACH(itjoint,pbody->_vecjoints) {
+            if( _setInitialJoints.find(*itjoint) == _setInitialJoints.end()) {
+                jointnamepairs.push_back(make_pair((*itjoint)->_name, prefix +(*itjoint)->_name));
+                (*itjoint)->_name = prefix + (*itjoint)->_name;
+                listprocessjoints.push_back(*itjoint);
+            }
+        }
+        FOREACH(itjoint,pbody->_vPassiveJoints) {
+            if( _setInitialJoints.find(*itjoint) == _setInitialJoints.end()) {
+                jointnamepairs.push_back(make_pair((*itjoint)->_name, prefix +(*itjoint)->_name));
+                (*itjoint)->_name = prefix + (*itjoint)->_name;
+                listprocessjoints.push_back(*itjoint);
+            }
+        }
+        // repeat again for the mimic equations, if any exist
+        FOREACH(itjoint, listprocessjoints) {
+            for(int idof = 0; idof < (*itjoint)->GetDOF(); ++idof) {
+                if( (*itjoint)->IsMimic(idof) ) {
+                    for(int ieq = 0; ieq < 3; ++ieq) {
+                        string neweq;
+                        SearchAndReplace(neweq,(*itjoint)->_vmimic[idof]->_equations[ieq],jointnamepairs);
+                        (*itjoint)->_vmimic[idof]->_equations[ieq] = neweq;
                     }
                 }
             }
         }
-        return bSuccess;
     }
 
     /// \brief extracts an articulated system. Note that an articulated system can include other articulated systems
@@ -2233,7 +2262,7 @@ public:
             Vector campos(pcamera->getValue()[0], pcamera->getValue()[1], pcamera->getValue()[2]);
             Vector lookat(pcamera->getValue()[3], pcamera->getValue()[4], pcamera->getValue()[5]);
             Vector camup(pcamera->getValue()[6], pcamera->getValue()[7], pcamera->getValue()[8]);
-            t = transformLookat(lookat,campos*_GetUnitScale(pelt,_fGlobalScale),camup);
+            t = transformLookat(lookat*_GetUnitScale(pelt,_fGlobalScale),campos*_GetUnitScale(pelt,_fGlobalScale),camup);
             return t;
         }
 

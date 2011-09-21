@@ -226,7 +226,7 @@ except ImportError:
 
 from itertools import izip
 try:
-    from itertools import combinations
+    from itertools import combinations, permutations
 except ImportError:
     def combinations(items,n):
         if n == 0: yield[]
@@ -234,6 +234,32 @@ except ImportError:
             for  i in xrange(len(items)):
                 for cc in combinations(items[i+1:],n-1):
                     yield [items[i]]+cc
+                    
+    def permutations(iterable, r=None):
+        # permutations('ABCD', 2) --> AB AC AD BA BC BD CA CB CD DA DB DC
+        # permutations(range(3)) --> 012 021 102 120 201 210
+        pool = tuple(iterable)
+        n = len(pool)
+        r = n if r is None else r
+        if r > n:
+            return
+        indices = range(n)
+        cycles = range(n, n-r, -1)
+        yield tuple(pool[i] for i in indices[:r])
+        while n:
+            for i in reversed(range(r)):
+                cycles[i] -= 1
+                if cycles[i] == 0:
+                    indices[i:] = indices[i+1:] + indices[i:i+1]
+                    cycles[i] = n - i
+                else:
+                    j = cycles[i]
+                    indices[i], indices[-j] = indices[-j], indices[i]
+                    yield tuple(pool[i] for i in indices[:r])
+                    break
+            else:
+                return
+
 
 import logging
 log = logging.getLogger(__name__)

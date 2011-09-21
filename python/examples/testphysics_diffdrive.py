@@ -31,7 +31,7 @@ if not __openravepy_build_doc__:
 def main(env,options):
     "Main example code."
     env.Load(options.scene)
-    if options._physics is None:
+    if options._physics is None and (env.GetPhysicsEngine() is None or len(env.GetPhysicsEngine().GetXMLId()) == 0):
         # no physics engine set, so set one
         physics = RaveCreatePhysicsEngine(env,'ode')
         env.SetPhysicsEngine(physics)
@@ -45,10 +45,10 @@ def main(env,options):
 
     starttime = time.time()
     while True:
-        velocities = 2*(random.rand(robot.GetDOF())-0.5)
+        velocities = 4*(random.rand(robot.GetDOF())-0.5)
         print 'velocities: ',velocities
         robot.GetController().SendCommand('setvelocity '+' '.join(str(f) for f in velocities))
-        time.sleep(2.0)
+        time.sleep(2)
 
 from optparse import OptionParser
 from openravepy.misc import OpenRAVEGlobalArguments

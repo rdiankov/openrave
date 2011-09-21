@@ -363,13 +363,14 @@ class InverseKinematicsModel(DatabaseGenerator):
     def getfilename(self,read=False):
         if self.iktype is None:
             raise ValueError('ik type is not set')
-        
+
         if self.solveindices is None or self.freeindices is None:
             solveindices, freeindices = self.getDefaultIndices()
         else:
             solveindices, freeindices = self.solveindices, self.freeindices
 
         index = -1
+        allfreeindices = None
         while True:
             basename = 'ikfast%s.%s.%s.'%(self.getversion(),self.iktype,platform.machine()) + '_'.join(str(ind) for ind in solveindices)
             if len(freeindices)>0:
@@ -380,7 +381,8 @@ class InverseKinematicsModel(DatabaseGenerator):
             # user did not specify a set of freeindices, so the expected behavior is to search for the next loadable one
             index += 1
             dofexpected = IkParameterization.GetDOF(self.iktype)
-            allfreeindices = [f for f in self.ikfast.combinations(self.manip.GetArmIndices(),len(self.manip.GetArmIndices())-dofexpected)]
+            if allfreeindices is None:
+                allfreeindices = [f for f in self.ikfast.permutations(self.manip.GetArmIndices(),len(self.manip.GetArmIndices())-dofexpected)]
             if index >= len(allfreeindices):
                 break
             freeindices = allfreeindices[index]
@@ -413,14 +415,23 @@ class InverseKinematicsModel(DatabaseGenerator):
             
         index = -1
         while True:
-            basename = 'ikfast%s.%s.'%(self.getversion(),self.iktype)
-            basename += '_'.join(str(ind) for ind in solveindices)
+            freeindicesstrings = []
             if len(freeindices)>0:
-                basename += '_f'+'_'.join(str(ind) for ind in freeindices)
-            basename += '.pp'
-            filename = RaveFindDatabaseFile(os.path.join('kinematics.'+self.manip.GetKinematicsStructureHash(),basename),read)
-            if not read or len(filename) > 0 or self.freeindices is not None:
-                break
+                for _freeindices in self.ikfast.permutations(freeindices):
+                    freeindicesstrings.append(['_f'+'_'.join(str(ind) for ind in _freeindices),_freeindices])
+            else:
+                freeindicesstrings.append(['',[]])
+
+            for freeindicesstring, fi in freeindicesstrings:
+                basename = 'ikfast%s.%s.'%(self.getversion(),self.iktype)
+                basename += '_'.join(str(ind) for ind in solveindices)
+                basename += freeindicesstring
+                basename += '.pp'
+                filename = RaveFindDatabaseFile(os.path.join('kinematics.'+self.manip.GetKinematicsStructureHash(),basename),read)
+                if not read or len(filename) > 0 or self.freeindices is not None:
+                    self.freeindices = fi
+                    return filename
+
             # user did not specify a set of freeindices, so the expected behavior is to search for the next loadable one
             index += 1
             dofexpected = IkParameterization.GetDOF(self.iktype)

@@ -1325,6 +1325,13 @@ public:
         Vector vscale(1,1,1);
         RaveVector<float> diffuseColor, ambientColor;
         float ftransparency;
+        FOREACHC(itatt,atts) {
+            if( itatt->first == "scalegeometry" ) {
+                stringstream ss(itatt->second);
+                ss >> vscale.x;
+                vscale.y = vscale.z = vscale.x;
+            }
+        }
         if( !ptrimesh ) {
             ptrimesh.reset(new KinBody::Link::TRIMESH());
         }
