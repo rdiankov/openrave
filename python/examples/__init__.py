@@ -40,8 +40,14 @@ import fastgraspingthreaded
 import hanoi
 import graspplanning
 import movehandstraight
-import qtexampleselector
-import qtserverprocess
+
+try:
+    from PyQt4 import QtGui, QtCore
+    import qtexampleselector
+    import qtserverprocess
+except ImportError:
+    pass
+
 import showsensors
 import simplegrasping
 import simplemanipulation

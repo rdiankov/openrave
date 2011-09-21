@@ -44,10 +44,7 @@ from multiprocessing import Process,Pipe
 from threading import Thread
 from openravepy import *
 
-try:
-    from PyQt4 import QtGui, QtCore
-except ImportError:
-    pass
+from PyQt4 import QtGui, QtCore
 
 logger = None
 

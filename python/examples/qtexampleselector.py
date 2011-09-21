@@ -42,10 +42,7 @@ import sys, os, re, logging, signal, traceback
 from multiprocessing import Process,Pipe
 from threading import Thread
 
-try:
-    from PyQt4 import QtGui, QtCore
-except ImportError:
-    pass
+from PyQt4 import QtGui, QtCore
 
 logger = None
 

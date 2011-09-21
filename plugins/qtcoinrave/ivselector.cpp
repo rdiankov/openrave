@@ -489,6 +489,32 @@ void IvJointDragger::UpdateSkeleton()
             }
             else {
                 vjoints.at(d+0) = fang+_jointoffset;
+                if( pjoint->IsRevolute(0) ) {
+                    if( vjoints.at(d) < vlower.at(0) ) {
+                        if( vlower.at(0)-vjoints.at(d) < vjoints.at(d)+2*PI-vupper.at(0) ) {
+                            vjoints[d] = vlower[0];
+                        }
+                        else {
+                            vjoints[d] = vupper[0];
+                        }
+                    }
+                    else if( vjoints.at(d) > vupper.at(0) ) {
+                        if( vlower.at(0)-vjoints.at(d)-2*PI < vjoints.at(d)-vupper.at(0) ) {
+                            vjoints[d] = vlower[0];
+                        }
+                        else {
+                            vjoints[d] = vupper[0];
+                        }
+                    }
+                }
+                else {
+                    if( vjoints.at(d) < vlower.at(0) ) {
+                        vjoints[d] = vlower[0];
+                    }
+                    else if( vjoints.at(d) > vupper.at(0) ) {
+                        vjoints[d] = vupper[0];
+                    }
+                }
             }
 
             if( !!probotitem && !!probotitem->GetRobot()->GetController() ) {
