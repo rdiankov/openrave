@@ -145,9 +145,10 @@ If SetDesired is called, only joint values will be set at every timestep leaving
         if( _bPause ) {
             return;
         }
-        if( !!_ptraj ) {
+        TrajectoryBaseConstPtr ptraj = _ptraj; // because of multi-threading setting issues
+        if( !!ptraj ) {
             Trajectory::TPOINT tp;
-            if( !_ptraj->SampleTrajectory(fTime, tp) ) {
+            if( !ptraj->SampleTrajectory(fTime, tp) ) {
                 return;
             }
             if( tp.q.size() > 0 ) {
@@ -162,8 +163,8 @@ If SetDesired is called, only joint values will be set at every timestep leaving
                 _probot->SetTransform(tp.trans);
             }
 
-            if( fTime > _ptraj->GetTotalDuration() ) {
-                fTime = _ptraj->GetTotalDuration();
+            if( fTime > ptraj->GetTotalDuration() ) {
+                fTime = ptraj->GetTotalDuration();
                 _bIsDone = true;
             }
 
