@@ -45,6 +45,14 @@ object toPyGraphHandle(const GraphHandlePtr p)
     return object(PyGraphHandle(p));
 }
 
+object toPyUserData(UserDataPtr p)
+{
+    if( !p ) {
+        return object();
+    }
+    return object(PyUserData(p));
+}
+
 object toPyRay(const RAY& r)
 {
     return object(boost::shared_ptr<PyRay>(new PyRay(r)));
@@ -731,6 +739,11 @@ void init_openravepy_global()
     .def("SetTransform",&PyGraphHandle::SetTransform,DOXY_FN(GraphHandle,SetTransform))
     .def("SetShow",&PyGraphHandle::SetShow,DOXY_FN(GraphHandle,SetShow))
     ;
+
+    class_<PyUserData, boost::shared_ptr<PyUserData> >("UserData", DOXY_CLASS(UserData), no_init)
+    .def("close",&PyUserData::close,"force releasing the user handle point.")
+    ;
+
     class_<PyRay, boost::shared_ptr<PyRay> >("Ray", DOXY_CLASS(geometry::ray))
     .def(init<object,object>(args("pos","dir")))
     .def("dir",&PyRay::dir)

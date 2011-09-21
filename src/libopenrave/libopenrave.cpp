@@ -31,7 +31,6 @@
 #include <locale>
 
 #include "plugindatabase.h"
-#include <openrave/planningutils.h>
 
 namespace OpenRAVE {
 
@@ -478,7 +477,7 @@ public:
     {
         std::map<InterfaceType,std::string>::const_iterator it = _mapinterfacenames.find(type);
         if( it == _mapinterfacenames.end() ) {
-            throw openrave_exception(str(boost::format("Invalid type %d specified")%type));
+            throw OPENRAVE_EXCEPTION_FORMAT("Invalid type %d specified", type, ORE_Failed);
         }
         return it->second;
     }
@@ -876,296 +875,6 @@ void DummyXMLReader::characters(const std::string& ch)
     }
 }
 
-void subtractstates(std::vector<dReal>& q1, const std::vector<dReal>& q2)
-{
-    BOOST_ASSERT(q1.size()==q2.size());
-    for(size_t i = 0; i < q1.size(); ++i) {
-        q1[i] -= q2[i];
-    }
-}
-
-bool addstates(std::vector<dReal>& q, const std::vector<dReal>& qdelta, int fromgoal)
-{
-    BOOST_ASSERT(q.size()==qdelta.size());
-    for(size_t i = 0; i < q.size(); ++i) {
-        q[i] += qdelta[i];
-    }
-    return true;
-}
-
-PlannerBase::PlannerParameters::PlannerParameters() : XMLReadable("plannerparameters"), _fStepLength(0.04f), _nMaxIterations(0), _sPathOptimizationPlanner("shortcut_linear")
-{
-    _diffstatefn = subtractstates;
-    _neighstatefn = addstates;
-    _vXMLParameters.reserve(10);
-    _vXMLParameters.push_back("_vinitialconfig");
-    _vXMLParameters.push_back("_vgoalconfig");
-    _vXMLParameters.push_back("_vconfiglowerlimit");
-    _vXMLParameters.push_back("_vconfigupperlimit");
-    _vXMLParameters.push_back("_vconfigresolution");
-    _vXMLParameters.push_back("_nmaxiterations");
-    _vXMLParameters.push_back("_fsteplength");
-    _vXMLParameters.push_back("_pathoptimization");
-}
-
-PlannerBase::PlannerParameters& PlannerBase::PlannerParameters::operator=(const PlannerBase::PlannerParameters& r)
-{
-    // reset
-    _costfn = r._costfn;
-    _goalfn = r._goalfn;
-    _distmetricfn = r._distmetricfn;
-    _checkpathconstraintsfn = r._checkpathconstraintsfn;
-    _samplefn = r._samplefn;
-    _sampleneighfn = r._sampleneighfn;
-    _samplegoalfn = r._samplegoalfn;
-    _sampleinitialfn = r._sampleinitialfn;
-    _setstatefn = r._setstatefn;
-    _getstatefn = r._getstatefn;
-    _diffstatefn = r._diffstatefn;
-    _neighstatefn = r._neighstatefn;
-
-    vinitialconfig.resize(0);
-    vgoalconfig.resize(0);
-    _vConfigLowerLimit.resize(0);
-    _vConfigUpperLimit.resize(0);
-    _vConfigResolution.resize(0);
-    _sPathOptimizationPlanner = "shortcut_linear";
-    _sPathOptimizationParameters.resize(0);
-    _sExtraParameters.resize(0);
-    _nMaxIterations = 0;
-    _fStepLength = 0.04f;
-    _plannerparametersdepth = 0;
-
-    // transfer data
-    std::stringstream ss;
-    ss << std::setprecision(std::numeric_limits<dReal>::digits10+1); /// have to do this or otherwise precision gets lost and planners' initial conditions can vioalte constraints
-    ss << r;
-    ss >> *this;
-    return *this;
-}
-
-void PlannerBase::PlannerParameters::copy(boost::shared_ptr<PlannerParameters const> r)
-{
-    *this = *r;
-}
-
-bool PlannerBase::PlannerParameters::serialize(std::ostream& O) const
-{
-    O << "<_vinitialconfig>";
-    FOREACHC(it, vinitialconfig) {
-        O << *it << " ";
-    }
-    O << "</_vinitialconfig>" << endl;
-    O << "<_vgoalconfig>";
-    FOREACHC(it, vgoalconfig) {
-        O << *it << " ";
-    }
-    O << "</_vgoalconfig>" << endl;
-    O << "<_vconfiglowerlimit>";
-    FOREACHC(it, _vConfigLowerLimit) {
-        O << *it << " ";
-    }
-    O << "</_vconfiglowerlimit>" << endl;
-    O << "<_vconfigupperlimit>";
-    FOREACHC(it, _vConfigUpperLimit) {
-        O << *it << " ";
-    }
-    O << "</_vconfigupperlimit>" << endl;
-    O << "<_vconfigresolution>";
-    FOREACHC(it, _vConfigResolution) {
-        O << *it << " ";
-    }
-    O << "</_vconfigresolution>" << endl;
-
-    O << "<_nmaxiterations>" << _nMaxIterations << "</_nmaxiterations>" << endl;
-    O << "<_fsteplength>" << _fStepLength << "</_fsteplength>" << endl;
-    O << "<_pathoptimization planner=\"" << _sPathOptimizationPlanner << "\">" << _sPathOptimizationParameters << "</_pathoptimization>" << endl;
-    O << _sExtraParameters << endl;
-    return !!O;
-}
-
-BaseXMLReader::ProcessElement PlannerBase::PlannerParameters::startElement(const std::string& name, const AttributesList& atts)
-{
-    _ss.str(""); // have to clear the string
-    if( !!__pcurreader ) {
-        if( __pcurreader->startElement(name, atts) == PE_Support ) {
-            return PE_Support;
-        }
-        return PE_Ignore;
-    }
-
-    if( __processingtag.size() > 0 ) {
-        return PE_Ignore;
-    }
-    if( name=="plannerparameters" ) {
-        _plannerparametersdepth++;
-        return PE_Support;
-    }
-
-    if( name == "_pathoptimization" ) {
-        _sslocal.reset(new std::stringstream());
-        _sPathOptimizationPlanner="";
-        _sPathOptimizationParameters="";
-        FOREACHC(itatt,atts) {
-            if( itatt->first == "planner" ) {
-                _sPathOptimizationPlanner = itatt->second;
-            }
-        }
-        __pcurreader.reset(new DummyXMLReader(name,GetXMLId(),_sslocal));
-        return PE_Support;
-    }
-
-    if( find(_vXMLParameters.begin(),_vXMLParameters.end(),name) == _vXMLParameters.end() ) {
-        _sslocal.reset(new std::stringstream());
-        *_sslocal << "<" << name << " ";
-        FOREACHC(itatt, atts) {
-            *_sslocal << itatt->first << "=\"" << itatt->second << "\" ";
-        }
-        *_sslocal << ">" << endl;
-        __pcurreader.reset(new DummyXMLReader(name,GetXMLId(),_sslocal));
-        return PE_Support;
-    }
-
-    if((name=="_vinitialconfig")||(name=="_vgoalconfig")||(name=="_vconfiglowerlimit")||(name=="_vconfigupperlimit")||(name=="_vconfigresolution")||(name=="_nmaxiterations")||(name=="_fsteplength")||(name=="_pathoptimization")) {
-        __processingtag = name;
-        return PE_Support;
-    }
-    return PE_Pass;
-}
-
-bool PlannerBase::PlannerParameters::endElement(const std::string& name)
-{
-    if( !!__pcurreader ) {
-        if( __pcurreader->endElement(name) ) {
-            boost::shared_ptr<DummyXMLReader> pdummy = boost::dynamic_pointer_cast<DummyXMLReader>(__pcurreader);
-            if( !!pdummy ) {
-                if( pdummy->GetFieldName() == "_pathoptimization" ) {
-                    _sPathOptimizationParameters = _sslocal->str();
-                    _sslocal.reset();
-                }
-                else {
-                    *_sslocal << "</" << name << ">" << endl;
-                    _sExtraParameters += _sslocal->str();
-                    _sslocal.reset();
-                }
-            }
-            __pcurreader.reset();
-        }
-    }
-    else if( name == "plannerparameters" ) {
-        return --_plannerparametersdepth < 0;
-    }
-    else if( __processingtag.size() > 0 ) {
-        if( name == "_vinitialconfig") {
-            vinitialconfig = vector<dReal>((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
-        }
-        else if( name == "_vgoalconfig") {
-            vgoalconfig = vector<dReal>((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
-        }
-        else if( name == "_vconfiglowerlimit") {
-            _vConfigLowerLimit = vector<dReal>((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
-        }
-        else if( name == "_vconfigupperlimit") {
-            _vConfigUpperLimit = vector<dReal>((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
-        }
-        else if( name == "_vconfigresolution") {
-            _vConfigResolution = vector<dReal>((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
-        }
-        else if( name == "_nmaxiterations") {
-            _ss >> _nMaxIterations;
-        }
-        else if( name == "_fsteplength") {
-            _ss >> _fStepLength;
-        }
-        if( name !=__processingtag ) {
-            RAVELOG_WARN(str(boost::format("invalid tag %s!=%s\n")%name%__processingtag));
-        }
-        __processingtag = "";
-        return false;
-    }
-
-    return false;
-}
-
-void PlannerBase::PlannerParameters::characters(const std::string& ch)
-{
-    if( !!__pcurreader ) {
-        __pcurreader->characters(ch);
-    }
-    else {
-        _ss.clear();
-        _ss << ch;
-    }
-}
-
-std::ostream& operator<<(std::ostream& O, const PlannerBase::PlannerParameters& v)
-{
-    O << "<" << v.GetXMLId() << ">" << endl;
-    v.serialize(O);
-    O << "</" << v.GetXMLId() << ">" << endl;
-    return O;
-}
-
-void PlannerBase::PlannerParameters::SetRobotActiveJoints(RobotBasePtr robot)
-{
-    using namespace planningutils;
-    _distmetricfn = boost::bind(&SimpleDistanceMetric::Eval,boost::shared_ptr<SimpleDistanceMetric>(new SimpleDistanceMetric(robot)),_1,_2);
-    SpaceSamplerBasePtr pconfigsampler = RaveCreateSpaceSampler(robot->GetEnv(),str(boost::format("robotconfiguration %s")%robot->GetName()));
-    boost::shared_ptr<SimpleNeighborhoodSampler> defaultsamplefn(new SimpleNeighborhoodSampler(pconfigsampler,_distmetricfn));
-    _samplefn = boost::bind(&SimpleNeighborhoodSampler::Sample,defaultsamplefn,_1);
-    _sampleneighfn = boost::bind(&SimpleNeighborhoodSampler::Sample,defaultsamplefn,_1,_2,_3);
-    _setstatefn = boost::bind(&RobotBase::SetActiveDOFValues,robot,_1,false);
-    _getstatefn = boost::bind(&RobotBase::GetActiveDOFValues,robot,_1);
-    _diffstatefn = boost::bind(&RobotBase::SubtractActiveDOFValues,robot,_1,_2);
-    _neighstatefn = addstates; // probably ok...
-
-    boost::shared_ptr<LineCollisionConstraint> pcollision(new LineCollisionConstraint());
-    _checkpathconstraintsfn = boost::bind(&LineCollisionConstraint::Check,pcollision,PlannerParametersWeakPtr(shared_parameters()), robot, _1, _2, _3, _4);
-
-    robot->GetActiveDOFLimits(_vConfigLowerLimit,_vConfigUpperLimit);
-    robot->GetActiveDOFResolutions(_vConfigResolution);
-    robot->GetActiveDOFValues(vinitialconfig);
-    BOOST_ASSERT((int)_vConfigResolution.size()==robot->GetActiveDOF());
-}
-
-bool PlannerBase::InitPlan(RobotBasePtr pbase, std::istream& isParameters)
-{
-    RAVELOG_WARN(str(boost::format("using default planner parameters structure to de-serialize parameters data inside %s, information might be lost!! Please define a InitPlan(robot,stream) function!\n")%GetXMLId()));
-    boost::shared_ptr<PlannerParameters> localparams(new PlannerParameters());
-    isParameters >> *localparams;
-    return InitPlan(pbase,localparams);
-}
-
-bool PlannerBase::_OptimizePath(RobotBasePtr probot, TrajectoryBasePtr ptraj)
-{
-    if( GetParameters()->_sPathOptimizationPlanner.size() == 0 ) {
-        return true;
-    }
-    PlannerBasePtr planner = RaveCreatePlanner(GetEnv(), GetParameters()->_sPathOptimizationPlanner);
-    if( !planner ) {
-        planner = RaveCreatePlanner(GetEnv(), "shortcut_linear");
-        if( !planner ) {
-            return false;
-        }
-    }
-    PlannerParametersPtr params(new PlannerParameters());
-    params->copy(GetParameters());
-    params->_sExtraParameters += GetParameters()->_sPathOptimizationParameters;
-    params->_sPathOptimizationPlanner = "";
-    params->_sPathOptimizationParameters = "";
-    params->_nMaxIterations = 0; // have to reset since path optimizers also use it and new parameters could be in extra parameters
-    bool bSuccess = planner->InitPlan(probot, params) && planner->PlanPath(ptraj);
-
-    if( !bSuccess && planner->GetXMLId() != "shortcut_linear") {
-        RAVELOG_DEBUG("trying shortcut_linear\n");
-        planner = RaveCreatePlanner(GetEnv(), "shortcut_linear");
-        if( !!planner ) {
-            bSuccess = planner->InitPlan(probot, params) && planner->PlanPath(ptraj);
-        }
-    }
-    return bSuccess;
-}
-
 #ifdef _WIN32
 const char *strcasestr(const char *s, const char *find)
 {
@@ -1188,195 +897,6 @@ const char *strcasestr(const char *s, const char *find)
 }
 #endif
 
-#define LIBXML_SAX1_ENABLED
-#include <libxml/globals.h>
-#include <libxml/xmlerror.h>
-#include <libxml/parser.h>
-#include <libxml/parserInternals.h> // only for xmlNewInputFromFile()
-#include <libxml/tree.h>
-
-#include <libxml/debugXML.h>
-#include <libxml/xmlmemory.h>
-
-namespace LocalXML {
-
-void RaveXMLErrorFunc(void *ctx, const char *msg, ...)
-{
-    va_list args;
-
-    va_start(args, msg);
-    RAVELOG_ERROR("XML Parse error: ");
-    vprintf(msg,args);
-    va_end(args);
-}
-
-struct XMLREADERDATA
-{
-    XMLREADERDATA(BaseXMLReaderPtr preader, xmlParserCtxtPtr ctxt) : _preader(preader), _ctxt(ctxt) {
-    }
-    BaseXMLReaderPtr _preader, _pdummy;
-    xmlParserCtxtPtr _ctxt;
-};
-
-void DefaultStartElementSAXFunc(void *ctx, const xmlChar *name, const xmlChar **atts)
-{
-    AttributesList listatts;
-    if( atts != NULL ) {
-        for (int i = 0; (atts[i] != NULL); i+=2) {
-            listatts.push_back(make_pair(string((const char*)atts[i]),string((const char*)atts[i+1])));
-            std::transform(listatts.back().first.begin(), listatts.back().first.end(), listatts.back().first.begin(), ::tolower);
-        }
-    }
-
-    XMLREADERDATA* pdata = (XMLREADERDATA*)ctx;
-    string s = (const char*)name;
-    std::transform(s.begin(), s.end(), s.begin(), ::tolower);
-    if( !!pdata->_pdummy ) {
-        RAVELOG_VERBOSE(str(boost::format("unknown field %s\n")%s));
-        pdata->_pdummy->startElement(s,listatts);
-    }
-    else {
-        if( ((XMLREADERDATA*)ctx)->_preader->startElement(s, listatts) != BaseXMLReader::PE_Support ) {
-            // not handling, so create a temporary class to handle it
-            pdata->_pdummy.reset(new DummyXMLReader(s,"(libxml)"));
-        }
-    }
-}
-
-void DefaultEndElementSAXFunc(void *ctx, const xmlChar *name)
-{
-    XMLREADERDATA* pdata = (XMLREADERDATA*)ctx;
-    string s = (const char*)name;
-    std::transform(s.begin(), s.end(), s.begin(), ::tolower);
-    if( !!pdata->_pdummy ) {
-        if( pdata->_pdummy->endElement(s) ) {
-            pdata->_pdummy.reset();
-        }
-    }
-    else {
-        if( pdata->_preader->endElement(s) ) {
-            //RAVEPRINT(L"%s size read %d\n", name, data->_ctxt->input->consumed);
-            xmlStopParser(pdata->_ctxt);
-        }
-    }
-}
-
-void DefaultCharactersSAXFunc(void *ctx, const xmlChar *ch, int len)
-{
-    XMLREADERDATA* pdata = (XMLREADERDATA*)ctx;
-    if( !!pdata->_pdummy ) {
-        pdata->_pdummy->characters(string((const char*)ch, len));
-    }
-    else {
-        pdata->_preader->characters(string((const char*)ch, len));
-    }
-}
-
-bool xmlDetectSAX2(xmlParserCtxtPtr ctxt)
-{
-    if (ctxt == NULL) {
-        return false;
-    }
-#ifdef LIBXML_SAX1_ENABLED
-    if ((ctxt->sax) &&  (ctxt->sax->initialized == XML_SAX2_MAGIC) && ((ctxt->sax->startElementNs != NULL) || (ctxt->sax->endElementNs != NULL))) {
-        ctxt->sax2 = 1;
-    }
-#else
-    ctxt->sax2 = 1;
-#endif
-
-    ctxt->str_xml = xmlDictLookup(ctxt->dict, BAD_CAST "xml", 3);
-    ctxt->str_xmlns = xmlDictLookup(ctxt->dict, BAD_CAST "xmlns", 5);
-    ctxt->str_xml_ns = xmlDictLookup(ctxt->dict, XML_XML_NAMESPACE, 36);
-    if ((ctxt->str_xml==NULL) || (ctxt->str_xmlns==NULL) || (ctxt->str_xml_ns == NULL)) {
-        return false;
-    }
-    return true;
-}
-
-bool ParseXMLData(BaseXMLReaderPtr preader, const char* buffer, int size)
-{
-    static xmlSAXHandler s_DefaultSAXHandler = { 0};
-    if( size <= 0 ) {
-        size = strlen(buffer);
-    }
-    if( !s_DefaultSAXHandler.initialized ) {
-        // first time, so init
-        s_DefaultSAXHandler.startElement = DefaultStartElementSAXFunc;
-        s_DefaultSAXHandler.endElement = DefaultEndElementSAXFunc;
-        s_DefaultSAXHandler.characters = DefaultCharactersSAXFunc;
-        s_DefaultSAXHandler.error = RaveXMLErrorFunc;
-        s_DefaultSAXHandler.initialized = 1;
-    }
-
-    xmlSAXHandlerPtr sax = &s_DefaultSAXHandler;
-    int ret = 0;
-    xmlParserCtxtPtr ctxt;
-
-    ctxt = xmlCreateMemoryParserCtxt(buffer, size);
-    if (ctxt == NULL) {
-        return false;
-    }
-    if (ctxt->sax != (xmlSAXHandlerPtr) &xmlDefaultSAXHandler) {
-        xmlFree(ctxt->sax);
-    }
-    ctxt->sax = sax;
-    xmlDetectSAX2(ctxt);
-
-    XMLREADERDATA reader(preader, ctxt);
-    ctxt->userData = &reader;
-
-    xmlParseDocument(ctxt);
-
-    if (ctxt->wellFormed) {
-        ret = 0;
-    }
-    else {
-        if (ctxt->errNo != 0) {
-            ret = ctxt->errNo;
-        }
-        else {
-            ret = -1;
-        }
-    }
-    if (sax != NULL) {
-        ctxt->sax = NULL;
-    }
-    if (ctxt->myDoc != NULL) {
-        xmlFreeDoc(ctxt->myDoc);
-        ctxt->myDoc = NULL;
-    }
-    xmlFreeParserCtxt(ctxt);
-
-    return ret==0;
-}
-
-}
-
-std::istream& operator>>(std::istream& I, PlannerBase::PlannerParameters& pp)
-{
-    if( !!I) {
-        stringbuf buf;
-        stringstream::streampos pos = I.tellg();
-        I.get(buf, 0); // get all the data, yes this is inefficient, not sure if there anyway to search in streams
-
-        string pbuf = buf.str();
-        const char* p = strcasestr(pbuf.c_str(), "</PlannerParameters>");
-        int ppsize=-1;
-        if( p != NULL ) {
-            I.clear();
-            ppsize=(p-pbuf.c_str())+20;
-            I.seekg((size_t)pos+ppsize);
-        }
-        else
-            throw openrave_exception(str(boost::format("error, failed to find </PlannerParameters> in %s")%buf.str()),ORE_InvalidArguments);
-        pp._plannerparametersdepth = 0;
-        LocalXML::ParseXMLData(PlannerBase::PlannerParametersPtr(&pp,null_deleter()), pbuf.c_str(), ppsize);
-    }
-
-    return I;
-}
-
 EnvironmentBase::EnvironmentBase()
 {
     if( !RaveGlobalState() ) {
@@ -1391,132 +911,6 @@ EnvironmentBase::~EnvironmentBase()
     RaveGlobal::instance()->UnregisterEnvironment(this);
 }
 
-InterfaceBase::InterfaceBase(InterfaceType type, EnvironmentBasePtr penv) : __type(type), __penv(penv)
-{
-    RaveInitializeFromState(penv->GlobalState()); // make sure global state is set
-    RegisterCommand("help",boost::bind(&InterfaceBase::_GetCommandHelp,this,_1,_2),
-                    "display help commands.");
-    __description = "Not documented yet.";
-}
-
-InterfaceBase::~InterfaceBase()
-{
-    boost::mutex::scoped_lock lock(_mutexInterface);
-    __mapCommands.clear();
-    __pUserData.reset();
-    __mapReadableInterfaces.clear();
-    __penv.reset();
-}
-
-void InterfaceBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
-{
-    if( !preference ) {
-        throw openrave_exception("invalid cloning reference",ORE_InvalidArguments);
-    }
-    __pUserData = preference->__pUserData;
-    __struri = preference->__struri;
-    __mapReadableInterfaces = preference->__mapReadableInterfaces;
-}
-
-bool InterfaceBase::SendCommand(ostream& sout, istream& sinput)
-{
-    string cmd;
-    sinput >> cmd;
-    if( !sinput ) {
-        throw openrave_exception("invalid command",ORE_InvalidArguments);
-    }
-    boost::shared_ptr<InterfaceCommand> interfacecmd;
-    {
-        boost::mutex::scoped_lock lock(_mutexInterface);
-        CMDMAP::iterator it = __mapCommands.find(cmd);
-        if( it == __mapCommands.end() ) {
-            throw openrave_exception(str(boost::format("failed to find command '%s' in interface %s\n")%cmd.c_str()%GetXMLId()),ORE_CommandNotSupported);
-        }
-        interfacecmd = it->second;
-    }
-    if( !interfacecmd->fn(sout,sinput) ) {
-        RAVELOG_VERBOSE(str(boost::format("command failed in interface %s: %s\n")%GetXMLId()%cmd));
-        return false;
-    }
-    return true;
-}
-
-void InterfaceBase::RegisterCommand(const std::string& cmdname, InterfaceBase::InterfaceCommandFn fncmd, const std::string& strhelp)
-{
-    boost::mutex::scoped_lock lock(_mutexInterface);
-    if((cmdname.size() == 0)|| !IsValidName(cmdname) ||(stricmp(cmdname.c_str(),"commands") == 0)) {
-        throw openrave_exception(str(boost::format("command '%s' invalid")%cmdname),ORE_InvalidArguments);
-    }
-    if( __mapCommands.find(cmdname) != __mapCommands.end() ) {
-        throw openrave_exception(str(boost::format("command '%s' already registered")%cmdname),ORE_InvalidArguments);
-    }
-    __mapCommands[cmdname] = boost::shared_ptr<InterfaceCommand>(new InterfaceCommand(fncmd, strhelp));
-}
-
-void InterfaceBase::UnregisterCommand(const std::string& cmdname)
-{
-    boost::mutex::scoped_lock lock(_mutexInterface);
-    CMDMAP::iterator it = __mapCommands.find(cmdname);
-    if( it != __mapCommands.end() ) {
-        __mapCommands.erase(it);
-    }
-}
-
-bool InterfaceBase::_GetCommandHelp(std::ostream& o, std::istream& sinput) const
-{
-    boost::mutex::scoped_lock lock(_mutexInterface);
-    string cmd, label;
-    CMDMAP::const_iterator it;
-    while(!sinput.eof()) {
-        sinput >> cmd;
-        if( !sinput ) {
-            break;
-        }
-        std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
-
-        if( cmd == "commands" ) {
-            for(it = __mapCommands.begin(); it != __mapCommands.end(); ++it) {
-                o << it->first << " ";
-            }
-            return true;
-        }
-        else if( cmd == "label" ) {
-            sinput >> label;
-        }
-        else {
-            it = __mapCommands.find(cmd);
-            if( it != __mapCommands.end() ) {
-                o << it->second->help;
-                return true;
-            }
-        }
-
-        if( !sinput ) {
-            RAVELOG_ERROR(str(boost::format("failed processing command %s\n")%cmd));
-            return false;
-        }
-    }
-
-    // display full help string
-    o << endl << GetXMLId() << " Commands" << endl;
-    for(size_t i = 0; i < GetXMLId().size(); ++i) {
-        o << "=";
-    }
-    o << "=========" << endl << endl;
-    for(it = __mapCommands.begin(); it != __mapCommands.end(); ++it) {
-        if( label.size() > 0 ) {
-            string strlower = it->first;
-            std::transform(strlower.begin(), strlower.end(), strlower.begin(), ::tolower);
-            o << endl << ".. _" << label << strlower << ":" << endl << endl;
-        }
-        o << endl << it->first << endl;
-        for(size_t i = 0; i < it->first.size(); ++i) {
-            o << "~";
-        }
-        o << endl << endl << it->second->help << endl << endl << "~~~~" << endl << endl;
-    }
-    return true;
-}
 
 bool SensorBase::SensorData::serialize(std::ostream& O) const
 {
@@ -1552,14 +946,18 @@ BaseXMLReader::ProcessElement SimpleSensorSystem::SimpleXMLReader::startElement(
 
 bool SimpleSensorSystem::SimpleXMLReader::endElement(const std::string& name)
 {
-    if( name == "offsetlink" )
+    if( name == "offsetlink" ) {
         ss >> _pdata->strOffsetLink;
-    else if( name == "id" )
+    }
+    else if( name == "id" ) {
         ss >> _pdata->id;
-    else if( name == "sid" )
+    }
+    else if( name == "sid" ) {
         ss >> _pdata->sid;
-    else if( name == "translation" )
+    }
+    else if( name == "translation" ) {
         ss >> _pdata->transOffset.trans.x >> _pdata->transOffset.trans.y >> _pdata->transOffset.trans.z;
+    }
     else if( name == "rotationmat" ) {
         TransformMatrix m;
         ss >> m.m[0] >> m.m[1] >> m.m[2] >> m.m[4] >> m.m[5] >> m.m[6] >> m.m[8] >> m.m[9] >> m.m[10];
@@ -1570,10 +968,12 @@ bool SimpleSensorSystem::SimpleXMLReader::endElement(const std::string& name)
         ss >> axis.x >> axis.y >> axis.z >> fang;
         _pdata->transOffset.rot = quatFromAxisAngle(axis,fang*dReal(PI/180.0));
     }
-    else if( name == "quat" )
+    else if( name == "quat" ) {
         ss >> _pdata->transOffset.rot;
-    else if( name == "pretranslation")
+    }
+    else if( name == "pretranslation") {
         ss >> _pdata->transPreOffset.trans.x >> _pdata->transPreOffset.trans.y >> _pdata->transPreOffset.trans.z;
+    }
     else if( name == "prerotationmat") {
         TransformMatrix m;
         ss >> m.m[0] >> m.m[1] >> m.m[2] >> m.m[4] >> m.m[5] >> m.m[6] >> m.m[8] >> m.m[9] >> m.m[10];
@@ -1584,13 +984,15 @@ bool SimpleSensorSystem::SimpleXMLReader::endElement(const std::string& name)
         ss >> axis.x >> axis.y >> axis.z >> fang;
         _pdata->transPreOffset.rot = quatFromAxisAngle(axis,fang*dReal(PI/180.0));
     }
-    else if( name == "prequat")
+    else if( name == "prequat") {
         ss >> _pdata->transPreOffset.rot;
-    else if( name == tolowerstring(_pdata->GetXMLId()) )
+    }
+    else if( name == tolowerstring(_pdata->GetXMLId()) ) {
         return true;
-
-    if( !ss )
+    }
+    if( !ss ) {
         RAVELOG_WARN(str(boost::format("error parsing %s\n")%name));
+    }
     return false;
 }
 
@@ -1737,9 +1139,9 @@ void SimpleSensorSystem::_UpdateBodies(list<SimpleSensorSystem::SNAPSHOT>& listb
             BOOST_ASSERT( it->first->IsEnabled() );
 
             KinBody::LinkPtr plink = it->first->GetOffsetLink();
-            if( !plink )
+            if( !plink ) {
                 continue;
-
+            }
             // transform with respect to offset link
             TransformMatrix tlink = plink->GetTransform();
             TransformMatrix tbase = plink->GetParent()->GetTransform();
@@ -1750,10 +1152,9 @@ void SimpleSensorSystem::_UpdateBodies(list<SimpleSensorSystem::SNAPSHOT>& listb
             it->first->lastupdated = curtime;
             it->first->tnew = it->second;
 
-            //RAVELOG_DEBUG("%f %f %f\n", tfinal.trans.x, tfinal.trans.y, tfinal.trans.z);
-
-            if( !it->first->IsPresent() )
+            if( !it->first->IsPresent() ) {
                 RAVELOG_VERBOSE(str(boost::format("updating body %s\n")%plink->GetParent()->GetName()));
+            }
             it->first->bPresent = true;
         }
     }
@@ -1798,213 +1199,6 @@ void SimpleSensorSystem::_UpdateBodiesThread()
     }
 }
 
-MultiController::MultiController(EnvironmentBasePtr penv) : ControllerBase(penv), _nControlTransformation(0)
-{
-}
-
-MultiController::~MultiController()
-{
-}
-
-bool MultiController::Init(RobotBasePtr robot, const std::vector<int>& dofindices, int nControlTransformation)
-{
-    boost::mutex::scoped_lock lock(_mutex);
-    _probot=robot;
-    if( !_probot ) {
-        return false;
-    }
-    _listcontrollers.clear();
-    _dofindices=dofindices;
-    // reverse the mapping
-    _dofreverseindices.resize(_probot->GetDOF());
-    FOREACH(it,_dofreverseindices) {
-        *it = -1;
-    }
-    int index = 0;
-    FOREACH(it,_dofindices) {
-        _dofreverseindices.at(*it) = index++;
-    }
-    _vcontrollersbydofs.resize(0); _vcontrollersbydofs.resize(_dofindices.size());
-    _nControlTransformation = nControlTransformation;
-    _ptransformcontroller.reset();
-    return true;
-}
-
-const std::vector<int>& MultiController::GetControlDOFIndices() const {
-    return _dofindices;
-}
-int MultiController::IsControlTransformation() const {
-    return _nControlTransformation;
-}
-RobotBasePtr MultiController::GetRobot() const {
-    return _probot;
-}
-
-bool MultiController::AttachController(ControllerBasePtr controller, const std::vector<int>& dofindices, int nControlTransformation)
-{
-    boost::mutex::scoped_lock lock(_mutex);
-    if( nControlTransformation && !!_ptransformcontroller ) {
-        throw openrave_exception("controller already attached for transformation",ORE_InvalidArguments);
-    }
-    FOREACHC(it,dofindices) {
-        if( !!_vcontrollersbydofs.at(*it) ) {
-            throw openrave_exception(str(boost::format("controller already attached to dof %d")%*it));
-        }
-    }
-    if( !controller->Init(_probot,dofindices,nControlTransformation) ) {
-        return false;
-    }
-    if( nControlTransformation ) {
-        _ptransformcontroller = controller;
-    }
-    FOREACHC(it,dofindices) {
-        _vcontrollersbydofs.at(*it) = controller;
-    }
-    _listcontrollers.push_back(controller);
-    return true;
-}
-
-void MultiController::RemoveController(ControllerBasePtr controller)
-{
-    boost::mutex::scoped_lock lock(_mutex);
-    _listcontrollers.remove(controller);
-    if( _ptransformcontroller == controller ) {
-        _ptransformcontroller.reset();
-    }
-    FOREACH(it,_vcontrollersbydofs) {
-        if( *it == controller ) {
-            it->reset();
-        }
-    }
-}
-
-ControllerBasePtr MultiController::GetController(int dof) const
-{
-    boost::mutex::scoped_lock lock(_mutex);
-    if( dof < 0 ) {
-        return _ptransformcontroller;
-    }
-    int index=0;
-    FOREACHC(it,_dofindices) {
-        if( *it == dof ) {
-            return _vcontrollersbydofs.at(index);
-        }
-        index++;
-    }
-    return ControllerBasePtr();
-}
-
-void MultiController::Reset(int options)
-{
-    boost::mutex::scoped_lock lock(_mutex);
-    FOREACH(itcontroller,_listcontrollers) {
-        (*itcontroller)->Reset(options);
-    }
-}
-
-bool MultiController::SetDesired(const std::vector<dReal>& values, TransformConstPtr trans)
-{
-    boost::mutex::scoped_lock lock(_mutex);
-    vector<dReal> v;
-    bool bsuccess = true;
-    FOREACH(itcontroller,_listcontrollers) {
-        v.resize(0);
-        FOREACHC(it, (*itcontroller)->GetControlDOFIndices()) {
-            v.push_back(values.at(_dofreverseindices.at(*it)));
-        }
-        bsuccess &= (*itcontroller)->SetDesired(v,trans);
-    }
-    return bsuccess;
-}
-
-bool MultiController::SetPath(TrajectoryBaseConstPtr ptraj)
-{
-    boost::mutex::scoped_lock lock(_mutex);
-    bool bsuccess = true;
-    if( !ptraj ) {
-        FOREACH(itcontroller,_listcontrollers) {
-            bsuccess &= (*itcontroller)->SetPath(TrajectoryBaseConstPtr());
-        }
-    }
-    else {
-        if( !_ptraj ||(_ptraj->GetXMLId() != ptraj->GetXMLId())) {
-            _ptraj = RaveCreateTrajectory(ptraj->GetEnv(),ptraj->GetXMLId());
-        }
-    }
-    return bsuccess;
-}
-
-void MultiController::SimulationStep(dReal fTimeElapsed)
-{
-    boost::mutex::scoped_lock lock(_mutex);
-    FOREACH(it,_listcontrollers) {
-        (*it)->SimulationStep(fTimeElapsed);
-    }
-}
-
-bool MultiController::IsDone()
-{
-    boost::mutex::scoped_lock lock(_mutex);
-    bool bdone=true;
-    FOREACH(it,_listcontrollers) {
-        bdone &= (*it)->IsDone();
-    }
-    return bdone;
-}
-
-dReal MultiController::GetTime() const
-{
-    boost::mutex::scoped_lock lock(_mutex);
-    dReal t = 0;
-    FOREACHC(it,_listcontrollers) {
-        if( it == _listcontrollers.begin() ) {
-            t = (*it)->GetTime();
-        }
-        else {
-            dReal tnew = (*it)->GetTime();
-            if( RaveFabs(t-tnew) > 0.000001 ) {
-                RAVELOG_WARN(str(boost::format("multi-controller time is different! %f!=%f\n")%t%tnew));
-            }
-            t = max(t,tnew);
-        }
-    }
-    return t;
-}
-
-void MultiController::GetVelocity(std::vector<dReal>& vel) const
-{
-    boost::mutex::scoped_lock lock(_mutex);
-    vel.resize(_dofindices.size());
-    FOREACH(it,vel) {
-        *it = 0;
-    }
-    vector<dReal> v;
-    FOREACHC(itcontroller,_listcontrollers) {
-        (*itcontroller)->GetVelocity(v);
-        int index=0;
-        FOREACH(it,v) {
-            vel.at(_dofreverseindices.at((*itcontroller)->GetControlDOFIndices().at(index++))) = *it;
-        }
-    }
-}
-
-void MultiController::GetTorque(std::vector<dReal>& torque) const
-{
-    boost::mutex::scoped_lock lock(_mutex);
-    torque.resize(_dofindices.size());
-    FOREACH(it,torque) {
-        *it = 0;
-    }
-    vector<dReal> v;
-    FOREACHC(itcontroller,_listcontrollers) {
-        (*itcontroller)->GetTorque(v);
-        int index=0;
-        FOREACH(it,v) {
-            torque.at(_dofreverseindices.at((*itcontroller)->GetControlDOFIndices().at(index++))) = *it;
-        }
-    }
-}
-
 CollisionOptionsStateSaver::CollisionOptionsStateSaver(CollisionCheckerBasePtr p, int newoptions, bool required)
 {
     _oldoptions = p->GetCollisionOptions();
@@ -2020,61 +1214,6 @@ CollisionOptionsStateSaver::~CollisionOptionsStateSaver()
 {
     _p->SetCollisionOptions(_oldoptions);
 }
-
-//void RobotBase::GetControlMaxTorques(std::vector<dReal>& maxtorques) const
-//{
-//    if( _nActiveDOF < 0 ) {
-//        GetDOFMaxTorque(maxtorques);
-//        return;
-//    }
-//    maxtorques.resize(GetActiveDOF());
-//    if( maxtorques.size() == 0 ) {
-//        return;
-//    }
-//    dReal* pMaxTorques = &maxtorques[0];
-//
-//    if( _vActiveJointIndices.size() != 0 ) {
-//        GetDOFMaxTorque(_vTempRobotJoints);
-//
-//        FOREACHC(it, _vActiveJointIndices)
-//            *pMaxTorques++ = _vTempRobotJoints[*it];
-//    }
-//
-//    if( _nAffineDOFs == DOF_NoTransform )
-//        return;
-//
-//    if( _nAffineDOFs & DOF_X ) *pMaxTorques++ = 0;
-//    if( _nAffineDOFs & DOF_Y ) *pMaxTorques++ = 0;
-//    if( _nAffineDOFs & DOF_Z ) *pMaxTorques++ = 0;
-//    if( _nAffineDOFs & DOF_RotationAxis ) *pMaxTorques++ = 0;
-//    else if( _nAffineDOFs & DOF_Rotation3D ) {
-//        *pMaxTorques++ = 0;
-//        *pMaxTorques++ = 0;
-//        *pMaxTorques++ = 0;
-//    }
-//    else if( _nAffineDOFs & DOF_RotationQuat ) {
-//        *pMaxTorques++ = 0;
-//        *pMaxTorques++ = 0;
-//        *pMaxTorques++ = 0;
-//        *pMaxTorques++ = 0;
-//    }
-//}
-//
-//void RobotBase::SetControlTorques(const std::vector<dReal>& vtorques)
-//{
-//    if(_nActiveDOF < 0) {
-//        SetJointTorques(vtorques, false);
-//        return;
-//    }
-//
-//    if( _vActiveJointIndices.size() > 0 ) {
-//        _vTempRobotJoints.resize(GetDOF());
-//        std::vector<dReal>::const_iterator ittorque = vtorques.begin();
-//        FOREACHC(it, _vActiveJointIndices)
-//            _vTempRobotJoints[*it] = *ittorque++;
-//        SetJointTorques(_vTempRobotJoints,false);
-//    }
-//}
 
 void RaveInitRandomGeneration(uint32_t seed)
 {

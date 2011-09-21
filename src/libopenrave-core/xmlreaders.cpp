@@ -40,6 +40,7 @@
 
 #include <boost/utility.hpp>
 #include <boost/thread/once.hpp>
+#include <boost/lexical_cast.hpp>
 
 BOOST_STATIC_ASSERT(sizeof(xmlChar) == 1);
 
@@ -751,8 +752,7 @@ public:
                 _bSkipGeometry = stricmp(itatt->second.c_str(), "true") == 0 || itatt->second=="1";
             }
             else if( itatt->first == "scalegeometry" ) {
-                stringstream ss(itatt->second);
-                ss >> _fScaleGeometry;
+                _fScaleGeometry = boost::lexical_cast<dReal>(itatt->second);
             }
         }
 
@@ -1913,8 +1913,7 @@ public:
                 _bSkipGeometry = stricmp(itatt->second.c_str(), "true") == 0 || itatt->second=="1";
             }
             else if( itatt->first == "scalegeometry" ) {
-                stringstream ss(itatt->second);
-                ss >> _fScaleGeometry;
+                _fScaleGeometry = boost::lexical_cast<dReal>(itatt->second);
             }
             else if((itatt->first != "file")&&(itatt->first != "type")) {
                 RAVELOG_WARN(str(boost::format("unknown kinbody attribute %s\n")%itatt->first));
@@ -1935,7 +1934,7 @@ public:
             //RAVELOG_INFO(str(boost::format("links: %d, prefix: %s: %x\n")%_pchain->GetLinks().size()%_prefix%this));
             // reisze _vTransforms to be the same size as the initial number of links
             _pchain->GetLinkTransformations(_vTransforms);
-            _pchain->SetGuiData(UserDataPtr());
+            _pchain->SetViewerData(UserDataPtr());
         }
     }
 
@@ -2743,8 +2742,7 @@ public:
                 _bSkipGeometry = stricmp(itatt->second.c_str(), "true") == 0 || itatt->second=="1";
             }
             else if( itatt->first == "scalegeometry" ) {
-                stringstream ss(itatt->second);
-                ss >> _fScaleGeometry;
+                _fScaleGeometry = boost::lexical_cast<dReal>(itatt->second);
             }
         }
         _CheckInterface();

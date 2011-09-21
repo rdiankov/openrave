@@ -1034,7 +1034,7 @@ public:
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
 
         if( !!robot ) {
-            robot->SetGuiData(UserDataPtr());
+            robot->SetViewerData(UserDataPtr());
             boost::mutex::scoped_lock lock(_mutexInterfaces);
             if( std::find(_vecrobots.begin(),_vecrobots.end(),robot) != _vecrobots.end() ) {
                 throw openrave_exception(str(boost::format("KinRobot::Init for %s, cannot Init a robot while it is added to the environment\n")%robot->GetName()));
@@ -1098,7 +1098,7 @@ public:
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
 
         if( !!robot ) {
-            robot->SetGuiData(UserDataPtr());
+            robot->SetViewerData(UserDataPtr());
             boost::mutex::scoped_lock lock(_mutexInterfaces);
             if( std::find(_vecrobots.begin(),_vecrobots.end(),robot) != _vecrobots.end() ) {
                 throw openrave_exception(str(boost::format("KinRobot::Init for %s, cannot Init a robot while it is added to the environment\n")%robot->GetName()));
@@ -1132,7 +1132,7 @@ public:
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
 
         if( !!body ) {
-            body->SetGuiData(UserDataPtr());
+            body->SetViewerData(UserDataPtr());
             boost::mutex::scoped_lock lock(_mutexInterfaces);
             if( std::find(_vecbodies.begin(),_vecbodies.end(),body) != _vecbodies.end() ) {
                 throw openrave_exception(str(boost::format("KinBody::Init for %s, cannot Init a body while it is added to the environment\n")%body->GetName()));
@@ -1196,7 +1196,7 @@ public:
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
 
         if( !!body ) {
-            body->SetGuiData(UserDataPtr());
+            body->SetViewerData(UserDataPtr());
             boost::mutex::scoped_lock lock(_mutexInterfaces);
             if( std::find(_vecbodies.begin(),_vecbodies.end(),body) != _vecbodies.end() ) {
                 throw openrave_exception(str(boost::format("KinBody::Init for %s, cannot Init a body while it is added to the environment\n")%body->GetName()));
@@ -1613,7 +1613,7 @@ public:
             (*itbody)->GetLinkTransformations(itstate->vectrans);
             (*itbody)->GetDOFValues(itstate->jointvalues);
             itstate->strname =(*itbody)->GetName();
-            itstate->pguidata = (*itbody)->GetGuiData();
+            itstate->pviewerdata = (*itbody)->GetViewerData();
             itstate->environmentid = (*itbody)->GetEnvironmentId();
             ++itstate;
         }

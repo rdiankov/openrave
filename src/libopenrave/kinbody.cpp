@@ -35,6 +35,26 @@
 
 namespace OpenRAVE {
 
+class ChangeCallbackData : public UserData
+{
+public:
+    ChangeCallbackData(int properties, const boost::function<void()>& callback, KinBodyPtr pbody) : _properties(properties), _callback(callback), _pweakbody(pbody) {
+    }
+    virtual ~ChangeCallbackData() {
+        KinBodyPtr pbody = _pweakbody.lock();
+        if( !!pbody ) {
+            pbody->_listRegisteredCallbacks.erase(_iterator);
+        }
+    }
+
+    int _properties;
+    boost::function<void()> _callback;
+    KinBodyWeakPtr _pweakbody;
+    list<UserDataWeakPtr>::iterator _iterator;
+};
+
+typedef boost::shared_ptr<ChangeCallbackData> ChangeCallbackDataPtr;
+
 void KinBody::Link::TRIMESH::ApplyTransform(const Transform& t)
 {
     FOREACH(it, vertices) {
@@ -1848,7 +1868,7 @@ void KinBody::Destroy()
     _vForcedAdjacentLinks.clear();
     _nHierarchyComputed = 0;
     _nParametersChanged = 0;
-    _pGuiData.reset();
+    _pViewerData.reset();
     _pPhysicsData.reset();
     _pCollisionData.reset();
     _pManageData.reset();
@@ -3944,10 +3964,11 @@ void KinBody::_ComputeInternalInformation()
     }
     // notify any callbacks of the changes
     if( _nParametersChanged ) {
-        std::list<std::pair<int,boost::function<void()> > > listRegisteredCallbacks = _listRegisteredCallbacks; // copy since it can be changed
-        FOREACH(itfns,listRegisteredCallbacks) {
-            if( itfns->first & _nParametersChanged ) {
-                itfns->second();
+        std::list<UserDataWeakPtr> listRegisteredCallbacks = _listRegisteredCallbacks; // copy since it can be changed
+        FOREACH(it,listRegisteredCallbacks) {
+            ChangeCallbackDataPtr pdata = boost::dynamic_pointer_cast<ChangeCallbackData>(it->lock());
+            if( !!pdata && (pdata->_properties & _nParametersChanged) ) {
+                pdata->_callback();
             }
         }
         _nParametersChanged = 0;
@@ -4246,10 +4267,11 @@ void KinBody::_ParametersChanged(int parameters)
         __hashkinematics.resize(0);
     }
 
-    std::list<std::pair<int,boost::function<void()> > > listRegisteredCallbacks = _listRegisteredCallbacks; // copy since it can be changed
-    FOREACH(itfns,listRegisteredCallbacks) {
-        if( itfns->first & parameters ) {
-            itfns->second();
+    std::list<UserDataWeakPtr> listRegisteredCallbacks = _listRegisteredCallbacks; // copy since it can be changed
+    FOREACH(it,listRegisteredCallbacks) {
+        ChangeCallbackDataPtr pdata = boost::dynamic_pointer_cast<ChangeCallbackData>(it->lock());
+        if( !!pdata && (pdata->_properties & parameters) ) {
+            pdata->_callback();
         }
     }
 }
@@ -4294,20 +4316,11 @@ const std::string& KinBody::GetKinematicsGeometryHash() const
     return __hashkinematics;
 }
 
-void KinBody::__erase_iterator(KinBodyWeakPtr pweakbody, std::list<std::pair<int,boost::function<void()> > >::iterator* pit)
+UserDataPtr KinBody::RegisterChangeCallback(int properties, const boost::function<void()>& callback)
 {
-    if( !!pit ) {
-        KinBodyPtr pbody = pweakbody.lock();
-        if( !!pbody ) {
-            pbody->_listRegisteredCallbacks.erase(*pit);
-        }
-        delete pit;
-    }
-}
-
-boost::shared_ptr<void> KinBody::RegisterChangeCallback(int properties, const boost::function<void()>& callback)
-{
-    return boost::shared_ptr<void>(new std::list<std::pair<int,boost::function<void()> > >::iterator(_listRegisteredCallbacks.insert(_listRegisteredCallbacks.end(),make_pair(properties,callback))), boost::bind(KinBody::__erase_iterator,KinBodyWeakPtr(shared_kinbody()), _1));
+    ChangeCallbackDataPtr pdata(new ChangeCallbackData(properties,callback,shared_kinbody()));
+    pdata->_iterator = _listRegisteredCallbacks.insert(_listRegisteredCallbacks.end(),pdata);
+    return pdata;
 }
 
 static std::vector<dReal> fparser_polyroots2(const dReal* rawcoeffs)

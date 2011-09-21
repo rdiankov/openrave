@@ -22,7 +22,7 @@ Core
 Inverse Kinematics
 ------------------
 
-* :ref:`.IkSolver::SetCustomFilter` now returns the old filter set. (temporary)
+* added :ref:`.IkSolver::RegisterCustomFilter` that allows any number of filters to be registered with priority. :ref:`.IkSolver::SetCustomFilter` is deprecated.
 
 * Fixed TranslationDirection5D IK bug, upgrade ikfast version
 
@@ -53,6 +53,8 @@ Misc
 * added two python examples showing how to use PyQt + OpenRAVE together. :mod:`.examples.qtexampleselector` :mod:`.examples.qtserverprocess`
 
 * odephysics now uses dJointFeedbakc to compute forces/torques on links
+
+* removed **KinBody.SetGuiData** and **KinBody.GetGuiData** and replaced with :ref:`.KinBody.GetViewerData` similar to how collision/physics are handled.
 
 Version 0.4.2
 =============

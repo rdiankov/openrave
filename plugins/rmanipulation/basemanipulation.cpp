@@ -916,17 +916,6 @@ protected:
         return true;
     }
 
-    class IkResetFilter
-    {
-public:
-        IkResetFilter(IkSolverBasePtr iksolver) : _iksolver(iksolver) {
-        }
-        virtual ~IkResetFilter() {
-            _iksolver->SetCustomFilter(IkSolverBase::IkFilterCallbackFn());
-        }
-        IkSolverBasePtr _iksolver;
-    };
-
     bool FindIKWithFilters(ostream& sout, istream& sinput)
     {
         bool bSolveAll = false;
@@ -974,8 +963,7 @@ public:
         if( !filterfn ) {
             throw openrave_exception("FindIKWithFilters: no filter function set");
         }
-        IkResetFilter resetfilter(robot->GetActiveManipulator()->GetIkSolver());
-        pmanip->GetIkSolver()->SetCustomFilter(filterfn);
+        UserDataPtr filterhandle = robot->GetActiveManipulator()->GetIkSolver()->RegisterCustomFilter(0,filterfn);
         vector< vector<dReal> > vsolutions;
         if( bSolveAll ) {
             if( !pmanip->FindIKSolutions(ikparam,vsolutions,filteroptions)) {

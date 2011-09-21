@@ -20,19 +20,6 @@
 
 class WorkspaceTrajectoryTracker : public PlannerBase
 {
-    class SetCustomFilterScope
-    {
-public:
-        SetCustomFilterScope(IkSolverBasePtr pik, const IkSolverBase::IkFilterCallbackFn& filterfn) : _pik(pik){
-            _pik->SetCustomFilter(filterfn);
-        }
-        virtual ~SetCustomFilterScope() {
-            _pik->SetCustomFilter(IkSolverBase::IkFilterCallbackFn());
-        }
-private:
-        IkSolverBasePtr _pik;
-    };
-
 public:
     WorkspaceTrajectoryTracker(EnvironmentBasePtr penv) : PlannerBase(penv)
     {
@@ -231,7 +218,7 @@ Planner Parameters\n\
             poutputtraj->AddPoint(Trajectory::TPOINT(_parameters->vinitialconfig,0));
         }
 
-        SetCustomFilterScope filter(_manip->GetIkSolver(),boost::bind(&WorkspaceTrajectoryTracker::_ValidateSolution,this,_1,_2,_3));
+        UserDataPtr filterhandle = _manip->GetIkSolver()->RegisterCustomFilter(0,boost::bind(&WorkspaceTrajectoryTracker::_ValidateSolution,this,_1,_2,_3));
         vector<dReal> vsolution;
         if( !_parameters->greedysearch ) {
             RAVELOG_ERROR("WorkspaceTrajectoryTracker::PlanPath - do not support non-greedy search\n");

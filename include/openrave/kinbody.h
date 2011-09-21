@@ -752,7 +752,7 @@ public:
         KinBodyPtr pbody;
         std::vector<RaveTransform<dReal> > vectrans;
         std::vector<dReal> jointvalues;
-        UserDataPtr pguidata, puserdata;
+        UserDataPtr pviewerdata, puserdata;
         std::string strname;         ///< name of the body
         int environmentid;
     };
@@ -1186,14 +1186,13 @@ protected:
      */
     virtual int8_t DoesAffect(int jointindex, int linkindex) const;
 
-    /// \brief GUI data to let the viewer store specific graphic handles for the object.
-    virtual void SetGuiData(UserDataPtr data) {
-        _pGuiData = data;
+    /// \see SetViewerData
+    virtual UserDataPtr GetViewerData() const {
+        return _pViewerData;
     }
-
-    /// \see SetGuiData
-    virtual UserDataPtr GetGuiData() const {
-        return _pGuiData;
+    /// \deprecated (11/09/21)
+    virtual UserDataPtr GetGuiData() const RAVE_DEPRECATED {
+        return GetViewerData();
     }
 
     /// \brief specifies the type of adjacent link information to receive
@@ -1240,7 +1239,7 @@ protected:
     /// block the thread that made the parameter change.
     /// \param callback
     /// \param properties a mask of the \ref KinBodyProperty values that the callback should be called for when they change
-    virtual boost::shared_ptr<void> RegisterChangeCallback(int properties, const boost::function<void()>& callback);
+    virtual UserDataPtr RegisterChangeCallback(int properties, const boost::function<void()>& callback);
 
     virtual void serialize(std::ostream& o, int options) const;
 
@@ -1284,6 +1283,10 @@ protected:
     /// \brief custom data managed by the current active collision checker, should be set only by CollisionCheckerBase
     virtual void SetCollisionData(UserDataPtr pdata) {
         _pCollisionData = pdata;
+    }
+    /// \brief custom data managed by the current active viewer, should be set only by ViewerBase
+    virtual void SetViewerData(UserDataPtr pdata) {
+        _pViewerData = pdata;
     }
     virtual void SetManageData(ManageDataPtr pdata) {
         _pManageData = pdata;
@@ -1337,7 +1340,7 @@ protected:
                                      ///< i|(j<<16) will be in the set where i<j.
     std::vector< std::pair<std::string, std::string> > _vForcedAdjacentLinks; ///< internally stores forced adjacent links
     std::list<KinBodyWeakPtr> _listAttachedBodies; ///< list of bodies that are directly attached to this body (can have duplicates)
-    std::list<std::pair<int,boost::function<void()> > > _listRegisteredCallbacks; ///< callbacks to call when particular properties of the body change.
+    std::list<UserDataWeakPtr> _listRegisteredCallbacks; ///< callbacks to call when particular properties of the body change.
 
     mutable boost::array<std::set<int>, 4> _setNonAdjacentLinks; ///< contains cached versions of the non-adjacent links depending on values in AdjacentOptions. Declared as mutable since data is cached.
     mutable int _nNonAdjacentLinkCache; ///< specifies what information is currently valid in the AdjacentOptions.  Declared as mutable since data is cached. If 0x80000000 (ie < 0), then everything needs to be recomputed including _setNonAdjacentLinks[0].
@@ -1346,7 +1349,7 @@ protected:
     int _environmentid; ///< \see GetEnvironmentId
     mutable int _nUpdateStampId; ///< \see GetUpdateStamp
     int _nParametersChanged; ///< set of parameters that changed and need callbacks
-    UserDataPtr _pGuiData; ///< \see SetGuiData
+    UserDataPtr _pViewerData; ///< \see SetViewerData
     UserDataPtr _pPhysicsData; ///< \see SetPhysicsData
     UserDataPtr _pCollisionData; ///< \see SetCollisionData
     ManageDataPtr _pManageData;
@@ -1358,8 +1361,6 @@ private:
     virtual const char* GetHash() const {
         return OPENRAVE_KINBODY_HASH;
     }
-
-    static void __erase_iterator(KinBodyWeakPtr pweakbody, std::list<std::pair<int,boost::function<void()> > >::iterator* pit);
 
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
@@ -1379,8 +1380,10 @@ private:
 
     friend class PhysicsEngineBase;
     friend class CollisionCheckerBase;
+    friend class ViewerBase;
     friend class SensorSystemBase;
     friend class RaveDatabase;
+    friend class ChangeCallbackData;
 };
 
 OPENRAVE_API std::ostream& operator<<(std::ostream& O, const KinBody::Link::TRIMESH& trimesh);

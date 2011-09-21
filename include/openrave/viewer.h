@@ -171,6 +171,10 @@ public:
     virtual bool LoadModel(const std::string& pfilename) RAVE_DEPRECATED OPENRAVE_DUMMY_IMPLEMENTATION;
 
 protected:
+    virtual void SetViewerData(KinBodyPtr body, UserDataPtr data) {
+        body->SetViewerData(data);
+    }
+
     virtual GraphHandlePtr plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const RaveVector<float>& color, int drawstyle = 0) OPENRAVE_DUMMY_IMPLEMENTATION;
     virtual GraphHandlePtr plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const float* colors, int drawstyle = 0, bool bhasalpha=false) OPENRAVE_DUMMY_IMPLEMENTATION;
 

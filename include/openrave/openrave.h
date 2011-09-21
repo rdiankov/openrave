@@ -223,6 +223,7 @@ public:
     }
 };
 typedef boost::shared_ptr<UserData> UserDataPtr;
+typedef boost::weak_ptr<UserData> UserDataWeakPtr;
 
 // terminal attributes
 //#define RESET           0

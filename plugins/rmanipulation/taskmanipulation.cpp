@@ -43,19 +43,6 @@ public:
     }
 };
 
-class SetCustomFilterScope
-{
-public:
-    SetCustomFilterScope(IkSolverBasePtr pik, const IkSolverBase::IkFilterCallbackFn& filterfn) : _pik(pik){
-        _pik->SetCustomFilter(filterfn);
-    }
-    virtual ~SetCustomFilterScope() {
-        _pik->SetCustomFilter(IkSolverBase::IkFilterCallbackFn());
-    }
-private:
-    IkSolverBasePtr _pik;
-};
-
 class TaskManipulation : public ModuleBase
 {
 public:
@@ -528,10 +515,10 @@ protected:
 
         _phandtraj.reset();
 
-        boost::shared_ptr<SetCustomFilterScope> ikfilter;
+        UserDataPtr ikfilter;
         if( pmanip->GetIkSolver()->Supports(IkParameterization::Type_TranslationDirection5D) ) {
             // if 5D, have to set a filter
-            ikfilter.reset(new SetCustomFilterScope(pmanip->GetIkSolver(),boost::bind(&TaskManipulation::_FilterIkForGrasping,shared_problem(),_1,_2,_3,ptarget)));
+            ikfilter = pmanip->GetIkSolver()->RegisterCustomFilter(0,boost::bind(&TaskManipulation::_FilterIkForGrasping,shared_problem(),_1,_2,_3,ptarget));
             fApproachOffset = 0; // cannot approach
         }
 
