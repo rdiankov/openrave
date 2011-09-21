@@ -91,7 +91,7 @@ class TestKinematics(EnvironmentSetup):
                                 assert( transdist(dot(Jquat,deltavalues)+worldquat,newquat) <= 2*thresh )
                                 raveLogDebug(repr(dofvaluesnew))
                                 raveLogDebug(repr(deltavalues))
-                                print 'angle dist: ',axisangledist(dot(Jangvel,deltavalues)+worldaxisangle,newaxisangle), 2*thresh, armlength
+                                #print 'angle dist: ',axisangledist(dot(Jangvel,deltavalues)+worldaxisangle,newaxisangle), 2*thresh, armlength
                                 assert( axisangledist(dot(Jangvel,deltavalues)+worldaxisangle,newaxisangle) <= 2*thresh )
 
     def test_bodyvelocities(self):

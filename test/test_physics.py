@@ -63,34 +63,38 @@ class TestPhysics(EnvironmentSetup):
         
         env.StartSimulation(0.01,realtime=True)
         starttime = 1e-6*env.GetSimulationTime()
+        realtime0 = time.time()
         time.sleep(1)
         env.StopSimulation()
+        realtime1 = time.time()
         simtime0 = 1e-6*env.GetSimulationTime()
         assert( abs(simtime0-starttime-1) < 0.05 )
         with env:
             T = body.GetTransform()
             assert(abs(T[2,3]-Tinit[2,3]) > 0.2)
-        
         time.sleep(2)
         with env:
             T2 = body.GetTransform()
             assert(abs(T[2,3]-T2[2,3]) < g_epsilon )
         env.StartSimulation(timestep=0.01,realtime=True)
+        realtime2 = time.time()
         time.sleep(1)
         env.StopSimulation()
-        assert( abs(1e-6*env.GetSimulationTime()-starttime-2) < 0.05 )
+        realtime3 = time.time()
+        assert( abs(1e-6*env.GetSimulationTime()-starttime-(realtime3-realtime2)-(realtime1-realtime0)) < 0.05 )
         with env:
             T2 = body.GetTransform()
             assert(abs(T[2,3]-T2[2,3])>0.2)
             body.SetVelocity([0,0,0],[0,0,0])
         
         simtime1 = 1e-6*env.GetSimulationTime()
-        for i in range(int(simtime0*100)):
+        for i in range(int((simtime0-starttime)*100)):
             env.StepSimulation(0.01)
         with env:
             T3 = body.GetTransform()
+            print (T[2,3]-Tinit[2,3]),(T3[2,3]-T2[2,3])
             assert( abs((T[2,3]-Tinit[2,3]) - (T3[2,3]-T2[2,3])) < 0.001)
-        assert(abs(1e-6*env.GetSimulationTime()-simtime1-simtime0) < g_epsilon)
+        assert(abs(1e-6*env.GetSimulationTime()-simtime1-(simtime0-starttime)) < g_epsilon)
 
         env.StartSimulation(timestep=0.01,realtime=False)
         simtime2 = 1e-6*env.GetSimulationTime()
