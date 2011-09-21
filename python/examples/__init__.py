@@ -36,10 +36,18 @@ import collision2
 import constraintplanning
 import dualarmdemo_schunk
 import fastgrasping
+import fastgraspingthreaded
 import hanoi
 import graspplanning
 import movehandstraight
-import movehandstraight2
+
+try:
+    from PyQt4 import QtGui, QtCore
+    import qtexampleselector
+    import qtserverprocess
+except ImportError:
+    pass
+
 import showsensors
 import simplegrasping
 import simplemanipulation

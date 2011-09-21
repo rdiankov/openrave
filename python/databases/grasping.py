@@ -262,23 +262,19 @@ class GraspingModel(DatabaseGenerator):
         with self.env:
             self.jointmaxlengths = zeros(len(self.robot.GetJoints()))
             for i,joint in enumerate(self.robot.GetJoints()):
-                childlink = None
-                if joint.GetFirstAttached() and self.robot.DoesAffect(joint.GetJointIndex(),joint.GetFirstAttached().GetIndex()):
-                    childlink = joint.GetFirstAttached()
-                elif joint.GetSecondAttached() and self.robot.DoesAffect(joint.GetJointIndex(),joint.GetSecondAttached().GetIndex()):
-                    childlink = joint.GetSecondAttached()
+                childlink = joint.GetHierarchyChildLink()
                 if childlink is not None:
                     # find how much an axis displaces the link
-                    if joint.GetType() == KinBody.Joint.Type.Slider or joint.GetType() == KinBody.Joint.Type.Prismatic:
+                    if joint.IsPrismatic(0):
                         self.jointmaxlengths[i] = 1.0
-                    else: # revolute
+                    elif joint.IsRevolute(0): # revolute
                         T = childlink.GetTransform()
                         T[0:3,3] -= joint.GetAnchor()
                         vertices = transformPoints(T,childlink.GetCollisionData().vertices)
                         # find all child joints and add their anchor to vertices
                         for childjoint in self.robot.GetJoints():
-                            if childjoint.GetJointIndex() != joint.GetJointIndex():
-                                if (childjoint.GetFirstAttached() and childjoint.GetFirstAttached().GetIndex() == childlink.GetIndex()) or (childjoint.GetSecondAttached() and childjoint.GetSecondAttached().GetIndex() == childlink.GetIndex()):
+                            if childjoint != joint:
+                                if childjoint.GetFirstAttached() == childlink or childjoint.GetSecondAttached() == childlink:
                                     vertices = r_[vertices,[childjoint.GetAnchor()-joint.GetAnchor()]]
                         self.jointmaxlengths[i] = sqrt(numpy.max(sum(vertices**2,1)-dot(vertices,joint.GetAxis(0))**2)) if len(vertices) > 0 else 0
     def autogenerateparams(self,options=None):
@@ -296,34 +292,36 @@ class GraspingModel(DatabaseGenerator):
         translationstepmult=None
         finestep=None
         if options is not None:
-            if options.preshapes is not None:
+            if hasattr(options,'preshapes') and options.preshapes is not None:
                 preshapes = array([array([float(s) for s in preshape.split()]) for preshape in options.preshapes])
-            if options.manipulatordirections is not None:
+            if hasattr(options,'manipulatordirections') and options.manipulatordirections is not None:
                 manipulatordirections = array([array([float(s) for s in md.split()]) for md in options.manipulatordirections])
-            if options.boxdelta is not None:
+            if hasattr(options,'boxdelta') and options.boxdelta is not None:
                 approachrays = self.computeBoxApproachRays(delta=options.boxdelta,normalanglerange=options.normalanglerange,directiondelta=options.directiondelta)
-            elif options.spheredelta is not None:
+            elif hasattr(options,'spheredelta') and options.spheredelta is not None:
                 approachrays = self.computeSphereApproachRays(delta=options.spheredelta,normalanglerange=options.normalanglerange,directiondelta=options.directiondelta)
-            if options.standoffs is not None:
+            if hasattr(options,'standoffs') and options.standoffs is not None:
                 standoffs = array(options.standoffs)
-            if options.rolls is not None:
+            if hasattr(options,'rolls') and options.rolls is not None:
                 rolls = array(options.rolls)
-            if options.friction is not None:
+            if hasattr(options,'friction') and options.friction is not None:
                 friction = options.friction
-            if options.avoidlinks is not None:
+            if hasattr(options,'avoidlinks') and options.avoidlinks is not None:
                 avoidlinks = [self.robot.GetLink(avoidlink) for avoidlink in options.avoidlinks]
-            if options.graspingnoise is not None:
+            if hasattr(options,'graspingnoise') and options.graspingnoise is not None:
                 graspingnoise = options.graspingnoise
-            if options.plannername is not None:
+            if hasattr(options,'plannername') and options.plannername is not None:
                 plannername = options.plannername
-            if options.normalanglerange is not None:
+            if hasattr(options,'normalanglerange') and options.normalanglerange is not None:
                 normalanglerange = options.normalanglerange
-            if options.directiondelta is not None:
+            if hasattr(options,'directiondelta') and options.directiondelta is not None:
                 directiondelta = options.directiondelta
-            if options.translationstepmult is not None:
+            if hasattr(options,'translationstepmult') and options.translationstepmult is not None:
                 translationstepmult = options.translationstepmult
-            if options.finestep is not None:
+            if hasattr(options,'finestep') and options.finestep is not None:
                 finestep = options.finestep
+            if hasattr(options,'numthreads') and options.numthreads is not None:
+                self.numthreads = options.numthreads
         # check for specific robots
         if self.robot.GetRobotStructureHash() == '2b0b07cce5d2f9c321010e74273a77f2' or self.robot.GetRobotStructureHash() == 'ca823aed89e08c7020b2cd7d2e5ff145': # wam+barretthand
             if preshapes is None:
@@ -339,7 +337,7 @@ class GraspingModel(DatabaseGenerator):
         if avoidlinks is None:
             avoidlinks = []
         if friction is None:
-            friction = 0.4
+            friction = 0.3
         if approachrays is None:
             approachrays = self.computeBoxApproachRays(delta=0.02,normalanglerange=normalanglerange,directiondelta=directiondelta)
         forceclosure = True
@@ -354,7 +352,7 @@ class GraspingModel(DatabaseGenerator):
             for b in bodies:
                 b[0].Enable(False)
         try:
-            if self.numthreads is not None:
+            if self.numthreads is not None and self.numthreads > 1:
                 self._generateThreaded(*args,**kwargs)
             else:
                 with self.GripperVisibility(self.manip):
@@ -474,8 +472,9 @@ class GraspingModel(DatabaseGenerator):
                 self.grasps.append(grasp)
             else:
                 self.grasps = array(self.grasps)
-                order = argsort(self.grasps[:,self.graspindices.get('performance')[0]])
-                self.grasps = self.grasps[order]
+                if len(self.grasps) > 1:
+                    order = argsort(self.grasps[:,self.graspindices.get('performance')[0]])
+                    self.grasps = self.grasps[order]
                 # force closing the handles
                 self.approachgraphs = None
                 self.contactgraph = None
@@ -492,7 +491,7 @@ class GraspingModel(DatabaseGenerator):
         if approachrays is None:
             approachrays = self.computeBoxApproachRays(delta=0.02,normalanglerange=0)
         if friction is None:
-            friction = 0.4
+            friction = 0.3
         if preshapes is None:
             # should disable everything but the robot
             with self.target:
@@ -507,8 +506,10 @@ class GraspingModel(DatabaseGenerator):
             standoffs = array([0,0.025])
         if manipulatordirections is None:
             manipulatordirections = array([self.manip.GetDirection()])
-        if numthreads is None:
-            numthreads = 2
+        if self.numthreads is None:
+            numthreads = 1
+        else:
+            numthreads = self.numthreads
         self.init(friction=friction,avoidlinks=avoidlinks,plannername=plannername)
 
         with self.robot: # lock the environment and save the robot state
@@ -519,7 +520,7 @@ class GraspingModel(DatabaseGenerator):
             self.robot.SetActiveDOFs(self.manip.GetGripperIndices(),Robot.DOFAffine.X+Robot.DOFAffine.Y+Robot.DOFAffine.Z if translate else 0)
             approachrays[:,3:6] = -approachrays[:,3:6]
             self.nextid, self.resultgrasps = self.grasper.GraspThreaded(approachrays=approachrays, rolls=rolls, standoffs=standoffs, preshapes=preshapes, manipulatordirections=manipulatordirections, target=self.target, graspingnoise=graspingnoise, forceclosurethreshold=forceclosurethreshold,numthreads=numthreads)
-            print 'graspthreaded done, processing grasps'
+            print 'graspthreaded done, processing grasps %d'%len(self.resultgrasps)
 
             for resultgrasp in self.resultgrasps:
                 grasp = zeros(self.totaldof)
@@ -557,8 +558,9 @@ class GraspingModel(DatabaseGenerator):
                             self.grasps.append(grasp)
 
             self.grasps = array(self.grasps)
-            order = argsort(self.grasps[:,self.graspindices.get('performance')])
-            self.grasps = self.grasps[order]
+            if len(self.grasps) > 0:
+                order = argsort(self.grasps[:,self.graspindices.get('performance')[0]])
+                self.grasps = self.grasps[order]
 
     def show(self,delay=0.1,options=None,forceclosure=True):
         with RobotStateSaver(self.robot):
@@ -640,7 +642,7 @@ class GraspingModel(DatabaseGenerator):
                 translationstd = mean(std([T[0:3,3] for T in allfinaltrans],0))
                 jointvaluesstd = self.jointmaxlengths*std(array(allfinaljoints),0)
                 # compute the max distance of each link
-                maxjointvaluestd = max([sum([jointvaluesstd[i] for i in range(self.robot.GetDOF()) if self.robot.DoesAffect(i,link.GetIndex())]) for link in self.robot.GetLinks()])
+                maxjointvaluestd = max([sum([jointvaluesstd[i] for i in range(self.robot.GetJoints()) if self.robot.DoesAffect(i,link.GetIndex())]) for link in self.robot.GetLinks()])
                 print 'grasp:',translationstd,maxjointvaluestd
                 if translationstd+maxjointvaluestd > 0.7*graspingnoise:
                     print 'fragile grasp:',translationstd,maxjointvaluestd
@@ -862,16 +864,20 @@ class GraspingModel(DatabaseGenerator):
                 self.env.SetCollisionChecker(cc)
 
     def computeBoxApproachRays(self,delta=0.02,normalanglerange=0,directiondelta=0.4):
+        return self._computeBoxApproachRays(self.env,self.target,delta=delta,normalanglerange=normalanglerange,directiondelta=directiondelta)
+
+    @staticmethod
+    def _computeBoxApproachRays(env,target,delta=0.02,normalanglerange=0,directiondelta=0.4):
         # ode gives the most accurate rays
-        cc = RaveCreateCollisionChecker(self.env,'ode')
+        cc = RaveCreateCollisionChecker(env,'ode')
         if cc is not None:
-            ccold = self.env.GetCollisionChecker()
-            self.env.SetCollisionChecker(cc)
+            ccold = env.GetCollisionChecker()
+            env.SetCollisionChecker(cc)
             cc = ccold
         try:
-            with self.target:
-                self.target.SetTransform(eye(4))
-                ab = self.target.ComputeAABB()
+            with target:
+                target.SetTransform(eye(4))
+                ab = target.ComputeAABB()
                 p = ab.pos()
                 e = ab.extents()+0.01 # increase since origin of ray should be outside of object
                 sides = array(((0,0,e[2],0,0,-1,e[0],0,0,0,e[1],0),
@@ -892,7 +898,7 @@ class GraspingModel(DatabaseGenerator):
                     localpos = outer(XX.flatten(),side[6:9]/ex)+outer(YY.flatten(),side[9:12]/ey)
                     N = localpos.shape[0]
                     rays = c_[tile(p+side[0:3],(N,1))+localpos,maxlen*tile(side[3:6],(N,1))]
-                    collision, info = self.env.CheckCollisionRays(rays,self.target)
+                    collision, info = env.CheckCollisionRays(rays,target)
                     # make sure all normals are the correct sign: pointing outward from the object)
                     newinfo = info[collision,:]
                     if len(newinfo) > 0:
@@ -913,7 +919,8 @@ class GraspingModel(DatabaseGenerator):
         finally:
             # restore the collision checker
             if cc is not None:
-                self.env.SetCollisionChecker(cc)
+                env.SetCollisionChecker(cc)
+
     def computeSphereApproachRays(self,delta=0.1,normalanglerange=0,directiondelta=0.4):
         # ode gives the most accurate rays
         cc = RaveCreateCollisionChecker(self.env,'ode')
@@ -993,7 +1000,7 @@ class GraspingModel(DatabaseGenerator):
         parser.add_option('--avoidlink', action='append', type='string',dest='avoidlinks',default=None,
                           help='Add a link name to avoid at all costs (like sensor links)')
         parser.add_option('--friction', action='store', type='float',dest='friction',default=None,
-                          help='Friction between robot and target object (default=0.4)')
+                          help='Friction between robot and target object (default=0.3)')
         parser.add_option('--graspingnoise', action='store', type='float',dest='graspingnoise',default=None,
                           help='Random undeterministic noise to add to the target object, represents the max possible displacement of any point on the object. Noise is added after global direction and start have been determined (default=0)')
         parser.add_option('--graspindex', action='store', type='int',dest='graspindex',default=None,

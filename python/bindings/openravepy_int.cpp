@@ -1198,11 +1198,8 @@ public:
         return _pbody->DoesAffect(jointindex,linkindex);
     }
 
-    void SetGuiData(PyUserData pdata) {
-        _pbody->SetGuiData(pdata._handle);
-    }
-    PyUserData GetGuiData() const {
-        return PyUserData(_pbody->GetGuiData());
+    object GetViewerData() const {
+        return toPyUserData(_pbody->GetViewerData());
     }
 
     std::string GetURI() const {
@@ -1233,11 +1230,11 @@ public:
         return adjacent;
     }
 
-    PyUserData GetPhysicsData() const {
-        return PyUserData(_pbody->GetPhysicsData());
+    object GetPhysicsData() const {
+        return toPyUserData(_pbody->GetPhysicsData());
     }
-    PyUserData GetCollisionData() const {
-        return PyUserData(_pbody->GetCollisionData());
+    object GetCollisionData() const {
+        return toPyUserData(_pbody->GetCollisionData());
     }
     PyManageDataPtr GetManageData() const {
         KinBody::ManageDataPtr pdata = _pbody->GetManageData();
@@ -1630,13 +1627,18 @@ public:
             numeric::array arr = toPyArrayN(&pdata->force_covariance[0],pdata->force_covariance.size());
             arr.resize(3,3);
             force_covariance = arr;
+            positions = toPyArray3(pgeom->positions);
+            thickness = pgeom->thickness;
         }
         PyTactileSensorData(boost::shared_ptr<SensorBase::TactileGeomData> pgeom) : PySensorData(SensorBase::ST_Tactile)
         {
+            positions = toPyArray3(pgeom->positions);
+            thickness = pgeom->thickness;
         }
         virtual ~PyTactileSensorData() {
         }
-        object forces, force_covariance;
+        object forces, force_covariance, positions;
+        dReal thickness;
     };
 
     class PyActuatorSensorData : public PySensorData
@@ -1809,12 +1811,12 @@ public:
         return _pIkSolver->Supports(type);
     }
 
-    void SetCustomFilter(object fncallback)
+    object RegisterCustomFilter(int priority, object fncallback)
     {
         if( !fncallback ) {
             throw OPENRAVE_EXCEPTION_FORMAT0("callback not specified",ORE_InvalidArguments);
         }
-        _pIkSolver->SetCustomFilter(boost::bind(&PyIkSolverBase::_CallCustomFilter,fncallback,_pyenv,_1,_2,_3));
+        return toPyUserData(_pIkSolver->RegisterCustomFilter(priority,boost::bind(&PyIkSolverBase::_CallCustomFilter,fncallback,_pyenv,_1,_2,_3)));
     }
 };
 
@@ -2475,12 +2477,35 @@ public:
         return boost::python::make_tuple(toPyArray(lower),toPyArray(upper));
     }
 
-    //    void GetActiveDOFResolutions(dReal* pResolution) const;
-    //    void GetActiveDOFResolutions(std::vector<dReal>& v) const;
-    //    void GetActiveDOFMaxVel(dReal* pMaxVel) const;
-    //    void GetActiveDOFMaxVel(std::vector<dReal>& v) const;
-    //    void GetActiveDOFMaxAccel(dReal* pMaxAccel) const;
-    //    void GetActiveDOFMaxAccel(std::vector<dReal>& v) const;
+    object GetActiveDOFMaxVel() const
+    {
+        if( _probot->GetActiveDOF() == 0 ) {
+            return numeric::array(boost::python::list());
+        }
+        vector<dReal> values;
+        _probot->GetActiveDOFMaxVel(values);
+        return toPyArray(values);
+    }
+
+    object GetActiveDOFMaxAccel() const
+    {
+        if( _probot->GetActiveDOF() == 0 ) {
+            return numeric::array(boost::python::list());
+        }
+        vector<dReal> values;
+        _probot->GetActiveDOFMaxAccel(values);
+        return toPyArray(values);
+    }
+
+    object GetActiveDOFResolutions() const
+    {
+        if( _probot->GetActiveDOF() == 0 ) {
+            return numeric::array(boost::python::list());
+        }
+        vector<dReal> values;
+        _probot->GetActiveDOFResolutions(values);
+        return toPyArray(values);
+    }
 
     //    void GetFullTrajectoryFromActive(PyTrajectory* pFullTraj, PyTrajectory* pActiveTraj, bool bOverwriteTransforms);
     //    void SetActiveMotion(PyTrajectory* ptraj);
@@ -4650,8 +4675,8 @@ In python, the syntax is::\n\n\
                         .def("IsRobot",&PyKinBody::IsRobot, DOXY_FN(KinBody,IsRobot))
                         .def("GetEnvironmentId",&PyKinBody::GetEnvironmentId, DOXY_FN(KinBody,GetEnvironmentId))
                         .def("DoesAffect",&PyKinBody::DoesAffect,args("jointindex","linkindex"), DOXY_FN(KinBody,DoesAffect))
-                        .def("SetGuiData",&PyKinBody::SetGuiData,args("data"), DOXY_FN(KinBody,SetGuiData))
-                        .def("GetGuiData",&PyKinBody::GetGuiData, DOXY_FN(KinBody,GetGuiData))
+                        .def("GetViewerData",&PyKinBody::GetViewerData, DOXY_FN(KinBody,GetViewerData))
+                        .def("GetGuiData",&PyKinBody::GetViewerData, DOXY_FN(KinBody,GetViewerData))
                         .def("GetURI",&PyKinBody::GetURI, DOXY_FN(InterfaceBase,GetURI))
                         .def("GetXMLFilename",&PyKinBody::GetURI, DOXY_FN(InterfaceBase,GetURI))
                         .def("GetNonAdjacentLinks",GetNonAdjacentLinks1, DOXY_FN(KinBody,GetNonAdjacentLinks))
@@ -4908,6 +4933,9 @@ In python, the syntax is::\n\n\
                       .def("SetActiveDOFVelocities",&PyRobotBase::SetActiveDOFVelocities, DOXY_FN(RobotBase,SetActiveDOFVelocities))
                       .def("GetActiveDOFVelocities",&PyRobotBase::GetActiveDOFVelocities, DOXY_FN(RobotBase,GetActiveDOFVelocities))
                       .def("GetActiveDOFLimits",&PyRobotBase::GetActiveDOFLimits, DOXY_FN(RobotBase,GetActiveDOFLimits))
+                      .def("GetActiveDOFMaxVel",&PyRobotBase::GetActiveDOFMaxVel, DOXY_FN(RobotBase,GetActiveDOFMaxVel))
+                      .def("GetActiveDOFMaxAccel",&PyRobotBase::GetActiveDOFMaxAccel, DOXY_FN(RobotBase,GetActiveDOFMaxAccel))
+                      .def("GetActiveDOFResolutions",&PyRobotBase::GetActiveDOFResolutions, DOXY_FN(RobotBase,GetActiveDOFResolutions))
                       .def("GetActiveJointIndices",&PyRobotBase::GetActiveJointIndices)
                       .def("GetActiveDOFIndices",&PyRobotBase::GetActiveDOFIndices, DOXY_FN(RobotBase,GetActiveDOFIndices))
                       .def("SubtractActiveDOFValues",&PyRobotBase::SubtractActiveDOFValues, args("values0","values1"), DOXY_FN(RobotBase,SubtractActiveDOFValues))
@@ -5073,7 +5101,7 @@ In python, the syntax is::\n\n\
     .def("GetNumFreeParameters",&PyIkSolverBase::GetNumFreeParameters, DOXY_FN(IkSolverBase,GetNumFreeParameters))
     .def("GetFreeParameters",&PyIkSolverBase::GetFreeParameters, DOXY_FN(IkSolverBase,GetFreeParameters))
     .def("Supports",&PyIkSolverBase::Supports, args("iktype"), DOXY_FN(IkSolverBase,Supports))
-    .def("SetCustomFilter",&PyIkSolverBase::SetCustomFilter, args("callback"), DOXY_FN(IkSolverBase,SetCustomFilter))
+    .def("RegisterCustomFilter",&PyIkSolverBase::RegisterCustomFilter, args("priority","callback"), DOXY_FN(IkSolverBase,RegisterCustomFilter))
     ;
 
     class_<PyPhysicsEngineBase, boost::shared_ptr<PyPhysicsEngineBase>, bases<PyInterfaceBase> >("PhysicsEngine", DOXY_CLASS(PhysicsEngineBase), no_init)
@@ -5159,6 +5187,8 @@ In python, the syntax is::\n\n\
         class_<PySensorBase::PyTactileSensorData, boost::shared_ptr<PySensorBase::PyTactileSensorData>, bases<PySensorBase::PySensorData> >("TactileSensorData", DOXY_CLASS(SensorBase::TactileSensorData),no_init)
         .def_readonly("forces",&PySensorBase::PyTactileSensorData::forces)
         .def_readonly("force_covariance",&PySensorBase::PyTactileSensorData::force_covariance)
+        .def_readonly("positions",&PySensorBase::PyTactileSensorData::positions)
+        .def_readonly("thickness",&PySensorBase::PyTactileSensorData::thickness)
         ;
         {
             class_<PySensorBase::PyActuatorSensorData, boost::shared_ptr<PySensorBase::PyActuatorSensorData>, bases<PySensorBase::PySensorData> >("ActuatorSensorData", DOXY_CLASS(SensorBase::ActuatorSensorData),no_init)

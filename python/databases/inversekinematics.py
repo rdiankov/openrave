@@ -46,7 +46,7 @@ To show the manipulator and IK results do:
 
 .. code-block:: bash
 
-  openrave.py --database inversekinematics --show
+  openrave.py --database inversekinematics --robot=robots/pr2-beta-static.zae --manipname=leftarm --show
 
 Description
 -----------
@@ -196,11 +196,16 @@ class InverseKinematicsModel(DatabaseGenerator):
         """
         :param forceikfast: if set will always force the ikfast solver
         """
+        self.ikfastproblem = None
+        DatabaseGenerator.__init__(self,robot=robot)
+        # check if robot manipulator has no static links (except the base)
+        for link in self.robot.GetChain(self.manip.GetBase().GetIndex(),self.manip.GetEndEffector().GetIndex(),returnjoints=False)[1:]:
+            for rigidlyattached in link.GetRigidlyAttachedLinks():
+                if rigidlyattached.IsStatic():
+                    raise ValueError('link %s part of IK chain cannot be declared static'%str(link))
         self.ikfast = __import__('openravepy.ikfast',fromlist=['openravepy'])
         self.ikfast.log.addHandler(handler)
         self.ikfast.log.setLevel(logging.INFO)
-
-        DatabaseGenerator.__init__(self,robot=robot)
         self.ikfastproblem = RaveCreateModule(self.env,'ikfast')
         if self.ikfastproblem is not None:
             self.env.AddModule(self.ikfastproblem,'')
@@ -267,6 +272,9 @@ class InverseKinematicsModel(DatabaseGenerator):
         return self.setrobot(freeinc,*args,**kwargs)
     def getversion(self):
         return int(self.ikfast.__version__)
+    def getikname(self):
+        return 'ikfast ikfast.%s.%s.%s'%(self.manip.GetKinematicsStructureHash(),str(self.iktype),self.manip.GetName())
+
     def setrobot(self,freeinc=None):
         """Sets the ik solver on the robot.
         
@@ -287,8 +295,8 @@ class InverseKinematicsModel(DatabaseGenerator):
 #             self.iksolver = RaveCreateIkSolver(self.env,self.manip.GetIKSolverName()+iksuffix)
         if self.iksolver is None:
             with self.env:
-                ikname = 'ikfast.%s.%s.%s'%(self.manip.GetKinematicsStructureHash(),str(self.iktype),self.manip.GetName())
-                iktype = self.ikfastproblem.SendCommand('AddIkLibrary %s %s'%(ikname,self.getfilename(True)))
+                ikname = self.getikname()
+                iktype = self.ikfastproblem.SendCommand('AddIkLibrary %s %s'%(ikname.split()[1],self.getfilename(True)))
                 if iktype is None:
                     if self.forceikfast:
                         return False
@@ -298,7 +306,6 @@ class InverseKinematicsModel(DatabaseGenerator):
                     if int(self.iktype) != int(iktype):
                         raise ValueError('ik does not match types %s!=%s'%(self.iktype,iktype))
                     
-                    ikname = 'ikfast ' + ikname
                     self.iksolver = RaveCreateIkSolver(self.env,ikname+iksuffix)
         if self.iksolver is not None and self.iksolver.Supports(self.iktype):
             return self.manip.SetIKSolver(self.iksolver)
@@ -356,13 +363,14 @@ class InverseKinematicsModel(DatabaseGenerator):
     def getfilename(self,read=False):
         if self.iktype is None:
             raise ValueError('ik type is not set')
-        
+
         if self.solveindices is None or self.freeindices is None:
             solveindices, freeindices = self.getDefaultIndices()
         else:
             solveindices, freeindices = self.solveindices, self.freeindices
 
         index = -1
+        allfreeindices = None
         while True:
             basename = 'ikfast%s.%s.%s.'%(self.getversion(),self.iktype,platform.machine()) + '_'.join(str(ind) for ind in solveindices)
             if len(freeindices)>0:
@@ -373,7 +381,8 @@ class InverseKinematicsModel(DatabaseGenerator):
             # user did not specify a set of freeindices, so the expected behavior is to search for the next loadable one
             index += 1
             dofexpected = IkParameterization.GetDOF(self.iktype)
-            allfreeindices = [f for f in self.ikfast.combinations(self.manip.GetArmIndices(),len(self.manip.GetArmIndices())-dofexpected)]
+            if allfreeindices is None:
+                allfreeindices = [f for f in self.ikfast.permutations(self.manip.GetArmIndices(),len(self.manip.GetArmIndices())-dofexpected)]
             if index >= len(allfreeindices):
                 break
             freeindices = allfreeindices[index]
@@ -406,14 +415,23 @@ class InverseKinematicsModel(DatabaseGenerator):
             
         index = -1
         while True:
-            basename = 'ikfast%s.%s.'%(self.getversion(),self.iktype)
-            basename += '_'.join(str(ind) for ind in solveindices)
+            freeindicesstrings = []
             if len(freeindices)>0:
-                basename += '_f'+'_'.join(str(ind) for ind in freeindices)
-            basename += '.pp'
-            filename = RaveFindDatabaseFile(os.path.join('kinematics.'+self.manip.GetKinematicsStructureHash(),basename),read)
-            if not read or len(filename) > 0 or self.freeindices is not None:
-                break
+                for _freeindices in self.ikfast.permutations(freeindices):
+                    freeindicesstrings.append(['_f'+'_'.join(str(ind) for ind in _freeindices),_freeindices])
+            else:
+                freeindicesstrings.append(['',[]])
+
+            for freeindicesstring, fi in freeindicesstrings:
+                basename = 'ikfast%s.%s.'%(self.getversion(),self.iktype)
+                basename += '_'.join(str(ind) for ind in solveindices)
+                basename += freeindicesstring
+                basename += '.pp'
+                filename = RaveFindDatabaseFile(os.path.join('kinematics.'+self.manip.GetKinematicsStructureHash(),basename),read)
+                if not read or len(filename) > 0 or self.freeindices is not None:
+                    self.freeindices = fi
+                    return filename
+
             # user did not specify a set of freeindices, so the expected behavior is to search for the next loadable one
             index += 1
             dofexpected = IkParameterization.GetDOF(self.iktype)
@@ -687,23 +705,23 @@ class InverseKinematicsModel(DatabaseGenerator):
         if self.env.GetViewer() is None:
             self.env.SetViewer('qtcoin')
         with RobotStateSaver(self.robot):
-            #with self.ArmVisibility(self.manip,0.9):
-            time.sleep(3) # let viewer load
-            self.setrobot(0.05)
-            while True:
-                with self.env:
-                    lower,upper = self.robot.GetDOFLimits(self.manip.GetArmIndices())
-                    self.robot.SetDOFValues(lower+random.rand(len(lower))*(upper-lower),self.manip.GetArmIndices())
-                    ikparam = self.manip.GetIkParameterization(self.iktype)
-                    sols = self.manip.FindIKSolutions(ikparam,IkFilterOptions.CheckEnvCollisions)
-                    weights = self.robot.GetDOFWeights(self.manip.GetArmIndices())
-                    print 'found %d solutions'%len(sols)
-                    sols = TSP(sols,lambda x,y: sum(weights*(x-y)**2))
-                    # find shortest route
-                    for sol in sols:
-                        self.robot.SetDOFValues(sol,self.manip.GetArmIndices())
-                        self.env.UpdatePublishedBodies()
-                        time.sleep(delay)
+            with self.ArmVisibility(self.manip,0.95):
+                time.sleep(3) # let viewer load
+                self.setrobot(0.05)
+                while True:
+                    with self.env:
+                        lower,upper = self.robot.GetDOFLimits(self.manip.GetArmIndices())
+                        self.robot.SetDOFValues(lower+random.rand(len(lower))*(upper-lower),self.manip.GetArmIndices())
+                        ikparam = self.manip.GetIkParameterization(self.iktype)
+                        sols = self.manip.FindIKSolutions(ikparam,IkFilterOptions.CheckEnvCollisions)
+                        weights = self.robot.GetDOFWeights(self.manip.GetArmIndices())
+                        print 'found %d solutions'%len(sols)
+                        sols = TSP(sols,lambda x,y: sum(weights*(x-y)**2))
+                        # find shortest route
+                        for sol in sols:
+                            self.robot.SetDOFValues(sol,self.manip.GetArmIndices())
+                            self.env.UpdatePublishedBodies()
+                            time.sleep(delay)
 
     @staticmethod
     def getcompiler():

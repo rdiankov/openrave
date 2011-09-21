@@ -51,10 +51,6 @@ public:
         return shared_solver();
     }
 
-    virtual void SetCustomFilter(const IkFilterCallbackFn& filterfn) {
-        _filterfn = filterfn;
-    }
-
     bool _SetIkThresholdCommand(ostream& sout, istream& sinput)
     {
         sinput >> _ikthreshold;
@@ -110,6 +106,9 @@ public:
         }
 
         if( _vFreeInc.size() != _vfreeparams.size() ) {
+            if( _vFreeInc.size() != 0 ) {
+                RAVELOG_WARN(str(boost::format("_vFreeInc not correct size: %d != %d\n")%_vFreeInc.size()%_vfreeparams.size()));
+            }
             _vFreeInc.resize(_vfreeparams.size());
             stringstream ss;
             ss << "robot " << probot->GetName() << ":" << pmanip->GetName() << " setting free increment to: ";
@@ -523,13 +522,11 @@ private:
 
         // check for self collisions
         probot->SetActiveDOFValues(vravesol);
-        if( !!_filterfn ) {
-            switch(_filterfn(vravesol, pmanip, param)) {
-            case IKFR_Reject: return SR_Continue;
-            case IKFR_Quit: return SR_Quit;
-            case IKFR_Success:
-                break;
-            }
+        switch(_CallFilters(vravesol, pmanip, param)) {
+        case IKFR_Reject: return SR_Continue;
+        case IKFR_Quit: return SR_Quit;
+        case IKFR_Success:
+            break;
         }
 
         CollisionReport report;
@@ -623,13 +620,11 @@ private:
         RobotBasePtr probot = pmanip->GetRobot();
         probot->SetActiveDOFValues(vravesol);
 
-        if( !!_filterfn ) {
-            switch(_filterfn(vravesol, pmanip, param)) {
-            case IKFR_Reject: return SR_Continue;
-            case IKFR_Quit: return SR_Quit;
-            case IKFR_Success:
-                break;
-            }
+        switch(_CallFilters(vravesol, pmanip, param)) {
+        case IKFR_Reject: return SR_Continue;
+        case IKFR_Quit: return SR_Quit;
+        case IKFR_Success:
+            break;
         }
 
         if( !(filteroptions&IKFO_IgnoreSelfCollisions) ) {
@@ -720,7 +715,6 @@ private:
     std::vector<dReal> _vFreeInc;
     int _nTotalDOF;
     std::vector<dReal> _qlower, _qupper;
-    IkFilterCallbackFn _filterfn;
     IkParameterization::Type _iktype;
     boost::shared_ptr<void> _resource;
     std::string _kinematicshash;

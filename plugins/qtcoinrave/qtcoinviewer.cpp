@@ -1143,11 +1143,10 @@ void QtCoinViewer::PrintCamera()
     GetCamera()->orientation.getValue(axis, fangle);
 
     RAVELOG_INFOA("Camera Transformation:\n"
-                  "position: %f %f %f\n"
-                  "orientation: axis=(%f %f %f), angle = %f (%f deg)\n"
+                  "<camtrans>%f %f %f</camtrans>\n"
+                  "<camrotationaxis>%f %f %f %f</camrotationaxis>\n"
                   "height angle: %f, focal dist: %f\n", pos[0], pos[1], pos[2],
-                  axis[0], axis[1], axis[2], fangle, fangle*180.0f/PI, GetCamera()->heightAngle.getValue(),
-                  GetCamera()->focalDistance.getValue());
+                  axis[0], axis[1], axis[2], fangle*180.0f/PI, GetCamera()->heightAngle.getValue(), GetCamera()->focalDistance.getValue());
 }
 
 RaveTransform<float> QtCoinViewer::GetCameraTransform() const
@@ -2568,14 +2567,14 @@ void QtCoinViewer::UpdateFromModel()
     FOREACH(itbody, vecbodies) {
         BOOST_ASSERT( !!itbody->pbody );
         KinBodyPtr pbody = itbody->pbody; // try to use only as an id, don't call any methods!
-        KinBodyItemPtr pitem = boost::dynamic_pointer_cast<KinBodyItem>(itbody->pguidata);
+        KinBodyItemPtr pitem = boost::dynamic_pointer_cast<KinBodyItem>(itbody->pviewerdata);
 
         if( !pitem ) {
             // make sure pbody is actually present
             if( GetEnv()->GetBodyFromEnvironmentId(itbody->environmentid) == pbody ) {
 
                 // check to make sure the real GUI data is also NULL
-                if( !pbody->GetGuiData() ) {
+                if( !pbody->GetViewerData() ) {
                     if( _mapbodies.find(pbody) != _mapbodies.end() ) {
                         RAVELOG_WARN("body %s already registered!\n", pbody->GetName().c_str());
                         continue;
@@ -2613,11 +2612,11 @@ void QtCoinViewer::UpdateFromModel()
                         _deselect();
                     }
                     pitem->Load();
-                    pbody->SetGuiData(pitem);
+                    SetViewerData(pbody,pitem);
                     _mapbodies[pbody] = pitem;
                 }
                 else {
-                    pitem = boost::dynamic_pointer_cast<KinBodyItem>(pbody->GetGuiData());
+                    pitem = boost::dynamic_pointer_cast<KinBodyItem>(pbody->GetViewerData());
                     BOOST_ASSERT( _mapbodies.find(pbody) != _mapbodies.end() && _mapbodies[pbody] == pitem );
                 }
             }
@@ -2644,7 +2643,7 @@ void QtCoinViewer::UpdateFromModel()
     FOREACH_NOINC(it, _mapbodies) {
         if( !it->second->GetUserData() ) {
             // item doesn't exist anymore, remove it
-            it->first->SetGuiData(UserDataPtr());
+            SetViewerData(it->first,UserDataPtr());
 
             if( _pSelectedItem == it->second ) {
                 _pdragger.reset();
@@ -2676,8 +2675,8 @@ void QtCoinViewer::_Reset()
     _condUpdateModels.notify_all();
 
     FOREACH(itbody, _mapbodies) {
-        BOOST_ASSERT( itbody->first->GetGuiData() == itbody->second );
-        itbody->first->SetGuiData(UserDataPtr());
+        BOOST_ASSERT( itbody->first->GetViewerData() == itbody->second );
+        SetViewerData(itbody->first, UserDataPtr());
     }
     _mapbodies.clear();
 
@@ -2787,8 +2786,8 @@ void QtCoinViewer::ViewGeometryChanged(QAction* pact)
 
     UpdateFromModel();
     FOREACH(itbody, _mapbodies) {
-        BOOST_ASSERT( itbody->first->GetGuiData() == itbody->second );
-        itbody->first->SetGuiData(UserDataPtr());
+        BOOST_ASSERT( itbody->first->GetViewerData() == itbody->second );
+        SetViewerData(itbody->first,UserDataPtr());
     }
     _mapbodies.clear();
 

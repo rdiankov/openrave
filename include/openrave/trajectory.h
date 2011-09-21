@@ -199,6 +199,10 @@ private:
     virtual int GetDOF() const {
         return _nDOF;
     }
+
+    virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions);
+
+    virtual void SetAffineVelocity(const Vector& maxAffineTranslationVel, dReal maxAffineRotationQuatVel);
 private:
 
     /// \brief Linear interpolation using the maximum joint velocities for timing.

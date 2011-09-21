@@ -36,6 +36,22 @@ Command-line
 
 .. shell-block:: openrave.py --database linkstatistics --help
 
+Description
+-----------
+
+When using link statics, it is possible to set the joints weights and resolutions so that planning is fastest. The **xyzdelta** parameter specifies the smallest object that can be found in the environment, this becomes the new discretization factor when checking collision. Higher values mean faster planning.
+
+
+.. code-block:: python
+
+   lmodel = databases.linkstatistics.LinkStatisticsModel(robot)
+   if not lmodel.load():
+       lmodel.autogenerate()
+   lmodel.setRobotWeights()
+   lmodel.setRobotResolutions(xyzdelta=0.01)
+   print 'robot resolutions: ',repr(robot.GetDOFResolutions())
+   print 'robot weights: ',repr(robot.GetDOFWeights())
+
 Class Definitions
 -----------------
 
@@ -107,7 +123,7 @@ class LinkStatisticsModel(DatabaseGenerator):
             self.robot.SetAffineTranslationResolution(tile(xyzdelta,3))
             self.robot.SetAffineRotationAxisResolution(tile(xyzdelta/numpy.max(self.affinevolumes[3+2]['crossarea'][:,0]),4))
 
-    def setRobotWeights(self,weightexp=0.3333,type=0):
+    def setRobotWeights(self,weightexp=0.3333,type=0,weightmult=10.0):
         """sets the weights for the robot.
         weightexp is the exponent for the final weights to help reduce the max:min (default is 1/3 which results in 50:1)
         Weights should be proportional so that equal distances displace the same volume on average.
@@ -122,7 +138,8 @@ class LinkStatisticsModel(DatabaseGenerator):
                         accumvolume = sum(array([volume for ilink,volume in enumerate(linkvolumes) if self.robot.DoesAffect(ijoint,ilink)]))
                     return (volumeinfo['volumedelta']*accumvolume)**weightexp
                 jweights = array([getweight(ijoint,jv) for ijoint,jv in enumerate(self.jointvolumes)])
-                jweights *= 10.0# this is a weird factor.... but at least it is consistent when composing robots
+                # this is a weird factor.... but at least it is consistent when composing robots
+                jweights *= weightmult
                 for w,j in izip(jweights,self.robot.GetJoints()):
                     j.SetWeights(tile(w,j.GetDOF()))
                 self.robot.SetAffineTranslationWeights([getweight(-1,self.affinevolumes[i]) for i in range(3)])

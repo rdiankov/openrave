@@ -3,12 +3,65 @@
 ChangeLog
 #########
 
+Version 0.5.0 Unstable
+======================
+
+Subversion Revision: **Unreleased**
+
+Initial Release: **Unreleased**
+
+Core
+----
+
+* fixed physics simulation loop freezing, added tests
+
+* fixed "prefix" attribute when colldata models are used.
+
+* added "scalegeometry" attribute to kinbody loading. can have different scales along XYZ.
+
+Inverse Kinematics
+------------------
+
+* added :ref:`.IkSolver::RegisterCustomFilter` that allows any number of filters to be registered with priority. :ref:`.IkSolver::SetCustomFilter` is deprecated.
+
+* Fixed TranslationDirection5D IK bug, upgrade ikfast version
+
+Grasping
+--------
+
+* fixes in grasping with standoff
+
+* added IK checking option to :ref:`module-grasper-graspthreaded`, showing usage in :mod:`.examples.fastgraspingthreaded` example.
+
+* added new :mod:`.examples.fastgraspingthreaded` example to show how to use multithreaded functions to compute good grasps in real-time.
+
+* added **--numthreads** option to **openrave.py --database grasping** to allow users to set number of threads.
+
+Misc
+----
+
+* added TrajectoryBase::Clone and CalcTrajTiming calls now respect active DOFs settings
+
+* "skipgeometry" now being acknowledged in Environment::Load, fixes the **openrave.py inversekinematics database --getfilename** option.
+
+* <render> tag for non-trimesh objects works now
+
+* more reasonable default acceleration and velocity limits
+
+* fixed octave graspplanning demo
+
+* added two python examples showing how to use PyQt + OpenRAVE together. :mod:`.examples.qtexampleselector` :mod:`.examples.qtserverprocess`
+
+* odephysics now uses dJointFeedbakc to compute forces/torques on links
+
+* removed **KinBody.SetGuiData** and **KinBody.GetGuiData** and replaced with :ref:`.KinBody.GetViewerData` similar to how collision/physics are handled.
+
 Version 0.4.2
 =============
 
-Subversion Revision: 2668
+Subversion Revision: 2678
 
-Initial Release: 2011/08/08
+Initial Release: 2011/08/11
 
 Core
 ----
@@ -49,8 +102,8 @@ Octave/Matlab
 
 * Octave stripping symbols
 
-IKFast
-------
+Inverse Kinematics
+------------------
 
 * Fixed major IK fast bug when intersecting axes of robot are not at the ends.
 
@@ -59,7 +112,7 @@ Tests
 
 * test_programs is now runnable by windows
 
-* test_ikfast is now also included in the regular tests to determine release. The full IK tests are run separately, and those can fail.
+* test_ikfast is now also included in the regular tests to determine release. The full IK tests are run separately to gather statistics on ikfast.
 
 Grasping
 --------
@@ -621,7 +674,7 @@ Misc
 
 * Added convex hull computation command inside grasper plugin so that openrave can convert point clouds into meshes for grasping.
 
-* Added several new python examples: checkconvexdecomposition.py, checkvisibility.py, fastgrasping.py,
+* Added several new python examples: :mod:`.examples.checkconvexdecomposition`, :mod:`.examples.checkvisibility`, :mod:`.examples.fastgrasping`,
 
 Version 0.2.15
 ==============

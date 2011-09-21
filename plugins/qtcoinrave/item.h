@@ -201,7 +201,7 @@ public:
     /// first is the index link index
     struct EE
     {
-        EE() {
+        EE() : _index(-1), _ptrans(NULL), _pswitch(NULL) {
         }
         EE(int index, SoTransform* ptrans, SoSwitch* pswitch) : _index(index), _ptrans(ptrans), _pswitch(pswitch) {
         }

@@ -218,7 +218,15 @@ protected:
             ptraj->CalcTrajTiming(robot,TrajectoryBase::CUBIC,true,false,_fMaxVelMult);
         }
         RAVELOG_VERBOSE(str(boost::format("executing traj with %d points\n")%ptraj->GetPoints().size()));
-        robot->SetMotion(ptraj);
+        if( ptraj->GetDOF() == robot->GetDOF() ) {
+            robot->SetMotion(ptraj);
+        }
+        else if( ptraj->GetDOF() == robot->GetActiveDOF() ) {
+            robot->SetActiveMotion(ptraj);
+        }
+        else {
+            return false;
+        }
         sout << "1";
         return true;
     }
@@ -316,20 +324,19 @@ protected:
             params->vinitialconfig.resize(0);     // set by SetRobotActiveJoints
         }
 
+        if( RaveHasInterface(PT_Planner,"ParabolicSmoothingPlanner") ) {
+            params->_sPathOptimizationPlanner = "ParabolicSmoothingPlanner";
+        }
+
         // compute a workspace trajectory (important to do this after jittering!)
         {
-            Vector voldtrans = robot->GetAffineTranslationMaxVels();
-            dReal foldrot = robot->GetAffineRotationQuatMaxVels();
-            robot->SetAffineTranslationMaxVels(Vector(1,1,1));
-            robot->SetAffineRotationQuatMaxVels(1.0);
             params->workspacetraj = RaveCreateTrajectory(GetEnv(),"");
             params->workspacetraj->Reset(0);
+            params->workspacetraj->SetAffineVelocity(Vector(1,1,1),10);
             params->workspacetraj->AddPoint(TrajectoryBase::TPOINT(vector<dReal>(),Tee,0));
             Tee.trans += direction*maxsteps*params->_fStepLength;
             params->workspacetraj->AddPoint(TrajectoryBase::TPOINT(vector<dReal>(),Tee,0));
             params->workspacetraj->CalcTrajTiming(RobotBasePtr(),TrajectoryBase::LINEAR,true,false);
-            robot->SetAffineTranslationMaxVels(voldtrans);
-            robot->SetAffineRotationQuatMaxVels(foldrot);
         }
 
         PlannerBasePtr planner = RaveCreatePlanner(GetEnv(),"workspacetrajectorytracker");
@@ -458,7 +465,9 @@ protected:
             return false;
         }
         params->vgoalconfig.resize(writeindex);
-
+        if( RaveHasInterface(PT_Planner,"ParabolicSmoothingPlanner") ) {
+            params->_sPathOptimizationPlanner = "ParabolicSmoothingPlanner";
+        }
         robot->SetActiveDOFValues(originalvalues);
 
         // jitter again for initial collision
@@ -679,6 +688,7 @@ protected:
                 --nSeedIkSolutions;
             }
         }
+        goalsampler.SetSamplingProb(0.05);
         params->_samplegoalfn = boost::bind(&planningutils::ManipulatorIKGoalSampler::Sample,&goalsampler,_1);
 
         if( params->vgoalconfig.size() == 0 ) {
@@ -700,6 +710,10 @@ protected:
             return false;
         }
         robot->GetActiveDOFValues(params->vinitialconfig);
+
+        if( RaveHasInterface(PT_Planner,"ParabolicSmoothingPlanner") ) {
+            params->_sPathOptimizationPlanner = "ParabolicSmoothingPlanner";
+        }
 
         PlannerBasePtr rrtplanner = RaveCreatePlanner(GetEnv(),_strRRTPlannerName);
         if( !rrtplanner ) {
@@ -902,17 +916,6 @@ protected:
         return true;
     }
 
-    class IkResetFilter
-    {
-public:
-        IkResetFilter(IkSolverBasePtr iksolver) : _iksolver(iksolver) {
-        }
-        virtual ~IkResetFilter() {
-            _iksolver->SetCustomFilter(IkSolverBase::IkFilterCallbackFn());
-        }
-        IkSolverBasePtr _iksolver;
-    };
-
     bool FindIKWithFilters(ostream& sout, istream& sinput)
     {
         bool bSolveAll = false;
@@ -960,8 +963,7 @@ public:
         if( !filterfn ) {
             throw openrave_exception("FindIKWithFilters: no filter function set");
         }
-        IkResetFilter resetfilter(robot->GetActiveManipulator()->GetIkSolver());
-        pmanip->GetIkSolver()->SetCustomFilter(filterfn);
+        UserDataPtr filterhandle = robot->GetActiveManipulator()->GetIkSolver()->RegisterCustomFilter(0,filterfn);
         vector< vector<dReal> > vsolutions;
         if( bSolveAll ) {
             if( !pmanip->FindIKSolutions(ikparam,vsolutions,filteroptions)) {

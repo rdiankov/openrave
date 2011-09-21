@@ -45,6 +45,14 @@ object toPyGraphHandle(const GraphHandlePtr p)
     return object(PyGraphHandle(p));
 }
 
+object toPyUserData(UserDataPtr p)
+{
+    if( !p ) {
+        return object();
+    }
+    return object(PyUserData(p));
+}
+
 object toPyRay(const RAY& r)
 {
     return object(boost::shared_ptr<PyRay>(new PyRay(r)));
@@ -293,6 +301,11 @@ public:
     dReal ComputeDistanceSqr(boost::shared_ptr<PyIkParameterization> pyikparam)
     {
         return _param.ComputeDistanceSqr(pyikparam->_param);
+    }
+
+    object Transform(object otrans)
+    {
+        return toPyIkParameterization(ExtractTransform(otrans) * _param);
     }
 
     IkParameterization _param;
@@ -726,6 +739,11 @@ void init_openravepy_global()
     .def("SetTransform",&PyGraphHandle::SetTransform,DOXY_FN(GraphHandle,SetTransform))
     .def("SetShow",&PyGraphHandle::SetShow,DOXY_FN(GraphHandle,SetShow))
     ;
+
+    class_<PyUserData, boost::shared_ptr<PyUserData> >("UserData", DOXY_CLASS(UserData), no_init)
+    .def("close",&PyUserData::close,"force releasing the user handle point.")
+    ;
+
     class_<PyRay, boost::shared_ptr<PyRay> >("Ray", DOXY_CLASS(geometry::ray))
     .def(init<object,object>(args("pos","dir")))
     .def("dir",&PyRay::dir)
@@ -791,6 +809,7 @@ void init_openravepy_global()
                                    .def_pickle(IkParameterization_pickle_suite())
 
                                    .def("ComputeDistanceSqr",&PyIkParameterization::ComputeDistanceSqr,DOXY_FN(IkParameterization,ComputeDistanceSqr))
+                                   .def("Transform",&PyIkParameterization::Transform,"Transforms the IK parameterization by this (T * ik)")
                                    // deprecated
                                    .def("SetTransform",&PyIkParameterization::SetTransform6D,args("transform"), DOXY_FN(IkParameterization,SetTransform6D))
                                    .def("SetRotation",&PyIkParameterization::SetRotation3D,args("quat"), DOXY_FN(IkParameterization,SetRotation3D))

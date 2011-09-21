@@ -35,6 +35,26 @@
 
 namespace OpenRAVE {
 
+class ChangeCallbackData : public UserData
+{
+public:
+    ChangeCallbackData(int properties, const boost::function<void()>& callback, KinBodyPtr pbody) : _properties(properties), _callback(callback), _pweakbody(pbody) {
+    }
+    virtual ~ChangeCallbackData() {
+        KinBodyPtr pbody = _pweakbody.lock();
+        if( !!pbody ) {
+            pbody->_listRegisteredCallbacks.erase(_iterator);
+        }
+    }
+
+    int _properties;
+    boost::function<void()> _callback;
+    KinBodyWeakPtr _pweakbody;
+    list<UserDataWeakPtr>::iterator _iterator;
+};
+
+typedef boost::shared_ptr<ChangeCallbackData> ChangeCallbackDataPtr;
+
 void KinBody::Link::TRIMESH::ApplyTransform(const Transform& t)
 {
     FOREACH(it, vertices) {
@@ -803,10 +823,10 @@ KinBody::Joint::Joint(KinBodyPtr parent)
     }
     fResolution = dReal(0.02);
     FOREACH(it,_vmaxvel) {
-        *it = 1e5f;
+        *it = 10;
     }
     FOREACH(it,_vmaxaccel) {
-        *it = 1e5f;
+        *it = 100;
     }
     FOREACH(it,_vmaxtorque) {
         *it = 1e5f;
@@ -1848,7 +1868,7 @@ void KinBody::Destroy()
     _vForcedAdjacentLinks.clear();
     _nHierarchyComputed = 0;
     _nParametersChanged = 0;
-    _pGuiData.reset();
+    _pViewerData.reset();
     _pPhysicsData.reset();
     _pCollisionData.reset();
     _pManageData.reset();
@@ -1886,7 +1906,7 @@ bool KinBody::InitFromBoxes(const std::vector<AABB>& vaabbs, bool bDraw)
     plink->_index = 0;
     plink->_name = "base";
     plink->_bStatic = true;
-    Link::TRIMESH trimesh;
+    size_t numvertices=0, numindices=0;
     FOREACHC(itab, vaabbs) {
         plink->_listGeomProperties.push_back(Link::GEOMPROPERTIES(plink));
         Link::GEOMPROPERTIES& geom = plink->_listGeomProperties.back();
@@ -1897,11 +1917,18 @@ bool KinBody::InitFromBoxes(const std::vector<AABB>& vaabbs, bool bDraw)
         geom.InitCollisionMesh();
         geom.diffuseColor=Vector(1,0.5f,0.5f,1);
         geom.ambientColor=Vector(0.1,0.0f,0.0f,0);
-        trimesh = geom.GetCollisionMesh();
-        trimesh.ApplyTransform(geom._t);
-        plink->collision.Append(trimesh);
+        numvertices += geom.GetCollisionMesh().vertices.size();
+        numindices += geom.GetCollisionMesh().indices.size();
     }
 
+    plink->collision.vertices.reserve(numvertices);
+    plink->collision.indices.reserve(numindices);
+    Link::TRIMESH trimesh;
+    FOREACH(itgeom,plink->_listGeomProperties) {
+        trimesh = itgeom->GetCollisionMesh();
+        trimesh.ApplyTransform(itgeom->_t);
+        plink->collision.Append(trimesh);
+    }
     _veclinks.push_back(plink);
     return true;
 }
@@ -1916,7 +1943,7 @@ bool KinBody::InitFromBoxes(const std::vector<OBB>& vobbs, bool bDraw)
     plink->_index = 0;
     plink->_name = "base";
     plink->_bStatic = true;
-    Link::TRIMESH trimesh;
+    size_t numvertices=0, numindices=0;
     FOREACHC(itobb, vobbs) {
         plink->_listGeomProperties.push_back(Link::GEOMPROPERTIES(plink));
         Link::GEOMPROPERTIES& geom = plink->_listGeomProperties.back();
@@ -1932,8 +1959,16 @@ bool KinBody::InitFromBoxes(const std::vector<OBB>& vobbs, bool bDraw)
         geom.InitCollisionMesh();
         geom.diffuseColor=Vector(1,0.5f,0.5f,1);
         geom.ambientColor=Vector(0.1,0.0f,0.0f,0);
-        trimesh = geom.GetCollisionMesh();
-        trimesh.ApplyTransform(geom._t);
+        numvertices += geom.GetCollisionMesh().vertices.size();
+        numindices += geom.GetCollisionMesh().indices.size();
+    }
+
+    plink->collision.vertices.reserve(numvertices);
+    plink->collision.indices.reserve(numindices);
+    Link::TRIMESH trimesh;
+    FOREACH(itgeom,plink->_listGeomProperties) {
+        trimesh = itgeom->GetCollisionMesh();
+        trimesh.ApplyTransform(itgeom->_t);
         plink->collision.Append(trimesh);
     }
 
@@ -3929,10 +3964,11 @@ void KinBody::_ComputeInternalInformation()
     }
     // notify any callbacks of the changes
     if( _nParametersChanged ) {
-        std::list<std::pair<int,boost::function<void()> > > listRegisteredCallbacks = _listRegisteredCallbacks; // copy since it can be changed
-        FOREACH(itfns,listRegisteredCallbacks) {
-            if( itfns->first & _nParametersChanged ) {
-                itfns->second();
+        std::list<UserDataWeakPtr> listRegisteredCallbacks = _listRegisteredCallbacks; // copy since it can be changed
+        FOREACH(it,listRegisteredCallbacks) {
+            ChangeCallbackDataPtr pdata = boost::dynamic_pointer_cast<ChangeCallbackData>(it->lock());
+            if( !!pdata && (pdata->_properties & _nParametersChanged) ) {
+                pdata->_callback();
             }
         }
         _nParametersChanged = 0;
@@ -4231,10 +4267,11 @@ void KinBody::_ParametersChanged(int parameters)
         __hashkinematics.resize(0);
     }
 
-    std::list<std::pair<int,boost::function<void()> > > listRegisteredCallbacks = _listRegisteredCallbacks; // copy since it can be changed
-    FOREACH(itfns,listRegisteredCallbacks) {
-        if( itfns->first & parameters ) {
-            itfns->second();
+    std::list<UserDataWeakPtr> listRegisteredCallbacks = _listRegisteredCallbacks; // copy since it can be changed
+    FOREACH(it,listRegisteredCallbacks) {
+        ChangeCallbackDataPtr pdata = boost::dynamic_pointer_cast<ChangeCallbackData>(it->lock());
+        if( !!pdata && (pdata->_properties & parameters) ) {
+            pdata->_callback();
         }
     }
 }
@@ -4279,20 +4316,11 @@ const std::string& KinBody::GetKinematicsGeometryHash() const
     return __hashkinematics;
 }
 
-void KinBody::__erase_iterator(KinBodyWeakPtr pweakbody, std::list<std::pair<int,boost::function<void()> > >::iterator* pit)
+UserDataPtr KinBody::RegisterChangeCallback(int properties, const boost::function<void()>& callback)
 {
-    if( !!pit ) {
-        KinBodyPtr pbody = pweakbody.lock();
-        if( !!pbody ) {
-            pbody->_listRegisteredCallbacks.erase(*pit);
-        }
-        delete pit;
-    }
-}
-
-boost::shared_ptr<void> KinBody::RegisterChangeCallback(int properties, const boost::function<void()>& callback)
-{
-    return boost::shared_ptr<void>(new std::list<std::pair<int,boost::function<void()> > >::iterator(_listRegisteredCallbacks.insert(_listRegisteredCallbacks.end(),make_pair(properties,callback))), boost::bind(KinBody::__erase_iterator,KinBodyWeakPtr(shared_kinbody()), _1));
+    ChangeCallbackDataPtr pdata(new ChangeCallbackData(properties,callback,shared_kinbody()));
+    pdata->_iterator = _listRegisteredCallbacks.insert(_listRegisteredCallbacks.end(),pdata);
+    return pdata;
 }
 
 static std::vector<dReal> fparser_polyroots2(const dReal* rawcoeffs)

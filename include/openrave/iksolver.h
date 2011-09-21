@@ -68,77 +68,112 @@ public:
         return PT_InverseKinematicsSolver;
     }
 
-    /// sets the IkSolverBase attached to a specific robot and sets IkSolverBase specific options
+    /// brief Sets the IkSolverBase attached to a specific robot and sets IkSolverBase specific options.
+    ///
     /// For example, some ik solvers might have different ways of computing optimal solutions.
     /// \param pmanip The manipulator the IK solver is attached to
     virtual bool Init(RobotBase::ManipulatorPtr pmanip) = 0;
 
     virtual RobotBase::ManipulatorPtr GetManipulator() const = 0;
 
-    /// \brief Sets an ik solution filter that is called for every ik solution.
-    ///
-    /// \param filterfn - an optional filter function to be called, see \ref IkFilterCallbackFn.
-    /// \exception openrave_exception Throw if filters are not supported.
-    virtual void SetCustomFilter(const IkFilterCallbackFn& filterfn) OPENRAVE_DUMMY_IMPLEMENTATION;
+    /** \brief Sets an ik solution filter that is called for every ik solution.
+
+        Multiple filters can be set at once, each filter will be called according to its priority; higher values get called first. The default implementation of IkSolverBase manages the filters internally. Users implementing their own IkSolverBase should call \ref _CallFilters to run the internally managed filters.
+        \param filterfn - an optional filter function to be called, see \ref IkFilterCallbackFn.
+        \param priority - The priority of the filter that controls the order in which filters get called. Higher priority filters get called first. If not certain what to set, use 0.
+        \return a managed handle to the filter. If this handle is released, then the fitler will be removed. Release operation is <b>[multi-thread safe]</b>.
+     */
+    virtual UserDataPtr RegisterCustomFilter(int priority, const IkFilterCallbackFn& filterfn);
+
+    /// \deprecated (11/09/21)
+    virtual void SetCustomFilter(const IkFilterCallbackFn& filterfn) RAVE_DEPRECATED
+    {
+        RAVELOG_WARN("IkSolverBase::SetCustomFilter is deprecated, have to use handle=AddCustomFilter. This call will will leak memory\n");
+        if( __listRegisteredFilters.size() > 0 ) {
+            RAVELOG_WARN("IkSolverBase::SetCustomFilter is deprecated, deleting all current filters!\n");
+        }
+        new UserDataPtr(RegisterCustomFilter(0,filterfn));
+    }
 
     /// \brief Number of free parameters defining the null solution space.
     ///
     /// Each parameter is always in the range of [0,1].
     virtual int GetNumFreeParameters() const = 0;
 
-    /// \brief gets the free parameters from the current robot configuration
-    ///
-    /// \param[out] vFreeParameters is filled with GetNumFreeParameters() parameters in [0,1] range
-    /// \return true if succeeded
+    /** \brief gets the free parameters from the current robot configuration
+
+        \param[out] vFreeParameters is filled with GetNumFreeParameters() parameters in [0,1] range
+        \return true if succeeded
+     */
     virtual bool GetFreeParameters(std::vector<dReal>& vFreeParameters) const = 0;
 
-    /// Return a joint configuration for the given end effector transform. Robot is checked for self-collisions.
-    /// \param[in] param the pose the end effector has to achieve. Note that the end effector pose
-    ///                        takes into account the grasp coordinate frame for the RobotBase::Manipulator
-    /// \param[in] q0 Return a solution nearest to the given configuration q0 in terms of the joint distance.
-    ///           If q0 is NULL, returns the first solution found
-    /// \param[in] filteroptions A bitmask of \ref IkFilterOptions values controlling what is checked for each ik solution.
-    /// \param[out] solution [optional] Holds the IK solution
-    /// \return true if solution is found
+    /** \brief Return a joint configuration for the given end effector transform.
+
+        \param[in] param the pose the end effector has to achieve. Note that the end effector pose
+        takes into account the grasp coordinate frame for the RobotBase::Manipulator
+        \param[in] q0 Return a solution nearest to the given configuration q0 in terms of the joint distance. If q0 is NULL, returns the first solution found
+        \param[in] filteroptions A bitmask of \ref IkFilterOptions values controlling what is checked for each ik solution.
+        \param[out] solution [optional] Holds the IK solution
+        \return true if solution is found
+     */
     virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, int filteroptions, boost::shared_ptr< std::vector<dReal> > solution) = 0;
 
-    /// Return all joint configurations for the given end effector transform. Robot is checked for self-collisions.
-    /// \param[in] param the pose the end effector has to achieve. Note that the end effector pose
-    ///                        takes into account the grasp coordinate frame for the RobotBase::Manipulator
-    /// \param[in] filteroptions A bitmask of \ref IkFilterOptions values controlling what is checked for each ik solution.
-    /// \param[out] solutions All solutions within a reasonable discretization level of the free parameters.
-    /// \return true if at least one solution is found
+    /** \brief Return all joint configurations for the given end effector transform.
+
+       \param[in] param the pose the end effector has to achieve. Note that the end effector pose
+       takes into account the grasp coordinate frame for the RobotBase::Manipulator
+       \param[in] filteroptions A bitmask of \ref IkFilterOptions values controlling what is checked for each ik solution.
+       \param[out] solutions All solutions within a reasonable discretization level of the free parameters.
+       \return true if at least one solution is found
+     */
     virtual bool Solve(const IkParameterization& param, int filteroptions, std::vector< std::vector<dReal> >& solutions) = 0;
 
-    /// Return a joint configuration for the given end effector transform. Robot is checked for self-collisions.
-    /// Can specify the free parameters in [0,1] range. If NULL, the regular equivalent Solve is called
-    /// \param[in] param the pose the end effector has to achieve. Note that the end effector pose
-    ///                        takes into account the grasp coordinate frame for the RobotBase::Manipulator
-    /// \param[in] q0 Return a solution nearest to the given configuration q0 in terms of the joint distance.
-    ///           If q0 is empty, returns the first solution found
-    /// \param[in] vFreeParameters The free parameters of the null space of the IK solutions. Always in range of [0,1]
-    /// \param[in] filteroptions A bitmask of \ref IkFilterOptions values controlling what is checked for each ik solution.
-    /// \param[out] solution Holds the IK solution, must be of size RobotBase::Manipulator::_vecarmjoints
-    /// \return true if solution is found
+    /** Return a joint configuration for the given end effector transform.
+
+        Can specify the free parameters in [0,1] range. If NULL, the regular equivalent Solve is called
+        \param[in] param the pose the end effector has to achieve. Note that the end effector pose takes into account the grasp coordinate frame for the RobotBase::Manipulator
+        \param[in] q0 Return a solution nearest to the given configuration q0 in terms of the joint distance. If q0 is empty, returns the first solution found
+        \param[in] vFreeParameters The free parameters of the null space of the IK solutions. Always in range of [0,1]
+        \param[in] filteroptions A bitmask of \ref IkFilterOptions values controlling what is checked for each ik solution.
+        \param[out] solution Holds the IK solution, must be of size RobotBase::Manipulator::_vecarmjoints
+        \return true if solution is found
+     */
     virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, const std::vector<dReal>& vFreeParameters, int filteroptions, boost::shared_ptr< std::vector<dReal> > solution) = 0;
 
-    /// Return all joint configurations for the given end effector transform. Robot is checked for self-collisions.
-    /// Can specify the free parameters in [0,1] range. If NULL, the regular equivalent Solve is called
-    /// \param[in] param the pose the end effector has to achieve. Note that the end effector pose
-    ///                        takes into account the grasp coordinate frame for the RobotBase::Manipulator
-    /// \param[in] vFreeParameters The free parameters of the null space of the IK solutions. Always in range of [0,1]
-    /// \param[in] filteroptions A bitmask of \ref IkFilterOptions values controlling what is checked for each ik solution.
-    /// \param[out] solutions All solutions within a reasonable discretization level of the free parameters.
-    /// \return true at least one solution is found
+    /** \brief Return all joint configurations for the given end effector transform.
+
+        Can specify the free parameters in [0,1] range. If NULL, the regular equivalent Solve is called
+        \param[in] param the pose the end effector has to achieve. Note that the end effector pose
+        takes into account the grasp coordinate frame for the RobotBase::Manipulator
+        \param[in] vFreeParameters The free parameters of the null space of the IK solutions. Always in range of [0,1]
+        \param[in] filteroptions A bitmask of \ref IkFilterOptions values controlling what is checked for each ik solution.
+        \param[out] solutions All solutions within a reasonable discretization level of the free parameters.
+        \return true at least one solution is found
+     */
     virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, int filteroptions, std::vector< std::vector<dReal> >& solutions) = 0;
 
     /// \brief returns true if the solver supports a particular ik parameterization as input.
     virtual bool Supports(IkParameterization::Type iktype) const OPENRAVE_DUMMY_IMPLEMENTATION;
 
+protected:
+    inline IkSolverBasePtr shared_iksolver() {
+        return boost::static_pointer_cast<IkSolverBase>(shared_from_this());
+    }
+    inline IkSolverBaseConstPtr shared_iksolver_const() const {
+        return boost::static_pointer_cast<IkSolverBase const>(shared_from_this());
+    }
+
+    /// \brief calls the registered filters in their priority order and returns the value of the last called filter.
+    virtual IkFilterReturn _CallFilters(std::vector<dReal>& solution, RobotBase::ManipulatorPtr manipulator, const IkParameterization& param);
+
 private:
     virtual const char* GetHash() const {
         return OPENRAVE_IKSOLVER_HASH;
     }
+
+    std::list<UserDataWeakPtr> __listRegisteredFilters; ///< internally managed filters
+
+    friend class CustomFilterData;
 };
 
 } // end namespace OpenRAVE

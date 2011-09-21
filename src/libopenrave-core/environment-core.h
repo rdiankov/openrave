@@ -444,7 +444,7 @@ public:
             }
         }
         else {
-            bSuccess = _ParseXMLFile(OpenRAVEXMLParser::CreateEnvironmentReader(shared_from_this(),atts), filename);
+            bSuccess = _ParseXMLFile(OpenRAVEXMLParser::CreateInterfaceReader(shared_from_this(),atts,true), filename);
         }
 
         if( !bSuccess ) {
@@ -1034,7 +1034,7 @@ public:
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
 
         if( !!robot ) {
-            robot->SetGuiData(UserDataPtr());
+            robot->SetViewerData(UserDataPtr());
             boost::mutex::scoped_lock lock(_mutexInterfaces);
             if( std::find(_vecrobots.begin(),_vecrobots.end(),robot) != _vecrobots.end() ) {
                 throw openrave_exception(str(boost::format("KinRobot::Init for %s, cannot Init a robot while it is added to the environment\n")%robot->GetName()));
@@ -1056,10 +1056,13 @@ public:
             }
             if( !!robot ) {
                 boost::shared_ptr<KinBody::Link::TRIMESH> ptrimesh;
-                ptrimesh = ReadTrimeshFile(ptrimesh,filename,atts);
+                RaveVector<float> diffuseColor(1,0.5,0.5), ambientColor(0.1,0,0);
+                ptrimesh = _ReadTrimeshURI(ptrimesh,filename,diffuseColor, ambientColor, atts);
                 if( robot->InitFromTrimesh(*ptrimesh,true) ) {
                     // have to set the render file
                     robot->_veclinks.at(0)->GetGeometry(0).SetRenderFilename(filename);
+                    robot->_veclinks.at(0)->GetGeometry(0).SetDiffuseColor(diffuseColor);
+                    robot->_veclinks.at(0)->GetGeometry(0).SetAmbientColor(ambientColor);
 #if defined(HAVE_BOOST_FILESYSTEM) && BOOST_VERSION >= 103600 // stem() was introduced in 1.36
                     boost::filesystem::path pfilename(filename);
 #if defined(BOOST_FILESYSTEM_VERSION) && BOOST_FILESYSTEM_VERSION >= 3
@@ -1098,7 +1101,7 @@ public:
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
 
         if( !!robot ) {
-            robot->SetGuiData(UserDataPtr());
+            robot->SetViewerData(UserDataPtr());
             boost::mutex::scoped_lock lock(_mutexInterfaces);
             if( std::find(_vecrobots.begin(),_vecrobots.end(),robot) != _vecrobots.end() ) {
                 throw openrave_exception(str(boost::format("KinRobot::Init for %s, cannot Init a robot while it is added to the environment\n")%robot->GetName()));
@@ -1132,7 +1135,7 @@ public:
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
 
         if( !!body ) {
-            body->SetGuiData(UserDataPtr());
+            body->SetViewerData(UserDataPtr());
             boost::mutex::scoped_lock lock(_mutexInterfaces);
             if( std::find(_vecbodies.begin(),_vecbodies.end(),body) != _vecbodies.end() ) {
                 throw openrave_exception(str(boost::format("KinBody::Init for %s, cannot Init a body while it is added to the environment\n")%body->GetName()));
@@ -1151,13 +1154,16 @@ public:
             }
             if( !!body ) {
                 boost::shared_ptr<KinBody::Link::TRIMESH> ptrimesh;
-                ptrimesh = ReadTrimeshURI(ptrimesh,filename,atts);
+                RaveVector<float> diffuseColor(1,0.5,0.5), ambientColor(0.1,0,0);
+                ptrimesh = _ReadTrimeshURI(ptrimesh,filename,diffuseColor, ambientColor, atts);
                 if( !ptrimesh ) {
                     return KinBodyPtr();
                 }
                 if( body->InitFromTrimesh(*ptrimesh,true) ) {
                     // have to set the render file
                     body->_veclinks.at(0)->GetGeometry(0).SetRenderFilename(filename);
+                    body->_veclinks.at(0)->GetGeometry(0).SetDiffuseColor(diffuseColor);
+                    body->_veclinks.at(0)->GetGeometry(0).SetAmbientColor(ambientColor);
 #if defined(HAVE_BOOST_FILESYSTEM) && BOOST_VERSION >= 103600 // stem() was introduced in 1.36
                     boost::filesystem::path pfilename(filename);
 #if defined(BOOST_FILESYSTEM_VERSION) && BOOST_FILESYSTEM_VERSION >= 3
@@ -1196,7 +1202,7 @@ public:
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
 
         if( !!body ) {
-            body->SetGuiData(UserDataPtr());
+            body->SetViewerData(UserDataPtr());
             boost::mutex::scoped_lock lock(_mutexInterfaces);
             if( std::find(_vecbodies.begin(),_vecbodies.end(),body) != _vecbodies.end() ) {
                 throw openrave_exception(str(boost::format("KinBody::Init for %s, cannot Init a body while it is added to the environment\n")%body->GetName()));
@@ -1230,7 +1236,7 @@ public:
         try {
             EnvironmentMutex::scoped_lock lockenv(GetMutex());
             OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
-            BaseXMLReaderPtr preader = OpenRAVEXMLParser::CreateInterfaceReader(shared_from_this(),atts);
+            BaseXMLReaderPtr preader = OpenRAVEXMLParser::CreateInterfaceReader(shared_from_this(),atts,false);
             if( !preader ) {
                 return InterfaceBasePtr();
             }
@@ -1315,20 +1321,35 @@ public:
         return pinterface;
     }
 
-    virtual boost::shared_ptr<KinBody::Link::TRIMESH> ReadTrimeshURI(boost::shared_ptr<KinBody::Link::TRIMESH> ptrimesh, const std::string& filename, const AttributesList& atts) {
+    virtual boost::shared_ptr<KinBody::Link::TRIMESH> ReadTrimeshURI(boost::shared_ptr<KinBody::Link::TRIMESH> ptrimesh, const std::string& filename, const AttributesList& atts)
+    {
+        RaveVector<float> diffuseColor, ambientColor;
+        return _ReadTrimeshURI(ptrimesh,filename,diffuseColor, ambientColor, atts);
+    }
+
+    virtual boost::shared_ptr<KinBody::Link::TRIMESH> _ReadTrimeshURI(boost::shared_ptr<KinBody::Link::TRIMESH> ptrimesh, const std::string& filename, RaveVector<float>& diffuseColor, RaveVector<float>& ambientColor, const AttributesList& atts)
+    {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
         boost::shared_ptr<pair<string,string> > filedata = OpenRAVEXMLParser::FindFile(filename);
         if( !filedata ) {
             return boost::shared_ptr<KinBody::Link::TRIMESH>();
         }
-        Vector vscale(1,1,1);
-        RaveVector<float> diffuseColor, ambientColor;
+        Vector vScaleGeometry(1,1,1);
         float ftransparency;
+        FOREACHC(itatt,atts) {
+            if( itatt->first == "scalegeometry" ) {
+                stringstream ss(itatt->second);
+                ss >> vScaleGeometry.x >> vScaleGeometry.y >> vScaleGeometry.z;
+                if( !ss ) {
+                    vScaleGeometry.z = vScaleGeometry.y = vScaleGeometry.x;
+                }
+            }
+        }
         if( !ptrimesh ) {
             ptrimesh.reset(new KinBody::Link::TRIMESH());
         }
-        if( !OpenRAVEXMLParser::CreateTriMeshData(shared_from_this(),filedata->second, vscale, *ptrimesh, diffuseColor, ambientColor, ftransparency) ) {
+        if( !OpenRAVEXMLParser::CreateTriMeshData(shared_from_this(),filedata->second, vScaleGeometry, *ptrimesh, diffuseColor, ambientColor, ftransparency) ) {
             ptrimesh.reset();
         }
         return ptrimesh;
@@ -1562,7 +1583,7 @@ public:
         _fDeltaSimTime = fDeltaTime;
         _bRealTime = bRealTime;
         //_nCurSimTime = 0; // don't reset since it is important to keep time monotonic
-        _nSimStartTime = GetMicroTime();
+        _nSimStartTime = GetMicroTime()-_nCurSimTime;
     }
 
     virtual bool IsSimulationRunning() const {
@@ -1606,7 +1627,7 @@ public:
             (*itbody)->GetLinkTransformations(itstate->vectrans);
             (*itbody)->GetDOFValues(itstate->jointvalues);
             itstate->strname =(*itbody)->GetName();
-            itstate->pguidata = (*itbody)->GetGuiData();
+            itstate->pviewerdata = (*itbody)->GetViewerData();
             itstate->environmentid = (*itbody)->GetEnvironmentId();
             ++itstate;
         }

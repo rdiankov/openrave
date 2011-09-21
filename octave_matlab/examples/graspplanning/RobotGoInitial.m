@@ -28,7 +28,7 @@ if( ~exist('home','var') )
     end
 end
 
-trajdata = orProblemSendCommand(['MoveManipulator execute 0 outputtraj armvals ' sprintf('%f ', home(armjoints+1))], probs.manip);
+trajdata = orProblemSendCommand(['MoveManipulator execute 0 outputtraj goal ' sprintf('%f ', home(armjoints+1))], probs.manip);
 
 if( isempty(trajdata) )
     return;

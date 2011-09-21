@@ -50,7 +50,18 @@ object, without moving it to the destination. To test planning without destinati
 5D IK Grasp Planning
 ====================
 
-It is possible to perform grasp planning with 5D IK. Try executing:
+It is possible to perform grasp planning with 5D IK.
+
+Neuronics Katana
+~~~~~~~~~~~~~~~~
+
+First create the grasp set with:
+
+.. code-block:: bash
+
+  openrave.py --database grasping --robot=robots/neuronics-katana.zae --manipname=arm --target=data/box_frootloops.kinbody.xml --manipulatordirection="0 1 0"
+
+Then execute:
 
 .. code-block:: bash
 
@@ -61,6 +72,21 @@ It is possible to perform grasp planning with 5D IK. Try executing:
 
 .. examplepost-block:: graspplanning
 
+
+Kuka Youbot
+~~~~~~~~~~~
+
+Grasp set generation:
+
+.. code-block:: bash
+
+  openrave.py --database grasping --robot=robots/kuka-youbot.zae --manipulatordirection="0 1 0" --target=thinbox.kinbody.xml
+
+Then execute:
+
+.. code-block:: bash
+
+  openrave.py --example graspplanning --scene=data/youbot1.env.xml
 
 """
 from __future__ import with_statement # for python 2.5
@@ -103,7 +129,7 @@ class GraspPlanning:
             self.graspables = self.getGraspables(dests=dests)
             if len(self.graspables) == 0:
                 print 'attempting to auto-generate a grasp table'
-                targets=[t for t in self.envreal.GetBodies() if t.GetName().find('mug')>=0]
+                targets=[t for t in self.envreal.GetBodies() if t.GetName().find('mug')>=0 or t.GetName().find('target')>=0]
                 if len(targets) > 0:
                     gmodel = databases.grasping.GraspingModel(robot=self.robot,target=targets[0])
                     if not gmodel.load():
@@ -218,13 +244,14 @@ class GraspPlanning:
                 for target in targets:
                     target.Enable(True)
 
-    def viewDestinations(self,graspable,delay=0.5):
-        with graspable[0].target:
-            for i,T in enumerate(graspable[1]):
-                print 'target %s dest %d/%d'%(graspable[0].target.GetName(),i,len(graspable[1]))
-                graspable[0].target.SetTransform(T)
-                graspable[0].target.GetEnv().UpdatePublishedBodies()
-                time.sleep(delay)
+    def viewDestinations(self,gmodel,Tdests,delay=0.5):
+        with gmodel.target:
+            for i,T in enumerate(Tdests):
+                print 'target %s dest %d/%d'%(gmodel.target.GetName(),i,len(Tdests))
+                gmodel.target.SetTransform(T)
+                validgrasps, indices = gmodel.computeValidGrasps(returnnum=1)
+                gmodel.target.GetEnv().UpdatePublishedBodies()
+                gmodel.showgrasp(validgrasps[0],useik=True,collisionfree=True,delay=delay)
 
     def waitrobot(self,robot=None):
         """busy wait for robot completion"""
@@ -287,6 +314,7 @@ class GraspPlanning:
             if waitforkey:
                 raw_input('press any key to continue grasp')
 
+            success = graspindex
             if movehanddown:
                 try:
                     print 'move hand up'
@@ -301,8 +329,18 @@ class GraspPlanning:
                     self.basemanip.MoveToHandPosition(ikparams=goals,maxiter=2000,maxtries=2,seedik=8)
                     self.waitrobot(robot)
                 except planning_error,e:
-                    print 'failed to reach a goal',e
-
+                    print 'failed to reach a goal, trying to move goal a little up',e
+                    if goals[0].GetType() == IkParameterizationType.Transform6D:
+                        Tgoal = goals[0].GetTransform6D()
+                        Tgoal[0:3,3] += self.updir*0.015
+                        try:
+                            self.basemanip.MoveToHandPosition(matrices=[Tgoal],maxiter=3000,maxtries=2,seedik=8)
+                            self.waitrobot(robot)
+                            self.basemanip.MoveToHandPosition(ikparams=goals,maxiter=2000,maxtries=2,seedik=8)
+                            self.waitrobot(robot)
+                        except planning_error,e:
+                            print e
+                            success = -1
             if movehanddown:
                 print 'moving hand down'
                 try:
@@ -343,7 +381,7 @@ class GraspPlanning:
                     except planning_error:
                         res = None
                     #raise ValueError('robot still in collision?')
-            return graspindex # return successful grasp index
+            return success # return successful grasp index
         # exhausted all grasps
         return -1
 

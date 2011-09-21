@@ -111,6 +111,8 @@ class DatabaseGenerator(metaclass.AutoReloader):
                            help='If set, will exit with 0 if datafile is generated and up to date, otherwise will return a 1. This will require loading the model and checking versions, so might be a little slow.')
         dbgroup.add_option('--robot',action='store',type='string',dest='robot',default=getenv('OPENRAVE_ROBOT',default='robots/barrettsegway.robot.xml'),
                            help='OpenRAVE robot to load (default=%default)')
+        dbgroup.add_option('--numthreads',action='store',type='int',dest='numthreads',default=1,
+                           help='number of threads to compute the database with (default=%default)')
         if useManipulator:
             dbgroup.add_option('--manipname',action='store',type='string',dest='manipname',default=None,
                                help='The name of the manipulator on the robot to use')
@@ -135,27 +137,38 @@ class DatabaseGenerator(metaclass.AutoReloader):
             level = openravepy_int.DebugLevel.Fatal
         openravepy_int.RaveInitialize(loadplugins,level)
         OpenRAVEGlobalArguments.parseGlobal(options)
+        destroyenv = False
         if env is None:
             env = openravepy_int.Environment()
-        options.viewername=OpenRAVEGlobalArguments.parseEnvironment(options,env,defaultviewer=defaultviewer,returnviewer=True)
-        with env:
-            env.Load(options.robot,robotatts)
-            if len(env.GetRobots()) > 0:
-                robot = env.GetRobots()[0]
-            elif allowkinbody:
-                robot = env.GetBodies()[0]
-            assert(robot is not None)
-            robot.SetTransform(eye(4))
-            if hasattr(options,'manipname') and robot.IsRobot():
-                if options.manipname is None:
-                    # prioritize manipulators with ik solvers
-                    indices = [i for i,m in enumerate(robot.GetManipulators()) if m.GetIkSolver() is not None]
-                    if len(indices) > 0:
-                        robot.SetActiveManipulator(indices[0])
-                else:
-                    robot.SetActiveManipulator([i for i,m in enumerate(robot.GetManipulators()) if m.GetName()==options.manipname][0])
-        model = Model(robot=robot)
-        return options,model
+            destroyenv = True
+        try:
+            options.viewername=OpenRAVEGlobalArguments.parseEnvironment(options,env,defaultviewer=defaultviewer,returnviewer=True)
+            with env:
+                env.Load(options.robot,robotatts)
+                # TODO: if exception is raised after this point, program exits with glibc double-link list corruption. most likely something in Load?
+                if len(env.GetRobots()) > 0:
+                    robot = env.GetRobots()[0]
+                elif allowkinbody:
+                    robot = env.GetBodies()[0]
+                assert(robot is not None)
+                robot.SetTransform(eye(4))
+                if hasattr(options,'manipname') and robot.IsRobot():
+                    if options.manipname is None:
+                        # prioritize manipulators with ik solvers
+                        indices = [i for i,m in enumerate(robot.GetManipulators()) if m.GetIkSolver() is not None]
+                        if len(indices) > 0:
+                            robot.SetActiveManipulator(indices[0])
+                    else:
+                        robot.SetActiveManipulator([i for i,m in enumerate(robot.GetManipulators()) if m.GetName()==options.manipname][0])
+            model = Model(robot=robot)
+            destroyenv = False
+            return options,model
+        
+        finally:
+            if destroyenv:
+                robot = None
+                model = None
+                env.Destroy()
 
     @staticmethod
     def RunFromParser(Model=None,env=None,parser=None,args=None,robotatts=dict(),defaultviewer=False,allowkinbody=False,**kwargs):

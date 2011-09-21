@@ -106,6 +106,12 @@ TrajectoryBase::TrajectoryBase(EnvironmentBasePtr penv, int nDOF) : InterfaceBas
     __description = ":Interface Author: Rosen Diankov, James Kuffner\n\n";
 }
 
+void TrajectoryBase::SetAffineVelocity(const Vector& maxAffineTranslationVel, dReal maxAffineRotationQuatVel)
+{
+    _maxAffineTranslationVel = maxAffineTranslationVel;
+    _maxAffineRotationQuatVel = maxAffineRotationQuatVel;
+}
+
 void TrajectoryBase::Reset(int nDOF)
 {
     Clear();
@@ -121,6 +127,24 @@ void TrajectoryBase::Clear()
     _maxJointVel.resize(0);
     _maxJointAccel.resize(0);
     _vecsegments.resize(0);
+}
+
+void TrajectoryBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
+{
+    InterfaceBase::Clone(preference,cloningoptions);
+    TrajectoryBaseConstPtr r = RaveInterfaceConstCast<TrajectoryBase>(preference);
+    _vecpoints = r->_vecpoints;
+    _vecsegments = r->_vecsegments;
+    _lowerJointLimit = r->_lowerJointLimit;
+    _upperJointLimit = r->_upperJointLimit;
+    _maxJointVel = r->_maxJointVel;
+    _maxJointAccel = r->_maxJointAccel;
+    _maxAffineTranslationVel = r->_maxAffineTranslationVel;
+    _maxAffineRotationQuatVel = r->_maxAffineRotationQuatVel;
+    _nQuaternionIndex = r->_nQuaternionIndex;
+    _diffstatefn = r->_diffstatefn;
+    _interpMethod = r->_interpMethod;
+    _nDOF = r->_nDOF;
 }
 
 bool TrajectoryBase::CalcTrajTiming(RobotBaseConstPtr pRobot, InterpEnum interpolationMethod, bool bAutoCalcTiming, bool bActiveDOFs, dReal fMaxVelMult)
@@ -338,6 +362,9 @@ bool TrajectoryBase::_SetLinear(bool bAutoCalcTiming, bool bActiveDOFs)
             _vecsegments[i-1].Get(0, d) = _vecpoints[i-1].q[d];
             _vecsegments[i-1].Get(1, d) = vd[d] / _vecsegments[i-1]._fduration;
         }
+        Transform tdelta = _vecpoints[i].trans * _vecpoints[i-1].trans.inverse();
+        _vecsegments[i-1].linearvel = (_vecpoints[i].trans.trans - _vecpoints[i-1].trans.trans)*(1/_vecsegments[i-1]._fduration);
+        _vecsegments[i-1].angularvel = axisAngleFromQuat(quatMultiply(_vecpoints[i].trans.rot,quatInverse(_vecpoints[i-1].trans.rot)))*(1/_vecsegments[i-1]._fduration);
     }
 
     // set the via point velocities if needed
@@ -352,8 +379,8 @@ bool TrajectoryBase::_SetLinear(bool bAutoCalcTiming, bool bActiveDOFs)
     // the preceding and subsequent trajectory segments.
     BOOST_ASSERT(_vecpoints.size()>0);
     for (size_t i = 1; i < _vecpoints.size()-1; i++) {
-        _vecpoints[i].linearvel = (dReal)0.5f*(_vecsegments[i-1].linearvel+_vecsegments[i].linearvel);
-        _vecpoints[i].angularvel = (dReal)0.5f*(_vecsegments[i-1].angularvel+_vecsegments[i].angularvel);
+        _vecpoints[i].linearvel = _vecsegments[i].linearvel;
+        _vecpoints[i].angularvel = _vecsegments[i].angularvel;
 
         for (int d = 0; d < _nDOF; d++) {
             prevSlope = _vecsegments[i-1].Get(1, d);
@@ -933,11 +960,10 @@ dReal TrajectoryBase::_MinimumTimeQuintic(const TPOINT& tp0, const TPOINT& tp1, 
 dReal TrajectoryBase::_MinimumTimeTransform(const Transform& t0, const Transform& t1)
 {
     //calc time for translation
-    dReal x_time = fabs(t1.trans.x - t0.trans.x) / _maxAffineTranslationVel.x;
-    dReal y_time = fabs(t1.trans.y - t0.trans.y) / _maxAffineTranslationVel.y;
-    dReal z_time = fabs(t1.trans.z - t0.trans.z) / _maxAffineTranslationVel.z;
-    dReal rot_dist = RaveAcos(min(dReal(1),RaveFabs(t0.rot.dot(t1.rot))))/_maxAffineRotationQuatVel;
-    return max(max(max(x_time,y_time),z_time),rot_dist);
+    //dReal x_time = fabs(t1.trans.x - t0.trans.x) / _maxAffineTranslationVel.x;
+    dReal trans_time = RaveSqrt((t1.trans - t0.trans).lengthsqr3()) / _maxAffineTranslationVel.x;
+    dReal rot_time = RaveAcos(min(dReal(1),RaveFabs(t0.rot.dot(t1.rot))))/_maxAffineRotationQuatVel;
+    return max(trans_time,rot_time);
 }
 
 int TrajectoryBase::_FindActiveInterval(dReal time) const
@@ -1007,6 +1033,8 @@ bool TrajectoryBase::_SampleLinear(const TPOINT& p0, const TPOINT& p1, const TSE
     sample.time = time;
     sample.trans.trans = p0.trans.trans + tduration*(p1.trans.trans - p0.trans.trans);
     sample.trans.rot = quatSlerp(p0.trans.rot, p1.trans.rot,tduration);
+    sample.linearvel = p0.linearvel;
+    sample.angularvel = p0.angularvel;
     return true;
 }
 
@@ -1220,7 +1248,10 @@ bool TrajectoryBase::Read(std::istream& f, RobotBasePtr robot)
 
     InterpEnum interp = (InterpEnum)((options&TO_InterpolationMask)>>CountZeroBits(TO_InterpolationMask));
     BOOST_ASSERT(interp<NUM_METHODS);
-    return CalcTrajTiming(robot, interp, false, false);
+    if( !robot || dof == robot->GetDOF() ) {
+        return CalcTrajTiming(robot, interp, false, false);
+    }
+    return true;
 }
 
 } // end namespace OpenRAVE

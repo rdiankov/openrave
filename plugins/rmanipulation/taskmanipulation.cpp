@@ -43,19 +43,6 @@ public:
     }
 };
 
-class SetCustomFilterScope
-{
-public:
-    SetCustomFilterScope(IkSolverBasePtr pik, const IkSolverBase::IkFilterCallbackFn& filterfn) : _pik(pik){
-        _pik->SetCustomFilter(filterfn);
-    }
-    virtual ~SetCustomFilterScope() {
-        _pik->SetCustomFilter(IkSolverBase::IkFilterCallbackFn());
-    }
-private:
-    IkSolverBasePtr _pik;
-};
-
 class TaskManipulation : public ModuleBase
 {
 public:
@@ -74,7 +61,6 @@ Task-based manipulation planning involving target objects. A lot of the algorith
 * randomdests\n\
 * writetraj\n\
 * maxiter\n\
-* graspindices\n\
 * igraspdir\n\
 * igrasppos\n\
 * igrasproll\n\
@@ -461,9 +447,10 @@ protected:
             RAVELOG_INFO("planning with mobile base!\n");
         }
         bool bInitialRobotChanged = false;
-        vector<dReal> vCurHandValues, vCurRobotValues, vOrgRobotValues;
+        vector<dReal> vCurHandValues, vCurRobotValues, vOrgRobotValues, vHandLowerLimits, vHandUpperLimits;
         _robot->SetActiveDOFs(pmanip->GetGripperIndices());
         _robot->GetActiveDOFValues(vCurHandValues);
+        _robot->GetActiveDOFLimits(vHandLowerLimits,vHandUpperLimits);
         _robot->GetDOFValues(vOrgRobotValues);
 
         SwitchModelState switchstate(shared_problem());
@@ -520,7 +507,7 @@ protected:
                 RAVELOG_ERROR("grasper problem not valid\n");
                 return false;
             }
-            if(( iGraspDir < 0) ||( iGraspPos < 0) ||( iGraspRoll < 0) ||( iGraspStandoff < 0) || (imanipulatordirection<0) ) {
+            if(( iGraspDir < 0) ||( iGraspPos < 0) ||( iGraspRoll < 0) ||( iGraspStandoff < 0) ) {
                 RAVELOG_ERROR("grasp indices not all initialized\n");
                 return false;
             }
@@ -528,10 +515,10 @@ protected:
 
         _phandtraj.reset();
 
-        boost::shared_ptr<SetCustomFilterScope> ikfilter;
+        UserDataPtr ikfilter;
         if( pmanip->GetIkSolver()->Supports(IkParameterization::Type_TranslationDirection5D) ) {
             // if 5D, have to set a filter
-            ikfilter.reset(new SetCustomFilterScope(pmanip->GetIkSolver(),boost::bind(&TaskManipulation::_FilterIkForGrasping,shared_problem(),_1,_2,_3,ptarget)));
+            ikfilter = pmanip->GetIkSolver()->RegisterCustomFilter(0,boost::bind(&TaskManipulation::_FilterIkForGrasping,shared_problem(),_1,_2,_3,ptarget));
             fApproachOffset = 0; // cannot approach
         }
 
@@ -555,8 +542,17 @@ protected:
 
             vector<dReal> vgoalpreshape(vCurHandValues.size());
             if( iGraspPreshape >= 0 ) {
+                bool badpreshape = false;
                 for(size_t j = 0; j < vCurHandValues.size(); ++j) {
                     vgoalpreshape[j] = pgrasp[iGraspPreshape+j];
+                    if( vHandLowerLimits.at(j) > vgoalpreshape[j]+0.001 || vHandUpperLimits.at(j) < vgoalpreshape[j]-0.001 ) {
+                        RAVELOG_WARN(str(boost::format("bad preshape index %d (%f)!")%j%vgoalpreshape[j]));
+                        badpreshape = true;
+                        break;
+                    }
+                }
+                if( badpreshape ) {
+                    continue;
                 }
             }
             else {
@@ -593,7 +589,12 @@ protected:
                 graspparams->ftargetroll = pgrasp[iGraspRoll];
                 graspparams->vtargetdirection = Vector(pgrasp[iGraspDir], pgrasp[iGraspDir+1], pgrasp[iGraspDir+2]);
                 graspparams->vtargetposition = Vector(pgrasp[iGraspPos], pgrasp[iGraspPos+1], pgrasp[iGraspPos+2]);
-                graspparams->vmanipulatordirection = Vector(pgrasp[imanipulatordirection], pgrasp[imanipulatordirection+1], pgrasp[imanipulatordirection+2]);
+                if( imanipulatordirection < 0 ) {
+                    graspparams->vmanipulatordirection = pmanip->GetDirection();
+                }
+                else {
+                    graspparams->vmanipulatordirection = Vector(pgrasp[imanipulatordirection], pgrasp[imanipulatordirection+1], pgrasp[imanipulatordirection+2]);
+                }
                 graspparams->btransformrobot = true;
                 graspparams->breturntrajectory = false;
                 graspparams->bonlycontacttarget = true;
@@ -1409,7 +1410,7 @@ protected:
         return boost::static_pointer_cast<TaskManipulation const>(shared_from_this());
     }
 
-    TrajectoryBasePtr _MoveArm(const vector<int>& activejoints, const PlannerBase::PlannerParameters::SampleGoalFn& samplegoalfn, int& nGoalIndex, int nMaxIterations)
+    TrajectoryBasePtr _MoveArm(const vector<int>& activejoints, planningutils::ManipulatorIKGoalSampler& goalsampler, int& nGoalIndex, int nMaxIterations)
     {
         RAVELOG_DEBUG("Starting MoveArm...\n");
         BOOST_ASSERT( !!_pRRTPlanner );
@@ -1436,8 +1437,9 @@ protected:
         int nSeedIkSolutions = 8;
         vector<dReal> vgoal;
         params->vgoalconfig.reserve(nSeedIkSolutions*_robot->GetActiveDOF());
+        goalsampler.SetSamplingProb(1);
         while(nSeedIkSolutions > 0) {
-            if( samplegoalfn(vgoal) ) {
+            if( goalsampler.Sample(vgoal) ) {
                 params->vgoalconfig.insert(params->vgoalconfig.end(), vgoal.begin(), vgoal.end());
                 --nSeedIkSolutions;
             }
@@ -1450,7 +1452,8 @@ protected:
             return ptraj;
         }
 
-        params->_samplegoalfn = samplegoalfn;
+        goalsampler.SetSamplingProb(0.05);
+        params->_samplegoalfn = boost::bind(&planningutils::ManipulatorIKGoalSampler::Sample,&goalsampler,_1);
 
         // restore
         _robot->SetActiveDOFValues(pzero);
@@ -1564,7 +1567,7 @@ protected:
         planningutils::ManipulatorIKGoalSampler goalsampler(pmanip, listgoals);
 
         int nGoalIndex = -1;
-        ptraj = _MoveArm(pmanip->GetArmIndices(), boost::bind(&planningutils::ManipulatorIKGoalSampler::Sample,&goalsampler,_1), nGoalIndex, nMaxIterations);
+        ptraj = _MoveArm(pmanip->GetArmIndices(), goalsampler, nGoalIndex, nMaxIterations);
         if (!ptraj ) {
             return ptraj;
         }

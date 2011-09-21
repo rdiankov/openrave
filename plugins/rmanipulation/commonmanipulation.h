@@ -296,7 +296,9 @@ protected:
         if( pActiveTraj->GetPoints().size() == 0 ) {
             return false;
         }
-        pActiveTraj->CalcTrajTiming(robot, pActiveTraj->GetInterpMethod(), true, true,fMaxVelMult);
+        if( pActiveTraj->GetTotalDuration() == 0 ) {
+            pActiveTraj->CalcTrajTiming(robot, pActiveTraj->GetInterpMethod(), true, true,fMaxVelMult);
+        }
 
         bool bExecuted = false;
         if( bExecute ) {

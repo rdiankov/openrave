@@ -377,7 +377,7 @@ bool ManipulatorIKGoalSampler::Sample(std::vector<dReal>& vgoal)
     vgoal.resize(0);
     std::vector<dReal> vindex;
     _pindexsampler->SampleSequence(vindex,1,IT_OpenEnd);
-    if( vindex.at(0) < _fsampleprob ) {
+    if( vindex.at(0) > _fsampleprob ) {
         return false;
     }
     if( _viksolutions.size() > 0 ) {
@@ -423,7 +423,7 @@ bool ManipulatorIKGoalSampler::Sample(std::vector<dReal>& vgoal)
             }
         }
         bool bsuccess = _pmanip->FindIKSolutions(itsample->_ikparam, vfree, _viksolutions, IKFO_CheckEnvCollisions);
-        if( --itsample->_numleft <= 0 ) {
+        if( --itsample->_numleft <= 0 || vfree.size() == 0 ) {
             _listsamples.erase(itsample);
         }
 
@@ -445,6 +445,11 @@ int ManipulatorIKGoalSampler::GetIkParameterizationIndex(int index)
     std::list<int>::iterator it = _listreturnedsamples.begin();
     advance(it,index);
     return *it;
+}
+
+void ManipulatorIKGoalSampler::SetSamplingProb(dReal fsampleprob)
+{
+    _fsampleprob = fsampleprob;
 }
 
 } // planningutils

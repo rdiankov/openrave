@@ -409,6 +409,7 @@ public:
 };
 
 object toPyGraphHandle(const GraphHandlePtr p);
+object toPyUserData(UserDataPtr p);
 bool ExtractIkParameterization(object o, IkParameterization& ikparam);
 object toPyIkParameterization(const IkParameterization& ikparam);
 object toPyAABB(const AABB& ab);

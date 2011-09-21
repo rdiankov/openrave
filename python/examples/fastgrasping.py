@@ -70,7 +70,7 @@ class FastGrasping:
             preshapes = array([final])
         try:
             self.gmodel.disableallbodies=False
-            self.gmodel.generate(preshapes=preshapes,standoffs=standoffs,rolls=rolls,approachrays=approachrays,checkgraspfn=self.checkgraspfn)
+            self.gmodel.generate(preshapes=preshapes,standoffs=standoffs,rolls=rolls,approachrays=approachrays,checkgraspfn=self.checkgraspfn,graspingnoise=0.01)
             return None,None # did not find anything
         except self.GraspingException, e:
             return e.args
@@ -83,13 +83,14 @@ def main(env,options):
         robot.SetActiveManipulator(options.manipname)
     # find an appropriate target
     bodies = [b for b in env.GetBodies() if not b.IsRobot() and linalg.norm(b.ComputeAABB().extents()) < 0.2]
-    self = FastGrasping(robot,target=bodies[0])
-    grasp,jointvalues = self.computeGrasp()
-    if grasp is not None:
-        print 'grasp is found!'
-        self.gmodel.showgrasp(grasp)
-        self.robot.SetDOFValues(jointvalues)
-        raw_input('press any key to exit')
+    for body in bodies:
+        self = FastGrasping(robot,target=body)
+        grasp,jointvalues = self.computeGrasp()
+        if grasp is not None:
+            print 'grasp is found!'
+            self.gmodel.showgrasp(grasp)
+            self.robot.SetDOFValues(jointvalues)
+            raw_input('press any key')
 
 from optparse import OptionParser
 from openravepy.misc import OpenRAVEGlobalArguments

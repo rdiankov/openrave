@@ -270,7 +270,7 @@ public:
             vcontacts.resize(min(_nMaxContacts,vcontacts.size()*2));
             log2limit += 1;
         }
-        RAVELOG_WARN(str(boost::format("max contacts %d reached, but still more contacts left! Try increasing the limit with the SetMaxContracts command")%_nMaxContacts));
+        RAVELOG_WARN(str(boost::format("max contacts %d reached, but still more contacts left! If this is a problem, try increasing the limit with the SetMaxContracts command")%_nMaxContacts));
         return vcontacts.size();
     }
 
