@@ -41,3 +41,18 @@ class TestEnvironment(EnvironmentSetup):
 </environment>"""
         env.LoadData(xml)
         assert(env.GetBodies()[0].GetURI().find('data/jsk-plate.zae') >= 0)
+
+    def test_scalegeometry(self):
+        env=self.env
+        with env:
+            scalefactor = array([2.0,3.0,4.0])
+            body1=env.ReadKinBodyURI('data/mug1.kinbody.xml')
+            env.AddKinBody(body1,True)
+            body1.SetTransform(eye(4))
+            body2=env.ReadKinBodyURI('data/mug1.kinbody.xml',{'scalegeometry':'%f %f %f'%tuple(scalefactor)})
+            env.AddKinBody(body2,True)
+            body2.SetTransform(eye(4))
+            ab1=body1.ComputeAABB()
+            ab2=body2.ComputeAABB()
+            assert( transdist(ab1.pos()*scalefactor,ab2.pos()) <= g_epsilon )
+            assert( transdist(ab1.extents()*scalefactor,ab2.extents()) <= g_epsilon )

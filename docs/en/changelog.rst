@@ -17,7 +17,7 @@ Core
 
 * fixed "prefix" attribute when colldata models are used.
 
-* added "scalegeometry" attribute to kinbody loading
+* added "scalegeometry" attribute to kinbody loading. can have different scales along XYZ.
 
 Inverse Kinematics
 ------------------

@@ -173,7 +173,10 @@ public:
                 _bSkipGeometry = stricmp(itatt->second.c_str(), "true") == 0 || itatt->second=="1";
             }
             else if( itatt->first == "scalegeometry" ) {
-                _fGlobalScale *= boost::lexical_cast<dReal>(itatt->second);
+                stringstream ss(itatt->second);
+                Vector v(1,1,1);
+                ss >> v.x;
+                _fGlobalScale *= v.x;
             }
             else if( itatt->first == "prefix" ) {
                 _prefix = itatt->second;

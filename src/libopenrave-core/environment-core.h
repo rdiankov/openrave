@@ -1056,10 +1056,13 @@ public:
             }
             if( !!robot ) {
                 boost::shared_ptr<KinBody::Link::TRIMESH> ptrimesh;
-                ptrimesh = ReadTrimeshFile(ptrimesh,filename,atts);
+                RaveVector<float> diffuseColor(1,0.5,0.5), ambientColor(0.1,0,0);
+                ptrimesh = _ReadTrimeshURI(ptrimesh,filename,diffuseColor, ambientColor, atts);
                 if( robot->InitFromTrimesh(*ptrimesh,true) ) {
                     // have to set the render file
                     robot->_veclinks.at(0)->GetGeometry(0).SetRenderFilename(filename);
+                    robot->_veclinks.at(0)->GetGeometry(0).SetDiffuseColor(diffuseColor);
+                    robot->_veclinks.at(0)->GetGeometry(0).SetAmbientColor(ambientColor);
 #if defined(HAVE_BOOST_FILESYSTEM) && BOOST_VERSION >= 103600 // stem() was introduced in 1.36
                     boost::filesystem::path pfilename(filename);
 #if defined(BOOST_FILESYSTEM_VERSION) && BOOST_FILESYSTEM_VERSION >= 3
@@ -1151,13 +1154,16 @@ public:
             }
             if( !!body ) {
                 boost::shared_ptr<KinBody::Link::TRIMESH> ptrimesh;
-                ptrimesh = ReadTrimeshURI(ptrimesh,filename,atts);
+                RaveVector<float> diffuseColor(1,0.5,0.5), ambientColor(0.1,0,0);
+                ptrimesh = _ReadTrimeshURI(ptrimesh,filename,diffuseColor, ambientColor, atts);
                 if( !ptrimesh ) {
                     return KinBodyPtr();
                 }
                 if( body->InitFromTrimesh(*ptrimesh,true) ) {
                     // have to set the render file
                     body->_veclinks.at(0)->GetGeometry(0).SetRenderFilename(filename);
+                    body->_veclinks.at(0)->GetGeometry(0).SetDiffuseColor(diffuseColor);
+                    body->_veclinks.at(0)->GetGeometry(0).SetAmbientColor(ambientColor);
 #if defined(HAVE_BOOST_FILESYSTEM) && BOOST_VERSION >= 103600 // stem() was introduced in 1.36
                     boost::filesystem::path pfilename(filename);
 #if defined(BOOST_FILESYSTEM_VERSION) && BOOST_FILESYSTEM_VERSION >= 3
@@ -1315,27 +1321,35 @@ public:
         return pinterface;
     }
 
-    virtual boost::shared_ptr<KinBody::Link::TRIMESH> ReadTrimeshURI(boost::shared_ptr<KinBody::Link::TRIMESH> ptrimesh, const std::string& filename, const AttributesList& atts) {
+    virtual boost::shared_ptr<KinBody::Link::TRIMESH> ReadTrimeshURI(boost::shared_ptr<KinBody::Link::TRIMESH> ptrimesh, const std::string& filename, const AttributesList& atts)
+    {
+        RaveVector<float> diffuseColor, ambientColor;
+        return _ReadTrimeshURI(ptrimesh,filename,diffuseColor, ambientColor, atts);
+    }
+
+    virtual boost::shared_ptr<KinBody::Link::TRIMESH> _ReadTrimeshURI(boost::shared_ptr<KinBody::Link::TRIMESH> ptrimesh, const std::string& filename, RaveVector<float>& diffuseColor, RaveVector<float>& ambientColor, const AttributesList& atts)
+    {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
         boost::shared_ptr<pair<string,string> > filedata = OpenRAVEXMLParser::FindFile(filename);
         if( !filedata ) {
             return boost::shared_ptr<KinBody::Link::TRIMESH>();
         }
-        Vector vscale(1,1,1);
-        RaveVector<float> diffuseColor, ambientColor;
+        Vector vScaleGeometry(1,1,1);
         float ftransparency;
         FOREACHC(itatt,atts) {
             if( itatt->first == "scalegeometry" ) {
                 stringstream ss(itatt->second);
-                ss >> vscale.x;
-                vscale.y = vscale.z = vscale.x;
+                ss >> vScaleGeometry.x >> vScaleGeometry.y >> vScaleGeometry.z;
+                if( !ss ) {
+                    vScaleGeometry.z = vScaleGeometry.y = vScaleGeometry.x;
+                }
             }
         }
         if( !ptrimesh ) {
             ptrimesh.reset(new KinBody::Link::TRIMESH());
         }
-        if( !OpenRAVEXMLParser::CreateTriMeshData(shared_from_this(),filedata->second, vscale, *ptrimesh, diffuseColor, ambientColor, ftransparency) ) {
+        if( !OpenRAVEXMLParser::CreateTriMeshData(shared_from_this(),filedata->second, vScaleGeometry, *ptrimesh, diffuseColor, ambientColor, ftransparency) ) {
             ptrimesh.reset();
         }
         return ptrimesh;
