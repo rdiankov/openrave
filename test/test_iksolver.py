@@ -13,7 +13,7 @@
 # limitations under the License.
 from common_test_openrave import *
 
-class TestSampling(EnvironmentSetup):
+class TestIkSolver(EnvironmentSetup):
     def test_customfilter(self):
         env=self.env
         env.Load('data/lab1.env.xml')

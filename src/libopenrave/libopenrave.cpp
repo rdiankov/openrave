@@ -875,28 +875,6 @@ void DummyXMLReader::characters(const std::string& ch)
     }
 }
 
-#ifdef _WIN32
-const char *strcasestr(const char *s, const char *find)
-{
-    register char c, sc;
-    register size_t len;
-
-    if ((c = *find++) != 0) {
-        c = tolower((unsigned char)c);
-        len = strlen(find);
-        do {
-            do {
-                if ((sc = *s++) == 0) {
-                    return (NULL);
-                }
-            } while ((char)tolower((unsigned char)sc) != c);
-        } while (strnicmp(s, find, len) != 0);
-        s--;
-    }
-    return ((char *) s);
-}
-#endif
-
 EnvironmentBase::EnvironmentBase()
 {
     if( !RaveGlobalState() ) {

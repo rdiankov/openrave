@@ -41,7 +41,11 @@ __copyright__ = '2011 Daniel Kappler (daniel.kappler@gmail.com)'
 import sys, os, re, logging, signal, traceback
 from multiprocessing import Process,Pipe
 from threading import Thread
-from PyQt4 import QtGui, QtCore
+
+try:
+    from PyQt4 import QtGui, QtCore
+except ImportError:
+    pass
 
 logger = None
 

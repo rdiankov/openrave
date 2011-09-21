@@ -42,8 +42,12 @@ import sys, os, re, logging, signal
 from numpy import random
 from multiprocessing import Process,Pipe
 from threading import Thread
-from PyQt4 import QtGui, QtCore
 from openravepy import *
+
+try:
+    from PyQt4 import QtGui, QtCore
+except ImportError:
+    pass
 
 logger = None
 

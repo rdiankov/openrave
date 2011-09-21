@@ -36,6 +36,22 @@ Command-line
 
 .. shell-block:: openrave.py --database linkstatistics --help
 
+Description
+-----------
+
+When using link statics, it is possible to set the joints weights and resolutions so that planning is fastest. The **xyzdelta** parameter specifies the smallest object that can be found in the environment, this becomes the new discretization factor when checking collision. Higher values mean faster planning.
+
+
+.. code-block:: python
+
+   lmodel = databases.linkstatistics.LinkStatisticsModel(robot)
+   if not lmodel.load():
+       lmodel.autogenerate()
+   lmodel.setRobotWeights()
+   lmodel.setRobotResolutions(xyzdelta=0.01)
+   print 'robot resolutions: ',repr(robot.GetDOFResolutions())
+   print 'robot weights: ',repr(robot.GetDOFWeights())
+
 Class Definitions
 -----------------
 

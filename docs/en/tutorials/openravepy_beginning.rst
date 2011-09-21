@@ -70,7 +70,7 @@ OpenRAVE C++ exceptions in the form of the openrave_exception class are automati
 Locking/Thread-safety Mechanisms
 --------------------------------
 
-When doing heavy operations, the environment should **always be locked** to keep other users from changing it. All environment methods are multi-thread safe, but any other method to kinbodies, robots, controllers, planners, etc are **not thread safe**!
+When doing heavy operations, the environment should **always be locked** to keep other users from changing it. All environment methods are **multi-thread safe**, but any other method to kinbodies, robots, controllers, planners, etc are **not thread safe**! If the documentation does not say multi-thread safe, **don't use the method without locking the environment**!
 
 
 Locking is done with **Environment.Lock(dolock)**. Scoped locking can be implemented using a
