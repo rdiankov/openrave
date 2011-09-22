@@ -623,6 +623,14 @@ public:
         }
     }
 
+//    bool InitFromGeometries(const std::list<boost::shared_ptr<PyLink::PyGeomProperties> >& listpyGeometries, bool bDraw)
+//    {
+//        std::list<KinBody::Link::GEOMPROPERTIES> listGeometries;
+//        FOREACH(itgeom, listpyGeometries) {
+//
+//        }
+//    }
+
     void SetName(const string& name) {
         _pbody->SetName(name);
     }

@@ -37,3 +37,10 @@ else:
 if openravepy_currentversion is not None:
     from sys import modules
     modules['openravepy'] = openravepy_currentversion
+
+# necessary in order to generate documentation
+try:
+    if __openravepy_import_examples__:
+        import openravepy.examples
+except Exception, e:
+    pass

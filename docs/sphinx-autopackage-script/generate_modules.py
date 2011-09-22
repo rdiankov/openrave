@@ -29,6 +29,7 @@ It also creates a modules index (named modules.<suffix>).
 import os
 import optparse
 
+__builtins__.__openravepy_import_examples__ = 1 # necessary for openrave
 
 # automodule options
 OPTIONS = ['members',

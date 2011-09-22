@@ -2029,6 +2029,27 @@ bool KinBody::InitFromTrimesh(const KinBody::Link::TRIMESH& trimesh, bool draw)
     return true;
 }
 
+bool KinBody::InitFromGeometries(std::list<KinBody::Link::GEOMPROPERTIES>& listGeometries, bool draw)
+{
+    if( GetEnvironmentId() ) {
+        throw OPENRAVE_EXCEPTION_FORMAT("%s, cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
+    }
+    BOOST_ASSERT(listGeometries.size()>0);
+    Destroy();
+    LinkPtr plink(new Link(shared_kinbody()));
+    plink->_index = 0;
+    plink->_name = "base";
+    plink->_bStatic = true;
+    plink->_listGeomProperties.splice(plink->_listGeomProperties.end(),listGeometries);
+    FOREACH(itgeom,plink->_listGeomProperties) {
+        itgeom->_bDraw = draw;
+        itgeom->_parent = plink;
+        plink->collision.Append(itgeom->GetCollisionMesh(),itgeom->_t);
+    }
+    _veclinks.push_back(plink);
+    return true;
+}
+
 void KinBody::SetName(const std::string& newname)
 {
     BOOST_ASSERT(newname.size() > 0);
