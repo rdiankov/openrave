@@ -107,7 +107,12 @@ class TestRobot(EnvironmentSetup):
 
             robot.ReleaseAllGrabbed()
             assert(env.CheckCollision(leftmug,rightmug))
-            
+
+    def test_basic():
+        robot = self.env.ReadRobotXMLFile('robots/schunk-lwa3-dual.robot.xml')
+        self.env.AddRobot(robot)
+        assert(robot.GetLinks()[0].GetParent().GetActiveDOF() == robot.GetActiveDOF())
+
 # def test_ikgeneration():
 #     import inversekinematics
 #     env = Environment()

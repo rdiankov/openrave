@@ -218,9 +218,7 @@ public:
             _plink->Enable(bEnable);
         }
 
-        PyKinBodyPtr GetParent() const {
-            return PyKinBodyPtr(new PyKinBody(_plink->GetParent(),_pyenv));
-        }
+        object GetParent() const;
 
         object GetParentLinks() const
         {
@@ -2656,6 +2654,17 @@ public:
     virtual void __enter__();
 };
 
+object PyKinBody::PyLink::GetParent() const
+{
+    KinBodyPtr parent = _plink->GetParent();
+    if( parent->IsRobot() ) {
+        return object(PyRobotBasePtr(new PyRobotBase(RaveInterfaceCast<RobotBase>(_plink->GetParent()),_pyenv)));
+    }
+    else {
+        return object(PyKinBodyPtr(new PyKinBody(_plink->GetParent(),_pyenv)));
+    }
+}
+
 PyRobotBasePtr PyControllerBase::GetRobot()
 {
     return PyRobotBasePtr(new PyRobotBase(_pcontroller->GetRobot(),_pyenv));
@@ -4209,7 +4218,13 @@ public:
         _penv->GetBodies(vbodies);
         boost::python::list bodies;
         FOREACHC(itbody, vbodies) {
-            bodies.append(PyKinBodyPtr(new PyKinBody(*itbody,shared_from_this())));
+
+            if( (*itbody)->IsRobot() ) {
+                bodies.append(PyRobotBasePtr(new PyRobotBase(RaveInterfaceCast<RobotBase>(*itbody),shared_from_this())));
+            }
+            else {
+                bodies.append(PyKinBodyPtr(new PyKinBody(*itbody,shared_from_this())));
+            }
         }
         return bodies;
     }

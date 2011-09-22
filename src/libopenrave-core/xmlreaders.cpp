@@ -40,6 +40,7 @@
 #include <boost/utility.hpp>
 #include <boost/thread/once.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/algorithm/string.hpp>
 
 BOOST_STATIC_ASSERT(sizeof(xmlChar) == 1);
 
@@ -198,7 +199,7 @@ bool CreateTriMeshData(EnvironmentBasePtr penv, const std::string& filename, con
                 return true;
             }
         }
-        if( extension == "stl" ) {
+        if( extension == "stl" || extension == "x") {
             return false;
         }
     }
@@ -783,14 +784,14 @@ public:
 
 #ifdef OPENRAVE_ASSIMP
         // assimp doesn't support vrml/iv, so don't waste time
-        if((extension != "iv")&&(extension != "wrl")&&(extension != "vrml")) {
+        if( extension != "iv" && extension != "wrl" && extension != "vrml" ) {
             aiSceneManaged scene(filename);
             if( !!scene._scene && !!scene._scene->mRootNode && !!scene._scene->HasMeshes() ) {
                 if( _AssimpCreateGeometries(scene._scene,scene._scene->mRootNode, vscale, listGeometries) ) {
                     return true;
                 }
             }
-            if( extension == "stl" ) {
+            if( extension == "stl" || extension == "x") {
                 return false;
             }
         }
@@ -975,7 +976,7 @@ public:
                 }
                 else if( itatt->first == "render" ) {
                     // set draw to false only if atts[i]==false
-                    bDraw = stricmp(itatt->second.c_str(), "false")!=0;
+                    bDraw = stricmp(itatt->second.c_str(), "false")!=0 && itatt->second!="0";
                 }
                 else if( itatt->first == "modifiable" ) {
                     bModifiable = !(stricmp(itatt->second.c_str(), "false") == 0 || itatt->second=="0");
@@ -2351,7 +2352,8 @@ public:
                 _pchain->_vForcedAdjacentLinks.push_back(entry);
             }
             else if( xmlname == "modelsdir" ) {
-                _ss >> _strModelsDir;
+                getline(_ss,_strModelsDir);
+                boost::trim(_strModelsDir);
                 _strModelsDir += "/";
             }
             else if( xmlname == "diffuseColor" ) {
