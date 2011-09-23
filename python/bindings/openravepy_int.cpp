@@ -76,7 +76,24 @@ public:
         }
     }
 
-    object SendCommand(const string& in) {
+    class PythonThreadSaver
+    {
+public:
+        PythonThreadSaver() {
+            _save = PyEval_SaveThread();
+        }
+        virtual ~PythonThreadSaver() {
+            PyEval_RestoreThread(_save);
+        }
+protected:
+        PyThreadState *_save;
+    };
+
+    object SendCommand(const string& in, bool releasegil=false) {
+        boost::shared_ptr<PythonThreadSaver> statesaver;
+        if( releasegil ) {
+            statesaver.reset(new PythonThreadSaver());
+        }
         stringstream sin(in), sout;
         sout << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
         if( !_pbase->SendCommand(sout,sin) ) {
@@ -4526,8 +4543,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMaxVel_overloads, GetMaxVel, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMaxAccel_overloads, GetMaxAccel, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMaxTorque_overloads, GetMaxTorque, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Configure_overloads, Configure, 1, 2)
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Load_overloads, Load, 1, 2)
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Save_overloads, Save, 1, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SendCommand_overloads, SendCommand, 1, 2)
 
 BOOST_PYTHON_MODULE(openravepy_int)
 {
@@ -4579,8 +4595,9 @@ BOOST_PYTHON_MODULE(openravepy_int)
         std::string sSendCommandDoc = std::string(DOXY_FN(InterfaceBase,SendCommand)) + std::string("The calling conventions between C++ and Python differ a little.\n\n\
 In C++ the syntax is::\n\n  success = SendCommand(OUT, IN)\n\n\
 In python, the syntax is::\n\n\
-  OUT = SendCommand(IN)\n\
-  success = not OUT is None\n\n"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          );
+  OUT = SendCommand(IN,releasegil)\n\
+  success = OUT is not None\n\n\n\
+The **releasegil** parameter controls whether the python Global Interpreter Lock should be released when executing this code. For calls that take a long time and if there are many threads running called from different python threads, releasing the GIL could speed up things a lot. Please keep in mind that releasing and re-acquiring the GIL also takes computation time.\n");
         class_<PyInterfaceBase, boost::shared_ptr<PyInterfaceBase> >("Interface", DOXY_CLASS(InterfaceBase), no_init)
         .def("GetInterfaceType",&PyInterfaceBase::GetInterfaceType, DOXY_FN(InterfaceBase,GetInterfaceType))
         .def("GetXMLId",&PyInterfaceBase::GetXMLId, DOXY_FN(InterfaceBase,GetXMLId))
@@ -4591,7 +4608,7 @@ In python, the syntax is::\n\n\
         .def("SetUserData",setuserdata1,args("data"), DOXY_FN(InterfaceBase,SetUserData))
         .def("SetUserData",setuserdata2,args("data"), DOXY_FN(InterfaceBase,SetUserData))
         .def("GetUserData",&PyInterfaceBase::GetUserData, DOXY_FN(InterfaceBase,GetUserData))
-        .def("SendCommand",&PyInterfaceBase::SendCommand,args("cmd"), sSendCommandDoc.c_str() )
+        .def("SendCommand",&PyInterfaceBase::SendCommand,SendCommand_overloads(args("cmd","releasegil"), sSendCommandDoc.c_str()))
         .def("__repr__", &PyInterfaceBase::__repr__)
         .def("__str__", &PyInterfaceBase::__str__)
         .def("__eq__",&PyInterfaceBase::__eq__)

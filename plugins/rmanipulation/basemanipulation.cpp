@@ -656,10 +656,8 @@ protected:
 
         robot->RegrabAll();
         RobotBase::RobotStateSaver saver(robot);
-
         robot->SetActiveDOFs(pmanip->GetArmIndices(), affinedofs);
         params->SetRobotActiveJoints(robot);
-        robot->GetActiveDOFValues(params->vinitialconfig);
 
         CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
 

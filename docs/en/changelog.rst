@@ -43,6 +43,13 @@ Grasping
 
 * added **--numthreads** option to **openrave.py --database grasping** to allow users to set number of threads.
 
+Python
+------
+
+* Added **releasegil** parameter to :meth:`.Interface.SendCommand` that can temporarily release the Python GIL.
+
+* added two python examples showing how to use PyQt + OpenRAVE together. :mod:`.examples.qtexampleselector` :mod:`.examples.qtserverprocess`
+
 Misc
 ----
 
@@ -56,9 +63,7 @@ Misc
 
 * fixed octave graspplanning demo
 
-* added two python examples showing how to use PyQt + OpenRAVE together. :mod:`.examples.qtexampleselector` :mod:`.examples.qtserverprocess`
-
-* odephysics now uses dJointFeedbakc to compute forces/torques on links
+* odephysics now uses dJointFeedback to compute forces/torques on links
 
 * removed **KinBody.SetGuiData** and **KinBody.GetGuiData** and replaced with :meth:`.KinBody.GetViewerData` similar to how collision/physics are handled.
 
