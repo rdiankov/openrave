@@ -35,7 +35,7 @@ class TestPhysics(EnvironmentSetup):
 
         while numbodies < 5:
             with env:
-                body = env.ReadKinBodyXMLFile(bodynames[random.randint(len(bodynames))])
+                body = env.ReadKinBodyURI(bodynames[random.randint(len(bodynames))])
                 body.SetName('body%d'%numbodies)
                 numbodies += 1
                 env.AddKinBody(body)
@@ -54,7 +54,7 @@ class TestPhysics(EnvironmentSetup):
         env.GetPhysicsEngine().SetGravity([0,0,-9.81])
 
         with env:
-            body = env.ReadKinBodyXMLFile('data/lego2.kinbody.xml')
+            body = env.ReadKinBodyURI('data/lego2.kinbody.xml')
             body.SetName('body')
             env.AddKinBody(body)
             Tinit = eye(4)

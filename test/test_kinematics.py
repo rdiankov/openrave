@@ -194,11 +194,11 @@ class TestKinematics(EnvironmentSetup):
         epsilon = 400*g_epsilon # because exporting, expect to lose precision, should fix this
         for robotfile in g_robotfiles:
             self.env.Reset()
-            robot0=self.env.ReadRobotXMLFile(robotfile)
+            robot0=self.env.ReadRobotURI(robotfile)
             self.env.AddRobot(robot0,True)
             robot0.SetTransform(eye(4))
             self.env.Save('test.zae')
-            robot1=self.env.ReadRobotXMLFile('test.zae')
+            robot1=self.env.ReadRobotURI('test.zae')
             self.env.AddRobot(robot1,True)
             robot1.SetTransform(eye(4))
             assert(len(robot0.GetJoints())==len(robot1.GetJoints()))
@@ -280,7 +280,7 @@ class TestKinematics(EnvironmentSetup):
                         assert( transdist(0.5*(vmax-vmin),extents) <= g_epsilon )
 
     def test_hashes(self):
-        robot = self.env.ReadRobotXMLFile(g_robotfiles[0])
+        robot = self.env.ReadRobotURI(g_robotfiles[0])
         self.env.AddRobot(robot)
         s = robot.serialize(SerializationOptions.Kinematics)
         hash0 = robot.GetKinematicsGeometryHash()
@@ -290,7 +290,7 @@ class TestKinematics(EnvironmentSetup):
 
     def test_staticlinks(self):
         env=self.env
-        robot=env.ReadRobotXMLFile('robots/barrettwam.robot.xml')
+        robot=env.ReadRobotURI('robots/barrettwam.robot.xml')
         env.AddRobot(robot)
         with env:
             robot.SetDOFValues([0.5],[0])

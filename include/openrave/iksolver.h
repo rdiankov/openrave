@@ -37,6 +37,7 @@ enum IkFilterOptions
     IKFO_IgnoreSelfCollisions=2, ///< will not check the self-collision of the robot (checked by default)
     IKFO_IgnoreJointLimits=4, ///< will not check the joint limits of the robot (checked by default)
     IKFO_IgnoreCustomFilter=8, ///< will not use the custom filter, even if one is set
+    IKFO_IgnoreEndEffectorCollision=16, ///< will not check collision of the end effector links with the environment. The links are defined by \ref RobotBase::Manipulator::GetChildLinks. Use this option when \ref RobotBase::Manipulator::CheckEndEffectorCollision has already been called, or it is ok for the end effector to collide given the IK constraints.
 };
 
 /** \brief <b>[interface]</b> Base class for all Inverse Kinematic solvers. See \ref arch_iksolver.

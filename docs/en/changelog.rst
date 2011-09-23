@@ -28,6 +28,8 @@ Inverse Kinematics
 
 * Fixed TranslationDirection5D IK bug, upgrade ikfast version
 
+* ikfast IkSolvers only check collisions of links that can possible move due to new joint values.
+
 Grasping
 --------
 

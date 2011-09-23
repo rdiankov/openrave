@@ -124,6 +124,7 @@ public:
             RAVELOG_DEBUG(ss.str());
         }
 
+        pmanip->GetChildLinks(_vchildlinks);
         // get the joint limits
         RobotBase::RobotStateSaver saver(probot);
         probot->SetActiveDOFs(pmanip->GetArmIndices());
@@ -144,15 +145,17 @@ public:
         }
 
         RobotBase::ManipulatorPtr pmanip(_pmanip);
-        if( (filteroptions&IKFO_CheckEnvCollisions) && _CheckIndependentCollision(pmanip) ) {
-            return false;
-        }
-
         RobotBasePtr probot = pmanip->GetRobot();
         RobotBase::RobotStateSaver saver(probot);
         probot->SetActiveDOFs(pmanip->GetArmIndices());
         std::vector<IKReal> vfree(_vfreeparams.size());
-        bool bCheckEndEffector = true;
+        bool bCheckEndEffector = !(filteroptions & IKFO_IgnoreEndEffectorCollision);
+        if( !bCheckEndEffector ) {
+            FOREACH(itlink,_vchildlinks) {
+                (*itlink)->Enable(false);
+            }
+        }
+        CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
         return ComposeSolution(_vfreeparams, vfree, 0, q0, boost::bind(&IkFastSolver::_SolveSingle,shared_solver(), boost::ref(param),boost::ref(vfree),boost::ref(q0),filteroptions,result,boost::ref(bCheckEndEffector))) == SR_Success;
     }
 
@@ -164,15 +167,17 @@ public:
             return false;
         }
         RobotBase::ManipulatorPtr pmanip(_pmanip);
-        if( (filteroptions&IKFO_CheckEnvCollisions) && _CheckIndependentCollision(pmanip) ) {
-            return false;
-        }
-
         RobotBasePtr probot = pmanip->GetRobot();
         RobotBase::RobotStateSaver saver(probot);
         probot->SetActiveDOFs(pmanip->GetArmIndices());
         std::vector<IKReal> vfree(_vfreeparams.size());
-        bool bCheckEndEffector = true;
+        bool bCheckEndEffector = !(filteroptions & IKFO_IgnoreEndEffectorCollision);
+        if( !bCheckEndEffector ) {
+            FOREACH(itlink,_vchildlinks) {
+                (*itlink)->Enable(false);
+            }
+        }
+        CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
         if( ComposeSolution(_vfreeparams, vfree, 0, vector<dReal>(), boost::bind(&IkFastSolver::_SolveAll,shared_solver(), param,boost::ref(vfree),filteroptions,boost::ref(qSolutions),boost::ref(bCheckEndEffector))) == SR_Quit ) {
             return false;
         }
@@ -189,9 +194,6 @@ public:
             throw openrave_exception("free parameters not equal",ORE_InvalidArguments);
         }
         RobotBase::ManipulatorPtr pmanip(_pmanip);
-        if( (filteroptions&IKFO_CheckEnvCollisions) && _CheckIndependentCollision(pmanip) ) {
-            return false;
-        }
         RobotBasePtr probot = pmanip->GetRobot();
         RobotBase::RobotStateSaver saver(probot);
         probot->SetActiveDOFs(pmanip->GetArmIndices());
@@ -199,7 +201,13 @@ public:
         for(size_t i = 0; i < _vfreeparams.size(); ++i) {
             vfree[i] = vFreeParameters[i]*(_qupper[_vfreeparams[i]]-_qlower[_vfreeparams[i]]) + _qlower[_vfreeparams[i]];
         }
-        bool bCheckEndEffector = true;
+        bool bCheckEndEffector = !(filteroptions & IKFO_IgnoreEndEffectorCollision);
+        if( !bCheckEndEffector ) {
+            FOREACH(itlink,_vchildlinks) {
+                (*itlink)->Enable(false);
+            }
+        }
+        CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
         return _SolveSingle(param,vfree,q0,filteroptions,result,bCheckEndEffector)==SR_Success;
     }
     virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, int filteroptions, std::vector< std::vector<dReal> >& qSolutions)
@@ -213,10 +221,6 @@ public:
             throw openrave_exception("free parameters not equal",ORE_InvalidArguments);
         }
         RobotBase::ManipulatorPtr pmanip(_pmanip);
-        if( (filteroptions&IKFO_CheckEnvCollisions) && _CheckIndependentCollision(pmanip) ) {
-            return false;
-        }
-
         RobotBasePtr probot = pmanip->GetRobot();
         RobotBase::RobotStateSaver saver(probot);
         probot->SetActiveDOFs(pmanip->GetArmIndices());
@@ -224,7 +228,13 @@ public:
         for(size_t i = 0; i < _vfreeparams.size(); ++i) {
             vfree[i] = vFreeParameters[i]*(_qupper[_vfreeparams[i]]-_qlower[_vfreeparams[i]]) + _qlower[_vfreeparams[i]];
         }
-        bool bCheckEndEffector = true;
+        bool bCheckEndEffector = !(filteroptions & IKFO_IgnoreEndEffectorCollision);
+        if( !bCheckEndEffector ) {
+            FOREACH(itlink,_vchildlinks) {
+                (*itlink)->Enable(false);
+            }
+        }
+        CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
         if( _SolveAll(param,vfree,filteroptions,qSolutions,bCheckEndEffector) == SR_Quit ) {
             return false;
         }
@@ -235,6 +245,7 @@ public:
     {
         return (int)_vfreeparams.size();
     }
+
     virtual bool GetFreeParameters(std::vector<dReal>& pFreeParameters) const
     {
         RobotBase::ManipulatorPtr pmanip(_pmanip);
@@ -556,6 +567,9 @@ private:
                     return SR_Quit; // stop the search
                 }
                 bCheckEndEffector = false;
+                FOREACH(itlink,_vchildlinks) {
+                    (*itlink)->Enable(false);
+                }
             }
             return SR_Continue;
         }
@@ -646,6 +660,9 @@ private:
                     return SR_Quit; // stop the search
                 }
                 bCheckEndEffector = false;
+                FOREACH(itlink,_vchildlinks) {
+                    (*itlink)->Enable(false);
+                }
             }
             if( GetEnv()->CheckCollision(KinBodyConstPtr(probot)) ) {
                 return SR_Continue;
@@ -675,20 +692,6 @@ private:
         return true;
     }
 
-    bool _CheckIndependentCollision(RobotBase::ManipulatorPtr pmanip)
-    {
-        CollisionReport report;
-        if( pmanip->CheckIndependentCollision(boost::shared_ptr<CollisionReport>(&report,null_deleter())) ) {
-            if( !!report.plink1 && !!report.plink2 ) {
-                RAVELOG_VERBOSE(str(boost::format("IKFastSolver: indep collision %s:%s with %s:%s\n")%report.plink1->GetParent()->GetName()%report.plink1->GetName()%report.plink2->GetParent()->GetName()%report.plink2->GetName()));
-            }
-
-            return true;
-        }
-
-        return false;
-    }
-
     dReal _configdist2(RobotBasePtr probot, const vector<dReal>& q1, const vector<dReal>& q2) const
     {
         vector<dReal> q = q1;
@@ -702,15 +705,12 @@ private:
         return dist;
     }
 
-    template <typename U> U SQR(U t) {
-        return t*t;
-    }
-
     RobotBase::ManipulatorWeakPtr _pmanip;
     std::vector<int> _vfreeparams;
     std::vector<uint8_t> _vfreerevolute, _vjointrevolute;
     std::vector<dReal> _vfreeparamscales;
     boost::shared_ptr<void> _cblimits;
+    std::vector<KinBody::LinkPtr> _vchildlinks;
     IkFn _pfnik;
     std::vector<dReal> _vFreeInc;
     int _nTotalDOF;

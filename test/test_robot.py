@@ -16,7 +16,7 @@ from common_test_openrave import *
 class TestRobot(EnvironmentSetup):
     def test_dualarm_grabbing(self):
         with self.env:
-            robot = self.env.ReadRobotXMLFile('robots/schunk-lwa3-dual.robot.xml')
+            robot = self.env.ReadRobotURI('robots/schunk-lwa3-dual.robot.xml')
             self.env.AddRobot(robot)
             body = self.env.ReadKinBodyXMLFile('data/box3.kinbody.xml')
             self.env.AddKinBody(body)
@@ -35,7 +35,7 @@ class TestRobot(EnvironmentSetup):
         with self.env:
             for robotfile in g_robotfiles:
                 self.env.Reset()
-                robot = self.env.ReadRobotXMLFile(robotfile)
+                robot = self.env.ReadRobotURI(robotfile)
                 self.env.AddRobot(robot)
                 assert(robot.GetDOF() == robot.GetActiveDOF())
 
@@ -108,17 +108,55 @@ class TestRobot(EnvironmentSetup):
             robot.ReleaseAllGrabbed()
             assert(env.CheckCollision(leftmug,rightmug))
 
-    def test_basic():
-        robot = self.env.ReadRobotXMLFile('robots/schunk-lwa3-dual.robot.xml')
+    def test_basic(self):
+        robot = self.env.ReadRobotURI('robots/schunk-lwa3-dual.robot.xml')
         self.env.AddRobot(robot)
         assert(robot.GetLinks()[0].GetParent().GetActiveDOF() == robot.GetActiveDOF())
+
+    def test_ikcollision(self):
+        print 'test if can solve IK during collisions'
+        env=self.env
+        with env:
+            robot = env.ReadRobotURI('robots/pr2-beta-static.zae')
+            env.AddRobot(robot)
+            target = env.ReadKinBodyURI('data/mug1.kinbody.xml')
+            env.AddKinBody(target,True)
+            T=target.GetTransform()
+            T[0:3,3] = [-0.342,0,0.8]
+            target.SetTransform(T)
+            floor = RaveCreateKinBody(env,'')
+            floor.InitFromBoxes(array([[0,0,0,2,2,0.01]]),True)
+            floor.SetName('floor')
+            env.AddKinBody(floor,True)
+            
+            assert(env.CheckCollision(robot))
+            manip=robot.SetActiveManipulator('leftarm')
+            robot.SetActiveDOFs(manip.GetArmIndices())
+            
+            robot.SetActiveDOFValues([  8.24799539e-01,   0.00000000e+00,   1.75604762e+00, -1.74228108e+00,   3.23831570e-16,   0.00000000e+00, 0.00000000e+00])
+            assert(not robot.CheckSelfCollision())
+            Tmanip = manip.GetTransform()
+            robot.SetActiveDOFValues(zeros(robot.GetActiveDOF()))
+            assert(manip.FindIKSolution(Tmanip,IkFilterOptions.CheckEnvCollisions) is not None)
+
+            basemanip = interfaces.BaseManipulation(robot)
+            out=basemanip.MoveToHandPosition(matrices=[Tmanip],execute=False)
+            assert(out is not None)
+            
+            # self colliding
+            robot.SetActiveDOFValues([  2.20622614e-01,   0.00000000e+00,   1.75604762e+00, -1.74228108e+00,   0.00000000e+00,  -9.56775092e-16, 0.00000000e+00])
+            assert(robot.CheckSelfCollision())
+            Tmanip = manip.GetTransform()
+            robot.SetActiveDOFValues(zeros(robot.GetActiveDOF()))
+            assert(manip.FindIKSolution(Tmanip,IkFilterOptions.CheckEnvCollisions) is None)
+            assert(manip.FindIKSolution(Tmanip,IkFilterOptions.CheckEnvCollisions|IkFilterOptions.IgnoreEndEffectorCollision) is not None)
 
 # def test_ikgeneration():
 #     import inversekinematics
 #     env = Environment()
 #     env.SetDebugLevel(DebugLevel.Debug)
-#     #robot = env.ReadRobotXMLFile('robots/barrettsegway.robot.xml')
-#     robot = env.ReadRobotXMLFile('robots/barrettwam4.robot.xml')
+#     #robot = env.ReadRobotURI('robots/barrettsegway.robot.xml')
+#     robot = env.ReadRobotURI('robots/barrettwam4.robot.xml')
 #     robot.SetActiveManipulator('arm')
 #     env.AddRobot(robot)
 #     self = inversekinematics.InverseKinematicsModel(robot=robot,iktype=IkParameterization.Type.Translation3D)
@@ -139,7 +177,7 @@ class TestRobot(EnvironmentSetup):
 # 
 # def test_handstraight_jacobian():
 #     env = Environment()
-#     robot = env.ReadRobotXMLFile('robots/barrettwam.robot.xml')
+#     robot = env.ReadRobotURI('robots/barrettwam.robot.xml')
 #     env.AddRobot(robot)
 #     # use jacobians for validation
 #     with env:
@@ -197,7 +235,7 @@ class TestRobot(EnvironmentSetup):
 #     import inversekinematics
 #     env = Environment()
 #     env.SetDebugLevel(DebugLevel.Debug)
-#     robot = env.ReadRobotXMLFile('/home/rdiankov/ros/honda/binpicking/robots/tx90.robot.xml')
+#     robot = env.ReadRobotURI('/home/rdiankov/ros/honda/binpicking/robots/tx90.robot.xml')
 #     env.AddRobot(robot)
 #     manip=robot.GetActiveManipulator()
 #     #manip=robot.SetActiveManipulator('leftarm_torso')
