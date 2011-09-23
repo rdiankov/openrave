@@ -637,7 +637,7 @@ public:
         bool bReadFile = false, bTestSelfCollision = false;
         dReal sampledegeneratecases = 0.2f, fthreshold = 0.000001f;
 
-        int filteroptions = IKFO_IgnoreJointLimits|IKFO_IgnoreSelfCollisions|IKFO_IgnoreCustomFilter;
+        int filteroptions = IKFO_IgnoreJointLimits|IKFO_IgnoreSelfCollisions|IKFO_IgnoreCustomFilters;
         RobotBasePtr robot;
         string cmd;
         while(!sinput.eof()) {

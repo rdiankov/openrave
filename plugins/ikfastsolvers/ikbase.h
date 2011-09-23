@@ -149,7 +149,7 @@ public:
         RobotBase::RobotStateSaver saver(probot);
         probot->SetActiveDOFs(pmanip->GetArmIndices());
         std::vector<IKReal> vfree(_vfreeparams.size());
-        bool bCheckEndEffector = !(filteroptions & IKFO_IgnoreEndEffectorCollision);
+        bool bCheckEndEffector = !(filteroptions & IKFO_IgnoreEndEffectorCollisions);
         if( !bCheckEndEffector ) {
             FOREACH(itlink,_vchildlinks) {
                 (*itlink)->Enable(false);
@@ -171,7 +171,7 @@ public:
         RobotBase::RobotStateSaver saver(probot);
         probot->SetActiveDOFs(pmanip->GetArmIndices());
         std::vector<IKReal> vfree(_vfreeparams.size());
-        bool bCheckEndEffector = !(filteroptions & IKFO_IgnoreEndEffectorCollision);
+        bool bCheckEndEffector = !(filteroptions & IKFO_IgnoreEndEffectorCollisions);
         if( !bCheckEndEffector ) {
             FOREACH(itlink,_vchildlinks) {
                 (*itlink)->Enable(false);
@@ -201,7 +201,7 @@ public:
         for(size_t i = 0; i < _vfreeparams.size(); ++i) {
             vfree[i] = vFreeParameters[i]*(_qupper[_vfreeparams[i]]-_qlower[_vfreeparams[i]]) + _qlower[_vfreeparams[i]];
         }
-        bool bCheckEndEffector = !(filteroptions & IKFO_IgnoreEndEffectorCollision);
+        bool bCheckEndEffector = !(filteroptions & IKFO_IgnoreEndEffectorCollisions);
         if( !bCheckEndEffector ) {
             FOREACH(itlink,_vchildlinks) {
                 (*itlink)->Enable(false);
@@ -228,7 +228,7 @@ public:
         for(size_t i = 0; i < _vfreeparams.size(); ++i) {
             vfree[i] = vFreeParameters[i]*(_qupper[_vfreeparams[i]]-_qlower[_vfreeparams[i]]) + _qlower[_vfreeparams[i]];
         }
-        bool bCheckEndEffector = !(filteroptions & IKFO_IgnoreEndEffectorCollision);
+        bool bCheckEndEffector = !(filteroptions & IKFO_IgnoreEndEffectorCollisions);
         if( !bCheckEndEffector ) {
             FOREACH(itlink,_vchildlinks) {
                 (*itlink)->Enable(false);
@@ -634,11 +634,13 @@ private:
         RobotBasePtr probot = pmanip->GetRobot();
         probot->SetActiveDOFValues(vravesol);
 
-        switch(_CallFilters(vravesol, pmanip, param)) {
-        case IKFR_Reject: return SR_Continue;
-        case IKFR_Quit: return SR_Quit;
-        case IKFR_Success:
-            break;
+        if( !(filteroptions & IKFO_IgnoreCustomFilters) ) {
+            switch(_CallFilters(vravesol, pmanip, param)) {
+            case IKFR_Reject: return SR_Continue;
+            case IKFR_Quit: return SR_Quit;
+            case IKFR_Success:
+                break;
+            }
         }
 
         if( !(filteroptions&IKFO_IgnoreSelfCollisions) ) {
