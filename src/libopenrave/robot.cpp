@@ -2042,6 +2042,16 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr plink)
                 g.vNonCollidingLinks.push_back(*itlink);
             }
         }
+        FOREACH(itgrabbed, _vGrabbedBodies) {
+            KinBodyConstPtr pgrabbedbody(itgrabbed->pbody);
+            if( pgrabbedbody != pbody ) {
+                FOREACHC(itlink, pgrabbedbody->GetLinks()) {
+                    if( GetEnv()->CheckCollision(LinkConstPtr(*itlink), pgrabbedbody) ) {
+                        g.vCollidingLinks.push_back(*itlink);
+                    }
+                }
+            }
+        }
     }
 
     _AttachBody(pbody);
@@ -2080,6 +2090,17 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr pRobotLinkToGrabWith, const std::
             }
             else {
                 g.vNonCollidingLinks.push_back(*itlink);
+            }
+        }
+
+        FOREACH(itgrabbed, _vGrabbedBodies) {
+            KinBodyConstPtr pgrabbedbody(itgrabbed->pbody);
+            if( pgrabbedbody != pbody ) {
+                FOREACHC(itlink, pgrabbedbody->GetLinks()) {
+                    if( GetEnv()->CheckCollision(LinkConstPtr(*itlink), pgrabbedbody) ) {
+                        g.vCollidingLinks.push_back(*itlink);
+                    }
+                }
             }
         }
     }
@@ -2132,6 +2153,16 @@ void RobotBase::RegrabAll()
                 }
                 else {
                     itbody->vNonCollidingLinks.push_back(*itlink);
+                }
+            }
+            FOREACH(itgrabbed, _vGrabbedBodies) {
+                KinBodyConstPtr pgrabbedbody(itgrabbed->pbody);
+                if( pgrabbedbody != pbody ) {
+                    FOREACHC(itlink, pgrabbedbody->GetLinks()) {
+                        if( GetEnv()->CheckCollision(LinkConstPtr(*itlink), pgrabbedbody) ) {
+                            itbody->vCollidingLinks.push_back(*itlink);
+                        }
+                    }
                 }
             }
             _AttachBody(pbody);
@@ -2238,15 +2269,18 @@ bool RobotBase::CheckSelfCollision(CollisionReportPtr report) const
                 if( pbody == pbody2 ) {
                     continue;
                 }
-                FOREACHC(itlink, pbody->GetLinks()) {
-                    FOREACHC(itlink2, pbody2->GetLinks()) {
-                        if( GetEnv()->CheckCollision(KinBody::LinkConstPtr(*itlink),KinBody::LinkConstPtr(*itlink2),report) ) {
-                            bCollision = true;
+                FOREACHC(itlink2, pbody2->GetLinks()) {
+                    // make sure the two bodies were not initially colliding
+                    if( find(itbody->vCollidingLinks.begin(),itbody->vCollidingLinks.end(),*itlink2) == itbody->vCollidingLinks.end() ) {
+                        FOREACHC(itlink, pbody->GetLinks()) {
+                            if( GetEnv()->CheckCollision(KinBody::LinkConstPtr(*itlink),KinBody::LinkConstPtr(*itlink2),report) ) {
+                                bCollision = true;
+                                break;
+                            }
+                        }
+                        if( bCollision ) {
                             break;
                         }
-                    }
-                    if( bCollision ) {
-                        break;
                     }
                 }
                 if( bCollision ) {

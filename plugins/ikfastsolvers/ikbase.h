@@ -239,6 +239,25 @@ protected:
                         }
                     }
                 }
+//                if( _savers.size() > 0 && !!report->plink1 && !!report->plink2 ) {
+//                    // two attached bodies can be colliding
+//                    bool bAttached1=false,bAttached2=false;
+//                    KinBodyPtr pbody1 = report->plink1->GetParent(), pbody2 = report->plink1->GetParent();
+//                    FOREACH(it,_savers) {
+//                        if( !bAttached1 && it->GetBody() == pbody1 ) {
+//                            bAttached1 = true;
+//                            if( bAttached1 && bAttached2 ) {
+//                                return CA_Ignore;
+//                            }
+//                        }
+//                        else if( !bAttached2 && it->GetBody() == pbody2 ) {
+//                            bAttached2 = true;
+//                            if( bAttached1 && bAttached2 ) {
+//                                return CA_Ignore;
+//                            }
+//                        }
+//                    }
+//                }
             }
             return CA_DefaultAction;
         }
