@@ -132,6 +132,12 @@ void KinBodyItem::Load()
             if((_viewmode == VG_RenderOnly)||(_viewmode == VG_RenderCollision)) {
                 SoInput mySceneInput;
                 string extension;
+                if( itgeom->GetRenderFilename().find("__norenderif__:") == 0 ) {
+                    string ignoreextension = itgeom->GetRenderFilename().substr(15);
+                    if( ignoreextension == "wrl" || extension == "iv" || extension == "vrml" ) {
+                        continue;
+                    }
+                }
                 if( itgeom->GetRenderFilename().find_last_of('.') != string::npos ) {
                     extension = itgeom->GetRenderFilename().substr(itgeom->GetRenderFilename().find_last_of('.')+1);
                     std::transform(extension.begin(), extension.end(), extension.begin(), ::tolower);

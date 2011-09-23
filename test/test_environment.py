@@ -48,6 +48,7 @@ class TestEnvironment(EnvironmentSetup):
             scalefactor = array([2.0,3.0,4.0])
             body1=env.ReadKinBodyURI('data/mug1.kinbody.xml')
             env.AddKinBody(body1,True)
+            renderfilename = body1.GetLinks()[0].GetGeometries()[0].GetRenderFilename()
             body1.SetTransform(eye(4))
             body2=env.ReadKinBodyURI('data/mug1.kinbody.xml',{'scalegeometry':'%f %f %f'%tuple(scalefactor)})
             env.AddKinBody(body2,True)
@@ -56,3 +57,11 @@ class TestEnvironment(EnvironmentSetup):
             ab2=body2.ComputeAABB()
             assert( transdist(ab1.pos()*scalefactor,ab2.pos()) <= g_epsilon )
             assert( transdist(ab1.extents()*scalefactor,ab2.extents()) <= g_epsilon )
+
+            if len(body1.GetLinks()) == 1:
+                body3 = env.ReadKinBodyURI(renderfilename,{'scalegeometry':'%f %f %f'%tuple(scalefactor)})
+                env.AddKinBody(body3,True)
+                body3.SetTransform(eye(4))
+                ab3=body2.ComputeAABB()
+                assert( transdist(ab3.pos(),ab2.pos()) <= g_epsilon )
+                assert( transdist(ab3.extents(),ab2.extents()) <= g_epsilon )

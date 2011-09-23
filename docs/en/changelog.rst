@@ -19,12 +19,16 @@ Core
 
 * added "scalegeometry" attribute to kinbody loading. can have different scales along XYZ.
 
+* Geometry files imported with assimp now load multiple geometries per material in order to preserve colors. Added :meth:`.KinBody.InitFromGeometries".
+
 Inverse Kinematics
 ------------------
 
-* added :ref:`.IkSolver::RegisterCustomFilter` that allows any number of filters to be registered with priority. :ref:`.IkSolver::SetCustomFilter` is deprecated.
+* added :meth:`.IkSolver.RegisterCustomFilter` that allows any number of filters to be registered with priority. :meth:`.IkSolver.SetCustomFilter` is deprecated.
 
 * Fixed TranslationDirection5D IK bug, upgrade ikfast version
+
+* ikfast IkSolvers only check collisions of links that can possible move due to new joint values.
 
 Grasping
 --------
@@ -40,9 +44,9 @@ Grasping
 Misc
 ----
 
-* added TrajectoryBase::Clone and CalcTrajTiming calls now respect active DOFs settings
+* added :meth:`.Trajectory.Clone` and :meth:`.Trajectory.CalcTrajTiming` calls now respect active DOFs settings
 
-* "skipgeometry" now being acknowledged in Environment::Load, fixes the **openrave.py inversekinematics database --getfilename** option.
+* "skipgeometry" now being acknowledged in :meth:`.Environment.Load`, fixes the **openrave.py inversekinematics database --getfilename** option.
 
 * <render> tag for non-trimesh objects works now
 
@@ -54,7 +58,7 @@ Misc
 
 * odephysics now uses dJointFeedbakc to compute forces/torques on links
 
-* removed **KinBody.SetGuiData** and **KinBody.GetGuiData** and replaced with :ref:`.KinBody.GetViewerData` similar to how collision/physics are handled.
+* removed **KinBody.SetGuiData** and **KinBody.GetGuiData** and replaced with :meth:`.KinBody.GetViewerData` similar to how collision/physics are handled.
 
 Version 0.4.2
 =============

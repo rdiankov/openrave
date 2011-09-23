@@ -110,6 +110,10 @@ public:
             inline const Vector& GetRenderScale() const {
                 return vRenderScale;
             }
+
+            /// \brief render resource file, should be transformed by _t before rendering
+            ///
+            /// If the value is "__norenderif__:x", then the viewer should not render the object if it supports *.x files where"x" is the file extension.
             inline const std::string& GetRenderFilename() const {
                 return _renderfilename;
             }
@@ -189,7 +193,7 @@ protected:
             RaveVector<float> diffuseColor, ambientColor;             ///< hints for how to color the meshes
             TRIMESH collisionmesh;             ///< see \ref GetCollisionMesh
             GeomType _type;                     ///< the type of geometry primitive
-            std::string _renderfilename;              ///< render resource file, should be transformed by _t before rendering
+            std::string _renderfilename;              ///< \see ref GetRenderFilename
             Vector vRenderScale;             ///< render scale of the object (x,y,z)
             float ftransparency;             ///< value from 0-1 for the transparency of the rendered object, 0 is opaque
 
@@ -845,26 +849,32 @@ protected:
 
     /// \brief Create a kinbody with one link composed of an array of aligned bounding boxes.
     ///
-    /// \param vaabbs the array of aligned bounding boxes that will comprise of the body
-    /// \param bDraw if true, the boxes will be rendered in the scene
+    /// \param boxes the array of aligned bounding boxes that will comprise of the body
+    /// \param draw if true, the boxes will be rendered in the scene
     virtual bool InitFromBoxes(const std::vector<AABB>& boxes, bool draw);
 
     /// \brief Create a kinbody with one link composed of an array of oriented bounding boxes.
     ///
-    /// \param vobbs the array of oriented bounding boxes that will comprise of the body
-    /// \param bDraw if true, the boxes will be rendered in the scene
+    /// \param boxes the array of oriented bounding boxes that will comprise of the body
+    /// \param draw if true, the boxes will be rendered in the scene
     virtual bool InitFromBoxes(const std::vector<OBB>& boxes, bool draw);
 
     /// \brief Create a kinbody with one link composed of an array of spheres
     ///
-    /// \param vspheres the XYZ position of the spheres with the W coordinate representing the individual radius
-    virtual bool InitFromSpheres(const std::vector<Vector>& vspheres, bool draw);
+    /// \param spheres the XYZ position of the spheres with the W coordinate representing the individual radius
+    virtual bool InitFromSpheres(const std::vector<Vector>& spheres, bool draw);
 
     /// \brief Create a kinbody with one link composed of a triangle mesh surface
     ///
     /// \param trimesh the triangle mesh
-    /// \param bDraw if true, will be rendered in the scene
+    /// \param draw if true, will be rendered in the scene
     virtual bool InitFromTrimesh(const Link::TRIMESH& trimesh, bool draw);
+
+    /// \brief Create a kinbody with one link composed of a list of geometries
+    ///
+    /// \param geometries In order to save memory, the geometries in this list are transferred to the link. After function completes, the size should be 0.
+    /// \param draw if true, will be rendered in the scene
+    bool InitFromGeometries(std::list<KinBody::Link::GEOMPROPERTIES>& geometries, bool draw);
 
     /// \brief Unique name of the robot.
     virtual const std::string& GetName() const {

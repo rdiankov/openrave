@@ -701,6 +701,7 @@ void init_openravepy_global()
     .value("IgnoreSelfCollisions",IKFO_IgnoreSelfCollisions)
     .value("IgnoreJointLimits",IKFO_IgnoreJointLimits)
     .value("IgnoreCustomFilter",IKFO_IgnoreCustomFilter)
+    .value("IgnoreEndEffectorCollision",IKFO_IgnoreEndEffectorCollision)
     ;
     enum_<IkFilterReturn>("IkFilterReturn" DOXY_ENUM(IkFilterReturn))
     .value("Success",IKFR_Success)

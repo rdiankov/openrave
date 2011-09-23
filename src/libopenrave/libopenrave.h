@@ -298,7 +298,7 @@ void subtractstates(std::vector<dReal>& q1, const std::vector<dReal>& q2);
 
 // if modifying check modify ravep.h too!
 inline bool IsValidCharInName(char c) {
-    return isalnum(c) || c == '_' || c == '-' || c == '.' || c == '/';
+    return c < 0 || c >= 33; //isalnum(c) || c == '_' || c == '-' || c == '.' || c == '/';
 }
 inline bool IsValidName(const std::string& s) {
     if( s.size() == 0 )

@@ -87,7 +87,6 @@ bool RobotBase::Manipulator::FindIKSolution(const IkParameterization& goal, cons
         throw OPENRAVE_EXCEPTION_FORMAT("manipulator %s:%s does not have an IK solver set",RobotBasePtr(_probot)->GetName()%GetName(),ORE_Failed);
     }
     RobotBasePtr probot = GetRobot();
-    EnvironmentMutex::scoped_lock lock(probot->GetEnv()->GetMutex()); // lock just in case since many users call this without locking...
     BOOST_ASSERT(_pIkSolver->GetManipulator() == shared_from_this() );
     vector<dReal> temp;
     probot->GetDOFValues(temp);
@@ -116,7 +115,6 @@ bool RobotBase::Manipulator::FindIKSolutions(const IkParameterization& goal, con
     if( !_pIkSolver ) {
         throw OPENRAVE_EXCEPTION_FORMAT("manipulator %s:%s does not have an IK solver set", RobotBasePtr(_probot)->GetName()%GetName(),ORE_Failed);
     }
-    EnvironmentMutex::scoped_lock lock(GetRobot()->GetEnv()->GetMutex()); // lock just in case since many users call this without locking...
     BOOST_ASSERT(_pIkSolver->GetManipulator() == shared_from_this() );
     IkParameterization localgoal;
     if( !!_pBase ) {

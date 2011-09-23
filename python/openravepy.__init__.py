@@ -38,7 +38,6 @@ from openravepy_ext import *
 import metaclass
 import interfaces
 import databases
-#import examples
 
 OpenRAVEModel = databases.DatabaseGenerator # for backwards compatibility
 _openrave_exception_.py_err_class = openrave_exception

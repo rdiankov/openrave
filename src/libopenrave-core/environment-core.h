@@ -1055,25 +1055,30 @@ public:
                 robot = RaveCreateRobot(shared_from_this(),"");
             }
             if( !!robot ) {
-                boost::shared_ptr<KinBody::Link::TRIMESH> ptrimesh;
-                RaveVector<float> diffuseColor(1,0.5,0.5), ambientColor(0.1,0,0);
-                ptrimesh = _ReadTrimeshURI(ptrimesh,filename,diffuseColor, ambientColor, atts);
-                if( robot->InitFromTrimesh(*ptrimesh,true) ) {
-                    // have to set the render file
-                    robot->_veclinks.at(0)->GetGeometry(0).SetRenderFilename(filename);
-                    robot->_veclinks.at(0)->GetGeometry(0).SetDiffuseColor(diffuseColor);
-                    robot->_veclinks.at(0)->GetGeometry(0).SetAmbientColor(ambientColor);
+                std::list<KinBody::Link::GEOMPROPERTIES> listGeometries;
+                if( _ReadGeometriesURI(listGeometries,filename,atts) && listGeometries.size() > 0 ) {
+                    if( robot->InitFromGeometries(listGeometries,true) ) {
+                        string extension;
+                        if( filename.find_last_of('.') != string::npos ) {
+                            extension = filename.substr(filename.find_last_of('.')+1);
+                        }
+                        string norender = string("__norenderif__:")+extension;
+                        for(size_t igeom = 0; igeom < robot->GetLinks().at(0)->GetGeometries().size(); ++igeom) {
+                            robot->GetLinks().at(0)->GetGeometry(igeom).SetRenderFilename(norender);
+                        }
+                        robot->GetLinks().at(0)->GetGeometry(0).SetRenderFilename(filename);
 #if defined(HAVE_BOOST_FILESYSTEM) && BOOST_VERSION >= 103600 // stem() was introduced in 1.36
-                    boost::filesystem::path pfilename(filename);
+                        boost::filesystem::path pfilename(filename);
 #if defined(BOOST_FILESYSTEM_VERSION) && BOOST_FILESYSTEM_VERSION >= 3
-                    robot->SetName(ConvertToOpenRAVEName(pfilename.stem().string()));
+                        robot->SetName(ConvertToOpenRAVEName(pfilename.stem().string()));
 #else
-                    robot->SetName(ConvertToOpenRAVEName(pfilename.stem()));
+                        robot->SetName(ConvertToOpenRAVEName(pfilename.stem()));
 #endif
 #else
-                    robot->SetName("object");
+                        robot->SetName("object");
 #endif
-                    return robot;
+                        return robot;
+                    }
                 }
                 robot.reset();
             }
@@ -1153,28 +1158,30 @@ public:
                 body = RaveCreateKinBody(shared_from_this(),"");
             }
             if( !!body ) {
-                boost::shared_ptr<KinBody::Link::TRIMESH> ptrimesh;
-                RaveVector<float> diffuseColor(1,0.5,0.5), ambientColor(0.1,0,0);
-                ptrimesh = _ReadTrimeshURI(ptrimesh,filename,diffuseColor, ambientColor, atts);
-                if( !ptrimesh ) {
-                    return KinBodyPtr();
-                }
-                if( body->InitFromTrimesh(*ptrimesh,true) ) {
-                    // have to set the render file
-                    body->_veclinks.at(0)->GetGeometry(0).SetRenderFilename(filename);
-                    body->_veclinks.at(0)->GetGeometry(0).SetDiffuseColor(diffuseColor);
-                    body->_veclinks.at(0)->GetGeometry(0).SetAmbientColor(ambientColor);
+                std::list<KinBody::Link::GEOMPROPERTIES> listGeometries;
+                if( _ReadGeometriesURI(listGeometries,filename,atts) && listGeometries.size() > 0 ) {
+                    if( body->InitFromGeometries(listGeometries,true) ) {
+                        string extension;
+                        if( filename.find_last_of('.') != string::npos ) {
+                            extension = filename.substr(filename.find_last_of('.')+1);
+                        }
+                        string norender = string("__norenderif__:")+extension;
+                        for(size_t igeom = 0; igeom < body->GetLinks().at(0)->GetGeometries().size(); ++igeom) {
+                            body->GetLinks().at(0)->GetGeometry(igeom).SetRenderFilename(norender);
+                        }
+                        body->GetLinks().at(0)->GetGeometry(0).SetRenderFilename(filename);
 #if defined(HAVE_BOOST_FILESYSTEM) && BOOST_VERSION >= 103600 // stem() was introduced in 1.36
-                    boost::filesystem::path pfilename(filename);
+                        boost::filesystem::path pfilename(filename);
 #if defined(BOOST_FILESYSTEM_VERSION) && BOOST_FILESYSTEM_VERSION >= 3
-                    body->SetName(ConvertToOpenRAVEName(pfilename.stem().string()));
+                        body->SetName(ConvertToOpenRAVEName(pfilename.stem().string()));
 #else
-                    body->SetName(ConvertToOpenRAVEName(pfilename.stem()));
+                        body->SetName(ConvertToOpenRAVEName(pfilename.stem()));
 #endif
 #else
-                    body->SetName("object");
+                        body->SetName("object");
 #endif
-                    return body;
+                        return body;
+                    }
                 }
                 body.reset();
             }
@@ -1353,6 +1360,27 @@ public:
             ptrimesh.reset();
         }
         return ptrimesh;
+    }
+
+    virtual bool _ReadGeometriesURI(std::list<KinBody::Link::GEOMPROPERTIES>& listGeometries, const std::string& filename, const AttributesList& atts)
+    {
+        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
+        boost::shared_ptr<pair<string,string> > filedata = OpenRAVEXMLParser::FindFile(filename);
+        if( !filedata ) {
+            return boost::shared_ptr<KinBody::Link::TRIMESH>();
+        }
+        Vector vScaleGeometry(1,1,1);
+        FOREACHC(itatt,atts) {
+            if( itatt->first == "scalegeometry" ) {
+                stringstream ss(itatt->second);
+                ss >> vScaleGeometry.x >> vScaleGeometry.y >> vScaleGeometry.z;
+                if( !ss ) {
+                    vScaleGeometry.z = vScaleGeometry.y = vScaleGeometry.x;
+                }
+            }
+        }
+        return OpenRAVEXMLParser::CreateGeometries(shared_from_this(),filedata->second, vScaleGeometry, listGeometries);
     }
 
     virtual boost::shared_ptr<void> RegisterXMLReader(InterfaceType type, const std::string& xmltag, const CreateXMLReaderFn& fn)

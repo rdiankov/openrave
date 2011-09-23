@@ -345,6 +345,10 @@ class GraspingModel(DatabaseGenerator):
         return preshapes,standoffs,rolls,approachrays, graspingnoise,forceclosure,forceclosurethreshold,None,manipulatordirections,translationstepmult,finestep,friction,avoidlinks,plannername
 
     def generate(self,*args,**kwargs):
+        """
+        Generates all the worker items, processes them, and stores the results. For an argument list, take a look at :ref:`.generatepcg`
+
+        """
         starttime = time.time()
         statesaver = self.robot.CreateRobotStateSaver()
         bodies = [(b,b.IsEnabled()) for b in self.env.GetBodies() if b != self.robot and b != self.target]

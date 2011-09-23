@@ -171,10 +171,10 @@ public:
         /// The child links do not include the arm links.
         virtual void GetChildLinks(std::vector<LinkPtr>& vlinks) const;
 
-        /// \brief Get all links that are independent of the arm and gripper joints
-        ///
-        /// conditioned that the base and end effector links are static.
-        /// In other words, returns all links not on the path from the base to the end effector and not children of the end effector.
+        /** \brief Get all links that are independent of the arm and gripper joints
+
+            In other words, returns all links not on the path from the base to the end effector and not children of the end effector. The base and all links rigidly attached to it are also returned.
+         */
         virtual void GetIndependentLinks(std::vector<LinkPtr>& vlinks) const;
 
         /** \brief Checks collision with only the gripper given its end-effector transform. Ignores disabled links.
