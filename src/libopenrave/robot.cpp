@@ -714,6 +714,17 @@ RobotBase::RobotStateSaver::RobotStateSaver(RobotBasePtr probot, int options) : 
 
 RobotBase::RobotStateSaver::~RobotStateSaver()
 {
+    _RestoreRobot();
+}
+
+void RobotBase::RobotStateSaver::Restore()
+{
+    _RestoreRobot();
+    KinBodyStateSaver::Restore();
+}
+
+void RobotBase::RobotStateSaver::_RestoreRobot()
+{
     if( _options & Save_ActiveDOF ) {
         _probot->SetActiveDOFs(vactivedofs, affinedofs, rotationaxis);
     }

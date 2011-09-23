@@ -22,7 +22,7 @@
 
 namespace OpenRAVE {
 
-/** \brief <b>[interface]</b> Planner interface that generates trajectories for the robot to follow around the environment. See \ref arch_planner.
+/** \brief <b>[interface]</b> Planner interface that generates trajectories for the robot to follow around the environment. <b>If not specified, method is not multi-thread safe.</b> See \ref arch_planner.
     \ingroup interfaces
  */
 class OPENRAVE_API PlannerBase : public InterfaceBase

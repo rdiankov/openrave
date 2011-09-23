@@ -23,7 +23,7 @@
 
 namespace OpenRAVE {
 
-/** \brief <b>[interface]</b> Encapsulate a time-parameterized trajectories of robot configurations. See \ref arch_trajectory.
+/** \brief <b>[interface]</b> Encapsulate a time-parameterized trajectories of robot configurations. <b>If not specified, method is not multi-thread safe.</b> See \ref arch_trajectory.
     \ingroup interfaces
  */
 class OPENRAVE_API TrajectoryBase : public InterfaceBase

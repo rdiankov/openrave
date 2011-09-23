@@ -21,6 +21,8 @@ Core
 
 * Geometry files imported with assimp now load multiple geometries per material in order to preserve colors. Added :meth:`.KinBody.InitFromGeometries".
 
+* KinBody::KinBodyStateSaver and RobotBase::RobotStateSaver now have **Restore** functions that allows users to get back to the original robot without having to destroy the handle.
+
 Inverse Kinematics
 ------------------
 
@@ -30,7 +32,7 @@ Inverse Kinematics
 
 * ikfast IkSolvers only check collisions of links that can possible move due to new joint values.
 
-* Added new :ref:`.IkFilterOptions.IgnoreEndEffectorCollision` option
+* Added new :ref:`.IkFilterOptions.IgnoreEndEffectorCollision` option, this disables the end effector links and their attached bodies from environment collision considerations.
 
 Grasping
 --------

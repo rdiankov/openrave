@@ -25,7 +25,7 @@ template<typename Value_t> class FunctionParserBase;
 
 namespace OpenRAVE {
 
-/** \brief <b>[interface]</b> A kinematic body of links and joints. <b>Methods not multi-thread safe.</b> See \ref arch_kinbody.
+/** \brief <b>[interface]</b> A kinematic body of links and joints. <b>If not specified, method is not multi-thread safe.</b> See \ref arch_kinbody.
     \ingroup interfaces
  */
 class OPENRAVE_API KinBody : public InterfaceBase
@@ -825,12 +825,18 @@ private:
 public:
         KinBodyStateSaver(KinBodyPtr pbody, int options = Save_LinkTransformation|Save_LinkEnable);
         virtual ~KinBodyStateSaver();
+        inline KinBodyPtr GetBody() const {
+            return _pbody;
+        }
+        virtual void Restore();
 protected:
         int _options;         ///< saved options
         std::vector<Transform> _vLinkTransforms;
         std::vector<uint8_t> _vEnabledLinks;
         std::vector<std::pair<Vector,Vector> > _vLinkVelocities;
         KinBodyPtr _pbody;
+private:
+        virtual void _RestoreKinBody();
     };
 
     virtual ~KinBody();

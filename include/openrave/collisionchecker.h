@@ -25,11 +25,18 @@ namespace OpenRAVE {
 /// options for collision checker
 enum CollisionOptions
 {
-    CO_Distance = 1, ///< compute distance measurements, this is usually slow
-    CO_UseTolerance = 2,
-    CO_Contacts = 4, ///< Collision returns contact points
-    CO_RayAnyHit = 8, ///< when performing collision with rays, if this is set, algorithm just returns any hit instead of the closest (can be faster)
-    CO_ActiveDOFs = 16, ///< if set and the target object is a robot, then only the links controlled by the currently set active DOFs will be checked for collisions. This allows planners to reduce redundant collision checks.
+    CO_Distance = 1, ///< Compute distance measurements, this is usually slow and not all checkers support it.
+    CO_UseTolerance = 2, ///< not used
+    CO_Contacts = 4, ///< Return the contact points of the collision in the \ref CollisionReport. Note that this takes longer to compute.
+    CO_RayAnyHit = 8, ///< When performing collision with rays, if this is set, algorithm just returns any hit instead of the closest (can be faster)
+
+    /** Allows planners to greatly reduce redundant collision checks.
+        If set and the target object is a robot, then only the links controlled by the currently set active DOFs and their attached bodies will be checked for collisions.
+
+        The things that **will not be** checked for collision are:
+        - links that do not remove with respect to each other as a result of moving the active dofs.
+     */
+    CO_ActiveDOFs = 16,
 };
 
 /// \brief action to perform whenever a collision is detected between objects
@@ -80,7 +87,7 @@ public:
 
 typedef CollisionReport COLLISIONREPORT RAVE_DEPRECATED;
 
-/** \brief <b>[interface]</b> Responsible for all collision checking queries of the environment. See \ref arch_collisionchecker.
+/** \brief <b>[interface]</b> Responsible for all collision checking queries of the environment. <b>If not specified, method is not multi-thread safe.</b> See \ref arch_collisionchecker.
     \ingroup interfaces
  */
 class OPENRAVE_API CollisionCheckerBase : public InterfaceBase

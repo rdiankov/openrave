@@ -1806,6 +1806,16 @@ KinBody::KinBodyStateSaver::KinBodyStateSaver(KinBodyPtr pbody, int options) : _
 
 KinBody::KinBodyStateSaver::~KinBodyStateSaver()
 {
+    _RestoreKinBody();
+}
+
+void KinBody::KinBodyStateSaver::Restore()
+{
+    _RestoreKinBody();
+}
+
+void KinBody::KinBodyStateSaver::_RestoreKinBody()
+{
     if( _options & Save_LinkTransformation ) {
         _pbody->SetLinkTransformations(_vLinkTransforms);
     }

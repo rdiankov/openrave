@@ -35,7 +35,7 @@ enum SampleDataType {
     SDT_Uint32=2,
 };
 
-/** \brief <b>[interface]</b> Contains space samplers commonly used in planners. <b>Methods not multi-thread safe.</b> See \ref arch_spacesampler.
+/** \brief <b>[interface]</b> Contains space samplers commonly used in planners. <b>If not specified, method is not multi-thread safe.</b> See \ref arch_spacesampler.
     \ingroup interfaces
  */
 class OPENRAVE_API SpaceSamplerBase :  public InterfaceBase

@@ -133,7 +133,7 @@ class TestRobot(EnvironmentSetup):
             manip=robot.SetActiveManipulator('leftarm')
             robot.SetActiveDOFs(manip.GetArmIndices())
             
-            robot.SetActiveDOFValues([  8.24799539e-01,   0.00000000e+00,   1.75604762e+00, -1.74228108e+00,   3.23831570e-16,   0.00000000e+00, 0.00000000e+00])
+            robot.SetActiveDOFValues([  0.678,   0.00000000e+00,   1.75604762e+00, -1.74228108e+00,   3.23831570e-16,   0.00000000e+00, 0.00000000e+00])
             assert(not robot.CheckSelfCollision())
             Tmanip = manip.GetTransform()
             robot.SetActiveDOFValues(zeros(robot.GetActiveDOF()))
@@ -149,7 +149,23 @@ class TestRobot(EnvironmentSetup):
             Tmanip = manip.GetTransform()
             robot.SetActiveDOFValues(zeros(robot.GetActiveDOF()))
             assert(manip.FindIKSolution(Tmanip,IkFilterOptions.CheckEnvCollisions) is None)
-            assert(manip.FindIKSolution(Tmanip,IkFilterOptions.CheckEnvCollisions|IkFilterOptions.IgnoreEndEffectorCollision) is not None)
+            assert(manip.FindIKSolution(Tmanip,IkFilterOptions.CheckEnvCollisions|IkFilterOptions.IgnoreEndEffectorCollisions) is not None)
+
+            box = RaveCreateKinBody(env,'')
+            box.InitFromBoxes(array([[0,0,0,0.1,0.1,0.2]]),True)
+            box.SetName('box')
+            env.AddKinBody(box,True)
+            box.SetTransform(manip.GetTransform())
+            robot.Grab(box)
+            robot.SetActiveDOFValues([  0.678,   0.00000000e+00,   1.75604762e+00, -1.74228108e+00,   3.23831570e-16,   0.00000000e+00, 0.00000000e+00])
+            assert(robot.CheckSelfCollision())
+            Tmanip = manip.GetTransform()
+            robot.SetActiveDOFValues(zeros(robot.GetActiveDOF()))
+            assert(manip.FindIKSolution(Tmanip,IkFilterOptions.CheckEnvCollisions|IkFilterOptions.IgnoreEndEffectorCollisions) is not None)
+
+            robot.SetActiveDOFValues([ 0.00000000e+00,   9.41227019e-01,   2.95911693e+00, -1.57009246e-16,   0.00000000e+00,  -3.14018492e-16, 0.00000000e+00])
+            Tmanip = manip.GetTransform()
+            assert(manip.FindIKSolution(Tmanip,IkFilterOptions.CheckEnvCollisions|IkFilterOptions.IgnoreEndEffectorCollisions) is not None)
 
 # def test_ikgeneration():
 #     import inversekinematics

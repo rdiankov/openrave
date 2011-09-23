@@ -22,7 +22,7 @@
 
 namespace OpenRAVE {
 
-/** \brief <b>[interface]</b> Abstract base class to encapsulate a local controller. <b>Methods not multi-thread safe.</b> See \ref arch_controller.
+/** \brief <b>[interface]</b> Abstract base class to encapsulate a local controller. <b>If not specified, method is not multi-thread safe.</b> See \ref arch_controller.
     \ingroup interfaces
  */
 class OPENRAVE_API ControllerBase : public InterfaceBase
