@@ -58,7 +58,7 @@ class TestEnvironment(EnvironmentSetup):
             assert( transdist(ab1.pos()*scalefactor,ab2.pos()) <= g_epsilon )
             assert( transdist(ab1.extents()*scalefactor,ab2.extents()) <= g_epsilon )
 
-            if len(body1.GetLinks()[0]) == 1:
+            if len(body1.GetLinks()) == 1:
                 body3 = env.ReadKinBodyURI(renderfilename,{'scalegeometry':'%f %f %f'%tuple(scalefactor)})
                 env.AddKinBody(body3,True)
                 body3.SetTransform(eye(4))
