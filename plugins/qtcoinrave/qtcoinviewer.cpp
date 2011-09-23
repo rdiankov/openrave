@@ -129,7 +129,7 @@ QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
 
     _ivBodies = NULL;
     if( !!ifstream("environment.iv") ) {
-        SoDBLock dblock();
+        SoDBWriteLock dblock;
         SoInput mySceneInput;
         if( mySceneInput.openFile("environment.iv") ) {
             _ivBodies = SoDB::readAll(&mySceneInput);

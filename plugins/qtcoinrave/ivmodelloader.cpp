@@ -49,11 +49,12 @@ public:
         }
         boost::trim(filename);
 
+        boost::mutex::scoped_lock lock(g_mutexsoqt);
+        SoDBWriteLock dblock;
         if(!SoDB::isInitialized()) {
             SoDB::init();
         }
         // have to lock coin3d, or otherwise state gets corrupted
-        SoDBLock lock;
         SoInput mySceneInput;
         if (!mySceneInput.openFile(filename.c_str())) {
             RAVELOG_WARN(str(boost::format("Failed to open '%s' for KinBody:TriMesh\n")%filename));
