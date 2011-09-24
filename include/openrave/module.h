@@ -22,7 +22,7 @@
 
 namespace OpenRAVE {
 
-/** \brief <b>[interface]</b> A loadable module of user code meant to solve a specific domain. See \ref arch_module.
+/** \brief <b>[interface]</b> A loadable module of user code meant to solve a specific domain. <b>If not specified, method is not multi-thread safe.</b> See \ref arch_module.
     \ingroup interfaces
  */
 class OPENRAVE_API ModuleBase : public InterfaceBase

@@ -292,16 +292,29 @@ public:
 };
 
 
-class SoDBLock
+class SoDBReadLock
 {
 public:
-    SoDBLock() {
+    SoDBReadLock() {
         SoDB::readlock();
     }
-    virtual ~SoDBLock() {
+    virtual ~SoDBReadLock() {
         SoDB::readunlock();
     }
 };
+
+class SoDBWriteLock
+{
+public:
+    SoDBWriteLock() {
+        SoDB::writelock();
+    }
+    virtual ~SoDBWriteLock() {
+        SoDB::writeunlock();
+    }
+};
+
+extern boost::mutex g_mutexsoqt;
 
 #include "item.h"
 #include "ivselector.h"

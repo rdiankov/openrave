@@ -22,7 +22,7 @@
 
 namespace OpenRAVE {
 
-/** \brief <b>[interface]</b> A sensor measures physical properties from the environment. See \ref arch_sensor.
+/** \brief <b>[interface]</b> A sensor measures physical properties from the environment. <b>If not specified, method is not multi-thread safe.</b> See \ref arch_sensor.
    \ingroup interfaces
  */
 class OPENRAVE_API SensorBase : public InterfaceBase
@@ -346,9 +346,10 @@ public:
     virtual Transform GetTransform() = 0;
 
     /// \brief Register a callback whenever new sensor data comes in.
+    ///
     /// \param type the sensor type to register for
     /// \param callback the user function to call, note that this might block the thread generating/receiving sensor data
-    virtual boost::shared_ptr<void> RegisterDataCallback(SensorType type, const boost::function<void(SensorDataConstPtr)>& callback) OPENRAVE_DUMMY_IMPLEMENTATION;
+    virtual UserDataPtr RegisterDataCallback(SensorType type, const boost::function<void(SensorDataConstPtr)>& callback) OPENRAVE_DUMMY_IMPLEMENTATION;
 
     /// \return the name of the sensor
     virtual const std::string& GetName() const {

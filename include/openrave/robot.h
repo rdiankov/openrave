@@ -23,7 +23,7 @@
 
 namespace OpenRAVE {
 
-/** \brief <b>[interface]</b> A robot is a kinematic body that has attached manipulators, sensors, and controllers. <b>Methods not multi-thread safe.</b> See \ref arch_robot.
+/** \brief <b>[interface]</b> A robot is a kinematic body that has attached manipulators, sensors, and controllers. <b>If not specified, method is not multi-thread safe.</b> See \ref arch_robot.
     \ingroup interfaces
  */
 class OPENRAVE_API RobotBase : public KinBody
@@ -321,6 +321,7 @@ public:
 public:
         RobotStateSaver(RobotBasePtr probot, int options = Save_LinkTransformation|Save_LinkEnable|Save_ActiveDOF|Save_ActiveManipulator);
         virtual ~RobotStateSaver();
+        virtual void Restore();
 protected:
         RobotBasePtr _probot;
         std::vector<int> vactivedofs;
@@ -328,6 +329,8 @@ protected:
         Vector rotationaxis;
         int nActiveManip;
         std::vector<Grabbed> _vGrabbedBodies;
+private:
+        virtual void _RestoreRobot();
     };
 
     virtual ~RobotBase();
@@ -496,8 +499,14 @@ protected:
     virtual void GetActiveDOFLimits(std::vector<dReal>& lower, std::vector<dReal>& upper) const;
     virtual void GetActiveDOFResolutions(std::vector<dReal>& v) const;
     virtual void GetActiveDOFWeights(std::vector<dReal>& v) const;
-    virtual void GetActiveDOFMaxVel(std::vector<dReal>& v) const;
-    virtual void GetActiveDOFMaxAccel(std::vector<dReal>& v) const;
+    virtual void GetActiveDOFVelocityLimits(std::vector<dReal>& v) const;
+    virtual void GetActiveDOFAccelerationLimits(std::vector<dReal>& v) const;
+    virtual void GetActiveDOFMaxVel(std::vector<dReal>& v) const {
+        return GetActiveDOFVelocityLimits(v);
+    }
+    virtual void GetActiveDOFMaxAccel(std::vector<dReal>& v) const {
+        return GetActiveDOFAccelerationLimits(v);
+    }
 
     /// computes the configuration difference q1-q2 and stores it in q1. Takes into account joint limits and circular joints
     virtual void SubtractActiveDOFValues(std::vector<dReal>& q1, const std::vector<dReal>& q2) const;

@@ -21,6 +21,10 @@ Core
 
 * Geometry files imported with assimp now load multiple geometries per material in order to preserve colors. Added :meth:`.KinBody.InitFromGeometries".
 
+* KinBody::KinBodyStateSaver and RobotBase::RobotStateSaver now have **Restore** functions that allows users to get back to the original robot without having to destroy the handle.
+
+* Now properly handling inter-grabbed-body collisions: if two grabbed bodies are initially colliding when grabbed, then their self-colision should be ignored. Also fixed a bug with :meth:`.Robot.Manipulator.CheckEndEffectorCollision`
+
 Inverse Kinematics
 ------------------
 
@@ -29,6 +33,8 @@ Inverse Kinematics
 * Fixed TranslationDirection5D IK bug, upgrade ikfast version
 
 * ikfast IkSolvers only check collisions of links that can possible move due to new joint values.
+
+* Added new :ref:`.IkFilterOptions.IgnoreEndEffectorCollision` option, this disables the end effector links and their attached bodies from environment collision considerations.
 
 Grasping
 --------
@@ -40,6 +46,13 @@ Grasping
 * added new :mod:`.examples.fastgraspingthreaded` example to show how to use multithreaded functions to compute good grasps in real-time.
 
 * added **--numthreads** option to **openrave.py --database grasping** to allow users to set number of threads.
+
+Python
+------
+
+* Added **releasegil** parameter to :meth:`.Interface.SendCommand` that can temporarily release the Python GIL.
+
+* added two python examples showing how to use PyQt + OpenRAVE together. :mod:`.examples.qtexampleselector` :mod:`.examples.qtserverprocess`
 
 Misc
 ----
@@ -54,9 +67,7 @@ Misc
 
 * fixed octave graspplanning demo
 
-* added two python examples showing how to use PyQt + OpenRAVE together. :mod:`.examples.qtexampleselector` :mod:`.examples.qtserverprocess`
-
-* odephysics now uses dJointFeedbakc to compute forces/torques on links
+* odephysics now uses dJointFeedback to compute forces/torques on links
 
 * removed **KinBody.SetGuiData** and **KinBody.GetGuiData** and replaced with :meth:`.KinBody.GetViewerData` similar to how collision/physics are handled.
 

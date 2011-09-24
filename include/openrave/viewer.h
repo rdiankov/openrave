@@ -22,10 +22,11 @@
 
 namespace OpenRAVE {
 
-/// \brief Handle holding the plot from the viewers. The plot will continue to be drawn as long as a reference to this handle is held.
-///
-/// Designed to be multi-thread safe and destruction and modification of the viewer plot can be done at any time. The viewers
-/// internally handle synchronization and threading issues.
+/** \brief Handle holding the plot from the viewers. The plot will continue to be drawn as long as a reference to this handle is held.
+
+    Designed to be multi-thread safe and destruction and modification of the viewer plot can be done at any time. The viewers
+    internally handle synchronization and threading issues.
+ */
 class OPENRAVE_API GraphHandle
 {
 public:
@@ -44,7 +45,7 @@ typedef boost::shared_ptr<GraphHandle> GraphHandlePtr;
 typedef boost::shared_ptr<GraphHandle const> GraphHandleConstPtr;
 typedef boost::weak_ptr<GraphHandle const> GraphHandleWeakPtr;
 
-/** \brief <b>[interface]</b> Base class for the graphics and gui engine that renders the environment and provides visual sensor information. See \ref arch_viewer.
+/** \brief <b>[interface]</b> Base class for the graphics and gui engine that renders the environment and provides visual sensor information. <b>If not specified, method is not multi-thread safe.</b> See \ref arch_viewer.
     \ingroup interfaces
  */
 class OPENRAVE_API ViewerBase : public InterfaceBase

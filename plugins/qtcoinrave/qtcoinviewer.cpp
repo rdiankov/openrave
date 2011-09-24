@@ -129,7 +129,7 @@ QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
 
     _ivBodies = NULL;
     if( !!ifstream("environment.iv") ) {
-        SoDBLock dblock();
+        SoDBWriteLock dblock;
         SoInput mySceneInput;
         if( mySceneInput.openFile("environment.iv") ) {
             _ivBodies = SoDB::readAll(&mySceneInput);
@@ -2629,7 +2629,7 @@ void QtCoinViewer::UpdateFromModel()
         map<KinBodyPtr, KinBodyItemPtr>::iterator itmap = _mapbodies.find(pbody);
 
         if( itmap == _mapbodies.end() ) {
-            RAVELOG_VERBOSE("body %s doesn't have a map associated with it!\n", itbody->strname.c_str());
+            //RAVELOG_VERBOSE("body %s doesn't have a map associated with it!\n", itbody->strname.c_str());
             continue;
         }
 

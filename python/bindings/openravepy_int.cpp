@@ -76,7 +76,24 @@ public:
         }
     }
 
-    object SendCommand(const string& in) {
+    class PythonThreadSaver
+    {
+public:
+        PythonThreadSaver() {
+            _save = PyEval_SaveThread();
+        }
+        virtual ~PythonThreadSaver() {
+            PyEval_RestoreThread(_save);
+        }
+protected:
+        PyThreadState *_save;
+    };
+
+    object SendCommand(const string& in, bool releasegil=false) {
+        boost::shared_ptr<PythonThreadSaver> statesaver;
+        if( releasegil ) {
+            statesaver.reset(new PythonThreadSaver());
+        }
         stringstream sin(in), sout;
         sout << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
         if( !_pbase->SendCommand(sout,sin) ) {
@@ -1353,12 +1370,12 @@ public:
 
 bool PyKinBody::CheckSelfCollision(PyCollisionReportPtr pReport)
 {
-    if( !pReport )
+    if( !pReport ) {
         return _pbody->CheckSelfCollision();
-
-    bool bSuccess = _pbody->CheckSelfCollision(pReport->report);
+    }
+    bool bCollision = _pbody->CheckSelfCollision(pReport->report);
     pReport->init(GetEnv());
-    return bSuccess;
+    return bCollision;
 }
 
 class PyControllerBase : public PyInterfaceBase
@@ -1977,7 +1994,11 @@ public:
         }
         bool CheckEndEffectorCollision(object otrans, PyCollisionReportPtr pReport) const
         {
-            return _pmanip->CheckEndEffectorCollision(ExtractTransform(otrans),!pReport ? CollisionReportPtr() : pReport->report);
+            bool bCollision = _pmanip->CheckEndEffectorCollision(ExtractTransform(otrans),!pReport ? CollisionReportPtr() : pReport->report);
+            if( !!pReport ) {
+                pReport->init(_pyenv);
+            }
+            return bCollision;
         }
         bool CheckIndependentCollision() const
         {
@@ -1985,7 +2006,11 @@ public:
         }
         bool CheckIndependentCollision(PyCollisionReportPtr pReport) const
         {
-            return _pmanip->CheckIndependentCollision(!pReport ? CollisionReportPtr() : pReport->report);
+            bool bCollision = _pmanip->CheckIndependentCollision(!pReport ? CollisionReportPtr() : pReport->report);
+            if( !!pReport ) {
+                pReport->init(_pyenv);
+            }
+            return bCollision;
         }
 
         boost::multi_array<dReal,2> CalculateJacobian()
@@ -3411,9 +3436,9 @@ public:
         if( !pReport ) {
             return _penv->CheckCollision(KinBodyConstPtr(pbody1->GetBody()));
         }
-        bool bSuccess = _penv->CheckCollision(KinBodyConstPtr(pbody1->GetBody()), pReport->report);
+        bool bCollision = _penv->CheckCollision(KinBodyConstPtr(pbody1->GetBody()), pReport->report);
         pReport->init(shared_from_this());
-        return bSuccess;
+        return bCollision;
     }
 
     bool CheckCollision(PyKinBodyPtr pbody1, PyKinBodyPtr pbody2)
@@ -3430,9 +3455,9 @@ public:
         if( !pReport ) {
             return _penv->CheckCollision(KinBodyConstPtr(pbody1->GetBody()), KinBodyConstPtr(pbody2->GetBody()));
         }
-        bool bSuccess = _penv->CheckCollision(KinBodyConstPtr(pbody1->GetBody()), KinBodyConstPtr(pbody2->GetBody()), pReport->report);
+        bool bCollision = _penv->CheckCollision(KinBodyConstPtr(pbody1->GetBody()), KinBodyConstPtr(pbody2->GetBody()), pReport->report);
         pReport->init(shared_from_this());
-        return bSuccess;
+        return bCollision;
     }
 
     bool CheckCollision(PyKinBody::PyLinkPtr plink)
@@ -3447,9 +3472,9 @@ public:
         if( !pReport ) {
             return _penv->CheckCollision(KinBody::LinkConstPtr(plink->GetLink()));
         }
-        bool bSuccess = _penv->CheckCollision(KinBody::LinkConstPtr(plink->GetLink()), pReport->report);
+        bool bCollision = _penv->CheckCollision(KinBody::LinkConstPtr(plink->GetLink()), pReport->report);
         pReport->init(shared_from_this());
-        return bSuccess;
+        return bCollision;
     }
 
     bool CheckCollision(PyKinBody::PyLinkPtr plink1, PyKinBody::PyLinkPtr plink2)
@@ -3465,9 +3490,9 @@ public:
         if( !pReport ) {
             return _penv->CheckCollision(KinBody::LinkConstPtr(plink1->GetLink()), KinBody::LinkConstPtr(plink2->GetLink()));
         }
-        bool bSuccess = _penv->CheckCollision(KinBody::LinkConstPtr(plink1->GetLink()), KinBody::LinkConstPtr(plink2->GetLink()), pReport->report);
+        bool bCollision = _penv->CheckCollision(KinBody::LinkConstPtr(plink1->GetLink()), KinBody::LinkConstPtr(plink2->GetLink()), pReport->report);
         pReport->init(shared_from_this());
-        return bSuccess;
+        return bCollision;
     }
 
     bool CheckCollision(PyKinBody::PyLinkPtr plink, PyKinBodyPtr pbody)
@@ -3484,9 +3509,9 @@ public:
         if( !pReport ) {
             return _penv->CheckCollision(KinBody::LinkConstPtr(plink->GetLink()), KinBodyConstPtr(pbody->GetBody()));
         }
-        bool bSuccess = _penv->CheckCollision(KinBody::LinkConstPtr(plink->GetLink()), KinBodyConstPtr(pbody->GetBody()), pReport->report);
+        bool bCollision = _penv->CheckCollision(KinBody::LinkConstPtr(plink->GetLink()), KinBodyConstPtr(pbody->GetBody()), pReport->report);
         pReport->init(shared_from_this());
-        return bSuccess;
+        return bCollision;
     }
 
     bool CheckCollision(PyKinBody::PyLinkPtr plink, object bodyexcluded, object linkexcluded)
@@ -3540,9 +3565,9 @@ public:
         if( !pReport ) {
             return _penv->CheckCollision(KinBody::LinkConstPtr(plink->GetLink()),vbodyexcluded,vlinkexcluded);
         }
-        bool bSuccess = _penv->CheckCollision(KinBody::LinkConstPtr(plink->GetLink()), vbodyexcluded, vlinkexcluded, pReport->report);
+        bool bCollision = _penv->CheckCollision(KinBody::LinkConstPtr(plink->GetLink()), vbodyexcluded, vlinkexcluded, pReport->report);
         pReport->init(shared_from_this());
-        return bSuccess;
+        return bCollision;
     }
 
     bool CheckCollision(PyKinBodyPtr pbody, object bodyexcluded, object linkexcluded)
@@ -3596,9 +3621,9 @@ public:
         if( !pReport ) {
             return _penv->CheckCollision(KinBodyConstPtr(pbody->GetBody()),vbodyexcluded,vlinkexcluded);
         }
-        bool bSuccess = _penv->CheckCollision(KinBodyConstPtr(pbody->GetBody()), vbodyexcluded, vlinkexcluded, pReport->report);
+        bool bCollision = _penv->CheckCollision(KinBodyConstPtr(pbody->GetBody()), vbodyexcluded, vlinkexcluded, pReport->report);
         pReport->init(shared_from_this());
-        return bSuccess;
+        return bCollision;
     }
 
     bool CheckCollision(boost::shared_ptr<PyRay> pyray, PyKinBodyPtr pbody)
@@ -3608,9 +3633,9 @@ public:
 
     bool CheckCollision(boost::shared_ptr<PyRay> pyray, PyKinBodyPtr pbody, PyCollisionReportPtr pReport)
     {
-        bool bSuccess = _penv->CheckCollision(pyray->r, KinBodyConstPtr(pbody->GetBody()), pReport->report);
+        bool bCollision = _penv->CheckCollision(pyray->r, KinBodyConstPtr(pbody->GetBody()), pReport->report);
         pReport->init(shared_from_this());
-        return bSuccess;
+        return bCollision;
     }
 
     object CheckCollisionRays(object rays, PyKinBodyPtr pbody,bool bFrontFacingOnly=false)
@@ -3672,9 +3697,9 @@ public:
 
     bool CheckCollision(boost::shared_ptr<PyRay> pyray, PyCollisionReportPtr pReport)
     {
-        bool bSuccess = _penv->CheckCollision(pyray->r, pReport->report);
+        bool bCollision = _penv->CheckCollision(pyray->r, pReport->report);
         pReport->init(shared_from_this());
-        return bSuccess;
+        return bCollision;
     }
 
     bool Load(const string& filename) {
@@ -4526,8 +4551,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMaxVel_overloads, GetMaxVel, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMaxAccel_overloads, GetMaxAccel, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMaxTorque_overloads, GetMaxTorque, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Configure_overloads, Configure, 1, 2)
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Load_overloads, Load, 1, 2)
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Save_overloads, Save, 1, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SendCommand_overloads, SendCommand, 1, 2)
 
 BOOST_PYTHON_MODULE(openravepy_int)
 {
@@ -4579,8 +4603,9 @@ BOOST_PYTHON_MODULE(openravepy_int)
         std::string sSendCommandDoc = std::string(DOXY_FN(InterfaceBase,SendCommand)) + std::string("The calling conventions between C++ and Python differ a little.\n\n\
 In C++ the syntax is::\n\n  success = SendCommand(OUT, IN)\n\n\
 In python, the syntax is::\n\n\
-  OUT = SendCommand(IN)\n\
-  success = not OUT is None\n\n"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          );
+  OUT = SendCommand(IN,releasegil)\n\
+  success = OUT is not None\n\n\n\
+The **releasegil** parameter controls whether the python Global Interpreter Lock should be released when executing this code. For calls that take a long time and if there are many threads running called from different python threads, releasing the GIL could speed up things a lot. Please keep in mind that releasing and re-acquiring the GIL also takes computation time.\n");
         class_<PyInterfaceBase, boost::shared_ptr<PyInterfaceBase> >("Interface", DOXY_CLASS(InterfaceBase), no_init)
         .def("GetInterfaceType",&PyInterfaceBase::GetInterfaceType, DOXY_FN(InterfaceBase,GetInterfaceType))
         .def("GetXMLId",&PyInterfaceBase::GetXMLId, DOXY_FN(InterfaceBase,GetXMLId))
@@ -4591,7 +4616,7 @@ In python, the syntax is::\n\n\
         .def("SetUserData",setuserdata1,args("data"), DOXY_FN(InterfaceBase,SetUserData))
         .def("SetUserData",setuserdata2,args("data"), DOXY_FN(InterfaceBase,SetUserData))
         .def("GetUserData",&PyInterfaceBase::GetUserData, DOXY_FN(InterfaceBase,GetUserData))
-        .def("SendCommand",&PyInterfaceBase::SendCommand,args("cmd"), sSendCommandDoc.c_str() )
+        .def("SendCommand",&PyInterfaceBase::SendCommand,SendCommand_overloads(args("cmd","releasegil"), sSendCommandDoc.c_str()))
         .def("__repr__", &PyInterfaceBase::__repr__)
         .def("__str__", &PyInterfaceBase::__str__)
         .def("__eq__",&PyInterfaceBase::__eq__)

@@ -43,11 +43,19 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
 
         bool IsActiveLink(KinBodyPtr pbody, int linkindex)
         {
-            if( !bActiveDOFs || !_pbody ||( pbody != _pbody) || !_pbody->IsRobot()) {
+            if( !bActiveDOFs || !_pbody || !_pbody->IsRobot()) {
                 return true;
             }
+            RobotBaseConstPtr probot = OpenRAVE::RaveInterfaceConstCast<RobotBase>(_pbody);
+            if( pbody != _pbody ) {
+                // pbody could be attached to a robot's link that is not active!
+                KinBody::LinkPtr pgrabbinglink = probot->IsGrabbing(pbody);
+                if( !pgrabbinglink ) {
+                    return true;
+                }
+                linkindex = pgrabbinglink->GetIndex();
+            }
             if( _vactivelinks.size() == 0 ) {
-                RobotBaseConstPtr probot = OpenRAVE::RaveInterfaceConstCast<RobotBase>(pbody);
                 if( probot->GetAffineDOF() ) {
                     // enable everything
                     _vactivelinks.resize(probot->GetLinks().size(),1);

@@ -25,7 +25,7 @@ template<typename Value_t> class FunctionParserBase;
 
 namespace OpenRAVE {
 
-/** \brief <b>[interface]</b> A kinematic body of links and joints. <b>Methods not multi-thread safe.</b> See \ref arch_kinbody.
+/** \brief <b>[interface]</b> A kinematic body of links and joints. <b>If not specified, method is not multi-thread safe.</b> See \ref arch_kinbody.
     \ingroup interfaces
  */
 class OPENRAVE_API KinBody : public InterfaceBase
@@ -42,7 +42,7 @@ public:
         Prop_LinkDraw=0x40,     ///< toggle link geometries rendering
         Prop_LinkGeometry=0x80|Prop_Links,     ///< the geometry of the link changed
         Prop_JointMimic=0x100|Prop_Joints,     ///< joint mimic equations
-        Prop_JointVelocityLimits=0x200|Prop_Joints,     ///< velocity limits
+        Prop_JointAccelerationVelocityLimits=0x200|Prop_Joints,     ///< velocity + acceleration
         Prop_LinkStatic=0x400|Prop_Links,     ///< static property of link changed
         // robot only
         Prop_RobotManipulators = 0x00010000,     ///< [robot only] all properties of all manipulators
@@ -533,14 +533,25 @@ public:
 
         /** \brief Returns the max velocities of the joint
 
-            \param[out] vlower the lower velocity limits
-            \param[out] vupper the lower velocity limits
+            \param[out] the max velocity
             \param[in] bAppend if true will append to the end of the vector instead of erasing it
          */
+        virtual void GetVelocityLimits(std::vector<dReal>& vmax, bool bAppend=false) const;
+
         virtual void GetVelocityLimits(std::vector<dReal>& vlower, std::vector<dReal>& vupper, bool bAppend=false) const;
 
         /// \brief \see GetVelocityLimits
-        virtual void SetVelocityLimits(const std::vector<dReal>& vmaxvel);
+        virtual void SetVelocityLimits(const std::vector<dReal>& vmax);
+
+        /** \brief Returns the max accelerations of the joint
+
+            \param[out] the max acceleration
+            \param[in] bAppend if true will append to the end of the vector instead of erasing it
+         */
+        virtual void GetAccelerationLimits(std::vector<dReal>& vmax, bool bAppend=false) const;
+
+        /// \brief \see GetAccelerationLimits
+        virtual void SetAccelerationLimits(const std::vector<dReal>& vmax);
 
         /// \brief The weight associated with a joint's axis for computing a distance in the robot configuration space.
         virtual dReal GetWeight(int axis=0) const;
@@ -825,12 +836,18 @@ private:
 public:
         KinBodyStateSaver(KinBodyPtr pbody, int options = Save_LinkTransformation|Save_LinkEnable);
         virtual ~KinBodyStateSaver();
+        inline KinBodyPtr GetBody() const {
+            return _pbody;
+        }
+        virtual void Restore();
 protected:
         int _options;         ///< saved options
         std::vector<Transform> _vLinkTransforms;
         std::vector<uint8_t> _vEnabledLinks;
         std::vector<std::pair<Vector,Vector> > _vLinkVelocities;
         KinBodyPtr _pbody;
+private:
+        virtual void _RestoreKinBody();
     };
 
     virtual ~KinBody();
@@ -898,43 +915,24 @@ protected:
     /// \brief Returns all the joint velocities as organized by the DOF indices.
     virtual void GetDOFVelocities(std::vector<dReal>& v) const;
     /// \brief Returns all the joint limits as organized by the DOF indices.
-    virtual void GetDOFLimits(std::vector<dReal>& vLowerLimit, std::vector<dReal>& vUpperLimit) const;
+    virtual void GetDOFLimits(std::vector<dReal>& lowerlimit, std::vector<dReal>& upperlimit) const;
     /// \brief Returns all the joint velocity limits as organized by the DOF indices.
-    virtual void GetDOFVelocityLimits(std::vector<dReal>& vLowerLimit, std::vector<dReal>& vUpperLimit) const;
+    virtual void GetDOFVelocityLimits(std::vector<dReal>& lowerlimit, std::vector<dReal>& upperlimit) const;
+    /// \brief Returns the max velocity for each DOF
+    virtual void GetDOFVelocityLimits(std::vector<dReal>& maxvelocities) const;
+    /// \brief Returns the max acceleration for each DOF
+    virtual void GetDOFAccelerationLimits(std::vector<dReal>& maxaccelerations) const;
+
     /// \deprecated (11/05/26)
     virtual void GetDOFMaxVel(std::vector<dReal>& v) const RAVE_DEPRECATED {
-        std::vector<dReal> dummy; GetDOFVelocityLimits(dummy,v);
+        GetDOFVelocityLimits(v);
     }
-    virtual void GetDOFMaxAccel(std::vector<dReal>& v) const;
+    virtual void GetDOFMaxAccel(std::vector<dReal>& v) const RAVE_DEPRECATED {
+        GetDOFAccelerationLimits(v);
+    }
     virtual void GetDOFMaxTorque(std::vector<dReal>& v) const;
     virtual void GetDOFResolutions(std::vector<dReal>& v) const;
     virtual void GetDOFWeights(std::vector<dReal>& v) const;
-
-    /// \deprecated Returns all the joint values in the order of GetJoints() (use GetDOFValues instead) (10/07/10)
-    virtual void GetJointValues(std::vector<dReal>& v) const RAVE_DEPRECATED {
-        GetDOFValues(v);
-    }
-    virtual void GetJointVelocities(std::vector<dReal>& v) const RAVE_DEPRECATED {
-        GetDOFVelocities(v);
-    }
-    virtual void GetJointLimits(std::vector<dReal>& vLowerLimit, std::vector<dReal>& vUpperLimit) const RAVE_DEPRECATED {
-        GetDOFLimits(vLowerLimit,vUpperLimit);
-    }
-    virtual void GetJointMaxVel(std::vector<dReal>& v) const RAVE_DEPRECATED {
-        std::vector<dReal> dummy; GetDOFVelocityLimits(dummy,v);
-    }
-    virtual void GetJointMaxAccel(std::vector<dReal>& v) const RAVE_DEPRECATED {
-        GetDOFMaxAccel(v);
-    }
-    virtual void GetJointMaxTorque(std::vector<dReal>& v) const RAVE_DEPRECATED {
-        GetDOFMaxTorque(v);
-    }
-    virtual void GetJointResolutions(std::vector<dReal>& v) const RAVE_DEPRECATED {
-        GetDOFResolutions(v);
-    }
-    virtual void GetJointWeights(std::vector<dReal>& v) const RAVE_DEPRECATED {
-        GetDOFWeights(v);
-    }
 
     /// \brief Returns the joints making up the controllable degrees of freedom of the body.
     const std::vector<JointPtr>& GetJoints() const {
