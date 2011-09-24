@@ -499,8 +499,14 @@ private:
     virtual void GetActiveDOFLimits(std::vector<dReal>& lower, std::vector<dReal>& upper) const;
     virtual void GetActiveDOFResolutions(std::vector<dReal>& v) const;
     virtual void GetActiveDOFWeights(std::vector<dReal>& v) const;
-    virtual void GetActiveDOFMaxVel(std::vector<dReal>& v) const;
-    virtual void GetActiveDOFMaxAccel(std::vector<dReal>& v) const;
+    virtual void GetActiveDOFVelocityLimits(std::vector<dReal>& v) const;
+    virtual void GetActiveDOFAccelerationLimits(std::vector<dReal>& v) const;
+    virtual void GetActiveDOFMaxVel(std::vector<dReal>& v) const {
+        return GetActiveDOFVelocityLimits(v);
+    }
+    virtual void GetActiveDOFMaxAccel(std::vector<dReal>& v) const {
+        return GetActiveDOFAccelerationLimits(v);
+    }
 
     /// computes the configuration difference q1-q2 and stores it in q1. Takes into account joint limits and circular joints
     virtual void SubtractActiveDOFValues(std::vector<dReal>& q1, const std::vector<dReal>& q2) const;

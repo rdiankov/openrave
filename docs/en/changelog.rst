@@ -23,6 +23,8 @@ Core
 
 * KinBody::KinBodyStateSaver and RobotBase::RobotStateSaver now have **Restore** functions that allows users to get back to the original robot without having to destroy the handle.
 
+* Now properly handling inter-grabbed-body collisions: if two grabbed bodies are initially colliding when grabbed, then their self-colision should be ignored.
+
 Inverse Kinematics
 ------------------
 

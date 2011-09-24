@@ -1377,12 +1377,40 @@ void KinBody::Joint::GetVelocityLimits(std::vector<dReal>& vlower, std::vector<d
     }
 }
 
+void KinBody::Joint::GetVelocityLimits(std::vector<dReal>& vmax, bool bAppend) const
+{
+    if( !bAppend ) {
+        vmax.resize(0);
+    }
+    for(int i = 0; i < GetDOF(); ++i) {
+        vmax.push_back(_vmaxvel[i]);
+    }
+}
+
 void KinBody::Joint::SetVelocityLimits(const std::vector<dReal>& vmaxvel)
 {
     for(int i = 0; i < GetDOF(); ++i) {
         _vmaxvel[i] = vmaxvel.at(i);
     }
-    GetParent()->_ParametersChanged(Prop_JointVelocityLimits);
+    GetParent()->_ParametersChanged(Prop_JointAccelerationVelocityLimits);
+}
+
+void KinBody::Joint::GetAccelerationLimits(std::vector<dReal>& vmax, bool bAppend) const
+{
+    if( !bAppend ) {
+        vmax.resize(0);
+    }
+    for(int i = 0; i < GetDOF(); ++i) {
+        vmax.push_back(_vmaxaccel[i]);
+    }
+}
+
+void KinBody::Joint::SetAccelerationLimits(const std::vector<dReal>& vmax)
+{
+    for(int i = 0; i < GetDOF(); ++i) {
+        _vmaxaccel[i] = vmax.at(i);
+    }
+    GetParent()->_ParametersChanged(Prop_JointAccelerationVelocityLimits);
 }
 
 dReal KinBody::Joint::GetWeight(int iaxis) const
@@ -2152,14 +2180,25 @@ void KinBody::GetDOFVelocityLimits(std::vector<dReal>& vlower, std::vector<dReal
     }
 }
 
-void KinBody::GetDOFMaxAccel(std::vector<dReal>& v) const
+void KinBody::GetDOFVelocityLimits(std::vector<dReal>& v) const
 {
     v.resize(0);
     if( (int)v.capacity() < GetDOF() ) {
         v.reserve(GetDOF());
     }
     FOREACHC(it, _vDOFOrderedJoints) {
-        v.insert(v.end(),(*it)->GetDOF(),(*it)->GetMaxAccel());
+        (*it)->GetVelocityLimits(v,true);
+    }
+}
+
+void KinBody::GetDOFAccelerationLimits(std::vector<dReal>& v) const
+{
+    v.resize(0);
+    if( (int)v.capacity() < GetDOF() ) {
+        v.reserve(GetDOF());
+    }
+    FOREACHC(it, _vDOFOrderedJoints) {
+        (*it)->GetAccelerationLimits(v,true);
     }
 }
 

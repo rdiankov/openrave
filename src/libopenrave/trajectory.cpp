@@ -168,17 +168,16 @@ bool TrajectoryBase::CalcTrajTiming(RobotBaseConstPtr pRobot, InterpEnum interpo
                 return false;
             }
 
-            pRobot->GetActiveDOFMaxVel(_maxJointVel);
-            pRobot->GetActiveDOFMaxAccel(_maxJointAccel);
+            pRobot->GetActiveDOFVelocityLimits(_maxJointVel);
+            pRobot->GetActiveDOFAccelerationLimits(_maxJointAccel);
             pRobot->GetActiveDOFLimits(_lowerJointLimit, _upperJointLimit);
             _diffstatefn = boost::bind(&RobotBase::SubtractActiveDOFValues,pRobot,_1,_2);
             _nQuaternionIndex = pRobot->GetAffineDOFIndex(RobotBase::DOF_RotationQuat);
             BOOST_ASSERT(_nQuaternionIndex < 0 || _nQuaternionIndex+4 <= _nDOF );
         }
         else {
-            std::vector<dReal> dummy;
-            pRobot->GetDOFVelocityLimits(dummy,_maxJointVel);
-            pRobot->GetDOFMaxAccel(_maxJointAccel);
+            pRobot->GetDOFVelocityLimits(_maxJointVel);
+            pRobot->GetDOFAccelerationLimits(_maxJointAccel);
             pRobot->GetDOFLimits(_lowerJointLimit, _upperJointLimit);
             _maxAffineTranslationVel = pRobot->GetAffineTranslationMaxVels();
             _maxAffineRotationQuatVel = pRobot->GetAffineRotationQuatMaxVels();

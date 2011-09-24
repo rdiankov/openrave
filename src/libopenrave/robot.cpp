@@ -1419,7 +1419,7 @@ void RobotBase::GetActiveDOFWeights(std::vector<dReal>& weights) const
     }
 }
 
-void RobotBase::GetActiveDOFMaxVel(std::vector<dReal>& maxvel) const
+void RobotBase::GetActiveDOFVelocityLimits(std::vector<dReal>& maxvel) const
 {
     std::vector<dReal> dummy;
     if( _nActiveDOF < 0 ) {
@@ -1454,10 +1454,10 @@ void RobotBase::GetActiveDOFMaxVel(std::vector<dReal>& maxvel) const
     }
 }
 
-void RobotBase::GetActiveDOFMaxAccel(std::vector<dReal>& maxaccel) const
+void RobotBase::GetActiveDOFAccelerationLimits(std::vector<dReal>& maxaccel) const
 {
     if( _nActiveDOF < 0 ) {
-        GetDOFMaxAccel(maxaccel);
+        GetDOFAccelerationLimits(maxaccel);
         return;
     }
     maxaccel.resize(GetActiveDOF());
@@ -1466,7 +1466,7 @@ void RobotBase::GetActiveDOFMaxAccel(std::vector<dReal>& maxaccel) const
     }
     dReal* pMaxAccel = &maxaccel[0];
 
-    GetDOFMaxAccel(_vTempRobotJoints);
+    GetDOFAccelerationLimits(_vTempRobotJoints);
     FOREACHC(it, _vActiveDOFIndices) {
         *pMaxAccel++ = _vTempRobotJoints[*it];
     }
@@ -2046,7 +2046,7 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr plink)
             KinBodyConstPtr pgrabbedbody(itgrabbed->pbody);
             if( pgrabbedbody != pbody ) {
                 FOREACHC(itlink, pgrabbedbody->GetLinks()) {
-                    if( GetEnv()->CheckCollision(LinkConstPtr(*itlink), pgrabbedbody) ) {
+                    if( GetEnv()->CheckCollision(LinkConstPtr(*itlink), pbody) ) {
                         g.vCollidingLinks.push_back(*itlink);
                     }
                 }
@@ -2273,8 +2273,13 @@ bool RobotBase::CheckSelfCollision(CollisionReportPtr report) const
                     // make sure the two bodies were not initially colliding
                     if( find(itbody->vCollidingLinks.begin(),itbody->vCollidingLinks.end(),*itlink2) == itbody->vCollidingLinks.end() ) {
                         FOREACHC(itlink, pbody->GetLinks()) {
-                            if( GetEnv()->CheckCollision(KinBody::LinkConstPtr(*itlink),KinBody::LinkConstPtr(*itlink2),report) ) {
-                                bCollision = true;
+                            if( find(itbody2->vCollidingLinks.begin(),itbody2->vCollidingLinks.end(),*itlink) == itbody2->vCollidingLinks.end() ) {
+                                if( GetEnv()->CheckCollision(KinBody::LinkConstPtr(*itlink),KinBody::LinkConstPtr(*itlink2),report) ) {
+                                    bCollision = true;
+                                    break;
+                                }
+                            }
+                            if( bCollision ) {
                                 break;
                             }
                         }

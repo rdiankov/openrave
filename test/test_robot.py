@@ -152,12 +152,12 @@ class TestRobot(EnvironmentSetup):
             assert(manip.FindIKSolution(Tmanip,IkFilterOptions.CheckEnvCollisions|IkFilterOptions.IgnoreEndEffectorCollisions) is not None)
 
             box = RaveCreateKinBody(env,'')
-            box.InitFromBoxes(array([[0,0,0,0.1,0.1,0.2]]),True)
+            box.InitFromBoxes(array([[0,0,0,0.05,0.05,0.2]]),True)
             box.SetName('box')
             env.AddKinBody(box,True)
             box.SetTransform(manip.GetTransform())
             robot.Grab(box)
-            robot.SetActiveDOFValues([  0.678,   0.00000000e+00,   1.75604762e+00, -1.74228108e+00,   3.23831570e-16,   0.00000000e+00, 0.00000000e+00])
+            robot.SetActiveDOFValues([  0.5,   0.00000000e+00,   1.57, -1.74228108e+00,   3.23831570e-16,   0.00000000e+00, 0.00000000e+00])
             assert(robot.CheckSelfCollision())
             Tmanip = manip.GetTransform()
             robot.SetActiveDOFValues(zeros(robot.GetActiveDOF()))
@@ -166,6 +166,14 @@ class TestRobot(EnvironmentSetup):
             robot.SetActiveDOFValues([ 0.00000000e+00,   9.41227019e-01,   2.95911693e+00, -1.57009246e-16,   0.00000000e+00,  -3.14018492e-16, 0.00000000e+00])
             Tmanip = manip.GetTransform()
             assert(manip.FindIKSolution(Tmanip,IkFilterOptions.CheckEnvCollisions|IkFilterOptions.IgnoreEndEffectorCollisions) is not None)
+
+            # test if initial colliding attachments are handled correctly
+            robot.SetActiveDOFValues(zeros(robot.GetActiveDOF()))
+            target.SetTransform(manip.GetTransform())
+            assert(not robot.CheckSelfCollision())
+            assert(env.CheckCollision(box,target))
+            robot.Grab(target)
+            assert(not robot.CheckSelfCollision())
 
 # def test_ikgeneration():
 #     import inversekinematics
