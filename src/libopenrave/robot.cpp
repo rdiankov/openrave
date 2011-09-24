@@ -2097,7 +2097,7 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr pRobotLinkToGrabWith, const std::
             KinBodyConstPtr pgrabbedbody(itgrabbed->pbody);
             if( pgrabbedbody != pbody ) {
                 FOREACHC(itlink, pgrabbedbody->GetLinks()) {
-                    if( GetEnv()->CheckCollision(LinkConstPtr(*itlink), pgrabbedbody) ) {
+                    if( GetEnv()->CheckCollision(LinkConstPtr(*itlink), pbody) ) {
                         g.vCollidingLinks.push_back(*itlink);
                     }
                 }
@@ -2159,7 +2159,7 @@ void RobotBase::RegrabAll()
                 KinBodyConstPtr pgrabbedbody(itgrabbed->pbody);
                 if( pgrabbedbody != pbody ) {
                     FOREACHC(itlink, pgrabbedbody->GetLinks()) {
-                        if( GetEnv()->CheckCollision(LinkConstPtr(*itlink), pgrabbedbody) ) {
+                        if( GetEnv()->CheckCollision(LinkConstPtr(*itlink), pbody) ) {
                             itbody->vCollidingLinks.push_back(*itlink);
                         }
                     }

@@ -172,15 +172,21 @@ class TestRobot(EnvironmentSetup):
 
             # test if initial colliding attachments are handled correctly
             robot.SetActiveDOFValues(zeros(robot.GetActiveDOF()))
-            target.SetTransform(manip.GetTransform())
+            T = manip.GetTransform()
+            T[0,3] += 0.2
+            target.SetTransform(T)
             assert(not robot.CheckSelfCollision())
             assert(env.CheckCollision(box,target))
             assert(manip.CheckEndEffectorCollision(manip.GetTransform()))
             assert(not manip2.CheckEndEffectorCollision(manip2.GetTransform()))
             robot.Grab(target)
+            assert(robot.IsGrabbing(target))
+            assert(not robot.CheckSelfCollision())
+            robot.RegrabAll()
             assert(not robot.CheckSelfCollision())
 
             robot.Release(target)
+            assert(not robot.IsGrabbing(target))
             
             box2 = RaveCreateKinBody(env,'')
             box2.InitFromBoxes(array([[0,0,0,0.05,0.05,0.2]]),True)
