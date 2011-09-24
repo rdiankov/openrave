@@ -2315,7 +2315,8 @@ bool RobotBase::CheckLinkCollision(int ilinkindex, const Transform& tlinktrans, 
         }
     }
 
-    // check if any grabbed bodies are attached to this link
+    // check if any grabbed bodies are attached to this link, and if so check their collisions with the environment
+    // it is important to make sure to add all other attached bodies in the ignored list!
     std::vector<KinBodyConstPtr> vbodyexcluded;
     std::vector<KinBody::LinkConstPtr> vlinkexcluded;
     FOREACHC(itgrabbed,_vGrabbedBodies) {
@@ -2324,6 +2325,14 @@ bool RobotBase::CheckLinkCollision(int ilinkindex, const Transform& tlinktrans, 
             if( !!pbody ) {
                 if( vbodyexcluded.size() == 0 ) {
                     vbodyexcluded.push_back(shared_kinbody_const());
+                    FOREACHC(itgrabbed,_vGrabbedBodies) {
+                        if( itgrabbed->plinkrobot != plink ) {
+                            KinBodyPtr pbody2 = itgrabbed->pbody.lock();
+                            if( !!pbody2 ) {
+                                vbodyexcluded.push_back(pbody2);
+                            }
+                        }
+                    }
                 }
                 KinBodyStateSaver bodysaver(pbody,Save_LinkTransformation);
                 pbody->SetTransform(tlinktrans * itgrabbed->troot);

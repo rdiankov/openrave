@@ -1370,12 +1370,12 @@ public:
 
 bool PyKinBody::CheckSelfCollision(PyCollisionReportPtr pReport)
 {
-    if( !pReport )
+    if( !pReport ) {
         return _pbody->CheckSelfCollision();
-
-    bool bSuccess = _pbody->CheckSelfCollision(pReport->report);
+    }
+    bool bCollision = _pbody->CheckSelfCollision(pReport->report);
     pReport->init(GetEnv());
-    return bSuccess;
+    return bCollision;
 }
 
 class PyControllerBase : public PyInterfaceBase
@@ -1994,7 +1994,11 @@ public:
         }
         bool CheckEndEffectorCollision(object otrans, PyCollisionReportPtr pReport) const
         {
-            return _pmanip->CheckEndEffectorCollision(ExtractTransform(otrans),!pReport ? CollisionReportPtr() : pReport->report);
+            bool bCollision = _pmanip->CheckEndEffectorCollision(ExtractTransform(otrans),!pReport ? CollisionReportPtr() : pReport->report);
+            if( !!pReport ) {
+                pReport->init(_pyenv);
+            }
+            return bCollision;
         }
         bool CheckIndependentCollision() const
         {
@@ -2002,7 +2006,11 @@ public:
         }
         bool CheckIndependentCollision(PyCollisionReportPtr pReport) const
         {
-            return _pmanip->CheckIndependentCollision(!pReport ? CollisionReportPtr() : pReport->report);
+            bool bCollision = _pmanip->CheckIndependentCollision(!pReport ? CollisionReportPtr() : pReport->report);
+            if( !!pReport ) {
+                pReport->init(_pyenv);
+            }
+            return bCollision;
         }
 
         boost::multi_array<dReal,2> CalculateJacobian()
@@ -3428,9 +3436,9 @@ public:
         if( !pReport ) {
             return _penv->CheckCollision(KinBodyConstPtr(pbody1->GetBody()));
         }
-        bool bSuccess = _penv->CheckCollision(KinBodyConstPtr(pbody1->GetBody()), pReport->report);
+        bool bCollision = _penv->CheckCollision(KinBodyConstPtr(pbody1->GetBody()), pReport->report);
         pReport->init(shared_from_this());
-        return bSuccess;
+        return bCollision;
     }
 
     bool CheckCollision(PyKinBodyPtr pbody1, PyKinBodyPtr pbody2)
@@ -3447,9 +3455,9 @@ public:
         if( !pReport ) {
             return _penv->CheckCollision(KinBodyConstPtr(pbody1->GetBody()), KinBodyConstPtr(pbody2->GetBody()));
         }
-        bool bSuccess = _penv->CheckCollision(KinBodyConstPtr(pbody1->GetBody()), KinBodyConstPtr(pbody2->GetBody()), pReport->report);
+        bool bCollision = _penv->CheckCollision(KinBodyConstPtr(pbody1->GetBody()), KinBodyConstPtr(pbody2->GetBody()), pReport->report);
         pReport->init(shared_from_this());
-        return bSuccess;
+        return bCollision;
     }
 
     bool CheckCollision(PyKinBody::PyLinkPtr plink)
@@ -3464,9 +3472,9 @@ public:
         if( !pReport ) {
             return _penv->CheckCollision(KinBody::LinkConstPtr(plink->GetLink()));
         }
-        bool bSuccess = _penv->CheckCollision(KinBody::LinkConstPtr(plink->GetLink()), pReport->report);
+        bool bCollision = _penv->CheckCollision(KinBody::LinkConstPtr(plink->GetLink()), pReport->report);
         pReport->init(shared_from_this());
-        return bSuccess;
+        return bCollision;
     }
 
     bool CheckCollision(PyKinBody::PyLinkPtr plink1, PyKinBody::PyLinkPtr plink2)
@@ -3482,9 +3490,9 @@ public:
         if( !pReport ) {
             return _penv->CheckCollision(KinBody::LinkConstPtr(plink1->GetLink()), KinBody::LinkConstPtr(plink2->GetLink()));
         }
-        bool bSuccess = _penv->CheckCollision(KinBody::LinkConstPtr(plink1->GetLink()), KinBody::LinkConstPtr(plink2->GetLink()), pReport->report);
+        bool bCollision = _penv->CheckCollision(KinBody::LinkConstPtr(plink1->GetLink()), KinBody::LinkConstPtr(plink2->GetLink()), pReport->report);
         pReport->init(shared_from_this());
-        return bSuccess;
+        return bCollision;
     }
 
     bool CheckCollision(PyKinBody::PyLinkPtr plink, PyKinBodyPtr pbody)
@@ -3501,9 +3509,9 @@ public:
         if( !pReport ) {
             return _penv->CheckCollision(KinBody::LinkConstPtr(plink->GetLink()), KinBodyConstPtr(pbody->GetBody()));
         }
-        bool bSuccess = _penv->CheckCollision(KinBody::LinkConstPtr(plink->GetLink()), KinBodyConstPtr(pbody->GetBody()), pReport->report);
+        bool bCollision = _penv->CheckCollision(KinBody::LinkConstPtr(plink->GetLink()), KinBodyConstPtr(pbody->GetBody()), pReport->report);
         pReport->init(shared_from_this());
-        return bSuccess;
+        return bCollision;
     }
 
     bool CheckCollision(PyKinBody::PyLinkPtr plink, object bodyexcluded, object linkexcluded)
@@ -3557,9 +3565,9 @@ public:
         if( !pReport ) {
             return _penv->CheckCollision(KinBody::LinkConstPtr(plink->GetLink()),vbodyexcluded,vlinkexcluded);
         }
-        bool bSuccess = _penv->CheckCollision(KinBody::LinkConstPtr(plink->GetLink()), vbodyexcluded, vlinkexcluded, pReport->report);
+        bool bCollision = _penv->CheckCollision(KinBody::LinkConstPtr(plink->GetLink()), vbodyexcluded, vlinkexcluded, pReport->report);
         pReport->init(shared_from_this());
-        return bSuccess;
+        return bCollision;
     }
 
     bool CheckCollision(PyKinBodyPtr pbody, object bodyexcluded, object linkexcluded)
@@ -3613,9 +3621,9 @@ public:
         if( !pReport ) {
             return _penv->CheckCollision(KinBodyConstPtr(pbody->GetBody()),vbodyexcluded,vlinkexcluded);
         }
-        bool bSuccess = _penv->CheckCollision(KinBodyConstPtr(pbody->GetBody()), vbodyexcluded, vlinkexcluded, pReport->report);
+        bool bCollision = _penv->CheckCollision(KinBodyConstPtr(pbody->GetBody()), vbodyexcluded, vlinkexcluded, pReport->report);
         pReport->init(shared_from_this());
-        return bSuccess;
+        return bCollision;
     }
 
     bool CheckCollision(boost::shared_ptr<PyRay> pyray, PyKinBodyPtr pbody)
@@ -3625,9 +3633,9 @@ public:
 
     bool CheckCollision(boost::shared_ptr<PyRay> pyray, PyKinBodyPtr pbody, PyCollisionReportPtr pReport)
     {
-        bool bSuccess = _penv->CheckCollision(pyray->r, KinBodyConstPtr(pbody->GetBody()), pReport->report);
+        bool bCollision = _penv->CheckCollision(pyray->r, KinBodyConstPtr(pbody->GetBody()), pReport->report);
         pReport->init(shared_from_this());
-        return bSuccess;
+        return bCollision;
     }
 
     object CheckCollisionRays(object rays, PyKinBodyPtr pbody,bool bFrontFacingOnly=false)
@@ -3689,9 +3697,9 @@ public:
 
     bool CheckCollision(boost::shared_ptr<PyRay> pyray, PyCollisionReportPtr pReport)
     {
-        bool bSuccess = _penv->CheckCollision(pyray->r, pReport->report);
+        bool bCollision = _penv->CheckCollision(pyray->r, pReport->report);
         pReport->init(shared_from_this());
-        return bSuccess;
+        return bCollision;
     }
 
     bool Load(const string& filename) {

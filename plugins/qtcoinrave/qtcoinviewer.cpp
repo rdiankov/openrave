@@ -2629,7 +2629,7 @@ void QtCoinViewer::UpdateFromModel()
         map<KinBodyPtr, KinBodyItemPtr>::iterator itmap = _mapbodies.find(pbody);
 
         if( itmap == _mapbodies.end() ) {
-            RAVELOG_VERBOSE("body %s doesn't have a map associated with it!\n", itbody->strname.c_str());
+            //RAVELOG_VERBOSE("body %s doesn't have a map associated with it!\n", itbody->strname.c_str());
             continue;
         }
 

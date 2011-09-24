@@ -70,9 +70,6 @@ Then execute:
 .. figure:: ../../images/examples/graspplanning_katana.jpg
   :width: 640
 
-.. examplepost-block:: graspplanning
-
-
 Kuka Youbot
 ~~~~~~~~~~~
 
@@ -87,6 +84,8 @@ Then execute:
 .. code-block:: bash
 
   openrave.py --example graspplanning --scene=data/youbot1.env.xml
+
+.. examplepost-block:: graspplanning
 
 """
 from __future__ import with_statement # for python 2.5

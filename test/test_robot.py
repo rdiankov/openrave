@@ -131,7 +131,10 @@ class TestRobot(EnvironmentSetup):
             
             assert(env.CheckCollision(robot))
             manip=robot.SetActiveManipulator('leftarm')
+            manip2 = robot.GetManipulator('rightarm')
             robot.SetActiveDOFs(manip.GetArmIndices())
+            assert(not manip.CheckEndEffectorCollision(manip.GetTransform()))
+            assert(not manip2.CheckEndEffectorCollision(manip2.GetTransform()))
             
             robot.SetActiveDOFValues([  0.678,   0.00000000e+00,   1.75604762e+00, -1.74228108e+00,   3.23831570e-16,   0.00000000e+00, 0.00000000e+00])
             assert(not robot.CheckSelfCollision())
@@ -172,8 +175,20 @@ class TestRobot(EnvironmentSetup):
             target.SetTransform(manip.GetTransform())
             assert(not robot.CheckSelfCollision())
             assert(env.CheckCollision(box,target))
+            assert(manip.CheckEndEffectorCollision(manip.GetTransform()))
+            assert(not manip2.CheckEndEffectorCollision(manip2.GetTransform()))
             robot.Grab(target)
             assert(not robot.CheckSelfCollision())
+
+            robot.Release(target)
+            
+            box2 = RaveCreateKinBody(env,'')
+            box2.InitFromBoxes(array([[0,0,0,0.05,0.05,0.2]]),True)
+            box2.SetName('box2')
+            env.AddKinBody(box2,True)
+            box2.SetTransform(manip2.GetTransform())
+            robot.Grab(box2,grablink=manip2.GetEndEffector())
+            assert(not manip2.CheckEndEffectorCollision(manip2.GetTransform()))
 
 # def test_ikgeneration():
 #     import inversekinematics
