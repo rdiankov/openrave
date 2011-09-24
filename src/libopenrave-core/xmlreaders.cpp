@@ -1570,7 +1570,7 @@ public:
         case PE_Ignore: return PE_Ignore;
         }
 
-        if (( xmlname == "body") ||( xmlname == "offsetfrom") ||( xmlname == "weight") ||( xmlname == "lostop") ||( xmlname == "histop") ||( xmlname == "limits") ||( xmlname == "limitsrad") ||( xmlname == "limitsdeg") ||( xmlname == "maxvel") ||( xmlname == "hardmaxvel") ||( xmlname == "maxaccel") ||( xmlname == "maxtorque") ||( xmlname == "maxforce") ||( xmlname == "resolution") ||( xmlname == "anchor") ||( xmlname == "axis") ||( xmlname == "axis1") ||( xmlname == "axis2") ||( xmlname=="axis3") ||( xmlname == "mode") ||( xmlname == "initial") ) {
+        if (( xmlname == "body") ||( xmlname == "offsetfrom") ||( xmlname == "weight") ||( xmlname == "lostop") ||( xmlname == "histop") ||( xmlname == "limits") ||( xmlname == "limitsrad") ||( xmlname == "limitsdeg") ||( xmlname == "maxvel") || xmlname == "maxveldeg" ||( xmlname == "hardmaxvel") ||( xmlname == "maxaccel") || xmlname == "maxacceldeg" ||( xmlname == "maxtorque") ||( xmlname == "maxforce") ||( xmlname == "resolution") ||( xmlname == "anchor") ||( xmlname == "axis") ||( xmlname == "axis1") ||( xmlname == "axis2") ||( xmlname=="axis3") ||( xmlname == "mode") ||( xmlname == "initial") ) {
             _processingtag = xmlname;
             return PE_Support;
         }
@@ -1696,6 +1696,12 @@ public:
                 _ss >> _pjoint->_vmaxvel[idof];
             }
         }
+        else if( xmlname == "maxveldeg" ) {
+            for(int idof = 0; idof < _pjoint->GetDOF(); ++idof) {
+                _ss >> _pjoint->_vmaxvel[idof];
+                _pjoint->_vmaxvel[idof] *= PI/180.0;
+            }
+        }
         else if( xmlname == "hardmaxvel" ) {
             for(int idof = 0; idof < _pjoint->GetDOF(); ++idof) {
                 _ss >> _pjoint->fHardMaxVel[idof];
@@ -1704,6 +1710,12 @@ public:
         else if( xmlname == "maxaccel" ) {
             for(int idof = 0; idof < _pjoint->GetDOF(); ++idof) {
                 _ss >> _pjoint->_vmaxaccel[idof];
+            }
+        }
+        else if( xmlname == "maxacceldeg" ) {
+            for(int idof = 0; idof < _pjoint->GetDOF(); ++idof) {
+                _ss >> _pjoint->_vmaxaccel[idof];
+                _pjoint->_vmaxaccel[idof] *= PI/180.0;
             }
         }
         else if( xmlname == "maxtorque" ) {
