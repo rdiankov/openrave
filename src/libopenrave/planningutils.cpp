@@ -395,8 +395,9 @@ bool ManipulatorIKGoalSampler::Sample(std::vector<dReal>& vgoal)
         std::list<SampleInfo>::iterator itsample = _listsamples.begin();
         advance(itsample,isampleindex);
 
+        bool bCheckEndEffector = itsample->_ikparam.GetType() == IkParameterization::Type_Transform6D;
         // if first grasp, quickly prune grasp is end effector is in collision
-        if((itsample->_numleft == _nummaxsamples)&&(itsample->_ikparam.GetType() == IkParameterization::Type_Transform6D)) {
+        if( itsample->_numleft == _nummaxsamples && bCheckEndEffector ) {
             if( _pmanip->CheckEndEffectorCollision(itsample->_ikparam.GetTransform6D(),_report) ) {
                 RAVELOG_VERBOSE(str(boost::format("sampleiksolutions gripper in collision: %s.\n")%_report->__str__()));
                 _listsamples.erase(itsample);
@@ -422,7 +423,7 @@ bool ManipulatorIKGoalSampler::Sample(std::vector<dReal>& vgoal)
                 }
             }
         }
-        bool bsuccess = _pmanip->FindIKSolutions(itsample->_ikparam, vfree, _viksolutions, IKFO_CheckEnvCollisions);
+        bool bsuccess = _pmanip->FindIKSolutions(itsample->_ikparam, vfree, _viksolutions, IKFO_CheckEnvCollisions|(bCheckEndEffector ? IKFO_IgnoreEndEffectorCollisions : 0));
         if( --itsample->_numleft <= 0 || vfree.size() == 0 ) {
             _listsamples.erase(itsample);
         }

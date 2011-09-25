@@ -19,7 +19,7 @@ Core
 
 * added "scalegeometry" attribute to kinbody loading. can have different scales along XYZ.
 
-* Geometry files imported with assimp now load multiple geometries per material in order to preserve colors. Added :meth:`.KinBody.InitFromGeometries".
+* Geometry files imported with assimp now load multiple geometries per material in order to preserve colors. Added :meth:`.KinBody.InitFromGeometries`.
 
 * KinBody::KinBodyStateSaver and RobotBase::RobotStateSaver now have **Restore** functions that allows users to get back to the original robot without having to destroy the handle.
 

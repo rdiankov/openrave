@@ -502,6 +502,13 @@ public:
             }
             _pjoint->SetVelocityLimits(vmaxlimits);
         }
+        void SetAccelerationLimits(object omaxlimits) {
+            vector<dReal> vmaxlimits = ExtractArray<dReal>(omaxlimits);
+            if( (int)vmaxlimits.size() != _pjoint->GetDOF() ) {
+                throw openrave_exception("limits are wrong dimensions");
+            }
+            _pjoint->SetAccelerationLimits(vmaxlimits);
+        }
         void SetResolution(dReal resolution) {
             _pjoint->SetResolution(resolution);
         }
@@ -697,9 +704,16 @@ public:
 
     object GetDOFVelocityLimits() const
     {
-        vector<dReal> vlower, vupper;
-        _pbody->GetDOFVelocityLimits(vlower,vupper);
-        return boost::python::make_tuple(toPyArray(vlower),toPyArray(vupper));
+        vector<dReal> vmax;
+        _pbody->GetDOFVelocityLimits(vmax);
+        return toPyArray(vmax);
+    }
+
+    object GetDOFAccelerationLimits() const
+    {
+        vector<dReal> vmax;
+        _pbody->GetDOFAccelerationLimits(vmax);
+        return toPyArray(vmax);
     }
 
     object GetDOFLimits(object oindices) const
@@ -732,23 +746,40 @@ public:
         if( vindices.size() == 0 ) {
             return numeric::array(boost::python::list());
         }
-        vector<dReal> vlower, vupper, vtemplower, vtempupper;
-        vlower.reserve(vindices.size());
-        vupper.reserve(vindices.size());
+        vector<dReal> vmax, vtempmax;
+        vmax.reserve(vindices.size());
         FOREACHC(it, vindices) {
             KinBody::JointPtr pjoint = _pbody->GetJointFromDOFIndex(*it);
-            pjoint->GetVelocityLimits(vtemplower,vtempupper,false);
-            vlower.push_back(vtemplower.at(*it-pjoint->GetDOFIndex()));
-            vupper.push_back(vtempupper.at(*it-pjoint->GetDOFIndex()));
+            pjoint->GetVelocityLimits(vtempmax,false);
+            vmax.push_back(vtempmax.at(*it-pjoint->GetDOFIndex()));
         }
-        return boost::python::make_tuple(toPyArray(vlower),toPyArray(vupper));
+        return toPyArray(vmax);
+    }
+
+    object GetDOFAccelerationLimits(object oindices) const
+    {
+        if( oindices == object() ) {
+            return numeric::array(boost::python::list());
+        }
+        vector<int> vindices = ExtractArray<int>(oindices);
+        if( vindices.size() == 0 ) {
+            return numeric::array(boost::python::list());
+        }
+        vector<dReal> vmax, vtempmax;
+        vmax.reserve(vindices.size());
+        FOREACHC(it, vindices) {
+            KinBody::JointPtr pjoint = _pbody->GetJointFromDOFIndex(*it);
+            pjoint->GetAccelerationLimits(vtempmax,false);
+            vmax.push_back(vtempmax.at(*it-pjoint->GetDOFIndex()));
+        }
+        return toPyArray(vmax);
     }
 
     object GetDOFMaxVel() const
     {
         RAVELOG_WARN("KinBody.GetDOFMaxVel() is deprecated, use GetDOFVelocityLimits\n");
-        vector<dReal> values, dummy;
-        _pbody->GetDOFVelocityLimits(dummy,values);
+        vector<dReal> values;
+        _pbody->GetDOFVelocityLimits(values);
         return toPyArray(values);
     }
     object GetDOFMaxTorque() const
@@ -759,6 +790,7 @@ public:
     }
     object GetDOFMaxAccel() const
     {
+        RAVELOG_WARN("KinBody.GetDOFMaxVel() is deprecated, use GetDOFAccelerationLimits\n");
         vector<dReal> values;
         _pbody->GetDOFMaxAccel(values);
         return toPyArray(values);
@@ -811,44 +843,6 @@ public:
             KinBody::JointPtr pjoint = _pbody->GetJointFromDOFIndex(*it);
             values.push_back(pjoint->GetResolution());
         }
-        return toPyArray(values);
-    }
-
-    object GetJointValues() const
-    {
-        RAVELOG_WARN("KinBody.GetJointValues deprecated, use KinBody.GetDOFValues\n");
-        vector<dReal> values;
-        _pbody->GetDOFValues(values);
-        return toPyArray(values);
-    }
-
-    object GetJointVelocities() const
-    {
-        RAVELOG_WARN("KinBody.GetJointVelocities deprecated, use KinBody.GetDOFVelocities\n");
-        vector<dReal> values;
-        _pbody->GetDOFVelocities(values);
-        return toPyArray(values);
-    }
-
-    object GetJointLimits() const
-    {
-        RAVELOG_WARN("KinBody.GetJointLimits deprecated, use KinBody.GetDOFLimits\n");
-        vector<dReal> vlower, vupper;
-        _pbody->GetDOFLimits(vlower,vupper);
-        return boost::python::make_tuple(toPyArray(vlower),toPyArray(vupper));
-    }
-    object GetJointMaxVel() const
-    {
-        RAVELOG_WARN("KinBody.GetJointMaxVel deprecated, use KinBody.GetDOFMaxVel\n");
-        vector<dReal> values, dummy;
-        _pbody->GetDOFVelocityLimits(dummy,values);
-        return toPyArray(values);
-    }
-    object GetJointWeights() const
-    {
-        RAVELOG_WARN("KinBody.GetJointWeights deprecated, use KinBody.GetDOFWeights\n");
-        vector<dReal> values;
-        _pbody->GetDOFWeights(values);
         return toPyArray(values);
     }
 
@@ -4642,6 +4636,8 @@ The **releasegil** parameter controls whether the python Global Interpreter Lock
         object (PyKinBody::*getdofresolutions2)(object) const = &PyKinBody::GetDOFResolutions;
         object (PyKinBody::*getdofvelocitylimits1)() const = &PyKinBody::GetDOFVelocityLimits;
         object (PyKinBody::*getdofvelocitylimits2)(object) const = &PyKinBody::GetDOFVelocityLimits;
+        object (PyKinBody::*getdofaccelerationlimits1)() const = &PyKinBody::GetDOFAccelerationLimits;
+        object (PyKinBody::*getdofaccelerationlimits2)(object) const = &PyKinBody::GetDOFAccelerationLimits;
         object (PyKinBody::*getlinks1)() const = &PyKinBody::GetLinks;
         object (PyKinBody::*getlinks2)(object) const = &PyKinBody::GetLinks;
         object (PyKinBody::*getjoints1)() const = &PyKinBody::GetJoints;
@@ -4670,6 +4666,8 @@ The **releasegil** parameter controls whether the python Global Interpreter Lock
                         .def("GetDOFLimits",getdoflimits2, args("indices"),DOXY_FN(KinBody,GetDOFLimits))
                         .def("GetDOFVelocityLimits",getdofvelocitylimits1, DOXY_FN(KinBody,GetDOFVelocityLimits))
                         .def("GetDOFVelocityLimits",getdofvelocitylimits2, args("indices"),DOXY_FN(KinBody,GetDOFVelocityLimits))
+                        .def("GetDOFAccelerationLimits",getdofaccelerationlimits1, DOXY_FN(KinBody,GetDOFAccelerationLimits))
+                        .def("GetDOFAccelerationLimits",getdofaccelerationlimits2, args("indices"),DOXY_FN(KinBody,GetDOFAccelerationLimits))
                         .def("GetDOFMaxVel",&PyKinBody::GetDOFMaxVel, DOXY_FN(KinBody,GetDOFMaxVel))
                         .def("GetDOFMaxTorque",&PyKinBody::GetDOFMaxTorque, DOXY_FN(KinBody,GetDOFMaxTorque))
                         .def("GetDOFMaxAccel",&PyKinBody::GetDOFMaxAccel, DOXY_FN(KinBody,GetDOFMaxAccel))
@@ -4677,11 +4675,6 @@ The **releasegil** parameter controls whether the python Global Interpreter Lock
                         .def("GetDOFWeights",getdofweights2, DOXY_FN(KinBody,GetDOFWeights))
                         .def("GetDOFResolutions",getdofresolutions1, DOXY_FN(KinBody,GetDOFResolutions))
                         .def("GetDOFResolutions",getdofresolutions2, DOXY_FN(KinBody,GetDOFResolutions))
-                        .def("GetJointValues",&PyKinBody::GetJointValues, DOXY_FN(KinBody,GetJointValues))
-                        .def("GetJointVelocities",&PyKinBody::GetJointVelocities, DOXY_FN(KinBody,GetJointVelocities))
-                        .def("GetJointLimits",&PyKinBody::GetJointLimits, DOXY_FN(KinBody,GetJointLimits))
-                        .def("GetJointMaxVel",&PyKinBody::GetJointMaxVel, DOXY_FN(KinBody,GetJointMaxVel))
-                        .def("GetJointWeights",&PyKinBody::GetJointWeights, DOXY_FN(KinBody,GetJointWeights))
                         .def("GetLinks",getlinks1, DOXY_FN(KinBody,GetLinks))
                         .def("GetLinks",getlinks2, args("indices"), DOXY_FN(KinBody,GetLinks))
                         .def("GetLink",&PyKinBody::GetLink,args("name"), DOXY_FN(KinBody,GetLink))
@@ -4863,8 +4856,8 @@ The **releasegil** parameter controls whether the python Global Interpreter Lock
                           .def("SetWrapOffset",&PyKinBody::PyJoint::SetWrapOffset,SetWrapOffset_overloads(args("offset","axis"), DOXY_FN(KinBody::Joint,SetWrapOffset)))
                           .def("GetWrapOffset",&PyKinBody::PyJoint::GetWrapOffset,GetWrapOffset_overloads(args("axis"), DOXY_FN(KinBody::Joint,GetWrapOffset)))
                           .def("SetLimits",&PyKinBody::PyJoint::SetLimits,args("lower","upper"), DOXY_FN(KinBody::Joint,SetLimits))
-                          .def("SetVelocityLimits",&PyKinBody::PyJoint::SetVelocityLimits,args("lower","upper"), DOXY_FN(KinBody::Joint,SetVelocityLimits))
-                          .def("SetJointLimits",&PyKinBody::PyJoint::SetLimits,args("lower","upper"), DOXY_FN(KinBody::Joint,SetLimits))
+                          .def("SetVelocityLimits",&PyKinBody::PyJoint::SetVelocityLimits,args("maxlimits"), DOXY_FN(KinBody::Joint,SetVelocityLimits))
+                          .def("SetAccelerationLimits",&PyKinBody::PyJoint::SetAccelerationLimits,args("maxlimits"), DOXY_FN(KinBody::Joint,SetAccelerationLimits))
                           .def("SetResolution",&PyKinBody::PyJoint::SetResolution,args("resolution"), DOXY_FN(KinBody::Joint,SetResolution))
                           .def("SetWeights",&PyKinBody::PyJoint::SetWeights,args("weights"), DOXY_FN(KinBody::Joint,SetWeights))
                           .def("AddTorque",&PyKinBody::PyJoint::AddTorque,args("torques"), DOXY_FN(KinBody::Joint,AddTorque))
