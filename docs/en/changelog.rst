@@ -34,7 +34,7 @@ Inverse Kinematics
 
 * ikfast IkSolvers only check collisions of links that can possible move due to new joint values.
 
-* Added new :ref:`.IkFilterOptions.IgnoreEndEffectorCollision` option, this disables the end effector links and their attached bodies from environment collision considerations.
+* Added new :class:`.IkFilterOptions.IgnoreEndEffectorCollision` option, this disables the end effector links and their attached bodies from environment collision considerations.
 
 Grasping
 --------

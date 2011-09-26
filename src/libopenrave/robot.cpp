@@ -2323,14 +2323,13 @@ bool RobotBase::CheckLinkCollision(int ilinkindex, const Transform& tlinktrans, 
         if( itgrabbed->plinkrobot == plink ) {
             KinBodyPtr pbody = itgrabbed->pbody.lock();
             if( !!pbody ) {
-                if( vbodyexcluded.size() == 0 ) {
-                    vbodyexcluded.push_back(shared_kinbody_const());
-                    FOREACHC(itgrabbed,_vGrabbedBodies) {
-                        if( itgrabbed->plinkrobot != plink ) {
-                            KinBodyPtr pbody2 = itgrabbed->pbody.lock();
-                            if( !!pbody2 ) {
-                                vbodyexcluded.push_back(pbody2);
-                            }
+                vbodyexcluded.resize(0);
+                vbodyexcluded.push_back(shared_kinbody_const());
+                FOREACHC(itgrabbed2,_vGrabbedBodies) {
+                    if( itgrabbed2 != itgrabbed ) {
+                        KinBodyPtr pbody2 = itgrabbed2->pbody.lock();
+                        if( !!pbody2 ) {
+                            vbodyexcluded.push_back(pbody2);
                         }
                     }
                 }
