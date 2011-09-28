@@ -335,6 +335,9 @@ if __name__ == "__main__":
                       help='The python pickled file containing ikfast statistics.')
     (options,args) = parser.parse_args()
 
+    if not os.path.exists(options.ikfaststats):
+        sys.exit(1)
+
     try:
         # have to clean the directory since cached files can get in the way
         shutil.rmtree(options.outputdir)

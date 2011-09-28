@@ -21,7 +21,7 @@ Installation
 
 If using latex, install::
 
-  apt-get install  dot2tex, texlive-base, texlive-latex-base, texlive-pictures, texlive-fonts-recommended
+  apt-get install  dot2tex texlive-base texlive-latex-base texlive-pictures texlive-fonts-recommended
 
 For japanese fonts install::
 
