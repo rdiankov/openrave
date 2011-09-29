@@ -185,6 +185,13 @@ Compiling with MSVC
 Details
 -------
 
+Terminology:
+
+- **solve joints** - the joints to solve for using inverse kinematics
+
+- **free joints** - the joints that are specified before the IK is run, these values are known at runtime, but not known at IK generation time.
+
+
 The top level class is `ikfast.IKFastSolver` and generates an Abstract Syntax Tree (AST) using definitions from `ikfast.AST`. The AST is then passed to the language-specific generators defined in `ikfast.CodeGenerators`.
 
 Internal symbolic math uses sympy_. Infinite precision fractions are used in order to keep track of linearly independent equations and when they evaluate to 0. The infinite precision fractions are converted to decimals in the generators.
@@ -194,6 +201,27 @@ Internal symbolic math uses sympy_. Infinite precision fractions are used in ord
 .. _`LAPACK For Windows`: http://icl.cs.utk.edu/lapack-for-windows/
 
 .. _sympy: http://code.google.com/p/sympy/
+
+Open Issues
+-----------
+
+1. currently ikfast does not handle big decimal numbers well. for example defining the axes or anchors as 1.032513241 will produce very big fractions and make things slow.
+
+2. there are cases when axes align and there are infinite solutions. although ikfast can detect such cases, we need a lot more work in this area.
+
+3. for 6D ik, there are still mechanisms it cannot solve, please send the kinematics model if such a situation is encountered.
+
+4. there are 10 different types of IK, currently ray4d IK needs a lot of work.
+
+FAQ
+---
+
+Q. **ikfast has been running for more than an hour, will it ever finish?**
+
+A. Most likely not, usually an iksolver finishes within 10 minutes.
+
+----
+
 
 """
 from __future__ import with_statement # for python 2.5

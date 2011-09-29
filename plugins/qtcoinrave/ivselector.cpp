@@ -162,12 +162,6 @@ void IvDragger::_MotionHandler(void *userData, SoDragger *)
 IvObjectDragger::IvObjectDragger(QtCoinViewerPtr viewer, ItemPtr pItem, float draggerScale, bool bAllowRotation)
     : IvDragger(viewer, pItem, draggerScale)
 {
-    //if( _ptext != NULL ) {
-    //        char str[256];
-    //        sprintf(str,"%s", _selectedItem->GetName().c_str());
-    //        _ptext->string.setValue(str);
-    //    }
-
     // create a root node for the dragger nodes
     _draggerRoot = new SoSeparator;
     _selectedItem->GetIvRoot()->insertChild(_draggerRoot, 0);
@@ -438,10 +432,12 @@ void IvJointDragger::CheckCollision(bool flag)
             if( !!lock ) {
                 int prevoptions = _viewer->GetEnv()->GetCollisionChecker()->GetCollisionOptions();
                 _viewer->GetEnv()->GetCollisionChecker()->SetCollisionOptions(CO_Contacts);
-                if (_viewer->GetEnv()->CheckCollision(KinBodyConstPtr(pbody->GetBody())) || pbody->GetBody()->CheckSelfCollision())
+                if (_viewer->GetEnv()->CheckCollision(KinBodyConstPtr(pbody->GetBody())) || pbody->GetBody()->CheckSelfCollision()) {
                     _SetColor(COLLISION_COLOR);
-                else
+                }
+                else {
                     _SetColor(CHECK_COLOR);
+                }
                 _viewer->GetEnv()->GetCollisionChecker()->SetCollisionOptions(prevoptions);
             }
         }
@@ -499,7 +495,7 @@ void IvJointDragger::UpdateSkeleton()
                         }
                     }
                     else if( vjoints.at(d) > vupper.at(0) ) {
-                        if( vlower.at(0)-vjoints.at(d)-2*PI < vjoints.at(d)-vupper.at(0) ) {
+                        if( vlower.at(0)-vjoints.at(d)+2*PI < vjoints.at(d)-vupper.at(0) ) {
                             vjoints[d] = vlower[0];
                         }
                         else {

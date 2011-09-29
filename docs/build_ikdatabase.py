@@ -15,7 +15,7 @@ import openravepy
 from openravepy import *
 from numpy import *
 from optparse import OptionParser
-import os, operator
+import os, sys, operator
 import scipy
 import shutil
 import pysvn
