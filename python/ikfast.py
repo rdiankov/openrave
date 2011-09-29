@@ -1491,6 +1491,9 @@ class IKFastSolver(AutoReloader):
         chainlinks = self.kinbody.GetChain(baselink,eelink,returnjoints=False)
         chainjoints = self.kinbody.GetChain(baselink,eelink,returnjoints=True)
         LinksRaw, jointvars = self.forwardKinematicsChain(chainlinks,chainjoints)
+        for T in LinksRaw:
+            log.info('[' + ','.join('[%s, %s, %s, %s]'%(T[i,0],T[i,1],T[i,2],T[i,3]) for i in range(3)) + ']')
+            
         self.degeneratecases = None
         if freeindices is None:
             # need to iterate through all combinations of free joints
