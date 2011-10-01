@@ -15,7 +15,7 @@
 /// See the License for the specific language governing permissions and
 /// limitations under the License.
 ///
-/// ikfast version 46 generated on 2011-09-06 18:52:46.197732
+/// ikfast version 47 generated on 2011-10-01 16:02:06.213270
 /// To compile with gcc:
 ///     gcc -lstdc++ ik.cpp
 /// To compile without any main function as a shared object:
@@ -143,6 +143,10 @@ inline double IKlog(double f) { return log(f); }
 
 #ifndef IKFAST_SINCOS_THRESH
 #define IKFAST_SINCOS_THRESH ((IKReal)0.000001)
+#endif
+
+#ifndef IKFAST_ATAN2_MAGTHRESH
+#define IKFAST_ATAN2_MAGTHRESH ((IKReal)1e-10)
 #endif
 
 inline float IKasin(float f)
@@ -780,6 +784,8 @@ if( (x64) < -1-IKFAST_SINCOS_THRESH || (x64) > 1+IKFAST_SINCOS_THRESH )
     continue;
 IKReal x65=IKasin(x64);
 IKReal x66=((pz)*(sj13));
+if( IKabs(x66)+IKabs(x55) < IKFAST_ATAN2_MAGTHRESH )
+    continue;
 IKReal x67=IKatan2(x66, x55);
 j14array[0]=((x65)+(((-1.00000000000000)*(x67))));
 sj14array[0]=IKsin(j14array[0]);

@@ -2734,13 +2734,13 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, bool bCheckLi
                             if((pjoint->GetType() == Joint::JointSpherical)|| pjoint->IsCircular(i) ) {
                                 veval.push_back(*iteval);
                             }
-                            else if( *iteval < pjoint->_vlowerlimit[i] ) {
+                            else if( *iteval < pjoint->_vlowerlimit[i]-g_fEpsilon*1000 ) {
                                 veval.push_back(pjoint->_vlowerlimit[i]);
-                                RAVELOG_WARN(str(boost::format("joint %s: lower limit (%f) is not followed: %f")%pjoint->GetName()%pjoint->_vlowerlimit[i]%*iteval));
+                                RAVELOG_WARN(str(boost::format("joint %s: lower limit (%e) is not followed: %e")%pjoint->GetName()%pjoint->_vlowerlimit[i]%*iteval));
                             }
-                            else if( *iteval > pjoint->_vupperlimit[i] ) {
+                            else if( *iteval > pjoint->_vupperlimit[i]+g_fEpsilon*1000 ) {
                                 veval.push_back(pjoint->_vupperlimit[i]);
-                                RAVELOG_WARN(str(boost::format("joint %s: upper limit (%f) is not followed: %f")%pjoint->GetName()%pjoint->_vupperlimit[i]%*iteval));
+                                RAVELOG_WARN(str(boost::format("joint %s: upper limit (%e) is not followed: %e")%pjoint->GetName()%pjoint->_vupperlimit[i]%*iteval));
                             }
                             else {
                                 veval.push_back(*iteval);

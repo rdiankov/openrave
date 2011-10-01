@@ -94,18 +94,38 @@ def customcse(rawexprs,symbols=None):
     if symbols is None:
         symbols = cse_main.numbered_symbols('x')
     # fractions can get big, so evaluate as many decimals as possible
-    allexprs = [evalNumbers(expr) for expr in rawexprs]
-    replacements,reduced_exprs = cse(allexprs,symbols=symbols)
+    complexitysubs = [(Symbol('POW'),1),(Symbol('ADD'),1),(Symbol('MUL'),1)]
+    reduced_exprs = []
+    allexprs = []
+    for expr in rawexprs:
+        evalexpr = evalNumbers(expr)
+        complexity = evalexpr.count_ops().subs(complexitysubs)
+        # need to threshold complexity or otherwise cse will not terminate
+        if complexity > 400:
+            reduced_exprs.append(evalexpr)
+        else:
+            allexprs.append(evalexpr)
+            reduced_exprs.append(None)
+
     newreplacements = []
-    # look for any expressions of the order of (x**(1/a))**b, usually computer wants x^(b/a)
-    for r in replacements:
-        newr = r[1]
-        if newr.is_Pow and newr.exp.is_number and newr.base.is_Symbol:
-            baseexpr = newr.base.subs(replacements)
-            if baseexpr.is_Pow and baseexpr.exp.is_number:
-                newreplacements.append((r[0],baseexpr.base**(newr.exp*baseexpr.exp)))
-                continue
-        newreplacements.append((r[0],newr))
+    if len(allexprs)>0:
+        replacements,reduced_exprs2 = cse(allexprs,symbols=symbols)
+        # have to maintain the same order
+        for expr in reduced_exprs2:
+            for i in range(len(reduced_exprs)):
+                if reduced_exprs[i] is None:
+                    reduced_exprs[i] = expr
+                    break
+        assert(all([expr is not None for expr in reduced_exprs]))
+        # look for any expressions of the order of (x**(1/a))**b, usually computer wants x^(b/a)
+        for r in replacements:
+            newr = r[1]
+            if newr.is_Pow and newr.exp.is_number and newr.base.is_Symbol:
+                baseexpr = newr.base.subs(replacements)
+                if baseexpr.is_Pow and baseexpr.exp.is_number:
+                    newreplacements.append((r[0],baseexpr.base**(newr.exp*baseexpr.exp)))
+                    continue
+            newreplacements.append((r[0],newr))
     return newreplacements,reduced_exprs
 
 class CodeGenerator(AutoReloader):
@@ -271,6 +291,10 @@ inline double IKlog(double f) { return log(f); }
 
 #ifndef IKFAST_SINCOS_THRESH
 #define IKFAST_SINCOS_THRESH ((IKReal)0.000001)
+#endif
+
+#ifndef IKFAST_ATAN2_MAGTHRESH
+#define IKFAST_ATAN2_MAGTHRESH ((IKReal)1e-10)
 #endif
 
 inline float IKasin(float f)
@@ -1465,6 +1489,7 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
                 code3,sepcode2 = self.writeExprCode(expr.args[1])
                 code += code3
                 sepcode += sepcode2
+                sepcode += 'if( IKabs(%s)+IKabs(%s) < IKFAST_ATAN2_MAGTHRESH )\n    continue;\n'%(code2,code3)
             elif expr.func == sin:
 #                 if expr.args[0].is_Symbol and expr.args[0].name[0] == 'j':
 #                     # probably already have initialized

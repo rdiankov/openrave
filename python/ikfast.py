@@ -228,7 +228,7 @@ from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2011 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Lesser GPL, Version 3'
-__version__ = '46'
+__version__ = '47'
 
 import sys, copy, time, math, datetime
 import __builtin__
@@ -1308,6 +1308,8 @@ class IKFastSolver(AutoReloader):
         exprs.sort(lambda x, y: self.codeComplexity(x)-self.codeComplexity(y))
 
     def checkForDivideByZero(self,eq):
+        """returns the equations to check for zero
+        """
         checkforzeros = []
         try:
             if eq.is_Function:
@@ -1492,7 +1494,7 @@ class IKFastSolver(AutoReloader):
         chainjoints = self.kinbody.GetChain(baselink,eelink,returnjoints=True)
         LinksRaw, jointvars = self.forwardKinematicsChain(chainlinks,chainjoints)
         for T in LinksRaw:
-            log.info('[' + ','.join('[%s, %s, %s, %s]'%(T[i,0],T[i,1],T[i,2],T[i,3]) for i in range(3)) + ']')
+            log.info('[' + ','.join(['[%s, %s, %s, %s]'%(T[i,0],T[i,1],T[i,2],T[i,3]) for i in range(3)]) + ']')
             
         self.degeneratecases = None
         if freeindices is None:
@@ -2162,7 +2164,7 @@ class IKFastSolver(AutoReloader):
         solsubs = self.freevarsubs[:]
         for var in usedvars:
             curvars.remove(var)
-            solsubs += [(cos(var),self.Variable(var).cvar),(sin(var),self.Variable(var).svar)]
+            solsubs += self.Variable(var).subs
         self.checkSolvability(AllEquations,curvars,self.freejointvars+usedvars)
         tree = self.solveAllEquations(AllEquations,curvars=curvars,othersolvedvars = self.freejointvars+usedvars,solsubs = solsubs,endbranchtree=endbranchtree)
         return coupledsolutions+tree
@@ -2760,11 +2762,23 @@ class IKFastSolver(AutoReloader):
         symbols = list(rawpolyeqs[0][0].symbols)
         othersymbols = list(rawpolyeqs[0][1].symbols)
         symbolsubs = [(symbols[i].subs(self.invsubs),symbols[i]) for i in range(len(symbols))]
-        if len(symbols) != 6:
-            raise self.CannotSolveError('Kohli/Osvatic method requires 3 unknown variables')
+        numsymbols = 0
+        for solvejointvar in solvejointvars:
+            for var in self.Variable(solvejointvar).vars:
+                if var in symbols:
+                    numsymbols += 1
+                    break
+        if numsymbols != 3:
+            raise self.CannotSolveError('Kohli/Osvatic method requires 3 unknown variables, has %d'%numsymbols)
             
         # choose which leftvar can determine the singularity of the following equations!
-        allowedindices = [i for i in range(0,len(symbols),2) if 8 == __builtin__.sum([int(peq[0].has_any_symbols(symbols[i],symbols[i+1])) for peq in rawpolyeqs])]
+        allowedindices = []
+        for i in range(len(symbols)):
+            # if first symbol is cjX, then next should be sjX
+            if symbols[i].name[0] == 'c':
+                assert( symbols[i+1].name == 's'+symbols[i].name[1:])
+                if 8 == __builtin__.sum([int(peq[0].has_any_symbols(symbols[i],symbols[i+1])) for peq in rawpolyeqs]):
+                    allowedindices.append(i)
         if len(allowedindices) == 0:
             raise self.CannotSolveError('need exactly 8 equations of one variable')
 
@@ -2988,18 +3002,20 @@ class IKFastSolver(AutoReloader):
                 #solution = self.solvePairVariables(AllEquations,usedvars[0],usedvars[1],self.freejointvars,maxcomplexity=50)
                 jointtrees=[]
                 raweqns=[eq for eq in AllEquations if not eq.has_any_symbols(tvar)]
-                halfanglesolution = self.solvePairVariablesHalfAngle(raweqns=raweqns,var0=usedvars[0],var1=usedvars[1],othersolvedvars=self.freejointvars)[0]
-                halfanglevar = usedvars[0] if halfanglesolution.jointname==usedvars[0].name else usedvars[1]
-                unknownvar = usedvars[1] if halfanglesolution.jointname==usedvars[0].name else usedvars[0]
-                nexttree = self.solveAllEquations(raweqns,curvars=[unknownvar],othersolvedvars=self.freejointvars+[halfanglevar],solsubs=self.freevarsubs+self.Variable(halfanglevar).subs,endbranchtree=[AST.SolverSequence([jointtrees])])
-                #finalsolution = self.solveSingleVariable(AllEquations,usedvars[2],othersolvedvars=self.freejointvars+usedvars[0:2],maxsolutions=4,maxdegree=4)
-                try:
-                    finaltree = self.solveAllEquations(AllEquations,curvars=usedvars[2:],othersolvedvars=self.freejointvars+usedvars[0:2],solsubs=self.freevarsubs+self.Variable(usedvars[0]).subs+self.Variable(usedvars[1]).subs,endbranchtree=endbranchtree)
-                    jointtrees.append(finaltree)
-                    return [halfanglesolution]+nexttree,usedvars
-                except self.CannotSolveError:
-                    # sometimes the last variable cannot be solved, so returned the already solved variables and let the higher function take care of it 
-                    return [halfanglesolution]+nexttree,usedvars[0:2]
+                if len(raweqns) > 0:
+                    halfanglesolution = self.solvePairVariablesHalfAngle(raweqns=raweqns,var0=usedvars[0],var1=usedvars[1],othersolvedvars=self.freejointvars)[0]
+                    halfanglevar = usedvars[0] if halfanglesolution.jointname==usedvars[0].name else usedvars[1]
+                    unknownvar = usedvars[1] if halfanglesolution.jointname==usedvars[0].name else usedvars[0]
+                    nexttree = self.solveAllEquations(raweqns,curvars=[unknownvar],othersolvedvars=self.freejointvars+[halfanglevar],solsubs=self.freevarsubs+self.Variable(halfanglevar).subs,endbranchtree=[AST.SolverSequence([jointtrees])])
+                    #finalsolution = self.solveSingleVariable(AllEquations,usedvars[2],othersolvedvars=self.freejointvars+usedvars[0:2],maxsolutions=4,maxdegree=4)
+                    try:
+                        finaltree = self.solveAllEquations(AllEquations,curvars=usedvars[2:],othersolvedvars=self.freejointvars+usedvars[0:2],solsubs=self.freevarsubs+self.Variable(usedvars[0]).subs+self.Variable(usedvars[1]).subs,endbranchtree=endbranchtree)
+                        jointtrees.append(finaltree)
+                        return [halfanglesolution]+nexttree,usedvars
+                    
+                    except self.CannotSolveError:
+                        # sometimes the last variable cannot be solved, so returned the already solved variables and let the higher function take care of it 
+                        return [halfanglesolution]+nexttree,usedvars[0:2]
                 
             except self.CannotSolveError,e:
                 log.debug(e)
@@ -3066,7 +3082,6 @@ class IKFastSolver(AutoReloader):
 #         except self.CannotSolveError:
 #             pass
 #         
-
 
         exportcoeffeqs,exportmonoms = self.solveDialytically(newreducedeqs,0,getsubs)
         coupledsolution = AST.SolverCoeffFunction(jointnames=[v.name for v in usedvars],jointeval=[v[1] for v in htvarsubs2],jointevalcos=[htvarsubs[2*i][1] for i in range(len(htvars))],jointevalsin=[htvarsubs[2*i+1][1] for i in range(len(htvars))],isHinges=[self.isHinge(v.name) for v in usedvars],exportvar=[v.name for v in htvars],exportcoeffeqs=exportcoeffeqs,exportfnname='solvedialyticpoly8qep',rootmaxdim=16)
@@ -3513,6 +3528,10 @@ class IKFastSolver(AutoReloader):
 
         # only return here if a solution was found that perfectly determines the unknown
         # otherwise, the pairwise solver could come up with something..
+        # There is still a problem with this: (bertold robot)
+        # Sometimes an equation like atan2(y,x) evaluates to atan2(0,0) during runtime.
+        # This cannot be known at compile time, so the equation is selected and any other possibilities are rejected.
+        # In the bertold robot case, the next possibility is a pair-wise solution involving two variables
         if any([s[0].numsolutions()==1 for s in solutions]):
             return self.addSolution(solutions,AllEquations,curvars,othersolvedvars,solsubs,endbranchtree,currentcases=currentcases)
 
@@ -4314,13 +4333,20 @@ class IKFastSolver(AutoReloader):
     def solveSingleVariable(self,raweqns,var,othersolvedvars,maxsolutions=4,maxdegree=2,subs=None):
         varsym = self.Variable(var)
         vars = [varsym.cvar,varsym.svar,varsym.htvar,var]
+        othersubs = []
+        for othersolvedvar in othersolvedvars:
+            othersubs += self.Variable(othersolvedvar).subs
+#         eqns = []
+#         for eq in raweqns:
+#             if eq.has_any_symbols(*vars):
+#                 # for equations that are very complex, make sure at least one set of values yields a non zero equation
+#                 testeq = eq.subs(varsym.subs+othersubs)
+#                 if any([testeq.subs(testconsistentvalue).evalf()!=S.Zero for testconsistentvalue in self.testconsistentvalues]):
+#                     eqns.append(eq)
         eqns = [eq.expand() for eq in raweqns if eq.has_any_symbols(*vars)]
         if len(eqns) == 0:
             raise self.CannotSolveError('not enough equations')
         
-        othersubs = []
-        for othersolvedvar in othersolvedvars:
-            othersubs += self.Variable(othersolvedvar).subs
 
         # prioritize finding a solution when var is alone
         for eq in eqns:

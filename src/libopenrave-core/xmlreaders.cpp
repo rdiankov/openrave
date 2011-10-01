@@ -3447,7 +3447,12 @@ public:
                     RobotBasePtr probot = RaveInterfaceCast<RobotBase>(_pinterface);
                     _penv->AddRobot(probot);
                     if( !!robotreader->GetJointValues() ) {
-                        probot->SetDOFValues(*robotreader->GetJointValues());
+                        if( (int)robotreader->GetJointValues()->size() != probot->GetDOF() ) {
+                            RAVELOG_WARN(str(boost::format("<jointvalues> wrong number of values %d!=%d, robot=%s")%robotreader->GetJointValues()->size()%probot->GetDOF()%probot->GetName()));
+                        }
+                        else {
+                            probot->SetDOFValues(*robotreader->GetJointValues());
+                        }
                     }
                 }
                 else if( !!boost::dynamic_pointer_cast<KinBodyXMLReader>(_pcurreader) ) {
@@ -3456,7 +3461,12 @@ public:
                     KinBodyPtr pbody = RaveInterfaceCast<KinBody>(_pinterface);
                     _penv->AddKinBody(pbody);
                     if( !!kinbodyreader->GetJointValues() ) {
-                        pbody->SetDOFValues(*kinbodyreader->GetJointValues());
+                        if( (int)kinbodyreader->GetJointValues()->size() != pbody->GetDOF() ) {
+                            RAVELOG_WARN(str(boost::format("<jointvalues> wrong number of values %d!=%d, body=%s")%kinbodyreader->GetJointValues()->size()%pbody->GetDOF()%pbody->GetName()));
+                        }
+                        else {
+                            pbody->SetDOFValues(*kinbodyreader->GetJointValues());
+                        }
                     }
                 }
                 else if( !!boost::dynamic_pointer_cast<SensorXMLReader>(_pcurreader) ) {
