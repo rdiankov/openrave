@@ -1113,6 +1113,7 @@ def test_ik():
     newsubs=[(var,eq.subs(self.testconsistentvalues[1]).evalf()) for var,eq in coupledsolutions[0].dictequations]
     mpmath.polyroots(coupledsolutions[0].poly.subs(newsubs).coeffs)
 
+    jointvalues = [-0.2898119639388401, 0.0, -5.913881500780583, 0.0, -3.116541584197247, 1.570796326794897]
 """
 ikfast notes;
 

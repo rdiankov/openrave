@@ -294,7 +294,7 @@ inline double IKlog(double f) { return log(f); }
 #endif
 
 #ifndef IKFAST_ATAN2_MAGTHRESH
-#define IKFAST_ATAN2_MAGTHRESH ((IKReal)1e-10)
+#define IKFAST_ATAN2_MAGTHRESH ((IKReal)2e-6)
 #endif
 
 inline float IKasin(float f)
@@ -1489,7 +1489,7 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
                 code3,sepcode2 = self.writeExprCode(expr.args[1])
                 code += code3
                 sepcode += sepcode2
-                sepcode += 'if( IKabs(%s)+IKabs(%s) < IKFAST_ATAN2_MAGTHRESH )\n    continue;\n'%(code2,code3)
+                sepcode += 'if( IKabs(%s) < IKFAST_ATAN2_MAGTHRESH && IKabs(%s) < IKFAST_ATAN2_MAGTHRESH )\n    continue;\n'%(code2,code3)
             elif expr.func == sin:
 #                 if expr.args[0].is_Symbol and expr.args[0].name[0] == 'j':
 #                     # probably already have initialized
