@@ -417,7 +417,7 @@ class GraspingModel(DatabaseGenerator):
         self.approachgraphs = [self.env.plot3(points=gapproachrays[:,0:3],pointsize=5,colors=array((1,0,0))),
                           self.env.drawlinelist(points=reshape(c_[gapproachrays[:,0:3],gapproachrays[:,0:3]+0.005*gapproachrays[:,3:6]],(2*N,3)),linewidth=4,colors=array((1,0,0,1)))]
         self.contactgraph = None
-        totalgrasps = N*len(preshapes)*len(rolls)*len(standoffs)
+        totalgrasps = N*len(preshapes)*len(rolls)*len(standoffs)*len(manipulatordirections)
         self.grasps = []
 
         def producer():
