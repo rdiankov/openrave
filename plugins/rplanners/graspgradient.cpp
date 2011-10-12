@@ -183,7 +183,7 @@ public:
             fConfigThresh *= 1.5f;
         }
 
-        if( _parameters->_configurationspecification != ptraj->GetConfigurationSpecification() ) {
+        if( ptraj->GetConfigurationSpecification().GetDOF() == 0 ) {
             ptraj->Init(_parameters->_configurationspecification);
         }
         FOREACH(it, listbestpath) {

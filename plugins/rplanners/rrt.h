@@ -316,11 +316,11 @@ public:
         BOOST_ASSERT( _goalindex >= 0 );
         _SimpleOptimizePath(vecnodes,10);
 
-        if( _parameters->_configurationspecification != ptraj->GetConfigurationSpecification() ) {
+        if( ptraj->GetConfigurationSpecification().GetDOF() == 0 ) {
             ptraj->Init(_parameters->_configurationspecification);
         }
         FOREACH(itnode, vecnodes) {
-            ptraj->Insert(ptraj->GetNumWaypoints(),(*itnode)->q);
+            ptraj->Insert(ptraj->GetNumWaypoints(),(*itnode)->q,_parameters->_configurationspecification);
         }
 
         RAVELOG_DEBUG(str(boost::format("plan success, path=%d points in %fs\n")%ptraj->GetNumWaypoints()%(0.001f*(float)(GetMilliTime()-basetime))));
@@ -494,11 +494,11 @@ public:
         }
 
         _SimpleOptimizePath(vecnodes,10);
-        if( _parameters->_configurationspecification != ptraj->GetConfigurationSpecification() ) {
+        if( ptraj->GetConfigurationSpecification().GetDOF() == 0 ) {
             ptraj->Init(_parameters->_configurationspecification);
         }
         FOREACH(itnode, vecnodes) {
-            ptraj->Insert(ptraj->GetNumWaypoints(),(*itnode)->q);
+            ptraj->Insert(ptraj->GetNumWaypoints(),(*itnode)->q,_parameters->_configurationspecification);
         }
 
         PlannerStatus status = _ProcessPostPlanners(_robot,ptraj);
@@ -641,12 +641,12 @@ protected:
             }
         }
 
-        if( _parameters->_configurationspecification != ptraj->GetConfigurationSpecification() ) {
+        if( ptraj->GetConfigurationSpecification().GetDOF() == 0 ) {
             ptraj->Init(_parameters->_configurationspecification);
         }
         // save nodes to trajectory
         FOREACH(itnode, _treeForward._nodes) {
-            ptraj->Insert(ptraj->GetNumWaypoints(),(*itnode)->q);
+            ptraj->Insert(ptraj->GetNumWaypoints(),(*itnode)->q,_parameters->_configurationspecification);
         }
         return PS_HasSolution;
     }

@@ -143,7 +143,7 @@ Planner Parameters\n\
         _robot->SetActiveDOFs(_manip->GetArmIndices());     // should be set by user anyway, but this is an extra precaution
         CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
 
-        if( _parameters->_configurationspecification != poutputtraj->GetConfigurationSpecification() ) {
+        if( poutputtraj->GetConfigurationSpecification().GetDOF() == 0 ) {
             poutputtraj->Init(_parameters->_configurationspecification);
         }
 
@@ -214,14 +214,11 @@ Planner Parameters\n\
 
         _mjacobian.resize(boost::extents[0][0]);
         _vprevsolution.resize(0);
-        if( _parameters->_configurationspecification != poutputtraj->GetConfigurationSpecification() ) {
-            poutputtraj->Init(_parameters->_configurationspecification);
-        }
         _tbaseinv = _manip->GetBase()->GetTransform().inverse();
         if( (int)_parameters->vinitialconfig.size() == _parameters->GetDOF() ) {
             _parameters->_setstatefn(_parameters->vinitialconfig);
             _SetPreviousSolution(_parameters->vinitialconfig,false);
-            poutputtraj->Insert(poutputtraj->GetNumWaypoints(),_parameters->vinitialconfig);
+            poutputtraj->Insert(poutputtraj->GetNumWaypoints(),_parameters->vinitialconfig,_parameters->_configurationspecification);
         }
 
         UserDataPtr filterhandle = _manip->GetIkSolver()->RegisterCustomFilter(0,boost::bind(&WorkspaceTrajectoryTracker::_ValidateSolution,this,_1,_2,_3));
@@ -261,7 +258,7 @@ Planner Parameters\n\
                 bPrevInCollision = false;
             }
 
-            poutputtraj->Insert(poutputtraj->GetNumWaypoints(),vsolution);
+            poutputtraj->Insert(poutputtraj->GetNumWaypoints(),vsolution,_parameters->_configurationspecification);
             _parameters->_setstatefn(vsolution);
             _SetPreviousSolution(vsolution);
         }
