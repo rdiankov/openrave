@@ -122,40 +122,72 @@ public:
             RAVELOG_DEBUG(str(boost::format("initial path size %d, duration: %f")%path.size()%dynamicpath.GetTotalTime()));
             ParabolicRamp::RampFeasibilityChecker checker(this,parameters->_pointtolerance);
             int res=dynamicpath.Shortcut(parameters->_nMaxIterations,checker);
+            if( res != 0 ) {
+                RAVELOG_WARN("parabolic smoother failed\n");
+            }
             RAVELOG_DEBUG(str(boost::format("after shortcutting: duration %f")%dynamicpath.GetTotalTime()));
 
-            ptraj->Init(_parameters->_configurationspecification);
-            Trajectory::TPOINT tp;
-            for(dReal t = 0; t < dynamicpath.GetTotalTime(); ++t) {
-                dynamicpath.Evaluate(t,tp.q);
-                dynamicpath.Derivative(t,tp.qdot);
-                tp.time = t;
-                ptraj->AddPoint(tp);
-            }
-            tp.q = dynamicpath.ramps.back().x1;
-            tp.qdot = dynamicpath.ramps.back().dx1;
-            tp.time = dynamicpath.GetTotalTime();
-            ptraj->AddPoint(tp);
+            ConfigurationSpecification oldspec = ptraj->GetConfigurationSpecification();
+            ConfigurationSpecification velspec = oldspec.GetVelocitySpecification();
+            ConfigurationSpecification newspec = oldspec;
+            newspec.AddVelocityGroups(true);
+            ptraj->Init(newspec);
 
-//            tp.q = dynamicpath.ramps.at(0).x0;
-//            tp.qdot = dynamicpath.ramps.at(0).dx0;
-//            tp.time = 0;
-//            ptraj->AddPoint(tp);
-//            FOREACHC(itramp,dynamicpath.ramps) {
-//                tp.q = itramp->x1;
-//                tp.qdot = itramp->dx1;
-//                tp.time += itramp->endTime;
-//                ptraj->AddPoint(tp);
-//            }
+            int timeoffset=-1;
+            FOREACH(itgroup,newspec._vgroups) {
+                if( itgroup->name == "deltatime" ) {
+                    timeoffset = itgroup->offset;
+                }
+                else if( velspec.FindCompatibleGroup(*itgroup) != velspec._vgroups.end() ) {
+                    itgroup->interpolation = "linear";
+                }
+                else if( oldspec.FindCompatibleGroup(*itgroup) != oldspec._vgroups.end() ) {
+                    itgroup->interpolation = "quadratic";
+                }
+            }
+
+            // separate all the acceleration switches into individual points
+            vector<dReal> vtrajpoint(newspec.GetDOF());
+            ConfigurationSpecification::ConvertData(vtrajpoint.begin(),newspec,dynamicpath.ramps.at(0).x0.begin(),oldspec,1,GetEnv(),true);
+            ConfigurationSpecification::ConvertData(vtrajpoint.begin(),newspec,dynamicpath.ramps.at(0).dx0.begin(),velspec,1,GetEnv(),false);
+            vtrajpoint.at(timeoffset) = 0;
+            ptraj->Insert(ptraj->GetNumWaypoints(),vtrajpoint);
+            vector<dReal> vswitchtimes;
+            ParabolicRamp::Vector vconfig;
+            FOREACHC(itrampnd,dynamicpath.ramps) {
+                vswitchtimes.resize(0);
+                vswitchtimes.push_back(itrampnd->endTime);
+                FOREACHC(itramp,itrampnd->ramps) {
+                    vector<dReal>::iterator it = lower_bound(vswitchtimes.begin(),vswitchtimes.end(),itramp->tswitch1);
+                    if( *it != itramp->tswitch1 ) {
+                        vswitchtimes.insert(it,itramp->tswitch1);
+                    }
+                    if( itramp->tswitch1 != itramp->tswitch2 ) {
+                        it = lower_bound(vswitchtimes.begin(),vswitchtimes.end(),itramp->tswitch2);
+                        if( *it != itramp->tswitch2 ) {
+                            vswitchtimes.insert(it,itramp->tswitch2);
+                        }
+                    }
+                }
+                dReal prevtime = 0;
+                FOREACH(ittime,vswitchtimes) {
+                    itrampnd->Evaluate(*ittime,vconfig);
+                    ConfigurationSpecification::ConvertData(vtrajpoint.begin(),newspec,vconfig.begin(),oldspec,1,GetEnv(),true);
+                    itrampnd->Derivative(*ittime,vconfig);
+                    ConfigurationSpecification::ConvertData(vtrajpoint.begin(),newspec,vconfig.begin(),velspec,1,GetEnv(),false);
+                    vtrajpoint.at(timeoffset) = *ittime-prevtime;
+                    ptraj->Insert(ptraj->GetNumWaypoints(),vtrajpoint);
+                    prevtime = *ittime;
+                }
+            }
         }
         catch (const openrave_exception& ex) {
             RAVELOG_WARN(str(boost::format("parabolic planner failed: %s")%ex.what()));
             ofstream f("failedsmoothing.traj");
             f << std::setprecision(std::numeric_limits<dReal>::digits10+1);
-            ptraj->Write(f,0);
+            ptraj->serialize(f);
             return PS_Failed;
         }
-        ptraj->CalcTrajTiming(_robot,TrajectoryBase::LINEAR,false,true);
         RAVELOG_DEBUG(str(boost::format("path optimizing - time=%fs\n")%(0.001f*(float)(GetMilliTime()-basetime))));
         return PS_HasSolution;
     }
@@ -190,3 +222,9 @@ PlannerBasePtr CreateParabolicSmoother(EnvironmentBasePtr penv, std::istream& si
 {
     return PlannerBasePtr(new ParabolicSmoother(penv,sinput));
 }
+
+#ifdef RAVE_REGISTER_BOOST
+#include BOOST_TYPEOF_INCREMENT_REGISTRATION_GROUP()
+BOOST_TYPEOF_REGISTER_TYPE(ParabolicRamp::ParabolicRamp1D)
+BOOST_TYPEOF_REGISTER_TYPE(ParabolicRamp::ParabolicRampND)
+#endif

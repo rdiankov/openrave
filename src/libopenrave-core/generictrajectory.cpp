@@ -228,6 +228,37 @@ public:
         }
     }
 
+    void Sample(std::vector<dReal>& data, dReal time, const ConfigurationSpecification& spec) const
+    {
+        BOOST_ASSERT(_bInit);
+        BOOST_ASSERT(_timeoffset>=0);
+        BOOST_ASSERT(time >= 0);
+        _ComputeInternal();
+        data.resize(0);
+        data.resize(spec.GetDOF(),0);
+        if( time >= GetDuration() ) {
+            ConfigurationSpecification::ConvertData(data.begin(),spec,_vtrajdata.end()-_spec.GetDOF(),_spec,1,GetEnv());
+        }
+        else {
+            std::vector<dReal>::iterator it = std::lower_bound(_vaccumtime.begin(),_vaccumtime.end(),time);
+            if( it == _vaccumtime.begin() ) {
+                ConfigurationSpecification::ConvertData(data.begin(),spec,_vtrajdata.begin(),_spec,1,GetEnv());
+            }
+            else {
+                // could be faster
+                vector<dReal> vinternaldata(_spec.GetDOF(),0);
+                size_t index = it-_vaccumtime.begin();
+                dReal deltatime = time-_vaccumtime.at(index-1);
+                for(size_t i = 0; i < _vgroupinterpolators.size(); ++i) {
+                    if( !!_vgroupinterpolators[i] ) {
+                        _vgroupinterpolators[i](index-1,deltatime,vinternaldata);
+                    }
+                }
+                ConfigurationSpecification::ConvertData(data.begin(),spec,vinternaldata.begin(),_spec,1,GetEnv());
+            }
+        }
+    }
+
     const ConfigurationSpecification& GetConfigurationSpecification() const
     {
         return _spec;

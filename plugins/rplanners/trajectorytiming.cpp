@@ -126,7 +126,7 @@ public:
                 stringstream ss(gpos.name.substr(supportedgroups[igrouptype].size()));
                 string bodyname;
                 int affinedofs=0;
-                IkParameterizationType iktype;
+                IkParameterizationType iktype=IKP_None;
                 if( igrouptype == 1 ) {
                     ss >> bodyname >> affinedofs;
                 }
