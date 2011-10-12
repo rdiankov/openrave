@@ -319,9 +319,9 @@ protected:
             params->vinitialconfig.resize(0);     // set by SetRobotActiveJoints
         }
 
-        if( RaveHasInterface(PT_Planner,"ParabolicSmoother") ) {
-            params->_sPostProcessingPlanner = "ParabolicSmoother";
-        }
+//        if( RaveHasInterface(PT_Planner,"ParabolicSmoother") ) {
+//            params->_sPostProcessingPlanner = "ParabolicSmoother";
+//        }
 
         // compute a workspace trajectory (important to do this after jittering!)
         {
@@ -467,9 +467,9 @@ protected:
             return false;
         }
         params->vgoalconfig.resize(writeindex);
-        if( RaveHasInterface(PT_Planner,"ParabolicSmoother") ) {
-            params->_sPostProcessingPlanner = "ParabolicSmoother";
-        }
+//        if( RaveHasInterface(PT_Planner,"ParabolicSmoother") ) {
+//            params->_sPostProcessingPlanner = "ParabolicSmoother";
+//        }
         robot->SetActiveDOFValues(originalvalues);
 
         // jitter again for initial collision
@@ -712,9 +712,9 @@ protected:
         }
         robot->GetActiveDOFValues(params->vinitialconfig);
 
-        if( RaveHasInterface(PT_Planner,"ParabolicSmoother") ) {
-            params->_sPostProcessingPlanner = "ParabolicSmoother";
-        }
+//        if( RaveHasInterface(PT_Planner,"ParabolicSmoother") ) {
+//            params->_sPostProcessingPlanner = "ParabolicSmoother";
+//        }
 
         PlannerBasePtr rrtplanner = RaveCreatePlanner(GetEnv(),_strRRTPlannerName);
         if( !rrtplanner ) {

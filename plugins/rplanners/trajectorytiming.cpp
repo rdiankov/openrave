@@ -102,7 +102,6 @@ public:
             list<GroupInfo> listgroupinfo;
             list< boost::function<dReal(std::vector<dReal>::const_iterator,std::vector<dReal>::const_iterator,std::vector<dReal>::const_iterator,bool) > > listmintimefns;
             list< boost::function<void(std::vector<dReal>::const_iterator,std::vector<dReal>::const_iterator,std::vector<dReal>::iterator) > > listvelocityfns;
-            list< std::vector<ConfigurationSpecification::Group>::iterator > listvelocitygroups;
             const boost::array<std::string,3> supportedgroups = {{"joint_values", "affine_transform", "ikparam_values"}};
             for(size_t i = 0; i < newspec._vgroups.size(); ++i) {
                 ConfigurationSpecification::Group& gpos = newspec._vgroups[i];
