@@ -218,6 +218,19 @@ void RetimeActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr probot, bool
     }
 }
 
+static void diffstatefn(std::vector<dReal>& q1, const std::vector<dReal>& q2, const std::vector<int>& vrotaxes)
+{
+    BOOST_ASSERT(q1.size()==q2.size());
+    for(size_t i = 0; i < q1.size(); ++i) {
+        if( find(vrotaxes.begin(),vrotaxes.end(),i) != vrotaxes.end() ) {
+            q1[i] = ANGLE_DIFF(q1[i],q2[i]);
+        }
+        else {
+            q1[i] -= q2[i];
+        }
+    }
+}
+
 void RetimeAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps, const std::string plannername)
 {
     PlannerBasePtr planner = RaveCreatePlanner(traj->GetEnv(),"trajectoryretimer");
@@ -231,8 +244,37 @@ void RetimeAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& ma
         params->_vConfigLowerLimit[i] = -1e6;
         params->_vConfigUpperLimit[i] = 1e6;
     }
+
+    // analyze the configuration for identified dimensions
+    std::vector<int> vrotaxes;
+    FOREACHC(itgroup,traj->GetConfigurationSpecification()._vgroups) {
+        if( itgroup->name.size() >= 16 && itgroup->name.substr(0,16) == "affine_transform" ) {
+            string tempname;
+            int affinedofs=0;
+            stringstream ss(itgroup->name.substr(16));
+            ss >> tempname >> affinedofs;
+            if( !!ss ) {
+                if( affinedofs & DOF_RotationAxis ) {
+                    vrotaxes.push_back(itgroup->offset+RaveGetIndexFromAffineDOF(affinedofs,DOF_RotationAxis));
+                }
+            }
+        }
+        else if( itgroup->name.size() >= 14 && itgroup->name.substr(0,14) == "ikparam_values" ) {
+            int iktypeint = 0;
+            stringstream ss(itgroup->name.substr(14));
+            ss >> iktypeint;
+            if( !!ss ) {
+                IkParameterizationType iktype=static_cast<IkParameterizationType>(iktypeint);
+                switch(iktype) {
+                case IKP_TranslationXYOrientation3D: vrotaxes.push_back(itgroup->offset+2); break;
+                default:
+                    break;
+                }
+            }
+        }
+    }
+    params->_diffstatefn == boost::bind(boost::bind(diffstatefn,_1,_2,boost::ref(vrotaxes)));
     //params->_distmetricfn;
-    //params->_diffstatefn;
     params->_sExtraParameters += str(boost::format("<interpolation>%s</interpolation><hastimestamps>%d</hastimestamps>")%interpolation%hastimestamps);
     if( !planner->InitPlan(RobotBasePtr(),params) ) {
         throw OPENRAVE_EXCEPTION_FORMAT0("failed to InitPlan",ORE_Failed);
@@ -472,7 +514,7 @@ bool ManipulatorIKGoalSampler::Sample(std::vector<dReal>& vgoal)
         std::list<SampleInfo>::iterator itsample = _listsamples.begin();
         advance(itsample,isampleindex);
 
-        bool bCheckEndEffector = itsample->_ikparam.GetType() == IkParameterization::Type_Transform6D;
+        bool bCheckEndEffector = itsample->_ikparam.GetType() == IKP_Transform6D;
         // if first grasp, quickly prune grasp is end effector is in collision
         if( itsample->_numleft == _nummaxsamples && bCheckEndEffector ) {
             if( _pmanip->CheckEndEffectorCollision(itsample->_ikparam.GetTransform6D(),_report) ) {

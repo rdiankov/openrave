@@ -326,18 +326,15 @@ protected:
         // compute a workspace trajectory (important to do this after jittering!)
         {
             params->workspacetraj = RaveCreateTrajectory(GetEnv(),"");
-            ConfigurationSpecification spec;
-            spec._vgroups.resize(1);
-            spec._vgroups[0].offset = 0;
-            spec._vgroups[0].dof = RaveGetAffineDOF(DOF_Transform);
-            spec._vgroups[0].name = str(boost::format("affine_transform __dummy__ %d")%DOF_Transform);
-            spec._vgroups[0].interpolation = "linear";
+            ConfigurationSpecification spec = IkParameterization::GetConfigurationSpecification(IKP_Transform6D);
             params->workspacetraj->Init(spec);
             vector<dReal> data(spec._vgroups[0].dof);
-            RaveGetAffineDOFValuesFromTransform(data.begin(),Tee,DOF_Transform);
+            IkParameterization ikparam(Tee,IKP_Transform6D);
+            ikparam.GetValues(data.begin());
             params->workspacetraj->Insert(0,data);
             Tee.trans += direction*maxsteps*params->_fStepLength;
-            RaveGetAffineDOFValuesFromTransform(data.begin(),Tee,DOF_Transform);
+            ikparam.SetTransform6D(Tee);
+            ikparam.GetValues(data.begin());
             params->workspacetraj->Insert(1,data);
             vector<dReal> maxvelocities(spec._vgroups[0].dof,1);
             vector<dReal> maxaccelerations(spec._vgroups[0].dof,10);

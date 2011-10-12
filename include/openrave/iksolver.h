@@ -154,7 +154,7 @@ public:
     virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, int filteroptions, std::vector< std::vector<dReal> >& solutions) = 0;
 
     /// \brief returns true if the solver supports a particular ik parameterization as input.
-    virtual bool Supports(IkParameterization::Type iktype) const OPENRAVE_DUMMY_IMPLEMENTATION;
+    virtual bool Supports(IkParameterizationType iktype) const OPENRAVE_DUMMY_IMPLEMENTATION;
 
 protected:
     inline IkSolverBasePtr shared_iksolver() {

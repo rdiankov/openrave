@@ -579,6 +579,7 @@ class CollisionCheckerBase;
 class ViewerBase;
 class SpaceSamplerBase;
 class IkParameterization;
+class ConfigurationSpecification;
 
 typedef boost::shared_ptr<CollisionReport> CollisionReportPtr;
 typedef boost::shared_ptr<CollisionReport const> CollisionReportConstPtr;
@@ -775,6 +776,240 @@ using mathextra::lengthsqr4;
 using mathextra::mult4;
 //@}
 
+/// \brief The types of inverse kinematics parameterizations supported.
+///
+/// The minimum degree of freedoms required is set in the upper 4 bits of each type.
+/// The number of values used to represent the parameterization ( >= dof ) is the next 4 bits.
+/// The lower bits contain a unique id of the type.
+enum IkParameterizationType {
+    IKP_None=0,
+    IKP_Transform6D=0x67000001,     ///< end effector reaches desired 6D transformation
+    IKP_Rotation3D=0x34000002,     ///< end effector reaches desired 3D rotation
+    IKP_Translation3D=0x33000003,     ///< end effector origin reaches desired 3D translation
+    IKP_Direction3D=0x23000004,     ///< direction on end effector coordinate system reaches desired direction
+    IKP_Ray4D=0x46000005,     ///< ray on end effector coordinate system reaches desired global ray
+    IKP_Lookat3D=0x23000006,     ///< direction on end effector coordinate system points to desired 3D position
+    IKP_TranslationDirection5D=0x56000007,     ///< end effector origin and direction reaches desired 3D translation and direction. Can be thought of as Ray IK where the origin of the ray must coincide.
+    IKP_TranslationXY2D=0x22000008,     ///< 2D translation along XY plane
+    IKP_TranslationXYOrientation3D=0x33000009,     ///< 2D translation along XY plane and 1D rotation around Z axis. The offset of the rotation is measured starting at +X, so at +X is it 0, at +Y it is pi/2.
+    IKP_TranslationLocalGlobal6D=0x3600000a,     ///< local point on end effector origin reaches desired 3D global point
+    IKP_NumberOfParameterizations=10,     ///< number of parameterizations (does not count IKP_None)
+};
+
+/** \brief A configuration specification references values in the environment that then define a configuration-space which can be searched for.
+
+    It is composed of several groups targetting values for individual bodies. It is serialized into XML. The XML syntax is as follows:
+
+   \code
+   <configuration>
+     <group name="string" offset="#OFF1" dof="#D1" interpolation="string"/>
+     <group name="string" offset="#OFF2" dof="#D2" interpolation="string"/>
+   </configuration>
+   \endcode
+ */
+class OPENRAVE_API ConfigurationSpecification
+{
+public:
+
+    /// \brief A group referencing the values of one body in the environment
+    class OPENRAVE_API Group
+    {
+public:
+        Group() : offset(0), dof(0) {
+        }
+
+        inline bool operator==(const Group& r) const {
+            return offset==r.offset && dof==r.dof && name==r.name && interpolation==r.interpolation;
+        }
+        inline bool operator!=(const Group& r) const {
+            return offset!=r.offset || dof!=r.dof || name!=r.name || interpolation!=r.interpolation;
+        }
+
+        /// \brief For each data point, the number of values to offset before data for this group starts.
+        int offset;
+        /// \brief The number of values in this group.
+        int dof;
+        /** \brief semantic information on what part of the environment the group refers to.
+
+            Can be composed of multiple workds; the first word is the group type, and the words following narrow the specifics. Common types are:
+
+            - \b joint_values - The joint values of a kinbody/robot. The joint names with the name of the body can follow.
+            - \b joint_velocities - The joint velocities (1/second) of a kinbody/robot. The name of the body with the joint names can follow.
+            - \b joint_accelerations - The joint accelerations (1/second^2) of a kinbody/robot. The name of the body with the joint names can follow.
+            - \b joint_torques - The joint torques (Newton meter) of a kinbody/robot. The name of the body with the joint names can follow.
+            - \b affine_transform - An affine transformation [quaternion, translation]. The name of the body with selected affine dofs (see \ref DOFAffine) can follow.
+            - \b affine_velocities - The velocity (1/second) of the affine transformation [rotation axis, translation velocity], the name of the body can follow.
+            - \b affine_accelerations - The velocity (1/second^2) of the affine transformation [rotation axis, translation velocity], the name of the body can follow.
+            - \b ikparam_values - The values of an IkParmeterization. The ikparam type is stored as the second value in name
+            - \b ikparam_velocities - velociti of an IkParmeterization. The ikparam type is stored as the second value in name
+         */
+        std::string name;
+        /** \brief Describes how the data should be interpolated. Common methods are:
+
+            - \b previous - the previous waypoint's value is always chosen
+            - \b next - the next waypoint's value is always chosen
+            - \b linear - linear interpolation (default)
+            - \b quadratic - position is piecewise-quadratic, velocity is piecewise-linear, acceleration is one of -amax, 0, or amax
+            - \b cubic - 3 degree polynomial
+            - \b quadric - 4 degree polynomial
+            - \b quintic - 5 degree polynomial
+         */
+        std::string interpolation;
+    };
+
+    class Reader : public BaseXMLReader
+    {
+public:
+        Reader(ConfigurationSpecification& spec);
+        virtual ProcessElement startElement(const std::string& name, const AttributesList& atts);
+        virtual bool endElement(const std::string& name);
+        virtual void characters(const std::string& ch);
+protected:
+        ConfigurationSpecification& _spec;
+        std::stringstream _ss;
+    };
+
+    virtual ~ConfigurationSpecification() {
+    }
+
+    /// \brief return the dimension of the configuraiton space (degrees of freedom)
+    virtual int GetDOF() const;
+
+    /// \brief check if the groups form a continguous space
+    virtual bool IsValid() const;
+
+    virtual bool operator==(const ConfigurationSpecification& r) const;
+    virtual bool operator!=(const ConfigurationSpecification& r) const;
+
+    /// \brief finds the most compatible group to the given group
+    ///
+    /// \param g the group to query, only the Group::name and Group::dof values are used
+    /// \param exactmatch if true, will only return groups whose name exactly matches with g.name
+    /// \return an iterator part of _vgroups that represents the most compatible group. If no group is found, will return _vgroups.end()
+    virtual std::vector<Group>::const_iterator FindCompatibleGroup(const Group& g, bool exactmatch=false) const;
+
+    /// \brief Return the most compatible group that represents the time-derivative data of the group.
+    ///
+    /// For example given a 'joint_values' group, this will return the closest 'joint_velocities' group.
+    /// \param g the group to query, only the Group::name and Group::dof values are used
+    /// \param exactmatch if true, will only return groups whose name exactly matches with g.name
+    /// \return an iterator part of _vgroups that represents the most compatible group. If no group is found, will return _vgroups.end()
+    virtual std::vector<Group>::const_iterator FindTimeDerivativeGroup(const Group& g, bool exactmatch=false) const;
+
+    /** \brief adds a velocity group for every position group.
+
+        If velocities groups already exist, they are checked for and/or modified. Note that the configuration space
+        might be re-ordered as a result of this function call.
+        \param adddeltatime If true will add the 'deltatime' tag, which is necessary for trajectory sampling
+     */
+    virtual void AddVelocityGroups(bool adddeltatime);
+
+    /// \brief converts all the groups to the corresponding velocity groups and returns the specification
+    ///
+    /// The velocity configuration space will have a one-to-one correspondence with the
+    virtual ConfigurationSpecification GetVelocitySpecification() const;
+
+    /** \brief set the offsets of each group in order to get a contiguous configuration space
+     */
+    virtual void ResetGroupOffsets();
+
+    /// \brief adds the deltatime tag to the end if one doesn't exist and returns the index into the configuration space
+    virtual int AddDeltaTime();
+
+    /** \brief extracts an affine transform given the start of a configuration space point
+
+        Looks for 'affine_transform' groups. If pbody is not initialized, will choose the first affine_transform found.
+        \param[inout] t the transform holding the default values, which will be overwritten with the new values.
+        \param[in] itdata data in the format of this configuration specification.
+        \return true if at least one group was found for extracting
+     */
+    virtual bool ExtractTransform(Transform& t, std::vector<dReal>::const_iterator itdata, KinBodyConstPtr pbody) const;
+
+    /** \brief extracts an ikparameterization given the start of a configuration space point
+
+        Looks for 'ikparam' groups.
+        \param[inout] ikparam filled with ikparameterization (if found)
+        \param[in] itdata data in the format of this configuration specification
+        \return true if at least one group was found for extracting
+     */
+    virtual bool ExtractIkParameterization(IkParameterization& ikparam, std::vector<dReal>::const_iterator itdata, int timederivative=0) const;
+
+    /** \brief extracts the affine values
+
+        Looks for 'affine_X' groups. If pbody is not initialized, will choose the first affine_X found.
+        \param[inout] itvalues iterator to vector that holds the default values and will be overwritten with the new values. must be initialized
+        \param[in] itdata data in the format of this configuration specification.
+        \param[in] affinedofs the format of the affine dofs requested
+        \param[in] timederivative the time derivative of the data to extract
+        \return true if at least one group was found for extracting
+     */
+    virtual bool ExtractAffineValues(std::vector<dReal>::iterator itvalues, std::vector<dReal>::const_iterator itdata, KinBodyConstPtr pbody, int affinedofs, int timederivative=0) const;
+
+    /** \brief extracts a body's joint values given the start of a configuration space point
+
+        Looks for 'joint_X' groups. If pbody is not initialized, will choose the first joint_X found.
+        \param[inout] itvalues iterator to vector that holds the default values and will be overwritten with the new values. must be initialized
+        \param[in] itdata data in the format of this configuration specification.
+        \param[in] indices the set of DOF indices of the body to extract and write into itvalues.
+        \param[in] timederivative the time derivative of the data to extract
+        \return true if at least one group was found for extracting
+     */
+    virtual bool ExtractJointValues(std::vector<dReal>::iterator itvalues, std::vector<dReal>::const_iterator itdata, KinBodyConstPtr pbody, const std::vector<int>& indices, int timederivative=0) const;
+
+    /** \brief inserts a set of joint values into a configuration space point
+
+        Looks for 'joint_X' groups. If pbody is not initialized, will use the first joint_X found.
+        \param[inout] itdata data in the format of this configuration specification.
+        \param[in] itvalues iterator to joint values to write
+        \param[in] indices the set of DOF indices that itvalues represents.
+        \param[in] timederivative the time derivative of the data to insert
+        \return true if at least one group was found for inserting
+     */
+    virtual bool InsertJointValues(std::vector<dReal>::iterator itdata, std::vector<dReal>::const_iterator itvalues, KinBodyConstPtr pbody, const std::vector<int>& indices, int timederivative=0) const;
+
+    /** \brief sets the deltatime field of the data if one exists
+
+        \param[inout] itdata data in the format of this configuration specification.
+        \param[in] deltatime the delta time of the time stamp (from previous point)
+        \return true if at least one group was found for inserting
+     */
+    virtual bool InsertDeltaTime(std::vector<dReal>::iterator itdata, dReal deltatime);
+
+    /** \brief given two compatible groups, convers data represented in the source group to data represented in the target group
+
+        \param ittargetdata iterator pointing to start of target group data that should be overwritten
+        \param targetstride the number of elements that to go from the next target point. Necessary if numpoints > 1.
+        \param gtarget the target configuration group
+        \param itsourcedata iterator pointing to start of source group data that should be read
+        \param sourcestride the number of elements that to go from the next source point. Necessary if numpoints > 1.
+        \param gsource the source configuration group
+        \param numpoints the number of points to convert. The target and source strides are gtarget.dof and gsource.dof
+        \param penv [optional] The environment which might be needed to fill in unknown data. Assumes environment is locked.
+        \throw openrave_exception throw f groups are incompatible
+     */
+    static void ConvertGroupData(std::vector<dReal>::iterator ittargetdata, size_t targetstride, const Group& gtarget, std::vector<dReal>::const_iterator itsourcedata, size_t sourcestride, const Group& gsource, size_t numpoints, EnvironmentBaseConstPtr penv);
+
+    /** \brief Converts from one specification to another.
+
+        \param ittargetdata iterator pointing to start of target group data that should be overwritten
+        \param targetspec the target configuration specification
+        \param itsourcedata iterator pointing to start of source group data that should be read
+        \param sourcespec the source configuration specification
+        \param numpoints the number of points to convert. The target and source strides are gtarget.dof and gsource.dof
+        \param penv [optional] The environment which might be needed to fill in unknown data. Assumes environment is locked.
+        \param filluninitialized If there exists target groups that cannot be initialized, then will set default values to them.
+     */
+    static void ConvertData(std::vector<dReal>::iterator ittargetdata, const ConfigurationSpecification& targetspec, std::vector<dReal>::const_iterator itsourcedata, const ConfigurationSpecification& sourcespec, size_t numpoints, EnvironmentBaseConstPtr penv, bool filluninitialized = true);
+
+    std::vector<Group> _vgroups;
+};
+
+OPENRAVE_API std::ostream& operator<<(std::ostream& O, const ConfigurationSpecification &spec);
+OPENRAVE_API std::istream& operator>>(std::istream& I, ConfigurationSpecification& spec);
+
+typedef boost::shared_ptr<ConfigurationSpecification> ConfigurationSpecificationPtr;
+typedef boost::shared_ptr<ConfigurationSpecification const> ConfigurationSpecificationConstPtr;
+
 /** \brief Parameterization of basic primitives for querying inverse-kinematics solutions.
 
     Holds the parameterization of a geometric primitive useful for autonomous manipulation scenarios like:
@@ -783,27 +1018,22 @@ using mathextra::mult4;
 class OPENRAVE_API IkParameterization
 {
 public:
-    /// \brief The types of inverse kinematics parameterizations supported.
-    ///
-    /// The minimum degree of freedoms required is set in the upper 4 bits of each type.
-    /// The number of values used to represent the parameterization ( >= dof ) is the next 4 bits.
-    /// The lower bits contain a unique id of the type.
-    enum Type {
-        Type_None=0,
-        Type_Transform6D=0x67000001,     ///< end effector reaches desired 6D transformation
-        Type_Rotation3D=0x34000002,     ///< end effector reaches desired 3D rotation
-        Type_Translation3D=0x33000003,     ///< end effector origin reaches desired 3D translation
-        Type_Direction3D=0x23000004,     ///< direction on end effector coordinate system reaches desired direction
-        Type_Ray4D=0x46000005,     ///< ray on end effector coordinate system reaches desired global ray
-        Type_Lookat3D=0x23000006,     ///< direction on end effector coordinate system points to desired 3D position
-        Type_TranslationDirection5D=0x56000007,     ///< end effector origin and direction reaches desired 3D translation and direction. Can be thought of as Ray IK where the origin of the ray must coincide.
-        Type_TranslationXY2D=0x22000008,     ///< 2D translation along XY plane
-        Type_TranslationXYOrientation3D=0x33000009,     ///< 2D translation along XY plane and 1D rotation around Z axis. The offset of the rotation is measured starting at +X, so at +X is it 0, at +Y it is pi/2.
-        Type_TranslationLocalGlobal6D=0x3600000a,     ///< local point on end effector origin reaches desired 3D global point
-        Type_NumberOfParameterizations=10,     ///< number of parameterizations (does not count Type_None)
-    };
+    /// \deprecated (11/10/12)
+    typedef IkParameterizationType Type RAVE_DEPRECATED;
+    static const IkParameterizationType Type_None RAVE_DEPRECATED = IKP_None;
+    static const IkParameterizationType Type_Transform6D RAVE_DEPRECATED = IKP_Transform6D;
+    static const IkParameterizationType Type_Rotation3D RAVE_DEPRECATED =IKP_Rotation3D;
+    static const IkParameterizationType Type_Translation3D RAVE_DEPRECATED =IKP_Translation3D;
+    static const IkParameterizationType Type_Direction3D RAVE_DEPRECATED = IKP_Direction3D;
+    static const IkParameterizationType Type_Ray4D RAVE_DEPRECATED = IKP_Ray4D;
+    static const IkParameterizationType Type_Lookat3D RAVE_DEPRECATED = IKP_Lookat3D;
+    static const IkParameterizationType Type_TranslationDirection5D RAVE_DEPRECATED = IKP_TranslationDirection5D;
+    static const IkParameterizationType Type_TranslationXY2D RAVE_DEPRECATED = IKP_TranslationXY2D;
+    static const IkParameterizationType Type_TranslationXYOrientation3D RAVE_DEPRECATED = IKP_TranslationXYOrientation3D;
+    static const IkParameterizationType Type_TranslationLocalGlobal6D RAVE_DEPRECATED = IKP_TranslationLocalGlobal6D;
+    static const IkParameterizationType Type_NumberOfParameterizations RAVE_DEPRECATED = IKP_NumberOfParameterizations;
 
-    IkParameterization() : _type(Type_None) {
+    IkParameterization() : _type(IKP_None) {
     }
     /// \brief sets a 6D transform parameterization
     IkParameterization(const Transform &t) {
@@ -814,25 +1044,25 @@ public:
         SetRay4D(r);
     }
     /// \brief set a custom parameterization using a transform as the source of the data. Not all types are supported with this method.
-    IkParameterization(const Transform &t, Type type) {
+    IkParameterization(const Transform &t, IkParameterizationType type) {
         _type=type;
         switch(_type) {
-        case Type_Transform6D: SetTransform6D(t); break;
-        case Type_Rotation3D: SetRotation3D(t.rot); break;
-        case Type_Translation3D: SetTranslation3D(t.trans); break;
-        case Type_Lookat3D: SetLookat3D(t.trans); break;
+        case IKP_Transform6D: SetTransform6D(t); break;
+        case IKP_Rotation3D: SetRotation3D(t.rot); break;
+        case IKP_Translation3D: SetTranslation3D(t.trans); break;
+        case IKP_Lookat3D: SetLookat3D(t.trans); break;
         default:
             throw openrave_exception(str(boost::format("IkParameterization constructor does not support type 0x%x")%_type));
         }
     }
 
-    inline Type GetType() const {
+    inline IkParameterizationType GetType() const {
         return _type;
     }
     inline const std::string& GetName() const;
 
     /// \brief Returns the minimum degree of freedoms required for the IK type.
-    static int GetDOF(Type type) {
+    static int GetDOF(IkParameterizationType type) {
         return (type>>28)&0xf;
     }
     /// \brief Returns the minimum degree of freedoms required for the IK type.
@@ -841,7 +1071,7 @@ public:
     }
 
     /// \brief Returns the number of values used to represent the parameterization ( >= dof ). The number of values serialized is this number plus 1 for the iktype.
-    static int GetNumberOfValues(Type type) {
+    static int GetNumberOfValues(IkParameterizationType type) {
         return (type>>24)&0xf;
     }
     /// \brief Returns the number of values used to represent the parameterization ( >= dof ). The number of values serialized is this number plus 1 for the iktype.
@@ -850,38 +1080,38 @@ public:
     }
 
     inline void SetTransform6D(const Transform& t) {
-        _type = Type_Transform6D; _transform = t;
+        _type = IKP_Transform6D; _transform = t;
     }
     inline void SetRotation3D(const Vector& quaternion) {
-        _type = Type_Rotation3D; _transform.rot = quaternion;
+        _type = IKP_Rotation3D; _transform.rot = quaternion;
     }
     inline void SetTranslation3D(const Vector& trans) {
-        _type = Type_Translation3D; _transform.trans = trans;
+        _type = IKP_Translation3D; _transform.trans = trans;
     }
     inline void SetDirection3D(const Vector& dir) {
-        _type = Type_Direction3D; _transform.rot = dir;
+        _type = IKP_Direction3D; _transform.rot = dir;
     }
     inline void SetRay4D(const RAY& ray) {
-        _type = Type_Ray4D; _transform.trans = ray.pos; _transform.rot = ray.dir;
+        _type = IKP_Ray4D; _transform.trans = ray.pos; _transform.rot = ray.dir;
     }
     inline void SetLookat3D(const Vector& trans) {
-        _type = Type_Lookat3D; _transform.trans = trans;
+        _type = IKP_Lookat3D; _transform.trans = trans;
     }
     /// \brief the ray direction is not used for IK, however it is needed in order to compute the error
     inline void SetLookat3D(const RAY& ray) {
-        _type = Type_Lookat3D; _transform.trans = ray.pos; _transform.rot = ray.dir;
+        _type = IKP_Lookat3D; _transform.trans = ray.pos; _transform.rot = ray.dir;
     }
     inline void SetTranslationDirection5D(const RAY& ray) {
-        _type = Type_TranslationDirection5D; _transform.trans = ray.pos; _transform.rot = ray.dir;
+        _type = IKP_TranslationDirection5D; _transform.trans = ray.pos; _transform.rot = ray.dir;
     }
     inline void SetTranslationXY2D(const Vector& trans) {
-        _type = Type_TranslationXY2D; _transform.trans.x = trans.x; _transform.trans.y = trans.y; _transform.trans.z = 0; _transform.trans.w = 0;
+        _type = IKP_TranslationXY2D; _transform.trans.x = trans.x; _transform.trans.y = trans.y; _transform.trans.z = 0; _transform.trans.w = 0;
     }
     inline void SetTranslationXYOrientation3D(const Vector& trans) {
-        _type = Type_TranslationXYOrientation3D; _transform.trans.x = trans.x; _transform.trans.y = trans.y; _transform.trans.z = trans.z; _transform.trans.w = 0;
+        _type = IKP_TranslationXYOrientation3D; _transform.trans.x = trans.x; _transform.trans.y = trans.y; _transform.trans.z = trans.z; _transform.trans.w = 0;
     }
     inline void SetTranslationLocalGlobal6D(const Vector& localtrans, const Vector& trans) {
-        _type = Type_TranslationLocalGlobal6D; _transform.rot.x = localtrans.x; _transform.rot.y = localtrans.y; _transform.rot.z = localtrans.z; _transform.rot.w = 0; _transform.trans.x = trans.x; _transform.trans.y = trans.y; _transform.trans.z = trans.z; _transform.trans.w = 0;
+        _type = IKP_TranslationLocalGlobal6D; _transform.rot.x = localtrans.x; _transform.rot.y = localtrans.y; _transform.rot.z = localtrans.z; _transform.rot.w = 0; _transform.trans.x = trans.x; _transform.trans.y = trans.y; _transform.trans.z = trans.z; _transform.trans.w = 0;
     }
 
     inline const Transform& GetTransform6D() const {
@@ -971,32 +1201,32 @@ public:
         const dReal anglemult = 0.4;     // this is a hack that should be removed....
         BOOST_ASSERT(_type==ikparam.GetType());
         switch(_type) {
-        case IkParameterization::Type_Transform6D: {
+        case IKP_Transform6D: {
             Transform t0 = GetTransform6D(), t1 = ikparam.GetTransform6D();
             dReal fcos = RaveFabs(t0.rot.dot(t1.rot));
             dReal facos = fcos >= 1 ? 0 : RaveAcos(fcos);
             return (t0.trans-t1.trans).lengthsqr3() + anglemult*facos*facos;
         }
-        case IkParameterization::Type_Rotation3D: {
+        case IKP_Rotation3D: {
             dReal fcos = RaveFabs(GetRotation3D().dot(ikparam.GetRotation3D()));
             dReal facos = fcos >= 1 ? 0 : RaveAcos(fcos);
             return facos*facos;
         }
-        case IkParameterization::Type_Translation3D:
+        case IKP_Translation3D:
             return (GetTranslation3D()-ikparam.GetTranslation3D()).lengthsqr3();
-        case IkParameterization::Type_Direction3D: {
+        case IKP_Direction3D: {
             dReal fcos = GetDirection3D().dot(ikparam.GetDirection3D());
             dReal facos = fcos >= 1 ? 0 : RaveAcos(fcos);
             return facos*facos;
         }
-        case IkParameterization::Type_Ray4D: {
+        case IKP_Ray4D: {
             Vector pos0 = GetRay4D().pos - GetRay4D().dir*GetRay4D().dir.dot(GetRay4D().pos);
             Vector pos1 = ikparam.GetRay4D().pos - ikparam.GetRay4D().dir*ikparam.GetRay4D().dir.dot(ikparam.GetRay4D().pos);
             dReal fcos = GetRay4D().dir.dot(ikparam.GetRay4D().dir);
             dReal facos = fcos >= 1 ? 0 : RaveAcos(fcos);
             return (pos0-pos1).lengthsqr3() + anglemult*facos*facos;
         }
-        case IkParameterization::Type_Lookat3D: {
+        case IKP_Lookat3D: {
             Vector v = GetLookat3D()-ikparam.GetLookat3D();
             dReal s = v.dot3(ikparam.GetLookat3DDirection());
             if( s >= -1 ) {     // ikparam's lookat is always 1 beyond the origin, this is just the convention for testing...
@@ -1004,15 +1234,15 @@ public:
             }
             return v.lengthsqr3();
         }
-        case IkParameterization::Type_TranslationDirection5D: {
+        case IKP_TranslationDirection5D: {
             dReal fcos = GetTranslationDirection5D().dir.dot(ikparam.GetTranslationDirection5D().dir);
             dReal facos = fcos >= 1 ? 0 : RaveAcos(fcos);
             return (GetTranslationDirection5D().pos-ikparam.GetTranslationDirection5D().pos).lengthsqr3() + anglemult*facos*facos;
         }
-        case IkParameterization::Type_TranslationXY2D: {
+        case IKP_TranslationXY2D: {
             return (GetTranslationXY2D()-ikparam.GetTranslationXY2D()).lengthsqr2();
         }
-        case IkParameterization::Type_TranslationXYOrientation3D: {
+        case IKP_TranslationXYOrientation3D: {
             Vector v0 = GetTranslationXYOrientation3D();
             Vector v1 = ikparam.GetTranslationXYOrientation3D();
             dReal anglediff = v0.z-v1.z;
@@ -1028,7 +1258,7 @@ public:
             }
             return (v0-v1).lengthsqr2() + anglemult*anglediff*anglediff;
         }
-        case IkParameterization::Type_TranslationLocalGlobal6D: {
+        case IKP_TranslationLocalGlobal6D: {
             std::pair<Vector,Vector> p0 = GetTranslationLocalGlobal6D(), p1 = ikparam.GetTranslationLocalGlobal6D();
             return (p0.first-p1.first).lengthsqr3() + (p0.second-p1.second).lengthsqr3();
         }
@@ -1038,9 +1268,168 @@ public:
         return 1e30;
     }
 
+    /// \brief fills the iterator with the serialized values of the ikparameterization.
+    ///
+    /// the container the iterator points to needs to have \ref GetNumberOfValues() available.
+    inline void GetValues(std::vector<dReal>::iterator itvalues) const
+    {
+        switch(_type) {
+        case IKP_Transform6D:
+            *itvalues++ = _transform.rot.x;
+            *itvalues++ = _transform.rot.y;
+            *itvalues++ = _transform.rot.z;
+            *itvalues++ = _transform.rot.w;
+            *itvalues++ = _transform.trans.x;
+            *itvalues++ = _transform.trans.y;
+            *itvalues++ = _transform.trans.z;
+            break;
+        case IKP_Rotation3D:
+            *itvalues++ = _transform.rot.x;
+            *itvalues++ = _transform.rot.y;
+            *itvalues++ = _transform.rot.z;
+            *itvalues++ = _transform.rot.w;
+            break;
+        case IKP_Translation3D:
+            *itvalues++ = _transform.trans.x;
+            *itvalues++ = _transform.trans.y;
+            *itvalues++ = _transform.trans.z;
+            break;
+        case IKP_Direction3D:
+            *itvalues++ = _transform.rot.x;
+            *itvalues++ = _transform.rot.y;
+            *itvalues++ = _transform.rot.z;
+            break;
+        case IKP_Ray4D:
+            *itvalues++ = _transform.rot.x;
+            *itvalues++ = _transform.rot.y;
+            *itvalues++ = _transform.rot.z;
+            *itvalues++ = _transform.trans.x;
+            *itvalues++ = _transform.trans.y;
+            *itvalues++ = _transform.trans.z;
+            break;
+        case IKP_Lookat3D:
+            *itvalues++ = _transform.trans.x;
+            *itvalues++ = _transform.trans.y;
+            *itvalues++ = _transform.trans.z;
+            break;
+        case IKP_TranslationDirection5D:
+            *itvalues++ = _transform.rot.x;
+            *itvalues++ = _transform.rot.y;
+            *itvalues++ = _transform.rot.z;
+            *itvalues++ = _transform.trans.x;
+            *itvalues++ = _transform.trans.y;
+            *itvalues++ = _transform.trans.z;
+            break;
+        case IKP_TranslationXY2D:
+            *itvalues++ = _transform.trans.x;
+            *itvalues++ = _transform.trans.y;
+            break;
+        case IKP_TranslationXYOrientation3D:
+            *itvalues++ = _transform.trans.x;
+            *itvalues++ = _transform.trans.y;
+            *itvalues++ = _transform.trans.z;
+            break;
+        case IKP_TranslationLocalGlobal6D:
+            *itvalues++ = _transform.rot.x;
+            *itvalues++ = _transform.rot.y;
+            *itvalues++ = _transform.rot.z;
+            *itvalues++ = _transform.trans.x;
+            *itvalues++ = _transform.trans.y;
+            *itvalues++ = _transform.trans.z;
+            break;
+        default:
+            throw OPENRAVE_EXCEPTION_FORMAT("does not support parameterization 0x%x", _type,ORE_InvalidArguments);
+        }
+    }
+
+    inline void Set(std::vector<dReal>::const_iterator itvalues, IkParameterizationType iktype)
+    {
+        _type = iktype;
+        switch(_type) {
+        case IKP_Transform6D:
+            _transform.rot.x = *itvalues++;
+            _transform.rot.y = *itvalues++;
+            _transform.rot.z = *itvalues++;
+            _transform.rot.w = *itvalues++;
+            _transform.trans.x = *itvalues++;
+            _transform.trans.y = *itvalues++;
+            _transform.trans.z = *itvalues++;
+            break;
+        case IKP_Rotation3D:
+            _transform.rot.x = *itvalues++;
+            _transform.rot.y = *itvalues++;
+            _transform.rot.z = *itvalues++;
+            _transform.rot.w = *itvalues++;
+            break;
+        case IKP_Translation3D: {
+            _transform.trans.x = *itvalues++;
+            _transform.trans.y = *itvalues++;
+            _transform.trans.z = *itvalues++;
+            break;
+        }
+        case IKP_Direction3D: {
+            _transform.rot.x = *itvalues++;
+            _transform.rot.y = *itvalues++;
+            _transform.rot.z = *itvalues++;
+            break;
+        }
+        case IKP_Ray4D: {
+            _transform.rot.x = *itvalues++;
+            _transform.rot.y = *itvalues++;
+            _transform.rot.z = *itvalues++;
+            _transform.trans.x = *itvalues++;
+            _transform.trans.y = *itvalues++;
+            _transform.trans.z = *itvalues++;
+            break;
+        }
+        case IKP_Lookat3D: {
+            _transform.trans.x = *itvalues++;
+            _transform.trans.y = *itvalues++;
+            _transform.trans.z = *itvalues++;
+            break;
+        }
+        case IKP_TranslationDirection5D:
+            _transform.rot.x = *itvalues++;
+            _transform.rot.y = *itvalues++;
+            _transform.rot.z = *itvalues++;
+            _transform.trans.x = *itvalues++;
+            _transform.trans.y = *itvalues++;
+            _transform.trans.z = *itvalues++;
+            break;
+        case IKP_TranslationXY2D: {
+            _transform.trans.x = *itvalues++;
+            _transform.trans.y = *itvalues++;
+            break;
+        }
+        case IKP_TranslationXYOrientation3D: {
+            _transform.trans.x = *itvalues++;
+            _transform.trans.y = *itvalues++;
+            _transform.trans.z = *itvalues++;
+            break;
+        }
+        case IKP_TranslationLocalGlobal6D: {
+            _transform.rot.x = *itvalues++;
+            _transform.rot.y = *itvalues++;
+            _transform.rot.z = *itvalues++;
+            _transform.trans.x = *itvalues++;
+            _transform.trans.y = *itvalues++;
+            _transform.trans.z = *itvalues++;
+            break;
+        }
+        default:
+            throw OPENRAVE_EXCEPTION_FORMAT("does not support parameterization 0x%x", _type,ORE_InvalidArguments);
+        }
+    }
+
+    static ConfigurationSpecification GetConfigurationSpecification(IkParameterizationType iktype);
+    inline ConfigurationSpecification GetConfigurationSpecification() const
+    {
+        return GetConfigurationSpecification(GetType());
+    }
+
 protected:
     Transform _transform;
-    Type _type;
+    IkParameterizationType _type;
 
     friend IkParameterization operator* (const Transform &t, const IkParameterization &ikparam);
     friend std::ostream& operator<<(std::ostream& O, const IkParameterization &ikparam);
@@ -1051,31 +1440,31 @@ inline IkParameterization operator* (const Transform &t, const IkParameterizatio
 {
     IkParameterization local;
     switch(ikparam.GetType()) {
-    case IkParameterization::Type_Transform6D:
+    case IKP_Transform6D:
         local.SetTransform6D(t * ikparam.GetTransform6D());
         break;
-    case IkParameterization::Type_Rotation3D:
+    case IKP_Rotation3D:
         local.SetRotation3D(quatMultiply(quatInverse(t.rot),ikparam.GetRotation3D()));
         break;
-    case IkParameterization::Type_Translation3D:
+    case IKP_Translation3D:
         local.SetTranslation3D(t*ikparam.GetTranslation3D());
         break;
-    case IkParameterization::Type_Direction3D:
+    case IKP_Direction3D:
         local.SetDirection3D(t.rotate(ikparam.GetDirection3D()));
         break;
-    case IkParameterization::Type_Ray4D:
+    case IKP_Ray4D:
         local.SetRay4D(RAY(t*ikparam.GetRay4D().pos,t.rotate(ikparam.GetRay4D().dir)));
         break;
-    case IkParameterization::Type_Lookat3D:
+    case IKP_Lookat3D:
         local.SetLookat3D(RAY(t*ikparam.GetLookat3D(),t.rotate(ikparam.GetLookat3DDirection())));
         break;
-    case IkParameterization::Type_TranslationDirection5D:
+    case IKP_TranslationDirection5D:
         local.SetTranslationDirection5D(RAY(t*ikparam.GetTranslationDirection5D().pos,t.rotate(ikparam.GetTranslationDirection5D().dir)));
         break;
-    case IkParameterization::Type_TranslationXY2D:
+    case IKP_TranslationXY2D:
         local.SetTranslationXY2D(t*ikparam.GetTranslationXY2D());
         break;
-    case IkParameterization::Type_TranslationXYOrientation3D: {
+    case IKP_TranslationXYOrientation3D: {
         Vector v = ikparam.GetTranslationXYOrientation3D();
         Vector voldtrans(v.x,v.y,0);
         Vector vnewtrans = t*voldtrans;
@@ -1083,7 +1472,7 @@ inline IkParameterization operator* (const Transform &t, const IkParameterizatio
         local.SetTranslationXYOrientation3D(Vector(vnewtrans.y,vnewtrans.y,v.z+zangle));
         break;
     }
-    case IkParameterization::Type_TranslationLocalGlobal6D:
+    case IKP_TranslationLocalGlobal6D:
         local.SetTranslationLocalGlobal6D(ikparam.GetTranslationLocalGlobal6D().first, t*ikparam.GetTranslationLocalGlobal6D().second);
         break;
     default:
@@ -1109,7 +1498,7 @@ enum DOFAffine
     DOF_Rotation3D = 16,     ///< can rotate freely (3 dof), the parameterization is
                              ///< theta * v, where v is the rotation axis and theta is the angle about that axis
     DOF_RotationQuat = 32,     ///< can rotate freely (4 dof), parameterization is a quaternion. In order for limits to work correctly, the quaternion is in the space of _vRotationQuatLimitStart. _vRotationQuatLimitStart is always left-multiplied before setting the transform!
-
+    DOF_RotationMask=(DOF_RotationAxis|DOF_Rotation3D|DOF_RotationQuat), ///< mask for all bits representing 3D rotations
     DOF_Transform = (DOF_XYZ|DOF_RotationQuat), ///< translate and rotate freely in 3D space
 };
 
@@ -1152,180 +1541,6 @@ OPENRAVE_API void RaveGetAffineDOFValuesFromTransform(std::vector<dReal>::iterat
     \param[in] vActvAffineRotationAxis optional rotation axis if affinedofs specified \ref DOF_RotationAxis
  */
 OPENRAVE_API void RaveGetTransformFromAffineDOFValues(Transform& t, std::vector<dReal>::const_iterator itvalues, int affinedofs, const Vector& vActvAffineRotationAxis=Vector(0,0,1));
-
-/** \brief A configuration specification references values in the environment that then define a configuration-space which can be searched for.
-
-    It is composed of several groups targetting values for individual bodies. It is serialized into XML. The XML syntax is as follows:
-
-   \code
-   <configuration>
-     <group name="string" offset="#OFF1" dof="#D1" interpolation="string"/>
-     <group name="string" offset="#OFF2" dof="#D2" interpolation="string"/>
-   </configuration>
-   \endcode
- */
-class OPENRAVE_API ConfigurationSpecification
-{
-public:
-
-    /// \brief A group referencing the values of one body in the environment
-    class OPENRAVE_API Group
-    {
-public:
-        Group() : offset(0), dof(0) {
-        }
-
-        inline bool operator==(const Group& r) const {
-            return offset==r.offset && dof==r.dof && name==r.name && interpolation==r.interpolation;
-        }
-        inline bool operator!=(const Group& r) const {
-            return offset!=r.offset || dof!=r.dof || name!=r.name || interpolation!=r.interpolation;
-        }
-
-        /// \brief For each data point, the number of values to offset before data for this group starts.
-        int offset;
-        /// \brief The number of values in this group.
-        int dof;
-        /** \brief semantic information on what part of the environment the group refers to.
-
-            Can be composed of multiple workds; the first word is the group type, and the words following narrow the specifics. Common types are:
-
-            - \b joint_values - The joint values of a kinbody/robot. The joint names with the name of the body can follow.
-            - \b joint_velocities - The joint velocities (1/second) of a kinbody/robot. The name of the body with the joint names can follow.
-            - \b joint_accelerations - The joint accelerations (1/second^2) of a kinbody/robot. The name of the body with the joint names can follow.
-            - \b joint_torques - The joint torques (Newton meter) of a kinbody/robot. The name of the body with the joint names can follow.
-            - \b affine_transform - An affine transformation [quaternion, translation]. The name of the body with selected affine dofs (see \ref DOFAffine) can follow.
-            - \b affine_velocities - The velocity (1/second) of the affine transformation [rotation axis, translation velocity], the name of the body can follow.
-            - \b affine_accelerations - The velocity (1/second^2) of the affine transformation [rotation axis, translation velocity], the name of the body can follow.
-         */
-        std::string name;
-        /** \brief Describes how the data should be interpolated. Common methods are:
-
-            - \b previous - the previous waypoint's value is always chosen
-            - \b next - the next waypoint's value is always chosen
-            - \b linear - linear interpolation (default)
-            - \b quadratic - position is piecewise-quadratic, velocity is piecewise-linear, acceleration is one of -amax, 0, or amax
-            - \b cubic - 3 degree polynomial
-            - \b quadric - 4 degree polynomial
-            - \b quintic - 5 degree polynomial
-         */
-        std::string interpolation;
-    };
-
-    class Reader : public BaseXMLReader
-    {
-public:
-        Reader(ConfigurationSpecification& spec);
-        virtual ProcessElement startElement(const std::string& name, const AttributesList& atts);
-        virtual bool endElement(const std::string& name);
-        virtual void characters(const std::string& ch);
-protected:
-        ConfigurationSpecification& _spec;
-        std::stringstream _ss;
-    };
-
-    virtual ~ConfigurationSpecification() {
-    }
-
-    /// \brief return the dimension of the configuraiton space (degrees of freedom)
-    virtual int GetDOF() const;
-
-    /// \brief check if the groups form a continguous space
-    virtual bool IsValid() const;
-
-    virtual bool operator==(const ConfigurationSpecification& r) const;
-    virtual bool operator!=(const ConfigurationSpecification& r) const;
-
-    /// \brief finds the most compatible group to the given group
-    ///
-    /// \param g the group to query, only the Group::name and Group::dof values are used
-    /// \param exactmatch if true, will only return groups whose name exactly matches with g.name
-    /// \return an iterator part of _vgroups that represents the most compatible group. If no group is found, will return _vgroups.end()
-    virtual std::vector<Group>::const_iterator FindCompatibleGroup(const Group& g, bool exactmatch=false) const;
-
-    /// \brief Return the most compatible group that represents the time-derivative data of the group.
-    ///
-    /// For example given a 'joint_values' group, this will return the closest 'joint_velocities' group.
-    /// \param g the group to query, only the Group::name and Group::dof values are used
-    /// \param exactmatch if true, will only return groups whose name exactly matches with g.name
-    /// \return an iterator part of _vgroups that represents the most compatible group. If no group is found, will return _vgroups.end()
-    virtual std::vector<Group>::const_iterator FindTimeDerivativeGroup(const Group& g, bool exactmatch=false) const;
-
-    /** \brief adds a velocity group for every position group.
-
-        If velocities groups already exist, they are checked for and/or modified. Note that the configuration space
-        might be re-ordered as a result of this function call.
-        \param adddeltatime If true will add the 'deltatime' tag, which is necessary for trajectory sampling
-     */
-    virtual void AddVelocityGroups(bool adddeltatime);
-
-    /** \brief set the offsets of each group in order to get a contiguous configuration space
-     */
-    virtual void ResetGroupOffsets();
-
-    /// \brief adds the deltatime tag to the end if one doesn't exist and returns the index into the configuration space
-    virtual int AddDeltaTime();
-
-    /** \brief extracts an affine transform given the start of a configuration space point
-
-        Looks for 'affine_transform' groups. If pbody is not initialized, will choose the first affine_transform found.
-        \param[inout] t the transform holding the default values, which will be overwritten with the new values.
-        \param[in] itdata data in the format of this configuration specification.
-     */
-    virtual void ExtractTransform(Transform& t, std::vector<dReal>::const_iterator itdata, KinBodyConstPtr pbody) const;
-
-    /** \brief extracts a body's joint values given the start of a configuration space point
-
-        Looks for 'joint_values' groups. If pbody is not initialized, will choose the first joint_values found.
-        \param[inout] itvalues iterator to vector that holds the default values and will be overwritten with the new values. must be initialized
-        \param[in] itdata data in the format of this configuration specification.
-        \param[in] indices the set of DOF indices of the body to extract and write into itvalues.
-     */
-    virtual void ExtractJointValues(std::vector<dReal>::iterator itvalues, std::vector<dReal>::const_iterator itdata, KinBodyConstPtr pbody, const std::vector<int>& indices) const;
-
-    /** \brief inserts a set of joint values into a configuration space point
-
-        Looks for 'joint_values' groups. If pbody is not initialized, will use the first joint_values found.
-        \param[inout] itdata data in the format of this configuration specification.
-        \param[in] itvalues iterator to joint values to write
-        \param[in] indices the set of DOF indices that itvalues represents.
-     */
-    virtual void InsertJointValues(std::vector<dReal>::iterator itdata, std::vector<dReal>::const_iterator itvalues, KinBodyConstPtr pbody, const std::vector<int>& indices) const;
-
-    /** \brief given two compatible groups, convers data represented in the source group to data represented in the target group
-
-        \param ittargetdata iterator pointing to start of target group data that should be overwritten
-        \param targetstride the number of elements that to go from the next target point. Necessary if numpoints > 1.
-        \param gtarget the target configuration group
-        \param itsourcedata iterator pointing to start of source group data that should be read
-        \param sourcestride the number of elements that to go from the next source point. Necessary if numpoints > 1.
-        \param gsource the source configuration group
-        \param numpoints the number of points to convert. The target and source strides are gtarget.dof and gsource.dof
-        \param penv [optional] The environment which might be needed to fill in unknown data. Assumes environment is locked.
-        \throw openrave_exception throw f groups are incompatible
-     */
-    static void ConvertGroupData(std::vector<dReal>::iterator ittargetdata, size_t targetstride, const Group& gtarget, std::vector<dReal>::const_iterator itsourcedata, size_t sourcestride, const Group& gsource, size_t numpoints, EnvironmentBaseConstPtr penv);
-
-    /** \brief Converts from one specification to another.
-
-        \param ittargetdata iterator pointing to start of target group data that should be overwritten
-        \param targetspec the target configuration specification
-        \param itsourcedata iterator pointing to start of source group data that should be read
-        \param sourcespec the source configuration specification
-        \param numpoints the number of points to convert. The target and source strides are gtarget.dof and gsource.dof
-        \param penv [optional] The environment which might be needed to fill in unknown data. Assumes environment is locked.
-        \param filluninitialized If there exists target groups that cannot be initialized, then will set default values to them.
-     */
-    static void ConvertData(std::vector<dReal>::iterator ittargetdata, const ConfigurationSpecification& targetspec, std::vector<dReal>::const_iterator itsourcedata, const ConfigurationSpecification& sourcespec, size_t numpoints, EnvironmentBaseConstPtr penv, bool filluninitialized = true);
-
-    std::vector<Group> _vgroups;
-};
-
-OPENRAVE_API std::ostream& operator<<(std::ostream& O, const ConfigurationSpecification &spec);
-OPENRAVE_API std::istream& operator>>(std::istream& I, ConfigurationSpecification& spec);
-
-typedef boost::shared_ptr<ConfigurationSpecification> ConfigurationSpecificationPtr;
-typedef boost::shared_ptr<ConfigurationSpecification const> ConfigurationSpecificationConstPtr;
 
 }
 
@@ -1415,8 +1630,8 @@ inline boost::shared_ptr<T const> RaveInterfaceConstCast(InterfaceBaseConstPtr p
 OPENRAVE_API const std::map<InterfaceType,std::string>& RaveGetInterfaceNamesMap();
 OPENRAVE_API const std::string& RaveGetInterfaceName(InterfaceType type);
 
-/// \brief returns a string of the ik parameterization type names (can include upper case in order to match IkParameterization::Type)
-OPENRAVE_API const std::map<IkParameterization::Type,std::string>& RaveGetIkParameterizationMap();
+/// \brief returns a string of the ik parameterization type names (can include upper case in order to match \ref IkParameterizationType)
+OPENRAVE_API const std::map<IkParameterizationType,std::string>& RaveGetIkParameterizationMap();
 
 /// \brief Returns the openrave home directory where settings, cache, and other files are stored.
 ///
@@ -1594,7 +1809,7 @@ typedef bool (*PluginExportFn_GetPluginAttributes)(PLUGININFO* pinfo, int size);
 // define inline functions
 const std::string& IkParameterization::GetName() const
 {
-    std::map<IkParameterization::Type,std::string>::const_iterator it = RaveGetIkParameterizationMap().find(_type);
+    std::map<IkParameterizationType,std::string>::const_iterator it = RaveGetIkParameterizationMap().find(_type);
     if( it != RaveGetIkParameterizationMap().end() ) {
         return it->second;
     }

@@ -66,7 +66,7 @@ public:
     virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
     {
         BOOST_ASSERT(!!_parameters && !!ptraj );
-        if( ptraj->GetPoints().size() < 2 ) {
+        if( ptraj->GetNumWaypoints() < 2 ) {
             return PS_Failed;
         }
         uint32_t basetime = GetMilliTime();

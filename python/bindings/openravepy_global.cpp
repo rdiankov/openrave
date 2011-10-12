@@ -213,26 +213,26 @@ public:
         stringstream ss(s);
         ss >> _param;
     }
-    PyIkParameterization(object o, IkParameterization::Type type)
+    PyIkParameterization(object o, IkParameterizationType type)
     {
         switch(type) {
-        case IkParameterization::Type_Transform6D: SetTransform6D(o); break;
-        case IkParameterization::Type_Rotation3D: SetRotation3D(o); break;
-        case IkParameterization::Type_Translation3D: SetTranslation3D(o); break;
-        case IkParameterization::Type_Direction3D: SetDirection3D(o); break;
-        case IkParameterization::Type_Ray4D: SetRay4D(extract<boost::shared_ptr<PyRay> >(o)); break;
-        case IkParameterization::Type_Lookat3D: SetLookat3D(o); break;
-        case IkParameterization::Type_TranslationDirection5D: SetTranslationDirection5D(extract<boost::shared_ptr<PyRay> >(o)); break;
-        case IkParameterization::Type_TranslationXY2D: SetTranslationXY2D(o); break;
-        case IkParameterization::Type_TranslationXYOrientation3D: SetTranslationXYOrientation3D(o); break;
-        case IkParameterization::Type_TranslationLocalGlobal6D: SetTranslationLocalGlobal6D(o[0],o[1]); break;
+        case IKP_Transform6D: SetTransform6D(o); break;
+        case IKP_Rotation3D: SetRotation3D(o); break;
+        case IKP_Translation3D: SetTranslation3D(o); break;
+        case IKP_Direction3D: SetDirection3D(o); break;
+        case IKP_Ray4D: SetRay4D(extract<boost::shared_ptr<PyRay> >(o)); break;
+        case IKP_Lookat3D: SetLookat3D(o); break;
+        case IKP_TranslationDirection5D: SetTranslationDirection5D(extract<boost::shared_ptr<PyRay> >(o)); break;
+        case IKP_TranslationXY2D: SetTranslationXY2D(o); break;
+        case IKP_TranslationXYOrientation3D: SetTranslationXYOrientation3D(o); break;
+        case IKP_TranslationLocalGlobal6D: SetTranslationLocalGlobal6D(o[0],o[1]); break;
         default: throw OPENRAVE_EXCEPTION_FORMAT("incorrect ik parameterization type 0x%x", type, ORE_InvalidArguments);
         }
     }
     PyIkParameterization(const IkParameterization& ikparam) : _param(ikparam) {
     }
 
-    IkParameterization::Type GetType() {
+    IkParameterizationType GetType() {
         return _param.GetType();
     }
 
@@ -346,16 +346,16 @@ public:
     {
         object o;
         switch(r._param.GetType()) {
-        case IkParameterization::Type_Transform6D: o = toPyArray(r._param.GetTransform6D()); break;
-        case IkParameterization::Type_Rotation3D: o = toPyVector4(r._param.GetRotation3D()); break;
-        case IkParameterization::Type_Translation3D: o = toPyVector3(r._param.GetTranslation3D()); break;
-        case IkParameterization::Type_Direction3D: o = toPyVector4(r._param.GetDirection3D()); break;
-        case IkParameterization::Type_Ray4D: return boost::python::make_tuple(r._param.GetRay4D(),r._param.GetType());
-        case IkParameterization::Type_Lookat3D: o = toPyVector3(r._param.GetLookat3D()); break;
-        case IkParameterization::Type_TranslationDirection5D: return boost::python::make_tuple(r._param.GetTranslationDirection5D(),r._param.GetType());
-        case IkParameterization::Type_TranslationXY2D: o = toPyVector3(r._param.GetTranslationXY2D()); break;
-        case IkParameterization::Type_TranslationXYOrientation3D: o = toPyVector3(r._param.GetTranslationXYOrientation3D()); break;
-        case IkParameterization::Type_TranslationLocalGlobal6D: o = boost::python::make_tuple(toPyVector3(r._param.GetTranslationLocalGlobal6D().first), toPyVector3(r._param.GetTranslationLocalGlobal6D().second)); break;
+        case IKP_Transform6D: o = toPyArray(r._param.GetTransform6D()); break;
+        case IKP_Rotation3D: o = toPyVector4(r._param.GetRotation3D()); break;
+        case IKP_Translation3D: o = toPyVector3(r._param.GetTranslation3D()); break;
+        case IKP_Direction3D: o = toPyVector4(r._param.GetDirection3D()); break;
+        case IKP_Ray4D: return boost::python::make_tuple(r._param.GetRay4D(),r._param.GetType());
+        case IKP_Lookat3D: o = toPyVector3(r._param.GetLookat3D()); break;
+        case IKP_TranslationDirection5D: return boost::python::make_tuple(r._param.GetTranslationDirection5D(),r._param.GetType());
+        case IKP_TranslationXY2D: o = toPyVector3(r._param.GetTranslationXY2D()); break;
+        case IKP_TranslationXYOrientation3D: o = toPyVector3(r._param.GetTranslationXYOrientation3D()); break;
+        case IKP_TranslationLocalGlobal6D: o = boost::python::make_tuple(toPyVector3(r._param.GetTranslationLocalGlobal6D().first), toPyVector3(r._param.GetTranslationLocalGlobal6D().second)); break;
         default: throw OPENRAVE_EXCEPTION_FORMAT("incorrect ik parameterization type 0x%x", r._param.GetType(), ORE_InvalidArguments);
         }
 
@@ -718,17 +718,17 @@ void init_openravepy_global()
     .value("Real",SDT_Real)
     .value("Uint32",SDT_Uint32)
     ;
-    object iktype = enum_<IkParameterization::Type>("IkParameterizationType" DOXY_ENUM(IkParameterization::Type))
-                    .value("Transform6D",IkParameterization::Type_Transform6D)
-                    .value("Rotation3D",IkParameterization::Type_Rotation3D)
-                    .value("Translation3D",IkParameterization::Type_Translation3D)
-                    .value("Direction3D",IkParameterization::Type_Direction3D)
-                    .value("Ray4D",IkParameterization::Type_Ray4D)
-                    .value("Lookat3D",IkParameterization::Type_Lookat3D)
-                    .value("TranslationDirection5D",IkParameterization::Type_TranslationDirection5D)
-                    .value("TranslationXY2D",IkParameterization::Type_TranslationXY2D)
-                    .value("TranslationXYOrientation3D",IkParameterization::Type_TranslationXYOrientation3D)
-                    .value("TranslationLocalGlobal6D",IkParameterization::Type_TranslationLocalGlobal6D)
+    object iktype = enum_<IkParameterizationType>("IkParameterizationType" DOXY_ENUM(IkParameterizationType))
+                    .value("Transform6D",IKP_Transform6D)
+                    .value("Rotation3D",IKP_Rotation3D)
+                    .value("Translation3D",IKP_Translation3D)
+                    .value("Direction3D",IKP_Direction3D)
+                    .value("Ray4D",IKP_Ray4D)
+                    .value("Lookat3D",IKP_Lookat3D)
+                    .value("TranslationDirection5D",IKP_TranslationDirection5D)
+                    .value("TranslationXY2D",IKP_TranslationXY2D)
+                    .value("TranslationXYOrientation3D",IKP_TranslationXYOrientation3D)
+                    .value("TranslationLocalGlobal6D",IKP_TranslationLocalGlobal6D)
     ;
 
     class_<UserData, UserDataPtr >("UserData", DOXY_CLASS(UserData))
@@ -777,10 +777,10 @@ void init_openravepy_global()
     ;
 
     {
-        int (*getdof1)(IkParameterization::Type) = &IkParameterization::GetDOF;
-        int (*getnumberofvalues1)(IkParameterization::Type) = &IkParameterization::GetNumberOfValues;
+        int (*getdof1)(IkParameterizationType) = &IkParameterization::GetDOF;
+        int (*getnumberofvalues1)(IkParameterizationType) = &IkParameterization::GetNumberOfValues;
         scope ikparameterization = class_<PyIkParameterization, boost::shared_ptr<PyIkParameterization> >("IkParameterization", DOXY_CLASS(IkParameterization))
-                                   .def(init<object,IkParameterization::Type>(args("primitive","type")))
+                                   .def(init<object,IkParameterizationType>(args("primitive","type")))
                                    .def(init<string>(args("str")))
                                    .def("GetType",&PyIkParameterization::GetType, DOXY_FN(IkParameterization,GetType))
                                    .def("SetTransform6D",&PyIkParameterization::SetTransform6D,args("transform"), DOXY_FN(IkParameterization,SetTransform6D))

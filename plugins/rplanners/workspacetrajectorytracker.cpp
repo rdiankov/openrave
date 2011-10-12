@@ -37,7 +37,7 @@ Planner Parameters\n\
 \n\
 - **dReal minimumcompletetime** - specifies the minimum trajectory that must be followed for planner to declare success. If 0, then the entire trajectory has to be followed.\n\
 \n\
-- **TrajectoryBasePtr workspacetraj** - workspace trajectory of the end effector\n\
+- **TrajectoryBasePtr workspacetraj** - workspace trajectory of the end effector, needs to hold 'ikparam_values' groups\n\
 \n\
 ";
         _report.reset(new CollisionReport());
@@ -121,7 +121,7 @@ Planner Parameters\n\
             return false;
         }
 
-        if( !_manip->GetIkSolver()->Supports(IkParameterization::Type_Transform6D) ) {
+        if( !_manip->GetIkSolver()->Supports(IKP_Transform6D) ) {
             RAVELOG_ERROR(str(boost::format("WorkspaceTrajectoryTracker: unsupported iktype for manipulator %s")%_manip->GetName()));
             return false;
         }
@@ -149,10 +149,11 @@ Planner Parameters\n\
 
         // first check if the end effectors are in collision
         TrajectoryBaseConstPtr workspacetraj = _parameters->workspacetraj;
-        Transform tlasttrans;
+        IkParameterization ikparam;
         vector<dReal> vtrajpoint;
         workspacetraj->Sample(vtrajpoint,workspacetraj->GetDuration());
-        workspacetraj->GetConfigurationSpecification().ExtractTransform(tlasttrans,vtrajpoint.begin(),KinBodyConstPtr());
+        workspacetraj->GetConfigurationSpecification().ExtractIkParameterization(ikparam,vtrajpoint.begin());
+        Transform tlasttrans = ikparam.GetTransform6D();
         if( _manip->CheckEndEffectorCollision(tlasttrans,_report) ) {
             if( _parameters->minimumcompletetime >= workspacetraj->GetDuration() ) {
                 RAVELOG_DEBUG(str(boost::format("final configuration colliding: %s\n")%_report->__str__()));
@@ -165,9 +166,9 @@ Planner Parameters\n\
         list<Transform> listtransforms;
         dReal ftime = 0;
         for(; ftime < workspacetraj->GetDuration(); ftime += _parameters->_fStepLength) {
-            Transform t;
             workspacetraj->Sample(vtrajpoint,ftime);
-            workspacetraj->GetConfigurationSpecification().ExtractTransform(t,vtrajpoint.begin(),KinBodyConstPtr());
+            workspacetraj->GetConfigurationSpecification().ExtractIkParameterization(ikparam,vtrajpoint.begin());
+            Transform t = ikparam.GetTransform6D();
             listtransforms.push_back(t);
             // end effector is only fully known given the entire 6D transform!
             if( _manip->CheckEndEffectorCollision(t,_report) ) {
@@ -232,7 +233,7 @@ Planner Parameters\n\
         ftime = 0;
         for(; ftime < fendtime; ftime += _parameters->_fStepLength, ++ittrans) {
             _filteroptions = (ftime >= fstarttime) ? IKFO_CheckEnvCollisions : 0;
-            IkParameterization ikparam(*ittrans,IkParameterization::Type_Transform6D);
+            IkParameterization ikparam(*ittrans,IKP_Transform6D);
             if( !_manip->FindIKSolution(ikparam,vsolution,_filteroptions) ) {
                 if( _filteroptions == 0 ) {
                     // haven't even checked with environment collisions, so a solution really doesn't exist
@@ -298,7 +299,7 @@ protected:
             _mjacobian.resize(boost::extents[0][0]);
             _mquatjacobian.resize(boost::extents[0][0]);
         }
-        _ikprev = _tbaseinv * _manip->GetIkParameterization(IkParameterization::Type_Transform6D);
+        _ikprev = _tbaseinv * _manip->GetIkParameterization(IKP_Transform6D);
         _vprevsolution = vsolution;
     }
 
@@ -306,7 +307,7 @@ protected:
     {
         // check if continuous with previous solution using the jacobian
         if( _mjacobian.num_elements() > 0 ) {
-            BOOST_ASSERT(ikp.GetType()==IkParameterization::Type_Transform6D);
+            BOOST_ASSERT(ikp.GetType()==IKP_Transform6D);
             Vector expecteddeltatrans = ikp.GetTransform6D().trans - _ikprev.GetTransform6D().trans;
             Vector jdeltatrans;
             dReal solutiondiff = 0;

@@ -516,7 +516,7 @@ protected:
         _phandtraj.reset();
 
         UserDataPtr ikfilter;
-        if( pmanip->GetIkSolver()->Supports(IkParameterization::Type_TranslationDirection5D) ) {
+        if( pmanip->GetIkSolver()->Supports(IKP_TranslationDirection5D) ) {
             // if 5D, have to set a filter
             ikfilter = pmanip->GetIkSolver()->RegisterCustomFilter(0,boost::bind(&TaskManipulation::_FilterIkForGrasping,shared_problem(),_1,_2,_3,ptarget));
             fApproachOffset = 0; // cannot approach
@@ -576,7 +576,7 @@ protected:
             _robot->SetActiveDOFs(pmanip->GetGripperIndices(), DOF_NoTransform);
             _robot->SetActiveDOFValues(vgoalpreshape,true);
 
-            if( !!_pGrasperPlanner && pmanip->GetIkSolver()->Supports(IkParameterization::Type_Transform6D) ) {
+            if( !!_pGrasperPlanner && pmanip->GetIkSolver()->Supports(IKP_Transform6D) ) {
                 _robot->SetActiveDOFs(pmanip->GetGripperIndices(), DOF_X|DOF_Y|DOF_Z);
                 if( !_phandtraj ) {
                     _phandtraj = RaveCreateTrajectory(GetEnv(),"");
@@ -655,7 +655,7 @@ protected:
                     tgoal = ptarget->GetTransform() * Transform(tm);
                 }
 
-                if( pmanip->GetIkSolver()->Supports(IkParameterization::Type_TranslationDirection5D) ) {
+                if( pmanip->GetIkSolver()->Supports(IKP_TranslationDirection5D) ) {
                     // get a valid transformation
                     tGoalEndEffector.SetTranslationDirection5D(RAY(tgoal.trans,tgoal.rotate(pmanip->GetDirection())));
                     vector<dReal> vsolution;
@@ -665,7 +665,7 @@ protected:
                     }
                     vFinalGripperValues = _vFinalGripperValues;
                 }
-                else if( pmanip->GetIkSolver()->Supports(IkParameterization::Type_Transform6D) ) {
+                else if( pmanip->GetIkSolver()->Supports(IKP_Transform6D) ) {
                     tGoalEndEffector.SetTransform6D(tgoal);
                     KinBody::KinBodyStateSaver saver(ptarget,KinBody::Save_LinkEnable);
                     ptarget->Enable(false);
@@ -697,7 +697,7 @@ protected:
                     vglobalpalmdir = transTarg.rotate(Vector(pgrasp[iGraspDir], pgrasp[iGraspDir+1], pgrasp[iGraspDir+2]));
                 }
                 else {
-                    if( tApproachEndEffector.GetType() == IkParameterization::Type_Transform6D ) {
+                    if( tApproachEndEffector.GetType() == IKP_Transform6D ) {
                         vglobalpalmdir = tApproachEndEffector.GetTransform6D().rotate(pmanip->GetDirection());
                     }
                     else {

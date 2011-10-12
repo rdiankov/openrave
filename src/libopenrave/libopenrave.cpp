@@ -325,17 +325,17 @@ class RaveGlobal : private boost::noncopyable, public boost::enable_shared_from_
         _mapinterfacenames[PT_SpaceSampler] = "spacesampler";
         BOOST_ASSERT(_mapinterfacenames.size()==PT_NumberOfInterfaces);
 
-        _mapikparameterization[IkParameterization::Type_Transform6D] = "Transform6d";
-        _mapikparameterization[IkParameterization::Type_Rotation3D] = "Rotation3D";
-        _mapikparameterization[IkParameterization::Type_Translation3D] = "Translation3D";
-        _mapikparameterization[IkParameterization::Type_Direction3D] = "Direction3D";
-        _mapikparameterization[IkParameterization::Type_Ray4D] = "Ray4D";
-        _mapikparameterization[IkParameterization::Type_Lookat3D] = "Lookat3D";
-        _mapikparameterization[IkParameterization::Type_TranslationDirection5D] = "TranslationDirection5D";
-        _mapikparameterization[IkParameterization::Type_TranslationXY2D] = "TranslationXY2D";
-        _mapikparameterization[IkParameterization::Type_TranslationXYOrientation3D] = "TranslationXYOrientation3D";
-        _mapikparameterization[IkParameterization::Type_TranslationLocalGlobal6D] = "TranslationLocalGlobal6D";
-        BOOST_ASSERT(_mapikparameterization.size()==IkParameterization::Type_NumberOfParameterizations);
+        _mapikparameterization[IKP_Transform6D] = "Transform6d";
+        _mapikparameterization[IKP_Rotation3D] = "Rotation3D";
+        _mapikparameterization[IKP_Translation3D] = "Translation3D";
+        _mapikparameterization[IKP_Direction3D] = "Direction3D";
+        _mapikparameterization[IKP_Ray4D] = "Ray4D";
+        _mapikparameterization[IKP_Lookat3D] = "Lookat3D";
+        _mapikparameterization[IKP_TranslationDirection5D] = "TranslationDirection5D";
+        _mapikparameterization[IKP_TranslationXY2D] = "TranslationXY2D";
+        _mapikparameterization[IKP_TranslationXYOrientation3D] = "TranslationXYOrientation3D";
+        _mapikparameterization[IKP_TranslationLocalGlobal6D] = "TranslationLocalGlobal6D";
+        BOOST_ASSERT(_mapikparameterization.size()==IKP_NumberOfParameterizations);
     }
 public:
     virtual ~RaveGlobal() {
@@ -502,7 +502,7 @@ protected:
     const std::map<InterfaceType,std::string>& GetInterfaceNamesMap() const {
         return _mapinterfacenames;
     }
-    const std::map<IkParameterization::Type,std::string>& GetIkParameterizationMap() {
+    const std::map<IkParameterizationType,std::string>& GetIkParameterizationMap() {
         return _mapikparameterization;
     }
 
@@ -600,7 +600,7 @@ private:
     boost::mutex _mutexXML;
     std::map<InterfaceType, READERSMAP > _mapreaders;
     std::map<InterfaceType,string> _mapinterfacenames;
-    std::map<IkParameterization::Type,string> _mapikparameterization;
+    std::map<IkParameterizationType,string> _mapikparameterization;
     std::map<int, EnvironmentBase*> _mapenvironments;
     std::string _homedirectory;
     std::vector<std::string> _vdbdirectories;
@@ -631,7 +631,7 @@ const std::map<InterfaceType,std::string>& RaveGetInterfaceNamesMap()
     return RaveGlobal::instance()->GetInterfaceNamesMap();
 }
 
-const std::map<IkParameterization::Type,std::string>& RaveGetIkParameterizationMap()
+const std::map<IkParameterizationType,std::string>& RaveGetIkParameterizationMap()
 {
     return RaveGlobal::instance()->GetIkParameterizationMap();
 }
@@ -816,76 +816,88 @@ BaseXMLReaderPtr RaveCallXMLReader(InterfaceType type, const std::string& xmltag
     return RaveGlobal::instance()->CallXMLReader(type,xmltag,pinterface,atts);
 }
 
+ConfigurationSpecification IkParameterization::GetConfigurationSpecification(IkParameterizationType iktype)
+{
+    ConfigurationSpecification spec;
+    spec._vgroups.resize(1);
+    spec._vgroups[0].offset = 0;
+    spec._vgroups[0].dof = IkParameterization::GetNumberOfValues(iktype);
+    spec._vgroups[0].name = str(boost::format("ikparam_values %d")%iktype);
+    spec._vgroups[0].interpolation = "linear";
+    return spec;
+}
+
 std::ostream& operator<<(std::ostream& O, const IkParameterization &ikparam)
 {
     O << ikparam._type << " ";
     switch(ikparam._type) {
-    case IkParameterization::Type_Transform6D:
+    case IKP_Transform6D:
         O << ikparam.GetTransform6D();
         break;
-    case IkParameterization::Type_Rotation3D:
+    case IKP_Rotation3D:
         O << ikparam.GetRotation3D();
         break;
-    case IkParameterization::Type_Translation3D: {
+    case IKP_Translation3D: {
         Vector v = ikparam.GetTranslation3D();
         O << v.x << " " << v.y << " " << v.z << " ";
         break;
     }
-    case IkParameterization::Type_Direction3D: {
+    case IKP_Direction3D: {
         Vector v = ikparam.GetDirection3D();
         O << v.x << " " << v.y << " " << v.z << " ";
         break;
     }
-    case IkParameterization::Type_Ray4D: {
+    case IKP_Ray4D: {
         O << ikparam.GetRay4D();
         break;
     }
-    case IkParameterization::Type_Lookat3D: {
+    case IKP_Lookat3D: {
         Vector v = ikparam.GetLookat3D();
         O << v.x << " " << v.y << " " << v.z << " ";
         break;
     }
-    case IkParameterization::Type_TranslationDirection5D:
+    case IKP_TranslationDirection5D:
         O << ikparam.GetTranslationDirection5D();
         break;
-    case IkParameterization::Type_TranslationXY2D: {
+    case IKP_TranslationXY2D: {
         Vector v = ikparam.GetTranslationXY2D();
         O << v.x << " " << v.y << " ";
         break;
     }
-    case IkParameterization::Type_TranslationXYOrientation3D: {
+    case IKP_TranslationXYOrientation3D: {
         Vector v = ikparam.GetTranslationXYOrientation3D();
         O << v.x << " " << v.y << " " << v.z << " ";
         break;
     }
-    case IkParameterization::Type_TranslationLocalGlobal6D: {
+    case IKP_TranslationLocalGlobal6D: {
         std::pair<Vector,Vector> p = ikparam.GetTranslationLocalGlobal6D();
         O << p.first.x << " " << p.first.y << " " << p.first.z << " " << p.second.x << " " << p.second.y << " " << p.second.z << " ";
         break;
     }
     default:
-        throw openrave_exception(str(boost::format("does not support parameterization %d")%ikparam.GetType()));
+        throw OPENRAVE_EXCEPTION_FORMAT("does not support parameterization 0x%x", ikparam.GetType(),ORE_InvalidArguments);
     }
     return O;
 }
 
 std::istream& operator>>(std::istream& I, IkParameterization& ikparam)
 {
-    int type=IkParameterization::Type_None;
+    int type=IKP_None;
     I >> type;
-    ikparam._type = static_cast<IkParameterization::Type>(type);
+    ikparam._type = static_cast<IkParameterizationType>(type);
     switch(ikparam._type) {
-    case IkParameterization::Type_Transform6D: { Transform t; I >> t; ikparam.SetTransform6D(t); break; }
-    case IkParameterization::Type_Rotation3D: { Vector v; I >> v; ikparam.SetRotation3D(v); break; }
-    case IkParameterization::Type_Translation3D: { Vector v; I >> v.x >> v.y >> v.z; ikparam.SetTranslation3D(v); break; }
-    case IkParameterization::Type_Direction3D: { Vector v; I >> v.x >> v.y >> v.z; ikparam.SetDirection3D(v); break; }
-    case IkParameterization::Type_Ray4D: { RAY r; I >> r; ikparam.SetRay4D(r); break; }
-    case IkParameterization::Type_Lookat3D: { Vector v; I >> v.x >> v.y >> v.z; ikparam.SetLookat3D(v); break; }
-    case IkParameterization::Type_TranslationDirection5D: { RAY r; I >> r; ikparam.SetTranslationDirection5D(r); break; }
-    case IkParameterization::Type_TranslationXY2D: { Vector v; I >> v.y >> v.y; ikparam.SetTranslationXY2D(v); break; }
-    case IkParameterization::Type_TranslationXYOrientation3D: { Vector v; I >> v.y >> v.y >> v.z; ikparam.SetTranslationXYOrientation3D(v); break; }
-    case IkParameterization::Type_TranslationLocalGlobal6D: { Vector localtrans, trans; I >> localtrans.x >> localtrans.y >> localtrans.z >> trans.x >> trans.y >> trans.z; ikparam.SetTranslationLocalGlobal6D(localtrans,trans); break; }
-    default: throw openrave_exception(str(boost::format("does not support parameterization %d")%ikparam.GetType()));
+    case IKP_Transform6D: { Transform t; I >> t; ikparam.SetTransform6D(t); break; }
+    case IKP_Rotation3D: { Vector v; I >> v; ikparam.SetRotation3D(v); break; }
+    case IKP_Translation3D: { Vector v; I >> v.x >> v.y >> v.z; ikparam.SetTranslation3D(v); break; }
+    case IKP_Direction3D: { Vector v; I >> v.x >> v.y >> v.z; ikparam.SetDirection3D(v); break; }
+    case IKP_Ray4D: { RAY r; I >> r; ikparam.SetRay4D(r); break; }
+    case IKP_Lookat3D: { Vector v; I >> v.x >> v.y >> v.z; ikparam.SetLookat3D(v); break; }
+    case IKP_TranslationDirection5D: { RAY r; I >> r; ikparam.SetTranslationDirection5D(r); break; }
+    case IKP_TranslationXY2D: { Vector v; I >> v.y >> v.y; ikparam.SetTranslationXY2D(v); break; }
+    case IKP_TranslationXYOrientation3D: { Vector v; I >> v.y >> v.y >> v.z; ikparam.SetTranslationXYOrientation3D(v); break; }
+    case IKP_TranslationLocalGlobal6D: { Vector localtrans, trans; I >> localtrans.x >> localtrans.y >> localtrans.z >> trans.x >> trans.y >> trans.z; ikparam.SetTranslationLocalGlobal6D(localtrans,trans); break; }
+    default:
+        throw OPENRAVE_EXCEPTION_FORMAT("does not support parameterization 0x%x", ikparam.GetType(),ORE_InvalidArguments);
     }
     return I;
 }
@@ -893,7 +905,6 @@ std::istream& operator>>(std::istream& I, IkParameterization& ikparam)
 int RaveGetIndexFromAffineDOF(int affinedofs, DOFAffine _dof)
 {
     int dof = static_cast<int>(_dof);
-    BOOST_ASSERT((affinedofs & dof)==dof);
     dof &= affinedofs;
     int index = 0;
     if( dof&DOF_X ) {
@@ -1208,6 +1219,9 @@ std::vector<ConfigurationSpecification::Group>::const_iterator ConfigurationSpec
     else if( g.name.size() >= 17 && g.name.substr(0,17) == "affine_velocities" ) {
         gderivative.name = string("affine_accelerations") + g.name.substr(17);
     }
+    else if( g.name.size() >= 14 && g.name.substr(0,14) == "ikparam_values" ) {
+        gderivative.name = string("ikparam_velocities") + g.name.substr(14);
+    }
     else {
         return _vgroups.end();
     }
@@ -1234,6 +1248,10 @@ void ConfigurationSpecification::AddVelocityGroups(bool adddeltatime)
         else if( itgroup->name.size() >= 16 && itgroup->name.substr(0,16) == "affine_transform" ) {
             replacename = "affine_velocities";
             offset = 16;
+        }
+        else if( itgroup->name.size() >= 14 && itgroup->name.substr(0,14) == "ikparam_values" ) {
+            replacename = "ikparam_velocities";
+            offset = 14;
         }
 
         if( offset > 0 ) {
@@ -1278,6 +1296,24 @@ void ConfigurationSpecification::AddVelocityGroups(bool adddeltatime)
     }
 }
 
+ConfigurationSpecification ConfigurationSpecification::GetVelocitySpecification() const
+{
+    ConfigurationSpecification vspec;
+    vspec._vgroups = _vgroups;
+    FOREACH(itgroup,vspec._vgroups) {
+        if( itgroup->name.size() >= 12 && itgroup->name.substr(0,12) == "joint_values" ) {
+            itgroup->name = string("joint_velocities") + itgroup->name.substr(12);
+        }
+        else if( itgroup->name.size() >= 16 && itgroup->name.substr(0,16) == "affine_transform" ) {
+            itgroup->name = string("affine_velocities") + itgroup->name.substr(16);
+        }
+        else if( itgroup->name.size() >= 14 && itgroup->name.substr(0,14) == "ikparam_values" ) {
+            itgroup->name = string("ikparam_velocities") + itgroup->name.substr(14);
+        }
+    }
+    return vspec;
+}
+
 void ConfigurationSpecification::ResetGroupOffsets()
 {
     int offset = 0;
@@ -1304,7 +1340,7 @@ int ConfigurationSpecification::AddDeltaTime()
     return g.offset;
 }
 
-void ConfigurationSpecification::ExtractTransform(Transform& t, std::vector<dReal>::const_iterator itdata, KinBodyConstPtr pbody) const
+bool ConfigurationSpecification::ExtractTransform(Transform& t, std::vector<dReal>::const_iterator itdata, KinBodyConstPtr pbody) const
 {
     bool bfound = false;
     FOREACHC(itgroup,_vgroups) {
@@ -1322,20 +1358,90 @@ void ConfigurationSpecification::ExtractTransform(Transform& t, std::vector<dRea
             }
         }
     }
-    if( !bfound ) {
-        RAVELOG_WARN(str(boost::format("failed to find a compatible group for body '%s'")%pbody->GetName()));
-    }
+    return bfound;
 }
 
-void ConfigurationSpecification::ExtractJointValues(std::vector<dReal>::iterator itvalues, std::vector<dReal>::const_iterator itdata, KinBodyConstPtr pbody, const std::vector<int>& indices) const
+bool ConfigurationSpecification::ExtractIkParameterization(IkParameterization& ikparam, std::vector<dReal>::const_iterator itdata, int timederivative) const
 {
-    if( indices.size() == 0 ) {
-        return;
+    bool bfound = false;
+    string searchname;
+    switch( timederivative ) {
+    case 0: searchname = "ikparam_values"; break;
+    case 1: searchname = "ikparam_velocities"; break;
+    default:
+        throw OPENRAVE_EXCEPTION_FORMAT0("bad time derivative",ORE_InvalidArguments);
+    };
+    FOREACHC(itgroup,_vgroups) {
+        if( itgroup->name.size() >= searchname.size() && itgroup->name.substr(0,searchname.size()) == searchname ) {
+            stringstream ss(itgroup->name.substr(searchname.size()));
+            int iktype = IKP_None;
+            ss >> iktype;
+            if( !!ss ) {
+                ikparam.Set(itdata+itgroup->offset,static_cast<IkParameterizationType>(iktype));
+                bfound = true;
+            }
+        }
     }
+    return bfound;
+}
+
+bool ConfigurationSpecification::ExtractAffineValues(std::vector<dReal>::iterator itvalues, std::vector<dReal>::const_iterator itdata, KinBodyConstPtr pbody, int affinedofs, int timederivative) const
+{
+    if( affinedofs == 0 ) {
+        return false;
+    }
+    string searchname;
+    switch( timederivative ) {
+    case 0: searchname = "affine_values"; break;
+    case 1: searchname = "affine_velocities"; break;
+    case 2: searchname = "affine_accelerations"; break;
+    default:
+        throw OPENRAVE_EXCEPTION_FORMAT0("bad time derivative",ORE_InvalidArguments);
+    };
     bool bfound = false;
     FOREACHC(itgroup,_vgroups) {
-        if( itgroup->name.size() >= 12 && itgroup->name.substr(0,12) == "joint_values" ) {
-            stringstream ss(itgroup->name.substr(12));
+        if( itgroup->name.size() >= searchname.size() && itgroup->name.substr(0,searchname.size()) == searchname ) {
+            stringstream ss(itgroup->name.substr(searchname.size()));
+            string bodyname;
+            int sourceaffinedofs=0;
+            ss >> bodyname >> sourceaffinedofs;
+            if( !!ss ) {
+                if( !!pbody && bodyname != pbody->GetName() ) {
+                    continue;
+                }
+
+                for(int index = 0; index < RaveGetAffineDOF(affinedofs); ++index) {
+                    DOFAffine dof = RaveGetAffineDOFFromIndex(affinedofs,index);
+                    int startindex = RaveGetIndexFromAffineDOF(affinedofs,dof);
+                    if( sourceaffinedofs & dof ) {
+                        int sourceindex = RaveGetIndexFromAffineDOF(sourceaffinedofs,dof);
+                        *(itvalues+index) = *(itdata + sourceindex + (index-startindex));
+                    }
+                }
+                bfound = true;
+            }
+        }
+    }
+    return bfound;
+}
+
+bool ConfigurationSpecification::ExtractJointValues(std::vector<dReal>::iterator itvalues, std::vector<dReal>::const_iterator itdata, KinBodyConstPtr pbody, const std::vector<int>& indices, int timederivative) const
+{
+    if( indices.size() == 0 ) {
+        return false;
+    }
+    string searchname;
+    switch( timederivative ) {
+    case 0: searchname = "joint_values"; break;
+    case 1: searchname = "joint_velocities"; break;
+    case 2: searchname = "joint_accelerations"; break;
+    default:
+        throw OPENRAVE_EXCEPTION_FORMAT0("bad time derivative",ORE_InvalidArguments);
+    };
+    bool bfound = false;
+    FOREACHC(itgroup,_vgroups) {
+        if( itgroup->name.size() >= searchname.size() && itgroup->name.substr(0,searchname.size()) == searchname ) {
+            stringstream ss(itgroup->name.substr(searchname.size()));
             string bodyname;
             ss >> bodyname;
             if( !!ss ) {
@@ -1353,20 +1459,26 @@ void ConfigurationSpecification::ExtractJointValues(std::vector<dReal>::iterator
             }
         }
     }
-    if( !bfound ) {
-        RAVELOG_WARN(str(boost::format("failed to find a compatible group for body '%s'")%pbody->GetName()));
-    }
+    return bfound;
 }
 
-void ConfigurationSpecification::InsertJointValues(std::vector<dReal>::iterator itdata, std::vector<dReal>::const_iterator itvalues, KinBodyConstPtr pbody, const std::vector<int>& indices) const
+bool ConfigurationSpecification::InsertJointValues(std::vector<dReal>::iterator itdata, std::vector<dReal>::const_iterator itvalues, KinBodyConstPtr pbody, const std::vector<int>& indices, int timederivative) const
 {
     if( indices.size() == 0 ) {
-        return;
+        return false;
     }
+    string searchname;
+    switch( timederivative ) {
+    case 0: searchname = "joint_values"; break;
+    case 1: searchname = "joint_velocities"; break;
+    case 2: searchname = "joint_accelerations"; break;
+    default:
+        throw OPENRAVE_EXCEPTION_FORMAT0("bad time derivative",ORE_InvalidArguments);
+    };
     bool bfound = false;
     FOREACHC(itgroup,_vgroups) {
-        if( itgroup->name.size() >= 12 && itgroup->name.substr(0,12) == "joint_values" ) {
-            stringstream ss(itgroup->name.substr(12));
+        if( itgroup->name.size() >= searchname.size() && itgroup->name.substr(0,searchname.size()) == searchname ) {
+            stringstream ss(itgroup->name.substr(searchname.size()));
             string bodyname;
             ss >> bodyname;
             if( !!ss ) {
@@ -1384,9 +1496,65 @@ void ConfigurationSpecification::InsertJointValues(std::vector<dReal>::iterator 
             }
         }
     }
-    if( !bfound ) {
-        RAVELOG_WARN(str(boost::format("failed to find a compatible group for body '%s'")%pbody->GetName()));
+    return bfound;
+}
+
+bool ConfigurationSpecification::InsertDeltaTime(std::vector<dReal>::iterator itdata, dReal deltatime)
+{
+    bool bfound = false;
+    FOREACHC(itgroup,_vgroups) {
+        if( itgroup->name == "deltatime" ) {
+            *(itdata+itgroup->offset) = deltatime;
+            bfound = true;
+        }
     }
+    return bfound;
+}
+
+static void ConvertDOFRotation_AxisFrom3D(std::vector<dReal>::iterator ittarget, std::vector<dReal>::const_iterator itsource, const Vector& vaxis)
+{
+    Vector axisangle(*(itsource+0),*(itsource+1),*(itsource+2));
+    *ittarget = normalizeAxisRotation(vaxis,quatFromAxisAngle(axisangle)).first;
+}
+
+static void ConvertDOFRotation_AxisFromQuat(std::vector<dReal>::iterator ittarget, std::vector<dReal>::const_iterator itsource, const Vector& vaxis)
+{
+    Vector quat(*(itsource+0),*(itsource+1),*(itsource+2),*(itsource+3));
+    *ittarget = normalizeAxisRotation(vaxis,quat).first;
+}
+
+static void ConvertDOFRotation_3DFromAxis(std::vector<dReal>::iterator ittarget, std::vector<dReal>::const_iterator itsource, const Vector& vaxis)
+{
+    *(ittarget+0) = vaxis[0]* *itsource;
+    *(ittarget+1) = vaxis[1]* *itsource;
+    *(ittarget+2) = vaxis[2]* *itsource;
+}
+static void ConvertDOFRotation_3DFromQuat(std::vector<dReal>::iterator ittarget, std::vector<dReal>::const_iterator itsource)
+{
+    Vector quat(*(itsource+0),*(itsource+1),*(itsource+2),*(itsource+3));
+    Vector axisangle = quatFromAxisAngle(quat);
+    *(ittarget+0) = axisangle[0];
+    *(ittarget+1) = axisangle[1];
+    *(ittarget+2) = axisangle[2];
+}
+static void ConvertDOFRotation_QuatFromAxis(std::vector<dReal>::iterator ittarget, std::vector<dReal>::const_iterator itsource, const Vector& vaxis)
+{
+    Vector axisangle = vaxis * *itsource;
+    Vector quat = quatFromAxisAngle(axisangle);
+    *(ittarget+0) = quat[0];
+    *(ittarget+1) = quat[1];
+    *(ittarget+2) = quat[2];
+    *(ittarget+3) = quat[3];
+}
+
+static void ConvertDOFRotation_QuatFrom3D(std::vector<dReal>::iterator ittarget, std::vector<dReal>::const_iterator itsource)
+{
+    Vector axisangle(*(itsource+0),*(itsource+1),*(itsource+2));
+    Vector quat = quatFromAxisAngle(axisangle);
+    *(ittarget+0) = quat[0];
+    *(ittarget+1) = quat[1];
+    *(ittarget+2) = quat[2];
+    *(ittarget+3) = quat[3];
 }
 
 void ConfigurationSpecification::ConvertGroupData(std::vector<dReal>::iterator ittargetdata, size_t targetstride, const ConfigurationSpecification::Group& gtarget, std::vector<dReal>::const_iterator itsourcedata, size_t sourcestride, const ConfigurationSpecification::Group& gsource, size_t numpoints, EnvironmentBaseConstPtr penv)
@@ -1478,6 +1646,7 @@ void ConfigurationSpecification::ConvertGroupData(std::vector<dReal>::iterator i
         }
         else if( targettokens.at(0).size() >= 7 && targettokens.at(0).substr(0,7) == "affine_") {
             int affinesource = 0, affinetarget = 0;
+            Vector sourceaxis(0,0,1), targetaxis(0,0,1);
             if( sourcetokens.size() < 3 ) {
                 if( targettokens.size() < 3 && gsource.dof == gtarget.dof ) {
                     for(size_t i = 0; i < targettokens.size(); ++i) {
@@ -1491,6 +1660,11 @@ void ConfigurationSpecification::ConvertGroupData(std::vector<dReal>::iterator i
             else {
                 affinesource = boost::lexical_cast<int>(sourcetokens.at(2));
                 BOOST_ASSERT(RaveGetAffineDOF(affinesource) == gsource.dof);
+                if( (affinesource & DOF_RotationAxis) && sourcetokens.size() >= 6 ) {
+                    sourceaxis.x = boost::lexical_cast<dReal>(sourcetokens.at(3));
+                    sourceaxis.y = boost::lexical_cast<dReal>(sourcetokens.at(4));
+                    sourceaxis.z = boost::lexical_cast<dReal>(sourcetokens.at(5));
+                }
             }
             if( vtransferindices.size() == 0 ) {
                 if( targettokens.size() < 3 ) {
@@ -1499,10 +1673,49 @@ void ConfigurationSpecification::ConvertGroupData(std::vector<dReal>::iterator i
                 else {
                     affinetarget = boost::lexical_cast<int>(targettokens.at(2));
                     BOOST_ASSERT(RaveGetAffineDOF(affinetarget) == gtarget.dof);
+                    if( (affinetarget & DOF_RotationAxis) && targettokens.size() >= 6 ) {
+                        targetaxis.x = boost::lexical_cast<dReal>(targettokens.at(3));
+                        targetaxis.y = boost::lexical_cast<dReal>(targettokens.at(4));
+                        targetaxis.z = boost::lexical_cast<dReal>(targettokens.at(5));
+                    }
                 }
 
                 int commondata = affinesource&affinetarget;
                 int uninitdata = affinetarget&(~commondata);
+                int sourcerotationstart = -1, targetrotationstart = -1, targetrotationend = -1;
+                boost::function< void(std::vector<dReal>::iterator, std::vector<dReal>::const_iterator) > rotconverterfn;
+                if( (uninitdata & DOF_RotationMask) && (affinetarget & DOF_RotationMask) && (affinesource & DOF_RotationMask) ) {
+                    // both hold rotations, but need to convert
+                    uninitdata &= ~DOF_RotationMask;
+                    sourcerotationstart = RaveGetIndexFromAffineDOF(affinesource,DOF_RotationMask);
+                    targetrotationstart = RaveGetIndexFromAffineDOF(affinetarget,DOF_RotationMask);
+                    targetrotationend = targetrotationstart+RaveGetAffineDOF(affinetarget&DOF_RotationMask);
+                    if( affinetarget & DOF_RotationAxis ) {
+                        if( affinesource & DOF_Rotation3D ) {
+                            rotconverterfn = boost::bind(ConvertDOFRotation_AxisFrom3D,_1,_2,targetaxis);
+                        }
+                        else if( affinesource & DOF_RotationQuat ) {
+                            rotconverterfn = boost::bind(ConvertDOFRotation_AxisFromQuat,_1,_2,targetaxis);
+                        }
+                    }
+                    else if( affinetarget & DOF_Rotation3D ) {
+                        if( affinesource & DOF_RotationAxis ) {
+                            rotconverterfn = boost::bind(ConvertDOFRotation_3DFromAxis,_1,_2,sourceaxis);
+                        }
+                        else if( affinesource & DOF_RotationQuat ) {
+                            rotconverterfn = ConvertDOFRotation_3DFromQuat;
+                        }
+                    }
+                    else if( affinetarget & DOF_RotationQuat ) {
+                        if( affinesource & DOF_RotationAxis ) {
+                            rotconverterfn = boost::bind(ConvertDOFRotation_QuatFromAxis,_1,_2,sourceaxis);
+                        }
+                        else if( affinesource & DOF_Rotation3D ) {
+                            rotconverterfn = ConvertDOFRotation_QuatFrom3D;
+                        }
+                    }
+                    BOOST_ASSERT(!!rotconverterfn);
+                }
                 if( uninitdata ) {
                     // initialize with the current body values
                     KinBodyPtr pbody;
@@ -1533,6 +1746,51 @@ void ConfigurationSpecification::ConvertGroupData(std::vector<dReal>::iterator i
                         vtransferindices.push_back(-1);
                     }
                 }
+
+                for(size_t i = 0; i < numpoints; ++i, itsourcedata += sourcestride, ittargetdata += targetstride) {
+                    for(int j = 0; j < (int)vtransferindices.size(); ++j) {
+                        if( vtransferindices[j] >= 0 ) {
+                            *(ittargetdata+j) = *(itsourcedata+vtransferindices[j]);
+                        }
+                        else {
+                            if( j >= targetrotationstart && j < targetrotationend ) {
+                                if( j == targetrotationstart ) {
+                                    // only convert when at first index
+                                    rotconverterfn(ittargetdata+targetrotationstart,itsourcedata+sourcerotationstart);
+                                }
+                            }
+                            else {
+                                *(ittargetdata+j) = vdefaultvalues.at(j);
+                            }
+                        }
+                    }
+                }
+                return;
+            }
+        }
+        else if( targettokens.at(0).size() >= 8 && targettokens.at(0).substr(0,8) == "ikparam_") {
+            IkParameterizationType iktypesource, iktypetarget;
+            if( sourcetokens.size() >= 2 ) {
+                iktypesource = static_cast<IkParameterizationType>(boost::lexical_cast<int>(sourcetokens[1]));
+            }
+            else {
+                throw OPENRAVE_EXCEPTION_FORMAT("ikparam type not present '%s'\n",gsource.name,ORE_InvalidArguments);
+            }
+            if( targettokens.size() >= 2 ) {
+                iktypetarget = static_cast<IkParameterizationType>(boost::lexical_cast<int>(targettokens[1]));
+            }
+            else {
+                throw OPENRAVE_EXCEPTION_FORMAT("ikparam type not present '%s'\n",gtarget.name,ORE_InvalidArguments);
+            }
+
+            if( iktypetarget == iktypesource ) {
+                vtransferindices.resize(IkParameterization::GetDOF(iktypetarget));
+                for(size_t i = 0; i < vtransferindices.size(); ++i) {
+                    vtransferindices[i] = i;
+                }
+            }
+            else {
+                RAVELOG_WARN("ikparam types do not match");
             }
         }
         else {
@@ -1552,7 +1810,7 @@ void ConfigurationSpecification::ConvertGroupData(std::vector<dReal>::iterator i
     }
 }
 
-void ConfigurationSpecification::ConvertData(std::vector<dReal>::iterator ittargetdata, const ConfigurationSpecification& targetspec, std::vector<dReal>::const_iterator itsourcedata, const ConfigurationSpecification& sourcespec, size_t numpoints, EnvironmentBaseConstPtr penv, bool filluninitialized)
+void ConfigurationSpecification::ConvertData(std::vector<dReal>::iterator ittargetdata, const ConfigurationSpecification &targetspec, std::vector<dReal>::const_iterator itsourcedata, const ConfigurationSpecification &sourcespec, size_t numpoints, EnvironmentBaseConstPtr penv, bool filluninitialized)
 {
     for(size_t igroup = 0; igroup < targetspec._vgroups.size(); ++igroup) {
         std::vector<ConfigurationSpecification::Group>::const_iterator itcompatgroup = sourcespec.FindCompatibleGroup(targetspec._vgroups[igroup]);
@@ -1615,7 +1873,7 @@ ConfigurationSpecification::Reader::Reader(ConfigurationSpecification& spec) : _
     _spec = ConfigurationSpecification(); // reset
 }
 
-BaseXMLReader::ProcessElement ConfigurationSpecification::Reader::startElement(const std::string& name, const AttributesList& atts)
+BaseXMLReader::ProcessElement ConfigurationSpecification::Reader::startElement(const std::string& name, const AttributesList &atts)
 {
     _ss.str(""); // have to clear the string
     if( name == "group" ) {
@@ -1723,7 +1981,7 @@ DummyXMLReader::DummyXMLReader(const std::string& fieldname, const std::string& 
     _parentname += _fieldname;
 }
 
-BaseXMLReader::ProcessElement DummyXMLReader::startElement(const std::string& name, const AttributesList& atts)
+BaseXMLReader::ProcessElement DummyXMLReader::startElement(const std::string& name, const AttributesList &atts)
 {
     if( !!_pcurreader ) {
         if( _pcurreader->startElement(name, atts) == PE_Support )
@@ -1868,7 +2126,7 @@ std::string GetMD5HashString(const std::string& s)
     return hex_output;
 }
 
-std::string GetMD5HashString(const std::vector<uint8_t>& v)
+std::string GetMD5HashString(const std::vector<uint8_t>&v)
 {
     if( v.size() == 0 )
         return "";
@@ -1890,12 +2148,12 @@ std::string GetMD5HashString(const std::vector<uint8_t>& v)
     return hex_output;
 }
 
-bool PairStringLengthCompare(const std::pair<std::string, std::string>& p0, const std::pair<std::string, std::string>& p1)
+bool PairStringLengthCompare(const std::pair<std::string, std::string>&p0, const std::pair<std::string, std::string>&p1)
 {
     return p0.first.size() > p1.first.size();
 }
 
-std::string& SearchAndReplace(std::string& out, const std::string& in, const std::vector< std::pair<std::string, std::string> >& _pairs)
+std::string& SearchAndReplace(std::string& out, const std::string& in, const std::vector< std::pair<std::string, std::string> >&_pairs)
 {
     BOOST_ASSERT(&out != &in);
     FOREACHC(itp,_pairs) {

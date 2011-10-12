@@ -126,42 +126,42 @@ bool RobotBase::Manipulator::FindIKSolutions(const IkParameterization& goal, con
     return vFreeParameters.size() == 0 ? _pIkSolver->Solve(localgoal,filteroptions,solutions) : _pIkSolver->Solve(localgoal,vFreeParameters,filteroptions,solutions);
 }
 
-IkParameterization RobotBase::Manipulator::GetIkParameterization(IkParameterization::Type iktype) const
+IkParameterization RobotBase::Manipulator::GetIkParameterization(IkParameterizationType iktype) const
 {
     IkParameterization ikp;
     switch(iktype) {
-    case IkParameterization::Type_Transform6D: ikp.SetTransform6D(GetTransform()); break;
-    case IkParameterization::Type_Rotation3D: ikp.SetRotation3D(GetTransform().rot); break;
-    case IkParameterization::Type_Translation3D: ikp.SetTranslation3D(GetTransform().trans); break;
-    case IkParameterization::Type_Direction3D: ikp.SetDirection3D(GetTransform().rotate(_vdirection)); break;
-    case IkParameterization::Type_Ray4D: {
+    case IKP_Transform6D: ikp.SetTransform6D(GetTransform()); break;
+    case IKP_Rotation3D: ikp.SetRotation3D(GetTransform().rot); break;
+    case IKP_Translation3D: ikp.SetTranslation3D(GetTransform().trans); break;
+    case IKP_Direction3D: ikp.SetDirection3D(GetTransform().rotate(_vdirection)); break;
+    case IKP_Ray4D: {
         Transform t = GetTransform();
         ikp.SetRay4D(RAY(t.trans,t.rotate(_vdirection)));
         break;
     }
-    case IkParameterization::Type_Lookat3D: {
+    case IKP_Lookat3D: {
         RAVELOG_WARN("RobotBase::Manipulator::GetIkParameterization: Lookat3D type setting goal a distance of 1 from the origin.\n");
         Transform t = GetTransform();
         Vector vdir = t.rotate(_vdirection);
         ikp.SetLookat3D(RAY(t.trans + vdir,vdir));
         break;
     }
-    case IkParameterization::Type_TranslationDirection5D: {
+    case IKP_TranslationDirection5D: {
         Transform t = GetTransform();
         ikp.SetTranslationDirection5D(RAY(t.trans,t.rotate(_vdirection)));
         break;
     }
-    case IkParameterization::Type_TranslationXY2D: {
+    case IKP_TranslationXY2D: {
         ikp.SetTranslationXY2D(GetTransform().trans);
         break;
     }
-    case IkParameterization::Type_TranslationXYOrientation3D: {
+    case IKP_TranslationXYOrientation3D: {
         Transform t = GetTransform();
         dReal zangle = -normalizeAxisRotation(Vector(0,0,1),GetTransform().rot).first;
         ikp.SetTranslationXYOrientation3D(Vector(t.trans.x,t.trans.y,zangle));
         break;
     }
-    case IkParameterization::Type_TranslationLocalGlobal6D: {
+    case IKP_TranslationLocalGlobal6D: {
         RAVELOG_WARN("RobotBase::Manipulator::GetIkParameterization: TranslationLocalGlobal6D type setting local translation to (0,0,0).\n");
         ikp.SetTranslationLocalGlobal6D(Vector(0,0,0),GetTransform().trans); break;
     }
@@ -175,38 +175,38 @@ IkParameterization RobotBase::Manipulator::GetIkParameterization(const IkParamet
 {
     IkParameterization ikp;
     switch(ikparam.GetType()) {
-    case IkParameterization::Type_Transform6D: ikp.SetTransform6D(GetTransform()); break;
-    case IkParameterization::Type_Rotation3D: ikp.SetRotation3D(GetTransform().rot); break;
-    case IkParameterization::Type_Translation3D: ikp.SetTranslation3D(GetTransform().trans); break;
-    case IkParameterization::Type_Direction3D: ikp.SetDirection3D(GetTransform().rotate(_vdirection)); break;
-    case IkParameterization::Type_Ray4D: {
+    case IKP_Transform6D: ikp.SetTransform6D(GetTransform()); break;
+    case IKP_Rotation3D: ikp.SetRotation3D(GetTransform().rot); break;
+    case IKP_Translation3D: ikp.SetTranslation3D(GetTransform().trans); break;
+    case IKP_Direction3D: ikp.SetDirection3D(GetTransform().rotate(_vdirection)); break;
+    case IKP_Ray4D: {
         Transform t = GetTransform();
         ikp.SetRay4D(RAY(t.trans,t.rotate(_vdirection)));
         break;
     }
-    case IkParameterization::Type_Lookat3D: {
+    case IKP_Lookat3D: {
         // find the closest point to ikparam.GetLookat3D() to the current ray
         Transform t = GetTransform();
         Vector vdir = t.rotate(_vdirection);
         ikp.SetLookat3D(RAY(t.trans + vdir*vdir.dot(ikparam.GetLookat3D()-t.trans),vdir));
         break;
     }
-    case IkParameterization::Type_TranslationDirection5D: {
+    case IKP_TranslationDirection5D: {
         Transform t = GetTransform();
         ikp.SetTranslationDirection5D(RAY(t.trans,t.rotate(_vdirection)));
         break;
     }
-    case IkParameterization::Type_TranslationXY2D: {
+    case IKP_TranslationXY2D: {
         ikp.SetTranslationXY2D(GetTransform().trans);
         break;
     }
-    case IkParameterization::Type_TranslationXYOrientation3D: {
+    case IKP_TranslationXYOrientation3D: {
         Transform t = GetTransform();
         dReal zangle = -normalizeAxisRotation(Vector(0,0,1),GetTransform().rot).first;
         ikp.SetTranslationXYOrientation3D(Vector(t.trans.x,t.trans.y,zangle));
         break;
     }
-    case IkParameterization::Type_TranslationLocalGlobal6D: {
+    case IKP_TranslationLocalGlobal6D: {
         Vector localtrans = ikparam.GetTranslationLocalGlobal6D().first;
         ikp.SetTranslationLocalGlobal6D(localtrans,GetTransform() * localtrans);
         break;

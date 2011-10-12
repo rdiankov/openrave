@@ -422,9 +422,7 @@ Rosen Diankov, James Kuffner. \"Randomized Statistical Path Planning. Intl. Conf
         if( _parameters->_configurationspecification != ptraj->GetConfigurationSpecification() ) {
             ptraj->Init(_parameters->_configurationspecification);
         }
-        Trajectory::TPOINT p;
-        p.q = _parameters->vinitialconfig;
-        ptraj->AddPoint(p);
+        ptraj->Insert(ptraj->GetNumWaypoints(),_parameters->vinitialconfig);
 
         list<Node*>::reverse_iterator itcur, itprev;
         itcur = vecnodes.rbegin();
@@ -435,7 +433,7 @@ Rosen Diankov, James Kuffner. \"Randomized Statistical Path Planning. Intl. Conf
             ++itcur;
         }
 
-        _OptimizePath(_robot,ptraj);
+        _ProcessPostPlanners(_robot,ptraj);
         return PS_HasSolution;
     }
 
@@ -476,17 +474,17 @@ private:
         }
 
         // compute joint increments
-        for (i = 0; i < GetDOF(); i++)
+        for (i = 0; i < GetDOF(); i++) {
             _jointIncrement[i] = (pQ1[i] - pQ0[i])/((dReal)numSteps);
-
-        Trajectory::TPOINT p;
-        p.q.resize(GetDOF());
+        }
+        vector<dReal> vtrajpoint(GetDOF());
 
         // compute the straight-line path
         for (int f = 1; f <= numSteps; f++) {
-            for (i = 0; i < GetDOF(); i++)
-                p.q[i] = pQ0[i] + (_jointIncrement[i] * f);
-            ptraj->AddPoint(p);
+            for (i = 0; i < GetDOF(); i++) {
+                vtrajpoint[i] = pQ0[i] + (_jointIncrement[i] * f);
+            }
+            ptraj->Insert(ptraj->GetNumWaypoints(),vtrajpoint);
         }
     }
 

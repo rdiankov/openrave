@@ -187,10 +187,10 @@ public:
             ptraj->Init(_parameters->_configurationspecification);
         }
         FOREACH(it, listbestpath) {
-            ptraj->AddPoint(Trajectory::TPOINT(*it,0));
+            ptraj->Insert(ptraj->GetNumWaypoints(),*it);
         }
 
-        RAVELOG_DEBUG(str(boost::format("plan %s, path=%d points in %fs\n")%(bSuccess ? "success" : "failure")%ptraj->GetPoints().size()%(0.001f*(float)(GetMilliTime()-basetime))));
+        RAVELOG_DEBUG(str(boost::format("plan %s, path=%d points in %fs\n")%(bSuccess ? "success" : "failure")%ptraj->GetNumWaypoints()%(0.001f*(float)(GetMilliTime()-basetime))));
 
         return bSuccess ? PS_HasSolution : PS_Failed;
     }
