@@ -1092,79 +1092,240 @@ inline IkParameterization operator* (const Transform &t, const IkParameterizatio
     return local;
 }
 
-inline std::ostream& operator<<(std::ostream& O, const IkParameterization &ikparam)
-{
-    O << ikparam._type << " ";
-    switch(ikparam._type) {
-    case IkParameterization::Type_Transform6D:
-        O << ikparam.GetTransform6D();
-        break;
-    case IkParameterization::Type_Rotation3D:
-        O << ikparam.GetRotation3D();
-        break;
-    case IkParameterization::Type_Translation3D: {
-        Vector v = ikparam.GetTranslation3D();
-        O << v.x << " " << v.y << " " << v.z << " ";
-        break;
-    }
-    case IkParameterization::Type_Direction3D: {
-        Vector v = ikparam.GetDirection3D();
-        O << v.x << " " << v.y << " " << v.z << " ";
-        break;
-    }
-    case IkParameterization::Type_Ray4D: {
-        O << ikparam.GetRay4D();
-        break;
-    }
-    case IkParameterization::Type_Lookat3D: {
-        Vector v = ikparam.GetLookat3D();
-        O << v.x << " " << v.y << " " << v.z << " ";
-        break;
-    }
-    case IkParameterization::Type_TranslationDirection5D:
-        O << ikparam.GetTranslationDirection5D();
-        break;
-    case IkParameterization::Type_TranslationXY2D: {
-        Vector v = ikparam.GetTranslationXY2D();
-        O << v.x << " " << v.y << " ";
-        break;
-    }
-    case IkParameterization::Type_TranslationXYOrientation3D: {
-        Vector v = ikparam.GetTranslationXYOrientation3D();
-        O << v.x << " " << v.y << " " << v.z << " ";
-        break;
-    }
-    case IkParameterization::Type_TranslationLocalGlobal6D: {
-        std::pair<Vector,Vector> p = ikparam.GetTranslationLocalGlobal6D();
-        O << p.first.x << " " << p.first.y << " " << p.first.z << " " << p.second.x << " " << p.second.y << " " << p.second.z << " ";
-        break;
-    }
-    default:
-        throw openrave_exception(str(boost::format("does not support parameterization %d")%ikparam.GetType()));
-    }
-    return O;
-}
+OPENRAVE_API std::ostream& operator<<(std::ostream& O, const IkParameterization &ikparam);
+OPENRAVE_API std::istream& operator>>(std::istream& I, IkParameterization& ikparam);
 
-inline std::istream& operator>>(std::istream& I, IkParameterization& ikparam)
+/// \brief Selects which DOFs of the affine transformation to include in the active configuration.
+enum DOFAffine
 {
-    int type=IkParameterization::Type_None;
-    I >> type;
-    ikparam._type = static_cast<IkParameterization::Type>(type);
-    switch(ikparam._type) {
-    case IkParameterization::Type_Transform6D: { Transform t; I >> t; ikparam.SetTransform6D(t); break; }
-    case IkParameterization::Type_Rotation3D: { Vector v; I >> v; ikparam.SetRotation3D(v); break; }
-    case IkParameterization::Type_Translation3D: { Vector v; I >> v.x >> v.y >> v.z; ikparam.SetTranslation3D(v); break; }
-    case IkParameterization::Type_Direction3D: { Vector v; I >> v.x >> v.y >> v.z; ikparam.SetDirection3D(v); break; }
-    case IkParameterization::Type_Ray4D: { RAY r; I >> r; ikparam.SetRay4D(r); break; }
-    case IkParameterization::Type_Lookat3D: { Vector v; I >> v.x >> v.y >> v.z; ikparam.SetLookat3D(v); break; }
-    case IkParameterization::Type_TranslationDirection5D: { RAY r; I >> r; ikparam.SetTranslationDirection5D(r); break; }
-    case IkParameterization::Type_TranslationXY2D: { Vector v; I >> v.y >> v.y; ikparam.SetTranslationXY2D(v); break; }
-    case IkParameterization::Type_TranslationXYOrientation3D: { Vector v; I >> v.y >> v.y >> v.z; ikparam.SetTranslationXYOrientation3D(v); break; }
-    case IkParameterization::Type_TranslationLocalGlobal6D: { Vector localtrans, trans; I >> localtrans.x >> localtrans.y >> localtrans.z >> trans.x >> trans.y >> trans.z; ikparam.SetTranslationLocalGlobal6D(localtrans,trans); break; }
-    default: throw openrave_exception(str(boost::format("does not support parameterization %d")%ikparam.GetType()));
+    DOF_NoTransform = 0,
+    DOF_X = 1,     ///< can move in the x direction
+    DOF_Y = 2,     ///< can move in the y direction
+    DOF_Z = 4,     ///< can move in the z direction
+    DOF_XYZ=DOF_X|DOF_Y|DOF_Z,     ///< moves in xyz direction
+
+    // DOF_RotationX fields are mutually exclusive
+    DOF_RotationAxis = 8,     ///< can rotate around an axis (1 dof)
+    DOF_Rotation3D = 16,     ///< can rotate freely (3 dof), the parameterization is
+                             ///< theta * v, where v is the rotation axis and theta is the angle about that axis
+    DOF_RotationQuat = 32,     ///< can rotate freely (4 dof), parameterization is a quaternion. In order for limits to work correctly, the quaternion is in the space of _vRotationQuatLimitStart. _vRotationQuatLimitStart is always left-multiplied before setting the transform!
+
+    DOF_Transform = (DOF_XYZ|DOF_RotationQuat), ///< translate and rotate freely in 3D space
+};
+
+/** \brief Given a mask of affine dofs and a dof inside that mask, returns the index where the value could be found.
+
+    \param affinedofs a mask of \ref DOFAffine values
+    \param dof a set of values inside affinedofs, the index of the first value is returned
+    \throw openrave_exception throws if dof is not present in affinedofs
+ */
+OPENRAVE_API int RaveGetIndexFromAffineDOF(int affinedofs, DOFAffine dof);
+
+/** \brief Given a mask of affine dofs and an index into the array, returns the affine dof that is being referenced
+
+    \param affinedofs a mask of \ref DOFAffine values
+    \param index an index into the affine dof array
+    \throw openrave_exception throws if dof if index is out of bounds
+ */
+OPENRAVE_API DOFAffine RaveGetAffineDOFFromIndex(int affinedofs, int index);
+
+/// \brief Returns the degrees of freedom needed to represent all the values in the affine dof mask.
+///
+/// \throw openrave_exception throws if
+OPENRAVE_API int RaveGetAffineDOF(int affinedofs);
+
+/** \brief Converts the transformation matrix into the specified affine values format.
+
+    \param[out] itvalues an iterator to the vector to write the values to. Will write exactly \ref RaveGetAffineDOF(affinedofs) values.
+    \param[in] the affine transformation to convert
+    \param[in] affinedofs the affine format to output values in
+    \param[in] vActvAffineRotationAxis optional rotation axis if affinedofs specified \ref DOF_RotationAxis
+ */
+OPENRAVE_API void RaveGetAffineDOFValuesFromTransform(std::vector<dReal>::iterator itvalues, const Transform& t, int affinedofs, const Vector& vActvAffineRotationAxis=Vector(0,0,1));
+
+/** \brief Converts affine dof values into a transform.
+
+    Note that depending on what the dof values holds, only a part of the transform will be updated.
+    \param[out] t the output transform
+    \param[in] itvalues the start iterator of the affine dof values
+    \param[in] affinedofs the affine dof mask
+    \param[in] vActvAffineRotationAxis optional rotation axis if affinedofs specified \ref DOF_RotationAxis
+ */
+OPENRAVE_API void RaveGetTransformFromAffineDOFValues(Transform& t, std::vector<dReal>::const_iterator itvalues, int affinedofs, const Vector& vActvAffineRotationAxis=Vector(0,0,1));
+
+/** \brief A configuration specification references values in the environment that then define a configuration-space which can be searched for.
+
+    It is composed of several groups targetting values for individual bodies. It is serialized into XML. The XML syntax is as follows:
+
+   \code
+   <configuration>
+     <group name="string" offset="#OFF1" dof="#D1" interpolation="string"/>
+     <group name="string" offset="#OFF2" dof="#D2" interpolation="string"/>
+   </configuration>
+   \endcode
+ */
+class OPENRAVE_API ConfigurationSpecification
+{
+public:
+
+    /// \brief A group referencing the values of one body in the environment
+    class OPENRAVE_API Group
+    {
+public:
+        Group() : offset(0), dof(0) {
+        }
+
+        inline bool operator==(const Group& r) const {
+            return offset==r.offset && dof==r.dof && name==r.name && interpolation==r.interpolation;
+        }
+        inline bool operator!=(const Group& r) const {
+            return offset!=r.offset || dof!=r.dof || name!=r.name || interpolation!=r.interpolation;
+        }
+
+        /// \brief For each data point, the number of values to offset before data for this group starts.
+        int offset;
+        /// \brief The number of values in this group.
+        int dof;
+        /** \brief semantic information on what part of the environment the group refers to.
+
+            Can be composed of multiple workds; the first word is the group type, and the words following narrow the specifics. Common types are:
+
+            - \b joint_values - The joint values of a kinbody/robot. The joint names with the name of the body can follow.
+            - \b joint_velocities - The joint velocities (1/second) of a kinbody/robot. The name of the body with the joint names can follow.
+            - \b joint_accelerations - The joint accelerations (1/second^2) of a kinbody/robot. The name of the body with the joint names can follow.
+            - \b joint_torques - The joint torques (Newton meter) of a kinbody/robot. The name of the body with the joint names can follow.
+            - \b affine_transform - An affine transformation [quaternion, translation]. The name of the body with selected affine dofs (see \ref DOFAffine) can follow.
+            - \b affine_velocities - The velocity (1/second) of the affine transformation [rotation axis, translation velocity], the name of the body can follow.
+            - \b affine_accelerations - The velocity (1/second^2) of the affine transformation [rotation axis, translation velocity], the name of the body can follow.
+         */
+        std::string name;
+        /** \brief Describes how the data should be interpolated. Common methods are:
+
+            - \b previous - the previous waypoint's value is always chosen
+            - \b next - the next waypoint's value is always chosen
+            - \b linear - linear interpolation (default)
+            - \b quadratic - position is piecewise-quadratic, velocity is piecewise-linear, acceleration is one of -amax, 0, or amax
+            - \b cubic - 3 degree polynomial
+            - \b quadric - 4 degree polynomial
+            - \b quintic - 5 degree polynomial
+         */
+        std::string interpolation;
+    };
+
+    class Reader : public BaseXMLReader
+    {
+public:
+        Reader(ConfigurationSpecification& spec);
+        virtual ProcessElement startElement(const std::string& name, const AttributesList& atts);
+        virtual bool endElement(const std::string& name);
+        virtual void characters(const std::string& ch);
+protected:
+        ConfigurationSpecification& _spec;
+        std::stringstream _ss;
+    };
+
+    virtual ~ConfigurationSpecification() {
     }
-    return I;
-}
+
+    /// \brief return the dimension of the configuraiton space (degrees of freedom)
+    virtual int GetDOF() const;
+
+    /// \brief check if the groups form a continguous space
+    virtual bool IsValid() const;
+
+    virtual bool operator==(const ConfigurationSpecification& r) const;
+    virtual bool operator!=(const ConfigurationSpecification& r) const;
+
+    /// \brief finds the most compatible group to the given group
+    ///
+    /// \param g the group to query, only the Group::name and Group::dof values are used
+    /// \param exactmatch if true, will only return groups whose name exactly matches with g.name
+    /// \return an iterator part of _vgroups that represents the most compatible group. If no group is found, will return _vgroups.end()
+    virtual std::vector<Group>::const_iterator FindCompatibleGroup(const Group& g, bool exactmatch=false) const;
+
+    /// \brief Return the most compatible group that represents the time-derivative data of the group.
+    ///
+    /// For example given a 'joint_values' group, this will return the closest 'joint_velocities' group.
+    /// \param g the group to query, only the Group::name and Group::dof values are used
+    /// \param exactmatch if true, will only return groups whose name exactly matches with g.name
+    /// \return an iterator part of _vgroups that represents the most compatible group. If no group is found, will return _vgroups.end()
+    virtual std::vector<Group>::const_iterator FindTimeDerivativeGroup(const Group& g, bool exactmatch=false) const;
+
+    /** \brief adds a velocity group for every position group.
+
+        If velocities groups already exist, they are checked for and/or modified. Note that the configuration space
+        might be re-ordered as a result of this function call.
+        \param adddeltatime If true will add the 'deltatime' tag, which is necessary for trajectory sampling
+     */
+    virtual void AddVelocityGroups(bool adddeltatime);
+
+    /** \brief set the offsets of each group in order to get a contiguous configuration space
+     */
+    virtual void ResetGroupOffsets();
+
+    /// \brief adds the deltatime tag to the end if one doesn't exist and returns the index into the configuration space
+    virtual int AddDeltaTime();
+
+    /** \brief extracts an affine transform given the start of a configuration space point
+
+        Looks for 'affine_transform' groups. If pbody is not initialized, will choose the first affine_transform found.
+        \param[inout] t the transform holding the default values, which will be overwritten with the new values.
+        \param[in] itdata data in the format of this configuration specification.
+     */
+    virtual void ExtractTransform(Transform& t, std::vector<dReal>::const_iterator itdata, KinBodyConstPtr pbody) const;
+
+    /** \brief extracts a body's joint values given the start of a configuration space point
+
+        Looks for 'joint_values' groups. If pbody is not initialized, will choose the first joint_values found.
+        \param[inout] itvalues iterator to vector that holds the default values and will be overwritten with the new values. must be initialized
+        \param[in] itdata data in the format of this configuration specification.
+        \param[in] indices the set of DOF indices of the body to extract and write into itvalues.
+     */
+    virtual void ExtractJointValues(std::vector<dReal>::iterator itvalues, std::vector<dReal>::const_iterator itdata, KinBodyConstPtr pbody, const std::vector<int>& indices) const;
+
+    /** \brief inserts a set of joint values into a configuration space point
+
+        Looks for 'joint_values' groups. If pbody is not initialized, will use the first joint_values found.
+        \param[inout] itdata data in the format of this configuration specification.
+        \param[in] itvalues iterator to joint values to write
+        \param[in] indices the set of DOF indices that itvalues represents.
+     */
+    virtual void InsertJointValues(std::vector<dReal>::iterator itdata, std::vector<dReal>::const_iterator itvalues, KinBodyConstPtr pbody, const std::vector<int>& indices) const;
+
+    /** \brief given two compatible groups, convers data represented in the source group to data represented in the target group
+
+        \param ittargetdata iterator pointing to start of target group data that should be overwritten
+        \param targetstride the number of elements that to go from the next target point. Necessary if numpoints > 1.
+        \param gtarget the target configuration group
+        \param itsourcedata iterator pointing to start of source group data that should be read
+        \param sourcestride the number of elements that to go from the next source point. Necessary if numpoints > 1.
+        \param gsource the source configuration group
+        \param numpoints the number of points to convert. The target and source strides are gtarget.dof and gsource.dof
+        \param penv [optional] The environment which might be needed to fill in unknown data. Assumes environment is locked.
+        \throw openrave_exception throw f groups are incompatible
+     */
+    static void ConvertGroupData(std::vector<dReal>::iterator ittargetdata, size_t targetstride, const Group& gtarget, std::vector<dReal>::const_iterator itsourcedata, size_t sourcestride, const Group& gsource, size_t numpoints, EnvironmentBaseConstPtr penv);
+
+    /** \brief Converts from one specification to another.
+
+        \param ittargetdata iterator pointing to start of target group data that should be overwritten
+        \param targetspec the target configuration specification
+        \param itsourcedata iterator pointing to start of source group data that should be read
+        \param sourcespec the source configuration specification
+        \param numpoints the number of points to convert. The target and source strides are gtarget.dof and gsource.dof
+        \param penv [optional] The environment which might be needed to fill in unknown data. Assumes environment is locked.
+        \param filluninitialized If there exists target groups that cannot be initialized, then will set default values to them.
+     */
+    static void ConvertData(std::vector<dReal>::iterator ittargetdata, const ConfigurationSpecification& targetspec, std::vector<dReal>::const_iterator itsourcedata, const ConfigurationSpecification& sourcespec, size_t numpoints, EnvironmentBaseConstPtr penv, bool filluninitialized = true);
+
+    std::vector<Group> _vgroups;
+};
+
+OPENRAVE_API std::ostream& operator<<(std::ostream& O, const ConfigurationSpecification &spec);
+OPENRAVE_API std::istream& operator>>(std::istream& I, ConfigurationSpecification& spec);
+
+typedef boost::shared_ptr<ConfigurationSpecification> ConfigurationSpecificationPtr;
+typedef boost::shared_ptr<ConfigurationSpecification const> ConfigurationSpecificationConstPtr;
 
 }
 
@@ -1333,10 +1494,10 @@ OPENRAVE_API CollisionCheckerBasePtr RaveCreateCollisionChecker(EnvironmentBaseP
 OPENRAVE_API ViewerBasePtr RaveCreateViewer(EnvironmentBasePtr penv, const std::string& name);
 OPENRAVE_API SpaceSamplerBasePtr RaveCreateSpaceSampler(EnvironmentBasePtr penv, const std::string& name);
 OPENRAVE_API KinBodyPtr RaveCreateKinBody(EnvironmentBasePtr penv, const std::string& name="");
-/// \brief Return an empty trajectory instance initialized to nDOF degrees of freedom. Will be deprecated soon
-OPENRAVE_API TrajectoryBasePtr RaveCreateTrajectory(EnvironmentBasePtr penv, int nDOF);
 /// \brief Return an empty trajectory instance.
 OPENRAVE_API TrajectoryBasePtr RaveCreateTrajectory(EnvironmentBasePtr penv, const std::string& name="");
+
+OPENRAVE_API TrajectoryBasePtr RaveCreateTrajectory(EnvironmentBasePtr penv, int dof) RAVE_DEPRECATED;
 
 /** \brief Registers a function to create an interface, this allows the interface to be created by other modules.
 
@@ -1348,7 +1509,7 @@ OPENRAVE_API TrajectoryBasePtr RaveCreateTrajectory(EnvironmentBasePtr penv, con
     \return a handle if function is successfully registered. By destroying the handle, the interface will be automatically unregistered.
     \throw openrave_exception Will throw with ORE_InvalidInterfaceHash if hashes do not match
  */
-OPENRAVE_API boost::shared_ptr<void> RaveRegisterInterface(InterfaceType type, const std::string& name, const char* interfacehash, const char* envhash, const boost::function<InterfaceBasePtr(EnvironmentBasePtr, std::istream&)>& createfn);
+OPENRAVE_API UserDataPtr RaveRegisterInterface(InterfaceType type, const std::string& name, const char* interfacehash, const char* envhash, const boost::function<InterfaceBasePtr(EnvironmentBasePtr, std::istream&)>& createfn);
 
 /** \brief Registers a custom xml reader for a particular interface.
 
@@ -1358,7 +1519,7 @@ OPENRAVE_API boost::shared_ptr<void> RaveRegisterInterface(InterfaceType type, c
     \param fn CreateXMLReaderFn(pinterface,atts) - passed in the pointer to the interface where the tag was seen along with the list of attributes
     \return a pointer holding the registration, releasing the pointer will unregister the XML reader
  */
-OPENRAVE_API boost::shared_ptr<void> RaveRegisterXMLReader(InterfaceType type, const std::string& xmltag, const CreateXMLReaderFn& fn);
+OPENRAVE_API UserDataPtr RaveRegisterXMLReader(InterfaceType type, const std::string& xmltag, const CreateXMLReaderFn& fn);
 
 /// \brief return the environment's unique id, returns 0 if environment could not be found or not registered
 OPENRAVE_API int RaveGetEnvironmentId(EnvironmentBasePtr penv);
@@ -1478,6 +1639,9 @@ BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::ViewerBase)
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::SpaceSamplerBase)
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::GraphHandle)
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::IkParameterization)
+BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::ConfigurationSpecification)
+BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::ConfigurationSpecification::Group)
+BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::ConfigurationSpecification::Reader)
 BOOST_TYPEOF_REGISTER_TEMPLATE(OpenRAVE::RaveVector, 1)
 BOOST_TYPEOF_REGISTER_TEMPLATE(OpenRAVE::RaveTransform, 1)
 BOOST_TYPEOF_REGISTER_TEMPLATE(OpenRAVE::RaveTransformMatrix, 1)

@@ -2,7 +2,7 @@
 PAPER_TYPE             = a4wide
 OUTPUT_LANGUAGE = Japanese
 OUTPUT_DIRECTORY = ./build/ja/
-ALIASES                += openravepy{1}="<a href=\"http://openrave.programmingvision.com/ja/main/tutorials/openravepy_beginning.html#openravepy-beginning\">\1</a>"
-ALIASES                += openrave_py{1}="<a href=\"http://openrave.programmingvision.com/ja/main/command_line_tools.html#openrave-py\">\1</a>"
-ALIASES                += octave{1}="<a href=\"http://openrave.programmingvision.com/wiki/index.php/OctaveMATLAB\">\1</a>"
+ALIASES                += openravepy{1}="<a href=\"http://openrave.org/ja/main/tutorials/openravepy_beginning.html#openravepy-beginning\">\1</a>"
+ALIASES                += openrave_py{1}="<a href=\"http://openrave.org/ja/main/command_line_tools.html#openrave-py\">\1</a>"
+ALIASES                += octave{1}="<a href=\"http://openrave.org/wiki/index.php/OctaveMATLAB\">\1</a>"
 ALIASES                += envvarwiki{1}="<a href=\"http://ja.wikipedia.org/wiki/%E7%92%B0%E5%A2%83%E5%A4%89%E6%95%B0\"></a>"

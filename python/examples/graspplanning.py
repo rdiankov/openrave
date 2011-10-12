@@ -395,7 +395,7 @@ class GraspPlanning:
                     graspables = self.graspables[:]
                 else:
                     break
-            i = random.randint(len(graspables))
+            i = 4#random.randint(len(graspables))
             try:
                 print 'grasping object %s'%graspables[i][0].target.GetName()
                 with self.envreal:

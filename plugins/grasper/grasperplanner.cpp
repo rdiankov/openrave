@@ -13,10 +13,10 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#ifndef  RAVE_GRASPER_PLANNER_H
-#define  RAVE_GRASPER_PLANNER_H
+#include "plugindefs.h"
 
-// plans a grasp
+#include <openrave/planningutils.h>
+
 class GrasperPlanner :  public PlannerBase
 {
     enum CollisionType
@@ -26,11 +26,11 @@ class GrasperPlanner :  public PlannerBase
         CT_SelfCollision = 2,
         CT_TargetCollision = 4,
         CT_EnvironmentCollision = 8,
-        CT_RegularCollision = 12,
+        CT_RegularCollision = (CT_TargetCollision|CT_EnvironmentCollision),
     };
 
 public:
-    GrasperPlanner(EnvironmentBasePtr penv) : PlannerBase(penv), _report(new CollisionReport()) {
+    GrasperPlanner(EnvironmentBasePtr penv, std::istream& sinput) : PlannerBase(penv), _report(new CollisionReport()) {
         __description = ":Interface Authors: Rosen Diankov, Dmitry Berenson\n\nSimple planner that performs a follow and squeeze operation of a robotic hand.";
     }
     bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams)
@@ -56,19 +56,56 @@ public:
         return true;
     }
 
-    bool PlanPath(TrajectoryBasePtr ptraj, boost::shared_ptr<std::ostream> pOutStream = boost::shared_ptr<std::ostream>())
+    PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
     {
         if(!_parameters) {
-            return false;
+            return PS_Failed;
         }
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         RobotBase::RobotStateSaver saver(_robot);
         RobotBase::ManipulatorPtr pmanip = _robot->GetActiveManipulator();
 
-        // do not clear the trajectory because the user might want to append the grasp point to it
-        if( ptraj->GetDOF() != _robot->GetActiveDOF() ) {
-            ptraj->Reset(_robot->GetActiveDOF());
+        _trajspec._vgroups.resize(2);
+        stringstream ss;
+        _trajspec._vgroups[0].name = str(boost::format("affine_transform %s %d")%_robot->GetName()%DOF_Transform);
+        _trajspec._vgroups[0].dof = RaveGetAffineDOF(DOF_Transform);
+        _trajspec._vgroups[0].offset = 0;
+        ss << "joint_values " << _robot->GetName();
+        FOREACHC(it,_robot->GetActiveDOFIndices()) {
+            ss << " " << *it;
         }
+        _trajspec._vgroups[1].name = ss.str();
+        _trajspec._vgroups[1].dof = _robot->GetActiveDOFIndices().size();
+        _trajspec._vgroups[1].offset = _trajspec._vgroups[0].dof;
+
+        {
+            // need full 6D transform or otherwise data will be lost
+            // do not clear the trajectory because the user might want to append the grasp point to it
+            ConfigurationSpecification spec;
+            if( ptraj->GetConfigurationSpecification().GetDOF() > 0 && ptraj->GetNumWaypoints() > 0 ) {
+                spec = ptraj->GetConfigurationSpecification();
+            }
+            else {
+                spec = _robot->GetActiveConfigurationSpecification();
+            }
+            FOREACH(itgroup,spec._vgroups) {
+                if( itgroup->name.size() >= 16 && itgroup->name.substr(0,16) == "affine_transform" ) {
+                    stringstream ss(itgroup->name.substr(16));
+                    string robotname;
+                    int affinedofs=0;
+                    ss >> robotname >> affinedofs;
+                    if( !!ss && robotname == _robot->GetName() && affinedofs != DOF_Transform ) {
+                        stringstream snew;
+                        snew << "affine_transform " << _robot->GetName() << " " << DOF_Transform;
+                        itgroup->name = snew.str();
+                        itgroup->dof = RaveGetAffineDOF(DOF_Transform);
+                    }
+                }
+            }
+            spec.ResetGroupOffsets();
+            planningutils::ConvertTrajectorySpecification(ptraj,spec);
+        }
+
         CollisionCheckerMngr checkermngr(GetEnv(),"");
         GetEnv()->GetCollisionChecker()->SetCollisionOptions(0);
 
@@ -172,14 +209,9 @@ public:
         std::vector<dReal> dofvals;
         _robot->GetActiveDOFValues(dofvals);
 
-        // only reset when traj dof != active dof
-        if( ptraj->GetDOF() != _robot->GetActiveDOF() ) {
-            ptraj->Reset(_robot->GetActiveDOF());
-        }
-        Trajectory::TPOINT ptemp;
-        ptemp.trans = _robot->GetTransform();
-        ptemp.q.resize(_robot->GetActiveDOF());
-        ptemp.qdot.resize(_robot->GetActiveDOF());
+        vector<dReal> trajpoint(_trajspec.GetDOF());
+        RaveGetAffineDOFValuesFromTransform(trajpoint.begin(),_robot->GetTransform(),DOF_Transform);
+        std::copy(dofvals.begin(),dofvals.begin()+_robot->GetActiveDOFIndices().size(),trajpoint.begin()+_trajspec._vgroups[1].offset);
 
         if( !_parameters->targetbody ) {
             vector<KinBodyPtr> vbodies;
@@ -241,14 +273,14 @@ public:
 
             if( _parameters->fstandoff > 0 ) {
                 dReal* pX = NULL, *pY = NULL, *pZ = NULL;
-                if( _robot->GetAffineDOF() & RobotBase::DOF_X ) {
-                    pX = &dofvals.at(_robot->GetAffineDOFIndex(RobotBase::DOF_X));
+                if( _robot->GetAffineDOF() & DOF_X ) {
+                    pX = &dofvals.at(_robot->GetAffineDOFIndex(DOF_X));
                 }
-                if( _robot->GetAffineDOF() & RobotBase::DOF_Y ) {
-                    pY = &dofvals.at(_robot->GetAffineDOFIndex(RobotBase::DOF_Y));
+                if( _robot->GetAffineDOF() & DOF_Y ) {
+                    pY = &dofvals.at(_robot->GetAffineDOFIndex(DOF_Y));
                 }
-                if( _robot->GetAffineDOF() & RobotBase::DOF_Z ) {
-                    pZ = &dofvals.at(_robot->GetAffineDOFIndex(RobotBase::DOF_Z));
+                if( _robot->GetAffineDOF() & DOF_Z ) {
+                    pZ = &dofvals.at(_robot->GetAffineDOFIndex(DOF_Z));
                 }
                 dReal fstandoff = _parameters->fstandoff;
                 if( ct & CT_EnvironmentCollision ) {
@@ -311,7 +343,7 @@ public:
                 ct = _CheckCollision(_vlinks[q], KinBodyPtr());
                 if( ct&CT_AvoidLinkHit ) {
                     RAVELOG_VERBOSE(str(boost::format("hit link that needed to be avoided %s: %s\n")%_vlinks.at(q)->GetName()%_report->__str__()));
-                    return false;
+                    return PS_Failed;
                 }
             }
         }
@@ -339,7 +371,7 @@ public:
             }
         }
 
-        ptemp.trans = _robot->GetTransform();
+        RaveGetAffineDOFValuesFromTransform(trajpoint.begin(),_robot->GetTransform(),DOF_Transform);
 
         //close the fingers one by one
         for(size_t ifing = 0; ifing < _robot->GetActiveDOFIndices().size(); ifing++) {
@@ -375,7 +407,7 @@ public:
                     if(_robot->DoesAffect(pjoint->GetJointIndex(),_vlinks[q]->GetIndex())  &&((ct = _CheckCollision(_vlinks[q], KinBodyPtr())) != CT_None) ) {
                         if( !coarse_pass && (ct & CT_AvoidLinkHit) ) {
                             RAVELOG_VERBOSE(str(boost::format("hit link that needed to be avoided: %s\n")%_report->__str__()));
-                            return false;
+                            return PS_Failed;
                         }
                         if(coarse_pass) {
                             //coarse step collided, back up and shrink step
@@ -432,11 +464,9 @@ public:
                     }
                 }
 
-                for(int j = 0; j < _robot->GetActiveDOF(); j++) {
-                    ptemp.q[j] = dofvals[j];
-                }
+                std::copy(dofvals.begin(),dofvals.begin()+_robot->GetActiveDOFIndices().size(),trajpoint.begin()+_trajspec._vgroups[1].offset);
                 if(_parameters->breturntrajectory) {
-                    ptraj->AddPoint(ptemp);
+                    ptraj->Insert(ptraj->GetNumWaypoints(),trajpoint,_trajspec);
                 }
                 if(collision) {
                     break;
@@ -451,7 +481,7 @@ public:
         for(int q = 0; q < (int)_vlinks.size(); q++) {
             int ct = _CheckCollision(_vlinks[q], KinBodyPtr());
             if( ct & CT_AvoidLinkHit ) {
-                return false;
+                return PS_Failed;
             }
             if( ct & CT_SelfCollision ) {
                 bAddLastPoint = false;
@@ -461,15 +491,13 @@ public:
         if( bAddLastPoint ) {
             // don't forget the final point!
             _robot->GetActiveDOFValues(dofvals);
-            for(int j = 0; j < _robot->GetActiveDOF(); j++) {
-                ptemp.q[j] = dofvals[j];
-            }
+            std::copy(dofvals.begin(),dofvals.begin()+_robot->GetActiveDOFIndices().size(),trajpoint.begin()+_trajspec._vgroups[1].offset);
             if(!_parameters->breturntrajectory) {
-                ptraj->AddPoint(ptemp);
+                ptraj->Insert(ptraj->GetNumWaypoints(),trajpoint,_trajspec);
             }
         }
 
-        return ptraj->GetPoints().size()>0;     // only return true if there is at least one valid pose!
+        return ptraj->GetNumWaypoints() > 0 ? PS_HasSolution : PS_Failed;     // only return true if there is at least one valid pose!
     }
 
     virtual int _CheckCollision(KinBody::LinkConstPtr plink, KinBodyPtr targetbody)
@@ -523,21 +551,22 @@ protected:
     virtual int _MoveStraight(TrajectoryBasePtr ptraj, const Vector& vapproachdir, vector<dReal>& dofvals, int checkcollisions)
     {
         dReal* pX = NULL, *pY = NULL, *pZ = NULL;
-        if( _robot->GetAffineDOF() & RobotBase::DOF_X ) {
-            pX = &dofvals.at(_robot->GetAffineDOFIndex(RobotBase::DOF_X));
+        if( _robot->GetAffineDOF() & DOF_X ) {
+            pX = &dofvals.at(_robot->GetAffineDOFIndex(DOF_X));
         }
-        if( _robot->GetAffineDOF() & RobotBase::DOF_Y ) {
-            pY = &dofvals.at(_robot->GetAffineDOFIndex(RobotBase::DOF_Y));
+        if( _robot->GetAffineDOF() & DOF_Y ) {
+            pY = &dofvals.at(_robot->GetAffineDOFIndex(DOF_Y));
         }
-        if( _robot->GetAffineDOF() & RobotBase::DOF_Z ) {
-            pZ = &dofvals.at(_robot->GetAffineDOFIndex(RobotBase::DOF_Z));
+        if( _robot->GetAffineDOF() & DOF_Z ) {
+            pZ = &dofvals.at(_robot->GetAffineDOFIndex(DOF_Z));
         }
 
         KinBodyPtr targetbody;
         if( !(checkcollisions & CT_EnvironmentCollision) && (checkcollisions&CT_TargetCollision) ) {
             targetbody = _parameters->targetbody;
         }
-        Trajectory::TPOINT ptemp;
+        vector<dReal> trajpoint(_trajspec.GetDOF(),0);
+        std::copy(dofvals.begin(),dofvals.begin()+_robot->GetActiveDOFIndices().size(),trajpoint.begin()+_trajspec._vgroups[1].offset);
         Vector v = vapproachdir * (_parameters->fcoarsestep*_parameters->ftranslationstepmult);
         int ct = 0;
         while(1) {
@@ -553,8 +582,8 @@ protected:
             }
 
             if(_parameters->breturntrajectory) {
-                ptemp.trans = _robot->GetTransform();
-                ptraj->AddPoint(ptemp);
+                RaveGetAffineDOFValuesFromTransform(trajpoint.begin(),_robot->GetTransform(),DOF_Transform);
+                ptraj->Insert(ptraj->GetNumWaypoints(),trajpoint);
             }
 
             if( pX != NULL ) {
@@ -612,8 +641,8 @@ protected:
             _robot->SetActiveDOFValues(dofvals);
 
             if(_parameters->breturntrajectory) {
-                ptemp.trans = _robot->GetTransform();
-                ptraj->AddPoint(ptemp);
+                RaveGetAffineDOFValuesFromTransform(trajpoint.begin(),_robot->GetTransform(),DOF_Transform);
+                ptraj->Insert(ptraj->GetNumWaypoints(),trajpoint);
             }
         }
         return ct;
@@ -625,6 +654,10 @@ protected:
     std::vector<KinBody::LinkPtr> _vlinks;
     Vector _vTargetCenter;
     dReal _fTargetRadius;
+    ConfigurationSpecification _trajspec;
 };
 
-#endif
+PlannerBasePtr CreateGrasperPlanner(EnvironmentBasePtr penv, std::istream& sinput)
+{
+    return PlannerBasePtr(new GrasperPlanner(penv,sinput));
+}

@@ -54,43 +54,6 @@ public:
     /// \brief Returns the OpenRAVE global state, used for initializing plugins
     virtual UserDataPtr GlobalState() = 0;
 
-    /// \deprecated (10/09/23) see \ref RaveCreateInterface
-    virtual InterfaceBasePtr CreateInterface(InterfaceType type,const std::string& interfacename) RAVE_DEPRECATED =0;
-    /// \deprecated (10/09/23) see \ref RaveCreateRobot
-    virtual RobotBasePtr CreateRobot(const std::string& name="") RAVE_DEPRECATED =0;
-    /// \deprecated (10/09/23) see \ref RaveCreatePlanner
-    virtual PlannerBasePtr CreatePlanner(const std::string& name) RAVE_DEPRECATED =0;
-    /// \deprecated (10/09/23) see \ref RaveCreateSensorSystem
-    virtual SensorSystemBasePtr CreateSensorSystem(const std::string& name) RAVE_DEPRECATED =0;
-    /// \deprecated (10/09/23) see \ref RaveCreateController
-    virtual ControllerBasePtr CreateController(const std::string& name) RAVE_DEPRECATED =0;
-    /// \deprecated (10/09/23) see \ref RaveCreateProblem
-    virtual ModuleBasePtr CreateProblem(const std::string& name) RAVE_DEPRECATED =0;
-    /// \deprecated (10/09/23) see \ref RaveCreateIkSolver
-    virtual IkSolverBasePtr CreateIkSolver(const std::string& name) RAVE_DEPRECATED =0;
-    /// \deprecated (10/09/23) see \ref RaveCreatePhysicsEngine
-    virtual PhysicsEngineBasePtr CreatePhysicsEngine(const std::string& name) RAVE_DEPRECATED =0;
-    /// \deprecated (10/09/23) see \ref RaveCreateSensor
-    virtual SensorBasePtr CreateSensor(const std::string& name) RAVE_DEPRECATED =0;
-    /// \deprecated (10/09/23) see \ref RaveCreateCollisionChecker
-    virtual CollisionCheckerBasePtr CreateCollisionChecker(const std::string& name) RAVE_DEPRECATED =0;
-    /// \deprecated (10/09/23) see \ref RaveCreateViewer
-    virtual ViewerBasePtr CreateViewer(const std::string& name) RAVE_DEPRECATED =0;
-    /// \deprecated (10/09/23) see \ref RaveCreateKinBody
-    virtual KinBodyPtr CreateKinBody(const std::string& name="") RAVE_DEPRECATED = 0;
-    /// \deprecated (10/09/23) see \ref RaveCreateTrajectory
-    virtual TrajectoryBasePtr CreateTrajectory(int nDOF) RAVE_DEPRECATED = 0;
-    /// \deprecated (10/09/23) see \ref RaveLoadPlugin
-    virtual void GetPluginInfo(std::list< std::pair<std::string, PLUGININFO> >& plugins) RAVE_DEPRECATED =0;
-    /// \deprecated (10/09/23) see \ref RaveLoadPlugin
-    virtual void GetLoadedInterfaces(std::map<InterfaceType, std::vector<std::string> >& interfacenames) const RAVE_DEPRECATED = 0;
-    /// \deprecated (10/09/23) see \ref RaveLoadPlugin
-    virtual bool LoadPlugin(const std::string& name) RAVE_DEPRECATED = 0;
-    /// \deprecated (10/09/23) see \ref RaveReloadPlugins
-    virtual void ReloadPlugins() RAVE_DEPRECATED = 0;
-    /// \deprecated (10/09/23) see \ref RaveHasInterface
-    virtual bool HasInterface(InterfaceType type, const std::string& interfacename) const RAVE_DEPRECATED = 0;
-
     /// \brief Environment will own the interface until EnvironmentBase::Destroy is called.
     virtual void OwnInterface(InterfaceBasePtr pinterface) = 0;
 
@@ -395,15 +358,15 @@ public:
 
     /// \brief Query a body from its name. <b>[multi-thread safe]</b>
     /// \return first KinBody (including robots) that matches with name
-    virtual KinBodyPtr GetKinBody(const std::string& name)=0;
+    virtual KinBodyPtr GetKinBody(const std::string& name) const =0;
 
     /// \brief Query a sensor from its name. <b>[multi-thread safe]</b>
     /// \return first sensor that matches with name, note that sensors attached to robots have the robot name as a prefix.
-    virtual SensorBasePtr GetSensor(const std::string& name)=0;
+    virtual SensorBasePtr GetSensor(const std::string& name) const =0;
 
     /// \brief Query a robot from its name. <b>[multi-thread safe]</b>
     /// \return first Robot that matches the name
-    virtual RobotBasePtr GetRobot(const std::string& name)=0;
+    virtual RobotBasePtr GetRobot(const std::string& name) const =0;
 
     /// \brief Get all bodies loaded in the environment (including robots). <b>[multi-thread safe]</b>
     /// \param[out] bodies filled with all the bodies

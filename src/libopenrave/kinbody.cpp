@@ -47,10 +47,11 @@ public:
         }
     }
 
+    list<UserDataWeakPtr>::iterator _iterator;
     int _properties;
     boost::function<void()> _callback;
+protected:
     KinBodyWeakPtr _pweakbody;
-    list<UserDataWeakPtr>::iterator _iterator;
 };
 
 typedef boost::shared_ptr<ChangeCallbackData> ChangeCallbackDataPtr;
@@ -4032,6 +4033,33 @@ void KinBody::_ComputeInternalInformation()
         }
         _vInitialLinkTransformations = vnewtrans;
     }
+
+    {
+        int offset = 0;
+        _spec._vgroups.resize(0);
+        if( GetDOF() > 0 ) {
+            ConfigurationSpecification::Group group;
+            stringstream ss;
+            ss << "joint_values " << GetName();
+            for(int i = 0; i < GetDOF(); ++i) {
+                ss << " " << i;
+            }
+            group.name = ss.str();
+            group.dof = GetDOF();
+            group.offset = offset;
+            group.interpolation = "linear";
+            offset += group.dof;
+            _spec._vgroups.push_back(group);
+        }
+
+        ConfigurationSpecification::Group group;
+        group.name = str(boost::format("affine_transform %s %d")%GetName()%DOF_Transform);
+        group.offset = offset;
+        group.dof = RaveGetAffineDOF(DOF_Transform);
+        group.interpolation = "linear";
+        _spec._vgroups.push_back(group);
+    }
+
     // notify any callbacks of the changes
     if( _nParametersChanged ) {
         std::list<UserDataWeakPtr> listRegisteredCallbacks = _listRegisteredCallbacks; // copy since it can be changed
@@ -4384,6 +4412,44 @@ const std::string& KinBody::GetKinematicsGeometryHash() const
         __hashkinematics = GetMD5HashString(ss.str());
     }
     return __hashkinematics;
+}
+
+void KinBody::SetConfigurationValues(std::vector<dReal>::const_iterator itvalues, bool checklimits)
+{
+    vector<dReal> vdofvalues(GetDOF());
+    if( GetDOF() > 0 ) {
+        std::copy(itvalues,itvalues+GetDOF(),vdofvalues.begin());
+    }
+    Transform t;
+    RaveGetTransformFromAffineDOFValues(t,itvalues+GetDOF(),DOF_Transform);
+    SetDOFValues(vdofvalues,t,checklimits);
+}
+
+void KinBody::GetConfigurationValues(std::vector<dReal>& v) const
+{
+    GetDOFValues(v);
+    v.resize(GetDOF()+RaveGetAffineDOF(DOF_Transform));
+    RaveGetAffineDOFValuesFromTransform(v.begin()+GetDOF(),GetTransform(),DOF_Transform);
+}
+
+const ConfigurationSpecification& KinBody::GetConfigurationSpecification() const
+{
+    return _spec;
+}
+
+ConfigurationSpecification KinBody::GetConfigurationSpecificationIndices(const std::vector<int>& indices) const
+{
+    ConfigurationSpecification spec;
+    spec._vgroups.resize(1);
+    stringstream ss;
+    ss << "joint_values " << GetName();
+    FOREACHC(it,indices) {
+        ss << " " << *it;
+    }
+    spec._vgroups[0].name = ss.str();
+    spec._vgroups[0].dof = indices.size();
+    spec._vgroups[0].offset = 0;
+    return spec;
 }
 
 UserDataPtr KinBody::RegisterChangeCallback(int properties, const boost::function<void()>& callback)

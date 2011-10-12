@@ -58,7 +58,7 @@ public:
             bool operator()( const pair<T,dReal>& a, const pair<T,dReal>& b ) const {
                 // always put the grasps with computed iksolutions first
                 if( (a.first->iksolutions.size() > 0) == (b.first->iksolutions.size() > 0) )
-                    return a.second > b.second;                                                                                                   // minimum on top of stack
+                    return a.second > b.second;                                                                                                                                                    // minimum on top of stack
                 else
                     return a.first->iksolutions.size() == 0;
             }
@@ -1447,7 +1447,7 @@ private:
             }
 
             ofstream f(strbodytraj.c_str());
-            pbodytraj->Write(f, Trajectory::TO_IncludeTimestamps|Trajectory::TO_IncludeBaseTransformation);
+            pbodytraj->serialize(f);
         }
 
         RAVELOG_WARN("success, time=%dms\n", finaltime);
@@ -1468,7 +1468,7 @@ private:
             boost::shared_ptr<Trajectory> pfulltraj(RaveCreateTrajectory(GetEnv(),_robot->GetDOF()));
             _robot->GetFullTrajectoryFromActive(pfulltraj, ptraj);
             ofstream f(strsavetraj.c_str());
-            pfulltraj->Write(f, Trajectory::TO_IncludeTimestamps|Trajectory::TO_IncludeBaseTransformation);
+            pfulltraj->serialize(f);
         }
 
         return true;
@@ -1683,14 +1683,14 @@ private:
             }
 
             ofstream f(strbodytraj.c_str());
-            pbodytraj->Write(f, Trajectory::TO_IncludeTimestamps|Trajectory::TO_IncludeBaseTransformation);
+            pbodytraj->serialize(f);
         }
 
         if( strsavetraj.size() ) {
             boost::shared_ptr<Trajectory> pfulltraj(RaveCreateTrajectory(GetEnv(),_robot->GetDOF()));
             _robot->GetFullTrajectoryFromActive(pfulltraj, ptraj);
             ofstream f(strsavetraj.c_str());
-            pfulltraj->Write(f, Trajectory::TO_IncludeTimestamps|Trajectory::TO_IncludeBaseTransformation);
+            pfulltraj->serialize(f);
         }
 
         return true;

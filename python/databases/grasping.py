@@ -587,7 +587,6 @@ class GraspingModel(DatabaseGenerator):
                     print 'grasp %d/%d'%(i,len(grasps))
                     try:
                         with self.env:
-                            #self.env.SetDebugLevel(DebugLevel.Verbose)
                             contacts,finalconfig,mindist,volume = self.testGrasp(grasp=grasp,translate=True,forceclosure=forceclosure,graspingnoise=graspingnoise)
                             #contacts,finalconfig,mindist,volume = self.runGrasp(grasp=grasp,translate=True,forceclosure=True)
                             if mindist == 0:

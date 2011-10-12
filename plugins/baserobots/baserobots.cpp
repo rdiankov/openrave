@@ -15,7 +15,6 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "plugindefs.h"
-#include "genericrobot.h"
 #include "collisionmaprobot.h"
 #include <openrave/plugin.h>
 
@@ -30,10 +29,7 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
 
     switch(type) {
     case PT_Robot:
-        if( interfacename == "genericrobot") {
-            return InterfaceBasePtr(new GenericRobot(penv));
-        }
-        else if( interfacename == "collisionmaprobot") {
+        if( interfacename == "collisionmaprobot") {
             return InterfaceBasePtr(new CollisionMapRobot(penv));
         }
         break;
@@ -46,7 +42,6 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
 
 void GetPluginAttributesValidated(PLUGININFO& info)
 {
-    info.interfacenames[PT_Robot].push_back("GenericRobot");
     info.interfacenames[PT_Robot].push_back("CollisionMapRobot");
 }
 

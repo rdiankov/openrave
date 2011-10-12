@@ -15,21 +15,23 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "plugindefs.h"
-
-#include "randomized-astar.h"
 #include "rrt.h"
-#include "graspgradient.h"
-#include "pathoptimizers.h"
-#include "workspacetrajectorytracker.h"
 
 #include <openrave/plugin.h>
+
+PlannerBasePtr CreateShortcutLinearPlanner(EnvironmentBasePtr penv, std::istream& sinput);
+PlannerBasePtr CreateGraspGradientPlanner(EnvironmentBasePtr penv, std::istream& sinput);
+PlannerBasePtr CreateRandomizedAStarPlanner(EnvironmentBasePtr penv, std::istream& sinput);
+PlannerBasePtr CreateWorkspaceTrajectoryTracker(EnvironmentBasePtr penv, std::istream& sinput);
+PlannerBasePtr CreateTrajectoryRetimer(EnvironmentBasePtr penv, std::istream& sinput);
 
 InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
 {
     switch(type) {
-    case OpenRAVE::PT_Planner:
-        if((interfacename == "rastar")||(interfacename == "ra*"))
-            return InterfaceBasePtr(new RandomizedAStarPlanner(penv));
+    case PT_Planner:
+        if( interfacename == "rastar" || interfacename == "ra*" ) {
+            return CreateRandomizedAStarPlanner(penv,sinput);
+        }
         else if( interfacename == "birrt") {
             return InterfaceBasePtr(new BirrtPlanner(penv));
         }
@@ -44,13 +46,16 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
             return InterfaceBasePtr(new ExplorationPlanner(penv));
         }
         else if( interfacename == "graspgradient" ) {
-            return InterfaceBasePtr(new GraspGradientPlanner(penv));
+            return CreateGraspGradientPlanner(penv,sinput);
         }
         else if( interfacename == "shortcut_linear" ) {
-            return InterfaceBasePtr(new ShortcutLinearPlanner(penv));
+            return CreateShortcutLinearPlanner(penv,sinput);
+        }
+        else if( interfacename == "trajectoryretimer" ) {
+            return CreateTrajectoryRetimer(penv,sinput);
         }
         else if( interfacename == "workspacetrajectorytracker" ) {
-            return InterfaceBasePtr(new WorkspaceTrajectoryTracker(penv));
+            return CreateWorkspaceTrajectoryTracker(penv,sinput);
         }
         break;
     default:
@@ -67,6 +72,7 @@ void GetPluginAttributesValidated(PLUGININFO& info)
     info.interfacenames[PT_Planner].push_back("ExplorationRRT");
     info.interfacenames[PT_Planner].push_back("GraspGradient");
     info.interfacenames[PT_Planner].push_back("shortcut_linear");
+    info.interfacenames[PT_Planner].push_back("TrajectoryRetimer");
     info.interfacenames[PT_Planner].push_back("WorkspaceTrajectoryTracker");
 }
 

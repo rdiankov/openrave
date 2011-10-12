@@ -4,7 +4,7 @@ if( HAVE_MKSTEMP )
 endif()
 
 set(OPENRAVE_CORE_LIBRARIES ${openrave_libraries})
-set(openrave_core_SOURCES openrave-core.cpp environment-core.h openrave-core.h ravep.h xmlreaders.cpp)
+set(openrave_core_SOURCES openrave-core.cpp environment-core.h openrave-core.h ravep.h xmlreaders.cpp genericrobot.cpp generictrajectory.cpp)
 
 if( COLLADA_DOM_FOUND )
   set(LIBOPENRAVE_COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} -DOPENRAVE_COLLADA_SUPPORT ${COLLADA_DOM_CFLAGS_OTHER}")

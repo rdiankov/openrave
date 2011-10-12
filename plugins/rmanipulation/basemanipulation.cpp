@@ -177,7 +177,7 @@ protected:
         if( !sinput ) {
             return false;
         }
-        TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),robot->GetDOF());
+        TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),"");
         char sep = ' ';
         if( filename == "sep" ) {
             sinput >> sep;
@@ -205,17 +205,12 @@ protected:
         bool bResetTiming = false; sinput >> bResetTiming;
 
         if( bResetTrans ) {
-            RAVELOG_VERBOSE("resetting transformations of trajectory\n");
-            Transform tcur = robot->GetTransform();
-            // set the transformation of every point to the current robot transformation
-            FOREACH(itpoint, ptraj->GetPoints()) {
-                itpoint->trans = tcur;
-            }
+            RAVELOG_WARN("resetting transformations of trajectory not supported\n");
         }
 
         if(( ptraj->GetTotalDuration() == 0) || bResetTiming ) {
             RAVELOG_VERBOSE(str(boost::format("retiming trajectory: %f\n")%_fMaxVelMult));
-            ptraj->CalcTrajTiming(robot,TrajectoryBase::CUBIC,true,false,_fMaxVelMult);
+            ptraj->CalcTrajTiming(robot,0,true,false,_fMaxVelMult);
         }
         RAVELOG_VERBOSE(str(boost::format("executing traj with %d points\n")%ptraj->GetPoints().size()));
         if( ptraj->GetDOF() == robot->GetDOF() ) {
@@ -325,18 +320,28 @@ protected:
         }
 
         if( RaveHasInterface(PT_Planner,"ParabolicSmoothingPlanner") ) {
-            params->_sPathOptimizationPlanner = "ParabolicSmoothingPlanner";
+            params->_sPostProcessingPlanner = "ParabolicSmoothingPlanner";
         }
 
         // compute a workspace trajectory (important to do this after jittering!)
         {
             params->workspacetraj = RaveCreateTrajectory(GetEnv(),"");
-            params->workspacetraj->Reset(0);
-            params->workspacetraj->SetAffineVelocity(Vector(1,1,1),10);
-            params->workspacetraj->AddPoint(TrajectoryBase::TPOINT(vector<dReal>(),Tee,0));
+            ConfigurationSpecification spec;
+            spec._vgroups.resize(1);
+            spec._vgroups[0].offset = 0;
+            spec._vgroups[0].dof = RaveGetAffineDOF(DOF_Transform);
+            spec._vgroups[0].name = str(boost::format("affine_transform __dummy__ %d")%DOF_Transform);
+            spec._vgroups[0].interpolation = "linear";
+            params->workspacetraj->Init(spec);
+            vector<dReal> data(spec._vgroups[0].dof);
+            RaveGetAffineDOFValuesFromTransform(data.begin(),Tee,DOF_Transform);
+            params->workspacetraj->Insert(0,data);
             Tee.trans += direction*maxsteps*params->_fStepLength;
-            params->workspacetraj->AddPoint(TrajectoryBase::TPOINT(vector<dReal>(),Tee,0));
-            params->workspacetraj->CalcTrajTiming(RobotBasePtr(),TrajectoryBase::LINEAR,true,false);
+            RaveGetAffineDOFValuesFromTransform(data.begin(),Tee,DOF_Transform);
+            params->workspacetraj->Insert(1,data);
+            vector<dReal> maxvelocities(spec._vgroups[0].dof,1);
+            vector<dReal> maxaccelerations(spec._vgroups[0].dof,10);
+            planningutils::RetimeAffineTrajectory(params->workspacetraj,maxvelocities,maxaccelerations);
         }
 
         PlannerBasePtr planner = RaveCreatePlanner(GetEnv(),"workspacetrajectorytracker");
@@ -466,7 +471,7 @@ protected:
         }
         params->vgoalconfig.resize(writeindex);
         if( RaveHasInterface(PT_Planner,"ParabolicSmoothingPlanner") ) {
-            params->_sPathOptimizationPlanner = "ParabolicSmoothingPlanner";
+            params->_sPostProcessingPlanner = "ParabolicSmoothingPlanner";
         }
         robot->SetActiveDOFValues(originalvalues);
 
@@ -483,7 +488,7 @@ protected:
             return false;
         }
 
-        TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF());
+        TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),"");
 
         RAVELOG_DEBUG("starting planning\n");
         bool bSuccess = false;
@@ -697,7 +702,8 @@ protected:
         // restore
         robot->SetActiveDOFValues(params->vinitialconfig);
 
-        TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF());
+        TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),"");
+        ptraj->Init(params->_configurationspecification);
         Trajectory::TPOINT pt;
         pt.q = params->vinitialconfig;
         ptraj->AddPoint(pt);
@@ -710,7 +716,7 @@ protected:
         robot->GetActiveDOFValues(params->vinitialconfig);
 
         if( RaveHasInterface(PT_Planner,"ParabolicSmoothingPlanner") ) {
-            params->_sPathOptimizationPlanner = "ParabolicSmoothingPlanner";
+            params->_sPostProcessingPlanner = "ParabolicSmoothingPlanner";
         }
 
         PlannerBasePtr rrtplanner = RaveCreatePlanner(GetEnv(),_strRRTPlannerName);
@@ -887,7 +893,8 @@ protected:
         }
 
         RobotBase::RobotStateSaver saver(robot);
-        TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF());
+        TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),"");
+        ptraj->Init(robot->GetActiveConfigurationSpecification());
 
         // have to add the first point
         Trajectory::TPOINT ptfirst;
@@ -1009,9 +1016,7 @@ protected:
                 bool bReset = false;
                 sinput >> bReset;
                 if( bReset ) {
-                    FOREACH(it,ptraj->GetPoints()) {
-                        it->trans = robot->GetTransform();
-                    }
+                    RAVELOG_WARN("resettiming not supported\n");
                 }
             }
             else if( cmd == "samplingstep" ) {

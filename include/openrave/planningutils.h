@@ -18,8 +18,8 @@
 /** \file planningutils.h
     \brief Planning related utilities likes samplers, distance metrics, etc.
  */
-#ifndef OPENRAVE_PLANNINGUTIL_H
-#define OPENRAVE_PLANNINGUTIL_H
+#ifndef OPENRAVE_PLANNINGUTILS_H
+#define OPENRAVE_PLANNINGUTILS_H
 
 #include <openrave/openrave.h>
 
@@ -44,6 +44,28 @@ OPENRAVE_API bool JitterTransform(KinBodyPtr pbody, float fJitter, int nMaxItera
     \throw openrave_exception If the trajectory is invalid, will throw ORE_InconsistentConstraints.
  */
 OPENRAVE_API void VerifyTrajectory(PlannerBase::PlannerParametersConstPtr parameters, TrajectoryBaseConstPtr trajectory, dReal samplingstep=0);
+
+/** \brief retimes the trajectory points consisting of active dofs of the robot
+
+   \param traj the trajectory that initially contains the input points, it is modified to contain the new re-timed data.
+   \param robot use the robot's active dofs to initialize the trajectory space
+   \param plannername the name of the planner to use to retime. If empty, will use the default trajectory re-timer.
+   \param hastimestamps if true, use the already initialized timestamps of the trajectory
+ */
+OPENRAVE_API void RetimeActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr robot, bool hastimestamps=false, dReal fmaxvelmult=1, const std::string plannername="");
+
+/** \brief retimes the trajectory points consisting of affine dofs
+
+   \param traj the trajectory that initially contains the input points, it is modified to contain the new re-timed data.
+   \param maxvelocities the max velocities of each dof
+   \param maxaccelerations the max acceleration of each dof
+   \param plannername the name of the planner to use to retime. If empty, will use the default trajectory re-timer.
+   \param hastimestamps if true, use the already initialized timestamps of the trajectory
+ */
+OPENRAVE_API void RetimeAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps=false, const std::string plannername="");
+
+/// \brief convert the trajectory and all its points to a new specification
+OPENRAVE_API void ConvertTrajectorySpecification(TrajectoryBasePtr traj, const ConfigurationSpecification& spec);
 
 /// \brief Line collision
 class OPENRAVE_API LineCollisionConstraint

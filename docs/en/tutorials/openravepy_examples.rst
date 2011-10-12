@@ -230,7 +230,7 @@ Set a custom IK filter to abort computation after 100ms.
           def timeoutfilter(values, manip, ikparam):
               return IkFilterReturn.Quit if time.time()-starttime > maxtime else IkFilterReturn.Success
 
-          manip.GetIkSolver().SetCustomFilter(timeoutfilter)
+          handle=manip.GetIkSolver().RegisterCustomFilter(0,timeoutfilter)
           success = manip.FindIKSolution(manip.GetIkParameterization(IkParameterization.Type.Transform6D),IkFilterOptions.CheckEnvCollisions)
           print 'in collision: %d, real success: %d, time passed: %f'%(incollision,success is not None,time.time()-starttime)
 
@@ -263,6 +263,34 @@ Shows how to set a physics engine and send torque commands to the robot
           robot.SetJointTorques(torques,True)
           time.sleep(0.01)
 
+Testing a Grasp
+---------------
+
+Loads the grasping model and moves the robot to the first grasp found
+
+.. code-block:: python
+
+  from openravepy import *
+  import numpy, time
+  env=Environment()
+  env.Load('data/lab1.env.xml')
+  env.SetViewer('qtcoin')
+  robot = env.GetRobots()[0]
+  target = env.GetKinBody('mug1')
+  gmodel = databases.grasping.GraspingModel(robot,target)
+  if not gmodel.load():
+      gmodel.autogenerate()
+  
+  validgrasps, validindicees = gmodel.computeValidGrasps(returnnum=1)
+  gmodel.moveToPreshape(validgrasps[0])
+  Tgoal = gmodel.getGlobalGraspTransform(validgrasps[0],collisionfree=True)
+  basemanip = interfaces.BaseManipulation(robot)
+  basemanip.MoveToHandPosition(matrices=[Tgoal])
+  robot.WaitForController(0)
+  taskmanip = interfaces.TaskManipulation(robot)
+  taskmanip.CloseFingers()
+  robot.WaitForController(0)
+  
 Logging
 -------
 
@@ -273,6 +301,6 @@ Save the current scene using the :ref:`probleminstance-logging` plugin:
   from openravepy import *
   env = Environment() # create openrave environment
   env.Load('data/lab1.env.xml') # load a simple scene
-
+  
   logger = RaveCreateModule(env,'logging')
   logger.SendCommand('savescene filename myscene.env.xml')

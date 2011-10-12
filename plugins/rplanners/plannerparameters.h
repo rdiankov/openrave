@@ -155,6 +155,67 @@ protected:
     }
 };
 
+class TrajectoryTimingParameters : public PlannerBase::PlannerParameters
+{
+public:
+    TrajectoryTimingParameters() : _interpolation("linear"), _hastimestamps(false), _bProcessing(false) {
+        _vXMLParameters.push_back("interpolation");
+        _vXMLParameters.push_back("hastimestamps");
+    }
+
+    string _interpolation;
+    bool _hastimestamps;
+
+protected:
+    bool _bProcessing;
+    virtual bool serialize(std::ostream& O) const
+    {
+        if( !PlannerParameters::serialize(O) ) {
+            return false;
+        }
+        O << "<interpolation>" << _interpolation << "</interpolation>" << endl;
+        O << "<hastimestamps>" << _hastimestamps << "</hastimestamps>" << endl;
+        return !!O;
+    }
+
+    ProcessElement startElement(const std::string& name, const AttributesList& atts)
+    {
+        if( _bProcessing ) {
+            return PE_Ignore;
+        }
+        switch( PlannerBase::PlannerParameters::startElement(name,atts) ) {
+        case PE_Pass: break;
+        case PE_Support: return PE_Support;
+        case PE_Ignore: return PE_Ignore;
+        }
+
+        _bProcessing = name=="interpolation" || name=="hastimestamps";
+        return _bProcessing ? PE_Support : PE_Pass;
+    }
+
+    virtual bool endElement(const string& name)
+    {
+        if( _bProcessing ) {
+            if( name == "interpolation") {
+                _ss >> _interpolation;
+            }
+            else if( name == "hastimestamps" ) {
+                _ss >> _hastimestamps;
+            }
+            else {
+                RAVELOG_WARN(str(boost::format("unknown tag %s\n")%name));
+            }
+            _bProcessing = false;
+            return false;
+        }
+
+        // give a chance for the default parameters to get processed
+        return PlannerParameters::endElement(name);
+    }
+};
+
+typedef boost::shared_ptr<TrajectoryTimingParameters> TrajectoryTimingParametersPtr;
+
 class WorkspaceTrajectoryParameters : public PlannerBase::PlannerParameters
 {
 public:
@@ -188,9 +249,9 @@ protected:
         O << "<ignorefirstcollision>" << ignorefirstcollision << "</ignorefirstcollision>" << endl;
         O << "<minimumcompletetime>" << minimumcompletetime << "</minimumcompletetime>" << endl;
         if( !!workspacetraj ) {
-            O << "<workspacetraj>";
-            workspacetraj->Write(O,TrajectoryBase::TO_IncludeTimestamps|TrajectoryBase::TO_IncludeBaseTransformation);
-            O << "</workspacetraj>" << endl;
+            O << "<workspacetraj><![CDATA[";
+            workspacetraj->serialize(O);
+            O << "]]></workspacetraj>" << endl;
         }
         return !!O;
     }
@@ -233,7 +294,7 @@ protected:
                 if( !workspacetraj ) {
                     workspacetraj = RaveCreateTrajectory(_penv,"");
                 }
-                workspacetraj->Read(_ss,RobotBasePtr());
+                workspacetraj->deserialize(_ss);
             }
             else {
                 RAVELOG_WARN(str(boost::format("unknown tag %s\n")%name));

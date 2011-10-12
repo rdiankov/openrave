@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2009 Rosen Diankov (rdiankov@cs.cmu.edu)
+// Copyright (C) 2006-2009 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
@@ -13,13 +13,6 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-// A continuous version of A*. See:
-// Rosen Diankov, James Kuffner.
-// Randomized Statistical Path Planning. Intl. Conf. on Intelligent Robots and Systems, October 2007.
-#ifndef RAVE_RANDOMIZED_ASTAR
-#define RAVE_RANDOMIZED_ASTAR
-
 #include "rplanners.h"
 
 class RandomizedAStarPlanner : public PlannerBase
@@ -252,9 +245,10 @@ public:
         CLOSED
     };
 
-    RandomizedAStarPlanner(EnvironmentBasePtr penv) : PlannerBase(penv)
+    RandomizedAStarPlanner(EnvironmentBasePtr penv, std::istream& sinput) : PlannerBase(penv)
     {
-        __description = ":Interface Author: Rosen Diankov\n\nRandomized A*";
+        __description = ":Interface Author: Rosen Diankov\n\nRandomized A*. A continuous version of A*. See:\n\
+Rosen Diankov, James Kuffner. \"Randomized Statistical Path Planning. Intl. Conf. on Intelligent Robots and Systems, October 2007.\"\n";
         bUseGauss = false;
         nIndex = 0;
     }
@@ -317,10 +311,11 @@ public:
         return true;
     }
 
-    virtual bool PlanPath(TrajectoryBasePtr ptraj, boost::shared_ptr<std::ostream> pOutStream)
+    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
     {
-        if( !_parameters )
-            return false;
+        if( !_parameters ) {
+            return PS_Failed;
+        }
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         Destroy();
 
@@ -328,7 +323,7 @@ public:
         Node* pcurrent=NULL, *pbest = NULL;
 
         if( !_parameters->_checkpathconstraintsfn(_parameters->vinitialconfig,_parameters->vinitialconfig,IT_OpenStart,ConfigurationListPtr()) ) {
-            return false;
+            return PS_Failed;
         }
 
         _parameters->_setstatefn(_parameters->vinitialconfig);
@@ -399,7 +394,7 @@ public:
         }
 
         if( !pbest ) {
-            return false;
+            return PS_Failed;
         }
 
         RAVELOG_DEBUG("Path found, final node: %f, %f\n", pbest->fcost, pbest->ftotal-pbest->fcost);
@@ -424,6 +419,9 @@ public:
 
         _SimpleOptimizePath(vecnodes);
 
+        if( _parameters->_configurationspecification != ptraj->GetConfigurationSpecification() ) {
+            ptraj->Init(_parameters->_configurationspecification);
+        }
         Trajectory::TPOINT p;
         p.q = _parameters->vinitialconfig;
         ptraj->AddPoint(p);
@@ -438,7 +436,7 @@ public:
         }
 
         _OptimizePath(_robot,ptraj);
-        return true;
+        return PS_HasSolution;
     }
 
     int GetTotalNodes() {
@@ -588,4 +586,6 @@ private:
     int nIndex;
 };
 
-#endif
+PlannerBasePtr CreateRandomizedAStarPlanner(EnvironmentBasePtr penv, std::istream& sinput) {
+    return PlannerBasePtr(new RandomizedAStarPlanner(penv, sinput));
+}

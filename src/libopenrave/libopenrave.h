@@ -415,6 +415,28 @@ inline void polyroots(const IKReal* rawcoeffs, IKReal* rawroots, int& numroots)
     }
 }
 
+class TrajectoryReader : public BaseXMLReader
+{
+public:
+    TrajectoryReader(TrajectoryBasePtr ptraj);
+    virtual ProcessElement startElement(const std::string& name, const AttributesList& atts);
+    virtual bool endElement(const std::string& name);
+    virtual void characters(const std::string& ch);
+
+protected:
+    TrajectoryBasePtr _ptraj;
+    std::stringstream _ss;
+    ConfigurationSpecification _spec;
+    BaseXMLReaderPtr _pcurreader;
+    int _datacount;
+    std::vector<dReal> _vdata;
+};
+
+namespace LocalXML
+{
+bool ParseXMLData(BaseXMLReaderPtr preader, const char* buffer, int size);
+}
+
 }
 
 // need the prototypes in order to keep them free of the OpenRAVE namespace

@@ -21,7 +21,7 @@ Getting Started
 
 * :ref:`overview`
 
- * `Architecture`_, `Interface Concepts`_, :ref:`package-databases`, :ref:`robots_overview`, :ref:`geometric_conventions`
+ * `Architecture`_, :ref:`interface_concepts`, :ref:`package-databases`, :ref:`robots_overview`, :ref:`geometric_conventions`
 
 Resources
 ---------

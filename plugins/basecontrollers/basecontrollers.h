@@ -64,6 +64,19 @@ If SetDesired is called, only joint values will be set at every timestep leaving
             }
             _cblimits = _probot->RegisterChangeCallback(KinBody::Prop_JointLimits,boost::bind(&IdealController::_SetJointLimits,boost::bind(&sptr_from<IdealController>, weak_controller())));
             _SetJointLimits();
+
+            _samplespec._vgroups.resize(2);
+            _samplespec._vgroups[0].offset = 0;
+            _samplespec._vgroups[0].dof = _probot->GetDOF();
+            stringstream ss;
+            ss << "joint_values " << _probot->GetName();
+            for(int i = 0; i < _probot->GetDOF(); ++i) {
+                ss << " " << i;
+            }
+            _samplespec._vgroups[0].name = ss.str();
+            _samplespec._vgroups[1].offset = _probot->GetDOF();
+            _samplespec._vgroups[1].dof = RaveGetAffineDOF(DOF_Transform);
+            _samplespec._vgroups[1].name = str(boost::format("affine_transform %s %d")%_probot->GetName()%DOF_Transform);
         }
         _bPause = false;
         return true;
@@ -118,23 +131,31 @@ If SetDesired is called, only joint values will be set at every timestep leaving
 
     virtual bool SetPath(TrajectoryBaseConstPtr ptraj)
     {
+        if( !!ptraj ) {
+            // see if at least one point can be sampled, this make it easier to debug bad trajectories
+            vector<dReal> v;
+            ptraj->Sample(v,0,_samplespec);
+            Transform t;
+            RaveGetTransformFromAffineDOFValues(t,v.begin()+_probot->GetDOF(),DOF_Transform);
+        }
+
         if( _bPause ) {
             RAVELOG_DEBUG("IdealController cannot player trajectories when paused\n");
             _ptraj.reset();
             _bIsDone = true;
             return false;
         }
-        if( !!ptraj &&( ptraj->GetDOF() != (int)_dofindices.size()) ) {
-            throw openrave_exception(str(boost::format("wrong path dimensions %d!=%d")%ptraj->GetDOF()%_dofindices.size()),ORE_InvalidArguments);
-        }
         _ptraj = ptraj;
         fTime = 0;
         _bIsDone = !_ptraj;
         _vecdesired.resize(0);
 
-        if( !!_ptraj && !!flog ) {
-            flog << endl << "trajectory: " << ++cmdid << endl;
-            _ptraj->Write(flog, Trajectory::TO_IncludeTimestamps|Trajectory::TO_IncludeBaseTransformation);
+        if( !!_ptraj ) {
+            _bTrajHasJoints = ptraj->GetConfigurationSpecification().FindCompatibleGroup(_samplespec._vgroups.at(0)) != ptraj->GetConfigurationSpecification()._vgroups.end();
+            _bTrajHasTransform = ptraj->GetConfigurationSpecification().FindCompatibleGroup(_samplespec._vgroups.at(1)) != ptraj->GetConfigurationSpecification()._vgroups.end();
+            if( !!flog ) {
+                _ptraj->serialize(flog);
+            }
         }
 
         return true;
@@ -147,28 +168,36 @@ If SetDesired is called, only joint values will be set at every timestep leaving
         }
         TrajectoryBaseConstPtr ptraj = _ptraj; // because of multi-threading setting issues
         if( !!ptraj ) {
-            Trajectory::TPOINT tp;
-            if( !ptraj->SampleTrajectory(fTime, tp) ) {
-                return;
+            vector<dReal> sampledata;
+            ptraj->Sample(sampledata,fTime,_samplespec);
+
+            vector<dReal> vdofvalues;
+            if( _bTrajHasJoints && _dofindices.size() > 0 ) {
+                vdofvalues.resize(_probot->GetDOF());
+                std::copy(sampledata.begin(),sampledata.begin()+_probot->GetDOF(),vdofvalues.begin());
             }
-            if( tp.q.size() > 0 ) {
-                if( _nControlTransformation ) {
-                    _SetDOFValues(tp.q,tp.trans);
+
+            Transform t;
+            if( _bTrajHasTransform && _nControlTransformation ) {
+                RaveGetTransformFromAffineDOFValues(t,sampledata.begin()+_probot->GetDOF(),DOF_Transform);
+                if( vdofvalues.size() > 0 ) {
+                    _SetDOFValues(vdofvalues,t);
                 }
                 else {
-                    _SetDOFValues(tp.q);
+                    _probot->SetTransform(t);
                 }
             }
-            else if( _nControlTransformation ) {
-                _probot->SetTransform(tp.trans);
+            else if( vdofvalues.size() > 0 ) {
+                _SetDOFValues(vdofvalues);
             }
 
-            if( fTime > ptraj->GetTotalDuration() ) {
-                fTime = ptraj->GetTotalDuration();
+            if( fTime > ptraj->GetDuration() ) {
+                fTime = ptraj->GetDuration();
                 _bIsDone = true;
             }
-
-            fTime += _fSpeed * fTimeElapsed;
+            else {
+                fTime += _fSpeed * fTimeElapsed;
+            }
         }
 
         if( _vecdesired.size() > 0 ) {
@@ -229,7 +258,7 @@ private:
         }
     }
 
-    virtual void _SetDOFValues(const std::vector<dReal>& values)
+    virtual void _SetDOFValues(const std::vector<dReal>&values)
     {
         vector<dReal> curvalues, curvel;
         _probot->GetDOFValues(curvalues);
@@ -246,7 +275,7 @@ private:
         _probot->SetDOFVelocities(curvel,linearvel,angularvel);
         _CheckConfiguration();
     }
-    virtual void _SetDOFValues(const std::vector<dReal>& values, const Transform& t)
+    virtual void _SetDOFValues(const std::vector<dReal>&values, const Transform &t)
     {
         BOOST_ASSERT(_nControlTransformation);
         vector<dReal> curvalues, curvel;
@@ -263,7 +292,7 @@ private:
         _CheckConfiguration();
     }
 
-    void _CheckLimits(std::vector<dReal>& curvalues)
+    void _CheckLimits(std::vector<dReal>&curvalues)
     {
         for(size_t i = 0; i < _vlower.size(); ++i) {
             if( _dofchecklimits[i] ) {
@@ -302,6 +331,7 @@ private:
     RobotBasePtr _probot;               ///< controlled body
     dReal _fSpeed;                    ///< how fast the robot should go
     TrajectoryBaseConstPtr _ptraj;         ///< computed trajectory robot needs to follow in chunks of _pbody->GetDOF()
+    bool _bTrajHasJoints, _bTrajHasTransform;
 
     dReal fTime;
 
@@ -316,7 +346,8 @@ private:
     int cmdid;
     bool _bPause, _bIsDone, _bCheckCollision, _bThrowExceptions;
     CollisionReportPtr _report;
-    boost::shared_ptr<void> _cblimits;
+    UserDataPtr _cblimits;
+    ConfigurationSpecification _samplespec;
 };
 
 class RedirectController : public ControllerBase
@@ -328,7 +359,7 @@ public:
     virtual ~RedirectController() {
     }
 
-    virtual bool Init(RobotBasePtr robot, const std::vector<int>& dofindices, int nControlTransformation)
+    virtual bool Init(RobotBasePtr robot, const std::vector<int>&dofindices, int nControlTransformation)
     {
         _dofindices.clear();
         _pcontroller.reset();
@@ -349,7 +380,7 @@ public:
     virtual void Reset(int options) {
     }
 
-    virtual bool SetDesired(const std::vector<dReal>& values, TransformConstPtr trans)
+    virtual bool SetDesired(const std::vector<dReal>&values, TransformConstPtr trans)
     {
         if( !_pcontroller->SetDesired(values, trans) ) {
             return false;
@@ -392,10 +423,10 @@ public:
     virtual dReal GetTime() const {
         return _pcontroller->GetTime();
     }
-    virtual void GetVelocity(std::vector<dReal>& vel) const {
+    virtual void GetVelocity(std::vector<dReal>&vel) const {
         return _pcontroller->GetVelocity(vel);
     }
-    virtual void GetTorque(std::vector<dReal>& torque) const {
+    virtual void GetTorque(std::vector<dReal>&torque) const {
         return _pcontroller->GetTorque(torque);
     }
     virtual RobotBasePtr GetRobot() const {

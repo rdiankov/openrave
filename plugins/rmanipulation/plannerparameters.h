@@ -438,9 +438,9 @@ protected:
         O << "<ignorefirstcollision>" << ignorefirstcollision << "</ignorefirstcollision>" << endl;
         O << "<minimumcompletetime>" << minimumcompletetime << "</minimumcompletetime>" << endl;
         if( !!workspacetraj ) {
-            O << "<workspacetraj>";
-            workspacetraj->Write(O,TrajectoryBase::TO_IncludeTimestamps|TrajectoryBase::TO_IncludeBaseTransformation);
-            O << "</workspacetraj>" << endl;
+            O << "<workspacetraj><![CDATA[";
+            workspacetraj->serialize(O);
+            O << "]]></workspacetraj>" << endl;
         }
         return !!O;
     }
@@ -483,7 +483,7 @@ protected:
                 if( !workspacetraj ) {
                     workspacetraj = RaveCreateTrajectory(_penv,"");
                 }
-                workspacetraj->Read(_ss,RobotBasePtr());
+                workspacetraj->deserialize(_ss);
             }
             else {
                 RAVELOG_WARN(str(boost::format("unknown tag %s\n")%name));

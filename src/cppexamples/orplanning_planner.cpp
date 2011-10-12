@@ -66,7 +66,7 @@ int main(int argc, char ** argv)
     params->vgoalconfig.resize(probot->GetActiveDOF());
 
     // create the output trajectory
-    boost::shared_ptr<Trajectory> ptraj(RaveCreateTrajectory(penv,probot->GetActiveDOF()));
+    TrajectoryBasePtr ptraj = RaveCreateTrajectory(penv,"");
 
     while(1) {
         GraphHandlePtr pgraph;
@@ -94,23 +94,20 @@ int main(int argc, char ** argv)
                 continue;
             }
 
-            ptraj->Clear();
             if( !planner->PlanPath(ptraj) ) {
                 RAVELOG_WARN("plan failed, trying again\n");
                 continue;
             }
 
-            // re-timing the trajectory with cubic interpolation
-            ptraj->CalcTrajTiming(probot,TrajectoryBase::CUBIC,true,true);
-
             // draw the end effector of the trajectory
             {
                 RobotBase::RobotStateSaver saver(probot); // save the state of the robot since will be setting joint values
                 vector<RaveVector<float> > vpoints;
-                for(dReal ftime = 0; ftime <= ptraj->GetTotalDuration(); ftime += 0.01) {
-                    TrajectoryBase::TPOINT tp;
-                    ptraj->SampleTrajectory(ftime,tp);
-                    probot->SetActiveDOFValues(tp.q);
+                vector<dReal> vtrajdata;
+                ConfigurationSpecification::Group gvalues;
+                for(dReal ftime = 0; ftime <= ptraj->GetDuration(); ftime += 0.01) {
+                    ptraj->Sample(vtrajdata,ftime,probot->GetActiveConfigurationSpecification());
+                    probot->SetActiveDOFValues(vtrajdata);
                     vpoints.push_back(pmanip->GetEndEffectorTransform().trans);
                 }
                 pgraph = penv->drawlinestrip(&vpoints[0].x,vpoints.size(),sizeof(vpoints[0]),1.0f);
@@ -118,7 +115,7 @@ int main(int argc, char ** argv)
         }
 
         // send the trajectory to the robot
-        probot->SetActiveMotion(ptraj);
+        probot->GetController()->SetPath(ptraj);
 
         // wait for the robot to finish
         while(!probot->GetController()->IsDone()) {

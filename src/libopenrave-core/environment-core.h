@@ -52,6 +52,9 @@ public:
         _bInit = false;
         _bEnableSimulation = true;     // need to start by default
 
+        _genericrobot = RaveRegisterInterface(PT_Robot,"GenericRobot", RaveGetInterfaceHash(PT_Robot), GetHash(), CreateGenericRobot);
+        _generictrajectory = RaveRegisterInterface(PT_Trajectory,"GenericTrajectory", RaveGetInterfaceHash(PT_Trajectory), GetHash(), CreateGenericTrajectory);
+
         {
             bool bExists=false;
             RaveParseDirectories(getenv("OPENRAVE_DATA"), _vdatadirs);
@@ -321,62 +324,6 @@ public:
 
     virtual UserDataPtr GlobalState() {
         return RaveGlobalState();
-    }
-
-    virtual void GetPluginInfo(std::list< std::pair<std::string, PLUGININFO> >& plugins) {
-        RaveGetPluginInfo(plugins);
-    }
-    virtual void GetLoadedInterfaces(std::map<InterfaceType, std::vector<std::string> >& interfacenames) const {
-        RaveGetLoadedInterfaces(interfacenames);
-    }
-    virtual bool LoadPlugin(const std::string& pname) {
-        return RaveLoadPlugin(pname);
-    }
-    virtual void ReloadPlugins() {
-        RaveReloadPlugins();
-    }
-    virtual bool HasInterface(InterfaceType type, const string& interfacename) const {
-        return RaveHasInterface(type,interfacename);
-    }
-
-    virtual InterfaceBasePtr CreateInterface(InterfaceType type,const std::string& pinterfacename) {
-        return RaveCreateInterface(shared_from_this(),type,pinterfacename);
-    }
-    virtual RobotBasePtr CreateRobot(const std::string& pname) {
-        return RaveCreateRobot(shared_from_this(), pname);
-    }
-    virtual KinBodyPtr CreateKinBody(const std::string& pname) {
-        return RaveCreateKinBody(shared_from_this(), pname);
-    }
-    virtual TrajectoryBasePtr CreateTrajectory(int nDOF) {
-        return RaveCreateTrajectory(shared_from_this(), nDOF);
-    }
-    virtual PlannerBasePtr CreatePlanner(const std::string& pname) {
-        return RaveCreatePlanner(shared_from_this(),pname);
-    }
-    virtual SensorSystemBasePtr CreateSensorSystem(const std::string& pname) {
-        return RaveCreateSensorSystem(shared_from_this(),pname);
-    }
-    virtual ControllerBasePtr CreateController(const std::string& pname) {
-        return RaveCreateController(shared_from_this(),pname);
-    }
-    virtual ModuleBasePtr CreateProblem(const std::string& pname) {
-        return RaveCreateModule(shared_from_this(),pname);
-    }
-    virtual IkSolverBasePtr CreateIkSolver(const std::string& pname) {
-        return RaveCreateIkSolver(shared_from_this(),pname);
-    }
-    virtual PhysicsEngineBasePtr CreatePhysicsEngine(const std::string& pname) {
-        return RaveCreatePhysicsEngine(shared_from_this(),pname);
-    }
-    virtual SensorBasePtr CreateSensor(const std::string& pname) {
-        return RaveCreateSensor(shared_from_this(),pname);
-    }
-    virtual CollisionCheckerBasePtr CreateCollisionChecker(const std::string& pname) {
-        return RaveCreateCollisionChecker(shared_from_this(),pname);
-    }
-    virtual ViewerBasePtr CreateViewer(const std::string& pname) {
-        return RaveCreateViewer(shared_from_this(),pname);
     }
 
     virtual void OwnInterface(InterfaceBasePtr pinterface)
@@ -688,7 +635,7 @@ public:
         return false;
     }
 
-    virtual KinBodyPtr GetKinBody(const std::string& pname)
+    virtual KinBodyPtr GetKinBody(const std::string& pname) const
     {
         boost::mutex::scoped_lock lock(_mutexInterfaces);
         FOREACHC(it, _vecbodies) {
@@ -700,7 +647,7 @@ public:
         return KinBodyPtr();
     }
 
-    virtual RobotBasePtr GetRobot(const std::string& pname)
+    virtual RobotBasePtr GetRobot(const std::string& pname) const
     {
         boost::mutex::scoped_lock lock(_mutexInterfaces);
         FOREACHC(it, _vecrobots) {
@@ -712,7 +659,7 @@ public:
         return RobotBasePtr();
     }
 
-    virtual SensorBasePtr GetSensor(const std::string& name)
+    virtual SensorBasePtr GetSensor(const std::string& name) const
     {
         boost::mutex::scoped_lock lock(_mutexInterfaces);
         FOREACHC(itrobot,_vecrobots) {
@@ -1718,7 +1665,7 @@ protected:
 
         // clone collision and physics
         if( !!r->GetCollisionChecker() ) {
-            SetCollisionChecker(CreateCollisionChecker(r->GetCollisionChecker()->GetXMLId()));
+            SetCollisionChecker(RaveCreateCollisionChecker(shared_from_this(),r->GetCollisionChecker()->GetXMLId()));
         }
 
         if( options & Clone_Bodies ) {
@@ -1823,7 +1770,7 @@ protected:
             r->GetViewers(listViewers);
             FOREACH(itviewer, listViewers) {
                 try {
-                    AddViewer(CreateViewer((*itviewer)->GetXMLId()));
+                    AddViewer(RaveCreateViewer(shared_from_this(),(*itviewer)->GetXMLId()));
                 }
                 catch(const openrave_exception &ex) {
                     RAVELOG_ERROR(str(boost::format("failed to lone viewer %s: %s")%(*itviewer)->GetName()%ex.what()));
@@ -1833,7 +1780,7 @@ protected:
 
         if( options & Clone_Simulation ) {
             if( !!r->GetPhysicsEngine() ) {
-                SetPhysicsEngine(CreatePhysicsEngine(r->GetPhysicsEngine()->GetXMLId()));
+                SetPhysicsEngine(RaveCreatePhysicsEngine(shared_from_this(),r->GetPhysicsEngine()->GetXMLId()));
             }
             _bEnableSimulation = r->_bEnableSimulation;
             _nCurSimTime = r->_nCurSimTime;
@@ -2218,6 +2165,7 @@ public:
     vector<KinBody::BodyState> _vPublishedBodies;
     vector<string> _vdatadirs;
     string _homedirectory;
+    UserDataPtr _genericrobot, _generictrajectory;
 
     list<InterfaceBasePtr> _listOwnedInterfaces;
 

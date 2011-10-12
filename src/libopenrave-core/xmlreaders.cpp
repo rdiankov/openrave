@@ -14,9 +14,6 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#ifndef OPENRAVE_XML_READERS
-#define OPENRAVE_XML_READERS
-
 #include "ravep.h"
 
 #include <libxml/xmlstring.h>
@@ -56,6 +53,7 @@ BOOST_STATIC_ASSERT(sizeof(xmlChar) == 1);
 
 namespace OpenRAVEXMLParser
 {
+
 static boost::once_flag __onceCreateXMLMutex = BOOST_ONCE_INIT;
 /// lock for parsing XML, don't destroy it in order to ensure it remains valid for as long as possible
 static EnvironmentMutex* __mutexXML;
@@ -2392,8 +2390,9 @@ public:
             _processingtag = "";
         }
         else if( InterfaceXMLReader::endElement(xmlname) ) {
-            if( _bodyname.size() > 0 )
+            if( _bodyname.size() > 0 ) {
                 _pchain->SetName(_bodyname);
+            }
             if( _filename.size() > 0 ) {
                 SetFilename(_filename);
             }
@@ -3669,6 +3668,5 @@ BaseXMLReaderPtr CreateInterfaceReader(EnvironmentBasePtr penv, const Attributes
 {
     return BaseXMLReaderPtr(new OpenRAVEXMLParser::GlobalInterfaceXMLReader(penv,atts,bAddToEnvironment));
 }
-};
 
-#endif
+} // end namespace OpenRAVEXMLParser

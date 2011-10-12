@@ -1,4 +1,5 @@
-// Copyright (C) 2006-2010 Rosen Diankov (rosen.diankov@gmail.com)
+// -*- coding: utf-8 -*-
+// Copyright (C) 2006-2011 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
@@ -12,13 +13,12 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#ifndef  PATH_OPTIMIZER_H
-#define  PATH_OPTIMIZER_H
+#include "rplanners.h"
 
 class ShortcutLinearPlanner : public PlannerBase
 {
 public:
-    ShortcutLinearPlanner(EnvironmentBasePtr penv) : PlannerBase(penv)
+    ShortcutLinearPlanner(EnvironmentBasePtr penv, std::istream& sinput) : PlannerBase(penv)
     {
         __description = ":Interface Author: Rosen Diankov\n\npath optimizer using linear shortcuts.";
     }
@@ -28,30 +28,34 @@ public:
     virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr params)
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
-        _parameters.reset(new PlannerParameters());
+        _parameters.reset(new TrajectoryTimingParameters());
         _parameters->copy(params);
-        if( _parameters->_nMaxIterations <= 0 ) {
-            _parameters->_nMaxIterations = 100;
-        }
-        if( _parameters->_fStepLength <= 0 ) {
-            _parameters->_fStepLength = 0.04;
-        }
-        _robot = pbase;
-        return true;
+        return _InitPlan();
     }
 
     virtual bool InitPlan(RobotBasePtr pbase, std::istream& isParameters)
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
-        _parameters.reset(new PlannerParameters());
+        _parameters.reset(new TrajectoryTimingParameters());
         isParameters >> *_parameters;
+        return _InitPlan();
+    }
+
+    bool _InitPlan()
+    {
         if( _parameters->_nMaxIterations <= 0 ) {
             _parameters->_nMaxIterations = 100;
         }
         if( _parameters->_fStepLength <= 0 ) {
             _parameters->_fStepLength = 0.04;
         }
-        _robot = pbase;
+        _trajectoryretimer = RaveCreatePlanner(GetEnv(),"trajectoryretimer");
+        if( !!_trajectoryretimer ) {
+            if( !_trajectoryretimer->InitPlan(RobotBasePtr(),_parameters) ) {
+                RAVELOG_WARN("trajectoryretimer failed to init\n");
+                _trajectoryretimer.reset();
+            }
+        }
         return true;
     }
 
@@ -59,10 +63,11 @@ public:
         return _parameters;
     }
 
-    virtual bool PlanPath(TrajectoryBasePtr ptraj, boost::shared_ptr<std::ostream> pOutStream)
+    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
     {
-        if( !_parameters || !ptraj ||( ptraj->GetPoints().size() < 2) ) {
-            return false;
+        BOOST_ASSERT(!!_parameters && !!ptraj );
+        if( ptraj->GetPoints().size() < 2 ) {
+            return PS_Failed;
         }
         uint32_t basetime = GetMilliTime();
         PlannerParametersConstPtr parameters = GetParameters();
@@ -111,78 +116,61 @@ public:
             }
         }
 
-        ptraj->Clear();
+        ptraj->Init(_parameters->_configurationspecification);
         FOREACH(it, path) {
-            ptraj->AddPoint(Trajectory::TPOINT(*it,0));
+            ptraj->Insert(ptraj->GetNumWaypoints(),*it);
         }
         RAVELOG_DEBUG(str(boost::format("path optimizing - time=%fs\n")%(0.001f*(float)(GetMilliTime()-basetime))));
-        return true;
+        if( !!_trajectoryretimer ) {
+            return _trajectoryretimer->PlanPath(ptraj);
+        }
+        return PS_HasSolution;
     }
 
 protected:
     void _SubsampleTrajectory(TrajectoryBasePtr ptraj, list< vector<dReal> >& listpoints) const
     {
         PlannerParametersConstPtr parameters = _parameters;
-        // subsample trajectory and add to list (have to do this since trajectory waypoints may not be linear)
-        if( ptraj->GetTotalDuration() > 0 ) {
-            listpoints.push_back(ptraj->GetPoints().at(0).q);
-            TrajectoryBase::TPOINT tp;
-            float fsampledelta = 0.01f;
-            BOOST_ASSERT((int)parameters->_vConfigResolution.size()==parameters->GetDOF());
-            for(float fsampletime = fsampledelta; fsampletime < ptraj->GetTotalDuration(); fsampletime += fsampledelta ) {
-                ptraj->SampleTrajectory(fsampletime,tp);
-                // check whether to add
-                for(size_t i = 0; i < tp.q.size(); ++i) {
-                    if( RaveFabs(tp.q[i]-listpoints.back()[i]) > parameters->_vConfigResolution[i] ) {
-                        listpoints.push_back(tp.q);
-                        break;
-                    }
+        vector<dReal> q0(parameters->GetDOF()), dq(parameters->GetDOF());
+        vector<dReal> vtrajdata;
+        ptraj->GetWaypoints(0,ptraj->GetNumWaypoints(),_parameters->_configurationspecification,vtrajdata);
+        for(size_t ipoint = 1; ipoint < ptraj->GetNumWaypoints(); ++ipoint) {
+            std::copy(vtrajdata.begin()+(ipoint-1)*_parameters->GetDOF(),vtrajdata.begin()+(ipoint)*_parameters->GetDOF(),dq.begin());
+            std::copy(vtrajdata.begin()+(ipoint)*_parameters->GetDOF(),vtrajdata.begin()+(ipoint+1)*_parameters->GetDOF(),q0.begin());
+            parameters->_diffstatefn(dq,q0);
+            int i, numSteps = 1;
+            vector<dReal>::const_iterator itres = parameters->_vConfigResolution.begin();
+            for (i = 0; i < parameters->GetDOF(); i++,itres++) {
+                int steps;
+                if( *itres != 0 ) {
+                    steps = (int)(fabs(dq[i]) / *itres);
+                }
+                else {
+                    steps = (int)(fabs(dq[i]) * 100);
+                }
+                if (steps > numSteps) {
+                    numSteps = steps;
+                }
+            }
+            dReal fisteps = dReal(1.0f)/numSteps;
+            FOREACH(it,dq) {
+                *it *= fisteps;
+            }
+            for (int f = 0; f < numSteps; f++) {
+                listpoints.push_back(q0);
+                if( !parameters->_neighstatefn(q0,dq,0) ) {
+                    RAVELOG_DEBUG("neighstatefn failed, perhaps non-linear constraints are used?\n");
+                    break;
                 }
             }
         }
-        else {
-            vector<dReal> q(parameters->GetDOF()), dq(parameters->GetDOF());
-            for(size_t ipoint = 1; ipoint < ptraj->GetPoints().size(); ++ipoint) {
-                vector<dReal>& q0 = ptraj->GetPoints()[ipoint-1].q;
-                vector<dReal>& q1 = ptraj->GetPoints()[ipoint].q;
 
-                dq = q1;
-                parameters->_diffstatefn(dq,q0);
-                int i, numSteps = 1;
-                vector<dReal>::const_iterator itres = parameters->_vConfigResolution.begin();
-                for (i = 0; i < parameters->GetDOF(); i++,itres++) {
-                    int steps;
-                    if( *itres != 0 ) {
-                        steps = (int)(fabs(dq[i]) / *itres);
-                    }
-                    else {
-                        steps = (int)(fabs(dq[i]) * 100);
-                    }
-                    if (steps > numSteps) {
-                        numSteps = steps;
-                    }
-                }
-                dReal fisteps = dReal(1.0f)/numSteps;
-                FOREACH(it,dq) {
-                    *it *= fisteps;
-                }
-                for (i = 0; i < parameters->GetDOF(); i++) {
-                    q[i] = q0[i];
-                }
-                for (int f = 0; f < numSteps; f++) {
-                    listpoints.push_back(q);
-                    if( !parameters->_neighstatefn(q,dq,0) ) {
-                        RAVELOG_DEBUG("neighstatefn failed, perhaps non-linear constraints are used?\n");
-                        break;
-                    }
-                }
-            }
-            listpoints.push_back(ptraj->GetPoints().back().q);
-        }
+        std::copy(vtrajdata.end()-_parameters->GetDOF(),vtrajdata.end(),q0.begin());
+        listpoints.push_back(q0);
     }
 
-    RobotBasePtr _robot;
-    PlannerParametersPtr _parameters;
+    TrajectoryTimingParametersPtr _parameters;
+    PlannerBasePtr _trajectoryretimer;
 };
 
 //    virtual void _OptimizePathSingle(list<Node*>& path, int numiterations)
@@ -266,4 +254,6 @@ protected:
 //        }
 //    }
 
-#endif
+PlannerBasePtr CreateShortcutLinearPlanner(EnvironmentBasePtr penv, std::istream& sinput) {
+    return PlannerBasePtr(new ShortcutLinearPlanner(penv, sinput));
+}

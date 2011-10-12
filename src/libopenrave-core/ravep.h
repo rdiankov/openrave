@@ -13,11 +13,10 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-/*! --------------------------------------------------------------------
+/**
    \file   ravep.h
-   \brief  Defines the private headers that every source file used to
-   build openrave must include (used in place of rave.h). Precompiled header.
-   -------------------------------------------------------------------- */
+   \brief  Defines the private headers that every source file used to build openrave must include (used in place of rave.h).
+ */
 
 #ifndef RAVE_RAVEP_H
 #define RAVE_RAVEP_H
@@ -184,6 +183,9 @@ namespace OpenRAVE
 OPENRAVE_API std::string GetMD5HashString(const std::string& s);
 OPENRAVE_API std::string GetMD5HashString(const std::vector<uint8_t>& v);
 OPENRAVE_API std::string& SearchAndReplace(std::string& out, const std::string& in, const std::vector< std::pair<std::string, std::string> >& pairs);
+
+RobotBasePtr CreateGenericRobot(EnvironmentBasePtr penv, std::istream& sinput);
+TrajectoryBasePtr CreateGenericTrajectory(EnvironmentBasePtr penv, std::istream& sinput);
 }
 
 using namespace OpenRAVE;

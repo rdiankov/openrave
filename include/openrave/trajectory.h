@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2010 Rosen Diankov (rosen.diankov@gmail.com)
+// Copyright (C) 2006-2011 Rosen Diankov (rosen.diankov@gmail.com)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -15,279 +15,240 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /** \file trajectory.h
-    \brief  Define a time-parameterized trajectory of robot configurations.
+    \brief  Definition of \ref OpenRAVE::TrajectoryBase
  */
 
-#ifndef TRAJECTORY_H
-#define TRAJECTORY_H
+#ifndef OPENRAVE_TRAJECTORY_H
+#define OPENRAVE_TRAJECTORY_H
 
 namespace OpenRAVE {
 
-/** \brief <b>[interface]</b> Encapsulate a time-parameterized trajectories of robot configurations. <b>If not specified, method is not multi-thread safe.</b> See \ref arch_trajectory.
+/** \brief <b>[interface]</b> Encapsulate a time-parameterized trajectories of robot configurations. <b>If not specified, method is not multi-thread safe.</b> \arch_trajectory
     \ingroup interfaces
  */
 class OPENRAVE_API TrajectoryBase : public InterfaceBase
 {
 public:
-    /// \brief trajectory interpolation and sampling methods
-    enum InterpEnum {
-        NONE=0,     ///< unspecified timing info
-        LINEAR=1,     ///< linear interpolation
-        LINEAR_BLEND=2,     ///< linear with quadratic blends
-        CUBIC=3,     ///< cubic spline interpolation
-        QUINTIC=4,     ///< quintic min-jerk interpolation
-        NUM_METHODS=5,     ///< number of interpolation methods
-    };
-
-    /// \brief options for serializing trajectories
-    enum TrajectoryOptions {
-        TO_OneLine = 1,     ///< if set, will write everything without newlines, otherwise
-                            ///< will start a newline for the header and every trajectory point
-        TO_NoHeader = 2,     ///< do not write the header that specifies number of points, degrees of freedom, and other options
-        TO_IncludeTimestamps = 4,
-        TO_IncludeBaseTransformation = 8,
-        TO_IncludeVelocities = 0x10,     ///< include velocities. If TO_IncludeBaseTransformation is also set, include the base
-                                         ///< base link velocity in terms of linear and angular velocity
-        TO_IncludeTorques = 0x20,     ///< include torques
-        TO_InterpolationMask = 0x1c0,     ///< bits to store the interpolation information
-    };
-
-    /// Via point along the trajectory (joint configuration with a timestamp)
-    class TPOINT
-    {
-public:
-        TPOINT() : time(0), blend_radius(0) {
-        }
-        TPOINT(const std::vector<dReal>& newq, dReal newtime) : time(newtime), blend_radius(0) {
-            q = newq;
-        }
-        TPOINT(const std::vector<dReal>& newq, const Transform& newtrans, dReal newtime) : time(newtime), blend_radius(0) {
-            q = newq; trans = newtrans;
-        }
-
-        enum TPcomponent {  POS=0,           //!< joint angle position
-                            VEL,           //!< joint angle velocity
-                            ACC,           //!< joint angle acceleration
-                            NUM_COMPONENTS };
-
-        friend std::ostream& operator<<(std::ostream& O, const TPOINT& tp);
-        void Setq(std::vector<dReal>* values)
-        {
-            assert(values->size() == q.size());
-            for(int i = 0; i < (int)values->size(); i++)
-                q[i] = values->at(i);
-            // reset the blend_radius
-            blend_radius=0;
-
-        }
-
-        Transform trans;                    ///< transform of the first link
-        Vector linearvel;                   ///< instanteneous linear velocity
-        Vector angularvel;                  ///< instanteneous angular velocity
-        std::vector<dReal> q;               ///< joint configuration
-        std::vector<dReal> qdot;            ///< instantaneous joint velocities
-        std::vector<dReal> qtorque;         ///< feedforward torque [optional]
-        dReal time;                         ///< time stamp of trajectory point
-        dReal blend_radius;
-    };
-
-    class TSEGMENT
-    {
-public:
-        //! the different segment types
-        enum Type {  START=0,             //!< starting trajectory segment
-                     MIDDLE,        //!< middle trajectory segment
-                     END,           //!< ending trajectory segment
-                     NUM_TYPES };
-
-        void SetDimensions(int curve_degree, int num_dof) {
-            coeff.resize((curve_degree+1)*num_dof); _curvedegrees = curve_degree;
-        }
-
-        inline dReal Get(int deg, int dof) const {
-            return coeff[dof*(_curvedegrees+1)+deg];
-        }
-        dReal& Get(int deg, int dof) {
-            return coeff[dof*(_curvedegrees+1)+deg];
-        }
-
-        friend std::ostream& operator<<(std::ostream& O, const TSEGMENT& tp);
-
-        Vector linearvel;                   ///< instanteneous linear velocity
-        Vector angularvel;                  ///< instanteneous angular velocity
-
-private:
-        dReal _fduration;
-        int _curvedegrees;
-        std::vector<dReal> coeff;               ///< num_degrees x num_dof coefficients of the segment
-
-        friend class TrajectoryBase;
-    };
-
-    TrajectoryBase(EnvironmentBasePtr penv, int nDOF);
+    TrajectoryBase(EnvironmentBasePtr penv);
     virtual ~TrajectoryBase() {
     }
 
-    /// return the static interface type this class points to (used for safe casting)
+    /// \brief return the static interface type this class points to (used for safe casting)
     static inline InterfaceType GetInterfaceTypeStatic() {
         return PT_Trajectory;
     }
 
-    /// clears all points and resets the dof of the trajectory
-    virtual void Reset(int nDOF);
+    virtual void Init(const ConfigurationSpecification& spec) = 0;
 
-    /// getting information about the trajectory
-    inline dReal GetTotalDuration() const {
-        return _vecpoints.size() > 0 ? _vecpoints.back().time : 0;
-    }
-    InterpEnum GetInterpMethod() const {
-        return _interpMethod;
-    }
-    const std::vector<TrajectoryBase::TPOINT>& GetPoints() const {
-        return _vecpoints;
-    }
-    std::vector<TrajectoryBase::TPOINT>& GetPoints() {
-        return _vecpoints;
-    }
-    const std::vector<TrajectoryBase::TSEGMENT>& GetSegments() const {
-        return _vecsegments;
-    }
+    /** \brief Sets/inserts new waypoints in the same configuration specification as the trajectory.
 
-    virtual void Clear();
-
-    /// add a point to the trajectory
-    virtual void AddPoint(const TrajectoryBase::TPOINT& p) {
-        assert( _nDOF == (int)p.q.size()); _vecpoints.push_back(p);
-    }
-
-    /** \brief Preprocesses the trajectory for later sampling and set its interpolation method.
-
-        \param[in] robot [optional] robot to do the timing for
-        \param[in] interpolationMethod method to use for interpolation
-        \param bAutoCalcTiming If true, will retime the trajectory using maximum joint velocities and accelerations, otherwise it expects the time stamps of each point to be set.
-        \param[in] bActiveDOFs If true, then the trajectory is specified in the robot's active degrees of freedom
-        and the maximum velocities and accelerations will be extracted appropriately. Affine transformations
-        are ignored in the retiming if true. If false, then use the
-        robot's full joint configuration and affine transformation for max velocities.
-        \param[in] fMaxVelMult The percentage of the max velocity of each joint to use when retiming.
+        \param index The index where to start modifying the trajectory.
+        \param data The data to insert, can represent multiple consecutive waypoints. data.size()/GetConfigurationSpecification().GetDOF() waypoints are added.
+        \param bOverwrite If true, will overwrite the waypoints starting at index, and will insert new waypoints only if end of trajectory is reached. If false, will insert the points before index: a 0 index inserts the new data in the beginning, a GetNumWaypoints() index inserts the new data at the end.
      */
-    virtual bool CalcTrajTiming(RobotBaseConstPtr robot, InterpEnum interpolationMethod, bool bAutoCalcTiming, bool bActiveDOFs, dReal fMaxVelMult=1);
+    virtual void Insert(size_t index, const std::vector<dReal>& data, bool bOverwrite=false) = 0;
 
-    /// \deprecated (11/06/14) see planningutils::ValidateTrajectory
-    virtual bool IsValid() const RAVE_DEPRECATED;
+    /** \brief Sets/inserts new waypoints in a \b user-given configuration specification.
 
-    /// tests if a point violates any position, velocity or accel constraints
-    //virtual bool  IsValidPoint(const TPOINT& tp) const;
+        \param index The index where to start modifying the trajectory.
+        \param data The data to insert, can represent multiple consecutive waypoints. data.size()/GetConfigurationSpecification().GetDOF() waypoints are added.
+        \param spec the specification in which the input data come in. Depending on what data is offered, some values of this trajectory's specification might not be initialized.
+        \param bOverwrite If true, will overwrite the waypoints starting at index, and will insert new waypoints only if end of trajectory is reached. If false, will insert the points before index: a 0 index inserts the new data in the beginning, a GetNumWaypoints() index inserts the new data at the end.
+     */
+    virtual void Insert(size_t index, const std::vector<dReal>& data, const ConfigurationSpecification& spec, bool bOverwrite=false) = 0;
 
-    /// \brief Sample the trajectory at the given time using the current interpolation method.
-    virtual bool SampleTrajectory(dReal time, TrajectoryBase::TPOINT &sample) const;
+    /// \brief removes a number of waypoints starting at the specified index
+    virtual void Remove(size_t startindex, size_t endindex) = 0;
 
-    /// Write to a stream, see TrajectoryOptions for file format
-    /// \param sinput stream to read the data from
-    /// \param options a combination of enums in TrajectoryOptions
-    virtual bool Write(std::ostream& sinput, int options) const;
+    /** \brief samples a data point on the trajectory at a particular time
 
-    /// Reads the trajectory, expects the filename to have a header.
-    /// \param sout stream to output the trajectory data
-    /// \param robot The robot to attach the trajrectory to, if specified, will
-    ///              call CalcTrajTiming to get the correct trajectory velocities.
-    virtual bool Read(std::istream& sout, RobotBasePtr robot);
+        \param data[out] the sampled point
+        \param time[in] the time to sample
+     */
+    virtual void Sample(std::vector<dReal>& data, dReal time) const = 0;
 
-    virtual bool Read(const std::string& filename, RobotBasePtr robot) RAVE_DEPRECATED;
-    virtual bool Write(const std::string& filename, int options) const RAVE_DEPRECATED;
+    /** \brief samples a data point on the trajectory at a particular time and returns data for the group specified.
 
-    virtual int GetDOF() const {
-        return _nDOF;
+        The default implementation is slow, so interface developers should override it.
+        \param data[out] the sampled point
+        \param time[in] the time to sample
+        \param spec[in] the specification format to return the data in
+     */
+    virtual void Sample(std::vector<dReal>& data, dReal time, const ConfigurationSpecification& spec) const;
+
+    virtual const ConfigurationSpecification& GetConfigurationSpecification() const = 0;
+
+    /// \brief return the number of waypoints
+    virtual size_t GetNumWaypoints() const = 0;
+
+    /** \brief return a set of waypoints in the range [startindex,endindex)
+
+        \param startindex[in] the start index of the waypoint (included)
+        \param endindex[in] the end index of the waypoint (not included)
+        \param data[out] the data of the waypoint
+     */
+    virtual void GetWaypoints(size_t startindex, size_t endindex, std::vector<dReal>& data) const = 0;
+
+    /** \brief return a set of waypoints in the range [startindex,endindex) in a different configuration specification.
+
+        The default implementation is very slow, so trajectory developers should really override it.
+        \param startindex[in] the start index of the waypoint (included)
+        \param endindex[in] the end index of the waypoint (not included)
+        \param spec[in] the specification to return the data in
+        \param data[out] the data of the waypoint
+     */
+    virtual void GetWaypoints(size_t startindex, size_t endindex, const ConfigurationSpecification& spec, std::vector<dReal>& data) const;
+
+    /** \brief returns one waypoint
+
+        \param index[in] index of the waypoint. If < 0, then counting starts from the last waypoint. For example GetWaypoints(-1,data) returns the last waypoint.
+        \param data[out] the data of the waypoint
+     */
+    inline void GetWaypoint(int index, std::vector<dReal>& data) const
+    {
+        int numpoints = GetNumWaypoints();
+        BOOST_ASSERT(index >= -numpoints && index < numpoints);
+        if( index < 0 ) {
+            index += numpoints;
+        }
+        GetWaypoints(index,index+1,data);
     }
+
+    /** \brief returns one waypoint
+
+        \param index[in] index of the waypoint. If < 0, then counting starts from the last waypoint. For example GetWaypoints(-1,data) returns the last waypoint.
+        \param data[out] the data of the waypoint
+     */
+    inline void GetWaypoint(int index, const ConfigurationSpecification& spec, std::vector<dReal>& data) const
+    {
+        int numpoints = GetNumWaypoints();
+        BOOST_ASSERT(index >= -numpoints && index < numpoints);
+        if( index < 0 ) {
+            index += numpoints;
+        }
+        GetWaypoints(index,index+1,spec,data);
+    }
+
+    /// \brief return the duration of the trajectory in seconds
+    virtual dReal GetDuration() const = 0;
+
+    /// \brief output the trajectory in XML format
+    virtual void serialize(std::ostream& O, int options=0) const;
+
+    /// \brief initialize the trajectory
+    virtual void deserialize(std::istream& I);
 
     virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions);
 
-    virtual void SetAffineVelocity(const Vector& maxAffineTranslationVel, dReal maxAffineRotationQuatVel);
+    // Old Trajectory API
+
+    /// \deprecated (11/10/04), please use newer API!
+    class Point
+    {
+public:
+        Point() : time(0) {
+        }
+        Point(const std::vector<dReal>& newq, dReal newtime) : time(newtime) {
+            q = newq;
+        }
+        Point(const std::vector<dReal>& newq, const Transform& newtrans, dReal newtime) : time(newtime) {
+            q=newq;
+            trans=newtrans;
+        }
+        dReal time;
+        std::vector<dReal> q, qdot;
+        Transform trans;
+    };
+
+    /// \deprecated (11/10/04)
+    typedef Point TPOINT RAVE_DEPRECATED;
+
+    /// \deprecated (11/10/04)
+    virtual bool SampleTrajectory(dReal time, Point& tp) const RAVE_DEPRECATED;
+
+    /// \deprecated (11/10/04)
+    virtual const std::vector<Point>& GetPoints() const RAVE_DEPRECATED;
+
+    /// \deprecated (11/10/04)
+    inline int GetDOF() const RAVE_DEPRECATED {
+        return GetConfigurationSpecification().GetDOF();
+    }
+
+    /// \deprecated (11/10/04)
+    virtual dReal GetTotalDuration() const RAVE_DEPRECATED
+    {
+        return GetDuration();
+    }
+
+    /// \deprecated (11/10/04)
+    virtual bool Write(std::ostream& O, int options) const RAVE_DEPRECATED {
+        serialize(O,options);
+        return true;
+    }
+
+    /// \deprecated (11/10/04)
+    virtual bool Read(std::istream& I, RobotBaseConstPtr) RAVE_DEPRECATED {
+        deserialize(I);
+        return true;
+    }
+
+    /// \deprecated (11/10/04)
+    virtual int GetInterpMethod() const RAVE_DEPRECATED {
+        return 0;
+    }
+
+    /// \deprecated (11/10/04)
+    virtual bool CalcTrajTiming(RobotBasePtr probot, int interp,  bool autocalc, bool activedof, dReal fmaxvelmult=1) RAVE_DEPRECATED;
+
+    /// \deprecated (11/10/04)
+    virtual void Clear() RAVE_DEPRECATED
+    {
+        Remove(0,GetNumWaypoints());
+    }
+
+    /// \deprecated (11/10/04)
+    virtual void AddPoint(const Point& p) RAVE_DEPRECATED;
+
+    /// \deprecated (11/10/04)
+    virtual void Reset(int dof) RAVE_DEPRECATED
+    {
+        Remove(0,GetNumWaypoints());
+    }
+
+    /// \deprecated (11/10/04)
+    static const int TO_OneLine RAVE_DEPRECATED = 1;
+    static const int TO_NoHeader RAVE_DEPRECATED = 2;
+    static const int TO_IncludeTimestamps RAVE_DEPRECATED = 4;
+    static const int TO_IncludeBaseTransformation RAVE_DEPRECATED = 8;
+    static const int TO_IncludeVelocities RAVE_DEPRECATED = 0x10;
+    static const int TO_IncludeTorques RAVE_DEPRECATED = 0x20;
+    static const int TO_InterpolationMask RAVE_DEPRECATED = 0x1c0;
+    static const int NONE RAVE_DEPRECATED = 0;
+    static const int LINEAR RAVE_DEPRECATED = 1;
+    static const int LINEAR_BLEND RAVE_DEPRECATED = 2;
+    static const int CUBIC RAVE_DEPRECATED = 3;
+    static const int QUINTIC RAVE_DEPRECATED = 4;
+    static const int NUM_METHODS RAVE_DEPRECATED = 5;
+
+protected:
+    inline TrajectoryBasePtr shared_trajectory() {
+        return boost::static_pointer_cast<TrajectoryBase>(shared_from_this());
+    }
+    inline TrajectoryBaseConstPtr shared_trajectory_const() const {
+        return boost::static_pointer_cast<TrajectoryBase const>(shared_from_this());
+    }
+
 private:
-
-    /// \brief Linear interpolation using the maximum joint velocities for timing.
-    virtual bool _SetLinear(bool bAutoCalcTiming, bool bActiveDOFs);
-
-    //// linear interpolation with parabolic blends
-    //virtual bool _SetLinearBlend(bool bAutoCalcTiming);
-
-    /// calculate the coefficients of a the parabolic and linear blends
-    ///  with continuous endpoint positions and velocities for via points.
-    //virtual void _CalculateLinearBlendCoefficients(TSEGMENT::Type segType,TSEGMENT& seg, TSEGMENT& prev,TPOINT& p0, TPOINT& p1,const dReal blendAccel[]);
-
-    /// cubic spline interpolation
-    virtual bool _SetCubic(bool bAutoCalcTiming, bool bActiveDOFs);
-
-    /// calculate the coefficients of a smooth cubic spline with
-    ///  continuous endpoint positions and velocities for via points.
-    virtual void _CalculateCubicCoefficients(TrajectoryBase::TSEGMENT&, const TrajectoryBase::TPOINT& tp0, const TrajectoryBase::TPOINT& tp1);
-
-    //bool _SetQuintic(bool bAutoCalcTiming, bool bActiveDOFs);
-
-    /// calculate the coefficients of a smooth quintic spline with
-    ///  continuous endpoint positions and velocities for via points
-    ///  using minimum jerk heuristics
-    //void _CalculateQuinticCoefficients(TSEGMENT&, TPOINT& tp0, TPOINT& tp1);
-
-    /// recalculate all via point velocities and accelerations
-    virtual void _RecalculateViaPointDerivatives();
-
-    /// computes minimum time interval for linear interpolation between
-    ///  path points that does not exceed the maximum joint velocities
-    virtual dReal _MinimumTimeLinear(const TrajectoryBase::TPOINT& p0, const TrajectoryBase::TPOINT& p1, bool bActiveDOFs);
-
-    /// computes minimum time interval for cubic interpolation between
-    ///  path points that does not exceed the maximum joint velocities
-    ///  or accelerations
-    virtual dReal _MinimumTimeCubic(const TrajectoryBase::TPOINT& p0, const TrajectoryBase::TPOINT& p1, bool bActiveDOFs);
-
-    /// computes minimum time interval for cubic interpolation between
-    ///  path points that does not exceed the maximum joint velocities
-    ///  or accelerations assuming zero velocities at endpoints
-    virtual dReal _MinimumTimeCubicZero(const TrajectoryBase::TPOINT& p0, const TrajectoryBase::TPOINT& p1, bool bActiveDOFs);
-
-    /// computes minimum time interval for quintic interpolation between
-    ///  path points that does not exceed the maximum joint velocities
-    ///  or accelerations
-    virtual dReal _MinimumTimeQuintic(const TrajectoryBase::TPOINT& p0, const TrajectoryBase::TPOINT& p1, bool bActiveDOFs);
-    virtual dReal _MinimumTimeTransform(const Transform& t0, const Transform& t1);
-
-    /// find the active trajectory interval covering the given time
-    ///  (returns the index of the start point of the interval)
-    virtual int _FindActiveInterval(dReal time) const;
-
-    /// \brief Sample the trajectory using linear interpolation.
-    virtual bool _SampleLinear(const TrajectoryBase::TPOINT& p0, const TrajectoryBase::TPOINT& p1, const TrajectoryBase::TSEGMENT& seg, dReal time, TrajectoryBase::TPOINT& sample) const;
-
-    /// \brief Sample using linear interpolation with parabolic blends.
-    virtual bool _SampleLinearBlend(const TrajectoryBase::TPOINT& p0, const TrajectoryBase::TPOINT& p1, const TrajectoryBase::TSEGMENT& seg, dReal time, TrajectoryBase::TPOINT& sample) const;
-
-    /// \brief Sample the trajectory using cubic interpolation.
-    virtual bool _SampleCubic(const TrajectoryBase::TPOINT& p0, const TrajectoryBase::TPOINT& p1, const TrajectoryBase::TSEGMENT& seg, dReal time, TrajectoryBase::TPOINT& sample) const;
-
-    /// \brief Sample the trajectory using quintic interpolation with minimum jerk.
-    virtual bool _SampleQuintic(const TrajectoryBase::TPOINT& p0, const TrajectoryBase::TPOINT& p1, const TrajectoryBase::TSEGMENT& seg, dReal time, TrajectoryBase::TPOINT& sample) const;
-
-    std::vector<TrajectoryBase::TPOINT> _vecpoints;
-    std::vector<TSEGMENT> _vecsegments;
-    std::vector<dReal> _lowerJointLimit, _upperJointLimit, _maxJointVel, _maxJointAccel;
-    Vector _maxAffineTranslationVel;
-    dReal _maxAffineRotationQuatVel;
-    int _nQuaternionIndex;     ///< the index of a quaternion rotation, if one exists (interpolation is different for quaternions)
-
-    /// computes the difference of two states necessary for correct interpolation when there are circular joints. Default is regular subtraction.
-    /// _diffstatefn(q1,q2) -> q1 -= q2
-    boost::function<void(std::vector<dReal>&,const std::vector<dReal>&)> _diffstatefn;
-
-    InterpEnum _interpMethod;
-    int _nDOF;
-
     virtual const char* GetHash() const {
         return OPENRAVE_TRAJECTORY_HASH;
     }
+
+    /// \deprecated (11/10/04), unfortunately necessary for back compat
+    mutable std::vector<Point> __vdeprecatedpoints;
 };
 
-typedef TrajectoryBase Trajectory;
+/// \deprecated (11/10/04)
+typedef TrajectoryBase Trajectory RAVE_DEPRECATED;
 
 } // end namespace OpenRAVE
 

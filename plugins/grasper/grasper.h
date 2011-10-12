@@ -274,8 +274,8 @@ public:
             return false;
         }
 
-        TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),_robot->GetActiveDOF());
-        if( !_planner->PlanPath(ptraj) ||( ptraj->GetPoints().size() == 0) ) {
+        TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),"");
+        if( !_planner->PlanPath(ptraj) || ptraj->GetNumWaypoints() == 0 ) {
             return false;
         }
 
@@ -288,9 +288,10 @@ public:
             pfulltraj->Write(f, 0);
         }
 
-        BOOST_ASSERT(ptraj->GetPoints().size()>0);
-        _robot->SetTransform(ptraj->GetPoints().back().trans);
-        _robot->SetActiveDOFValues(ptraj->GetPoints().back().q);
+        BOOST_ASSERT(ptraj->GetNumWaypoints()>0);
+        vector<dReal> vdata;
+        ptraj->GetWaypoints(ptraj->GetNumWaypoints()-1,ptraj->GetNumWaypoints(),vdata);
+        _robot->SetActiveDOFValues(vdata);
 
         vector< pair<CollisionReport::CONTACT,int> > contacts;
         if( bComputeStableContacts ) {
@@ -329,9 +330,11 @@ public:
         }
 
         if( bOutputFinal ) {
-            BOOST_ASSERT(pfulltraj->GetPoints().size()>0);
-            sout << pfulltraj->GetPoints().back().trans << " ";
-            FOREACHC(it,pfulltraj->GetPoints().back().q) {
+            BOOST_ASSERT(pfulltraj->GetNumWaypoints()>0);
+            vector<dReal> q;
+            pfulltraj->GetWaypoint(-1,_robot->GetConfigurationSpecification(),q);
+            q.resize(_robot->GetDOF());
+            FOREACHC(it,q) {
                 sout << *it << " ";
             }
         }
@@ -868,8 +871,7 @@ public:
             params->ftranslationstepmult = worker_params->ftranslationstepmult;
 
             CollisionReportPtr report(new CollisionReport());
-            TrajectoryBasePtr ptraj = RaveCreateTrajectory(pcloneenv,probot->GetActiveDOF());
-            //TrajectoryBasePtr pfulltraj = RaveCreateTrajectory(pcloneenv,probot->GetDOF());
+            TrajectoryBasePtr ptraj = RaveCreateTrajectory(pcloneenv,"");
             GraspParametersThreadPtr grasp_params;
 
             // calculate the contact normals
@@ -916,7 +918,7 @@ public:
                 probot->Enable(true);
 
                 params->fgraspingnoise = 0;
-                ptraj->Clear();
+                ptraj->Init(probot->GetActiveConfigurationSpecification());
 
                 // InitPlan/PlanPath
                 if( !planner->InitPlan(probot, params) ) {
@@ -928,7 +930,7 @@ public:
                     continue;
                 }
 
-                BOOST_ASSERT(ptraj->GetPoints().size() > 0);
+                BOOST_ASSERT(ptraj->GetNumWaypoints() > 0);
                 probot->SetTransform(ptraj->GetPoints().back().trans);
                 probot->SetActiveDOFValues(ptraj->GetPoints().back().q,true);
                 grasp_params->transfinal = probot->GetTransform();
@@ -1001,7 +1003,7 @@ public:
                         probot->SetActiveDOFValues(grasp_params->preshape);
                         probot->SetActiveDOFs(worker_params->vactiveindices,worker_params->affinedofs,worker_params->affineaxis);
                         params->vinitialconfig.resize(0);
-                        ptraj->Clear();
+                        ptraj->Init(probot->GetActiveConfigurationSpecification());
                         if( !planner->InitPlan(probot, params) ) {
                             RAVELOG_VERBOSE(str(boost::format("grasp %d: grasping noise planner failed")%grasp_params->id));
                             break;
@@ -1010,7 +1012,7 @@ public:
                             RAVELOG_VERBOSE(str(boost::format("grasp %d: grasping noise planner failed")%grasp_params->id));
                             break;
                         }
-                        BOOST_ASSERT(ptraj->GetPoints().size() > 0);
+                        BOOST_ASSERT(ptraj->GetNumWaypoints() > 0);
 
                         if ( worker_params->bCheckGraspIK ) {
                             CollisionOptionsStateSaver optionstate(pcloneenv->GetCollisionChecker(),coloptions,false); // remove contacts

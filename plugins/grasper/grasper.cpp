@@ -13,16 +13,17 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "plugindefs.h"
-#include "grasperplanner.h"
 #include "grasper.h"
 #include <openrave/plugin.h>
+
+PlannerBasePtr CreateGrasperPlanner(EnvironmentBasePtr penv, std::istream& sinput);
 
 InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
 {
     switch(type) {
     case PT_Planner:
         if( interfacename == "grasper" ) {
-            return InterfaceBasePtr(new GrasperPlanner(penv));
+            return CreateGrasperPlanner(penv,sinput);
         }
         break;
     case PT_Module:

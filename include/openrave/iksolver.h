@@ -174,7 +174,7 @@ private:
 
     std::list<UserDataWeakPtr> __listRegisteredFilters; ///< internally managed filters
 
-    friend class CustomFilterData;
+    friend class CustomIkSolverFilterData;
 };
 
 } // end namespace OpenRAVE

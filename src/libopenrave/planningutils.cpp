@@ -132,43 +132,57 @@ void VerifyTrajectory(PlannerBase::PlannerParametersConstPtr parameters, Traject
     BOOST_ASSERT((int)parameters->_vConfigLowerLimit.size() == parameters->GetDOF());
     BOOST_ASSERT((int)parameters->_vConfigUpperLimit.size() == parameters->GetDOF());
     BOOST_ASSERT((int)parameters->_vConfigResolution.size() == parameters->GetDOF());
+
+    if( parameters->_configurationspecification != trajectory->GetConfigurationSpecification() ) {
+        TrajectoryBasePtr newtraj = RaveCreateTrajectory(trajectory->GetEnv(),trajectory->GetXMLId());
+        newtraj->Init(parameters->_configurationspecification);
+        std::vector<dReal> vdata;
+        trajectory->GetWaypoints(0,trajectory->GetNumWaypoints(),vdata);
+        newtraj->Insert(0,vdata,trajectory->GetConfigurationSpecification());
+        trajectory = newtraj;
+    }
+
     PlannerBase::ConfigurationListPtr configs(new PlannerBase::ConfigurationList());
     dReal fthresh = 5e-5f;
     vector<dReal> deltaq(parameters->GetDOF(),0);
     if( samplingstep > 0 ) {
         RAVELOG_WARN("currently not using samplingstep\n");
     }
-    for(size_t ipoint = 0; ipoint < trajectory->GetPoints().size(); ++ipoint) {
-        const TrajectoryBase::TPOINT& tp = trajectory->GetPoints()[ipoint];
-        BOOST_ASSERT((int)tp.q.size() == parameters->GetDOF());
-        for(size_t i = 0; i < tp.q.size(); ++i) {
-            BOOST_ASSERT(tp.q[i] >= parameters->_vConfigLowerLimit[i]-fthresh);
-            BOOST_ASSERT(tp.q[i] <= parameters->_vConfigUpperLimit[i]+fthresh);
+    std::vector<dReal> vdata;
+    for(size_t ipoint = 0; ipoint < trajectory->GetNumWaypoints(); ++ipoint) {
+        trajectory->GetWaypoints(ipoint,ipoint+1,vdata);
+        BOOST_ASSERT((int)vdata.size()==parameters->GetDOF());
+        for(size_t i = 0; i < vdata.size(); ++i) {
+            BOOST_ASSERT(vdata[i] >= parameters->_vConfigLowerLimit[i]-fthresh);
+            BOOST_ASSERT(vdata[i] <= parameters->_vConfigUpperLimit[i]+fthresh);
         }
-        parameters->_setstatefn(tp.q);
+        parameters->_setstatefn(vdata);
         vector<dReal> newq;
         parameters->_getstatefn(newq);
-        BOOST_ASSERT(tp.q.size() == newq.size());
+        BOOST_ASSERT(vdata.size() == newq.size());
         for(size_t i = 0; i < newq.size(); ++i) {
-            if( RaveFabs(tp.q.at(i) - newq.at(i)) > 0.001 * parameters->_vConfigResolution[i] ) {
-                throw OPENRAVE_EXCEPTION_FORMAT("setstate/getstate inconsistent configuration %d dof %d: %f != %f",ipoint%i%tp.q.at(i)%newq.at(i),ORE_InconsistentConstraints);
+            if( RaveFabs(vdata.at(i) - newq.at(i)) > 0.001 * parameters->_vConfigResolution[i] ) {
+                throw OPENRAVE_EXCEPTION_FORMAT("setstate/getstate inconsistent configuration %d dof %d: %f != %f",ipoint%i%vdata.at(i)%newq.at(i),ORE_InconsistentConstraints);
             }
         }
         if( !!parameters->_neighstatefn ) {
             FOREACH(it,newq) {
                 *it = 0;
             }
-            newq = tp.q;
+            newq = vdata;
             if( !parameters->_neighstatefn(newq,deltaq,0) ) {
                 throw OPENRAVE_EXCEPTION_FORMAT("neighstatefn is rejecting configuration %d",ipoint,ORE_InconsistentConstraints);
             }
         }
     }
 
-    for(size_t i = 1; i < trajectory->GetPoints().size(); ++i) {
-        if( !!parameters->_checkpathconstraintsfn ) {
+    if( !!parameters->_checkpathconstraintsfn && trajectory->GetNumWaypoints() >= 2 ) {
+        std::vector<dReal> vprevdata;
+        trajectory->GetWaypoints(0,1,vprevdata);
+        for(size_t i = 1; i < trajectory->GetNumWaypoints(); ++i) {
             configs->clear();
-            if( !parameters->_checkpathconstraintsfn(trajectory->GetPoints()[i-1].q,trajectory->GetPoints()[i].q,IT_Closed, configs) ) {
+            trajectory->GetWaypoints(i,i+1,vdata);
+            if( !parameters->_checkpathconstraintsfn(vprevdata,vdata,IT_Closed, configs) ) {
                 throw OPENRAVE_EXCEPTION_FORMAT("checkpathconstraintsfn failed at %d-%d",(i-1)%i,ORE_InconsistentConstraints);
             }
             FOREACH(itconfig, *configs) {
@@ -176,6 +190,69 @@ void VerifyTrajectory(PlannerBase::PlannerParametersConstPtr parameters, Traject
                     throw OPENRAVE_EXCEPTION_FORMAT("neighstatefn is rejecting configurations from checkpathconstraintsfn %d-%d",(i-1)%i,ORE_InconsistentConstraints);
                 }
             }
+            vprevdata=vdata;
+        }
+    }
+}
+
+void RetimeActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr probot, bool hastimestamps, dReal fmaxvelmult, const std::string plannername)
+{
+    PlannerBasePtr planner = RaveCreatePlanner(traj->GetEnv(),"trajectoryretimer");
+    PlannerBase::PlannerParametersPtr params(new PlannerBase::PlannerParameters());
+    params->SetRobotActiveJoints(probot);
+    FOREACH(it,params->_vConfigVelocityLimit) {
+        *it *= fmaxvelmult;
+    }
+    string interpolation = "linear";
+    params->_sExtraParameters += str(boost::format("<interpolation>%s</interpolation><hastimestamps>%d</hastimestamps>")%interpolation%hastimestamps);
+    if( !planner->InitPlan(probot,params) ) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("failed to InitPlan",ORE_Failed);
+    }
+
+    if( params->GetDOF() != traj->GetConfigurationSpecification().GetDOF() ) {
+        // have to remove unnecessary DOFs in order for spaces to match
+        ConvertTrajectorySpecification(traj,probot->GetActiveConfigurationSpecification());
+    }
+    if( planner->PlanPath(traj) != PS_HasSolution ) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("failed to PlanPath",ORE_Failed);
+    }
+}
+
+void RetimeAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps, const std::string plannername)
+{
+    PlannerBasePtr planner = RaveCreatePlanner(traj->GetEnv(),"trajectoryretimer");
+    PlannerBase::PlannerParametersPtr params(new PlannerBase::PlannerParameters());
+    string interpolation = "linear";
+    params->_vConfigVelocityLimit = maxvelocities;
+    params->_vConfigAccelerationLimit = maxaccelerations;
+    params->_vConfigLowerLimit.resize(traj->GetConfigurationSpecification().GetDOF());
+    params->_vConfigUpperLimit.resize(traj->GetConfigurationSpecification().GetDOF());
+    for(size_t i = 0; i < params->_vConfigLowerLimit.size(); ++i) {
+        params->_vConfigLowerLimit[i] = -1e6;
+        params->_vConfigUpperLimit[i] = 1e6;
+    }
+    //params->_distmetricfn;
+    //params->_diffstatefn;
+    params->_sExtraParameters += str(boost::format("<interpolation>%s</interpolation><hastimestamps>%d</hastimestamps>")%interpolation%hastimestamps);
+    if( !planner->InitPlan(RobotBasePtr(),params) ) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("failed to InitPlan",ORE_Failed);
+    }
+    if( planner->PlanPath(traj) != PS_HasSolution ) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("failed to PlanPath",ORE_Failed);
+    }
+}
+
+void ConvertTrajectorySpecification(TrajectoryBasePtr traj, const ConfigurationSpecification& spec)
+{
+    if( traj->GetConfigurationSpecification() != spec ) {
+        size_t numpoints = traj->GetConfigurationSpecification().GetDOF() > 0 ? traj->GetNumWaypoints() : 0;
+        vector<dReal> data;
+        if( numpoints > 0 ) {
+            traj->GetWaypoints(0,numpoints,spec,data);
+        }
+        traj->Init(spec);
+        if( numpoints > 0 ) {
+            traj->Insert(0,data);
         }
     }
 }

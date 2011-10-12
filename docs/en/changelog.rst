@@ -25,6 +25,10 @@ Core
 
 * Now properly handling inter-grabbed-body collisions: if two grabbed bodies are initially colliding when grabbed, then their self-colision should be ignored. Also fixed a bug with :meth:`.Robot.Manipulator.CheckEndEffectorCollision`
 
+* Added a new class :class:`.ConfigurationSpecification` to manage configuration spaces, it is shared by both planners and trajectories.
+
+* Separated the affine DOF spece configuration from robot class into the global openrave space. See :class:`.DOFAffine`, :meth:`.RaveGetIndexFromAffineDOF`, :meth:`.RaveGetAffineDOFFromIndex`, :meth:`.RaveGetAffineDOF`, and :meth:`.RaveGetAffineDOFValuesFromTransform`
+
 Inverse Kinematics
 ------------------
 
@@ -35,6 +39,8 @@ Inverse Kinematics
 * ikfast IkSolvers only check collisions of links that can possible move due to new joint values.
 
 * Added new :class:`.IkFilterOptions.IgnoreEndEffectorCollision` option, this disables the end effector links and their attached bodies from environment collision considerations.
+
+* fixed ikfast bug when prismatic joints are present, ikfast version is now **47**.
 
 Grasping
 --------
@@ -47,6 +53,25 @@ Grasping
 
 * added **--numthreads** option to **openrave.py --database grasping** to allow users to set number of threads.
 
+Planning
+--------
+
+* Can register callback functions during planners to stop the planner via :meth:`.Planner.RegisterPlanCallback`. Planner developers should use :meth:`.Planner._CallCallbacks` to call the callbacks.
+
+* :meth:`.Planner.PlanPath` now returns a :ref:`.PlannerStatus` enum showing how planner exited. It does not support pOutStream anymore.
+
+* Added velocity and acceleration limits to :class:`.Planner.PlannerParameters`
+
+* Each planner needs to initialize the trajectory with :meth:`.Trajectory.Init` (GetParameters()->_configurationspecification);
+
+Trajectories
+------------
+
+* Completely redesigned the :class:`.Trajectory` class, see `Trajectory Concepts`_ for usage.
+* Added :meth:`.Trajectory.Clone`
+
+* Changed trajectory serialization format to XML, see :ref:`arch_trajectory_format`
+
 Python
 ------
 
@@ -57,7 +82,6 @@ Python
 Misc
 ----
 
-* added :meth:`.Trajectory.Clone` and :meth:`.Trajectory.CalcTrajTiming` calls now respect active DOFs settings
 
 * "skipgeometry" now being acknowledged in :meth:`.Environment.Load`, fixes the **openrave.py inversekinematics database --getfilename** option.
 

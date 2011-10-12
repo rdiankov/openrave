@@ -2268,7 +2268,7 @@ public:
     int GetAffineDOF() const {
         return _probot->GetAffineDOF();
     }
-    int GetAffineDOFIndex(RobotBase::DOFAffine dof) const {
+    int GetAffineDOFIndex(DOFAffine dof) const {
         return _probot->GetAffineDOFIndex(dof);
     }
 
@@ -3328,69 +3328,6 @@ public:
         }
     }
 
-    bool LoadPlugin(const string& name) {
-        RAVELOG_WARN("Environment.LoadPlugin deprecated, use RaveLoadPlugin\n");  return RaveLoadPlugin(name.c_str());
-    }
-    void ReloadPlugins() {
-        RAVELOG_WARN("Environment.ReloadPlugins deprecated, use RaveReloadPlugins\n"); return RaveReloadPlugins();
-    }
-
-    PyInterfaceBasePtr CreateInterface(InterfaceType type, const string& name)
-    {
-        RAVELOG_WARN("Environment.CreateInterface deprecated, use RaveCreateInterface\n");
-        return openravepy::RaveCreateInterface(shared_from_this(),type,name);
-    }
-    PyRobotBasePtr CreateRobot(const string& name)
-    {
-        RAVELOG_WARN("Environment.CreateRobot deprecated, use RaveCreateRobot\n");
-        return openravepy::RaveCreateRobot(shared_from_this(),name);
-    }
-    PyPlannerBasePtr CreatePlanner(const string& name)
-    {
-        RAVELOG_WARN("Environment.CreatePlanner deprecated, use RaveCreatePlanner\n");
-        return openravepy::RaveCreatePlanner(shared_from_this(),name);
-    }
-    PySensorSystemBasePtr CreateSensorSystem(const string& name)
-    {
-        RAVELOG_WARN("Environment.CreateSensorSystem deprecated, use RaveCreateSensorSystem\n");
-        return openravepy::RaveCreateSensorSystem(shared_from_this(),name);
-    }
-    PyControllerBasePtr CreateController(const string& name)
-    {
-        RAVELOG_WARN("Environment.CreateController deprecated, use RaveCreateController\n");
-        return openravepy::RaveCreateController(shared_from_this(),name);
-    }
-    PyModuleBasePtr CreateProblem(const string& name)
-    {
-        RAVELOG_WARN("Environment.CreateProblem deprecated, use RaveCreateProblem\n");
-        return openravepy::RaveCreateModule(shared_from_this(),name);
-    }
-    PyIkSolverBasePtr CreateIkSolver(const string& name)
-    {
-        RAVELOG_WARN("Environment.CreateIkSolver deprecated, use RaveCreateIkSolver\n");
-        return openravepy::RaveCreateIkSolver(shared_from_this(),name);
-    }
-    PyPhysicsEngineBasePtr CreatePhysicsEngine(const string& name)
-    {
-        RAVELOG_WARN("Environment.CreatePhysicsEngine deprecated, use RaveCreatePhysicsEngine\n");
-        return openravepy::RaveCreatePhysicsEngine(shared_from_this(),name);
-    }
-    PySensorBasePtr CreateSensor(const string& name)
-    {
-        RAVELOG_WARN("Environment.CreateSensor deprecated, use RaveCreateSensor\n");
-        return openravepy::RaveCreateSensor(shared_from_this(),name);
-    }
-    PyCollisionCheckerBasePtr CreateCollisionChecker(const string& name)
-    {
-        RAVELOG_WARN("Environment.CreateCollisionChecker deprecated, use RaveCreateCollisionChecker\n");
-        return openravepy::RaveCreateCollisionChecker(shared_from_this(),name);
-    }
-    PyViewerBasePtr CreateViewer(const string& name)
-    {
-        RAVELOG_WARN("Environment.CreateViewer deprecated, use RaveCreateViewer\n");
-        return openravepy::RaveCreateViewer(shared_from_this(),name);
-    }
-
     PyEnvironmentBasePtr CloneSelf(int options)
     {
         //RAVELOG_WARN("cloning environment without permission!\n");
@@ -3829,15 +3766,6 @@ public:
     {
         KinBodyPtr pbody = _penv->GetBodyFromEnvironmentId(id);
         return !pbody ? PyKinBodyPtr() : PyKinBodyPtr(new PyKinBody(pbody,shared_from_this()));
-    }
-
-    PyKinBodyPtr CreateKinBody()
-    {
-        return PyKinBodyPtr(new PyKinBody(RaveCreateKinBody(_penv),shared_from_this()));
-    }
-
-    PyTrajectoryBasePtr CreateTrajectory(int nDOF) {
-        return PyTrajectoryBasePtr(new PyTrajectoryBase(RaveCreateTrajectory(_penv,nDOF),shared_from_this()));
     }
 
     int AddModule(PyModuleBasePtr prob, const string& args) {
@@ -4591,6 +4519,16 @@ BOOST_PYTHON_MODULE(openravepy_int)
     .def("__str__",&PyCollisionReport::__str__)
     ;
 
+    object dofaffine = enum_<DOFAffine>("DOFAffine" DOXY_ENUM(DOFAffine))
+                       .value("NoTransform",DOF_NoTransform)
+                       .value("X",DOF_X)
+                       .value("Y",DOF_Y)
+                       .value("Z",DOF_Z)
+                       .value("RotationAxis",DOF_RotationAxis)
+                       .value("Rotation3D",DOF_Rotation3D)
+                       .value("RotationQuat",DOF_RotationQuat)
+    ;
+
     {
         void (PyInterfaceBase::*setuserdata1)(PyUserData) = &PyInterfaceBase::SetUserData;
         void (PyInterfaceBase::*setuserdata2)(object) = &PyInterfaceBase::SetUserData;
@@ -5009,6 +4947,7 @@ The **releasegil** parameter controls whether the python Global Interpreter Lock
                       .def("__repr__", &PyRobotBase::__repr__)
                       .def("__str__", &PyRobotBase::__str__)
         ;
+        robot.attr("DOFAffine") = dofaffine; // deprecated (11/10/04)
 
         object (PyRobotBase::PyManipulator::*pmanipik)(object, int) const = &PyRobotBase::PyManipulator::FindIKSolution;
         object (PyRobotBase::PyManipulator::*pmanipikf)(object, object, int) const = &PyRobotBase::PyManipulator::FindIKSolution;
@@ -5087,16 +5026,6 @@ The **releasegil** parameter controls whether the python Global Interpreter Lock
         .def_readwrite("linkrobot",&PyRobotBase::PyGrabbed::linkrobot)
         .def_readwrite("validColLinks",&PyRobotBase::PyGrabbed::validColLinks)
         .def_readwrite("troot",&PyRobotBase::PyGrabbed::troot)
-        ;
-
-        enum_<RobotBase::DOFAffine>("DOFAffine" DOXY_ENUM(DOFAffine))
-        .value("NoTransform",RobotBase::DOF_NoTransform)
-        .value("X",RobotBase::DOF_X)
-        .value("Y",RobotBase::DOF_Y)
-        .value("Z",RobotBase::DOF_Z)
-        .value("RotationAxis",RobotBase::DOF_RotationAxis)
-        .value("Rotation3D",RobotBase::DOF_Rotation3D)
-        .value("RotationQuat",RobotBase::DOF_RotationQuat)
         ;
     }
 
@@ -5396,20 +5325,6 @@ The **releasegil** parameter controls whether the python Global Interpreter Lock
                     .def(init<>())
                     .def("Reset",&PyEnvironmentBase::Reset, DOXY_FN(EnvironmentBase,Reset))
                     .def("Destroy",&PyEnvironmentBase::Destroy, DOXY_FN(EnvironmentBase,Destroy))
-                    .def("LoadPlugin",&PyEnvironmentBase::LoadPlugin,args("filename"), DOXY_FN(EnvironmentBase,LoadPlugin))
-                    .def("ReloadPlugins",&PyEnvironmentBase::ReloadPlugins, DOXY_FN(EnvironmentBase,ReloadPlugins))
-                    .def("CreateInterface", &PyEnvironmentBase::CreateInterface,args("type","name"), DOXY_FN(EnvironmentBase,ReloadPlugins))
-                    .def("CreateRobot", &PyEnvironmentBase::CreateRobot,args("name"), DOXY_FN(EnvironmentBase,CreateRobot))
-                    .def("CreatePlanner", &PyEnvironmentBase::CreatePlanner,args("name"), DOXY_FN(EnvironmentBase,CreatePlanner))
-                    .def("CreateSensorSystem", &PyEnvironmentBase::CreateSensorSystem,args("name"), DOXY_FN(EnvironmentBase,CreateSensorSystem))
-                    .def("CreateController", &PyEnvironmentBase::CreateController,args("name"), DOXY_FN(EnvironmentBase,CreateController))
-                    .def("CreateProblem", &PyEnvironmentBase::CreateProblem,args("name"), DOXY_FN(EnvironmentBase,CreateProblem))
-                    .def("CreateIkSolver", &PyEnvironmentBase::CreateIkSolver,args("name"), DOXY_FN(EnvironmentBase,CreateIkSolver))
-                    .def("CreatePhysicsEngine", &PyEnvironmentBase::CreatePhysicsEngine,args("name"), DOXY_FN(EnvironmentBase,CreateIkSolver))
-                    .def("CreateSensor", &PyEnvironmentBase::CreateSensor,args("name"), DOXY_FN(EnvironmentBase,CreateIkSolver))
-                    .def("CreateCollisionChecker", &PyEnvironmentBase::CreateCollisionChecker,args("name"), DOXY_FN(EnvironmentBase,CreateIkSolver))
-                    .def("CreateViewer", &PyEnvironmentBase::CreateViewer,args("name"), DOXY_FN(EnvironmentBase,CreateViewer))
-
                     .def("CloneSelf",&PyEnvironmentBase::CloneSelf,args("options"), DOXY_FN(EnvironmentBase,CloneSelf))
                     .def("SetCollisionChecker",&PyEnvironmentBase::SetCollisionChecker,args("collisionchecker"), DOXY_FN(EnvironmentBase,SetCollisionChecker))
                     .def("GetCollisionChecker",&PyEnvironmentBase::GetCollisionChecker, DOXY_FN(EnvironmentBase,GetCollisionChecker))
@@ -5478,8 +5393,6 @@ The **releasegil** parameter controls whether the python Global Interpreter Lock
                     .def("GetRobot",&PyEnvironmentBase::GetRobot,args("name"), DOXY_FN(EnvironmentBase,GetRobot))
                     .def("GetSensor",&PyEnvironmentBase::GetSensor,args("name"), DOXY_FN(EnvironmentBase,GetSensor))
                     .def("GetBodyFromEnvironmentId",&PyEnvironmentBase::GetBodyFromEnvironmentId, DOXY_FN(EnvironmentBase,GetBodyFromEnvironmentId))
-                    .def("CreateKinBody",&PyEnvironmentBase::CreateKinBody, DOXY_FN(EnvironmentBase,CreateKinBody))
-                    .def("CreateTrajectory",&PyEnvironmentBase::CreateTrajectory,args("dof"), DOXY_FN(EnvironmentBase,CreateTrajectory))
                     .def("AddModule",&PyEnvironmentBase::AddModule,args("module","args"), DOXY_FN(EnvironmentBase,AddModule))
                     .def("LoadProblem",&PyEnvironmentBase::AddModule,args("module","args"), DOXY_FN(EnvironmentBase,AddModule))
                     .def("RemoveProblem",&PyEnvironmentBase::RemoveProblem,args("prob"), DOXY_FN(EnvironmentBase,RemoveProblem))
