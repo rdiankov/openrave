@@ -43,13 +43,6 @@ public:
         if( !_CheckParameters() ) {
             return false;
         }
-//        if( _parameters->useshortcutlinear ) {
-//            _shortcut_linear = RaveCreatePlanner(GetEnv(),"shortcut_linear");
-//            if( !!_shortcut_linear ) {
-//                _shortcut_linear->InitPlan(pbase,params);
-//            }
-//        }
-
         _puniformsampler = RaveCreateSpaceSampler(GetEnv(),"mt19937");
         return true;
     }
@@ -87,10 +80,6 @@ public:
         if( ptraj->GetNumWaypoints() < 2 ) {
             return PS_Failed;
         }
-
-//        if( !!_shortcut_linear ) {
-//            _shortcut_linear->PlanPath(ptraj);
-//        }
 
         uint32_t basetime = GetMilliTime();
         TrajectoryTimingParametersConstPtr parameters = boost::dynamic_pointer_cast<TrajectoryTimingParameters const>(GetParameters());
@@ -193,7 +182,6 @@ public:
 protected:
     RobotBasePtr _robot;
     TrajectoryTimingParametersPtr _parameters;
-    //PlannerBasePtr _shortcut_linear;
     SpaceSamplerBasePtr _puniformsampler;
 };
 

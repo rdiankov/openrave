@@ -203,7 +203,7 @@ void RetimeActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr probot, bool
     FOREACH(it,params->_vConfigVelocityLimit) {
         *it *= fmaxvelmult;
     }
-    string interpolation = "quadratic";
+    string interpolation = "linear";
     params->_sExtraParameters += str(boost::format("<interpolation>%s</interpolation><hastimestamps>%d</hastimestamps>")%interpolation%hastimestamps);
     if( !planner->InitPlan(probot,params) ) {
         throw OPENRAVE_EXCEPTION_FORMAT0("failed to InitPlan",ORE_Failed);

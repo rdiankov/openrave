@@ -303,9 +303,10 @@ protected:
                         RaveGetAffineDOFValuesFromTransform(vdefaultvalues.begin(),Transform(),affinedofs);
                     }
                 }
-                for(size_t ielement = 0; ielement < numelements; ++ielement, ittargetdata += _spec.GetDOF()) {
+                int offset = _spec._vgroups[igroup].offset;
+                for(size_t ielement = 0; ielement < numelements; ++ielement, offset += _spec.GetDOF()) {
                     for(int j = 0; j < _spec._vgroups[igroup].dof; ++j) {
-                        *(ittargetdata+_spec._vgroups[igroup].offset+j) = vdefaultvalues[j];
+                        *(ittargetdata+offset+j) = vdefaultvalues[j];
                     }
                 }
             }

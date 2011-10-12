@@ -49,7 +49,7 @@ public:
         if( _parameters->_fStepLength <= 0 ) {
             _parameters->_fStepLength = 0.04;
         }
-        _trajectoryretimer = RaveCreatePlanner(GetEnv(),"trajectoryretimer");
+        _trajectoryretimer = RaveCreatePlanner(GetEnv(),"lineartrajectoryretimer");
         if( !!_trajectoryretimer ) {
             if( !_trajectoryretimer->InitPlan(RobotBasePtr(),_parameters) ) {
                 RAVELOG_WARN("trajectoryretimer failed to init\n");
