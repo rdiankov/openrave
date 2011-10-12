@@ -314,23 +314,11 @@ protected:
             }
             // have to set anyway since calling script will query ControllerBase::IsDone
             else if( !!robot->GetController() ) {
-                vector<dReal> data, robotvalues;
-                pActiveTraj->GetWaypoints(0,1,data);
-                ConfigurationSpecification spec;
-                spec._vgroups.resize(1);
-                spec._vgroups[0].offset = 0;
-                spec._vgroups[0].dof = robot->GetDOF();
-                stringstream ss; ss << "joint_values " << robot->GetName();
-                for(int i = 0; i < robot->GetDOF(); ++i) {
-                    ss << " " << i;
-                }
-                spec._vgroups[0].name = ss.str();
+                vector<dReal> robotvalues;
+                pActiveTraj->GetWaypoint(0,robot->GetConfigurationSpecification(),robotvalues);
                 robotvalues.resize(robot->GetDOF());
-                ConfigurationSpecification::ConvertData(robotvalues.begin(),spec,data.begin(),pActiveTraj->GetConfigurationSpecification(),1,robot->GetEnv());
-                if( !!robot->GetController() ) {
-                    if( robot->GetController()->SetDesired(robotvalues)) {
-                        bExecuted = true;
-                    }
+                if( robot->GetController()->SetDesired(robotvalues)) {
+                    bExecuted = true;
                 }
             }
         }
@@ -561,28 +549,6 @@ public:
 
     dReal _thresh;
 };
-
-#ifndef MATH_RANDOM_FLOAT
-#define MATH_RANDOM_FLOAT (rand()/((T)RAND_MAX))
-#endif
-
-/// \brief Generate a uniformly distributed random quaternion.
-template <typename T> inline RaveVector<T> GetRandomQuat()
-{
-    RaveVector<T> q;
-    while(1) {
-        q.x = -1 + 2*(T)(MATH_RANDOM_FLOAT);
-        q.y = -1 + 2*(T)(MATH_RANDOM_FLOAT);
-        q.z = -1 + 2*(T)(MATH_RANDOM_FLOAT);
-        q.w = -1 + 2*(T)(MATH_RANDOM_FLOAT);
-        T norm = q.lengthsqr4();
-        if(norm <= 1) {
-            q = q * (1 / RaveSqrt(norm));
-            break;
-        }
-    }
-    return q;
-}
 
 #ifdef RAVE_REGISTER_BOOST
 #include BOOST_TYPEOF_INCREMENT_REGISTRATION_GROUP()

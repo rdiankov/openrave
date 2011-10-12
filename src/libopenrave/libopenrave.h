@@ -285,13 +285,15 @@ inline T NORMALIZE_ANGLE(T theta, T min, T max)
 {
     if (theta < min) {
         theta += T(2*PI);
-        while (theta < min)
+        while (theta < min) {
             theta += T(2*PI);
+        }
     }
     else if (theta > max) {
         theta -= T(2*PI);
-        while (theta > max)
+        while (theta > max) {
             theta -= T(2*PI);
+        }
     }
     return theta;
 }

@@ -23,7 +23,8 @@ PlannerBasePtr CreateShortcutLinearPlanner(EnvironmentBasePtr penv, std::istream
 PlannerBasePtr CreateGraspGradientPlanner(EnvironmentBasePtr penv, std::istream& sinput);
 PlannerBasePtr CreateRandomizedAStarPlanner(EnvironmentBasePtr penv, std::istream& sinput);
 PlannerBasePtr CreateWorkspaceTrajectoryTracker(EnvironmentBasePtr penv, std::istream& sinput);
-PlannerBasePtr CreateTrajectoryRetimer(EnvironmentBasePtr penv, std::istream& sinput);
+PlannerBasePtr CreateLinearTrajectoryRetimer(EnvironmentBasePtr penv, std::istream& sinput);
+PlannerBasePtr CreateParabolicSmoother(EnvironmentBasePtr penv, std::istream& sinput);
 
 InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
 {
@@ -51,11 +52,14 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
         else if( interfacename == "shortcut_linear" ) {
             return CreateShortcutLinearPlanner(penv,sinput);
         }
-        else if( interfacename == "trajectoryretimer" ) {
-            return CreateTrajectoryRetimer(penv,sinput);
+        else if( interfacename == "lineartrajectoryretimer" ) {
+            return CreateLinearTrajectoryRetimer(penv,sinput);
         }
         else if( interfacename == "workspacetrajectorytracker" ) {
             return CreateWorkspaceTrajectoryTracker(penv,sinput);
+        }
+        else if( interfacename == "parabolicsmoother" ) {
+            return CreateParabolicSmoother(penv,sinput);
         }
         break;
     default:
@@ -72,8 +76,9 @@ void GetPluginAttributesValidated(PLUGININFO& info)
     info.interfacenames[PT_Planner].push_back("ExplorationRRT");
     info.interfacenames[PT_Planner].push_back("GraspGradient");
     info.interfacenames[PT_Planner].push_back("shortcut_linear");
-    info.interfacenames[PT_Planner].push_back("TrajectoryRetimer");
+    info.interfacenames[PT_Planner].push_back("LinearTrajectoryRetimer");
     info.interfacenames[PT_Planner].push_back("WorkspaceTrajectoryTracker");
+    info.interfacenames[PT_Planner].push_back("ParabolicSmoother");
 }
 
 OPENRAVE_PLUGIN_API void DestroyPlugin()

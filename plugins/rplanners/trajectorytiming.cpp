@@ -13,34 +13,22 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#include "rplanners.h"
+#include "plugindefs.h"
+#include "plannerparameters.h"
 
-template <typename T>
-inline T NORMALIZE_ANGLE(T theta, T min, T max)
+class LinearTrajectoryRetimer : public PlannerBase
 {
-    if (theta < min) {
-        theta += T(2*PI);
-        while (theta < min)
-            theta += T(2*PI);
-    }
-    else if (theta > max) {
-        theta -= T(2*PI);
-        while (theta > max)
-            theta -= T(2*PI);
-    }
-    return theta;
-}
+    struct GroupInfo
+    {
+        GroupInfo(int degree, const ConfigurationSpecification::Group& gpos, const ConfigurationSpecification::Group &gvel) : degree(degree), gpos(gpos), gvel(gvel) {
+        }
+        int degree;
+        const ConfigurationSpecification::Group& gpos, &gvel;
+        int orgdofoffset;
+    };
 
-template <typename T>
-inline T ANGLE_DIFF(T f0, T f1)
-{
-    return NORMALIZE_ANGLE(f0-f1, T(-PI), T(PI));
-}
-
-class TrajectoryRetimer : public PlannerBase
-{
 public:
-    TrajectoryRetimer(EnvironmentBasePtr penv, std::istream& sinput) : PlannerBase(penv)
+    LinearTrajectoryRetimer(EnvironmentBasePtr penv, std::istream& sinput) : PlannerBase(penv)
     {
         __description = ":Interface Author: Rosen Diankov\n\ntrajectory re-timing without modifying any of the points. Overwrites the velocities and timestamps.";
     }
@@ -94,6 +82,9 @@ public:
         ptraj->GetWaypoints(0,numpoints,vdiffdata);
         data.resize(numpoints*newspec.GetDOF(),0);
         ConfigurationSpecification::ConvertData(data.begin(),newspec,vdiffdata.begin(),oldspec,numpoints,GetEnv());
+        int degree = 1;
+        string posinterpolation = "linear";
+        string velinterpolation = "next";
 
         if( numpoints > 1 ) {
             // get the diff states
@@ -106,65 +97,70 @@ public:
                 vnext = vprev;
             }
 
+
             // analyze the configuration space and set the necessary converters
+            list<GroupInfo> listgroupinfo;
             list< boost::function<dReal(std::vector<dReal>::const_iterator,std::vector<dReal>::const_iterator,std::vector<dReal>::const_iterator,bool) > > listmintimefns;
             list< boost::function<void(std::vector<dReal>::const_iterator,std::vector<dReal>::const_iterator,std::vector<dReal>::iterator) > > listvelocityfns;
             list< std::vector<ConfigurationSpecification::Group>::iterator > listvelocitygroups;
+            const boost::array<std::string,3> supportedgroups = {{"joint_values", "affine_transform", "ikparam_values"}};
             for(size_t i = 0; i < newspec._vgroups.size(); ++i) {
                 ConfigurationSpecification::Group& gpos = newspec._vgroups[i];
-                if( gpos.name.size() >= 12 && gpos.name.substr(0,12) == "joint_values" ) {
-                    int orgdofoffset = oldspec.FindCompatibleGroup(gpos)->offset;
-                    BOOST_ASSERT(orgdofoffset+gpos.dof <= _parameters->GetDOF());
-                    std::vector<ConfigurationSpecification::Group>::iterator itvelgroup = newspec._vgroups.begin()+(newspec.FindTimeDerivativeGroup(gpos)-newspec._vgroups.begin());
-                    BOOST_ASSERT(itvelgroup != newspec._vgroups.end());
-                    listvelocitygroups.push_back(itvelgroup);
-                    if( _parameters->_interpolation == "linear" ) {
-                        if( !_parameters->_hastimestamps ) {
-                            listmintimefns.push_back(boost::bind(&TrajectoryRetimer::_ComputeMinimumTimeLinearJointValues,this,boost::ref(gpos),boost::ref(*itvelgroup),orgdofoffset,_1,_2,_3,_4));
-                        }
-                        listvelocityfns.push_back(boost::bind(&TrajectoryRetimer::_ComputeVelocitiesLinearJointValues,this,boost::ref(gpos),boost::ref(*itvelgroup),orgdofoffset,_1,_2,_3));
-                        gpos.interpolation = "linear";
-                        itvelgroup->interpolation = "next";
+                size_t igrouptype;
+                for(igrouptype = 0; igrouptype < supportedgroups.size(); ++igrouptype) {
+                    if( gpos.name.size() >= supportedgroups[igrouptype].size() && gpos.name.substr(0,supportedgroups[igrouptype].size()) == supportedgroups[igrouptype] ) {
+                        break;
                     }
                 }
-                else if( gpos.name.size() >= 16 && gpos.name.substr(0,16) == "affine_transform" ) {
-                    int orgdofoffset = oldspec.FindCompatibleGroup(gpos)->offset;
-                    BOOST_ASSERT(orgdofoffset+gpos.dof <= _parameters->GetDOF());
-                    std::vector<ConfigurationSpecification::Group>::iterator itvelgroup = newspec._vgroups.begin()+(newspec.FindTimeDerivativeGroup(gpos)-newspec._vgroups.begin());
-                    BOOST_ASSERT(itvelgroup != newspec._vgroups.end());
-                    listvelocitygroups.push_back(itvelgroup);
-                    stringstream ss(gpos.name.substr(16));
-                    string bodyname;
-                    int affinedofs=0;
+                if( igrouptype >= supportedgroups.size() ) {
+                    continue;
+                }
+
+                // group is supported
+                int orgdofoffset = oldspec.FindCompatibleGroup(gpos)->offset;
+                BOOST_ASSERT(orgdofoffset+gpos.dof <= _parameters->GetDOF());
+                std::vector<ConfigurationSpecification::Group>::iterator itvelgroup = newspec._vgroups.begin()+(newspec.FindTimeDerivativeGroup(gpos)-newspec._vgroups.begin());
+                BOOST_ASSERT(itvelgroup != newspec._vgroups.end());
+                listgroupinfo.push_back(GroupInfo(degree,gpos,*itvelgroup));
+                listgroupinfo.back().orgdofoffset = orgdofoffset;
+
+                stringstream ss(gpos.name.substr(supportedgroups[igrouptype].size()));
+                string bodyname;
+                int affinedofs=0;
+                IkParameterizationType iktype;
+                if( igrouptype == 1 ) {
                     ss >> bodyname >> affinedofs;
-                    if( _parameters->_interpolation == "linear" ) {
-                        if( !_parameters->_hastimestamps ) {
-                            listmintimefns.push_back(boost::bind(&TrajectoryRetimer::_ComputeMinimumTimeLinearAffine,this,boost::ref(gpos),boost::ref(*itvelgroup),orgdofoffset,affinedofs,_1,_2,_3,_4));
-                        }
-                        listvelocityfns.push_back(boost::bind(&TrajectoryRetimer::_ComputeVelocitiesLinearAffine,this,boost::ref(gpos),boost::ref(*itvelgroup),orgdofoffset,affinedofs,_1,_2,_3));
-                        gpos.interpolation = "linear";
-                        itvelgroup->interpolation = "next";
+                }
+                else if( igrouptype == 2 ) {
+                    int niktype=0;
+                    ss >> niktype;
+                    iktype = static_cast<IkParameterizationType>(niktype);
+                }
+
+                if( !_parameters->_hastimestamps ) {
+                    if( igrouptype == 0 ) {
+                        listmintimefns.push_back(boost::bind(&LinearTrajectoryRetimer::_ComputeMinimumTimeJointValues,this,boost::ref(listgroupinfo.back()),_1,_2,_3,_4));
+                    }
+                    else if( igrouptype == 1 ) {
+                        listmintimefns.push_back(boost::bind(&LinearTrajectoryRetimer::_ComputeMinimumTimeAffine,this,boost::ref(listgroupinfo.back()),affinedofs,_1,_2,_3,_4));
+                    }
+                    else if( igrouptype == 2 ) {
+                        listmintimefns.push_back(boost::bind(&LinearTrajectoryRetimer::_ComputeMinimumTimeIk,this,boost::ref(listgroupinfo.back()),iktype,_1,_2,_3,_4));
                     }
                 }
-                else if( gpos.name.size() >= 14 && gpos.name.substr(0,14) == "ikparam_values" ) {
-                    int orgdofoffset = oldspec.FindCompatibleGroup(gpos)->offset;
-                    BOOST_ASSERT(orgdofoffset+gpos.dof <= _parameters->GetDOF());
-                    std::vector<ConfigurationSpecification::Group>::iterator itvelgroup = newspec._vgroups.begin()+(newspec.FindTimeDerivativeGroup(gpos)-newspec._vgroups.begin());
-                    BOOST_ASSERT(itvelgroup != newspec._vgroups.end());
-                    listvelocitygroups.push_back(itvelgroup);
-                    stringstream ss(gpos.name.substr(14));
-                    int iktypeint=0;
-                    ss >> iktypeint;
-                    IkParameterizationType iktype = static_cast<IkParameterizationType>(iktypeint);
-                    if( _parameters->_interpolation == "linear" ) {
-                        if( !_parameters->_hastimestamps ) {
-                            listmintimefns.push_back(boost::bind(&TrajectoryRetimer::_ComputeMinimumTimeLinearIk,this,boost::ref(gpos),boost::ref(*itvelgroup),orgdofoffset,iktype,_1,_2,_3,_4));
-                        }
-                        listvelocityfns.push_back(boost::bind(&TrajectoryRetimer::_ComputeVelocitiesLinearIk,this,boost::ref(gpos),boost::ref(*itvelgroup),orgdofoffset,iktype,_1,_2,_3));
-                        gpos.interpolation = "linear";
-                        itvelgroup->interpolation = "next";
-                    }
+
+                if( igrouptype == 0 ) {
+                    listvelocityfns.push_back(boost::bind(&LinearTrajectoryRetimer::_ComputeVelocitiesJointValues,this,boost::ref(listgroupinfo.back()),_1,_2,_3));
                 }
+                else if( igrouptype == 1 ) {
+                    listvelocityfns.push_back(boost::bind(&LinearTrajectoryRetimer::_ComputeVelocitiesAffine,this,boost::ref(listgroupinfo.back()),affinedofs,_1,_2,_3));
+                }
+                else if( igrouptype == 2 ) {
+                    listvelocityfns.push_back(boost::bind(&LinearTrajectoryRetimer::_ComputeVelocitiesIk,this,boost::ref(listgroupinfo.back()),iktype,_1,_2,_3));
+                }
+
+                gpos.interpolation = posinterpolation;
+                itvelgroup->interpolation = velinterpolation;
             }
 
             // compute the timestamps and velocities
@@ -179,9 +175,9 @@ public:
             std::vector<dReal>::iterator itdata = data.begin();
             data.at(_timeoffset) = 0;
             // set velocities to 0
-            FOREACH(it, listvelocitygroups) {
-                int offset = (*it)->offset;
-                for(int j = 0; j < (*it)->dof; ++j) {
+            FOREACH(it, listgroupinfo) {
+                int offset = it->gvel.offset;
+                for(int j = 0; j < it->gvel.dof; ++j) {
                     data.at(offset+j) = 0; // initial
                     data.at(data.size()-dof+offset+j) = 0; // end
                 }
@@ -230,26 +226,25 @@ public:
     }
 
 protected:
-
-    dReal _ComputeMinimumTimeLinearJointValues(const ConfigurationSpecification::Group& gpos, const ConfigurationSpecification::Group& gvel, int orgdofoffset, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::const_iterator itdata, bool bUseEndVelocity)
+    dReal _ComputeMinimumTimeJointValues(GroupInfo& info, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::const_iterator itdata, bool bUseEndVelocity)
     {
         dReal bestmintime = 0;
-        for(int i = 0; i < gpos.dof; ++i) {
-            dReal mintime = RaveFabs(*(itorgdiff+orgdofoffset+i)*_vimaxvel.at(orgdofoffset+i));
+        for(int i = 0; i < info.gpos.dof; ++i) {
+            dReal mintime = RaveFabs(*(itorgdiff+info.orgdofoffset+i)*_vimaxvel.at(info.orgdofoffset+i));
             bestmintime = max(bestmintime,mintime);
         }
         return bestmintime;
     }
 
-    void _ComputeVelocitiesLinearJointValues(const ConfigurationSpecification::Group& gpos, const ConfigurationSpecification::Group& gvel, int orgdofoffset, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata)
+    void _ComputeVelocitiesJointValues(GroupInfo& info, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata)
     {
         dReal invdeltatime = 1.0 / *(itdata+_timeoffset);
-        for(int i = 0; i < gpos.dof; ++i) {
-            *(itdata+gvel.offset+i) = *(itorgdiff+orgdofoffset+i)*invdeltatime;
+        for(int i = 0; i < info.gpos.dof; ++i) {
+            *(itdata+info.gvel.offset+i) = *(itorgdiff+info.orgdofoffset+i)*invdeltatime;
         }
     }
 
-    dReal _ComputeMinimumTimeLinearAffine(const ConfigurationSpecification::Group& gpos, const ConfigurationSpecification::Group& gvel, int orgdofoffset, int affinedofs, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::const_iterator itdata, bool bUseEndVelocity)
+    dReal _ComputeMinimumTimeAffine(GroupInfo& info, int affinedofs, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::const_iterator itdata, bool bUseEndVelocity)
     {
         dReal bestmintime = 0;
         const boost::array<DOFAffine,4> testdofs={{DOF_X,DOF_Y,DOF_Z,DOF_RotationAxis}};
@@ -260,7 +255,7 @@ protected:
                 int index = RaveGetIndexFromAffineDOF(affinedofs,*itdof);
                 dReal f = *(itorgdiff+index);
                 distxyz += f*f;
-                fivel = _vimaxvel.at(orgdofoffset+index);
+                fivel = _vimaxvel.at(info.orgdofoffset+index);
             }
         }
         if( distxyz > 0 ) {
@@ -269,88 +264,88 @@ protected:
         }
         if( affinedofs & DOF_RotationAxis ) {
             int index = RaveGetIndexFromAffineDOF(affinedofs,DOF_RotationAxis);
-            dReal mintime = RaveFabs(*(itorgdiff+index)*_vimaxvel.at(orgdofoffset+index));
+            dReal mintime = RaveFabs(*(itorgdiff+index)*_vimaxvel.at(info.orgdofoffset+index));
             bestmintime = max(bestmintime,mintime);
         }
         else if( affinedofs & DOF_RotationQuat ) {
             int index = RaveGetIndexFromAffineDOF(affinedofs,DOF_RotationQuat);
             Vector qprev,qnext;
             for(int i = 0; i < 4; ++i) {
-                qnext[i] = *(itdata+gpos.offset+index+i);
-                qprev[i] = *(itdataprev+gpos.offset+index+i);
+                qnext[i] = *(itdata+info.gpos.offset+index+i);
+                qprev[i] = *(itdataprev+info.gpos.offset+index+i);
             }
-            dReal mintime = RaveAcos(min(dReal(1),RaveFabs(qprev.dot(qnext))))*_vimaxvel.at(orgdofoffset+index);
+            dReal mintime = RaveAcos(min(dReal(1),RaveFabs(qprev.dot(qnext))))*_vimaxvel.at(info.orgdofoffset+index);
             bestmintime = max(bestmintime,mintime);
         }
         else if( affinedofs & DOF_Rotation3D ) {
-            RAVELOG_WARN("_ComputeMinimumTimeLinearAffine does not support DOF_Rotation3D\n");
+            RAVELOG_WARN("_ComputeMinimumTimeAffine does not support DOF_Rotation3D\n");
         }
         return bestmintime;
     }
 
-    void _ComputeVelocitiesLinearAffine(const ConfigurationSpecification::Group& gpos, const ConfigurationSpecification::Group& gvel, int orgdofoffset, int affinedofs, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata)
+    void _ComputeVelocitiesAffine(GroupInfo& info, int affinedofs, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata)
     {
         dReal invdeltatime = 1.0 / *(itdata+_timeoffset);
         const boost::array<DOFAffine,4> testdofs={{DOF_X,DOF_Y,DOF_Z,DOF_RotationAxis}};
         FOREACHC(itdof,testdofs) {
             if( affinedofs & *itdof ) {
                 int index = RaveGetIndexFromAffineDOF(affinedofs,*itdof);
-                *(itdata+gvel.offset+index) = *(itorgdiff+orgdofoffset+index)*invdeltatime;
+                *(itdata+info.gvel.offset+index) = *(itorgdiff+info.orgdofoffset+index)*invdeltatime;
             }
         }
         if( affinedofs & DOF_RotationQuat ) {
             int index = RaveGetIndexFromAffineDOF(affinedofs,DOF_RotationQuat);
             for(int i = 0; i < 4; ++i) {
-                *(itdata+gvel.offset+index+i) = *(itorgdiff+index+i)*invdeltatime;
+                *(itdata+info.gvel.offset+index+i) = *(itorgdiff+index+i)*invdeltatime;
             }
         }
         else if( affinedofs & DOF_Rotation3D ) {
-            RAVELOG_WARN("_ComputeMinimumTimeLinearAffine does not support DOF_Rotation3D\n");
+            RAVELOG_WARN("_ComputeMinimumTimeAffine does not support DOF_Rotation3D\n");
         }
     }
 
-    dReal _ComputeMinimumTimeLinearIk(const ConfigurationSpecification::Group& gpos, const ConfigurationSpecification::Group& gvel, int orgdofoffset, IkParameterizationType iktype, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::const_iterator itdata, bool bUseEndVelocity)
+    dReal _ComputeMinimumTimeIk(GroupInfo& info, IkParameterizationType iktype, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::const_iterator itdata, bool bUseEndVelocity)
     {
         IkParameterization ikparamprev, ikparam;
         ikparamprev.Set(itdataprev,iktype);
         ikparam.Set(itdata,iktype);
         switch(iktype) {
         case IKP_Transform6D: {
-            dReal quatmintime = RaveAcos(min(dReal(1),RaveFabs(ikparamprev.GetTransform6D().rot.dot(ikparam.GetTransform6D().rot))))*_vimaxvel.at(orgdofoffset+0);
-            dReal transmintime = RaveSqrt((ikparamprev.GetTransform6D().trans-ikparam.GetTransform6D().trans).lengthsqr3())*_vimaxvel.at(orgdofoffset+4);
+            dReal quatmintime = RaveAcos(min(dReal(1),RaveFabs(ikparamprev.GetTransform6D().rot.dot(ikparam.GetTransform6D().rot))))*_vimaxvel.at(info.orgdofoffset+0);
+            dReal transmintime = RaveSqrt((ikparamprev.GetTransform6D().trans-ikparam.GetTransform6D().trans).lengthsqr3())*_vimaxvel.at(info.orgdofoffset+4);
             return max(quatmintime,transmintime);
         }
         case IKP_Rotation3D:
-            return RaveAcos(min(dReal(1),RaveFabs(ikparamprev.GetRotation3D().dot(ikparam.GetRotation3D()))))*_vimaxvel.at(orgdofoffset+0);
+            return RaveAcos(min(dReal(1),RaveFabs(ikparamprev.GetRotation3D().dot(ikparam.GetRotation3D()))))*_vimaxvel.at(info.orgdofoffset+0);
         case IKP_Translation3D:
-            return RaveSqrt((ikparamprev.GetTranslation3D()-ikparam.GetTranslation3D()).lengthsqr3())*_vimaxvel.at(orgdofoffset);
+            return RaveSqrt((ikparamprev.GetTranslation3D()-ikparam.GetTranslation3D()).lengthsqr3())*_vimaxvel.at(info.orgdofoffset);
         case IKP_Direction3D: {
-            return RaveAcos(min(dReal(1),ikparamprev.GetDirection3D().dot3(ikparam.GetDirection3D())))*_vimaxvel.at(orgdofoffset);
+            return RaveAcos(min(dReal(1),ikparamprev.GetDirection3D().dot3(ikparam.GetDirection3D())))*_vimaxvel.at(info.orgdofoffset);
         }
         case IKP_Ray4D: {
             Vector pos0 = ikparamprev.GetRay4D().pos - ikparamprev.GetRay4D().dir*ikparamprev.GetRay4D().dir.dot(ikparamprev.GetRay4D().pos);
             Vector pos1 = ikparam.GetRay4D().pos - ikparam.GetRay4D().dir*ikparam.GetRay4D().dir.dot(ikparam.GetRay4D().pos);
             dReal fcos = ikparamprev.GetRay4D().dir.dot(ikparam.GetRay4D().dir);
             dReal facos = fcos >= 1 ? 0 : RaveAcos(fcos);
-            return max(facos*_vimaxvel.at(orgdofoffset),(pos0-pos1).lengthsqr3()*_vimaxvel.at(orgdofoffset+3));
+            return max(facos*_vimaxvel.at(info.orgdofoffset),(pos0-pos1).lengthsqr3()*_vimaxvel.at(info.orgdofoffset+3));
         }
         case IKP_Lookat3D:
-            return RaveSqrt((ikparamprev.GetLookat3D()-ikparam.GetLookat3D()).lengthsqr3())*_vimaxvel.at(orgdofoffset);
+            return RaveSqrt((ikparamprev.GetLookat3D()-ikparam.GetLookat3D()).lengthsqr3())*_vimaxvel.at(info.orgdofoffset);
         case IKP_TranslationDirection5D: {
-            dReal dirmintime = RaveAcos(min(dReal(1),ikparamprev.GetTranslationDirection5D().dir.dot3(ikparam.GetTranslationDirection5D().dir)))*_vimaxvel.at(orgdofoffset);
-            dReal transmintime = RaveSqrt((ikparamprev.GetTranslationDirection5D().pos-ikparam.GetTranslationDirection5D().pos).lengthsqr3())*_vimaxvel.at(orgdofoffset+3);
+            dReal dirmintime = RaveAcos(min(dReal(1),ikparamprev.GetTranslationDirection5D().dir.dot3(ikparam.GetTranslationDirection5D().dir)))*_vimaxvel.at(info.orgdofoffset);
+            dReal transmintime = RaveSqrt((ikparamprev.GetTranslationDirection5D().pos-ikparam.GetTranslationDirection5D().pos).lengthsqr3())*_vimaxvel.at(info.orgdofoffset+3);
             return max(dirmintime,transmintime);
         }
         case IKP_TranslationXY2D:
-            return RaveSqrt((ikparamprev.GetTranslationXY2D()-ikparam.GetTranslationXY2D()).lengthsqr2())*_vimaxvel.at(orgdofoffset+0);
+            return RaveSqrt((ikparamprev.GetTranslationXY2D()-ikparam.GetTranslationXY2D()).lengthsqr2())*_vimaxvel.at(info.orgdofoffset+0);
         case IKP_TranslationXYOrientation3D: {
-            dReal angmintime = ANGLE_DIFF(ikparam.GetTranslationXYOrientation3D().z,ikparamprev.GetTranslationXYOrientation3D().z)*_vimaxvel.at(orgdofoffset+2);
-            dReal transmintime = RaveSqrt((ikparamprev.GetTranslationXYOrientation3D()-ikparam.GetTranslationXYOrientation3D()).lengthsqr2())*_vimaxvel.at(orgdofoffset+0);
+            dReal angmintime = ANGLE_DIFF(ikparam.GetTranslationXYOrientation3D().z,ikparamprev.GetTranslationXYOrientation3D().z)*_vimaxvel.at(info.orgdofoffset+2);
+            dReal transmintime = RaveSqrt((ikparamprev.GetTranslationXYOrientation3D()-ikparam.GetTranslationXYOrientation3D()).lengthsqr2())*_vimaxvel.at(info.orgdofoffset+0);
             return max(angmintime,transmintime);
         }
         case IKP_TranslationLocalGlobal6D: {
-            dReal transmintime0 = RaveSqrt((ikparamprev.GetTranslationLocalGlobal6D().first-ikparam.GetTranslationLocalGlobal6D().first).lengthsqr3())*_vimaxvel.at(orgdofoffset+0);
-            dReal transmintime1 = RaveSqrt((ikparamprev.GetTranslationLocalGlobal6D().second-ikparam.GetTranslationLocalGlobal6D().second).lengthsqr3())*_vimaxvel.at(orgdofoffset+3);
+            dReal transmintime0 = RaveSqrt((ikparamprev.GetTranslationLocalGlobal6D().first-ikparam.GetTranslationLocalGlobal6D().first).lengthsqr3())*_vimaxvel.at(info.orgdofoffset+0);
+            dReal transmintime1 = RaveSqrt((ikparamprev.GetTranslationLocalGlobal6D().second-ikparam.GetTranslationLocalGlobal6D().second).lengthsqr3())*_vimaxvel.at(info.orgdofoffset+3);
             return max(transmintime0,transmintime1);
         }
         default:
@@ -358,12 +353,12 @@ protected:
         }
     }
 
-    void _ComputeVelocitiesLinearIk(const ConfigurationSpecification::Group& gpos, const ConfigurationSpecification::Group& gvel, int orgdofoffset, IkParameterizationType iktype, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata)
+    void _ComputeVelocitiesIk(GroupInfo& info, IkParameterizationType iktype, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata)
     {
         dReal invdeltatime = 1.0 / *(itdata+_timeoffset);
         // can probably do better...
-        for(int i = 0; i < gpos.dof; ++i) {
-            *(itdata+gvel.offset+i) = *(itorgdiff+orgdofoffset+i)*invdeltatime;
+        for(int i = 0; i < info.gpos.dof; ++i) {
+            *(itdata+info.gvel.offset+i) = *(itorgdiff+info.orgdofoffset+i)*invdeltatime;
         }
     }
 
@@ -373,6 +368,6 @@ protected:
 };
 
 
-PlannerBasePtr CreateTrajectoryRetimer(EnvironmentBasePtr penv, std::istream& sinput) {
-    return PlannerBasePtr(new TrajectoryRetimer(penv, sinput));
+PlannerBasePtr CreateLinearTrajectoryRetimer(EnvironmentBasePtr penv, std::istream& sinput) {
+    return PlannerBasePtr(new LinearTrajectoryRetimer(penv, sinput));
 }
