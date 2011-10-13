@@ -132,11 +132,11 @@ public:
             ptraj->Init(newspec);
 
             // separate all the acceleration switches into individual points
-            vector<dReal> vtrajpoint(newspec.GetDOF());
-            ConfigurationSpecification::ConvertData(vtrajpoint.begin(),newspec,dynamicpath.ramps.at(0).x0.begin(),oldspec,1,GetEnv(),true);
-            ConfigurationSpecification::ConvertData(vtrajpoint.begin(),newspec,dynamicpath.ramps.at(0).dx0.begin(),velspec,1,GetEnv(),false);
-            vtrajpoint.at(timeoffset) = 0;
-            ptraj->Insert(ptraj->GetNumWaypoints(),vtrajpoint);
+            vector<dReal> vtrajpoints(newspec.GetDOF());
+            ConfigurationSpecification::ConvertData(vtrajpoints.begin(),newspec,dynamicpath.ramps.at(0).x0.begin(),oldspec,1,GetEnv(),true);
+            ConfigurationSpecification::ConvertData(vtrajpoints.begin(),newspec,dynamicpath.ramps.at(0).dx0.begin(),velspec,1,GetEnv(),false);
+            vtrajpoints.at(timeoffset) = 0;
+            ptraj->Insert(ptraj->GetNumWaypoints(),vtrajpoints);
             vector<dReal> vswitchtimes;
             ParabolicRamp::Vector vconfig;
             FOREACHC(itrampnd,dynamicpath.ramps) {
@@ -154,16 +154,19 @@ public:
                         }
                     }
                 }
+                vtrajpoints.resize(newspec.GetDOF()*vswitchtimes.size());
+                vector<dReal>::iterator ittargetdata = vtrajpoints.begin();
                 dReal prevtime = 0;
                 FOREACH(ittime,vswitchtimes) {
                     itrampnd->Evaluate(*ittime,vconfig);
-                    ConfigurationSpecification::ConvertData(vtrajpoint.begin(),newspec,vconfig.begin(),oldspec,1,GetEnv(),true);
+                    ConfigurationSpecification::ConvertData(ittargetdata,newspec,vconfig.begin(),oldspec,1,GetEnv(),true);
                     itrampnd->Derivative(*ittime,vconfig);
-                    ConfigurationSpecification::ConvertData(vtrajpoint.begin(),newspec,vconfig.begin(),velspec,1,GetEnv(),false);
-                    vtrajpoint.at(timeoffset) = *ittime-prevtime;
-                    ptraj->Insert(ptraj->GetNumWaypoints(),vtrajpoint);
+                    ConfigurationSpecification::ConvertData(ittargetdata,newspec,vconfig.begin(),velspec,1,GetEnv(),false);
+                    *(ittargetdata+timeoffset) = *ittime-prevtime;
+                    ittargetdata += newspec.GetDOF();
                     prevtime = *ittime;
                 }
+                ptraj->Insert(ptraj->GetNumWaypoints(),vtrajpoints);
             }
 
             BOOST_ASSERT(RaveFabs(dynamicpath.GetTotalTime()-ptraj->GetDuration())<0.001);
