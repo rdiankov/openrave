@@ -1296,7 +1296,7 @@ void ConfigurationSpecification::AddVelocityGroups(bool adddeltatime)
     }
 }
 
-ConfigurationSpecification ConfigurationSpecification::GetVelocitySpecification() const
+ConfigurationSpecification ConfigurationSpecification::ConvertToVelocitySpecification() const
 {
     ConfigurationSpecification vspec;
     vspec._vgroups = _vgroups;
@@ -1311,6 +1311,40 @@ ConfigurationSpecification ConfigurationSpecification::GetVelocitySpecification(
             itgroup->name = string("ikparam_velocities") + itgroup->name.substr(14);
         }
     }
+    return vspec;
+}
+
+ConfigurationSpecification ConfigurationSpecification::GetTimeDerivativeSpecification(int timederivative) const
+{
+    ConfigurationSpecification vspec;
+    vspec._vgroups = _vgroups;
+    const boost::array<string,3> posgroups = {{"joint_values","affine_transform","ikparam_values"}};
+    const boost::array<string,3> velgroups = {{"joint_velocities","affine_velocities","ikparam_velocities"}};
+    const boost::array<string,3> accgroups = {{"joint_accelerations","affine_accelerations","ikparam_accelerations"}};
+    const boost::array<string,3>* pgroup=NULL;
+    if( timederivative == 0 ) {
+        pgroup = &posgroups;
+    }
+    else if( timederivative == 1 ) {
+        pgroup = &velgroups;
+    }
+    else if( timederivative == 2 ) {
+        pgroup = &accgroups;
+    }
+    else {
+        throw OPENRAVE_EXCEPTION_FORMAT0("invalid timederivative",ORE_InvalidArguments);
+    }
+
+    FOREACH(itgroup,vspec._vgroups) {
+        for(size_t i = 0; i < pgroup->size(); ++i) {
+            const string& name = pgroup->at(i);
+            if( itgroup->name.size() >= name.size() && itgroup->name.substr(0,name.size()) == name ) {
+                vspec._vgroups.push_back(*itgroup);
+                break;
+            }
+        }
+    }
+    vspec.ResetGroupOffsets();
     return vspec;
 }
 

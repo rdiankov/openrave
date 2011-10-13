@@ -903,14 +903,14 @@ protected:
                 itpreshapetraj->second->serialize(f);
             }
             if( bCombinePreShapeTraj ) {     // add the preshape
-                itpreshapetraj->second->GetWaypoints(0,itpreshapetraj->second->GetNumWaypoints(),specfinal,vtrajdata);
+                itpreshapetraj->second->GetWaypoints(0,itpreshapetraj->second->GetNumWaypoints(),vtrajdata,specfinal);
                 ptrajfinal->Insert(ptrajfinal->GetNumWaypoints(),vtrajdata);
                 // set the last point so the converters can pick it up
-                ptrajfinal->GetWaypoint(-1,_robot->GetConfigurationSpecification(),vtrajdata);
+                ptrajfinal->GetWaypoint(-1,vtrajdata,_robot->GetConfigurationSpecification());
                 _robot->SetConfigurationValues(vtrajdata.begin(),true);
             }
 
-            ptraj->GetWaypoints(0,ptraj->GetNumWaypoints(),specfinal,vtrajdata);
+            ptraj->GetWaypoints(0,ptraj->GetNumWaypoints(),vtrajdata,specfinal);
             ptrajfinal->Insert(ptrajfinal->GetNumWaypoints(),vtrajdata);
 
             RAVELOG_DEBUG("grasp index %d\n",goalFound.graspindex);
@@ -1023,14 +1023,15 @@ protected:
             return false;
         }
         if( bOutputFinal ) {
-            vector<dReal> q = ptraj->GetPoints().back().q;
+            vector<dReal> q;
+            ptraj->GetWaypoint(-1,q,_robot->GetActiveConfigurationSpecification());
             FOREACH(itq,q) {
                 sout << *itq << " ";
             }
         }
 
         vector<dReal> vlastvalues;
-        ptraj->GetWaypoint(-1,_robot->GetActiveConfigurationSpecification(),vlastvalues);
+        ptraj->GetWaypoint(-1,vlastvalues,_robot->GetActiveConfigurationSpecification());
         if(vlastvalues.size() == voffset.size() ) {
             for(size_t i = 0; i < voffset.size(); ++i) {
                 vlastvalues[i] += voffset[i]*pmanip->GetClosingDirection().at(i);
@@ -1148,28 +1149,32 @@ protected:
             return false;
         }
 
+        vector<dReal> q;
         if( bOutputFinal ) {
-            vector<dReal> q = ptraj->GetPoints().back().q;
+            ptraj->GetWaypoint(-1,q,_robot->GetActiveConfigurationSpecification());
             FOREACH(itq,q) {
                 sout << *itq << " ";
             }
         }
 
+        bool bForceRetime = false;
         {
             // check final trajectory for colliding points
             RobotBase::RobotStateSaver saver2(_robot);
-            _robot->SetActiveDOFValues(ptraj->GetPoints().back().q);
+            ptraj->GetWaypoint(-1,q,_robot->GetActiveConfigurationSpecification());
+            _robot->SetActiveDOFValues(q);
             if( planningutils::JitterActiveDOF(_robot) > 0 ) {
                 RAVELOG_WARN("robot final configuration is in collision\n");
-                Trajectory::TPOINT pt = ptraj->GetPoints().back();
-                _robot->GetActiveDOFValues(pt.q);
-                ptraj->AddPoint(pt);
+                _robot->GetActiveDOFValues(q);
+                ptraj->Insert(ptraj->GetNumWaypoints(),q,_robot->GetActiveConfigurationSpecification());
+                bForceRetime = true;
             }
         }
 
         if( !!ptarget ) {
             _robot->Release(ptarget);
-            _robot->SetActiveDOFValues(ptraj->GetPoints().back().q);
+            ptraj->GetWaypoint(-1,q,_robot->GetActiveConfigurationSpecification());
+            _robot->SetActiveDOFValues(q);
             if( GetEnv()->CheckCollision(KinBodyConstPtr(_robot),KinBodyConstPtr(ptarget)) ) {
                 RAVELOG_WARN(str(boost::format("even after releasing, in collision with target %s")%_robot->GetName()));
             }
@@ -1279,22 +1284,25 @@ protected:
             return false;
         }
 
+        vector<dReal> q;
         if( bOutputFinal ) {
-            vector<dReal> q = ptraj->GetPoints().back().q;
+            ptraj->GetWaypoint(-1,q,_robot->GetActiveConfigurationSpecification());
             FOREACH(itq,q) {
                 sout << *itq << " ";
             }
         }
 
+        bool bForceRetime = false;
         {
             // check final trajectory for colliding points
             RobotBase::RobotStateSaver saver2(_robot);
-            _robot->SetActiveDOFValues(ptraj->GetPoints().back().q);
+            ptraj->GetWaypoint(-1,q,_robot->GetActiveConfigurationSpecification());
+            _robot->SetActiveDOFValues(q);
             if( planningutils::JitterActiveDOF(_robot) > 0 ) {
                 RAVELOG_WARN("robot final configuration is in collision\n");
-                Trajectory::TPOINT pt = ptraj->GetPoints().back();
-                _robot->GetActiveDOFValues(pt.q);
-                ptraj->AddPoint(pt);
+                _robot->GetActiveDOFValues(q);
+                ptraj->Insert(ptraj->GetNumWaypoints(),q,_robot->GetActiveConfigurationSpecification());
+                bForceRetime = true;
             }
         }
 
@@ -1570,7 +1578,7 @@ protected:
             if( itpreshapetraj->second->GetNumWaypoints() > 0 ) {
                 vector<dReal> vtrajdata;
                 _robot->GetConfigurationValues(vtrajdata);
-                itpreshapetraj->second->GetWaypoint(-1,_robot->GetConfigurationSpecification(),vtrajdata);
+                itpreshapetraj->second->GetWaypoint(-1,vtrajdata,_robot->GetConfigurationSpecification());
                 _robot->SetConfigurationValues(vtrajdata.begin(),true);
             }
         }
@@ -1615,7 +1623,7 @@ protected:
         RobotBase::RobotStateSaver saver(_robot);
         _robot->SetActiveDOFs(pmanip->GetGripperIndices());
         if( !_phandtraj ) {
-            _phandtraj = RaveCreateTrajectory(GetEnv(),_robot->GetActiveDOF());
+            _phandtraj = RaveCreateTrajectory(GetEnv(),"");
         }
 
         boost::shared_ptr<GraspParameters> graspparams(new GraspParameters(GetEnv()));
@@ -1634,7 +1642,7 @@ protected:
             return IKFR_Reject;
         }
 
-        _phandtraj->GetWaypoint(-1,_robot->GetConfigurationSpecificationIndices(pmanip->GetGripperIndices()), _vFinalGripperValues);
+        _phandtraj->GetWaypoint(-1,_vFinalGripperValues, _robot->GetConfigurationSpecificationIndices(pmanip->GetGripperIndices()));
         return IKFR_Success;
     }
 

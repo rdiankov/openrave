@@ -907,7 +907,12 @@ protected:
     /// \brief converts all the groups to the corresponding velocity groups and returns the specification
     ///
     /// The velocity configuration space will have a one-to-one correspondence with the
-    virtual ConfigurationSpecification GetVelocitySpecification() const;
+    virtual ConfigurationSpecification ConvertToVelocitySpecification() const;
+
+    /// \brief returns a new specification of just particular time-derivative groups.
+    ///
+    /// \param timederivative the time derivative to query groups from. 0 is positions/joint values, 1 is velocities, 2 is accelerations, etc
+    virtual ConfigurationSpecification GetTimeDerivativeSpecification(int timederivative) const;
 
     /** \brief set the offsets of each group in order to get a contiguous configuration space
      */

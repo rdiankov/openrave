@@ -97,7 +97,7 @@ public:
         \param spec[in] the specification to return the data in
         \param data[out] the data of the waypoint
      */
-    virtual void GetWaypoints(size_t startindex, size_t endindex, const ConfigurationSpecification& spec, std::vector<dReal>& data) const;
+    virtual void GetWaypoints(size_t startindex, size_t endindex, std::vector<dReal>& data, const ConfigurationSpecification& spec) const;
 
     /** \brief returns one waypoint
 
@@ -119,14 +119,14 @@ public:
         \param index[in] index of the waypoint. If < 0, then counting starts from the last waypoint. For example GetWaypoints(-1,data) returns the last waypoint.
         \param data[out] the data of the waypoint
      */
-    inline void GetWaypoint(int index, const ConfigurationSpecification& spec, std::vector<dReal>& data) const
+    inline void GetWaypoint(int index, std::vector<dReal>& data, const ConfigurationSpecification& spec) const
     {
         int numpoints = GetNumWaypoints();
         BOOST_ASSERT(index >= -numpoints && index < numpoints);
         if( index < 0 ) {
             index += numpoints;
         }
-        GetWaypoints(index,index+1,spec,data);
+        GetWaypoints(index,index+1,data,spec);
     }
 
     /// \brief return the duration of the trajectory in seconds

@@ -77,7 +77,7 @@ public:
         boost::array<dReal,9> AtA;
         path.reserve(ptraj->GetNumWaypoints());
         vector<dReal> vtrajpoints;
-        ptraj->GetWaypoints(0,ptraj->GetNumWaypoints(),_parameters->_configurationspecification,vtrajpoints);
+        ptraj->GetWaypoints(0,ptraj->GetNumWaypoints(),vtrajpoints,_parameters->_configurationspecification);
         ParabolicRamp::Vector q(_parameters->GetDOF());
         for(size_t i = 0; i < ptraj->GetNumWaypoints(); ++i) {
             std::copy(vtrajpoints.begin()+i*_parameters->GetDOF(),vtrajpoints.begin()+(i+1)*_parameters->GetDOF(),q.begin());
@@ -113,7 +113,7 @@ public:
             int numshortcuts=dynamicpath.Shortcut(parameters->_nMaxIterations,checker);
 
             ConfigurationSpecification oldspec = ptraj->GetConfigurationSpecification();
-            ConfigurationSpecification velspec = oldspec.GetVelocitySpecification();
+            ConfigurationSpecification velspec = oldspec.ConvertToVelocitySpecification();
             ConfigurationSpecification newspec = oldspec;
             newspec.AddVelocityGroups(true);
 

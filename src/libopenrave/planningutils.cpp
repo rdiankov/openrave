@@ -290,7 +290,7 @@ void ConvertTrajectorySpecification(TrajectoryBasePtr traj, const ConfigurationS
         size_t numpoints = traj->GetConfigurationSpecification().GetDOF() > 0 ? traj->GetNumWaypoints() : 0;
         vector<dReal> data;
         if( numpoints > 0 ) {
-            traj->GetWaypoints(0,numpoints,spec,data);
+            traj->GetWaypoints(0,numpoints,data,spec);
         }
         traj->Init(spec);
         if( numpoints > 0 ) {

@@ -332,7 +332,7 @@ public:
         if( bOutputFinal ) {
             BOOST_ASSERT(pfulltraj->GetNumWaypoints()>0);
             vector<dReal> q;
-            pfulltraj->GetWaypoint(-1,_robot->GetConfigurationSpecification(),q);
+            pfulltraj->GetWaypoint(-1,q,_robot->GetConfigurationSpecification());
             q.resize(_robot->GetDOF());
             FOREACHC(it,q) {
                 sout << *it << " ";

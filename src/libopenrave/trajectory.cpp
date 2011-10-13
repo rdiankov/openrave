@@ -141,7 +141,7 @@ void TrajectoryBase::Sample(std::vector<dReal>& data, dReal time, const Configur
     ConfigurationSpecification::ConvertData(data.begin(),spec,vinternaldata.begin(),GetConfigurationSpecification(),1,GetEnv());
 }
 
-void TrajectoryBase::GetWaypoints(size_t startindex, size_t endindex, const ConfigurationSpecification& spec, std::vector<dReal>& data) const
+void TrajectoryBase::GetWaypoints(size_t startindex, size_t endindex, std::vector<dReal>& data, const ConfigurationSpecification& spec) const
 {
     RAVELOG_VERBOSE(str(boost::format("TrajectoryBase::GetWaypoints: calling slow implementation %s")%GetXMLId()));
     vector<dReal> vinternaldata;

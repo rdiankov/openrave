@@ -278,7 +278,7 @@ public:
         std::copy(_vtrajdata.begin()+startindex*_spec.GetDOF(),_vtrajdata.begin()+endindex*_spec.GetDOF(),data.begin());
     }
 
-    void GetWaypoints(size_t startindex, size_t endindex, const ConfigurationSpecification& spec, std::vector<dReal>& data) const
+    void GetWaypoints(size_t startindex, size_t endindex, std::vector<dReal>& data, const ConfigurationSpecification& spec) const
     {
         BOOST_ASSERT(_bInit);
         BOOST_ASSERT(startindex<=endindex && startindex*_spec.GetDOF() <= _vtrajdata.size() && endindex*_spec.GetDOF() <= _vtrajdata.size());

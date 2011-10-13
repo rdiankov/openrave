@@ -208,11 +208,11 @@ protected:
             RAVELOG_WARN("resetting transformations of trajectory not supported\n");
         }
 
-        if(( ptraj->GetTotalDuration() == 0) || bResetTiming ) {
+        if(( ptraj->GetDuration() == 0) || bResetTiming ) {
             RAVELOG_VERBOSE(str(boost::format("retiming trajectory: %f\n")%_fMaxVelMult));
             ptraj->CalcTrajTiming(robot,0,true,false,_fMaxVelMult);
         }
-        RAVELOG_VERBOSE(str(boost::format("executing traj with %d points\n")%ptraj->GetPoints().size()));
+        RAVELOG_VERBOSE(str(boost::format("executing traj with %d points\n")%ptraj->GetNumWaypoints()));
         if( ptraj->GetDOF() == robot->GetDOF() ) {
             robot->SetMotion(ptraj);
         }
@@ -824,16 +824,16 @@ protected:
             return false;
         }
 
-        BOOST_ASSERT(ptraj->GetPoints().size() > 0);
+        BOOST_ASSERT(ptraj->GetNumWaypoints() > 0);
 
         bool bExecuted = CM::SetActiveTrajectory(robot, ptraj, bExecute, strsavetraj, pOutputTrajStream,_fMaxVelMult);
         sout << (int)bExecuted << " ";
-
         sout << (GetMilliTime()-starttime)/1000.0f << " ";
-        FOREACH(it, ptraj->GetPoints().back().q) {
+        vector<dReal> q;
+        ptraj->GetWaypoint(-1,q,robot->GetActiveConfigurationSpecification());
+        FOREACH(it, q) {
             sout << *it << " ";
         }
-
         return true;
     }
 
@@ -1022,7 +1022,7 @@ protected:
             return false;
         }
 
-        if( bRecomputeTiming ||( ptraj->GetTotalDuration() == 0) ) {
+        if( bRecomputeTiming || ptraj->GetDuration() == 0 ) {
             ptraj->CalcTrajTiming(robot,ptraj->GetInterpMethod(),true,false);
         }
 

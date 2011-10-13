@@ -124,7 +124,7 @@ protected:
         PlannerParametersConstPtr parameters = _parameters;
         vector<dReal> q0(parameters->GetDOF()), dq(parameters->GetDOF());
         vector<dReal> vtrajdata;
-        ptraj->GetWaypoints(0,ptraj->GetNumWaypoints(),_parameters->_configurationspecification,vtrajdata);
+        ptraj->GetWaypoints(0,ptraj->GetNumWaypoints(),vtrajdata,_parameters->_configurationspecification);
 
         std::copy(vtrajdata.begin(),vtrajdata.begin()+_parameters->GetDOF(),q0.begin());
         listpoints.push_back(q0);

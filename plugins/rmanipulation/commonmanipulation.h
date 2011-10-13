@@ -315,7 +315,7 @@ protected:
             // have to set anyway since calling script will query ControllerBase::IsDone
             else if( !!robot->GetController() ) {
                 vector<dReal> robotvalues;
-                pActiveTraj->GetWaypoint(0,robot->GetConfigurationSpecification(),robotvalues);
+                pActiveTraj->GetWaypoint(0,robotvalues,robot->GetConfigurationSpecification());
                 robotvalues.resize(robot->GetDOF());
                 if( robot->GetController()->SetDesired(robotvalues)) {
                     bExecuted = true;
