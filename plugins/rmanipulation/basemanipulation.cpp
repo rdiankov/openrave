@@ -238,7 +238,7 @@ protected:
         RobotBase::ManipulatorConstPtr pmanip = robot->GetActiveManipulator();
         Transform Tee;
 
-        boost::shared_ptr<WorkspaceTrajectoryParameters> params(new WorkspaceTrajectoryParameters(GetEnv()));
+        WorkspaceTrajectoryParametersPtr params(new WorkspaceTrajectoryParameters(GetEnv()));
         boost::shared_ptr<ostream> pOutputTrajStream;
         params->ignorefirstcollision = 0.04;     // 0.04m?
         string cmd;

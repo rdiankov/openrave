@@ -880,6 +880,8 @@ public:
             probot->GetActiveManipulator()->GetIndependentLinks(vindependentlinks);
             Transform trobotstart = probot->GetTransform();
 
+            vector<dReal> vtrajpoint;
+
             // use CO_ActiveDOFs since might be calling FindIKSolution
             int coloptions = GetEnv()->GetCollisionChecker()->GetCollisionOptions()|(worker_params->bCheckGraspIK ? CO_ActiveDOFs : 0);
             coloptions &= ~CO_Contacts;
@@ -931,8 +933,9 @@ public:
                 }
 
                 BOOST_ASSERT(ptraj->GetNumWaypoints() > 0);
-                probot->SetTransform(ptraj->GetPoints().back().trans);
-                probot->SetActiveDOFValues(ptraj->GetPoints().back().q,true);
+                vector<dReal> vtrajpoint;
+                ptraj->Sample(vtrajpoint,ptraj->GetDuration(),probot->GetConfigurationSpecification());
+                probot->SetConfigurationValues(vtrajpoint.begin(),true);
                 grasp_params->transfinal = probot->GetTransform();
                 probot->GetDOFValues(grasp_params->finalshape);
 
@@ -1017,7 +1020,10 @@ public:
                         if ( worker_params->bCheckGraspIK ) {
                             CollisionOptionsStateSaver optionstate(pcloneenv->GetCollisionChecker(),coloptions,false); // remove contacts
                             RobotBase::RobotStateSaver linksaver(probot);
-                            probot->SetTransform(ptraj->GetPoints().back().trans);
+                            ptraj->Sample(vtrajpoint,ptraj->GetDuration());
+                            Transform t = probot->GetTransform();
+                            ptraj->GetConfigurationSpecification().ExtractTransform(t,vtrajpoint.begin(),probot);
+                            probot->SetTransform(t);
                             Transform Tgoalgrasp = probot->GetActiveManipulator()->GetEndEffectorTransform();
                             probot->SetTransform(trobotstart);
                             FOREACH(itlink,vlinks) {
@@ -1033,10 +1039,10 @@ public:
                             }
                         }
 
-                        probot->SetActiveDOFValues(ptraj->GetPoints().back().q,true);
+                        ptraj->Sample(vtrajpoint,ptraj->GetDuration(),probot->GetConfigurationSpecification());
+                        probot->SetConfigurationValues(vtrajpoint.begin(),true);
                         vfinalvalues.push_back(vector<dReal>());
                         probot->GetDOFValues(vfinalvalues.back());
-                        probot->SetTransform(ptraj->GetPoints().back().trans);
                         vfinaltransformations.push_back(probot->GetActiveManipulator()->GetTransform());
                     }
 
