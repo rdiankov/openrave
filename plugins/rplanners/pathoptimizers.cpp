@@ -49,13 +49,6 @@ public:
         if( _parameters->_fStepLength <= 0 ) {
             _parameters->_fStepLength = 0.04;
         }
-        _trajectoryretimer = RaveCreatePlanner(GetEnv(),"lineartrajectoryretimer");
-        if( !!_trajectoryretimer ) {
-            if( !_trajectoryretimer->InitPlan(RobotBasePtr(),_parameters) ) {
-                RAVELOG_WARN("trajectoryretimer failed to init\n");
-                _trajectoryretimer.reset();
-            }
-        }
         return true;
     }
 
@@ -121,9 +114,7 @@ public:
             ptraj->Insert(ptraj->GetNumWaypoints(),*it);
         }
         RAVELOG_DEBUG(str(boost::format("path optimizing - time=%fs\n")%(0.001f*(float)(GetMilliTime()-basetime))));
-        if( !!_trajectoryretimer ) {
-            return _trajectoryretimer->PlanPath(ptraj);
-        }
+        _ProcessPostPlanners(RobotBasePtr(),ptraj);
         return PS_HasSolution;
     }
 
@@ -134,6 +125,10 @@ protected:
         vector<dReal> q0(parameters->GetDOF()), dq(parameters->GetDOF());
         vector<dReal> vtrajdata;
         ptraj->GetWaypoints(0,ptraj->GetNumWaypoints(),_parameters->_configurationspecification,vtrajdata);
+
+        std::copy(vtrajdata.begin(),vtrajdata.begin()+_parameters->GetDOF(),q0.begin());
+        listpoints.push_back(q0);
+
         for(size_t ipoint = 1; ipoint < ptraj->GetNumWaypoints(); ++ipoint) {
             std::copy(vtrajdata.begin()+(ipoint-1)*_parameters->GetDOF(),vtrajdata.begin()+(ipoint)*_parameters->GetDOF(),dq.begin());
             std::copy(vtrajdata.begin()+(ipoint)*_parameters->GetDOF(),vtrajdata.begin()+(ipoint+1)*_parameters->GetDOF(),q0.begin());
@@ -170,7 +165,6 @@ protected:
     }
 
     TrajectoryTimingParametersPtr _parameters;
-    PlannerBasePtr _trajectoryretimer;
 };
 
 //    virtual void _OptimizePathSingle(list<Node*>& path, int numiterations)

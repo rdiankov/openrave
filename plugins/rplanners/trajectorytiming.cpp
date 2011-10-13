@@ -221,6 +221,7 @@ public:
         // finally initialize the output trajectory
         ptraj->Init(newspec);
         ptraj->Insert(0,data);
+        RAVELOG_DEBUG(str(boost::format("LinearTrajectoryRetimer path length=%fs")%ptraj->GetDuration()));
         return PS_HasSolution;
     }
 

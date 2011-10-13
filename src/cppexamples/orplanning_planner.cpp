@@ -65,9 +65,6 @@ int main(int argc, char ** argv)
     params->SetRobotActiveJoints(probot); // set planning configuration space to current active dofs
     params->vgoalconfig.resize(probot->GetActiveDOF());
 
-    // create the output trajectory
-    TrajectoryBasePtr ptraj = RaveCreateTrajectory(penv,"");
-
     while(1) {
         GraphHandlePtr pgraph;
         {
@@ -94,6 +91,8 @@ int main(int argc, char ** argv)
                 continue;
             }
 
+            // create a new output trajectory
+            TrajectoryBasePtr ptraj = RaveCreateTrajectory(penv,"");
             if( !planner->PlanPath(ptraj) ) {
                 RAVELOG_WARN("plan failed, trying again\n");
                 continue;
@@ -104,7 +103,6 @@ int main(int argc, char ** argv)
                 RobotBase::RobotStateSaver saver(probot); // save the state of the robot since will be setting joint values
                 vector<RaveVector<float> > vpoints;
                 vector<dReal> vtrajdata;
-                ConfigurationSpecification::Group gvalues;
                 for(dReal ftime = 0; ftime <= ptraj->GetDuration(); ftime += 0.01) {
                     ptraj->Sample(vtrajdata,ftime,probot->GetActiveConfigurationSpecification());
                     probot->SetActiveDOFValues(vtrajdata);
@@ -112,10 +110,11 @@ int main(int argc, char ** argv)
                 }
                 pgraph = penv->drawlinestrip(&vpoints[0].x,vpoints.size(),sizeof(vpoints[0]),1.0f);
             }
+
+            // send the trajectory to the robot
+            probot->GetController()->SetPath(ptraj);
         }
 
-        // send the trajectory to the robot
-        probot->GetController()->SetPath(ptraj);
 
         // wait for the robot to finish
         while(!probot->GetController()->IsDone()) {

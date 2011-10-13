@@ -88,6 +88,8 @@ PlannerBase::PlannerParameters::PlannerParameters() : XMLReadable("plannerparame
 {
     _diffstatefn = subtractstates;
     _neighstatefn = addstates;
+    //_sPostProcessingParameters ="<_nmaxiterations>100</_nmaxiterations><_postprocessing planner=\"lineartrajectoryretimer\"></_postprocessing>";
+    _sPostProcessingParameters ="<_nmaxiterations>10</_nmaxiterations><_postprocessing planner=\"parabolicsmoother\"></_postprocessing>";
     _vXMLParameters.reserve(20);
     _vXMLParameters.push_back("configuration");
     _vXMLParameters.push_back("_vinitialconfig");
@@ -131,7 +133,7 @@ PlannerBase::PlannerParameters& PlannerBase::PlannerParameters::operator=(const 
     _vConfigResolution.resize(0);
     _vConfigVelocityLimit.resize(0);
     _vConfigAccelerationLimit.resize(0);
-    _sPostProcessingPlanner = "shortcut_linear";
+    _sPostProcessingPlanner = "";
     _sPostProcessingParameters.resize(0);
     _sExtraParameters.resize(0);
     _nMaxIterations = 0;

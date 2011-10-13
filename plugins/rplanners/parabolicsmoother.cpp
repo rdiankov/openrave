@@ -39,12 +39,7 @@ public:
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         _parameters.reset(new TrajectoryTimingParameters());
         _parameters->copy(params);
-        _robot = pbase;
-        if( !_CheckParameters() ) {
-            return false;
-        }
-        _puniformsampler = RaveCreateSpaceSampler(GetEnv(),"mt19937");
-        return true;
+        return _InitPlan();
     }
 
     virtual bool InitPlan(RobotBasePtr pbase, std::istream& isParameters)
@@ -52,22 +47,16 @@ public:
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         _parameters.reset(new TrajectoryTimingParameters());
         isParameters >> *_parameters;
-        _robot = pbase;
-        return _CheckParameters();
+        return _InitPlan();
     }
 
-    bool _CheckParameters()
+    bool _InitPlan()
     {
         if( _parameters->_nMaxIterations <= 0 ) {
             _parameters->_nMaxIterations = 100;
         }
-        if(_robot->GetActiveDOF() != _parameters->GetDOF() ) {
-            return false;
-        }
-        if(_robot->GetActiveDOF() != _parameters->GetDOF() ) {
-            return false;
-        }
-        return true;
+        _puniformsampler = RaveCreateSpaceSampler(GetEnv(),"mt19937");
+        return !!_puniformsampler;
     }
 
     virtual PlannerParametersConstPtr GetParameters() const {
@@ -121,17 +110,12 @@ public:
             dynamicpath.SetMilestones(path);   //now the trajectory starts and stops at every milestone
             RAVELOG_DEBUG(str(boost::format("initial path size %d, duration: %f")%path.size()%dynamicpath.GetTotalTime()));
             ParabolicRamp::RampFeasibilityChecker checker(this,parameters->_pointtolerance);
-            int res=dynamicpath.Shortcut(parameters->_nMaxIterations,checker);
-            if( res != 0 ) {
-                RAVELOG_WARN("parabolic smoother failed\n");
-            }
-            RAVELOG_DEBUG(str(boost::format("after shortcutting: duration %f")%dynamicpath.GetTotalTime()));
+            int numshortcuts=dynamicpath.Shortcut(parameters->_nMaxIterations,checker);
 
             ConfigurationSpecification oldspec = ptraj->GetConfigurationSpecification();
             ConfigurationSpecification velspec = oldspec.GetVelocitySpecification();
             ConfigurationSpecification newspec = oldspec;
             newspec.AddVelocityGroups(true);
-            ptraj->Init(newspec);
 
             int timeoffset=-1;
             FOREACH(itgroup,newspec._vgroups) {
@@ -145,6 +129,7 @@ public:
                     itgroup->interpolation = "quadratic";
                 }
             }
+            ptraj->Init(newspec);
 
             // separate all the acceleration switches into individual points
             vector<dReal> vtrajpoint(newspec.GetDOF());
@@ -180,6 +165,9 @@ public:
                     prevtime = *ittime;
                 }
             }
+
+            BOOST_ASSERT(RaveFabs(dynamicpath.GetTotalTime()-ptraj->GetDuration())<0.001);
+            RAVELOG_DEBUG(str(boost::format("after shortcutting %d times: path waypoints=%d, length=%fs")%numshortcuts%ptraj->GetNumWaypoints()%dynamicpath.GetTotalTime()));
         }
         catch (const openrave_exception& ex) {
             RAVELOG_WARN(str(boost::format("parabolic planner failed: %s")%ex.what()));
@@ -188,7 +176,7 @@ public:
             ptraj->serialize(f);
             return PS_Failed;
         }
-        RAVELOG_DEBUG(str(boost::format("path optimizing - time=%fs\n")%(0.001f*(float)(GetMilliTime()-basetime))));
+        RAVELOG_DEBUG(str(boost::format("path optimizing - computation time=%fs\n")%(0.001f*(float)(GetMilliTime()-basetime))));
         return PS_HasSolution;
     }
 
@@ -212,7 +200,6 @@ public:
     }
 
 protected:
-    RobotBasePtr _robot;
     TrajectoryTimingParametersPtr _parameters;
     SpaceSamplerBasePtr _puniformsampler;
 };

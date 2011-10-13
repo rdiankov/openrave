@@ -397,13 +397,13 @@ protected:
 
     void _InterpolateQuadratic(const ConfigurationSpecification::Group& g, size_t ipoint, dReal deltatime, std::vector<dReal>& data)
     {
-        size_t offset= ipoint*_spec.GetDOF()+g.offset;
+        size_t offset= ipoint*_spec.GetDOF();
         int derivoffset = _vderivoffsets[g.offset];
         for(int i = 0; i < g.dof; ++i) {
             // coeff*t^2 + deriv0*t + pos0
-            dReal deriv0 = _vtrajdata[offset+derivoffset];
-            dReal coeff = 0.5*_vdeltainvtime.at(ipoint+1)*(_vtrajdata[_spec.GetDOF()+offset+derivoffset]-deriv0);
-            data[g.offset+i] = _vtrajdata[offset+i] + deltatime*(deriv0 + deltatime*coeff);
+            dReal deriv0 = _vtrajdata[offset+derivoffset+i];
+            dReal coeff = 0.5*_vdeltainvtime.at(ipoint+1)*(_vtrajdata[_spec.GetDOF()+offset+derivoffset+i]-deriv0);
+            data[g.offset+i] = _vtrajdata[offset+g.offset+i] + deltatime*(deriv0 + deltatime*coeff);
         }
     }
 
