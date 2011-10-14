@@ -87,7 +87,7 @@ class CubeAssembly(metaclass.AutoReloader):
 
                 gmodel = databases.grasping.GraspingModel(robot=self.robot,target=body)
                 if generategrasps:
-                    if 1#not gmodel.load():
+                    if not gmodel.load():
                         approachrays = gmodel.computeBoxApproachRays(delta=0.01,normalanglerange=0,directiondelta=0)
                         gmodel.numthreads = multiprocessing.cpu_count()
                         gmodel.generate(standoffs=array([0,0.04,0.08]),approachrays=approachrays, friction=0.1)
