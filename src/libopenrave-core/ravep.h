@@ -186,6 +186,8 @@ OPENRAVE_API std::string& SearchAndReplace(std::string& out, const std::string& 
 
 RobotBasePtr CreateGenericRobot(EnvironmentBasePtr penv, std::istream& sinput);
 TrajectoryBasePtr CreateGenericTrajectory(EnvironmentBasePtr penv, std::istream& sinput);
+PhysicsEngineBasePtr CreateGenericPhysicsEngine(EnvironmentBasePtr penv, std::istream& sinput);
+CollisionCheckerBasePtr CreateGenericCollisionChecker(EnvironmentBasePtr penv, std::istream& sinput);
 }
 
 using namespace OpenRAVE;

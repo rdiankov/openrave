@@ -811,7 +811,7 @@ protected:
             RAVELOG_WARN("failed to jitter robot out of collision\n");
         }
 
-        TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF());
+        TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),"");
 
         bool bSuccess = false;
         for(int itry = 0; itry < nMaxTries; ++itry) {
@@ -990,10 +990,8 @@ protected:
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
 
             if( cmd == "stream" ) {
-                ptraj = RaveCreateTrajectory(GetEnv(),robot->GetDOF());
-                if( !ptraj->Read(sinput,robot) ) {
-                    return false;
-                }
+                ptraj = RaveCreateTrajectory(GetEnv(),"");
+                ptraj->deserialize(sinput);
             }
             else if( cmd == "resettiming" ) {
                 sinput >> bRecomputeTiming;
@@ -1023,7 +1021,7 @@ protected:
         }
 
         if( bRecomputeTiming || ptraj->GetDuration() == 0 ) {
-            ptraj->CalcTrajTiming(robot,ptraj->GetInterpMethod(),true,false);
+            planningutils::RetimeActiveDOFTrajectory(ptraj,robot);
         }
 
         RobotBase::RobotStateSaver saver(robot);

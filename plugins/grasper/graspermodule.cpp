@@ -13,8 +13,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#ifndef  GRASPER_PROBLEM_H
-#define  GRASPER_PROBLEM_H
+#include "plugindefs.h"
 
 #include <boost/thread/condition.hpp>
 #include <boost/thread/mutex.hpp>
@@ -53,7 +52,7 @@ struct sort_pair_first {
 };
 
 // very simple interface to use the GrasperPlanner
-class GrasperProblem : public ModuleBase
+class GrasperModule : public ModuleBase
 {
     struct GRASPANALYSIS
     {
@@ -64,20 +63,20 @@ class GrasperProblem : public ModuleBase
     };
 
 public:
-    GrasperProblem(EnvironmentBasePtr penv)  : ModuleBase(penv), errfile(NULL) {
+    GrasperModule(EnvironmentBasePtr penv, std::istream& sinput)  : ModuleBase(penv), errfile(NULL) {
         __description = ":Interface Author: Rosen Diankov\n\nUsed to simulate a hand grasping an object by closing its fingers until collision with all links. ";
-        RegisterCommand("Grasp",boost::bind(&GrasperProblem::_GraspCommand,this,_1,_2),
+        RegisterCommand("Grasp",boost::bind(&GrasperModule::_GraspCommand,this,_1,_2),
                         "Performs a grasp and returns contact points");
-        RegisterCommand("GraspThreaded",boost::bind(&GrasperProblem::_GraspThreadedCommand,this,_1,_2),
+        RegisterCommand("GraspThreaded",boost::bind(&GrasperModule::_GraspThreadedCommand,this,_1,_2),
                         "Parllelizes the computation of the grasp planning and force closure. Number of threads can be specified with 'numthreads'.");
-        RegisterCommand("ComputeDistanceMap",boost::bind(&GrasperProblem::_ComputeDistanceMapCommand,this,_1,_2),
+        RegisterCommand("ComputeDistanceMap",boost::bind(&GrasperModule::_ComputeDistanceMapCommand,this,_1,_2),
                         "Computes a distance map around a particular point in space");
-        RegisterCommand("GetStableContacts",boost::bind(&GrasperProblem::_GetStableContactsCommand,this,_1,_2),
+        RegisterCommand("GetStableContacts",boost::bind(&GrasperModule::_GetStableContactsCommand,this,_1,_2),
                         "Returns the stable contacts as defined by the closing direction");
-        RegisterCommand("ConvexHull",boost::bind(&GrasperProblem::_ConvexHullCommand,this,_1,_2),
+        RegisterCommand("ConvexHull",boost::bind(&GrasperModule::_ConvexHullCommand,this,_1,_2),
                         "Given a point cloud, returns information about its convex hull like normal planes, vertex indices, and triangle indices. Computed planes point outside the mesh, face indices are not ordered, triangles point outside the mesh (counter-clockwise)");
     }
-    virtual ~GrasperProblem() {
+    virtual ~GrasperModule() {
         if( !!errfile )
             fclose(errfile);
     }
@@ -279,19 +278,15 @@ public:
             return false;
         }
 
-        ptraj->CalcTrajTiming(_robot, ptraj->GetInterpMethod(), true, true);
-        TrajectoryBasePtr pfulltraj = RaveCreateTrajectory(GetEnv(),_robot->GetDOF());
-        _robot->GetFullTrajectoryFromActive(pfulltraj,ptraj,false);
-
         if( strsavetraj.size() > 0 ) {
             ofstream f(strsavetraj.c_str());
-            pfulltraj->Write(f, 0);
+            ptraj->serialize(f);
         }
 
         BOOST_ASSERT(ptraj->GetNumWaypoints()>0);
         vector<dReal> vdata;
-        ptraj->GetWaypoints(ptraj->GetNumWaypoints()-1,ptraj->GetNumWaypoints(),vdata);
-        _robot->SetActiveDOFValues(vdata);
+        ptraj->GetWaypoint(-1,vdata,_robot->GetConfigurationSpecification());
+        _robot->SetConfigurationValues(vdata.begin(),true);
 
         vector< pair<CollisionReport::CONTACT,int> > contacts;
         if( bComputeStableContacts ) {
@@ -330,10 +325,12 @@ public:
         }
 
         if( bOutputFinal ) {
-            BOOST_ASSERT(pfulltraj->GetNumWaypoints()>0);
-            vector<dReal> q;
-            pfulltraj->GetWaypoint(-1,q,_robot->GetConfigurationSpecification());
-            q.resize(_robot->GetDOF());
+            BOOST_ASSERT(ptraj->GetNumWaypoints()>0);
+            vector<dReal> vtrajpoint, q;
+            ptraj->GetWaypoint(-1,vtrajpoint,_robot->GetConfigurationSpecification());
+            _robot->SetConfigurationValues(vtrajpoint.begin(),true);
+            sout << _robot->GetTransform() << " ";
+            _robot->GetDOFValues(q);
             FOREACHC(it,q) {
                 sout << *it << " ";
             }
@@ -354,8 +351,8 @@ public:
             sout << analysis.mindist << " " << analysis.volume << " ";
         }
 
-        if( bExecute ) {
-            _robot->SetMotion(pfulltraj);
+        if( bExecute && !!_robot->GetController() ) {
+            _robot->GetController()->SetPath(ptraj);
         }
         return true;
     }
@@ -778,7 +775,7 @@ public:
         // start worker threads
         vector<boost::shared_ptr<boost::thread> > listthreads(numthreads);
         FOREACH(itthread,listthreads) {
-            itthread->reset(new boost::thread(boost::bind(&GrasperProblem::_WorkerThread,this,worker_params,pcloneenv)));
+            itthread->reset(new boost::thread(boost::bind(&GrasperModule::_WorkerThread,this,worker_params,pcloneenv)));
         }
 
         _listGraspResults.clear();
@@ -934,7 +931,7 @@ public:
 
                 BOOST_ASSERT(ptraj->GetNumWaypoints() > 0);
                 vector<dReal> vtrajpoint;
-                ptraj->Sample(vtrajpoint,ptraj->GetDuration(),probot->GetConfigurationSpecification());
+                ptraj->GetWaypoint(-1,vtrajpoint,probot->GetConfigurationSpecification());
                 probot->SetConfigurationValues(vtrajpoint.begin(),true);
                 grasp_params->transfinal = probot->GetTransform();
                 probot->GetDOFValues(grasp_params->finalshape);
@@ -1020,7 +1017,7 @@ public:
                         if ( worker_params->bCheckGraspIK ) {
                             CollisionOptionsStateSaver optionstate(pcloneenv->GetCollisionChecker(),coloptions,false); // remove contacts
                             RobotBase::RobotStateSaver linksaver(probot);
-                            ptraj->Sample(vtrajpoint,ptraj->GetDuration());
+                            ptraj->GetWaypoint(-1,vtrajpoint);
                             Transform t = probot->GetTransform();
                             ptraj->GetConfigurationSpecification().ExtractTransform(t,vtrajpoint.begin(),probot);
                             probot->SetTransform(t);
@@ -1039,7 +1036,7 @@ public:
                             }
                         }
 
-                        ptraj->Sample(vtrajpoint,ptraj->GetDuration(),probot->GetConfigurationSpecification());
+                        ptraj->GetWaypoint(-1,vtrajpoint,probot->GetConfigurationSpecification());
                         probot->SetConfigurationValues(vtrajpoint.begin(),true);
                         vfinalvalues.push_back(vector<dReal>());
                         probot->GetDOFValues(vfinalvalues.back());
@@ -1419,7 +1416,7 @@ protected:
         RAVELOG_DEBUG("Starting GetStableContacts...\n");
 
         if(!GetEnv()->CheckCollision(KinBodyConstPtr(_robot))) {
-            RAVELOG_ERROR("GrasperProblem::GetStableContacts - Error: Robot is not colliding with the target.\n");
+            RAVELOG_ERROR("GrasperModule::GetStableContacts - Error: Robot is not colliding with the target.\n");
             return;
         }
 
@@ -1673,4 +1670,7 @@ protected:
     std::vector<dReal> _vjointmaxlengths;
 };
 
-#endif
+ModuleBasePtr CreateGrasperModule(EnvironmentBasePtr penv, std::istream& sinput)
+{
+    return ModuleBasePtr(new GrasperModule(penv,sinput));
+}

@@ -156,8 +156,9 @@ public:
             trans=newtrans;
         }
         dReal time;
-        std::vector<dReal> q, qdot;
+        std::vector<dReal> q, qdot, qtorque;
         Transform trans;
+        Vector linearvel, angularvel;
     };
 
     /// \deprecated (11/10/04)

@@ -299,7 +299,6 @@ protected:
 
     bool GraspPlanning(ostream& sout, istream& sinput)
     {
-        RAVELOG_DEBUG("GraspPlanning...\n");
         RobotBase::ManipulatorConstPtr pmanip = _robot->GetActiveManipulator();
 
         vector<dReal> vgrasps;
@@ -935,7 +934,6 @@ protected:
 
     bool CloseFingers(ostream& sout, istream& sinput)
     {
-        RAVELOG_DEBUG("Starting CloseFingers...\n");
         bool bExecute = true, bOutputFinal=false;
         string strtrajfilename;
         boost::shared_ptr<ostream> pOutputTrajStream;
@@ -1047,7 +1045,6 @@ protected:
 
     bool ReleaseFingers(ostream& sout, istream& sinput)
     {
-        RAVELOG_VERBOSE("Starting ReleaseFingers...\n");
         bool bExecute = true, bOutputFinal=false;
         string strtrajfilename;
         boost::shared_ptr<ostream> pOutputTrajStream;
@@ -1185,7 +1182,6 @@ protected:
 
     bool ReleaseActive(ostream& sout, istream& sinput)
     {
-        RAVELOG_VERBOSE("Releasing active...\n");
         bool bExecute = true, bOutputFinal = false;
         string strtrajfilename;
         boost::shared_ptr<ostream> pOutputTrajStream;

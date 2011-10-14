@@ -284,7 +284,7 @@ public:
         BOOST_ASSERT(startindex<=endindex && startindex*_spec.GetDOF() <= _vtrajdata.size() && endindex*_spec.GetDOF() <= _vtrajdata.size());
         data.resize(spec.GetDOF()*(endindex-startindex),0);
         if( startindex < endindex ) {
-            ConfigurationSpecification::ConvertData(data.begin(),spec,_vtrajdata.begin(),_spec,endindex-startindex,GetEnv());
+            ConfigurationSpecification::ConvertData(data.begin(),spec,_vtrajdata.begin()+startindex*_spec.GetDOF(),_spec,endindex-startindex,GetEnv());
         }
     }
 

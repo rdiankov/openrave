@@ -437,11 +437,11 @@ public:
     }
 
     inline T rot(int i, int j) const {
-        MATH_ASSERT( i >= 0 && i < 3 && j >= 0 && j < 3);
+        MATH_ASSERT( i >= 0 && j >= 0 && i < 3 && j < 3);
         return m[4*i+j];
     }
     inline T& rot(int i, int j) {
-        MATH_ASSERT( i >= 0 && i < 3 && j >= 0 && j < 3);
+        MATH_ASSERT( i >= 0 && j >= 0 && i < 3 && j < 3);
         return m[4*i+j];
     }
 

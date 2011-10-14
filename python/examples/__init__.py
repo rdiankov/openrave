@@ -34,6 +34,7 @@ import checkvisibility
 import collision
 import collision2
 import constraintplanning
+import cubeassembly
 import dualarmdemo_schunk
 import fastgrasping
 import fastgraspingthreaded

@@ -398,6 +398,7 @@ class GraspingModel(DatabaseGenerator):
                 # do not fill with plannername
                 taskmanip = interfaces.TaskManipulation(self.robot)
                 final,traj = taskmanip.ReleaseFingers(execute=False,outputfinal=True)
+            print 'setting preshape ',final
             preshapes = array([final])
         if rolls is None:
             rolls = arange(0,2*pi,pi/2)

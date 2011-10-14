@@ -17,6 +17,8 @@
 #ifndef RAVE_SERVER
 #define RAVE_SERVER
 
+#include <openrave/planningutils.h>
+
 #ifndef _WIN32
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -471,7 +473,7 @@ private:
     }
 
     // called from threads other than the main worker to wait until
-    void SyncWithWorkerThread()
+    void _SyncWithWorkerThread()
     {
         boost::mutex::scoped_lock lock(_mutexWorker);
         while((listWorkers.size() > 0 || _bWorking) && !bCloseThread) {
@@ -895,7 +897,7 @@ protected:
             return false;
         }
         std::string strargs((std::istreambuf_iterator<char>(is)), std::istreambuf_iterator<char>());
-        SyncWithWorkerThread();
+        _SyncWithWorkerThread();
 
         if( bDestroyDuplicates ) {
             // if there's a duplicate problem instance, delete it
@@ -962,7 +964,7 @@ protected:
             return false;
         }
 
-        SyncWithWorkerThread();
+        _SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         KinBodyPtr body = GetEnv()->ReadKinBodyURI(KinBodyPtr(),xmlfile,list<pair<string,string> >());
 
@@ -985,7 +987,7 @@ protected:
         if( !is ) {
             return false;
         }
-        SyncWithWorkerThread();
+        _SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
 
         KinBodyPtr pbody = GetEnv()->GetKinBody(bodyname);
@@ -1000,7 +1002,7 @@ protected:
 
     bool orEnvGetRobots(istream& is, ostream& os, boost::shared_ptr<void>& pdata)
     {
-        SyncWithWorkerThread();
+        _SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
 
         vector<RobotBasePtr> vrobots;
@@ -1015,7 +1017,7 @@ protected:
 
     bool orEnvGetBodies(istream& is, ostream& os, boost::shared_ptr<void>& pdata)
     {
-        SyncWithWorkerThread();
+        _SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
 
         vector<KinBodyPtr> vbodies;
@@ -1031,7 +1033,7 @@ protected:
     /// values = orBodySetTransform(body, position, rotation) - returns the dof values of a kinbody
     bool orKinBodySetTransform(istream& is, ostream& os, boost::shared_ptr<void>& pdata)
     {
-        SyncWithWorkerThread();
+        _SyncWithWorkerThread();
         KinBodyPtr pbody = orMacroGetBody(is);
         vector<dReal> values = vector<dReal>((istream_iterator<dReal>(is)), istream_iterator<dReal>());
 
@@ -1085,7 +1087,7 @@ protected:
     /// orBodyDestroy(robot, indices, affinedofs, axis) - returns the dof values of a kinbody
     bool orBodyDestroy(istream& is, ostream& os, boost::shared_ptr<void>& pdata)
     {
-        SyncWithWorkerThread();
+        _SyncWithWorkerThread();
         KinBodyPtr pbody = orMacroGetBody(is);
         if( !pbody ) {
             return false;
@@ -1095,7 +1097,7 @@ protected:
 
     bool orBodyEnable(istream& is, ostream& os, boost::shared_ptr<void>& pdata)
     {
-        SyncWithWorkerThread();
+        _SyncWithWorkerThread();
         KinBodyPtr pbody = orMacroGetBody(is);
         if( !pbody ) {
             return false;
@@ -1112,7 +1114,7 @@ protected:
     /// values = orBodyGetLinks(body) - returns the dof values of a kinbody
     bool orBodyGetLinks(istream& is, ostream& os, boost::shared_ptr<void>& pdata)
     {
-        SyncWithWorkerThread();
+        _SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         KinBodyPtr body = orMacroGetBody(is);
         if( !body ) {
@@ -1128,7 +1130,7 @@ protected:
 
     bool orRobotControllerSend(istream& is, ostream& os, boost::shared_ptr<void>& pdata)
     {
-        SyncWithWorkerThread();
+        _SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         RobotBasePtr probot = orMacroGetRobot(is);
         if( !probot || !probot->GetController() ) {
@@ -1143,7 +1145,7 @@ protected:
 
     bool orRobotSensorSend(istream& is, ostream& os, boost::shared_ptr<void>& pdata)
     {
-        SyncWithWorkerThread();
+        _SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         RobotBasePtr probot = orMacroGetRobot(is);
         if( !probot ) {
@@ -1162,7 +1164,7 @@ protected:
 
     bool orRobotSensorConfigure(istream& is, ostream& os, boost::shared_ptr<void>& pdata)
     {
-        SyncWithWorkerThread();
+        _SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         RobotBasePtr probot = orMacroGetRobot(is);
         string strcmd;
@@ -1209,7 +1211,7 @@ protected:
 
     bool orRobotSensorData(istream& is, ostream& os, boost::shared_ptr<void>& pdata)
     {
-        SyncWithWorkerThread();
+        _SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         RobotBasePtr probot = orMacroGetRobot(is);
         if( !probot ) {
@@ -1330,7 +1332,7 @@ protected:
 
     bool orRobotControllerSet(istream& is, ostream& os, boost::shared_ptr<void>& pdata)
     {
-        SyncWithWorkerThread();
+        _SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         RobotBasePtr probot = orMacroGetRobot(is);
         if( !probot )
@@ -1465,7 +1467,7 @@ protected:
     /// orRobotSetActiveDOFs(robot, indices, affinedofs, axis) - returns the dof values of a kinbody
     bool orRobotSetActiveDOFs(istream& is, ostream& os, boost::shared_ptr<void>& pdata)
     {
-        SyncWithWorkerThread();
+        _SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         RobotBasePtr probot = orMacroGetRobot(is);
         if( !probot ) {
@@ -1496,7 +1498,7 @@ protected:
             return false;
         }
         Vector axis;
-        if( affinedofs & RobotBase::DOF_RotationAxis ) {
+        if( affinedofs & DOF_RotationAxis ) {
             is >> axis.x >> axis.y >> axis.z;
             if( !is ) {
                 return false;
@@ -1510,7 +1512,7 @@ protected:
     /// orRobotSetActiveManipulator(robot, manip) - returns the dof values of a kinbody
     bool orRobotSetActiveManipulator(istream& is, ostream& os, boost::shared_ptr<void>& pdata)
     {
-        SyncWithWorkerThread();
+        _SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         RobotBasePtr probot = orMacroGetRobot(is);
         if( !probot ) {
@@ -1527,7 +1529,7 @@ protected:
 
     bool orRobotCheckSelfCollision(istream& is, ostream& os, boost::shared_ptr<void>& pdata)
     {
-        SyncWithWorkerThread();
+        _SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         KinBodyPtr probot = orMacroGetBody(is);
         if( !probot ) {
@@ -1541,7 +1543,7 @@ protected:
     /// dofs = orRobotGetActiveDOF(body) - returns the active degrees of freedom of the robot
     bool orRobotGetActiveDOF(istream& is, ostream& os, boost::shared_ptr<void>& pdata)
     {
-        SyncWithWorkerThread();
+        _SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         RobotBasePtr probot = orMacroGetRobot(is);
         if( !probot ) {
@@ -1554,7 +1556,7 @@ protected:
     /// dofs = orBodyGetAABB(body) - returns the number of active joints of the body
     bool orBodyGetAABB(istream& is, ostream& os, boost::shared_ptr<void>& pdata)
     {
-        SyncWithWorkerThread();
+        _SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         KinBodyPtr pbody = orMacroGetBody(is);
         if( !pbody ) {
@@ -1568,7 +1570,7 @@ protected:
     /// values = orBodyGetLinks(body) - returns the dof values of a kinbody
     bool orBodyGetAABBs(istream& is, ostream& os, boost::shared_ptr<void>& pdata)
     {
-        SyncWithWorkerThread();
+        _SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         KinBodyPtr pbody = orMacroGetBody(is);
         if( !pbody ) {
@@ -1585,7 +1587,7 @@ protected:
     /// dofs = orBodyGetDOF(body) - returns the number of active joints of the body
     bool orBodyGetDOF(istream& is, ostream& os, boost::shared_ptr<void>& pdata)
     {
-        SyncWithWorkerThread();
+        _SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         KinBodyPtr pbody = orMacroGetBody(is);
         if( !pbody ) {
@@ -1598,7 +1600,7 @@ protected:
     /// values = orBodyGetDOFValues(body, indices) - returns the dof values of a kinbody
     bool orBodyGetJointValues(istream& is, ostream& os, boost::shared_ptr<void>& pdata)
     {
-        SyncWithWorkerThread();
+        _SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         KinBodyPtr pbody = orMacroGetBody(is);
         if( !pbody ) {
@@ -1631,7 +1633,7 @@ protected:
     /// values = orRobotGetDOFValues(body, indices) - returns the dof values of a kinbody
     bool orRobotGetDOFValues(istream& is, ostream& os, boost::shared_ptr<void>& pdata)
     {
-        SyncWithWorkerThread();
+        _SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         RobotBasePtr probot = orMacroGetRobot(is);
         if( !probot ) {
@@ -1663,7 +1665,7 @@ protected:
     /// [lower, upper] = orKinBodyGetDOFLimits(body) - returns the dof limits of a kinbody
     bool orRobotGetDOFLimits(istream& is, ostream& os, boost::shared_ptr<void>& pdata)
     {
-        SyncWithWorkerThread();
+        _SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         RobotBasePtr probot = orMacroGetRobot(is);
         if( !probot ) {
@@ -1684,7 +1686,7 @@ protected:
 
     bool orRobotGetManipulators(istream& is, ostream& os, boost::shared_ptr<void>& pdata)
     {
-        SyncWithWorkerThread();
+        _SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         RobotBasePtr probot = orMacroGetRobot(is);
         if( !probot ) {
@@ -1733,7 +1735,7 @@ protected:
 
     bool orRobotGetAttachedSensors(istream& is, ostream& os, boost::shared_ptr<void>& pdata)
     {
-        SyncWithWorkerThread();
+        _SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         RobotBasePtr probot = orMacroGetRobot(is);
         if( !probot ) {
@@ -1765,7 +1767,7 @@ protected:
     /// orBodySetJointValues(body, values, indices)
     bool orBodySetJointValues(istream& is, ostream& os, boost::shared_ptr<void>& pdata)
     {
-        SyncWithWorkerThread();
+        _SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         KinBodyPtr pbody = orMacroGetBody(is);
         if( !pbody ) {
@@ -1838,7 +1840,7 @@ protected:
     /// orBodySetJointTorques(body, values, indices)
     bool orBodySetJointTorques(istream& is, ostream& os, boost::shared_ptr<void>& pdata)
     {
-        SyncWithWorkerThread();
+        _SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         KinBodyPtr pbody = orMacroGetBody(is);
         if( !pbody ) {
@@ -1868,7 +1870,7 @@ protected:
     /// orRobotSetDOFValues(body, values, indices)
     bool orRobotSetDOFValues(istream& is, ostream& os, boost::shared_ptr<void>& pdata)
     {
-        SyncWithWorkerThread();
+        _SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         RobotBasePtr probot = orMacroGetRobot(is);
         if( !probot ) {
@@ -1942,76 +1944,93 @@ protected:
         if( !probot ) {
             return false;
         }
+        if( !probot->GetController() ) {
+            return false;
+        }
         int numpoints, havetime, havetrans;
         *is >> numpoints >> havetime >> havetrans;
         if( !*is ) {
             return false;
         }
-        Transform trans = probot->GetTransform();
-        vector<Trajectory::TPOINT> vpoints(numpoints);
-        FOREACH(it, vpoints) {
-            it->q.resize(probot->GetActiveDOF());
-            it->trans = trans;
-            FOREACH(itval, it->q) {
-                *is >> *itval;
-            }
-            if( !*is ) {
-                return false;
+
+
+        int dof = probot->GetActiveDOF()+(havetime ? 1 : 0)+(havetrans ? 7 : 0);
+        ConfigurationSpecification spec = probot->GetActiveConfigurationSpecification();
+        int offset = probot->GetActiveDOF();
+        if( havetime ) {
+            ConfigurationSpecification::Group g;
+            g.offset = offset;
+            g.dof = 1;
+            g.interpolation = "linear";
+            g.name = "deltatime";
+            spec._vgroups.push_back(g);
+            offset += g.dof;
+        }
+        if( havetrans ) {
+            BOOST_ASSERT( probot->GetAffineDOF() == 0);
+            ConfigurationSpecification::Group g;
+            g.offset = offset;
+            g.dof = 1;
+            g.interpolation = "linear";
+            g.name = str(boost::format("affine_transform %s %d")%probot->GetName()%DOF_Transform);
+            spec._vgroups.push_back(g);
+            offset += g.dof;
+        }
+        offset = 0;
+        vector<dReal> vpoints(numpoints*dof);
+        for(int i = 0; i < numpoints; ++i) {
+            for(int j = 0; j < probot->GetActiveDOF(); ++j) {
+                *is >> vpoints[i*dof+j];
             }
         }
+        if( !*is ) {
+            return false;
+        }
+        offset += probot->GetActiveDOF();
         if( havetime ) {
-            FOREACH(it, vpoints) {
-                *is >> it->time;
+            for(int i = 0; i < numpoints; ++i) {
+                *is >> vpoints[i*dof+offset];
             }
+            offset += 1;
         }
 
         if( havetrans ) {
             if( havetrans == 1 ) {     // 3x4 matrix
                 TransformMatrix m;
-                FOREACH(it, vpoints) {
+                for(int i = 0; i < numpoints; ++i) {
                     *is >> m;
-                    it->trans = m;
+                    RaveGetAffineDOFValuesFromTransform(vpoints.begin()+i*dof+offset,m,DOF_Transform);
                 }
             }
             else {     // quaternion and translation
-                FOREACH(it, vpoints) {
-                    *is >> it->trans;
+                Transform t;
+                for(int i = 0; i < numpoints; ++i) {
+                    *is >> t;
+                    RaveGetAffineDOFValuesFromTransform(vpoints.begin()+i*dof+offset,t,DOF_Transform);
                 }
             }
         }
-
-        // add all the points
-        TrajectoryBasePtr pfulltraj = RaveCreateTrajectory(GetEnv(),probot->GetDOF());
-
-        if( probot->GetActiveDOF() > 0 ) {
-            TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),probot->GetActiveDOF());
-            FOREACH(it, vpoints) {
-                ptraj->AddPoint(*it);
-            }
-            probot->GetFullTrajectoryFromActive(pfulltraj, ptraj, false);
-        }
-        else {
-            Trajectory::TPOINT tp;
-            probot->GetDOFValues(tp.q);
-            FOREACH(it, vpoints) {
-                tp.time = it->time;
-                tp.trans = it->trans;
-                pfulltraj->AddPoint(tp);
-            }
-        }
-
         if( !*is ) {
             return false;
         }
-        pfulltraj->CalcTrajTiming(probot, pfulltraj->GetInterpMethod(), !havetime, false);
-        probot->SetMotion(pfulltraj);
+
+        // add all the points
+        TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),"");
+        ptraj->Init(spec);
+        ptraj->Insert(0,vpoints);
+        RobotBase::RobotStateSaver saver(probot);
+        if( havetrans ) {
+            probot->SetActiveDOFs(probot->GetActiveDOFIndices(),DOF_Transform);
+        }
+        planningutils::RetimeActiveDOFTrajectory(ptraj,probot,havetime);
+        probot->GetController()->SetPath(ptraj);
         return true;
     }
 
     /// [collision, bodycolliding] = orEnvCheckCollision(body) - returns whether a certain body is colliding with the scene
     bool orEnvCheckCollision(istream& is, ostream& os, boost::shared_ptr<void>& pdata)
     {
-        SyncWithWorkerThread();
+        _SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         KinBodyPtr pbody = orMacroGetBody(is);
         if( !pbody ) {
@@ -2083,7 +2102,7 @@ protected:
     /// info is a Nx6 vector where the first 3 columns are position and last 3 are normals
     bool orEnvRayCollision(istream& is, ostream& os, boost::shared_ptr<void>& pdata)
     {
-        SyncWithWorkerThread();
+        _SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         KinBodyPtr pbody = orMacroGetBody(is);
 
@@ -2134,7 +2153,7 @@ protected:
         bool bSync=true;
         is >> timestep >> bSync;
         if( bSync ) {
-            SyncWithWorkerThread();
+            _SyncWithWorkerThread();
             EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
             GetEnv()->StepSimulation(timestep);
         }
@@ -2154,7 +2173,7 @@ protected:
 
     bool orEnvTriangulate(istream& is, ostream& os, boost::shared_ptr<void>& pdata)
     {
-        SyncWithWorkerThread();
+        _SyncWithWorkerThread();
 
         int inclusive=0;
         is >> inclusive;
@@ -2188,7 +2207,7 @@ protected:
     // if a robot id is specified, also waits for that robot's trajectory to finish
     bool orEnvWait(istream& is, ostream& os, boost::shared_ptr<void>& pdata)
     {
-        SyncWithWorkerThread();
+        _SyncWithWorkerThread();
         RobotBasePtr probot;
         ControllerBasePtr pcontroller;
         int timeout = -1;
@@ -2243,7 +2262,7 @@ protected:
         if( !is ) {
             return false;
         }
-        SyncWithWorkerThread();
+        _SyncWithWorkerThread();
         // do not need lock
         //EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
 

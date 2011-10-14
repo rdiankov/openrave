@@ -1547,6 +1547,8 @@ OPENRAVE_API void RaveGetAffineDOFValuesFromTransform(std::vector<dReal>::iterat
  */
 OPENRAVE_API void RaveGetTransformFromAffineDOFValues(Transform& t, std::vector<dReal>::const_iterator itvalues, int affinedofs, const Vector& vActvAffineRotationAxis=Vector(0,0,1));
 
+OPENRAVE_API ConfigurationSpecification RaveGetAffineConfigurationSpecification(int affinedofs,KinBodyConstPtr pbody=KinBodyConstPtr());
+
 }
 
 #include <openrave/plugininfo.h>

@@ -1093,6 +1093,22 @@ void RaveGetTransformFromAffineDOFValues(Transform& t, std::vector<dReal>::const
     }
 }
 
+ConfigurationSpecification RaveGetAffineConfigurationSpecification(int affinedofs,KinBodyConstPtr pbody)
+{
+    ConfigurationSpecification spec;
+    spec._vgroups.resize(1);
+    spec._vgroups[0].offset = 0;
+    spec._vgroups[0].dof = RaveGetAffineDOF(affinedofs);
+    spec._vgroups[0].interpolation = "linear";
+    if( !!pbody ) {
+        spec._vgroups[0].name = str(boost::format("affine_transform %s %d")%pbody->GetName()%affinedofs);
+    }
+    else {
+        spec._vgroups[0].name = str(boost::format("affine_transform __dummy__ %d")%affinedofs);
+    }
+    return spec;
+}
+
 int ConfigurationSpecification::GetDOF() const
 {
     int maxdof = 0;
