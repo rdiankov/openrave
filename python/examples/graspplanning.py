@@ -380,7 +380,10 @@ class GraspPlanning:
                     except planning_error:
                         res = None
                     #raise ValueError('robot still in collision?')
-            return success # return successful grasp index
+
+            if success >= 0:
+                return success # return successful grasp index
+            
         # exhausted all grasps
         return -1
 

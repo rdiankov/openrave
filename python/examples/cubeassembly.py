@@ -106,46 +106,60 @@ class CubeAssembly(metaclass.AutoReloader):
             del savers
 
     def SetGoal(self,Tgoal,randomize=True):
-        with self.env:
-            for gmodel in self.gmodels:
-                gmodel.target.SetTransform(Tgoal)
-            minextents = array([-0.1,-0.2,0])
-            maxextents = array([0.1,0.2,0])
-            for igmodel in range(len(self.gmodels)-1,-1,-1):
-                gmodel = self.gmodels[igmodel]
-                target=gmodel.target
-                T = eye(4)
-                target.SetTransform(T)
-                ab = target.ComputeAABB()
-                while True:
-                    T = array(Tgoal)
-                    target.SetTransform(T)
-                    validgrasps,validindices=gmodel.computeValidGrasps(returnnum=1)
-                    if len(validgrasps) == 0:
-                        raise ValueError('no valid goal grasp for target %s'%gmodel.target)
-                    
-                    T[0:3,3] += (maxextents-minextents)*random.rand(3)+minextents
-                    T[2,3] += 0.001-(ab.pos()[2]-ab.extents()[2])
-                    if linalg.norm(Tgoal[0:3,3]-T[0:3,3]) < 0.05:
-                        continue
-                    target.SetTransform(T)
-                    if not self.env.CheckCollision(target):
-                        # have to check all previously moved targets still maintain their grasps
-                        success = True
-                        for igmodel2 in range(igmodel,len(self.gmodels)):
-                            validgrasps,validindices=self.gmodels[igmodel2].computeValidGrasps(returnnum=1)
-                            if len(validgrasps) == 0:
-                                success = False
-                                break
-                        if success:
-                            break
+        """sets the goal of all the target bodies and randomizes the obstacles across the plane
+        """
+        if not randomize:
             self.Tgoal = Tgoal
+            return
+        
+        with self.env:
+            self.Tgoal = None
+            while self.Tgoal is None:
+                for gmodel in self.gmodels:
+                    gmodel.target.SetTransform(Tgoal)
+                minextents = array([-0.1,-0.2,0])
+                maxextents = array([0.2,0.2,0])
+                invalidgrasp = False
+                for igmodel in range(len(self.gmodels)-1,-1,-1):
+                    gmodel = self.gmodels[igmodel]
+                    target=gmodel.target
+                    T = eye(4)
+                    target.SetTransform(T)
+                    ab = target.ComputeAABB()
+                    while True:
+                        T = array(Tgoal)
+                        target.SetTransform(T)
+                        validgrasps,validindices=gmodel.computeValidGrasps(returnnum=1)
+                        if len(validgrasps) == 0:
+                            print 'no valid goal grasp for target %s'%gmodel.target
+                            invalidgrasp = True
+                            break
+
+                        T[0:3,3] += (maxextents-minextents)*random.rand(3)+minextents
+                        T[2,3] += 0.001-(ab.pos()[2]-ab.extents()[2])
+                        if linalg.norm(Tgoal[0:3,3]-T[0:3,3]) < 0.1:
+                            continue
+                        target.SetTransform(T)
+                        if not self.env.CheckCollision(target):
+                            # have to check all previously moved targets still maintain their grasps
+                            success = True
+                            for igmodel2 in range(igmodel,len(self.gmodels)):
+                                validgrasps,validindices=self.gmodels[igmodel2].computeValidGrasps(returnnum=1)
+                                if len(validgrasps) == 0:
+                                    success = False
+                                    break
+                            if success:
+                                break
+                            
+                if not invalidgrasp:
+                    self.Tgoal = Tgoal
 
     def Plan(self):
         if self.Tgoal is None:
             raise ValueError('need to set goal with SetGoal()')
         planner=graspplanning.GraspPlanning(self.robot,randomize=False,dests=None,nodestinations=True)
         for gmodel in self.gmodels:
+            print 'grasping %s'%gmodel.target
             success=-1
             while success < 0:
                 success = planner.graspAndPlaceObject(gmodel,dests=[self.Tgoal],movehanddown=False)
@@ -161,6 +175,7 @@ def main(env,options):
     self.CreateBlocks()
     Tgoal = eye(4)
     Tgoal[0,3] = -0.2
+    Tgoal[2,3] = 0.001
     self.SetGoal(Tgoal)
     self.Plan()
 
