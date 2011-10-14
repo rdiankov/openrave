@@ -323,7 +323,7 @@ protected:
         int iGraspDir = -1, iGraspPos = -1, iGraspRoll = -1, iGraspPreshape = -1, iGraspStandoff = -1, imanipulatordirection = -1;
         int iGraspTransform = -1;     // if >= 0, use the grasp transform to check for collisions
         int iGraspTransformNoCol = -1;
-
+        int iStartCountdown = 40;
         string cmd;
         CollisionReportPtr report(new CollisionReport);
 
@@ -392,6 +392,9 @@ protected:
             }
             else if( cmd == "quitafterfirstrun" ) {
                 bQuitAfterFirstRun = true;
+            }
+            else if( cmd == "countdowngrasps" ) {
+                sinput >> iStartCountdown;
             }
             else if( cmd == "matdests" ) {
                 int numdests = 0; sinput >> numdests;
@@ -849,7 +852,7 @@ protected:
             }
 
             RAVELOG_DEBUG("grasp %d: adding to goals\n", igrasp);
-            iCountdown = 40;
+            iCountdown = iStartCountdown;
 
             if( (int)listGraspGoals.size() >= nMaxSeedGrasps ) {
                 RAVELOG_VERBOSE(str(boost::format("planning grasps %d\n")%listGraspGoals.size()));

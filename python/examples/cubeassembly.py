@@ -87,8 +87,8 @@ class CubeAssembly(metaclass.AutoReloader):
 
                 gmodel = databases.grasping.GraspingModel(robot=self.robot,target=body)
                 if generategrasps:
-                    if not gmodel.load():
-                        approachrays = gmodel.computeBoxApproachRays(delta=0.015,normalanglerange=0,directiondelta=0)
+                    if 1#not gmodel.load():
+                        approachrays = gmodel.computeBoxApproachRays(delta=0.01,normalanglerange=0,directiondelta=0)
                         gmodel.numthreads = multiprocessing.cpu_count()
                         gmodel.generate(standoffs=array([0,0.04,0.08]),approachrays=approachrays, friction=0.1)
                         gmodel.save()
@@ -109,9 +109,10 @@ class CubeAssembly(metaclass.AutoReloader):
         with self.env:
             for gmodel in self.gmodels:
                 gmodel.target.SetTransform(Tgoal)
-            minextents = array([-0.1,-0.3,0])
-            maxextents = array([0.1,0.3,0])
-            for gmodel in self.gmodels:
+            minextents = array([-0.1,-0.2,0])
+            maxextents = array([0.1,0.2,0])
+            for igmodel in range(len(self.gmodels)-1,-1,-1):
+                gmodel = self.gmodels[igmodel]
                 target=gmodel.target
                 T = eye(4)
                 target.SetTransform(T)
@@ -124,8 +125,14 @@ class CubeAssembly(metaclass.AutoReloader):
                         continue
                     target.SetTransform(T)
                     if not self.env.CheckCollision(target):
-                        validgrasps,validindices=gmodel.computeValidGrasps(returnnum=1)
-                        if len(validgrasps) > 0:
+                        # have to check all previous grasps
+                        success = True
+                        for igmodel2 in range(igmodel,len(self.gmodels)):
+                            validgrasps,validindices=self.gmodels[igmodel2].computeValidGrasps(returnnum=1)
+                            if len(validgrasps) == 0:
+                                success = False
+                                break
+                        if success:
                             break
             self.Tgoal = Tgoal
 
@@ -137,7 +144,7 @@ class CubeAssembly(metaclass.AutoReloader):
             success=-1
             while success < 0:
                 success = planner.graspAndPlaceObject(gmodel,dests=[self.Tgoal],movehanddown=False)
-
+                
 def main(env,options):
     "Main example code."
     env.Load(options.scene)
@@ -186,5 +193,6 @@ def test():
     self.CreateBlocks()
     Tgoal = eye(4)
     Tgoal[0,3] = -0.2
+    Tgoal[2,3] = 0.001
     self.SetGoal(Tgoal)
     self.Plan()

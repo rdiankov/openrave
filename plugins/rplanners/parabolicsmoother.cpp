@@ -19,12 +19,7 @@
 
 #include "ParabolicPathSmooth/DynamicPath.h"
 
-//namespace ParabolicRamp
-//{
-//
-//static SpaceSamplerBasePtr s_sampler;
-//Real Rand();
-//}
+#include <openrave/planningutils.h>
 
 class ParabolicSmoother : public PlannerBase, public ParabolicRamp::FeasibilityCheckerBase, public ParabolicRamp::RandomSamplerBase
 {
@@ -82,21 +77,18 @@ public:
         for(size_t i = 0; i < ptraj->GetNumWaypoints(); ++i) {
             std::copy(vtrajpoints.begin()+i*_parameters->GetDOF(),vtrajpoints.begin()+(i+1)*_parameters->GetDOF(),q.begin());
             if( path.size() >= 2 ) {
-                // check if collinear by taking determinant
-                // compute A^t*A
-                for(size_t i = 0; i < 9; ++i) {
-                    AtA[i] = 0;
+                // check if collinear by taking angle
+                const ParabolicRamp::Vector& x0 = path[path.size()-2];
+                const ParabolicRamp::Vector& x1 = path[path.size()-1];
+                dReal dotproduct=0,x0length2=0,x1length2=0;
+                for(size_t i = 0; i < q.size(); ++i) {
+                    dReal dx0=x0[i]-q[i];
+                    dReal dx1=x1[i]-q[i];
+                    dotproduct += dx0*dx1;
+                    x0length2 += dx0*dx0;
+                    x1length2 += dx1*dx1;
                 }
-                boost::array<ParabolicRamp::Vector*,3> A = {{&path[path.size()-2],&path[path.size()-1],&q}};
-                for(size_t i = 0; i < 3; ++i) {
-                    for(size_t j = i; j <3; ++j) {
-                        for(size_t k = 0; k < q.size(); ++k) {
-                            AtA[3*i+j] += A[i]->at(k) * A[j]->at(k);
-                        }
-                    }
-                }
-                dReal det = AtA[0]*AtA[4]*AtA[8] - AtA[0]*AtA[5]*AtA[5] -AtA[1]*AtA[1]*AtA[8] + 2*AtA[1]*AtA[2]*AtA[5] - AtA[2]*AtA[2]*AtA[4];
-                if( RaveFabs(det) < 1e-8 ) {
+                if( RaveFabs(dotproduct * dotproduct - x0length2*x1length2) < 1e-8 ) {
                     path.back() = q;
                     continue;
                 }

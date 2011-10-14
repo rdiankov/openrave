@@ -160,11 +160,19 @@ if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
   add_definitions("-fno-strict-aliasing -Wall")
 endif()
 
+set(OPENRAVE_EXPORT_CXXFLAGS)
+
 if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
   set(CMAKE_CXX_FLAGS_OPTIMIZED "-O2 -DNDEBUG -DBOOST_DISABLE_ASSERTS -D_SECURE_SCL=0") # this practically removes all checks making it a very dangerous options to play with
   set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG") 
   set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g")
   set(CMAKE_CXX_FLAGS_DEBUG "-g -D_DEBUG")
+
+  # the _GLIBCXX_DEBUG flag is very helpful in bounds checking for vector[] and iterators, however it requires all
+  # libraries linking with openrave to use it
+#  if( CMAKE_BUILD_TYPE STREQUAL "Debug")
+#    set(OPENRAVE_EXPORT_CXXFLAGS "${OPENRAVE_EXPORT_CXXFLAGS} -D_GLIBCXX_DEBUG")
+#  endif()
 endif()
 
 if( MSVC )

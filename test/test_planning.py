@@ -14,6 +14,19 @@
 from common_test_openrave import *
 
 class TestMoving(EnvironmentSetup):
+    def test_basicplanning(self):
+        env = self.env
+        with env:
+            env.Load('data/hironxtable.env.xml')
+            robot = env.GetRobots()[0]
+            manip = robot.SetActiveManipulator('leftarm_torso')
+            basemanip = interfaces.BaseManipulation(robot)
+            robot.SetActiveDOFs(manip.GetArmIndices())
+            goal = robot.GetActiveDOFValues()
+            goal[0] = -0.556
+            goal[3] = -1.86
+            basemanip.MoveActiveJoints(goal=goal,maxiter=5000,steplength=0.01,maxtries=2,execute=False)
+            
     def test_ikplanning(self):
         env = self.env
         env.Load('data/lab1.env.xml')
