@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# Copyright (C) 2009-2011 Rosen Diankov (rosen.diankov@gmail.com)
+# Copyright (C) 2009-2011 Rosen Diankov <rosen.diankov@gmail.com>
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Simple cube assembly task using grasp sets
+"""Assembly of cube from randomly scattered blocks using grasp sets.
 
 .. examplepre-block:: cubeassembly
 
@@ -56,18 +56,19 @@ class CubeAssembly(metaclass.AutoReloader):
         self.Tgoal = None
         self.gmodels = []
 
-    def CreateBlocks(self,side=0.015,T=eye(4)):
+    def CreateBlocks(self,side=0.015,T=eye(4),generategrasps=True):
         with self.env:
             for gmodel in self.gmodels:
                 self.env.Remove(gmodel.target)
             self.gmodels = []
             volumecolors = array(((1,0,0,0.5),(0,1,0,0.5),(0,0,1,0.5),(0,1,1,0.5),(1,0,1,0.5),(1,1,0,0.5),(0.5,1,0,0.5),(0.5,0,1,0.5),(0,0.5,1,0.5),(1,0.5,0,0.5),(0,1,0.5,0.5),(1,0,0.5,0.5)))
-            blocks = [[[0,0,0],[1,0,0],[2,0,0],[2,1,0]],
-                      [[0,1,0],[1,1,0],[1,1,1],[2,1,1]],
-                      [[0,2,0],[1,2,0],[2,2,0],[1,2,1],[0,2,1]],
-                      [[2,0,1],[1,0,1],[0,0,1],[0,0,2],[2,0,2]],
-                      [[0,1,1],[0,1,2],[1,1,2],[1,0,2]],
-                      [[2,1,2],[2,2,2],[1,2,2],[0,2,2],[2,2,1]]
+            blocks = [[[-1,-1,0],[0,-1,0],[-1,0,0],[-1,-1,1]],
+                      [[-1,1,0],[-1,1,1],[-1,0,1]],
+                      [[0,0,0],[0,1,0],[0,0,1],[0,-1,1]],
+                      [[1,1,0],[1,0,0],[1,1,1],[0,1,1]],
+                      [[1,-1,0],[1,-1,1],[1,0,1],[1,-1,2]],
+                      [[0,0,2],[1,0,2],[0,1,2],[1,1,2]],
+                      [[-1,-1,2],[0,-1,2],[-1,0,2],[-1,1,2]]
                       ]
             for iblock,block in enumerate(blocks):
                 print 'creating block %d/%d'%(iblock,len(blocks))
@@ -85,31 +86,40 @@ class CubeAssembly(metaclass.AutoReloader):
                 body.SetTransform(T)
 
                 gmodel = databases.grasping.GraspingModel(robot=self.robot,target=body)
-                if not gmodel.load():
-                    approachrays = gmodel.computeBoxApproachRays(delta=0.015,normalanglerange=0,directiondelta=0)
-                    gmodel.numthreads = multiprocessing.cpu_count()
-                    gmodel.generate(standoffs=array([0,0.04,0.08]),approachrays=approachrays, friction=0.1)
-                    gmodel.save()
+                if generategrasps:
+                    if not gmodel.load():
+                        approachrays = gmodel.computeBoxApproachRays(delta=0.015,normalanglerange=0,directiondelta=0)
+                        gmodel.numthreads = multiprocessing.cpu_count()
+                        gmodel.generate(standoffs=array([0,0.04,0.08]),approachrays=approachrays, friction=0.1)
+                        gmodel.save()
                 self.gmodels.append(gmodel)
+
+    def ShowGoal(self,Tgoal):
+        try:
+            with self.env:
+                savers = []
+                for gmodel in self.gmodels:
+                    savers.append(gmodel.target.CreateKinBodyStateSaver())
+                    gmodel.target.SetTransform(Tgoal)
+            raw_input('press any key')
+        finally:
+            del savers
 
     def SetGoal(self,Tgoal,randomize=True):
         with self.env:
-            minextents = array([2.56,-2.9,0.24])
-            maxextents = array([3.05,-3.153,0.24])
+            for gmodel in self.gmodels:
+                gmodel.target.SetTransform(Tgoal)
+            minextents = array([-0.1,-0.3,0])
+            maxextents = array([0.1,0.3,0])
             for gmodel in self.gmodels:
                 target=gmodel.target
                 T = eye(4)
-                target.SetTransform()
+                target.SetTransform(T)
                 ab = target.ComputeAABB()
-                gmodel = databases.grasping.GraspingModel(robot=robot,target=target)
-                if not gmodel.load():
-                    approachrays = gmodel.computeBoxApproachRays(delta=0.01,normalanglerange=0,directiondelta=0)
-                    gmodel.generate(standoffs=[0,0.04,0.08],approachrays=approachrays, friction=0.1)
-                    gmodel.save()
-                gmodels.append(gmodel)
                 while True:
-                    T[0:3,3] = (maxextents-minextents)*random.rand(3)+minextents
-                    T[2,3] += 0.01-ab.pos()[2]
+                    T = array(Tgoal)
+                    T[0:3,3] += (maxextents-minextents)*random.rand(3)+minextents
+                    T[2,3] += 0.001-(ab.pos()[2]-ab.extents()[2])
                     if linalg.norm(Tgoal[0:3,3]-T[0:3,3]) < 0.1:
                         continue
                     target.SetTransform(T)
@@ -119,29 +129,14 @@ class CubeAssembly(metaclass.AutoReloader):
                             break
             self.Tgoal = Tgoal
 
-#             with gmodel.target:
-#                 gmodel.target.SetTransform(Tgoal)
-#                 self.env.UpdatePublishedBodies()
-#                 raw_input('yo')
-# 
-#             try:
-#                 with env:
-#                     savers = []
-#                     for gmodel in gmodels:
-#                         savers.append(gmodel.target.CreateKinBodyStateSaver())
-#                         gmodel.target.SetTransform(Tgoal)
-#                 raw_input('press any key')
-#             finally:
-#                 del savers
-
     def Plan(self):
         if self.Tgoal is None:
             raise ValueError('need to set goal with SetGoal()')
-        planner=graspplanning.GraspPlanning(robot,randomize=False,dests=None,nodestinations=True)
-        for gmodel in gmodels:
+        planner=graspplanning.GraspPlanning(self.robot,randomize=False,dests=None,nodestinations=True)
+        for gmodel in self.gmodels:
             success=-1
             while success < 0:
-                success = planner.graspAndPlaceObject(gmodel,dests=[Tgoal],movehanddown=False)
+                success = planner.graspAndPlaceObject(gmodel,dests=[self.Tgoal],movehanddown=False)
 
 def main(env,options):
     "Main example code."
@@ -169,7 +164,7 @@ def run(args=None):
     parser = OptionParser(description='Simple cube assembly task using grasp sets.')
     OpenRAVEGlobalArguments.addOptions(parser)
     parser.add_option('--scene',
-                      action="store",type='string',dest='scene',default='robots/kawada-hironx.zae',
+                      action="store",type='string',dest='scene',default='data/hironxtable.env.xml',
                       help='Scene file to load (default=%default)')
     parser.add_option('--manipname',
                       action="store",type='string',dest='manipname',default='leftarm_torso',
@@ -183,6 +178,7 @@ if __name__ == "__main__":
 
 def test():
     import cubeassembly
+    from openravepy.examples import graspplanning
     env.Load('data/hironxtable.env.xml')
     robot=env.GetRobots()[0]
     robot.SetActiveManipulator('leftarm_torso')

@@ -40,7 +40,7 @@ Inverse Kinematics
 
 * Added new :class:`.IkFilterOptions.IgnoreEndEffectorCollision` option, this disables the end effector links and their attached bodies from environment collision considerations.
 
-* fixed ikfast bug when prismatic joints are present, ikfast version is now **47**.
+* fixed ikfast bug when prismatic joints are present, ikfast version is now **48**.
 
 Grasping
 --------
@@ -82,7 +82,6 @@ Python
 Misc
 ----
 
-
 * "skipgeometry" now being acknowledged in :meth:`.Environment.Load`, fixes the **openrave.py inversekinematics database --getfilename** option.
 
 * <render> tag for non-trimesh objects works now
@@ -94,6 +93,8 @@ Misc
 * odephysics now uses dJointFeedback to compute forces/torques on links
 
 * removed **KinBody.SetGuiData** and **KinBody.GetGuiData** and replaced with :meth:`.KinBody.GetViewerData` similar to how collision/physics are handled.
+
+* added  :mod:`.examples.cubeassembly` to show a robot assembling a cube from randomly scattered blocks.
 
 Version 0.4.2
 =============

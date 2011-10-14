@@ -514,6 +514,7 @@ protected:
 
         _phandtraj.reset();
 
+        vector<dReal> vtrajdata;
         UserDataPtr ikfilter;
         if( pmanip->GetIkSolver()->Supports(IKP_TranslationDirection5D) ) {
             // if 5D, have to set a filter
@@ -610,7 +611,6 @@ protected:
                 }
 
                 BOOST_ASSERT(_phandtraj->GetNumWaypoints()>0);
-                vector<dReal> vtrajdata;
                 _phandtraj->GetWaypoint(-1,vtrajdata);
                 Transform t = _robot->GetTransform();
                 _phandtraj->GetConfigurationSpecification().ExtractTransform(t,vtrajdata.begin(),_robot);
@@ -635,7 +635,7 @@ protected:
 
                 // find the end effector transform
                 tGoalEndEffector.SetTransform6D(t * _robot->GetTransform().inverse() * pmanip->GetTransform());
-                vFinalGripperValues.resize(pmanip->GetGripperIndices().size());
+                vFinalGripperValues.resize(pmanip->GetGripperIndices().size(),0);
                 _phandtraj->GetConfigurationSpecification().ExtractJointValues(vFinalGripperValues.begin(),vtrajdata.begin(),_robot,pmanip->GetGripperIndices());
             }
             else if( iGraspTransformNoCol >= 0 ) {

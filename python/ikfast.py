@@ -228,7 +228,7 @@ from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2011 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Lesser GPL, Version 3'
-__version__ = '47'
+__version__ = '48'
 
 import sys, copy, time, math, datetime
 import __builtin__
@@ -2128,6 +2128,7 @@ class IKFastSolver(AutoReloader):
         """
         rawpolyeqs2 = [None,None]
         coupledsolutions = None
+        leftovervarstree = []
         for solvemethod in [self.solveLiWoernleHiller, self.solveKohliOsvatic, self.solveManochaCanny]:
             if coupledsolutions is not None:
                 break
@@ -2145,7 +2146,7 @@ class IKFastSolver(AutoReloader):
                         rawpolyeqs2[j] = rawpolyeqs
                 try:
                     if rawpolyeqs2[j] is not None:
-                        coupledsolutions,usedvars = solvemethod(rawpolyeqs2[j],solvejointvars,endbranchtree)
+                        coupledsolutions,usedvars = solvemethod(rawpolyeqs2[j],solvejointvars,endbranchtree=[AST.SolverSequence([leftovervarstree])])
                         break
                 except self.CannotSolveError, e:
                     log.warn('%s',e)
@@ -2166,8 +2167,8 @@ class IKFastSolver(AutoReloader):
             curvars.remove(var)
             solsubs += self.Variable(var).subs
         self.checkSolvability(AllEquations,curvars,self.freejointvars+usedvars)
-        tree = self.solveAllEquations(AllEquations,curvars=curvars,othersolvedvars = self.freejointvars+usedvars,solsubs = solsubs,endbranchtree=endbranchtree)
-        return coupledsolutions+tree
+        leftovervarstree += self.solveAllEquations(AllEquations,curvars=curvars,othersolvedvars = self.freejointvars+usedvars,solsubs = solsubs,endbranchtree=endbranchtree)
+        return coupledsolutions
 
     def buildEquationsFromTwoSides(self,leftside, rightside, usedvars, uselength=True):
         # try to shift all the constants of each Position expression to one side
