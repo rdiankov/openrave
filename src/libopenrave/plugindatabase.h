@@ -446,15 +446,11 @@ protected:
                 pointer->__strxmlid = "KinBody";
                 break;
             }
-            case PT_Robot: {
-                name = "GenericRobot";
-                break;
-            }
-            case PT_Trajectory:
-                name = "GenericTrajectory";
-                break;
-            default:
-                break;
+            case PT_PhysicsEngine: name = "GenericPhysicsEngine"; break;
+            case PT_CollisionChecker: name = "GenericCollisionChecker"; break;
+            case PT_Robot: name = "GenericRobot"; break;
+            case PT_Trajectory: name = "GenericTrajectory"; break;
+            default: break;
             }
         }
 

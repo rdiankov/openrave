@@ -71,7 +71,7 @@ class CubeAssembly(metaclass.AutoReloader):
                       [[-1,-1,2],[0,-1,2],[-1,0,2],[-1,1,2]]
                       ]
             for iblock,block in enumerate(blocks):
-                print 'creating block %d/%d'%(iblock,len(blocks))
+                print 'creating block %d/%d, grasp set generation could take a couple of minutes...'%(iblock,len(blocks))
                 color = volumecolors[mod(iblock,len(volumecolors))]
                 boxes = []
                 for geom in block:
@@ -119,13 +119,18 @@ class CubeAssembly(metaclass.AutoReloader):
                 ab = target.ComputeAABB()
                 while True:
                     T = array(Tgoal)
+                    target.SetTransform(T)
+                    validgrasps,validindices=gmodel.computeValidGrasps(returnnum=1)
+                    if len(validgrasps) == 0:
+                        raise ValueError('no valid goal grasp for target %s'%gmodel.target)
+                    
                     T[0:3,3] += (maxextents-minextents)*random.rand(3)+minextents
                     T[2,3] += 0.001-(ab.pos()[2]-ab.extents()[2])
-                    if linalg.norm(Tgoal[0:3,3]-T[0:3,3]) < 0.1:
+                    if linalg.norm(Tgoal[0:3,3]-T[0:3,3]) < 0.05:
                         continue
                     target.SetTransform(T)
                     if not self.env.CheckCollision(target):
-                        # have to check all previous grasps
+                        # have to check all previously moved targets still maintain their grasps
                         success = True
                         for igmodel2 in range(igmodel,len(self.gmodels)):
                             validgrasps,validindices=self.gmodels[igmodel2].computeValidGrasps(returnnum=1)
