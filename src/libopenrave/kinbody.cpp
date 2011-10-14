@@ -827,7 +827,7 @@ KinBody::Joint::Joint(KinBodyPtr parent)
         *it = 10;
     }
     FOREACH(it,_vmaxaccel) {
-        *it = 100;
+        *it = 50;
     }
     FOREACH(it,_vmaxtorque) {
         *it = 1e5f;
