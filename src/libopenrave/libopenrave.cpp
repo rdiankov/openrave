@@ -1502,7 +1502,7 @@ bool ConfigurationSpecification::ExtractJointValues(std::vector<dReal>::iterator
                 for(size_t i = 0; i < indices.size(); ++i) {
                     std::vector<int>::iterator it = find(vgroupindices.begin(),vgroupindices.end(),indices[i]);
                     if( it != vgroupindices.end() ) {
-                        *(itvalues+i) = *(itdata+itgroup->offset+*it);
+                        *(itvalues+i) = *(itdata+itgroup->offset+(it-vgroupindices.begin()));
                     }
                 }
                 bfound = true;
