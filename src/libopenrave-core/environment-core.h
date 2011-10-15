@@ -1332,7 +1332,7 @@ public:
         return OpenRAVEXMLParser::CreateGeometries(shared_from_this(),filedata->second, vScaleGeometry, listGeometries);
     }
 
-    virtual boost::shared_ptr<void> RegisterXMLReader(InterfaceType type, const std::string& xmltag, const CreateXMLReaderFn& fn)
+    virtual UserDataPtr RegisterXMLReader(InterfaceType type, const std::string& xmltag, const CreateXMLReaderFn& fn)
     {
         return RaveRegisterXMLReader(type,xmltag,fn);
     }

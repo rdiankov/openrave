@@ -204,6 +204,63 @@ public:
     }
 };
 
+class PyConfigurationSpecification
+{
+public:
+    PyConfigurationSpecification() {
+    }
+    PyConfigurationSpecification(const ConfigurationSpecification& spec) {
+        _spec = spec;
+    }
+    virtual ~PyConfigurationSpecification() {
+    }
+
+    virtual int GetDOF() const {
+        return _spec.GetDOF();
+    }
+
+    virtual bool IsValid() const {
+        return _spec.IsValid();
+    }
+
+//    virtual std::vector<Group>::const_iterator FindCompatibleGroup(const Group& g, bool exactmatch=false) const;
+//
+//    virtual std::vector<Group>::const_iterator FindTimeDerivativeGroup(const Group& g, bool exactmatch=false) const;
+//
+//    virtual void AddVelocityGroups(bool adddeltatime);
+//
+//    virtual ConfigurationSpecification GetTimeDerivativeSpecification(int timederivative) const;
+//
+//    virtual void ResetGroupOffsets();
+//
+//    virtual int AddDeltaTime();
+//
+//    virtual bool ExtractTransform(Transform& t, std::vector<dReal>::const_iterator itdata, KinBodyConstPtr pbody) const;
+//
+//    virtual bool ExtractIkParameterization(IkParameterization& ikparam, std::vector<dReal>::const_iterator itdata, int timederivative=0) const;
+//
+//    virtual bool ExtractAffineValues(std::vector<dReal>::iterator itvalues, std::vector<dReal>::const_iterator itdata, KinBodyConstPtr pbody, int affinedofs, int timederivative=0) const;
+//
+//    virtual bool ExtractJointValues(std::vector<dReal>::iterator itvalues, std::vector<dReal>::const_iterator itdata, KinBodyConstPtr pbody, const std::vector<int>& indices, int timederivative=0) const;
+//
+//    virtual bool InsertJointValues(std::vector<dReal>::iterator itdata, std::vector<dReal>::const_iterator itvalues, KinBodyConstPtr pbody, const std::vector<int>& indices, int timederivative=0) const;
+//
+//    virtual bool InsertDeltaTime(std::vector<dReal>::iterator itdata, dReal deltatime);
+//
+//    static void ConvertGroupData(std::vector<dReal>::iterator ittargetdata, size_t targetstride, const Group& gtarget, std::vector<dReal>::const_iterator itsourcedata, size_t sourcestride, const Group& gsource, size_t numpoints, EnvironmentBaseConstPtr penv);
+//
+//    static void ConvertData(std::vector<dReal>::iterator ittargetdata, const ConfigurationSpecification& targetspec, std::vector<dReal>::const_iterator itsourcedata, const ConfigurationSpecification& sourcespec, size_t numpoints, EnvironmentBaseConstPtr penv, bool filluninitialized = true);
+
+    bool __eq__(boost::shared_ptr<PyConfigurationSpecification> p) {
+        return !!p && _spec==p->_spec;
+    }
+    bool __ne__(boost::shared_ptr<PyConfigurationSpecification> p) {
+        return !p || _spec!=p->_spec;
+    }
+
+    ConfigurationSpecification _spec;
+};
+
 class PyIkParameterization
 {
 public:
@@ -230,6 +287,8 @@ public:
         }
     }
     PyIkParameterization(const IkParameterization& ikparam) : _param(ikparam) {
+    }
+    virtual ~PyIkParameterization() {
     }
 
     IkParameterizationType GetType() {
@@ -364,6 +423,16 @@ public:
 };
 
 namespace openravepy {
+
+PyConfigurationSpecificationPtr toPyConfigurationSpecification(const ConfigurationSpecification& spec)
+{
+    return PyConfigurationSpecificationPtr(new PyConfigurationSpecification(spec));
+}
+
+const ConfigurationSpecification& GetConfigurationSpecification(PyConfigurationSpecificationPtr p)
+{
+    return p->_spec;
+}
 
 std::string openravepyCompilerVersion()
 {
@@ -775,6 +844,15 @@ void init_openravepy_global()
     .def_readonly("interfacenames",&PyPluginInfo::interfacenames)
     .def_readonly("version",&PyPluginInfo::version)
     ;
+
+    {
+        scope configurationspecification = class_<PyConfigurationSpecification, PyConfigurationSpecificationPtr >("ConfigurationSpecification",DOXY_CLASS(ConfigurationSpecification))
+                                           .def("GetDOF",&PyConfigurationSpecification::GetDOF,DOXY_FN(ConfigurationSpecification,GetDOF))
+                                           .def("IsValid",&PyConfigurationSpecification::IsValid,DOXY_FN(ConfigurationSpecification,IsValid))
+                                           .def("__eq__",&PyConfigurationSpecification::__eq__)
+                                           .def("__ne__",&PyConfigurationSpecification::__ne__)
+        ;
+    }
 
     {
         int (*getdof1)(IkParameterizationType) = &IkParameterization::GetDOF;

@@ -300,7 +300,7 @@ public:
     }
 
     /// \deprecated (10/09/30) see \ref RaveRegisterXMLReader
-    virtual boost::shared_ptr<void> RegisterXMLReader(InterfaceType type, const std::string& xmltag, const CreateXMLReaderFn& fn) RAVE_DEPRECATED = 0;
+    virtual UserDataPtr RegisterXMLReader(InterfaceType type, const std::string& xmltag, const CreateXMLReaderFn& fn) RAVE_DEPRECATED = 0;
 
     /// \brief Parses a file for OpenRAVE XML formatted data.
     virtual bool ParseXMLFile(BaseXMLReaderPtr preader, const std::string& filename) RAVE_DEPRECATED = 0;

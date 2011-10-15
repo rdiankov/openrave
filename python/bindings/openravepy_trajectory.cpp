@@ -27,6 +27,94 @@ public:
     virtual ~PyTrajectoryBase() {
     }
 
+    void Init(PyConfigurationSpecificationPtr pyspec) {
+        _ptrajectory->Init(openravepy::GetConfigurationSpecification(pyspec));
+    }
+
+    void Insert(size_t index, object odata)
+    {
+        std::vector<dReal> vdata = ExtractArray<dReal>(odata);
+        _ptrajectory->Insert(index,vdata);
+    }
+
+    void Insert(size_t index, object odata, bool bOverwrite)
+    {
+        std::vector<dReal> vdata = ExtractArray<dReal>(odata);
+        _ptrajectory->Insert(index,vdata,bOverwrite);
+    }
+
+    void Insert(size_t index, object odata, PyConfigurationSpecificationPtr pyspec)
+    {
+        std::vector<dReal> vdata = ExtractArray<dReal>(odata);
+        _ptrajectory->Insert(index,vdata,openravepy::GetConfigurationSpecification(pyspec));
+    }
+
+    void Insert(size_t index, object odata, PyConfigurationSpecificationPtr pyspec, bool bOverwrite)
+    {
+        std::vector<dReal> vdata = ExtractArray<dReal>(odata);
+        _ptrajectory->Insert(index,vdata,openravepy::GetConfigurationSpecification(pyspec),bOverwrite);
+    }
+
+    void Remove(size_t startindex, size_t endindex)
+    {
+        _ptrajectory->Remove(startindex,endindex);
+    }
+
+    object Sample(dReal time) const
+    {
+        vector<dReal> values;
+        _ptrajectory->Sample(values,time);
+        return toPyArray(values);
+    }
+
+    object Sample(dReal time, PyConfigurationSpecificationPtr pyspec) const
+    {
+        vector<dReal> values;
+        _ptrajectory->Sample(values,time,openravepy::GetConfigurationSpecification(pyspec));
+        return toPyArray(values);
+    }
+
+    object GetConfigurationSpecification() const {
+        return object(openravepy::toPyConfigurationSpecification(_ptrajectory->GetConfigurationSpecification()));
+    }
+
+    size_t GetNumWaypoints() const {
+        return _ptrajectory->GetNumWaypoints();
+    }
+
+    object GetWaypoints(size_t startindex, size_t endindex) const
+    {
+        vector<dReal> values;
+        _ptrajectory->GetWaypoints(startindex,endindex,values);
+        return toPyArray(values);
+    }
+
+    object GetWaypoints(size_t startindex, size_t endindex, PyConfigurationSpecificationPtr pyspec) const
+    {
+        vector<dReal> values;
+        _ptrajectory->GetWaypoints(startindex,endindex,values,openravepy::GetConfigurationSpecification(pyspec));
+        return toPyArray(values);
+    }
+
+    object GetWaypoint(int index) const
+    {
+        vector<dReal> values;
+        _ptrajectory->GetWaypoint(index,values);
+        return toPyArray(values);
+    }
+
+    object GetWaypoint(int index, PyConfigurationSpecificationPtr pyspec) const
+    {
+        vector<dReal> values;
+        _ptrajectory->GetWaypoint(index,values,openravepy::GetConfigurationSpecification(pyspec));
+        return toPyArray(values);
+    }
+
+    dReal GetDuration() const {
+        return _ptrajectory->GetDuration();
+    }
+
+
     void deserialize(const string& s)
     {
         std::stringstream ss(s);
@@ -80,7 +168,32 @@ PyTrajectoryBasePtr RaveCreateTrajectory(PyEnvironmentBasePtr pyenv, const std::
 
 void init_openravepy_trajectory()
 {
+    void (PyTrajectoryBase::*Insert1)(size_t,object) = &PyTrajectoryBase::Insert;
+    void (PyTrajectoryBase::*Insert2)(size_t,object,bool) = &PyTrajectoryBase::Insert;
+    void (PyTrajectoryBase::*Insert3)(size_t,object,PyConfigurationSpecificationPtr) = &PyTrajectoryBase::Insert;
+    void (PyTrajectoryBase::*Insert4)(size_t,object,PyConfigurationSpecificationPtr,bool) = &PyTrajectoryBase::Insert;
+    object (PyTrajectoryBase::*Sample1)(dReal) const = &PyTrajectoryBase::Sample;
+    object (PyTrajectoryBase::*Sample2)(dReal, PyConfigurationSpecificationPtr) const = &PyTrajectoryBase::Sample;
+    object (PyTrajectoryBase::*GetWaypoints1)(size_t,size_t) const = &PyTrajectoryBase::GetWaypoints;
+    object (PyTrajectoryBase::*GetWaypoints2)(size_t,size_t,PyConfigurationSpecificationPtr) const = &PyTrajectoryBase::GetWaypoints;
+    object (PyTrajectoryBase::*GetWaypoint1)(int) const = &PyTrajectoryBase::GetWaypoint;
+    object (PyTrajectoryBase::*GetWaypoint2)(int,PyConfigurationSpecificationPtr) const = &PyTrajectoryBase::GetWaypoint;
     class_<PyTrajectoryBase, boost::shared_ptr<PyTrajectoryBase>, bases<PyInterfaceBase> >("Trajectory", DOXY_CLASS(TrajectoryBase), no_init)
+    .def("Init",&PyTrajectoryBase::Init,args("spec"),DOXY_FN(TrajectoryBase,Init))
+    .def("Insert",Insert1,args("index","data"),DOXY_FN(TrajectoryBase,Init "size_t; const std::vector; bool"))
+    .def("Insert",Insert2,args("index","data","overwrite"),DOXY_FN(TrajectoryBase,Init "size_t; const std::vector; bool"))
+    .def("Insert",Insert3,args("index","data","spec"),DOXY_FN(TrajectoryBase,Init "size_t; const std::vector; const ConfigurationSpecification&; bool"))
+    .def("Insert",Insert4,args("index","data","spec","overwrite"),DOXY_FN(TrajectoryBase,Init "size_t; const std::vector; const ConfigurationSpecification&; bool"))
+    .def("Remove",&PyTrajectoryBase::Remove,args("startindex","endindex"),DOXY_FN(TrajectoryBase,Remove))
+    .def("Sample",Sample1,args("time"),DOXY_FN(TrajectoryBase,Sample "std::vector; dReal"))
+    .def("Sample",Sample2,args("time","spec"),DOXY_FN(TrajectoryBase,Sample "std::vector; dReal; spec"))
+    .def("GetConfigurationSpecification",&PyTrajectoryBase::GetConfigurationSpecification,DOXY_FN(TrajectoryBase,GetConfigurationSpecification))
+    .def("GetNumWaypoints",&PyTrajectoryBase::GetNumWaypoints,DOXY_FN(TrajectoryBase,GetNumWaypoints))
+    .def("GetWaypoints",GetWaypoints1,args("startindex","endindex"),DOXY_FN(TrajectoryBase, GetWaypoints "size_t; size_t; std::vector"))
+    .def("GetWaypoints",GetWaypoints2,args("startindex","endindex","spec"),DOXY_FN(TrajectoryBase, GetWaypoints "size_t; size_t; std::vector, const ConfigurationSpecification&"))
+    .def("GetWaypoint",GetWaypoint1,args("index"),DOXY_FN(TrajectoryBase, GetWaypoint "size_t; std::vector"))
+    .def("GetWaypoint",GetWaypoint2,args("index","spec"),DOXY_FN(TrajectoryBase, GetWaypoint "size_t; std::vector; const ConfigurationSpecification&"))
+    .def("GetDuration",&PyTrajectoryBase::GetDuration,DOXY_FN(TrajectoryBase, GetDuration))
     .def("serialize",&PyTrajectoryBase::serialize,args("options"),DOXY_FN(TrajectoryBase,serialize))
     .def("deserialize",&PyTrajectoryBase::deserialize,args("data"),DOXY_FN(TrajectoryBase,deserialize))
     .def("Write",&PyTrajectoryBase::Write,args("options"),DOXY_FN(TrajectoryBase,Write))

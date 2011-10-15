@@ -72,6 +72,8 @@ Trajectories
 
 * Changed trajectory serialization format to XML, see :ref:`arch_trajectory_format`
 
+* Added trajectory API to openravepy.
+
 Python
 ------
 

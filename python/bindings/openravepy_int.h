@@ -78,6 +78,7 @@ class PyTrajectoryBase;
 class PyModuleBase;
 class PyViewerBase;
 class PySpaceSamplerBase;
+class PyConfigurationSpecification;
 
 typedef boost::shared_ptr<PyInterfaceBase> PyInterfaceBasePtr;
 typedef boost::shared_ptr<PyInterfaceBase const> PyInterfaceBaseConstPtr;
@@ -111,6 +112,8 @@ typedef boost::shared_ptr<PyViewerBase> PyViewerBasePtr;
 typedef boost::shared_ptr<PyViewerBase const> PyViewerBaseConstPtr;
 typedef boost::shared_ptr<PySpaceSamplerBase> PySpaceSamplerBasePtr;
 typedef boost::shared_ptr<PySpaceSamplerBase const> PySpaceSamplerBaseConstPtr;
+typedef boost::shared_ptr<PyConfigurationSpecification> PyConfigurationSpecificationPtr;
+typedef boost::shared_ptr<PyConfigurationSpecification const> PyConfigurationSpecificationConstPtr;
 
 inline uint64_t GetMicroTime()
 {
@@ -568,9 +571,10 @@ void init_openravepy_viewer();
 ViewerBasePtr GetViewer(PyViewerBasePtr);
 PyInterfaceBasePtr toPyViewer(ViewerBasePtr, PyEnvironmentBasePtr);
 
+PyConfigurationSpecificationPtr toPyConfigurationSpecification(const ConfigurationSpecification&);
+const ConfigurationSpecification& GetConfigurationSpecification(PyConfigurationSpecificationPtr);
+
 PyInterfaceBasePtr RaveCreateInterface(PyEnvironmentBasePtr pyenv, InterfaceType type, const std::string& name);
-PyRobotBasePtr RaveCreateRobot(PyEnvironmentBasePtr pyenv, const std::string& name);
-PyKinBodyPtr RaveCreateKinBody(PyEnvironmentBasePtr pyenv, const std::string& name);
 void init_openravepy_global();
 
 }
