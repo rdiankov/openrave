@@ -79,6 +79,8 @@ Python
 
 * added two python examples showing how to use PyQt + OpenRAVE together. :mod:`.examples.qtexampleselector` :mod:`.examples.qtserverprocess`
 
+* split openravepy into smaller files for faster compilation
+
 Misc
 ----
 
