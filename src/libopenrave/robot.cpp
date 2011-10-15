@@ -33,27 +33,41 @@ RobotBase::Manipulator::Manipulator(const RobotBase::Manipulator& r)
 {
     *this = r;
     _pIkSolver.reset();
-    if( _strIkSolver.size() > 0 )
+    if( _strIkSolver.size() > 0 ) {
         _pIkSolver = RaveCreateIkSolver(GetRobot()->GetEnv(), _strIkSolver);
+    }
 }
 
 RobotBase::Manipulator::Manipulator(RobotBasePtr probot, const RobotBase::Manipulator& r)
 {
     *this = r;
     _probot = probot;
-    if( !!r.GetBase() )
+    if( !!r.GetBase() ) {
         _pBase = probot->GetLinks().at(r.GetBase()->GetIndex());
-    if( !!r.GetEndEffector() )
+    }
+    if( !!r.GetEndEffector() ) {
         _pEndEffector = probot->GetLinks().at(r.GetEndEffector()->GetIndex());
-
+    }
     _pIkSolver.reset();
-    if( _strIkSolver.size() > 0 )
+    if( _strIkSolver.size() > 0 ) {
         _pIkSolver = RaveCreateIkSolver(probot->GetEnv(), _strIkSolver);
+    }
+}
+
+void RobotBase::Manipulator::SetLocalToolTransform(const Transform& t)
+{
+    _strIkSolver.resize(0);
+    _pIkSolver.reset();
+    _tLocalTool = t;
+    RobotBasePtr probot = GetRobot();
+    probot->_ParametersChanged(Prop_RobotManipulatorTool);
+    __hashkinematicsstructure.resize(0);
+    __hashstructure.resize(0);
 }
 
 Transform RobotBase::Manipulator::GetTransform() const
 {
-    return _pEndEffector->GetTransform() * _tGrasp;
+    return _pEndEffector->GetTransform() * _tLocalTool;
 }
 
 bool RobotBase::Manipulator::SetIkSolver(IkSolverBasePtr iksolver)
@@ -513,7 +527,7 @@ void RobotBase::Manipulator::CalculateJacobian(boost::multi_array<dReal,2>& mjac
     RobotBasePtr probot(_probot);
     RobotBase::RobotStateSaver saver(probot,RobotBase::Save_ActiveDOF);
     probot->SetActiveDOFs(__varmdofindices);
-    probot->CalculateActiveJacobian(_pEndEffector->GetIndex(),_pEndEffector->GetTransform() * _tGrasp.trans,mjacobian);
+    probot->CalculateActiveJacobian(_pEndEffector->GetIndex(),_pEndEffector->GetTransform() * _tLocalTool.trans,mjacobian);
 }
 
 void RobotBase::Manipulator::CalculateRotationJacobian(boost::multi_array<dReal,2>& mjacobian) const
@@ -521,7 +535,7 @@ void RobotBase::Manipulator::CalculateRotationJacobian(boost::multi_array<dReal,
     RobotBasePtr probot(_probot);
     RobotBase::RobotStateSaver saver(probot,RobotBase::Save_ActiveDOF);
     probot->SetActiveDOFs(__varmdofindices);
-    probot->CalculateActiveRotationJacobian(_pEndEffector->GetIndex(),quatMultiply(_pEndEffector->GetTransform().rot, _tGrasp.rot),mjacobian);
+    probot->CalculateActiveRotationJacobian(_pEndEffector->GetIndex(),quatMultiply(_pEndEffector->GetTransform().rot, _tLocalTool.rot),mjacobian);
 }
 
 void RobotBase::Manipulator::CalculateAngularVelocityJacobian(boost::multi_array<dReal,2>& mjacobian) const
@@ -544,7 +558,7 @@ void RobotBase::Manipulator::serialize(std::ostream& o, int options) const
         FOREACHC(it,_vClosingDirection) {
             SerializeRound(o,*it);
         }
-        SerializeRound(o,_tGrasp);
+        SerializeRound(o,_tLocalTool);
     }
     if( options & SO_Kinematics ) {
         RobotBasePtr probot(_probot);
@@ -556,7 +570,7 @@ void RobotBase::Manipulator::serialize(std::ostream& o, int options) const
             tbaseinv = _pBase->GetTransform().inverse();
         }
         if( !_pEndEffector ) {
-            SerializeRound(o,tbaseinv * _tGrasp);
+            SerializeRound(o,tbaseinv * _tLocalTool);
         }
         else {
             SerializeRound(o,tbaseinv * GetTransform());

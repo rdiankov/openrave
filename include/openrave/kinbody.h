@@ -52,6 +52,7 @@ public:
         Prop_RobotSensorPlacement = 0x00040000,     ///< [robot only] relative sensor placement of sensors
         Prop_SensorPlacement = 0x00040000,
         Prop_RobotActiveDOFs = 0x00080000,     ///< [robot only] active dofs changed
+        Prop_RobotManipulatorTool = 0x00100000, ///< [robot only] the tool coordinate system changed
     };
 
     /// \brief A rigid body holding all its collision and rendering data.

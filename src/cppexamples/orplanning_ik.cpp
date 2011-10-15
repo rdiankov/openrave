@@ -58,7 +58,7 @@ int main(int argc, char ** argv)
     penv->AddModule(pikfast,"");
     stringstream ssin,ssout;
     vector<dReal> vsolution;
-    ssin << "LoadIKFastSolver " << probot->GetName() << " " << (int)DOF_Transform6D;
+    ssin << "LoadIKFastSolver " << probot->GetName() << " " << (int)IKP_Transform6D;
     if( !pikfast->SendCommand(ssout,ssin) ) {
         RAVELOG_ERROR("failed to load iksolver\n");
     }

@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2010 Rosen Diankov (rosen.diankov@gmail.com)
+// Copyright (C) 2006-2011 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -57,7 +57,7 @@ public:
         /// \brief Sets the ik solver and initializes it with the current manipulator.
         ///
         /// Due to complications with translation,rotation,direction,and ray ik,
-        /// the ik solver should take into account the grasp transform (_tGrasp) internally.
+        /// the ik solver should take into account the grasp transform (_tLocalTool) internally.
         /// The actual ik primitives are transformed into the base frame only.
         virtual bool SetIkSolver(IkSolverBasePtr iksolver);
 
@@ -83,8 +83,18 @@ public:
         }
 
         /// \brief Return transform with respect to end effector defining the grasp coordinate system
-        virtual Transform GetGraspTransform() const {
-            return _tGrasp;
+        virtual Transform GetLocalToolTransform() const {
+            return _tLocalTool;
+        }
+
+        /// \brief Sets the local tool transform with respect to the end effector.
+        ///
+        /// Because this call will change manipulator hash, it resets the loaded IK and sets the Prop_RobotManipulatorTool message.
+        virtual void SetLocalToolTransform(const Transform& t);
+
+        /// \deprecated (11/10/15) use GetLocalToolTransform
+        virtual Transform GetGraspTransform() const RAVE_DEPRECATED {
+            return GetLocalToolTransform();
         }
 
         /// \brief Gripper indices of the joints that the  manipulator controls.
@@ -105,8 +115,13 @@ public:
         }
 
         /// \brief direction of palm/head/manipulator used for approaching. defined inside the manipulator/grasp coordinate system
-        virtual Vector GetDirection() const {
+        virtual Vector GetLocalToolDirection() const {
             return _vdirection;
+        }
+
+        /// \deprecated (11/10/15) use GetLocalToolDirection
+        virtual Vector GetDirection() const {
+            return GetLocalToolDirection();
         }
 
         /// \brief Find a close solution to the current robot's joint values.
@@ -215,7 +230,7 @@ public:
 protected:
         std::string _name;
         LinkPtr _pBase, _pEndEffector;
-        Transform _tGrasp;
+        Transform _tLocalTool;
         std::vector<dReal> _vClosingDirection;
         Vector _vdirection;
         IkSolverBasePtr _pIkSolver;

@@ -1255,16 +1255,25 @@ public:
             return !_pmanip->GetEndEffector() ? PyLinkPtr() : PyLinkPtr(new PyLink(_pmanip->GetEndEffector(),_pyenv));
         }
         object GetGraspTransform() {
-            return ReturnTransform(_pmanip->GetGraspTransform());
+            RAVELOG_WARN("Robot.Manipulator.GetGraspTransform deprecated, use GetLocalToolTransform\n");
+            return ReturnTransform(_pmanip->GetLocalToolTransform());
+        }
+        object GetLocalToolTransform() {
+            return ReturnTransform(_pmanip->GetLocalToolTransform());
+        }
+        void SetLocalToolTransform(object otrans) {
+            _pmanip->SetLocalToolTransform(ExtractTransform(otrans));
         }
         object GetGripperJoints() {
-            RAVELOG_DEBUG("GetGripperJoints is deprecated, use GetGripperIndices\n"); return toPyArray(_pmanip->GetGripperIndices());
+            RAVELOG_DEBUG("GetGripperJoints is deprecated, use GetGripperIndices\n");
+            return toPyArray(_pmanip->GetGripperIndices());
         }
         object GetGripperIndices() {
             return toPyArray(_pmanip->GetGripperIndices());
         }
         object GetArmJoints() {
-            RAVELOG_DEBUG("GetArmJoints is deprecated, use GetArmIndices\n"); return toPyArray(_pmanip->GetArmIndices());
+            RAVELOG_DEBUG("GetArmJoints is deprecated, use GetArmIndices\n");
+            return toPyArray(_pmanip->GetArmIndices());
         }
         object GetArmIndices() {
             return toPyArray(_pmanip->GetArmIndices());
@@ -1273,10 +1282,14 @@ public:
             return toPyArray(_pmanip->GetClosingDirection());
         }
         object GetPalmDirection() {
-            RAVELOG_INFO("GetPalmDirection deprecated to GetDirection\n"); return toPyVector3(_pmanip->GetDirection());
+            RAVELOG_INFO("GetPalmDirection deprecated to GetDirection\n");
+            return toPyVector3(_pmanip->GetDirection());
         }
         object GetDirection() {
-            return toPyVector3(_pmanip->GetDirection());
+            return toPyVector3(_pmanip->GetLocalToolDirection());
+        }
+        object GetLocalToolDirection() {
+            return toPyVector3(_pmanip->GetLocalToolDirection());
         }
         bool IsGrabbing(PyKinBodyPtr pbody) {
             return _pmanip->IsGrabbing(pbody->GetBody());
@@ -1311,7 +1324,7 @@ public:
             else if( !_pmanip->FindIKSolution(ExtractTransform(oparam),solution,filteroptions) ) {
                 return object();
             }
-            return toPyArrayN(&solution[0],solution.size());
+            return toPyArray(solution);
         }
 
         object FindIKSolution(object oparam, object freeparams, int filteroptions) const
@@ -1347,7 +1360,7 @@ public:
                 return solutions;
             }
             FOREACH(itsol,vsolutions) {
-                solutions.append(toPyArrayN(&(*itsol)[0],itsol->size()));
+                solutions.append(toPyArray(*itsol));
             }
             return solutions;
         }
@@ -2576,14 +2589,17 @@ void init_openravepy_kinbody()
         .def("GetIkParameterization",&PyRobotBase::PyManipulator::GetIkParameterization, args("iktype"), DOXY_FN(RobotBase::Manipulator::GetIkParameterization, "IkParameterization::Type"))
         .def("GetBase",&PyRobotBase::PyManipulator::GetBase, DOXY_FN(RobotBase::Manipulator,GetBase))
         .def("GetEndEffector",&PyRobotBase::PyManipulator::GetEndEffector, DOXY_FN(RobotBase::Manipulator,GetEndEffector))
-        .def("GetGraspTransform",&PyRobotBase::PyManipulator::GetGraspTransform, DOXY_FN(RobotBase::Manipulator,GetGraspTransform))
+        .def("GetGraspTransform",&PyRobotBase::PyManipulator::GetGraspTransform, DOXY_FN(RobotBase::Manipulator,GetLocalToolTransform))
+        .def("GetLocalToolTransform",&PyRobotBase::PyManipulator::GetLocalToolTransform, DOXY_FN(RobotBase::Manipulator,GetLocalToolTransform))
+        .def("SetLocalToolTransform",&PyRobotBase::PyManipulator::SetLocalToolTransform, DOXY_FN(RobotBase::Manipulator,SetLocalToolTransform))
         .def("GetGripperJoints",&PyRobotBase::PyManipulator::GetGripperJoints, DOXY_FN(RobotBase::Manipulator,GetGripperIndices))
         .def("GetGripperIndices",&PyRobotBase::PyManipulator::GetGripperIndices, DOXY_FN(RobotBase::Manipulator,GetGripperIndices))
         .def("GetArmJoints",&PyRobotBase::PyManipulator::GetArmJoints, DOXY_FN(RobotBase::Manipulator,GetArmIndices))
         .def("GetArmIndices",&PyRobotBase::PyManipulator::GetArmIndices, DOXY_FN(RobotBase::Manipulator,GetArmIndices))
         .def("GetClosingDirection",&PyRobotBase::PyManipulator::GetClosingDirection, DOXY_FN(RobotBase::Manipulator,GetClosingDirection))
-        .def("GetPalmDirection",&PyRobotBase::PyManipulator::GetPalmDirection, DOXY_FN(RobotBase::Manipulator,GetDirection))
-        .def("GetDirection",&PyRobotBase::PyManipulator::GetDirection, DOXY_FN(RobotBase::Manipulator,GetDirection))
+        .def("GetPalmDirection",&PyRobotBase::PyManipulator::GetPalmDirection, DOXY_FN(RobotBase::Manipulator,GetLocalToolDirection))
+        .def("GetDirection",&PyRobotBase::PyManipulator::GetDirection, DOXY_FN(RobotBase::Manipulator,GetLocalToolDirection))
+        .def("GetLocalToolDirection",&PyRobotBase::PyManipulator::GetLocalToolDirection, DOXY_FN(RobotBase::Manipulator,GetLocalToolDirection))
         .def("IsGrabbing",&PyRobotBase::PyManipulator::IsGrabbing,args("body"), DOXY_FN(RobotBase::Manipulator,IsGrabbing))
         .def("GetChildJoints",&PyRobotBase::PyManipulator::GetChildJoints, DOXY_FN(RobotBase::Manipulator,GetChildJoints))
         .def("GetChildDOFIndices",&PyRobotBase::PyManipulator::GetChildDOFIndices, DOXY_FN(RobotBase::Manipulator,GetChildDOFIndices))
