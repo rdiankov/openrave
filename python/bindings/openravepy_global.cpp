@@ -215,37 +215,63 @@ public:
     virtual ~PyConfigurationSpecification() {
     }
 
-    virtual int GetDOF() const {
+    int GetDOF() const {
         return _spec.GetDOF();
     }
 
-    virtual bool IsValid() const {
+    bool IsValid() const {
         return _spec.IsValid();
     }
 
-//    virtual std::vector<Group>::const_iterator FindCompatibleGroup(const Group& g, bool exactmatch=false) const;
+//    std::vector<Group>::const_iterator FindCompatibleGroup(const Group& g, bool exactmatch=false) const;
 //
-//    virtual std::vector<Group>::const_iterator FindTimeDerivativeGroup(const Group& g, bool exactmatch=false) const;
+//    std::vector<Group>::const_iterator FindTimeDerivativeGroup(const Group& g, bool exactmatch=false) const;
 //
-//    virtual void AddVelocityGroups(bool adddeltatime);
+//    void AddVelocityGroups(bool adddeltatime);
 //
-//    virtual ConfigurationSpecification GetTimeDerivativeSpecification(int timederivative) const;
+//    ConfigurationSpecification GetTimeDerivativeSpecification(int timederivative) const;
 //
-//    virtual void ResetGroupOffsets();
+//    void ResetGroupOffsets();
 //
-//    virtual int AddDeltaTime();
+//    int AddDeltaTime();
 //
-//    virtual bool ExtractTransform(Transform& t, std::vector<dReal>::const_iterator itdata, KinBodyConstPtr pbody) const;
+//    bool ExtractTransform(Transform& t, std::vector<dReal>::const_iterator itdata, KinBodyConstPtr pbody) const;
 //
-//    virtual bool ExtractIkParameterization(IkParameterization& ikparam, std::vector<dReal>::const_iterator itdata, int timederivative=0) const;
+//    bool ExtractIkParameterization(IkParameterization& ikparam, std::vector<dReal>::const_iterator itdata, int timederivative=0) const;
 //
-//    virtual bool ExtractAffineValues(std::vector<dReal>::iterator itvalues, std::vector<dReal>::const_iterator itdata, KinBodyConstPtr pbody, int affinedofs, int timederivative=0) const;
+//    bool ExtractAffineValues(std::vector<dReal>::iterator itvalues, std::vector<dReal>::const_iterator itdata, KinBodyConstPtr pbody, int affinedofs, int timederivative=0) const;
 //
-//    virtual bool ExtractJointValues(std::vector<dReal>::iterator itvalues, std::vector<dReal>::const_iterator itdata, KinBodyConstPtr pbody, const std::vector<int>& indices, int timederivative=0) const;
+    object ExtractJointValues(object odata, PyKinBodyPtr pybody, object oindices, int timederivative) const
+    {
+        std::vector<int> vindices = ExtractArray<int>(oindices);
+        std::vector<dReal> vdata = ExtractArray<dReal>(odata);
+        std::vector<dReal> values(vindices.size(),0);
+        bool bfound = _spec.ExtractJointValues(values.begin(),vdata.begin(),openravepy::GetKinBody(pybody),vindices,timederivative);
+        if( bfound ) {
+            return toPyArray(values);
+        }
+        else {
+            return object();
+        }
+    }
+
+    object ExtractDeltaTime(object odata) const
+    {
+        std::vector<dReal> vdata = ExtractArray<dReal>(odata);
+        dReal deltatime=0;
+        bool bfound = _spec.ExtractDeltaTime(deltatime,vdata.begin());
+        if( bfound ) {
+            return object(deltatime);
+        }
+        else {
+            return object();
+        }
+    }
+
 //
-//    virtual bool InsertJointValues(std::vector<dReal>::iterator itdata, std::vector<dReal>::const_iterator itvalues, KinBodyConstPtr pbody, const std::vector<int>& indices, int timederivative=0) const;
+//    bool InsertJointValues(std::vector<dReal>::iterator itdata, std::vector<dReal>::const_iterator itvalues, KinBodyConstPtr pbody, const std::vector<int>& indices, int timederivative=0) const;
 //
-//    virtual bool InsertDeltaTime(std::vector<dReal>::iterator itdata, dReal deltatime);
+//    bool InsertDeltaTime(std::vector<dReal>::iterator itdata, dReal deltatime);
 //
 //    static void ConvertGroupData(std::vector<dReal>::iterator ittargetdata, size_t targetstride, const Group& gtarget, std::vector<dReal>::const_iterator itsourcedata, size_t sourcestride, const Group& gsource, size_t numpoints, EnvironmentBaseConstPtr penv);
 //
@@ -849,6 +875,8 @@ void init_openravepy_global()
         scope configurationspecification = class_<PyConfigurationSpecification, PyConfigurationSpecificationPtr >("ConfigurationSpecification",DOXY_CLASS(ConfigurationSpecification))
                                            .def("GetDOF",&PyConfigurationSpecification::GetDOF,DOXY_FN(ConfigurationSpecification,GetDOF))
                                            .def("IsValid",&PyConfigurationSpecification::IsValid,DOXY_FN(ConfigurationSpecification,IsValid))
+                                           .def("ExtractJointValues",&PyConfigurationSpecification::ExtractJointValues,args("data","body","indices","timederivative"),DOXY_FN(ConfigurationSpecification,ExtractJointValues))
+                                           .def("ExtractDeltaTime",&PyConfigurationSpecification::ExtractDeltaTime,args("data"),DOXY_FN(ConfigurationSpecification,ExtractDeltaTime))
                                            .def("__eq__",&PyConfigurationSpecification::__eq__)
                                            .def("__ne__",&PyConfigurationSpecification::__ne__)
         ;

@@ -961,6 +961,9 @@ protected:
      */
     virtual bool ExtractJointValues(std::vector<dReal>::iterator itvalues, std::vector<dReal>::const_iterator itdata, KinBodyConstPtr pbody, const std::vector<int>& indices, int timederivative=0) const;
 
+    /// \brief extracts the delta time from the configuration if one exists
+    virtual bool ExtractDeltaTime(dReal& deltatime, std::vector<dReal>::const_iterator itdata) const;
+
     /** \brief inserts a set of joint values into a configuration space point
 
         Looks for 'joint_X' groups. If pbody is not initialized, will use the first joint_X found.

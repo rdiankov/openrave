@@ -69,7 +69,6 @@ public:
         TrajectoryTimingParametersConstPtr parameters = boost::dynamic_pointer_cast<TrajectoryTimingParameters const>(GetParameters());
 
         vector<ParabolicRamp::Vector> path;
-        boost::array<dReal,9> AtA;
         path.reserve(ptraj->GetNumWaypoints());
         vector<dReal> vtrajpoints;
         ptraj->GetWaypoints(0,ptraj->GetNumWaypoints(),vtrajpoints,_parameters->_configurationspecification);

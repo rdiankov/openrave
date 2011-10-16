@@ -1512,6 +1512,17 @@ bool ConfigurationSpecification::ExtractJointValues(std::vector<dReal>::iterator
     return bfound;
 }
 
+bool ConfigurationSpecification::ExtractDeltaTime(dReal& deltatime, std::vector<dReal>::const_iterator itdata) const
+{
+    FOREACHC(itgroup,_vgroups) {
+        if( itgroup->name == "deltatime" ) {
+            deltatime = *(itdata+itgroup->offset);
+            return true;
+        }
+    }
+    return false;
+}
+
 bool ConfigurationSpecification::InsertJointValues(std::vector<dReal>::iterator itdata, std::vector<dReal>::const_iterator itvalues, KinBodyConstPtr pbody, const std::vector<int>& indices, int timederivative) const
 {
     if( indices.size() == 0 ) {

@@ -29,6 +29,8 @@ Core
 
 * Separated the affine DOF spece configuration from robot class into the global openrave space. See :class:`.DOFAffine`, :meth:`.RaveGetIndexFromAffineDOF`, :meth:`.RaveGetAffineDOFFromIndex`, :meth:`.RaveGetAffineDOF`, and :meth:`.RaveGetAffineDOFValuesFromTransform`
 
+* Can now reset the local manipulator coordinate system with :meth:`.Robot.Manipulator.SetLocalToolTransform`
+
 Inverse Kinematics
 ------------------
 

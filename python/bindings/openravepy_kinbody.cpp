@@ -1111,6 +1111,27 @@ public:
         _pbody->SetZeroConfiguration();
     }
 
+    object GetConfigurationSpecification() const {
+        return object(openravepy::toPyConfigurationSpecification(_pbody->GetConfigurationSpecification()));
+    }
+
+    object GetConfigurationSpecificationIndices(object oindices) const {
+        vector<int> vindices = ExtractArray<int>(oindices);
+        return object(openravepy::toPyConfigurationSpecification(_pbody->GetConfigurationSpecificationIndices(vindices)));
+    }
+
+    void SetConfigurationValues(object ovalues, bool checklimits) {
+        vector<dReal> vvalues = ExtractArray<dReal>(ovalues);
+        BOOST_ASSERT((int)vvalues.size()==_pbody->GetConfigurationSpecification().GetDOF());
+        _pbody->SetConfigurationValues(vvalues.begin(),checklimits);
+    }
+
+    object GetConfigurationValues() const {
+        vector<dReal> values;
+        _pbody->GetConfigurationValues(values);
+        return toPyArray(values);
+    }
+
     bool IsRobot() const {
         return _pbody->IsRobot();
     }
@@ -1902,6 +1923,10 @@ public:
         return toPyArray(values);
     }
 
+    object GetActiveConfigurationSpecification() const {
+        return object(openravepy::toPyConfigurationSpecification(_probot->GetActiveConfigurationSpecification()));
+    }
+
     object GetActiveJointIndices() {
         RAVELOG_WARN("GetActiveJointIndices deprecated. Use GetActiveDOFIndices\n"); return toPyArray(_probot->GetActiveDOFIndices());
     }
@@ -2274,6 +2299,10 @@ void init_openravepy_kinbody()
                         .def("IsAttached",&PyKinBody::IsAttached,args("body"), DOXY_FN(KinBody,IsAttached))
                         .def("GetAttached",&PyKinBody::GetAttached, DOXY_FN(KinBody,GetAttached))
                         .def("SetZeroConfiguration",&PyKinBody::SetZeroConfiguration, DOXY_FN(KinBody,SetZeroConfiguration))
+                        .def("GetConfigurationSpecification",&PyKinBody::GetConfigurationSpecification, DOXY_FN(KinBody,GetConfigurationSpecification))
+                        .def("GetConfigurationSpecificationIndices",&PyKinBody::GetConfigurationSpecificationIndices, args("indices"), DOXY_FN(KinBody,GetConfigurationSpecificationIndices))
+                        .def("SetConfigurationValues",&PyKinBody::SetConfigurationValues, args("values"), DOXY_FN(KinBody,SetConfigurationValues))
+                        .def("GetConfigurationValues",&PyKinBody::GetConfigurationValues, DOXY_FN(KinBody,GetConfigurationValues))
                         .def("IsRobot",&PyKinBody::IsRobot, DOXY_FN(KinBody,IsRobot))
                         .def("GetEnvironmentId",&PyKinBody::GetEnvironmentId, DOXY_FN(KinBody,GetEnvironmentId))
                         .def("DoesAffect",&PyKinBody::DoesAffect,args("jointindex","linkindex"), DOXY_FN(KinBody,DoesAffect))
@@ -2538,6 +2567,7 @@ void init_openravepy_kinbody()
                       .def("GetActiveDOFMaxVel",&PyRobotBase::GetActiveDOFMaxVel, DOXY_FN(RobotBase,GetActiveDOFMaxVel))
                       .def("GetActiveDOFMaxAccel",&PyRobotBase::GetActiveDOFMaxAccel, DOXY_FN(RobotBase,GetActiveDOFMaxAccel))
                       .def("GetActiveDOFResolutions",&PyRobotBase::GetActiveDOFResolutions, DOXY_FN(RobotBase,GetActiveDOFResolutions))
+                      .def("GetActiveConfigurationSpecification",&PyRobotBase::GetActiveConfigurationSpecification, DOXY_FN(RobotBase,GetActiveConfigurationSpecification))
                       .def("GetActiveJointIndices",&PyRobotBase::GetActiveJointIndices)
                       .def("GetActiveDOFIndices",&PyRobotBase::GetActiveDOFIndices, DOXY_FN(RobotBase,GetActiveDOFIndices))
                       .def("SubtractActiveDOFValues",&PyRobotBase::SubtractActiveDOFValues, args("values0","values1"), DOXY_FN(RobotBase,SubtractActiveDOFValues))

@@ -177,6 +177,7 @@ protected:
         if( !sinput ) {
             return false;
         }
+        RAVELOG_WARN("BaseManipulation Traj command is deprecated, use robot.GetController().SetPath(traj) instead\n");
         TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),"");
         char sep = ' ';
         if( filename == "sep" ) {
