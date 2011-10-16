@@ -76,6 +76,8 @@ Trajectories
 
 * Added trajectory API to openravepy.
 
+* Added many useful trajectory routines in the :class:`.planningutils` namespace. For example: :meth:`.planningutils.VerifyTrajectory`, :meth:`.planningutils.RetimeActiveDOFTrajectory`, :meth:`.planningutils.RetimeAffineTrajectory`, :meth:`.planningutils.ConvertTrajectorySpecification`, :meth:`.planningutils.ReverseTrajectory`.
+
 Python
 ------
 

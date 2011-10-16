@@ -1706,7 +1706,7 @@ protected:
             else {
                 os << (*itmanip)->GetEndEffector()->GetIndex() << " ";
             }
-            os << TransformMatrix((*itmanip)->GetGraspTransform()) << " ";
+            os << TransformMatrix((*itmanip)->GetLocalToolTransform()) << " ";
             os << (*itmanip)->GetGripperIndices().size() << " ";
             FOREACHC(it, (*itmanip)->GetGripperIndices()) {
                 os << *it << " ";

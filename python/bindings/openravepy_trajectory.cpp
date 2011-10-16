@@ -157,6 +157,11 @@ PyInterfaceBasePtr toPyTrajectory(TrajectoryBasePtr ptrajectory, PyEnvironmentBa
     return !ptrajectory ? PyInterfaceBasePtr() : PyInterfaceBasePtr(new PyTrajectoryBase(ptrajectory,pyenv));
 }
 
+PyEnvironmentBasePtr toPyEnvironment(PyTrajectoryBasePtr pytraj)
+{
+    return pytraj->GetEnv();
+}
+
 PyTrajectoryBasePtr RaveCreateTrajectory(PyEnvironmentBasePtr pyenv, const std::string& name)
 {
     TrajectoryBasePtr p = OpenRAVE::RaveCreateTrajectory(GetEnvironment(pyenv), name);

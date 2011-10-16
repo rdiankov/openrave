@@ -67,6 +67,11 @@ OPENRAVE_API void RetimeAffineTrajectory(TrajectoryBasePtr traj, const std::vect
 /// \brief convert the trajectory and all its points to a new specification
 OPENRAVE_API void ConvertTrajectorySpecification(TrajectoryBasePtr traj, const ConfigurationSpecification& spec);
 
+/// \brief reverses the order of the trajectory waypoints and times.
+///
+/// Velocities are just negated and the new trajectory is not guaranteed to be executable or valid
+OPENRAVE_API TrajectoryBasePtr ReverseTrajectory(TrajectoryBaseConstPtr traj);
+
 /// \brief Line collision
 class OPENRAVE_API LineCollisionConstraint
 {

@@ -567,6 +567,7 @@ PyInterfaceBasePtr toPySpaceSampler(SpaceSamplerBasePtr, PyEnvironmentBasePtr);
 void init_openravepy_trajectory();
 TrajectoryBasePtr GetTrajectory(PyTrajectoryBasePtr);
 PyInterfaceBasePtr toPyTrajectory(TrajectoryBasePtr, PyEnvironmentBasePtr);
+PyEnvironmentBasePtr toPyEnvironment(PyTrajectoryBasePtr);
 void init_openravepy_viewer();
 ViewerBasePtr GetViewer(PyViewerBasePtr);
 PyInterfaceBasePtr toPyViewer(ViewerBasePtr, PyEnvironmentBasePtr);

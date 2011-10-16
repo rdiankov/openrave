@@ -17,6 +17,8 @@
 #define NO_IMPORT_ARRAY
 #include "openravepy_int.h"
 
+#include <openrave/planningutils.h>
+
 PyRay::PyRay(object newpos, object newdir)
 {
     r.pos = ExtractVector3(newpos);
@@ -271,7 +273,18 @@ public:
 //
 //    bool InsertJointValues(std::vector<dReal>::iterator itdata, std::vector<dReal>::const_iterator itvalues, KinBodyConstPtr pbody, const std::vector<int>& indices, int timederivative=0) const;
 //
-//    bool InsertDeltaTime(std::vector<dReal>::iterator itdata, dReal deltatime);
+    bool InsertDeltaTime(object odata, dReal deltatime)
+    {
+        // it is easier to get the time index
+        FOREACHC(itgroup,_spec._vgroups) {
+            if( itgroup->name == "deltatime" ) {
+                odata[itgroup->offset] = object(deltatime);
+                return true;
+            }
+        }
+        return false;
+    }
+
 //
 //    static void ConvertGroupData(std::vector<dReal>::iterator ittargetdata, size_t targetstride, const Group& gtarget, std::vector<dReal>::const_iterator itsourcedata, size_t sourcestride, const Group& gsource, size_t numpoints, EnvironmentBaseConstPtr penv);
 //
@@ -733,6 +746,16 @@ string poseSerialization(object o)
     return ss.str();
 }
 
+namespace planningutils
+{
+
+object pyReverseTrajectory(PyTrajectoryBasePtr pytraj)
+{
+    return object(openravepy::toPyTrajectory(OpenRAVE::planningutils::ReverseTrajectory(openravepy::GetTrajectory(pytraj)),openravepy::toPyEnvironment(pytraj)));
+}
+
+}
+
 BOOST_PYTHON_FUNCTION_OVERLOADS(RaveInitialize_overloads, RaveInitialize, 0, 2)
 
 void init_openravepy_global()
@@ -877,6 +900,7 @@ void init_openravepy_global()
                                            .def("IsValid",&PyConfigurationSpecification::IsValid,DOXY_FN(ConfigurationSpecification,IsValid))
                                            .def("ExtractJointValues",&PyConfigurationSpecification::ExtractJointValues,args("data","body","indices","timederivative"),DOXY_FN(ConfigurationSpecification,ExtractJointValues))
                                            .def("ExtractDeltaTime",&PyConfigurationSpecification::ExtractDeltaTime,args("data"),DOXY_FN(ConfigurationSpecification,ExtractDeltaTime))
+                                           .def("InsertDeltaTime",&PyConfigurationSpecification::InsertDeltaTime,args("data","deltatime"),DOXY_FN(ConfigurationSpecification,InsertDeltaTime))
                                            .def("__eq__",&PyConfigurationSpecification::__eq__)
                                            .def("__ne__",&PyConfigurationSpecification::__ne__)
         ;
@@ -936,6 +960,13 @@ void init_openravepy_global()
                                    .def("__repr__",&PyIkParameterization::__repr__)
         ;
         ikparameterization.attr("Type") = iktype;
+    }
+
+    {
+        scope x = class_<object>("planningutils")
+                  .def("ReverseTrajectory",planningutils::pyReverseTrajectory,DOXY_FN1(ReverseTrajectory))
+                  .staticmethod("ReverseTrajectory")
+        ;
     }
 
     def("RaveSetDebugLevel",OpenRAVE::RaveSetDebugLevel,args("level"), DOXY_FN1(RaveSetDebugLevel));

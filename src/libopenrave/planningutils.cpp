@@ -299,6 +299,50 @@ void ConvertTrajectorySpecification(TrajectoryBasePtr traj, const ConfigurationS
     }
 }
 
+TrajectoryBasePtr ReverseTrajectory(TrajectoryBaseConstPtr sourcetraj)
+{
+    vector<dReal> sourcedata;
+    size_t numpoints = sourcetraj->GetNumWaypoints();
+    int dof = sourcetraj->GetConfigurationSpecification().GetDOF();
+    vector<uint8_t> velocitydofs(dof,0);
+    int timeoffset = -1;
+    FOREACHC(itgroup, sourcetraj->GetConfigurationSpecification()._vgroups) {
+        if( itgroup->name.find("_velocities") != string::npos ) {
+            for(int i = 0; i < itgroup->dof; ++i) {
+                velocitydofs.at(itgroup->offset+i) = 1;
+            }
+        }
+        else if( itgroup->name == "deltatime" ) {
+            timeoffset = itgroup->offset;
+        }
+    }
+    sourcetraj->GetWaypoints(0,numpoints,sourcedata);
+    vector<dReal> targetdata(sourcedata.size());
+    dReal prevdeltatime = 0;
+    for(size_t i = 0; i < numpoints; ++i) {
+        vector<dReal>::iterator ittarget = targetdata.begin()+i*dof;
+        vector<dReal>::iterator itsource = sourcedata.begin()+(numpoints-i-1)*dof;
+        for(int j = 0; j < dof; ++j) {
+            if( velocitydofs[j] ) {
+                *(ittarget+j) = -*(itsource+j);
+            }
+            else {
+                *(ittarget+j) = *(itsource+j);
+            }
+        }
+
+        if( timeoffset >= 0 ) {
+            *(ittarget+timeoffset) = prevdeltatime;
+            prevdeltatime = *(itsource+timeoffset);
+        }
+    }
+
+    TrajectoryBasePtr traj = RaveCreateTrajectory(sourcetraj->GetEnv(),sourcetraj->GetXMLId());
+    traj->Init(sourcetraj->GetConfigurationSpecification());
+    traj->Insert(0,targetdata);
+    return traj;
+}
+
 LineCollisionConstraint::LineCollisionConstraint()
 {
     _report.reset(new CollisionReport());

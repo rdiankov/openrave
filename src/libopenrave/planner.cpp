@@ -89,7 +89,7 @@ PlannerBase::PlannerParameters::PlannerParameters() : XMLReadable("plannerparame
     _diffstatefn = subtractstates;
     _neighstatefn = addstates;
     //_sPostProcessingParameters ="<_nmaxiterations>100</_nmaxiterations><_postprocessing planner=\"lineartrajectoryretimer\"></_postprocessing>";
-    _sPostProcessingParameters ="<_nmaxiterations>10</_nmaxiterations><_postprocessing planner=\"parabolicsmoother\"></_postprocessing>";
+    _sPostProcessingParameters ="<_nmaxiterations>20</_nmaxiterations><_postprocessing planner=\"parabolicsmoother\"><_nmaxiterations>200</_nmaxiterations></_postprocessing>";
     _vXMLParameters.reserve(20);
     _vXMLParameters.push_back("configuration");
     _vXMLParameters.push_back("_vinitialconfig");
