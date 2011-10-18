@@ -204,8 +204,7 @@ void DynamicPath::SetMilestones(const vector<Vector>& x)
             ramps[i].dx0 = zero;
             ramps[i].dx1 = zero;
             bool res=ramps[i].SolveMinTimeLinear(accMax,velMax);
-            PARABOLIC_ASSERT(res);
-            PARABOLIC_ASSERT(ramps[i].IsValid());
+            PARABOLIC_ASSERT(res && ramps[i].IsValid());
         }
     }
 }
@@ -360,7 +359,7 @@ void DynamicPath::Concat(const DynamicPath& suffix)
             PARABOLICLOG("dx:\n");
             for(size_t i=0; i<ramps.back().x1.size(); i++)
                 PARABOLICLOG("%g - %g = %g\n",ramps.back().dx1[i],suffix.ramps.front().dx0[i],ramps.back().dx1[i]-suffix.ramps.front().dx0[i]);
-            getchar();
+            //getchar();
         }
         ramps.back().x1 = ramps.front().x0;
         ramps.back().dx1 = ramps.front().dx0;
@@ -484,7 +483,7 @@ bool CheckRamp(const ParabolicRampND& ramp,FeasibilityCheckerBase* feas,Distance
         Real tc = (section.ta+section.tb)*0.5;
         Vector xc;
         ramp.Evaluate(tc,xc);
-        if(!feas->ConfigFeasible(xc)) return false;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   //infeasible config
+        if(!feas->ConfigFeasible(xc)) return false;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             //infeasible config
         //subdivide
         Real dc = distance->ObstacleDistance(xc);
         RampSection sa,sb;
@@ -785,7 +784,7 @@ int DynamicPath::OnlineShortcut(Real leadTime,Real padTime,RampFeasibilityChecke
         if(t1 > t2) Swap(t1,t2);
         int i1 = std::upper_bound(rampStartTime.begin(),rampStartTime.end(),t1)-rampStartTime.begin()-1;
         int i2 = std::upper_bound(rampStartTime.begin(),rampStartTime.end(),t2)-rampStartTime.begin()-1;
-        if(i1 == i2) continue;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  //same ramp
+        if(i1 == i2) continue;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  //same ramp
         Real u1 = t1-rampStartTime[i1];
         Real u2 = t2-rampStartTime[i2];
         PARABOLIC_ASSERT(u1 >= 0);

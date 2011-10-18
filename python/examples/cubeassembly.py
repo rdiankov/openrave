@@ -30,12 +30,15 @@ import openravepy
 if not __openravepy_build_doc__:
     from openravepy import *
     from numpy import *
+else:
+    from numpy import eye
 
 import multiprocessing
 
-from openravepy.examples import graspplanning
+#from openravepy.examples
+import graspplanning
 
-class CubeAssembly(metaclass.AutoReloader):
+class CubeAssembly(object):#metaclass.AutoReloader):
     def __init__(self,robot):
         self.env=robot.GetEnv()
         self.robot=robot
