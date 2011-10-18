@@ -111,6 +111,7 @@ class CubeAssembly(object):#metaclass.AutoReloader):
     def SetGoal(self,Tgoal,randomize=True):
         """sets the goal of all the target bodies and randomizes the obstacles across the plane
         """
+        print 'randomizing blocks, might take a couple of seconds...'
         if not randomize:
             self.Tgoal = Tgoal
             return
@@ -160,6 +161,7 @@ class CubeAssembly(object):#metaclass.AutoReloader):
     def Plan(self):
         if self.Tgoal is None:
             raise ValueError('need to set goal with SetGoal()')
+        print 'planning...'
         planner=graspplanning.GraspPlanning(self.robot,randomize=False,dests=None,nodestinations=True)
         for gmodel in self.gmodels:
             print 'grasping %s'%gmodel.target
@@ -176,11 +178,12 @@ def main(env,options):
     time.sleep(0.1) # give time for environment to update
     self = CubeAssembly(robot)
     self.CreateBlocks()
-    Tgoal = eye(4)
-    Tgoal[0,3] = -0.2
-    Tgoal[2,3] = 0.001
-    self.SetGoal(Tgoal)
-    self.Plan()
+    while True:
+        Tgoal = eye(4)
+        Tgoal[0,3] = -0.2
+        Tgoal[2,3] = 0.001
+        self.SetGoal(Tgoal)
+        self.Plan()
 
 from optparse import OptionParser
 from openravepy.misc import OpenRAVEGlobalArguments

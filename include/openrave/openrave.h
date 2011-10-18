@@ -1440,8 +1440,8 @@ protected:
     IkParameterizationType _type;
 
     friend IkParameterization operator* (const Transform &t, const IkParameterization &ikparam);
-    friend std::ostream& operator<<(std::ostream& O, const IkParameterization &ikparam);
-    friend std::istream& operator>>(std::istream& I, IkParameterization& ikparam);
+    friend OPENRAVE_API std::ostream& operator<<(std::ostream& O, const IkParameterization &ikparam);
+    friend OPENRAVE_API std::istream& operator>>(std::istream& I, IkParameterization& ikparam);
 };
 
 inline IkParameterization operator* (const Transform &t, const IkParameterization &ikparam)

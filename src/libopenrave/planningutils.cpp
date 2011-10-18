@@ -162,12 +162,16 @@ void VerifyTrajectory(PlannerBase::PlannerParametersConstPtr parameters, Traject
         BOOST_ASSERT(vdata.size() == newq.size());
         for(size_t i = 0; i < newq.size(); ++i) {
             if( RaveFabs(vdata.at(i) - newq.at(i)) > 0.001 * parameters->_vConfigResolution[i] ) {
+                ofstream f("failedtrajectory.xml");
+                trajectory->serialize(f);
                 throw OPENRAVE_EXCEPTION_FORMAT("setstate/getstate inconsistent configuration %d dof %d: %f != %f",ipoint%i%vdata.at(i)%newq.at(i),ORE_InconsistentConstraints);
             }
         }
         if( !!parameters->_neighstatefn ) {
             newq = vdata;
             if( !parameters->_neighstatefn(newq,deltaq,0) ) {
+                ofstream f("failedtrajectory.xml");
+                trajectory->serialize(f);
                 throw OPENRAVE_EXCEPTION_FORMAT("neighstatefn is rejecting configuration %d",ipoint,ORE_InconsistentConstraints);
             }
         }
@@ -180,10 +184,14 @@ void VerifyTrajectory(PlannerBase::PlannerParametersConstPtr parameters, Traject
             configs->clear();
             trajectory->GetWaypoints(i,i+1,vdata);
             if( !parameters->_checkpathconstraintsfn(vprevdata,vdata,IT_Closed, configs) ) {
+                ofstream f("failedtrajectory.xml");
+                trajectory->serialize(f);
                 throw OPENRAVE_EXCEPTION_FORMAT("checkpathconstraintsfn failed at %d-%d",(i-1)%i,ORE_InconsistentConstraints);
             }
             FOREACH(itconfig, *configs) {
                 if( !parameters->_neighstatefn(*itconfig,deltaq,0) ) {
+                    ofstream f("failedtrajectory.xml");
+                    trajectory->serialize(f);
                     throw OPENRAVE_EXCEPTION_FORMAT("neighstatefn is rejecting configurations from checkpathconstraintsfn %d-%d",(i-1)%i,ORE_InconsistentConstraints);
                 }
             }
