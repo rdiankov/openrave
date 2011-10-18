@@ -92,7 +92,7 @@ int JitterActiveDOF(RobotBasePtr robot,int nMaxIterations,dReal fRand,const Plan
             }
             robot->SetActiveDOFValues(newdof,true);
             if(robot->CheckSelfCollision() || robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot)) ) {
-                bConstraint = true;
+                bCollision = true;
                 break;
             }
         }
@@ -166,9 +166,6 @@ void VerifyTrajectory(PlannerBase::PlannerParametersConstPtr parameters, Traject
             }
         }
         if( !!parameters->_neighstatefn ) {
-            FOREACH(it,newq) {
-                *it = 0;
-            }
             newq = vdata;
             if( !parameters->_neighstatefn(newq,deltaq,0) ) {
                 throw OPENRAVE_EXCEPTION_FORMAT("neighstatefn is rejecting configuration %d",ipoint,ORE_InconsistentConstraints);
@@ -238,6 +235,7 @@ void RetimeAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& ma
     string interpolation = "linear";
     params->_vConfigVelocityLimit = maxvelocities;
     params->_vConfigAccelerationLimit = maxaccelerations;
+    params->_configurationspecification = traj->GetConfigurationSpecification();
     params->_vConfigLowerLimit.resize(traj->GetConfigurationSpecification().GetDOF());
     params->_vConfigUpperLimit.resize(traj->GetConfigurationSpecification().GetDOF());
     for(size_t i = 0; i < params->_vConfigLowerLimit.size(); ++i) {
@@ -378,7 +376,10 @@ bool LineCollisionConstraint::Check(PlannerBase::PlannerParametersWeakPtr _param
     _vtempconfig.resize(params->GetDOF());
     if (bCheckEnd) {
         params->_setstatefn(pQ1);
-        if (robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot)) || (robot->CheckSelfCollision()) ) {
+        if (robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot),_report) ) {
+            return false;
+        }
+        if( robot->CheckSelfCollision(_report) ) {
             return false;
         }
     }
@@ -424,7 +425,10 @@ bool LineCollisionConstraint::Check(PlannerBase::PlannerParametersWeakPtr _param
     }
     for (int f = start; f < numSteps; f++) {
         params->_setstatefn(_vtempconfig);
-        if( robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot)) || (robot->CheckSelfCollision()) ) {
+        if( robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot)) ) {
+            return false;
+        }
+        if( robot->CheckSelfCollision() ) {
             return false;
         }
         if( !!params->_getstatefn ) {

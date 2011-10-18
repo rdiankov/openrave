@@ -784,7 +784,7 @@ class NoSharedFixtureContextSuite(ContextSuite):
             if len(localtests) > 1 and self.testQueue is not None:
                 log.debug("queue %d tests"%len(localtests))
                 for test in localtests:
-                    if isinstance(test.test,nose.failure.Failure):
+                    if not isinstance(test,NoSharedFixtureContextSuite) and isinstance(test.test,nose.failure.Failure):
                         # proably failed in the generator, so execute directly
                         # to get the exception
                         test(orig)

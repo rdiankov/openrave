@@ -173,7 +173,7 @@ void init_openravepy_viewer()
                        .def("SetName",&PyViewerBase::SetName, DOXY_FN(ViewerBase,SetName))
                        .def("GetName",&PyViewerBase::GetName, DOXY_FN(ViewerBase,GetName))
                        .def("RegisterCallback",&PyViewerBase::RegisterCallback, args("callback"), DOXY_FN(ViewerBase,RegisterItemSelectionCallback))
-                       .def("RegisterItemSelectionCallback",&PyViewerBase::RegisterItemSelectionCallback, args("callback"), DOXY_FN(ViewerBase,RegisterCallback))
+                       .def("RegisterItemSelectionCallback",&PyViewerBase::RegisterItemSelectionCallback, args("callback"), DOXY_FN(ViewerBase,RegisterItemSelectionCallback))
                        .def("EnvironmentSync",&PyViewerBase::EnvironmentSync, DOXY_FN(ViewerBase,EnvironmentSync))
                        .def("SetCamera",setcamera1,args("transform"), DOXY_FN(ViewerBase,SetCamera))
                        .def("SetCamera",setcamera2,args("transform","focalDistance"), DOXY_FN(ViewerBase,SetCamera))
@@ -182,9 +182,9 @@ void init_openravepy_viewer()
                        .def("GetCameraImage",&PyViewerBase::GetCameraImage,args("width","height","transform","K"), DOXY_FN(ViewerBase,GetCameraImage))
         ;
 
-        enum_<ViewerBase::ViewerEvents>("Events" DOXY_ENUM(ViewerEvents))
-        .value("ItemSelection",ViewerBase::VE_ItemSelection)
-        ;
+//        enum_<ViewerBase::ViewerEvents>("Events" DOXY_ENUM(ViewerEvents))
+//        .value("ItemSelection",ViewerBase::VE_ItemSelection)
+//        ;
     }
 
     def("RaveCreateViewer",openravepy::RaveCreateViewer,args("env","name"),DOXY_FN1(RaveCreateViewer));

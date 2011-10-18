@@ -73,13 +73,13 @@ public:
     virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
     {
         BOOST_ASSERT(!!_parameters && !!ptraj && ptraj->GetEnv()==GetEnv());
-        BOOST_ASSERT(_parameters->GetDOF() == ptraj->GetConfigurationSpecification().GetDOF());
+        BOOST_ASSERT(_parameters->GetDOF() == _parameters->_configurationspecification.GetDOF());
         size_t numpoints = ptraj->GetNumWaypoints();
-        const ConfigurationSpecification& oldspec = ptraj->GetConfigurationSpecification();
-        ConfigurationSpecification newspec = oldspec;
+        const ConfigurationSpecification& oldspec = _parameters->_configurationspecification;
+        ConfigurationSpecification newspec = ptraj->GetConfigurationSpecification();
         newspec.AddVelocityGroups(true);
         vector<dReal> vdiffdata, data;
-        ptraj->GetWaypoints(0,numpoints,vdiffdata);
+        ptraj->GetWaypoints(0,numpoints,vdiffdata,oldspec);
         data.resize(numpoints*newspec.GetDOF(),0);
         ConfigurationSpecification::ConvertData(data.begin(),newspec,vdiffdata.begin(),oldspec,numpoints,GetEnv());
         int degree = 1;

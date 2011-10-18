@@ -63,7 +63,12 @@ Uses the Rapidly-Exploring Random Trees Algorithm.\n\
             _treeForward.AddNode(-1, vinitialconfig);
         }
 
-        return _treeForward._nodes.size()>0;
+        if( _treeForward._nodes.size() == 0 && !params->_sampleinitialfn ) {
+            RAVELOG_WARN("no initial configurations\n");
+            return false;
+        }
+
+        return true;
     }
 
     // simple path optimization

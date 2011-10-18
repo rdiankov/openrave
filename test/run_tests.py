@@ -16,14 +16,16 @@ import sys
 from optparse import OptionParser
 import nose
 from nose.plugins import failuredetail
-from noseplugins import multiprocess, xunitmultiprocess, capture, callableclass
+from noseplugins import xunitmultiprocess, capture, callableclass, multiprocess
+
+import multiprocessing
 
 if __name__ == "__main__":
     import test_kinematics
     parser = OptionParser(description='OpenRAVE unit tests')
     parser.add_option('--timeout','-t', action='store', type='float', dest='timeout',default='600',
                       help='Timeout for each ikfast run, this includes time for generation and performance measurement. (default=%default)')
-    parser.add_option('-j', action='store', type='int', dest='numprocesses',default='4',
+    parser.add_option('-j', action='store', type='int', dest='numprocesses',default=None,
                       help='Number of processors to run this in (default=%default).')
     parser.add_option('--with-coverage',action='store_true',dest='with_coverage',default=False,
                       help='set to create coverage statistics')
@@ -32,7 +34,8 @@ if __name__ == "__main__":
     (options, args) = parser.parse_args()
 
     multiprocess._instantiate_plugins = [capture.Capture, xunitmultiprocess.Xunitmp,failuredetail.FailureDetail,callableclass.CallableClass]
-    argv=['nosetests','-v','--with-xunitmp','--xunit-file=results.xml','--processes=%d'%options.numprocesses,'--process-timeout=%f'%options.timeout,'--process-restartworker','-d','--with-callableclass','-s']
+    numprocesses = options.numprocesses if options.numprocesses is not None else multiprocessing.cpu_count()
+    argv=['nosetests','-v','--with-xunitmp','--xunit-file=results.xml','--processes=%d'%numprocesses,'--process-timeout=%f'%options.timeout,'--process-restartworker','-d','--with-callableclass','-s']
     if options.os_only:
         argv.append('test_programs.py')
     if options.with_coverage:

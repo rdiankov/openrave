@@ -108,7 +108,7 @@ public:
                     bNeedDerivatives = true;
                 }
                 else if( name != "deltatime" ) {
-                    RAVELOG_WARN(str(boost::format("unknown interpolation method '%s' for group '%s'")%interpolation%name));
+                    RAVELOG_DEBUG(str(boost::format("unknown interpolation method '%s' for group '%s'")%interpolation%name));
                 }
 
 
