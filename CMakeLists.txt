@@ -657,7 +657,7 @@ if(OPT_PYTHON AND PYTHON_EXECUTABLE)
   set(OPENRAVE_USE_LOCAL_SYMPY 1)
   if( PYTHON_EXECUTABLE )
     set(SYMPY_MINIMUM_VERSION "0.6.3")
-    set(SYMPY_MINIMUM_VERSION "0.6.7")
+    set(SYMPY_MAXIMUM_VERSION "0.6.7")
     # check if sympy substitution is ok
     execute_process(
       COMMAND ${PYTHON_EXECUTABLE} -c "import sympy, sys;  x=sympy.Symbol('x'); sys.exit((x**3).subs(x**2,sympy.Symbol('y')) != x**3)"
