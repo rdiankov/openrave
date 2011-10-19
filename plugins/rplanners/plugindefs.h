@@ -142,15 +142,15 @@ template <typename T>
 inline T NORMALIZE_ANGLE(T theta, T min, T max)
 {
     if (theta < min) {
-        theta += T(2*M_PI);
+        theta += T(2*PI);
         while (theta < min) {
-            theta += T(2*M_PI);
+            theta += T(2*PI);
         }
     }
     else if (theta > max) {
-        theta -= T(2*M_PI);
+        theta -= T(2*PI);
         while (theta > max) {
-            theta -= T(2*M_PI);
+            theta -= T(2*PI);
         }
     }
     return theta;
@@ -159,7 +159,7 @@ inline T NORMALIZE_ANGLE(T theta, T min, T max)
 template <typename T>
 inline T ANGLE_DIFF(T f0, T f1)
 {
-    return NORMALIZE_ANGLE(f0-f1, T(-M_PI), T(M_PI));
+    return NORMALIZE_ANGLE(f0-f1, T(-PI), T(PI));
 }
 
 struct null_deleter

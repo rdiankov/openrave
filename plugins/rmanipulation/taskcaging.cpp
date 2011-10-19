@@ -1402,15 +1402,16 @@ private:
         finaltime = GetMilliTime()-basetime;
 
         Trajectory::TPOINT tp;
+        vector<Trajectory::TPOINT> vtemppoints = ptrajtemp->GetPoints();
         if( bReverseTrajectory ) {
-            FOREACHR(itpoint, ptrajtemp->GetPoints()) {
+            FOREACHRC(itpoint, vtemppoints) {
                 tp.q.resize(0);
                 tp.q.insert(tp.q.end(), itpoint->q.begin(), itpoint->q.begin()+_robot->GetActiveDOF());
                 ptraj->AddPoint(tp);
             }
         }
         else {
-            FOREACH(itpoint, ptrajtemp->GetPoints()) {
+            FOREACHC(itpoint, vtemppoints) {
                 tp.q.resize(0);
                 tp.q.insert(tp.q.end(), itpoint->q.begin(), itpoint->q.begin()+_robot->GetActiveDOF());
                 ptraj->AddPoint(tp);
@@ -1428,7 +1429,7 @@ private:
             Transform ttarget = taskdata->ptarget->GetTransform();
 
             if( bReverseTrajectory ) {
-                FOREACHR(itpoint, ptrajtemp->GetPoints()) {
+                FOREACHRC(itpoint, ptrajtemp->GetPoints()) {
                     for(size_t i = 0; i < taskdata->_vtargetjoints.size(); ++i)
                         tp.q[taskdata->_vtargetjoints[i]] = itpoint->q[_robot->GetActiveDOF()+i];
                     tp.time = itrobottraj++->time;
@@ -1437,7 +1438,7 @@ private:
                 }
             }
             else {
-                FOREACH(itpoint, ptrajtemp->GetPoints()) {
+                FOREACHC(itpoint, ptrajtemp->GetPoints()) {
                     for(size_t i = 0; i < taskdata->_vtargetjoints.size(); ++i)
                         tp.q[taskdata->_vtargetjoints[i]] = itpoint->q[_robot->GetActiveDOF()+i];
                     tp.time = itrobottraj++->time;

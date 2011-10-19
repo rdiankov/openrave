@@ -2,7 +2,19 @@
 #include <stdlib.h>
 
 #ifdef WIN32
-#define GETCURRENTTIME(x) x=timeGetTime()
+
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+
+inline static unsigned int GetMilliTime()
+{
+    LARGE_INTEGER count, freq;
+    QueryPerformanceCounter(&count);
+    QueryPerformanceFrequency(&freq);
+    return (unsigned int)((count.QuadPart * 1000) / freq.QuadPart);
+}
+
+#define GETCURRENTTIME(x) x=GetMilliTime()
 #else
 #define GETCURRENTTIME(x) gettimeofday(&x,NULL)
 #endif //WIN32
