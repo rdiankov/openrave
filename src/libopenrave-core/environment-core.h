@@ -672,7 +672,7 @@ public:
                 }
             }
         }
-        FOREACH(itsensor,_listSensors) {
+        FOREACHC(itsensor,_listSensors) {
             if( (*itsensor)->GetName() == name ) {
                 return *itsensor;
             }
