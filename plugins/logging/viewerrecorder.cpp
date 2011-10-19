@@ -600,7 +600,7 @@ protected:
             s_pVideoGlobalState.reset(new VideoGlobalState());
         }
         lcodecs.clear();
-        AVOutputFormat *fmt = first_oformat;
+        AVOutputFormat *fmt = av_oformat_next(NULL);//first_oformat;
         while (fmt != NULL) {
             lcodecs.push_back(make_pair((int)fmt->video_codec,fmt->long_name));
             fmt = fmt->next;
@@ -617,7 +617,7 @@ protected:
         AVCodec *codec;
 
         CodecID video_codec = codecid == -1 ? CODEC_ID_MPEG4 : (CodecID)codecid;
-        AVOutputFormat *fmt = first_oformat;
+        AVOutputFormat *fmt = av_oformat_next(NULL);//first_oformat;
         while (fmt != NULL) {
             if (fmt->video_codec == video_codec) {
                 break;
@@ -637,7 +637,11 @@ protected:
 
         codec_ctx = _stream->codec;
         codec_ctx->codec_id = video_codec;
+#ifdef HAS_AVMEDIA_TYPE_VIDEO
+        codec_ctx->codec_type = AVMEDIA_TYPE_VIDEO;
+#else
         codec_ctx->codec_type = CODEC_TYPE_VIDEO;
+#endif
         codec_ctx->bit_rate = 4000000;
         codec_ctx->width = width;
         codec_ctx->height = height;

@@ -159,7 +159,7 @@ public:
             \endcode
             \param iktype the type of parameterization to request
          */
-        virtual IkParameterization GetIkParameterization(IkParameterization::Type iktype) const;
+        virtual IkParameterization GetIkParameterization(IkParameterizationType iktype) const;
 
         /** \brief returns a full parameterization of a given IK type for the current manipulator position using an existing IkParameterization as the seed.
 

@@ -180,7 +180,7 @@ public:
             trobot = tbase*ttorobot;
             _robot->SetTransform(trobot);
 
-            Transform tstartmanip = pmanip->GetTransform();
+            //Transform tstartmanip = pmanip->GetTransform();
 
             dReal step_size = 0.05f;
             //backup the robot until it is no longer colliding with the object

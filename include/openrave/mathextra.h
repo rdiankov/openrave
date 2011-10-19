@@ -381,9 +381,11 @@ inline T* _multtrans4(T* pfres, const T* pf1, const T* pf2)
 
     for(int i = 0; i < 4; ++i) {
         for(int j = 0; j < 4; ++j) {
-            pfres[4*i+j] = pf1[i] * pf2[j] + pf1[i+4] * pf2[j+4] + pf1[i+8] * pf2[j+8] + pf1[i+12] * pf2[j+12];
+            pfres2[4*i+j] = pf1[i] * pf2[j] + pf1[i+4] * pf2[j+4] + pf1[i+8] * pf2[j+8] + pf1[i+12] * pf2[j+12];
         }
     }
+
+    if( pfres2 != pfres ) memcpy(pfres, pfres2, 16*sizeof(T));
 
     return pfres;
 }

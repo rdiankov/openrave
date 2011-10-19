@@ -240,8 +240,6 @@ public:
 
         std::vector<Transform> vtrans1,vtrans2;
         plink->GetParent()->GetLinkTransformations(vtrans1);
-
-        bool exclude_link2;
         FOREACH(itbody,vecbodies) {
             if(!!report) {
                 report->numWithinTol = 0;
@@ -259,7 +257,6 @@ public:
             pbody2->GetLinkTransformations(vtrans2);
             GetPQPTransformFromTransform(vtrans1[plink->GetIndex()],R1,T1);
 
-            exclude_link2 = false;
             for(int j = 0; j < (int)vtrans2.size(); j++) {
                 if(plink == veclinks2[j]) {
                     continue;
@@ -390,8 +387,6 @@ private:
         pbody1->GetLinkTransformations(vtrans1);
 
         std::vector<KinBody::LinkPtr> veclinks1 = pbody1->GetLinks();
-
-        bool exclude_link1, exclude_link2;
         FOREACH(itbody,vecbodies) {
             if(!!report) {
                 report->numWithinTol = 0;
@@ -408,15 +403,12 @@ private:
 
             std::vector<KinBody::LinkPtr> veclinks2 = pbody2->GetLinks();
             pbody2->GetLinkTransformations(vtrans2);
-
-            exclude_link1 = false;
             for(int i = 0; i < (int)vtrans1.size(); i++) {
                 if(find(vlinkexcluded.begin(),vlinkexcluded.end(),veclinks1[i]) != vlinkexcluded.end()) {
                     continue;
                 }
                 GetPQPTransformFromTransform(vtrans1[i],R1,T1);
 
-                exclude_link2 = false;
                 for(int j = 0; j < (int)vtrans2.size(); j++) {
                     if(find(vlinkexcluded.begin(),vlinkexcluded.end(),veclinks2[j]) != vlinkexcluded.end()) {
                         continue;

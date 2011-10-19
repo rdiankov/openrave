@@ -1528,7 +1528,7 @@ inline bool TriTriCollision(const RaveVector<T>& u1, const RaveVector<T>& u2, co
     // for the face to be intersecting the plane, one of its
     // vertices must be on the opposite side of the plane
     char b = 0;
-    RaveVector<T> u12 = u2 - u1, u23 = u3 - u2, u31 = u1 - u3;
+    RaveVector<T> u12 = u2 - u1,                u31 = u1 - u3;
     RaveVector<T> v12 = v2 - v1, v23 = v3 - v2, v31 = v1 - v3;
     RaveVector<T> vedges[3] = { v12, v23, v31};
     RaveVector<T> unorm, vnorm;

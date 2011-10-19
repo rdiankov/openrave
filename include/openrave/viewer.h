@@ -163,7 +163,7 @@ public:
     /// \deprecated (11/06/10)
     typedef ItemSelectionCallbackFn ViewerCallbackFn RAVE_DEPRECATED;
     /// \deprecated (11/06/10)
-    virtual boost::shared_ptr<void> RegisterCallback(int properties, const ViewerCallbackFn& fncallback) RAVE_DEPRECATED
+    virtual boost::shared_ptr<void> RegisterCallback(int properties, const ItemSelectionCallbackFn& fncallback) RAVE_DEPRECATED
     {
         return RegisterItemSelectionCallback(fncallback);
     }

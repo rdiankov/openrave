@@ -1071,11 +1071,9 @@ public:
                     domKinematics_axis_infoRef kinematics_axis_info;
                     domMotion_axis_infoRef motion_axis_info;
                     FOREACHC(itaxisbinding,bindings.listAxisBindings) {
-                        bool bfound = false;
                         if (vdomaxes[ic] == itaxisbinding->pkinematicaxis) {
                             kinematics_axis_info = itaxisbinding->kinematics_axis_info;
                             motion_axis_info = itaxisbinding->motion_axis_info;
-                            bfound = true;
                             break;
                         }
                     }
