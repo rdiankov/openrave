@@ -434,7 +434,7 @@ public:
     virtual bool CheckCollision(KinBody::LinkConstPtr plink, CollisionReportPtr report)
     {
         if( !plink->IsEnabled() ) {
-            RAVELOG_WARN(str(boost::format("calling collision on disabled link %s\n")%plink->GetName()));
+            RAVELOG_VERBOSE(str(boost::format("calling collision on disabled link %s\n")%plink->GetName()));
             return false;
         }
 
@@ -448,11 +448,11 @@ public:
     virtual bool CheckCollision(KinBody::LinkConstPtr plink1, KinBody::LinkConstPtr plink2, CollisionReportPtr report)
     {
         if( !plink1->IsEnabled() ) {
-            RAVELOG_WARN(str(boost::format("calling collision on disabled link1 %s\n")%plink1->GetName()));
+            RAVELOG_VERBOSE(str(boost::format("calling collision on disabled link1 %s\n")%plink1->GetName()));
             return false;
         }
         if( !plink2->IsEnabled() ) {
-            RAVELOG_WARN(str(boost::format("calling collision on disabled link2 %s\n")%plink2->GetName()));
+            RAVELOG_VERBOSE(str(boost::format("calling collision on disabled link2 %s\n")%plink2->GetName()));
             return false;
         }
 
@@ -470,7 +470,7 @@ public:
         }
 
         if( !plink->IsEnabled() ) {
-            RAVELOG_WARN(str(boost::format("calling collision on disabled link %s\n")%plink->GetName()));
+            RAVELOG_VERBOSE(str(boost::format("calling collision on disabled link %s\n")%plink->GetName()));
             return false;
         }
 
@@ -509,7 +509,7 @@ public:
     virtual bool CheckCollision(const RAY& ray, KinBody::LinkConstPtr plink, CollisionReportPtr report)
     {
         if( !plink->IsEnabled() ) {
-            RAVELOG_WARN(str(boost::format("calling collision on disabled link %s\n")%plink->GetName()));
+            RAVELOG_VERBOSE(str(boost::format("calling collision on disabled link %s\n")%plink->GetName()));
             return false;
         }
 
