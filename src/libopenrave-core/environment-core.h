@@ -52,6 +52,11 @@ public:
         _bInit = false;
         _bEnableSimulation = true;     // need to start by default
 
+        _handlegenericrobot = RaveRegisterInterface(PT_Robot,"GenericRobot", RaveGetInterfaceHash(PT_Robot), GetHash(), CreateGenericRobot);
+        _handlegenerictrajectory = RaveRegisterInterface(PT_Trajectory,"GenericTrajectory", RaveGetInterfaceHash(PT_Trajectory), GetHash(), CreateGenericTrajectory);
+        _handlegenericphysicsengine = RaveRegisterInterface(PT_PhysicsEngine,"GenericPhysicsEngine", RaveGetInterfaceHash(PT_PhysicsEngine), GetHash(), CreateGenericPhysicsEngine);
+        _handlegenericcollisionchecker = RaveRegisterInterface(PT_CollisionChecker,"GenericCollisionChecker", RaveGetInterfaceHash(PT_CollisionChecker), GetHash(), CreateGenericCollisionChecker);
+
         {
             bool bExists=false;
             RaveParseDirectories(getenv("OPENRAVE_DATA"), _vdatadirs);
@@ -124,10 +129,10 @@ public:
         _bEnableSimulation = true;     // need to start by default
 
         if( !_pCurrentChecker ) {
-            _pCurrentChecker.reset(new DummyCollisionChecker(shared_from_this()));
+            _pCurrentChecker = RaveCreateCollisionChecker(shared_from_this(), "GenericCollisionChecker");
         }
         if( !_pPhysicsEngine ) {
-            _pPhysicsEngine.reset(new DummyPhysicsEngine(shared_from_this()));
+            _pPhysicsEngine = RaveCreatePhysicsEngine(shared_from_this(), "GenericPhysicsEngine");
         }
 
         // try to set init as early as possible since will be calling into user code
@@ -321,62 +326,6 @@ public:
 
     virtual UserDataPtr GlobalState() {
         return RaveGlobalState();
-    }
-
-    virtual void GetPluginInfo(std::list< std::pair<std::string, PLUGININFO> >& plugins) {
-        RaveGetPluginInfo(plugins);
-    }
-    virtual void GetLoadedInterfaces(std::map<InterfaceType, std::vector<std::string> >& interfacenames) const {
-        RaveGetLoadedInterfaces(interfacenames);
-    }
-    virtual bool LoadPlugin(const std::string& pname) {
-        return RaveLoadPlugin(pname);
-    }
-    virtual void ReloadPlugins() {
-        RaveReloadPlugins();
-    }
-    virtual bool HasInterface(InterfaceType type, const string& interfacename) const {
-        return RaveHasInterface(type,interfacename);
-    }
-
-    virtual InterfaceBasePtr CreateInterface(InterfaceType type,const std::string& pinterfacename) {
-        return RaveCreateInterface(shared_from_this(),type,pinterfacename);
-    }
-    virtual RobotBasePtr CreateRobot(const std::string& pname) {
-        return RaveCreateRobot(shared_from_this(), pname);
-    }
-    virtual KinBodyPtr CreateKinBody(const std::string& pname) {
-        return RaveCreateKinBody(shared_from_this(), pname);
-    }
-    virtual TrajectoryBasePtr CreateTrajectory(int nDOF) {
-        return RaveCreateTrajectory(shared_from_this(), nDOF);
-    }
-    virtual PlannerBasePtr CreatePlanner(const std::string& pname) {
-        return RaveCreatePlanner(shared_from_this(),pname);
-    }
-    virtual SensorSystemBasePtr CreateSensorSystem(const std::string& pname) {
-        return RaveCreateSensorSystem(shared_from_this(),pname);
-    }
-    virtual ControllerBasePtr CreateController(const std::string& pname) {
-        return RaveCreateController(shared_from_this(),pname);
-    }
-    virtual ModuleBasePtr CreateProblem(const std::string& pname) {
-        return RaveCreateModule(shared_from_this(),pname);
-    }
-    virtual IkSolverBasePtr CreateIkSolver(const std::string& pname) {
-        return RaveCreateIkSolver(shared_from_this(),pname);
-    }
-    virtual PhysicsEngineBasePtr CreatePhysicsEngine(const std::string& pname) {
-        return RaveCreatePhysicsEngine(shared_from_this(),pname);
-    }
-    virtual SensorBasePtr CreateSensor(const std::string& pname) {
-        return RaveCreateSensor(shared_from_this(),pname);
-    }
-    virtual CollisionCheckerBasePtr CreateCollisionChecker(const std::string& pname) {
-        return RaveCreateCollisionChecker(shared_from_this(),pname);
-    }
-    virtual ViewerBasePtr CreateViewer(const std::string& pname) {
-        return RaveCreateViewer(shared_from_this(),pname);
     }
 
     virtual void OwnInterface(InterfaceBasePtr pinterface)
@@ -688,7 +637,7 @@ public:
         return false;
     }
 
-    virtual KinBodyPtr GetKinBody(const std::string& pname)
+    virtual KinBodyPtr GetKinBody(const std::string& pname) const
     {
         boost::mutex::scoped_lock lock(_mutexInterfaces);
         FOREACHC(it, _vecbodies) {
@@ -700,7 +649,7 @@ public:
         return KinBodyPtr();
     }
 
-    virtual RobotBasePtr GetRobot(const std::string& pname)
+    virtual RobotBasePtr GetRobot(const std::string& pname) const
     {
         boost::mutex::scoped_lock lock(_mutexInterfaces);
         FOREACHC(it, _vecrobots) {
@@ -712,7 +661,7 @@ public:
         return RobotBasePtr();
     }
 
-    virtual SensorBasePtr GetSensor(const std::string& name)
+    virtual SensorBasePtr GetSensor(const std::string& name) const
     {
         boost::mutex::scoped_lock lock(_mutexInterfaces);
         FOREACHC(itrobot,_vecrobots) {
@@ -723,7 +672,7 @@ public:
                 }
             }
         }
-        FOREACH(itsensor,_listSensors) {
+        FOREACHC(itsensor,_listSensors) {
             if( (*itsensor)->GetName() == name ) {
                 return *itsensor;
             }
@@ -740,7 +689,7 @@ public:
         _pPhysicsEngine = pengine;
         if( !_pPhysicsEngine ) {
             RAVELOG_DEBUG("disabling physics\n");
-            _pPhysicsEngine.reset(new DummyPhysicsEngine(shared_from_this()));
+            _pPhysicsEngine = RaveCreatePhysicsEngine(shared_from_this(),"GenericPhysicsEngine");
         }
         else {
             RAVELOG_DEBUG(str(boost::format("setting %s physics engine\n")%_pPhysicsEngine->GetXMLId()));
@@ -791,7 +740,7 @@ public:
         _pCurrentChecker = pchecker;
         if( !_pCurrentChecker ) {
             RAVELOG_DEBUG("disabling collisions\n");
-            _pCurrentChecker.reset(new DummyCollisionChecker(shared_from_this()));
+            _pCurrentChecker = RaveCreateCollisionChecker(shared_from_this(),"GenericCollisionChecker");
         }
         else {
             RAVELOG_DEBUG(str(boost::format("setting %s collision checker\n")%_pCurrentChecker->GetXMLId()));
@@ -1383,7 +1332,7 @@ public:
         return OpenRAVEXMLParser::CreateGeometries(shared_from_this(),filedata->second, vScaleGeometry, listGeometries);
     }
 
-    virtual boost::shared_ptr<void> RegisterXMLReader(InterfaceType type, const std::string& xmltag, const CreateXMLReaderFn& fn)
+    virtual UserDataPtr RegisterXMLReader(InterfaceType type, const std::string& xmltag, const CreateXMLReaderFn& fn)
     {
         return RaveRegisterXMLReader(type,xmltag,fn);
     }
@@ -1718,7 +1667,7 @@ protected:
 
         // clone collision and physics
         if( !!r->GetCollisionChecker() ) {
-            SetCollisionChecker(CreateCollisionChecker(r->GetCollisionChecker()->GetXMLId()));
+            SetCollisionChecker(RaveCreateCollisionChecker(shared_from_this(),r->GetCollisionChecker()->GetXMLId()));
         }
 
         if( options & Clone_Bodies ) {
@@ -1823,7 +1772,7 @@ protected:
             r->GetViewers(listViewers);
             FOREACH(itviewer, listViewers) {
                 try {
-                    AddViewer(CreateViewer((*itviewer)->GetXMLId()));
+                    AddViewer(RaveCreateViewer(shared_from_this(),(*itviewer)->GetXMLId()));
                 }
                 catch(const openrave_exception &ex) {
                     RAVELOG_ERROR(str(boost::format("failed to lone viewer %s: %s")%(*itviewer)->GetName()%ex.what()));
@@ -1833,7 +1782,7 @@ protected:
 
         if( options & Clone_Simulation ) {
             if( !!r->GetPhysicsEngine() ) {
-                SetPhysicsEngine(CreatePhysicsEngine(r->GetPhysicsEngine()->GetXMLId()));
+                SetPhysicsEngine(RaveCreatePhysicsEngine(shared_from_this(),r->GetPhysicsEngine()->GetXMLId()));
             }
             _bEnableSimulation = r->_bEnableSimulation;
             _nCurSimTime = r->_nCurSimTime;
@@ -1882,187 +1831,6 @@ protected:
         }
         return true;
     }
-
-    class DummyPhysicsEngine : public PhysicsEngineBase
-    {
-        class PhysicsData : public UserData
-        {
-public:
-            PhysicsData(KinBodyPtr pbody) {
-                linkvelocities.resize(pbody->GetLinks().size());
-            }
-            virtual ~PhysicsData() {
-            }
-            std::vector< std::pair<Vector, Vector> > linkvelocities;
-        };
-
-        boost::shared_ptr<PhysicsData> _GetData(KinBodyConstPtr pbody) {
-            return boost::dynamic_pointer_cast<PhysicsData>(pbody->GetPhysicsData());
-        }
-
-public:
-        DummyPhysicsEngine(EnvironmentBasePtr penv) : PhysicsEngineBase(penv) {
-        }
-        virtual bool SetPhysicsOptions(int physicsoptions) {
-            return true;
-        }
-        virtual int GetPhysicsOptions() const {
-            return 0;
-        }
-
-        virtual bool SetPhysicsOptions(std::ostream& sout, std::istream& sinput) {
-            return true;
-        }
-
-        virtual bool InitEnvironment() {
-            vector<KinBodyPtr> vbodies;
-            GetEnv()->GetBodies(vbodies);
-            FOREACH(itbody, vbodies) {
-                InitKinBody(*itbody);
-            }
-            return true;
-        }
-        virtual void DestroyEnvironment()
-        {
-            vector<KinBodyPtr> vbodies;
-            GetEnv()->GetBodies(vbodies);
-            FOREACH(itbody, vbodies) {
-                DestroyKinBody(*itbody);
-            }
-        }
-
-        virtual bool InitKinBody(KinBodyPtr pbody) {
-            SetPhysicsData(pbody, UserDataPtr(new PhysicsData(pbody))); return true;
-        }
-        virtual bool DestroyKinBody(KinBodyPtr pbody) {
-            SetPhysicsData(pbody, UserDataPtr()); return true;
-        }
-
-        virtual bool GetLinkVelocity(KinBody::LinkConstPtr plink, Vector& linearvel, Vector& angularvel) {
-            std::pair<Vector, Vector> vel = _GetData(plink->GetParent())->linkvelocities.at(plink->GetIndex());
-            linearvel = vel.first;
-            angularvel = vel.second;
-            return true;
-        }
-        bool GetLinkVelocities(KinBodyConstPtr body, std::vector<std::pair<Vector,Vector> >& velocities) {
-            velocities = _GetData(body)->linkvelocities;
-            return true;
-        }
-
-        virtual bool SetLinkVelocity(KinBody::LinkPtr plink, const Vector& linearvel, const Vector& angularvel)
-        {
-            _GetData(plink->GetParent())->linkvelocities.at(plink->GetIndex()) = make_pair(linearvel,angularvel);
-            return true;
-        }
-        bool SetLinkVelocities(KinBodyPtr body, const std::vector<std::pair<Vector,Vector> >& velocities)
-        {
-            _GetData(body)->linkvelocities = velocities;
-            return true;
-        }
-
-        virtual bool SetBodyForce(KinBody::LinkPtr plink, const Vector& force, const Vector& position, bool bAdd) {
-            return true;
-        }
-        virtual bool SetBodyTorque(KinBody::LinkPtr plink, const Vector& torque, bool bAdd) {
-            return true;
-        }
-        virtual bool AddJointTorque(KinBody::JointPtr pjoint, const std::vector<dReal>& pTorques) {
-            return true;
-        }
-
-        virtual void SetGravity(const Vector& gravity) {
-        }
-        virtual Vector GetGravity() {
-            return Vector(0,0,0);
-        }
-
-        virtual bool GetLinkForceTorque(KinBody::LinkConstPtr plink, Vector& force, Vector& torque) {
-            force = Vector(0,0,0);
-            torque = Vector(0,0,0);
-            return true;
-        }
-
-        virtual void SimulateStep(dReal fTimeElapsed) {
-        }
-    };
-
-    class DummyCollisionChecker : public CollisionCheckerBase
-    {
-public:
-        DummyCollisionChecker(EnvironmentBasePtr penv) : CollisionCheckerBase(penv) {
-        }
-        virtual ~DummyCollisionChecker() {
-        }
-
-        virtual bool InitEnvironment() {
-            return true;
-        }
-        virtual void DestroyEnvironment() {
-        }
-
-        virtual bool InitKinBody(KinBodyPtr pbody) {
-            SetCollisionData(pbody, UserDataPtr()); return true;
-        }
-        virtual bool DestroyKinBody(KinBodyPtr pbody) {
-            SetCollisionData(pbody, UserDataPtr()); return true;
-        }
-        virtual bool Enable(KinBodyConstPtr pbody, bool bEnable) {
-            return true;
-        }
-        virtual bool EnableLink(KinBody::LinkConstPtr pbody, bool bEnable) {
-            return true;
-        }
-
-        virtual bool SetCollisionOptions(int collisionoptions) {
-            return true;
-        }
-        virtual int GetCollisionOptions() const {
-            return 0;
-        }
-
-        virtual bool SetCollisionOptions(std::ostream& sout, std::istream& sinput) {
-            return true;
-        }
-
-        virtual bool CheckCollision(KinBodyConstPtr pbody1, CollisionReportPtr) {
-            return false;
-        }
-        virtual bool CheckCollision(KinBodyConstPtr pbody1, KinBodyConstPtr pbody2, CollisionReportPtr) {
-            return false;
-        }
-        virtual bool CheckCollision(KinBody::LinkConstPtr plink, CollisionReportPtr) {
-            return false;
-        }
-        virtual bool CheckCollision(KinBody::LinkConstPtr plink1, KinBody::LinkConstPtr plink2, CollisionReportPtr) {
-            return false;
-        }
-        virtual bool CheckCollision(KinBody::LinkConstPtr plink, KinBodyConstPtr pbody, CollisionReportPtr) {
-            return false;
-        }
-
-        virtual bool CheckCollision(KinBody::LinkConstPtr plink, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr) {
-            return false;
-        }
-        virtual bool CheckCollision(KinBodyConstPtr pbody, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr) {
-            return false;
-        }
-
-        virtual bool CheckCollision(const RAY& ray, KinBody::LinkConstPtr plink, CollisionReportPtr) {
-            return false;
-        }
-        virtual bool CheckCollision(const RAY& ray, KinBodyConstPtr pbody, CollisionReportPtr) {
-            return false;
-        }
-        virtual bool CheckCollision(const RAY& ray, CollisionReportPtr) {
-            return false;
-        }
-        virtual bool CheckSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr) {
-            return false;
-        }
-
-        virtual void SetTolerance(dReal tolerance) {
-        }
-    };
 
     virtual void SetEnvironmentId(KinBodyPtr pbody)
     {
@@ -2218,6 +1986,7 @@ public:
     vector<KinBody::BodyState> _vPublishedBodies;
     vector<string> _vdatadirs;
     string _homedirectory;
+    UserDataPtr _handlegenericrobot, _handlegenerictrajectory, _handlegenericphysicsengine, _handlegenericcollisionchecker;
 
     list<InterfaceBasePtr> _listOwnedInterfaces;
 

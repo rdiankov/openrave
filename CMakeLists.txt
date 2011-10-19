@@ -160,11 +160,19 @@ if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
   add_definitions("-fno-strict-aliasing -Wall")
 endif()
 
+set(OPENRAVE_EXPORT_CXXFLAGS)
+
 if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
   set(CMAKE_CXX_FLAGS_OPTIMIZED "-O2 -DNDEBUG -DBOOST_DISABLE_ASSERTS -D_SECURE_SCL=0") # this practically removes all checks making it a very dangerous options to play with
   set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG") 
   set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g")
   set(CMAKE_CXX_FLAGS_DEBUG "-g -D_DEBUG")
+
+  # the _GLIBCXX_DEBUG flag is very helpful in bounds checking for vector[] and iterators, however it requires all
+  # libraries linking with openrave to use it
+#  if( CMAKE_BUILD_TYPE STREQUAL "Debug")
+#    set(OPENRAVE_EXPORT_CXXFLAGS "${OPENRAVE_EXPORT_CXXFLAGS} -D_GLIBCXX_DEBUG")
+#  endif()
 endif()
 
 if( MSVC )
@@ -649,6 +657,7 @@ if(OPT_PYTHON AND PYTHON_EXECUTABLE)
   set(OPENRAVE_USE_LOCAL_SYMPY 1)
   if( PYTHON_EXECUTABLE )
     set(SYMPY_MINIMUM_VERSION "0.6.3")
+    set(SYMPY_MAXIMUM_VERSION "0.6.7")
     # check if sympy substitution is ok
     execute_process(
       COMMAND ${PYTHON_EXECUTABLE} -c "import sympy, sys;  x=sympy.Symbol('x'); sys.exit((x**3).subs(x**2,sympy.Symbol('y')) != x**3)"
@@ -665,8 +674,10 @@ if(OPT_PYTHON AND PYTHON_EXECUTABLE)
       if( ${_sympy_version_failed} EQUAL 0 )
         string(REGEX REPLACE "[\r\n]" "" _sympy_version "${_sympy_version}")
         if( "${_sympy_version}" VERSION_GREATER "${SYMPY_MINIMUM_VERSION}" OR "${_sympy_version}" VERSION_EQUAL "${SYMPY_MINIMUM_VERSION}" )
-          message(STATUS "Found sympy version ${_sympy_version} >= ${SYMPY_MINIMUM_VERSION}, will patch this instead of installing local version (could have been previously installed by openrave?)")
-          set(OPENRAVE_USE_LOCAL_SYMPY 0)
+          if( "${_sympy_version}" VERSION_LESS "${SYMPY_MAXIMUM_VERSION}" OR "${_sympy_version}" VERSION_EQUAL "${SYMPY_MINIMUM_VERSION}" )
+            message(STATUS "Found sympy version ${_sympy_version} >= ${SYMPY_MINIMUM_VERSION}, will patch this instead of installing local version (could have been previously installed by openrave?)")
+            set(OPENRAVE_USE_LOCAL_SYMPY 0)
+          endif()
         endif()
       else()
         message(STATUS "failed to find python sympy system installation")
@@ -796,7 +807,7 @@ if(CMAKE_CPACK_COMMAND AND UNIX AND OPT_BUILD_PACKAGES)
   set(CPACK_DEBIAN_DISTRIBUTION_NAME ${_lsb_distribution} CACHE STRING "Name of the distrubiton")
   string(TOLOWER ${CPACK_DEBIAN_DISTRIBUTION_NAME} CPACK_DEBIAN_DISTRIBUTION_NAME)
   if( ${CPACK_DEBIAN_DISTRIBUTION_NAME} STREQUAL "ubuntu" )
-    set(CPACK_DEBIAN_DISTRIBUTION_RELEASES karmic lucid maverick natty CACHE STRING "Release code-names of the distrubiton release")
+    set(CPACK_DEBIAN_DISTRIBUTION_RELEASES lucid maverick natty oneiric CACHE STRING "Release code-names of the distrubiton release")
   endif()
   if( OPT_BUILD_PACKAGE_DEFAULT )
     set(CPACK_COMPONENT_OPENRAVE_RECOMMENDS ${CPACK_DEBIAN_PACKAGE_NAME})

@@ -15,7 +15,7 @@
 /// See the License for the specific language governing permissions and
 /// limitations under the License.
 ///
-/// ikfast version 46 generated on 2011-09-06 18:52:46.197732
+/// ikfast version 48 generated on 2011-10-14 18:28:39.104418
 /// To compile with gcc:
 ///     gcc -lstdc++ ik.cpp
 /// To compile without any main function as a shared object:
@@ -143,6 +143,10 @@ inline double IKlog(double f) { return log(f); }
 
 #ifndef IKFAST_SINCOS_THRESH
 #define IKFAST_SINCOS_THRESH ((IKReal)0.000001)
+#endif
+
+#ifndef IKFAST_ATAN2_MAGTHRESH
+#define IKFAST_ATAN2_MAGTHRESH ((IKReal)2e-6)
 #endif
 
 inline float IKasin(float f)
@@ -780,6 +784,8 @@ if( (x64) < -1-IKFAST_SINCOS_THRESH || (x64) > 1+IKFAST_SINCOS_THRESH )
     continue;
 IKReal x65=IKasin(x64);
 IKReal x66=((pz)*(sj13));
+if( IKabs(x66) < IKFAST_ATAN2_MAGTHRESH && IKabs(x55) < IKFAST_ATAN2_MAGTHRESH )
+    continue;
 IKReal x67=IKatan2(x66, x55);
 j14array[0]=((x65)+(((-1.00000000000000)*(x67))));
 sj14array[0]=IKsin(j14array[0]);
@@ -968,6 +974,6 @@ IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr penv, const std::vector<dReal>
     for(size_t i = 0; i < vfree.size(); ++i) {
         vfree[i] = getFreeParameters()[i];
     }
-    return IkSolverBasePtr(new IkFastSolver<IKReal,IKSolution>(ik,vfree,vfreeinc,getNumJoints(),(IkParameterization::Type)getIKType(), boost::shared_ptr<void>(), getKinematicsHash(), penv));
+    return IkSolverBasePtr(new IkFastSolver<IKReal,IKSolution>(ik,vfree,vfreeinc,getNumJoints(),static_cast<IkParameterizationType>(getIKType()), boost::shared_ptr<void>(), getKinematicsHash(), penv));
 }
 } // end namespace

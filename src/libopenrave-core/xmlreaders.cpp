@@ -14,9 +14,6 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#ifndef OPENRAVE_XML_READERS
-#define OPENRAVE_XML_READERS
-
 #include "ravep.h"
 
 #include <libxml/xmlstring.h>
@@ -56,6 +53,7 @@ BOOST_STATIC_ASSERT(sizeof(xmlChar) == 1);
 
 namespace OpenRAVEXMLParser
 {
+
 static boost::once_flag __onceCreateXMLMutex = BOOST_ONCE_INIT;
 /// lock for parsing XML, don't destroy it in order to ensure it remains valid for as long as possible
 static EnvironmentMutex* __mutexXML;
@@ -2392,8 +2390,9 @@ public:
             _processingtag = "";
         }
         else if( InterfaceXMLReader::endElement(xmlname) ) {
-            if( _bodyname.size() > 0 )
+            if( _bodyname.size() > 0 ) {
                 _pchain->SetName(_bodyname);
+            }
             if( _filename.size() > 0 ) {
                 SetFilename(_filename);
             }
@@ -2732,24 +2731,24 @@ public:
         else if( xmlname == "translation" ) {
             Vector v;
             _ss >> v.x >> v.y >> v.z;
-            _pmanip->_tGrasp.trans += v*_vScaleGeometry;
+            _pmanip->_tLocalTool.trans += v*_vScaleGeometry;
         }
         else if( xmlname == "quat" ) {
             Transform tnew;
             _ss >> tnew.rot.x >> tnew.rot.y >> tnew.rot.z >> tnew.rot.w;
             tnew.rot.normalize4();
-            _pmanip->_tGrasp.rot = (tnew*_pmanip->_tGrasp).rot;
+            _pmanip->_tLocalTool.rot = (tnew*_pmanip->_tLocalTool).rot;
         }
         else if( xmlname == "rotationaxis" ) {
             Vector vaxis; dReal fangle=0;
             _ss >> vaxis.x >> vaxis.y >> vaxis.z >> fangle;
             Transform tnew; tnew.rot = quatFromAxisAngle(vaxis, fangle * PI / 180.0f);
-            _pmanip->_tGrasp.rot = (tnew*_pmanip->_tGrasp).rot;
+            _pmanip->_tLocalTool.rot = (tnew*_pmanip->_tLocalTool).rot;
         }
         else if( xmlname == "rotationmat" ) {
             TransformMatrix tnew;
             _ss >> tnew.m[0] >> tnew.m[1] >> tnew.m[2] >> tnew.m[4] >> tnew.m[5] >> tnew.m[6] >> tnew.m[8] >> tnew.m[9] >> tnew.m[10];
-            _pmanip->_tGrasp.rot = (Transform(tnew)*_pmanip->_tGrasp).rot;
+            _pmanip->_tLocalTool.rot = (Transform(tnew)*_pmanip->_tLocalTool).rot;
         }
 
         if( xmlname !=_processingtag )
@@ -3447,7 +3446,12 @@ public:
                     RobotBasePtr probot = RaveInterfaceCast<RobotBase>(_pinterface);
                     _penv->AddRobot(probot);
                     if( !!robotreader->GetJointValues() ) {
-                        probot->SetDOFValues(*robotreader->GetJointValues());
+                        if( (int)robotreader->GetJointValues()->size() != probot->GetDOF() ) {
+                            RAVELOG_WARN(str(boost::format("<jointvalues> wrong number of values %d!=%d, robot=%s")%robotreader->GetJointValues()->size()%probot->GetDOF()%probot->GetName()));
+                        }
+                        else {
+                            probot->SetDOFValues(*robotreader->GetJointValues());
+                        }
                     }
                 }
                 else if( !!boost::dynamic_pointer_cast<KinBodyXMLReader>(_pcurreader) ) {
@@ -3456,7 +3460,12 @@ public:
                     KinBodyPtr pbody = RaveInterfaceCast<KinBody>(_pinterface);
                     _penv->AddKinBody(pbody);
                     if( !!kinbodyreader->GetJointValues() ) {
-                        pbody->SetDOFValues(*kinbodyreader->GetJointValues());
+                        if( (int)kinbodyreader->GetJointValues()->size() != pbody->GetDOF() ) {
+                            RAVELOG_WARN(str(boost::format("<jointvalues> wrong number of values %d!=%d, body=%s")%kinbodyreader->GetJointValues()->size()%pbody->GetDOF()%pbody->GetName()));
+                        }
+                        else {
+                            pbody->SetDOFValues(*kinbodyreader->GetJointValues());
+                        }
                     }
                 }
                 else if( !!boost::dynamic_pointer_cast<SensorXMLReader>(_pcurreader) ) {
@@ -3659,6 +3668,5 @@ BaseXMLReaderPtr CreateInterfaceReader(EnvironmentBasePtr penv, const Attributes
 {
     return BaseXMLReaderPtr(new OpenRAVEXMLParser::GlobalInterfaceXMLReader(penv,atts,bAddToEnvironment));
 }
-};
 
-#endif
+} // end namespace OpenRAVEXMLParser

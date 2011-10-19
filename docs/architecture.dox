@@ -519,9 +519,9 @@ Ability to register custom xml reader interfaces.
 - \subpage arch_robot
 - \subpage arch_sensor
 - \subpage arch_sensorsystem
-- \subpage arch_trajectory
-- \subpage arch_viewer
 - \subpage arch_spacesampler
+- \arch_trajectory
+- \subpage arch_viewer
 
 */
 
@@ -695,28 +695,18 @@ OpenRAVE::EnvironmentBase::SetPhysicsEngine.
 \page arch_planner Planner Concepts
 \b Reference: \ref OpenRAVE::PlannerBase
 
-Planner should be able to query sensor information from the Robot like its current camera image
-etc. Planner should be compatible with Robot presented (some hand-shaking happens between the two
-classes). Examples of planners are: 
-- Manipulation - manipulable objects need to be specified. Objects like doors should be special cases that planners knows about.
-- Following - Goal easily changes. Attributes can change.
-- Object Building - Need to describe how parts of object fit together into a bigger part.
-- Dish Washing - Specific goals are not specified, just a condition that all plates need to be inside.
-- Foot step planning - Need discrete footsteps and other capabilities from robot.
-
 \section planner_intro Introduction
 
 In OpenRAVE, the basic purpose of a planner is to find a trajectory starting at some initial
 configuration that reaches a goal condition while satisfying various navigation constraints. All
 planners are assumed to be geometric in nature (ie, not planning in the space of policies that
-depend on sensor data). Planners only plan for Robots and as default they should use the active
-degrees of freedom specified by the robot to plan. If a ConfigurationState class is specified in
-PlannerParameters, then a planner has to use it to set the state of the robot. This gives the user
-flexibility in choosing the configuration space. A planner should never use the raw joint values
-functions defined in KinBody. The usage of a planner is simple:
+depend on sensor data). Planners can have any configuration space defined by using the \ref
+OpenRAVE::PlannerBase::PlannerParameters structure. A planner should never use the raw joint values
+functions defined in KinBody.
 
-- Acquire its pointer from RaveCreatePlanner. You **MUST** always do this, even if the
-  planner is defined in the same plugin that uses it.
+The usage of a planner is simple:
+
+- Acquire its pointer from RaveCreatePlanner.
 
 - Fill a \ref OpenRAVE::PlannerBase::PlannerParameters "PlannerParameters" structure defining the
   instance of the problem. The structure has many fields for describing planning entities like start
@@ -746,7 +736,7 @@ parameters without destroying compatibility with a particular planner or user of
 is enabled by the serialization to XML capabilities of <code>PlannerParameters</code>
 
 \code
-PlannerBase::PlannerParametersPtr params(new PlannerBase::PlannerParameters);
+PlannerBase::PlannerParametersPtr params(new PlannerBase::PlannerParameters());
 params->vinitialconfig.push_back(2);
 ostream os;
 os << *params;
@@ -762,7 +752,7 @@ will produce something in the form of
 Furthermore \ref OpenRAVE::PlannerBase::PlannerParameters "PlannerParameters" can read such an XML file given an input stream
 \verbatim
 istream is;
-os >> *params;
+is >> *params;
 \endverbatim
 
 Using XML as a medium, it is easy to exchange data across different derivations of \ref
@@ -792,14 +782,24 @@ params.vgoalconfig = activegoal;
  
 PlannerBasePtr rrtplanner = RaveCreatePlanner(GetEnv(),"rBiRRT");
 TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF());
-if( !rrtplanner->InitPlan(robot, params) )
+if( !rrtplanner->InitPlan(robot, params) ) {
     return false;
- 
-if( !rrtplanner->PlanPath(ptraj) )
-    return false;
- 
-robot->SetActiveMotion(ptraj); // trajectory is done, execute on the robot
+}
+
+PlannerStatus status = rrtplanner->Plan(ptraj);
+if( status & PS_HasSolution ) {
+    robot->SetActiveMotion(ptraj); // trajectory is done, execute on the robot
+}
 \endcode
+
+
+In order to speed up computations further, planners can use the CO_ActiveDOFs collision checker
+option, which only focuses collision on the currently moving links in the robot. If using the robot active DOF, before calling the planner, the user should insert this statement:
+
+\code
+CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
+\endcode
+
 
 \subsection planner_extraparameters Defining Extra Planner Parameters
 
@@ -856,23 +856,47 @@ BasicRRTParameters() : _fGoalBiasProb(0.05f), _bProcessing(false) {
 };
 \endcode
 
+\subsection planner_development Planner Development
+
+Most planners do their computation iteratively, and they take lots of computation time. It is very
+frequent for a user to want to early-terminate the planner, or tell it to return the best solution
+it has founds immediately. Users might also want to visualize the planning process without getting
+into the internals of the planner. In order to do this, OpenRAVE allows users to register callbacks
+via \ref OpenRAVE::PlannerBase::RegisterPlanCallback. Planner developers should \b always call \ref
+OpenRAVE::PlannerBase::_CallCallbacks inside their planning loop and process the input correctly.
+
+\section planner_examples Planner Examples
+
+Examples of planners are: 
+- Manipulation - manipulable objects need to be specified. Objects like doors should be special cases that planners knows about.
+- Following - Goal easily changes. Attributes can change.
+- Path Smoothing - uses the input trajectory
+- Trajectory Re-timing - uses the input trajectory
+- Object Building - Need to describe how parts of object fit together into a bigger part.
+- Dish Washing - Specific goals are not specified, just a condition that all plates need to be inside.
+- Foot step planning - Need discrete footsteps and other capabilities from robot.
+
+Planner should be able to query sensor information from the Robot like its current camera image etc.
+Planner should be compatible with Robot presented; some hand-shaking should happen between the two
+during InitPlan function.
+
 \section planner_pathoptimization Path Optimization
 
-Path smoothing/optimization is regarded as a post-processing step to planners. "Path optimization"
+Path smoothing/optimization can be regarded as a post-processing step to planners. "Path optimization"
 algorithms take in an existing trajectory and filter it using the existing constraints of the
 planner. In fact, functionality there is no difference between a "path optimization" planner and a
-regular planner besides the fact that a trajectory is used as input. Because PlannerBase::PlanPath
+regular planner besides the fact that a trajectory is used as input. Because \ref PlannerBase::PlanPath
 already has a trajectory as an argument, this does not cause any major API changes to the
 infrastructure.
 
 However, the PlannerParameters structure had to reflect what 'path optimization' algorithm to use
-for post processing the trajectory. This is now reflected in the _sPathOptimizationPlanner and
-_sPathOptimizationParameters arguments. By default, this is the default "linear shortcut" path
-optimizer. There is also a helper function in PlannerBase to help users easily call the
-post-processing step:
+for post processing the trajectory. This is now reflected in the
+PlannerParameters::_sPostProcessingPlanner and PlannerParameters::_sPostProcessingParameters
+arguments. By default, this is the default "linear shortcut" path optimizer. There is also a helper
+function in PlannerBase to help users easily call the post-processing step:
 
 \code
-_OptimizePath(RobotBasePtr probot, TrajectoryBasePtr ptraj);
+_ProcessPostPlanners(RobotBasePtr probot, TrajectoryBasePtr ptraj);
 \endcode
 
 Please take a look at how the default RRT algorithms are now structured.
@@ -930,40 +954,6 @@ to implement a basic laser range and camera sensors.
 \b Reference: \ref OpenRAVE::SensorSystemBase
 New objects can be created, existing objects can be updated. Every managed object should set the
 kinbody's Manager pointer
-*/
-
-/**
-\page arch_trajectory Trajectory Concepts
-\b Reference: \ref OpenRAVE::TrajectoryBase
-
-A trajectory is a path between a set of configuration space points. It
-performs smoothing and filtering on this path.
-
-\b Exporting options:
-The file format is:
-\verbatim
-#points #dof #options
-[timestamp 1] [dof joint values 1] [transform 1] [dof joint velocities 1] [linear and angular velocity 1]
-[timestamp 2] [dof joint values 2] [transform 2] [dof joint velocities 2] [linear and angular velocity 2]
-...
-\endverbatim
-
-Export format:
-- linear velocity - xyz velocity
-- angular velocity - axis * angular_speed
-- transform - outputs quaternion first then translation
-
-An example file that contains 2 points linearly interpolated with timestamps for a 3 dof robot is:
-\verbatim
-2 3 68
-0.5 0 0   0
-1.5 1 2.2 3.3
-\endverbatim
-
-where 4 (TO_OneLine) + 64*1 (LINEAR) = 68.
-
-Cubic blend would be 4 (TO_OneLine) + 64*3 (CUBIC) = 196.
-
 */
 
 /**

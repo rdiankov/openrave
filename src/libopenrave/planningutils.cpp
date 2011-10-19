@@ -92,7 +92,7 @@ int JitterActiveDOF(RobotBasePtr robot,int nMaxIterations,dReal fRand,const Plan
             }
             robot->SetActiveDOFValues(newdof,true);
             if(robot->CheckSelfCollision() || robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot)) ) {
-                bConstraint = true;
+                bCollision = true;
                 break;
             }
         }
@@ -132,52 +132,228 @@ void VerifyTrajectory(PlannerBase::PlannerParametersConstPtr parameters, Traject
     BOOST_ASSERT((int)parameters->_vConfigLowerLimit.size() == parameters->GetDOF());
     BOOST_ASSERT((int)parameters->_vConfigUpperLimit.size() == parameters->GetDOF());
     BOOST_ASSERT((int)parameters->_vConfigResolution.size() == parameters->GetDOF());
-    PlannerBase::ConfigurationListPtr configs(new PlannerBase::ConfigurationList());
+
     dReal fthresh = 5e-5f;
     vector<dReal> deltaq(parameters->GetDOF(),0);
-    if( samplingstep > 0 ) {
-        RAVELOG_WARN("currently not using samplingstep\n");
-    }
-    for(size_t ipoint = 0; ipoint < trajectory->GetPoints().size(); ++ipoint) {
-        const TrajectoryBase::TPOINT& tp = trajectory->GetPoints()[ipoint];
-        BOOST_ASSERT((int)tp.q.size() == parameters->GetDOF());
-        for(size_t i = 0; i < tp.q.size(); ++i) {
-            BOOST_ASSERT(tp.q[i] >= parameters->_vConfigLowerLimit[i]-fthresh);
-            BOOST_ASSERT(tp.q[i] <= parameters->_vConfigUpperLimit[i]+fthresh);
+    std::vector<dReal> vdata;
+    for(size_t ipoint = 0; ipoint < trajectory->GetNumWaypoints(); ++ipoint) {
+        trajectory->GetWaypoint(ipoint,vdata,parameters->_configurationspecification);
+        BOOST_ASSERT((int)vdata.size()==parameters->GetDOF());
+        for(size_t i = 0; i < vdata.size(); ++i) {
+            BOOST_ASSERT(vdata[i] >= parameters->_vConfigLowerLimit[i]-fthresh);
+            BOOST_ASSERT(vdata[i] <= parameters->_vConfigUpperLimit[i]+fthresh);
         }
-        parameters->_setstatefn(tp.q);
+        parameters->_setstatefn(vdata);
         vector<dReal> newq;
         parameters->_getstatefn(newq);
-        BOOST_ASSERT(tp.q.size() == newq.size());
+        BOOST_ASSERT(vdata.size() == newq.size());
         for(size_t i = 0; i < newq.size(); ++i) {
-            if( RaveFabs(tp.q.at(i) - newq.at(i)) > 0.001 * parameters->_vConfigResolution[i] ) {
-                throw OPENRAVE_EXCEPTION_FORMAT("setstate/getstate inconsistent configuration %d dof %d: %f != %f",ipoint%i%tp.q.at(i)%newq.at(i),ORE_InconsistentConstraints);
+            if( RaveFabs(vdata.at(i) - newq.at(i)) > 0.001 * parameters->_vConfigResolution[i] ) {
+                ofstream f("failedtrajectory.xml");
+                f << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
+                trajectory->serialize(f);
+                throw OPENRAVE_EXCEPTION_FORMAT("setstate/getstate inconsistent configuration %d dof %d: %f != %f",ipoint%i%vdata.at(i)%newq.at(i),ORE_InconsistentConstraints);
             }
         }
         if( !!parameters->_neighstatefn ) {
-            FOREACH(it,newq) {
-                *it = 0;
-            }
-            newq = tp.q;
+            newq = vdata;
             if( !parameters->_neighstatefn(newq,deltaq,0) ) {
+                ofstream f("failedtrajectory.xml");
+                f << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
+                trajectory->serialize(f);
                 throw OPENRAVE_EXCEPTION_FORMAT("neighstatefn is rejecting configuration %d",ipoint,ORE_InconsistentConstraints);
             }
         }
     }
 
-    for(size_t i = 1; i < trajectory->GetPoints().size(); ++i) {
-        if( !!parameters->_checkpathconstraintsfn ) {
-            configs->clear();
-            if( !parameters->_checkpathconstraintsfn(trajectory->GetPoints()[i-1].q,trajectory->GetPoints()[i].q,IT_Closed, configs) ) {
-                throw OPENRAVE_EXCEPTION_FORMAT("checkpathconstraintsfn failed at %d-%d",(i-1)%i,ORE_InconsistentConstraints);
+    if( !!parameters->_checkpathconstraintsfn && trajectory->GetNumWaypoints() >= 2 ) {
+
+        if( 0 ) { //trajectory->GetDuration() > 0 && samplingstep > 0 ) {
+            // use sampling
+            std::vector<dReal> vprevdata;
+            PlannerBase::ConfigurationListPtr configs(new PlannerBase::ConfigurationList());
+            trajectory->Sample(vprevdata,0,parameters->_configurationspecification);
+            for(dReal ftime = 0; ftime < trajectory->GetDuration(); ftime += samplingstep ) {
+                configs->clear();
+                trajectory->Sample(vdata,ftime+samplingstep,parameters->_configurationspecification);
+                if( !parameters->_checkpathconstraintsfn(vprevdata,vdata,IT_Closed, configs) ) {
+                    ofstream f("failedtrajectory.xml");
+                    f << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
+                    trajectory->serialize(f);
+                    throw OPENRAVE_EXCEPTION_FORMAT("checkpathconstraintsfn failed at %fs-%fs",ftime%(ftime+samplingstep),ORE_InconsistentConstraints);
+                }
+                FOREACH(itconfig, *configs) {
+                    if( !parameters->_neighstatefn(*itconfig,deltaq,0) ) {
+                        ofstream f("failedtrajectory.xml");
+                        f << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
+                        trajectory->serialize(f);
+                        throw OPENRAVE_EXCEPTION_FORMAT("neighstatefn is rejecting configurations from checkpathconstraintsfn %fs-%fs",ftime%(ftime+samplingstep),ORE_InconsistentConstraints);
+                    }
+                }
+                vprevdata=vdata;
             }
-            FOREACH(itconfig, *configs) {
-                if( !parameters->_neighstatefn(*itconfig,deltaq,0) ) {
-                    throw OPENRAVE_EXCEPTION_FORMAT("neighstatefn is rejecting configurations from checkpathconstraintsfn %d-%d",(i-1)%i,ORE_InconsistentConstraints);
+        }
+        else {
+            for(size_t i = 0; i < trajectory->GetNumWaypoints(); ++i) {
+                trajectory->GetWaypoint(i,vdata,parameters->_configurationspecification);
+                if( !parameters->_checkpathconstraintsfn(vdata,vdata,IT_OpenStart, PlannerBase::ConfigurationListPtr()) ) {
+                    ofstream f("failedtrajectory.xml");
+                    f << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
+                    trajectory->serialize(f);
+                    throw OPENRAVE_EXCEPTION_FORMAT("checkpathconstraintsfn failed at %d-%d",(i-1)%i,ORE_InconsistentConstraints);
                 }
             }
         }
     }
+}
+
+void RetimeActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr probot, bool hastimestamps, dReal fmaxvelmult, const std::string plannername)
+{
+    PlannerBasePtr planner = RaveCreatePlanner(traj->GetEnv(),"lineartrajectoryretimer");
+    PlannerBase::PlannerParametersPtr params(new PlannerBase::PlannerParameters());
+    params->SetRobotActiveJoints(probot);
+    FOREACH(it,params->_vConfigVelocityLimit) {
+        *it *= fmaxvelmult;
+    }
+    string interpolation = "linear";
+    params->_sExtraParameters += str(boost::format("<interpolation>%s</interpolation><hastimestamps>%d</hastimestamps>")%interpolation%hastimestamps);
+    if( !planner->InitPlan(probot,params) ) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("failed to InitPlan",ORE_Failed);
+    }
+
+    if( params->GetDOF() != traj->GetConfigurationSpecification().GetDOF() ) {
+        // have to remove unnecessary DOFs in order for spaces to match
+        ConvertTrajectorySpecification(traj,probot->GetActiveConfigurationSpecification());
+    }
+    if( planner->PlanPath(traj) != PS_HasSolution ) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("failed to PlanPath",ORE_Failed);
+    }
+}
+
+static void diffstatefn(std::vector<dReal>& q1, const std::vector<dReal>& q2, const std::vector<int>& vrotaxes)
+{
+    BOOST_ASSERT(q1.size()==q2.size());
+    for(size_t i = 0; i < q1.size(); ++i) {
+        if( find(vrotaxes.begin(),vrotaxes.end(),i) != vrotaxes.end() ) {
+            q1[i] = ANGLE_DIFF(q1[i],q2[i]);
+        }
+        else {
+            q1[i] -= q2[i];
+        }
+    }
+}
+
+void RetimeAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps, const std::string plannername)
+{
+    PlannerBasePtr planner = RaveCreatePlanner(traj->GetEnv(),"lineartrajectoryretimer");
+    PlannerBase::PlannerParametersPtr params(new PlannerBase::PlannerParameters());
+    string interpolation = "linear";
+    params->_vConfigVelocityLimit = maxvelocities;
+    params->_vConfigAccelerationLimit = maxaccelerations;
+    params->_configurationspecification = traj->GetConfigurationSpecification();
+    params->_vConfigLowerLimit.resize(traj->GetConfigurationSpecification().GetDOF());
+    params->_vConfigUpperLimit.resize(traj->GetConfigurationSpecification().GetDOF());
+    for(size_t i = 0; i < params->_vConfigLowerLimit.size(); ++i) {
+        params->_vConfigLowerLimit[i] = -1e6;
+        params->_vConfigUpperLimit[i] = 1e6;
+    }
+
+    // analyze the configuration for identified dimensions
+    std::vector<int> vrotaxes;
+    FOREACHC(itgroup,traj->GetConfigurationSpecification()._vgroups) {
+        if( itgroup->name.size() >= 16 && itgroup->name.substr(0,16) == "affine_transform" ) {
+            string tempname;
+            int affinedofs=0;
+            stringstream ss(itgroup->name.substr(16));
+            ss >> tempname >> affinedofs;
+            if( !!ss ) {
+                if( affinedofs & DOF_RotationAxis ) {
+                    vrotaxes.push_back(itgroup->offset+RaveGetIndexFromAffineDOF(affinedofs,DOF_RotationAxis));
+                }
+            }
+        }
+        else if( itgroup->name.size() >= 14 && itgroup->name.substr(0,14) == "ikparam_values" ) {
+            int iktypeint = 0;
+            stringstream ss(itgroup->name.substr(14));
+            ss >> iktypeint;
+            if( !!ss ) {
+                IkParameterizationType iktype=static_cast<IkParameterizationType>(iktypeint);
+                switch(iktype) {
+                case IKP_TranslationXYOrientation3D: vrotaxes.push_back(itgroup->offset+2); break;
+                default:
+                    break;
+                }
+            }
+        }
+    }
+    params->_diffstatefn = boost::bind(diffstatefn,_1,_2,boost::ref(vrotaxes));
+    //params->_distmetricfn;
+    params->_sExtraParameters += str(boost::format("<interpolation>%s</interpolation><hastimestamps>%d</hastimestamps>")%interpolation%hastimestamps);
+    if( !planner->InitPlan(RobotBasePtr(),params) ) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("failed to InitPlan",ORE_Failed);
+    }
+    if( planner->PlanPath(traj) != PS_HasSolution ) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("failed to PlanPath",ORE_Failed);
+    }
+}
+
+void ConvertTrajectorySpecification(TrajectoryBasePtr traj, const ConfigurationSpecification& spec)
+{
+    if( traj->GetConfigurationSpecification() != spec ) {
+        size_t numpoints = traj->GetConfigurationSpecification().GetDOF() > 0 ? traj->GetNumWaypoints() : 0;
+        vector<dReal> data;
+        if( numpoints > 0 ) {
+            traj->GetWaypoints(0,numpoints,data,spec);
+        }
+        traj->Init(spec);
+        if( numpoints > 0 ) {
+            traj->Insert(0,data);
+        }
+    }
+}
+
+TrajectoryBasePtr ReverseTrajectory(TrajectoryBaseConstPtr sourcetraj)
+{
+    vector<dReal> sourcedata;
+    size_t numpoints = sourcetraj->GetNumWaypoints();
+    int dof = sourcetraj->GetConfigurationSpecification().GetDOF();
+    vector<uint8_t> velocitydofs(dof,0);
+    int timeoffset = -1;
+    FOREACHC(itgroup, sourcetraj->GetConfigurationSpecification()._vgroups) {
+        if( itgroup->name.find("_velocities") != string::npos ) {
+            for(int i = 0; i < itgroup->dof; ++i) {
+                velocitydofs.at(itgroup->offset+i) = 1;
+            }
+        }
+        else if( itgroup->name == "deltatime" ) {
+            timeoffset = itgroup->offset;
+        }
+    }
+    sourcetraj->GetWaypoints(0,numpoints,sourcedata);
+    vector<dReal> targetdata(sourcedata.size());
+    dReal prevdeltatime = 0;
+    for(size_t i = 0; i < numpoints; ++i) {
+        vector<dReal>::iterator ittarget = targetdata.begin()+i*dof;
+        vector<dReal>::iterator itsource = sourcedata.begin()+(numpoints-i-1)*dof;
+        for(int j = 0; j < dof; ++j) {
+            if( velocitydofs[j] ) {
+                *(ittarget+j) = -*(itsource+j);
+            }
+            else {
+                *(ittarget+j) = *(itsource+j);
+            }
+        }
+
+        if( timeoffset >= 0 ) {
+            *(ittarget+timeoffset) = prevdeltatime;
+            prevdeltatime = *(itsource+timeoffset);
+        }
+    }
+
+    TrajectoryBasePtr traj = RaveCreateTrajectory(sourcetraj->GetEnv(),sourcetraj->GetXMLId());
+    traj->Init(sourcetraj->GetConfigurationSpecification());
+    traj->Insert(0,targetdata);
+    return traj;
 }
 
 LineCollisionConstraint::LineCollisionConstraint()
@@ -215,7 +391,10 @@ bool LineCollisionConstraint::Check(PlannerBase::PlannerParametersWeakPtr _param
     _vtempconfig.resize(params->GetDOF());
     if (bCheckEnd) {
         params->_setstatefn(pQ1);
-        if (robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot)) || (robot->CheckSelfCollision()) ) {
+        if (robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot),_report) ) {
+            return false;
+        }
+        if( robot->CheckSelfCollision(_report) ) {
             return false;
         }
     }
@@ -261,7 +440,10 @@ bool LineCollisionConstraint::Check(PlannerBase::PlannerParametersWeakPtr _param
     }
     for (int f = start; f < numSteps; f++) {
         params->_setstatefn(_vtempconfig);
-        if( robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot)) || (robot->CheckSelfCollision()) ) {
+        if( robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot)) ) {
+            return false;
+        }
+        if( robot->CheckSelfCollision() ) {
             return false;
         }
         if( !!params->_getstatefn ) {
@@ -395,8 +577,9 @@ bool ManipulatorIKGoalSampler::Sample(std::vector<dReal>& vgoal)
         std::list<SampleInfo>::iterator itsample = _listsamples.begin();
         advance(itsample,isampleindex);
 
+        bool bCheckEndEffector = itsample->_ikparam.GetType() == IKP_Transform6D;
         // if first grasp, quickly prune grasp is end effector is in collision
-        if((itsample->_numleft == _nummaxsamples)&&(itsample->_ikparam.GetType() == IkParameterization::Type_Transform6D)) {
+        if( itsample->_numleft == _nummaxsamples && bCheckEndEffector ) {
             if( _pmanip->CheckEndEffectorCollision(itsample->_ikparam.GetTransform6D(),_report) ) {
                 RAVELOG_VERBOSE(str(boost::format("sampleiksolutions gripper in collision: %s.\n")%_report->__str__()));
                 _listsamples.erase(itsample);
@@ -422,7 +605,7 @@ bool ManipulatorIKGoalSampler::Sample(std::vector<dReal>& vgoal)
                 }
             }
         }
-        bool bsuccess = _pmanip->FindIKSolutions(itsample->_ikparam, vfree, _viksolutions, IKFO_CheckEnvCollisions);
+        bool bsuccess = _pmanip->FindIKSolutions(itsample->_ikparam, vfree, _viksolutions, IKFO_CheckEnvCollisions|(bCheckEndEffector ? IKFO_IgnoreEndEffectorCollisions : 0));
         if( --itsample->_numleft <= 0 || vfree.size() == 0 ) {
             _listsamples.erase(itsample);
         }

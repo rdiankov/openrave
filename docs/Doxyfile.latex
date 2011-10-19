@@ -31,8 +31,8 @@ SEPARATE_MEMBER_PAGES  = NO
 TAB_SIZE               = 4
 ALIASES                = 
 ALIASES                += sourcesdownload{1}="<a href=\"http://sourceforge.net/projects/openrave\">\1</a>"
-ALIASES                += englishdoc="<a href=\"http://openrave.programmingvision.com/ordocs/en/html/index.html\">English</a>"
-ALIASES                += japanesedoc="<a href=\"http://openrave.programmingvision.com/ordocs/ja/html/index.html\">Japanese</a>"
+ALIASES                += englishdoc="<a href=\"http://openrave.org/ordocs/en/html/index.html\">English</a>"
+ALIASES                += japanesedoc="<a href=\"http://openrave.org/ordocs/ja/html/index.html\">Japanese</a>"
 ALIASES                += en="\~english "
 ALIASES                += ja="\~japanese "
 OPTIMIZE_OUTPUT_FOR_C  = NO

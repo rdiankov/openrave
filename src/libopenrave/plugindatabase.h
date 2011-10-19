@@ -60,16 +60,26 @@ namespace OpenRAVE {
 /// \brief database of interfaces from plugins
 class RaveDatabase : public boost::enable_shared_from_this<RaveDatabase>
 {
-    struct RegisteredInterface
+    struct RegisteredInterface : public UserData
     {
-        RegisteredInterface(InterfaceType type, const std::string& name, const boost::function<InterfaceBasePtr(EnvironmentBasePtr, std::istream&)>& createfn) : _type(type), _name(name), _createfn(createfn) {
+        RegisteredInterface(InterfaceType type, const std::string& name, const boost::function<InterfaceBasePtr(EnvironmentBasePtr, std::istream&)>& createfn, boost::shared_ptr<RaveDatabase> database) : _type(type), _name(name), _createfn(createfn), _database(database) {
         }
         virtual ~RegisteredInterface() {
+            boost::shared_ptr<RaveDatabase> database = _database.lock();
+            if( !!database ) {
+                boost::mutex::scoped_lock lock(database->_mutex);
+                database->_listRegisteredInterfaces.erase(_iterator);
+            }
         }
+
         InterfaceType _type;
         std::string _name;
         boost::function<InterfaceBasePtr(EnvironmentBasePtr, std::istream&)> _createfn;
+        std::list< boost::weak_ptr<RegisteredInterface> >::iterator _iterator;
+protected:
+        boost::weak_ptr<RaveDatabase> _database;
     };
+    typedef boost::shared_ptr<RegisteredInterface> RegisteredInterfacePtr;
 
 public:
     class Plugin : public boost::enable_shared_from_this<Plugin>
@@ -425,8 +435,9 @@ protected:
         listplugins = _listplugins;
     }
 
-    InterfaceBasePtr Create(EnvironmentBasePtr penv, InterfaceType type, const std::string& name)
+    InterfaceBasePtr Create(EnvironmentBasePtr penv, InterfaceType type, const std::string& _name)
     {
+        std::string name=_name;
         InterfaceBasePtr pointer;
         if( name.size() == 0 ) {
             switch(type) {
@@ -435,20 +446,15 @@ protected:
                 pointer->__strxmlid = "KinBody";
                 break;
             }
-            case PT_Robot: {
-                pointer.reset(new RobotBase(penv));
-                pointer->__strxmlid = "RobotBase";
-                break;
-            }
-            case PT_Trajectory:
-                pointer.reset(new TrajectoryBase(penv,0));
-                pointer->__strxmlid = "TrajectoryBase";
-                break;
-            default:
-                break;
+            case PT_PhysicsEngine: name = "GenericPhysicsEngine"; break;
+            case PT_CollisionChecker: name = "GenericCollisionChecker"; break;
+            case PT_Robot: name = "GenericRobot"; break;
+            case PT_Trajectory: name = "GenericTrajectory"; break;
+            default: break;
             }
         }
-        else {
+
+        if( !pointer ) {
             size_t nInterfaceNameLength = name.find_first_of(' ');
             if( nInterfaceNameLength == string::npos ) {
                 nInterfaceNameLength = name.size();
@@ -459,7 +465,7 @@ protected:
             }
 
             // have to copy in order to allow plugins to register stuff inside their creation methods
-            std::list<RegisteredInterface> listRegisteredInterfaces;
+            std::list< boost::weak_ptr<RegisteredInterface> > listRegisteredInterfaces;
             list<PluginPtr> listplugins;
             {
                 boost::mutex::scoped_lock lock(_mutex);
@@ -467,23 +473,26 @@ protected:
                 listplugins = _listplugins;
             }
             FOREACH(it, listRegisteredInterfaces) {
-                if(( nInterfaceNameLength >= it->_name.size()) &&( strnicmp(name.c_str(),it->_name.c_str(),it->_name.size()) == 0) ) {
-                    std::stringstream sinput(name);
-                    std::string interfacename;
-                    sinput >> interfacename;
-                    std::transform(interfacename.begin(), interfacename.end(), interfacename.begin(), ::tolower);
-                    pointer = it->_createfn(penv,sinput);
-                    if( !!pointer ) {
-                        if( pointer->GetInterfaceType() != type ) {
-                            RAVELOG_FATAL(str(boost::format("plugin interface name %s, type %s, types do not match\n")%name%RaveGetInterfaceName(type)));
-                            pointer.reset();
-                        }
-                        else {
-                            pointer = InterfaceBasePtr(pointer.get(), smart_pointer_deleter<InterfaceBasePtr>(pointer,INTERFACE_DELETER));
-                            pointer->__strpluginname = "__internal__";
-                            pointer->__strxmlid = name;
-                            //pointer->__plugin; // need to protect resources?
-                            break;
+                RegisteredInterfacePtr registration = it->lock();
+                if( !!registration ) {
+                    if(( nInterfaceNameLength >= registration->_name.size()) &&( strnicmp(name.c_str(),registration->_name.c_str(),registration->_name.size()) == 0) ) {
+                        std::stringstream sinput(name);
+                        std::string interfacename;
+                        sinput >> interfacename;
+                        std::transform(interfacename.begin(), interfacename.end(), interfacename.begin(), ::tolower);
+                        pointer = registration->_createfn(penv,sinput);
+                        if( !!pointer ) {
+                            if( pointer->GetInterfaceType() != type ) {
+                                RAVELOG_FATAL(str(boost::format("plugin interface name %s, type %s, types do not match\n")%name%RaveGetInterfaceName(type)));
+                                pointer.reset();
+                            }
+                            else {
+                                pointer = InterfaceBasePtr(pointer.get(), smart_pointer_deleter<InterfaceBasePtr>(pointer,INTERFACE_DELETER));
+                                pointer->__strpluginname = "__internal__";
+                                pointer->__strxmlid = name;
+                                //pointer->__plugin; // need to protect resources?
+                                break;
+                            }
                         }
                     }
                 }
@@ -640,8 +649,11 @@ protected:
     {
         boost::mutex::scoped_lock lock(_mutex);
         FOREACHC(it,_listRegisteredInterfaces) {
-            if(( interfacename.size() >= it->_name.size()) &&( strnicmp(interfacename.c_str(),it->_name.c_str(),it->_name.size()) == 0) ) {
-                return true;
+            RegisteredInterfacePtr registration = it->lock();
+            if( !!registration ) {
+                if(( interfacename.size() >= registration->_name.size()) &&( strnicmp(interfacename.c_str(),registration->_name.c_str(),registration->_name.size()) == 0) ) {
+                    return true;
+                }
             }
         }
         FOREACHC(itplugin, _listplugins) {
@@ -666,7 +678,10 @@ protected:
             plugins.push_back(make_pair(string("__internal__"),PLUGININFO()));
             plugins.back().second.version = OPENRAVE_VERSION;
             FOREACHC(it,_listRegisteredInterfaces) {
-                plugins.back().second.interfacenames[it->_type].push_back(it->_name);
+                RegisteredInterfacePtr registration = it->lock();
+                if( !!registration ) {
+                    plugins.back().second.interfacenames[registration->_type].push_back(registration->_name);
+                }
             }
         }
     }
@@ -676,7 +691,10 @@ protected:
         interfacenames.clear();
         boost::mutex::scoped_lock lock(_mutex);
         FOREACHC(it,_listRegisteredInterfaces) {
-            interfacenames[it->_type].push_back(it->_name);
+            RegisteredInterfacePtr registration = it->lock();
+            if( !!registration ) {
+                interfacenames[registration->_type].push_back(registration->_name);
+            }
         }
         FOREACHC(itplugin, _listplugins) {
             PLUGININFO localinfo;
@@ -693,7 +711,7 @@ protected:
         }
     }
 
-    boost::shared_ptr<void> RegisterInterface(InterfaceType type, const std::string& name, const char* interfacehash, const char* envhash, const boost::function<InterfaceBasePtr(EnvironmentBasePtr, std::istream&)>& createfn) {
+    UserDataPtr RegisterInterface(InterfaceType type, const std::string& name, const char* interfacehash, const char* envhash, const boost::function<InterfaceBasePtr(EnvironmentBasePtr, std::istream&)>& createfn) {
         BOOST_ASSERT(interfacehash != NULL && envhash != NULL);
         BOOST_ASSERT(!!createfn);
         BOOST_ASSERT(name.size()>0);
@@ -704,7 +722,9 @@ protected:
             throw openrave_exception(str(boost::format("interface %s invalid hash %s!=%s\n")%RaveGetInterfaceName(type)%interfacehash%RaveGetInterfaceHash(type)),ORE_InvalidInterfaceHash);
         }
         boost::mutex::scoped_lock lock(_mutex);
-        return boost::shared_ptr<void>(new std::list<RegisteredInterface>::iterator(_listRegisteredInterfaces.insert(_listRegisteredInterfaces.end(),RegisteredInterface(type,name,createfn))), boost::bind(RaveDatabase::__erase_iterator,boost::weak_ptr<RaveDatabase>(shared_from_this()), _1));
+        RegisteredInterfacePtr pdata(new RegisteredInterface(type,name,createfn,shared_from_this()));
+        pdata->_iterator = _listRegisteredInterfaces.insert(_listRegisteredInterfaces.end(),pdata);
+        return pdata;
     }
 
     static const char* GetInterfaceHash(InterfaceBasePtr pint) {
@@ -978,22 +998,10 @@ protected:
         }
     }
 
-    static void __erase_iterator(boost::weak_ptr<RaveDatabase> pweakdb, std::list<RegisteredInterface>::iterator* pit)
-    {
-        if( !!pit ) {
-            boost::shared_ptr<RaveDatabase> pdb = pweakdb.lock();
-            if( !!pdb ) {
-                boost::mutex::scoped_lock lock(pdb->_mutex);
-                pdb->_listRegisteredInterfaces.erase(*pit);
-            }
-            delete pit;
-        }
-    }
-
     list<PluginPtr> _listplugins;
     mutable boost::mutex _mutex;     ///< changing plugin database
     std::list<void*> _listDestroyLibraryQueue;
-    std::list<RegisteredInterface> _listRegisteredInterfaces;
+    std::list< boost::weak_ptr<RegisteredInterface> > _listRegisteredInterfaces;
     std::list<std::string> _listplugindirs;
 
     /// \name plugin loading

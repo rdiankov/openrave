@@ -33,11 +33,11 @@
 #include <boost/typeof/std/set.hpp>
 #include <boost/typeof/std/string.hpp>
 
-#define FOREACH(it, v) for(BOOST_TYPEOF(v) ::iterator it = (v).begin(); it != (v).end(); ++(it))
-#define FOREACH_NOINC(it, v) for(BOOST_TYPEOF(v) ::iterator it = (v).begin(); it != (v).end(); )
+#define FOREACH(it, v) for(BOOST_TYPEOF(v) ::iterator it = (v).begin(), __itend__=(v).end(); it != __itend__; ++(it))
+#define FOREACH_NOINC(it, v) for(BOOST_TYPEOF(v) ::iterator it = (v).begin(), __itend__=(v).end(); it != __itend__; )
 
-#define FOREACHC(it, v) for(BOOST_TYPEOF(v) ::const_iterator it = (v).begin(); it != (v).end(); ++(it))
-#define FOREACHC_NOINC(it, v) for(BOOST_TYPEOF(v) ::const_iterator it = (v).begin(); it != (v).end(); )
+#define FOREACHC(it, v) for(BOOST_TYPEOF(v) ::const_iterator it = (v).begin(), __itend__=(v).end(); it != __itend__; ++(it))
+#define FOREACHC_NOINC(it, v) for(BOOST_TYPEOF(v) ::const_iterator it = (v).begin(), __itend__=(v).end(); it != __itend__; )
 #define RAVE_REGISTER_BOOST
 
 #else
@@ -49,13 +49,35 @@
 #include <string>
 #include <algorithm>
 
-#define FOREACH(it, v) for(typeof((v).begin())it = (v).begin(); it != (v).end(); (it)++)
-#define FOREACH_NOINC(it, v) for(typeof((v).begin())it = (v).begin(); it != (v).end(); )
+#define FOREACH(it, v) for(typeof((v).begin())it = (v).begin(), __itend__=(v).end(); it != __itend__; (it)++)
+#define FOREACH_NOINC(it, v) for(typeof((v).begin())it = (v).begin(), __itend__=(v).end(); it != __itend__; )
 
 #define FOREACHC FOREACH
 #define FOREACHC_NOINC FOREACH_NOINC
 
 #endif
+
+//template <typename T>
+//class openraveconst_iteratorbegin : public T::const_iterator
+//{
+//public:
+//    openraveconst_iteratorbegin(const T & v) : T::const_iterator(v.begin()), _v(v) {
+//    }
+//    const T & _v;
+//};
+//
+//
+//template <typename T>
+//class openraveiteratorbegin : public T::iterator
+//{
+//public:
+//    openraveiteratorbegin(const T & v) : T::iterator( const_cast<T&> (v).begin()), _v(v) {
+//    }
+//    const T & _v;
+//};
+
+//#define OPENRAVE_FOREACH(it,v) for( OpenRAVE::openraveiteratorbegin<typeof(v)> (it) (v); (it) != (it)._v.end(); (it)++ )
+//#define OPENRAVE_FOREACHC(it,v) for( OpenRAVE::openraveconst_iteratorbegin<typeof(v)> (it) (v); (it) != (it)._v.end(); (it)++ )
 
 #include <stdint.h>
 #include <algorithm>
@@ -263,13 +285,15 @@ inline T NORMALIZE_ANGLE(T theta, T min, T max)
 {
     if (theta < min) {
         theta += T(2*PI);
-        while (theta < min)
+        while (theta < min) {
             theta += T(2*PI);
+        }
     }
     else if (theta > max) {
         theta -= T(2*PI);
-        while (theta > max)
+        while (theta > max) {
             theta -= T(2*PI);
+        }
     }
     return theta;
 }
@@ -414,6 +438,50 @@ inline void polyroots(const IKReal* rawcoeffs, IKReal* rawroots, int& numroots)
         }
     }
 }
+
+class TrajectoryReader : public BaseXMLReader
+{
+public:
+    TrajectoryReader(TrajectoryBasePtr ptraj);
+    virtual ProcessElement startElement(const std::string& name, const AttributesList& atts);
+    virtual bool endElement(const std::string& name);
+    virtual void characters(const std::string& ch);
+
+protected:
+    TrajectoryBasePtr _ptraj;
+    std::stringstream _ss;
+    ConfigurationSpecification _spec;
+    BaseXMLReaderPtr _pcurreader;
+    int _datacount;
+    std::vector<dReal> _vdata;
+};
+
+namespace LocalXML
+{
+bool ParseXMLData(BaseXMLReaderPtr preader, const char* buffer, int size);
+}
+
+#ifdef _WIN32
+inline const char *strcasestr(const char *s, const char *find)
+{
+    register char c, sc;
+    register size_t len;
+
+    if ((c = *find++) != 0) {
+        c = tolower((unsigned char)c);
+        len = strlen(find);
+        do {
+            do {
+                if ((sc = *s++) == 0) {
+                    return (NULL);
+                }
+            } while ((char)tolower((unsigned char)sc) != c);
+        } while (strnicmp(s, find, len) != 0);
+        s--;
+    }
+    return ((char *) s);
+}
+#endif
 
 }
 

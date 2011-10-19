@@ -48,7 +48,7 @@ class IKFastProblem : public ModuleBase
     typedef int DECLFNPTR (getIKRealSizeFn, ());
     typedef int DECLFNPTR (getIKTypeFn, ());
     static int getDefaultIKType() {
-        return IkParameterization::Type_Transform6D;
+        return IKP_Transform6D;
     }
 
     class IKLibrary : public boost::enable_shared_from_this<IKLibrary>
@@ -124,10 +124,10 @@ public:
                 kinematicshash =getKinematicsHash();
             }
             if( getIKRealSize() == 4 ) {
-                return IkSolverBasePtr(new IkFastSolver<float,IKSolutionFloat >((IkFastSolver<float,IKSolutionFloat >::IkFn)ikfn,vfree,vfreeinc,getNumJoints(),(IkParameterization::Type)getIKType(),shared_from_this(),kinematicshash, penv));
+                return IkSolverBasePtr(new IkFastSolver<float,IKSolutionFloat >((IkFastSolver<float,IKSolutionFloat >::IkFn)ikfn,vfree,vfreeinc,getNumJoints(),(IkParameterizationType)getIKType(),shared_from_this(),kinematicshash, penv));
             }
             else if( getIKRealSize() == 8 ) {
-                return IkSolverBasePtr(new IkFastSolver<double,IKSolutionDouble >((IkFastSolver<double,IKSolutionDouble >::IkFn)ikfn,vfree,vfreeinc,getNumJoints(),(IkParameterization::Type)getIKType(),shared_from_this(),kinematicshash, penv));
+                return IkSolverBasePtr(new IkFastSolver<double,IKSolutionDouble >((IkFastSolver<double,IKSolutionDouble >::IkFn)ikfn,vfree,vfreeinc,getNumJoints(),(IkParameterizationType)getIKType(),shared_from_this(),kinematicshash, penv));
             }
             throw openrave_exception("bad real size");
         }
@@ -313,9 +313,9 @@ public:
             return false;
         }
         RobotBase::ManipulatorPtr pmanip = probot->GetActiveManipulator();
-        IkParameterization::Type niktype = IkParameterization::Type_None;
+        IkParameterizationType niktype = IKP_None;
         try {
-            niktype = static_cast<IkParameterization::Type>(boost::lexical_cast<int>(striktype));
+            niktype = static_cast<IkParameterizationType>(boost::lexical_cast<int>(striktype));
             striktype = RaveGetIkParameterizationMap().find(niktype)->second;
         }
         catch(const boost::bad_lexical_cast&) {
@@ -329,7 +329,7 @@ public:
                     break;
                 }
             }
-            if(niktype == IkParameterization::Type_None) {
+            if(niktype == IKP_None) {
                 throw openrave_exception(str(boost::format("could not find iktype %s")%striktype));
             }
         }
@@ -561,7 +561,7 @@ public:
         RobotBase::RobotStateSaver saver(robot);
 
         if( !bInitialized ) {
-            ikparam = pmanip->GetIkParameterization(IkParameterization::Type_Transform6D);
+            ikparam = pmanip->GetIkParameterization(IKP_Transform6D);
         }
         robot->GetDOFValues(values);
 
@@ -766,11 +766,11 @@ public:
                 }
 
                 robot->SetActiveDOFValues(vrealsolution,false);
-                if( itiktype->first == IkParameterization::Type_Lookat3D) {
+                if( itiktype->first == IKP_Lookat3D) {
                     twrist.SetLookat3D(Vector(RaveRandomFloat()-0.5,RaveRandomFloat()-0.5,RaveRandomFloat()-0.5)*10);
                     twrist = pmanip->GetIkParameterization(twrist);
                 }
-                else if( itiktype->first == IkParameterization::Type_TranslationLocalGlobal6D) {
+                else if( itiktype->first == IKP_TranslationLocalGlobal6D) {
                     twrist.SetTranslationLocalGlobal6D(Vector(RaveRandomFloat()-0.5,RaveRandomFloat()-0.5,RaveRandomFloat()-0.5),Vector());
                     twrist = pmanip->GetIkParameterization(twrist);
                 }
@@ -893,8 +893,9 @@ public:
                             s.str("");
                             s << "FindIKSolutions: Incorrect IK, i = " << i << " error: " << RaveSqrt(twrist.ComputeDistanceSqr(twrist_out)) << endl
                               << "Original Joint Val: ";
-                            FOREACH(it, vrealsolution)
-                            s << *it << " ";
+                            FOREACH(it, vrealsolution) {
+                                s << *it << " ";
+                            }
                             s << endl << "Returned Joint Val: ";
                             FOREACH(it, *itsol)
                             s << *it << " ";
@@ -1052,54 +1053,54 @@ public:
 
     static void GetIKFastCommand(std::ostream& o, const IkParameterization& param) {
         switch(param.GetType()) {
-        case IkParameterization::Type_Transform6D: {
+        case IKP_Transform6D: {
             TransformMatrix tm = param.GetTransform6D();
             o << tm.m[0] << " " << tm.m[1] << " " << tm.m[2] << " " << tm.trans[0] << " " << tm.m[4] << " " << tm.m[5] << " " << tm.m[6] << " " << tm.trans[1] << " " << tm.m[8] << " " << tm.m[9] << " " << tm.m[10] << " " << tm.trans[2] << " ";
             break;
         }
-        case IkParameterization::Type_Rotation3D: {
+        case IKP_Rotation3D: {
             TransformMatrix tm = matrixFromQuat(param.GetRotation3D());
             o << tm.m[0] << " " << tm.m[1] << " " << tm.m[2] << " 0 " << tm.m[4] << " " << tm.m[5] << " " << tm.m[6] << " 0 " << tm.m[8] << " " << tm.m[9] << " " << tm.m[10] << " 0 ";
             break;
         }
-        case IkParameterization::Type_Translation3D: {
+        case IKP_Translation3D: {
             Vector v = param.GetTranslation3D();
             o << "0 0 0 " << v.x << " 0 0 0 " << v.y << " 0 0 0 " << v.z << " ";
             break;
         }
-        case IkParameterization::Type_Direction3D: {
+        case IKP_Direction3D: {
             Vector dir = param.GetDirection3D();
             o << dir.x << " " << dir.y << " " << dir.z << " 0 0 0 0 0 0 0 0 0 ";
             break;
         }
-        case IkParameterization::Type_Ray4D: {
+        case IKP_Ray4D: {
             Vector pos = param.GetRay4D().pos;
             Vector dir = param.GetRay4D().dir;
             o << dir.x << " " << dir.y << " " << dir.z << " " << pos.x << " 0 0 0 " << pos.y << " 0 0 0 " << pos.z << " ";
             break;
         }
-        case IkParameterization::Type_Lookat3D: {
+        case IKP_Lookat3D: {
             Vector v = param.GetLookat3D();
             o << "0 0 0 " << v.x << " 0 0 0 " << v.y << " 0 0 0 " << v.z << " ";
             break;
         }
-        case IkParameterization::Type_TranslationDirection5D: {
+        case IKP_TranslationDirection5D: {
             Vector dir = param.GetTranslationDirection5D().dir;
             Vector pos = param.GetTranslationDirection5D().pos;
             o << dir.x << " " << dir.y << " " << dir.z << " " << pos.x << " 0 0 0 " << pos.y << " 0 0 0 " << pos.z << " ";
             break;
         }
-        case IkParameterization::Type_TranslationXY2D: {
+        case IKP_TranslationXY2D: {
             Vector v = param.GetTranslationXY2D();
             o << "0 0 0 " << v.x << " 0 0 0 " << v.y << " 0 0 0 0 ";
             break;
         }
-        case IkParameterization::Type_TranslationXYOrientation3D: {
+        case IKP_TranslationXYOrientation3D: {
             Vector v = param.GetTranslationXYOrientation3D();
             o << "0 0 0 " << v.x << " 0 0 0 " << v.y << " 0 0 0 " << v.z << " ";
             break;
         }
-        case IkParameterization::Type_TranslationLocalGlobal6D: {
+        case IKP_TranslationLocalGlobal6D: {
             std::pair<Vector,Vector> p = param.GetTranslationLocalGlobal6D();
             o << p.first.x << " 0 0 " << p.second.x << " 0 " << p.first.y << " 0 " << p.second.y << " 0 0 " << p.first.z << " " << p.second.z << " ";
             break;

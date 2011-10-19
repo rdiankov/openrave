@@ -20,12 +20,14 @@ from copy import copy as shallowcopy
 class Grasper:
     """Interface wrapper for :ref:`module-grasper`
     """
-    def __init__(self,robot,friction=0.3,avoidlinks=None,plannername=None):
+    def __init__(self,robot,friction=0.3,avoidlinks=[],plannername=None):
         env = robot.GetEnv()
         self.prob = RaveCreateModule(env,'Grasper')
         self.robot = robot
         self.friction = friction
         self.avoidlinks = avoidlinks
+        if self.avoidlinks is None:
+            self.avoidlinks = []
         self.plannername=plannername
         self.args = self.robot.GetName()
         if plannername is not None and len(plannername)>0:
@@ -57,9 +59,8 @@ class Grasper:
         cmd += 'stablecontacts %d forceclosure %d transformrobot %d onlycontacttarget %d tightgrasp %d outputfinal %d '%(stablecontacts,forceclosure,transformrobot,onlycontacttarget,tightgrasp,outputfinal)
         if self.friction is not None:
             cmd += 'friction %.15e '%self.friction
-        if self.avoidlinks is not None:
-            for link in self.avoidlinks:
-                cmd += 'avoidlink %s '%link.GetName()
+        for link in self.avoidlinks:
+            cmd += 'avoidlink %s '%link.GetName()
         if graspingnoise is not None:
             cmd += 'graspingnoise %.15e '%graspingnoise
         if translationstepmult is not None:
@@ -103,9 +104,8 @@ class Grasper:
             cmd += 'startindex %d '%startindex
         if maxgrasps is not None:
             cmd += 'maxgrasps %d '%maxgrasps
-        if self.avoidlinks is not None:
-            for link in self.avoidlinks:
-                cmd += 'avoidlink %s '%link.GetName()
+        for link in self.avoidlinks:
+            cmd += 'avoidlink %s '%link.GetName()
         if graspingnoise is not None:
             cmd += 'graspingnoise %.15e %d '%graspingnoise
         if translationstepmult is not None:

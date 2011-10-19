@@ -1075,7 +1075,7 @@ def test_ik():
     log.setLevel(logging.DEBUG)
     
     chaintree = solver.generateIkSolver(baselink=baselink,eelink=eelink,freeindices=freeindices,solvefn=solvefn)
-    code=ikfast_generator_cpp.CodeGenerator().generate(chaintree)
+    code=ikmodel.ikfast.ikfast_generator_cpp.CodeGenerator().generate(chaintree)
     open(sourcefilename,'w').write(code)
 
     # get values
@@ -1109,6 +1109,11 @@ def test_ik():
         psubs.append((self.Tee[i],(Tfinal[i].subs(psubs+valsubs).evalf())))
     for s,v in self.ppsubs+self.npxyzsubs+self.rxpsubs:
         psubs.append((s,v.subs(psubs)))
+
+    newsubs=[(var,eq.subs(self.testconsistentvalues[1]).evalf()) for var,eq in coupledsolutions[0].dictequations]
+    mpmath.polyroots(coupledsolutions[0].poly.subs(newsubs).coeffs)
+
+    jointvalues = [-0.2898119639388401, 0.0, -5.913881500780583, 0.0, -3.116541584197247, 1.570796326794897]
 """
 ikfast notes;
 

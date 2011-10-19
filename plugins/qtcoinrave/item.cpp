@@ -648,7 +648,7 @@ bool RobotItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vector<
             if((itee->_index >= 0)&&(itee->_index < (int)_probot->GetManipulators().size())) {
                 RobotBase::ManipulatorConstPtr manip = _probot->GetManipulators().at(itee->_index);
                 if( !!manip->GetEndEffector() ) {
-                    RaveTransform<float> tgrasp = vtrans.at(manip->GetEndEffector()->GetIndex())*manip->GetGraspTransform();
+                    RaveTransform<float> tgrasp = vtrans.at(manip->GetEndEffector()->GetIndex())*manip->GetLocalToolTransform();
                     SetSoTransform(itee->_ptrans, transInvRoot * tgrasp);
                 }
             }

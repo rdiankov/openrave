@@ -398,6 +398,7 @@ class GraspingModel(DatabaseGenerator):
                 # do not fill with plannername
                 taskmanip = interfaces.TaskManipulation(self.robot)
                 final,traj = taskmanip.ReleaseFingers(execute=False,outputfinal=True)
+            print 'setting preshape ',final
             preshapes = array([final])
         if rolls is None:
             rolls = arange(0,2*pi,pi/2)
@@ -417,7 +418,7 @@ class GraspingModel(DatabaseGenerator):
         self.approachgraphs = [self.env.plot3(points=gapproachrays[:,0:3],pointsize=5,colors=array((1,0,0))),
                           self.env.drawlinelist(points=reshape(c_[gapproachrays[:,0:3],gapproachrays[:,0:3]+0.005*gapproachrays[:,3:6]],(2*N,3)),linewidth=4,colors=array((1,0,0,1)))]
         self.contactgraph = None
-        totalgrasps = N*len(preshapes)*len(rolls)*len(standoffs)
+        totalgrasps = N*len(preshapes)*len(rolls)*len(standoffs)*len(manipulatordirections)
         self.grasps = []
 
         def producer():
@@ -521,7 +522,7 @@ class GraspingModel(DatabaseGenerator):
             Trobotorig = self.robot.GetTransform()
             self.robot.SetActiveManipulator(self.manip)
             self.robot.SetTransform(eye(4)) # have to reset transform in order to remove randomness
-            self.robot.SetActiveDOFs(self.manip.GetGripperIndices(),Robot.DOFAffine.X+Robot.DOFAffine.Y+Robot.DOFAffine.Z if translate else 0)
+            self.robot.SetActiveDOFs(self.manip.GetGripperIndices(),DOFAffine.X+DOFAffine.Y+DOFAffine.Z if translate else 0)
             approachrays[:,3:6] = -approachrays[:,3:6]
             self.nextid, self.resultgrasps = self.grasper.GraspThreaded(approachrays=approachrays, rolls=rolls, standoffs=standoffs, preshapes=preshapes, manipulatordirections=manipulatordirections, target=self.target, graspingnoise=graspingnoise, forceclosurethreshold=forceclosurethreshold,numthreads=numthreads)
             print 'graspthreaded done, processing grasps %d'%len(self.resultgrasps)
@@ -587,7 +588,6 @@ class GraspingModel(DatabaseGenerator):
                     print 'grasp %d/%d'%(i,len(grasps))
                     try:
                         with self.env:
-                            #self.env.SetDebugLevel(DebugLevel.Verbose)
                             contacts,finalconfig,mindist,volume = self.testGrasp(grasp=grasp,translate=True,forceclosure=forceclosure,graspingnoise=graspingnoise)
                             #contacts,finalconfig,mindist,volume = self.runGrasp(grasp=grasp,translate=True,forceclosure=True)
                             if mindist == 0:
@@ -657,7 +657,7 @@ class GraspingModel(DatabaseGenerator):
             self.robot.SetActiveManipulator(self.manip)
             self.robot.SetTransform(eye(4)) # have to reset transform in order to remove randomness
             self.robot.SetDOFValues(grasp[self.graspindices.get('igrasppreshape')],self.manip.GetGripperIndices())
-            self.robot.SetActiveDOFs(self.manip.GetGripperIndices(),Robot.DOFAffine.X+Robot.DOFAffine.Y+Robot.DOFAffine.Z if translate else 0)
+            self.robot.SetActiveDOFs(self.manip.GetGripperIndices(),DOFAffine.X+DOFAffine.Y+DOFAffine.Z if translate else 0)
             return self.grasper.Grasp(direction=grasp[self.graspindices.get('igraspdir')], roll=grasp[self.graspindices.get('igrasproll')], position=grasp[self.graspindices.get('igrasppos')], standoff=grasp[self.graspindices.get('igraspstandoff')], manipulatordirection=grasp[self.graspindices.get('imanipulatordirection')], target=self.target,graspingnoise = graspingnoise, forceclosure=forceclosure, execute=False, outputfinal=True,translationstepmult=translationstepmult,finestep=finestep)
     def runGraspFromTrans(self,grasp):
         """squeeze the fingers to test whether the completed grasp only collides with the target, throws an exception if it fails. Otherwise returns the Grasp parameters. Uses the grasp transformation directly."""

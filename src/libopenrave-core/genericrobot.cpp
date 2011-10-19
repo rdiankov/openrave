@@ -1,6 +1,8 @@
-// Copyright (C) 2006-2008 Carnegie Mellon University (rdiankov@cs.cmu.edu)
+// -*- coding: utf-8 -*-
+// Copyright (C) 2006-2011 Rosen Diankov <rosen.diankov@gmail.com>
 //
-// This program is free software: you can redistribute it and/or modify
+// This file is part of OpenRAVE.
+// OpenRAVE is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // at your option) any later version.
@@ -12,17 +14,14 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#ifndef RAVE_GENERIC_ROBOT_H
-#define RAVE_GENERIC_ROBOT_H
+#include "ravep.h"
+
+namespace OpenRAVE {
 
 class GenericRobot : public RobotBase
 {
 public:
-    enum RobotState {
-        ST_NONE=0,
-        ST_PATH_FOLLOW
-    };
-    GenericRobot(EnvironmentBasePtr penv) : RobotBase(penv), _state(ST_NONE)
+    GenericRobot(EnvironmentBasePtr penv, std::istream& sinput) : RobotBase(penv)
     {
         __description = ":Interface Author: Rosen Diankov\n\nSimplest robot possible that just passes the trajectories to the controller";
     }
@@ -38,35 +37,8 @@ public:
                 _pController.reset();
                 return false;
             }
-            if( _state == ST_PATH_FOLLOW ) {
-                _pController->SetPath(_trajcur);
-            }
         }
         return true;
-    }
-
-    virtual bool SetMotion(TrajectoryBaseConstPtr ptraj)
-    {
-        BOOST_ASSERT(ptraj->GetPoints().size() > 0 || !"trajectory has no points\n");
-        BOOST_ASSERT(ptraj->GetDOF() == GetDOF() || !"trajectory of wrong dimension");
-        _trajcur = ptraj;
-        _state = ST_PATH_FOLLOW;
-        return _pController->SetPath(_trajcur);
-    }
-
-    virtual bool SetActiveMotion(TrajectoryBaseConstPtr ptraj)
-    {
-        BOOST_ASSERT(ptraj->GetPoints().size() > 0 || !"trajectory has no points\n");
-        BOOST_ASSERT(ptraj->GetDOF() == GetActiveDOF() || !"trajectory of wrong dimension");
-        TrajectoryBasePtr pfulltraj = RaveCreateTrajectory(GetEnv(),ptraj->GetDOF());
-        GetFullTrajectoryFromActive(pfulltraj, ptraj);
-        _trajcur = pfulltraj;
-        _state = ST_PATH_FOLLOW;
-        return _pController->SetPath(_trajcur);
-    }
-
-    RobotState GetState() {
-        return _state;
     }
 
     virtual ControllerBasePtr GetController() const {
@@ -78,17 +50,17 @@ public:
         RobotBase::SimulationStep(fElapsedTime);
         if( !!_pController ) {
             _pController->SimulationStep(fElapsedTime);
-            if( _pController->IsDone() ) {
-                _state = ST_NONE;
-            }
         }
     }
 
 protected:
     TrajectoryBaseConstPtr _trajcur;
     ControllerBasePtr _pController;
-    RobotState _state;
-
 };
 
-#endif
+RobotBasePtr CreateGenericRobot(EnvironmentBasePtr penv, std::istream& sinput)
+{
+    return RobotBasePtr(new GenericRobot(penv,sinput));
+}
+
+}

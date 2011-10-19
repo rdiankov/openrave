@@ -219,9 +219,11 @@ rst_epilog = """
 
 .. _`Architecture`: ../coreapihtml/architecture_concepts.html
 
-.. _`Interface Concepts`: ../coreapihtml/interface_concepts.html
+.. _`C++ Interface Concepts`: ../coreapihtml/interface_concepts.html
 
 .. _`Sensor Concepts`: ../coreapihtml/arch_sensor.html
+
+.. _`Trajectory Concepts`: ../coreapihtml/arch_trajectory.html
 
 .. _`FindOpenRAVE.cmake`: ../coreapihtml/FindOpenRAVE_8cmake-example.html
 

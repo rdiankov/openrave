@@ -22,6 +22,7 @@ from ..misc import mkdir_recursive
 from ..misc import OpenRAVEGlobalArguments
 import os.path
 from os import getenv
+import time
 
 class DatabaseGenerator(metaclass.AutoReloader):
     """The base class defining the structure of the openrave database generators.

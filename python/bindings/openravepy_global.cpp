@@ -1,5 +1,5 @@
-// Copyright (C) 2006-2010 Rosen Diankov (rdiankov@cs.cmu.edu)
 // -*- coding: utf-8 -*-
+// Copyright (C) 2006-2011 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -16,6 +16,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define NO_IMPORT_ARRAY
 #include "openravepy_int.h"
+
+#include <openrave/planningutils.h>
 
 PyRay::PyRay(object newpos, object newdir)
 {
@@ -204,6 +206,100 @@ public:
     }
 };
 
+class PyConfigurationSpecification
+{
+public:
+    PyConfigurationSpecification() {
+    }
+    PyConfigurationSpecification(const ConfigurationSpecification& spec) {
+        _spec = spec;
+    }
+    virtual ~PyConfigurationSpecification() {
+    }
+
+    int GetDOF() const {
+        return _spec.GetDOF();
+    }
+
+    bool IsValid() const {
+        return _spec.IsValid();
+    }
+
+//    std::vector<Group>::const_iterator FindCompatibleGroup(const Group& g, bool exactmatch=false) const;
+//
+//    std::vector<Group>::const_iterator FindTimeDerivativeGroup(const Group& g, bool exactmatch=false) const;
+//
+//    void AddVelocityGroups(bool adddeltatime);
+//
+//    ConfigurationSpecification GetTimeDerivativeSpecification(int timederivative) const;
+//
+//    void ResetGroupOffsets();
+//
+//    int AddDeltaTime();
+//
+//    bool ExtractTransform(Transform& t, std::vector<dReal>::const_iterator itdata, KinBodyConstPtr pbody) const;
+//
+//    bool ExtractIkParameterization(IkParameterization& ikparam, std::vector<dReal>::const_iterator itdata, int timederivative=0) const;
+//
+//    bool ExtractAffineValues(std::vector<dReal>::iterator itvalues, std::vector<dReal>::const_iterator itdata, KinBodyConstPtr pbody, int affinedofs, int timederivative=0) const;
+//
+    object ExtractJointValues(object odata, PyKinBodyPtr pybody, object oindices, int timederivative) const
+    {
+        std::vector<int> vindices = ExtractArray<int>(oindices);
+        std::vector<dReal> vdata = ExtractArray<dReal>(odata);
+        std::vector<dReal> values(vindices.size(),0);
+        bool bfound = _spec.ExtractJointValues(values.begin(),vdata.begin(),openravepy::GetKinBody(pybody),vindices,timederivative);
+        if( bfound ) {
+            return toPyArray(values);
+        }
+        else {
+            return object();
+        }
+    }
+
+    object ExtractDeltaTime(object odata) const
+    {
+        std::vector<dReal> vdata = ExtractArray<dReal>(odata);
+        dReal deltatime=0;
+        bool bfound = _spec.ExtractDeltaTime(deltatime,vdata.begin());
+        if( bfound ) {
+            return object(deltatime);
+        }
+        else {
+            return object();
+        }
+    }
+
+//
+//    bool InsertJointValues(std::vector<dReal>::iterator itdata, std::vector<dReal>::const_iterator itvalues, KinBodyConstPtr pbody, const std::vector<int>& indices, int timederivative=0) const;
+//
+    bool InsertDeltaTime(object odata, dReal deltatime)
+    {
+        // it is easier to get the time index
+        FOREACHC(itgroup,_spec._vgroups) {
+            if( itgroup->name == "deltatime" ) {
+                odata[itgroup->offset] = object(deltatime);
+                return true;
+            }
+        }
+        return false;
+    }
+
+//
+//    static void ConvertGroupData(std::vector<dReal>::iterator ittargetdata, size_t targetstride, const Group& gtarget, std::vector<dReal>::const_iterator itsourcedata, size_t sourcestride, const Group& gsource, size_t numpoints, EnvironmentBaseConstPtr penv);
+//
+//    static void ConvertData(std::vector<dReal>::iterator ittargetdata, const ConfigurationSpecification& targetspec, std::vector<dReal>::const_iterator itsourcedata, const ConfigurationSpecification& sourcespec, size_t numpoints, EnvironmentBaseConstPtr penv, bool filluninitialized = true);
+
+    bool __eq__(boost::shared_ptr<PyConfigurationSpecification> p) {
+        return !!p && _spec==p->_spec;
+    }
+    bool __ne__(boost::shared_ptr<PyConfigurationSpecification> p) {
+        return !p || _spec!=p->_spec;
+    }
+
+    ConfigurationSpecification _spec;
+};
+
 class PyIkParameterization
 {
 public:
@@ -211,28 +307,31 @@ public:
     }
     PyIkParameterization(const string& s) {
         stringstream ss(s);
+        ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
         ss >> _param;
     }
-    PyIkParameterization(object o, IkParameterization::Type type)
+    PyIkParameterization(object o, IkParameterizationType type)
     {
         switch(type) {
-        case IkParameterization::Type_Transform6D: SetTransform6D(o); break;
-        case IkParameterization::Type_Rotation3D: SetRotation3D(o); break;
-        case IkParameterization::Type_Translation3D: SetTranslation3D(o); break;
-        case IkParameterization::Type_Direction3D: SetDirection3D(o); break;
-        case IkParameterization::Type_Ray4D: SetRay4D(extract<boost::shared_ptr<PyRay> >(o)); break;
-        case IkParameterization::Type_Lookat3D: SetLookat3D(o); break;
-        case IkParameterization::Type_TranslationDirection5D: SetTranslationDirection5D(extract<boost::shared_ptr<PyRay> >(o)); break;
-        case IkParameterization::Type_TranslationXY2D: SetTranslationXY2D(o); break;
-        case IkParameterization::Type_TranslationXYOrientation3D: SetTranslationXYOrientation3D(o); break;
-        case IkParameterization::Type_TranslationLocalGlobal6D: SetTranslationLocalGlobal6D(o[0],o[1]); break;
+        case IKP_Transform6D: SetTransform6D(o); break;
+        case IKP_Rotation3D: SetRotation3D(o); break;
+        case IKP_Translation3D: SetTranslation3D(o); break;
+        case IKP_Direction3D: SetDirection3D(o); break;
+        case IKP_Ray4D: SetRay4D(extract<boost::shared_ptr<PyRay> >(o)); break;
+        case IKP_Lookat3D: SetLookat3D(o); break;
+        case IKP_TranslationDirection5D: SetTranslationDirection5D(extract<boost::shared_ptr<PyRay> >(o)); break;
+        case IKP_TranslationXY2D: SetTranslationXY2D(o); break;
+        case IKP_TranslationXYOrientation3D: SetTranslationXYOrientation3D(o); break;
+        case IKP_TranslationLocalGlobal6D: SetTranslationLocalGlobal6D(o[0],o[1]); break;
         default: throw OPENRAVE_EXCEPTION_FORMAT("incorrect ik parameterization type 0x%x", type, ORE_InvalidArguments);
         }
     }
     PyIkParameterization(const IkParameterization& ikparam) : _param(ikparam) {
     }
+    virtual ~PyIkParameterization() {
+    }
 
-    IkParameterization::Type GetType() {
+    IkParameterizationType GetType() {
         return _param.GetType();
     }
 
@@ -346,16 +445,16 @@ public:
     {
         object o;
         switch(r._param.GetType()) {
-        case IkParameterization::Type_Transform6D: o = toPyArray(r._param.GetTransform6D()); break;
-        case IkParameterization::Type_Rotation3D: o = toPyVector4(r._param.GetRotation3D()); break;
-        case IkParameterization::Type_Translation3D: o = toPyVector3(r._param.GetTranslation3D()); break;
-        case IkParameterization::Type_Direction3D: o = toPyVector4(r._param.GetDirection3D()); break;
-        case IkParameterization::Type_Ray4D: return boost::python::make_tuple(r._param.GetRay4D(),r._param.GetType());
-        case IkParameterization::Type_Lookat3D: o = toPyVector3(r._param.GetLookat3D()); break;
-        case IkParameterization::Type_TranslationDirection5D: return boost::python::make_tuple(r._param.GetTranslationDirection5D(),r._param.GetType());
-        case IkParameterization::Type_TranslationXY2D: o = toPyVector3(r._param.GetTranslationXY2D()); break;
-        case IkParameterization::Type_TranslationXYOrientation3D: o = toPyVector3(r._param.GetTranslationXYOrientation3D()); break;
-        case IkParameterization::Type_TranslationLocalGlobal6D: o = boost::python::make_tuple(toPyVector3(r._param.GetTranslationLocalGlobal6D().first), toPyVector3(r._param.GetTranslationLocalGlobal6D().second)); break;
+        case IKP_Transform6D: o = toPyArray(r._param.GetTransform6D()); break;
+        case IKP_Rotation3D: o = toPyVector4(r._param.GetRotation3D()); break;
+        case IKP_Translation3D: o = toPyVector3(r._param.GetTranslation3D()); break;
+        case IKP_Direction3D: o = toPyVector4(r._param.GetDirection3D()); break;
+        case IKP_Ray4D: return boost::python::make_tuple(r._param.GetRay4D(),r._param.GetType());
+        case IKP_Lookat3D: o = toPyVector3(r._param.GetLookat3D()); break;
+        case IKP_TranslationDirection5D: return boost::python::make_tuple(r._param.GetTranslationDirection5D(),r._param.GetType());
+        case IKP_TranslationXY2D: o = toPyVector3(r._param.GetTranslationXY2D()); break;
+        case IKP_TranslationXYOrientation3D: o = toPyVector3(r._param.GetTranslationXYOrientation3D()); break;
+        case IKP_TranslationLocalGlobal6D: o = boost::python::make_tuple(toPyVector3(r._param.GetTranslationLocalGlobal6D().first), toPyVector3(r._param.GetTranslationLocalGlobal6D().second)); break;
         default: throw OPENRAVE_EXCEPTION_FORMAT("incorrect ik parameterization type 0x%x", r._param.GetType(), ORE_InvalidArguments);
         }
 
@@ -364,6 +463,16 @@ public:
 };
 
 namespace openravepy {
+
+PyConfigurationSpecificationPtr toPyConfigurationSpecification(const ConfigurationSpecification& spec)
+{
+    return PyConfigurationSpecificationPtr(new PyConfigurationSpecification(spec));
+}
+
+const ConfigurationSpecification& GetConfigurationSpecification(PyConfigurationSpecificationPtr p)
+{
+    return p->_spec;
+}
 
 std::string openravepyCompilerVersion()
 {
@@ -628,14 +737,28 @@ object transformLookat(object olookat, object ocamerapos, object ocameraup)
 
 string matrixSerialization(object o)
 {
-    stringstream ss; ss << ExtractTransformMatrix(o);
+    stringstream ss;
+    ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
+    ss << ExtractTransformMatrix(o);
     return ss.str();
 }
 
 string poseSerialization(object o)
 {
-    stringstream ss; ss << ExtractTransform(o);
+    stringstream ss;
+    ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
+    ss << ExtractTransform(o);
     return ss.str();
+}
+
+namespace planningutils
+{
+
+object pyReverseTrajectory(PyTrajectoryBasePtr pytraj)
+{
+    return object(openravepy::toPyTrajectory(OpenRAVE::planningutils::ReverseTrajectory(openravepy::GetTrajectory(pytraj)),openravepy::toPyEnvironment(pytraj)));
+}
+
 }
 
 BOOST_PYTHON_FUNCTION_OVERLOADS(RaveInitialize_overloads, RaveInitialize, 0, 2)
@@ -718,17 +841,17 @@ void init_openravepy_global()
     .value("Real",SDT_Real)
     .value("Uint32",SDT_Uint32)
     ;
-    object iktype = enum_<IkParameterization::Type>("IkParameterizationType" DOXY_ENUM(IkParameterization::Type))
-                    .value("Transform6D",IkParameterization::Type_Transform6D)
-                    .value("Rotation3D",IkParameterization::Type_Rotation3D)
-                    .value("Translation3D",IkParameterization::Type_Translation3D)
-                    .value("Direction3D",IkParameterization::Type_Direction3D)
-                    .value("Ray4D",IkParameterization::Type_Ray4D)
-                    .value("Lookat3D",IkParameterization::Type_Lookat3D)
-                    .value("TranslationDirection5D",IkParameterization::Type_TranslationDirection5D)
-                    .value("TranslationXY2D",IkParameterization::Type_TranslationXY2D)
-                    .value("TranslationXYOrientation3D",IkParameterization::Type_TranslationXYOrientation3D)
-                    .value("TranslationLocalGlobal6D",IkParameterization::Type_TranslationLocalGlobal6D)
+    object iktype = enum_<IkParameterizationType>("IkParameterizationType" DOXY_ENUM(IkParameterizationType))
+                    .value("Transform6D",IKP_Transform6D)
+                    .value("Rotation3D",IKP_Rotation3D)
+                    .value("Translation3D",IKP_Translation3D)
+                    .value("Direction3D",IKP_Direction3D)
+                    .value("Ray4D",IKP_Ray4D)
+                    .value("Lookat3D",IKP_Lookat3D)
+                    .value("TranslationDirection5D",IKP_TranslationDirection5D)
+                    .value("TranslationXY2D",IKP_TranslationXY2D)
+                    .value("TranslationXYOrientation3D",IKP_TranslationXYOrientation3D)
+                    .value("TranslationLocalGlobal6D",IKP_TranslationLocalGlobal6D)
     ;
 
     class_<UserData, UserDataPtr >("UserData", DOXY_CLASS(UserData))
@@ -777,10 +900,22 @@ void init_openravepy_global()
     ;
 
     {
-        int (*getdof1)(IkParameterization::Type) = &IkParameterization::GetDOF;
-        int (*getnumberofvalues1)(IkParameterization::Type) = &IkParameterization::GetNumberOfValues;
+        scope configurationspecification = class_<PyConfigurationSpecification, PyConfigurationSpecificationPtr >("ConfigurationSpecification",DOXY_CLASS(ConfigurationSpecification))
+                                           .def("GetDOF",&PyConfigurationSpecification::GetDOF,DOXY_FN(ConfigurationSpecification,GetDOF))
+                                           .def("IsValid",&PyConfigurationSpecification::IsValid,DOXY_FN(ConfigurationSpecification,IsValid))
+                                           .def("ExtractJointValues",&PyConfigurationSpecification::ExtractJointValues,args("data","body","indices","timederivative"),DOXY_FN(ConfigurationSpecification,ExtractJointValues))
+                                           .def("ExtractDeltaTime",&PyConfigurationSpecification::ExtractDeltaTime,args("data"),DOXY_FN(ConfigurationSpecification,ExtractDeltaTime))
+                                           .def("InsertDeltaTime",&PyConfigurationSpecification::InsertDeltaTime,args("data","deltatime"),DOXY_FN(ConfigurationSpecification,InsertDeltaTime))
+                                           .def("__eq__",&PyConfigurationSpecification::__eq__)
+                                           .def("__ne__",&PyConfigurationSpecification::__ne__)
+        ;
+    }
+
+    {
+        int (*getdof1)(IkParameterizationType) = &IkParameterization::GetDOF;
+        int (*getnumberofvalues1)(IkParameterizationType) = &IkParameterization::GetNumberOfValues;
         scope ikparameterization = class_<PyIkParameterization, boost::shared_ptr<PyIkParameterization> >("IkParameterization", DOXY_CLASS(IkParameterization))
-                                   .def(init<object,IkParameterization::Type>(args("primitive","type")))
+                                   .def(init<object,IkParameterizationType>(args("primitive","type")))
                                    .def(init<string>(args("str")))
                                    .def("GetType",&PyIkParameterization::GetType, DOXY_FN(IkParameterization,GetType))
                                    .def("SetTransform6D",&PyIkParameterization::SetTransform6D,args("transform"), DOXY_FN(IkParameterization,SetTransform6D))
@@ -830,6 +965,13 @@ void init_openravepy_global()
                                    .def("__repr__",&PyIkParameterization::__repr__)
         ;
         ikparameterization.attr("Type") = iktype;
+    }
+
+    {
+        scope x = class_<object>("planningutils")
+                  .def("ReverseTrajectory",planningutils::pyReverseTrajectory,DOXY_FN1(ReverseTrajectory))
+                  .staticmethod("ReverseTrajectory")
+        ;
     }
 
     def("RaveSetDebugLevel",OpenRAVE::RaveSetDebugLevel,args("level"), DOXY_FN1(RaveSetDebugLevel));

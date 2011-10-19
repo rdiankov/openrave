@@ -98,6 +98,8 @@ if not __openravepy_build_doc__:
     from openravepy import *
     from numpy import *
 
+import multiprocessing
+
 class GraspPlanning:
     def __init__(self,robot,randomize=False,dests=None,nodestinations=False,switchpatterns=None,plannername=None):
         self.envreal = robot.GetEnv()
@@ -132,6 +134,7 @@ class GraspPlanning:
                 if len(targets) > 0:
                     gmodel = databases.grasping.GraspingModel(robot=self.robot,target=targets[0])
                     if not gmodel.load():
+                        gmodel.numthreads = multiprocessing.cpu_count()
                         gmodel.autogenerate()
                         self.graspables = self.getGraspables(dests=dests)
 
@@ -380,7 +383,10 @@ class GraspPlanning:
                     except planning_error:
                         res = None
                     #raise ValueError('robot still in collision?')
-            return success # return successful grasp index
+
+            if success >= 0:
+                return success # return successful grasp index
+            
         # exhausted all grasps
         return -1
 
@@ -395,7 +401,7 @@ class GraspPlanning:
                     graspables = self.graspables[:]
                 else:
                     break
-            i = random.randint(len(graspables))
+            i=random.randint(len(graspables))
             try:
                 print 'grasping object %s'%graspables[i][0].target.GetName()
                 with self.envreal:

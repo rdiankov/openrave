@@ -32,7 +32,7 @@ public:
     typedef bool (*IkFn)(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::vector<Solution>& vsolutions);
     typedef bool (*FkFn)(const IKReal* j, IKReal* eetrans, IKReal* eerot);
 
-    IkFastSolver(IkFn pfnik, const std::vector<int>& vfreeparams, const vector<dReal>& vFreeInc, int nTotalDOF, IkParameterization::Type iktype, boost::shared_ptr<void> resource, const std::string kinematicshash, EnvironmentBasePtr penv) : IkSolverBase(penv), _vfreeparams(vfreeparams), _pfnik(pfnik), _vFreeInc(vFreeInc), _nTotalDOF(nTotalDOF), _iktype(iktype), _resource(resource), _kinematicshash(kinematicshash) {
+    IkFastSolver(IkFn pfnik, const std::vector<int>& vfreeparams, const vector<dReal>& vFreeInc, int nTotalDOF, IkParameterizationType iktype, boost::shared_ptr<void> resource, const std::string kinematicshash, EnvironmentBasePtr penv) : IkSolverBase(penv), _vfreeparams(vfreeparams), _pfnik(pfnik), _vFreeInc(vFreeInc), _nTotalDOF(nTotalDOF), _iktype(iktype), _resource(resource), _kinematicshash(kinematicshash) {
         __description = ":Interface Author: Rosen Diankov\n\nAn OpenRAVE wrapper for the ikfast generated files.\nIf 6D IK is used, will check if the end effector and other independent links are in collision before manipulator link collisions. If they are, the IK will terminate with failure immediately.\nBecause checking collisions is the slowest part of the IK, the custom filter function run before collision checking.";
         _ikthreshold = 1e-4;
         RegisterCommand("SetIkThreshold",boost::bind(&IkFastSolver<IKReal,Solution>::_SetIkThresholdCommand,this,_1,_2),
@@ -134,7 +134,7 @@ public:
         return true;
     }
 
-    virtual bool Supports(IkParameterization::Type iktype) const
+    virtual bool Supports(IkParameterizationType iktype) const
     {
         return iktype == _iktype;
     }
@@ -440,7 +440,7 @@ private:
     {
         try {
             switch(param.GetType()) {
-            case IkParameterization::Type_Transform6D: {
+            case IKP_Transform6D: {
                 TransformMatrix t = param.GetTransform6D();
                 IKReal eetrans[3] = {t.trans.x, t.trans.y, t.trans.z};
                 IKReal eerot[9] = {t.m[0],t.m[1],t.m[2],t.m[4],t.m[5],t.m[6],t.m[8],t.m[9],t.m[10]};
@@ -453,12 +453,12 @@ private:
                 //RAVELOG_INFO(ss.str());
                 return _pfnik(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, vsolutions);
             }
-            case IkParameterization::Type_Rotation3D: {
+            case IKP_Rotation3D: {
                 TransformMatrix t(Transform(param.GetRotation3D(),Vector()));
                 IKReal eerot[9] = {t.m[0],t.m[1],t.m[2],t.m[4],t.m[5],t.m[6],t.m[8],t.m[9],t.m[10]};
                 return _pfnik(NULL, eerot, vfree.size()>0 ? &vfree[0] : NULL, vsolutions);
             }
-            case IkParameterization::Type_Translation3D: {
+            case IKP_Translation3D: {
                 Vector v = param.GetTranslation3D();
                 IKReal eetrans[3] = {v.x, v.y, v.z};
                 //                stringstream ss; ss << "./ik " << std::setprecision(16);
@@ -470,12 +470,12 @@ private:
                 //                RAVELOG_INFO(ss.str());
                 return _pfnik(eetrans, NULL, vfree.size()>0 ? &vfree[0] : NULL, vsolutions);
             }
-            case IkParameterization::Type_Direction3D: {
+            case IKP_Direction3D: {
                 Vector v = param.GetDirection3D();
                 IKReal eerot[9] = {v.x, v.y, v.z,0,0,0,0,0,0};
                 return _pfnik(NULL, eerot, vfree.size()>0 ? &vfree[0] : NULL, vsolutions);
             }
-            case IkParameterization::Type_Ray4D: {
+            case IKP_Ray4D: {
                 RAY r = param.GetRay4D();
                 IKReal eetrans[3] = {r.pos.x,r.pos.y,r.pos.z};
                 IKReal eerot[9] = {r.dir.x, r.dir.y, r.dir.z,0,0,0,0,0,0};
@@ -485,12 +485,12 @@ private:
                 }
                 return true;
             }
-            case IkParameterization::Type_Lookat3D: {
+            case IKP_Lookat3D: {
                 Vector v = param.GetLookat3D();
                 IKReal eetrans[3] = {v.x, v.y, v.z};
                 return _pfnik(eetrans, NULL, vfree.size()>0 ? &vfree[0] : NULL, vsolutions);
             }
-            case IkParameterization::Type_TranslationDirection5D: {
+            case IKP_TranslationDirection5D: {
                 RAY r = param.GetTranslationDirection5D();
                 IKReal eetrans[3] = {r.pos.x,r.pos.y,r.pos.z};
                 IKReal eerot[9] = {r.dir.x, r.dir.y, r.dir.z,0,0,0,0,0,0};
@@ -499,17 +499,17 @@ private:
                 }
                 return true;
             }
-            case IkParameterization::Type_TranslationXY2D: {
+            case IKP_TranslationXY2D: {
                 Vector v = param.GetTranslationXY2D();
                 IKReal eetrans[3] = {v.x, v.y,0};
                 return _pfnik(eetrans, NULL, vfree.size()>0 ? &vfree[0] : NULL, vsolutions);
             }
-            case IkParameterization::Type_TranslationXYOrientation3D: {
+            case IKP_TranslationXYOrientation3D: {
                 Vector v = param.GetTranslationXYOrientation3D();
                 IKReal eetrans[3] = {v.x, v.y,v.z};
                 return _pfnik(eetrans, NULL, vfree.size()>0 ? &vfree[0] : NULL, vsolutions);
             }
-            case IkParameterization::Type_TranslationLocalGlobal6D: {
+            case IKP_TranslationLocalGlobal6D: {
                 std::pair<Vector,Vector> p = param.GetTranslationLocalGlobal6D();
                 IKReal eetrans[3] = {p.second.x, p.second.y, p.second.z};
                 IKReal eerot[9] = {p.first.x, 0, 0, 0, p.first.y, 0, 0, 0, p.first.z};
@@ -669,7 +669,7 @@ private:
         }
         if( filteroptions&IKFO_CheckEnvCollisions ) {
             stateCheck.SetEnvironmentCollisionState();
-            if( stateCheck.NeedCheckEndEffectorCollision() && param.GetType() == IkParameterization::Type_Transform6D ) {
+            if( stateCheck.NeedCheckEndEffectorCollision() && param.GetType() == IKP_Transform6D ) {
                 // if gripper is colliding, solutions will always fail, so completely stop solution process
                 if(  pmanip->CheckEndEffectorCollision(pmanip->GetBase()->GetTransform()*param.GetTransform6D()) ) {
                     return SR_Quit; // stop the search
@@ -772,7 +772,7 @@ private:
         }
         if( (filteroptions&IKFO_CheckEnvCollisions) ) {
             stateCheck.SetEnvironmentCollisionState();
-            if( stateCheck.NeedCheckEndEffectorCollision() && param.GetType() == IkParameterization::Type_Transform6D ) {
+            if( stateCheck.NeedCheckEndEffectorCollision() && param.GetType() == IKP_Transform6D ) {
                 if( pmanip->CheckEndEffectorCollision(pmanip->GetBase()->GetTransform()*param.GetTransform6D()) ) {
                     return SR_Quit; // stop the search
                 }
@@ -829,7 +829,7 @@ private:
     std::vector<dReal> _vFreeInc;
     int _nTotalDOF;
     std::vector<dReal> _qlower, _qupper;
-    IkParameterization::Type _iktype;
+    IkParameterizationType _iktype;
     boost::shared_ptr<void> _resource;
     std::string _kinematicshash;
     dReal _ikthreshold;

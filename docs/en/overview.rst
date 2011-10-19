@@ -41,8 +41,6 @@ libraries. It provides a set of interfaces that let users modify existing functi
 OpenRAVE-enabled modules without having to recompile OpenRAVE or deal with messy monolithic
 code-bases.
 
-* `Architecture`_
-* `Interface Concepts`_
 * :ref:`package-databases`
 
  * :ref:`ikfast_compiler`
@@ -50,6 +48,7 @@ code-bases.
 .. toctree::
    :maxdepth: 1
 
+   architecture/index
    robots_overview
    geometric_conventions
 

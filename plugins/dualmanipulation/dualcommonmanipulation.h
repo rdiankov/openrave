@@ -133,11 +133,12 @@ protected:
 
             if( strsavetraj.size() > 0 ) {
                 ofstream f(strsavetraj.c_str());
-                pfulltraj->Write(f, Trajectory::TO_IncludeTimestamps|Trajectory::TO_IncludeBaseTransformation);
+                pfulltraj->serialize(f);
             }
 
-            if( !!pout )
-                pfulltraj->Write(*pout, Trajectory::TO_IncludeTimestamps|Trajectory::TO_IncludeBaseTransformation|Trajectory::TO_OneLine);
+            if( !!pout ) {
+                pfulltraj->serialize(*pout);
+            }
         }
 
         return bExecuted;

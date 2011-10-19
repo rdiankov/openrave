@@ -18,12 +18,12 @@
 
 namespace OpenRAVE {
 
-class CustomFilterData : public boost::enable_shared_from_this<CustomFilterData>, public UserData
+class CustomIkSolverFilterData : public boost::enable_shared_from_this<CustomIkSolverFilterData>, public UserData
 {
 public:
-    CustomFilterData(int priority, const IkSolverBase::IkFilterCallbackFn& filterfn, IkSolverBasePtr iksolver) : _priority(priority), _filterfn(filterfn), _iksolverweak(iksolver) {
+    CustomIkSolverFilterData(int priority, const IkSolverBase::IkFilterCallbackFn& filterfn, IkSolverBasePtr iksolver) : _priority(priority), _filterfn(filterfn), _iksolverweak(iksolver) {
     }
-    virtual ~CustomFilterData() {
+    virtual ~CustomIkSolverFilterData() {
         IkSolverBasePtr iksolver = _iksolverweak.lock();
         if( !!iksolver ) {
             iksolver->__listRegisteredFilters.erase(_iterator);
@@ -36,19 +36,19 @@ public:
     std::list<UserDataWeakPtr>::iterator _iterator;
 };
 
-typedef boost::shared_ptr<CustomFilterData> CustomFilterDataPtr;
+typedef boost::shared_ptr<CustomIkSolverFilterData> CustomIkSolverFilterDataPtr;
 
-bool CustomFilterDataCompare(UserDataPtr data0, UserDataPtr data1)
+bool CustomIkSolverFilterDataCompare(UserDataPtr data0, UserDataPtr data1)
 {
-    return boost::dynamic_pointer_cast<CustomFilterData>(data0)->_priority > boost::dynamic_pointer_cast<CustomFilterData>(data1)->_priority;
+    return boost::dynamic_pointer_cast<CustomIkSolverFilterData>(data0)->_priority > boost::dynamic_pointer_cast<CustomIkSolverFilterData>(data1)->_priority;
 }
 
 UserDataPtr IkSolverBase::RegisterCustomFilter(int priority, const IkSolverBase::IkFilterCallbackFn &filterfn)
 {
-    CustomFilterDataPtr pdata(new CustomFilterData(priority,filterfn,shared_iksolver()));
+    CustomIkSolverFilterDataPtr pdata(new CustomIkSolverFilterData(priority,filterfn,shared_iksolver()));
     std::list<UserDataWeakPtr>::iterator it;
     FORIT(it, __listRegisteredFilters) {
-        CustomFilterDataPtr pitdata = boost::dynamic_pointer_cast<CustomFilterData>(it->lock());
+        CustomIkSolverFilterDataPtr pitdata = boost::dynamic_pointer_cast<CustomIkSolverFilterData>(it->lock());
         if( !!pitdata && pdata->_priority > pitdata->_priority ) {
             break;
         }
@@ -60,7 +60,7 @@ UserDataPtr IkSolverBase::RegisterCustomFilter(int priority, const IkSolverBase:
 IkFilterReturn IkSolverBase::_CallFilters(std::vector<dReal>& solution, RobotBase::ManipulatorPtr manipulator, const IkParameterization& param)
 {
     FOREACHC(it,__listRegisteredFilters) {
-        CustomFilterDataPtr pitdata = boost::dynamic_pointer_cast<CustomFilterData>(it->lock());
+        CustomIkSolverFilterDataPtr pitdata = boost::dynamic_pointer_cast<CustomIkSolverFilterData>(it->lock());
         if( !!pitdata) {
             IkFilterReturn ret = pitdata->_filterfn(solution,manipulator,param);
             if( ret != IKFR_Success ) {

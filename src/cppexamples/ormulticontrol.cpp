@@ -9,6 +9,7 @@
     <b>Full Example Code:</b>
  */
 #include <openrave-core.h>
+#include <openrave/planningutils.h>
 #include <vector>
 #include <cstring>
 #include <sstream>
@@ -100,10 +101,15 @@ int main(int argc, char ** argv)
 
             if( !!armcontroller ) {
                 // set a trajectory on the arm and velocity on the wheels
-                TrajectoryBasePtr traj = RaveCreateTrajectory(penv,restindices.size());
+                TrajectoryBasePtr traj = RaveCreateTrajectory(penv,"");
                 probot->SetActiveDOFs(restindices);
+                ConfigurationSpecification spec = probot->GetActiveConfigurationSpecification();
+                int timeoffset = spec.AddDeltaTime();
+                traj->Init(spec);
                 probot->GetActiveDOFValues(q); // get current values
-                traj->AddPoint(TrajectoryBase::TPOINT(q,0.0f));
+                vector<dReal> vdata(spec.GetDOF(),0);
+                std::copy(q.begin(),q.end(),vdata.begin());
+                traj->Insert(0,vdata);
                 for(int i = 0; i < 4; ++i) {
                     q.at(RaveRandomInt()%restindices.size()) += RaveRandomFloat()-0.5; // move a random axis
                 }
@@ -116,8 +122,11 @@ int main(int argc, char ** argv)
                         continue; // robot in collision at final point, so reject
                     }
                 }
-                traj->AddPoint(TrajectoryBase::TPOINT(q,2.0f));
-                traj->CalcTrajTiming(probot,TrajectoryBase::CUBIC,false,true); // initialize the trajectory structures
+
+                std::copy(q.begin(),q.end(),vdata.begin());
+                vdata.at(timeoffset) = 2; // trajectory takes 2s
+                traj->Insert(1,vdata);
+                planningutils::RetimeActiveDOFTrajectory(traj,probot,true);
                 armcontroller->SetPath(traj);
             }
 

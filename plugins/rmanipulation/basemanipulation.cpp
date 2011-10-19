@@ -177,7 +177,8 @@ protected:
         if( !sinput ) {
             return false;
         }
-        TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),robot->GetDOF());
+        RAVELOG_WARN("BaseManipulation Traj command is deprecated, use robot.GetController().SetPath(traj) instead\n");
+        TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),"");
         char sep = ' ';
         if( filename == "sep" ) {
             sinput >> sep;
@@ -205,19 +206,14 @@ protected:
         bool bResetTiming = false; sinput >> bResetTiming;
 
         if( bResetTrans ) {
-            RAVELOG_VERBOSE("resetting transformations of trajectory\n");
-            Transform tcur = robot->GetTransform();
-            // set the transformation of every point to the current robot transformation
-            FOREACH(itpoint, ptraj->GetPoints()) {
-                itpoint->trans = tcur;
-            }
+            RAVELOG_WARN("resetting transformations of trajectory not supported\n");
         }
 
-        if(( ptraj->GetTotalDuration() == 0) || bResetTiming ) {
+        if(( ptraj->GetDuration() == 0) || bResetTiming ) {
             RAVELOG_VERBOSE(str(boost::format("retiming trajectory: %f\n")%_fMaxVelMult));
-            ptraj->CalcTrajTiming(robot,TrajectoryBase::CUBIC,true,false,_fMaxVelMult);
+            ptraj->CalcTrajTiming(robot,0,true,false,_fMaxVelMult);
         }
-        RAVELOG_VERBOSE(str(boost::format("executing traj with %d points\n")%ptraj->GetPoints().size()));
+        RAVELOG_VERBOSE(str(boost::format("executing traj with %d points\n")%ptraj->GetNumWaypoints()));
         if( ptraj->GetDOF() == robot->GetDOF() ) {
             robot->SetMotion(ptraj);
         }
@@ -243,7 +239,7 @@ protected:
         RobotBase::ManipulatorConstPtr pmanip = robot->GetActiveManipulator();
         Transform Tee;
 
-        boost::shared_ptr<WorkspaceTrajectoryParameters> params(new WorkspaceTrajectoryParameters(GetEnv()));
+        WorkspaceTrajectoryParametersPtr params(new WorkspaceTrajectoryParameters(GetEnv()));
         boost::shared_ptr<ostream> pOutputTrajStream;
         params->ignorefirstcollision = 0.04;     // 0.04m?
         string cmd;
@@ -324,19 +320,22 @@ protected:
             params->vinitialconfig.resize(0);     // set by SetRobotActiveJoints
         }
 
-        if( RaveHasInterface(PT_Planner,"ParabolicSmoothingPlanner") ) {
-            params->_sPathOptimizationPlanner = "ParabolicSmoothingPlanner";
-        }
-
         // compute a workspace trajectory (important to do this after jittering!)
         {
             params->workspacetraj = RaveCreateTrajectory(GetEnv(),"");
-            params->workspacetraj->Reset(0);
-            params->workspacetraj->SetAffineVelocity(Vector(1,1,1),10);
-            params->workspacetraj->AddPoint(TrajectoryBase::TPOINT(vector<dReal>(),Tee,0));
+            ConfigurationSpecification spec = IkParameterization::GetConfigurationSpecification(IKP_Transform6D);
+            params->workspacetraj->Init(spec);
+            vector<dReal> data(spec._vgroups[0].dof);
+            IkParameterization ikparam(Tee,IKP_Transform6D);
+            ikparam.GetValues(data.begin());
+            params->workspacetraj->Insert(0,data);
             Tee.trans += direction*maxsteps*params->_fStepLength;
-            params->workspacetraj->AddPoint(TrajectoryBase::TPOINT(vector<dReal>(),Tee,0));
-            params->workspacetraj->CalcTrajTiming(RobotBasePtr(),TrajectoryBase::LINEAR,true,false);
+            ikparam.SetTransform6D(Tee);
+            ikparam.GetValues(data.begin());
+            params->workspacetraj->Insert(1,data);
+            vector<dReal> maxvelocities(spec._vgroups[0].dof,1);
+            vector<dReal> maxaccelerations(spec._vgroups[0].dof,10);
+            planningutils::RetimeAffineTrajectory(params->workspacetraj,maxvelocities,maxaccelerations);
         }
 
         PlannerBasePtr planner = RaveCreatePlanner(GetEnv(),"workspacetrajectorytracker");
@@ -465,9 +464,6 @@ protected:
             return false;
         }
         params->vgoalconfig.resize(writeindex);
-        if( RaveHasInterface(PT_Planner,"ParabolicSmoothingPlanner") ) {
-            params->_sPathOptimizationPlanner = "ParabolicSmoothingPlanner";
-        }
         robot->SetActiveDOFValues(originalvalues);
 
         // jitter again for initial collision
@@ -483,7 +479,7 @@ protected:
             return false;
         }
 
-        TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF());
+        TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),"");
 
         RAVELOG_DEBUG("starting planning\n");
         bool bSuccess = false;
@@ -666,6 +662,8 @@ protected:
             boost::shared_ptr<CM::GripperJacobianConstrains<double> > pconstraints(new CM::GripperJacobianConstrains<double>(robot->GetActiveManipulator(),tConstraintTargetWorldFrame,vconstraintfreedoms,constrainterrorthresh));
             pconstraints->_distmetricfn = params->_distmetricfn;
             params->_neighstatefn = boost::bind(&CM::GripperJacobianConstrains<double>::RetractionConstraint,pconstraints,_1,_2);
+            // use linear interpolation!
+            params->_sPostProcessingParameters ="<_nmaxiterations>100</_nmaxiterations><_postprocessing planner=\"lineartrajectoryretimer\"></_postprocessing>";
         }
 
         robot->SetActiveDOFs(pmanip->GetArmIndices(), 0);
@@ -697,7 +695,8 @@ protected:
         // restore
         robot->SetActiveDOFValues(params->vinitialconfig);
 
-        TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF());
+        TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),"");
+        ptraj->Init(params->_configurationspecification);
         Trajectory::TPOINT pt;
         pt.q = params->vinitialconfig;
         ptraj->AddPoint(pt);
@@ -708,10 +707,6 @@ protected:
             return false;
         }
         robot->GetActiveDOFValues(params->vinitialconfig);
-
-        if( RaveHasInterface(PT_Planner,"ParabolicSmoothingPlanner") ) {
-            params->_sPathOptimizationPlanner = "ParabolicSmoothingPlanner";
-        }
 
         PlannerBasePtr rrtplanner = RaveCreatePlanner(GetEnv(),_strRRTPlannerName);
         if( !rrtplanner ) {
@@ -819,7 +814,7 @@ protected:
             RAVELOG_WARN("failed to jitter robot out of collision\n");
         }
 
-        TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF());
+        TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),"");
 
         bool bSuccess = false;
         for(int itry = 0; itry < nMaxTries; ++itry) {
@@ -832,16 +827,16 @@ protected:
             return false;
         }
 
-        BOOST_ASSERT(ptraj->GetPoints().size() > 0);
+        BOOST_ASSERT(ptraj->GetNumWaypoints() > 0);
 
         bool bExecuted = CM::SetActiveTrajectory(robot, ptraj, bExecute, strsavetraj, pOutputTrajStream,_fMaxVelMult);
         sout << (int)bExecuted << " ";
-
         sout << (GetMilliTime()-starttime)/1000.0f << " ";
-        FOREACH(it, ptraj->GetPoints().back().q) {
+        vector<dReal> q;
+        ptraj->GetWaypoint(-1,q,robot->GetActiveConfigurationSpecification());
+        FOREACH(it, q) {
             sout << *it << " ";
         }
-
         return true;
     }
 
@@ -887,7 +882,8 @@ protected:
         }
 
         RobotBase::RobotStateSaver saver(robot);
-        TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF());
+        TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),"");
+        ptraj->Init(robot->GetActiveConfigurationSpecification());
 
         // have to add the first point
         Trajectory::TPOINT ptfirst;
@@ -997,10 +993,8 @@ protected:
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
 
             if( cmd == "stream" ) {
-                ptraj = RaveCreateTrajectory(GetEnv(),robot->GetDOF());
-                if( !ptraj->Read(sinput,robot) ) {
-                    return false;
-                }
+                ptraj = RaveCreateTrajectory(GetEnv(),"");
+                ptraj->deserialize(sinput);
             }
             else if( cmd == "resettiming" ) {
                 sinput >> bRecomputeTiming;
@@ -1009,9 +1003,7 @@ protected:
                 bool bReset = false;
                 sinput >> bReset;
                 if( bReset ) {
-                    FOREACH(it,ptraj->GetPoints()) {
-                        it->trans = robot->GetTransform();
-                    }
+                    RAVELOG_WARN("resettiming not supported\n");
                 }
             }
             else if( cmd == "samplingstep" ) {
@@ -1031,8 +1023,8 @@ protected:
             return false;
         }
 
-        if( bRecomputeTiming ||( ptraj->GetTotalDuration() == 0) ) {
-            ptraj->CalcTrajTiming(robot,ptraj->GetInterpMethod(),true,false);
+        if( bRecomputeTiming || ptraj->GetDuration() == 0 ) {
+            planningutils::RetimeActiveDOFTrajectory(ptraj,robot);
         }
 
         RobotBase::RobotStateSaver saver(robot);

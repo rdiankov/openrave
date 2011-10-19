@@ -1868,7 +1868,7 @@ public:
                             RAVELOG_WARN(str(boost::format("failed to find manipulator %s frame tip %s\n")%name%pframe_tip->getAttribute("link")));
                             continue;
                         }
-                        pmanip->_tGrasp = _ExtractFullTransformFromChildren(pframe_tip);
+                        pmanip->_tLocalTool = _ExtractFullTransformFromChildren(pframe_tip);
                     }
 
                     for(size_t ic = 0; ic < tec->getContents().getCount(); ++ic) {

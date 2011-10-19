@@ -22,7 +22,24 @@
 
 namespace OpenRAVE {
 
-/** \brief <b>[interface]</b> Planner interface that generates trajectories for the robot to follow around the environment. <b>If not specified, method is not multi-thread safe.</b> See \ref arch_planner.
+/// \brief the status of the PlanPath method. Used when PlanPath can be called multiple times to resume planning.
+enum PlannerStatus
+{
+    PS_Failed = 0, ///< planner failed
+    PS_HasSolution = 1, ///< planner succeeded
+    PS_Interrupted = 2, ///< planning was interrupted, but can be resumed by calling PlanPath again
+    PS_InterruptedWithSolution = 3, /// planning was interrupted, but a valid path/solution was returned. Can call PlanPath again to refine results
+};
+
+/// \brief action to send to the planner while it is planning. This is usually done by the user-specified planner callback function
+enum PlannerAction
+{
+    PA_None=0, ///< no action
+    PA_Interrupt=1, ///< interrupt the planner and return to user
+    PA_ReturnWithAnySolution=2, ///< return quickly with any path
+};
+
+/** \brief <b>[interface]</b> Planner interface that generates trajectories for target objects to follow through the environment. <b>If not specified, method is not multi-thread safe.</b> See \ref arch_planner.
     \ingroup interfaces
  */
 class OPENRAVE_API PlannerBase : public InterfaceBase
@@ -48,14 +65,19 @@ public:
         virtual ~PlannerParameters() {
         }
 
-        /// tries to copy data from one set of parameters to another in the safest manner.
-        /// First serializes the data of the right hand into a string, then initializes the current parameters via >>
-        /// pointers to functions are copied directly
+        /** \brief Attemps to copy data from one set of parameters to another in the safest manner.
+
+            First serializes the data of the right hand into a string, then initializes the current parameters via >>
+            pointers to functions are copied directly
+         */
         virtual PlannerParameters& operator=(const PlannerParameters& r);
         virtual void copy(boost::shared_ptr<PlannerParameters const> r);
 
         /// sets up the planner parameters to use the active joints of the robot
         virtual void SetRobotActiveJoints(RobotBasePtr robot);
+
+        /// \brief the configuration specification in which the planner works in. This specification is passed to the trajecotry creation modules.
+        ConfigurationSpecification _configurationspecification;
 
         /// \brief Cost function on the state pace (optional).
         ///
@@ -64,12 +86,13 @@ public:
         typedef boost::function<dReal(const std::vector<dReal>&)> CostFn;
         CostFn _costfn;
 
-        /// \brief Goal heuristic function.(optional)
-        ///
-        /// distance = _goalfn(config)
-        ///
-        /// Goal is complete when returns 0
-        /// \param distance - distance to closest goal
+        /** \brief Goal heuristic function.(optional)
+
+            distance = _goalfn(config)
+
+            Goal is complete when returns 0
+            \param distance - distance to closest goal
+         */
         typedef boost::function<dReal(const std::vector<dReal>&)> GoalFn;
         GoalFn _goalfn;
 
@@ -100,28 +123,31 @@ public:
         typedef boost::function<bool (const std::vector<dReal>&, const std::vector<dReal>&, IntervalType, PlannerBase::ConfigurationListPtr)> CheckPathConstraintFn;
         CheckPathConstraintFn _checkpathconstraintsfn;
 
-        /// \brief Samples a random configuration (mandatory)
-        ///
-        /// The dimension of the returned sample is the dimension of the configuration space.
-        /// success = samplefn(newsample)
+        /** \brief Samples a random configuration (mandatory)
+
+            The dimension of the returned sample is the dimension of the configuration space.
+            success = samplefn(newsample)
+         */
         typedef boost::function<bool (std::vector<dReal>&)> SampleFn;
         SampleFn _samplefn;
 
-        /// \brief Samples a valid goal configuration (optional).
-        ///
-        /// If valid, the function should be called
-        /// at every iteration. Any type of sampling probabilities and conditions can be encoded inside the function.
-        /// The dimension of the returned sample is the dimension of the configuration space.
-        /// success = samplegoalfn(newsample)
+        /** \brief Samples a valid goal configuration (optional).
+
+            If valid, the function should be called
+            at every iteration. Any type of sampling probabilities and conditions can be encoded inside the function.
+            The dimension of the returned sample is the dimension of the configuration space.
+            success = samplegoalfn(newsample)
+         */
         typedef boost::function<bool (std::vector<dReal>&)> SampleGoalFn;
         SampleGoalFn _samplegoalfn;
 
-        /// \brief Samples a valid initial configuration (optional).
-        ///
-        /// If valid, the function should be called
-        /// at every iteration. Any type of sampling probabilities and conditions can be encoded inside the function.
-        /// The dimension of the returned sample is the dimension of the configuration space.
-        /// success = sampleinitialfn(newsample)
+        /** \brief Samples a valid initial configuration (optional).
+
+            If valid, the function should be called
+            at every iteration. Any type of sampling probabilities and conditions can be encoded inside the function.
+            The dimension of the returned sample is the dimension of the configuration space.
+            success = sampleinitialfn(newsample)
+         */
         typedef boost::function<bool (std::vector<dReal>&)> SampleInitialFn;
         SampleInitialFn _sampleinitialfn;
 
@@ -174,6 +200,12 @@ public:
         /// \brief the absolute limits of the configuration space.
         std::vector<dReal> _vConfigLowerLimit, _vConfigUpperLimit;
 
+        /// \brief the absolute velocity limits of each DOF of the configuration space.
+        std::vector<dReal> _vConfigVelocityLimit;
+
+        /// \brief the absolute acceleration limits of each DOF of the configuration space.
+        std::vector<dReal> _vConfigAccelerationLimit;
+
         /// \brief the discretization resolution of each dimension of the configuration space
         std::vector<dReal> _vConfigResolution;
 
@@ -191,12 +223,12 @@ public:
         /// \brief Specifies the planner that will perform the post-processing path smoothing before returning.
         ///
         /// If empty, will not path smooth the returned trajectories (used to measure algorithm time)
-        std::string _sPathOptimizationPlanner;
+        std::string _sPostProcessingPlanner;
 
         /// \brief The serialized planner parameters to pass to the path optimizer.
         ///
-        /// For example: std::stringstream(_sPathOptimizationParameters) >> _parameters;
-        std::string _sPathOptimizationParameters;
+        /// For example: std::stringstream(_sPostProcessingParameters) >> _parameters;
+        std::string _sPostProcessingParameters;
 
         /// \brief Extra parameters data that does not fit within this planner parameters structure, but is still important not to lose all the information.
         std::string _sExtraParameters;
@@ -214,7 +246,7 @@ protected:
             return boost::static_pointer_cast<PlannerBase::PlannerParameters const>(shared_from_this());
         }
 
-        /// output the planner parameters in a string (in XML format)
+        /// \brief output the planner parameters in a string (in XML format)
         /// don't use PlannerParameters as a tag!
         virtual bool serialize(std::ostream& O) const;
 
@@ -229,10 +261,8 @@ protected:
         //@}
 
 private:
-        /// disallow copy constructors since it gets complicated with virtualization
-        PlannerParameters(const PlannerParameters &r) : XMLReadable("") {
-            BOOST_ASSERT(0);
-        }
+        /// prevent copy constructors since it gets complicated with virtual functions
+        PlannerParameters(const PlannerParameters &r);
         BaseXMLReaderPtr __pcurreader;         ///< temporary reader
         std::string __processingtag;
         int _plannerparametersdepth;
@@ -246,8 +276,15 @@ private:
     typedef boost::shared_ptr<PlannerBase::PlannerParameters const> PlannerParametersConstPtr;
     typedef boost::weak_ptr<PlannerBase::PlannerParameters> PlannerParametersWeakPtr;
 
-    PlannerBase(EnvironmentBasePtr penv) : InterfaceBase(PT_Planner, penv) {
-    }
+    /// \brief Planner progress information passed to each callback function
+    class OPENRAVE_API PlannerProgress
+    {
+public:
+        PlannerProgress();
+        int _iteration;
+    };
+
+    PlannerBase(EnvironmentBasePtr penv);
     virtual ~PlannerBase() {
     }
 
@@ -256,19 +293,16 @@ private:
         return PT_Planner;
     }
 
-    /// \brief Setup scene, robot, and properties of the plan, and reset all internal structures.
-    /// \param probot The robot will be planning for.
-    /// \param pparams The parameters of the planner, any class derived from PlannerParameters can be passed. The planner should copy these parameters for future instead of storing the pointer.
-    virtual bool InitPlan(RobotBasePtr probot, PlannerParametersConstPtr pparams) = 0;
+    /** \brief Setup scene, robot, and properties of the plan, and reset all internal structures.
+
+        \param robot main robot to be used for planning
+        \param params The parameters of the planner, any class derived from PlannerParameters can be passed. The planner should copy these parameters for future instead of storing the pointer.
+     */
+    virtual bool InitPlan(RobotBasePtr robot, PlannerParametersConstPtr params) = 0;
 
     /** \brief Setup scene, robot, and properties of the plan, and reset all structures with pparams.
 
-        \param robot The robot will be planning for. Although the configuration space of the planner and the robot can be independent,
-        the planner uses the robot to check for environment and self-collisions.
-        In order to speed up computations further, planners can use the CO_ActiveDOFs collision checker option, which only focuses
-        collision on the currently moving links in the robot.
-        Even if the configuration space of the planner is different from the robot, the robot active DOFs must be set correctly (or at least have all dofs active)!
-
+        \param robot main robot to be used for planning
         \param isParameters The serialized form of the parameters. By default, this exists to allow third parties to
         pass information to planners without excplicitly knowning the format/internal structures used
         \return true if plan is initialized successfully and initial conditions are satisfied.
@@ -279,15 +313,41 @@ private:
 
         Fill ptraj with the trajectory of the planned path that the robot needs to execute
         \param ptraj The output trajectory the robot has to follow in order to successfully complete the plan. If this planner is a path optimizer, the trajectory can be used as an input for generating a smoother path. The trajectory is for the configuration degrees of freedom defined by the planner parameters.
-        \param pOutStream If specified, planner will output any other special data
-        \return true if planner is successful
+        \return the status that the planner returned in.
      */
-    virtual bool PlanPath(TrajectoryBasePtr ptraj, boost::shared_ptr<std::ostream> pOutStream = boost::shared_ptr<std::ostream>()) = 0;
+    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj) = 0;
+
+    /// \deprecated (11/10/03)
+    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj, boost::shared_ptr<std::ostream> pOutStream) RAVE_DEPRECATED {
+        if( !!pOutStream ) {
+            RAVELOG_WARN("planner does not support pOutputStream anymore, please find another method to return information like using SendCommand or writing the data into the returned trajectory\n");
+        }
+        return PlanPath(ptraj);
+    }
 
     /// \brief return the internal parameters of the planner
     virtual PlannerParametersConstPtr GetParameters() const = 0;
 
+    /** \brief Callback function during planner execute
+
+        \param progress planner progress information
+     */
+    typedef boost::function<PlannerAction(const PlannerProgress&)> PlanCallbackFn;
+
+    /** \brief register a function that is called periodically during the plan loop.
+
+        Allows the calling process to control the behavior of the planner from a high-level perspective
+     */
+    virtual UserDataPtr RegisterPlanCallback(const PlanCallbackFn& callbackfn);
+
 protected:
+    inline PlannerBasePtr shared_planner() {
+        return boost::static_pointer_cast<PlannerBase>(shared_from_this());
+    }
+    inline PlannerBaseConstPtr shared_planner_const() const {
+        return boost::static_pointer_cast<PlannerBase const>(shared_from_this());
+    }
+
     /** \brief Calls a planner to optimizes the trajectory path.
 
         The PlannerParameters structure passed into the optimization planner is
@@ -296,12 +356,25 @@ protected:
         \param probot the robot this trajectory is meant for, also uses the robot for checking collisions.
         \param ptraj Initial trajectory to be smoothed is inputted. If optimization path succeeds, final trajectory output is set in this variable. The trajectory is for the configuration degrees of freedom defined by the planner parameters.
      */
-    virtual bool _OptimizePath(RobotBasePtr probot, TrajectoryBasePtr ptraj);
+    virtual PlannerStatus _ProcessPostPlanners(RobotBasePtr probot, TrajectoryBasePtr ptraj);
+
+    virtual bool _OptimizePath(RobotBasePtr probot, TrajectoryBasePtr ptraj) RAVE_DEPRECATED {
+        return !!(_ProcessPostPlanners(probot,ptraj) & PS_HasSolution);
+    }
+
+    /// \brief Calls the registered callbacks in order and returns immediately when an action other than PA_None is returned.
+    ///
+    /// \param progress planner progress information
+    virtual PlannerAction _CallCallbacks(const PlannerProgress& progress);
 
 private:
     virtual const char* GetHash() const {
         return OPENRAVE_PLANNER_HASH;
     }
+
+    std::list<UserDataWeakPtr> __listRegisteredCallbacks; ///< internally managed callbacks
+
+    friend class CustomPlannerCallbackData;
 };
 
 OPENRAVE_API std::ostream& operator<<(std::ostream& O, const PlannerBase::PlannerParameters& v);

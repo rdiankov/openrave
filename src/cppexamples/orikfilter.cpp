@@ -69,7 +69,7 @@ int main(int argc, char ** argv)
     penv->AddModule(pikfast,"");
     stringstream ssin,ssout;
     vector<dReal> vsolution;
-    ssin << "LoadIKFastSolver " << probot->GetName() << " " << (int)IkParameterization::Type_Transform6D;
+    ssin << "LoadIKFastSolver " << probot->GetName() << " " << (int)IKP_Transform6D;
     if( !pikfast->SendCommand(ssout,ssin) ) {
         RAVELOG_ERROR("failed to load iksolver\n");
     }
@@ -95,8 +95,8 @@ int main(int argc, char ** argv)
             bool bincollision = !penv->CheckCollision(probot) && !probot->CheckSelfCollision();
 
             uint32_t starttime = GetMilliTime();
-            pmanip->GetIkSolver()->SetCustomFilter(boost::bind(MyTimeoutFilter,_1,_2,_3,starttime));
-            bool bsuccess = pmanip->FindIKSolution(pmanip->GetIkParameterization(IkParameterization::Type_Transform6D),v,IKFO_CheckEnvCollisions);
+            UserDataPtr filterhandle = pmanip->GetIkSolver()->RegisterCustomFilter(0,boost::bind(MyTimeoutFilter,_1,_2,_3,starttime));
+            bool bsuccess = pmanip->FindIKSolution(pmanip->GetIkParameterization(IKP_Transform6D),v,IKFO_CheckEnvCollisions);
             RAVELOG_INFO("in collision: %d, real success %d, time passed: %d\n",bincollision,bsuccess,GetMilliTime()-starttime);
         }
     }

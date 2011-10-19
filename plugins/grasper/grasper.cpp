@@ -1,4 +1,5 @@
-// Copyright (C) 2006-2008 Carnegie Mellon University (rdiankov@cs.cmu.edu)
+// -*- coding: utf-8 -*-
+// Copyright (C) 2006-2011 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
@@ -13,21 +14,22 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "plugindefs.h"
-#include "grasperplanner.h"
-#include "grasper.h"
 #include <openrave/plugin.h>
+
+PlannerBasePtr CreateGrasperPlanner(EnvironmentBasePtr penv, std::istream& sinput);
+ModuleBasePtr CreateGrasperModule(EnvironmentBasePtr penv, std::istream& sinput);
 
 InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
 {
     switch(type) {
     case PT_Planner:
         if( interfacename == "grasper" ) {
-            return InterfaceBasePtr(new GrasperPlanner(penv));
+            return CreateGrasperPlanner(penv,sinput);
         }
         break;
     case PT_Module:
         if( interfacename == "grasper") {
-            return InterfaceBasePtr(new GrasperProblem(penv));
+            return CreateGrasperModule(penv,sinput);
         }
         break;
     default:

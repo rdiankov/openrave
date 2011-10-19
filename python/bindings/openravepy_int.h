@@ -17,6 +17,8 @@
 #ifndef OPENRAVEPY_INTERNAL_H
 #define OPENRAVEPY_INTERNAL_H
 
+#include <Python.h>
+
 #include "openrave-core.h"
 
 #ifndef _WIN32
@@ -26,8 +28,6 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #endif
-
-#include <Python.h>
 
 #include <sstream>
 #include <exception>
@@ -78,6 +78,7 @@ class PyTrajectoryBase;
 class PyModuleBase;
 class PyViewerBase;
 class PySpaceSamplerBase;
+class PyConfigurationSpecification;
 
 typedef boost::shared_ptr<PyInterfaceBase> PyInterfaceBasePtr;
 typedef boost::shared_ptr<PyInterfaceBase const> PyInterfaceBaseConstPtr;
@@ -91,12 +92,12 @@ typedef boost::shared_ptr<PyIkSolverBase> PyIkSolverBasePtr;
 typedef boost::shared_ptr<PyIkSolverBase const> PyIkSolverBaseConstPtr;
 typedef boost::shared_ptr<PyTrajectoryBase> PyTrajectoryBasePtr;
 typedef boost::shared_ptr<PyTrajectoryBase const> PyTrajectoryBaseConstPtr;
-typedef boost::shared_ptr<PyCollisionReport> PyCollisionReportPtr;
-typedef boost::shared_ptr<PyCollisionReport const> PyCollisionReportConstPtr;
 typedef boost::shared_ptr<PyPhysicsEngineBase> PyPhysicsEngineBasePtr;
 typedef boost::shared_ptr<PyPhysicsEngineBase const> PyPhysicsEngineBaseConstPtr;
 typedef boost::shared_ptr<PyCollisionCheckerBase> PyCollisionCheckerBasePtr;
 typedef boost::shared_ptr<PyCollisionCheckerBase const> PyCollisionCheckerBaseConstPtr;
+typedef boost::shared_ptr<PyCollisionReport> PyCollisionReportPtr;
+typedef boost::shared_ptr<PyCollisionReport const> PyCollisionReportConstPtr;
 typedef boost::shared_ptr<PyPlannerBase> PyPlannerBasePtr;
 typedef boost::shared_ptr<PyPlannerBase const> PyPlannerBaseConstPtr;
 typedef boost::shared_ptr<PySensorBase> PySensorBasePtr;
@@ -111,6 +112,8 @@ typedef boost::shared_ptr<PyViewerBase> PyViewerBasePtr;
 typedef boost::shared_ptr<PyViewerBase const> PyViewerBaseConstPtr;
 typedef boost::shared_ptr<PySpaceSamplerBase> PySpaceSamplerBasePtr;
 typedef boost::shared_ptr<PySpaceSamplerBase const> PySpaceSamplerBaseConstPtr;
+typedef boost::shared_ptr<PyConfigurationSpecification> PyConfigurationSpecificationPtr;
+typedef boost::shared_ptr<PyConfigurationSpecification const> PyConfigurationSpecificationConstPtr;
 
 inline uint64_t GetMicroTime()
 {
@@ -419,23 +422,162 @@ bool ExtractRay(object o, RAY& r);
 object toPyTriMesh(const KinBody::Link::TRIMESH& mesh);
 bool ExtractTriMesh(object o, KinBody::Link::TRIMESH& mesh);
 
+class PyInterfaceBase
+{
+protected:
+    InterfaceBasePtr _pbase;
+    PyEnvironmentBasePtr _pyenv;
+public:
+    PyInterfaceBase(InterfaceBasePtr pbase, PyEnvironmentBasePtr pyenv);
+    virtual ~PyInterfaceBase() {
+    }
+
+    InterfaceType GetInterfaceType() const {
+        return _pbase->GetInterfaceType();
+    }
+    string GetXMLId() const {
+        return _pbase->GetXMLId();
+    }
+    string GetPluginName() const {
+        return _pbase->GetPluginName();
+    }
+    string GetDescription() const {
+        return _pbase->GetDescription();
+    }
+    PyEnvironmentBasePtr GetEnv() const {
+        return _pyenv;
+    }
+
+    void Clone(PyInterfaceBasePtr preference, int cloningoptions) {
+        CHECK_POINTER(preference);
+        _pbase->Clone(preference->GetInterfaceBase(),cloningoptions);
+    }
+
+    void SetUserData(PyUserData pdata) {
+        _pbase->SetUserData(pdata._handle);
+    }
+    void SetUserData(object o) {
+        _pbase->SetUserData(boost::shared_ptr<UserData>(new PyUserObject(o)));
+    }
+    object GetUserData() const {
+        boost::shared_ptr<PyUserObject> po = boost::dynamic_pointer_cast<PyUserObject>(_pbase->GetUserData());
+        if( !po ) {
+            return object(PyUserData(_pbase->GetUserData()));
+        }
+        else {
+            return po->_o;
+        }
+    }
+
+    class PythonThreadSaver
+    {
+public:
+        PythonThreadSaver() {
+            _save = PyEval_SaveThread();
+        }
+        virtual ~PythonThreadSaver() {
+            PyEval_RestoreThread(_save);
+        }
+protected:
+        PyThreadState *_save;
+    };
+
+    object SendCommand(const string& in, bool releasegil=false) {
+        boost::shared_ptr<PythonThreadSaver> statesaver;
+        if( releasegil ) {
+            statesaver.reset(new PythonThreadSaver());
+        }
+        stringstream sin(in), sout;
+        sout << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
+        if( !_pbase->SendCommand(sout,sin) ) {
+            return object();
+        }
+        return object(sout.str());
+    }
+
+    virtual string __repr__() {
+        return boost::str(boost::format("<RaveCreateInterface(RaveGetEnvironment(%d),InterfaceType.%s,'%s')>")%RaveGetEnvironmentId(_pbase->GetEnv())%RaveGetInterfaceName(_pbase->GetInterfaceType())%_pbase->GetXMLId());
+    }
+    virtual string __str__() {
+        return boost::str(boost::format("<%s:%s>")%RaveGetInterfaceName(_pbase->GetInterfaceType())%_pbase->GetXMLId());
+    }
+    virtual bool __eq__(PyInterfaceBasePtr p) {
+        return !!p && _pbase == p->GetInterfaceBase();
+    }
+    virtual bool __ne__(PyInterfaceBasePtr p) {
+        return !p || _pbase != p->GetInterfaceBase();
+    }
+    virtual InterfaceBasePtr GetInterfaceBase() {
+        return _pbase;
+    }
+};
+
 namespace openravepy
 {
+
+EnvironmentBasePtr GetEnvironment(PyEnvironmentBasePtr);
+void LockEnvironment(PyEnvironmentBasePtr);
+void UnlockEnvironment(PyEnvironmentBasePtr);
+
+void init_openravepy_collisionchecker();
+CollisionCheckerBasePtr GetCollisionChecker(PyCollisionCheckerBasePtr);
+PyInterfaceBasePtr toPyCollisionChecker(CollisionCheckerBasePtr, PyEnvironmentBasePtr);
+CollisionReportPtr GetCollisionReport(object);
+CollisionReportPtr GetCollisionReport(PyCollisionReportPtr);
+PyCollisionReportPtr toPyCollisionReport(CollisionReportPtr, PyEnvironmentBasePtr);
+void UpdateCollisionReport(PyCollisionReportPtr, PyEnvironmentBasePtr);
+void UpdateCollisionReport(object, PyEnvironmentBasePtr);
+void init_openravepy_controller();
+ControllerBasePtr GetController(PyControllerBasePtr);
+PyInterfaceBasePtr toPyController(ControllerBasePtr, PyEnvironmentBasePtr);
+void init_openravepy_iksolver();
+IkSolverBasePtr GetIkSolver(PyIkSolverBasePtr);
+PyInterfaceBasePtr toPyIkSolver(IkSolverBasePtr, PyEnvironmentBasePtr);
+void init_openravepy_kinbody();
+KinBodyPtr GetKinBody(object);
+KinBodyPtr GetKinBody(PyKinBodyPtr);
+PyInterfaceBasePtr toPyKinBody(KinBodyPtr, PyEnvironmentBasePtr);
+object toPyKinBodyLink(KinBody::LinkPtr plink, PyEnvironmentBasePtr);
+KinBody::LinkPtr GetKinBodyLink(object);
+KinBody::LinkConstPtr GetKinBodyLinkConst(object);
+KinBody::JointPtr GetKinBodyJoint(object);
+void init_openravepy_module();
+ModuleBasePtr GetModule(PyModuleBasePtr);
+PyInterfaceBasePtr toPyModule(ModuleBasePtr, PyEnvironmentBasePtr);
+void init_openravepy_physicsengine();
+PhysicsEngineBasePtr GetPhysicsEngine(PyPhysicsEngineBasePtr);
+PyInterfaceBasePtr toPyPhysicsEngine(PhysicsEngineBasePtr, PyEnvironmentBasePtr);
+void init_openravepy_planner();
+PlannerBasePtr GetPlanner(PyPlannerBasePtr);
+PyInterfaceBasePtr toPyPlanner(PlannerBasePtr, PyEnvironmentBasePtr);
+//void init_openravepy_robot();
+RobotBasePtr GetRobot(PyRobotBasePtr);
+PyInterfaceBasePtr toPyRobot(RobotBasePtr, PyEnvironmentBasePtr);
+object toPyRobotManipulator(RobotBase::ManipulatorPtr, PyEnvironmentBasePtr);
+void init_openravepy_sensor();
+SensorBasePtr GetSensor(PySensorBasePtr);
+PyInterfaceBasePtr toPySensor(SensorBasePtr, PyEnvironmentBasePtr);
+object toPySensorData(SensorBasePtr, PyEnvironmentBasePtr);
+void init_openravepy_sensorsystem();
+SensorSystemBasePtr GetSensorSystem(PySensorSystemBasePtr);
+PyInterfaceBasePtr toPySensorSystem(SensorSystemBasePtr, PyEnvironmentBasePtr);
+void init_openravepy_spacesampler();
+SpaceSamplerBasePtr GetSpaceSampler(PySpaceSamplerBasePtr);
+PyInterfaceBasePtr toPySpaceSampler(SpaceSamplerBasePtr, PyEnvironmentBasePtr);
+void init_openravepy_trajectory();
+TrajectoryBasePtr GetTrajectory(PyTrajectoryBasePtr);
+PyInterfaceBasePtr toPyTrajectory(TrajectoryBasePtr, PyEnvironmentBasePtr);
+PyEnvironmentBasePtr toPyEnvironment(PyTrajectoryBasePtr);
+void init_openravepy_viewer();
+ViewerBasePtr GetViewer(PyViewerBasePtr);
+PyInterfaceBasePtr toPyViewer(ViewerBasePtr, PyEnvironmentBasePtr);
+
+PyConfigurationSpecificationPtr toPyConfigurationSpecification(const ConfigurationSpecification&);
+const ConfigurationSpecification& GetConfigurationSpecification(PyConfigurationSpecificationPtr);
+
 PyInterfaceBasePtr RaveCreateInterface(PyEnvironmentBasePtr pyenv, InterfaceType type, const std::string& name);
-PyRobotBasePtr RaveCreateRobot(PyEnvironmentBasePtr pyenv, const std::string& name);
-PyPlannerBasePtr RaveCreatePlanner(PyEnvironmentBasePtr pyenv, const std::string& name);
-PySensorSystemBasePtr RaveCreateSensorSystem(PyEnvironmentBasePtr pyenv, const std::string& name);
-PyControllerBasePtr RaveCreateController(PyEnvironmentBasePtr pyenv, const std::string& name);
-PyModuleBasePtr RaveCreateModule(PyEnvironmentBasePtr pyenv, const std::string& name);
-PyIkSolverBasePtr RaveCreateIkSolver(PyEnvironmentBasePtr pyenv, const std::string& name);
-PyPhysicsEngineBasePtr RaveCreatePhysicsEngine(PyEnvironmentBasePtr pyenv, const std::string& name);
-PySensorBasePtr RaveCreateSensor(PyEnvironmentBasePtr pyenv, const std::string& name);
-PyCollisionCheckerBasePtr RaveCreateCollisionChecker(PyEnvironmentBasePtr pyenv, const std::string& name);
-PyViewerBasePtr RaveCreateViewer(PyEnvironmentBasePtr pyenv, const std::string& name);
-PySpaceSamplerBasePtr RaveCreateSpaceSampler(PyEnvironmentBasePtr pyenv, const std::string& name);
-PyKinBodyPtr RaveCreateKinBody(PyEnvironmentBasePtr pyenv, const std::string& name);
-PyTrajectoryBasePtr RaveCreateTrajectory(PyEnvironmentBasePtr pyenv, const std::string& name);
 void init_openravepy_global();
+
 }
 
 #endif

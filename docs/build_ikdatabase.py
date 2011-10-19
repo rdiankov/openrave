@@ -15,7 +15,7 @@ import openravepy
 from openravepy import *
 from numpy import *
 from optparse import OptionParser
-import os, operator
+import os, sys, operator
 import scipy
 import shutil
 import pysvn
@@ -334,6 +334,9 @@ if __name__ == "__main__":
     parser.add_option('--ikfaststats',action="store",type='string',dest='ikfaststats',default='ikfaststats.pp',
                       help='The python pickled file containing ikfast statistics.')
     (options,args) = parser.parse_args()
+
+    if not os.path.exists(options.ikfaststats):
+        sys.exit(1)
 
     try:
         # have to clean the directory since cached files can get in the way

@@ -29,12 +29,15 @@ public:
 :Interface Author:  Rosen Diankov\n\n\
 Uses the Rapidly-Exploring Random Trees Algorithm.\n\
 ";
+        RegisterCommand("GetGoalIndex",boost::bind(&RrtPlanner<Node>::GetGoalIndexCommand,this,_1,_2),
+                        "returns the goal index of the plan");
     }
     virtual ~RrtPlanner() {
     }
 
     virtual bool _InitPlan(RobotBasePtr pbase, PlannerParametersPtr params)
     {
+        _goalindex = -1;
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
 
         _robot = pbase;
@@ -60,7 +63,12 @@ Uses the Rapidly-Exploring Random Trees Algorithm.\n\
             _treeForward.AddNode(-1, vinitialconfig);
         }
 
-        return _treeForward._nodes.size()>0;
+        if( _treeForward._nodes.size() == 0 && !params->_sampleinitialfn ) {
+            RAVELOG_WARN("no initial configurations\n");
+            return false;
+        }
+
+        return true;
     }
 
     // simple path optimization
@@ -117,9 +125,17 @@ Uses the Rapidly-Exploring Random Trees Algorithm.\n\
     virtual RobotBasePtr GetRobot() const {
         return _robot;
     }
+
+    bool GetGoalIndexCommand(std::ostream& os, std::istream& is)
+    {
+        os << _goalindex;
+        return !!os;
+    }
+
 protected:
     RobotBasePtr _robot;
     std::vector<dReal>         _sampleConfig;
+    int _goalindex;
 
     SpatialTree< RrtPlanner<Node>, Node > _treeForward;
 
@@ -193,11 +209,12 @@ public:
         return true;
     }
 
-    virtual bool PlanPath(TrajectoryBasePtr ptraj, boost::shared_ptr<std::ostream> pOutStream)
+    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
     {
+        _goalindex = -1;
         if(!_parameters) {
             RAVELOG_ERROR("BirrtPlanner::PlanPath - Error, planner not initialized\n");
-            return false;
+            return PS_Failed;
         }
 
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
@@ -273,7 +290,7 @@ public:
 
         if( !bConnected ) {
             RAVELOG_WARN("plan failed, %fs\n",0.001f*(float)(GetMilliTime()-basetime));
-            return false;
+            return PS_Failed;
         }
 
         list<SimpleNode*> vecnodes;
@@ -289,35 +306,30 @@ public:
         }
 
         // add nodes from the backward tree
-        int goalindex = -1;
+        _goalindex = -1;
 
         SimpleNode *pbackward = _treeBackward._nodes.at(TreeA == &_treeBackward ? iConnectedA : iConnectedB);
         while(1) {
             vecnodes.push_back(pbackward);
             if(pbackward->parent < 0) {
-                goalindex = -pbackward->parent-1;
+                _goalindex = -pbackward->parent-1;
                 break;
             }
             pbackward = _treeBackward._nodes.at(pbackward->parent);
         }
 
-        BOOST_ASSERT( goalindex >= 0 );
-        if( !!pOutStream ) {
-            *pOutStream << goalindex;
-        }
+        BOOST_ASSERT( _goalindex >= 0 );
         _SimpleOptimizePath(vecnodes,10);
 
-        Trajectory::TPOINT pt; pt.q.resize(_parameters->GetDOF());
-
+        if( ptraj->GetConfigurationSpecification().GetDOF() == 0 ) {
+            ptraj->Init(_parameters->_configurationspecification);
+        }
         FOREACH(itnode, vecnodes) {
-            for(int i = 0; i < _parameters->GetDOF(); ++i) {
-                pt.q[i] = (*itnode)->q[i];
-            }
-            ptraj->AddPoint(pt);
+            ptraj->Insert(ptraj->GetNumWaypoints(),(*itnode)->q,_parameters->_configurationspecification);
         }
 
-        RAVELOG_DEBUG(str(boost::format("plan success, path=%d points in %fs\n")%ptraj->GetPoints().size()%(0.001f*(float)(GetMilliTime()-basetime))));
-        return _OptimizePath(_robot,ptraj);
+        RAVELOG_DEBUG(str(boost::format("plan success, path=%d points in %fs\n")%ptraj->GetNumWaypoints()%(0.001f*(float)(GetMilliTime()-basetime))));
+        return _ProcessPostPlanners(_robot,ptraj);
     }
 
     virtual PlannerParametersConstPtr GetParameters() const {
@@ -393,11 +405,11 @@ public:
         return true;
     }
 
-    bool PlanPath(TrajectoryBasePtr ptraj, boost::shared_ptr<std::ostream> pOutStream)
+    PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
     {
         if(!_parameters) {
             RAVELOG_WARN("RrtPlanner::PlanPath - Error, planner not initialized\n");
-            return false;
+            return PS_Failed;
         }
 
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
@@ -411,7 +423,7 @@ public:
         CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
 
         int iter = 0;
-        int igoalindex = -1;
+        _goalindex = -1;
 
         while(!bSuccess && iter < _parameters->_nMaxIterations) {
             iter++;
@@ -445,8 +457,8 @@ public:
                 FOREACH(itgoal, _vecGoals) {
                     if( _treeForward._distmetricfn(*itgoal, _treeForward._nodes.at(lastnode)->q) < 2*_treeForward._fStepLength ) {
                         bSuccess = true;
-                        igoalindex = (int)(itgoal-_vecGoals.begin());
-                        RAVELOG_DEBUG(str(boost::format("found goal index: %d\n")%igoalindex));
+                        _goalindex = (int)(itgoal-_vecGoals.begin());
+                        RAVELOG_DEBUG(str(boost::format("found goal index: %d\n")%_goalindex));
                         break;
                     }
                 }
@@ -456,7 +468,7 @@ public:
             if(( et != ET_Failed) && !!_parameters->_goalfn ) {
                 if( _parameters->_goalfn(_treeForward._nodes.at(lastnode)->q) <= 1e-4f ) {
                     bSuccess = true;
-                    igoalindex = -1;
+                    _goalindex = -1;
                     RAVELOG_DEBUG("node at goal\n");
                     break;
                 }
@@ -471,7 +483,7 @@ public:
 
         if( !bSuccess ) {
             RAVELOG_DEBUG("plan failed, %fs\n",0.001f*(float)(GetMilliTime()-basetime));
-            return false;
+            return PS_Failed;
         }
 
         list<SimpleNode*> vecnodes;
@@ -487,21 +499,16 @@ public:
         }
 
         _SimpleOptimizePath(vecnodes,10);
-        if( !!pOutStream ) {
-            *pOutStream << igoalindex;
+        if( ptraj->GetConfigurationSpecification().GetDOF() == 0 ) {
+            ptraj->Init(_parameters->_configurationspecification);
         }
-        Trajectory::TPOINT pt; pt.q.resize(_parameters->GetDOF());
         FOREACH(itnode, vecnodes) {
-            for(int i = 0; i < _parameters->GetDOF(); ++i) {
-                pt.q[i] = (*itnode)->q[i];
-            }
-            ptraj->AddPoint(pt);
+            ptraj->Insert(ptraj->GetNumWaypoints(),(*itnode)->q,_parameters->_configurationspecification);
         }
 
-        bSuccess = _OptimizePath(_robot,ptraj);
-        RAVELOG_DEBUG(str(boost::format("plan success, path=%d points in %fs\n")%ptraj->GetPoints().size()%((0.001f*(float)(GetMilliTime()-basetime)))));
-
-        return bSuccess;
+        PlannerStatus status = _ProcessPostPlanners(_robot,ptraj);
+        RAVELOG_DEBUG(str(boost::format("plan success, path=%d points in %fs\n")%ptraj->GetNumWaypoints()%((0.001f*(float)(GetMilliTime()-basetime)))));
+        return status;
     }
 
     virtual PlannerParametersConstPtr GetParameters() const {
@@ -598,10 +605,11 @@ protected:
         return true;
     }
 
-    virtual bool PlanPath(TrajectoryBasePtr ptraj, boost::shared_ptr<std::ostream> pOutStream)
+    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
     {
+        _goalindex = -1;
         if( !_parameters ) {
-            return false;
+            return PS_Failed;
         }
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         vector<dReal> vSampleConfig;
@@ -619,7 +627,7 @@ protected:
                 SimpleNode* pnode = _treeForward._nodes.at(inode);
 
                 if( !_parameters->_sampleneighfn(vSampleConfig,pnode->q,_parameters->_fStepLength) ) {
-                    return false;
+                    return PS_Failed;
                 }
                 if( GetParameters()->_checkpathconstraintsfn(pnode->q, vSampleConfig, IT_OpenStart,ConfigurationListPtr()) ) {
                     _treeForward.AddNode(inode,vSampleConfig);
@@ -638,11 +646,14 @@ protected:
             }
         }
 
+        if( ptraj->GetConfigurationSpecification().GetDOF() == 0 ) {
+            ptraj->Init(_parameters->_configurationspecification);
+        }
         // save nodes to trajectory
         FOREACH(itnode, _treeForward._nodes) {
-            ptraj->AddPoint(Trajectory::TPOINT((*itnode)->q,0));
+            ptraj->Insert(ptraj->GetNumWaypoints(),(*itnode)->q,_parameters->_configurationspecification);
         }
-        return true;
+        return PS_HasSolution;
     }
 
     virtual PlannerParametersConstPtr GetParameters() const {

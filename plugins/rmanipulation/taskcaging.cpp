@@ -58,7 +58,7 @@ public:
             bool operator()( const pair<T,dReal>& a, const pair<T,dReal>& b ) const {
                 // always put the grasps with computed iksolutions first
                 if( (a.first->iksolutions.size() > 0) == (b.first->iksolutions.size() > 0) )
-                    return a.second > b.second;                                                                                                   // minimum on top of stack
+                    return a.second > b.second;                                                                                                                                                    // minimum on top of stack
                 else
                     return a.first->iksolutions.size() == 0;
             }
@@ -1402,15 +1402,16 @@ private:
         finaltime = GetMilliTime()-basetime;
 
         Trajectory::TPOINT tp;
+        vector<Trajectory::TPOINT> vtemppoints = ptrajtemp->GetPoints();
         if( bReverseTrajectory ) {
-            FOREACHR(itpoint, ptrajtemp->GetPoints()) {
+            FOREACHRC(itpoint, vtemppoints) {
                 tp.q.resize(0);
                 tp.q.insert(tp.q.end(), itpoint->q.begin(), itpoint->q.begin()+_robot->GetActiveDOF());
                 ptraj->AddPoint(tp);
             }
         }
         else {
-            FOREACH(itpoint, ptrajtemp->GetPoints()) {
+            FOREACHC(itpoint, vtemppoints) {
                 tp.q.resize(0);
                 tp.q.insert(tp.q.end(), itpoint->q.begin(), itpoint->q.begin()+_robot->GetActiveDOF());
                 ptraj->AddPoint(tp);
@@ -1428,7 +1429,7 @@ private:
             Transform ttarget = taskdata->ptarget->GetTransform();
 
             if( bReverseTrajectory ) {
-                FOREACHR(itpoint, ptrajtemp->GetPoints()) {
+                FOREACHRC(itpoint, ptrajtemp->GetPoints()) {
                     for(size_t i = 0; i < taskdata->_vtargetjoints.size(); ++i)
                         tp.q[taskdata->_vtargetjoints[i]] = itpoint->q[_robot->GetActiveDOF()+i];
                     tp.time = itrobottraj++->time;
@@ -1437,7 +1438,7 @@ private:
                 }
             }
             else {
-                FOREACH(itpoint, ptrajtemp->GetPoints()) {
+                FOREACHC(itpoint, ptrajtemp->GetPoints()) {
                     for(size_t i = 0; i < taskdata->_vtargetjoints.size(); ++i)
                         tp.q[taskdata->_vtargetjoints[i]] = itpoint->q[_robot->GetActiveDOF()+i];
                     tp.time = itrobottraj++->time;
@@ -1447,7 +1448,7 @@ private:
             }
 
             ofstream f(strbodytraj.c_str());
-            pbodytraj->Write(f, Trajectory::TO_IncludeTimestamps|Trajectory::TO_IncludeBaseTransformation);
+            pbodytraj->serialize(f);
         }
 
         RAVELOG_WARN("success, time=%dms\n", finaltime);
@@ -1468,7 +1469,7 @@ private:
             boost::shared_ptr<Trajectory> pfulltraj(RaveCreateTrajectory(GetEnv(),_robot->GetDOF()));
             _robot->GetFullTrajectoryFromActive(pfulltraj, ptraj);
             ofstream f(strsavetraj.c_str());
-            pfulltraj->Write(f, Trajectory::TO_IncludeTimestamps|Trajectory::TO_IncludeBaseTransformation);
+            pfulltraj->serialize(f);
         }
 
         return true;
@@ -1683,14 +1684,14 @@ private:
             }
 
             ofstream f(strbodytraj.c_str());
-            pbodytraj->Write(f, Trajectory::TO_IncludeTimestamps|Trajectory::TO_IncludeBaseTransformation);
+            pbodytraj->serialize(f);
         }
 
         if( strsavetraj.size() ) {
             boost::shared_ptr<Trajectory> pfulltraj(RaveCreateTrajectory(GetEnv(),_robot->GetDOF()));
             _robot->GetFullTrajectoryFromActive(pfulltraj, ptraj);
             ofstream f(strsavetraj.c_str());
-            pfulltraj->Write(f, Trajectory::TO_IncludeTimestamps|Trajectory::TO_IncludeBaseTransformation);
+            pfulltraj->serialize(f);
         }
 
         return true;

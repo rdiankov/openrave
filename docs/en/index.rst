@@ -17,11 +17,11 @@ Getting Started
 
 * :ref:`getting_started`
 
- * :ref:`openravepy_beginning`, :ref:`command_line_tools`, `Writing Plugins in C++ <../coreapihtml/writing_plugins.html>`_, :ref:`environment_variables`, `Octave/MATLAB`_
+ * :ref:`openravepy_beginning`, :ref:`command_line_tools`, :ref:`writing_plugins`_, :ref:`environment_variables`, `Octave/MATLAB`_
 
 * :ref:`overview`
 
- * `Architecture`_, `Interface Concepts`_, :ref:`package-databases`, :ref:`robots_overview`, :ref:`geometric_conventions`
+ * `Architecture`_, :ref:`interface_concepts`, :ref:`package-databases`, :ref:`robots_overview`, :ref:`geometric_conventions`
 
 Resources
 ---------

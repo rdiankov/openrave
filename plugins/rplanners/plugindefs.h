@@ -138,12 +138,36 @@ inline static uint32_t GetMilliTime()
 
 #define FORIT(it, v) for(it = (v).begin(); it != (v).end(); (it)++)
 
+using namespace OpenRAVE;
+
+template <typename T>
+inline T NORMALIZE_ANGLE(T theta, T min, T max)
+{
+    if (theta < min) {
+        theta += T(2*PI);
+        while (theta < min) {
+            theta += T(2*PI);
+        }
+    }
+    else if (theta > max) {
+        theta -= T(2*PI);
+        while (theta > max) {
+            theta -= T(2*PI);
+        }
+    }
+    return theta;
+}
+
+template <typename T>
+inline T ANGLE_DIFF(T f0, T f1)
+{
+    return NORMALIZE_ANGLE(f0-f1, T(-PI), T(PI));
+}
+
 struct null_deleter
 {
     void operator()(void const *) const {
     }
 };
-
-using namespace OpenRAVE;
 
 #endif

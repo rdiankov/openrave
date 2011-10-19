@@ -11,6 +11,7 @@ Installation
 
 .. code-block:: bash
 
+  apt-get remove python-sphinx
   apt-get install python-pygments python-setuptools python-lxml python-matplotlib dvipng dia-common python-svn
   easy_install --upgrade docutils
   easy_install sphinx
@@ -21,7 +22,7 @@ Installation
 
 If using latex, install::
 
-  apt-get install  dot2tex, texlive-base, texlive-latex-base, texlive-pictures, texlive-fonts-recommended
+  apt-get install  dot2tex texlive-base texlive-latex-base texlive-pictures texlive-fonts-recommended
 
 For japanese fonts install::
 

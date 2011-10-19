@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2010 Rosen Diankov (rosen.diankov@gmail.com)
+// Copyright (C) 2006-2011 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -155,6 +155,74 @@ protected:
     }
 };
 
+class TrajectoryTimingParameters : public PlannerBase::PlannerParameters
+{
+public:
+    TrajectoryTimingParameters() : _interpolation("linear"), _hastimestamps(false), _pointtolerance(0.001), _bProcessing(false) {
+        _vXMLParameters.push_back("interpolation");
+        _vXMLParameters.push_back("hastimestamps");
+        _vXMLParameters.push_back("pointtolerance");
+    }
+
+    string _interpolation;
+    bool _hastimestamps;
+    dReal _pointtolerance;
+
+protected:
+    bool _bProcessing;
+    virtual bool serialize(std::ostream& O) const
+    {
+        if( !PlannerParameters::serialize(O) ) {
+            return false;
+        }
+        O << "<interpolation>" << _interpolation << "</interpolation>" << endl;
+        O << "<hastimestamps>" << _hastimestamps << "</hastimestamps>" << endl;
+        O << "<pointtolerance>" << _pointtolerance << "</pointtolerance>" << endl;
+        return !!O;
+    }
+
+    ProcessElement startElement(const std::string& name, const AttributesList& atts)
+    {
+        if( _bProcessing ) {
+            return PE_Ignore;
+        }
+        switch( PlannerBase::PlannerParameters::startElement(name,atts) ) {
+        case PE_Pass: break;
+        case PE_Support: return PE_Support;
+        case PE_Ignore: return PE_Ignore;
+        }
+
+        _bProcessing = name=="interpolation" || name=="hastimestamps" || name=="pointtolerance";
+        return _bProcessing ? PE_Support : PE_Pass;
+    }
+
+    virtual bool endElement(const string& name)
+    {
+        if( _bProcessing ) {
+            if( name == "interpolation") {
+                _ss >> _interpolation;
+            }
+            else if( name == "hastimestamps" ) {
+                _ss >> _hastimestamps;
+            }
+            else if( name == "pointtolerance" ) {
+                _ss >> _pointtolerance;
+            }
+            else {
+                RAVELOG_WARN(str(boost::format("unknown tag %s\n")%name));
+            }
+            _bProcessing = false;
+            return false;
+        }
+
+        // give a chance for the default parameters to get processed
+        return PlannerParameters::endElement(name);
+    }
+};
+
+typedef boost::shared_ptr<TrajectoryTimingParameters> TrajectoryTimingParametersPtr;
+typedef boost::shared_ptr<TrajectoryTimingParameters const> TrajectoryTimingParametersConstPtr;
+
 class WorkspaceTrajectoryParameters : public PlannerBase::PlannerParameters
 {
 public:
@@ -165,6 +233,7 @@ public:
         _vXMLParameters.push_back("ignorefirstcollision");
         _vXMLParameters.push_back("minimumcompletetime");
         _vXMLParameters.push_back("workspacetraj");
+        _vXMLParameters.push_back("conveyorspeed");
     }
 
     dReal maxdeviationangle;     ///< the maximum angle the next iksolution can deviate from the expected direction computed by the jacobian
@@ -173,6 +242,8 @@ public:
     dReal ignorefirstcollision;     ///< if > 0, will allow the robot to be in environment collision for the initial 'ignorefirstcollision' seconds of the trajectory. Once the robot gets out of collision, it will execute its normal following phase until it gets into collision again. This option is used when lifting objects from a surface, where the object is already in collision with the surface.
     dReal minimumcompletetime;     ///< specifies the minimum trajectory that must be followed for planner to declare success. If 0, then the entire trajectory has to be followed.
     TrajectoryBasePtr workspacetraj;     ///< workspace trajectory
+    Vector conveyorspeed; ///< velocity of the coordinate system. used if object is on is moving at a constant speed on a conveyor
+
 protected:
     EnvironmentBasePtr _penv;
     bool _bProcessing;
@@ -188,10 +259,11 @@ protected:
         O << "<ignorefirstcollision>" << ignorefirstcollision << "</ignorefirstcollision>" << endl;
         O << "<minimumcompletetime>" << minimumcompletetime << "</minimumcompletetime>" << endl;
         if( !!workspacetraj ) {
-            O << "<workspacetraj>";
-            workspacetraj->Write(O,TrajectoryBase::TO_IncludeTimestamps|TrajectoryBase::TO_IncludeBaseTransformation);
-            O << "</workspacetraj>" << endl;
+            O << "<workspacetraj><![CDATA[";
+            workspacetraj->serialize(O);
+            O << "]]></workspacetraj>" << endl;
         }
+        O << "<conveyorspeed>" << conveyorspeed << "</conveyorspeed>" << endl;
         return !!O;
     }
 
@@ -205,7 +277,7 @@ protected:
         case PE_Support: return PE_Support;
         case PE_Ignore: return PE_Ignore;
         }
-        _bProcessing = name=="maxdeviationangle" || name=="maintaintiming" || name=="greedysearch" || name=="ignorefirstcollision" || name=="minimumcompletetime" || name=="workspacetraj";
+        _bProcessing = name=="maxdeviationangle" || name=="maintaintiming" || name=="greedysearch" || name=="ignorefirstcollision" || name=="minimumcompletetime" || name=="workspacetraj" || name == "conveyorspeed";
         return _bProcessing ? PE_Support : PE_Pass;
     }
 
@@ -229,11 +301,14 @@ protected:
             else if( name == "minimumcompletetime" ) {
                 _ss >> minimumcompletetime;
             }
+            else if( name == "conveyorspeed" ) {
+                _ss >> conveyorspeed;
+            }
             else if( name == "workspacetraj" ) {
                 if( !workspacetraj ) {
                     workspacetraj = RaveCreateTrajectory(_penv,"");
                 }
-                workspacetraj->Read(_ss,RobotBasePtr());
+                workspacetraj->deserialize(_ss);
             }
             else {
                 RAVELOG_WARN(str(boost::format("unknown tag %s\n")%name));
@@ -245,5 +320,8 @@ protected:
         return PlannerParameters::endElement(name);
     }
 };
+
+typedef boost::shared_ptr<WorkspaceTrajectoryParameters> WorkspaceTrajectoryParametersPtr;
+typedef boost::shared_ptr<WorkspaceTrajectoryParameters const> WorkspaceTrajectoryParametersConstPtr;
 
 #endif

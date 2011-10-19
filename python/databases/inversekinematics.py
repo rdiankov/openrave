@@ -123,7 +123,7 @@ Reference
 
 * :ref:`ikfast_compiler` - details on the technology behind IKFast
 
-.. _`ikfastloader.cpp`: ../coreapihtml/ikfastloader_8cpp-example.html
+.. _`ikfastloader.cpp`: ../../coreapihtml/ikfastloader_8cpp-example.html
 
 Command-line
 ------------
@@ -756,7 +756,7 @@ class InverseKinematicsModel(DatabaseGenerator):
         parser.description='Uses ikfast to compute the closed-form inverse kinematics equations of a robot manipulator, generates a C++ file, and compiles this file into a shared object which can then be loaded by OpenRAVE.'
         parser.usage='openrave.py --database inversekinematics [options]'
         parser.add_option('--freejoint', action='append', type='string', dest='freejoints',default=None,
-                          help='Optional joint name specifying a free parameter of the manipulator. If nothing specified, assumes all joints not solving for are free parameters. Can be specified multiple times for multiple free parameters.')
+                          help='Optional joint name specifying a free parameter of the manipulator. The value of a free joint is known at runtime, but not known at IK generation time. If nothing specified, assumes all joints not solving for are free parameters. Can be specified multiple times for multiple free parameters.')
         parser.add_option('--precision', action='store', type='int', dest='precision',default=8,
                           help='The precision to compute the inverse kinematics in, (default=%default).')
         parser.add_option('--usecached', action='store_false', dest='force',default=True,

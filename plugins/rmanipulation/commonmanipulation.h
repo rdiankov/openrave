@@ -19,6 +19,8 @@
 #include "plugindefs.h"
 #include "plannerparameters.h"
 
+#include <openrave/planningutils.h>
+
 // used for inverse jacobian computation
 #include <boost/numeric/ublas/vector.hpp>
 #include <boost/numeric/ublas/vector_proxy.hpp>
@@ -106,9 +108,14 @@ public:
 
         static bool _MoveUnsyncJoints(EnvironmentBasePtr penv, RobotBasePtr robot, TrajectoryBasePtr ptraj, const vector<int>& vhandjoints, const vector<dReal>& vhandgoal, const std::string& pplannername="BasicRRT",int maxdivision=10)
         {
-            if(( vhandjoints.size() == 0) ||( vhandjoints.size() != vhandgoal.size()) || !ptraj )
+            if( vhandjoints.size() == 0 ||vhandjoints.size() != vhandgoal.size() ) {
                 return false;
+            }
+            BOOST_ASSERT(!!ptraj);
 
+            if( robot->GetActiveConfigurationSpecification() != ptraj->GetConfigurationSpecification() ) {
+                ptraj->Init(robot->GetActiveConfigurationSpecification());
+            }
             boost::shared_ptr<MoveUnsync> pgoalfn(new MoveUnsync());
             pgoalfn->thresh = 0;
             pgoalfn->vhandjoints = vhandjoints;
@@ -125,8 +132,7 @@ public:
 
             if( pgoalfn->Eval(params->vinitialconfig) <= pgoalfn->GetGoalThresh() ) {
                 // already done
-                Trajectory::TPOINT pt; pt.q = params->vinitialconfig;
-                ptraj->AddPoint(pt);
+                ptraj->Insert(0,params->vinitialconfig);
                 return true;
             }
 
@@ -143,7 +149,6 @@ public:
                 return false;
             }
 
-            //ptraj->CalcTrajTiming(robot, ptraj->GetInterpMethod(), true, true);
             return true;
         }
 
@@ -293,71 +298,39 @@ protected:
 
     static bool SetActiveTrajectory(RobotBasePtr robot, TrajectoryBasePtr pActiveTraj, bool bExecute, const string& strsavetraj, boost::shared_ptr<ostream> pout,dReal fMaxVelMult=1)
     {
-        if( pActiveTraj->GetPoints().size() == 0 ) {
+        if( pActiveTraj->GetNumWaypoints() == 0 ) {
             return false;
         }
-        if( pActiveTraj->GetTotalDuration() == 0 ) {
-            pActiveTraj->CalcTrajTiming(robot, pActiveTraj->GetInterpMethod(), true, true,fMaxVelMult);
+        if( pActiveTraj->GetDuration() == 0 && pActiveTraj->GetNumWaypoints() > 1 ) {
+            planningutils::RetimeActiveDOFTrajectory(pActiveTraj,robot);
         }
-
         bool bExecuted = false;
         if( bExecute ) {
-            if( pActiveTraj->GetPoints().size() > 1 ) {
-                robot->SetActiveMotion(pActiveTraj);
-                bExecute = true;
+            if( pActiveTraj->GetNumWaypoints() > 1 ) {
+                if( !!robot->GetController() ) {
+                    robot->GetController()->SetPath(pActiveTraj);
+                    bExecute = true;
+                }
             }
-            // have to set anyway since calling script will orEnvWait!
+            // have to set anyway since calling script will query ControllerBase::IsDone
             else if( !!robot->GetController() ) {
-                TrajectoryBasePtr pfulltraj = RaveCreateTrajectory(robot->GetEnv(),robot->GetDOF());
-                robot->GetFullTrajectoryFromActive(pfulltraj, pActiveTraj);
-
-                if( robot->GetController()->SetDesired(pfulltraj->GetPoints()[0].q)) {
+                vector<dReal> robotvalues;
+                pActiveTraj->GetWaypoint(0,robotvalues,robot->GetConfigurationSpecification());
+                robotvalues.resize(robot->GetDOF());
+                if( robot->GetController()->SetDesired(robotvalues)) {
                     bExecuted = true;
                 }
             }
         }
 
         if( strsavetraj.size() || !!pout ) {
-            TrajectoryBasePtr pfulltraj = RaveCreateTrajectory(robot->GetEnv(),robot->GetDOF());
-            robot->GetFullTrajectoryFromActive(pfulltraj, pActiveTraj);
-
             if( strsavetraj.size() > 0 ) {
                 ofstream f(strsavetraj.c_str());
-                pfulltraj->Write(f, Trajectory::TO_IncludeTimestamps|Trajectory::TO_IncludeBaseTransformation);
+                pActiveTraj->serialize(f);
             }
             if( !!pout ) {
-                pfulltraj->Write(*pout, Trajectory::TO_IncludeTimestamps|Trajectory::TO_IncludeBaseTransformation|Trajectory::TO_OneLine);
+                pActiveTraj->serialize(*pout);
             }
-        }
-
-        return bExecuted;
-    }
-
-    static bool SetFullTrajectory(RobotBasePtr robot, TrajectoryBasePtr pfulltraj, bool bExecute, const string& strsavetraj, boost::shared_ptr<ostream> pout)
-    {
-        if( pfulltraj->GetPoints().size() == 0 )
-            return false;
-
-        bool bExecuted = false;
-        if( bExecute ) {
-            if( pfulltraj->GetPoints().size() > 1 ) {
-                robot->SetMotion(pfulltraj);
-                bExecute = true;
-            }
-            // have to set anyway since calling script will orEnvWait!
-            else if( !!robot->GetController() ) {
-                if( robot->GetController()->SetDesired(pfulltraj->GetPoints()[0].q))
-                    bExecuted = true;
-            }
-        }
-
-        if( strsavetraj.size() || !!pout ) {
-            if( strsavetraj.size() > 0 ) {
-                ofstream f(strsavetraj.c_str());
-                pfulltraj->Write(f, Trajectory::TO_IncludeTimestamps|Trajectory::TO_IncludeBaseTransformation);
-            }
-            if( !!pout )
-                pfulltraj->Write(*pout, Trajectory::TO_IncludeTimestamps|Trajectory::TO_IncludeBaseTransformation|Trajectory::TO_OneLine);
         }
 
         return bExecuted;
@@ -576,28 +549,6 @@ public:
 
     dReal _thresh;
 };
-
-#ifndef MATH_RANDOM_FLOAT
-#define MATH_RANDOM_FLOAT (rand()/((T)RAND_MAX))
-#endif
-
-/// \brief Generate a uniformly distributed random quaternion.
-template <typename T> inline RaveVector<T> GetRandomQuat()
-{
-    RaveVector<T> q;
-    while(1) {
-        q.x = -1 + 2*(T)(MATH_RANDOM_FLOAT);
-        q.y = -1 + 2*(T)(MATH_RANDOM_FLOAT);
-        q.z = -1 + 2*(T)(MATH_RANDOM_FLOAT);
-        q.w = -1 + 2*(T)(MATH_RANDOM_FLOAT);
-        T norm = q.lengthsqr4();
-        if(norm <= 1) {
-            q = q * (1 / RaveSqrt(norm));
-            break;
-        }
-    }
-    return q;
-}
 
 #ifdef RAVE_REGISTER_BOOST
 #include BOOST_TYPEOF_INCREMENT_REGISTRATION_GROUP()

@@ -8,12 +8,13 @@
     trajectory consists of two points: the current configuration and the target configuration.
 
     \code
-    TrajectoryBasePtr traj = penv->CreateTrajectory(probot->GetDOF());
-    probot->GetDOFValues(q); // get current values
-    traj->AddPoint(TrajectoryBase::TPOINT(q,probot->GetTransform(),0.0f));
-    q[RaveRandomInt()%probot->GetDOF()] += RaveRandomFloat()-0.5; // move a random axis
-    traj->AddPoint(TrajectoryBase::TPOINT(q,probot->GetTransform(),2.0f));
-    traj->CalcTrajTiming(probot,TrajectoryBase::CUBIC,false,false); // initialize the trajectory structures
+    TrajectoryBasePtr traj = RaveCreateTrajectory(penv,"");
+    traj->Init(probot->GetActiveConfigurationSpecification());
+    probot->GetActiveDOFValues(q); // get current values
+    traj->Insert(0,q);
+    q[0] = 0.5;
+    traj->Insert(1,q);
+    planningutils::RetimeActiveDOFTrajectory(probot,traj);
     \endcode
 
     The demo also adds a collision check at the target point to make sure robot is going to a
@@ -40,6 +41,7 @@
 
 #include <boost/thread/thread.hpp>
 #include <boost/bind.hpp>
+#include <openrave/planningutils.h>
 
 using namespace OpenRAVE;
 using namespace std;
@@ -78,9 +80,10 @@ int main(int argc, char ** argv)
         {
             EnvironmentMutex::scoped_lock lock(penv->GetMutex()); // lock environment
 
-            TrajectoryBasePtr traj = RaveCreateTrajectory(penv,probot->GetDOF());
-            probot->GetDOFValues(q); // get current values
-            traj->AddPoint(TrajectoryBase::TPOINT(q,probot->GetTransform(),0.0f));
+            TrajectoryBasePtr traj = RaveCreateTrajectory(penv,"");
+            traj->Init(probot->GetActiveConfigurationSpecification());
+            probot->GetActiveDOFValues(q); // get current values
+            traj->Insert(0,q);
             q[RaveRandomInt()%probot->GetDOF()] += RaveRandomFloat()-0.5; // move a random axis
 
             // check for collisions
@@ -92,8 +95,8 @@ int main(int argc, char ** argv)
                 }
             }
 
-            traj->AddPoint(TrajectoryBase::TPOINT(q,probot->GetTransform(),2.0f));
-            traj->CalcTrajTiming(probot,TrajectoryBase::CUBIC,false,false); // initialize the trajectory structures
+            traj->Insert(1,q);
+            planningutils::RetimeActiveDOFTrajectory(traj,probot);
             probot->GetController()->SetPath(traj);
             // setting through the robot is also possible: probot->SetMotion(traj);
         }

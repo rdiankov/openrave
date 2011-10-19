@@ -19,11 +19,17 @@ Core
 
 * added "scalegeometry" attribute to kinbody loading. can have different scales along XYZ.
 
-* Geometry files imported with assimp now load multiple geometries per material in order to preserve colors. Added :meth:`.KinBody.InitFromGeometries".
+* Geometry files imported with assimp now load multiple geometries per material in order to preserve colors. Added :meth:`.KinBody.InitFromGeometries`.
 
 * KinBody::KinBodyStateSaver and RobotBase::RobotStateSaver now have **Restore** functions that allows users to get back to the original robot without having to destroy the handle.
 
 * Now properly handling inter-grabbed-body collisions: if two grabbed bodies are initially colliding when grabbed, then their self-colision should be ignored. Also fixed a bug with :meth:`.Robot.Manipulator.CheckEndEffectorCollision`
+
+* Added a new class :class:`.ConfigurationSpecification` to manage configuration spaces, it is shared by both planners and trajectories.
+
+* Separated the affine DOF spece configuration from robot class into the global openrave space. See :class:`.DOFAffine`, :meth:`.RaveGetIndexFromAffineDOF`, :meth:`.RaveGetAffineDOFFromIndex`, :meth:`.RaveGetAffineDOF`, and :meth:`.RaveGetAffineDOFValuesFromTransform`
+
+* Can now reset the local manipulator coordinate system with :meth:`.Robot.Manipulator.SetLocalToolTransform`
 
 Inverse Kinematics
 ------------------
@@ -34,7 +40,9 @@ Inverse Kinematics
 
 * ikfast IkSolvers only check collisions of links that can possible move due to new joint values.
 
-* Added new :ref:`.IkFilterOptions.IgnoreEndEffectorCollision` option, this disables the end effector links and their attached bodies from environment collision considerations.
+* Added new :class:`.IkFilterOptions.IgnoreEndEffectorCollision` option, this disables the end effector links and their attached bodies from environment collision considerations.
+
+* fixed ikfast bug when prismatic joints are present, ikfast version is now **48**.
 
 Grasping
 --------
@@ -47,6 +55,29 @@ Grasping
 
 * added **--numthreads** option to **openrave.py --database grasping** to allow users to set number of threads.
 
+Planning
+--------
+
+* Can register callback functions during planners to stop the planner via :meth:`.Planner.RegisterPlanCallback`. Planner developers should use :meth:`.Planner._CallCallbacks` to call the callbacks.
+
+* :meth:`.Planner.PlanPath` now returns a :ref:`.PlannerStatus` enum showing how planner exited. It does not support pOutStream anymore.
+
+* Added velocity and acceleration limits to :class:`.Planner.PlannerParameters`
+
+* Each planner needs to initialize the trajectory with :meth:`.Trajectory.Init` (GetParameters()->_configurationspecification);
+
+Trajectories
+------------
+
+* Completely redesigned the :class:`.Trajectory` class, see `Trajectory Concepts`_ for usage.
+* Added :meth:`.Trajectory.Clone`
+
+* Changed trajectory serialization format to XML, see :ref:`arch_trajectory_format`
+
+* Added trajectory API to openravepy.
+
+* Added many useful trajectory routines in the :class:`.planningutils` namespace. For example: :meth:`.planningutils.VerifyTrajectory`, :meth:`.planningutils.RetimeActiveDOFTrajectory`, :meth:`.planningutils.RetimeAffineTrajectory`, :meth:`.planningutils.ConvertTrajectorySpecification`, :meth:`.planningutils.ReverseTrajectory`.
+
 Python
 ------
 
@@ -54,10 +85,10 @@ Python
 
 * added two python examples showing how to use PyQt + OpenRAVE together. :mod:`.examples.qtexampleselector` :mod:`.examples.qtserverprocess`
 
+* split openravepy into smaller files for faster compilation
+
 Misc
 ----
-
-* added :meth:`.Trajectory.Clone` and :meth:`.Trajectory.CalcTrajTiming` calls now respect active DOFs settings
 
 * "skipgeometry" now being acknowledged in :meth:`.Environment.Load`, fixes the **openrave.py inversekinematics database --getfilename** option.
 
@@ -70,6 +101,8 @@ Misc
 * odephysics now uses dJointFeedback to compute forces/torques on links
 
 * removed **KinBody.SetGuiData** and **KinBody.GetGuiData** and replaced with :meth:`.KinBody.GetViewerData` similar to how collision/physics are handled.
+
+* added  :mod:`.examples.cubeassembly` to show a robot assembling a cube from randomly scattered blocks.
 
 Version 0.4.2
 =============

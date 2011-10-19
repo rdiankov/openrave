@@ -717,7 +717,7 @@ public:
             frame_origin->setAttribute("link",(kmodelid+kmout->vlinksids.at((*itmanip)->GetBase()->GetIndex())).c_str());
             daeElementRef frame_tip = ptec->add("frame_tip");
             frame_tip->setAttribute("link",(kmodelid+kmout->vlinksids.at((*itmanip)->GetEndEffector()->GetIndex())).c_str());
-            _WriteTransformation(frame_tip,(*itmanip)->GetGraspTransform());
+            _WriteTransformation(frame_tip,(*itmanip)->GetLocalToolTransform());
             int i = 0;
             map<KinBody::JointPtr, daeElementRef> mapgripper_joints;
             FOREACHC(itindex,(*itmanip)->GetGripperIndices()) {

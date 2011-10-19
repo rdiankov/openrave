@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2010 Rosen Diankov (rdiankov@cs.cmu.edu)
+// Copyright (C) 2006-2011 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
@@ -13,8 +13,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#ifndef  GRASP_GRADIENT_PLANNER_H
-#define  GRASP_GRADIENT_PLANNER_H
+#include "rplanners.h"
 
 class GraspGradientPlanner : public PlannerBase
 {
@@ -34,7 +33,7 @@ public:
         bool bProcessed;     ///< set to true if grasp has already been used in gradient descend
     };
 
-    GraspGradientPlanner(EnvironmentBasePtr penv) : PlannerBase(penv) {
+    GraspGradientPlanner(EnvironmentBasePtr penv, std::istream& sinput) : PlannerBase(penv) {
         __description = ":Interface Author: Rosen Diankov\n\nGrasp Planning with Stochastic Gradient Descent";
         _report.reset(new CollisionReport());
     }
@@ -108,11 +107,11 @@ public:
     }
 
     /// \param pOutStream returns which goal was chosen
-    virtual bool PlanPath(TrajectoryBasePtr ptraj, boost::shared_ptr<std::ostream> pOutStream)
+    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
     {
         if(!_parameters) {
             RAVELOG_ERROR("GraspGradientPlanner::PlanPath - Error, planner not initialized\n");
-            return false;
+            return PS_Failed;
         }
 
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
@@ -143,7 +142,7 @@ public:
         }
 
         if( vgrasps.size() == 0 )
-            return false;
+            return PS_Failed;
 
         sort(vgrasps.begin(),vgrasps.end());
 
@@ -184,12 +183,16 @@ public:
             fConfigThresh *= 1.5f;
         }
 
-        FOREACH(it, listbestpath)
-        ptraj->AddPoint(Trajectory::TPOINT(*it,0));
+        if( ptraj->GetConfigurationSpecification().GetDOF() == 0 ) {
+            ptraj->Init(_parameters->_configurationspecification);
+        }
+        FOREACH(it, listbestpath) {
+            ptraj->Insert(ptraj->GetNumWaypoints(),*it);
+        }
 
-        RAVELOG_DEBUG(str(boost::format("plan %s, path=%d points in %fs\n")%(bSuccess ? "success" : "failure")%ptraj->GetPoints().size()%(0.001f*(float)(GetMilliTime()-basetime))));
+        RAVELOG_DEBUG(str(boost::format("plan %s, path=%d points in %fs\n")%(bSuccess ? "success" : "failure")%ptraj->GetNumWaypoints()%(0.001f*(float)(GetMilliTime()-basetime))));
 
-        return bSuccess;
+        return bSuccess ? PS_HasSolution : PS_Failed;
     }
 
     virtual PlannerParametersConstPtr GetParameters() const {
@@ -324,4 +327,6 @@ private:
     std::vector<std::vector<dReal> > _viksolutions;
 };
 
-#endif
+PlannerBasePtr CreateGraspGradientPlanner(EnvironmentBasePtr penv, std::istream& sinput) {
+    return PlannerBasePtr(new GraspGradientPlanner(penv, sinput));
+}

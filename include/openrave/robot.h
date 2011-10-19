@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2010 Rosen Diankov (rosen.diankov@gmail.com)
+// Copyright (C) 2006-2011 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -17,9 +17,8 @@
 /** \file   robot.h
     \brief  Base robot and manipulator description.
  */
-
-#ifndef  RAVE_ROBOT_H
-#define  RAVE_ROBOT_H
+#ifndef OPENRAVE_ROBOT_H
+#define OPENRAVE_ROBOT_H
 
 namespace OpenRAVE {
 
@@ -58,7 +57,7 @@ public:
         /// \brief Sets the ik solver and initializes it with the current manipulator.
         ///
         /// Due to complications with translation,rotation,direction,and ray ik,
-        /// the ik solver should take into account the grasp transform (_tGrasp) internally.
+        /// the ik solver should take into account the grasp transform (_tLocalTool) internally.
         /// The actual ik primitives are transformed into the base frame only.
         virtual bool SetIkSolver(IkSolverBasePtr iksolver);
 
@@ -84,8 +83,18 @@ public:
         }
 
         /// \brief Return transform with respect to end effector defining the grasp coordinate system
-        virtual Transform GetGraspTransform() const {
-            return _tGrasp;
+        virtual Transform GetLocalToolTransform() const {
+            return _tLocalTool;
+        }
+
+        /// \brief Sets the local tool transform with respect to the end effector.
+        ///
+        /// Because this call will change manipulator hash, it resets the loaded IK and sets the Prop_RobotManipulatorTool message.
+        virtual void SetLocalToolTransform(const Transform& t);
+
+        /// \deprecated (11/10/15) use GetLocalToolTransform
+        virtual Transform GetGraspTransform() const RAVE_DEPRECATED {
+            return GetLocalToolTransform();
         }
 
         /// \brief Gripper indices of the joints that the  manipulator controls.
@@ -106,8 +115,13 @@ public:
         }
 
         /// \brief direction of palm/head/manipulator used for approaching. defined inside the manipulator/grasp coordinate system
-        virtual Vector GetDirection() const {
+        virtual Vector GetLocalToolDirection() const {
             return _vdirection;
+        }
+
+        /// \deprecated (11/10/15) use GetLocalToolDirection
+        virtual Vector GetDirection() const {
+            return GetLocalToolDirection();
         }
 
         /// \brief Find a close solution to the current robot's joint values.
@@ -216,7 +230,7 @@ public:
 protected:
         std::string _name;
         LinkPtr _pBase, _pEndEffector;
-        Transform _tGrasp;
+        Transform _tLocalTool;
         std::vector<dReal> _vClosingDirection;
         Vector _vdirection;
         IkSolverBasePtr _pIkSolver;
@@ -351,9 +365,6 @@ private:
     virtual std::vector<ManipulatorPtr>& GetManipulators() {
         return _vecManipulators;
     }
-    virtual bool SetMotion(TrajectoryBaseConstPtr ptraj) {
-        return false;
-    }
 
     virtual std::vector<AttachedSensorPtr>& GetAttachedSensors() {
         return _vecSensors;
@@ -378,27 +389,22 @@ private:
         @name Affine DOFs
         @{
      */
-    /// \brief Selects which DOFs of the affine transformation to include in the active configuration.
-    enum DOFAffine
-    {
-        DOF_NoTransform = 0,
-        DOF_X = 1,     ///< robot can move in the x direction
-        DOF_Y = 2,     ///< robot can move in the y direction
-        DOF_Z = 4,     ///< robot can move in the z direction
 
-        // DOF_RotationX fields are mutually exclusive
-        DOF_RotationAxis = 8,     ///< robot can rotate around an axis (1 dof)
-        DOF_Rotation3D = 16,     ///< robot can rotate freely (3 dof), the parameterization is
-                                 ///< theta * v, where v is the rotation axis and theta is the angle about that axis
-        DOF_RotationQuat = 32,     ///< robot can rotate freely (4 dof), parameterization is a quaternion. In order for limits to work correctly, the quaternion is in the space of _vRotationQuatLimitStart. _vRotationQuatLimitStart is always left-multiplied before setting the transform!
-    };
+    /// \deprecated (11/10/04), use OpenRAVE:: global variables
+    static const DOFAffine DOF_NoTransform RAVE_DEPRECATED = OpenRAVE::DOF_NoTransform;
+    static const DOFAffine DOF_X RAVE_DEPRECATED = OpenRAVE::DOF_X;
+    static const DOFAffine DOF_Y RAVE_DEPRECATED = OpenRAVE::DOF_Y;
+    static const DOFAffine DOF_Z RAVE_DEPRECATED = OpenRAVE::DOF_Z;
+    static const DOFAffine DOF_RotationAxis RAVE_DEPRECATED = OpenRAVE::DOF_RotationAxis;
+    static const DOFAffine DOF_Rotation3D RAVE_DEPRECATED = OpenRAVE::DOF_Rotation3D;
+    static const DOFAffine DOF_RotationQuat RAVE_DEPRECATED = OpenRAVE::DOF_RotationQuat;
 
     /** \brief Set the joint indices and affine transformation dofs that the planner should use. If \ref DOF_RotationAxis is specified, the previously set axis is used.
 
         \param dofindices the indices of the original degrees of freedom to use.
         \param affine A bitmask of \ref DOFAffine values
      */
-    virtual void SetActiveDOFs(const std::vector<int>& dofindices, int affine = DOF_NoTransform);
+    virtual void SetActiveDOFs(const std::vector<int>& dofindices, int affine = OpenRAVE::DOF_NoTransform);
 
     /** \brief Set the joint indices and affine transformation dofs that the planner should use. If \ref DOF_RotationAxis is specified, then rotationaxis is set as the new axis.
 
@@ -414,8 +420,13 @@ private:
         return _nAffineDOFs;
     }
 
-    /// \brief If dof is set in the affine dofs, returns its index in the dof values array, otherwise returns -1
-    virtual int GetAffineDOFIndex(DOFAffine dof) const;
+    /// \deprecated (11/10/07)
+    virtual int GetAffineDOFIndex(DOFAffine dof) const {
+        return GetActiveDOFIndices().size()+RaveGetIndexFromAffineDOF(GetAffineDOF(),dof);
+    }
+
+    /// \brief return the configuration specification of the active dofs
+    virtual const ConfigurationSpecification& GetActiveConfigurationSpecification() const;
 
     /// \brief Return the set of active dof indices of the joints.
     virtual const std::vector<int>& GetActiveDOFIndices() const;
@@ -524,20 +535,15 @@ private:
         return _nActiveManip;
     }
 
-    /// Converts a trajectory specified with the current active degrees of freedom to a full joint/transform trajectory
-    /// \param pFullTraj written with the final trajectory,
-    /// \param pActiveTraj the input active dof trajectory
-    /// \param bOverwriteTransforms if true will use the current robot transform as the base (ie will ignore any transforms specified in pActiveTraj). If false, will use the pActiveTraj transforms specified
-    virtual void GetFullTrajectoryFromActive(TrajectoryBasePtr pFullTraj, TrajectoryBaseConstPtr pActiveTraj, bool bOverwriteTransforms = true);
+    /// \deprecated (11/10/04) send directly through controller
+    virtual bool SetMotion(TrajectoryBaseConstPtr ptraj) RAVE_DEPRECATED;
 
-    virtual bool SetActiveMotion(TrajectoryBaseConstPtr ptraj) {
-        return false;
-    }
+    /// \deprecated (11/10/04)
+    virtual bool SetActiveMotion(TrajectoryBaseConstPtr ptraj) RAVE_DEPRECATED;
 
-    /// the speed at which the robot should go at
-    virtual bool SetActiveMotion(TrajectoryBaseConstPtr ptraj, dReal fSpeed) {
-        return SetActiveMotion(ptraj);
-    }
+    /// \deprecated (11/10/04)
+    virtual bool SetActiveMotion(TrajectoryBaseConstPtr ptraj, dReal fSpeed) RAVE_DEPRECATED;
+
 
     /** \brief Calculates the translation jacobian with respect to a link.
 
@@ -687,6 +693,9 @@ private:
         return SetController(controller,dofindices,1);
     }
 
+    /// \deprecated (11/10/04)
+    void GetFullTrajectoryFromActive(TrajectoryBasePtr pfulltraj, TrajectoryBaseConstPtr pActiveTraj, bool bOverwriteTransforms=true) RAVE_DEPRECATED;
+
 protected:
     RobotBase(EnvironmentBasePtr penv);
 
@@ -725,6 +734,7 @@ protected:
     Vector _vRotationQuatLimitStart;
     dReal _fQuatLimitMaxAngle, _fQuatMaxAngleVelocity, _fQuatAngleResolution, _fQuatAngleWeight;
 
+    ConfigurationSpecification _activespec;
 private:
     virtual const char* GetHash() const {
         return OPENRAVE_ROBOT_HASH;

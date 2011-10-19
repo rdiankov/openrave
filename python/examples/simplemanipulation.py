@@ -67,7 +67,7 @@ def main(env,options):
 
     print 'move robot base to target'
     with env:
-        robot.SetActiveDOFs([],Robot.DOFAffine.X|Robot.DOFAffine.Y|Robot.DOFAffine.RotationAxis,[0,0,1])
+        robot.SetActiveDOFs([],DOFAffine.X|DOFAffine.Y|DOFAffine.RotationAxis,[0,0,1])
         basemanip.MoveActiveJoints(goal=[2.8,-1.3,0],maxiter=5000,steplength=0.15,maxtries=2)
     waitrobot(robot)
 
@@ -91,7 +91,7 @@ def main(env,options):
 
     print 'move the robot to another location'
     with env:
-        robot.SetActiveDOFs([],Robot.DOFAffine.X|Robot.DOFAffine.Y|Robot.DOFAffine.RotationAxis,[0,0,1])
+        robot.SetActiveDOFs([],DOFAffine.X|DOFAffine.Y|DOFAffine.RotationAxis,[0,0,1])
         localgoal = [0,2.4,0]
         T = robot.GetTransform()
         goal = dot(T[0:3,0:3],localgoal) + T[0:3,3]

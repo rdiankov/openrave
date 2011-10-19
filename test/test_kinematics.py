@@ -111,7 +111,8 @@ class TestKinematics(EnvironmentSetup):
                             assert(joint == body.GetJointFromDOFIndex(joint.GetDOFIndex()) )
                         # velocities, has to do with physics engine
                         oldlinkvels = body.GetLinkVelocities()
-                        dofvelnew = randlimits(*body.GetDOFVelocityLimits())
+                        vellimits = body.GetDOFVelocityLimits()
+                        dofvelnew = randlimits(-vellimits,vellimits)
                         link0vel = [random.rand(3)-0.5,random.rand(3)-0.5]
                         body.SetVelocity(*link0vel)
                         assert( sum(abs(body.GetDOFVelocities())) <= g_epsilon )
@@ -250,7 +251,7 @@ class TestKinematics(EnvironmentSetup):
     def test_initkinbody(self):
         print "tests initializing a kinematics body"
         with self.env:
-            k = self.env.CreateKinBody()
+            k = RaveCreateKinBody(self.env,'')
             boxes = array(((0,0.5,0,0.1,0.2,0.3),(0.5,0,0,0.2,0.2,0.2)))
             k.InitFromBoxes(boxes,True)
             k.SetName('temp')
@@ -258,7 +259,7 @@ class TestKinematics(EnvironmentSetup):
             assert( len(k.GetLinks()) == 1 and len(k.GetLinks()[0].GetGeometries()) == 2 )
             assert( k.GetLinks()[0].GetGeometries()[0].GetType() == KinBody.Link.GeomProperties.Type.Box )
             assert( k.GetLinks()[0].GetGeometries()[1].GetType() == KinBody.Link.GeomProperties.Type.Box )
-            k2 = self.env.CreateKinBody()
+            k2 = RaveCreateKinBody(self.env,'')
             k2.InitFromTrimesh(TriMesh(*misc.ComputeBoxMesh([0.1,0.2,0.3])),True)
             k2.SetName('temp')
             self.env.AddKinBody(k2,True)

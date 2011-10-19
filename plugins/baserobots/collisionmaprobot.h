@@ -160,24 +160,6 @@ For joints J2xJ3, the index operation is::\n\n\
         return true;
     }
 
-    virtual bool SetMotion(TrajectoryBaseConstPtr ptraj)
-    {
-        BOOST_ASSERT(ptraj->GetPoints().size() > 0 || !"trajectory has no points\n");
-        BOOST_ASSERT(ptraj->GetDOF() == GetDOF() || !"trajectory of wrong dimension");
-        _trajcur = ptraj;
-        return _pController->SetPath(_trajcur);
-    }
-
-    virtual bool SetActiveMotion(TrajectoryBaseConstPtr ptraj)
-    {
-        BOOST_ASSERT(ptraj->GetPoints().size() > 0 || !"trajectory has no points\n");
-        BOOST_ASSERT(ptraj->GetDOF() == GetActiveDOF() || !"trajectory of wrong dimension");
-        TrajectoryBasePtr pfulltraj = RaveCreateTrajectory(GetEnv(),ptraj->GetDOF());
-        GetFullTrajectoryFromActive(pfulltraj, ptraj);
-        _trajcur = pfulltraj;
-        return _pController->SetPath(_trajcur);
-    }
-
     virtual ControllerBasePtr GetController() const {
         return _pController;
     }

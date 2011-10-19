@@ -1071,7 +1071,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
                 sinput >> strtrajfilename;
             }
             else if( cmd == "smoothpath" ) {
-                sinput >> params->_sPathOptimizationPlanner;
+                sinput >> params->_sPostProcessingPlanner;
             }
             else if( cmd == "planner" ) {
                 sinput >> plannername;
@@ -1102,11 +1102,9 @@ Visibility computation checks occlusion with other objects using ray sampling in
         _robot->GetActiveDOFValues(params->vinitialconfig);
 
         params->_samplegoalfn = boost::bind(&GoalSampleFunction::Sample,pgoalsampler,_1);
-        TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),_robot->GetActiveDOF());
-
-        Trajectory::TPOINT pt;
-        pt.q = params->vinitialconfig;
-        ptraj->AddPoint(pt);
+        TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),"");
+        ptraj->Init(_robot->GetActiveConfigurationSpecification());
+        ptraj->Insert(0,params->vinitialconfig);
 
         // jitter for initial collision
         if( !planningutils::JitterActiveDOF(_robot) ) {
@@ -1232,7 +1230,8 @@ Visibility computation checks occlusion with other objects using ray sampling in
         params->_ptarget = _target;
         _robot->GetActiveDOFValues(params->vinitialconfig);
 
-        TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),_robot->GetActiveDOF());
+        TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),"");
+        ptraj->Init(_robot->GetActiveConfigurationSpecification());
         PlannerBasePtr planner = RaveCreatePlanner(GetEnv(),plannername);
         if( !planner ) {
             RAVELOG_ERROR("failed to create BiRRTs\n");

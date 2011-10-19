@@ -54,7 +54,7 @@ class SimpleNavigationPlanning:
                 self.robot.SetAffineTranslationLimits(envmin,envmax)
                 self.robot.SetAffineTranslationMaxVels([0.5,0.5,0.5])
                 self.robot.SetAffineRotationAxisMaxVels(ones(4))
-                self.robot.SetActiveDOFs([],Robot.DOFAffine.X|Robot.DOFAffine.Y|Robot.DOFAffine.RotationAxis,[0,0,1])
+                self.robot.SetActiveDOFs([],DOFAffine.X|DOFAffine.Y|DOFAffine.RotationAxis,[0,0,1])
                 # pick a random position
                 with self.robot:
                     while True:

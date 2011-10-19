@@ -13,15 +13,12 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#ifndef  WORKSPACE_TRAJECTORY_PLANNER_H
-#define  WORKSPACE_TRAJECTORY_PLANNER_H
-
 #include "rplanners.h"
 
 class WorkspaceTrajectoryTracker : public PlannerBase
 {
 public:
-    WorkspaceTrajectoryTracker(EnvironmentBasePtr penv) : PlannerBase(penv)
+    WorkspaceTrajectoryTracker(EnvironmentBasePtr penv, std::istream& sinput) : PlannerBase(penv)
     {
         __description = "\
 :Interface Author:  Rosen Diankov\n\n\
@@ -40,7 +37,7 @@ Planner Parameters\n\
 \n\
 - **dReal minimumcompletetime** - specifies the minimum trajectory that must be followed for planner to declare success. If 0, then the entire trajectory has to be followed.\n\
 \n\
-- **TrajectoryBasePtr workspacetraj** - workspace trajectory of the end effector\n\
+- **TrajectoryBasePtr workspacetraj** - workspace trajectory of the end effector, needs to hold 'ikparam_values' groups\n\
 \n\
 ";
         _report.reset(new CollisionReport());
@@ -63,7 +60,7 @@ Planner Parameters\n\
             return false;
         }
 
-        if( !parameters->workspacetraj ||( parameters->workspacetraj->GetTotalDuration() == 0) ||( parameters->workspacetraj->GetPoints().size() == 0) ) {
+        if( !parameters->workspacetraj ||( parameters->workspacetraj->GetDuration() == 0) ||( parameters->workspacetraj->GetNumWaypoints() == 0) ) {
             RAVELOG_ERROR("input trajectory needs to be initialized with interpolation information\n");
         }
 
@@ -124,7 +121,7 @@ Planner Parameters\n\
             return false;
         }
 
-        if( !_manip->GetIkSolver()->Supports(IkParameterization::Type_Transform6D) ) {
+        if( !_manip->GetIkSolver()->Supports(IKP_Transform6D) ) {
             RAVELOG_ERROR(str(boost::format("WorkspaceTrajectoryTracker: unsupported iktype for manipulator %s")%_manip->GetName()));
             return false;
         }
@@ -133,11 +130,11 @@ Planner Parameters\n\
         return true;
     }
 
-    virtual bool PlanPath(TrajectoryBasePtr poutputtraj, boost::shared_ptr<std::ostream> pOutStream)
+    virtual PlannerStatus PlanPath(TrajectoryBasePtr poutputtraj)
     {
         if(!_parameters) {
             RAVELOG_ERROR("WorkspaceTrajectoryTracker::PlanPath - Error, planner not initialized\n");
-            return false;
+            return PS_Failed;
         }
 
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
@@ -146,27 +143,35 @@ Planner Parameters\n\
         _robot->SetActiveDOFs(_manip->GetArmIndices());     // should be set by user anyway, but this is an extra precaution
         CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
 
+        if( poutputtraj->GetConfigurationSpecification().GetDOF() == 0 ) {
+            poutputtraj->Init(_parameters->_configurationspecification);
+        }
+
         // first check if the end effectors are in collision
         TrajectoryBaseConstPtr workspacetraj = _parameters->workspacetraj;
-        TrajectoryBase::TPOINT pt;
-        workspacetraj->SampleTrajectory(workspacetraj->GetTotalDuration(),pt);
-        Transform tlasttrans = pt.trans;
+        IkParameterization ikparam;
+        vector<dReal> vtrajpoint;
+        workspacetraj->Sample(vtrajpoint,workspacetraj->GetDuration());
+        workspacetraj->GetConfigurationSpecification().ExtractIkParameterization(ikparam,vtrajpoint.begin());
+        Transform tlasttrans = ikparam.GetTransform6D();
         if( _manip->CheckEndEffectorCollision(tlasttrans,_report) ) {
-            if( _parameters->minimumcompletetime >= workspacetraj->GetTotalDuration() ) {
+            if( _parameters->minimumcompletetime >= workspacetraj->GetDuration() ) {
                 RAVELOG_DEBUG(str(boost::format("final configuration colliding: %s\n")%_report->__str__()));
-                return false;
+                return PS_Failed;
             }
         }
 
-        dReal fstarttime = 0, fendtime = workspacetraj->GetTotalDuration();
+        dReal fstarttime = 0, fendtime = workspacetraj->GetDuration();
         bool bPrevInCollision = true;
         list<Transform> listtransforms;
         dReal ftime = 0;
-        for(; ftime < workspacetraj->GetTotalDuration(); ftime += _parameters->_fStepLength) {
-            workspacetraj->SampleTrajectory(ftime,pt);
-            listtransforms.push_back(pt.trans);
+        for(; ftime < workspacetraj->GetDuration(); ftime += _parameters->_fStepLength) {
+            workspacetraj->Sample(vtrajpoint,ftime);
+            workspacetraj->GetConfigurationSpecification().ExtractIkParameterization(ikparam,vtrajpoint.begin());
+            Transform t = ikparam.GetTransform6D();
+            listtransforms.push_back(t);
             // end effector is only fully known given the entire 6D transform!
-            if( _manip->CheckEndEffectorCollision(pt.trans,_report) ) {
+            if( _manip->CheckEndEffectorCollision(t,_report) ) {
                 if(( ftime < _parameters->ignorefirstcollision) && bPrevInCollision ) {
                     continue;
                 }
@@ -176,7 +181,7 @@ Planner Parameters\n\
                         break;
                     }
                 }
-                return false;
+                return PS_Failed;
             }
             else {
                 if( bPrevInCollision ) {
@@ -188,11 +193,11 @@ Planner Parameters\n\
 
         if( bPrevInCollision ) {
             // only the last point is valid
-            fstarttime = workspacetraj->GetTotalDuration();
+            fstarttime = workspacetraj->GetDuration();
         }
         if( fstarttime > _parameters->ignorefirstcollision ) {
             RAVELOG_DEBUG(str(boost::format("initial end effector in collision, start time %f > %f\n")%fstarttime%_parameters->ignorefirstcollision));
-            return false;
+            return PS_Failed;
         }
 
         listtransforms.push_back(tlasttrans);
@@ -210,12 +215,11 @@ Planner Parameters\n\
 
         _mjacobian.resize(boost::extents[0][0]);
         _vprevsolution.resize(0);
-        poutputtraj->Reset(_parameters->GetDOF());
         _tbaseinv = _manip->GetBase()->GetTransform().inverse();
         if( (int)_parameters->vinitialconfig.size() == _parameters->GetDOF() ) {
             _parameters->_setstatefn(_parameters->vinitialconfig);
             _SetPreviousSolution(_parameters->vinitialconfig,false);
-            poutputtraj->AddPoint(Trajectory::TPOINT(_parameters->vinitialconfig,0));
+            poutputtraj->Insert(poutputtraj->GetNumWaypoints(),_parameters->vinitialconfig,_parameters->_configurationspecification);
         }
 
         UserDataPtr filterhandle = _manip->GetIkSolver()->RegisterCustomFilter(0,boost::bind(&WorkspaceTrajectoryTracker::_ValidateSolution,this,_1,_2,_3));
@@ -229,16 +233,16 @@ Planner Parameters\n\
         ftime = 0;
         for(; ftime < fendtime; ftime += _parameters->_fStepLength, ++ittrans) {
             _filteroptions = (ftime >= fstarttime) ? IKFO_CheckEnvCollisions : 0;
-            IkParameterization ikparam(*ittrans,IkParameterization::Type_Transform6D);
+            IkParameterization ikparam(*ittrans,IKP_Transform6D);
             if( !_manip->FindIKSolution(ikparam,vsolution,_filteroptions) ) {
                 if( _filteroptions == 0 ) {
                     // haven't even checked with environment collisions, so a solution really doesn't exist
-                    return false;
+                    return PS_Failed;
                 }
                 if(( ftime < _parameters->ignorefirstcollision) && bPrevInCollision ) {
                     _filteroptions = 0;
                     if( !_manip->FindIKSolution(ikparam,vsolution,_filteroptions) ) {
-                        return false;
+                        return PS_Failed;
                     }
                 }
                 else {
@@ -248,25 +252,24 @@ Planner Parameters\n\
                             break;
                         }
                     }
-                    return false;
+                    return PS_Failed;
                 }
             }
             else {
                 bPrevInCollision = false;
             }
 
-            poutputtraj->AddPoint(Trajectory::TPOINT(vsolution,0));
+            poutputtraj->Insert(poutputtraj->GetNumWaypoints(),vsolution,_parameters->_configurationspecification);
             _parameters->_setstatefn(vsolution);
             _SetPreviousSolution(vsolution);
         }
 
         if( bPrevInCollision ) {
-            poutputtraj->Clear();
-            return false;
+            return PS_Failed;
         }
 
-        RAVELOG_DEBUG(str(boost::format("workspace trajectory tracker plan success, path=%d points, time=%f computed in %fs\n")%poutputtraj->GetPoints().size()%ftime%((0.001f*(float)(GetMilliTime()-basetime)))));
-        return true;
+        RAVELOG_DEBUG(str(boost::format("workspace trajectory tracker plan success, path=%d points, time=%f computed in %fs\n")%poutputtraj->GetNumWaypoints()%ftime%((0.001f*(float)(GetMilliTime()-basetime)))));
+        return PS_HasSolution;
     }
 
     virtual PlannerParametersConstPtr GetParameters() const {
@@ -296,7 +299,7 @@ protected:
             _mjacobian.resize(boost::extents[0][0]);
             _mquatjacobian.resize(boost::extents[0][0]);
         }
-        _ikprev = _tbaseinv * _manip->GetIkParameterization(IkParameterization::Type_Transform6D);
+        _ikprev = _tbaseinv * _manip->GetIkParameterization(IKP_Transform6D);
         _vprevsolution = vsolution;
     }
 
@@ -304,7 +307,7 @@ protected:
     {
         // check if continuous with previous solution using the jacobian
         if( _mjacobian.num_elements() > 0 ) {
-            BOOST_ASSERT(ikp.GetType()==IkParameterization::Type_Transform6D);
+            BOOST_ASSERT(ikp.GetType()==IKP_Transform6D);
             Vector expecteddeltatrans = ikp.GetTransform6D().trans - _ikprev.GetTransform6D().trans;
             Vector jdeltatrans;
             dReal solutiondiff = 0;
@@ -386,4 +389,6 @@ protected:
     vector<dReal> _vprevsolution;
 };
 
-#endif
+PlannerBasePtr CreateWorkspaceTrajectoryTracker(EnvironmentBasePtr penv, std::istream& sinput) {
+    return PlannerBasePtr(new WorkspaceTrajectoryTracker(penv, sinput));
+}

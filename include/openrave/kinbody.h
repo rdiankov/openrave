@@ -17,8 +17,8 @@
 /** \file   kinbody.h
     \brief  Kinematics body related definitions.
  */
-#ifndef  OPENRAVE_KINBODY_H
-#define  OPENRAVE_KINBODY_H
+#ifndef OPENRAVE_KINBODY_H
+#define OPENRAVE_KINBODY_H
 
 /// declare function parser class from fparser library
 template<typename Value_t> class FunctionParserBase;
@@ -52,6 +52,7 @@ public:
         Prop_RobotSensorPlacement = 0x00040000,     ///< [robot only] relative sensor placement of sensors
         Prop_SensorPlacement = 0x00040000,
         Prop_RobotActiveDOFs = 0x00080000,     ///< [robot only] active dofs changed
+        Prop_RobotManipulatorTool = 0x00100000, ///< [robot only] the tool coordinate system changed
     };
 
     /// \brief A rigid body holding all its collision and rendering data.
@@ -1274,6 +1275,28 @@ private:
     /// This is primarily used for calibrating a robot's zero position
     virtual void SetZeroConfiguration();
 
+    /// Functions dealing with configuration specifications
+    /// @name Configuration Specification API
+    //@{
+
+    /// \brief return the configuration specification of the joint values and transform
+    virtual const ConfigurationSpecification& GetConfigurationSpecification() const;
+
+    /// \brief return the configuration specification of the specified joint indices.
+    ///
+    /// Note that the return type is by-value, so should not be used in iteration
+    virtual ConfigurationSpecification GetConfigurationSpecificationIndices(const std::vector<int>& indices) const;
+
+    /// \brief sets joint values and transform of the body using configuration values as specified by \ref GetConfigurationSpecification()
+    ///
+    /// \param itvalues the iterator to the vector containing the dof values. Must have GetConfigurationSpecification().GetDOF() values!
+    virtual void SetConfigurationValues(std::vector<dReal>::const_iterator itvalues, bool checklimits = false);
+
+    /// \brief returns the configuration values as specified by \ref GetConfigurationSpecification()
+    virtual void GetConfigurationValues(std::vector<dReal>& v) const;
+
+    //@}
+
 protected:
     /// \brief constructors declared protected so that user always goes through environment to create bodies
     KinBody(InterfaceType type, EnvironmentBasePtr penv);
@@ -1353,6 +1376,8 @@ protected:
     mutable boost::array<std::set<int>, 4> _setNonAdjacentLinks; ///< contains cached versions of the non-adjacent links depending on values in AdjacentOptions. Declared as mutable since data is cached.
     mutable int _nNonAdjacentLinkCache; ///< specifies what information is currently valid in the AdjacentOptions.  Declared as mutable since data is cached. If 0x80000000 (ie < 0), then everything needs to be recomputed including _setNonAdjacentLinks[0].
     std::vector<Transform> _vInitialLinkTransformations; ///< the initial transformations of each link specifying at least one pose where the robot is collision free
+
+    ConfigurationSpecification _spec;
 
     int _environmentid; ///< \see GetEnvironmentId
     mutable int _nUpdateStampId; ///< \see GetUpdateStamp
