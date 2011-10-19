@@ -461,6 +461,28 @@ namespace LocalXML
 bool ParseXMLData(BaseXMLReaderPtr preader, const char* buffer, int size);
 }
 
+#ifdef _WIN32
+inline const char *strcasestr(const char *s, const char *find)
+{
+    register char c, sc;
+    register size_t len;
+
+    if ((c = *find++) != 0) {
+        c = tolower((unsigned char)c);
+        len = strlen(find);
+        do {
+            do {
+                if ((sc = *s++) == 0) {
+                    return (NULL);
+                }
+            } while ((char)tolower((unsigned char)sc) != c);
+        } while (strnicmp(s, find, len) != 0);
+        s--;
+    }
+    return ((char *) s);
+}
+#endif
+
 }
 
 // need the prototypes in order to keep them free of the OpenRAVE namespace
