@@ -176,7 +176,8 @@ void VerifyTrajectory(PlannerBase::PlannerParametersConstPtr parameters, Traject
             for(dReal ftime = 0; ftime < trajectory->GetDuration(); ftime += samplingstep ) {
                 configs->clear();
                 trajectory->Sample(vdata,ftime+samplingstep,parameters->_configurationspecification);
-                if( !parameters->_checkpathconstraintsfn(vprevdata,vdata,IT_Closed, configs) ) {
+                //if( !parameters->_checkpathconstraintsfn(vprevdata,vdata,IT_Closed, configs) ) {
+                if( !parameters->_checkpathconstraintsfn(vdata,vdata,IT_OpenStart, configs) ) {
                     ofstream f("failedtrajectory.xml");
                     f << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
                     trajectory->serialize(f);

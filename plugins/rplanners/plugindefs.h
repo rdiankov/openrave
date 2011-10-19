@@ -138,6 +138,8 @@ inline static uint32_t GetMilliTime()
 
 #define FORIT(it, v) for(it = (v).begin(); it != (v).end(); (it)++)
 
+using namespace OpenRAVE;
+
 template <typename T>
 inline T NORMALIZE_ANGLE(T theta, T min, T max)
 {
@@ -167,7 +169,5 @@ struct null_deleter
     void operator()(void const *) const {
     }
 };
-
-using namespace OpenRAVE;
 
 #endif
