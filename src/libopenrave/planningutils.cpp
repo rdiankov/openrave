@@ -133,24 +133,11 @@ void VerifyTrajectory(PlannerBase::PlannerParametersConstPtr parameters, Traject
     BOOST_ASSERT((int)parameters->_vConfigUpperLimit.size() == parameters->GetDOF());
     BOOST_ASSERT((int)parameters->_vConfigResolution.size() == parameters->GetDOF());
 
-    if( parameters->_configurationspecification != trajectory->GetConfigurationSpecification() ) {
-        TrajectoryBasePtr newtraj = RaveCreateTrajectory(trajectory->GetEnv(),trajectory->GetXMLId());
-        newtraj->Init(parameters->_configurationspecification);
-        std::vector<dReal> vdata;
-        trajectory->GetWaypoints(0,trajectory->GetNumWaypoints(),vdata);
-        newtraj->Insert(0,vdata,trajectory->GetConfigurationSpecification());
-        trajectory = newtraj;
-    }
-
-    PlannerBase::ConfigurationListPtr configs(new PlannerBase::ConfigurationList());
     dReal fthresh = 5e-5f;
     vector<dReal> deltaq(parameters->GetDOF(),0);
-    if( samplingstep > 0 ) {
-        RAVELOG_WARN("currently not using samplingstep\n");
-    }
     std::vector<dReal> vdata;
     for(size_t ipoint = 0; ipoint < trajectory->GetNumWaypoints(); ++ipoint) {
-        trajectory->GetWaypoints(ipoint,ipoint+1,vdata);
+        trajectory->GetWaypoint(ipoint,vdata,parameters->_configurationspecification);
         BOOST_ASSERT((int)vdata.size()==parameters->GetDOF());
         for(size_t i = 0; i < vdata.size(); ++i) {
             BOOST_ASSERT(vdata[i] >= parameters->_vConfigLowerLimit[i]-fthresh);
@@ -163,6 +150,7 @@ void VerifyTrajectory(PlannerBase::PlannerParametersConstPtr parameters, Traject
         for(size_t i = 0; i < newq.size(); ++i) {
             if( RaveFabs(vdata.at(i) - newq.at(i)) > 0.001 * parameters->_vConfigResolution[i] ) {
                 ofstream f("failedtrajectory.xml");
+                f << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
                 trajectory->serialize(f);
                 throw OPENRAVE_EXCEPTION_FORMAT("setstate/getstate inconsistent configuration %d dof %d: %f != %f",ipoint%i%vdata.at(i)%newq.at(i),ORE_InconsistentConstraints);
             }
@@ -171,6 +159,7 @@ void VerifyTrajectory(PlannerBase::PlannerParametersConstPtr parameters, Traject
             newq = vdata;
             if( !parameters->_neighstatefn(newq,deltaq,0) ) {
                 ofstream f("failedtrajectory.xml");
+                f << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
                 trajectory->serialize(f);
                 throw OPENRAVE_EXCEPTION_FORMAT("neighstatefn is rejecting configuration %d",ipoint,ORE_InconsistentConstraints);
             }
@@ -178,24 +167,42 @@ void VerifyTrajectory(PlannerBase::PlannerParametersConstPtr parameters, Traject
     }
 
     if( !!parameters->_checkpathconstraintsfn && trajectory->GetNumWaypoints() >= 2 ) {
-        std::vector<dReal> vprevdata;
-        trajectory->GetWaypoints(0,1,vprevdata);
-        for(size_t i = 1; i < trajectory->GetNumWaypoints(); ++i) {
-            configs->clear();
-            trajectory->GetWaypoints(i,i+1,vdata);
-            if( !parameters->_checkpathconstraintsfn(vprevdata,vdata,IT_Closed, configs) ) {
-                ofstream f("failedtrajectory.xml");
-                trajectory->serialize(f);
-                throw OPENRAVE_EXCEPTION_FORMAT("checkpathconstraintsfn failed at %d-%d",(i-1)%i,ORE_InconsistentConstraints);
-            }
-            FOREACH(itconfig, *configs) {
-                if( !parameters->_neighstatefn(*itconfig,deltaq,0) ) {
+
+        if( trajectory->GetDuration() > 0 && samplingstep > 0 ) {
+            // use sampling
+            std::vector<dReal> vprevdata;
+            PlannerBase::ConfigurationListPtr configs(new PlannerBase::ConfigurationList());
+            trajectory->Sample(vprevdata,0,parameters->_configurationspecification);
+            for(dReal ftime = 0; ftime < trajectory->GetDuration(); ftime += samplingstep ) {
+                configs->clear();
+                trajectory->Sample(vdata,ftime+samplingstep,parameters->_configurationspecification);
+                if( !parameters->_checkpathconstraintsfn(vprevdata,vdata,IT_Closed, configs) ) {
                     ofstream f("failedtrajectory.xml");
+                    f << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
                     trajectory->serialize(f);
-                    throw OPENRAVE_EXCEPTION_FORMAT("neighstatefn is rejecting configurations from checkpathconstraintsfn %d-%d",(i-1)%i,ORE_InconsistentConstraints);
+                    throw OPENRAVE_EXCEPTION_FORMAT("checkpathconstraintsfn failed at %fs-%fs",ftime%(ftime+samplingstep),ORE_InconsistentConstraints);
+                }
+                FOREACH(itconfig, *configs) {
+                    if( !parameters->_neighstatefn(*itconfig,deltaq,0) ) {
+                        ofstream f("failedtrajectory.xml");
+                        f << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
+                        trajectory->serialize(f);
+                        throw OPENRAVE_EXCEPTION_FORMAT("neighstatefn is rejecting configurations from checkpathconstraintsfn %fs-%fs",ftime%(ftime+samplingstep),ORE_InconsistentConstraints);
+                    }
+                }
+                vprevdata=vdata;
+            }
+        }
+        else {
+            for(size_t i = 0; i < trajectory->GetNumWaypoints(); ++i) {
+                trajectory->GetWaypoint(i,vdata,parameters->_configurationspecification);
+                if( !parameters->_checkpathconstraintsfn(vdata,vdata,IT_OpenStart, PlannerBase::ConfigurationListPtr()) ) {
+                    ofstream f("failedtrajectory.xml");
+                    f << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
+                    trajectory->serialize(f);
+                    throw OPENRAVE_EXCEPTION_FORMAT("checkpathconstraintsfn failed at %d-%d",(i-1)%i,ORE_InconsistentConstraints);
                 }
             }
-            vprevdata=vdata;
         }
     }
 }

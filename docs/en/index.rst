@@ -17,7 +17,7 @@ Getting Started
 
 * :ref:`getting_started`
 
- * :ref:`openravepy_beginning`, :ref:`command_line_tools`, `Writing Plugins in C++ <../coreapihtml/writing_plugins.html>`_, :ref:`environment_variables`, `Octave/MATLAB`_
+ * :ref:`openravepy_beginning`, :ref:`command_line_tools`, :ref:`writing_plugins`_, :ref:`environment_variables`, `Octave/MATLAB`_
 
 * :ref:`overview`
 

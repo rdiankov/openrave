@@ -183,7 +183,7 @@ public:
     virtual bool SegmentFeasible(const ParabolicRamp::Vector& a,const ParabolicRamp::Vector& b)
     {
         _parameters->_setstatefn(a);
-        return _parameters->_checkpathconstraintsfn(a,b,IT_Open,PlannerBase::ConfigurationListPtr());
+        return _parameters->_checkpathconstraintsfn(a,b,IT_OpenStart,PlannerBase::ConfigurationListPtr());
     }
 
     virtual dReal Rand()

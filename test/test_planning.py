@@ -83,6 +83,33 @@ class TestMoving(EnvironmentSetup):
                 assert(ret is not None)
                 
 
+    def test_movetohandpositiongrab(self):
+        env=self.env
+        env.Load('data/hanoi_complex2.env.xml')
+        robot = env.GetRobots()[0]
+        basemanip = interfaces.BaseManipulation(robot)
+        with env:
+            resolutions = [ 0.00292825,  0.00303916,  0.01520142,  0.0163279,   0.03591959,  0.03591959,  0.08129367]
+            weights = [ 1.61903856,  1.11858069,  0.20061367,  0.15267405,  0.05951496,  0.04199751,  0.01950391]
+            for j in robot.GetJoints():
+                j.SetWeights(weights[j.GetDOFIndex():(j.GetDOFIndex()+j.GetDOF())])
+                j.SetResolution(resolutions[j.GetDOFIndex()])
+            Tdisk2 = array([[-0.9152146 ,  0.40084098, -0.04133701, -0.21687754],
+                            [-0.39826911, -0.88415551,  0.24423505, -0.19242871],
+                            [ 0.06135107,  0.23999073,  0.96883461,  1.12189841],
+                            [ 0.        ,  0.        ,  0.        ,  1.        ]])
+            env.GetKinBody('disk2').SetTransform(Tdisk2)
+            disk1 = env.GetKinBody('disk1')
+            robot.SetDOFValues([ 0.4620151 , -2.67934022,  0.29334635, -1.45878047, -1.2220377 , -1.83725485, -0.25900999])
+            robot.Grab(disk1)
+            Tgoal = array([[-0.7912808 ,  0.25088882,  0.55761053, -0.1646556 ],
+                           [-0.3734526 ,  0.52379002, -0.76562208,  0.02972558],
+                           [-0.48415685, -0.81406315, -0.32076991,  1.38703197],
+                           [ 0.        ,  0.        ,  0.        ,  1.        ]])
+            for i in range(4):
+                # have to execute several times to bring out the bug
+                out = basemanip.MoveToHandPosition(matrices=[Tgoal],execute=False)
+
     def test_navigationmanip(self):
         env=self.env
         env.StartSimulation(0.1,False)
