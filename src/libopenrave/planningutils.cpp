@@ -286,7 +286,7 @@ void RetimeAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& ma
             }
         }
     }
-    params->_diffstatefn == boost::bind(boost::bind(diffstatefn,_1,_2,boost::ref(vrotaxes)));
+    params->_diffstatefn = boost::bind(diffstatefn,_1,_2,boost::ref(vrotaxes));
     //params->_distmetricfn;
     params->_sExtraParameters += str(boost::format("<interpolation>%s</interpolation><hastimestamps>%d</hastimestamps>")%interpolation%hastimestamps);
     if( !planner->InitPlan(RobotBasePtr(),params) ) {
