@@ -795,7 +795,7 @@ if(CMAKE_CPACK_COMMAND AND UNIX AND OPT_BUILD_PACKAGES)
   # add once infinite precision computations are enabled:
   # libmpfr-dev libgmp3-dev libmpfi-dev libgmpxx4ldbl python-gmpy
   # plugins:
-  set(CPACK_DEBIAN_BUILD_DEPENDS_UBUNTU ${CPACK_DEBIAN_BUILD_DEPENDS_UBUNTU} libboost-iostreams-dev libboost-regex-dev libqt4-dev qt4-dev-tools libqhull-dev libavcodec-dev libavformat-dev libswscale-dev libsimage-dev libode-dev libsoqt4-dev assimp-dev)
+  set(CPACK_DEBIAN_BUILD_DEPENDS_UBUNTU ${CPACK_DEBIAN_BUILD_DEPENDS_UBUNTU} libboost-iostreams-dev libboost-regex-dev libqt4-dev qt4-dev-tools libqhull-dev libavcodec-dev libavformat-dev libswscale-dev libsimage-dev libode-dev libsoqt4-dev assimp-dev libbullet-dev)
 
   # debian
   set(CPACK_DEBIAN_PACKAGE_PRIORITY optional)
@@ -813,9 +813,6 @@ if(CMAKE_CPACK_COMMAND AND UNIX AND OPT_BUILD_PACKAGES)
     OUTPUT_VARIABLE _lsb_distribution OUTPUT_STRIP_TRAILING_WHITESPACE
     RESULT_VARIABLE _lsb_release_failed)
   set(CPACK_DEBIAN_DISTRIBUTION_NAME ${_lsb_distribution} CACHE STRING "Name of the distrubiton")
-  if( CPACK_DEBIAN_DISTRIBUTION_NAME STREQUAL "lucid" OR CPACK_DEBIAN_DISTRIBUTION_NAME STREQUAL "natty" )
-    set(CPACK_DEBIAN_BUILD_DEPENDS_UBUNTU ${CPACK_DEBIAN_BUILD_DEPENDS_UBUNTU} libbullet-dev)
-  endif()
   string(TOLOWER ${CPACK_DEBIAN_DISTRIBUTION_NAME} CPACK_DEBIAN_DISTRIBUTION_NAME)
   if( ${CPACK_DEBIAN_DISTRIBUTION_NAME} STREQUAL "ubuntu" )
     set(CPACK_DEBIAN_DISTRIBUTION_RELEASES lucid maverick natty oneiric CACHE STRING "Release code-names of the distrubiton release")
