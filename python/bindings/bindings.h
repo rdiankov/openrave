@@ -186,7 +186,7 @@ struct exception_translator
 
         storage_t* the_storage = reinterpret_cast<storage_t*>( data );
         void* memory_chunk = the_storage->storage.bytes;
-        T* cpp_err = new (memory_chunk) T( extract<T>(pimpl) );
+        new (memory_chunk) T( extract<T>(pimpl) );
         data->convertible = memory_chunk;
     }
 };

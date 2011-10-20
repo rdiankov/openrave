@@ -490,6 +490,11 @@ if( OPT_COLLADA )
   if( MSVC )
     # MSVC has prepackaged collada libraries
     set(COLLADA_PATH ${CMAKE_CURRENT_SOURCE_DIR}/msvc_collada)
+  else()
+    # this is temporary since collada libraries changed (11/10/20)
+    set(COLLADA_DOM_LIBRARIES "" CACHE INTERNAL "collada libraries directories" FORCE)
+    set(COLLADA_DOM_DIR "" CACHE PATH "The directory containing a CMake configuration file for COLLADA_DOM." FORCE)
+    set(COLLADA_PATH "" CACHE PATH "collada root path" FORCE)
   endif()
   find_package(COLLADA_DOM 2.3 COMPONENTS 1.5 PATHS ${COLLADA_PATH})
   
