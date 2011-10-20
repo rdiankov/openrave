@@ -38,6 +38,25 @@ if( OPT_VIDEORECORDING )
       set(ENABLE_VIDEORECORDING 1)
     endif()
     include_directories(${FFMPEG_libavformat_INCLUDEDIR} ${FFMPEG_libavcodec_INCLUDEDIR} ${FFMPEG_libswscale_INCLUDEDIR})
+
+  set(CMAKE_REQUIRED_INCLUDES ${FFMPEG_libavformat_INCLUDEDIR} ${FFMPEG_libavcodec_INCLUDEDIR} ${FFMPEG_libswscale_INCLUDEDIR})
+  set(CMAKE_REQUIRED_FLAGS "${FFMPEG_CFLAGS} ")
+  check_cxx_source_compiles("
+    #define __STDC_CONSTANT_MACROS
+    #include <stdint.h>
+    #include <libavformat/avformat.h>
+    #include <libavcodec/avcodec.h>
+    int main()
+    {
+      return AVMEDIA_TYPE_VIDEO;
+    }"
+    HAS_AVMEDIA_TYPE_VIDEO)
+  set(CMAKE_REQUIRED_FLAGS)
+  set(CMAKE_REQUIRED_INCLUDES)
+  if( HAS_AVMEDIA_TYPE_VIDEO )
+    add_definitions(-DHAS_AVMEDIA_TYPE_VIDEO)
+  endif()
+
   elseif(MSVC)
     set (FFMPEG_LIBRARIES vfw32)
     set(ENABLE_VIDEORECORDING 1)

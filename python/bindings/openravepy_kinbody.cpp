@@ -1408,7 +1408,7 @@ public:
             return solutions;
         }
 
-        object GetIkParameterization(IkParameterization::Type iktype)
+        object GetIkParameterization(IkParameterizationType iktype)
         {
             return toPyIkParameterization(_pmanip->GetIkParameterization(iktype));
         }
@@ -2616,7 +2616,7 @@ void init_openravepy_kinbody()
         .def("FindIKSolution",pmanipikf,args("param","freevalues","filteroptions"), DOXY_FN(RobotBase::Manipulator,FindIKSolution "const IkParameterization; const std::vector; std::vector; int"))
         .def("FindIKSolutions",pmanipiks,args("param","filteroptions"), DOXY_FN(RobotBase::Manipulator,FindIKSolutions "const IkParameterization; std::vector; int"))
         .def("FindIKSolutions",pmanipiksf,args("param","freevalues","filteroptions"), DOXY_FN(RobotBase::Manipulator,FindIKSolutions "const IkParameterization; const std::vector; std::vector; int"))
-        .def("GetIkParameterization",&PyRobotBase::PyManipulator::GetIkParameterization, args("iktype"), DOXY_FN(RobotBase::Manipulator::GetIkParameterization, "IkParameterization::Type"))
+        .def("GetIkParameterization",&PyRobotBase::PyManipulator::GetIkParameterization, args("iktype"), DOXY_FN(RobotBase::Manipulator::GetIkParameterization, "IkParameterizationType"))
         .def("GetBase",&PyRobotBase::PyManipulator::GetBase, DOXY_FN(RobotBase::Manipulator,GetBase))
         .def("GetEndEffector",&PyRobotBase::PyManipulator::GetEndEffector, DOXY_FN(RobotBase::Manipulator,GetEndEffector))
         .def("GetGraspTransform",&PyRobotBase::PyManipulator::GetGraspTransform, DOXY_FN(RobotBase::Manipulator,GetLocalToolTransform))

@@ -104,6 +104,8 @@ Misc
 
 * added  :mod:`.examples.cubeassembly` to show a robot assembling a cube from randomly scattered blocks.
 
+* updated :ref:`collisionchecker-bullet` collision checker to be up to par with ODE. Now the two engines should be interchangeable,
+
 Version 0.4.2
 =============
 

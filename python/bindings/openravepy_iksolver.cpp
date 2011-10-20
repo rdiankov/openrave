@@ -63,7 +63,7 @@ public:
         return toPyArray(values);
     }
 
-    bool Supports(IkParameterization::Type type) {
+    bool Supports(IkParameterizationType type) {
         return _pIkSolver->Supports(type);
     }
 
