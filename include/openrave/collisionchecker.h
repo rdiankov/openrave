@@ -186,6 +186,13 @@ protected:
         pbody->SetCollisionData(data);
     }
 
+    inline CollisionCheckerBasePtr shared_collisionchecker() {
+        return boost::static_pointer_cast<CollisionCheckerBase>(shared_from_this());
+    }
+    inline CollisionCheckerBaseConstPtr shared_collisionchecker_const() const {
+        return boost::static_pointer_cast<CollisionCheckerBase const>(shared_from_this());
+    }
+
 private:
     virtual const char* GetHash() const {
         return OPENRAVE_COLLISIONCHECKER_HASH;
