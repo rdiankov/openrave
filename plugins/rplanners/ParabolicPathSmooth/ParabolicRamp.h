@@ -163,7 +163,6 @@ bool SolveMinAccelBounded(const Vector& x0,const Vector& v0,const Vector& x1,con
                           std::vector<std::vector<ParabolicRamp1D> >& ramps);
 
 /// Combines an array of 1-d ramp sequences into a sequence of N-d ramps
-/// Not tested yet.
 void CombineRamps(const std::vector<std::vector<ParabolicRamp1D> >& ramps,std::vector<ParabolicRampND>& ndramps);
 
 } //namespace ParabolicRamp
