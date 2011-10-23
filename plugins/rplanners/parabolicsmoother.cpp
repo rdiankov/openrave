@@ -133,15 +133,17 @@ public:
             FOREACHC(itrampnd,dynamicpath.ramps) {
                 vswitchtimes.resize(0);
                 vswitchtimes.push_back(itrampnd->endTime);
-                FOREACHC(itramp,itrampnd->ramps) {
-                    vector<dReal>::iterator it = lower_bound(vswitchtimes.begin(),vswitchtimes.end(),itramp->tswitch1);
-                    if( *it != itramp->tswitch1 ) {
-                        vswitchtimes.insert(it,itramp->tswitch1);
-                    }
-                    if( itramp->tswitch1 != itramp->tswitch2 ) {
-                        it = lower_bound(vswitchtimes.begin(),vswitchtimes.end(),itramp->tswitch2);
-                        if( *it != itramp->tswitch2 ) {
-                            vswitchtimes.insert(it,itramp->tswitch2);
+                if( _parameters->_outputaccelchanges ) {
+                    FOREACHC(itramp,itrampnd->ramps) {
+                        vector<dReal>::iterator it = lower_bound(vswitchtimes.begin(),vswitchtimes.end(),itramp->tswitch1);
+                        if( *it != itramp->tswitch1 ) {
+                            vswitchtimes.insert(it,itramp->tswitch1);
+                        }
+                        if( itramp->tswitch1 != itramp->tswitch2 ) {
+                            it = lower_bound(vswitchtimes.begin(),vswitchtimes.end(),itramp->tswitch2);
+                            if( *it != itramp->tswitch2 ) {
+                                vswitchtimes.insert(it,itramp->tswitch2);
+                            }
                         }
                     }
                 }

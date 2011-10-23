@@ -158,16 +158,17 @@ protected:
 class TrajectoryTimingParameters : public PlannerBase::PlannerParameters
 {
 public:
-    TrajectoryTimingParameters() : _interpolation("linear"), _hastimestamps(false), _pointtolerance(0.001), _bProcessing(false) {
+    TrajectoryTimingParameters() : _interpolation("linear"), _pointtolerance(0.001), _hastimestamps(false), _outputaccelchanges(true), _bProcessing(false) {
         _vXMLParameters.push_back("interpolation");
         _vXMLParameters.push_back("hastimestamps");
         _vXMLParameters.push_back("pointtolerance");
+        _vXMLParameters.push_back("outputaccelchanges");
     }
 
     string _interpolation;
-    bool _hastimestamps;
     dReal _pointtolerance;
-
+    bool _hastimestamps;
+    bool _outputaccelchanges;
 protected:
     bool _bProcessing;
     virtual bool serialize(std::ostream& O) const
@@ -178,6 +179,7 @@ protected:
         O << "<interpolation>" << _interpolation << "</interpolation>" << endl;
         O << "<hastimestamps>" << _hastimestamps << "</hastimestamps>" << endl;
         O << "<pointtolerance>" << _pointtolerance << "</pointtolerance>" << endl;
+        O << "<outputaccelchanges>" << _outputaccelchanges << "</outputaccelchanges>" << endl;
         return !!O;
     }
 
@@ -192,7 +194,7 @@ protected:
         case PE_Ignore: return PE_Ignore;
         }
 
-        _bProcessing = name=="interpolation" || name=="hastimestamps" || name=="pointtolerance";
+        _bProcessing = name=="interpolation" || name=="hastimestamps" || name=="pointtolerance" || name=="outputaccelchanges";
         return _bProcessing ? PE_Support : PE_Pass;
     }
 
@@ -207,6 +209,9 @@ protected:
             }
             else if( name == "pointtolerance" ) {
                 _ss >> _pointtolerance;
+            }
+            else if( name == "outputaccelchanges" ) {
+                _ss >> _outputaccelchanges;
             }
             else {
                 RAVELOG_WARN(str(boost::format("unknown tag %s\n")%name));
