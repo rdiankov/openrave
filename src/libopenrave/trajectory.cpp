@@ -104,7 +104,8 @@ void TrajectoryBase::serialize(std::ostream& O, int options) const
         O << *it << " ";
     }
     O << "</data>" << endl;
-    O << "<description><![CDATA[" << GetDescription() << "]]></description>" << endl;
+    //O << "<description><![CDATA[" << GetDescription() << "]]></description>" << endl;
+    O << "<description>" << GetDescription() << "</description>" << endl;
     O << "</trajectory>" << endl;
 }
 
