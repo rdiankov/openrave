@@ -483,7 +483,7 @@ bool CheckRamp(const ParabolicRampND& ramp,FeasibilityCheckerBase* feas,Distance
         Real tc = (section.ta+section.tb)*0.5;
         Vector xc;
         ramp.Evaluate(tc,xc);
-        if(!feas->ConfigFeasible(xc)) return false;                                                         //infeasible config
+        if(!feas->ConfigFeasible(xc)) return false;                                                                                                              //infeasible config
         //subdivide
         Real dc = distance->ObstacleDistance(xc);
         RampSection sa,sb;
@@ -681,6 +681,10 @@ int DynamicPath::Shortcut(int numIters,RampFeasibilityChecker& check)
     DynamicPath intermediate;
     for(int iters=0; iters<numIters; iters++) {
         Real t1=sampler->Rand()*endTime,t2=sampler->Rand()*endTime;
+        if( iters == 0 ) {
+            t1 = 0;
+            t2 = endTime;
+        }
         if(t1 > t2) Swap(t1,t2);
         int i1 = std::upper_bound(rampStartTime.begin(),rampStartTime.end(),t1)-rampStartTime.begin()-1;
         int i2 = std::upper_bound(rampStartTime.begin(),rampStartTime.end(),t2)-rampStartTime.begin()-1;
@@ -784,7 +788,7 @@ int DynamicPath::OnlineShortcut(Real leadTime,Real padTime,RampFeasibilityChecke
         if(t1 > t2) Swap(t1,t2);
         int i1 = std::upper_bound(rampStartTime.begin(),rampStartTime.end(),t1)-rampStartTime.begin()-1;
         int i2 = std::upper_bound(rampStartTime.begin(),rampStartTime.end(),t2)-rampStartTime.begin()-1;
-        if(i1 == i2) continue;  //same ramp
+        if(i1 == i2) continue;                                  //same ramp
         Real u1 = t1-rampStartTime[i1];
         Real u2 = t2-rampStartTime[i2];
         PARABOLIC_ASSERT(u1 >= 0);

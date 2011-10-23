@@ -242,8 +242,9 @@ protected:
         WorkspaceTrajectoryParametersPtr params(new WorkspaceTrajectoryParameters(GetEnv()));
         boost::shared_ptr<ostream> pOutputTrajStream;
         params->ignorefirstcollision = 0.04;     // 0.04m?
-        string cmd;
+        string plannername = "workspacetrajectorytracker";
         params->_fStepLength = 0.01;
+        string cmd;
         while(!sinput.eof()) {
             sinput >> cmd;
             if( !sinput ) {
@@ -284,6 +285,9 @@ protected:
             }
             else if( cmd == "jacobian" ) {
                 RAVELOG_WARN("MoveHandStraight jacobian parameter not supported anymore\n");
+            }
+            else if( cmd == "planner" ) {
+                sinput >> plannername;
             }
             else if( cmd == "starteematrix" ) {
                 TransformMatrix tm;
@@ -338,7 +342,7 @@ protected:
             planningutils::RetimeAffineTrajectory(params->workspacetraj,maxvelocities,maxaccelerations);
         }
 
-        PlannerBasePtr planner = RaveCreatePlanner(GetEnv(),"workspacetrajectorytracker");
+        PlannerBasePtr planner = RaveCreatePlanner(GetEnv(),plannername);
         if( !planner ) {
             RAVELOG_WARN("failed to create planner\n");
             return false;

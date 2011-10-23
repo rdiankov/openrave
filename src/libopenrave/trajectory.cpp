@@ -52,6 +52,9 @@ BaseXMLReader::ProcessElement TrajectoryReader::startElement(const std::string& 
         }
         return PE_Support;
     }
+    else if( name == "description" ) {
+        return PE_Support;
+    }
     return PE_Pass;
 }
 
@@ -71,6 +74,9 @@ bool TrajectoryReader::endElement(const std::string& name)
         }
         BOOST_ASSERT(!!_ss);
         _ptraj->Insert(_ptraj->GetNumWaypoints(),_vdata);
+    }
+    else if( name == "description" ) {
+        _ptraj->SetDescription(_ss.str());
     }
     else if( name == "trajectory" ) {
         return true;
@@ -97,7 +103,9 @@ void TrajectoryBase::serialize(std::ostream& O, int options) const
     FOREACHC(it,data){
         O << *it << " ";
     }
-    O << "</data>" << endl << "</trajectory>" << endl;
+    O << "</data>" << endl;
+    O << "<description><![CDATA[" << GetDescription() << "]]></description>" << endl;
+    O << "</trajectory>" << endl;
 }
 
 void TrajectoryBase::deserialize(std::istream& I)

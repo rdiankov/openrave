@@ -444,6 +444,9 @@ public:
     string GetDescription() const {
         return _pbase->GetDescription();
     }
+    void SetDescription(const std::string& s) {
+        _pbase->SetDescription(s);
+    }
     PyEnvironmentBasePtr GetEnv() const {
         return _pyenv;
     }

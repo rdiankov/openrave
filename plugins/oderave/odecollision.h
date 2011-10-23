@@ -288,11 +288,11 @@ public:
             report->Reset(_options);
         }
         if( !plink1->IsEnabled() ) {
-            RAVELOG_VERBOSE(str(boost::format("calling collision on disabled link1 %s\n")%plink1->GetName()));
+            //RAVELOG_VERBOSE(str(boost::format("calling collision on disabled link1 %s\n")%plink1->GetName()));
             return false;
         }
         if( !plink2->IsEnabled() ) {
-            RAVELOG_VERBOSE(str(boost::format("calling collision on disabled link2 %s\n")%plink2->GetName()));
+            //RAVELOG_VERBOSE(str(boost::format("calling collision on disabled link2 %s\n")%plink2->GetName()));
             return false;
         }
         if( _options & OpenRAVE::CO_Distance ) {

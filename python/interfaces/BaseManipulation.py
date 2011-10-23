@@ -53,7 +53,7 @@ class BaseManipulation:
             cmd += 'samplingstep %.15e '%samplingstep
         return self.prob.SendCommand(cmd)
 
-    def MoveHandStraight(self,direction,minsteps=None,maxsteps=None,stepsize=None,ignorefirstcollision=None,starteematrix=None,greedysearch=True,execute=None,outputtraj=None,maxdeviationangle=None,steplength=None):
+    def MoveHandStraight(self,direction,minsteps=None,maxsteps=None,stepsize=None,ignorefirstcollision=None,starteematrix=None,greedysearch=None,execute=None,outputtraj=None,maxdeviationangle=None,steplength=None,planner=None):
         """See :ref:`module-basemanipulation-movehandstraight`
         """
         cmd = 'MoveHandStraight direction %.15e %.15e %.15e '%(direction[0],direction[1],direction[2])
@@ -65,6 +65,8 @@ class BaseManipulation:
             cmd += 'steplength %.15e '%stepsize
         if steplength is not None:
             cmd += 'steplength %.15e '%steplength
+        if planner is not None:
+            cmd += 'planner %s '%planner
         if execute is not None:
             cmd += 'execute %d '%execute
         if starteematrix is not None:
