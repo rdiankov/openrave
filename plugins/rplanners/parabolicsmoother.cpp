@@ -133,15 +133,17 @@ public:
             FOREACHC(itrampnd,dynamicpath.ramps) {
                 vswitchtimes.resize(0);
                 vswitchtimes.push_back(itrampnd->endTime);
-                FOREACHC(itramp,itrampnd->ramps) {
-                    vector<dReal>::iterator it = lower_bound(vswitchtimes.begin(),vswitchtimes.end(),itramp->tswitch1);
-                    if( *it != itramp->tswitch1 ) {
-                        vswitchtimes.insert(it,itramp->tswitch1);
-                    }
-                    if( itramp->tswitch1 != itramp->tswitch2 ) {
-                        it = lower_bound(vswitchtimes.begin(),vswitchtimes.end(),itramp->tswitch2);
-                        if( *it != itramp->tswitch2 ) {
-                            vswitchtimes.insert(it,itramp->tswitch2);
+                if( _parameters->_outputaccelchanges ) {
+                    FOREACHC(itramp,itrampnd->ramps) {
+                        vector<dReal>::iterator it = lower_bound(vswitchtimes.begin(),vswitchtimes.end(),itramp->tswitch1);
+                        if( *it != itramp->tswitch1 ) {
+                            vswitchtimes.insert(it,itramp->tswitch1);
+                        }
+                        if( itramp->tswitch1 != itramp->tswitch2 ) {
+                            it = lower_bound(vswitchtimes.begin(),vswitchtimes.end(),itramp->tswitch2);
+                            if( *it != itramp->tswitch2 ) {
+                                vswitchtimes.insert(it,itramp->tswitch2);
+                            }
                         }
                     }
                 }
@@ -161,7 +163,7 @@ public:
             }
 
             BOOST_ASSERT(RaveFabs(dynamicpath.GetTotalTime()-ptraj->GetDuration())<0.001);
-            RAVELOG_DEBUG(str(boost::format("after shortcutting %d times: path waypoints=%d, length=%fs")%numshortcuts%ptraj->GetNumWaypoints()%dynamicpath.GetTotalTime()));
+            RAVELOG_DEBUG(str(boost::format("after shortcutting %d times: path waypoints=%d, traj waypoints=%d, length=%fs")%numshortcuts%dynamicpath.ramps.size()%ptraj->GetNumWaypoints()%dynamicpath.GetTotalTime()));
         }
         catch (const openrave_exception& ex) {
             RAVELOG_WARN(str(boost::format("parabolic planner failed: %s")%ex.what()));

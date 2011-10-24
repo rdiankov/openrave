@@ -16,6 +16,12 @@
 
 .. examplepre-block:: cubeassembly
 
+There's an ODE bug that can cause the demo to crash, if that happens try with a different collision checker like:
+
+.. code-block:: bash
+
+  openrave.py --example cubeassembly --collision=bullet
+
 Description
 -----------
 

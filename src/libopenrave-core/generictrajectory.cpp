@@ -302,7 +302,10 @@ public:
         FOREACHC(it,_vtrajdata) {
             O << *it << " ";
         }
-        O << "</data>" << "</trajectory>" << endl;
+        O << "</data>" << endl;
+        //O << "<description><![CDATA[" << GetDescription() << "]]></description>" << endl;
+        O << "<description>" << GetDescription() << "</description>" << endl;
+        O << "</trajectory>" << endl;
     }
 
     void Clone(InterfaceBaseConstPtr preference, int cloningoptions)

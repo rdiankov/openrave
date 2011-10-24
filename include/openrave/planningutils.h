@@ -52,7 +52,7 @@ OPENRAVE_API void VerifyTrajectory(PlannerBase::PlannerParametersConstPtr parame
    \param plannername the name of the planner to use to retime. If empty, will use the default trajectory re-timer.
    \param hastimestamps if true, use the already initialized timestamps of the trajectory
  */
-OPENRAVE_API void RetimeActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr robot, bool hastimestamps=false, dReal fmaxvelmult=1, const std::string plannername="");
+OPENRAVE_API void RetimeActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr robot, bool hastimestamps=false, dReal fmaxvelmult=1, const std::string& plannername="");
 
 /** \brief retimes the trajectory points consisting of affine dofs
 
@@ -62,7 +62,7 @@ OPENRAVE_API void RetimeActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr
    \param plannername the name of the planner to use to retime. If empty, will use the default trajectory re-timer.
    \param hastimestamps if true, use the already initialized timestamps of the trajectory
  */
-OPENRAVE_API void RetimeAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps=false, const std::string plannername="");
+OPENRAVE_API void RetimeAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps=false, const std::string& plannername="");
 
 /// \brief convert the trajectory and all its points to a new specification
 OPENRAVE_API void ConvertTrajectorySpecification(TrajectoryBasePtr traj, const ConfigurationSpecification& spec);

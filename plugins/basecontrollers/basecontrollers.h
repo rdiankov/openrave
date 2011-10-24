@@ -49,12 +49,12 @@ If SetDesired is called, only joint values will be set at every timestep leaving
             flog.close();
         }
         if( !!_probot ) {
-            string filename = RaveGetHomeDirectory() + string("/") + _probot->GetName() + string(".traj");
+            string filename = RaveGetHomeDirectory() + string("/") + _probot->GetName() + string(".traj.xml");
             flog.open(filename.c_str());
             if( !flog ) {
                 RAVELOG_WARN(str(boost::format("failed to open %s\n")%filename));
             }
-            flog << GetXMLId() << " " << _probot->GetName() << endl << endl;
+            flog << "<" << GetXMLId() << " robot=\"" << _probot->GetName() << "\"/>" << endl;
             _dofindices = dofindices;
             _nControlTransformation = nControlTransformation;
             _dofchecklimits.resize(0);

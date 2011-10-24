@@ -131,8 +131,9 @@ Here's a short list of features of the grasper planner and problem interfaces:
   headaches before).
 
 - The grasp coordinate system is defined to be the manipulator's grasp coordinate system (ie, it
-  isn't a link). This allows grasps to define a center of approach. The manipulator definition
-  itself also supports specifying a 'palm direction', which the grasper planner now uses.
+  isn't a link). This allows grasps to define a center of approach. Each grasp also requires an
+  approach direction, which can be specified by the **manipulationdirection** parameter; if none
+  specified, the manipulator's direction is used.
 
 - Because the grasper planner reads the gripper links from the manipulator definition, it can now
   function correctly just by being passed the full robot. Inside the loop, the gripper is separated

@@ -19,10 +19,12 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
 {
     switch(type) {
     case PT_Controller:
-        if( interfacename == "idealcontroller")
+        if( interfacename == "idealcontroller") {
             return InterfaceBasePtr(new IdealController(penv));
-        else if( interfacename == "redirectcontroller" )
+        }
+        else if( interfacename == "redirectcontroller" ) {
             return InterfaceBasePtr(new RedirectController(penv));
+        }
         break;
     default:
         break;

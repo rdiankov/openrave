@@ -224,6 +224,24 @@ private:
         BulletCollisionChecker* _pchecker;
     };
 
+    class SetFilterScope
+    {
+public:
+        SetFilterScope(boost::shared_ptr<btOpenraveDispatcher> dispatcher, btOverlappingPairCache* paircallback, btOverlapFilterCallback* filter) : _dispatcher(dispatcher), _paircallback(paircallback) {
+            _paircallback->setOverlapFilterCallback(filter);
+            _dispatcher->_poverlapfilt = filter;
+        }
+        virtual ~SetFilterScope()
+        {
+            _paircallback->setOverlapFilterCallback(NULL);
+            _dispatcher->_poverlapfilt = NULL;
+        }
+
+private:
+        boost::shared_ptr<btOpenraveDispatcher> _dispatcher;
+        btOverlappingPairCache* _paircallback;
+    };
+
     class AllRayResultCallback : public btCollisionWorld::RayResultCallback    //btCollisionWorld::ClosestRayResultCallback
     {
 public:
@@ -286,16 +304,13 @@ public:
         bool bHasCallbacks = GetEnv()->HasRegisteredCollisionCallbacks();
         std::list<EnvironmentBase::CollisionCallbackFn> listcallbacks;
 
-        _world->getPairCache()->setOverlapFilterCallback(poverlapfilt);
-        _dispatcher->_poverlapfilt = poverlapfilt;
-
+        SetFilterScope filter(_dispatcher, _world->getPairCache(), poverlapfilt);
         _world->performDiscreteCollisionDetection();
 
         // for some reason this is necessary, or else collisions will start disappearing
         _broadphase->calculateOverlappingPairs(_world->getDispatcher());
 
         int numManifolds = _world->getDispatcher()->getNumManifolds();
-        _dispatcher->_poverlapfilt = NULL;
 
         for (int i=0; i<numManifolds; i++) {
             btPersistentManifold* contactManifold = _world->getDispatcher()->getManifoldByIndexInternal(i);
@@ -397,9 +412,6 @@ public:
 
     virtual void DestroyEnvironment()
     {
-        _world->getPairCache()->setOverlapFilterCallback(NULL);
-        _dispatcher->_poverlapfilt = NULL;
-
         // go through all the KinBodies and destory their collision pointers
         vector<KinBodyPtr> vbodies;
         GetEnv()->GetBodies(vbodies);
@@ -771,9 +783,6 @@ public:
         LinkAdjacentFilterCallback linkadjacent(pbody, pbody->GetNonAdjacentLinks(adjacentoptions));
         bulletspace->Synchronize(); // call after GetNonAdjacentLinks since it can modify the body, even though it is const!
         bool bCollision = CheckCollisionP(&linkadjacent, report);
-        // things get cached and very messy if not released
-        _world->getPairCache()->setOverlapFilterCallback(NULL);
-        _dispatcher->_poverlapfilt = NULL;
         return bCollision;
     }
 

@@ -207,9 +207,9 @@ void VerifyTrajectory(PlannerBase::PlannerParametersConstPtr parameters, Traject
     }
 }
 
-void RetimeActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr probot, bool hastimestamps, dReal fmaxvelmult, const std::string plannername)
+void RetimeActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr probot, bool hastimestamps, dReal fmaxvelmult, const std::string& plannername)
 {
-    PlannerBasePtr planner = RaveCreatePlanner(traj->GetEnv(),"lineartrajectoryretimer");
+    PlannerBasePtr planner = RaveCreatePlanner(traj->GetEnv(),plannername.size() > 0 ? plannername : string("lineartrajectoryretimer"));
     PlannerBase::PlannerParametersPtr params(new PlannerBase::PlannerParameters());
     params->SetRobotActiveJoints(probot);
     FOREACH(it,params->_vConfigVelocityLimit) {
@@ -243,9 +243,9 @@ static void diffstatefn(std::vector<dReal>& q1, const std::vector<dReal>& q2, co
     }
 }
 
-void RetimeAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps, const std::string plannername)
+void RetimeAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps, const std::string& plannername)
 {
-    PlannerBasePtr planner = RaveCreatePlanner(traj->GetEnv(),"lineartrajectoryretimer");
+    PlannerBasePtr planner = RaveCreatePlanner(traj->GetEnv(),plannername.size() > 0 ? plannername : string("lineartrajectoryretimer"));
     PlannerBase::PlannerParametersPtr params(new PlannerBase::PlannerParameters());
     string interpolation = "linear";
     params->_vConfigVelocityLimit = maxvelocities;

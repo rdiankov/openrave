@@ -17,8 +17,22 @@ class TestCollision(EnvironmentSetup):
     def setup(self):
         EnvironmentSetup.setup(self)
         # select collision engine here
-        self.env.SetCollisionChecker(RaveCreateCollisionChecker(self.env,'ode'))
+        self.env.SetCollisionChecker(RaveCreateCollisionChecker(self.env,'bullet'))
 
+    def test_basic(self):
+        env=self.env
+        with env:
+            env.Load('data/hironxtable.env.xml')
+            robot=env.GetRobots()[0]
+            env.CheckCollision(robot)
+            newobject=env.ReadKinBodyURI('data/mug1.kinbody.xml')
+            env.AddKinBody(newobject,True)
+            box=RaveCreateKinBody(env,'')
+            env.CheckCollision(box)
+            box.InitFromBoxes(array([[0,0,0,1,1,1]]),True)
+            box.SetName('box')
+            env.AddKinBody(box,True)
+            
     def test_collisioncaching(self):
         filenames = ['robots/barrettwam.robot.xml']
         env=self.env
