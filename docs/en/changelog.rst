@@ -31,6 +31,8 @@ Core
 
 * Can now reset the local manipulator coordinate system with :meth:`.Robot.Manipulator.SetLocalToolTransform`
 
+* Added parsing of kinematics for DirextX files (*.x).
+
 Inverse Kinematics
 ------------------
 

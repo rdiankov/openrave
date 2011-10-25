@@ -206,10 +206,12 @@ protected:
             friend class ColladaReader;
             friend class OpenRAVEXMLParser::LinkXMLReader;
             friend class OpenRAVEXMLParser::KinBodyXMLReader;
+            friend class XFileReader;
 #else
             friend class ::ColladaReader;
             friend class ::OpenRAVEXMLParser::LinkXMLReader;
             friend class ::OpenRAVEXMLParser::KinBodyXMLReader;
+            friend class ::XFileReader;
 #endif
 #endif
             friend class KinBody;
@@ -370,11 +372,13 @@ private:
         friend class OpenRAVEXMLParser::LinkXMLReader;
         friend class OpenRAVEXMLParser::KinBodyXMLReader;
         friend class OpenRAVEXMLParser::RobotXMLReader;
+        friend class XFileReader;
 #else
         friend class ::ColladaReader;
         friend class ::OpenRAVEXMLParser::LinkXMLReader;
         friend class ::OpenRAVEXMLParser::KinBodyXMLReader;
         friend class ::OpenRAVEXMLParser::RobotXMLReader;
+        friend class ::XFileReader;
 #endif
 #endif
         friend class KinBody;
@@ -743,12 +747,14 @@ private:
         friend class OpenRAVEXMLParser::JointXMLReader;
         friend class OpenRAVEXMLParser::KinBodyXMLReader;
         friend class OpenRAVEXMLParser::RobotXMLReader;
+        friend class XFileReader;
 #else
         friend class ::ColladaReader;
         friend class ::ColladaWriter;
         friend class ::OpenRAVEXMLParser::JointXMLReader;
         friend class ::OpenRAVEXMLParser::KinBodyXMLReader;
         friend class ::OpenRAVEXMLParser::RobotXMLReader;
+        friend class ::XFileReader;
 #endif
 #endif
         friend class KinBody;
@@ -1402,12 +1408,14 @@ private:
     friend class ColladaWriter;
     friend class OpenRAVEXMLParser::KinBodyXMLReader;
     friend class OpenRAVEXMLParser::JointXMLReader;
+    friend class XFileReader;
 #else
     friend class ::Environment;
     friend class ::ColladaReader;
     friend class ::ColladaWriter;
     friend class ::OpenRAVEXMLParser::KinBodyXMLReader;
     friend class ::OpenRAVEXMLParser::JointXMLReader;
+    friend class ::XFileReader;
 #endif
 #endif
 

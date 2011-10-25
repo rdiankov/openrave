@@ -508,69 +508,69 @@ class InverseKinematicsModel(DatabaseGenerator):
         if self.iktype is None:
             self.iktype = iktype = IkParameterization.Type.Transform6D
         if self.iktype == IkParameterization.Type.Rotation3D:
-            Rbaseraw=self.manip.GetGraspTransform()[0:3,0:3]
+            Rbaseraw=self.manip.GetLocalToolTransform()[0:3,0:3]
             def solveFullIK_Rotation3D(*args,**kwargs):
                 kwargs['Rbaseraw'] = Rbaseraw
                 return self.ikfast.IKFastSolver.solveFullIK_Rotation3D(*args,**kwargs)
             solvefn=solveFullIK_Rotation3D
         elif self.iktype == IkParameterization.Type.Direction3D:
-            rawbasedir=dot(self.manip.GetGraspTransform()[0:3,0:3],self.manip.GetDirection())
+            rawbasedir=dot(self.manip.GetLocalToolTransform()[0:3,0:3],self.manip.GetDirection())
             def solveFullIK_Direction3D(*args,**kwargs):
                 kwargs['rawbasedir'] = rawbasedir
                 return self.ikfast.IKFastSolver.solveFullIK_Direction3D(*args,**kwargs)
             solvefn=solveFullIK_Direction3D
         elif self.iktype == IkParameterization.Type.Ray4D:
-            rawbasedir=dot(self.manip.GetGraspTransform()[0:3,0:3],self.manip.GetDirection())
-            rawbasepos=self.manip.GetGraspTransform()[0:3,3]
+            rawbasedir=dot(self.manip.GetLocalToolTransform()[0:3,0:3],self.manip.GetDirection())
+            rawbasepos=self.manip.GetLocalToolTransform()[0:3,3]
             def solveFullIK_Ray4D(*args,**kwargs):
                 kwargs['rawbasedir'] = rawbasedir
                 kwargs['rawbasepos'] = rawbasepos
                 return self.ikfast.IKFastSolver.solveFullIK_Ray4D(*args,**kwargs)
             solvefn=solveFullIK_Ray4D
         elif self.iktype == IkParameterization.Type.TranslationDirection5D:
-            rawbasedir=dot(self.manip.GetGraspTransform()[0:3,0:3],self.manip.GetDirection())
-            rawbasepos=self.manip.GetGraspTransform()[0:3,3]
+            rawbasedir=dot(self.manip.GetLocalToolTransform()[0:3,0:3],self.manip.GetDirection())
+            rawbasepos=self.manip.GetLocalToolTransform()[0:3,3]
             def solveFullIK_TranslationDirection5D(*args,**kwargs):
                 kwargs['rawbasedir'] = rawbasedir
                 kwargs['rawbasepos'] = rawbasepos
                 return self.ikfast.IKFastSolver.solveFullIK_TranslationDirection5D(*args,**kwargs)
             solvefn=solveFullIK_TranslationDirection5D
         elif self.iktype == IkParameterization.Type.Translation3D:
-            rawbasepos=self.manip.GetGraspTransform()[0:3,3]
+            rawbasepos=self.manip.GetLocalToolTransform()[0:3,3]
             def solveFullIK_Translation3D(*args,**kwargs):
                 kwargs['rawbasepos'] = rawbasepos
                 return self.ikfast.IKFastSolver.solveFullIK_Translation3D(*args,**kwargs)
             solvefn=solveFullIK_Translation3D
         elif self.iktype == IkParameterization.Type.TranslationXY2D:
-            rawbasepos=self.manip.GetGraspTransform()[0:2,3]
+            rawbasepos=self.manip.GetLocalToolTransform()[0:2,3]
             def solveFullIK_TranslationXY2D(*args,**kwargs):
                 kwargs['rawbasepos'] = rawbasepos
                 return self.ikfast.IKFastSolver.solveFullIK_TranslationXY2D(*args,**kwargs)
             solvefn=solveFullIK_TranslationXY2D
         elif self.iktype == IkParameterization.Type.TranslationXYOrientation3D:
-            rawbasepos=self.manip.GetGraspTransform()[0:2,3]
-            rawangle=normalizeAxisRotation([0,0,1],-self.manip.GetGraspTransform()[0:3,0:3])[0]
+            rawbasepos=self.manip.GetLocalToolTransform()[0:2,3]
+            rawangle=normalizeAxisRotation([0,0,1],-self.manip.GetLocalToolTransform()[0:3,0:3])[0]
             def solveFullIK_TranslationXYOrientation3D(*args,**kwargs):
                 kwargs['rawbasepos'] = rawbasepos
                 kwargs['rawangle'] = rawangle
                 return self.ikfast.IKFastSolver.solveFullIK_TranslationXYOrientation3D(*args,**kwargs)
             solvefn=solveFullIK_TranslationXYOrientation3D
         elif self.iktype == IkParameterization.Type.Transform6D:
-            Tgripperraw=self.manip.GetGraspTransform()
+            Tgripperraw=self.manip.GetLocalToolTransform()
             def solveFullIK_6D(*args,**kwargs):
                 kwargs['Tgripperraw'] = Tgripperraw
                 return self.ikfast.IKFastSolver.solveFullIK_6D(*args,**kwargs)
             solvefn=solveFullIK_6D
         elif self.iktype == IkParameterization.Type.Lookat3D:
-            rawbasedir=dot(self.manip.GetGraspTransform()[0:3,0:3],self.manip.GetDirection())
-            rawbasepos=self.manip.GetGraspTransform()[0:3,3]
+            rawbasedir=dot(self.manip.GetLocalToolTransform()[0:3,0:3],self.manip.GetDirection())
+            rawbasepos=self.manip.GetLocalToolTransform()[0:3,3]
             def solveFullIK_Lookat3D(*args,**kwargs):
                 kwargs['rawbasedir'] = rawbasedir
                 kwargs['rawbasepos'] = rawbasepos
                 return self.ikfast.IKFastSolver.solveFullIK_Lookat3D(*args,**kwargs)
             solvefn=solveFullIK_Lookat3D
         elif self.iktype == IkParameterization.Type.TranslationLocalGlobal6D:
-            Tgripperraw=self.manip.GetGraspTransform()
+            Tgripperraw=self.manip.GetLocalToolTransform()
             def solveFullIK_TranslationLocalGlobal6D(*args,**kwargs):
                 kwargs['Tgripperraw'] = Tgripperraw
                 return self.ikfast.IKFastSolver.solveFullIK_TranslationLocalGlobal6D(*args,**kwargs)

@@ -174,6 +174,7 @@ class Environment;
 class RaveDatabase;
 class ColladaReader;
 class ColladaWriter;
+class XFileReader;
 
 #include "openrave-core.h"
 
