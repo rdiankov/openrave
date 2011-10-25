@@ -22,7 +22,7 @@ if( ASSIMP_FOUND )
   set(LIBOPENRAVE_COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} -DOPENRAVE_ASSIMP ${ASSIMP_CFLAGS_OTHER}")
   set(LIBOPENRAVE_LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS} ${ASSIMP_LDFLAGS_OTHER}")
   message(STATUS "Geometry Parsing: Using Open Asset Import Library (assimp)")
-  set(openrave_core_SOURCES ${openrave_core_SOURCES}  xfileparser/XFileParser.cpp xfileparser/xfilebindings)
+  set(openrave_core_SOURCES ${openrave_core_SOURCES}  xfileparser/XFileParser.cpp xfileparser/XFileBindings.cpp)
 endif()
 
 if( IVCON_FOUND )
