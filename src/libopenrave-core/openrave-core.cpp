@@ -83,3 +83,27 @@ void RaveWriteColladaFile(RobotBasePtr probot, const string& filename)
 }
 
 #endif
+
+#ifndef OPENRAVE_ASSIMP
+
+bool RaveParseXFile(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& filename,const AttributesList& atts)
+{
+    RAVELOG_ERROR("x-files not supported\n");
+}
+
+bool RaveParseXFile(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& filename,const AttributesList& atts)
+{
+    RAVELOG_ERROR("x-files not supported\n");
+}
+
+bool RaveParseXData(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& data,const AttributesList& atts)
+{
+    RAVELOG_ERROR("x-files not supported\n");
+}
+
+bool RaveParseXData(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& data,const AttributesList& atts)
+{
+    RAVELOG_ERROR("x-files not supported\n");
+}
+
+#endif

@@ -379,33 +379,47 @@ public:
     virtual bool Load(const std::string& filename, const AttributesList& atts)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        bool bSuccess = false;
         OpenRAVEXMLParser::GetXMLErrorCount() = 0;
         if( _IsColladaFile(filename) ) {
             OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
-            bSuccess = RaveParseColladaFile(shared_from_this(), filename, atts);
+            if( RaveParseColladaFile(shared_from_this(), filename, atts) ) {
+                return true;
+            }
+        }
+        if( _IsXFile(filename) ) {
+            OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
+            RobotBasePtr robot;
+            if( RaveParseXFile(shared_from_this(), robot, filename, atts) ) {
+                AddRobot(robot, true);
+                return true;
+            }
         }
         else if( !_IsOpenRAVEFile(filename) && _IsRigidModelFile(filename) ) {
             KinBodyPtr pbody = ReadKinBodyURI(KinBodyPtr(),filename,atts);
             if( !!pbody ) {
                 AddKinBody(pbody,true);
-                bSuccess = true;
+                return true;
             }
         }
         else {
-            bSuccess = _ParseXMLFile(OpenRAVEXMLParser::CreateInterfaceReader(shared_from_this(),atts,true), filename);
+            if( _ParseXMLFile(OpenRAVEXMLParser::CreateInterfaceReader(shared_from_this(),atts,true), filename) ) {
+                if( OpenRAVEXMLParser::GetXMLErrorCount() == 0 ) {
+                    return true;
+                }
+            }
         }
 
-        if( !bSuccess ) {
-            RAVELOG_WARN("load failed on file %s\n", filename.c_str());
-        }
-
-        return bSuccess && OpenRAVEXMLParser::GetXMLErrorCount() == 0;
+        RAVELOG_WARN("load failed on file %s\n", filename.c_str());
+        return false;
     }
 
     virtual bool LoadData(const std::string& data, const AttributesList& atts)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        if( _IsColladaData(data) ) {
+            OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
+            return RaveParseColladaData(shared_from_this(), data, atts);
+        }
         return _ParseXMLData(OpenRAVEXMLParser::CreateEnvironmentReader(shared_from_this(),atts),data);
     }
 
@@ -996,6 +1010,12 @@ public:
                 return RobotBasePtr();
             }
         }
+        else if( _IsXFile(filename) ) {
+            OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
+            if( !RaveParseXFile(shared_from_this(), robot, filename, atts) ) {
+                return RobotBasePtr();
+            }
+        }
         else if( !_IsOpenRAVEFile(filename) && _IsRigidModelFile(filename) ) {
             if( !robot ) {
                 robot = RaveCreateRobot(shared_from_this(),"GenericRobot");
@@ -1067,6 +1087,11 @@ public:
                 return RobotBasePtr();
             }
         }
+        else if( _IsXData(data) ) {
+            if( !RaveParseXData(shared_from_this(), robot, data, atts) ) {
+                return RobotBasePtr();
+            }
+        }
         else {
             InterfaceBasePtr pinterface = robot;
             BaseXMLReaderPtr preader = OpenRAVEXMLParser::CreateInterfaceReader(shared_from_this(), PT_Robot, pinterface, "robot", atts);
@@ -1099,6 +1124,12 @@ public:
         if( _IsColladaFile(filename) ) {
             OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
             if( !RaveParseColladaFile(shared_from_this(), body, filename, atts) ) {
+                return KinBodyPtr();
+            }
+        }
+        else if( _IsXFile(filename) ) {
+            OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
+            if( !RaveParseXFile(shared_from_this(), body, filename, atts) ) {
                 return KinBodyPtr();
             }
         }
@@ -1170,6 +1201,11 @@ public:
                 return RobotBasePtr();
             }
         }
+        else if( _IsXData(data) ) {
+            if( !RaveParseXData(shared_from_this(), body, data, atts) ) {
+                return RobotBasePtr();
+            }
+        }
         else {
             InterfaceBasePtr pinterface = body;
             BaseXMLReaderPtr preader = OpenRAVEXMLParser::CreateInterfaceReader(shared_from_this(), PT_KinBody, pinterface, "kinbody", atts);
@@ -1214,7 +1250,7 @@ public:
     virtual InterfaceBasePtr ReadInterfaceURI(InterfaceBasePtr pinterface, InterfaceType type, const std::string& filename, const AttributesList& atts)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        if( (( type == PT_KinBody) ||( type == PT_Robot) ) && _IsColladaFile(filename) ) {
+        if( (type == PT_KinBody ||type == PT_Robot ) && _IsColladaFile(filename) ) {
             if( type == PT_KinBody ) {
                 BOOST_ASSERT(!pinterface|| (pinterface->GetInterfaceType()==PT_KinBody||pinterface->GetInterfaceType()==PT_Robot));
                 KinBodyPtr pbody = RaveInterfaceCast<KinBody>(pinterface);
@@ -1229,6 +1265,30 @@ public:
                 RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pinterface);
                 OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
                 if( !RaveParseColladaFile(shared_from_this(), probot, filename, atts) ) {
+                    return InterfaceBasePtr();
+                }
+                pinterface = probot;
+            }
+            else {
+                return InterfaceBasePtr();
+            }
+            pinterface->__struri = filename;
+        }
+        if( (type == PT_KinBody ||type == PT_Robot ) && _IsXFile(filename) ) {
+            if( type == PT_KinBody ) {
+                BOOST_ASSERT(!pinterface|| (pinterface->GetInterfaceType()==PT_KinBody||pinterface->GetInterfaceType()==PT_Robot));
+                KinBodyPtr pbody = RaveInterfaceCast<KinBody>(pinterface);
+                OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
+                if( !RaveParseXFile(shared_from_this(), pbody, filename, atts) ) {
+                    return InterfaceBasePtr();
+                }
+                pinterface = pbody;
+            }
+            else if( type == PT_Robot ) {
+                BOOST_ASSERT(!pinterface||pinterface->GetInterfaceType()==PT_Robot);
+                RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pinterface);
+                OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
+                if( !RaveParseXFile(shared_from_this(), probot, filename, atts) ) {
                     return InterfaceBasePtr();
                 }
                 pinterface = probot;
@@ -1911,10 +1971,10 @@ protected:
         if( len < 4 ) {
             return false;
         }
-        if(( filename[len-4] == '.') &&( ::tolower(filename[len-3]) == 'd') &&( ::tolower(filename[len-2]) == 'a') &&( ::tolower(filename[len-1]) == 'e') ) {
+        if( filename[len-4] == '.' && ::tolower(filename[len-3]) == 'd' && ::tolower(filename[len-2]) == 'a' && ::tolower(filename[len-1]) == 'e' ) {
             return true;
         }
-        if(( filename[len-4] == '.') &&( ::tolower(filename[len-3]) == 'z') &&( ::tolower(filename[len-2]) == 'a') &&( ::tolower(filename[len-1]) == 'e') ) {
+        if( filename[len-4] == '.' && ::tolower(filename[len-3]) == 'z' && ::tolower(filename[len-2]) == 'a' && ::tolower(filename[len-1]) == 'e' ) {
             return true;
         }
         return false;
@@ -1923,6 +1983,21 @@ protected:
     {
         return data.find("<COLLADA") != std::string::npos;
     }
+
+    static bool _IsXFile(const std::string& filename)
+    {
+        size_t len = filename.size();
+        if( len < 2 ) {
+            return false;
+        }
+        return filename[len-2] == '.' && ::tolower(filename[len-1]) == 'x';
+    }
+
+    static bool _IsXData(const std::string& data)
+    {
+        return data.size() >= 4 && data[0] == 'x' && data[1] == 'o' && data[2] == 'f' && data[3] == ' ';
+    }
+
     static bool _IsOpenRAVEFile(const std::string& filename)
     {
         size_t len = filename.size();
