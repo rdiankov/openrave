@@ -185,10 +185,12 @@ private:
     friend class Environment;
     friend class OpenRAVEXMLParser::InterfaceXMLReader;
     friend class ColladaReader;
+    friend class XFileReader;
 #else
     friend class ::Environment;
     friend class ::OpenRAVEXMLParser::InterfaceXMLReader;
     friend class ::ColladaReader;
+    friend class ::XFileReader;
 #endif
 #endif
     friend class RaveDatabase;

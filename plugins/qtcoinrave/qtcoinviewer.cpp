@@ -1989,10 +1989,9 @@ void QtCoinViewer::SetupMenus()
     _pSelectedCollisionChecker = new QActionGroup(this);
 
     {
-        pact = new QAction(tr("None"), this);
+        pact = new QAction(tr("[None]"), this);
         pact->setCheckable(true);
         pact->setChecked(false);
-        pact->setData("");
         psubmenu->addAction(pact);
         _pSelectedCollisionChecker->addAction(pact);
     }
@@ -2001,7 +2000,6 @@ void QtCoinViewer::SetupMenus()
         pact = new QAction(tr(itname->c_str()), this);
         pact->setCheckable(true);
         pact->setChecked(false);
-        pact->setData(itname->c_str());
         psubmenu->addAction(pact);
         _pSelectedCollisionChecker->addAction(pact);
     }
@@ -2012,10 +2010,9 @@ void QtCoinViewer::SetupMenus()
     _pSelectedPhysicsEngine = new QActionGroup(this);
 
     {
-        pact = new QAction(tr("None"), this);
+        pact = new QAction(tr("[None]"), this);
         pact->setCheckable(true);
         pact->setChecked(false);
-        pact->setData("");
         psubmenu->addAction(pact);
         _pSelectedPhysicsEngine->addAction(pact);
     }
@@ -2024,7 +2021,6 @@ void QtCoinViewer::SetupMenus()
         pact = new QAction(tr(itname->c_str()), this);
         pact->setCheckable(true);
         pact->setChecked(false);
-        pact->setData(itname->c_str());
         psubmenu->addAction(pact);
         _pSelectedPhysicsEngine->addAction(pact);
     }
@@ -3082,11 +3078,11 @@ uint8_t* QtCoinViewer::_GetVideoFrame()
 
 void QtCoinViewer::CollisionCheckerChanged(QAction* pact)
 {
-    if( pact->data().toString().size() == 0 ) {
+    if( pact->text() == "[None]" ) {
         GetEnv()->SetCollisionChecker(CollisionCheckerBasePtr());
     }
     else {
-        CollisionCheckerBasePtr p = RaveCreateCollisionChecker(GetEnv(),pact->data().toString().toStdString());
+        CollisionCheckerBasePtr p = RaveCreateCollisionChecker(GetEnv(),pact->text().toUtf8().constData());
         if( !!p ) {
             GetEnv()->SetCollisionChecker(p);
         }
@@ -3102,12 +3098,14 @@ void QtCoinViewer::_UpdateCollisionChecker()
         CollisionCheckerBasePtr p = GetEnv()->GetCollisionChecker();
         if( !!p ) {
             for(int i = 0; i < _pSelectedCollisionChecker->actions().size(); ++i) {
-                if( _pSelectedCollisionChecker->actions().at(i)->data().toString().toStdString() == p->GetXMLId() ) {
-                    _pSelectedCollisionChecker->actions().at(i)->setChecked(true);
+                QAction* pact = _pSelectedCollisionChecker->actions().at(i);
+                std::string selectedname = pact->text().toUtf8().constData();
+                if( selectedname == p->GetXMLId()) {
+                    pact->setChecked(true);
                     return;
                 }
             }
-            //RAVELOG_VERBOSE(str(boost::format("cannot find collision checker menu item %s\n")%p->GetXMLId()));
+            RAVELOG_VERBOSE(str(boost::format("cannot find collision checker menu item %s\n")%p->GetXMLId()));
         }
 
         // set to default
@@ -3117,11 +3115,12 @@ void QtCoinViewer::_UpdateCollisionChecker()
 
 void QtCoinViewer::PhysicsEngineChanged(QAction* pact)
 {
-    if( pact->data().toString().size() == 0 ) {
+    
+    if( pact->text() == "[None]" ) {
         GetEnv()->SetPhysicsEngine(PhysicsEngineBasePtr());
     }
     else {
-        PhysicsEngineBasePtr p = RaveCreatePhysicsEngine(GetEnv(),pact->data().toString().toStdString());
+        PhysicsEngineBasePtr p = RaveCreatePhysicsEngine(GetEnv(),pact->text().toUtf8().constData());
         if( !!p ) {
             GetEnv()->SetPhysicsEngine(p);
         }
@@ -3134,16 +3133,18 @@ void QtCoinViewer::PhysicsEngineChanged(QAction* pact)
 void QtCoinViewer::_UpdatePhysicsEngine()
 {
     PhysicsEngineBasePtr p;
-    if( !!_pSelectedPhysicsEngine ) {
+    if( 0&&!!_pSelectedPhysicsEngine ) {
         p = GetEnv()->GetPhysicsEngine();
         if( !!p ) {
             for(int i = 0; i < _pSelectedPhysicsEngine->actions().size(); ++i) {
-                if( _pSelectedPhysicsEngine->actions().at(i)->data().toString().toStdString() == p->GetXMLId() ) {
-                    _pSelectedPhysicsEngine->actions().at(i)->setChecked(true);
+                QAction* pact = _pSelectedPhysicsEngine->actions().at(i);
+                std::string selectedname = pact->text().toUtf8().constData();
+                if( selectedname == p->GetXMLId() ) {
+                    pact->setChecked(true);
                     return;
                 }
             }
-            //RAVELOG_WARN(str(boost::format("cannot find physics engine menu item %s\n")%p->GetXMLId()));
+            RAVELOG_VERBOSE(str(boost::format("cannot find physics engine menu item %s\n")%p->GetXMLId()));
         }
 
         // set to default

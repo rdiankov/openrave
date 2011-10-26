@@ -31,6 +31,8 @@ Core
 
 * Can now reset the local manipulator coordinate system with :meth:`.Robot.Manipulator.SetLocalToolTransform`
 
+* Added parsing of kinematics for DirextX files (*.x).
+
 Inverse Kinematics
 ------------------
 
@@ -105,6 +107,8 @@ Misc
 * added  :mod:`.examples.cubeassembly` to show a robot assembling a cube from randomly scattered blocks.
 
 * updated :ref:`collisionchecker-bullet` collision checker to be up to par with ODE. Now the two engines should be interchangeable,
+
+* fixed qtcoin interface memory leak with QAction menus.
 
 Version 0.4.2
 =============

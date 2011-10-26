@@ -45,6 +45,7 @@ BOOST_STATIC_ASSERT(sizeof(xmlChar) == 1);
 #include <assimp.hpp>
 #include <aiScene.h>
 #include <aiPostProcess.h>
+#include <DefaultLogger.h>
 #endif
 
 #ifdef OPENRAVE_IVCON
@@ -55,12 +56,45 @@ namespace OpenRAVEXMLParser
 {
 
 static boost::once_flag __onceCreateXMLMutex = BOOST_ONCE_INIT;
+static boost::once_flag __onceSetAssimpLog = BOOST_ONCE_INIT;
+
 /// lock for parsing XML, don't destroy it in order to ensure it remains valid for as long as possible
 static EnvironmentMutex* __mutexXML;
 void __CreateXMLMutex()
 {
     __mutexXML = new EnvironmentMutex();
 }
+
+#ifdef OPENRAVE_ASSIMP
+
+class myStream : public Assimp::LogStream
+{
+public:
+    myStream()
+    {
+    }
+
+    ~myStream()
+    {
+    }
+
+    void write(const char* message)
+    {
+        RAVELOG_VERBOSE("%s",message);
+    }
+};
+
+void __SetAssimpLog()
+{
+    using namespace Assimp;
+    Assimp::DefaultLogger::create("",Assimp::Logger::VERBOSE);
+    // Select the kinds of messages you want to receive on this log stream
+    const unsigned int severity = Logger::Debugging|Logger::Info|Logger::Warn|Logger::Err;
+
+    // Attaching it to the default logger
+    DefaultLogger::get()->attachStream( new myStream(), severity );
+}
+#endif
 
 EnvironmentMutex* GetXMLMutex()
 {
@@ -99,6 +133,7 @@ class aiSceneManaged
 {
 public:
     aiSceneManaged(const std::string& filename, unsigned int flags = aiProcess_JoinIdenticalVertices|aiProcess_Triangulate|aiProcess_FindDegenerates|aiProcess_PreTransformVertices|aiProcess_SortByPType) {
+        boost::call_once(__SetAssimpLog,__onceSetAssimpLog);
         _importer.SetPropertyInteger(AI_CONFIG_PP_SBP_REMOVE, aiPrimitiveType_POINT|aiPrimitiveType_LINE);
         _scene = _importer.ReadFile(filename.c_str(),flags);
         if( _scene == NULL ) {
@@ -783,6 +818,7 @@ public:
 #ifdef OPENRAVE_ASSIMP
         // assimp doesn't support vrml/iv, so don't waste time
         if( extension != "iv" && extension != "wrl" && extension != "vrml" ) {
+            //Assimp::DefaultLogger::get()->setLogSeverity(Assimp::Logger::Debugging);
             aiSceneManaged scene(filename);
             if( !!scene._scene && !!scene._scene->mRootNode && !!scene._scene->HasMeshes() ) {
                 if( _AssimpCreateGeometries(scene._scene,scene._scene->mRootNode, vscale, listGeometries) ) {

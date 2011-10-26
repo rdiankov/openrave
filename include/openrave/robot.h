@@ -247,10 +247,12 @@ private:
         friend class ColladaReader;
         friend class OpenRAVEXMLParser::ManipulatorXMLReader;
         friend class OpenRAVEXMLParser::RobotXMLReader;
+        friend class XFileReader;
 #else
         friend class ::ColladaReader;
         friend class ::OpenRAVEXMLParser::ManipulatorXMLReader;
         friend class ::OpenRAVEXMLParser::RobotXMLReader;
+        friend class ::XFileReader;
 #endif
 #endif
         friend class RobotBase;
@@ -308,10 +310,12 @@ private:
         friend class ColladaReader;
         friend class OpenRAVEXMLParser::AttachedSensorXMLReader;
         friend class OpenRAVEXMLParser::RobotXMLReader;
+        friend class XFileReader;
 #else
         friend class ::ColladaReader;
         friend class ::OpenRAVEXMLParser::AttachedSensorXMLReader;
         friend class ::OpenRAVEXMLParser::RobotXMLReader;
+        friend class ::XFileReader;
 #endif
 #endif
         friend class RobotBase;
@@ -753,6 +757,7 @@ private:
     friend class OpenRAVEXMLParser::RobotXMLReader;
     friend class OpenRAVEXMLParser::ManipulatorXMLReader;
     friend class OpenRAVEXMLParser::AttachedSensorXMLReader;
+    friend class XFileReader;
 #else
     friend class ::Environment;
     friend class ::ColladaReader;
@@ -760,6 +765,7 @@ private:
     friend class ::OpenRAVEXMLParser::RobotXMLReader;
     friend class ::OpenRAVEXMLParser::ManipulatorXMLReader;
     friend class ::OpenRAVEXMLParser::AttachedSensorXMLReader;
+    friend class ::XFileReader;
 #endif
 #endif
     friend class RaveDatabase;

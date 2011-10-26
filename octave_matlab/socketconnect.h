@@ -130,8 +130,8 @@ public:
 
     int ConnectToHost(std::string& ip, int port)
     {
-        int                  sck;
-        struct sockaddr_in   writer;
+        int sck;
+        struct sockaddr_in writer;
         struct hostent       *hp;
 
         // set to the classic locale so that number serialization/hashing works correctly
@@ -148,8 +148,8 @@ public:
         }
 
 #ifdef _WIN32
-        WORD      wVersionRequested;
-        WSADATA   wsaData;
+        WORD wVersionRequested;
+        WSADATA wsaData;
 
         wVersionRequested = MAKEWORD(1,1);
         if (WSAStartup(wVersionRequested, &wsaData) != 0) {
@@ -191,7 +191,7 @@ public:
     int Readline(void *vptr, int maxlen)
     {
         int n, rc;
-        char    c, *buffer;
+        char c, *buffer;
 
         buffer = (char*)vptr;
 
@@ -231,8 +231,8 @@ public:
 
     int Writeline(const void *vptr, int n)
     {
-        int      nleft;
-        int      nwritten;
+        int nleft;
+        int nwritten;
         const char *buffer;
 
         buffer = (const char*)vptr;

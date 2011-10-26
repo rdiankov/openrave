@@ -174,6 +174,7 @@ class Environment;
 class RaveDatabase;
 class ColladaReader;
 class ColladaWriter;
+class XFileReader;
 
 #include "openrave-core.h"
 
@@ -308,5 +309,10 @@ void RaveWriteColladaFile(EnvironmentBasePtr penv, const std::string& filename);
 void RaveWriteColladaFile(KinBodyPtr pbody, const std::string& filename);
 void RaveWriteColladaFile(RobotBasePtr probot, const std::string& filename);
 void RaveWriteColladaFile(const std::list<KinBodyPtr>& listbodies, const std::list<RobotBasePtr>& listrobots, const std::string& filename);
+
+bool RaveParseXFile(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& filename,const AttributesList& atts);
+bool RaveParseXFile(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& filename,const AttributesList& atts);
+bool RaveParseXData(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& data,const AttributesList& atts);
+bool RaveParseXData(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& data,const AttributesList& atts);
 
 #endif
