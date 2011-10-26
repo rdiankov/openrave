@@ -222,6 +222,10 @@ if( MSVC )
   # untar the source files
   set(EXTRA_MSVC_DEPEND msvc_boost msvc_collada msvc_libxml2 msvc_ode msvc_soqt)
   foreach(MSVC_LIBRARY ${EXTRA_MSVC_DEPEND})
+    if( NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${MSVC_LIBRARY}" )
+      execute_process(COMMAND ${CMAKE_COMMAND} -E tar xzf "${CMAKE_CURRENT_SOURCE_DIR}/${MSVC_LIBRARY}.tgz" WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
+    endif()
+
     add_custom_command(
       OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/${MSVC_LIBRARY}
       COMMAND ${CMAKE_COMMAND} -E chdir
