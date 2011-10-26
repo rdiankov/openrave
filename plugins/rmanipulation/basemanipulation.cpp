@@ -188,18 +188,12 @@ protected:
         if( filename == "stream" ) {
             // the trajectory is embedded in the stream
             RAVELOG_VERBOSE("BaseManipulation: reading trajectory from stream\n");
-            if( !ptraj->Read(sinput, robot) ) {
-                RAVELOG_ERROR("BaseManipulation: failed to get trajectory\n");
-                return false;
-            }
+            ptraj->deserialize(sinput);
         }
         else {
             RAVELOG_VERBOSE(str(boost::format("BaseManipulation: reading trajectory: %s\n")%filename));
             ifstream f(filename.c_str());
-            if( !ptraj->Read(f, robot) ) {
-                RAVELOG_ERROR(str(boost::format("BaseManipulation: failed to read trajectory %s\n")%filename));
-                return false;
-            }
+            ptraj->deserialize(sinput);
         }
 
         bool bResetTrans = false; sinput >> bResetTrans;
@@ -211,16 +205,10 @@ protected:
 
         if(( ptraj->GetDuration() == 0) || bResetTiming ) {
             RAVELOG_VERBOSE(str(boost::format("retiming trajectory: %f\n")%_fMaxVelMult));
-            ptraj->CalcTrajTiming(robot,0,true,false,_fMaxVelMult);
+            planningutils::RetimeActiveDOFTrajectory(ptraj, robot, false, _fMaxVelMult);
         }
         RAVELOG_VERBOSE(str(boost::format("executing traj with %d points\n")%ptraj->GetNumWaypoints()));
-        if( ptraj->GetDOF() == robot->GetDOF() ) {
-            robot->SetMotion(ptraj);
-        }
-        else if( ptraj->GetDOF() == robot->GetActiveDOF() ) {
-            robot->SetActiveMotion(ptraj);
-        }
-        else {
+        if( !robot->GetController()->SetPath(ptraj) ) {
             return false;
         }
         sout << "1";
@@ -701,9 +689,7 @@ protected:
 
         TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),"");
         ptraj->Init(params->_configurationspecification);
-        Trajectory::TPOINT pt;
-        pt.q = params->vinitialconfig;
-        ptraj->AddPoint(pt);
+        ptraj->Insert(0,params->vinitialconfig);
 
         // jitter again for initial collision
         if( planningutils::JitterActiveDOF(robot,5000,jitter,params->_neighstatefn) == 0 ) {
@@ -889,23 +875,22 @@ protected:
         TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),"");
         ptraj->Init(robot->GetActiveConfigurationSpecification());
 
-        // have to add the first point
-        Trajectory::TPOINT ptfirst;
-        robot->GetActiveDOFValues(ptfirst.q);
-        ptraj->AddPoint(ptfirst);
+        vector<dReal> vvalues;
+        robot->GetActiveDOFValues(vvalues);
+        ptraj->Insert(0,vvalues);
         switch( planningutils::JitterActiveDOF(robot,nMaxIterations,fJitter) ) {
         case 0:
             RAVELOG_WARN("could not jitter out of collision\n");
             return false;
         case 1:
-            robot->GetActiveDOFValues(ptfirst.q);
-            ptraj->AddPoint(ptfirst);
+            robot->GetActiveDOFValues(vvalues);
+            ptraj->Insert(1,vvalues);
         default:
             break;
         }
 
         if( bOutputFinal ) {
-            FOREACH(itq,ptfirst.q) {
+            FOREACH(itq,vvalues) {
                 sout << *itq << " ";
             }
         }
