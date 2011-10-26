@@ -3105,7 +3105,7 @@ void QtCoinViewer::_UpdateCollisionChecker()
                     return;
                 }
             }
-            //RAVELOG_VERBOSE(str(boost::format("cannot find collision checker menu item %s\n")%p->GetXMLId()));
+            RAVELOG_VERBOSE(str(boost::format("cannot find collision checker menu item %s\n")%p->GetXMLId()));
         }
 
         // set to default
@@ -3144,7 +3144,7 @@ void QtCoinViewer::_UpdatePhysicsEngine()
                     return;
                 }
             }
-            //RAVELOG_WARN(str(boost::format("cannot find physics engine menu item %s\n")%p->GetXMLId()));
+            RAVELOG_VERBOSE(str(boost::format("cannot find physics engine menu item %s\n")%p->GetXMLId()));
         }
 
         // set to default
