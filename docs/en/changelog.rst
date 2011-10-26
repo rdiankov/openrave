@@ -108,6 +108,8 @@ Misc
 
 * updated :ref:`collisionchecker-bullet` collision checker to be up to par with ODE. Now the two engines should be interchangeable,
 
+* fixed qtcoin interface memory leak with QAction menus.
+
 Version 0.4.2
 =============
 
