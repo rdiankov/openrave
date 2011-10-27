@@ -217,16 +217,13 @@ intersphinx_mapping = {
 rst_epilog = """
 .. _`Core C++ API`: ../coreapihtml/index.html
 
-.. _`Architecture`: ../coreapihtml/architecture_concepts.html
+.. _`C++ Architecture`: ../../coreapihtml/architecture_concepts.html
 
-.. _`C++ Interface Concepts`: ../coreapihtml/interface_concepts.html
+.. _`C++ Interface Concepts`: ../../coreapihtml/interface_concepts.html
 
 .. _`Sensor Concepts`: ../coreapihtml/arch_sensor.html
 
-.. _`Trajectory Concepts`: ../coreapihtml/arch_trajectory.html
-
 .. _`FindOpenRAVE.cmake`: ../coreapihtml/FindOpenRAVE_8cmake-example.html
-
 
 .. _`Installer Packages`: http://sourceforge.net/projects/openrave/files/latest_stable
 

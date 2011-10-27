@@ -347,7 +347,7 @@ class GraspingModel(DatabaseGenerator):
 
     def generate(self,*args,**kwargs):
         """
-        Generates all the worker items, processes them, and stores the results. For an argument list, take a look at :ref:`.generatepcg`
+        Generates all the worker items, processes them, and stores the results. For an argument list, take a look at :meth:`.generatepcg`
 
         """
         starttime = time.time()

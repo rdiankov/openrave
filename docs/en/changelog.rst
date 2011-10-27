@@ -31,7 +31,7 @@ Core
 
 * Can now reset the local manipulator coordinate system with :meth:`.Robot.Manipulator.SetLocalToolTransform`
 
-* Added parsing of kinematics for DirextX files (*.x).
+* Added parsing of kinematics for DirextX files (\*.x).
 
 Inverse Kinematics
 ------------------
@@ -62,7 +62,7 @@ Planning
 
 * Can register callback functions during planners to stop the planner via :meth:`.Planner.RegisterPlanCallback`. Planner developers should use :meth:`.Planner._CallCallbacks` to call the callbacks.
 
-* :meth:`.Planner.PlanPath` now returns a :ref:`.PlannerStatus` enum showing how planner exited. It does not support pOutStream anymore.
+* :meth:`.Planner.PlanPath` now returns a :class:`.PlannerStatus` enum showing how planner exited. It does not support pOutStream anymore.
 
 * Added velocity and acceleration limits to :class:`.Planner.PlannerParameters`
 
@@ -71,7 +71,8 @@ Planning
 Trajectories
 ------------
 
-* Completely redesigned the :class:`.Trajectory` class, see `Trajectory Concepts`_ for usage.
+* Completely redesigned the :class:`.Trajectory` class, see :ref:`arch_trajectory` for usage.
+
 * Added :meth:`.Trajectory.Clone`
 
 * Changed trajectory serialization format to XML, see :ref:`arch_trajectory_format`
@@ -253,7 +254,7 @@ Core
 
  * renamed EnvironmentBase::TriangulateOptions to EnvironmentBase::SelectionOptions
 
-* renamed EnvironmentBase *XMLFile and *XMLData methods to *URI and *Data.
+* renamed EnvironmentBase \*XMLFile and \*XMLData methods to \*URI and \*Data.
 
 Planning
 --------
@@ -362,12 +363,13 @@ Core
 
 * removed a dependency on mathextra.h from geometry.h
 
-* ReadKinBody*, ReadRobot*, and Load can now process rigid body models like IV, VRML, STL, etc and convert them automatically to KinBody objects. For example::
+* ReadKinBody*, ReadRobot*, and Load can now process rigid body models like IV, VRML, STL, etc and
+  convert them automatically to KinBody objects. For example::
 
-  openrave windmill.iv
-  openrave test1.iv
-  Environment.Load('test1.iv')
-  Environment.ReadKinBodyXMLFile('test1.iv')
+    openrave windmill.iv
+    openrave test1.iv
+    Environment.Load('test1.iv')
+    Environment.ReadKinBodyXMLFile('test1.iv')
 
 * fixed collada bug in parsing robot sensors, added a barrett-wam-sensors.zae file to show a working example.
 
@@ -603,10 +605,14 @@ Core
 
 * moved the check_libm_accuracy script in libopenrave folder
 
-* Moved all configuration files to the build (BINARY) folder rather than have it in source. The build process for configuration files changed a little to accommodate simultaneous builds with different options better. This allows us tohave double/float precision + debug/release all at the same time without forcing a rebuild. In order to avoid any collision troubles, the following files were renamed::
-
-  classhashes.h -> interfacehashes.h
-  defines.h -> config.h
+* Moved all configuration files to the build (BINARY) folder rather than have it in source. The
+  build process for configuration files changed a little to accommodate simultaneous builds with
+  different options better. This allows us tohave double/float precision + debug/release all at the
+  same time without forcing a rebuild. In order to avoid any collision troubles, the following files
+  were renamed::
+  
+    classhashes.h -> interfacehashes.h
+    defines.h -> config.h
 
 * updated zlib 1.2.5 and minizip
 
@@ -629,7 +635,9 @@ COLLADA
 
 https://openrave.svn.sourceforge.net/svnroot/openrave/data/robots
 
-* For ROS users: There is now a collada_robots ROS package that will check out all these robots. You would need to add the following bashrc line to get them into your openrave path::
+* For ROS users: There is now a collada_robots ROS package that will check out all these robots. You would need to add the following bashrc line to get them into your openrave path.
+
+.. code-block: bash
 
   export OPENRAVE_DATA=$OPENRAVE_DATA:`rospack find collada_robots`/data
 
@@ -836,9 +844,12 @@ Sensors
 
 * A sensor can be added into the environment without a robot using :meth:`.Enviornment.AddSensor`
 
-* All the sensors in the environment can be queried using Environment.GetSensors, this returns all sensors attached to all the robots and all the environment sensors. Individual sensors can be queried by name using :meth:`.Environment.GetSensor`
+* All the sensors in the environment can be queried using Environment.GetSensors, this returns all
+  sensors attached to all the robots and all the environment sensors. Individual sensors can be
+  queried by name using :meth:`.Environment.GetSensor`.
 
-* Can now store sensor parameters in side *.sensor.xml files and include them from a parent xml file using the file="..." attribute. This applies to all interface types, not just sensors. `Here's a tutorial <http://openrave.programmingvision.com/wiki/index.php/Format:XML#Sensor>`_.
+* Can now store sensor parameters in side \*.sensor.xml files and include them from a parent xml file
+  using the file="..." attribute. This applies to all interface types, not just sensors. `Here's a tutorial <http://openrave.programmingvision.com/wiki/index.php/Format:XML#Sensor>`_.
 
 * Added IMU sensor definitions
 

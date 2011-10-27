@@ -73,7 +73,7 @@ Usage
 
 The main file ikfast.py can be used both as a library and as an executable program. For advanced users, it is also possible to use run ikfast.py as a stand-alone program, which makes it mostly independent of the OpenRAVE run-time. 
 
-**However, the recommended way of using IKFast** is through the OpenRAVE :ref:`databases.inversekinematics` database generator which directly loads the IK into OpenRAVE as an interface. 
+**However, the recommended way of using IKFast** is through the OpenRAVE :mod:`.databases.inversekinematics` database generator which directly loads the IK into OpenRAVE as an interface. 
 
 Stand-alone Executable
 ======================

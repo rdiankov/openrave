@@ -54,7 +54,7 @@ If SetDesired is called, only joint values will be set at every timestep leaving
             if( !flog ) {
                 RAVELOG_WARN(str(boost::format("failed to open %s\n")%filename));
             }
-            flog << "<" << GetXMLId() << " robot=\"" << _probot->GetName() << "\"/>" << endl;
+            //flog << "<" << GetXMLId() << " robot=\"" << _probot->GetName() << "\"/>" << endl;
             _dofindices = dofindices;
             _nControlTransformation = nControlTransformation;
             _dofchecklimits.resize(0);

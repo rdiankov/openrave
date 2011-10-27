@@ -1,11 +1,11 @@
+.. _architecture:
+
 OpenRAVE Architecture
 =====================
 
-`Architecture`_
-
-`C++ Interface Concepts`_
+`C++ Architecture`_
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
 
-   trajectory
+   interface_concepts

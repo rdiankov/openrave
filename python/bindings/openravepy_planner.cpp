@@ -132,6 +132,13 @@ void init_openravepy_planner()
         ;
     }
 
+    object plannerstatus = enum_<PlannerStatus>("PlannerStatus" DOXY_ENUM(PlannerStatus))
+                           .value("Failed",PS_Failed)
+                           .value("HasSolution",PS_HasSolution)
+                           .value("Interrupted",PS_Interrupted)
+                           .value("InterruptedWithSolution",PS_InterruptedWithSolution)
+    ;
+
     def("RaveCreatePlanner",openravepy::RaveCreatePlanner,args("env","name"),DOXY_FN1(RaveCreatePlanner));
 }
 
