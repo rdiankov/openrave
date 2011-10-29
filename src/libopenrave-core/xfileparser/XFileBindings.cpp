@@ -200,6 +200,10 @@ protected:
                 Transform t = plink->_t.inverse()*tflipyz*tpivot;
                 vaxes[0] = Vector(node->mFramePivot->mMotionDirection.x, node->mFramePivot->mMotionDirection.y, node->mFramePivot->mMotionDirection.z);
                 vaxes[0] = t.rotate(vaxes[0]);
+                if( _bFlipYZ ) {
+                    // flip z here makes things right....
+                    vaxes[0].z *= -1;
+                }
                 std::vector<dReal> vcurrentvalues;
                 pjoint->_ComputeInternalInformation(plink,pchildlink,t.trans,vaxes,vcurrentvalues);
                 pbody->_vecjoints.push_back(pjoint);
