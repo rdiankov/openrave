@@ -68,6 +68,8 @@ Planning
 
 * Each planner needs to initialize the trajectory with :meth:`.Trajectory.Init` (GetParameters()->_configurationspecification);
 
+* Added **minimumgoalpaths** to RRT planner to continue searching for different goals after initial path is found.
+
 Trajectories
 ------------
 

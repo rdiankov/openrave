@@ -22,12 +22,13 @@ class PyIkSolverBase : public PyInterfaceBase
 protected:
     IkSolverBasePtr _pIkSolver;
 
-    static IkFilterReturn _CallCustomFilter(object fncallback, PyEnvironmentBasePtr pyenv, std::vector<dReal>& values, RobotBase::ManipulatorPtr pmanip, const IkParameterization& ikparam)
+    static IkFilterReturn _CallCustomFilter(object fncallback, PyEnvironmentBasePtr pyenv, std::vector<dReal>& values, RobotBase::ManipulatorConstPtr pmanip, const IkParameterization& ikparam)
     {
         object res;
         PyGILState_STATE gstate = PyGILState_Ensure();
         try {
-            res = fncallback(toPyArray(values), openravepy::toPyRobotManipulator(pmanip,pyenv),toPyIkParameterization(ikparam));
+            RobotBase::ManipulatorPtr pmanip2 = boost::const_pointer_cast<RobotBase::Manipulator>(pmanip);
+            res = fncallback(toPyArray(values), openravepy::toPyRobotManipulator(pmanip2,pyenv),toPyIkParameterization(ikparam));
         }
         catch(...) {
             RAVELOG_ERROR("exception occured in python viewer callback:\n");

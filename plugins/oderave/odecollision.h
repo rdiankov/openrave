@@ -387,7 +387,7 @@ public:
             return false;
         }
         if( !plink->IsEnabled() ) {
-            RAVELOG_VERBOSE("calling collision on disabled link %s\n", plink->GetName().c_str());
+            //RAVELOG_VERBOSE("calling collision on disabled link %s\n", plink->GetName().c_str());
             return false;
         }
         if( pbody->IsAttached(plink->GetParent()) ) {

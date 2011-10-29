@@ -422,6 +422,17 @@ bool LineCollisionConstraint::Check(PlannerBase::PlannerParametersWeakPtr _param
         return true;
     }
 
+    if (start == 0 ) {
+        params->_setstatefn(pQ0);
+        if (robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot),_report) ) {
+            return false;
+        }
+        if( robot->CheckSelfCollision(_report) ) {
+            return false;
+        }
+        start = 1;
+    }
+
     dReal fisteps = dReal(1.0f)/numSteps;
     for(std::vector<dReal>::iterator it = dQ.begin(); it != dQ.end(); ++it) {
         *it *= fisteps;

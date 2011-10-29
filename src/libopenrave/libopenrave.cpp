@@ -1917,7 +1917,8 @@ void ConfigurationSpecification::ConvertData(std::vector<dReal>::iterator ittarg
                 }
             }
             else if( name != "deltatime" ) {
-                RAVELOG_VERBOSE(str(boost::format("cannot initialize unknown group '%s'")%name));
+                // messages are too frequent
+                //RAVELOG_VERBOSE(str(boost::format("cannot initialize unknown group '%s'")%name));
             }
             int offset = targetspec._vgroups[igroup].offset;
             for(size_t i = 0; i < numpoints; ++i, offset += targetspec.GetDOF()) {
