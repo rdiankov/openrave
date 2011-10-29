@@ -109,11 +109,9 @@ Uses the Rapidly-Exploring Random Trees Algorithm.\n\
             }
 
             ++startNode;
-            int parent=(*startNode)->parent;
             FOREACHC(itc, *listconfigs) {
-                int index = _treeForward.AddNode(parent,*itc);
+                int index = _treeForward.AddNode(0x80000000,*itc);
                 path.insert(startNode, _treeForward._nodes.at(index));
-                parent = index;
             }
             // splice out in-between nodes in path
             path.erase(startNode, endNode);
@@ -335,6 +333,7 @@ public:
         while(1) {
             vecnodes.push_front(pforward);
             if(pforward->parent < 0) {
+                BOOST_ASSERT(pforward->parent == -1);
                 break;
             }
             pforward = _treeForward._nodes.at(pforward->parent);
@@ -352,7 +351,7 @@ public:
             pbackward = _treeBackward._nodes.at(pbackward->parent);
         }
 
-        BOOST_ASSERT( goalpath.goalindex >= 0 );
+        BOOST_ASSERT( goalpath.goalindex >= 0 && goalpath.goalindex < _numgoals );
         _SimpleOptimizePath(vecnodes,10);
         int dof = _parameters->GetDOF();
         goalpath.qall.resize(vecnodes.size()*dof);

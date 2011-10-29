@@ -137,7 +137,7 @@ public:
         int ibest = -1;
         dReal fbest = 0;
         FOREACH(itnode, _nodes) {
-            if( !!*itnode ) {
+            if( !!*itnode && (*itnode)->parent != (int)0x80000000) {
                 dReal f = _distmetricfn(q, (*itnode)->q);
                 if(( ibest < 0) ||( f < fbest) ) {
                     ibest = (int)(itnode-_nodes.begin());
