@@ -206,6 +206,14 @@ public:
          */
         virtual bool CheckIndependentCollision(CollisionReportPtr report = CollisionReportPtr()) const;
 
+        /** \brief Checks collision with a target body and all the independent links of the robot. Ignores disabled links.
+
+            \param[in] the body to check the independent links with
+            \param[out] report [optional] collision report
+            \return true if a collision occurred
+         */
+        //virtual bool CheckIndependentCollision(KinBodyConstPtr body, CollisionReportPtr report = CollisionReportPtr()) const;
+
         /// \brief return true if the body is being grabbed by any link on this manipulator
         virtual bool IsGrabbing(KinBodyConstPtr body) const;
 

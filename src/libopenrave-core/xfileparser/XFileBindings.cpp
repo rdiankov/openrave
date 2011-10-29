@@ -23,6 +23,10 @@
 using namespace OpenRAVE;
 using namespace std;
 
+#ifdef HAVE_BOOST_FILESYSTEM
+#include <boost/filesystem/operations.hpp>
+#endif
+
 class XFileReader
 {
 public:
@@ -41,9 +45,15 @@ public:
         f.read(&filedata[0], filedata.size());
         Read(pbody,filedata,atts);
         pbody->__struri = filename;
-        if( filename.size() > 2 && pbody->GetName().size() == 0 ) {
-            pbody->SetName(filename.substr(0,filename.size()-2));
-        }
+#if defined(HAVE_BOOST_FILESYSTEM) && BOOST_VERSION >= 103600 // stem() was introduced in 1.36
+        boost::filesystem::path bfpath(filename);
+#if defined(BOOST_FILESYSTEM_VERSION) && BOOST_FILESYSTEM_VERSION >= 3
+        pbody->SetName(bfpath.stem().string());
+#else
+        pbody->SetName(bfpath.stem());
+#endif
+#endif
+
     }
 
     void ReadFile(RobotBasePtr probot, const std::string& filename, const AttributesList& atts)
@@ -58,9 +68,14 @@ public:
         f.read(&filedata[0], filedata.size());
         Read(probot,filedata,atts);
         probot->__struri = filename;
-        if( filename.size() > 2 && probot->GetName().size() == 0 ) {
-            probot->SetName(filename.substr(0,filename.size()-2));
-        }
+#if defined(HAVE_BOOST_FILESYSTEM) && BOOST_VERSION >= 103600 // stem() was introduced in 1.36
+        boost::filesystem::path bfpath(filename);
+#if defined(BOOST_FILESYSTEM_VERSION) && BOOST_FILESYSTEM_VERSION >= 3
+        probot->SetName(bfpath.stem().string());
+#else
+        probot->SetName(bfpath.stem());
+#endif
+#endif
     }
 
     void Read(KinBodyPtr pbody, const std::string& data,const AttributesList& atts)
@@ -93,6 +108,7 @@ protected:
     {
         _listendeffectors.clear();
         _vScaleGeometry = Vector(0.001,0.001,0.001);
+        _bFlipYZ = false;
         _bSkipGeometry = false;
         _prefix = "";
         FOREACHC(itatt,atts) {
@@ -109,6 +125,9 @@ protected:
             }
             else if( itatt->first == "prefix" ) {
                 _prefix = itatt->second;
+            }
+            else if( itatt->first == "flipyz" ) {
+                _bFlipYZ = stricmp(itatt->second.c_str(), "true") == 0 || itatt->second=="1";
             }
             else if( itatt->first == "name" ) {
                 pbody->SetName(itatt->second);
@@ -130,9 +149,13 @@ protected:
 
         RAVELOG_VERBOSE(str(boost::format("node=%s, parent=%s, children=%d, meshes=%d, pivot=%d")%node->mName%(!node->mParent ? string() : node->mParent->mName)%node->mChildren.size()%node->mMeshes.size()%(!!node->mFramePivot)));
 
+        Transform tflipyz;
+        if( _bFlipYZ ) {
+            tflipyz.rot = quatFromAxisAngle(Vector(PI/2,0,0));
+        }
+
         if( !!node->mFramePivot ) {
             Transform tpivot = tnode*ExtractTransform(node->mFramePivot->mPivotMatrix);
-
             KinBody::JointPtr pjoint(new KinBody::Joint(pbody));
             if( node->mFramePivot->mType == 1 ) {
                 pjoint->_type = KinBody::Joint::JointRevolute;
@@ -141,8 +164,8 @@ protected:
             }
             else if( node->mFramePivot->mType == 2 ) {
                 pjoint->_type = KinBody::Joint::JointPrismatic;
-                pjoint->_vlowerlimit[0] = -1;
-                pjoint->_vupperlimit[0] = 1;
+                pjoint->_vlowerlimit[0] = -10;
+                pjoint->_vupperlimit[0] = 10;
             }
             else {
                 if( node->mFramePivot->mType != 0 ) {
@@ -154,8 +177,8 @@ protected:
             KinBody::LinkPtr pchildlink;
             if( !!pjoint || !plink ) {
                 pchildlink.reset(new KinBody::Link(pbody));
-                pchildlink->_name = node->mName;
-                pchildlink->_t = tpivot;
+                pchildlink->_name = _prefix+node->mName;
+                pchildlink->_t = tflipyz*tpivot*tflipyz.inverse();
                 pchildlink->_bStatic = false;
                 pchildlink->_bIsEnabled = true;
                 pchildlink->_index = pbody->_veclinks.size();
@@ -168,13 +191,13 @@ protected:
                 }
                 if( node->mFramePivot->mAttribute & 4 ) {
                     // end effector?
-                    _listendeffectors.push_back(make_pair(pchildlink,pchildlink->_t.inverse()*tpivot));
+                    _listendeffectors.push_back(make_pair(pchildlink,pchildlink->_t.inverse()*tflipyz*tpivot*tflipyz.inverse()));
                 }
 
-                pjoint->_name = node->mFramePivot->mName;
+                pjoint->_name = _prefix+node->mFramePivot->mName;
                 pjoint->_bIsCircular[0] = false;
                 std::vector<Vector> vaxes(1);
-                Transform t = plink->_t.inverse()*tpivot;
+                Transform t = plink->_t.inverse()*tflipyz*tpivot;
                 vaxes[0] = Vector(node->mFramePivot->mMotionDirection.x, node->mFramePivot->mMotionDirection.y, node->mFramePivot->mMotionDirection.z);
                 vaxes[0] = t.rotate(vaxes[0]);
                 std::vector<dReal> vcurrentvalues;
@@ -191,7 +214,7 @@ protected:
             Assimp::XFile::Mesh* pmesh = *it;
             plink->_listGeomProperties.push_back(KinBody::Link::GEOMPROPERTIES(plink));
             KinBody::Link::GEOMPROPERTIES& g = plink->_listGeomProperties.back();
-            g._t = plink->_t.inverse() * tnode;
+            g._t = plink->_t.inverse() * tflipyz * tnode;
             g._type = KinBody::Link::GEOMPROPERTIES::GeomTrimesh;
             g.collisionmesh.vertices.resize(pmesh->mPositions.size());
             for(size_t i = 0; i < pmesh->mPositions.size(); ++i) {
@@ -239,6 +262,7 @@ protected:
     EnvironmentBasePtr _penv;
     std::string _prefix;
     Vector _vScaleGeometry;
+    bool _bFlipYZ;
     std::list< pair<KinBody::LinkPtr, Transform> > _listendeffectors;
     bool _bSkipGeometry;
 };

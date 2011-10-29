@@ -115,10 +115,11 @@ public:
     }
 
 
-    void deserialize(const string& s)
+    PyTrajectoryBasePtr deserialize(const string& s)
     {
         std::stringstream ss(s);
-        _ptrajectory->deserialize(ss);
+        InterfaceBasePtr p = _ptrajectory->deserialize(ss);
+        return PyTrajectoryBasePtr(new PyTrajectoryBase(RaveInterfaceCast<TrajectoryBase>(p),_pyenv));
     }
 
     object serialize(int options)

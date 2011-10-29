@@ -136,7 +136,7 @@ public:
     virtual void serialize(std::ostream& O, int options=0) const;
 
     /// \brief initialize the trajectory
-    virtual void deserialize(std::istream& I);
+    virtual InterfaceBasePtr deserialize(std::istream& I);
 
     virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions);
 
