@@ -83,7 +83,9 @@ public:
         _ProcessAtts(atts, pbody);
         Assimp::XFileParser parser(data.c_str());
         _Read(pbody,parser.GetImportedData());
-        pbody->SetName("body");
+        if( pbody->GetName().size() == 0 ) {
+            pbody->SetName("body");
+        }
     }
 
     void Read(RobotBasePtr probot, const std::string& data,const AttributesList& atts)
@@ -91,7 +93,9 @@ public:
         _ProcessAtts(atts,probot);
         Assimp::XFileParser parser(data.c_str());
         _Read(probot,parser.GetImportedData());
-        probot->SetName("robot");
+        if( probot->GetName().size() == 0 ) {
+            probot->SetName("robot");
+        }
         // add manipulators
         FOREACH(itmanip,_listendeffectors) {
             RobotBase::ManipulatorPtr pmanip(new RobotBase::Manipulator(probot));
@@ -107,7 +111,7 @@ protected:
     void _ProcessAtts(const AttributesList& atts, KinBodyPtr pbody)
     {
         _listendeffectors.clear();
-        _vScaleGeometry = Vector(0.001,0.001,0.001);
+        _vScaleGeometry = Vector(1,1,1);
         _bFlipYZ = false;
         _bSkipGeometry = false;
         _prefix = "";
@@ -117,11 +121,12 @@ protected:
             }
             else if( itatt->first == "scalegeometry" ) {
                 stringstream ss(itatt->second);
-                _vScaleGeometry = Vector(0.001,0.001,0.001);
-                ss >> _vScaleGeometry.x >> _vScaleGeometry.y >> _vScaleGeometry.z;
+                Vector v(1,1,1);
+                ss >> v.x >> v.y >> v.z;
                 if( !ss ) {
-                    _vScaleGeometry.z = _vScaleGeometry.y = _vScaleGeometry.x;
+                    v.z = v.y = v.x;
                 }
+                _vScaleGeometry *= v;
             }
             else if( itatt->first == "prefix" ) {
                 _prefix = itatt->second;
@@ -138,11 +143,16 @@ protected:
     void _Read(KinBodyPtr pbody, const Assimp::XFile::Scene* scene)
     {
         BOOST_ASSERT(!!scene);
-        pbody->Destroy();
-        _Read(pbody, KinBody::LinkPtr(), scene->mRootNode, Transform());
+        Transform t;
+        KinBody::LinkPtr parent;
+        if( pbody->GetLinks().size() > 0 ) {
+            parent = pbody->GetLinks()[0];
+            t = parent->GetTransform();
+        }
+        _Read(pbody, parent, scene->mRootNode, t, 0);
     }
 
-    void _Read(KinBodyPtr pbody, KinBody::LinkPtr plink, const Assimp::XFile::Node* node, const Transform& transparent)
+    void _Read(KinBodyPtr pbody, KinBody::LinkPtr plink, const Assimp::XFile::Node* node, const Transform& transparent, int level)
     {
         BOOST_ASSERT(!!node);
         Transform tnode = transparent * ExtractTransform(node->mTrafoMatrix);
@@ -175,7 +185,7 @@ protected:
             }
 
             KinBody::LinkPtr pchildlink;
-            if( !!pjoint || !plink ) {
+            if( !!pjoint || !plink || level == 0 ) {
                 pchildlink.reset(new KinBody::Link(pbody));
                 pchildlink->_name = _prefix+node->mName;
                 pchildlink->_t = tflipyz*tpivot*tflipyz.inverse();
@@ -250,7 +260,7 @@ protected:
         }
 
         FOREACH(it,node->mChildren) {
-            _Read(pbody, plink, *it,tnode);
+            _Read(pbody, plink, *it,tnode,level+1);
         }
     }
 
@@ -277,7 +287,8 @@ bool RaveParseXFile(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::stri
         ppbody = RaveCreateKinBody(penv,"");
     }
     XFileReader reader(penv);
-    reader.ReadFile(ppbody,filename,atts);
+    boost::shared_ptr<pair<string,string> > filedata = OpenRAVEXMLParser::FindFile(filename);
+    reader.ReadFile(ppbody,filedata->second,atts);
     return true;
 }
 
@@ -287,7 +298,8 @@ bool RaveParseXFile(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::s
         pprobot = RaveCreateRobot(penv,"GenericRobot");
     }
     XFileReader reader(penv);
-    reader.ReadFile(pprobot,filename,atts);
+    boost::shared_ptr<pair<string,string> > filedata = OpenRAVEXMLParser::FindFile(filename);
+    reader.ReadFile(pprobot,filedata->second,atts);
     return true;
 }
 
