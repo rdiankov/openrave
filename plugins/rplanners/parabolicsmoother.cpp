@@ -135,11 +135,14 @@ public:
                 vswitchtimes.push_back(itrampnd->endTime);
                 if( _parameters->_outputaccelchanges ) {
                     FOREACHC(itramp,itrampnd->ramps) {
-                        vector<dReal>::iterator it = lower_bound(vswitchtimes.begin(),vswitchtimes.end(),itramp->tswitch1);
-                        if( *it != itramp->tswitch1 ) {
-                            vswitchtimes.insert(it,itramp->tswitch1);
+                        vector<dReal>::iterator it;
+                        if( itramp->tswitch1 != 0 ) {
+                            it = lower_bound(vswitchtimes.begin(),vswitchtimes.end(),itramp->tswitch1);
+                            if( *it != itramp->tswitch1) {
+                                vswitchtimes.insert(it,itramp->tswitch1);
+                            }
                         }
-                        if( itramp->tswitch1 != itramp->tswitch2 ) {
+                        if( itramp->tswitch1 != itramp->tswitch2 && itramp->tswitch2 != 0 ) {
                             it = lower_bound(vswitchtimes.begin(),vswitchtimes.end(),itramp->tswitch2);
                             if( *it != itramp->tswitch2 ) {
                                 vswitchtimes.insert(it,itramp->tswitch2);
