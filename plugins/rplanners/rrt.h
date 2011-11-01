@@ -212,7 +212,8 @@ public:
 
     struct GOALPATH
     {
-        GOALPATH() : goalindex(-1), length(0) {}
+        GOALPATH() : goalindex(-1), length(0) {
+        }
         vector<dReal> qall;
         int goalindex;
         dReal length;
@@ -327,7 +328,7 @@ public:
     virtual void _ExtractPath(GOALPATH& goalpath, int iConnectedForward, int iConnectedBackward)
     {
         list<SimpleNode*> vecnodes;
-        
+
         // add nodes from the forward tree
         SimpleNode* pforward = _treeForward._nodes.at(iConnectedForward);
         while(1) {
@@ -361,8 +362,18 @@ public:
         vector<dReal>::iterator itq = goalpath.qall.begin();
         std::copy((*itprev)->q.begin(), (*itprev)->q.begin()+dof, itq);
         itq += dof;
+        vector<dReal> vivel(dof,1.0);
+        for(size_t i = 0; i < vivel.size(); ++i) {
+            if( _parameters->_vConfigVelocityLimit.at(i) != 0 ) {
+                vivel[i] = 1/_parameters->_vConfigVelocityLimit.at(i);
+            }
+        }
+
         while(itnext != vecnodes.end()) {
-            goalpath.length += _parameters->_distmetricfn((*itprev)->q,(*itnext)->q);
+            //goalpath.length += _parameters->_distmetricfn((*itprev)->q,(*itnext)->q);
+            for(int i = 0; i < dof; ++i) {
+                goalpath.length += RaveFabs((*itprev)->q[i]-(*itnext)->q[i])*vivel[i];
+            }
             std::copy((*itnext)->q.begin(), (*itnext)->q.begin()+dof, itq);
             itprev=itnext;
             ++itnext;

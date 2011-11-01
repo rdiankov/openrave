@@ -225,6 +225,10 @@ public:
         return _spec.IsValid();
     }
 
+    const ConfigurationSpecification::Group& GetGroupFromName(const std::string& name) {
+        return _spec.GetGroupFromName(name);
+    }
+
 //    std::vector<Group>::const_iterator FindCompatibleGroup(const Group& g, bool exactmatch=false) const;
 //
 //    std::vector<Group>::const_iterator FindTimeDerivativeGroup(const Group& g, bool exactmatch=false) const;
@@ -901,6 +905,7 @@ void init_openravepy_global()
 
     {
         scope configurationspecification = class_<PyConfigurationSpecification, PyConfigurationSpecificationPtr >("ConfigurationSpecification",DOXY_CLASS(ConfigurationSpecification))
+                                           .def("GetGroupFromName",&PyConfigurationSpecification::GetGroupFromName, return_value_policy<copy_const_reference>()) //, DOXY_FN(ConfigurationSpecification,GetGroupFromName))
                                            .def("GetDOF",&PyConfigurationSpecification::GetDOF,DOXY_FN(ConfigurationSpecification,GetDOF))
                                            .def("IsValid",&PyConfigurationSpecification::IsValid,DOXY_FN(ConfigurationSpecification,IsValid))
                                            .def("ExtractJointValues",&PyConfigurationSpecification::ExtractJointValues,args("data","body","indices","timederivative"),DOXY_FN(ConfigurationSpecification,ExtractJointValues))
@@ -909,6 +914,15 @@ void init_openravepy_global()
                                            .def("__eq__",&PyConfigurationSpecification::__eq__)
                                            .def("__ne__",&PyConfigurationSpecification::__ne__)
         ;
+
+        {
+            scope group = class_<ConfigurationSpecification::Group, boost::shared_ptr<ConfigurationSpecification::Group> >("Group",DOXY_CLASS(ConfigurationSpecification::Group))
+                          .def_readwrite("name",&ConfigurationSpecification::Group::name)
+                          .def_readwrite("interpolation",&ConfigurationSpecification::Group::interpolation)
+                          .def_readwrite("offset",&ConfigurationSpecification::Group::offset)
+                          .def_readwrite("dof",&ConfigurationSpecification::Group::dof)
+            ;
+        }
     }
 
     {

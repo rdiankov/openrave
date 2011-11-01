@@ -881,6 +881,18 @@ protected:
     virtual bool operator==(const ConfigurationSpecification& r) const;
     virtual bool operator!=(const ConfigurationSpecification& r) const;
 
+    /// \brief return the group whose name begins with a particular string.
+    ///
+    /// If multiple groups exist that begin with the same string, then the shortest one is returned.
+    /// \throw openrave_exception if a group is not found
+    virtual const Group& GetGroupFromName(const std::string& name) const;
+
+    /// \brief return the group whose name begins with a particular string.
+    ///
+    /// If multiple groups exist that begin with the same string, then the shortest one is returned.
+    /// \throw openrave_exception if a group is not found
+    virtual Group& GetGroupFromName(const std::string& name);
+
     /// \brief finds the most compatible group to the given group
     ///
     /// \param g the group to query, only the Group::name and Group::dof values are used
@@ -962,6 +974,8 @@ protected:
     virtual bool ExtractJointValues(std::vector<dReal>::iterator itvalues, std::vector<dReal>::const_iterator itdata, KinBodyConstPtr pbody, const std::vector<int>& indices, int timederivative=0) const;
 
     /// \brief extracts the delta time from the configuration if one exists
+    ///
+    /// \return true if deltatime exists in the current configuration, otherwise false
     virtual bool ExtractDeltaTime(dReal& deltatime, std::vector<dReal>::const_iterator itdata) const;
 
     /** \brief inserts a set of joint values into a configuration space point

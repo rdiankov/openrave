@@ -213,17 +213,20 @@ protected:
 class TrajectoryTimingParameters : public PlannerBase::PlannerParameters
 {
 public:
-    TrajectoryTimingParameters() : _interpolation("linear"), _pointtolerance(0.001), _hastimestamps(false), _outputaccelchanges(true), _bProcessing(false) {
+    TrajectoryTimingParameters() : _interpolation("linear"), _pointtolerance(0.001), _hastimestamps(false), _outputaccelchanges(true), _fToolAccelerationLimit(0), _bProcessing(false) {
         _vXMLParameters.push_back("interpolation");
         _vXMLParameters.push_back("hastimestamps");
         _vXMLParameters.push_back("pointtolerance");
         _vXMLParameters.push_back("outputaccelchanges");
+        _vXMLParameters.push_back("toolaccelerationlimit");
     }
 
     string _interpolation;
     dReal _pointtolerance;
     bool _hastimestamps;
-    bool _outputaccelchanges;
+    bool _outputaccelchanges; ///< if true, will output a waypoint every time a DOF changes its acceleration, this allows a trajectory be executed without knowing the max velocities/accelerations. If false, will just output the waypoints.
+    dReal _fToolAccelerationLimit; ///< if non-zero then the timer shoulld consdier the max acceleration limit of the tool.
+
 protected:
     bool _bProcessing;
     virtual bool serialize(std::ostream& O) const
@@ -235,6 +238,7 @@ protected:
         O << "<hastimestamps>" << _hastimestamps << "</hastimestamps>" << endl;
         O << "<pointtolerance>" << _pointtolerance << "</pointtolerance>" << endl;
         O << "<outputaccelchanges>" << _outputaccelchanges << "</outputaccelchanges>" << endl;
+        O << "<toolaccelerationlimit>" << _fToolAccelerationLimit << "</toolaccelerationlimit>" << endl;
         return !!O;
     }
 
@@ -249,7 +253,7 @@ protected:
         case PE_Ignore: return PE_Ignore;
         }
 
-        _bProcessing = name=="interpolation" || name=="hastimestamps" || name=="pointtolerance" || name=="outputaccelchanges";
+        _bProcessing = name=="interpolation" || name=="hastimestamps" || name=="pointtolerance" || name=="outputaccelchanges" || name=="toolaccelerationlimit";
         return _bProcessing ? PE_Support : PE_Pass;
     }
 
@@ -267,6 +271,9 @@ protected:
             }
             else if( name == "outputaccelchanges" ) {
                 _ss >> _outputaccelchanges;
+            }
+            else if( name == "toolaccelerationlimit" ) {
+                _ss >> _fToolAccelerationLimit;
             }
             else {
                 RAVELOG_WARN(str(boost::format("unknown tag %s\n")%name));

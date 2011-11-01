@@ -1176,6 +1176,60 @@ bool ConfigurationSpecification::operator!=(const ConfigurationSpecification& r)
     return !this->operator==(r);
 }
 
+const ConfigurationSpecification::Group& ConfigurationSpecification::GetGroupFromName(const std::string& name) const
+{
+    size_t bestmatch=0xffffffff;
+    vector<Group>::const_iterator itbestgroup;
+    FOREACHC(itgroup,_vgroups) {
+        if( itgroup->name.size() >= name.size() ) {
+            if( itgroup->name.size() == name.size() ) {
+                if( itgroup->name == name ) {
+                    return *itgroup;
+                }
+            }
+            else {
+                if( itgroup->name.substr(0,name.size()) == name ) {
+                    size_t match = itgroup->name.size()-name.size();
+                    if( match < bestmatch ) {
+                        itbestgroup = itgroup;
+                    }
+                }
+            }
+        }
+    }
+    if(bestmatch==0xffffffff) {
+        throw OPENRAVE_EXCEPTION_FORMAT("failed to find group %s",name,ORE_InvalidArguments);
+    }
+    return *itbestgroup;
+}
+
+ConfigurationSpecification::Group& ConfigurationSpecification::GetGroupFromName(const std::string& name)
+{
+    size_t bestmatch=0xffffffff;
+    vector<Group>::iterator itbestgroup;
+    FOREACH(itgroup,_vgroups) {
+        if( itgroup->name.size() >= name.size() ) {
+            if( itgroup->name.size() == name.size() ) {
+                if( itgroup->name == name ) {
+                    return *itgroup;
+                }
+            }
+            else {
+                if( itgroup->name.substr(0,name.size()) == name ) {
+                    size_t match = itgroup->name.size()-name.size();
+                    if( match < bestmatch ) {
+                        itbestgroup = itgroup;
+                    }
+                }
+            }
+        }
+    }
+    if(bestmatch==0xffffffff) {
+        throw OPENRAVE_EXCEPTION_FORMAT("failed to find group %s",name,ORE_InvalidArguments);
+    }
+    return *itbestgroup;
+}
+
 std::vector<ConfigurationSpecification::Group>::const_iterator ConfigurationSpecification::FindCompatibleGroup(const ConfigurationSpecification::Group& g, bool exactmatch) const
 {
     std::vector<ConfigurationSpecification::Group>::const_iterator itsemanticmatch = _vgroups.end();
