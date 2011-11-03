@@ -987,6 +987,42 @@ public:
         _pbody->SetTransform(ExtractTransform(transform));
     }
 
+    void SetDOFWeights(object o)
+    {
+        if( _pbody->GetDOF() == 0 ) {
+            return;
+        }
+        vector<dReal> values = ExtractArray<dReal>(o);
+        if( (int)values.size() != GetDOF() ) {
+            throw openrave_exception("values do not equal to body degrees of freedom");
+        }
+        _pbody->SetDOFWeights(values);
+    }
+
+    void SetDOFVelocityLimits(object o)
+    {
+        if( _pbody->GetDOF() == 0 ) {
+            return;
+        }
+        vector<dReal> values = ExtractArray<dReal>(o);
+        if( (int)values.size() != GetDOF() ) {
+            throw openrave_exception("values do not equal to body degrees of freedom");
+        }
+        _pbody->SetDOFVelocityLimits(values);
+    }
+
+    void SetDOFAccelerationLimits(object o)
+    {
+        if( _pbody->GetDOF() == 0 ) {
+            return;
+        }
+        vector<dReal> values = ExtractArray<dReal>(o);
+        if( (int)values.size() != GetDOF() ) {
+            throw openrave_exception("values do not equal to body degrees of freedom");
+        }
+        _pbody->SetDOFAccelerationLimits(values);
+    }
+
     void SetDOFValues(object o)
     {
         if( _pbody->GetDOF() == 0 ) {
@@ -2249,6 +2285,9 @@ void init_openravepy_kinbody()
                         .def("GetDOFMaxAccel",&PyKinBody::GetDOFMaxAccel, DOXY_FN(KinBody,GetDOFMaxAccel))
                         .def("GetDOFWeights",getdofweights1, DOXY_FN(KinBody,GetDOFWeights))
                         .def("GetDOFWeights",getdofweights2, DOXY_FN(KinBody,GetDOFWeights))
+                        .def("SetDOFWeights",&PyKinBody::SetDOFWeights, args("weights"), DOXY_FN(KinBody,SetDOFWeights))
+                        .def("SetDOFVelocityLimits",&PyKinBody::SetDOFVelocityLimits, args("limits"), DOXY_FN(KinBody,SetDOFVelocityLimits))
+                        .def("SetDOFAccelerationLimits",&PyKinBody::SetDOFAccelerationLimits, args("limits"), DOXY_FN(KinBody,SetDOFAccelerationLimits))
                         .def("GetDOFResolutions",getdofresolutions1, DOXY_FN(KinBody,GetDOFResolutions))
                         .def("GetDOFResolutions",getdofresolutions2, DOXY_FN(KinBody,GetDOFResolutions))
                         .def("GetLinks",getlinks1, DOXY_FN(KinBody,GetLinks))

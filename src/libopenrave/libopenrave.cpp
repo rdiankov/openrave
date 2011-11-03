@@ -1192,6 +1192,7 @@ const ConfigurationSpecification::Group& ConfigurationSpecification::GetGroupFro
                     size_t match = itgroup->name.size()-name.size();
                     if( match < bestmatch ) {
                         itbestgroup = itgroup;
+                        bestmatch = match;
                     }
                 }
             }
@@ -1219,6 +1220,7 @@ ConfigurationSpecification::Group& ConfigurationSpecification::GetGroupFromName(
                     size_t match = itgroup->name.size()-name.size();
                     if( match < bestmatch ) {
                         itbestgroup = itgroup;
+                        bestmatch = match;
                     }
                 }
             }
@@ -1483,6 +1485,43 @@ bool ConfigurationSpecification::ExtractIkParameterization(IkParameterization& i
             if( !!ss ) {
                 ikparam.Set(itdata+itgroup->offset,static_cast<IkParameterizationType>(iktype));
                 bfound = true;
+                if( timederivative == 0 ) {
+                    // normalize parameterizations
+                    switch(ikparam.GetType()) {
+                    case IKP_Transform6D: {
+                        Transform t = ikparam.GetTransform6D();
+                        t.rot.normalize4();
+                        ikparam.SetTransform6D(t);
+                        break;
+                    }
+                    case IKP_Rotation3D: {
+                        Vector quat = ikparam.GetRotation3D();
+                        quat.normalize4();
+                        ikparam.SetRotation3D(quat);
+                        break;
+                    }
+                    case IKP_Direction3D: {
+                        Vector dir = ikparam.GetDirection3D();
+                        dir.normalize3();
+                        ikparam.SetDirection3D(dir);
+                        break;
+                    }
+                    case IKP_Ray4D: {
+                        RAY r = ikparam.GetRay4D();
+                        r.dir.normalize3();
+                        ikparam.SetRay4D(r);
+                        break;
+                    }
+                    case IKP_TranslationDirection5D: {
+                        RAY r = ikparam.GetTranslationDirection5D();
+                        r.dir.normalize3();
+                        ikparam.SetTranslationDirection5D(r);
+                        break;
+                    }
+                    default:
+                        break;
+                    }
+                }
             }
         }
     }

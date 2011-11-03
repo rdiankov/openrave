@@ -1379,7 +1379,8 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
         code += 'vsolutions.push_back(IKSolution()); IKSolution& solution = vsolutions.back();\n'
         code += 'solution.basesol.resize(%d);\n'%len(node.alljointvars)
         for i,var in enumerate(node.alljointvars):
-            code += 'solution.basesol[%d].foffset = %s;\n'%(i,var)
+            offsetvalue = '+%.15e'%node.offsetvalues[i] if node.offsetvalues is not None else ''
+            code += 'solution.basesol[%d].foffset = %s%s;\n'%(i,var,offsetvalue)
             vardeps = [vardep for vardep in self.freevardependencies if vardep[1]==var.name]
             if len(vardeps) > 0:
                 freevarname = vardeps[0][0]

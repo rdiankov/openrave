@@ -753,6 +753,7 @@ class AST:
         alljointvars = None
         checkgreaterzero = None # used for final sanity checks to ensure IK solution is consistent
         thresh = 0
+        offsetvalues = None
         def __init__(self, alljointvars,checkgreaterzero=None):
             self.alljointvars = alljointvars
             self.checkgreaterzero = checkgreaterzero
@@ -1863,17 +1864,43 @@ class IKFastSolver(AutoReloader):
         basedir = Matrix(3,1,[Real(x,30) for x in rawbasedir])
         basedir /= sqrt(basedir[0]*basedir[0]+basedir[1]*basedir[1]+basedir[2]*basedir[2])
         for i in range(3):
-            basedir[i] = self.convertRealToRational(basedir[i])
+            basedir[i] = self.convertRealToRational(basedir[i],5)
+        basedir /= sqrt(basedir[0]*basedir[0]+basedir[1]*basedir[1]+basedir[2]*basedir[2]) # unfortunately have to do it again...
         offsetdist = basedir.dot(basepos)
         basepos = basepos-basedir*offsetdist
         Links = LinksRaw[:]
+
+        endbranchtree = [AST.SolverStoreSolution (jointvars)]
+        numzeros = int(basedir[0]==S.Zero) + int(basedir[1]==S.Zero) + int(basedir[2]==S.Zero)
+#         if numzeros < 2:
+#             try:
+#                 log.info('try to rotate the last joint so that numzeros increases')
+#                 assert(not self.has_any_symbols(Links[-1],*solvejointvars))
+#                 localdir = Links[-1][0:3,0:3]*basedir
+#                 localpos = Links[-1][0:3,0:3]*basepos+Links[-1][0:3,3]
+#                 AllEquations = Links[-2][0:3,0:3]*localdir
+#                 tree=self.solveAllEquations(AllEquations,curvars=solvejointvars[-1:],othersolvedvars = [],solsubs = [],endbranchtree=[])
+#                 offset = tree[0].jointeval[0]
+#                 endbranchtree[0].offsetvalues = [S.Zero]*len(solvejointvars)
+#                 endbranchtree[0].offsetvalues[-1] = offset
+#                 Toffset = Links[-2].subs(solvejointvars[-1],offset).evalf()
+#                 localdir2 = Toffset[0:3,0:3]*localdir
+#                 localpos2 = Toffset[0:3,0:3]*localpos+Toffset[0:3,3]
+#                 Links[-1]=eye(4)
+#                 for i in range(3):
+#                     basedir[i] = self.convertRealToRational(localdir2[i])
+#                 basedir /= sqrt(basedir[0]*basedir[0]+basedir[1]*basedir[1]+basedir[2]*basedir[2]) # unfortunately have to do it again...
+#                 basepos = Matrix(3,1,[self.convertRealToRational(x) for x in localpos2])
+#             except Exception, e:
+#                 print 'failed to rotate joint correctly',e
+
         LinksInv = [self.affineInverse(link) for link in Links]
         T = self.multiplyMatrix(Links)
         Tfinal = zeros((4,4))
         Tfinal[0,0:3] = (T[0:3,0:3]*basedir).transpose()
         Tfinal[0:3,3] = T[0:3,0:3]*basepos+T[0:3,3]
         self.testconsistentvalues = self.computeConsistentValues(jointvars,Tfinal,numsolutions=4)
-        endbranchtree = [AST.SolverStoreSolution (jointvars)]
+
         solvejointvars = [jointvars[i] for i in isolvejointvars]
         if len(solvejointvars) != 5:
             raise self.CannotSolveError('need 5 joints')
