@@ -902,7 +902,7 @@ std::istream& operator>>(std::istream& I, IkParameterization& ikparam)
     case IKP_TranslationXY2D: { Vector v; I >> v.y >> v.y; ikparam.SetTranslationXY2D(v); break; }
     case IKP_TranslationXYOrientation3D: { Vector v; I >> v.y >> v.y >> v.z; ikparam.SetTranslationXYOrientation3D(v); break; }
     case IKP_TranslationLocalGlobal6D: { Vector localtrans, trans; I >> localtrans.x >> localtrans.y >> localtrans.z >> trans.x >> trans.y >> trans.z; ikparam.SetTranslationLocalGlobal6D(localtrans,trans); break; }
-    case IKP_TranslationXAxisAngle4D: { Vector trans; dReal angle=0; I >> trans.x >> trans.y >> trans.z >> angle; ikparam.SetTranslationXAxisAngle4D(trans,angle); break; }
+    case IKP_TranslationXAxisAngle4D: { Vector trans; dReal angle=0; I >> angle >> trans.x >> trans.y >> trans.z; ikparam.SetTranslationXAxisAngle4D(trans,angle); break; }
     default:
         throw OPENRAVE_EXCEPTION_FORMAT("does not support parameterization 0x%x", ikparam.GetType(),ORE_InvalidArguments);
     }
