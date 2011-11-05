@@ -212,11 +212,11 @@ sudo yum install qt4-devel Coin2-devel glew-devel gsm-devel x264 x264-devel ffmp
 
 パッケージマネージャから<b>soqt-develをインストールする場合には，間違ったバージョンのQtをコンパイルするかもしれませんので注意してください．</b>もしソースファイルからSoQtをコンパイルする場合には，\c QTDIR と正しいバージョンであることを確認してください．
 
-\en \section ilinux_libraries Necessary libraries for Old Linux Distros
+\en \subsection ilinux_libraries Necessary libraries for Old Linux Distros
 
 (Only install these libraries from sources if not in package manager.
 
-\ja \section ilinux_libraries 旧Linuxに必要なライブラリ
+\ja \subsection ilinux_libraries 旧Linuxに必要なライブラリ
 
 （パッケージマネージャにない場合のみ，これらのライブラリをソースからインストールしてください．
 
@@ -229,7 +229,7 @@ sudo yum install qt4-devel Coin2-devel glew-devel gsm-devel x264 x264-devel ffmp
 \ja
  - <b>x86-64ユーザ：</b> SoQtはSoQtComponent.cppでコンパイルエラーを起こすかもしれません．これを修正するため，\c src/Inventor/Qt/SoQtComponent.cppファイルの<tt>unsigned long key</tt>を<tt>SbDict::Key key</tt>に置換してください．
 
-\en \section ilinux_collisionphysics Collision Checkers and Physics Simulators
+\en \subsection ilinux_collisionphysics Collision Checkers and Physics Simulators
 
 Although %OpenRAVE is not tied to any particular collision checker, it requires at least one is installed to get basic functions. Here are the following libraries that have %OpenRAVE plugins:
 
@@ -242,7 +242,7 @@ Although %OpenRAVE is not tied to any particular collision checker, it requires 
 
 - <a href="http://www.cs.unc.edu/~geom/SSV/">PQP Collision</a> - source code separate inside \b pqprave plugin.
 
-\ja \section ilinux_collisionphysics 干渉検知と物理シミュレータ
+\ja \subsection ilinux_collisionphysics 干渉検知と物理シミュレータ
 
 %OpenRAVEは特定の干渉検知器と提携しているわけではありませんが，基本的な機能のために少なくとも１つの干渉検知器を必要とします．ここに%OpenRAVEのプラグインをもつ以下のライブラリを紹介します．
 
@@ -255,17 +255,11 @@ Although %OpenRAVE is not tied to any particular collision checker, it requires 
 
 - <a href="http://www.cs.unc.edu/~geom/SSV/">PQP</a> - ソースコードは内部の\b pqpraveプラグインに含まれています．
 
-\en \section ilinux_python Python
+\en \subsection ilinux_python Python
 
 In order to use the python bindings through the \openravepy{openravepy} module, you'll need to install python, boost python, python numpy, and python sympy. .
 
-To setup the python path in bash add the following line:
-
-\verbatim
-export PYTHONPATH=$PYTHONPATH:`openrave-config --python-dir`
-\endverbatim
-
-\ja \section ilinux_python Python
+\ja \subsection ilinux_python Python
 
 \openravepy{openravepy}を利用するために%OpenRAVEをコンパイルする前に以下のパッケージをインストールしてください．
 
