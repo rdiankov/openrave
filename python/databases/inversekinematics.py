@@ -575,6 +575,14 @@ class InverseKinematicsModel(DatabaseGenerator):
                 kwargs['Tgripperraw'] = Tgripperraw
                 return self.ikfast.IKFastSolver.solveFullIK_TranslationLocalGlobal6D(*args,**kwargs)
             solvefn=solveFullIK_TranslationLocalGlobal6D
+        elif self.iktype == IkParameterization.Type.TranslationXAxisAngle4D:
+            rawbasedir=dot(self.manip.GetLocalToolTransform()[0:3,0:3],self.manip.GetDirection())
+            rawbasepos=self.manip.GetLocalToolTransform()[0:3,3]
+            def solveFullIK_TranslationXAxisAngle4D(*args,**kwargs):
+                kwargs['rawbasedir'] = rawbasedir
+                kwargs['rawbasepos'] = rawbasepos
+                return self.ikfast.IKFastSolver.solveFullIK_TranslationXAxisAngle4D(*args,**kwargs)
+            solvefn=solveFullIK_TranslationXAxisAngle4D
         else:
             raise ValueError('bad type')
 
@@ -606,6 +614,8 @@ class InverseKinematicsModel(DatabaseGenerator):
             log.info('creating ik file %s',sourcefilename)
             mkdir_recursive(os.path.split(sourcefilename)[0])
             solver = self.ikfast.IKFastSolver(kinbody=self.robot,kinematicshash=self.manip.GetKinematicsStructureHash(),precision=precision)
+            if self.iktype == IkParameterization.Type.TranslationXAxisAngle4D:
+                solver.useleftmultiply = False
             baselink=self.manip.GetBase().GetIndex()
             eelink=self.manip.GetEndEffector().GetIndex()
             if ipython:

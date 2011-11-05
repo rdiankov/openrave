@@ -177,7 +177,13 @@ IkParameterization RobotBase::Manipulator::GetIkParameterization(IkParameterizat
     }
     case IKP_TranslationLocalGlobal6D: {
         RAVELOG_WARN("RobotBase::Manipulator::GetIkParameterization: TranslationLocalGlobal6D type setting local translation to (0,0,0).\n");
-        ikp.SetTranslationLocalGlobal6D(Vector(0,0,0),GetTransform().trans); break;
+        ikp.SetTranslationLocalGlobal6D(Vector(0,0,0),GetTransform().trans);
+        break;
+    }
+    case IKP_TranslationXAxisAngle4D: {
+        Transform t = GetTransform();
+        ikp.SetTranslationXAxisAngle4D(t.trans,RaveAcos(t.rotate(_vdirection).x));
+        break;
     }
     default:
         throw OPENRAVE_EXCEPTION_FORMAT("invalid ik type 0x%x",iktype,ORE_InvalidArguments);
@@ -223,6 +229,11 @@ IkParameterization RobotBase::Manipulator::GetIkParameterization(const IkParamet
     case IKP_TranslationLocalGlobal6D: {
         Vector localtrans = ikparam.GetTranslationLocalGlobal6D().first;
         ikp.SetTranslationLocalGlobal6D(localtrans,GetTransform() * localtrans);
+        break;
+    }
+    case IKP_TranslationXAxisAngle4D: {
+        Transform t = GetTransform();
+        ikp.SetTranslationXAxisAngle4D(t.trans,RaveAcos(t.rotate(_vdirection).x));
         break;
     }
     default:

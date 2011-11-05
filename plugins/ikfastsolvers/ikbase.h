@@ -515,6 +515,12 @@ private:
                 IKReal eerot[9] = {p.first.x, 0, 0, 0, p.first.y, 0, 0, 0, p.first.z};
                 return _pfnik(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, vsolutions);
             }
+            case IKP_TranslationXAxisAngle4D: {
+                std::pair<Vector,dReal> p = param.GetTranslationXAxisAngle4D();
+                IKReal eetrans[3] = {p.first.x, p.first.y,p.first.z};
+                IKReal eerot[9] = {p.second, 0, 0, 0, 0, 0, 0, 0, 0};
+                return _pfnik(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, vsolutions);
+            }
             default:
                 BOOST_ASSERT(0);
                 break;

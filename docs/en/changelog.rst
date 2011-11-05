@@ -44,7 +44,9 @@ Inverse Kinematics
 
 * Added new :class:`.IkFilterOptions.IgnoreEndEffectorCollision` option, this disables the end effector links and their attached bodies from environment collision considerations.
 
-* fixed ikfast bug when prismatic joints are present, ikfast version is now **48**.
+* fixed ikfast bug when prismatic joints are present, ikfast version is now **49**.
+
+* Added new IK type :meth:`.TranslationXAxisAngle4D`
 
 Grasping
 --------

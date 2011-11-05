@@ -65,7 +65,7 @@ The following inverse kinematics types are supported:
 * **TranslationDirection5D** - end effector origin and direction reaches desired 3D translation and direction. Can be thought of as Ray IK where the origin of the ray must coincide.
 * **TranslationXY2D** - end effector origin reaches desired XY translation position, Z is ignored. The coordinate system with relative to the base link.
 * **TranslationLocalGlobal6D** - local point on end effector origin reaches desired 3D global point. Because both local point and global point can be specified, there are 6 values.
-
+* **TranslationXAxisAngle4D** - end effector origin reaches desired 3D translation, manipulator direction makes a specific angle with x-axis (defined in the manipulator base link's coordinate system)
 The possible solve methods are defined by `ikfast.IKFastSolver.GetSolvers()`
 
 Usage
@@ -151,7 +151,7 @@ The global functions are:
 Parameters:
   
 - ``eetrans`` - 3 translation values. For iktype **TranslationXYOrientation3D**, the z-axis is the orientation.
-- ``eerot`` - 9 values for the rotation matrix. For iktypes **Direction3D**, **Ray4D**, and **TranslationDirection5D**, the first 3 values represent the target direction.
+- ``eerot`` - 9 values for the rotation matrix. For iktypes **Direction3D**, **Ray4D**, **TranslationDirection5D**, and **TranslationXAxisAngle4D** the first 3 values represent the target direction.
 - ``IKSolution`` - The discrete solutions are returned in this structure. Sometimes the joint axes of the robot can align allowing an infinite number of solutions. The ``IKSolution`` structure stores all these solutions in the form of free variables that the user has to set when querying the solution. Its prototype is:
 
 .. code-block:: c++
@@ -228,7 +228,7 @@ from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2011 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Lesser GPL, Version 3'
-__version__ = '48'
+__version__ = '49'
 
 import sys, copy, time, math, datetime
 import __builtin__
@@ -946,6 +946,33 @@ class AST:
             self.Dfk = Tleft[0:3,0:3]*self.Dfk
             self.Pee = Tleftinv[0:3,0:3]*self.Pee+Tleftinv[0:3,3]
 
+    class SolverIKChainAxisAngle:
+        solvejointvars = None
+        freejointvars = None
+        jointtree = None
+        Pfk = None
+        Pee = None
+        dictequations = None
+        angleee=None
+        anglefk=None
+        def __init__(self, solvejointvars, freejointvars, Pee, angleee,jointtree,Pfk=None,anglefk=None):
+            self.solvejointvars = solvejointvars
+            self.freejointvars = freejointvars
+            self.Pee = Pee
+            self.anglefk=anglefk
+            self.jointtree = jointtree
+            self.Pfk=Pfk
+            self.angleee=angleee
+            self.dictequations = []
+        def generate(self, generator):
+            return generator.generateSolverIKChainAxisAngle(self)
+        def end(self, generator):
+            return generator.endSolverIKChainAxisAngle(self)
+        def leftmultiply(self,Tleft,Tleftinv):
+            self.Pfk = Tleft[0:2,0:2]*self.Pfk+Tleft[0:2,3]
+            self.Pee = Tleftinv[0:2,0:2]*self.Pee+Tleftinv[0:2,3]
+            assert(0) # need to change angle
+
 from sympy.core import function # for sympy 0.7.1+
 class fmod(function.Function):
     """defines floating-point mod"""
@@ -1037,6 +1064,7 @@ class IKFastSolver(AutoReloader):
 
     def __init__(self, kinbody=None,kinematicshash='',precision=None):
         self.usinglapack = False
+        self.useleftmultiply = True
         self.freevarsubs = []
         self.degeneratecases = None
         self.kinematicshash = kinematicshash
@@ -1548,8 +1576,9 @@ class IKFastSolver(AutoReloader):
         self.pvars = self.Tee[0:12]+self.npxyz+[self.pp]+self.rxp[0]+self.rxp[1]+self.rxp[2]
         self.Teeinv = self.affineInverse(self.Tee)
         LinksLeft = []
-        while not self.has_any_symbols(LinksRaw[0],*solvejointvars):
-            LinksLeft.append(LinksRaw.pop(0))
+        if self.useleftmultiply:
+            while not self.has_any_symbols(LinksRaw[0],*solvejointvars):
+                LinksLeft.append(LinksRaw.pop(0))
         LinksLeftInv = [self.affineInverse(T) for T in LinksLeft]
         self.testconsistentvalues = None
         # before passing to the solver, set big numbers to constants, this will greatly reduce computation times
@@ -1569,7 +1598,8 @@ class IKFastSolver(AutoReloader):
 #                         self.globalsymbols.append((sym,T[i]))
 #                     T[i] = sym
         chaintree = solvefn(self, LinksRaw, jointvars, isolvejointvars)
-        chaintree.leftmultiply(Tleft=self.multiplyMatrix(LinksLeft), Tleftinv=self.multiplyMatrix(LinksLeftInv[::-1]))
+        if self.useleftmultiply:
+            chaintree.leftmultiply(Tleft=self.multiplyMatrix(LinksLeft), Tleftinv=self.multiplyMatrix(LinksLeftInv[::-1]))
         chaintree.dictequations += self.globalsymbols
         return chaintree
 
@@ -2196,6 +2226,156 @@ class IKFastSolver(AutoReloader):
         self.checkSolvability(AllEquations,curvars,self.freejointvars+usedvars)
         leftovervarstree += self.solveAllEquations(AllEquations,curvars=curvars,othersolvedvars = self.freejointvars+usedvars,solsubs = solsubs,endbranchtree=endbranchtree)
         return coupledsolutions
+
+    def solveFullIK_TranslationXAxisAngle4D(self, LinksRaw, jointvars, isolvejointvars, rawbasedir=Matrix(3,1,[S.Zero,S.Zero,S.One]),rawbasepos=Matrix(3,1,[S.Zero,S.Zero,S.Zero])):
+        """Solves 3D translation + Angle with respect to X-axis
+        """
+        basepos = Matrix(3,1,[self.convertRealToRational(x) for x in rawbasepos])
+        basedir = Matrix(3,1,[Real(x,30) for x in rawbasedir])
+        basedir /= sqrt(basedir[0]*basedir[0]+basedir[1]*basedir[1]+basedir[2]*basedir[2])
+        for i in range(3):
+            basedir[i] = self.convertRealToRational(basedir[i],5)
+        basedir /= sqrt(basedir[0]*basedir[0]+basedir[1]*basedir[1]+basedir[2]*basedir[2]) # unfortunately have to do it again...
+        Links = LinksRaw[:]
+
+        endbranchtree = [AST.SolverStoreSolution (jointvars)]
+
+        LinksInv = [self.affineInverse(link) for link in Links]
+        T = self.multiplyMatrix(Links)
+        Tfinal = zeros((4,4))
+        Tfinal[0,0] = acos((T[0:3,0:3]*basedir)[0])
+        Tfinal[0:3,3] = T[0:3,0:3]*basepos+T[0:3,3]
+        self.testconsistentvalues = self.computeConsistentValues(jointvars,Tfinal,numsolutions=4)
+
+        solvejointvars = [jointvars[i] for i in isolvejointvars]
+        if len(solvejointvars) != 4:
+            raise self.CannotSolveError('need 5 joints')
+        
+        log.info('ikfast translation axis 4d: %s',solvejointvars)
+
+        # if last two axes are intersecting, can divide computing position and direction
+        ilinks = [i for i,Tlink in enumerate(Links) if self.has_any_symbols(Tlink,*solvejointvars)]
+        T = self.multiplyMatrix(Links[ilinks[-2]:])
+        P = T[0:3,0:3]*basepos+T[0:3,3]
+        D = T[0:3,0:3]*basedir
+
+        Tbaseposinv = eye(4)
+        Tbaseposinv[0:3,3] = -basepos
+        T1links = [Tbaseposinv]+LinksInv[::-1]+[self.Tee]
+        T1linksinv = [self.affineInverse(Tbaseposinv)]+Links[::-1]+[self.Teeinv]
+        AllEquations = self.buildEquationsFromPositions(T1links,T1linksinv,solvejointvars,self.freejointvars,uselength=True)
+
+        for index in range(len(ilinks)):
+            T0links=LinksInv[:ilinks[index]][::-1]
+            T0 = self.multiplyMatrix(T0links)
+            T1links=Links[ilinks[index]:]
+            T1 = self.multiplyMatrix(T1links)
+            eq = T0[0:3,0].dot(T1[0:3,0:3]*basedir)
+            eq = self.simplifyTransform(self.trigsimp(eq,solvejointvars))-cos(self.Tee[0])
+            if self.isExpressionUnique(AllEquations,eq) and self.isExpressionUnique(AllEquations,-eq):
+                AllEquations.append(eq)
+
+        self.sortComplexity(AllEquations)
+
+        othersolvedvars = self.freejointvars[:]
+        solsubs = self.freevarsubs[:]
+        freevarinvsubs = [(f[1],f[0]) for f in self.freevarsubs]
+        solinvsubs = [(f[1],f[0]) for f in solsubs]
+        # single variable solutions
+        solutions = []
+        for curvar in solvejointvars:
+            othervars = [var for var in solvejointvars if var != curvar]
+            curvarsym = self.Variable(curvar)
+            raweqns = []
+            for e in AllEquations:
+                if (len(othervars) == 0 or not e.has_any_symbols(*othervars)) and e.has_any_symbols(curvar,curvarsym.htvar,curvarsym.cvar,curvarsym.svar):
+                    eq = e.subs(self.freevarsubs+solsubs)
+                    if self.isExpressionUnique(raweqns,eq) and self.isExpressionUnique(raweqns,-eq):
+                        raweqns.append(eq)
+            if len(raweqns) > 0:
+                try:
+                    rawsolutions=self.solveSingleVariable(raweqns,curvar,othersolvedvars)
+                    for solution in rawsolutions:
+                        self.solutionComplexity(solution,othersolvedvars,solvejointvars)
+                        solutions.append((solution,curvar))
+                except self.CannotSolveError:
+                    pass
+
+        firstsolution, firstvar = solutions[0]
+        othersolvedvars.append(firstvar)
+        solsubs += self.Variable(firstvar).subs
+        curvars=solvejointvars[:]
+        curvars.remove(firstvar)
+
+        trigsubs = []
+        polysubs = []
+        polyvars = []
+        for v in curvars:
+            if self.isHinge(v.name):
+                var = self.Variable(v)
+                polysubs += [(cos(v),var.cvar),(sin(v),var.svar)]
+                polyvars += [var.cvar,var.svar]
+                trigsubs.append((var.svar**2,1-var.cvar**2))
+            else:
+                polyvars.append(v)
+        polysubsinv = [(b,a) for a,b in polysubs]
+        rawpolyeqs = [Poly(eq.subs(polysubs),*polyvars).subs(trigsubs) for eq in AllEquations if eq.has_any_symbols(*curvars)]
+
+        dummys = []
+        dummysubs = []
+        dummysubs2 = []
+        dummyvars = []
+        for i in range(0,len(polyvars),2):
+            dummy = Symbol('ht%s'%polyvars[i].name[1:])
+            # [0] - cos, [1] - sin
+            dummys.append(dummy)
+            dummysubs += [(polyvars[i],(1-dummy**2)/(1+dummy**2)),(polyvars[i+1],2*dummy/(1+dummy**2))]
+            var = polyvars[i].subs(self.invsubs).args[0]
+            dummysubs2.append((var,2*atan(dummy)))
+            dummyvars.append((dummy,tan(0.5*var)))
+
+        newreducedeqs = []
+        for peq in rawpolyeqs:
+            maxdenom = [0]*(len(polyvars)/2)
+            for monoms in peq.iter_monoms():
+                for i in range(len(maxdenom)):
+                    maxdenom[i] = max(maxdenom[i],monoms[2*i]+monoms[2*i+1])
+            eqnew = S.Zero
+            for c,monoms in peq.iter_terms():
+                term = c
+                for i in range(len(polyvars)):
+                    num,denom = fraction(dummysubs[i][1])
+                    term *= num**monoms[i]
+                # the denoms for 0,1 and 2,3 are the same
+                for i in range(len(maxdenom)):
+                    denom = fraction(dummysubs[2*i][1])[1]
+                    term *= denom**(maxdenom[i]-monoms[2*i]-monoms[2*i+1])
+                eqnew += term
+            newreducedeqs.append(Poly(eqnew,*dummys))
+
+        newreducedeqs.sort(cmp=lambda x,y: len(x.monoms) - len(y.monoms))
+        ileftvar = 0
+        leftvar = dummys[ileftvar]
+        coupledvars = dummys[:]
+        coupledvars.pop(ileftvar)
+        exportcoeffeqs=None
+        for ioffset in range(len(newreducedeqs)):
+            try:
+                exportcoeffeqs,exportmonoms = self.solveDialytically(newreducedeqs[ioffset:],ileftvar)
+                log.info('ioffset %d'%ioffset)
+                break
+            except self.CannotSolveError:
+                pass
+
+        if exportcoeffeqs is None:
+            raise self.CannotSolveError('failed to solveDialytically')
+
+        coupledsolution = AST.SolverCoeffFunction(jointnames=[v.name for v in curvars],jointeval=[v[1] for v in dummysubs2],jointevalcos=[dummysubs[2*i][1] for i in range(len(curvars))],jointevalsin=[dummysubs[2*i+1][1] for i in range(len(curvars))],isHinges=[self.isHinge(v.name) for v in curvars],exportvar=[v.name for v in dummys],exportcoeffeqs=exportcoeffeqs,exportfnname='solvedialyticpoly12qep',rootmaxdim=16)
+        self.usinglapack = True
+        tree = [firstsolution,coupledsolution]+ endbranchtree
+        chaintree = AST.SolverIKChainAxisAngle([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(v,i) for v,i in izip(self.freejointvars,self.ifreejointvars)], Pee=self.Tee[0:3,3].subs(self.freevarsubs), angleee=self.Tee[0,0].subs(self.freevarsubs),jointtree=tree,Pfk=Tfinal[0:3,3],anglefk=Tfinal[0,0])
+        chaintree.dictequations += self.ppsubs
+        return chaintree
 
     def buildEquationsFromTwoSides(self,leftside, rightside, usedvars, uselength=True):
         # try to shift all the constants of each Position expression to one side
@@ -3346,6 +3526,14 @@ class IKFastSolver(AutoReloader):
                 eps = 10**-(self.precision-3)
                 eigenvals = numpy.linalg.eigvals(numpy.array(numpy.array(A),numpy.float64))
                 if all([abs(f) > eps for f in eigenvals]):
+                    Ainv = A.inv(method='LU')
+                    B = Ainv*Mall[1].subs(subs).evalf()
+                    C = Ainv*Mall[0].subs(subs).evalf()
+                    A2 = zeros((B.shape[0],B.shape[0]*2))
+                    for i in range(B.shape[0]):
+                        A2[i,B.shape[0]+i] = S.One
+                    A2=A2.col_join((-C).row_join(-B))
+                    eigenvals2 = numpy.linalg.eigvals(numpy.array(numpy.array(A2),numpy.float64))
                     linearlyindependent = True
                     break
             if not linearlyindependent:
@@ -5269,7 +5457,7 @@ class IKFastSolver(AutoReloader):
     @staticmethod
     def GetSolvers():
         """Returns a dictionary of all the supported solvers and their official identifier names"""
-        return {'transform6d':IKFastSolver.solveFullIK_6D, 'rotation3d':IKFastSolver.solveFullIK_Rotation3D, 'translation3d':IKFastSolver.solveFullIK_Translation3D, 'direction3d':IKFastSolver.solveFullIK_Direction3D, 'ray4d':IKFastSolver.solveFullIK_Ray4D, 'lookat3d':IKFastSolver.solveFullIK_Lookat3D, 'translationdirection5d':IKFastSolver.solveFullIK_TranslationDirection5D,'translationxy2d':IKFastSolver.solveFullIK_TranslationXY2D,'translationxyorientation3d':IKFastSolver.solveFullIK_TranslationXYOrientation3D}
+        return {'transform6d':IKFastSolver.solveFullIK_6D, 'rotation3d':IKFastSolver.solveFullIK_Rotation3D, 'translation3d':IKFastSolver.solveFullIK_Translation3D, 'direction3d':IKFastSolver.solveFullIK_Direction3D, 'ray4d':IKFastSolver.solveFullIK_Ray4D, 'lookat3d':IKFastSolver.solveFullIK_Lookat3D, 'translationdirection5d':IKFastSolver.solveFullIK_TranslationDirection5D,'translationxy2d':IKFastSolver.solveFullIK_TranslationXY2D,'translationxyorientation3d':IKFastSolver.solveFullIK_TranslationXYOrientation3D,'translationxaxisangle4d':IKFastSolver.solveFullIK_TranslationXAxisAngle4D}
 
 if __name__ == '__main__':
     import openravepy

@@ -42,6 +42,8 @@ except:
         TranslationDirection5D=0x56000007
         TranslationXY2D=0x22000008
         TranslationXYOrientation3D=0x33000009
+        TranslationLocalGlobal6D=0x3600000a
+        TranslationXAxisAngle4D=0x4400000b
 
 from sympy import *
 
@@ -918,6 +920,70 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
         return code
     def endIKChainLookat3D(self, node):
         return ''
+
+    def generateSolverIKChainAxisAngle(self, node):
+        self.freevars = []
+        self.freevardependencies = []
+        self.resetequations()
+        self.symbolgen = cse_main.numbered_symbols('x')
+        
+        code = ''
+        if node.anglefk and node.Pfk:
+            code += "/// solves the inverse kinematics equations.\n"
+            code += "/// \\param pfree is an array specifying the free joints of the chain.\n"
+            code += "IKFAST_API void fk(const IKReal* j, IKReal* eetrans, IKReal* eerot) {\n"
+            code += "for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {\n"
+            allvars = node.solvejointvars + node.freejointvars
+            allsubs = [(v[0],Symbol('j[%d]'%v[1])) for v in allvars]
+            eqs = []
+            for eq in node.Pfk[0:3]:
+                eqs.append(eq.subs(allsubs))
+            eqs.append(node.anglefk.subs(allsubs))
+            subexprs,reduced_exprs=customcse (eqs,self.symbolgen)
+            outputnames = ['eetrans[0]','eetrans[1]','eetrans[2]','eerot[0]']
+            fcode = ''
+            if len(subexprs) > 0:
+                vars = [var for var,expr in subexprs]
+                fcode = 'IKReal ' + ','.join(str(var) for var,expr in subexprs) + ';\n'
+                for var,expr in subexprs:
+                    fcode += self.writeEquations(lambda k: str(var),collect(expr,vars))
+            for i in range(len(outputnames)):
+                fcode += self.writeEquations(lambda k: outputnames[i],reduced_exprs[i])
+            code += self.indentCode(fcode,4)
+            # if gets to the end of the for loop statement, return successfully. if exits for loop, assert(0)
+            code += 'return;\n}\nIKFAST_ASSERT(0);\n}\n\n'
+
+        code += self.getClassInit(node,IkType.TranslationXAxisAngle4D,userotation=1)
+        code += "bool ik(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::vector<IKSolution>& vsolutions) {\n"
+        code += "for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {\n"
+        fcode = "vsolutions.resize(0); vsolutions.reserve(8);\n"
+        fcode += "px = eetrans[0]; py = eetrans[1]; pz = eetrans[2];\n\n"
+        for i in range(len(node.freejointvars)):
+            name = node.freejointvars[i][0].name
+            fcode += '%s=pfree[%d]; c%s=cos(pfree[%d]); s%s=sin(pfree[%d]);\n'%(name,i,name,i,name,i)
+        fcode += "r00 = eerot[0];\n"
+        fcode += "px = eetrans[0]; py = eetrans[1]; pz = eetrans[2];\n"
+
+        psymbols = ["new_px","new_py","new_pz"]
+        for i in range(3):
+            fcode += self.writeEquations(lambda k: psymbols[i],node.Pee[i].evalf())
+        fcode += self.writeEquations(lambda k: "new_r00",node.angleee.evalf())
+        fcode += "r00 = new_r00; "
+        fcode += "px = new_px; py = new_py; pz = new_pz;\n\n"
+        if node.dictequations is not None:
+            for var,value in node.dictequations:
+                fcode += self.writeEquations(lambda k: var,value)
+        fcode += self.generateTree(node.jointtree)
+        code += self.indentCode(fcode,4) + "}\nreturn vsolutions.size()>0;\n}\n"
+
+        # write other functions
+        for name,functioncode in self.functions.iteritems():
+            code += self.indentCode(functioncode,4)
+        code += "};\n"
+        return code
+    def endSolverIKChainAxisAngle(self, node):
+        return ''
+
 
     def generateSolution(self, node,declarearray=True,acceptfreevars=True):
         code = ''
