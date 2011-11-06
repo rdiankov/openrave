@@ -1084,7 +1084,12 @@ public:
                         }
                         fmaxjointdisplacement = max(fmaxjointdisplacement,f);
                     }
-                    if( ftranslationdisplacement+fmaxjointdisplacement > 0.7 * worker_params->fgraspingnoise ) {
+
+                    dReal graspthresh = 0.005*RaveSqrt(0.49+400*worker_params->fgraspingnoise)-0.0035;
+                    if( graspthresh < worker_params->fgraspingnoise*0.1 ) {
+                        graspthresh = worker_params->fgraspingnoise*0.1;
+                    }
+                    if( ftranslationdisplacement+fmaxjointdisplacement > graspthresh ) {
                         RAVELOG_DEBUG(str(boost::format("grasp %d: fragile grasp %f>%f\n")%grasp_params->id%(ftranslationdisplacement+fmaxjointdisplacement)%(0.7 * worker_params->fgraspingnoise)));
                         continue;
                     }

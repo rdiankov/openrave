@@ -545,7 +545,7 @@ class GraspingModel(DatabaseGenerator):
             self.robot.SetTransform(eye(4)) # have to reset transform in order to remove randomness
             self.robot.SetActiveDOFs(self.manip.GetGripperIndices(),DOFAffine.X+DOFAffine.Y+DOFAffine.Z if translate else 0)
             approachrays[:,3:6] = -approachrays[:,3:6]
-            self.nextid, self.resultgrasps = self.grasper.GraspThreaded(approachrays=approachrays, rolls=rolls, standoffs=standoffs, preshapes=preshapes, manipulatordirections=manipulatordirections, target=self.target, graspingnoise=graspingnoise, forceclosurethreshold=forceclosurethreshold,numthreads=numthreads)
+            self.nextid, self.resultgrasps = self.grasper.GraspThreaded(approachrays=approachrays, rolls=rolls, standoffs=standoffs, preshapes=preshapes, manipulatordirections=manipulatordirections, target=self.target, graspingnoise=graspingnoise, forceclosurethreshold=forceclosurethreshold,numthreads=numthreads,translationstepmult=self.translationstepmult,finestep=self.finestep)
             print 'graspthreaded done, processing grasps %d'%len(self.resultgrasps)
 
             for resultgrasp in self.resultgrasps:
