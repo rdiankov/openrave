@@ -335,6 +335,7 @@ class RaveGlobal : private boost::noncopyable, public boost::enable_shared_from_
         _mapikparameterization[IKP_TranslationXY2D] = "TranslationXY2D";
         _mapikparameterization[IKP_TranslationXYOrientation3D] = "TranslationXYOrientation3D";
         _mapikparameterization[IKP_TranslationLocalGlobal6D] = "TranslationLocalGlobal6D";
+        _mapikparameterization[IKP_TranslationXAxisAngle4D] = "TranslationXAxisAngle4D";
         BOOST_ASSERT(_mapikparameterization.size()==IKP_NumberOfParameterizations);
     }
 public:
@@ -874,6 +875,11 @@ std::ostream& operator<<(std::ostream& O, const IkParameterization &ikparam)
         O << p.first.x << " " << p.first.y << " " << p.first.z << " " << p.second.x << " " << p.second.y << " " << p.second.z << " ";
         break;
     }
+    case IKP_TranslationXAxisAngle4D: {
+        std::pair<Vector,dReal> p = ikparam.GetTranslationXAxisAngle4D();
+        O << p.second << " " << p.first.x << " " << p.first.y << " " << p.first.z << " ";
+        break;
+    }
     default:
         throw OPENRAVE_EXCEPTION_FORMAT("does not support parameterization 0x%x", ikparam.GetType(),ORE_InvalidArguments);
     }
@@ -896,6 +902,7 @@ std::istream& operator>>(std::istream& I, IkParameterization& ikparam)
     case IKP_TranslationXY2D: { Vector v; I >> v.y >> v.y; ikparam.SetTranslationXY2D(v); break; }
     case IKP_TranslationXYOrientation3D: { Vector v; I >> v.y >> v.y >> v.z; ikparam.SetTranslationXYOrientation3D(v); break; }
     case IKP_TranslationLocalGlobal6D: { Vector localtrans, trans; I >> localtrans.x >> localtrans.y >> localtrans.z >> trans.x >> trans.y >> trans.z; ikparam.SetTranslationLocalGlobal6D(localtrans,trans); break; }
+    case IKP_TranslationXAxisAngle4D: { Vector trans; dReal angle=0; I >> angle >> trans.x >> trans.y >> trans.z; ikparam.SetTranslationXAxisAngle4D(trans,angle); break; }
     default:
         throw OPENRAVE_EXCEPTION_FORMAT("does not support parameterization 0x%x", ikparam.GetType(),ORE_InvalidArguments);
     }
@@ -1176,6 +1183,62 @@ bool ConfigurationSpecification::operator!=(const ConfigurationSpecification& r)
     return !this->operator==(r);
 }
 
+const ConfigurationSpecification::Group& ConfigurationSpecification::GetGroupFromName(const std::string& name) const
+{
+    size_t bestmatch=0xffffffff;
+    vector<Group>::const_iterator itbestgroup;
+    FOREACHC(itgroup,_vgroups) {
+        if( itgroup->name.size() >= name.size() ) {
+            if( itgroup->name.size() == name.size() ) {
+                if( itgroup->name == name ) {
+                    return *itgroup;
+                }
+            }
+            else {
+                if( itgroup->name.substr(0,name.size()) == name ) {
+                    size_t match = itgroup->name.size()-name.size();
+                    if( match < bestmatch ) {
+                        itbestgroup = itgroup;
+                        bestmatch = match;
+                    }
+                }
+            }
+        }
+    }
+    if(bestmatch==0xffffffff) {
+        throw OPENRAVE_EXCEPTION_FORMAT("failed to find group %s",name,ORE_InvalidArguments);
+    }
+    return *itbestgroup;
+}
+
+ConfigurationSpecification::Group& ConfigurationSpecification::GetGroupFromName(const std::string& name)
+{
+    size_t bestmatch=0xffffffff;
+    vector<Group>::iterator itbestgroup;
+    FOREACH(itgroup,_vgroups) {
+        if( itgroup->name.size() >= name.size() ) {
+            if( itgroup->name.size() == name.size() ) {
+                if( itgroup->name == name ) {
+                    return *itgroup;
+                }
+            }
+            else {
+                if( itgroup->name.substr(0,name.size()) == name ) {
+                    size_t match = itgroup->name.size()-name.size();
+                    if( match < bestmatch ) {
+                        itbestgroup = itgroup;
+                        bestmatch = match;
+                    }
+                }
+            }
+        }
+    }
+    if(bestmatch==0xffffffff) {
+        throw OPENRAVE_EXCEPTION_FORMAT("failed to find group %s",name,ORE_InvalidArguments);
+    }
+    return *itbestgroup;
+}
+
 std::vector<ConfigurationSpecification::Group>::const_iterator ConfigurationSpecification::FindCompatibleGroup(const ConfigurationSpecification::Group& g, bool exactmatch) const
 {
     std::vector<ConfigurationSpecification::Group>::const_iterator itsemanticmatch = _vgroups.end();
@@ -1429,6 +1492,43 @@ bool ConfigurationSpecification::ExtractIkParameterization(IkParameterization& i
             if( !!ss ) {
                 ikparam.Set(itdata+itgroup->offset,static_cast<IkParameterizationType>(iktype));
                 bfound = true;
+                if( timederivative == 0 ) {
+                    // normalize parameterizations
+                    switch(ikparam.GetType()) {
+                    case IKP_Transform6D: {
+                        Transform t = ikparam.GetTransform6D();
+                        t.rot.normalize4();
+                        ikparam.SetTransform6D(t);
+                        break;
+                    }
+                    case IKP_Rotation3D: {
+                        Vector quat = ikparam.GetRotation3D();
+                        quat.normalize4();
+                        ikparam.SetRotation3D(quat);
+                        break;
+                    }
+                    case IKP_Direction3D: {
+                        Vector dir = ikparam.GetDirection3D();
+                        dir.normalize3();
+                        ikparam.SetDirection3D(dir);
+                        break;
+                    }
+                    case IKP_Ray4D: {
+                        RAY r = ikparam.GetRay4D();
+                        r.dir.normalize3();
+                        ikparam.SetRay4D(r);
+                        break;
+                    }
+                    case IKP_TranslationDirection5D: {
+                        RAY r = ikparam.GetTranslationDirection5D();
+                        r.dir.normalize3();
+                        ikparam.SetTranslationDirection5D(r);
+                        break;
+                    }
+                    default:
+                        break;
+                    }
+                }
             }
         }
     }
@@ -1917,7 +2017,8 @@ void ConfigurationSpecification::ConvertData(std::vector<dReal>::iterator ittarg
                 }
             }
             else if( name != "deltatime" ) {
-                RAVELOG_VERBOSE(str(boost::format("cannot initialize unknown group '%s'")%name));
+                // messages are too frequent
+                //RAVELOG_VERBOSE(str(boost::format("cannot initialize unknown group '%s'")%name));
             }
             int offset = targetspec._vgroups[igroup].offset;
             for(size_t i = 0; i < numpoints; ++i, offset += targetspec.GetDOF()) {

@@ -303,7 +303,7 @@ protected:
         _vprevsolution = vsolution;
     }
 
-    IkFilterReturn _ValidateSolution(std::vector<dReal>& vsolution, RobotBase::ManipulatorPtr pmanip, const IkParameterization& ikp)
+    IkFilterReturn _ValidateSolution(std::vector<dReal>& vsolution, RobotBase::ManipulatorConstPtr pmanip, const IkParameterization& ikp)
     {
         // check if continuous with previous solution using the jacobian
         if( _mjacobian.num_elements() > 0 ) {

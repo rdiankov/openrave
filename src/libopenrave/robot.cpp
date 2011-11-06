@@ -177,7 +177,13 @@ IkParameterization RobotBase::Manipulator::GetIkParameterization(IkParameterizat
     }
     case IKP_TranslationLocalGlobal6D: {
         RAVELOG_WARN("RobotBase::Manipulator::GetIkParameterization: TranslationLocalGlobal6D type setting local translation to (0,0,0).\n");
-        ikp.SetTranslationLocalGlobal6D(Vector(0,0,0),GetTransform().trans); break;
+        ikp.SetTranslationLocalGlobal6D(Vector(0,0,0),GetTransform().trans);
+        break;
+    }
+    case IKP_TranslationXAxisAngle4D: {
+        Transform t = GetTransform();
+        ikp.SetTranslationXAxisAngle4D(t.trans,RaveAcos(t.rotate(_vdirection).x));
+        break;
     }
     default:
         throw OPENRAVE_EXCEPTION_FORMAT("invalid ik type 0x%x",iktype,ORE_InvalidArguments);
@@ -223,6 +229,11 @@ IkParameterization RobotBase::Manipulator::GetIkParameterization(const IkParamet
     case IKP_TranslationLocalGlobal6D: {
         Vector localtrans = ikparam.GetTranslationLocalGlobal6D().first;
         ikp.SetTranslationLocalGlobal6D(localtrans,GetTransform() * localtrans);
+        break;
+    }
+    case IKP_TranslationXAxisAngle4D: {
+        Transform t = GetTransform();
+        ikp.SetTranslationXAxisAngle4D(t.trans,RaveAcos(t.rotate(_vdirection).x));
         break;
     }
     default:
@@ -2146,7 +2157,22 @@ bool RobotBase::CheckSelfCollision(CollisionReportPtr report) const
     }
 
     if( bCollision && !!report ) {
-        RAVELOG_VERBOSE(str(boost::format("Self collision: %s\n")%report->__str__()));
+        if( IS_DEBUGLEVEL(Level_Verbose) ) {
+            RAVELOG_VERBOSE(str(boost::format("Self collision: %s\n")%report->__str__()));
+            std::vector<OpenRAVE::dReal> v;
+            GetDOFValues(v);
+            stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+            for(size_t i = 0; i < v.size(); ++i ) {
+                if( i > 0 ) {
+                    ss << "," << v[i];
+                }
+                else {
+                    ss << "colvalues=[" << v[i];
+                }
+            }
+            ss << "]";
+            RAVELOG_VERBOSE(ss.str());
+        }
     }
     return bCollision;
 }

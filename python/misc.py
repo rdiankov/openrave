@@ -256,7 +256,7 @@ class MultiManipIKSolver:
         Method always checks self-collisions.
         
         :param Tgrasps: a list of all the end effector transforms of each of the manipualtors
-        :param filteroptions: a bitmask of `IkFilterOptions`
+        :param filteroptions: a bitmask of :class:`IkFilterOptions`
         """
         assert(len(Tgrasps)==len(self.manips))
         with self.robot:

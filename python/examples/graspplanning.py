@@ -280,7 +280,7 @@ class GraspPlanning:
             goals,graspindex,searchtime,trajdata = self.taskmanip.GraspPlanning(graspindices=gmodel.graspindices,grasps=gmodel.grasps[istartgrasp:],
                                                                                 target=target,approachoffset=approachoffset,destposes=dests,
                                                                                 seedgrasps = 3,seeddests=8,seedik=1,maxiter=1000,
-                                                                                randomgrasps=True,randomdests=True)
+                                                                                randomgrasps=True,randomdests=True,grasptranslationstepmult=gmodel.translationstepmult,graspfinestep=gmodel.finestep)
             istartgrasp = graspindex+1
             Tglobalgrasp = gmodel.getGlobalGraspTransform(gmodel.grasps[graspindex],collisionfree=True)
 

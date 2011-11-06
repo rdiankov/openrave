@@ -115,7 +115,7 @@ class ConstraintPlanning:
                 hplane = self.envreal.drawplane(transform=Tplane,extents=[1.0,1.0],texture=reshape([1,1,0.5,0.5],(1,1,4)))
 
                 constraintmatrix = eye(4)
-                constrainterrorthresh = 0.005
+                constrainterrorthresh = 0.01
                 for iter in range(3):
                     with self.robot:
                         vcur = self.robot.GetDOFValues()

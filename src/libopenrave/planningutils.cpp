@@ -422,6 +422,17 @@ bool LineCollisionConstraint::Check(PlannerBase::PlannerParametersWeakPtr _param
         return true;
     }
 
+    if (start == 0 ) {
+        params->_setstatefn(pQ0);
+        if (robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot),_report) ) {
+            return false;
+        }
+        if( robot->CheckSelfCollision(_report) ) {
+            return false;
+        }
+        start = 1;
+    }
+
     dReal fisteps = dReal(1.0f)/numSteps;
     for(std::vector<dReal>::iterator it = dQ.begin(); it != dQ.end(); ++it) {
         *it *= fisteps;
@@ -505,7 +516,7 @@ bool SimpleNeighborhoodSampler::Sample(std::vector<dReal>& vNewSample, const std
         if(_distmetricfn(vNewSample, vCurSample) > fRadius ) {
             // take the previous
             for (size_t i = 0; i < dof; i++) {
-                vNewSample[i] = 0.833333333333333f*vNewSample[i]-0.16666666666666669*vCurSample[i];
+                vNewSample[i] = 0.833333333333333*vNewSample[i]-0.16666666666666669*vCurSample[i];
             }
             break;
         }

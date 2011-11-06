@@ -107,6 +107,13 @@ public:
             ConfigurationSpecification velspec = oldspec.ConvertToVelocitySpecification();
             ConfigurationSpecification newspec = oldspec;
             newspec.AddVelocityGroups(true);
+            int waypointoffset = newspec.GetDOF();
+            ConfigurationSpecification::Group gwaypoint;
+            gwaypoint.offset = waypointoffset;
+            gwaypoint.dof = 1;
+            gwaypoint.name = "iswaypoint";
+            gwaypoint.interpolation = "next";
+            newspec._vgroups.push_back(gwaypoint);
 
             int timeoffset=-1;
             FOREACH(itgroup,newspec._vgroups) {
@@ -126,6 +133,7 @@ public:
             vector<dReal> vtrajpoints(newspec.GetDOF());
             ConfigurationSpecification::ConvertData(vtrajpoints.begin(),newspec,dynamicpath.ramps.at(0).x0.begin(),oldspec,1,GetEnv(),true);
             ConfigurationSpecification::ConvertData(vtrajpoints.begin(),newspec,dynamicpath.ramps.at(0).dx0.begin(),velspec,1,GetEnv(),false);
+            vtrajpoints.at(waypointoffset) = 1;
             vtrajpoints.at(timeoffset) = 0;
             ptraj->Insert(ptraj->GetNumWaypoints(),vtrajpoints);
             vector<dReal> vswitchtimes;
@@ -135,11 +143,14 @@ public:
                 vswitchtimes.push_back(itrampnd->endTime);
                 if( _parameters->_outputaccelchanges ) {
                     FOREACHC(itramp,itrampnd->ramps) {
-                        vector<dReal>::iterator it = lower_bound(vswitchtimes.begin(),vswitchtimes.end(),itramp->tswitch1);
-                        if( *it != itramp->tswitch1 ) {
-                            vswitchtimes.insert(it,itramp->tswitch1);
+                        vector<dReal>::iterator it;
+                        if( itramp->tswitch1 != 0 ) {
+                            it = lower_bound(vswitchtimes.begin(),vswitchtimes.end(),itramp->tswitch1);
+                            if( *it != itramp->tswitch1) {
+                                vswitchtimes.insert(it,itramp->tswitch1);
+                            }
                         }
-                        if( itramp->tswitch1 != itramp->tswitch2 ) {
+                        if( itramp->tswitch1 != itramp->tswitch2 && itramp->tswitch2 != 0 ) {
                             it = lower_bound(vswitchtimes.begin(),vswitchtimes.end(),itramp->tswitch2);
                             if( *it != itramp->tswitch2 ) {
                                 vswitchtimes.insert(it,itramp->tswitch2);
@@ -150,14 +161,15 @@ public:
                 vtrajpoints.resize(newspec.GetDOF()*vswitchtimes.size());
                 vector<dReal>::iterator ittargetdata = vtrajpoints.begin();
                 dReal prevtime = 0;
-                FOREACH(ittime,vswitchtimes) {
-                    itrampnd->Evaluate(*ittime,vconfig);
+                for(size_t i = 0; i < vswitchtimes.size(); ++i) {
+                    itrampnd->Evaluate(vswitchtimes[i],vconfig);
                     ConfigurationSpecification::ConvertData(ittargetdata,newspec,vconfig.begin(),oldspec,1,GetEnv(),true);
-                    itrampnd->Derivative(*ittime,vconfig);
+                    itrampnd->Derivative(vswitchtimes[i],vconfig);
                     ConfigurationSpecification::ConvertData(ittargetdata,newspec,vconfig.begin(),velspec,1,GetEnv(),false);
-                    *(ittargetdata+timeoffset) = *ittime-prevtime;
+                    *(ittargetdata+timeoffset) = vswitchtimes[i]-prevtime;
+                    *(ittargetdata+waypointoffset) = dReal(i==0);
                     ittargetdata += newspec.GetDOF();
-                    prevtime = *ittime;
+                    prevtime = vswitchtimes[i];
                 }
                 ptraj->Insert(ptraj->GetNumWaypoints(),vtrajpoints);
             }

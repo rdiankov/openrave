@@ -91,7 +91,7 @@ class Grasper:
         contacts = reshape(array([float64(s) for s in resvalues],float64),(len(resvalues)/6,6))
         return contacts,finalconfig,mindist,volume
 
-    def GraspThreaded(self,approachrays,standoffs,preshapes,rolls,manipulatordirections=None,target=None,transformrobot=True,onlycontacttarget=True,tightgrasp=False,graspingnoise=None,forceclosurethreshold=None,collisionchecker=None,translationstepmult=None,numthreads=None,startindex=None,maxgrasps=None):
+    def GraspThreaded(self,approachrays,standoffs,preshapes,rolls,manipulatordirections=None,target=None,transformrobot=True,onlycontacttarget=True,tightgrasp=False,graspingnoise=None,forceclosurethreshold=None,collisionchecker=None,translationstepmult=None,numthreads=None,startindex=None,maxgrasps=None,finestep=None):
         """See :ref:`module-grasper-graspthreaded`
         """
         cmd = 'GraspThreaded '
@@ -110,6 +110,8 @@ class Grasper:
             cmd += 'graspingnoise %.15e %d '%graspingnoise
         if translationstepmult is not None:
             cmd += 'translationstepmult %.15e '%translationstepmult
+        if finestep is not None:
+            cmd += 'finestep %.15e '%finestep
         if numthreads is not None:
             cmd += 'numthreads %d '%numthreads
         cmd += 'approachrays %d '%len(approachrays)

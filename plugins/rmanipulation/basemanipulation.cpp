@@ -1078,7 +1078,7 @@ protected:
     }
 
 protected:
-    IkFilterReturn _FilterWorldAxisIK(std::vector<dReal>& values, RobotBase::ManipulatorPtr pmanip, const IkParameterization& ikparam, const Vector& vlocalaxis, const Vector& vworldaxis, dReal coslimit)
+    IkFilterReturn _FilterWorldAxisIK(std::vector<dReal>& values, RobotBase::ManipulatorConstPtr pmanip, const IkParameterization& ikparam, const Vector& vlocalaxis, const Vector& vworldaxis, dReal coslimit)
     {
         if( RaveFabs(vworldaxis.dot3(pmanip->GetTransform().rotate(vlocalaxis))) < coslimit ) {
             return IKFR_Reject;

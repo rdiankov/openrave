@@ -113,6 +113,21 @@ public:
         return (int)_nodes.size()-1;
     }
 
+    /// deletes all nodes that have parentindex as their parent
+    virtual void DeleteNodesWithParent(int parentindex)
+    {
+        if( _vchildindices.capacity() == 0 ) {
+            _vchildindices.reserve(128);
+        }
+        _vchildindices.resize(0); _vchildindices.push_back(parentindex);
+        for(size_t i = 0; i < _nodes.size(); ++i) {
+            if( !!_nodes[i] && std::binary_search(_vchildindices.begin(),_vchildindices.end(),_nodes[i]->parent) ) {
+                _vchildindices.push_back(i);
+                delete _nodes[i]; _nodes[i] = NULL;
+            }
+        }
+    }
+
     ///< return the nearest neighbor
     virtual int GetNN(const vector<dReal>& q)
     {
@@ -122,10 +137,12 @@ public:
         int ibest = -1;
         dReal fbest = 0;
         FOREACH(itnode, _nodes) {
-            dReal f = _distmetricfn(q, (*itnode)->q);
-            if(( ibest < 0) ||( f < fbest) ) {
-                ibest = (int)(itnode-_nodes.begin());
-                fbest = f;
+            if( !!*itnode && (*itnode)->parent != (int)0x80000000) {
+                dReal f = _distmetricfn(q, (*itnode)->q);
+                if(( ibest < 0) ||( f < fbest) ) {
+                    ibest = (int)(itnode-_nodes.begin());
+                    fbest = f;
+                }
             }
         }
 
@@ -211,6 +228,7 @@ public:
     dReal _fStepLength;
 
 private:
+    vector<int> _vchildindices;
     vector<dReal> _vNewConfig, _vDeltaConfig;
     boost::weak_ptr<Planner> _planner;
     int _dof, _fromgoal;

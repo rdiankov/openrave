@@ -110,7 +110,8 @@ Uses the Rapidly-Exploring Random Trees Algorithm.\n\
 
             ++startNode;
             FOREACHC(itc, *listconfigs) {
-                path.insert(startNode, _treeForward._nodes.at(_treeForward.AddNode(-1,*itc)));
+                int index = _treeForward.AddNode(0x80000000,*itc);
+                path.insert(startNode, _treeForward._nodes.at(index));
             }
             // splice out in-between nodes in path
             path.erase(startNode, endNode);
@@ -161,7 +162,7 @@ public:
     virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams)
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
-        _parameters.reset(new PlannerParameters());
+        _parameters.reset(new RRTParameters());
         _parameters->copy(pparams);
         if( !RrtPlanner<SimpleNode>::_InitPlan(pbase,_parameters) ) {
             _parameters.reset();
@@ -209,6 +210,15 @@ public:
         return true;
     }
 
+    struct GOALPATH
+    {
+        GOALPATH() : goalindex(-1), length(0) {
+        }
+        vector<dReal> qall;
+        int goalindex;
+        dReal length;
+    };
+
     virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
     {
         _goalindex = -1;
@@ -221,8 +231,6 @@ public:
         uint32_t basetime = GetMilliTime();
 
         // the main planning loop
-        bool bConnected = false;
-
         RobotBase::RobotStateSaver savestate(_robot);
         CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
 
@@ -231,7 +239,9 @@ public:
         int iConnectedA, iConnectedB;
         int iter = 0;
 
-        while(!bConnected && iter < 3*_parameters->_nMaxIterations) {
+        list<GOALPATH> listgoalpaths;
+
+        while(listgoalpaths.size() < _parameters->_minimumgoalpaths && iter < 3*_parameters->_nMaxIterations) {
             RAVELOG_VERBOSE("iter: %d\n", iter);
             ++iter;
 
@@ -275,9 +285,16 @@ public:
             et = TreeB->Extend(TreeA->GetConfig(iConnectedA), iConnectedB);     // extend B toward A
 
             if( et == ET_Connected ) {
-                // if connected, success
-                bConnected = true;
-                break;
+                // connected, process goal
+                listgoalpaths.push_back(GOALPATH());
+                _ExtractPath(listgoalpaths.back(),TreeA == &_treeForward ? iConnectedA : iConnectedB,TreeA == &_treeBackward ? iConnectedA : iConnectedB);
+                int goalindex = listgoalpaths.back().goalindex;
+                RAVELOG_DEBUG(str(boost::format("found a goal, goal index=%d, path length=%f")%goalindex%listgoalpaths.back().length));
+                if( listgoalpaths.size() >= _parameters->_minimumgoalpaths || (int)listgoalpaths.size() >= _numgoals ) {
+                    break;
+                }
+                // more goal requested, make sure to remove all the nodes pointing to the current found goal
+                _treeBackward.DeleteNodesWithParent(-goalindex-1);
             }
 
             swap(TreeA, TreeB);
@@ -288,48 +305,80 @@ public:
             }
         }
 
-        if( !bConnected ) {
+        if( listgoalpaths.size() == 0 ) {
             RAVELOG_WARN("plan failed, %fs\n",0.001f*(float)(GetMilliTime()-basetime));
             return PS_Failed;
         }
 
+        list<GOALPATH>::iterator itbest = listgoalpaths.begin();
+        FOREACH(itpath,listgoalpaths) {
+            if( itpath->length < itbest->length ) {
+                itbest = itpath;
+            }
+        }
+        _goalindex = itbest->goalindex;
+        if( ptraj->GetConfigurationSpecification().GetDOF() == 0 ) {
+            ptraj->Init(_parameters->_configurationspecification);
+        }
+        ptraj->Insert(ptraj->GetNumWaypoints(),itbest->qall,_parameters->_configurationspecification);
+        RAVELOG_DEBUG(str(boost::format("plan success, path=%d points in %fs\n")%ptraj->GetNumWaypoints()%(0.001f*(float)(GetMilliTime()-basetime))));
+        return _ProcessPostPlanners(_robot,ptraj);
+    }
+
+    virtual void _ExtractPath(GOALPATH& goalpath, int iConnectedForward, int iConnectedBackward)
+    {
         list<SimpleNode*> vecnodes;
 
         // add nodes from the forward tree
-        SimpleNode* pforward = _treeForward._nodes.at(TreeA == &_treeForward ? iConnectedA : iConnectedB);
+        SimpleNode* pforward = _treeForward._nodes.at(iConnectedForward);
         while(1) {
             vecnodes.push_front(pforward);
             if(pforward->parent < 0) {
+                BOOST_ASSERT(pforward->parent == -1);
                 break;
             }
             pforward = _treeForward._nodes.at(pforward->parent);
         }
 
         // add nodes from the backward tree
-        _goalindex = -1;
-
-        SimpleNode *pbackward = _treeBackward._nodes.at(TreeA == &_treeBackward ? iConnectedA : iConnectedB);
+        goalpath.goalindex = -1;
+        SimpleNode *pbackward = _treeBackward._nodes.at(iConnectedBackward);
         while(1) {
             vecnodes.push_back(pbackward);
             if(pbackward->parent < 0) {
-                _goalindex = -pbackward->parent-1;
+                goalpath.goalindex = -pbackward->parent-1;
                 break;
             }
             pbackward = _treeBackward._nodes.at(pbackward->parent);
         }
 
-        BOOST_ASSERT( _goalindex >= 0 );
+        BOOST_ASSERT( goalpath.goalindex >= 0 && goalpath.goalindex < _numgoals );
         _SimpleOptimizePath(vecnodes,10);
-
-        if( ptraj->GetConfigurationSpecification().GetDOF() == 0 ) {
-            ptraj->Init(_parameters->_configurationspecification);
+        int dof = _parameters->GetDOF();
+        goalpath.qall.resize(vecnodes.size()*dof);
+        list<SimpleNode*>::iterator itprev = vecnodes.begin();
+        list<SimpleNode*>::iterator itnext = itprev; itnext++;
+        goalpath.length = 0;
+        vector<dReal>::iterator itq = goalpath.qall.begin();
+        std::copy((*itprev)->q.begin(), (*itprev)->q.begin()+dof, itq);
+        itq += dof;
+        vector<dReal> vivel(dof,1.0);
+        for(size_t i = 0; i < vivel.size(); ++i) {
+            if( _parameters->_vConfigVelocityLimit.at(i) != 0 ) {
+                vivel[i] = 1/_parameters->_vConfigVelocityLimit.at(i);
+            }
         }
-        FOREACH(itnode, vecnodes) {
-            ptraj->Insert(ptraj->GetNumWaypoints(),(*itnode)->q,_parameters->_configurationspecification);
-        }
 
-        RAVELOG_DEBUG(str(boost::format("plan success, path=%d points in %fs\n")%ptraj->GetNumWaypoints()%(0.001f*(float)(GetMilliTime()-basetime))));
-        return _ProcessPostPlanners(_robot,ptraj);
+        while(itnext != vecnodes.end()) {
+            //goalpath.length += _parameters->_distmetricfn((*itprev)->q,(*itnext)->q);
+            for(int i = 0; i < dof; ++i) {
+                goalpath.length += RaveFabs((*itprev)->q[i]-(*itnext)->q[i])*vivel[i];
+            }
+            std::copy((*itnext)->q.begin(), (*itnext)->q.begin()+dof, itq);
+            itprev=itnext;
+            ++itnext;
+            itq += dof;
+        }
     }
 
     virtual PlannerParametersConstPtr GetParameters() const {
@@ -337,7 +386,7 @@ public:
     }
 
 protected:
-    PlannerParametersPtr _parameters;
+    RRTParametersPtr _parameters;
     SpatialTree< RrtPlanner<SimpleNode>, SimpleNode > _treeBackward;
     int _numgoals;
 };
@@ -664,5 +713,10 @@ private:
     boost::shared_ptr<ExplorationParameters> _parameters;
 
 };
+
+#ifdef RAVE_REGISTER_BOOST
+#include BOOST_TYPEOF_INCREMENT_REGISTRATION_GROUP()
+BOOST_TYPEOF_REGISTER_TYPE(BirrtPlanner::GOALPATH)
+#endif
 
 #endif

@@ -1572,8 +1572,8 @@ public:
         _vAxes.resize(_pjoint->GetDOF());
         if( _pjoint->GetType() == KinBody::Joint::JointSlider ) {
             for(int i = 0; i < _pjoint->GetDOF(); ++i) {
-                _pjoint->_vlowerlimit.at(i) = -100000;
-                _pjoint->_vupperlimit.at(i) = 100000;
+                _pjoint->_vlowerlimit.at(i) = -10;
+                _pjoint->_vupperlimit.at(i) = 10;
             }
         }
         else if( _pjoint->GetType() == KinBody::Joint::JointSpherical ) {
@@ -1581,8 +1581,8 @@ public:
             _vAxes.at(1) = Vector(0,1,0);
             _vAxes.at(2) = Vector(0,0,1);
             for(int i = 0; i < _pjoint->GetDOF(); ++i) {
-                _pjoint->_vlowerlimit.at(i) = -1000;
-                _pjoint->_vupperlimit.at(i) = 1000;
+                _pjoint->_vlowerlimit.at(i) = -100;
+                _pjoint->_vupperlimit.at(i) = 100;
             }
         }
         else {
@@ -1604,7 +1604,8 @@ public:
         case PE_Ignore: return PE_Ignore;
         }
 
-        if (( xmlname == "body") ||( xmlname == "offsetfrom") ||( xmlname == "weight") ||( xmlname == "lostop") ||( xmlname == "histop") ||( xmlname == "limits") ||( xmlname == "limitsrad") ||( xmlname == "limitsdeg") ||( xmlname == "maxvel") || xmlname == "maxveldeg" ||( xmlname == "hardmaxvel") ||( xmlname == "maxaccel") || xmlname == "maxacceldeg" ||( xmlname == "maxtorque") ||( xmlname == "maxforce") ||( xmlname == "resolution") ||( xmlname == "anchor") ||( xmlname == "axis") ||( xmlname == "axis1") ||( xmlname == "axis2") ||( xmlname=="axis3") ||( xmlname == "mode") ||( xmlname == "initial") ) {
+        static boost::array<string, 23> tags = { { "body", "offsetfrom", "weight", "lostop", "histop", "limits", "limitsrad", "limitsdeg", "maxvel", "maxveldeg", "hardmaxvel", "maxaccel", "maxacceldeg", "maxtorque", "maxforce", "resolution", "anchor", "axis", "axis1", "axis2", "axis3", "mode", "initial" }};
+        if( find(tags.begin(),tags.end(),xmlname) != tags.end() ) {
             _processingtag = xmlname;
             return PE_Support;
         }

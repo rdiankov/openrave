@@ -3,10 +3,9 @@
 Plugin Interfaces
 -----------------
 
-Documentation of OpenRAVE-loadable plugins. Each plugin offers a set of interfaces derived from
-:class:`.Interface`.
+Documentation of OpenRAVE-loadable plugins. Each plugin offers a set of interfaces derived from :class:`.Interface`.
 
-See `Interface Concepts`_ for more details.
+See :ref:`interface_concepts` for more details.
 
 .. toctree::
     :maxdepth: 3

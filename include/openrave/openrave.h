@@ -793,7 +793,8 @@ enum IkParameterizationType {
     IKP_TranslationXY2D=0x22000008,     ///< 2D translation along XY plane
     IKP_TranslationXYOrientation3D=0x33000009,     ///< 2D translation along XY plane and 1D rotation around Z axis. The offset of the rotation is measured starting at +X, so at +X is it 0, at +Y it is pi/2.
     IKP_TranslationLocalGlobal6D=0x3600000a,     ///< local point on end effector origin reaches desired 3D global point
-    IKP_NumberOfParameterizations=10,     ///< number of parameterizations (does not count IKP_None)
+    IKP_TranslationXAxisAngle4D=0x4400000b, ///< end effector origin reaches desired 3D translation, manipulator direction makes a specific angle with x-axis (defined in the manipulator base link's coordinate system)
+    IKP_NumberOfParameterizations=11,     ///< number of parameterizations (does not count IKP_None)
 };
 
 /** \brief A configuration specification references values in the environment that then define a configuration-space which can be searched for.
@@ -881,6 +882,18 @@ protected:
     virtual bool operator==(const ConfigurationSpecification& r) const;
     virtual bool operator!=(const ConfigurationSpecification& r) const;
 
+    /// \brief return the group whose name begins with a particular string.
+    ///
+    /// If multiple groups exist that begin with the same string, then the shortest one is returned.
+    /// \throw openrave_exception if a group is not found
+    virtual const Group& GetGroupFromName(const std::string& name) const;
+
+    /// \brief return the group whose name begins with a particular string.
+    ///
+    /// If multiple groups exist that begin with the same string, then the shortest one is returned.
+    /// \throw openrave_exception if a group is not found
+    virtual Group& GetGroupFromName(const std::string& name);
+
     /// \brief finds the most compatible group to the given group
     ///
     /// \param g the group to query, only the Group::name and Group::dof values are used
@@ -962,6 +975,8 @@ protected:
     virtual bool ExtractJointValues(std::vector<dReal>::iterator itvalues, std::vector<dReal>::const_iterator itdata, KinBodyConstPtr pbody, const std::vector<int>& indices, int timederivative=0) const;
 
     /// \brief extracts the delta time from the configuration if one exists
+    ///
+    /// \return true if deltatime exists in the current configuration, otherwise false
     virtual bool ExtractDeltaTime(dReal& deltatime, std::vector<dReal>::const_iterator itdata) const;
 
     /** \brief inserts a set of joint values into a configuration space point
@@ -1121,6 +1136,11 @@ public:
     inline void SetTranslationLocalGlobal6D(const Vector& localtrans, const Vector& trans) {
         _type = IKP_TranslationLocalGlobal6D; _transform.rot.x = localtrans.x; _transform.rot.y = localtrans.y; _transform.rot.z = localtrans.z; _transform.rot.w = 0; _transform.trans.x = trans.x; _transform.trans.y = trans.y; _transform.trans.z = trans.z; _transform.trans.w = 0;
     }
+    inline void SetTranslationXAxisAngle4D(const Vector& trans, dReal angle) {
+        _type = IKP_TranslationXAxisAngle4D;
+        _transform.trans = trans;
+        _transform.rot.x = angle;
+    }
 
     inline const Transform& GetTransform6D() const {
         return _transform;
@@ -1154,6 +1174,9 @@ public:
     }
     inline std::pair<Vector,Vector> GetTranslationLocalGlobal6D() const {
         return std::make_pair(_transform.rot,_transform.trans);
+    }
+    inline std::pair<Vector,dReal> GetTranslationXAxisAngle4D() const {
+        return std::make_pair(_transform.trans,_transform.rot.x);
     }
 
     /// \deprecated (11/02/15)
@@ -1270,6 +1293,10 @@ public:
             std::pair<Vector,Vector> p0 = GetTranslationLocalGlobal6D(), p1 = ikparam.GetTranslationLocalGlobal6D();
             return (p0.first-p1.first).lengthsqr3() + (p0.second-p1.second).lengthsqr3();
         }
+        case IKP_TranslationXAxisAngle4D: {
+            std::pair<Vector,dReal> p0 = GetTranslationXAxisAngle4D(), p1 = ikparam.GetTranslationXAxisAngle4D();
+            return (p0.first-p1.first).lengthsqr3() + (p0.second-p1.second)*(p0.second-p1.second);
+        }
         default:
             BOOST_ASSERT(0);
         }
@@ -1345,6 +1372,12 @@ public:
             *itvalues++ = _transform.trans.y;
             *itvalues++ = _transform.trans.z;
             break;
+        case IKP_TranslationXAxisAngle4D:
+            *itvalues++ = _transform.rot.x;
+            *itvalues++ = _transform.trans.x;
+            *itvalues++ = _transform.trans.y;
+            *itvalues++ = _transform.trans.z;
+            break;
         default:
             throw OPENRAVE_EXCEPTION_FORMAT("does not support parameterization 0x%x", _type,ORE_InvalidArguments);
         }
@@ -1369,19 +1402,17 @@ public:
             _transform.rot.z = *itvalues++;
             _transform.rot.w = *itvalues++;
             break;
-        case IKP_Translation3D: {
+        case IKP_Translation3D:
             _transform.trans.x = *itvalues++;
             _transform.trans.y = *itvalues++;
             _transform.trans.z = *itvalues++;
             break;
-        }
-        case IKP_Direction3D: {
+        case IKP_Direction3D:
             _transform.rot.x = *itvalues++;
             _transform.rot.y = *itvalues++;
             _transform.rot.z = *itvalues++;
             break;
-        }
-        case IKP_Ray4D: {
+        case IKP_Ray4D:
             _transform.rot.x = *itvalues++;
             _transform.rot.y = *itvalues++;
             _transform.rot.z = *itvalues++;
@@ -1389,13 +1420,11 @@ public:
             _transform.trans.y = *itvalues++;
             _transform.trans.z = *itvalues++;
             break;
-        }
-        case IKP_Lookat3D: {
+        case IKP_Lookat3D:
             _transform.trans.x = *itvalues++;
             _transform.trans.y = *itvalues++;
             _transform.trans.z = *itvalues++;
             break;
-        }
         case IKP_TranslationDirection5D:
             _transform.rot.x = *itvalues++;
             _transform.rot.y = *itvalues++;
@@ -1404,18 +1433,16 @@ public:
             _transform.trans.y = *itvalues++;
             _transform.trans.z = *itvalues++;
             break;
-        case IKP_TranslationXY2D: {
+        case IKP_TranslationXY2D:
             _transform.trans.x = *itvalues++;
             _transform.trans.y = *itvalues++;
             break;
-        }
-        case IKP_TranslationXYOrientation3D: {
+        case IKP_TranslationXYOrientation3D:
             _transform.trans.x = *itvalues++;
             _transform.trans.y = *itvalues++;
             _transform.trans.z = *itvalues++;
             break;
-        }
-        case IKP_TranslationLocalGlobal6D: {
+        case IKP_TranslationLocalGlobal6D:
             _transform.rot.x = *itvalues++;
             _transform.rot.y = *itvalues++;
             _transform.rot.z = *itvalues++;
@@ -1423,7 +1450,12 @@ public:
             _transform.trans.y = *itvalues++;
             _transform.trans.z = *itvalues++;
             break;
-        }
+        case IKP_TranslationXAxisAngle4D:
+            _transform.rot.x = *itvalues++;
+            _transform.trans.x = *itvalues++;
+            _transform.trans.y = *itvalues++;
+            _transform.trans.z = *itvalues++;
+            break;
         default:
             throw OPENRAVE_EXCEPTION_FORMAT("does not support parameterization 0x%x", _type,ORE_InvalidArguments);
         }
@@ -1483,6 +1515,12 @@ inline IkParameterization operator* (const Transform &t, const IkParameterizatio
     case IKP_TranslationLocalGlobal6D:
         local.SetTranslationLocalGlobal6D(ikparam.GetTranslationLocalGlobal6D().first, t*ikparam.GetTranslationLocalGlobal6D().second);
         break;
+    case IKP_TranslationXAxisAngle4D: {
+        std::pair<Vector,dReal> p = ikparam.GetTranslationXAxisAngle4D();
+        // don't change the angle since don't know the exact direction it is pointing at
+        local.SetTranslationXAxisAngle4D(t*p.first,p.second);
+        break;
+    }
     default:
         throw openrave_exception(str(boost::format("does not support parameterization %d")%ikparam.GetType()));
     }

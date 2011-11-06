@@ -82,7 +82,7 @@ def main(env,options):
         with env:
             #Tee = dot(ikmodel.manip.GetEndEffectorTransform(),matrixFromAxisAngle(random.rand(3)-0.5,0.2*random.rand()))
             Tee = matrixFromAxisAngle(random.rand(3)-0.5,pi*random.rand())
-            direction = random.rand(3)
+            direction = random.rand(3)-0.5
             direction /= linalg.norm(direction)
             x = random.rand(3)-0.5
             length = 0.4*random.rand()*armlength

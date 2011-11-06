@@ -43,7 +43,7 @@ class TaskManipulation:
         if envother.AddModule(clone.prob,clone.args) != 0:
             raise ValueError('module failed to initialize')
         return clone
-    def GraspPlanning(self,graspindices,grasps,target,approachoffset=0,destposes=None,seedgrasps=None,seeddests=None,seedik=None,maxiter=None,randomgrasps=None,randomdests=None, execute=None,outputtraj=None):
+    def GraspPlanning(self,graspindices,grasps,target,approachoffset=0,destposes=None,seedgrasps=None,seeddests=None,seedik=None,maxiter=None,randomgrasps=None,randomdests=None, execute=None,outputtraj=None,grasptranslationstepmult=None,graspfinestep=None):
         """See :ref:`module-taskmanipulation-graspplanning`
         """
         cmd = 'graspplanning target %s approachoffset %.15e grasps %d %d '%(target.GetName(),approachoffset, grasps.shape[0],grasps.shape[1])
@@ -77,6 +77,10 @@ class TaskManipulation:
             cmd += 'execute %d '%execute
         if outputtraj is not None and outputtraj:
             cmd += 'outputtraj '
+        if grasptranslationstepmult is not None:
+            cmd += 'grasptranslationstepmult %.15e '%grasptranslationstepmult
+        if graspfinestep is not None:
+            cmd += 'graspfinestep %.15e '%graspfinestep
         res = self.prob.SendCommand(cmd)
         if res is None:
             raise planning_error()

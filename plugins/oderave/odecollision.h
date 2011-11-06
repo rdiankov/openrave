@@ -387,7 +387,7 @@ public:
             return false;
         }
         if( !plink->IsEnabled() ) {
-            RAVELOG_VERBOSE("calling collision on disabled link %s\n", plink->GetName().c_str());
+            //RAVELOG_VERBOSE("calling collision on disabled link %s\n", plink->GetName().c_str());
             return false;
         }
         if( pbody->IsAttached(plink->GetParent()) ) {
@@ -635,7 +635,22 @@ public:
         FOREACHC(itset, nonadjacent) {
             KinBody::LinkConstPtr plink1(pbody->GetLinks().at(*itset&0xffff)), plink2(pbody->GetLinks().at(*itset>>16));
             if( _CheckCollision(plink1,plink2, report) ) {
-                RAVELOG_VERBOSE(str(boost::format("selfcol %s, Links %s %s are colliding\n")%pbody->GetName()%plink1->GetName()%plink2->GetName()));
+                if( IS_DEBUGLEVEL(OpenRAVE::Level_Verbose) ) {
+                    RAVELOG_VERBOSE(str(boost::format("selfcol %s, Links %s %s are colliding\n")%pbody->GetName()%plink1->GetName()%plink2->GetName()));
+                    std::vector<OpenRAVE::dReal> v;
+                    pbody->GetDOFValues(v);
+                    stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                    for(size_t i = 0; i < v.size(); ++i ) {
+                        if( i > 0 ) {
+                            ss << "," << v[i];
+                        }
+                        else {
+                            ss << "colvalues=[" << v[i];
+                        }
+                    }
+                    ss << "]";
+                    RAVELOG_VERBOSE(ss.str());
+                }
                 return true;
             }
         }

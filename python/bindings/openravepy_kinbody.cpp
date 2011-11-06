@@ -372,6 +372,16 @@ public:
             _pjoint->GetVelocityLimits(vlower,vupper);
             return boost::python::make_tuple(toPyArray(vlower),toPyArray(vupper));
         }
+        object GetAccelerationLimits() const {
+            vector<dReal> v;
+            _pjoint->GetAccelerationLimits(v);
+            return toPyArray(v);
+        }
+        object GetTorqueLimits() const {
+            vector<dReal> v;
+            _pjoint->GetTorqueLimits(v);
+            return toPyArray(v);
+        }
         object GetWeights() const {
             vector<dReal> weights(_pjoint->GetDOF());
             for(size_t i = 0; i < weights.size(); ++i)
@@ -406,6 +416,13 @@ public:
                 throw openrave_exception("limits are wrong dimensions");
             }
             _pjoint->SetAccelerationLimits(vmaxlimits);
+        }
+        void SetTorqueLimits(object omaxlimits) {
+            vector<dReal> vmaxlimits = ExtractArray<dReal>(omaxlimits);
+            if( (int)vmaxlimits.size() != _pjoint->GetDOF() ) {
+                throw openrave_exception("limits are wrong dimensions");
+            }
+            _pjoint->SetTorqueLimits(vmaxlimits);
         }
         void SetResolution(dReal resolution) {
             _pjoint->SetResolution(resolution);
@@ -618,6 +635,13 @@ public:
         return toPyArray(vmax);
     }
 
+    object GetDOFTorqueLimits() const
+    {
+        vector<dReal> vmax;
+        _pbody->GetDOFTorqueLimits(vmax);
+        return toPyArray(vmax);
+    }
+
     object GetDOFLimits(object oindices) const
     {
         if( oindices == object() ) {
@@ -672,6 +696,25 @@ public:
         FOREACHC(it, vindices) {
             KinBody::JointPtr pjoint = _pbody->GetJointFromDOFIndex(*it);
             pjoint->GetAccelerationLimits(vtempmax,false);
+            vmax.push_back(vtempmax.at(*it-pjoint->GetDOFIndex()));
+        }
+        return toPyArray(vmax);
+    }
+
+    object GetDOFTorqueLimits(object oindices) const
+    {
+        if( oindices == object() ) {
+            return numeric::array(boost::python::list());
+        }
+        vector<int> vindices = ExtractArray<int>(oindices);
+        if( vindices.size() == 0 ) {
+            return numeric::array(boost::python::list());
+        }
+        vector<dReal> vmax, vtempmax;
+        vmax.reserve(vindices.size());
+        FOREACHC(it, vindices) {
+            KinBody::JointPtr pjoint = _pbody->GetJointFromDOFIndex(*it);
+            pjoint->GetTorqueLimits(vtempmax,false);
             vmax.push_back(vtempmax.at(*it-pjoint->GetDOFIndex()));
         }
         return toPyArray(vmax);
@@ -985,6 +1028,54 @@ public:
 
     void SetTransform(object transform) {
         _pbody->SetTransform(ExtractTransform(transform));
+    }
+
+    void SetDOFWeights(object o)
+    {
+        if( _pbody->GetDOF() == 0 ) {
+            return;
+        }
+        vector<dReal> values = ExtractArray<dReal>(o);
+        if( (int)values.size() != GetDOF() ) {
+            throw openrave_exception("values do not equal to body degrees of freedom");
+        }
+        _pbody->SetDOFWeights(values);
+    }
+
+    void SetDOFVelocityLimits(object o)
+    {
+        if( _pbody->GetDOF() == 0 ) {
+            return;
+        }
+        vector<dReal> values = ExtractArray<dReal>(o);
+        if( (int)values.size() != GetDOF() ) {
+            throw openrave_exception("values do not equal to body degrees of freedom");
+        }
+        _pbody->SetDOFVelocityLimits(values);
+    }
+
+    void SetDOFAccelerationLimits(object o)
+    {
+        if( _pbody->GetDOF() == 0 ) {
+            return;
+        }
+        vector<dReal> values = ExtractArray<dReal>(o);
+        if( (int)values.size() != GetDOF() ) {
+            throw openrave_exception("values do not equal to body degrees of freedom");
+        }
+        _pbody->SetDOFAccelerationLimits(values);
+    }
+
+    void SetDOFTorqueLimits(object o)
+    {
+        if( _pbody->GetDOF() == 0 ) {
+            return;
+        }
+        vector<dReal> values = ExtractArray<dReal>(o);
+        if( (int)values.size() != GetDOF() ) {
+            throw openrave_exception("values do not equal to body degrees of freedom");
+        }
+        _pbody->SetDOFTorqueLimits(values);
     }
 
     void SetDOFValues(object o)
@@ -2214,6 +2305,8 @@ void init_openravepy_kinbody()
         object (PyKinBody::*getdofvelocitylimits2)(object) const = &PyKinBody::GetDOFVelocityLimits;
         object (PyKinBody::*getdofaccelerationlimits1)() const = &PyKinBody::GetDOFAccelerationLimits;
         object (PyKinBody::*getdofaccelerationlimits2)(object) const = &PyKinBody::GetDOFAccelerationLimits;
+        object (PyKinBody::*getdoftorquelimits1)() const = &PyKinBody::GetDOFTorqueLimits;
+        object (PyKinBody::*getdoftorquelimits2)(object) const = &PyKinBody::GetDOFTorqueLimits;
         object (PyKinBody::*getlinks1)() const = &PyKinBody::GetLinks;
         object (PyKinBody::*getlinks2)(object) const = &PyKinBody::GetLinks;
         object (PyKinBody::*getjoints1)() const = &PyKinBody::GetJoints;
@@ -2244,11 +2337,17 @@ void init_openravepy_kinbody()
                         .def("GetDOFVelocityLimits",getdofvelocitylimits2, args("indices"),DOXY_FN(KinBody,GetDOFVelocityLimits))
                         .def("GetDOFAccelerationLimits",getdofaccelerationlimits1, DOXY_FN(KinBody,GetDOFAccelerationLimits))
                         .def("GetDOFAccelerationLimits",getdofaccelerationlimits2, args("indices"),DOXY_FN(KinBody,GetDOFAccelerationLimits))
+                        .def("GetDOFTorqueLimits",getdoftorquelimits1, DOXY_FN(KinBody,GetDOFTorqueLimits))
+                        .def("GetDOFTorqueLimits",getdoftorquelimits2, args("indices"),DOXY_FN(KinBody,GetDOFTorqueLimits))
                         .def("GetDOFMaxVel",&PyKinBody::GetDOFMaxVel, DOXY_FN(KinBody,GetDOFMaxVel))
                         .def("GetDOFMaxTorque",&PyKinBody::GetDOFMaxTorque, DOXY_FN(KinBody,GetDOFMaxTorque))
                         .def("GetDOFMaxAccel",&PyKinBody::GetDOFMaxAccel, DOXY_FN(KinBody,GetDOFMaxAccel))
                         .def("GetDOFWeights",getdofweights1, DOXY_FN(KinBody,GetDOFWeights))
                         .def("GetDOFWeights",getdofweights2, DOXY_FN(KinBody,GetDOFWeights))
+                        .def("SetDOFWeights",&PyKinBody::SetDOFWeights, args("weights"), DOXY_FN(KinBody,SetDOFWeights))
+                        .def("SetDOFVelocityLimits",&PyKinBody::SetDOFVelocityLimits, args("limits"), DOXY_FN(KinBody,SetDOFVelocityLimits))
+                        .def("SetDOFAccelerationLimits",&PyKinBody::SetDOFAccelerationLimits, args("limits"), DOXY_FN(KinBody,SetDOFAccelerationLimits))
+                        .def("SetDOFTorqueLimits",&PyKinBody::SetDOFTorqueLimits, args("limits"), DOXY_FN(KinBody,SetDOFTorqueLimits))
                         .def("GetDOFResolutions",getdofresolutions1, DOXY_FN(KinBody,GetDOFResolutions))
                         .def("GetDOFResolutions",getdofresolutions2, DOXY_FN(KinBody,GetDOFResolutions))
                         .def("GetLinks",getlinks1, DOXY_FN(KinBody,GetLinks))
@@ -2432,12 +2531,15 @@ void init_openravepy_kinbody()
                           .def("GetInternalHierarchyRightTransform",&PyKinBody::PyJoint::GetInternalHierarchyRightTransform, DOXY_FN(KinBody::Joint,GetInternalHierarchyRightTransform))
                           .def("GetLimits", &PyKinBody::PyJoint::GetLimits, DOXY_FN(KinBody::Joint,GetLimits))
                           .def("GetVelocityLimits", &PyKinBody::PyJoint::GetVelocityLimits, DOXY_FN(KinBody::Joint,GetVelocityLimits))
+                          .def("GetAccelerationLimits", &PyKinBody::PyJoint::GetAccelerationLimits, DOXY_FN(KinBody::Joint,GetAccelerationLimits))
+                          .def("GetTorqueLimits", &PyKinBody::PyJoint::GetTorqueLimits, DOXY_FN(KinBody::Joint,GetTorqueLimits))
                           .def("GetWeights", &PyKinBody::PyJoint::GetWeights, DOXY_FN(KinBody::Joint,GetWeight))
                           .def("SetWrapOffset",&PyKinBody::PyJoint::SetWrapOffset,SetWrapOffset_overloads(args("offset","axis"), DOXY_FN(KinBody::Joint,SetWrapOffset)))
                           .def("GetWrapOffset",&PyKinBody::PyJoint::GetWrapOffset,GetWrapOffset_overloads(args("axis"), DOXY_FN(KinBody::Joint,GetWrapOffset)))
                           .def("SetLimits",&PyKinBody::PyJoint::SetLimits,args("lower","upper"), DOXY_FN(KinBody::Joint,SetLimits))
                           .def("SetVelocityLimits",&PyKinBody::PyJoint::SetVelocityLimits,args("maxlimits"), DOXY_FN(KinBody::Joint,SetVelocityLimits))
                           .def("SetAccelerationLimits",&PyKinBody::PyJoint::SetAccelerationLimits,args("maxlimits"), DOXY_FN(KinBody::Joint,SetAccelerationLimits))
+                          .def("SetTorqueLimits",&PyKinBody::PyJoint::SetTorqueLimits,args("maxlimits"), DOXY_FN(KinBody::Joint,SetTorqueLimits))
                           .def("SetResolution",&PyKinBody::PyJoint::SetResolution,args("resolution"), DOXY_FN(KinBody::Joint,SetResolution))
                           .def("SetWeights",&PyKinBody::PyJoint::SetWeights,args("weights"), DOXY_FN(KinBody::Joint,SetWeights))
                           .def("AddTorque",&PyKinBody::PyJoint::AddTorque,args("torques"), DOXY_FN(KinBody::Joint,AddTorque))

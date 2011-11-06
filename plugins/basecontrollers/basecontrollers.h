@@ -54,7 +54,7 @@ If SetDesired is called, only joint values will be set at every timestep leaving
             if( !flog ) {
                 RAVELOG_WARN(str(boost::format("failed to open %s\n")%filename));
             }
-            flog << "<" << GetXMLId() << " robot=\"" << _probot->GetName() << "\"/>" << endl;
+            //flog << "<" << GetXMLId() << " robot=\"" << _probot->GetName() << "\"/>" << endl;
             _dofindices = dofindices;
             _nControlTransformation = nControlTransformation;
             _dofchecklimits.resize(0);
@@ -131,6 +131,7 @@ If SetDesired is called, only joint values will be set at every timestep leaving
 
     virtual bool SetPath(TrajectoryBaseConstPtr ptraj)
     {
+        boost::mutex::scoped_lock lock(_mutex);
         if( !!ptraj ) {
             // see if at least one point can be sampled, this make it easier to debug bad trajectories
             vector<dReal> v;
@@ -166,6 +167,7 @@ If SetDesired is called, only joint values will be set at every timestep leaving
         if( _bPause ) {
             return;
         }
+        boost::mutex::scoped_lock lock(_mutex);
         TrajectoryBaseConstPtr ptraj = _ptraj; // because of multi-threading setting issues
         if( !!ptraj ) {
             vector<dReal> sampledata;
@@ -348,6 +350,7 @@ private:
     CollisionReportPtr _report;
     UserDataPtr _cblimits;
     ConfigurationSpecification _samplespec;
+    boost::mutex _mutex;
 };
 
 class RedirectController : public ControllerBase

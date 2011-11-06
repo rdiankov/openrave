@@ -42,7 +42,7 @@ public:
         Prop_LinkDraw=0x40,     ///< toggle link geometries rendering
         Prop_LinkGeometry=0x80|Prop_Links,     ///< the geometry of the link changed
         Prop_JointMimic=0x100|Prop_Joints,     ///< joint mimic equations
-        Prop_JointAccelerationVelocityLimits=0x200|Prop_Joints,     ///< velocity + acceleration
+        Prop_JointAccelerationVelocityTorqueLimits=0x200|Prop_Joints,     ///< velocity + acceleration + torque
         Prop_LinkStatic=0x400|Prop_Links,     ///< static property of link changed
         // robot only
         Prop_RobotManipulators = 0x00010000,     ///< [robot only] all properties of all manipulators
@@ -558,6 +558,16 @@ public:
         /// \brief \see GetAccelerationLimits
         virtual void SetAccelerationLimits(const std::vector<dReal>& vmax);
 
+        /** \brief Returns the max torques of the joint
+
+            \param[out] the max torque
+            \param[in] bAppend if true will append to the end of the vector instead of erasing it
+         */
+        virtual void GetTorqueLimits(std::vector<dReal>& vmax, bool bAppend=false) const;
+
+        /// \brief \see GetTorqueLimits
+        virtual void SetTorqueLimits(const std::vector<dReal>& vmax);
+
         /// \brief The weight associated with a joint's axis for computing a distance in the robot configuration space.
         virtual dReal GetWeight(int axis=0) const;
         /// \brief \see GetWeight
@@ -929,6 +939,8 @@ private:
     virtual void GetDOFVelocityLimits(std::vector<dReal>& maxvelocities) const;
     /// \brief Returns the max acceleration for each DOF
     virtual void GetDOFAccelerationLimits(std::vector<dReal>& maxaccelerations) const;
+    /// \brief Returns the max torque for each DOF
+    virtual void GetDOFTorqueLimits(std::vector<dReal>& maxaccelerations) const;
 
     /// \deprecated (11/05/26)
     virtual void GetDOFMaxVel(std::vector<dReal>& v) const RAVE_DEPRECATED {
@@ -940,6 +952,18 @@ private:
     virtual void GetDOFMaxTorque(std::vector<dReal>& v) const;
     virtual void GetDOFResolutions(std::vector<dReal>& v) const;
     virtual void GetDOFWeights(std::vector<dReal>& v) const;
+
+    /// \brief \see GetDOFVelocityLimits
+    virtual void SetDOFVelocityLimits(const std::vector<dReal>& maxlimits);
+
+    /// \brief \see GetDOFAccelerationLimits
+    virtual void SetDOFAccelerationLimits(const std::vector<dReal>& maxlimits);
+
+    /// \brief \see GetDOFTorqueLimits
+    virtual void SetDOFTorqueLimits(const std::vector<dReal>& maxlimits);
+
+    /// \brief \see GetDOFWeights
+    virtual void SetDOFWeights(const std::vector<dReal>& weights);
 
     /// \brief Returns the joints making up the controllable degrees of freedom of the body.
     const std::vector<JointPtr>& GetJoints() const {
@@ -1024,6 +1048,7 @@ private:
     virtual void SubtractJointValues(std::vector<dReal>& q1, const std::vector<dReal>& q2) const RAVE_DEPRECATED {
         SubtractDOFValues(q1,q2);
     }
+
 
     /// \brief Adds a torque to every joint.
     ///

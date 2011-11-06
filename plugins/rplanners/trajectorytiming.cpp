@@ -348,6 +348,11 @@ protected:
             dReal transmintime1 = RaveSqrt((ikparamprev.GetTranslationLocalGlobal6D().second-ikparam.GetTranslationLocalGlobal6D().second).lengthsqr3())*_vimaxvel.at(info.orgdofoffset+3);
             return max(transmintime0,transmintime1);
         }
+        case IKP_TranslationXAxisAngle4D: {
+            dReal angmintime = ANGLE_DIFF(ikparam.GetTranslationXAxisAngle4D().second,ikparamprev.GetTranslationXAxisAngle4D().second)*_vimaxvel.at(info.orgdofoffset);
+            dReal transmintime = RaveSqrt((ikparam.GetTranslationXAxisAngle4D().first-ikparamprev.GetTranslationXAxisAngle4D().first).lengthsqr3())*_vimaxvel.at(info.orgdofoffset+1);
+            return max(angmintime,transmintime);
+        }
         default:
             throw OPENRAVE_EXCEPTION_FORMAT("does not support parameterization 0x%x", ikparam.GetType(),ORE_InvalidArguments);
         }

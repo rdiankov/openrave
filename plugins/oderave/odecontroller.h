@@ -1,4 +1,4 @@
-// Copyright (c) 2008-2010 Rosen Diankov (rosen.diankov@gmail.com), Juan Gonzalez
+// Copyright (c) 2008-2011 Rosen Diankov <rosen.diankov@gmail.com>, Juan Gonzalez
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -49,6 +49,7 @@ public:
                     odespace->_jointset[dJointGetType(jointid)](jointid,dParamFMax+dParamGroup*index, 0);
                 }
             }
+            _torquechangedhandle = _probot->RegisterChangeCallback(KinBody::Prop_JointAccelerationVelocityTorqueLimits, boost::bind(&ODEVelocityController::_TorqueChanged,this));
         }
         _bVelocityMode = false;
     }
@@ -158,9 +159,24 @@ public:
     }
 
 protected:
+    void _TorqueChanged() {
+        if( !!_probot ) {
+            ODESpace::KinBodyInfoPtr pinfo = GetODESpace();
+            boost::shared_ptr<ODESpace> odespace(pinfo->_odespace);
+            FOREACHC(it, _dofindices) {
+                KinBody::JointConstPtr pjoint = _probot->GetJointFromDOFIndex(*it);
+                dJointID jointid = pinfo->vjoints.at(pjoint->GetJointIndex());
+                int iaxis = *it-pjoint->GetDOFIndex();
+                BOOST_ASSERT(iaxis >= 0);
+                odespace->_jointset[dJointGetType(jointid)](jointid,dParamFMax+dParamGroup*iaxis, pjoint->GetMaxTorque(iaxis));
+            }
+        }
+    }
+
     RobotBasePtr _probot;
     std::vector<int> _dofindices;
     bool _bVelocityMode;
+    OpenRAVE::UserDataPtr _torquechangedhandle;
 };
 
 #endif
