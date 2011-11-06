@@ -76,6 +76,8 @@ Task-based manipulation planning involving target objects. A lot of the algorith
 * seeddests\n\
 * seedik\n\
 * savepreshapetraj\n\
+* grasptranslationstepmult\n\
+* graspfinestep\n\
 ");
         RegisterCommand("CloseFingers",boost::bind(&TaskManipulation::CloseFingers,this,_1,_2),
                         "Closes the active manipulator fingers using the grasp planner.");
@@ -422,6 +424,12 @@ protected:
             }
             else if( cmd == "savepreshapetraj" ) {
                 sinput >> strpreshapetraj;
+            }
+            else if( cmd == "grasptranslationstepmult" ) {
+                sinput >> graspparams->ftranslationstepmult;
+            }
+            else if( cmd == "graspfinestep" ) {
+                sinput >> graspparams->ffinestep;
             }
             else {
                 RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
