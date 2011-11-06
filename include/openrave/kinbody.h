@@ -959,6 +959,9 @@ private:
     /// \brief \see GetDOFAccelerationLimits
     virtual void SetDOFAccelerationLimits(const std::vector<dReal>& maxlimits);
 
+    /// \brief \see GetDOFTorqueLimits
+    virtual void SetDOFTorqueLimits(const std::vector<dReal>& maxlimits);
+
     /// \brief \see GetDOFWeights
     virtual void SetDOFWeights(const std::vector<dReal>& weights);
 

@@ -2294,6 +2294,16 @@ void KinBody::SetDOFAccelerationLimits(const std::vector<dReal>& v)
     _ParametersChanged(Prop_JointAccelerationVelocityTorqueLimits);
 }
 
+void KinBody::SetDOFTorqueLimits(const std::vector<dReal>& v)
+{
+    std::vector<dReal>::const_iterator itv = v.begin();
+    FOREACHC(it, _vDOFOrderedJoints) {
+        std::copy(itv,itv+(*it)->GetDOF(), (*it)->_vmaxtorque.begin());
+        itv += (*it)->GetDOF();
+    }
+    _ParametersChanged(Prop_JointAccelerationVelocityTorqueLimits);
+}
+
 void KinBody::SimulationStep(dReal fElapsedTime)
 {
 }

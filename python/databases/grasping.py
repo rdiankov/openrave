@@ -507,7 +507,9 @@ class GraspingModel(DatabaseGenerator):
         """Generates a grasp set by searching space and evaluating contact points.
 
         All grasp parameters have to be in the bodies's coordinate system (ie: approachrays).
-        @param checkgraspfn: If set, then will be used to validate the grasp. If its evaluation returns false, then grasp will not be added to set. Called by checkgraspfn(contacts,finalconfig,grasp,info)"""
+        :param graspingnoise: A tuple of two values (randomoffset, number_of_tries)
+        :param checkgraspfn: If set, then will be used to validate the grasp. If its evaluation returns false, then grasp will not be added to set. Called by checkgraspfn(contacts,finalconfig,grasp,info)
+        """
         print 'Generating Grasp Set for %s:%s:%s'%(self.robot.GetName(),self.manip.GetName(),self.target.GetName())
         translate = True
         if approachrays is None:

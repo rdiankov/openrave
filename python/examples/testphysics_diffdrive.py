@@ -31,7 +31,7 @@ if not __openravepy_build_doc__:
 def main(env,options):
     "Main example code."
     env.Load(options.scene)
-    if options._physics is None and (env.GetPhysicsEngine() is None or len(env.GetPhysicsEngine().GetXMLId()) == 0):
+    if options._physics is None:
         # no physics engine set, so set one
         physics = RaveCreatePhysicsEngine(env,'ode')
         env.SetPhysicsEngine(physics)
