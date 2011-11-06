@@ -221,6 +221,8 @@ class GraspingModel(DatabaseGenerator):
         self.contactgraph = None
         self.numthreads=None
         self.disableallbodies=True
+        self.translationstepmult = None
+        self.finestep = None
         # only the indices used by the TaskManipulation plugin should start with an 'i'
         graspdof = {'igraspdir':3,'igrasppos':3,'igrasproll':1,'igraspstandoff':1,'igrasppreshape':len(self.manip.GetGripperIndices()),'igrasptrans':12,'imanipulatordirection':3,'forceclosure':1,'grasptrans_nocol':12,'performance':1}
         self.graspindices = dict()
@@ -237,24 +239,36 @@ class GraspingModel(DatabaseGenerator):
     def has(self):
         return len(self.grasps) > 0 and len(self.graspindices) > 0 and self.grasper is not None
     def getversion(self):
-        return 6
+        return 7
     def init(self,friction,avoidlinks,plannername=None):
         self.basemanip = interfaces.BaseManipulation(self.robot,maxvelmult=self.maxvelmult)
         self.grasper = interfaces.Grasper(self.robot,friction=friction,avoidlinks=avoidlinks,plannername=plannername)
         self.grasps = []
     def load(self):
+        filename = self.getfilename(True)
+        if len(filename) == 0:
+            return None
         try:
-            params = DatabaseGenerator.load(self)
-            if params is None:
-                return False;
-            self.grasps,self.graspindices,friction,linknames,plannername = params
+            modelversion,params = pickle.load(open(filename, 'r'))
+            if modelversion == self.getversion():
+                self.grasps,self.graspindices,friction,linknames,plannername,self.translationstepmult,self.finestep = params
+            elif modelversion == 6:
+                self.grasps,self.graspindices,friction,linknames,plannername = params
+            else:
+                print 'version is wrong ',modelversion,'!=',self.getversion()
+
             self.basemanip = interfaces.BaseManipulation(self.robot,maxvelmult=self.maxvelmult)
             self.grasper = interfaces.Grasper(self.robot,friction,avoidlinks = [self.robot.GetLink(name) for name in linknames],plannername=plannername)
             return self.has()
-        except:
-            return False
+
+        except MemoryError,e:
+            print '%s memory failed: '%filename,e
+        except Exception, e:
+            print '%s failed: '%filename,e
+        return False
+
     def save(self):
-        DatabaseGenerator.save(self,(self.grasps,self.graspindices,self.grasper.friction,[link.GetName() for link in self.grasper.avoidlinks],self.grasper.plannername))
+        DatabaseGenerator.save(self,(self.grasps,self.graspindices,self.grasper.friction,[link.GetName() for link in self.grasper.avoidlinks],self.grasper.plannername,self.translationstepmult,self.finestep))
     def getfilename(self,read=False):
         return RaveFindDatabaseFile(os.path.join('robot.'+self.robot.GetKinematicsGeometryHash(), 'graspset.' + self.manip.GetStructureHash() + '.' + self.target.GetKinematicsGeometryHash()+'.pp'),read)
 
@@ -409,6 +423,8 @@ class GraspingModel(DatabaseGenerator):
             graspingnoise = 0.0
         if manipulatordirections is None:
             manipulatordirections = array([self.manip.GetDirection()])
+        self.translationstepmult = translationstepmult
+        self.finestep = finestep
         time.sleep(0.1) # sleep or otherwise viewer might not load well
         N = approachrays.shape[0]
         with self.env:
@@ -439,7 +455,7 @@ class GraspingModel(DatabaseGenerator):
             grasp[self.graspindices.get('igrasppreshape')] = preshape
             grasp[self.graspindices.get('imanipulatordirection')] = manipulatordirection
             try:
-                contacts,finalconfig,mindist,volume = self.testGrasp(grasp=grasp,graspingnoise=graspingnoise,translate=True,forceclosure=forceclosure,forceclosurethreshold=forceclosurethreshold,translationstepmult=translationstepmult,finestep=finestep)
+                contacts,finalconfig,mindist,volume = self.testGrasp(grasp=grasp,graspingnoise=graspingnoise,translate=True,forceclosure=forceclosure,forceclosurethreshold=forceclosurethreshold)
             except planning_error, e:
                 print 'Grasp Failed: '
                 print_exc(e)
@@ -466,7 +482,7 @@ class GraspingModel(DatabaseGenerator):
                 grasp[self.graspindices.get('forceclosure')] = mindist if mindist is not None else 0
                 self.robot.SetTransform(Trobotorig) # transform back to original position for checkgraspfn
                 if not forceclosure or mindist >= forceclosurethreshold:
-                    grasp[self.graspindices.get('performance')] = self._ComputeGraspPerformance(grasp)
+                    grasp[self.graspindices.get('performance')] = self._ComputeGraspPerformance(grasp, graspingnoise=graspingnoise,translate=True,forceclosure=False)
                     if checkgraspfn is None or checkgraspfn(contacts,finalconfig,grasp,{'mindist':mindist,'volume':volume}):
                         print 'found good grasp'
                         return grasp,
@@ -517,6 +533,8 @@ class GraspingModel(DatabaseGenerator):
         else:
             numthreads = self.numthreads
         self.init(friction=friction,avoidlinks=avoidlinks,plannername=plannername)
+        self.translationstepmult = translationstepmult
+        self.finestep = finestep
 
         with self.robot: # lock the environment and save the robot state
             Ttarget = self.target.GetTransform()
@@ -654,6 +672,10 @@ class GraspingModel(DatabaseGenerator):
                     mindist = 0
         return contacts,finalconfig,mindist,volume
     def runGrasp(self,grasp,graspingnoise=None,translate=True,forceclosure=False,translationstepmult=None,finestep=None):
+        if translationstepmult is None:
+            translationstepmult = self.translationstepmult
+        if finestep is None:
+            finestep = self.finestep
         with self.robot: # lock the environment and save the robot state
             self.robot.SetActiveManipulator(self.manip)
             self.robot.SetTransform(eye(4)) # have to reset transform in order to remove randomness
@@ -667,7 +689,7 @@ class GraspingModel(DatabaseGenerator):
             self.robot.SetDOFValues(grasp[self.graspindices.get('igrasppreshape')],self.manip.GetGripperIndices())
             self.robot.SetTransform(dot(self.getGlobalGraspTransform(grasp),dot(linalg.inv(self.manip.GetEndEffectorTransform()),self.robot.GetTransform())))
             self.robot.SetActiveDOFs(self.manip.GetGripperIndices())
-            return self.grasper.Grasp(transformrobot=False,target=self.target,onlycontacttarget=True, forceclosure=False, execute=False, outputfinal=True)
+            return self.grasper.Grasp(transformrobot=False,target=self.target,onlycontacttarget=True, forceclosure=False, execute=False, outputfinal=True,translationstepmult=self.translationstepmult,finestep=self.finestep)
 
     def getGlobalGraspTransform(self,grasp,collisionfree=False):
         """returns the final grasp transform before fingers start closing. If collisionfree is set to True, then will return a grasp that is guaranteed to be not in collision with the target object when at its preshape. This is achieved by by moving the hand back along igraspdir."""
@@ -809,12 +831,14 @@ class GraspingModel(DatabaseGenerator):
                     except planning_error, e:
                         continue
             yield grasp,i
-    def _ComputeGraspPerformance(self,grasp):
+    def _ComputeGraspPerformance(self,grasp, **kwargs):
         """compute a performance metric based on closest contact to the center of object."""
         with self.target:
             self.target.SetTransform(eye(4))
             try:
-                contacts,finalconfig,mindist,volume = self.runGrasp(grasp=grasp,translate=True,forceclosure=False)
+                kwargs['translate'] = True
+                kwargs['forceclosure'] = False
+                contacts,finalconfig,mindist,volume = self.runGrasp(grasp=grasp,**kwargs)
             except planning_error, e:
                 print 'grasp failed: ',e
                 return inf

@@ -516,7 +516,7 @@ bool SimpleNeighborhoodSampler::Sample(std::vector<dReal>& vNewSample, const std
         if(_distmetricfn(vNewSample, vCurSample) > fRadius ) {
             // take the previous
             for (size_t i = 0; i < dof; i++) {
-                vNewSample[i] = 0.833333333333333f*vNewSample[i]-0.16666666666666669*vCurSample[i];
+                vNewSample[i] = 0.833333333333333*vNewSample[i]-0.16666666666666669*vCurSample[i];
             }
             break;
         }

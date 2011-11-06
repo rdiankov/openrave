@@ -59,6 +59,8 @@ Grasping
 
 * added **--numthreads** option to **openrave.py --database grasping** to allow users to set number of threads.
 
+* now storing translationstepmult and finestep parameters in the database since they affect success rates
+
 Planning
 --------
 
