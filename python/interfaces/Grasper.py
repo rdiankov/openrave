@@ -87,7 +87,7 @@ class Grasper:
             pose = []
             for i in range(7):
                 pose.insert(0,float64(resvalues.pop()))
-            finalconfig = (jointvalues,matrixFromPose(pose))
+            finalconfig = (array(jointvalues),matrixFromPose(pose))
         contacts = reshape(array([float64(s) for s in resvalues],float64),(len(resvalues)/6,6))
         return contacts,finalconfig,mindist,volume
 

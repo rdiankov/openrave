@@ -789,7 +789,7 @@ class GraspingModel(DatabaseGenerator):
                             continue
                 if checkcollision and checkgrasper:
                     try:
-                        self.runGraspFromTrans(grasp)
+                        contacts2,finalconfig2,mindist2,volume2 = self.runGraspFromTrans(grasp)
                     except planning_error, e:
                         continue
                 validgrasps.append(grasp)
@@ -798,9 +798,10 @@ class GraspingModel(DatabaseGenerator):
                     return validgrasps,validindices
             return validgrasps,validindices
 
-    def validGraspIterator(self,startindex=0,checkcollision=True,checkik=True,checkgrasper=True,backupdist=0.0,randomgrasps=False):
+    def validGraspIterator(self,startindex=0,checkcollision=True,checkik=True,checkgrasper=True,backupdist=0.0,randomgrasps=False,returnfinal=False):
         """Returns an iterator for valid grasps that satisfy certain conditions.
 
+        :param returnfinal: if True will return the contacts and finalconfig of the simulation grasp
         See :meth:`computeValidGrasps` for description of parameters.
         """
         if randomgrasps:
@@ -829,10 +830,15 @@ class GraspingModel(DatabaseGenerator):
                             continue
                 if checkcollision and checkgrasper:
                     try:
-                        self.runGraspFromTrans(grasp)
+                        contacts,finalconfig,mindist,volume = self.runGraspFromTrans(grasp)
                     except planning_error, e:
                         continue
-            yield grasp,i
+
+            if returnfinal:
+                yield grasp,i,contacts,finalconfig
+            else:
+                yield grasp,i
+
     def _ComputeGraspPerformance(self,grasp, **kwargs):
         """compute a performance metric based on closest contact to the center of object."""
         with self.target:

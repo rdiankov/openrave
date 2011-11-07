@@ -54,6 +54,8 @@ Method wraps the WorkspaceTrajectoryTracker planner. For more details on paramet
                         "Options: handjoints savetraj planner");
         RegisterCommand("JitterActive",boost::bind(&BaseManipulation::JitterActive,this,_1,_2),
                         "Jitters the active DOF for a collision-free position.");
+        RegisterCommand("SetMinimumGoalPaths",boost::bind(&BaseManipulation::SetMinimumGoalPathsCommand,this,_1,_2),
+                        "Sets _minimumgoalpaths for all planner parameters.");
         RegisterCommand("FindIKWithFilters",boost::bind(&BaseManipulation::FindIKWithFilters,this,_1,_2),
                         "Samples IK solutions using custom filters that constrain the end effector in the world. Parameters:\n\n\
 - cone - Constraint the direction of a local axis with respect to a cone in the world. Takes in: worldaxis(3), localaxis(3), anglelimit. \n\
@@ -61,6 +63,7 @@ Method wraps the WorkspaceTrajectoryTracker planner. For more details on paramet
 - ikparam - The serialized ik parameterization to use for FindIKSolution(s).\n\
 - filteroptions\n\
 ");
+        _minimumgoalpaths=1;
     }
 
     virtual ~BaseManipulation() {
@@ -80,7 +83,7 @@ Method wraps the WorkspaceTrajectoryTracker planner. For more details on paramet
     virtual int main(const std::string& args)
     {
         _fMaxVelMult=1;
-
+        _minimumgoalpaths=1;
         string strRobotName;
         stringstream ss(args);
         ss >> strRobotName;
@@ -368,7 +371,8 @@ protected:
         int nMaxTries = 2;     // max tries for the planner
         boost::shared_ptr<ostream> pOutputTrajStream;
 
-        PlannerBase::PlannerParametersPtr params(new PlannerBase::PlannerParameters());
+        RRTParametersPtr params(new RRTParameters());
+        params->_minimumgoalpaths = _minimumgoalpaths;
         params->_nMaxIterations = 4000;     // max iterations before failure
 
         string cmd;
@@ -516,7 +520,8 @@ protected:
         int nSeedIkSolutions = 8;     // no extra solutions
         int nMaxTries = 3;     // max tries for the planner
 
-        PlannerBase::PlannerParametersPtr params(new PlannerBase::PlannerParameters());
+        RRTParametersPtr params(new RRTParameters());
+        params->_minimumgoalpaths = _minimumgoalpaths;
         params->_nMaxIterations = 4000;
 
         // constraint stuff
@@ -627,6 +632,9 @@ protected:
             }
             else if( cmd == "constrainterrorthresh" ) {
                 sinput >> constrainterrorthresh;
+            }
+            else if( cmd == "minimumgoalpaths" ) {
+                sinput >> params->_minimumgoalpaths;
             }
             else if( cmd == "jitter" ) {
                 sinput >> jitter;
@@ -1017,7 +1025,8 @@ protected:
         }
 
         RobotBase::RobotStateSaver saver(robot);
-        PlannerBase::PlannerParametersPtr params(new PlannerBase::PlannerParameters());
+        RRTParametersPtr params(new RRTParameters());
+        params->_minimumgoalpaths = _minimumgoalpaths;
         params->SetRobotActiveJoints(robot);
         try{
             planningutils::VerifyTrajectory(params,ptraj,samplingstep);
@@ -1078,6 +1087,13 @@ protected:
     }
 
 protected:
+    bool SetMinimumGoalPathsCommand(ostream& sout, istream& sinput)
+    {
+        sinput >> _minimumgoalpaths;
+        BOOST_ASSERT(_minimumgoalpaths>=0);
+        return !!sinput;
+    }
+
     IkFilterReturn _FilterWorldAxisIK(std::vector<dReal>& values, RobotBase::ManipulatorConstPtr pmanip, const IkParameterization& ikparam, const Vector& vlocalaxis, const Vector& vworldaxis, dReal coslimit)
     {
         if( RaveFabs(vworldaxis.dot3(pmanip->GetTransform().rotate(vlocalaxis))) < coslimit ) {
@@ -1089,6 +1105,7 @@ protected:
     RobotBasePtr robot;
     string _strRRTPlannerName;
     dReal _fMaxVelMult;
+    int _minimumgoalpaths;
 };
 
 ModuleBasePtr CreateBaseManipulation(EnvironmentBasePtr penv) {
