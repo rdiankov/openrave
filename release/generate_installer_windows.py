@@ -545,7 +545,7 @@ Function DetectNumPy
     MessageBox MB_OK "Failed to find python installation"  /SD IDOK
     Quit
 start:
-  ExecWait '"$1\\python.exe" -c "import numpy"' $0
+  ExecWait '"$1\\python.exe" -c "import numpy; assert(numpy.version.version==\\"%(numpy_version)s\\")"' $0
   StrCmp $0 "0" done
     Call GetNumPy
 done:
@@ -572,7 +572,7 @@ Function DetectSymPy
     MessageBox MB_OK "Failed to find python installation"  /SD IDOK
     Quit
 start:
-  ExecWait '"$1\\python.exe" -c "import sympy"' $0
+  ExecWait '"$1\\python.exe" -c "import sympy; assert(sympy.__version__ == \\"%(sympy_version)s\\")"' $0
   StrCmp $0 "0" done
     Call GetSymPy
 done:
