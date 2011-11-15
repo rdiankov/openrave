@@ -31,6 +31,15 @@ using namespace std;
 
 class ColladaReader : public daeErrorHandler
 {
+    template <typename T>
+    inline static std::string getSid(T t)
+    {
+        if( !t->getSid() ) {
+            return "(None)";
+        }
+        return t->getSid();
+    }
+
     /// \brief bindings for instance models
     class ModelBinding
     {
@@ -57,7 +66,7 @@ public:
             }
 
             if (!visualnode) {
-                RAVELOG_WARN(str(boost::format("couldn't find parent node of element id %s, sid %s\n")%pkinematicaxis->getID()%pkinematicaxis->getSid()));
+                RAVELOG_WARN(str(boost::format("couldn't find parent node of element id %s, sid %s\n")%pkinematicaxis->getID()%getSid(pkinematicaxis)));
             }
         }
 
@@ -444,7 +453,7 @@ public:
         if( !ias ) {
             return false;
         }
-        RAVELOG_DEBUG(str(boost::format("instance articulated system sid %s\n")%ias->getSid()));
+        RAVELOG_DEBUG(str(boost::format("instance articulated system sid %s\n")%getSid(ias)));
         domArticulated_systemRef articulated_system = daeSafeCast<domArticulated_system> (ias->getUrl().getElement().cast());
         if( !articulated_system ) {
             return false;
@@ -549,10 +558,10 @@ public:
         if( !ikm ) {
             return false;
         }
-        RAVELOG_DEBUG(str(boost::format("instance kinematics model sid %s\n")%ikm->getSid()));
+        RAVELOG_DEBUG(str(boost::format("instance kinematics model sid %s\n")%getSid(ikm)));
         domKinematics_modelRef kmodel = daeSafeCast<domKinematics_model> (ikm->getUrl().getElement().cast());
         if (!kmodel) {
-            RAVELOG_WARN(str(boost::format("%s does not reference valid kinematics\n")%ikm->getSid()));
+            RAVELOG_WARN(str(boost::format("%s does not reference valid kinematics\n")%getSid(ikm)));
             return false;
         }
 
@@ -583,7 +592,7 @@ public:
             }
         }
         if( !pvisualnode ) {
-            RAVELOG_WARN(str(boost::format("failed to find visual node for instance kinematics model %s\n")%ikm->getSid()));
+            RAVELOG_WARN(str(boost::format("failed to find visual node for instance kinematics model %s\n")%getSid(ikm)));
             return false;
         }
 
@@ -2104,7 +2113,7 @@ public:
                     if( !!newparam->getSIDREF() ) {     // can only bind with SIDREF
                         return daeSidRef(newparam->getSIDREF()->getValue(),pbindelt).resolve().elt;
                     }
-                    RAVELOG_WARN(str(boost::format("newparam sid=%s does not have SIDREF\n")%newparam->getSid()));
+                    RAVELOG_WARN(str(boost::format("newparam sid=%s does not have SIDREF\n")%getSid(newparam)));
                 }
             }
         }
