@@ -15,6 +15,9 @@ using namespace OpenRAVE;
 using namespace std;
 
 #ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+
 inline static uint32_t GetMilliTime()
 {
     LARGE_INTEGER count, freq;
@@ -42,7 +45,7 @@ inline static uint32_t GetMilliTime()
 #endif
 
 // quit after 100 milliseconds
-IkFilterReturn MyTimeoutFilter(std::vector<dReal>&, RobotBase::ManipulatorPtr, const IkParameterization&, uint32_t starttime)
+IkFilterReturn MyTimeoutFilter(std::vector<dReal>&, RobotBase::ManipulatorConstPtr, const IkParameterization&, uint32_t starttime)
 {
     if( GetMilliTime()-starttime > 100 ) {
         RAVELOG_INFO("quitting\n");

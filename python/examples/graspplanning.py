@@ -101,11 +101,12 @@ if not __openravepy_build_doc__:
 import multiprocessing
 
 class GraspPlanning:
-    def __init__(self,robot,randomize=False,dests=None,nodestinations=False,switchpatterns=None,plannername=None):
+    def __init__(self,robot,randomize=False,dests=None,nodestinations=False,switchpatterns=None,plannername=None,minimumgoalpaths=1):
         self.envreal = robot.GetEnv()
         self.robot = robot
         self.plannername=plannername
         self.nodestinations = nodestinations
+        self.minimumgoalpaths=minimumgoalpaths
         try:
             self.ikmodel = databases.inversekinematics.InverseKinematicsModel(robot=robot,iktype=IkParameterization.Type.Transform6D)
             if not self.ikmodel.load():
@@ -123,6 +124,7 @@ class GraspPlanning:
         self.switchpatterns = switchpatterns
         with self.envreal:
             self.basemanip = interfaces.BaseManipulation(self.robot,plannername=plannername)
+            self.basemanip.prob.SendCommand('SetMinimumGoalPaths %d'%self.minimumgoalpaths)
             self.taskmanip = None
             self.updir = array((0,0,1))
             
@@ -268,6 +270,7 @@ class GraspPlanning:
         robot = self.robot
         with env:
             self.taskmanip = interfaces.TaskManipulation(self.robot,graspername=gmodel.grasper.plannername,plannername=self.plannername)
+            self.taskmanip.prob.SendCommand('SetMinimumGoalPaths %d'%self.minimumgoalpaths)
             if self.switchpatterns is not None:
                 self.taskmanip.SwitchModels(switchpatterns=self.switchpatterns)
             robot.SetActiveManipulator(gmodel.manip)
@@ -307,7 +310,7 @@ class GraspPlanning:
                         continue
                 self.waitrobot(robot)
 
-            self.taskmanip.CloseFingers()
+            self.taskmanip.CloseFingers(translationstepmult=gmodel.translationstepmult,finestep=gmodel.finestep)
             self.waitrobot(robot)
             
 
@@ -352,7 +355,7 @@ class GraspPlanning:
                 self.waitrobot(robot)
 
             try:
-                res = self.taskmanip.ReleaseFingers(target=target)
+                res = self.taskmanip.ReleaseFingers(target=target,translationstepmult=gmodel.translationstepmult,finestep=gmodel.finestep)
             except planning_error:
                 res = None
             if res is None:
@@ -360,7 +363,7 @@ class GraspPlanning:
                 with env:
                     robot.ReleaseAllGrabbed()
                     try:
-                        res = self.taskmanip.ReleaseFingers(target=target)
+                        res = self.taskmanip.ReleaseFingers(target=target,translationstepmult=gmodel.translationstepmult,finestep=gmodel.finestep)
                     except planning_error:
                         res = None
                 if res is None:
@@ -379,7 +382,7 @@ class GraspPlanning:
                     pass
                 if env.CheckCollision(robot):
                     try:
-                        self.taskmanip.ReleaseFingers(target=target)
+                        self.taskmanip.ReleaseFingers(target=target,translationstepmult=gmodel.translationstepmult,finestep=gmodel.finestep)
                     except planning_error:
                         res = None
                     #raise ValueError('robot still in collision?')

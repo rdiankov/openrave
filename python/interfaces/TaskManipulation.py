@@ -115,7 +115,7 @@ class TaskManipulation:
         iters = array([int(s) for s in resvalues[0:len(configs)]])
         newconfigs = reshape(array([float64(s) for s in resvalues[len(configs):]]),(len(configs),self.robot.GetActiveDOF()))
         return iters,newconfigs
-    def CloseFingers(self,offset=None,movingdir=None,execute=None,outputtraj=None,outputfinal=None,coarsestep=None):
+    def CloseFingers(self,offset=None,movingdir=None,execute=None,outputtraj=None,outputfinal=None,coarsestep=None,translationstepmult=None,finestep=None):
         """See :ref:`module-taskmanipulation-closefingers`
         """
         cmd = 'CloseFingers '
@@ -134,6 +134,10 @@ class TaskManipulation:
             cmd += 'outputtraj '
         if outputfinal:
             cmd += 'outputfinal'
+        if translationstepmult is not None:
+            cmd += 'translationstepmult %.15e '%translationstepmult
+        if finestep is not None:
+            cmd += 'finestep %.15e '%finestep
         res = self.prob.SendCommand(cmd)
         if res is None:
             raise planning_error('CloseFingers')
@@ -148,7 +152,7 @@ class TaskManipulation:
         else:
             traj = None
         return final,traj
-    def ReleaseFingers(self,target=None,movingdir=None,execute=None,outputtraj=None,outputfinal=None,coarsestep=None):
+    def ReleaseFingers(self,target=None,movingdir=None,execute=None,outputtraj=None,outputfinal=None,coarsestep=None,translationstepmult=None,finestep=None):
         """See :ref:`module-taskmanipulation-releasefingers`
         """
         cmd = 'ReleaseFingers '
@@ -166,6 +170,10 @@ class TaskManipulation:
             cmd += 'outputfinal'
         if coarsestep is not None:
             cmd += 'coarsestep %.15e '%coarsestep
+        if translationstepmult is not None:
+            cmd += 'translationstepmult %.15e '%translationstepmult
+        if finestep is not None:
+            cmd += 'finestep %.15e '%finestep
         res = self.prob.SendCommand(cmd)
         if res is None:
             raise planning_error('ReleaseFingers')
@@ -180,7 +188,7 @@ class TaskManipulation:
         else:
             traj = None
         return final,traj
-    def ReleaseActive(self,movingdir=None,execute=None,outputtraj=None,outputfinal=None):
+    def ReleaseActive(self,movingdir=None,execute=None,outputtraj=None,outputfinal=None,translationstepmult=None,finestep=None):
         """See :ref:`module-taskmanipulation-releaseactive`
         """
         cmd = 'ReleaseActive '
@@ -193,6 +201,10 @@ class TaskManipulation:
             cmd += 'outputtraj '
         if outputfinal:
             cmd += 'outputfinal'
+        if translationstepmult is not None:
+            cmd += 'translationstepmult %.15e '%translationstepmult
+        if finestep is not None:
+            cmd += 'finestep %.15e '%finestep
         res = self.prob.SendCommand(cmd)
         if res is None:
             raise planning_error('ReleaseActive')

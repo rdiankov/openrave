@@ -24,6 +24,29 @@
 #include <Inventor/nodes/SoFaceSet.h>
 #include <Inventor/nodes/SoMaterialBinding.h>
 
+#include <Inventor/actions/SoWriteAction.h>
+#include <Inventor/actions/SoToVRML2Action.h>
+#include <Inventor/VRMLnodes/SoVRMLGroup.h>
+
+static void SaveToVRML(SoNode * root, const char* filename)
+{
+    root->ref();
+    SoToVRML2Action tovrml2;
+    tovrml2.apply(root);
+    SoVRMLGroup *newroot = tovrml2.getVRML2SceneGraph();
+    newroot->ref();
+    root->unref();
+
+    SoOutput out;
+    out.openFile(filename);
+    out.setHeaderString("#VRML V2.0 utf8");
+
+    SoWriteAction wa(&out);
+    wa.apply(newroot);
+    out.closeFile();
+    newroot->unref();
+}
+
 Item::Item(QtCoinViewerPtr viewer) : _viewer(viewer)
 {
     // set up the Inventor nodes
@@ -283,6 +306,9 @@ void KinBodyItem::Load()
 
     _bReload = false;
     _bDrawStateChanged = false;
+
+    string name = _pchain->GetName() + string(".wrl");
+    //SaveToVRML(_ivGeom,name.c_str());
 }
 
 bool KinBodyItem::UpdateFromIv()

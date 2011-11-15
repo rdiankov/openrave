@@ -771,6 +771,11 @@ object pyReverseTrajectory(PyTrajectoryBasePtr pytraj)
     return object(openravepy::toPyTrajectory(OpenRAVE::planningutils::ReverseTrajectory(openravepy::GetTrajectory(pytraj)),openravepy::toPyEnvironment(pytraj)));
 }
 
+void pyRetimeActiveDOFTrajectory(PyTrajectoryBasePtr pytraj, PyRobotBasePtr pyrobot, bool hastimestamps)
+{
+    OpenRAVE::planningutils::RetimeActiveDOFTrajectory(openravepy::GetTrajectory(pytraj),openravepy::GetRobot(pyrobot),hastimestamps);
+}
+
 }
 
 BOOST_PYTHON_FUNCTION_OVERLOADS(RaveInitialize_overloads, RaveInitialize, 0, 2)
@@ -996,6 +1001,8 @@ void init_openravepy_global()
         scope x = class_<object>("planningutils")
                   .def("ReverseTrajectory",planningutils::pyReverseTrajectory,DOXY_FN1(ReverseTrajectory))
                   .staticmethod("ReverseTrajectory")
+                  .def("RetimeActiveDOFTrajectory",planningutils::pyRetimeActiveDOFTrajectory,DOXY_FN1(RetimeActiveDOFTrajectory))
+                  .staticmethod("RetimeActiveDOFTrajectory")
         ;
     }
 

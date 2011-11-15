@@ -130,7 +130,7 @@ public:
             ptraj->Init(newspec);
 
             // separate all the acceleration switches into individual points
-            vector<dReal> vtrajpoints(newspec.GetDOF());
+            vtrajpoints.resize(newspec.GetDOF());
             ConfigurationSpecification::ConvertData(vtrajpoints.begin(),newspec,dynamicpath.ramps.at(0).x0.begin(),oldspec,1,GetEnv(),true);
             ConfigurationSpecification::ConvertData(vtrajpoints.begin(),newspec,dynamicpath.ramps.at(0).dx0.begin(),velspec,1,GetEnv(),false);
             vtrajpoints.at(waypointoffset) = 1;

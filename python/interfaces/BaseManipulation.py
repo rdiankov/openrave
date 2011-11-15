@@ -123,7 +123,7 @@ class BaseManipulation:
             raise planning_error('MoveActiveJoints')
         return res
 
-    def MoveToHandPosition(self,matrices=None,affinedofs=None,maxiter=None,maxtries=None,translation=None,rotation=None,seedik=None,constraintfreedoms=None,constraintmatrix=None,constrainterrorthresh=None,execute=None,outputtraj=None,steplength=None,goalsamples=None,ikparam=None,ikparams=None,jitter=None):
+    def MoveToHandPosition(self,matrices=None,affinedofs=None,maxiter=None,maxtries=None,translation=None,rotation=None,seedik=None,constraintfreedoms=None,constraintmatrix=None,constrainterrorthresh=None,execute=None,outputtraj=None,steplength=None,goalsamples=None,ikparam=None,ikparams=None,jitter=None,minimumgoalpaths=None):
         """See :ref:`module-basemanipulation-movetohandposition`
         """
         cmd = 'MoveToHandPosition '
@@ -163,6 +163,8 @@ class BaseManipulation:
             cmd += 'execute %d '%execute
         if outputtraj is not None and outputtraj:
             cmd += 'outputtraj '
+        if minimumgoalpaths is not None:
+            cmd += 'minimumgoalpaths %d '%minimumgoalpaths
         res = self.prob.SendCommand(cmd)
         if res is None:
             raise planning_error('MoveToHandPosition')

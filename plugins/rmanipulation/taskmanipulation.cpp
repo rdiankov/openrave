@@ -91,11 +91,14 @@ Task-based manipulation planning involving target objects. A lot of the algorith
         RegisterCommand("EvaluateConstraints",boost::bind(&TaskManipulation::EvaluateConstraints,this,_1,_2),
                         "Instantiates a jacobian constraint function and runs it on several examples.\n"
                         "The constraints work on the active degress of freedom of the manipulator starting from the current configuration");
+        RegisterCommand("SetMinimumGoalPaths",boost::bind(&TaskManipulation::SetMinimumGoalPathsCommand,this,_1,_2),
+                        "Sets _minimumgoalpaths for all planner parameters.");
 #ifdef HAVE_BOOST_REGEX
         RegisterCommand("SwitchModels",boost::bind(&TaskManipulation::SwitchModels,this,_1,_2),
                         "Switches between thin and fat models for planning.");
 #endif
         _fMaxVelMult=1;
+        _minimumgoalpaths=1;
     }
     virtual ~TaskManipulation()
     {
@@ -130,6 +133,7 @@ Task-based manipulation planning involving target objects. A lot of the algorith
         string name;
         stringstream ss(args);
         _fMaxVelMult=1;
+        _minimumgoalpaths=1;
         ss >> _strRobotName;
 
         string plannername, graspername = "Grasper";
@@ -988,6 +992,12 @@ protected:
                 sinput >> graspparams->fcoarsestep;
                 graspparams->ffinestep = graspparams->fcoarsestep * 0.01;     // always make it 100x more accurate
             }
+            else if( cmd == "finestep" ) {
+                sinput >> graspparams->ffinestep;
+            }
+            else if( cmd == "translationstepmult" ) {
+                sinput >> graspparams->ftranslationstepmult;
+            }
             else {
                 RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
@@ -1099,6 +1109,12 @@ protected:
             else if( cmd == "coarsestep" ) {
                 sinput >> graspparams->fcoarsestep;
                 graspparams->ffinestep = graspparams->fcoarsestep * 0.01;     // always make it 100x more accurate
+            }
+            else if( cmd == "finestep" ) {
+                sinput >> graspparams->ffinestep;
+            }
+            else if( cmd == "translationstepmult" ) {
+                sinput >> graspparams->ftranslationstepmult;
             }
             else {
                 RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
@@ -1217,18 +1233,29 @@ protected:
         string cmd;
         while(!sinput.eof()) {
             sinput >> cmd;
-            if( !sinput )
+            if( !sinput ) {
                 break;
+            }
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
 
-            if( cmd == "execute" )
+            if( cmd == "execute" ) {
                 sinput >> bExecute;
-            else if( cmd == "outputtraj" )
+            }
+            else if( cmd == "outputtraj" ) {
                 pOutputTrajStream = boost::shared_ptr<ostream>(&sout,null_deleter());
-            else if( cmd == "outputfinal" )
+            }
+            else if( cmd == "outputfinal" ) {
                 bOutputFinal = true;
-            else if( cmd == "writetraj" )
+            }
+            else if( cmd == "writetraj" ) {
                 sinput >> strtrajfilename;
+            }
+            else if( cmd == "finestep" ) {
+                sinput >> graspparams->ffinestep;
+            }
+            else if( cmd == "translationstepmult" ) {
+                sinput >> graspparams->ftranslationstepmult;
+            }
             else if( cmd == "movingdir" ) {
                 // moving direction, has to be of size activedof
                 FOREACH(it, graspparams->vgoalconfig)
@@ -1455,7 +1482,8 @@ protected:
         if( GetEnv()->CheckCollision(KinBodyConstPtr(_robot)) )
             RAVELOG_WARN("Hand in collision\n");
 
-        PlannerBase::PlannerParametersPtr params(new PlannerBase::PlannerParameters());
+        RRTParametersPtr params(new RRTParameters());
+        params->_minimumgoalpaths = _minimumgoalpaths;
         _robot->SetActiveDOFs(activejoints);
         params->SetRobotActiveJoints(_robot);
         //params->_sPathOptimizationPlanner = ""; // no smoothing
@@ -1704,6 +1732,13 @@ protected:
         }
     }
 
+    bool SetMinimumGoalPathsCommand(ostream& sout, istream& sinput)
+    {
+        sinput >> _minimumgoalpaths;
+        BOOST_ASSERT(_minimumgoalpaths>=0);
+        return !!sinput;
+    }
+
     string _strRobotName;     ///< name of the active robot
     RobotBasePtr _robot;
     dReal _fMaxVelMult;
@@ -1713,7 +1748,7 @@ protected:
     list<SwitchModelContainerPtr> _listSwitchModels;
     TrajectoryBasePtr _phandtraj;
     vector<dReal> _vFinalGripperValues;
-
+    int _minimumgoalpaths;
     friend class SwitchModelState;
 };
 
