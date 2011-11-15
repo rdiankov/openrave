@@ -42,7 +42,7 @@ inline static uint32_t GetMilliTime()
 #endif
 
 // quit after 100 milliseconds
-IkFilterReturn MyTimeoutFilter(std::vector<dReal>&, RobotBase::ManipulatorPtr, const IkParameterization&, uint32_t starttime)
+IkFilterReturn MyTimeoutFilter(std::vector<dReal>&, RobotBase::ManipulatorConstPtr, const IkParameterization&, uint32_t starttime)
 {
     if( GetMilliTime()-starttime > 100 ) {
         RAVELOG_INFO("quitting\n");
