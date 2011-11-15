@@ -15,6 +15,9 @@ using namespace OpenRAVE;
 using namespace std;
 
 #ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+
 inline static uint32_t GetMilliTime()
 {
     LARGE_INTEGER count, freq;

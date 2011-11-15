@@ -236,7 +236,7 @@ if( MSVC )
 
   check_include_file(stdint.h HAVE_STDINT_H)
   if( NOT HAVE_STDINT_H )
-    install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/msvc_include/stdint.h DESTINATION include/openrave-${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}/openrave COMPONENT ${COMPONENT_PREFIX}dev)
+    install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/msvc_include/stdint.h DESTINATION include/openrave-${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR} COMPONENT ${COMPONENT_PREFIX}dev)
     include_directories(${CMAKE_CURRENT_SOURCE_DIR}/msvc_include)
   endif()
   

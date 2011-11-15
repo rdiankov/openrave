@@ -1725,7 +1725,11 @@ void ConfigurationSpecification::ConvertGroupData(std::vector<dReal>::iterator i
     }
     if( gsource.name == gtarget.name ) {
         BOOST_ASSERT(gsource.dof==gtarget.dof);
-        for(size_t i = 0; i < numpoints; ++i, itsourcedata += sourcestride, ittargetdata += targetstride) {
+        for(size_t i = 0; i < numpoints; ++i) {
+			if( i != 0 ) {
+				itsourcedata += sourcestride;
+				ittargetdata += targetstride;
+			}
             std::copy(itsourcedata,itsourcedata+gsource.dof,ittargetdata);
         }
     }
