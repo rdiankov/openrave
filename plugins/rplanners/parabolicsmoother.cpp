@@ -167,7 +167,7 @@ public:
                     itrampnd->Derivative(vswitchtimes[i],vconfig);
                     ConfigurationSpecification::ConvertData(ittargetdata,newspec,vconfig.begin(),velspec,1,GetEnv(),false);
                     *(ittargetdata+timeoffset) = vswitchtimes[i]-prevtime;
-                    *(ittargetdata+waypointoffset) = dReal(i==0);
+                    *(ittargetdata+waypointoffset) = dReal(i+1==vswitchtimes.size());
                     ittargetdata += newspec.GetDOF();
                     prevtime = vswitchtimes[i];
                 }

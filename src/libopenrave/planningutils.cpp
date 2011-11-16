@@ -359,6 +359,22 @@ TrajectoryBasePtr ReverseTrajectory(TrajectoryBaseConstPtr sourcetraj)
 TrajectoryBasePtr MergeTrajectories(const std::list<TrajectoryBaseConstPtr>& listtrajectories)
 {
     TrajectoryBasePtr presulttraj;
+    if( listtrajectories.size() == 0 ) {
+        return presulttraj;
+    }
+    ConfigurationSpecification spec;
+    vector<ConfigurationSpecification::Group> vtimegroups; vtimegroups.reserve(listtrajectories.size());
+    int totaldof = 0;
+    FOREACHC(ittraj,listtrajectories) {
+        vtimegroups.push_back((*ittraj)->GetConfigurationSpecification().GetGroupFromName("deltatime"));
+        spec += (*ittraj)->GetConfigurationSpecification();
+        totaldof += (*ittraj)->GetConfigurationSpecification().GetDOF();
+    }
+    if( totaldof-3 != spec.GetDOF() ) {
+        throw OPENRAVE_EXCEPTION_FORMAT("merged configuration needs to have %d DOF, currently has %d",(totaldof-3)%spec.GetDOF(),ORE_InvalidArguments);
+    }
+    presulttraj = RaveCreateTrajectory(listtrajectories.front()->GetEnv(),listtrajectories.front()->GetXMLId());
+
     return presulttraj;
 }
 
