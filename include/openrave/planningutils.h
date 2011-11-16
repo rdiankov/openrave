@@ -72,6 +72,13 @@ OPENRAVE_API void ConvertTrajectorySpecification(TrajectoryBasePtr traj, const C
 /// Velocities are just negated and the new trajectory is not guaranteed to be executable or valid
 OPENRAVE_API TrajectoryBasePtr ReverseTrajectory(TrajectoryBaseConstPtr traj);
 
+/// \brief merges the contents of multiple trajectories into one so that everything can be played simultaneously.
+///
+/// Each trajectory needs to have timestamps. The trajectories cannot share common configuration data because only one
+/// trajectories's data can be set at a time.
+/// \throw openrave_exception throws an exception if the trajectory data is incompatible and cannot be merged.
+OPENRAVE_API TrajectoryBasePtr MergeTrajectories(const std::list<TrajectoryBaseConstPtr>& listtrajectories);
+
 /// \brief Line collision
 class OPENRAVE_API LineCollisionConstraint
 {

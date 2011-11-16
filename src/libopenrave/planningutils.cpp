@@ -356,6 +356,12 @@ TrajectoryBasePtr ReverseTrajectory(TrajectoryBaseConstPtr sourcetraj)
     return traj;
 }
 
+TrajectoryBasePtr MergeTrajectories(const std::list<TrajectoryBaseConstPtr>& listtrajectories)
+{
+    TrajectoryBasePtr presulttraj;
+    return presulttraj;
+}
+
 LineCollisionConstraint::LineCollisionConstraint()
 {
     _report.reset(new CollisionReport());

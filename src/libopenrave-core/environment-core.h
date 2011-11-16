@@ -1092,6 +1092,9 @@ public:
                 return RobotBasePtr();
             }
         }
+        else if( _IsIVData(data) ) {
+            throw OPENRAVE_EXCEPTION_FORMAT0("iv data not supported",ORE_InvalidArguments);
+        }
         else {
             InterfaceBasePtr pinterface = robot;
             BaseXMLReaderPtr preader = OpenRAVEXMLParser::CreateInterfaceReader(shared_from_this(), PT_Robot, pinterface, "robot", atts);
@@ -1205,6 +1208,9 @@ public:
             if( !RaveParseXData(shared_from_this(), body, data, atts) ) {
                 return RobotBasePtr();
             }
+        }
+        else if( _IsIVData(data) ) {
+            throw OPENRAVE_EXCEPTION_FORMAT0("iv data not supported",ORE_InvalidArguments);
         }
         else {
             InterfaceBasePtr pinterface = body;
@@ -1996,6 +2002,16 @@ protected:
     static bool _IsXData(const std::string& data)
     {
         return data.size() >= 4 && data[0] == 'x' && data[1] == 'o' && data[2] == 'f' && data[3] == ' ';
+    }
+
+    static bool _IsIVData(const std::string& data)
+    {
+        if( data.size() >= 10 ) {
+            if( data.substr(0,10) == string("#Inventor ") ) {
+                return true;
+            }
+        }
+        return false;
     }
 
     static bool _IsOpenRAVEFile(const std::string& filename)

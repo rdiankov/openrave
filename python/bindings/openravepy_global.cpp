@@ -206,13 +206,16 @@ public:
     }
 };
 
-class PyConfigurationSpecification
+class PyConfigurationSpecification : public boost::enable_shared_from_this<PyConfigurationSpecification>
 {
 public:
     PyConfigurationSpecification() {
     }
     PyConfigurationSpecification(const ConfigurationSpecification& spec) {
         _spec = spec;
+    }
+    PyConfigurationSpecification(PyConfigurationSpecificationPtr pyspec) {
+        _spec = pyspec->_spec;
     }
     virtual ~PyConfigurationSpecification() {
     }
@@ -294,11 +297,22 @@ public:
 //
 //    static void ConvertData(std::vector<dReal>::iterator ittargetdata, const ConfigurationSpecification& targetspec, std::vector<dReal>::const_iterator itsourcedata, const ConfigurationSpecification& sourcespec, size_t numpoints, EnvironmentBaseConstPtr penv, bool filluninitialized = true);
 
-    bool __eq__(boost::shared_ptr<PyConfigurationSpecification> p) {
+    bool __eq__(PyConfigurationSpecificationPtr p) {
         return !!p && _spec==p->_spec;
     }
-    bool __ne__(boost::shared_ptr<PyConfigurationSpecification> p) {
+    bool __ne__(PyConfigurationSpecificationPtr p) {
         return !p || _spec!=p->_spec;
+    }
+
+    PyConfigurationSpecificationPtr __add__(PyConfigurationSpecificationPtr r)
+    {
+        return PyConfigurationSpecificationPtr(new PyConfigurationSpecification(_spec + r->_spec));
+    }
+
+    PyConfigurationSpecificationPtr __iadd__(PyConfigurationSpecificationPtr r)
+    {
+        _spec += r->_spec;
+        return shared_from_this();
     }
 
     ConfigurationSpecification _spec;
@@ -776,6 +790,24 @@ void pyRetimeActiveDOFTrajectory(PyTrajectoryBasePtr pytraj, PyRobotBasePtr pyro
     OpenRAVE::planningutils::RetimeActiveDOFTrajectory(openravepy::GetTrajectory(pytraj),openravepy::GetRobot(pyrobot),hastimestamps);
 }
 
+object pyMergeTrajectories(object pytrajectories)
+{
+    std::list<TrajectoryBaseConstPtr> listtrajectories;
+    PyEnvironmentBasePtr pyenv;
+    for(int i = 0; i < len(pytrajectories); ++i) {
+        extract<PyTrajectoryBasePtr> epytrajectory(pytrajectories[i]);
+        PyTrajectoryBasePtr pytrajectory = (PyTrajectoryBasePtr)epytrajectory;
+        if( !pyenv ) {
+            pyenv = openravepy::toPyEnvironment(pytrajectory);
+        }
+        else {
+            BOOST_ASSERT(pyenv == openravepy::toPyEnvironment(pytrajectory));
+        }
+        listtrajectories.push_back(openravepy::GetTrajectory(pytrajectory));
+    }
+    return object(openravepy::toPyTrajectory(OpenRAVE::planningutils::MergeTrajectories(listtrajectories),pyenv));
+}
+
 }
 
 BOOST_PYTHON_FUNCTION_OVERLOADS(RaveInitialize_overloads, RaveInitialize, 0, 2)
@@ -919,6 +951,7 @@ void init_openravepy_global()
 
     {
         scope configurationspecification = class_<PyConfigurationSpecification, PyConfigurationSpecificationPtr >("ConfigurationSpecification",DOXY_CLASS(ConfigurationSpecification))
+                                           .def(init<PyConfigurationSpecificationPtr>(args("spec")) )
                                            .def("GetGroupFromName",&PyConfigurationSpecification::GetGroupFromName, return_value_policy<copy_const_reference>()) //, DOXY_FN(ConfigurationSpecification,GetGroupFromName))
                                            .def("GetDOF",&PyConfigurationSpecification::GetDOF,DOXY_FN(ConfigurationSpecification,GetDOF))
                                            .def("IsValid",&PyConfigurationSpecification::IsValid,DOXY_FN(ConfigurationSpecification,IsValid))
@@ -927,6 +960,8 @@ void init_openravepy_global()
                                            .def("InsertDeltaTime",&PyConfigurationSpecification::InsertDeltaTime,args("data","deltatime"),DOXY_FN(ConfigurationSpecification,InsertDeltaTime))
                                            .def("__eq__",&PyConfigurationSpecification::__eq__)
                                            .def("__ne__",&PyConfigurationSpecification::__ne__)
+                                           .def("__add__",&PyConfigurationSpecification::__add__)
+                                           .def("__iadd__",&PyConfigurationSpecification::__iadd__);
         ;
 
         {
@@ -999,10 +1034,12 @@ void init_openravepy_global()
 
     {
         scope x = class_<object>("planningutils")
-                  .def("ReverseTrajectory",planningutils::pyReverseTrajectory,DOXY_FN1(ReverseTrajectory))
+                  .def("ReverseTrajectory",planningutils::pyReverseTrajectory,args("trajectory"),DOXY_FN1(ReverseTrajectory))
                   .staticmethod("ReverseTrajectory")
-                  .def("RetimeActiveDOFTrajectory",planningutils::pyRetimeActiveDOFTrajectory,DOXY_FN1(RetimeActiveDOFTrajectory))
+                  .def("RetimeActiveDOFTrajectory",planningutils::pyRetimeActiveDOFTrajectory,args("trajectory"),DOXY_FN1(RetimeActiveDOFTrajectory))
                   .staticmethod("RetimeActiveDOFTrajectory")
+                  .def("MergeTrajectories",planningutils::pyMergeTrajectories,args("trajectories"),DOXY_FN1(MergeTrajectories))
+                  .staticmethod("MergeTrajectories")
         ;
     }
 
