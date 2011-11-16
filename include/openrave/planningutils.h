@@ -74,7 +74,7 @@ OPENRAVE_API TrajectoryBasePtr ReverseTrajectory(TrajectoryBaseConstPtr traj);
 
 /// \brief merges the contents of multiple trajectories into one so that everything can be played simultaneously.
 ///
-/// Each trajectory needs to have timestamps. The trajectories cannot share common configuration data because only one
+/// Each trajectory needs to have a 'deltatime' group for timestamps. The trajectories cannot share common configuration data because only one
 /// trajectories's data can be set at a time.
 /// \throw openrave_exception throws an exception if the trajectory data is incompatible and cannot be merged.
 OPENRAVE_API TrajectoryBasePtr MergeTrajectories(const std::list<TrajectoryBaseConstPtr>& listtrajectories);

@@ -1241,15 +1241,26 @@ ConfigurationSpecification::Group& ConfigurationSpecification::GetGroupFromName(
 
 std::vector<ConfigurationSpecification::Group>::const_iterator ConfigurationSpecification::FindCompatibleGroup(const ConfigurationSpecification::Group& g, bool exactmatch) const
 {
+    std::vector<ConfigurationSpecification::Group>::const_iterator itcompatgroup = FindCompatibleGroup(g.name,exactmatch);
+    if( itcompatgroup != _vgroups.end() && exactmatch ) {
+        if( itcompatgroup->dof != g.dof ) {
+            return _vgroups.end();
+        }
+    }
+    return itcompatgroup;
+}
+
+std::vector<ConfigurationSpecification::Group>::const_iterator ConfigurationSpecification::FindCompatibleGroup(const std::string& name, bool exactmatch) const
+{
     std::vector<ConfigurationSpecification::Group>::const_iterator itsemanticmatch = _vgroups.end();
     uint32_t bestmatchscore = 0;
-    stringstream ss(g.name);
+    stringstream ss(name);
     std::vector<std::string> tokens((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
     if( tokens.size() == 0 ) {
         return _vgroups.end();
     }
     FOREACHC(itgroup,_vgroups) {
-        if( itgroup->name == g.name && itgroup->dof == g.dof) {
+        if( itgroup->name == name ) {
             return itgroup;
         }
         if( exactmatch ) {
@@ -1285,27 +1296,37 @@ std::vector<ConfigurationSpecification::Group>::const_iterator ConfigurationSpec
 
 std::vector<ConfigurationSpecification::Group>::const_iterator ConfigurationSpecification::FindTimeDerivativeGroup(const ConfigurationSpecification::Group& g, bool exactmatch) const
 {
-    ConfigurationSpecification::Group gderivative;
-    if( g.name.size() >= 12 && g.name.substr(0,12) == "joint_values" ) {
-        gderivative.name = string("joint_velocities") + g.name.substr(12);
+    std::vector<ConfigurationSpecification::Group>::const_iterator itcompatgroup = FindTimeDerivativeGroup(g.name,exactmatch);
+    if( itcompatgroup != _vgroups.end() ) {
+        if( itcompatgroup->dof != g.dof ) {
+            return _vgroups.end();
+        }
     }
-    else if( g.name.size() >= 16 && g.name.substr(0,16) == "joint_velocities" ) {
-        gderivative.name = string("joint_accelerations") + g.name.substr(16);
+    return itcompatgroup;
+}
+
+std::vector<ConfigurationSpecification::Group>::const_iterator ConfigurationSpecification::FindTimeDerivativeGroup(const std::string& name, bool exactmatch) const
+{
+    string derivativename;
+    if( name.size() >= 12 && name.substr(0,12) == "joint_values" ) {
+        derivativename = string("joint_velocities") + name.substr(12);
     }
-    else if( g.name.size() >= 16 && g.name.substr(0,16) == "affine_transform" ) {
-        gderivative.name = string("affine_velocities") + g.name.substr(16);
+    else if( name.size() >= 16 && name.substr(0,16) == "joint_velocities" ) {
+        derivativename = string("joint_accelerations") + name.substr(16);
     }
-    else if( g.name.size() >= 17 && g.name.substr(0,17) == "affine_velocities" ) {
-        gderivative.name = string("affine_accelerations") + g.name.substr(17);
+    else if( name.size() >= 16 && name.substr(0,16) == "affine_transform" ) {
+        derivativename = string("affine_velocities") + name.substr(16);
     }
-    else if( g.name.size() >= 14 && g.name.substr(0,14) == "ikparam_values" ) {
-        gderivative.name = string("ikparam_velocities") + g.name.substr(14);
+    else if( name.size() >= 17 && name.substr(0,17) == "affine_velocities" ) {
+        derivativename = string("affine_accelerations") + name.substr(17);
+    }
+    else if( name.size() >= 14 && name.substr(0,14) == "ikparam_values" ) {
+        derivativename = string("ikparam_velocities") + name.substr(14);
     }
     else {
         return _vgroups.end();
     }
-    gderivative.dof = g.dof;
-    return FindCompatibleGroup(gderivative,exactmatch);
+    return FindCompatibleGroup(derivativename,exactmatch);
 }
 
 void ConfigurationSpecification::AddVelocityGroups(bool adddeltatime)
@@ -1371,7 +1392,7 @@ void ConfigurationSpecification::AddVelocityGroups(bool adddeltatime)
         _vgroups.push_back(*itadd);
     }
     if( !hasdeltatime && adddeltatime ) {
-        AddDeltaTime();
+        AddDeltaTimeGroup();
     }
 }
 
@@ -1436,7 +1457,7 @@ void ConfigurationSpecification::ResetGroupOffsets()
     }
 }
 
-int ConfigurationSpecification::AddDeltaTime()
+int ConfigurationSpecification::AddDeltaTimeGroup()
 {
     int dof = 0;
     for(size_t i = 0; i < _vgroups.size(); ++i) {
@@ -1449,6 +1470,39 @@ int ConfigurationSpecification::AddDeltaTime()
     g.name = "deltatime";
     g.offset = dof;
     g.dof = 1;
+    _vgroups.push_back(g);
+    return g.offset;
+}
+
+int ConfigurationSpecification::AddGroup(const std::string& name, int dof, const std::string& interpolation)
+{
+    BOOST_ASSERT(name.size()>0);
+    stringstream ss(name);
+    std::vector<std::string> tokens((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
+    int specdof = 0;
+    for(size_t i = 0; i < _vgroups.size(); ++i) {
+        specdof = max(specdof,_vgroups[i].offset+_vgroups[i].dof);
+        if( _vgroups[i].name == name ) {
+            BOOST_ASSERT(_vgroups[i].dof==dof);
+            return _vgroups[i].offset;
+        }
+        else if( _vgroups[i].name.size() >= tokens[0].size() && _vgroups[i].name.substr(0,tokens[0].size()) == tokens[0] ) {
+            // first token matches, check if the next token does also
+            ss.clear();
+            ss.str(_vgroups[i].name);
+            std::vector<std::string> newtokens((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
+            if( newtokens.size() >= 2 && tokens.size() >= 2 ) {
+                if( newtokens[1] == tokens[1] ) {
+                    throw OPENRAVE_EXCEPTION_FORMAT("new group '%s' conflicts with existing group '%s'",name%_vgroups[i].name,ORE_InvalidArguments);
+                }
+            }
+        }
+    }
+    ConfigurationSpecification::Group g;
+    g.name = name;
+    g.offset = specdof;
+    g.dof = dof;
+    g.interpolation = interpolation;
     _vgroups.push_back(g);
     return g.offset;
 }
@@ -1813,7 +1867,7 @@ static void ConvertDOFRotation_QuatFrom3D(std::vector<dReal>::iterator ittarget,
     *(ittarget+3) = quat[3];
 }
 
-void ConfigurationSpecification::ConvertGroupData(std::vector<dReal>::iterator ittargetdata, size_t targetstride, const ConfigurationSpecification::Group& gtarget, std::vector<dReal>::const_iterator itsourcedata, size_t sourcestride, const ConfigurationSpecification::Group& gsource, size_t numpoints, EnvironmentBaseConstPtr penv)
+void ConfigurationSpecification::ConvertGroupData(std::vector<dReal>::iterator ittargetdata, size_t targetstride, const ConfigurationSpecification::Group& gtarget, std::vector<dReal>::const_iterator itsourcedata, size_t sourcestride, const ConfigurationSpecification::Group& gsource, size_t numpoints, EnvironmentBaseConstPtr penv, bool filluninitialized)
 {
     if( numpoints > 1 ) {
         BOOST_ASSERT(targetstride != 0 && sourcestride != 0 );
@@ -1875,7 +1929,7 @@ void ConfigurationSpecification::ConvertGroupData(std::vector<dReal>::iterator i
                 }
             }
 
-            if( bUninitializedData ) {
+            if( bUninitializedData && filluninitialized ) {
                 KinBodyPtr pbody;
                 if( targettokens.size() > 1 ) {
                     pbody = penv->GetKinBody(targettokens.at(1));
@@ -1976,7 +2030,7 @@ void ConfigurationSpecification::ConvertGroupData(std::vector<dReal>::iterator i
                     }
                     BOOST_ASSERT(!!rotconverterfn);
                 }
-                if( uninitdata ) {
+                if( uninitdata && filluninitialized ) {
                     // initialize with the current body values
                     KinBodyPtr pbody;
                     if( targettokens.size() > 1 ) {
@@ -2019,7 +2073,7 @@ void ConfigurationSpecification::ConvertGroupData(std::vector<dReal>::iterator i
                                     rotconverterfn(ittargetdata+targetrotationstart,itsourcedata+sourcerotationstart);
                                 }
                             }
-                            else {
+                            else if( filluninitialized ) {
                                 *(ittargetdata+j) = vdefaultvalues.at(j);
                             }
                         }
@@ -2062,7 +2116,7 @@ void ConfigurationSpecification::ConvertGroupData(std::vector<dReal>::iterator i
                 if( vtransferindices[j] >= 0 ) {
                     *(ittargetdata+j) = *(itsourcedata+vtransferindices[j]);
                 }
-                else {
+                else if( filluninitialized ) {
                     *(ittargetdata+j) = vdefaultvalues.at(j);
                 }
             }
@@ -2075,7 +2129,7 @@ void ConfigurationSpecification::ConvertData(std::vector<dReal>::iterator ittarg
     for(size_t igroup = 0; igroup < targetspec._vgroups.size(); ++igroup) {
         std::vector<ConfigurationSpecification::Group>::const_iterator itcompatgroup = sourcespec.FindCompatibleGroup(targetspec._vgroups[igroup]);
         if( itcompatgroup != sourcespec._vgroups.end() ) {
-            ConfigurationSpecification::ConvertGroupData(ittargetdata+targetspec._vgroups[igroup].offset, targetspec.GetDOF(), targetspec._vgroups[igroup], itsourcedata+itcompatgroup->offset, sourcespec.GetDOF(), *itcompatgroup,numpoints,penv);
+            ConfigurationSpecification::ConvertGroupData(ittargetdata+targetspec._vgroups[igroup].offset, targetspec.GetDOF(), targetspec._vgroups[igroup], itsourcedata+itcompatgroup->offset, sourcespec.GetDOF(), *itcompatgroup,numpoints,penv,filluninitialized);
         }
         else if( filluninitialized ) {
             vector<dReal> vdefaultvalues(targetspec._vgroups[igroup].dof,0);

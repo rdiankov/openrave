@@ -363,18 +363,89 @@ TrajectoryBasePtr MergeTrajectories(const std::list<TrajectoryBaseConstPtr>& lis
         return presulttraj;
     }
     ConfigurationSpecification spec;
-    vector<ConfigurationSpecification::Group> vtimegroups; vtimegroups.reserve(listtrajectories.size());
-    int totaldof = 0;
+    vector<dReal> vpointdata;
+    vector<dReal> vtimes; vtimes.reserve(listtrajectories.front()->GetNumWaypoints());
+    int totaldof = 1; // for delta time
     FOREACHC(ittraj,listtrajectories) {
-        vtimegroups.push_back((*ittraj)->GetConfigurationSpecification().GetGroupFromName("deltatime"));
-        spec += (*ittraj)->GetConfigurationSpecification();
-        totaldof += (*ittraj)->GetConfigurationSpecification().GetDOF();
+        const ConfigurationSpecification& trajspec = (*ittraj)->GetConfigurationSpecification();
+        ConfigurationSpecification::Group gtime = trajspec.GetGroupFromName("deltatime");
+        spec += trajspec;
+        totaldof += trajspec.GetDOF()-1;
+        if( trajspec.FindCompatibleGroup("iswaypoint",true) != trajspec._vgroups.end() ) {
+            totaldof -= 1;
+        }
+        dReal curtime = 0;
+        for(size_t ipoint = 0; ipoint < (*ittraj)->GetNumWaypoints(); ++ipoint) {
+            (*ittraj)->GetWaypoint(ipoint,vpointdata);
+            curtime += vpointdata.at(gtime.offset);
+            vector<dReal>::iterator it = lower_bound(vtimes.begin(),vtimes.end(),curtime);
+            if( *it != curtime ) {
+                vtimes.insert(it,curtime);
+            }
+        }
     }
-    if( totaldof-3 != spec.GetDOF() ) {
-        throw OPENRAVE_EXCEPTION_FORMAT("merged configuration needs to have %d DOF, currently has %d",(totaldof-3)%spec.GetDOF(),ORE_InvalidArguments);
+
+    vector<ConfigurationSpecification::Group>::const_iterator itwaypointgroup = spec.FindCompatibleGroup("iswaypoint",true);
+    vector<dReal> vwaypoints;
+    if( itwaypointgroup != spec._vgroups.end() ) {
+        totaldof += 1;
+        vwaypoints.resize(vtimes.size(),0);
+    }
+
+    if( totaldof != spec.GetDOF() ) {
+        throw OPENRAVE_EXCEPTION_FORMAT("merged configuration needs to have %d DOF, currently has %d",totaldof%spec.GetDOF(),ORE_InvalidArguments);
     }
     presulttraj = RaveCreateTrajectory(listtrajectories.front()->GetEnv(),listtrajectories.front()->GetXMLId());
+    presulttraj->Init(spec);
 
+    if( vtimes.size() == 0 ) {
+        return presulttraj;
+    }
+
+    // need to find all waypoints
+    vector<dReal> vtemp, vnewdata;
+
+    int deltatimeoffset = spec.GetGroupFromName("deltatime").offset;
+    FOREACHC(ittraj,listtrajectories) {
+        vector<ConfigurationSpecification::Group>::const_iterator itwaypointgrouptraj = (*ittraj)->GetConfigurationSpecification().FindCompatibleGroup("iswaypoint",true);
+        int waypointoffset = -1;
+        if( itwaypointgrouptraj != (*ittraj)->GetConfigurationSpecification()._vgroups.end() ) {
+            waypointoffset = itwaypointgrouptraj->offset;
+        }
+        if( vnewdata.size() == 0 ) {
+            vnewdata.reserve(vtimes.size()*spec.GetDOF());
+            for(size_t i = 0; i < vtimes.size(); ++i) {
+                (*ittraj)->Sample(vtemp,vtimes[i],spec);
+                vnewdata.insert(vnewdata.end(),vtemp.begin(),vtemp.end());
+                if( waypointoffset >= 0 ) {
+                    vwaypoints[i] += vtemp[waypointoffset];
+                }
+            }
+        }
+        else {
+            vpointdata.resize(0);
+            for(size_t i = 0; i < vtimes.size(); ++i) {
+                (*ittraj)->Sample(vtemp,vtimes[i]);
+                vpointdata.insert(vpointdata.end(),vtemp.begin(),vtemp.end());
+                if( waypointoffset >= 0 ) {
+                    vwaypoints[i] += vtemp[waypointoffset];
+                }
+            }
+            ConfigurationSpecification::ConvertData(vnewdata.begin(),spec,vpointdata.begin(),(*ittraj)->GetConfigurationSpecification(),vtimes.size(),presulttraj->GetEnv(),false);
+        }
+    }
+
+    vnewdata.at(deltatimeoffset) = vtimes[0];
+    for(size_t i = 1; i < vtimes.size(); ++i) {
+        vnewdata.at(i*spec.GetDOF()+deltatimeoffset) = vtimes[i]-vtimes[i-1];
+    }
+    if( itwaypointgroup != spec._vgroups.end() ) {
+        vnewdata.at(itwaypointgroup->offset) = vwaypoints[0];
+        for(size_t i = 1; i < vtimes.size(); ++i) {
+            vnewdata.at(i*spec.GetDOF()+itwaypointgroup->offset) = vwaypoints[i];
+        }
+    }
+    presulttraj->Insert(0,vnewdata);
     return presulttraj;
 }
 
