@@ -290,6 +290,37 @@ Loads the grasping model and moves the robot to the first grasp found
   taskmanip = interfaces.TaskManipulation(robot)
   taskmanip.CloseFingers()
   robot.WaitForController(0)
+
+Verifying a Trajectory
+----------------------
+
+Verify a trajectory to a grasp without executing anything.
+
+.. code-block:: python
+
+  from openravepy import *
+  import numpy, time
+  env=Environment()
+  env.Load('data/lab1.env.xml')
+  env.SetViewer('qtcoin')
+  robot = env.GetRobots()[0]
+  target = env.GetKinBody('mug1')
+  gmodel = databases.grasping.GraspingModel(robot,target)
+  if not gmodel.load():
+      gmodel.autogenerate()
+  
+  validgrasps, validindicees = gmodel.computeValidGrasps(returnnum=1)
+  basemanip = interfaces.BaseManipulation(robot)
+  with robot:
+      grasp = validgrasps[0]
+      gmodel.setPreshape(grasp)
+      T = gmodel.getGlobalGraspTransform(grasp,collisionfree=True)
+      trajdata = basemanip.MoveToHandPosition(matrices=[T],execute=False,outputtraj=True)
+      traj = RaveCreateTrajectory(env,'').deserialize(trajdata)
+      
+  print 'traj has %d waypoints, last waypoint is: %s'%(traj.GetNumWaypoints(),repr(traj.GetWaypoint(-1)))
+  robot.GetController().SetPath(traj)
+  robot.WaitForController(0)
   
 Logging
 -------

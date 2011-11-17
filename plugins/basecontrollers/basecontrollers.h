@@ -65,18 +65,18 @@ If SetDesired is called, only joint values will be set at every timestep leaving
             _cblimits = _probot->RegisterChangeCallback(KinBody::Prop_JointLimits,boost::bind(&IdealController::_SetJointLimits,boost::bind(&sptr_from<IdealController>, weak_controller())));
             _SetJointLimits();
 
-            _samplespec._vgroups.resize(2);
-            _samplespec._vgroups[0].offset = 0;
-            _samplespec._vgroups[0].dof = _probot->GetDOF();
+            _samplespecbase._vgroups.resize(2);
+            _samplespecbase._vgroups[0].offset = 0;
+            _samplespecbase._vgroups[0].dof = _probot->GetDOF();
             stringstream ss;
             ss << "joint_values " << _probot->GetName();
             for(int i = 0; i < _probot->GetDOF(); ++i) {
                 ss << " " << i;
             }
-            _samplespec._vgroups[0].name = ss.str();
-            _samplespec._vgroups[1].offset = _probot->GetDOF();
-            _samplespec._vgroups[1].dof = RaveGetAffineDOF(DOF_Transform);
-            _samplespec._vgroups[1].name = str(boost::format("affine_transform %s %d")%_probot->GetName()%DOF_Transform);
+            _samplespecbase._vgroups[0].name = ss.str();
+            _samplespecbase._vgroups[1].offset = _probot->GetDOF();
+            _samplespecbase._vgroups[1].dof = RaveGetAffineDOF(DOF_Transform);
+            _samplespecbase._vgroups[1].name = str(boost::format("affine_transform %s %d")%_probot->GetName()%DOF_Transform);
         }
         _bPause = false;
         return true;
@@ -135,7 +135,7 @@ If SetDesired is called, only joint values will be set at every timestep leaving
         if( !!ptraj ) {
             // see if at least one point can be sampled, this make it easier to debug bad trajectories
             vector<dReal> v;
-            ptraj->Sample(v,0,_samplespec);
+            ptraj->Sample(v,0,_samplespecbase);
             Transform t;
             RaveGetTransformFromAffineDOFValues(t,v.begin()+_probot->GetDOF(),DOF_Transform);
         }
@@ -152,8 +152,19 @@ If SetDesired is called, only joint values will be set at every timestep leaving
         _vecdesired.resize(0);
 
         if( !!_ptraj ) {
-            _bTrajHasJoints = ptraj->GetConfigurationSpecification().FindCompatibleGroup(_samplespec._vgroups.at(0)) != ptraj->GetConfigurationSpecification()._vgroups.end();
-            _bTrajHasTransform = ptraj->GetConfigurationSpecification().FindCompatibleGroup(_samplespec._vgroups.at(1)) != ptraj->GetConfigurationSpecification()._vgroups.end();
+            _bTrajHasJoints = ptraj->GetConfigurationSpecification().FindCompatibleGroup(_samplespecbase._vgroups.at(0).name,false) != ptraj->GetConfigurationSpecification()._vgroups.end();
+            _bTrajHasTransform = ptraj->GetConfigurationSpecification().FindCompatibleGroup(_samplespecbase._vgroups.at(1).name,false) != ptraj->GetConfigurationSpecification()._vgroups.end();
+            _bTrajHasGrab = false;
+            _samplespec = _samplespecbase;
+            FOREACHC(itgroup,ptraj->GetConfigurationSpecification()._vgroups) {
+                if( itgroup->name.size()>=4 && itgroup->name.substr(0,4) == "grab") {
+                    stringstream ss(itgroup->name);
+                    std::vector<std::string> tokens((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
+                    if( tokens.size() >= 2 && tokens[1] == _probot->GetName() ) {
+                        _samplespec._vgroups.push_back(*itgroup);
+                    }
+                }
+            }
             if( !!flog ) {
                 _ptraj->serialize(flog);
             }
@@ -333,7 +344,7 @@ private:
     RobotBasePtr _probot;               ///< controlled body
     dReal _fSpeed;                    ///< how fast the robot should go
     TrajectoryBaseConstPtr _ptraj;         ///< computed trajectory robot needs to follow in chunks of _pbody->GetDOF()
-    bool _bTrajHasJoints, _bTrajHasTransform;
+    bool _bTrajHasJoints, _bTrajHasTransform, _bTrajHasGrab;
 
     dReal fTime;
 
@@ -349,7 +360,7 @@ private:
     bool _bPause, _bIsDone, _bCheckCollision, _bThrowExceptions;
     CollisionReportPtr _report;
     UserDataPtr _cblimits;
-    ConfigurationSpecification _samplespec;
+    ConfigurationSpecification _samplespecbase, _samplespec;
     boost::mutex _mutex;
 };
 

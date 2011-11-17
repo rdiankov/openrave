@@ -842,7 +842,9 @@ public:
             - \b affine_velocities - The velocity (1/second) of the affine transformation [rotation axis, translation velocity], the name of the body can follow.
             - \b affine_accelerations - The velocity (1/second^2) of the affine transformation [rotation axis, translation velocity], the name of the body can follow.
             - \b ikparam_values - The values of an IkParmeterization. The ikparam type is stored as the second value in name
-            - \b ikparam_velocities - velociti of an IkParmeterization. The ikparam type is stored as the second value in name
+            - \b ikparam_velocities - velocity of an IkParmeterization. The ikparam type is stored as the second value in name
+            - \b iswaypoint - non-zero if the point represents a major knot point of the trajectory
+            - \b grab - Used to grab bodies given a robot's links. The name of the robot name along with the link indices to grab can follow.
          */
         std::string name;
         /** \brief Describes how the data should be interpolated. Common methods are:

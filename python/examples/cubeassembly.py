@@ -43,7 +43,7 @@ import multiprocessing
 
 from openravepy.examples import graspplanning
 
-class CubeAssembly(object):#metaclass.AutoReloader):
+class CubeAssembly(object):
     def __init__(self,robot):
         self.env=robot.GetEnv()
         self.robot=robot

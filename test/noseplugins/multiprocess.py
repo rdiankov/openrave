@@ -259,8 +259,7 @@ class MultiProcess(Plugin):
                                       loaderClass=self.loaderClass)
 
 class MultiProcessTestRunner(TextTestRunner):
-    waitkilltime = 5.0 # max time to wait to terminate a process that does not
-                       # respond to SIGINT
+    waitkilltime = 10.0 # max time to wait to terminate a process that does not respond to SIGINT
     def __init__(self, **kw):
         self.loaderClass = kw.pop('loaderClass', loader.defaultTestLoader)
         super(MultiProcessTestRunner, self).__init__(**kw)
