@@ -807,6 +807,11 @@ string poseSerialization(object o)
 namespace planningutils
 {
 
+void pyConvertTrajectorySpecification(PyTrajectoryBasePtr pytraj, PyConfigurationSpecificationPtr pyspec)
+{
+    OpenRAVE::planningutils::ConvertTrajectorySpecification(openravepy::GetTrajectory(pytraj),openravepy::GetConfigurationSpecification(pyspec));
+}
+
 object pyReverseTrajectory(PyTrajectoryBasePtr pytraj)
 {
     return object(openravepy::toPyTrajectory(OpenRAVE::planningutils::ReverseTrajectory(openravepy::GetTrajectory(pytraj)),openravepy::toPyEnvironment(pytraj)));
@@ -1068,6 +1073,8 @@ void init_openravepy_global()
 
     {
         scope x = class_<object>("planningutils")
+                  .def("ConvertTrajectorySpecification",planningutils::pyConvertTrajectorySpecification,args("trajectory","spec"),DOXY_FN1(ConvertTrajectorySpecification))
+                  .staticmethod("ConvertTrajectorySpecification")
                   .def("ReverseTrajectory",planningutils::pyReverseTrajectory,args("trajectory"),DOXY_FN1(ReverseTrajectory))
                   .staticmethod("ReverseTrajectory")
                   .def("RetimeActiveDOFTrajectory",planningutils::pyRetimeActiveDOFTrajectory,args("trajectory"),DOXY_FN1(RetimeActiveDOFTrajectory))

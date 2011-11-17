@@ -1580,6 +1580,28 @@ ConfigurationSpecification& ConfigurationSpecification::operator+= (const Config
                 // no idea how to merge two different ikparams...
                 listaddgroups.push_back(itrgroup);
             }
+            else if( targettokens.at(0).size() >= 4 && targettokens.at(0).substr(0,4) == "grab") {
+                if( targettokens.size() >= 2 && sourcetokens.size() >= 2 && targettokens.at(1) == sourcetokens.at(1) ) {
+                    BOOST_ASSERT((int)targettokens.size()>=itcompatgroup->dof+2);
+                    BOOST_ASSERT((int)sourcetokens.size()>=itrgroup->dof+2);
+                    vindices.resize(itcompatgroup->dof);
+                    for(size_t i = 0; i < vindices.size(); ++i) {
+                        vindices[i] = boost::lexical_cast<int>(targettokens.at(i+2));
+                    }
+                    for(int i = 0; i < itrgroup->dof; ++i) {
+                        int index = boost::lexical_cast<int>(sourcetokens.at(i+2));
+                        if( find(vindices.begin(),vindices.end(),index) == vindices.end() ) {
+                            itcompatgroup->name += string(" ");
+                            itcompatgroup->name += sourcetokens.at(i+2);
+                            itcompatgroup->dof += 1;
+                            vindices.push_back(index);
+                        }
+                    }
+                }
+                else {
+                    listaddgroups.push_back(itrgroup);
+                }
+            }
             else {
                 throw OPENRAVE_EXCEPTION_FORMAT("do not know how to merge group '%s' into '%s'",itrgroup->name%itcompatgroup->name,ORE_InvalidArguments);
             }
@@ -2105,6 +2127,41 @@ void ConfigurationSpecification::ConvertGroupData(std::vector<dReal>::iterator i
             }
             else {
                 RAVELOG_WARN("ikparam types do not match");
+            }
+        }
+        else if( targettokens.at(0).size() >= 4 && targettokens.at(0).substr(0,4) == "grab") {
+            std::vector<int> vsourceindices(gsource.dof), vtargetindices(gtarget.dof);
+            if( (int)sourcetokens.size() < gsource.dof+2 ) {
+                throw OPENRAVE_EXCEPTION_FORMAT("source tokens '%s' do not have %d dof indices, guessing....", gsource.name%gsource.dof, ORE_InvalidArguments);
+            }
+            else {
+                for(int i = 0; i < gsource.dof; ++i) {
+                    vsourceindices[i] = boost::lexical_cast<int>(sourcetokens.at(i+2));
+                }
+            }
+            if( (int)targettokens.size() < gtarget.dof+2 ) {
+                throw OPENRAVE_EXCEPTION_FORMAT("target tokens '%s' do not match dof '%d', guessing....", gtarget.name%gtarget.dof, ORE_InvalidArguments);
+            }
+            else {
+                for(int i = 0; i < gtarget.dof; ++i) {
+                    vtargetindices[i] = boost::lexical_cast<int>(targettokens.at(i+2));
+                }
+            }
+
+            bool bUninitializedData=false;
+            FOREACH(ittargetindex,vtargetindices) {
+                std::vector<int>::iterator it = find(vsourceindices.begin(),vsourceindices.end(),*ittargetindex);
+                if( it == vsourceindices.end() ) {
+                    bUninitializedData = true;
+                    vtransferindices.push_back(-1);
+                }
+                else {
+                    vtransferindices.push_back(static_cast<int>(it-vsourceindices.begin()));
+                }
+            }
+
+            if( bUninitializedData && filluninitialized ) {
+                vdefaultvalues.resize(vtargetindices.size(),0);
             }
         }
         else {

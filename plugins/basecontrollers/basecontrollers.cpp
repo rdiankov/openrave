@@ -15,15 +15,18 @@
 #include "plugindefs.h"
 #include <openrave/plugin.h>
 
+ControllerBasePtr CreateIdealController(EnvironmentBasePtr penv, std::istream& sinput);
+ControllerBasePtr CreateRedirectController(EnvironmentBasePtr penv, std::istream& sinput);
+
 InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
 {
     switch(type) {
     case PT_Controller:
         if( interfacename == "idealcontroller") {
-            return InterfaceBasePtr(new IdealController(penv));
+            return CreateIdealController(penv,sinput);
         }
         else if( interfacename == "redirectcontroller" ) {
-            return InterfaceBasePtr(new RedirectController(penv));
+            return CreateRedirectController(penv,sinput);
         }
         break;
     default:
