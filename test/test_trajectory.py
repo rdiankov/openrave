@@ -113,3 +113,27 @@ class TestTrajectory(EnvironmentSetup):
         assert(transdist(body1.GetTransform(),Tgoal1) <= g_epsilon )
         assert(transdist(body2.GetTransform(),Tgoal2) <= g_epsilon )
         assert(len(robot.GetGrabbed())==0)
+
+    def test_grabonly(self):
+        env = self.env
+        with env:
+            env.Load('robots/pr2-beta-static.zae')
+            robot=env.GetRobots()[0]
+            manip1=robot.SetActiveManipulator('leftarm')
+            body1=env.ReadKinBodyURI('data/mug1.kinbody.xml')
+            env.AddKinBody(body1,True)
+            body1.SetTransform(manip1.GetTransform())
+
+            robot.GetController().SendCommand('SetThrowExceptions 1')
+            env.StartSimulation(0.01,False)
+
+            spec=ConfigurationSpecification()
+            spec.AddGroup('grab %s %d'%(robot.GetName(),robot.GetActiveManipulator().GetEndEffector().GetIndex()),1,'previous')
+            spec.AddGroup('deltatime',1,'linear')
+            traj=RaveCreateTrajectory(self.env,'')
+            traj.Init(spec)
+            traj.Insert(0,[body1.GetEnvironmentId(),0])
+
+        robot.GetController().SetPath(traj)
+        assert(robot.WaitForController(0.1))
+        assert(robot.GetGrabbed()[-1] == body1)
