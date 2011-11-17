@@ -53,7 +53,7 @@ class BaseManipulation:
             cmd += 'samplingstep %.15e '%samplingstep
         return self.prob.SendCommand(cmd)
 
-    def MoveHandStraight(self,direction,minsteps=None,maxsteps=None,stepsize=None,ignorefirstcollision=None,starteematrix=None,greedysearch=None,execute=None,outputtraj=None,maxdeviationangle=None,steplength=None,planner=None):
+    def MoveHandStraight(self,direction,minsteps=None,maxsteps=None,stepsize=None,ignorefirstcollision=None,starteematrix=None,greedysearch=None,execute=None,outputtraj=None,maxdeviationangle=None,steplength=None,planner=None,outputtrajobj=None):
         """See :ref:`module-basemanipulation-movehandstraight`
         """
         cmd = 'MoveHandStraight direction %.15e %.15e %.15e '%(direction[0],direction[1],direction[2])
@@ -73,7 +73,7 @@ class BaseManipulation:
             cmd += 'starteematrix ' + matrixSerialization(starteematrix) + ' '
         if greedysearch is not None:
             cmd += 'greedysearch %d '%greedysearch
-        if outputtraj is not None and outputtraj:
+        if (outputtraj is not None and outputtraj) or (outputtrajobj is not None and outputtrajobj):
             cmd += 'outputtraj '
         if ignorefirstcollision is not None:
             cmd += 'ignorefirstcollision %.15e '%ignorefirstcollision
@@ -82,22 +82,24 @@ class BaseManipulation:
         res = self.prob.SendCommand(cmd)
         if res is None:
             raise planning_error('MoveHandStraight')
+        if outputtrajobj is not None and outputtrajobj:
+            return RaveCreateTrajectory(self.prob.GetEnv(),'').deserialize(res)
         return res
-    def MoveManipulator(self,goal=None,maxiter=None,execute=None,outputtraj=None,maxtries=None,goals=None,steplength=None):
+    def MoveManipulator(self,goal=None,maxiter=None,execute=None,outputtraj=None,maxtries=None,goals=None,steplength=None,outputtrajobj=None):
         """See :ref:`module-basemanipulation-movemanipulator`
         """
         if goal is not None:
             assert(len(goal) == len(self.robot.GetActiveManipulator().GetArmIndices()))
-        return self._MoveJoints('MoveManipulator',goal=goal,steplength=steplength,maxiter=maxiter,maxtries=maxtries,execute=execute,outputtraj=outputtraj,goals=goals)
+        return self._MoveJoints('MoveManipulator',goal=goal,steplength=steplength,maxiter=maxiter,maxtries=maxtries,execute=execute,outputtraj=outputtraj,goals=goals,outputtrajobj=outputtrajobj)
     
-    def MoveActiveJoints(self,goal=None,steplength=None,maxiter=None,maxtries=None,execute=None,outputtraj=None,goals=None):
+    def MoveActiveJoints(self,goal=None,steplength=None,maxiter=None,maxtries=None,execute=None,outputtraj=None,goals=None,outputtrajobj=None):
         """See :ref:`module-basemanipulation-moveactivejoints`
         """
         if goal is not None:
             assert(len(goal) == self.robot.GetActiveDOF() and len(goal) > 0)
-        return self._MoveJoints('MoveActiveJoints',goal=goal,steplength=steplength,maxiter=maxiter,maxtries=maxtries,execute=execute,outputtraj=outputtraj,goals=goals)
+        return self._MoveJoints('MoveActiveJoints',goal=goal,steplength=steplength,maxiter=maxiter,maxtries=maxtries,execute=execute,outputtraj=outputtraj,goals=goals,outputtrajobj=outputtrajobj)
 
-    def _MoveJoints(self,cmd,goal=None,steplength=None,maxiter=None,maxtries=None,execute=None,outputtraj=None,goals=None):
+    def _MoveJoints(self,cmd,goal=None,steplength=None,maxiter=None,maxtries=None,execute=None,outputtraj=None,goals=None,outputtrajobj=None):
         """See :ref:`module-basemanipulation-moveactivejoints`
         """
         cmd += ' '
@@ -112,7 +114,7 @@ class BaseManipulation:
             cmd += 'steplength %.15e '%steplength
         if execute is not None:
             cmd += 'execute %d '%execute
-        if outputtraj is not None and outputtraj:
+        if (outputtraj is not None and outputtraj) or (outputtrajobj is not None and outputtrajobj):
             cmd += 'outputtraj '
         if maxiter is not None:
             cmd += 'maxiter %d '%maxiter
@@ -121,9 +123,11 @@ class BaseManipulation:
         res = self.prob.SendCommand(cmd)
         if res is None:
             raise planning_error('MoveActiveJoints')
+        if outputtrajobj is not None and outputtrajobj:
+            return RaveCreateTrajectory(self.prob.GetEnv(),'').deserialize(res)
         return res
 
-    def MoveToHandPosition(self,matrices=None,affinedofs=None,maxiter=None,maxtries=None,translation=None,rotation=None,seedik=None,constraintfreedoms=None,constraintmatrix=None,constrainterrorthresh=None,execute=None,outputtraj=None,steplength=None,goalsamples=None,ikparam=None,ikparams=None,jitter=None,minimumgoalpaths=None):
+    def MoveToHandPosition(self,matrices=None,affinedofs=None,maxiter=None,maxtries=None,translation=None,rotation=None,seedik=None,constraintfreedoms=None,constraintmatrix=None,constrainterrorthresh=None,execute=None,outputtraj=None,steplength=None,goalsamples=None,ikparam=None,ikparams=None,jitter=None,minimumgoalpaths=None,outputtrajobj=None):
         """See :ref:`module-basemanipulation-movetohandposition`
         """
         cmd = 'MoveToHandPosition '
@@ -161,15 +165,17 @@ class BaseManipulation:
                 cmd += str(ikp) + ' '
         if execute is not None:
             cmd += 'execute %d '%execute
-        if outputtraj is not None and outputtraj:
+        if (outputtraj is not None and outputtraj) or (outputtrajobj is not None and outputtrajobj):
             cmd += 'outputtraj '
         if minimumgoalpaths is not None:
             cmd += 'minimumgoalpaths %d '%minimumgoalpaths
         res = self.prob.SendCommand(cmd)
         if res is None:
             raise planning_error('MoveToHandPosition')
+        if outputtrajobj is not None and outputtrajobj:
+            return RaveCreateTrajectory(self.prob.GetEnv(),'').deserialize(res)
         return res
-    def MoveUnsyncJoints(self,jointvalues,jointinds,maxtries=None,planner=None,maxdivision=None,execute=None,outputtraj=None):
+    def MoveUnsyncJoints(self,jointvalues,jointinds,maxtries=None,planner=None,maxdivision=None,execute=None,outputtraj=None,outputtrajobj=None):
         """See :ref:`module-basemanipulation-moveunsyncjoints`
         """
         assert(len(jointinds)==len(jointvalues) and len(jointinds)>0)
@@ -178,7 +184,7 @@ class BaseManipulation:
             cmd += 'planner %s '%planner
         if execute is not None:
             cmd += 'execute %d '%execute
-        if outputtraj is not None and outputtraj:
+        if (outputtraj is not None and outputtraj) or (outputtrajobj is not None and outputtrajobj):
             cmd += 'outputtraj '
         if maxtries is not None:
             cmd += 'maxtries %d '%maxtries
@@ -187,8 +193,10 @@ class BaseManipulation:
         res = self.prob.SendCommand(cmd)
         if res is None:
             raise planning_error('MoveUnsyncJoints')
+        if outputtrajobj is not None and outputtrajobj:
+            return RaveCreateTrajectory(self.prob.GetEnv(),'').deserialize(res)
         return res
-    def JitterActive(self,maxiter=None,jitter=None,execute=None,outputtraj=None,outputfinal=None):
+    def JitterActive(self,maxiter=None,jitter=None,execute=None,outputtraj=None,outputfinal=None,outputtrajobj=None):
         """See :ref:`module-basemanipulation-jitteractive`
         """
         cmd = 'JitterActive '
@@ -198,7 +206,7 @@ class BaseManipulation:
             cmd += 'jitter %.15e '%jitter
         if execute is not None:
             cmd += 'execute %d '%execute
-        if outputtraj is not None and outputtraj:
+        if (outputtraj is not None and outputtraj) or (outputtrajobj is not None and outputtrajobj):
             cmd += 'outputtraj '
         if outputfinal:
             cmd += 'outputfinal'
@@ -211,10 +219,12 @@ class BaseManipulation:
             resvalues=resvalues[len(final):]
         else:
             final=None
-        if outputtraj is not None and outputtraj:
+        if (outputtraj is not None and outputtraj) or (outputtrajobj is not None and outputtrajobj):
             traj = ' '.join(resvalues)
         else:
             traj = None
+        if traj is not None and outputtrajobj is not None and outputtrajobj:
+            traj = RaveCreateTrajectory(self.prob.GetEnv(),'').deserialize(traj)
         return final,traj
     def FindIKWithFilters(self,ikparam,cone=None,solveall=None,filteroptions=None):
         """See :ref:`module-basemanipulation-findikwithfilters`
