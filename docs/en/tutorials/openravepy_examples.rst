@@ -321,7 +321,45 @@ Verify a trajectory to a grasp without executing anything.
   print 'traj has %d waypoints, last waypoint is: %s'%(traj.GetNumWaypoints(),repr(traj.GetWaypoint(-1)))
   robot.GetController().SetPath(traj)
   robot.WaitForController(0)
+
+Saving Viewer Image
+-------------------
+
+Save a 640x480 image from the viewer.
+
+.. code-block:: python
+
+  from openravepy import *
+  import scipy
+  import time
+  env = Environment() # create openrave environment
+  env.SetViewer('qtcoin')
+  env.Load('data/lab1.env.xml') # load a simple scene
+  time.sleep(1) # wait for viewer to initialize
   
+  I = env.GetViewer().GetCameraImage(640,480,  env.GetViewer().GetCameraTransform(),[640,640,320,240])
+  scipy.misc.imsave('openrave.jpg',I)
+
+Recording Videos
+----------------
+
+Start and stop recording videos using the Python API.
+
+.. code-block:: python
+
+  from openravepy import *
+  import scipy
+  import time
+  env = Environment() # create openrave environment
+  env.SetViewer('qtcoin')
+  env.Load('data/lab1.env.xml') # load a simple scene
+  
+  recorder = RaveCreateModule(env,'viewerrecorder')
+  env.AddModule(recorder,'')
+  filename = 'openrave.mpg'
+  recorder.SendCommand('Start 640 480 30 codec 13 timing realtime filename %s\nviewer %s'%(filename,env.GetViewer().GetName()))
+
+
 Logging
 -------
 

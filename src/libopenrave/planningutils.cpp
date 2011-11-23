@@ -209,6 +209,17 @@ void VerifyTrajectory(PlannerBase::PlannerParametersConstPtr parameters, Traject
 
 void RetimeActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr probot, bool hastimestamps, dReal fmaxvelmult, const std::string& plannername)
 {
+    if( traj->GetNumWaypoints() == 1 ) {
+        // don't need retiming, but should at least add a time group
+        ConfigurationSpecification spec = traj->GetConfigurationSpecification();
+        spec.AddDeltaTimeGroup();
+        vector<dReal> data;
+        traj->GetWaypoints(0,traj->GetNumWaypoints(),data,spec);
+        traj->Init(spec);
+        traj->Insert(0,data);
+        return;
+    }
+
     PlannerBasePtr planner = RaveCreatePlanner(traj->GetEnv(),plannername.size() > 0 ? plannername : string("lineartrajectoryretimer"));
     PlannerBase::PlannerParametersPtr params(new PlannerBase::PlannerParameters());
     params->SetRobotActiveJoints(probot);
