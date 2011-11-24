@@ -104,7 +104,7 @@ def robotstats(description,robotfilename,manipname, iktypestr,freeindices):
 
             ikmodel.freeinc = ikmodel.getDefaultFreeIncrements(options.freeincrot,options.freeinctrans)
             assert(manip.GetIkSolver().GetNumFreeParameters() == len(freeindices))
-            solutionresults = []
+            solutionresults = [[],[],[]]
 
             numtested = 0
             numsuccessful = 0
@@ -120,13 +120,11 @@ def robotstats(description,robotfilename,manipname, iktypestr,freeindices):
                 for iresults in range(3):
                     num = int(res[index])
                     index += 1
-                    samples = []
                     for i in range(num):
                         ikparam = IkParameterization(' '.join(res[index:(index+ikdof)]))
                         index += ikdof
-                        samples.append([ikparam,res[index:(index+len(freeindices))]])
+                        solutionresults[iresults].append([ikparam,res[index:(index+len(freeindices))]])
                         index += len(freeindices)
-                    solutionresults.append(samples)
             successrate = float(numsuccessful)/numtested
             nosolutions = float(len(solutionresults[1]))/numtested
             wrongrate = float(len(solutionresults[0]))/numtested
