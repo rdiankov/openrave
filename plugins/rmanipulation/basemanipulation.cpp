@@ -636,6 +636,12 @@ protected:
             else if( cmd == "minimumgoalpaths" ) {
                 sinput >> params->_minimumgoalpaths;
             }
+            else if( cmd == "postprocessingparameters" ) {
+                sinput >> params->_sPostProcessingParameters;
+            }
+            else if( cmd == "postprocessingplanner" ) {
+                sinput >> params->_sPostProcessingPlanner;
+            }
             else if( cmd == "jitter" ) {
                 sinput >> jitter;
             }
