@@ -127,8 +127,10 @@ class BaseManipulation:
             return RaveCreateTrajectory(self.prob.GetEnv(),'').deserialize(res)
         return res
 
-    def MoveToHandPosition(self,matrices=None,affinedofs=None,maxiter=None,maxtries=None,translation=None,rotation=None,seedik=None,constraintfreedoms=None,constraintmatrix=None,constrainterrorthresh=None,execute=None,outputtraj=None,steplength=None,goalsamples=None,ikparam=None,ikparams=None,jitter=None,minimumgoalpaths=None,outputtrajobj=None):
+    def MoveToHandPosition(self,matrices=None,affinedofs=None,maxiter=None,maxtries=None,translation=None,rotation=None,seedik=None,constraintfreedoms=None,constraintmatrix=None,constrainterrorthresh=None,execute=None,outputtraj=None,steplength=None,goalsamples=None,ikparam=None,ikparams=None,jitter=None,minimumgoalpaths=None,outputtrajobj=None,postprocessing=None):
         """See :ref:`module-basemanipulation-movetohandposition`
+
+        postprocessing is two parameters: (plannername,parmaeters)
         """
         cmd = 'MoveToHandPosition '
         if matrices is not None:
@@ -147,6 +149,8 @@ class BaseManipulation:
             cmd += 'seedik %d '%seedik
         if goalsamples is not None:
             cmd += 'goalsamples %d '%goalsamples
+        if postprocessing is not None:
+            cmd += 'postprocessingplanner %s\n postprocessingparameters %s\n '%(postprocessing[0],postprocessing[1])
         if constraintfreedoms is not None:
             cmd += 'constraintfreedoms %s '%(' '.join(str(constraintfreedoms[i]) for i in range(6)))
         if constraintmatrix is not None:

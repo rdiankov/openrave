@@ -15,6 +15,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "commonmanipulation.h"
 
+#include <boost/algorithm/string.hpp>
+
 class BaseManipulation : public ModuleBase
 {
 public:
@@ -637,10 +639,16 @@ protected:
                 sinput >> params->_minimumgoalpaths;
             }
             else if( cmd == "postprocessingparameters" ) {
-                sinput >> params->_sPostProcessingParameters;
+                if( !getline(sinput, params->_sPostProcessingParameters) ) {
+                    return false;
+                }
+                boost::trim(params->_sPostProcessingParameters);
             }
             else if( cmd == "postprocessingplanner" ) {
-                sinput >> params->_sPostProcessingPlanner;
+                if( !getline(sinput, params->_sPostProcessingPlanner) ) {
+                    return false;
+                }
+                boost::trim(params->_sPostProcessingPlanner);
             }
             else if( cmd == "jitter" ) {
                 sinput >> jitter;
