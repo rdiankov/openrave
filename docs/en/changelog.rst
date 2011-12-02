@@ -33,6 +33,8 @@ Core
 
 * Added parsing of kinematics for DirextX files (\*.x).
 
+* Collada reading/writing now preserve the body DOF indices order by storing actuator information.
+
 Inverse Kinematics
 ------------------
 

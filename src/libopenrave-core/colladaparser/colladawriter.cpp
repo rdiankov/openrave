@@ -333,6 +333,11 @@ public:
         pextra_library_sensors->setType("library_sensors");
         _sensorsLib = daeSafeCast<domTechnique>(pextra_library_sensors->add(COLLADA_ELEMENT_TECHNIQUE));
         _sensorsLib->setProfile("OpenRAVE");
+        domExtraRef pextra_library_actuators = daeSafeCast<domExtra>(_dom->add(COLLADA_ELEMENT_EXTRA));
+        pextra_library_actuators->setId("actuators");
+        pextra_library_actuators->setType("library_actuators");
+        _actuatorsLib = daeSafeCast<domTechnique>(pextra_library_actuators->add(COLLADA_ELEMENT_TECHNIQUE));
+        _actuatorsLib->setProfile("OpenRAVE");
     }
     virtual ~ColladaWriter() {
         _collada.reset();
@@ -705,14 +710,24 @@ public:
             ptec->add("interface")->setCharData(probot->GetXMLId());
         }
 
+        boost::shared_ptr<kinematics_model_output> kmout = _GetKinematics_model(KinBodyPtr(probot));
+        string kmodelid = kmout->kmodel->getID(); kmodelid += "/";
+        FOREACHC(itjoint,probot->GetJoints()) {
+            domExtraRef pextra = daeSafeCast<domExtra>(articulated_system_motion->add(COLLADA_ELEMENT_EXTRA));
+            pextra->setName(str(boost::format("motor%d")%(*itjoint)->GetJointIndex()).c_str());
+            pextra->setType("attach_actuator");
+            domTechniqueRef ptec = daeSafeCast<domTechnique>(pextra->add(COLLADA_ELEMENT_TECHNIQUE));
+            ptec->setProfile("OpenRAVE");
+            daeElementRef bind_actuator = ptec->add("bind_actuator");
+            bind_actuator->setAttribute("joint",str(boost::format("%sjoint%d")%kmodelid%(*itjoint)->GetJointIndex()).c_str());
+        }
+
         FOREACHC(itmanip, probot->GetManipulators()) {
             domExtraRef pextra = daeSafeCast<domExtra>(articulated_system_motion->add(COLLADA_ELEMENT_EXTRA));
             pextra->setName((*itmanip)->GetName().c_str());
             pextra->setType("manipulator");
             domTechniqueRef ptec = daeSafeCast<domTechnique>(pextra->add(COLLADA_ELEMENT_TECHNIQUE));
             ptec->setProfile("OpenRAVE");
-            boost::shared_ptr<kinematics_model_output> kmout = _GetKinematics_model(KinBodyPtr(probot));
-            string kmodelid = kmout->kmodel->getID(); kmodelid += "/";
             daeElementRef frame_origin = ptec->add("frame_origin");
             frame_origin->setAttribute("link",(kmodelid+kmout->vlinksids.at((*itmanip)->GetBase()->GetIndex())).c_str());
             daeElementRef frame_tip = ptec->add("frame_tip");
@@ -816,7 +831,8 @@ public:
             daeSafeCast<domKinematics_newparam::domSIDREF>(kbind->add(COLLADA_ELEMENT_SIDREF))->setValue((refscope+ikmsid+"/"+it->sid).c_str());
             domKinematics_newparamRef pvalueparam = daeSafeCast<domKinematics_newparam>(ikmout->ikm->add(COLLADA_ELEMENT_NEWPARAM));
             pvalueparam->setSid((sid+string("_value")).c_str());
-            daeSafeCast<domKinematics_newparam::domFloat>(pvalueparam->add(COLLADA_ELEMENT_FLOAT))->setValue(it->pjoint->GetValue(it->iaxis));
+            dReal value = it->pjoint->GetValue(it->iaxis);
+            daeSafeCast<domKinematics_newparam::domFloat>(pvalueparam->add(COLLADA_ELEMENT_FLOAT))->setValue(value);
             ikmout->vaxissids.push_back(axis_sids(sid,pvalueparam->getSid(),kmout->vaxissids.at(i).jointnodesid));
             ++i;
         }
@@ -1510,7 +1526,7 @@ private:
     domLibrary_materialsRef _materialsLib;
     domLibrary_effectsRef _effectsLib;
     domLibrary_geometriesRef _geometriesLib;
-    domTechniqueRef _sensorsLib;     ///< custom sensors library
+    domTechniqueRef _sensorsLib, _actuatorsLib;     ///< custom libraries
     SCENE _scene;
     EnvironmentBaseConstPtr _penv;
     std::list<kinbody_models> _listkinbodies;
