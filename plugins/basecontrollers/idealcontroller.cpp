@@ -65,18 +65,23 @@ If SetDesired is called, only joint values will be set at every timestep leaving
             _cblimits = _probot->RegisterChangeCallback(KinBody::Prop_JointLimits,boost::bind(&IdealController::_SetJointLimits,boost::bind(&sptr_from<IdealController>, weak_controller())));
             _SetJointLimits();
 
-            _samplespecbase._vgroups.resize(2);
-            _samplespecbase._vgroups[0].offset = 0;
-            _samplespecbase._vgroups[0].dof = _probot->GetDOF();
-            stringstream ss;
-            ss << "joint_values " << _probot->GetName();
-            for(int i = 0; i < _probot->GetDOF(); ++i) {
-                ss << " " << i;
+            if( _dofindices.size() > 0 ) {
+                _gjointvalues.reset(new ConfigurationSpecification::Group());
+                _gjointvalues->offset = 0;
+                _gjointvalues->dof = _dofindices.size();
+                stringstream ss;
+                ss << "joint_values " << _probot->GetName();
+                FOREACHC(it, _dofindices) {
+                    ss << " " << *it;
+                }
+                _gjointvalues->name = ss.str();
             }
-            _samplespecbase._vgroups[0].name = ss.str();
-            _samplespecbase._vgroups[1].offset = _probot->GetDOF();
-            _samplespecbase._vgroups[1].dof = RaveGetAffineDOF(DOF_Transform);
-            _samplespecbase._vgroups[1].name = str(boost::format("affine_transform %s %d")%_probot->GetName()%DOF_Transform);
+            if( nControlTransformation ) {
+                _gtransform.reset(new ConfigurationSpecification::Group());
+                _gtransform->offset = _probot->GetDOF();
+                _gtransform->dof = RaveGetAffineDOF(DOF_Transform);
+                _gtransform->name = str(boost::format("affine_transform %s %d")%_probot->GetName()%DOF_Transform);
+            }
         }
         _bPause = false;
         return true;
@@ -132,30 +137,28 @@ If SetDesired is called, only joint values will be set at every timestep leaving
     virtual bool SetPath(TrajectoryBaseConstPtr ptraj)
     {
         boost::mutex::scoped_lock lock(_mutex);
-        if( !!ptraj ) {
-            // see if at least one point can be sampled, this make it easier to debug bad trajectories
-            vector<dReal> v;
-            ptraj->Sample(v,0,_samplespecbase);
-            Transform t;
-            RaveGetTransformFromAffineDOFValues(t,v.begin()+_probot->GetDOF(),DOF_Transform);
-        }
-
         if( _bPause ) {
             RAVELOG_DEBUG("IdealController cannot player trajectories when paused\n");
             _ptraj.reset();
             _bIsDone = true;
             return false;
         }
-        _ptraj = ptraj;
         fTime = 0;
-        _bIsDone = !_ptraj;
+        _bIsDone = true;
         _vecdesired.resize(0);
 
-        if( !!_ptraj ) {
-            _bTrajHasJoints = ptraj->GetConfigurationSpecification().FindCompatibleGroup(_samplespecbase._vgroups.at(0).name,false) != ptraj->GetConfigurationSpecification()._vgroups.end();
-            _bTrajHasTransform = ptraj->GetConfigurationSpecification().FindCompatibleGroup(_samplespecbase._vgroups.at(1).name,false) != ptraj->GetConfigurationSpecification()._vgroups.end();
+        if( !!ptraj ) {
+            _samplespec._vgroups.resize(0);
+            _bTrajHasJoints = !!_gjointvalues && ptraj->GetConfigurationSpecification().FindCompatibleGroup(_gjointvalues->name,false) != ptraj->GetConfigurationSpecification()._vgroups.end();
+            if( _bTrajHasJoints ) {
+                _samplespec._vgroups.push_back(*_gjointvalues);
+            }
+            _bTrajHasTransform = !!_gtransform && ptraj->GetConfigurationSpecification().FindCompatibleGroup(_gtransform->name,false) != ptraj->GetConfigurationSpecification()._vgroups.end();
+            if( _bTrajHasTransform ) {
+                _samplespec._vgroups.push_back(*_gtransform);
+            }
+            _samplespec.ResetGroupOffsets();
             _vgrablinks.resize(0);
-            _samplespec = _samplespecbase;
             int dof = _samplespec.GetDOF();
             FOREACHC(itgroup,ptraj->GetConfigurationSpecification()._vgroups) {
                 if( itgroup->name.size()>=4 && itgroup->name.substr(0,4) == "grab") {
@@ -172,9 +175,21 @@ If SetDesired is called, only joint values will be set at every timestep leaving
                 }
             }
             BOOST_ASSERT(_samplespec.IsValid());
-            if( !!flog ) {
-                _ptraj->serialize(flog);
+
+            // see if at least one point can be sampled, this make it easier to debug bad trajectories
+            vector<dReal> v;
+            ptraj->Sample(v,0,_samplespec);
+            if( _bTrajHasTransform ) {
+                Transform t;
+                _samplespec.ExtractTransform(t,v.begin(),_probot);
             }
+
+            if( !!flog ) {
+                ptraj->serialize(flog);
+            }
+
+            _bIsDone = false;
+            _ptraj = ptraj;
         }
 
         return true;
@@ -208,15 +223,14 @@ If SetDesired is called, only joint values will be set at every timestep leaving
                 }
             }
 
-            vector<dReal> vdofvalues;
+            vector<dReal> vdofvalues(_dofindices.size());
             if( _bTrajHasJoints && _dofindices.size() > 0 ) {
-                vdofvalues.resize(_probot->GetDOF());
-                std::copy(sampledata.begin(),sampledata.begin()+_probot->GetDOF(),vdofvalues.begin());
+                _samplespec.ExtractJointValues(vdofvalues.begin(),sampledata.begin(), _probot, _dofindices, 0);
             }
 
             Transform t;
             if( _bTrajHasTransform && _nControlTransformation ) {
-                RaveGetTransformFromAffineDOFValues(t,sampledata.begin()+_probot->GetDOF(),DOF_Transform);
+                _samplespec.ExtractTransform(t,sampledata.begin(),_probot);
                 if( vdofvalues.size() > 0 ) {
                     _SetDOFValues(vdofvalues,t);
                 }
@@ -389,7 +403,8 @@ private:
     bool _bPause, _bIsDone, _bCheckCollision, _bThrowExceptions;
     CollisionReportPtr _report;
     UserDataPtr _cblimits;
-    ConfigurationSpecification _samplespecbase, _samplespec;
+    ConfigurationSpecification _samplespec;
+    boost::shared_ptr<ConfigurationSpecification::Group> _gjointvalues, _gtransform;
     boost::mutex _mutex;
 };
 

@@ -702,7 +702,7 @@ protected:
         params->_samplegoalfn = boost::bind(&planningutils::ManipulatorIKGoalSampler::Sample,&goalsampler,_1);
 
         if( params->vgoalconfig.size() == 0 ) {
-            RAVELOG_WARN("jitter failed for goal\n");
+            RAVELOG_WARN("failed to find goal\n");
             return false;
         }
 
