@@ -259,6 +259,9 @@ void TrajectoryBase::AddPoint(const Point& p)
     v.resize(dof+spec._vgroups.back().dof);
     v.at(dof) = p.time;
     dof += 1;
+    if( GetConfigurationSpecification().GetDOF() == 0 ) {
+        Init(spec);
+    }
     Insert(GetNumWaypoints(),v,spec);
 }
 
