@@ -88,7 +88,7 @@ class DatabaseGenerator(metaclass.AutoReloader):
     def generate(self,*args,**kwargs):
         starttime = time.time()
         producer,consumer,gatherer,numjobs = self.generatepcg(*args,**kwargs)
-        print 'database %s has %d items'%(__name__,num)
+        print 'database %s has %d items'%(__name__,numjobs)
         for work in producer():
             results = consumer(*work)
             if len(results) > 0:
