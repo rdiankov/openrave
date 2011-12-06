@@ -707,36 +707,27 @@ class GraspingModel(DatabaseGenerator):
     def getPreshape(self,grasp):
         """returns the preshape joint values"""
         return grasp[self.graspindices['igrasppreshape']]
-    def moveToPreshape(self,grasp,execute=True,outputtraj=False):
+    def moveToPreshape(self,grasp,execute=True,outputtraj=None,outputtrajobj=None):
         """uses a planner to safely move the hand to the preshape and returns the trajectory"""
         trajdata = []
         with self.robot:
             self.robot.SetActiveDOFs(self.manip.GetArmIndices())
-            trajdata.append(self.basemanip.MoveUnsyncJoints(jointvalues=grasp[self.graspindices['igrasppreshape']],jointinds=self.manip.GetGripperIndices(),execute=execute,outputtraj=outputtraj))
+            trajdata.append(self.basemanip.MoveUnsyncJoints(jointvalues=grasp[self.graspindices['igrasppreshape']],jointinds=self.manip.GetGripperIndices(),execute=execute,outputtraj=outputtraj,outputtrajobj=outputtrajobj))
         while execute and not self.robot.GetController().IsDone(): # busy wait
             time.sleep(0.01)
 
         with self.robot:
-            if not execute and outputtraj:
-                # set the final point!
-                s = trajdata[-1].split()
-                numpoints, numjoints, options = int(s[0]),int(s[1]),int(s[2])
-                if numpoints > 0:
-                    dof = numjoints
-                    lastpointindex = 3
-                    if options & 4:
-                        dof += 1
-                        lastpointindex += 1
-                    if options & 8:
-                        dof += 7
-                    if options & 16:
-                        dof += numjoints
-                    if options & 32:
-                        dof += numjoints
-                    lastpointindex+=(numpoints-1)*dof
-                    self.robot.SetDOFValues(array([float(f) for f in s[lastpointindex:(lastpointindex+numjoints)]]))
+            if not execute:
+                # need to set the final point!
+                assert(outputtraj or outputtrajobj)
+                if outputtrajobj:
+                    traj = trajdata[-1]
+                else:
+                    traj = RaveCreateTrajectory(self.env,'').deserialize(trajdata[-1])
+                values = traj.GetConfigurationSpecification().ExtractJointValues(GetWaypoint(-1),self.robot,self.robot.GetActiveDOFIndices(),0)
+                self.robot.SetActiveDOFValues(values)
             self.robot.SetActiveDOFs(self.manip.GetGripperIndices())
-            trajdata.append(self.basemanip.MoveActiveJoints(goal=grasp[self.graspindices['igrasppreshape']],execute=execute,outputtraj=outputtraj))
+            trajdata.append(self.basemanip.MoveActiveJoints(goal=grasp[self.graspindices['igrasppreshape']],execute=execute,outputtraj=outputtraj,outputtrajobj=outputtrajobj))
         while execute and not self.robot.GetController().IsDone(): # busy wait
             time.sleep(0.01)
         return trajdata

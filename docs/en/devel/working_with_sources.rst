@@ -24,14 +24,15 @@ Note that this will create symlinks to the compilers inside **/usr/local/bin**.
 Indenting C++ Files
 -------------------
 
-OpenRAVE C++ code should automatically be run with `uncrustify <http://uncrustify.sourceforge.net/>`_ before being committed. Currently OpenRAVE requires uncrustify version >=0.57. First put :download:`.uncrustify.cfg <../../../sandbox/.uncrustify.cfg>` in your $HOME directory. The run a file before committing using:
+OpenRAVE C++ code should automatically be run with `uncrustify <http://uncrustify.sourceforge.net/>`_ before being committed. Currently OpenRAVE requires uncrustify version >=0.57. First put :download:`.uncrustify.cfg <../../../sandbox/.uncrustify.cfg>` in your $HOME directory.
+
+Run a C++ file before committing to OpenRAVE:
 
 .. code-block:: bash
 
   uncrustify --no-backup myfile.cpp
 
-Emacs
------
+:ref:`emacs_automatic_indention` shows how to automate calling uncrustify when saving the C++ file in Emacs.
 
 Auto-Completion
 ###############
@@ -54,10 +55,12 @@ To get auto-completion for the OpenRAVE C++ API using `Collection of Emacs Devel
   (add-to-list 'auto-mode-alist (cons openrave-base-dir 'c++-mode))
   (add-to-list 'semantic-lex-c-preprocessor-symbol-file (concat openrave-base-dir "/openrave/config.h"))
 
+.. _emacs_automatic_indention:
+
 Automatic Indention
 ###################
 
-It is possible to setup emacs to automatically call **uncrustify** when saving a file by downloading the `emacs-uncrustify <https://github.com/glima/Emacs-uncrustify>`_  pakcage and putting the following in your **.emacs** file:
+It is possible to setup emacs to automatically call **uncrustify** when saving a file by downloading the `emacs-uncrustify <https://github.com/glima/Emacs-uncrustify>`_  pakcage, setting its path in the emacs load path, and putting the following in your **.emacs** file:
 
 .. code-block:: common-lisp
 

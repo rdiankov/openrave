@@ -14,7 +14,7 @@
     traj->Insert(0,q);
     q[0] = 0.5;
     traj->Insert(1,q);
-    planningutils::RetimeActiveDOFTrajectory(probot,traj);
+    planningutils::SmoothActiveDOFTrajectory(probot,traj);
     \endcode
 
     The demo also adds a collision check at the target point to make sure robot is going to a
@@ -96,7 +96,7 @@ int main(int argc, char ** argv)
             }
 
             traj->Insert(1,q);
-            planningutils::RetimeActiveDOFTrajectory(traj,probot);
+            planningutils::SmoothActiveDOFTrajectory(traj,probot);
             probot->GetController()->SetPath(traj);
             // setting through the robot is also possible: probot->SetMotion(traj);
         }

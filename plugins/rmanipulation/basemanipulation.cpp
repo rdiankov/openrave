@@ -15,6 +15,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "commonmanipulation.h"
 
+#include <boost/algorithm/string.hpp>
+
 class BaseManipulation : public ModuleBase
 {
 public:
@@ -208,7 +210,7 @@ protected:
 
         if(( ptraj->GetDuration() == 0) || bResetTiming ) {
             RAVELOG_VERBOSE(str(boost::format("retiming trajectory: %f\n")%_fMaxVelMult));
-            planningutils::RetimeActiveDOFTrajectory(ptraj, robot, false, _fMaxVelMult);
+            planningutils::SmoothActiveDOFTrajectory(ptraj, robot, false, _fMaxVelMult);
         }
         RAVELOG_VERBOSE(str(boost::format("executing traj with %d points\n")%ptraj->GetNumWaypoints()));
         if( !robot->GetController()->SetPath(ptraj) ) {
@@ -330,7 +332,7 @@ protected:
             params->workspacetraj->Insert(1,data);
             vector<dReal> maxvelocities(spec._vgroups[0].dof,1);
             vector<dReal> maxaccelerations(spec._vgroups[0].dof,10);
-            planningutils::RetimeAffineTrajectory(params->workspacetraj,maxvelocities,maxaccelerations);
+            planningutils::SmoothAffineTrajectory(params->workspacetraj,maxvelocities,maxaccelerations);
         }
 
         PlannerBasePtr planner = RaveCreatePlanner(GetEnv(),plannername);
@@ -636,6 +638,18 @@ protected:
             else if( cmd == "minimumgoalpaths" ) {
                 sinput >> params->_minimumgoalpaths;
             }
+            else if( cmd == "postprocessingparameters" ) {
+                if( !getline(sinput, params->_sPostProcessingParameters) ) {
+                    return false;
+                }
+                boost::trim(params->_sPostProcessingParameters);
+            }
+            else if( cmd == "postprocessingplanner" ) {
+                if( !getline(sinput, params->_sPostProcessingPlanner) ) {
+                    return false;
+                }
+                boost::trim(params->_sPostProcessingPlanner);
+            }
             else if( cmd == "jitter" ) {
                 sinput >> jitter;
             }
@@ -688,7 +702,7 @@ protected:
         params->_samplegoalfn = boost::bind(&planningutils::ManipulatorIKGoalSampler::Sample,&goalsampler,_1);
 
         if( params->vgoalconfig.size() == 0 ) {
-            RAVELOG_WARN("jitter failed for goal\n");
+            RAVELOG_WARN("failed to find goal\n");
             return false;
         }
 
@@ -1021,7 +1035,7 @@ protected:
         }
 
         if( bRecomputeTiming || ptraj->GetDuration() == 0 ) {
-            planningutils::RetimeActiveDOFTrajectory(ptraj,robot);
+            planningutils::SmoothActiveDOFTrajectory(ptraj,robot);
         }
 
         RobotBase::RobotStateSaver saver(robot);

@@ -54,7 +54,7 @@ public:
     class JointAxisBinding
     {
 public:
-        JointAxisBinding(daeElementRef pvisualtrans, domAxis_constraintRef pkinematicaxis, domCommon_float_or_paramRef jointvalue, domKinematics_axis_infoRef kinematics_axis_info, domMotion_axis_infoRef motion_axis_info) : pvisualtrans(pvisualtrans), pkinematicaxis(pkinematicaxis), jointvalue(jointvalue), kinematics_axis_info(kinematics_axis_info), motion_axis_info(motion_axis_info) {
+        JointAxisBinding(daeElementRef pvisualtrans, domAxis_constraintRef pkinematicaxis, dReal jointvalue, domKinematics_axis_infoRef kinematics_axis_info, domMotion_axis_infoRef motion_axis_info) : pvisualtrans(pvisualtrans), pkinematicaxis(pkinematicaxis), jointvalue(jointvalue), kinematics_axis_info(kinematics_axis_info), motion_axis_info(motion_axis_info),_iaxis(0) {
             BOOST_ASSERT( !!pkinematicaxis );
             daeElement* pae = pvisualtrans->getParentElement();
             while (!!pae) {
@@ -72,10 +72,12 @@ public:
 
         daeElementRef pvisualtrans;
         domAxis_constraintRef pkinematicaxis;
-        domCommon_float_or_paramRef jointvalue;
+        dReal jointvalue;
         domNodeRef visualnode;
         domKinematics_axis_infoRef kinematics_axis_info;
         domMotion_axis_infoRef motion_axis_info;
+        KinBody::JointPtr _pjoint;
+        int _iaxis;
     };
 
     /// \brief bindings for links between different specs
@@ -231,6 +233,7 @@ public:
                 if( ExtractArticulatedSystem(probot, kscene->getInstance_articulated_system_array()[ias], bindings) && !!probot ) {
                     RAVELOG_DEBUG(str(boost::format("Robot %s added to the environment ...\n")%probot->GetName()));
                     _penv->AddRobot(probot,true);
+                    _SetDOFValues(probot,bindings);
                 }
             }
             for(size_t ikmodel = 0; ikmodel < kscene->getInstance_kinematics_model_array().getCount(); ++ikmodel) {
@@ -238,6 +241,7 @@ public:
                 if( ExtractKinematicsModel(pbody, kscene->getInstance_kinematics_model_array()[ikmodel], bindings) && !!pbody ) {
                     RAVELOG_VERBOSE(str(boost::format("Kinbody %s added to the environment\n")%pbody->GetName()));
                     _penv->AddKinBody(pbody,true);
+                    _SetDOFValues(pbody,bindings);
                 }
             }
 
@@ -260,6 +264,21 @@ public:
         }
 
         return true;
+    }
+
+    /// \brief sets the dof values of the body given the scene bindings. in the future might also set the body transformation?
+    void _SetDOFValues(KinBodyPtr pbody, KinematicsSceneBindings& bindings)
+    {
+        vector<dReal> values;
+        pbody->GetDOFValues(values);
+        FOREACH(itaxisbinding,bindings.listAxisBindings) {
+            if( !!itaxisbinding->_pjoint && itaxisbinding->_pjoint->GetParent() == pbody ) {
+                if( itaxisbinding->_pjoint->GetDOFIndex() >= 0 ) {
+                    values.at(itaxisbinding->_pjoint->GetDOFIndex()+itaxisbinding->_iaxis) = itaxisbinding->jointvalue;
+                }
+            }
+        }
+        pbody->SetDOFValues(values);
     }
 
     /// \extract the first possible robot in the scene
@@ -550,6 +569,7 @@ public:
 
         ExtractRobotManipulators(probot, articulated_system);
         ExtractRobotAttachedSensors(probot, articulated_system);
+        ExtractRobotAttachedActuators(probot, articulated_system);
         return true;
     }
 
@@ -1004,6 +1024,16 @@ public:
                 FOREACH(it,pjoint->_vweights) {
                     *it = 1;
                 }
+
+                for (size_t ic = 0; ic < vdomaxes.getCount(); ++ic) {
+                    FOREACH(itaxisbinding,bindings.listAxisBindings) {
+                        if (vdomaxes[ic] == itaxisbinding->pkinematicaxis) {
+                            itaxisbinding->_pjoint = pjoint;
+                            itaxisbinding->_iaxis = ic;
+                        }
+                    }
+                }
+
                 std::vector<dReal> vaxisunits(vdomaxes.getCount(),dReal(1));
                 for (size_t ic = 0; ic < vdomaxes.getCount(); ++ic) {
                     FOREACHC(itaxisbinding,bindings.listAxisBindings) {
@@ -1969,6 +1999,64 @@ public:
         }
     }
 
+    /// \brief extract the robot manipulators
+    void ExtractRobotAttachedActuators(RobotBasePtr probot, const domArticulated_systemRef as)
+    {
+        list<KinBody::JointPtr> listOrderedJoints;
+        for(size_t ie = 0; ie < as->getExtra_array().getCount(); ++ie) {
+            domExtraRef pextra = as->getExtra_array()[ie];
+            if( strcmp(pextra->getType(), "attach_actuator") == 0 ) {
+                string name = pextra->getAttribute("name");
+                domTechniqueRef tec = _ExtractOpenRAVEProfile(pextra->getTechnique_array());
+                if( !!tec ) {
+                    for(size_t ic = 0; ic < tec->getContents().getCount(); ++ic) {
+                        daeElementRef pchild = tec->getContents()[ic];
+                        if( pchild->getElementName() == string("bind_actuator") ) {
+                            std::pair<KinBody::JointPtr, domJointRef> result = _getJointFromRef(pchild->getAttribute("joint").c_str(),as,probot);
+                            KinBody::JointPtr pjoint = result.first;
+                            domJointRef pdomjoint = result.second;
+                            if( !!pjoint && !!pdomjoint ) {
+                                listOrderedJoints.push_back(pjoint);
+                            }
+                            else {
+                                RAVELOG_WARN(str(boost::format("failed to find joint %s in actuator %s\n")%pchild->getAttribute("joint")%name));
+                            }
+                        }
+                    }
+                }
+                else {
+                    RAVELOG_WARN(str(boost::format("cannot create robot %s attached actuator %s\n")%probot->GetName()%name));
+                }
+            }
+        }
+
+        // for all robot joints after _setInitialJoints, first put listJoints in that order
+        vector<KinBody::JointPtr> vjoints, vlastjoints;
+        vjoints.reserve(probot->_vecjoints.size());
+        vlastjoints.reserve(probot->_vecjoints.size()-listOrderedJoints.size());
+        FOREACH(itjoint,probot->_vecjoints) {
+            if( _setInitialJoints.find(*itjoint) == _setInitialJoints.end()) {
+                if( find(listOrderedJoints.begin(),listOrderedJoints.end(),*itjoint) == listOrderedJoints.end() ) {
+                    vlastjoints.push_back(*itjoint);
+                }
+            }
+            else {
+                vjoints.push_back(*itjoint);
+            }
+        }
+        probot->_vecjoints = vjoints;
+        probot->_vecjoints.insert(probot->_vecjoints.end(),listOrderedJoints.begin(),listOrderedJoints.end());
+        probot->_vecjoints.insert(probot->_vecjoints.end(),vlastjoints.begin(),vlastjoints.end());
+        // have to reset the joint indices and dof indices
+        int jointindex=0;
+        int dofindex=0;
+        FOREACH(itjoint,probot->_vecjoints) {
+            (*itjoint)->jointindex = jointindex++;
+            (*itjoint)->dofindex = dofindex;
+            dofindex += (*itjoint)->GetDOF();
+        }
+    }
+
     /// \brief Extract an instance of a sensor
     bool _ExtractSensor(SensorBasePtr& psensor, daeElementRef instance_sensor)
     {
@@ -2395,7 +2483,19 @@ private:
                 RAVELOG_WARN(str(boost::format("joint axis for target %s\n")%bindjoint->getTarget()));
                 continue;
             }
-            bindings.listAxisBindings.push_back(JointAxisBinding(pjtarget, pjointaxis, bindjoint->getValue(), NULL, NULL));
+
+            float jointvalue=0;
+            if( !!bindjoint->getValue() ) {
+                if (!!bindjoint->getValue()->getParam()) {
+                    pelt = searchBinding(bindjoint->getValue()->getParam()->getValue(),kscene);
+                }
+                else {
+                    pelt = bindjoint->getValue();
+                }
+            }
+
+            resolveCommon_float_or_param(pelt,kscene,jointvalue);
+            bindings.listAxisBindings.push_back(JointAxisBinding(pjtarget, pjointaxis, jointvalue, NULL, NULL));
         }
     }
 

@@ -206,13 +206,16 @@ public:
     }
 };
 
-class PyConfigurationSpecification
+class PyConfigurationSpecification : public boost::enable_shared_from_this<PyConfigurationSpecification>
 {
 public:
     PyConfigurationSpecification() {
     }
     PyConfigurationSpecification(const ConfigurationSpecification& spec) {
         _spec = spec;
+    }
+    PyConfigurationSpecification(PyConfigurationSpecificationPtr pyspec) {
+        _spec = pyspec->_spec;
     }
     virtual ~PyConfigurationSpecification() {
     }
@@ -229,18 +232,45 @@ public:
         return _spec.GetGroupFromName(name);
     }
 
-//    std::vector<Group>::const_iterator FindCompatibleGroup(const Group& g, bool exactmatch=false) const;
-//
-//    std::vector<Group>::const_iterator FindTimeDerivativeGroup(const Group& g, bool exactmatch=false) const;
-//
-//    void AddVelocityGroups(bool adddeltatime);
-//
+    object FindCompatibleGroup(const std::string& name, bool exactmatch) const
+    {
+        std::vector<ConfigurationSpecification::Group>::const_iterator it  = _spec.FindCompatibleGroup(name,exactmatch);
+        if( it == _spec._vgroups.end() ) {
+            return object();
+        }
+        return object(boost::shared_ptr<ConfigurationSpecification::Group>(new ConfigurationSpecification::Group(*it)));
+    }
+
+    object FindTimeDerivativeGroup(const std::string& name, bool exactmatch) const
+    {
+        std::vector<ConfigurationSpecification::Group>::const_iterator it  = _spec.FindTimeDerivativeGroup(name,exactmatch);
+        if( it == _spec._vgroups.end() ) {
+            return object();
+        }
+        return object(boost::shared_ptr<ConfigurationSpecification::Group>(new ConfigurationSpecification::Group(*it)));
+    }
+
 //    ConfigurationSpecification GetTimeDerivativeSpecification(int timederivative) const;
-//
-//    void ResetGroupOffsets();
-//
-//    int AddDeltaTime();
-//
+
+    void ResetGroupOffsets()
+    {
+        _spec.ResetGroupOffsets();
+    }
+
+    void AddVelocityGroups(bool adddeltatime)
+    {
+        _spec.AddVelocityGroups(adddeltatime);
+    }
+
+    int AddDeltaTimeGroup() {
+        return _spec.AddDeltaTimeGroup();
+    }
+
+    int AddGroup(const std::string& name, int dof, const std::string& interpolation)
+    {
+        return _spec.AddGroup(name,dof,interpolation);
+    }
+
 //    bool ExtractTransform(Transform& t, std::vector<dReal>::const_iterator itdata, KinBodyConstPtr pbody) const;
 //
 //    bool ExtractIkParameterization(IkParameterization& ikparam, std::vector<dReal>::const_iterator itdata, int timederivative=0) const;
@@ -294,11 +324,22 @@ public:
 //
 //    static void ConvertData(std::vector<dReal>::iterator ittargetdata, const ConfigurationSpecification& targetspec, std::vector<dReal>::const_iterator itsourcedata, const ConfigurationSpecification& sourcespec, size_t numpoints, EnvironmentBaseConstPtr penv, bool filluninitialized = true);
 
-    bool __eq__(boost::shared_ptr<PyConfigurationSpecification> p) {
+    bool __eq__(PyConfigurationSpecificationPtr p) {
         return !!p && _spec==p->_spec;
     }
-    bool __ne__(boost::shared_ptr<PyConfigurationSpecification> p) {
+    bool __ne__(PyConfigurationSpecificationPtr p) {
         return !p || _spec!=p->_spec;
+    }
+
+    PyConfigurationSpecificationPtr __add__(PyConfigurationSpecificationPtr r)
+    {
+        return PyConfigurationSpecificationPtr(new PyConfigurationSpecification(_spec + r->_spec));
+    }
+
+    PyConfigurationSpecificationPtr __iadd__(PyConfigurationSpecificationPtr r)
+    {
+        _spec += r->_spec;
+        return shared_from_this();
     }
 
     ConfigurationSpecification _spec;
@@ -309,7 +350,7 @@ class PyIkParameterization
 public:
     PyIkParameterization() {
     }
-    PyIkParameterization(const string& s) {
+    PyIkParameterization(const string &s) {
         stringstream ss(s);
         ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
         ss >> _param;
@@ -331,7 +372,7 @@ public:
         default: throw OPENRAVE_EXCEPTION_FORMAT("incorrect ik parameterization type 0x%x", type, ORE_InvalidArguments);
         }
     }
-    PyIkParameterization(const IkParameterization& ikparam) : _param(ikparam) {
+    PyIkParameterization(const IkParameterization &ikparam) : _param(ikparam) {
     }
     virtual ~PyIkParameterization() {
     }
@@ -444,7 +485,7 @@ bool ExtractIkParameterization(object o, IkParameterization& ikparam) {
 }
 
 
-object toPyIkParameterization(const IkParameterization& ikparam)
+object toPyIkParameterization(const IkParameterization &ikparam)
 {
     return object(boost::shared_ptr<PyIkParameterization>(new PyIkParameterization(ikparam)));
 }
@@ -452,7 +493,7 @@ object toPyIkParameterization(const IkParameterization& ikparam)
 class IkParameterization_pickle_suite : public pickle_suite
 {
 public:
-    static tuple getinitargs(const PyIkParameterization& r)
+    static tuple getinitargs(const PyIkParameterization &r)
     {
         object o;
         switch(r._param.GetType()) {
@@ -476,7 +517,7 @@ public:
 
 namespace openravepy {
 
-PyConfigurationSpecificationPtr toPyConfigurationSpecification(const ConfigurationSpecification& spec)
+PyConfigurationSpecificationPtr toPyConfigurationSpecification(const ConfigurationSpecification &spec)
 {
     return PyConfigurationSpecificationPtr(new PyConfigurationSpecification(spec));
 }
@@ -499,34 +540,34 @@ std::string openravepyCompilerVersion()
     return ss.str();
 }
 
-void raveLog(const string& s, int level)
+void raveLog(const string &s, int level)
 {
     if( s.size() > 0 ) {
         RavePrintfA(s,level);
     }
 }
 
-void raveLogFatal(const string& s)
+void raveLogFatal(const string &s)
 {
     raveLog(s,Level_Verbose);
 }
-void raveLogError(const string& s)
+void raveLogError(const string &s)
 {
     raveLog(s,Level_Error);
 }
-void raveLogWarn(const string& s)
+void raveLogWarn(const string &s)
 {
     raveLog(s,Level_Warn);
 }
-void raveLogInfo(const string& s)
+void raveLogInfo(const string &s)
 {
     raveLog(s,Level_Info);
 }
-void raveLogDebug(const string& s)
+void raveLogDebug(const string &s)
 {
     raveLog(s,Level_Debug);
 }
-void raveLogVerbose(const string& s)
+void raveLogVerbose(const string &s)
 {
     raveLog(s,Level_Verbose);
 }
@@ -766,19 +807,49 @@ string poseSerialization(object o)
 namespace planningutils
 {
 
+void pyConvertTrajectorySpecification(PyTrajectoryBasePtr pytraj, PyConfigurationSpecificationPtr pyspec)
+{
+    OpenRAVE::planningutils::ConvertTrajectorySpecification(openravepy::GetTrajectory(pytraj),openravepy::GetConfigurationSpecification(pyspec));
+}
+
 object pyReverseTrajectory(PyTrajectoryBasePtr pytraj)
 {
     return object(openravepy::toPyTrajectory(OpenRAVE::planningutils::ReverseTrajectory(openravepy::GetTrajectory(pytraj)),openravepy::toPyEnvironment(pytraj)));
 }
 
-void pyRetimeActiveDOFTrajectory(PyTrajectoryBasePtr pytraj, PyRobotBasePtr pyrobot, bool hastimestamps)
+void pySmoothActiveDOFTrajectory(PyTrajectoryBasePtr pytraj, PyRobotBasePtr pyrobot, bool hastimestamps=false, dReal fmaxvelmult=1.0, const std::string& plannername="")
 {
-    OpenRAVE::planningutils::RetimeActiveDOFTrajectory(openravepy::GetTrajectory(pytraj),openravepy::GetRobot(pyrobot),hastimestamps);
+    OpenRAVE::planningutils::SmoothActiveDOFTrajectory(openravepy::GetTrajectory(pytraj),openravepy::GetRobot(pyrobot),hastimestamps,fmaxvelmult,plannername);
+}
+
+void pySmoothAffineTrajectory(PyTrajectoryBasePtr pytraj, object omaxvelocities, object omaxaccelerations, bool hastimestamps=false, const std::string& plannername="")
+{
+    OpenRAVE::planningutils::SmoothAffineTrajectory(openravepy::GetTrajectory(pytraj),ExtractArray<dReal>(omaxvelocities), ExtractArray<dReal>(omaxaccelerations),hastimestamps,plannername);
+}
+
+object pyMergeTrajectories(object pytrajectories)
+{
+    std::list<TrajectoryBaseConstPtr> listtrajectories;
+    PyEnvironmentBasePtr pyenv;
+    for(int i = 0; i < len(pytrajectories); ++i) {
+        extract<PyTrajectoryBasePtr> epytrajectory(pytrajectories[i]);
+        PyTrajectoryBasePtr pytrajectory = (PyTrajectoryBasePtr)epytrajectory;
+        if( !pyenv ) {
+            pyenv = openravepy::toPyEnvironment(pytrajectory);
+        }
+        else {
+            BOOST_ASSERT(pyenv == openravepy::toPyEnvironment(pytrajectory));
+        }
+        listtrajectories.push_back(openravepy::GetTrajectory(pytrajectory));
+    }
+    return object(openravepy::toPyTrajectory(OpenRAVE::planningutils::MergeTrajectories(listtrajectories),pyenv));
 }
 
 }
 
 BOOST_PYTHON_FUNCTION_OVERLOADS(RaveInitialize_overloads, RaveInitialize, 0, 2)
+BOOST_PYTHON_FUNCTION_OVERLOADS(SmoothActiveDOFTrajectory_overloads, planningutils::pySmoothActiveDOFTrajectory, 2, 5)
+BOOST_PYTHON_FUNCTION_OVERLOADS(SmoothAffineTrajectory_overloads, planningutils::pySmoothAffineTrajectory, 3, 5)
 
 void init_openravepy_global()
 {
@@ -919,14 +990,24 @@ void init_openravepy_global()
 
     {
         scope configurationspecification = class_<PyConfigurationSpecification, PyConfigurationSpecificationPtr >("ConfigurationSpecification",DOXY_CLASS(ConfigurationSpecification))
-                                           .def("GetGroupFromName",&PyConfigurationSpecification::GetGroupFromName, return_value_policy<copy_const_reference>()) //, DOXY_FN(ConfigurationSpecification,GetGroupFromName))
+                                           .def(init<PyConfigurationSpecificationPtr>(args("spec")) )
+                                           .def("GetGroupFromName",&PyConfigurationSpecification::GetGroupFromName, return_value_policy<copy_const_reference>(), DOXY_FN(ConfigurationSpecification,GetGroupFromName))
+                                           .def("FindCompatibleGroup",&PyConfigurationSpecification::FindCompatibleGroup, DOXY_FN(ConfigurationSpecification,FindCompatibleGroup))
+                                           .def("FindTimeDerivativeGroup",&PyConfigurationSpecification::FindTimeDerivativeGroup, DOXY_FN(ConfigurationSpecification,FindTimeDerivativeGroup))
                                            .def("GetDOF",&PyConfigurationSpecification::GetDOF,DOXY_FN(ConfigurationSpecification,GetDOF))
                                            .def("IsValid",&PyConfigurationSpecification::IsValid,DOXY_FN(ConfigurationSpecification,IsValid))
+                                           .def("ResetGroupOffsets",&PyConfigurationSpecification::ResetGroupOffsets,DOXY_FN(ConfigurationSpecification,ResetGroupOffsets))
+                                           .def("AddVelocityGroups",&PyConfigurationSpecification::AddVelocityGroups,args("adddeltatime"), DOXY_FN(ConfigurationSpecification,AddVelocityGroups))
+                                           .def("AddDeltaTimeGroup",&PyConfigurationSpecification::AddDeltaTimeGroup,DOXY_FN(ConfigurationSpecification,AddDeltaTimeGroup))
+                                           .def("AddGroup",&PyConfigurationSpecification::AddGroup,args("name","dof","interpolation"), DOXY_FN(ConfigurationSpecification,AddGroup))
+
                                            .def("ExtractJointValues",&PyConfigurationSpecification::ExtractJointValues,args("data","body","indices","timederivative"),DOXY_FN(ConfigurationSpecification,ExtractJointValues))
                                            .def("ExtractDeltaTime",&PyConfigurationSpecification::ExtractDeltaTime,args("data"),DOXY_FN(ConfigurationSpecification,ExtractDeltaTime))
                                            .def("InsertDeltaTime",&PyConfigurationSpecification::InsertDeltaTime,args("data","deltatime"),DOXY_FN(ConfigurationSpecification,InsertDeltaTime))
                                            .def("__eq__",&PyConfigurationSpecification::__eq__)
                                            .def("__ne__",&PyConfigurationSpecification::__ne__)
+                                           .def("__add__",&PyConfigurationSpecification::__add__)
+                                           .def("__iadd__",&PyConfigurationSpecification::__iadd__);
         ;
 
         {
@@ -999,10 +1080,16 @@ void init_openravepy_global()
 
     {
         scope x = class_<object>("planningutils")
-                  .def("ReverseTrajectory",planningutils::pyReverseTrajectory,DOXY_FN1(ReverseTrajectory))
+                  .def("ConvertTrajectorySpecification",planningutils::pyConvertTrajectorySpecification,args("trajectory","spec"),DOXY_FN1(ConvertTrajectorySpecification))
+                  .staticmethod("ConvertTrajectorySpecification")
+                  .def("ReverseTrajectory",planningutils::pyReverseTrajectory,args("trajectory"),DOXY_FN1(ReverseTrajectory))
                   .staticmethod("ReverseTrajectory")
-                  .def("RetimeActiveDOFTrajectory",planningutils::pyRetimeActiveDOFTrajectory,DOXY_FN1(RetimeActiveDOFTrajectory))
-                  .staticmethod("RetimeActiveDOFTrajectory")
+                  .def("SmoothActiveDOFTrajectory",planningutils::pySmoothActiveDOFTrajectory, SmoothActiveDOFTrajectory_overloads(args("trajectory","robot","hastimestamps","maxvelmult","plannername"),DOXY_FN1(SmoothActiveDOFTrajectory)))
+                  .staticmethod("SmoothActiveDOFTrajectory")
+                  .def("SmoothAffineTrajectory",planningutils::pySmoothAffineTrajectory, SmoothAffineTrajectory_overloads(args("trajectory","maxvelocities","maxaccelerations","hastimestamps","plannername"),DOXY_FN1(SmoothAffineTrajectory)))
+                  .staticmethod("SmoothAffineTrajectory")
+                  .def("MergeTrajectories",planningutils::pyMergeTrajectories,args("trajectories"),DOXY_FN1(MergeTrajectories))
+                  .staticmethod("MergeTrajectories")
         ;
     }
 

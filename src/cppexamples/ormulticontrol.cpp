@@ -126,7 +126,7 @@ int main(int argc, char ** argv)
                 std::copy(q.begin(),q.end(),vdata.begin());
                 vdata.at(timeoffset) = 2; // trajectory takes 2s
                 traj->Insert(1,vdata);
-                planningutils::RetimeActiveDOFTrajectory(traj,probot,true);
+                planningutils::SmoothActiveDOFTrajectory(traj,probot,true);
                 armcontroller->SetPath(traj);
             }
 

@@ -842,7 +842,9 @@ public:
             - \b affine_velocities - The velocity (1/second) of the affine transformation [rotation axis, translation velocity], the name of the body can follow.
             - \b affine_accelerations - The velocity (1/second^2) of the affine transformation [rotation axis, translation velocity], the name of the body can follow.
             - \b ikparam_values - The values of an IkParmeterization. The ikparam type is stored as the second value in name
-            - \b ikparam_velocities - velociti of an IkParmeterization. The ikparam type is stored as the second value in name
+            - \b ikparam_velocities - velocity of an IkParmeterization. The ikparam type is stored as the second value in name
+            - \b iswaypoint - non-zero if the point represents a major knot point of the trajectory
+            - \b grab - Used to grab bodies given a robot's links. The name of the robot name along with the link indices to grab can follow.
          */
         std::string name;
         /** \brief Describes how the data should be interpolated. Common methods are:
@@ -901,13 +903,30 @@ protected:
     /// \return an iterator part of _vgroups that represents the most compatible group. If no group is found, will return _vgroups.end()
     virtual std::vector<Group>::const_iterator FindCompatibleGroup(const Group& g, bool exactmatch=false) const;
 
-    /// \brief Return the most compatible group that represents the time-derivative data of the group.
+    /// \brief finds the most compatible group to the given group
     ///
-    /// For example given a 'joint_values' group, this will return the closest 'joint_velocities' group.
-    /// \param g the group to query, only the Group::name and Group::dof values are used
+    /// \param name the name of the group to query
     /// \param exactmatch if true, will only return groups whose name exactly matches with g.name
     /// \return an iterator part of _vgroups that represents the most compatible group. If no group is found, will return _vgroups.end()
+    virtual std::vector<Group>::const_iterator FindCompatibleGroup(const std::string& name, bool exactmatch=false) const;
+
+    /** \brief Return the most compatible group that represents the time-derivative data of the group.
+
+        For example given a 'joint_values' group, this will return the closest 'joint_velocities' group.
+        \param g the group to query, only the Group::name and Group::dof values are used
+        \param exactmatch if true, will only return groups whose name exactly matches with g.name
+        \return an iterator part of _vgroups that represents the most compatible group. If no group is found, will return _vgroups.end()
+     */
     virtual std::vector<Group>::const_iterator FindTimeDerivativeGroup(const Group& g, bool exactmatch=false) const;
+
+    /** \brief Return the most compatible group that represents the time-derivative data of the group.
+
+        For example given a 'joint_values' group, this will return the closest 'joint_velocities' group.
+        \param name the name of the group to query
+        \param exactmatch if true, will only return groups whose name exactly matches with g.name
+        \return an iterator part of _vgroups that represents the most compatible group. If no group is found, will return _vgroups.end()
+     */
+    virtual std::vector<Group>::const_iterator FindTimeDerivativeGroup(const std::string& name, bool exactmatch=false) const;
 
     /** \brief adds a velocity group for every position group.
 
@@ -932,7 +951,25 @@ protected:
     virtual void ResetGroupOffsets();
 
     /// \brief adds the deltatime tag to the end if one doesn't exist and returns the index into the configuration space
-    virtual int AddDeltaTime();
+    virtual int AddDeltaTimeGroup();
+
+    /// \brief adds a new group to the specification and returns its new offset.
+    ///
+    /// If the new group's semantic name exists in the current specification and it exactly matches, then succeeds. If the match
+    /// isn't exact, then an openrave_exception is throw.
+    virtual int AddGroup(const std::string& name, int dof, const std::string& interpolation = "");
+
+    /// \brief merges all the information from the input group into this group
+    ///
+    /// For groups that are merged, the interpolation method is not changed.
+    /// \throw openrave_exception throws if groups do not contain enough information to be merged
+    virtual ConfigurationSpecification& operator+= (const ConfigurationSpecification& r);
+
+    /// \brief return a new specification that holds the merged information from the current and input specification and the input parameter..
+    ///
+    /// For groups that are merged, the interpolation method is not changed.
+    /// \throw openrave_exception throws if groups do not contain enough information to be merged
+    virtual ConfigurationSpecification operator+ (const ConfigurationSpecification& r) const;
 
     /** \brief extracts an affine transform given the start of a configuration space point
 
@@ -1008,9 +1045,10 @@ protected:
         \param gsource the source configuration group
         \param numpoints the number of points to convert. The target and source strides are gtarget.dof and gsource.dof
         \param penv [optional] The environment which might be needed to fill in unknown data. Assumes environment is locked.
+        \param filluninitialized If there exists target groups that cannot be initialized, then will set default values using the current environment. For example, the current joint values of the body will be used.
         \throw openrave_exception throw f groups are incompatible
      */
-    static void ConvertGroupData(std::vector<dReal>::iterator ittargetdata, size_t targetstride, const Group& gtarget, std::vector<dReal>::const_iterator itsourcedata, size_t sourcestride, const Group& gsource, size_t numpoints, EnvironmentBaseConstPtr penv);
+    static void ConvertGroupData(std::vector<dReal>::iterator ittargetdata, size_t targetstride, const Group& gtarget, std::vector<dReal>::const_iterator itsourcedata, size_t sourcestride, const Group& gsource, size_t numpoints, EnvironmentBaseConstPtr penv, bool filluninitialized = true);
 
     /** \brief Converts from one specification to another.
 
@@ -1020,7 +1058,7 @@ protected:
         \param sourcespec the source configuration specification
         \param numpoints the number of points to convert. The target and source strides are gtarget.dof and gsource.dof
         \param penv [optional] The environment which might be needed to fill in unknown data. Assumes environment is locked.
-        \param filluninitialized If there exists target groups that cannot be initialized, then will set default values to them.
+        \param filluninitialized If there exists target groups that cannot be initialized, then will set default values using the current environment. For example, the current joint values of the body will be used.
      */
     static void ConvertData(std::vector<dReal>::iterator ittargetdata, const ConfigurationSpecification& targetspec, std::vector<dReal>::const_iterator itsourcedata, const ConfigurationSpecification& sourcespec, size_t numpoints, EnvironmentBaseConstPtr penv, bool filluninitialized = true);
 

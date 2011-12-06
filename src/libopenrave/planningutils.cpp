@@ -207,8 +207,19 @@ void VerifyTrajectory(PlannerBase::PlannerParametersConstPtr parameters, Traject
     }
 }
 
-void RetimeActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr probot, bool hastimestamps, dReal fmaxvelmult, const std::string& plannername)
+void SmoothActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr probot, bool hastimestamps, dReal fmaxvelmult, const std::string& plannername)
 {
+    if( traj->GetNumWaypoints() == 1 ) {
+        // don't need retiming, but should at least add a time group
+        ConfigurationSpecification spec = traj->GetConfigurationSpecification();
+        spec.AddDeltaTimeGroup();
+        vector<dReal> data;
+        traj->GetWaypoints(0,traj->GetNumWaypoints(),data,spec);
+        traj->Init(spec);
+        traj->Insert(0,data);
+        return;
+    }
+
     PlannerBasePtr planner = RaveCreatePlanner(traj->GetEnv(),plannername.size() > 0 ? plannername : string("lineartrajectoryretimer"));
     PlannerBase::PlannerParametersPtr params(new PlannerBase::PlannerParameters());
     params->SetRobotActiveJoints(probot);
@@ -243,7 +254,22 @@ static void diffstatefn(std::vector<dReal>& q1, const std::vector<dReal>& q2, co
     }
 }
 
-void RetimeAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps, const std::string& plannername)
+static void _SetTransformBody(std::vector<dReal>::const_iterator itvalues, KinBodyPtr pbody, int index, int affinedofs,const Vector& vActvAffineRotationAxis)
+{
+    Transform t = pbody->GetTransform();
+    RaveGetTransformFromAffineDOFValues(t,itvalues+index,affinedofs,vActvAffineRotationAxis);
+    pbody->SetTransform(t);
+}
+
+void _SetAffineState(const std::vector<dReal>& v, const std::list< boost::function< void(std::vector<dReal>::const_iterator) > >& listfunctions)
+{
+    FOREACHC(itfn,listfunctions) {
+        (*itfn)(v.begin());
+    }
+}
+
+// this function is very messed up
+void SmoothAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps, const std::string& plannername)
 {
     PlannerBasePtr planner = RaveCreatePlanner(traj->GetEnv(),plannername.size() > 0 ? plannername : string("lineartrajectoryretimer"));
     PlannerBase::PlannerParametersPtr params(new PlannerBase::PlannerParameters());
@@ -253,24 +279,34 @@ void RetimeAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& ma
     params->_configurationspecification = traj->GetConfigurationSpecification();
     params->_vConfigLowerLimit.resize(traj->GetConfigurationSpecification().GetDOF());
     params->_vConfigUpperLimit.resize(traj->GetConfigurationSpecification().GetDOF());
+    params->_vConfigResolution.resize(traj->GetConfigurationSpecification().GetDOF());
     for(size_t i = 0; i < params->_vConfigLowerLimit.size(); ++i) {
         params->_vConfigLowerLimit[i] = -1e6;
         params->_vConfigUpperLimit[i] = 1e6;
+        params->_vConfigResolution[i] = 0.01;
     }
 
     // analyze the configuration for identified dimensions
+    list< boost::function<void(std::vector<dReal>::const_iterator) > > listfunctions;
     std::vector<int> vrotaxes;
+    KinBodyPtr robot;
     FOREACHC(itgroup,traj->GetConfigurationSpecification()._vgroups) {
         if( itgroup->name.size() >= 16 && itgroup->name.substr(0,16) == "affine_transform" ) {
             string tempname;
             int affinedofs=0;
             stringstream ss(itgroup->name.substr(16));
             ss >> tempname >> affinedofs;
-            if( !!ss ) {
-                if( affinedofs & DOF_RotationAxis ) {
-                    vrotaxes.push_back(itgroup->offset+RaveGetIndexFromAffineDOF(affinedofs,DOF_RotationAxis));
-                }
+            BOOST_ASSERT( !!ss );
+            KinBodyPtr pbody = traj->GetEnv()->GetKinBody(tempname);
+            BOOST_ASSERT( !!pbody );
+            int index = itgroup->offset+RaveGetIndexFromAffineDOF(affinedofs,DOF_RotationAxis);
+            Vector vaxis(0,0,1);
+            if( affinedofs & DOF_RotationAxis ) {
+                vrotaxes.push_back(itgroup->offset+RaveGetIndexFromAffineDOF(affinedofs,DOF_RotationAxis));
+                ss >> vaxis.x >> vaxis.y >> vaxis.z;
             }
+            robot = pbody;
+            listfunctions.push_back(boost::bind(_SetTransformBody,_1,pbody,index,affinedofs,vaxis));
         }
         else if( itgroup->name.size() >= 14 && itgroup->name.substr(0,14) == "ikparam_values" ) {
             int iktypeint = 0;
@@ -284,7 +320,14 @@ void RetimeAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& ma
                     break;
                 }
             }
+            RAVELOG_VERBOSE("cannot smooth state for IK configurations\n");
         }
+    }
+    if( listfunctions.size() > 0 ) {
+        params->_setstatefn = boost::bind(_SetAffineState,_1,boost::ref(listfunctions));
+
+        boost::shared_ptr<LineCollisionConstraint> pcollision(new LineCollisionConstraint());
+        params->_checkpathconstraintsfn = boost::bind(&LineCollisionConstraint::Check,pcollision,PlannerBase::PlannerParametersWeakPtr(params), robot, _1, _2, _3, _4);
     }
     params->_diffstatefn = boost::bind(diffstatefn,_1,_2,boost::ref(vrotaxes));
     //params->_distmetricfn;
@@ -356,12 +399,105 @@ TrajectoryBasePtr ReverseTrajectory(TrajectoryBaseConstPtr sourcetraj)
     return traj;
 }
 
+TrajectoryBasePtr MergeTrajectories(const std::list<TrajectoryBaseConstPtr>& listtrajectories)
+{
+    TrajectoryBasePtr presulttraj;
+    if( listtrajectories.size() == 0 ) {
+        return presulttraj;
+    }
+    ConfigurationSpecification spec;
+    vector<dReal> vpointdata;
+    vector<dReal> vtimes; vtimes.reserve(listtrajectories.front()->GetNumWaypoints());
+    int totaldof = 1; // for delta time
+    FOREACHC(ittraj,listtrajectories) {
+        const ConfigurationSpecification& trajspec = (*ittraj)->GetConfigurationSpecification();
+        ConfigurationSpecification::Group gtime = trajspec.GetGroupFromName("deltatime");
+        spec += trajspec;
+        totaldof += trajspec.GetDOF()-1;
+        if( trajspec.FindCompatibleGroup("iswaypoint",true) != trajspec._vgroups.end() ) {
+            totaldof -= 1;
+        }
+        dReal curtime = 0;
+        for(size_t ipoint = 0; ipoint < (*ittraj)->GetNumWaypoints(); ++ipoint) {
+            (*ittraj)->GetWaypoint(ipoint,vpointdata);
+            curtime += vpointdata.at(gtime.offset);
+            vector<dReal>::iterator it = lower_bound(vtimes.begin(),vtimes.end(),curtime);
+            if( *it != curtime ) {
+                vtimes.insert(it,curtime);
+            }
+        }
+    }
+
+    vector<ConfigurationSpecification::Group>::const_iterator itwaypointgroup = spec.FindCompatibleGroup("iswaypoint",true);
+    vector<dReal> vwaypoints;
+    if( itwaypointgroup != spec._vgroups.end() ) {
+        totaldof += 1;
+        vwaypoints.resize(vtimes.size(),0);
+    }
+
+    if( totaldof != spec.GetDOF() ) {
+        throw OPENRAVE_EXCEPTION_FORMAT("merged configuration needs to have %d DOF, currently has %d",totaldof%spec.GetDOF(),ORE_InvalidArguments);
+    }
+    presulttraj = RaveCreateTrajectory(listtrajectories.front()->GetEnv(),listtrajectories.front()->GetXMLId());
+    presulttraj->Init(spec);
+
+    if( vtimes.size() == 0 ) {
+        return presulttraj;
+    }
+
+    // need to find all waypoints
+    vector<dReal> vtemp, vnewdata;
+
+    int deltatimeoffset = spec.GetGroupFromName("deltatime").offset;
+    FOREACHC(ittraj,listtrajectories) {
+        vector<ConfigurationSpecification::Group>::const_iterator itwaypointgrouptraj = (*ittraj)->GetConfigurationSpecification().FindCompatibleGroup("iswaypoint",true);
+        int waypointoffset = -1;
+        if( itwaypointgrouptraj != (*ittraj)->GetConfigurationSpecification()._vgroups.end() ) {
+            waypointoffset = itwaypointgrouptraj->offset;
+        }
+        if( vnewdata.size() == 0 ) {
+            vnewdata.reserve(vtimes.size()*spec.GetDOF());
+            for(size_t i = 0; i < vtimes.size(); ++i) {
+                (*ittraj)->Sample(vtemp,vtimes[i],spec);
+                vnewdata.insert(vnewdata.end(),vtemp.begin(),vtemp.end());
+                if( waypointoffset >= 0 ) {
+                    vwaypoints[i] += vtemp[waypointoffset];
+                }
+            }
+        }
+        else {
+            vpointdata.resize(0);
+            for(size_t i = 0; i < vtimes.size(); ++i) {
+                (*ittraj)->Sample(vtemp,vtimes[i]);
+                vpointdata.insert(vpointdata.end(),vtemp.begin(),vtemp.end());
+                if( waypointoffset >= 0 ) {
+                    vwaypoints[i] += vtemp[waypointoffset];
+                }
+            }
+            ConfigurationSpecification::ConvertData(vnewdata.begin(),spec,vpointdata.begin(),(*ittraj)->GetConfigurationSpecification(),vtimes.size(),presulttraj->GetEnv(),false);
+        }
+    }
+
+    vnewdata.at(deltatimeoffset) = vtimes[0];
+    for(size_t i = 1; i < vtimes.size(); ++i) {
+        vnewdata.at(i*spec.GetDOF()+deltatimeoffset) = vtimes[i]-vtimes[i-1];
+    }
+    if( itwaypointgroup != spec._vgroups.end() ) {
+        vnewdata.at(itwaypointgroup->offset) = vwaypoints[0];
+        for(size_t i = 1; i < vtimes.size(); ++i) {
+            vnewdata.at(i*spec.GetDOF()+itwaypointgroup->offset) = vwaypoints[i];
+        }
+    }
+    presulttraj->Insert(0,vnewdata);
+    return presulttraj;
+}
+
 LineCollisionConstraint::LineCollisionConstraint()
 {
     _report.reset(new CollisionReport());
 }
 
-bool LineCollisionConstraint::Check(PlannerBase::PlannerParametersWeakPtr _params, RobotBasePtr robot, const std::vector<dReal>& pQ0, const std::vector<dReal>& pQ1, IntervalType interval, PlannerBase::ConfigurationListPtr pvCheckedConfigurations)
+bool LineCollisionConstraint::Check(PlannerBase::PlannerParametersWeakPtr _params, KinBodyPtr robot, const std::vector<dReal>& pQ0, const std::vector<dReal>& pQ1, IntervalType interval, PlannerBase::ConfigurationListPtr pvCheckedConfigurations)
 {
     // set the bounds based on the interval type
     PlannerBase::PlannerParametersPtr params = _params.lock();
@@ -404,6 +540,7 @@ bool LineCollisionConstraint::Check(PlannerBase::PlannerParametersWeakPtr _param
     params->_diffstatefn(dQ,pQ0);
     int i, numSteps = 1;
     std::vector<dReal>::const_iterator itres = params->_vConfigResolution.begin();
+    BOOST_ASSERT((int)params->_vConfigResolution.size()==params->GetDOF());
     int totalsteps = 0;
     for (i = 0; i < params->GetDOF(); i++,itres++) {
         int steps;

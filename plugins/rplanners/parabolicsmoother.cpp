@@ -101,7 +101,10 @@ public:
             dynamicpath.SetMilestones(path);   //now the trajectory starts and stops at every milestone
             RAVELOG_DEBUG(str(boost::format("initial path size %d, duration: %f")%path.size()%dynamicpath.GetTotalTime()));
             ParabolicRamp::RampFeasibilityChecker checker(this,parameters->_pointtolerance);
-            int numshortcuts=dynamicpath.Shortcut(parameters->_nMaxIterations,checker);
+            int numshortcuts=0;
+            if( !!_parameters->_setstatefn ) {
+                dynamicpath.Shortcut(parameters->_nMaxIterations,checker);
+            }
 
             ConfigurationSpecification oldspec = ptraj->GetConfigurationSpecification();
             ConfigurationSpecification velspec = oldspec.ConvertToVelocitySpecification();
@@ -167,7 +170,7 @@ public:
                     itrampnd->Derivative(vswitchtimes[i],vconfig);
                     ConfigurationSpecification::ConvertData(ittargetdata,newspec,vconfig.begin(),velspec,1,GetEnv(),false);
                     *(ittargetdata+timeoffset) = vswitchtimes[i]-prevtime;
-                    *(ittargetdata+waypointoffset) = dReal(i==0);
+                    *(ittargetdata+waypointoffset) = dReal(i+1==vswitchtimes.size());
                     ittargetdata += newspec.GetDOF();
                     prevtime = vswitchtimes[i];
                 }

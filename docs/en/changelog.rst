@@ -25,13 +25,15 @@ Core
 
 * Now properly handling inter-grabbed-body collisions: if two grabbed bodies are initially colliding when grabbed, then their self-colision should be ignored. Also fixed a bug with :meth:`.Robot.Manipulator.CheckEndEffectorCollision`
 
-* Added a new class :class:`.ConfigurationSpecification` to manage configuration spaces, it is shared by both planners and trajectories.
+* Added a new class :class:`.ConfigurationSpecification` to manage configuration spaces, it is shared by both planners and trajectories. The specification can hold joint values, transformation values, etc.
 
 * Separated the affine DOF spece configuration from robot class into the global openrave space. See :class:`.DOFAffine`, :meth:`.RaveGetIndexFromAffineDOF`, :meth:`.RaveGetAffineDOFFromIndex`, :meth:`.RaveGetAffineDOF`, and :meth:`.RaveGetAffineDOFValuesFromTransform`
 
 * Can now reset the local manipulator coordinate system with :meth:`.Robot.Manipulator.SetLocalToolTransform`
 
 * Added parsing of kinematics for DirextX files (\*.x).
+
+* Collada reading/writing now preserve the body DOF indices order by storing actuator information.
 
 Inverse Kinematics
 ------------------
@@ -85,7 +87,7 @@ Trajectories
 
 * Added trajectory API to openravepy.
 
-* Added many useful trajectory routines in the :class:`.planningutils` namespace. For example: :meth:`.planningutils.VerifyTrajectory`, :meth:`.planningutils.RetimeActiveDOFTrajectory`, :meth:`.planningutils.RetimeAffineTrajectory`, :meth:`.planningutils.ConvertTrajectorySpecification`, :meth:`.planningutils.ReverseTrajectory`.
+* Added many useful trajectory routines in the :class:`.planningutils` namespace. For example: :meth:`.planningutils.VerifyTrajectory`, :meth:`.planningutils.RetimeActiveDOFTrajectory`, :meth:`.planningutils.RetimeAffineTrajectory`, :meth:`.planningutils.ConvertTrajectorySpecification`, :meth:`.planningutils.ReverseTrajectory`, :meth:`.planningutils.MergeTrajectories`.
 
 Python
 ------
@@ -116,6 +118,8 @@ Misc
 * updated :ref:`collisionchecker-bullet` collision checker to be up to par with ODE. Now the two engines should be interchangeable,
 
 * fixed qtcoin interface memory leak with QAction menus.
+
+* fixed qtcoin :meth:`.Viewer.GetCameraTransform` function. now compatible with :meth:`.Viewer.GetCameraImage`
 
 Version 0.4.2
 =============

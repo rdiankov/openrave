@@ -45,24 +45,24 @@ OPENRAVE_API bool JitterTransform(KinBodyPtr pbody, float fJitter, int nMaxItera
  */
 OPENRAVE_API void VerifyTrajectory(PlannerBase::PlannerParametersConstPtr parameters, TrajectoryBaseConstPtr trajectory, dReal samplingstep=0.002);
 
-/** \brief retimes the trajectory points consisting of active dofs of the robot
+/** \brief Smooth the trajectory points consisting of active dofs of the robot
 
    \param traj the trajectory that initially contains the input points, it is modified to contain the new re-timed data.
    \param robot use the robot's active dofs to initialize the trajectory space
-   \param plannername the name of the planner to use to retime. If empty, will use the default trajectory re-timer.
+   \param plannername the name of the planner to use to smooth. If empty, will use the default trajectory re-timer.
    \param hastimestamps if true, use the already initialized timestamps of the trajectory
  */
-OPENRAVE_API void RetimeActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr robot, bool hastimestamps=false, dReal fmaxvelmult=1, const std::string& plannername="");
+OPENRAVE_API void SmoothActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr robot, bool hastimestamps=false, dReal fmaxvelmult=1, const std::string& plannername="");
 
-/** \brief retimes the trajectory points consisting of affine dofs
+/** \brief Smooth the trajectory points consisting of affine dofs
 
    \param traj the trajectory that initially contains the input points, it is modified to contain the new re-timed data.
    \param maxvelocities the max velocities of each dof
    \param maxaccelerations the max acceleration of each dof
-   \param plannername the name of the planner to use to retime. If empty, will use the default trajectory re-timer.
+   \param plannername the name of the planner to use to smooth. If empty, will use the default trajectory re-timer.
    \param hastimestamps if true, use the already initialized timestamps of the trajectory
  */
-OPENRAVE_API void RetimeAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps=false, const std::string& plannername="");
+OPENRAVE_API void SmoothAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps=false, const std::string& plannername="");
 
 /// \brief convert the trajectory and all its points to a new specification
 OPENRAVE_API void ConvertTrajectorySpecification(TrajectoryBasePtr traj, const ConfigurationSpecification& spec);
@@ -72,12 +72,19 @@ OPENRAVE_API void ConvertTrajectorySpecification(TrajectoryBasePtr traj, const C
 /// Velocities are just negated and the new trajectory is not guaranteed to be executable or valid
 OPENRAVE_API TrajectoryBasePtr ReverseTrajectory(TrajectoryBaseConstPtr traj);
 
+/// \brief merges the contents of multiple trajectories into one so that everything can be played simultaneously.
+///
+/// Each trajectory needs to have a 'deltatime' group for timestamps. The trajectories cannot share common configuration data because only one
+/// trajectories's data can be set at a time.
+/// \throw openrave_exception throws an exception if the trajectory data is incompatible and cannot be merged.
+OPENRAVE_API TrajectoryBasePtr MergeTrajectories(const std::list<TrajectoryBaseConstPtr>& listtrajectories);
+
 /// \brief Line collision
 class OPENRAVE_API LineCollisionConstraint
 {
 public:
     LineCollisionConstraint();
-    bool Check(PlannerBase::PlannerParametersWeakPtr _params, RobotBasePtr robot, const std::vector<dReal>& pQ0, const std::vector<dReal>& pQ1, IntervalType interval, PlannerBase::ConfigurationListPtr pvCheckedConfigurations);
+    bool Check(PlannerBase::PlannerParametersWeakPtr _params, KinBodyPtr robot, const std::vector<dReal>& pQ0, const std::vector<dReal>& pQ1, IntervalType interval, PlannerBase::ConfigurationListPtr pvCheckedConfigurations);
 
 protected:
     std::vector<dReal> _vtempconfig, dQ;

@@ -259,13 +259,16 @@ void TrajectoryBase::AddPoint(const Point& p)
     v.resize(dof+spec._vgroups.back().dof);
     v.at(dof) = p.time;
     dof += 1;
+    if( GetConfigurationSpecification().GetDOF() == 0 ) {
+        Init(spec);
+    }
     Insert(GetNumWaypoints(),v,spec);
 }
 
 bool TrajectoryBase::CalcTrajTiming(RobotBasePtr probot, int interp,  bool autocalc, bool activedof, dReal fmaxvelmult)
 {
     if( activedof ) {
-        planningutils::RetimeActiveDOFTrajectory(shared_trajectory(),probot, !autocalc,fmaxvelmult);
+        planningutils::SmoothActiveDOFTrajectory(shared_trajectory(),probot, !autocalc,fmaxvelmult);
     }
     else if( !!probot ) {
         RobotBase::RobotStateSaver saver(probot);
@@ -274,7 +277,7 @@ bool TrajectoryBase::CalcTrajTiming(RobotBasePtr probot, int interp,  bool autoc
             indices[i] = i;
         }
         probot->SetActiveDOFs(indices);
-        planningutils::RetimeActiveDOFTrajectory(shared_trajectory(),probot,!autocalc,fmaxvelmult);
+        planningutils::SmoothActiveDOFTrajectory(shared_trajectory(),probot,!autocalc,fmaxvelmult);
     }
     else {
         RAVELOG_WARN("CalcTrajTiming failed, need to specify robot\n");

@@ -121,7 +121,7 @@ class ReachabilityModel(DatabaseGenerator):
         clone = DatabaseGenerator.clone(self,envother)
         return clone
     def has(self):
-        return len(self.reachabilitydensity3d) > 0 and len(self.reachability3d) > 0
+        return len(self.reachabilitydensity3d) > 0 and len(self.reachability3d) > 0 and len(self.reachabilitystats) > 0
     def getversion(self):
         return 4
     def load(self):

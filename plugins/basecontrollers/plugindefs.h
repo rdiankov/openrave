@@ -72,6 +72,4 @@ template <class T> boost::shared_ptr<T> sptr_from(boost::weak_ptr<T> const& wpt)
 
 using namespace OpenRAVE;
 
-#include "basecontrollers.h"
-
 #endif

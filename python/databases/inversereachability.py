@@ -202,6 +202,7 @@ class InverseReachabilityModel(DatabaseGenerator):
             quateucdist2 = (1-cos(quatthresh))**2+sin(quatthresh)**2
             # find the density
             basetrans = array(self.rmodel.reachabilitystats)
+            assert len(basetrans) > 0
             basetrans[:,0:7] = poseMultArrayT(poseFromMatrix(Tbase),basetrans[:,0:7])
             # find the density of the points
             searchtrans = c_[basetrans[:,0:4],basetrans[:,6:7]]

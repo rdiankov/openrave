@@ -1153,7 +1153,9 @@ void QtCoinViewer::PrintCamera()
 RaveTransform<float> QtCoinViewer::GetCameraTransform() const
 {
     boost::mutex::scoped_lock lock(_mutexMessages);
-    return Tcam;
+    // have to flip Z axis
+    RaveTransform<float> trot; trot.rot = quatFromAxisAngle(RaveVector<float>(1,0,0),(float)PI);
+    return Tcam*trot;
 }
 
 geometry::RaveCameraIntrinsics<float> QtCoinViewer::GetCameraIntrinsics() const
@@ -3115,7 +3117,7 @@ void QtCoinViewer::_UpdateCollisionChecker()
 
 void QtCoinViewer::PhysicsEngineChanged(QAction* pact)
 {
-    
+
     if( pact->text() == "[None]" ) {
         GetEnv()->SetPhysicsEngine(PhysicsEngineBasePtr());
     }

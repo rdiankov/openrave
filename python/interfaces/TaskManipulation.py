@@ -43,7 +43,7 @@ class TaskManipulation:
         if envother.AddModule(clone.prob,clone.args) != 0:
             raise ValueError('module failed to initialize')
         return clone
-    def GraspPlanning(self,graspindices,grasps,target,approachoffset=0,destposes=None,seedgrasps=None,seeddests=None,seedik=None,maxiter=None,randomgrasps=None,randomdests=None, execute=None,outputtraj=None,grasptranslationstepmult=None,graspfinestep=None):
+    def GraspPlanning(self,graspindices,grasps,target,approachoffset=0,destposes=None,seedgrasps=None,seeddests=None,seedik=None,maxiter=None,randomgrasps=None,randomdests=None, execute=None,outputtraj=None,grasptranslationstepmult=None,graspfinestep=None,outputtrajobj=None):
         """See :ref:`module-taskmanipulation-graspplanning`
         """
         cmd = 'graspplanning target %s approachoffset %.15e grasps %d %d '%(target.GetName(),approachoffset, grasps.shape[0],grasps.shape[1])
@@ -75,7 +75,7 @@ class TaskManipulation:
             cmd += 'randomdests %d '%randomdests
         if execute is not None:
             cmd += 'execute %d '%execute
-        if outputtraj is not None and outputtraj:
+        if (outputtraj is not None and outputtraj) or (outputtrajobj is not None and outputtrajobj):
             cmd += 'outputtraj '
         if grasptranslationstepmult is not None:
             cmd += 'grasptranslationstepmult %.15e '%grasptranslationstepmult
@@ -95,8 +95,10 @@ class TaskManipulation:
         graspindex = int(resvalues.pop(0))
         searchtime = double(resvalues.pop(0))
         trajdata = None
-        if outputtraj is not None and outputtraj:
+        if (outputtraj is not None and outputtraj) or (outputtrajobj is not None and outputtrajobj):
             trajdata = ' '.join(resvalues)
+            if outputtrajobj is not None and outputtrajobj:
+                trajdata = RaveCreateTrajectory(self.prob.GetEnv(),'').deserialize(trajdata)
         return goals,graspindex,searchtime,trajdata
     def EvaluateConstraints(self,freedoms,configs,targetframematrix=None,targetframepose=None,errorthresh=None):
         """See :ref:`module-taskmanipulation-evaluateconstraints`
@@ -115,7 +117,7 @@ class TaskManipulation:
         iters = array([int(s) for s in resvalues[0:len(configs)]])
         newconfigs = reshape(array([float64(s) for s in resvalues[len(configs):]]),(len(configs),self.robot.GetActiveDOF()))
         return iters,newconfigs
-    def CloseFingers(self,offset=None,movingdir=None,execute=None,outputtraj=None,outputfinal=None,coarsestep=None,translationstepmult=None,finestep=None):
+    def CloseFingers(self,offset=None,movingdir=None,execute=None,outputtraj=None,outputfinal=None,coarsestep=None,translationstepmult=None,finestep=None,outputtrajobj=None):
         """See :ref:`module-taskmanipulation-closefingers`
         """
         cmd = 'CloseFingers '
@@ -130,7 +132,7 @@ class TaskManipulation:
             cmd += 'execute %d '%execute
         if coarsestep is not None:
             cmd += 'coarsestep %.15e '%coarsestep
-        if outputtraj is not None and outputtraj:
+        if (outputtraj is not None and outputtraj) or (outputtrajobj is not None and outputtrajobj):
             cmd += 'outputtraj '
         if outputfinal:
             cmd += 'outputfinal'
@@ -147,12 +149,14 @@ class TaskManipulation:
             resvalues=resvalues[dof:]
         else:
             final=None
-        if outputtraj is not None and outputtraj:
+        if (outputtraj is not None and outputtraj) or (outputtrajobj is not None and outputtrajobj):
             traj = ' '.join(resvalues)
+            if outputtrajobj is not None and outputtrajobj:
+                traj = RaveCreateTrajectory(self.prob.GetEnv(),'').deserialize(traj)
         else:
             traj = None
         return final,traj
-    def ReleaseFingers(self,target=None,movingdir=None,execute=None,outputtraj=None,outputfinal=None,coarsestep=None,translationstepmult=None,finestep=None):
+    def ReleaseFingers(self,target=None,movingdir=None,execute=None,outputtraj=None,outputfinal=None,coarsestep=None,translationstepmult=None,finestep=None,outputtrajobj=None):
         """See :ref:`module-taskmanipulation-releasefingers`
         """
         cmd = 'ReleaseFingers '
@@ -164,7 +168,7 @@ class TaskManipulation:
             cmd += 'movingdir %s '%(' '.join(str(f) for f in movingdir))
         if execute is not None:
             cmd += 'execute %d '%execute
-        if outputtraj is not None and outputtraj:
+        if (outputtraj is not None and outputtraj) or (outputtrajobj is not None and outputtrajobj):
             cmd += 'outputtraj '
         if outputfinal:
             cmd += 'outputfinal'
@@ -183,12 +187,14 @@ class TaskManipulation:
             resvalues=resvalues[len(final):]
         else:
             final=None
-        if outputtraj is not None and outputtraj:
+        if (outputtraj is not None and outputtraj) or (outputtrajobj is not None and outputtrajobj):
             traj = ' '.join(resvalues)
+            if outputtrajobj is not None and outputtrajobj:
+                traj = RaveCreateTrajectory(self.prob.GetEnv(),'').deserialize(traj)
         else:
             traj = None
         return final,traj
-    def ReleaseActive(self,movingdir=None,execute=None,outputtraj=None,outputfinal=None,translationstepmult=None,finestep=None):
+    def ReleaseActive(self,movingdir=None,execute=None,outputtraj=None,outputfinal=None,translationstepmult=None,finestep=None,outputtrajobj=None):
         """See :ref:`module-taskmanipulation-releaseactive`
         """
         cmd = 'ReleaseActive '
@@ -197,7 +203,7 @@ class TaskManipulation:
             cmd += 'movingdir %s '%(' '.join(str(f) for f in movingdir))
         if execute is not None:
             cmd += 'execute %d '%execute
-        if outputtraj is not None and outputtraj:
+        if (outputtraj is not None and outputtraj) or (outputtrajobj is not None and outputtrajobj):
             cmd += 'outputtraj '
         if outputfinal:
             cmd += 'outputfinal'
@@ -214,8 +220,10 @@ class TaskManipulation:
             resvalues=resvalues[len(final):]
         else:
             final=None
-        if outputtraj is not None and outputtraj:
+        if (outputtraj is not None and outputtraj) or (outputtrajobj is not None and outputtrajobj):
             traj = ' '.join(resvalues)
+            if outputtrajobj is not None and outputtrajobj:
+                traj = RaveCreateTrajectory(self.prob.GetEnv(),'').deserialize(traj)
         else:
             traj = None
         return final,traj

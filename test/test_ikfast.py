@@ -103,30 +103,32 @@ def robotstats(description,robotfilename,manipname, iktypestr,freeindices):
                 return
 
             ikmodel.freeinc = ikmodel.getDefaultFreeIncrements(options.freeincrot,options.freeinctrans)
-            solutionresults = []                
-            cmd = 'DebugIK robot %s '%robot.GetName()
-            cmd += 'numtests %d '%int(options.numiktests[len(freeindices)])
-            cmd += 'threshold %f '%options.errorthreshold
-            res = ikfastproblem.SendCommand(cmd).split()
-            numtested = int(res[0])
-            numsuccessful = int(res[1])
-            index = 2
-            ikdof = 1+IkParameterization.GetNumberOfValues(iktype)
             assert(manip.GetIkSolver().GetNumFreeParameters() == len(freeindices))
-            for iresults in range(3):
-                num = int(res[index])
-                index += 1
-                samples = []
-                for i in range(num):
-                    ikparam = IkParameterization(' '.join(res[index:(index+ikdof)]))
-                    index += ikdof
-                    samples.append([ikparam,res[index:(index+len(freeindices))]])
-                    index += len(freeindices)
-                solutionresults.append(samples)
+            solutionresults = [[],[],[]]
+
+            numtested = 0
+            numsuccessful = 0
+            numiktests = int(options.numiktests[len(freeindices)])
+            chunksize = 100 # have to split into chunks because of timeouts
+            cmd = 'DebugIK robot %s threshold %f '%(robot.GetName(), options.errorthreshold)
+            for ichunk in range((numiktests+chunksize-1)/chunksize):
+                res = ikfastproblem.SendCommand(cmd+'numtests %d '%chunksize).split()
+                numtested += int(res[0])
+                numsuccessful += int(res[1])
+                index = 2
+                ikdof = 1+IkParameterization.GetNumberOfValues(iktype)
+                for iresults in range(3):
+                    num = int(res[index])
+                    index += 1
+                    for i in range(num):
+                        ikparam = IkParameterization(' '.join(res[index:(index+ikdof)]))
+                        index += ikdof
+                        solutionresults[iresults].append([ikparam,res[index:(index+len(freeindices))]])
+                        index += len(freeindices)
             successrate = float(numsuccessful)/numtested
             nosolutions = float(len(solutionresults[1]))/numtested
             wrongrate = float(len(solutionresults[0]))/numtested
-            resultsstr = ikfastproblem.SendCommand('PerfTiming num 10000 maxtime %f %s'%(options.perftime,ikmodel.getfilename(True)))
+            resultsstr = ikfastproblem.SendCommand('PerfTiming num 5000 maxtime %f %s'%(options.perftime,ikmodel.getfilename(True)))
             results = [numpy.double(s)*1e-9 for s in resultsstr.split()]
             jointnames = ', '.join(robot.GetJointFromDOFIndex(dof).GetName() for dof in ikmodel.manip.GetArmIndices())
         except ikfast.IKFastSolver.IKFeasibilityError,e:

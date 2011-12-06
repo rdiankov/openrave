@@ -788,7 +788,7 @@ RobotBase::RobotBase(EnvironmentBasePtr penv) : KinBody(PT_Robot, penv)
 
     _vRotationAxisLowerLimits = Vector(-PI,-PI,-PI,-PI);
     _vRotationAxisUpperLimits = Vector(PI,PI,PI,PI);
-    _vRotationAxisMaxVels = Vector(0.07f,0.07f,0.07f,0.07f);
+    _vRotationAxisMaxVels = Vector(0.4f,0.4f,0.4f,0.4f);
     _vRotationAxisResolutions = Vector(0.01f,0.01f,0.01f,0.01f);
     _vRotationAxisWeights = Vector(2.0f,2.0f,2.0f,2.0f);
 

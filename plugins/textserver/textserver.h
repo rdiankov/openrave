@@ -2022,7 +2022,7 @@ protected:
         if( havetrans ) {
             probot->SetActiveDOFs(probot->GetActiveDOFIndices(),DOF_Transform);
         }
-        planningutils::RetimeActiveDOFTrajectory(ptraj,probot,havetime);
+        planningutils::SmoothActiveDOFTrajectory(ptraj,probot,havetime);
         probot->GetController()->SetPath(ptraj);
         return true;
     }

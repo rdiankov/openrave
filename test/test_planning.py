@@ -204,3 +204,55 @@ class TestMoving(EnvironmentSetup):
             assert(robot.CheckSelfCollision())
             ret = basemanip.MoveToHandPosition([Tnew],execute=False)
             assert(ret is not None)
+
+    def test_movebase(self):
+        env=self.env
+        xml = """
+<robot name="diffdrive_caster">
+  <kinbody>
+    <body name="base" type="static">
+      <mass type="box">
+        <total>50</total>
+        <extents>1 1 1</extents>
+      </mass>
+      <geom type="box">
+        <extents>0.1 0.2 0.25</extents>
+        <translation>0 0 0.35</translation>
+      </geom>
+    </body>
+    <body name="wheel_left">
+      <geom type="cylinder">
+        <radius>0.2</radius>
+        <height>0.05</height>
+        <translation>0 0.26 0.2</translation>
+      </geom>
+    </body>
+    <body name="wheel_right">s
+      <geom type="cylinder">
+        <radius>0.2</radius>
+        <height>0.05</height>
+        <translation>0 -0.26 0.2</translation>
+      </geom>
+    </body>
+  </kinbody>
+</robot>
+"""
+        robot=env.ReadRobotXMLData(xml)
+        env.AddRobot(robot)
+        robot.SetActiveDOFs([], DOFAffine.X | DOFAffine.Y |DOFAffine.RotationAxis, [0,0,1])
+        basemanip = interfaces.BaseManipulation(robot)
+        trajdata=basemanip.MoveActiveJoints([1,1,1],outputtraj=True)
+
+    def test_affine_smoothing(self):
+        env=self.env
+        robot=env.ReadRobotURI('robots/barrettwam.robot.xml')
+        env.AddRobot(robot)
+        robot.SetActiveDOFs([], DOFAffine.X | DOFAffine.Y |DOFAffine.RotationAxis, [0,0,1])
+        traj=RaveCreateTrajectory(env,'')
+        traj.Init(robot.GetActiveConfigurationSpecification())
+        traj.Insert(0,[0,0,0,  1,0,0.7, 1,0,-5.58, 1,0,-3.2])
+        traj2=RaveCreateTrajectory(env,'')
+        traj2.Clone(traj,0)
+        planningutils.SmoothAffineTrajectory(traj,[2,2,1],[5,5,5],False,'LinearTrajectoryRetimer')
+        planningutils.SmoothAffineTrajectory(traj2,[2,2,1],[5,5,5],False,'ParabolicSmoother')
+        robot.GetController().SetPath(traj2)

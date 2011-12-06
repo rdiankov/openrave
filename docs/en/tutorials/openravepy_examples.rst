@@ -290,7 +290,77 @@ Loads the grasping model and moves the robot to the first grasp found
   taskmanip = interfaces.TaskManipulation(robot)
   taskmanip.CloseFingers()
   robot.WaitForController(0)
+
+Verifying a Trajectory
+----------------------
+
+Verify a trajectory to a grasp without executing anything.
+
+.. code-block:: python
+
+  from openravepy import *
+  import numpy, time
+  env=Environment()
+  env.Load('data/lab1.env.xml')
+  env.SetViewer('qtcoin')
+  robot = env.GetRobots()[0]
+  target = env.GetKinBody('mug1')
+  gmodel = databases.grasping.GraspingModel(robot,target)
+  if not gmodel.load():
+      gmodel.autogenerate()
   
+  validgrasps, validindicees = gmodel.computeValidGrasps(returnnum=1)
+  basemanip = interfaces.BaseManipulation(robot)
+  with robot:
+      grasp = validgrasps[0]
+      gmodel.setPreshape(grasp)
+      T = gmodel.getGlobalGraspTransform(grasp,collisionfree=True)
+      trajdata = basemanip.MoveToHandPosition(matrices=[T],execute=False,outputtraj=True)
+      traj = RaveCreateTrajectory(env,'').deserialize(trajdata)
+      
+  print 'traj has %d waypoints, last waypoint is: %s'%(traj.GetNumWaypoints(),repr(traj.GetWaypoint(-1)))
+  robot.GetController().SetPath(traj)
+  robot.WaitForController(0)
+
+Saving Viewer Image
+-------------------
+
+Save a 640x480 image from the viewer.
+
+.. code-block:: python
+
+  from openravepy import *
+  import scipy
+  import time
+  env = Environment() # create openrave environment
+  env.SetViewer('qtcoin')
+  env.Load('data/lab1.env.xml') # load a simple scene
+  time.sleep(1) # wait for viewer to initialize
+  
+  env.GetViewer().SendCommand('SetFiguresInCamera 1') # also shows the figures in the image
+  I = env.GetViewer().GetCameraImage(640,480,  env.GetViewer().GetCameraTransform(),[640,640,320,240])
+  scipy.misc.imsave('openrave.jpg',I)
+
+Recording Videos
+----------------
+
+Start and stop recording videos using the Python API.
+
+.. code-block:: python
+
+  from openravepy import *
+  import scipy
+  import time
+  env = Environment() # create openrave environment
+  env.SetViewer('qtcoin')
+  env.Load('data/lab1.env.xml') # load a simple scene
+  
+  recorder = RaveCreateModule(env,'viewerrecorder')
+  env.AddModule(recorder,'')
+  filename = 'openrave.mpg'
+  recorder.SendCommand('Start 640 480 30 codec 13 timing realtime filename %s\nviewer %s'%(filename,env.GetViewer().GetName()))
+
+
 Logging
 -------
 

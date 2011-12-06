@@ -13,15 +13,15 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#ifndef RAVE_CONTROLLERS_H
-#define RAVE_CONTROLLERS_H
+#include "plugindefs.h"
 
 #include <boost/bind.hpp>
+#include <boost/lexical_cast.hpp>
 
 class IdealController : public ControllerBase
 {
 public:
-    IdealController(EnvironmentBasePtr penv) : ControllerBase(penv), cmdid(0), _bPause(false), _bIsDone(true), _bCheckCollision(false), _bThrowExceptions(false)
+    IdealController(EnvironmentBasePtr penv, std::istream& sinput) : ControllerBase(penv), cmdid(0), _bPause(false), _bIsDone(true), _bCheckCollision(false), _bThrowExceptions(false)
     {
         __description = ":Interface Author: Rosen Diankov\n\nIdeal controller used for planning and non-physics simulations. Forces exact robot positions.\n\n\
 If \ref ControllerBase::SetPath is called and the trajectory finishes, then the controller will continue to set the trajectory's final joint values and transformation until one of three things happens:\n\n\
@@ -65,18 +65,23 @@ If SetDesired is called, only joint values will be set at every timestep leaving
             _cblimits = _probot->RegisterChangeCallback(KinBody::Prop_JointLimits,boost::bind(&IdealController::_SetJointLimits,boost::bind(&sptr_from<IdealController>, weak_controller())));
             _SetJointLimits();
 
-            _samplespec._vgroups.resize(2);
-            _samplespec._vgroups[0].offset = 0;
-            _samplespec._vgroups[0].dof = _probot->GetDOF();
-            stringstream ss;
-            ss << "joint_values " << _probot->GetName();
-            for(int i = 0; i < _probot->GetDOF(); ++i) {
-                ss << " " << i;
+            if( _dofindices.size() > 0 ) {
+                _gjointvalues.reset(new ConfigurationSpecification::Group());
+                _gjointvalues->offset = 0;
+                _gjointvalues->dof = _dofindices.size();
+                stringstream ss;
+                ss << "joint_values " << _probot->GetName();
+                FOREACHC(it, _dofindices) {
+                    ss << " " << *it;
+                }
+                _gjointvalues->name = ss.str();
             }
-            _samplespec._vgroups[0].name = ss.str();
-            _samplespec._vgroups[1].offset = _probot->GetDOF();
-            _samplespec._vgroups[1].dof = RaveGetAffineDOF(DOF_Transform);
-            _samplespec._vgroups[1].name = str(boost::format("affine_transform %s %d")%_probot->GetName()%DOF_Transform);
+            if( nControlTransformation ) {
+                _gtransform.reset(new ConfigurationSpecification::Group());
+                _gtransform->offset = _probot->GetDOF();
+                _gtransform->dof = RaveGetAffineDOF(DOF_Transform);
+                _gtransform->name = str(boost::format("affine_transform %s %d")%_probot->GetName()%DOF_Transform);
+            }
         }
         _bPause = false;
         return true;
@@ -132,31 +137,59 @@ If SetDesired is called, only joint values will be set at every timestep leaving
     virtual bool SetPath(TrajectoryBaseConstPtr ptraj)
     {
         boost::mutex::scoped_lock lock(_mutex);
-        if( !!ptraj ) {
-            // see if at least one point can be sampled, this make it easier to debug bad trajectories
-            vector<dReal> v;
-            ptraj->Sample(v,0,_samplespec);
-            Transform t;
-            RaveGetTransformFromAffineDOFValues(t,v.begin()+_probot->GetDOF(),DOF_Transform);
-        }
-
         if( _bPause ) {
-            RAVELOG_DEBUG("IdealController cannot player trajectories when paused\n");
+            RAVELOG_DEBUG("IdealController cannot start trajectories when paused\n");
             _ptraj.reset();
             _bIsDone = true;
             return false;
         }
-        _ptraj = ptraj;
         fTime = 0;
-        _bIsDone = !_ptraj;
+        _bIsDone = true;
         _vecdesired.resize(0);
 
-        if( !!_ptraj ) {
-            _bTrajHasJoints = ptraj->GetConfigurationSpecification().FindCompatibleGroup(_samplespec._vgroups.at(0)) != ptraj->GetConfigurationSpecification()._vgroups.end();
-            _bTrajHasTransform = ptraj->GetConfigurationSpecification().FindCompatibleGroup(_samplespec._vgroups.at(1)) != ptraj->GetConfigurationSpecification()._vgroups.end();
-            if( !!flog ) {
-                _ptraj->serialize(flog);
+        if( !!ptraj ) {
+            _samplespec._vgroups.resize(0);
+            _bTrajHasJoints = !!_gjointvalues && ptraj->GetConfigurationSpecification().FindCompatibleGroup(_gjointvalues->name,false) != ptraj->GetConfigurationSpecification()._vgroups.end();
+            if( _bTrajHasJoints ) {
+                _samplespec._vgroups.push_back(*_gjointvalues);
             }
+            _bTrajHasTransform = !!_gtransform && ptraj->GetConfigurationSpecification().FindCompatibleGroup(_gtransform->name,false) != ptraj->GetConfigurationSpecification()._vgroups.end();
+            if( _bTrajHasTransform ) {
+                _samplespec._vgroups.push_back(*_gtransform);
+            }
+            _samplespec.ResetGroupOffsets();
+            _vgrablinks.resize(0);
+            int dof = _samplespec.GetDOF();
+            FOREACHC(itgroup,ptraj->GetConfigurationSpecification()._vgroups) {
+                if( itgroup->name.size()>=4 && itgroup->name.substr(0,4) == "grab") {
+                    stringstream ss(itgroup->name);
+                    std::vector<std::string> tokens((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
+                    if( tokens.size() >= 2 && tokens[1] == _probot->GetName() ) {
+                        _samplespec._vgroups.push_back(*itgroup);
+                        _samplespec._vgroups.back().offset = dof;
+                        for(int idof = 0; idof < _samplespec._vgroups.back().dof; ++idof) {
+                            _vgrablinks.push_back(make_pair(dof+idof,boost::lexical_cast<int>(tokens.at(2+idof))));
+                        }
+                        dof += _samplespec._vgroups.back().dof;
+                    }
+                }
+            }
+            BOOST_ASSERT(_samplespec.IsValid());
+
+            // see if at least one point can be sampled, this make it easier to debug bad trajectories
+            vector<dReal> v;
+            ptraj->Sample(v,0,_samplespec);
+            if( _bTrajHasTransform ) {
+                Transform t;
+                _samplespec.ExtractTransform(t,v.begin(),_probot);
+            }
+
+            if( !!flog ) {
+                ptraj->serialize(flog);
+            }
+
+            _bIsDone = false;
+            _ptraj = ptraj;
         }
 
         return true;
@@ -173,15 +206,31 @@ If SetDesired is called, only joint values will be set at every timestep leaving
             vector<dReal> sampledata;
             ptraj->Sample(sampledata,fTime,_samplespec);
 
-            vector<dReal> vdofvalues;
+            // first process all grab info
+            list<KinBodyPtr> listrelease;
+            FOREACH(itgrabinfo,_vgrablinks) {
+                int bodyid = std::floor(sampledata.at(itgrabinfo->first)+0.5);
+                if( bodyid != 0 ) {
+                    KinBodyPtr pbody = GetEnv()->GetBodyFromEnvironmentId(abs(bodyid));
+                    if( bodyid < 0 ) {
+                        if( _probot->IsGrabbing(pbody) ) {
+                            listrelease.push_back(pbody);
+                        }
+                    }
+                    else {
+                        _probot->Grab(pbody,_probot->GetLinks().at(itgrabinfo->second));
+                    }
+                }
+            }
+
+            vector<dReal> vdofvalues(_dofindices.size());
             if( _bTrajHasJoints && _dofindices.size() > 0 ) {
-                vdofvalues.resize(_probot->GetDOF());
-                std::copy(sampledata.begin(),sampledata.begin()+_probot->GetDOF(),vdofvalues.begin());
+                _samplespec.ExtractJointValues(vdofvalues.begin(),sampledata.begin(), _probot, _dofindices, 0);
             }
 
             Transform t;
             if( _bTrajHasTransform && _nControlTransformation ) {
-                RaveGetTransformFromAffineDOFValues(t,sampledata.begin()+_probot->GetDOF(),DOF_Transform);
+                _samplespec.ExtractTransform(t,sampledata.begin(),_probot);
                 if( vdofvalues.size() > 0 ) {
                     _SetDOFValues(vdofvalues,t);
                 }
@@ -191,6 +240,11 @@ If SetDesired is called, only joint values will be set at every timestep leaving
             }
             else if( vdofvalues.size() > 0 ) {
                 _SetDOFValues(vdofvalues);
+            }
+
+            // always release after setting dof values
+            FOREACH(itbody,listrelease) {
+                _probot->Release(*itbody);
             }
 
             if( fTime > ptraj->GetDuration() ) {
@@ -334,7 +388,7 @@ private:
     dReal _fSpeed;                    ///< how fast the robot should go
     TrajectoryBaseConstPtr _ptraj;         ///< computed trajectory robot needs to follow in chunks of _pbody->GetDOF()
     bool _bTrajHasJoints, _bTrajHasTransform;
-
+    vector< pair<int, int> > _vgrablinks; /// (data offset, link index) pairs
     dReal fTime;
 
     std::vector<dReal> _vecdesired;         ///< desired values of the joints
@@ -350,146 +404,11 @@ private:
     CollisionReportPtr _report;
     UserDataPtr _cblimits;
     ConfigurationSpecification _samplespec;
+    boost::shared_ptr<ConfigurationSpecification::Group> _gjointvalues, _gtransform;
     boost::mutex _mutex;
 };
 
-class RedirectController : public ControllerBase
+ControllerBasePtr CreateIdealController(EnvironmentBasePtr penv, std::istream& sinput)
 {
-public:
-    RedirectController(EnvironmentBasePtr penv) : ControllerBase(penv), _bAutoSync(true) {
-        __description = ":Interface Author: Rosen Diankov\n\nRedirects all input and output to another controller (this avoides cloning the other controller while still allowing it to be used from cloned environments)";
-    }
-    virtual ~RedirectController() {
-    }
-
-    virtual bool Init(RobotBasePtr robot, const std::vector<int>&dofindices, int nControlTransformation)
-    {
-        _dofindices.clear();
-        _pcontroller.reset();
-        _probot = GetEnv()->GetRobot(robot->GetName());
-        if( _probot != robot ) {
-            _pcontroller = robot->GetController();
-            if( !!_pcontroller ) {
-                _dofindices = _pcontroller->GetControlDOFIndices();
-            }
-        }
-        if( _bAutoSync ) {
-            _sync();
-        }
-        return true;
-    }
-
-    // don't touch the referenced controller, since could be just destroying clones
-    virtual void Reset(int options) {
-    }
-
-    virtual bool SetDesired(const std::vector<dReal>&values, TransformConstPtr trans)
-    {
-        if( !_pcontroller->SetDesired(values, trans) ) {
-            return false;
-        }
-        if(_bAutoSync) {
-            _sync();
-        }
-        return true;
-    }
-    virtual bool SetPath(TrajectoryBaseConstPtr ptraj)
-    {
-        if( !_pcontroller->SetPath(ptraj) ) {
-            return false;
-        }
-        if(_bAutoSync) {
-            _sync();
-        }
-        return true;
-    }
-
-    virtual void SimulationStep(dReal fTimeElapsed) {
-        if( !!_pcontroller ) {
-            _pcontroller->SimulationStep(fTimeElapsed);
-            if(_bAutoSync) {
-                _sync();
-            }
-        }
-    }
-
-    virtual const std::vector<int>& GetControlDOFIndices() const {
-        return _dofindices;
-    }
-    virtual int IsControlTransformation() const {
-        return !_pcontroller ? 0 : _pcontroller->IsControlTransformation();
-    }
-    virtual bool IsDone() {
-        return _bAutoSync ? _bSyncDone&&_pcontroller->IsDone() : _pcontroller->IsDone();
-    }
-
-    virtual dReal GetTime() const {
-        return _pcontroller->GetTime();
-    }
-    virtual void GetVelocity(std::vector<dReal>&vel) const {
-        return _pcontroller->GetVelocity(vel);
-    }
-    virtual void GetTorque(std::vector<dReal>&torque) const {
-        return _pcontroller->GetTorque(torque);
-    }
-    virtual RobotBasePtr GetRobot() const {
-        return _probot;
-    }
-
-    virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions)
-    {
-        ControllerBase::Clone(preference,cloningoptions);
-        boost::shared_ptr<RedirectController const> r = boost::dynamic_pointer_cast<RedirectController const>(preference);
-        _probot = GetEnv()->GetRobot(r->_probot->GetName());
-        _pcontroller = r->_pcontroller;     // hmm......... this requires some thought
-    }
-
-    virtual bool SendCommand(std::ostream& os, std::istream& is)
-    {
-        string cmd;
-        streampos pos = is.tellg();
-        is >> cmd;
-        if( !is ) {
-            throw openrave_exception("invalid argument",ORE_InvalidArguments);
-        }
-        std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
-        if( cmd == "sync" ) {
-            _sync();
-            return true;
-        }
-        else if( cmd == "autosync" ) {
-            is >> _bAutoSync;
-            if( !is ) {
-                return false;
-            }
-            if( _bAutoSync ) {
-                _sync();
-            }
-            return true;
-        }
-
-        is.seekg(pos);
-        if( !_pcontroller ) {
-            return false;
-        }
-        return _pcontroller->SendCommand(os,is);
-    }
-
-private:
-    virtual void _sync()
-    {
-        if( !!_pcontroller ) {
-            vector<Transform> vtrans;
-            _pcontroller->GetRobot()->GetLinkTransformations(vtrans);
-            _probot->SetLinkTransformations(vtrans);
-            _bSyncDone = _pcontroller->IsDone();
-        }
-    }
-
-    std::vector<int> _dofindices;
-    bool _bAutoSync, _bSyncDone;
-    RobotBasePtr _probot;               ///< controlled body
-    ControllerBasePtr _pcontroller;
-};
-
-#endif
+    return ControllerBasePtr(new IdealController(penv,sinput));
+}
