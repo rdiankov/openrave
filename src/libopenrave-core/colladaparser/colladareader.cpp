@@ -1026,7 +1026,7 @@ public:
                 }
 
                 for (size_t ic = 0; ic < vdomaxes.getCount(); ++ic) {
-                    FOREACHC(itaxisbinding,bindings.listAxisBindings) {
+                    FOREACH(itaxisbinding,bindings.listAxisBindings) {
                         if (vdomaxes[ic] == itaxisbinding->pkinematicaxis) {
                             itaxisbinding->_pjoint = pjoint;
                             itaxisbinding->_iaxis = ic;
