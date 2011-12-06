@@ -178,10 +178,10 @@ void init_openravepy_spacesampler()
                              .def("GetNumberOfValues",&PySpaceSamplerBase::GetNumberOfValues, args("seed"), DOXY_FN(SpaceSamplerBase,GetNumberOfValues))
                              .def("Supports",&PySpaceSamplerBase::Supports, args("seed"), DOXY_FN(SpaceSamplerBase,Supports))
                              .def("GetLimits",&PySpaceSamplerBase::GetLimits, args("seed"), DOXY_FN(SpaceSamplerBase,GetLimits))
-                             .def("SampleSequence",SampleSequence1, args("num","interval"), DOXY_FN(SpaceSamplerBase,SampleSequence "std::vector<dReal>; size_t; IntervalType"))
-                             .def("SampleSequence",SampleSequence2, args("num"), DOXY_FN(SpaceSamplerBase,SampleSequence "std::vector<uint32_t>; size_t"))
-                             .def("SampleComplete",SampleComplete1, args("num","interval"), DOXY_FN(SpaceSamplerBase,SampleComplete "std::vector<dReal>; size_t; IntervalType"))
-                             .def("SampleComplete",SampleComplete2, args("num"), DOXY_FN(SpaceSamplerBase,SampleComplete "std::vector<uint32_t>; size_t"))
+                             .def("SampleSequence",SampleSequence1, args("num","interval"), DOXY_FN(SpaceSamplerBase,SampleSequence "std::vector; size_t; IntervalType"))
+                             .def("SampleSequence",SampleSequence2, args("num"), DOXY_FN(SpaceSamplerBase,SampleSequence "std::vector; size_t"))
+                             .def("SampleComplete",SampleComplete1, args("num","interval"), DOXY_FN(SpaceSamplerBase,SampleComplete "std::vector; size_t; IntervalType"))
+                             .def("SampleComplete",SampleComplete2, args("num"), DOXY_FN(SpaceSamplerBase,SampleComplete "std::vector; size_t"))
         ;
     }
 

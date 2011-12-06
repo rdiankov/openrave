@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os, sys
+import fnmatch
 from optparse import OptionParser
 import breathe # for doxygen links
 import sphinx
@@ -85,8 +86,8 @@ class FunctionArgumentMatcher(breathe.finder.doxygen.ItemMatcher):
 if __name__ == "__main__":
     parser = OptionParser(description="""Small utility that converts a set of doxygen comments to restructuredText for inclusion into python documentation.
 Uses python docutils, sphinx, breathe, and xml2rst.""")
-    parser.add_option('-i', action="store",type='string',dest='infile',default='../python/bindings/openravepy_int.cpp',
-                      help='Input C++ file to look for DOXY_* tags to know what to generate (default=%default).')
+    parser.add_option('-i', action="store",type='string',dest='infile',default='../python/bindings/*.cpp',
+                      help='Input C++ directory to look for DOXY_* tags to know what to generate (default=%default).')
     parser.add_option('-o', action="store",type='string',dest='outfile',default='../python/bindings/docstrings.cpp',
                       help='Output C++ files that offers the comments.')
     parser.add_option('--languagecode','-l', action="append",type='string',dest='languagecodes',default=[],
@@ -96,22 +97,33 @@ Uses python docutils, sphinx, breathe, and xml2rst.""")
         print 'need to specify at least one language code!'
         sys.exit(1)
 
-    # brief+detailed descriptions only, do not include entire scope
-    rawcppdata = open(options.infile,'r').read()
-    functions=re.findall('DOXY_FN\(\s*([\w:]*)\s*,([\s\w:;* <>&"]*)\)',rawcppdata)
-    while len(functions) > 0 and functions[0][0] == 'class':
-        functions.pop(0) # remove the #define's
-    # add all functions without member classes
-    functions2=re.findall('DOXY_FN1\(([\s\w:;* <>&"]*)\)',rawcppdata)
-    for name in functions2:
-        if name != 'name':
-            functions.append((None,name))
-    enums=re.findall('DOXY_ENUM\(\s*([\w:]*)\s*\)',rawcppdata)
-    while len(enums) > 0 and enums[0] == 'name':
-        enums.pop(0) # remove the #define's
-    classes=re.findall('DOXY_CLASS\(\s*([\w:]*)\s*\)',rawcppdata)
-    while len(classes) > 0 and classes[0] == 'name':
-        classes.pop(0) # remove the #define's
+    functions = []
+    enums = []
+    classes = []
+
+    searchpath, searchstring = os.path.split(options.infile)
+    for file in os.listdir(searchpath):
+        if not fnmatch.fnmatch(file, searchstring):
+            continue
+        # brief+detailed descriptions only, do not include entire scope
+        rawcppdata = open(os.path.join(searchpath,file),'r').read()
+        functions_temp=re.findall('DOXY_FN\(\s*([\w:]*)\s*,([\s\w:;* <>&"]*)\)',rawcppdata)
+        while len(functions_temp) > 0 and functions_temp[0][0] == 'class':
+            functions_temp.pop(0) # remove the #define's
+        functions += functions_temp
+        # add all functions without member classes
+        functions_temp=re.findall('DOXY_FN1\(([\s\w:;* <>&"]*)\)',rawcppdata)
+        for name in functions_temp:
+            if name != 'name':
+                functions.append((None,name))
+        enums_temp=re.findall('DOXY_ENUM\(\s*([\w:]*)\s*\)',rawcppdata)
+        while len(enums_temp) > 0 and enums_temp[0] == 'name':
+            enums_temp.pop(0) # remove the #define's
+        enums += enums_temp
+        classes_temp=re.findall('DOXY_CLASS\(\s*([\w:]*)\s*\)',rawcppdata)
+        while len(classes_temp) > 0 and classes_temp[0] == 'name':
+            classes_temp.pop(0) # remove the #define's
+        classes += classes_temp
 
     xml2rst.setDefaultOptions()
     mainXsltF = open('xml2rst.xsl','r')
@@ -187,7 +199,7 @@ Uses python docutils, sphinx, breathe, and xml2rst.""")
             else:
                 print 'Cannot find "%s" enum in xml output' %name
         
-        # build the reStrcturedText
+        # build the reStructuredText
         document = docutils.utils.new_document('.')
         builder = builder_factory.create_builder(project_info, document=document)
         for id, data_object in comment_objects:
