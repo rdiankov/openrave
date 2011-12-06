@@ -84,7 +84,7 @@ class OPENRAVE_API LineCollisionConstraint
 {
 public:
     LineCollisionConstraint();
-    bool Check(PlannerBase::PlannerParametersWeakPtr _params, RobotBasePtr robot, const std::vector<dReal>& pQ0, const std::vector<dReal>& pQ1, IntervalType interval, PlannerBase::ConfigurationListPtr pvCheckedConfigurations);
+    bool Check(PlannerBase::PlannerParametersWeakPtr _params, KinBodyPtr robot, const std::vector<dReal>& pQ0, const std::vector<dReal>& pQ1, IntervalType interval, PlannerBase::ConfigurationListPtr pvCheckedConfigurations);
 
 protected:
     std::vector<dReal> _vtempconfig, dQ;

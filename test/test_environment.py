@@ -144,7 +144,7 @@ class TestEnvironment(EnvironmentSetup):
 
                     # todo: compare geometry
 
-                adjacentlinks = set([(indexmap[index0],indexmap[index1]) for index0,index1 in robot0.GetAdjacentLinks()])
+                adjacentlinks = set([tuple(sorted((indexmap[index0],indexmap[index1]))) for index0,index1 in robot0.GetAdjacentLinks()])
                 assert(adjacentlinks == set(robot1.GetAdjacentLinks()))
 
             # test if collada can store current joint values

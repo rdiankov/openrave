@@ -254,6 +254,21 @@ static void diffstatefn(std::vector<dReal>& q1, const std::vector<dReal>& q2, co
     }
 }
 
+static void _SetTransformBody(std::vector<dReal>::const_iterator itvalues, KinBodyPtr pbody, int index, int affinedofs,const Vector& vActvAffineRotationAxis)
+{
+    Transform t = pbody->GetTransform();
+    RaveGetTransformFromAffineDOFValues(t,itvalues+index,affinedofs,vActvAffineRotationAxis);
+    pbody->SetTransform(t);
+}
+
+void _SetAffineState(const std::vector<dReal>& v, const std::list< boost::function< void(std::vector<dReal>::const_iterator) > >& listfunctions)
+{
+    FOREACHC(itfn,listfunctions) {
+        (*itfn)(v.begin());
+    }
+}
+
+// this function is very messed up
 void SmoothAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps, const std::string& plannername)
 {
     PlannerBasePtr planner = RaveCreatePlanner(traj->GetEnv(),plannername.size() > 0 ? plannername : string("lineartrajectoryretimer"));
@@ -264,24 +279,34 @@ void SmoothAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& ma
     params->_configurationspecification = traj->GetConfigurationSpecification();
     params->_vConfigLowerLimit.resize(traj->GetConfigurationSpecification().GetDOF());
     params->_vConfigUpperLimit.resize(traj->GetConfigurationSpecification().GetDOF());
+    params->_vConfigResolution.resize(traj->GetConfigurationSpecification().GetDOF());
     for(size_t i = 0; i < params->_vConfigLowerLimit.size(); ++i) {
         params->_vConfigLowerLimit[i] = -1e6;
         params->_vConfigUpperLimit[i] = 1e6;
+        params->_vConfigResolution[i] = 0.01;
     }
 
     // analyze the configuration for identified dimensions
+    list< boost::function<void(std::vector<dReal>::const_iterator) > > listfunctions;
     std::vector<int> vrotaxes;
+    KinBodyPtr robot;
     FOREACHC(itgroup,traj->GetConfigurationSpecification()._vgroups) {
         if( itgroup->name.size() >= 16 && itgroup->name.substr(0,16) == "affine_transform" ) {
             string tempname;
             int affinedofs=0;
             stringstream ss(itgroup->name.substr(16));
             ss >> tempname >> affinedofs;
-            if( !!ss ) {
-                if( affinedofs & DOF_RotationAxis ) {
-                    vrotaxes.push_back(itgroup->offset+RaveGetIndexFromAffineDOF(affinedofs,DOF_RotationAxis));
-                }
+            BOOST_ASSERT( !!ss );
+            KinBodyPtr pbody = traj->GetEnv()->GetKinBody(tempname);
+            BOOST_ASSERT( !!pbody );
+            int index = itgroup->offset+RaveGetIndexFromAffineDOF(affinedofs,DOF_RotationAxis);
+            Vector vaxis(0,0,1);
+            if( affinedofs & DOF_RotationAxis ) {
+                vrotaxes.push_back(itgroup->offset+RaveGetIndexFromAffineDOF(affinedofs,DOF_RotationAxis));
+                ss >> vaxis.x >> vaxis.y >> vaxis.z;
             }
+            robot = pbody;
+            listfunctions.push_back(boost::bind(_SetTransformBody,_1,pbody,index,affinedofs,vaxis));
         }
         else if( itgroup->name.size() >= 14 && itgroup->name.substr(0,14) == "ikparam_values" ) {
             int iktypeint = 0;
@@ -295,7 +320,14 @@ void SmoothAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& ma
                     break;
                 }
             }
+            RAVELOG_VERBOSE("cannot smooth state for IK configurations\n");
         }
+    }
+    if( listfunctions.size() > 0 ) {
+        params->_setstatefn = boost::bind(_SetAffineState,_1,boost::ref(listfunctions));
+
+        boost::shared_ptr<LineCollisionConstraint> pcollision(new LineCollisionConstraint());
+        params->_checkpathconstraintsfn = boost::bind(&LineCollisionConstraint::Check,pcollision,PlannerBase::PlannerParametersWeakPtr(params), robot, _1, _2, _3, _4);
     }
     params->_diffstatefn = boost::bind(diffstatefn,_1,_2,boost::ref(vrotaxes));
     //params->_distmetricfn;
@@ -465,7 +497,7 @@ LineCollisionConstraint::LineCollisionConstraint()
     _report.reset(new CollisionReport());
 }
 
-bool LineCollisionConstraint::Check(PlannerBase::PlannerParametersWeakPtr _params, RobotBasePtr robot, const std::vector<dReal>& pQ0, const std::vector<dReal>& pQ1, IntervalType interval, PlannerBase::ConfigurationListPtr pvCheckedConfigurations)
+bool LineCollisionConstraint::Check(PlannerBase::PlannerParametersWeakPtr _params, KinBodyPtr robot, const std::vector<dReal>& pQ0, const std::vector<dReal>& pQ1, IntervalType interval, PlannerBase::ConfigurationListPtr pvCheckedConfigurations)
 {
     // set the bounds based on the interval type
     PlannerBase::PlannerParametersPtr params = _params.lock();
@@ -508,6 +540,7 @@ bool LineCollisionConstraint::Check(PlannerBase::PlannerParametersWeakPtr _param
     params->_diffstatefn(dQ,pQ0);
     int i, numSteps = 1;
     std::vector<dReal>::const_iterator itres = params->_vConfigResolution.begin();
+    BOOST_ASSERT((int)params->_vConfigResolution.size()==params->GetDOF());
     int totalsteps = 0;
     for (i = 0; i < params->GetDOF(); i++,itres++) {
         int steps;
