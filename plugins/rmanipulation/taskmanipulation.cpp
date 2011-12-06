@@ -841,7 +841,7 @@ protected:
                     vector<dReal> vpreshapevalues(pgrasp+iGraspPreshape,pgrasp+iGraspPreshape+_robot->GetActiveDOF());
                     ptrajToPreshape->GetConfigurationSpecification().InsertJointValues(vtrajdata.begin(),vpreshapevalues.begin(),_robot,pmanip->GetGripperIndices());
                     ptrajToPreshape->Insert(ptrajToPreshape->GetNumWaypoints(),vtrajdata);
-                    planningutils::RetimeActiveDOFTrajectory(ptrajToPreshape,_robot);
+                    planningutils::SmoothActiveDOFTrajectory(ptrajToPreshape,_robot);
                 }
 
                 mapPreshapeTrajectories[vgoalpreshape] = ptrajToPreshape;

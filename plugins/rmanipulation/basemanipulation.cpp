@@ -210,7 +210,7 @@ protected:
 
         if(( ptraj->GetDuration() == 0) || bResetTiming ) {
             RAVELOG_VERBOSE(str(boost::format("retiming trajectory: %f\n")%_fMaxVelMult));
-            planningutils::RetimeActiveDOFTrajectory(ptraj, robot, false, _fMaxVelMult);
+            planningutils::SmoothActiveDOFTrajectory(ptraj, robot, false, _fMaxVelMult);
         }
         RAVELOG_VERBOSE(str(boost::format("executing traj with %d points\n")%ptraj->GetNumWaypoints()));
         if( !robot->GetController()->SetPath(ptraj) ) {
@@ -332,7 +332,7 @@ protected:
             params->workspacetraj->Insert(1,data);
             vector<dReal> maxvelocities(spec._vgroups[0].dof,1);
             vector<dReal> maxaccelerations(spec._vgroups[0].dof,10);
-            planningutils::RetimeAffineTrajectory(params->workspacetraj,maxvelocities,maxaccelerations);
+            planningutils::SmoothAffineTrajectory(params->workspacetraj,maxvelocities,maxaccelerations);
         }
 
         PlannerBasePtr planner = RaveCreatePlanner(GetEnv(),plannername);
@@ -1035,7 +1035,7 @@ protected:
         }
 
         if( bRecomputeTiming || ptraj->GetDuration() == 0 ) {
-            planningutils::RetimeActiveDOFTrajectory(ptraj,robot);
+            planningutils::SmoothActiveDOFTrajectory(ptraj,robot);
         }
 
         RobotBase::RobotStateSaver saver(robot);

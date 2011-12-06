@@ -253,6 +253,6 @@ class TestMoving(EnvironmentSetup):
         traj.Insert(0,[0,0,0,  1,0,0.7, 1,0,-5.58, 1,0,-3.2])
         traj2=RaveCreateTrajectory(env,'')
         traj2.Clone(traj,0)
-        planningutils.RetimeAffineTrajectory(traj,[2,2,1],[5,5,5],False,'LinearTrajectoryRetimer')
-        planningutils.RetimeAffineTrajectory(traj2,[2,2,1],[5,5,5],False,'ParabolicSmoother')
+        planningutils.SmoothAffineTrajectory(traj,[2,2,1],[5,5,5],False,'LinearTrajectoryRetimer')
+        planningutils.SmoothAffineTrajectory(traj2,[2,2,1],[5,5,5],False,'ParabolicSmoother')
         robot.GetController().SetPath(traj2)
