@@ -45,7 +45,7 @@ class TestMoving(EnvironmentSetup):
         env.StartSimulation(0.01,False)
         robot.WaitForController(0)
         with env:
-            assert(transdist(Tee,ikmodel.manip.GetEndEffectorTransform()))
+            assert(transdist(Tee,ikmodel.manip.GetEndEffectorTransform()) <= g_epsilon)
             
     def test_constraintpr2(self):
         env = self.env
@@ -256,3 +256,23 @@ class TestMoving(EnvironmentSetup):
         planningutils.SmoothAffineTrajectory(traj,[2,2,1],[5,5,5],False,'LinearTrajectoryRetimer')
         planningutils.SmoothAffineTrajectory(traj2,[2,2,1],[5,5,5],False,'ParabolicSmoother')
         robot.GetController().SetPath(traj2)
+
+    def test_releasefingers(self):
+        env=self.env
+        env.Load('data/katanatable.env.xml')
+        with env:
+            robot=env.GetRobots()[0]
+            m=robot.SetActiveManipulator('arm')
+            body=env.GetKinBody('mug2')
+            T = eye(4)
+            T[0:3,3] = [-0.053,0.39,1.58643]
+            body.SetTransform(T)
+            initialvalues = tile(-0.43,len(m.GetGripperIndices()))
+            robot.SetDOFValues(initialvalues,m.GetGripperIndices())
+        taskmanip=interfaces.TaskManipulation(robot)
+        trajdata=taskmanip.ReleaseFingers(execute=False,outputtraj=True)[1]
+        traj=RaveCreateTrajectory(env,'').deserialize(trajdata)
+        assert(traj.GetDuration()>0)
+        newvalues=traj.GetConfigurationSpecification().ExtractJointValues(traj.GetWaypoint(-1),robot,m.GetGripperIndices(),0)
+        assert(transdist(initialvalues,newvalues) > 0.1 )
+        

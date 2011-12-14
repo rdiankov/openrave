@@ -2247,6 +2247,11 @@ ConfigurationSpecification::Reader::Reader(ConfigurationSpecification& spec) : _
 
 BaseXMLReader::ProcessElement ConfigurationSpecification::Reader::startElement(const std::string& name, const AttributesList &atts)
 {
+    if( !!_preader ) {
+        if( _preader->startElement(name, atts) == PE_Support )
+            return PE_Support;
+        return PE_Ignore;
+    }
     _ss.str(""); // have to clear the string
     if( name == "group" ) {
         _spec._vgroups.resize(_spec._vgroups.size()+1);
@@ -2267,11 +2272,21 @@ BaseXMLReader::ProcessElement ConfigurationSpecification::Reader::startElement(c
         }
         return PE_Support;
     }
+    else if( name == "configuration" ) {
+        _preader.reset(new ConfigurationSpecification::Reader(_spec));
+        return PE_Support;
+    }
     return PE_Pass;
 }
 
 bool ConfigurationSpecification::Reader::endElement(const std::string& name)
 {
+    if( !!_preader ) {
+        if( _preader->endElement(name) ) {
+            _preader.reset();
+        }
+        return false;
+    }
     if( name == "configuration" ) {
         return true;
     }
@@ -2280,8 +2295,13 @@ bool ConfigurationSpecification::Reader::endElement(const std::string& name)
 
 void ConfigurationSpecification::Reader::characters(const std::string& ch)
 {
-    _ss.clear();
-    _ss << ch;
+    if( !_preader ) {
+        _ss.clear();
+        _ss << ch;
+    }
+    else {
+        _preader->characters(ch);
+    }
 }
 
 std::ostream& operator<<(std::ostream& O, const ConfigurationSpecification &spec)

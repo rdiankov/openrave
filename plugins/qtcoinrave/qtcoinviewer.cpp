@@ -94,6 +94,8 @@ QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
   }\n\n";
     RegisterCommand("SetFiguresInCamera",boost::bind(&QtCoinViewer::_SetFiguresInCamera,this,_1,_2),
                     "Accepts 0/1 value that decides whether to render the figure plots in the camera image through GetCameraImage");
+    RegisterCommand("SetFeedbackVisibility",boost::bind(&QtCoinViewer::_SetFeedbackVisibility,this,_1,_2),
+                    "Accepts 0/1 value that decides whether to render the cross hairs");
     _bLockEnvironment = true;
     _pToggleDebug = NULL;
     _pSelectedCollisionChecker = NULL;
@@ -3242,6 +3244,16 @@ bool QtCoinViewer::_SetFiguresInCamera(ostream& sout, istream& sinput)
 {
     sinput >> _bRenderFiguresInCamera;
     return !!sinput;
+}
+
+bool QtCoinViewer::_SetFeedbackVisibility(ostream& sout, istream& sinput)
+{
+    sinput >> _bDisplayFeedBack;
+    if( !!sinput ) {
+        ViewToggleFeedBack(_bDisplayFeedBack);
+        return true;
+    }
+    return false;
 }
 
 void QtCoinViewer::_UnregisterItemSelectionCallback(ViewerBaseWeakPtr pweakviewer, std::list<ItemSelectionCallbackFn>::iterator* pit)

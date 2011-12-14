@@ -22,7 +22,7 @@ from nose.tools import assert_raises
 import fnmatch
 import time
 import os
-
+import cPickle as pickle
 _multiprocess_can_split_ = True
 
 g_epsilon = 1e-7

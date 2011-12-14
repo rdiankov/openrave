@@ -211,6 +211,10 @@ class PyConfigurationSpecification : public boost::enable_shared_from_this<PyCon
 public:
     PyConfigurationSpecification() {
     }
+    PyConfigurationSpecification(const std::string &s) {
+        std::stringstream ss(s);
+        ss >> _spec;
+    }
     PyConfigurationSpecification(const ConfigurationSpecification& spec) {
         _spec = spec;
     }
@@ -343,6 +347,17 @@ public:
     }
 
     ConfigurationSpecification _spec;
+};
+
+class ConfigurationSpecification_pickle_suite : public pickle_suite
+{
+public:
+    static tuple getinitargs(const PyConfigurationSpecification& pyspec)
+    {
+        std::stringstream ss;
+        ss << pyspec._spec;
+        return boost::python::make_tuple(ss.str());
+    }
 };
 
 class PyIkParameterization
@@ -991,6 +1006,7 @@ void init_openravepy_global()
     {
         scope configurationspecification = class_<PyConfigurationSpecification, PyConfigurationSpecificationPtr >("ConfigurationSpecification",DOXY_CLASS(ConfigurationSpecification))
                                            .def(init<PyConfigurationSpecificationPtr>(args("spec")) )
+                                           .def(init<const std::string&>(args("xmldata")) )
                                            .def("GetGroupFromName",&PyConfigurationSpecification::GetGroupFromName, return_value_policy<copy_const_reference>(), DOXY_FN(ConfigurationSpecification,GetGroupFromName))
                                            .def("FindCompatibleGroup",&PyConfigurationSpecification::FindCompatibleGroup, DOXY_FN(ConfigurationSpecification,FindCompatibleGroup))
                                            .def("FindTimeDerivativeGroup",&PyConfigurationSpecification::FindTimeDerivativeGroup, DOXY_FN(ConfigurationSpecification,FindTimeDerivativeGroup))
@@ -1007,7 +1023,8 @@ void init_openravepy_global()
                                            .def("__eq__",&PyConfigurationSpecification::__eq__)
                                            .def("__ne__",&PyConfigurationSpecification::__ne__)
                                            .def("__add__",&PyConfigurationSpecification::__add__)
-                                           .def("__iadd__",&PyConfigurationSpecification::__iadd__);
+                                           .def("__iadd__",&PyConfigurationSpecification::__iadd__)
+                                           .def_pickle(ConfigurationSpecification_pickle_suite())
         ;
 
         {

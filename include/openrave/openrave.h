@@ -870,6 +870,7 @@ public:
 protected:
         ConfigurationSpecification& _spec;
         std::stringstream _ss;
+        BaseXMLReaderPtr _preader;
     };
 
     virtual ~ConfigurationSpecification() {
