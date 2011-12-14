@@ -1,4 +1,4 @@
-include_directories("${OPENRAVE_INCLUDE_DIRS}") # needed since plugins include openrave/openrave.h
+include_directories(${OPENRAVE_INCLUDE_LOCAL_DIRS}) # needed since plugins include openrave/openrave.h
 set(PLUGIN_LINK_FLAGS "")
 
 if(APPLE)

@@ -537,7 +537,11 @@ boost::shared_ptr<std::pair<std::string,std::string> > FindFile(const std::strin
     }
 
 #ifdef HAVE_BOOST_FILESYSTEM
+#if defined(BOOST_FILESYSTEM_VERSION) && BOOST_FILESYSTEM_VERSION >= 3
     fullfilename = boost::filesystem::system_complete(boost::filesystem::path(fullfilename)).string();
+#else
+    fullfilename = boost::filesystem::system_complete(boost::filesystem::path(fullfilename, boost::filesystem::native)).string();
+#endif
 #endif
     return boost::shared_ptr<pair<string,string> >(new pair<string,string>(parsedirectory,fullfilename));
 }
@@ -826,6 +830,9 @@ public:
                 }
             }
             if( extension == "stl" || extension == "x") {
+                if( extension == "stl" ) {
+                    RAVELOG_WARN("failed to load STL file %s. If it is in binary format, make sure the first 5 characters of the file are not 'solid'!\n");
+                }
                 return false;
             }
         }

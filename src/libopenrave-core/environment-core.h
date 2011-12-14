@@ -81,9 +81,19 @@ public:
                     RAVELOG_WARN(str(boost::format("%s doesn't exist")%installdir));
                 }
             }
+#if defined(BOOST_FILESYSTEM_VERSION) && BOOST_FILESYSTEM_VERSION >= 3
             boost::filesystem::path datafilename = boost::filesystem::system_complete(boost::filesystem::path(installdir));
+#else
+            boost::filesystem::path datafilename = boost::filesystem::system_complete(boost::filesystem::path(installdir, boost::filesystem::native));
+#endif
+
             FOREACH(itname, _vdatadirs) {
-                if( datafilename == boost::filesystem::system_complete(boost::filesystem::path(*itname)) ) {
+#if defined(BOOST_FILESYSTEM_VERSION) && BOOST_FILESYSTEM_VERSION >= 3
+                if( datafilename == boost::filesystem::system_complete(boost::filesystem::path(*itname)) )
+#else
+                if( datafilename == boost::filesystem::system_complete(boost::filesystem::path(*itname, boost::filesystem::native)) )
+#endif
+                {
                     bExists = true;
                     break;
                 }
@@ -1037,10 +1047,11 @@ public:
                         }
                         robot->GetLinks().at(0)->GetGeometry(0).SetRenderFilename(filename);
 #if defined(HAVE_BOOST_FILESYSTEM) && BOOST_VERSION >= 103600 // stem() was introduced in 1.36
-                        boost::filesystem::path pfilename(filename);
 #if defined(BOOST_FILESYSTEM_VERSION) && BOOST_FILESYSTEM_VERSION >= 3
+                        boost::filesystem::path pfilename(filename);
                         robot->SetName(ConvertToOpenRAVEName(pfilename.stem().string()));
 #else
+                        boost::filesystem::path pfilename(filename, boost::filesystem::native);
                         robot->SetName(ConvertToOpenRAVEName(pfilename.stem()));
 #endif
 #else
@@ -1154,10 +1165,11 @@ public:
                         }
                         body->GetLinks().at(0)->GetGeometry(0).SetRenderFilename(filename);
 #if defined(HAVE_BOOST_FILESYSTEM) && BOOST_VERSION >= 103600 // stem() was introduced in 1.36
-                        boost::filesystem::path pfilename(filename);
 #if defined(BOOST_FILESYSTEM_VERSION) && BOOST_FILESYSTEM_VERSION >= 3
+                        boost::filesystem::path pfilename(filename);
                         body->SetName(ConvertToOpenRAVEName(pfilename.stem().string()));
 #else
+                        boost::filesystem::path pfilename(filename, boost::filesystem::native);
                         body->SetName(ConvertToOpenRAVEName(pfilename.stem()));
 #endif
 #else
