@@ -369,13 +369,13 @@ protected:
         }
 #if !defined(BOOST_FILESYSTEM_VERSION) || BOOST_FILESYSTEM_VERSION == 2
         // TODO, boost 1.40 doesnot take boost::filesystem::native as argument
-        boost::filesystem::path pluginsfilename = boost::filesystem::system_complete(boost::filesystem::path(installdir));
+        boost::filesystem::path pluginsfilename = boost::filesystem::system_complete(boost::filesystem::path(installdir, boost::filesystem::native));
 #else
         boost::filesystem::path pluginsfilename = boost::filesystem::system_complete(boost::filesystem::path(installdir));
 #endif
         FOREACH(itname, vplugindirs) {
 #if !defined(BOOST_FILESYSTEM_VERSION) || BOOST_FILESYSTEM_VERSION == 2
-            if( pluginsfilename == boost::filesystem::system_complete(boost::filesystem::path(*itname)), boost::filesystem::native)
+            if( pluginsfilename == boost::filesystem::system_complete(boost::filesystem::path(*itname, boost::filesystem::native)))
 #else
             if( pluginsfilename == boost::filesystem::system_complete(boost::filesystem::path(*itname)) )
 #endif
