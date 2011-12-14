@@ -2406,7 +2406,7 @@ public:
                 _pchain->_vForcedAdjacentLinks.push_back(entry);
             }
             else if( xmlname == "modelsdir" ) {
-                getline(_ss,_strModelsDir);
+                _strModelsDir = _ss.str();
                 boost::trim(_strModelsDir);
                 _strModelsDir += "/";
             }

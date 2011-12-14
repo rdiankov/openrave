@@ -2960,7 +2960,7 @@ class IKFastSolver(AutoReloader):
 
     def solveLiWoernleHiller(self,rawpolyeqs,solvejointvars,endbranchtree):
         """Li-Woernle-Hiller procedure covered in 
-        Jorge Angeles, "Fundamentals of Robotics Mechanical Systems, Springer, 2007.
+        Jorge Angeles, "Fundamentals of Robotics Mechanical Systems", Springer, 2007.
         """
         log.info('attempting li/woernle/hiller general ik method')
         if len(rawpolyeqs[0][0].symbols) < len(rawpolyeqs[0][1].symbols):
