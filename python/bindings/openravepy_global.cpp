@@ -346,6 +346,17 @@ public:
         return shared_from_this();
     }
 
+    string __repr__() {
+        std::stringstream ss;
+        ss << _spec;
+        return ss.str();
+    }
+    string __str__() {
+        std::stringstream ss;
+        ss << "<configuration dof=\"" << _spec.GetDOF() << "\">";
+        return ss.str();
+    }
+
     ConfigurationSpecification _spec;
 };
 
@@ -477,13 +488,13 @@ public:
     IkParameterization _param;
 
     string __repr__() {
-        stringstream ss;
+        std::stringstream ss;
         ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
         ss << _param;
         return boost::str(boost::format("<IkParameterization('%s')>")%ss.str());
     }
     string __str__() {
-        stringstream ss;
+        std::stringstream ss;
         ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
         ss << _param;
         return ss.str();
@@ -1025,6 +1036,8 @@ void init_openravepy_global()
                                            .def("__add__",&PyConfigurationSpecification::__add__)
                                            .def("__iadd__",&PyConfigurationSpecification::__iadd__)
                                            .def_pickle(ConfigurationSpecification_pickle_suite())
+                                           .def("__str__",&PyConfigurationSpecification::__str__)
+                                           .def("__repr__",&PyConfigurationSpecification::__repr__)
         ;
 
         {
