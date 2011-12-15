@@ -8,16 +8,16 @@
     The following python example will register 'mysimfunction' with the enviornment thread, and run it until it returns true.
     \verbatim
    from openravepy import *
-   env=openravepy.Environment()
+   env=Environment()
    RaveSetDebugLevel(DebugLevel.Debug)
    import orpythonbinding
    orpythonbinding.Init(RaveGlobalState())
    totaltime = 0
+ # return True to end the thread
    def mysimfunction(elapsedtime):
     global totaltime
     totaltime += elapsedtime
     print 'this is the time',totaltime
- # return True to end the thread
     return totaltime > 5
 
    module = orpythonbinding.RegisterSimulationFunction(RaveGetEnvironmentId(env),mysimfunction)
