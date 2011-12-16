@@ -1095,9 +1095,11 @@ void QtCoinViewer::EnvironmentSync()
         RAVELOG_WARN("failed to update models from environment sync\n");
 }
 
-void QtCoinViewer::_SetCamera(const RaveTransform<float>& t, float focalDistance)
+void QtCoinViewer::_SetCamera(const RaveTransform<float>& _t, float focalDistance)
 {
     _bAutoSetCamera = false;
+    RaveTransform<float> trot; trot.rot = quatFromAxisAngle(RaveVector<float>(1,0,0),(float)PI);
+    RaveTransform<float> t = _t*trot;
     GetCamera()->position.setValue(t.trans.x, t.trans.y, t.trans.z);
     GetCamera()->orientation.setValue(t.rot.y, t.rot.z, t.rot.w, t.rot.x);
     if( focalDistance > 0 ) {
