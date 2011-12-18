@@ -127,7 +127,7 @@ class BaseManipulation:
             return RaveCreateTrajectory(self.prob.GetEnv(),'').deserialize(res)
         return res
 
-    def MoveToHandPosition(self,matrices=None,affinedofs=None,maxiter=None,maxtries=None,translation=None,rotation=None,seedik=None,constraintfreedoms=None,constraintmatrix=None,constrainterrorthresh=None,execute=None,outputtraj=None,steplength=None,goalsamples=None,ikparam=None,ikparams=None,jitter=None,minimumgoalpaths=None,outputtrajobj=None,postprocessing=None):
+    def MoveToHandPosition(self,matrices=None,affinedofs=None,maxiter=None,maxtries=None,translation=None,rotation=None,seedik=None,constraintfreedoms=None,constraintmatrix=None,constrainterrorthresh=None,execute=None,outputtraj=None,steplength=None,goalsamples=None,ikparam=None,ikparams=None,jitter=None,minimumgoalpaths=None,outputtrajobj=None,postprocessing=None,jittergoal=None):
         """See :ref:`module-basemanipulation-movetohandposition`
 
         postprocessing is two parameters: (plannername,parmaeters)
@@ -161,6 +161,8 @@ class BaseManipulation:
             cmd += 'jitter %.15e '%jitter
         if steplength is not None:
             cmd += 'steplength %.15e '%steplength
+        if jittergoal is not None:
+            cmd += 'jittergoal %.15e '%jittergoal
         if ikparam is not None:
             cmd += 'ikparam ' + str(ikparam) + ' '
         if ikparams is not None:

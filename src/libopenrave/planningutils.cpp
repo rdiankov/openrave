@@ -681,9 +681,9 @@ bool SimpleNeighborhoodSampler::Sample(std::vector<dReal>& samples)
     return samples.size()>0;
 }
 
-
 ManipulatorIKGoalSampler::ManipulatorIKGoalSampler(RobotBase::ManipulatorConstPtr pmanip, const std::list<IkParameterization>& listparameterizations, int nummaxsamples, int nummaxtries, dReal fsampleprob) : _pmanip(pmanip), _nummaxsamples(nummaxsamples), _nummaxtries(nummaxtries), _fsampleprob(fsampleprob)
 {
+    _fjittermaxdist = 0;
     _probot = _pmanip->GetRobot();
     _pindexsampler = RaveCreateSpaceSampler(_probot->GetEnv(),"mt19937");
     int orgindex = 0;
@@ -727,11 +727,35 @@ bool ManipulatorIKGoalSampler::Sample(std::vector<dReal>& vgoal)
 
         bool bCheckEndEffector = itsample->_ikparam.GetType() == IKP_Transform6D;
         // if first grasp, quickly prune grasp is end effector is in collision
+        IkParameterization ikparam = itsample->_ikparam;
         if( itsample->_numleft == _nummaxsamples && bCheckEndEffector ) {
-            if( _pmanip->CheckEndEffectorCollision(itsample->_ikparam.GetTransform6D(),_report) ) {
-                RAVELOG_VERBOSE(str(boost::format("sampleiksolutions gripper in collision: %s.\n")%_report->__str__()));
-                _listsamples.erase(itsample);
-                continue;
+            if( _pmanip->CheckEndEffectorCollision(ikparam.GetTransform6D(),_report) ) {
+                bool bcollision=true;
+                if( _fjittermaxdist > 0 ) {
+                    // try jittering the end effector out
+                    RAVELOG_VERBOSE("starting jitter transform...\n");
+
+                    // randomly add small offset to the ik until it stops being in collision
+                    Transform transorig = ikparam.GetTransform();
+                    Transform transnew = transorig;
+                    int iiter = 0;
+                    int nMaxIterations = 100;
+                    std::vector<dReal> xyzsamples(3);
+                    for(iiter = 0; iiter < nMaxIterations; ++iiter) {
+                        _pindexsampler->SampleSequence(xyzsamples,3,IT_Closed);
+                        transnew.trans = transorig.trans + _fjittermaxdist * Vector(xyzsamples[0]-0.5f, xyzsamples[1]-0.5f, xyzsamples[2]-0.5f);
+                        if( !_pmanip->CheckEndEffectorCollision(transnew,_report) ) {
+                            ikparam.SetTransform6D(transnew);
+                            bcollision = false;
+                            break;
+                        }
+                    }
+                }
+                if( bcollision ) {
+                    RAVELOG_VERBOSE(str(boost::format("sampleiksolutions gripper in collision: %s.\n")%_report->__str__()));
+                    _listsamples.erase(itsample);
+                    continue;
+                }
             }
         }
 
@@ -753,7 +777,7 @@ bool ManipulatorIKGoalSampler::Sample(std::vector<dReal>& vgoal)
                 }
             }
         }
-        bool bsuccess = _pmanip->FindIKSolutions(itsample->_ikparam, vfree, _viksolutions, IKFO_CheckEnvCollisions|(bCheckEndEffector ? IKFO_IgnoreEndEffectorCollisions : 0));
+        bool bsuccess = _pmanip->FindIKSolutions(ikparam, vfree, _viksolutions, IKFO_CheckEnvCollisions|(bCheckEndEffector ? IKFO_IgnoreEndEffectorCollisions : 0));
         if( --itsample->_numleft <= 0 || vfree.size() == 0 ) {
             _listsamples.erase(itsample);
         }
@@ -781,6 +805,11 @@ int ManipulatorIKGoalSampler::GetIkParameterizationIndex(int index)
 void ManipulatorIKGoalSampler::SetSamplingProb(dReal fsampleprob)
 {
     _fsampleprob = fsampleprob;
+}
+
+void ManipulatorIKGoalSampler::SetJitter(dReal maxdist)
+{
+    _fjittermaxdist = maxdist;
 }
 
 } // planningutils

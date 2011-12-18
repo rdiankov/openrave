@@ -131,6 +131,11 @@ public:
     virtual int GetIkParameterizationIndex(int index);
     virtual void SetSamplingProb(dReal fsampleprob);
 
+    /// \brief set a jitter distance for the goal
+    ///
+    /// \param maxdist If > 0, allows jittering of the goal IK if they cause the robot to be in collision and no IK solutions to be found
+    virtual void SetJitter(dReal maxdist);
+
 protected:
     struct SampleInfo
     {
@@ -144,7 +149,7 @@ protected:
     int _nummaxsamples, _nummaxtries;
     std::list<SampleInfo> _listsamples;
     SpaceSamplerBasePtr _pindexsampler;
-    dReal _fsampleprob;
+    dReal _fsampleprob, _fjittermaxdist;
     CollisionReportPtr _report;
     std::vector< std::vector<dReal> > _viksolutions;
     std::list<int> _listreturnedsamples;

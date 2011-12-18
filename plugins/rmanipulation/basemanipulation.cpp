@@ -533,6 +533,7 @@ protected:
         int goalsamples = 40;
         string cmd;
         dReal jitter = 0.03;
+        dReal jittergoal = 0;
         while(!sinput.eof()) {
             sinput >> cmd;
             if( !sinput ) {
@@ -653,6 +654,9 @@ protected:
             else if( cmd == "jitter" ) {
                 sinput >> jitter;
             }
+            else if( cmd == "jittergoal" ) {
+                sinput >> jittergoal;
+            }
             else {
                 RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
@@ -684,6 +688,7 @@ protected:
 
         vector<dReal> vgoal;
         planningutils::ManipulatorIKGoalSampler goalsampler(pmanip, listgoals,goalsamples);
+        goalsampler.SetJitter(jittergoal);
         params->vgoalconfig.reserve(nSeedIkSolutions*robot->GetActiveDOF());
         while(nSeedIkSolutions > 0) {
             if( goalsampler.Sample(vgoal) ) {
@@ -745,14 +750,25 @@ protected:
             }
         }
 
-        rrtplanner.reset();     // have to destroy before environment
-
         if( !bSuccess ) {
             return false;
         }
         if( RaveGetDebugLevel() & Level_VerifyPlans ) {
             planningutils::VerifyTrajectory(params, ptraj);
         }
+
+        if( jittergoal > 0 ) {
+            // could have returned a jittered goal different from the original goals
+            try {
+                stringstream soutput, sinput;
+                sinput << "GetGoalIndex";
+                rrtplanner->SendCommand(soutput,sinput);
+            }
+            catch(const openrave_exception& ex) {
+                RAVELOG_WARN(str(boost::format("planner %s does not GetGoalIndex command necessary for determining what goal it chose!\n")%rrtplanner->GetXMLId()));
+            }
+        }
+
         CM::SetActiveTrajectory(robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream,_fMaxVelMult);
         sout << "1";
         return true;

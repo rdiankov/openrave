@@ -276,3 +276,9 @@ class TestMoving(EnvironmentSetup):
         newvalues=traj.GetConfigurationSpecification().ExtractJointValues(traj.GetWaypoint(-1),robot,m.GetGripperIndices(),0)
         assert(transdist(initialvalues,newvalues) > 0.1 )
         
+    def test_handgoal_collision(self):
+        env=self.env
+        env.Load('data/lab1.env.xml')
+        robot.SetDOFValues(array([ -8.44575603e-02,   1.48528347e+00,  -5.09108824e-08, 6.48108822e-01,  -4.57571203e-09,  -1.04008750e-08, 7.26855048e-10,   5.50807826e-08,   5.50807826e-08, -1.90689327e-08,   0.00000000e+00]))
+        assert(env.CheckCollision(robot))
+        
