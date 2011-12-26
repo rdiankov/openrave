@@ -1068,11 +1068,16 @@ def test_ik():
     from sympy import *
     import __builtin__
     from openravepy.ikfast import AST, combinations
+    IkType=IkParameterizationType
     ikmodel=self
     self = solver
     freeindices = ikmodel.freeindices
     log = ikmodel.ikfast.log
     log.setLevel(logging.DEBUG)
+    rawglobaldir = [1.0,0.0,0.0]
+    rawnormaldir = [0.0,0.0,1.0]
+    rawbasedir=dot(ikmodel.manip.GetLocalToolTransform()[0:3,0:3],ikmodel.manip.GetDirection())
+    rawbasepos=ikmodel.manip.GetLocalToolTransform()[0:3,3]
     
     chaintree = solver.generateIkSolver(baselink=baselink,eelink=eelink,freeindices=freeindices,solvefn=solvefn)
     code=ikmodel.ikfast.ikfast_generator_cpp.CodeGenerator().generate(chaintree)

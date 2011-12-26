@@ -336,6 +336,8 @@ class RaveGlobal : private boost::noncopyable, public boost::enable_shared_from_
         _mapikparameterization[IKP_TranslationXYOrientation3D] = "TranslationXYOrientation3D";
         _mapikparameterization[IKP_TranslationLocalGlobal6D] = "TranslationLocalGlobal6D";
         _mapikparameterization[IKP_TranslationXAxisAngle4D] = "TranslationXAxisAngle4D";
+        _mapikparameterization[IKP_TranslationYAxisAngle4D] = "TranslationYAxisAngle4D";
+        _mapikparameterization[IKP_TranslationZAxisAngle4D] = "TranslationZAxisAngle4D";
         BOOST_ASSERT(_mapikparameterization.size()==IKP_NumberOfParameterizations);
     }
 public:
@@ -880,6 +882,16 @@ std::ostream& operator<<(std::ostream& O, const IkParameterization &ikparam)
         O << p.second << " " << p.first.x << " " << p.first.y << " " << p.first.z << " ";
         break;
     }
+    case IKP_TranslationYAxisAngle4D: {
+        std::pair<Vector,dReal> p = ikparam.GetTranslationYAxisAngle4D();
+        O << p.second << " " << p.first.x << " " << p.first.y << " " << p.first.z << " ";
+        break;
+    }
+    case IKP_TranslationZAxisAngle4D: {
+        std::pair<Vector,dReal> p = ikparam.GetTranslationZAxisAngle4D();
+        O << p.second << " " << p.first.x << " " << p.first.y << " " << p.first.z << " ";
+        break;
+    }
     default:
         throw OPENRAVE_EXCEPTION_FORMAT("does not support parameterization 0x%x", ikparam.GetType(),ORE_InvalidArguments);
     }
@@ -902,7 +914,24 @@ std::istream& operator>>(std::istream& I, IkParameterization& ikparam)
     case IKP_TranslationXY2D: { Vector v; I >> v.y >> v.y; ikparam.SetTranslationXY2D(v); break; }
     case IKP_TranslationXYOrientation3D: { Vector v; I >> v.y >> v.y >> v.z; ikparam.SetTranslationXYOrientation3D(v); break; }
     case IKP_TranslationLocalGlobal6D: { Vector localtrans, trans; I >> localtrans.x >> localtrans.y >> localtrans.z >> trans.x >> trans.y >> trans.z; ikparam.SetTranslationLocalGlobal6D(localtrans,trans); break; }
-    case IKP_TranslationXAxisAngle4D: { Vector trans; dReal angle=0; I >> angle >> trans.x >> trans.y >> trans.z; ikparam.SetTranslationXAxisAngle4D(trans,angle); break; }
+    case IKP_TranslationXAxisAngle4D: {
+        Vector trans; dReal angle=0;
+        I >> angle >> trans.x >> trans.y >> trans.z;
+        ikparam.SetTranslationXAxisAngle4D(trans,angle);
+        break;
+    }
+    case IKP_TranslationYAxisAngle4D: {
+        Vector trans; dReal angle=0;
+        I >> angle >> trans.x >> trans.y >> trans.z;
+        ikparam.SetTranslationYAxisAngle4D(trans,angle);
+        break;
+    }
+    case IKP_TranslationZAxisAngle4D: {
+        Vector trans; dReal angle=0;
+        I >> angle >> trans.x >> trans.y >> trans.z;
+        ikparam.SetTranslationZAxisAngle4D(trans,angle);
+        break;
+    }
     default:
         throw OPENRAVE_EXCEPTION_FORMAT("does not support parameterization 0x%x", ikparam.GetType(),ORE_InvalidArguments);
     }

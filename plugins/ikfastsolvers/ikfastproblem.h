@@ -1110,6 +1110,16 @@ public:
             o << p.second << " 0 0 " << p.first.x << " 0 0 0 " << p.first.y << " 0 0 0 " << p.first.z << " ";
             break;
         }
+        case IKP_TranslationYAxisAngle4D: {
+            std::pair<Vector,dReal> p = param.GetTranslationYAxisAngle4D();
+            o << p.second << " 0 0 " << p.first.x << " 0 0 0 " << p.first.y << " 0 0 0 " << p.first.z << " ";
+            break;
+        }
+        case IKP_TranslationZAxisAngle4D: {
+            std::pair<Vector,dReal> p = param.GetTranslationZAxisAngle4D();
+            o << p.second << " 0 0 " << p.first.x << " 0 0 0 " << p.first.y << " 0 0 0 " << p.first.z << " ";
+            break;
+        }
         default:
             BOOST_ASSERT(0);
         }

@@ -736,7 +736,7 @@ bool ManipulatorIKGoalSampler::Sample(std::vector<dReal>& vgoal)
                     RAVELOG_VERBOSE("starting jitter transform...\n");
 
                     // randomly add small offset to the ik until it stops being in collision
-                    Transform transorig = ikparam.GetTransform();
+                    Transform transorig = ikparam.GetTransform6D();
                     Transform transnew = transorig;
                     int iiter = 0;
                     int nMaxIterations = 100;

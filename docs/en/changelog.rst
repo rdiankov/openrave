@@ -33,7 +33,8 @@ Core
 
 * Added parsing of kinematics for DirextX files (\*.x).
 
-* Collada reading/writing now preserve the body DOF indices order by storing actuator information.
+* COLLADA: reading/writing now preserve the body DOF indices order by storing actuator information, now supports manipulator <direction> tag.
+
 
 Inverse Kinematics
 ------------------
@@ -48,7 +49,7 @@ Inverse Kinematics
 
 * fixed ikfast bug when prismatic joints are present, ikfast version is now **49**.
 
-* Added new IK type :meth:`.TranslationXAxisAngle4D`
+* Added new IK types: :meth:`.TranslationXAxisAngle4D`, :meth:`.TranslationYAxisAngle4D`, :meth:`.TranslationZAxisAngle4D`
 
 Grasping
 --------

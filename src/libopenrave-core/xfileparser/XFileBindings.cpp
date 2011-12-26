@@ -167,6 +167,7 @@ protected:
         if( !!node->mFramePivot ) {
             Transform tpivot = tnode*ExtractTransform(node->mFramePivot->mPivotMatrix);
             KinBody::JointPtr pjoint(new KinBody::Joint(pbody));
+            // support mimic joints, so have to look at mJointIndex!
             if( node->mFramePivot->mType == 1 ) {
                 pjoint->_type = KinBody::Joint::JointRevolute;
                 pjoint->_vlowerlimit[0] = -PI;
@@ -176,6 +177,11 @@ protected:
                 pjoint->_type = KinBody::Joint::JointPrismatic;
                 pjoint->_vlowerlimit[0] = -10;
                 pjoint->_vupperlimit[0] = 10;
+            }
+            else if( node->mFramePivot->mType == 5 ) {
+                // some type of mimic/passive joint?
+                RAVELOG_WARN(str(boost::format("passive joint type %d")%node->mFramePivot->mType));
+                pjoint.reset();
             }
             else {
                 if( node->mFramePivot->mType != 0 ) {

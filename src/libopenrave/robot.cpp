@@ -185,6 +185,16 @@ IkParameterization RobotBase::Manipulator::GetIkParameterization(IkParameterizat
         ikp.SetTranslationXAxisAngle4D(t.trans,RaveAcos(t.rotate(_vdirection).x));
         break;
     }
+    case IKP_TranslationYAxisAngle4D: {
+        Transform t = GetTransform();
+        ikp.SetTranslationYAxisAngle4D(t.trans,RaveAcos(t.rotate(_vdirection).x));
+        break;
+    }
+    case IKP_TranslationZAxisAngle4D: {
+        Transform t = GetTransform();
+        ikp.SetTranslationZAxisAngle4D(t.trans,RaveAcos(t.rotate(_vdirection).x));
+        break;
+    }
     default:
         throw OPENRAVE_EXCEPTION_FORMAT("invalid ik type 0x%x",iktype,ORE_InvalidArguments);
     }
@@ -234,6 +244,16 @@ IkParameterization RobotBase::Manipulator::GetIkParameterization(const IkParamet
     case IKP_TranslationXAxisAngle4D: {
         Transform t = GetTransform();
         ikp.SetTranslationXAxisAngle4D(t.trans,RaveAcos(t.rotate(_vdirection).x));
+        break;
+    }
+    case IKP_TranslationYAxisAngle4D: {
+        Transform t = GetTransform();
+        ikp.SetTranslationYAxisAngle4D(t.trans,RaveAcos(t.rotate(_vdirection).x));
+        break;
+    }
+    case IKP_TranslationZAxisAngle4D: {
+        Transform t = GetTransform();
+        ikp.SetTranslationZAxisAngle4D(t.trans,RaveAcos(t.rotate(_vdirection).x));
         break;
     }
     default:

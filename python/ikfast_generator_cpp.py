@@ -44,6 +44,8 @@ except:
         TranslationXYOrientation3D=0x33000009
         TranslationLocalGlobal6D=0x3600000a
         TranslationXAxisAngle4D=0x4400000b
+        TranslationYAxisAngle4D=0x4400000c
+        TranslationZAxisAngle4D=0x4400000d
 
 from sympy import *
 
@@ -953,7 +955,7 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
             # if gets to the end of the for loop statement, return successfully. if exits for loop, assert(0)
             code += 'return;\n}\nIKFAST_ASSERT(0);\n}\n\n'
 
-        code += self.getClassInit(node,IkType.TranslationXAxisAngle4D,userotation=1)
+        code += self.getClassInit(node,node.iktype,userotation=1)
         code += "bool ik(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::vector<IKSolution>& vsolutions) {\n"
         code += "for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {\n"
         fcode = "vsolutions.resize(0); vsolutions.reserve(8);\n"

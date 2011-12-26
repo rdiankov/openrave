@@ -353,6 +353,16 @@ protected:
             dReal transmintime = RaveSqrt((ikparam.GetTranslationXAxisAngle4D().first-ikparamprev.GetTranslationXAxisAngle4D().first).lengthsqr3())*_vimaxvel.at(info.orgdofoffset+1);
             return max(angmintime,transmintime);
         }
+        case IKP_TranslationYAxisAngle4D: {
+            dReal angmintime = ANGLE_DIFF(ikparam.GetTranslationYAxisAngle4D().second,ikparamprev.GetTranslationYAxisAngle4D().second)*_vimaxvel.at(info.orgdofoffset);
+            dReal transmintime = RaveSqrt((ikparam.GetTranslationYAxisAngle4D().first-ikparamprev.GetTranslationYAxisAngle4D().first).lengthsqr3())*_vimaxvel.at(info.orgdofoffset+1);
+            return max(angmintime,transmintime);
+        }
+        case IKP_TranslationZAxisAngle4D: {
+            dReal angmintime = ANGLE_DIFF(ikparam.GetTranslationZAxisAngle4D().second,ikparamprev.GetTranslationZAxisAngle4D().second)*_vimaxvel.at(info.orgdofoffset);
+            dReal transmintime = RaveSqrt((ikparam.GetTranslationZAxisAngle4D().first-ikparamprev.GetTranslationZAxisAngle4D().first).lengthsqr3())*_vimaxvel.at(info.orgdofoffset+1);
+            return max(angmintime,transmintime);
+        }
         default:
             throw OPENRAVE_EXCEPTION_FORMAT("does not support parameterization 0x%x", ikparam.GetType(),ORE_InvalidArguments);
         }

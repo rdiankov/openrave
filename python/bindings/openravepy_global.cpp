@@ -395,6 +395,8 @@ public:
         case IKP_TranslationXYOrientation3D: SetTranslationXYOrientation3D(o); break;
         case IKP_TranslationLocalGlobal6D: SetTranslationLocalGlobal6D(o[0],o[1]); break;
         case IKP_TranslationXAxisAngle4D: SetTranslationXAxisAngle4D(o[0],extract<dReal>(o[1])); break;
+        case IKP_TranslationYAxisAngle4D: SetTranslationYAxisAngle4D(o[0],extract<dReal>(o[1])); break;
+        case IKP_TranslationZAxisAngle4D: SetTranslationZAxisAngle4D(o[0],extract<dReal>(o[1])); break;
         default: throw OPENRAVE_EXCEPTION_FORMAT("incorrect ik parameterization type 0x%x", type, ORE_InvalidArguments);
         }
     }
@@ -440,6 +442,12 @@ public:
     void SetTranslationXAxisAngle4D(object otrans, dReal angle) {
         _param.SetTranslationXAxisAngle4D(ExtractVector3(otrans),angle);
     }
+    void SetTranslationYAxisAngle4D(object otrans, dReal angle) {
+        _param.SetTranslationYAxisAngle4D(ExtractVector3(otrans),angle);
+    }
+    void SetTranslationZAxisAngle4D(object otrans, dReal angle) {
+        _param.SetTranslationZAxisAngle4D(ExtractVector3(otrans),angle);
+    }
 
     object GetTransform6D() {
         return ReturnTransform(_param.GetTransform6D());
@@ -473,6 +481,14 @@ public:
     }
     object GetTranslationXAxisAngle4D() {
         std::pair<Vector,dReal> p = _param.GetTranslationXAxisAngle4D();
+        return boost::python::make_tuple(toPyVector3(p.first),object(p.second));
+    }
+    object GetTranslationYAxisAngle4D() {
+        std::pair<Vector,dReal> p = _param.GetTranslationYAxisAngle4D();
+        return boost::python::make_tuple(toPyVector3(p.first),object(p.second));
+    }
+    object GetTranslationZAxisAngle4D() {
+        std::pair<Vector,dReal> p = _param.GetTranslationZAxisAngle4D();
         return boost::python::make_tuple(toPyVector3(p.first),object(p.second));
     }
     dReal ComputeDistanceSqr(boost::shared_ptr<PyIkParameterization> pyikparam)
@@ -523,18 +539,45 @@ public:
     {
         object o;
         switch(r._param.GetType()) {
-        case IKP_Transform6D: o = toPyArray(r._param.GetTransform6D()); break;
-        case IKP_Rotation3D: o = toPyVector4(r._param.GetRotation3D()); break;
-        case IKP_Translation3D: o = toPyVector3(r._param.GetTranslation3D()); break;
-        case IKP_Direction3D: o = toPyVector4(r._param.GetDirection3D()); break;
-        case IKP_Ray4D: return boost::python::make_tuple(r._param.GetRay4D(),r._param.GetType());
-        case IKP_Lookat3D: o = toPyVector3(r._param.GetLookat3D()); break;
-        case IKP_TranslationDirection5D: return boost::python::make_tuple(r._param.GetTranslationDirection5D(),r._param.GetType());
-        case IKP_TranslationXY2D: o = toPyVector3(r._param.GetTranslationXY2D()); break;
-        case IKP_TranslationXYOrientation3D: o = toPyVector3(r._param.GetTranslationXYOrientation3D()); break;
-        case IKP_TranslationLocalGlobal6D: o = boost::python::make_tuple(toPyVector3(r._param.GetTranslationLocalGlobal6D().first), toPyVector3(r._param.GetTranslationLocalGlobal6D().second)); break;
-        case IKP_TranslationXAxisAngle4D: o = boost::python::make_tuple(toPyVector3(r._param.GetTranslationXAxisAngle4D().first),object(r._param.GetTranslationXAxisAngle4D().second));
-        default: throw OPENRAVE_EXCEPTION_FORMAT("incorrect ik parameterization type 0x%x", r._param.GetType(), ORE_InvalidArguments);
+        case IKP_Transform6D:
+            o = toPyArray(r._param.GetTransform6D());
+            break;
+        case IKP_Rotation3D:
+            o = toPyVector4(r._param.GetRotation3D());
+            break;
+        case IKP_Translation3D:
+            o = toPyVector3(r._param.GetTranslation3D());
+            break;
+        case IKP_Direction3D:
+            o = toPyVector4(r._param.GetDirection3D());
+            break;
+        case IKP_Ray4D:
+            return boost::python::make_tuple(r._param.GetRay4D(),r._param.GetType());
+        case IKP_Lookat3D:
+            o = toPyVector3(r._param.GetLookat3D());
+            break;
+        case IKP_TranslationDirection5D:
+            return boost::python::make_tuple(r._param.GetTranslationDirection5D(),r._param.GetType());
+        case IKP_TranslationXY2D:
+            o = toPyVector3(r._param.GetTranslationXY2D());
+            break;
+        case IKP_TranslationXYOrientation3D:
+            o = toPyVector3(r._param.GetTranslationXYOrientation3D());
+            break;
+        case IKP_TranslationLocalGlobal6D:
+            o = boost::python::make_tuple(toPyVector3(r._param.GetTranslationLocalGlobal6D().first), toPyVector3(r._param.GetTranslationLocalGlobal6D().second));
+            break;
+        case IKP_TranslationXAxisAngle4D:
+            o = boost::python::make_tuple(toPyVector3(r._param.GetTranslationXAxisAngle4D().first),object(r._param.GetTranslationXAxisAngle4D().second));
+            break;
+        case IKP_TranslationYAxisAngle4D:
+            o = boost::python::make_tuple(toPyVector3(r._param.GetTranslationYAxisAngle4D().first),object(r._param.GetTranslationYAxisAngle4D().second));
+            break;
+        case IKP_TranslationZAxisAngle4D:
+            o = boost::python::make_tuple(toPyVector3(r._param.GetTranslationZAxisAngle4D().first),object(r._param.GetTranslationZAxisAngle4D().second));
+            break;
+        default:
+            throw OPENRAVE_EXCEPTION_FORMAT("incorrect ik parameterization type 0x%x", r._param.GetType(), ORE_InvalidArguments);
         }
 
         return boost::python::make_tuple(o,r._param.GetType());
@@ -967,6 +1010,8 @@ void init_openravepy_global()
                     .value("TranslationXYOrientation3D",IKP_TranslationXYOrientation3D)
                     .value("TranslationLocalGlobal6D",IKP_TranslationLocalGlobal6D)
                     .value("TranslationXAxisAngle4D",IKP_TranslationXAxisAngle4D)
+                    .value("TranslationYAxisAngle4D",IKP_TranslationYAxisAngle4D)
+                    .value("TranslationZAxisAngle4D",IKP_TranslationZAxisAngle4D)
     ;
 
     class_<UserData, UserDataPtr >("UserData", DOXY_CLASS(UserData))
@@ -1068,6 +1113,9 @@ void init_openravepy_global()
                                    .def("SetTranslationXYOrientation3D",&PyIkParameterization::SetTranslationXYOrientation3D,args("posangle"), DOXY_FN(IkParameterization,SetTranslationXYOrientation3D))
                                    .def("SetTranslationLocalGlobal6D",&PyIkParameterization::SetTranslationLocalGlobal6D,args("localpos","pos"), DOXY_FN(IkParameterization,SetTranslationLocalGlobal6D))
                                    .def("SetTranslationXAxisAngle4D",&PyIkParameterization::SetTranslationXAxisAngle4D,args("quat"), DOXY_FN(IkParameterization,SetTranslationXAxisAngle4D))
+                                   .def("SetTranslationYAxisAngle4D",&PyIkParameterization::SetTranslationYAxisAngle4D,args("quat"), DOXY_FN(IkParameterization,SetTranslationYAxisAngle4D))
+                                   .def("SetTranslationZAxisAngle4D",&PyIkParameterization::SetTranslationZAxisAngle4D,args("quat"), DOXY_FN(IkParameterization,SetTranslationZAxisAngle4D))
+
                                    .def("GetTransform6D",&PyIkParameterization::GetTransform6D, DOXY_FN(IkParameterization,GetTransform6D))
                                    .def("GetRotation3D",&PyIkParameterization::GetRotation3D, DOXY_FN(IkParameterization,GetRotation3D))
                                    .def("GetTranslation3D",&PyIkParameterization::GetTranslation3D, DOXY_FN(IkParameterization,GetTranslation3D))
@@ -1079,6 +1127,8 @@ void init_openravepy_global()
                                    .def("GetTranslationXYOrientation3D",&PyIkParameterization::GetTranslationXYOrientation3D, DOXY_FN(IkParameterization,GetTranslationXYOrientation3D))
                                    .def("GetTranslationLocalGlobal6D",&PyIkParameterization::GetTranslationLocalGlobal6D, DOXY_FN(IkParameterization,GetTranslationLocalGlobal6D))
                                    .def("GetTranslationXAxisAngle4D",&PyIkParameterization::GetTranslationXAxisAngle4D, DOXY_FN(IkParameterization,GetTranslationXAxisAngle4D))
+                                   .def("GetTranslationYAxisAngle4D",&PyIkParameterization::GetTranslationYAxisAngle4D, DOXY_FN(IkParameterization,GetTranslationYAxisAngle4D))
+                                   .def("GetTranslationZAxisAngle4D",&PyIkParameterization::GetTranslationZAxisAngle4D, DOXY_FN(IkParameterization,GetTranslationZAxisAngle4D))
                                    .def("GetDOF", getdof1,args("type"), DOXY_FN(IkParameterization,GetDOF))
                                    .staticmethod("GetDOF")
                                    .def("GetNumberOfValues",getnumberofvalues1,args("type"), DOXY_FN(IkParameterization,GetNumberOfValues))

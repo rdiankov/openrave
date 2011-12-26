@@ -794,7 +794,9 @@ enum IkParameterizationType {
     IKP_TranslationXYOrientation3D=0x33000009,     ///< 2D translation along XY plane and 1D rotation around Z axis. The offset of the rotation is measured starting at +X, so at +X is it 0, at +Y it is pi/2.
     IKP_TranslationLocalGlobal6D=0x3600000a,     ///< local point on end effector origin reaches desired 3D global point
     IKP_TranslationXAxisAngle4D=0x4400000b, ///< end effector origin reaches desired 3D translation, manipulator direction makes a specific angle with x-axis (defined in the manipulator base link's coordinate system)
-    IKP_NumberOfParameterizations=11,     ///< number of parameterizations (does not count IKP_None)
+    IKP_TranslationYAxisAngle4D=0x4400000c, ///< end effector origin reaches desired 3D translation, manipulator direction makes a specific angle with y-axis (defined in the manipulator base link's coordinate system)
+    IKP_TranslationZAxisAngle4D=0x4400000d, ///< end effector origin reaches desired 3D translation, manipulator direction makes a specific angle with x-axis (defined in the manipulator base link's coordinate system)
+    IKP_NumberOfParameterizations=13,     ///< number of parameterizations (does not count IKP_None)
 };
 
 /** \brief A configuration specification references values in the environment that then define a configuration-space which can be searched for.
@@ -1180,6 +1182,16 @@ public:
         _transform.trans = trans;
         _transform.rot.x = angle;
     }
+    inline void SetTranslationYAxisAngle4D(const Vector& trans, dReal angle) {
+        _type = IKP_TranslationYAxisAngle4D;
+        _transform.trans = trans;
+        _transform.rot.x = angle;
+    }
+    inline void SetTranslationZAxisAngle4D(const Vector& trans, dReal angle) {
+        _type = IKP_TranslationZAxisAngle4D;
+        _transform.trans = trans;
+        _transform.rot.x = angle;
+    }
 
     inline const Transform& GetTransform6D() const {
         return _transform;
@@ -1215,6 +1227,12 @@ public:
         return std::make_pair(_transform.rot,_transform.trans);
     }
     inline std::pair<Vector,dReal> GetTranslationXAxisAngle4D() const {
+        return std::make_pair(_transform.trans,_transform.rot.x);
+    }
+    inline std::pair<Vector,dReal> GetTranslationYAxisAngle4D() const {
+        return std::make_pair(_transform.trans,_transform.rot.x);
+    }
+    inline std::pair<Vector,dReal> GetTranslationZAxisAngle4D() const {
         return std::make_pair(_transform.trans,_transform.rot.x);
     }
 
@@ -1336,6 +1354,14 @@ public:
             std::pair<Vector,dReal> p0 = GetTranslationXAxisAngle4D(), p1 = ikparam.GetTranslationXAxisAngle4D();
             return (p0.first-p1.first).lengthsqr3() + (p0.second-p1.second)*(p0.second-p1.second);
         }
+        case IKP_TranslationYAxisAngle4D: {
+            std::pair<Vector,dReal> p0 = GetTranslationYAxisAngle4D(), p1 = ikparam.GetTranslationYAxisAngle4D();
+            return (p0.first-p1.first).lengthsqr3() + (p0.second-p1.second)*(p0.second-p1.second);
+        }
+        case IKP_TranslationZAxisAngle4D: {
+            std::pair<Vector,dReal> p0 = GetTranslationZAxisAngle4D(), p1 = ikparam.GetTranslationZAxisAngle4D();
+            return (p0.first-p1.first).lengthsqr3() + (p0.second-p1.second)*(p0.second-p1.second);
+        }
         default:
             BOOST_ASSERT(0);
         }
@@ -1412,6 +1438,8 @@ public:
             *itvalues++ = _transform.trans.z;
             break;
         case IKP_TranslationXAxisAngle4D:
+        case IKP_TranslationYAxisAngle4D:
+        case IKP_TranslationZAxisAngle4D:
             *itvalues++ = _transform.rot.x;
             *itvalues++ = _transform.trans.x;
             *itvalues++ = _transform.trans.y;
@@ -1490,6 +1518,8 @@ public:
             _transform.trans.z = *itvalues++;
             break;
         case IKP_TranslationXAxisAngle4D:
+        case IKP_TranslationYAxisAngle4D:
+        case IKP_TranslationZAxisAngle4D:
             _transform.rot.x = *itvalues++;
             _transform.trans.x = *itvalues++;
             _transform.trans.y = *itvalues++;
@@ -1558,6 +1588,18 @@ inline IkParameterization operator* (const Transform &t, const IkParameterizatio
         std::pair<Vector,dReal> p = ikparam.GetTranslationXAxisAngle4D();
         // don't change the angle since don't know the exact direction it is pointing at
         local.SetTranslationXAxisAngle4D(t*p.first,p.second);
+        break;
+    }
+    case IKP_TranslationYAxisAngle4D: {
+        std::pair<Vector,dReal> p = ikparam.GetTranslationYAxisAngle4D();
+        // don't change the angle since don't know the exact direction it is pointing at
+        local.SetTranslationYAxisAngle4D(t*p.first,p.second);
+        break;
+    }
+    case IKP_TranslationZAxisAngle4D: {
+        std::pair<Vector,dReal> p = ikparam.GetTranslationZAxisAngle4D();
+        // don't change the angle since don't know the exact direction it is pointing at
+        local.SetTranslationZAxisAngle4D(t*p.first,p.second);
         break;
     }
     default:
