@@ -103,6 +103,11 @@ public:
             pmanip->_pEndEffector = itmanip->first;
             pmanip->_pBase = probot->GetLinks().at(0);
             pmanip->_tLocalTool = itmanip->second;
+            RAVELOG_INFO("robot dof %d\n", probot->GetDOF());
+            //if( probot->GetDOF() == 4 ) {
+            //RAVELOG_INFO("specify x-axis for planar IK\n");
+            pmanip->_vdirection=Vector(1,0,0);
+            //}
             probot->_vecManipulators.push_back(pmanip);
         }
     }
