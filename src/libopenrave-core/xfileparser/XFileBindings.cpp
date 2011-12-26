@@ -218,7 +218,9 @@ protected:
                 vaxes[0] = t.rotate(vaxes[0]);
                 if( _bFlipYZ ) {
                     // flip z here makes things right....
-                    vaxes[0].z *= -1;
+                    if( node->mFramePivot->mType == 1 ) {
+                        vaxes[0].z *= -1;
+                    }
                 }
                 std::vector<dReal> vcurrentvalues;
                 pjoint->_ComputeInternalInformation(plink,pchildlink,t.trans,vaxes,vcurrentvalues);
