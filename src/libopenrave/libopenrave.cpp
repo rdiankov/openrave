@@ -338,6 +338,9 @@ class RaveGlobal : private boost::noncopyable, public boost::enable_shared_from_
         _mapikparameterization[IKP_TranslationXAxisAngle4D] = "TranslationXAxisAngle4D";
         _mapikparameterization[IKP_TranslationYAxisAngle4D] = "TranslationYAxisAngle4D";
         _mapikparameterization[IKP_TranslationZAxisAngle4D] = "TranslationZAxisAngle4D";
+        _mapikparameterization[IKP_TranslationXAxisAngleZNorm4D] = "TranslationXAxisAngleZNorm4D";
+        _mapikparameterization[IKP_TranslationYAxisAngleXNorm4D] = "TranslationYAxisAngleXNorm4D";
+        _mapikparameterization[IKP_TranslationZAxisAngleYNorm4D] = "TranslationZAxisAngleYNorm4D";
         BOOST_ASSERT(_mapikparameterization.size()==IKP_NumberOfParameterizations);
     }
 public:
@@ -892,6 +895,21 @@ std::ostream& operator<<(std::ostream& O, const IkParameterization &ikparam)
         O << p.second << " " << p.first.x << " " << p.first.y << " " << p.first.z << " ";
         break;
     }
+    case IKP_TranslationXAxisAngleZNorm4D: {
+        std::pair<Vector,dReal> p = ikparam.GetTranslationXAxisAngleZNorm4D();
+        O << p.second << " " << p.first.x << " " << p.first.y << " " << p.first.z << " ";
+        break;
+    }
+    case IKP_TranslationYAxisAngleXNorm4D: {
+        std::pair<Vector,dReal> p = ikparam.GetTranslationYAxisAngleXNorm4D();
+        O << p.second << " " << p.first.x << " " << p.first.y << " " << p.first.z << " ";
+        break;
+    }
+    case IKP_TranslationZAxisAngleYNorm4D: {
+        std::pair<Vector,dReal> p = ikparam.GetTranslationZAxisAngleYNorm4D();
+        O << p.second << " " << p.first.x << " " << p.first.y << " " << p.first.z << " ";
+        break;
+    }
     default:
         throw OPENRAVE_EXCEPTION_FORMAT("does not support parameterization 0x%x", ikparam.GetType(),ORE_InvalidArguments);
     }
@@ -930,6 +948,24 @@ std::istream& operator>>(std::istream& I, IkParameterization& ikparam)
         Vector trans; dReal angle=0;
         I >> angle >> trans.x >> trans.y >> trans.z;
         ikparam.SetTranslationZAxisAngle4D(trans,angle);
+        break;
+    }
+    case IKP_TranslationXAxisAngleZNorm4D: {
+        Vector trans; dReal angle=0;
+        I >> angle >> trans.x >> trans.y >> trans.z;
+        ikparam.SetTranslationXAxisAngleZNorm4D(trans,angle);
+        break;
+    }
+    case IKP_TranslationYAxisAngleXNorm4D: {
+        Vector trans; dReal angle=0;
+        I >> angle >> trans.x >> trans.y >> trans.z;
+        ikparam.SetTranslationYAxisAngleXNorm4D(trans,angle);
+        break;
+    }
+    case IKP_TranslationZAxisAngleYNorm4D: {
+        Vector trans; dReal angle=0;
+        I >> angle >> trans.x >> trans.y >> trans.z;
+        ikparam.SetTranslationZAxisAngleYNorm4D(trans,angle);
         break;
     }
     default:

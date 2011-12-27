@@ -46,7 +46,9 @@ except:
         TranslationXAxisAngle4D=0x4400000b
         TranslationYAxisAngle4D=0x4400000c
         TranslationZAxisAngle4D=0x4400000d
-
+        TranslationXAxisAngleZNorm4D=0x4400000e
+        TranslationYAxisAngleXNorm4D=0x4400000f
+        TranslationZAxisAngleYNorm4D=0x44000010
 from sympy import *
 
 try:

@@ -582,7 +582,6 @@ class InverseKinematicsModel(DatabaseGenerator):
                 kwargs['rawbasedir'] = rawbasedir
                 kwargs['rawbasepos'] = rawbasepos
                 kwargs['rawglobaldir'] = [1.0,0.0,0.0]
-                kwargs['rawnormaldir'] = [0.0,0.0,1.0]
                 return self.ikfast.IKFastSolver.solveFullIK_TranslationAxisAngle4D(*args,**kwargs)
             solvefn=solveFullIK_TranslationXAxisAngle4D
         elif self.iktype == IkParameterization.Type.TranslationYAxisAngle4D:
@@ -592,7 +591,6 @@ class InverseKinematicsModel(DatabaseGenerator):
                 kwargs['rawbasedir'] = rawbasedir
                 kwargs['rawbasepos'] = rawbasepos
                 kwargs['rawglobaldir'] = [0.0,1.0,0.0]
-                kwargs['rawnormaldir'] = [1.0,0.0,0.0]
                 return self.ikfast.IKFastSolver.solveFullIK_TranslationAxisAngle4D(*args,**kwargs)
             solvefn=solveFullIK_TranslationYAxisAngle4D
         elif self.iktype == IkParameterization.Type.TranslationZAxisAngle4D:
@@ -602,9 +600,38 @@ class InverseKinematicsModel(DatabaseGenerator):
                 kwargs['rawbasedir'] = rawbasedir
                 kwargs['rawbasepos'] = rawbasepos
                 kwargs['rawglobaldir'] = [0.0,0.0,1.0]
-                kwargs['rawnormaldir'] = [0.0,1.0,0.0]
                 return self.ikfast.IKFastSolver.solveFullIK_TranslationAxisAngle4D(*args,**kwargs)
             solvefn=solveFullIK_TranslationZAxisAngle4D
+        elif self.iktype == IkParameterization.Type.TranslationXAxisAngleZNorm4D:
+            rawbasedir=dot(self.manip.GetLocalToolTransform()[0:3,0:3],self.manip.GetDirection())
+            rawbasepos=self.manip.GetLocalToolTransform()[0:3,3]
+            def solveFullIK_TranslationXAxisAngleZNorm4D(*args,**kwargs):
+                kwargs['rawbasedir'] = rawbasedir
+                kwargs['rawbasepos'] = rawbasepos
+                kwargs['rawglobaldir'] = [1.0,0.0,0.0]
+                kwargs['rawnormaldir'] = [0.0,0.0,1.0]
+                return self.ikfast.IKFastSolver.solveFullIK_TranslationAxisAngle4D(*args,**kwargs)
+            solvefn=solveFullIK_TranslationXAxisAngleZNorm4D
+        elif self.iktype == IkParameterization.Type.TranslationYAxisAngleXNorm4D:
+            rawbasedir=dot(self.manip.GetLocalToolTransform()[0:3,0:3],self.manip.GetDirection())
+            rawbasepos=self.manip.GetLocalToolTransform()[0:3,3]
+            def solveFullIK_TranslationYAxisAngleXNorm4D(*args,**kwargs):
+                kwargs['rawbasedir'] = rawbasedir
+                kwargs['rawbasepos'] = rawbasepos
+                kwargs['rawglobaldir'] = [0.0,1.0,0.0]
+                kwargs['rawnormaldir'] = [1.0,0.0,0.0]
+                return self.ikfast.IKFastSolver.solveFullIK_TranslationAxisAngle4D(*args,**kwargs)
+            solvefn=solveFullIK_TranslationYAxisAngleXNorm4D
+        elif self.iktype == IkParameterization.Type.TranslationZAxisAngleYNorm4D:
+            rawbasedir=dot(self.manip.GetLocalToolTransform()[0:3,0:3],self.manip.GetDirection())
+            rawbasepos=self.manip.GetLocalToolTransform()[0:3,3]
+            def solveFullIK_TranslationZAxisAngleYNorm4D(*args,**kwargs):
+                kwargs['rawbasedir'] = rawbasedir
+                kwargs['rawbasepos'] = rawbasepos
+                kwargs['rawglobaldir'] = [0.0,0.0,1.0]
+                kwargs['rawnormaldir'] = [0.0,1.0,0.0]
+                return self.ikfast.IKFastSolver.solveFullIK_TranslationAxisAngle4D(*args,**kwargs)
+            solvefn=solveFullIK_TranslationZAxisAngleYNorm4D
         else:
             raise ValueError('bad type')
 
@@ -636,7 +663,7 @@ class InverseKinematicsModel(DatabaseGenerator):
             log.info('creating ik file %s',sourcefilename)
             mkdir_recursive(os.path.split(sourcefilename)[0])
             solver = self.ikfast.IKFastSolver(kinbody=self.robot,kinematicshash=self.manip.GetKinematicsStructureHash(),precision=precision)
-            if self.iktype == IkParameterization.Type.TranslationXAxisAngle4D or self.iktype == IkParameterization.Type.TranslationYAxisAngle4D or self.iktype == IkParameterization.Type.TranslationZAxisAngle4D:
+            if self.iktype == IkParameterization.Type.TranslationXAxisAngle4D or self.iktype == IkParameterization.Type.TranslationYAxisAngle4D or self.iktype == IkParameterization.Type.TranslationZAxisAngle4D or self.iktype == IkParameterization.Type.TranslationXAxisAngleZNorm4D or self.iktype == IkParameterization.Type.TranslationYAxisAngleXNorm4D or self.iktype == IkParameterization.Type.TranslationZAxisAngleYNorm4D:
                 solver.useleftmultiply = False
             baselink=self.manip.GetBase().GetIndex()
             eelink=self.manip.GetEndEffector().GetIndex()

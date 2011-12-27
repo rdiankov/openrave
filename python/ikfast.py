@@ -2242,13 +2242,22 @@ class IKFastSolver(AutoReloader):
         globaldir /= sqrt(globaldir[0]*globaldir[0]+globaldir[1]*globaldir[1]+globaldir[2]*globaldir[2])
         for i in range(3):
             globaldir[i] = self.convertRealToRational(globaldir[i],5)
-        if globaldir[0] == S.One:
-            iktype = IkType.TranslationXAxisAngle4D
-        elif globaldir[1] == S.One:
-            iktype = IkType.TranslationYAxisAngle4D
-        elif globaldir[2] == S.One:
-            iktype = IkType.TranslationZAxisAngle4D
+        iktype = None
+        if normaldir is None:
+            if globaldir[0] == S.One:
+                iktype = IkType.TranslationXAxisAngle4D
+            elif globaldir[1] == S.One:
+                iktype = IkType.TranslationYAxisAngle4D
+            elif globaldir[2] == S.One:
+                iktype = IkType.TranslationZAxisAngle4D
         else:
+            if globaldir[0] == S.One and normaldir[2] == S.One:
+                iktype = IkType.TranslationXAxisAngleZNorm4D
+            elif globaldir[1] == S.One and normaldir[0] == S.One:
+                iktype = IkType.TranslationYAxisAngleXNorm4D
+            elif globaldir[2] == S.One and normaldir[1] == S.One:
+                iktype = IkType.TranslationZAxisAngleYNorm4D
+        if iktype is None:
             raise ValueError('currently globaldir can only by one of x,y,z axes')
     
         basepos = Matrix(3,1,[self.convertRealToRational(x) for x in rawbasepos])
@@ -5528,7 +5537,22 @@ class IKFastSolver(AutoReloader):
     @staticmethod
     def GetSolvers():
         """Returns a dictionary of all the supported solvers and their official identifier names"""
-        return {'transform6d':IKFastSolver.solveFullIK_6D, 'rotation3d':IKFastSolver.solveFullIK_Rotation3D, 'translation3d':IKFastSolver.solveFullIK_Translation3D, 'direction3d':IKFastSolver.solveFullIK_Direction3D, 'ray4d':IKFastSolver.solveFullIK_Ray4D, 'lookat3d':IKFastSolver.solveFullIK_Lookat3D, 'translationdirection5d':IKFastSolver.solveFullIK_TranslationDirection5D,'translationxy2d':IKFastSolver.solveFullIK_TranslationXY2D,'translationxyorientation3d':IKFastSolver.solveFullIK_TranslationXYOrientation3D,'translationxaxisangle4d':IKFastSolver.solveFullIK_TranslationXAxisAngle4D, 'translationyaxisangle4d':IKFastSolver.solveFullIK_TranslationYAxisAngle4D, 'translationzaxisangle4d':IKFastSolver.solveFullIK_TranslationZAxisAngle4D}
+        return {'transform6d':IKFastSolver.solveFullIK_6D,
+                'rotation3d':IKFastSolver.solveFullIK_Rotation3D,
+                'translation3d':IKFastSolver.solveFullIK_Translation3D,
+                'direction3d':IKFastSolver.solveFullIK_Direction3D,
+                'ray4d':IKFastSolver.solveFullIK_Ray4D,
+                'lookat3d':IKFastSolver.solveFullIK_Lookat3D,
+                'translationdirection5d':IKFastSolver.solveFullIK_TranslationDirection5D,
+                'translationxy2d':IKFastSolver.solveFullIK_TranslationXY2D,
+                'translationxyorientation3d':IKFastSolver.solveFullIK_TranslationXYOrientation3D,
+                'translationxaxisangle4d':IKFastSolver.solveFullIK_TranslationAxisAngle4D,
+                'translationyaxisangle4d':IKFastSolver.solveFullIK_TranslationAxisAngle4D,
+                'translationzaxisangle4d':IKFastSolver.solveFullIK_TranslationAxisAngle4D,
+                'translationxaxisangleznorm4d':IKFastSolver.solveFullIK_TranslationAxisAngle4D,
+                'translationyaxisanglexnorm4d':IKFastSolver.solveFullIK_TranslationAxisAngle4D,
+                'translationzaxisangleynorm4d':IKFastSolver.solveFullIK_TranslationAxisAngle4D
+                }
 
 if __name__ == '__main__':
     import openravepy

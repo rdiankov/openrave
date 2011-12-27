@@ -49,7 +49,7 @@ Inverse Kinematics
 
 * fixed ikfast bug when prismatic joints are present, ikfast version is now **49**.
 
-* Added new IK types: :meth:`.TranslationXAxisAngle4D`, :meth:`.TranslationYAxisAngle4D`, :meth:`.TranslationZAxisAngle4D`
+* Added new IK types: :meth:`.TranslationXAxisAngle4D`, :meth:`.TranslationYAxisAngle4D`, :meth:`.TranslationZAxisAngle4D`, :meth:`.TranslationXAxisAngleZNorm4D`, :meth:`.TranslationYAxisAngleXNorm4D`, :meth:`.TranslationZAxisAngleYNorm4D`
 
 Grasping
 --------

@@ -533,6 +533,24 @@ private:
                 IKReal eerot[9] = {p.second, 0, 0, 0, 0, 0, 0, 0, 0};
                 return _pfnik(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, vsolutions);
             }
+            case IKP_TranslationXAxisAngleZNorm4D: {
+                std::pair<Vector,dReal> p = param.GetTranslationXAxisAngleZNorm4D();
+                IKReal eetrans[3] = {p.first.x, p.first.y,p.first.z};
+                IKReal eerot[9] = {p.second, 0, 0, 0, 0, 0, 0, 0, 0};
+                return _pfnik(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, vsolutions);
+            }
+            case IKP_TranslationYAxisAngleXNorm4D: {
+                std::pair<Vector,dReal> p = param.GetTranslationYAxisAngleXNorm4D();
+                IKReal eetrans[3] = {p.first.x, p.first.y,p.first.z};
+                IKReal eerot[9] = {p.second, 0, 0, 0, 0, 0, 0, 0, 0};
+                return _pfnik(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, vsolutions);
+            }
+            case IKP_TranslationZAxisAngleYNorm4D: {
+                std::pair<Vector,dReal> p = param.GetTranslationZAxisAngleYNorm4D();
+                IKReal eetrans[3] = {p.first.x, p.first.y,p.first.z};
+                IKReal eerot[9] = {p.second, 0, 0, 0, 0, 0, 0, 0, 0};
+                return _pfnik(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, vsolutions);
+            }
             default:
                 BOOST_ASSERT(0);
                 break;
