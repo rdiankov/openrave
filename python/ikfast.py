@@ -2263,10 +2263,10 @@ class IKFastSolver(AutoReloader):
         endbranchtree = [AST.SolverStoreSolution (jointvars)]
 
         LinksInv = [self.affineInverse(link) for link in Links]
-        T = self.multiplyMatrix(Links)
+        Tallmult = self.multiplyMatrix(Links)
         Tfinal = zeros((4,4))
-        Tfinal[0,0] = acos(globaldir.dot(T[0:3,0:3]*basedir))
-        Tfinal[0:3,3] = T[0:3,0:3]*basepos+T[0:3,3]
+        Tfinal[0,0] = acos(globaldir.dot(Tallmult[0:3,0:3]*basedir))
+        Tfinal[0:3,3] = Tallmult[0:3,0:3]*basepos+Tallmult[0:3,3]
         self.testconsistentvalues = self.computeConsistentValues(jointvars,Tfinal,numsolutions=4)
         
         solvejointvars = [jointvars[i] for i in isolvejointvars]
@@ -2277,9 +2277,6 @@ class IKFastSolver(AutoReloader):
 
         # if last two axes are intersecting, can divide computing position and direction
         ilinks = [i for i,Tlink in enumerate(Links) if self.has_any_symbols(Tlink,*solvejointvars)]
-        #T = self.multiplyMatrix(Links[ilinks[-2]:])
-        #P = T[0:3,0:3]*basepos+T[0:3,3]
-        #D = T[0:3,0:3]*basedir
 
         Tbaseposinv = eye(4)
         Tbaseposinv[0:3,3] = -basepos
@@ -2302,10 +2299,41 @@ class IKFastSolver(AutoReloader):
                 if self.isExpressionUnique(AllEquations,eq) and self.isExpressionUnique(AllEquations,-eq):
                     AllEquations.append(eq)
 
-        self.sortComplexity(AllEquations)
+        # check if planar with respect to normaldir
+        extravar = None
+        if normaldir is not None:
+            if Tallmult[0:3,0:3]*normaldir == normaldir:
+                Tnormaltest = self.rodrigues(normaldir,pi/2)
+                # planar, so know that the sum of all hinge joints is equal to the final angle
+                # can use this fact to substitute one angle with the other values
+                angles = []
+                for solvejoint in solvejointvars:
+                    if self.isHinge(solvejoint.name):
+                        Tall0 = Tallmult[0:3,0:3].subs(solvejoint,S.Zero)
+                        Tall1 = Tallmult[0:3,0:3].subs(solvejoint,pi/2)
+                        if Tall0*Tnormaltest-Tall1:
+                            angles.append(solvejoint)
+                        else:
+                            angles.append(-solvejoint)
 
+                Tzero = Tallmult.subs([(a,S.Zero) for a in angles])
+                eqangles = self.Tee[0]-acos(globaldir.dot(Tzero[0:3,0:3]*basedir))
+                for a in angles[:-1]:
+                    eqangles -= a
+                extravar = (angles[-1],eqangles)
+                coseq = cos(eqangles).expand(trig=True)
+                sineq = sin(eqangles).expand(trig=True)
+                AllEquationsOld = AllEquations
+                AllEquations = [self.trigsimp(eq.subs([(cos(angles[-1]),coseq),(sin(angles[-1]),sineq)]).expand(),solvejointvars) for eq in AllEquationsOld]
+                solvejointvars.remove(angles[-1])
+                
+        self.sortComplexity(AllEquations)
+        endbranchtree = [AST.SolverStoreSolution (jointvars)]
+        if extravar is not None:
+            solution=AST.SolverSolution(extravar[0].name, jointeval=[extravar[1]],isHinge=self.isHinge(extravar[0].name))
+            endbranchtree.insert(0,solution)
+                    
         try:
-            endbranchtree = [AST.SolverStoreSolution (jointvars)]
             tree = self.solveAllEquations(AllEquations,curvars=solvejointvars[:],othersolvedvars=self.freejointvars,solsubs=self.freevarsubs[:],endbranchtree=endbranchtree)
             tree = self.verifyAllEquations(AllEquations,solvejointvars,self.freevarsubs,tree)
         except self.CannotSolveError:
@@ -4247,7 +4275,7 @@ class IKFastSolver(AutoReloader):
                                 pass
                             
                         # sort with respect to degree
-                        equationdegrees = [(peq.degree,peq) for peq in possibilities]
+                        equationdegrees = [(peq.degree*100000+self.codeComplexity(peq.as_basic()),peq) for peq in possibilities]
                         equationdegrees.sort()
                         solutions[ileftvar] = [peq[1] for peq in equationdegrees]
                         break
@@ -4259,9 +4287,16 @@ class IKFastSolver(AutoReloader):
         pfinals = None
         ileftvar = None
         if solutions[0] is not None:
-            if solutions[1] is not None and solutions[1][0].degree < solutions[0][0].degree:
-                pfinals = solutions[1]
-                ileftvar = 1
+            if solutions[1] is not None:
+                if solutions[1][0].degree < solutions[0][0].degree:
+                    pfinals = solutions[1]
+                    ileftvar = 1
+                elif solutions[1][0].degree == solutions[0][0].degree and self.codeComplexity(solutions[1][0].as_basic()) < self.codeComplexity(solutions[0][0].as_basic()):
+                    pfinals = solutions[1]
+                    ileftvar = 1
+                else:
+                    pfinals = solutions[0]
+                    ileftvar = 0
             else:
                 pfinals = solutions[0]
                 ileftvar = 0
@@ -4350,6 +4385,7 @@ class IKFastSolver(AutoReloader):
         solution.postcheckfornonzeros = [peq.as_basic() for peq in pfinals[1:]]
         solution.postcheckforrange = []
         solution.dictequations = dictequations
+        solution.AddHalfTanValue = True
         return [solution]
 
     def _createSimplifyFn(self,vars,varsubs,varsubsinv):
@@ -4525,6 +4561,7 @@ class IKFastSolver(AutoReloader):
             if pfinal is not None:
                 jointsol = 2*atan(varsym.htvar)
                 solution = AST.SolverPolynomialRoots(jointname=varsym.name,poly=pfinal,jointeval=[jointsol],isHinge=self.isHinge(varsym.name))
+                solution.AddHalfTanValue = True
                 solution.checkforzeros = []
                 solution.postcheckforzeros = []
                 solution.postcheckfornonzeros = []

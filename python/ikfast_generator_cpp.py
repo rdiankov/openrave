@@ -105,7 +105,7 @@ def customcse(rawexprs,symbols=None):
         evalexpr = evalNumbers(expr)
         complexity = evalexpr.count_ops().subs(complexitysubs)
         # need to threshold complexity or otherwise cse will not terminate
-        if complexity > 400:
+        if complexity > 300:
             reduced_exprs.append(evalexpr)
         else:
             allexprs.append(evalexpr)
@@ -1717,11 +1717,11 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
     }
     complex<IKReal> B = S+T, A = S-T;
     numroots = 0;
-    if( IKabs(imag(B)) < std::numeric_limits<IKReal>::epsilon() ) {
+    if( IKabs(imag(B)) < 40*std::numeric_limits<IKReal>::epsilon() ) {
         rawroots[numroots++] = -a2_3+real(B);
     }
     complex<IKReal> Arot = complex<IKReal>(0,SQRT_3)*A;
-    if( IKabs(imag(B-Arot)) < std::numeric_limits<IKReal>::epsilon() ) {
+    if( IKabs(imag(B-Arot)) < 40*std::numeric_limits<IKReal>::epsilon() ) {
         rawroots[numroots++] = -a2_3-0.5*real(B-Arot);
         rawroots[numroots++] = -a2_3-0.5*real(B+Arot);
     }
@@ -1776,7 +1776,7 @@ static inline void %s(IKReal rawcoeffs[%d+1], IKReal rawroots[%d], int& numroots
     }
     numroots = 0;
     for(int i = 0; i < %d; ++i) {
-        if( IKabs(imag(roots[i])) < std::numeric_limits<IKReal>::epsilon() ) {
+        if( IKabs(imag(roots[i])) < tol ) {
             rawroots[numroots++] = real(roots[i]);
         }
     }

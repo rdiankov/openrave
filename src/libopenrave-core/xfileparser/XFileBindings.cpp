@@ -185,12 +185,14 @@ protected:
             }
             else if( node->mFramePivot->mType == 5 ) {
                 // some type of mimic/passive joint?
-                RAVELOG_WARN(str(boost::format("passive joint type %d")%node->mFramePivot->mType));
+                RAVELOG_WARN(str(boost::format("passive joint %s type %d")%node->mName%node->mFramePivot->mType));
                 pjoint.reset();
+                //pjoint->_vlowerlimit[0] = -10;
+                //pjoint->_vupperlimit[0] = 10;
             }
             else {
                 if( node->mFramePivot->mType != 0 ) {
-                    RAVELOG_WARN(str(boost::format("unknown joint type %d")%node->mFramePivot->mType));
+                    RAVELOG_WARN(str(boost::format("unknown joint %s type %d")%node->mName%node->mFramePivot->mType));
                 }
                 pjoint.reset();
             }
