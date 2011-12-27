@@ -1730,12 +1730,15 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
 }
 """%name
             else:
-                fcode = """/// Durand-Kerner polynomial root finding method
-static inline void %s(IKReal rawcoeffs[%d+1], IKReal rawroots[%d], int& numroots)
+                # Durand-Kerner polynomial root finding method
+                # In case of multiple roots, see Pierre Fraigniaud's work on Quadratic-Like Convergence of the Mean
+                # http://www.springerlink.com/content/t72g1635574u10q3/
+                fcode = """static inline void %s(IKReal rawcoeffs[%d+1], IKReal rawroots[%d], int& numroots)
 {
     using std::complex;
     IKFAST_ASSERT(rawcoeffs[0] != 0);
     const IKReal tol = 128.0*std::numeric_limits<IKReal>::epsilon();
+    const IKReal tolsqrt = 8*sqrt(std::numeric_limits<IKReal>::epsilon());
     complex<IKReal> coeffs[%d];
     const int maxsteps = 50;
     for(int i = 0; i < %d; ++i) {
@@ -1744,7 +1747,7 @@ static inline void %s(IKReal rawcoeffs[%d+1], IKReal rawroots[%d], int& numroots
     complex<IKReal> roots[%d];
     IKReal err[%d];
     roots[0] = complex<IKReal>(1,0);
-    roots[1] = complex<IKReal>(0.4,0.9); // any complex number not a root of unity is works
+    roots[1] = complex<IKReal>(0.4,0.9); // any complex number not a root of unity works
     err[0] = 1.0;
     err[1] = 1.0;
     for(int i = 2; i < %d; ++i) {
@@ -1776,14 +1779,32 @@ static inline void %s(IKReal rawcoeffs[%d+1], IKReal rawroots[%d], int& numroots
             break;
         }
     }
+
     numroots = 0;
+    bool visited[%d] = {false};
     for(int i = 0; i < %d; ++i) {
-        if( IKabs(imag(roots[i])) < tol ) {
-            rawroots[numroots++] = real(roots[i]);
+        if( !visited[i] ) {
+            // might be a multiple root, in which case it will have more error than the other roots
+            // find any neighboring roots, and take the average
+            complex<IKReal> newroot=roots[i];
+            int n = 1;
+            for(int j = i+1; j < %d; ++j) {
+                if( abs(roots[i]-roots[j]) < tolsqrt ) {
+                    newroot += roots[j];
+                    n += 1;
+                    visited[j] = true;
+                }
+            }
+            if( n > 1 ) {
+                newroot /= n;
+            }
+            if( IKabs(imag(newroot)) < tol ) {
+                rawroots[numroots++] = real(newroot);
+            }
         }
     }
 }
-"""%(name,deg,deg,deg,deg,deg,deg,deg,deg,deg,deg,deg)
+"""%(name,deg,deg,deg,deg,deg,deg,deg,deg,deg,deg,deg,deg,deg)
             self.functions[name] = fcode
         return name
 

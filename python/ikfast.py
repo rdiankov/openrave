@@ -2233,30 +2233,30 @@ class IKFastSolver(AutoReloader):
     def solveFullIK_TranslationAxisAngle4D(self, LinksRaw, jointvars, isolvejointvars, rawbasedir=Matrix(3,1,[S.One,S.Zero,S.Zero]),rawbasepos=Matrix(3,1,[S.Zero,S.Zero,S.Zero]),rawglobaldir=Matrix(3,1,[S.Zero,S.Zero,S.One]), rawnormaldir=None):
         """Solves 3D translation + Angle with respect to X-axis
         """
-        if rawnormaldir is not None:
-            normaldir = Matrix(3,1,[Real(x,30) for x in rawnormaldir])
-        else:
-            normaldir = None
-            
         globaldir = Matrix(3,1,[Real(x,30) for x in rawglobaldir])
         globaldir /= sqrt(globaldir[0]*globaldir[0]+globaldir[1]*globaldir[1]+globaldir[2]*globaldir[2])
         for i in range(3):
             globaldir[i] = self.convertRealToRational(globaldir[i],5)
         iktype = None
-        if normaldir is None:
-            if globaldir[0] == S.One:
-                iktype = IkType.TranslationXAxisAngle4D
-            elif globaldir[1] == S.One:
-                iktype = IkType.TranslationYAxisAngle4D
-            elif globaldir[2] == S.One:
-                iktype = IkType.TranslationZAxisAngle4D
-        else:
+        
+        if rawnormaldir is not None:
+            normaldir = Matrix(3,1,[Real(x,30) for x in rawnormaldir])
+            binormaldir = normaldir.cross(globaldir).transpose()
             if globaldir[0] == S.One and normaldir[2] == S.One:
                 iktype = IkType.TranslationXAxisAngleZNorm4D
             elif globaldir[1] == S.One and normaldir[0] == S.One:
                 iktype = IkType.TranslationYAxisAngleXNorm4D
             elif globaldir[2] == S.One and normaldir[1] == S.One:
                 iktype = IkType.TranslationZAxisAngleYNorm4D
+        else:
+            normaldir = None
+            if globaldir[0] == S.One:
+                iktype = IkType.TranslationXAxisAngle4D
+            elif globaldir[1] == S.One:
+                iktype = IkType.TranslationYAxisAngle4D
+            elif globaldir[2] == S.One:
+                iktype = IkType.TranslationZAxisAngle4D            
+
         if iktype is None:
             raise ValueError('currently globaldir can only by one of x,y,z axes')
     
@@ -2274,7 +2274,10 @@ class IKFastSolver(AutoReloader):
         LinksInv = [self.affineInverse(link) for link in Links]
         Tallmult = self.multiplyMatrix(Links)
         Tfinal = zeros((4,4))
-        Tfinal[0,0] = acos(globaldir.dot(Tallmult[0:3,0:3]*basedir))
+        if normaldir is None:
+            Tfinal[0,0] = acos(globaldir.dot(Tallmult[0:3,0:3]*basedir))
+        else:
+            Tfinal[0,0] = atan2(binormaldir.dot(Tallmult[0:3,0:3]*basedir), globaldir.dot(Tallmult[0:3,0:3]*basedir))
         Tfinal[0:3,3] = Tallmult[0:3,0:3]*basepos+Tallmult[0:3,3]
         self.testconsistentvalues = self.computeConsistentValues(jointvars,Tfinal,numsolutions=4)
         
@@ -2304,7 +2307,8 @@ class IKFastSolver(AutoReloader):
             if self.isExpressionUnique(AllEquations,eq) and self.isExpressionUnique(AllEquations,-eq):
                 AllEquations.append(eq)
             if normaldir is not None:
-                eq = self.simplifyTransform(self.trigsimp((T0[0:3,0:3]*normaldir).dot(globaldir2.cross(basedir2)),solvejointvars))-sin(self.Tee[0])
+                binormaldir2 = T0[0:3,0:3]*binormaldir
+                eq = self.simplifyTransform(self.trigsimp(binormaldir2.dot(basedir2),solvejointvars))-sin(self.Tee[0])
                 if self.isExpressionUnique(AllEquations,eq) and self.isExpressionUnique(AllEquations,-eq):
                     AllEquations.append(eq)
 
@@ -2326,7 +2330,8 @@ class IKFastSolver(AutoReloader):
                             angles.append(-solvejoint)
 
                 Tzero = Tallmult.subs([(a,S.Zero) for a in angles])
-                eqangles = self.Tee[0]-acos(globaldir.dot(Tzero[0:3,0:3]*basedir))
+                zeroangle = atan2(binormaldir.dot(Tzero[0:3,0:3]*basedir), globaldir.dot(Tzero[0:3,0:3]*basedir))
+                eqangles = self.Tee[0]-zeroangle
                 for a in angles[:-1]:
                     eqangles -= a
                 extravar = (angles[-1],eqangles)
@@ -2335,7 +2340,8 @@ class IKFastSolver(AutoReloader):
                 AllEquationsOld = AllEquations
                 AllEquations = [self.trigsimp(eq.subs([(cos(angles[-1]),coseq),(sin(angles[-1]),sineq)]).expand(),solvejointvars) for eq in AllEquationsOld]
                 solvejointvars.remove(angles[-1])
-                
+
+        
         self.sortComplexity(AllEquations)
         endbranchtree = [AST.SolverStoreSolution (jointvars)]
         if extravar is not None:
