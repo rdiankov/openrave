@@ -129,6 +129,8 @@ Misc
 
 * fixed qtcoin :meth:`.Viewer.GetCameraTransform` function. now compatible with :meth:`.Viewer.GetCameraImage`
 
+* everything compiles with Ubuntu 8.04/Python 2.5.
+
 Version 0.4.2
 =============
 

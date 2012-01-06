@@ -98,8 +98,9 @@ if( OPT_PYTHON )
       OUTPUT_VARIABLE _python_distpackage OUTPUT_STRIP_TRAILING_WHITESPACE
       RESULT_VARIABLE _python_failed1)
     execute_process(
-      COMMAND ${PYTHON_EXECUTABLE} -c "from distutils.sysconfig import get_python_lib; from os.path import relpath; print relpath(get_python_lib(1,prefix='${CMAKE_INSTALL_PREFIX}'),'${CMAKE_INSTALL_PREFIX}')"
+      COMMAND ${PYTHON_EXECUTABLE} -c "from distutils.sysconfig import get_python_lib; from myrelpath import relpath; print relpath(get_python_lib(1,prefix='${CMAKE_INSTALL_PREFIX}'),'${CMAKE_INSTALL_PREFIX}')"
       OUTPUT_VARIABLE OPENRAVE_PYTHON_INSTALL_DIR OUTPUT_STRIP_TRAILING_WHITESPACE
+      WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
       RESULT_VARIABLE _python_failed2)
 
     if( ${_python_failed0} EQUAL 0 AND ${_python_failed1} EQUAL 0 AND ${_python_failed2} EQUAL 0 )
@@ -125,7 +126,7 @@ if( OPT_PYTHON )
         message(STATUS "failed to get python version")
       endif()
     else()
-      message(STATUS "failed to get python site-package directories via get_pytho_lib")
+      message(STATUS "failed to get python site-package directories via get_python_lib")
       set(PYTHON_EXECUTABLE)
     endif()
   endif()
@@ -407,8 +408,16 @@ add_custom_target(interfacehashes_target ALL DEPENDS ${interfacehashes_h} ${EXTR
 # math libraries
 find_package(GMP)
 find_package(GMPXX)
-find_package(MPFR)
+find_package(MPFR 2.4)
+if( MPFR_FOUND )
+  check_library_exists(${MPFR_LIBRARIES} mpfr_div_d "${MPFR_LIBRARIES_DIR}" MPFR_DIV_D_FOUND)
+  if( NOT MPFR_DIV_D_FOUND )
+    message(WARNING "MPFR verison too old, does not support mpfr_div_d function")
+    set(MPFR_FOUND 0)
+  endif()
+endif()
 find_package(MPFI)
+
 
 if( OPT_ACCURATEMATH AND NOT MSVC )
   check_library_exists(crlibm crlibm_init "" CRLIBM_FOUND_LIB)

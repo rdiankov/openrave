@@ -98,7 +98,11 @@ if not __openravepy_build_doc__:
     from openravepy import *
     from numpy import *
 
-import multiprocessing
+try:
+    from multiprocessing import cpu_count
+except:
+    def cpu_count(): return 1
+
 
 class GraspPlanning:
     def __init__(self,robot,randomize=False,dests=None,nodestinations=False,switchpatterns=None,plannername=None,minimumgoalpaths=1):
@@ -136,7 +140,7 @@ class GraspPlanning:
                 if len(targets) > 0:
                     gmodel = databases.grasping.GraspingModel(robot=self.robot,target=targets[0])
                     if not gmodel.load():
-                        gmodel.numthreads = multiprocessing.cpu_count()
+                        gmodel.numthreads = cpu_count()
                         gmodel.autogenerate()
                         self.graspables = self.getGraspables(dests=dests)
 

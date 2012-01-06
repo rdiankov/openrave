@@ -1966,7 +1966,7 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr plink)
             KinBodyConstPtr pgrabbedbody(itgrabbed->pbody);
             if( pgrabbedbody != pbody ) {
                 FOREACHC(itlink, pgrabbedbody->GetLinks()) {
-                    if( GetEnv()->CheckCollision(LinkConstPtr(*itlink), pbody) ) {
+		    if( GetEnv()->CheckCollision(LinkConstPtr(*itlink), KinBodyConstPtr(pbody)) ) {
                         g.vCollidingLinks.push_back(*itlink);
                     }
                 }
@@ -2017,7 +2017,7 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr pRobotLinkToGrabWith, const std::
             KinBodyConstPtr pgrabbedbody(itgrabbed->pbody);
             if( pgrabbedbody != pbody ) {
                 FOREACHC(itlink, pgrabbedbody->GetLinks()) {
-                    if( GetEnv()->CheckCollision(LinkConstPtr(*itlink), pbody) ) {
+		    if( GetEnv()->CheckCollision(LinkConstPtr(*itlink), KinBodyConstPtr(pbody)) ) {
                         g.vCollidingLinks.push_back(*itlink);
                     }
                 }
@@ -2079,7 +2079,7 @@ void RobotBase::RegrabAll()
                 KinBodyConstPtr pgrabbedbody(itgrabbed->pbody);
                 if( pgrabbedbody != pbody ) {
                     FOREACHC(itlink, pgrabbedbody->GetLinks()) {
-                        if( GetEnv()->CheckCollision(LinkConstPtr(*itlink), pbody) ) {
+		        if( GetEnv()->CheckCollision(LinkConstPtr(*itlink), KinBodyConstPtr(pbody)) ) {
                             itbody->vCollidingLinks.push_back(*itlink);
                         }
                     }

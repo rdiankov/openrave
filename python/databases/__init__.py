@@ -208,10 +208,15 @@ class DatabaseGenerator(metaclass.AutoReloader):
             if destroyenv and env is not None:
                 env.Destroy()
 
-import convexdecomposition
-import linkstatistics
-import grasping
-import inversekinematics
-import kinematicreachability
-import inversereachability
-import visibilitymodel
+# python 2.5 raises 'import *' not allowed with 'from .'
+from sys import version_info
+if version_info[0:3]>=(2,6,0):
+    import convexdecomposition
+    import linkstatistics
+    import grasping
+    import inversekinematics
+    import kinematicreachability
+    import inversereachability
+    import visibilitymodel
+else:
+    print 'openravepy.datbases cannot be used python versions < 2.6'

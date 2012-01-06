@@ -607,7 +607,11 @@ protected:
             s_pVideoGlobalState.reset(new VideoGlobalState());
         }
         lcodecs.clear();
+#if LIBAVFORMAT_VERSION_INT >= (52<<16)
         AVOutputFormat *fmt = av_oformat_next(NULL); //first_oformat;
+#else
+        AVOutputFormat *fmt = first_oformat;
+#endif
         while (fmt != NULL) {
             lcodecs.push_back(make_pair((int)fmt->video_codec,fmt->long_name));
             fmt = fmt->next;
@@ -624,7 +628,11 @@ protected:
         AVCodec *codec;
 
         CodecID video_codec = codecid == -1 ? CODEC_ID_MPEG4 : (CodecID)codecid;
+#if LIBAVFORMAT_VERSION_INT >= (52<<16)
         AVOutputFormat *fmt = av_oformat_next(NULL); //first_oformat;
+#else
+        AVOutputFormat *fmt = first_oformat;
+#endif
         while (fmt != NULL) {
             if (fmt->video_codec == video_codec) {
                 break;

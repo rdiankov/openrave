@@ -32,7 +32,11 @@ if not __openravepy_build_doc__:
     from openravepy import *
     from numpy import *
 
-import multiprocessing
+try:
+    from multiprocessing import cpu_count
+except:
+    def cpu_count(): return 1
+
 import time
 
 class FastGraspingThreaded:
@@ -132,7 +136,7 @@ class FastGraspingThreaded:
             forceclosurethreshold=1e-9
             avoidlinks = []
             friction = 0.4
-            numthreads = multiprocessing.cpu_count()
+            numthreads = cpu_count()
             maxgrasps = 1
             checkik = True
             grasps = []

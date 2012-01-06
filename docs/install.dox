@@ -192,6 +192,16 @@ sudo apt-get update
 sudo apt-get build-dep openrave
 \endverbatim
 
+\subsection ilinux_ubuntu804 Ubuntu 8.04 or earlier
+
+Install as many packages as possible:
+
+\verbatim
+sudo apt-get install g++ libqt4-dev qt4-dev-tools ffmpeg libavcodec-dev libavformat-dev libxvidcore-dev libx264-dev libfaac-dev libogg-dev libvorbis-dev libdc1394-dev liblame-dev libgsm1-dev libboost-dev libboost-regex-dev libxml2-dev libglew-dev  libboost-graph-dev libboost-wave-dev libboost-serialization-dev libboost-filesystem-dev libpcre3-dev libboost-thread-dev libmpfr-dev libboost-date-time-dev libqhull-dev libswscale-dev
+\endverbatim
+
+- CMake - need to use version >=2.6.0, default cmake in ubuntu 8.04 is 2.47, which will not work.
+
 \en \subsection ilinux_fedora Fedora Core Users
 
 Might need to add the livna yum repository for ffmpeg. To install the necessary packages type
@@ -264,7 +274,13 @@ In order to use the python bindings through the \openravepy{openravepy} module, 
 \openravepy{openravepy}を利用するために%OpenRAVEをコンパイルする前に以下のパッケージをインストールしてください．
 
 \verbatim
-sudo apt-get install libboost-python-dev python python-dev python-numpy python-scipy ipython
+sudo apt-get install libboost-python-dev python python-dev python-numpy ipython
+\endverbatim
+
+Optional:
+
+\verbatim
+sudo apt-get install python-scipy
 \endverbatim
 
 Pythonパスを設定するために，bashファイルに以下の行を追加してください．

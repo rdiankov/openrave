@@ -48,6 +48,7 @@
 #include <set>
 #include <string>
 #include <algorithm>
+#include <complex>
 
 #define FOREACH(it, v) for(typeof((v).begin())it = (v).begin(), __itend__=(v).end(); it != __itend__; (it)++)
 #define FOREACH_NOINC(it, v) for(typeof((v).begin())it = (v).begin(), __itend__=(v).end(); it != __itend__; )
